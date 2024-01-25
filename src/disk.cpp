@@ -1360,6 +1360,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 	drv->tracktiming[0] = 0;
 	drv->useturbo = 0;
 	drv->indexoffset = 0;
+	drv->buffered_side = -1;
 	if (!fake) {
 		drv->dskeject = false;
 #ifdef RETROPLATFORM
@@ -1580,7 +1581,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 		size == 9 * 81 * 1 * 512 || size == 18 * 81 * 1 * 512 || size == 10 * 81 * 1 * 512 || size == 20 * 81 * 1 * 512 ||
 		size == 9 * 82 * 1 * 512 || size == 18 * 82 * 1 * 512 || size == 10 * 82 * 1 * 512 || size == 20 * 82 * 1 * 512)) {
 		/* PC formatted image */
-		int side, sd;
+		int heads, sd;
 
 		drv->num_secs = 9;
 		drv->ddhd = 1;
@@ -1590,41 +1591,41 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 		bool can80 = dfxtype == DRV_35_DD || dfxtype == DRV_35_DD_ESCOM  || dfxtype == DRV_35_HD || dfxtype == DRV_PC_35_ONLY_80 || dfxtype == DRV_PC_525_40_80;
 		bool drv525 = dfxtype == DRV_525_DD || dfxtype == DRV_PC_525_ONLY_40 || dfxtype == DRV_PC_525_40_80;
 
-		for (side = 2; side > 0; side--) {
+		for (heads = 2; heads > 0; heads--) {
 			if (drv->hard_num_cyls >= 80 && can80) {
-				if (size == 9 * 80 * side * 512 || size == 9 * 81 * side * 512 || size == 9 * 82 * side * 512) {
+				if (size == 9 * 80 * heads * 512 || size == 9 * 81 * heads * 512 || size == 9 * 82 * heads * 512) {
 					drv->num_secs = 9;
 					drv->ddhd = 1;
 					break;
-				} else if (!drv525 && (size == 18 * 80 * side * 512 || size == 18 * 81 * side * 512 || size == 18 * 82 * side * 512)) {
+				} else if (!drv525 && (size == 18 * 80 * heads * 512 || size == 18 * 81 * heads * 512 || size == 18 * 82 * heads * 512)) {
 					drv->num_secs = 18;
 					drv->ddhd = 2;
 					break;
-				} else if (!drv525 && (size == 10 * 80 * side * 512 || size == 10 * 81 * side * 512 || size == 10 * 82 * side * 512)) {
+				} else if (!drv525 && (size == 10 * 80 * heads * 512 || size == 10 * 81 * heads * 512 || size == 10 * 82 * heads * 512)) {
 					drv->num_secs = 10;
 					drv->ddhd = 1;
 					break;
-				} else if (!drv525 && (size == 20 * 80 * side * 512 || size == 20 * 81 * side * 512 || size == 20 * 82 * side * 512)) {
+				} else if (!drv525 && (size == 20 * 80 * heads * 512 || size == 20 * 81 * heads * 512 || size == 20 * 82 * heads * 512)) {
 					drv->num_secs = 20;
 					drv->ddhd = 2;
 					break;
-				} else if (!drv525 && (size == 21 * 80 * side * 512 || size == 21 * 81 * side * 512 || size == 21 * 82 * side * 512)) {
+				} else if (!drv525 && (size == 21 * 80 * heads * 512 || size == 21 * 81 * heads * 512 || size == 21 * 82 * heads * 512)) {
 					drv->num_secs = 21;
 					drv->ddhd = 2;
 					break;
-				} else if (size == 15 * 80 * side * 512) {
+				} else if (size == 15 * 80 * heads * 512) {
 					drv->num_secs = 15;
 					drv->ddhd = 1;
 					break;
 				}
 			}
 			if (drv->hard_num_cyls == 40 || can40) {
-				if (size == 9 * 40 * side * 512) {
+				if (size == 9 * 40 * heads * 512) {
 					drv->num_secs = 9;
 					drv->ddhd = 1;
 					sd = 1;
 					break;
-				} else if (size == 8 * 40 * side * 512) {
+				} else if (size == 8 * 40 * heads * 512) {
 					drv->num_secs = 8;
 					drv->ddhd = 1;
 					sd = 1;
@@ -1649,7 +1650,7 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 			tid->len = 512 * drv->num_secs;
 			tid->bitlen = 0;
 			tid->offs = (sd ? i / 2 : i) * 512 * drv->num_secs;
-			if (side == 1) {
+			if (heads == 1) {
 				tid++;
 				tid->type = TRACK_NONE;
 				tid->len = 512 * drv->num_secs;
@@ -1658,8 +1659,8 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 			tid++;
 
 		}
-		drv->num_heads = side;
-		if (side == 1)
+		drv->num_heads = heads;
+		if (heads == 1)
 			drv->num_tracks *= 2;
 
 	} else if ((size == 262144 || size == 524288) && buffer[0] == 0x11 && (buffer[1] == 0x11 || buffer[1] == 0x14)) {
@@ -2983,6 +2984,7 @@ static void drive_eject (drive * drv)
 	drv->forcedwrprot = false;
 	drv->useturbo = 0;
 	drv->crc32 = 0;
+	drv->buffered_side = -1;
 	drive_settype_id (drv); /* Back to 35 DD */
 	if (disk_debug_logging > 0)
 		write_log (_T("eject drive %ld\n"), drv - &floppy[0]);
@@ -3266,12 +3268,10 @@ int DISK_history_add(const TCHAR *name, int idx, int type, int nopathfix)
 	}
 	if (name[0] == 0)
 		return 0;
-
 	_tcscpy(path, name);
 	if (!nopathfix) {
 		fullpath(path, sizeof(path) / sizeof(TCHAR));
 	}
-
 	if (idx >= 0) {
 		if (idx >= MAX_PREVIOUS_IMAGES)
 			return 0;
@@ -3758,33 +3758,33 @@ static uae_u32 getonebit(drive *drv, uae_u16 *mfmbuf, int mfmpos, int *inc)
 
 void dumpdisk (const TCHAR *name)
 {
-	//int i, j, k;
-	//uae_u16 w;
+	int i, j, k;
+	uae_u16 w;
 
-	//for (i = 0; i < MAX_FLOPPY_DRIVES; i++) {
-	//	drive *drv = &floppy[i];
-	//	if (!(disabled & (1 << i))) {
-	//		console_out_f (_T("%s: drive %d motor %s cylinder %2d sel %s %s mfmpos %d/%d\n"),
-	//			name, i, drv->motoroff ? _T("off") : _T(" on"), drv->cyl, (selected & (1 << i)) ? _T("no") : _T("yes"),
-	//			drive_writeprotected (drv) ? _T("ro") : _T("rw"), drv->mfmpos, drv->tracklen);
-	//		if (drv->motoroff == 0) {
-	//			w = 0;
-	//			for (j = -4; j < 13; j++) {
-	//				for (k = 0; k < 16; k++) {
-	//					int pos = drv->mfmpos + j * 16 + k;
-	//					if (pos < 0)
-	//						pos += drv->tracklen;
-	//					w <<= 1;
-	//					w |= getonebit (drv->bigmfmbuf, pos);
-	//				}
-	//				console_out_f(_T("%04X%c"), w, j == -1 ? '|' : ' ');
-	//			}
-	//			console_out (_T("\n"));
-	//		}
-	//	}
-	//}
-	//console_out_f (_T("side %d dma %d off %d word %04X pt %08X len %04X bytr %04X adk %04X sync %04X\n"),
-	//	side, dskdmaen, bitoffset, word, dskpt, dsklen, dskbytr_val, adkcon, dsksync);
+	for (i = 0; i < MAX_FLOPPY_DRIVES; i++) {
+		drive *drv = &floppy[i];
+		if (!(disabled & (1 << i))) {
+			console_out_f (_T("%s: drive %d motor %s cylinder %2d sel %s %s mfmpos %d/%d\n"),
+				name, i, drv->motoroff ? _T("off") : _T(" on"), drv->cyl, (selected & (1 << i)) ? _T("no") : _T("yes"),
+				drive_writeprotected (drv) ? _T("ro") : _T("rw"), drv->mfmpos, drv->tracklen);
+			if (drv->motoroff == 0) {
+				w = 0;
+				for (j = -4; j < 13; j++) {
+					for (k = 0; k < 16; k++) {
+						int pos = drv->mfmpos + j * 16 + k;
+						if (pos < 0)
+							pos += drv->tracklen;
+						w <<= 1;
+						w |= getonebit(NULL, drv->bigmfmbuf, pos, NULL);
+					}
+					console_out_f(_T("%04X%c"), w, j == -1 ? '|' : ' ');
+				}
+				console_out (_T("\n"));
+			}
+		}
+	}
+	console_out_f (_T("side %d dma %d off %d word %04X pt %08X len %04X bytr %04X adk %04X sync %04X\n"),
+		side, dskdmaen, bitoffset, word, dskpt, dsklen, dskbytr_val, adkcon, dsksync);
 }
 
 static void disk_dmafinished (void)
