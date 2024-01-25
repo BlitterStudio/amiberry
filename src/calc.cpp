@@ -560,6 +560,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
                                         if (isstackstring(sc2)) {
                                             TCHAR *c = stacktostring(sc2);
                                             _tcscpy(vals, c);
+                                            xfree(c);
                                         }
                                         val = stacktoval(sc2);
                                }
