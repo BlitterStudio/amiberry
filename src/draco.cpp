@@ -39,6 +39,23 @@ static int maxcnt = 100;
 	.asciz	"buserr"	| 7: nmi: bus timeout
 */
 
+// CASABLANCA
+// INTENA  : 0x02000043
+// INTPEN  : 0x02000083
+// INTFRC  : 0x020000c3
+// ?       : 0x02000143
+// SuperIO : 0x02400000 (PC-style serial, parallel, WD floppy)
+// Interrupt
+
+// Bit 0: Master enable / Soft INT1
+// Bit 1: INT4
+// Bit 2: INT2
+// Bit 3: INT6
+// Bit 4: INT1
+// Bit 5:
+// Bit 6: INT5 (SuperIO)
+
+// DRACO
 // INTENA  : 0x01000001
 // INTPEN  : 0x01400001
 // INTFRC  : 0x01800001
@@ -53,14 +70,12 @@ static int maxcnt = 100;
 
 // Interrupt
 
-// Bit 0: Master enable / INT1
+// Bit 0: Master enable / Soft INT1
 // Bit 1: INT4 (SCSI)
 // Bit 2: INT2 (Timer)
 // Bit 3: INT6
-
 // SVGA vblank: INT3
 // SuperIO: INT5
-
 
 // IO:
 
@@ -167,6 +182,44 @@ static int draco_scsi_intpen, draco_serial_intpen;
 
 static bool draco_have_vmotion = false;
 
+static void casa_irq(void)
+{
+	uae_u16 irq = 0;
+	if (draco_scsi_intpen) {
+		draco_intpen |= 2;
+	} else {
+		draco_intpen &= ~2;
+	}
+	if (draco_intena & 1) {
+		uae_u16 mask = draco_intena & draco_intpen;
+		if (mask) {
+			if (mask & 1) { // INT1
+				irq |= 1;
+			}
+			if (mask & 2) { // INT4
+				irq |= 0x80;
+			}
+			if (mask & 4) { // INT2
+				irq |= 8;
+			}
+			if (mask & 8) { // INT6
+				irq |= 0x2000;
+			}
+		}
+		if (draco_intfrc & 1) {
+			irq |= 1; // software interrupt
+		}
+		if (draco_svga_irq_state) {
+			irq |= 0x0010; // INT3
+		}
+	}
+	INTREQ_f(0x7fff);
+	if (irq) {
+		INTREQ_f(0x8000 | irq);
+		doint();
+	}
+}
+
 static void draco_irq(void)
 {
 	uae_u16 irq = 0;
@@ -212,13 +265,22 @@ static void draco_irq(void)
 		INTREQ_f(0x8000 | irq);
 		doint();
 	}
+}
 
+static void dc_irq(void)
+{
+	if (currprefs.cs_compatible == CP_DRACO) {
+		draco_irq();
+	}
+	if (currprefs.cs_compatible == CP_CASABLANCA) {
+		casa_irq();
+	}
 }
 
 void draco_svga_irq(bool state)
 {
 	draco_svga_irq_state = state;
-	draco_irq();
+	dc_irq();
 }
 
 static uae_u8 draco_kbd_state;
@@ -735,8 +797,87 @@ static uaecptr draco_convert_cia_addr(uaecptr addr)
 
 void draco_bustimeout(uaecptr addr)
 {
-	write_log("draco bus timeout %08x\n", addr);
+	write_log("draco bus timeout %08x PC=%08x\n", addr, M68K_GETPC);
+	if (currprefs.cs_compatible == CP_DRACO) {
 	draco_reg[3] |= DRSTAT_BUSTIMO;
+	} else {
+		draco_reg[2] |= 0x80;
+	}
+}
+
+static const uae_u8 casa_video_config20[] = { 0x00, 0xce, 0x17, 0x47, 0x54, 0x1f, 0x28, 0x05, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04 };
+
+static uae_u8 casa_video_bget(uaecptr addr)
+{
+	uae_u8 v = 0;
+	if (addr < 0x28000000) {
+		if (addr & 3) {
+			draco_bustimeout(addr);
+		} else {
+			int reg = (addr >> 2) & 15;
+			v = casa_video_config20[reg];
+		}
+	} else {
+		if ((addr & 3) != 3) {
+			draco_bustimeout(addr);
+		}
+	}
+	return v;
+}
+
+static uae_u8 casa_read_io(uaecptr addr)
+{
+	int reg = ((addr & 0xfc0) >> 6) & 0x1f;
+	uae_u8 v = draco_reg[reg];
+	switch(reg)
+	{
+		case 0x02:
+		if (draco_reg[0] & 1) {
+			//v |= 0x80;
+		}
+		break;
+		// casablanca revision
+		case 0x1f: // 0x7c3
+		v = draco_revision;
+		break;
+	}
+	return v;
+}
+
+static uae_u8 draco_read_io(uaecptr addr)
+{
+	// io
+	int reg = addr & 0x1f;
+	uae_u8 v = draco_reg[reg];
+	switch (reg)
+	{
+		case 3:
+			draco_keyboard_read();
+			draco_1wire_read();
+			v = draco_reg[reg];
+			break;
+		case 5:
+#if KBD_DEBUG > 1
+			write_log("draco keyboard scan code read %02x\n", v);
+#endif
+			draco_reg[3] &= ~DRSTAT_KBDRECV;
+			break;
+		case 9:
+			v = draco_revision;
+			draco_timer_latched = true;
+			break;
+		case 0xb:
+			v = (draco_timer_latched ? draco_timer_latch : draco_timer) >> 8;
+			break;
+		case 0xd:
+			v = (draco_timer_latched ? draco_timer_latch : draco_timer) >> 0;
+			draco_timer_latched = false;
+			break;
+		case 0x1d:
+			v = draco_floppy_get_data();
+			break;
+	}
+	return v;
 }
 
 static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
@@ -744,7 +885,9 @@ static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
 	uae_u8 v = 0;
 
 	if (maxcnt >= 0) {
+		if (addr != 0x020007c3) {
 		write_log(_T("draco_bget %08x %08x\n"), addr, M68K_GETPC);
+		}
 		maxcnt--;
 	}
 
@@ -758,8 +901,12 @@ static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
 	}
 
 	if (addr >= 0x20000000) {
+		if (currprefs.cs_compatible == CP_CASABLANCA) {
+			v = casa_video_bget(addr);
+		} else {
 		draco_bustimeout(addr);
-		return 0;
+		}
+		return v;
 	}
 
 	if ((addr & 0x07c00000) == 0x04000000) {
@@ -832,40 +979,11 @@ static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
 
 	} else if ((addr & 0x07c00000) == 0x02000000) {
 
-		// io
-		int reg = addr & 0x1f;
-		v = draco_reg[reg];
-		switch(reg)
-		{
-		case 3:
-			draco_keyboard_read();
-			draco_1wire_read();
-			v = draco_reg[reg];
-			break;
-		case 5:
-#if KBD_DEBUG > 1
-			write_log("draco keyboard scan code read %02x\n", v);
-#endif
-			break;
-		case 9:
-			v = draco_revision;
-			draco_timer_latched = true;
-			break;
-		case 0xb:
-			v = (draco_timer_latched ? draco_timer_latch : draco_timer) >> 8;
-			break;
-		case 0xd:
-			v = (draco_timer_latched ? draco_timer_latch : draco_timer) >> 0;
-			draco_timer_latched = false;
-			break;
-		case 0x1d:
-			v = draco_floppy_get_data();
-			break;
+		if (currprefs.cs_compatible == CP_DRACO) {
+			v = draco_read_io(addr);
+		} else {
+			v = casa_read_io(addr);
 		}
-
-		// casablanca revision
-		if (addr == 0x020007c3)
-			v = draco_revision;
 
 	} else if ((addr & 0x07c00000) == 0x02800000) {
 
@@ -968,7 +1086,7 @@ static void REGPARAM2 draco_lput(uaecptr addr, uae_u32 l)
 		cpuboard_ncr710_io_bput(reg + 1, l >> 16);
 		cpuboard_ncr710_io_bput(reg + 0, l >> 24);
 
-	} else {
+	} else if (addr < 0x28000000) {
 
 		write_log(_T("draco_lput %08x %08x %08x\n"), addr, l, M68K_GETPC);
 	}
@@ -978,6 +1096,81 @@ static void REGPARAM2 draco_wput(uaecptr addr, uae_u32 w)
 	write_log(_T("draco_wput %08x %04x %08x\n"), addr, w & 0xffff, M68K_GETPC);
 }
 
+static void casa_write_io(uaecptr addr, uae_u8 b)
+{
+	int reg = ((addr & 0xfc0) >> 6) & 0x1f;
+	draco_reg[reg] = b;
+	switch (reg)
+	{
+		case 1:
+			draco_intena = b & 63;
+			casa_irq();
+			break;
+		case 2:
+			draco_intpen = b & 63;
+			casa_irq();
+			break;
+		case 3:
+			draco_intfrc = b & 63;
+			casa_irq();
+			break;
+		case 4:
+			casa_irq();
+			break;
+	}
+}
+
+static void draco_write_io(uaecptr addr, uae_u8 b)
+{
+	int reg = addr & 0x1f;
+	uae_u8 oldval = draco_reg[reg];
+	draco_reg[reg] = b;
+
+	//write_log(_T("draco_bput %08x %02x %08x\n"), addr, b & 0xff, M68K_GETPC);
+	switch (reg)
+	{
+		case 1:
+			if (b & DRCNTRL_WDOGDAT) {
+				draco_watchdog = 0;
+			}
+			draco_irq();
+			draco_keyboard_write(b);
+			break;
+		case 3: // RO
+			draco_reg[reg] = oldval;
+			break;
+		case 7:
+			draco_irq();
+			break;
+		case 9:
+			draco_reg[7] &= ~DRSTAT2_TMRIRQPEN;
+			break;
+		case 0x0b:
+			draco_timer &= 0x00ff;
+			draco_timer |= b << 8;
+			break;
+		case 0x0d:
+			draco_timer &= 0xff00;
+			draco_timer |= b;
+			break;
+		case 0x11:
+			draco_1wire_send(0);
+			break;
+		case 0x13:
+			draco_1wire_send(1);
+			break;
+		case 0x15:
+			draco_1wire_reset();
+			break;
+		case 0x17:
+			draco_keyboard_done();
+			break;
+		case 0x19:
+			draco_reg[3] &= ~DRSTAT_BUSTIMO;
+			break;
+	}
+}
+
 static void REGPARAM2 draco_bput(uaecptr addr, uae_u32 b)
 {
 	if (maxcnt >= 0) {
@@ -985,13 +1178,14 @@ static void REGPARAM2 draco_bput(uaecptr addr, uae_u32 b)
 		write_log(_T("draco_bput %08x %02x %08x\n"), addr, b & 0xff, M68K_GETPC);
 	}
 
+	if (addr >= 0x20000000) {
+		if (currprefs.cs_compatible == CP_DRACO) {
 	if (addr >= 0x28000000 && addr < 0x30000000 && draco_have_vmotion) {
 		vmotion_write(addr & 0x07ffffff, b);
 		return;
 	}
-
-	if (addr >= 0x20000000) {
 		draco_bustimeout(addr);
+		}
 		return;
 	}
 
@@ -1078,54 +1272,10 @@ static void REGPARAM2 draco_bput(uaecptr addr, uae_u32 b)
 
 	} else if ((addr & 0x07c00000) == 0x02000000) {
 
-		// IO
-
-		int reg = addr & 0x1f;
-		uae_u8 oldval = draco_reg[reg];
-		draco_reg[reg] = b;
-
-		//write_log(_T("draco_bput %08x %02x %08x\n"), addr, b & 0xff, M68K_GETPC);
-		switch(reg)
-		{
-			case 1:
-				if (b & DRCNTRL_WDOGDAT) {
-					draco_watchdog = 0;
-				}
-				draco_irq();
-				draco_keyboard_write(b);
-				break;
-			case 3: // RO
-				draco_reg[reg] = oldval;
-				break;
-			case 7:
-				draco_irq();
-				break;
-			case 9:
-				draco_reg[7] &= ~DRSTAT2_TMRIRQPEN;
-				break;
-			case 0x0b:
-				draco_timer &= 0x00ff;
-				draco_timer |= b << 8;
-				break;
-			case 0x0d:
-				draco_timer &= 0xff00;
-				draco_timer |= b;
-				break;
-			case 0x11:
-				draco_1wire_send(0);
-				break;
-			case 0x13:
-				draco_1wire_send(1);
-				break;
-			case 0x15:
-				draco_1wire_reset();
-				break;
-			case 0x17:
-				draco_keyboard_done();
-				break;
-			case 0x19:
-				draco_reg[3] &= ~DRSTAT_BUSTIMO;
-				break;
+		if (currprefs.cs_compatible == CP_DRACO) {
+			draco_write_io(addr, b);
+		} else {
+			casa_write_io(addr, b);
 		}
 
 	} else if ((addr & 0x07000000) == 0x01000000) {
@@ -1189,7 +1339,6 @@ static addrbank draco_bank = {
 	draco_lget, draco_wget, ABFLAG_IO, S_READ, S_WRITE
 };
 
-
 void draco_ext_interrupt(bool i6)
 {
 	if (i6) {
@@ -1197,7 +1346,7 @@ void draco_ext_interrupt(bool i6)
 	} else {
 		draco_intpen |= 4;
 	}
-	draco_irq();
+	dc_irq();
 }
 
 void draco_keycode(uae_u16 scancode, uae_u8 state)
@@ -1216,6 +1365,19 @@ static void draco_hsync(void)
 	uae_u16 tm = 5, ot;
 	static int hcnt;
 
+#if 0
+	if (currprefs.cs_compatible == CP_CASABLANCA) {
+		static int casa_timer;
+		casa_timer++;
+		if (casa_timer >= maxvpos) {
+			draco_svga_irq(true);
+		} else {
+			draco_svga_irq(false);
+		}
+	}
+#endif
+
+	if (currprefs.cs_compatible == CP_DRACO) {
 	ot = draco_timer;
 	draco_timer -= tm;
 	if ((draco_timer > 0xf000 && ot < 0x1000) || (draco_timer < 0x1000 && ot > 0xf000)) {
@@ -1224,7 +1386,6 @@ static void draco_hsync(void)
 			draco_irq();
 		}
 	}
-	x86_floppy_run();
 
 	if (draco_kbd_buffer_len > 0) {
 		draco_keyboard_send();
@@ -1252,12 +1413,15 @@ static void draco_hsync(void)
 		activate_debugger();
 		draco_watchdog = 0;
 	}
+	}
+
+	x86_floppy_run();
 }
 
 void draco_set_scsi_irq(int id, int level)
 {
 	draco_scsi_intpen = level;
-	draco_irq();
+	dc_irq();
 }
 
 
@@ -1268,7 +1432,7 @@ static void x86_irq(int irq, bool state)
 	} else {
 		draco_fdc_intpen = state;
 	}
-	draco_irq();
+	dc_irq();
 }
 
 void draco_free(void)
@@ -1373,6 +1537,7 @@ void draco_init(void)
 	if (currprefs.cs_compatible == CP_CASABLANCA) {
 
 		draco_revision = 9;
+		draco_cias = 3;
 		draco_reset(1);
 
 		device_add_rethink(draco_irq);
@@ -1401,6 +1566,7 @@ void casablanca_map_overlay(void)
 	// KS ROM is here
 	map_banks(&kickmem_bank, 0x02c00000 >> 16, 524288 >> 16, 0);
 	map_banks(&draco_bank, 0x03000000 >> 16, 0x01000000 >> 16, 0);
+	map_banks(&draco_bank, 0x20000000 >> 16, 0x20000000 >> 16, 0);
 }
 
 
