@@ -8373,7 +8373,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->sound_interpol = 1;
 	p->sound_filter = FILTER_SOUND_EMUL;
 	p->sound_filter_type = 0;
-	p->sound_auto = 1;
+	p->sound_auto = 0;
 	p->sampler_stereo = false;
 	p->sampler_buffer = 0;
 	p->sampler_freq = 0;
