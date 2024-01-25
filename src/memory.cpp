@@ -2722,7 +2722,7 @@ static void fill_ce_banks (void)
 	}
 
 	if (currprefs.address_space_24) {
-		for (i = 1; i < 256; i++)
+		for (i = 1; i < MEMORY_BANKS_24; i++)
 			memcpy(&ce_banktype[i * 256], &ce_banktype[0], 256);
 	}
 
@@ -3506,7 +3506,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 	}
 
 #ifndef ADDRESS_SPACE_24BIT
-	if (start >= 0x100) {
+	if (start >= MEMORY_BANKS_24) {
 		int real_left = 0;
 		for (bnr = start; bnr < start + size; bnr++) {
 			if (!real_left) {
@@ -3634,7 +3634,7 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 	}
 #endif
 
-	if (start >= 0x100) {
+	if (start >= MEMORY_BANKS_24) {
 		int real_left = 0;
 		for (int bnr = start; bnr < start + size; bnr++) {
 			highram_temp_bank[bnr - 0x100] = bank;
