@@ -71,7 +71,7 @@ namespace gcn
 {
 	BasicContainer::~BasicContainer()
 	{
-		BasicContainer::clear();
+		clear();
 	}
 
 	void BasicContainer::moveToTop(Widget* widget)
@@ -130,7 +130,7 @@ namespace gcn
 			}
 		}
 
-		const auto end = it;
+		const WidgetListIterator end = it;
 
 		if (it == mWidgets.end())
 		{
@@ -166,7 +166,7 @@ namespace gcn
 			}
 		}
 
-		const auto end = it;
+		const WidgetListReverseIterator end = it;
 
 		++it;
 
@@ -192,11 +192,11 @@ namespace gcn
 
 	Widget* BasicContainer::getWidgetAt(int x, int y)
 	{
-		const auto r = getChildrenArea();
+		const Rectangle r = getChildrenArea();
 
 		if (!r.isPointInRect(x, y))
 		{
-			return nullptr;
+			return NULL;
 		}
 
 		x -= r.x;
@@ -210,7 +210,7 @@ namespace gcn
 			}
 		}
 
-		return nullptr;
+		return NULL;
 	}
 
 	void BasicContainer::logic()
@@ -222,7 +222,7 @@ namespace gcn
 	{
 		Widget::_setFocusHandler(focusHandler);
 
-		if (mInternalFocusHandler != nullptr)
+		if (mInternalFocusHandler != NULL)
 		{
 			return;
 		}
@@ -237,7 +237,7 @@ namespace gcn
 	{
 		mWidgets.push_back(widget);
 
-		if (mInternalFocusHandler == nullptr)
+		if (mInternalFocusHandler == NULL)
 		{
 			widget->_setFocusHandler(_getFocusHandler());
 		}
@@ -257,8 +257,8 @@ namespace gcn
 			if (*iter == widget)
 			{
 				mWidgets.erase(iter);
-				widget->_setFocusHandler(nullptr);
-				widget->_setParent(nullptr);
+				widget->_setFocusHandler(NULL);
+				widget->_setParent(NULL);
 				widget->removeDeathListener(this);
 				return;
 			}
@@ -271,8 +271,8 @@ namespace gcn
 	{
 		for (auto& mWidget : mWidgets)
 		{
-			mWidget->_setFocusHandler(nullptr);
-			mWidget->_setParent(nullptr);
+			mWidget->_setFocusHandler(NULL);
+			mWidget->_setParent(NULL);
 			mWidget->removeDeathListener(this);
 		}
 
@@ -291,7 +291,7 @@ namespace gcn
 				// draw it before drawing the widget
 				if (mWidget->getBorderSize() > 0)
 				{
-					auto rec = mWidget->getDimension();
+					Rectangle rec = mWidget->getDimension();
 					rec.x -= static_cast<int>(mWidget->getBorderSize());
 					rec.y -= static_cast<int>(mWidget->getBorderSize());
 					rec.width += 2 * static_cast<int>(mWidget->getBorderSize());
@@ -320,7 +320,7 @@ namespace gcn
 
 	void BasicContainer::showWidgetPart(Widget* widget, Rectangle area)
 	{
-		const auto widgetArea = getChildrenArea();
+		const Rectangle widgetArea = getChildrenArea();
 		area.x += widget->getX();
 		area.y += widget->getY();
 
@@ -352,7 +352,7 @@ namespace gcn
 
 		for (auto& mWidget : mWidgets)
 		{
-			if (mInternalFocusHandler == nullptr)
+			if (mInternalFocusHandler == NULL)
 			{
 				mWidget->_setFocusHandler(_getFocusHandler());
 			}
@@ -372,19 +372,19 @@ namespace gcn
 				return mWidget;
 			}
 
-			auto* basicContainer = dynamic_cast<BasicContainer*>(mWidget);
+			BasicContainer *basicContainer = dynamic_cast<BasicContainer*>(mWidget);
 
-			if (basicContainer != nullptr)
+			if (basicContainer != NULL)
 			{
-				auto* const widget = basicContainer->findWidgetById(id);
+				Widget *widget = basicContainer->findWidgetById(id);
 
-				if (widget != nullptr)
+				if (widget != NULL)
 				{
 					return widget;
 				}
 			}
 		}
 
-		return nullptr;
+		return NULL;
 	}
 }

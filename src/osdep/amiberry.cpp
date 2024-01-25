@@ -466,8 +466,9 @@ void setpriority(int prio)
 
 static void setcursorshape(int monid)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (SDL_GetCursor() != NULL)
+		if (!mon->screen_is_picasso || !currprefs.rtg_hardwaresprite)
 			SDL_ShowCursor(SDL_DISABLE);
 	}
 	else if (!picasso_setwincursor(monid)) {
@@ -487,6 +488,91 @@ void releasecapture(struct AmigaMonitor* mon)
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 	mon_cursorclipped = 0;
+}
+
+void updatemouseclip(struct AmigaMonitor* mon)
+{
+	if (mon_cursorclipped) {
+		mon->amigawinclip_rect = mon->amigawin_rect;
+		if (!isfullscreen()) {
+			int idx = 0;
+			//reenumeratemonitors(); //disabled as we only support 1 monitor anyway
+			while (Displays[idx].monitorname) {
+				SDL_Rect out;
+				struct MultiDisplay* md = &Displays[idx];
+				idx++;
+				if (md->rect.x == md->workrect.x && md->rect.w == md->workrect.w
+					&& md->rect.y == md->workrect.y && md->rect.h == md->workrect.h)
+					continue;
+				// not in this monitor?
+				//if (!IntersectRect(&out, &md->rect, &mon->amigawin_rect))
+				//	continue;
+				for (int e = 0; e < 4; e++) {
+					int v1, v2, x, y;
+					int* lp;
+					switch (e)
+					{
+					case 0:
+					default:
+						v1 = md->rect.x;
+						v2 = md->workrect.x;
+						lp = &mon->amigawinclip_rect.x;
+						x = v1 - 1;
+						y = (md->rect.h - md->rect.y) / 2;
+						break;
+					case 1:
+						v1 = md->rect.y;
+						v2 = md->workrect.y;
+						lp = &mon->amigawinclip_rect.y;
+						x = (md->rect.w - md->rect.x) / 2;
+						y = v1 - 1;
+						break;
+					case 2:
+						v1 = md->rect.w;
+						v2 = md->workrect.w;
+						lp = &mon->amigawinclip_rect.w;
+						x = v1 + 1;
+						y = (md->rect.h - md->rect.y) / 2;
+						break;
+					case 3:
+						v1 = md->rect.h;
+						v2 = md->workrect.h;
+						lp = &mon->amigawinclip_rect.h;
+						x = (md->rect.w - md->rect.x) / 2;
+						y = v1 + 1;
+						break;
+					}
+					// is there another monitor sharing this edge?
+					//POINT pt;
+					//pt.x = x;
+					//pt.y = y;
+					//if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL))
+					//	continue;
+					// restrict mouse clip bounding box to this edge
+					if (e >= 2) {
+						if (*lp > v2) {
+							*lp = v2;
+						}
+					}
+					else {
+						if (*lp < v2) {
+							*lp = v2;
+						}
+					}
+				}
+			}
+			// Too small or invalid?
+			if (mon->amigawinclip_rect.w <= mon->amigawinclip_rect.x + 7 || mon->amigawinclip_rect.h <= mon->amigawinclip_rect.y + 7)
+				mon->amigawinclip_rect = mon->amigawin_rect;
+		}
+		if (mon_cursorclipped == mon->monitor_id + 1) {
+#if MOUSECLIP_LOG
+			write_log(_T("CLIP mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, isfullscreen());
+#endif
+			//if (!ClipCursor(&mon->amigawinclip_rect))
+			//	write_log(_T("ClipCursor error %d\n"), GetLastError());
+		}
+	}
 }
 
 void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
@@ -553,10 +639,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
 		if (mousehack_alive())
-		{
-			if (active) setcursorshape(mon->monitor_id);
 			return;
-		}
 		SDL_SetCursor(normalcursor);
 	}
 
@@ -567,11 +650,14 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 		if (focus) {
 			SDL_RaiseWindow(mon->sdl_window);
 			if (!mon_cursorclipped) {
-				SDL_ShowCursor(SDL_DISABLE);
 				SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
 				updatewinrect(mon, false);
+				// SDL2 hides the cursor when Relative mode is enabled
+				// This means that the RTG hardware sprite will no longer be shown,
+				// unless it's configured to use Virtual Mouse (absolute movement).
 				SDL_SetRelativeMouseMode(SDL_TRUE);
 				mon_cursorclipped = mon->monitor_id + 1;
+				//updatemouseclip(mon);
 			}
 			setcursor(mon, -30000, -30000);
 		}
@@ -1415,6 +1501,12 @@ void process_event(SDL_Event event)
 		if (!mouseinside)
 			mouseinside = true;
 			
+		//int mx = event.motion.x;
+		//int my = event.motion.y;
+
+		//mx -= mon->mouseposx;
+		//my -= mon->mouseposy;
+
 		if (recapture && isfullscreen() <= 0) {
 			enablecapture(mon->monitor_id);
 			return;
@@ -1430,8 +1522,20 @@ void process_event(SDL_Event event)
 		if (!focus || !mouseactive)
 			return;
 		/* relative */
+
+		// Disabled as it doesn't seem to work as expected
+		// Instead, we'll use SDL2's recommended Relative mode directly
+		//int mxx = (mon->amigawinclip_rect.x - mon->amigawin_rect.x) + (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2;
+		//int myy = (mon->amigawinclip_rect.y - mon->amigawin_rect.y) + (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2;
+		//mx = mx - mxx;
+		//my = my - myy;
+		//setmousestate(0, 0, mx, 0);
+		//setmousestate(0, 1, my, 0);
 		setmousestate(0, 0, event.motion.xrel, 0);
 		setmousestate(0, 1, event.motion.yrel, 0);
+
+		//if (mon_cursorclipped || mouseactive)
+		//	setcursor(mon, event.motion.x, event.motion.y);
 	}
 	break;
 
@@ -1829,6 +1933,13 @@ void target_fixup_options(struct uae_prefs* p)
 		p->rtgmatchdepth = false;
 		p->color_mode = 5;
 	}
+
+#ifdef AMIBERRY
+	// Disable hardware sprite if not using Virtual mouse mode,
+	// otherwise we'll have no cursor showing (due to SDL2 Relative mouse)
+	if (p->rtg_hardwaresprite && p->input_tablet == 0)
+		p->rtg_hardwaresprite = false;
+#endif
 
 	struct MultiDisplay* md = getdisplay(p, 0);
 	for (int j = 0; j < MAX_AMIGADISPLAYS; j++) {
@@ -3973,7 +4084,9 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #endif
-	atexit(SDL_Quit);
+	(void)atexit(SDL_Quit);
+	write_log(_T("Enumerating display devices.. \n"));
+	enumeratedisplays();
 	write_log(_T("Sorting devices and modes...\n"));
 	sortdisplays();
 	enumerate_sound_devices();
@@ -3988,7 +4101,7 @@ int main(int argc, char* argv[])
 	}
 	write_log(_T("done\n"));
 
-	normalcursor = SDL_GetDefaultCursor();
+	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	clipboard_init();
 
 #ifndef __MACH__

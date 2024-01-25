@@ -73,7 +73,7 @@ namespace gcn
 	{
 		mLabel = new Label();
 		mLabel->setPosition(4, 4);
-		BasicContainer::add(mLabel);
+		add(mLabel);
 		setBorderSize(1);
 
 		addMouseListener(this);
@@ -94,7 +94,7 @@ namespace gcn
 		mTabbedArea = tabbedArea;
 	}
 
-	TabbedArea* Tab::getTabbedArea() const
+	TabbedArea* Tab::getTabbedArea()
 	{
 		return mTabbedArea;
 	}
@@ -136,16 +136,18 @@ namespace gcn
 
 	void Tab::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + getBorderSize() * 2 - 1;
+		int height = getHeight() + getBorderSize() * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(highlightColor);
 			graphics->drawLine(i, i, width - i, i);

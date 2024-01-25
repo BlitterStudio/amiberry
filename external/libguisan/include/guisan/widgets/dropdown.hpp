@@ -105,9 +105,9 @@ namespace gcn
 		 * @param listBox the listBox to use.
 		 * @see ListModel, ScrollArea, ListBox.
 		 */
-		DropDown(ListModel* listModel = nullptr,
-		         ScrollArea* scrollArea = nullptr,
-		         ListBox* listBox = nullptr);
+		DropDown(ListModel* listModel = NULL,
+		         ScrollArea* scrollArea = NULL,
+		         ListBox* listBox = NULL);
 
 		/**
 		* Destructor.
@@ -120,7 +120,7 @@ namespace gcn
 		* @return the selected item as an index in the list model.
 		* @see setSelected
 		*/
-		[[nodiscard]] int getSelected() const;
+		int getSelected() const;
 
 		/**
 		* Sets the selected item. The selected item is represented by
@@ -134,7 +134,7 @@ namespace gcn
 		/*
 		 * Clears any selected item
 		 */
-		virtual void clearSelected(void) const;
+		void clearSelected(void) const;
 
 		/**
 		* Sets the list model to use when displaying the list.
@@ -150,7 +150,7 @@ namespace gcn
 		* @return the ListModel used.
 		* @see setListModel
 		*/
-		[[nodiscard]] ListModel* getListModel() const;
+		ListModel* getListModel();
 
 		/**
 		* Adjusts the height of the drop down to fit the height of the
@@ -180,76 +180,76 @@ namespace gcn
 		/*
 		 * Returns the current Dropdown status
 		 */
-		[[nodiscard]] virtual bool isDroppedDown() const;
+		bool isDroppedDown();
 
 		/**
 		* Sets the DropDown Widget to dropped-down mode.
 		*/
-		void dropDown();
+		virtual void dropDown();
 
 		/**
 		* Sets the DropDown Widget to folded-up mode.
 		*/
-		void foldUp();
+		virtual void foldUp();
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
-		void setBaseColor(const Color& color) override;
+		void setBaseColor(const Color& color);
 
-		void setBackgroundColor(const Color& color) override;
+		void setBackgroundColor(const Color& color);
 
-		void setForegroundColor(const Color& color) override;
+		void setForegroundColor(const Color& color);
 
-		void setFont(Font* font) override;
+		void setFont(Font* font);
 
-		void setSelectionColor(const Color& color) override;
+		void setSelectionColor(const Color& color);
 
 
 		// Inherited from BasicContainer
 
-		Rectangle getChildrenArea() override;
+		virtual Rectangle getChildrenArea();
 
 
 		// Inherited from FocusListener
 
-		void focusLost(const Event& event) override;
+		virtual void focusLost(const Event& event);
 
 
 		// Inherited from ActionListener
 
-		void action(const ActionEvent& actionEvent) override;
+		virtual void action(const ActionEvent& actionEvent);
 
 
 		// Inherited from DeathListener
 
-		void death(const Event& event) override;
+		virtual void death(const Event& event);
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 
 		// Inherited from MouseListener
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mouseReleased(MouseEvent& mouseEvent) override;
+		virtual void mouseReleased(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedUp(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedUp(MouseEvent& mouseEvent);
 
-		void mouseWheelMovedDown(MouseEvent& mouseEvent) override;
+		virtual void mouseWheelMovedDown(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
 
 		// Inherited from SelectionListener
 
-		void valueChanged(const SelectionEvent& event) override;
+		virtual void valueChanged(const SelectionEvent& event);
 
 
 	protected:
@@ -277,7 +277,7 @@ namespace gcn
 		* checking if the list of the drop down was clicked or if the upper part
 		* of the drop down was clicked on a mouse click
 		*/
-		int mFoldedUpHeight{};
+		int mFoldedUpHeight;
 
 		/**
 		* The scroll area used.

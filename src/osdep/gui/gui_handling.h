@@ -3,9 +3,11 @@
 
 #include <guisan/sdl/sdlinput.hpp>
 #include "amiberry_gfx.h"
+
 #ifdef USE_OPENGL
 #include <guisan/opengl.hpp>
 #endif
+
 #include "options.h"
 
 #define DISTANCE_BORDER 10
@@ -23,6 +25,11 @@
 #define SELECTOR_WIDTH 165
 #define SELECTOR_HEIGHT 24
 #define SCROLLBAR_WIDTH 20
+
+static const std::vector<std::string> floppy_drive_types = {
+		"Disabled", "3.5\" DD", "3.5\" HD", "5.25\" (40)",
+		"5.25\" (80)", "3.5\" ESCOM", "DB: Fast", "DB: Compatible",
+		"DB: Turbo", "DB: Stalling"};
 
 static const TCHAR* memsize_names[] = {
 	/* 0 */ _T("none"),
@@ -119,7 +126,8 @@ static const int msi_mb[] = { 0, 5, 6, 7, 8, 9, 10, 11, 12 };
 #define MIN_SOUND_MEM 0
 #define MAX_SOUND_MEM 10
 
-static const char* diskfile_filter[] = { ".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", ".zip", ".7z", ".lha", ".lzh", ".lzx", "\0" };
+static const char *diskfile_filter[] = {".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", ".zip",
+                                        ".7z", ".lha", ".lzh", ".lzx", "\0"};
 static const char* harddisk_filter[] = { ".hdf", ".hdz", ".lha", "zip", ".vhd", ".chd", ".7z", "\0" };
 static const char* cdfile_filter[] = { ".cue", ".ccd", ".iso", ".mds", ".nrg", ".chd", "\0" };
 static const char* whdload_filter[] = { ".lha", "\0" };
@@ -131,15 +139,18 @@ static string drivebridgeModes[] =
 	"Accurate"
 };
 
-typedef struct config_category
-{
+typedef struct config_category {
 	const char* category;
 	const char* imagepath;
 	gcn::SelectorEntry* selector;
 	gcn::Container* panel;
+
 	void (*InitFunc)(const config_category& category);
+
 	void (*ExitFunc)();
+
 	void (*RefreshFunc)();
+
 	bool (*HelpFunc)(std::vector<std::string>&);
 } ConfigCategory;
 
@@ -185,8 +196,7 @@ extern char last_loaded_config[MAX_DPATH];
 extern int quickstart_model;
 extern int quickstart_conf;
 
-typedef struct
-{
+typedef struct {
 	char Name[MAX_DPATH];
 	char FullPath[MAX_DPATH];
 	char Description[MAX_DPATH];
@@ -196,144 +206,225 @@ typedef struct
 extern vector<ConfigFileInfo*> ConfigFilesList;
 
 void InitPanelAbout(const struct config_category& category);
+
 void ExitPanelAbout();
+
 void RefreshPanelAbout();
+
 bool HelpPanelAbout(std::vector<std::string>& helptext);
 
 void InitPanelPaths(const struct config_category& category);
+
 void ExitPanelPaths();
+
 void RefreshPanelPaths();
+
 bool HelpPanelPaths(std::vector<std::string>& helptext);
 
 void InitPanelQuickstart(const struct config_category& category);
+
 void ExitPanelQuickstart();
+
 void RefreshPanelQuickstart();
+
 bool HelpPanelQuickstart(std::vector<std::string>& helptext);
 
 void InitPanelConfig(const struct config_category& category);
+
 void ExitPanelConfig();
+
 void RefreshPanelConfig();
+
 bool HelpPanelConfig(std::vector<std::string>& helptext);
 
 void InitPanelCPU(const struct config_category& category);
+
 void ExitPanelCPU();
+
 void RefreshPanelCPU();
+
 bool HelpPanelCPU(std::vector<std::string>& helptext);
 
 void InitPanelChipset(const struct config_category& category);
+
 void ExitPanelChipset();
+
 void RefreshPanelChipset();
+
 bool HelpPanelChipset(std::vector<std::string>& helptext);
 
 void InitPanelROM(const struct config_category& category);
+
 void ExitPanelROM();
+
 void RefreshPanelROM();
+
 bool HelpPanelROM(std::vector<std::string>& helptext);
 
 void InitPanelRAM(const struct config_category& category);
+
 void ExitPanelRAM();
+
 void RefreshPanelRAM();
+
 bool HelpPanelRAM(std::vector<std::string>& helptext);
 
 void InitPanelFloppy(const struct config_category& category);
+
 void ExitPanelFloppy();
+
 void RefreshPanelFloppy();
+
 bool HelpPanelFloppy(std::vector<std::string>& helptext);
 
 void InitPanelHD(const struct config_category& category);
+
 void ExitPanelHD();
+
 void RefreshPanelHD();
+
 bool HelpPanelHD(std::vector<std::string>& helptext);
 
 void InitPanelExpansions(const struct config_category& category);
+
 void ExitPanelExpansions();
+
 void RefreshPanelExpansions();
+
 bool HelpPanelExpansions(std::vector<std::string>& helptext);
 
 void InitPanelRTG(const struct config_category& category);
+
 void ExitPanelRTG();
+
 void RefreshPanelRTG();
+
 bool HelpPanelRTG(std::vector<std::string>& helptext);
 
 void InitPanelHWInfo(const struct config_category& category);
+
 void ExitPanelHWInfo();
+
 void RefreshPanelHWInfo();
+
 bool HelpPanelHWInfo(std::vector<std::string>& helptext);
 
 void InitPanelDisplay(const struct config_category& category);
+
 void ExitPanelDisplay();
+
 void RefreshPanelDisplay();
+
 bool HelpPanelDisplay(std::vector<std::string>& helptext);
 
 void InitPanelSound(const struct config_category& category);
+
 void ExitPanelSound();
+
 void RefreshPanelSound();
+
 bool HelpPanelSound(std::vector<std::string>& helptext);
 
 void InitPanelInput(const struct config_category& category);
+
 void ExitPanelInput();
+
 void RefreshPanelInput();
+
 bool HelpPanelInput(std::vector<std::string>& helptext);
 
 void InitPanelIO(const struct config_category& category);
+
 void ExitPanelIO();
+
 void RefreshPanelIO();
+
 bool HelpPanelIO(std::vector<std::string>& helptext);
 
 void InitPanelCustom(const struct config_category& category);
+
 void ExitPanelCustom();
+
 void RefreshPanelCustom();
+
 bool HelpPanelCustom(std::vector<std::string>& helptext);
 
 void InitPanelDiskSwapper(const struct config_category& category);
+
 void ExitPanelDiskSwapper();
+
 void RefreshPanelDiskSwapper();
+
 bool HelpPanelDiskSwapper(std::vector<std::string>& helptext);
 
 void InitPanelMisc(const struct config_category& category);
+
 void ExitPanelMisc();
+
 void RefreshPanelMisc();
+
 bool HelpPanelMisc(std::vector<std::string>& helptext);
 
 void InitPanelPrio(const struct config_category& category);
+
 void ExitPanelPrio();
+
 void RefreshPanelPrio();
+
 bool HelpPanelPrio(std::vector<std::string>& helptext);
 
 void InitPanelSavestate(const struct config_category& category);
+
 void ExitPanelSavestate();
+
 void RefreshPanelSavestate();
+
 bool HelpPanelSavestate(std::vector<std::string>& helptext);
 
 void InitPanelVirtualKeyboard(const struct config_category &category);
+
 void ExitPanelVirtualKeyboard();
+
 void RefreshPanelVirtualKeyboard();
+
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
 
 void refresh_all_panels();
+
 void register_refresh_func(void (*func)());
 
 void focus_bug_workaround(gcn::Window* wnd);
 
 void disable_resume();
 
-bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3, const std::string& button1, const std::string& button2);
+bool ShowMessage(const std::string &title, const std::string &line1, const std::string &line2, const std::string &line3,
+                 const std::string &button1, const std::string &button2);
+
 amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1);
+
 bool SelectFolder(const char* title, char* value);
+
 bool SelectFile(const char* title, char* value, const char* filter[], bool create = false);
+
 bool EditFilesysVirtual(int unit_no);
+
 bool EditFilesysHardfile(int unit_no);
+
 bool EditFilesysHardDrive(int unit_no);
+
 bool CreateFilesysHardfile();
+
 void ShowHelp(const char* title, const std::vector<std::string>& text);
+
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
+
 std::string show_controller_map(int device, bool map_touchpad);
 
 extern void read_directory(const char* path, vector<string>* dirs, vector<string>* files);
+
 extern void FilterFiles(vector<string>* files, const char* filter[]);
 
-enum
-{
+enum {
 	DIRECTION_NONE,
 	DIRECTION_UP,
 	DIRECTION_DOWN,
@@ -342,14 +433,18 @@ enum
 };
 
 bool HandleNavigation(int direction);
+
 void PushFakeKey(SDL_Keycode inKey);
 
 #define MAX_HD_DEVICES 8
+
 extern void CreateDefaultDevicename(char* name);
+
 extern bool DevicenameExists(const char* name);
+
 extern int tweakbootpri(int bp, int ab, int dnm);
-STATIC_INLINE bool is_hdf_rdb()
-{
+
+STATIC_INLINE bool is_hdf_rdb() {
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
 }
 
@@ -363,16 +458,23 @@ extern int last_y;
 extern void init_dispmanx_gui();
 #endif
 extern void update_gui_screen();
+
 extern void cap_fps(Uint64 start);
+
 extern long get_file_size(const std::string& filename);
+
 extern bool download_file(const std::string& source, const std::string& destination, bool keep_backup);
+
 extern void download_rtb(const std::string& filename);
 
 extern int fromdfxtype(int num, int dfx, int subtype);
+
 extern int todfxtype(int num, int dfx, int* subtype);
+
 extern void DisplayDiskInfo(int num);
 
 extern std::string get_full_path_from_disk_list(std::string element);
+
 extern amiberry_hotkey get_hotkey_from_config(std::string config_option);
 
 extern void save_mapping_to_file(std::string mapping);

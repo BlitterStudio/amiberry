@@ -111,7 +111,7 @@ namespace gcn
 		 * @return True if the radio button is selecte, false otherwise.
 		 * @see setSelected
 		 */
-		[[nodiscard]] bool isSelected() const;
+		bool isSelected() const;
 
 		/**
 		 * Sets the radio button to selected or not.
@@ -128,7 +128,7 @@ namespace gcn
 		 * @return The caption of the radio button.
 		 * @see setCaption
 		 */
-		[[nodiscard]] const std::string& getCaption() const;
+		const std::string& getCaption() const;
 
 		/**
 		 * Sets the caption of the radio button. It's advisable to call
@@ -138,7 +138,7 @@ namespace gcn
 		 * @param caption The caption of the radio button.
 		 * @see getCaption, adjustSize
 		 */
-		void setCaption(std::string caption);
+		void setCaption(const std::string caption);
 
 		/**
 		 * Sets the group the radio button should belong to. Note that
@@ -156,7 +156,7 @@ namespace gcn
 		 * @return The group the radio button belongs to.
 		 * @see setGroup
 		 */
-		[[nodiscard]] const std::string& getGroup() const;
+		const std::string& getGroup() const;
 
 		/**
 		 * Adjusts the radio button's size to fit the caption.
@@ -166,21 +166,21 @@ namespace gcn
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 
 		// Inherited from MouseListener
 
-		void mouseClicked(MouseEvent& mouseEvent) override;
+		virtual void mouseClicked(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
 	protected:
 		/**
@@ -193,7 +193,7 @@ namespace gcn
 		/**
 		 * True if the radio button is selected, false otherwise.
 		 */
-		bool mSelected{};
+		bool mSelected;
 
 		/**
 		 * Holds the caption of the radio button.

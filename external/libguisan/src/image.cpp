@@ -65,7 +65,7 @@
 
 namespace gcn
 {
-	ImageLoader* Image::mImageLoader = nullptr;
+	ImageLoader* Image::mImageLoader = NULL;
 
 	Image::Image()
 	= default;
@@ -85,7 +85,7 @@ namespace gcn
 
 	Image* Image::load(const std::string& filename, bool convertToDisplayFormat)
 	{
-		if (mImageLoader == nullptr)
+		if (mImageLoader == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to load an image but no image loader is set.");
 		}

@@ -44,6 +44,7 @@ static TCHAR *parsedvaluess[MAX_VALUES];
 static int op_preced(const TCHAR c)
 {
     switch(c)    {
+        case 0xf0: case 0xf1: case 0xf2:
         case '!':
             return 4;
         case '*':  case '/': case '\\': case '%':
@@ -67,6 +68,7 @@ static bool op_left_assoc(const TCHAR c)
         // left to right
         case '*': case '/': case '%': case '+': case '-':
         case '|': case '&': case '^':
+        case 0xf0: case 0xf1: case 0xf2:
             return true;
         // right to left
         case '=': case '!': case '@': case '@' | 0x80: case '>': case '<': case '>' | 0x80: case '<' | 0x80:
@@ -85,6 +87,7 @@ static unsigned int op_arg_count(const TCHAR c)
             return 2;
         case '!':
         case ':':
+        case 0xf0: case 0xf1: case 0xf2:
             return 1;
         default:
             return c - 'A';
@@ -94,7 +97,7 @@ static unsigned int op_arg_count(const TCHAR c)
  
 #define is_operator(c)  (c == '+' || c == '-' || c == '/' || c == '*' || c == '!' || c == '%' || c == '=' || \
                          c == '|' || c == '&' || c == '^' || c == '@' || c == ('@' | 0x80) || c == '>' || c == '<' || c == ('>' | 0x80) || c == ('<' | 0x80) || \
-                         c == '?' || c == ':')
+                         c == '?' || c == ':' || c == 0xf0 || c == 0xf1 || c == 0xf2)
 #define is_function(c)  (c >= 'A' && c <= 'Z')
 #define is_ident(c)     ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z'))
  
@@ -273,6 +276,7 @@ static TCHAR *stacktostring(struct calcstack *st)
         if (_tcslen(st->s) == 1 && st->s[0] >= 'a' && st->s[0] <= 'z') {
             TCHAR *s = parsedvaluess[st->s[0] - 'a'];
             if (s) {
+                xfree(st->vals);
                 st->vals = my_strdup(s);
                 xfree(st->s);
                 st->s = NULL;
@@ -281,6 +285,7 @@ static TCHAR *stacktostring(struct calcstack *st)
             double v = parsedvaluesd[st->s[0] - 'a'];
             TCHAR tmp[256];
             _stprintf(tmp, _T("%d"), (int)v);
+            xfree(st->vals);
             st->vals = my_strdup(tmp);
             xfree(st->s);
             st->s = NULL;
@@ -457,7 +462,7 @@ static TCHAR *chartostack(TCHAR c)
 	return s;
 }
 
-static struct calcstack stack[STACK_SIZE] = { 0 };
+static struct calcstack stack[STACK_SIZE];
 
 static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
 {
@@ -617,7 +622,16 @@ static bool parse_values(const TCHAR *ins, TCHAR *out)
 			in[2] = ' ';
 			in[3] = ' ';
 			in[4] = ' ';
-		} else if (in[0] == '>' && in[1] == '>') {
+        } else if (!_tcsncmp(in, _T("rl("), 3)) {
+            in[0] = 0xf2;
+            in[1] = ' ';
+        } else if (!_tcsncmp(in, _T("rw("), 3)) {
+            in[0] = 0xf1;
+            in[1] = ' ';
+        } else if (!_tcsncmp(in, _T("rb("), 3)) {
+            in[0] = 0xf0;
+            in[1] = ' ';
+        } else if (in[0] == '>' && in[1] == '>') {
             in[0] = '>' | 0x80;
             in[1] = ' ';
         } else if (in[0] == '<' && in[1] == '<') {
@@ -687,7 +701,11 @@ int calc(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
     if (outstring) {
         outstring[0] = 0;
     }
-	if (parse_values(input, output2)) {
+    for (int i = 0; i < STACK_SIZE; i++) {
+        struct calcstack* s = &stack[i];
+        memset(s, 0, sizeof(struct calcstack));
+    }
+    if (parse_values(input, output2)) {
 		if(shunting_yard(output2, output))    {
 			calc_log ((_T("RPN OUT: %s\n"), output));
 			if(!execution_order(output, outval, outstring, maxlen)) {

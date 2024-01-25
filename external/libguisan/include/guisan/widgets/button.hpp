@@ -92,7 +92,7 @@ namespace gcn
 		 *
 		 * @param caption the caption of the Button.
 		 */
-		explicit Button(std::string caption);
+		Button(const std::string& caption);
 
 		/**
 		 * Sets the Button caption.
@@ -106,7 +106,7 @@ namespace gcn
 		 *
 		 * @return the Button caption.
 		 */
-		[[nodiscard]] const std::string& getCaption() const;
+		const std::string& getCaption() const;
 
 		/**
 		 * Sets the alignment for the caption.
@@ -114,14 +114,14 @@ namespace gcn
 		 * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT
 		 * @see Graphics
 		 */
-		virtual void setAlignment(unsigned int alignment);
+		void setAlignment(unsigned int alignment);
 
 		/**
 		 * Gets the alignment for the caption.
 		 *
 		 * @return alignment of caption.
 		 */
-		[[nodiscard]] virtual unsigned int getAlignment() const;
+		unsigned int getAlignment() const;
 
 		/**
 		 * Sets the spacing between the border of this button and its caption.
@@ -136,51 +136,51 @@ namespace gcn
 		 *
 		 * @return spacing.
 		 */
-		[[nodiscard]] unsigned int getSpacing() const;
+		unsigned int getSpacing() const;
 
 		/**
 		 * Adjusts the buttons size to fit the content.
 		 */
-		virtual void adjustSize();
+		void adjustSize();
 
 		/**
 		 * Checks if the button is pressed down. Useful when drawing.
 		 *
 		 * @return true if the button is pressed down.
 		 */
-		[[nodiscard]] bool isPressed() const;
+		bool isPressed() const;
 
 
 		//Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
 
 		// Inherited from FocusListener
 
-		void focusLost(const Event& event) override;
+		virtual void focusLost(const Event& event);
 
 
 		// Inherited from MouseListener
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
-		void mouseReleased(MouseEvent& mouseEvent) override;
+		virtual void mouseReleased(MouseEvent& mouseEvent);
 
-		void mouseEntered(MouseEvent& mouseEvent) override;
+		virtual void mouseEntered(MouseEvent& mouseEvent);
 
-		void mouseExited(MouseEvent& mouseEvent) override;
+		virtual void mouseExited(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
-		void keyReleased(KeyEvent& keyEvent) override;
+		virtual void keyReleased(KeyEvent& keyEvent);
 
 	protected:
 		std::string mCaption;

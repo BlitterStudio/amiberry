@@ -5,6 +5,7 @@
 #include <string>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "config.h"
@@ -17,7 +18,7 @@
 #include "amiberry_input.h"
 
 #define DIALOG_WIDTH 620
-#define DIALOG_HEIGHT 280
+#define DIALOG_HEIGHT 320
 
 struct controller_map
 {
@@ -161,63 +162,8 @@ void updatehdfinfo(bool force, bool defaults)
 	}
 }
 
-class ControllerListModel : public gcn::ListModel
-{
-public:
-	ControllerListModel() = default;
-
-	int getNumberOfElements() override
-	{
-		return 2;
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= 2)
-			return "---";
-		return controller[i].display;
-	}
-};
-
-static ControllerListModel controllerListModel;
-
-class UnitListModel : public gcn::ListModel
-{
-public:
-	UnitListModel() = default;
-
-	int getNumberOfElements() override
-	{
-		return 4;
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= 4)
-			return "---";
-		return std::to_string(i);
-	}
-};
-
-static UnitListModel unitListModel;
+static gcn::StringListModel controllerListModel;
+static gcn::StringListModel unitListModel;
 
 class FilesysHardfileActionListener : public gcn::ActionListener
 {
@@ -366,7 +312,6 @@ public:
 };
 static FilesysHardfileFocusListener* filesysHardfileFocusListener;
 
-
 static void InitEditFilesysHardfile()
 {
 	for (auto i = 0; expansionroms[i].name; i++)
@@ -384,6 +329,15 @@ static void InitEditFilesysHardfile()
 			}
 		}
 	}
+
+	controllerListModel.clear();
+	controllerListModel.add(controller[0].display);
+	controllerListModel.add(controller[1].display);
+	unitListModel.clear();
+	unitListModel.add(_T("0"));
+	unitListModel.add(_T("1"));
+	unitListModel.add(_T("2"));
+	unitListModel.add(_T("3"));
 
 	wndEditFilesysHardfile = new gcn::Window("Edit");
 	wndEditFilesysHardfile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);

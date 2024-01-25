@@ -149,15 +149,15 @@ namespace gcn
 
 		// Inherited from Input
 
-		bool isKeyQueueEmpty() override;
+		virtual bool isKeyQueueEmpty();
 
-		KeyInput dequeueKeyInput() override;
+		virtual KeyInput dequeueKeyInput();
 
-		bool isMouseQueueEmpty() override;
+		virtual bool isMouseQueueEmpty();
 
-		MouseInput dequeueMouseInput() override;
+		virtual MouseInput dequeueMouseInput();
 
-		void _pollInput() override;
+		virtual void _pollInput();
 
 	protected:
 		std::queue<KeyInput> mKeyInputQueue;

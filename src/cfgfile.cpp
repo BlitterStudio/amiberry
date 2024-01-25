@@ -410,7 +410,7 @@ static TCHAR *cfgfile_unescape(const TCHAR *s, const TCHAR **endpos, TCHAR separ
 			case 'r':
 				*p++ = '\r';
 				break;
-			case '\n':
+			case 'n':
 				*p++ = '\n';
 				break;
 			default:
@@ -576,7 +576,7 @@ static TCHAR *cfgfile_escape (const TCHAR *s, const TCHAR *escstr, bool quote, b
 		TCHAR c = s[i];
 		if (c == 0)
 			break;
-		if ((c == '\\' && !min) || c == '\"' || c == '\'') {
+		if ((c == '\\' && !min) || c == '\"' || (c == '\'' && !min)) {
 			*p++ = '\\';
 			*p++ = c;
 		} else if (c >= 32 && !quote) {
@@ -2121,10 +2121,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite (f, _T("floppy_channel_mask"), _T("0x%x"), p->dfxclickchannelmask);
 	cfgfile_write (f, _T("cd_speed"), _T("%d"), p->cd_speed);
 	cfgfile_write_bool (f, _T("parallel_on_demand"), p->parallel_demand);
-#ifdef SERIAL_PORT
 	if (p->sername[0])
 		cfgfile_write_str (f, _T("serial_port"), p->sername);
-#endif
 	cfgfile_write_bool (f, _T("serial_on_demand"), p->serial_demand);
 	cfgfile_write_bool(f, _T("serial_hardware_ctsrts"), p->serial_hwctsrts);
 	cfgfile_write_bool(f, _T("serial_status"), p->serial_rtsctsdtrdtecd);
@@ -8355,7 +8353,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->sound_interpol = 1;
 	p->sound_filter = FILTER_SOUND_EMUL;
 	p->sound_filter_type = 0;
-	p->sound_auto = 1;
+	p->sound_auto = 0;
 	p->sampler_stereo = false;
 	p->sampler_buffer = 0;
 	p->sampler_freq = 0;
@@ -8715,13 +8713,15 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->cpuboard_subtype = 0;
 #ifdef AMIBERRY
 	p->sound_volume_cd = 0;
-	p->mbresmem_low.size = 0;
-	p->mbresmem_high.size = 0;
 #endif
 	p->chipmem.size = 0x00080000;
 	p->chipmem.chipramtiming = true;
 	p->bogomem.size = 0x00080000;
 	p->bogomem.chipramtiming = true;
+	p->cpuboardmem1.size = 0;
+	p->cpuboardmem2.size = 0;
+	p->mbresmem_low.size = 0;
+	p->mbresmem_high.size = 0;
 	p->z3chipmem.size = 0;
 	for (auto i = 0; i < MAX_RAM_BOARDS; i++) {
 		memset(p->fastmem, 0, sizeof(struct ramboard));
@@ -9169,7 +9169,6 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->cs_rtc = 1;
 		break;
 	}
-
 	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
 #endif
 	return 1;
@@ -9464,7 +9463,7 @@ static int bip_casablanca(struct uae_prefs *p, int config, int compa, int romche
 	case 2:
 		p->cpu_model = 68060;
 		p->fpu_model = 68060;
-		p->mmu_model = 68040;
+		p->mmu_model = 68060;
 		break;
 	}
 	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
@@ -9472,11 +9471,66 @@ static int bip_casablanca(struct uae_prefs *p, int config, int compa, int romche
 	p->m68k_speed = -1;
 	p->immediate_blits = 0;
 	p->produce_sound = 2;
+	p->nr_floppies = 0;
+	p->keyboard_connected = false;
 	p->floppyslots[0].dfxtype = DRV_NONE;
 	p->floppyslots[1].dfxtype = DRV_NONE;
+	p->floppyslots[2].dfxtype = DRV_PC_35_ONLY_80;
 	p->cs_compatible = CP_CASABLANCA;
 	built_in_chipset_prefs(p);
 	return configure_rom(p, roms, romcheck);
+}
+
+static int bip_draco(struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	int roms[8];
+
+	p->bogomem.size = 0;
+	p->chipmem.size = 0x200000;
+	p->cpu_model = 68060;
+	p->fpu_model = 68060;
+	p->mmu_model = 68060;
+	p->cpuboardmem1.size = 128 * 1024 * 1024;
+	p->chipset_mask = CSMASK_AGA | CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+	p->cpu_compatible = p->address_space_24 = 0;
+	p->m68k_speed = -1;
+	p->immediate_blits = 0;
+	p->produce_sound = 2;
+	p->nr_floppies = 0;
+	p->keyboard_connected = false;
+	p->cpuboard_settings |= 0x10;
+	p->floppyslots[0].dfxtype = DRV_NONE;
+	p->floppyslots[1].dfxtype = DRV_NONE;
+	p->floppyslots[2].dfxtype = DRV_PC_35_ONLY_80;
+	p->cs_compatible = CP_DRACO;
+	p->cpuboard_type = BOARD_MACROSYSTEM;
+	p->cpuboard_subtype = BOARD_MACROSYSTEM_SUB_DRACO;
+	p->rtgboards[0].rtgmem_type = GFXBOARD_ID_ALTAIS_Z3;
+	p->rtgboards[0].rtgmem_size = 4 * 1024 * 1024;
+	built_in_chipset_prefs(p);
+	get_nvram_path(p->flashfile, sizeof(p->flashfile) / sizeof(TCHAR));
+	_tcscat(p->flashfile, _T("draco.nvr"));
+	roms[0] = 61;
+	roms[1] = -1;
+	if (!configure_rom(p, roms, romcheck)) {
+		return 0;
+	}
+	roms[0] = 234;
+	roms[1] = 311;
+	roms[2] = -1;
+	if (!configure_rom(p, roms, romcheck)) {
+		return 0;
+	}
+	return 1;
+}
+
+static int bip_macrosystem(struct uae_prefs *p, int config, int compa, int romcheck)
+{
+	if (config == 0) {
+		return bip_draco(p, config, compa, romcheck);
+	} else {
+		return bip_casablanca(p, config - 1, compa, romcheck);
+	}
 }
 
 int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int romcheck)
@@ -9523,7 +9577,7 @@ int built_in_prefs (struct uae_prefs *p, int model, int config, int compa, int r
 		v = bip_arcadia(p, config, compa, romcheck);
 		break;
 	case 12:
-		v = bip_casablanca(p, config, compa, romcheck);
+		v = bip_macrosystem(p, config, compa, romcheck);
 		break;
 	case 13:
 		v = bip_super (p, config, compa, romcheck);
@@ -9848,17 +9902,23 @@ void cfgfile_get_shader_config(struct uae_prefs *p, int rtg)
 }
 #endif
 
-void set_config_changed (void)
+void set_config_changed (int flags)
 {
+	if (!config_changed) {
+		config_changed_flags = 0;
+	}
 	config_changed = 1;
+	config_changed_flags |= flags;
 }
 
 void config_check_vsync (void)
 {
 	if (config_changed) {
 		config_changed++;
-		if (config_changed >= 3)
+		if (config_changed >= 3) {
 			config_changed = 0;
+			config_changed_flags = 0;
+		}
 	}
 }
 

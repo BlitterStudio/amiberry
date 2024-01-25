@@ -81,7 +81,6 @@ add_executable(${PROJECT_NAME}
         src/blkdev_cdimage.cpp
         src/bsdsocket.cpp
         src/calc.cpp
-        src/casablanca.cpp
         src/cd32_fmv.cpp
         src/cd32_fmv_genlock.cpp
         src/cdrom.cpp
@@ -100,6 +99,7 @@ add_executable(${PROJECT_NAME}
         src/diskutil.cpp
         src/dlopen.cpp
         src/dongle.cpp
+        src/draco.cpp
         src/drawing.cpp
         src/driveclick.cpp
         src/ethernet.cpp
@@ -345,6 +345,10 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
             src/jit/compemu_fpp.cpp
             src/jit/compemu_support.cpp
     )
+endif ()
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
+    add_definitions(-DCPU_AARCH64)
 endif ()
 
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)

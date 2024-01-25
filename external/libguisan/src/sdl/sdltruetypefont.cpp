@@ -61,11 +61,11 @@ namespace gcn
 		mGlyphSpacing = 0;
 		mAntiAlias = true;
 		mFilename = filename;
-		mFont = nullptr;
+		mFont = NULL;
 
 		mFont = TTF_OpenFont(filename.c_str(), size);
 
-		if (mFont == nullptr)
+		if (mFont == NULL)
 		{
 			throw GCN_EXCEPTION("SDLTrueTypeFont::SDLTrueTypeFont. "+std::string(TTF_GetError()));
 		}
@@ -89,25 +89,25 @@ namespace gcn
 		return TTF_FontHeight(mFont) + mRowSpacing;
 	}
 
-	void SDLTrueTypeFont::drawString(Graphics* graphics, const std::string& text, const int x, const int y)
+	void SDLTrueTypeFont::drawString(gcn::Graphics* graphics, const std::string& text, const int x, const int y)
 	{
 		if (text == "")
 		{
 			return;
 		}
 
-		auto* sdlGraphics = dynamic_cast<SDLGraphics*>(graphics);
-		auto* sdl2Graphics = dynamic_cast<SDL2Graphics*>(graphics);
+		gcn::SDLGraphics* sdlGraphics = dynamic_cast<gcn::SDLGraphics*>(graphics);
+		gcn::SDL2Graphics* sdl2Graphics = dynamic_cast<gcn::SDL2Graphics*>(graphics);
 
 
-		if (sdlGraphics == nullptr && sdl2Graphics == nullptr)
+		if (sdlGraphics == NULL && sdl2Graphics == NULL)
 		{
 			throw GCN_EXCEPTION("SDLTrueTypeFont::drawString. Graphics object not an SDL graphics object!");
 			return;
 		}
 
 		// This is needed for drawing the Glyph in the middle if we have spacing
-		const auto yoffset = getRowSpacing() / 2;
+		const int yoffset = getRowSpacing() / 2;
 
 		Color col;
 		if (sdlGraphics)

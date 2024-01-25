@@ -88,7 +88,7 @@ namespace gcn
 		 * @return The caption of the label.
 		 * @see setCaption
 		 */
-		[[nodiscard]] virtual const std::string& getCaption() const;
+		const std::string& getCaption() const;
 
 		/**
 		 * Sets the caption of the label. It's advisable to call
@@ -98,7 +98,7 @@ namespace gcn
 		 * @param caption The caption of the label.
 		 * @see getCaption, adjustSize
 		 */
-		virtual void setCaption(const std::string& caption);
+		void setCaption(const std::string& caption);
 
 		/**
 		 * Sets the alignment for the caption. The alignment is relative
@@ -107,7 +107,7 @@ namespace gcn
 		 * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
 		 * @see getAlignment, Graphics
 		 */
-		virtual void setAlignment(unsigned int alignment);
+		void setAlignment(unsigned int alignment);
 
 		/**
 		 * Gets the alignment for the caption. The alignment is relative to
@@ -116,19 +116,19 @@ namespace gcn
 		 * @return alignment of caption. Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
 		 * @see setAlignment, Graphics
 		 */
-		[[nodiscard]] virtual unsigned int getAlignment() const;
+		unsigned int getAlignment() const;
 
 		/**
 		 * Adjusts the label's size to fit the caption size.
 		 */
-		virtual void adjustSize();
+		void adjustSize();
 
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
 	protected:
 		/**

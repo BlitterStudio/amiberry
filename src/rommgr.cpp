@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 311
+#define NEXT_ROM_ID 313
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -297,8 +297,10 @@ static struct romdata roms[] = {
 	0x2ec384e3,0x47f9ee6d, 0x0f8ac5a6,0x5c6eddc3,0x0bcd47c8,0x574d8725, NULL, NULL, 4 },
 	ALTROMPN(231, 1, 1, 524288, ROMTYPE_EVEN, _T("74095 00 717 02 01 U4"), 0x1bdcd18c, 0xabc7b734,0x1f8df24d,0xd4f1d062,0xfc0f7680,0x4d1053b9)
 	ALTROMPN(231, 1, 2, 524288, ROMTYPE_ODD , _T("74095 00 717 02 02 U5"), 0x6ccb0431, 0xa2a43444,0xbeda38be,0x1fa5cabe,0x75fc4def,0x063bcd7a)
-	{ _T("DraCo Boot ROM v1.3"), 1, 3, 1, 3, _T("DRACO\0"), 131072, 234, 2 | 4, 0, ROMTYPE_EXTCDTV, 0, 0, NULL,
+	{ _T("DraCo Boot ROM v1.3"), 1, 3, 1, 3, _T("DRACO\0"), 131072, 234, 2 | 4, 0, ROMTYPE_CB_DRACO, 0, 0, NULL,
 	0x0e9c5899,0x82151324,0x01207554,0x60c8a068,0x4793ec18,0x3f744d74, NULL, NULL, 4 },
+	{ _T("DraCo Boot ROM v1.5"), 1, 5, 1, 5, _T("DRACO\0"), 131072, 311, 2 | 4, 0, ROMTYPE_CB_DRACO, 0, 0, NULL,
+	0x7b4cdd4a,0x4d383adb,0x85c681a3,0xb625dcda,0x7a229a17,0x6af4d161, NULL, NULL, 4 },
 
 	{ _T("CD32 KS ROM v3.1"), 3, 1, 40, 60, _T("CD32\0"), 524288, 18, 1, 0, ROMTYPE_KICKCD32, 0, 0, NULL,
 	0x1e62d4a5, 0x3525BE88,0x87F79B59,0x29E017B4,0x2380A79E,0xDFEE542D, NULL, NULL, 1 },
@@ -533,8 +535,10 @@ static struct romdata roms[] = {
 	0x3bc9b90c, 0x24fa6ab8, 0x5ca64ae6, 0x43851a85, 0xa473ff0c, 0x5a48f272, NULL, NULL },
 	{ _T("MacroSystem Falcon 040 (No SCSI)"), 0, 0, 0, 0, _T("FALCON040\0"), 131072, 229, 0, 0, ROMTYPE_CB_FALCON40, 0, 0, NULL,
 	0xa2ba67d1, 0x2015685f, 0xaadfbaf6, 0x8b19b07e, 0x5f4e888f, 0x738b99d7, NULL, NULL },
-	{ _T("GVP A1230 Turbo+ Series II"), 0, 0, 0, 0, _T("A1230SII\0"), 16384, 230, 0, 0, ROMTYPE_CB_A1230S2, 0, 0, NULL,
+	{ _T("GVP A1230 Turbo+ Series II v5.0"), 5, 0, 5, 0, _T("A1230SII\0"), 16384, 230, 0, 0, ROMTYPE_CB_A1230S2, 0, 0, NULL,
 	0x96bd351f, 0xb7648daf, 0x52d0732d, 0x897548f3, 0x29ebf624, 0x101474d5, NULL, NULL },
+	{ _T("GVP A1230 Turbo+ Series II v5.3"), 5, 3, 5, 3, _T("A1230SII\0"), 16384, 312, 0, 0, ROMTYPE_CB_A1230S2, 0, 0, NULL,
+	0x0a3bb4b1, 0xf870116f, 0x699ec800, 0x2a1b31bb, 0x0f412e27, 0xc5d01266, NULL, NULL },
 	{ _T("GVP A1230 Turbo+"), 0, 0, 0, 0, _T("A1230SI\0"), 16384, 260, 0, 0, ROMTYPE_CB_A1230S1, 0, 0, NULL,
 	0x3f0b8d7a, 0x258c6ee7, 0x5d8dfee5, 0x7871c5be, 0x79a83fa3, 0xca53a1a9, NULL, NULL },
 	{ _T("Harms 3000 Professional"), 0, 0, 0, 00, _T("HARMS3000PRO\0"), 65536, 248, 0, 0, ROMTYPE_CB_HARMS3KP, 0, 0, NULL,

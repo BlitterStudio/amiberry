@@ -4,6 +4,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -40,57 +41,12 @@ static gcn::Label* lblRetroarch;
 static int SelectedPort = 1;
 static int SelectedFunction = 0;
 
-
-class string_list_model : public gcn::ListModel
-{
-private:
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i) {
-			if (entries != nullptr && entries[i] != nullptr)
-				values.emplace_back(entries[i]);
-		}
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-
-	int swap_first_element(const char* Elem)
-	{
-		values.erase(values.begin());
-		values.emplace(values.begin(), Elem);
-		return 0;
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-static string_list_model CustomEventList(nullptr, 0);
-static string_list_model CustomEventList_HotKey(nullptr, 0);
-static string_list_model CustomEventList_Menu(nullptr, 0);
-static string_list_model CustomEventList_Quit(nullptr, 0);
-static string_list_model CustomEventList_Reset(nullptr, 0);
-static string_list_model CustomEventList_Vkbd(nullptr, 0);
+static gcn::StringListModel CustomEventList;
+static gcn::StringListModel CustomEventList_HotKey;
+static gcn::StringListModel CustomEventList_Menu;
+static gcn::StringListModel CustomEventList_Quit;
+static gcn::StringListModel CustomEventList_Reset;
+static gcn::StringListModel CustomEventList_Vkbd;
 
 const string label_button_list[] = {
 	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
@@ -238,17 +194,14 @@ static CustomActionListener* customActionListener;
 void InitPanelCustom(const config_category& category)
 {
 	int i;
-	char tmp[255];
 
 	if (CustomEventList.getNumberOfElements() == 0)
 	{
-		CustomEventList.add_element("None");
-
+		CustomEventList.add("None");
 		for (int idx = 0; idx < remap_event_list_size; idx++)
 		{
 			const auto* const ie = inputdevice_get_eventinfo(remap_event_list[idx]);
-			snprintf(tmp, 255, "%s", ie->name);
-			CustomEventList.add_element(tmp);
+			CustomEventList.add(ie->name);
 		}
 	}
 
@@ -258,11 +211,11 @@ void InitPanelCustom(const config_category& category)
 	CustomEventList_Reset = CustomEventList;
 	CustomEventList_Vkbd = CustomEventList;
 
-	CustomEventList_HotKey.swap_first_element("In-Use (HotKey)");
-	CustomEventList_Menu.swap_first_element("In-Use (Menu)");
-	CustomEventList_Quit.swap_first_element("In-Use (Quit)");
-	CustomEventList_Reset.swap_first_element("In-Use (Reset)");
-	CustomEventList_Vkbd.swap_first_element("In-Use (VKBD)");
+	CustomEventList_HotKey.swap_first("In-Use (HotKey)");
+	CustomEventList_Menu.swap_first("In-Use (Menu)");
+	CustomEventList_Quit.swap_first("In-Use (Quit)");
+	CustomEventList_Reset.swap_first("In-Use (Reset)");
+	CustomEventList_Vkbd.swap_first("In-Use (VKBD)");
 
 	customActionListener = new CustomActionListener();
 	grpActionListener = new GroupActionListener();

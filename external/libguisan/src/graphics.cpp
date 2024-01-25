@@ -85,7 +85,7 @@ namespace gcn
             return true;
         }
 
-        const auto top = mClipStack.top();
+        const ClipRectangle top = mClipStack.top();
         ClipRectangle carea;
         carea = area;
         carea.xOffset = top.xOffset + carea.x;
@@ -114,7 +114,7 @@ namespace gcn
             carea.height = top.height;             
         }
 
-        const auto result = carea.intersect(top);
+        const bool result = carea.intersect(top);
 
         mClipStack.push(carea);
 

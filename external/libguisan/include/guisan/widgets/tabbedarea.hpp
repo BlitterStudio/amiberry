@@ -130,7 +130,7 @@ namespace gcn
 		 * @param index The index of the tab to check.
 		 * @return True if the tab is selected, false otherwise.
 		 */
-		virtual auto isTabSelected(unsigned int index) const -> bool;
+		virtual bool isTabSelected(unsigned int index) const;
 
 		/**
 		 * Checks whether a tab is selected or not.
@@ -160,7 +160,7 @@ namespace gcn
 		 * @return The index of the selected tab.
 		 *         If no tab is selected -1 will be returned.
 		 */
-		[[nodiscard]] virtual int getSelectedTabIndex() const;
+		virtual int getSelectedTabIndex() const;
 
 		/**
 		 * Gets the selected tab.
@@ -172,39 +172,39 @@ namespace gcn
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
-		void logic() override;
+		virtual void logic();
 
-		void setWidth(int width) override;
+		void setWidth(int width);
 
-		void setHeight(int height) override;
+		void setHeight(int height);
 
-		void setSize(int width, int height) override;
+		void setSize(int width, int height);
 
-		void setDimension(const Rectangle& dimension) override;
+		void setDimension(const Rectangle& dimension);
 
 
 		// Inherited from ActionListener
 
-		void action(const ActionEvent& actionEvent) override;
+		void action(const ActionEvent& actionEvent);
 
 
 		// Inherited from DeathListener
 
-		void death(const Event& event) override;
+		virtual void death(const Event& event);
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 
 		// Inherited from MouseListener
 
-		void mousePressed(MouseEvent& mouseEvent) override;
+		virtual void mousePressed(MouseEvent& mouseEvent);
 
 
 	protected:

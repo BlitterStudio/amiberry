@@ -77,8 +77,7 @@ namespace gcn
 		/**
 		 * Constructor.
 		 */
-		MouseInput()
-		= default;;
+		MouseInput() { }
 
 		/**
 		 * Constructor.
@@ -107,7 +106,7 @@ namespace gcn
 		 *
 		 * @return the input type.
 		 */
-		[[nodiscard]] unsigned int getType() const;
+		unsigned int getType() const;
 
 		/**
 		 * Sets the button pressed.
@@ -121,7 +120,7 @@ namespace gcn
 		 *
 		 * @return the button pressed.
 		 */
-		[[nodiscard]] unsigned int getButton() const;
+		unsigned int getButton() const;
 
 		/**
 		 * Sets the timestamp for the input.
@@ -135,7 +134,7 @@ namespace gcn
 		 *
 		 * @return the time stamp of the input.
 		 */
-		[[nodiscard]] int getTimeStamp() const;
+		int getTimeStamp() const;
 
 		/**
 		 * Sets the x coordinate of the input.
@@ -151,7 +150,7 @@ namespace gcn
 		 * @return the x coordinate of the input.
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] int getX() const;
+		int getX() const;
 
 		/**
 		 * Sets the y coordinate of the input.
@@ -165,7 +164,7 @@ namespace gcn
 		 * Gets the y coordinate of the input.
 		 * @since 0.6.0
 		 */
-		[[nodiscard]] int getY() const;
+		int getY() const;
 
 		/**
 		 * Mouse input event types. This enum partially corresponds
@@ -192,11 +191,11 @@ namespace gcn
 		};
 
 	protected:
-		unsigned int mType{};
-		unsigned int mButton{};
-		int mTimeStamp{};
-		int mX{};
-		int mY{};
+		unsigned int mType;
+		unsigned int mButton;
+		int mTimeStamp;
+		int mX;
+		int mY;
 	};
 }
 

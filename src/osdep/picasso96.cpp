@@ -800,7 +800,46 @@ static void do_fillrect_frame_buffer(struct RenderInfo *ri, int X, int Y, int Wi
 static void setupcursor(void)
 {
 #ifdef AMIBERRY
-// TODO not implemented yet
+	struct rtgboardconfig *rbc = &currprefs.rtgboards[0];
+
+	if (rbc->rtgmem_type >= GFXBOARD_HARDWARE)
+		return;
+
+	//gfx_lock ();
+	setupcursor_needed = 1;
+	if (cursordata && cursorwidth && cursorheight) {
+		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_BGRA32);
+
+		for (int y = 0; y < cursorheight; y++) {
+			uae_u8 *p1 = cursordata + cursorwidth * y;
+			uae_u32 *p2 = (uae_u32*)((Uint8 *)p96_cursor_surface->pixels + p96_cursor_surface->pitch * y);
+			for (int x = 0; x < cursorwidth; x++) {
+				uae_u8 c = *p1++;
+				if (c < 4) {
+					*p2 = cursorrgbn[c];
+				}
+				p2++;
+			}
+		}
+
+		auto* p96_formatted_cursor_surface = SDL_ConvertSurfaceFormat(p96_cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
+		if (p96_formatted_cursor_surface != nullptr) {
+			SDL_FreeSurface(p96_cursor_surface);
+			if (p96_cursor != nullptr) {
+				SDL_FreeCursor(p96_cursor);
+				p96_cursor = nullptr;
+			}
+			p96_cursor = SDL_CreateColorCursor(p96_formatted_cursor_surface, 0, 0);
+			SDL_FreeSurface(p96_formatted_cursor_surface);
+
+			SDL_SetCursor(p96_cursor);
+			setupcursor_needed = 0;
+			P96TRACE_SPR((_T("cursorsurface3d updated\n")));
+		}
+	} else {
+		P96TRACE_SPR((_T("cursorsurfaced3d LockRect() failed %08x\n"), hr));
+	}
+	//gfx_unlock ();
 #else
 	uae_u8 *dptr;
 	int bpp = 4;
@@ -875,6 +914,8 @@ static void mouseupdate(struct AmigaMonitor *mon)
 
 #ifdef AMIBERRY
 	SDL_WarpMouseInWindow(mon->sdl_window, x, y);
+	if (p96_cursor == nullptr)
+		setupcursor_needed = 1;
 #else
 	if (D3D_setcursor) {
 		if (!D3D_setcursorsurface(mon->monitor_id, true, NULL)) {
@@ -1302,10 +1343,11 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	if (!ad->picasso_on)
 		return;
 
-	if (uaegfx && uaegfx_active)
+	if (uaegfx && uaegfx_active) {
 		if (setupcursor_needed)
 			setupcursor();
 		mouseupdate(mon);
+	}
 
 	if (thisisvsync) {
 		rtg_render();
@@ -1893,7 +1935,20 @@ static void updatesprcolors (int bpp)
 }
 
 #ifdef AMIBERRY
-//TODO not implemented yet
+static void putmousepixel(SDL_Surface* cursor_surface, int x, int y, int c, uae_u32 *ct)
+{
+	if (c == 0) {
+		Uint32* const target_pixel = (Uint32*) ((Uint8 *) cursor_surface->pixels + y * cursor_surface->pitch + x * cursor_surface->format->BytesPerPixel);
+		*target_pixel = 0;
+	} else {
+		uae_u32 val = ct[c];
+		unsigned char* pixels = (unsigned char*)cursor_surface->pixels;
+		pixels[4 * (y * cursor_surface->pitch + x) + 0] = (val >> 16); //Red
+		pixels[4 * (y * cursor_surface->pitch + x) + 1] = (val >> 8); //Green
+		pixels[4 * (y * cursor_surface->pitch + x) + 2] = val; //Blue
+		pixels[4 * (y * cursor_surface->pitch + x) + 3] = 255; //Alpha
+	}
+}
 #else
 static void putwinmousepixel(HDC andDC, HDC xorDC, int x, int y, int c, uae_u32 *ct)
 {
@@ -1908,7 +1963,7 @@ static void putwinmousepixel(HDC andDC, HDC xorDC, int x, int y, int c, uae_u32 
 }
 #endif
 
-static int wincursorcnt;
+//static int wincursorcnt;
 static int tmp_sprite_w, tmp_sprite_h;
 static uae_u8 tmp_sprite_data[CURSORMAXWIDTH * CURSORMAXHEIGHT];
 static uae_u32 tmp_sprite_colors[4];
@@ -1920,8 +1975,167 @@ extern uae_u32 sprite_0_colors[4];
 static int createwindowscursor(int monid, int set, int chipset)
 {
 #ifdef AMIBERRY
-//TODO not implemented yet
-	return 0;
+	SDL_Surface* cursor_surface = nullptr;
+	SDL_Surface* formatted_cursor_surface = nullptr;
+	int ret = 0;
+	bool isdata = false;
+	SDL_Cursor* old_cursor = p96_cursor;
+	uae_u32 *ct;
+	TrapContext *ctx = NULL;
+	int w, h;
+	uae_u8 *image;
+	uae_u8 tmp_sprite[CURSORMAXWIDTH * CURSORMAXHEIGHT];
+	int datasize;
+
+	wincursor_shown = 0;
+
+	if (isfullscreen() > 0 || currprefs.input_tablet == 0 || !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		goto exit;
+	}
+	if (currprefs.input_magic_mouse_cursor != MAGICMOUSE_HOST_ONLY) {
+		goto exit;
+	}
+
+	if (chipset) {
+		w = sprite_0_width;
+		h = sprite_0_height;
+		uaecptr src = sprite_0;
+		int doubledsprite = sprite_0_doubled;
+		if (doubledsprite) {
+			w *= 2;
+			h *= 2;
+		}
+		int hiressprite = sprite_0_width / 16;
+		int ds = h * ((w + 15) / 16) * 4;
+		if (!sprite_0 || !mousehack_alive() || w > CURSORMAXWIDTH || h > CURSORMAXHEIGHT || !valid_address(src, ds)) {
+			if (p96_cursor) {
+				SDL_SetCursor(normalcursor);
+			}
+			goto exit;
+		}
+		int yy = 0;
+		for (int y = 0, yy = 0; y < h; yy++) {
+			uae_u8 *dst = tmp_sprite + y * w;
+			int dbl;
+			uaecptr img = src + yy * 4 * hiressprite;
+			for (dbl = 0; dbl < (doubledsprite ? 2 : 1); dbl++) {
+				int x = 0;
+				while (x < w) {
+					uae_u32 d1 = trap_get_long(ctx, img);
+					uae_u32 d2 = trap_get_long(ctx, img + 2 * hiressprite);
+					int bits;
+					int maxbits = w - x;
+
+					if (maxbits > 16 * hiressprite) {
+						maxbits = 16 * hiressprite;
+					}
+					for (bits = 0; bits < maxbits && x < w; bits++) {
+						uae_u8 c = ((d2 & 0x80000000) ? 2 : 0) + ((d1 & 0x80000000) ? 1 : 0);
+						d1 <<= 1;
+						d2 <<= 1;
+						*dst++ = c;
+						x++;
+						if (doubledsprite && x < w) {
+							*dst++ = c;
+							x++;
+						}
+					}
+				}
+				if (y <= h) {
+					y++;
+				}
+			}
+		}
+		ct = sprite_0_colors;
+		image = tmp_sprite;
+	} else {
+		w = cursorwidth;
+		h = cursorheight;
+		ct = cursorrgbn;
+		image = cursordata;
+	}
+
+	datasize = h * ((w + 15) / 16) * 16;
+
+	if (p96_cursor) {
+		if (w == tmp_sprite_w && h == tmp_sprite_h && !memcmp(tmp_sprite_data, image, datasize) && !memcmp(tmp_sprite_colors, ct, sizeof (uae_u32)*4)) {
+			if (SDL_GetCursor() == p96_cursor) {
+				wincursor_shown = 1;
+				return 1;
+			}
+		}
+	}
+
+	write_log(_T("p96_cursor: %dx%d\n"), w, h);
+
+	tmp_sprite_w = tmp_sprite_h = 0;
+
+	//cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
+	//if (!cursor_surface)
+	//	goto end;
+
+	//isdata = false;
+	//for (int y = 0; y < h; y++) {
+	//	uae_u8 *s = image + y * w;
+	//	for (int x = 0; x < w; x++) {
+	//		int c = *s++;
+	//		putmousepixel(cursor_surface, x, y, c, ct);
+	//		if (c > 0) {
+	//			isdata = true;
+	//		}
+	//	}
+	//}
+	//ret = 1;
+
+	//formatted_cursor_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
+
+end:
+	if (!isdata) {
+		p96_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+	} else if (ret) {
+		p96_cursor = SDL_CreateColorCursor(formatted_cursor_surface, 0, 0);
+		tmp_sprite_w = w;
+		tmp_sprite_h = h;
+		memcpy(tmp_sprite_data, image, datasize);
+		memcpy(tmp_sprite_colors, ct, sizeof (uae_u32) * 4);
+	}
+
+	if (cursor_surface != nullptr)
+	{
+		SDL_FreeSurface(cursor_surface);
+		cursor_surface = nullptr;
+	}
+
+	if (formatted_cursor_surface != nullptr)
+	{
+		SDL_FreeSurface(formatted_cursor_surface);
+		formatted_cursor_surface = nullptr;
+	}
+
+	if (p96_cursor) {
+		SDL_SetCursor(p96_cursor);
+		wincursor_shown = 1;
+	}
+
+	if (!ret) {
+		write_log(_T("RTG Windows color cursor creation failed\n"));
+	}
+
+exit:
+	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
+		if (!currprefs.rtg_hardwaresprite)
+			SDL_ShowCursor(SDL_DISABLE);
+	} else {
+		if (p96_cursor == old_cursor && normalcursor != NULL) {
+			SDL_SetCursor(normalcursor);
+		}
+	}
+	if (old_cursor) {
+		SDL_FreeCursor(old_cursor);
+	}
+	old_cursor = NULL;
+
+	return ret;
 #else
 	HBITMAP andBM, xorBM;
 	HBITMAP andoBM, xoroBM;
@@ -2104,13 +2318,16 @@ exit:
 
 int picasso_setwincursor(int monid)
 {
+	struct amigadisplay *ad = &adisplays[monid];
 #ifdef AMIBERRY
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
 		return 1;
+	} else if (!ad->picasso_on) {
+		if (createwindowscursor(monid, 0, 1))
+			return 1;
 	}
 #else
-	struct amigadisplay *ad = &adisplays[monid];
 	if (wincursor) {
 		SetCursor(wincursor);
 		return 1;
@@ -2786,8 +3003,7 @@ static void inituaegfx(TrapContext *ctx, uaecptr ABI)
 	flags &= ~BIF_HARDWARESPRITE;
 	
 #ifdef AMIBERRY
-	if (0) {
-	//TODO not implemented yet
+	if (USE_HARDWARESPRITE && currprefs.rtg_hardwaresprite) {
 #else
 	if (D3D_setcursor && D3D_setcursor(0, -1, -1, -1, -1, 0, 0, false, false) && USE_HARDWARESPRITE && currprefs.rtg_hardwaresprite) {
 #endif
@@ -5704,11 +5920,11 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			dst = dstp;
 
 			// safety check
-			if (pwidth > vidinfo->rowbytes / vidinfo->pixbytes) {
-				pwidth = vidinfo->rowbytes / vidinfo->pixbytes;
+			if (pwidth > vidinfo->maxwidth) {
+				pwidth = vidinfo->maxwidth;
 			}
-			if (pheight > vidinfo->height) {
-				pheight = vidinfo->height;
+			if (pheight > vidinfo->maxheight) {
+				pheight = vidinfo->maxheight;
 			}
 
 			if (!split && vidinfo->rtg_clear_flag) {

@@ -4,6 +4,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -41,160 +42,21 @@ static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 static void AdjustDropDownControls();
 static bool bIgnoreListChange = false;
 
-class DriveTypeListModel : public gcn::ListModel
-{
-	std::vector<std::string> types{};
+static gcn::StringListModel driveTypeList(floppy_drive_types);
+static gcn::StringListModel driverNameList;
+static gcn::StringListModel diskfileList;
+static gcn::StringListModel serial_ports_list;
 
-public:
-	DriveTypeListModel()
+static void RefreshDiskListModel()
 	{
-		types.emplace_back("Disabled");
-		types.emplace_back("3.5\" DD");
-		types.emplace_back("3.5\" HD");
-		types.emplace_back("5.25\" (40)");
-		types.emplace_back("5.25\" (80)");
-		types.emplace_back("3.5\" ESCOM");
-		types.emplace_back("DB: Fast");
-		types.emplace_back("DB: Compatible");
-		types.emplace_back("DB: Turbo");
-		types.emplace_back("DB: Stalling");
-	}
-
-	int add_element(const char* elem) override
+	diskfileList.clear();
+	for(const auto & i : lstMRUDiskList)
 	{
-		types.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		types.clear();
-	}
-	
-	int getNumberOfElements() override
-	{
-		return static_cast<int>(types.size());
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(types.size()))
-			return "---";
-		return types[i];
-	}
-};
-
-static DriveTypeListModel driveTypeList;
-
-class DriverListModel : public gcn::ListModel
-{
-	std::vector<std::string> types{};
-
-public:
-	DriverListModel()
-	{
-		FloppyBridgeAPI::getDriverList(driver_list);
-		for (auto &i : driver_list)
-		{
-			types.emplace_back(i.name);
-		}
-	}
-
-	int add_element(const char* elem) override
-	{
-		types.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		types.clear();
-	}
-
-	int getNumberOfElements() override
-	{
-		return static_cast<int>(types.size());
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(types.size()))
-			return "---";
-		return types[i];
-	}
-};
-
-static DriverListModel driverNameList;
-
-class DiskfileListModel : public gcn::ListModel
-{
-public:
-	DiskfileListModel()
-	= default;
-
-	int getNumberOfElements() override
-	{
-		return static_cast<int>(lstMRUDiskList.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-	
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
-			return "---";
-		const std::string full_path = lstMRUDiskList[i];
+		const std::string full_path = i;
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
-		return filename + " { " + full_path + " }";
+		diskfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-};
-
-static DiskfileListModel diskfileList;
-
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i) {
-			if (entries != nullptr && entries[i] != nullptr)
-				values.emplace_back(entries[i]);
 		}
-	}
-
-	int getNumberOfElements() override
-	{
-		return static_cast<int>(values.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-static string_list_model serial_ports_list(nullptr, 0);
 
 class DriveTypeActionListener : public gcn::ActionListener
 {
@@ -308,7 +170,6 @@ public:
 
 static DFxCheckActionListener* dfxCheckActionListener;
 
-
 class DFxButtonActionListener : public gcn::ActionListener
 {
 public:
@@ -351,6 +212,7 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
+						RefreshDiskListModel();
 						extract_path(tmp, current_dir);
 
 						AdjustDropDownControls();
@@ -365,7 +227,6 @@ public:
 };
 
 static DFxButtonActionListener* dfxButtonActionListener;
-
 
 class DiskFileActionListener : public gcn::ActionListener
 {
@@ -399,6 +260,7 @@ public:
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
+							RefreshDiskListModel();
 							bIgnoreListChange = true;
 							cboDFxFile[i]->setSelected(0);
 							bIgnoreListChange = false;
@@ -414,7 +276,6 @@ public:
 
 static DiskFileActionListener* diskFileActionListener;
 
-
 class DriveSpeedSliderActionListener : public gcn::ActionListener
 {
 public:
@@ -426,7 +287,6 @@ public:
 };
 
 static DriveSpeedSliderActionListener* driveSpeedSliderActionListener;
-
 
 class SaveForDiskActionListener : public gcn::ActionListener
 {
@@ -457,7 +317,6 @@ public:
 
 static SaveForDiskActionListener* saveForDiskActionListener;
 
-
 class CreateDiskActionListener : public gcn::ActionListener
 {
 public:
@@ -477,6 +336,7 @@ public:
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_DD, -1, diskname, false, false, nullptr);
 				DISK_history_add (tmp, -1, HISTORY_FLOPPY, 0);
 				AddFileToDiskList(tmp, 1);
+				RefreshDiskListModel();
 				extract_path(tmp, current_dir);
 			}
 			cmdCreateDDDisk->requestFocus();
@@ -495,6 +355,7 @@ public:
 				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_HD, -1, diskname, false, false, nullptr);
 				DISK_history_add (tmp, -1, HISTORY_FLOPPY, 0);
 				AddFileToDiskList(tmp, 1);
+				RefreshDiskListModel();
 				extract_path(tmp, current_dir);
 			}
 			cmdCreateHDDisk->requestFocus();
@@ -504,7 +365,6 @@ public:
 
 static CreateDiskActionListener* createDiskActionListener;
 
-
 void InitPanelFloppy(const config_category& category)
 {
 	int posX;
@@ -512,10 +372,16 @@ void InitPanelFloppy(const config_category& category)
 	int i;
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
 
-	serial_ports_list.clear_elements();
-	serial_ports_list.add_element("none");
-	for(const auto& i : serial_ports) {
-		serial_ports_list.add_element(i.c_str());
+	FloppyBridgeAPI::getDriverList(driver_list);
+	for (auto &item : driver_list)
+	{
+		driverNameList.add(item.name);
+	}
+
+	serial_ports_list.clear();
+	serial_ports_list.add("none");
+	for(const auto& port : serial_ports) {
+		serial_ports_list.add(port);
 	}
 
 	dfxCheckActionListener = new DFxCheckActionListener();
@@ -684,7 +550,6 @@ void InitPanelFloppy(const config_category& category)
 	RefreshPanelFloppy();
 }
 
-
 void ExitPanelFloppy()
 {
 	for (auto i = 0; i < 4; ++i)
@@ -720,7 +585,6 @@ void ExitPanelFloppy()
 	delete createDiskActionListener;
 }
 
-
 static void AdjustDropDownControls()
 {
 	bIgnoreListChange = true;
@@ -745,13 +609,13 @@ static void AdjustDropDownControls()
 	bIgnoreListChange = false;
 }
 
-
 void RefreshPanelFloppy()
 {
 	int i;
 	auto prev_available = true;
 
 	AdjustDropDownControls();
+	RefreshDiskListModel();
 
 	changed_prefs.nr_floppies = 0;
 	for (i = 0; i < 4; ++i)

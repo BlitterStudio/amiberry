@@ -7,6 +7,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "config.h"
@@ -54,13 +55,12 @@ public:
 		return static_cast<int>(dirs.size() + files.size());
 	}
 
-	int add_element(const char* elem) override
+	void add(const std::string& elem) override
 	{
 		dirs.emplace_back(elem);
-		return 0;
 	}
 
-	void clear_elements() override
+	void clear() override
 	{
 		dirs.clear();
 	}
@@ -89,7 +89,6 @@ public:
 };
 
 static SelectFileListModel* fileList;
-
 
 class FileButtonActionListener : public gcn::ActionListener
 {
@@ -128,7 +127,6 @@ public:
 };
 
 static FileButtonActionListener* fileButtonActionListener;
-
 
 static void checkfoldername(char* current)
 {
@@ -200,7 +198,6 @@ public:
 	}
 };
 static EditFilePathActionListener* editFilePathActionListener;
-
 
 static void InitSelectFile(const char* title)
 {
@@ -279,7 +276,6 @@ static void InitSelectFile(const char* title)
 	lstFiles->requestFocus();
 	lstFiles->setSelected(0);
 }
-
 
 static void ExitSelectFile()
 {

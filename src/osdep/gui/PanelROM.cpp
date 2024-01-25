@@ -3,6 +3,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -39,13 +40,12 @@ public:
 		return int(roms.size());
 	}
 
-	int add_element(const char* elem) override
+	void add(const std::string& elem) override
 	{
 		roms.emplace_back(elem);
-		return 0;
 	}
 
-	void clear_elements() override
+	void clear() override
 	{
 		roms.clear();
 	}
@@ -95,38 +95,8 @@ static ROMListModel* mainROMList;
 static ROMListModel* extROMList;
 static ROMListModel* cartROMList;
 
-class string_list_model : public gcn::ListModel
-{
-private:
-	std::vector<std::string> values;
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* Elem) override
-	{
-		values.emplace_back(Elem);
-		return 0;
-	}
-
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-const char* uaeValues[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
-string_list_model uaeList(uaeValues, 5);
+static const std::vector<std::string> uaeValues = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
+static gcn::StringListModel uaeList(uaeValues);
 
 class MainROMActionListener : public gcn::ActionListener
 {
@@ -140,7 +110,6 @@ public:
 };
 
 static MainROMActionListener* mainROMActionListener;
-
 
 class ExtROMActionListener : public gcn::ActionListener
 {
@@ -248,7 +217,6 @@ public:
 
 static ROMButtonActionListener* romButtonActionListener;
 
-
 void InitPanelROM(const config_category& category)
 {
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
@@ -340,7 +308,6 @@ void InitPanelROM(const config_category& category)
 
 	RefreshPanelROM();
 }
-
 
 void ExitPanelROM()
 {

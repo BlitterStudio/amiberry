@@ -108,7 +108,7 @@ namespace gcn
 		 *
 		 * @param message the error message.
 		 */
-		Exception(std::string message);
+		Exception(const std::string& message);
 
 		/**
 		 * Constructor.
@@ -120,9 +120,9 @@ namespace gcn
 		 * @param filename the name of the file.
 		 * @param line the line number.
 		 */
-		Exception(std::string message,
-				  std::string function,
-				  std::string filename,
+		Exception(const std::string& message,
+				const std::string& function,
+				const std::string& filename,
 				  int line);
 
 		/**
@@ -130,28 +130,28 @@ namespace gcn
 		 *
 		 * @return the function name in which the exception was thrown.
 		 */
-		[[nodiscard]] const std::string& getFunction() const;
+		const std::string& getFunction() const;
 
 		/**
 		 * Gets the error message of the exception.
 		 *
 		 * @return the error message.
 		 */
-		[[nodiscard]] const std::string& getMessage() const;
+		const std::string& getMessage() const;
 
 		/**
 		 * Gets the filename in which the exceptions was thrown.
 		 *
 		 * @return the filename in which the exception was thrown.
 		 */
-		[[nodiscard]] const std::string& getFilename() const;
+		const std::string& getFilename() const;
 
 		/**
 		 * Gets the line number of the line where the exception was thrown.
 		 *
 		 * @return the line number of the line where the exception was thrown.
 		 */
-		[[nodiscard]] int getLine() const;
+		int getLine() const;
 
 	protected:
 		std::string mFunction;

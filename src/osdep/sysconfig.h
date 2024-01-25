@@ -21,6 +21,9 @@
 #endif
 
 #define AMIBERRY
+#ifndef UAE
+#define UAE
+#endif
 
 /* #define DEBUGGER */
 #define FILESYS /* filesys emulation */
@@ -48,7 +51,6 @@
 #define UAESERIAL /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
 #define FPU_UAE
-/* #define WITH_SOFTFLOAT */
 /* #define MMUEMU */ /* Aranym 68040 MMU */
 /* #define FULLMMU */ /* Aranym 68040 MMU */
 #define CPUEMU_0 /* generic 680x0 emulation */
@@ -103,6 +105,7 @@
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU
 //#define WITH_DSP
+//#define WITH_DRACO
 
 // Use portmidi library for MIDI devices
 #define WITH_MIDI
@@ -573,8 +576,12 @@ typedef int SOCKET;
 #define INVALID_SOCKET -1
 
 typedef unsigned char boolean;
+#ifndef FALSE
 #define FALSE 0
+#endif
+#ifndef TRUE
 #define TRUE 1
+#endif
 
 typedef unsigned short USHORT;
 

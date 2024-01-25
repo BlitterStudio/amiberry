@@ -80,28 +80,28 @@ namespace gcn
 		 *
 		 * @return true if the key is a letter, number or whitespace.
 		 */
-		[[nodiscard]] bool isCharacter() const;
+		bool isCharacter() const;
 
 		/**
 		 * Checks whether a key is a number.
 		 *
 		 * @return true if the key is a number (0-9).
 		 */
-		[[nodiscard]] bool isNumber() const;
+		bool isNumber() const;
 
 		/**
 		 * Checks whether a key is a letter.
 		 *
 		 * @return true if the key is a letter (a-z,A-Z).
 		 */
-		[[nodiscard]] bool isLetter() const;
+		bool isLetter() const;
 
-		/*
-		 * Checks if the key is a symbol
+		/**
+		 * Checks whether a key is printable.
 		 *
-		 * @return true if the key is a symbol (-/+.; etc)
+		 * @return true if the key is printable
 		 */
-		[[nodiscard]] bool isSymbol() const;
+		bool isPrintable() const;
 
 		/**
 		 * Gets the value of the key. If an ascii value exists it will be
@@ -109,28 +109,14 @@ namespace gcn
 		 *
 		 * @return the value of the key.
 		 */
-		[[nodiscard]] int getValue() const;
+		int getValue() const;
 
 		/**
 		 *  Gets the char value of the key if available.
 		 *  
 		 *  @return the char value of the key, the null character otherwise
 		 */
-		[[nodiscard]] char getChar() const;
-
-		/**
-		 * Gets the value represented by SHIFT + numeric key
-		 *
-		 * @return the char value of the key, the null character otherwise
-		 */
-		[[nodiscard]] char getShiftedNumeric() const;
-
-		/**
-		 * Gets the value represented by SHIFT + symbol key
-		 *
-		 * @return the char value of the key, the null character otherwise
-		 */
-		[[nodiscard]] char getShiftedSymbol() const;
+		char getChar() const;
 
 		/**
 		 * An enum with key values.

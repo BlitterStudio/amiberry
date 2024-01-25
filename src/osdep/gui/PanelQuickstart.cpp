@@ -4,6 +4,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -38,50 +39,7 @@ static gcn::DropDown* cboWhdload;
 static gcn::Button* cmdWhdloadEject;
 static gcn::Button* cmdWhdloadSelect;
 
-class QSDriveTypeListModel : public gcn::ListModel
-{
-	std::vector<std::string> types{};
-
-public:
-	QSDriveTypeListModel()
-	{
-		types.emplace_back("Disabled");
-		types.emplace_back("3.5\" DD");
-		types.emplace_back("3.5\" HD");
-		types.emplace_back("5.25\" (40)");
-		types.emplace_back("5.25\" (80)");
-		types.emplace_back("3.5\" ESCOM");
-		types.emplace_back("FB: Fast");
-		types.emplace_back("FB: Compatible");
-		types.emplace_back("FB: Turbo");
-		types.emplace_back("FB: Accurate");
-	}
-
-	int add_element(const char* elem) override
-	{
-		types.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		types.clear();
-	}
-
-	int getNumberOfElements() override
-	{
-		return static_cast<int>(types.size());
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(types.size()))
-			return "---";
-		return types[i];
-	}
-};
-
-static QSDriveTypeListModel qsDriveTypeList;
+static gcn::StringListModel qsDriveTypeList(floppy_drive_types);
 
 struct amigamodels
 {
@@ -180,10 +138,17 @@ static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
 static char whdload_file[MAX_DPATH];
 
+static gcn::StringListModel amigaModelList;
+static gcn::StringListModel amigaConfigList;
+static gcn::StringListModel diskfileList;
+static gcn::StringListModel cdfileList;
+static gcn::StringListModel whdloadFileList;
+
 static void AdjustDropDownControls();
 
 static void CountModelConfigs()
 {
+	amigaConfigList.clear();
 	numModelConfigs = 0;
 	if (quickstart_model >= 0 && quickstart_model < numModels)
 	{
@@ -191,6 +156,7 @@ static void CountModelConfigs()
 		{
 			if (config[0] == '\0')
 				break;
+			amigaConfigList.add(config);
 			++numModelConfigs;
 		}
 	}
@@ -290,161 +256,38 @@ static void AdjustPrefs()
 	}
 }
 
-class AmigaModelListModel : public gcn::ListModel
+static void RefreshDiskListModel()
 {
-public:
-	AmigaModelListModel()
-	= default;
-
-	int getNumberOfElements() override
+	diskfileList.clear();
+	for(const auto & i : lstMRUDiskList)
 	{
-		return numModels;
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= numModels)
-			return "---";
-		return amodels[i].name;
-	}
-};
-
-static AmigaModelListModel amigaModelList;
-
-class AmigaConfigListModel : public gcn::ListModel
-{
-public:
-	AmigaConfigListModel()
-	= default;
-
-	int getNumberOfElements() override
-	{
-		return numModelConfigs;
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-
-	std::string getElementAt(const int i) override
-	{
-		if (quickstart_model < 0 || i < 0 || i >= numModelConfigs)
-			return "---";
-		return amodels[quickstart_model].configs[i];
-	}
-};
-
-static AmigaConfigListModel amigaConfigList;
-
-class QSDiskfileListModel : public gcn::ListModel
-{
-public:
-	QSDiskfileListModel()
-	= default;
-
-	int getNumberOfElements() override
-	{
-		return int(lstMRUDiskList.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(lstMRUDiskList.size()))
-			return "---";
-		const std::string full_path = lstMRUDiskList[i];
+		const std::string full_path = i;
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
-		return filename + " { " + full_path + " }";
+		diskfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-};
-
-static QSDiskfileListModel diskfileList;
-
-class QSCDfileListModel : public gcn::ListModel
-{
-public:
-	QSCDfileListModel()
-	= default;
-
-	int getNumberOfElements() override
-	{
-		return int(lstMRUCDList.size());
 	}
 
-	int add_element(const char* elem) override
+static void RefreshCDListModel()
 	{
-		return 0;
-	}
-
-	void clear_elements() override
+	cdfileList.clear();
+	for(const auto & i : lstMRUCDList)
 	{
-	}
-
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(lstMRUCDList.size()))
-			return "---";
-		const std::string full_path = lstMRUCDList[i];
+		const std::string full_path = i;
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
-		return filename + " { " + full_path + " }";
+		cdfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-};
-
-static QSCDfileListModel cdfileList;
-
-class QSWhdloadListModel : public gcn::ListModel
-{
-public:
-	QSWhdloadListModel()
-		= default;
-
-	int getNumberOfElements() override
-	{
-		return int(lstMRUWhdloadList.size());
 	}
 
-	int add_element(const char* elem) override
+static void RefreshWhdListModel()
 	{
-		return 0;
-	}
-
-	void clear_elements() override
+	whdloadFileList.clear();
+	for(const auto & i : lstMRUWhdloadList)
 	{
-	}
-
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(lstMRUWhdloadList.size()))
-			return "---";
-		const std::string full_path = lstMRUWhdloadList[i];
+		const std::string full_path = i;
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
-		return filename + " { " + full_path + " }";
+		whdloadFileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-};
-
-static QSWhdloadListModel whdloadFileList;
+	}
 
 class QSCDButtonActionListener : public gcn::ActionListener
 {
@@ -477,6 +320,7 @@ public:
 					AddFileToCDList(tmp, 1);
 					extract_path(tmp, current_dir);
 
+					RefreshCDListModel();
 					AdjustDropDownControls();
 				}
 			}
@@ -599,6 +443,7 @@ public:
 			{
 				strncpy(whdload_file, tmp, MAX_DPATH);
 				AddFileToWHDLoadList(whdload_file, 1);
+				RefreshWhdListModel();
 				whdload_auto_prefs(&changed_prefs, whdload_file);
 
 				AdjustDropDownControls();
@@ -799,6 +644,8 @@ public:
 						disk_insert(i, tmp);
 						AddFileToDiskList(tmp, 1);
 						extract_path(tmp, current_dir);
+						RefreshDiskListModel();
+						extract_path(tmp, current_dir);
 
 						AdjustDropDownControls();
 					}
@@ -876,6 +723,27 @@ void InitPanelQuickstart(const config_category& category)
 {
 	int posX;
 	auto posY = DISTANCE_BORDER;
+
+	amigaModelList.clear();
+	for (int i = 0; i < numModels; ++i)
+		amigaModelList.add(amodels[i].name);
+
+	amigaConfigList.clear();
+	diskfileList.clear();
+	for(const auto & i : lstMRUDiskList)
+	{
+		const std::string full_path = i;
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		diskfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
+	}
+
+	cdfileList.clear();
+	for(const auto & i : lstMRUCDList)
+	{
+		const std::string full_path = i;
+		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
+		cdfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
+	}
 
 	amigaModelActionListener = new AmigaModelActionListener();
 	ntscButtonActionListener = new QSNTSCButtonActionListener();

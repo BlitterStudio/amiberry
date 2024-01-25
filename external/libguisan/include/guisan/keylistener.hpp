@@ -80,8 +80,7 @@ namespace gcn
 		/**
 		 * Destructor
 		 */
-		virtual ~KeyListener()
-		= default;
+		virtual ~KeyListener() { }
 
 		/**
 		 * Called if a key is pressed when the widget has keyboard focus.
@@ -90,18 +89,14 @@ namespace gcn
 		 *
 		 * @param keyEvent discribes the event.
 		 */
-		virtual void keyPressed(KeyEvent& keyEvent)
-		{
-		}
+		virtual void keyPressed(KeyEvent& keyEvent) { }
 
 		/**
 		 * Called if a key is released when the widget has keyboard focus.
 		 *
 		 * @param keyEvent discribes the event.
 		 */
-		virtual void keyReleased(KeyEvent& keyEvent)
-		{
-		}
+		virtual void keyReleased(KeyEvent& keyEvent) { }
 
 	protected:
 		/**
@@ -112,8 +107,7 @@ namespace gcn
 		 * you must inherit from this class and implement it's
 		 * functions.
 		 */
-		KeyListener()
-		= default;
+		KeyListener() { }
 	};
 }
 

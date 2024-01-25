@@ -1,6 +1,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -313,7 +314,6 @@ void InitPanelCPU(const struct config_category& category)
 	grpCPU->setSize(chk24Bit->getWidth() + 20, 285);
 	grpCPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCPU->setBaseColor(gui_baseCol);
-
 	category.panel->add(grpCPU);
 
 	fpuButtonActionListener = new FPUButtonActionListener();
@@ -354,7 +354,6 @@ void InitPanelCPU(const struct config_category& category)
 	grpFPU->setSize(175, 285);
 	grpFPU->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpFPU->setBaseColor(gui_baseCol);
-
 	category.panel->add(grpFPU);
 
 	cpuSpeedButtonActionListener = new CPUSpeedButtonActionListener();
@@ -409,7 +408,6 @@ void InitPanelCPU(const struct config_category& category)
 	RefreshPanelCPU();
 }
 
-
 void ExitPanelCPU()
 {
 	delete optCPU68000;
@@ -449,7 +447,6 @@ void ExitPanelCPU()
 	delete grpCPUSpeed;
 	delete cpuSpeedButtonActionListener;
 }
-
 
 void RefreshPanelCPU()
 {

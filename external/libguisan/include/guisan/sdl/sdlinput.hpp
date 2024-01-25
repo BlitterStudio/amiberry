@@ -95,20 +95,18 @@ namespace gcn
 		 * only use SDL and plan sticking with SDL you can safely ignore this
 		 * function as it in the SDL case does nothing.
 		 */
-		void _pollInput() override
-		{
-		}
+		virtual void _pollInput() { }
 
 
 		// Inherited from Input
 
-		bool isKeyQueueEmpty() override;
+		virtual bool isKeyQueueEmpty();
 
-		KeyInput dequeueKeyInput() override;
+		virtual KeyInput dequeueKeyInput();
 
-		bool isMouseQueueEmpty() override;
+		virtual bool isMouseQueueEmpty();
 
-		MouseInput dequeueMouseInput() override;
+		virtual MouseInput dequeueMouseInput();
 
 	protected:
 		/**
@@ -118,7 +116,7 @@ namespace gcn
 		 * @param button an SDL mouse button.
 		 * @return a Guisan mouse button.
 		 */
-		static int convertMouseButton(int button);
+		int convertMouseButton(int button);
 
 		/**
 		 * Converts an SDL event key to a key value.
@@ -127,7 +125,7 @@ namespace gcn
 		 * @return a key value.
 		 * @see Key
 		 */
-		static int convertKeyCharacter(SDL_Event event);
+		int convertKeyCharacter(SDL_Event event);
 
 		std::queue<KeyInput> mKeyInputQueue;
 		std::queue<MouseInput> mMouseInputQueue;

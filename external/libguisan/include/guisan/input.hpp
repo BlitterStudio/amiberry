@@ -80,8 +80,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~Input()
-		= default;
+		virtual ~Input() { }
 
 		/**
 		 * Checks whether the key queue is empty or not.

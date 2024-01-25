@@ -90,12 +90,12 @@ namespace gcn
 		 *
 		 * @return the source widget of the event.
 		 */
-		[[nodiscard]] Widget* getSource() const;
+		Widget* getSource() const;
 
 
 	protected:
 		Widget* mSource;
-		unsigned int mType{};
+		unsigned int mType;
 	};
 }
 

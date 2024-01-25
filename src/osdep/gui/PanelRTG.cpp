@@ -4,63 +4,30 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
 #include "gfxboard.h"
 #include "gui_handling.h"
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i)
-			values.emplace_back(entries[i]);
-	}
+static const std::vector<std::string> rtg_boards = { "-", "UAE [Zorro II]", "UAE [Zorro III]" };
+static gcn::StringListModel rtg_boards_list(rtg_boards);
 
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
+static const std::vector<std::string> rtg_refreshrates = { "Chipset", "Default", "50", "60", "70", "75" };
+static gcn::StringListModel rtg_refreshrates_list(rtg_refreshrates);
 
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
+static const std::vector<std::string> rtg_buffermodes = { "Double buffering", "Triple buffering" };
+static gcn::StringListModel rtg_buffermodes_list(rtg_buffermodes);
 
-	void clear_elements() override
-	{
-		values.clear();
-	}
+static const std::vector<std::string> rtg_aspectratios = { "Disabled", "Automatic" };
+static gcn::StringListModel rtg_aspectratios_list(rtg_aspectratios);
 	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
+static const std::vector<std::string> rtg_16bit_modes = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
+static gcn::StringListModel rtg_16bit_modes_list(rtg_16bit_modes);
 
-const char* rtg_boards[] = { "-", "UAE [Zorro II]", "UAE [Zorro III]" };
-string_list_model rtg_boards_list(rtg_boards, 3);
-
-const char* rtg_refreshrates[] = { "Chipset", "Default", "50", "60", "70", "75" };
-string_list_model rtg_refreshrates_list(rtg_refreshrates, 6);
-
-const char* rtg_buffermodes[] = { "Double buffering", "Triple buffering" };
-string_list_model rtg_buffermodes_list(rtg_buffermodes, 2);
-
-const char* rtg_aspectratios[] = { "Disabled", "Automatic" };
-string_list_model rtg_aspectratios_list(rtg_aspectratios, 2);
-
-const char* rtg_16bit_modes[] = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
-string_list_model rtg_16bit_modes_list(rtg_16bit_modes, 8);
-
-const char* rtg_32bit_modes[] = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
-string_list_model rtg_32bit_modes_list(rtg_32bit_modes, 6);
+static const std::vector<std::string> rtg_32bit_modes = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
+static gcn::StringListModel rtg_32bit_modes_list(rtg_32bit_modes);
 
 
 static gcn::Label* lblBoard;
@@ -148,7 +115,7 @@ public:
 
 		else if (action_event.getSource() == cboRtgRefreshRate)
 			changed_prefs.rtgvblankrate = cboRtgRefreshRate->getSelected() == 0 ? 0 :
-			cboRtgRefreshRate->getSelected() == 1 ? -1 : atoi(rtg_refreshrates[cboRtgRefreshRate->getSelected()]);
+			cboRtgRefreshRate->getSelected() == 1 ? -1 : std::stoi(rtg_refreshrates[cboRtgRefreshRate->getSelected()]);
 		
 		else if (action_event.getSource() == cboRtgBufferMode)
 			changed_prefs.gfx_apmode[1].gfx_backbuffers = cboRtgBufferMode->getSelected() + 1;
@@ -249,7 +216,6 @@ void InitPanelRTG(const config_category& category)
 	chkRtgHardwareSprite = new gcn::CheckBox("Hardware sprite emulation");
 	chkRtgHardwareSprite->setId("chkRtgHardwareSprite");
 	chkRtgHardwareSprite->addActionListener(rtg_action_listener);
-	chkRtgHardwareSprite->setEnabled(false); // Not implemented yet
 
 	chkRtgMultithreaded = new gcn::CheckBox("Multithreaded");
 	chkRtgMultithreaded->setId("chkRtgMultithreaded");
@@ -425,6 +391,9 @@ void RefreshPanelRTG()
 	chkRtgAlwaysCenter->setSelected(changed_prefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER);
 	chkRtgAllowScaling->setSelected(changed_prefs.rtgallowscaling);
 	chkRtgHardwareInterrupt->setSelected(changed_prefs.rtg_hardwareinterrupt);
+	// Only enable this if Virtual Mouse option is enabled,
+	// otherwise we'll get no cursor at all (due to SDL2 and Relative Mouse mode)
+	chkRtgHardwareSprite->setEnabled(changed_prefs.input_tablet > 0);
 	chkRtgHardwareSprite->setSelected(changed_prefs.rtg_hardwaresprite);
 	chkRtgMultithreaded->setSelected(changed_prefs.rtg_multithread);
 
@@ -471,8 +440,45 @@ void RefreshPanelRTG()
 bool HelpPanelRTG(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("\"RTG board\" is the graphics memory used by Picasso96 and only available if");
-	helptext.emplace_back("a 32 bit CPU is selected. If you select some memory for this type,");
-	helptext.emplace_back("the Z3 RTG board will be activated.");
+	helptext.emplace_back("This panel allows you add a graphics card to your emulated Amiga");
+	helptext.emplace_back("(otherwise known as an RTG card). Currently on the UAE Zorro II");
+	helptext.emplace_back("and Zorro III options are available, as Board types.");
+	helptext.emplace_back("These correspond to the \"uaegfx\" driver, of the P96 package.");
+	helptext.emplace_back("You can either use the free Aminet version of P96 or the newer iComp");
+	helptext.emplace_back("versions, as both as supported.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The color modes dropdowns allow you to choose which pixel format");
+	helptext.emplace_back("will be used. Please note that for performance reasons, the default");
+	helptext.emplace_back("32-bit mode is not the same as in WinUAE (Amiberry uses RGBA, WinUAE");
+	helptext.emplace_back("uses BGRA).");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Some options are not yet implemented, so they appear as disabled.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Hardware vertical blank interrupt: If this option is enabled,");
+	helptext.emplace_back("     an interrupt will be triggered in the emulated system on each");
+	helptext.emplace_back("     vsync event under RTG modes.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Hardware sprite emulation: This option will use the system");
+	helptext.emplace_back("     cursor as the Amiga cursor in RTG modes, if supported. Please");
+	helptext.emplace_back("     note that some systems do not support this, and you will only");
+	helptext.emplace_back("     get a blank cursor instead, if this option is enabled.");
+	helptext.emplace_back("     Due to SDL2 limitations, this currently only works well when");
+	helptext.emplace_back("     the \"Virtual Mouse driver\" option from the Input panel, is");
+	helptext.emplace_back("     enabled as well.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The Refresh rate option allows you to select how the refresh rate");
+	helptext.emplace_back("for the emulated graphics card should behave:");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Chipset: (the default option) this will use the native chipset");
+	helptext.emplace_back("              selected, for the refresh rate - PAL will use 50 Hz");
+	helptext.emplace_back("              NTSC will use 60 Hz.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Default: this will use the default refresh rate for the selected");
+	helptext.emplace_back("              RTG card. Usually that's 60 Hz always.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     50/60/70/75: Use the selected refresh rate.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back(" In most cases, leaving this to the default value (which is Chipset) should work fine.");
+	helptext.emplace_back(" ");
 	return true;
 }

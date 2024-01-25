@@ -1,6 +1,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -71,56 +72,20 @@ static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode, nullptr
 static gcn::Button* cmdRemap0;
 static gcn::Button* cmdRemap1;
 
-class string_list_model : public gcn::ListModel
-{
-	std::vector<std::string> values{};
-public:
-	string_list_model(const char* entries[], const int count)
-	{
-		for (auto i = 0; i < count; ++i) {
-			if (entries != nullptr && entries[i] != nullptr)
-				values.emplace_back(entries[i]);
-		}
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(values.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		values.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		values.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i < 0 || i >= static_cast<int>(values.size()))
-			return "---";
-		return values[i];
-	}
-};
-
-static string_list_model ctrlPortList(nullptr, 0);
+static gcn::StringListModel ctrlPortList;
 static int portListIDs[MAX_INPUT_DEVICES + JSEM_LASTKBD + 1];
 
-const char* autoFireValues[] = { "No autofire (normal)", "Autofire", "Autofire (toggle)", "Autofire (always)", "No autofire (toggle)"};
-string_list_model autoFireList(autoFireValues, 5);
+static const std::vector<std::string> autoFireValues = { "No autofire (normal)", "Autofire", "Autofire (toggle)", "Autofire (always)", "No autofire (toggle)"};
+static gcn::StringListModel autoFireList(autoFireValues);
 
-const char* autoFireRateValues[] = { "Off", "Slow", "Medium", "Fast" };
-string_list_model autoFireRateList(autoFireRateValues, 4);
+static const std::vector<std::string> autoFireRateValues = { "Off", "Slow", "Medium", "Fast" };
+static gcn::StringListModel autoFireRateList(autoFireRateValues);
 
-const char* mousemapValues[] = { "None", "LStick" };
-string_list_model ctrlPortMouseModeList(mousemapValues, 2);
+static const std::vector<std::string> mousemapValues = { "None", "LStick" };
+static gcn::StringListModel ctrlPortMouseModeList(mousemapValues);
 
-const char* joyportmodes[] = { "Default", "Wheel Mouse", "Mouse", "Joystick", "Gamepad", "Analog Joystick", "CDTV remote mouse", "CD32 pad"};
-string_list_model ctrlPortModeList(joyportmodes, 8);
+static const std::vector<std::string> joyportmodes = { "Default", "Wheel Mouse", "Mouse", "Joystick", "Gamepad", "Analog Joystick", "CDTV remote mouse", "CD32 pad"};
+static gcn::StringListModel ctrlPortModeList(joyportmodes);
 
 void update_joystick_list()
 {
@@ -129,43 +94,43 @@ void update_joystick_list()
 	mice = inputdevice_get_device_total(IDTYPE_MOUSE);
 
 	auto idx = 0;
-	ctrlPortList.add_element("<none>");
+	ctrlPortList.add("<none>");
 	portListIDs[idx] = JPORT_NONE;
 
 	idx++;
-	ctrlPortList.add_element("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)");
+	ctrlPortList.add("Keyboard Layout A (Numpad, 0/5=Fire, Decimal/DEL=2nd Fire)");
 	portListIDs[idx] = JSEM_KBDLAYOUT;
 
 	idx++;
-	ctrlPortList.add_element("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)");
+	ctrlPortList.add("Keyboard Layout B (Cursor, RCtrl/RAlt=Fire, RShift=2nd Fire)");
 	portListIDs[idx] = JSEM_KBDLAYOUT + 1;
 
 	idx++;
-	ctrlPortList.add_element("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)");
+	ctrlPortList.add("Keyboard Layout C (WSAD, LAlt=Fire, LShift=2nd Fire)");
 	portListIDs[idx] = JSEM_KBDLAYOUT + 2;
 
 	idx++;
-	ctrlPortList.add_element("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)");
+	ctrlPortList.add("Keyrah Layout (Cursor, Space/RAlt=Fire, RShift=2nd Fire)");
 	portListIDs[idx] = JSEM_KBDLAYOUT + 3;
 
 	for (auto j = 0; j < 4; j++)
 	{
 		auto element = "Retroarch KBD as Joystick Player" + std::to_string(j + 1);
-		ctrlPortList.add_element(element.c_str());
+		ctrlPortList.add(element);
 		idx++;
 		portListIDs[idx] = JSEM_KBDLAYOUT + j + 4;
 	}
 
 	for (auto j = 0; j < joysticks; j++)
 	{
-		ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_JOYSTICK, j));
+		ctrlPortList.add(inputdevice_get_device_name(IDTYPE_JOYSTICK, j));
 		idx++;
 		portListIDs[idx] = JSEM_JOYS + j;
 	}
 
 	for (auto j = 0; j < mice; j++)
 	{
-		ctrlPortList.add_element(inputdevice_get_device_name(IDTYPE_MOUSE, j));
+		ctrlPortList.add(inputdevice_get_device_name(IDTYPE_MOUSE, j));
 		idx++;
 		portListIDs[idx] = JSEM_MICE + j;
 	}
@@ -655,7 +620,7 @@ void RefreshPanelInput()
 {
 	if (joystick_refresh_needed)
 	{
-		ctrlPortList.clear_elements();
+		ctrlPortList.clear();
 		update_joystick_list();
 	}
 

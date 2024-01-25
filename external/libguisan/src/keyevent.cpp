@@ -79,6 +79,7 @@ namespace gcn
 		  mIsNumericPad(isNumericPad),
 		  mKey(key)
 	{
+
 	}
 
 	KeyEvent::~KeyEvent()

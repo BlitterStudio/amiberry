@@ -109,6 +109,7 @@ extern uae_u16 DSKDATR (int);
 extern uae_u16 disk_dmal (void);
 extern uaecptr disk_getpt (void);
 extern int disk_fifostatus (void);
+extern uae_u16 DSKBYTR_fake(int);
 
 extern int disk_debug_logging;
 extern int disk_debug_mode;

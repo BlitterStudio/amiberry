@@ -73,9 +73,9 @@ namespace gcn
 	ListBox::ListBox()
 	{
 		mSelected = -1;
-		mListModel = nullptr;
+		mListModel = NULL;
 		mWrappingEnabled = false;
-		Widget::setWidth(100);
+		setWidth(100);
 		setFocusable(true);
 
 		addMouseListener(this);
@@ -86,7 +86,7 @@ namespace gcn
 	{
 		mSelected = -1;
 		mWrappingEnabled = false;
-		Widget::setWidth(100);
+		setWidth(100);
 		setListModel(listModel);
 		setFocusable(true);
 
@@ -99,7 +99,7 @@ namespace gcn
 		graphics->setColor(getBackgroundColor());
 		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
-		if (mListModel == nullptr)
+		if (mListModel == NULL)
 		{
 			return;
 		}
@@ -173,16 +173,18 @@ namespace gcn
 
 	void ListBox::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + getBorderSize() * 2 - 1;
+		int height = getHeight() + getBorderSize() * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (auto i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(shadowColor);
 			graphics->drawLine(i, i, width - i, i);
@@ -205,7 +207,7 @@ namespace gcn
 
 	void ListBox::setSelected(int selected)
 	{
-		if (mListModel == nullptr)
+		if (mListModel == NULL)
 		{
 			mSelected = -1;
 		}
@@ -224,8 +226,8 @@ namespace gcn
 				mSelected = selected;
 			}
 
-			auto* par = getParent();
-			if (par == nullptr)
+			Widget* par = getParent();
+			if (par == NULL)
 			{
 				return;
 			}
@@ -250,7 +252,7 @@ namespace gcn
 
 	void ListBox::keyPressed(KeyEvent& keyEvent)
 	{
-		const auto key = keyEvent.getKey();
+		const Key key = keyEvent.getKey();
 
 		if (key.getValue() == Key::ENTER || key.getValue() == Key::SPACE)
 		{
@@ -345,14 +347,14 @@ namespace gcn
 		adjustSize();
 	}
 
-	ListModel* ListBox::getListModel() const
+	ListModel* ListBox::getListModel()
 	{
 		return mListModel;
 	}
 
 	void ListBox::adjustSize()
 	{
-		if (mListModel != nullptr)
+		if (mListModel != NULL)
 		{
 			setHeight(getFont()->getHeight() * mListModel->getNumberOfElements());
 		}

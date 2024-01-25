@@ -105,7 +105,7 @@ namespace gcn
 		 *
 		 * @return The tabbed are the tab is a part of.
 		 */
-		[[nodiscard]] TabbedArea* getTabbedArea() const;
+		TabbedArea* getTabbedArea();
 
 		/**
 		 * Sets the caption of the tab.
@@ -119,25 +119,25 @@ namespace gcn
 		 *
 		 * @return The caption of the tab.
 		 */
-		[[nodiscard]] const std::string& getCaption() const;
+		const std::string& getCaption() const;
 
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
 
 		// Inherited from MouseListener
 
-		void mouseEntered(MouseEvent& mouseEvent) override;
+		virtual void mouseEntered(MouseEvent& mouseEvent);
 
-		void mouseExited(MouseEvent& mouseEvent) override;
+		virtual void mouseExited(MouseEvent& mouseEvent);
 
 	protected:
 		Label* mLabel;
-		TabbedArea* mTabbedArea{};
+		TabbedArea* mTabbedArea;
 		std::string mCaption;
 		bool mHasMouse;
 	};

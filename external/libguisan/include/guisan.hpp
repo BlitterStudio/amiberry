@@ -115,10 +115,11 @@
 
 class Widget;
 
-extern "C" {
+extern "C"
+{
 /**
  * Gets the the version of Guisan. As it is a C function
- * it can be used to check for Guichan with autotools.
+     * it can be used to check for Guisan with autotools.
  *
  * @return the version of Guisan.
  */

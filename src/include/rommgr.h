@@ -54,6 +54,8 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_12GAUGE	0x0004001f
 #define ROMTYPE_CB_HARMS3KP	0x00040020
 #define ROMTYPE_CB_A1230S1	0x00040021
+#define ROMTYPE_CB_DRACO	0x00040022
+#define ROMTYPE_CB_CASAB	0x00040023
 
 #define ROMTYPE_FREEZER		0x00080000
 #define ROMTYPE_AR			0x00080001
@@ -207,6 +209,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CSMK1SCSI	0x0010008d
 #define ROMTYPE_GVPA1208	0x0010008e
 #define ROMTYPE_DSP3210		0x0010008f
+#define ROMTYPE_ALTAIS		0x00100090
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000

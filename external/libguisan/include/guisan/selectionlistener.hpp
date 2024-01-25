@@ -80,8 +80,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~SelectionListener()
-		= default;
+		virtual ~SelectionListener() { }
 
 		/**
 		 * Called when a value has been changed in a Widget. It is used
@@ -90,9 +89,7 @@ namespace gcn
 		 * @param event the event of the value change.
 		 * @since 0.8.0
 		 */
-		virtual void valueChanged(const SelectionEvent& event)
-		{
-		}
+		virtual void valueChanged(const SelectionEvent& event) { }
 	};
 }
 

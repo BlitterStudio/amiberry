@@ -82,30 +82,30 @@ namespace gcn
 
 		// Inherited from Widget
 
-		void moveToTop(Widget* widget) override;
+		virtual void moveToTop(Widget* widget);
 
-		void moveToBottom(Widget* widget) override;
+		virtual void moveToBottom(Widget* widget);
 
-		Rectangle getChildrenArea() override;
+		virtual Rectangle getChildrenArea();
 
-		void focusNext() override;
+		virtual void focusNext();
 
-		void focusPrevious() override;
+		virtual void focusPrevious();
 
-		void logic() override;
+		virtual void logic();
 
-		void _setFocusHandler(FocusHandler* focusHandler) override;
+		virtual void _setFocusHandler(FocusHandler* focusHandler);
 
-		void setInternalFocusHandler(FocusHandler* focusHandler) override;
+		void setInternalFocusHandler(FocusHandler* focusHandler);
 
-		void showWidgetPart(Widget* widget, Rectangle area) override;
+		virtual void showWidgetPart(Widget* widget, Rectangle area);
 
-		Widget* getWidgetAt(int x, int y) override;
+		virtual Widget* getWidgetAt(int x, int y);
 
 
 		// Inherited from DeathListener
 
-		void death(const Event& event) override;
+		virtual void death(const Event& event);
 
 	protected:
 		/**
@@ -113,7 +113,7 @@ namespace gcn
 		 *
 		 * @param widget the widget to add.
 		 */
-		virtual void add(Widget* widget);
+		void add(Widget* widget);
 
 		/**
 		 * Removes a widget from the basic container.

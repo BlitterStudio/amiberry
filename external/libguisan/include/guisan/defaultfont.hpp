@@ -73,8 +73,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~DefaultFont()
-		= default;
+		virtual ~DefaultFont() { }
 
 		/**
 		 * Draws a glyph as a rectangle. The glyphs always be drawn as
@@ -95,13 +94,13 @@ namespace gcn
 
 		// Inherited from Font
 
-		void drawString(Graphics* graphics, const std::string& text, int x, int y) override;
+		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y);
 
-		[[nodiscard]] int getWidth(const std::string& text) const override;
+		virtual int getWidth(const std::string& text) const;
 
-		[[nodiscard]] int getHeight() const override;
+		virtual int getHeight() const;
 
-		int getStringIndexAt(const std::string& text, int x) override;
+		virtual int getStringIndexAt(const std::string& text, int x);
 	};
 }
 

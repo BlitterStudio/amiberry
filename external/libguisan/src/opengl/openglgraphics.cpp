@@ -93,6 +93,7 @@ namespace gcn
 
 	OpenGLGraphics::~OpenGLGraphics()
 	{
+
 	}
 
 	void OpenGLGraphics::_beginDraw()

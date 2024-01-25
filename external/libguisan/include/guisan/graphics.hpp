@@ -103,8 +103,7 @@ namespace gcn
 	public:
 		Graphics();
 
-		virtual ~Graphics()
-		= default;
+		virtual ~Graphics() { }
 
 		/**
 		 * Initializes drawing. Called by the Gui when Gui::draw() is called.
@@ -117,9 +116,7 @@ namespace gcn
 		 *
 		 * @see _endDraw, Gui::draw
 		 */
-		virtual void _beginDraw()
-		{
-		}
+		virtual void _beginDraw() { }
 
 		/**
 		 * Deinitializes drawing. Called by the Gui when a Gui::draw() is done.
@@ -130,9 +127,7 @@ namespace gcn
 		 *
 		 * @see _beginDraw, Gui::draw
 		 */
-		virtual void _endDraw()
-		{
-		}
+		virtual void _endDraw() { }
 
 		/**
 		 * Pushes a clip area onto the stack. The x and y coordinates in the

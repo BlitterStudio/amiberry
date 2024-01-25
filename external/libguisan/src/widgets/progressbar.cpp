@@ -140,69 +140,71 @@ namespace gcn
 		graphics->setColor(getBackgroundColor());
 		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
-		int text_x;
-		const auto text_y = getHeight() / 2 - getFont()->getHeight() / 2;
+		int textX;
+		int textY = getHeight() / 2 - getFont()->getHeight() / 2;
 
 		graphics->setColor(getSelectionColor());
-		int progress_width;
+		int progressWidth;
 		if (mStart == 0 && mEnd == 0)
 		{
 			// Infinite scrollbar
-			progress_width = getWidth() / 5;
-			const auto bar_x = getWidth() * static_cast<int>(mValue) / 100;
+			progressWidth = getWidth() / 5;
+			int barX = getWidth() * static_cast<int>(mValue) / 100;
 
-			if (bar_x + progress_width > getWidth())
+			if (barX + progressWidth > getWidth())
 			{
-				graphics->fillRectangle(Rectangle(bar_x, 0, getWidth() - bar_x, getHeight()));
-				graphics->fillRectangle(Rectangle(0, 0, progress_width - (getWidth() - bar_x), getHeight()));
+				graphics->fillRectangle(Rectangle(barX, 0, getWidth() - barX, getHeight()));
+				graphics->fillRectangle(Rectangle(0, 0, progressWidth - (getWidth() - barX), getHeight()));
 			}
 			else
 			{
-				graphics->fillRectangle(Rectangle(bar_x, 0, progress_width, getHeight()));
+				graphics->fillRectangle(Rectangle(barX, 0, progressWidth, getHeight()));
 			}
 		}
 		else
 		{
 			// Standard scrollbar
-			progress_width = getWidth() * static_cast<int>(mValue) / static_cast<int>(mEnd - mStart);
-			graphics->fillRectangle(Rectangle(0, 0, progress_width, getHeight()));
+			progressWidth = getWidth() * static_cast<int>(mValue) / static_cast<int>(mEnd - mStart);
+			graphics->fillRectangle(Rectangle(0, 0, progressWidth, getHeight()));
 		}
 
 		switch (getAlignment())
 		{
 		case Graphics::LEFT:
-			text_x = 0;
+			textX = 0;
 			break;
 		case Graphics::CENTER:
-			text_x = getWidth() / 2;
+			textX = getWidth() / 2;
 			break;
 		case Graphics::RIGHT:
-			text_x = getWidth();
+			textX = getWidth();
 			break;
 		default:
 			throw GCN_EXCEPTION("Unknown alignment.");
 		}
 
 		graphics->setFont(getFont());
-		auto color = getForegroundColor();
+		Color color = getForegroundColor();
 		if (!isEnabled())
 			color = color - 0x303030;
 		graphics->setColor(color);
-		graphics->drawText(getCaption(), text_x, text_y, getAlignment());
+		graphics->drawText(getCaption(), textX, textY, getAlignment());
 	}
 
 	void ProgressBar::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + getBorderSize() * 2 - 1;
+		int height = getHeight() + getBorderSize() * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (int i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(shadowColor);
 			graphics->drawLine(i, i, width - i, i);

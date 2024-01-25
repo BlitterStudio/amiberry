@@ -56,6 +56,9 @@
 #endif
 #include "bsdsocket.h"
 #include "devices.h"
+#ifdef WITH_DRACO
+#include "draco.h"
+#endif
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>

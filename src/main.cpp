@@ -78,7 +78,7 @@ static const char __ver[40] = "$VER: Amiberry 5.6.6 (2024-01-14)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
-int config_changed;
+int config_changed, config_changed_flags;
 
 bool no_gui = false, quit_to_gui = false;
 bool cloanto_rom = false;
@@ -182,6 +182,10 @@ static void fixup_prefs_dim2(int monid, struct wh *wh)
 			error_log (_T("Height (%d) must be at least 128."), wh->height);
 		wh->height = 128;
 	}
+
+	wh->width += 3;
+	wh->width &= ~3;
+
 	if (wh->width > max_uae_width) {
 		if (!monid)
 			error_log (_T("Width (%d) max is %d."), wh->width, max_uae_width);

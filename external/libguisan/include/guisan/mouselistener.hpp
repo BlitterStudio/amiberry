@@ -77,8 +77,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~MouseListener()
-		= default;
+		virtual ~MouseListener() { }
 
 		/**
 		 * Called when the mouse has entered into the widget area.
@@ -88,6 +87,7 @@ namespace gcn
 		 */
 		virtual void mouseEntered(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -97,6 +97,7 @@ namespace gcn
 		 */
 		virtual void mouseExited(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -110,6 +111,7 @@ namespace gcn
 		 */
 		virtual void mousePressed(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -119,6 +121,7 @@ namespace gcn
 		 */
 		virtual void mouseReleased(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -130,6 +133,7 @@ namespace gcn
 		 */
 		virtual void mouseClicked(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -140,6 +144,7 @@ namespace gcn
 		 */
 		virtual void mouseWheelMovedUp(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -150,6 +155,7 @@ namespace gcn
 		 */
 		virtual void mouseWheelMovedDown(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -161,6 +167,7 @@ namespace gcn
 		 */
 		virtual void mouseMoved(MouseEvent& mouseEvent)
 		{
+
 		}
 
 		/**
@@ -172,6 +179,7 @@ namespace gcn
 		 */
 		virtual void mouseDragged(MouseEvent& mouseEvent)
 		{
+
 		}
 
 	protected:
@@ -183,8 +191,7 @@ namespace gcn
 		 * you must inherit from this class and implement it's
 		 * functions.
 		 */
-		MouseListener()
-		= default;
+		MouseListener() { }
 	};
 }
 

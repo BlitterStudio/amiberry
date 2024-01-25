@@ -30,7 +30,6 @@ static gcn::Label* lblMbResHighmem;
 static gcn::Label* lblMbResHighsize;
 static gcn::Slider* sldMbResHighmem;
 
-
 class MemorySliderActionListener : public gcn::ActionListener
 {
 public:

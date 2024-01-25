@@ -4,6 +4,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "config.h"
@@ -23,42 +24,7 @@ static gcn::Button* cmdOK;
 static gcn::ListBox* lstHelp;
 static gcn::ScrollArea* scrAreaHelp;
 
-
-class HelpListModel : public gcn::ListModel
-{
-	std::vector<std::string> lines{};
-
-public:
-	explicit HelpListModel(const std::vector<std::string>& helptext)
-	{
-		lines = helptext;
-	}
-
-	int getNumberOfElements() override
-	{
-		return int(lines.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		lines.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		lines.clear();
-	}
-	
-	std::string getElementAt(const int i) override
-	{
-		if (i >= 0 && i < lines.size())
-			return lines[i];
-		return "";
-	}
-};
-
-static HelpListModel* helpList;
+static gcn::StringListModel helpList;
 
 class ShowHelpActionListener : public gcn::ActionListener
 {
@@ -81,9 +47,12 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 
 	showHelpActionListener = new ShowHelpActionListener();
 
-	helpList = new HelpListModel(helptext);
+	helpList.clear();
+	for (const auto & i : helptext) {
+		helpList.add(i);
+	}
 
-	lstHelp = new gcn::ListBox(helpList);
+	lstHelp = new gcn::ListBox(&helpList);
 	lstHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	lstHelp->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
@@ -126,9 +95,7 @@ static void ExitShowHelp()
 	delete scrAreaHelp;
 	delete cmdOK;
 
-	delete helpList;
 	delete showHelpActionListener;
-
 	delete wndShowHelp;
 }
 

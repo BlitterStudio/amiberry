@@ -83,6 +83,7 @@ namespace gcn
 		  mY(y),
 		  mClickCount(clickCount)
 	{
+
 	}
 
 	unsigned int MouseEvent::getButton() const

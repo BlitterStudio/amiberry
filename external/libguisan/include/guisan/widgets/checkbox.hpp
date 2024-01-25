@@ -98,8 +98,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~CheckBox()
-		= default;
+		virtual ~CheckBox() { }
 
 		/**
 		 * Checks if the check box is selected.
@@ -107,7 +106,7 @@ namespace gcn
 		 * @return True if the check box is selected, false otherwise.
 		 * @see setSelected
 		 */
-		[[nodiscard]] bool isSelected() const;
+		bool isSelected() const;
 
 		/**
 		 * Sets the check box to be selected.
@@ -123,7 +122,7 @@ namespace gcn
 		 * @return The caption of the check box.
 		 * @see setCaption
 		 */
-		[[nodiscard]] const std::string& getCaption() const;
+		const std::string& getCaption() const;
 
 		/**
 		 * Sets the caption of the check box. It's advisable to call
@@ -143,21 +142,21 @@ namespace gcn
 
 		// Inherited from Widget
 
-		void draw(Graphics* graphics) override;
+		virtual void draw(Graphics* graphics);
 
-		void drawBorder(Graphics* graphics) override;
+		virtual void drawBorder(Graphics* graphics);
 
 
 		// Inherited from KeyListener
 
-		void keyPressed(KeyEvent& keyEvent) override;
+		virtual void keyPressed(KeyEvent& keyEvent);
 
 
 		// Inherited from MouseListener
 
-		void mouseClicked(MouseEvent& mouseEvent) override;
+		virtual void mouseClicked(MouseEvent& mouseEvent);
 
-		void mouseDragged(MouseEvent& mouseEvent) override;
+		virtual void mouseDragged(MouseEvent& mouseEvent);
 
 
 	protected:
@@ -177,7 +176,7 @@ namespace gcn
 		/**
 		 * True if the check box is selected, false otherwise.
 		 */
-		bool mSelected{};
+		bool mSelected;
 
 		/**
 		 * Holds the caption of the check box.

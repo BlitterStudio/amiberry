@@ -81,7 +81,7 @@ namespace gcn
 
 	SDL2Graphics::~SDL2Graphics()
 	{
-		if (mRenderTarget != nullptr)
+		if (mRenderTarget != NULL)
 		{
 			SDL_DestroyTexture(mTexture);
 			SDL_FreeSurface(mTarget);
@@ -108,7 +108,7 @@ namespace gcn
 		mRenderTarget = renderer;
 		// An internal surface is still required to be able to handle surfaces and colorkeys
 		mTarget = SDL_CreateRGBSurface(0, width, height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-		SDL_FillRect(mTarget, nullptr, SDL_MapRGB(mTarget->format, 0xff, 0, 0xff));
+		SDL_FillRect(mTarget, NULL, SDL_MapRGB(mTarget->format, 0xff, 0, 0xff));
 		SDL_SetColorKey(mTarget, SDL_TRUE, SDL_MapRGB(mTarget->format, 0xff, 0, 0xff)); // magenta, Guisan default
 		SDL_SetSurfaceBlendMode(mTarget, SDL_BLENDMODE_NONE); // needed to cleanup temp data properly
 		mTexture = SDL_CreateTextureFromSurface(mRenderTarget, mTarget);
@@ -118,9 +118,9 @@ namespace gcn
 	bool SDL2Graphics::pushClipArea(Rectangle area)
 	{
 		SDL_Rect rect;
-		const auto result = Graphics::pushClipArea(area);
+		bool result = Graphics::pushClipArea(area);
 
-		const auto& carea = mClipStack.top();
+		const ClipRectangle& carea = mClipStack.top();
 		rect.x = carea.x;
 		rect.y = carea.y;
 		rect.w = carea.width;
@@ -140,7 +140,7 @@ namespace gcn
 			return;
 		}
 
-		const auto& carea = mClipStack.top();
+		const ClipRectangle& carea = mClipStack.top();
 		SDL_Rect rect;
 		rect.x = carea.x;
 		rect.y = carea.y;
@@ -165,7 +165,7 @@ namespace gcn
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
 
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 		SDL_Rect src;
 		SDL_Rect dst;
 		SDL_Rect temp;
@@ -182,14 +182,14 @@ namespace gcn
 		temp.w = width;
 		temp.h = height;
 
-		const auto* const srcImage = dynamic_cast<const SDLImage*>(image);
+		const SDLImage* srcImage = dynamic_cast<const SDLImage*>(image);
 
-		if (srcImage == nullptr)
+		if (srcImage == NULL)
 		{
 			throw GCN_EXCEPTION("Trying to draw an image of unknown format, must be an SDLImage.");
 		}
 
-		if (srcImage->getTexture() == nullptr)
+		if (srcImage->getTexture() == NULL)
 		{
 			SDL_FillRect(mTarget, &temp, SDL_MapRGBA(mTarget->format, 0xff, 0, 0xff, 0));
 			SDL_BlitSurface(srcImage->getSurface(), &src, mTarget, &temp);
@@ -210,9 +210,9 @@ namespace gcn
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
 
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
-		auto area = rectangle;
+		Rectangle area = rectangle;
 		area.x += top.xOffset;
 		area.y += top.yOffset;
 
@@ -223,10 +223,10 @@ namespace gcn
 
 		if (mAlpha)
 		{
-			const auto x1 = area.x > top.x ? area.x : top.x;
-			const auto y1 = area.y > top.y ? area.y : top.y;
-			const auto x2 = area.x + area.width < top.x + top.width ? area.x + area.width : top.x + top.width;
-			const auto y2 = area.y + area.height < top.y + top.height ? area.y + area.height : top.y + top.height;
+			const int x1 = area.x > top.x ? area.x : top.x;
+			const int y1 = area.y > top.y ? area.y : top.y;
+			const int x2 = area.x + area.width < top.x + top.width ? area.x + area.width : top.x + top.width;
+			const int y2 = area.y + area.height < top.y + top.height ? area.y + area.height : top.y + top.height;
 			
 			SDL_Rect rect;
 			rect.x = x1;
@@ -247,7 +247,6 @@ namespace gcn
 			rect.w = area.width;
 			rect.h = area.height;
 
-			auto color = SDL_MapRGBA(mTarget->format, mColor.r, mColor.g, mColor.b, mColor.a);
 			saveRenderColor();
 			SDL_SetRenderDrawColor(mRenderTarget, mColor.r, mColor.g, mColor.b, mColor.a);
 			SDL_RenderFillRect(mRenderTarget, &rect);
@@ -263,7 +262,7 @@ namespace gcn
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
 
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x += top.xOffset;
 		y += top.yOffset;
@@ -293,7 +292,7 @@ SDLputPixel(mTarget, x, y, mColor);
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x1 += top.xOffset;
 		y += top.yOffset;
@@ -340,7 +339,7 @@ SDLputPixel(mTarget, x, y, mColor);
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x += top.xOffset;
 		y1 += top.yOffset;
@@ -382,10 +381,10 @@ SDLputPixel(mTarget, x, y, mColor);
 
 	void SDL2Graphics::drawRectangle(const Rectangle& rectangle)
 	{
-		const auto x1 = rectangle.x;
-		const auto x2 = rectangle.x + rectangle.width - 1;
-		const auto y1 = rectangle.y;
-		const auto y2 = rectangle.y + rectangle.height - 1;
+		const int x1 = rectangle.x;
+		const int x2 = rectangle.x + rectangle.width - 1;
+		const int y1 = rectangle.y;
+		const int y2 = rectangle.y + rectangle.height - 1;
 
 		drawHLine(x1, y1, x2);
 		drawHLine(x1, y2, x2);
@@ -401,7 +400,7 @@ SDLputPixel(mTarget, x, y, mColor);
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		x1 += top.xOffset;
 		y1 += top.yOffset;
@@ -434,7 +433,7 @@ SDLputPixel(mTarget, x, y, mColor);
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		destination.x += top.xOffset;
 		destination.y += top.yOffset;
@@ -460,7 +459,7 @@ SDLputPixel(mTarget, x, y, mColor);
 			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
 				"called a draw function outside of _beginDraw() and _endDraw()?");
 		}
-		const auto& top = mClipStack.top();
+		const ClipRectangle& top = mClipStack.top();
 
 		destination.x += top.xOffset;
 		destination.y += top.yOffset;

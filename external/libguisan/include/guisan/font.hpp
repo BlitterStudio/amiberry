@@ -77,7 +77,7 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~Font() = default;
+		virtual ~Font() { }
 
 		/**
 		 * Gets the width of a string. The width of a string is not necesserily
@@ -86,14 +86,14 @@ namespace gcn
 		 * @param text the string to return the width of.
 		 * @return the width of a string.
 		 */
-		[[nodiscard]] virtual int getWidth(const std::string& text) const = 0;
+		virtual int getWidth(const std::string& text) const = 0;
 
 		/**
 		 * Gets the height of the glyphs in the font.
 		 *
 		 * @return the height of the glyphs int the font.
 		 */
-		[[nodiscard]] virtual int getHeight() const = 0;
+		virtual int getHeight() const = 0;
 
 		/**
 		 * Gets a string index in a string providing an x coordinate.

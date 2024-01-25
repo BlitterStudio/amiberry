@@ -2,10 +2,9 @@
 #include <cstdio>
 
 #include <guisan.hpp>
-#include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
-#include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -31,40 +30,11 @@ void SetLastActiveConfig(const char* filename)
 	remove_file_extension(last_active_config);
 }
 
-class ConfigsListModel : public gcn::ListModel
-{
-	std::vector<std::string> configs{};
+static gcn::StringListModel configsList;
 
-public:
-	ConfigsListModel()
-	= default;
-
-	int getNumberOfElements() override
+static void InitConfigsList()
 	{
-		return int(configs.size());
-	}
-
-	int add_element(const char* elem) override
-	{
-		configs.emplace_back(elem);
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-		configs.clear();
-	}
-	
-	std::string getElementAt(int i) override
-	{
-		if (i >= static_cast<int>(configs.size()) || i < 0)
-			return "---";
-		return configs[i];
-	}
-
-	void InitConfigsList()
-	{
-		configs.clear();
+	configsList.clear();
 		for (auto& i : ConfigFilesList)
 		{
 			char tmp[MAX_DPATH];
@@ -75,12 +45,9 @@ public:
 				strncat(tmp, i->Description, MAX_DPATH - 3);
 				strncat(tmp, ")", MAX_DPATH - 1);
 			}
-			configs.emplace_back(tmp);
+		configsList.add(tmp);
 		}
 	}
-};
-
-static ConfigsListModel* configsList;
 
 class ConfigButtonActionListener : public gcn::ActionListener
 {
@@ -192,10 +159,6 @@ static ConfigsListActionListener* configsListActionListener;
 void InitPanelConfig(const struct config_category& category)
 {
 	configButtonActionListener = new ConfigButtonActionListener();
-
-	ReadConfigFileList();
-	configsList = new ConfigsListModel();
-	configsList->InitConfigsList();
 	configsListActionListener = new ConfigsListActionListener();
 
 	lblName = new gcn::Label("Name:");
@@ -232,7 +195,7 @@ void InitPanelConfig(const struct config_category& category)
 
 	int list_width = category.panel->getWidth() - 2 * DISTANCE_BORDER - SCROLLBAR_WIDTH - 2;
 	int list_height = category.panel->getHeight() - 2 * DISTANCE_BORDER - 2 * lblName->getHeight() - 3 * DISTANCE_NEXT_Y - 2 * BUTTON_HEIGHT;
-	lstConfigs = new gcn::ListBox(configsList);
+	lstConfigs = new gcn::ListBox(&configsList);
 	lstConfigs->setSize(list_width, list_height);
 	lstConfigs->setBaseColor(colTextboxBackground);
 	lstConfigs->setBackgroundColor(colTextboxBackground);
@@ -282,7 +245,6 @@ void ExitPanelConfig()
 	delete lstConfigs;
 	delete scrAreaConfigs;
 	delete configsListActionListener;
-	delete configsList;
 
 	delete cmdLoad;
 	delete cmdSave;
@@ -308,7 +270,7 @@ static void MakeCurrentVisible()
 void RefreshPanelConfig()
 {
 	ReadConfigFileList();
-	configsList->InitConfigsList();
+	InitConfigsList();
 
 	// Search current entry
 	if (!txtName->getText().empty())

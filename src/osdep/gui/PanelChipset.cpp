@@ -1,6 +1,7 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
+#include "StringListModel.h"
 
 #include "sysdeps.h"
 #include "options.h"
@@ -58,38 +59,8 @@ static chipset chipsets[] = {
 	{-1, ""}
 };
 
-static const int numChipsets = 17;
-
-class ChipsetListModel : public gcn::ListModel
-{
-public:
-	ChipsetListModel()
-	= default;
-
-	int getNumberOfElements() override
-	{
-		return numChipsets;
-	}
-
-	int add_element(const char* elem) override
-	{
-		return 0;
-	}
-
-	void clear_elements() override
-	{
-	}
-	
-	std::string getElementAt(int i) override
-	{
-		if (i < 0 || i >= numChipsets)
-			return "---";
-		return chipsets[i].name;
-	}
-};
-
-static ChipsetListModel chipsetList;
 static bool bIgnoreListChange = true;
+static gcn::StringListModel chipsetList;
 
 class ChipsetActionListener : public gcn::ActionListener
 {
@@ -307,6 +278,10 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
 
+	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
+	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
+	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
+
 	grpChipset = new gcn::Window("Chipset");
 	grpChipset->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpChipset->add(optOCS, 10, 10);
@@ -319,6 +294,7 @@ void InitPanelChipset(const struct config_category& category)
 	grpChipset->add(chkMemoryCycleExact, 10, 150);
 	grpChipset->add(lblChipset, 80, 180);
 	grpChipset->add(cboChipset, 80 + lblChipset->getWidth() + 10, 180);
+	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	grpChipset->setMovable(false);
 	grpChipset->setSize(350, 300);
@@ -445,39 +421,8 @@ void ExitPanelChipset()
 	delete collisionButtonActionListener;
 }
 
-
 void RefreshPanelChipset()
 {
-	bIgnoreListChange = true;
-	auto idx = 0;
-	for (auto i = 0; i < numChipsets; ++i)
-	{
-		if (chipsets[i].compatible == changed_prefs.cs_compatible)
-		{
-			idx = i;
-			break;
-		}
-	}
-	cboChipset->setSelected(idx);
-	bIgnoreListChange = false;
-
-	if (changed_prefs.chipset_mask == 0)
-		optOCS->setSelected(true);
-	else if (changed_prefs.chipset_mask == CSMASK_ECS_AGNUS)
-		optECSAgnus->setSelected(true);
-	else if (changed_prefs.chipset_mask == CSMASK_ECS_DENISE)
-		optECSDenise->setSelected(true);
-	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE))
-		optECS->setSelected(true);
-	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA))
-		optAGA->setSelected(true);
-
-	chkNTSC->setSelected(changed_prefs.ntscmode);
-	chkCycleExact->setSelected(changed_prefs.cpu_cycle_exact);
-	chkMemoryCycleExact->setSelected(changed_prefs.cpu_memory_cycle_exact);
-	chkCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
-	chkMemoryCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
-
 	if (changed_prefs.immediate_blits)
 		optBlitImmed->setSelected(true);
 	else if (changed_prefs.waiting_blits)
@@ -496,9 +441,22 @@ void RefreshPanelChipset()
 		chkFastCopper->setSelected(changed_prefs.fast_copper);
 	}
 
-	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
 	chkMultithreadedDrawing->setEnabled(!emulating);
-	
+
+	// Set Values
+	if (changed_prefs.chipset_mask == 0)
+		optOCS->setSelected(true);
+	else if (changed_prefs.chipset_mask == CSMASK_ECS_AGNUS)
+		optECSAgnus->setSelected(true);
+	else if (changed_prefs.chipset_mask == CSMASK_ECS_DENISE)
+		optECSDenise->setSelected(true);
+	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE))
+		optECS->setSelected(true);
+	else if (changed_prefs.chipset_mask == (CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA))
+		optAGA->setSelected(true);
+
+	chkNTSC->setSelected(changed_prefs.ntscmode);
+
 	if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);
 	else if (changed_prefs.collision_level == 1)
@@ -507,6 +465,26 @@ void RefreshPanelChipset()
 		optCollPlayfield->setSelected(true);
 	else
 		optCollFull->setSelected(true);
+
+	chkCycleExact->setSelected(changed_prefs.cpu_cycle_exact);
+	chkMemoryCycleExact->setSelected(changed_prefs.cpu_memory_cycle_exact);
+	chkCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
+	chkMemoryCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
+
+	bIgnoreListChange = true;
+	auto idx = 0;
+	for (auto i = 0; i < chipsetList.getNumberOfElements(); ++i)
+	{
+		if (chipsets[i].compatible == changed_prefs.cs_compatible)
+		{
+			idx = i;
+			break;
+		}
+	}
+	cboChipset->setSelected(idx);
+	bIgnoreListChange = false;
+
+	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
 }
 
 bool HelpPanelChipset(std::vector<std::string>& helptext)
@@ -518,6 +496,12 @@ bool HelpPanelChipset(std::vector<std::string>& helptext)
 	helptext.emplace_back("an entry in \"Extra\", all internal Chipset settings will change to the required values");
 	helptext.emplace_back("for the specified Amiga model. For some games, you have to switch to \"NTSC\"");
 	helptext.emplace_back("(60 Hz instead of 50 Hz) for correct timing.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The \"Multithreaded drawing\" option, will enable some Amiberry optimizations");
+	helptext.emplace_back("that will help the performance when drawing lines on native screen modes.");
+	helptext.emplace_back("In some cases, this might cause screen tearing artifacts, so you can choose to");
+	helptext.emplace_back("disable this option when needed. Note that it cannot be changed once emulation has");
+	helptext.emplace_back("started.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(If you see graphic issues in a game, try the "Immediate" or "Wait for blitter")");
 	helptext.emplace_back("Blitter options and/or disable \"Fast copper\".");

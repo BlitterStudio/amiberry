@@ -92,28 +92,28 @@ namespace gcn
 		 *
 		 * @return true if shift was pressed at the same time as the key.
 		 */
-		[[nodiscard]] bool isShiftPressed() const;
+		bool isShiftPressed() const;
 
 		/**
 		 * Checks whether control is pressed.
 		 *
 		 * @return true if control was pressed at the same time as the key.
 		 */
-		[[nodiscard]] bool isControlPressed() const;
+		bool isControlPressed() const;
 
 		/**
 		 * Checks whether alt is pressed.
 		 *
 		 * @return true if alt was pressed at the same time as the key.
 		 */
-		[[nodiscard]] bool isAltPressed() const;
+		bool isAltPressed() const;
 
 		/**
 		 * Checks whether meta is pressed.
 		 *
 		 * @return true if meta was pressed at the same time as the key.
 		 */
-		[[nodiscard]] bool isMetaPressed() const;
+		bool isMetaPressed() const;
 
 		/**
 		 * Marks the event as consumed. How widgets should act on consumed
@@ -126,7 +126,7 @@ namespace gcn
 		 *
 		 * @return true if the input event is consumed, false otherwise.
 		 */
-		[[nodiscard]] bool isConsumed() const;
+		bool isConsumed() const;
 
 	protected:
 		bool mShiftPressed;

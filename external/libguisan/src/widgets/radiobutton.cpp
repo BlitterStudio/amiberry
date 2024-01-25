@@ -117,23 +117,25 @@ namespace gcn
 			graphics->drawRectangle(Rectangle(0,0, getWidth(), getHeight()));
 		}
 
-		const auto h = getHeight() + getHeight() / 2;
+		const int h = getHeight() + getHeight() / 2;
 
 		graphics->drawText(getCaption(), h - 2, 0);
 	}
 
 	void RadioButton::drawBorder(Graphics* graphics)
 	{
-		const auto faceColor = getBaseColor();
-		const auto alpha = getBaseColor().a;
-		const auto width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const auto height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		auto highlightColor = faceColor + 0x303030;
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + getBorderSize() * 2 - 1;
+		int height = getHeight() + getBorderSize() * 2 - 1;
+		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		for (int i = 0; i < static_cast<int>(getBorderSize()); ++i)
+		unsigned int i;
+		for (i = 0; i < getBorderSize(); ++i)
 		{
 			graphics->setColor(shadowColor);
 			graphics->drawLine(i, i, width - i, i);
@@ -157,21 +159,21 @@ namespace gcn
 			h = getHeight() - 3;
 		}
 
-		const auto alpha = getBaseColor().a;
-		auto faceColor = getBaseColor();
+		const int alpha = getBaseColor().a;
+		Color faceColor = getBaseColor();
 		faceColor.a = alpha;
-		auto highlightColor = faceColor + 0x303030;
+		Color highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
-		auto shadowColor = faceColor - 0x303030;
+		Color shadowColor = faceColor - 0x303030;
 		shadowColor.a = alpha;
 
-		auto backCol = getBackgroundColor();
+		Color backCol = getBackgroundColor();
 		if (!isEnabled())
 			backCol = backCol - 0x303030;
 		graphics->setColor(backCol);
 
 		int i;
-		const auto hh = (h + 1) / 2;
+		const int hh = (h + 1) / 2;
 
 		for (i = 1; i <= hh; ++i)
 		{
@@ -199,7 +201,7 @@ namespace gcn
 
 		graphics->setColor(getForegroundColor());
 
-		const auto hhh = hh - 3;
+		const int hhh = hh - 3;
 		if (mSelected)
 		{
 			for (i = 0; i < hhh; ++i)
@@ -222,9 +224,9 @@ namespace gcn
 	{
 		if (selected && !mGroup.empty())
 		{
-			const auto iterEnd = mGroupMap.upper_bound(mGroup);
+			const GroupIterator iterEnd = mGroupMap.upper_bound(mGroup);
 
-			for (auto iter = mGroupMap.lower_bound(mGroup);
+			for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
 				 iter != iterEnd;
 				 ++iter)
 			{
@@ -250,7 +252,7 @@ namespace gcn
 
 	void RadioButton::keyPressed(KeyEvent& keyEvent)
 	{
-		const auto key = keyEvent.getKey();
+		const Key key = keyEvent.getKey();
 
 		if (key.getValue() == Key::ENTER ||
 			key.getValue() == Key::SPACE)
@@ -279,9 +281,9 @@ namespace gcn
 	{
 		if (!mGroup.empty())
 		{
-			const auto iterEnd = mGroupMap.upper_bound(mGroup);
+			const GroupIterator iterEnd = mGroupMap.upper_bound(mGroup);
 
-			for (auto iter = mGroupMap.lower_bound(mGroup);
+			for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
 				 iter != iterEnd;
 				 ++iter)
 			{
@@ -309,7 +311,7 @@ namespace gcn
 
 	void RadioButton::adjustSize()
 	{
-		const auto height = getFont()->getHeight();
+		const int height = getFont()->getHeight();
 
 		setHeight(height);
 		setWidth(getFont()->getWidth(getCaption()) + height + height / 2);

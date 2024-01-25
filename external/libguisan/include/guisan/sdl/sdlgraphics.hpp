@@ -102,7 +102,7 @@ namespace gcn
 		 *
 		 * @return the target SDL_Surface.
 		 */
-		[[nodiscard]] virtual SDL_Surface* getTarget() const;
+		virtual SDL_Surface* getTarget() const;
 
 		/**
 		 * Draws an SDL_Surface on the target surface. Normally you'll
@@ -117,29 +117,29 @@ namespace gcn
 
 		// Inherited from Graphics
 
-		void _beginDraw() override;
+		virtual void _beginDraw();
 
-		void _endDraw() override;
+		virtual void _endDraw();
 
-		bool pushClipArea(Rectangle area) override;
+		virtual bool pushClipArea(Rectangle area);
 
-		void popClipArea() override;
+		virtual void popClipArea();
 
-		void drawImage(const Image* image, int srcX, int srcY,
+		virtual void drawImage(const Image* image, int srcX, int srcY,
 		               int dstX, int dstY, int width,
-		               int height) override;
+		               int height);
 
-		void drawPoint(int x, int y) override;
+		virtual void drawPoint(int x, int y);
 
-		void drawLine(int x1, int y1, int x2, int y2) override;
+		virtual void drawLine(int x1, int y1, int x2, int y2);
 
-		void drawRectangle(const Rectangle& rectangle) override;
+		virtual void drawRectangle(const Rectangle& rectangle);
 
-		void fillRectangle(const Rectangle& rectangle) override;
+		virtual void fillRectangle(const Rectangle& rectangle);
 
-		void setColor(const Color& color) override;
+		virtual void setColor(const Color& color);
 
-		const Color& getColor() override;
+		virtual const Color& getColor();
 
 	protected:
 		/**
@@ -160,7 +160,7 @@ namespace gcn
 		 */
 		virtual void drawVLine(int x, int y1, int y2);
 
-		SDL_Surface* mTarget{};
+		SDL_Surface* mTarget;
 		Color mColor;
 		bool mAlpha;
 	};

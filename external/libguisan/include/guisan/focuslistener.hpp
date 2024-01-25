@@ -78,26 +78,21 @@ namespace gcn
 		/**
 		 * Destructor.
 		 */
-		virtual ~FocusListener()
-		= default;
+		virtual ~FocusListener() { }
 
 		/**
 		 * Called when a widget gains focus. 
 		 *
 		 * @param event describes the event.
 		 */
-		virtual void focusGained(const Event& event)
-		{
-		};
+		virtual void focusGained(const Event& event) { };
 
 		/**
 		 * Called when a widget loses focus. 
 		 *
 		 * @param event discribes the event.
 		 */
-		virtual void focusLost(const Event& event)
-		{
-		};
+		virtual void focusLost(const Event& event) { };
 	};
 }
 

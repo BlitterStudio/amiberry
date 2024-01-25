@@ -2600,6 +2600,8 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 		case BOARD_MACROSYSTEM_SUB_FALCON040:
 			romtype = ROMTYPE_CB_FALCON40;
 			break;
+		case BOARD_MACROSYSTEM_SUB_DRACO:
+			return false;
 		}
 		break;
 
