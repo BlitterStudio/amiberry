@@ -36,7 +36,7 @@ jobs:
 
       - name: Upload artifact
         if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
           path: |
@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload artifact
         if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
           path: amiberry-${{ github.ref_name }}-macOS-x86_64.zip
@@ -71,7 +71,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-x86_64
         path: |
@@ -94,7 +94,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-x86_64
         path: amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip
@@ -117,7 +117,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-x86_64
         path: |
@@ -140,7 +140,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-x86_64
         path: amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip
@@ -163,7 +163,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-x86_64
         path: |
@@ -186,7 +186,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-x86_64
         path: amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip
@@ -207,7 +207,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-manjaro-aarch64-rpi4
         path: |
@@ -230,7 +230,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-manjaro-aarch64-rpi4
         path: amiberry-${{ github.ref_name }}-manjaro-aarch64-rpi4.zip
@@ -250,7 +250,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-manjaro-aarch64-rk3399
         path: |
@@ -273,7 +273,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-manjaro-aarch64-rk3399
         path: amiberry-${{ github.ref_name }}-manjaro-aarch64-rk3399.zip
@@ -296,7 +296,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-aarch64-rpi5
         path: |
@@ -319,7 +319,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-aarch64-rpi5
         path: amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi5.zip
@@ -343,7 +343,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf-rpi5
         path: |
@@ -366,7 +366,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf-rpi5
         path: amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi5.zip
@@ -389,7 +389,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-aarch64-rpi4
         path: |
@@ -412,7 +412,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-aarch64-rpi4
         path: amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi4.zip
@@ -436,7 +436,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-armhf-rpi4
         path: |
@@ -459,7 +459,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-armhf-rpi4
         path: amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi4.zip
@@ -482,7 +482,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-aarch64-rpi4
         path: |
@@ -505,7 +505,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-aarch64-rpi4
         path: amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi4.zip
@@ -529,7 +529,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-armhf-rpi4
         path: |
@@ -552,7 +552,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-armhf-rpi4
         path: amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi4.zip
@@ -575,7 +575,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-aarch64-rpi4
         path: |
@@ -598,7 +598,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-aarch64-rpi4
         path: amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi4.zip
@@ -622,7 +622,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf-rpi4
         path: |
@@ -645,7 +645,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf-rpi4
         path: amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi4.zip
@@ -669,7 +669,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-aarch64-rpi3
         path: |
@@ -692,7 +692,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-aarch64-rpi3
         path: amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi3.zip
@@ -716,7 +716,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-armhf-rpi3
         path: |
@@ -739,7 +739,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-buster-armhf-rpi3
         path: amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi3.zip
@@ -763,7 +763,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-aarch64-rpi3
         path: |
@@ -786,7 +786,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-aarch64-rpi3
         path: amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi3.zip
@@ -810,7 +810,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-armhf-rpi3
         path: |
@@ -833,7 +833,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-armhf-rpi3
         path: amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi3.zip
@@ -857,7 +857,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-aarch64-rpi3
         path: |
@@ -880,7 +880,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-aarch64-rpi3
         path: amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi3.zip
@@ -904,7 +904,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf-rpi3
         path: |
@@ -927,7 +927,7 @@ jobs:
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf-rpi3
         path: amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip
