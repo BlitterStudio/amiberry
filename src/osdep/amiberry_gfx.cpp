@@ -85,7 +85,6 @@ static int gl_have_error(const char* name)
 	}
 	return 0;
 }
-
 #else
 SDL_Texture* amiga_texture;
 SDL_Rect crop_rect;
@@ -102,11 +101,7 @@ Uint32 pixel_format;
 
 static frame_time_t last_synctime;
 static int deskhz;
-
-#ifdef AMIBERRY
-bool vsync_changed = false;
 bool sdl2_thread_changed = false;
-#endif
 
 #ifdef USE_DISPMANX
 /* Possible screen modes (x and y resolutions) */
@@ -1259,12 +1254,6 @@ int check_prefs_changed_gfx()
 	}
 	monitors[0] = true;
 
-#ifdef AMIBERRY
-	if (currprefs.gfx_apmode[0].gfx_vsync != changed_prefs.gfx_apmode[0].gfx_vsync)
-	{
-		vsync_changed = true;
-	}
-#endif
 	c |= currprefs.color_mode != changed_prefs.color_mode ? 2 | 16 : 0;
 	c |= currprefs.gfx_apmode[0].gfx_fullscreen != changed_prefs.gfx_apmode[0].gfx_fullscreen ? 16 : 0;
 	c |= currprefs.gfx_apmode[1].gfx_fullscreen != changed_prefs.gfx_apmode[1].gfx_fullscreen ? 16 : 0;
@@ -1542,16 +1531,7 @@ int check_prefs_changed_gfx()
 				open_screen(&currprefs);
 			}
 			if ((c & 16) || ((c & 8) && keepfsmode)) {
-				if (vsync_changed)
-				{
-					graphics_leave();
-					graphics_init(true);
-					vsync_changed = false;
-				}
-				else
-				{
-					open_screen(&currprefs);
-				}
+				open_screen(&currprefs);
 				c |= 2;
 			}
 			if ((c & 32) || ((c & 2) && !keepfsmode)) {
@@ -2228,16 +2208,13 @@ int graphics_init(bool mousecapture)
 	if (gl_context == nullptr)
 		gl_context = SDL_GL_CreateContext(mon->sdl_window);
 
-	if (currprefs.gfx_apmode[0].gfx_vsync)
+	// Enable vsync
+	if (SDL_GL_SetSwapInterval(-1) < 0)
 	{
-		// Enable vsync
-		if (SDL_GL_SetSwapInterval(-1) < 0)
+		write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
+		if (SDL_GL_SetSwapInterval(1) < 0)
 		{
-			write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
-			if (SDL_GL_SetSwapInterval(1) < 0)
-			{
-				write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
-			}
+			write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
 		}
 	}
 
@@ -2249,15 +2226,7 @@ int graphics_init(bool mousecapture)
 #else
 	if (sdl_renderer == nullptr)
 	{
-		Uint32 flags;
-		if (currprefs.gfx_apmode[0].gfx_vsync)
-		{
-			flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-		}
-		else
-		{
-			flags = SDL_RENDERER_ACCELERATED;
-		}
+		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
 		sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, flags);
 		check_error_sdl(sdl_renderer == nullptr, "Unable to create a renderer:");
 	}
