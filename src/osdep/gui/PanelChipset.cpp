@@ -59,7 +59,6 @@ static chipset chipsets[] = {
 	{-1, ""}
 };
 
-static bool bIgnoreListChange = true;
 static gcn::StringListModel chipsetList;
 
 class ChipsetActionListener : public gcn::ActionListener
@@ -67,50 +66,9 @@ class ChipsetActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (!bIgnoreListChange)
-		{
-			if (actionEvent.getSource() == cboChipset)
-			{
-				//---------------------------------------
-				// Chipset selected
-				//---------------------------------------
-				const auto cs = chipsets[cboChipset->getSelected()].compatible;
-				if (changed_prefs.cs_compatible != cs)
-				{
-					changed_prefs.cs_compatible = cs;
-					built_in_chipset_prefs(&changed_prefs);
-					RefreshPanelChipset();
-				}
-			}
-		}
-	}
-};
-static ChipsetActionListener* chipsetActionListener;
+		changed_prefs.immediate_blits = optBlitImmed->isSelected();
+		changed_prefs.waiting_blits = optBlitWait->isSelected();
 
-class ChipsetButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == optOCS)
-			changed_prefs.chipset_mask = 0;
-		else if (actionEvent.getSource() == optECSAgnus)
-			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
-		else if (actionEvent.getSource() == optECSDenise)
-			changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
-		else if (actionEvent.getSource() == optECS)
-			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
-		else
-			changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
-	}
-};
-static ChipsetButtonActionListener* chipsetButtonActionListener;
-
-class CycleExactActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
 		auto n2 = chkMemoryCycleExact->isSelected();
 		auto n1 = chkCycleExact->isSelected();
 		if (changed_prefs.cpu_cycle_exact != n1 || changed_prefs.cpu_memory_cycle_exact != n2)
@@ -164,110 +122,79 @@ public:
 				changed_prefs.cachesize = 0;
 			}
 		}
+
+		changed_prefs.collision_level = optCollNone->isSelected() ? 0
+              : optCollSprites->isSelected() ? 1
+              : optCollPlayfield->isSelected() ? 2 : 3;
+
+		changed_prefs.chipset_mask = optOCS->isSelected() ? 0
+              : optECSAgnus->isSelected() ? CSMASK_ECS_AGNUS
+              : optECSDenise->isSelected() ? CSMASK_ECS_DENISE
+			  : optECS->isSelected() ? CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE
+              : CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+
+		n1 = chkNTSC->isSelected();
+		if (changed_prefs.ntscmode != n1)
+		{
+			changed_prefs.ntscmode = n1;
+		}
+
+		const auto cs = chipsets[cboChipset->getSelected()].compatible;
+		if (changed_prefs.cs_compatible != cs)
+		{
+			changed_prefs.cs_compatible = cs;
+			built_in_chipset_prefs(&changed_prefs);
+		}
+
+		changed_prefs.fast_copper = chkFastCopper->isSelected();
+		changed_prefs.multithreaded_drawing = chkMultithreadedDrawing->isSelected();
+
 		RefreshPanelCPU();
 		RefreshPanelQuickstart();
 		RefreshPanelChipset();
 	}
 };
-static CycleExactActionListener* cycleExactActionListener;
-
-class NTSCButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (chkNTSC->isSelected())
-		{
-			changed_prefs.ntscmode = true;
-			changed_prefs.chipset_refreshrate = 60.0;
-		}
-		else
-		{
-			changed_prefs.ntscmode = false;
-			changed_prefs.chipset_refreshrate = 50.0;
-		}
-		RefreshPanelQuickstart();
-	}
-};
-static NTSCButtonActionListener* ntscButtonActionListener;
-
-class FastCopperActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		changed_prefs.fast_copper = chkFastCopper->isSelected();
-		changed_prefs.multithreaded_drawing = chkMultithreadedDrawing->isSelected();
-	}
-};
-static FastCopperActionListener* fastCopperActionListener;
-
-class BlitterButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		changed_prefs.immediate_blits = optBlitImmed->isSelected();
-		changed_prefs.waiting_blits = optBlitWait->isSelected();
-	}
-};
-static BlitterButtonActionListener* blitterButtonActionListener;
-
-class CollisionButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == optCollNone)
-			changed_prefs.collision_level = 0;
-		else if (actionEvent.getSource() == optCollSprites)
-			changed_prefs.collision_level = 1;
-		else if (actionEvent.getSource() == optCollPlayfield)
-			changed_prefs.collision_level = 2;
-		else
-			changed_prefs.collision_level = 3;
-	}
-};
-static CollisionButtonActionListener* collisionButtonActionListener;
+static ChipsetActionListener* chipsetActionListener;
 
 void InitPanelChipset(const struct config_category& category)
 {
+	chipsetList.clear();
+	for (int i = 0; chipsets[i].compatible >= 0; ++i)
+		chipsetList.add(chipsets[i].name);
+
 	chipsetActionListener = new ChipsetActionListener();
-	chipsetButtonActionListener = new ChipsetButtonActionListener();
-	ntscButtonActionListener = new NTSCButtonActionListener();
-	cycleExactActionListener = new CycleExactActionListener();
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
 	optOCS->setId("optOCS");
-	optOCS->addActionListener(chipsetButtonActionListener);
+	optOCS->addActionListener(chipsetActionListener);
 
 	optECSAgnus = new gcn::RadioButton("ECS Agnus", "radiochipsetgroup");
 	optECSAgnus->setId("optECSAgnus");
-	optECSAgnus->addActionListener(chipsetButtonActionListener);
+	optECSAgnus->addActionListener(chipsetActionListener);
 
 	optECSDenise = new gcn::RadioButton("ECS Denise", "radiochipsetgroup");
 	optECSDenise->setId("optECSDenise");
-	optECSDenise->addActionListener(chipsetButtonActionListener);
+	optECSDenise->addActionListener(chipsetActionListener);
 	
 	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
 	optECS->setId("optFullECS");
-	optECS->addActionListener(chipsetButtonActionListener);
+	optECS->addActionListener(chipsetActionListener);
 
 	optAGA = new gcn::RadioButton("AGA", "radiochipsetgroup");
 	optAGA->setId("optAGA");
-	optAGA->addActionListener(chipsetButtonActionListener);
+	optAGA->addActionListener(chipsetActionListener);
 
 	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("chkNTSC");
-	chkNTSC->addActionListener(ntscButtonActionListener);
+	chkNTSC->addActionListener(chipsetActionListener);
 
 	chkCycleExact = new gcn::CheckBox("Cycle Exact (Full)");
 	chkCycleExact->setId("chkCycleExact");
-	chkCycleExact->addActionListener(cycleExactActionListener);
+	chkCycleExact->addActionListener(chipsetActionListener);
 
 	chkMemoryCycleExact = new gcn::CheckBox("Cycle Exact (DMA/Memory)");
 	chkMemoryCycleExact->setId("chkMemoryCycleExact");
-	chkMemoryCycleExact->addActionListener(cycleExactActionListener);
+	chkMemoryCycleExact->addActionListener(chipsetActionListener);
 
 	lblChipset = new gcn::Label("Chipset Extra:");
 	lblChipset->setAlignment(gcn::Graphics::RIGHT);
@@ -303,19 +230,17 @@ void InitPanelChipset(const struct config_category& category)
 
 	category.panel->add(grpChipset);
 
-	blitterButtonActionListener = new BlitterButtonActionListener();
-
 	optBlitNormal = new gcn::RadioButton("Normal", "radiocblittergroup");
 	optBlitNormal->setId("optBlitNormal");
-	optBlitNormal->addActionListener(blitterButtonActionListener);
+	optBlitNormal->addActionListener(chipsetActionListener);
 
 	optBlitImmed = new gcn::RadioButton("Immediate", "radiocblittergroup");
 	optBlitImmed->setId("optBlitImmed");
-	optBlitImmed->addActionListener(blitterButtonActionListener);
+	optBlitImmed->addActionListener(chipsetActionListener);
 
 	optBlitWait = new gcn::RadioButton("Wait for blitter", "radiocblittergroup");
 	optBlitWait->setId("optBlitWait");
-	optBlitWait->addActionListener(blitterButtonActionListener);
+	optBlitWait->addActionListener(chipsetActionListener);
 
 	grpBlitter = new gcn::Window("Blitter");
 	grpBlitter->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
@@ -329,15 +254,13 @@ void InitPanelChipset(const struct config_category& category)
 
 	category.panel->add(grpBlitter);
 
-	fastCopperActionListener = new FastCopperActionListener();
-
 	chkFastCopper = new gcn::CheckBox("Fast copper");
 	chkFastCopper->setId("chkFastCopper");
-	chkFastCopper->addActionListener(fastCopperActionListener);
+	chkFastCopper->addActionListener(chipsetActionListener);
 
 	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
 	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
-	chkMultithreadedDrawing->addActionListener(fastCopperActionListener);
+	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
 	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	grpCopper = new gcn::Window("Copper");
@@ -351,23 +274,21 @@ void InitPanelChipset(const struct config_category& category)
 
 	category.panel->add(grpCopper);
 
-	collisionButtonActionListener = new CollisionButtonActionListener();
-
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("optCollNone");
-	optCollNone->addActionListener(collisionButtonActionListener);
+	optCollNone->addActionListener(chipsetActionListener);
 
 	optCollSprites = new gcn::RadioButton("Sprites only", "radioccollisiongroup");
 	optCollSprites->setId("optCollSprites");
-	optCollSprites->addActionListener(collisionButtonActionListener);
+	optCollSprites->addActionListener(chipsetActionListener);
 
 	optCollPlayfield = new gcn::RadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
 	optCollPlayfield->setId("optCollPlayfield");
-	optCollPlayfield->addActionListener(collisionButtonActionListener);
+	optCollPlayfield->addActionListener(chipsetActionListener);
 
 	optCollFull = new gcn::RadioButton("Full (rarely needed)", "radioccollisiongroup");
 	optCollFull->setId("optCollFull");
-	optCollFull->addActionListener(collisionButtonActionListener);
+	optCollFull->addActionListener(chipsetActionListener);
 
 	grpCollisionLevel = new gcn::Window("Collision Level");
 	grpCollisionLevel->setPosition(DISTANCE_BORDER, DISTANCE_BORDER + grpChipset->getHeight() + DISTANCE_NEXT_Y);
@@ -398,27 +319,21 @@ void ExitPanelChipset()
 	delete lblChipset;
 	delete cboChipset;
 	delete grpChipset;
-	delete chipsetButtonActionListener;
-	delete ntscButtonActionListener;
-	delete cycleExactActionListener;
 	delete chipsetActionListener;
 
 	delete optBlitNormal;
 	delete optBlitImmed;
 	delete optBlitWait;
 	delete grpBlitter;
-	delete blitterButtonActionListener;
 
 	delete chkFastCopper;
 	delete chkMultithreadedDrawing;
 	delete grpCopper;
-	delete fastCopperActionListener;
 	delete optCollNone;
 	delete optCollSprites;
 	delete optCollPlayfield;
 	delete optCollFull;
 	delete grpCollisionLevel;
-	delete collisionButtonActionListener;
 }
 
 void RefreshPanelChipset()
@@ -471,7 +386,6 @@ void RefreshPanelChipset()
 	chkCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
 	chkMemoryCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
 
-	bIgnoreListChange = true;
 	auto idx = 0;
 	for (auto i = 0; i < chipsetList.getNumberOfElements(); ++i)
 	{
@@ -482,8 +396,6 @@ void RefreshPanelChipset()
 		}
 	}
 	cboChipset->setSelected(idx);
-	bIgnoreListChange = false;
-
 	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
 }
 
