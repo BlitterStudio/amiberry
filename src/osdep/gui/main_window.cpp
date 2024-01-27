@@ -406,7 +406,6 @@ void amiberry_gui_init()
 	}
 	SDL_RenderSetLogicalSize(sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
 #else
-	//setup_cursor();
 
 	if (!mon->sdl_window)
 	{

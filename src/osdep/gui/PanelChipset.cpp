@@ -219,12 +219,12 @@ void InitPanelChipset(const struct config_category& category)
 	grpChipset->add(chkNTSC, 165, 70);
 	grpChipset->add(chkCycleExact, 10, 120);
 	grpChipset->add(chkMemoryCycleExact, 10, 150);
-	grpChipset->add(lblChipset, 80, 180);
-	grpChipset->add(cboChipset, 80 + lblChipset->getWidth() + 10, 180);
+	grpChipset->add(lblChipset, 60, 180);
+	grpChipset->add(cboChipset, 60 + lblChipset->getWidth() + 10, 180);
 	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(350, 300);
+	grpChipset->setSize(cboChipset->getX() + cboChipset->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + 250 + chkMultithreadedDrawing->getHeight() + DISTANCE_NEXT_Y * 2);
 	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpChipset->setBaseColor(gui_baseCol);
 
@@ -297,7 +297,7 @@ void InitPanelChipset(const struct config_category& category)
 	grpCollisionLevel->add(optCollPlayfield, 10, 70);
 	grpCollisionLevel->add(optCollFull, 10, 100);
 	grpCollisionLevel->setMovable(false);
-	grpCollisionLevel->setSize(grpChipset->getWidth(), 165);
+	grpCollisionLevel->setSize(grpChipset->getWidth(), TITLEBAR_HEIGHT + 100 + optCollFull->getHeight() + DISTANCE_NEXT_Y);
 	grpCollisionLevel->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCollisionLevel->setBaseColor(gui_baseCol);
 

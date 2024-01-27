@@ -1680,9 +1680,6 @@
     <ClCompile Include="..\external\mt32emu\src\srchelper\srctools\src\SincResampler.cpp">
       <Filter>external\mt32emu\src\srchelper\srctools\src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\casablanca.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\build68k.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1718,6 +1715,9 @@
     </ClCompile>
     <ClCompile Include="..\src\jit\gencomp.cpp">
       <Filter>src\jit</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\draco.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2645,9 +2645,6 @@
     <ClInclude Include="..\src\include\arcadia.h">
       <Filter>src\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\include\casablanca.h">
-      <Filter>src\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\disasm.h">
       <Filter>src\include</Filter>
     </ClInclude>
@@ -2830,6 +2827,12 @@
     </ClInclude>
     <ClInclude Include="..\src\jit\flags_x86.h">
       <Filter>src\jit</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\draco.h">
+      <Filter>src\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\x86.h">
+      <Filter>src\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

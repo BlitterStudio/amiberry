@@ -522,7 +522,6 @@
     <ClCompile Include="..\src\build68k.cpp" />
     <ClCompile Include="..\src\calc.cpp" />
     <ClCompile Include="..\src\caps\caps_amiberry.cpp" />
-    <ClCompile Include="..\src\casablanca.cpp" />
     <ClCompile Include="..\src\cd32_fmv.cpp" />
     <ClCompile Include="..\src\cd32_fmv_genlock.cpp" />
     <ClCompile Include="..\src\cdrom.cpp" />
@@ -551,6 +550,7 @@
     <ClCompile Include="..\src\diskutil.cpp" />
     <ClCompile Include="..\src\dlopen.cpp" />
     <ClCompile Include="..\src\dongle.cpp" />
+    <ClCompile Include="..\src\draco.cpp" />
     <ClCompile Include="..\src\drawing.cpp" />
     <ClCompile Include="..\src\driveclick.cpp" />
     <ClCompile Include="..\src\enforcer.cpp" />
@@ -938,7 +938,6 @@
     <ClInclude Include="..\src\include\blkdev.h" />
     <ClInclude Include="..\src\include\bsdsocket.h" />
     <ClInclude Include="..\src\include\calc.h" />
-    <ClInclude Include="..\src\include\casablanca.h" />
     <ClInclude Include="..\src\include\cd32_fmv.h" />
     <ClInclude Include="..\src\include\cdtv.h" />
     <ClInclude Include="..\src\include\cdtvcr.h" />
@@ -960,6 +959,7 @@
     <ClInclude Include="..\src\include\disk.h" />
     <ClInclude Include="..\src\include\diskutil.h" />
     <ClInclude Include="..\src\include\dongle.h" />
+    <ClInclude Include="..\src\include\draco.h" />
     <ClInclude Include="..\src\include\drawing.h" />
     <ClInclude Include="..\src\include\driveclick.h" />
     <ClInclude Include="..\src\include\enforcer.h" />
@@ -1040,6 +1040,7 @@
     <ClInclude Include="..\src\include\uae\uae_pragmas.h" />
     <ClInclude Include="..\src\include\uae\vm.h" />
     <ClInclude Include="..\src\include\uni_common.h" />
+    <ClInclude Include="..\src\include\x86.h" />
     <ClInclude Include="..\src\include\xwin.h" />
     <ClInclude Include="..\src\include\zarchive.h" />
     <ClInclude Include="..\src\include\zfile.h" />

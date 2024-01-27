@@ -1869,9 +1869,6 @@ void show_screen(int monid, int mode)
 	if (currprefs.gfx_framerate == 2)
 		current_vsync_frame++;
 	
-#endif
-
-#ifdef USE_DISPMANX
 	wait_for_display_thread();
 	flip_in_progress = true;
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
