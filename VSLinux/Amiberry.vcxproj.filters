@@ -2834,6 +2834,15 @@
     <ClInclude Include="..\src\include\x86.h">
       <Filter>src\include</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\include\uae\inline.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\include\uae\qemu.h">
+      <Filter>src\include\uae</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\osdep\gui\StringListModel.h">
+      <Filter>src\osdep\gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="..\abr\brainfile.xml">

@@ -1028,10 +1028,12 @@
     <ClInclude Include="..\src\include\uae\caps.h" />
     <ClInclude Include="..\src\include\uae\cdrom.h" />
     <ClInclude Include="..\src\include\uae\dlopen.h" />
+    <ClInclude Include="..\src\include\uae\inline.h" />
     <ClInclude Include="..\src\include\uae\likely.h" />
     <ClInclude Include="..\src\include\uae\log.h" />
     <ClInclude Include="..\src\include\uae\memory.h" />
     <ClInclude Include="..\src\include\uae\mman.h" />
+    <ClInclude Include="..\src\include\uae\qemu.h" />
     <ClInclude Include="..\src\include\uae\slirp.h" />
     <ClInclude Include="..\src\include\uae\socket.h" />
     <ClInclude Include="..\src\include\uae\string.h" />
@@ -1067,6 +1069,7 @@
     <ClInclude Include="..\src\osdep\fsdb_host.h" />
     <ClInclude Include="..\src\osdep\gui\gui_handling.h" />
     <ClInclude Include="..\src\osdep\gui\SelectorEntry.hpp" />
+    <ClInclude Include="..\src\osdep\gui\StringListModel.h" />
     <ClInclude Include="..\src\osdep\ioport.h" />
     <ClInclude Include="..\src\osdep\midi.h" />
     <ClInclude Include="..\src\osdep\mp3decoder.h" />
