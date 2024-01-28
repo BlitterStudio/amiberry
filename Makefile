@@ -687,13 +687,13 @@ clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
 	$(MAKE) -C external/libguisan clean && $(RM) external/libguisan/libguisan.a
 	-cmake --build external/mt32emu/build --target clean
-	-rm external/mt32emu/build
+	-rm -R external/mt32emu/build
 	-rm external/mt32emu/libmt32emu.a
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
 	$(MAKE) -C external/libguisan cleanprofile
-	
+
 guisan:
 	$(MAKE) -C external/libguisan CC="$(CC)" CXX="$(CXX)"
 
