@@ -600,6 +600,7 @@ int log_ld;
 static uae_u8 algmemory[ALG_NVRAM_SIZE];
 static int algmemory_modified;
 static int algmemory_initialized;
+static int alg_game_id;
 
 static void alg_nvram_write (void)
 {
@@ -1057,6 +1058,19 @@ uae_u16 alg_joydat(int joy, uae_u16 v)
 }
 uae_u8 alg_joystick_buttons(uae_u8 pra, uae_u8 dra, uae_u8 v)
 {
+	if (alg_flag) {
+		int ply = alg_get_player(alg_potgo);
+	
+		if (alg_game_id == 175) {
+			// Mad Dog McCree v1C Holster is fire button
+			if ((alg_flag & 256) && ply == 0) {
+				v &= ~0x40;
+			}
+			if ((alg_flag & 512) && ply == 1) {
+				v &= ~0x80;
+			}
+		}
+	}
 	return v;
 }
 
