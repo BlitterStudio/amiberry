@@ -9576,7 +9576,7 @@ static void BLTCON0L(int hpos, uae_u16 v)
 	if (!ecs_agnus)
 		return; // ei voittoa.
 	maybe_blit(hpos, 2); bltcon0 = (bltcon0 & 0xFF00) | (v & 0xFF);
-	reset_blit(1);
+	reset_blit(0);
 }
 static void BLTCON1(int hpos, uae_u16 v) {
 	maybe_blit(hpos, 2);
