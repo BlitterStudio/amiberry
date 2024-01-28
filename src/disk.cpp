@@ -4801,7 +4801,7 @@ static void DSKLEN_2(uae_u16 v, int hpos)
 		}
 		dskdmaen = DSKDMA_READ;
 		DISK_start ();
-		weirddma = dsklength < 544 * 11 * 2;
+		weirddma = dsklength < 544 * 11 + FLOPPY_GAP_LEN;
 	}
 	if (!(v & 0x8000)) {
 		if (dskdmaen != DSKDMA_OFF) {
