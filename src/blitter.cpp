@@ -2004,6 +2004,9 @@ void do_blitter(int hpos, int copper, uaecptr pc)
 	bltcon0_old = bltcon0;
 	bltcon1_old = bltcon1;
 
+	if (blitter_cycle_exact != (currprefs.blitter_cycle_exact ? 1 : 0)) {
+		memset(blitter_pipe, 0, sizeof(blitter_pipe));
+	}
 	blitter_cycle_exact = currprefs.blitter_cycle_exact;
 	immediate_blits = currprefs.immediate_blits;
 	blt_info.got_cycle = 0;

@@ -4866,8 +4866,8 @@ STATIC_INLINE void one_fetch_cycle_0(int hpos, int fm)
 	if (datreg & CYCLE_PIPE_BITPLANE) {
 		plane0 = fetch((datreg - 1) & 7, fm, hpos, (datreg & CYCLE_PIPE_MODULO) != 0);
 	} else if (datreg & CYCLE_PIPE_COPPER) {
-		do_copper_fetch(hpos, datreg);
 		cycle_line_pipe[hpos] = 0;
+		do_copper_fetch(hpos, datreg);
 	}
 
 	if (plane0p_enabled) {
@@ -5655,17 +5655,11 @@ static void record_sprite(int num, int sprxp, uae_u16 *data, uae_u16 *datb, unsi
 	low order bit records whether the attach bit was set for this pair.  */
 	if (attachment) {
 		uae_u32 state = 0x01010101 << (num & ~1);
-		uae_u8 *stb1 = spixstate.stb + word_offs;
+		uae_u32 *stb1 = (uae_u32*)(spixstate.stb + word_offs);
 		for (int i = 0; i < width; i += 8) {
 			stb1[0] |= state;
 			stb1[1] |= state;
-			stb1[2] |= state;
-			stb1[3] |= state;
-			stb1[4] |= state;
-			stb1[5] |= state;
-			stb1[6] |= state;
-			stb1[7] |= state;
-			stb1 += 8;
+			stb1 += 2;
 		}
 		e->has_attached = 1;
 	}
@@ -9923,7 +9917,11 @@ static void SPRxDATB(int hpos, uae_u16 v, int num)
 static void SPRxCTL_2(uae_u32 vv)
 {
 	int hpos = current_hpos();
-	uae_u16 v = vv >> 16;
+	if (!currprefs.cpu_memory_cycle_exact) {
+		// current_hpos() assumes cycle-by-cycle emulation which does not happen in non-CE modes. FIXME!
+		hpos = ((vv >> 24) + 1) % maxhposm0;
+	}
+	uae_u16 v = vv >> 8;
 	int num = vv & 7;
 #if SPRITE_DEBUG > 0
 	if (vpos >= SPRITE_DEBUG_MINY && vpos <= SPRITE_DEBUG_MAXY && (SPRITE_DEBUG & (1 << num))) {
@@ -9936,14 +9934,17 @@ static void SPRxCTL_2(uae_u32 vv)
 }
 static void SPRxCTL(int hpos, uae_u16 v, int num)
 {
-	uae_u32 vv = (v << 16) | num;
+	uae_u32 vv = (hpos << 24) | (v << 8) | num;
 	event2_newevent_xx_ce(1 * CYCLE_UNIT, vv, SPRxCTL_2);
 }
 
 static void SPRxPOS_2(uae_u32 vv)
 {
 	int hpos = current_hpos();
-	uae_u16 v = vv >> 16;
+	if (!currprefs.cpu_memory_cycle_exact) {
+		hpos = ((vv >> 24) + 1) % maxhposm0;
+	}
+	uae_u16 v = vv >> 8;
 	int num = vv & 7;
 	struct sprite *s = &spr[num];
 #if SPRITE_DEBUG > 0
@@ -9956,7 +9957,7 @@ static void SPRxPOS_2(uae_u32 vv)
 }
 static void SPRxPOS(int hpos, uae_u16 v, int num)
 {
-	uae_u32 vv = (v << 16) | num;
+	uae_u32 vv = (hpos << 24) | (v << 8) | num;
 	event2_newevent_xx_ce(1 * CYCLE_UNIT, vv, SPRxPOS_2);
 }
 
@@ -10334,7 +10335,9 @@ static bool copper_cant_read(int hpos, uae_u16 alloc)
 		int offset = get_rga_pipeline(hpos, coffset);
 		if (alloc && !bitplane_dma_access(hpos, coffset) && !cycle_line_pipe[offset]) {
 			cycle_line_pipe[offset] = CYCLE_PIPE_NONE | CYCLE_PIPE_COPPER;
-			blitter_pipe[offset] = CYCLE_PIPE_COPPER;
+			if (currprefs.blitter_cycle_exact) {
+				blitter_pipe[offset] = CYCLE_PIPE_COPPER;
+			}
 #ifdef DEBUGGER
 			int dvpos = vpos + 1;
 			if (is_last_line()) {
@@ -10379,7 +10382,9 @@ static bool copper_cant_read(int hpos, uae_u16 alloc)
 		// Keep copper cycles, without it blitter would
 		// think copper cycles are free cycles because they
 		// are cleared after copper has processed them
-		blitter_pipe[offset] = CYCLE_PIPE_COPPER;
+		if (currprefs.blitter_cycle_exact) {
+			blitter_pipe[offset] = CYCLE_PIPE_COPPER;
+		}
 	}
 
 	return false;
@@ -10426,8 +10431,8 @@ static void decide_line(int endhpos)
 		}
 		uae_u16 datreg = cycle_line_pipe[hpos];
 		if (datreg & CYCLE_PIPE_COPPER) {
-			do_copper_fetch(hpos, datreg);
 			cycle_line_pipe[hpos] = 0;
+			do_copper_fetch(hpos, datreg);
 		}
 
 		bool dma = dmacon_bpl;
@@ -11065,8 +11070,8 @@ static void update_copper(int until_hpos)
 		bool copper_dma = (cycle_line_pipe[hpos] & CYCLE_PIPE_COPPER) != 0;
 		if (copper_dma) {
 			uae_u16 v = cycle_line_pipe[hpos];
-			do_copper_fetch(hpos, v);
 			cycle_line_pipe[hpos] = 0;
+			do_copper_fetch(hpos, v);
 		}
 
 		if (!copper_enabled_thisline) {
