@@ -225,3 +225,4 @@ Brewfile.lock.json
 cmake-build-debug-remote-host
 cmake-build-release-remote-host
 cmake-build-debug-opengl
+VSLinux/Amiberry.vcxproj.user
