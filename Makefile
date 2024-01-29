@@ -383,11 +383,6 @@ CXX    ?= g++
 STRIP  ?= strip
 PROG   = amiberry
 
-ifdef CWRAPPER
-CC  := $(CWRAPPER) $(CC)
-CXX := $(CWRAPPER) $(CXX)
-endif
-
 #
 # SDL2 options
 #
@@ -745,10 +740,10 @@ cleanprofile:
 	$(MAKE) -C external/libguisan cleanprofile
 	
 guisan:
-	$(MAKE) -C external/libguisan CC="$(CC)" CXX="$(CXX)"
+	$(MAKE) -C external/libguisan
 
 mt32emu:
-	cmake $(if $(CWRAPPER),-DCMAKE_CXX_COMPILER_LAUNCHER=$(CWRAPPER),) -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
+	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
 	cmake --build external/mt32emu/build --target all --parallel
 	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
 
