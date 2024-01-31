@@ -493,7 +493,16 @@ void graphics_subshutdown()
 	avidinfo->inbuffer = &avidinfo->drawbuffer;
 
 #ifdef USE_OPENGL
-
+	if (crtemu != nullptr)
+	{
+		crtemu_destroy(crtemu);
+		crtemu = nullptr;
+	}
+	if (frame != nullptr)
+	{
+		xfree(frame);
+		frame = nullptr;
+	}
 #else
 	if (amiga_texture != nullptr)
 	{
@@ -612,15 +621,15 @@ static void open_screen(struct uae_prefs* p)
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
 		{
-			if (mon->amigawin_rect.x && mon->amigawin_rect.y)
-				SDL_SetWindowPosition(mon->sdl_window, mon->amigawin_rect.x, mon->amigawin_rect.y);
-			else
-				SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
 			if (mon->amigawin_rect.w && mon->amigawin_rect.h)
 				SDL_SetWindowSize(mon->sdl_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
 			else
 				SDL_SetWindowSize(mon->sdl_window, width, height);
+
+			if (mon->amigawin_rect.x && mon->amigawin_rect.y)
+				SDL_SetWindowPosition(mon->sdl_window, mon->amigawin_rect.x, mon->amigawin_rect.y);
+			else
+				SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		}
 	}
 
@@ -628,9 +637,17 @@ static void open_screen(struct uae_prefs* p)
 	check_error_sdl(sdl_surface == nullptr, "Unable to create a surface");
 
 #ifdef USE_OPENGL
+	int frame_width, frame_height;
+	SDL_GetWindowSize(mon->sdl_window, &frame_width, &frame_height);
+
 	if (frame == nullptr)
-		frame = (CRT_FRAME_U32*) malloc( CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT * sizeof( CRT_FRAME_U32 ) );
-	crt_frame( frame );
+		frame = (CRT_FRAME_U32*) malloc( frame_width * frame_height * sizeof( CRT_FRAME_U32 ) );
+	//crt_frame( frame ); // bezel - however, seems hardcoded to internal 1024x1024 size
+
+	if (crtemu == nullptr)
+		crtemu = crtemu_create(CRTEMU_TYPE_TV, nullptr);
+
+	crtemu_frame( crtemu, frame, frame_width, frame_height);
 #else
 	amiga_texture = SDL_CreateTexture(sdl_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, sdl_surface->w, sdl_surface->h);
 	check_error_sdl(amiga_texture == nullptr, "Unable to create texture");
@@ -1749,12 +1766,6 @@ int graphics_init(bool mousecapture)
 
 	// Enable vsync
 	SDL_GL_SetSwapInterval( 1 );
-
-	if (frame == nullptr)
-		frame = (CRT_FRAME_U32*) malloc( CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT * sizeof( CRT_FRAME_U32 ) );
-
-	crtemu = crtemu_create( NULL );
-	crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
 
 #else
 	if (sdl_renderer == nullptr)
