@@ -66,20 +66,20 @@ SDL_Surface* sdl_surface = nullptr;
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
 GLuint gl_texture = 0;
-static int old_w, old_h;
-static float vertex_coords[] = {
-	-1.0f,  1.0f,  0.0f, // 0    0  1
-	 1.0f,  1.0f,  0.0f, // 1  ^
-	-1.0f, -1.0f,  0.0f, // 2  | 2  3
-	 1.0f, -1.0f,  0.0f, // 3  +-->
-};
-
-static float texture_coords[] = {
-	0.0f, 0.0f, // we flip this:
-	1.0f, 0.0f, // v^
-	0.0f, 1.0f, //  |  u
-	1.0f, 1.0f, //  +-->
-};
+//static int old_w, old_h;
+//static float vertex_coords[] = {
+//	-1.0f,  1.0f,  0.0f, // 0    0  1
+//	 1.0f,  1.0f,  0.0f, // 1  ^
+//	-1.0f, -1.0f,  0.0f, // 2  | 2  3
+//	 1.0f, -1.0f,  0.0f, // 3  +-->
+//};
+//
+//static float texture_coords[] = {
+//	0.0f, 0.0f, // we flip this:
+//	1.0f, 0.0f, // v^
+//	0.0f, 1.0f, //  |  u
+//	1.0f, 1.0f, //  +-->
+//};
 
 static int gl_have_error(const char* name)
 {
@@ -658,30 +658,30 @@ static void open_screen(struct uae_prefs* p)
 	check_error_sdl(sdl_surface == nullptr, "Unable to create a surface");
 
 #ifdef USE_OPENGL
-	if (gl_texture == 0)
-	{
-		glGenTextures(1, &gl_texture);
-		if (gl_have_error("glGenTextures"))	abort();
-	}
-
-	glBindTexture(GL_TEXTURE_2D, gl_texture);
-	display_depth == 32
-		? glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-			display_width, display_height, 0, GL_RGBA,
-			GL_UNSIGNED_BYTE, sdl_surface->pixels)
-		: glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-			display_width, display_height, 0, GL_RGB,
-			GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glLoadIdentity();
-	glFrontFace(GL_CW);
-	glEnable(GL_CULL_FACE);
-
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_VERTEX_ARRAY);
+//	if (gl_texture == 0)
+//	{
+//		glGenTextures(1, &gl_texture);
+//		if (gl_have_error("glGenTextures"))	abort();
+//	}
+//
+//	glBindTexture(GL_TEXTURE_2D, gl_texture);
+//	display_depth == 32
+//		? glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+//			display_width, display_height, 0, GL_RGBA,
+//			GL_UNSIGNED_BYTE, sdl_surface->pixels)
+//		: glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+//			display_width, display_height, 0, GL_RGB,
+//			GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
+//
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//
+//	glLoadIdentity();
+//	glFrontFace(GL_CW);
+//	glEnable(GL_CULL_FACE);
+//
+//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//	glEnableClientState(GL_VERTEX_ARRAY);
 
 	crt_frame( frame );
 #else
@@ -694,8 +694,8 @@ static void open_screen(struct uae_prefs* p)
 		if (isModeAspectRatioExact(&sdl_mode, display_width, display_height))
 #ifdef USE_OPENGL
 		{
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
@@ -703,8 +703,8 @@ static void open_screen(struct uae_prefs* p)
 		else
 #ifdef USE_OPENGL
 		{
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -713,8 +713,8 @@ static void open_screen(struct uae_prefs* p)
 	else if (p->scaling_method == 0)
 #ifdef USE_OPENGL
 	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
@@ -722,10 +722,10 @@ static void open_screen(struct uae_prefs* p)
 	else if (p->scaling_method == 1)
 #ifdef USE_OPENGL
 	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
-	glBindTexture(GL_TEXTURE_2D, 0);
+//	glBindTexture(GL_TEXTURE_2D, 0);
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
@@ -1556,29 +1556,29 @@ void show_screen(int monid, int mode)
 #ifdef USE_OPENGL
 		struct AmigaMonitor* mon = &AMonitors[monid];
 
-		glClear(GL_COLOR_BUFFER_BIT);
+//		glClear(GL_COLOR_BUFFER_BIT);
 
-		if (sdl_surface->w != old_w || sdl_surface->h != old_h) {
-			float f_w = static_cast<float>(sdl_surface->w) / static_cast<float>(display_width);
-			float f_h = static_cast<float>(sdl_surface->h) / static_cast<float>(display_height);
-			texture_coords[1 * 2 + 0] = f_w;
-			texture_coords[2 * 2 + 1] = f_h;
-			texture_coords[3 * 2 + 0] = f_w;
-			texture_coords[3 * 2 + 1] = f_h;
-			old_w = sdl_surface->w;
-			old_h = sdl_surface->h;
-		}
-
-		glBindTexture(GL_TEXTURE_2D, gl_texture);
-		display_depth == 32
-		? glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-			GL_RGBA, GL_UNSIGNED_BYTE, sdl_surface->pixels)
-		: glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
-
-		glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
-		glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+//		if (sdl_surface->w != old_w || sdl_surface->h != old_h) {
+//			float f_w = static_cast<float>(sdl_surface->w) / static_cast<float>(display_width);
+//			float f_h = static_cast<float>(sdl_surface->h) / static_cast<float>(display_height);
+//			texture_coords[1 * 2 + 0] = f_w;
+//			texture_coords[2 * 2 + 1] = f_h;
+//			texture_coords[3 * 2 + 0] = f_w;
+//			texture_coords[3 * 2 + 1] = f_h;
+//			old_w = sdl_surface->w;
+//			old_h = sdl_surface->h;
+//		}
+//
+//		glBindTexture(GL_TEXTURE_2D, gl_texture);
+//		display_depth == 32
+//		? glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
+//			GL_RGBA, GL_UNSIGNED_BYTE, sdl_surface->pixels)
+//		: glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
+//			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
+//
+//		glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
+//		glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
+//		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 		auto time = SDL_GetTicks();
 		if( crtemu ) {
@@ -1857,13 +1857,13 @@ int graphics_init(bool mousecapture)
 	}
 
 	//Initialize clear color
-	glClearColor(0.f, 0.f, 0.f, 1.f);
+//	glClearColor(0.f, 0.f, 0.f, 1.f);
 
 	crtemu = crtemu_create( nullptr );
 	crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
 
 	// for old fixed-function pipeline (change when using shaders!)
-	glEnable(GL_TEXTURE_2D);
+//	glEnable(GL_TEXTURE_2D);
 #else
 	if (sdl_renderer == nullptr)
 	{
@@ -1951,12 +1951,12 @@ void graphics_leave()
 		glDeleteTextures(1, &gl_texture);
 		gl_texture = 0;
 	}
-	if( crtemu )
+	if (crtemu != nullptr)
 	{
 		crtemu_destroy( crtemu );
 		crtemu = nullptr;
 	}
-	if(frame != nullptr)
+	if (frame != nullptr)
 	{
 		xfree(frame);
 	}
