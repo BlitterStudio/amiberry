@@ -30,6 +30,9 @@
 #include <SDL_image.h>
 #ifdef USE_OPENGL
 #include <SDL_opengl.h>
+#define CRTEMU_IMPLEMENTATION
+#include "crtemu.h"
+#include "crt_frame.h"
 #endif
 #include <iostream>
 
@@ -80,6 +83,9 @@ static int gl_have_error(const char* name)
 	}
 	return 0;
 }
+
+static crtemu_t* crtemu = 0;
+
 #else
 SDL_Texture* amiga_texture;
 SDL_Rect crop_rect;
@@ -1564,6 +1570,12 @@ void show_screen(int monid, int mode)
 		glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+		auto time = SDL_GetTicks();
+		if( crtemu ) {
+			crtemu_present(crtemu, (CRTEMU_U64) time, (CRTEMU_U32 const *) sdl_surface->pixels,
+			               sdl_surface->w, sdl_surface->h, (unsigned int)0xffffffff, (unsigned int)0xff000000);
+		}
+
 		SDL_GL_SwapWindow(mon->sdl_window);
 #else
 		SDL_RenderClear(sdl_renderer);
@@ -1837,6 +1849,9 @@ int graphics_init(bool mousecapture)
 	//Initialize clear color
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 
+	crtemu = crtemu_create( 0 );
+	if( crtemu ) crtemu_frame( crtemu, (CRTEMU_U32*) a_crt_frame, 1024, 1024);
+
 	// for old fixed-function pipeline (change when using shaders!)
 	glEnable(GL_TEXTURE_2D);
 #else
@@ -1925,6 +1940,11 @@ void graphics_leave()
 	{
 		glDeleteTextures(1, &gl_texture);
 		gl_texture = 0;
+	}
+	if( crtemu )
+	{
+		crtemu_destroy( crtemu );
+		crtemu = 0;
 	}
 #else
 	if (amiga_texture)
