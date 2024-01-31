@@ -385,14 +385,7 @@ void amiberry_gui_init()
 		gl_context = SDL_GL_CreateContext(mon->sdl_window);
 
 	// Enable vsync
-	if (SDL_GL_SetSwapInterval(-1) < 0)
-	{
-		write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
-		if (SDL_GL_SetSwapInterval(1) < 0)
-		{
-			write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
-		}
-	}
+	SDL_GL_SetSwapInterval( 1 );
 
 	// Setup OpenGL
 	glViewport(0, 0, GUI_WIDTH, GUI_HEIGHT);

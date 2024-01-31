@@ -65,34 +65,8 @@ SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
-GLuint gl_texture = 0;
-//static int old_w, old_h;
-//static float vertex_coords[] = {
-//	-1.0f,  1.0f,  0.0f, // 0    0  1
-//	 1.0f,  1.0f,  0.0f, // 1  ^
-//	-1.0f, -1.0f,  0.0f, // 2  | 2  3
-//	 1.0f, -1.0f,  0.0f, // 3  +-->
-//};
-//
-//static float texture_coords[] = {
-//	0.0f, 0.0f, // we flip this:
-//	1.0f, 0.0f, // v^
-//	0.0f, 1.0f, //  |  u
-//	1.0f, 1.0f, //  +-->
-//};
-
-static int gl_have_error(const char* name)
-{
-	if (const GLenum e = glGetError(); e != GL_NO_ERROR) {
-		write_log("GL error: %s %x\n", name, e);
-		return 1;
-	}
-	return 0;
-}
-
 static crtemu_t* crtemu = nullptr;
-
-CRT_FRAME_U32* frame = (CRT_FRAME_U32*) malloc( CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT * sizeof( CRT_FRAME_U32 ) );
+CRT_FRAME_U32* frame = nullptr;
 
 #else
 SDL_Texture* amiga_texture;
@@ -519,11 +493,7 @@ void graphics_subshutdown()
 	avidinfo->inbuffer = &avidinfo->drawbuffer;
 
 #ifdef USE_OPENGL
-	if (gl_texture != 0)
-	{
-		glDeleteTextures(1, &gl_texture);
-		gl_texture = 0;
-	}
+
 #else
 	if (amiga_texture != nullptr)
 	{
@@ -658,31 +628,8 @@ static void open_screen(struct uae_prefs* p)
 	check_error_sdl(sdl_surface == nullptr, "Unable to create a surface");
 
 #ifdef USE_OPENGL
-//	if (gl_texture == 0)
-//	{
-//		glGenTextures(1, &gl_texture);
-//		if (gl_have_error("glGenTextures"))	abort();
-//	}
-//
-//	glBindTexture(GL_TEXTURE_2D, gl_texture);
-//	display_depth == 32
-//		? glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-//			display_width, display_height, 0, GL_RGBA,
-//			GL_UNSIGNED_BYTE, sdl_surface->pixels)
-//		: glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-//			display_width, display_height, 0, GL_RGB,
-//			GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
-//
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//
-//	glLoadIdentity();
-//	glFrontFace(GL_CW);
-//	glEnable(GL_CULL_FACE);
-//
-//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-//	glEnableClientState(GL_VERTEX_ARRAY);
-
+	if (frame == nullptr)
+		frame = (CRT_FRAME_U32*) malloc( CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT * sizeof( CRT_FRAME_U32 ) );
 	crt_frame( frame );
 #else
 	amiga_texture = SDL_CreateTexture(sdl_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, sdl_surface->w, sdl_surface->h);
@@ -725,7 +672,7 @@ static void open_screen(struct uae_prefs* p)
 //		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 //		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
-//	glBindTexture(GL_TEXTURE_2D, 0);
+
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
@@ -1556,30 +1503,6 @@ void show_screen(int monid, int mode)
 #ifdef USE_OPENGL
 		struct AmigaMonitor* mon = &AMonitors[monid];
 
-//		glClear(GL_COLOR_BUFFER_BIT);
-
-//		if (sdl_surface->w != old_w || sdl_surface->h != old_h) {
-//			float f_w = static_cast<float>(sdl_surface->w) / static_cast<float>(display_width);
-//			float f_h = static_cast<float>(sdl_surface->h) / static_cast<float>(display_height);
-//			texture_coords[1 * 2 + 0] = f_w;
-//			texture_coords[2 * 2 + 1] = f_h;
-//			texture_coords[3 * 2 + 0] = f_w;
-//			texture_coords[3 * 2 + 1] = f_h;
-//			old_w = sdl_surface->w;
-//			old_h = sdl_surface->h;
-//		}
-//
-//		glBindTexture(GL_TEXTURE_2D, gl_texture);
-//		display_depth == 32
-//		? glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-//			GL_RGBA, GL_UNSIGNED_BYTE, sdl_surface->pixels)
-//		: glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sdl_surface->w, sdl_surface->h,
-//			GL_RGB, GL_UNSIGNED_SHORT_5_6_5, sdl_surface->pixels);
-//
-//		glVertexPointer(3, GL_FLOAT, 0, vertex_coords);
-//		glTexCoordPointer(2, GL_FLOAT, 0, texture_coords);
-//		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
 		auto time = SDL_GetTicks();
 		if( crtemu ) {
 			crtemu_present(crtemu, time, (CRTEMU_U32 const *) sdl_surface->pixels,
@@ -1672,20 +1595,6 @@ void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 	*myp = 1.0f / my;
 }
 
-void DX_Fill(struct AmigaMonitor* mon, int dstx, int dsty, int width, int height, uae_u32 color)
-{
-	SDL_Rect dstrect;
-	if (width < 0)
-		width = sdl_surface->w;
-	if (height < 0)
-		height = sdl_surface->h;
-	dstrect.x = dstx;
-	dstrect.y = dsty;
-	dstrect.w = width;
-	dstrect.h = height;
-	SDL_FillRect(sdl_surface, &dstrect, color);
-}
-
 void clearscreen()
 {
 	if (amiberry_options.use_sdl2_render_thread)
@@ -1751,16 +1660,6 @@ int machdep_init()
 
 	return 1;
 }
-
-#ifdef USE_OPENGL
-void set_gl_attribute(SDL_GLattr attr, int value)
-{
-	if (SDL_GL_SetAttribute(attr, value) != 0)
-	{
-		std::cerr << "SDL_GL_SetAttribute(" << attr << ", " << value << ") failed: " << SDL_GetError() << std::endl;
-	}
-}
-#endif
 
 int graphics_init(bool mousecapture)
 {
@@ -1846,24 +1745,17 @@ int graphics_init(bool mousecapture)
 	if (gl_context == nullptr)
 		gl_context = SDL_GL_CreateContext(mon->sdl_window);
 
+	glewInit();
+
 	// Enable vsync
-	if (SDL_GL_SetSwapInterval(-1) < 0)
-	{
-		write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
-		if (SDL_GL_SetSwapInterval(1) < 0)
-		{
-			write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
-		}
-	}
+	SDL_GL_SetSwapInterval( 1 );
 
-	//Initialize clear color
-//	glClearColor(0.f, 0.f, 0.f, 1.f);
+	if (frame == nullptr)
+		frame = (CRT_FRAME_U32*) malloc( CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT * sizeof( CRT_FRAME_U32 ) );
 
-	crtemu = crtemu_create( nullptr );
+	crtemu = crtemu_create( NULL );
 	crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
 
-	// for old fixed-function pipeline (change when using shaders!)
-//	glEnable(GL_TEXTURE_2D);
 #else
 	if (sdl_renderer == nullptr)
 	{
@@ -1946,11 +1838,6 @@ void graphics_leave()
 	}
 
 #ifdef USE_OPENGL
-	if (gl_texture != 0)
-	{
-		glDeleteTextures(1, &gl_texture);
-		gl_texture = 0;
-	}
 	if (crtemu != nullptr)
 	{
 		crtemu_destroy( crtemu );
