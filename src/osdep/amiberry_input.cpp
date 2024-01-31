@@ -360,8 +360,8 @@ int keyhack (int scancode, int pressed, int num)
 	if (currprefs.alt_tab_release)
 	{
 		if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
-			SDL_ResetKeyboard();
 			disablecapture();
+			SDL_ResetKeyboard();
 			return -1;
 		}
 	}
