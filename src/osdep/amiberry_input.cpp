@@ -361,6 +361,7 @@ int keyhack (int scancode, int pressed, int num)
 	{
 		if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
 			disablecapture();
+			SDL_ResetKeyboard();
 			return -1;
 		}
 	}
