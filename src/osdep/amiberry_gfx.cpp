@@ -1516,6 +1516,7 @@ void show_screen(int monid, int mode)
 		struct AmigaMonitor* mon = &AMonitors[monid];
 
 		auto time = SDL_GetTicks();
+		glViewport(0, 0, sdl_surface->w, sdl_surface->h);
 		if( crtemu_tv ) {
 			crtemu_present(crtemu_tv, time, (CRTEMU_U32 const *) sdl_surface->pixels,
 			               sdl_surface->w, sdl_surface->h, 0xffffffff, 0x000000);
