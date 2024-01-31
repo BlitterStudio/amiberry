@@ -379,17 +379,19 @@ void amiberry_gui_init()
 		}
 	}
 #ifdef USE_OPENGL
+	destroy_crtemu();
+
 	// Grab the window surface
 	gui_screen = SDL_GetWindowSurface(mon->sdl_window);
+
 	if (gl_context == nullptr)
 		gl_context = SDL_GL_CreateContext(mon->sdl_window);
 
 	// Enable vsync
 	SDL_GL_SetSwapInterval( 1 );
 
-	// Setup OpenGL
+	// Setup OpenGL Viewport
 	glViewport(0, 0, GUI_WIDTH, GUI_HEIGHT);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 #else
 	if (sdl_renderer == nullptr)
 	{

@@ -138,6 +138,8 @@ extern void update_win_fs_mode(int monid, struct uae_prefs* p);
 extern void gfx_lock(void);
 extern void gfx_unlock(void);
 
+extern void destroy_crtemu();
+
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);

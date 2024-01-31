@@ -63,17 +63,18 @@ bool volatile flip_in_progress = false;
 /* SDL Surface for output of emulation */
 SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
+
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
-static crtemu_t* crtemu_lite = nullptr;
-static crtemu_t* crtemu_pc = nullptr;
-static crtemu_t* crtemu_tv = nullptr;
-
+//crtemu_t* crtemu_lite = nullptr;
+//crtemu_t* crtemu_pc = nullptr;
+crtemu_t* crtemu_tv = nullptr;
 #else
 SDL_Texture* amiga_texture;
 SDL_Rect crop_rect;
 SDL_Renderer* sdl_renderer;
 #endif
+
 SDL_Rect renderQuad;
 static int dx = 0, dy = 0;
 const char* sdl_video_driver;
@@ -472,6 +473,17 @@ static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf,
 		currprefs.color_mode = changed_prefs.color_mode = 5;
 }
 
+void destroy_crtemu()
+{
+#ifdef USE_OPENGL
+	if (crtemu_tv != nullptr)
+	{
+		crtemu_destroy(crtemu_tv);
+		crtemu_tv = nullptr;
+	}
+#endif
+}
+
 void graphics_subshutdown()
 {
 	if (display_tid != nullptr) {
@@ -494,11 +506,7 @@ void graphics_subshutdown()
 	avidinfo->inbuffer = &avidinfo->drawbuffer;
 
 #ifdef USE_OPENGL
-	if (crtemu_tv != nullptr)
-	{
-		crtemu_destroy(crtemu_tv);
-		crtemu_tv = nullptr;
-	}
+	destroy_crtemu();
 #else
 	if (amiga_texture != nullptr)
 	{
@@ -636,7 +644,7 @@ static void open_screen(struct uae_prefs* p)
 	int frame_width, frame_height;
 	SDL_GetWindowSize(mon->sdl_window, &frame_width, &frame_height);
 
-	//crt_frame( frame ); // bezel - however, seems hardcoded to internal 1024x1024 size
+	//crt_frame( (CRTEMU_U32*)sdl_surface->pixels ); // bezel - however, seems hardcoded to internal 1024x1024 size
 
 	//TODO Check for option (which CRT filter to use: Lite/PC/TV)
 	if (crtemu_tv == nullptr)
@@ -1845,11 +1853,7 @@ void graphics_leave()
 	}
 
 #ifdef USE_OPENGL
-	if (crtemu_tv != nullptr)
-	{
-		crtemu_destroy( crtemu_tv );
-		crtemu_tv = nullptr;
-	}
+	destroy_crtemu();
 #else
 	if (amiga_texture)
 	{
