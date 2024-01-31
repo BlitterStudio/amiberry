@@ -65,8 +65,9 @@ SDL_DisplayMode sdl_mode;
 SDL_Surface* sdl_surface = nullptr;
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
-static crtemu_t* crtemu = nullptr;
-CRT_FRAME_U32* frame = nullptr;
+static crtemu_t* crtemu_lite = nullptr;
+static crtemu_t* crtemu_pc = nullptr;
+static crtemu_t* crtemu_tv = nullptr;
 
 #else
 SDL_Texture* amiga_texture;
@@ -493,15 +494,10 @@ void graphics_subshutdown()
 	avidinfo->inbuffer = &avidinfo->drawbuffer;
 
 #ifdef USE_OPENGL
-	if (crtemu != nullptr)
+	if (crtemu_tv != nullptr)
 	{
-		crtemu_destroy(crtemu);
-		crtemu = nullptr;
-	}
-	if (frame != nullptr)
-	{
-		xfree(frame);
-		frame = nullptr;
+		crtemu_destroy(crtemu_tv);
+		crtemu_tv = nullptr;
 	}
 #else
 	if (amiga_texture != nullptr)
@@ -585,8 +581,8 @@ static void open_screen(struct uae_prefs* p)
 		if (isfullscreen() == 0 && !is_maximized)
 		{
 			mon->amigawin_rect.x = mon->amigawin_rect.y = mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
-			SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 			SDL_SetWindowSize(mon->sdl_window, display_width, display_height);
+			SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 		}
 	}
 	else // Native screen mode
@@ -640,14 +636,13 @@ static void open_screen(struct uae_prefs* p)
 	int frame_width, frame_height;
 	SDL_GetWindowSize(mon->sdl_window, &frame_width, &frame_height);
 
-	if (frame == nullptr)
-		frame = (CRT_FRAME_U32*) malloc( frame_width * frame_height * sizeof( CRT_FRAME_U32 ) );
 	//crt_frame( frame ); // bezel - however, seems hardcoded to internal 1024x1024 size
 
-	if (crtemu == nullptr)
-		crtemu = crtemu_create(CRTEMU_TYPE_TV, nullptr);
-
-	crtemu_frame( crtemu, frame, frame_width, frame_height);
+	//TODO Check for option (which CRT filter to use: Lite/PC/TV)
+	if (crtemu_tv == nullptr)
+		crtemu_tv = crtemu_create(CRTEMU_TYPE_TV, nullptr);
+	if (crtemu_tv)
+		crtemu_frame( crtemu_tv, (CRTEMU_U32*)sdl_surface->pixels, frame_width, frame_height);
 #else
 	amiga_texture = SDL_CreateTexture(sdl_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, sdl_surface->w, sdl_surface->h);
 	check_error_sdl(amiga_texture == nullptr, "Unable to create texture");
@@ -1521,9 +1516,9 @@ void show_screen(int monid, int mode)
 		struct AmigaMonitor* mon = &AMonitors[monid];
 
 		auto time = SDL_GetTicks();
-		if( crtemu ) {
-			crtemu_present(crtemu, time, (CRTEMU_U32 const *) sdl_surface->pixels,
-			               sdl_surface->w, sdl_surface->h, 0xffffffff, 0xff000000);
+		if( crtemu_tv ) {
+			crtemu_present(crtemu_tv, time, (CRTEMU_U32 const *) sdl_surface->pixels,
+			               sdl_surface->w, sdl_surface->h, 0xffffffff, 0x000000);
 		}
 
 		SDL_GL_SwapWindow(mon->sdl_window);
@@ -1849,14 +1844,10 @@ void graphics_leave()
 	}
 
 #ifdef USE_OPENGL
-	if (crtemu != nullptr)
+	if (crtemu_tv != nullptr)
 	{
-		crtemu_destroy( crtemu );
-		crtemu = nullptr;
-	}
-	if (frame != nullptr)
-	{
-		xfree(frame);
+		crtemu_destroy( crtemu_tv );
+		crtemu_tv = nullptr;
 	}
 #else
 	if (amiga_texture)
