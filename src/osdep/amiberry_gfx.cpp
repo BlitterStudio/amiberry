@@ -29,10 +29,16 @@
 #include <png.h>
 #include <SDL_image.h>
 #ifdef USE_OPENGL
+#include <GL/glew.h>
 #include <SDL_opengl.h>
+
+#define CRTEMU_REPORT_SHADER_ERRORS
 #define CRTEMU_IMPLEMENTATION
 #include "crtemu.h"
+
+#define CRT_FRAME_IMPLEMENTATION
 #include "crt_frame.h"
+
 #endif
 #include <iostream>
 
@@ -84,7 +90,9 @@ static int gl_have_error(const char* name)
 	return 0;
 }
 
-static crtemu_t* crtemu = 0;
+static crtemu_t* crtemu = nullptr;
+
+CRT_FRAME_U32* frame = (CRT_FRAME_U32*) malloc( CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT * sizeof( CRT_FRAME_U32 ) );
 
 #else
 SDL_Texture* amiga_texture;
@@ -674,6 +682,8 @@ static void open_screen(struct uae_prefs* p)
 
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glEnableClientState(GL_VERTEX_ARRAY);
+
+	crt_frame( frame );
 #else
 	amiga_texture = SDL_CreateTexture(sdl_renderer, pixel_format, SDL_TEXTUREACCESS_STREAMING, sdl_surface->w, sdl_surface->h);
 	check_error_sdl(amiga_texture == nullptr, "Unable to create texture");
@@ -1572,8 +1582,8 @@ void show_screen(int monid, int mode)
 
 		auto time = SDL_GetTicks();
 		if( crtemu ) {
-			crtemu_present(crtemu, (CRTEMU_U64) time, (CRTEMU_U32 const *) sdl_surface->pixels,
-			               sdl_surface->w, sdl_surface->h, (unsigned int)0xffffffff, (unsigned int)0xff000000);
+			crtemu_present(crtemu, time, (CRTEMU_U32 const *) sdl_surface->pixels,
+			               sdl_surface->w, sdl_surface->h, 0xffffffff, 0xff000000);
 		}
 
 		SDL_GL_SwapWindow(mon->sdl_window);
@@ -1849,8 +1859,8 @@ int graphics_init(bool mousecapture)
 	//Initialize clear color
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 
-	crtemu = crtemu_create( 0 );
-	if( crtemu ) crtemu_frame( crtemu, (CRTEMU_U32*) a_crt_frame, 1024, 1024);
+	crtemu = crtemu_create( nullptr );
+	crtemu_frame( crtemu, frame, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
 
 	// for old fixed-function pipeline (change when using shaders!)
 	glEnable(GL_TEXTURE_2D);
@@ -1944,7 +1954,11 @@ void graphics_leave()
 	if( crtemu )
 	{
 		crtemu_destroy( crtemu );
-		crtemu = 0;
+		crtemu = nullptr;
+	}
+	if(frame != nullptr)
+	{
+		xfree(frame);
 	}
 #else
 	if (amiga_texture)
