@@ -1400,6 +1400,8 @@ void process_event(SDL_Event event)
 				scancode = SDL_SCANCODE_RGUI;
 			}
 			scancode = keyhack(scancode, pressed, 0);
+			if (scancode < 0)
+				return;
 			my_kbd_handler(0, scancode, pressed, true);
 		}
 		break;
