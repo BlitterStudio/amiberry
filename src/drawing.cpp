@@ -5154,6 +5154,15 @@ bool vsync_handle_check (void)
 	return changed != 0;
 }
 
+#ifdef AMIBERRY
+void quit_drawing_thread()
+{
+	while (drawing_thread_busy)
+		sleep_micros(1);
+	write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_QUIT, 1);
+}
+#endif
+
 void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_u16 bplcon3p, bool drawlines, bool initial)
 {
 	int monid = 0;
@@ -5207,17 +5216,7 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 			{
 				if (drawing_tid)
 				{
-					while (drawing_thread_busy)
-						sleep_micros(1);
-					write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_QUIT, 1);
-					while (drawing_tid != nullptr) {
-						sleep_micros(10);
-					}
-					destroy_comm_pipe(drawing_pipe);
-					xfree(drawing_pipe);
-					drawing_pipe = nullptr;
-					uae_sem_destroy(&drawing_sem);
-					drawing_sem = nullptr;
+					quit_drawing_thread();
 				}
 			}
 #endif
@@ -5560,10 +5559,36 @@ static int drawing_thread(void *unused)
 
 			case RENDER_SIGNAL_QUIT:
 				drawing_tid = nullptr;
+				if (drawing_pipe)
+				{
+					destroy_comm_pipe(drawing_pipe);
+					xfree(drawing_pipe);
+					drawing_pipe = nullptr;
+				}
+				if (drawing_sem)
+				{
+					uae_sem_destroy(&drawing_sem);
+					drawing_sem = nullptr;
+				}
+				drawing_thread_busy = false;
 				return 0;
 			default:
 				break;
 		}
+	}
+}
+
+void start_drawing_thread()
+{
+	if (drawing_pipe == nullptr) {
+		drawing_pipe = xmalloc(smp_comm_pipe, 1);
+		init_comm_pipe(drawing_pipe, 20, 1);
+	}
+	if (drawing_sem == nullptr) {
+		uae_sem_init(&drawing_sem, 0, 0);
+	}
+	if (drawing_tid == nullptr && drawing_pipe != nullptr && drawing_sem != nullptr) {
+		uae_start_thread(_T("drawing"), drawing_thread, nullptr, &drawing_tid);
 	}
 }
 #endif
@@ -5584,16 +5609,7 @@ void drawing_init (void)
 #ifdef AMIBERRY
 	if (currprefs.multithreaded_drawing)
 	{
-		if (drawing_pipe == nullptr) {
-			drawing_pipe = xmalloc(smp_comm_pipe, 1);
-			init_comm_pipe(drawing_pipe, 20, 1);
-		}
-		if (drawing_sem == nullptr) {
-			uae_sem_init(&drawing_sem, 0, 0);
-		}
-		if (drawing_tid == nullptr && drawing_pipe != nullptr && drawing_sem != nullptr) {
-			uae_start_thread(_T("drawing"), drawing_thread, nullptr, &drawing_tid);
-		}
+		start_drawing_thread();
 	}
 #endif
 

@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdarg>
+#include <fstream>
 
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
@@ -37,7 +38,6 @@
 #endif
 #include <sys/ioctl.h>
 #endif
-#include <fstream>
 
 int emulating = 0;
 bool config_loaded = false;
@@ -479,7 +479,7 @@ static void gui_to_prefs(void)
 #endif
 
 	fixup_prefs(&changed_prefs, true);
-	update_win_fs_mode(0, &changed_prefs);
+	updatewinfsmode(0, &changed_prefs);
 }
 
 static void after_leave_gui()
@@ -499,6 +499,7 @@ int gui_init()
 	prefs_to_gui();
 	run_gui();
 	gui_to_prefs();
+
 	if (quit_program < 0)
 		quit_program = -quit_program;
 	if (quit_program == UAE_QUIT)
@@ -610,8 +611,11 @@ int gui_update()
 /* if drive is -1, show the full GUI, otherwise file-requester for DF[drive] */
 void gui_display(int shortcut)
 {
-	if (quit_program != 0)
+	static int here;
+
+	if (here)
 		return;
+	here++;
 	gui_active++;
 
 	if (setpaused(7)) {
@@ -623,18 +627,13 @@ void gui_display(int shortcut)
 
 	if (shortcut == -1)
 	{
-		AmigaMonitor* mon = &AMonitors[0];
-		updatewinrect(mon, false);
-		graphics_subshutdown();
-
 		prefs_to_gui();
 		run_gui();
 		gui_to_prefs();
 
-		clearscreen();
-
 		gui_update();
 		gui_purge_events();
+		gui_active--;
 	}
 	else if (shortcut >= 0 && shortcut < 4)
 	{
@@ -644,19 +643,19 @@ void gui_display(int shortcut)
 		gui_widgets_halt();
 		amiberry_gui_halt();
 	}
-	
+
 	reset_sound();
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 	clearallkeys ();
-	update_display(&changed_prefs);
+
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);
 	}
-	
 	fpscounter_reset();
 	gui_active--;
+	here--;
 }
 
 static void gui_flicker_led2(int led, int unitnum, int status)

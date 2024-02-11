@@ -68,6 +68,11 @@ extern bool config_loaded;
 extern int z3_base_adr;
 extern bool volatile flip_in_progress;
 
+extern void setmouseactive(int monid, int active);
+extern void minimizewindow(int monid);
+extern void updatemouseclip(struct AmigaMonitor*);
+extern void updatewinrect(struct AmigaMonitor*, bool);
+int getdpiforwindow(SDL_Window* hwnd);
 void amiberry_gui_init();
 void gui_widgets_init();
 void run_gui(void);
@@ -202,7 +207,7 @@ void restore_host_fp_regs(void* buf);
 // a few declarations).
 typedef void* HINSTANCE;
 typedef void* HMODULE;
-typedef void* HWND;
+typedef SDL_Window* HWND;
 typedef void* HKEY;
 typedef void* OSVERSIONINFO;
 typedef bool BOOL;

@@ -931,6 +931,7 @@ struct uae_prefs
 	int active_capture_priority;
 	bool active_nocapture_pause;
 	bool active_nocapture_nosound;
+	int active_input;
 	int inactive_priority;
 	bool inactive_pause;
 	bool inactive_nosound;
