@@ -304,8 +304,6 @@ void amiberry_gui_init()
         if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
         {
 			sdl_window_mode =  SDL_WINDOW_RESIZABLE;
-            if (currprefs.borderless)
-                sdl_window_mode |= SDL_WINDOW_BORDERLESS;
             if (currprefs.main_alwaysontop)
                 sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
             if (currprefs.start_minimized)
