@@ -556,11 +556,10 @@ static void addmode(struct MultiDisplay* md, SDL_DisplayMode* dm, int rawmode)
 	md->DisplayModes[i].colormodes = ct;
 	md->DisplayModes[i + 1].depth = -1;
 	_stprintf(md->DisplayModes[i].name, _T("%dx%d%s, %d-bit"),
-	          md->DisplayModes[i].res.width, md->DisplayModes[i].res.height,
-	          lace ? _T("i") : _T(""),
-	          md->DisplayModes[i].depth * 8);
+		md->DisplayModes[i].res.width, md->DisplayModes[i].res.height,
+		lace ? _T("i") : _T(""),
+		md->DisplayModes[i].depth * 8);
 }
-
 
 static int resolution_compare(const void* a, const void* b)
 {
@@ -760,7 +759,7 @@ bool show_screen_maybe(int monid, bool show)
 	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
 	if (!ap->gfx_vflip || ap->gfx_vsyncmode == 0 || ap->gfx_vsync <= 0) {
 		if (show)
-			show_screen(0, 0);
+			show_screen(monid, 0);
 		return false;
 	}
 	return false;
@@ -774,8 +773,7 @@ float target_adjust_vblank_hz(int monid, float hz)
 		return hz;
 	if (isfullscreen() > 0) {
 		maxrate = mon->currentmode.freq;
-	}
-	else {
+	} else {
 		maxrate = deskhz;
 	}
 	double nhz = hz * 2.0;
@@ -898,13 +896,11 @@ void graphics_reset(bool forced)
 {
 	if (forced) {
 		display_change_requested = 2;
-	}
-	else {
+	} else {
 		// full reset if display size can't be changed.
 		if (currprefs.gfx_api) {
 			display_change_requested = 3;
-		}
-		else {
+		} else {
 			display_change_requested = 2;
 		}
 	}
@@ -924,6 +920,7 @@ int check_prefs_changed_gfx()
 	config_changed_flags = 0;
 
 	for (int i = 0; i < MAX_AMIGADISPLAYS; i++) {
+		monitors[i] = false;
 		int c2 = 0;
 		c2 |= currprefs.gfx_monitor[i].gfx_size_fs.width != changed_prefs.gfx_monitor[i].gfx_size_fs.width ? 16 : 0;
 		c2 |= currprefs.gfx_monitor[i].gfx_size_fs.height != changed_prefs.gfx_monitor[i].gfx_size_fs.height ? 16 : 0;
@@ -962,8 +959,7 @@ int check_prefs_changed_gfx()
 				gfc->changed = false;
 				c |= 16;
 			}
-		}
-		else {
+		} else {
 			struct gfx_filterdata* gfc1 = &changed_prefs.gf[0];
 			struct gfx_filterdata* gfc2 = &changed_prefs.gf[2];
 			if (gfc1->changed || gfc2->changed) {
@@ -973,6 +969,11 @@ int check_prefs_changed_gfx()
 			}
 		}
 	}
+	if (currprefs.gf[2].enable != changed_prefs.gf[2].enable) {
+		currprefs.gf[2].enable = changed_prefs.gf[2].enable;
+		c |= 512;
+	}
+
 	monitors[0] = true;
 
 	c |= currprefs.color_mode != changed_prefs.color_mode ? 2 | 16 : 0;
@@ -1058,6 +1059,7 @@ int check_prefs_changed_gfx()
 	c |= currprefs.gfx_scandoubler != changed_prefs.gfx_scandoubler ? (2 | 8) : 0;
 	c |= currprefs.gfx_threebitcolors != changed_prefs.gfx_threebitcolors ? (256) : 0;
 	c |= currprefs.gfx_grayscale != changed_prefs.gfx_grayscale ? (512) : 0;
+	c |= currprefs.gfx_monitorblankdelay != changed_prefs.gfx_monitorblankdelay ? (512) : 0;
 
 	c |= currprefs.gfx_display_sections != changed_prefs.gfx_display_sections ? (512) : 0;
 	c |= currprefs.gfx_variable_sync != changed_prefs.gfx_variable_sync ? 1 : 0;
@@ -1088,8 +1090,8 @@ int check_prefs_changed_gfx()
 		bool setpause = false;
 		bool dontcapture = false;
 		int keepfsmode =
-				currprefs.gfx_apmode[0].gfx_fullscreen == changed_prefs.gfx_apmode[0].gfx_fullscreen &&
-				currprefs.gfx_apmode[1].gfx_fullscreen == changed_prefs.gfx_apmode[1].gfx_fullscreen;
+			currprefs.gfx_apmode[0].gfx_fullscreen == changed_prefs.gfx_apmode[0].gfx_fullscreen &&
+			currprefs.gfx_apmode[1].gfx_fullscreen == changed_prefs.gfx_apmode[1].gfx_fullscreen;
 
 		currprefs.gfx_autoresolution = changed_prefs.gfx_autoresolution;
 		currprefs.gfx_autoresolution_vga = changed_prefs.gfx_autoresolution_vga;
@@ -1103,11 +1105,11 @@ int check_prefs_changed_gfx()
 		if (display_change_requested) {
 			if (display_change_requested == 3) {
 				c = 1024;
-			}
-			else if (display_change_requested == 2) {
+			} else if (display_change_requested == 2) {
 				c = 512;
-			}
-			else {
+			} else if (display_change_requested == 4) {
+				c = 32;
+			} else {
 				c = 2;
 				keepfsmode = 0;
 				if (display_change_requested <= -1) {
@@ -1188,6 +1190,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_scandoubler = changed_prefs.gfx_scandoubler;
 		currprefs.gfx_threebitcolors = changed_prefs.gfx_threebitcolors;
 		currprefs.gfx_grayscale = changed_prefs.gfx_grayscale;
+		currprefs.gfx_monitorblankdelay = changed_prefs.gfx_monitorblankdelay;
 
 		currprefs.gfx_display_sections = changed_prefs.gfx_display_sections;
 		currprefs.gfx_variable_sync = changed_prefs.gfx_variable_sync;
@@ -1209,6 +1212,12 @@ int check_prefs_changed_gfx()
 		currprefs.rtgscaleaspectratio = changed_prefs.rtgscaleaspectratio;
 		currprefs.rtgvblankrate = changed_prefs.rtgvblankrate;
 
+#ifdef AMIBERRY
+		bool was_multithreaded_drawing = currprefs.multithreaded_drawing;
+		if (was_multithreaded_drawing)
+			quit_drawing_thread();
+		currprefs.multithreaded_drawing = false;
+#endif
 		bool unacquired = false;
 		for (int monid = MAX_AMIGAMONITORS - 1; monid >= 0; monid--) {
 			if (!monitors[monid])
@@ -1229,13 +1238,15 @@ int check_prefs_changed_gfx()
 			if (c & 128) {
 				if (currprefs.gfx_autoresolution) {
 					c |= 2 | 8;
-				}
-				else {
+				} else {
 					c |= 16;
 					reset_drawing();
-					//S2X_reset();
+#ifdef AMIBERRY
 					// Trigger auto-crop recalculations if needed
 					force_auto_crop = true;
+#else
+					//S2X_reset(mon->monitor_id);
+#endif
 				}
 			}
 			if (c & 1024) {
@@ -1261,7 +1272,11 @@ int check_prefs_changed_gfx()
 				graphics_init(!dontcapture);
 			}
 		}
-
+#ifdef AMIBERRY
+		currprefs.multithreaded_drawing = was_multithreaded_drawing;
+		if (was_multithreaded_drawing)
+			start_drawing_thread();
+#endif
 		init_custom();
 		if (c & 4) {
 			pause_sound();
@@ -1287,7 +1302,7 @@ int check_prefs_changed_gfx()
 	bool changed = false;
 	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 		if (currprefs.cr[i].rate != changed_prefs.cr[i].rate ||
-		    currprefs.cr[i].locked != changed_prefs.cr[i].locked) {
+			currprefs.cr[i].locked != changed_prefs.cr[i].locked) {
 			memcpy(&currprefs.cr[i], &changed_prefs.cr[i], sizeof(struct chipset_refresh));
 			changed = true;
 		}
@@ -1302,13 +1317,15 @@ int check_prefs_changed_gfx()
 		return 1;
 	}
 
-	if (currprefs.gf[0].gfx_filter_autoscale != changed_prefs.gf[0].gfx_filter_autoscale ||
-	    currprefs.gfx_xcenter_pos != changed_prefs.gfx_xcenter_pos ||
-	    currprefs.gfx_ycenter_pos != changed_prefs.gfx_ycenter_pos ||
-	    currprefs.gfx_xcenter_size != changed_prefs.gfx_xcenter_size ||
-	    currprefs.gfx_ycenter_size != changed_prefs.gfx_ycenter_size ||
-	    currprefs.gfx_xcenter != changed_prefs.gfx_xcenter ||
-	    currprefs.gfx_ycenter != changed_prefs.gfx_ycenter)
+	if (
+		currprefs.gf[0].gfx_filter_autoscale != changed_prefs.gf[0].gfx_filter_autoscale ||
+		currprefs.gf[2].gfx_filter_autoscale != changed_prefs.gf[2].gfx_filter_autoscale ||
+		currprefs.gfx_xcenter_pos != changed_prefs.gfx_xcenter_pos ||
+		currprefs.gfx_ycenter_pos != changed_prefs.gfx_ycenter_pos ||
+		currprefs.gfx_xcenter_size != changed_prefs.gfx_xcenter_size ||
+		currprefs.gfx_ycenter_size != changed_prefs.gfx_ycenter_size ||
+		currprefs.gfx_xcenter != changed_prefs.gfx_xcenter ||
+		currprefs.gfx_ycenter != changed_prefs.gfx_ycenter)
 	{
 		currprefs.gfx_xcenter_pos = changed_prefs.gfx_xcenter_pos;
 		currprefs.gfx_ycenter_pos = changed_prefs.gfx_ycenter_pos;
@@ -1317,6 +1334,7 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_xcenter = changed_prefs.gfx_xcenter;
 		currprefs.gfx_ycenter = changed_prefs.gfx_ycenter;
 		currprefs.gf[0].gfx_filter_autoscale = changed_prefs.gf[0].gfx_filter_autoscale;
+		currprefs.gf[2].gfx_filter_autoscale = changed_prefs.gf[2].gfx_filter_autoscale;
 
 		get_custom_limits(nullptr, nullptr, nullptr, nullptr, nullptr);
 		fixup_prefs_dimensions(&changed_prefs);
@@ -1328,35 +1346,37 @@ int check_prefs_changed_gfx()
 	currprefs.harddrive_read_only = changed_prefs.harddrive_read_only;
 
 	if (currprefs.leds_on_screen != changed_prefs.leds_on_screen ||
-	    currprefs.keyboard_leds[0] != changed_prefs.keyboard_leds[0] ||
-	    currprefs.keyboard_leds[1] != changed_prefs.keyboard_leds[1] ||
-	    currprefs.keyboard_leds[2] != changed_prefs.keyboard_leds[2] ||
-	    currprefs.input_mouse_untrap != changed_prefs.input_mouse_untrap ||
-	    currprefs.input_magic_mouse_cursor != changed_prefs.input_magic_mouse_cursor ||
-	    currprefs.active_capture_priority != changed_prefs.active_capture_priority ||
-	    currprefs.inactive_priority != changed_prefs.inactive_priority ||
-	    currprefs.active_nocapture_nosound != changed_prefs.active_nocapture_nosound ||
-	    currprefs.active_nocapture_pause != changed_prefs.active_nocapture_pause ||
-	    currprefs.inactive_nosound != changed_prefs.inactive_nosound ||
-	    currprefs.inactive_pause != changed_prefs.inactive_pause ||
-	    currprefs.inactive_input != changed_prefs.inactive_input ||
-	    currprefs.minimized_priority != changed_prefs.minimized_priority ||
-	    currprefs.minimized_nosound != changed_prefs.minimized_nosound ||
-	    currprefs.minimized_pause != changed_prefs.minimized_pause ||
-	    currprefs.minimized_input != changed_prefs.minimized_input ||
-	    currprefs.capture_always != changed_prefs.capture_always ||
-	    currprefs.native_code != changed_prefs.native_code ||
-	    currprefs.alt_tab_release != changed_prefs.alt_tab_release ||
-	    currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
-	    currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
-	    currprefs.use_retroarch_reset != changed_prefs.use_retroarch_reset ||
-	    currprefs.use_retroarch_vkbd != changed_prefs.use_retroarch_vkbd ||
-	    currprefs.sound_pullmode != changed_prefs.sound_pullmode ||
-	    currprefs.kbd_led_num != changed_prefs.kbd_led_num ||
-	    currprefs.kbd_led_scr != changed_prefs.kbd_led_scr ||
-	    currprefs.kbd_led_cap != changed_prefs.kbd_led_cap ||
-	    currprefs.turbo_boot != changed_prefs.turbo_boot ||
-	    currprefs.right_control_is_right_win_key != changed_prefs.right_control_is_right_win_key)
+		currprefs.keyboard_leds[0] != changed_prefs.keyboard_leds[0] ||
+		currprefs.keyboard_leds[1] != changed_prefs.keyboard_leds[1] ||
+		currprefs.keyboard_leds[2] != changed_prefs.keyboard_leds[2] ||
+		currprefs.input_mouse_untrap != changed_prefs.input_mouse_untrap ||
+		currprefs.input_magic_mouse_cursor != changed_prefs.input_magic_mouse_cursor ||
+		currprefs.minimize_inactive != changed_prefs.minimize_inactive ||
+		currprefs.active_capture_priority != changed_prefs.active_capture_priority ||
+		currprefs.inactive_priority != changed_prefs.inactive_priority ||
+		currprefs.minimized_priority != changed_prefs.minimized_priority ||
+		currprefs.active_nocapture_nosound != changed_prefs.active_nocapture_nosound ||
+		currprefs.active_nocapture_pause != changed_prefs.active_nocapture_pause ||
+		currprefs.active_input != changed_prefs.active_input ||
+		currprefs.inactive_nosound != changed_prefs.inactive_nosound ||
+		currprefs.inactive_pause != changed_prefs.inactive_pause ||
+		currprefs.inactive_input != changed_prefs.inactive_input ||
+		currprefs.minimized_nosound != changed_prefs.minimized_nosound ||
+		currprefs.minimized_pause != changed_prefs.minimized_pause ||
+		currprefs.minimized_input != changed_prefs.minimized_input ||
+		currprefs.capture_always != changed_prefs.capture_always ||
+		currprefs.native_code != changed_prefs.native_code ||
+		currprefs.alt_tab_release != changed_prefs.alt_tab_release ||
+		currprefs.use_retroarch_quit != changed_prefs.use_retroarch_quit ||
+		currprefs.use_retroarch_menu != changed_prefs.use_retroarch_menu ||
+		currprefs.use_retroarch_reset != changed_prefs.use_retroarch_reset ||
+		currprefs.use_retroarch_vkbd != changed_prefs.use_retroarch_vkbd ||
+		currprefs.sound_pullmode != changed_prefs.sound_pullmode ||
+		currprefs.kbd_led_num != changed_prefs.kbd_led_num ||
+		currprefs.kbd_led_scr != changed_prefs.kbd_led_scr ||
+		currprefs.kbd_led_cap != changed_prefs.kbd_led_cap ||
+		currprefs.turbo_boot != changed_prefs.turbo_boot ||
+		currprefs.right_control_is_right_win_key != changed_prefs.right_control_is_right_win_key)
 	{
 		currprefs.leds_on_screen = changed_prefs.leds_on_screen;
 		currprefs.keyboard_leds[0] = changed_prefs.keyboard_leds[0];
@@ -1364,14 +1384,16 @@ int check_prefs_changed_gfx()
 		currprefs.keyboard_leds[2] = changed_prefs.keyboard_leds[2];
 		currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap;
 		currprefs.input_magic_mouse_cursor = changed_prefs.input_magic_mouse_cursor;
+		currprefs.minimize_inactive = changed_prefs.minimize_inactive;
 		currprefs.active_capture_priority = changed_prefs.active_capture_priority;
 		currprefs.inactive_priority = changed_prefs.inactive_priority;
+		currprefs.minimized_priority = changed_prefs.minimized_priority;
 		currprefs.active_nocapture_nosound = changed_prefs.active_nocapture_nosound;
+		currprefs.active_input = changed_prefs.active_input;
 		currprefs.active_nocapture_pause = changed_prefs.active_nocapture_pause;
 		currprefs.inactive_nosound = changed_prefs.inactive_nosound;
 		currprefs.inactive_pause = changed_prefs.inactive_pause;
 		currprefs.inactive_input = changed_prefs.inactive_input;
-		currprefs.minimized_priority = changed_prefs.minimized_priority;
 		currprefs.minimized_nosound = changed_prefs.minimized_nosound;
 		currprefs.minimized_pause = changed_prefs.minimized_pause;
 		currprefs.minimized_input = changed_prefs.minimized_input;
@@ -1398,16 +1420,33 @@ int check_prefs_changed_gfx()
 	}
 
 	if (currprefs.samplersoundcard != changed_prefs.samplersoundcard ||
-	    currprefs.sampler_stereo != changed_prefs.sampler_stereo) {
+		currprefs.sampler_stereo != changed_prefs.sampler_stereo) {
 		currprefs.samplersoundcard = changed_prefs.samplersoundcard;
 		currprefs.sampler_stereo = changed_prefs.sampler_stereo;
 		sampler_free();
 	}
 
+	if (_tcscmp(currprefs.prtname, changed_prefs.prtname) ||
+		currprefs.parallel_autoflush_time != changed_prefs.parallel_autoflush_time ||
+		currprefs.parallel_matrix_emulation != changed_prefs.parallel_matrix_emulation ||
+		currprefs.parallel_postscript_emulation != changed_prefs.parallel_postscript_emulation ||
+		currprefs.parallel_postscript_detection != changed_prefs.parallel_postscript_detection ||
+		_tcscmp(currprefs.ghostscript_parameters, changed_prefs.ghostscript_parameters)) {
+		_tcscpy(currprefs.prtname, changed_prefs.prtname);
+		currprefs.parallel_autoflush_time = changed_prefs.parallel_autoflush_time;
+		currprefs.parallel_matrix_emulation = changed_prefs.parallel_matrix_emulation;
+		currprefs.parallel_postscript_emulation = changed_prefs.parallel_postscript_emulation;
+		currprefs.parallel_postscript_detection = changed_prefs.parallel_postscript_detection;
+		_tcscpy(currprefs.ghostscript_parameters, changed_prefs.ghostscript_parameters);
+#ifdef PARALLEL_PORT
+		//closeprinter();
+#endif
+	}
+
 	if (_tcscmp(currprefs.sername, changed_prefs.sername) ||
-	    currprefs.serial_hwctsrts != changed_prefs.serial_hwctsrts ||
-	    currprefs.serial_direct != changed_prefs.serial_direct ||
-	    currprefs.serial_demand != changed_prefs.serial_demand) {
+		currprefs.serial_hwctsrts != changed_prefs.serial_hwctsrts ||
+		currprefs.serial_direct != changed_prefs.serial_direct ||
+		currprefs.serial_demand != changed_prefs.serial_demand) {
 		_tcscpy(currprefs.sername, changed_prefs.sername);
 		currprefs.serial_hwctsrts = changed_prefs.serial_hwctsrts;
 		currprefs.serial_demand = changed_prefs.serial_demand;
@@ -1419,8 +1458,8 @@ int check_prefs_changed_gfx()
 	}
 
 	if (_tcscmp(currprefs.midiindev, changed_prefs.midiindev) ||
-	    _tcscmp(currprefs.midioutdev, changed_prefs.midioutdev) ||
-	    currprefs.midirouter != changed_prefs.midirouter)
+		_tcscmp(currprefs.midioutdev, changed_prefs.midioutdev) ||
+		currprefs.midirouter != changed_prefs.midirouter)
 	{
 		_tcscpy(currprefs.midiindev, changed_prefs.midiindev);
 		_tcscpy(currprefs.midioutdev, changed_prefs.midioutdev);
@@ -1438,14 +1477,15 @@ int check_prefs_changed_gfx()
 #endif
 	}
 
+#ifdef AMIBERRY
 	// Virtual keyboard
 	if (currprefs.vkbd_enabled != changed_prefs.vkbd_enabled ||
-	    currprefs.vkbd_hires != changed_prefs.vkbd_hires ||
-	    currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
-	    currprefs.vkbd_exit != changed_prefs.vkbd_exit ||
-	    _tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
-	    _tcscmp(currprefs.vkbd_style, changed_prefs.vkbd_style) ||
-	    _tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
+		currprefs.vkbd_hires != changed_prefs.vkbd_hires ||
+		currprefs.vkbd_transparency != changed_prefs.vkbd_transparency ||
+		currprefs.vkbd_exit != changed_prefs.vkbd_exit ||
+		_tcscmp(currprefs.vkbd_language, changed_prefs.vkbd_language) ||
+		_tcscmp(currprefs.vkbd_style, changed_prefs.vkbd_style) ||
+		_tcscmp(currprefs.vkbd_toggle, changed_prefs.vkbd_toggle))
 	{
 		currprefs.vkbd_enabled = changed_prefs.vkbd_enabled;
 		currprefs.vkbd_hires = changed_prefs.vkbd_hires;
@@ -1472,6 +1512,7 @@ int check_prefs_changed_gfx()
 			vkbd_quit();
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -1642,15 +1683,8 @@ static void open_screen(struct uae_prefs* p)
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
 		{
-			if (mon->amigawin_rect.x && mon->amigawin_rect.y)
-				SDL_SetWindowPosition(mon->amiga_window, mon->amigawin_rect.x, mon->amigawin_rect.y);
-			else
-				SDL_SetWindowPosition(mon->amiga_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
-			if (mon->amigawin_rect.w && mon->amigawin_rect.h)
-				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
-			else
-				SDL_SetWindowSize(mon->amiga_window, width, height);
+			SDL_SetWindowPosition(mon->amiga_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+			SDL_SetWindowSize(mon->amiga_window, width, height);
 		}
 	}
 
@@ -1739,8 +1773,7 @@ bool vsync_switchmode(int monid, int hz)
 
 	if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate > 85) {
 		preferdouble = true;
-	}
-	else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced) {
+	} else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced) {
 		preferlace = true;
 	}
 
@@ -1752,7 +1785,6 @@ bool vsync_switchmode(int monid, int hz)
 	newh = h * (currprefs.ntscmode ? 60 : 50) / hz;
 
 	found = nullptr;
-
 	for (cnt = 0; cnt <= abs(newh - h) + 1 && !found; cnt++) {
 		for (int dbl = 0; dbl < 2 && !found; dbl++) {
 			bool doublecheck = false;
@@ -1775,8 +1807,7 @@ bool vsync_switchmode(int monid, int hz)
 									hz = r->refresh[j];
 									break;
 								}
-							}
-							else if (lacecheck) {
+							} else if (lacecheck) {
 								if (!(r->refreshtype[j] & REFRESH_RATE_LACE))
 									continue;
 								if (r->refresh[j] * 2 == hz + extra) {
@@ -1785,8 +1816,7 @@ bool vsync_switchmode(int monid, int hz)
 									hz = r->refresh[j];
 									break;
 								}
-							}
-							else {
+							} else {
 								if (r->refresh[j] == hz + extra) {
 									found = r;
 									hz = r->refresh[j];
@@ -1810,14 +1840,13 @@ bool vsync_switchmode(int monid, int hz)
 		}
 		write_log(_T("refresh rate changed to %d%s but no matching screenmode found, vsync disabled\n"), hz, lace ? _T("i") : _T("p"));
 		return false;
-	}
-	else {
+	} else {
 		newh = static_cast<int>(found->res.height);
 		changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height = newh;
 		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = hz;
 		changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = lace;
 		if (changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height != currprefs.gfx_monitor[mon->monitor_id].gfx_size_fs.height ||
-		    changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate != currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate) {
+			changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate != currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate) {
 			write_log(_T("refresh rate changed to %d%s, new screenmode %dx%d\n"), hz, lace ? _T("i") : _T("p"), w, newh);
 			set_config_changed();
 		}
@@ -1834,10 +1863,10 @@ int vsync_isdone(frame_time_t* dt)
 {
 	if (isvsync() == 0)
 		return -1;
-	//if (waitvblankthread_mode <= 0)
-	//	return -2;
-	//if (dt)
-	//	*dt = wait_vblank_timestamp;
+	if (waitvblankthread_mode <= 0)
+		return -2;
+	if (dt)
+		*dt = wait_vblank_timestamp;
 	return vsync_active ? 1 : 0;
 }
 
@@ -2298,17 +2327,14 @@ bool toggle_rtg(int monid, int mode)
 	for (;;) {
 		if (mode == -1) {
 			rtg_index--;
-		}
-		else if (mode >= 0 && mode <= MAX_RTG_BOARDS) {
+		} else if (mode >= 0 && mode <= MAX_RTG_BOARDS) {
 			rtg_index = mode - 1;
-		}
-		else {
+		} else {
 			rtg_index++;
 		}
 		if (rtg_index >= MAX_RTG_BOARDS) {
 			rtg_index = -1;
-		}
-		else if (rtg_index < -1) {
+		} else if (rtg_index < -1) {
 			rtg_index = MAX_RTG_BOARDS - 1;
 		}
 		if (rtg_index < 0) {
@@ -2323,18 +2349,17 @@ bool toggle_rtg(int monid, int mode)
 		}
 		struct rtgboardconfig* r = &currprefs.rtgboards[rtg_index];
 		if (r->rtgmem_size > 0 && r->monitor_id == monid) {
-			if (r->rtgmem_type >= GFXBOARD_HARDWARE) {
-				int idx = 0; // gfxboard_toggle(r->monitor_id, rtg_index, mode >= -1);
-				if (idx >= 0) {
-					rtg_index = idx;
-					return true;
-				}
-				if (idx < -1) {
-					rtg_index = -1;
-					return false;
-				}
-			}
-			else {
+//			if (r->rtgmem_type >= GFXBOARD_HARDWARE) {
+//				int idx = gfxboard_toggle(r->monitor_id, rtg_index, mode >= -1);
+//				if (idx >= 0) {
+//					rtg_index = idx;
+//					return true;
+//				}
+//				if (idx < -1) {
+//					rtg_index = -1;
+//					return false;
+//				}
+//			} else {
 				//gfxboard_toggle(r->monitor_id, -1, -1);
 				if (mode < -1)
 					return true;
@@ -2357,7 +2382,7 @@ bool toggle_rtg(int monid, int mode)
 					set_config_changed();
 					return true;
 				}
-			}
+//			}
 		}
 		if (mode >= 0 && mode <= MAX_RTG_BOARDS) {
 			rtg_index = old_index;
@@ -2370,7 +2395,7 @@ bool toggle_rtg(int monid, int mode)
 void close_rtg(int monid, bool reset)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	close_windows(&AMonitors[monid]);
+	close_windows(mon);
 	if (reset) {
 		mon->screen_is_picasso = false;
 	}
@@ -2391,50 +2416,41 @@ void toggle_fullscreen(int monid, int mode)
 		if (v == GFX_FULLWINDOW) {
 			prevmode = v;
 			v = GFX_WINDOW;
-		}
-		else if (v == GFX_WINDOW) {
+		} else if (v == GFX_WINDOW) {
 			if (prevmode < 0) {
 				v = GFX_FULLSCREEN;
 				prevmode = v;
-			}
-			else {
+			} else {
 				v = prevmode;
 			}
+		} else if (v == GFX_FULLSCREEN) {
+			if (wfw > 0)
+				v = GFX_FULLWINDOW;
+			else
+				v = GFX_WINDOW;
 		}
-		else if (v == GFX_FULLSCREEN) {
-			{
-				if (wfw > 0)
-					v = GFX_FULLWINDOW;
-				else
-					v = GFX_WINDOW;
-			}
-		}
-	}
-	else if (mode == 0) {
+	} else if (mode == 0) {
 		prevmode = v;
 		// fullscreen <> window
 		if (v == GFX_FULLSCREEN)
 			v = GFX_WINDOW;
 		else
 			v = GFX_FULLSCREEN;
-	}
-	else if (mode == 1) {
+	} else if (mode == 1) {
 		prevmode = v;
 		// fullscreen <> fullwindow
 		if (v == GFX_FULLSCREEN)
 			v = GFX_FULLWINDOW;
 		else
 			v = GFX_FULLSCREEN;
-	}
-	else if (mode == 2) {
+	} else if (mode == 2) {
 		prevmode = v;
 		// window <> fullwindow
 		if (v == GFX_FULLWINDOW)
 			v = GFX_WINDOW;
 		else
 			v = GFX_FULLWINDOW;
-	}
-	else if (mode == 10) {
+	} else if (mode == 10) {
 		v = GFX_WINDOW;
 	}
 	*p = v;
@@ -2483,6 +2499,8 @@ void auto_crop_image()
 {
 	static bool last_autocrop;
 	static int width, height;
+	if (amiga_surface == nullptr || amiga_renderer == nullptr) return;
+
 	if (currprefs.gfx_auto_crop)
 	{
 		static int last_vstrt, last_vstop, last_hstrt, last_hstop, last_x;
@@ -2748,14 +2766,14 @@ void create_screenshot()
 
 	if (amiga_surface != nullptr) {
 	current_screenshot = SDL_CreateRGBSurfaceFrom(amiga_surface->pixels,
-		amiga_surface->w,
-		amiga_surface->h,
-		amiga_surface->format->BitsPerPixel,
-		amiga_surface->pitch,
-		amiga_surface->format->Rmask,
-		amiga_surface->format->Gmask,
-		amiga_surface->format->Bmask,
-		amiga_surface->format->Amask);
+	                                              amiga_surface->w,
+	                                              amiga_surface->h,
+	                                              amiga_surface->format->BitsPerPixel,
+	                                              amiga_surface->pitch,
+	                                              amiga_surface->format->Rmask,
+	                                              amiga_surface->format->Gmask,
+	                                              amiga_surface->format->Bmask,
+	                                              amiga_surface->format->Amask);
 	}
 }
 
@@ -2791,6 +2809,3 @@ void screenshot(int monid, int mode, int doprepare)
 	strncat(screenshot_filename,".png", MAX_DPATH - 1);
 	save_thumb(screenshot_filename);
 }
-
-
-
