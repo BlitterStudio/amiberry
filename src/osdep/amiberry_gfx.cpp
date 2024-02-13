@@ -2311,6 +2311,7 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 	struct AmigaMonitor* mon = &AMonitors[0];
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
 	bool borderless = p->borderless;
+	bool changed = false;
 
 	if (mon->amiga_window)
 	{
@@ -2327,13 +2328,17 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 			{
 				SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
 				SDL_SetWindowSize(mon->amiga_window, p->gfx_monitor[monid].gfx_size_fs.width, p->gfx_monitor[monid].gfx_size_fs.height);
+				changed = true;
 			}
 		}
 		else if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLWINDOW)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 			if (!is_fullwindow)
+			{
 				SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+				changed = true;
+			}
 		}
 		else
 		{
@@ -2341,15 +2346,20 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 			// Switch to Window mode, if we don't have it already - but not for KMSDRM
 			if ((is_fullscreen || is_fullwindow) 
 				&& strcmpi(sdl_video_driver, "KMSDRM") != 0)
+			{
 				SDL_SetWindowFullscreen(mon->amiga_window, 0);
+				changed = true;
+			}
 
 			if (borderless != is_borderless)
 			{
 				SDL_SetWindowBordered(mon->amiga_window, borderless ? SDL_FALSE : SDL_TRUE);
+				changed = true;
 			}
 		}
-		
-		set_config_changed();
+
+		if (changed)
+			set_config_changed();
 	}
 
 	if (mon->screen_is_picasso)
