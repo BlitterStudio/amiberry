@@ -2498,7 +2498,7 @@ bool target_graphics_buffer_update(int monid)
 		int scaled_height = h;
 		if (currprefs.gfx_vresolution == VRES_NONDOUBLE)
 		{
-			if (currprefs.gfx_resolution == RES_HIRES)
+			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
 				scaled_height *= 2;
 //			else if (currprefs.gfx_resolution == RES_SUPERHIRES)
 //				scaled_width /= 2;
