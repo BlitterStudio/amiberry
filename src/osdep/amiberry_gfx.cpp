@@ -2487,14 +2487,18 @@ bool target_graphics_buffer_update(int monid)
 		{
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
 				SDL_RenderSetLogicalSize(amiga_renderer, scaled_width, scaled_height);
-				renderQuad = {dx, dy, scaled_width, scaled_height};
-				crop_rect = {dx, dy, scaled_width, scaled_height};
+				if (!currprefs.gfx_auto_crop) {
+					renderQuad = {dx, dy, scaled_width, scaled_height};
+					crop_rect = {dx, dy, scaled_width, scaled_height};
+				}
 			}
 			else
 			{
 				SDL_RenderSetLogicalSize(amiga_renderer, scaled_height, scaled_width);
-				renderQuad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
-				crop_rect = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
+				if (!currprefs.gfx_auto_crop) {
+					renderQuad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
+					crop_rect = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
+				}
 			}
 			set_scaling_option(&currprefs, scaled_width, scaled_height);
 		}
@@ -2799,16 +2803,16 @@ void auto_crop_image()
 
 			// Minimum values
 			const int min_width = currprefs.gfx_resolution ? 640 : 320;
-			if (new_width / 2 << currprefs.gfx_resolution < min_width)
+			if (((new_width / 2) << currprefs.gfx_resolution) < min_width)
 				new_width = min_width;
 			else
-				new_width = new_width / 2 << currprefs.gfx_resolution;
+				new_width = (new_width / 2) << currprefs.gfx_resolution;
 			if (new_height < 204)
 				new_height = 204;
 
 			// Maximum values
-			if (new_width > 720)
-				new_width = 720;
+			if (new_width > (AMIGA_WIDTH_MAX << currprefs.gfx_resolution))
+				new_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
 
 			// Adjust new Height for Line mode option
 			new_height = new_height << currprefs.gfx_vresolution;
@@ -2819,22 +2823,14 @@ void auto_crop_image()
 #ifdef USE_OPENGL
 			// TODO Auto-Crop in OpenGL
 #else
-			crop_rect = { x, y, new_width, new_height };
+			width = (new_width * 2) >> currprefs.gfx_resolution;
+			height = (new_height * 2) >> currprefs.gfx_vresolution;
 
-			if (currprefs.gfx_correct_aspect == 0)
-			{
-				width = sdl_mode.w;
-				height = sdl_mode.h;
-			}
-			else
-			{
-				width = new_width * 2 >> currprefs.gfx_resolution;
-				height = new_height * 2 >> currprefs.gfx_vresolution;
-			}
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			{
 				SDL_RenderSetLogicalSize(amiga_renderer, width, height);
 				renderQuad = { dx, dy, width, height };
+				crop_rect = { x, y, new_width, new_height };
 			}
 			else
 			{
@@ -2849,30 +2845,22 @@ void auto_crop_image()
 #ifdef USE_OPENGL
 		// TODO Auto-Crop in OpenGL
 #else
-		crop_rect = { 0, 0, amiga_surface->w, amiga_surface->h };
-
 		if (last_autocrop != currprefs.gfx_auto_crop)
 		{
-			// Restore Aspect ratio corrections if auto-crop was turned off
-			if (currprefs.gfx_correct_aspect == 0)
-			{
-				width = sdl_mode.w;
-				height = sdl_mode.h;
-			}
-			else
-			{
-				width = display_width * 2 >> currprefs.gfx_resolution;
-				height = display_height * 2 >> currprefs.gfx_vresolution;
-			}
+			width = (display_width * 2) >> currprefs.gfx_resolution;
+			height = (display_height * 2) >> currprefs.gfx_vresolution;
+
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			{
 				SDL_RenderSetLogicalSize(amiga_renderer, width, height);
 				renderQuad = { dx, dy, width, height };
+				crop_rect = { 0, 0, width, height };
 			}
 			else
 			{
 				SDL_RenderSetLogicalSize(amiga_renderer, height, width);
 				renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
+				crop_rect = { -(width - height) / 2, (width - height) / 2, width, height };
 			}
 		}
 #endif
