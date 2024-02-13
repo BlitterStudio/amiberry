@@ -5159,7 +5159,8 @@ void quit_drawing_thread()
 {
 	while (drawing_thread_busy)
 		sleep_micros(1);
-	write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_QUIT, 1);
+	if (drawing_pipe)
+		write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_QUIT, 1);
 }
 #endif
 
