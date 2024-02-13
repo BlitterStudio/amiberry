@@ -110,9 +110,9 @@ static frame_time_t last_synctime;
 
 static SDL_Surface* current_screenshot = nullptr;
 static char screenshot_filename_default[MAX_DPATH] =
-		{
-				'/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'p', 'n', 'g', '\0'
-		};
+{
+	'/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'p', 'n', 'g', '\0'
+};
 char* screenshot_filename = &screenshot_filename_default[0];
 FILE* screenshot_file = nullptr;
 int delay_savestate_frame = 0;
@@ -162,6 +162,12 @@ static void OffsetRect(SDL_Rect* rect, int dx, int dy)
 	rect->y += dy;
 }
 
+static void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
+{
+	SDL_GetWindowPosition(window, &rect->x, &rect->y);
+	SDL_GetWindowSize(window, &rect->w, &rect->h);
+}
+
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
 bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int height)
@@ -209,6 +215,144 @@ void set_scaling_option(uae_prefs* p, int width, int height)
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
+}
+
+static void SDL2_init()
+{
+	struct AmigaMonitor* mon = &AMonitors[0];
+	write_log("Getting Current Video Driver...\n");
+	sdl_video_driver = SDL_GetCurrentVideoDriver();
+
+	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdl_mode);
+	if (should_be_zero == 0)
+	{
+		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdl_mode.format), SDL_GetPixelFormatName(sdl_mode.format), sdl_mode.w, sdl_mode.h, sdl_mode.refresh_rate);
+		vsync_vblank = float(sdl_mode.refresh_rate);
+
+		mon->currentmode.native_width = sdl_mode.w;
+		mon->currentmode.native_height = sdl_mode.h;
+		mon->currentmode.native_depth = SDL_BITSPERPIXEL(sdl_mode.format);
+		mon->currentmode.freq = sdl_mode.refresh_rate;
+	}
+
+	if (!mon->amiga_window)
+	{
+		write_log("Creating Amiberry window...\n");
+		Uint32 amiga_window_mode;
+		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+		{
+			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
+			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+				amiga_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+				amiga_window_mode = SDL_WINDOW_FULLSCREEN;
+			else
+				amiga_window_mode =  SDL_WINDOW_RESIZABLE;
+			if (currprefs.borderless)
+				amiga_window_mode |= SDL_WINDOW_BORDERLESS;
+			if (currprefs.main_alwaysontop)
+				amiga_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+			if (currprefs.start_minimized)
+				amiga_window_mode |= SDL_WINDOW_HIDDEN;
+			else
+				amiga_window_mode |= SDL_WINDOW_SHOWN;
+			// Set Window allow high DPI by default
+			amiga_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef USE_OPENGL
+			amiga_window_mode |= SDL_WINDOW_OPENGL;
+#endif
+		}
+		else
+		{
+			// otherwise go for Full-window
+			amiga_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		}
+
+		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
+		{
+			mon->amiga_window = SDL_CreateWindow("Amiberry",
+			                                     SDL_WINDOWPOS_CENTERED,
+			                                     SDL_WINDOWPOS_CENTERED,
+			                                     GUI_HEIGHT,
+			                                     GUI_WIDTH,
+			                                     amiga_window_mode);
+		}
+		else
+		{
+			mon->amiga_window = SDL_CreateWindow("Amiberry",
+			                                     SDL_WINDOWPOS_CENTERED,
+			                                     SDL_WINDOWPOS_CENTERED,
+			                                     GUI_WIDTH,
+			                                     GUI_HEIGHT,
+			                                     amiga_window_mode);
+		}
+		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
+
+		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
+		if (icon_surface != nullptr)
+		{
+			SDL_SetWindowIcon(mon->amiga_window, icon_surface);
+			SDL_FreeSurface(icon_surface);
+		}
+	}
+
+#ifdef USE_OPENGL
+	if (gl_context == nullptr)
+		gl_context = SDL_GL_CreateContext(mon->amiga_window);
+
+	// Enable vsync
+	if (SDL_GL_SetSwapInterval(-1) < 0)
+	{
+		write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
+		if (SDL_GL_SetSwapInterval(1) < 0)
+		{
+			write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
+		}
+	}
+
+	//Initialize clear color
+	glClearColor(0.f, 0.f, 0.f, 1.f);
+
+	// for old fixed-function pipeline (change when using shaders!)
+	glEnable(GL_TEXTURE_2D);
+#else
+	if (amiga_renderer == nullptr)
+	{
+		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+		amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
+		check_error_sdl(amiga_renderer == nullptr, "Unable to create a renderer:");
+	}
+#endif
+
+	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
+		write_log("SDL2: could not grab the keyboard!\n");
+
+	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
+		write_log("SDL2: Set window not to minimize on focus loss\n");
+
+	if (currprefs.rtgvblankrate == 0) {
+		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.gfx_apmode[0].gfx_refreshrate;
+		if (currprefs.gfx_apmode[0].gfx_interlaced) {
+			currprefs.gfx_apmode[1].gfx_refreshrate *= 2;
+		}
+	}
+	else if (currprefs.rtgvblankrate < 0) {
+		currprefs.gfx_apmode[1].gfx_refreshrate = 0;
+	}
+	else {
+		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
+	}
+}
+
+static float SDL2_getrefreshrate(int monid)
+{
+	SDL_DisplayMode mode;
+	if (SDL_GetDisplayMode(monid, 0, &mode) != 0)
+	{
+		write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
+		return 0;
+	}
+	return static_cast<float>(mode.refresh_rate);
 }
 
 static bool SDL2_alloctexture(int monid, int w, int h, int depth)
@@ -263,17 +407,6 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 	amiga_texture = SDL_CreateTexture(amiga_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 	return amiga_texture != nullptr;
 #endif
-}
-
-static float SDL2_getrefreshrate(int monid)
-{
-	SDL_DisplayMode mode;
-	if (SDL_GetDisplayMode(monid, 0, &mode) != 0)
-	{
-		write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
-		return 0;
-	}
-	return static_cast<float>(mode.refresh_rate);
 }
 
 static void update_leds(int monid)
@@ -355,14 +488,15 @@ struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
 
 void desktop_coords(int monid, int* dw, int* dh, int* ax, int* ay, int* aw, int* ah)
 {
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct MultiDisplay* md = getdisplay(&currprefs, monid);
 
 	*dw = md->rect.w - md->rect.x;
 	*dh = md->rect.h - md->rect.y;
-	*ax = 0;
-	*ay = 0;
-	*aw = amiga_surface->w;
-	*ah = amiga_surface->h;
+	*ax = mon->amigawin_rect.x;
+	*ay = mon->amigawin_rect.y;
+	*aw = mon->amigawin_rect.w;
+	*ah = mon->amigawin_rect.h;
 }
 
 int target_get_display(const TCHAR* name)
@@ -496,7 +630,7 @@ static void display_vblank_thread(struct AmigaMonitor* mon)
 	//	_beginthreadex(NULL, 0, waitvblankthread, 0, 0, &th);
 	//}
 	//else {
-	calculated_scanline = false;
+		calculated_scanline = false;
 	//}
 }
 
@@ -1592,16 +1726,16 @@ void init_colors(int monid)
 
 int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 {
-	auto changed = 0;
+	int changed = 0;
 
-	for (auto i = 0; i < 256 * 2; i++) {
+	for (int i = 0; i < 256 * 2; i++) {
 		int r = CLUT[i].Red;
 		int g = CLUT[i].Green;
 		int b = CLUT[i].Blue;
-		auto v = (doMask256 (r, red_bits, red_shift)
-		          | doMask256 (g, green_bits, green_shift)
-		          | doMask256 (b, blue_bits, blue_shift))
-		         | doMask256 (0xff, alpha_bits, alpha_shift);
+		uae_u32 v = (doMask256 (r, red_bits, red_shift)
+			| doMask256(g, green_bits, green_shift)
+			| doMask256(b, blue_bits, blue_shift))
+			| doMask256 ((1 << alpha_bits) - 1, alpha_bits, alpha_shift);
 		if (v != clut[i]) {
 			//write_log (_T("%d:%08x\n"), i, v);
 			clut[i] = v;
@@ -1994,129 +2128,7 @@ static void graphics_subinit()
 
 int graphics_init(bool mousecapture)
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
-	write_log("Getting Current Video Driver...\n");
-	sdl_video_driver = SDL_GetCurrentVideoDriver();
-
-	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdl_mode);
-	if (should_be_zero == 0)
-	{
-		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdl_mode.format), SDL_GetPixelFormatName(sdl_mode.format), sdl_mode.w, sdl_mode.h, sdl_mode.refresh_rate);
-		vsync_vblank = sdl_mode.refresh_rate;
-
-		mon->currentmode.native_width = sdl_mode.w;
-		mon->currentmode.native_height = sdl_mode.h;
-		mon->currentmode.native_depth = SDL_BITSPERPIXEL(sdl_mode.format);
-		mon->currentmode.freq = sdl_mode.refresh_rate;
-	}
-
-	if (!mon->amiga_window)
-	{
-		write_log("Creating Amiberry window...\n");
-		Uint32 amiga_window_mode;
-		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
-		{
-			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
-			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
-				amiga_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
-				amiga_window_mode = SDL_WINDOW_FULLSCREEN;
-			else
-				amiga_window_mode =  SDL_WINDOW_RESIZABLE;
-			if (currprefs.borderless)
-				amiga_window_mode |= SDL_WINDOW_BORDERLESS;
-			if (currprefs.main_alwaysontop)
-				amiga_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-			if (currprefs.start_minimized)
-				amiga_window_mode |= SDL_WINDOW_HIDDEN;
-			else
-				amiga_window_mode |= SDL_WINDOW_SHOWN;
-			// Set Window allow high DPI by default
-			amiga_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
-#ifdef USE_OPENGL
-			amiga_window_mode |= SDL_WINDOW_OPENGL;
-#endif
-		}
-		else
-		{
-			// otherwise go for Full-window
-			amiga_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-		}
-
-		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-		{
-			mon->amiga_window = SDL_CreateWindow("Amiberry",
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     GUI_HEIGHT,
-			                                     GUI_WIDTH,
-			                                     amiga_window_mode);
-		}
-		else
-		{
-			mon->amiga_window = SDL_CreateWindow("Amiberry",
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     GUI_WIDTH,
-			                                     GUI_HEIGHT,
-			                                     amiga_window_mode);
-		}
-		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
-
-		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
-		if (icon_surface != nullptr)
-		{
-			SDL_SetWindowIcon(mon->amiga_window, icon_surface);
-			SDL_FreeSurface(icon_surface);
-		}
-	}
-
-#ifdef USE_OPENGL
-	if (gl_context == nullptr)
-		gl_context = SDL_GL_CreateContext(mon->amiga_window);
-
-	// Enable vsync
-	if (SDL_GL_SetSwapInterval(-1) < 0)
-	{
-		write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
-		if (SDL_GL_SetSwapInterval(1) < 0)
-		{
-			write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
-		}
-	}
-
-	//Initialize clear color
-	glClearColor(0.f, 0.f, 0.f, 1.f);
-
-	// for old fixed-function pipeline (change when using shaders!)
-	glEnable(GL_TEXTURE_2D);
-#else
-	if (amiga_renderer == nullptr)
-	{
-		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-		amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
-		check_error_sdl(amiga_renderer == nullptr, "Unable to create a renderer:");
-	}
-#endif
-
-	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		write_log("SDL2: could not grab the keyboard!\n");
-
-	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
-		write_log("SDL2: Set window not to minimize on focus loss\n");
-
-	if (currprefs.rtgvblankrate == 0) {
-		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.gfx_apmode[0].gfx_refreshrate;
-		if (currprefs.gfx_apmode[0].gfx_interlaced) {
-			currprefs.gfx_apmode[1].gfx_refreshrate *= 2;
-		}
-	}
-	else if (currprefs.rtgvblankrate < 0) {
-		currprefs.gfx_apmode[1].gfx_refreshrate = 0;
-	}
-	else {
-		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
-	}
+	SDL2_init();
 
 	inputdevice_unacquire();
 	graphics_subinit();
@@ -2216,6 +2228,8 @@ static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf,
 		currprefs.color_mode = changed_prefs.color_mode = 2;
 	else
 		currprefs.color_mode = changed_prefs.color_mode = 5;
+
+	write_log(_T("Mon %d allocated %s temp buffer (%d*%d*%d) = %p\n"), monid, name, width, height, depth, buf->realbufmem);
 }
 
 static int oldtex_w[MAX_AMIGAMONITORS], oldtex_h[MAX_AMIGAMONITORS], oldtex_rtg[MAX_AMIGAMONITORS];
@@ -2558,6 +2572,7 @@ void graphics_subshutdown()
 #endif
 }
 
+#ifdef AMIBERRY
 extern int vstrt; // vertical start
 extern int vstop; // vertical stop
 extern int hstrt; // horizontal start
@@ -2685,6 +2700,7 @@ void auto_crop_image()
 
 	last_autocrop = currprefs.gfx_auto_crop;
 }
+#endif
 
 unsigned long target_lastsynctime()
 {
