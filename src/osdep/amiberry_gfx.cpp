@@ -217,6 +217,17 @@ void set_scaling_option(uae_prefs* p, int width, int height)
 #endif
 }
 
+static float SDL2_getrefreshrate(int monid)
+{
+	SDL_DisplayMode mode;
+	if (SDL_GetDisplayMode(monid, 0, &mode) != 0)
+	{
+		write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
+		return 0;
+	}
+	return static_cast<float>(mode.refresh_rate);
+}
+
 static void SDL2_init()
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
@@ -227,10 +238,8 @@ static void SDL2_init()
 	if (should_be_zero == 0)
 	{
 		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdl_mode.format), SDL_GetPixelFormatName(sdl_mode.format), sdl_mode.w, sdl_mode.h, sdl_mode.refresh_rate);
-		vsync_vblank = float(sdl_mode.refresh_rate);
+		vsync_vblank = static_cast<float>(sdl_mode.refresh_rate);
 
-		mon->currentmode.native_width = sdl_mode.w;
-		mon->currentmode.native_height = sdl_mode.h;
 		mon->currentmode.native_depth = SDL_BITSPERPIXEL(sdl_mode.format);
 		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
@@ -301,20 +310,13 @@ static void SDL2_init()
 		gl_context = SDL_GL_CreateContext(mon->amiga_window);
 
 	// Enable vsync
-	if (SDL_GL_SetSwapInterval(-1) < 0)
+	if (SDL_GL_SetSwapInterval(1) < 0)
 	{
-		write_log("Warning: Adaptive V-Sync not supported on this platform, trying normal V-Sync\n");
-		if (SDL_GL_SetSwapInterval(1) < 0)
-		{
-			write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
-		}
+		write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
 	}
 
 	//Initialize clear color
 	glClearColor(0.f, 0.f, 0.f, 1.f);
-
-	// for old fixed-function pipeline (change when using shaders!)
-	glEnable(GL_TEXTURE_2D);
 #else
 	if (amiga_renderer == nullptr)
 	{
@@ -330,29 +332,6 @@ static void SDL2_init()
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
 		write_log("SDL2: Set window not to minimize on focus loss\n");
 
-	if (currprefs.rtgvblankrate == 0) {
-		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.gfx_apmode[0].gfx_refreshrate;
-		if (currprefs.gfx_apmode[0].gfx_interlaced) {
-			currprefs.gfx_apmode[1].gfx_refreshrate *= 2;
-		}
-	}
-	else if (currprefs.rtgvblankrate < 0) {
-		currprefs.gfx_apmode[1].gfx_refreshrate = 0;
-	}
-	else {
-		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
-	}
-}
-
-static float SDL2_getrefreshrate(int monid)
-{
-	SDL_DisplayMode mode;
-	if (SDL_GetDisplayMode(monid, 0, &mode) != 0)
-	{
-		write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
-		return 0;
-	}
-	return static_cast<float>(mode.refresh_rate);
 }
 
 static bool SDL2_alloctexture(int monid, int w, int h, int depth)
@@ -1039,8 +1018,8 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 
 uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
-	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[0];
+	struct AmigaMonitor *mon = &AMonitors[monid];
+	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	static uae_u8* p;
 	if (amiga_surface == nullptr || mon->screen_is_picasso == 0)
 		return nullptr;
@@ -1073,6 +1052,191 @@ void gfx_unlock_picasso(int monid, const bool dorender)
 	{
 		render_screen(0, 0, true);
 		show_screen(0, 0);
+	}
+}
+
+static bool canmatchdepth(void)
+{
+	if (!currprefs.rtgmatchdepth)
+		return false;
+	if (currprefs.gfx_api >= 2)
+		return false;
+	return true;
+}
+
+static void updatemodes(struct AmigaMonitor* mon)
+{
+	struct uae_filter* usedfilter = mon->usedfilter;
+	Uint32 flags = 0;
+
+	mon->currentmode.fullfill = 0;
+	if (isfullscreen() > 0)
+		flags |= SDL_WINDOW_FULLSCREEN;
+	else if (isfullscreen() < 0)
+		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+#ifdef AMIBERRY
+	if (mon->currentmode.current_depth < 15)
+		mon->currentmode.current_depth = 16;
+	else if (mon->currentmode.current_depth < 32)
+		mon->currentmode.current_depth = 32;
+#else
+#if defined (GFXFILTER)
+	if (usedfilter) {
+		flags |= DM_SWSCALE;
+		if (mon->currentmode.current_depth < 15)
+			mon->currentmode.current_depth = 16;
+	}
+#endif
+#endif
+	mon->currentmode.flags = flags;
+	mon->currentmode.fullfill = 1;
+	if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+		SDL_Rect rc = getdisplay(&currprefs, mon->monitor_id)->rect;
+		mon->currentmode.native_width = rc.w;
+		mon->currentmode.native_height = rc.h;
+		mon->currentmode.current_width = mon->currentmode.native_width;
+		mon->currentmode.current_height = mon->currentmode.native_height;
+	} else {
+		mon->currentmode.native_width = mon->currentmode.current_width;
+		mon->currentmode.native_height = mon->currentmode.current_height;
+	}
+}
+
+static void update_gfxparams(struct AmigaMonitor* mon)
+{
+	struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
+
+	updatewinfsmode(mon->monitor_id, &currprefs);
+#ifdef PICASSO96
+	mon->currentmode.vsync = 0;
+	if (mon->screen_is_picasso) {
+		float mx = 1.0;
+		float my = 1.0;
+		if (currprefs.gf[GF_RTG].gfx_filter_horiz_zoom_mult > 0) {
+			mx *= currprefs.gf[GF_RTG].gfx_filter_horiz_zoom_mult;
+		}
+		if (currprefs.gf[GF_RTG].gfx_filter_vert_zoom_mult > 0) {
+			my *= currprefs.gf[GF_RTG].gfx_filter_vert_zoom_mult;
+		}
+		mon->currentmode.current_width = (int)(state->Width * currprefs.rtg_horiz_zoom_mult * mx);
+		mon->currentmode.current_height = (int)(state->Height * currprefs.rtg_vert_zoom_mult * my);
+		currprefs.gfx_apmode[1].gfx_interlaced = false;
+		if (currprefs.rtgvblankrate == 0) {
+			currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.gfx_apmode[0].gfx_refreshrate;
+			if (currprefs.gfx_apmode[0].gfx_interlaced) {
+				currprefs.gfx_apmode[1].gfx_refreshrate *= 2;
+			}
+		} else if (currprefs.rtgvblankrate < 0) {
+			currprefs.gfx_apmode[1].gfx_refreshrate = 0;
+		} else {
+			currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
+		}
+		if (currprefs.gfx_apmode[1].gfx_vsync)
+			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[1].gfx_vsyncmode;
+	} else {
+#endif
+		mon->currentmode.current_width = currprefs.gfx_monitor[mon->monitor_id].gfx_size.width;
+		mon->currentmode.current_height = currprefs.gfx_monitor[mon->monitor_id].gfx_size.height;
+		if (currprefs.gfx_apmode[0].gfx_vsync)
+			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[0].gfx_vsyncmode;
+#ifdef PICASSO96
+	}
+#endif
+#if FORCE16BIT
+	mon->currentmode.current_depth = 16;
+#else
+	mon->currentmode.current_depth = currprefs.color_mode < 5 ? 16 : 32;
+#endif
+	if (mon->screen_is_picasso && canmatchdepth() && isfullscreen() > 0) {
+		int pbits = state->BytesPerPixel * 8;
+		if (pbits <= 8) {
+			if (mon->currentmode.current_depth == 32)
+				pbits = 32;
+			else
+				pbits = 16;
+		}
+		if (pbits == 24)
+			pbits = 32;
+		mon->currentmode.current_depth = pbits;
+	}
+	mon->currentmode.amiga_width = mon->currentmode.current_width;
+	mon->currentmode.amiga_height = mon->currentmode.current_height;
+
+	mon->scalepicasso = 0;
+	if (mon->screen_is_picasso) {
+		bool diff = state->Width != mon->currentmode.native_width || state->Height != mon->currentmode.native_height;
+		if (isfullscreen() < 0) {
+			if ((currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_CENTER || currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_SCALE || currprefs.rtgallowscaling) && diff) {
+				mon->scalepicasso = RTG_MODE_SCALE;
+			}
+			if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_INTEGER_SCALE && diff) {
+				mon->scalepicasso = RTG_MODE_INTEGER_SCALE;
+			}
+			if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_CENTER && diff) {
+				mon->scalepicasso = currprefs.gf[GF_RTG].gfx_filter_autoscale;
+			}
+			if (!mon->scalepicasso && currprefs.rtgscaleaspectratio) {
+				mon->scalepicasso = -1;
+			}
+		} else if (isfullscreen() > 0) {
+			if (!canmatchdepth()) { // can't scale to different color depth
+				if (mon->currentmode.native_width > state->Width && mon->currentmode.native_height > state->Height) {
+					if (currprefs.gf[GF_RTG].gfx_filter_autoscale)
+						mon->scalepicasso = RTG_MODE_SCALE;
+					if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_INTEGER_SCALE) {
+						mon->scalepicasso = RTG_MODE_INTEGER_SCALE;
+					}
+				}
+				if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_CENTER)
+					mon->scalepicasso = currprefs.gf[GF_RTG].gfx_filter_autoscale;
+				if (!mon->scalepicasso && currprefs.rtgscaleaspectratio)
+					mon->scalepicasso = -1;
+			}
+		} else if (isfullscreen() == 0) {
+			if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_INTEGER_SCALE) {
+				mon->scalepicasso = RTG_MODE_INTEGER_SCALE;
+				mon->currentmode.current_width = currprefs.gfx_monitor[mon->monitor_id].gfx_size.width;
+				mon->currentmode.current_height = currprefs.gfx_monitor[mon->monitor_id].gfx_size.height;
+			} else if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_CENTER) {
+				if (currprefs.gfx_monitor[mon->monitor_id].gfx_size.width < state->Width || currprefs.gfx_monitor[mon->monitor_id].gfx_size.height < state->Height) {
+					if (!currprefs.rtgallowscaling) {
+						;
+					} else if (currprefs.rtgscaleaspectratio) {
+						mon->scalepicasso = -1;
+						mon->currentmode.current_width = currprefs.gfx_monitor[mon->monitor_id].gfx_size.width;
+						mon->currentmode.current_height = currprefs.gfx_monitor[mon->monitor_id].gfx_size.height;
+					}
+				} else {
+					mon->scalepicasso = RTG_MODE_CENTER;
+					mon->currentmode.current_width = currprefs.gfx_monitor[mon->monitor_id].gfx_size.width;
+					mon->currentmode.current_height = currprefs.gfx_monitor[mon->monitor_id].gfx_size.height;
+				}
+			} else if (currprefs.gf[GF_RTG].gfx_filter_autoscale == RTG_MODE_SCALE) {
+				if (currprefs.gfx_monitor[mon->monitor_id].gfx_size.width > state->Width || currprefs.gfx_monitor[mon->monitor_id].gfx_size.height > state->Height)
+					mon->scalepicasso = RTG_MODE_SCALE;
+				if ((currprefs.gfx_monitor[mon->monitor_id].gfx_size.width != state->Width || currprefs.gfx_monitor[mon->monitor_id].gfx_size.height != state->Height) && currprefs.rtgallowscaling) {
+					mon->scalepicasso = RTG_MODE_SCALE;
+				} else if (currprefs.gfx_monitor[mon->monitor_id].gfx_size.width < state->Width || currprefs.gfx_monitor[mon->monitor_id].gfx_size.height < state->Height) {
+					// no always scaling and smaller? Back to normal size and set new configured max size
+					mon->currentmode.current_width = changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = state->Width;
+					mon->currentmode.current_height = changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = state->Height;
+				} else if (currprefs.gfx_monitor[mon->monitor_id].gfx_size.width == state->Width || currprefs.gfx_monitor[mon->monitor_id].gfx_size.height == state->Height) {
+					;
+				} else if (!mon->scalepicasso && currprefs.rtgscaleaspectratio) {
+					mon->scalepicasso = -1;
+				}
+			} else {
+				if ((currprefs.gfx_monitor[mon->monitor_id].gfx_size.width != state->Width || currprefs.gfx_monitor[mon->monitor_id].gfx_size.height != state->Height) && currprefs.rtgallowscaling)
+					mon->scalepicasso = RTG_MODE_SCALE;
+				if (!mon->scalepicasso && currprefs.rtgscaleaspectratio)
+					mon->scalepicasso = -1;
+			}
+		}
+
+		if (mon->scalepicasso > 0 && (currprefs.gfx_monitor[mon->monitor_id].gfx_size.width != state->Width || currprefs.gfx_monitor[mon->monitor_id].gfx_size.height != state->Height)) {
+			mon->currentmode.current_width = currprefs.gfx_monitor[mon->monitor_id].gfx_size.width;
+			mon->currentmode.current_height = currprefs.gfx_monitor[mon->monitor_id].gfx_size.height;
+		}
 	}
 }
 
@@ -1396,12 +1560,6 @@ int check_prefs_changed_gfx()
 		currprefs.rtgscaleaspectratio = changed_prefs.rtgscaleaspectratio;
 		currprefs.rtgvblankrate = changed_prefs.rtgvblankrate;
 
-#ifdef AMIBERRY
-		bool was_multithreaded_drawing = currprefs.multithreaded_drawing;
-		if (was_multithreaded_drawing)
-			quit_drawing_thread();
-		currprefs.multithreaded_drawing = false;
-#endif
 		bool unacquired = false;
 		for (int monid = MAX_AMIGAMONITORS - 1; monid >= 0; monid--) {
 			if (!monitors[monid])
@@ -1455,11 +1613,6 @@ int check_prefs_changed_gfx()
 				graphics_init(!dontcapture);
 			}
 		}
-#ifdef AMIBERRY
-		currprefs.multithreaded_drawing = was_multithreaded_drawing;
-		if (was_multithreaded_drawing)
-			start_drawing_thread();
-#endif
 		init_custom();
 		if (c & 4) {
 			pause_sound();
@@ -1777,6 +1930,10 @@ static void open_screen(struct uae_prefs* p)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
+
+	updatemodes(mon);
+	update_gfxparams(mon);
+
 	graphics_subshutdown();
 
 	if (max_uae_width == 0 || max_uae_height == 0)
@@ -2041,6 +2198,59 @@ int vsync_isdone(frame_time_t* dt)
 
 #ifdef PICASSO96
 
+static int modeswitchneeded(struct AmigaMonitor* mon, struct winuae_currentmode* wc)
+{
+	struct vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
+	struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
+
+	if (isfullscreen() > 0) {
+		/* fullscreen to fullscreen */
+		if (mon->screen_is_picasso) {
+			if (state->BytesPerPixel > 1 && state->BytesPerPixel * 8 != wc->current_depth && canmatchdepth())
+				return -1;
+			if (state->Width < wc->current_width && state->Height < wc->current_height) {
+				if ((currprefs.gf[GF_RTG].gfx_filter_autoscale == 1 || (currprefs.gf[GF_RTG].gfx_filter_autoscale == 2 && currprefs.rtgallowscaling)) && !canmatchdepth())
+					return 0;
+			}
+			if (state->Width != wc->current_width ||
+				state->Height != wc->current_height)
+				return 1;
+			if (state->Width == wc->current_width &&
+				state->Height == wc->current_height) {
+				if (state->BytesPerPixel * 8 == wc->current_depth || state->BytesPerPixel == 1)
+					return 0;
+				if (!canmatchdepth())
+					return 0;
+			}
+			return 1;
+		} else {
+			if (mon->currentmode.current_width != wc->current_width ||
+				mon->currentmode.current_height != wc->current_height ||
+				mon->currentmode.current_depth != wc->current_depth)
+				return -1;
+			if (!avidinfo->outbuffer->bufmem_lockable)
+				return -1;
+		}
+	} else if (isfullscreen () == 0) {
+		/* windowed to windowed */
+		return -2;
+	} else {
+		/* fullwindow to fullwindow */
+		if (mon->screen_is_picasso) {
+			if (currprefs.gf[GF_RTG].gfx_filter_autoscale && ((wc->native_width > state->Width && wc->native_height >= state->Height) || (wc->native_height > state->Height && wc->native_width >= state->Width)))
+				return -1;
+			if (currprefs.rtgallowscaling && (state->Width != wc->native_width || state->Height != wc->native_height))
+				return -1;
+#if 0
+			if (wc->native_width < state->Width || wc->native_height < state->Height)
+				return 1;
+#endif
+		}
+		return -1;
+	}
+	return 0;
+}
+
 void gfx_set_picasso_state(int monid, int on)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
@@ -2048,7 +2258,9 @@ void gfx_set_picasso_state(int monid, int on)
 		return;
 	mon->screen_is_picasso = on;
 
-	clearscreen();
+	updatemodes(mon);
+	update_gfxparams(mon);
+
 	open_screen(&currprefs);
 }
 
@@ -2072,27 +2284,20 @@ void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
+	int need;
 	if (!mon->screen_is_picasso)
 		return;
 	gfx_set_picasso_colors(monid, rgbfmt);
 
-	if (picasso_vidinfo[0].width == state->Width &&
-	    picasso_vidinfo[0].height == state->Height &&
-	    picasso_vidinfo[0].depth == state->GC_Depth &&
-	    picasso_vidinfo[0].selected_rgbformat == rgbfmt)
-		return;
+	update_gfxparams(mon);
+	updatemodes(mon);
+	need = modeswitchneeded(mon, &mon->currentmode);
 
-	picasso_vidinfo[0].selected_rgbformat = rgbfmt;
-	picasso_vidinfo[0].width = state->Width;
-	picasso_vidinfo[0].height = state->Height;
-	picasso_vidinfo[0].depth = state->GC_Depth;
-	picasso_vidinfo[0].extra_mem = 1;
-	picasso_vidinfo[0].rowbytes = amiga_surface->pitch;
-	picasso_vidinfo[0].pixbytes = amiga_surface->format->BytesPerPixel;
-	picasso_vidinfo[0].offset = 0;
-
-	if (mon->screen_is_picasso)
+	if (need != 0)
 		open_screen(&currprefs);
+
+	state->ModeChanged = false;
+	target_graphics_buffer_update(monid);
 }
 
 void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt)
@@ -2139,10 +2344,6 @@ int graphics_init(bool mousecapture)
 
 int graphics_setup()
 {
-	if (!screen_cs_allocated) {
-		uae_sem_init(&screen_cs, 0, -1);
-		screen_cs_allocated = true;
-	}
 #ifdef PICASSO96
 	//sortdisplays(); //we already run this earlier on startup
 	InitPicasso96(0);
@@ -2341,7 +2542,6 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 			if (!is_fullscreen)
 			{
 				SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
-				SDL_SetWindowSize(mon->amiga_window, p->gfx_monitor[monid].gfx_size_fs.width, p->gfx_monitor[monid].gfx_size_fs.height);
 				changed = true;
 			}
 		}
@@ -2718,30 +2918,6 @@ static int get_display_depth()
 void update_display(struct uae_prefs* p)
 {
 	open_screen(p);
-}
-
-void DX_Fill(struct AmigaMonitor* mon, int dstx, int dsty, int width, int height, uae_u32 color)
-{
-	SDL_Rect dstrect;
-	if (width < 0)
-		width = amiga_surface->w;
-	if (height < 0)
-		height = amiga_surface->h;
-	dstrect.x = dstx;
-	dstrect.y = dsty;
-	dstrect.w = width;
-	dstrect.h = height;
-	SDL_FillRect(amiga_surface, &dstrect, color);
-}
-
-void clearscreen()
-{
-	if (amiga_surface != nullptr)
-	{
-		SDL_FillRect(amiga_surface, nullptr, 0);
-		render_screen(0, 0, true);
-		show_screen(0, 0);
-	}
 }
 
 #ifdef USE_OPENGL
