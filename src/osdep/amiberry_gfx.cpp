@@ -2494,7 +2494,16 @@ bool target_graphics_buffer_update(int monid)
 	}
 	else
 	{
+		int scaled_width = w;
 		int scaled_height = h;
+		if (currprefs.gfx_resolution == RES_LORES)
+		{
+			scaled_width *= 2;
+		}
+		else if (currprefs.gfx_resolution == RES_SUPERHIRES)
+		{
+			scaled_width /= 2;
+		}
 		if (currprefs.gfx_vresolution == VRES_NONDOUBLE)
 		{
 			scaled_height *= 2;
@@ -2502,15 +2511,15 @@ bool target_graphics_buffer_update(int monid)
 
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, w, scaled_height);
+			SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
 		}
 		if (amiga_renderer)
 		{
-			SDL_RenderSetLogicalSize(amiga_renderer, w, scaled_height);
-			renderQuad = { dx, dy, w, scaled_height };
-			crop_rect = { dx, dy, w, scaled_height };
+			SDL_RenderSetLogicalSize(amiga_renderer, scaled_width, scaled_height);
+			renderQuad = { dx, dy, scaled_width, scaled_height };
+			crop_rect = { dx, dy, scaled_width, scaled_height };
 
-			set_scaling_option(&currprefs, w, scaled_height);
+			set_scaling_option(&currprefs, scaled_width, scaled_height);
 		}
 		else
 			return false;
