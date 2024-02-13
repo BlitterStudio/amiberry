@@ -404,11 +404,11 @@ static void update_leds(int monid)
 		done = 1;
 	}
 
-	statusline_getpos(monid, &osdx, &osdy, amiga_surface->w, amiga_surface->h);
+	statusline_getpos(monid, &osdx, &osdy, display_width, display_height);
 	int m = statusline_get_multiplier(monid) / 100;
 	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
 		uae_u8 *buf = (uae_u8*)amiga_surface->pixels + (y + osdy) * amiga_surface->pitch;
-		draw_status_line_single(monid, buf, 32 / 8, y, amiga_surface->w, rc, gc, bc, a);
+		draw_status_line_single(monid, buf, 32 / 8, y, display_width, rc, gc, bc, a);
 	}
 }
 
@@ -1966,6 +1966,8 @@ static void open_screen(struct uae_prefs* p)
 			display_depth = 32;
 			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
+		display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
+		display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
 	}
 	else // Native screen mode
 	{
@@ -1995,6 +1997,9 @@ static void open_screen(struct uae_prefs* p)
 
 		display_depth = 32;
 		pixel_format = SDL_PIXELFORMAT_RGBA32;
+
+		display_width = mon->currentmode.amiga_width;
+		display_height = mon->currentmode.amiga_height;
 	}
 
 	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, mon->screen_is_picasso ? display_width : 1920, mon->screen_is_picasso ? display_height : 1280, display_depth, pixel_format);
@@ -2561,18 +2566,8 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 			set_config_changed();
 	}
 
-	if (mon->screen_is_picasso)
-	{
-		display_width = picasso96_state[monid].Width ? picasso96_state[monid].Width : 640;
-		display_height = picasso96_state[monid].Height ? picasso96_state[monid].Height : 480;
-	}
-	else
-	{
-		display_width = p->gfx_monitor[monid].gfx_size.width / 2 << p->gfx_resolution;
-		display_height = p->gfx_monitor[monid].gfx_size.height / 2 << p->gfx_vresolution;
-
+	if (!mon->screen_is_picasso)
 		force_auto_crop = true;
-	}
 }
 
 int rtg_index = -1;
