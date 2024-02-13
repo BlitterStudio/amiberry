@@ -1952,7 +1952,6 @@ static void open_screen(struct uae_prefs* p)
 	const auto window_flags = SDL_GetWindowFlags(mon->amiga_window);
 	const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
 
-	int width, height;
 	if (mon->screen_is_picasso)
 	{
 		if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5
@@ -1967,23 +1966,6 @@ static void open_screen(struct uae_prefs* p)
 			display_depth = 32;
 			pixel_format = SDL_PIXELFORMAT_RGBA32;
 		}
-
-#ifdef USE_OPENGL
-		// TODO Rotation in OpenGL
-#else
-		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		{
-			SDL_RenderSetLogicalSize(amiga_renderer, display_width, display_height);
-			renderQuad = { 0, 0, display_width, display_height };
-			crop_rect = { 0, 0, display_width, display_height };
-		}
-		else
-		{
-			SDL_RenderSetLogicalSize(amiga_renderer, display_height, display_width);
-			renderQuad = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
-			crop_rect = { -(display_width - display_height) / 2, (display_width - display_height) / 2, display_width, display_height };
-		}
-#endif
 	}
 	else // Native screen mode
 	{
@@ -2013,32 +1995,6 @@ static void open_screen(struct uae_prefs* p)
 
 		display_depth = 32;
 		pixel_format = SDL_PIXELFORMAT_RGBA32;
-
-		if (p->gfx_correct_aspect == 0)
-		{
-			width = sdl_mode.w;
-			height = sdl_mode.h;
-		}
-		else
-		{
-			width = display_width * 2 >> p->gfx_resolution;
-			height = display_height * 2 >> p->gfx_vresolution;
-		}
-
-#ifdef USE_OPENGL
-		// TODO Rotation in OpenGL
-#else
-		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		{
-			SDL_RenderSetLogicalSize(amiga_renderer, width, height);
-			renderQuad = { dx, dy, width, height };
-		}
-		else
-		{
-			SDL_RenderSetLogicalSize(amiga_renderer, height, width);
-			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
-		}
-#endif
 	}
 
 	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, mon->screen_is_picasso ? display_width : 1920, mon->screen_is_picasso ? display_height : 1280, display_depth, pixel_format);
@@ -2483,10 +2439,17 @@ bool target_graphics_buffer_update(int monid)
 			SDL_SetWindowSize(mon->amiga_window, w, h);
 		}
 		if (amiga_renderer) {
-			SDL_RenderSetLogicalSize(amiga_renderer, w, h);
-			renderQuad = {dx, dy, w, h};
-			crop_rect = {dx, dy, w, h};
-
+			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
+				SDL_RenderSetLogicalSize(amiga_renderer, w, h);
+				renderQuad = {dx, dy, w, h};
+				crop_rect = {dx, dy, w, h};
+			}
+			else
+			{
+				SDL_RenderSetLogicalSize(amiga_renderer, h, w);
+				renderQuad = { -(w - h) / 2, (w - h) / 2, w, h };
+				crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
+			}
 			set_scaling_option(&currprefs, w, h);
 		}
 		else
@@ -2517,10 +2480,17 @@ bool target_graphics_buffer_update(int monid)
 		}
 		if (amiga_renderer)
 		{
-			SDL_RenderSetLogicalSize(amiga_renderer, scaled_width, scaled_height);
-			renderQuad = { dx, dy, scaled_width, scaled_height };
-			crop_rect = { dx, dy, scaled_width, scaled_height };
-
+			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
+				SDL_RenderSetLogicalSize(amiga_renderer, scaled_width, scaled_height);
+				renderQuad = {dx, dy, scaled_width, scaled_height};
+				crop_rect = {dx, dy, scaled_width, scaled_height};
+			}
+			else
+			{
+				SDL_RenderSetLogicalSize(amiga_renderer, scaled_height, scaled_width);
+				renderQuad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
+				crop_rect = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
+			}
 			set_scaling_option(&currprefs, scaled_width, scaled_height);
 		}
 		else
