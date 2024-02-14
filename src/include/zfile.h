@@ -118,6 +118,7 @@ extern int zfile_truncate(struct zfile *z, uae_s64 size);
 #define ZFILE_NVR 7
 #define ZFILE_HDFRDB 8
 #define ZFILE_CDIMAGE 9
+#define ZFILE_EXECUTABLE 10
 
 extern const TCHAR *uae_archive_extensions[];
 extern const TCHAR *uae_ignoreextensions[];
