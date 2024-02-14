@@ -4847,9 +4847,15 @@ struct uaedev_config_data *add_filesys_config (struct uae_prefs *p, int index, s
 			}
 		}
 		uci = getuci (p);
+		if (!uci) {
+			return NULL;
+		}
 		uci->configoffset = -1;
 		uci->unitnum = -1;
 	} else {
+		if (index >= MAX_FILESYSTEM_UNITS) {
+			return NULL;
+		}
 		uci = &p->mountconfig[index];
 	}
 	if (!uci)

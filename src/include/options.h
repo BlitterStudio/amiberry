@@ -189,7 +189,8 @@ struct wh
 	int special;
 };
 
-#define MOUNT_CONFIG_SIZE 30
+#define MOUNT_CONFIG_SIZE 50
+#define MAX_FILESYSTEM_UNITS 50
 #define UAEDEV_DIR 0
 #define UAEDEV_HDF 1
 #define UAEDEV_CD 2
