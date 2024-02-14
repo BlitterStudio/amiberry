@@ -200,7 +200,7 @@ void cia_adjust_eclock_phase(int diff)
 	//write_log("CIA E-clock phase %d\n", internaleclockphase);
 }
 
-static void set_eclockphase(void)
+void cia_set_eclockphase(void)
 {
 	if (currprefs.cs_eclocksync == 3) {
 		e_clock_sync = E_CLOCK_SYNC_X;
@@ -236,7 +236,7 @@ static evt_t get_e_cycles(void)
 			currprefs.cs_eclocksync = 1;
 		}
 		changed_prefs.cs_eclocksync = currprefs.cs_eclocksync;
-		set_eclockphase();
+		cia_set_eclockphase();
 		write_log("CIA elock timing mode %d\n", currprefs.cs_eclocksync);
 		blop2 = 0;
 	}
@@ -2212,7 +2212,7 @@ void CIA_reset(void)
 		CIA_calctimers();
 		DISK_select_set(cia[1].prb);
 	}
-	set_eclockphase();
+	cia_set_eclockphase();
 	map_overlay(0);
 	check_led();
 #ifdef SERIAL_PORT

@@ -16392,6 +16392,7 @@ void check_prefs_changed_custom(void)
 		currprefs.chipset_hr = changed_prefs.chipset_hr;
 		init_custom();
 	}
+	cia_set_eclockphase();
 	if (syncchange) {
 		varsync_changed = 2;
 	}
