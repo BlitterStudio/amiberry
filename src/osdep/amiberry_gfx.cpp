@@ -2735,9 +2735,6 @@ void auto_crop_image()
 #else
 	if (amiga_surface == nullptr || amiga_renderer == nullptr) return;
 #endif
-
-	struct amigadisplay *ad = &adisplays[0];
-
 	if (currprefs.gfx_auto_crop)
 	{
 		int cw, ch, cx, cy, crealh = 0;
