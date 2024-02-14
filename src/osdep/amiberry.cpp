@@ -83,6 +83,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
+int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
 
@@ -302,6 +303,39 @@ int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 
+int getdpiforwindow(SDL_Window* hwnd)
+{
+	float diagDPI = -1;
+	float horiDPI = -1;
+	float vertDPI = -1;
+
+	SDL_GetDisplayDPI(0, &diagDPI, &horiDPI, &vertDPI);
+	return static_cast<int>(vertDPI);
+}
+
+uae_s64 spincount;
+extern bool calculated_scanline;
+
+void target_spin(int total)
+{
+	if (!spincount || calculated_scanline)
+		return;
+	if (total > 10)
+		total = 10;
+	while (total-- >= 0) {
+		uae_s64 v1 = read_processor_time();
+		v1 += spincount;
+		while (v1 > read_processor_time());
+	}
+}
+
+extern int vsync_activeheight;
+
+void target_calibrate_spin(void)
+{
+	spincount = 0;
+}
+
 void sleep_micros (int ms)
 {
 	usleep(ms);
@@ -355,7 +389,7 @@ static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 	int cx = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 + mon->amigawin_rect.x + (mon->amigawinclip_rect.x - mon->amigawin_rect.x);
 	int cy = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 + mon->amigawin_rect.y + (mon->amigawinclip_rect.y - mon->amigawin_rect.y);
 
-	SDL_WarpMouseInWindow(mon->sdl_window, cx, cy);
+	SDL_WarpMouseInWindow(mon->amiga_window, cx, cy);
 }
 
 static int mon_cursorclipped;
@@ -484,7 +518,7 @@ void releasecapture(struct AmigaMonitor* mon)
 {
 	if (!mon_cursorclipped)
 		return;
-	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
+	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 	mon_cursorclipped = 0;
@@ -580,10 +614,10 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 	int f = isfullscreen();
 	if (!allowfullscreen && f > 0)
 		return;
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
+	SDL_GetWindowPosition(mon->amiga_window, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
+	SDL_GetWindowSize(mon->amiga_window, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
+	SDL_GetWindowPosition(mon->amiga_window, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
+	SDL_GetWindowSize(mon->amiga_window, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
 #if MOUSECLIP_LOG
 	write_log(_T("GetWindowRect mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, f);
 #endif
@@ -648,9 +682,9 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
-			SDL_RaiseWindow(mon->sdl_window);
+			SDL_RaiseWindow(mon->amiga_window);
 			if (!mon_cursorclipped) {
-				SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
+				SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 				updatewinrect(mon, false);
 				// SDL2 hides the cursor when Relative mode is enabled
 				// This means that the RTG hardware sprite will no longer be shown,
@@ -692,7 +726,7 @@ void setmouseactive(int monid, int active)
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
 	if (active > 1)
-		SDL_RaiseWindow(mon->sdl_window);
+		SDL_RaiseWindow(mon->amiga_window);
 	setmouseactive2(mon, active, true);
 }
 
@@ -800,8 +834,8 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 void minimizewindow(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (mon->sdl_window)
-		SDL_MinimizeWindow(mon->sdl_window);
+	if (mon->amiga_window)
+		SDL_MinimizeWindow(mon->amiga_window);
 }
 
 void enablecapture(int monid)
@@ -841,7 +875,7 @@ void setmouseactivexy(int monid, int x, int y, int dir)
 
 	if (mouseactive) {
 		disablecapture();
-		SDL_WarpMouseInWindow(mon->sdl_window, x, y);
+		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
 		if (dir) {
 			recapture = 1;
 		}
@@ -2830,17 +2864,6 @@ void set_logfile_enabled(bool enabled)
 	amiberry_options.write_logfile = enabled;
 }
 
-bool get_sdl2_thread_enabled()
-{
-	return amiberry_options.use_sdl2_render_thread;
-}
-
-void set_sdl2_thread_enabled(bool enabled)
-{
-	amiberry_options.use_sdl2_render_thread = enabled;
-	sdl2_thread_changed = true;
-}
-
 // Returns 1 if savedatapath is overridden
 // if force_internal == true, the non-overridden whdbootpath based save-data path will be returned
 int get_savedatapath(char* out, int size, const int force_internal)
@@ -4158,8 +4181,6 @@ int main(int argc, char* argv[])
 	lstMRUWhdloadList.clear();
 
 	logging_cleanup();
-
-	SDL_Quit();
 
 	if (host_poweroff)
 		target_shutdown();

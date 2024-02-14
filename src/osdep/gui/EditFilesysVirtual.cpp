@@ -485,7 +485,7 @@ static void EditFilesysVirtualLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(sdl_renderer);
+		SDL_RenderClear(gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -533,7 +533,7 @@ bool EditFilesysVirtual(const int unit_no)
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(sdl_renderer);
+	SDL_RenderClear(gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

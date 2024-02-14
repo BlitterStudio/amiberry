@@ -8,10 +8,10 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = { 640, 704, 720 };
-const int amigaheight_values[] = { 400, 480, 512, 568 };
-#define AMIGAWIDTH_COUNT 3
-#define AMIGAHEIGHT_COUNT 4
+const int amigawidth_values[] = { 640, 704, 720, 754 };
+const int amigaheight_values[] = { 400, 480, 512, 568, 576 };
+#define AMIGAWIDTH_COUNT 4
+#define AMIGAHEIGHT_COUNT 5
 
 const int fullscreen_width_values[] = { 640, 720, 800, 1024, 1280, 1280, 1920 };
 const int fullscreen_height_values[] = { 480, 576, 600, 768, 720, 1024, 1080 };
@@ -86,8 +86,6 @@ static gcn::CheckBox* chkBlackerThanBlack;
 static gcn::Label* lblBrightness;
 static gcn::Slider* sldBrightness;
 static gcn::Label* lblBrightnessValue;
-
-static gcn::CheckBox* chkSdl2Thread;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -216,9 +214,6 @@ public:
 
 		else if (actionEvent.getSource() == chkFilterLowRes)
 			changed_prefs.gfx_lores_mode = chkFilterLowRes->isSelected() ? 1 : 0;
-
-		else if (actionEvent.getSource() == chkSdl2Thread)
-			set_sdl2_thread_enabled(chkSdl2Thread->isSelected());
 
 		RefreshPanelDisplay();
 	}
@@ -454,10 +449,6 @@ void InitPanelDisplay(const config_category& category)
 	lblBrightnessValue = new gcn::Label("0.0");
 	lblBrightnessValue->setAlignment(gcn::Graphics::LEFT);
 
-	chkSdl2Thread = new gcn::CheckBox("Use SDL2 multi-threaded rendering");
-	chkSdl2Thread->setId("chkSdl2Thread");
-	chkSdl2Thread->addActionListener(amigaScreenActionListener);
-
 	lblScreenmode = new gcn::Label("Screen mode:");
 	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
@@ -624,8 +615,6 @@ void InitPanelDisplay(const config_category& category)
 	category.panel->add(lblBrightnessValue, sldBrightness->getX() + sldBrightness->getWidth() + 8, posY);
 	posY += lblBrightness->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(chkSdl2Thread, DISTANCE_BORDER, posY);
-
 	RefreshPanelDisplay();
 }
 
@@ -687,7 +676,6 @@ void ExitPanelDisplay()
 	delete lblResolution;
 	delete cboResolution;
 	delete chkFilterLowRes;
-	delete chkSdl2Thread;
 }
 
 void RefreshPanelDisplay()
@@ -773,9 +761,6 @@ void RefreshPanelDisplay()
 	
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFilterLowRes->setSelected(changed_prefs.gfx_lores_mode);
-
-	chkSdl2Thread->setEnabled(strcmpi(sdl_video_driver, "KMSDRM") != 0);
-	chkSdl2Thread->setSelected(get_sdl2_thread_enabled());
 
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
 	{
