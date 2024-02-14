@@ -2821,7 +2821,7 @@ void auto_crop_image()
 			new_height = (new_height + vidinfo->drawbuffer.yoffset) << currprefs.gfx_vresolution;
 
 			last_x = x;
-			const int y = (vstrt - minfirstline) << currprefs.gfx_vresolution > 0 ? (vstrt - minfirstline) << currprefs.gfx_vresolution : 0;
+			const int y = (start_y / 2) << currprefs.gfx_vresolution;
 
 #ifdef USE_OPENGL
 			// TODO Auto-Crop in OpenGL
