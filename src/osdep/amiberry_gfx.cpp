@@ -2769,6 +2769,9 @@ void auto_crop_image()
 	static int width, height;
 	if (amiga_surface == nullptr || amiga_renderer == nullptr) return;
 
+	struct amigadisplay *ad = &adisplays[0];
+	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
+
 	if (currprefs.gfx_auto_crop)
 	{
 		static int last_vstrt, last_vstop, last_hstrt, last_hstop, last_x;
@@ -2815,7 +2818,7 @@ void auto_crop_image()
 				new_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
 
 			// Adjust new Height for Line mode option
-			new_height = new_height << currprefs.gfx_vresolution;
+			new_height = (new_height + vidinfo->drawbuffer.yoffset) << currprefs.gfx_vresolution;
 
 			last_x = x;
 			const int y = (vstrt - minfirstline) << currprefs.gfx_vresolution > 0 ? (vstrt - minfirstline) << currprefs.gfx_vresolution : 0;
