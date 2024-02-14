@@ -1015,7 +1015,7 @@ static void sony_serial_read(uae_u16 w)
 	sb(0x80);
 	sb(0x00);
 	sb(0x40);
-	sb((ld_mode == LD_MODE_SEARCH ? 0x02 : 0x00));
+	sb((ld_mode_value == LD_MODE_SEARCH ? 0x02 : 0x00) | (ld_mode_value == LD_MODE_REPEAT ? 0x04 : 0x00) | (ld_mode_value ? 0x01 : 0x00) | (ld_mode_value == LD_MODE_REPEAT2 ? 0x20 : 0x00));
 	sb((ld_mode == LD_MODE_PLAY ? 0x01 : 0x00) | (ld_mode == LD_MODE_STILL ? 0x20 : 0x00) | (ld_mode == LD_MODE_STOP ? 0x40 : 0x00) | (ld_direction < 0 ? 0x80 : 0x00));
 	if (log_ld > 1)
 		write_log(_T("LD: STATUS INQ\n"));
