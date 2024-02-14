@@ -1136,6 +1136,7 @@ void alg_map_banks(void)
 	ser_buf_offset = 0;
 	alg_hsync_delay = 0;
 	arcadia_hsync_cnt = 0;
+	currprefs.cs_floppydatapullup = changed_prefs.cs_floppydatapullup = true;
 	device_add_vsync_pre(arcadia_vsync);
 	device_add_hsync(arcadia_hsync);
 	if (!currprefs.genlock) {
