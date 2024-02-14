@@ -9457,6 +9457,11 @@ static int bip_alg(struct uae_prefs* p, int config, int compa, int romcheck)
 			roms[0] = rl[i]->rd->id;
 			roms[1] = -1;
 			configure_rom(p, roms, 0);
+			const TCHAR *name = rl[i]->rd->name;
+			p->ntscmode = true;
+			if (_tcsstr(name, _T("Picmatic"))) {
+				p->ntscmode = false;
+			}
 			break;
 		}
 	}
