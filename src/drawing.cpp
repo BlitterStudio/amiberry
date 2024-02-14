@@ -3361,13 +3361,6 @@ static void pfield_draw_line(struct vidbuffer *vb, int lineno, int gfx_ypos, int
 	}
 }
 
-#ifdef AMIBERRY
-int get_visible_left_border()
-{
-	return min_diwstart == MAX_STOP ? visible_left_border / 2 : min_diwstart - visible_left_border;
-}
-#endif
-
 static void center_image (void)
 {
 	struct amigadisplay *ad = &adisplays[0];

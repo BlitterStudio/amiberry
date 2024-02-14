@@ -1034,70 +1034,34 @@ static void open_screen(struct uae_prefs* p)
 	}
 }
 
-extern int vstrt; // vertical start
-extern int vstop; // vertical stop
-extern int hstrt; // horizontal start
-extern int hstop; // horizontal stop
-extern int get_visible_left_border();
-
 void auto_crop_image()
 {
 	static bool last_autocrop;
 	static int width, height;
 	if (currprefs.gfx_auto_crop)
 	{
-		static int last_vstrt, last_vstop, last_hstrt, last_hstop, last_x;
-		const int x = get_visible_left_border() > 0 ? get_visible_left_border() : 0;
+		int cw, ch, cx, cy, crealh = 0;
+		get_custom_limits(&cw, &ch, &cx, &cy, &crealh);
+
+		static int last_cw, last_ch, last_cx, last_cy;
 		if (force_auto_crop
-			|| last_autocrop != currprefs.gfx_auto_crop
-			|| last_vstrt != vstrt
-			|| last_vstop != vstop
-			|| last_hstrt != hstrt
-			|| last_hstop != hstop
-			|| last_x != x
+		    || last_autocrop != currprefs.gfx_auto_crop
+		    || last_cw != cw
+		    || last_ch != ch
+		    || last_cx != cx
+		    || last_cy != cy
 			)
 		{
-			last_vstrt = vstrt;
-			last_vstop = vstop;
-			last_hstrt = hstrt;
-			last_hstop = hstop;
+			last_cw = cw;
+			last_ch = ch;
+			last_cx = cx;
+			last_cy = cy;
 			force_auto_crop = false;
-			static int new_height, new_width;
 
-			auto start_y = minfirstline; // minfirstline = first line to be written to screen buffer
-			auto stop_y = MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
-			if (vstrt > minfirstline)
-				start_y = vstrt;		// if vstrt > minfirstline then there is a black border
-			if (start_y > 200)
-				start_y = minfirstline; // shouldn't happen but does for donkey kong
-			if (vstop < stop_y)
-				stop_y = vstop;			// if vstop < stop_y then there is a black border
-
-			new_width = (hstop - hstrt) / 2;
-			new_height = stop_y - start_y;
-
-			// Minimum values
-			const int min_width = currprefs.gfx_resolution ? 640 : 320;
-			if (new_width / 2 << currprefs.gfx_resolution < min_width)
-				new_width = min_width;
-			else
-				new_width = new_width / 2 << currprefs.gfx_resolution;
-			if (new_height < 204)
-				new_height = 204;
-
-			// Maximum values
-			if (new_width > 720)
-				new_width = 720;
-
-			// Adjust new Height for Line mode option
-			new_height = new_height << currprefs.gfx_vresolution;
-
-			last_x = x;
-			const int y = (vstrt - minfirstline) << currprefs.gfx_vresolution > 0 ? (vstrt - minfirstline) << currprefs.gfx_vresolution : 0;
-
+			width = (cw * 2) >> currprefs.gfx_resolution;
+			height = (ch * 2) >> currprefs.gfx_vresolution;
 #ifdef USE_DISPMANX
 			// Still using the old approach for DMX, for now
-			height = new_height * 2 >> currprefs.gfx_vresolution;
 			if (height != currprefs.gfx_monitor[0].gfx_size_win.height)
 			{
 				changed_prefs.gfx_monitor[0].gfx_size_win.height = currprefs.gfx_monitor[0].gfx_size_win.height = height;
@@ -1107,22 +1071,11 @@ void auto_crop_image()
 #elif USE_OPENGL
 			// TODO Auto-Crop in OpenGL
 #else
-			crop_rect = { x, y, new_width, new_height };
-
-			if (currprefs.gfx_correct_aspect == 0)
-			{
-				width = sdl_mode.w;
-				height = sdl_mode.h;
-			}
-			else
-			{
-				width = new_width * 2 >> currprefs.gfx_resolution;
-				height = new_height * 2 >> currprefs.gfx_vresolution;
-			}
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			{
 				SDL_RenderSetLogicalSize(sdl_renderer, width, height);
 				renderQuad = { dx, dy, width, height };
+				crop_rect = { cx, cy, cw, ch };
 			}
 			else
 			{
