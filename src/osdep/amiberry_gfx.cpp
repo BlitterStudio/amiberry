@@ -2727,16 +2727,9 @@ void graphics_subshutdown()
 }
 
 #ifdef AMIBERRY
-extern int vstrt; // vertical start
-extern int vstop; // vertical stop
-extern int hstrt; // horizontal start
-extern int hstop; // horizontal stop
-extern int get_visible_left_border();
-
 void auto_crop_image()
 {
 	static bool last_autocrop;
-	static int width, height;
 #ifdef USE_OPENGL
 	if (amiga_surface == nullptr) return;
 #else
@@ -2744,70 +2737,38 @@ void auto_crop_image()
 #endif
 
 	struct amigadisplay *ad = &adisplays[0];
-	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
 
 	if (currprefs.gfx_auto_crop)
 	{
-		static int last_vstrt, last_vstop, last_hstrt, last_hstop, last_x;
-		const int x = get_visible_left_border() > 0 ? get_visible_left_border() : 0;
+		int cw, ch, cx, cy, crealh = 0;
+		get_custom_limits(&cw, &ch, &cx, &cy, &crealh);
+
+		static int last_cw, last_ch, last_cx, last_cy;
 		if (force_auto_crop
 			|| last_autocrop != currprefs.gfx_auto_crop
-			|| last_vstrt != vstrt
-			|| last_vstop != vstop
-			|| last_hstrt != hstrt
-			|| last_hstop != hstop
-			|| last_x != x
+			|| last_cw != cw
+			|| last_ch != ch
+			|| last_cx != cx
+			|| last_cy != cy
 			)
 		{
-			last_vstrt = vstrt;
-			last_vstop = vstop;
-			last_hstrt = hstrt;
-			last_hstop = hstop;
+			last_cw = cw;
+			last_ch = ch;
+			last_cx = cx;
+			last_cy = cy;
 			force_auto_crop = false;
-			static int new_height, new_width;
-
-			auto start_y = minfirstline; // minfirstline = first line to be written to screen buffer
-			auto stop_y = MAXVPOS_PAL + minfirstline; // last line to be written to screen buffer
-			if (vstrt > minfirstline)
-				start_y = vstrt;		// if vstrt > minfirstline then there is a black border
-			if (start_y > 200)
-				start_y = minfirstline; // shouldn't happen but does for donkey kong
-			if (vstop < stop_y)
-				stop_y = vstop;			// if vstop < stop_y then there is a black border
-
-			new_width = (hstop - hstrt) / 2;
-			new_height = stop_y - start_y;
-
-			// Minimum values
-			const int min_width = currprefs.gfx_resolution ? 640 : 320;
-			if (((new_width / 2) << currprefs.gfx_resolution) < min_width)
-				new_width = min_width;
-			else
-				new_width = (new_width / 2) << currprefs.gfx_resolution;
-			if (new_height < 204)
-				new_height = 204;
-
-			// Maximum values
-			if (new_width > (AMIGA_WIDTH_MAX << currprefs.gfx_resolution))
-				new_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
-
-			// Adjust new Height for Line mode option
-			new_height = (new_height + vidinfo->drawbuffer.yoffset) << currprefs.gfx_vresolution;
-
-			last_x = x;
-			const int y = (start_y / 2) << currprefs.gfx_vresolution;
 
 #ifdef USE_OPENGL
 			// TODO Auto-Crop in OpenGL
 #else
-			width = (new_width * 2) >> currprefs.gfx_resolution;
-			height = (new_height * 2) >> currprefs.gfx_vresolution;
+			int width = (cw * 2) >> currprefs.gfx_resolution;
+			int height = (ch * 2) >> currprefs.gfx_vresolution;
 
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			{
 				SDL_RenderSetLogicalSize(amiga_renderer, width, height);
 				renderQuad = { dx, dy, width, height };
-				crop_rect = { x, y, new_width, new_height };
+				crop_rect = { cx, cy, cw, ch };
 			}
 			else
 			{
