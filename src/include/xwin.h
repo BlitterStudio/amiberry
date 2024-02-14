@@ -55,7 +55,7 @@ extern bool show_screen_maybe(int monid, bool);
 
 extern int lockscr(struct vidbuffer*, bool, bool, bool);
 extern void unlockscr(struct vidbuffer*, int, int);
-extern bool target_graphics_buffer_update(int monid);
+extern bool target_graphics_buffer_update(int monid, bool force);
 extern float target_adjust_vblank_hz(int monid, float);
 extern int target_get_display_scanline(int displayindex);
 extern void target_spin(int);

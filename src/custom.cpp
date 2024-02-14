@@ -7060,9 +7060,9 @@ void compute_framesync(void)
 	set_config_changed();
 
 	if (currprefs.monitoremu_mon != 0) {
-		target_graphics_buffer_update(currprefs.monitoremu_mon);
+		target_graphics_buffer_update(currprefs.monitoremu_mon, false);
 	}
-	if (target_graphics_buffer_update(0)) {
+	if (target_graphics_buffer_update(0, false)) {
 		reset_drawing();
 	}
 }
