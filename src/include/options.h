@@ -684,6 +684,7 @@ struct uae_prefs
 	int genlock_scale;
 	int genlock_aspect;
 	int genlock_effects;
+	int genlock_offset_x, genlock_offset_y;
 	uae_u64 ecs_genlock_features_colorkey_mask[4];
 	uae_u8 ecs_genlock_features_plane_mask;
 	bool genlock_alpha;

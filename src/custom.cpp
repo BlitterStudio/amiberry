@@ -7800,6 +7800,21 @@ static void check_line_enabled(void)
 	line_disabled |= custom_disabled ? 2 : 0;
 }
 
+void get_mode_blanking_limits(int *phbstop, int *phbstrt, int *pvbstop, int *pvbstrt)
+{
+	if (new_beamcon0 & BEAMCON0_VARVBEN) {
+		*pvbstop = vbstop;
+		*pvbstrt = vbstrt;
+		*phbstop = hbstop_v;
+		*phbstrt = hbstrt_v;
+	} else {
+		*pvbstop = hardwired_vbstop;
+		*pvbstrt = hardwired_vbstrt;
+		*phbstop = (47 << CCK_SHRES_SHIFT) - 7;
+		*phbstrt = ((maxhpos_short + 8) << CCK_SHRES_SHIFT) - 3;
+	}
+}
+
 static void vb_check(void)
 {
 	check_line_enabled();

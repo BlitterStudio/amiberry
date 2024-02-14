@@ -2533,6 +2533,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_str(f, _T("genlock_video"), p->genlock_video_file);
 	cfgfile_dwrite(f, _T("genlock_mix"), _T("%d"), p->genlock_mix);
 	cfgfile_dwrite(f, _T("genlock_scale"), _T("%d"), p->genlock_scale);
+	cfgfile_dwrite(f, _T("genlock_offset_x"), _T("%d"), p->genlock_offset_x);
+	cfgfile_dwrite(f, _T("genlock_offset_y"), _T("%d"), p->genlock_offset_y);
 	if (p->genlock_effects) {
 		tmp[0] = 0;
 		if (p->genlock_effects & (1 << 4)) {
@@ -6022,6 +6024,8 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_intval(option, value, _T("monitoremu_monitor"), &p->monitoremu_mon, 1)
 		|| cfgfile_intval(option, value, _T("genlock_scale"), &p->genlock_scale, 1)
 		|| cfgfile_intval(option, value, _T("genlock_mix"), &p->genlock_mix, 1)
+        || cfgfile_intval(option, value, _T("genlock_offset_x"), &p->genlock_offset_x, 1)
+        || cfgfile_intval(option, value, _T("genlock_offset_y"), &p->genlock_offset_y, 1)
 		|| cfgfile_intval(option, value, _T("keyboard_handshake"), &p->cs_kbhandshake, 1)
 		|| cfgfile_intval(option, value, _T("eclockphase"), &p->cs_eclockphase, 1)
 		|| cfgfile_intval(option, value, _T("chipset_rtc_adjust"), &p->cs_rtc_adjust, 1)
@@ -8577,6 +8581,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->genlock = 0;
 	p->genlock_image = 0;
 	p->genlock_mix = 0;
+	p->genlock_offset_x = 0;
+	p->genlock_offset_y = 0;
 	p->ntscmode = 0;
 	p->filesys_limit = 0;
 	p->filesys_max_name = 107;
