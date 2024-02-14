@@ -6150,7 +6150,7 @@ static void reset_decisions_scanline_start(void)
 		}
 	}
 
-	if (!ecs_denise) {
+	if (!ecs_denise && currprefs.gfx_overscanmode > OVERSCANMODE_OVERSCAN) {
 		if (!ecs_agnus) {
 			if (vb_start_line == 2 + vblank_extraline) {
 				record_color_change2(0, 0, COLOR_CHANGE_BLANK | 1);
@@ -13041,7 +13041,7 @@ static void hsync_handlerh(bool onvsync)
 	hpos_hsync_extra = 0;
 	estimate_last_fetch_cycle(hpos);
 
-	if (vb_end_next_line && !ecs_denise) {
+	if (vb_end_next_line && !ecs_denise && currprefs.gfx_overscanmode > OVERSCANMODE_OVERSCAN) {
 		record_color_change2(hpos, 0, COLOR_CHANGE_BLANK | 1);
 	}
 
