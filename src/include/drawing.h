@@ -28,7 +28,9 @@ extern int detected_screen_resolution;
 extern int hsync_end_left_border, denisehtotal;
 
 #define AMIGA_WIDTH_MAX (754 / 2)
-#define AMIGA_HEIGHT_MAX (576 / 2)
+#define AMIGA_HEIGHT_MAX_PAL (576 / 2)
+#define AMIGA_HEIGHT_MAX_NTSC (484 / 2)
+#define AMIGA_HEIGHT_MAX (AMIGA_HEIGHT_MAX_PAL)
 
 // Cycles * 2 from start of scanline to first refresh slot (hsync strobe slot)
 #define DDF_OFFSET (2 * 4)
