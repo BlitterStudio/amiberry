@@ -68,6 +68,7 @@ static void multigame (int);
 
 int arcadia_flag, arcadia_coin[2];
 struct arcadiarom *arcadia_bios, *arcadia_game;
+static int arcadia_hsync_cnt;
 
 static struct arcadiarom roms[]	= {
 
@@ -480,6 +481,11 @@ static void nvram_read (void)
 
 static void alg_vsync(void);
 static void cubo_vsync(void);
+
+static void arcadia_hsync(void)
+{
+	arcadia_hsync_cnt++;
+}
 static void arcadia_vsync(void)
 {
 	if (alg_flag)
@@ -528,6 +534,8 @@ int arcadia_map_banks (void)
 	multigame (0);
 	map_banks (&arcadia_boot_bank, 0xf0, 8, 0);
 	device_add_vsync_pre(arcadia_vsync);
+	device_add_hsync(arcadia_hsync);
+	arcadia_hsync_cnt = 0;
 	return 1;
 }
 
@@ -690,6 +698,7 @@ static int ser_buf_offset;
 static int ld_wait_ack;
 static int ld_audio;
 static int ld_vsync;
+static int alg_hsync_delay;
 
 static void sb(uae_u8 v)
 {
@@ -968,12 +977,19 @@ void ld_serial_read(uae_u16 w)
 
 int ld_serial_write(void)
 {
-	if (alg_flag || currprefs.genlock_image == 7) {
-		return sony_serial_write();
-	} else if (currprefs.genlock_image == 8) {
-		return pioneer_serial_write();
+	int v = -1;
+	if (arcadia_hsync_cnt < alg_hsync_delay) {
+		return -1;
 	}
-	return -1;
+	if (alg_flag || currprefs.genlock_image == 7) {
+		v = sony_serial_write();
+	} else if (currprefs.genlock_image == 8) {
+		v = pioneer_serial_write();
+	}
+	if (v >= 0) {
+		alg_hsync_delay = arcadia_hsync_cnt + 3;
+	}
+	return v;
 }
 
 /*
@@ -1113,7 +1129,10 @@ void alg_map_banks(void)
 	ld_wait_ack = 0;
 	ld_direction = 0;
 	ser_buf_offset = 0;
+	alg_hsync_delay = 0;
+	arcadia_hsync_cnt = 0;
 	device_add_vsync_pre(arcadia_vsync);
+	device_add_hsync(arcadia_hsync);
 	if (!currprefs.genlock) {
 		currprefs.genlock = changed_prefs.genlock = 1;
 	}
