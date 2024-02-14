@@ -115,6 +115,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 	int mask = zf->zfdmask;
 	int canhistory = (mask & ZFD_DISKHISTORY) && !(mask & ZFD_CHECKONLY);
 	int getflag = (mask &  ZFD_DELAYEDOPEN) ? FILE_DELAYEDOPEN : 0;
+	int execnt = 0;
 
 	if (retcode)
 		*retcode = 0;
@@ -128,6 +129,7 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 	zv = getzvolume (parent, zf, id);
 	if (!zv)
 		return NULL;
+retry:;
 	we_have_file = 0;
 	tmphist[0] = 0;
 	zipcnt = 1;
@@ -192,8 +194,24 @@ struct zfile *archive_access_select (struct znode *parent, struct zfile *zf, uns
 						ft = ZFILE_CDIMAGE;
 					}
 				} else {
-					zt = archive_getzfile (zn, id, getflag);
-					ft = zfile_gettype (zt);
+					zt = archive_getzfile(zn, id, getflag);
+					ft = zfile_gettype(zt);
+					// if more than 1 exe: do not mount as disk image
+					if (ft == ZFILE_EXECUTABLE) {
+						if (execnt < 0) {
+							ft = ZFILE_UNKNOWN;
+							zfile_fclose(z);
+							z = NULL;
+							zfile_fclose(zt);
+							zt = NULL;
+						} else {
+							if (execnt > 0) {
+								execnt = -1;
+								goto retry;
+							}
+							execnt++;
+						}
+					}
 				}
 				if ((select < 0 || ft) && whf > we_have_file) {
 					if (!zt)

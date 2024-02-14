@@ -116,8 +116,9 @@ static void diskswapper_addfile(struct uae_prefs* prefs, const TCHAR* file)
 			struct zfile* zf = zfile_fopen(out, _T("rb"), ZFD_NORMAL);
 			if (zf) {
 				int type = zfile_gettype(zf);
-				if (type == ZFILE_DISKIMAGE)
-					diskswapper_addfile2(prefs, out);
+				if (type == ZFILE_DISKIMAGE || type == ZFILE_EXECUTABLE) {
+					diskswapper_addfile2 (prefs, out);
+				}
 				zfile_fclose(zf);
 			}
 		}

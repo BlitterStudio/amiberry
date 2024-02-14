@@ -336,7 +336,7 @@ int zfile_gettype (struct zfile *z)
 	zfile_fread (buf, 8, 1, z);
 	zfile_fseek (z, -8, SEEK_CUR);
 	if (!memcmp (buf, exeheader, sizeof (buf)))
-		return ZFILE_DISKIMAGE;
+		return ZFILE_EXECUTABLE;
 	if (!memcmp (buf, "CAPS", 4))
 		return ZFILE_DISKIMAGE;
 	if (!memcmp (buf, "SCP", 3))

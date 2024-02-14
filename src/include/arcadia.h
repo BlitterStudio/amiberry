@@ -33,6 +33,7 @@ extern int alg_get_player(uae_u16);
 extern uae_u16 alg_potgor(uae_u16);
 extern uae_u16 alg_joydat(int, uae_u16);
 extern uae_u8 alg_joystick_buttons(uae_u8, uae_u8, uae_u8);
+extern uae_u8 alg_parallel_port(uae_u8, uae_u8);
 extern struct romdata *get_alg_rom(const TCHAR *name);
 
 extern void ld_serial_read(uae_u16 v);

@@ -1550,7 +1550,7 @@ int check_prefs_changed_gfx()
 				}
 			}
 			if (c & 1024) {
-				target_graphics_buffer_update(mon->monitor_id);
+				target_graphics_buffer_update(mon->monitor_id, true);
 			}
 			if (c & 512) {
 				open_screen(&currprefs);
@@ -1983,12 +1983,12 @@ static void open_screen(struct uae_prefs* p)
 		}
 		init_row_map();
 	}
-	target_graphics_buffer_update(mon->monitor_id);
-	updatewinrect(mon, true);
 
+	updatewinrect(mon, true);
 	mon->screen_is_initialized = 1;
 
 	init_colors(mon->monitor_id);
+	target_graphics_buffer_update(mon->monitor_id, false);
 	picasso_refresh(mon->monitor_id);
 	setmouseactive(mon->monitor_id, -1);
 
@@ -2217,7 +2217,7 @@ void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt)
 		open_screen(&currprefs);
 
 	state->ModeChanged = false;
-	target_graphics_buffer_update(monid);
+	target_graphics_buffer_update(monid, false);
 }
 
 void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt)
@@ -2350,7 +2350,7 @@ static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf,
 }
 
 static int oldtex_w[MAX_AMIGAMONITORS], oldtex_h[MAX_AMIGAMONITORS], oldtex_rtg[MAX_AMIGAMONITORS];
-bool target_graphics_buffer_update(int monid)
+bool target_graphics_buffer_update(int monid, bool force)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct vidbuf_description* avidinfo = &adisplays[monid].gfxvidinfo;
@@ -2370,7 +2370,7 @@ bool target_graphics_buffer_update(int monid)
 		depth = 32;
 	}
 
-	if (oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && SDL2_alloctexture(mon->monitor_id, -w, -h, depth)) {
+	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && SDL2_alloctexture(mon->monitor_id, -w, -h, depth)) {
 		//osk_setup(monid, -2);
 		return false;
 	}

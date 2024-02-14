@@ -30,6 +30,7 @@
 #include "statusline.h"
 #include "rommgr.h"
 #include "flashrom.h"
+#include "savestate.h"
 #include "devices.h"
 
 #define CUBO_DEBUG 1
@@ -68,6 +69,7 @@ static void multigame (int);
 
 int arcadia_flag, arcadia_coin[2];
 struct arcadiarom *arcadia_bios, *arcadia_game;
+static int arcadia_hsync_cnt;
 
 static struct arcadiarom roms[]	= {
 
@@ -480,6 +482,11 @@ static void nvram_read (void)
 
 static void alg_vsync(void);
 static void cubo_vsync(void);
+
+static void arcadia_hsync(void)
+{
+	arcadia_hsync_cnt++;
+}
 static void arcadia_vsync(void)
 {
 	if (alg_flag)
@@ -528,6 +535,8 @@ int arcadia_map_banks (void)
 	multigame (0);
 	map_banks (&arcadia_boot_bank, 0xf0, 8, 0);
 	device_add_vsync_pre(arcadia_vsync);
+	device_add_hsync(arcadia_hsync);
+	arcadia_hsync_cnt = 0;
 	return 1;
 }
 
@@ -601,6 +610,8 @@ static uae_u8 algmemory[ALG_NVRAM_SIZE];
 static int algmemory_modified;
 static int algmemory_initialized;
 static int alg_game_id;
+static bool alg_picmatic;
+static uae_u8 picmatic_io;
 
 static void alg_nvram_write (void)
 {
@@ -641,6 +652,9 @@ static uae_u32 REGPARAM2 alg_wget (uaecptr addr)
 
 static uae_u32 REGPARAM2 alg_bget (uaecptr addr)
 {
+	if (alg_picmatic && (addr & 0xffff0000) == 0xf60000) {
+		return 0;
+	}
 	uaecptr addr2 = addr;
 	addr >>= 1;
 	addr &= ALG_NVRAM_MASK;
@@ -658,6 +672,12 @@ static void REGPARAM2 alg_wput (uaecptr addr, uae_u32 w)
 
 static void REGPARAM2 alg_bput (uaecptr addr, uae_u32 b)
 {
+	if (alg_picmatic && (addr & 0xffff0000) == 0xf60000) {
+		if (!(addr & 0xffff)) {
+			picmatic_io = b;
+		}
+		return;
+	}
 	uaecptr addr2 = addr;
 	addr >>= 1;
 	addr &= ALG_NVRAM_MASK;
@@ -676,20 +696,28 @@ static addrbank alg_ram_bank = {
 	NULL, 65536
 };
 
-static int ld_mode;
+static int ld_mode, ld_mode_value;
 static uae_u32 ld_address, ld_value;
+static uae_u32 ld_startaddress, ld_endaddress;
+static uae_s32 ld_repcnt, ld_mark;
 static int ld_direction;
+static bool ld_save_restore;
 #define LD_MODE_SEARCH 1
 #define LD_MODE_PLAY 2
 #define LD_MODE_STILL 3
 #define LD_MODE_STOP 4
+#define LD_MODE_REPEAT 5
+#define LD_MODE_REPEAT2 6
+#define LD_MODE_MARK 7
 
 #define ALG_SER_BUF_SIZE 16
 static uae_u8 alg_ser_buf[ALG_SER_BUF_SIZE];
 static int ser_buf_offset;
 static int ld_wait_ack;
 static int ld_audio;
+static bool ld_video;
 static int ld_vsync;
+static int alg_hsync_delay;
 
 static void sb(uae_u8 v)
 {
@@ -699,7 +727,7 @@ static void sb(uae_u8 v)
 }
 static void ack(void)
 {
-	ld_wait_ack = 1;
+	ld_wait_ack = alg_hsync_delay + 30;
 	sb(0x0a); // ACK
 }
 
@@ -708,6 +736,42 @@ static void sony_serial_read(uae_u16 w)
 	w &= 0xff;
 	switch (w)
 	{
+	case 0x26: // Video off
+		ld_video = false;
+		ack();
+		if (log_ld)
+			write_log(_T("LD: Video off\n"));
+		break;
+	case 0x27: // Video on
+		ld_video = true;
+		ack();
+		if (log_ld)
+			write_log(_T("LD: Video on\n"));
+		break;
+	case 0x2b: // FWD Step
+		ld_address++;
+#ifdef AVIOUTPUT
+		getsetpositionvideograb(ld_address);
+#endif
+		ld_mode = LD_MODE_STILL;
+		ld_direction = 0;
+		ack();
+		if (log_ld)
+			write_log(_T("LD: FWD step\n"));
+		break;
+	case 0x2c: // REV Step
+		if (ld_address) {
+			ld_address--;
+		}
+#ifdef AVIOUTPUT
+		getsetpositionvideograb(ld_address);
+#endif
+		ld_mode = LD_MODE_STILL;
+		ld_direction = 0;
+		ack();
+		if (log_ld)
+			write_log(_T("LD: REV step\n"));
+		break;
 	case 0x30: // '0'
 	case 0x31:
 	case 0x32:
@@ -728,6 +792,7 @@ static void sony_serial_read(uae_u16 w)
 	case 0x3a: // F-PLAY ':'
 	ld_mode = LD_MODE_PLAY;
 	ld_direction = 0;
+	ld_repcnt = -1;
 #ifdef AVIOUTPUT
 	pausevideograb(0);
 #endif
@@ -750,20 +815,65 @@ static void sony_serial_read(uae_u16 w)
 	if (log_ld)
 		write_log(_T("LD: STOP\n"));
 	break;
-	case 0x40: // '@'
-	if (ld_mode == LD_MODE_SEARCH) {
-		ld_address = ld_value;
+	case 0x40: // ENTER '@'
+		if (ld_mode_value == LD_MODE_MARK) {
+			ld_mode_value = 0;
+			ld_mark = ld_value;
+			ack();
+			if (log_ld) {
+				write_log(_T("LD: SET MARK %d\n"), ld_mark);
+			}
+		} else if (ld_mode_value == LD_MODE_REPEAT) {
+			ld_direction = 0;
+			ld_endaddress = ld_value;
+			ld_startaddress = ld_address;
+			ld_value = 0;
+			ld_mode_value = LD_MODE_REPEAT2;
+			ack();
+		} else if (ld_mode_value == LD_MODE_REPEAT2) {
+			ld_repcnt = ld_value;
+			ld_address = ld_startaddress;
+			if (ld_startaddress > ld_endaddress) {
+				ld_direction = -1;
+			}
+			ld_mode_value = 0;
+			ld_mode = LD_MODE_PLAY;
 #ifdef AVIOUTPUT
-		getsetpositionvideograb(ld_address);
+			pausevideograb(0);
+#endif
+			ack();
+			if (log_ld) {
+				write_log(_T("LD: REPEAT CNT=%d, %d TO %d\n"), ld_repcnt, ld_startaddress, ld_endaddress);
+			}
+		} else if (ld_mode_value == LD_MODE_SEARCH) {
+#ifdef AVIOUTPUT
+			uae_s32 endpos = (uae_s32)getdurationvideograb();
+#endif
+		ld_address = ld_value;
+		ack();
+#ifdef AVIOUTPUT
+		if (ld_address > endpos) {
+			ld_address = endpos;
+			getsetpositionvideograb(ld_address);
+			sb(0x06); // NO FRAME NUMBER
+		} else {
+			getsetpositionvideograb(ld_address);
+			sb(0x01); // COMPLETION
+		}
 #endif
 		ld_mode = LD_MODE_STILL;
+		ld_mode_value = 0;
 		ld_direction = 0;
-		ack();
-		sb(0x01); // COMPLETION
 		if (log_ld)
 			write_log(_T("LD: SEARCH %d\n"), ld_value);
 	}
 	break;
+	case 0x41: // Clear entry
+		ld_value = 0;
+		ack();
+		if (log_ld)
+			write_log(_T("LD: CLEAR ENTRY\n"), ld_value);
+		break;
 	case 0x4a: // R-PLAY 'J'
 	ld_mode = LD_MODE_PLAY;
 #ifdef AVIOUTPUT
@@ -796,7 +906,8 @@ static void sony_serial_read(uae_u16 w)
 	break;
 	case 0x43: // SEARCH 'C'
 	ack();
-	ld_mode = LD_MODE_SEARCH;
+	ld_mode = LD_MODE_STILL;
+	ld_mode_value = LD_MODE_SEARCH;
 	ld_direction = 0;
 #ifdef AVIOUTPUT
 	pausevideograb(1);
@@ -805,11 +916,22 @@ static void sony_serial_read(uae_u16 w)
 	if (log_ld)
 		write_log(_T("LD: SEARCH\n"));
 	break;
+	case 0x44: // Repeat 'D'
+	ack();
+	ld_mode_value = LD_MODE_REPEAT;
+	ld_direction = 0;
+#ifdef AVIOUTPUT
+	pausevideograb(1);
+#endif
+	ld_value = 0;
+	if (log_ld)
+		write_log(_T("LD: REPEAT\n"));
+	break;
 	case 0x46: // CH-1 ON 'F'
 	ack();
 	ld_audio |= 1;
 #ifdef AVIOUTPUT
-	setvolumevideograb(100 - currprefs.sound_volume_genlock);
+	setchflagsvideograb(ld_audio);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-1 ON\n"));
@@ -818,7 +940,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio |= 2;
 #ifdef AVIOUTPUT
-	setvolumevideograb(100 - currprefs.sound_volume_genlock);
+	setchflagsvideograb(ld_audio);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-2 ON\n"));
@@ -827,8 +949,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio &= ~1;
 #ifdef AVIOUTPUT
-	if (!ld_audio)
-		setvolumevideograb(0);
+	setchflagsvideograb(ld_audio);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-1 OFF\n"));
@@ -837,8 +958,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_audio &= ~2;
 #ifdef AVIOUTPUT
-	if (!ld_audio)
-		setvolumevideograb(0);
+	setchflagsvideograb(ld_audio);
 #endif
 	if (log_ld)
 		write_log(_T("LD: CH-2 OFF\n"));
@@ -853,9 +973,19 @@ static void sony_serial_read(uae_u16 w)
 	if (log_ld)
 		write_log(_T("LD: INDEX OFF\n"));
 	break;
-	case 0x56: // CL
+	case 0x55: // Frame mode 'U'
+	ack();
+	if (log_ld)
+		write_log(_T("LD: Frame Mode\n"));
+	break;
+	case 0x56: // Clear 'V'
 	ld_mode = LD_MODE_STILL;
+	ld_repcnt = -1;
+	ld_mark = -1;
+	ld_mode_value = 0;
 	ld_direction = 0;
+	ld_video = true;
+	ld_value = 0;
 #ifdef AVIOUTPUT
 	pausevideograb(1);
 #endif
@@ -866,7 +996,7 @@ static void sony_serial_read(uae_u16 w)
 	case 0x60: // ADDR INQ '`'
 	{
 #ifdef AVIOUTPUT
-		if (isvideograb() && ld_direction == 0) {
+		if (!ld_save_restore && isvideograb() && ld_direction == 0) {
 			ld_address = (uae_u32)getsetpositionvideograb(-1);
 		}
 #endif
@@ -885,11 +1015,26 @@ static void sony_serial_read(uae_u16 w)
 	sb(0x80);
 	sb(0x00);
 	sb(0x40);
-	sb((ld_mode == LD_MODE_SEARCH ? 0x02 : 0x00));
+	sb((ld_mode_value == LD_MODE_SEARCH ? 0x02 : 0x00) | (ld_mode_value == LD_MODE_REPEAT ? 0x04 : 0x00) | (ld_mode_value ? 0x01 : 0x00) | (ld_mode_value == LD_MODE_REPEAT2 ? 0x20 : 0x00));
 	sb((ld_mode == LD_MODE_PLAY ? 0x01 : 0x00) | (ld_mode == LD_MODE_STILL ? 0x20 : 0x00) | (ld_mode == LD_MODE_STOP ? 0x40 : 0x00) | (ld_direction < 0 ? 0x80 : 0x00));
 	if (log_ld > 1)
 		write_log(_T("LD: STATUS INQ\n"));
 	break;
+	case 0x73: // MARK SET 's'
+		ld_value = 0;
+		ld_mode_value = LD_MODE_MARK;
+		ack();
+		if (log_ld)
+			write_log(_T("LD: MARK SET\n"));
+		break;
+	case 0x82: // User Index Off
+		ack();
+		if (log_ld)
+			write_log(_T("LD: USER INDEX OFF\n"));
+		break;
+	default:
+		write_log(_T("LD: Unemulated command %02x\n"), w);
+		break;
 	}
 }
 
@@ -900,9 +1045,27 @@ bool alg_ld_active(void)
 
 static void alg_vsync(void)
 {
-	ld_wait_ack = 0;
 	ld_vsync++;
+	if (ld_save_restore) {
+#ifdef AVIOUTPUT
+		if (ld_address == 0 || getsetpositionvideograb(ld_address) > 0) {
+			ld_save_restore = false;
+			setchflagsvideograb(ld_audio);
+		}
+		if (ld_save_restore) {
+			return;
+		}
+#endif
+	}
+
 	if (ld_mode == LD_MODE_PLAY) {
+#ifdef AVIOUTPUT
+		if (log_ld && (ld_vsync & 63) == 0) {
+			uae_s64 pos = getsetpositionvideograb(-1);
+			write_log(_T("LD: frame %lld\n"), pos);
+		}
+		pausevideograb(0);
+#endif
 		if (ld_direction < 0) {
 			if (ld_address > 0) {
 				ld_address -= (-ld_direction);
@@ -926,6 +1089,46 @@ static void alg_vsync(void)
 				}
 			}
 		}
+#ifdef AVIOUTPUT
+		if (ld_repcnt >= 0 || ld_mark >= 0) {
+			uae_s64 f = getsetpositionvideograb(-1);
+			if (ld_repcnt >= 0) {
+				if ((ld_direction >= 0 && f >= ld_endaddress) || (ld_direction < 0 && f <= ld_endaddress)) {
+					if (ld_repcnt > 0) {
+						ld_repcnt--;
+						if (ld_repcnt == 0) {
+							sb(0x01); // Repeat complete
+							if (log_ld) {
+								write_log(_T("LD: Repeat complete\n"));
+							}
+							ld_repcnt = -1;
+						} else {
+							ld_address = ld_startaddress;
+							getsetpositionvideograb(ld_address);
+							if (log_ld) {
+								write_log(_T("LD: Repeat %d from %d\n"), ld_repcnt, ld_startaddress);
+							}
+						}
+					} else {
+						ld_address = ld_startaddress;
+						getsetpositionvideograb(ld_address);
+						if (log_ld) {
+							write_log(_T("LD: Repeat %d from %d\n"), ld_repcnt, ld_startaddress);
+						}
+					}
+				}
+			}
+			if (ld_mark == f || ld_mark == f + 1 || ld_mark == f + 2) {
+				sb(0x07); // MARK RETURN
+				if (log_ld) {
+					write_log(_T("LD: Mark return %d\n"), ld_mark);
+				}
+				ld_mark = -1;
+			}
+		}
+	} else {
+		pausevideograb(1);
+#endif
 	}
 	if (algmemory_modified > 0) {
 		algmemory_modified--;
@@ -939,8 +1142,11 @@ static int sony_serial_write(void)
 {
 	if (ser_buf_offset > 0) {
 		uae_u16 v = alg_ser_buf[0];
-		if (v == 0x0a && ld_wait_ack)
-			return -1;
+		if (v == 0x0a) {
+			if (arcadia_hsync_cnt < ld_wait_ack) {
+				return -1;
+			}
+		}
 		ser_buf_offset--;
 		memmove(alg_ser_buf, alg_ser_buf + 1, ser_buf_offset);
 		return v;
@@ -968,12 +1174,19 @@ void ld_serial_read(uae_u16 w)
 
 int ld_serial_write(void)
 {
-	if (alg_flag || currprefs.genlock_image == 7) {
-		return sony_serial_write();
-	} else if (currprefs.genlock_image == 8) {
-		return pioneer_serial_write();
+	int v = -1;
+	if (arcadia_hsync_cnt < alg_hsync_delay) {
+		return -1;
 	}
-	return -1;
+	if (alg_flag || currprefs.genlock_image == 7) {
+		v = sony_serial_write();
+	} else if (currprefs.genlock_image == 8) {
+		v = pioneer_serial_write();
+	}
+	if (v >= 0) {
+		alg_hsync_delay = arcadia_hsync_cnt + 2;
+	}
+	return v;
 }
 
 /*
@@ -996,11 +1209,24 @@ Port 2:
 */
 
 static uae_u16 alg_potgo;
+static uae_u8 picmatic_parallel;
+
+uae_u8 alg_parallel_port(uae_u8 drb, uae_u8 v)
+{
+	picmatic_parallel = v;
+	//write_log("%02x\n", v);
+	return v;
+}
 
 int alg_get_player(uae_u16 potgo)
 {
-	// 2nd button output and high = player 2.
-	return (potgo & 0xc000) == 0xc000 ? 1 : 0;
+	if (alg_picmatic) {
+		// Picmatic: parallel port bit 0 set = player 2
+		return (picmatic_io & 1) ? 0 : 1;
+	} else {
+		// ALG: 2nd button output and high = player 2.
+		return (potgo & 0xc000) == 0xc000 ? 1 : 0;
+	}
 }
 
 uae_u16 alg_potgor(uae_u16 potgo)
@@ -1009,13 +1235,21 @@ uae_u16 alg_potgor(uae_u16 potgo)
 
 	int ply = alg_get_player(alg_potgo);
 
-	potgo |= (0x1000 | 0x0100);
-	// trigger
-	if (((alg_flag & 128) && ply == 1) || ((alg_flag & 64) && ply == 0))
-		potgo &= ~0x1000;
-	// right start
-	if (alg_flag & 8)
-		potgo &= ~0x0100;
+	if (alg_picmatic) {
+		potgo |= (0x1000 | 0x0100 | 0x4000 | 0x0400);
+		// right trigger
+		if (alg_flag & 128)
+			potgo &= ~0x1000;
+
+	} else {
+		potgo |= (0x1000 | 0x0100);
+		// trigger
+		if (((alg_flag & 128) && ply == 1) || ((alg_flag & 64) && ply == 0))
+			potgo &= ~0x1000;
+		// right start
+		if (alg_flag & 8)
+			potgo &= ~0x0100;
+	}
 
 	return potgo;
 }
@@ -1025,34 +1259,72 @@ uae_u16 alg_joydat(int joy, uae_u16 v)
 		return v;
 	int ply = alg_get_player(alg_potgo);
 	v = 0;
-	if (joy == 0) {
 
-		// left coin
-		if (alg_flag & 16)
-			v |= 0x0200;
-		// right coin
-		if (alg_flag & 32)
-			v |= 0x0002;
+	if (alg_picmatic) {
+		if (joy == 0) {
 
-		// service
-		if (alg_flag & 2)
-			v |= (v & 0x0200) ? 0x0000 : 0x0100;
-		else
-			v |= (v & 0x0200) ? 0x0100 : 0x0000;
-		// start
-		if (alg_flag & 4)
-			v |= (v & 0x0002) ? 0x0000: 0x0001;
-		else
-			v |= (v & 0x0002) ? 0x0001: 0x0000;
+			// coin
+			if (alg_flag & (16 | 32))
+				v |= 0x0002;
 
-	} else if (joy == 1) {
+			// left start
+			if (alg_flag & 4)
+				v |= 0x0200;
 
-		// holster
-		if (((alg_flag & 512) && ply == 0) || ((alg_flag & 256) && ply == 1))
-			v |= (v & 0x0200) ? 0x0000 : 0x0100;
-		else
-			v |= (v & 0x0200) ? 0x0100 : 0x0000;
+			// service
+			if (alg_flag & 2)
+				v |= (v & 0x0200) ? 0x0000 : 0x0100;
+			else
+				v |= (v & 0x0200) ? 0x0100 : 0x0000;
 
+			// right start
+			if (alg_flag & 8)
+				v |= (v & 0x0002) ? 0x0000 : 0x0001;
+			else
+				v |= (v & 0x0002) ? 0x0001 : 0x0000;
+
+		} else if (joy == 1) {
+
+			// holster
+			if (alg_flag & 512)
+				v |= 0x0200;
+
+			// left trigger
+			if (alg_flag & 64)
+				v |= 0x0002;
+
+		}
+	} else {
+
+		if (joy == 0) {
+
+			// left coin
+			if (alg_flag & 16)
+				v |= 0x0200;
+			// right coin
+			if (alg_flag & 32)
+				v |= 0x0002;
+
+			// service
+			if (alg_flag & 2)
+				v |= (v & 0x0200) ? 0x0000 : 0x0100;
+			else
+				v |= (v & 0x0200) ? 0x0100 : 0x0000;
+			// left start
+			if (alg_flag & 4)
+				v |= (v & 0x0002) ? 0x0000: 0x0001;
+			else
+				v |= (v & 0x0002) ? 0x0001: 0x0000;
+
+		} else if (joy == 1) {
+
+			// holster
+			if (((alg_flag & 512) && ply == 0) || ((alg_flag & 256) && ply == 1))
+				v |= (v & 0x0200) ? 0x0000 : 0x0100;
+			else
+				v |= (v & 0x0200) ? 0x0100 : 0x0000;
+
+		}
 	}
 	return v;
 }
@@ -1092,7 +1364,9 @@ struct romdata *get_alg_rom(const TCHAR *name)
 
 void alg_map_banks(void)
 {
-	alg_flag = 1;
+	if (!savestate_state) {
+		alg_flag = 1;
+	}
 	if (!algmemory_initialized) {
 		alg_nvram_read();
 		algmemory_initialized = 1;
@@ -1105,18 +1379,110 @@ void alg_map_banks(void)
 	} else {
 		map_banks(&alg_ram_bank, 0xf7, 1, 0);
 	}
+	alg_game_id = rd->id;
+	alg_picmatic = rd->id == 198 || rd->id == 301 || rd->id == 302;
+	if (alg_picmatic) {
+		map_banks(&alg_ram_bank, 0xf6, 1, 0);
+	}
 #ifdef AVIOUTPUT
 	pausevideograb(1);
 #endif
-	ld_audio = 0;
-	ld_mode = 0;
-	ld_wait_ack = 0;
-	ld_direction = 0;
-	ser_buf_offset = 0;
+
+	currprefs.cs_floppydatapullup = changed_prefs.cs_floppydatapullup = true;
 	device_add_vsync_pre(arcadia_vsync);
+	device_add_hsync(arcadia_hsync);
 	if (!currprefs.genlock) {
 		currprefs.genlock = changed_prefs.genlock = 1;
 	}
+
+	ld_save_restore = false;
+	if (savestate_state == STATE_RESTORE) {
+		if (ld_mode == LD_MODE_PLAY || ld_mode == LD_MODE_STILL) {
+			ld_save_restore = true;
+		}
+	} else {
+		picmatic_io = 0;
+		ld_repcnt = -1;
+		ld_mark = -1;
+		ld_audio = 0;
+		ld_video = true;
+		ld_mode = 0;
+		ld_wait_ack = 0;
+		ld_direction = 0;
+		ser_buf_offset = 0;
+		alg_hsync_delay = 0;
+		arcadia_hsync_cnt = 0;
+	}
+}
+
+uae_u8 *restore_alg(uae_u8 *src)
+{
+	uae_u32 flags = restore_u32();
+	alg_flag = restore_u32();
+	ld_value = restore_u32();
+	ld_address = restore_u32();
+	ld_startaddress = restore_u32();
+	ld_endaddress = restore_u32();
+	ld_repcnt = restore_u32();
+	ld_mark = restore_u32();
+	ld_wait_ack = restore_u32();
+	alg_hsync_delay = restore_u32();
+	arcadia_hsync_cnt = restore_u32();
+	ld_audio = restore_u8();
+	ld_video = restore_u8();
+	ld_mode = restore_u8();
+	ld_mode_value = restore_u8();
+	ld_direction = restore_u8();
+	picmatic_io = restore_u8();
+	picmatic_parallel = restore_u8();
+	ser_buf_offset  = restore_u8();
+	for (int i = 0; i < ser_buf_offset; i++) {
+		alg_ser_buf[i] = restore_u8();
+	}
+	ld_vsync = restore_u32();
+	return src;
+}
+
+uae_u8 *save_alg(size_t *len)
+{
+	uae_u8 *dstbak, *dst;
+
+	if (!alg_flag)
+		return NULL;
+
+	dstbak = dst = xmalloc(uae_u8, 1000);
+	save_u32(1);
+#ifdef AVIOUTPUT
+	uae_u32 addr = (uae_u32)getsetpositionvideograb(-1);
+#else
+	uae_u32 addr = 0;
+#endif
+
+	save_u32(alg_flag);
+	save_u32(ld_value);
+	save_u32(addr);
+	save_u32(ld_startaddress);
+	save_u32(ld_endaddress);
+	save_u32(ld_repcnt);
+	save_u32(ld_mark);
+	save_u32(ld_wait_ack);
+	save_u32(alg_hsync_delay);
+	save_u32(arcadia_hsync_cnt);
+	save_u8(ld_audio);
+	save_u8(ld_video);
+	save_u8(ld_mode);
+	save_u8(ld_mode_value);
+	save_u8(ld_direction);
+	save_u8(picmatic_io);
+	save_u8(picmatic_parallel);
+	save_u8(ser_buf_offset);
+	for (int i = 0; i < ser_buf_offset; i++) {
+		save_u8(alg_ser_buf[i]);
+	}
+	save_u32(ld_vsync);
+
+	*len = dst - dstbak;
+	return dstbak;
 }
 
 static TCHAR cubo_pic_settings[ROMCONFIG_CONFIGTEXT_LEN];

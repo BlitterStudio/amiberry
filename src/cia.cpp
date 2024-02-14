@@ -200,7 +200,7 @@ void cia_adjust_eclock_phase(int diff)
 	//write_log("CIA E-clock phase %d\n", internaleclockphase);
 }
 
-static void set_eclockphase(void)
+void cia_set_eclockphase(void)
 {
 	if (currprefs.cs_eclocksync == 3) {
 		e_clock_sync = E_CLOCK_SYNC_X;
@@ -236,7 +236,7 @@ static evt_t get_e_cycles(void)
 			currprefs.cs_eclocksync = 1;
 		}
 		changed_prefs.cs_eclocksync = currprefs.cs_eclocksync;
-		set_eclockphase();
+		cia_set_eclockphase();
 		write_log("CIA elock timing mode %d\n", currprefs.cs_eclocksync);
 		blop2 = 0;
 	}
@@ -1717,6 +1717,13 @@ static uae_u8 CIA_PBON(struct CIA *c, uae_u8 v)
 	return v;
 }
 
+#if DONGLE_DEBUG > 0
+static bool notinrom()
+{
+	return true;
+}
+#endif
+
 static uae_u8 ReadCIAA(uae_u32 addr, uae_u32 *flags)
 {
 	struct CIA *c = &cia[0];
@@ -1954,6 +1961,9 @@ static void WriteCIAA(uae_u16 addr, uae_u8 val, uae_u32 *flags)
 #endif
 		c->prb = val;
 		dongle_cia_write(0, reg, c->drb, val);
+#ifdef ARCADIA
+		alg_parallel_port(c->drb, val);
+#endif
 #ifdef PARALLEL_PORT
 		if (isprinter()) {
 			if (isprinter() > 0) {
@@ -2202,7 +2212,7 @@ void CIA_reset(void)
 		CIA_calctimers();
 		DISK_select_set(cia[1].prb);
 	}
-	set_eclockphase();
+	cia_set_eclockphase();
 	map_overlay(0);
 	check_led();
 #ifdef SERIAL_PORT
@@ -2230,11 +2240,13 @@ void dumpcia(void)
 
 	console_out_f(_T("A: CRA %02x CRB %02x ICR %02x IM %02x TA %04x (%04x) TB %04x (%04x)\n"),
 		a->t[0].cr, a->t[1].cr, a->icr1, a->imask, a->t[0].timer - a->t[0].passed, a->t[0].latch, a->t[1].timer - a->t[1].passed, a->t[1].latch);
-	console_out_f(_T("TOD %06x (%06x) ALARM %06x %c%c CYC=%016llX\n"),
+	console_out_f(_T("   PRA %02x PRB %02x DDRA %02x DDRB %02x\n"), a->pra, a->prb, a->dra, a->drb);
+	console_out_f(_T("   TOD %06x (%06x) ALARM %06x %c%c CYC=%016llX\n"),
 		a->tod, a->tol, a->alarm, a->tlatch ? 'L' : '-', a->todon ? '-' : 'S', get_cycles());
 	console_out_f(_T("B: CRA %02x CRB %02x ICR %02x IM %02x TA %04x (%04x) TB %04x (%04x)\n"),
 		b->t[0].cr, b->t[1].cr, b->icr1, b->imask, b->t[0].timer - b->t[0].passed, b->t[0].latch, b->t[1].timer - b->t[1].passed, b->t[1].latch);
-	console_out_f(_T("TOD %06x (%06x) ALARM %06x %c%c\n"),
+	console_out_f(_T("   PRA %02x PRB %02x DDRA %02x DDRB %02x\n"), b->pra, b->prb, b->dra, b->drb);
+	console_out_f(_T("   TOD %06x (%06x) ALARM %06x %c%c\n"),
 		b->tod, b->tol, b->alarm, b->tlatch ? 'L' : '-', b->todon ? '-' : 'S');
 }
 

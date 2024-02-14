@@ -254,6 +254,7 @@ void custom_cpuchange(void);
 bool bitplane_dma_access(int hpos, int offset);
 void custom_dumpstate(int);
 bool get_ras_cas(uaecptr, int*, int*);
+void get_mode_blanking_limits(int *phbstop, int *phbstrt, int *pvbstop, int *pvbstrt);
 
 #define RGA_PIPELINE_ADJUST 4
 #define MAX_CHIPSETSLOTS 256

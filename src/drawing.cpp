@@ -182,6 +182,7 @@ struct spritepixelsbuf {
 static struct spritepixelsbuf spritepixels_buffer[MAX_PIXELS_PER_LINE];
 static struct spritepixelsbuf *spritepixels;
 static int sprite_first_x, sprite_last_x;
+static bool sprite_visibility;
 
 #ifdef AGA
 /* AGA mode color lookup tables */
@@ -504,6 +505,18 @@ void get_custom_topedge (int *xp, int *yp, bool max)
 	}
 }
 
+void get_screen_blanking_limits(int *hbstop, int *hbstrt, int *vbstop, int *vbstrt)
+{
+	*vbstop = vblank_bottom_stop;
+	*vbstrt = vblank_top_start;
+
+	int hblank_left = exthblank ? hblank_left_start : hblank_left_start_hard;
+	int hblank_right = exthblank ? hblank_right_stop : hblank_right_stop_hard;
+
+	*hbstop = hblank_left - visible_left_border;
+	*hbstrt = hblank_right - visible_left_border;
+}
+
 static void reset_custom_limits(void)
 {
 	gclow = gcloh = gclox = gcloy = 0;
@@ -688,7 +701,7 @@ static void set_hblanking_limits(void)
 	} else if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
 		doblank = true;
 	} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-		hbstrt = (239 << CCK_SHRES_SHIFT) - 3;
+		hbstrt = ((maxhpos_short + 12) << CCK_SHRES_SHIFT) - 3;
 		doblank = true;
 	} else if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 		doblank = true;
@@ -1793,10 +1806,7 @@ static uae_u8 render_sprites(int pos, int dualpf, uae_u8 apixel, int aga)
 	int *shift_lookup = dualpf ? (bpldualpfpri ? dblpf_ms2 : dblpf_ms1) : dblpf_ms;
 	int maskshift, plfmask;
 
-	if (exthblank || exthblank_force) {
-		return 0;
-	}
-	if (extborder && (ce_is_borderblank(colors_for_drawing.extra) || !ce_is_bordersprite(colors_for_drawing.extra))) {
+	if (!sprite_visibility) {
 		return 0;
 	}
 
@@ -3389,6 +3399,17 @@ static void setbplmode(void)
 		bplmode = CMODE_NORMAL;
 }
 
+static void set_sprite_visibility(void)
+{
+	sprite_visibility = true;
+	if (exthblank || exthblank_force) {
+		sprite_visibility = false;
+	}
+	if (extborder && (ce_is_borderblank(colors_for_drawing.extra) || !ce_is_bordersprite(colors_for_drawing.extra))) {
+		sprite_visibility = false;
+	}
+}
+
 /* We only save hardware registers during the hardware frame. Now, when
 * drawing the frame, we expand the data into a slightly more useful
 * form. */
@@ -3556,6 +3577,7 @@ static void pfield_expand_dp_bplconx (int regno, int v, int hp, int vp)
 			exthblanken = false;
 			exthblank = 0;
 		}
+		set_sprite_visibility();
 		return;
 	case 0x208: // forced hblank
 		if (v) {
@@ -3666,6 +3688,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 		exthblank = 0;
 	}
 	ehb_enable = true;
+	set_sprite_visibility();
 
 	for (int i = dip_for_drawing->first_color_change; i <= dip_for_drawing->last_color_change; i++) {
 		int regno = curr_color_changes[i].regno;
@@ -3821,6 +3844,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 							extborder = false;
 						}
 					}
+					set_sprite_visibility();
 				} else if (value & COLOR_CHANGE_BLANK) {
 					if (value & 1) {
 						exthblank = exthblank_set;
@@ -3839,6 +3863,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 					colors_for_drawing.extra |= (value & 3) == 2 ? (1 << CE_BORDERSPRITE) : 0;
 					colors_for_drawing.extra |= (value & 5) == 4 ? (1 << CE_BORDERNTRANS) : 0;
 					colors_for_drawing.extra |= (value & 8) == 8 ? (1 << CE_EXTBLANKSET) : 0;
+					set_sprite_visibility();
 				} else if (value & COLOR_CHANGE_SHRES_DELAY) {
 					colors_for_drawing.extra &= ~(1 << CE_SHRES_DELAY_SHIFT);
 					colors_for_drawing.extra &= ~(1 << (CE_SHRES_DELAY_SHIFT + 1));
