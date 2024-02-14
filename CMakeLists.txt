@@ -377,6 +377,7 @@ find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
 find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
+find_library(LIBMPEG2 mpeg2 REQUIRED)
 
 add_subdirectory(external/libguisan)
 target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ./external/libguisan/include ./external/mt32emu/src)
