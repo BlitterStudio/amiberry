@@ -689,7 +689,7 @@ static void set_hblanking_limits(void)
 	} else if (currprefs.gfx_overscanmode <= OVERSCANMODE_OVERSCAN) {
 		doblank = true;
 	} else if (currprefs.gfx_overscanmode == OVERSCANMODE_BROADCAST) {
-		hbstrt = (239 << CCK_SHRES_SHIFT) - 3;
+		hbstrt = ((maxhpos_short + 12) << CCK_SHRES_SHIFT) - 3;
 		doblank = true;
 	} else if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
 		doblank = true;
