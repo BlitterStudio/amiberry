@@ -914,10 +914,7 @@ static void open_screen(struct uae_prefs* p)
 #endif
 		if (isfullscreen() == 0 && !is_maximized)
 		{
-			if (mon->amigawin_rect.x && mon->amigawin_rect.y)
-				SDL_SetWindowPosition(mon->sdl_window, mon->amigawin_rect.x, mon->amigawin_rect.y);
-			else
-				SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+			SDL_SetWindowPosition(mon->sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
 			if (mon->amigawin_rect.w && mon->amigawin_rect.h)
 				SDL_SetWindowSize(mon->sdl_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
