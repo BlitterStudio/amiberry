@@ -727,7 +727,7 @@ static void sb(uae_u8 v)
 }
 static void ack(void)
 {
-	ld_wait_ack = 1;
+	ld_wait_ack = alg_hsync_delay + 30;
 	sb(0x0a); // ACK
 }
 
@@ -1045,7 +1045,6 @@ bool alg_ld_active(void)
 
 static void alg_vsync(void)
 {
-	ld_wait_ack = 0;
 	ld_vsync++;
 	if (ld_save_restore) {
 #ifdef AVIOUTPUT
@@ -1143,8 +1142,11 @@ static int sony_serial_write(void)
 {
 	if (ser_buf_offset > 0) {
 		uae_u16 v = alg_ser_buf[0];
-		if (v == 0x0a && ld_wait_ack)
-			return -1;
+		if (v == 0x0a) {
+			if (arcadia_hsync_cnt < ld_wait_ack) {
+				return -1;
+			}
+		}
 		ser_buf_offset--;
 		memmove(alg_ser_buf, alg_ser_buf + 1, ser_buf_offset);
 		return v;
