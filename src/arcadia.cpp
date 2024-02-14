@@ -862,6 +862,11 @@ static void sony_serial_read(uae_u16 w)
 	if (log_ld)
 		write_log(_T("LD: INDEX OFF\n"));
 	break;
+	case 0x55: // Frame mode
+	ack();
+	if (log_ld)
+		write_log(_T("LD: Frame Mode\n"));
+	break;
 	case 0x56: // CL
 	ld_mode = LD_MODE_STILL;
 	ld_direction = 0;
