@@ -29,7 +29,7 @@ extern int hsync_end_left_border, denisehtotal;
 
 #define AMIGA_WIDTH_MAX (754 / 2)
 #define AMIGA_HEIGHT_MAX_PAL (576 / 2)
-#define AMIGA_HEIGHT_MAX_NTSC (484 / 2)
+#define AMIGA_HEIGHT_MAX_NTSC (486 / 2)
 #define AMIGA_HEIGHT_MAX (AMIGA_HEIGHT_MAX_PAL)
 
 // Cycles * 2 from start of scanline to first refresh slot (hsync strobe slot)
@@ -385,6 +385,7 @@ extern void allocvidbuffer(int monid, struct vidbuffer *buf, int width, int heig
 extern void freevidbuffer(int monid, struct vidbuffer *buf);
 extern void check_prefs_picasso(void);
 extern int get_vertical_visible_height(bool);
+extern void get_screen_blanking_limits(int*, int*, int*, int*);
 
 /* Finally, stuff that shouldn't really be shared.  */
 

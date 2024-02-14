@@ -505,6 +505,18 @@ void get_custom_topedge (int *xp, int *yp, bool max)
 	}
 }
 
+void get_screen_blanking_limits(int *hbstop, int *hbstrt, int *vbstop, int *vbstrt)
+{
+	*vbstop = vblank_bottom_stop;
+	*vbstrt = vblank_top_start;
+
+	int hblank_left = exthblank ? hblank_left_start : hblank_left_start_hard;
+	int hblank_right = exthblank ? hblank_right_stop : hblank_right_stop_hard;
+
+	*hbstop = hblank_left - visible_left_border;
+	*hbstrt = hblank_right - visible_left_border;
+}
+
 static void reset_custom_limits(void)
 {
 	gclow = gcloh = gclox = gcloy = 0;
