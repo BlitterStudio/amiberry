@@ -2840,31 +2840,6 @@ void auto_crop_image()
 #endif
 		}
 	}
-	else
-	{
-#ifdef USE_OPENGL
-		// TODO Auto-Crop in OpenGL
-#else
-		if (last_autocrop != currprefs.gfx_auto_crop)
-		{
-			width = (display_width * 2) >> currprefs.gfx_resolution;
-			height = (display_height * 2) >> currprefs.gfx_vresolution;
-
-			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-			{
-				SDL_RenderSetLogicalSize(amiga_renderer, width, height);
-				renderQuad = { dx, dy, width, height };
-				crop_rect = { 0, 0, width, height };
-			}
-			else
-			{
-				SDL_RenderSetLogicalSize(amiga_renderer, height, width);
-				renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
-				crop_rect = { -(width - height) / 2, (width - height) / 2, width, height };
-			}
-		}
-#endif
-	}
 
 	last_autocrop = currprefs.gfx_auto_crop;
 }

@@ -5040,7 +5040,8 @@ static void finish_drawing_frame(bool drawlines)
 
 	unlockscr(vb, display_reset ? -2 : -1, -1);
 #ifdef AMIBERRY
-	auto_crop_image();
+	if (currprefs.gfx_auto_crop)
+		auto_crop_image();
 #endif
 }
 
