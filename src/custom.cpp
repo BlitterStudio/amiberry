@@ -15435,7 +15435,7 @@ static void REGPARAM2 custom_bput (uaecptr addr, uae_u32 value)
 		if (addr & 1) {
 			rval = value & 0xff;
 		} else {
-			rval = (value << 8) | (value & 0xFF);
+			rval = (value << 8) | (value & 0xff);
 		}
 	} else {
 		rval = (value << 8) | (value & 0xff);
@@ -15443,11 +15443,11 @@ static void REGPARAM2 custom_bput (uaecptr addr, uae_u32 value)
 
 	if (currprefs.cs_bytecustomwritebug) {
 		if (addr & 1)
-			custom_wput (addr & ~1, rval);
+			custom_wput(addr & ~1, rval | (rval << 8));
 		else
-			custom_wput (addr, value << 8);
+			custom_wput(addr, value << 8);
 	} else {
-		custom_wput (addr & ~1, rval);
+		custom_wput(addr & ~1, rval);
 	}
 }
 
