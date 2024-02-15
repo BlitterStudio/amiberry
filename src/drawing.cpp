@@ -563,7 +563,9 @@ static void get_vblanking_limits(int *vbstrtp, int *vbstopp, bool overscanonly)
 	}
 	int vbstop = maxvpos + lof_display;
 	if (!ecs_denise && !ecs_agnus) {
-		vbstop++;
+		if (currprefs.gfx_overscanmode >= OVERSCANMODE_BROADCAST) {
+			vbstop++;
+		}
 	} else if (ecs_agnus && !ecs_denise) {
 		// hide hblank bug by faking vblank start 1 line earlier
 		if (currprefs.gfx_overscanmode < OVERSCANMODE_BROADCAST) {
