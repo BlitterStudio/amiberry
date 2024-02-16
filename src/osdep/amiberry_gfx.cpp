@@ -320,6 +320,8 @@ static void SDL2_init()
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
 		write_log("SDL2: Set window not to minimize on focus loss\n");
 
+	if (SDL_SetHint(SDL_HINT_ALLOW_ALT_TAB_WHILE_GRABBED, "0") == SDL_TRUE)
+		write_log("SDL2: Don't minimize window on Alt-Tab\n");
 }
 
 static bool SDL2_alloctexture(int monid, int w, int h, int depth)
