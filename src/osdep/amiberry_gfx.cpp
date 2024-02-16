@@ -266,13 +266,13 @@ static void SDL2_init()
 			amiga_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 		}
 
-		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
+		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 			                                     SDL_WINDOWPOS_CENTERED,
 			                                     SDL_WINDOWPOS_CENTERED,
-			                                     GUI_HEIGHT,
-			                                     GUI_WIDTH,
+			                                     800,
+			                                     600,
 			                                     amiga_window_mode);
 		}
 		else
@@ -280,8 +280,8 @@ static void SDL2_init()
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 			                                     SDL_WINDOWPOS_CENTERED,
 			                                     SDL_WINDOWPOS_CENTERED,
-			                                     GUI_WIDTH,
-			                                     GUI_HEIGHT,
+			                                     600,
+			                                     800,
 			                                     amiga_window_mode);
 		}
 		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
