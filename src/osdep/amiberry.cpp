@@ -1223,7 +1223,7 @@ void process_event(SDL_Event event)
 	AmigaMonitor* mon = &AMonitors[0];
 	didata* did = &di_joystick[0];
 	
-	if (event.type == SDL_WINDOWEVENT)
+	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
 	{
 		switch (event.window.event)
 		{
