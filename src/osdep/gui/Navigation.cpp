@@ -264,9 +264,10 @@ static NavigationMap navMap[] =
 
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
-	{ "cboFullscreen", "Display", "chkHorizontal", "chkSdl2Thread", "cboScreenmode" },
-	{ "cboScreenmode", "Display", "chkVertical", "cboFullscreen", "sldWidth" },
-	{ "sldWidth", "", "", "cboScreenmode", "sldHeight" },
+	{ "cboFullscreen", "Display", "chkHorizontal", "sldBrightness", "cboScreenmode" },
+	{ "cboScreenmode", "Display", "chkVertical", "cboFullscreen", "chkManualCrop" },
+	{ "chkManualCrop", "Display", "chkHorizontal", "cboScreenmode", "sldWidth" },
+	{ "sldWidth", "", "", "chkManualCrop", "sldHeight" },
 	{ "sldHeight", "", "", "sldWidth", "chkAutoCrop" },
 	{ "chkAutoCrop", "Display", "chkBorderless", "sldHeight", "sldHOffset" },
 	{ "chkBorderless", "chkAutoCrop", "chkVsync", "sldHeight", "sldHOffset" },
@@ -281,8 +282,7 @@ static NavigationMap navMap[] =
 	{ "chkFlickerFixer", "Display", "optIDouble", "chkAspect", "chkFrameskip" },
 	{ "chkFrameskip", "Display", "optIDouble2", "chkFlickerFixer", "sldBrightness" },
 	{ "sldRefresh", "", "", "chkFlickerFixer", "sldBrightness" },
-	{ "sldBrightness", "", "", "chkFrameskip", "chkSdl2Thread" },
-	{ "chkSdl2Thread", "Display", "optIDouble2", "sldBrightness", "cboFullscreen" },
+	{ "sldBrightness", "", "", "chkFrameskip", "cboFullscreen" },
 
 	{ "chkHorizontal", "cboScreenmode", "", "optIDouble3", "chkVertical" },
 	{ "chkVertical", "cboScreenmode", "", "chkHorizontal", "optSingle" },

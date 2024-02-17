@@ -3379,11 +3379,7 @@ static void init_aspect_maps(void)
 		if (amiga2aspect_line_map[i] == -1)
 			continue;
 		for (j = amiga2aspect_line_map[i]; j < native2amiga_line_map_height && native2amiga_line_map[j] == -1; j++)
-#ifdef AMIBERRY
-			native2amiga_line_map[j] = (i + currprefs.gfx_vertical_offset) >> linedbl;
-#else
 			native2amiga_line_map[j] = i >> linedbl;
-#endif
 	}
 }
 
@@ -4190,10 +4186,6 @@ static void center_image (void)
 		}
 	}
 
-#ifdef AMIBERRY
-	visible_left_border += currprefs.gfx_horizontal_offset;
-#endif
-
 	if (visible_left_border > max_diwlastword - 32)
 		visible_left_border = max_diwlastword - 32;
 	if (visible_left_border < 0)
@@ -4214,11 +4206,8 @@ static void center_image (void)
 		max_drawn_amiga_line_tmp = vidinfo->drawbuffer.inheight;
 	max_drawn_amiga_line_tmp >>= linedbl;
 
-#ifdef AMIBERRY
-	thisframe_y_adjust = minfirstline + currprefs.gfx_vertical_offset;
-#else
 	thisframe_y_adjust = minfirstline;
-#endif
+
 	if (currprefs.gfx_ycenter && !fd->gfx_filter_autoscale) {
 
 		if (thisframe_first_drawn_line >= 0 && thisframe_last_drawn_line > thisframe_first_drawn_line) {

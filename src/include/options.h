@@ -919,6 +919,9 @@ struct uae_prefs
 	int kbd_led_cap;
 
 	bool gfx_auto_crop;
+	bool gfx_manual_crop;
+	int gfx_manual_crop_width;
+	int gfx_manual_crop_height;
 	int gfx_horizontal_offset;
 	int gfx_vertical_offset;
 	int gfx_correct_aspect;
@@ -1221,11 +1224,6 @@ struct amiberry_options
 	bool write_logfile = false;
 	bool rctrl_as_ramiga = false;
 	bool gui_joystick_control = true;
-#ifdef USE_RENDER_THREAD
-	bool use_sdl2_render_thread = true;
-#else
-	bool use_sdl2_render_thread = false;
-#endif
 	bool default_multithreaded_drawing = true;
 	int default_line_mode = 0;
 	int input_default_mouse_speed = 100;

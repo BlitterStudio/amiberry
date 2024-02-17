@@ -1948,9 +1948,7 @@ void target_fixup_options(struct uae_prefs* p)
 
 	if (p->gfx_auto_crop)
 	{
-		// Make sure that Width/Height are set to max, and Auto-Center disabled
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
+		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
 #endif
@@ -2105,13 +2103,14 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_monitor[0].gfx_size_win.width = amiberry_options.default_width;
 	p->gfx_monitor[0].gfx_size_win.height = amiberry_options.default_height;
 
+	p->gfx_manual_crop = false;
+	p->gfx_manual_crop_width = AMIGA_WIDTH_MAX << p->gfx_resolution;
+	p->gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p->gfx_vresolution;
 	p->gfx_horizontal_offset = 0;
 	p->gfx_vertical_offset = 0;
 	if (amiberry_options.default_auto_crop)
 	{
 		p->gfx_auto_crop = amiberry_options.default_auto_crop;
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
 	}
 	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
@@ -2425,6 +2424,9 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("gfx_horizontal_offset"), _T("%d"), p->gfx_horizontal_offset);
 	cfgfile_target_dwrite(f, _T("gfx_vertical_offset"), _T("%d"), p->gfx_vertical_offset);
 	cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
+	cfgfile_target_dwrite_bool(f, _T("gfx_manual_crop"), p->gfx_manual_crop);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_width"), _T("%d"), p->gfx_manual_crop_width);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_height"), _T("%d"), p->gfx_manual_crop_height);
 	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -2563,8 +2565,11 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 	    || cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
 	    || cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
 	    || cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_width", &p->gfx_manual_crop_width, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_height", &p->gfx_manual_crop_height, 1)
 	    || cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
 	    || cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
+		|| cfgfile_yesno(option, value, _T("gfx_manual_crop"), &p->gfx_manual_crop)
 	    || cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
 	    || cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
 	    || cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
@@ -3148,11 +3153,6 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", amiberry_options.gui_joystick_control ? "yes" : "no");
 	fputs(buffer, f);
 
-	// Use a separate render thread under SDL2?
-	// This might give a performance boost, but it's not supported on all SDL2 back-ends
-	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", amiberry_options.use_sdl2_render_thread ? "yes" : "no");
-	fputs(buffer, f);
-
 	// Use a separate thread for drawing native chipset output
 	// This helps with performance, but may cause glitches in some cases
 	snprintf(buffer, MAX_DPATH, "default_multithreaded_drawing=%s\n", amiberry_options.default_multithreaded_drawing ? "yes" : "no");
@@ -3572,7 +3572,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
-		ret |= cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
 		ret |= cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);

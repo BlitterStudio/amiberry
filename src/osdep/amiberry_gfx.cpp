@@ -82,12 +82,12 @@ SDL_GLContext gl_context;
 crtemu_t* crtemu_tv = nullptr;
 #else
 SDL_Texture* amiga_texture;
-SDL_Rect crop_rect;
 SDL_Renderer* amiga_renderer;
 #endif
 
 SDL_Rect renderQuad;
 static int dx = 0, dy = 0;
+SDL_Rect crop_rect;
 const char* sdl_video_driver;
 
 static int display_width;
@@ -1239,6 +1239,9 @@ int check_prefs_changed_gfx()
 		c2 |= currprefs.gfx_horizontal_offset != changed_prefs.gfx_horizontal_offset ? 16 : 0;
 		c2 |= currprefs.gfx_vertical_offset != changed_prefs.gfx_vertical_offset ? 16 : 0;
 		c2 |= currprefs.gfx_auto_crop != changed_prefs.gfx_auto_crop ? 16 : 0;
+		c2 |= currprefs.gfx_manual_crop != changed_prefs.gfx_manual_crop ? 16 : 0;
+		c2 |= currprefs.gfx_manual_crop_width != changed_prefs.gfx_manual_crop_width ? 16 : 0;
+		c2 |= currprefs.gfx_manual_crop_height != changed_prefs.gfx_manual_crop_height ? 16 : 0;
 		c2 |= currprefs.gfx_correct_aspect != changed_prefs.gfx_correct_aspect ? 16 : 0;
 		c2 |= currprefs.scaling_method != changed_prefs.scaling_method ? 16 : 0;
 #endif
@@ -1459,12 +1462,13 @@ int check_prefs_changed_gfx()
 		currprefs.multithreaded_drawing = changed_prefs.multithreaded_drawing;
 		currprefs.gfx_horizontal_offset = changed_prefs.gfx_horizontal_offset;
 		currprefs.gfx_vertical_offset = changed_prefs.gfx_vertical_offset;
+		currprefs.gfx_manual_crop_width = changed_prefs.gfx_manual_crop_width;
+		currprefs.gfx_manual_crop_height = changed_prefs.gfx_manual_crop_height;
 		currprefs.gfx_auto_crop = changed_prefs.gfx_auto_crop;
+		currprefs.gfx_manual_crop = changed_prefs.gfx_manual_crop;
 
 		if (currprefs.gfx_auto_crop)
 		{
-			currprefs.gfx_monitor[0].gfx_size_fs.width = changed_prefs.gfx_monitor[0].gfx_size_fs.width = currprefs.gfx_monitor[0].gfx_size_win.width = changed_prefs.gfx_monitor[0].gfx_size_win.width = currprefs.gfx_monitor[0].gfx_size.width = changed_prefs.gfx_monitor[0].gfx_size.width = 720;
-			currprefs.gfx_monitor[0].gfx_size_fs.height = changed_prefs.gfx_monitor[0].gfx_size_fs.height = currprefs.gfx_monitor[0].gfx_size_win.height = changed_prefs.gfx_monitor[0].gfx_size_win.height = currprefs.gfx_monitor[0].gfx_size.height = changed_prefs.gfx_monitor[0].gfx_size.height = 568;
 			changed_prefs.gfx_xcenter = changed_prefs.gfx_ycenter = 0;
 		}
 		currprefs.gfx_correct_aspect = changed_prefs.gfx_correct_aspect;
@@ -2451,15 +2455,20 @@ bool target_graphics_buffer_update(int monid, bool force)
 		{
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
 				SDL_RenderSetLogicalSize(amiga_renderer, scaled_width, scaled_height);
-				if (!currprefs.gfx_auto_crop) {
+				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = {dx, dy, scaled_width, scaled_height};
 					crop_rect = {dx, dy, scaled_width, scaled_height};
+				}
+				else if (currprefs.gfx_manual_crop)
+				{
+					renderQuad = { dx, dy, scaled_width, scaled_height };
+					crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
 				}
 			}
 			else
 			{
 				SDL_RenderSetLogicalSize(amiga_renderer, scaled_height, scaled_width);
-				if (!currprefs.gfx_auto_crop) {
+				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
 					crop_rect = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
 				}

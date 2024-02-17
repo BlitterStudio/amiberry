@@ -117,6 +117,7 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 extern SDL_Texture* amiga_texture;
 extern SDL_Cursor* cursor;
 extern SDL_DisplayMode sdl_mode;
+extern SDL_Rect crop_rect;
 
 extern SDL_Surface* amiga_surface;
 extern const char* sdl_video_driver;
