@@ -83,6 +83,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
+int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
 
@@ -302,6 +303,39 @@ int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 
+int getdpiforwindow(SDL_Window* hwnd)
+{
+	float diagDPI = -1;
+	float horiDPI = -1;
+	float vertDPI = -1;
+
+	SDL_GetDisplayDPI(0, &diagDPI, &horiDPI, &vertDPI);
+	return static_cast<int>(vertDPI);
+}
+
+uae_s64 spincount;
+extern bool calculated_scanline;
+
+void target_spin(int total)
+{
+	if (!spincount || calculated_scanline)
+		return;
+	if (total > 10)
+		total = 10;
+	while (total-- >= 0) {
+		uae_s64 v1 = read_processor_time();
+		v1 += spincount;
+		while (v1 > read_processor_time());
+	}
+}
+
+extern int vsync_activeheight;
+
+void target_calibrate_spin(void)
+{
+	spincount = 0;
+}
+
 void sleep_micros (int ms)
 {
 	usleep(ms);
@@ -355,7 +389,7 @@ static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 	int cx = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 + mon->amigawin_rect.x + (mon->amigawinclip_rect.x - mon->amigawin_rect.x);
 	int cy = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 + mon->amigawin_rect.y + (mon->amigawinclip_rect.y - mon->amigawin_rect.y);
 
-	SDL_WarpMouseInWindow(mon->sdl_window, cx, cy);
+	SDL_WarpMouseInWindow(mon->amiga_window, cx, cy);
 }
 
 static int mon_cursorclipped;
@@ -484,7 +518,7 @@ void releasecapture(struct AmigaMonitor* mon)
 {
 	if (!mon_cursorclipped)
 		return;
-	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
+	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 	mon_cursorclipped = 0;
@@ -580,10 +614,10 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 	int f = isfullscreen();
 	if (!allowfullscreen && f > 0)
 		return;
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
+	SDL_GetWindowPosition(mon->amiga_window, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
+	SDL_GetWindowSize(mon->amiga_window, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
+	SDL_GetWindowPosition(mon->amiga_window, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
+	SDL_GetWindowSize(mon->amiga_window, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
 #if MOUSECLIP_LOG
 	write_log(_T("GetWindowRect mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, f);
 #endif
@@ -648,9 +682,9 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
-			SDL_RaiseWindow(mon->sdl_window);
+			SDL_RaiseWindow(mon->amiga_window);
 			if (!mon_cursorclipped) {
-				SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
+				SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 				updatewinrect(mon, false);
 				// SDL2 hides the cursor when Relative mode is enabled
 				// This means that the RTG hardware sprite will no longer be shown,
@@ -692,7 +726,7 @@ void setmouseactive(int monid, int active)
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
 	if (active > 1)
-		SDL_RaiseWindow(mon->sdl_window);
+		SDL_RaiseWindow(mon->amiga_window);
 	setmouseactive2(mon, active, true);
 }
 
@@ -800,8 +834,8 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 void minimizewindow(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (mon->sdl_window)
-		SDL_MinimizeWindow(mon->sdl_window);
+	if (mon->amiga_window)
+		SDL_MinimizeWindow(mon->amiga_window);
 }
 
 void enablecapture(int monid)
@@ -841,7 +875,7 @@ void setmouseactivexy(int monid, int x, int y, int dir)
 
 	if (mouseactive) {
 		disablecapture();
-		SDL_WarpMouseInWindow(mon->sdl_window, x, y);
+		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
 		if (dir) {
 			recapture = 1;
 		}
@@ -1189,7 +1223,7 @@ void process_event(SDL_Event event)
 	AmigaMonitor* mon = &AMonitors[0];
 	didata* did = &di_joystick[0];
 	
-	if (event.type == SDL_WINDOWEVENT)
+	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
 	{
 		switch (event.window.event)
 		{
@@ -1914,9 +1948,7 @@ void target_fixup_options(struct uae_prefs* p)
 
 	if (p->gfx_auto_crop)
 	{
-		// Make sure that Width/Height are set to max, and Auto-Center disabled
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
+		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
 #endif
@@ -2071,13 +2103,14 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_monitor[0].gfx_size_win.width = amiberry_options.default_width;
 	p->gfx_monitor[0].gfx_size_win.height = amiberry_options.default_height;
 
+	p->gfx_manual_crop = false;
+	p->gfx_manual_crop_width = AMIGA_WIDTH_MAX << p->gfx_resolution;
+	p->gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p->gfx_vresolution;
 	p->gfx_horizontal_offset = 0;
 	p->gfx_vertical_offset = 0;
 	if (amiberry_options.default_auto_crop)
 	{
 		p->gfx_auto_crop = amiberry_options.default_auto_crop;
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
 	}
 	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
@@ -2391,6 +2424,9 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("gfx_horizontal_offset"), _T("%d"), p->gfx_horizontal_offset);
 	cfgfile_target_dwrite(f, _T("gfx_vertical_offset"), _T("%d"), p->gfx_vertical_offset);
 	cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
+	cfgfile_target_dwrite_bool(f, _T("gfx_manual_crop"), p->gfx_manual_crop);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_width"), _T("%d"), p->gfx_manual_crop_width);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_height"), _T("%d"), p->gfx_manual_crop_height);
 	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -2529,8 +2565,11 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 	    || cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
 	    || cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
 	    || cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_width", &p->gfx_manual_crop_width, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_height", &p->gfx_manual_crop_height, 1)
 	    || cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
 	    || cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
+		|| cfgfile_yesno(option, value, _T("gfx_manual_crop"), &p->gfx_manual_crop)
 	    || cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
 	    || cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
 	    || cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
@@ -2830,17 +2869,6 @@ void set_logfile_enabled(bool enabled)
 	amiberry_options.write_logfile = enabled;
 }
 
-bool get_sdl2_thread_enabled()
-{
-	return amiberry_options.use_sdl2_render_thread;
-}
-
-void set_sdl2_thread_enabled(bool enabled)
-{
-	amiberry_options.use_sdl2_render_thread = enabled;
-	sdl2_thread_changed = true;
-}
-
 // Returns 1 if savedatapath is overridden
 // if force_internal == true, the non-overridden whdbootpath based save-data path will be returned
 int get_savedatapath(char* out, int size, const int force_internal)
@@ -3123,11 +3151,6 @@ void save_amiberry_settings(void)
 	// Disable controller in the GUI?
 	// If you want to disable the default behavior for some reason
 	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", amiberry_options.gui_joystick_control ? "yes" : "no");
-	fputs(buffer, f);
-
-	// Use a separate render thread under SDL2?
-	// This might give a performance boost, but it's not supported on all SDL2 back-ends
-	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", amiberry_options.use_sdl2_render_thread ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Use a separate thread for drawing native chipset output
@@ -3549,7 +3572,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
-		ret |= cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
 		ret |= cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
@@ -4053,7 +4075,7 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
 #endif
 	(void)atexit(SDL_Quit);
 	write_log(_T("Enumerating display devices.. \n"));
@@ -4158,8 +4180,6 @@ int main(int argc, char* argv[])
 	lstMRUWhdloadList.clear();
 
 	logging_cleanup();
-
-	SDL_Quit();
 
 	if (host_poweroff)
 		target_shutdown();

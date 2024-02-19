@@ -53,6 +53,7 @@ struct MultiDisplay {
 	struct PicassoResolution* DisplayModes;
 	SDL_Rect rect;
 	SDL_Rect workrect;
+	bool HasAdapterData;
 };
 extern struct MultiDisplay Displays[MAX_DISPLAYS];
 
@@ -70,12 +71,14 @@ struct winuae_currentmode {
 #define MAX_AMIGAMONITORS 1
 struct AmigaMonitor {
 	int monitor_id;
-	SDL_Window* sdl_window;
+	SDL_Window* amiga_window;
+	SDL_Window* gui_window;
 	struct MultiDisplay* md;
 
 	SDL_Rect amigawin_rect, mainwin_rect;
 	SDL_Rect amigawinclip_rect;
 	int window_extra_width, window_extra_height;
+	int window_extra_height_bar;
 	int win_x_diff, win_y_diff;
 	int setcursoroffset_x, setcursoroffset_y;
 	int mouseposx, mouseposy;
@@ -84,8 +87,8 @@ struct AmigaMonitor {
 	int ratio_width, ratio_height;
 	int ratio_adjust_x, ratio_adjust_y;
 	bool ratio_sizing;
-	int prevsbheight;
 	bool render_ok, wait_render;
+	int dpi;
 
 	int in_sizemove;
 	int manual_painting_needed;
@@ -104,21 +107,22 @@ struct AmigaMonitor {
 extern struct AmigaMonitor* amon;
 extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
-#define  SYSTEM_RED_SHIFT      (sdl_surface->format->Rshift)
-#define  SYSTEM_GREEN_SHIFT    (sdl_surface->format->Gshift)
-#define  SYSTEM_BLUE_SHIFT     (sdl_surface->format->Bshift)
-#define  SYSTEM_RED_MASK       (sdl_surface->format->Rmask)
-#define  SYSTEM_GREEN_MASK     (sdl_surface->format->Gmask)
-#define  SYSTEM_BLUE_MASK      (sdl_surface->format->Bmask)
+#define  SYSTEM_RED_SHIFT      (amiga_surface->format->Rshift)
+#define  SYSTEM_GREEN_SHIFT    (amiga_surface->format->Gshift)
+#define  SYSTEM_BLUE_SHIFT     (amiga_surface->format->Bshift)
+#define  SYSTEM_RED_MASK       (amiga_surface->format->Rmask)
+#define  SYSTEM_GREEN_MASK     (amiga_surface->format->Gmask)
+#define  SYSTEM_BLUE_MASK      (amiga_surface->format->Bmask)
 
 extern SDL_Texture* amiga_texture;
 extern SDL_Cursor* cursor;
 extern SDL_DisplayMode sdl_mode;
+extern SDL_Rect crop_rect;
 
-extern SDL_Surface* sdl_surface;
+extern SDL_Surface* amiga_surface;
 extern const char* sdl_video_driver;
 #ifndef USE_OPENGL
-extern SDL_Renderer* sdl_renderer;
+extern SDL_Renderer* amiga_renderer;
 #endif
 extern SDL_Rect renderQuad;
 extern SDL_Cursor* normalcursor;
@@ -134,9 +138,11 @@ extern int default_freq;
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
 extern void close_windows(struct AmigaMonitor*);
-extern void update_win_fs_mode(int monid, struct uae_prefs* p);
+extern void updatewinfsmode(int monid, struct uae_prefs* p);
 extern void gfx_lock(void);
 extern void gfx_unlock(void);
+
+extern void destroy_crtemu();
 
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
@@ -144,6 +150,7 @@ void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
+extern void quit_drawing_thread();
+extern void start_drawing_thread();
 
 extern SDL_GameControllerButton vkbd_button;
-extern bool sdl2_thread_changed;

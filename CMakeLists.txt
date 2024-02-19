@@ -387,7 +387,8 @@ target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 if (USE_OPENGL)
     add_definitions(-DUSE_OPENGL)
     find_package(OpenGL REQUIRED)
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
+    find_package(GLEW REQUIRED)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
 endif ()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

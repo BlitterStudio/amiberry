@@ -84,8 +84,7 @@ void ahi_close_sound(void)
 
 	if (ahi_dev) {
 		SDL_PauseAudioDevice(ahi_dev, 1);
-	}
-	else {
+	} else {
 		write_log(_T("AHI: Sound Stopped...\n"));
 	}
 
@@ -101,7 +100,6 @@ void ahi_close_sound(void)
 }
 
 typedef unsigned long DWORD;
-//typedef void* LPVOID;
 
 void ahi_updatesound(int force)
 {
@@ -137,8 +135,7 @@ void ahi_updatesound(int force)
 				intcount = 1;
 				INTREQ(0x8000 | 0x2000);
 				return; //to generate amiga ints every amigablksize
-			}
-			else {
+			} else {
 				return;
 			}
 		}

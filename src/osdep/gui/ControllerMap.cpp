@@ -484,8 +484,8 @@ WatchJoystick(SDL_Joystick* joystick)
 #ifdef USE_OPENGL
 	//TODO need implementation
 #else
-	button = LoadTexture(sdl_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
-	axis = LoadTexture(sdl_renderer, prefix_with_data_path("axis.png").c_str(), SDL_TRUE);
+	button = LoadTexture(gui_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
+	axis = LoadTexture(gui_renderer, prefix_with_data_path("axis.png").c_str(), SDL_TRUE);
 #endif
 
 	/* Print info about the joystick we are watching */
@@ -579,27 +579,23 @@ WatchJoystick(SDL_Joystick* joystick)
 		// Update guisan
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(sdl_renderer);
+		SDL_RenderClear(gui_renderer);
 #endif
 		uae_gui->draw();
 #ifdef USE_OPENGL
 		const AmigaMonitor* mon = &AMonitors[0];
-		SDL_GL_SwapWindow(mon->sdl_window);
+		SDL_GL_SwapWindow(mon->gui_window);
 
 		//TODO need implementation of blitting the textures below for OpenGL!
 #else
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-			renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
-		else
-			renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
-		SDL_RenderCopyEx(sdl_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 
 		// Blit marker on top
 		SDL_SetTextureAlphaMod(marker, alpha);
 		SDL_SetTextureColorMod(marker, 10, 255, 21);
-		SDL_RenderCopyEx(sdl_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
-		SDL_RenderPresent(sdl_renderer);
+		SDL_RenderCopyEx(gui_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderPresent(gui_renderer);
 #endif
 		while (SDL_PollEvent(&event) > 0)
 		{
@@ -924,9 +920,9 @@ show_controller_map(int device, bool map_touchpad)
 		}
 #ifdef USE_OPENGL
 		const AmigaMonitor* mon = &AMonitors[0];
-		SDL_GL_SwapWindow(mon->sdl_window);
+		SDL_GL_SwapWindow(mon->gui_window);
 #else
-		SDL_RenderPresent(sdl_renderer);
+		SDL_RenderPresent(gui_renderer);
 #endif
 	}
 #ifdef DEBUG

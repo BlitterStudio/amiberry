@@ -51,7 +51,7 @@ LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt
 
 ifdef USE_OPENGL
 	CFLAGS += -DUSE_OPENGL
-	LDFLAGS += -lGL
+	LDFLAGS += -lGLEW -lGL
 endif
 
 ifdef USE_LTO
