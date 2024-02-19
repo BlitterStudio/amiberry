@@ -17,8 +17,8 @@
 #include "guisan/color.hpp"
 
 #define UAEMAJOR 6
-#define UAEMINOR 1
-#define UAESUBREV 4
+#define UAEMINOR 2
+#define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 1
 

@@ -74,7 +74,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry v6.1.4 (2024-02-17)";
+static const char __ver[40] = "$VER: Amiberry v6.2.0 (2024-02-19)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
