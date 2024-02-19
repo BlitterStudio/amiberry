@@ -25,7 +25,7 @@ void flushprinter(void);
 int checkserwrite(int spaceneeded);
 void serialuartbreak(int);
 
-void hsyncstuff(void);
+//void hsyncstuff(void);
 
 void shmem_serial_delete(void);
 bool shmem_serial_create(void);

@@ -773,7 +773,7 @@ static void serdatcopy(void)
 void serial_hsynchandler (void)
 {
 #ifdef AHI
-	hsyncstuff();
+	//hsyncstuff();
 #endif
 #ifdef ARCADIA
 	if (alg_flag || currprefs.genlock_image >= 7) {
