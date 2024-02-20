@@ -373,6 +373,7 @@ void InitPanelFloppy(const config_category& category)
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
 
 	FloppyBridgeAPI::getDriverList(driver_list);
+	driverNameList.clear();
 	for (auto &item : driver_list)
 	{
 		driverNameList.add(item.name);
