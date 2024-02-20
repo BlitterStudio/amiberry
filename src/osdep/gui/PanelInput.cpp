@@ -312,6 +312,7 @@ public:
 		}
 		
 		RefreshPanelInput();
+		RefreshPanelRTG(); // needed to enable the Hardware RTG sprite
 	}
 };
 
