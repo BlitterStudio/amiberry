@@ -1391,6 +1391,13 @@ int check_prefs_changed_gfx()
 	c |= currprefs.rtgvblankrate != changed_prefs.rtgvblankrate ? 8 : 0;
 
 #ifdef AMIBERRY
+	// These are missing from WinUAE
+	c |= currprefs.rtg_hardwareinterrupt != changed_prefs.rtg_hardwareinterrupt ? 32 : 0;
+	c |= currprefs.rtg_hardwaresprite != changed_prefs.rtg_hardwaresprite ? 32 : 0;
+	c |= currprefs.rtg_multithread != changed_prefs.rtg_multithread ? 32 : 0;
+#endif
+
+#ifdef AMIBERRY
 	c |= currprefs.multithreaded_drawing != changed_prefs.multithreaded_drawing ? (512) : 0;
 #endif
 
@@ -1521,6 +1528,13 @@ int check_prefs_changed_gfx()
 		currprefs.rtgallowscaling = changed_prefs.rtgallowscaling;
 		currprefs.rtgscaleaspectratio = changed_prefs.rtgscaleaspectratio;
 		currprefs.rtgvblankrate = changed_prefs.rtgvblankrate;
+
+#ifdef AMIBERRY
+		// These are missing from WinUAE
+		currprefs.rtg_hardwareinterrupt = changed_prefs.rtg_hardwareinterrupt;
+		currprefs.rtg_hardwaresprite = changed_prefs.rtg_hardwaresprite;
+		currprefs.rtg_multithread = changed_prefs.rtg_multithread;
+#endif
 
 		bool unacquired = false;
 		for (int monid = MAX_AMIGAMONITORS - 1; monid >= 0; monid--) {
