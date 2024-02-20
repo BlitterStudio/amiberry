@@ -405,6 +405,7 @@ void amiberry_gui_init()
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
+	SDL_RaiseWindow(mon->gui_window);
 
 	//-------------------------------------------------
 	// Create helpers for GUI framework
