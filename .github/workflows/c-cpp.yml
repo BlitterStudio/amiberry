@@ -948,7 +948,7 @@ jobs:
           config_file: .github/tag-changelog-config.js
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.2
 
       - name: Create Release
         if: github.ref_type == 'tag'
@@ -995,7 +995,7 @@ jobs:
           config_file: .github/tag-changelog-config.js
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.2
 
       - name: Create PreRelease
         if: github.ref_type == 'tag'

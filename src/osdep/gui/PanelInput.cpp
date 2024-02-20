@@ -264,7 +264,6 @@ public:
 			if (chkMagicMouseUntrap->isSelected())
 			{
 				changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MAGIC;
-				SDL_SetRelativeMouseMode(SDL_FALSE);
 			}
 			else
 			{
