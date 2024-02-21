@@ -3123,6 +3123,10 @@ void save_amiberry_settings(void)
 
 	char buffer[MAX_DPATH];
 
+	// Use the old Single-Window mode (useful in cases where multiple overlapping windows are a problem)
+	snprintf(buffer, MAX_DPATH, "single_window_mode=%s\n", amiberry_options.single_window_mode ? "yes" : "no");
+	fputs(buffer, f);
+
 	// Should the Quickstart Panel be the default when opening the GUI?
 	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", amiberry_options.quickstart_start);
 	fputs(buffer, f);
@@ -3566,6 +3570,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
+		ret |= cfgfile_yesno(option, value, "single_window_mode", &amiberry_options.single_window_mode);
 		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
 		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
