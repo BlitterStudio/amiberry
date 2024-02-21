@@ -25,6 +25,7 @@
 #include "autoconf.h"
 #include "amiberry_input.h"
 #include "inputdevice.h"
+#include "xwin.h"
 
 bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
 int last_x = 0;
@@ -295,12 +296,26 @@ void amiberry_gui_init()
 	}
 #endif
 
+	if (amiberry_options.single_window_mode)
+	{
+		if (mon->amiga_window)
+		{
+			graphics_leave();
+		}
+	}
+
 	if (!mon->gui_window)
 	{
         Uint32 mode;
         if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
         {
-			mode =  SDL_WINDOW_RESIZABLE;
+			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
+			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+				mode = SDL_WINDOW_FULLSCREEN;
+			else
+				mode =  SDL_WINDOW_RESIZABLE;
             if (currprefs.gui_alwaysontop)
                 mode |= SDL_WINDOW_ALWAYS_ON_TOP;
             if (currprefs.start_minimized)

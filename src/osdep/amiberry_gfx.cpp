@@ -1914,6 +1914,9 @@ static void open_screen(struct uae_prefs* p)
 
 	graphics_subshutdown();
 
+	if (!mon->amiga_window)
+		SDL2_init();
+
 	if (max_uae_width == 0 || max_uae_height == 0)
 	{
 		max_uae_width = 8192;

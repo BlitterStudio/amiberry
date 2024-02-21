@@ -17,6 +17,7 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "fsdb_host.h"
+#include "xwin.h"
 
 #define DIALOG_WIDTH 600
 #define DIALOG_HEIGHT 200
@@ -61,6 +62,14 @@ static void InitShowMessage(const std::string& message)
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
 	}
 #endif
+
+	if (amiberry_options.single_window_mode)
+	{
+		if (mon->amiga_window)
+		{
+			graphics_leave();
+		}
+	}
 
 	if (!mon->gui_window)
 	{
