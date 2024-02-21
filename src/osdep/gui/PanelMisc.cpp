@@ -11,6 +11,7 @@
 #include "fsdb_host.h"
 #include "statusline.h"
 
+static gcn::ScrollArea* scrollArea;
 static gcn::Window* grpMiscOptions;
 
 static gcn::CheckBox* chkAltTabRelease;
@@ -26,6 +27,8 @@ static gcn::CheckBox* chkHDReadOnly;
 static gcn::CheckBox* chkClipboardSharing;
 static gcn::CheckBox* chkAllowNativeCode;
 static gcn::CheckBox* chkRCtrlIsRAmiga;
+static gcn::CheckBox* chkMainAlwaysOnTop;
+static gcn::CheckBox* chkGuiAlwaysOnTop;
 static gcn::CheckBox* chkSyncClock;
 static gcn::CheckBox* chkResetDelay;
 static gcn::CheckBox* chkFasterRTG;
@@ -142,6 +145,12 @@ public:
 
 		else if (actionEvent.getSource() == chkRCtrlIsRAmiga)
 			changed_prefs.right_control_is_right_win_key = chkRCtrlIsRAmiga->isSelected();
+
+		else if (actionEvent.getSource() == chkMainAlwaysOnTop)
+			changed_prefs.main_alwaysontop = chkMainAlwaysOnTop->isSelected();
+
+		else if (actionEvent.getSource() == chkGuiAlwaysOnTop)
+			changed_prefs.gui_alwaysontop = chkGuiAlwaysOnTop->isSelected();
 
 		else if (actionEvent.getSource() == chkSyncClock)
 			changed_prefs.tod_hack = chkSyncClock->isSelected();
@@ -325,7 +334,7 @@ void InitPanelMisc(const config_category& category)
 	chkMasterWP->addActionListener(miscActionListener);
 
 	chkHDReadOnly = new gcn::CheckBox("Master harddrive write protection");
-	chkHDReadOnly->setId("chkHDRO");
+	chkHDReadOnly->setId("chkHDReadOnly");
 	chkHDReadOnly->addActionListener(miscActionListener);
 	
 	chkClipboardSharing = new gcn::CheckBox("Clipboard sharing");
@@ -335,6 +344,14 @@ void InitPanelMisc(const config_category& category)
 	chkRCtrlIsRAmiga = new gcn::CheckBox("RCtrl = RAmiga");
 	chkRCtrlIsRAmiga->setId("chkRCtrlIsRAmiga");
 	chkRCtrlIsRAmiga->addActionListener(miscActionListener);
+
+	chkMainAlwaysOnTop = new gcn::CheckBox("Always on top");
+	chkMainAlwaysOnTop->setId("chkMainAlwaysOnTop");
+	chkMainAlwaysOnTop->addActionListener(miscActionListener);
+
+	chkGuiAlwaysOnTop = new gcn::CheckBox("GUI Always on top");
+	chkGuiAlwaysOnTop->setId("chkGuiAlwaysOnTop");
+	chkGuiAlwaysOnTop->addActionListener(miscActionListener);
 
 	chkSyncClock = new gcn::CheckBox("Synchronize clock");
 	chkSyncClock->setId("chkSyncClock");
@@ -495,8 +512,10 @@ void InitPanelMisc(const config_category& category)
 	// Use CTRL-F11 to quit
 	// Don't show taskbar button
 	// Don't show notification icon
-	// Main window always on top
-	// GUI window always on top
+	grpMiscOptions->add(chkMainAlwaysOnTop, DISTANCE_BORDER, posY);
+	posY += chkMainAlwaysOnTop->getHeight() + DISTANCE_NEXT_Y;
+	grpMiscOptions->add(chkGuiAlwaysOnTop, DISTANCE_BORDER, posY);
+	posY += chkGuiAlwaysOnTop->getHeight() + DISTANCE_NEXT_Y;
 	// Disable screensaver
 	grpMiscOptions->add(chkSyncClock, DISTANCE_BORDER, posY);
 	posY += chkSyncClock->getHeight() + DISTANCE_NEXT_Y;
@@ -547,11 +566,19 @@ void InitPanelMisc(const config_category& category)
 	posY += chkRetroArchMenu->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkRetroArchReset, DISTANCE_BORDER, posY);
 
-	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 40, category.panel->getHeight() - DISTANCE_BORDER * 2);
+	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 40, 800);
 
-	category.panel->add(grpMiscOptions, DISTANCE_BORDER, DISTANCE_BORDER);
+	scrollArea = new gcn::ScrollArea(grpMiscOptions);
+	scrollArea->setId("scrlMisc");
+	scrollArea->setBackgroundColor(gui_baseCol);
+	scrollArea->setBaseColor(gui_baseCol);
+	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 25);
+	scrollArea->setHeight(600);
+	scrollArea->setBorderSize(1);
+	scrollArea->setFocusable(true);
+	category.panel->add(scrollArea, DISTANCE_BORDER, DISTANCE_BORDER);
 
-	const auto column2_x = grpMiscOptions->getWidth() + DISTANCE_NEXT_X * 2;
+	const auto column2_x = scrollArea->getWidth() + 20;
 	posY = DISTANCE_BORDER;
 	
 	category.panel->add(lblOpenGUI, column2_x, posY);
@@ -617,6 +644,8 @@ void ExitPanelMisc()
 	delete chkHDReadOnly;
 	delete chkClipboardSharing;
 	delete chkRCtrlIsRAmiga;
+	delete chkMainAlwaysOnTop;
+	delete chkGuiAlwaysOnTop;
 	delete chkSyncClock;
 	delete chkResetDelay;
 	delete chkFasterRTG;
@@ -663,6 +692,7 @@ void ExitPanelMisc()
 	delete miscActionListener;
 
 	delete grpMiscOptions;
+	delete scrollArea;
 }
 
 void RefreshPanelMisc()
@@ -679,6 +709,8 @@ void RefreshPanelMisc()
 	chkHDReadOnly->setSelected(changed_prefs.harddrive_read_only);
 	chkClipboardSharing->setSelected(changed_prefs.clipboard_sharing);
 	chkRCtrlIsRAmiga->setSelected(changed_prefs.right_control_is_right_win_key);
+	chkMainAlwaysOnTop->setSelected(changed_prefs.main_alwaysontop);
+	chkGuiAlwaysOnTop->setSelected(changed_prefs.gui_alwaysontop);
 	chkSyncClock->setSelected(changed_prefs.tod_hack);
 	chkResetDelay->setSelected(changed_prefs.reset_delay);
 	chkFasterRTG->setSelected(changed_prefs.picasso96_nocustom);
