@@ -192,23 +192,19 @@ void InitPanelRTG(const config_category& category)
 	chkRtgMatchDepth = new gcn::CheckBox("Match host and RTG color depth if possible");
 	chkRtgMatchDepth->setId("chkRtgMatchDepth");
 	chkRtgMatchDepth->addActionListener(rtg_action_listener);
-	chkRtgMatchDepth->setEnabled(false); // Not implemented yet
 
 	chkRtgAutoscale = new gcn::CheckBox("Scale if smaller than display size setting");
 	chkRtgAutoscale->setId("chkRtgAutoscale");
 	chkRtgAutoscale->addActionListener(rtg_action_listener);
-	chkRtgAutoscale->setEnabled(false); // Not implemented yet
-	
+
 	chkRtgAllowScaling = new gcn::CheckBox("Always scale in windowed mode");
 	chkRtgAllowScaling->setId("chkRtgAllowScaling");
 	chkRtgAllowScaling->addActionListener(rtg_action_listener);
-	chkRtgAllowScaling->setEnabled(false); // Not implemented yet
-	
+
 	chkRtgAlwaysCenter = new gcn::CheckBox("Always center");
 	chkRtgAlwaysCenter->setId("chkRtgAlwaysCenter");
 	chkRtgAlwaysCenter->addActionListener(rtg_action_listener);
-	chkRtgAlwaysCenter->setEnabled(false); // Not implemented yet
-	
+
 	chkRtgHardwareInterrupt = new gcn::CheckBox("Hardware vertical blank interrupt");
 	chkRtgHardwareInterrupt->setId("chkRtgHardwareInterrupt");
 	chkRtgHardwareInterrupt->addActionListener(rtg_action_listener);
@@ -238,7 +234,6 @@ void InitPanelRTG(const config_category& category)
 	cboRtgBufferMode->setBackgroundColor(colTextboxBackground);
 	cboRtgBufferMode->setId("cboRtgBufferMode");
 	cboRtgBufferMode->addActionListener(rtg_action_listener);
-	cboRtgBufferMode->setEnabled(false); // Not implemented yet
 
 	lblRtgAspectRatio = new gcn::Label("Aspect Ratio:");
 	lblRtgAspectRatio->setAlignment(gcn::Graphics::LEFT);
@@ -248,7 +243,6 @@ void InitPanelRTG(const config_category& category)
 	cboRtgAspectRatio->setBackgroundColor(colTextboxBackground);
 	cboRtgAspectRatio->setId("cboRtgAspectRatio");
 	cboRtgAspectRatio->addActionListener(rtg_action_listener);
-	cboRtgAspectRatio->setEnabled(false); // Not implemented yet
 
 	lblRtgColorModes = new gcn::Label("Color modes:");
 	lblRtgColorModes->setAlignment(gcn::Graphics::LEFT);
@@ -386,15 +380,27 @@ void RefreshPanelRTG()
 		lblGfxsize->setCaption(memsize_names[msi_gfx[mem_size]]);
 	}
 
+	chkRtgMatchDepth->setEnabled(false); // Not implemented yet
 	chkRtgMatchDepth->setSelected(changed_prefs.rtgmatchdepth);
+
+	chkRtgAutoscale->setEnabled(false); // Not implemented yet
 	chkRtgAutoscale->setSelected(changed_prefs.gf[1].gfx_filter_autoscale == RTG_MODE_SCALE);
+
+	chkRtgAlwaysCenter->setEnabled(false); // Not implemented yet
 	chkRtgAlwaysCenter->setSelected(changed_prefs.gf[1].gfx_filter_autoscale == RTG_MODE_CENTER);
+
+	chkRtgAllowScaling->setEnabled(false); // Not implemented yet
 	chkRtgAllowScaling->setSelected(changed_prefs.rtgallowscaling);
+
+	chkRtgHardwareInterrupt->setEnabled(!emulating);
 	chkRtgHardwareInterrupt->setSelected(changed_prefs.rtg_hardwareinterrupt);
+
 	// Only enable this if Virtual Mouse option is enabled,
 	// otherwise we'll get no cursor at all (due to SDL2 and Relative Mouse mode)
-	chkRtgHardwareSprite->setEnabled(changed_prefs.input_tablet > 0);
+	chkRtgHardwareSprite->setEnabled(changed_prefs.input_tablet > 0 && !emulating);
 	chkRtgHardwareSprite->setSelected(changed_prefs.rtg_hardwaresprite);
+
+	chkRtgMultithreaded->setEnabled(!emulating);
 	chkRtgMultithreaded->setSelected(changed_prefs.rtg_multithread);
 
 	if (changed_prefs.rtgvblankrate <= 0 ||
@@ -430,10 +436,12 @@ void RefreshPanelRTG()
 		changed_prefs.picasso96_modeflags & RGBFF_A8B8G8R8 ? 3 :
 		changed_prefs.picasso96_modeflags & RGBFF_R8G8B8A8 ? 4 :
 		changed_prefs.picasso96_modeflags & RGBFF_B8G8R8A8 ? 5 : 0);
-	
+
+	cboRtgBufferMode->setEnabled(false); // Not implemented yet
 	cboRtgBufferMode->setSelected(changed_prefs.gfx_apmode[1].gfx_backbuffers == 0 ? 0 :
 		changed_prefs.gfx_apmode[1].gfx_backbuffers - 1);
 
+	cboRtgAspectRatio->setEnabled(false); // Not implemented yet
 	cboRtgAspectRatio->setSelected(changed_prefs.rtgscaleaspectratio == 0 ? 0 : 1);
 }
 
