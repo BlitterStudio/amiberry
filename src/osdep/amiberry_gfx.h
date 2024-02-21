@@ -115,7 +115,6 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 #define  SYSTEM_BLUE_MASK      (amiga_surface->format->Bmask)
 
 extern SDL_Texture* amiga_texture;
-extern SDL_Cursor* cursor;
 extern SDL_DisplayMode sdl_mode;
 extern SDL_Rect crop_rect;
 

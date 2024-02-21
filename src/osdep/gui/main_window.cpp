@@ -133,8 +133,6 @@ SDL_Event touch_event;
 SDL_Renderer* gui_renderer;
 SDL_Texture* gui_texture;
 #endif
-SDL_Cursor* cursor;
-SDL_Surface* cursor_surface;
 
 /*
 * Gui SDL stuff we need
@@ -462,11 +460,6 @@ void amiberry_gui_halt()
 	{
 		SDL_DestroyTexture(gui_texture);
 		gui_texture = nullptr;
-	}
-	if (cursor != nullptr)
-	{
-		SDL_FreeCursor(cursor);
-		cursor = nullptr;
 	}
 	if (gui_renderer)
 	{

@@ -269,12 +269,6 @@ static void ExitShowMessage()
 			gui_texture = nullptr;
 		}
 
-		if (cursor != nullptr)
-		{
-			SDL_FreeCursor(cursor);
-			cursor = nullptr;
-		}
-
 		// Clear the screen
 		SDL_RenderClear(gui_renderer);
 		SDL_RenderPresent(gui_renderer);
