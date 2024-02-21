@@ -138,8 +138,6 @@ int element_present = 0;
 #else
 SDL_Texture* gui_texture;
 #endif
-SDL_Cursor* cursor;
-SDL_Surface* cursor_surface;
 #endif
 
 /*
@@ -605,12 +603,6 @@ void amiberry_gui_halt()
 	{
 		SDL_DestroyTexture(gui_texture);
 		gui_texture = nullptr;
-	}
-
-	if (cursor != nullptr)
-	{
-		SDL_FreeCursor(cursor);
-		cursor = nullptr;
 	}
 #endif	
 }
