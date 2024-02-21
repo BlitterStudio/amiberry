@@ -72,7 +72,9 @@ struct winuae_currentmode {
 struct AmigaMonitor {
 	int monitor_id;
 	SDL_Window* amiga_window;
+	SDL_Renderer* amiga_renderer;
 	SDL_Window* gui_window;
+	SDL_Renderer* gui_renderer;
 	struct MultiDisplay* md;
 
 	SDL_Rect amigawin_rect, mainwin_rect;
@@ -120,9 +122,6 @@ extern SDL_Rect crop_rect;
 
 extern SDL_Surface* amiga_surface;
 extern const char* sdl_video_driver;
-#ifndef USE_OPENGL
-extern SDL_Renderer* amiga_renderer;
-#endif
 extern SDL_Rect renderQuad;
 extern SDL_Cursor* normalcursor;
 

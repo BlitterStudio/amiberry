@@ -246,6 +246,8 @@ static void navigate_left()
 
 static void SelectFolderLoop()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
@@ -497,7 +499,7 @@ static void SelectFolderLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -508,6 +510,8 @@ static void SelectFolderLoop()
 
 bool SelectFolder(const char* title, char* value)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	dialogResult = false;
 	dialogFinished = false;
 
@@ -517,7 +521,7 @@ bool SelectFolder(const char* title, char* value)
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

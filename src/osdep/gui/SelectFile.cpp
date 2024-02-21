@@ -338,6 +338,8 @@ static void navigate_left()
 
 static void SelectFileLoop()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
@@ -585,7 +587,7 @@ static void SelectFileLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -596,6 +598,8 @@ static void SelectFileLoop()
 
 bool SelectFile(const char* title, char* value, const char* filter[], const bool create)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	dialogResult = false;
 	dialogFinished = false;
 	createNew = create;
@@ -616,7 +620,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

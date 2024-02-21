@@ -100,6 +100,8 @@ static void ExitShowDiskInfo()
 
 static void ShowDiskInfoLoop()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
@@ -226,7 +228,7 @@ static void ShowDiskInfoLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -237,6 +239,8 @@ static void ShowDiskInfoLoop()
 
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	dialog_finished = false;
 
 	InitShowDiskInfo(text);
@@ -247,7 +251,7 @@ void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

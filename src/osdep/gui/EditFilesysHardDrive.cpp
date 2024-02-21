@@ -127,6 +127,8 @@ static void ExitEditFilesysHardDrive()
 
 static void EditFilesysHardDriveLoop()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	char lastActiveWidget[128];
 	strcpy(lastActiveWidget, "");
 
@@ -393,7 +395,7 @@ static void EditFilesysHardDriveLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -404,6 +406,8 @@ static void EditFilesysHardDriveLoop()
 
 bool EditFilesysHardDrive(const int unit_no)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	mountedinfo mi{};
 	uaedev_config_data* uci;
 	std::string strdevname, strroot;
@@ -434,7 +438,7 @@ bool EditFilesysHardDrive(const int unit_no)
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

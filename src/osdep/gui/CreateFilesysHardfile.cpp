@@ -203,6 +203,8 @@ static void CreateFilesysHardfileLoop()
 {
 	//FocusBugWorkaround(wndCreateFilesysHardfile);
 
+	AmigaMonitor* mon = &AMonitors[0];
+
 	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
@@ -467,7 +469,7 @@ static void CreateFilesysHardfileLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -478,6 +480,8 @@ static void CreateFilesysHardfileLoop()
 
 bool CreateFilesysHardfile()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	std::string strroot;
 	char tmp[32];
 	char zero = 0;
@@ -501,7 +505,7 @@ bool CreateFilesysHardfile()
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

@@ -181,7 +181,6 @@ extern gcn::SDLTrueTypeFont *gui_font;
 extern SDL_GLContext gl_context;
 #else
 extern SDL_Texture *gui_texture;
-extern SDL_Renderer *gui_renderer;
 #endif
 
 extern char current_dir[MAX_DPATH];

@@ -661,6 +661,8 @@ static SDL_Surface* vkbd_concat_surfaces(SDL_Surface* keyboard, SDL_Surface* exi
 #else
 static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	const auto keyboard = vkbd_create_keyboard_surface(shift);
 	if (keyboard == nullptr)
 	{
@@ -690,7 +692,7 @@ static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 		surf = keyboard;
 	}
 
-	const auto texture = SDL_CreateTextureFromSurface(amiga_renderer, surf);
+	const auto texture = SDL_CreateTextureFromSurface(mon->amiga_renderer, surf);
 	SDL_FreeSurface(surf);
 	return texture;
 }
@@ -708,6 +710,8 @@ static int vkbd_find_index(int key)
 
 void vkbd_update(bool createTextures)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	switch (vkbdLanguage)
 	{
 	case VKBD_LANGUAGE_UK:
@@ -751,7 +755,7 @@ void vkbd_update(bool createTextures)
 		int width, height;
 		SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
 		int renderedWidth, rendererHeight;
-		SDL_RenderGetLogicalSize(amiga_renderer, &renderedWidth, &rendererHeight);
+		SDL_RenderGetLogicalSize(mon->amiga_renderer, &renderedWidth, &rendererHeight);
 
 		vkbdEndX = (renderedWidth - width) / 2;
 		vkbdEndY = rendererHeight - height;
@@ -944,6 +948,8 @@ static void vkbd_update_current_xy()
 
 void vkbd_redraw(void)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)
 	{
 		return;
@@ -970,30 +976,30 @@ void vkbd_redraw(void)
 #ifdef USE_OPENGL
 	//TODO needs implementation
 #else
-	SDL_SetRenderDrawBlendMode(amiga_renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawBlendMode(mon->amiga_renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(toDraw, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureAlphaMod(toDraw, vkbdAlpha);
-	SDL_RenderCopy(amiga_renderer, toDraw, nullptr, &rect);
+	SDL_RenderCopy(mon->amiga_renderer, toDraw, nullptr, &rect);
 
 	// Store color so we can restore later
 	SDL_Color color;
-	SDL_GetRenderDrawColor(amiga_renderer, &color.r, &color.g, &color.b, &color.a);
+	SDL_GetRenderDrawColor(mon->amiga_renderer, &color.r, &color.g, &color.b, &color.a);
 
 	// Draw currently selected key:
 	rect = vkbd_get_key_drawing_rect(vkbdActualIndex);
 	const int alpha = static_cast<int>((1.0 - vkbdTransparency) * vkbdPressedKeyColor.a);
-	SDL_SetRenderDrawColor(amiga_renderer, vkbdPressedKeyColor.r, vkbdPressedKeyColor.g, vkbdPressedKeyColor.b, alpha);
-	SDL_RenderFillRect(amiga_renderer, &rect);
+	SDL_SetRenderDrawColor(mon->amiga_renderer, vkbdPressedKeyColor.r, vkbdPressedKeyColor.g, vkbdPressedKeyColor.b, alpha);
+	SDL_RenderFillRect(mon->amiga_renderer, &rect);
 
 	// Draw sticky keys:
 	for (auto key : vkbdPressedStickyKeys)
 	{
 		const auto index = vkbdStickyKeyToIndex[key];
 		rect = vkbd_get_key_drawing_rect(index);
-		SDL_RenderFillRect(amiga_renderer, &rect);
+		SDL_RenderFillRect(mon->amiga_renderer, &rect);
 	}
 
-	SDL_SetRenderDrawColor(amiga_renderer, color.r, color.g, color.b, color.a);
+	SDL_SetRenderDrawColor(mon->amiga_renderer, color.r, color.g, color.b, color.a);
 #endif
 }
 

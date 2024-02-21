@@ -130,7 +130,6 @@ SDL_Event touch_event;
 
 #ifdef USE_OPENGL
 #else
-SDL_Renderer* gui_renderer;
 SDL_Texture* gui_texture;
 #endif
 
@@ -268,13 +267,13 @@ void cap_fps(Uint64 start)
 
 void update_gui_screen()
 {
-#ifdef USE_OPENGL
 	const AmigaMonitor* mon = &AMonitors[0];
+#ifdef USE_OPENGL
 	SDL_GL_SwapWindow(mon->gui_window);
 #else
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-	SDL_RenderCopyEx(gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-	SDL_RenderPresent(gui_renderer);
+	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderPresent(mon->gui_renderer);
 #endif
 }
 
@@ -298,45 +297,45 @@ void amiberry_gui_init()
 
 	if (!mon->gui_window)
 	{
-        Uint32 sdl_window_mode;
+        Uint32 mode;
         if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
         {
-			sdl_window_mode =  SDL_WINDOW_RESIZABLE;
+			mode =  SDL_WINDOW_RESIZABLE;
             if (currprefs.gui_alwaysontop)
-                sdl_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+                mode |= SDL_WINDOW_ALWAYS_ON_TOP;
             if (currprefs.start_minimized)
-                sdl_window_mode |= SDL_WINDOW_HIDDEN;
+                mode |= SDL_WINDOW_HIDDEN;
             else
-                sdl_window_mode |= SDL_WINDOW_SHOWN;
+                mode |= SDL_WINDOW_SHOWN;
             // Set Window allow high DPI by default
-            sdl_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+            mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 #ifdef USE_OPENGL
-            sdl_window_mode |= SDL_WINDOW_OPENGL;
+			mode |= SDL_WINDOW_OPENGL;
 #endif
         }
         else
         {
             // otherwise go for Full-window
-            sdl_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+            mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
         }
 
         if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
         {
-            mon->gui_window = SDL_CreateWindow("Amiberry",
+            mon->gui_window = SDL_CreateWindow("Amiberry GUI",
                                                SDL_WINDOWPOS_CENTERED,
                                                SDL_WINDOWPOS_CENTERED,
                                                GUI_HEIGHT,
                                                GUI_WIDTH,
-                                               sdl_window_mode);
+                                               mode);
         }
         else
         {
-            mon->gui_window = SDL_CreateWindow("Amiberry",
+            mon->gui_window = SDL_CreateWindow("Amiberry GUI",
                                                SDL_WINDOWPOS_CENTERED,
                                                SDL_WINDOWPOS_CENTERED,
                                                GUI_WIDTH,
                                                GUI_HEIGHT,
-                                               sdl_window_mode);
+                                               mode);
         }
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
@@ -382,28 +381,27 @@ void amiberry_gui_init()
 	glViewport(0, 0, GUI_WIDTH, GUI_HEIGHT);
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 #else
-	if (gui_renderer == nullptr)
+	if (mon->gui_renderer == nullptr)
 	{
-		gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(gui_renderer == nullptr, "Unable to create a renderer:");
+		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
 	}
 
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
-	gui_texture = SDL_CreateTexture(gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
+	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
-		SDL_RenderSetLogicalSize(gui_renderer, GUI_HEIGHT, GUI_WIDTH);
+		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
 #endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
-	SDL_RaiseWindow(mon->gui_window);
 
 	//-------------------------------------------------
 	// Create helpers for GUI framework
@@ -412,7 +410,7 @@ void amiberry_gui_init()
 	gui_imageLoader = new gcn::OpenGLSDLImageLoader();
 #else
 	gui_imageLoader = new gcn::SDLImageLoader();
-	gui_imageLoader->setRenderer(gui_renderer);
+	gui_imageLoader->setRenderer(mon->gui_renderer);
 #endif
 	// The ImageLoader in use is static and must be set to be
 	// able to load images
@@ -435,6 +433,8 @@ void amiberry_gui_init()
 
 void amiberry_gui_halt()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	delete uae_gui;
 	uae_gui = nullptr;
 	delete gui_imageLoader;
@@ -461,13 +461,12 @@ void amiberry_gui_halt()
 		SDL_DestroyTexture(gui_texture);
 		gui_texture = nullptr;
 	}
-	if (gui_renderer)
+	if (mon->gui_renderer)
 	{
-		SDL_DestroyRenderer(gui_renderer);
-		gui_renderer = nullptr;
+		SDL_DestroyRenderer(mon->gui_renderer);
+		mon->gui_renderer = nullptr;
 	}
 #endif
-	auto mon = &AMonitors[0];
 	if (mon->gui_window) {
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
@@ -476,6 +475,8 @@ void amiberry_gui_halt()
 
 void check_input()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	auto got_event = 0;
 	didata* did = &di_joystick[0];
 	
@@ -866,7 +867,7 @@ void check_input()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -876,6 +877,8 @@ void check_input()
 
 void amiberry_gui_run()
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	if (amiberry_options.gui_joystick_control)
 	{
 		for (auto j = 0; j < SDL_NumJoysticks(); j++)
@@ -896,7 +899,7 @@ void amiberry_gui_run()
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

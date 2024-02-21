@@ -82,7 +82,6 @@ SDL_GLContext gl_context;
 crtemu_t* crtemu_tv = nullptr;
 #else
 SDL_Texture* amiga_texture;
-SDL_Renderer* amiga_renderer;
 #endif
 
 SDL_Rect renderQuad;
@@ -236,34 +235,34 @@ static void SDL2_init()
 	if (!mon->amiga_window)
 	{
 		write_log("Creating Amiberry window...\n");
-		Uint32 amiga_window_mode;
+		Uint32 mode;
 		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
-				amiga_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
-				amiga_window_mode = SDL_WINDOW_FULLSCREEN;
+				mode = SDL_WINDOW_FULLSCREEN;
 			else
-				amiga_window_mode =  SDL_WINDOW_RESIZABLE;
+				mode =  SDL_WINDOW_RESIZABLE;
 			if (currprefs.borderless)
-				amiga_window_mode |= SDL_WINDOW_BORDERLESS;
+				mode |= SDL_WINDOW_BORDERLESS;
 			if (currprefs.main_alwaysontop)
-				amiga_window_mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+				mode |= SDL_WINDOW_ALWAYS_ON_TOP;
 			if (currprefs.start_minimized)
-				amiga_window_mode |= SDL_WINDOW_HIDDEN;
+				mode |= SDL_WINDOW_HIDDEN;
 			else
-				amiga_window_mode |= SDL_WINDOW_SHOWN;
+				mode |= SDL_WINDOW_SHOWN;
 			// Set Window allow high DPI by default
-			amiga_window_mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+			mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 #ifdef USE_OPENGL
-			amiga_window_mode |= SDL_WINDOW_OPENGL;
+			mode |= SDL_WINDOW_OPENGL;
 #endif
 		}
 		else
 		{
 			// otherwise go for Full-window
-			amiga_window_mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 		}
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
@@ -273,7 +272,7 @@ static void SDL2_init()
 			                                     SDL_WINDOWPOS_CENTERED,
 			                                     800,
 			                                     600,
-			                                     amiga_window_mode);
+			                                     mode);
 		}
 		else
 		{
@@ -282,7 +281,7 @@ static void SDL2_init()
 			                                     SDL_WINDOWPOS_CENTERED,
 			                                     600,
 			                                     800,
-			                                     amiga_window_mode);
+			                                     mode);
 		}
 		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
 
@@ -306,11 +305,11 @@ static void SDL2_init()
 		write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
 	}
 #else
-	if (amiga_renderer == nullptr)
+	if (mon->amiga_renderer == nullptr)
 	{
 		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-		amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
-		check_error_sdl(amiga_renderer == nullptr, "Unable to create a renderer:");
+		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
+		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 #endif
 
@@ -358,7 +357,8 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 	if (amiga_texture != nullptr)
 		SDL_DestroyTexture(amiga_texture);
 
-	amiga_texture = SDL_CreateTexture(amiga_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
+	AmigaMonitor* mon = &AMonitors[0];
+	amiga_texture = SDL_CreateTexture(mon->amiga_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 	return amiga_texture != nullptr;
 #endif
 }
@@ -922,6 +922,8 @@ float target_adjust_vblank_hz(int monid, float hz)
 
 void show_screen(int monid, int mode)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	struct amigadisplay* ad = &adisplays[monid];
 	bool rtg = ad->picasso_on;
 
@@ -945,12 +947,12 @@ void show_screen(int monid, int mode)
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
-	SDL_RenderClear(amiga_renderer);
+	SDL_RenderClear(mon->amiga_renderer);
 	SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
-	SDL_RenderCopyEx(amiga_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	if (vkbd_allowed(monid))
 		vkbd_redraw();
-	SDL_RenderPresent(amiga_renderer);
+	SDL_RenderPresent(mon->amiga_renderer);
 #endif
 
 	last_synctime = read_processor_time();
@@ -2310,10 +2312,10 @@ void graphics_leave()
 		gl_context = nullptr;
 	}
 #else
-	if (amiga_renderer)
+	if (mon->amiga_renderer)
 	{
-		SDL_DestroyRenderer(amiga_renderer);
-		amiga_renderer = nullptr;
+		SDL_DestroyRenderer(mon->amiga_renderer);
+		mon->amiga_renderer = nullptr;
 	}
 #endif
 	if (mon->amiga_window)
@@ -2418,15 +2420,15 @@ bool target_graphics_buffer_update(int monid, bool force)
 #ifdef USE_OPENGL
 		set_scaling_option(&currprefs, w, h);
 #else
-		if (amiga_renderer) {
+		if (mon->amiga_renderer) {
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(amiga_renderer, w, h);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
 				renderQuad = {dx, dy, w, h};
 				crop_rect = {dx, dy, w, h};
 			}
 			else
 			{
-				SDL_RenderSetLogicalSize(amiga_renderer, h, w);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, h, w);
 				renderQuad = { -(w - h) / 2, (w - h) / 2, w, h };
 				crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
 			}
@@ -2462,10 +2464,10 @@ bool target_graphics_buffer_update(int monid, bool force)
 #ifdef USE_OPENGL
 		set_scaling_option(&currprefs, scaled_width, scaled_height);
 #else
-		if (amiga_renderer)
+		if (mon->amiga_renderer)
 		{
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(amiga_renderer, scaled_width, scaled_height);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
 				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = {dx, dy, scaled_width, scaled_height};
 					crop_rect = {dx, dy, scaled_width, scaled_height};
@@ -2478,7 +2480,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 			}
 			else
 			{
-				SDL_RenderSetLogicalSize(amiga_renderer, scaled_height, scaled_width);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_height, scaled_width);
 				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
 					crop_rect = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
@@ -2751,12 +2753,9 @@ void graphics_subshutdown()
 #ifdef AMIBERRY
 void auto_crop_image()
 {
+	AmigaMonitor* mon = &AMonitors[0];
 	static bool last_autocrop;
-#ifdef USE_OPENGL
-	if (amiga_surface == nullptr) return;
-#else
-	if (amiga_surface == nullptr || amiga_renderer == nullptr) return;
-#endif
+
 	if (currprefs.gfx_auto_crop)
 	{
 		int cw, ch, cx, cy, crealh = 0;
@@ -2785,13 +2784,13 @@ void auto_crop_image()
 
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			{
-				SDL_RenderSetLogicalSize(amiga_renderer, width, height);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
 				renderQuad = { dx, dy, width, height };
 				crop_rect = { cx, cy, cw, ch };
 			}
 			else
 			{
-				SDL_RenderSetLogicalSize(amiga_renderer, height, width);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, height, width);
 				renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 			}
 #endif

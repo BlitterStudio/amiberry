@@ -222,6 +222,8 @@ static void EditFilesysVirtualLoop()
 {
 	//FocusBugWorkaround(wndEditFilesysVirtual);
 
+	AmigaMonitor* mon = &AMonitors[0];
+
 	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
@@ -485,7 +487,7 @@ static void EditFilesysVirtualLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -497,6 +499,8 @@ static void EditFilesysVirtualLoop()
 
 bool EditFilesysVirtual(const int unit_no)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	mountedinfo mi{};
 	uaedev_config_data* uci;
 	std::string strdevname, strvolname, strroot;
@@ -533,7 +537,7 @@ bool EditFilesysVirtual(const int unit_no)
 	// Prepare the screen once
 	uae_gui->logic();
 #ifndef USE_OPENGL
-	SDL_RenderClear(gui_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 #endif
 	uae_gui->draw();
 	update_gui_screen();

@@ -463,6 +463,8 @@ BMergeAxisBindings(int iIndex)
 static void
 WatchJoystick(SDL_Joystick* joystick)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 #ifdef USE_OPENGL
 	//TODO need implementation
 #else
@@ -484,8 +486,8 @@ WatchJoystick(SDL_Joystick* joystick)
 #ifdef USE_OPENGL
 	//TODO need implementation
 #else
-	button = LoadTexture(gui_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
-	axis = LoadTexture(gui_renderer, prefix_with_data_path("axis.png").c_str(), SDL_TRUE);
+	button = LoadTexture(mon->gui_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
+	axis = LoadTexture(mon->gui_renderer, prefix_with_data_path("axis.png").c_str(), SDL_TRUE);
 #endif
 
 	/* Print info about the joystick we are watching */
@@ -579,7 +581,7 @@ WatchJoystick(SDL_Joystick* joystick)
 		// Update guisan
 		uae_gui->logic();
 #ifndef USE_OPENGL
-		SDL_RenderClear(gui_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 #endif
 		uae_gui->draw();
 #ifdef USE_OPENGL
@@ -589,13 +591,13 @@ WatchJoystick(SDL_Joystick* joystick)
 		//TODO need implementation of blitting the textures below for OpenGL!
 #else
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-		SDL_RenderCopyEx(gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 
 		// Blit marker on top
 		SDL_SetTextureAlphaMod(marker, alpha);
 		SDL_SetTextureColorMod(marker, 10, 255, 21);
-		SDL_RenderCopyEx(gui_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
-		SDL_RenderPresent(gui_renderer);
+		SDL_RenderCopyEx(mon->gui_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderPresent(mon->gui_renderer);
 #endif
 		while (SDL_PollEvent(&event) > 0)
 		{
@@ -894,6 +896,8 @@ WatchJoystick(SDL_Joystick* joystick)
 std::string
 show_controller_map(int device, bool map_touchpad)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	const char* name;
 	int i;
 	SDL_Joystick* joystick;
@@ -922,7 +926,7 @@ show_controller_map(int device, bool map_touchpad)
 		const AmigaMonitor* mon = &AMonitors[0];
 		SDL_GL_SwapWindow(mon->gui_window);
 #else
-		SDL_RenderPresent(gui_renderer);
+		SDL_RenderPresent(mon->gui_renderer);
 #endif
 	}
 #ifdef DEBUG
