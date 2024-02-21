@@ -913,7 +913,6 @@ static void mouseupdate(struct AmigaMonitor *mon)
 	}
 
 #ifdef AMIBERRY
-	SDL_WarpMouseInWindow(mon->sdl_window, x, y);
 	if (p96_cursor == nullptr)
 		setupcursor_needed = 1;
 #else
