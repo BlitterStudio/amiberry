@@ -55,13 +55,11 @@ static void InitShowMessage(const std::string& message)
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
-#ifndef USE_OPENGL
 	if (!gui_screen)
 	{
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
 	}
-#endif
 
 	if (amiberry_options.single_window_mode)
 	{
@@ -85,9 +83,6 @@ static void InitShowMessage(const std::string& message)
 				mode |= SDL_WINDOW_SHOWN;
 			// Set Window allow high DPI by default
 			mode |= SDL_WINDOW_ALLOW_HIGHDPI;
-#ifdef USE_OPENGL
-			mode |= SDL_WINDOW_OPENGL;
-#endif
 		}
 		else
 		{
@@ -123,22 +118,13 @@ static void InitShowMessage(const std::string& message)
 		}
 	}
 
-#ifdef USE_OPENGL
-	// Grab the window surface
-	gui_screen = SDL_GetWindowSurface(mon->gui_window);
-	if (gl_context == nullptr)
-		gl_context = SDL_GL_CreateContext(mon->gui_window);
-	// Setup OpenGL
-	glViewport(0, 0, GUI_WIDTH, GUI_HEIGHT);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-#else
 	if (mon->gui_renderer == nullptr)
 	{
 		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
 		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
-#endif
+
 	if (mon->gui_window)
 	{
 		const auto window_flags = SDL_GetWindowFlags(mon->gui_window);
@@ -155,7 +141,7 @@ static void InitShowMessage(const std::string& message)
 
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-#ifndef USE_OPENGL
+
 	if (gui_texture == nullptr)
 	{
 		gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
@@ -167,20 +153,14 @@ static void InitShowMessage(const std::string& message)
 		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
-#endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 
 	if (gui_graphics == nullptr)
 	{
-#ifdef USE_OPENGL
-		gui_graphics = new gcn::OpenGLGraphics();
-		gui_graphics->setTargetPlane(GUI_WIDTH, GUI_HEIGHT);
-#else
 		gui_graphics = new gcn::SDLGraphics();
 		gui_graphics->setTarget(gui_screen);
-#endif
 	}
 	if (gui_input == nullptr)
 	{
@@ -207,12 +187,8 @@ static void InitShowMessage(const std::string& message)
 
 		try
 		{
-#ifdef USE_OPENGL
-			gui_font = new gcn::ImageFont(prefix_with_data_path("rpgfont.png"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/():;%&`'*#=[]\"");
-#else
 			gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
 			gui_font->setAntiAlias(false);
-#endif
 		}
 		catch (exception& ex)
 		{
@@ -297,13 +273,6 @@ static void ExitShowMessage()
 		delete gui_top;
 		gui_top = nullptr;
 
-#ifdef USE_OPENGL
-		if (gl_context != nullptr)
-		{
-			SDL_GL_DeleteContext(gl_context);
-			gl_context = nullptr;
-		}
-#else
 		if (gui_screen != nullptr)
 		{
 			SDL_FreeSurface(gui_screen);
@@ -318,7 +287,6 @@ static void ExitShowMessage()
 		// Clear the screen
 		SDL_RenderClear(mon->gui_renderer);
 		SDL_RenderPresent(mon->gui_renderer);
-#endif
 	}
 }
 
@@ -516,9 +484,9 @@ static void ShowMessageWaitInputLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-#ifndef USE_OPENGL
+
 		SDL_RenderClear(mon->gui_renderer);
-#endif
+
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -637,13 +605,10 @@ static void ShowMessageLoop()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
-#ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
-#else
+
 			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
 			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -654,13 +619,10 @@ static void ShowMessageLoop()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
-#ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
-#else
+
 			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
 			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -670,13 +632,10 @@ static void ShowMessageLoop()
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
-#ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
-#else
+
 			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
 			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -703,9 +662,9 @@ static void ShowMessageLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-#ifndef USE_OPENGL
+
 		SDL_RenderClear(mon->gui_renderer);
-#endif
+
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -739,9 +698,9 @@ bool ShowMessage(const std::string& title, const std::string& line1, const std::
 
 	// Prepare the screen once
 	uae_gui->logic();
-#ifndef USE_OPENGL
+
 	SDL_RenderClear(mon->gui_renderer);
-#endif
+
 	uae_gui->draw();
 	update_gui_screen();
 
@@ -772,9 +731,9 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 
 	// Prepare the screen once
 	uae_gui->logic();
-#ifndef USE_OPENGL
+
 	SDL_RenderClear(mon->gui_renderer);
-#endif
+
 	uae_gui->draw();
 	update_gui_screen();
 

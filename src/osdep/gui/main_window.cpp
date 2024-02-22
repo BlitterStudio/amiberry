@@ -8,10 +8,6 @@
 #include <SDL_ttf.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
-#ifdef USE_OPENGL
-#include <guisan/opengl.hpp>
-#include <guisan/opengl/openglsdlimageloader.hpp>
-#endif
 #include "SelectorEntry.hpp"
 
 #include "sysdeps.h"
@@ -128,25 +124,15 @@ SDL_Joystick* gui_joystick;
 SDL_Surface* gui_screen;
 SDL_Event gui_event;
 SDL_Event touch_event;
-
-#ifdef USE_OPENGL
-#else
 SDL_Texture* gui_texture;
-#endif
 
 /*
 * Gui SDL stuff we need
 */
 gcn::SDLInput* gui_input;
-#ifdef USE_OPENGL
-gcn::OpenGLGraphics* gui_graphics;		   // Graphics driver
-gcn::OpenGLSDLImageLoader* gui_imageLoader;  // For loading images
-gcn::ImageFont* gui_font;
-#else
 gcn::SDLGraphics* gui_graphics;
 gcn::SDLImageLoader* gui_imageLoader;
 gcn::SDLTrueTypeFont* gui_font;
-#endif
 
 /*
 * Gui stuff we need
@@ -269,13 +255,10 @@ void cap_fps(Uint64 start)
 void update_gui_screen()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
-#ifdef USE_OPENGL
-	SDL_GL_SwapWindow(mon->gui_window);
-#else
+
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(mon->gui_renderer);
-#endif
 }
 
 void amiberry_gui_init()
@@ -284,8 +267,6 @@ void amiberry_gui_init()
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
-// we will grab the surface from the window directly, for OpenGL
-#ifndef USE_OPENGL
 	//-------------------------------------------------
 	// Create new screen for GUI
 	//-------------------------------------------------
@@ -294,7 +275,6 @@ void amiberry_gui_init()
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 	}
-#endif
 
 	if (amiberry_options.single_window_mode)
 	{
@@ -324,9 +304,6 @@ void amiberry_gui_init()
                 mode |= SDL_WINDOW_SHOWN;
             // Set Window allow high DPI by default
             mode |= SDL_WINDOW_ALLOW_HIGHDPI;
-#ifdef USE_OPENGL
-			mode |= SDL_WINDOW_OPENGL;
-#endif
         }
         else
         {
@@ -378,24 +355,7 @@ void amiberry_gui_init()
 			}
 		}
 	}
-#ifdef USE_OPENGL
-	destroy_crtemu();
 
-	// Grab the window surface
-	gui_screen = SDL_GetWindowSurface(mon->gui_window);
-	if (gl_context == nullptr)
-		gl_context = SDL_GL_CreateContext(mon->gui_window);
-
-	// Enable vsync
-	if (SDL_GL_SetSwapInterval(1) < 0)
-	{
-		write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
-	}
-
-	// Setup OpenGL Viewport
-	glViewport(0, 0, GUI_WIDTH, GUI_HEIGHT);
-	glClearColor(0.f, 0.f, 0.f, 1.f);
-#else
 	if (mon->gui_renderer == nullptr)
 	{
 		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -413,7 +373,6 @@ void amiberry_gui_init()
 		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
-#endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
@@ -421,25 +380,18 @@ void amiberry_gui_init()
 	//-------------------------------------------------
 	// Create helpers for GUI framework
 	//-------------------------------------------------
-#ifdef USE_OPENGL
-	gui_imageLoader = new gcn::OpenGLSDLImageLoader();
-#else
+
 	gui_imageLoader = new gcn::SDLImageLoader();
 	gui_imageLoader->setRenderer(mon->gui_renderer);
-#endif
+
 	// The ImageLoader in use is static and must be set to be
 	// able to load images
 	gcn::Image::setImageLoader(gui_imageLoader);
-#ifdef USE_OPENGL
-	gui_graphics = new gcn::OpenGLGraphics();
-	gui_graphics->setTargetPlane(GUI_WIDTH, GUI_HEIGHT);
-#else
 	gui_graphics = new gcn::SDLGraphics();
 	// Set the target for the graphics object to be the screen.
 	// In other words, we will draw to the screen.
 	// Note, any surface will do, it doesn't have to be the screen.
 	gui_graphics->setTarget(gui_screen);
-#endif
 	gui_input = new gcn::SDLInput();
 	uae_gui = new gcn::Gui();
 	uae_gui->setGraphics(gui_graphics);
@@ -459,13 +411,6 @@ void amiberry_gui_halt()
 	delete gui_graphics;
 	gui_graphics = nullptr;
 
-#ifdef USE_OPENGL
-	if (gl_context != nullptr)
-	{
-		SDL_GL_DeleteContext(gl_context);
-		gl_context = nullptr;
-	}
-#else
 	if (gui_screen != nullptr)
 	{
 		SDL_FreeSurface(gui_screen);
@@ -481,7 +426,7 @@ void amiberry_gui_halt()
 		SDL_DestroyRenderer(mon->gui_renderer);
 		mon->gui_renderer = nullptr;
 	}
-#endif
+
 	if (mon->gui_window) {
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
@@ -782,13 +727,10 @@ void check_input()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
-#ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
-#else
+
 			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
 			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -799,13 +741,10 @@ void check_input()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
-#ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
-#else
+
 			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
 			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -815,13 +754,10 @@ void check_input()
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
-#ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(gui_event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(gui_event.tfinger.y);
-#else
+
 			touch_event.motion.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
 			touch_event.motion.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -881,9 +817,9 @@ void check_input()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-#ifndef USE_OPENGL
+
 		SDL_RenderClear(mon->gui_renderer);
-#endif
+
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		update_gui_screen();
@@ -913,9 +849,9 @@ void amiberry_gui_run()
 
 	// Prepare the screen once
 	uae_gui->logic();
-#ifndef USE_OPENGL
+
 	SDL_RenderClear(mon->gui_renderer);
-#endif
+
 	uae_gui->draw();
 	update_gui_screen();
 	
@@ -1070,21 +1006,15 @@ void gui_widgets_init()
 	gui_top->setBackgroundColor(gui_baseCol);
 	uae_gui->setTop(gui_top);
 
-#ifndef USE_OPENGL
 	//-------------------------------------------------
 	// Initialize fonts
 	//-------------------------------------------------
 	TTF_Init();
-#endif
 
 	try
 	{
-#ifdef USE_OPENGL
-		gui_font = new gcn::ImageFont(prefix_with_data_path("rpgfont.png"), " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/():;%&`'*#=[]\"");
-#else
 		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
 		gui_font->setAntiAlias(false);
-#endif
 	}
 	catch (exception& ex)
 	{
