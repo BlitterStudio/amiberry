@@ -327,7 +327,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 #ifdef USE_OPENGL
 	struct AmigaMonitor* mon = &AMonitors[monid];
 
-	//crt_frame( (CRTEMU_U32*)sdl_surface->pixels ); // bezel - however, seems hardcoded to internal 1024x1024 size
+	//crt_frame( (CRTEMU_U32*)amiga_surface->pixels ); // bezel - however, seems hardcoded to internal 1024x1024 size
 
 	//TODO Check for option (which CRT filter to use: Lite/PC/TV)
 	if (crtemu_tv)
@@ -2819,16 +2819,6 @@ void update_display(struct uae_prefs* p)
 {
 	open_screen(p);
 }
-
-#ifdef USE_OPENGL
-void set_gl_attribute(SDL_GLattr attr, int value)
-{
-	if (SDL_GL_SetAttribute(attr, value) != 0)
-	{
-		std::cerr << "SDL_GL_SetAttribute(" << attr << ", " << value << ") failed: " << SDL_GetError() << std::endl;
-	}
-}
-#endif
 
 static int save_png(const SDL_Surface* surface, char* path)
 {

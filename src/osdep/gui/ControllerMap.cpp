@@ -464,12 +464,7 @@ static void
 WatchJoystick(SDL_Joystick* joystick)
 {
 	AmigaMonitor* mon = &AMonitors[0];
-
-#ifdef USE_OPENGL
-	//TODO need implementation
-#else
 	SDL_Texture* button, *axis, *marker;
-#endif
 	const char* name = NULL;
 	SDL_Event event;
 	SDL_Rect dst;
@@ -483,12 +478,8 @@ WatchJoystick(SDL_Joystick* joystick)
 	background_back_image = gcn::Image::load(prefix_with_data_path("controllermap_back.png"));
 	background_back_icon = new gcn::Icon(background_back_image);
 
-#ifdef USE_OPENGL
-	//TODO need implementation
-#else
 	button = LoadTexture(mon->gui_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
 	axis = LoadTexture(mon->gui_renderer, prefix_with_data_path("axis.png").c_str(), SDL_TRUE);
-#endif
 
 	/* Print info about the joystick we are watching */
 	name = SDL_JoystickName(joystick);
@@ -521,18 +512,10 @@ WatchJoystick(SDL_Joystick* joystick)
 		switch (s_arrBindingDisplay[iElement].marker)
 		{
 		case MARKER_AXIS:
-#ifdef USE_OPENGL
-			//TODO need implementation
-#else
 			marker = axis;
-#endif
 			break;
 		case MARKER_BUTTON:
-#ifdef USE_OPENGL
-			//TODO need implementation
-#else
 			marker = button;
-#endif
 			break;
 		default:
 			break;
@@ -543,11 +526,8 @@ WatchJoystick(SDL_Joystick* joystick)
 
 		dst.x = s_arrBindingDisplay[iElement].x + x_offset;
 		dst.y = s_arrBindingDisplay[iElement].y + y_offset;
-#ifdef USE_OPENGL
-		//TODO need implementation
-#else
+
 		SDL_QueryTexture(marker, nullptr, nullptr, &dst.w, &dst.h);
-#endif
 
 		if (SDL_GetTicks() - alpha_ticks > 5)
 		{
@@ -580,16 +560,11 @@ WatchJoystick(SDL_Joystick* joystick)
 
 		// Update guisan
 		uae_gui->logic();
-#ifndef USE_OPENGL
-		SDL_RenderClear(mon->gui_renderer);
-#endif
-		uae_gui->draw();
-#ifdef USE_OPENGL
-		const AmigaMonitor* mon = &AMonitors[0];
-		SDL_GL_SwapWindow(mon->gui_window);
 
-		//TODO need implementation of blitting the textures below for OpenGL!
-#else
+		SDL_RenderClear(mon->gui_renderer);
+
+		uae_gui->draw();
+
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 		SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 
@@ -598,7 +573,7 @@ WatchJoystick(SDL_Joystick* joystick)
 		SDL_SetTextureColorMod(marker, 10, 255, 21);
 		SDL_RenderCopyEx(mon->gui_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
 		SDL_RenderPresent(mon->gui_renderer);
-#endif
+
 		while (SDL_PollEvent(&event) > 0)
 		{
 			switch (event.type)
@@ -885,12 +860,9 @@ WatchJoystick(SDL_Joystick* joystick)
 
 	SDL_free(s_arrAxisState);
 	s_arrAxisState = nullptr;
-#ifdef USE_OPENGL
-	//TODO need implementation
-#else
+
 	SDL_DestroyTexture(axis);
 	SDL_DestroyTexture(button);
-#endif
 }
 
 std::string
@@ -922,12 +894,8 @@ show_controller_map(int device, bool map_touchpad)
 				break;
 			}
 		}
-#ifdef USE_OPENGL
-		const AmigaMonitor* mon = &AMonitors[0];
-		SDL_GL_SwapWindow(mon->gui_window);
-#else
+
 		SDL_RenderPresent(mon->gui_renderer);
-#endif
 	}
 #ifdef DEBUG
 	/* Print information about the joysticks */
