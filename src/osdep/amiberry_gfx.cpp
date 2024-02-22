@@ -936,8 +936,6 @@ void show_screen(int monid, int mode)
 	}
 
 #ifdef USE_OPENGL
-	struct AmigaMonitor* mon = &AMonitors[monid];
-
 	auto time = SDL_GetTicks();
 	glViewport(0, 0, amiga_surface->w, amiga_surface->h);
 	if( crtemu_tv ) {
