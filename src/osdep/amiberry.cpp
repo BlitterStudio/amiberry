@@ -2165,10 +2165,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.default_frameskip)
 		p->gfx_framerate = 2;
 
-#ifdef USE_OPENGL
-	amiberry_options.use_sdl2_render_thread = false;
-#endif
-
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
 		p->sound_stereo_separation = amiberry_options.default_stereo_separation;
 

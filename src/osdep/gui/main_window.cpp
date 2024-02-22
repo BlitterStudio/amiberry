@@ -460,10 +460,10 @@ void amiberry_gui_halt()
 	gui_graphics = nullptr;
 
 #ifdef USE_OPENGL
-	if (cursor != nullptr)
+	if (gl_context != nullptr)
 	{
-		SDL_FreeCursor(cursor);
-		cursor = nullptr;
+		SDL_GL_DeleteContext(gl_context);
+		gl_context = nullptr;
 	}
 #else
 	if (gui_screen != nullptr)

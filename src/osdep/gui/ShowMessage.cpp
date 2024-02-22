@@ -296,26 +296,19 @@ static void ExitShowMessage()
 		gui_font = nullptr;
 		delete gui_top;
 		gui_top = nullptr;
-#ifndef USE_OPENGL
-		if (gui_screen != nullptr)
-		{
-			SDL_FreeSurface(gui_screen);
-			gui_screen = nullptr;
-		}
-#endif
+
 #ifdef USE_OPENGL
 		if (gl_context != nullptr)
 		{
 			SDL_GL_DeleteContext(gl_context);
 			gl_context = nullptr;
 		}
-
-		if (cursor != nullptr)
-		{
-			SDL_FreeCursor(cursor);
-			cursor = nullptr;
-		}
 #else
+		if (gui_screen != nullptr)
+		{
+			SDL_FreeSurface(gui_screen);
+			gui_screen = nullptr;
+		}
 		if (gui_texture != nullptr)
 		{
 			SDL_DestroyTexture(gui_texture);
