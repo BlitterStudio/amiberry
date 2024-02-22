@@ -612,13 +612,11 @@ void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 
-#ifndef USE_OPENGL //TODO Auto-Crop in OpenGL
 	if (currprefs.gfx_auto_crop)
 	{
 		dx -= float(crop_rect.x);
 		dy -= float(crop_rect.y);
 	}
-#endif
 
 	*dxp = dx;
 	*dyp = dy;
@@ -937,10 +935,10 @@ void show_screen(int monid, int mode)
 
 #ifdef USE_OPENGL
 	auto time = SDL_GetTicks();
-	glViewport(0, 0, amiga_surface->w, amiga_surface->h);
+	glViewport(0, 0, renderQuad.w, renderQuad.h);
 	if( crtemu_tv ) {
 		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const *) amiga_surface->pixels,
-		               amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
+			crop_rect.w, crop_rect.h, 0xffffffff, 0x000000);
 	}
 
 	SDL_GL_SwapWindow(mon->amiga_window);
@@ -2419,6 +2417,8 @@ bool target_graphics_buffer_update(int monid, bool force)
 			SDL_SetWindowSize(mon->amiga_window, w, h);
 		}
 #ifdef USE_OPENGL
+		renderQuad = { dx, dy, w, h };
+		crop_rect = { dx, dy, w, h };
 		set_scaling_option(&currprefs, w, h);
 #else
 		if (mon->amiga_renderer) {
@@ -2463,6 +2463,15 @@ bool target_graphics_buffer_update(int monid, bool force)
 			SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
 		}
 #ifdef USE_OPENGL
+		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
+			renderQuad = { dx, dy, scaled_width, scaled_height };
+			crop_rect = { dx, dy, scaled_width, scaled_height };
+		}
+		else if (currprefs.gfx_manual_crop)
+		{
+			renderQuad = { dx, dy, scaled_width, scaled_height };
+			crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
+		}
 		set_scaling_option(&currprefs, scaled_width, scaled_height);
 #else
 		if (mon->amiga_renderer)
@@ -2777,11 +2786,12 @@ void auto_crop_image()
 			last_cy = cy;
 			force_auto_crop = false;
 
-#ifdef USE_OPENGL
-			// TODO Auto-Crop in OpenGL
-#else
 			int width = (cw * 2) >> currprefs.gfx_resolution;
 			int height = (ch * 2) >> currprefs.gfx_vresolution;
+#ifdef USE_OPENGL
+			renderQuad = { dx, dy, width, height };
+			crop_rect = { cx, cy, cw, ch };
+#else
 
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			{
