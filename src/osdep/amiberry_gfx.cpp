@@ -379,11 +379,11 @@ static void update_leds(int monid)
 		done = 1;
 	}
 
-	statusline_getpos(monid, &osdx, &osdy, display_width, display_height);
+	statusline_getpos(monid, &osdx, &osdy, crop_rect.w + crop_rect.x, crop_rect.h + crop_rect.y);
 	int m = statusline_get_multiplier(monid) / 100;
 	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
 		uae_u8 *buf = (uae_u8*)amiga_surface->pixels + (y + osdy) * amiga_surface->pitch;
-		draw_status_line_single(monid, buf, 32 / 8, y, display_width, rc, gc, bc, a);
+		draw_status_line_single(monid, buf, 32 / 8, y, crop_rect.w + crop_rect.x, rc, gc, bc, a);
 	}
 }
 
@@ -2480,7 +2480,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
 				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = {dx, dy, scaled_width, scaled_height};
-					crop_rect = {dx, dy, scaled_width, scaled_height};
+					crop_rect = {dx, dy, w, h};
 				}
 				else if (currprefs.gfx_manual_crop)
 				{
@@ -2493,7 +2493,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_height, scaled_width);
 				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
-					crop_rect = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
+					crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
 				}
 			}
 			set_scaling_option(&currprefs, scaled_width, scaled_height);
