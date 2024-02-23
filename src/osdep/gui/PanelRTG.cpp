@@ -380,10 +380,12 @@ void RefreshPanelRTG()
 		lblGfxsize->setCaption(memsize_names[msi_gfx[mem_size]]);
 	}
 
-	chkRtgMatchDepth->setEnabled(false); // Not implemented yet
+	// We always match depth, so this option is disabled
+	chkRtgMatchDepth->setEnabled(false);
 	chkRtgMatchDepth->setSelected(changed_prefs.rtgmatchdepth);
 
-	chkRtgAutoscale->setEnabled(false); // Not implemented yet
+	// We always scale, so this option is disabled
+	chkRtgAutoscale->setEnabled(false);
 	chkRtgAutoscale->setSelected(changed_prefs.gf[1].gfx_filter_autoscale == RTG_MODE_SCALE);
 
 	chkRtgAlwaysCenter->setEnabled(false); // Not implemented yet
@@ -437,7 +439,8 @@ void RefreshPanelRTG()
 		changed_prefs.picasso96_modeflags & RGBFF_R8G8B8A8 ? 4 :
 		changed_prefs.picasso96_modeflags & RGBFF_B8G8R8A8 ? 5 : 0);
 
-	cboRtgBufferMode->setEnabled(false); // Not implemented yet
+	// Only double-buffering is supported in SDL2, which is the default here anyway
+	cboRtgBufferMode->setEnabled(false); 
 	cboRtgBufferMode->setSelected(changed_prefs.gfx_apmode[1].gfx_backbuffers == 0 ? 0 :
 		changed_prefs.gfx_apmode[1].gfx_backbuffers - 1);
 
@@ -460,7 +463,7 @@ bool HelpPanelRTG(std::vector<std::string>& helptext)
 	helptext.emplace_back("32-bit mode is not the same as in WinUAE (Amiberry uses RGBA, WinUAE");
 	helptext.emplace_back("uses BGRA).");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Some options are not yet implemented, so they appear as disabled.");
+	helptext.emplace_back("Some options are not implemented, so they appear as disabled.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("     Hardware vertical blank interrupt: If this option is enabled,");
 	helptext.emplace_back("     an interrupt will be triggered in the emulated system on each");
@@ -473,6 +476,10 @@ bool HelpPanelRTG(std::vector<std::string>& helptext)
 	helptext.emplace_back("     Due to SDL2 limitations, this currently only works well when");
 	helptext.emplace_back("     the \"Virtual Mouse driver\" option from the Input panel, is");
 	helptext.emplace_back("     enabled as well.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("     Multithreaded: This option will set the RTG rendering to be");
+	helptext.emplace_back("     done in a separate thread. This might improve the performance");
+	helptext.emplace_back("     in some cases, especially with higher resolutions.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The Refresh rate option allows you to select how the refresh rate");
 	helptext.emplace_back("for the emulated graphics card should behave:");
