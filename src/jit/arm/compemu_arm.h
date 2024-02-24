@@ -71,7 +71,9 @@ typedef union {
   struct blockinfo_t* bi;
 } cacheline;
 
-#define COMP_DEBUG 0
+#define USE_F_ALIAS 1
+#define USE_OFFSET 1
+#define COMP_DEBUG 1
 
 #if COMP_DEBUG
 #define Dif(x) if (x)
@@ -114,18 +116,12 @@ typedef union {
 #define FLAG_ALL  (FLAG_C | FLAG_Z | FLAG_N | FLAG_V | FLAG_X)
 #define FLAG_ZNV  (FLAG_Z | FLAG_N | FLAG_V)
 
-#if defined(CPU_arm)
-
-//#define DEBUG_DATA_BUFFER
-
-#if defined(CPU_AARCH64)
+#if defined(CPU_arm) && !defined(ARMV6T2) && !defined(CPU_AARCH64)
+#define USE_DATA_BUFFER
+#elif defined(CPU_AARCH64)
 #define N_REGS 18   /* really 32, but 29 to 31 are FP, LR, SP; 18 has special meaning; 27 holds memstart and 28 holds regs-struct */
 #else
 #define N_REGS 11  /* really 16, but 13 to 15 are SP, LR, PC; 11 holds memstart and 12 is scratch register */
-#endif
-
-#else
-#define N_REGS 8  /* really only 7, but they are numbered 0,1,2,3,5,6,7 */
 #endif
 
 #define N_FREGS 16  // We use 10 regs: 6 - FP_RESULT, 7 - SCRATCH, 8-15 - Amiga regs FP0-FP7
@@ -137,8 +133,7 @@ extern void compiler_exit(void);
 extern void build_comp(void);
 extern void set_cache_state(int enabled);
 #ifdef JIT
-extern void flush_icache(int n);
-extern void flush_icache_hard(int n);
+extern void (*flush_icache)(int);
 #endif
 extern void alloc_cache(void);
 extern void compile_block(cpu_history* pc_hist, int blocklen, int totcyles);
@@ -170,6 +165,7 @@ typedef struct {
   uae_u8 status;
   uae_s8 realreg; /* gb-- realreg can hold -1 */
   uae_u8 realind; /* The index in the holds[] array */
+  uae_u8 needflush;
 } reg_status;
 
 typedef struct {
@@ -228,12 +224,14 @@ typedef struct {
 } fn_status;
 
 /* For flag handling */
+#define NADA 1
 #define TRASH 2
 #define VALID 3
 
 /* needflush values */
 #define NF_SCRATCH   0
 #define NF_TOMEM     1
+#define NF_HANDLER   2
 
 typedef struct {
   /* Integer part */
@@ -247,6 +245,12 @@ typedef struct {
   freg_status fate[VFREGS];
   fn_status   fat[N_FREGS];
 } bigstate;
+
+typedef struct {
+	/* Integer part */
+	uae_s8 virt[VREGS];
+	uae_s8 nat[N_REGS];
+} smallstate;
 
 #define IM8 uae_s32
 #define IM16 uae_s32
@@ -385,5 +389,19 @@ typedef fptype fpu_register;
 #define DISTRUST_CONSISTENT_MEM 0
 
 void jit_abort(const TCHAR *format,...);
+
+#ifdef CPU_64_BIT
+static inline uae_u32 check_uae_p32(uintptr address, const char* file, int line)
+{
+	if (address > (uintptr_t)0xffffffff) {
+		jit_abort("JIT: 64-bit pointer (0x%llx) at %s:%d (fatal)",
+			(unsigned long long)address, file, line);
+	}
+	return (uae_u32)address;
+}
+#define uae_p32(x) (check_uae_p32((uintptr)(x), __FILE__, __LINE__))
+#else
+#define uae_p32(x) ((uae_u32)(x))
+#endif
 
 #endif /* COMPEMU_H */

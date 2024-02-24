@@ -468,7 +468,7 @@ STATIC_INLINE void compemu_raw_jmp(uintptr t)
 	} else {
 		LDR_xPCi(REG_WORK1, 8);
 		BR_x(REG_WORK1);
-		emit_longlong(t);
+		emit_quad(t);
 	}
 }
 
@@ -578,7 +578,7 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 	B_i(0);
 	write_jmp_target(branchadd, (uintptr)popall_do_nothing);
 
-	emit_longlong(v);
+	emit_quad(v);
 
 	return tba;
 }
@@ -586,8 +586,6 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 /*************************************************************************
 * FPU stuff                                                             *
 *************************************************************************/
-
-#ifdef USE_JIT_FPU
 
 LOWFUNC(NONE,NONE,2,raw_fmov_rr,(FW d, FR s))
 {
@@ -1125,6 +1123,3 @@ LOWFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
 	}
 }
 LENDFUNC(NONE,NONE,2,raw_fp_fscc_ri,(RW4 d, int cc))
-
-#endif // USE_JIT_FPU
-

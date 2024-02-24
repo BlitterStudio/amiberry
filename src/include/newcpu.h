@@ -879,11 +879,7 @@ extern cpuop_func_noret *cpufunctbl_noret[65536] ASM_SYM_FOR_FUNC("cpufunctbl_no
 extern cpuop_func *cpufunctbl[65536] ASM_SYM_FOR_FUNC("cpufunctbl");
 
 #ifdef JIT
-#ifdef CPU_AARCH64
-extern void flush_icache(int);
-#else
 extern void (*flush_icache)(int);
-#endif
 extern void compemu_reset(void);
 #else
 #define flush_icache(int) do {} while (0)

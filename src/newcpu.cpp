@@ -161,9 +161,7 @@ static int fallback_new_cpu_model;
 
 int cpu_last_stop_vpos, cpu_stopped_lines;
 
-#ifndef CPU_AARCH64
 void (*flush_icache)(int);
-#endif
 
 #if COUNT_INSTRS
 static unsigned long int instrcount[65536];
