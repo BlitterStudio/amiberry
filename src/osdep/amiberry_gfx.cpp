@@ -150,7 +150,7 @@ static void OffsetRect(SDL_Rect* rect, int dx, int dy)
 	rect->y += dy;
 }
 
-static void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
+void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
 {
 	SDL_GetWindowPosition(window, &rect->x, &rect->y);
 	SDL_GetWindowSize(window, &rect->w, &rect->h);

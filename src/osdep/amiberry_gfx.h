@@ -152,3 +152,4 @@ extern void quit_drawing_thread();
 extern void start_drawing_thread();
 
 extern SDL_GameControllerButton vkbd_button;
+extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
