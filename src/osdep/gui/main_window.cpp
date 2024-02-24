@@ -265,6 +265,9 @@ void amiberry_gui_init()
 {
 	AmigaMonitor* mon = &AMonitors[0];
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
+
+	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+		kmsdrm_detected = true;
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
 	//-------------------------------------------------
@@ -280,14 +283,14 @@ void amiberry_gui_init()
 	{
 		if (mon->amiga_window)
 		{
-			graphics_leave();
+			close_windows(mon);
 		}
 	}
 
 	if (!mon->gui_window)
 	{
         Uint32 mode;
-        if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+        if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
         {
 			mode =  SDL_WINDOW_RESIZABLE;
             if (currprefs.gui_alwaysontop)

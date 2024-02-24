@@ -88,6 +88,7 @@ SDL_Rect renderQuad;
 static int dx = 0, dy = 0;
 SDL_Rect crop_rect;
 const char* sdl_video_driver;
+bool kmsdrm_detected = false;
 
 static int display_width;
 static int display_height;
@@ -120,8 +121,6 @@ int vsync_activeheight, vsync_totalheight;
 float vsync_vblank, vsync_hblank;
 bool beamracer_debug;
 bool gfx_hdr;
-
-static int reopen(struct AmigaMonitor*, int, bool);
 
 static uae_sem_t screen_cs = nullptr;
 static bool screen_cs_allocated;
@@ -221,6 +220,8 @@ static void SDL2_init()
 	struct AmigaMonitor* mon = &AMonitors[0];
 	write_log("Getting Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
+	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+		kmsdrm_detected = true;
 
 	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdl_mode);
 	if (should_be_zero == 0)
@@ -236,7 +237,7 @@ static void SDL2_init()
 	{
 		write_log("Creating Amiberry window...\n");
 		Uint32 mode;
-		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
@@ -2282,8 +2283,11 @@ int graphics_init(bool mousecapture)
 
 int graphics_setup()
 {
+	if (!screen_cs_allocated) {
+		uae_sem_init(&screen_cs, 0, 1);
+		screen_cs_allocated = true;
+	}
 #ifdef PICASSO96
-	//sortdisplays(); //we already run this earlier on startup
 	InitPicasso96(0);
 #endif
 	return 1;
@@ -2292,6 +2296,16 @@ int graphics_setup()
 void graphics_leave()
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
+	close_windows(mon);
+
+	uae_sem_destroy(&screen_cs);
+	screen_cs = nullptr;
+	screen_cs_allocated = false;
+}
+
+void close_windows(struct AmigaMonitor* mon)
+{
+	reset_sound();
 	graphics_subshutdown();
 
 #ifdef USE_OPENGL
@@ -2325,12 +2339,6 @@ void graphics_leave()
 
 	if (currprefs.vkbd_enabled)
 		vkbd_quit();
-}
-
-void close_windows(struct AmigaMonitor* mon)
-{
-	reset_sound();
-	graphics_subshutdown();
 }
 
 float target_getcurrentvblankrate(int monid)
@@ -2549,8 +2557,7 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 			// Switch to Window mode, if we don't have it already - but not for KMSDRM
-			if ((is_fullscreen || is_fullwindow) 
-				&& strcmpi(sdl_video_driver, "KMSDRM") != 0)
+			if ((is_fullscreen || is_fullwindow) && !kmsdrm_detected)
 			{
 				SDL_SetWindowFullscreen(mon->amiga_window, 0);
 				changed = true;
