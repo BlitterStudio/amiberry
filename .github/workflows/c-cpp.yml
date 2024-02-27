@@ -17,7 +17,7 @@ on:
 jobs:
 
   build-macOS-x86_64:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
+          brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
 
       - name: make capsimg
         run: make capsimg
