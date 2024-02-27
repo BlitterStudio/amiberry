@@ -44,7 +44,7 @@ enum
 
 // We use the offset values here for positioning the marker, to avoid messing with the pixel coordinates below
 static constexpr int x_offset = 145;
-static constexpr int y_offset = 205;
+static constexpr int y_offset = 255;
 
 static struct
 {
