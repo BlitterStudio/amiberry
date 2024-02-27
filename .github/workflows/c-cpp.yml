@@ -53,6 +53,43 @@ jobs:
           name: amiberry-macOS-64bit-intel
           path: amiberry-${{ github.ref_name }}-macOS-x86_64.zip
 
+  build-macOS-M1:
+    runs-on: macos-14
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Install dependencies
+        run: |
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
+
+      - name: make capsimg
+        run: make capsimg
+
+      - name: make for macOS M1
+        run: make -j4 PLATFORM=osx-m1
+
+      - name: Upload artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-macOS-64bit-m1
+          path: |
+            Amiberry.app/**
+
+      - name: ZIP binaries
+        if: github.ref_type == 'tag'
+        run: zip -r amiberry-${{ github.ref_name }}-macOS-m1.zip Amiberry.app
+
+      - name: Upload artifact
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-macOS-64bit-m1
+          path: amiberry-${{ github.ref_name }}-macOS-m1.zip
+
   build-debian-buster-x86_64:
     runs-on: ubuntu-latest
     steps:
@@ -933,7 +970,7 @@ jobs:
         path: amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip
 
   create-release:
-    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-bookworm-armhf-rpi5, build-debian-buster-aarch64-rpi4, build-debian-buster-armhf-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bullseye-armhf-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-bookworm-armhf-rpi4, build-debian-buster-aarch64-rpi3, build-debian-buster-armhf-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bullseye-armhf-rpi3, build-debian-bookworm-aarch64-rpi3, build-debian-bookworm-armhf-rpi3]
+    needs: [build-macOS-x86_64, build-macOS-m1, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-manjaro-aarch64-rpi4, build-manjaro-aarch64-rk3399, build-debian-bookworm-aarch64-rpi5, build-debian-bookworm-armhf-rpi5, build-debian-buster-aarch64-rpi4, build-debian-buster-armhf-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bullseye-armhf-rpi4, build-debian-bookworm-aarch64-rpi4, build-debian-bookworm-armhf-rpi4, build-debian-buster-aarch64-rpi3, build-debian-buster-armhf-rpi3, build-debian-bullseye-aarch64-rpi3, build-debian-bullseye-armhf-rpi3, build-debian-bookworm-aarch64-rpi3, build-debian-bookworm-armhf-rpi3]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
@@ -959,6 +996,7 @@ jobs:
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
             amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
+            amiberry-macOS-64bit-m1/amiberry-${{ github.ref_name }}-macOS-m1.zip
             amiberry-debian-buster-x86_64/amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip
             amiberry-debian-bullseye-x86_64/amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip
             amiberry-debian-bookworm-x86_64/amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip
@@ -980,7 +1018,7 @@ jobs:
             amiberry-debian-bookworm-armhf-rpi3/amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-debian-bookworm-aarch64-rpi5, build-debian-buster-aarch64-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bookworm-aarch64-rpi4]
+    needs: [build-macOS-x86_64, build-macOS-m1, build-debian-buster-x86_64, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-debian-bookworm-aarch64-rpi5, build-debian-buster-aarch64-rpi4, build-debian-bullseye-aarch64-rpi4, build-debian-bookworm-aarch64-rpi4]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     steps:
@@ -1007,6 +1045,7 @@ jobs:
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
             amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
+            amiberry-macOS-64bit-m1/amiberry-${{ github.ref_name }}-macOS-m1.zip
             amiberry-debian-buster-x86_64/amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip
             amiberry-debian-bullseye-x86_64/amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip
             amiberry-debian-bookworm-x86_64/amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip
