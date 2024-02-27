@@ -40,7 +40,7 @@ enum
 
 // We use the offset values here for positioning the marker, to avoid messing with the pixel coordinates below
 static constexpr int x_offset = 145;
-static constexpr int y_offset = 205;
+static constexpr int y_offset = 255;
 
 static struct
 {
@@ -566,7 +566,11 @@ WatchJoystick(SDL_Joystick* joystick)
 		uae_gui->draw();
 
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-		SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+			renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+		else
+			renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
+		SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 
 		// Blit marker on top
 		SDL_SetTextureAlphaMod(marker, alpha);
