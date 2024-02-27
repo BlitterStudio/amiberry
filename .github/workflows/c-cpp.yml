@@ -63,7 +63,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
+          brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
 
       - name: make capsimg
         run: make capsimg
