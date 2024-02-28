@@ -506,64 +506,54 @@ void parse_gfx_settings(uae_prefs* prefs, const game_options& game_detail)
 	// SCREEN AUTO-HEIGHT
 	if (strcmpi(game_detail.scr_autoheight.c_str(), "true") == 0)
 	{
-		line_string = "amiberry.gfx_auto_crop=true";
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_auto_crop = true;
 	}
 	else if (strcmpi(game_detail.scr_autoheight.c_str(), "false") == 0)
 	{
-		line_string = "amiberry.gfx_auto_crop=false";
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_auto_crop = false;
 	}
 
 	// SCREEN CENTER/HEIGHT/WIDTH
 	if (strcmpi(game_detail.scr_centerh.c_str(), "smart") == 0)
 	{
 #ifdef USE_DISPMANX
-		line_string = "gfx_center_horizontal=smart";
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_xcenter = 2;
 #else
 		if (prefs->gfx_auto_crop)
 		{
 			// Disable if using Auto-Crop, otherwise the output won't be correct
-			line_string = "gfx_center_horizontal=none";
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_xcenter = 0;
 		}
 		else
 		{
-			line_string = "gfx_center_horizontal=smart";
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_xcenter = 2;
 		}
 #endif
 	}
 	else if (strcmpi(game_detail.scr_centerh.c_str(), "none") == 0)
 	{
-		line_string = "gfx_center_horizontal=none";
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_xcenter = 0;
 	}
 
 	if (strcmpi(game_detail.scr_centerv.c_str(), "smart") == 0)
 	{
 #ifdef USE_DISPMANX
-		line_string = "gfx_center_vertical=smart";
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_ycenter = 2;
 #else
 		if (prefs->gfx_auto_crop)
 		{
 			// Disable if using Auto-Crop, otherwise the output won't be correct
-			line_string = "gfx_center_vertical=none";
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_ycenter = 0;
 		}
 		else
 		{
-			line_string = "gfx_center_vertical=smart";
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_ycenter = 2;
 		}
 #endif
 	}
 	else if (strcmpi(game_detail.scr_centerv.c_str(), "none") == 0)
 	{
-		line_string = "gfx_center_vertical=none";
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_ycenter = 0;
 	}
 
 	if (strcmpi(game_detail.scr_height.c_str(), "nul") != 0)
