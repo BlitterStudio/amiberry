@@ -800,7 +800,7 @@ void InitPanelQuickstart(const config_category& category)
 		snprintf(tmp, 20, "qsWP%d", i);
 		chkqsDFxWriteProtect[i]->setId(tmp);
 		chkqsDFxWriteProtect[i]->addActionListener(qsdfxCheckActionListener);
-		
+
 
 		cmdqsDFxInfo[i] = new gcn::Button("?");
 		snprintf(tmp, 20, "qsInfo%d", i);
@@ -930,7 +930,7 @@ void InitPanelQuickstart(const config_category& category)
 	category.panel->add(cmdWhdloadSelect, cmdWhdloadEject->getX() + cmdWhdloadEject->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdWhdloadSelect->getHeight() + 8;
 	category.panel->add(cboWhdload, DISTANCE_BORDER, posY);
-	
+
 	chkCD->setVisible(false);
 	cmdCDEject->setVisible(false);
 	cmdCDSelect->setVisible(false);
@@ -1038,7 +1038,7 @@ static void AdjustDropDownControls()
 			}
 		}
 	}
-	
+
 	bIgnoreListChange = false;
 }
 
