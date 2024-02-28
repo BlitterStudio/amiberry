@@ -647,20 +647,15 @@ void parse_gfx_settings(uae_prefs* prefs, const game_options& game_detail)
 	if (strcmpi(game_detail.scr_offseth.c_str(), "nul") != 0)
 	{
 #ifdef USE_DISPMANX
-		line_string = "amiberry.gfx_horizontal_offset=";
-		line_string.append(game_detail.scr_offseth);
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_horizontal_offset = std::stoi(game_detail.scr_offseth);
 #else
 		if (prefs->gfx_auto_crop)
 		{
-			line_string = "amiberry.gfx_horizontal_offset=0";
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_horizontal_offset = 0;
 		}
 		else
 		{
-			line_string = "amiberry.gfx_horizontal_offset=";
-			line_string.append(game_detail.scr_offseth);
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_horizontal_offset = std::stoi(game_detail.scr_offseth);
 		}
 #endif
 	}
@@ -668,20 +663,15 @@ void parse_gfx_settings(uae_prefs* prefs, const game_options& game_detail)
 	if (strcmpi(game_detail.scr_offsetv.c_str(), "nul") != 0)
 	{
 #ifdef USE_DISPMANX
-		line_string = "amiberry.gfx_vertical_offset=";
-		line_string.append(game_detail.scr_offsetv);
-		parse_cfg_line(prefs, line_string);
+		prefs->gfx_vertical_offset = std::stoi(game_detail.scr_offsetv);
 #else
 		if (prefs->gfx_auto_crop)
 		{
-			line_string = "amiberry.gfx_vertical_offset=0";
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_vertical_offset = 0;
 		}
 		else
 		{
-			line_string = "amiberry.gfx_vertical_offset=";
-			line_string.append(game_detail.scr_offsetv);
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_vertical_offset = std::stoi(game_detail.scr_offsetv);
 		}
 #endif
 	}
