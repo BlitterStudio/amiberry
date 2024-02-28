@@ -1552,8 +1552,16 @@ void process_event(SDL_Event event)
 		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 		{
 			/* absolute */
-			setmousestate(0, 0, (mx / 2) << currprefs.gfx_resolution, 1);
-			setmousestate(0, 1, (my / 2) << currprefs.gfx_vresolution, 1);
+			if (mon->screen_is_picasso)
+			{
+				setmousestate(0, 0, mx, 1);
+				setmousestate(0, 1, my, 1);
+			}
+			else
+			{
+				setmousestate(0, 0, (mx / 2) << currprefs.gfx_resolution, 1);
+				setmousestate(0, 1, (my / 2) << currprefs.gfx_vresolution, 1);
+			}
 			return;
 		}
 		if (!focus || !mouseactive)
