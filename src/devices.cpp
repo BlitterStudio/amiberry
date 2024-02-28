@@ -390,9 +390,9 @@ void do_leave_program (void)
 	close_sound();
 	if (! no_gui)
 		gui_exit();
-//#ifdef USE_SDL
-//	SDL_Quit();
-//#endif
+#ifdef AMIBERRY
+	SDL_Quit();
+#endif
 	//machdep_free();
 }
 
