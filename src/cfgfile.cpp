@@ -2718,6 +2718,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("unmapped_address_space"), unmapped, p->cs_unmapped_space);
 	cfgfile_dwrite_bool(f, _T("memory_pattern"), p->cs_memorypatternfill);
 	cfgfile_dwrite_bool(f, _T("ipl_delay"), p->cs_ipldelay);
+	cfgfile_dwrite_bool(f, _T("floppydata_pullup"), p->cs_floppydatapullup);
 	cfgfile_dwrite(f, _T("keyboard_handshake"), _T("%d"), currprefs.cs_kbhandshake);
 	cfgfile_dwrite(f, _T("chipset_hacks"), _T("0x%x"), p->cs_hacks);
 	cfgfile_dwrite(f, _T("eclockphase"), _T("%d"), p->cs_eclockphase);
@@ -4845,9 +4846,15 @@ struct uaedev_config_data *add_filesys_config (struct uae_prefs *p, int index, s
 			}
 		}
 		uci = getuci (p);
+		if (!uci) {
+			return NULL;
+		}
 		uci->configoffset = -1;
 		uci->unitnum = -1;
 	} else {
+		if (index >= MAX_FILESYSTEM_UNITS) {
+			return NULL;
+		}
 		uci = &p->mountconfig[index];
 	}
 	if (!uci)
@@ -6027,6 +6034,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_strval(option, value, _T("unmapped_address_space"), &p->cs_unmapped_space, unmapped, 0)
 		|| cfgfile_yesno(option, value, _T("memory_pattern"), &p->cs_memorypatternfill)
 		|| cfgfile_yesno(option, value, _T("ipl_delay"), &p->cs_ipldelay)
+		|| cfgfile_yesno(option, value, _T("floppydata_pullup"), &p->cs_floppydatapullup)
 		|| cfgfile_strval(option, value, _T("ciaa_type"), &p->cs_ciatype[0], ciatype, 0)
 		|| cfgfile_strval(option, value, _T("ciab_type"), &p->cs_ciatype[1], ciatype, 0)
 		|| cfgfile_strboolval(option, value, _T("comp_flushmode"), &p->comp_hardflush, flushmode, 0)
@@ -8468,6 +8476,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cs_ciatype[1] = 0;
 	p->cs_memorypatternfill = true;
 	p->cs_ipldelay = false;
+	p->cs_floppydatapullup = false;
 
 	for (int i = 0; i < MAX_FILTERDATA; i++) {
 		struct gfx_filterdata *f = &p->gf[i];
@@ -9420,6 +9429,7 @@ static int bip_alg(struct uae_prefs* p, int config, int compa, int romcheck)
 	p->genlock_image = 6;
 	p->floppyslots[0].dfxtype = DRV_NONE;
 	p->floppyslots[1].dfxtype = DRV_NONE;
+	p->cs_floppydatapullup = true;
 	set_68000_compa(p, compa);
 	p->cs_compatible = CP_A500;
 	built_in_chipset_prefs(p);

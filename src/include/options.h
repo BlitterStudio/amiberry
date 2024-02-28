@@ -791,6 +791,7 @@ struct uae_prefs
 	int cs_eclocksync;
 	bool cs_memorypatternfill;
 	bool cs_ipldelay;
+	bool cs_floppydatapullup;
 	uae_u32 seed;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
@@ -934,6 +935,7 @@ struct uae_prefs
 	int active_capture_priority;
 	bool active_nocapture_pause;
 	bool active_nocapture_nosound;
+	int active_input;
 	int inactive_priority;
 	bool inactive_pause;
 	bool inactive_nosound;

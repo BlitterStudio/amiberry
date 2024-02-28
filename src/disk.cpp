@@ -4267,9 +4267,11 @@ static void wordsync_detected(bool startup)
 	}
 }
 
-static void disk_doupdate_read_reallynothing(int floppybits, bool state)
+static void disk_doupdate_read_reallynothing(int floppybits)
 {
 	int speed = get_floppy_speed();
+	bool state = currprefs.cs_floppydatapullup;
+
 	while (floppybits >= speed) {
 		bool skipbit = false;
 		bool waszero = word == 0;
@@ -4306,10 +4308,15 @@ static void disk_doupdate_read_reallynothing(int floppybits, bool state)
 static void disk_doupdate_read_nothing(int floppybits)
 {
 	int speed = get_floppy_speed();
+	bool state = currprefs.cs_floppydatapullup;
 	while (floppybits >= speed) {
 		bool skipbit = false;
 		word <<= 1;
-		word |= (uaerand() & 0x1000) ? 1 : 0;
+		if (state) {
+			word |= 1;
+		} else {
+			word |= (uaerand() & 0x1000) ? 1 : 0;
+		}
 		doreaddma();
 		// MSBSYNC
 		if (adkcon & 0x200) {
@@ -4764,7 +4771,7 @@ void DISK_update (int tohpos)
 		/* no floppy selected and no DMA */
 		if ((selected | disabled) == 15) {
 			if (dskdmaen < DSKDMA_WRITE) {
-				disk_doupdate_read_reallynothing(cycles, false);
+				disk_doupdate_read_reallynothing(cycles);
 			} else if (dskdmaen == DSKDMA_WRITE) {
 				disk_doupdate_write(cycles, get_floppy_speed());
 			}
@@ -4801,7 +4808,7 @@ static void DSKLEN_2(uae_u16 v, int hpos)
 		}
 		dskdmaen = DSKDMA_READ;
 		DISK_start ();
-		weirddma = dsklength < 544 * 11 * 2;
+		weirddma = dsklength < 544 * 11 + FLOPPY_GAP_LEN;
 	}
 	if (!(v & 0x8000)) {
 		if (dskdmaen != DSKDMA_OFF) {
