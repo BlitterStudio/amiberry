@@ -2534,6 +2534,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_str(f, _T("genlock_video"), p->genlock_video_file);
 	cfgfile_dwrite(f, _T("genlock_mix"), _T("%d"), p->genlock_mix);
 	cfgfile_dwrite(f, _T("genlock_scale"), _T("%d"), p->genlock_scale);
+	cfgfile_dwrite(f, _T("genlock_offset_x"), _T("%d"), p->genlock_offset_x);
+	cfgfile_dwrite(f, _T("genlock_offset_y"), _T("%d"), p->genlock_offset_y);
 	if (p->genlock_effects) {
 		tmp[0] = 0;
 		if (p->genlock_effects & (1 << 4)) {
@@ -8557,6 +8559,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->genlock = 0;
 	p->genlock_image = 0;
 	p->genlock_mix = 0;
+	p->genlock_offset_x = 0;
+	p->genlock_offset_y = 0;
 	p->ntscmode = 0;
 	p->filesys_limit = 0;
 	p->filesys_max_name = 107;
@@ -9023,6 +9027,7 @@ static void bip_velvet(struct uae_prefs *p, int config, int compa, int romcheck)
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	p->cs_compatible = CP_VELVET;
 	p->bogomem.chipramtiming = false;
+	p->chipmem.size = 0x40000;
 	p->cs_dipagnus = 1;
 	p->cs_agnusbltbusybug = 1;
 	built_in_chipset_prefs (p);
@@ -9446,6 +9451,11 @@ static int bip_alg(struct uae_prefs* p, int config, int compa, int romcheck)
 			roms[0] = rl[i]->rd->id;
 			roms[1] = -1;
 			configure_rom(p, roms, 0);
+			const TCHAR *name = rl[i]->rd->name;
+			p->ntscmode = true;
+			if (_tcsstr(name, _T("Picmatic"))) {
+				p->ntscmode = false;
+			}
 			break;
 		}
 	}
