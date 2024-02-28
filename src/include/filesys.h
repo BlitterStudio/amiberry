@@ -120,8 +120,6 @@ struct hd_hardfiledata {
 #define FILESYS_CD 4
 #define FILESYS_TAPE 5
 
-#define MAX_FILESYSTEM_UNITS 50
-
 struct uaedev_mount_info;
 extern struct uaedev_mount_info options_mountinfo;
 

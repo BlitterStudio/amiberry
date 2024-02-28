@@ -83,6 +83,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
+int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
 
@@ -143,7 +144,7 @@ std::string get_sdl2_version_string()
 	return sdl_compiled.str();
 }
 
-std::vector<int> parse_color_string(std::string input)
+std::vector<int> parse_color_string(const std::string& input)
 {
 	std::vector<int> result;
 	std::stringstream ss(input);
@@ -341,8 +342,7 @@ static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 
 	if (oldx >= 30000 || oldy >= 30000 || oldx <= -30000 || oldy <= -30000) {
 		oldx = oldy = 0;
-	}
-	else {
+	} else {
 		if (abs(mon->mouseposx) < mon->windowmouse_max_w && abs(mon->mouseposy) < mon->windowmouse_max_h)
 			return;
 	}
@@ -355,7 +355,7 @@ static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 	int cx = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 + mon->amigawin_rect.x + (mon->amigawinclip_rect.x - mon->amigawin_rect.x);
 	int cy = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 + mon->amigawin_rect.y + (mon->amigawinclip_rect.y - mon->amigawin_rect.y);
 
-	SDL_WarpMouseInWindow(mon->sdl_window, cx, cy);
+	SDL_WarpMouseGlobal(cx, cy);
 }
 
 static int mon_cursorclipped;
@@ -1188,7 +1188,8 @@ void process_event(SDL_Event event)
 {
 	AmigaMonitor* mon = &AMonitors[0];
 	didata* did = &di_joystick[0];
-	
+	int mx, my;
+
 	if (event.type == SDL_WINDOWEVENT)
 	{
 		switch (event.window.event)
@@ -1224,7 +1225,7 @@ void process_event(SDL_Event event)
 				if (mousehack_alive())
 					setcursorshape(mon->monitor_id);
 			}
-			return;
+			break;
 		case SDL_WINDOWEVENT_LEAVE:
 			mouseinside = false;
 			return;
@@ -1497,14 +1498,14 @@ void process_event(SDL_Event event)
 	{
 		// This will be useful when/if SDL2 supports more than 1 mouse.
 		// Currently, it always returns 0.
-		//auto wm = event.motion.which;
+		auto wm = event.motion.which;
 
 		monitor_off = 0;
 		if (!mouseinside)
 			mouseinside = true;
-			
-		//int mx = event.motion.x;
-		//int my = event.motion.y;
+
+		mx = event.motion.x;
+		my = event.motion.y;
 
 		//mx -= mon->mouseposx;
 		//my -= mon->mouseposy;
@@ -1517,8 +1518,8 @@ void process_event(SDL_Event event)
 		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 		{
 			/* absolute */
-			setmousestate(0, 0, (event.motion.x / 2) << currprefs.gfx_resolution, 1);
-			setmousestate(0, 1, (event.motion.y / 2) << currprefs.gfx_vresolution, 1);
+			setmousestate(0, 0, (mx / 2) << currprefs.gfx_resolution, 1);
+			setmousestate(0, 1, (my / 2) << currprefs.gfx_vresolution, 1);
 			return;
 		}
 		if (!focus || !mouseactive)
@@ -2229,7 +2230,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.gui_theme_base_color[0])
 	{
 		// parse string as comma-separated numbers
-		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_base_color);
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_base_color);
 		if (result.size() == 3)
 		{
 			gui_theme.base_color = gcn::Color(result[0], result[1], result[2]);
@@ -2252,7 +2253,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.gui_theme_selector_inactive[0])
 	{
 		// parse string as comma-separated numbers
-		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_inactive);
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_inactive);
 		if (result.size() == 3)
 		{
 			gui_theme.selector_inactive = gcn::Color(result[0], result[1], result[2]);
@@ -2275,7 +2276,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.gui_theme_selector_active[0])
 	{
 		// parse string as comma-separated numbers
-		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_active);
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_active);
 		if (result.size() == 3)
 		{
 			gui_theme.selector_active = gcn::Color(result[0], result[1], result[2]);
@@ -2298,7 +2299,7 @@ void target_default_options(struct uae_prefs* p, int type)
 	if (amiberry_options.gui_theme_textbox_background[0])
 	{
 		// parse string as comma-separated numbers
-		std::vector<int> result = parse_color_string(amiberry_options.gui_theme_textbox_background);
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_textbox_background);
 		if (result.size() == 3)
 		{
 			gui_theme.textbox_background = gcn::Color(result[0], result[1], result[2]);
@@ -4084,7 +4085,7 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
 #endif
 	(void)atexit(SDL_Quit);
 	write_log(_T("Enumerating display devices.. \n"));
