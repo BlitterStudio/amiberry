@@ -745,9 +745,9 @@ STATIC_INLINE void reset_data_buffer(void)
 STATIC_INLINE void clobber_flags(void);
 
 #if defined(CPU_AARCH64) 
-#include "codegen_armA64.cpp.in"
+#include "codegen_armA64.cpp"
 #elif defined(CPU_arm) 
-#include "codegen_arm.cpp.in"
+#include "codegen_arm.cpp"
 #endif
 #if defined(CPU_i386) || defined(CPU_x86_64)
 #include "codegen_x86.cpp"
@@ -1264,11 +1264,11 @@ static void fflags_into_flags_internal(void)
 #endif
 
 #if defined(CPU_AARCH64) 
-#include "compemu_midfunc_armA64.cpp.in"
-#include "compemu_midfunc_armA64_2.cpp.in"
+#include "compemu_midfunc_armA64.cpp"
+#include "compemu_midfunc_armA64_2.cpp"
 #elif defined(CPU_arm)
-#include "compemu_midfunc_arm.cpp.in"
-#include "compemu_midfunc_arm2.cpp.in"
+#include "compemu_midfunc_arm.cpp"
+#include "compemu_midfunc_arm2.cpp"
 #endif
 
 #if defined(CPU_i386) || defined(CPU_x86_64)
