@@ -526,6 +526,8 @@ static void EditFilesysHardfileLoop()
 {
 	//FocusBugWorkaround(wndEditFilesysHardfile);
 
+	AmigaMonitor* mon = &AMonitors[0];
+
 	char lastActiveWidget[128];
 	strcpy(lastActiveWidget, "");
 	
@@ -715,13 +717,10 @@ static void EditFilesysHardfileLoop()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
-#ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
-#else
+
 			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
 			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -732,13 +731,10 @@ static void EditFilesysHardfileLoop()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
-#ifdef USE_OPENGL
-			touch_event.button.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
-#else
+
 			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
 			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -748,13 +744,10 @@ static void EditFilesysHardfileLoop()
 			touch_event.type = SDL_MOUSEMOTION;
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
-#ifdef USE_OPENGL
-			touch_event.motion.x = gui_graphics->getTargetPlaneWidth() * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTargetPlaneHeight() * int(event.tfinger.y);
-#else
+
 			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
 			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
-#endif
+
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -796,20 +789,17 @@ static void EditFilesysHardfileLoop()
 		//-------------------------------------------------
 		// Send event to guisan-controls
 		//-------------------------------------------------
-#ifdef ANDROID
-		androidsdl_event(event, gui_input);
-#else
 		gui_input->pushInput(event);
-#endif
+
 	}
 
 	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-#ifndef USE_OPENGL
-		SDL_RenderClear(sdl_renderer);
-#endif
+
+		SDL_RenderClear(mon->sdl_renderer);
+
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -819,6 +809,8 @@ static void EditFilesysHardfileLoop()
 
 bool EditFilesysHardfile(const int unit_no)
 {
+	AmigaMonitor* mon = &AMonitors[0];
+
 	mountedinfo mi{};
 	uaedev_config_data *uci;
 	std::string strdevname, strroot;
@@ -849,9 +841,9 @@ bool EditFilesysHardfile(const int unit_no)
 	
 	// Prepare the screen once
 	uae_gui->logic();
-#ifndef USE_OPENGL
-	SDL_RenderClear(sdl_renderer);
-#endif
+
+	SDL_RenderClear(mon->sdl_renderer);
+
 	uae_gui->draw();
 	update_gui_screen();
 

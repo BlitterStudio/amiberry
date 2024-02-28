@@ -1168,9 +1168,11 @@ static void setconvert(int monid)
 	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_B8G8R8A8 : RGBFB_B5G6R5PC;
 #endif
 	if (picasso_vidinfo[monid].pixbytes == 4)
-		alloc_colors_rgb(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, 0, 0, 0, 0, p96rc, p96gc, p96bc);
+		//alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGRA
+		alloc_colors_rgb(8, 8, 8, 0, 8, 16, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGBA
 	else
-		alloc_colors_rgb(5, 6, 5, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, 0, 0, 0, 0, p96rc, p96gc, p96bc);
+		//alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGR
+		alloc_colors_rgb(5, 6, 5, 0, 5, 11, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGB
 	gfx_set_picasso_colors(monid, state->RGBFormat);
 	picasso_palette(state->CLUT, vidinfo->clut);
 	if (vidinfo->host_mode != vidinfo->ohost_mode || state->RGBFormat != vidinfo->orgbformat) {
@@ -1216,9 +1218,7 @@ void picasso_refresh(int monid)
 	rtg_clear(monid);
 
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
-#ifdef AMIBERRY
-		picasso_refresh(monid);
-#else
+#ifndef AMIBERRY
 		gfxboard_refresh(monid);
 #endif
 		unlockrtg();
@@ -3378,7 +3378,7 @@ static void init_picasso_screen(int monid)
 		state->Extent = state->Address + state->BytesPerRow * state->VirtualHeight;
 	}
 	if (set_gc_called) {
-		gfx_set_picasso_modeinfo(monid, state->Width, state->Height, state->GC_Depth, state->RGBFormat);
+		gfx_set_picasso_modeinfo(monid, state->RGBFormat);
 		set_gc_called = 0;
 	}
 
@@ -4876,9 +4876,8 @@ void picasso_statusline(int monid, uae_u8 *dst)
 	}
 }
 
-static void
-copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width, int srcbytesperrow, int srcpixbytes, int dx,
-        int dy, int dstbytesperrow, int dstpixbytes, int *convert_modep, uae_u32 *p96_rgbx16p) {
+static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width, int srcbytesperrow, int srcpixbytes, int dx, int dy, int dstbytesperrow, int dstpixbytes, int *convert_modep, uae_u32 *p96_rgbx16p)
+{
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	int endx = x + width, endx4;
@@ -5775,7 +5774,8 @@ uae_u8 *uaegfx_getrtgbuffer(int monid, int *widthp, int *heightp, int *pitch, in
 		return NULL;
 	convert[0] = getconvert (state->RGBFormat, pixbytes);
 	convert[1] = convert[0];
-	alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, state->RGBFormat, p96_rgbx16);
+	//alloc_colors_picasso(8, 8, 8, 16, 8, 0, state->RGBFormat, p96_rgbx16); // BGR
+	alloc_colors_picasso(8, 8, 8, 0, 8, 16, state->RGBFormat, p96_rgbx16); // RGB
 
 	copyall (monid, src + off, dst, width, height, state->BytesPerRow, state->BytesPerPixel, width * pixbytes, pixbytes, convert);
 	if (pixbytes == 1) {
@@ -5918,6 +5918,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			}
 			dst = dstp;
 
+#ifndef AMIBERRY // we never set maxwidth/maxheight, so this won't work
 			// safety check
 			if (pwidth > vidinfo->maxwidth) {
 				pwidth = vidinfo->maxwidth;
@@ -5925,6 +5926,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (pheight > vidinfo->maxheight) {
 				pheight = vidinfo->maxheight;
 			}
+#endif
 
 			if (!split && vidinfo->rtg_clear_flag) {
 				uae_u8 *p2 = dst;
@@ -6605,7 +6607,8 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext *ctx)
 	int of = overlay_format;
 	if (of == RGBFB_Y4U2V2 || of == RGBFB_Y4U1V1)
 		of = RGBFB_R5G5B5PC;
-	alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, of, p96_rgbx16_ovl);
+	//alloc_colors_picasso(8, 8, 8, 16, 8, 0, of, p96_rgbx16_ovl); // BGR
+	alloc_colors_picasso(8, 8, 8, 0, 8, 16, of, p96_rgbx16_ovl); // RGB
 #if OVERLAY_DEBUG
 	write_log(_T("picasso_CreateFeature overlay bitmap %08x, vram %08x (%dx%d)\n"),
 		overlay_bitmap, overlay_vram, overlay_src_width, overlay_src_height);
@@ -7091,7 +7094,8 @@ void restore_p96_finish (void)
 			overlay_convert = getconvert(overlay_format, picasso_vidinfo[0].pixbytes);
 			if (!p96_rgbx16_ovl)
 				p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
-			alloc_colors_picasso(8, 8, 8, SYSTEM_RED_SHIFT, SYSTEM_GREEN_SHIFT, SYSTEM_BLUE_SHIFT, overlay_format, p96_rgbx16_ovl);
+			//alloc_colors_picasso(8, 8, 8, 16, 8, 0, overlay_format, p96_rgbx16_ovl); // BGR
+			alloc_colors_picasso(8, 8, 8, 0, 8, 16, overlay_format, p96_rgbx16_ovl); // RGB
 			picasso_palette(overlay_clutc, overlay_clut);
 			overlay_color = overlay_color_unswapped;
 			overlay_pix = GetBytesPerPixel(overlay_format);

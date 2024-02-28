@@ -22,7 +22,7 @@ static gcn::StringListModel rtg_buffermodes_list(rtg_buffermodes);
 
 static const std::vector<std::string> rtg_aspectratios = { "Disabled", "Automatic" };
 static gcn::StringListModel rtg_aspectratios_list(rtg_aspectratios);
-	
+
 static const std::vector<std::string> rtg_16bit_modes = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
 static gcn::StringListModel rtg_16bit_modes_list(rtg_16bit_modes);
 

@@ -124,14 +124,14 @@ public:
 		}
 
 		changed_prefs.collision_level = optCollNone->isSelected() ? 0
-              : optCollSprites->isSelected() ? 1
-              : optCollPlayfield->isSelected() ? 2 : 3;
+			: optCollSprites->isSelected() ? 1
+			: optCollPlayfield->isSelected() ? 2 : 3;
 
 		changed_prefs.chipset_mask = optOCS->isSelected() ? 0
-              : optECSAgnus->isSelected() ? CSMASK_ECS_AGNUS
-              : optECSDenise->isSelected() ? CSMASK_ECS_DENISE
-			  : optECS->isSelected() ? CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE
-              : CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+			: optECSAgnus->isSelected() ? CSMASK_ECS_AGNUS
+			: optECSDenise->isSelected() ? CSMASK_ECS_DENISE
+			: optECS->isSelected() ? CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE
+			: CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
 
 		n1 = chkNTSC->isSelected();
 		if (changed_prefs.ntscmode != n1)

@@ -84,7 +84,7 @@ static void RefreshCDListModel()
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
 		cdfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-	}
+}
 
 class HDRemoveActionListener : public gcn::ActionListener
 {

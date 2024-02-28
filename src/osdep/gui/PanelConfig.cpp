@@ -33,21 +33,21 @@ void SetLastActiveConfig(const char* filename)
 static gcn::StringListModel configsList;
 
 static void InitConfigsList()
-	{
+{
 	configsList.clear();
-		for (auto& i : ConfigFilesList)
+	for (auto& i : ConfigFilesList)
+	{
+		char tmp[MAX_DPATH];
+		strncpy(tmp, i->Name, MAX_DPATH);
+		if (strlen(i->Description) > 0)
 		{
-			char tmp[MAX_DPATH];
-			strncpy(tmp, i->Name, MAX_DPATH);
-			if (strlen(i->Description) > 0)
-			{
-				strncat(tmp, " (", MAX_DPATH - 1);
-				strncat(tmp, i->Description, MAX_DPATH - 3);
-				strncat(tmp, ")", MAX_DPATH - 1);
-			}
-		configsList.add(tmp);
+			strncat(tmp, " (", MAX_DPATH - 1);
+			strncat(tmp, i->Description, MAX_DPATH - 3);
+			strncat(tmp, ")", MAX_DPATH - 1);
 		}
+		configsList.add(tmp);
 	}
+}
 
 class ConfigButtonActionListener : public gcn::ActionListener
 {

@@ -342,7 +342,7 @@ void InitPanelDisplay(const config_category& category)
 	cboFullscreen->setBackgroundColor(colTextboxBackground);
 	cboFullscreen->setId("cboFullscreen");
 	cboFullscreen->addActionListener(amigaScreenActionListener);
-	
+
 	lblAmigaWidth = new gcn::Label("Width:");
 	lblAmigaWidth->setAlignment(gcn::Graphics::LEFT);
 	sldAmigaWidth = new gcn::Slider(0, AMIGAWIDTH_COUNT - 1);
@@ -492,7 +492,7 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(lblScreenmode, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(cboScreenmode, lblScreenmode->getX() + lblScreenmode->getWidth() + 8, posY);
 	posY += cboScreenmode->getHeight() + DISTANCE_NEXT_Y;
-	
+
 	grpAmigaScreen->add(lblAmigaWidth, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldAmigaWidth, lblAmigaWidth->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
 	grpAmigaScreen->add(txtAmigaWidth, sldAmigaWidth->getX() + sldAmigaWidth->getWidth() + DISTANCE_NEXT_X, posY);

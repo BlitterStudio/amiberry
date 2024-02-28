@@ -48,7 +48,7 @@ static gcn::StringListModel diskfileList;
 static gcn::StringListModel serial_ports_list;
 
 static void RefreshDiskListModel()
-	{
+{
 	diskfileList.clear();
 	for(const auto & i : lstMRUDiskList)
 	{
@@ -56,7 +56,7 @@ static void RefreshDiskListModel()
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
 		diskfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-		}
+}
 
 class DriveTypeActionListener : public gcn::ActionListener
 {

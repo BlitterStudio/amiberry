@@ -27,7 +27,7 @@ static gcn::StringListModel expansionboard_itemselector_list;
 static gcn::StringListModel scsi_romid_list;
 static gcn::StringListModel scsirom_selectnum_list;
 static gcn::StringListModel scsirom_file_list;
-	
+
 static gcn::StringListModel cpuboards_list;
 static gcn::StringListModel cpuboards_subtype_list;
 static gcn::StringListModel cpuboard_romfile_list;

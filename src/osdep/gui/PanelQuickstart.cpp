@@ -265,10 +265,10 @@ static void RefreshDiskListModel()
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
 		diskfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-	}
+}
 
 static void RefreshCDListModel()
-	{
+{
 	cdfileList.clear();
 	for(const auto & i : lstMRUCDList)
 	{
@@ -276,10 +276,10 @@ static void RefreshCDListModel()
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
 		cdfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-	}
+}
 
 static void RefreshWhdListModel()
-	{
+{
 	whdloadFileList.clear();
 	for(const auto & i : lstMRUWhdloadList)
 	{
@@ -287,7 +287,7 @@ static void RefreshWhdListModel()
 		const std::string filename = full_path.substr(full_path.find_last_of("/\\") + 1);
 		whdloadFileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
-	}
+}
 
 class QSCDButtonActionListener : public gcn::ActionListener
 {

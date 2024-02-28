@@ -86,29 +86,25 @@ static int disk_swap(int entry, int mode)
 	return 1;
 }
 
-static void diskswapper_addfile2(struct uae_prefs* prefs, const TCHAR* file)
+static void diskswapper_addfile2(struct uae_prefs *prefs, const TCHAR *file, int slot)
 {
-	int list = 0;
-	while (list < MAX_SPARE_DRIVES) {
-		if (!strcasecmp(prefs->dfxlist[list], file))
+	while (slot < MAX_SPARE_DRIVES) {
+		if (!prefs->dfxlist[slot][0]) {
+			_tcscpy (prefs->dfxlist[slot], file);
+			fullpath (prefs->dfxlist[slot], MAX_DPATH);
 			break;
-		list++;
-	}
-	if (list == MAX_SPARE_DRIVES) {
-		list = 0;
-		while (list < MAX_SPARE_DRIVES) {
-			if (!prefs->dfxlist[list][0]) {
-				_tcscpy(prefs->dfxlist[list], file);
-				fullpath(prefs->dfxlist[list], MAX_DPATH);
-				break;
-			}
-			list++;
 		}
+		slot++;
 	}
 }
 
-static void diskswapper_addfile(struct uae_prefs* prefs, const TCHAR* file)
+static int diskswapper_entry;
+
+static void diskswapper_addfile(struct uae_prefs *prefs, const TCHAR *file, int slot)
 {
+	if (slot < 0) {
+		slot = diskswapper_entry;
+	}
 	struct zdirectory* zd = zfile_opendir_archive(file, ZFD_ARCHIVE | ZFD_NORECURSE);
 	if (zd && zfile_readdir_archive(zd, nullptr, true) > 1) {
 		TCHAR out[MAX_DPATH];
@@ -116,15 +112,16 @@ static void diskswapper_addfile(struct uae_prefs* prefs, const TCHAR* file)
 			struct zfile* zf = zfile_fopen(out, _T("rb"), ZFD_NORMAL);
 			if (zf) {
 				int type = zfile_gettype(zf);
-				if (type == ZFILE_DISKIMAGE)
-					diskswapper_addfile2(prefs, out);
+				if (type == ZFILE_DISKIMAGE || type == ZFILE_EXECUTABLE) {
+					diskswapper_addfile2(prefs, out, slot);
+				}
 				zfile_fclose(zf);
 			}
 		}
 		zfile_closedir_archive(zd);
 	}
 	else {
-		diskswapper_addfile2(prefs, file);
+		diskswapper_addfile2(prefs, file, slot);
 	}
 }
 
