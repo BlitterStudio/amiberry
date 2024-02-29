@@ -285,7 +285,7 @@ void CommonBridgeTemplate::mainThread() {
 
 			{
 				std::unique_lock lck(m_queueSemaphoreLock);
-				queueReady = m_driveResetStatusFlag.wait_for(lck, queuePause, [this] { return m_queueSemaphore > 0; });
+				queueReady = m_queueSemaphoreFlag.wait_for(lck, queuePause, [this] { return m_queueSemaphore > 0; });
 			}
 		}
 		if (queueReady) {
