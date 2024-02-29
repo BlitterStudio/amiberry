@@ -532,7 +532,7 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 			// Switch to Window mode, if we don't have it already - but not for KMSDRM
 			if ((is_fullscreen || is_fullwindow) 
-				&& strcmpi(sdl_video_driver, "KMSDRM") != 0)
+				&& !kmsdrm_detected)
 				SDL_SetWindowFullscreen(mon->sdl_window, 0);
 		}
 		
@@ -2105,6 +2105,8 @@ int graphics_init(bool mousecapture)
 #else
 	write_log("Getting Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
+	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+		kmsdrm_detected = true;
 
 	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdl_mode);
 	if (should_be_zero == 0)
@@ -2123,7 +2125,7 @@ int graphics_init(bool mousecapture)
 	if (!mon->sdl_window)
 	{
 		Uint32 sdl_window_mode;
-		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && strcmpi(sdl_video_driver, "KMSDRM") != 0)
+		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
@@ -2234,7 +2236,7 @@ int graphics_init(bool mousecapture)
 	amiberry_options.use_sdl2_render_thread = false;
 #endif
 #ifndef USE_DISPMANX
-	if (strcmpi(sdl_video_driver, "KMSDRM") == 0)
+	if (kmsdrm_detected)
 	{
 		// Disable the render thread under KMSDRM (not supported)
 		amiberry_options.use_sdl2_render_thread = false;
