@@ -460,7 +460,7 @@ static void check_channel_mods(int hpos, int ch)
 		return;
 	if (ch == bltptxc) {
 		bltptxpos = -1;
-			write_log(_T("BLITTER: %08X write to %cPT ignored! %08x\n"), bltptx, ch + 'A' - 1, m68k_getpc());
+		write_log (_T("BLITTER: %08X write to %cPT ignored! %08x\n"), bltptx, ch + 'A' - 1, m68k_getpc ());
 		//activate_debugger();
 	}
 }
@@ -1058,22 +1058,22 @@ STATIC_INLINE void blitter_doddma (int hpos)
 			write_log (_T("BLITTER: D-channel without nothing to do?\n"));
 		}
 		return;
-		}
+	}
 	record_dma_blit (0x00, d, bltdpt, hpos);
 	//last_custom_value1 = d; blitter writes are not stored
 	chipmem_agnus_wput2 (bltdpt, d);
 	alloc_cycle_blitter(hpos, &bltdpt, 4);
-		bltdpt += blit_add;
+	bltdpt += blit_add;
 	blitter_hcounter2++;
 	if (blitter_hcounter2 == blt_info.hblitsize) {
 		blitter_hcounter2 = 0;
-			bltdpt += blit_modaddd;
+		bltdpt += blit_modaddd;
 		blitter_vcounter2++;
 		if (blit_dmacount2 == 0) // d-only
 			blitter_vcounter1++;
 		if (blitter_vcounter2 > blitter_vcounter1)
 			blitter_vcounter1 = blitter_vcounter2;
-		}
+	}
 	if (blit_ch == 1)
 		blitter_hcounter1 = blitter_hcounter2;
 }
@@ -1174,11 +1174,11 @@ static void do_startcycles (int hpos)
 				if (blit_faulty)
 					blit_faulty = 1;
 				return;
-	}
+			}
 		} else {
 			markidlecycle (hpos);
+		}
 	}
-}
 }
 
 void decide_blitter(int hpos)
@@ -1281,27 +1281,27 @@ void decide_blitter(int hpos)
 				}
 				markidlecycle (last_blitter_hpos);
 				break;
-				}
+			}
 
 			blitter_nasty++;
 
 			if (v <= 0) {
 				blit_misscyclecounter++;
 				break;
-					}
+			}
 
 			blt_info.got_cycle = 1;
-					if (c == 4) {
+			if (c == 4) {
 				blitter_doddma (last_blitter_hpos);
 				blit_cyclecounter++;
 				blit_totalcyclecounter++;
-					} else {
+			} else {
 				if (blitter_vcounter1 < blt_info.vblitsize) {
 					blitter_dodma (c, last_blitter_hpos);
-					}
+				}
 				blit_cyclecounter++;
 				blit_totalcyclecounter++;
-				}
+			}
 
 			if (blitter_vcounter1 >= blt_info.vblitsize && blitter_vcounter2 >= blt_info.vblitsize) {
 				if (!ddat1use && !ddat2use) {
@@ -1309,8 +1309,8 @@ void decide_blitter(int hpos)
 					return;
 				}
 			}
-				// check this after end check because last D write won't cause any problems.
-				check_channel_mods(last_blitter_hpos, c);
+			// check this after end check because last D write won't cause any problems.
+			check_channel_mods (last_blitter_hpos, c);
 			break;
 		}
 
@@ -1337,29 +1337,29 @@ static void blitter_force_finish(bool state)
 	if (bltstate == BLT_done)
 		return;
 	if (bltstate != BLT_done) {
-	/* blitter is currently running
-	* force finish (no blitter state support yet)
-	*/
-	odmacon = dmacon;
-	dmacon |= DMA_MASTER | DMA_BLITTER;
-	if (state)
-		write_log(_T("forcing blitter finish\n"));
-	if (blitter_cycle_exact && !immediate_blits) {
-		int rounds = 10000;
+		/* blitter is currently running
+		* force finish (no blitter state support yet)
+		*/
+		odmacon = dmacon;
+		dmacon |= DMA_MASTER | DMA_BLITTER;
+		if (state)
+			write_log (_T("forcing blitter finish\n"));
+		if (blitter_cycle_exact && !immediate_blits) {
+			int rounds = 10000;
 			while (bltstate != BLT_done && rounds > 0) {
-			memset(cycle_line, 0, sizeof cycle_line);
-			decide_blitter(-1);
-			rounds--;
-		}
-		if (rounds == 0)
-			write_log(_T("blitter froze!?\n"));
+				memset (cycle_line, 0, sizeof cycle_line);
+				decide_blitter (-1);
+				rounds--;
+			}
+			if (rounds == 0)
+				write_log (_T("blitter froze!?\n"));
 			blit_startcycles = 0;
-	} else {
-		actually_do_blit();
+		} else {
+			actually_do_blit ();
+		}
+		blitter_done (current_hpos ());
+		dmacon = odmacon;
 	}
-	blitter_done(current_hpos());
-	dmacon = odmacon;
-}
 }
 
 static bool invstate (void)
@@ -1601,7 +1601,7 @@ static void do_blitter2(int hpos, int copper, uaecptr pc)
 	if ((log_blitter & 2)) {
 		if (bltstate != BLT_done) {
 			if (blit_final) {
-			write_log (_T("blitter was already active! PC=%08x\n"), M68K_GETPC);
+				write_log (_T("blitter was already active! PC=%08x\n"), M68K_GETPC);
 				//activate_debugger();
 			}
 		}
@@ -1742,12 +1742,12 @@ void blitter_check_start (void)
 {
 	if (bltstate != BLT_init)
 		return;
-		blitter_start_init();
+	blitter_start_init ();
 	bltstate = BLT_work;
-		if (immediate_blits) {
-			blitter_doit();
-		}
+	if (immediate_blits) {
+		blitter_doit ();
 	}
+}
 
 void do_blitter(int hpos, int copper, uaecptr pc)
 {

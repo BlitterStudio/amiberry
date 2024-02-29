@@ -40,10 +40,6 @@ extern void dumpcustom (void);
 
 extern void do_copper (void);
 
-#ifdef AMIBERRY
-extern void check_copperlist_write(uaecptr addr);
-#endif
-
 extern void notice_new_xcolors (void);
 extern void notice_screen_contents_lost(int monid);
 extern void init_row_map (void);

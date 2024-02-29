@@ -852,10 +852,6 @@ void REGPARAM2 chipmem_agnus_wput (uaecptr addr, uae_u32 w)
 	uae_u16 *m;
 
 	addr &= chipmem_full_mask;
-#ifdef AMIBERRY
-	if (eventtab[ev_copper].active)
-		check_copperlist_write(addr);
-#endif
 	if (addr >= chipmem_full_size - 1)
 		return;
 	m = (uae_u16 *)(chipmem_bank.baseaddr + addr);

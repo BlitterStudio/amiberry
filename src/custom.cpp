@@ -3086,12 +3086,12 @@ STATIC_INLINE int one_fetch_cycle(int pos, int dma, int fm)
 
 static void update_fetch_x(int until, int fm)
 {
-#ifdef AMIBERRY
+	int pos;
+
 	if (nodraw())
 		return;
-#endif
 
-	int pos = last_fetch_hpos;
+	pos = last_fetch_hpos;
 	update_toscr_planes(fm);
 
 	// not optimized, update_fetch_x() is extremely rarely used.
@@ -3493,7 +3493,7 @@ static void decide_line(int hpos)
 				// if ECS: pre-set plf_end_hpos if we have already passed virtual ddfstop
 				if (ecs) {
 					// DDFSTRT=$18: always skip this condition. For some unknown reason.
-					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET) {
+					if (last_decide_line_hpos < hstart && hstart >= plfstop && hstart - plfstop <= DDF_OFFSET && hstart != HARD_DDF_START_REAL + DDF_OFFSET) {
 						plf_end_hpos = plfstop + DDF_OFFSET;
 						nextstate = plf_passed_stop;
 					}
@@ -6842,9 +6842,6 @@ static int copper_cant_read(int hpos, int alloc)
    it subtly wrong; and it would also be more expensive - we want this code
    to be fast.  */
 
-static uaecptr fc_ip_start = 0;
-static uaecptr fc_ip_end = 0;
-
 static void predict_copper(void)
 {
 	uaecptr ip = cop_state.ip;
@@ -6855,8 +6852,6 @@ static void predict_copper(void)
 	unsigned int vcmp;
 	int vp;
 
-	fc_ip_end = 0;
-	
 	if (cop_state.ignore_next || cop_state.movedelay)
 		return;
 
@@ -6889,8 +6884,6 @@ static void predict_copper(void)
 		break;
 	}
 
-	fc_ip_start = ip;
-	
 	while (c_hpos < until_hpos && !force_exit) {
 
 		switch (state) {
@@ -6921,7 +6914,6 @@ static void predict_copper(void)
 				ip = cop1lc;
 			else
 				ip = cop2lc;
-			fc_ip_start = ip;
 			break;
 
 		case COP_start_delay:
@@ -7011,7 +7003,6 @@ static void predict_copper(void)
 		eventtab[ev_copper].active = 1;
 		eventtab[ev_copper].evtime = get_cycles() + cycle_count * CYCLE_UNIT;
 		events_schedule();
-		fc_ip_end = ip;
 	}
 }
 #endif
@@ -7471,18 +7462,6 @@ out:
 	}
 #endif //AMIBERRY
 }
-
-#ifdef AMIBERRY
-void check_copperlist_write(uaecptr addr)
-{
-	if (addr >= fc_ip_start && addr < fc_ip_end) {
-		// Write to copperlist area detected
-		eventtab[ev_copper].active = 0;
-		if (copper_enabled_thisline)
-			update_copper(current_hpos());
-	}
-}
-#endif
 
 static void compute_spcflag_copper(int hpos)
 {
