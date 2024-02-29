@@ -181,7 +181,7 @@ STATIC_INLINE void raw_pop_preserved_regs(void) {
 
 STATIC_INLINE void raw_flags_to_reg(int r)
 {
-  uintptr idx = (uintptr) &(regs.ccrflags.nzcv) - (uintptr) &regs;
+  uintptr idx = (uintptr) &(regflags.nzcv) - (uintptr) &regs;
 	MRS_CPSR(r);
 	if(flags_carry_inverted) {
 	  EOR_rri(r, r, ARM_C_FLAG);
