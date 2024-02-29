@@ -257,26 +257,26 @@ public:
 			changed_prefs.input_mouse_speed = mousespeed_values[static_cast<int>(sldMouseSpeed->getValue())];
 
 		else if (actionEvent.getSource() == chkMouseHack)
-			changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
+			currprefs.input_tablet = changed_prefs.input_tablet = chkMouseHack->isSelected() ? TABLET_MOUSEHACK : TABLET_OFF;
 
 		else if (actionEvent.getSource() == chkMagicMouseUntrap)
 		{
 			if (chkMagicMouseUntrap->isSelected())
 			{
-				changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MAGIC;
+				currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap |= MOUSEUNTRAP_MAGIC;
 			}
 			else
 			{
-				changed_prefs.input_mouse_untrap &= ~MOUSEUNTRAP_MAGIC;
+				currprefs.input_mouse_untrap = changed_prefs.input_mouse_untrap &= ~MOUSEUNTRAP_MAGIC;
 			}
 		}
 
 		else if (actionEvent.getSource() == optBoth)
-			changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_BOTH;
+			currprefs.input_magic_mouse_cursor = changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_BOTH;
 		else if (actionEvent.getSource() == optNative)
-			changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_NATIVE_ONLY;
+			currprefs.input_magic_mouse_cursor = changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_NATIVE_ONLY;
 		else if (actionEvent.getSource() == optHost)
-			changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_HOST_ONLY;
+			currprefs.input_magic_mouse_cursor = changed_prefs.input_magic_mouse_cursor = MAGICMOUSE_HOST_ONLY;
 		
 		else if (actionEvent.getSource() == chkInputAutoswitch)
 			changed_prefs.input_autoswitch = chkInputAutoswitch->isSelected();

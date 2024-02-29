@@ -670,7 +670,10 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
 		if (mousehack_alive())
+		{
+			setcursorshape(mon->monitor_id);
 			return;
+		}
 		SDL_SetCursor(normalcursor);
 	}
 
@@ -1251,7 +1254,7 @@ void process_event(SDL_Event event)
 			break;
 		case SDL_WINDOWEVENT_ENTER:
 			mouseinside = true;
-			if (event.window.windowID == SDL_GetWindowID(mon->amiga_window) && currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
 			{
 				if (mousehack_alive())
 					setcursorshape(mon->monitor_id);
