@@ -19,7 +19,7 @@
 #include "amiberry_input.h"
 
 #define DIALOG_WIDTH 520
-#define DIALOG_HEIGHT 400
+#define DIALOG_HEIGHT 600
 
 std::string volName;
 static bool dialogResult = false;
@@ -178,7 +178,7 @@ static void InitSelectFolder(const char* title)
 	listBoxActionListener = new ListBoxActionListener();
 
 	lstFolders = new gcn::ListBox(&dirList);
-	lstFolders->setSize(800, 252);
+	lstFolders->setSize(DIALOG_WIDTH - 40, DIALOG_HEIGHT - 108);
 	lstFolders->setBaseColor(gui_baseCol);
 	lstFolders->setWrappingEnabled(true);
 	lstFolders->addActionListener(listBoxActionListener);
@@ -186,7 +186,7 @@ static void InitSelectFolder(const char* title)
 	scrAreaFolders = new gcn::ScrollArea(lstFolders);
 	scrAreaFolders->setBorderSize(1);
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
-	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
+	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFolders->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFolders->setBaseColor(gui_baseCol);
 
