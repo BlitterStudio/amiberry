@@ -21,7 +21,7 @@
 #include "amiberry_input.h"
 
 #define DIALOG_WIDTH 520
-#define DIALOG_HEIGHT 400
+#define DIALOG_HEIGHT 600
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -236,7 +236,7 @@ static void InitSelectFile(const char* title)
 	fileList = new SelectFileListModel(".");
 
 	lstFiles = new gcn::ListBox(fileList);
-	lstFiles->setSize(800, 252);
+	lstFiles->setSize(DIALOG_WIDTH - 40, DIALOG_HEIGHT - 108);
 	lstFiles->setBaseColor(gui_baseCol);
 	lstFiles->setWrappingEnabled(true);
 	lstFiles->addActionListener(selectFileActionListener);
@@ -244,7 +244,7 @@ static void InitSelectFile(const char* title)
 	scrAreaFiles = new gcn::ScrollArea(lstFiles);
 	scrAreaFiles->setBorderSize(1);
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
-	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272);
+	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFiles->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFiles->setBaseColor(gui_baseCol);
 
