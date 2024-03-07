@@ -5173,6 +5173,25 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		if (vkbd_allowed(0))
 			vkbd_toggle();
 		break;
+	case AKS_DISKSWAPPER_NEXT_INSERT0:
+		swapperslot++;
+		if (swapperslot >= MAX_SPARE_DRIVES || currprefs.dfxlist[swapperslot][0] == 0)
+			swapperslot = 0;
+		_tcscpy(changed_prefs.floppyslots[0].df, currprefs.dfxlist[swapperslot]);
+		set_config_changed();
+		break;
+	case AKS_DISKSWAPPER_PREVIOUS_INSERT0:
+		swapperslot--;
+		if (swapperslot < 0)
+			swapperslot = MAX_SPARE_DRIVES - 1;
+		while (swapperslot > 0) {
+			if (currprefs.dfxlist[swapperslot][0])
+				break;
+			swapperslot--;
+		}
+		_tcscpy(changed_prefs.floppyslots[0].df, currprefs.dfxlist[swapperslot]);
+		set_config_changed();
+		break;
 	}
 end:
 	if (tracer_enable) {
