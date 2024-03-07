@@ -2795,6 +2795,11 @@ void auto_crop_image()
 
 			int width = (cw * 2) >> currprefs.gfx_resolution;
 			int height = (ch * 2) >> currprefs.gfx_vresolution;
+			if (currprefs.gfx_correct_aspect == 0)
+			{
+				width = sdl_mode.w;
+				height = sdl_mode.h;
+			}
 #ifdef USE_OPENGL
 			renderQuad = { dx, dy, width, height };
 			crop_rect = { cx, cy, cw, ch };
