@@ -1134,8 +1134,16 @@ void gui_widgets_init()
 		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
 		gui_font->setAntiAlias(false);
 	}
-	catch (exception& ex)
+	catch (gcn::Exception& e)
 	{
+		gui_running = false;
+		std::cout << e.getMessage() << '\n';
+		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", e.getMessage());
+		abort();
+	}
+	catch (std::exception& ex)
+	{
+		gui_running = false;
 		cout << ex.what() << '\n';
 		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
 		abort();
@@ -1342,21 +1350,21 @@ void run_gui()
 	// Catch all GUI framework exceptions.
 	catch (gcn::Exception& e)
 	{
-		std::cout << e.getMessage() << std::endl;
+		std::cout << e.getMessage() << '\n';
 		uae_quit();
 	}
 
 	// Catch all Std exceptions.
 	catch (exception& e)
 	{
-		std::cout << "Std exception: " << e.what() << std::endl;
+		std::cout << "Std exception: " << e.what() << '\n';
 		uae_quit();
 	}
 
 	// Catch all unknown exceptions.
 	catch (...)
 	{
-		std::cout << "Unknown exception" << std::endl;
+		std::cout << "Unknown exception" << '\n';
 		uae_quit();
 	}
 
