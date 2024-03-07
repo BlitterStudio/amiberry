@@ -284,6 +284,7 @@ static char rp9_path[MAX_DPATH];
 static char controllers_path[MAX_DPATH];
 static char retroarch_file[MAX_DPATH];
 static char whdboot_path[MAX_DPATH];
+static char whdload_arch_path[MAX_DPATH];
 static char logfile_path[MAX_DPATH];
 static char floppy_sounds_dir[MAX_DPATH];
 static char data_dir[MAX_DPATH];
@@ -2910,6 +2911,17 @@ void set_whdbootpath(char* newpath)
 	strncpy(whdboot_path, newpath, MAX_DPATH - 1);
 }
 
+void get_whdload_arch_path(char* out, int size)
+{
+	fix_trailing(whdload_arch_path);
+	strncpy(out, whdload_arch_path, size - 1);
+}
+
+void set_whdload_arch_path(char* newpath)
+{
+	strncpy(whdload_arch_path, newpath, MAX_DPATH - 1);
+}
+
 void get_logfile_path(char* out, int size)
 {
 	strncpy(out, logfile_path, size - 1);
@@ -3391,6 +3403,9 @@ void save_amiberry_settings(void)
 	snprintf(buffer, MAX_DPATH, "whdboot_path=%s\n", whdboot_path);
 	fputs(buffer, f);
 
+	snprintf(buffer, MAX_DPATH, "whdload_arch_path=%s\n", whdload_arch_path);
+	fputs(buffer, f);
+
 	snprintf(buffer, MAX_DPATH, "logfile_path=%s\n", logfile_path);
 	fputs(buffer, f);
 
@@ -3559,6 +3574,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
 		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
 		ret |= cfgfile_string(option, value, "whdboot_path", whdboot_path, sizeof whdboot_path);
+		ret |= cfgfile_string(option, value, "whdload_arch_path", whdload_arch_path, sizeof whdload_arch_path);
 		ret |= cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
 		ret |= cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
 		ret |= cfgfile_string(option, value, "rp9_path", rp9_path, sizeof rp9_path);
@@ -3817,6 +3833,7 @@ static void init_amiberry_paths(void)
 	snprintf(controllers_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Controllers/").c_str());
 	snprintf(data_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Data/").c_str());
 	snprintf(whdboot_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Whdboot/").c_str());
+	snprintf(whdload_arch_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Lha/").c_str());
 	snprintf(logfile_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Amiberry.log").c_str());
 	snprintf(rom_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Kickstarts/").c_str());
 	snprintf(rp9_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/RP9/").c_str());
@@ -3832,6 +3849,7 @@ static void init_amiberry_paths(void)
 	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
 	snprintf(data_dir, MAX_DPATH, "%s/data/", start_path_data);
 	snprintf(whdboot_path, MAX_DPATH, "%s/whdboot/", start_path_data);
+	snprintf(whdload_arch_path, MAX_DPATH, "%s/lha/", start_path_data);
 	snprintf(logfile_path, MAX_DPATH, "%s/amiberry.log", start_path_data);
 	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
 	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);

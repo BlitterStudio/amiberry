@@ -42,6 +42,10 @@ static gcn::Label* lblWHDBootPath;
 static gcn::TextField* txtWHDBootPath;
 static gcn::Button* cmdWHDBootPath;
 
+static gcn::Label* lblWHDLoadArchPath;
+static gcn::TextField* txtWHDLoadArchPath;
+static gcn::Button* cmdWHDLoadArchPath;
+
 static gcn::CheckBox* chkEnableLogging;
 static gcn::Label* lblLogfilePath;
 static gcn::TextField* txtLogfilePath;
@@ -132,6 +136,16 @@ public:
 				set_whdbootpath(tmp);
 			}
 			cmdWHDBootPath->requestFocus();
+		}
+
+		else if (actionEvent.getSource() == cmdWHDLoadArchPath)
+		{
+			get_whdload_arch_path(tmp, MAX_DPATH);
+			if (SelectFolder("Folder for WHDLoad Archives", tmp))
+			{
+				set_whdload_arch_path(tmp);
+			}
+			cmdWHDLoadArchPath->requestFocus();
 		}
 
 		else if (actionEvent.getSource() == cmdLogfilePath)
@@ -376,6 +390,17 @@ void InitPanelPaths(const config_category& category)
 	cmdWHDBootPath->setBaseColor(gui_baseCol);
 	cmdWHDBootPath->addActionListener(folderButtonActionListener);
 
+	lblWHDLoadArchPath = new gcn::Label("WHDLoad Archives (LHA):");
+	txtWHDLoadArchPath = new gcn::TextField();
+	txtWHDLoadArchPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtWHDLoadArchPath->setBackgroundColor(colTextboxBackground);
+
+	cmdWHDLoadArchPath = new gcn::Button("...");
+	cmdWHDLoadArchPath->setId("cmdWHDLoadArchPath");
+	cmdWHDLoadArchPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdWHDLoadArchPath->setBaseColor(gui_baseCol);
+	cmdWHDLoadArchPath->addActionListener(folderButtonActionListener);
+
 	enableLoggingActionListener = new EnableLoggingActionListener();
 	chkEnableLogging = new gcn::CheckBox("Enable logging", true);
 	chkEnableLogging->setId("chkEnableLogging");
@@ -438,8 +463,14 @@ void InitPanelPaths(const config_category& category)
 	yPos += lblWHDBootPath->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtWHDBootPath, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdWHDBootPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	yPos += txtWHDBootPath->getHeight() + DISTANCE_NEXT_Y;
 
-	yPos += txtWHDBootPath->getHeight() + DISTANCE_NEXT_Y * 5;
+	category.panel->add(lblWHDLoadArchPath, DISTANCE_BORDER, yPos);
+	yPos += lblWHDLoadArchPath->getHeight() + DISTANCE_NEXT_Y / 2;
+	category.panel->add(txtWHDLoadArchPath, DISTANCE_BORDER, yPos);
+	category.panel->add(cmdWHDLoadArchPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+
+	yPos += txtWHDLoadArchPath->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(lblLogfilePath, DISTANCE_BORDER, yPos);
 	category.panel->add(chkEnableLogging, lblLogfilePath->getX() + lblLogfilePath->getWidth() + DISTANCE_NEXT_X * 3, yPos);
@@ -511,6 +542,10 @@ void ExitPanelPaths()
 	delete txtWHDBootPath;
 	delete cmdWHDBootPath;
 
+	delete lblWHDLoadArchPath;
+	delete txtWHDLoadArchPath;
+	delete cmdWHDLoadArchPath;
+
 	delete chkEnableLogging;
 	delete lblLogfilePath;
 	delete txtLogfilePath;
@@ -554,6 +589,9 @@ void RefreshPanelPaths()
 
 	get_whdbootpath(tmp, MAX_DPATH);
 	txtWHDBootPath->setText(tmp);
+
+	get_whdload_arch_path(tmp, MAX_DPATH);
+	txtWHDLoadArchPath->setText(tmp);
 
 	chkEnableLogging->setSelected(get_logfile_enabled());
 	get_logfile_path(tmp, MAX_DPATH);
