@@ -1064,8 +1064,16 @@ void auto_crop_image()
 			last_cy = cy;
 			force_auto_crop = false;
 
-			width = (cw * 2) >> currprefs.gfx_resolution;
-			height = (ch * 2) >> currprefs.gfx_vresolution;
+			if (currprefs.gfx_correct_aspect == 0)
+			{
+				width = sdl_mode.w;
+				height = sdl_mode.h;
+			}
+			else
+			{
+				width = (cw * 2) >> currprefs.gfx_resolution;
+				height = (ch * 2) >> currprefs.gfx_vresolution;
+			}
 #ifdef USE_DISPMANX
 			// Still using the old approach for DMX, for now
 			if (height != currprefs.gfx_monitor[0].gfx_size_win.height)
