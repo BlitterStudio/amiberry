@@ -1138,7 +1138,7 @@ void gui_widgets_init()
 	{
 		gui_running = false;
 		std::cout << e.getMessage() << '\n';
-		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", e.getMessage());
+		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", e.getMessage().c_str());
 		abort();
 	}
 	catch (std::exception& ex)
