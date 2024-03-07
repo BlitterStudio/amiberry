@@ -437,7 +437,7 @@ public:
 			if (strlen(whdload_file) > 0)
 				strncpy(tmp, whdload_file, MAX_DPATH);
 			else
-				strncpy(tmp, current_dir, MAX_DPATH);
+				get_whdload_arch_path(tmp, MAX_DPATH);
 
 			if (SelectFile("Select WHDLoad LHA file", tmp, whdload_filter))
 			{
