@@ -71,6 +71,7 @@ TCHAR whd_startup[255];
 TCHAR game_name[MAX_DPATH];
 TCHAR selected_slave[MAX_DPATH];
 TCHAR sub_path[MAX_DPATH];
+TCHAR data_path[MAX_DPATH];
 TCHAR use_slave_libs = false;
 
 static TCHAR* parse_text(const TCHAR* s)
@@ -842,6 +843,14 @@ game_options parse_settings_from_xml(uae_prefs* prefs, char* filepath)
 
 					write_log("WHDBooter - Libraries:  %s\n", sub_path);
 				}
+
+				// get data path
+				temp_node = game_node->FirstChildElement("slave")->FirstChildElement("datapath");
+				if (temp_node && temp_node->GetText() != nullptr)
+				{
+					_stprintf(data_path, "%s", temp_node->GetText());
+					write_log("WHDBooter - Data Path:  %s\n", data_path);
+				}
 				break;
 			}
 			game_node = game_node->NextSiblingElement();
@@ -923,6 +932,11 @@ void create_startup_sequence(uae_prefs* prefs)
 
 	// SPECIAL SAVE PATH
 	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << sub_path << "\"";
+
+	// DATA PATH
+	if (data_path[0])
+		whd_bootscript << "DATA=\"" << data_path << "\"";
+
 	whd_bootscript << '\n';
 
 	// Launches utility program to quit the emulator (via a UAE trap in RTAREA)
