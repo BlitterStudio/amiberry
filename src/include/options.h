@@ -1142,8 +1142,8 @@ extern bool cfgfile_createconfigstore(struct uae_prefs* p);
 extern void cfgfile_get_shader_config(struct uae_prefs* p, int rtg);
 
 #ifdef AMIBERRY
-extern void whdload_auto_prefs(struct uae_prefs* prefs, char* filename);
-extern void cd_auto_prefs(struct uae_prefs* prefs, char* filename);
+extern void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath);
+extern void cd_auto_prefs(struct uae_prefs* prefs, char* filepath);
 extern void symlink_roms(struct uae_prefs* prefs);
 extern void drawbridge_update_profiles(struct uae_prefs* prefs);
 #endif
