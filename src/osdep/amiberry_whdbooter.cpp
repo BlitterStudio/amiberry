@@ -837,7 +837,7 @@ void set_compatibility_settings(uae_prefs* prefs, const game_options& game_detai
 	}
 }
 
-game_options parse_settings_from_xml(uae_prefs* prefs, char* filepath)
+game_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 {
 	game_options game_detail;
 	tinyxml2::XMLDocument doc;
