@@ -3190,6 +3190,17 @@ int cfgfile_string(const TCHAR *option, const TCHAR *value, const TCHAR *name, T
 	return 1;
 }
 
+#ifdef AMIBERRY
+// Similar to the above, but using strings instead
+int cfgfile_string(const std::string& option, const std::string& value, const std::string& name, std::string& location)
+{
+	if (option.compare(name) != 0)
+		return 0;
+	location = value;
+	return 1;
+}
+#endif
+
 static int cfgfile_string (const TCHAR *option, const TCHAR *value, const TCHAR *name, const TCHAR *nameext, TCHAR *location, int maxsz)
 {
 	if (nameext) {

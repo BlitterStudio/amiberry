@@ -169,7 +169,7 @@ void InitPanelIO(const config_category& category)
 
 	ioActionListener = new IOActionListener();
 
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 
 	lblSampler = new gcn::Label("Sampler:");
 	lblSampler->setAlignment(gcn::Graphics::RIGHT);

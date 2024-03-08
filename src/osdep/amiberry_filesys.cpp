@@ -159,11 +159,8 @@ std::string prefix_with_data_path(std::string filename)
 	filePath = CFStringCopyUTF8String(path);
 	return filePath;
 #else
-	TCHAR directory[MAX_DPATH];
-	get_data_path(directory, sizeof directory / sizeof(TCHAR));
-	auto result = std::string(directory);
-	result += filename;
-	return result;
+	auto result = get_data_path();
+	return result.append(filename);
 #endif
 }
 
@@ -193,11 +190,8 @@ std::string prefix_with_whdboot_path(std::string filename)
 	filePath = CFStringCopyUTF8String(path);
 	return filePath;
 #else
-	TCHAR directory[MAX_DPATH];
-	get_whdbootpath(directory, sizeof directory / sizeof(TCHAR));
-	auto result = std::string(directory);
-	result += filename;
-	return result;
+	auto result = get_whdbootpath();
+	return result.append(filename);
 #endif
 }
 

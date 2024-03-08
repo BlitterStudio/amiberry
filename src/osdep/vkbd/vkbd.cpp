@@ -566,10 +566,7 @@ static std::string vkbd_get_exit_button_filename()
 	const std::string styleString = vkbd_get_style_string();
 	const std::string hiresString = vkbd_get_hires_string();
 
-	TCHAR data_dir[MAX_DPATH];
-	get_data_path(data_dir, sizeof(data_dir) / sizeof(TCHAR));
-
-	std::string fileName = data_dir;
+	std::string fileName = get_data_path();
 	fileName += std::string("vkbd/vkbd");
 	fileName += styleString;
 	fileName += std::string("Quit");
@@ -586,10 +583,7 @@ static std::string vkbd_get_keyboard_filename(bool shift)
 	const std::string hiresString = vkbd_get_hires_string();
 	const std::string shiftString = shift ? "Shift" : "";
 
-	TCHAR data_dir[MAX_DPATH];
-	get_data_path(data_dir, sizeof(data_dir) / sizeof(TCHAR));
-
-	std::string fileName = data_dir;
+	std::string fileName = get_data_path();
 	fileName += std::string("vkbd/vkbd");
 	fileName += styleString;
 	fileName += languageString;

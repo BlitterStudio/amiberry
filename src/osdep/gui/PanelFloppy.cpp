@@ -199,21 +199,21 @@ public:
 				//---------------------------------------
 				// Select disk for drive
 				//---------------------------------------
-				char tmp[MAX_DPATH];
+				std::string tmp;
 
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
+					tmp = std::string(changed_prefs.floppyslots[i].df);
 				else
-					strncpy(tmp, current_dir, MAX_DPATH);
-				if (SelectFile("Select disk image file", tmp, diskfile_filter))
+					tmp = current_dir;
+				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
 				{
-					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
-						disk_insert(i, tmp);
-						AddFileToDiskList(tmp, 1);
+						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
+						disk_insert(i, tmp.c_str());
+						AddFileToDiskList(tmp.c_str(), 1);
 						RefreshDiskListModel();
-						extract_path(tmp, current_dir);
+						current_dir = extract_path(tmp);
 
 						AdjustDropDownControls();
 					}
@@ -322,41 +322,38 @@ class CreateDiskActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		std::string tmp;
 		if (actionEvent.getSource() == cmdCreateDDDisk)
 		{
 			// Create 3.5" DD Disk
-			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strncpy(tmp, current_dir, MAX_DPATH);
-			if (SelectFile("Create 3.5\" DD disk file", tmp, diskfile_filter, true))
+			tmp = SelectFile("Create 3.5\" DD disk file", current_dir, diskfile_filter, true);
 			{
-				extract_filename(tmp, diskname);
+				extract_filename(tmp.c_str(), diskname);
 				remove_file_extension(diskname);
 				diskname[31] = '\0';
-				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_DD, -1, diskname, false, false, nullptr);
-				DISK_history_add (tmp, -1, HISTORY_FLOPPY, 0);
-				AddFileToDiskList(tmp, 1);
+				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_DD, -1, diskname, false, false, nullptr);
+				DISK_history_add (tmp.c_str(), -1, HISTORY_FLOPPY, 0);
+				AddFileToDiskList(tmp.c_str(), 1);
 				RefreshDiskListModel();
-				extract_path(tmp, current_dir);
+				current_dir = extract_path(tmp);
 			}
 			cmdCreateDDDisk->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdCreateHDDisk)
 		{
 			// Create 3.5" HD Disk
-			char tmp[MAX_DPATH];
 			char diskname[MAX_DPATH];
-			strcpy(tmp, current_dir);
-			if (SelectFile("Create 3.5\" HD disk file", tmp, diskfile_filter, true))
+			tmp = SelectFile("Create 3.5\" HD disk file", current_dir, diskfile_filter, true);
 			{
-				extract_filename(tmp, diskname);
+				extract_filename(tmp.c_str(), diskname);
 				remove_file_extension(diskname);
 				diskname[31] = '\0';
-				disk_creatediskfile(&changed_prefs, tmp, 0, DRV_35_HD, -1, diskname, false, false, nullptr);
-				DISK_history_add (tmp, -1, HISTORY_FLOPPY, 0);
-				AddFileToDiskList(tmp, 1);
+				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_HD, -1, diskname, false, false, nullptr);
+				DISK_history_add (tmp.c_str(), -1, HISTORY_FLOPPY, 0);
+				AddFileToDiskList(tmp.c_str(), 1);
 				RefreshDiskListModel();
-				extract_path(tmp, current_dir);
+				current_dir = extract_path(tmp);
 			}
 			cmdCreateHDDisk->requestFocus();
 		}
@@ -368,13 +365,13 @@ static CreateDiskActionListener* createDiskActionListener;
 void InitPanelFloppy(const config_category& category)
 {
 	int posX;
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 	int i;
-	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
+	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
 
 	FloppyBridgeAPI::getDriverList(driver_list);
 	driverNameList.clear();
-	for (auto &item : driver_list)
+	for (const auto &item : driver_list)
 	{
 		driverNameList.add(item.name);
 	}

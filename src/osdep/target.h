@@ -53,7 +53,7 @@ extern void enablecapture(int monid);
 extern void disablecapture();
 extern void activationtoggle(int monid, bool inactiveonly);
 extern void create_screenshot();
-extern int save_thumb(char* path);
+extern int save_thumb(const std::string& path);
 
 extern amiberry_hotkey enter_gui_key;
 extern SDL_GameControllerButton enter_gui_button;
@@ -100,44 +100,40 @@ string prefix_with_application_directory_path(string currentpath);
 #endif
 
 extern void get_configuration_path(char* out, int size);
-extern void set_configuration_path(char* newpath);
-extern void set_nvram_path(char* newpath);
-extern void set_screenshot_path(char* newpath);
-extern void set_savestate_path(char* newpath);
-extern void get_controllers_path(char* out, int size);
-extern void set_controllers_path(char* newpath);
+extern void set_configuration_path(const std::string& newpath);
+extern void set_nvram_path(const std::string& newpath);
+extern void set_screenshot_path(const std::string& newpath);
+extern void set_savestate_path(const std::string& newpath);
+extern std::string get_controllers_path();
+extern void set_controllers_path(const std::string& newpath);
 
-extern void get_retroarch_file(char* out, int size);
-extern void set_retroarch_file(char* newpath);
+extern std::string get_retroarch_file();
+extern void set_retroarch_file(const std::string& newpath);
 
 extern int get_savedatapath(char* out, int size, int force_internal);
-extern void get_whdbootpath(char* out, int size);
-extern void set_whdbootpath(char* newpath);
-extern void get_whdload_arch_path(char* out, int size);
-extern void set_whdload_arch_path(char* newpath);
+extern std::string get_whdbootpath();
+extern void set_whdbootpath(const std::string& newpath);
+extern std::string get_whdload_arch_path();
+extern void set_whdload_arch_path(const std::string& newpath);
 
-extern bool get_sdl2_thread_enabled();
-extern void set_sdl2_thread_enabled(bool enabled);
 extern bool get_logfile_enabled();
 extern void set_logfile_enabled(bool enabled);
-extern void get_logfile_path(char* out, int size);
-extern void set_logfile_path(char* newpath);
+extern std::string get_logfile_path();
+extern void set_logfile_path(const std::string& newpath);
 
-extern void set_rom_path(char* newpath);
+extern void set_rom_path(const std::string& newpath);
 extern void get_rp9_path(char* out, int size);
-extern void get_savestate_path(char* out, int size);
-extern void get_screenshot_path(char* out, int size);
+extern std::string get_screenshot_path();
 
 extern void extract_filename(const char* str, char* buffer);
 extern void extract_path(char* str, char* buffer);
+extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
+extern std::string remove_file_extension(const std::string& filename);
 extern void ReadConfigFileList(void);
 extern void RescanROMs(void);
 extern void SymlinkROMs(void);
 extern void ClearAvailableROMList(void);
-
-extern void minimizewindow(int monid);
-extern void updatewinrect(struct AmigaMonitor*, bool);
 
 extern bool resumepaused(int priority);
 extern bool setpaused(int priority);
@@ -247,4 +243,3 @@ struct sound_device
 };
 extern struct sound_device* sound_devices[MAX_SOUND_DEVICES];
 extern struct sound_device* record_devices[MAX_SOUND_DEVICES];
-

@@ -577,8 +577,8 @@ static NavigationMap navMap[] =
 	{ "txtVirtVolume", "", "", "txtVirtDevice", "txtVirtPath" },
 	{ "txtVirtPath", "", "", "txtVirtVolume", "cmdVirtPath" },
 	{ "cmdVirtPath", "", "", "txtVirtBootPri", "cmdVirtCancel" },
-	{ "chkVirtRW", "txtVirtDev", "txtVirtDev", "cmdVirtOK", "virtAutoboot" },
-	{ "virtAutoboot", "txtVirtVol", "txtVirtBootPri", "chkVirtRW", "cmdVirtPath" },
+	{ "chkVirtRW", "txtVirtDev", "txtVirtDev", "cmdVirtOK", "chkAutoboot" },
+	{ "chkAutoboot", "txtVirtVol", "txtVirtBootPri", "chkVirtRW", "cmdVirtPath" },
 	{ "cmdVirtOK", "cmdVirtCancel", "cmdVirtCancel", "cmdVirtPath", "chkVirtRW" },
 	{ "cmdVirtCancel", "cmdVirtOK", "cmdVirtOK", "cmdVirtPath", "chkVirtRW" },
 
@@ -614,7 +614,7 @@ static NavigationMap navMap[] =
 
 bool HandleNavigation(int direction)
 {
-	gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
+	const gcn::FocusHandler* focusHdl = gui_top->_getFocusHandler();
 	gcn::Widget* focusTarget = nullptr;
 
 	if (focusHdl != nullptr)
@@ -684,12 +684,12 @@ bool HandleNavigation(int direction)
 				auto* scrollarea = dynamic_cast<gcn::ScrollArea*>(activeWidget);
 				if (direction == DIRECTION_UP)
 				{
-					auto scroll = scrollarea->getVerticalScrollAmount();
+					const auto scroll = scrollarea->getVerticalScrollAmount();
 					scrollarea->setVerticalScrollAmount(scroll - 30);
 				}
 				else if (direction == DIRECTION_DOWN)
 				{
-					auto scroll = scrollarea->getVerticalScrollAmount();
+					const auto scroll = scrollarea->getVerticalScrollAmount();
 					scrollarea->setVerticalScrollAmount(scroll + 30);
 				}
 			}

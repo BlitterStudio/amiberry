@@ -19,8 +19,11 @@
 #include "fsdb_host.h"
 #include "xwin.h"
 
-#define DIALOG_WIDTH 600
-#define DIALOG_HEIGHT 200
+enum
+{
+	DIALOG_WIDTH = 600,
+	DIALOG_HEIGHT = 200
+};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -247,7 +250,7 @@ static void InitShowMessage(const std::string& message)
 
 static void ExitShowMessage()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	wndShowMessage->releaseModalFocus();
 	gui_top->remove(wndShowMessage);
@@ -508,12 +511,12 @@ static void navigate_left_right()
 
 static void ShowMessageLoop()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
-	didata* did = &di_joystick[0];
+	const didata* did = &di_joystick[0];
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -608,8 +611,8 @@ static void ShowMessageLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -622,8 +625,8 @@ static void ShowMessageLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -635,8 +638,8 @@ static void ShowMessageLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -677,7 +680,7 @@ static void ShowMessageLoop()
 bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3,
                  const std::string& button1, const std::string& button2)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -719,7 +722,7 @@ bool ShowMessage(const std::string& title, const std::string& line1, const std::
 
 amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	dialogResult = false;
 	dialogFinished = false;

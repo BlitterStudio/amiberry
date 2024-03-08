@@ -20,13 +20,16 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 520
-#define DIALOG_HEIGHT 600
+enum
+{
+	DIALOG_WIDTH = 520,
+	DIALOG_HEIGHT = 600
+};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
 static bool createNew = false;
-static char workingDir[MAX_DPATH];
+static std::string workingDir;
 static const char** filefilter;
 static int selectedOnStart = -1;
 
@@ -100,25 +103,23 @@ public:
 			const auto selected_item = lstFiles->getSelected();
 			if (createNew)
 			{
-				char tmp[MAX_DPATH];
 				if (txtFilename->getText().empty())
 					return;
-				strncpy(tmp, workingDir, MAX_DPATH - 1);
-				strncat(tmp, "/", MAX_DPATH - 1);
-				strncat(tmp, txtFilename->getText().c_str(), MAX_DPATH - 2);
-				if (strstr(tmp, filefilter[0]) == nullptr)
-					strncat(tmp, filefilter[0], MAX_DPATH - 1);
-				if (my_existsfile2(tmp) == 1)
+				std::string tmp = workingDir.append("/").append(txtFilename->getText());
+
+				if (tmp.find(filefilter[0]) == std::string::npos)
+					tmp = tmp.append(filefilter[0]);
+
+				if (my_existsfile2(tmp.c_str()) == 1)
 					return; // File already exists
-				strncpy(workingDir, tmp, MAX_DPATH - 1);
+				workingDir = tmp;
 				dialogResult = true;
 			}
 			else
 			{
 				if (fileList->isDir(selected_item))
 					return; // Directory selected -> Ok not possible
-				strncat(workingDir, "/", MAX_DPATH - 1);
-				strncat(workingDir, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 2);
+				workingDir = workingDir.append("/").append(fileList->getElementAt(selected_item));
 				dialogResult = true;
 			}
 		}
@@ -128,30 +129,30 @@ public:
 
 static FileButtonActionListener* fileButtonActionListener;
 
-static void checkfoldername(char* current)
+static void checkfoldername(const std::string& current)
 {
-	char actualpath[MAX_DPATH];
 	DIR* dir;
 
-	if ((dir = opendir(current)))
+	if ((dir = opendir(current.c_str())))
 	{
-		fileList->changeDir(current);
-		auto* const ptr = realpath(current, actualpath);
-		strncpy(workingDir, ptr, MAX_DPATH);
+		char actualpath[MAX_DPATH];
+		fileList->changeDir(current.c_str());
+		auto* const ptr = realpath(current.c_str(), actualpath);
+		workingDir = std::string(ptr);
 		closedir(dir);
 	}
 	else
 	{
-		strncpy(workingDir, start_path_data, MAX_DPATH);
-		fileList->changeDir(workingDir);
+		workingDir = start_path_data;
+		fileList->changeDir(workingDir.c_str());
 	}
 	txtCurrent->setText(workingDir);
 }
 
-static void checkfilename(char* current)
+static void checkfilename(std::string current)
 {
 	char actfile[MAX_DPATH];
-	extract_filename(current, actfile);
+	extract_filename(current.c_str(), actfile);
 	for (auto i = 0; i < fileList->getNumberOfElements(); ++i)
 	{
 		if (!fileList->isDir(i) && !stricmp(fileList->getElementAt(i).c_str(), actfile))
@@ -168,17 +169,15 @@ class SelectFileActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char foldername[MAX_DPATH] = "";
+		std::string foldername = "";
 
 		const auto selected_item = lstFiles->getSelected();
-		strncpy(foldername, workingDir, MAX_DPATH);
-		strncat(foldername, "/", MAX_DPATH - 1);
-		strncat(foldername, fileList->getElementAt(selected_item).c_str(), MAX_DPATH - 2);
+		foldername = workingDir.append("/").append(fileList->getElementAt(selected_item));
 		if (fileList->isDir(selected_item))
 			checkfoldername(foldername);
 		else if (!createNew)
 		{
-			strncpy(workingDir, foldername, sizeof workingDir);
+			workingDir = foldername;
 			dialogResult = true;
 			dialogFinished = true;
 		}
@@ -190,16 +189,14 @@ static SelectFileActionListener* selectFileActionListener;
 class EditFilePathActionListener : public gcn::ActionListener
 {
 public:
-	void action(const gcn::ActionEvent& actionEvent)
+	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char tmp[MAX_DPATH];
-		strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
-		checkfoldername(tmp);
+		checkfoldername(txtCurrent->getText());
 	}
 };
 static EditFilePathActionListener* editFilePathActionListener;
 
-static void InitSelectFile(const char* title)
+static void InitSelectFile(const std::string& title)
 {
 	wndSelectFile = new gcn::Window("Load");
 	wndSelectFile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -250,7 +247,7 @@ static void InitSelectFile(const char* title)
 
 	if (createNew)
 	{
-		scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, 272 - TEXTFIELD_HEIGHT - DISTANCE_NEXT_Y);
+		scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128 - TEXTFIELD_HEIGHT - DISTANCE_NEXT_Y);
 		lblFilename = new gcn::Label("Filename:");
 		lblFilename->setSize(80, LABEL_HEIGHT);
 		lblFilename->setAlignment(gcn::Graphics::LEFT);
@@ -273,8 +270,15 @@ static void InitSelectFile(const char* title)
 
 	wndSelectFile->requestModalFocus();
 	focus_bug_workaround(wndSelectFile);
-	lstFiles->requestFocus();
-	lstFiles->setSelected(0);
+	if (createNew)
+	{
+		txtFilename->requestFocus();
+	}
+	else
+	{
+		lstFiles->requestFocus();
+		lstFiles->setSelected(0);
+	}
 }
 
 static void ExitSelectFile()
@@ -304,8 +308,8 @@ static void ExitSelectFile()
 
 static void navigate_right()
 {
-	auto* const focus_hdl = gui_top->_getFocusHandler();
-	auto* const active_widget = focus_hdl->getFocused();
+	const auto* const focus_hdl = gui_top->_getFocusHandler();
+	const auto* const active_widget = focus_hdl->getFocused();
 	if (active_widget == lstFiles)
 		if (createNew)
 			txtFilename->requestFocus();
@@ -321,8 +325,8 @@ static void navigate_right()
 
 static void navigate_left()
 {
-	auto* const focus_hdl = gui_top->_getFocusHandler();
-	auto* const active_widget = focus_hdl->getFocused();
+	const auto* const focus_hdl = gui_top->_getFocusHandler();
+	const auto* const active_widget = focus_hdl->getFocused();
 	if (active_widget == lstFiles)
 		cmdCancel->requestFocus();
 	else if (active_widget == cmdCancel)
@@ -338,7 +342,7 @@ static void navigate_left()
 
 static void SelectFileLoop()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	auto got_event = 0;
 	SDL_Event event;
@@ -587,9 +591,9 @@ static void SelectFileLoop()
 	}
 }
 
-bool SelectFile(const char* title, char* value, const char* filter[], const bool create)
+std::string SelectFile(const std::string& title, std::string value, const char* filter[], const bool create)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -599,7 +603,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 
 	InitSelectFile(title);
 
-	extract_path(value, workingDir);
+	workingDir = extract_path(value);
 	checkfoldername(workingDir);
 	checkfilename(value);
 
@@ -626,7 +630,7 @@ bool SelectFile(const char* title, char* value, const char* filter[], const bool
 	ExitSelectFile();
 
 	if (dialogResult)
-		strncpy(value, workingDir, MAX_DPATH);
+		value = workingDir;
 
-	return dialogResult;
+	return value;
 }

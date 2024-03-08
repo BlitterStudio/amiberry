@@ -141,7 +141,7 @@ void InitPanelPrio(const config_category& category)
 {
 	prioActionListener = new PrioActionListener();
 
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 
 	lblActiveRunAtPrio = new gcn::Label("Run at priority:");
 	lblActiveRunAtPrio->setAlignment(gcn::Graphics::CENTER);

@@ -1024,8 +1024,8 @@ void InitPanelExpansions(const config_category& category)
 	chkSana2->addActionListener(expansions_action_listener);
 	chkSana2->setEnabled(false); //TODO enable this when SANA2 support is implemented
 	
-	auto posY = DISTANCE_BORDER;
-	auto posX = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
+	int posX = DISTANCE_BORDER;
 	
 	grpExpansionBoard = new gcn::Window("Expansion Board Settings");
 	grpExpansionBoard->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);

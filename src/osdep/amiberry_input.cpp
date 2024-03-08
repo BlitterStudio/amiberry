@@ -738,9 +738,8 @@ static int init_kb()
 	if (retroarch_inited) return 1;
 	
 	// Check if we have a Retroarch file
-	char retroarch_file[MAX_DPATH];
-	get_retroarch_file(retroarch_file, MAX_DPATH);
-	if (my_existsfile2(retroarch_file))
+	std::string retroarch_file = get_retroarch_file();
+	if (my_existsfile2(retroarch_file.c_str()))
 	{
 		// Add as many keyboards as joysticks that are setup
 		// on arcade machines, you could have a 4 player ipac using all keyboard buttons
@@ -841,17 +840,15 @@ static int init_joystick()
 		num_joystick = MAX_INPUT_DEVICES;
 
 	// set up variables / paths etc.
-	char controllers_path[MAX_DPATH];
-	get_controllers_path(controllers_path, MAX_DPATH);
+	std::string controllers = get_controllers_path();
 
 	char cfg[MAX_DPATH];
 	get_configuration_path(cfg, MAX_DPATH);
 	strcat(cfg, "gamecontrollerdb.txt");
 	SDL_GameControllerAddMappingsFromFile(cfg);
 
-	get_controllers_path(cfg, MAX_DPATH);
-	strcat(cfg, "gamecontrollerdb_user.txt");
-	SDL_GameControllerAddMappingsFromFile(cfg);
+	controllers.append("gamecontrollerdb_user.txt");
+	SDL_GameControllerAddMappingsFromFile(controllers.c_str());
 	
 	// Possible scenarios:
 	// 1 - Controller is an SDL2 Game Controller, no retroarch file: we use the default mapping
@@ -973,7 +970,7 @@ static int init_joystick()
 		fixbuttons(did);
 		fixthings(did);
 
-		auto retroarch_config_file = std::string(controllers_path);
+		auto retroarch_config_file = controllers;
 		auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
 		retroarch_config_file += sanitized_name.append(".cfg") ;
 		write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
@@ -983,15 +980,14 @@ static int init_joystick()
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
 			fill_blank_controller();
 			did->mapping = default_controller_map;
-			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file.data(), -1);
+			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
 		}
 		else
 		{
 			write_log("No Retroarch controller cfg file found, checking for mapping in retroarch.cfg\n");
 			// Check if values are in retroarch.cfg
-			char retroarch_file[MAX_DPATH];
-			get_retroarch_file(retroarch_file, MAX_DPATH);
-			if (my_existsfile2(retroarch_file))
+			std::string retroarch_file = get_retroarch_file();
+			if (my_existsfile2(retroarch_file.c_str()))
 			{
 				int found_player = -1;
 				for (auto p = 1; p < 5; p++) 

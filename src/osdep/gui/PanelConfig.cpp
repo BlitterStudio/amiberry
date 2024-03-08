@@ -35,7 +35,7 @@ static gcn::StringListModel configsList;
 static void InitConfigsList()
 {
 	configsList.clear();
-	for (auto& i : ConfigFilesList)
+	for (const auto& i : ConfigFilesList)
 	{
 		char tmp[MAX_DPATH];
 		strncpy(tmp, i->Name, MAX_DPATH);
@@ -193,8 +193,8 @@ void InitPanelConfig(const struct config_category& category)
 	cmdDelete->setId("CfgDelete");
 	cmdDelete->addActionListener(configButtonActionListener);
 
-	int list_width = category.panel->getWidth() - 2 * DISTANCE_BORDER - SCROLLBAR_WIDTH - 2;
-	int list_height = category.panel->getHeight() - 2 * DISTANCE_BORDER - 2 * lblName->getHeight() - 3 * DISTANCE_NEXT_Y - 2 * BUTTON_HEIGHT;
+	const int list_width = category.panel->getWidth() - 2 * DISTANCE_BORDER - SCROLLBAR_WIDTH - 2;
+	const int list_height = category.panel->getHeight() - 2 * DISTANCE_BORDER - 2 * lblName->getHeight() - 3 * DISTANCE_NEXT_Y - 2 * BUTTON_HEIGHT;
 	lstConfigs = new gcn::ListBox(&configsList);
 	lstConfigs->setSize(list_width, list_height);
 	lstConfigs->setBaseColor(colTextboxBackground);
@@ -218,7 +218,7 @@ void InitPanelConfig(const struct config_category& category)
 	category.panel->add(lblDesc, DISTANCE_BORDER, txtName->getY() + txtName->getHeight() + DISTANCE_NEXT_Y);
 	category.panel->add(txtDesc, DISTANCE_BORDER + lblDesc->getWidth() + 8, lblDesc->getY());
 
-	auto button_x = DISTANCE_BORDER;
+	int button_x = DISTANCE_BORDER;
 	const auto buttonY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 	category.panel->add(cmdLoad, button_x, buttonY);
 	button_x += BUTTON_WIDTH + DISTANCE_NEXT_X;

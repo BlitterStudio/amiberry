@@ -524,7 +524,7 @@ void InitPanelSound(const config_category& category)
 	grpSoundBufferSize->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpSoundBufferSize->setBaseColor(gui_baseCol);
 	
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 	category.panel->add(cboSoundcard, DISTANCE_BORDER, posY);
 	posY += cboSoundcard->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);

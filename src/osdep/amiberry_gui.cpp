@@ -414,20 +414,20 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 
 void disk_selection(const int drive, uae_prefs* prefs)
 {
-	char tmp[MAX_DPATH];
+	std::string tmp;
 
 	if (strlen(prefs->floppyslots[drive].df) > 0)
-		strncpy(tmp, prefs->floppyslots[drive].df, MAX_DPATH);
+		tmp = std::string(prefs->floppyslots[drive].df);
 	else
-		strncpy(tmp, current_dir, MAX_DPATH);
-	if (SelectFile("Select disk image file", tmp, diskfile_filter))
+		tmp = current_dir;
+	tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
 	{
-		if (strncmp(prefs->floppyslots[drive].df, tmp, MAX_DPATH) != 0)
+		if (strncmp(prefs->floppyslots[drive].df, tmp.c_str(), MAX_DPATH) != 0)
 		{
-			strncpy(prefs->floppyslots[drive].df, tmp, MAX_DPATH);
-			disk_insert(drive, tmp);
-			AddFileToDiskList(tmp, 1);
-			extract_path(tmp, current_dir);
+			strncpy(prefs->floppyslots[drive].df, tmp.c_str(), MAX_DPATH);
+			disk_insert(drive, tmp.c_str());
+			AddFileToDiskList(tmp.c_str(), 1);
+			current_dir = extract_path(tmp);
 		}
 	}
 }
@@ -531,7 +531,7 @@ int gui_update()
 	char tmp[MAX_DPATH];
 
 	get_savestate_path(savestate_fname, MAX_DPATH - 1);
-	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
+	screenshot_filename = get_screenshot_path();
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extract_filename(currprefs.floppyslots[0].df, tmp);
@@ -539,7 +539,7 @@ int gui_update()
 		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
 
 	strncat(savestate_fname, tmp, MAX_DPATH - 1);
-	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
+	screenshot_filename.append(std::string(tmp));
 	remove_file_extension(savestate_fname);
 	remove_file_extension(screenshot_filename);
 
@@ -547,63 +547,63 @@ int gui_update()
 	{
 		case 1:
 			strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename,"-1.png", MAX_DPATH - 1);
+			screenshot_filename.append("-1.png");
 			break;
 		case 2:
 			strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename,"-2.png", MAX_DPATH - 1);
+			screenshot_filename.append("-2.png");
 			break;
 		case 3:
 			strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename,"-3.png", MAX_DPATH - 1);
+			screenshot_filename.append("-3.png");
 			break;
 		case 4:
 			strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-4.png", MAX_DPATH - 1);
+			screenshot_filename.append("-4.png");
 			break;
 		case 5:
 			strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-5.png", MAX_DPATH - 1);
+			screenshot_filename.append("-5.png");
 			break;
 		case 6:
 			strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-6.png", MAX_DPATH - 1);
+			screenshot_filename.append("-6.png");
 			break;
 		case 7:
 			strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-7.png", MAX_DPATH - 1);
+			screenshot_filename.append("-7.png");
 			break;
 		case 8:
 			strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-8.png", MAX_DPATH - 1);
+			screenshot_filename.append("-8.png");
 			break;
 		case 9:
 			strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-9.png", MAX_DPATH - 1);
+			screenshot_filename.append("-9.png");
 			break;
 		case 10:
 			strncat(savestate_fname, "-10.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-10.png", MAX_DPATH - 1);
+			screenshot_filename.append("-10.png");
 			break;
 		case 11:
 			strncat(savestate_fname, "-11.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-11.png", MAX_DPATH - 1);
+			screenshot_filename.append("-11.png");
 			break;
 		case 12:
 			strncat(savestate_fname, "-12.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-12.png", MAX_DPATH - 1);
+			screenshot_filename.append("-12.png");
 			break;
 		case 13:
 			strncat(savestate_fname, "-13.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-13.png", MAX_DPATH - 1);
+			screenshot_filename.append("-13.png");
 			break;
 		case 14:
 			strncat(savestate_fname, "-14.uss", MAX_DPATH - 1);
-			strncat(screenshot_filename, "-14.png", MAX_DPATH - 1);
+			screenshot_filename.append("-14.png");
 			break;
 		default:
 			strncat(savestate_fname,".uss", MAX_DPATH - 1);
-			strncat(screenshot_filename,".png", MAX_DPATH - 1);
+			screenshot_filename.append(".png");
 	}
 	return 0;
 }
@@ -1171,9 +1171,8 @@ void DisplayDiskInfo(int num)
 
 void save_mapping_to_file(std::string mapping)
 {
-	char filename[MAX_DPATH];
-	get_controllers_path(filename, MAX_DPATH);
-	strcat(filename, "gamecontrollerdb_user.txt");
+	std::string filename = get_controllers_path();
+	filename.append("gamecontrollerdb_user.txt");
 
 	std::ofstream file_output; // out file stream
 	file_output.open(filename, ios::app);

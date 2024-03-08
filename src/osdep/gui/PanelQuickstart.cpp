@@ -304,21 +304,21 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
 		{
-			char tmp[MAX_DPATH];
+			std::string tmp;
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
-				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
+				tmp = std::string(changed_prefs.cdslots[0].name);
 			else
-				strncpy(tmp, current_dir, MAX_DPATH);
+				tmp = current_dir;
 
-			if (SelectFile("Select CD image file", tmp, cdfile_filter))
+			tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
 			{
-				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
+				if (strncmp(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp, MAX_DPATH);
+					strncpy(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-					AddFileToCDList(tmp, 1);
-					extract_path(tmp, current_dir);
+					AddFileToCDList(tmp.c_str(), 1);
+					current_dir = extract_path(tmp);
 
 					RefreshCDListModel();
 					AdjustDropDownControls();
@@ -433,15 +433,15 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdWhdloadSelect)
 		{
-			char tmp[MAX_DPATH];
+			std::string tmp;
 			if (strlen(whdload_file) > 0)
-				strncpy(tmp, whdload_file, MAX_DPATH);
+				tmp = std::string(whdload_file);
 			else
-				get_whdload_arch_path(tmp, MAX_DPATH);
+				tmp = get_whdload_arch_path();
 
-			if (SelectFile("Select WHDLoad LHA file", tmp, whdload_filter))
+			tmp = SelectFile("Select WHDLoad LHA file", tmp, whdload_filter);
 			{
-				strncpy(whdload_file, tmp, MAX_DPATH);
+				strncpy(whdload_file, tmp.c_str(), MAX_DPATH);
 				AddFileToWHDLoadList(whdload_file, 1);
 				RefreshWhdListModel();
 				whdload_auto_prefs(&changed_prefs, whdload_file);
@@ -630,22 +630,22 @@ public:
 				//---------------------------------------
 				// Select disk for drive
 				//---------------------------------------
-				char tmp[MAX_DPATH];
+				std::string tmp;
 
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					strncpy(tmp, changed_prefs.floppyslots[i].df, MAX_DPATH);
+					tmp = std::string(changed_prefs.floppyslots[i].df);
 				else
-					strncpy(tmp, current_dir, MAX_DPATH);
-				if (SelectFile("Select disk image file", tmp, diskfile_filter))
+					tmp = current_dir;
+				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
 				{
-					if (strncmp(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH) != 0)
+					if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
 					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp, MAX_DPATH);
-						disk_insert(i, tmp);
-						AddFileToDiskList(tmp, 1);
-						extract_path(tmp, current_dir);
+						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
+						disk_insert(i, tmp.c_str());
+						AddFileToDiskList(tmp.c_str(), 1);
+						current_dir = extract_path(tmp);
 						RefreshDiskListModel();
-						extract_path(tmp, current_dir);
+						current_dir = extract_path(tmp);
 
 						AdjustDropDownControls();
 					}
@@ -722,7 +722,7 @@ static QuickstartModeActionListener* quickstartModeActionListener;
 void InitPanelQuickstart(const config_category& category)
 {
 	int posX;
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 
 	amigaModelList.clear();
 	for (int i = 0; i < numModels; ++i)

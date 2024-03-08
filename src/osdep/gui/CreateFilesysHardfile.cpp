@@ -14,8 +14,11 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 620
-#define DIALOG_HEIGHT 202
+enum
+{
+	DIALOG_WIDTH = 620,
+	DIALOG_HEIGHT = 202
+};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -43,10 +46,8 @@ public:
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
-			char tmp[MAX_DPATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
 			wndCreateFilesysHardfile->releaseModalFocus();
-			if (SelectFile("Create harddisk file", tmp, harddisk_filter, true))
+			const std::string tmp = SelectFile("Create hard disk file", txtPath->getText(), harddisk_filter, true);
 			{
 				txtPath->setText(tmp);
 				fileSelected = true;
@@ -203,7 +204,7 @@ static void CreateFilesysHardfileLoop()
 {
 	//FocusBugWorkaround(wndCreateFilesysHardfile);
 
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	int got_event = 0;
 	SDL_Event event;
@@ -381,8 +382,8 @@ static void CreateFilesysHardfileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -395,8 +396,8 @@ static void CreateFilesysHardfileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -408,8 +409,8 @@ static void CreateFilesysHardfileLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -471,9 +472,8 @@ static void CreateFilesysHardfileLoop()
 
 bool CreateFilesysHardfile()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
-	std::string strroot;
 	char tmp[32];
 	char zero = 0;
 
@@ -484,9 +484,7 @@ bool CreateFilesysHardfile()
 
 	CreateDefaultDevicename(tmp);
 	txtDevice->setText(tmp);
-	strroot.assign(current_dir);
-	strroot.append("/");
-	txtPath->setText(strroot);
+	txtPath->setText(current_dir);
 	fileSelected = false;
 
 	txtBootPri->setText("0");

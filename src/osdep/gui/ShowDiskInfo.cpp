@@ -13,8 +13,11 @@
 #include "gui_handling.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 600
-#define DIALOG_HEIGHT 460
+enum
+{
+	DIALOG_WIDTH = 600,
+	DIALOG_HEIGHT = 460
+};
 
 static bool dialog_finished = false;
 
@@ -100,12 +103,12 @@ static void ExitShowDiskInfo()
 
 static void ShowDiskInfoLoop()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	auto got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
-	didata* did = &di_joystick[0];
+	const didata* did = &di_joystick[0];
 
 	while (SDL_PollEvent(&event))
 	{
@@ -158,8 +161,8 @@ static void ShowDiskInfoLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -172,8 +175,8 @@ static void ShowDiskInfoLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -185,8 +188,8 @@ static void ShowDiskInfoLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -230,7 +233,7 @@ static void ShowDiskInfoLoop()
 
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	dialog_finished = false;
 

@@ -377,14 +377,14 @@ void RefreshPanelSavestate()
 		}
 	}
 
-	if (strlen(screenshot_filename) > 0)
+	if (screenshot_filename.length() > 0)
 	{
-		auto* const f = fopen(screenshot_filename, "rbe");
+		auto* const f = fopen(screenshot_filename.c_str(), "rbe");
 		if (f)
 		{
 			fclose(f);
 			const auto rect = grpScreenshot->getChildrenArea();
-			auto* loadedImage = IMG_Load(screenshot_filename);
+			auto* loadedImage = IMG_Load(screenshot_filename.c_str());
 			if (loadedImage != nullptr)
 			{
 				SDL_Rect source = {0, 0, 0, 0};
