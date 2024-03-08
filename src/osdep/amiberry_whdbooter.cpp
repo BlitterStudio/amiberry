@@ -255,7 +255,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	if (!my_existsdir(kick_path)) {
 		// otherwise, use the old route
 		whdbooter_path = get_whdbootpath();
-		_sntprintf(kick_path, MAX_DPATH, _T("%sgame-data/Devs/Kickstarts"), whdbooter_path);
+		_sntprintf(kick_path, MAX_DPATH, _T("%sgame-data/Devs/Kickstarts"), whdbooter_path.c_str());
 	}
 	write_log("WHDBoot - using kickstarts from %s\n", kick_path);
 
@@ -977,9 +977,9 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbooter_path);
+		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbooter_path.c_str());
 		if (!my_existsfile2(boot_path))
-			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path);
+			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path.c_str());
 
 		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
@@ -989,9 +989,9 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 	}
 	else // revert to original booter is no slave was set
 	{
-		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbooter_path);
+		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbooter_path.c_str());
 		if (!my_existsfile2(boot_path))
-			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path);
+			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path.c_str());
 
 		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
@@ -1067,13 +1067,13 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	remove(whd_startup);
 
 	// LOAD HOST OPTIONS
-	_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbooter_path);
+	_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbooter_path.c_str());
 
 	// are we using save-data/ ?
 	_sntprintf(kick_path, MAX_DPATH, "%s/Kickstarts", save_path);
 
 	// LOAD GAME SPECIFICS
-	_sntprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbooter_path);
+	_sntprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbooter_path.c_str());
 	game_options game_detail;
 
 	_tcscpy(whd_config, whd_path);
@@ -1098,11 +1098,11 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	if (my_existsfile2(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/amiberry/
-		_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbooter_path);
+		_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbooter_path.c_str());
 		symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
-		_sntprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdbooter_path);
+		_sntprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdbooter_path.c_str());
 		symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
 
 		// create a symlink for DEVS in /tmp/amiberry/
