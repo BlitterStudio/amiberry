@@ -239,21 +239,21 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdCDSelectFile)
 		{
-			char tmp[MAX_DPATH];
+			std::string tmp;
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
-				strncpy(tmp, changed_prefs.cdslots[0].name, MAX_DPATH);
+				tmp = std::string(changed_prefs.cdslots[0].name);
 			else
-				strncpy(tmp, current_dir, MAX_DPATH);
+				tmp = current_dir;
 
-			if (SelectFile("Select CD image file", tmp, cdfile_filter))
+			tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
 			{
-				if (strncmp(changed_prefs.cdslots[0].name, tmp, MAX_DPATH) != 0)
+				if (strncmp(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp, sizeof changed_prefs.cdslots[0].name);
+					strncpy(changed_prefs.cdslots[0].name, tmp.c_str(), sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-					AddFileToCDList(tmp, 1);
-					extract_path(tmp, current_dir);
+					AddFileToCDList(tmp.c_str(), 1);
+					current_dir = extract_path(tmp);
 
 					RefreshCDListModel();
 					AdjustDropDownControls();

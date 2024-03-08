@@ -15,8 +15,11 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 550
-#define DIALOG_HEIGHT 202
+enum
+{
+	DIALOG_WIDTH = 550,
+	DIALOG_HEIGHT = 202
+};
 
 extern std::string volName;
 
@@ -45,17 +48,15 @@ public:
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
-			char tmp[MAX_DPATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
 			wndEditFilesysVirtual->releaseModalFocus();
-			if (SelectFolder("Select folder", tmp))
+			const std::string tmp = SelectFolder("Select folder", txtPath->getText());
 			{
 				txtPath->setText(tmp);
 				txtVolume->setText(volName);
 				default_fsvdlg(&current_fsvdlg);
 				CreateDefaultDevicename(current_fsvdlg.ci.devname);
 				_tcscpy(current_fsvdlg.ci.volname, current_fsvdlg.ci.devname);
-				_tcscpy(current_fsvdlg.ci.rootdir, tmp);
+				_tcscpy(current_fsvdlg.ci.rootdir, tmp.c_str());
 			}
 			wndEditFilesysVirtual->requestModalFocus();
 			cmdPath->requestFocus();
@@ -150,7 +151,7 @@ static void InitEditFilesysVirtual()
 	chkReadWrite->setId("chkVirtRW");
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
-	chkAutoboot->setId("virtAutoboot");
+	chkAutoboot->setId("chkAutoboot");
 	chkAutoboot->addActionListener(filesysVirtualActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
@@ -158,8 +159,8 @@ static void InitEditFilesysVirtual()
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
 
-	auto posY = DISTANCE_BORDER;
-	auto posX = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
+	int posX = DISTANCE_BORDER;
 
 	wndEditFilesysVirtual->add(lblDevice, DISTANCE_BORDER, posY);
 	posX += lblDevice->getWidth() + 8;
@@ -222,7 +223,7 @@ static void EditFilesysVirtualLoop()
 {
 	//FocusBugWorkaround(wndEditFilesysVirtual);
 
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	int got_event = 0;
 	SDL_Event event;
@@ -399,8 +400,8 @@ static void EditFilesysVirtualLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -413,8 +414,8 @@ static void EditFilesysVirtualLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -426,8 +427,8 @@ static void EditFilesysVirtualLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -490,7 +491,7 @@ static void EditFilesysVirtualLoop()
 
 bool EditFilesysVirtual(const int unit_no)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	mountedinfo mi{};
 	uaedev_config_data* uci;
@@ -559,7 +560,7 @@ bool EditFilesysVirtual(const int unit_no)
 				filesys_eject(uci->configoffset);
 		}
 
-		extract_path((char*)txtPath->getText().c_str(), current_dir);
+		current_dir = extract_path(txtPath->getText());
 	}
 
 	ExitEditFilesysVirtual();

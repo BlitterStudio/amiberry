@@ -61,47 +61,47 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		char tmp[MAX_DPATH];
+		std::string path;
 
 		if (actionEvent.getSource() == cmdSystemROMs)
 		{
 			get_rom_path(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for System ROMs", tmp))
+			path = SelectFolder("Folder for System ROMs", std::string(tmp));
 			{
-				set_rom_path(tmp);
+				set_rom_path(path);
 			}
 			cmdSystemROMs->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdConfigPath)
 		{
 			get_configuration_path(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for configuration files", tmp))
+			path = SelectFolder("Folder for configuration files", std::string(tmp));
 			{
-				set_configuration_path(tmp);
+				set_configuration_path(path);
 			}
 			cmdConfigPath->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdNvramFiles)
 		{
 			get_nvram_path(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for NVRAM files", tmp))
+			path = SelectFolder("Folder for NVRAM files", std::string(tmp));
 			{
-				set_nvram_path(tmp);
+				set_nvram_path(path);
 			}
 			cmdNvramFiles->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdScreenshotFiles)
 		{
-			get_screenshot_path(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for Screenshot files", tmp))
+			path = SelectFolder("Folder for Screenshot files", get_screenshot_path());
 			{
-				set_screenshot_path(tmp);
+				set_screenshot_path(path);
 			}
 			cmdScreenshotFiles->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdStateFiles)
 		{
 			get_savestate_path(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for Save state files", tmp))
+			path = SelectFolder("Folder for Save state files", std::string(tmp));
 			{
 				set_savestate_path(tmp);
 			}
@@ -109,10 +109,9 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdControllersPath)
 		{
-			get_controllers_path(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for controller files", tmp))
+			path = SelectFolder("Folder for controller files", get_controllers_path());
 			{
-				set_controllers_path(tmp);
+				set_controllers_path(std::string(tmp));
 			}
 			cmdControllersPath->requestFocus();
 		}
@@ -120,8 +119,7 @@ public:
 		else if (actionEvent.getSource() == cmdRetroArchFile)
 		{
 			const char* filter[] = {"retroarch.cfg", "\0"};
-			get_retroarch_file(tmp, MAX_DPATH);
-			if (SelectFile("Select RetroArch Config File", tmp, filter))
+			path = SelectFile("Select RetroArch Config File", get_retroarch_file(), filter);
 			{
 				set_retroarch_file(tmp);
 			}
@@ -130,8 +128,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdWHDBootPath)
 		{
-			get_whdbootpath(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for WHDBoot files", tmp))
+			path = SelectFolder("Folder for WHDBoot files", get_whdbootpath());
 			{
 				set_whdbootpath(tmp);
 			}
@@ -140,10 +137,9 @@ public:
 
 		else if (actionEvent.getSource() == cmdWHDLoadArchPath)
 		{
-			get_whdload_arch_path(tmp, MAX_DPATH);
-			if (SelectFolder("Folder for WHDLoad Archives", tmp))
+			path = SelectFolder("Folder for WHDLoad Archives", get_whdload_arch_path());
 			{
-				set_whdload_arch_path(tmp);
+				set_whdload_arch_path(path);
 			}
 			cmdWHDLoadArchPath->requestFocus();
 		}
@@ -151,8 +147,7 @@ public:
 		else if (actionEvent.getSource() == cmdLogfilePath)
 		{
 			const char* filter[] = { "amiberry.log", "\0" };
-			get_logfile_path(tmp, MAX_DPATH);
-			if (SelectFile("Select Amiberry Log file", tmp, filter, true))
+			path = SelectFile("Select Amiberry Log file", get_logfile_path(), filter, true);
 			{
 				set_logfile_path(tmp);
 			}
@@ -301,8 +296,8 @@ static DownloadControllerDbActionListener* downloadControllerDbActionListener;
 
 void InitPanelPaths(const config_category& category)
 {
-	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
-	auto yPos = DISTANCE_BORDER;
+	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
+	int yPos = DISTANCE_BORDER;
 	folderButtonActionListener = new FolderButtonActionListener();
 
 	lblSystemROMs = new gcn::Label("System ROMs:");
@@ -575,27 +570,18 @@ void RefreshPanelPaths()
 	get_nvram_path(tmp, MAX_DPATH);
 	txtNvramFiles->setText(tmp);
 
-	get_screenshot_path(tmp, MAX_DPATH);
-	txtScreenshotFiles->setText(tmp);
+	txtScreenshotFiles->setText(get_screenshot_path());
 
 	get_savestate_path(tmp, MAX_DPATH);
 	txtStateFiles->setText(tmp);
 
-	get_controllers_path(tmp, MAX_DPATH);
-	txtControllersPath->setText(tmp);
-
-	get_retroarch_file(tmp, MAX_DPATH);
-	txtRetroArchFile->setText(tmp);
-
-	get_whdbootpath(tmp, MAX_DPATH);
-	txtWHDBootPath->setText(tmp);
-
-	get_whdload_arch_path(tmp, MAX_DPATH);
-	txtWHDLoadArchPath->setText(tmp);
+	txtControllersPath->setText(get_controllers_path());
+	txtRetroArchFile->setText(get_retroarch_file());
+	txtWHDBootPath->setText(get_whdbootpath());
+	txtWHDLoadArchPath->setText(get_whdload_arch_path());
 
 	chkEnableLogging->setSelected(get_logfile_enabled());
-	get_logfile_path(tmp, MAX_DPATH);
-	txtLogfilePath->setText(tmp);
+	txtLogfilePath->setText(get_logfile_path());
 	
 	lblLogfilePath->setEnabled(chkEnableLogging->isSelected());
 	txtLogfilePath->setEnabled(chkEnableLogging->isSelected());
@@ -606,7 +592,7 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
 {
         helptext.clear();
         helptext.emplace_back("Here you can configure the various paths for Amiberry resources. In normal usage,");
-        helptext.emplace_back("the default paths ahould work fine, however if you wish to change any path, you");
+        helptext.emplace_back("the default paths should work fine, however if you wish to change any path, you");
         helptext.emplace_back("can use the \"...\" button, to select the folder/path of your choosing. Details");
         helptext.emplace_back("for each path resource appear below.");
         helptext.emplace_back(" ");

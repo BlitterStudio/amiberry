@@ -62,7 +62,7 @@ public:
 		
 		if (action_event.getSource() == cboBoard)
 		{
-			auto selected_board = cboBoard->getSelected();
+			const auto selected_board = cboBoard->getSelected();
 			if (selected_board == 0)
 			{
 				changed_prefs.rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;
@@ -165,7 +165,7 @@ RTGActionListener* rtg_action_listener;
 
 void InitPanelRTG(const config_category& category)
 {
-	int marker_length = 20;
+	constexpr int marker_length = 20;
 
 	rtg_action_listener = new RTGActionListener();
 
@@ -261,7 +261,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtg32bitModes->setId("cboRtg32bitModes");
 	cboRtg32bitModes->addActionListener(rtg_action_listener);
 	
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 	
 	category.panel->add(lblBoard, DISTANCE_BORDER, posY);
 	category.panel->add(lblRtgColorModes, lblBoard->getX() + lblBoard->getWidth() + DISTANCE_NEXT_X * 18, posY);

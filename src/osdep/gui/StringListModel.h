@@ -1,5 +1,5 @@
 //
-// Created by midwan on 30/12/2023.
+// StringListModel for Amiberry's Guisan GUI
 //
 
 #ifndef STRINGLISTMODEL_H

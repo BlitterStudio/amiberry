@@ -100,7 +100,7 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 	UAE_DLHANDLE handle = uae_dlopen(path);
 #else
 	TCHAR path[MAX_DPATH];
-	std::string directory = string(start_path_data);
+	std::string directory = start_path_data;
 	_tcscpy(path, directory.append("/").append(name).c_str());
 #ifdef _WIN64
 	_tcscat(path, _T("_x64"));

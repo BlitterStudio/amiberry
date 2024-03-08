@@ -17,8 +17,11 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 620
-#define DIALOG_HEIGHT 320
+enum
+{
+	DIALOG_WIDTH = 620,
+	DIALOG_HEIGHT = 320
+};
 
 struct controller_map
 {
@@ -61,8 +64,8 @@ static gcn::DropDown *cboUnit;
 
 static void sethd(void)
 {
-	bool rdb = is_hdf_rdb();
-	bool enablegeo = !rdb;
+	const bool rdb = is_hdf_rdb();
+	const bool enablegeo = !rdb;
 	txtSectors->setEnabled(enablegeo);
 	txtSurfaces->setEnabled(enablegeo);
 	txtReserved->setEnabled(enablegeo);
@@ -157,7 +160,7 @@ void updatehdfinfo(bool force, bool defaults)
 	}
 
 	if (current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) {
-		if (current_hfdlg.ci.unit_feature_level == HD_LEVEL_ATA_1 && bsize >= 4 * (uae_u64)0x40000000)
+		if (current_hfdlg.ci.unit_feature_level == HD_LEVEL_ATA_1 && bsize >= 4 * static_cast<uae_u64>(0x40000000))
 			current_hfdlg.ci.unit_feature_level = HD_LEVEL_ATA_2;
 	}
 }
@@ -172,10 +175,8 @@ public:
 	{
 		if (actionEvent.getSource() == cmdPath)
 		{
-			char tmp[MAX_DPATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
 			wndEditFilesysHardfile->releaseModalFocus();
-			if (SelectFile("Select harddisk file", tmp, harddisk_filter))
+			const std::string tmp = SelectFile("Select hard disk file", txtPath->getText(), harddisk_filter);
 			{
 				txtPath->setText(tmp);
 				fileSelected = true;
@@ -232,10 +233,9 @@ public:
 				}
 				dialogResult = true;
 			}
-			char tmp[MAX_DPATH];
-			strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
+
 			//default_hfdlg(&current_hfdlg);
-			_tcscpy(current_hfdlg.ci.rootdir, tmp);
+			_tcscpy(current_hfdlg.ci.rootdir, txtPath->getText().c_str());
 			// Set RDB mode if IDE or SCSI
 			if (current_hfdlg.ci.controller_type > 0) {
 				current_hfdlg.ci.sectors = current_hfdlg.ci.reserved = current_hfdlg.ci.surfaces = 0;
@@ -255,11 +255,11 @@ static FilesysHardfileActionListener *filesysHardfileActionListener;
 class FilesysHardfileFocusListener : public gcn::FocusListener
 {
 public:
-	void focusGained(const gcn::Event& event)
+	void focusGained(const gcn::Event& event) override
 	{
 	}
 
-	void focusLost(const gcn::Event& event)
+	void focusLost(const gcn::Event& event) override
 	{
 		int v;
 		int* p;
@@ -526,11 +526,8 @@ static void EditFilesysHardfileLoop()
 {
 	//FocusBugWorkaround(wndEditFilesysHardfile);
 
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
-	char lastActiveWidget[128];
-	strcpy(lastActiveWidget, "");
-	
 	int got_event = 0;
 	SDL_Event event;
 	SDL_Event touch_event;
@@ -718,8 +715,8 @@ static void EditFilesysHardfileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -732,8 +729,8 @@ static void EditFilesysHardfileLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -745,8 +742,8 @@ static void EditFilesysHardfileLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -809,11 +806,10 @@ static void EditFilesysHardfileLoop()
 
 bool EditFilesysHardfile(const int unit_no)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	mountedinfo mi{};
 	uaedev_config_data *uci;
-	std::string strdevname, strroot;
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -856,7 +852,7 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (dialogResult)
 	{
-		extract_path(const_cast<char *>(txtPath->getText().c_str()), current_dir);
+		current_dir = extract_path(txtPath->getText());
 		uaedev_config_info ci{};
 
 		memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));

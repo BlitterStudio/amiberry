@@ -502,7 +502,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyMinimizeClear->setId("cmdKeyMinimizeClear");
 	cmdKeyMinimizeClear->addActionListener(miscActionListener);
 
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpMiscOptions->setBaseColor(gui_baseCol);
 	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);

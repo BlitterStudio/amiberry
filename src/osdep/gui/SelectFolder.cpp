@@ -18,13 +18,16 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 520
-#define DIALOG_HEIGHT 600
+enum
+{
+	DIALOG_WIDTH = 520,
+	DIALOG_HEIGHT = 600
+};
 
 std::string volName;
 static bool dialogResult = false;
 static bool dialogFinished = false;
-static char workingDir[MAX_DPATH];
+static std::string workingDir;
 
 static gcn::Window* wndSelectFolder;
 static gcn::Button* cmdOK;
@@ -55,14 +58,14 @@ class SelectDirListModel : public gcn::ListModel
 	std::vector<std::string> dirs{};
 
 public:
-	SelectDirListModel(const char* path)
+	SelectDirListModel(const std::string& path)
 	{
 		changeDir(path);
 	}
 
 	int getNumberOfElements() override
 	{
-		return int(dirs.size());
+		return static_cast<int>(dirs.size());
 	}
 
 	void add(const std::string& elem) override
@@ -77,12 +80,12 @@ public:
 	
 	std::string getElementAt(const int i) override
 	{
-		if (i >= int(dirs.size()) || i < 0)
+		if (i >= static_cast<int>(dirs.size()) || i < 0)
 			return "---";
 		return dirs[i];
 	}
 
-	void changeDir(const char* path)
+	void changeDir(const std::string& path)
 	{
 		read_directory(path, &dirs, nullptr);
 		if (dirs.empty())
@@ -92,21 +95,21 @@ public:
 
 static SelectDirListModel dirList(".");
 
-static void checkfoldername(char* current)
+static void checkfoldername(const std::string& current)
 {
 	char actualpath [MAX_DPATH];
 	DIR* dir;
 
-	if ((dir = opendir(current)))
+	if ((dir = opendir(current.c_str())))
 	{
 		dirList = current;
-		auto* const ptr = realpath(current, actualpath);
-		strncpy(workingDir, ptr, MAX_DPATH);
+		auto* const ptr = realpath(current.c_str(), actualpath);
+		workingDir = std::string(ptr);
 		closedir(dir);
 	}
 	else
 	{
-		strncpy(workingDir, start_path_data, MAX_DPATH);
+		workingDir = start_path_data;
 		dirList = workingDir;
 	}
 	txtCurrent->setText(workingDir);
@@ -117,12 +120,11 @@ class ListBoxActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char foldername[MAX_DPATH] = "";
+		std::string foldername = "";
 
 		const auto selected_item = lstFolders->getSelected();
-		strncpy(foldername, workingDir, MAX_DPATH - 1);
-		strncat(foldername, "/", MAX_DPATH - 1);
-		strncat(foldername, dirList.getElementAt(selected_item).c_str(), MAX_DPATH - 2);
+		foldername = workingDir.append("/").append(dirList.getElementAt(selected_item));
+
 		volName = dirList.getElementAt(selected_item);
 		checkfoldername(foldername);
 	}
@@ -135,14 +137,12 @@ class EditDirPathActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char tmp[MAX_DPATH];
-		strncpy(tmp, txtCurrent->getText().c_str(), MAX_DPATH - 1);
-		checkfoldername(tmp);
+		checkfoldername(txtCurrent->getText());
 	}
 };
 static EditDirPathActionListener* editDirPathActionListener;
 
-static void InitSelectFolder(const char* title)
+static void InitSelectFolder(const std::string& title)
 {
 	wndSelectFolder = new gcn::Window("Load");
 	wndSelectFolder->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
@@ -222,8 +222,8 @@ static void ExitSelectFolder()
 
 static void navigate_right()
 {
-	auto* const focusHdl = gui_top->_getFocusHandler();
-	auto* const activeWidget = focusHdl->getFocused();
+	const auto* const focusHdl = gui_top->_getFocusHandler();
+	const auto* const activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFolders)
 		cmdOK->requestFocus();
 	else if (activeWidget == cmdCancel)
@@ -234,8 +234,8 @@ static void navigate_right()
 
 static void navigate_left()
 {
-	auto* const focusHdl = gui_top->_getFocusHandler();
-	auto* const activeWidget = focusHdl->getFocused();
+	const auto* const focusHdl = gui_top->_getFocusHandler();
+	const auto* const activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFolders)
 		cmdCancel->requestFocus();
 	else if (activeWidget == cmdCancel)
@@ -246,7 +246,7 @@ static void navigate_left()
 
 static void SelectFolderLoop()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	auto got_event = 0;
 	SDL_Event event;
@@ -412,8 +412,8 @@ static void SelectFolderLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -426,8 +426,8 @@ static void SelectFolderLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -439,8 +439,8 @@ static void SelectFolderLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -499,9 +499,9 @@ static void SelectFolderLoop()
 	}
 }
 
-bool SelectFolder(const char* title, char* value)
+std::string SelectFolder(const std::string& title, std::string value)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -526,8 +526,7 @@ bool SelectFolder(const char* title, char* value)
 
 	ExitSelectFolder();
 	if (dialogResult)
-	{
-		strncpy(value, workingDir, MAX_DPATH);
-	}
-	return dialogResult;
+		value = workingDir;
+
+	return value;
 }

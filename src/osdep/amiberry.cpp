@@ -13,6 +13,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <csignal>
+#include <iostream>
+#include <filesystem>
 
 #include <algorithm>
 #include <execinfo.h>
@@ -139,8 +141,8 @@ std::string get_sdl2_version_string()
 	SDL_VERSION(&compiled);
 	SDL_GetVersion(&linked);
 	std::ostringstream sdl_compiled;
-	sdl_compiled << "Compiled against SDL2 v" << int(compiled.major) << "." << int(compiled.minor) << "." << int(compiled.patch);
-	sdl_compiled << ", Linked against SDL2 v" << int(linked.major) << "." << int(linked.minor) << "." << int(linked.patch);
+	sdl_compiled << "Compiled against SDL2 v" << static_cast<int>(compiled.major) << "." << static_cast<int>(compiled.minor) << "." << static_cast<int>(compiled.patch);
+	sdl_compiled << ", Linked against SDL2 v" << static_cast<int>(linked.major) << "." << static_cast<int>(linked.minor) << "." << static_cast<int>(linked.patch);
 	return sdl_compiled.str();
 }
 
@@ -266,8 +268,8 @@ extern void signal_term(int signum, siginfo_t* info, void* ptr);
 
 extern void SetLastActiveConfig(const char* filename);
 
-char start_path_data[MAX_DPATH];
-char current_dir[MAX_DPATH];
+std::string start_path_data;
+std::string current_dir;
 
 #ifndef __MACH__
 #include <linux/kd.h>
@@ -278,24 +280,24 @@ char current_dir[MAX_DPATH];
 unsigned char kbd_led_status;
 char kbd_flags;
 
-static char config_path[MAX_DPATH];
-static char rom_path[MAX_DPATH];
-static char rp9_path[MAX_DPATH];
-static char controllers_path[MAX_DPATH];
-static char retroarch_file[MAX_DPATH];
-static char whdboot_path[MAX_DPATH];
-static char whdload_arch_path[MAX_DPATH];
-static char logfile_path[MAX_DPATH];
-static char floppy_sounds_dir[MAX_DPATH];
-static char data_dir[MAX_DPATH];
-static char saveimage_dir[MAX_DPATH];
-static char savestate_dir[MAX_DPATH];
-static char ripper_path[MAX_DPATH];
-static char input_dir[MAX_DPATH];
-static char screenshot_dir[MAX_DPATH];
-static char nvram_dir[MAX_DPATH];
-static char video_dir[MAX_DPATH];
-static char amiberry_conf_file[MAX_DPATH];
+std::string config_path;
+std::string rom_path;
+std::string rp9_path;
+std::string controllers_path;
+std::string retroarch_file;
+std::string whdboot_path;
+std::string whdload_arch_path;
+std::string logfile_path;
+std::string floppy_sounds_dir;
+std::string data_dir;
+std::string saveimage_dir;
+std::string savestate_dir;
+std::string ripper_path;
+std::string input_dir;
+std::string screenshot_dir;
+std::string nvram_dir;
+std::string video_dir;
+std::string amiberry_conf_file;
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -1671,8 +1673,6 @@ void logging_init()
 	if (amiberry_options.write_logfile)
 	{
 		static int first = 0;
-		char debug_filename[MAX_DPATH];
-
 		if (first > 1)
 		{
 			write_log("***** RESTART *****\n");
@@ -1685,9 +1685,8 @@ void logging_init()
 			debugfile = nullptr;
 		}
 
-		sprintf(debug_filename, "%s", logfile_path);
 		if (!debugfile)
-			debugfile = fopen(debug_filename, "wt");
+			debugfile = fopen(logfile_path.c_str(), "wt");
 
 		logging_started = 1;
 		first++;
@@ -1711,7 +1710,7 @@ uae_u8* save_log(int bootlog, size_t* len)
 
 	if (!logging_started)
 		return NULL;
-	f = fopen(logfile_path, _T("rb"));
+	f = fopen(logfile_path.c_str(), _T("rb"));
 	if (!f)
 		return NULL;
 	fseek(f, 0, SEEK_END);
@@ -1742,6 +1741,15 @@ void fix_trailing(TCHAR* p)
 	if (p[_tcslen(p) - 1] == '/' || p[_tcslen(p) - 1] == '\\')
 		return;
 	_tcscat(p, "/");
+}
+
+std::string fix_trailing(std::string& input)
+{
+	if (!input.empty() && input.back() != '/')
+	{
+		return input + "/";
+	}
+	return input;
 }
 
 // convert path to absolute
@@ -2741,27 +2749,6 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		return 1;
 	}
 
-//	if (cfgfile_string_escape(option, value, _T("midiout_device_name"), tmpbuf, 256)) {
-//		p->midioutdev = -2;
-//		if (!_tcsicmp (tmpbuf, _T("default")) || (midioutportinfo[0] && !_tcsicmp (tmpbuf, midioutportinfo[0]->name)))
-//			p->midioutdev = -1;
-//		for (int i = 0; i < MAX_MIDI_PORTS && midioutportinfo[i]; i++) {
-//			if (!_tcsicmp (midioutportinfo[i]->name, tmpbuf)) {
-//				p->midioutdev = midioutportinfo[i]->devid;
-//			}
-//		}
-//		return 1;
-//	}
-//	if (cfgfile_string_escape(option, value, _T("midiin_device_name"), tmpbuf, 256)) {
-//		p->midiindev = -1;
-//		for (int i = 0; i < MAX_MIDI_PORTS && midiinportinfo[i]; i++) {
-//			if (!_tcsicmp (midiinportinfo[i]->name, tmpbuf)) {
-//				p->midiindev = midiinportinfo[i]->devid;
-//			}
-//		}
-//		return 1;
-//	}
-
 	return 0;
 }
 
@@ -2788,68 +2775,64 @@ int target_parse_option(struct uae_prefs *p, const TCHAR *option, const TCHAR *v
 	return 0;
 }
 
-void get_data_path(char* out, int size)
+std::string get_data_path()
 {
-	fix_trailing(data_dir);
-	strncpy(out, data_dir, size - 1);
+	return fix_trailing(data_dir);
 }
 
 void get_saveimage_path(char* out, int size, int dir)
 {
-	fix_trailing(saveimage_dir);
-	strncpy(out, saveimage_dir, size - 1);
+	_tcsncpy(out, fix_trailing(saveimage_dir).c_str(), size - 1);
 }
 
 void get_configuration_path(char* out, int size)
 {
-	fix_trailing(config_path);
-	strncpy(out, config_path, size - 1);
+	_tcsncpy(out, fix_trailing(config_path).c_str(), size - 1);
 }
 
-void set_configuration_path(char* newpath)
+void set_configuration_path(const std::string& newpath)
 {
-	strncpy(config_path, newpath, MAX_DPATH - 1);
+	config_path = newpath;
 }
 
-void set_nvram_path(char* newpath)
+void set_nvram_path(const std::string& newpath)
 {
-	strncpy(nvram_dir, newpath, MAX_DPATH - 1);
+	nvram_dir = newpath;
 }
 
-void set_video_path(char* newpath)
+void set_video_path(const std::string& newpath)
 {
-	strncpy(video_dir, newpath, MAX_DPATH - 1);
+	video_dir = newpath;
 }
 
-void set_screenshot_path(char* newpath)
+void set_screenshot_path(const std::string& newpath)
 {
-	strncpy(screenshot_dir, newpath, MAX_DPATH - 1);
+	screenshot_dir = newpath;
 }
 
-void set_savestate_path(char* newpath)
+void set_savestate_path(const std::string& newpath)
 {
-	strncpy(savestate_dir, newpath, MAX_DPATH - 1);
+	savestate_dir = newpath;
 }
 
-void get_controllers_path(char* out, int size)
+std::string get_controllers_path()
 {
-	fix_trailing(controllers_path);
-	strncpy(out, controllers_path, size - 1);
+	return fix_trailing(controllers_path);
 }
 
-void set_controllers_path(char* newpath)
+void set_controllers_path(const std::string& newpath)
 {
-	strncpy(controllers_path, newpath, MAX_DPATH - 1);
+	controllers_path = newpath;
 }
 
-void get_retroarch_file(char* out, int size)
+std::string get_retroarch_file()
 {
-	strncpy(out, retroarch_file, size - 1);
+	return retroarch_file;
 }
 
-void set_retroarch_file(char* newpath)
+void set_retroarch_file(const std::string& newpath)
 {
-	strncpy(retroarch_file, newpath, MAX_DPATH - 1);
+	retroarch_file = newpath;
 }
 
 bool get_logfile_enabled()
@@ -2880,13 +2863,12 @@ int get_savedatapath(char* out, int size, const int force_internal)
 	int ret = 0;
 
 	if (const char* ep = force_internal ? NULL : getenv("WHDBOOT_SAVE_DATA"); ep != NULL) {
-		strncpy(out, ep, static_cast<size_t>(size) - 1);
+		_tcsncpy(out, ep, static_cast<size_t>(size) - 1);
 		ret = 1;
 	}
 	else {
-		char tmp[MAX_DPATH];
-		get_whdbootpath(tmp, MAX_DPATH);
-		strncpy(out, tmp, static_cast<size_t>(size) - 1);
+		const std::string tmp = get_whdbootpath();
+		_tcsncpy(out, tmp.c_str(), static_cast<size_t>(size) - 1);
 		strncat(out, "save-data", static_cast<size_t>(size) - 1);
 	}
 
@@ -2895,95 +2877,84 @@ int get_savedatapath(char* out, int size, const int force_internal)
 	return ret;
 }
 
-void get_whdbootpath(char* out, int size)
+std::string get_whdbootpath()
 {
-	fix_trailing(whdboot_path);
-	strncpy(out, whdboot_path, size - 1);
+	return fix_trailing(whdboot_path);
 }
 
-void set_whdbootpath(char* newpath)
+void set_whdbootpath(const std::string& newpath)
 {
-	strncpy(whdboot_path, newpath, MAX_DPATH - 1);
+	whdboot_path = newpath;
 }
 
-void get_whdload_arch_path(char* out, int size)
+std::string get_whdload_arch_path()
 {
-	fix_trailing(whdload_arch_path);
-	strncpy(out, whdload_arch_path, size - 1);
+	return fix_trailing(whdload_arch_path);
 }
 
-void set_whdload_arch_path(char* newpath)
+void set_whdload_arch_path(const std::string& newpath)
 {
-	strncpy(whdload_arch_path, newpath, MAX_DPATH - 1);
+	whdload_arch_path = newpath;
 }
 
-void get_logfile_path(char* out, int size)
+std::string get_logfile_path()
 {
-	strncpy(out, logfile_path, size - 1);
+	return logfile_path;
 }
 
-void set_logfile_path(char* newpath)
+void set_logfile_path(const std::string& newpath)
 {
-	strncpy(logfile_path, newpath, MAX_DPATH - 1);
+	logfile_path = newpath;
 }
 
 void get_rom_path(char* out, int size)
 {
-	fix_trailing(rom_path);
-	strncpy(out, rom_path, size - 1);
+	_tcsncpy(out, fix_trailing(rom_path).c_str(), size - 1);
 }
 
-void set_rom_path(char* newpath)
+void set_rom_path(const std::string& newpath)
 {
-	strncpy(rom_path, newpath, MAX_DPATH - 1);
+	rom_path = newpath;
 }
 
 void get_rp9_path(char* out, int size)
 {
-	fix_trailing(rp9_path);
-	strncpy(out, rp9_path, size - 1);
+	_tcsncpy(out, fix_trailing(rp9_path).c_str(), size - 1);
 }
 
 void get_savestate_path(char* out, int size)
 {
-	fix_trailing(savestate_dir);
-	strncpy(out, savestate_dir, size - 1);
+	_tcsncpy(out, fix_trailing(savestate_dir).c_str(), size - 1);
 }
 
 void fetch_ripperpath(TCHAR* out, int size)
 {
-	fix_trailing(ripper_path);
-	strncpy(out, ripper_path, size - 1);
+	_tcsncpy(out, fix_trailing(ripper_path).c_str(), size - 1);
 }
 
-void fetch_inputfilepath(TCHAR *out, int size)
+void fetch_inputfilepath(TCHAR* out, int size)
 {
-	fix_trailing(input_dir);
-	strncpy(out, input_dir, size - 1);
+	_tcsncpy(out, fix_trailing(input_dir).c_str(), size - 1);
 }
 
-void get_nvram_path(TCHAR *out, int size)
+void get_nvram_path(TCHAR* out, int size)
 {
-	fix_trailing(nvram_dir);
-	strncpy(out, nvram_dir, size - 1);
+	_tcsncpy(out, fix_trailing(nvram_dir).c_str(), size - 1);
 }
 
-void get_screenshot_path(char* out, int size)
+std::string get_screenshot_path()
 {
-	fix_trailing(screenshot_dir);
-	strncpy(out, screenshot_dir, size - 1);
+	return fix_trailing(screenshot_dir);
 }
 
 void get_video_path(char* out, int size)
 {
-	fix_trailing(video_dir);
-	strncpy(out, video_dir, size - 1);
+	_tcsncpy(out, fix_trailing(video_dir).c_str(), size - 1);
 }
 
 void get_floppy_sounds_path(char* out, int size)
 {
-	fix_trailing(floppy_sounds_dir);
-	_tcsncpy(out, floppy_sounds_dir, size - 1);
+	_tcsncpy(out, fix_trailing(floppy_sounds_dir).c_str(), size - 1);
 }
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
@@ -3069,6 +3040,12 @@ void extract_path(char* str, char* buffer)
 	p[1] = '\0';
 }
 
+std::string extract_path(const std::string& filename)
+{
+	const std::filesystem::path file_path(filename);
+	return file_path.parent_path().string();
+}
+
 void remove_file_extension(char* filename)
 {
 	auto* p = filename + strlen(filename) - 1;
@@ -3080,7 +3057,17 @@ void remove_file_extension(char* filename)
 	*p = '\0';
 }
 
-void read_directory(const char* path, std::vector<std::string>* dirs, std::vector<std::string>* files)
+std::string remove_file_extension(const std::string& filename)
+{
+	const size_t last_dot = filename.find_last_of(".");
+	if (last_dot == std::string::npos) {
+		// No extension found, return the original filename
+		return filename;
+	}
+	return filename.substr(0, last_dot);
+}
+
+void read_directory(const std::string path, std::vector<std::string>* dirs, std::vector<std::string>* files)
 {
 	struct dirent* dent;
 
@@ -3089,7 +3076,7 @@ void read_directory(const char* path, std::vector<std::string>* dirs, std::vecto
 	if (files != nullptr)
 		files->clear();
 
-	auto* const dir = opendir(path);
+	auto* const dir = opendir(path.c_str());
 	if (dir != nullptr)
 	{
 		while ((dent = readdir(dir)) != nullptr)
@@ -3132,7 +3119,7 @@ void read_directory(const char* path, std::vector<std::string>* dirs, std::vecto
 
 void save_amiberry_settings(void)
 {
-	auto* const f = fopen(amiberry_conf_file, "we");
+	auto* const f = fopen(amiberry_conf_file.c_str(), "we");
 	if (!f)
 		return;
 
@@ -3166,11 +3153,6 @@ void save_amiberry_settings(void)
 	// Disable controller in the GUI?
 	// If you want to disable the default behavior for some reason
 	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", amiberry_options.gui_joystick_control ? "yes" : "no");
-	fputs(buffer, f);
-
-	// Use a separate render thread under SDL2?
-	// This might give a performance boost, but it's not supported on all SDL2 back-ends
-	snprintf(buffer, MAX_DPATH, "use_sdl2_render_thread=%s\n", amiberry_options.use_sdl2_render_thread ? "yes" : "no");
 	fputs(buffer, f);
 
 	// Use a separate thread for drawing native chipset output
@@ -3384,58 +3366,58 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 
 	// Paths
-	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir);
+	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path);
+	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "controllers_path=%s\n", controllers_path);
+	snprintf(buffer, MAX_DPATH, "controllers_path=%s\n", controllers_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file);
+	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "whdboot_path=%s\n", whdboot_path);
+	snprintf(buffer, MAX_DPATH, "whdboot_path=%s\n", whdboot_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "whdload_arch_path=%s\n", whdload_arch_path);
+	snprintf(buffer, MAX_DPATH, "whdload_arch_path=%s\n", whdload_arch_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "logfile_path=%s\n", logfile_path);
+	snprintf(buffer, MAX_DPATH, "logfile_path=%s\n", logfile_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path);
+	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "rp9_path=%s\n", rp9_path);
+	snprintf(buffer, MAX_DPATH, "rp9_path=%s\n", rp9_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "floppy_sounds_dir=%s\n", floppy_sounds_dir);
+	snprintf(buffer, MAX_DPATH, "floppy_sounds_dir=%s\n", floppy_sounds_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "data_dir=%s\n", data_dir);
+	snprintf(buffer, MAX_DPATH, "data_dir=%s\n", data_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "saveimage_dir=%s\n", saveimage_dir);
+	snprintf(buffer, MAX_DPATH, "saveimage_dir=%s\n", saveimage_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", savestate_dir);
+	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", savestate_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "ripper_dir=%s\n", ripper_path);
+	snprintf(buffer, MAX_DPATH, "ripper_dir=%s\n", ripper_path.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "inputrecordings_dir=%s\n", input_dir);
+	snprintf(buffer, MAX_DPATH, "inputrecordings_dir=%s\n", input_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", screenshot_dir);
+	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", screenshot_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "nvram_dir=%s\n", nvram_dir);
+	snprintf(buffer, MAX_DPATH, "nvram_dir=%s\n", nvram_dir.c_str());
 	fputs(buffer, f);
 
-	snprintf(buffer, MAX_DPATH, "video_dir=%s\n", video_dir);
+	snprintf(buffer, MAX_DPATH, "video_dir=%s\n", video_dir.c_str());
 	fputs(buffer, f);
 
 	// The number of ROMs in the last scan
@@ -3565,28 +3547,28 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	}
 	else
 	{
-		ret |= cfgfile_string(option, value, "path", current_dir, sizeof current_dir);
-		ret |= cfgfile_string(option, value, "config_path", config_path, sizeof config_path);
-		ret |= cfgfile_string(option, value, "controllers_path", controllers_path, sizeof controllers_path);
-		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file, sizeof retroarch_file);
-		ret |= cfgfile_string(option, value, "whdboot_path", whdboot_path, sizeof whdboot_path);
-		ret |= cfgfile_string(option, value, "whdload_arch_path", whdload_arch_path, sizeof whdload_arch_path);
-		ret |= cfgfile_string(option, value, "logfile_path", logfile_path, sizeof logfile_path);
-		ret |= cfgfile_string(option, value, "rom_path", rom_path, sizeof rom_path);
-		ret |= cfgfile_string(option, value, "rp9_path", rp9_path, sizeof rp9_path);
-		ret |= cfgfile_string(option, value, "floppy_sounds_dir", floppy_sounds_dir, sizeof floppy_sounds_dir);
-		ret |= cfgfile_string(option, value, "data_dir", data_dir, sizeof data_dir);
-		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir, sizeof saveimage_dir);
-		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir, sizeof savestate_dir);
-		ret |= cfgfile_string(option, value, "ripper_path", ripper_path, sizeof ripper_path);
-		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir, sizeof input_dir);
-		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir, sizeof screenshot_dir);
-		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir, sizeof nvram_dir);
-		ret |= cfgfile_string(option, value, "video_dir", video_dir, sizeof video_dir);
+		ret |= cfgfile_string(option, value, "path", current_dir);
+		ret |= cfgfile_string(option, value, "config_path", config_path);
+		ret |= cfgfile_string(option, value, "controllers_path", controllers_path);
+		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file);
+		ret |= cfgfile_string(option, value, "whdboot_path", whdboot_path);
+		ret |= cfgfile_string(option, value, "whdload_arch_path", whdload_arch_path);
+		ret |= cfgfile_string(option, value, "logfile_path", logfile_path);
+		ret |= cfgfile_string(option, value, "rom_path", rom_path);
+		ret |= cfgfile_string(option, value, "rp9_path", rp9_path);
+		ret |= cfgfile_string(option, value, "floppy_sounds_dir", floppy_sounds_dir);
+		ret |= cfgfile_string(option, value, "data_dir", data_dir);
+		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir);
+		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir);
+		ret |= cfgfile_string(option, value, "ripper_path", ripper_path);
+		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir);
+		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir);
+		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir);
+		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
-		ret |= cfgfile_string(option, value, "amiberry_config", amiberry_conf_file, sizeof amiberry_conf_file);
+		ret |= cfgfile_string(option, value, "amiberry_config", amiberry_conf_file);
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
@@ -3596,7 +3578,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
-		ret |= cfgfile_yesno(option, value, "use_sdl2_render_thread", &amiberry_options.use_sdl2_render_thread);
 		ret |= cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
@@ -3814,7 +3795,7 @@ void macos_copy_amiberry_files_to_userdir(std::string macos_amiberry_directory)
 
 static void init_amiberry_paths(void)
 {
-	strncpy(current_dir, start_path_data, MAX_DPATH - 1);
+	current_dir = start_path_data;
 #ifdef __MACH__
 	// MacOS stores these files under the user Documents/Amiberry folder
 	const std::string macos_home_directory = getenv("HOME");
@@ -3825,46 +3806,60 @@ static void init_amiberry_paths(void)
 		init_macos_amiberry_folders(macos_amiberry_directory);
 		macos_copy_amiberry_files_to_userdir(macos_amiberry_directory);
 	}
-	snprintf(config_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Configurations/").c_str());
-	snprintf(controllers_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Controllers/").c_str());
-	snprintf(data_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Data/").c_str());
-	snprintf(whdboot_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Whdboot/").c_str());
-	snprintf(whdload_arch_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Lha/").c_str());
-	snprintf(logfile_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Amiberry.log").c_str());
-	snprintf(rom_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Kickstarts/").c_str());
-	snprintf(rp9_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/RP9/").c_str());
-	snprintf(saveimage_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Savestates/").c_str());
-	snprintf(savestate_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Savestates/").c_str());
-	snprintf(ripper_path, MAX_DPATH, "%s", (macos_amiberry_directory + "/Ripper/").c_str());
-	snprintf(input_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Inputrecordings/").c_str());
-	snprintf(screenshot_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Screenshots/").c_str());
-	snprintf(nvram_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Nvram/").c_str());
-	snprintf(video_dir, MAX_DPATH, "%s", (macos_amiberry_directory + "/Videos/").c_str());
+	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path =
+		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
+		input_dir = screenshot_dir = nvram_dir = video_dir = macos_amiberry_directory;
+
+	config_path.append("/Configurations/");
+	controllers_path.append("/Controllers/");
+	data_dir.append("/Data/");
+	whdboot_path.append("/Whdboot/");
+	whdload_arch_path.append("/Lha/");
+	logfile_path.append("/Amiberry.log");
+	rom_path.append("/Kickstarts/");
+	rp9_path.append("/RP9/");
+	saveimage_dir.append("/Savestates/");
+	savestate_dir.append("/Savestates/");
+	ripper_path.append("/Ripper/");
+	input_dir.append("/Inputrecordings/");
+	screenshot_dir.append("/Screenshots/");
+	nvram_dir.append("/Nvram/");
+	video_dir.append("/Videos/");
 #else
-	snprintf(config_path, MAX_DPATH, "%s/conf/", start_path_data);
-	snprintf(controllers_path, MAX_DPATH, "%s/controllers/", start_path_data);
-	snprintf(data_dir, MAX_DPATH, "%s/data/", start_path_data);
-	snprintf(whdboot_path, MAX_DPATH, "%s/whdboot/", start_path_data);
-	snprintf(whdload_arch_path, MAX_DPATH, "%s/lha/", start_path_data);
-	snprintf(logfile_path, MAX_DPATH, "%s/amiberry.log", start_path_data);
-	snprintf(rom_path, MAX_DPATH, "%s/kickstarts/", start_path_data);
-	snprintf(rp9_path, MAX_DPATH, "%s/rp9/", start_path_data);
-	snprintf(saveimage_dir, MAX_DPATH, "%s/savestates/", start_path_data);
-	snprintf(savestate_dir, MAX_DPATH, "%s/savestates/", start_path_data);
-	snprintf(ripper_path, MAX_DPATH, "%s/ripper/", start_path_data);
-	snprintf(input_dir, MAX_DPATH, "%s/inputrecordings/", start_path_data);
-	snprintf(screenshot_dir, MAX_DPATH, "%s/screenshots/", start_path_data);
-	snprintf(nvram_dir, MAX_DPATH, "%s/nvram/", start_path_data);
-	snprintf(video_dir, MAX_DPATH, "%s/videos/", start_path_data);
+	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = 
+		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
+		input_dir = screenshot_dir = nvram_dir = video_dir = 
+		start_path_data;
+
+	config_path.append("/conf/");
+	controllers_path.append("/controllers/");
+	data_dir.append("/data/");
+	whdboot_path.append("/whdboot/");
+	whdload_arch_path.append("/lha/");
+	logfile_path.append("/amiberry.log");
+	rom_path.append("/kickstarts/");
+	rp9_path.append("/rp9/");
+	saveimage_dir.append("/savestates/");
+	savestate_dir.append("/savestates/");
+	ripper_path.append("/ripper/");
+	input_dir.append("/inputrecordings/");
+	screenshot_dir.append("/screenshots/");
+	nvram_dir.append("/nvram/");
+	video_dir.append("/videos/");
 #endif
-	snprintf(amiberry_conf_file, MAX_DPATH, "%s/amiberry.conf", config_path);
-	snprintf(retroarch_file, MAX_DPATH, "%s/retroarch.cfg", config_path);
-	snprintf(floppy_sounds_dir, MAX_DPATH, "%s/floppy_sounds/", data_dir);
+	amiberry_conf_file = config_path;
+	amiberry_conf_file.append("amiberry.conf");
+
+	retroarch_file = config_path;
+	retroarch_file.append("retroarch.cfg");
+
+	floppy_sounds_dir = data_dir;
+	floppy_sounds_dir.append("floppy_sounds/");
 }
 
 void load_amiberry_settings(void)
 {
-	auto* const fh = zfile_fopen(amiberry_conf_file, _T("r"), ZFD_NORMAL);
+	auto* const fh = zfile_fopen(amiberry_conf_file.c_str(), _T("r"), ZFD_NORMAL);
 	if (fh)
 	{
 		char linea[CONFIG_BLEN];
@@ -3873,32 +3868,10 @@ void load_amiberry_settings(void)
 		{
 			trim_wsa(linea);
 			if (strlen(linea) > 0)
-				parse_amiberry_settings_line(amiberry_conf_file, linea);
+				parse_amiberry_settings_line(amiberry_conf_file.c_str(), linea);
 		}
 		zfile_fclose(fh);
-		// fix old data_dir being equal to application startup dir
-		auto data_dir_string = std::string(data_dir);
-		auto start_path_data_string = std::string(start_path_data);
-		start_path_data_string += "/";
-		if (data_dir_string == start_path_data_string)
-		{
-			_tcscat(data_dir, _T("data/"));
-		}
 	}
-}
-
-void rename_old_adfdir()
-{
-	char old_path[MAX_DPATH];
-	char new_path[MAX_DPATH];
-	snprintf(old_path, MAX_DPATH, "%s/conf/adfdir.conf", start_path_data);
-	snprintf(new_path, MAX_DPATH, "%s/conf/amiberry.conf", start_path_data);
-
-	const auto result = rename(old_path, new_path);
-	if (result == 0)
-		write_log("Old adfdir.conf file successfully renamed to amiberry.conf");
-	else
-		write_log("Error while trying to rename old adfdir.conf file to amiberry.conf!");
 }
 
 void target_getdate(int* y, int* m, int* d)
@@ -3976,19 +3949,19 @@ const TCHAR** uaenative_get_library_dirs(void)
 		nats = xcalloc(const TCHAR*, 3);
 	if (path == NULL) {
 		path = xcalloc(TCHAR, MAX_DPATH);
-		_tcscpy(path, start_path_data);
+		_tcscpy(path, start_path_data.c_str());
 		_tcscat(path, _T("plugins"));
 	}
-	nats[0] = start_path_data;
+	nats[0] = start_path_data.c_str();
 	nats[1] = path;
 	return nats;
 }
 
-bool data_dir_exists(char* directory)
+bool data_dir_exists(const char* directory)
 {
 	if (directory == nullptr) return false;
-	std::string dataDir = "/data";
-	std::string check_for = directory + dataDir;
+	const std::string dataDir = "/data";
+	const std::string check_for = directory + dataDir;
 	return my_existsdir(check_for.c_str());
 }
 
@@ -4004,7 +3977,7 @@ int main(int argc, char* argv[])
 
 	if(argc == 2)
 	{
-		std::string two(argv[1]);
+		const std::string two(argv[1]);
 		if(two == "-v" || two == "--version")
 		{
 			print_version();
@@ -4019,22 +3992,23 @@ int main(int argc, char* argv[])
 	max_uae_height = 8192;
 
 	// Get startup path
-	auto external_files_dir = getenv("EXTERNAL_FILES_DIR");
-	auto xdg_data_home = getenv("XDG_DATA_HOME");
+    const auto external_files_dir = getenv("EXTERNAL_FILES_DIR");
+    const auto xdg_data_home = getenv("XDG_DATA_HOME");
 	if (external_files_dir != nullptr && data_dir_exists(external_files_dir))
 	{
-		strncpy(start_path_data, external_files_dir, MAX_DPATH - 1);
+		start_path_data = std::string(external_files_dir);
 	}
 	else if (xdg_data_home != nullptr && data_dir_exists(xdg_data_home))
 	{
-		strncpy(start_path_data, xdg_data_home, MAX_DPATH -1);
+		start_path_data = std::string(xdg_data_home);
 	}
 	else
 	{
-		getcwd(start_path_data, MAX_DPATH);
+		char tmp[MAX_DPATH];
+		getcwd(tmp, MAX_DPATH);
+		start_path_data = std::string(tmp);
 	}
 
-	rename_old_adfdir();
 	init_amiberry_paths();
 	// Parse command line to get possibly set amiberry_config.
 	// Do not remove used args yet.
@@ -4054,8 +4028,7 @@ int main(int argc, char* argv[])
 		abort();
 	}
 
-	fix_trailing(savestate_dir);
-	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", savestate_dir);
+	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", fix_trailing(savestate_dir).c_str());
 	logging_init();
 #if defined (CPU_arm)
 	memset(&action, 0, sizeof action);
@@ -4234,7 +4207,7 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 {
 	if (strcmp(path, "floppysounds") == 0) {
 		if (floppy_sounds_dir[0]) {
-			strncpy(out, floppy_sounds_dir, len);
+			strncpy(out, floppy_sounds_dir.c_str(), len);
 		}
 		else {
 			strncpy(out, "floppy_sounds", len);
@@ -4243,7 +4216,7 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		out[len - 1] = '\0';
 	}
 	else {
-		strncpy(out, start_path_data, len - 1);
+		strncpy(out, start_path_data.c_str(), len - 1);
 		strncat(out, "/", len - 1);
 		strncat(out, path, len - 1);
 		strncat(out, "/", len - 1);
@@ -4257,16 +4230,16 @@ void drawbridge_update_profiles(uae_prefs* p)
 #ifdef FLOPPYBRIDGE
 	unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
 
-	std::string profile_name_fast = "Fast";
-	std::string profile_name_comp = "Compatible";
-	std::string profile_name_turbo = "Turbo";
-	std::string profile_name_stalling = "Stalling";
+	const std::string profile_name_fast = "Fast";
+	const std::string profile_name_comp = "Compatible";
+	const std::string profile_name_turbo = "Turbo";
+	const std::string profile_name_stalling = "Stalling";
 
-	std::string bridge_mode_fast = "0";
-	std::string bridge_mode_comp = "1";
-	std::string bridge_mode_turbo = "2";
-	std::string bridge_mode_stalling = "3";
-	std::string bridge_density_auto = "0";
+	const std::string bridge_mode_fast = "0";
+	const std::string bridge_mode_comp = "1";
+	const std::string bridge_mode_turbo = "2";
+	const std::string bridge_mode_stalling = "3";
+	const std::string bridge_density_auto = "0";
 
 	std::string serial_port = p->drawbridge_serial_port;
 	if (serial_port.empty())

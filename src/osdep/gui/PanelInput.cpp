@@ -9,7 +9,11 @@
 #include "inputdevice.h"
 #include "amiberry_input.h"
 
-#define MAX_PORTSUBMODES 16
+enum
+{
+	MAX_PORTSUBMODES = 16
+};
+
 static int portsubmodes[MAX_PORTSUBMODES];
 static int retroarch_kb = 0;
 static int joysticks = 0;
@@ -485,7 +489,7 @@ void InitPanelInput(const config_category& category)
 	chkInputAutoswitch->setId("chkInputAutoswitch");
 	chkInputAutoswitch->addActionListener(inputActionListener);
 
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
 	category.panel->add(joys[0], DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
 	posY += joys[0]->getHeight() + DISTANCE_NEXT_Y;

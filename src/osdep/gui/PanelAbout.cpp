@@ -61,7 +61,7 @@ void InitPanelAbout(const config_category& category)
 
 	textBoxScrollArea->setBorderSize(1);
 	
-	auto pos_y = DISTANCE_BORDER;
+	int pos_y = DISTANCE_BORDER;
 	category.panel->add(icon, DISTANCE_BORDER, pos_y);
 	pos_y += icon->getHeight() + DISTANCE_NEXT_Y;
 

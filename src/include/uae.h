@@ -43,6 +43,7 @@ extern int target_sleep_nanos(int);
 extern bool get_plugin_path (TCHAR *out, int size, const TCHAR *path);
 extern void strip_slashes (TCHAR *p);
 extern void fix_trailing (TCHAR *p);
+extern std::string fix_trailing(std::string& input);
 extern void fullpath(TCHAR *path, int size);
 extern void fullpath(TCHAR *path, int size, bool userelative);
 extern void getpathpart (TCHAR *outpath, int size, const TCHAR *inpath);
@@ -61,7 +62,7 @@ extern int quit_program;
 extern bool console_emulation;
 
 extern TCHAR warning_buffer[256];
-extern TCHAR start_path_data[];
+extern std::string start_path_data;
 extern TCHAR start_path_data_exe[];
 extern TCHAR start_path_plugins[];
 
@@ -81,17 +82,17 @@ struct bstring {
 
 extern TCHAR *colormodes[];
 extern int saveimageoriginalpath;
-extern void get_saveimage_path (TCHAR*, int, int);
-extern void get_configuration_path (TCHAR *out, int size);
-extern void get_nvram_path (TCHAR *out, int size);
+extern void get_saveimage_path(char* out, int size, int dir);
+extern std::string get_configuration_path();
+extern void get_nvram_path(TCHAR* out, int size);
 extern void fetch_luapath (TCHAR *out, int size);
-extern void get_screenshot_path (TCHAR *out, int size);
+extern std::string get_screenshot_path();
 extern void fetch_ripperpath (TCHAR *out, int size);
-extern void get_savestate_path(TCHAR *out, int size);
+extern void get_savestate_path(char* out, int size);
 extern void fetch_inputfilepath (TCHAR *out, int size);
-extern void get_data_path (TCHAR *out, int size);
-extern void get_rom_path (TCHAR *out, int size);
-extern void get_video_path (TCHAR *out, int size);
+extern std::string get_data_path();
+extern void get_rom_path(char* out, int size);
+extern void get_video_path(char* out, int size);
 extern void get_floppy_sounds_path(char* out, int size);
 extern uae_u32 uaerand(void);
 extern uae_u32 uaesetrandseed(uae_u32 seed);

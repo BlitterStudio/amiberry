@@ -42,7 +42,7 @@ const std::string controller_axis_list[] = {
 	"lefttrigger", "righttrigger"
 };
 
-int find_retroarch(const std::string& find_setting, char* retroarch_file)
+int find_retroarch(const std::string& find_setting, std::string retroarch_file)
 {
 	// opening file and parsing
 	std::ifstream read_file(retroarch_file);
@@ -105,7 +105,7 @@ int find_retroarch(const std::string& find_setting, char* retroarch_file)
 	return button;
 }
 
-bool find_retroarch_polarity(const std::string& find_setting, char* retroarch_file)
+bool find_retroarch_polarity(const std::string& find_setting, std::string retroarch_file)
 {
 	// opening file and parsing
 	std::ifstream read_file(retroarch_file);
@@ -149,7 +149,7 @@ bool find_retroarch_polarity(const std::string& find_setting, char* retroarch_fi
 	return button;
 }
 
-const TCHAR* find_retroarch_key(const std::string& find_setting_prefix, int player, const TCHAR* suffix, char* retroarch_file)
+const TCHAR* find_retroarch_key(const std::string& find_setting_prefix, int player, const TCHAR* suffix, std::string retroarch_file)
 {
 	// opening file and parsing
 	std::ifstream read_file(retroarch_file);
@@ -229,9 +229,9 @@ std::string sanitize_retroarch_name(std::string s)
 	return s;
 }
 
-bool init_kb_from_retroarch(int index, char* retroarch_file)
+bool init_kb_from_retroarch(const int index, std::string retroarch_file)
 {
-	auto player = index + 1;
+	const auto player = index + 1;
 	const TCHAR* key;
 	int x;
 	int* kbs[] = { kb_retroarch_player1, kb_retroarch_player2, kb_retroarch_player3, kb_retroarch_player4 };
@@ -291,7 +291,7 @@ bool init_kb_from_retroarch(int index, char* retroarch_file)
 	return valid;
 }
 
-std::string ra_player_input(std::string retroarch_string, int player)
+std::string ra_player_input(std::string retroarch_string, const int player)
 {
 	if (player != -1 && retroarch_string.find("input_") == 0)
 		retroarch_string.replace(0, 6, "input_player" + to_string(player) + "_");
@@ -299,7 +299,7 @@ std::string ra_player_input(std::string retroarch_string, int player)
 	return retroarch_string;
 }
 
-host_input_button map_from_retroarch(host_input_button mapping, char* control_config, int player)
+host_input_button map_from_retroarch(host_input_button mapping, const std::string& control_config, const int player)
 {
 	mapping.is_retroarch = true;
 	mapping.hotkey_button = find_retroarch("input_enable_hotkey_btn", control_config);

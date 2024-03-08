@@ -15,8 +15,11 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 600
-#define DIALOG_HEIGHT 200
+enum
+{
+	DIALOG_WIDTH = 600,
+	DIALOG_HEIGHT = 200
+};
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
@@ -42,11 +45,9 @@ public:
 			}
 			dialogResult = true;
 		}
-		char tmp[MAX_DPATH];
-		strncpy(tmp, txtPath->getText().c_str(), MAX_DPATH);
 		default_hfdlg(&current_hfdlg);
 		CreateDefaultDevicename(current_hfdlg.ci.devname);
-		_tcscpy(current_hfdlg.ci.rootdir, tmp);
+		_tcscpy(current_hfdlg.ci.rootdir, txtPath->getText().c_str());
 		// Set RDB mode if IDE or SCSI
 		if (current_hfdlg.ci.controller_type > 0) {
 			current_hfdlg.ci.sectors = current_hfdlg.ci.reserved = current_hfdlg.ci.surfaces = 0;
@@ -95,7 +96,6 @@ static void InitEditFilesysHardDrive()
 	txtPath->setId("txtHDDPath");
 
 	int posY = DISTANCE_BORDER;
-	int posX = DISTANCE_BORDER;
 
 	wndEditFilesysHardDrive->add(lblPath, DISTANCE_BORDER, posY);
 	wndEditFilesysHardDrive->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);
@@ -127,10 +127,7 @@ static void ExitEditFilesysHardDrive()
 
 static void EditFilesysHardDriveLoop()
 {
-	AmigaMonitor* mon = &AMonitors[0];
-
-	char lastActiveWidget[128];
-	strcpy(lastActiveWidget, "");
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	int got_event = 0;
 	SDL_Event event;
@@ -307,8 +304,8 @@ static void EditFilesysHardDriveLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -321,8 +318,8 @@ static void EditFilesysHardDriveLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -334,8 +331,8 @@ static void EditFilesysHardDriveLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -397,11 +394,10 @@ static void EditFilesysHardDriveLoop()
 
 bool EditFilesysHardDrive(const int unit_no)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	mountedinfo mi{};
 	uaedev_config_data* uci;
-	std::string strdevname, strroot;
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -443,7 +439,7 @@ bool EditFilesysHardDrive(const int unit_no)
 
 	if (dialogResult)
 	{
-		extract_path(const_cast<char*>(txtPath->getText().c_str()), current_dir);
+		current_dir = extract_path(txtPath->getText());
 
 		uaedev_config_info ci{};
 		memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));

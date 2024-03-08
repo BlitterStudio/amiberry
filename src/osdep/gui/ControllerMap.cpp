@@ -15,15 +15,17 @@
 #include "fsdb_host.h"
 #include <string>
 
-#ifdef USE_DISPMANX
+enum
+{
+	SCREEN_WIDTH = 640,
+	SCREEN_HEIGHT = 500
+};
 
-#endif
-
-#define SCREEN_WIDTH 640
-#define SCREEN_HEIGHT 500
-
-#define MARKER_BUTTON 1
-#define MARKER_AXIS 2
+enum
+{
+	MARKER_BUTTON = 1,
+	MARKER_AXIS = 2
+};
 
 enum
 {

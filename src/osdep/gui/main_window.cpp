@@ -31,8 +31,12 @@ bool gui_running = false;
 static int last_active_panel = 3;
 bool joystick_refresh_needed = false;
 
-#define MAX_STARTUP_TITLE 64
-#define MAX_STARTUP_MESSAGE 256
+enum
+{
+	MAX_STARTUP_TITLE = 64,
+	MAX_STARTUP_MESSAGE = 256
+};
+
 static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
@@ -1131,7 +1135,9 @@ void gui_widgets_init()
 
 	try
 	{
-		gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
+		std::string font = get_data_path();
+		font.append(gui_theme.font_name);
+		gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
 		gui_font->setAntiAlias(false);
 	}
 	catch (gcn::Exception& e)
@@ -1197,13 +1203,13 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	// Create selector entries
 	//--------------------------------------------------
-	const auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
+	constexpr auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
 	selectors = new gcn::Container();
 	selectors->setBorderSize(0);
 	selectors->setBaseColor(colSelectorInactive);
 	selectors->setBackgroundColor(gui_baseCol);
 
-	const auto selectorScrollAreaWidth = SELECTOR_WIDTH + 2;
+	constexpr auto selectorScrollAreaWidth = SELECTOR_WIDTH + 2;
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
 	selectorsScrollArea->setBaseColor(colSelectorInactive);
@@ -1379,7 +1385,7 @@ void run_gui()
 		currprefs.nr_floppies = changed_prefs.nr_floppies;
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
-			quit_program = -UAE_RESET_HARD; // Hardreset required...
+			quit_program = -UAE_RESET_HARD; // Hard reset required...
 	}
 
 	// Reset counter for access violations

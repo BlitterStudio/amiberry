@@ -138,22 +138,19 @@ public:
 				//---------------------------------------
 				// Select disk for drive
 				//---------------------------------------
-				char tmp[MAX_DPATH];
+				std::string tmp;
 
 				if (strlen(changed_prefs.dfxlist[i]) > 0)
-					strncpy(tmp, changed_prefs.dfxlist[i], MAX_DPATH);
+					tmp = std::string(changed_prefs.dfxlist[i]);
 				else
+					tmp = current_dir;
+
+				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
 				{
-					strncpy(tmp, current_dir, MAX_DPATH);
-					fix_trailing(tmp);
-				}
-				
-				if (SelectFile("Select disk image file", tmp, diskfile_filter))
-				{
-					if (strncmp(changed_prefs.dfxlist[i], tmp, MAX_DPATH) != 0)
+					if (strncmp(changed_prefs.dfxlist[i], tmp.c_str(), MAX_DPATH) != 0)
 					{
-						strncpy(changed_prefs.dfxlist[i], tmp, MAX_DPATH);
-						AddFileToDiskList(tmp, 1);
+						strncpy(changed_prefs.dfxlist[i], tmp.c_str(), MAX_DPATH);
+						AddFileToDiskList(tmp.c_str(), 1);
 					}
 				}
 				cmdDiskSwapperListAdd[i]->requestFocus();
@@ -286,7 +283,7 @@ void InitPanelDiskSwapper(const config_category& category)
 	cmdDiskSwapperRemoveAll->setId("cmdDiskSwapperRemoveAll");
 	cmdDiskSwapperRemoveAll->addActionListener(diskSwapperRemoveAllActionListener);
 
-	auto posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
+	int posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
 	// Labels
 	for (column = 0; column < 3; ++column)
 	{
@@ -408,6 +405,8 @@ bool HelpPanelDiskSwapper(std::vector<std::string>& helptext)
     helptext.emplace_back(" ");
     helptext.emplace_back("- Next slot in Disk Swapper");
     helptext.emplace_back("- Previous slot in Disk Swapper");
+	helptext.emplace_back("- Insert next Disk Swapper slot in DF0:");
+	helptext.emplace_back("- Insert previous Disk Swapper slot in DF0:");
     helptext.emplace_back("- Insert disk in current Disk Swapper slot in DF0:");
     helptext.emplace_back("- Insert disk in current Disk Swapper slot in DF1:");
     helptext.emplace_back("- Insert disk in current Disk Swapper slot in DF2:");

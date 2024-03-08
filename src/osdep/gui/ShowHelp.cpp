@@ -14,8 +14,11 @@
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 
-#define DIALOG_WIDTH 760
-#define DIALOG_HEIGHT 440
+enum
+{
+	DIALOG_WIDTH = 760,
+	DIALOG_HEIGHT = 440
+};
 
 static bool dialog_finished = false;
 
@@ -101,7 +104,7 @@ static void ExitShowHelp()
 
 static void ShowHelpLoop()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	auto got_event = 0;
 	SDL_Event event;
@@ -159,8 +162,8 @@ static void ShowHelpLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -173,8 +176,8 @@ static void ShowHelpLoop()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -186,8 +189,8 @@ static void ShowHelpLoop()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -248,7 +251,7 @@ static void ShowHelpLoop()
 
 void ShowHelp(const char* title, const std::vector<std::string>& text)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	dialog_finished = false;
 

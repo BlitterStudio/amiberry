@@ -146,53 +146,50 @@ class ROMButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char tmp[MAX_DPATH];
+		std::string tmp;
 		const char* filter[] = {".rom", ".bin", "\0"};
 
 		if (actionEvent.getSource() == cmdMainROM)
 		{
-			strncpy(tmp, current_dir, MAX_DPATH - 1);
-			if (SelectFile("Select System ROM", tmp, filter))
+			tmp = SelectFile("Select System ROM", current_dir, filter);
 			{
 				auto* const newrom = new AvailableROM();
-				extract_filename(tmp, newrom->Name);
+				extract_filename(tmp.c_str(), newrom->Name);
 				remove_file_extension(newrom->Name);
-				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
+				strncpy(newrom->Path, tmp.c_str(), MAX_DPATH - 1);
 				newrom->ROMType = ROMTYPE_KICK;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romfile, tmp, sizeof changed_prefs.romfile);
+				strncpy(changed_prefs.romfile, tmp.c_str(), sizeof changed_prefs.romfile);
 				RefreshPanelROM();
 			}
 			cmdMainROM->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdExtROM)
 		{
-			strncpy(tmp, current_dir, MAX_DPATH - 1);
-			if (SelectFile("Select Extended ROM", tmp, filter))
+			tmp = SelectFile("Select Extended ROM", current_dir, filter);
 			{
 				auto* const newrom = new AvailableROM();
-				extract_filename(tmp, newrom->Name);
+				extract_filename(tmp.c_str(), newrom->Name);
 				remove_file_extension(newrom->Name);
-				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
+				strncpy(newrom->Path, tmp.c_str(), MAX_DPATH - 1);
 				newrom->ROMType = ROMTYPE_EXTCDTV;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romextfile, tmp, sizeof changed_prefs.romextfile);
+				strncpy(changed_prefs.romextfile, tmp.c_str(), sizeof changed_prefs.romextfile);
 				RefreshPanelROM();
 			}
 			cmdExtROM->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdCartROM)
 		{
-			strncpy(tmp, current_dir, MAX_DPATH - 1);
-			if (SelectFile("Select Cartridge ROM", tmp, filter))
+			tmp = SelectFile("Select Cartridge ROM", current_dir, filter);
 			{
 				auto* const newrom = new AvailableROM();
-				extract_filename(tmp, newrom->Name);
+				extract_filename(tmp.c_str(), newrom->Name);
 				remove_file_extension(newrom->Name);
-				strncpy(newrom->Path, tmp, MAX_DPATH - 1);
+				strncpy(newrom->Path, tmp.c_str(), MAX_DPATH - 1);
 				newrom->ROMType = ROMTYPE_CD32CART;
 				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romextfile, tmp, sizeof changed_prefs.romextfile);
+				strncpy(changed_prefs.romextfile, tmp.c_str(), sizeof changed_prefs.romextfile);
 				RefreshPanelROM();
 			}
 			cmdCartROM->requestFocus();
@@ -280,7 +277,7 @@ void InitPanelROM(const config_category& category)
 	chkShapeShifter->setId("chkShapeShifter");
 	chkShapeShifter->addActionListener(romButtonActionListener);
 
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
 	posY += lblMainROM->getHeight() + 4;
 	category.panel->add(cboMainROM, DISTANCE_BORDER, posY);

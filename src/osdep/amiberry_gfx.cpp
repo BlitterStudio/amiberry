@@ -43,7 +43,6 @@
 #include <GL/glew.h>
 #include <SDL_opengl.h>
 
-
 #endif
 
 #ifdef WITH_MIDIEMU
@@ -108,6 +107,12 @@ static int display_depth;
 Uint32 pixel_format;
 
 static frame_time_t last_synctime;
+
+static SDL_Surface* current_screenshot = nullptr;
+std::string screenshot_filename;
+FILE* screenshot_file = nullptr;
+int delay_savestate_frame = 0;
+
 static int deskhz;
 bool sdl2_thread_changed = false;
 
@@ -143,15 +148,6 @@ static int display_change_requested;
 static int wasfullwindow_a, wasfullwindow_p;
 
 int vsync_vblank, vsync_hblank;
-
-static SDL_Surface* current_screenshot = nullptr;
-static char screenshot_filename_default[MAX_DPATH] =
-{
-	'/', 't', 'm', 'p', '/', 'n', 'u', 'l', 'l', '.', 'p', 'n', 'g', '\0'
-};
-char* screenshot_filename = &screenshot_filename_default[0];
-FILE* screenshot_file = nullptr;
-int delay_savestate_frame = 0;
 static volatile bool vsync_active;
 
 #ifdef USE_DISPMANX
@@ -370,8 +366,6 @@ static int display_thread(void* unused)
 
 				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
 			}
-#else
-
 #endif
 			uae_sem_post(&display_sem);
 			break;
@@ -2344,13 +2338,13 @@ void close_windows(struct AmigaMonitor* mon)
 	graphics_subshutdown();
 }
 
-static int save_png(const SDL_Surface* surface, char* path)
+static int save_png(const SDL_Surface* surface, const std::string& path)
 {
 	const auto w = surface->w;
 	const auto h = surface->h;
 	auto* const pix = static_cast<unsigned char *>(surface->pixels);
 	unsigned char writeBuffer[1920 * 3];
-	auto* const f = fopen(path, "wbe");
+	auto* const f = fopen(path.c_str(), "wbe");
 	if (!f) return 0;
 	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
 											nullptr,
@@ -2455,7 +2449,7 @@ void create_screenshot()
 	}
 }
 
-int save_thumb(char* path)
+int save_thumb(const std::string& path)
 {
 	if (amiberry_options.use_sdl2_render_thread)
 		wait_for_display_thread();
@@ -2475,7 +2469,7 @@ void screenshot(int monid, int mode, int doprepare)
 	char tmp[MAX_DPATH];
 
 	create_screenshot();
-	get_screenshot_path(screenshot_filename, MAX_DPATH - 1);
+	screenshot_filename = get_screenshot_path();
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
 		extract_filename(currprefs.floppyslots[0].df, tmp);
@@ -2484,10 +2478,10 @@ void screenshot(int monid, int mode, int doprepare)
 	else
 		strncpy(tmp, "default.uae", MAX_DPATH - 1);
 
-	strncat(screenshot_filename, tmp, MAX_DPATH - 1);
-	remove_file_extension(screenshot_filename);
+	screenshot_filename.append(std::string(tmp));
+	screenshot_filename = remove_file_extension(screenshot_filename);
 
-	strncat(screenshot_filename,".png", MAX_DPATH - 1);
+	screenshot_filename.append(".png");
 	save_thumb(screenshot_filename);
 }
 

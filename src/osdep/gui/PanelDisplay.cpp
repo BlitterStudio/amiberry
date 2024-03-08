@@ -8,10 +8,14 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = { 640, 704, 720 };
-const int amigaheight_values[] = { 400, 480, 512, 568 };
-#define AMIGAWIDTH_COUNT 3
-#define AMIGAHEIGHT_COUNT 4
+const int amigawidth_values[] = { 640, 704, 720, 754 };
+const int amigaheight_values[] = { 400, 480, 512, 568, 576 };
+
+enum
+{
+	AMIGAWIDTH_COUNT = 4,
+	AMIGAHEIGHT_COUNT = 5
+};
 
 const int fullscreen_width_values[] = { 640, 720, 800, 1024, 1280, 1280, 1920 };
 const int fullscreen_height_values[] = { 480, 576, 600, 768, 720, 1024, 1080 };
@@ -332,7 +336,7 @@ void InitPanelDisplay(const config_category& category)
 	scalingMethodActionListener = new ScalingMethodActionListener();
 	lineModeActionListener = new LineModeActionListener();
 	
-	auto posY = DISTANCE_BORDER;
+	int posY = DISTANCE_BORDER;
 
 	lblFullscreen = new gcn::Label("Fullscreen:");
 	lblFullscreen->setAlignment(gcn::Graphics::LEFT);
