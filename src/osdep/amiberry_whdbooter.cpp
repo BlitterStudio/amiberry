@@ -60,7 +60,7 @@ struct game_options
 std::string whdbooter_path;
 TCHAR boot_path[MAX_DPATH];
 TCHAR save_path[MAX_DPATH];
-TCHAR config_path[MAX_DPATH];
+TCHAR conf_path[MAX_DPATH];
 TCHAR whd_path[MAX_DPATH];
 TCHAR kick_path[MAX_DPATH];
 
@@ -320,7 +320,7 @@ void clear_jports(uae_prefs* prefs)
 
 void build_uae_config_filename()
 {
-	_tcscpy(uae_config, config_path);
+	_tcscpy(uae_config, conf_path);
 	_tcscat(uae_config, game_name);
 	_tcscat(uae_config, ".uae");
 }
@@ -331,7 +331,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	write_log("\nCD Autoload: %s  \n\n", filepath);
 
-	get_configuration_path(config_path, MAX_DPATH);
+	get_configuration_path(conf_path, MAX_DPATH);
 	get_game_name(filepath);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
@@ -1025,7 +1025,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	write_log("WHDBooter Launched\n");
 	_tcscpy(selected_slave, "");
 
-	get_configuration_path(config_path, MAX_DPATH);
+	get_configuration_path(conf_path, MAX_DPATH);
 	whdbooter_path = get_whdbootpath();
 	get_savedatapath(save_path, MAX_DPATH, 0 );
 
