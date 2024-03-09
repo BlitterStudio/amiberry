@@ -119,8 +119,6 @@ extern void set_whdbootpath(const std::string& newpath);
 extern std::string get_whdload_arch_path();
 extern void set_whdload_arch_path(const std::string& newpath);
 
-extern bool get_sdl2_thread_enabled();
-extern void set_sdl2_thread_enabled(bool enabled);
 extern bool get_logfile_enabled();
 extern void set_logfile_enabled(bool enabled);
 extern std::string get_logfile_path();

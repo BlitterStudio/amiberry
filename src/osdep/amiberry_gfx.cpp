@@ -114,7 +114,6 @@ FILE* screenshot_file = nullptr;
 int delay_savestate_frame = 0;
 
 static int deskhz;
-bool sdl2_thread_changed = false;
 
 #ifdef USE_DISPMANX
 /* Possible screen modes (x and y resolutions) */
@@ -402,14 +401,6 @@ static int display_thread(void* unused)
 				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_2);
 			}
 			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
-#else
-#ifndef USE_OPENGL
-			SDL_RenderClear(mon->sdl_renderer);
-			SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
-			SDL_RenderCopyEx(mon->sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-			if (vkbd_allowed(0))
-				vkbd_redraw();
-#endif
 #endif
 			flip_in_progress = false;
 			break;
@@ -1330,7 +1321,7 @@ int check_prefs_changed_gfx()
 	c |= currprefs.multithreaded_drawing != changed_prefs.multithreaded_drawing ? (512) : 0;
 #endif
 	
-	if (display_change_requested || c || sdl2_thread_changed)
+	if (display_change_requested || c)
 	{
 		bool setpause = false;
 		bool dontcapture = false;
@@ -1464,12 +1455,6 @@ int check_prefs_changed_gfx()
 		currprefs.rtg_multithread = changed_prefs.rtg_multithread;
 #endif
 
-		if (sdl2_thread_changed)
-		{
-			graphics_leave();
-			graphics_init(true);
-			sdl2_thread_changed = false;
-		}
 		bool unacquired = false;
 		for (int monid = MAX_AMIGAMONITORS - 1; monid >= 0; monid--) {
 			if (!monitors[monid])
@@ -1857,26 +1842,12 @@ void show_screen(int monid, int mode)
 	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
 #else
 
-	if (amiberry_options.use_sdl2_render_thread)
+	// RTG status line is handled in P96 code, this is for native modes only
+	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
 	{
-		wait_for_display_thread();
-		flip_in_progress = true;
-#ifdef USE_OPENGL
-		
-#else
-		// RenderPresent must be done in the main thread.
-		SDL_RenderPresent(mon->sdl_renderer);
-		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SHOW, 1);
-#endif
+		update_leds(monid);
 	}
-	else 
-	{
-		// RTG status line is handled in P96 code, this is for native modes only
-		if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
-		{
-			update_leds(monid);
-		}
-		flip_in_progress = true;
+	flip_in_progress = true;
 #ifdef USE_OPENGL
 		struct AmigaMonitor* mon = &AMonitors[monid];
 
@@ -1906,15 +1877,14 @@ void show_screen(int monid, int mode)
 
 		SDL_GL_SwapWindow(mon->sdl_window);
 #else
-		SDL_RenderClear(mon->sdl_renderer);
-		SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
-		SDL_RenderCopyEx(mon->sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-		if (vkbd_allowed(monid))
-			vkbd_redraw();
-		SDL_RenderPresent(mon->sdl_renderer);
+	SDL_RenderClear(mon->sdl_renderer);
+	SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
+	SDL_RenderCopyEx(mon->sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	if (vkbd_allowed(monid))
+		vkbd_redraw();
+	SDL_RenderPresent(mon->sdl_renderer);
 #endif
-		flip_in_progress = false;
-	}
+	flip_in_progress = false;
 #endif
 
 	last_synctime = read_processor_time();
@@ -2014,11 +1984,6 @@ void DX_Fill(struct AmigaMonitor* mon, int dstx, int dsty, int width, int height
 
 void clearscreen()
 {
-#ifndef USE_DISPMANX
-	if (amiberry_options.use_sdl2_render_thread)
-#endif
-		wait_for_display_thread();
-
 	if (amiga_surface != nullptr)
 	{
 		SDL_FillRect(amiga_surface, nullptr, 0);
@@ -2237,30 +2202,6 @@ int graphics_init(bool mousecapture)
 	// Disable the render thread under OpenGL (not supported)
 	amiberry_options.use_sdl2_render_thread = false;
 #endif
-#ifndef USE_DISPMANX
-	if (kmsdrm_detected)
-	{
-		// Disable the render thread under KMSDRM (not supported)
-		amiberry_options.use_sdl2_render_thread = false;
-	}
-	
-	if (amiberry_options.use_sdl2_render_thread)
-	{
-#endif
-		if (display_pipe == nullptr) {
-			display_pipe = xmalloc(smp_comm_pipe, 1);
-			init_comm_pipe(display_pipe, 20, 1);
-		}
-		if (display_sem == nullptr) {
-			uae_sem_init(&display_sem, 0, 0);
-		}
-		if (display_tid == nullptr && display_pipe != nullptr && display_sem != nullptr) {
-			uae_start_thread(_T("display thread"), display_thread, nullptr, &display_tid);
-		}
-		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
-#ifndef USE_DISPMANX
-	}
-#endif
 
 	inputdevice_unacquire();
 	graphics_subinit();
@@ -2274,24 +2215,6 @@ void graphics_leave()
 	struct AmigaMonitor* mon = &AMonitors[0];
 	graphics_subshutdown();
 
-#ifndef USE_DISPMANX
-	if (amiberry_options.use_sdl2_render_thread)
-	{
-#endif
-		if (display_tid != nullptr) {
-			write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_QUIT, 1);
-			while (display_tid != nullptr) {
-				sleep_millis(10);
-			}
-			destroy_comm_pipe(display_pipe);
-			xfree(display_pipe);
-			display_pipe = nullptr;
-			uae_sem_destroy(&display_sem);
-			display_sem = nullptr;
-		}
-#ifndef USE_DISPMANX
-	}
-#endif
 #ifdef USE_DISPMANX
 	bcm_host_deinit();
 #elif USE_OPENGL
@@ -2427,9 +2350,6 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 
 void create_screenshot()
 {
-	if (amiberry_options.use_sdl2_render_thread)
-		wait_for_display_thread();
-
 	if (current_screenshot != nullptr)
 	{
 		SDL_FreeSurface(current_screenshot);
@@ -2451,9 +2371,6 @@ void create_screenshot()
 
 int save_thumb(const std::string& path)
 {
-	if (amiberry_options.use_sdl2_render_thread)
-		wait_for_display_thread();
-
 	auto ret = 0;
 	if (current_screenshot != nullptr)
 	{
