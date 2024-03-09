@@ -14,7 +14,6 @@
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
-#include "custom.h"
 #include "rommgr.h"
 #include "fsdb.h"
 #include "tinyxml2.h"
@@ -26,8 +25,11 @@ extern char last_loaded_config[MAX_DPATH];
 
 // Use configs with 8MB Fast RAM, to make it likely
 // that WHDLoad preload will cache everything.
-#define A600_CONFIG  3 // 8MB fast ram
-#define A1200_CONFIG 2 // 8MB fast ram
+enum
+{
+	A600_CONFIG = 3, // 8MB fast ram
+	A1200_CONFIG = 2 // 8MB fast ram
+};
 
 struct game_options
 {
@@ -738,7 +740,7 @@ void set_compatibility_settings(uae_prefs* prefs, const game_options& game_detai
 
 game_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 {
-	game_options game_detail;
+	game_options game_detail{};
 	tinyxml2::XMLDocument doc;
 	auto error = false;
 	write_log("WHDBooter - Loading whdload_db.xml\n");
@@ -785,7 +787,7 @@ game_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 			{
 				// now get the <hardware> and <custom_controls> items
 				// get hardware
-				auto* temp_node = game_node->FirstChildElement("hardware");
+				const auto* temp_node = game_node->FirstChildElement("hardware");
 				if (temp_node)
 				{
 					const auto* hardware = temp_node->GetText();
@@ -879,11 +881,11 @@ void create_startup_sequence(uae_prefs* prefs)
 	// Write Cache
 	if (prefs->whdbootprefs.writecache)
 	{
-		whd_bootscript << " PRELOAD NOREQ ";
+		whd_bootscript << " PRELOAD NOREQ";
 	}
 	else
 	{
-		whd_bootscript << " PRELOAD NOREQ NOWRITECACHE ";
+		whd_bootscript << " PRELOAD NOREQ NOWRITECACHE";
 	}
 
 	// CUSTOM options
@@ -948,7 +950,7 @@ void create_startup_sequence(uae_prefs* prefs)
 	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);
 
-	ofstream myfile(whd_startup);
+	std::ofstream myfile(whd_startup);
 	if (myfile.is_open())
 	{
 		myfile << whd_bootscript.str();
