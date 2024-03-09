@@ -8,13 +8,13 @@
 #include "custom.h"
 #include "gui_handling.h"
 
-const int amigawidth_values[] = { 640, 704, 720, 754 };
-const int amigaheight_values[] = { 400, 480, 512, 568, 576 };
+const int amigawidth_values[] = { 640, 704, 720 };
+const int amigaheight_values[] = { 400, 480, 512, 568 };
 
 enum
 {
-	AMIGAWIDTH_COUNT = 4,
-	AMIGAHEIGHT_COUNT = 5
+	AMIGAWIDTH_COUNT = 3,
+	AMIGAHEIGHT_COUNT = 4
 };
 
 const int fullscreen_width_values[] = { 640, 720, 800, 1024, 1280, 1280, 1920 };
