@@ -110,6 +110,7 @@ bool host_poweroff = false;
 int relativepaths = 0;
 int saveimageoriginalpath = 0;
 
+struct whdload_options whdload_prefs = {};
 struct amiberry_options amiberry_options = {};
 struct amiberry_gui_theme gui_theme = {};
 amiberry_hotkey enter_gui_key;
@@ -2221,11 +2222,11 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->use_retroarch_reset = amiberry_options.default_retroarch_reset;
 	p->use_retroarch_vkbd = amiberry_options.default_retroarch_vkbd;
 
-	p->whdbootprefs.buttonwait = amiberry_options.default_whd_buttonwait;
-	p->whdbootprefs.showsplash = amiberry_options.default_whd_showsplash;
-	p->whdbootprefs.configdelay = amiberry_options.default_whd_configdelay;
-	p->whdbootprefs.writecache = amiberry_options.default_whd_writecache;
-	p->whdbootprefs.quit_on_exit = amiberry_options.default_whd_quit_on_exit;
+	whdload_prefs.button_wait = amiberry_options.default_whd_buttonwait;
+	whdload_prefs.show_splash = amiberry_options.default_whd_showsplash;
+	whdload_prefs.config_delay = amiberry_options.default_whd_configdelay;
+	whdload_prefs.write_cache = amiberry_options.default_whd_writecache;
+	whdload_prefs.quit_on_exit = amiberry_options.default_whd_quit_on_exit;
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
 
@@ -3034,6 +3035,12 @@ void extract_filename(const char* str, char* buffer)
 		p--;
 	p++;
 	strncpy(buffer, p, MAX_DPATH - 1);
+}
+
+std::string extract_filename(const std::string& path)
+{
+	const std::filesystem::path file_path(path);
+	return file_path.filename().string();
 }
 
 void extract_path(char* str, char* buffer)

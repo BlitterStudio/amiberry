@@ -126,6 +126,7 @@ extern void get_rp9_path(char* out, int size);
 extern std::string get_screenshot_path();
 
 extern void extract_filename(const char* str, char* buffer);
+extern std::string extract_filename(const std::string& path);
 extern void extract_path(char* str, char* buffer);
 extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);

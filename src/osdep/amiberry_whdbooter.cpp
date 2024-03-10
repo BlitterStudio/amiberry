@@ -31,7 +31,7 @@ enum
 	A1200_CONFIG = 2 // 8MB fast ram
 };
 
-struct game_options
+struct game_hardware_options
 {
 	std::string port0 = "nul";
 	std::string port1 = "nul";
@@ -69,12 +69,6 @@ TCHAR kick_path[MAX_DPATH];
 TCHAR uae_config[255];
 TCHAR whd_config[255];
 TCHAR whd_startup[255];
-
-TCHAR game_name[MAX_DPATH];
-std::string selected_slave;
-std::string sub_path;
-std::string data_path;
-bool use_slave_libs = false;
 
 static TCHAR* parse_text(const TCHAR* s)
 {
@@ -177,9 +171,9 @@ std::string find_whdload_game_option(const std::string& find_setting, const std:
 	return find_substring(find_setting, whd_options);
 }
 
-game_options get_game_settings(const std::string& hardware)
+game_hardware_options get_game_hardware_settings(const std::string& hardware)
 {
-	game_options output_detail;
+	game_hardware_options output_detail;
 	output_detail.port0 = find_whdload_game_option("PORT0", hardware);
 	output_detail.port1 = find_whdload_game_option("PORT1", hardware);
 	output_detail.control = find_whdload_game_option("PRIMARY_CONTROL", hardware);
@@ -287,11 +281,11 @@ void symlink_roms(struct uae_prefs* prefs)
 	}
 }
 
-void get_game_name(char* filepath)
+std::string get_game_filename(char* filepath)
 {
 	extract_filename(filepath, last_loaded_config);
-	extract_filename(filepath, game_name);
-	remove_file_extension(game_name);
+	const std::string game_name = extract_filename(filepath);
+	return remove_file_extension(game_name);
 }
 
 void set_jport_modes(uae_prefs* prefs, const bool is_cd32)
@@ -320,10 +314,10 @@ void clear_jports(uae_prefs* prefs)
 	}
 }
 
-void build_uae_config_filename()
+void build_uae_config_filename(const std::string& game_name)
 {
 	_tcscpy(uae_config, conf_path);
-	_tcscat(uae_config, game_name);
+	_tcscat(uae_config, game_name.c_str());
 	_tcscat(uae_config, ".uae");
 }
 
@@ -334,11 +328,11 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	write_log("\nCD Autoload: %s  \n\n", filepath);
 
 	get_configuration_path(conf_path, MAX_DPATH);
-	get_game_name(filepath);
+	whdload_prefs.filename = get_game_filename(filepath);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
-	build_uae_config_filename();
+	build_uae_config_filename(whdload_prefs.filename);
 
 	if (my_existsfile2(uae_config))
 	{
@@ -420,7 +414,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	}
 }
 
-void set_input_settings(uae_prefs* prefs, const game_options& game_detail, const bool is_cd32)
+void set_input_settings(uae_prefs* prefs, const game_hardware_options& game_detail, const bool is_cd32)
 {
 	// APPLY SPECIAL CONFIG E.G. MOUSE OR ALT. JOYSTICK SETTINGS
 	clear_jports(prefs);
@@ -501,7 +495,7 @@ void set_input_settings(uae_prefs* prefs, const game_options& game_detail, const
 	}
 }
 
-void set_gfx_settings(uae_prefs* prefs, const game_options& game_detail)
+void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail)
 {
 	std::string line_string;
 	// SCREEN AUTO-HEIGHT
@@ -586,7 +580,7 @@ void set_gfx_settings(uae_prefs* prefs, const game_options& game_detail)
 	}
 }
 
-void set_compatibility_settings(uae_prefs* prefs, const game_options& game_detail, const bool a600_available, const bool use_aga)
+void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& game_detail, const bool a600_available, const bool use_aga)
 {
 	std::string line_string;
 	// CPU 68020/040 or no A600 ROM available
@@ -738,13 +732,12 @@ void set_compatibility_settings(uae_prefs* prefs, const game_options& game_detai
 	}
 }
 
-game_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
+game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 {
-	game_options game_detail{};
+	game_hardware_options game_detail{};
 	tinyxml2::XMLDocument doc;
 	auto error = false;
-	write_log("WHDBooter - Loading whdload_db.xml\n");
-	write_log("WHDBooter - Searching whdload_db.xml for %s\n", game_name);
+	write_log("WHDBooter - Searching whdload_db.xml for %s\n", whdload_prefs.filename);
 
 	auto* f = fopen(whd_config, _T("rb"));
 	if (f)
@@ -774,35 +767,100 @@ game_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 			// then fall back to sha1 if a user has renamed the file!
 			//
 			int found = 0;
-			if (game_node->Attribute("filename", game_name))
-			{
-				found = 1;
-			}
-			if (game_node->Attribute("sha1", sha1.c_str()))
+			if (game_node->Attribute("filename", whdload_prefs.filename.c_str()) || 
+				game_node->Attribute("sha1", sha1.c_str()))
 			{
 				found = 1;
 			}
 
 			if (found)
 			{
-				// now get the <hardware> and <custom_controls> items
-				// get hardware
-				const auto* temp_node = game_node->FirstChildElement("hardware");
-				if (temp_node)
+				// Name
+				auto xml_element = game_node->FirstChildElement("name");
+				if (xml_element)
 				{
-					const auto hardware = std::string(temp_node->GetText());
+					whdload_prefs.game_name.assign(xml_element->GetText());
+				}
+
+				// Sub Path
+				xml_element = game_node->FirstChildElement("subpath");
+				if (xml_element)
+				{
+					whdload_prefs.sub_path.assign(xml_element->GetText());
+				}
+
+				// Variant UUID
+				xml_element = game_node->FirstChildElement("variant_uuid");
+				if (xml_element)
+				{
+					whdload_prefs.variant_uuid.assign(xml_element->GetText());
+				}
+
+				// Slave count
+				xml_element = game_node->FirstChildElement("slave_count");
+				if (xml_element)
+				{
+					whdload_prefs.slave_count = xml_element->IntText(0);
+				}
+
+				// Default slave
+				xml_element = game_node->FirstChildElement("slave_default");
+				if (xml_element)
+				{
+					whdload_prefs.slave_default.assign(xml_element->GetText());
+					write_log("WHDBooter - Selected Slave: %s \n", whdload_prefs.slave_default.c_str());
+				}
+
+				// Slave_libraries
+				xml_element = game_node->FirstChildElement("slave_libraries");
+				if (xml_element->GetText() != nullptr)
+				{
+					if (strcmpi(xml_element->GetText(), "true") == 0)
+						whdload_prefs.slave_libraries = true;
+				}
+
+				// Get slaves and settings
+				xml_element = game_node->FirstChildElement("slave");
+				int i = 1;
+				do
+				{
+					if (xml_element)
+					{
+						whdload_slave slave;
+						slave.filename.assign(xml_element->FirstChildElement("filename")->GetText());
+						slave.data_path.assign(xml_element->FirstChildElement("datapath")->GetText());
+
+						whdload_prefs.slaves.emplace_back(slave);
+
+						// Set the default slave as the selected one
+						if (slave.filename == whdload_prefs.slave_default)
+							whdload_prefs.selected_slave = slave;
+					}
+
+					xml_element = game_node->NextSiblingElement("slave");
+					i++;
+				}
+				while (i <= whdload_prefs.slave_count);
+
+				// get hardware
+				xml_element = game_node->FirstChildElement("hardware");
+				if (xml_element)
+				{
+					std::string hardware;
+					hardware.assign(xml_element->GetText());
 					if (!hardware.empty())
 					{
-						game_detail = get_game_settings(hardware);
+						game_detail = get_game_hardware_settings(hardware);
 						write_log("WHDBooter - Game H/W Settings: \n%s\n", hardware.c_str());
 					}
 				}
-					
+
 				// get custom controls
-				temp_node = game_node->FirstChildElement("custom_controls");
-				if (temp_node)
+				xml_element = game_node->FirstChildElement("custom_controls");
+				if (xml_element)
 				{
-					const auto custom_settings = std::string(temp_node->GetText());
+					std::string custom_settings;
+					custom_settings.assign(xml_element->GetText());
 					if (!custom_settings.empty())
 					{
 						parse_custom_settings(prefs, custom_settings);
@@ -810,49 +868,6 @@ game_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 					}
 				}
 
-				if (selected_slave.empty())
-				{
-					temp_node = game_node->FirstChildElement("slave_default");
-
-					// use a selected slave if we have one
-					if (strlen(prefs->whdbootprefs.slave) != 0)
-					{
-						selected_slave.assign(prefs->whdbootprefs.slave);
-						write_log("WHDBooter - Config Selected Slave: %s \n", selected_slave.c_str());
-					}
-					// otherwise use the XML default
-					else if (temp_node->GetText() != nullptr)
-					{
-						selected_slave.assign(temp_node->GetText());
-						write_log("WHDBooter - Default Slave: %s\n", selected_slave.c_str());
-					}
-
-					temp_node = game_node->FirstChildElement("subpath");
-
-					if (temp_node->GetText() != nullptr)
-					{
-						sub_path.assign(temp_node->GetText());
-						write_log("WHDBooter - SubPath:  %s\n", sub_path.c_str());
-					}
-				}
-
-				// get slave_libraries
-				temp_node = game_node->FirstChildElement("slave_libraries");
-				if (temp_node->GetText() != nullptr)
-				{
-					if (strcmpi(temp_node->GetText(), "true") == 0)
-						use_slave_libs = true;
-
-					write_log("WHDBooter - Libraries:  %s\n", sub_path.c_str());
-				}
-
-				// get data path
-				temp_node = game_node->FirstChildElement("slave")->FirstChildElement("datapath");
-				if (temp_node && temp_node->GetText() != nullptr)
-				{
-					data_path.assign(temp_node->GetText());
-					write_log("WHDBooter - Data Path:  %s\n", data_path.c_str());
-				}
 				break;
 			}
 			game_node = game_node->NextSiblingElement();
@@ -866,7 +881,7 @@ void create_startup_sequence(uae_prefs* prefs)
 	std::ostringstream whd_bootscript;
 	whd_bootscript << "FAILAT 999\n";
 
-	if (use_slave_libs)
+	if (whdload_prefs.slave_libraries)
 	{
 		whd_bootscript << "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n";
 	}
@@ -875,11 +890,11 @@ void create_startup_sequence(uae_prefs* prefs)
 	whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
 	whd_bootscript << "ENDIF\n";
 
-	whd_bootscript << "CD \"Games:" << sub_path << "\"\n";
-	whd_bootscript << "WHDLoad SLAVE=\"Games:" << sub_path << "/" << selected_slave << "\"";
+	whd_bootscript << "CD \"Games:" << whdload_prefs.sub_path << "\"\n";
+	whd_bootscript << "WHDLoad SLAVE=\"Games:" << whdload_prefs.sub_path << "/" << whdload_prefs.selected_slave.filename << "\"";
 
 	// Write Cache
-	if (prefs->whdbootprefs.writecache)
+	if (whdload_prefs.write_cache)
 	{
 		whd_bootscript << " PRELOAD NOREQ";
 	}
@@ -889,60 +904,60 @@ void create_startup_sequence(uae_prefs* prefs)
 	}
 
 	// CUSTOM options
-	if (prefs->whdbootprefs.custom1 > 0)
+	if (whdload_prefs.selected_slave.custom1 > 0)
 	{
-		whd_bootscript << " CUSTOM1=" << prefs->whdbootprefs.custom1;
+		whd_bootscript << " CUSTOM1=" << whdload_prefs.selected_slave.custom1;
 	}
-	if (prefs->whdbootprefs.custom2 > 0)
+	if (whdload_prefs.selected_slave.custom2 > 0)
 	{
-		whd_bootscript << " CUSTOM2=" << prefs->whdbootprefs.custom2;
+		whd_bootscript << " CUSTOM2=" << whdload_prefs.selected_slave.custom2;
 	}
-	if (prefs->whdbootprefs.custom3 > 0)
+	if (whdload_prefs.selected_slave.custom3 > 0)
 	{
-		whd_bootscript << " CUSTOM3=" << prefs->whdbootprefs.custom3;
+		whd_bootscript << " CUSTOM3=" << whdload_prefs.selected_slave.custom3;
 	}
-	if (prefs->whdbootprefs.custom4 > 0)
+	if (whdload_prefs.selected_slave.custom4 > 0)
 	{
-		whd_bootscript << " CUSTOM4=" << prefs->whdbootprefs.custom4;
+		whd_bootscript << " CUSTOM4=" << whdload_prefs.selected_slave.custom4;
 	}
-	if (prefs->whdbootprefs.custom5 > 0)
+	if (whdload_prefs.selected_slave.custom5 > 0)
 	{
-		whd_bootscript << " CUSTOM5=" << prefs->whdbootprefs.custom5;
+		whd_bootscript << " CUSTOM5=" << whdload_prefs.selected_slave.custom5;
 	}
-	if (strlen(prefs->whdbootprefs.custom) != 0)
+	if (!whdload_prefs.custom.empty())
 	{
-		whd_bootscript << " CUSTOM=\"" << prefs->whdbootprefs.custom << "\"";
+		whd_bootscript << " CUSTOM=\"" << whdload_prefs.custom << "\"";
 	}
 
 	// BUTTONWAIT
-	if (prefs->whdbootprefs.buttonwait)
+	if (whdload_prefs.button_wait)
 	{
 		whd_bootscript << " BUTTONWAIT";
 	}
 
 	// SPLASH
-	if (!prefs->whdbootprefs.showsplash)
+	if (!whdload_prefs.show_splash)
 	{
 		whd_bootscript << " SPLASHDELAY=0";
 	}
 
 	// CONFIGDELAY
-	if (prefs->whdbootprefs.configdelay != 0)
+	if (whdload_prefs.config_delay != 0)
 	{
-		whd_bootscript << " CONFIGDELAY=" << prefs->whdbootprefs.configdelay;
+		whd_bootscript << " CONFIGDELAY=" << whdload_prefs.config_delay;
 	}
 
 	// SPECIAL SAVE PATH
-	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << sub_path << "\"";
+	whd_bootscript << " SAVEPATH=Saves:Savegames/ SAVEDIR=\"" << whdload_prefs.sub_path << "\"";
 
 	// DATA PATH
-	if (!data_path.empty())
-		whd_bootscript << "DATA=\"" << data_path << "\"";
+	if (!whdload_prefs.selected_slave.data_path.empty())
+		whd_bootscript << "DATA=\"" << whdload_prefs.selected_slave.data_path << "\"";
 
 	whd_bootscript << '\n';
 
 	// Launches utility program to quit the emulator (via a UAE trap in RTAREA)
-	if (prefs->whdbootprefs.quit_on_exit)
+	if (whdload_prefs.quit_on_exit)
 	{
 		whd_bootscript << "DH0:C/AmiQuit\n";
 	}
@@ -969,7 +984,7 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 {
 	TCHAR tmp[MAX_DPATH];
 
-	if (!selected_slave.empty()) // new booter solution
+	if (!whdload_prefs.selected_slave.filename.empty()) // new booter solution
 	{
 		_sntprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
 
@@ -1025,7 +1040,6 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 {
 	write_log("WHDBooter Launched\n");
-	selected_slave = "";
 
 	get_configuration_path(conf_path, MAX_DPATH);
 	whdbooter_path = get_whdbootpath();
@@ -1046,11 +1060,12 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	// REMOVE THE FILE PATH AND EXTENSION
 	const auto* filename = my_getfilepart(filepath);
-	get_game_name(filepath);
+	const std::string filename_no_extension = get_game_filename(filepath);
+	whdload_prefs.filename = filename_no_extension;
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
-	build_uae_config_filename();
+	build_uae_config_filename(whdload_prefs.filename);
 
 	// If we have a config file, we will use it.
 	// We will need it for the WHDLoad options too.
@@ -1076,7 +1091,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	// LOAD GAME SPECIFICS
 	_sntprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbooter_path.c_str());
-	game_options game_detail;
+	game_hardware_options game_detail;
 
 	_tcscpy(whd_config, whd_path);
 	_tcscat(whd_config, "whdload_db.xml");
@@ -1091,7 +1106,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	}
 
 	// If we have a slave, create a startup-sequence
-	if (!selected_slave.empty())
+	if (!whdload_prefs.selected_slave.filename.empty())
 	{
 		create_startup_sequence(prefs);
 	}

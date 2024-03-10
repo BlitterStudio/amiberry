@@ -11,6 +11,8 @@
 #define UAE_OPTIONS_H
 
 #include <array>
+#include <vector>
+
 #include "uae/types.h"
 
 #include "traps.h"
@@ -533,20 +535,33 @@ struct monconfig
 };
 
 #ifdef AMIBERRY
-struct whdbooter
+struct whdload_slave
 {
-	int custom1 = 0;
-	int custom2 = 0;
-	int custom3 = 0;
-	int custom4 = 0;
-	int custom5 = 0;
-	TCHAR custom[256]{};
-	bool buttonwait{};
-	TCHAR slave[4096]{};
-	bool showsplash{};
-	int configdelay = 0;
-	bool writecache{};
-	bool quit_on_exit{};
+	std::string filename;
+	std::string data_path;
+	int custom1;
+	int custom2;
+	int custom3;
+	int custom4;
+	int custom5;
+};
+struct whdload_options
+{
+	std::string filename;
+	std::string game_name;
+	std::string sub_path;
+	std::string variant_uuid;
+	int slave_count;
+	std::string slave_default;
+	bool slave_libraries;
+	std::vector<whdload_slave> slaves;
+	whdload_slave selected_slave;
+	std::string custom;
+	bool button_wait;
+	bool show_splash;
+	int config_delay;
+	bool write_cache;
+	bool quit_on_exit;
 };
 #endif
 
@@ -1031,10 +1046,11 @@ struct uae_prefs
 	bool use_retroarch_statebuttons;
 	bool use_retroarch_vkbd;
 
-	struct whdbooter whdbootprefs;
-
+	
 #endif
 };
+
+extern whdload_options whdload_prefs;
 
 extern int config_changed, config_changed_flags;
 extern void config_check_vsync(void);
