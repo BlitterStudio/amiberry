@@ -1081,7 +1081,7 @@ static const TCHAR* get_joystick_friendlyname(const int joy)
 static const TCHAR* get_joystick_uniquename(const int joy)
 {
 	TCHAR tmp[MAX_DPATH];
-	_stprintf(tmp, _T("JOY%d"), joy);
+	_sntprintf(tmp, MAX_DPATH, _T("JOY%d"), joy);
 	return my_strdup(tmp);
 }
 

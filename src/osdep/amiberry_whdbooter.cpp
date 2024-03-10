@@ -366,11 +366,11 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	}
 
 	// enable CD
-	_stprintf(tmp, "cd32cd=1");
+	_sntprintf(tmp, MAX_DPATH, "cd32cd=1");
 	cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 	// mount the image
-	_stprintf(tmp, "cdimage0=%s,image", filepath);
+	_sntprintf(tmp, MAX_DPATH, "cdimage0=%s,image", filepath);
 	cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 	//APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
@@ -988,20 +988,20 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 	{
 		_sntprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
 
-		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
+		_sntprintf(tmp, MAX_DPATH, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
+		_sntprintf(tmp, MAX_DPATH, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbooter_path.c_str());
 		if (!my_existsfile2(boot_path))
 			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path.c_str());
 
-		_stprintf(tmp, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
+		_sntprintf(tmp, MAX_DPATH, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-		_stprintf(tmp, _T("uaehf0=dir,rw,DH3:DH3::%s,-10"), boot_path);
+		_sntprintf(tmp, MAX_DPATH, _T("uaehf0=dir,rw,DH3:DH3::%s,-10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 	}
 	else // revert to original booter is no slave was set
@@ -1010,18 +1010,18 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 		if (!my_existsfile2(boot_path))
 			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path.c_str());
 
-		_stprintf(tmp, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
+		_sntprintf(tmp, MAX_DPATH, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-		_stprintf(tmp, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
+		_sntprintf(tmp, MAX_DPATH, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 	}
 
 	//set the Second (game data) drive
-	_stprintf(tmp, "filesystem2=rw,DH1:Games:\"%s\",0", filepath);
+	_sntprintf(tmp, MAX_DPATH, "filesystem2=rw,DH1:Games:\"%s\",0", filepath);
 	cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-	_stprintf(tmp, "uaehf1=dir,rw,DH1:Games:\"%s\",0", filepath);
+	_sntprintf(tmp, MAX_DPATH, "uaehf1=dir,rw,DH1:Games:\"%s\",0", filepath);
 	cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
 	//set the third (save data) drive
@@ -1029,10 +1029,10 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 
 	if (my_existsdir(save_path))
 	{
-		_stprintf(tmp, "filesystem2=rw,DH2:Saves:%s,0", save_path);
+		_sntprintf(tmp, MAX_DPATH, "filesystem2=rw,DH2:Saves:%s,0", save_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 
-		_stprintf(tmp, "uaehf2=dir,rw,DH2:Saves:%s,0", save_path);
+		_sntprintf(tmp, MAX_DPATH, "uaehf2=dir,rw,DH2:Saves:%s,0", save_path);
 		cfgfile_parse_line(prefs, parse_text(tmp), 0);
 	}
 }
