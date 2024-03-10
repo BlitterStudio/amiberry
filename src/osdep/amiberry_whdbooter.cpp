@@ -737,7 +737,7 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 	game_hardware_options game_detail{};
 	tinyxml2::XMLDocument doc;
 	auto error = false;
-	write_log("WHDBooter - Searching whdload_db.xml for %s\n", whdload_prefs.filename);
+	write_log("WHDBooter - Searching whdload_db.xml for %s\n", whdload_prefs.filename.c_str());
 
 	auto* f = fopen(whd_config, _T("rb"));
 	if (f)
