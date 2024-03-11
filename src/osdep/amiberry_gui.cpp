@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <fstream>
+#include <algorithm>
+#include <vector>
+#include <string>
 
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
@@ -94,73 +97,16 @@ std::string get_full_path_from_disk_list(std::string element)
 	return full_path;
 }
 
-void AddFileToDiskList(const char *file, int moveToTop)
+void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file)
 {
-	unsigned int i;
-
-	for (i = 0; i < lstMRUDiskList.size(); ++i)
-	{
-		if (!stricmp(lstMRUDiskList[i].c_str(), file))
-		{
-			if (moveToTop)
-			{
-				lstMRUDiskList.erase(lstMRUDiskList.begin() + i);
-				lstMRUDiskList.insert(lstMRUDiskList.begin(), file);
-			}
-			break;
-		}
+	// Check if the string already exists in the vector
+	if (std::find(vec.begin(), vec.end(), file) == vec.end()) {
+		// The string does not exist in the vector, so add it at the first position
+		vec.insert(vec.begin(), file);
 	}
-	if (i >= lstMRUDiskList.size())
-		lstMRUDiskList.insert(lstMRUDiskList.begin(), file);
 
-	while (lstMRUDiskList.size() > MAX_MRU_DISKLIST)
-		lstMRUDiskList.pop_back();
-}
-
-void AddFileToCDList(const char *file, int moveToTop)
-{
-	unsigned int i;
-
-	for (i = 0; i < lstMRUCDList.size(); ++i)
-	{
-		if (!stricmp(lstMRUCDList[i].c_str(), file))
-		{
-			if (moveToTop)
-			{
-				lstMRUCDList.erase(lstMRUCDList.begin() + i);
-				lstMRUCDList.insert(lstMRUCDList.begin(), file);
-			}
-			break;
-		}
-	}
-	if (i >= lstMRUCDList.size())
-		lstMRUCDList.insert(lstMRUCDList.begin(), file);
-
-	while (lstMRUCDList.size() > MAX_MRU_CDLIST)
-		lstMRUCDList.pop_back();
-}
-
-void AddFileToWHDLoadList(const char* file, int moveToTop)
-{
-	unsigned int i;
-
-	for (i = 0; i < lstMRUWhdloadList.size(); ++i)
-	{
-		if (!stricmp(lstMRUWhdloadList[i].c_str(), file))
-		{
-			if (moveToTop)
-			{
-				lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + i);
-				lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
-			}
-			break;
-		}
-	}
-	if (i >= lstMRUWhdloadList.size())
-		lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
-
-	while (lstMRUWhdloadList.size() > MAX_MRU_WHDLOADLIST)
-		lstMRUWhdloadList.pop_back();
+	while (vec.size() > MAX_MRU_LIST)
+		vec.pop_back();
 }
 
 void ClearAvailableROMList()
@@ -426,7 +372,7 @@ void disk_selection(const int drive, uae_prefs* prefs)
 		{
 			strncpy(prefs->floppyslots[drive].df, tmp.c_str(), MAX_DPATH);
 			disk_insert(drive, tmp.c_str());
-			AddFileToDiskList(tmp.c_str(), 1);
+			add_file_to_mru_list(lstMRUDiskList, tmp);
 			current_dir = extract_path(tmp);
 		}
 	}

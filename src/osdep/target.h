@@ -156,17 +156,13 @@ typedef struct
 
 extern std::vector<AvailableROM*> lstAvailableROMs;
 
-#define MAX_MRU_DISKLIST 40
+#define MAX_MRU_LIST 40
+
 extern std::vector<std::string> lstMRUDiskList;
-extern void AddFileToDiskList(const char* file, int moveToTop);
-
-#define MAX_MRU_CDLIST 10
 extern std::vector<std::string> lstMRUCDList;
-extern void AddFileToCDList(const char* file, int moveToTop);
-
-#define MAX_MRU_WHDLOADLIST 10
 extern std::vector<std::string> lstMRUWhdloadList;
-extern void AddFileToWHDLoadList(const char* file, int moveToTop);
+
+extern void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file);
 
 int count_HDs(struct uae_prefs* p);
 extern void gui_force_rtarea_hdchange(void);

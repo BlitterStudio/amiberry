@@ -252,7 +252,7 @@ public:
 					strncpy(changed_prefs.cdslots[0].name, tmp.c_str(), sizeof changed_prefs.cdslots[0].name);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-					AddFileToCDList(tmp.c_str(), 1);
+					add_file_to_mru_list(lstMRUCDList, tmp);
 					current_dir = extract_path(tmp);
 
 					RefreshCDListModel();

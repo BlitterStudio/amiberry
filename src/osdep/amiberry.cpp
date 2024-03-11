@@ -2989,7 +2989,7 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 				p->floppyslots[i].df[0] = 0;
 			disk_insert(i, p->floppyslots[i].df);
 			if (strlen(p->floppyslots[i].df) > 0)
-				AddFileToDiskList(p->floppyslots[i].df, 1);
+				add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
 		}
 
 		if (!isdefault)
