@@ -281,7 +281,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	}
 }
 
-std::string get_game_filename(char* filepath)
+std::string get_game_filename(const char* filepath)
 {
 	extract_filename(filepath, last_loaded_config);
 	const std::string game_name = extract_filename(filepath);
@@ -876,7 +876,7 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 	return game_detail;
 }
 
-void create_startup_sequence(uae_prefs* prefs)
+void create_startup_sequence()
 {
 	std::ostringstream whd_bootscript;
 	whd_bootscript << "FAILAT 999\n";
@@ -980,7 +980,7 @@ bool is_a600_available(uae_prefs* prefs)
 	return rom_test == 1;
 }
 
-void set_booter_drives(uae_prefs* prefs, char* filepath)
+void set_booter_drives(uae_prefs* prefs, const char* filepath)
 {
 	TCHAR tmp[MAX_DPATH];
 
@@ -1037,7 +1037,7 @@ void set_booter_drives(uae_prefs* prefs, char* filepath)
 	}
 }
 
-void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
+void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
 	write_log("WHDBooter Launched\n");
 
@@ -1108,7 +1108,7 @@ void whdload_auto_prefs(uae_prefs* prefs, char* filepath)
 	// If we have a slave, create a startup-sequence
 	if (!whdload_prefs.selected_slave.filename.empty())
 	{
-		create_startup_sequence(prefs);
+		create_startup_sequence();
 	}
 
 	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
