@@ -537,9 +537,9 @@ struct monconfig
 #ifdef AMIBERRY
 enum custom_type
 {
-	None,
-	Boolean,
-	List
+	none,
+	checkbox,
+	list
 };
 struct whdload_custom
 {

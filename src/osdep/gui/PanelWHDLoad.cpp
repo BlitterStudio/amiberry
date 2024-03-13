@@ -427,7 +427,7 @@ void ExitPanelWHDLoad()
 
 void update_custom_fields(const whdload_custom& custom, const int custom_x)
 {
-	if (custom.type == Boolean)
+	if (custom.type == checkbox)
 	{
 		chkCustom[custom_x]->setCaption(custom.caption);
 		chkCustom[custom_x]->adjustSize();
@@ -437,7 +437,7 @@ void update_custom_fields(const whdload_custom& custom, const int custom_x)
 		// Hide the other widgets
 		cboCustom[custom_x]->setVisible(false);
 	}
-	else if (custom.type == List)
+	else if (custom.type == list)
 	{
 		lblCustom[custom_x]->setCaption(custom.caption);
 		lblCustom[custom_x]->adjustSize();
