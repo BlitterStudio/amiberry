@@ -732,6 +732,125 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 	}
 }
 
+void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
+{
+	std::istringstream stream(custom);
+	std::string line;
+
+	while (std::getline(stream, line)) {
+		if (line.find("C1") != std::string::npos || line.find("C2") != std::string::npos ||
+			line.find("C3") != std::string::npos || line.find("C4") != std::string::npos ||
+			line.find("C5") != std::string::npos) {
+
+			std::istringstream lineStream(line);
+			std::string segment;
+			std::vector<std::string> seglist;
+
+			while (std::getline(lineStream, segment, ':')) {
+				segment.erase(std::remove(segment.begin(), segment.end(), '\t'), segment.end());
+				seglist.push_back(segment);
+			}
+
+			// Process seglist as needed
+			if (seglist[0] == "C1")
+			{
+				if (seglist[1] == "B" || seglist[1] == "X")
+				{
+					slave.custom1.type = Boolean;
+					slave.custom1.caption = seglist[2];
+				}
+				else if (seglist[1] == "L")
+				{
+					slave.custom1.type = List;
+					slave.custom1.caption = seglist[2];
+					slave.custom1.value = 0;
+					std::string token;
+					std::istringstream token_stream(seglist[3]);
+					while (std::getline(token_stream, token, ',')) {
+						slave.custom1.labels.push_back(token);
+					}
+				}
+			}
+			else if (seglist[0] == "C2")
+			{
+				if (seglist[1] == "B" || seglist[1] == "X")
+				{
+					slave.custom2.type = Boolean;
+					slave.custom2.caption = seglist[2];
+				}
+				else if (seglist[1] == "L")
+				{
+					slave.custom2.type = List;
+					slave.custom2.caption = seglist[2];
+					slave.custom2.value = 0;
+					std::string token;
+					std::istringstream token_stream(seglist[3]);
+					while (std::getline(token_stream, token, ',')) {
+						slave.custom2.labels.push_back(token);
+					}
+				}
+			}
+			else if (seglist[0] == "C3")
+			{
+				if (seglist[1] == "B" || seglist[1] == "X")
+				{
+					slave.custom3.type = Boolean;
+					slave.custom3.caption = seglist[2];
+				}
+				else if (seglist[1] == "L")
+				{
+					slave.custom3.type = List;
+					slave.custom3.caption = seglist[2];
+					slave.custom3.value = 0;
+					std::string token;
+					std::istringstream token_stream(seglist[3]);
+					while (std::getline(token_stream, token, ',')) {
+						slave.custom3.labels.push_back(token);
+					}
+				}
+			}
+			else if (seglist[0] == "C4")
+			{
+				if (seglist[1] == "B" || seglist[1] == "X")
+				{
+					slave.custom4.type = Boolean;
+					slave.custom4.caption = seglist[2];
+				}
+				else if (seglist[1] == "L")
+				{
+					slave.custom4.type = List;
+					slave.custom4.caption = seglist[2];
+					slave.custom4.value = 0;
+					std::string token;
+					std::istringstream token_stream(seglist[3]);
+					while (std::getline(token_stream, token, ',')) {
+						slave.custom4.labels.push_back(token);
+					}
+				}
+			}
+			else if (seglist[0] == "C5")
+			{
+				if (seglist[1] == "B" || seglist[1] == "X")
+				{
+					slave.custom5.type = Boolean;
+					slave.custom5.caption = seglist[2];
+				}
+				else if (seglist[1] == "L")
+				{
+					slave.custom5.type = List;
+					slave.custom5.caption = seglist[2];
+					slave.custom5.value = 0;
+					std::string token;
+					std::istringstream token_stream(seglist[3]);
+					while (std::getline(token_stream, token, ',')) {
+						slave.custom5.labels.push_back(token);
+					}
+				}
+			}
+		}
+	}
+}
+
 game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 {
 	game_hardware_options game_detail{};
@@ -830,8 +949,12 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 						slave.filename.assign(xml_element->FirstChildElement("filename")->GetText());
 						if (xml_element->FirstChildElement("datapath")->GetText() != nullptr)
 							slave.data_path.assign(xml_element->FirstChildElement("datapath")->GetText());
-
-						//TODO parse custom1-5 here, assign to slave object
+						
+						if (xml_element->FirstChildElement("custom")->GetText() != nullptr)
+						{
+							auto custom = std::string(xml_element->FirstChildElement("custom")->GetText());
+							parse_slave_custom_fields(slave, custom);
+						}
 
 						whdload_prefs.slaves.emplace_back(slave);
 
@@ -907,25 +1030,25 @@ void create_startup_sequence()
 	}
 
 	// CUSTOM options
-	if (whdload_prefs.selected_slave.custom1 > 0)
+	if (whdload_prefs.selected_slave.custom1.value > 0)
 	{
-		whd_bootscript << " CUSTOM1=" << whdload_prefs.selected_slave.custom1;
+		whd_bootscript << " CUSTOM1=" << whdload_prefs.selected_slave.custom1.value;
 	}
-	if (whdload_prefs.selected_slave.custom2 > 0)
+	if (whdload_prefs.selected_slave.custom2.value > 0)
 	{
-		whd_bootscript << " CUSTOM2=" << whdload_prefs.selected_slave.custom2;
+		whd_bootscript << " CUSTOM2=" << whdload_prefs.selected_slave.custom2.value;
 	}
-	if (whdload_prefs.selected_slave.custom3 > 0)
+	if (whdload_prefs.selected_slave.custom3.value > 0)
 	{
-		whd_bootscript << " CUSTOM3=" << whdload_prefs.selected_slave.custom3;
+		whd_bootscript << " CUSTOM3=" << whdload_prefs.selected_slave.custom3.value;
 	}
-	if (whdload_prefs.selected_slave.custom4 > 0)
+	if (whdload_prefs.selected_slave.custom4.value > 0)
 	{
-		whd_bootscript << " CUSTOM4=" << whdload_prefs.selected_slave.custom4;
+		whd_bootscript << " CUSTOM4=" << whdload_prefs.selected_slave.custom4.value;
 	}
-	if (whdload_prefs.selected_slave.custom5 > 0)
+	if (whdload_prefs.selected_slave.custom5.value > 0)
 	{
-		whd_bootscript << " CUSTOM5=" << whdload_prefs.selected_slave.custom5;
+		whd_bootscript << " CUSTOM5=" << whdload_prefs.selected_slave.custom5.value;
 	}
 	if (!whdload_prefs.custom.empty())
 	{

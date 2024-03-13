@@ -315,6 +315,11 @@ void ExitPanelVirtualKeyboard();
 void RefreshPanelVirtualKeyboard();
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
 
+void InitPanelWHDLoad(const struct config_category& category);
+void ExitPanelWHDLoad();
+void RefreshPanelWHDLoad();
+bool HelpPanelWHDLoad(std::vector<std::string>& helptext);
+
 void refresh_all_panels();
 void register_refresh_func(void (*func)());
 void focus_bug_workaround(gcn::Window* wnd);

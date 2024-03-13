@@ -2974,11 +2974,11 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_write_bool(f, _T("whdload_showsplash"), whdload_prefs.show_splash);
 	cfgfile_write_bool(f, _T("whdload_buttonwait"), whdload_prefs.button_wait);
 	cfgfile_dwrite(f, _T("whdload_configdelay"), _T("%d"), whdload_prefs.config_delay);
-	cfgfile_write(f, _T("whdload_custom1"), _T("%d"), whdload_prefs.selected_slave.custom1);
-	cfgfile_write(f, _T("whdload_custom2"), _T("%d"), whdload_prefs.selected_slave.custom2);
-	cfgfile_write(f, _T("whdload_custom3"), _T("%d"), whdload_prefs.selected_slave.custom3);
-	cfgfile_write(f, _T("whdload_custom4"), _T("%d"), whdload_prefs.selected_slave.custom4);
-	cfgfile_write(f, _T("whdload_custom5"), _T("%d"), whdload_prefs.selected_slave.custom5);
+	cfgfile_write(f, _T("whdload_custom1"), _T("%d"), whdload_prefs.selected_slave.custom1.value);
+	cfgfile_write(f, _T("whdload_custom2"), _T("%d"), whdload_prefs.selected_slave.custom2.value);
+	cfgfile_write(f, _T("whdload_custom3"), _T("%d"), whdload_prefs.selected_slave.custom3.value);
+	cfgfile_write(f, _T("whdload_custom4"), _T("%d"), whdload_prefs.selected_slave.custom4.value);
+	cfgfile_write(f, _T("whdload_custom5"), _T("%d"), whdload_prefs.selected_slave.custom5.value);
 	cfgfile_write_str(f, _T("whdload_custom"), whdload_prefs.custom.c_str());
 	cfgfile_write_bool(f, _T("whdload_writecache"), whdload_prefs.write_cache);
 	cfgfile_write_bool(f, _T("whdload_quit_on_exit"), whdload_prefs.quit_on_exit);
@@ -3521,11 +3521,11 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 	/* Read in WHDLoad Options  */
 	if (cfgfile_string(option, value, _T("whdload_slave"), whdload_prefs.selected_slave.filename)
-		|| cfgfile_intval(option, value, _T("whdload_custom1"), &whdload_prefs.selected_slave.custom1, 1)
-		|| cfgfile_intval(option, value, _T("whdload_custom2"), &whdload_prefs.selected_slave.custom2, 1)
-		|| cfgfile_intval(option, value, _T("whdload_custom3"), &whdload_prefs.selected_slave.custom3, 1)
-		|| cfgfile_intval(option, value, _T("whdload_custom4"), &whdload_prefs.selected_slave.custom4, 1)
-		|| cfgfile_intval(option, value, _T("whdload_custom5"), &whdload_prefs.selected_slave.custom5, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom1"), &whdload_prefs.selected_slave.custom1.value, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom2"), &whdload_prefs.selected_slave.custom2.value, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom3"), &whdload_prefs.selected_slave.custom3.value, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom4"), &whdload_prefs.selected_slave.custom4.value, 1)
+		|| cfgfile_intval(option, value, _T("whdload_custom5"), &whdload_prefs.selected_slave.custom5.value, 1)
 		|| cfgfile_string(option, value, _T("whdload_custom"), whdload_prefs.custom)
 		|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &whdload_prefs.button_wait)
 		|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &whdload_prefs.show_splash)

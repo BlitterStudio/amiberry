@@ -334,7 +334,7 @@ void InitPanelCustom(const config_category& category)
 	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y;
 
 	// Column 1
-	const auto column1 = 5;
+	constexpr auto column1 = 5;
 	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX / 2; i++)
 	{
 		category.panel->add(lblCustomButtonAction[i], column1, posY);
