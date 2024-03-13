@@ -756,12 +756,12 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			{
 				if (seglist[1] == "B" || seglist[1] == "X")
 				{
-					slave.custom1.type = checkbox;
+					slave.custom1.type = bool_type;
 					slave.custom1.caption = seglist[2];
 				}
 				else if (seglist[1] == "L")
 				{
-					slave.custom1.type = list;
+					slave.custom1.type = list_type;
 					slave.custom1.caption = seglist[2];
 					slave.custom1.value = 0;
 					std::string token;
@@ -775,12 +775,12 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			{
 				if (seglist[1] == "B" || seglist[1] == "X")
 				{
-					slave.custom2.type = checkbox;
+					slave.custom2.type = bool_type;
 					slave.custom2.caption = seglist[2];
 				}
 				else if (seglist[1] == "L")
 				{
-					slave.custom2.type = list;
+					slave.custom2.type = list_type;
 					slave.custom2.caption = seglist[2];
 					slave.custom2.value = 0;
 					std::string token;
@@ -794,12 +794,12 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			{
 				if (seglist[1] == "B" || seglist[1] == "X")
 				{
-					slave.custom3.type = checkbox;
+					slave.custom3.type = bool_type;
 					slave.custom3.caption = seglist[2];
 				}
 				else if (seglist[1] == "L")
 				{
-					slave.custom3.type = list;
+					slave.custom3.type = list_type;
 					slave.custom3.caption = seglist[2];
 					slave.custom3.value = 0;
 					std::string token;
@@ -813,12 +813,12 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			{
 				if (seglist[1] == "B" || seglist[1] == "X")
 				{
-					slave.custom4.type = checkbox;
+					slave.custom4.type = bool_type;
 					slave.custom4.caption = seglist[2];
 				}
 				else if (seglist[1] == "L")
 				{
-					slave.custom4.type = list;
+					slave.custom4.type = list_type;
 					slave.custom4.caption = seglist[2];
 					slave.custom4.value = 0;
 					std::string token;
@@ -832,12 +832,12 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			{
 				if (seglist[1] == "B" || seglist[1] == "X")
 				{
-					slave.custom5.type = checkbox;
+					slave.custom5.type = bool_type;
 					slave.custom5.caption = seglist[2];
 				}
 				else if (seglist[1] == "L")
 				{
-					slave.custom5.type = list;
+					slave.custom5.type = list_type;
 					slave.custom5.caption = seglist[2];
 					slave.custom5.value = 0;
 					std::string token;

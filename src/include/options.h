@@ -538,8 +538,8 @@ struct monconfig
 enum custom_type
 {
 	none,
-	checkbox,
-	list
+	bool_type,
+	list_type
 };
 struct whdload_custom
 {
