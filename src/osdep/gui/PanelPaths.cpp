@@ -103,7 +103,7 @@ public:
 			get_savestate_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for Save state files", std::string(tmp));
 			{
-				set_savestate_path(tmp);
+				set_savestate_path(path);
 			}
 			cmdStateFiles->requestFocus();
 		}
@@ -111,7 +111,7 @@ public:
 		{
 			path = SelectFolder("Folder for controller files", get_controllers_path());
 			{
-				set_controllers_path(std::string(tmp));
+				set_controllers_path(path);
 			}
 			cmdControllersPath->requestFocus();
 		}
@@ -121,7 +121,7 @@ public:
 			const char* filter[] = {"retroarch.cfg", "\0"};
 			path = SelectFile("Select RetroArch Config File", get_retroarch_file(), filter);
 			{
-				set_retroarch_file(tmp);
+				set_retroarch_file(path);
 			}
 			cmdRetroArchFile->requestFocus();
 		}
@@ -130,7 +130,7 @@ public:
 		{
 			path = SelectFolder("Folder for WHDBoot files", get_whdbootpath());
 			{
-				set_whdbootpath(tmp);
+				set_whdbootpath(path);
 			}
 			cmdWHDBootPath->requestFocus();
 		}
@@ -149,7 +149,7 @@ public:
 			const char* filter[] = { "amiberry.log", "\0" };
 			path = SelectFile("Select Amiberry Log file", get_logfile_path(), filter, true);
 			{
-				set_logfile_path(tmp);
+				set_logfile_path(path);
 			}
 			cmdLogfilePath->requestFocus();
 		}
