@@ -828,7 +828,10 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 					{
 						whdload_slave slave;
 						slave.filename.assign(xml_element->FirstChildElement("filename")->GetText());
-						slave.data_path.assign(xml_element->FirstChildElement("datapath")->GetText());
+						if (xml_element->FirstChildElement("datapath")->GetText() != nullptr)
+							slave.data_path.assign(xml_element->FirstChildElement("datapath")->GetText());
+
+						//TODO parse custom1-5 here, assign to slave object
 
 						whdload_prefs.slaves.emplace_back(slave);
 
