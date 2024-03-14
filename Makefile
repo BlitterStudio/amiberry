@@ -129,7 +129,7 @@ ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
 # OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
 	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
-	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
 	HAVE_NEON = 1
 	ifdef DEBUG
 		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -140,7 +140,7 @@ else ifeq ($(PLATFORM),orangepi-pc)
 # OrangePi Zero (SDL2)
 else ifeq ($(PLATFORM),orangepi-zero)
 	CPUFLAGS = -mcpu=cortex-a53
-	CPPFLAGS += $(CPPFLAGS64) -DUSE_RENDER_THREAD
+	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 	ifdef DEBUG
 		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -151,7 +151,7 @@ else ifeq ($(PLATFORM),orangepi-zero)
 # Odroid XU4 (SDL2)
 else ifeq ($(PLATFORM),xu4)
 	CPUFLAGS = -mcpu=cortex-a15 -mfpu=neon-vfpv4
-	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
 	HAVE_NEON = 1
 	ifdef DEBUG
 		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -162,7 +162,7 @@ else ifeq ($(PLATFORM),xu4)
 # Odroid C1 (SDL2)
 else ifeq ($(PLATFORM),c1)
 	CPUFLAGS = -mcpu=cortex-a5 -mfpu=neon-vfpv4
-	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
 	HAVE_NEON = 1
 	ifdef DEBUG
 		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -173,7 +173,7 @@ else ifeq ($(PLATFORM),c1)
 # Odroid N1/N2, RockPro64 (SDL2 64-bit)
 else ifeq ($(PLATFORM),n2)
 	CPUFLAGS = -mcpu=cortex-a72
-	CPPFLAGS += $(CPPFLAGS64) -DUSE_RENDER_THREAD
+	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
 # Raspberry Pi 3 (SDL2 64-bit)
@@ -205,7 +205,7 @@ else ifeq ($(PLATFORM),rpi5-64-sdl2)
 else ifeq ($(PLATFORM),vero4k)
 	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
 	CFLAGS += -ftree-vectorize -funsafe-math-optimizations
-	CPPFLAGS += -I/opt/vero3/include $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	CPPFLAGS += -I/opt/vero3/include $(CPPFLAGS32) $(NEON_FLAGS)
 	LDFLAGS += -L/opt/vero3/lib
 	HAVE_NEON = 1
 
@@ -223,7 +223,6 @@ else ifneq (,$(findstring AMLG,$(PLATFORM)))
 	  endif
 	else ifneq (,$(findstring AMLGX,$(PLATFORM)))
 	  CPUFLAGS = -mcpu=cortex-a53
-	  CPPFLAGS += -DUSE_RENDER_THREAD
 	endif
 
 # Amlogic S905D3/S905X3/S905Y3 (AMLSM1) e.g. HardKernel ODroid C4 & Khadas VIM3L (SDL2 64-bit)
@@ -262,12 +261,9 @@ else ifeq ($(PLATFORM),a64)
 
 # Generic x86-64 target
 else ifeq ($(PLATFORM),x86-64)
-	CPPFLAGS += -DUSE_RENDER_THREAD
 
 # Generic EXPERIMENTAL riscv64 target
 else ifeq ($(PLATFORM),riscv64)
-	# USE_RENDER_THREAD fails under sway on VisionFive2
-	# CPPFLAGS += -DUSE_RENDER_THREAD
 
 # RK3588 e.g. RockPi 5
 else ifeq ($(PLATFORM),rk3588)
@@ -289,20 +285,17 @@ else ifneq (,$(findstring RK,$(PLATFORM)))
 		CPUFLAGS += -mcpu=cortex-a72
 	  else ifneq (,$(findstring RK3328,$(PLATFORM)))
 		CPUFLAGS += -mcpu=cortex-a53
-		CPPFLAGS += -DUSE_RENDER_THREAD
 	  else ifneq (,$(findstring RK3326,$(PLATFORM)))
 		CPUFLAGS += -mcpu=cortex-a35
-		CPPFLAGS += -DUSE_RENDER_THREAD
 	  endif
 	else ifneq (,$(findstring RK3288,$(PLATFORM)))
 	  CPUFLAGS = -mcpu=cortex-a17 -mfloat-abi=hard -mfpu=neon-vfpv4
-	  CPPFLAGS += -DUSE_RENDER_THREAD
 	endif
 
 # sun8i Allwinner H2+ / H3 like Orange PI, Nano PI, Banana PI, Tritium, AlphaCore2, MPCORE-HUB
 else ifeq ($(PLATFORM),sun8i)
 	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
-	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
 	HAVE_NEON = 1
 	ifdef DEBUG
 		# Otherwise we'll get compilation errors, check https://tls.mbed.org/kb/development/arm-thumb-error-r7-cannot-be-used-in-asm-here
@@ -331,7 +324,7 @@ else ifeq ($(PLATFORM),mali-drm-gles2-sdl2)
 # Generic Cortex-A9 32-bit
 else ifeq ($(PLATFORM),s812)
 	CPUFLAGS = -mcpu=cortex-a9 -mfpu=neon-vfpv3 -mfloat-abi=hard
-	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS) -DUSE_RENDER_THREAD
+	CPPFLAGS += $(CPPFLAGS32) $(NEON_FLAGS)
 	HAVE_NEON = 1 
 
 else
