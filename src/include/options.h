@@ -992,6 +992,9 @@ struct uae_prefs
 	bool midirouter;
 	int uaescsimode;
 	int soundcard;
+#ifdef AMIBERRY
+	bool soundcard_default;
+#endif
 	int samplersoundcard;
 	bool blankmonitors;
 	bool right_control_is_right_win_key;

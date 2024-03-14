@@ -2040,6 +2040,9 @@ static int sound_prefs_changed (void)
 		return 0;
 	if (changed_prefs.produce_sound != currprefs.produce_sound
 		|| changed_prefs.soundcard != currprefs.soundcard
+#ifdef AMIBERRY
+		|| changed_prefs.soundcard_default != currprefs.soundcard_default
+#endif
 		|| changed_prefs.sound_stereo != currprefs.sound_stereo
 		|| changed_prefs.sound_maxbsiz != currprefs.sound_maxbsiz
 		|| changed_prefs.sound_freq != currprefs.sound_freq
@@ -2129,6 +2132,9 @@ void set_audio (void)
 
 	currprefs.produce_sound = changed_prefs.produce_sound;
 	currprefs.soundcard = changed_prefs.soundcard;
+#ifdef AMIBERRY
+	currprefs.soundcard_default = changed_prefs.soundcard_default;
+#endif
 	currprefs.sound_stereo = changed_prefs.sound_stereo;
 	active_sound_stereo = currprefs.sound_stereo;
 	currprefs.sound_auto = changed_prefs.sound_auto;

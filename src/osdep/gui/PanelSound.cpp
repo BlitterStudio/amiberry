@@ -54,7 +54,9 @@ static gcn::Slider* sldSoundBufferSize;
 static gcn::Label* lblSoundBufferSize;
 static gcn::RadioButton* optSoundPull;
 static gcn::RadioButton* optSoundPush;
+static gcn::Label* lblSoundcard;
 static gcn::DropDown* cboSoundcard;
+static gcn::CheckBox* chkSystemDefault;
 static gcn::Label* lblSwapChannels;
 static gcn::DropDown* cboSwapChannels;
 
@@ -91,7 +93,11 @@ class SoundActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == cboSoundcard)
+		if (actionEvent.getSource() == chkSystemDefault)
+		{
+			changed_prefs.soundcard_default = chkSystemDefault->isSelected();
+		}
+		else if (actionEvent.getSource() == cboSoundcard)
 		{
 			const int soundcard = cboSoundcard->getSelected();
 			if (soundcard != changed_prefs.soundcard)
@@ -302,12 +308,18 @@ void InitPanelSound(const config_category& category)
 
 	sound_action_listener = new SoundActionListener();
 
+	lblSoundcard = new gcn::Label("Device:");
+	lblSoundcard->setAlignment(gcn::Graphics::RIGHT);
 	cboSoundcard = new gcn::DropDown(&soundcard_list);
-	cboSoundcard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, cboSoundcard->getHeight());
+	cboSoundcard->setSize(category.panel->getWidth() - lblSoundcard->getWidth() - 8 - DISTANCE_BORDER * 2, cboSoundcard->getHeight());
 	cboSoundcard->setBaseColor(gui_baseCol);
 	cboSoundcard->setBackgroundColor(colTextboxBackground);
 	cboSoundcard->setId("cboSoundcard");
 	cboSoundcard->addActionListener(sound_action_listener);
+
+	chkSystemDefault = new gcn::CheckBox("System default");
+	chkSystemDefault->setId("chkSystemDefault");
+	chkSystemDefault->addActionListener(sound_action_listener);
 
 	optSoundDisabled = new gcn::RadioButton("Disabled", "radiosoundgroup");
 	optSoundDisabled->setId("sndDisable");
@@ -525,8 +537,11 @@ void InitPanelSound(const config_category& category)
 	grpSoundBufferSize->setBaseColor(gui_baseCol);
 	
 	int posY = DISTANCE_BORDER;
-	category.panel->add(cboSoundcard, DISTANCE_BORDER, posY);
+	category.panel->add(lblSoundcard, DISTANCE_BORDER, posY);
+	category.panel->add(cboSoundcard, lblSoundcard->getX() + lblSoundcard->getWidth() + 8, posY);
 	posY += cboSoundcard->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkSystemDefault, DISTANCE_BORDER, posY);
+	posY += chkSystemDefault->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(grpSound, DISTANCE_BORDER, posY);
 	category.panel->add(grpVolume, grpSound->getX() + grpSound->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += grpSound->getHeight() + DISTANCE_NEXT_Y;
@@ -558,7 +573,9 @@ void ExitPanelSound()
 {
 	delete lblSwapChannels;
 	delete cboSwapChannels;
+	delete lblSoundcard;
 	delete cboSoundcard;
+	delete chkSystemDefault;
 	delete optSoundDisabled;
 	delete optSoundDisabledEmu;
 	delete optSoundEmulated;
@@ -618,7 +635,9 @@ void RefreshPanelSound()
 {
 	char tmp[10];
 
-	if (numdevs == 0)
+	chkSystemDefault->setSelected(changed_prefs.soundcard_default);
+
+	if (numdevs == 0 || chkSystemDefault->isSelected())
 	{
 		cboSoundcard->setEnabled(false);
 	}
