@@ -2414,6 +2414,7 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite_bool(f, _T("borderless"), p->borderless);
 	cfgfile_target_dwrite_bool(f, _T("blank_monitors"), p->blankmonitors);
 	cfgfile_target_dwrite_str(f, _T("uaescsimode"), scsimode[p->uaescsimode]);
+	cfgfile_target_dwrite_bool(f, _T("soundcard_default"), p->soundcard_default);
 	cfgfile_target_write(f, _T("soundcard"), _T("%d"), p->soundcard);
 	if (p->soundcard >= 0 && p->soundcard < MAX_SOUND_DEVICES && sound_devices[p->soundcard])
 		cfgfile_target_write_str(f, _T("soundcardname"), sound_devices[p->soundcard]->cfgname);
@@ -2608,6 +2609,8 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 	if (cfgfile_yesno(option, value, _T("rtg_scale_allow"), &p->rtgallowscaling))
 		return 1;
 
+	if (cfgfile_yesno(option, value, _T("soundcard_default"), &p->soundcard_default))
+		return 1;
 	if (cfgfile_intval(option, value, _T("soundcard"), &p->soundcard, 1)) {
 		if (p->soundcard < 0 || p->soundcard >= MAX_SOUND_DEVICES || sound_devices[p->soundcard] == NULL)
 			p->soundcard = 0;

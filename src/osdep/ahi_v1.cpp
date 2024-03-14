@@ -257,7 +257,7 @@ static int ahi_init_sound(void)
 	if (!ahisndbuffer)
 		return 0;
 
-	auto devname = sound_devices[currprefs.soundcard]->name;
+	const auto devname = sound_devices[currprefs.soundcard]->name;
 	SDL_zero(ahi_want);
 	ahi_want.freq = sound_freq_ahi;
 	ahi_want.format = AUDIO_S16SYS;
@@ -268,7 +268,7 @@ static int ahi_init_sound(void)
 		sound_freq_ahi, sound_channels_ahi, sound_bits_ahi, amigablksize);
 
 	if (ahi_dev == 0)
-		ahi_dev = SDL_OpenAudioDevice(devname, 0, &ahi_want, &ahi_have, 0);
+		ahi_dev = SDL_OpenAudioDevice(currprefs.soundcard_default ? nullptr : devname, 0, &ahi_want, &ahi_have, 0);
 
 	if (ahi_dev == 0) {
 		write_log(_T("AHI: Failed to open selected SDL2 device: %s, retrying with default device\n"), SDL_GetError());
