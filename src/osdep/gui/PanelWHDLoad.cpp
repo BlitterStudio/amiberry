@@ -1,5 +1,7 @@
 #include <cstring>
 #include <cstdio>
+#include <iostream>
+#include <vector>
 
 #include <guisan.hpp>
 #include <SDL_image.h>
@@ -21,14 +23,8 @@ static gcn::Button* cmdWhdloadSelect;
 static gcn::Label* lblGameName;
 static gcn::TextField* txtGameName;
 
-static gcn::Label* lblSubPath;
-static gcn::TextField* txtSubPath;
-
 static gcn::Label* lblVariantUuid;
 static gcn::TextField* txtVariantUuid;
-
-static gcn::Label* lblSlaveCount;
-static gcn::TextField* txtSlaveCount;
 
 static gcn::Label* lblSlaveDefault;
 static gcn::TextField* txtSlaveDefault;
@@ -211,20 +207,10 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtGameName->setSize(textfield_width, TEXTFIELD_HEIGHT);
 	txtGameName->setBackgroundColor(colTextboxBackground);
 
-	lblSubPath = new gcn::Label("Sub Path:");
-	txtSubPath = new gcn::TextField();
-	txtSubPath->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtSubPath->setBackgroundColor(colTextboxBackground);
-
 	lblVariantUuid = new gcn::Label("UUID:");
 	txtVariantUuid = new gcn::TextField();
 	txtVariantUuid->setSize(textfield_width, TEXTFIELD_HEIGHT);
 	txtVariantUuid->setBackgroundColor(colTextboxBackground);
-
-	lblSlaveCount = new gcn::Label("Slave count:");
-	txtSlaveCount = new gcn::TextField();
-	txtSlaveCount->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtSlaveCount->setBackgroundColor(colTextboxBackground);
 
 	lblSlaveDefault = new gcn::Label("Slave Default:");
 	txtSlaveDefault = new gcn::TextField();
@@ -297,17 +283,9 @@ void InitPanelWHDLoad(const struct config_category& category)
 	category.panel->add(txtGameName, pos_x2, pos_y);
 	pos_y += lblGameName->getHeight() + 8;
 
-	category.panel->add(lblSubPath, pos_x1, pos_y);
-	category.panel->add(txtSubPath, pos_x2, pos_y);
-	pos_y += lblSubPath->getHeight() + 8;
-
 	category.panel->add(lblVariantUuid, pos_x1, pos_y);
 	category.panel->add(txtVariantUuid, pos_x2, pos_y);
 	pos_y += lblVariantUuid->getHeight() + 8;
-
-	category.panel->add(lblSlaveCount, pos_x1, pos_y);
-	category.panel->add(txtSlaveCount, pos_x2, pos_y);
-	pos_y += lblSlaveCount->getHeight() + 8;
 
 	category.panel->add(lblSlaveDefault, pos_x1, pos_y);
 	category.panel->add(txtSlaveDefault, pos_x2, pos_y);
@@ -336,10 +314,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 		pos_y += cboCustom[i]->getHeight() + 8;
 	}
 
-	pos_y += DISTANCE_NEXT_Y;
-
 	grpWHDLoadGlobal = new gcn::Window("Global options");
-	grpWHDLoadGlobal->setPosition(pos_x1, pos_y);
 	grpWHDLoadGlobal->setMovable(false);
 	grpWHDLoadGlobal->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpWHDLoadGlobal->setBaseColor(gui_baseCol);
@@ -361,6 +336,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	grpWHDLoadGlobal->add(chkQuitOnExit, pos_x1, pos_y);
 	grpWHDLoadGlobal->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 
 		chkQuitOnExit->getY() + chkQuitOnExit->getHeight() + DISTANCE_NEXT_Y + TITLEBAR_HEIGHT);
+	grpWHDLoadGlobal->setPosition(pos_x1, category.panel->getHeight() - grpWHDLoadGlobal->getHeight() - DISTANCE_NEXT_Y);
 	category.panel->add(grpWHDLoadGlobal);
 
 	bIgnoreListChange = false;
@@ -379,14 +355,8 @@ void ExitPanelWHDLoad()
 	delete lblGameName;
 	delete txtGameName;
 
-	delete lblSubPath;
-	delete txtSubPath;
-
 	delete lblVariantUuid;
 	delete txtVariantUuid;
-
-	delete lblSlaveCount;
-	delete txtSlaveCount;
 
 	delete lblSlaveDefault;
 	delete txtSlaveDefault;
@@ -433,6 +403,16 @@ void update_custom_fields(const whdload_custom& custom, const int custom_x)
 		chkCustom[custom_x]->adjustSize();
 		chkCustom[custom_x]->setVisible(true);
 		chkCustom[custom_x]->setSelected(custom.value > 0);
+
+		// Hide the other widgets
+		cboCustom[custom_x]->setVisible(false);
+	}
+	else if (custom.type == bit_type)
+	{
+		chkCustom[custom_x]->setCaption(custom.label_bit_pairs[0].first);
+		chkCustom[custom_x]->adjustSize();
+		chkCustom[custom_x]->setVisible(true);
+		chkCustom[custom_x]->setSelected(custom.label_bit_pairs[0].second > 0);
 
 		// Hide the other widgets
 		cboCustom[custom_x]->setVisible(false);
@@ -491,9 +471,7 @@ void RefreshPanelWHDLoad()
 	if (!whdload_filename.empty())
 	{
 		txtGameName->setText(whdload_prefs.game_name);
-		txtSubPath->setText(whdload_prefs.sub_path);
 		txtVariantUuid->setText(whdload_prefs.variant_uuid);
-		txtSlaveCount->setText(std::to_string(whdload_prefs.slave_count));
 		txtSlaveDefault->setText(whdload_prefs.slave_default);
 		chkSlaveLibraries->setSelected(whdload_prefs.slave_libraries);
 		txtCustomText->setText(whdload_prefs.custom);

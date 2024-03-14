@@ -754,10 +754,16 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			// Process seglist as needed
 			if (seglist[0] == "C1")
 			{
-				if (seglist[1] == "B" || seglist[1] == "X")
+				if (seglist[1] == "B")
 				{
 					slave.custom1.type = bool_type;
 					slave.custom1.caption = seglist[2];
+					slave.custom1.value = 0;
+				}
+				else if (seglist[1] == "X")
+				{
+					slave.custom1.type = bit_type;
+					slave.custom1.label_bit_pairs.insert(slave.custom1.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
 				{
@@ -773,10 +779,16 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			}
 			else if (seglist[0] == "C2")
 			{
-				if (seglist[1] == "B" || seglist[1] == "X")
+				if (seglist[1] == "B")
 				{
 					slave.custom2.type = bool_type;
 					slave.custom2.caption = seglist[2];
+					slave.custom2.value = 0;
+				}
+				else if (seglist[1] == "X")
+				{
+					slave.custom2.type = bit_type;
+					slave.custom2.label_bit_pairs.insert(slave.custom2.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
 				{
@@ -792,10 +804,16 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			}
 			else if (seglist[0] == "C3")
 			{
-				if (seglist[1] == "B" || seglist[1] == "X")
+				if (seglist[1] == "B")
 				{
 					slave.custom3.type = bool_type;
 					slave.custom3.caption = seglist[2];
+					slave.custom3.value = 0;
+				}
+				else if (seglist[1] == "X")
+				{
+					slave.custom3.type = bit_type;
+					slave.custom3.label_bit_pairs.insert(slave.custom3.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
 				{
@@ -815,6 +833,12 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 				{
 					slave.custom4.type = bool_type;
 					slave.custom4.caption = seglist[2];
+					slave.custom4.value = 0;
+				}
+				else if (seglist[1] == "X")
+				{
+					slave.custom4.type = bit_type;
+					slave.custom4.label_bit_pairs.insert(slave.custom4.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
 				{
@@ -834,6 +858,12 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 				{
 					slave.custom5.type = bool_type;
 					slave.custom5.caption = seglist[2];
+					slave.custom5.value = 0;
+				}
+				else if (seglist[1] == "X")
+				{
+					slave.custom5.type = bit_type;
+					slave.custom5.label_bit_pairs.insert(slave.custom5.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
 				{

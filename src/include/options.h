@@ -539,14 +539,32 @@ enum custom_type
 {
 	none,
 	bool_type,
+	bit_type,
 	list_type
 };
 struct whdload_custom
 {
+	/**
+	 * \brief The value of this custom field. This will be sent to WHDLoad
+	 */
 	int value;
+	/**
+	 * \brief The type of the custom field: None, Boolean, Bit or List
+	 */
 	custom_type type;
+	/**
+	 * \brief Caption for this custom field function. Used in the label which describes what this option does
+	 */
 	std::string caption;
+	/**
+	 * \brief The list of labels to show in the dropdown. Used in List type custom fields
+	 */
 	std::vector<std::string> labels;
+	/**
+	 * \brief When the type is a Bit, it can contain multiple entries for the same custom field.
+	 * Each entry has it's own label and a different value that goes with it.
+	 */
+	std::vector<std::pair<std::string, int>> label_bit_pairs;
 };
 struct whdload_slave
 {
