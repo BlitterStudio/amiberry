@@ -53,6 +53,8 @@ endfunction()
 
 detect_architecture("__x86_64__" x86_64)
 detect_architecture("__aarch64__" arm64)
+detect_architecture("__arm__" arm32)
+
 message(STATUS "Target architecture: ${ARCHITECTURE}")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -347,8 +349,15 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
     )
 endif ()
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
-    add_definitions(-DCPU_AARCH64)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR ARCHITECTURE MATCHES "arm32")
+    add_definitions(-DCPU_arm -DARMV6_ASSEMBLY -DARMV6T2)
+    target_sources(${PROJECT_NAME} PRIVATE
+            src/osdep/arm_helper.s
+            src/jit/compemu.cpp
+            src/jit/compstbl.cpp
+            src/jit/compemu_fpp.cpp
+            src/jit/compemu_support.cpp
+    )
 endif ()
 
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
