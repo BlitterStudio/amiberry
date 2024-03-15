@@ -293,6 +293,7 @@ add_executable(${PROJECT_NAME}
         src/threaddep/threading.cpp
         src/osdep/gui/ControllerMap.cpp
         src/osdep/gui/SelectorEntry.cpp
+        src/osdep/gui/ShowCustomFields.cpp
         src/osdep/gui/ShowHelp.cpp
         src/osdep/gui/ShowMessage.cpp
         src/osdep/gui/ShowDiskInfo.cpp

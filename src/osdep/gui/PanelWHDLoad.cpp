@@ -53,14 +53,10 @@ static gcn::Label* lblSlaveDataPath;
 static gcn::TextField* txtSlaveDataPath;
 
 // Selected Slave Custom options
-static gcn::Label* lblCustom[5];
-static gcn::CheckBox* chkCustom[5];
-static gcn::DropDown* cboCustom[5];
-
+static gcn::Button* cmdCustomFields;
 
 static gcn::StringListModel whdloadFileList;
 static gcn::StringListModel slaves_list;
-static gcn::StringListModel custom_list[5];
 
 static bool bIgnoreListChange = true;
 
@@ -166,6 +162,10 @@ public:
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
+		else if (actionEvent.getSource() == cmdCustomFields)
+		{
+			ShowCustomFields();
+		}
 		refresh_all_panels();
 	}
 };
@@ -230,26 +230,11 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtSlaveDataPath->setSize(textfield_width, TEXTFIELD_HEIGHT);
 	txtSlaveDataPath->setBackgroundColor(colTextboxBackground);
 
-	// CUSTOM 1-5
-	for (int i = 0; i < 5; i++)
-	{
-		custom_list[i].clear();
-		std::string caption = "Custom" + std::to_string(i + 1);
-		std::string id;
-
-		lblCustom[i] = new gcn::Label(caption);
-
-		id = "chkCustom" + std::to_string(i);
-		chkCustom[i] = new gcn::CheckBox(caption);
-		chkCustom[i]->setId(id);
-
-		id = "cboCustom" + std::to_string(i);
-		cboCustom[i] = new gcn::DropDown(&custom_list[i]);
-		cboCustom[i]->setId(id);
-		cboCustom[i]->setSize(textfield_width, cboCustom[i]->getHeight());
-		cboCustom[i]->setBaseColor(gui_baseCol);
-		cboCustom[i]->setBackgroundColor(colTextboxBackground);
-	}
+	cmdCustomFields = new gcn::Button("Custom Fields");
+	cmdCustomFields->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdCustomFields->setBaseColor(gui_baseCol);
+	cmdCustomFields->setId("cmdCustomFields");
+	cmdCustomFields->addActionListener(whdloadButtonActionListener);
 
 	lblCustomText = new gcn::Label("Custom:");
 	txtCustomText = new gcn::TextField();
@@ -306,13 +291,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	category.panel->add(txtCustomText, pos_x2, pos_y);
 	pos_y += lblCustomText->getHeight() + DISTANCE_NEXT_Y;
 
-	for (int i = 0; i < 5; i++)
-	{
-		category.panel->add(lblCustom[i], pos_x1, pos_y);
-		category.panel->add(chkCustom[i], pos_x2, pos_y);
-		category.panel->add(cboCustom[i], pos_x2, pos_y);
-		pos_y += cboCustom[i]->getHeight() + 8;
-	}
+	category.panel->add(cmdCustomFields, pos_x2, pos_y);
 
 	grpWHDLoadGlobal = new gcn::Window("Global options");
 	grpWHDLoadGlobal->setMovable(false);
@@ -383,61 +362,11 @@ void ExitPanelWHDLoad()
 	delete txtSlaveDataPath;
 
 	// Selected Slave Custom options
-	for (int i = 0; i < 5; i++)
-	{
-		delete lblCustom[i];
-		delete chkCustom[i];
-		delete cboCustom[i];
-	}
+	delete cmdCustomFields;
 	delete grpWHDLoadGlobal;
 
 	delete whdloadActionListener;
 	delete whdloadButtonActionListener;
-}
-
-void update_custom_fields(const whdload_custom& custom, const int custom_x)
-{
-	if (custom.type == bool_type)
-	{
-		chkCustom[custom_x]->setCaption(custom.caption);
-		chkCustom[custom_x]->adjustSize();
-		chkCustom[custom_x]->setVisible(true);
-		chkCustom[custom_x]->setSelected(custom.value > 0);
-
-		// Hide the other widgets
-		cboCustom[custom_x]->setVisible(false);
-	}
-	else if (custom.type == bit_type)
-	{
-		chkCustom[custom_x]->setCaption(custom.label_bit_pairs[0].first);
-		chkCustom[custom_x]->adjustSize();
-		chkCustom[custom_x]->setVisible(true);
-		chkCustom[custom_x]->setSelected(custom.label_bit_pairs[0].second > 0);
-
-		// Hide the other widgets
-		cboCustom[custom_x]->setVisible(false);
-	}
-	else if (custom.type == list_type)
-	{
-		lblCustom[custom_x]->setCaption(custom.caption);
-		lblCustom[custom_x]->adjustSize();
-		custom_list[custom_x].clear();
-		for (const auto& label : custom.labels)
-		{
-			custom_list[custom_x].add(label);
-		}
-		cboCustom[custom_x]->setVisible(true);
-		cboCustom[custom_x]->setSelected(custom.value);
-
-		// hide the other widgets
-		chkCustom[custom_x]->setVisible(false);
-	}
-	else
-	{
-		// No Custom field for this item, hide all widgets
-		cboCustom[custom_x]->setVisible(false);
-		chkCustom[custom_x]->setVisible(false);
-	}
 }
 
 void update_slaves_list(const std::vector<whdload_slave>& slaves)
@@ -468,13 +397,15 @@ void RefreshPanelWHDLoad()
 	RefreshWhdListModel();
 	AdjustDropDownControls();
 
-	if (!whdload_filename.empty())
+	if (whdload_filename.empty())
 	{
-		txtGameName->setText(whdload_prefs.game_name);
-		txtVariantUuid->setText(whdload_prefs.variant_uuid);
-		txtSlaveDefault->setText(whdload_prefs.slave_default);
-		chkSlaveLibraries->setSelected(whdload_prefs.slave_libraries);
-		txtCustomText->setText(whdload_prefs.custom);
+		cmdCustomFields->setEnabled(false);
+		whdload_prefs = {};
+		slaves_list.clear();
+	}
+	else
+	{
+		cmdCustomFields->setEnabled(true);
 
 		update_slaves_list(whdload_prefs.slaves);
 		update_selected_slave(whdload_prefs.selected_slave);
@@ -483,13 +414,29 @@ void RefreshPanelWHDLoad()
 			txtSlaveDataPath->setText(whdload_prefs.selected_slave.data_path);
 		else
 			txtSlaveDataPath->setText("");
-
-		update_custom_fields(whdload_prefs.selected_slave.custom1, 0);
-		update_custom_fields(whdload_prefs.selected_slave.custom2, 1);
-		update_custom_fields(whdload_prefs.selected_slave.custom3, 2);
-		update_custom_fields(whdload_prefs.selected_slave.custom4, 3);
-		update_custom_fields(whdload_prefs.selected_slave.custom5, 4);
 	}
+
+	if (!whdload_prefs.game_name.empty())
+		txtGameName->setText(whdload_prefs.game_name);
+	else
+		txtGameName->setText("");
+
+	if (!whdload_prefs.variant_uuid.empty())
+		txtVariantUuid->setText(whdload_prefs.variant_uuid);
+	else
+		txtVariantUuid->setText("");
+
+	if (!whdload_prefs.slave_default.empty())
+		txtSlaveDefault->setText(whdload_prefs.slave_default);
+	else
+		txtSlaveDefault->setText("");
+
+	chkSlaveLibraries->setSelected(whdload_prefs.slave_libraries);
+
+	if (!whdload_prefs.custom.empty())
+		txtCustomText->setText(whdload_prefs.custom);
+	else
+		txtCustomText->setText("");
 
 	// These are global
 	chkButtonWait->setSelected(whdload_prefs.button_wait);

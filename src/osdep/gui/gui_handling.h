@@ -338,6 +338,7 @@ bool EditFilesysHardDrive(int unit_no);
 bool CreateFilesysHardfile();
 void ShowHelp(const char* title, const std::vector<std::string>& text);
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
+void ShowCustomFields();
 
 std::string show_controller_map(int device, bool map_touchpad);
 extern void read_directory(std::string path, vector<string>* dirs, vector<string>* files);

@@ -829,7 +829,7 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			}
 			else if (seglist[0] == "C4")
 			{
-				if (seglist[1] == "B" || seglist[1] == "X")
+				if (seglist[1] == "B")
 				{
 					slave.custom4.type = bool_type;
 					slave.custom4.caption = seglist[2];
@@ -854,7 +854,7 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 			}
 			else if (seglist[0] == "C5")
 			{
-				if (seglist[1] == "B" || seglist[1] == "X")
+				if (seglist[1] == "B")
 				{
 					slave.custom5.type = bool_type;
 					slave.custom5.caption = seglist[2];
@@ -971,6 +971,7 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 				// Get slaves and settings
 				xml_element = game_node->FirstChildElement("slave");
 				int i = 1;
+				whdload_prefs.slaves = {};
 				do
 				{
 					if (xml_element)
