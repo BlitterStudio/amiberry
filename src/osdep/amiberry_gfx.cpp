@@ -919,8 +919,8 @@ void show_screen(int monid, int mode)
 {
 	AmigaMonitor* mon = &AMonitors[0];
 
-	struct amigadisplay* ad = &adisplays[monid];
-	bool rtg = ad->picasso_on;
+	const struct amigadisplay* ad = &adisplays[monid];
+	const bool rtg = ad->picasso_on;
 
 	const auto start = read_processor_time();
 
@@ -1044,7 +1044,7 @@ static void updatemodes(struct AmigaMonitor* mon)
 	mon->currentmode.flags = flags;
 	mon->currentmode.fullfill = 1;
 	if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-		SDL_Rect rc = getdisplay(&currprefs, mon->monitor_id)->rect;
+		const SDL_Rect rc = getdisplay(&currprefs, mon->monitor_id)->rect;
 		mon->currentmode.native_width = rc.w;
 		mon->currentmode.native_height = rc.h;
 		mon->currentmode.current_width = mon->currentmode.native_width;
@@ -1071,8 +1071,8 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 		if (currprefs.gf[GF_RTG].gfx_filter_vert_zoom_mult > 0) {
 			my *= currprefs.gf[GF_RTG].gfx_filter_vert_zoom_mult;
 		}
-		mon->currentmode.current_width = (int)(state->Width * currprefs.rtg_horiz_zoom_mult * mx);
-		mon->currentmode.current_height = (int)(state->Height * currprefs.rtg_vert_zoom_mult * my);
+		mon->currentmode.current_width = static_cast<int>(state->Width * currprefs.rtg_horiz_zoom_mult * mx);
+		mon->currentmode.current_height = static_cast<int>(state->Height * currprefs.rtg_vert_zoom_mult * my);
 		currprefs.gfx_apmode[1].gfx_interlaced = false;
 		if (currprefs.rtgvblankrate == 0) {
 			currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.gfx_apmode[0].gfx_refreshrate;
@@ -1853,10 +1853,10 @@ int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 	int changed = 0;
 
 	for (int i = 0; i < 256 * 2; i++) {
-		int r = CLUT[i].Red;
-		int g = CLUT[i].Green;
-		int b = CLUT[i].Blue;
-		uae_u32 v = (doMask256 (r, red_bits, red_shift)
+		const int r = CLUT[i].Red;
+		const int g = CLUT[i].Green;
+		const int b = CLUT[i].Blue;
+		const uae_u32 v = (doMask256 (r, red_bits, red_shift)
 			| doMask256(g, green_bits, green_shift)
 			| doMask256(b, blue_bits, blue_shift))
 			| doMask256 ((1 << alpha_bits) - 1, alpha_bits, alpha_shift);
