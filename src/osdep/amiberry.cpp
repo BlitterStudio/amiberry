@@ -3617,7 +3617,7 @@ static int get_env_dir( char * path, const char *path_template, const char *envn
 	return ret;
 }
 
-void init_macos_amiberry_folders(std::string macos_amiberry_directory)
+void init_macos_amiberry_folders(const std::string& macos_amiberry_directory)
 {
 	if (!my_existsdir(macos_amiberry_directory.c_str()))
 		my_mkdir(macos_amiberry_directory.c_str());
@@ -4011,12 +4011,12 @@ int main(int argc, char* argv[])
 	sortdisplays();
 	enumerate_sound_devices();
 	for (int i = 0; i < MAX_SOUND_DEVICES && sound_devices[i]; i++) {
-		int type = sound_devices[i]->type;
+		const int type = sound_devices[i]->type;
 		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), sound_devices[i]->name);
 	}
 	write_log(_T("Enumerating recording devices:\n"));
 	for (int i = 0; i < MAX_SOUND_DEVICES && record_devices[i]; i++) {
-		int type = record_devices[i]->type;
+		const int type = record_devices[i]->type;
 		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
 	}
 	write_log(_T("done\n"));
@@ -4143,7 +4143,7 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 void drawbridge_update_profiles(uae_prefs* p)
 {
 #ifdef FLOPPYBRIDGE
-	unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
+	const unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
 
 	const std::string profile_name_fast = "Fast";
 	const std::string profile_name_comp = "Compatible";
