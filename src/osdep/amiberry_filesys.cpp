@@ -41,45 +41,44 @@ struct my_openfile_s {
 void utf8_to_latin1_string(std::string& input, std::string& output)
 {
 	std::vector<char> in_buf(input.begin(), input.end());
-	char* src_ptr = &in_buf[0];
+	char* src_ptr = in_buf.data();
 	size_t src_size = input.size();
 	std::vector<char> buf(1024);
 	std::string dst;
-	
+
 	auto* iconv_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
-	
-	while (0 < src_size) {
-		char* dst_ptr = &buf[0];
+
+	while (src_size > 0) {
+		char* dst_ptr = buf.data();
 		size_t dst_size = buf.size();
 		size_t res = ::iconv(iconv_, &src_ptr, &src_size, &dst_ptr, &dst_size);
 		if (res == (size_t)-1) {
-			if (errno == E2BIG) {
-				// ignore this error
-			}
-			else {
+			if (errno != E2BIG) {
 				// skip character
 				++src_ptr;
 				--src_size;
 			}
 		}
-		dst.append(&buf[0], buf.size() - dst_size);
+		dst.append(buf.data(), buf.size() - dst_size);
 	}
-	dst.swap(output);
+	output = std::move(dst);
 	iconv_close(iconv_);
 }
 
-std::string iso_8859_1_to_utf8(std::string& str)
+std::string iso_8859_1_to_utf8(const std::string& str)
 {
-	string str_out;
-	for (auto it = str.begin(); it != str.end(); ++it)
+	std::string str_out;
+	str_out.reserve(str.size() * 2); // Reserve space to avoid reallocations
+
+	for (const auto& ch : str)
 	{
-		uint8_t ch = *it;
-		if (ch < 0x80) {
-			str_out.push_back(ch);
+		uint8_t byte = static_cast<uint8_t>(ch);
+		if (byte < 0x80) {
+			str_out.push_back(byte);
 		}
 		else {
-			str_out.push_back(0xc0 | ch >> 6);
-			str_out.push_back(0x80 | (ch & 0x3f));
+			str_out.push_back(0xc0 | byte >> 6);
+			str_out.push_back(0x80 | (byte & 0x3f));
 		}
 	}
 	return str_out;
