@@ -33,26 +33,103 @@ static gcn::StringListModel custom_list[5];
 static gcn::Window* wndShowCustomFields;
 static gcn::Button* cmdOK;
 
-static std::vector<gcn::Label*> lblCustomField1{};
-static std::vector<gcn::CheckBox*> chkCustomField1{};
-static std::vector<gcn::DropDown*> cboCustomField1{};
+struct custom_field {
+	std::vector<gcn::Label*> lbl;
+	std::vector<gcn::CheckBox*> chk;
+	std::vector<gcn::DropDown*> cbo;
+};
 
-static std::vector<gcn::Label*> lblCustomField2{};
-static std::vector<gcn::CheckBox*> chkCustomField2{};
-static std::vector<gcn::DropDown*> cboCustomField2{};
+custom_field customField1;
+custom_field customField2;
+custom_field customField3;
+custom_field customField4;
+custom_field customField5;
 
-static std::vector<gcn::Label*> lblCustomField3{};
-static std::vector<gcn::CheckBox*> chkCustomField3{};
-static std::vector<gcn::DropDown*> cboCustomField3{};
+void create_custom_field(custom_field& customField, int custom_number, const std::string& customName, const whdload_custom& custom_field, int& pos_y)
+{
+	constexpr int textfield_width = 350;
+	constexpr int pos_x1 = DISTANCE_BORDER;
+	constexpr int pos_x2 = 150;
 
-static std::vector<gcn::Label*> lblCustomField4{};
-static std::vector<gcn::CheckBox*> chkCustomField4{};
-static std::vector<gcn::DropDown*> cboCustomField4{};
+	for (int i = 0; i < custom_number; i++) {
+		std::string id;
 
-static std::vector<gcn::Label*> lblCustomField5{};
-static std::vector<gcn::CheckBox*> chkCustomField5{};
-static std::vector<gcn::DropDown*> cboCustomField5{};
+		customField.lbl.emplace_back(new gcn::Label(customName + ":"));
+		customField.lbl[i]->setPosition(pos_x1, pos_y);
 
+		wndShowCustomFields->add(customField.lbl[i]);
+
+		if (custom_field.type == bit_type)
+		{
+			customField.chk.emplace_back(new gcn::CheckBox(custom_field.label_bit_pairs[i].first));
+			// TODO not correct, it shouldn't use the value coming from the XML
+			customField.chk[i]->setSelected(custom_field.label_bit_pairs[i].second);
+
+			id = "chkCustomField_" + std::to_string(i);
+			customField.chk[i]->setId(id);
+
+			customField.chk[i]->setPosition(pos_x2, pos_y);
+			pos_y += customField.chk[i]->getHeight() + 8;
+
+			wndShowCustomFields->add(customField.chk[i]);
+		}
+		else if (custom_field.type == bool_type)
+		{
+			customField.chk.emplace_back(new gcn::CheckBox(custom_field.caption));
+			customField.chk[i]->setSelected(custom_field.value);
+
+			id = "chkCustomField_" + std::to_string(i);
+			customField.chk[i]->setId(id);
+
+			customField.chk[i]->setPosition(pos_x2, pos_y);
+			pos_y += customField.chk[i]->getHeight() + 8;
+
+			wndShowCustomFields->add(customField.chk[i]);
+		}
+		else if (custom_field.type == list_type)
+		{
+			customField.lbl[i]->setCaption(custom_field.caption);
+
+			for (const auto& label : custom_field.labels)
+			{
+				custom_list[i].add(label);
+			}
+
+			id = "cboCustomField_" + std::to_string(i);
+			customField.cbo.emplace_back(new gcn::DropDown(&custom_list[i]));
+			customField.cbo[i]->setId(id);
+			customField.cbo[i]->setSize(textfield_width, customField.cbo[i]->getHeight());
+			customField.cbo[i]->setBaseColor(gui_baseCol);
+			customField.cbo[i]->setBackgroundColor(colTextboxBackground);
+
+			customField.cbo[i]->setPosition(pos_x2, pos_y);
+			pos_y += customField.cbo[i]->getHeight() + 8;
+
+			wndShowCustomFields->add(customField.cbo[i]);
+		}
+		else
+		{
+			pos_y += customField.lbl[i]->getHeight() + 8;
+		}
+	}
+}
+
+void delete_custom_field(custom_field& customField) {
+	for (const auto& lbl : customField.lbl) {
+		delete lbl;
+	}
+	customField.lbl.clear();
+
+	for (const auto& chk : customField.chk) {
+		delete chk;
+	}
+	customField.chk.clear();
+
+	for (const auto& cbo : customField.cbo) {
+		delete cbo;
+	}
+	customField.cbo.clear();
+}
 
 class ShowCustomFieldsActionListener : public gcn::ActionListener
 {
@@ -77,9 +154,6 @@ static void InitShowCustomFields()
 	wndShowCustomFields->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	showCustomFieldsActionListener = new ShowCustomFieldsActionListener();
-	constexpr int textfield_width = 350;
-	constexpr int pos_x1 = DISTANCE_BORDER;
-	constexpr int pos_x2 = 150;
 	int pos_y = DISTANCE_BORDER;
 
 	for (auto& i : custom_list)
@@ -87,320 +161,11 @@ static void InitShowCustomFields()
 		i.clear();
 	}
 
-	for (int i = 0; i < custom1_number; i++)
-	{
-		std::string id;
-
-		lblCustomField1.emplace_back(new gcn::Label("Custom1:"));
-		lblCustomField1[i]->setPosition(pos_x1, pos_y);
-
-		wndShowCustomFields->add(lblCustomField1[i]);
-
-		if (whdload_prefs.selected_slave.custom1.type == bit_type)
-		{
-			chkCustomField1.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom1.label_bit_pairs[i].first));
-			// TODO not correct, it shouldn't use the value coming from the XML
-			chkCustomField1[i]->setSelected(whdload_prefs.selected_slave.custom1.label_bit_pairs[i].second);
-
-			id = "chkCustomField1_" + std::to_string(i);
-			chkCustomField1[i]->setId(id);
-
-			chkCustomField1[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField1[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField1[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom1.type == bool_type)
-		{
-			chkCustomField1.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom1.caption));
-			chkCustomField1[i]->setSelected(whdload_prefs.selected_slave.custom1.value);
-
-			id = "chkCustomField1_" + std::to_string(i);
-			chkCustomField1[i]->setId(id);
-
-			chkCustomField1[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField1[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField1[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom1.type == list_type)
-		{
-			lblCustomField1[i]->setCaption(whdload_prefs.selected_slave.custom1.caption);
-
-			for (const auto& label : whdload_prefs.selected_slave.custom1.labels)
-			{
-				custom_list[i].add(label);
-			}
-
-			id = "cboCustomField1_" + std::to_string(i);
-			cboCustomField1.emplace_back(new gcn::DropDown(&custom_list[i]));
-			cboCustomField1[i]->setId(id);
-			cboCustomField1[i]->setSize(textfield_width, cboCustomField1[i]->getHeight());
-			cboCustomField1[i]->setBaseColor(gui_baseCol);
-			cboCustomField1[i]->setBackgroundColor(colTextboxBackground);
-
-			cboCustomField1[i]->setPosition(pos_x2, pos_y);
-			pos_y += cboCustomField1[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(cboCustomField1[i]);
-		}
-		else
-		{
-			pos_y += lblCustomField1[i]->getHeight() + 8;
-		}
-	}
-
-	for (int i = 0; i < custom2_number; i++)
-	{
-		std::string id;
-
-		lblCustomField2.emplace_back(new gcn::Label("Custom2:"));
-		lblCustomField2[i]->setPosition(pos_x1, pos_y);
-
-		wndShowCustomFields->add(lblCustomField2[i]);
-
-		if (whdload_prefs.selected_slave.custom2.type == bit_type)
-		{
-			chkCustomField2.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom2.label_bit_pairs[i].first));
-			// TODO not correct, it shouldn't use the value coming from the XML
-			chkCustomField2[i]->setSelected(whdload_prefs.selected_slave.custom2.label_bit_pairs[i].second);
-
-			id = "chkCustomField2_" + std::to_string(i);
-			chkCustomField2[i]->setId(id);
-
-			chkCustomField2[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField2[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField2[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom2.type == bool_type)
-		{
-			chkCustomField2.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom2.caption));
-			chkCustomField2[i]->setSelected(whdload_prefs.selected_slave.custom2.value);
-
-			id = "chkCustomField2_" + std::to_string(i);
-			chkCustomField2[i]->setId(id);
-
-			chkCustomField2[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField2[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField2[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom2.type == list_type)
-		{
-			lblCustomField2[i]->setCaption(whdload_prefs.selected_slave.custom2.caption);
-
-			for (const auto& label : whdload_prefs.selected_slave.custom2.labels)
-			{
-				custom_list[i].add(label);
-			}
-
-			id = "cboCustomField2_" + std::to_string(i);
-			cboCustomField2.emplace_back(new gcn::DropDown(&custom_list[i]));
-			cboCustomField2[i]->setId(id);
-			cboCustomField2[i]->setSize(textfield_width, cboCustomField2[i]->getHeight());
-			cboCustomField2[i]->setBaseColor(gui_baseCol);
-			cboCustomField2[i]->setBackgroundColor(colTextboxBackground);
-
-			cboCustomField2[i]->setPosition(pos_x2, pos_y);
-			pos_y += cboCustomField2[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(cboCustomField2[i]);
-		}
-		else
-		{
-			pos_y += lblCustomField2[i]->getHeight() + 8;
-		}
-	}
-
-	for (int i = 0; i < custom3_number; i++)
-	{
-		std::string id;
-
-		lblCustomField3.emplace_back(new gcn::Label("Custom3:"));
-		lblCustomField3[i]->setPosition(pos_x1, pos_y);
-
-		wndShowCustomFields->add(lblCustomField3[i]);
-
-		if (whdload_prefs.selected_slave.custom3.type == bit_type)
-		{
-			chkCustomField3.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom3.label_bit_pairs[i].first));
-			// TODO not correct, it shouldn't use the value coming from the XML
-			chkCustomField3[i]->setSelected(whdload_prefs.selected_slave.custom3.label_bit_pairs[i].second);
-
-			id = "chkCustomField3_" + std::to_string(i);
-			chkCustomField3[i]->setId(id);
-
-			chkCustomField3[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField3[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField3[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom3.type == bool_type)
-		{
-			chkCustomField3.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom3.caption));
-			chkCustomField3[i]->setSelected(whdload_prefs.selected_slave.custom3.value);
-
-			id = "chkCustomField3_" + std::to_string(i);
-			chkCustomField3[i]->setId(id);
-
-			chkCustomField3[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField3[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField3[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom3.type == list_type)
-		{
-			lblCustomField3[i]->setCaption(whdload_prefs.selected_slave.custom3.caption);
-
-			for (const auto& label : whdload_prefs.selected_slave.custom3.labels)
-			{
-				custom_list[i].add(label);
-			}
-
-			id = "cboCustomField3_" + std::to_string(i);
-			cboCustomField3.emplace_back(new gcn::DropDown(&custom_list[i]));
-			cboCustomField3[i]->setId(id);
-			cboCustomField3[i]->setSize(textfield_width, cboCustomField3[i]->getHeight());
-			cboCustomField3[i]->setBaseColor(gui_baseCol);
-			cboCustomField3[i]->setBackgroundColor(colTextboxBackground);
-
-			cboCustomField3[i]->setPosition(pos_x2, pos_y);
-			pos_y += cboCustomField3[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(cboCustomField3[i]);
-		}
-		else
-		{
-			pos_y += lblCustomField3[i]->getHeight() + 8;
-		}
-	}
-
-	for (int i = 0; i < custom4_number; i++)
-	{
-		std::string id;
-
-		lblCustomField4.emplace_back(new gcn::Label("Custom4:"));
-		lblCustomField4[i]->setPosition(pos_x1, pos_y);
-
-		wndShowCustomFields->add(lblCustomField4[i]);
-
-		if (whdload_prefs.selected_slave.custom4.type == bit_type)
-		{
-			chkCustomField4.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom4.label_bit_pairs[i].first));
-			// TODO not correct, it shouldn't use the value coming from the XML
-			chkCustomField4[i]->setSelected(whdload_prefs.selected_slave.custom4.label_bit_pairs[i].second);
-
-			id = "chkCustomField4_" + std::to_string(i);
-			chkCustomField4[i]->setId(id);
-
-			chkCustomField4[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField4[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField4[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom4.type == bool_type)
-		{
-			chkCustomField4.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom4.caption));
-			chkCustomField4[i]->setSelected(whdload_prefs.selected_slave.custom4.value);
-
-			id = "chkCustomField4_" + std::to_string(i);
-			chkCustomField4[i]->setId(id);
-
-			chkCustomField4[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField4[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField4[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom4.type == list_type)
-		{
-			lblCustomField4[i]->setCaption(whdload_prefs.selected_slave.custom4.caption);
-
-			for (const auto& label : whdload_prefs.selected_slave.custom4.labels)
-			{
-				custom_list[i].add(label);
-			}
-
-			id = "cboCustomField4_" + std::to_string(i);
-			cboCustomField4.emplace_back(new gcn::DropDown(&custom_list[i]));
-			cboCustomField4[i]->setId(id);
-			cboCustomField4[i]->setSize(textfield_width, cboCustomField4[i]->getHeight());
-			cboCustomField4[i]->setBaseColor(gui_baseCol);
-			cboCustomField4[i]->setBackgroundColor(colTextboxBackground);
-
-			cboCustomField4[i]->setPosition(pos_x2, pos_y);
-			pos_y += cboCustomField4[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(cboCustomField4[i]);
-		}
-		else
-		{
-			pos_y += lblCustomField4[i]->getHeight() + 8;
-		}
-	}
-
-	for (int i = 0; i < custom5_number; i++)
-	{
-		std::string id;
-
-		lblCustomField5.emplace_back(new gcn::Label("Custom5:"));
-		lblCustomField5[i]->setPosition(pos_x1, pos_y);
-
-		wndShowCustomFields->add(lblCustomField5[i]);
-
-		if (whdload_prefs.selected_slave.custom5.type == bit_type)
-		{
-			chkCustomField5.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom5.label_bit_pairs[i].first));
-			// TODO not correct, it shouldn't use the value coming from the XML
-			chkCustomField5[i]->setSelected(whdload_prefs.selected_slave.custom5.label_bit_pairs[i].second);
-
-			id = "chkCustomField5_" + std::to_string(i);
-			chkCustomField5[i]->setId(id);
-
-			chkCustomField5[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField5[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField5[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom5.type == bool_type)
-		{
-			chkCustomField5.emplace_back(new gcn::CheckBox(whdload_prefs.selected_slave.custom5.caption));
-			chkCustomField5[i]->setSelected(whdload_prefs.selected_slave.custom5.value);
-
-			id = "chkCustomField5_" + std::to_string(i);
-			chkCustomField5[i]->setId(id);
-
-			chkCustomField5[i]->setPosition(pos_x2, pos_y);
-			pos_y += chkCustomField5[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(chkCustomField5[i]);
-		}
-		else if (whdload_prefs.selected_slave.custom5.type == list_type)
-		{
-			lblCustomField5[i]->setCaption(whdload_prefs.selected_slave.custom5.caption);
-
-			for (const auto& label : whdload_prefs.selected_slave.custom5.labels)
-			{
-				custom_list[i].add(label);
-			}
-
-			id = "cboCustomField5_" + std::to_string(i);
-			cboCustomField5.emplace_back(new gcn::DropDown(&custom_list[i]));
-			cboCustomField5[i]->setId(id);
-			cboCustomField5[i]->setSize(textfield_width, cboCustomField5[i]->getHeight());
-			cboCustomField5[i]->setBaseColor(gui_baseCol);
-			cboCustomField5[i]->setBackgroundColor(colTextboxBackground);
-
-			cboCustomField5[i]->setPosition(pos_x2, pos_y);
-			pos_y += cboCustomField5[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(cboCustomField5[i]);
-		}
-		else
-		{
-			pos_y += lblCustomField5[i]->getHeight() + 8;
-		}
-	}
+	create_custom_field(customField1, custom1_number, "Custom1", whdload_prefs.selected_slave.custom1, pos_y);
+	create_custom_field(customField2, custom2_number, "Custom2", whdload_prefs.selected_slave.custom2, pos_y);
+	create_custom_field(customField3, custom3_number, "Custom3", whdload_prefs.selected_slave.custom3, pos_y);
+	create_custom_field(customField4, custom4_number, "Custom4", whdload_prefs.selected_slave.custom4, pos_y);
+	create_custom_field(customField5, custom5_number, "Custom5", whdload_prefs.selected_slave.custom5, pos_y);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
@@ -425,65 +190,11 @@ static void ExitShowCustomFields()
 
 	delete cmdOK;
 
-	for (const auto label : lblCustomField1)
-		delete label;
-	lblCustomField1.clear();
-
-	for (const auto checkbox : chkCustomField1)
-		delete checkbox;
-	chkCustomField1.clear();
-
-	for (const auto dropdown : cboCustomField1)
-		delete dropdown;
-	cboCustomField1.clear();
-
-	for (const auto label : lblCustomField2)
-		delete label;
-	lblCustomField2.clear();
-
-	for (const auto checkbox : chkCustomField2)
-		delete checkbox;
-	chkCustomField2.clear();
-
-	for (const auto dropdown : cboCustomField2)
-		delete dropdown;
-	cboCustomField2.clear();
-
-	for (const auto label : lblCustomField3)
-		delete label;
-	lblCustomField3.clear();
-
-	for (const auto checkbox : chkCustomField3)
-		delete checkbox;
-	chkCustomField3.clear();
-
-	for (const auto dropdown : cboCustomField3)
-		delete dropdown;
-	cboCustomField3.clear();
-
-	for (const auto label : lblCustomField4)
-		delete label;
-	lblCustomField4.clear();
-
-	for (const auto checkbox : chkCustomField4)
-		delete checkbox;
-	chkCustomField4.clear();
-
-	for (const auto dropdown : cboCustomField4)
-		delete dropdown;
-	cboCustomField4.clear();
-
-	for (const auto label : lblCustomField5)
-		delete label;
-	lblCustomField5.clear();
-
-	for (const auto checkbox : chkCustomField5)
-		delete checkbox;
-	chkCustomField5.clear();
-
-	for (const auto dropdown : cboCustomField5)
-		delete dropdown;
-	cboCustomField5.clear();
+	delete_custom_field(customField1);
+	delete_custom_field(customField2);
+	delete_custom_field(customField3);
+	delete_custom_field(customField4);
+	delete_custom_field(customField5);
 
 	delete showCustomFieldsActionListener;
 	delete wndShowCustomFields;
