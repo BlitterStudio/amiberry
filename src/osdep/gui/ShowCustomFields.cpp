@@ -144,6 +144,10 @@ static void InitShowCustomFields()
 
 			wndShowCustomFields->add(cboCustomField1[i]);
 		}
+		else
+		{
+			pos_y += lblCustomField1[i]->getHeight() + 8;
+		}
 	}
 
 	for (int i = 0; i < custom2_number; i++)
@@ -202,6 +206,10 @@ static void InitShowCustomFields()
 			pos_y += cboCustomField2[i]->getHeight() + 8;
 
 			wndShowCustomFields->add(cboCustomField2[i]);
+		}
+		else
+		{
+			pos_y += lblCustomField2[i]->getHeight() + 8;
 		}
 	}
 
@@ -262,6 +270,10 @@ static void InitShowCustomFields()
 
 			wndShowCustomFields->add(cboCustomField3[i]);
 		}
+		else
+		{
+			pos_y += lblCustomField3[i]->getHeight() + 8;
+		}
 	}
 
 	for (int i = 0; i < custom4_number; i++)
@@ -320,6 +332,10 @@ static void InitShowCustomFields()
 			pos_y += cboCustomField4[i]->getHeight() + 8;
 
 			wndShowCustomFields->add(cboCustomField4[i]);
+		}
+		else
+		{
+			pos_y += lblCustomField4[i]->getHeight() + 8;
 		}
 	}
 
@@ -380,6 +396,10 @@ static void InitShowCustomFields()
 
 			wndShowCustomFields->add(cboCustomField5[i]);
 		}
+		else
+		{
+			pos_y += lblCustomField5[i]->getHeight() + 8;
+		}
 	}
 
 	cmdOK = new gcn::Button("Ok");
@@ -405,50 +425,65 @@ static void ExitShowCustomFields()
 
 	delete cmdOK;
 
-	for (int i = 0; i < custom1_number; i++)
-	{
-		delete lblCustomField1[i];
-		if (whdload_prefs.selected_slave.custom1.type == bool_type || whdload_prefs.selected_slave.custom1.type == bit_type)
-			delete chkCustomField1[i];
-		else if (whdload_prefs.selected_slave.custom1.type == list_type)
-			delete cboCustomField1[i];
-	}
+	for (const auto label : lblCustomField1)
+		delete label;
+	lblCustomField1.clear();
 
-	for (int i = 0; i < custom2_number; i++)
-	{
-		delete lblCustomField2[i];
-		if (whdload_prefs.selected_slave.custom2.type == bool_type || whdload_prefs.selected_slave.custom2.type == bit_type)
-			delete chkCustomField2[i];
-		else if (whdload_prefs.selected_slave.custom2.type == list_type)
-			delete cboCustomField2[i];
-	}
+	for (const auto checkbox : chkCustomField1)
+		delete checkbox;
+	chkCustomField1.clear();
 
-	for (int i = 0; i < custom3_number; i++)
-	{
-		delete lblCustomField3[i];
-		if (whdload_prefs.selected_slave.custom3.type == bool_type || whdload_prefs.selected_slave.custom3.type == bit_type)
-			delete chkCustomField3[i];
-		else if(whdload_prefs.selected_slave.custom3.type == list_type)
-			delete cboCustomField3[i];
-	}
+	for (const auto dropdown : cboCustomField1)
+		delete dropdown;
+	cboCustomField1.clear();
 
-	for (int i = 0; i < custom4_number; i++)
-	{
-		delete lblCustomField4[i];
-		if (whdload_prefs.selected_slave.custom4.type == bool_type || whdload_prefs.selected_slave.custom4.type == bit_type)
-			delete chkCustomField4[i];
-		else if (whdload_prefs.selected_slave.custom4.type == list_type)
-			delete cboCustomField4[i];
-	}
+	for (const auto label : lblCustomField2)
+		delete label;
+	lblCustomField2.clear();
 
-	for (int i = 0; i < custom5_number; i++)
-	{
-		delete lblCustomField5[i];
-		if (whdload_prefs.selected_slave.custom5.type == bool_type || whdload_prefs.selected_slave.custom5.type == bit_type)
-			delete chkCustomField5[i];
-		else if (whdload_prefs.selected_slave.custom5.type == list_type)
-			delete cboCustomField5[i];
-	}
+	for (const auto checkbox : chkCustomField2)
+		delete checkbox;
+	chkCustomField2.clear();
+
+	for (const auto dropdown : cboCustomField2)
+		delete dropdown;
+	cboCustomField2.clear();
+
+	for (const auto label : lblCustomField3)
+		delete label;
+	lblCustomField3.clear();
+
+	for (const auto checkbox : chkCustomField3)
+		delete checkbox;
+	chkCustomField3.clear();
+
+	for (const auto dropdown : cboCustomField3)
+		delete dropdown;
+	cboCustomField3.clear();
+
+	for (const auto label : lblCustomField4)
+		delete label;
+	lblCustomField4.clear();
+
+	for (const auto checkbox : chkCustomField4)
+		delete checkbox;
+	chkCustomField4.clear();
+
+	for (const auto dropdown : cboCustomField4)
+		delete dropdown;
+	cboCustomField4.clear();
+
+	for (const auto label : lblCustomField5)
+		delete label;
+	lblCustomField5.clear();
+
+	for (const auto checkbox : chkCustomField5)
+		delete checkbox;
+	chkCustomField5.clear();
+
+	for (const auto dropdown : cboCustomField5)
+		delete dropdown;
+	cboCustomField5.clear();
 
 	delete showCustomFieldsActionListener;
 	delete wndShowCustomFields;
@@ -608,25 +643,15 @@ void ShowCustomFields()
 	dialog_finished = false;
 
 	if (whdload_prefs.selected_slave.custom1.type == bit_type)
-	{
 		custom1_number = static_cast<int>(whdload_prefs.selected_slave.custom1.label_bit_pairs.size());
-	}
 	if (whdload_prefs.selected_slave.custom2.type == bit_type)
-	{
 		custom2_number = static_cast<int>(whdload_prefs.selected_slave.custom2.label_bit_pairs.size());
-	}
 	if (whdload_prefs.selected_slave.custom3.type == bit_type)
-	{
 		custom3_number = static_cast<int>(whdload_prefs.selected_slave.custom3.label_bit_pairs.size());
-	}
 	if (whdload_prefs.selected_slave.custom4.type == bit_type)
-	{
 		custom4_number = static_cast<int>(whdload_prefs.selected_slave.custom4.label_bit_pairs.size());
-	}
 	if (whdload_prefs.selected_slave.custom5.type == bit_type)
-	{
 		custom5_number = static_cast<int>(whdload_prefs.selected_slave.custom5.label_bit_pairs.size());
-	}
 
 	InitShowCustomFields();
 

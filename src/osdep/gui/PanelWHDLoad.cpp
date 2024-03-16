@@ -1,10 +1,8 @@
 #include <cstring>
 #include <cstdio>
-#include <iostream>
 #include <vector>
 
 #include <guisan.hpp>
-#include <SDL_image.h>
 #include <guisan/sdl.hpp>
 
 #include "SelectorEntry.hpp"
@@ -400,7 +398,7 @@ void RefreshPanelWHDLoad()
 	if (whdload_filename.empty())
 	{
 		cmdCustomFields->setEnabled(false);
-		whdload_prefs = {};
+		clear_whdload_prefs();
 		slaves_list.clear();
 	}
 	else

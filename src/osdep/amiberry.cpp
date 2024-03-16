@@ -4284,3 +4284,17 @@ struct netdriverdata **target_ethernet_enumerate(void)
 	net_enumerated = 1;
 	return ndd;
 }
+
+void clear_whdload_prefs()
+{
+	whdload_prefs.filename.clear();
+	whdload_prefs.game_name.clear();
+	whdload_prefs.sub_path.clear();
+	whdload_prefs.variant_uuid.clear();
+	whdload_prefs.slave_count = 0;
+	whdload_prefs.slave_default.clear();
+	whdload_prefs.slave_libraries = false;
+	whdload_prefs.slaves = {};
+	whdload_prefs.selected_slave = {};
+	whdload_prefs.custom.clear();
+}
