@@ -3133,304 +3133,225 @@ void save_amiberry_settings(void)
 
 	char buffer[MAX_DPATH];
 
+	auto write_bool_option = [&](const char* name, bool value) {
+		snprintf(buffer, MAX_DPATH, "%s=%s\n", name, value ? "yes" : "no");
+		fputs(buffer, f);
+		};
+
+	auto write_int_option = [&](const char* name, int value) {
+		snprintf(buffer, MAX_DPATH, "%s=%d\n", name, value);
+		fputs(buffer, f);
+		};
+
+	auto write_string_option = [&](const char* name, const std::string& value) {
+		snprintf(buffer, MAX_DPATH, "%s=%s\n", name, value.c_str());
+		fputs(buffer, f);
+		};
+
 	// Use the old Single-Window mode (useful in cases where multiple overlapping windows are a problem)
-	snprintf(buffer, MAX_DPATH, "single_window_mode=%s\n", amiberry_options.single_window_mode ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("single_window_mode", amiberry_options.single_window_mode);
 
 	// Should the Quickstart Panel be the default when opening the GUI?
-	snprintf(buffer, MAX_DPATH, "Quickstart=%d\n", amiberry_options.quickstart_start);
-	fputs(buffer, f);
+	write_int_option("Quickstart", amiberry_options.quickstart_start);
 
 	// Open each config file and read the Description field? 
 	// This will slow down scanning the config list if it's very large
-	snprintf(buffer, MAX_DPATH, "read_config_descriptions=%s\n", amiberry_options.read_config_descriptions ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("read_config_descriptions", amiberry_options.read_config_descriptions);
 
 	// Write to logfile? 
 	// If enabled, a file named "amiberry_log.txt" will be generated in the startup folder
-	snprintf(buffer, MAX_DPATH, "write_logfile=%s\n", amiberry_options.write_logfile ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("write_logfile", amiberry_options.write_logfile);
 
 	// Scanlines ON by default?
 	// This will only be enabled if the vertical height is enough, as we need Line Doubling set to ON also
 	// Beware this comes with a performance hit, as double the amount of lines need to be drawn on-screen
-	snprintf(buffer, MAX_DPATH, "default_line_mode=%d\n", amiberry_options.default_line_mode);
-	fputs(buffer, f);
+	write_int_option("default_line_mode", amiberry_options.default_line_mode);
 
 	// Map RCtrl key to RAmiga key?
 	// This helps with keyboards that may not have 2 Win keys and no Menu key either
-	snprintf(buffer, MAX_DPATH, "rctrl_as_ramiga=%s\n", amiberry_options.rctrl_as_ramiga ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("rctrl_as_ramiga", amiberry_options.rctrl_as_ramiga);
 
 	// Disable controller in the GUI?
 	// If you want to disable the default behavior for some reason
-	snprintf(buffer, MAX_DPATH, "gui_joystick_control=%s\n", amiberry_options.gui_joystick_control ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("gui_joystick_control", amiberry_options.gui_joystick_control);
 
 	// Use a separate thread for drawing native chipset output
 	// This helps with performance, but may cause glitches in some cases
-	snprintf(buffer, MAX_DPATH, "default_multithreaded_drawing=%s\n", amiberry_options.default_multithreaded_drawing ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_multithreaded_drawing", amiberry_options.default_multithreaded_drawing);
 
 	// Default mouse input speed
-	snprintf(buffer, MAX_DPATH, "input_default_mouse_speed=%d\n", amiberry_options.input_default_mouse_speed);
-	fputs(buffer, f);
+	write_int_option("input_default_mouse_speed", amiberry_options.input_default_mouse_speed);
 
 	// When using Keyboard as Joystick, stop any double keypresses
-	snprintf(buffer, MAX_DPATH, "input_keyboard_as_joystick_stop_keypresses=%s\n", amiberry_options.input_keyboard_as_joystick_stop_keypresses ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("input_keyboard_as_joystick_stop_keypresses", amiberry_options.input_keyboard_as_joystick_stop_keypresses);
 	
 	// Default key for opening the GUI (e.g. "F12")
-	snprintf(buffer, MAX_DPATH, "default_open_gui_key=%s\n", amiberry_options.default_open_gui_key);
-	fputs(buffer, f);
+	write_string_option("default_open_gui_key", amiberry_options.default_open_gui_key);
 
 	// Default key for Quitting the emulator
-	snprintf(buffer, MAX_DPATH, "default_quit_key=%s\n", amiberry_options.default_quit_key);
-	fputs(buffer, f);
+	write_string_option("default_quit_key", amiberry_options.default_quit_key);
 
 	// Default key for opening Action Replay
-	snprintf(buffer, MAX_DPATH, "default_ar_key=%s\n", amiberry_options.default_ar_key);
-	fputs(buffer, f);
+	write_string_option("default_ar_key", amiberry_options.default_ar_key);
 
 	// Default key for Fullscreen Toggle
-	snprintf(buffer, MAX_DPATH, "default_fullscreen_toggle_key=%s\n", amiberry_options.default_fullscreen_toggle_key);
-	fputs(buffer, f);
+	write_string_option("default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key);
 
 	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
-	snprintf(buffer, MAX_DPATH, "rotation_angle=%d\n", amiberry_options.rotation_angle);
-	fputs(buffer, f);
-
+	write_int_option("rotation_angle", amiberry_options.rotation_angle);
+	
 	// Enable Horizontal Centering by default?
-	snprintf(buffer, MAX_DPATH, "default_horizontal_centering=%s\n", amiberry_options.default_horizontal_centering ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_horizontal_centering", amiberry_options.default_horizontal_centering);
 
 	// Enable Vertical Centering by default?
-	snprintf(buffer, MAX_DPATH, "default_vertical_centering=%s\n", amiberry_options.default_vertical_centering ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_vertical_centering", amiberry_options.default_vertical_centering);
 
 	// Scaling method to use by default?
 	// Valid options are: -1 Auto, 0 Nearest Neighbor, 1 Linear
-	snprintf(buffer, MAX_DPATH, "default_scaling_method=%d\n", amiberry_options.default_scaling_method);
-	fputs(buffer, f);
+	write_int_option("default_scaling_method", amiberry_options.default_scaling_method);
 
 	// Enable frameskip by default?
-	snprintf(buffer, MAX_DPATH, "default_frameskip=%s\n", amiberry_options.default_frameskip ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_frameskip", amiberry_options.default_frameskip);
 
 	// Correct Aspect Ratio by default?
-	snprintf(buffer, MAX_DPATH, "default_correct_aspect_ratio=%s\n", amiberry_options.default_correct_aspect_ratio ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_correct_aspect_ratio", amiberry_options.default_correct_aspect_ratio);
 
-	// Enable Auto-Height by default?
-	snprintf(buffer, MAX_DPATH, "default_auto_crop=%s\n", amiberry_options.default_auto_crop ? "yes" : "no");
-	fputs(buffer, f);
+	// Enable Auto-Crop by default?
+	write_bool_option("default_auto_crop", amiberry_options.default_auto_crop);
 
 	// Default Screen Width
-	snprintf(buffer, MAX_DPATH, "default_width=%d\n", amiberry_options.default_width);
-	fputs(buffer, f);
+	write_int_option("default_width", amiberry_options.default_width);
 	
 	// Default Screen Height
-	snprintf(buffer, MAX_DPATH, "default_height=%d\n", amiberry_options.default_height);
-	fputs(buffer, f);
+	write_int_option("default_height", amiberry_options.default_height);
 
 	// Full screen mode (0, 1, 2)
-	snprintf(buffer, MAX_DPATH, "default_fullscreen_mode=%d\n", amiberry_options.default_fullscreen_mode);
-	fputs(buffer, f);
+	write_int_option("default_fullscreen_mode", amiberry_options.default_fullscreen_mode);
 	
 	// Default Stereo Separation
-	snprintf(buffer, MAX_DPATH, "default_stereo_separation=%d\n", amiberry_options.default_stereo_separation);
-	fputs(buffer, f);
+	write_int_option("default_stereo_separation", amiberry_options.default_stereo_separation);
 
 	// Default Sound buffer size
-	snprintf(buffer, MAX_DPATH, "default_sound_buffer=%d\n", amiberry_options.default_sound_buffer);
-	fputs(buffer, f);
+	write_int_option("default_sound_buffer", amiberry_options.default_sound_buffer);
 
 	// Default Sound Mode (Pull/Push)
-	snprintf(buffer, MAX_DPATH, "default_sound_pull=%s\n", amiberry_options.default_sound_pull ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_sound_pull", amiberry_options.default_sound_pull);
 
 	// Default Joystick Deadzone
-	snprintf(buffer, MAX_DPATH, "default_joystick_deadzone=%d\n", amiberry_options.default_joystick_deadzone);
-	fputs(buffer, f);
+	write_int_option("default_joystick_deadzone", amiberry_options.default_joystick_deadzone);
 
 	// Enable RetroArch Quit by default?
-	snprintf(buffer, MAX_DPATH, "default_retroarch_quit=%s\n", amiberry_options.default_retroarch_quit ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_retroarch_quit", amiberry_options.default_retroarch_quit);
 
 	// Enable RetroArch Menu by default?
-	snprintf(buffer, MAX_DPATH, "default_retroarch_menu=%s\n", amiberry_options.default_retroarch_menu ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_retroarch_menu", amiberry_options.default_retroarch_menu);
 
 	// Enable RetroArch Reset by default?
-	snprintf(buffer, MAX_DPATH, "default_retroarch_reset=%s\n", amiberry_options.default_retroarch_reset ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_retroarch_reset", amiberry_options.default_retroarch_reset);
 
-	// Enable RetroArch Reset by default?
-	snprintf(buffer, MAX_DPATH, "default_retroarch_vkbd=%s\n", amiberry_options.default_retroarch_vkbd ? "yes" : "no");
-	fputs(buffer, f);
+	// Enable RetroArch VKBD by default?
+	write_bool_option("default_retroarch_vkbd", amiberry_options.default_retroarch_vkbd);
 
 	// Controller1
-	snprintf(buffer, MAX_DPATH, "default_controller1=%s\n", amiberry_options.default_controller1);
-	fputs(buffer, f);
+	write_string_option("default_controller1", amiberry_options.default_controller1);
 
 	// Controller2
-	snprintf(buffer, MAX_DPATH, "default_controller2=%s\n", amiberry_options.default_controller2);
-	fputs(buffer, f);
+	write_string_option("default_controller2", amiberry_options.default_controller2);
 
 	// Controller3
-	snprintf(buffer, MAX_DPATH, "default_controller3=%s\n", amiberry_options.default_controller3);
-	fputs(buffer, f);
+	write_string_option("default_controller3", amiberry_options.default_controller3);
 
 	// Controller4
-	snprintf(buffer, MAX_DPATH, "default_controller4=%s\n", amiberry_options.default_controller4);
-	fputs(buffer, f);
+	write_string_option("default_controller4", amiberry_options.default_controller4);
 
 	// Mouse1
-	snprintf(buffer, MAX_DPATH, "default_mouse1=%s\n", amiberry_options.default_mouse1);
-	fputs(buffer, f);
+	write_string_option("default_mouse1", amiberry_options.default_mouse1);
 
 	// Mouse2
-	snprintf(buffer, MAX_DPATH, "default_mouse2=%s\n", amiberry_options.default_mouse2);
-	fputs(buffer, f);
+	write_string_option("default_mouse2", amiberry_options.default_mouse2);
 
 	// WHDLoad ButtonWait
-	snprintf(buffer, MAX_DPATH, "default_whd_buttonwait=%s\n", amiberry_options.default_whd_buttonwait ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_whd_buttonwait", amiberry_options.default_whd_buttonwait);
 
 	// WHDLoad Show Splash screen
-	snprintf(buffer, MAX_DPATH, "default_whd_showsplash=%s\n", amiberry_options.default_whd_showsplash ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_whd_showsplash", amiberry_options.default_whd_showsplash);
 
 	// WHDLoad Config Delay
-	snprintf(buffer, MAX_DPATH, "default_whd_configdelay=%d\n", amiberry_options.default_whd_configdelay);
-	fputs(buffer, f);
+	write_int_option("default_whd_configdelay", amiberry_options.default_whd_configdelay);
 
 	// WHDLoad WriteCache
-	snprintf(buffer, MAX_DPATH, "default_whd_writecache=%s\n", amiberry_options.default_whd_writecache ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_whd_writecache", amiberry_options.default_whd_writecache);
 
 	// WHDLoad Quit emulator after game exits
-	snprintf(buffer, MAX_DPATH, "default_whd_quit_on_exit=%s\n", amiberry_options.default_whd_quit_on_exit ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_whd_quit_on_exit", amiberry_options.default_whd_quit_on_exit);
 
 	// Disable Shutdown button in GUI
-	snprintf(buffer, MAX_DPATH, "disable_shutdown_button=%s\n", amiberry_options.disable_shutdown_button ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("disable_shutdown_button", amiberry_options.disable_shutdown_button);
 
 	// Allow Display settings to be used from the WHDLoad XML (override amiberry.conf defaults)
-	snprintf(buffer, MAX_DPATH, "allow_display_settings_from_xml=%s\n", amiberry_options.allow_display_settings_from_xml ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("allow_display_settings_from_xml", amiberry_options.allow_display_settings_from_xml);
 
 	// Default Sound Card (0=default, first one available in the system)
-	snprintf(buffer, MAX_DPATH, "default_soundcard=%d\n", amiberry_options.default_soundcard);
-	fputs(buffer, f);
-
+	write_int_option("default_soundcard", amiberry_options.default_soundcard);
+	
 	// Enable Virtual Keyboard by default
-	snprintf(buffer, MAX_DPATH, "default_vkbd_enabled=%s\n", amiberry_options.default_vkbd_enabled ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_vkbd_enabled", amiberry_options.default_vkbd_enabled);
 
 	// Show the High-res version of the Virtual Keyboard by default
-	snprintf(buffer, MAX_DPATH, "default_vkbd_hires=%s\n", amiberry_options.default_vkbd_hires ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_vkbd_hires", amiberry_options.default_vkbd_hires);
 
 	// Enable Quit functionality through Virtual Keyboard by default
-	snprintf(buffer, MAX_DPATH, "default_vkbd_exit=%s\n", amiberry_options.default_vkbd_exit ? "yes" : "no");
-	fputs(buffer, f);
+	write_bool_option("default_vkbd_exit", amiberry_options.default_vkbd_exit);
 
 	// Default Language for the Virtual Keyboard
-	snprintf(buffer, MAX_DPATH, "default_vkbd_language=%s\n", amiberry_options.default_vkbd_language);
-	fputs(buffer, f);
+	write_string_option("default_vkbd_language", amiberry_options.default_vkbd_language);
 
 	// Default Style for the Virtual Keyboard
-	snprintf(buffer, MAX_DPATH, "default_vkbd_style=%s\n", amiberry_options.default_vkbd_style);
-	fputs(buffer, f);
+	write_string_option("default_vkbd_style", amiberry_options.default_vkbd_style);
 
 	// Default transparency for the Virtual Keyboard
-	snprintf(buffer, MAX_DPATH, "default_vkbd_transparency=%d\n", amiberry_options.default_vkbd_transparency);
-	fputs(buffer, f);
+	write_int_option("default_vkbd_transparency", amiberry_options.default_vkbd_transparency);
 
 	// Default controller button for toggling the Virtual Keyboard
-	snprintf(buffer, MAX_DPATH, "default_vkbd_toggle=%s\n", amiberry_options.default_vkbd_toggle);
-	fputs(buffer, f);
+	write_string_option("default_vkbd_toggle", amiberry_options.default_vkbd_toggle);
 
 	// GUI Theme: Font name
-	snprintf(buffer, MAX_DPATH, "gui_theme_font_name=%s\n", amiberry_options.gui_theme_font_name);
-	fputs(buffer, f);
+	write_string_option("gui_theme_font_name", amiberry_options.gui_theme_font_name);
 
 	// GUI Theme: Font size
-	snprintf(buffer, MAX_DPATH, "gui_theme_font_size=%d\n", amiberry_options.gui_theme_font_size);
-	fputs(buffer, f);
+	write_int_option("gui_theme_font_size", amiberry_options.gui_theme_font_size);
 
 	// GUI Theme: Base color
-	snprintf(buffer, MAX_DPATH, "gui_theme_base_color=%s\n", amiberry_options.gui_theme_base_color);
-	fputs(buffer, f);
+	write_string_option("gui_theme_base_color", amiberry_options.gui_theme_base_color);
 
 	// GUI Theme: Selector Inactive color
-	snprintf(buffer, MAX_DPATH, "gui_theme_selector_inactive=%s\n", amiberry_options.gui_theme_selector_inactive);
-	fputs(buffer, f);
+	write_string_option("gui_theme_selector_inactive", amiberry_options.gui_theme_selector_inactive);
 
 	// GUI Theme: Selector Active color
-	snprintf(buffer, MAX_DPATH, "gui_theme_selector_active=%s\n", amiberry_options.gui_theme_selector_active);
-	fputs(buffer, f);
+	write_string_option("gui_theme_selector_active", amiberry_options.gui_theme_selector_active);
 
 	// GUI Theme: Textbox Background color
-	snprintf(buffer, MAX_DPATH, "gui_theme_textbox_background=%s\n", amiberry_options.gui_theme_textbox_background);
-	fputs(buffer, f);
+	write_string_option("gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background);
 
 	// Paths
-	snprintf(buffer, MAX_DPATH, "path=%s\n", current_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "config_path=%s\n", config_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "controllers_path=%s\n", controllers_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "retroarch_config=%s\n", retroarch_file.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "whdboot_path=%s\n", whdboot_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "whdload_arch_path=%s\n", whdload_arch_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "logfile_path=%s\n", logfile_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "rom_path=%s\n", rom_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "rp9_path=%s\n", rp9_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "floppy_sounds_dir=%s\n", floppy_sounds_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "data_dir=%s\n", data_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "saveimage_dir=%s\n", saveimage_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "savestate_dir=%s\n", savestate_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "ripper_dir=%s\n", ripper_path.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "inputrecordings_dir=%s\n", input_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "screenshot_dir=%s\n", screenshot_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "nvram_dir=%s\n", nvram_dir.c_str());
-	fputs(buffer, f);
-
-	snprintf(buffer, MAX_DPATH, "video_dir=%s\n", video_dir.c_str());
-	fputs(buffer, f);
+	write_string_option("path", current_dir);
+	write_string_option("config_path", config_path);
+	write_string_option("controllers_path", controllers_path);
+	write_string_option("retroarch_config", retroarch_file);
+	write_string_option("whdboot_path", whdboot_path);
+	write_string_option("whdload_arch_path", whdload_arch_path);
+	write_string_option("logfile_path", logfile_path);
+	write_string_option("rom_path", rom_path);
+	write_string_option("rp9_path", rp9_path);
+	write_string_option("floppy_sounds_dir", floppy_sounds_dir);
+	write_string_option("data_dir", data_dir);
+	write_string_option("saveimage_dir", saveimage_dir);
+	write_string_option("savestate_dir", savestate_dir);
+	write_string_option("screenshot_dir", screenshot_dir);
+	write_string_option("ripper_path", ripper_path);
+	write_string_option("inputrecordings_dir", input_dir);
+	write_string_option("nvram_dir", nvram_dir);
+	write_string_option("video_dir", video_dir);
 
 	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
@@ -3439,12 +3360,9 @@ void save_amiberry_settings(void)
 	// The ROMs found in the last scan
 	for (auto& lstAvailableROM : lstAvailableROMs)
 	{
-		snprintf(buffer, MAX_DPATH, "ROMName=%s\n", lstAvailableROM->Name);
-		fputs(buffer, f);
-		snprintf(buffer, MAX_DPATH, "ROMPath=%s\n", lstAvailableROM->Path);
-		fputs(buffer, f);
-		snprintf(buffer, MAX_DPATH, "ROMType=%d\n", lstAvailableROM->ROMType);
-		fputs(buffer, f);
+		write_string_option("ROMName", lstAvailableROM->Name);
+		write_string_option("ROMPath", lstAvailableROM->Path);
+		write_int_option("ROMType", lstAvailableROM->ROMType);
 	}
 
 	// Recent disk entries (these are used in the dropdown controls)
@@ -3452,8 +3370,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 	for (auto& i : lstMRUDiskList)
 	{
-		snprintf(buffer, MAX_DPATH, "Diskfile=%s\n", i.c_str());
-		fputs(buffer, f);
+		write_string_option("Diskfile", i);
 	}
 
 	// Recent CD entries (these are used in the dropdown controls)
@@ -3461,8 +3378,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 	for (auto& i : lstMRUCDList)
 	{
-		snprintf(buffer, MAX_DPATH, "CDfile=%s\n", i.c_str());
-		fputs(buffer, f);
+		write_string_option("CDfile", i);
 	}
 
 	// Recent WHDLoad entries (these are used in the dropdown controls)
@@ -3471,8 +3387,7 @@ void save_amiberry_settings(void)
 	fputs(buffer, f);
 	for (auto& i : lstMRUWhdloadList)
 	{
-		snprintf(buffer, MAX_DPATH, "WHDLoadfile=%s\n", i.c_str());
-		fputs(buffer, f);
+		write_string_option("WHDLoadfile", i);
 	}
 	
 	fclose(f);
