@@ -111,12 +111,11 @@ void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file
 
 void ClearAvailableROMList()
 {
-	while (!lstAvailableROMs.empty())
+	for (const auto* rom : lstAvailableROMs)
 	{
-		auto* const tmp = lstAvailableROMs[0];
-		lstAvailableROMs.erase(lstAvailableROMs.begin());
-		delete tmp;
+		delete rom;
 	}
+	lstAvailableROMs.clear();
 }
 
 static void addrom(struct romdata* rd, const char* path)
@@ -292,12 +291,11 @@ void RescanROMs()
 
 static void ClearConfigFileList()
 {
-	while (!ConfigFilesList.empty())
+	for (const auto* config : ConfigFilesList)
 	{
-		auto* const tmp = ConfigFilesList[0];
-		ConfigFilesList.erase(ConfigFilesList.begin());
-		delete tmp;
+		delete config;
 	}
+	ConfigFilesList.clear();
 }
 
 void ReadConfigFileList(void)
@@ -350,7 +348,7 @@ void ReadConfigFileList(void)
 
 ConfigFileInfo* SearchConfigInList(const char* name)
 {
-	for (auto & i : ConfigFilesList)
+	for (const auto & i : ConfigFilesList)
 	{
 		if (!SDL_strncasecmp(i->Name, name, MAX_DPATH))
 			return i;
@@ -489,68 +487,11 @@ int gui_update()
 	remove_file_extension(savestate_fname);
 	remove_file_extension(screenshot_filename);
 
-	switch(currentStateNum)
-	{
-		case 1:
-			strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-1.png");
-			break;
-		case 2:
-			strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-2.png");
-			break;
-		case 3:
-			strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-3.png");
-			break;
-		case 4:
-			strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-4.png");
-			break;
-		case 5:
-			strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-5.png");
-			break;
-		case 6:
-			strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-6.png");
-			break;
-		case 7:
-			strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-7.png");
-			break;
-		case 8:
-			strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-8.png");
-			break;
-		case 9:
-			strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-9.png");
-			break;
-		case 10:
-			strncat(savestate_fname, "-10.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-10.png");
-			break;
-		case 11:
-			strncat(savestate_fname, "-11.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-11.png");
-			break;
-		case 12:
-			strncat(savestate_fname, "-12.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-12.png");
-			break;
-		case 13:
-			strncat(savestate_fname, "-13.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-13.png");
-			break;
-		case 14:
-			strncat(savestate_fname, "-14.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-14.png");
-			break;
-		default:
-			strncat(savestate_fname,".uss", MAX_DPATH - 1);
-			screenshot_filename.append(".png");
-	}
+	std::string suffix = (currentStateNum >= 1 && currentStateNum <= 14) ?
+		"-" + std::to_string(currentStateNum) : "";
+	strncat(savestate_fname, (suffix + ".uss").c_str(), MAX_DPATH - 1);
+	screenshot_filename.append(suffix + ".png");
+
 	return 0;
 }
 
@@ -1071,30 +1012,30 @@ void DisplayDiskInfo(int num)
 	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
 
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk readable: %s", di.unreadable ? _T("No") : _T("Yes"));
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk CRC32: %08X", di.imagecrc32);
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block CRC32: %08X", di.bootblockcrc32);
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block checksum valid: %s", di.bb_crc_valid ? _T("Yes") : _T("No"));
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block type: %s", di.bootblocktype == 0 ? _T("Custom") : (di.bootblocktype == 1 ? _T("Standard 1.x") : _T("Standard 2.x+")));
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	if (di.diskname[0]) {
 		snprintf(linebuffer, sizeof(linebuffer) - 1, "Label: '%s'", di.diskname);
-		infotext.push_back(linebuffer);
+		infotext.emplace_back(linebuffer);
 	}
-	infotext.push_back("");
+	infotext.emplace_back("");
 
 	if (di.bootblockinfo[0]) {
-		infotext.push_back("Amiga Bootblock Reader database detected:");
+		infotext.emplace_back("Amiga Bootblock Reader database detected:");
 		snprintf(linebuffer, sizeof(linebuffer) - 1, "Name: '%s'", di.bootblockinfo);
-		infotext.push_back(linebuffer);
+		infotext.emplace_back(linebuffer);
 		if (di.bootblockclass[0]) {
 			snprintf(linebuffer, sizeof(linebuffer) - 1, "Class: '%s'", di.bootblockclass);
-			infotext.push_back(linebuffer);
+			infotext.emplace_back(linebuffer);
 		}
-		infotext.push_back("");
+		infotext.emplace_back("");
 	}
 
 	int w = 16;
@@ -1109,13 +1050,13 @@ void DisplayDiskInfo(int num)
 		}
 		linebuffer[w * 3] = ' ';
 		linebuffer[w * 3 + 1 + w] = 0;
-		infotext.push_back(linebuffer);
+		infotext.emplace_back(linebuffer);
 	}
 
 	ShowDiskInfo(title, infotext);
 }
 
-void save_mapping_to_file(std::string mapping)
+void save_mapping_to_file(const std::string& mapping)
 {
 	std::string filename = get_controllers_path();
 	filename.append("gamecontrollerdb_user.txt");
@@ -1124,7 +1065,7 @@ void save_mapping_to_file(std::string mapping)
 	file_output.open(filename, ios::app);
 	if (file_output.is_open())
 	{
-		file_output << std::endl << mapping << std::endl;
+		file_output << '\n' << mapping << '\n';
 		file_output.close();
 	}
 }

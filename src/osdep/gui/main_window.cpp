@@ -6,6 +6,7 @@
 #include <guisan.hpp>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
+#include <bits/stl_algo.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
@@ -244,17 +245,12 @@ void cap_fps(Uint64 start)
 	const auto end = SDL_GetPerformanceCounter();
 	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
 
-	int refresh_rate = sdl_mode.refresh_rate;
-	if (refresh_rate < 50) refresh_rate = 50;
-	if (refresh_rate > 60) refresh_rate = 60;
+	const int refresh_rate = std::clamp(sdl_mode.refresh_rate, 50, 60);
+	const float frame_time = 1000.0f / refresh_rate;
+	const float delay_time = frame_time - elapsed_ms;
 
-	float d = 0.0f;
-	if (refresh_rate == 60)
-		d = floor(16.666f - elapsed_ms);
-	else
-		d = floor(20.000f - elapsed_ms);
-
-	if( d > 0.0f ) SDL_Delay( Uint32(d) );
+	if (delay_time > 0.0f)
+		SDL_Delay(static_cast<Uint32>(delay_time));
 }
 
 void update_gui_screen()
@@ -437,7 +433,7 @@ void amiberry_gui_halt()
 
 void check_input()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	auto got_event = 0;
 	didata* did = &di_joystick[0];
@@ -808,11 +804,7 @@ void check_input()
 		//-------------------------------------------------
 		// Send event to gui-controls
 		//-------------------------------------------------
-#ifdef ANDROID
-		androidsdl_event(gui_event, gui_input);
-#else
 		gui_input->pushInput(gui_event);
-#endif
 	}
 	
 	if (got_event)
@@ -830,7 +822,7 @@ void check_input()
 
 void amiberry_gui_run()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 
 	if (amiberry_options.gui_joystick_control)
 	{
@@ -890,72 +882,84 @@ class MainButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == cmdShutdown)
+		const auto source = actionEvent.getSource();
+		if (source == cmdShutdown)
 		{
-			// ------------------------------------------------
-			// Shutdown the host (power off)
-			// ------------------------------------------------
-			uae_quit();
-			gui_running = false;
-			host_poweroff = true;
+			shutdown_host();
 		}
+		else if (source == cmdQuit)
+		{
+			quit_program();
+		}
+		else if (source == cmdReset)
+		{
+			reset_amiga();
+		}
+		else if (source == cmdRestart)
+		{
+			restart_emulator();
+		}
+		else if (source == cmdStart)
+		{
+			start_emulation();
+		}
+		else if (source == cmdHelp)
+		{
+			show_help();
+		}
+	}
+private:
+	static void shutdown_host()
+	{
+		uae_quit();
+		gui_running = false;
+		host_poweroff = true;
+	}
 
-		if (actionEvent.getSource() == cmdQuit)
+	static void quit_program()
+	{
+		uae_quit();
+		gui_running = false;
+	}
+
+	static void reset_amiga()
+	{
+		uae_reset(1, 1);
+		gui_running = false;
+	}
+
+	static void restart_emulator()
+	{
+		char tmp[MAX_DPATH];
+		get_configuration_path(tmp, sizeof tmp);
+		if (strlen(last_loaded_config) > 0)
+			strncat(tmp, last_loaded_config, MAX_DPATH - 1);
+		else
 		{
-			//-------------------------------------------------
-			// Quit entire program via click on Quit-button
-			//-------------------------------------------------
-			uae_quit();
+			strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
+			strncat(tmp, ".uae", MAX_DPATH - 10);
+		}
+		uae_restart(&changed_prefs, -1, tmp);
+		gui_running = false;
+	}
+
+	static void start_emulation()
+	{
+		if (emulating && cmdStart->isEnabled())
+		{
 			gui_running = false;
 		}
-		else if (actionEvent.getSource() == cmdReset)
+		else
 		{
-			//-------------------------------------------------
-			// Reset Amiga via click on Reset-button
-			//-------------------------------------------------
-			uae_reset(1, 1);
+			uae_reset(0, 1);
 			gui_running = false;
 		}
-		else if (actionEvent.getSource() == cmdRestart)
-		{
-			//-------------------------------------------------
-			// Restart emulator
-			//-------------------------------------------------
-			char tmp[MAX_DPATH];
-			get_configuration_path(tmp, sizeof tmp);
-			if (strlen(last_loaded_config) > 0)
-				strncat(tmp, last_loaded_config, MAX_DPATH - 1);
-			else
-			{
-				strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
-				strncat(tmp, ".uae", MAX_DPATH - 10);
-			}
-			uae_restart(&changed_prefs, -1, tmp);
-			gui_running = false;
-		}
-		else if (actionEvent.getSource() == cmdStart)
-		{
-			if (emulating && cmdStart->isEnabled())
-			{
-				//------------------------------------------------
-				// Continue emulation
-				//------------------------------------------------
-				gui_running = false;
-			}
-			else
-			{
-				//------------------------------------------------
-				// First start of emulator -> reset Amiga
-				//------------------------------------------------
-				uae_reset(0, 1);
-				gui_running = false;
-			}
-		}
-		else if (actionEvent.getSource() == cmdHelp)
-		{
-			show_help_requested();
-			cmdHelp->requestFocus();
-		}
+	}
+
+	static void show_help()
+	{
+		show_help_requested();
+		cmdHelp->requestFocus();
 	}
 };
 
