@@ -267,7 +267,7 @@ void RescanROMs()
 		if (dir != "..")
 		{
 			std::string full_path = std::string(path).append(dir);
-			read_directory(full_path.c_str(), nullptr, &files);
+			read_directory(full_path, nullptr, &files);
 			for (auto & file : files)
 			{
 				std::string tmp_path = full_path;

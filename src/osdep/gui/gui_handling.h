@@ -341,7 +341,7 @@ void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
 void ShowCustomFields();
 
 std::string show_controller_map(int device, bool map_touchpad);
-extern void read_directory(std::string path, vector<string>* dirs, vector<string>* files);
+extern void read_directory(const std::string& path, vector<string>* dirs, vector<string>* files);
 extern void FilterFiles(vector<string>* files, const char* filter[]);
 
 enum

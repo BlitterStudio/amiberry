@@ -3074,7 +3074,7 @@ void remove_file_extension(char* filename)
 
 std::string remove_file_extension(const std::string& filename)
 {
-	const size_t last_dot = filename.find_last_of(".");
+	const size_t last_dot = filename.find_last_of('.');
 	if (last_dot == std::string::npos) {
 		// No extension found, return the original filename
 		return filename;
@@ -3082,49 +3082,42 @@ std::string remove_file_extension(const std::string& filename)
 	return filename.substr(0, last_dot);
 }
 
-void read_directory(const std::string path, std::vector<std::string>* dirs, std::vector<std::string>* files)
+void read_directory(const std::string& path, std::vector<std::string>* dirs, std::vector<std::string>* files)
 {
-	struct dirent* dent;
-
 	if (dirs != nullptr)
 		dirs->clear();
 	if (files != nullptr)
 		files->clear();
 
-	auto* const dir = opendir(path.c_str());
-	if (dir != nullptr)
+	// check if the path exists first
+	if (!std::filesystem::exists(path))
+		return;
+	for (const auto& entry : std::filesystem::directory_iterator(path))
 	{
-		while ((dent = readdir(dir)) != nullptr)
+		if (entry.is_directory())
 		{
-			if (dent->d_type == DT_DIR)
-			{
-                if (dirs != nullptr
-                    && (dent->d_name[0] != '.' || (dent->d_name[0] == '.' && dent->d_name[1] == '.')))
-                    dirs->emplace_back(dent->d_name);
-			}
-			else if (dent->d_type == DT_LNK)
-			{
-				struct stat stbuf{};
-				stat(dent->d_name, &stbuf);
-				if (S_ISDIR(stbuf.st_mode))
-				{
-                    if (dirs != nullptr
-                        && (dent->d_name[0] != '.' || (dent->d_name[0] == '.' && dent->d_name[1] == '.')))
-                        dirs->emplace_back(dent->d_name);
-				}
-				else
-				{
-					if (files != nullptr && dent->d_name[0] != '.')
-						files->emplace_back(dent->d_name);
-				}
-			}
-			else if (files != nullptr && dent->d_name[0] != '.')
-				files->emplace_back(dent->d_name);
+			if (dirs != nullptr && (entry.path().filename().string()[0] != '.' || (entry.path().filename().string()[0] == '.' && entry.path().filename().string()[1] == '.')))
+				dirs->emplace_back(entry.path().filename().string());
 		}
-		if (dirs != nullptr && !dirs->empty() && (*dirs)[0] == ".")
-			dirs->erase(dirs->begin());
-		closedir(dir);
+		else if (entry.is_symlink())
+		{
+			if (std::filesystem::is_directory(entry))
+			{
+				if (dirs != nullptr && (entry.path().filename().string()[0] != '.' || (entry.path().filename().string()[0] == '.' && entry.path().filename().string()[1] == '.')))
+					dirs->emplace_back(entry.path().filename().string());
+			}
+			else
+			{
+				if (files != nullptr && entry.path().filename().string()[0] != '.')
+					files->emplace_back(entry.path().filename().string());
+			}
+		}
+		else if (files != nullptr && entry.path().filename().string()[0] != '.')
+			files->emplace_back(entry.path().filename().string());
 	}
+
+	if (dirs != nullptr && !dirs->empty() && (*dirs)[0] == ".")
+		dirs->erase(dirs->begin());
 
 	if (dirs != nullptr)
 		sort(dirs->begin(), dirs->end());
