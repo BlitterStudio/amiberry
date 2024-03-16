@@ -395,46 +395,25 @@ void RefreshPanelWHDLoad()
 	RefreshWhdListModel();
 	AdjustDropDownControls();
 
+	cmdCustomFields->setEnabled(!whdload_filename.empty());
+
 	if (whdload_filename.empty())
 	{
-		cmdCustomFields->setEnabled(false);
 		clear_whdload_prefs();
 		slaves_list.clear();
 	}
 	else
 	{
-		cmdCustomFields->setEnabled(true);
-
 		update_slaves_list(whdload_prefs.slaves);
 		update_selected_slave(whdload_prefs.selected_slave);
-
-		if (!whdload_prefs.selected_slave.data_path.empty())
-			txtSlaveDataPath->setText(whdload_prefs.selected_slave.data_path);
-		else
-			txtSlaveDataPath->setText("");
+		txtSlaveDataPath->setText(whdload_prefs.selected_slave.data_path.empty() ? "" : whdload_prefs.selected_slave.data_path);
 	}
 
-	if (!whdload_prefs.game_name.empty())
-		txtGameName->setText(whdload_prefs.game_name);
-	else
-		txtGameName->setText("");
-
-	if (!whdload_prefs.variant_uuid.empty())
-		txtVariantUuid->setText(whdload_prefs.variant_uuid);
-	else
-		txtVariantUuid->setText("");
-
-	if (!whdload_prefs.slave_default.empty())
-		txtSlaveDefault->setText(whdload_prefs.slave_default);
-	else
-		txtSlaveDefault->setText("");
-
+	txtGameName->setText(whdload_prefs.game_name.empty() ? "" : whdload_prefs.game_name);
+	txtVariantUuid->setText(whdload_prefs.variant_uuid.empty() ? "" : whdload_prefs.variant_uuid);
+	txtSlaveDefault->setText(whdload_prefs.slave_default.empty() ? "" : whdload_prefs.slave_default);
 	chkSlaveLibraries->setSelected(whdload_prefs.slave_libraries);
-
-	if (!whdload_prefs.custom.empty())
-		txtCustomText->setText(whdload_prefs.custom);
-	else
-		txtCustomText->setText("");
+	txtCustomText->setText(whdload_prefs.custom.empty() ? "" : whdload_prefs.custom);
 
 	// These are global
 	chkButtonWait->setSelected(whdload_prefs.button_wait);
