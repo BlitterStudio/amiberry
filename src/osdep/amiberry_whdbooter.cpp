@@ -999,7 +999,7 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 					if (slave.filename == whdload_prefs.slave_default)
 						whdload_prefs.selected_slave = slave;
 
-					xml_element = game_node->NextSiblingElement("slave");
+					xml_element = xml_element->NextSiblingElement("slave");
 				}
 
 				// get hardware
