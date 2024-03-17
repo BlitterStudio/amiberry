@@ -94,12 +94,13 @@ class WHDLoadActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		//---------------------------------------
-		// WHDLoad file from list selected
-		//---------------------------------------
-		if (!bIgnoreListChange)
+		const auto source = actionEvent.getSource();
+		if (source == cboWhdload)
 		{
-			if (actionEvent.getSource() == cboWhdload)
+			//---------------------------------------
+			// WHDLoad file from list selected
+			//---------------------------------------
+			if (!bIgnoreListChange)
 			{
 				const auto idx = cboWhdload->getSelected();
 
@@ -124,24 +125,15 @@ public:
 				refresh_all_panels();
 			}
 		}
-	}
-};
-
-static WHDLoadActionListener* whdloadActionListener;
-
-class WHDLoadButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == cmdWhdloadEject)
+		else if (source == cmdWhdloadEject)
 		{
 			//---------------------------------------
 			// Eject WHDLoad file
 			//---------------------------------------
 			whdload_filename = "";
+			refresh_all_panels();
 		}
-		else if (actionEvent.getSource() == cmdWhdloadSelect)
+		else if (source == cmdWhdloadSelect)
 		{
 			std::string tmp;
 			if (!whdload_filename.empty())
@@ -159,16 +151,24 @@ public:
 				AdjustDropDownControls();
 			}
 			cmdWhdloadSelect->requestFocus();
+			refresh_all_panels();
 		}
-		else if (actionEvent.getSource() == cmdCustomFields)
+		else if (source == cboSlaves)
+		{
+			if (cboSlaves->getSelected() >= 0)
+			{
+				whdload_prefs.selected_slave = whdload_prefs.slaves[cboSlaves->getSelected()];
+				txtSlaveDataPath->setText(whdload_prefs.selected_slave.data_path.empty() ? "" : whdload_prefs.selected_slave.data_path);
+			}
+		}
+		else if (source == cmdCustomFields)
 		{
 			ShowCustomFields();
 		}
-		refresh_all_panels();
 	}
 };
 
-static WHDLoadButtonActionListener* whdloadButtonActionListener;
+static WHDLoadActionListener* whdloadActionListener;
 
 void InitPanelWHDLoad(const struct config_category& category)
 {
@@ -177,7 +177,6 @@ void InitPanelWHDLoad(const struct config_category& category)
 	constexpr int textfield_width = 350;
 
 	whdloadActionListener = new WHDLoadActionListener();
-	whdloadButtonActionListener = new WHDLoadButtonActionListener();
 
 	lblWhdload = new gcn::Label("WHDLoad auto-config:");
 	cboWhdload = new gcn::DropDown(&whdloadFileList);
@@ -191,13 +190,13 @@ void InitPanelWHDLoad(const struct config_category& category)
 	cmdWhdloadEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadEject->setBaseColor(gui_baseCol);
 	cmdWhdloadEject->setId("cmdWhdloadEject");
-	cmdWhdloadEject->addActionListener(whdloadButtonActionListener);
+	cmdWhdloadEject->addActionListener(whdloadActionListener);
 
 	cmdWhdloadSelect = new gcn::Button("Select file");
 	cmdWhdloadSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadSelect->setBaseColor(gui_baseCol);
 	cmdWhdloadSelect->setId("cmdWhdloadSelect");
-	cmdWhdloadSelect->addActionListener(whdloadButtonActionListener);
+	cmdWhdloadSelect->addActionListener(whdloadActionListener);
 
 	// WHDLoad options
 	lblGameName = new gcn::Label("Game Name:");
@@ -222,6 +221,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	cboSlaves->setSize(textfield_width, cboSlaves->getHeight());
 	cboSlaves->setBaseColor(gui_baseCol);
 	cboSlaves->setBackgroundColor(colTextboxBackground);
+	cboSlaves->addActionListener(whdloadActionListener);
 
 	lblSlaveDataPath = new gcn::Label("Slave Data path:");
 	txtSlaveDataPath = new gcn::TextField();
@@ -232,7 +232,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	cmdCustomFields->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
 	cmdCustomFields->setBaseColor(gui_baseCol);
 	cmdCustomFields->setId("cmdCustomFields");
-	cmdCustomFields->addActionListener(whdloadButtonActionListener);
+	cmdCustomFields->addActionListener(whdloadActionListener);
 
 	lblCustomText = new gcn::Label("Custom:");
 	txtCustomText = new gcn::TextField();
@@ -364,7 +364,6 @@ void ExitPanelWHDLoad()
 	delete grpWHDLoadGlobal;
 
 	delete whdloadActionListener;
-	delete whdloadButtonActionListener;
 }
 
 void update_slaves_list(const std::vector<whdload_slave>& slaves)
