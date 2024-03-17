@@ -2,11 +2,11 @@
 #include <cstring>
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
 
 #include <guisan.hpp>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
-#include <bits/stl_algo.h>
 #include <guisan/sdl.hpp>
 #include <guisan/sdl/sdltruetypefont.hpp>
 #include "SelectorEntry.hpp"
