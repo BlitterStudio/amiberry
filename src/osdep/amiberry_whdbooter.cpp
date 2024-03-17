@@ -981,7 +981,7 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 						if (xml_element->FirstChildElement("datapath")->GetText() != nullptr)
 							slave.data_path.assign(xml_element->FirstChildElement("datapath")->GetText());
 						
-						if (xml_element->FirstChildElement("custom")->GetText() != nullptr)
+						if (xml_element->FirstChildElement("custom") != nullptr && xml_element->FirstChildElement("custom")->GetText() != nullptr)
 						{
 							auto custom = std::string(xml_element->FirstChildElement("custom")->GetText());
 							parse_slave_custom_fields(slave, custom);
