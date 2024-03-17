@@ -10205,11 +10205,10 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 
 	} else {
 #endif
-		v &= 0x8fff;
-		if (!ecs_denise) {
-			v &= 0xfff;
+		if (ecs_denise) {
+			color_regs_genlock[num] = v >> 15;
 		}
-		color_regs_genlock[num] = v >> 15;
+		v &= 0xfff;
 		if (num && v == 0) {
 			colzero = true;
 		}
@@ -15250,7 +15249,7 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 	case 0x1A4: case 0x1A6: case 0x1A8: case 0x1AA: case 0x1AC: case 0x1AE:
 	case 0x1B0: case 0x1B2: case 0x1B4: case 0x1B6: case 0x1B8: case 0x1BA:
 	case 0x1BC: case 0x1BE:
-		COLOR_WRITE(hpos, value & 0xFFF, (addr & 0x3E) / 2);
+		COLOR_WRITE(hpos, value & 0x8FFF, (addr & 0x3E) / 2);
 		break;
 	case 0x120: case 0x124: case 0x128: case 0x12C:
 	case 0x130: case 0x134: case 0x138: case 0x13C:
