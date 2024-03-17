@@ -165,6 +165,22 @@ public:
 		{
 			ShowCustomFields();
 		}
+		else if (source == chkButtonWait)
+		{
+			whdload_prefs.button_wait = chkButtonWait->isSelected();
+		}
+		else if (source == chkShowSplash)
+		{
+			whdload_prefs.show_splash = chkShowSplash->isSelected();
+		}
+		else if (source == chkWriteCache)
+		{
+			whdload_prefs.write_cache = chkWriteCache->isSelected();
+		}
+		else if (source == chkQuitOnExit)
+		{
+			whdload_prefs.quit_on_exit = chkQuitOnExit->isSelected();
+		}
 	}
 };
 
@@ -240,7 +256,9 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtCustomText->setBackgroundColor(colTextboxBackground);
 
 	chkButtonWait = new gcn::CheckBox("Button Wait");
+	chkButtonWait->addActionListener(whdloadActionListener);
 	chkShowSplash = new gcn::CheckBox("Show Splash");
+	chkShowSplash->addActionListener(whdloadActionListener);
 
 	lblConfigDelay = new gcn::Label("Config Delay:");
 	txtConfigDelay = new gcn::TextField();
@@ -248,7 +266,9 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtConfigDelay->setBackgroundColor(colTextboxBackground);
 
 	chkWriteCache = new gcn::CheckBox("Write Cache");
+	chkWriteCache->addActionListener(whdloadActionListener);
 	chkQuitOnExit = new gcn::CheckBox("Quit on Exit");
+	chkQuitOnExit->addActionListener(whdloadActionListener);
 
 	constexpr int pos_x1 = DISTANCE_BORDER;
 	const int pos_x2 = chkSlaveLibraries->getWidth() + 8;
