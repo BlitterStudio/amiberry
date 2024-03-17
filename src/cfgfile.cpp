@@ -2531,6 +2531,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("genlockmode"), genlockmodes, p->genlock_image);
 	cfgfile_dwrite_str(f, _T("genlock_image"), p->genlock_image_file);
 	cfgfile_dwrite_str(f, _T("genlock_video"), p->genlock_video_file);
+	cfgfile_dwrite_str(f, _T("genlock_font"), p->genlock_font);
 	cfgfile_dwrite(f, _T("genlock_mix"), _T("%d"), p->genlock_mix);
 	cfgfile_dwrite(f, _T("genlock_scale"), _T("%d"), p->genlock_scale);
 	cfgfile_dwrite(f, _T("genlock_offset_x"), _T("%d"), p->genlock_offset_x);
@@ -6096,6 +6097,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_path(option, value, _T("picassoiv_rom_file"), p->picassoivromfile, sizeof p->picassoivromfile / sizeof(TCHAR), &p->path_rom)
 		|| cfgfile_string(option, value, _T("genlock_image"), p->genlock_image_file, sizeof p->genlock_image_file / sizeof(TCHAR))
 		|| cfgfile_string(option, value, _T("genlock_video"), p->genlock_video_file, sizeof p->genlock_video_file / sizeof(TCHAR))
+		|| cfgfile_string(option, value, _T("genlock_font"), p->genlock_font, sizeof p->genlock_font / sizeof(TCHAR))
 		|| cfgfile_string(option, value, _T ("pci_devices"), p->pci_devices, sizeof p->pci_devices / sizeof(TCHAR))
 		|| cfgfile_string (option, value, _T("ghostscript_parameters"), p->ghostscript_parameters, sizeof p->ghostscript_parameters / sizeof (TCHAR)))
 		return 1;
@@ -8807,6 +8809,7 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->genlock = 0;
 	p->genlock_image = 0;
 	p->genlock_image_file[0] = 0;
+	p->genlock_font[0] = 0;
 	
 	p->ne2000pciname[0] = 0;
 	p->ne2000pcmcianame[0] = 0;

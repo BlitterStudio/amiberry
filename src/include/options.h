@@ -755,6 +755,7 @@ struct uae_prefs
 	bool genlock_alpha;
 	TCHAR genlock_image_file[MAX_DPATH];
 	TCHAR genlock_video_file[MAX_DPATH];
+	TCHAR genlock_font[MAX_DPATH];
 	int monitoremu;
 	int monitoremu_mon;
 	float chipset_refreshrate;

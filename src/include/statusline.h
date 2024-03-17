@@ -54,5 +54,6 @@ const TCHAR *statusline_fetch(void);
 int statusline_set_multiplier(int, int, int);
 int statusline_get_multiplier(int monid);
 void statusline_set_font(const char *newnumbers, int width, int height);
+void ldp_render(const char *txt, int len, uae_u8 *buf, struct vidbuffer*, int x, int y, int mx, int my);
 
 #endif /* UAE_STATUSLINE_H */

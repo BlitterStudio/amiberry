@@ -719,6 +719,60 @@ static int ld_audio, ld_audio_mute;
 static bool ld_video;
 static int ld_vsync;
 static int alg_hsync_delay;
+static uae_u8 ld_uidx_config[3], ld_uidx_offset, ld_uidx_offsetd;
+static char ld_uidx_data[32];
+static uae_u8 ld_user_index;
+
+void genlock_infotext(uae_u8 *d, struct vidbuffer *dst)
+{
+	if (!ld_user_index) {
+#if 0
+		int x = 26;
+		int y = 12;
+		x -= 12;
+		y -= 10;
+		int dx = dst->inwidth * x / (86 - 12);
+		int dy = dst->inheight * y / (59 - 10);
+		int mx = 1, my = 1;
+		mx <<= currprefs.gfx_resolution;
+		my <<= currprefs.gfx_vresolution;
+		ldp_render("ABCDE12345ABCDE12345", 20, d, dst, dx, dy, mx ,my);
+		y += 4;
+		dy = dst->inheight * y / (59 - 10);
+		ldp_render("ABCDE12345ABCDE12345", 20, d, dst, dx, dy, mx, my);
+#endif
+		return;
+	}
+	int x = ld_uidx_config[0] & 63;
+	int y = ld_uidx_config[1] & 63;
+	int mx = (ld_uidx_config[2] & 3) + 1;
+	int my = ((ld_uidx_config[2] >> 2) & 3) + 1;
+	bool dm = (ld_uidx_config[2] & 0x10) != 0;
+	int offset = ld_uidx_offsetd & 31;
+	int len = 32 - offset;
+
+	x -= 12;
+	y -= 10;
+
+	int dx = dst->inwidth * x / (86 - 12);
+	int dy = dst->inheight * y / (59 - 10);
+
+	mx <<= currprefs.gfx_resolution;
+	my <<= currprefs.gfx_vresolution;
+
+	if (dm) {
+		ldp_render(ld_uidx_data, 10, d, dst, dx, dy, mx, my);
+		y += 4;
+		dy = dst->inheight * y / (59 - 10);
+		ldp_render(ld_uidx_data + 10, 10, d, dst, dx, dy, mx, my);
+		y += 4;
+		dy = dst->inheight * y / (59 - 10);
+		ldp_render(ld_uidx_data + 20, 10, d, dst, dx, dy, mx, my);
+	} else {
+		ldp_render(ld_uidx_data, 20, d, dst, dx, dy, mx, my);
+	}
+
+}
 
 static void sb(uae_u8 v)
 {
@@ -737,16 +791,27 @@ static void sony_serial_read(uae_u16 w)
 	w &= 0xff;
 
 	if (ld_ui >= 0 && ld_ui_cnt >= 0) {
-		ld_ui_cnt++;
 		if (ld_ui == 0) {
+			ld_uidx_config[ld_ui_cnt] = (uae_u8)w;
+			ld_ui_cnt++;
 			if (ld_ui_cnt == 3) {
 				ld_ui = -1;
 			}
 		} else if (ld_ui == 1) {
+			if (ld_ui_cnt == 0) {
+				ld_uidx_offset = (uae_u8)w;
+			} else {
+				int idx = ld_uidx_offset & 31;
+				ld_uidx_data[idx] = (uae_u8)w;
+				ld_uidx_offset++;
+			}
+			ld_ui_cnt++;
 			if (ld_ui_cnt >= 34 || (ld_ui_cnt > 1 && w == 0x1a)) {
 				ld_ui = -1;
 			}
 		} else if (ld_ui == 2) {
+			ld_uidx_offsetd = (uae_u8)w;
+			ld_ui_cnt++;
 			ld_ui = -1;
 		}
 		ack();
@@ -1502,6 +1567,13 @@ void alg_map_banks(void)
 		alg_hsync_delay = 0;
 		arcadia_hsync_cnt = 0;
 		ld_ui = -1;
+		ld_user_index = 0;
+		ld_uidx_config[0] = 0;
+		ld_uidx_config[1] = 0;
+		ld_uidx_config[2] = 0;
+		ld_uidx_offset = 0;
+		ld_uidx_offsetd = 0;
+		memset(ld_uidx_data, 0, sizeof(ld_uidx_data));
 	}
 }
 
@@ -1533,6 +1605,15 @@ uae_u8 *restore_alg(uae_u8 *src)
 		alg_ser_buf[i] = restore_u8();
 	}
 	ld_vsync = restore_u32();
+	ld_user_index = restore_u8();
+	ld_uidx_config[0] = restore_u8();
+	ld_uidx_config[1] = restore_u8();
+	ld_uidx_config[2] = restore_u8();
+	ld_uidx_offset = restore_u8();
+	ld_uidx_offsetd = restore_u8();
+	for (int i = 0; i < 32; i++) {
+		ld_uidx_data[i] = restore_u8();
+	}
 	return src;
 }
 
@@ -1573,7 +1654,15 @@ uae_u8 *save_alg(size_t *len)
 		save_u8(alg_ser_buf[i]);
 	}
 	save_u32(ld_vsync);
-
+	save_u8(ld_user_index);
+	save_u8(ld_uidx_config[0]);
+	save_u8(ld_uidx_config[1]);
+	save_u8(ld_uidx_config[2]);
+	save_u8(ld_uidx_offset);
+	save_u8(ld_uidx_offsetd);
+	for (int i = 0; i < 32; i++) {
+		save_u8(ld_uidx_data[i]);
+	}
 	*len = dst - dstbak;
 	return dstbak;
 }
