@@ -886,7 +886,7 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 	game_hardware_options game_detail{};
 	tinyxml2::XMLDocument doc;
 	auto error = false;
-	write_log("WHDBooter - Searching whdload_db.xml for %s\n", whdload_prefs.filename.c_str());
+	write_log(_T("WHDBooter - Searching whdload_db.xml for %s\n"), whdload_prefs.filename.c_str());
 
 	auto* f = fopen(whd_config, _T("rb"));
 	if (f)
@@ -970,34 +970,36 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 
 				// Get slaves and settings
 				xml_element = game_node->FirstChildElement("slave");
-				int i = 1;
-				whdload_prefs.slaves = {};
-				do
+				whdload_prefs.slaves.clear();
+
+				for (int i = 0; i < whdload_prefs.slave_count && xml_element; ++i)
 				{
-					if (xml_element)
+					whdload_slave slave;
+					const char* slave_text = nullptr;
+
+					slave_text = xml_element->FirstChildElement("filename")->GetText();
+					if (slave_text)
+						slave.filename.assign(slave_text);
+
+					slave_text = xml_element->FirstChildElement("datapath")->GetText();
+					if (slave_text)
+						slave.data_path.assign(slave_text);
+
+					auto customElement = xml_element->FirstChildElement("custom");
+					if (customElement && ((slave_text = customElement->GetText())))
 					{
-						whdload_slave slave;
-						slave.filename.assign(xml_element->FirstChildElement("filename")->GetText());
-						if (xml_element->FirstChildElement("datapath")->GetText() != nullptr)
-							slave.data_path.assign(xml_element->FirstChildElement("datapath")->GetText());
-						
-						if (xml_element->FirstChildElement("custom") != nullptr && xml_element->FirstChildElement("custom")->GetText() != nullptr)
-						{
-							auto custom = std::string(xml_element->FirstChildElement("custom")->GetText());
-							parse_slave_custom_fields(slave, custom);
-						}
-
-						whdload_prefs.slaves.emplace_back(slave);
-
-						// Set the default slave as the selected one
-						if (slave.filename == whdload_prefs.slave_default)
-							whdload_prefs.selected_slave = slave;
+						auto custom = std::string(slave_text);
+						parse_slave_custom_fields(slave, custom);
 					}
 
+					whdload_prefs.slaves.emplace_back(slave);
+
+					// Set the default slave as the selected one
+					if (slave.filename == whdload_prefs.slave_default)
+						whdload_prefs.selected_slave = slave;
+
 					xml_element = game_node->NextSiblingElement("slave");
-					i++;
 				}
-				while (i <= whdload_prefs.slave_count);
 
 				// get hardware
 				xml_element = game_node->FirstChildElement("hardware");
