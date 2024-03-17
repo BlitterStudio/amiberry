@@ -85,7 +85,7 @@ static gcn::StringListModel frequency_type_list(frequency);
 static const std::vector<std::string> interpolation = { "Disabled", "Anti", "Sinc", "RH", "Crux" };
 static gcn::StringListModel interpolation_type_list(interpolation);
 
-static const std::vector<std::string> filter = { "Always off", "Emulated (A500)", "Emulated (A1200)", "Always on (A500)", "Always on (A1200)" };
+static const std::vector<std::string> filter = { "Always off", "Emulated (A500)", "Emulated (A1200)", "Always on (A500)", "Always on (A1200)", "Always on (Fixed only)" };
 static gcn::StringListModel filter_type_list(filter);
 
 class SoundActionListener : public gcn::ActionListener
@@ -190,6 +190,10 @@ public:
 			case 4:
 				changed_prefs.sound_filter = FILTER_SOUND_ON;
 				changed_prefs.sound_filter_type = 1;
+				break;
+			case 5:
+				changed_prefs.sound_filter = FILTER_SOUND_ON;
+				changed_prefs.sound_filter_type = 2;
 				break;
 			default:
 				break;
@@ -367,7 +371,7 @@ void InitPanelSound(const config_category& category)
 	lblInterpolation = new gcn::Label("Interpolation:");
 	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
 	cboInterpolation = new gcn::DropDown(&interpolation_type_list);
-	cboInterpolation->setSize(150, cboInterpolation->getHeight());
+	cboInterpolation->setSize(200, cboInterpolation->getHeight());
 	cboInterpolation->setBaseColor(gui_baseCol);
 	cboInterpolation->setBackgroundColor(colTextboxBackground);
 	cboInterpolation->setId("cboInterpol");
@@ -376,7 +380,7 @@ void InitPanelSound(const config_category& category)
 	lblFilter = new gcn::Label("Filter:");
 	lblFilter->setAlignment(gcn::Graphics::RIGHT);
 	cboFilter = new gcn::DropDown(&filter_type_list);
-	cboFilter->setSize(150, cboFilter->getHeight());
+	cboFilter->setSize(200, cboFilter->getHeight());
 	cboFilter->setBaseColor(gui_baseCol);
 	cboFilter->setBackgroundColor(colTextboxBackground);
 	cboFilter->setId("cboFilter");
@@ -385,7 +389,7 @@ void InitPanelSound(const config_category& category)
 	lblSeparation = new gcn::Label("Stereo separation:");
 	lblSeparation->setAlignment(gcn::Graphics::RIGHT);
 	cboSeparation = new gcn::DropDown(&separation_list);
-	cboSeparation->setSize(150, cboSeparation->getHeight());
+	cboSeparation->setSize(120, cboSeparation->getHeight());
 	cboSeparation->setBaseColor(gui_baseCol);
 	cboSeparation->setBackgroundColor(colTextboxBackground);
 	cboSeparation->setId("cboSeparation");
@@ -394,7 +398,7 @@ void InitPanelSound(const config_category& category)
 	lblStereoDelay = new gcn::Label("Stereo delay:");
 	lblStereoDelay->setAlignment(gcn::Graphics::RIGHT);
 	cboStereoDelay = new gcn::DropDown(&stereo_delay_list);
-	cboStereoDelay->setSize(150, cboStereoDelay->getHeight());
+	cboStereoDelay->setSize(120, cboStereoDelay->getHeight());
 	cboStereoDelay->setBaseColor(gui_baseCol);
 	cboStereoDelay->setBackgroundColor(colTextboxBackground);
 	cboStereoDelay->setId("cboStereoDelay");
@@ -720,7 +724,7 @@ void RefreshPanelSound()
 		i = changed_prefs.sound_filter_type ? 2 : 1;
 		break;
 	case 2:
-		i = changed_prefs.sound_filter_type ? 4 : 3;
+		i = changed_prefs.sound_filter_type == 2 ? 5 : (changed_prefs.sound_filter_type == 1 ? 4 : 3);
 		break;
 	default:
 		break;
