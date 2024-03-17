@@ -33,6 +33,9 @@
 // instruction is considered completed, generate short bus error stack frame.
 #define MMU68030_LAST_WRITE 1
 
+// Not useful
+#define WAITSTATUS_020_EXTRA 0
+
 static FILE *headerfile;
 static FILE *stblfile;
 
@@ -2654,7 +2657,7 @@ static void addop_ce020 (struct instr *curi, int subhead, int flags)
 		int h = curi->head;
 		int t = curi->tail;
 		int c = curi->clocks;
-	#if 0
+	#if WAITSTATUS_020_EXTRA
 		if ((((curi->sduse & 2) && !isreg (curi->smode)) || (((curi->sduse >> 4) & 2) && !isreg (curi->dmode))) && using_waitstates) {
 			t += using_waitstates;
 			c += using_waitstates;
@@ -2715,6 +2718,11 @@ static void addcycles_ea_ce020 (const char *ea, int h, int t, int c)
 
 #define SETCE020(h2,t2,c2) { h = h2; t = t2; c = c2; }
 #define SETCE020H(h2,t2,c2) { h = h2; oph = curi ? curi->head : 0; t = t2; c = c2; }
+#if WAITSTATUS_020_EXTRA
+#define SETCE020WS(h2,t2,c2,ws2) { h = h2; t = t2; c = c2; ws = ws2; }
+#else
+#define SETCE020WS(h2,t2,c2,ws2) { h = h2; t = t2; c = c2; }
+#endif
 
 static int gence020cycles_fiea (struct instr *curi, wordsizes ssize, amodes dmode)
 {
@@ -2844,45 +2852,42 @@ static int gence020cycles_ciea (struct instr *curi, wordsizes ssize, amodes dmod
 
 static int gence020cycles_fea (amodes mode)
 {
-	int h = 0, t = 0, c = 0, ws = 0;
+	int h = 0, t = 0, c = 0;
+#if WAITSTATUS_020_EXTRA
+	int ws = 0;
+#endif
+
 	switch (mode)
 	{
 	case Dreg:
 	case Areg:
-		SETCE020(0, 0, 0)
+		SETCE020WS(0, 0, 0, 0)
 		break;
 	case Aind: // (An)
-		ws++;
-		SETCE020(1, 1, 3)
+		SETCE020WS(1, 1, 3, 1)
 		break;
 	case Aipi: // (An)+
-		ws++;
-		SETCE020(0, 1, 3)
+		SETCE020WS(0, 1, 3, 1)
 		break;
 	case Apdi: // -(An)
-		ws++;
-		SETCE020(2, 2, 4)
+		SETCE020WS(2, 2, 4, 1)
 		break;
 	case Ad8r: // (d8,An,Xn)
 	case PC8r: // (d8,PC,Xn)
-		ws++;
-		SETCE020(4, 2, 6)
+		SETCE020WS(4, 2, 6, 1)
 		break;
 	case Ad16: // (d16,An)
 	case PC16: // (d16,PC)
-		ws++;
-		SETCE020(2, 2, 4)
+		SETCE020WS(2, 2, 4, 1)
 		break;
 	case absw:
-		ws++;
-		SETCE020(2, 2, 4)
+		SETCE020WS(2, 2, 4, 1)
 		break;
 	case absl:
-		ws++;
-		SETCE020(1, 0, 4)
+		SETCE020WS(1, 0, 4, 1)
 		break;
 	}
-#if 0
+#if WAITSTATUS_020_EXTRA
 	if (using_waitstates) {
 		t += ws * using_waitstates;
 		c += ws * using_waitstates;
