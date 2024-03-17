@@ -49,13 +49,11 @@ public:
 		dialogFinished = true;
 	}
 };
-
 static FolderRequesterButtonActionListener* folderButtonActionListener;
-
 
 class SelectDirListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs{};
+	std::vector<std::string> dirs;
 
 public:
 	SelectDirListModel(const std::string& path)
@@ -70,7 +68,7 @@ public:
 
 	void add(const std::string& elem) override
 	{
-		dirs.emplace_back(elem);
+		dirs.push_back(elem);
 	}
 
 	void clear() override
@@ -78,9 +76,9 @@ public:
 		dirs.clear();
 	}
 	
-	std::string getElementAt(const int i) override
+	std::string getElementAt(int i) override
 	{
-		if (i >= static_cast<int>(dirs.size()) || i < 0)
+		if (i < 0 || i >= getNumberOfElements())
 			return "---";
 		return dirs[i];
 	}
