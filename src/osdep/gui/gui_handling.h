@@ -389,5 +389,6 @@ extern std::string get_full_path_from_disk_list(std::string element);
 extern amiberry_hotkey get_hotkey_from_config(std::string config_option);
 extern void save_mapping_to_file(const std::string& mapping);
 extern void clear_whdload_prefs();
+extern void create_startup_sequence();
 
 #endif // GUI_HANDLING_H

@@ -21,114 +21,35 @@ enum
 };
 
 static bool dialog_finished = false;
-
-static int custom1_number = 1;
-static int custom2_number = 1;
-static int custom3_number = 1;
-static int custom4_number = 1;
-static int custom5_number = 1;
-
+static int custom_number[5];
 static gcn::StringListModel custom_list[5];
 
 static gcn::Window* wndShowCustomFields;
 static gcn::Button* cmdOK;
 
-struct custom_field {
+struct custom_widget {
 	std::vector<gcn::Label*> lbl;
-	std::vector<gcn::CheckBox*> chk;
-	std::vector<gcn::DropDown*> cbo;
+	std::vector<gcn::CheckBox*> boolean;
+	std::vector<gcn::CheckBox*> bit;
+	std::vector<gcn::DropDown*> list;
 };
 
-custom_field customField1;
-custom_field customField2;
-custom_field customField3;
-custom_field customField4;
-custom_field customField5;
+custom_widget customWidget1;
+custom_widget customWidget2;
+custom_widget customWidget3;
+custom_widget customWidget4;
+custom_widget customWidget5;
 
-void create_custom_field(custom_field& customField, int custom_number, const std::string& customName, const whdload_custom& custom_field, int& pos_y)
-{
-	constexpr int textfield_width = 350;
-	constexpr int pos_x1 = DISTANCE_BORDER;
-	constexpr int pos_x2 = 150;
-
-	for (int i = 0; i < custom_number; i++) {
-		std::string id;
-
-		customField.lbl.emplace_back(new gcn::Label(customName + ":"));
-		customField.lbl[i]->setPosition(pos_x1, pos_y);
-
-		wndShowCustomFields->add(customField.lbl[i]);
-
-		if (custom_field.type == bit_type)
-		{
-			customField.chk.emplace_back(new gcn::CheckBox(custom_field.label_bit_pairs[i].first));
-			// TODO not correct, it shouldn't use the value coming from the XML
-			customField.chk[i]->setSelected(custom_field.label_bit_pairs[i].second);
-
-			id = "chkCustomField_" + std::to_string(i);
-			customField.chk[i]->setId(id);
-
-			customField.chk[i]->setPosition(pos_x2, pos_y);
-			pos_y += customField.chk[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(customField.chk[i]);
-		}
-		else if (custom_field.type == bool_type)
-		{
-			customField.chk.emplace_back(new gcn::CheckBox(custom_field.caption));
-			customField.chk[i]->setSelected(custom_field.value);
-
-			id = "chkCustomField_" + std::to_string(i);
-			customField.chk[i]->setId(id);
-
-			customField.chk[i]->setPosition(pos_x2, pos_y);
-			pos_y += customField.chk[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(customField.chk[i]);
-		}
-		else if (custom_field.type == list_type)
-		{
-			customField.lbl[i]->setCaption(custom_field.caption);
-
-			for (const auto& label : custom_field.labels)
-			{
-				custom_list[i].add(label);
-			}
-
-			id = "cboCustomField_" + std::to_string(i);
-			customField.cbo.emplace_back(new gcn::DropDown(&custom_list[i]));
-			customField.cbo[i]->setId(id);
-			customField.cbo[i]->setSize(textfield_width, customField.cbo[i]->getHeight());
-			customField.cbo[i]->setBaseColor(gui_baseCol);
-			customField.cbo[i]->setBackgroundColor(colTextboxBackground);
-
-			customField.cbo[i]->setPosition(pos_x2, pos_y);
-			pos_y += customField.cbo[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(customField.cbo[i]);
-		}
-		else
-		{
-			pos_y += customField.lbl[i]->getHeight() + 8;
-		}
-	}
+static int set_bit(const int value, const int bit_position) {
+	return value | (1 << bit_position);
 }
 
-void delete_custom_field(custom_field& customField) {
-	for (const auto& lbl : customField.lbl) {
-		delete lbl;
-	}
-	customField.lbl.clear();
+static int clear_bit(const int value, const int bit_position) {
+	return value & ~(1 << bit_position);
+}
 
-	for (const auto& chk : customField.chk) {
-		delete chk;
-	}
-	customField.chk.clear();
-
-	for (const auto& cbo : customField.cbo) {
-		delete cbo;
-	}
-	customField.cbo.clear();
+static bool is_bit_set(const int num, const int bit) {
+	return (num & (1 << bit)) != 0;
 }
 
 class ShowCustomFieldsActionListener : public gcn::ActionListener
@@ -136,14 +57,145 @@ class ShowCustomFieldsActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == cmdOK)
-			dialog_finished = true;
+		const auto source = actionEvent.getSource();
+		const std::array<custom_widget*, 5> customWidgets = { &customWidget1, &customWidget2, &customWidget3, &customWidget4, &customWidget5 };
+		const std::array<whdload_custom*, 5> customFields = { &whdload_prefs.selected_slave.custom1, &whdload_prefs.selected_slave.custom2, &whdload_prefs.selected_slave.custom3, &whdload_prefs.selected_slave.custom4, &whdload_prefs.selected_slave.custom5 };
 
+		if (source == cmdOK)
+			dialog_finished = true;
+		else
+		{
+			for (int j = 0; j < 5; ++j)
+			{
+				for (int i = 0; i < custom_number[j]; i++)
+				{
+					if (!customWidgets[j]->list.empty() && customFields[j]->type == list_type)
+					{
+						if (source == customWidgets[j]->list[i])
+						{
+							customFields[j]->value = customWidgets[j]->list[i]->getSelected();
+							write_log("Custom field %d value updated to: %d\n", i, customFields[j]->value);
+						}
+					}
+					else if (!customWidgets[j]->boolean.empty() && customFields[j]->type == bool_type)
+					{
+						if (source == customWidgets[j]->boolean[i])
+						{
+							customFields[j]->value = customWidgets[j]->boolean[i]->isSelected();
+							write_log("Custom field %d value updated to: %d\n", i, customFields[j]->value);
+						}
+					}
+					else if (!customWidgets[j]->bit.empty() && customFields[j]->type == bit_type)
+					{
+						if (source == customWidgets[j]->bit[i])
+						{
+							customFields[j]->value = customWidgets[j]->bit[i]->isSelected()
+							? set_bit(customFields[j]->value, customFields[j]->label_bit_pairs[i].second)
+							: clear_bit(customFields[j]->value, customFields[j]->label_bit_pairs[i].second);
+							write_log("Custom field %d value updated to: %d\n", i, customFields[j]->value);
+						}
+					}
+				}
+			}
+		}
 	}
 };
 
 static ShowCustomFieldsActionListener* showCustomFieldsActionListener;
 
+void create_custom_field(custom_widget& widget, const int number, const std::string& caption, const whdload_custom& custom_field, int& pos_y)
+{
+	constexpr int textfield_width = 350;
+	constexpr int pos_x1 = DISTANCE_BORDER;
+	constexpr int pos_x2 = 150;
+
+	for (int i = 0; i < number; i++) {
+		std::string id;
+
+		widget.lbl.emplace_back(new gcn::Label(caption + ":"));
+		widget.lbl[i]->setPosition(pos_x1, pos_y);
+
+		wndShowCustomFields->add(widget.lbl[i]);
+
+		if (custom_field.type == bit_type)
+		{
+			widget.bit.emplace_back(new gcn::CheckBox(custom_field.label_bit_pairs[i].first));
+			widget.bit[i]->setSelected(is_bit_set(custom_field.value, custom_field.label_bit_pairs[i].second));
+			widget.bit[i]->addActionListener(showCustomFieldsActionListener);
+
+			id = "chkCustomFieldBit_" + std::to_string(i);
+			widget.bit[i]->setId(id);
+
+			widget.bit[i]->setPosition(pos_x2, pos_y);
+			pos_y += widget.bit[i]->getHeight() + 8;
+
+			wndShowCustomFields->add(widget.bit[i]);
+		}
+		else if (custom_field.type == bool_type)
+		{
+			widget.boolean.emplace_back(new gcn::CheckBox(custom_field.caption));
+			widget.boolean[i]->setSelected(custom_field.value);
+			widget.boolean[i]->addActionListener(showCustomFieldsActionListener);
+
+			id = "chkCustomFieldBool_" + std::to_string(i);
+			widget.boolean[i]->setId(id);
+
+			widget.boolean[i]->setPosition(pos_x2, pos_y);
+			pos_y += widget.boolean[i]->getHeight() + 8;
+
+			wndShowCustomFields->add(widget.boolean[i]);
+		}
+		else if (custom_field.type == list_type)
+		{
+			widget.lbl[i]->setCaption(custom_field.caption);
+			widget.lbl[i]->adjustSize();
+
+			for (const auto& label : custom_field.labels)
+			{
+				custom_list[i].add(label);
+			}
+
+			id = "cboCustomFieldList_" + std::to_string(i);
+			widget.list.emplace_back(new gcn::DropDown(&custom_list[i]));
+			widget.list[i]->setId(id);
+			widget.list[i]->setSize(textfield_width, widget.list[i]->getHeight());
+			widget.list[i]->setBaseColor(gui_baseCol);
+			widget.list[i]->setBackgroundColor(colTextboxBackground);
+			widget.list[i]->addActionListener(showCustomFieldsActionListener);
+
+			widget.list[i]->setPosition(pos_x2, pos_y);
+			pos_y += widget.list[i]->getHeight() + 8;
+
+			wndShowCustomFields->add(widget.list[i]);
+		}
+		else
+		{
+			pos_y += widget.lbl[i]->getHeight() + 8;
+		}
+	}
+}
+
+void delete_custom_field(custom_widget& customField) {
+	for (const auto& lbl : customField.lbl) {
+		delete lbl;
+	}
+	customField.lbl.clear();
+
+	for (const auto& chk : customField.boolean) {
+		delete chk;
+	}
+	customField.boolean.clear();
+
+	for (const auto& chk : customField.bit) {
+		delete chk;
+	}
+	customField.bit.clear();
+
+	for (const auto& cbo : customField.list) {
+		delete cbo;
+	}
+	customField.list.clear();
+}
 
 static void InitShowCustomFields()
 {
@@ -161,11 +213,11 @@ static void InitShowCustomFields()
 		i.clear();
 	}
 
-	create_custom_field(customField1, custom1_number, "Custom1", whdload_prefs.selected_slave.custom1, pos_y);
-	create_custom_field(customField2, custom2_number, "Custom2", whdload_prefs.selected_slave.custom2, pos_y);
-	create_custom_field(customField3, custom3_number, "Custom3", whdload_prefs.selected_slave.custom3, pos_y);
-	create_custom_field(customField4, custom4_number, "Custom4", whdload_prefs.selected_slave.custom4, pos_y);
-	create_custom_field(customField5, custom5_number, "Custom5", whdload_prefs.selected_slave.custom5, pos_y);
+	create_custom_field(customWidget1, custom_number[0], "Custom1", whdload_prefs.selected_slave.custom1, pos_y);
+	create_custom_field(customWidget2, custom_number[1], "Custom2", whdload_prefs.selected_slave.custom2, pos_y);
+	create_custom_field(customWidget3, custom_number[2], "Custom3", whdload_prefs.selected_slave.custom3, pos_y);
+	create_custom_field(customWidget4, custom_number[3], "Custom4", whdload_prefs.selected_slave.custom4, pos_y);
+	create_custom_field(customWidget5, custom_number[4], "Custom5", whdload_prefs.selected_slave.custom5, pos_y);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
@@ -190,11 +242,11 @@ static void ExitShowCustomFields()
 
 	delete cmdOK;
 
-	delete_custom_field(customField1);
-	delete_custom_field(customField2);
-	delete_custom_field(customField3);
-	delete_custom_field(customField4);
-	delete_custom_field(customField5);
+	delete_custom_field(customWidget1);
+	delete_custom_field(customWidget2);
+	delete_custom_field(customWidget3);
+	delete_custom_field(customWidget4);
+	delete_custom_field(customWidget5);
 
 	delete showCustomFieldsActionListener;
 	delete wndShowCustomFields;
@@ -353,16 +405,20 @@ void ShowCustomFields()
 
 	dialog_finished = false;
 
-	if (whdload_prefs.selected_slave.custom1.type == bit_type)
-		custom1_number = static_cast<int>(whdload_prefs.selected_slave.custom1.label_bit_pairs.size());
-	if (whdload_prefs.selected_slave.custom2.type == bit_type)
-		custom2_number = static_cast<int>(whdload_prefs.selected_slave.custom2.label_bit_pairs.size());
-	if (whdload_prefs.selected_slave.custom3.type == bit_type)
-		custom3_number = static_cast<int>(whdload_prefs.selected_slave.custom3.label_bit_pairs.size());
-	if (whdload_prefs.selected_slave.custom4.type == bit_type)
-		custom4_number = static_cast<int>(whdload_prefs.selected_slave.custom4.label_bit_pairs.size());
-	if (whdload_prefs.selected_slave.custom5.type == bit_type)
-		custom5_number = static_cast<int>(whdload_prefs.selected_slave.custom5.label_bit_pairs.size());
+    // Initialize custom_number to 1
+    std::fill(std::begin(custom_number), std::end(custom_number), 1);
+
+    // If the custom field is a bit field, set the custom_number to the number of pairs
+    if (whdload_prefs.selected_slave.custom1.type == bit_type)
+        custom_number[0] = static_cast<int>(whdload_prefs.selected_slave.custom1.label_bit_pairs.size());
+    if (whdload_prefs.selected_slave.custom2.type == bit_type)
+        custom_number[1] = static_cast<int>(whdload_prefs.selected_slave.custom2.label_bit_pairs.size());
+    if (whdload_prefs.selected_slave.custom3.type == bit_type)
+        custom_number[2] = static_cast<int>(whdload_prefs.selected_slave.custom3.label_bit_pairs.size());
+    if (whdload_prefs.selected_slave.custom4.type == bit_type)
+        custom_number[3] = static_cast<int>(whdload_prefs.selected_slave.custom4.label_bit_pairs.size());
+    if (whdload_prefs.selected_slave.custom5.type == bit_type)
+        custom_number[4] = static_cast<int>(whdload_prefs.selected_slave.custom5.label_bit_pairs.size());
 
 	InitShowCustomFields();
 
@@ -384,5 +440,6 @@ void ShowCustomFields()
 		cap_fps(start);
 	}
 
+	create_startup_sequence();
 	ExitShowCustomFields();
 }
