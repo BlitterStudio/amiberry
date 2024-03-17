@@ -388,8 +388,8 @@ void InitPanelDisplay(const config_category& category)
 
 	lblHOffset = new gcn::Label("H. Offset:");
 	lblHOffset->setAlignment(gcn::Graphics::LEFT);
-	sldHOffset = new gcn::Slider(-60, 60);
-	sldHOffset->setSize(135, SLIDER_HEIGHT);
+	sldHOffset = new gcn::Slider(-80, 80);
+	sldHOffset->setSize(200, SLIDER_HEIGHT);
 	sldHOffset->setBaseColor(gui_baseCol);
 	sldHOffset->setMarkerLength(20);
 	sldHOffset->setStepLength(1);
@@ -400,8 +400,8 @@ void InitPanelDisplay(const config_category& category)
 
 	lblVOffset = new gcn::Label("V. Offset:");
 	lblVOffset->setAlignment(gcn::Graphics::LEFT);
-	sldVOffset = new gcn::Slider(-60, 60);
-	sldVOffset->setSize(135, SLIDER_HEIGHT);
+	sldVOffset = new gcn::Slider(-80, 80);
+	sldVOffset->setSize(200, SLIDER_HEIGHT);
 	sldVOffset->setBaseColor(gui_baseCol);
 	sldVOffset->setMarkerLength(20);
 	sldVOffset->setStepLength(1);
@@ -700,9 +700,8 @@ void RefreshPanelDisplay()
 	sldBrightness->setValue(changed_prefs.gfx_luminance);
 	lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
 	lblBrightnessValue->adjustSize();
-	
-	int i;
 
+	int i;
 	for (i = 0; i < AMIGAWIDTH_COUNT; ++i)
 	{
 		if (changed_prefs.gfx_monitor[0].gfx_size_win.width == amigawidth_values[i])

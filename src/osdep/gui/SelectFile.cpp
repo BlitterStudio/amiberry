@@ -44,40 +44,41 @@ static gcn::TextField* txtFilename;
 
 class SelectFileListModel : public gcn::ListModel
 {
-	std::vector<std::string> dirs{};
-	std::vector<std::string> files{};
+	std::vector<std::string> dirs;
+	std::vector<std::string> files;
 
 public:
-	explicit SelectFileListModel(const char* path)
+	explicit SelectFileListModel(const std::string& path)
 	{
 		changeDir(path);
 	}
 
 	int getNumberOfElements() override
 	{
-		return static_cast<int>(dirs.size() + files.size());
+		return dirs.size() + files.size();
 	}
 
 	void add(const std::string& elem) override
 	{
-		dirs.emplace_back(elem);
+		dirs.push_back(elem);
 	}
 
 	void clear() override
 	{
 		dirs.clear();
+		files.clear();
 	}
 	
-	std::string getElementAt(const int i) override
+	std::string getElementAt(int i) override
 	{
-		if (i >= static_cast<int>(dirs.size() + files.size()) || i < 0)
+		if (i < 0 || i >= getNumberOfElements())
 			return "---";
-		if (i < static_cast<int>(dirs.size()))
+		if (i < dirs.size())
 			return dirs[i];
 		return files[i - dirs.size()];
 	}
 
-	void changeDir(const char* path)
+	void changeDir(const std::string& path)
 	{
 		read_directory(path, &dirs, &files);
 		if (dirs.empty())
@@ -85,7 +86,7 @@ public:
 		FilterFiles(&files, filefilter);
 	}
 
-	[[nodiscard]] bool isDir(const unsigned int i) const
+	bool isDir(unsigned int i) const
 	{
 		return (i < dirs.size());
 	}

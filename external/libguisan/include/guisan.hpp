@@ -117,13 +117,13 @@ class Widget;
 
 extern "C"
 {
-/**
- * Gets the the version of Guisan. As it is a C function
+    /**
+     * Gets the the version of Guisan. As it is a C function
      * it can be used to check for Guisan with autotools.
- *
- * @return the version of Guisan.
- */
-GCN_CORE_DECLSPEC extern const char* gcnGuisanVersion();
+     *
+     * @return the version of Guisan.
+     */
+    GCN_CORE_DECLSPEC extern const char* gcnGuisanVersion();
 }
 
 #endif // end GCN_GUISAN_HPP

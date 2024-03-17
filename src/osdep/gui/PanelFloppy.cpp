@@ -211,7 +211,7 @@ public:
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
 						disk_insert(i, tmp.c_str());
-						AddFileToDiskList(tmp.c_str(), 1);
+						add_file_to_mru_list(lstMRUDiskList, tmp);
 						RefreshDiskListModel();
 						current_dir = extract_path(tmp);
 
@@ -334,7 +334,7 @@ public:
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_DD, -1, diskname, false, false, nullptr);
 				DISK_history_add (tmp.c_str(), -1, HISTORY_FLOPPY, 0);
-				AddFileToDiskList(tmp.c_str(), 1);
+				add_file_to_mru_list(lstMRUDiskList, tmp);
 				RefreshDiskListModel();
 				current_dir = extract_path(tmp);
 			}
@@ -351,7 +351,7 @@ public:
 				diskname[31] = '\0';
 				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_HD, -1, diskname, false, false, nullptr);
 				DISK_history_add (tmp.c_str(), -1, HISTORY_FLOPPY, 0);
-				AddFileToDiskList(tmp.c_str(), 1);
+				add_file_to_mru_list(lstMRUDiskList, tmp);
 				RefreshDiskListModel();
 				current_dir = extract_path(tmp);
 			}

@@ -20,8 +20,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v5.6.9 (2024-09-09)")
-#define AMIBERRYDATE MAKEBD(2024, 3, 9)
+#define AMIBERRYVERSION _T("Amiberry v5.6.9 (2024-03-17)")
+#define AMIBERRYDATE MAKEBD(2024, 3, 17)
 #define COPYRIGHT _T("Copyright (C) 2016-2024 Dimitris Panokostas")
 
 #define IHF_WINDOWHIDDEN 6
@@ -129,6 +129,7 @@ extern void get_rp9_path(char* out, int size);
 extern std::string get_screenshot_path();
 
 extern void extract_filename(const char* str, char* buffer);
+extern std::string extract_filename(const std::string& path);
 extern void extract_path(char* str, char* buffer);
 extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
@@ -158,17 +159,13 @@ typedef struct
 
 extern std::vector<AvailableROM*> lstAvailableROMs;
 
-#define MAX_MRU_DISKLIST 40
+#define MAX_MRU_LIST 40
+
 extern std::vector<std::string> lstMRUDiskList;
-extern void AddFileToDiskList(const char* file, int moveToTop);
-
-#define MAX_MRU_CDLIST 10
 extern std::vector<std::string> lstMRUCDList;
-extern void AddFileToCDList(const char* file, int moveToTop);
-
-#define MAX_MRU_WHDLOADLIST 10
 extern std::vector<std::string> lstMRUWhdloadList;
-extern void AddFileToWHDLoadList(const char* file, int moveToTop);
+
+extern void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file);
 
 int count_HDs(struct uae_prefs* p);
 extern void gui_force_rtarea_hdchange(void);

@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <fstream>
+#include <algorithm>
+#include <vector>
+#include <string>
 
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
@@ -94,83 +97,25 @@ std::string get_full_path_from_disk_list(std::string element)
 	return full_path;
 }
 
-void AddFileToDiskList(const char *file, int moveToTop)
+void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file)
 {
-	unsigned int i;
-
-	for (i = 0; i < lstMRUDiskList.size(); ++i)
-	{
-		if (!stricmp(lstMRUDiskList[i].c_str(), file))
-		{
-			if (moveToTop)
-			{
-				lstMRUDiskList.erase(lstMRUDiskList.begin() + i);
-				lstMRUDiskList.insert(lstMRUDiskList.begin(), file);
-			}
-			break;
-		}
+	// Check if the string already exists in the vector
+	if (std::find(vec.begin(), vec.end(), file) == vec.end()) {
+		// The string does not exist in the vector, so add it at the first position
+		vec.insert(vec.begin(), file);
 	}
-	if (i >= lstMRUDiskList.size())
-		lstMRUDiskList.insert(lstMRUDiskList.begin(), file);
 
-	while (lstMRUDiskList.size() > MAX_MRU_DISKLIST)
-		lstMRUDiskList.pop_back();
-}
-
-void AddFileToCDList(const char *file, int moveToTop)
-{
-	unsigned int i;
-
-	for (i = 0; i < lstMRUCDList.size(); ++i)
-	{
-		if (!stricmp(lstMRUCDList[i].c_str(), file))
-		{
-			if (moveToTop)
-			{
-				lstMRUCDList.erase(lstMRUCDList.begin() + i);
-				lstMRUCDList.insert(lstMRUCDList.begin(), file);
-			}
-			break;
-		}
-	}
-	if (i >= lstMRUCDList.size())
-		lstMRUCDList.insert(lstMRUCDList.begin(), file);
-
-	while (lstMRUCDList.size() > MAX_MRU_CDLIST)
-		lstMRUCDList.pop_back();
-}
-
-void AddFileToWHDLoadList(const char* file, int moveToTop)
-{
-	unsigned int i;
-
-	for (i = 0; i < lstMRUWhdloadList.size(); ++i)
-	{
-		if (!stricmp(lstMRUWhdloadList[i].c_str(), file))
-		{
-			if (moveToTop)
-			{
-				lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + i);
-				lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
-			}
-			break;
-		}
-	}
-	if (i >= lstMRUWhdloadList.size())
-		lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), file);
-
-	while (lstMRUWhdloadList.size() > MAX_MRU_WHDLOADLIST)
-		lstMRUWhdloadList.pop_back();
+	while (vec.size() > MAX_MRU_LIST)
+		vec.pop_back();
 }
 
 void ClearAvailableROMList()
 {
-	while (!lstAvailableROMs.empty())
+	for (const auto* rom : lstAvailableROMs)
 	{
-		auto* const tmp = lstAvailableROMs[0];
-		lstAvailableROMs.erase(lstAvailableROMs.begin());
-		delete tmp;
+		delete rom;
 	}
+	lstAvailableROMs.clear();
 }
 
 static void addrom(struct romdata* rd, const char* path)
@@ -321,7 +266,7 @@ void RescanROMs()
 		if (dir != "..")
 		{
 			std::string full_path = std::string(path).append(dir);
-			read_directory(full_path.c_str(), nullptr, &files);
+			read_directory(full_path, nullptr, &files);
 			for (auto & file : files)
 			{
 				std::string tmp_path = full_path;
@@ -346,12 +291,11 @@ void RescanROMs()
 
 static void ClearConfigFileList()
 {
-	while (!ConfigFilesList.empty())
+	for (const auto* config : ConfigFilesList)
 	{
-		auto* const tmp = ConfigFilesList[0];
-		ConfigFilesList.erase(ConfigFilesList.begin());
-		delete tmp;
+		delete config;
 	}
+	ConfigFilesList.clear();
 }
 
 void ReadConfigFileList(void)
@@ -404,7 +348,7 @@ void ReadConfigFileList(void)
 
 ConfigFileInfo* SearchConfigInList(const char* name)
 {
-	for (auto & i : ConfigFilesList)
+	for (const auto & i : ConfigFilesList)
 	{
 		if (!SDL_strncasecmp(i->Name, name, MAX_DPATH))
 			return i;
@@ -426,7 +370,7 @@ void disk_selection(const int drive, uae_prefs* prefs)
 		{
 			strncpy(prefs->floppyslots[drive].df, tmp.c_str(), MAX_DPATH);
 			disk_insert(drive, tmp.c_str());
-			AddFileToDiskList(tmp.c_str(), 1);
+			add_file_to_mru_list(lstMRUDiskList, tmp);
 			current_dir = extract_path(tmp);
 		}
 	}
@@ -543,68 +487,11 @@ int gui_update()
 	remove_file_extension(savestate_fname);
 	remove_file_extension(screenshot_filename);
 
-	switch(currentStateNum)
-	{
-		case 1:
-			strncat(savestate_fname,"-1.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-1.png");
-			break;
-		case 2:
-			strncat(savestate_fname,"-2.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-2.png");
-			break;
-		case 3:
-			strncat(savestate_fname,"-3.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-3.png");
-			break;
-		case 4:
-			strncat(savestate_fname, "-4.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-4.png");
-			break;
-		case 5:
-			strncat(savestate_fname, "-5.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-5.png");
-			break;
-		case 6:
-			strncat(savestate_fname, "-6.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-6.png");
-			break;
-		case 7:
-			strncat(savestate_fname, "-7.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-7.png");
-			break;
-		case 8:
-			strncat(savestate_fname, "-8.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-8.png");
-			break;
-		case 9:
-			strncat(savestate_fname, "-9.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-9.png");
-			break;
-		case 10:
-			strncat(savestate_fname, "-10.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-10.png");
-			break;
-		case 11:
-			strncat(savestate_fname, "-11.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-11.png");
-			break;
-		case 12:
-			strncat(savestate_fname, "-12.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-12.png");
-			break;
-		case 13:
-			strncat(savestate_fname, "-13.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-13.png");
-			break;
-		case 14:
-			strncat(savestate_fname, "-14.uss", MAX_DPATH - 1);
-			screenshot_filename.append("-14.png");
-			break;
-		default:
-			strncat(savestate_fname,".uss", MAX_DPATH - 1);
-			screenshot_filename.append(".png");
-	}
+	std::string suffix = (currentStateNum >= 1 && currentStateNum <= 14) ?
+		"-" + std::to_string(currentStateNum) : "";
+	strncat(savestate_fname, (suffix + ".uss").c_str(), MAX_DPATH - 1);
+	screenshot_filename.append(suffix + ".png");
+
 	return 0;
 }
 
@@ -648,7 +535,7 @@ void gui_display(int shortcut)
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 	clearallkeys ();
-	update_display(&changed_prefs);
+
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);
@@ -1125,30 +1012,30 @@ void DisplayDiskInfo(int num)
 	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
 
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk readable: %s", di.unreadable ? _T("No") : _T("Yes"));
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Disk CRC32: %08X", di.imagecrc32);
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block CRC32: %08X", di.bootblockcrc32);
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block checksum valid: %s", di.bb_crc_valid ? _T("Yes") : _T("No"));
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	snprintf(linebuffer, sizeof(linebuffer) - 1, "Boot block type: %s", di.bootblocktype == 0 ? _T("Custom") : (di.bootblocktype == 1 ? _T("Standard 1.x") : _T("Standard 2.x+")));
-	infotext.push_back(linebuffer);
+	infotext.emplace_back(linebuffer);
 	if (di.diskname[0]) {
 		snprintf(linebuffer, sizeof(linebuffer) - 1, "Label: '%s'", di.diskname);
-		infotext.push_back(linebuffer);
+		infotext.emplace_back(linebuffer);
 	}
-	infotext.push_back("");
+	infotext.emplace_back("");
 
 	if (di.bootblockinfo[0]) {
-		infotext.push_back("Amiga Bootblock Reader database detected:");
+		infotext.emplace_back("Amiga Bootblock Reader database detected:");
 		snprintf(linebuffer, sizeof(linebuffer) - 1, "Name: '%s'", di.bootblockinfo);
-		infotext.push_back(linebuffer);
+		infotext.emplace_back(linebuffer);
 		if (di.bootblockclass[0]) {
 			snprintf(linebuffer, sizeof(linebuffer) - 1, "Class: '%s'", di.bootblockclass);
-			infotext.push_back(linebuffer);
+			infotext.emplace_back(linebuffer);
 		}
-		infotext.push_back("");
+		infotext.emplace_back("");
 	}
 
 	int w = 16;
@@ -1163,13 +1050,13 @@ void DisplayDiskInfo(int num)
 		}
 		linebuffer[w * 3] = ' ';
 		linebuffer[w * 3 + 1 + w] = 0;
-		infotext.push_back(linebuffer);
+		infotext.emplace_back(linebuffer);
 	}
 
 	ShowDiskInfo(title, infotext);
 }
 
-void save_mapping_to_file(std::string mapping)
+void save_mapping_to_file(const std::string& mapping)
 {
 	std::string filename = get_controllers_path();
 	filename.append("gamecontrollerdb_user.txt");
@@ -1178,7 +1065,7 @@ void save_mapping_to_file(std::string mapping)
 	file_output.open(filename, ios::app);
 	if (file_output.is_open())
 	{
-		file_output << std::endl << mapping << std::endl;
+		file_output << '\n' << mapping << '\n';
 		file_output.close();
 	}
 }

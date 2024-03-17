@@ -136,13 +136,14 @@ static amigamodels amodels[] = {
 static const int numModels = 10;
 static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
-static char whdload_file[MAX_DPATH];
 
 static gcn::StringListModel amigaModelList;
 static gcn::StringListModel amigaConfigList;
 static gcn::StringListModel diskfileList;
 static gcn::StringListModel cdfileList;
 static gcn::StringListModel whdloadFileList;
+
+std::string whdload_filename;
 
 static void AdjustDropDownControls();
 
@@ -317,7 +318,7 @@ public:
 					strncpy(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-					AddFileToCDList(tmp.c_str(), 1);
+					add_file_to_mru_list(lstMRUCDList, tmp);
 					current_dir = extract_path(tmp);
 
 					RefreshCDListModel();
@@ -394,21 +395,21 @@ public:
 
 				if (idx < 0)
 				{
-					strncpy(whdload_file, "", MAX_DPATH);
+					whdload_filename = "";
 				}
 				else
 				{
 					const auto element = get_full_path_from_disk_list(whdloadFileList.getElementAt(idx));
-					if (element != whdload_file)
+					if (element != whdload_filename)
 					{
-						strncpy(whdload_file, element.c_str(), MAX_DPATH);
+						whdload_filename.assign(element);
 						lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
-						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_file);
+						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_filename);
 						bIgnoreListChange = true;
 						cboWhdload->setSelected(0);
 						bIgnoreListChange = false;
 					}
-					whdload_auto_prefs(&changed_prefs, whdload_file);
+					whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
 				}
 				refresh_all_panels();
 			}
@@ -428,23 +429,22 @@ public:
 			//---------------------------------------
 			// Eject WHDLoad file
 			//---------------------------------------
-			strncpy(whdload_file, "", MAX_DPATH);
-			AdjustPrefs();
+			whdload_filename = "";
 		}
 		else if (actionEvent.getSource() == cmdWhdloadSelect)
 		{
 			std::string tmp;
-			if (strlen(whdload_file) > 0)
-				tmp = std::string(whdload_file);
+			if (!whdload_filename.empty())
+				tmp = whdload_filename;
 			else
 				tmp = get_whdload_arch_path();
 
 			tmp = SelectFile("Select WHDLoad LHA file", tmp, whdload_filter);
 			{
-				strncpy(whdload_file, tmp.c_str(), MAX_DPATH);
-				AddFileToWHDLoadList(whdload_file, 1);
+				whdload_filename = tmp;
+				add_file_to_mru_list(lstMRUWhdloadList, whdload_filename);
 				RefreshWhdListModel();
-				whdload_auto_prefs(&changed_prefs, whdload_file);
+				whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
 
 				AdjustDropDownControls();
 			}
@@ -642,7 +642,7 @@ public:
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
 						disk_insert(i, tmp.c_str());
-						AddFileToDiskList(tmp.c_str(), 1);
+						add_file_to_mru_list(lstMRUDiskList, tmp);
 						current_dir = extract_path(tmp);
 						RefreshDiskListModel();
 						current_dir = extract_path(tmp);
@@ -1027,11 +1027,11 @@ static void AdjustDropDownControls()
 	}
 
 	cboWhdload->clearSelected();
-	if (strlen(whdload_file) > 0)
+	if (!whdload_filename.empty())
 	{
 		for (auto i = 0; i < static_cast<int>(lstMRUWhdloadList.size()); ++i)
 		{
-			if (lstMRUWhdloadList[i].c_str() != whdload_file)
+			if (lstMRUWhdloadList[i] == whdload_filename)
 			{
 				cboWhdload->setSelected(i);
 				break;
@@ -1048,6 +1048,7 @@ void RefreshPanelQuickstart()
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
 
+	RefreshWhdListModel();
 	AdjustDropDownControls();
 
 	changed_prefs.nr_floppies = 0;

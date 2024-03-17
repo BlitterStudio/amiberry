@@ -11,6 +11,8 @@
 #define UAE_OPTIONS_H
 
 #include <array>
+#include <vector>
+
 #include "uae/types.h"
 
 #include "traps.h"
@@ -18,7 +20,7 @@
 
 #define UAEMAJOR 5
 #define UAEMINOR 6
-#define UAESUBREV 8
+#define UAESUBREV 9
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -533,20 +535,83 @@ struct monconfig
 };
 
 #ifdef AMIBERRY
-struct whdbooter
+enum custom_type
 {
-	int custom1 = 0;
-	int custom2 = 0;
-	int custom3 = 0;
-	int custom4 = 0;
-	int custom5 = 0;
-	TCHAR custom[256]{};
-	bool buttonwait{};
-	TCHAR slave[4096]{};
-	bool showsplash{};
-	int configdelay = 0;
-	bool writecache{};
-	bool quit_on_exit{};
+	none,
+	bool_type,
+	bit_type,
+	list_type
+};
+struct whdload_custom
+{
+	/**
+	 * \brief The value of this custom field. This will be sent to WHDLoad
+	 */
+	int value;
+	/**
+	 * \brief The type of the custom field: None, Boolean, Bit or List
+	 */
+	custom_type type;
+	/**
+	 * \brief Caption for this custom field function. Used in the label which describes what this option does
+	 */
+	std::string caption;
+	/**
+	 * \brief The list of labels to show in the dropdown. Used in List type custom fields
+	 */
+	std::vector<std::string> labels;
+	/**
+	 * \brief When the type is a Bit, it can contain multiple entries for the same custom field.
+	 * Each entry has it's own label and a different value that goes with it.
+	 */
+	std::vector<std::pair<std::string, int>> label_bit_pairs;
+};
+struct whdload_slave
+{
+	std::string filename;
+	std::string data_path;
+	whdload_custom custom1;
+	whdload_custom custom2;
+	whdload_custom custom3;
+	whdload_custom custom4;
+	whdload_custom custom5;
+
+	whdload_custom& get_custom(const int index)
+	{
+		switch (index)
+		{
+		case 1:
+			return custom1;
+		case 2:
+			return custom2;
+		case 3:
+			return custom3;
+		case 4:
+			return custom4;
+		case 5:
+			return custom5;
+		default:
+			return custom1;
+		}
+	}
+};
+struct whdload_options
+{
+	std::string filename;
+	std::string game_name;
+	std::string sub_path;
+	std::string variant_uuid;
+	int slave_count;
+	std::string slave_default;
+	bool slave_libraries;
+	std::vector<whdload_slave> slaves;
+	whdload_slave selected_slave;
+	std::string custom;
+	bool button_wait;
+	bool show_splash;
+	int config_delay;
+	bool write_cache;
+	bool quit_on_exit;
 };
 #endif
 
@@ -1032,10 +1097,11 @@ struct uae_prefs
 	bool use_retroarch_statebuttons;
 	bool use_retroarch_vkbd;
 
-	struct whdbooter whdbootprefs;
-
+	
 #endif
 };
+
+extern whdload_options whdload_prefs;
 
 extern int config_changed, config_changed_flags;
 extern void config_check_vsync(void);
@@ -1143,7 +1209,7 @@ extern bool cfgfile_createconfigstore(struct uae_prefs* p);
 extern void cfgfile_get_shader_config(struct uae_prefs* p, int rtg);
 
 #ifdef AMIBERRY
-extern void whdload_auto_prefs(struct uae_prefs* prefs, char* filepath);
+extern void whdload_auto_prefs(struct uae_prefs* prefs, const char* filepath);
 extern void cd_auto_prefs(struct uae_prefs* prefs, char* filepath);
 extern void symlink_roms(struct uae_prefs* prefs);
 extern void drawbridge_update_profiles(struct uae_prefs* prefs);

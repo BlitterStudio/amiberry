@@ -322,6 +322,11 @@ void ExitPanelVirtualKeyboard();
 void RefreshPanelVirtualKeyboard();
 bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
 
+void InitPanelWHDLoad(const struct config_category& category);
+void ExitPanelWHDLoad();
+void RefreshPanelWHDLoad();
+bool HelpPanelWHDLoad(std::vector<std::string>& helptext);
+
 void refresh_all_panels();
 void register_refresh_func(void (*func)());
 void focus_bug_workaround(gcn::Window* wnd);
@@ -340,9 +345,10 @@ bool EditFilesysHardDrive(int unit_no);
 bool CreateFilesysHardfile();
 void ShowHelp(const char* title, const std::vector<std::string>& text);
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
+void ShowCustomFields();
 
 std::string show_controller_map(int device, bool map_touchpad);
-extern void read_directory(std::string path, vector<string>* dirs, vector<string>* files);
+extern void read_directory(const std::string& path, vector<string>* dirs, vector<string>* files);
 extern void FilterFiles(vector<string>* files, const char* filter[]);
 
 enum
@@ -371,6 +377,7 @@ STATIC_INLINE bool is_hdf_rdb()
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
 }
 
+extern std::string whdload_filename;
 extern std::string screenshot_filename;
 extern int currentStateNum;
 extern int delay_savestate_frame;
@@ -390,6 +397,8 @@ extern int todfxtype(int num, int dfx, int* subtype);
 extern void DisplayDiskInfo(int num);
 extern std::string get_full_path_from_disk_list(std::string element);
 extern amiberry_hotkey get_hotkey_from_config(std::string config_option);
-extern void save_mapping_to_file(std::string mapping);
+extern void save_mapping_to_file(const std::string& mapping);
+extern void clear_whdload_prefs();
+extern void create_startup_sequence();
 
 #endif // GUI_HANDLING_H

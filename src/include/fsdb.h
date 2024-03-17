@@ -161,10 +161,10 @@ extern unsigned int my_read (struct my_openfile_s*, void*, unsigned int);
 extern unsigned int my_write (struct my_openfile_s*, void*, unsigned int);
 extern int my_truncate (const TCHAR *name, uae_u64 len);
 extern int dos_errno (void);
-extern int my_existslink(const char* name);
-extern int my_existsfile (const TCHAR *name);
-extern int my_existsfile2(const TCHAR* name);
-extern int my_existsdir (const TCHAR *name);
+extern bool my_existslink(const char* name);
+extern bool my_existsfile (const TCHAR *name);
+extern bool my_existsfile2(const TCHAR* name);
+extern bool my_existsdir (const TCHAR *name);
 extern FILE *my_opentext (const TCHAR*);
 
 extern bool my_stat (const TCHAR *name, struct mystat *ms);
@@ -187,7 +187,7 @@ extern bool my_createshortcut(const TCHAR *source, const TCHAR *target, const TC
 #define MYVOLUMEINFO_CDFS 16
 
 extern int my_getvolumeinfo (const TCHAR *root);
-extern const std::string my_get_sha1_of_file(const char* filepath);
+extern std::string my_get_sha1_of_file(const char* filepath);
 
 #ifdef AMIBERRY
 char* fsdb_native_path(const char* root_dir, const char* amiga_path);

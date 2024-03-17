@@ -51,7 +51,7 @@ LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt
 
 ifdef USE_OPENGL
 	CFLAGS += -DUSE_OPENGL
-	LDFLAGS += -lGL
+	LDFLAGS += -lGLEW -lGL
 endif
 
 ifdef USE_LTO
@@ -636,6 +636,7 @@ OBJS = \
 	src/threaddep/threading.o \
 	src/osdep/gui/ControllerMap.o \
 	src/osdep/gui/SelectorEntry.o \
+	src/osdep/gui/ShowCustomFields.o \
 	src/osdep/gui/ShowHelp.o \
 	src/osdep/gui/ShowMessage.o \
 	src/osdep/gui/ShowDiskInfo.o \
@@ -668,6 +669,7 @@ OBJS = \
 	src/osdep/gui/PanelPrio.o \
 	src/osdep/gui/PanelSavestate.o \
 	src/osdep/gui/PanelVirtualKeyboard.o \
+	src/osdep/gui/PanelWHDLoad.o \
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o \
 	src/osdep/vkbd/vkbd.o \
@@ -737,7 +739,7 @@ clean:
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
 	$(MAKE) -C external/libguisan cleanprofile
-	
+
 guisan:
 	$(MAKE) -C external/libguisan
 

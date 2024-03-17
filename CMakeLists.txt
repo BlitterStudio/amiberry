@@ -290,6 +290,7 @@ add_executable(${PROJECT_NAME}
         src/threaddep/threading.cpp
         src/osdep/gui/ControllerMap.cpp
         src/osdep/gui/SelectorEntry.cpp
+        src/osdep/gui/ShowCustomFields.cpp
         src/osdep/gui/ShowHelp.cpp
         src/osdep/gui/ShowMessage.cpp
         src/osdep/gui/ShowDiskInfo.cpp
@@ -322,6 +323,7 @@ add_executable(${PROJECT_NAME}
         src/osdep/gui/PanelPrio.cpp
         src/osdep/gui/PanelSavestate.cpp
         src/osdep/gui/PanelVirtualKeyboard.cpp
+        src/osdep/gui/PanelWHDLoad.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/gui/Navigation.cpp
         src/osdep/vkbd/vkbd.cpp
@@ -387,7 +389,8 @@ target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 if (USE_OPENGL)
     add_definitions(-DUSE_OPENGL)
     find_package(OpenGL REQUIRED)
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
+    find_package(GLEW REQUIRED)
+    TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
 endif ()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

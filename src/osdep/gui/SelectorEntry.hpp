@@ -1,5 +1,4 @@
-#ifndef GCN_SELECTORENTRY_HPP
-#define GCN_SELECTORENTRY_HPP
+#pragma once
 
 #include <guisan/basiccontainer.hpp>
 #include <guisan/platform.hpp>
@@ -31,7 +30,7 @@ namespace gcn
 		void setInactiveColor(const Color& color);
 		void setActiveColor(const Color& color);
 		void setActive(bool active);
-		[[nodiscard]] bool getActive() const;
+		bool getActive() const;
 
 		void widgetResized(const Event& event) override;
 
@@ -48,4 +47,3 @@ namespace gcn
 	};
 }
 
-#endif // end GCN_SELECTORENTRY_HPP

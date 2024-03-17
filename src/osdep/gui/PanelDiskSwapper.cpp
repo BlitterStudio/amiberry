@@ -150,7 +150,7 @@ public:
 					if (strncmp(changed_prefs.dfxlist[i], tmp.c_str(), MAX_DPATH) != 0)
 					{
 						strncpy(changed_prefs.dfxlist[i], tmp.c_str(), MAX_DPATH);
-						AddFileToDiskList(tmp.c_str(), 1);
+						add_file_to_mru_list(lstMRUDiskList, tmp);
 					}
 				}
 				cmdDiskSwapperListAdd[i]->requestFocus();
@@ -212,7 +212,7 @@ public:
 			{
 				disk_swap(row, 1);
 
-				AddFileToDiskList(changed_prefs.dfxlist[row], 1);
+				add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[row]));
 				RefreshPanelDiskSwapper();
 				RefreshPanelFloppy();
 				RefreshPanelQuickstart();
