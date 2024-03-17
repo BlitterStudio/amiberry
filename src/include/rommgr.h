@@ -210,6 +210,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_GVPA1208	0x0010008e
 #define ROMTYPE_DSP3210		0x0010008f
 #define ROMTYPE_ALTAIS		0x00100090
+#define ROMTYPE_PROMETHEUSFS 0x00100091
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
