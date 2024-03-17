@@ -53,6 +53,8 @@ endfunction()
 
 detect_architecture("__x86_64__" x86_64)
 detect_architecture("__aarch64__" arm64)
+detect_architecture("__arm__" arm32)
+
 message(STATUS "Target architecture: ${ARCHITECTURE}")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
