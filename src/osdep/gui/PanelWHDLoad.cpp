@@ -159,6 +159,7 @@ public:
 			{
 				whdload_prefs.selected_slave = whdload_prefs.slaves[cboSlaves->getSelected()];
 				txtSlaveDataPath->setText(whdload_prefs.selected_slave.data_path.empty() ? "" : whdload_prefs.selected_slave.data_path);
+				create_startup_sequence();
 			}
 		}
 		else if (source == cmdCustomFields)
@@ -168,18 +169,22 @@ public:
 		else if (source == chkButtonWait)
 		{
 			whdload_prefs.button_wait = chkButtonWait->isSelected();
+			create_startup_sequence();
 		}
 		else if (source == chkShowSplash)
 		{
 			whdload_prefs.show_splash = chkShowSplash->isSelected();
+			create_startup_sequence();
 		}
 		else if (source == chkWriteCache)
 		{
 			whdload_prefs.write_cache = chkWriteCache->isSelected();
+			create_startup_sequence();
 		}
 		else if (source == chkQuitOnExit)
 		{
 			whdload_prefs.quit_on_exit = chkQuitOnExit->isSelected();
+			create_startup_sequence();
 		}
 	}
 };

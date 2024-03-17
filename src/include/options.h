@@ -575,6 +575,25 @@ struct whdload_slave
 	whdload_custom custom3;
 	whdload_custom custom4;
 	whdload_custom custom5;
+
+	whdload_custom& get_custom(const int index)
+	{
+		switch (index)
+		{
+		case 1:
+			return custom1;
+		case 2:
+			return custom2;
+		case 3:
+			return custom3;
+		case 4:
+			return custom4;
+		case 5:
+			return custom5;
+		default:
+			return custom1;
+		}
+	}
 };
 struct whdload_options
 {

@@ -789,6 +789,7 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 				else if (seglist[1] == "X")
 				{
 					slave.custom2.type = bit_type;
+					slave.custom2.value = 0;
 					slave.custom2.label_bit_pairs.insert(slave.custom2.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
@@ -814,6 +815,7 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 				else if (seglist[1] == "X")
 				{
 					slave.custom3.type = bit_type;
+					slave.custom3.value = 0;
 					slave.custom3.label_bit_pairs.insert(slave.custom3.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
@@ -839,6 +841,7 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 				else if (seglist[1] == "X")
 				{
 					slave.custom4.type = bit_type;
+					slave.custom4.value = 0;
 					slave.custom4.label_bit_pairs.insert(slave.custom4.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
@@ -864,6 +867,7 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 				else if (seglist[1] == "X")
 				{
 					slave.custom5.type = bit_type;
+					slave.custom5.value = 0;
 					slave.custom5.label_bit_pairs.insert(slave.custom5.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
@@ -1054,35 +1058,18 @@ void create_startup_sequence()
 	whd_bootscript << "WHDLoad SLAVE=\"Games:" << whdload_prefs.sub_path << "/" << whdload_prefs.selected_slave.filename << "\"";
 
 	// Write Cache
-	if (whdload_prefs.write_cache)
+	whd_bootscript << " PRELOAD NOREQ";
+	if (!whdload_prefs.write_cache)
 	{
-		whd_bootscript << " PRELOAD NOREQ";
-	}
-	else
-	{
-		whd_bootscript << " PRELOAD NOREQ NOWRITECACHE";
+		whd_bootscript << " NOWRITECACHE";
 	}
 
 	// CUSTOM options
-	if (whdload_prefs.selected_slave.custom1.value > 0)
-	{
-		whd_bootscript << " CUSTOM1=" << whdload_prefs.selected_slave.custom1.value;
-	}
-	if (whdload_prefs.selected_slave.custom2.value > 0)
-	{
-		whd_bootscript << " CUSTOM2=" << whdload_prefs.selected_slave.custom2.value;
-	}
-	if (whdload_prefs.selected_slave.custom3.value > 0)
-	{
-		whd_bootscript << " CUSTOM3=" << whdload_prefs.selected_slave.custom3.value;
-	}
-	if (whdload_prefs.selected_slave.custom4.value > 0)
-	{
-		whd_bootscript << " CUSTOM4=" << whdload_prefs.selected_slave.custom4.value;
-	}
-	if (whdload_prefs.selected_slave.custom5.value > 0)
-	{
-		whd_bootscript << " CUSTOM5=" << whdload_prefs.selected_slave.custom5.value;
+	for (int i = 1; i <= 5; ++i) {
+		auto& custom = whdload_prefs.selected_slave.get_custom(i);
+		if (custom.type != none && custom.value != 0) {
+			whd_bootscript << " CUSTOM" << i << "=" << custom.value;
+		}
 	}
 	if (!whdload_prefs.custom.empty())
 	{
@@ -1112,7 +1099,7 @@ void create_startup_sequence()
 
 	// DATA PATH
 	if (!whdload_prefs.selected_slave.data_path.empty())
-		whd_bootscript << "DATA=\"" << whdload_prefs.selected_slave.data_path << "\"";
+		whd_bootscript << " DATA=\"" << whdload_prefs.selected_slave.data_path << "\"";
 
 	whd_bootscript << '\n';
 
