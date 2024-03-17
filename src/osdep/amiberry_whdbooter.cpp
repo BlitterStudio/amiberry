@@ -763,6 +763,7 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 				else if (seglist[1] == "X")
 				{
 					slave.custom1.type = bit_type;
+					slave.custom1.value = 0;
 					slave.custom1.label_bit_pairs.insert(slave.custom1.label_bit_pairs.end(), { seglist[2], stoi(seglist[3]) });
 				}
 				else if (seglist[1] == "L")
