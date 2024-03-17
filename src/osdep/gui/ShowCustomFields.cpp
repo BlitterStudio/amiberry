@@ -40,6 +40,9 @@ custom_widget customWidget3;
 custom_widget customWidget4;
 custom_widget customWidget5;
 
+constexpr std::array<custom_widget*, 5> customWidgets = { &customWidget1, &customWidget2, &customWidget3, &customWidget4, &customWidget5 };
+constexpr std::array<whdload_custom*, 5> customFields = { &whdload_prefs.selected_slave.custom1, &whdload_prefs.selected_slave.custom2, &whdload_prefs.selected_slave.custom3, &whdload_prefs.selected_slave.custom4, &whdload_prefs.selected_slave.custom5 };
+
 static int set_bit(const int value, const int bit_position) {
 	return value | (1 << bit_position);
 }
@@ -58,8 +61,6 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		const auto source = actionEvent.getSource();
-		const std::array<custom_widget*, 5> customWidgets = { &customWidget1, &customWidget2, &customWidget3, &customWidget4, &customWidget5 };
-		const std::array<whdload_custom*, 5> customFields = { &whdload_prefs.selected_slave.custom1, &whdload_prefs.selected_slave.custom2, &whdload_prefs.selected_slave.custom3, &whdload_prefs.selected_slave.custom4, &whdload_prefs.selected_slave.custom5 };
 
 		if (source == cmdOK)
 			dialog_finished = true;
@@ -103,7 +104,7 @@ public:
 
 static ShowCustomFieldsActionListener* showCustomFieldsActionListener;
 
-void create_custom_field(custom_widget& widget, const int number, const std::string& caption, const whdload_custom& custom_field, int& pos_y)
+void create_custom_field(custom_widget& widget, const int number, const std::string& caption, const whdload_custom& custom_field, int& pos_y, const int custom_list_index)
 {
 	constexpr int textfield_width = 350;
 	constexpr int pos_x1 = DISTANCE_BORDER;
@@ -112,65 +113,56 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 	for (int i = 0; i < number; i++) {
 		std::string id;
 
-		widget.lbl.emplace_back(new gcn::Label(caption + ":"));
-		widget.lbl[i]->setPosition(pos_x1, pos_y);
+		auto label = new gcn::Label(caption + ":");
+		label->setPosition(pos_x1, pos_y);
+		widget.lbl.emplace_back(label);
+		wndShowCustomFields->add(label);
 
-		wndShowCustomFields->add(widget.lbl[i]);
-
-		if (custom_field.type == bit_type)
-		{
-			widget.bit.emplace_back(new gcn::CheckBox(custom_field.label_bit_pairs[i].first));
-			widget.bit[i]->setSelected(is_bit_set(custom_field.value, custom_field.label_bit_pairs[i].second));
-			widget.bit[i]->addActionListener(showCustomFieldsActionListener);
-
-			id = "chkCustomFieldBit_" + std::to_string(i);
-			widget.bit[i]->setId(id);
-
-			widget.bit[i]->setPosition(pos_x2, pos_y);
-			pos_y += widget.bit[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(widget.bit[i]);
+		switch (custom_field.type) {
+		case bit_type: {
+			auto checkbox = new gcn::CheckBox(custom_field.label_bit_pairs[i].first);
+			checkbox->setSelected(is_bit_set(custom_field.value, custom_field.label_bit_pairs[i].second));
+			checkbox->addActionListener(showCustomFieldsActionListener);
+			checkbox->setId("chkCustomFieldBit_" + std::to_string(i));
+			checkbox->setPosition(pos_x2, pos_y);
+			widget.bit.emplace_back(checkbox);
+			wndShowCustomFields->add(checkbox);
+			pos_y += checkbox->getHeight() + 8;
+			break;
 		}
-		else if (custom_field.type == bool_type)
-		{
-			widget.boolean.emplace_back(new gcn::CheckBox(custom_field.caption));
-			widget.boolean[i]->setSelected(custom_field.value);
-			widget.boolean[i]->addActionListener(showCustomFieldsActionListener);
-
-			id = "chkCustomFieldBool_" + std::to_string(i);
-			widget.boolean[i]->setId(id);
-
-			widget.boolean[i]->setPosition(pos_x2, pos_y);
-			pos_y += widget.boolean[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(widget.boolean[i]);
+		case bool_type: {
+			auto checkbox = new gcn::CheckBox(custom_field.caption);
+			checkbox->setSelected(custom_field.value);
+			checkbox->addActionListener(showCustomFieldsActionListener);
+			checkbox->setId("chkCustomFieldBool_" + std::to_string(i));
+			checkbox->setPosition(pos_x2, pos_y);
+			widget.boolean.emplace_back(checkbox);
+			wndShowCustomFields->add(checkbox);
+			pos_y += checkbox->getHeight() + 8;
+			break;
 		}
-		else if (custom_field.type == list_type)
-		{
-			widget.lbl[i]->setCaption(custom_field.caption);
-			widget.lbl[i]->adjustSize();
-
-			for (const auto& label : custom_field.labels)
+		case list_type: {
+			label->setCaption(custom_field.caption);
+			label->adjustSize();
+			for (const auto& item : custom_field.labels)
 			{
-				custom_list[i].add(label);
+				custom_list[custom_list_index].add(item);
 			}
-
-			id = "cboCustomFieldList_" + std::to_string(i);
-			widget.list.emplace_back(new gcn::DropDown(&custom_list[i]));
-			widget.list[i]->setId(id);
-			widget.list[i]->setSize(textfield_width, widget.list[i]->getHeight());
-			widget.list[i]->setBaseColor(gui_baseCol);
-			widget.list[i]->setBackgroundColor(colTextboxBackground);
-			widget.list[i]->addActionListener(showCustomFieldsActionListener);
-
-			widget.list[i]->setPosition(pos_x2, pos_y);
-			pos_y += widget.list[i]->getHeight() + 8;
-
-			wndShowCustomFields->add(widget.list[i]);
+			auto dropdown = new gcn::DropDown(&custom_list[custom_list_index]);
+			dropdown->setId("cboCustomFieldList_" + std::to_string(i));
+			dropdown->setSize(textfield_width, dropdown->getHeight());
+			dropdown->setBaseColor(gui_baseCol);
+			dropdown->setBackgroundColor(colTextboxBackground);
+			dropdown->addActionListener(showCustomFieldsActionListener);
+			dropdown->setPosition(pos_x2, pos_y);
+			widget.list.emplace_back(dropdown);
+			wndShowCustomFields->add(dropdown);
+			pos_y += dropdown->getHeight() + 8;
+			break;
 		}
-		else
-		{
-			pos_y += widget.lbl[i]->getHeight() + 8;
+		default:
+			pos_y += label->getHeight() + 8;
+			break;
 		}
 	}
 }
@@ -213,12 +205,9 @@ static void InitShowCustomFields()
 		i.clear();
 	}
 
-	create_custom_field(customWidget1, custom_number[0], "Custom1", whdload_prefs.selected_slave.custom1, pos_y);
-	create_custom_field(customWidget2, custom_number[1], "Custom2", whdload_prefs.selected_slave.custom2, pos_y);
-	create_custom_field(customWidget3, custom_number[2], "Custom3", whdload_prefs.selected_slave.custom3, pos_y);
-	create_custom_field(customWidget4, custom_number[3], "Custom4", whdload_prefs.selected_slave.custom4, pos_y);
-	create_custom_field(customWidget5, custom_number[4], "Custom5", whdload_prefs.selected_slave.custom5, pos_y);
-
+	for (int i = 0; i < 5; ++i) {
+		create_custom_field(*customWidgets[i], custom_number[i], "Custom" + std::to_string(i + 1), *customFields[i], pos_y, i);
+	}
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
