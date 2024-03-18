@@ -9,15 +9,8 @@
  * Copyright 2012 Frode Solheim
  */
 
-#include "sysconfig.h"
-#include "sysdeps.h"
-#include "options.h"
-#include "memory.h"
-
-#include "uae/uae.h"
-#include "fsdb.h"
-#include "zfile.h"
-
+#include <cstring>
+#include <climits>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef WINDOWS
@@ -25,21 +18,28 @@
 #else
 #include <sys/time.h>
 #endif
-#include <string.h>
-#include <limits.h>
 
+
+#include "sysconfig.h"
+#include "sysdeps.h"
+
+#include "fsdb.h"
+#include "zfile.h"
 #include "fsdb_host.h"
-
 #include "uae.h"
 
-#define NUM_EVILCHARS 9
+enum
+{
+	NUM_EVILCHARS = 9
+};
+
 static TCHAR evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<', '>' };
 static char hex_chars[] = "0123456789abcdef";
 #define UAEFSDB_BEGINS _T("__uae___")
 
-static char* aname_to_nname(const char* aname, int ascii)
+static char* aname_to_nname(const char* aname, const int ascii)
 {
-	size_t len = strlen(aname);
+	const size_t len = strlen(aname);
 	unsigned int repl_1 = UINT_MAX;
 	unsigned int repl_2 = UINT_MAX;
 
@@ -66,20 +66,18 @@ static char* aname_to_nname(const char* aname, int ascii)
 	}
 
 	// spaces and periods at the end are a no-no in Windows
-	int ei = len - 1;
+	const auto ei = len - 1;
 	if (aname[ei] == '.' || aname[ei] == ' ') {
 		repl_2 = ei;
 	}
 
 	// allocating for worst-case scenario here (max replacements)
-	char* buf = (char*)malloc(len * 3 + 1);
+	const auto buf = static_cast<char*>(malloc(len * 3 + 1));
 	char* p = buf;
 
-	int repl, j;
-	unsigned char x;
 	for (unsigned int i = 0; i < len; i++) {
-		x = (unsigned char)aname[i];
-		repl = 0;
+		const char x = aname[i];
+		int repl = 0;
 		if (i == repl_1) {
 			repl = 1;
 		}
@@ -93,8 +91,9 @@ static char* aname_to_nname(const char* aname, int ascii)
 		else if (ascii && x > 127) {
 			repl = 1;
 		}
-		for (j = 0; j < NUM_EVILCHARS; j++) {
-			if (x == evilchars[j]) {
+		for (const char evilchar : evilchars)
+		{
+			if (x == evilchar) {
 				repl = 1;
 				break;
 			}
@@ -122,33 +121,33 @@ static char* aname_to_nname(const char* aname, int ascii)
 		return buf;
 	}
 
-	auto string_buf = string(buf);
-	auto result = iso_8859_1_to_utf8(string_buf);
+	const auto string_buf = string(buf);
+	const auto result = iso_8859_1_to_utf8(string_buf);
 	free(buf);
 	char* char_result = strdup(result.c_str());
 	return char_result;
 }
 
 /* Return nonzero for any name we can't create on the native filesystem.  */
-static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* n, int dir)
+static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* name, int isDirectory)
 {
-	int i;
-	int l = _tcslen(n);
+	const int name_length = _tcslen(name);
 
 	/* the reserved fsdb filename */
-	if (_tcscmp(n, FSDB_FILE) == 0)
+	if (_tcscmp(name, FSDB_FILE) == 0)
 		return -1;
 
-	if (dir) {
-		if (n[0] == '.' && l == 1)
-			return -1;
-		if (n[0] == '.' && n[1] == '.' && l == 2)
+	if (isDirectory) {
+		// '.' and '..' are not valid directory names
+		if ((name[0] == '.' && name_length == 1) ||
+			(name[0] == '.' && name[1] == '.' && name_length == 2))
 			return -1;
 	}
 
 	/* these characters are *never* allowed */
-	for (i = 0; i < NUM_EVILCHARS; i++) {
-		if (_tcschr(n, evilchars[i]) != 0)
+	for (const char evilchar : evilchars)
+	{
+		if (_tcschr(name, evilchar) != nullptr)
 			return 1;
 	}
 
@@ -157,7 +156,7 @@ static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* n, int dir)
 
 int fsdb_name_invalid(a_inode* aino, const TCHAR* n)
 {
-	int v = fsdb_name_invalid_2(aino, n, 0);
+	const int v = fsdb_name_invalid_2(aino, n, 0);
 	if (v <= 0)
 		return v;
 	write_log(_T("FILESYS: '%s' illegal filename\n"), n);
@@ -166,7 +165,7 @@ int fsdb_name_invalid(a_inode* aino, const TCHAR* n)
 
 int fsdb_name_invalid_dir(a_inode* aino, const TCHAR* n)
 {
-	int v = fsdb_name_invalid_2(aino, n, 1);
+	const int v = fsdb_name_invalid_2(aino, n, 1);
 	if (v <= 0)
 		return v;
 	write_log(_T("FILESYS: '%s' illegal filename\n"), n);
@@ -180,14 +179,16 @@ int fsdb_exists(const TCHAR* nname)
 
 bool my_utime(const char* name, struct mytimeval* tv)
 {
-	struct mytimeval mtv{};
+	struct mytimeval mtv {};
 	struct timeval times[2];
 
 	if (tv == NULL) {
-		struct timeval time{};
-		struct timezone tz{};
+		struct timeval time {};
+		struct timezone tz {};
 
-		gettimeofday(&time, &tz);
+		if (gettimeofday(&time, &tz) == -1)
+			return false;
+
 		mtv.tv_sec = time.tv_sec + tz.tz_minuteswest;
 		mtv.tv_usec = time.tv_usec;
 	}
@@ -209,7 +210,7 @@ bool my_utime(const char* name, struct mytimeval* tv)
 /* return supported combination */
 int fsdb_mode_supported(const a_inode* aino)
 {
-	int mask = aino->amigaos_mode;
+	const int mask = aino->amigaos_mode;
 	return mask;
 }
 
@@ -217,11 +218,10 @@ int fsdb_mode_supported(const a_inode* aino)
  * native fs, fill in information about this file/directory.  */
 int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 {
-	struct stat statbuf{};
+	struct stat statbuf {};
 	/* This really shouldn't happen...  */
-	auto input = string(aino->nname);
-	auto output = iso_8859_1_to_utf8(input);
-	
+	const auto output = iso_8859_1_to_utf8(string(aino->nname));
+
 	if (stat(output.c_str(), &statbuf) == -1)
 		return 0;
 	aino->dir = S_ISDIR(statbuf.st_mode) ? 1 : 0;
@@ -240,34 +240,23 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 
 int fsdb_set_file_attrs(a_inode* aino)
 {
-	struct stat statbuf{};
-	int mode;
-	uae_u32 mask = aino->amigaos_mode;
+	struct stat statbuf {};
+	const uae_u32 mask = aino->amigaos_mode;
 
-	auto input = string(aino->nname);
-	auto output = iso_8859_1_to_utf8(input);
-	
+	const auto input = string(aino->nname);
+	const auto output = iso_8859_1_to_utf8(input);
+
 	if (stat(output.c_str(), &statbuf) == -1)
 		return ERROR_OBJECT_NOT_AROUND;
 
-	mode = statbuf.st_mode;
+	int mode = statbuf.st_mode;
 
-	if (mask & A_FIBF_READ)
-		mode &= ~S_IRUSR;
-	else
-		mode |= S_IRUSR;
+	mode = (mask & A_FIBF_READ) ? (mode & ~S_IRUSR) : (mode | S_IRUSR);
+	mode = (mask & A_FIBF_WRITE) ? (mode & ~S_IWUSR) : (mode | S_IWUSR);
+	mode = (mask & A_FIBF_EXECUTE) ? (mode & ~S_IXUSR) : (mode | S_IXUSR);
 
-	if (mask & A_FIBF_WRITE)
-		mode &= ~S_IWUSR;
-	else
-		mode |= S_IWUSR;
-
-	if (mask & A_FIBF_EXECUTE)
-		mode &= ~S_IXUSR;
-	else
-		mode |= S_IXUSR;
-
-	chmod(output.c_str(), mode);
+	if (chmod(output.c_str(), mode) != 0)
+		return ERROR_OBJECT_NOT_AROUND;
 
 	aino->dirty = 1;
 	return 0;
@@ -283,21 +272,29 @@ int same_aname(const char* an1, const char* an2)
  * native FS.  Return zero if that is not possible.  */
 int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
 {
-	int mask = amigaos_mode ^ 15;
+	// XOR operation with 15 to flip the last 4 bits of amigaos_mode
+	const int flipped_amigaos_mode = amigaos_mode ^ 15;
 
-	if (0 && aino->dir)
-		return amigaos_mode == 0;
+	// Check if the script bit is set in the flipped mode
+	if (flipped_amigaos_mode & A_FIBF_SCRIPT) /* script */
+		return 0;
 
-	if (mask & A_FIBF_SCRIPT) /* script */
-		return 0;
-	if ((mask & 15) == 15) /* xxxxRWED == OK */
+	// Check if the last 4 bits of the flipped mode are all set (xxxxRWED == OK)
+	if ((flipped_amigaos_mode & 15) == 15)
 		return 1;
-	if (!(mask & A_FIBF_EXECUTE)) /* not executable */
+
+	// Check if the execute bit is not set in the flipped mode
+	if (!(flipped_amigaos_mode & A_FIBF_EXECUTE)) /* not executable */
 		return 0;
-	if (!(mask & A_FIBF_READ)) /* not readable */
+
+	// Check if the read bit is not set in the flipped mode
+	if (!(flipped_amigaos_mode & A_FIBF_READ)) /* not readable */
 		return 0;
-	if ((mask & 15) == (A_FIBF_READ | A_FIBF_EXECUTE)) /* ----RxEx == ReadOnly */
+
+	// Check if only the read and execute bits are set in the flipped mode (----RxEx == ReadOnly)
+	if ((flipped_amigaos_mode & 15) == (A_FIBF_READ | A_FIBF_EXECUTE))
 		return 1;
+
 	return 0;
 }
 
