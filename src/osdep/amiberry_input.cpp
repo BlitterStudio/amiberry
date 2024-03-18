@@ -322,7 +322,7 @@ constexpr int remap_key_map_list[] = {
 	SDL_SCANCODE_KP_PERIOD, SDL_SCANCODE_KP_EQUALS, SDL_SCANCODE_RCTRL, SDL_SCANCODE_RALT
 };
 
-const char* remap_key_map_list_strings[] = {
+std::vector<std::string> remap_key_map_list_strings = {
 	"nul",
 	"a", "b", "c", "d", "e",
 	"f", "g", "h", "i", "j",
@@ -346,8 +346,6 @@ const char* remap_key_map_list_strings[] = {
 	"backslash", "rightbracket",
 	"kp_period", "kp_equals", "rctrl", "ralt"
 };
-
-constexpr int remap_key_map_list_size = std::size(remap_key_map_list);
 
 //#define	MAX_KEYCODES 256
 //static uae_u8 di_keycodes[MAX_INPUT_DEVICES][MAX_KEYCODES];
@@ -824,10 +822,186 @@ static int get_joystick_num()
 	return num_joystick;
 }
 
+// Helper functions
+void open_as_game_controller(struct didata* did, const int i)
+{
+	char guid_str[33];
+	did->controller = SDL_GameControllerOpen(i);
+	if (did->controller == nullptr)
+	{
+		write_log("Warning: Unable to open game controller! SDL Error: %s\n", SDL_GetError());
+		return;
+	}
+	did->is_controller = true;
+	did->joystick = SDL_GameControllerGetJoystick(did->controller);
+	did->joystick_id = SDL_JoystickInstanceID(did->joystick);
+	SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
+
+	if (SDL_GameControllerNameForIndex(i) != nullptr)
+		did->controller_name.assign(SDL_GameControllerNameForIndex(i));
+	write_log("Controller #%i: %s\n      GUID: %s\n", did->joystick_id, SDL_GameControllerName(did->controller), guid_str);
+
+	// Try to get the Joystick Name as well, we will need it in case of RetroArch mapping files
+	if (SDL_JoystickNameForIndex(i) != nullptr)
+		did->joystick_name.assign(SDL_JoystickNameForIndex(i));
+
+	if (!did->controller_name.empty())
+		did->name = did->controller_name;
+	else
+		did->name = did->joystick_name;
+}
+
+void open_as_joystick(struct didata* did, const int i)
+{
+	char guid_str[33];
+	did->joystick = SDL_JoystickOpen(i);
+	if (did->joystick == nullptr)
+	{
+		write_log("Warning: Unable to open Joystick! SDL Error: %s\n", SDL_GetError());
+		return;
+	}
+	did->is_controller = false;
+	did->joystick_id = SDL_JoystickInstanceID(did->joystick);
+	SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
+
+	if (SDL_JoystickNameForIndex(i) != nullptr)
+		did->joystick_name.assign(SDL_JoystickNameForIndex(i));
+	did->name = did->joystick_name;
+	write_log("Joystick #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d\n",
+		did->joystick_id, SDL_JoystickName(did->joystick), guid_str, SDL_JoystickNumAxes(did->joystick),
+		SDL_JoystickNumButtons(did->joystick), SDL_JoystickNumBalls(did->joystick));
+}
+
+void setup_controller_mappings(const struct didata* did, const int i)
+{
+	auto* const mapping = SDL_GameControllerMapping(did->controller);
+	write_log("Controller %i is mapped as \"%s\".\n", i, mapping);
+	SDL_free(mapping);
+}
+
+void fix_didata(struct didata* did)
+{
+	did->axles = static_cast<uae_s16>(SDL_JoystickNumAxes(did->joystick));
+	int hats = SDL_JoystickNumHats(did->joystick);
+	if (hats > 0) hats = hats * 4;
+	did->buttons_real = did->buttons = static_cast<uae_s16>(SDL_JoystickNumButtons(did->joystick) + hats);
+	if (did->is_controller)
+	{
+		for (uae_s16 b = 0; b < did->buttons; b++)
+		{
+			did->buttonsort[b] = b;
+			did->buttonmappings[b] = b;
+			const auto button_name = SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(b));
+			if (button_name != nullptr)
+				did->buttonname[b] = button_name;
+		}
+		for (uae_s16 a = 0; a < did->axles; a++)
+		{
+			did->axissort[a] = a;
+			did->axismappings[a] = a;
+			const auto axis_name = SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(a));
+			if (axis_name != nullptr)
+				did->axisname[a] = axis_name;
+			if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
+				did->axistype[a] = AXISTYPE_POV_X;
+			else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
+				did->axistype[a] = AXISTYPE_POV_Y;
+			else did->axistype[a] = AXISTYPE_NORMAL;
+			if (a >= 2)
+				did->analogstick = true;
+		}
+	}
+	else
+	{
+		for (uae_s16 b = 0; b < did->buttons; b++)
+		{
+			did->buttonsort[b] = b;
+			did->buttonmappings[b] = b;
+			did->buttonname[b] = std::string("Button ").append(std::to_string(b));
+		}
+		for (uae_s16 a = 0; a < did->axles; a++)
+		{
+			did->axissort[a] = a;
+			did->axismappings[a] = a;
+			did->axisname[a] = std::string("Axis ").append(std::to_string(a));
+			if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
+				did->axistype[a] = AXISTYPE_POV_X;
+			else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
+				did->axistype[a] = AXISTYPE_POV_Y;
+			else did->axistype[a] = AXISTYPE_NORMAL;
+			if (a >= 2)
+				did->analogstick = true;
+		}
+	}
+
+	fixbuttons(did);
+	fixthings(did);
+}
+
+void setup_mapping(struct didata* did, const std::string& controllers, const int i) {
+	auto retroarch_config_file = controllers;
+	auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
+	retroarch_config_file += sanitized_name.append(".cfg");
+	write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
+
+	if (my_existsfile2(retroarch_config_file.c_str()))
+	{
+		write_log("Retroarch controller cfg file found, using that for mapping\n");
+		fill_blank_controller();
+		did->mapping = default_controller_map;
+		did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
+	}
+	else
+	{
+		write_log("No Retroarch controller cfg file found, checking for mapping in retroarch.cfg\n");
+		// Check if values are in retroarch.cfg
+		std::string retroarch_file = get_retroarch_file();
+		if (my_existsfile2(retroarch_file.c_str()))
+		{
+			int found_player = -1;
+			for (auto p = 1; p < 5; p++)
+			{
+				const int pindex = find_retroarch((std::string("input_player").append(to_string(p)).append(std::string("_joypad_index"))), retroarch_file);
+				if (pindex == i)
+				{
+					found_player = p;
+					break;
+				}
+			}
+			if (found_player != -1)
+			{
+				write_log("Controller index found in retroarch cfg, using that for mapping\n");
+				fill_blank_controller();
+				did->mapping = default_controller_map;
+				did->mapping = map_from_retroarch(did->mapping, retroarch_file, found_player);
+			}
+			else
+			{
+				write_log("No controller index found in retroarch cfg, using the default mapping\n");
+				fill_default_controller();
+				did->mapping = default_controller_map;
+			}
+		}
+		else
+		{
+			write_log("No Retroarch controller cfg file found, using the default mapping\n");
+			fill_default_controller();
+			did->mapping = default_controller_map;
+		}
+	}
+
+	if (did->mapping.hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)
+	{
+		for (auto& k : did->mapping.button)
+		{
+			if (k == did->mapping.hotkey_button)
+				k = SDL_CONTROLLER_BUTTON_INVALID;
+		}
+	}
+}
+
 static int init_joystick()
 {
-	struct didata* did;
-	
 	if (joystick_inited)
 		return 1;
 	joystick_inited = 1;
@@ -855,180 +1029,27 @@ static int init_joystick()
 	// 2 - Controller is an SDL2 Game Controller, but there's a retroarch file: retroarch overrides default mapping
 	// 3 - Controller is not an SDL2 Game Controller, but there's a retroarch file: open it as Joystick, use retroarch mapping
 	// 4 - Controller is not an SDL2 Game Controller, no retroarch file: open as Joystick with default map
-	
-	char guid_str[33];
+
 	// do the loop
 	for (auto i = 0; i < num_joystick; i++)
 	{
-		did = &di_joystick[i];
+		struct didata* did = &di_joystick[i];
+
 		// Check if joystick supports SDL's game controller interface (a mapping is available)
 		if (SDL_IsGameController(i))
 		{
-			did->controller = SDL_GameControllerOpen(i);
-			if (did->controller == nullptr)
-			{
-				write_log("Warning: Unable to open game controller! SDL Error: %s\n", SDL_GetError());
-				continue;
-			}
-			did->is_controller = true;
-			did->joystick = SDL_GameControllerGetJoystick(did->controller);
-			did->joystick_id = SDL_JoystickInstanceID(did->joystick);
-			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
-
-			if (SDL_GameControllerNameForIndex(i) != nullptr)
-				did->controller_name.assign(SDL_GameControllerNameForIndex(i));
-			write_log("Controller #%i: %s\n      GUID: %s\n", did->joystick_id, SDL_GameControllerName(did->controller), guid_str);
-
-			// Try to get the Joystick Name as well, we will need it in case of RetroArch mapping files
-			if (SDL_JoystickNameForIndex(i) != nullptr)
-				did->joystick_name.assign(SDL_JoystickNameForIndex(i));
-
-			if (!did->controller_name.empty())
-				did->name = did->controller_name;
-			else
-				did->name = did->joystick_name;
-
-			auto* const mapping = SDL_GameControllerMapping(did->controller);
-			write_log("Controller %i is mapped as \"%s\".\n", i, mapping);
-			SDL_free(mapping);
+			open_as_game_controller(did, i);
+			setup_controller_mappings(did, i);
 		}
 		// Controller interface not supported, try to open as joystick
 		else
 		{
-			did->joystick = SDL_JoystickOpen(i);
-			if (did->joystick == nullptr)
-			{
-				write_log("Warning: Unable to open Joystick! SDL Error: %s\n", SDL_GetError());
-				continue;
-			}
-			did->is_controller = false;
-			did->joystick_id = SDL_JoystickInstanceID(did->joystick);
-			SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
-			
-			if (SDL_JoystickNameForIndex(i) != nullptr)
-				did->joystick_name.assign(SDL_JoystickNameForIndex(i));
-			did->name = did->joystick_name;
-			write_log("Joystick #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d\n",
-				did->joystick_id, SDL_JoystickName(did->joystick), guid_str, SDL_JoystickNumAxes(did->joystick),
-									SDL_JoystickNumButtons(did->joystick), SDL_JoystickNumBalls(did->joystick));
+			open_as_joystick(did, i);
 			write_log("Joystick #%i does not have a mapping available\n", did->joystick_id);
 		}
 
-		did->axles = static_cast<uae_s16>(SDL_JoystickNumAxes(did->joystick));
-		int hats = SDL_JoystickNumHats(did->joystick);
-		if (hats > 0) hats = hats * 4;
-		did->buttons_real = did->buttons = static_cast<uae_s16>(SDL_JoystickNumButtons(did->joystick) + hats);
-		if (did->is_controller)
-		{
-			for (uae_s16 b = 0; b < did->buttons; b++)
-			{
-				did->buttonsort[b] = b;
-				did->buttonmappings[b] = b;
-				const auto button_name = SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(b));
-				if (button_name != nullptr)
-					did->buttonname[b] = button_name;
-			}
-			for (uae_s16 a = 0; a < did->axles; a++)
-			{
-				did->axissort[a] = a;
-				did->axismappings[a] = a;
-				const auto axis_name = SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(a));
-				if (axis_name != nullptr)
-					did->axisname[a] = axis_name;
-				if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
-					did->axistype[a] = AXISTYPE_POV_X;
-				else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
-					did->axistype[a] = AXISTYPE_POV_Y;
-				else did->axistype[a] = AXISTYPE_NORMAL;
-				if (a >= 2)
-					did->analogstick = true;
-			}
-		}
-		else
-		{
-			for (uae_s16 b = 0; b < did->buttons; b++)
-			{
-				did->buttonsort[b] = b;
-				did->buttonmappings[b] = b;
-				did->buttonname[b] = std::string("Button ").append(std::to_string(b));
-			}
-			for (uae_s16 a = 0; a < did->axles; a++)
-			{
-				did->axissort[a] = a;
-				did->axismappings[a] = a;
-				did->axisname[a] = std::string("Axis ").append(std::to_string(a));
-				if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
-					did->axistype[a] = AXISTYPE_POV_X;
-				else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
-					did->axistype[a] = AXISTYPE_POV_Y;
-				else did->axistype[a] = AXISTYPE_NORMAL;
-				if (a >= 2)
-					did->analogstick = true;
-			}
-		}
-
-		fixbuttons(did);
-		fixthings(did);
-
-		auto retroarch_config_file = controllers;
-		auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
-		retroarch_config_file += sanitized_name.append(".cfg") ;
-		write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
-
-		if (my_existsfile2(retroarch_config_file.c_str()))
-		{
-			write_log("Retroarch controller cfg file found, using that for mapping\n");
-			fill_blank_controller();
-			did->mapping = default_controller_map;
-			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
-		}
-		else
-		{
-			write_log("No Retroarch controller cfg file found, checking for mapping in retroarch.cfg\n");
-			// Check if values are in retroarch.cfg
-			std::string retroarch_file = get_retroarch_file();
-			if (my_existsfile2(retroarch_file.c_str()))
-			{
-				int found_player = -1;
-				for (auto p = 1; p < 5; p++) 
-				{
-					const int pindex = find_retroarch((std::string("input_player").append(to_string(p)).append(std::string("_joypad_index"))), retroarch_file);
-					if (pindex == i) 
-					{
-						found_player = p;
-						break;
-					}
-				}
-				if (found_player != -1) 
-				{
-					write_log("Controller index found in retroarch cfg, using that for mapping\n");
-					fill_blank_controller();
-					did->mapping = default_controller_map;
-					did->mapping = map_from_retroarch(did->mapping, retroarch_file, found_player);
-				}
-				else 
-				{
-					write_log("No controller index found in retroarch cfg, using the default mapping\n");
-					fill_default_controller();
-					did->mapping = default_controller_map;
-				}
-			}
-			else
-			{
-				write_log("No Retroarch controller cfg file found, using the default mapping\n");
-				fill_default_controller();
-				did->mapping = default_controller_map;
-			}
-		}
-
-		if (did->mapping.hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)
-		{
-			for (auto& k : did->mapping.button)
-			{
-				if (k == did->mapping.hotkey_button)
-					k = SDL_CONTROLLER_BUTTON_INVALID;
-			}
-		}
+		fix_didata(did);
+		setup_mapping(did, controllers, i);
 	}
 	return 1;
 }
@@ -1165,15 +1186,43 @@ static int get_joystick_flags(int num)
 
 static bool invert_axis(int axis, const didata* did)
 {
-	if (axis == SDL_CONTROLLER_AXIS_LEFTX && did->mapping.lstick_axis_x_invert != 0)
-		return true;
-	if (axis == SDL_CONTROLLER_AXIS_LEFTY && did->mapping.lstick_axis_y_invert != 0)
-		return true;
-	if (axis == SDL_CONTROLLER_AXIS_RIGHTX && did->mapping.rstick_axis_x_invert != 0)
-		return true;
-	if (axis == SDL_CONTROLLER_AXIS_RIGHTY && did->mapping.rstick_axis_y_invert != 0)
-		return true;
-	return false;
+	switch (axis)
+	{
+	case SDL_CONTROLLER_AXIS_LEFTX:
+		return did->mapping.lstick_axis_x_invert != 0;
+	case SDL_CONTROLLER_AXIS_LEFTY:
+		return did->mapping.lstick_axis_y_invert != 0;
+	case SDL_CONTROLLER_AXIS_RIGHTX:
+		return did->mapping.rstick_axis_x_invert != 0;
+	case SDL_CONTROLLER_AXIS_RIGHTY:
+		return did->mapping.rstick_axis_y_invert != 0;
+	default:
+		return false;
+	}
+}
+
+void set_button_state(const didata* did, const int id, int button, const int offset, const bool is_controller)
+{
+	if (button != SDL_CONTROLLER_BUTTON_INVALID)
+	{
+		const auto button_state = is_controller
+			? SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(button)) & 1
+			: SDL_JoystickGetButton(did->joystick, button) & 1;
+		setjoybuttonstate(id, offset, button_state);
+	}
+}
+
+void set_axis_state(const didata* did, const int id, const int axis, int value, const bool invert)
+{
+	if (invert)
+	{
+		value = value * -1;
+	}
+	if (axisold[id][axis] != value)
+	{
+		setjoystickstate(id, axis, value, analog_upper_bound);
+		axisold[id][axis] = value;
+	}
 }
 
 void read_controller_button(const int id, const int button, const int state)
@@ -1184,42 +1233,22 @@ void read_controller_button(const int id, const int button, const int state)
 	{
 		auto held_offset = 0;
 		if (did->mapping.hotkey_button > SDL_CONTROLLER_BUTTON_INVALID
-				&& SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button)) & 1)
-				held_offset = REMAP_BUTTONS;
+			&& SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button)) & 1)
+			held_offset = REMAP_BUTTONS;
 
 		int retroarch_offset = SDL_CONTROLLER_BUTTON_MAX + SDL_CONTROLLER_AXIS_MAX * 2;
 
 		// detect RetroArch events, with or without Hotkey
-		if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
-		{
-			setjoybuttonstate(id, retroarch_offset + 1,
-				SDL_GameControllerGetButton(did->controller,
-					static_cast<SDL_GameControllerButton>(did->mapping.menu_button)) & 1);
-		}
-		if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
-		{
-			setjoybuttonstate(id, retroarch_offset + 2,
-				SDL_GameControllerGetButton(did->controller,
-					static_cast<SDL_GameControllerButton>(did->mapping.quit_button)) & 1);
-		}
-		if (did->mapping.reset_button != SDL_CONTROLLER_BUTTON_INVALID)
-		{
-			setjoybuttonstate(id, retroarch_offset + 3,
-				SDL_GameControllerGetButton(did->controller,
-					static_cast<SDL_GameControllerButton>(did->mapping.reset_button)) & 1);
-		}
-		if (did->mapping.vkbd_button != SDL_CONTROLLER_BUTTON_INVALID)
-		{
-			setjoybuttonstate(id, retroarch_offset + 4,
-				SDL_GameControllerGetButton(did->controller,
-					static_cast<SDL_GameControllerButton>(did->mapping.vkbd_button)) & 1);
-		}
+		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, true);
+		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, true);
+		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, true);
+		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, true);
 
- 		setjoybuttonstate(id, button + held_offset, state);
+		setjoybuttonstate(id, button + held_offset, state);
 	}
 }
 
-void read_controller_axis(const int id, const int axis, int value)
+void read_controller_axis(const int id, const int axis, const int value)
 {
 	const didata* did = &di_joystick[id];
 
@@ -1233,19 +1262,12 @@ void read_controller_axis(const int id, const int axis, int value)
 		}
 		else
 		{
-			if (invert_axis(axis, did))
-			{
-				value = value * -1;
-			}
-			if (axisold[id][axis] != value) {
-				setjoystickstate(id, axis, value, analog_upper_bound);
-				axisold[id][axis] = value;
-			}
+			set_axis_state(did, id, axis, value, invert_axis(axis, did));
 		}
 	}
 }
 
-void read_joystick_button(const int id, const int button, const int state)
+void read_joystick_buttons(const int id)
 {
 	const didata* did = &di_joystick[id];
 
@@ -1259,30 +1281,10 @@ void read_joystick_button(const int id, const int button, const int state)
 		int retroarch_offset = SDL_CONTROLLER_BUTTON_MAX + SDL_CONTROLLER_AXIS_MAX * 2;
 
 		// detect RetroArch events, with or without Hotkey
-		if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID
-			|| SDL_JoystickGetButton(did->joystick, did->mapping.hotkey_button) & 1)
-		{
-			if (did->mapping.menu_button != SDL_CONTROLLER_BUTTON_INVALID)
-			{
-				setjoybuttonstate(id, retroarch_offset + 1,
-					SDL_JoystickGetButton(did->joystick, did->mapping.menu_button) & 1);
-			}
-			if (did->mapping.quit_button != SDL_CONTROLLER_BUTTON_INVALID)
-			{
-				setjoybuttonstate(id, retroarch_offset + 2,
-					SDL_JoystickGetButton(did->joystick, did->mapping.quit_button) & 1);
-			}
-			if (did->mapping.reset_button != SDL_CONTROLLER_BUTTON_INVALID)
-			{
-				setjoybuttonstate(id, retroarch_offset + 3,
-					SDL_JoystickGetButton(did->joystick, did->mapping.reset_button) & 1);
-			}
-			if (did->mapping.vkbd_button != SDL_CONTROLLER_BUTTON_INVALID)
-			{
-				setjoybuttonstate(id, retroarch_offset + 4,
-					SDL_JoystickGetButton(did->joystick, did->mapping.vkbd_button) & 1);
-			}
-		}
+		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, false);
+		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, false);
+		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, false);
+		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, false);
 
 		// Check all Joystick buttons, including axes acting as buttons
 		for (int did_button = 0; did_button < did->buttons; did_button++)
@@ -1337,14 +1339,7 @@ void read_joystick_axis(const int id, const int axis, int value)
 				}
 				else
 				{
-					if (invert_axis(did_axis, did))
-					{
-						data = data * -1;
-					}
-					if (axisold[id][did_axis] != data) {
-						setjoystickstate(id, did_axis, data, analog_upper_bound);
-						axisold[id][did_axis] = data;
-					}
+					set_axis_state(did, id, did_axis, data, invert_axis(did_axis, did));
 				}
 			}
 		}
@@ -1358,15 +1353,20 @@ void read_joystick_hat(const int id, int hat, const int value)
 		for (int button = SDL_CONTROLLER_BUTTON_DPAD_UP; button <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; button++)
 		{
 			int state = 0;
-			if (button == SDL_CONTROLLER_BUTTON_DPAD_UP)
+			switch (button) {
+			case SDL_CONTROLLER_BUTTON_DPAD_UP:
 				state = value & SDL_HAT_UP;
-			else if (button == SDL_CONTROLLER_BUTTON_DPAD_DOWN)
+				break;
+			case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
 				state = value & SDL_HAT_DOWN;
-			else if (button == SDL_CONTROLLER_BUTTON_DPAD_LEFT)
+				break;
+			case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
 				state = value & SDL_HAT_LEFT;
-			else if (button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
+				break;
+			case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
 				state = value & SDL_HAT_RIGHT;
-
+				break;
+			}
 			setjoybuttonstate(id, button, state);
 		}
 	}
