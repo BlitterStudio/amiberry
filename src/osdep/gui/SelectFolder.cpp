@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <sys/types.h>
 #include <dirent.h>
 #include <cstdlib>
@@ -86,8 +87,8 @@ public:
 	void changeDir(const std::string& path)
 	{
 		read_directory(path, &dirs, nullptr);
-		if (dirs.empty())
-			dirs.emplace_back("..");
+		if (std::find(dirs.begin(), dirs.end(), "..") == dirs.end())
+			dirs.insert(dirs.begin(), "..");
 	}
 };
 

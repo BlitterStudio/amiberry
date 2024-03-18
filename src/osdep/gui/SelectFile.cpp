@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
@@ -81,8 +82,8 @@ public:
 	void changeDir(const std::string& path)
 	{
 		read_directory(path, &dirs, &files);
-		if (dirs.empty())
-			dirs.emplace_back("..");
+		if (std::find(dirs.begin(), dirs.end(), "..") == dirs.end())
+			dirs.insert(dirs.begin(), "..");
 		FilterFiles(&files, filefilter);
 	}
 
