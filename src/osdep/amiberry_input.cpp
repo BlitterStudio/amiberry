@@ -1018,13 +1018,12 @@ static int init_joystick()
 		num_joystick = MAX_INPUT_DEVICES;
 
 	// set up variables / paths etc.
-	std::string controllers = get_controllers_path();
-
 	char cfg[MAX_DPATH];
 	get_configuration_path(cfg, MAX_DPATH);
 	strcat(cfg, "gamecontrollerdb.txt");
 	SDL_GameControllerAddMappingsFromFile(cfg);
 
+	std::string controllers = get_controllers_path();
 	controllers.append("gamecontrollerdb_user.txt");
 	SDL_GameControllerAddMappingsFromFile(controllers.c_str());
 	
@@ -1034,6 +1033,7 @@ static int init_joystick()
 	// 3 - Controller is not an SDL2 Game Controller, but there's a retroarch file: open it as Joystick, use retroarch mapping
 	// 4 - Controller is not an SDL2 Game Controller, no retroarch file: open as Joystick with default map
 
+	controllers = get_controllers_path();
 	// do the loop
 	for (auto i = 0; i < num_joystick; i++)
 	{
