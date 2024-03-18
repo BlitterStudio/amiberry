@@ -96,19 +96,18 @@ extern const int remap_event_list[];
 extern const int remap_event_list_size;
 
 extern const int remap_key_map_list[];
-extern const char* remap_key_map_list_strings[];
-extern const int remap_key_map_list_size;
+extern std::vector<std::string> remap_key_map_list_strings;
 
 //extern bool key_used_by_retroarch_joy(int scancode);
 extern int keyhack(int scancode, int pressed, int num);
 extern int get_retroarch_kb_num();
-extern bool init_kb_from_retroarch(int index, std::string retroarch_file);
+extern bool init_kb_from_retroarch(int index, const std::string& retroarch_file);
 extern std::string sanitize_retroarch_name(std::string s);
-extern int find_retroarch(const std::string& find_setting, std::string retroarch_file);
-extern bool find_retroarch_polarity(const std::string& find_setting, std::string retroarch_file);
+extern int find_retroarch(const std::string& find_setting, const std::string& retroarch_file);
+extern bool find_retroarch_polarity(const std::string& find_setting, const std::string& retroarch_file);
 extern host_input_button map_from_retroarch(host_input_button mapping, const std::string& control_config, const int player);
 
-extern void read_joystick_button(int id, int button, int state);
+extern void read_joystick_buttons(int id);
 extern void read_joystick_axis(int id, int axis, int value);
 extern void read_joystick_hat(int id, int hat, int value);
 

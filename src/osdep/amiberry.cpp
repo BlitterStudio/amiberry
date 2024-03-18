@@ -1373,7 +1373,7 @@ void handle_joy_button_event(const SDL_Event& event)
 			break;
 		}
 
-		read_joystick_button(id, button, state);
+		read_joystick_buttons(id);
 		return;
 	}
 }
