@@ -844,6 +844,8 @@ void open_as_game_controller(struct didata* did, const int i)
 	// Try to get the Joystick Name as well, we will need it in case of RetroArch mapping files
 	if (SDL_JoystickNameForIndex(i) != nullptr)
 		did->joystick_name.assign(SDL_JoystickNameForIndex(i));
+	else
+		did->joystick_name = "";
 
 	if (!did->controller_name.empty())
 		did->name = did->controller_name;
@@ -866,6 +868,9 @@ void open_as_joystick(struct didata* did, const int i)
 
 	if (SDL_JoystickNameForIndex(i) != nullptr)
 		did->joystick_name.assign(SDL_JoystickNameForIndex(i));
+	else
+		did->joystick_name = "";
+
 	did->name = did->joystick_name;
 	write_log("Joystick #%i: %s\n      GUID: %s\n      Axes: %d\n      Buttons: %d\n      Balls: %d\n",
 		did->joystick_id, SDL_JoystickName(did->joystick), guid_str, SDL_JoystickNumAxes(did->joystick),
@@ -938,30 +943,37 @@ void fix_didata(struct didata* did)
 	fixthings(did);
 }
 
-void setup_mapping(struct didata* did, const std::string& controllers, const int i) {
-	auto retroarch_config_file = controllers;
-	auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
-	retroarch_config_file += sanitized_name.append(".cfg");
-	write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
-
-	if (my_existsfile2(retroarch_config_file.c_str()))
+void setup_mapping(struct didata* did, const std::string& controllers, const int i)
+{
+	std::string retroarch_config_file;
+	if (!did->joystick_name.empty())
 	{
-		write_log("Retroarch controller cfg file found, using that for mapping\n");
+		const auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
+		retroarch_config_file = controllers + sanitized_name + ".cfg";
+		write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
+	}
+
+	const std::string retroarch_file = get_retroarch_file();
+	const bool retroarch_config_exists = !retroarch_config_file.empty() && my_existsfile2(retroarch_config_file.c_str());
+	const bool retroarch_file_exists = my_existsfile2(retroarch_file.c_str());
+
+	if (retroarch_config_exists || retroarch_file_exists)
+	{
 		fill_blank_controller();
 		did->mapping = default_controller_map;
-		did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
-	}
-	else
-	{
-		write_log("No Retroarch controller cfg file found, checking for mapping in retroarch.cfg\n");
-		// Check if values are in retroarch.cfg
-		std::string retroarch_file = get_retroarch_file();
-		if (my_existsfile2(retroarch_file.c_str()))
+
+		if (retroarch_config_exists)
 		{
+			write_log("Retroarch controller cfg file found, using that for mapping\n");
+			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
+		}
+		else
+		{
+			write_log("No Retroarch controller cfg file found, checking for mapping in retroarch.cfg\n");
 			int found_player = -1;
 			for (auto p = 1; p < 5; p++)
 			{
-				const int pindex = find_retroarch((std::string("input_player").append(to_string(p)).append(std::string("_joypad_index"))), retroarch_file);
+				const int pindex = find_retroarch("input_player" + std::to_string(p) + "_joypad_index", retroarch_file);
 				if (pindex == i)
 				{
 					found_player = p;
@@ -971,23 +983,15 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 			if (found_player != -1)
 			{
 				write_log("Controller index found in retroarch cfg, using that for mapping\n");
-				fill_blank_controller();
-				did->mapping = default_controller_map;
 				did->mapping = map_from_retroarch(did->mapping, retroarch_file, found_player);
 			}
-			else
-			{
-				write_log("No controller index found in retroarch cfg, using the default mapping\n");
-				fill_default_controller();
-				did->mapping = default_controller_map;
-			}
 		}
-		else
-		{
-			write_log("No Retroarch controller cfg file found, using the default mapping\n");
-			fill_default_controller();
-			did->mapping = default_controller_map;
-		}
+	}
+	else
+	{
+		write_log("No Retroarch controller cfg file found, using the default mapping\n");
+		fill_default_controller();
+		did->mapping = default_controller_map;
 	}
 
 	if (did->mapping.hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)
