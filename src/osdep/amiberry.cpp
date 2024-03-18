@@ -1222,396 +1222,469 @@ static void touch_event(unsigned long id, int pressrel, int x, int y, const SDL_
 	tablet_touch(id, pressrel, x, y, rcontrol);
 }
 
-void process_event(SDL_Event event)
+void handle_focus_gained_event(AmigaMonitor* mon)
 {
-	AmigaMonitor* mon = &AMonitors[0];
-	didata* did = &di_joystick[0];
-	int mx, my;
+	amiberry_active(mon, minimized);
+	unsetminimized(mon->monitor_id);
+}
 
-	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
+void handle_minimized_event(AmigaMonitor* mon)
+{
+	if (!minimized)
 	{
-		switch (event.window.event)
-		{
-		case SDL_WINDOWEVENT_FOCUS_GAINED:
-			focus = 1;
-			amiberry_active(mon, minimized);
-			unsetminimized(mon->monitor_id);
-			return;
-		case SDL_WINDOWEVENT_MINIMIZED:
-			if (!minimized)
-			{
-				write_log(_T("SIZE_MINIMIZED\n"));
-				setminimized(mon->monitor_id);
-				amiberry_inactive(mon, minimized);
-			}
-			return;
-		case SDL_WINDOWEVENT_RESTORED:
-			amiberry_active(mon, minimized);
-			unsetminimized(mon->monitor_id);
-			return;
-		case SDL_WINDOWEVENT_MOVED:
-			if (isfullscreen() <= 0)
-			{
-				updatewinrect(mon, false);
-				//updatemouseclip(0);
-			}
-			break;
-		case SDL_WINDOWEVENT_ENTER:
-			mouseinside = true;
-			if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
-			{
-				if (mousehack_alive())
-					setcursorshape(mon->monitor_id);
-			}
-			break;
-		case SDL_WINDOWEVENT_LEAVE:
-			mouseinside = false;
-			return;
-		case SDL_WINDOWEVENT_FOCUS_LOST:
-			focus = 0;
-			amiberry_inactive(mon, minimized);
-			if (isfullscreen() <= 0 && currprefs.minimize_inactive)
-				minimizewindow(mon->monitor_id);
-			return;
-		case SDL_WINDOWEVENT_CLOSE:
-			wait_keyrelease();
-			inputdevice_unacquire();
-			uae_quit();
-			return;
-		default:
-			break;
-		}
+		write_log(_T("SIZE_MINIMIZED\n"));
+		setminimized(mon->monitor_id);
+		amiberry_inactive(mon, minimized);
 	}
-	else
-	switch (event.type)
+}
+
+void handle_restored_event(AmigaMonitor* mon)
+{
+	amiberry_active(mon, minimized);
+	unsetminimized(mon->monitor_id);
+}
+
+void handle_moved_event(AmigaMonitor* mon)
+{
+	if (isfullscreen() <= 0)
 	{
-	case SDL_QUIT:
+		updatewinrect(mon, false);
+		//updatemouseclip(0);
+	}
+}
+
+void handle_enter_event()
+{
+	mouseinside = true;
+	if (currprefs.input_tablet > 0 && currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC && isfullscreen() <= 0)
+	{
+		if (mousehack_alive())
+			setcursorshape(0);
+	}
+}
+
+void handle_leave_event()
+{
+	mouseinside = false;
+}
+
+void handle_focus_lost_event(AmigaMonitor* mon)
+{
+	focus = 0;
+	amiberry_inactive(mon, minimized);
+	if (isfullscreen() <= 0 && currprefs.minimize_inactive)
+		minimizewindow(mon->monitor_id);
+}
+
+void handle_close_event()
+{
+	wait_keyrelease();
+	inputdevice_unacquire();
+	uae_quit();
+}
+
+void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
+{
+	switch (event.window.event)
+	{
+	case SDL_WINDOWEVENT_FOCUS_GAINED:
+		handle_focus_gained_event(mon);
+		break;
+	case SDL_WINDOWEVENT_MINIMIZED:
+		handle_minimized_event(mon);
+		break;
+	case SDL_WINDOWEVENT_RESTORED:
+		handle_restored_event(mon);
+		break;
+	case SDL_WINDOWEVENT_MOVED:
+		handle_moved_event(mon);
+		break;
+	case SDL_WINDOWEVENT_ENTER:
+		handle_enter_event();
+		break;
+	case SDL_WINDOWEVENT_LEAVE:
+		handle_leave_event();
+		break;
+	case SDL_WINDOWEVENT_FOCUS_LOST:
+		handle_focus_lost_event(mon);
+		break;
+	case SDL_WINDOWEVENT_CLOSE:
+		handle_close_event();
+		break;
+	default:
+		break;
+	}
+}
+
+void handle_quit_event()
+{
+	uae_quit();
+}
+
+void handle_clipboard_update_event()
+{
+	if (currprefs.clipboard_sharing && SDL_HasClipboardText() == SDL_TRUE)
+	{
+		auto* clipboard_host = SDL_GetClipboardText();
+		uae_clipboard_put_text(clipboard_host);
+		SDL_free(clipboard_host);
+	}
+}
+
+void handle_joy_device_event()
+{
+	write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
+	if (inputdevice_devicechange(&currprefs))
+	{
+		import_joysticks();
+		joystick_refresh_needed = true;
+	}
+}
+
+void handle_controller_button_event(const SDL_Event& event)
+{
+	if (event.cbutton.button == enter_gui_button)
+	{
+		inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
+		return;
+	}
+	if (quit_key.button && event.cbutton.button == quit_key.button)
+	{
 		uae_quit();
 		return;
-
-	case SDL_CLIPBOARDUPDATE:
-		if (currprefs.clipboard_sharing && SDL_HasClipboardText() == SDL_TRUE)
-		{
-			auto* clipboard_host = SDL_GetClipboardText();
-			uae_clipboard_put_text(clipboard_host);
-			SDL_free(clipboard_host);	
-		}
-		return;
-		
-	case SDL_JOYDEVICEADDED:
-	case SDL_JOYDEVICEREMOVED:
-		write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
-		if (inputdevice_devicechange(&currprefs))
-		{
-			import_joysticks();
-			joystick_refresh_needed = true;
-		}
-		return;
-
-	case SDL_CONTROLLERBUTTONDOWN:
-	case SDL_CONTROLLERBUTTONUP:
-		if (event.cbutton.button == enter_gui_button)
-		{
-			inputdevice_add_inputcode(AKS_ENTERGUI, event.cbutton.state == SDL_PRESSED, nullptr);
-			break;
-		}
-		if (quit_key.button && event.cbutton.button == quit_key.button)
-		{
-			uae_quit();
-			break;
-		}
-		if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
-		{
-			inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
-			break;
-		}
-		if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
-		{
-			inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
-			break;
-		}
-		if (minimize_key.button && event.cbutton.button == minimize_key.button)
-		{
-			minimizewindow(0);
-			break;
-		}
-		if (event.cbutton.button == vkbd_button)
-		{
-			inputdevice_add_inputcode(AKS_OSK, event.cbutton.state == SDL_PRESSED, nullptr);
-			break;
-		}
-
-		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-		{
-			did = &di_joystick[id];
-			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
-			if (did->mapping.is_retroarch || !did->is_controller) continue;
-
-			read_controller_button(id, event.cbutton.button, event.cbutton.state);
-			return;
-		}
-		return;
-
-	case SDL_JOYBUTTONDOWN:
-	case SDL_JOYBUTTONUP:
-		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-		{
-			did = &di_joystick[id];
-			if (did->joystick_id != event.jbutton.which) continue;
-			if (did->name.empty() || did->joystick_id != id) continue;
-			if (!did->mapping.is_retroarch && did->is_controller) continue;
-
-			if (event.jbutton.button == did->mapping.hotkey_button)
-			{
-				hotkey_pressed = event.jbutton.state == SDL_PRESSED;
-				break;
-			}
-			if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
-			{
-				hotkey_pressed = false;
-				inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
-				break;
-			}
-			if (event.jbutton.button == did->mapping.vkbd_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
-			{
-				hotkey_pressed = false;
-				inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
-				break;
-			}
-
-			read_joystick_button(id, event.jbutton.button, event.jbutton.state);
-			return;
-		}
-		return;
-
-	case SDL_CONTROLLERAXISMOTION:
-		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-		{
-			did = &di_joystick[id];
-			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
-			if (did->mapping.is_retroarch || !did->is_controller) continue;
-
-			read_controller_axis(id, event.caxis.axis, event.caxis.value);
-			return;
-		}
-		return;
-
-	case SDL_JOYAXISMOTION:
-		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-		{
-			did = &di_joystick[id];
-			if (did->joystick_id != event.jaxis.which) continue;
-			if (did->name.empty() || did->joystick_id != id) continue;
-			if (!did->mapping.is_retroarch && did->is_controller) continue;
-
-			read_joystick_axis(event.jaxis.which, event.jaxis.axis, event.jaxis.value);
-			return;
-		}
-		return;
-
-	case SDL_JOYHATMOTION:
-		for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
-		{
-			did = &di_joystick[id];
-			if (did->joystick_id != event.jhat.which) continue;
-			if (did->name.empty() || did->joystick_id != id) continue;
-
-			read_joystick_hat(event.jhat.which, event.jhat.hat, event.jhat.value);
-			return;
-		}
-		return;
-
-	case SDL_KEYDOWN:
-	case SDL_KEYUP:
-		if (event.key.repeat == 0)
-		{
-			if (!isfocus())
-				break;
-			if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
-				break;
-			
-			int scancode = event.key.keysym.scancode;
-			const int pressed = event.key.state;
-
-			if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
-				&& scancode == SDL_SCANCODE_RCTRL)
-			{
-				scancode = SDL_SCANCODE_RGUI;
-			}
-			scancode = keyhack(scancode, pressed, 0);
-			if (scancode < 0)
-				return;
-			my_kbd_handler(0, scancode, pressed, true);
-		}
-		break;
-
-	case SDL_FINGERDOWN:
-		if (isfocus())
-		{
-			if (event.button.clicks == 2)
-				setmousebuttonstate(0, 0, 1);
-		}
-		return;
-	case SDL_FINGERUP:
-		if (isfocus())
-		{
-			setmousebuttonstate(0, 0, 0);
-		}
-		return;
-
-	case SDL_MOUSEBUTTONDOWN:
-		if (event.button.button == SDL_BUTTON_LEFT
-			&& !mouseactive
-			&& (!mousehack_alive()
-				|| currprefs.input_tablet != TABLET_MOUSEHACK
-				|| (currprefs.input_tablet == TABLET_MOUSEHACK
-					&& !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
-				|| isfullscreen() > 0))
-		{
-			if (!pause_emulation || currprefs.active_nocapture_pause)
-				setmouseactive(mon->monitor_id, (event.button.clicks == 1 || isfullscreen() > 0) ? 2 : 1);
-		}
-		else if (isfocus())
-		{
-			switch (event.button.button)
-			{
-			case SDL_BUTTON_LEFT:
-				setmousebuttonstate(0, 0, 1);
-				break;
-			case SDL_BUTTON_RIGHT:
-				setmousebuttonstate(0, 1, 1);
-				break;
-			case SDL_BUTTON_MIDDLE:
-				if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
-					activationtoggle(0, true);
-				else
-					setmousebuttonstate(0, 2, 1);
-				break;
-			case SDL_BUTTON_X1:
-				setmousebuttonstate(0, 3, 1);
-				break;
-			case SDL_BUTTON_X2:
-				setmousebuttonstate(0, 4, 1);
-				break;
-			default: break;
-			}
-		}
-		return;
-
-	case SDL_MOUSEBUTTONUP:
-		if (isfocus())
-		{
-			switch (event.button.button)
-			{
-			case SDL_BUTTON_LEFT:
-				setmousebuttonstate(0, 0, 0);
-				break;
-			case SDL_BUTTON_RIGHT:
-				setmousebuttonstate(0, 1, 0);
-				break;
-			case SDL_BUTTON_MIDDLE:
-				if (!(currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON))
-					setmousebuttonstate(0, 2, 0);
-				break;
-			case SDL_BUTTON_X1:
-				setmousebuttonstate(0, 3, 0);
-				break;
-			case SDL_BUTTON_X2:
-				setmousebuttonstate(0, 4, 0);
-				break;
-			default: break;
-			}
-		}
-		return;
-
-	case SDL_FINGERMOTION:
-		if (isfocus())
-		{
-			setmousestate(0, 0, event.motion.x, 1);
-			setmousestate(0, 1, event.motion.y, 1);
-		}
-		return;
-
-	case SDL_MOUSEMOTION:
+	}
+	if (action_replay_key.button && event.cbutton.button == action_replay_key.button)
 	{
-		if (event.window.windowID != SDL_GetWindowID(mon->amiga_window))
-			return;
+		inputdevice_add_inputcode(AKS_FREEZEBUTTON, event.cbutton.state == SDL_PRESSED, nullptr);
+		return;
+	}
+	if (fullscreen_key.button && event.cbutton.button == fullscreen_key.button)
+	{
+		inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, event.cbutton.state == SDL_PRESSED, nullptr);
+		return;
+	}
+	if (minimize_key.button && event.cbutton.button == minimize_key.button)
+	{
+		minimizewindow(0);
+		return;
+	}
+	if (event.cbutton.button == vkbd_button)
+	{
+		inputdevice_add_inputcode(AKS_OSK, event.cbutton.state == SDL_PRESSED, nullptr);
+		return;
+	}
 
-		// This will be useful when/if SDL2 supports more than 1 mouse.
-		// Currently, it always returns 0.
-		auto wm = event.motion.which;
+	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+	{
+		const didata* did = &di_joystick[id];
+		if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
+		if (did->mapping.is_retroarch || !did->is_controller) continue;
 
-		monitor_off = 0;
-		if (!mouseinside)
-			mouseinside = true;
+		read_controller_button(id, event.cbutton.button, event.cbutton.state);
+		return;
+	}
+}
 
-		mx = event.motion.x;
-		my = event.motion.y;
+void handle_joy_button_event(const SDL_Event& event)
+{
+	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+	{
+		const didata* did = &di_joystick[id];
+		if (did->joystick_id != event.jbutton.which) continue;
+		if (did->name.empty() || did->joystick_id != id) continue;
+		if (!did->mapping.is_retroarch && did->is_controller) continue;
 
-		//mx -= mon->mouseposx;
-		//my -= mon->mouseposy;
-
-		if (recapture && isfullscreen() <= 0) {
-			enablecapture(mon->monitor_id);
-			return;
+		if (event.jbutton.button == did->mapping.hotkey_button)
+		{
+			hotkey_pressed = event.jbutton.state == SDL_PRESSED;
+			break;
+		}
+		if (event.jbutton.button == did->mapping.menu_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+		{
+			hotkey_pressed = false;
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+			break;
+		}
+		if (event.jbutton.button == did->mapping.vkbd_button && hotkey_pressed && event.jbutton.state == SDL_PRESSED)
+		{
+			hotkey_pressed = false;
+			inputdevice_add_inputcode(AKS_OSK, 1, nullptr);
+			break;
 		}
 
+		read_joystick_button(id, event.jbutton.button, event.jbutton.state);
+		return;
+	}
+}
+
+void handle_controller_axis_motion_event(const SDL_Event& event)
+{
+	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+	{
+		const didata* did = &di_joystick[id];
+		if (did->name.empty() || did->joystick_id != event.caxis.which) continue;
+		if (did->mapping.is_retroarch || !did->is_controller) continue;
+
+		read_controller_axis(id, event.caxis.axis, event.caxis.value);
+	}
+}
+
+void handle_joy_axis_motion_event(const SDL_Event& event)
+{
+	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+	{
+		const didata* did = &di_joystick[id];
+		if (did->joystick_id != event.jaxis.which) continue;
+		if (did->name.empty() || did->joystick_id != id) continue;
+		if (!did->mapping.is_retroarch && did->is_controller) continue;
+
+		read_joystick_axis(event.jaxis.which, event.jaxis.axis, event.jaxis.value);
+	}
+}
+
+void handle_joy_hat_motion_event(const SDL_Event& event)
+{
+	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
+	{
+		const didata* did = &di_joystick[id];
+		if (did->joystick_id != event.jhat.which) continue;
+		if (did->name.empty() || did->joystick_id != id) continue;
+
+		read_joystick_hat(event.jhat.which, event.jhat.hat, event.jhat.value);
+		return;
+	}
+}
+
+void handle_key_event(const SDL_Event& event)
+{
+	if (event.key.repeat == 0)
+	{
+		if (!isfocus())
+			return;
+		if (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+			return;
+
+		int scancode = event.key.keysym.scancode;
+		const int pressed = event.key.state;
+
+		if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key)
+			&& scancode == SDL_SCANCODE_RCTRL)
+		{
+			scancode = SDL_SCANCODE_RGUI;
+		}
+		scancode = keyhack(scancode, pressed, 0);
+		if (scancode < 0)
+			return;
+		my_kbd_handler(0, scancode, pressed, true);
+	}
+}
+
+void handle_finger_event(const SDL_Event& event)
+{
+	if (isfocus())
+	{
+		if (event.tfinger.fingerId == 0)
+		{
+			if (event.tfinger.type == SDL_FINGERDOWN)
+			{
+				if (event.button.clicks == 2)
+					setmousebuttonstate(0, 0, 1);
+			}
+			else if (event.tfinger.type == SDL_FINGERUP)
+			{
+				setmousebuttonstate(0, 0, 0);
+			}
+		}
+	}
+}
+
+void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor* mon)
+{
+	if (event.button.button == SDL_BUTTON_LEFT
+		&& !mouseactive
+		&& (!mousehack_alive()
+			|| currprefs.input_tablet != TABLET_MOUSEHACK
+			|| (currprefs.input_tablet == TABLET_MOUSEHACK
+				&& !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+			|| isfullscreen() > 0))
+	{
+		if (!pause_emulation || currprefs.active_nocapture_pause)
+			setmouseactive(mon->monitor_id, (event.button.clicks == 1 || isfullscreen() > 0) ? 2 : 1);
+	}
+	else if (isfocus())
+	{
+		switch (event.button.button)
+		{
+		case SDL_BUTTON_LEFT:
+			setmousebuttonstate(0, 0, event.button.state == SDL_PRESSED);
+			break;
+		case SDL_BUTTON_RIGHT:
+			setmousebuttonstate(0, 1, event.button.state == SDL_PRESSED);
+			break;
+		case SDL_BUTTON_MIDDLE:
+			if (currprefs.input_mouse_untrap & MOUSEUNTRAP_MIDDLEBUTTON)
+				activationtoggle(0, true);
+			else
+				setmousebuttonstate(0, 2, event.button.state == SDL_PRESSED);
+			break;
+		case SDL_BUTTON_X1:
+			setmousebuttonstate(0, 3, event.button.state == SDL_PRESSED);
+			break;
+		case SDL_BUTTON_X2:
+			setmousebuttonstate(0, 4, event.button.state == SDL_PRESSED);
+			break;
+		default: break;
+		}
+	}
+}
+
+void handle_finger_motion_event(const SDL_Event& event)
+{
+	if (isfocus())
+	{
+		if (event.tfinger.fingerId == 0)
+		{
+			setmousestate(0, 0, event.tfinger.x, 1);
+			setmousestate(0, 1, event.tfinger.y, 1);
+		}
+	}
+}
+
+void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor* mon)
+{
+	monitor_off = 0;
+	if (!mouseinside)
+		mouseinside = true;
+
+	if (recapture && isfullscreen() <= 0) {
+		enablecapture(mon->monitor_id);
+		return;
+	}
+
+	if (isfocus() > 0)
+	{
 		if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 		{
 			/* absolute */
 			if (mon->screen_is_picasso)
 			{
-				setmousestate(0, 0, mx, 1);
-				setmousestate(0, 1, my, 1);
+				setmousestate(0, 0, event.motion.x, 1);
+				setmousestate(0, 1, event.motion.y, 1);
 			}
 			else
 			{
-				setmousestate(0, 0, (mx / 2) << currprefs.gfx_resolution, 1);
-				setmousestate(0, 1, (my / 2) << currprefs.gfx_vresolution, 1);
+				setmousestate(0, 0, (event.motion.x / 2) << currprefs.gfx_resolution, 1);
+				setmousestate(0, 1, (event.motion.y / 2) << currprefs.gfx_vresolution, 1);
 			}
-			return;
 		}
-		if (!focus || !mouseactive)
-			return;
-		/* relative */
-
-		// Disabled as it doesn't seem to work as expected
-		// Instead, we'll use SDL2's recommended Relative mode directly
-		//int mxx = (mon->amigawinclip_rect.x - mon->amigawin_rect.x) + (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2;
-		//int myy = (mon->amigawinclip_rect.y - mon->amigawin_rect.y) + (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2;
-		//mx = mx - mxx;
-		//my = my - myy;
-		//setmousestate(0, 0, mx, 0);
-		//setmousestate(0, 1, my, 0);
-		setmousestate(0, 0, event.motion.xrel, 0);
-		setmousestate(0, 1, event.motion.yrel, 0);
-
-		//if (mon_cursorclipped || mouseactive)
-		//	setcursor(mon, event.motion.x, event.motion.y);
-	}
-	break;
-
-	case SDL_MOUSEWHEEL:
-		if (isfocus() > 0)
+		else
 		{
-			const auto val_y = event.wheel.y;
-			setmousestate(0, 2, val_y, 0);
-			if (val_y < 0)
-				setmousebuttonstate(0, 3 + 0, -1);
-			else if (val_y > 0)
-				setmousebuttonstate(0, 3 + 1, -1);
-
-			const auto val_x = event.wheel.x;
-			setmousestate(0, 3, val_x, 0);
-			if (val_x < 0)
-				setmousebuttonstate(0, 3 + 2, -1);
-			else if (val_x > 0)
-				setmousebuttonstate(0, 3 + 3, -1);
+			/* relative */
+			setmousestate(0, 0, event.motion.xrel, 0);
+			setmousestate(0, 1, event.motion.yrel, 0);
 		}
-		return;
+	}
+}
 
-	default:
-		break;
+void handle_mouse_wheel_event(const SDL_Event& event)
+{
+	if (isfocus() > 0)
+	{
+		const auto val_y = event.wheel.y;
+		setmousestate(0, 2, val_y, 0);
+		if (val_y < 0)
+			setmousebuttonstate(0, 3 + 0, -1);
+		else if (val_y > 0)
+			setmousebuttonstate(0, 3 + 1, -1);
+
+		const auto val_x = event.wheel.x;
+		setmousestate(0, 3, val_x, 0);
+		if (val_x < 0)
+			setmousebuttonstate(0, 3 + 2, -1);
+		else if (val_x > 0)
+			setmousebuttonstate(0, 3 + 3, -1);
+	}
+}
+
+void process_event(const SDL_Event& event)
+{
+	AmigaMonitor* mon = &AMonitors[0];
+
+	// Handle window events
+	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
+	{
+		handle_window_event(event, mon);
+	}
+	else
+	{
+		// Handle other types of events
+		switch (event.type)
+		{
+		case SDL_QUIT:
+			handle_quit_event();
+			break;
+
+		case SDL_CLIPBOARDUPDATE:
+			handle_clipboard_update_event();
+			break;
+		
+		case SDL_JOYDEVICEADDED:
+		case SDL_JOYDEVICEREMOVED:
+			handle_joy_device_event();
+			break;
+
+		case SDL_CONTROLLERBUTTONDOWN:
+		case SDL_CONTROLLERBUTTONUP:
+			handle_controller_button_event(event);
+			break;
+
+		case SDL_JOYBUTTONDOWN:
+		case SDL_JOYBUTTONUP:
+			handle_joy_button_event(event);
+			break;
+
+		case SDL_CONTROLLERAXISMOTION:
+			handle_controller_axis_motion_event(event);
+			break;
+
+		case SDL_JOYAXISMOTION:
+			handle_joy_axis_motion_event(event);
+			break;
+
+		case SDL_JOYHATMOTION:
+			handle_joy_hat_motion_event(event);
+			break;
+
+		case SDL_KEYDOWN:
+		case SDL_KEYUP:
+			handle_key_event(event);
+			break;
+
+		case SDL_FINGERDOWN:
+		case SDL_FINGERUP:
+			handle_finger_event(event);
+			break;
+
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+			handle_mouse_button_event(event, mon);
+			break;
+
+		case SDL_FINGERMOTION:
+			handle_finger_motion_event(event);
+			break;
+
+		case SDL_MOUSEMOTION:
+			handle_mouse_motion_event(event, mon);
+			break;
+
+		case SDL_MOUSEWHEEL:
+			handle_mouse_wheel_event(event);
+			break;
+
+		default:
+			break;
+		}
 	}
 }
 
