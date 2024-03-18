@@ -557,22 +557,22 @@ static void EditFilesysHardfileLoop()
 				break;
 
 			case VK_UP:
-				if (HandleNavigation(DIRECTION_UP))
+				if (handle_navigation(DIRECTION_UP))
 					continue; // Don't change value when enter ComboBox -> don't send event to control
 				break;
 
 			case VK_DOWN:
-				if (HandleNavigation(DIRECTION_DOWN))
+				if (handle_navigation(DIRECTION_DOWN))
 					continue; // Don't change value when enter ComboBox -> don't send event to control
 				break;
 
 			case VK_LEFT:
-				if (HandleNavigation(DIRECTION_LEFT))
+				if (handle_navigation(DIRECTION_LEFT))
 					continue; // Don't change value when enter Slider -> don't send event to control
 				break;
 
 			case VK_RIGHT:
-				if (HandleNavigation(DIRECTION_RIGHT))
+				if (handle_navigation(DIRECTION_RIGHT))
 					continue; // Don't change value when enter Slider -> don't send event to control
 				break;
 
@@ -596,28 +596,28 @@ static void EditFilesysHardfileLoop()
 				
 				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_UP]) || hat & SDL_HAT_UP)
 				{
-					if (HandleNavigation(DIRECTION_UP))
+					if (handle_navigation(DIRECTION_UP))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_UP);
 					break;
 				}
 				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_DOWN]) || hat & SDL_HAT_DOWN)
 				{
-					if (HandleNavigation(DIRECTION_DOWN))
+					if (handle_navigation(DIRECTION_DOWN))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_DOWN);
 					break;
 				}
 				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) || hat & SDL_HAT_RIGHT)
 				{
-					if (HandleNavigation(DIRECTION_RIGHT))
+					if (handle_navigation(DIRECTION_RIGHT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_RIGHT);
 					break;
 				}
 				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) || hat & SDL_HAT_LEFT)
 				{
-					if (HandleNavigation(DIRECTION_LEFT))
+					if (handle_navigation(DIRECTION_LEFT))
 						continue; // Don't change value when enter Slider -> don't send event to control
 					PushFakeKey(SDLK_LEFT);
 					break;
@@ -667,7 +667,7 @@ static void EditFilesysHardfileLoop()
 					if (event.jaxis.value > joystick_dead_zone && last_x != 1)
 					{
 						last_x = 1;
-						if (HandleNavigation(DIRECTION_RIGHT))
+						if (handle_navigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
 						break;
@@ -675,7 +675,7 @@ static void EditFilesysHardfileLoop()
 					if (event.jaxis.value < -joystick_dead_zone && last_x != -1)
 					{
 						last_x = -1;
-						if (HandleNavigation(DIRECTION_LEFT))
+						if (handle_navigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_LEFT);
 						break;
@@ -688,7 +688,7 @@ static void EditFilesysHardfileLoop()
 					if (event.jaxis.value < -joystick_dead_zone && last_y != -1)
 					{
 						last_y = -1;
-						if (HandleNavigation(DIRECTION_UP))
+						if (handle_navigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
 						break;
@@ -696,7 +696,7 @@ static void EditFilesysHardfileLoop()
 					if (event.jaxis.value > joystick_dead_zone && last_y != 1)
 					{
 						last_y = 1;
-						if (HandleNavigation(DIRECTION_DOWN))
+						if (handle_navigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
 						break;

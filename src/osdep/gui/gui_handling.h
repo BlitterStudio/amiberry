@@ -3,6 +3,7 @@
 
 #include <guisan/sdl/sdlinput.hpp>
 #include "amiberry_gfx.h"
+#include "amiberry_input.h"
 #include "options.h"
 
 enum
@@ -360,8 +361,14 @@ enum
 	DIRECTION_RIGHT
 };
 
-bool HandleNavigation(int direction);
+bool handle_navigation(int direction);
 void PushFakeKey(SDL_Keycode inKey);
+
+extern bool handle_keydown(SDL_Event& event, bool& dialog_finished, bool& nav_left, bool& nav_right);
+extern bool handle_joybutton(didata* did, bool& dialog_finished, bool& nav_left, bool& nav_right);
+extern bool handle_joyaxis(const SDL_Event& event, bool& nav_left, bool& nav_right);
+extern bool handle_finger(const SDL_Event& event, SDL_Event& touch_event);
+extern bool handle_mousewheel(const SDL_Event& event);
 
 enum
 {

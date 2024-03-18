@@ -553,149 +553,52 @@ static void ShowMessageLoop()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 
-	auto got_event = 0;
+	bool got_event = false;
 	SDL_Event event;
 	SDL_Event touch_event;
-	const didata* did = &di_joystick[0];
+	bool nav_left, nav_right;
 	while (SDL_PollEvent(&event))
 	{
+		nav_left = nav_right = false;
 		switch (event.type)
 		{
 		case SDL_KEYDOWN:
-			got_event = 1;
-			switch (event.key.keysym.sym)
-			{
-			case VK_ESCAPE:
-				dialogFinished = true;
-				break;
-
-			case VK_LEFT:
-			case VK_RIGHT:
-				navigate_left_right();
-				break;
-
-			case VK_Blue:
-			case VK_Green:
-			case SDLK_RETURN:
-				event.key.keysym.sym = SDLK_RETURN;
-				gui_input->pushInput(event); // Fire key down
-				event.type = SDL_KEYUP; // and the key up
-				break;
-			default:
-				break;
-			}
+			got_event = handle_keydown(event, dialogFinished, nav_left, nav_right);
 			break;
 
 		case SDL_JOYBUTTONDOWN:
 		case SDL_JOYHATMOTION:
 			if (gui_joystick)
 			{
-				got_event = 1;
-				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
-
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_A]) ||
-					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_B]))
-				{
-					PushFakeKey(SDLK_RETURN);
-					break;
-				}
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_X]) ||
-					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_Y]) ||
-					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_START]))
-				{
-					dialogFinished = true;
-					break;
-				}
-				if (SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_LEFT]) ||
-					SDL_JoystickGetButton(gui_joystick, did->mapping.button[SDL_CONTROLLER_BUTTON_DPAD_RIGHT]) ||
-					hat & SDL_HAT_LEFT ||
-					hat & SDL_HAT_RIGHT)
-				{
-					navigate_left_right();
-					break;
-				}
+				got_event = handle_joybutton(&di_joystick[0], dialogFinished, nav_left, nav_right);
 			}
 			break;
 
 		case SDL_JOYAXISMOTION:
 			if (gui_joystick)
 			{
-				got_event = 1;
-				if (event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
-				{
-					if (event.jaxis.value > joystick_dead_zone && last_x != 1)
-					{
-						last_x = 1;
-						navigate_left_right();
-						break;
-					}
-					if (event.jaxis.value<-joystick_dead_zone && last_x != -1)
-					                      {
-						                      last_x = -1;
-						                      navigate_left_right();
-						break;
-					
-					                      }
-					if (event.jaxis.value > -joystick_dead_zone && event.jaxis.value < joystick_dead_zone)
-					                      last_x = 0;
-				
-				}
+				got_event = handle_joyaxis(event, nav_left, nav_right);
 			}
 			break;
 
 		case SDL_FINGERDOWN:
-			got_event = 1;
-			memcpy(&touch_event, &event, sizeof event);
-			touch_event.type = SDL_MOUSEBUTTONDOWN;
-			touch_event.button.which = 0;
-			touch_event.button.button = SDL_BUTTON_LEFT;
-			touch_event.button.state = SDL_PRESSED;
-
-			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
-
-			gui_input->pushInput(touch_event);
-			break;
-
 		case SDL_FINGERUP:
-			got_event = 1;
-			memcpy(&touch_event, &event, sizeof event);
-			touch_event.type = SDL_MOUSEBUTTONUP;
-			touch_event.button.which = 0;
-			touch_event.button.button = SDL_BUTTON_LEFT;
-			touch_event.button.state = SDL_RELEASED;
-
-			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
-
-			gui_input->pushInput(touch_event);
-			break;
-
 		case SDL_FINGERMOTION:
-			got_event = 1;
-			memcpy(&touch_event, &event, sizeof event);
-			touch_event.type = SDL_MOUSEMOTION;
-			touch_event.motion.which = 0;
-			touch_event.motion.state = 0;
-
-			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(event.tfinger.y);
-
+			got_event = handle_finger(event, touch_event);
 			gui_input->pushInput(touch_event);
 			break;
 
-		case SDL_KEYUP:
-		case SDL_JOYBUTTONUP:
-		case SDL_MOUSEBUTTONDOWN:
-		case SDL_MOUSEBUTTONUP:
-		case SDL_MOUSEMOTION:
 		case SDL_MOUSEWHEEL:
-			got_event = 1;
+			got_event = handle_mousewheel(event);
 			break;
 
 		default:
+			got_event = true;
 			break;
 		}
+
+		if (nav_left || nav_right)
+			navigate_left_right();
 
 		//-------------------------------------------------
 		// Send event to guisan-controls
