@@ -951,6 +951,7 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 		const auto sanitized_name = sanitize_retroarch_name(did->joystick_name);
 		retroarch_config_file = controllers + sanitized_name + ".cfg";
 		write_log("Joystick name: '%s', sanitized to: '%s'\n", did->joystick_name.c_str(), sanitized_name.c_str());
+		write_log("Checking for Retroarch cfg file: '%s'\n", retroarch_config_file.c_str());
 	}
 
 	const std::string retroarch_file = get_retroarch_file();
