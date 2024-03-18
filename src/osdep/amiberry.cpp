@@ -1898,27 +1898,27 @@ void target_execute(const char* command)
 	releasecapture(mon);
 
 	write_log("Target_execute received: %s\n", command);
-	const std::string cmd_string = command;
-	auto cmd_split = split_command(cmd_string);
+	const std::string command_string = command;
+	auto command_parts = split_command(command_string);
 
-	for (unsigned int i = 0; i < cmd_split.size(); ++i)
+	for (size_t i = 0; i < command_parts.size(); ++i)
 	{
 		if (i > 0)
 		{
-			const auto found = cmd_split[i].find(':');
-			if (found != std::string::npos)
+			const auto delimiter_position = command_parts[i].find(':');
+			if (delimiter_position != std::string::npos)
 			{
-				auto chunk = cmd_split[i].substr(0, found);
+				auto volume_or_device_name = command_parts[i].substr(0, delimiter_position);
 				for (auto mount = 0; mount < currprefs.mountitems; mount++)
 				{
 					if (currprefs.mountconfig[mount].ci.type == UAEDEV_DIR)
 					{
-						if (_tcsicmp(currprefs.mountconfig[mount].ci.volname, chunk.c_str()) == 0
-							|| _tcsicmp(currprefs.mountconfig[mount].ci.devname, chunk.c_str()) == 0)
+						if (_tcsicmp(currprefs.mountconfig[mount].ci.volname, volume_or_device_name.c_str()) == 0
+							|| _tcsicmp(currprefs.mountconfig[mount].ci.devname, volume_or_device_name.c_str()) == 0)
 						{
-							std::string tmp = currprefs.mountconfig[mount].ci.rootdir;
-							chunk += ':';
-							replace(cmd_split[i], chunk, tmp);
+							std::string root_directory = currprefs.mountconfig[mount].ci.rootdir;
+							volume_or_device_name += ':';
+							replace(command_parts[i], volume_or_device_name, root_directory);
 						}
 					}
 				}
@@ -1926,23 +1926,23 @@ void target_execute(const char* command)
 		}
 	}
 
-	std::string cmd_result;
-	for (const auto& i : cmd_split)
+	std::ostringstream command_stream;
+	for (const auto& part : command_parts)
 	{
-		cmd_result.append(i);
-		cmd_result.append(" ");
+		command_stream << part << " ";
 	}
 	// Ensure this runs in the background, otherwise we'll block the emulator until it returns
-	cmd_result.append(" &");
-	
+	command_stream << "&";
+
 	try
 	{
-		write_log("Executing: %s\n", cmd_result.c_str());
-		system(cmd_result.c_str());
+		std::string final_command = command_stream.str();
+		write_log("Executing: %s\n", final_command.c_str());
+		system(final_command.c_str());
 	}
-	catch (...)
+	catch (const std::exception& e)
 	{
-		write_log("Exception thrown when trying to execute: %s", command);
+		write_log("Exception thrown when trying to execute: %s. Exception: %s", command, e.what());
 	}
 }
 
