@@ -344,6 +344,8 @@ std::string SelectFolder(const std::string& title, std::string value)
 	ExitSelectFolder();
 	if (dialogResult)
 		value = workingDir;
+	else
+		value = "";
 
 	return value;
 }

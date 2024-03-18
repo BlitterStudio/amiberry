@@ -455,6 +455,8 @@ std::string SelectFile(const std::string& title, std::string value, const char* 
 
 	if (dialogResult)
 		value = workingDir;
+	else 		
+		value = "";
 
 	return value;
 }
