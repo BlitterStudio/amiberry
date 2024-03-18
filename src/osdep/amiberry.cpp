@@ -1564,7 +1564,7 @@ void process_event(const SDL_Event& event)
 	AmigaMonitor* mon = &AMonitors[0];
 
 	// Handle window events
-	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
+	if (event.type == SDL_WINDOWEVENT)
 	{
 		handle_window_event(event, mon);
 	}
