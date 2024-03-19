@@ -5848,8 +5848,7 @@ void inputdevice_vsync (void)
 		mousehack_alive_cnt++;
 		if (mousehack_alive_cnt == 0) {
 			mousehack_alive_cnt = 100;
-			setmouseactive(0, 0);
-			setmouseactive(0, 1);
+			setmouseactive(0, -1);
 		}
 	}
 	inputdevice_checkconfig ();

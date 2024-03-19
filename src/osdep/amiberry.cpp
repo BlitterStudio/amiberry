@@ -517,13 +517,33 @@ static void setcursorshape(int monid)
 	}
 }
 
+void set_showcursor(BOOL v)
+{
+	if (v) {
+		int vv = SDL_ShowCursor(SDL_ENABLE);
+		if (vv > 1) {
+			SDL_ShowCursor(SDL_DISABLE);
+		}
+	}
+	else {
+		int max = 10;
+		while (max-- > 0) {
+			int vv = SDL_ShowCursor(SDL_DISABLE);
+			if (vv < 0) {
+				while (vv < -1) {
+					vv = SDL_ShowCursor(SDL_ENABLE);
+				}
+				break;
+			}
+		}
+	}
+}
+
 void releasecapture(struct AmigaMonitor* mon)
 {
-	if (!mon_cursorclipped)
-		return;
 	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
-	SDL_ShowCursor(SDL_ENABLE);
+	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
 }
 
@@ -669,13 +689,12 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	mouseactive = active ? mon->monitor_id + 1 : 0;
 
 	mon->mouseposx = mon->mouseposy = 0;
-	releasecapture(mon);
-	recapture = 0;
 
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
 		if (mousehack_alive())
 		{
-			setcursorshape(mon->monitor_id);
+			releasecapture(mon);
+			recapture = 0;
 			return;
 		}
 		SDL_SetCursor(normalcursor);
@@ -687,16 +706,17 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	if (mouseactive) {
 		if (focus) {
 			SDL_RaiseWindow(mon->amiga_window);
-			if (!mon_cursorclipped) {
-				SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
-				updatewinrect(mon, false);
-				// SDL2 hides the cursor when Relative mode is enabled
-				// This means that the RTG hardware sprite will no longer be shown,
-				// unless it's configured to use Virtual Mouse (absolute movement).
-				SDL_SetRelativeMouseMode(SDL_TRUE);
-				mon_cursorclipped = mon->monitor_id + 1;
-				//updatemouseclip(mon);
-			}
+#if MOUSECLIP_HIDE
+			set_showcursor(FALSE);
+#endif
+			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+			updatewinrect(mon, false);
+			// SDL2 hides the cursor when Relative mode is enabled
+			// This means that the RTG hardware sprite will no longer be shown,
+			// unless it's configured to use Virtual Mouse (absolute movement).
+			SDL_SetRelativeMouseMode(SDL_TRUE);
+			mon_cursorclipped = mon->monitor_id + 1;
+			//updatemouseclip(mon);
 			setcursor(mon, -30000, -30000);
 		}
 		if (lastmouseactive != mouseactive) {
