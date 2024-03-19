@@ -2530,7 +2530,6 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 	struct AmigaMonitor* mon = &AMonitors[0];
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
 	bool borderless = p->borderless;
-	bool changed = false;
 
 	if (mon->amiga_window)
 	{
@@ -2539,44 +2538,30 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
 		const bool is_borderless = window_flags & SDL_WINDOW_BORDERLESS;
 
-		if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLSCREEN)
+		if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLSCREEN && !is_fullscreen)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_fs;
-			// Switch to Fullscreen mode, if we don't have it already
-			if (!is_fullscreen)
-			{
-				SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
-				changed = true;
-			}
-		}
-		else if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLWINDOW)
-		{
-			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
-			if (!is_fullwindow)
-			{
-				SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-				changed = true;
-			}
-		}
-		else
-		{
-			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
-			// Switch to Window mode, if we don't have it already - but not for KMSDRM
-			if ((is_fullscreen || is_fullwindow) && !kmsdrm_detected)
-			{
-				SDL_SetWindowFullscreen(mon->amiga_window, 0);
-				changed = true;
-			}
-
-			if (borderless != is_borderless)
-			{
-				SDL_SetWindowBordered(mon->amiga_window, borderless ? SDL_FALSE : SDL_TRUE);
-				changed = true;
-			}
-		}
-
-		if (changed)
+			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
 			set_config_changed();
+		}
+		else if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLWINDOW && !is_fullwindow)
+		{
+			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
+			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			set_config_changed();
+		}
+		else if (p->gfx_apmode[monid].gfx_fullscreen != GFX_FULLSCREEN && p->gfx_apmode[monid].gfx_fullscreen != GFX_FULLWINDOW && (is_fullscreen || is_fullwindow) && !kmsdrm_detected)
+		{
+			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
+			SDL_SetWindowFullscreen(mon->amiga_window, 0);
+			set_config_changed();
+		}
+
+		if (borderless != is_borderless)
+		{
+			SDL_SetWindowBordered(mon->amiga_window, borderless ? SDL_FALSE : SDL_TRUE);
+			set_config_changed();
+		}
 	}
 
 	if (!mon->screen_is_picasso)
