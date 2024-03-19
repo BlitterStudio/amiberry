@@ -508,7 +508,7 @@ void set_showcursor(BOOL v)
 
 void releasecapture(struct AmigaMonitor* mon)
 {
-	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
+	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
@@ -674,11 +674,11 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
-			SDL_RaiseWindow(mon->amiga_window);
+			SDL_RaiseWindow(mon->sdl_window);
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
-			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+			SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
 			updatewinrect(mon, false);
 			// SDL2 hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
