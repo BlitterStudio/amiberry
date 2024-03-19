@@ -195,19 +195,24 @@ static int isromext(const char* path)
 {
 	if (!path)
 		return 0;
-	auto* ext = _tcsrchr(path, '.');
+	auto* ext = strrchr(path, '.');
 	if (!ext)
 		return 0;
 	ext++;
 
-	if (!_tcsicmp(ext, "rom") || !_tcsicmp(ext, "adf") || !_tcsicmp(ext, "key")
-		|| !_tcsicmp(ext, "a500") || !_tcsicmp(ext, "a1200") || !_tcsicmp(ext, "a4000"))
+	static const char* extensions[] = { "rom", "adf", "key", "a500", "a1200", "a4000", nullptr };
+	for (int i = 0; extensions[i]; ++i)
+	{
+		if (!strcasecmp(ext, extensions[i]))
+			return 1;
+	}
+
+	if (strlen(ext) >= 2 && toupper(ext[0]) == 'U' && isdigit(ext[1]))
 		return 1;
-	if (_tcslen (ext) >= 2 && toupper(ext[0]) == 'U' && isdigit (ext[1]))
-		return 1;
+
 	for (auto i = 0; uae_archive_extensions[i]; i++)
 	{
-		if (!_tcsicmp(ext, uae_archive_extensions[i]))
+		if (!strcasecmp(ext, uae_archive_extensions[i]))
 			return 1;
 	}
 	return 0;
