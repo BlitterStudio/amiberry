@@ -954,14 +954,14 @@ void show_screen(int monid, int mode)
 
 int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 {
-	gfx_lock();
+	//gfx_lock();
 	//if (amiga_surface && SDL_MUSTLOCK(amiga_surface))
 	//	SDL_LockSurface(amiga_surface);
 	//int pitch;
 	//SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&vb->bufmem), &pitch);
 	if (first)
 		init_row_map();
-	gfx_unlock();
+	//gfx_unlock();
 	return 1;
 }
 
@@ -982,7 +982,7 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 	if (mon->rtg_locked) {
 		return p;
 	}
-	gfx_lock();
+	//gfx_lock();
 	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 	vidinfo->rowbytes = amiga_surface->pitch;
 	vidinfo->maxwidth = amiga_surface->w;
@@ -990,7 +990,7 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 	p = static_cast<uae_u8*>(amiga_surface->pixels);
 	if (!p)
 	{
-		gfx_unlock();
+		//gfx_unlock();
 	}
 	else
 	{
@@ -1002,15 +1002,15 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 void gfx_unlock_picasso(int monid, const bool dorender)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (!mon->rtg_locked)
-		gfx_lock();
+	//if (!mon->rtg_locked)
+		//gfx_lock();
 	mon->rtg_locked = false;
 	if (dorender)
 	{
 		render_screen(0, 0, true);
 		show_screen(0, 0);
 	}
-	gfx_unlock();
+	//gfx_unlock();
 }
 
 static bool canmatchdepth(void)
