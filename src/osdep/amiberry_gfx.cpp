@@ -2228,10 +2228,9 @@ void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt)
 	if (!mon->screen_is_picasso)
 		return;
 	gfx_set_picasso_colors(monid, rgbfmt);
-
+	need = modeswitchneeded(mon, &mon->currentmode);
 	update_gfxparams(mon);
 	updatemodes(mon);
-	need = modeswitchneeded(mon, &mon->currentmode);
 
 	if (need != 0)
 		open_screen(&currprefs);
