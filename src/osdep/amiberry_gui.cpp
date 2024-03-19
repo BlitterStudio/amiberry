@@ -191,28 +191,25 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	return rd;
 }
 
-static int isromext(const char* path)
+static int isromext(const std::string& path)
 {
-	if (!path)
+	if (path.empty())
 		return 0;
-	auto* ext = strrchr(path, '.');
-	if (!ext)
+	const auto ext_pos = path.find_last_of('.');
+	if (ext_pos == std::string::npos)
 		return 0;
-	ext++;
+	const std::string ext = path.substr(ext_pos + 1);
 
-	static const char* extensions[] = { "rom", "adf", "key", "a500", "a1200", "a4000", nullptr };
-	for (int i = 0; extensions[i]; ++i)
-	{
-		if (!strcasecmp(ext, extensions[i]))
-			return 1;
-	}
+	static const std::vector<std::string> extensions = { "rom", "adf", "key", "a500", "a1200", "a4000" };
+	if (std::find(extensions.begin(), extensions.end(), ext) != extensions.end())
+		return 1;
 
-	if (strlen(ext) >= 2 && toupper(ext[0]) == 'U' && isdigit(ext[1]))
+	if (ext.size() >= 2 && std::toupper(ext[0]) == 'U' && std::isdigit(ext[1]))
 		return 1;
 
 	for (auto i = 0; uae_archive_extensions[i]; i++)
 	{
-		if (!strcasecmp(ext, uae_archive_extensions[i]))
+		if (strcasecmp(ext.c_str(), uae_archive_extensions[i]) == 0)
 			return 1;
 	}
 	return 0;
@@ -232,7 +229,7 @@ static int scan_rom_2(struct zfile* f, void* dummy)
 
 static void scan_rom(const std::string& path)
 {
-	if (!isromext(path.c_str())) {
+	if (!isromext(path)) {
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return;
 	}
