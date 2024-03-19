@@ -235,7 +235,7 @@ static void InitSelectFile(const std::string& title)
 	fileList = new SelectFileListModel(".");
 
 	lstFiles = new gcn::ListBox(fileList);
-	lstFiles->setSize(DIALOG_WIDTH - 40, DIALOG_HEIGHT - 108);
+	lstFiles->setSize(DIALOG_WIDTH - 45, DIALOG_HEIGHT - 108);
 	lstFiles->setBaseColor(gui_baseCol);
 	lstFiles->setWrappingEnabled(true);
 	lstFiles->addActionListener(selectFileActionListener);
@@ -246,6 +246,8 @@ static void InitSelectFile(const std::string& title)
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFiles->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFiles->setBaseColor(gui_baseCol);
+	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
+	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
 
 	if (createNew)
 	{
