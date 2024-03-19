@@ -177,7 +177,7 @@ static void InitSelectFolder(const std::string& title)
 	listBoxActionListener = new ListBoxActionListener();
 
 	lstFolders = new gcn::ListBox(&dirList);
-	lstFolders->setSize(DIALOG_WIDTH - 40, DIALOG_HEIGHT - 108);
+	lstFolders->setSize(DIALOG_WIDTH - 45, DIALOG_HEIGHT - 108);
 	lstFolders->setBaseColor(gui_baseCol);
 	lstFolders->setWrappingEnabled(true);
 	lstFolders->addActionListener(listBoxActionListener);
@@ -188,6 +188,8 @@ static void InitSelectFolder(const std::string& title)
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFolders->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFolders->setBaseColor(gui_baseCol);
+	scrAreaFolders->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
+	scrAreaFolders->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
 
 	wndSelectFolder->add(cmdOK);
 	wndSelectFolder->add(cmdCancel);
