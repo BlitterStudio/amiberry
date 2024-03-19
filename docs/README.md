@@ -39,7 +39,7 @@ Amiberry has experimental support for macOS, and has been tested on:
 - Monterey (x86_64 and M1)
 
 You will need to install the required libraries using Homebrew.
-If you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-OSX)
+If you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-macOS)
 
 ### Dependencies
 
