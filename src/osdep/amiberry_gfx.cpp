@@ -118,16 +118,16 @@ float vsync_vblank, vsync_hblank;
 bool beamracer_debug;
 bool gfx_hdr;
 
-static uae_sem_t screen_cs = nullptr;
+static SDL_mutex* screen_cs = nullptr;
 static bool screen_cs_allocated;
 
 void gfx_lock(void)
 {
-	uae_sem_wait(&screen_cs);
+	SDL_LockMutex(screen_cs);
 }
 void gfx_unlock(void)
 {
-	uae_sem_post(&screen_cs);
+	SDL_UnlockMutex(screen_cs);
 }
 
 #ifdef AMIBERRY
@@ -954,18 +954,21 @@ void show_screen(int monid, int mode)
 
 int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 {
-	if (amiga_surface && SDL_MUSTLOCK(amiga_surface))
-		SDL_LockSurface(amiga_surface);
+	gfx_lock();
+	//if (amiga_surface && SDL_MUSTLOCK(amiga_surface))
+	//	SDL_LockSurface(amiga_surface);
 	//int pitch;
 	//SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&vb->bufmem), &pitch);
-	init_row_map();
+	if (first)
+		init_row_map();
+	gfx_unlock();
 	return 1;
 }
 
 void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 {
-	if (amiga_surface && SDL_MUSTLOCK(amiga_surface))
-		SDL_UnlockSurface(amiga_surface);
+	//if (amiga_surface && SDL_MUSTLOCK(amiga_surface))
+	//	SDL_UnlockSurface(amiga_surface);
 	//SDL_UnlockTexture(texture);
 }
 
@@ -976,9 +979,10 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 	static uae_u8* p;
 	if (amiga_surface == nullptr || mon->screen_is_picasso == 0)
 		return nullptr;
-	if (SDL_MUSTLOCK(amiga_surface))
-		SDL_LockSurface(amiga_surface);
-
+	if (mon->rtg_locked) {
+		return p;
+	}
+	gfx_lock();
 	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 	vidinfo->rowbytes = amiga_surface->pitch;
 	vidinfo->maxwidth = amiga_surface->w;
@@ -986,8 +990,7 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 	p = static_cast<uae_u8*>(amiga_surface->pixels);
 	if (!p)
 	{
-		if (SDL_MUSTLOCK(amiga_surface))
-			SDL_UnlockSurface(amiga_surface);
+		gfx_unlock();
 	}
 	else
 	{
@@ -998,14 +1001,16 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 
 void gfx_unlock_picasso(int monid, const bool dorender)
 {
-	if (SDL_MUSTLOCK(amiga_surface))
-		SDL_UnlockSurface(amiga_surface);
-
+	struct AmigaMonitor* mon = &AMonitors[monid];
+	if (!mon->rtg_locked)
+		gfx_lock();
+	mon->rtg_locked = false;
 	if (dorender)
 	{
 		render_screen(0, 0, true);
 		show_screen(0, 0);
 	}
+	gfx_unlock();
 }
 
 static bool canmatchdepth(void)
@@ -2280,7 +2285,11 @@ int graphics_init(bool mousecapture)
 int graphics_setup()
 {
 	if (!screen_cs_allocated) {
-		uae_sem_init(&screen_cs, 0, 1);
+		screen_cs = SDL_CreateMutex();
+		if (screen_cs == NULL) {
+			write_log(_T("Couldn't create screen_cs: %s\n"), SDL_GetError());
+			return 0;
+		}
 		screen_cs_allocated = true;
 	}
 #ifdef PICASSO96
@@ -2294,7 +2303,7 @@ void graphics_leave()
 	struct AmigaMonitor* mon = &AMonitors[0];
 	close_windows(mon);
 
-	uae_sem_destroy(&screen_cs);
+	SDL_DestroyMutex(screen_cs);
 	screen_cs = nullptr;
 	screen_cs_allocated = false;
 }
@@ -2771,49 +2780,45 @@ void auto_crop_image()
 
 	if (currprefs.gfx_auto_crop)
 	{
+		static int last_cw = 0, last_ch = 0, last_cx = 0, last_cy = 0;
 		int cw, ch, cx, cy, crealh = 0;
 		get_custom_limits(&cw, &ch, &cx, &cy, &crealh);
 
-		static int last_cw, last_ch, last_cx, last_cy;
-		if (force_auto_crop
-			|| last_autocrop != currprefs.gfx_auto_crop
-			|| last_cw != cw
-			|| last_ch != ch
-			|| last_cx != cx
-			|| last_cy != cy
-			)
+		if (!force_auto_crop && last_autocrop == currprefs.gfx_auto_crop && last_cw == cw && last_ch == ch && last_cx == cx && last_cy == cy)
 		{
-			last_cw = cw;
-			last_ch = ch;
-			last_cx = cx;
-			last_cy = cy;
-			force_auto_crop = false;
+			return;
+		}
 
-			int width = (cw * 2) >> currprefs.gfx_resolution;
-			int height = (ch * 2) >> currprefs.gfx_vresolution;
-			if (currprefs.gfx_correct_aspect == 0)
-			{
-				width = sdl_mode.w;
-				height = sdl_mode.h;
-			}
+		last_cw = cw;
+		last_ch = ch;
+		last_cx = cx;
+		last_cy = cy;
+		force_auto_crop = false;
+
+		int width = (cw * 2) >> currprefs.gfx_resolution;
+		int height = (ch * 2) >> currprefs.gfx_vresolution;
+		if (currprefs.gfx_correct_aspect == 0)
+		{
+			width = sdl_mode.w;
+			height = sdl_mode.h;
+		}
 #ifdef USE_OPENGL
-			renderQuad = { dx, dy, width, height };
-			crop_rect = { cx, cy, cw, ch };
+		renderQuad = { dx, dy, width, height };
+		crop_rect = { cx, cy, cw, ch };
 #else
 
-			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-			{
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
-				renderQuad = { dx, dy, width, height };
-				crop_rect = { cx, cy, cw, ch };
-			}
-			else
-			{
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, height, width);
-				renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
-			}
-#endif
+		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+		{
+			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
+			renderQuad = { dx, dy, width, height };
+			crop_rect = { cx, cy, cw, ch };
 		}
+		else
+		{
+			SDL_RenderSetLogicalSize(mon->amiga_renderer, height, width);
+			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
+		}
+#endif
 	}
 
 	last_autocrop = currprefs.gfx_auto_crop;
