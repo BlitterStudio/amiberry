@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(amiberry)
-enable_language(C CXX ASM)
+enable_language(C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,8 +8,6 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe")
 set(CMAKE_C_FLAGS_DEBUG "-Og -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic -pipe")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-set(CMAKE_ASM_COMPILER "${CMAKE_C_COMPILER}")
-set(CMAKE_ASM_COMPILER_ARG1 "${CMAKE_C_COMPILER_ARG1}")
 
 # Set build type to "Release" if user did not specify any build type yet
 # Other possible values: Debug, Release, RelWithDebInfo and MinSizeRel
@@ -23,18 +21,9 @@ endif ()
 
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-include_directories(
-        src
-        src/osdep
-        src/include
-        src/threaddep
-        src/archivers
-)
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
-add_compile_options(-fno-pie)
-add_compile_definitions(_FILE_OFFSET_BITS=64)
 
 include(CheckSymbolExists)
 function(detect_architecture symbol arch)
@@ -360,6 +349,9 @@ add_executable(${PROJECT_NAME}
         src/jit/compemu_support.cpp
 )
 
+target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
+target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
+
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
     add_definitions(-DCPU_AARCH64)
 endif ()
@@ -370,9 +362,10 @@ find_package(SDL2_ttf REQUIRED)
 
 if (USE_DBUS)
     add_definitions(-DUSE_DBUS)
+    find_package(PkgConfig REQUIRED)
     pkg_check_modules(DBUS REQUIRED dbus-1)
-    include_directories(${DBUS_INCLUDE_DIRS})
-    link_directories(${DBUS_LIBRARY_DIRS})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${DBUS_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${DBUS_LIBRARIES})
 endif ()
 
 find_package(FLAC REQUIRED)
@@ -384,15 +377,15 @@ find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
 find_library(LIBMPEG2 mpeg2 REQUIRED)
 
 add_subdirectory(external/libguisan)
-target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ./external/libguisan/include ./external/mt32emu/src)
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
+target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
 target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 
 if (USE_OPENGL)
     add_definitions(-DUSE_OPENGL)
     find_package(OpenGL REQUIRED)
     find_package(GLEW REQUIRED)
-    TARGET_LINK_LIBRARIES(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
 endif ()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
