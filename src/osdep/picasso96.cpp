@@ -4903,21 +4903,25 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 	uae_u8 *src2 = src + y * srcbytesperrow;
 	uae_u8 *dst2 = dst + dy * dstbytesperrow;
 
+#ifdef AMIBERRY
+	// In Amiberry, we only use these two modes, so we can optimize this as much as possible
+	// Use memcpy for copying memory
+	if (convert_mode == RGBFB_R8G8B8A8_32 || convert_mode == RGBFB_R5G6B5PC_16) {
+		std::memcpy(dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
+		return;
+	}
+#else
 	// native match?
 	//if (currprefs.gfx_api) {
 		switch (convert_mode) {
-#if defined(AMIBERRY)
-			case RGBFB_R8G8B8A8_32:
-			case RGBFB_R5G6B5PC_16:
-#else
+
 			case RGBFB_B8G8R8A8_32:
 			case RGBFB_R5G6B5PC_16:
-#endif
 				memcpy(dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
 				return;
 		}
 	//} else {
-
+#endif
 		endx4 = endx & ~3;
 
 		switch (convert_mode) {
