@@ -889,30 +889,31 @@ void master_sound_volume(int dir)
 // Audio callback function
 void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 {
-	const auto* sd = static_cast<sound_data*>(userdata);
+	auto* sd = static_cast<sound_data*>(userdata);
 	auto* s = sd->data;
 
 	if (!s->stream_initialised || sd->mute) {
-		memset(stream, 0, len);
-		if( sd->mute ) s->silence_written++;
+		std::fill_n(stream, len, 0);
+		if (sd->mute) s->silence_written++;
 		s->stream_initialised = 1;
+		return;
 	}
 
 	if (!s->framesperbuffer || sdp->deactive)
 		return;
-	
+
 	if (s->pullbufferlen <= 0) {
 		gui_data.sndbuf_status = -1;
 		return;
 	}
 
-	const unsigned int bytes_to_copy = s->framesperbuffer * sd->samplesize;	
+	const auto bytes_to_copy = std::min(static_cast<unsigned int>(s->framesperbuffer * sd->samplesize), s->pullbufferlen);
 	if (sd->mute == 0 && bytes_to_copy > 0) {
-		memcpy(stream, s->pullbuffer, bytes_to_copy);
+		std::copy(s->pullbuffer, s->pullbuffer + bytes_to_copy, stream);
 	}
 
 	if (bytes_to_copy < s->pullbufferlen) {
-		memmove(s->pullbuffer, s->pullbuffer + bytes_to_copy, s->pullbufferlen - static_cast<size_t>(bytes_to_copy));
+		std::memmove(s->pullbuffer, s->pullbuffer + bytes_to_copy, s->pullbufferlen - bytes_to_copy);
 	}
 	s->pullbufferlen -= bytes_to_copy;
 }
