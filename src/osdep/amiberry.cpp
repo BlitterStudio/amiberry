@@ -4179,9 +4179,6 @@ int main(int argc, char* argv[])
 	romlist_clear();
 	free_keyring();
 
-	lstMRUDiskList.clear();
-	lstMRUCDList.clear();
-	lstMRUWhdloadList.clear();
 
 	logging_cleanup();
 

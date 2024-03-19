@@ -241,12 +241,11 @@ void SymlinkROMs()
 
 void RescanROMs()
 {
-	vector<string> dirs;
-	vector<string> files;
+	std::vector<std::string> dirs;
+	std::vector<std::string> files;
 	char path[MAX_DPATH];
 
 	romlist_clear();
-
 	ClearAvailableROMList();
 	get_rom_path(path, MAX_DPATH);
 
@@ -254,38 +253,37 @@ void RescanROMs()
 	read_directory(path, &dirs, &files);
 
 	// Root level scan
-	for (auto & file : files)
+	for (const auto& file : files)
 	{
-		std::string tmp_path = std::string(path).append(file);
-		scan_rom(tmp_path);
+		scan_rom(std::string(path) + file);
 	}
 
 	// Recursive scan
-	for (auto & dir : dirs)
+	for (const auto& dir : dirs)
 	{
 		if (dir != "..")
 		{
-			std::string full_path = std::string(path).append(dir);
+			std::string full_path = std::string(path) + dir;
 			read_directory(full_path, nullptr, &files);
-			for (auto & file : files)
+			for (const auto& file : files)
 			{
-				std::string tmp_path = full_path;
-				scan_rom(tmp_path.append("/").append(file));
+				scan_rom(full_path + "/" + file);
 			}
 		}
 	}
 
-	auto id = 1;
-	for (;;) {
+	for (int id = 1;; ++id)
+	{
 		auto* rd = getromdatabyid(id);
 		if (!rd)
 			break;
-		if (rd->crc32 == 0xffffffff && strncmp(rd->model, "AROS", 4) == 0)
-			addrom(rd, ":AROS");
-		if (rd->crc32 == 0xffffffff && rd->id == 63) {
-			addrom(rd, ":HRTMon");
+		if (rd->crc32 == 0xffffffff)
+		{
+			if (strncmp(rd->model, "AROS", 4) == 0)
+				addrom(rd, ":AROS");
+			else if (rd->id == 63)
+				addrom(rd, ":HRTMon");
 		}
-		id++;
 	}
 }
 
