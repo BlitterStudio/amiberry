@@ -55,7 +55,7 @@ If you want to compile Amiberry from source, you'll need the `-dev` version of t
 
 Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package names are these (these include the `dev` versions by default):
 
-      sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport libportmidi
+      sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport portmidi
 
 if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run [Amiberry](https://aur.archlinux.org/packages/amiberry) through:
 
