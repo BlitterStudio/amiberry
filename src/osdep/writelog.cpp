@@ -394,34 +394,33 @@ void console_flush (void)
 
 void write_log(const char* format, ...)
 {
-	if (amiberry_options.write_logfile)
+	if (amiberry_options.write_logfile && debugfile)
 	{
-		TCHAR buffer[WRITE_LOG_BUF_SIZE];
-
-		va_list parms{};
+		va_list parms;
 		va_start(parms, format);
-		auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
-		if (debugfile)
-		{
-			fprintf(debugfile, "%s", buffer);
-			fflush(debugfile);
-		}
+		vfprintf(debugfile, format, parms);
+		fflush(debugfile);
 		va_end(parms);
 	}
 }
 
 void jit_abort(const TCHAR* format, ...)
 {
-	static int happened;
+	static bool happened = false;
 	TCHAR buffer[WRITE_LOG_BUF_SIZE];
-	va_list parms{};
+	va_list parms;
 	va_start(parms, format);
 
 	auto count = vsnprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
-	write_log(buffer);
+	buffer[count] = '\0'; // Ensure null termination
 	va_end(parms);
+
 	if (!happened)
+	{
 		gui_message("JIT: Serious error:\n%s", buffer);
-	happened = 1;
+		happened = true;
+	}
+
+	write_log("%s", buffer); // Use format specifier to prevent potential format string vulnerabilities
 	uae_reset(1, 0);
 }
