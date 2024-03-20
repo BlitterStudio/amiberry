@@ -76,7 +76,11 @@ extern int zfile_iscompressed(struct zfile *z);
 extern int zfile_zcompress(struct zfile *dst, void *src, size_t size);
 extern int zfile_zuncompress(void *dst, int dstsize, struct zfile *src, int srcsize);
 extern int zfile_gettype(struct zfile *z);
+#ifdef AMIBERRY
+extern int zfile_zopen(const std::string& name, zfile_callback zc, void* user);
+#else
 extern int zfile_zopen(const TCHAR *name, zfile_callback zc, void *user);
+#endif
 extern TCHAR *zfile_getname(struct zfile *f);
 extern TCHAR *zfile_getoriginalname(struct zfile *f);
 extern TCHAR *zfile_getfilename(struct zfile *f);

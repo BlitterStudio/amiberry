@@ -1749,6 +1749,37 @@ static struct zfile *zfile_fopen_2 (const TCHAR *name, const TCHAR *mode, int ma
 	return l;
 }
 
+#ifdef AMIBERRY
+#include <string>
+#include <algorithm>
+
+// outsize is unused, only here for compatibility with original version
+static void manglefilename(const std::string& in, std::string& out, int outsize)
+{
+	out = in;
+	std::replace(out.begin(), out.end(), '\\', '/');
+	out.erase(std::unique(out.begin(), out.end(), [](char a, char b) { return a == '/' && b == '/'; }), out.end());
+}
+
+int zfile_zopen(const std::string& name, zfile_callback zc, void* user)
+{
+	struct zfile* l;
+	int ztype;
+	std::string path;
+
+	manglefilename(name, path, 0);
+	l = zfile_fopen_2(path.c_str(), "rb", ZFD_NORMAL);
+	if (!l)
+		return 0;
+	ztype = iszip(l);
+	if (ztype == 0)
+		zc(l, user);
+	else
+		archive_access_scan(l, zc, user, ztype);
+	zfile_fclose(l);
+	return 1;
+}
+#else
 static void manglefilename(const TCHAR *in, TCHAR *out, int outsize)
 {
 	if (!target_expand_environment(in, out, outsize))
@@ -1780,6 +1811,7 @@ int zfile_zopen (const TCHAR *name, zfile_callback zc, void *user)
 	zfile_fclose (l);
 	return 1;
 }
+#endif
 
 /*
 * fopen() for a compressed file
@@ -1788,12 +1820,20 @@ static struct zfile *zfile_fopen_x (const TCHAR *name, const TCHAR *mode, int ma
 {
 	int cnt = 10;
 	struct zfile *l, *l2;
+#ifdef AMIBERRY
+	std::string path;
+#else
 	TCHAR path[MAX_DPATH];
+#endif
 
 	if (_tcslen (name) == 0)
 		return NULL;
 	manglefilename(name, path, sizeof(path) / sizeof (TCHAR));
+#ifdef AMIBERRY
+	l = zfile_fopen_2(path.c_str(), mode, mask);
+#else
 	l = zfile_fopen_2 (path, mode, mask);
+#endif
 	if (!l)
 		return 0;
 	l2 = NULL;
