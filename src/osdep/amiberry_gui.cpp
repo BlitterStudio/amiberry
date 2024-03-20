@@ -46,10 +46,6 @@ int emulating = 0;
 bool config_loaded = false;
 int gui_active;
 
-//struct serparportinfo *comports[MAX_SERPAR_PORTS];
-//struct midiportinfo *midiinportinfo[MAX_MIDI_PORTS];
-//struct midiportinfo *midioutportinfo[MAX_MIDI_PORTS];
-
 std::vector<std::string> serial_ports;
 std::vector<std::string> midi_in_ports;
 std::vector<std::string> midi_out_ports;
@@ -123,9 +119,9 @@ static void addrom(struct romdata* rd, const char* path)
 	char tmpName[MAX_DPATH];
 	auto* const tmp = new AvailableROM();
 	getromname(rd, tmpName);
-	strncpy(tmp->Name, tmpName, MAX_DPATH - 1);
+	tmp->Name.assign(tmpName);
 	if (path != nullptr)
-		strncpy(tmp->Path, path, MAX_DPATH - 1);
+		tmp->Path.assign(path);
 	tmp->ROMType = rd->type;
 	lstAvailableROMs.emplace_back(tmp);
 	romlist_add(path, rd);

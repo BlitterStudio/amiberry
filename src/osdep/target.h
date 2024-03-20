@@ -149,8 +149,8 @@ void init_colors(int monid);
 
 typedef struct
 {
-	char Name[MAX_DPATH];
-	char Path[MAX_DPATH];
+	std::string Name;
+	std::string Path;
 	int ROMType;
 } AvailableROM;
 
