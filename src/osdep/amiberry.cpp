@@ -3493,8 +3493,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
 		{
 			auto* tmp = new AvailableROM();
-			strncpy(tmp->Name, romName, sizeof tmp->Name - 1);
-			strncpy(tmp->Path, romPath, sizeof tmp->Path - 1);
+			tmp->Name.assign(romName);
+			tmp->Path.assign(romPath);
 			tmp->ROMType = romType;
 			lstAvailableROMs.emplace_back(tmp);
 			strncpy(romName, "", sizeof romName);

@@ -81,7 +81,7 @@ public:
 		{
 			if (lstAvailableROMs[i]->ROMType & ROMType)
 			{
-				if (!stricmp(lstAvailableROMs[i]->Path, current))
+				if (!stricmp(lstAvailableROMs[i]->Path.c_str(), current))
 					currIdx = int(roms.size());
 				roms.emplace_back(lstAvailableROMs[i]->Name);
 				idxToAvailableROMs.push_back(i);
@@ -105,7 +105,7 @@ public:
 	{
 		auto* const rom = mainROMList->get_rom_at(cboMainROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romfile, rom->Path, sizeof changed_prefs.romfile);
+			strncpy(changed_prefs.romfile, rom->Path.c_str(), sizeof changed_prefs.romfile);
 	}
 };
 
@@ -118,7 +118,7 @@ public:
 	{
 		auto* const rom = extROMList->get_rom_at(cboExtROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.romextfile, rom->Path, sizeof changed_prefs.romextfile);
+			strncpy(changed_prefs.romextfile, rom->Path.c_str(), sizeof changed_prefs.romextfile);
 		else
 			strncpy(changed_prefs.romextfile, " ", sizeof changed_prefs.romextfile);
 	}
@@ -133,7 +133,7 @@ public:
 	{
 		auto* const rom = cartROMList->get_rom_at(cboCartROM->getSelected());
 		if (rom != nullptr)
-			strncpy(changed_prefs.cartfile, rom->Path, sizeof changed_prefs.cartfile);
+			strncpy(changed_prefs.cartfile, rom->Path.c_str(), sizeof changed_prefs.cartfile);
 		else
 			strncpy(changed_prefs.cartfile, "", sizeof changed_prefs.cartfile);
 	}
@@ -141,60 +141,44 @@ public:
 
 static CartROMActionListener* cartROMActionListener;
 
+// Helper function to reduce code duplication
+void handleROMSelection(const gcn::ActionEvent& actionEvent, char* prefsFile, const int romType)
+{
+	std::string tmp;
+	const char* filter[] = { ".rom", ".bin", "\0" };
+	tmp = SelectFile("Select ROM", current_dir, filter);
+	{
+		auto* const newrom = new AvailableROM();
+		newrom->Name = extract_filename(tmp);
+		newrom->Name = remove_file_extension(newrom->Name);
+		newrom->Path = tmp;
+		newrom->ROMType = romType;
+		lstAvailableROMs.push_back(newrom);
+		strncpy(prefsFile, tmp.c_str(), MAX_DPATH - 1);
+		RefreshPanelROM();
+	}
+	actionEvent.getSource()->requestFocus();
+}
+
 class ROMButtonActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		std::string tmp;
-		const char* filter[] = {".rom", ".bin", "\0"};
-
 		if (actionEvent.getSource() == cmdMainROM)
 		{
-			tmp = SelectFile("Select System ROM", current_dir, filter);
-			{
-				auto* const newrom = new AvailableROM();
-				extract_filename(tmp.c_str(), newrom->Name);
-				remove_file_extension(newrom->Name);
-				strncpy(newrom->Path, tmp.c_str(), MAX_DPATH - 1);
-				newrom->ROMType = ROMTYPE_KICK;
-				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romfile, tmp.c_str(), sizeof changed_prefs.romfile);
-				RefreshPanelROM();
-			}
-			cmdMainROM->requestFocus();
+			handleROMSelection(actionEvent, changed_prefs.romfile, ROMTYPE_KICK);
 		}
 		else if (actionEvent.getSource() == cmdExtROM)
 		{
-			tmp = SelectFile("Select Extended ROM", current_dir, filter);
-			{
-				auto* const newrom = new AvailableROM();
-				extract_filename(tmp.c_str(), newrom->Name);
-				remove_file_extension(newrom->Name);
-				strncpy(newrom->Path, tmp.c_str(), MAX_DPATH - 1);
-				newrom->ROMType = ROMTYPE_EXTCDTV;
-				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romextfile, tmp.c_str(), sizeof changed_prefs.romextfile);
-				RefreshPanelROM();
-			}
-			cmdExtROM->requestFocus();
+			handleROMSelection(actionEvent, changed_prefs.romextfile, ROMTYPE_EXTCDTV);
 		}
 		else if (actionEvent.getSource() == cmdCartROM)
 		{
-			tmp = SelectFile("Select Cartridge ROM", current_dir, filter);
-			{
-				auto* const newrom = new AvailableROM();
-				extract_filename(tmp.c_str(), newrom->Name);
-				remove_file_extension(newrom->Name);
-				strncpy(newrom->Path, tmp.c_str(), MAX_DPATH - 1);
-				newrom->ROMType = ROMTYPE_CD32CART;
-				lstAvailableROMs.push_back(newrom);
-				strncpy(changed_prefs.romextfile, tmp.c_str(), sizeof changed_prefs.romextfile);
-				RefreshPanelROM();
-			}
-			cmdCartROM->requestFocus();
+			handleROMSelection(actionEvent, changed_prefs.cartfile, ROMTYPE_CD32CART);
 		}
-		else if (actionEvent.getSource() == cboUAEROM) {
+		else if (actionEvent.getSource() == cboUAEROM) 
+		{
 			const auto v = cboUAEROM->getSelected();
 			if (v > 0) {
 				changed_prefs.uaeboard = v - 1;
@@ -332,47 +316,31 @@ void ExitPanelROM()
 	delete romButtonActionListener;
 }
 
-void RefreshPanelROM()
+void refresh_rom_list(ROMListModel* rom_list, const gcn::DropDown* cboROM, char* prefsFile, const int romType)
 {
-	auto idx = mainROMList->init_rom_list(changed_prefs.romfile);
+	const auto idx = rom_list->init_rom_list(prefsFile);
 	if (idx != -1)
-		cboMainROM->setSelected(idx);
-	else
 	{
-		// ROM file not in the list of known ROMs -- let's add it
-		auto* newrom = new AvailableROM();
-		extract_filename(changed_prefs.romfile, newrom->Name);
-		remove_file_extension(newrom->Name);
-		strncpy(newrom->Path, changed_prefs.romfile, MAX_DPATH - 1);
-		newrom->ROMType = ROMTYPE_KICK;
-		lstAvailableROMs.push_back(newrom);
-		RefreshPanelROM();
+		cboROM->setSelected(idx);
 	}
-
-	idx = extROMList->init_rom_list(changed_prefs.romextfile);
-	// ROM was found in the list
-	if (idx != 0 && strlen(changed_prefs.romextfile) == 0)
-		cboExtROM->setSelected(idx);
-	// A ROM filename was specified, but it wasn't found in the list - let's add it
-	else if (idx == 0 && strlen(changed_prefs.romextfile) > 0)
+	else if (strlen(prefsFile) > 0)
 	{
 		// ROM file not in the list of known ROMs
 		auto* newrom = new AvailableROM();
-		extract_filename(changed_prefs.romextfile, newrom->Name);
-		remove_file_extension(newrom->Name);
-		strncpy(newrom->Path, changed_prefs.romextfile, MAX_DPATH - 1);
-		newrom->ROMType = ROMTYPE_EXTCDTV;
+		extract_filename(prefsFile, newrom->Name.data());
+		newrom->Name = remove_file_extension(newrom->Name);
+		newrom->Path.assign(prefsFile);
+		newrom->ROMType = romType;
 		lstAvailableROMs.push_back(newrom);
 		RefreshPanelROM();
 	}
-	// No ROM specified
-	else
-	{
-		cboExtROM->setSelected(idx);
-	}
+}
 
-	idx = cartROMList->init_rom_list(changed_prefs.cartfile);
-	cboCartROM->setSelected(idx);
+void RefreshPanelROM()
+{
+	refresh_rom_list(mainROMList, cboMainROM, changed_prefs.romfile, ROMTYPE_KICK);
+	refresh_rom_list(extROMList, cboExtROM, changed_prefs.romextfile, ROMTYPE_EXTCDTV);
+	refresh_rom_list(cartROMList, cboCartROM, changed_prefs.cartfile, ROMTYPE_CD32CART);
 
 	if (changed_prefs.boot_rom == 1) {
 		cboUAEROM->setSelected(0);
