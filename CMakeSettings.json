@@ -27,7 +27,7 @@
       "wslPath": "${defaultWSLPath}"
     },
     {
-      "name": "Linux-arm64-GCC-Debug",
+      "name": "Linux-arm-GCC-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
       "cmakeExecutable": "cmake",
@@ -46,7 +46,7 @@
       "remoteCopySourcesMethod": "rsync"
     },
     {
-      "name": "Linux-arm64-GCC-Release",
+      "name": "Linux-arm-GCC-Release",
       "generator": "Ninja",
       "configurationType": "RelWithDebInfo",
       "cmakeExecutable": "cmake",
@@ -65,7 +65,7 @@
       "remoteCopySourcesMethod": "rsync"
     },
     {
-      "name": "Linux-arm64-GCC-Debug-OpenGL",
+      "name": "Linux-arm-GCC-Debug-OpenGL",
       "generator": "Ninja",
       "configurationType": "Debug",
       "cmakeExecutable": "cmake",
