@@ -570,6 +570,7 @@ static int delete_trigger(blockinfo *bi, void *pc)
 }
 #endif
 
+typedef uae_u32 uintptr;
 
 static int handle_exception(unsigned long* pregs, long fault_addr)
 {
