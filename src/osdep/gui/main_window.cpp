@@ -252,11 +252,7 @@ void cap_fps(Uint64 start)
 {
 	const auto end = SDL_GetPerformanceCounter();
 	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
-#ifdef USE_DISPMANX
-	refresh_rate = 60;
-#else
 	const int refresh_rate = std::clamp(sdl_mode.refresh_rate, 50, 60);
-#endif
 	const float frame_time = 1000.0f / refresh_rate;
 	const float delay_time = frame_time - elapsed_ms;
 

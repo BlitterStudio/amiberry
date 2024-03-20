@@ -127,8 +127,8 @@ extern VC_RECT_T black_rect;
 extern VC_IMAGE_TYPE_T rgb_mode;
 #else
 extern SDL_Texture* amiga_texture;
-extern SDL_DisplayMode sdl_mode;
 #endif
+extern SDL_DisplayMode sdl_mode;
 extern SDL_Rect crop_rect;
 
 extern SDL_Surface* amiga_surface;

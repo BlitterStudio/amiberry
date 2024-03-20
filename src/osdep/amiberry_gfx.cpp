@@ -831,7 +831,7 @@ static void open_screen(struct uae_prefs* p)
 
 	dmx_vsync_counter = 0;
 	current_vsync_frame = 2;
-#else
+#endif
 
 	const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
 	const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
@@ -2229,7 +2229,6 @@ void graphics_leave()
 		SDL_DestroyTexture(amiga_texture);
 		amiga_texture = nullptr;
 	}
-#endif
 #endif
 
 #ifdef USE_OPENGL

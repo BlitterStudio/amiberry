@@ -580,8 +580,10 @@ WatchJoystick(SDL_Joystick* joystick)
 
 		// Update guisan
 		uae_gui->logic();
-
+#ifdef USE_DISPMANX
+#else
 		SDL_RenderClear(mon->sdl_renderer);
+#endif
 
 		uae_gui->draw();
 #ifdef USE_DISPMANX
