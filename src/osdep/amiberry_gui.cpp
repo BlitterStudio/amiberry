@@ -233,7 +233,7 @@ static void scan_rom(const std::string& path)
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return;
 	}
-	zfile_zopen(path.c_str(), scan_rom_2, nullptr);
+	zfile_zopen(path, scan_rom_2, nullptr);
 }
 
 void SymlinkROMs()
