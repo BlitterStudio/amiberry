@@ -1316,7 +1316,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// if we already loaded a .uae config, we don't need to do the below manual setup for hardware
 	if (std::filesystem::exists(uae_config))
 	{
-		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config);
+		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config.c_str());
 		return;
 	}
 
