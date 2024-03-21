@@ -386,7 +386,7 @@ STATIC_INLINE bool is_hdf_rdb()
 
 extern std::string whdload_filename;
 extern std::string screenshot_filename;
-extern int currentStateNum;
+extern int current_state_num;
 extern int delay_savestate_frame;
 extern int last_x;
 extern int last_y;

@@ -468,24 +468,25 @@ void gui_purge_events()
 
 int gui_update()
 {
-	char tmp[MAX_DPATH];
-
-	get_savestate_path(savestate_fname, MAX_DPATH - 1);
-	screenshot_filename = get_screenshot_path();
+	std::string filename;
+	std::string suffix = (current_state_num >= 1 && current_state_num <= 14) ?
+		"-" + std::to_string(current_state_num) : "";
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
-		extract_filename(currprefs.floppyslots[0].df, tmp);
+		filename = extract_filename(currprefs.floppyslots[0].df);
+	else if (currprefs.cdslots[0].inuse && strlen(currprefs.cdslots[0].name) > 0)
+		filename = extract_filename(currprefs.cdslots[0].name);
 	else
-		strncpy(tmp, last_loaded_config, MAX_DPATH - 1);
+		filename = std::string(last_loaded_config);
 
-	strncat(savestate_fname, tmp, MAX_DPATH - 1);
-	screenshot_filename.append(std::string(tmp));
+	get_savestate_path(savestate_fname, MAX_DPATH - 1);
+	strncat(savestate_fname, filename.c_str(), MAX_DPATH - 1);
 	remove_file_extension(savestate_fname);
-	remove_file_extension(screenshot_filename);
-
-	std::string suffix = (currentStateNum >= 1 && currentStateNum <= 14) ?
-		"-" + std::to_string(currentStateNum) : "";
 	strncat(savestate_fname, (suffix + ".uss").c_str(), MAX_DPATH - 1);
+
+	screenshot_filename = get_screenshot_path();
+	screenshot_filename += filename;
+	screenshot_filename = remove_file_extension(screenshot_filename);
 	screenshot_filename.append(suffix + ".png");
 
 	return 0;

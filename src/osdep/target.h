@@ -52,7 +52,7 @@ extern void releasecapture(struct AmigaMonitor*);
 extern void enablecapture(int monid);
 extern void disablecapture();
 extern void activationtoggle(int monid, bool inactiveonly);
-extern void create_screenshot();
+extern bool create_screenshot();
 extern int save_thumb(const std::string& path);
 
 extern amiberry_hotkey enter_gui_key;
