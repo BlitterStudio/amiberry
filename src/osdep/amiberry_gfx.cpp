@@ -2380,6 +2380,9 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 
 void create_screenshot()
 {
+#ifdef USE_DISPMANX
+	wait_for_display_thread();
+#endif
 	if (current_screenshot != nullptr)
 	{
 		SDL_FreeSurface(current_screenshot);
@@ -2401,6 +2404,9 @@ void create_screenshot()
 
 int save_thumb(const std::string& path)
 {
+#ifdef USE_DISPMANX
+	wait_for_display_thread();
+#endif
 	auto ret = 0;
 	if (current_screenshot != nullptr)
 	{
