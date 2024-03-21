@@ -831,7 +831,7 @@ static void open_screen(struct uae_prefs* p)
 
 	dmx_vsync_counter = 0;
 	current_vsync_frame = 2;
-#endif
+#else
 
 	const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
 	const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
@@ -988,6 +988,7 @@ static void open_screen(struct uae_prefs* p)
 	glBindTexture(GL_TEXTURE_2D, 0);
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+#endif
 #endif
 
 	statusline_set_multiplier(mon->monitor_id, display_width, display_height);
@@ -2202,6 +2203,19 @@ int graphics_init(bool mousecapture)
 	// Disable the render thread under OpenGL (not supported)
 	amiberry_options.use_sdl2_render_thread = false;
 #endif
+#ifdef USE_DISPMANX
+	if (display_pipe == nullptr) {
+		display_pipe = xmalloc(smp_comm_pipe, 1);
+		init_comm_pipe(display_pipe, 20, 1);
+	}
+	if (display_sem == nullptr) {
+		uae_sem_init(&display_sem, 0, 0);
+	}
+	if (display_tid == nullptr && display_pipe != nullptr && display_sem != nullptr) {
+		uae_start_thread(_T("display thread"), display_thread, nullptr, &display_tid);
+	}
+	write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_SETUP, 1);
+#endif
 
 	inputdevice_unacquire();
 	graphics_subinit();
@@ -2216,6 +2230,18 @@ void graphics_leave()
 	graphics_subshutdown();
 
 #ifdef USE_DISPMANX
+	if (display_tid != nullptr) {
+		write_comm_pipe_u32(display_pipe, DISPLAY_SIGNAL_QUIT, 1);
+		while (display_tid != nullptr) {
+			sleep_millis(10);
+		}
+		destroy_comm_pipe(display_pipe);
+		xfree(display_pipe);
+		display_pipe = nullptr;
+		uae_sem_destroy(&display_sem);
+		display_sem = nullptr;
+	}
+
 	bcm_host_deinit();
 #elif USE_OPENGL
 	if (gl_texture != 0)
