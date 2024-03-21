@@ -904,7 +904,7 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 		auto err = doc.LoadFile(f);
 		if (err != tinyxml2::XML_SUCCESS)
 		{
-			write_log(_T("Failed to parse '%s':  %d\n"), whd_config, err);
+			write_log(_T("Failed to parse '%s':  %d\n"), whd_config.c_str(), err);
 			error = true;
 		}
 		fclose(f);
