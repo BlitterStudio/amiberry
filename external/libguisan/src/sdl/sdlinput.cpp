@@ -164,8 +164,10 @@ namespace gcn {
 				keyInput.setNumericPad(event.key.keysym.sym >= SDLK_KP_0
 				                       && event.key.keysym.sym <= SDLK_KP_EQUALS);
 
-				if (!keyInput.getKey().isPrintable() || keyInput.isAltPressed()
-				    || keyInput.isControlPressed()) {
+				if (!keyInput.getKey().isPrintable() 
+					|| keyInput.isAltPressed()
+				    || keyInput.isControlPressed()
+					|| keyInput.getKey().getValue() == Key::ENTER) {
 					mKeyInputQueue.push(keyInput);
 				}
 				break;
