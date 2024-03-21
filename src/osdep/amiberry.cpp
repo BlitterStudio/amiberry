@@ -2960,11 +2960,9 @@ std::string get_savedatapath(const bool force_internal)
 	}
 	else {
 		result = get_whdbootpath();
-		result.append("/save-data");
+		result.append("save-data");
 	}
-
 	write_log("%s savedatapath [%s]\n", isOverridden ? "external" : "internal", result.c_str());
-
 	return result;
 }
 

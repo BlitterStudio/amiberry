@@ -274,6 +274,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	rom_key_destination_path /= "rom.key";
 
 	if (std::filesystem::exists(rom_key_source_path) && !std::filesystem::exists(rom_key_destination_path)) {
+		write_log("Making SymLink for rom.key\n");
 		try {
 			std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
 		}
@@ -1265,17 +1266,20 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		// create a symlink to WHDLoad in /tmp/amiberry/
 		whd_path = whdbooter_path / "WHDLoad";
 		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
+			write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
 			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
 		}
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
 		whd_path = whdbooter_path / "AmiQuit";
 		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/AmiQuit")) {
+			write_log("WHDBooter - Creating symlink to AmiQuit in /tmp/amiberry/c/ \n");
 			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
 		}
 
 		// create a symlink for DEVS in /tmp/amiberry/
 		if (!std::filesystem::exists("/tmp/amiberry/devs/Kickstarts")) {
+			write_log("WHDBooter - Creating symlink to Kickstarts in /tmp/amiberry/devs/ \n");
 			std::filesystem::create_symlink(kickstart_path, "/tmp/amiberry/devs/Kickstarts");
 		}
 	}
@@ -1329,23 +1333,30 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	if (is_aga || is_cd32 || !a600_available)
 	{
 		// SET THE BASE AMIGA (Expanded A1200)
+		write_log("WHDBooter - Host: A1200 ROM selected\n");
 		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
 	}
 	else
 	{
 		// SET THE BASE AMIGA (Expanded A600)
+		write_log("WHDBooter - Host: A600 ROM selected\n");
 		built_in_prefs(prefs, 2, A600_CONFIG, 0, 0);
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad]"));
 	}
 
 	// SET THE WHD BOOTER AND GAME DATA
+	write_log("WHDBooter - Host: setting up drives\n");
 	set_booter_drives(prefs, filepath);
 
 	// APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
+	write_log("WHDBooter - Host: setting up controllers\n");
 	set_input_settings(prefs, game_detail, is_cd32);
 
 	//  SET THE GAME COMPATIBILITY SETTINGS
 	// BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC
+	write_log("WHDBooter - Host: setting up game compatibility settings\n");
 	set_compatibility_settings(prefs, game_detail, a600_available, is_aga || is_cd32);
+
+	write_log("WHDBooter - Host: settings applied\n\n");
 }
