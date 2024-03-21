@@ -1985,6 +1985,9 @@ void DX_Fill(struct AmigaMonitor* mon, int dstx, int dsty, int width, int height
 
 void clearscreen()
 {
+#ifdef USE_DISPMANX
+	wait_for_display_thread();
+#endif
 	if (amiga_surface != nullptr)
 	{
 		SDL_FillRect(amiga_surface, nullptr, 0);
