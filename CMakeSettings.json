@@ -27,6 +27,20 @@
       "wslPath": "${defaultWSLPath}"
     },
     {
+      "name": "WSL-GCC-ReleaseDebInfo",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeExecutable": "cmake",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "linux_x64" ],
+      "wslPath": "${defaultWSLPath}",
+      "variables": []
+    },
+    {
       "name": "Linux-arm-GCC-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
@@ -81,8 +95,7 @@
       "remoteCopySources": true,
       "rsyncCommandArgs": "-t --delete",
       "remoteCopyBuildOutput": false,
-      "remoteCopySourcesMethod": "rsync",
-      "variables": []
+      "remoteCopySourcesMethod": "rsync"
     }
   ]
 }
