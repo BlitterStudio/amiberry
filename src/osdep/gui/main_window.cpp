@@ -258,7 +258,12 @@ void update_gui_screen()
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, nullptr, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+	else
+		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
+	
+	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(mon->gui_renderer);
 }
 
