@@ -464,18 +464,26 @@ static struct zfile *archive_do_zip (struct znode *zn, struct zfile *z, int flag
 	if (z) {
 		int err = -1;
 		if (!(flags & FILE_DELAYEDOPEN) || z->size <= PEEK_BYTES) {
+#ifdef DEBUG
 			write_log (_T("ZIP: unpacking %s, flags=%d\n"), name, flags);
+#endif
 			err = unzReadCurrentFile (uz, z->data, (unsigned int)z->datasize);
+#ifdef DEBUG
 			write_log (_T("ZIP: unpacked, code=%d\n"), err);
+#endif
 		} else {
 			z->archiveparent = zfile_dup (zn->volume->archive);
 			if (z->archiveparent) {
+#ifdef DEBUG
 				write_log (_T("ZIP: delayed open '%s'\n"), name);
+#endif
 				xfree (z->archiveparent->name);
 				z->archiveparent->name = my_strdup (tmp);
 				z->datasize = PEEK_BYTES;
 				err = unzReadCurrentFile (uz, z->data, (unsigned int)z->datasize);
+#ifdef DEBUG
 				write_log (_T("ZIP: unpacked, code=%d\n"), err);
+#endif
 			} else {
 				write_log (_T("ZIP: unpacking %s (failed DELAYEDOPEN)\n"), name);
 				err = unzReadCurrentFile (uz, z->data, (unsigned int)z->datasize);
