@@ -91,6 +91,7 @@ extern void fetch_ripperpath (TCHAR *out, int size);
 extern void get_savestate_path(char* out, int size);
 extern void fetch_inputfilepath (TCHAR *out, int size);
 extern std::string get_data_path();
+extern std::string get_rom_path();
 extern void get_rom_path(char* out, int size);
 extern void get_video_path(char* out, int size);
 extern void get_floppy_sounds_path(char* out, int size);
