@@ -92,7 +92,9 @@ static int gl_have_error(const char* name)
 	return 0;
 }
 #else
+#ifndef USE_DISPMANX
 SDL_Texture* amiga_texture;
+#endif
 #endif
 
 SDL_Rect renderQuad;
