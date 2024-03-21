@@ -113,7 +113,7 @@ extern void set_controllers_path(const std::string& newpath);
 extern std::string get_retroarch_file();
 extern void set_retroarch_file(const std::string& newpath);
 
-extern int get_savedatapath(char* out, int size, int force_internal);
+extern std::string get_savedatapath(bool force_internal);
 extern std::string get_whdbootpath();
 extern void set_whdbootpath(const std::string& newpath);
 extern std::string get_whdload_arch_path();

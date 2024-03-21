@@ -160,7 +160,7 @@ static const TCHAR *compmode[] = { _T("direct"), _T("indirect"), _T("indirectKS"
 static const TCHAR *flushmode[] = { _T("soft"), _T("hard"), 0 };
 static const TCHAR *kbleds[] = { _T("none"), _T("POWER"), _T("DF0"), _T("DF1"), _T("DF2"), _T("DF3"), _T("HD"), _T("CD"), _T("DFx"), 0 };
 static const TCHAR *onscreenleds[] = { _T("false"), _T("true"), _T("rtg"), _T("both"), 0 };
-static const TCHAR *soundfiltermode1[] = { _T("off"), _T("emulated"), _T("on"), 0 };
+static const TCHAR *soundfiltermode1[] = { _T("off"), _T("emulated"), _T("on"), _T("fixedonly"), 0 };
 static const TCHAR *soundfiltermode2[] = { _T("standard"), _T("enhanced"), 0 };
 static const TCHAR *lorestype1[] = { _T("lores"), _T("hires"), _T("superhires"), 0 };
 static const TCHAR *lorestype2[] = { _T("true"), _T("false"), 0 };
@@ -2532,6 +2532,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("genlockmode"), genlockmodes, p->genlock_image);
 	cfgfile_dwrite_str(f, _T("genlock_image"), p->genlock_image_file);
 	cfgfile_dwrite_str(f, _T("genlock_video"), p->genlock_video_file);
+	cfgfile_dwrite_str(f, _T("genlock_font"), p->genlock_font);
 	cfgfile_dwrite(f, _T("genlock_mix"), _T("%d"), p->genlock_mix);
 	cfgfile_dwrite(f, _T("genlock_scale"), _T("%d"), p->genlock_scale);
 	cfgfile_dwrite(f, _T("genlock_offset_x"), _T("%d"), p->genlock_offset_x);
@@ -6018,6 +6019,8 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_intval(option, value, _T("monitoremu_monitor"), &p->monitoremu_mon, 1)
 		|| cfgfile_intval(option, value, _T("genlock_scale"), &p->genlock_scale, 1)
 		|| cfgfile_intval(option, value, _T("genlock_mix"), &p->genlock_mix, 1)
+		|| cfgfile_intval(option, value, _T("genlock_offset_x"), &p->genlock_offset_x, 1)
+		|| cfgfile_intval(option, value, _T("genlock_offset_y"), &p->genlock_offset_y, 1)
 		|| cfgfile_intval(option, value, _T("keyboard_handshake"), &p->cs_kbhandshake, 1)
 		|| cfgfile_intval(option, value, _T("eclockphase"), &p->cs_eclockphase, 1)
 		|| cfgfile_intval(option, value, _T("chipset_rtc_adjust"), &p->cs_rtc_adjust, 1)
@@ -6074,6 +6077,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_path(option, value, _T("picassoiv_rom_file"), p->picassoivromfile, sizeof p->picassoivromfile / sizeof(TCHAR), &p->path_rom)
 		|| cfgfile_string(option, value, _T("genlock_image"), p->genlock_image_file, sizeof p->genlock_image_file / sizeof(TCHAR))
 		|| cfgfile_string(option, value, _T("genlock_video"), p->genlock_video_file, sizeof p->genlock_video_file / sizeof(TCHAR))
+		|| cfgfile_string(option, value, _T("genlock_font"), p->genlock_font, sizeof p->genlock_font / sizeof(TCHAR))
 		|| cfgfile_string(option, value, _T ("pci_devices"), p->pci_devices, sizeof p->pci_devices / sizeof(TCHAR))
 		|| cfgfile_string (option, value, _T("ghostscript_parameters"), p->ghostscript_parameters, sizeof p->ghostscript_parameters / sizeof (TCHAR)))
 		return 1;
@@ -6698,7 +6702,7 @@ void cfgfile_compatibility_romtype(struct uae_prefs *p)
 		ROMTYPE_HYDRA, ROMTYPE_LANROVER,
 		0 };
 	static const int restricted_x86[] = { ROMTYPE_A1060, ROMTYPE_A2088, ROMTYPE_A2088T, ROMTYPE_A2286, ROMTYPE_A2386, 0 };
-	static const int restricted_pci[] = { ROMTYPE_GREX, ROMTYPE_MEDIATOR, ROMTYPE_PROMETHEUS, 0 };
+	static const int restricted_pci[] = { ROMTYPE_GREX, ROMTYPE_MEDIATOR, ROMTYPE_PROMETHEUS, ROMTYPE_PROMETHEUSFS, 0 };
 	romtype_restricted(p, restricted_net);
 	romtype_restricted(p, restricted_x86);
 	romtype_restricted(p, restricted_pci);
@@ -8785,6 +8789,7 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->genlock = 0;
 	p->genlock_image = 0;
 	p->genlock_image_file[0] = 0;
+	p->genlock_font[0] = 0;
 	
 	p->ne2000pciname[0] = 0;
 	p->ne2000pcmcianame[0] = 0;

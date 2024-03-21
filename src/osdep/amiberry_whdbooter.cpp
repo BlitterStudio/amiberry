@@ -5,6 +5,8 @@
  *
  */
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -17,7 +19,6 @@
 #include "rommgr.h"
 #include "fsdb.h"
 #include "tinyxml2.h"
-#include <fstream>
 
 extern void SetLastActiveConfig(const char* filename);
 extern std::string current_dir;
@@ -60,16 +61,16 @@ struct game_hardware_options
 	std::string fastcopper = "nul";
 };
 
-std::string whdbooter_path;
-TCHAR boot_path[MAX_DPATH];
-TCHAR save_path[MAX_DPATH];
-TCHAR conf_path[MAX_DPATH];
-TCHAR whd_path[MAX_DPATH];
-TCHAR kick_path[MAX_DPATH];
+std::filesystem::path whdbooter_path;
+std::filesystem::path boot_path;
+std::filesystem::path save_path;
+std::filesystem::path conf_path;
+std::filesystem::path whd_path;
+std::filesystem::path kickstart_path;
 
-TCHAR uae_config[255];
-TCHAR whd_config[255];
-TCHAR whd_startup[255];
+std::string uae_config;
+std::string whd_config;
+std::string whd_startup;
 
 static TCHAR* parse_text(const TCHAR* s)
 {
@@ -203,59 +204,56 @@ game_hardware_options get_game_hardware_settings(const std::string& hardware)
 	return output_detail;
 }
 
-void make_rom_symlink(const char* kick_short, int kick_numb, struct uae_prefs* p)
+void make_rom_symlink(const std::string& kickstart_short_name, const int kickstart_number, struct uae_prefs* prefs)
 {
-	char kick_long[MAX_DPATH];
-	int roms[2] = { -1,-1 };
+	std::filesystem::path kickstart_long_path = kickstart_path;
+	kickstart_long_path /= kickstart_short_name;
 
-	// do the checks...
-	_sntprintf(kick_long, MAX_DPATH, "%s/%s", kick_path, kick_short);
-
-	// this should sort any broken links (only remove if a link, not a file. See vfat handling of link below)
-	// Only remove file IF it is a symlink.
-	// On VFAT USB stick, the roms are copied not symlinked, which takes a long time, also the user
-	// may have provided their own rom files, so we do not want to remove and replace those.
-	//
-	if (my_existslink(kick_long)) {
-		my_unlink(kick_long);
+	// Remove the symlink if it already exists
+	if (std::filesystem::is_symlink(kickstart_long_path)) {
+		std::filesystem::remove(kickstart_long_path);
 	}
 
-	if (!my_existsfile2(kick_long))
+	if (!std::filesystem::exists(kickstart_long_path))
 	{
-		roms[0] = kick_numb;
-		const auto rom_test = configure_rom(p, roms, 0);
-		if (rom_test == 1)
+		const int roms[2] = { kickstart_number, -1 };
+		if (configure_rom(prefs, roms, 0) == 1)
 		{
-			int r = symlink(p->romfile, kick_long);
-			// VFAT filesystems do not support creation of symlinks.
-			// Fallback to copying file if filesystem does not support the generation of symlinks
-			if (r < 0 && errno == EPERM)
-				r = copyfile(kick_long, p->romfile, true);
-			write_log("Making SymLink for Kickstart ROM: %s  [%s]\n", kick_long, r < 0 ? "Fail" : "Ok");
+			try {
+				std::filesystem::create_symlink(prefs->romfile, kickstart_long_path);
+				write_log("Making SymLink for Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				if (e.code() == std::errc::operation_not_permitted) {
+					// Fallback to copying file if filesystem does not support the generation of symlinks
+					std::filesystem::copy(prefs->romfile, kickstart_long_path);
+					write_log("Copying Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+				}
+				else {
+					write_log("Error creating SymLink for Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
+				}
+			}
 		}
 	}
 }
 
 void symlink_roms(struct uae_prefs* prefs)
 {
-	TCHAR tmp[MAX_DPATH];
-	TCHAR tmp2[MAX_DPATH];
-
 	write_log("SymLink Kickstart ROMs for Booter\n");
 
 	// here we can do some checks for Kickstarts we might need to make symlinks for
 	current_dir = start_path_data;
 
 	// are we using save-data/ ?
-	get_savedatapath(tmp, MAX_DPATH, 1);
-	_sntprintf(kick_path, MAX_DPATH, _T("%s/Kickstarts"), tmp);
+	kickstart_path = get_savedatapath(true);
+	kickstart_path /= "Kickstarts";
 
-	if (!my_existsdir(kick_path)) {
+	if (!std::filesystem::exists(kickstart_path)) {
 		// otherwise, use the old route
 		whdbooter_path = get_whdbootpath();
-		_sntprintf(kick_path, MAX_DPATH, _T("%sgame-data/Devs/Kickstarts"), whdbooter_path.c_str());
+		kickstart_path = whdbooter_path / "game-data" / "Devs" / "Kickstarts";
 	}
-	write_log("WHDBoot - using kickstarts from %s\n", kick_path);
+	write_log("WHDBoot - using kickstarts from %s\n", kickstart_path.c_str());
 
 	// These are all the kickstart rom files found in skick346.lha
 	//   http://aminet.net/package/util/boot/skick346
@@ -270,16 +268,23 @@ void symlink_roms(struct uae_prefs* prefs)
 
 	// Symlink rom.key also
 	// source file
-	get_rom_path(tmp2, MAX_DPATH);
-	_sntprintf(tmp, MAX_DPATH, _T("%s/rom.key"), tmp2);
+	std::filesystem::path rom_key_source_path = get_rom_path();
+	rom_key_source_path /= "rom.key";
 
 	// destination file (symlink)
-	_sntprintf(tmp2, MAX_DPATH, _T("%s/rom.key"), kick_path);
+	std::filesystem::path rom_key_destination_path = kickstart_path;
+	rom_key_destination_path /= "rom.key";
 
-	if (my_existsfile2(tmp)) {
-		const int r = symlink(tmp, tmp2);
-		if (r < 0 && errno == EPERM)
-			copyfile(tmp2, tmp, true);
+	if (std::filesystem::exists(rom_key_source_path) && !std::filesystem::exists(rom_key_destination_path)) {
+		try {
+			std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
+		}
+		catch (std::filesystem::filesystem_error& e) {
+			if (e.code() == std::errc::operation_not_permitted) {
+				// Fallback to copying file if filesystem does not support the generation of symlinks
+				std::filesystem::copy(rom_key_source_path, rom_key_destination_path);
+			}
+		}
 	}
 }
 
@@ -318,9 +323,7 @@ void clear_jports(uae_prefs* prefs)
 
 void build_uae_config_filename(const std::string& game_name)
 {
-	_tcscpy(uae_config, conf_path);
-	_tcscat(uae_config, game_name.c_str());
-	_tcscat(uae_config, ".uae");
+	uae_config = (conf_path / (game_name + ".uae")).string();
 }
 
 void cd_auto_prefs(uae_prefs* prefs, char* filepath)
@@ -329,16 +332,16 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	write_log("\nCD Autoload: %s  \n\n", filepath);
 
-	get_configuration_path(conf_path, MAX_DPATH);
+	conf_path = get_configuration_path();
 	whdload_prefs.filename = get_game_filename(filepath);
 
 	// LOAD GAME SPECIFICS FOR EXISTING .UAE - USE SHA1 IF AVAILABLE
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename(whdload_prefs.filename);
 
-	if (my_existsfile2(uae_config))
+	if (std::filesystem::exists(uae_config))
 	{
-		target_cfgfile_load(prefs, uae_config, CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_ALL, 0);
 		return;
 	}
 
@@ -994,13 +997,13 @@ game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* file
 	auto error = false;
 	write_log(_T("WHDBooter - Searching whdload_db.xml for %s\n"), whdload_prefs.filename.c_str());
 
-	auto* f = fopen(whd_config, _T("rb"));
+	auto* f = fopen(whd_config.c_str(), _T("rb"));
 	if (f)
 	{
 		auto err = doc.LoadFile(f);
 		if (err != tinyxml2::XML_SUCCESS)
 		{
-			write_log(_T("Failed to parse '%s':  %d\n"), whd_config, err);
+			write_log(_T("Failed to parse '%s':  %d\n"), whd_config.c_str(), err);
 			error = true;
 		}
 		fclose(f);
@@ -1211,7 +1214,7 @@ void create_startup_sequence()
 	}
 
 	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
-	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup);
+	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup.c_str());
 
 	std::ofstream myfile(whd_startup);
 	if (myfile.is_open())
@@ -1230,58 +1233,58 @@ bool is_a600_available(uae_prefs* prefs)
 
 void set_booter_drives(uae_prefs* prefs, const char* filepath)
 {
-	TCHAR tmp[MAX_DPATH];
+	std::string tmp;
 
 	if (!whdload_prefs.selected_slave.filename.empty()) // new booter solution
 	{
-		_sntprintf(boot_path, MAX_DPATH, "/tmp/amiberry/");
+		boot_path = "/tmp/amiberry/";
 
-		_sntprintf(tmp, MAX_DPATH, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "filesystem2=rw,DH0:DH0:" + boot_path.string() + ",10";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
-		_sntprintf(tmp, MAX_DPATH, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "uaehf0=dir,rw,DH0:DH0::" + boot_path.string() + ",10";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
-		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbooter_path.c_str());
-		if (!my_existsfile2(boot_path))
-			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path.c_str());
+		boot_path = whdbooter_path / "boot-data.zip";
+		if (!std::filesystem::exists(boot_path))
+			boot_path = whdbooter_path / "boot-data";
 
-		_sntprintf(tmp, MAX_DPATH, _T("filesystem2=rw,DH3:DH3:%s,-10"), boot_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "filesystem2=rw,DH3:DH3:" + boot_path.string() + ",-10";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
-		_sntprintf(tmp, MAX_DPATH, _T("uaehf0=dir,rw,DH3:DH3::%s,-10"), boot_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "uaehf0=dir,rw,DH3:DH3::" + boot_path.string() + ",-10";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 	}
 	else // revert to original booter is no slave was set
 	{
-		_sntprintf(boot_path, MAX_DPATH, "%sboot-data.zip", whdbooter_path.c_str());
-		if (!my_existsfile2(boot_path))
-			_sntprintf(boot_path, MAX_DPATH, "%sboot-data/", whdbooter_path.c_str());
+		boot_path = whdbooter_path / "boot-data.zip";
+		if (!std::filesystem::exists(boot_path))
+			boot_path = whdbooter_path / "boot-data";
 
-		_sntprintf(tmp, MAX_DPATH, _T("filesystem2=rw,DH0:DH0:%s,10"), boot_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "filesystem2=rw,DH0:DH0:" + boot_path.string() + ",10";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
-		_sntprintf(tmp, MAX_DPATH, _T("uaehf0=dir,rw,DH0:DH0::%s,10"), boot_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "uaehf0=dir,rw,DH0:DH0::" + boot_path.string() + ",10";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 	}
 
 	//set the Second (game data) drive
-	_sntprintf(tmp, MAX_DPATH, "filesystem2=rw,DH1:Games:\"%s\",0", filepath);
-	cfgfile_parse_line(prefs, parse_text(tmp), 0);
+	tmp = "filesystem2=rw,DH1:Games:\"" + std::string(filepath) + "\",0";
+	cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
-	_sntprintf(tmp, MAX_DPATH, "uaehf1=dir,rw,DH1:Games:\"%s\",0", filepath);
-	cfgfile_parse_line(prefs, parse_text(tmp), 0);
+	tmp = "uaehf1=dir,rw,DH1:Games:\"" + std::string(filepath) + "\",0";
+	cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
 	//set the third (save data) drive
-	_sntprintf(whd_path, MAX_DPATH, "%s/", save_path);
+	whd_path = save_path / "";
 
-	if (my_existsdir(save_path))
+	if (std::filesystem::exists(save_path))
 	{
-		_sntprintf(tmp, MAX_DPATH, "filesystem2=rw,DH2:Saves:%s,0", save_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "filesystem2=rw,DH2:Saves:" + save_path.string() + ",0";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
-		_sntprintf(tmp, MAX_DPATH, "uaehf2=dir,rw,DH2:Saves:%s,0", save_path);
-		cfgfile_parse_line(prefs, parse_text(tmp), 0);
+		tmp = "uaehf2=dir,rw,DH2:Saves:" + save_path.string() + ",0";
+		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 	}
 }
 
@@ -1289,9 +1292,9 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
 	write_log("WHDBooter Launched\n");
 
-	get_configuration_path(conf_path, MAX_DPATH);
+	conf_path = get_configuration_path();
 	whdbooter_path = get_whdbootpath();
-	get_savedatapath(save_path, MAX_DPATH, 0 );
+	save_path = get_savedatapath(false);
 
 	symlink_roms(prefs);
 
@@ -1317,34 +1320,32 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 
 	// If we have a config file, we will use it.
 	// We will need it for the WHDLoad options too.
-	if (my_existsfile2(uae_config))
+	if (std::filesystem::exists(uae_config))
 	{
-		write_log("WHDBooter -  %s found. Loading Config for WHDLoad options.\n", uae_config);
-		target_cfgfile_load(&currprefs, uae_config, CONFIG_TYPE_ALL, 0);
+		write_log("WHDBooter -  %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
+		target_cfgfile_load(&currprefs, uae_config.c_str(), CONFIG_TYPE_ALL, 0);
 	}
 
 	// setups for tmp folder.
-	my_mkdir("/tmp/amiberry");
-	my_mkdir("/tmp/amiberry/s");
-	my_mkdir("/tmp/amiberry/c");
-	my_mkdir("/tmp/amiberry/devs");
-	_tcscpy(whd_startup, "/tmp/amiberry/s/startup-sequence");
-	remove(whd_startup);
+	std::filesystem::create_directories("/tmp/amiberry/s");
+	std::filesystem::create_directories("/tmp/amiberry/c");
+	std::filesystem::create_directories("/tmp/amiberry/devs");
+	whd_startup = "/tmp/amiberry/s/startup-sequence";
+	std::filesystem::remove(whd_startup);
 
 	// LOAD HOST OPTIONS
-	_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbooter_path.c_str());
+	whd_path = whdbooter_path / "WHDLoad";
 
 	// are we using save-data/ ?
-	_sntprintf(kick_path, MAX_DPATH, "%s/Kickstarts", save_path);
+	kickstart_path = std::filesystem::path(get_savedatapath(true)) / "Kickstarts";
 
 	// LOAD GAME SPECIFICS
-	_sntprintf(whd_path, MAX_DPATH, "%sgame-data/", whdbooter_path.c_str());
+	whd_path = whdbooter_path / "game-data";
 	game_hardware_options game_detail;
 
-	_tcscpy(whd_config, whd_path);
-	_tcscat(whd_config, "whdload_db.xml");
+	whd_config = whd_path / "whdload_db.xml";
 
-	if (my_existsfile2(whd_config))
+	if (std::filesystem::exists(whd_config))
 	{
 		game_detail = parse_settings_from_xml(prefs, filepath);
 	}
@@ -1360,18 +1361,24 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	}
 
 	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
-	if (my_existsfile2(whd_startup))
+	if (std::filesystem::exists(whd_startup))
 	{
 		// create a symlink to WHDLoad in /tmp/amiberry/
-		_sntprintf(whd_path, MAX_DPATH, "%sWHDLoad", whdbooter_path.c_str());
-		symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
+		whd_path = whdbooter_path / "WHDLoad";
+		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
+			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
+		}
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
-		_sntprintf(whd_path, MAX_DPATH, "%sAmiQuit", whdbooter_path.c_str());
-		symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
+		whd_path = whdbooter_path / "AmiQuit";
+		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/AmiQuit")) {
+			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
+		}
 
 		// create a symlink for DEVS in /tmp/amiberry/
-		symlink(kick_path, "/tmp/amiberry/devs/Kickstarts");
+		if (!std::filesystem::exists("/tmp/amiberry/devs/Kickstarts")) {
+			std::filesystem::create_symlink(kickstart_path, "/tmp/amiberry/devs/Kickstarts");
+		}
 	}
 #if DEBUG
 	// debugging code!
@@ -1407,9 +1414,9 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 #endif
 
 	// if we already loaded a .uae config, we don't need to do the below manual setup for hardware
-	if (my_existsfile2(uae_config))
+	if (std::filesystem::exists(uae_config))
 	{
-		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config);
+		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config.c_str());
 		return;
 	}
 

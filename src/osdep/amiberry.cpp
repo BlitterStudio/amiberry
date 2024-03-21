@@ -2869,6 +2869,12 @@ void get_saveimage_path(char* out, int size, int dir)
 	_tcsncpy(out, fix_trailing(saveimage_dir).c_str(), size - 1);
 }
 
+std::string get_configuration_path()
+{
+	return fix_trailing(config_path);
+
+}
+
 void get_configuration_path(char* out, int size)
 {
 	_tcsncpy(out, fix_trailing(config_path).c_str(), size - 1);
@@ -2929,25 +2935,22 @@ void set_logfile_enabled(bool enabled)
 	amiberry_options.write_logfile = enabled;
 }
 
-// Returns 1 if savedatapath is overridden
 // if force_internal == true, the non-overridden whdbootpath based save-data path will be returned
-int get_savedatapath(char* out, int size, const int force_internal)
+std::string get_savedatapath(const bool force_internal)
 {
-	int ret = 0;
+	std::string result;
+	bool isOverridden = false;
 
-	if (const char* ep = force_internal ? NULL : getenv("WHDBOOT_SAVE_DATA"); ep != NULL) {
-		_tcsncpy(out, ep, static_cast<size_t>(size) - 1);
-		ret = 1;
+	if (!force_internal && std::getenv("WHDBOOT_SAVE_DATA")) {
+		result = std::getenv("WHDBOOT_SAVE_DATA");
+		isOverridden = true;
 	}
 	else {
-		const std::string tmp = get_whdbootpath();
-		_tcsncpy(out, tmp.c_str(), static_cast<size_t>(size) - 1);
-		strncat(out, "save-data", static_cast<size_t>(size) - 1);
+		result = get_whdbootpath();
+		result.append("save-data");
 	}
-
-	write_log("%s savedatapath [%s]\n", ret ? "external" : "internal", out);
-
-	return ret;
+	write_log("%s savedatapath [%s]\n", isOverridden ? "external" : "internal", result.c_str());
+	return result;
 }
 
 std::string get_whdbootpath()
@@ -2978,6 +2981,11 @@ std::string get_logfile_path()
 void set_logfile_path(const std::string& newpath)
 {
 	logfile_path = newpath;
+}
+
+std::string get_rom_path()
+{
+	return fix_trailing(rom_path);
 }
 
 void get_rom_path(char* out, int size)

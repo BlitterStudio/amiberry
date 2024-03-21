@@ -120,5 +120,4 @@ struct gfxboard_func
 	GFXBOARD_CONFIGURED configured;
 };
 
-
 #endif /* UAE_GFXBOARD_H */

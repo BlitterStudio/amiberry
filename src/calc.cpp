@@ -32,6 +32,14 @@
 #define MAX_VALUES 32
 #define IOBUFFERS 256
 
+#ifdef DEBUGGER
+uae_u32 get_byte_debug(uaecptr addr);
+uae_u32 get_word_debug(uaecptr addr);
+uae_u32 get_long_debug(uaecptr addr);
+int getregidx(TCHAR **c);
+uae_u32 returnregx(int regid);
+#endif
+
 static double parsedvaluesd[MAX_VALUES];
 static TCHAR *parsedvaluess[MAX_VALUES];
 
@@ -394,6 +402,17 @@ static bool docalcx(TCHAR op, double v1, double v2, double *valp)
         case ':':
         v = v1;
         break;
+#ifdef DEBUGGER
+        case 0xf0:
+        v = get_byte_debug((uaecptr)v1);
+        break;
+        case 0xf1:
+        v = get_word_debug((uaecptr)v1);
+        break;
+        case 0xf2:
+        v = get_long_debug((uaecptr)v1);
+        break;
+#endif
         default:
         return false;
     }

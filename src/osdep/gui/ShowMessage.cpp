@@ -610,9 +610,7 @@ static void ShowMessageLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-
 		SDL_RenderClear(mon->sdl_renderer);
-
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.

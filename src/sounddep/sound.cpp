@@ -256,6 +256,9 @@ extern void setvolume_ahi(int);
 void set_volume_sound_device(struct sound_data* sd, int volume, int mute)
 {
 	sound_dp* s = sd->data;
+	if (!s) {
+		return;
+	}
 	if (sd->devicetype == SOUND_DEVICE_SDL2)
 	{
 		if (volume < 100 && !mute)

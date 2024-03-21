@@ -83,3 +83,4 @@ extern int active_sound_stereo;
 
 #define FILTER_SOUND_TYPE_A500 0
 #define FILTER_SOUND_TYPE_A1200 1
+#define FILTER_SOUND_TYPE_A500_FIXEDONLY 2

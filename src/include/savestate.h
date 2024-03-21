@@ -204,6 +204,9 @@ extern uae_u8 *save_screenshot(int monid, size_t *len);
 extern uae_u8 *save_cycles(size_t *len, uae_u8 *dstptr);
 extern uae_u8 *restore_cycles(uae_u8 *src);
 
+extern uae_u8 *save_alg(size_t *len);
+extern uae_u8 *restore_alg(uae_u8 *src);
+
 extern void restore_cram(int, size_t);
 extern void restore_bram(int, size_t);
 extern void restore_fram(int, size_t, int);

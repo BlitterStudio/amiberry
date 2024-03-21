@@ -583,4 +583,9 @@ void statusline_render(int monid, uae_u8 *buf, int bpp, int pitch, int width, in
 {
 
 }
+
+void ldp_render(const char* txt, int len, uae_u8* buf, struct vidbuffer*, int x, int y, int mx, int my)
+{
+	//TODO: Implement
+}
 #endif

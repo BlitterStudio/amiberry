@@ -7816,7 +7816,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 				else if (JSEM_ISSOMEWHEREELSE (i, prefs))
 					kb = keyboard_default_kbmaps[KBR_DEFAULT_MAP_SE];
 				if (kb) {
-					setcompakb (prefs, kb, i == 3 ? ip_parjoy2default : ip_parjoy1default, i, prefs->jports[i].autofire);
+					setcompakb(prefs, kb, i == 3 ? ip_parjoy2default : ip_parjoy1default, i, prefs->jports[i].autofire);
 					used[joy] = 1;
 					joymodes[i] = JSEM_MODE_JOYSTICK;
 				}
@@ -9949,7 +9949,7 @@ void pausemode (int mode)
 
 int jsem_isjoy (int port, const struct uae_prefs *p)
 {
-	int v = JSEM_DECODEVAL (port, p);
+	int v = JSEM_DECODEVAL(port, p);
 	if (v < JSEM_JOYS)
 		return -1;
 	v -= JSEM_JOYS;

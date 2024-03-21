@@ -1437,15 +1437,17 @@ static void x86_irq(int irq, bool state)
 
 void draco_free(void)
 {
-	TCHAR path[MAX_DPATH];
-	cfgfile_resolve_path_out_load(currprefs.flashfile, path, MAX_DPATH, PATH_ROM);
-	struct zfile *draco_flashfile = zfile_fopen(path, _T("wb"), ZFD_NORMAL);
-	if (draco_flashfile) {
-		uae_u8 zeros[8] = { 0 };
-		zfile_fwrite(draco_1wire_rom, sizeof(draco_1wire_rom), 1, draco_flashfile);
-		zfile_fwrite(zeros, sizeof(zeros), 1, draco_flashfile);
-		zfile_fwrite(draco_1wire_sram, sizeof(draco_1wire_sram), 1, draco_flashfile);
-		zfile_fclose(draco_flashfile);
+	if (currprefs.cs_compatible == CP_DRACO || currprefs.cs_compatible == CP_CASABLANCA) {
+		TCHAR path[MAX_DPATH];
+		cfgfile_resolve_path_out_load(currprefs.flashfile, path, MAX_DPATH, PATH_ROM);
+		struct zfile *draco_flashfile = zfile_fopen(path, _T("wb"), ZFD_NORMAL);
+		if (draco_flashfile) {
+			uae_u8 zeros[8] = { 0 };
+			zfile_fwrite(draco_1wire_rom, sizeof(draco_1wire_rom), 1, draco_flashfile);
+			zfile_fwrite(zeros, sizeof(zeros), 1, draco_flashfile);
+			zfile_fwrite(draco_1wire_sram, sizeof(draco_1wire_sram), 1, draco_flashfile);
+			zfile_fclose(draco_flashfile);
+		}
 	}
 	xfree(draco_mouse_base);
 	draco_mouse_base = NULL;

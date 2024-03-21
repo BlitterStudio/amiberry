@@ -434,7 +434,8 @@ static float filter_a0; /* a500 and a1200 use the same */
 enum {
 	FILTER_NONE = 0,
 	FILTER_MODEL_A500,
-	FILTER_MODEL_A1200
+	FILTER_MODEL_A1200,
+	FILTER_MODEL_A500_FIXEDONLY
 };
 
 /* Amiga has two separate filtering circuits per channel, a static RC filter
@@ -471,6 +472,13 @@ static int filter (int input, struct filter_state *fs)
 		fs->rc5 = filter_a0 * fs->rc4       + (1 - filter_a0) * fs->rc5;
 
 		led_output = fs->rc5;
+		break;
+
+	case FILTER_MODEL_A500_FIXEDONLY:
+		fs->rc1 = (float)(a500e_filter1_a0 * input + (1.0f - a500e_filter1_a0) * fs->rc1 + DENORMAL_OFFSET);
+		fs->rc2 = a500e_filter2_a0 * fs->rc1 + (1.0f - a500e_filter2_a0) * fs->rc2;
+		normal_output = fs->rc2;
+		led_output = fs->rc2;
 		break;
 
 	case FILTER_MODEL_A1200:
@@ -628,7 +636,7 @@ static void samplexx_sinc_handler (int *datasp, int ch_start, int ch_num)
 	int const *winsinc;
 
 	if (sound_use_filter_sinc && ch_start == 0) {
-		n = (sound_use_filter_sinc == FILTER_MODEL_A500) ? 0 : 2;
+		n = (sound_use_filter_sinc == FILTER_MODEL_A500 || sound_use_filter_sinc == FILTER_MODEL_A500_FIXEDONLY) ? 0 : 2;
 		if (led_filter_on)
 			n += 1;
 	} else {
@@ -2203,6 +2211,8 @@ void set_audio (void)
 			sound_use_filter = FILTER_MODEL_A500;
 		else if (currprefs.sound_filter_type == FILTER_SOUND_TYPE_A1200)
 			sound_use_filter = FILTER_MODEL_A1200;
+		else if (currprefs.sound_filter_type == FILTER_SOUND_TYPE_A500_FIXEDONLY)
+			sound_use_filter = FILTER_MODEL_A500_FIXEDONLY;
 	}
 	a500e_filter1_a0 = rc_calculate_a0 (currprefs.sound_freq, 6200);
 	a500e_filter2_a0 = rc_calculate_a0 (currprefs.sound_freq, 20000);

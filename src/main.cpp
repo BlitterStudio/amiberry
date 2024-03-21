@@ -886,7 +886,8 @@ static int diskswapper_cb (struct zfile *f, void *vrsd)
 	auto* num = static_cast<int*>(vrsd);
 	if (*num >= MAX_SPARE_DRIVES)
 		return 1;
-	if (zfile_gettype (f) ==  ZFILE_DISKIMAGE) {
+	int type = zfile_gettype(f);
+	if (type == ZFILE_DISKIMAGE || type == ZFILE_EXECUTABLE) {
 		_tcsncpy (currprefs.dfxlist[*num], zfile_getname (f), 255);
 		(*num)++;
 	}

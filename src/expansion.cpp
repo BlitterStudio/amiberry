@@ -5364,6 +5364,14 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, bridge_settings
 	},
+	{
+		_T("prometheusfirestorm"), _T("Prometheus FireStorm"), _T("E3B"),
+		NULL, prometheusfs_init, NULL, NULL, ROMTYPE_PROMETHEUSFS | ROMTYPE_NOT, 0, 0, BOARD_AUTOCONFIG_Z3, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_PCI_BRIDGE,
+		0, 0, 0, false, NULL,
+		false, 0, bridge_settings
+	},
 #endif
 	/* SCSI/IDE expansion */
 
@@ -6093,6 +6101,12 @@ const struct expansionromtype expansionroms[] = {
 	{
 		_T("s3virge"), _T("Virge"), _T("S3"),
 		NULL, NULL, NULL, NULL, ROMTYPE_S3VIRGE | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG
+	},
+	{
+		_T("xvision"), _T("CyberVision/BlizzardVision PPC"), _T("DCE"),
+		NULL, NULL, NULL, NULL, ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
 		NULL, 0,
 		false, EXPANSIONTYPE_RTG
 	},
