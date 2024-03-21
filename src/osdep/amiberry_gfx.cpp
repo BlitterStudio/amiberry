@@ -877,8 +877,8 @@ bool render_screen(int monid, int mode, bool immediate)
 			--delay_savestate_frame;
 		else
 		{
-			create_screenshot();
-			save_thumb(screenshot_filename);
+			if (create_screenshot())
+				save_thumb(screenshot_filename);
 			savestate_state = 0;
 		}
 	}
@@ -2833,20 +2833,25 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 	const auto h = surface->h;
 	auto* const pix = static_cast<unsigned char *>(surface->pixels);
 	unsigned char writeBuffer[1920 * 3];
+
+	// Open the file for writing
 	auto* const f = fopen(path.c_str(), "wbe");
-	if (!f) return 0;
-	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
-											nullptr,
-											nullptr,
-											nullptr);
+	if (!f)
+	{
+		write_log(_T("Failed to open file for writing: %s\n"), path.c_str());
+		return 0;
+	}
+
+	// Create a PNG write structure
+	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 	if (!png_ptr)
 	{
+		write_log(_T("Failed to create PNG write structure\n"));
 		fclose(f);
 		return 0;
 	}
 
 	auto* info_ptr = png_create_info_struct(png_ptr);
-
 	if (!info_ptr)
 	{
 		png_destroy_write_struct(&png_ptr, nullptr);
@@ -2867,7 +2872,6 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 	png_write_info(png_ptr, info_ptr);
 
 	auto* b = writeBuffer;
-
 	const auto sizeX = w;
 	const auto sizeY = h;
 	const auto depth = get_display_depth();
@@ -2880,7 +2884,6 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 			for (auto x = 0; x < sizeX; x++)
 			{
 				const auto v = p[x];
-
 				*b++ = ((v & SYSTEM_RED_MASK) >> SYSTEM_RED_SHIFT) << 3; // R
 				*b++ = ((v & SYSTEM_GREEN_MASK) >> SYSTEM_GREEN_SHIFT) << 2; // G
 				*b++ = ((v & SYSTEM_BLUE_MASK) >> SYSTEM_BLUE_SHIFT) << 3; // B
@@ -2896,7 +2899,6 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 		for (auto y = 0; y < sizeY; y++) {
 			for (auto x = 0; x < sizeX; x++) {
 				auto v = p[x];
-
 				*b++ = ((v & SYSTEM_RED_MASK) >> SYSTEM_RED_SHIFT); // R
 				*b++ = ((v & SYSTEM_GREEN_MASK) >> SYSTEM_GREEN_SHIFT); // G 
 				*b++ = ((v & SYSTEM_BLUE_MASK) >> SYSTEM_BLUE_SHIFT); // B
@@ -2914,7 +2916,7 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 	return 1;
 }
 
-void create_screenshot()
+bool create_screenshot()
 {
 	if (current_screenshot != nullptr)
 	{
@@ -2933,6 +2935,7 @@ void create_screenshot()
 	                                              amiga_surface->format->Bmask,
 	                                              amiga_surface->format->Amask);
 	}
+	return current_screenshot != nullptr;
 }
 
 int save_thumb(const std::string& path)
@@ -2949,21 +2952,25 @@ int save_thumb(const std::string& path)
 
 void screenshot(int monid, int mode, int doprepare)
 {
-	char tmp[MAX_DPATH];
+	std::string filename;
 
-	create_screenshot();
-	screenshot_filename = get_screenshot_path();
+	if (!create_screenshot())
+	{
+		write_log(_T("Failed to create screenshot\n"));
+		return;
+	}
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
-		extract_filename(currprefs.floppyslots[0].df, tmp);
+		filename = extract_filename(currprefs.floppyslots[0].df);
 	else if (currprefs.cdslots[0].inuse && strlen(currprefs.cdslots[0].name) > 0)
-		extract_filename(currprefs.cdslots[0].name, tmp);
+		filename = extract_filename(currprefs.cdslots[0].name);
 	else
-		strncpy(tmp, "default.uae", MAX_DPATH - 1);
+		filename = "default.uae";
 
-	screenshot_filename.append(std::string(tmp));
+	screenshot_filename = get_screenshot_path();
+	screenshot_filename += filename;
 	screenshot_filename = remove_file_extension(screenshot_filename);
+	screenshot_filename += ".png";
 
-	screenshot_filename.append(".png");
 	save_thumb(screenshot_filename);
 }

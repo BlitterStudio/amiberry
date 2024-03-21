@@ -1,5 +1,7 @@
 #include <cstring>
 #include <cstdio>
+#include <sys/stat.h>
+#include <ctime>
 
 #include <guisan.hpp>
 #include <SDL_image.h>
@@ -11,7 +13,7 @@
 #include "savestate.h"
 #include "gui_handling.h"
 
-int currentStateNum = 0;
+int current_state_num = 0;
 
 static gcn::Window* grpNumber;
 static gcn::RadioButton* optState0;
@@ -37,15 +39,20 @@ static gcn::Image* imgSavestate = nullptr;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
 
-char* getts(char *filename1, char *date_string, size_t date_string_size)
+std::string get_file_timestamp(const std::string& filename)
 {
-	struct stat st{};
+	struct stat st {};
 	tm tm{};
 
-	stat(filename1, &st);
+	if (stat(filename.c_str(), &st) == -1) {
+		write_log("Failed to get file timestamp, stat failed: %s\n", strerror(errno));
+		return "ERROR";
+	}
+
 	localtime_r(&st.st_mtime, &tm);
-	strftime(date_string, date_string_size,"%c" , &tm);
-	return date_string;
+	char date_string[256];
+	strftime(date_string, sizeof(date_string), "%c", &tm);
+	return std::string(date_string);
 }
 
 class SavestateActionListener : public gcn::ActionListener
@@ -54,35 +61,35 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		if (actionEvent.getSource() == optState0)
-			currentStateNum = 0;
+			current_state_num = 0;
 		else if (actionEvent.getSource() == optState1)
-			currentStateNum = 1;
+			current_state_num = 1;
 		else if (actionEvent.getSource() == optState2)
-			currentStateNum = 2;
+			current_state_num = 2;
 		else if (actionEvent.getSource() == optState3)
-			currentStateNum = 3;
+			current_state_num = 3;
 		else if (actionEvent.getSource() == optState4)
-			currentStateNum = 4;
+			current_state_num = 4;
 		else if (actionEvent.getSource() == optState5)
-			currentStateNum = 5;
+			current_state_num = 5;
 		else if (actionEvent.getSource() == optState6)
-			currentStateNum = 6;
+			current_state_num = 6;
 		else if (actionEvent.getSource() == optState7)
-			currentStateNum = 7;
+			current_state_num = 7;
 		else if (actionEvent.getSource() == optState8)
-			currentStateNum = 8;
+			current_state_num = 8;
 		else if (actionEvent.getSource() == optState9)
-			currentStateNum = 9;
+			current_state_num = 9;
 		else if (actionEvent.getSource() == optState10)
-			currentStateNum = 10;
+			current_state_num = 10;
 		else if (actionEvent.getSource() == optState11)
-			currentStateNum = 11;
+			current_state_num = 11;
 		else if (actionEvent.getSource() == optState12)
-			currentStateNum = 12;
+			current_state_num = 12;
 		else if (actionEvent.getSource() == optState13)
-			currentStateNum = 13;
+			current_state_num = 13;
 		else if (actionEvent.getSource() == optState14)
-			currentStateNum = 14;
+			current_state_num = 14;
 		else if (actionEvent.getSource() == cmdLoadState)
 		{
 			//------------------------------------------
@@ -113,7 +120,7 @@ public:
 		{
 			bool unsafe = false;
 			bool unsafe_confirmed = false;
-			AmigaMonitor* mon = &AMonitors[0];
+			const AmigaMonitor* mon = &AMonitors[0];
 			// Check if we have RTG, then it might fail saving
 			if (mon->screen_is_picasso)
 			{
@@ -310,7 +317,7 @@ void RefreshPanelSavestate()
 		imgSavestate = nullptr;
 	}
 
-	switch (currentStateNum)
+	switch (current_state_num)
 	{
 		case 0:
 			optState0->setSelected(true);
@@ -367,9 +374,7 @@ void RefreshPanelSavestate()
 		auto* const f = fopen(savestate_fname, "rbe");
 		if (f) {
 			fclose(f);
-			char date_string[256];
-			getts(savestate_fname, date_string, sizeof(date_string));
-			lblTimestamp->setCaption(date_string);
+			lblTimestamp->setCaption(get_file_timestamp(savestate_fname));
 		}
 		else
 		{
