@@ -273,16 +273,14 @@ void symlink_roms(struct uae_prefs* prefs)
 	std::filesystem::path rom_key_destination_path = kickstart_path;
 	rom_key_destination_path /= "rom.key";
 
-	if (std::filesystem::exists(rom_key_source_path)) {
-		if (!std::filesystem::exists(rom_key_destination_path)) {
-			try {
-				std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
-			}
-			catch (std::filesystem::filesystem_error& e) {
-				if (e.code() == std::errc::operation_not_permitted) {
-					// Fallback to copying file if filesystem does not support the generation of symlinks
-					std::filesystem::copy(rom_key_source_path, rom_key_destination_path);
-				}
+	if (std::filesystem::exists(rom_key_source_path) && !std::filesystem::exists(rom_key_destination_path)) {
+		try {
+			std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
+		}
+		catch (std::filesystem::filesystem_error& e) {
+			if (e.code() == std::errc::operation_not_permitted) {
+				// Fallback to copying file if filesystem does not support the generation of symlinks
+				std::filesystem::copy(rom_key_source_path, rom_key_destination_path);
 			}
 		}
 	}
@@ -1266,13 +1264,13 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	{
 		// create a symlink to WHDLoad in /tmp/amiberry/
 		whd_path = whdbooter_path / "WHDLoad";
-		if (!std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
+		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
 			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
 		}
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
 		whd_path = whdbooter_path / "AmiQuit";
-		if (!std::filesystem::exists("/tmp/amiberry/c/AmiQuit")) {
+		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/AmiQuit")) {
 			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
 		}
 
