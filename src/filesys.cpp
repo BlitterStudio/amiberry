@@ -562,9 +562,15 @@ static void close_filesys_unit (UnitInfo *uip)
 	if (uip->rootdir != 0)
 		xfree (uip->rootdir);
 	if (uip->unit_pipe)
-		xfree (uip->unit_pipe);
+	{
+		destroy_comm_pipe(uip->unit_pipe);
+		xfree(uip->unit_pipe);
+	}
 	if (uip->back_pipe)
-		xfree (uip->back_pipe);
+	{
+		destroy_comm_pipe(uip->back_pipe);
+		xfree(uip->back_pipe);
+	}
 	if (uip->cd_open) {
 		sys_command_close (uip->cddevno);
 		isofs_unmount (uip->cdfs_superblock);
