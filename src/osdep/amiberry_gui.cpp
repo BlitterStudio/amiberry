@@ -477,7 +477,9 @@ int gui_update()
 	else if (currprefs.cdslots[0].inuse && strlen(currprefs.cdslots[0].name) > 0)
 		filename = extract_filename(currprefs.cdslots[0].name);
 	else
-		filename = std::string(last_loaded_config);
+	{
+		last_loaded_config[0] != '\0' ? filename = std::string(last_loaded_config) : filename = "default.uae";
+	}
 
 	get_savestate_path(savestate_fname, MAX_DPATH - 1);
 	strncat(savestate_fname, filename.c_str(), MAX_DPATH - 1);
