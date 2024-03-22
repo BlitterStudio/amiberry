@@ -2913,15 +2913,15 @@ bool create_screenshot()
 	}
 
 	if (amiga_surface != nullptr) {
-	current_screenshot = SDL_CreateRGBSurfaceFrom(amiga_surface->pixels,
-	                                              amiga_surface->w,
-	                                              amiga_surface->h,
-	                                              amiga_surface->format->BitsPerPixel,
-	                                              amiga_surface->pitch,
-	                                              amiga_surface->format->Rmask,
-	                                              amiga_surface->format->Gmask,
-	                                              amiga_surface->format->Bmask,
-	                                              amiga_surface->format->Amask);
+		current_screenshot = SDL_CreateRGBSurfaceFrom(amiga_surface->pixels,
+			AMIGA_WIDTH_MAX << currprefs.gfx_resolution,
+			AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution,
+			amiga_surface->format->BitsPerPixel,
+			amiga_surface->pitch,
+			amiga_surface->format->Rmask,
+			amiga_surface->format->Gmask,
+			amiga_surface->format->Bmask,
+			amiga_surface->format->Amask);
 	}
 	return current_screenshot != nullptr;
 }
