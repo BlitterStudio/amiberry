@@ -59,18 +59,6 @@
 #ifdef AMIBERRY
 static bool force_auto_crop = false;
 
-# if SDL_BYTEORDER == SDL_BIG_ENDIAN
-#  define RMASK 0xff000000
-#  define GMASK 0x00ff0000
-#  define BMASK 0x0000ff00
-#  define AMASK 0x000000ff
-# else
-#  define RMASK 0x000000ff
-#  define GMASK 0x0000ff00
-#  define BMASK 0x00ff0000
-#  define AMASK 0xff000000
-# endif
-
 /* SDL Surface for output of emulation */
 SDL_DisplayMode sdl_mode;
 SDL_Surface* amiga_surface = nullptr;
@@ -110,8 +98,6 @@ struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
 static int display_change_requested;
 static int wasfullwindow_a, wasfullwindow_p;
-
-int vsync_modechangetimeout = 10;
 
 int vsync_activeheight, vsync_totalheight;
 float vsync_vblank, vsync_hblank;
@@ -163,38 +149,38 @@ void set_scaling_option(uae_prefs* p, int width, int height)
 	if (p->scaling_method == -1) {
 		if (isModeAspectRatioExact(&sdl_mode, width, height))
 #ifdef USE_OPENGL
-			{
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			}
-#else
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-#endif
-		else
-#ifdef USE_OPENGL
-			{
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-#else
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-#endif
-	} else if (p->scaling_method == 0)
-#ifdef USE_OPENGL
 		{
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
 #else
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 #endif
-	else if (p->scaling_method == 1)
+		else
 #ifdef USE_OPENGL
 		{
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		}
-		glBindTexture(GL_TEXTURE_2D, 0);
+#else
+			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+#endif
+	} else if (p->scaling_method == 0)
+#ifdef USE_OPENGL
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+#else
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+#endif
+	else if (p->scaling_method == 1)
+#ifdef USE_OPENGL
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+	glBindTexture(GL_TEXTURE_2D, 0);
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
@@ -241,7 +227,7 @@ static void SDL2_init()
 			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 				mode = SDL_WINDOW_FULLSCREEN;
 			else
-				mode =  SDL_WINDOW_RESIZABLE;
+				mode = SDL_WINDOW_RESIZABLE;
 			if (currprefs.borderless)
 				mode |= SDL_WINDOW_BORDERLESS;
 			if (currprefs.main_alwaysontop)
@@ -332,7 +318,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 	if (crtemu_tv == nullptr)
 		crtemu_tv = crtemu_create(CRTEMU_TYPE_TV, nullptr);
 	if (crtemu_tv)
-		crtemu_frame( crtemu_tv, (CRTEMU_U32*)amiga_surface->pixels, w, h);
+		crtemu_frame(crtemu_tv, (CRTEMU_U32*)amiga_surface->pixels, w, h);
 	return crtemu_tv != nullptr;
 #else
 	if (w < 0 || h < 0)
@@ -390,7 +376,7 @@ bool vkbd_allowed(int monid)
 	return currprefs.vkbd_enabled && !mon->screen_is_picasso;
 }
 
-#endif
+#endif //AMIBERRY
 
 static int isfullscreen_2(struct uae_prefs* p)
 {
@@ -602,9 +588,6 @@ const TCHAR* target_get_display_name(int num, bool friendlyname)
 	return md->monitorid;
 }
 
-static int picasso_offset_x, picasso_offset_y;
-static float picasso_offset_mx, picasso_offset_my;
-
 void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
@@ -700,8 +683,8 @@ static void addmode(struct MultiDisplay* md, SDL_DisplayMode* dm, int rawmode)
 
 static int resolution_compare(const void* a, const void* b)
 {
-	auto* ma = (struct PicassoResolution *)a;
-	auto* mb = (struct PicassoResolution *)b;
+	auto* ma = (struct PicassoResolution*)a;
+	auto* mb = (struct PicassoResolution*)b;
 	if (ma->res.width < mb->res.width)
 		return -1;
 	if (ma->res.width > mb->res.width)
@@ -720,7 +703,8 @@ static void sortmodes(struct MultiDisplay* md)
 	while (md->DisplayModes[i].depth >= 0)
 		i++;
 	qsort(md->DisplayModes, i, sizeof(struct PicassoResolution), resolution_compare);
-	for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
+	for (i = 0; md->DisplayModes[i].depth >= 0; i++)
+	{
 		int j, k;
 		for (j = 0; md->DisplayModes[i].refresh[j]; j++) {
 			for (k = j + 1; md->DisplayModes[i].refresh[k]; k++) {
@@ -734,7 +718,8 @@ static void sortmodes(struct MultiDisplay* md)
 				}
 			}
 		}
-		if (md->DisplayModes[i].res.height != ph || md->DisplayModes[i].res.width != pw) {
+		if (md->DisplayModes[i].res.height != ph || md->DisplayModes[i].res.width != pw)
+		{
 			ph = md->DisplayModes[i].res.height;
 			pw = md->DisplayModes[i].res.width;
 			idx++;
@@ -748,10 +733,12 @@ static void modesList(struct MultiDisplay* md)
 	int i, j;
 
 	i = 0;
-	while (md->DisplayModes[i].depth >= 0) {
+	while (md->DisplayModes[i].depth >= 0)
+	{
 		write_log(_T("%d: %s%s ("), i, md->DisplayModes[i].rawmode ? _T("!") : _T(""), md->DisplayModes[i].name);
 		j = 0;
-		while (md->DisplayModes[i].refresh[j] > 0) {
+		while (md->DisplayModes[i].refresh[j] > 0)
+		{
 			if (j > 0)
 				write_log(_T(","));
 			if (md->DisplayModes[i].refreshtype[j] & REFRESH_RATE_RAW)
@@ -770,7 +757,7 @@ void reenumeratemonitors(void)
 {
 	for (int i = 0; i < MAX_DISPLAYS; i++) {
 		struct MultiDisplay* md = &Displays[i];
-		memcpy(&md->workrect, &md->rect, sizeof (SDL_Rect));
+		memcpy(&md->workrect, &md->rect, sizeof(SDL_Rect));
 	}
 	enumeratedisplays();
 }
@@ -905,9 +892,9 @@ float target_adjust_vblank_hz(int monid, float hz)
 
 void show_screen(int monid, int mode)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	AmigaMonitor* mon = &AMonitors[monid];
 
-	const struct amigadisplay* ad = &adisplays[monid];
+	const amigadisplay* ad = &adisplays[monid];
 	const bool rtg = ad->picasso_on;
 
 	const auto start = read_processor_time();
@@ -921,8 +908,8 @@ void show_screen(int monid, int mode)
 #ifdef USE_OPENGL
 	auto time = SDL_GetTicks();
 	glViewport(0, 0, renderQuad.w, renderQuad.h);
-	if( crtemu_tv ) {
-		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const *) amiga_surface->pixels,
+	if (crtemu_tv) {
+		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
 			crop_rect.w, crop_rect.h, 0xffffffff, 0x000000);
 	}
 
@@ -934,7 +921,7 @@ void show_screen(int monid, int mode)
 	if (vkbd_allowed(monid))
 		vkbd_redraw();
 	SDL_RenderPresent(mon->amiga_renderer);
-#endif
+#endif // USE_OPENGL
 
 	last_synctime = read_processor_time();
 	idletime += last_synctime - start;
@@ -962,8 +949,8 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 
 uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 {
-	struct AmigaMonitor *mon = &AMonitors[monid];
-	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	struct AmigaMonitor* mon = &AMonitors[monid];
+	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
 	static uae_u8* p;
 	if (amiga_surface == nullptr || mon->screen_is_picasso == 0)
 		return nullptr;
@@ -1232,8 +1219,8 @@ int check_prefs_changed_gfx()
 #endif
 		if (c2) {
 			if (i > 0) {
-				for (auto & rtgboard : changed_prefs.rtgboards) {
-					struct rtgboardconfig *rbc = &rtgboard;
+				for (auto& rtgboard : changed_prefs.rtgboards) {
+					struct rtgboardconfig* rbc = &rtgboard;
 					if (rbc->monitor_id == i) {
 						c |= c2;
 						monitors[i] = true;
@@ -1922,8 +1909,8 @@ static void open_screen(struct uae_prefs* p)
 	if (mon->screen_is_picasso)
 	{
 		if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5
-		    || picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC
-		    || picasso96_state[0].RGBFormat == RGBFB_CLUT)
+			|| picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC
+			|| picasso96_state[0].RGBFormat == RGBFB_CLUT)
 		{
 			display_depth = 16;
 			pixel_format = SDL_PIXELFORMAT_RGB565;
@@ -2514,9 +2501,9 @@ void updatedisplayarea(int monid)
 
 void updatewinfsmode(int monid, struct uae_prefs* p)
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
+	const struct AmigaMonitor* mon = &AMonitors[0];
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
-	bool borderless = p->borderless;
+	const bool borderless = p->borderless;
 
 	if (mon->amiga_window)
 	{
@@ -2747,7 +2734,7 @@ void graphics_subshutdown()
 #ifdef AMIBERRY
 void auto_crop_image()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 	static bool last_autocrop;
 
 	if (currprefs.gfx_auto_crop)
@@ -2819,7 +2806,7 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 {
 	const auto w = surface->w;
 	const auto h = surface->h;
-	auto* const pix = static_cast<unsigned char *>(surface->pixels);
+	auto* const pix = static_cast<unsigned char*>(surface->pixels);
 	unsigned char writeBuffer[1920 * 3];
 
 	// Open the file for writing
