@@ -251,20 +251,20 @@ static void SDL2_init()
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     800,
-			                                     600,
-			                                     mode);
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
+				800,
+				600,
+				mode);
 		}
 		else
 		{
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     SDL_WINDOWPOS_CENTERED,
-			                                     600,
-			                                     800,
-			                                     mode);
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
+				600,
+				800,
+				mode);
 		}
 		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
 

@@ -620,7 +620,6 @@ void InitPanelDisplay(const config_category& category)
 	category.panel->add(lblBrightness, DISTANCE_BORDER, posY);
 	category.panel->add(sldBrightness, lblBrightness->getX() + lblBrightness->getWidth() + DISTANCE_NEXT_X, posY);
 	category.panel->add(lblBrightnessValue, sldBrightness->getX() + sldBrightness->getWidth() + 8, posY);
-	posY += lblBrightness->getHeight() + DISTANCE_NEXT_Y;
 
 	RefreshPanelDisplay();
 }
