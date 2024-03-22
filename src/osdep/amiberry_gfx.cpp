@@ -871,18 +871,6 @@ void sortdisplays()
 
 bool render_screen(int monid, int mode, bool immediate)
 {
-	if (savestate_state == STATE_DOSAVE)
-	{
-		if (delay_savestate_frame > 0)
-			--delay_savestate_frame;
-		else
-		{
-			if (create_screenshot())
-				save_thumb(screenshot_filename);
-			savestate_state = 0;
-		}
-	}
-
 	return true;
 }
 

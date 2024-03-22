@@ -103,9 +103,8 @@ public:
 			{
 				savestate_initsave(savestate_fname, 1, true, true);
 				save_state(savestate_fname, "...");
-				savestate_state = STATE_DOSAVE; // Just to create the screenshot
-				delay_savestate_frame = 2;
-				gui_running = false;
+				if (create_screenshot())
+					save_thumb(screenshot_filename);
 			}
 			else
 				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "", "Ok", "");
