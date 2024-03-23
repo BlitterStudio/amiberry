@@ -2780,12 +2780,6 @@ void graphics_leave()
 	SDL_DestroyMutex(screen_cs);
 	screen_cs = nullptr;
 	screen_cs_allocated = false;
-}
-
-void close_windows(struct AmigaMonitor* mon)
-{
-	reset_sound();
-	graphics_subshutdown();
 
 #ifdef USE_DISPMANX
 	if (display_tid != nullptr) {
@@ -2801,6 +2795,15 @@ void close_windows(struct AmigaMonitor* mon)
 	}
 
 	bcm_host_deinit();
+#endif
+}
+
+void close_windows(struct AmigaMonitor* mon)
+{
+	reset_sound();
+	graphics_subshutdown();
+
+#ifdef USE_DISPMANX
 #elif USE_OPENGL
 	destroy_crtemu();
 #else
