@@ -1903,9 +1903,6 @@ static void open_screen(struct uae_prefs* p)
 
 	updatewinfsmode(0, p);
 
-	const auto window_flags = SDL_GetWindowFlags(mon->amiga_window);
-	const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
-
 	if (mon->screen_is_picasso)
 	{
 		if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5
