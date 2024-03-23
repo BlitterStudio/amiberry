@@ -4809,7 +4809,7 @@ void draw_lines(int end, int section)
 			return;
 	}
 
-	int section_color_cnt = 4;
+	//int section_color_cnt = 4;
 
 	vidinfo->outbuffer = vb;
 	if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))

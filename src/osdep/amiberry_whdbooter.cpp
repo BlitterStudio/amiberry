@@ -19,6 +19,9 @@
 #include "rommgr.h"
 #include "fsdb.h"
 #include "tinyxml2.h"
+#include "custom.h"
+#include "xwin.h"
+#include "drawing.h"
 
 extern void SetLastActiveConfig(const char* filename);
 extern std::string current_dir;
@@ -553,7 +556,7 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 		{
 			prefs->gfx_manual_crop = true;
 			prefs->gfx_manual_crop_height = std::stoi(game_detail.scr_height);
-			prefs->gfx_vertical_offset = (576 - prefs->gfx_manual_crop_height) / 2;
+			prefs->gfx_vertical_offset = ((AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution) - prefs->gfx_manual_crop_height) / 2;
 		}
 	}
 
@@ -563,7 +566,7 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 		{
 			prefs->gfx_manual_crop = true;
 			prefs->gfx_manual_crop_width = std::stoi(game_detail.scr_width);
-			prefs->gfx_horizontal_offset = (754 - prefs->gfx_manual_crop_width) / 2;
+			prefs->gfx_horizontal_offset = ((AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution) - prefs->gfx_manual_crop_width) / 2;
 		}
 	}
 
