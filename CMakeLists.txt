@@ -14,6 +14,7 @@ set(CMAKE_ASM_COMPILER_ARG1 "${CMAKE_C_COMPILER_ARG1}")
 option(USE_DISPMANX "Use Dispmanx" OFF)
 option(USE_DBUS "Use DBus" OFF)
 option(USE_OPENGL "Use OpenGL" OFF)
+option(WITH_LTO "Enable Link Time Optimization" OFF)
 
 # Set build type to "Release" if user did not specify any build type yet
 # Other possible values: Debug, Release, RelWithDebInfo and MinSizeRel
