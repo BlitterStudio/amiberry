@@ -2319,7 +2319,11 @@ static void open_screen(struct uae_prefs* p)
 	graphics_subshutdown();
 
 	if (!mon->sdl_window)
+#ifdef USE_DISPMANX
+		DMX_init();
+#else
 		SDL2_init();
+#endif
 
 	if (max_uae_width == 0 || max_uae_height == 0)
 	{
