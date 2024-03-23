@@ -327,12 +327,10 @@ void refresh_rom_list(ROMListModel* rom_list, const gcn::DropDown* cboROM, char*
 	{
 		// ROM file not in the list of known ROMs
 		auto* newrom = new AvailableROM();
-		extract_filename(prefsFile, newrom->Name.data());
+		newrom->Name = extract_filename(prefsFile);
 		newrom->Name = remove_file_extension(newrom->Name);
-		newrom->Path.assign(prefsFile);
 		newrom->ROMType = romType;
 		lstAvailableROMs.push_back(newrom);
-		RefreshPanelROM();
 	}
 }
 
