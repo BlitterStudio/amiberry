@@ -486,22 +486,22 @@ static void wait_for_display_thread()
 static void DMX_init()
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
-	if (!mon->sdl_window)
+	if (!mon->amiga_window)
 	{
-		mon->sdl_window = SDL_CreateWindow("Amiberry",
+		mon->amiga_window = SDL_CreateWindow("Amiberry",
 			SDL_WINDOWPOS_UNDEFINED,
 			SDL_WINDOWPOS_UNDEFINED,
 			0,
 			0,
 			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window");
+		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window");
 	}
 
-	if (mon->sdl_renderer == nullptr)
+	if (mon->amiga_renderer == nullptr)
 	{
 		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-		mon->sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, flags);
-		check_error_sdl(mon->sdl_renderer == nullptr, "Unable to create a renderer:");
+		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
+		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
