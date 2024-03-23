@@ -241,9 +241,259 @@ static float SDL2_getrefreshrate(int monid)
 	return static_cast<float>(mode.refresh_rate);
 }
 
+static void update_leds(int monid)
+{
+	static uae_u32 rc[256], gc[256], bc[256], a[256];
+	static int done;
+	int osdx, osdy;
+
+	if (!done) {
+		for (int i = 0; i < 256; i++) {
+			rc[i] = i << 0;
+			gc[i] = i << 8;
+			bc[i] = i << 16;
+			a[i] = i << 24;
+		}
+		done = 1;
+	}
+
+	statusline_getpos(monid, &osdx, &osdy, crop_rect.w + crop_rect.x, crop_rect.h + crop_rect.y);
+	int m = statusline_get_multiplier(monid) / 100;
+	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
+		uae_u8* buf = (uae_u8*)amiga_surface->pixels + (y + osdy) * amiga_surface->pitch;
+		draw_status_line_single(monid, buf, 32 / 8, y, crop_rect.w + crop_rect.x, rc, gc, bc, a);
+	}
+}
+
 #ifdef USE_DISPMANX
+static int display_thread(void* unused)
+{
+	struct AmigaMonitor* mon = &AMonitors[0];
+	struct amigadisplay* ad = &adisplays[0];
+
+	uint32_t vc_image_ptr;
+	SDL_Rect viewport;
+
+	for (;;) {
+		display_thread_busy = false;
+		auto signal = read_comm_pipe_u32_blocking(display_pipe);
+		display_thread_busy = true;
+
+		switch (signal) {
+		case DISPLAY_SIGNAL_SETUP:
+			vc_dispmanx_vsync_callback(displayHandle, vsync_callback, nullptr);
+			break;
+
+		case DISPLAY_SIGNAL_SUBSHUTDOWN:
+			if (DispManXElementpresent == 1)
+			{
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_remove(updateHandle, elementHandle);
+				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+				vc_dispmanx_update_submit_sync(updateHandle);
+				elementHandle = 0;
+				blackscreen_element = 0;
+				DispManXElementpresent = 0;
+			}
+
+			if (amigafb_resource_1) {
+				vc_dispmanx_resource_delete(amigafb_resource_1);
+				amigafb_resource_1 = 0;
+			}
+			if (amigafb_resource_2) {
+				vc_dispmanx_resource_delete(amigafb_resource_2);
+				amigafb_resource_2 = 0;
+			}
+			if (blackfb_resource)
+			{
+				vc_dispmanx_resource_delete(blackfb_resource);
+				blackfb_resource = 0;
+			}
+			uae_sem_post(&display_sem);
+			break;
+
+		case DISPLAY_SIGNAL_OPEN:
+			if (mon->screen_is_picasso)
+			{
+				if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5
+					|| picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC
+					|| picasso96_state[0].RGBFormat == RGBFB_CLUT)
+				{
+					display_depth = 16;
+					rgb_mode = VC_IMAGE_RGB565;
+					pixel_format = SDL_PIXELFORMAT_RGB565;
+				}
+				else
+				{
+					display_depth = 32;
+					rgb_mode = VC_IMAGE_RGBX32;
+					pixel_format = SDL_PIXELFORMAT_RGBA32;
+				}
+			}
+			else
+			{
+				//display_depth = 16;
+				//rgb_mode = VC_IMAGE_RGB565;
+				display_depth = 32;
+				rgb_mode = VC_IMAGE_RGBX32;
+				pixel_format = SDL_PIXELFORMAT_RGBA32;
+			}
+
+			if (!amiga_surface)
+				amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
+
+			if (!displayHandle)
+				displayHandle = vc_dispmanx_display_open(0);
+
+			if (!amigafb_resource_1)
+				amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
+			if (!amigafb_resource_2)
+				amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
+			if (!blackfb_resource)
+				blackfb_resource = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
+
+			vc_dispmanx_rect_set(&blit_rect, 0, 0, display_width, display_height);
+			vc_dispmanx_resource_write_data(amigafb_resource_1, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
+			vc_dispmanx_resource_write_data(blackfb_resource, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
+			vc_dispmanx_rect_set(&src_rect, 0, 0, display_width << 16, display_height << 16);
+
+			// Use the full screen size for the black frame
+			vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
+
+			// Correct Aspect Ratio
+			if (currprefs.gfx_correct_aspect == 0)
+			{
+				// Fullscreen.
+				vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
+			}
+			else
+			{
+				int width, height;
+				if (mon->screen_is_picasso)
+				{
+					width = display_width;
+					height = display_height;
+				}
+				else
+				{
+					width = display_width * 2 >> currprefs.gfx_resolution;
+					height = display_height * 2 >> currprefs.gfx_vresolution;
+				}
+
+				const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
+				const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
+
+				float scale;
+				if (want_aspect > real_aspect)
+				{
+					scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
+				}
+				else
+				{
+					scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
+				}
+
+				viewport.w = static_cast<int>(SDL_floor(width * scale));
+				viewport.x = (modeInfo.width - viewport.w) / 2;
+				viewport.h = static_cast<int>(SDL_floor(height * scale));
+				viewport.y = (modeInfo.height - viewport.h) / 2;
+				vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
+			}
+
+			if (DispManXElementpresent == 0)
+			{
+				DispManXElementpresent = 1;
+				updateHandle = vc_dispmanx_update_start(0);
+
+				if (!blackscreen_element)
+					blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
+						nullptr, DISPMANX_NO_ROTATE);
+
+				if (!elementHandle)
+					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
+						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
+						nullptr, DISPMANX_NO_ROTATE);
+
+				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
+			}
+
+			uae_sem_post(&display_sem);
+			break;
+
+		case DISPLAY_SIGNAL_SHOW:
+			// RTG status line is handled in P96 code, this is for native modes only
+			if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on)
+			{
+				update_leds(0);
+			}
+
+			vsync_active = true;
+			if (current_resource_amigafb == 1)
+			{
+				current_resource_amigafb = 0;
+				vc_dispmanx_resource_write_data(amigafb_resource_1,
+					rgb_mode,
+					amiga_surface->pitch,
+					amiga_surface->pixels,
+					&blit_rect);
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_1);
+			}
+			else
+			{
+				current_resource_amigafb = 1;
+				vc_dispmanx_resource_write_data(amigafb_resource_2,
+					rgb_mode,
+					amiga_surface->pitch,
+					amiga_surface->pixels,
+					&blit_rect);
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_2);
+			}
+			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
+			flip_in_progress = false;
+			break;
+
+		case DISPLAY_SIGNAL_QUIT:
+			updateHandle = vc_dispmanx_update_start(0);
+			if (blackscreen_element)
+			{
+				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
+				blackscreen_element = 0;
+			}
+			if (elementHandle)
+			{
+				updateHandle = vc_dispmanx_update_start(0);
+				vc_dispmanx_element_remove(updateHandle, elementHandle);
+				elementHandle = 0;
+			}
+			vc_dispmanx_update_submit_sync(updateHandle);
+
+			if (displayHandle)
+			{
+				vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
+				vc_dispmanx_display_close(displayHandle);
+			}
+
+			display_tid = nullptr;
+			return 0;
+		default:
+			break;
+		}
+	}
+	return 0;
+}
+
+static void wait_for_display_thread()
+{
+	while (display_thread_busy)
+		usleep(10);
+}
+
 static void DMX_init()
 {
+	struct AmigaMonitor* mon = &AMonitors[0];
 	if (!mon->sdl_window)
 	{
 		mon->sdl_window = SDL_CreateWindow("Amiberry",
@@ -388,6 +638,7 @@ static void SDL2_init()
 		write_log("SDL2: Set window not to minimize on focus loss\n");
 }
 
+#ifndef USE_DISPMANX
 static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 {
 	if (w == 0 || h == 0)
@@ -430,30 +681,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 	return amiga_texture != nullptr;
 #endif
 }
-
-static void update_leds(int monid)
-{
-	static uae_u32 rc[256], gc[256], bc[256], a[256];
-	static int done;
-	int osdx, osdy;
-
-	if (!done) {
-		for (int i = 0; i < 256; i++) {
-			rc[i] = i << 0;
-			gc[i] = i << 8;
-			bc[i] = i << 16;
-			a[i] = i << 24;
-		}
-		done = 1;
-	}
-
-	statusline_getpos(monid, &osdx, &osdy, crop_rect.w + crop_rect.x, crop_rect.h + crop_rect.y);
-	int m = statusline_get_multiplier(monid) / 100;
-	for (int y = 0; y < TD_TOTAL_HEIGHT * m; y++) {
-		uae_u8 *buf = (uae_u8*)amiga_surface->pixels + (y + osdy) * amiga_surface->pitch;
-		draw_status_line_single(monid, buf, 32 / 8, y, crop_rect.w + crop_rect.x, rc, gc, bc, a);
-	}
-}
+#endif
 
 bool vkbd_allowed(int monid)
 {
@@ -461,226 +689,7 @@ bool vkbd_allowed(int monid)
 	return currprefs.vkbd_enabled && !mon->screen_is_picasso;
 }
 
-#ifdef USE_DISPMANX
-static int display_thread(void* unused)
-{
-	struct AmigaMonitor* mon = &AMonitors[0];
-	struct amigadisplay* ad = &adisplays[0];
 
-	uint32_t vc_image_ptr;
-	SDL_Rect viewport;
-
-	for (;;) {
-		display_thread_busy = false;
-		auto signal = read_comm_pipe_u32_blocking(display_pipe);
-		display_thread_busy = true;
-
-		switch (signal) {
-		case DISPLAY_SIGNAL_SETUP:
-			vc_dispmanx_vsync_callback(displayHandle, vsync_callback, nullptr);
-			break;
-
-		case DISPLAY_SIGNAL_SUBSHUTDOWN:
-			if (DispManXElementpresent == 1)
-			{
-				updateHandle = vc_dispmanx_update_start(0);
-				vc_dispmanx_element_remove(updateHandle, elementHandle);
-				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-				vc_dispmanx_update_submit_sync(updateHandle);
-				elementHandle = 0;
-				blackscreen_element = 0;
-				DispManXElementpresent = 0;
-			}
-
-			if (amigafb_resource_1) {
-				vc_dispmanx_resource_delete(amigafb_resource_1);
-				amigafb_resource_1 = 0;
-			}
-			if (amigafb_resource_2) {
-				vc_dispmanx_resource_delete(amigafb_resource_2);
-				amigafb_resource_2 = 0;
-			}
-			if (blackfb_resource)
-			{
-				vc_dispmanx_resource_delete(blackfb_resource);
-				blackfb_resource = 0;
-			}
-			uae_sem_post(&display_sem);
-			break;
-
-		case DISPLAY_SIGNAL_OPEN:
-			if (mon->screen_is_picasso)
-			{
-				if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5
-					|| picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC
-					|| picasso96_state[0].RGBFormat == RGBFB_CLUT)
-				{
-					display_depth = 16;
-					rgb_mode = VC_IMAGE_RGB565;
-					pixel_format = SDL_PIXELFORMAT_RGB565;
-				}
-				else
-				{
-					display_depth = 32;
-					rgb_mode = VC_IMAGE_RGBX32;
-					pixel_format = SDL_PIXELFORMAT_RGBA32;
-				}
-			}
-			else
-			{
-				//display_depth = 16;
-				//rgb_mode = VC_IMAGE_RGB565;
-				display_depth = 32;
-				rgb_mode = VC_IMAGE_RGBX32;
-				pixel_format = SDL_PIXELFORMAT_RGBA32;
-			}
-
-			if (!amiga_surface)
-				amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
-
-			if (!displayHandle)
-				displayHandle = vc_dispmanx_display_open(0);
-
-			if (!amigafb_resource_1)
-				amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
-			if (!amigafb_resource_2)
-				amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
-			if (!blackfb_resource)
-				blackfb_resource = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
-
-			vc_dispmanx_rect_set(&blit_rect, 0, 0, display_width, display_height);
-			vc_dispmanx_resource_write_data(amigafb_resource_1, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
-			vc_dispmanx_resource_write_data(blackfb_resource, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
-			vc_dispmanx_rect_set(&src_rect, 0, 0, display_width << 16, display_height << 16);
-
-			// Use the full screen size for the black frame
-			vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
-
-			// Correct Aspect Ratio
-			if (currprefs.gfx_correct_aspect == 0)
-			{
-				// Fullscreen.
-				vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
-			}
-			else
-			{
-				int width, height;
-				if (mon->screen_is_picasso)
-				{
-					width = display_width;
-					height = display_height;
-				}
-				else
-				{
-					width = display_width * 2 >> currprefs.gfx_resolution;
-					height = display_height * 2 >> currprefs.gfx_vresolution;
-				}
-
-				const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
-				const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
-
-				float scale;
-				if (want_aspect > real_aspect)
-				{
-					scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
-				}
-				else
-				{
-					scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
-				}
-
-				viewport.w = static_cast<int>(SDL_floor(width * scale));
-				viewport.x = (modeInfo.width - viewport.w) / 2;
-				viewport.h = static_cast<int>(SDL_floor(height * scale));
-				viewport.y = (modeInfo.height - viewport.h) / 2;
-				vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
-			}
-
-			if (DispManXElementpresent == 0)
-			{
-				DispManXElementpresent = 1;
-				updateHandle = vc_dispmanx_update_start(0);
-				
-				if (!blackscreen_element)
-					blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
-						nullptr, DISPMANX_NO_ROTATE);
-
-				if (!elementHandle)
-					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
-						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
-						nullptr, DISPMANX_NO_ROTATE);
-
-				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
-			}
-
-			uae_sem_post(&display_sem);
-			break;
-
-		case DISPLAY_SIGNAL_SHOW:
-			// RTG status line is handled in P96 code, this is for native modes only
-			if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on)
-			{
-				update_leds(0);
-			}
-
-			vsync_active = true;
-			if (current_resource_amigafb == 1)
-			{
-				current_resource_amigafb = 0;
-				vc_dispmanx_resource_write_data(amigafb_resource_1,
-					rgb_mode,
-					amiga_surface->pitch,
-					amiga_surface->pixels,
-					&blit_rect);
-				updateHandle = vc_dispmanx_update_start(0);
-				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_1);
-			}
-			else
-			{
-				current_resource_amigafb = 1;
-				vc_dispmanx_resource_write_data(amigafb_resource_2,
-					rgb_mode,
-					amiga_surface->pitch,
-					amiga_surface->pixels,
-					&blit_rect);
-				updateHandle = vc_dispmanx_update_start(0);
-				vc_dispmanx_element_change_source(updateHandle, elementHandle, amigafb_resource_2);
-			}
-			vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
-			flip_in_progress = false;
-			break;
-
-		case DISPLAY_SIGNAL_QUIT:
-			updateHandle = vc_dispmanx_update_start(0);
-			if (blackscreen_element)
-			{
-				vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-				blackscreen_element = 0;
-			}
-			if (elementHandle)
-			{
-				updateHandle = vc_dispmanx_update_start(0);
-				vc_dispmanx_element_remove(updateHandle, elementHandle);
-				elementHandle = 0;
-			}
-			vc_dispmanx_update_submit_sync(updateHandle);
-			
-			if (displayHandle)
-			{
-				vc_dispmanx_vsync_callback(displayHandle, nullptr, nullptr);
-				vc_dispmanx_display_close(displayHandle);
-			}
-
-			display_tid = nullptr;
-			return 0;
-		default:
-			break;
-		}
-	}
-	return 0;
-}
-#endif //USE_DISPMANX
 #endif //AMIBERRY
 
 static int isfullscreen_2(struct uae_prefs* p)
@@ -3231,14 +3240,6 @@ void destroy_crtemu()
 		crtemu_destroy(crtemu_tv);
 		crtemu_tv = nullptr;
 	}
-#endif
-}
-
-static void wait_for_display_thread()
-{
-#ifdef USE_DISPMANX
-	while (display_thread_busy)
-		usleep(10);
 #endif
 }
 
