@@ -13,7 +13,6 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
-
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"

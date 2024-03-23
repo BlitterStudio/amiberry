@@ -541,7 +541,7 @@ void set_showcursor(BOOL v)
 
 void releasecapture(struct AmigaMonitor* mon)
 {
-	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
+	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
@@ -637,8 +637,8 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 	int f = isfullscreen();
 	if (!allowfullscreen && f > 0)
 		return;
-	GetWindowRect(mon->sdl_window, &mon->amigawin_rect);
-	GetWindowRect(mon->sdl_window, &mon->amigawinclip_rect);
+	GetWindowRect(mon->amiga_window, &mon->amigawin_rect);
+	GetWindowRect(mon->amiga_window, &mon->amigawinclip_rect);
 #if MOUSECLIP_LOG
 	write_log(_T("GetWindowRect mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, f);
 #endif
@@ -705,11 +705,11 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
-			SDL_RaiseWindow(mon->sdl_window);
+			SDL_RaiseWindow(mon->amiga_window);
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
-			SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
+			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 			updatewinrect(mon, false);
 			// SDL2 hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
@@ -750,7 +750,7 @@ void setmouseactive(int monid, int active)
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
 	if (active > 1)
-		SDL_RaiseWindow(mon->sdl_window);
+		SDL_RaiseWindow(mon->amiga_window);
 	setmouseactive2(mon, active, true);
 }
 
@@ -858,8 +858,8 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 void minimizewindow(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (mon->sdl_window)
-		SDL_MinimizeWindow(mon->sdl_window);
+	if (mon->amiga_window)
+		SDL_MinimizeWindow(mon->amiga_window);
 }
 
 void enablecapture(int monid)
@@ -899,7 +899,7 @@ void setmouseactivexy(int monid, int x, int y, int dir)
 
 	if (mouseactive) {
 		disablecapture();
-		SDL_WarpMouseInWindow(mon->sdl_window, x, y);
+		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
 		if (dir) {
 			recapture = 1;
 		}
@@ -1615,7 +1615,7 @@ void process_event(const SDL_Event& event)
 	AmigaMonitor* mon = &AMonitors[0];
 
 	// Handle window events
-	if (event.type == SDL_WINDOWEVENT)
+	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
 	{
 		handle_window_event(event, mon);
 	}

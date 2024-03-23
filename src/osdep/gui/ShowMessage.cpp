@@ -65,28 +65,16 @@ static void InitShowMessage(const std::string& message)
 		gui_screen = SDL_CreateRGBSurface(0, GUI_WIDTH, GUI_HEIGHT, 16, 0, 0, 0, 0);
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
 	}
-#ifdef USE_DISPMANX
-	if (!displayHandle)
-		init_dispmanx_gui();
 
-	if (!mon->sdl_window)
+	if (amiberry_options.single_window_mode)
 	{
-		mon->sdl_window = SDL_CreateWindow("Amiberry",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			GUI_WIDTH,
-			GUI_HEIGHT,
-			SDL_WINDOW_FULLSCREEN_DESKTOP);
-		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
+		if (mon->amiga_window)
+		{
+			close_windows(mon);
+		}
 	}
-	if (mon->sdl_renderer == nullptr)
-	{
-		mon->sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(mon->sdl_renderer == nullptr, "Unable to create a renderer:");
-		SDL_RenderSetLogicalSize(mon->sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
-	}
-#else
-	if (!mon->sdl_window)
+
+	if (!mon->gui_window)
 	{
 		Uint32 mode;
 		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
@@ -109,7 +97,7 @@ static void InitShowMessage(const std::string& message)
 
 		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
 		{
-			mon->sdl_window = SDL_CreateWindow("Amiberry GUI",
+			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
 				GUI_HEIGHT,
@@ -118,41 +106,41 @@ static void InitShowMessage(const std::string& message)
 		}
 		else
 		{
-			mon->sdl_window = SDL_CreateWindow("Amiberry GUI",
+			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
 				GUI_WIDTH,
 				GUI_HEIGHT,
 				mode);
 		}
-		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
+		check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{
-			SDL_SetWindowIcon(mon->sdl_window, icon_surface);
+			SDL_SetWindowIcon(mon->gui_window, icon_surface);
 			SDL_FreeSurface(icon_surface);
 		}
 	}
 
-	if (mon->sdl_renderer == nullptr)
+	if (mon->gui_renderer == nullptr)
 	{
-		mon->sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(mon->sdl_renderer == nullptr, "Unable to create a renderer:");
-		SDL_RenderSetLogicalSize(mon->sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
+		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
+		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	}
 
-	if (mon->sdl_window)
+	if (mon->gui_window)
 	{
-		const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
+		const auto window_flags = SDL_GetWindowFlags(mon->gui_window);
 		const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
 		if (!is_maximized && !is_fullscreen)
 		{
 			if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-				SDL_SetWindowSize(mon->sdl_window, GUI_HEIGHT, GUI_WIDTH);
+				SDL_SetWindowSize(mon->gui_window, GUI_HEIGHT, GUI_WIDTH);
 			else
-				SDL_SetWindowSize(mon->sdl_window, GUI_WIDTH, GUI_HEIGHT);
+				SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
 		}
 	}
 
@@ -161,16 +149,15 @@ static void InitShowMessage(const std::string& message)
 
 	if (gui_texture == nullptr)
 	{
-		gui_texture = SDL_CreateTexture(mon->sdl_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
+		gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING,
 		                                gui_screen->w, gui_screen->h);
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture from Surface");
 	}
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(mon->sdl_renderer, GUI_WIDTH, GUI_HEIGHT);
+		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
-		SDL_RenderSetLogicalSize(mon->sdl_renderer, GUI_HEIGHT, GUI_WIDTH);
-#endif
+		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
@@ -296,32 +283,6 @@ static void ExitShowMessage()
 			SDL_FreeSurface(gui_screen);
 			gui_screen = nullptr;
 		}
-#ifdef USE_DISPMANX
-		if (element_present == 1)
-		{
-			element_present = 0;
-			updateHandle = vc_dispmanx_update_start(0);
-			vc_dispmanx_element_remove(updateHandle, gui_element);
-			gui_element = 0;
-			vc_dispmanx_element_remove(updateHandle, blackscreen_element);
-			blackscreen_element = 0;
-			vc_dispmanx_update_submit_sync(updateHandle);
-		}
-
-		if (gui_resource)
-		{
-			vc_dispmanx_resource_delete(gui_resource);
-			gui_resource = 0;
-		}
-
-		if (black_gui_resource)
-		{
-			vc_dispmanx_resource_delete(black_gui_resource);
-			black_gui_resource = 0;
-		}
-		if (displayHandle)
-			vc_dispmanx_display_close(displayHandle);
-#else
 		if (gui_texture != nullptr)
 		{
 			SDL_DestroyTexture(gui_texture);
@@ -329,9 +290,8 @@ static void ExitShowMessage()
 		}
 
 		// Clear the screen
-		SDL_RenderClear(mon->sdl_renderer);
-		SDL_RenderPresent(mon->sdl_renderer);
-#endif
+		SDL_RenderClear(mon->gui_renderer);
+		SDL_RenderPresent(mon->gui_renderer);
 	}
 }
 
@@ -530,7 +490,7 @@ static void ShowMessageWaitInputLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 
-		SDL_RenderClear(mon->sdl_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -610,7 +570,7 @@ static void ShowMessageLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-		SDL_RenderClear(mon->sdl_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -645,7 +605,7 @@ bool ShowMessage(const std::string& title, const std::string& line1, const std::
 	// Prepare the screen once
 	uae_gui->logic();
 
-	SDL_RenderClear(mon->sdl_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 
 	uae_gui->draw();
 	update_gui_screen();
@@ -678,7 +638,7 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	// Prepare the screen once
 	uae_gui->logic();
 
-	SDL_RenderClear(mon->sdl_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 
 	uae_gui->draw();
 	update_gui_screen();

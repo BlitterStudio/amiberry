@@ -513,14 +513,9 @@ void gui_display(int shortcut)
 
 	if (shortcut == -1)
 	{
-#ifdef USE_DISPMANX
-		graphics_subshutdown();
-#endif
 		prefs_to_gui();
 		run_gui();
 		gui_to_prefs();
-
-		clearscreen();
 
 		gui_update();
 		gui_purge_events();

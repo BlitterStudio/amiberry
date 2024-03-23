@@ -71,8 +71,10 @@ struct winuae_currentmode {
 #define MAX_AMIGAMONITORS 1
 struct AmigaMonitor {
 	int monitor_id;
-	SDL_Window* sdl_window;
-	SDL_Renderer* sdl_renderer;
+	SDL_Window* amiga_window;
+	SDL_Renderer* amiga_renderer;
+	SDL_Window* gui_window;
+	SDL_Renderer* gui_renderer;
 	struct MultiDisplay* md;
 
 	SDL_Rect amigawin_rect, mainwin_rect;
@@ -159,6 +161,8 @@ void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
+extern void quit_drawing_thread();
+extern void start_drawing_thread();
 
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);

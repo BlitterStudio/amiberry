@@ -725,21 +725,10 @@ void RefreshPanelInput()
 		}
 	}
 
-	// Absolute mouse movement doesn't work as expected in Dispmanx.
-	// If the resolution is changed, the mouse movement doesn't scale accordingly
-	// to the edges of the window.
-	// This feature is disabled for Dispmanx, until we find a solution.
-#ifdef USE_DISPMANX
-	chkMouseHack->setEnabled(false);
-	optBoth->setEnabled(false);
-	optNative->setEnabled(false);
-	optHost->setEnabled(false);
-#else
 	chkMouseHack->setSelected(changed_prefs.input_tablet > 0);
 	optBoth->setEnabled(changed_prefs.input_tablet > 0);
 	optNative->setEnabled(changed_prefs.input_tablet > 0);
 	optHost->setEnabled(changed_prefs.input_tablet > 0);
-#endif
 
 	chkMagicMouseUntrap->setSelected(changed_prefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC);
 	chkInputAutoswitch->setSelected(changed_prefs.input_autoswitch);

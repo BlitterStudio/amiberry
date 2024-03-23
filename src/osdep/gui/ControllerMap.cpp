@@ -469,11 +469,8 @@ BMergeAxisBindings(int iIndex)
 static void
 WatchJoystick(SDL_Joystick* joystick)
 {
-#ifdef USE_DISPMANX
-#else
 	AmigaMonitor* mon = &AMonitors[0];
 	SDL_Texture* button, *axis, *marker;
-#endif
 	const char* name = NULL;
 	SDL_Event event;
 	SDL_Rect dst;
@@ -487,11 +484,8 @@ WatchJoystick(SDL_Joystick* joystick)
 	background_back_image = gcn::Image::load(prefix_with_data_path("controllermap_back.png"));
 	background_back_icon = new gcn::Icon(background_back_image);
 
-#ifdef USE_DISPMANX
-#else
-	button = LoadTexture(mon->sdl_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
-	axis = LoadTexture(mon->sdl_renderer, prefix_with_data_path("axis.png").c_str(), SDL_TRUE);
-#endif
+	button = LoadTexture(mon->gui_renderer, prefix_with_data_path("button.png").c_str(), SDL_TRUE);
+	axis = LoadTexture(mon->gui_renderer, prefix_with_data_path("axis.png").c_str(), SDL_TRUE);
 
 	/* Print info about the joystick we are watching */
 	name = SDL_JoystickName(joystick);
@@ -524,16 +518,10 @@ WatchJoystick(SDL_Joystick* joystick)
 		switch (s_arrBindingDisplay[iElement].marker)
 		{
 		case MARKER_AXIS:
-#ifdef USE_DISPMANX
-#else
 			marker = axis;
-#endif
 			break;
 		case MARKER_BUTTON:
-#ifdef USE_DISPMANX
-#else
 			marker = button;
-#endif
 			break;
 		default:
 			break;
@@ -544,10 +532,8 @@ WatchJoystick(SDL_Joystick* joystick)
 
 		dst.x = s_arrBindingDisplay[iElement].x + x_offset;
 		dst.y = s_arrBindingDisplay[iElement].y + y_offset;
-#ifdef USE_DISPMANX
-#else
+
 		SDL_QueryTexture(marker, nullptr, nullptr, &dst.w, &dst.h);
-#endif
 
 		if (SDL_GetTicks() - alpha_ticks > 5)
 		{
@@ -580,31 +566,24 @@ WatchJoystick(SDL_Joystick* joystick)
 
 		// Update guisan
 		uae_gui->logic();
-#ifdef USE_DISPMANX
-#else
-		SDL_RenderClear(mon->sdl_renderer);
-#endif
+
+		SDL_RenderClear(mon->gui_renderer);
 
 		uae_gui->draw();
-#ifdef USE_DISPMANX
-		vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-		updateHandle = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
-		vc_dispmanx_update_submit_sync(updateHandle);
-#else
+
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 			renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
 		else
 			renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
-		SDL_RenderCopyEx(mon->sdl_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 
 		// Blit marker on top
 		SDL_SetTextureAlphaMod(marker, alpha);
 		SDL_SetTextureColorMod(marker, 10, 255, 21);
-		SDL_RenderCopyEx(mon->sdl_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
-		SDL_RenderPresent(mon->sdl_renderer);
-#endif
+		SDL_RenderCopyEx(mon->gui_renderer, marker, nullptr, &dst, s_arrBindingDisplay[iElement].angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderPresent(mon->gui_renderer);
+
 		while (SDL_PollEvent(&event) > 0)
 		{
 			switch (event.type)
@@ -891,11 +870,9 @@ WatchJoystick(SDL_Joystick* joystick)
 
 	SDL_free(s_arrAxisState);
 	s_arrAxisState = nullptr;
-#ifdef USE_DISPMANX
-#else
+
 	SDL_DestroyTexture(axis);
 	SDL_DestroyTexture(button);
-#endif
 }
 
 std::string
@@ -927,14 +904,8 @@ show_controller_map(int device, bool map_touchpad)
 				break;
 			}
 		}
-#ifdef USE_DISPMANX
-		vc_dispmanx_resource_write_data(gui_resource, rgb_mode, gui_screen->pitch, gui_screen->pixels, &blit_rect);
-		updateHandle = vc_dispmanx_update_start(0);
-		vc_dispmanx_element_change_source(updateHandle, gui_element, gui_resource);
-		vc_dispmanx_update_submit_sync(updateHandle);
-#else
-		SDL_RenderPresent(mon->sdl_renderer);
-#endif
+
+		SDL_RenderPresent(mon->gui_renderer);
 	}
 #ifdef DEBUG
 	/* Print information about the joysticks */

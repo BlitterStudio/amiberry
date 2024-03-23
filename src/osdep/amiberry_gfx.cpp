@@ -192,6 +192,36 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 
 void set_scaling_option(uae_prefs* p, int width, int height)
 {
+#ifdef USE_DISPMANX
+	SDL_Rect viewport;
+	// Correct Aspect Ratio
+	if (currprefs.gfx_correct_aspect == 0)
+	{
+		// Fullscreen.
+		vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
+	}
+	else
+	{
+		const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
+		const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
+
+		float scale;
+		if (want_aspect > real_aspect)
+		{
+			scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
+		}
+		else
+		{
+			scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
+		}
+
+		viewport.w = static_cast<int>(SDL_floor(width * scale));
+		viewport.x = (modeInfo.width - viewport.w) / 2;
+		viewport.h = static_cast<int>(SDL_floor(height * scale));
+		viewport.y = (modeInfo.height - viewport.h) / 2;
+		vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
+	}
+#else
 	if (p->scaling_method == -1) {
 		if (isModeAspectRatioExact(&sdl_mode, width, height))
 #ifdef USE_OPENGL
@@ -230,6 +260,7 @@ void set_scaling_option(uae_prefs* p, int width, int height)
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
+#endif // USE_DISPMANX
 }
 
 static float SDL2_getrefreshrate(int monid)
@@ -274,7 +305,6 @@ static int display_thread(void* unused)
 	struct amigadisplay* ad = &adisplays[0];
 
 	uint32_t vc_image_ptr;
-	SDL_Rect viewport;
 
 	for (;;) {
 		display_thread_busy = false;
@@ -361,46 +391,6 @@ static int display_thread(void* unused)
 
 			// Use the full screen size for the black frame
 			vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
-
-			// Correct Aspect Ratio
-			if (currprefs.gfx_correct_aspect == 0)
-			{
-				// Fullscreen.
-				vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
-			}
-			else
-			{
-				int width, height;
-				if (mon->screen_is_picasso)
-				{
-					width = display_width;
-					height = display_height;
-				}
-				else
-				{
-					width = display_width * 2 >> currprefs.gfx_resolution;
-					height = display_height * 2 >> currprefs.gfx_vresolution;
-				}
-
-				const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
-				const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
-
-				float scale;
-				if (want_aspect > real_aspect)
-				{
-					scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
-				}
-				else
-				{
-					scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
-				}
-
-				viewport.w = static_cast<int>(SDL_floor(width * scale));
-				viewport.x = (modeInfo.width - viewport.w) / 2;
-				viewport.h = static_cast<int>(SDL_floor(height * scale));
-				viewport.y = (modeInfo.height - viewport.h) / 2;
-				vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
-			}
 
 			if (DispManXElementpresent == 0)
 			{
@@ -552,7 +542,7 @@ static void SDL2_init()
 		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
 
-	if (!mon->sdl_window)
+	if (!mon->amiga_window)
 	{
 		write_log("Creating Amiberry window...\n");
 		Uint32 mode;
@@ -587,7 +577,7 @@ static void SDL2_init()
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
-			mon->sdl_window = SDL_CreateWindow("Amiberry",
+			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
 				800,
@@ -596,26 +586,26 @@ static void SDL2_init()
 		}
 		else
 		{
-			mon->sdl_window = SDL_CreateWindow("Amiberry",
+			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
 				600,
 				800,
 				mode);
 		}
-		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window:");
+		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
 
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{
-			SDL_SetWindowIcon(mon->sdl_window, icon_surface);
+			SDL_SetWindowIcon(mon->amiga_window, icon_surface);
 			SDL_FreeSurface(icon_surface);
 		}
 	}
 
 #ifdef USE_OPENGL
 	if (gl_context == nullptr)
-		gl_context = SDL_GL_CreateContext(mon->sdl_window);
+		gl_context = SDL_GL_CreateContext(mon->amiga_window);
 
 	glewInit();
 
@@ -625,11 +615,11 @@ static void SDL2_init()
 		write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
 	}
 #else
-	if (mon->sdl_renderer == nullptr)
+	if (mon->amiga_renderer == nullptr)
 	{
 		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-		mon->sdl_renderer = SDL_CreateRenderer(mon->sdl_window, -1, flags);
-		check_error_sdl(mon->sdl_renderer == nullptr, "Unable to create a renderer:");
+		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
+		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 #endif
 
@@ -679,7 +669,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 		SDL_DestroyTexture(amiga_texture);
 
 	AmigaMonitor* mon = &AMonitors[0];
-	amiga_texture = SDL_CreateTexture(mon->sdl_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
+	amiga_texture = SDL_CreateTexture(mon->amiga_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 	return amiga_texture != nullptr;
 #endif
 }
@@ -690,7 +680,6 @@ bool vkbd_allowed(int monid)
 	struct AmigaMonitor *mon = &AMonitors[monid];
 	return currprefs.vkbd_enabled && !mon->screen_is_picasso;
 }
-
 
 #endif //AMIBERRY
 
@@ -1333,14 +1322,14 @@ void show_screen(int monid, int mode)
 			crop_rect.w, crop_rect.h, 0xffffffff, 0x000000);
 	}
 
-	SDL_GL_SwapWindow(mon->sdl_window);
+	SDL_GL_SwapWindow(mon->amiga_window);
 #else
-	SDL_RenderClear(mon->sdl_renderer);
+	SDL_RenderClear(mon->amiga_renderer);
 	SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
-	SDL_RenderCopyEx(mon->sdl_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	if (vkbd_allowed(monid))
 		vkbd_redraw();
-	SDL_RenderPresent(mon->sdl_renderer);
+	SDL_RenderPresent(mon->amiga_renderer);
 #endif // USE_OPENGL
 #endif // USE_DISPMANX
 
@@ -1952,7 +1941,6 @@ int check_prefs_changed_gfx()
 					inputdevice_unacquire();
 					unacquired = true;
 				}
-				clearscreen();
 			}
 			if (c & 256) {
 				init_colors(mon->monitor_id);
@@ -2318,7 +2306,7 @@ static void open_screen(struct uae_prefs* p)
 
 	graphics_subshutdown();
 
-	if (!mon->sdl_window)
+	if (!mon->amiga_window)
 #ifdef USE_DISPMANX
 		DMX_init();
 #else
@@ -2378,8 +2366,7 @@ static void open_screen(struct uae_prefs* p)
 		if (!currprefs.gfx_autoresolution) {
 			mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
 			mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution;
-		}
-		else {
+		} else {
 			mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << avidinfo->gfx_resolution_reserved;
 			mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << avidinfo->gfx_vresolution_reserved;
 		}
@@ -2642,7 +2629,6 @@ void gfx_set_picasso_state(int monid, int on)
 	updatemodes(mon);
 	update_gfxparams(mon);
 
-	clearscreen();
 	open_screen(&currprefs);
 }
 
@@ -2669,7 +2655,6 @@ void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt)
 	int need;
 	if (!mon->screen_is_picasso)
 		return;
-	clearscreen();
 	gfx_set_picasso_colors(monid, rgbfmt);
 	need = modeswitchneeded(mon, &mon->currentmode);
 	update_gfxparams(mon);
@@ -2821,16 +2806,16 @@ void close_windows(struct AmigaMonitor* mon)
 		gl_context = nullptr;
 	}
 #else
-	if (mon->sdl_renderer)
+	if (mon->amiga_renderer)
 	{
-		SDL_DestroyRenderer(mon->sdl_renderer);
-		mon->sdl_renderer = nullptr;
+		SDL_DestroyRenderer(mon->amiga_renderer);
+		mon->amiga_renderer = nullptr;
 	}
 #endif
-	if (mon->sdl_window)
+	if (mon->amiga_window)
 	{
-		SDL_DestroyWindow(mon->sdl_window);
-		mon->sdl_window = nullptr;
+		SDL_DestroyWindow(mon->amiga_window);
+		mon->amiga_window = nullptr;
 	}
 
 	if (currprefs.vkbd_enabled)
@@ -2903,7 +2888,6 @@ bool target_graphics_buffer_update(int monid, bool force)
 	if (rate_changed)
 	{
 		fpscounter_reset();
-
 		time_per_frame = 1000 * 1000 / currprefs.chipset_refreshrate;
 	}
 
@@ -2939,24 +2923,24 @@ bool target_graphics_buffer_update(int monid, bool force)
 
 	if (mon->screen_is_picasso)
 	{
-		if (mon->sdl_window && isfullscreen() == 0)
+		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->sdl_window, w, h);
+			SDL_SetWindowSize(mon->amiga_window, w, h);
 		}
 #ifdef USE_OPENGL
 		renderQuad = { dx, dy, w, h };
 		crop_rect = { dx, dy, w, h };
 		set_scaling_option(&currprefs, w, h);
 #else
-		if (mon->sdl_renderer) {
+		if (mon->amiga_renderer) {
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(mon->sdl_renderer, w, h);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
 				renderQuad = {dx, dy, w, h};
 				crop_rect = {dx, dy, w, h};
 			}
 			else
 			{
-				SDL_RenderSetLogicalSize(mon->sdl_renderer, h, w);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, h, w);
 				renderQuad = { -(w - h) / 2, (w - h) / 2, w, h };
 				crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
 			}
@@ -2985,9 +2969,9 @@ bool target_graphics_buffer_update(int monid, bool force)
 //				scaled_width /= 2;
 		}
 
-		if (mon->sdl_window && isfullscreen() == 0)
+		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->sdl_window, scaled_width, scaled_height);
+			SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
 		}
 #ifdef USE_OPENGL
 		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
@@ -3001,10 +2985,10 @@ bool target_graphics_buffer_update(int monid, bool force)
 		}
 		set_scaling_option(&currprefs, scaled_width, scaled_height);
 #else
-		if (mon->sdl_renderer)
+		if (mon->amiga_renderer)
 		{
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(mon->sdl_renderer, scaled_width, scaled_height);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
 				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = {dx, dy, scaled_width, scaled_height};
 					crop_rect = {dx, dy, w, h};
@@ -3017,7 +3001,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 			}
 			else
 			{
-				SDL_RenderSetLogicalSize(mon->sdl_renderer, scaled_height, scaled_width);
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_height, scaled_width);
 				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
 					renderQuad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
 					crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
@@ -3050,9 +3034,9 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 	p->gfx_monitor[0].gfx_size = p->gfx_monitor[0].gfx_size_win;
 	set_config_changed();
 #else
-	if (mon->sdl_window)
+	if (mon->amiga_window)
 	{
-		const auto window_flags = SDL_GetWindowFlags(mon->sdl_window);
+		const auto window_flags = SDL_GetWindowFlags(mon->amiga_window);
 		const bool is_fullwindow = window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
 		const bool is_borderless = window_flags & SDL_WINDOW_BORDERLESS;
@@ -3060,25 +3044,25 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 		if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLSCREEN && !is_fullscreen)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_fs;
-			SDL_SetWindowFullscreen(mon->sdl_window, SDL_WINDOW_FULLSCREEN);
+			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
 			set_config_changed();
 		}
 		else if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLWINDOW && !is_fullwindow)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
-			SDL_SetWindowFullscreen(mon->sdl_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 			set_config_changed();
 		}
 		else if (p->gfx_apmode[monid].gfx_fullscreen != GFX_FULLSCREEN && p->gfx_apmode[monid].gfx_fullscreen != GFX_FULLWINDOW && (is_fullscreen || is_fullwindow) && !kmsdrm_detected)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
-			SDL_SetWindowFullscreen(mon->sdl_window, 0);
+			SDL_SetWindowFullscreen(mon->amiga_window, 0);
 			set_config_changed();
 		}
 
 		if (borderless != is_borderless)
 		{
-			SDL_SetWindowBordered(mon->sdl_window, borderless ? SDL_FALSE : SDL_TRUE);
+			SDL_SetWindowBordered(mon->amiga_window, borderless ? SDL_FALSE : SDL_TRUE);
 			set_config_changed();
 		}
 	}
@@ -3332,13 +3316,13 @@ void auto_crop_image()
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
-			SDL_RenderSetLogicalSize(mon->sdl_renderer, width, height);
+			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
 			renderQuad = { dx, dy, width, height };
 			crop_rect = { cx, cy, cw, ch };
 		}
 		else
 		{
-			SDL_RenderSetLogicalSize(mon->sdl_renderer, height, width);
+			SDL_RenderSetLogicalSize(mon->amiga_renderer, height, width);
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
 #endif

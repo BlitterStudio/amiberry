@@ -127,10 +127,8 @@ public:
 		else if (actionEvent.getSource() == chkAutoCrop)
 		{
 			changed_prefs.gfx_auto_crop = chkAutoCrop->isSelected();
-#if !defined USE_DISPMANX
 			if (changed_prefs.gfx_manual_crop)
 				changed_prefs.gfx_manual_crop = false;
-#endif
 		}
 
 		else if (actionEvent.getSource() == chkBorderless)
@@ -373,11 +371,7 @@ void InitPanelDisplay(const config_category& category)
 	txtAmigaHeight->setBackgroundColor(colTextboxBackground);
 	txtAmigaHeight->addActionListener(amigaScreenActionListener);
 
-#if defined USE_DISPMANX
-	chkAutoCrop = new gcn::CheckBox("Auto Height");
-#else
 	chkAutoCrop = new gcn::CheckBox("Auto Crop");
-#endif
 	chkAutoCrop->setId("chkAutoCrop");
 	chkAutoCrop->addActionListener(amigaScreenActionListener);
 
@@ -739,15 +733,12 @@ void RefreshPanelDisplay()
 		}
 	}
 
-#if !defined USE_DISPMANX
 	if (changed_prefs.gfx_auto_crop)
 	{
-		changed_prefs.gfx_monitor[0].gfx_size_win.width = 720;
-		changed_prefs.gfx_monitor[0].gfx_size_win.height = 568;
 		changed_prefs.gfx_xcenter = 0;
 		changed_prefs.gfx_ycenter = 0;
 	}
-#endif
+
 	chkManualCrop->setSelected(changed_prefs.gfx_manual_crop);
 	chkAutoCrop->setSelected(changed_prefs.gfx_auto_crop);
 
@@ -769,10 +760,8 @@ void RefreshPanelDisplay()
 	lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
 	lblVOffsetValue->adjustSize();
 
-#if !defined USE_DISPMANX
 	chkHorizontal->setEnabled(!changed_prefs.gfx_auto_crop);
 	chkVertical->setEnabled(!changed_prefs.gfx_auto_crop);
-#endif
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
 
@@ -820,11 +809,6 @@ void RefreshPanelDisplay()
 			changed_prefs.gfx_monitor[0].gfx_size_fs.height = fullscreen_height_values[2];
 		}
 	}
-	
-#ifdef USE_DISPMANX
-	lblScalingMethod->setEnabled(false);
-	cboScalingMethod->setEnabled(false);
-#endif
 
 	cboScalingMethod->setSelected(changed_prefs.scaling_method + 1);
 	
