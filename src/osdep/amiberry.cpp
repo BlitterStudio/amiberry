@@ -4094,7 +4094,6 @@ int main(int argc, char* argv[])
 	}
 #endif
 	alloc_AmigaMem();
-	RescanROMs();
 	uae_time_calibrate();
 	
 	if (
