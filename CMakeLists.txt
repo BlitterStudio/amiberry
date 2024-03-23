@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 project(amiberry)
 enable_language(C CXX ASM)
 
@@ -10,6 +10,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_ASM_COMPILER "${CMAKE_C_COMPILER}")
 set(CMAKE_ASM_COMPILER_ARG1 "${CMAKE_C_COMPILER_ARG1}")
+
+option(USE_DBUS "Use DBus" OFF)
+option(USE_OPENGL "Use OpenGL" OFF)
 
 # Set build type to "Release" if user did not specify any build type yet
 # Other possible values: Debug, Release, RelWithDebInfo and MinSizeRel
@@ -335,7 +338,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
-    add_definitions(-DCPU_AARCH64)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
     target_sources(${PROJECT_NAME} PRIVATE
             src/osdep/aarch64_helper.s
             src/jit/compemu.cpp
@@ -346,7 +349,7 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
 endif ()
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR ARCHITECTURE MATCHES "arm32")
-    add_definitions(-DCPU_arm -DARMV6_ASSEMBLY -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV)
     target_sources(${PROJECT_NAME} PRIVATE
             src/osdep/arm_helper.s
             src/jit/compemu.cpp
@@ -361,7 +364,7 @@ find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
 if (USE_DBUS)
-    add_definitions(-DUSE_DBUS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DBUS)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DBUS REQUIRED dbus-1)
     target_include_directories(${PROJECT_NAME} PRIVATE ${DBUS_INCLUDE_DIRS})
@@ -382,7 +385,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt
 target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 
 if (USE_OPENGL)
-    add_definitions(-DUSE_OPENGL)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
     find_package(OpenGL REQUIRED)
     find_package(GLEW REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
