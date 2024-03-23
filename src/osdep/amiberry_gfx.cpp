@@ -266,6 +266,8 @@ static void update_leds(int monid)
 }
 
 #ifdef USE_DISPMANX
+static volatile bool vsync_active;
+
 static int display_thread(void* unused)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
@@ -758,7 +760,9 @@ int target_get_display(const TCHAR* name)
 static volatile int waitvblankthread_mode;
 static frame_time_t wait_vblank_timestamp;
 static MultiDisplay* wait_vblank_display;
+#ifndef USE_DISPMANX // already defined higher up
 static volatile bool vsync_active;
+#endif
 static bool scanlinecalibrating;
 
 static int target_get_display_scanline2(int displayindex)
