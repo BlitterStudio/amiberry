@@ -5,8 +5,11 @@
 
 #include "sysdeps.h"
 #include "options.h"
+#include "uae.h"
 #include "custom.h"
+#include "xwin.h"
 #include "gui_handling.h"
+#include "drawing.h"
 
 const int amigawidth_values[] = { 640, 704, 720, 754 };
 const int amigaheight_values[] = { 400, 480, 512, 568, 576 };
@@ -107,7 +110,7 @@ public:
 		else if (actionEvent.getSource() == sldAmigaWidth)
 		{
 			const int new_width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
-			const int new_x = (754 - new_width) / 2;
+			const int new_x = ((AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution) - new_width) / 2;
 
 			changed_prefs.gfx_manual_crop_width = new_width;
 			changed_prefs.gfx_horizontal_offset = new_x;
@@ -115,7 +118,7 @@ public:
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
 			const int new_height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
-			const int new_y = (576 - new_height) / 2;
+			const int new_y = ((AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution) - new_height) / 2;
 
 			changed_prefs.gfx_manual_crop_height = new_height;
 			changed_prefs.gfx_vertical_offset = new_y;
