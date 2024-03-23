@@ -13,12 +13,16 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
+
 #include "sysdeps.h"
 #include "uae.h"
 #include "options.h"
 #include "rommgr.h"
 #include "fsdb.h"
 #include "tinyxml2.h"
+#include "custom.h"
+#include "xwin.h"
+#include "drawing.h"
 
 extern void SetLastActiveConfig(const char* filename);
 extern std::string current_dir;
@@ -276,6 +280,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	rom_key_destination_path /= "rom.key";
 
 	if (std::filesystem::exists(rom_key_source_path) && !std::filesystem::exists(rom_key_destination_path)) {
+		write_log("Making SymLink for rom.key\n");
 		try {
 			std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
 		}
@@ -571,31 +576,11 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 		line_string.append(game_detail.scr_height);
 		parse_cfg_line(prefs, line_string);
 #else
-		if (prefs->gfx_auto_crop)
+		if (!prefs->gfx_auto_crop)
 		{
-			// If using Auto-Crop, bypass any screen Height adjustments as they are not needed and will cause issues
-			line_string = "gfx_height=768";
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_height_windowed=768";
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_height_fullscreen=768";
-			parse_cfg_line(prefs, line_string);
-		}
-		else
-		{
-			line_string = "gfx_height=";
-			line_string.append(game_detail.scr_height);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_height_windowed=";
-			line_string.append(game_detail.scr_height);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_height_fullscreen=";
-			line_string.append(game_detail.scr_height);
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_manual_crop = true;
+			prefs->gfx_manual_crop_height = std::stoi(game_detail.scr_height);
+			prefs->gfx_vertical_offset = ((AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution) - prefs->gfx_manual_crop_height) / 2;
 		}
 #endif
 	}
@@ -615,31 +600,11 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 		line_string.append(game_detail.scr_width);
 		parse_cfg_line(prefs, line_string);
 #else
-		if (prefs->gfx_auto_crop)
+		if (!prefs->gfx_auto_crop)
 		{
-			// If using Auto-Crop, bypass any screen Width adjustments as they are not needed and will cause issues
-			line_string = "gfx_width=720";
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_width_windowed=720";
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_width_fullscreen=720";
-			parse_cfg_line(prefs, line_string);
-		}
-		else
-		{
-			line_string = "gfx_width=";
-			line_string.append(game_detail.scr_width);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_width_windowed=";
-			line_string.append(game_detail.scr_width);
-			parse_cfg_line(prefs, line_string);
-
-			line_string = "gfx_width_fullscreen=";
-			line_string.append(game_detail.scr_width);
-			parse_cfg_line(prefs, line_string);
+			prefs->gfx_manual_crop = true;
+			prefs->gfx_manual_crop_width = std::stoi(game_detail.scr_width);
+			prefs->gfx_horizontal_offset = ((AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution) - prefs->gfx_manual_crop_width) / 2;
 		}
 #endif
 	}
@@ -649,11 +614,7 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 #ifdef USE_DISPMANX
 		prefs->gfx_horizontal_offset = std::stoi(game_detail.scr_offseth);
 #else
-		if (prefs->gfx_auto_crop)
-		{
-			prefs->gfx_horizontal_offset = 0;
-		}
-		else
+		if (!prefs->gfx_auto_crop)
 		{
 			prefs->gfx_horizontal_offset = std::stoi(game_detail.scr_offseth);
 		}
@@ -665,11 +626,7 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 #ifdef USE_DISPMANX
 		prefs->gfx_vertical_offset = std::stoi(game_detail.scr_offsetv);
 #else
-		if (prefs->gfx_auto_crop)
-		{
-			prefs->gfx_vertical_offset = 0;
-		}
-		else
+		if (!prefs->gfx_auto_crop)
 		{
 			prefs->gfx_vertical_offset = std::stoi(game_detail.scr_offsetv);
 		}
@@ -1366,17 +1323,20 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		// create a symlink to WHDLoad in /tmp/amiberry/
 		whd_path = whdbooter_path / "WHDLoad";
 		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
+			write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
 			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
 		}
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
 		whd_path = whdbooter_path / "AmiQuit";
 		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/AmiQuit")) {
+			write_log("WHDBooter - Creating symlink to AmiQuit in /tmp/amiberry/c/ \n");
 			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
 		}
 
 		// create a symlink for DEVS in /tmp/amiberry/
 		if (!std::filesystem::exists("/tmp/amiberry/devs/Kickstarts")) {
+			write_log("WHDBooter - Creating symlink to Kickstarts in /tmp/amiberry/devs/ \n");
 			std::filesystem::create_symlink(kickstart_path, "/tmp/amiberry/devs/Kickstarts");
 		}
 	}
@@ -1431,23 +1391,30 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	if (is_aga || is_cd32 || !a600_available)
 	{
 		// SET THE BASE AMIGA (Expanded A1200)
+		write_log("WHDBooter - Host: A1200 ROM selected\n");
 		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
 	}
 	else
 	{
 		// SET THE BASE AMIGA (Expanded A600)
+		write_log("WHDBooter - Host: A600 ROM selected\n");
 		built_in_prefs(prefs, 2, A600_CONFIG, 0, 0);
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad]"));
 	}
 
 	// SET THE WHD BOOTER AND GAME DATA
+	write_log("WHDBooter - Host: setting up drives\n");
 	set_booter_drives(prefs, filepath);
 
 	// APPLY THE SETTINGS FOR MOUSE/JOYSTICK ETC
+	write_log("WHDBooter - Host: setting up controllers\n");
 	set_input_settings(prefs, game_detail, is_cd32);
 
 	//  SET THE GAME COMPATIBILITY SETTINGS
 	// BLITTER, SPRITES, MEMORY, JIT, BIG CPU ETC
+	write_log("WHDBooter - Host: setting up game compatibility settings\n");
 	set_compatibility_settings(prefs, game_detail, a600_available, is_aga || is_cd32);
+
+	write_log("WHDBooter - Host: settings applied\n\n");
 }

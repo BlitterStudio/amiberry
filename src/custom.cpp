@@ -4763,7 +4763,7 @@ void compute_framesync(void)
 
 	set_config_changed();
 
-	if (target_graphics_buffer_update(0)) {
+	if (target_graphics_buffer_update(0, false)) {
 		reset_drawing();
 	}
 }
@@ -8478,8 +8478,6 @@ static void vsync_handler_post(void)
 		compute_framesync();
 	}
 
-	//vsync_check_vsyncmode();
-
 	lof_changed = 0;
 	vposw_change = 0;
 	bplcon0_interlace_seen = false;
@@ -8759,7 +8757,9 @@ static void set_hpos(void)
 // this finishes current line
 static void hsync_handler_pre(bool onvsync)
 {
-	//int hpos = current_hpos();
+#ifdef DEBUGGER
+	int hpos = current_hpos();
+#endif
 
 	if (!nocustom()) {
 #ifdef AMIBERRY

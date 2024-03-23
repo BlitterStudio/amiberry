@@ -307,6 +307,39 @@ int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 
+int getdpiforwindow(SDL_Window* hwnd)
+{
+	float diagDPI = -1;
+	float horiDPI = -1;
+	float vertDPI = -1;
+
+	SDL_GetDisplayDPI(0, &diagDPI, &horiDPI, &vertDPI);
+	return static_cast<int>(vertDPI);
+}
+
+uae_s64 spincount;
+extern bool calculated_scanline;
+
+void target_spin(int total)
+{
+	if (!spincount || calculated_scanline)
+		return;
+	if (total > 10)
+		total = 10;
+	while (total-- >= 0) {
+		uae_s64 v1 = read_processor_time();
+		v1 += spincount;
+		while (v1 > read_processor_time());
+	}
+}
+
+extern int vsync_activeheight;
+
+void target_calibrate_spin(void)
+{
+	spincount = 0;
+}
+
 void sleep_micros (int ms)
 {
 	usleep(ms);
@@ -604,10 +637,8 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 	int f = isfullscreen();
 	if (!allowfullscreen && f > 0)
 		return;
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
+	GetWindowRect(mon->sdl_window, &mon->amigawin_rect);
+	GetWindowRect(mon->sdl_window, &mon->amigawinclip_rect);
 #if MOUSECLIP_LOG
 	write_log(_T("GetWindowRect mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, f);
 #endif
@@ -2017,9 +2048,7 @@ void target_fixup_options(struct uae_prefs* p)
 #if !defined USE_DISPMANX
 	if (p->gfx_auto_crop)
 	{
-		// Make sure that Width/Height are set to max, and Auto-Center disabled
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
+		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
 #endif
@@ -2183,15 +2212,14 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_monitor[0].gfx_size_win.width = amiberry_options.default_width;
 	p->gfx_monitor[0].gfx_size_win.height = amiberry_options.default_height;
 
+	p->gfx_manual_crop = false;
+	p->gfx_manual_crop_width = AMIGA_WIDTH_MAX << p->gfx_resolution;
+	p->gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p->gfx_vresolution;
 	p->gfx_horizontal_offset = 0;
 	p->gfx_vertical_offset = 0;
 	if (amiberry_options.default_auto_crop)
 	{
 		p->gfx_auto_crop = amiberry_options.default_auto_crop;
-#if !defined USE_DISPMANX
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
-#endif
 	}
 	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
@@ -2252,10 +2280,6 @@ void target_default_options(struct uae_prefs* p, int type)
 
 	if (amiberry_options.default_frameskip)
 		p->gfx_framerate = 2;
-
-#ifdef USE_OPENGL
-	amiberry_options.use_sdl2_render_thread = false;
-#endif
 
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
 		p->sound_stereo_separation = amiberry_options.default_stereo_separation;
@@ -2513,6 +2537,9 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("gfx_horizontal_offset"), _T("%d"), p->gfx_horizontal_offset);
 	cfgfile_target_dwrite(f, _T("gfx_vertical_offset"), _T("%d"), p->gfx_vertical_offset);
 	cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
+	cfgfile_target_dwrite_bool(f, _T("gfx_manual_crop"), p->gfx_manual_crop);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_width"), _T("%d"), p->gfx_manual_crop_width);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_height"), _T("%d"), p->gfx_manual_crop_height);
 	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -2651,8 +2678,11 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 	    || cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
 	    || cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
 	    || cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_width", &p->gfx_manual_crop_width, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_height", &p->gfx_manual_crop_height, 1)
 	    || cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
 	    || cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
+		|| cfgfile_yesno(option, value, _T("gfx_manual_crop"), &p->gfx_manual_crop)
 	    || cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
 	    || cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
 	    || cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
@@ -3220,6 +3250,9 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 		};
 
+	// Use the old Single-Window mode (useful in cases where multiple overlapping windows are a problem)
+	write_bool_option("single_window_mode", amiberry_options.single_window_mode);
+
 	// Should the Quickstart Panel be the default when opening the GUI?
 	write_int_option("Quickstart", amiberry_options.quickstart_start);
 
@@ -3568,6 +3601,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
+		ret |= cfgfile_yesno(option, value, "single_window_mode", &amiberry_options.single_window_mode);
 		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
 		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);

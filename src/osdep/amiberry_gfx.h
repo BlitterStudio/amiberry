@@ -151,6 +151,8 @@ extern void updatewinfsmode(int monid, struct uae_prefs* p);
 extern void gfx_lock(void);
 extern void gfx_unlock(void);
 
+extern void destroy_crtemu();
+
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);
@@ -161,4 +163,3 @@ extern bool vkbd_allowed(int monid);
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
 extern bool kmsdrm_detected;
-extern bool sdl2_thread_changed;

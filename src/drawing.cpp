@@ -2746,11 +2746,7 @@ static void init_aspect_maps(void)
 		if (amiga2aspect_line_map[i] == -1)
 			continue;
 		for (int j = amiga2aspect_line_map[i]; j < native2amiga_line_map_height && native2amiga_line_map[j] == -1; j++)
-#ifdef AMIBERRY
-			native2amiga_line_map[j] = (i + currprefs.gfx_vertical_offset) >> linedbl;
-#else
 			native2amiga_line_map[j] = i >> linedbl;
-#endif
 	}
 }
 
@@ -3398,10 +3394,6 @@ static void center_image (void)
 		}
 	}
 
-#ifdef AMIBERRY
-	visible_left_border += currprefs.gfx_horizontal_offset;
-#endif
-
 	if (visible_left_border > max_diwlastword - 32)
 		visible_left_border = max_diwlastword - 32;
 	if (visible_left_border < 0)
@@ -3422,11 +3414,7 @@ static void center_image (void)
 		max_drawn_amiga_line_tmp = vidinfo->drawbuffer.inheight;
 	max_drawn_amiga_line_tmp >>= linedbl;
 
-#ifdef AMIBERRY
-	thisframe_y_adjust = minfirstline + currprefs.gfx_vertical_offset;
-#else
 	thisframe_y_adjust = minfirstline;
-#endif
 	if (currprefs.gfx_ycenter && thisframe_first_drawn_line >= 0 && !currprefs.gf[0].gfx_filter_autoscale) {
 
 		if (thisframe_last_drawn_line - thisframe_first_drawn_line < max_drawn_amiga_line_tmp && currprefs.gfx_ycenter == 2)
@@ -3892,11 +3880,7 @@ static void refresh_indicator_update(struct vidbuffer *vb)
 
 static void draw_frame2(struct vidbuffer *vbin, struct vidbuffer *vbout)
 {
-#ifdef AMIBERRY
-	for (int i = next_line_to_render; i < max_ypos_thisframe; i++) {
-#else
 	for (int i = 0; i < max_ypos_thisframe; i++) {
-#endif
 		int i1 = i + min_ypos_for_screen;
 		int line = i + thisframe_y_adjust_real;
 		int whereline = amiga2aspect_line_map[i1];
@@ -4311,6 +4295,16 @@ bool vsync_handle_check (void)
 	return changed != 0;
 }
 
+#ifdef AMIBERRY
+void quit_drawing_thread()
+{
+	while (drawing_thread_busy)
+		sleep_micros(1);
+	if (drawing_pipe)
+		write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_QUIT, 1);
+}
+#endif
+
 void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_u16 bplcon3p, bool drawlines)
 {
 	int monid = 0;
@@ -4339,6 +4333,7 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 			finish_drawing_frame(drawlines);
 #endif
 		}
+		count_frame(monid);
 
 		if (quit_program < 0) {
 #ifdef AMIBERRY
@@ -4346,26 +4341,14 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 			{
 				if (drawing_tid)
 				{
-					while (drawing_thread_busy)
-						sleep_micros(1);
-					write_comm_pipe_u32(drawing_pipe, RENDER_SIGNAL_QUIT, 1);
-					while (drawing_tid != nullptr) {
-						sleep_micros(10);
-					}
-					destroy_comm_pipe(drawing_pipe);
-					xfree(drawing_pipe);
-					drawing_pipe = nullptr;
-					uae_sem_destroy(&drawing_sem);
-					drawing_sem = nullptr;
+					quit_drawing_thread();
 				}
 			}
 #endif
 #ifdef SAVESTATE
-			if (!savestate_state) {
-				if (currprefs.quitstatefile[0]) {
-					savestate_initsave(currprefs.quitstatefile, 1, 1, true);
-					save_state(currprefs.quitstatefile, _T(""));
-				}
+			if (!savestate_state && quit_program == -UAE_QUIT && currprefs.quitstatefile[0]) {
+				savestate_initsave(currprefs.quitstatefile, 1, 1, true);
+				save_state(currprefs.quitstatefile, _T(""));
 			}
 #endif
 			quit_program = -quit_program;
@@ -4373,8 +4356,6 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 			set_special(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE);
 			return;
 		}
-
-		count_frame(monid);
 
 		if (ad->framecnt == 0) {
 			init_drawing_frame();
@@ -4642,10 +4623,36 @@ static int drawing_thread(void *unused)
 
 			case RENDER_SIGNAL_QUIT:
 				drawing_tid = nullptr;
+				if (drawing_pipe)
+				{
+					destroy_comm_pipe(drawing_pipe);
+					xfree(drawing_pipe);
+					drawing_pipe = nullptr;
+				}
+				if (drawing_sem)
+				{
+					uae_sem_destroy(&drawing_sem);
+					drawing_sem = nullptr;
+				}
+				drawing_thread_busy = false;
 				return 0;
 			default:
 				break;
 		}
+	}
+}
+
+void start_drawing_thread()
+{
+	if (drawing_pipe == nullptr) {
+		drawing_pipe = xmalloc(smp_comm_pipe, 1);
+		init_comm_pipe(drawing_pipe, 20, 1);
+	}
+	if (drawing_sem == nullptr) {
+		uae_sem_init(&drawing_sem, 0, 0);
+	}
+	if (drawing_tid == nullptr && drawing_pipe != nullptr && drawing_sem != nullptr) {
+		uae_start_thread(_T("drawing"), drawing_thread, nullptr, &drawing_tid);
 	}
 }
 #endif
@@ -4666,16 +4673,7 @@ void drawing_init (void)
 #ifdef AMIBERRY
 	if (currprefs.multithreaded_drawing)
 	{
-		if (drawing_pipe == nullptr) {
-			drawing_pipe = xmalloc(smp_comm_pipe, 1);
-			init_comm_pipe(drawing_pipe, 20, 1);
-		}
-		if (drawing_sem == nullptr) {
-			uae_sem_init(&drawing_sem, 0, 0);
-		}
-		if (drawing_tid == nullptr && drawing_pipe != nullptr && drawing_sem != nullptr) {
-			uae_start_thread(_T("drawing"), drawing_thread, nullptr, &drawing_tid);
-		}
+		start_drawing_thread();
 	}
 #endif
 

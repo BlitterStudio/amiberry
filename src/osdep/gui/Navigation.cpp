@@ -259,8 +259,9 @@ static NavigationMap nav_map[] =
 	//  active            move left           move right          move up           move down
 	// PanelDisplay
 	{ "cboFullscreen", "Display", "chkHorizontal", "sldBrightness", "cboScreenmode" },
-	{ "cboScreenmode", "Display", "chkVertical", "cboFullscreen", "sldWidth" },
-	{ "sldWidth", "", "", "cboScreenmode", "sldHeight" },
+	{ "cboScreenmode", "Display", "chkVertical", "cboFullscreen", "chkManualCrop" },
+	{ "chkManualCrop", "Display", "chkHorizontal", "cboScreenmode", "sldWidth" },
+	{ "sldWidth", "", "", "chkManualCrop", "sldHeight" },
 	{ "sldHeight", "", "", "sldWidth", "chkAutoCrop" },
 	{ "chkAutoCrop", "Display", "chkBorderless", "sldHeight", "sldHOffset" },
 	{ "chkBorderless", "chkAutoCrop", "chkVsync", "sldHeight", "sldHOffset" },
