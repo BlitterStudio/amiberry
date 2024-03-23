@@ -11,6 +11,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_ASM_COMPILER "${CMAKE_C_COMPILER}")
 set(CMAKE_ASM_COMPILER_ARG1 "${CMAKE_C_COMPILER_ARG1}")
 
+option(USE_DISPMANX "Use Dispmanx" OFF)
 option(USE_DBUS "Use DBus" OFF)
 option(USE_OPENGL "Use OpenGL" OFF)
 
@@ -362,6 +363,13 @@ endif ()
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+
+if (USE_DISPMANX)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DISPMANX)
+    target_include_directories(${PROJECT_NAME} PRIVATE /opt/vc/include)
+    target_link_libraries(${PROJECT_NAME} PRIVATE bcm_host vchiq_arm)
+    target_link_directories(${PROJECT_NAME} PRIVATE /opt/vc/lib)
+endif()
 
 if (USE_DBUS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DBUS)
