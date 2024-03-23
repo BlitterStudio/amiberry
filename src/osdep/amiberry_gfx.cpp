@@ -71,6 +71,8 @@ static bool volatile display_thread_busy = false;
 static uae_u32 current_vsync_frame = 0;
 unsigned long time_per_frame = 20000; // Default for PAL (50 Hz): 20000 microsecs
 static int vsync_modulo = 1;
+static volatile bool vsync_active;
+bool volatile flip_in_progress = false;
 
 /* Possible screen modes (x and y resolutions) */
 #define MAX_SCREEN_MODES 14
@@ -266,8 +268,6 @@ static void update_leds(int monid)
 }
 
 #ifdef USE_DISPMANX
-static volatile bool vsync_active;
-
 static int display_thread(void* unused)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
