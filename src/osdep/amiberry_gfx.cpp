@@ -2867,7 +2867,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 		if (mon->screen_is_picasso)
 		{
 			width = w;
-			height = w;
+			height = h;
 		}
 		else
 		{
