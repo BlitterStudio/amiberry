@@ -18623,6 +18623,7 @@ uae_u32 REGPARAM2 op_4ed0_50_ff(uae_u32 opcode)
 	uae_u32 srcreg = (real_opcode & 7);
 	uaecptr srca;
 	srca = m68k_areg(regs, srcreg);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -18641,6 +18642,7 @@ uae_u32 REGPARAM2 op_4ee8_50_ff(uae_u32 opcode)
 	uae_u32 srcreg = (real_opcode & 7);
 	uaecptr srca;
 	srca = m68k_areg(regs, srcreg) + (uae_s32)(uae_s16)get_iiword_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -18660,6 +18662,7 @@ uae_u32 REGPARAM2 op_4ef0_50_ff(uae_u32 opcode)
 	uaecptr srca;
 	m68k_incpc(2);
 	srca = x_get_disp_ea_020(m68k_areg(regs, srcreg), 0);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -18676,6 +18679,7 @@ uae_u32 REGPARAM2 op_4ef8_50_ff(uae_u32 opcode)
 {
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_iiword_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -18692,6 +18696,7 @@ uae_u32 REGPARAM2 op_4ef9_50_ff(uae_u32 opcode)
 {
 	uaecptr srca;
 	srca = get_iilong_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -18709,6 +18714,7 @@ uae_u32 REGPARAM2 op_4efa_50_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_getpc() + 2;
 	srca += (uae_s32)(uae_s16)get_iiword_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -18727,6 +18733,7 @@ uae_u32 REGPARAM2 op_4efb_50_ff(uae_u32 opcode)
 	m68k_incpc(2);
 	uaecptr tmppc = m68k_getpc();
 	srca = x_get_disp_ea_020(tmppc, 0);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -49643,6 +49650,7 @@ uae_u32 REGPARAM2 op_4ef0_54_ff(uae_u32 opcode)
 	uae_u32 srcreg = (real_opcode & 7);
 	uaecptr srca;
 	srca = get_disp_ea_000(m68k_areg(regs, srcreg), get_iiword_jit(2));
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -49659,6 +49667,7 @@ uae_u32 REGPARAM2 op_4efb_54_ff(uae_u32 opcode)
 	uaecptr srca;
 	uaecptr tmppc = m68k_getpc() + 2;
 	srca = get_disp_ea_000(tmppc, get_iiword_jit(2));
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -57780,6 +57789,7 @@ uae_u32 REGPARAM2 op_4ed0_55_ff(uae_u32 opcode)
 	uae_u32 srcreg = (real_opcode & 7);
 	uaecptr srca;
 	srca = m68k_areg(regs, srcreg);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -57797,6 +57807,7 @@ uae_u32 REGPARAM2 op_4ee8_55_ff(uae_u32 opcode)
 	uae_u32 srcreg = (real_opcode & 7);
 	uaecptr srca;
 	srca = m68k_areg(regs, srcreg) + (uae_s32)(uae_s16)get_iiword_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -57814,6 +57825,7 @@ uae_u32 REGPARAM2 op_4ef0_55_ff(uae_u32 opcode)
 	uae_u32 srcreg = (real_opcode & 7);
 	uaecptr srca;
 	srca = get_disp_ea_000(m68k_areg(regs, srcreg), get_iiword_jit(2));
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -57829,6 +57841,7 @@ uae_u32 REGPARAM2 op_4ef8_55_ff(uae_u32 opcode)
 {
 	uaecptr srca;
 	srca = (uae_s32)(uae_s16)get_iiword_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -57844,6 +57857,7 @@ uae_u32 REGPARAM2 op_4ef9_55_ff(uae_u32 opcode)
 {
 	uaecptr srca;
 	srca = get_iilong_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -57860,6 +57874,7 @@ uae_u32 REGPARAM2 op_4efa_55_ff(uae_u32 opcode)
 	uaecptr srca;
 	srca = m68k_getpc() + 2;
 	srca += (uae_s32)(uae_s16)get_iiword_jit(2);
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);
@@ -57876,6 +57891,7 @@ uae_u32 REGPARAM2 op_4efb_55_ff(uae_u32 opcode)
 	uaecptr srca;
 	uaecptr tmppc = m68k_getpc() + 2;
 	srca = get_disp_ea_000(tmppc, get_iiword_jit(2));
+	uaecptr oldpc = m68k_getpc();
 	if (srca & 1) {
 		m68k_incpc(2);
 		exception3_read_prefetch_only(opcode, srca);

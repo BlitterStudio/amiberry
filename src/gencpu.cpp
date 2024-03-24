@@ -7236,7 +7236,8 @@ static void gen_opcode (unsigned int opcode)
 		clear_m68k_offset();
 		tail_ce020_done = true;
 		if (using_ce || using_prefetch) {
-			fill_prefetch_full_000_special(2, NULL);
+			out("int pcadjust = oldpc - m68k_getpci() + 2;\n");
+			fill_prefetch_full_000_special(-1, NULL);
 		} else {
 			fill_prefetch_full_ntx(0);
 		}
@@ -7405,7 +7406,8 @@ static void gen_opcode (unsigned int opcode)
 		out("}\n");
 		clear_m68k_offset();
 		if (using_prefetch || using_ce) {
-			fill_prefetch_full_000_special(2, NULL);
+			out("int pcadjust = oldpc - m68k_getpci() + 2;\n");
+			fill_prefetch_full_000_special(-1, NULL);
 		} else {
 			fill_prefetch_full(0);
 		}
@@ -7518,7 +7520,8 @@ static void gen_opcode (unsigned int opcode)
 		}
 		clear_m68k_offset();
 		if (using_prefetch || using_ce) {
-			fill_prefetch_full_000_special(2, NULL);
+			out("int pcadjust = oldpc - m68k_getpci() + 2;\n");
+			fill_prefetch_full_000_special(-1, NULL);
 		} else {
 			fill_prefetch_full(0);
 		}
@@ -7584,7 +7587,17 @@ static void gen_opcode (unsigned int opcode)
 					write_return_cycles(0);
 					out("}\n");
 				}
+
+				if (curi->smode == absl) {
+					sprintf(bus_error_code, "pcoffset = (oldpc - srca) + 6;\n");
+				} else if (curi->smode == Ad8r || curi->smode == PC8r || curi->smode == Ad16 || curi->smode == PC16 || curi->smode == absw) {
+					sprintf(bus_error_code, "pcoffset = (oldpc - srca) + 4;\n");
+				} else {
+					sprintf(bus_error_code, "pcoffset = (oldpc - srca) + 2;\n");
+				}
 				fill_prefetch_1(0);
+				bus_error_code[0] = 0;
+
 				if (cpu_level < 2) {
 					out("m68k_areg(regs, 7) -= 4;\n");
 				}
@@ -7640,7 +7653,8 @@ static void gen_opcode (unsigned int opcode)
 					out("if(regs.t1) opcode |= 0x10000;\n");
 				out("%s(%d);\n", prefetch_word, 2);
 				count_readw++;
-				check_prefetch_bus_error(-2, 0, sp);
+				check_prefetch_bus_error(2, 0, 0);
+
 				did_prefetch = 1;
 				ir2irc = 0;
 			} else {
@@ -7654,6 +7668,7 @@ static void gen_opcode (unsigned int opcode)
 	case i_JMP:
 		no_prefetch_ce020 = true;
 		genamode(curi, curi->smode, "srcreg", curi->size, "src", 0, 0, GF_AA|GF_NOREFILL);
+		out("uaecptr oldpc = %s;\n", getpc);
 		if (using_exception_3) {
 			push_ins_cnt();
 			out("if (srca & 1) {\n");
@@ -7680,7 +7695,9 @@ static void gen_opcode (unsigned int opcode)
 		if (using_prefetch || using_ce) {
 			out("%s(%d);\n", prefetch_word, 0);
 			count_readw++;
-			check_prefetch_bus_error(-1, 0, 0);
+			sprintf(bus_error_code, "pcoffset = (oldpc - srca) + 2;\n");
+			check_prefetch_bus_error(-1, -1, 0);
+			bus_error_code[0] = 0;
 			irc2ir();
 			set_last_access_ipl();
 			out("%s(%d);\n", prefetch_word, 2);
@@ -7689,7 +7706,7 @@ static void gen_opcode (unsigned int opcode)
 			if (sp < 0 && cpu_level == 0)
 				out("if(regs.t1) opcode |= 0x10000;\n");
 			count_readw++;
-			check_prefetch_bus_error(-2, 0, sp);
+			check_prefetch_bus_error(2, 0, 0);
 			did_prefetch = 1;
 			ir2irc = 0;
 		} else {
@@ -7853,7 +7870,8 @@ static void gen_opcode (unsigned int opcode)
 		push_ins_cnt();
 		if (using_prefetch) {
 			incpc("(uae_s32)src + 2");
-			fill_prefetch_full_000_special(2, NULL);
+			out("int pcadjust = oldpc - m68k_getpci() + 2;\n");
+			fill_prefetch_full_000_special(-1, NULL);
 			if (using_ce)
 				out("return;\n");
 			else
