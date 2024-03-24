@@ -113,3 +113,6 @@ extern void read_joystick_hat(int id, int hat, int value);
 
 extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
+
+extern void save_controller_mapping_to_file(const host_input_button& input, const std::string& filename);
+extern void read_controller_mapping_from_file(host_input_button& input, const std::string& filename);

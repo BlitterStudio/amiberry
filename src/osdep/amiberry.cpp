@@ -4291,3 +4291,112 @@ void clear_whdload_prefs()
 	whdload_prefs.selected_slave = {};
 	whdload_prefs.custom.clear();
 }
+
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
+void save_controller_mapping_to_file(const host_input_button& input, const std::string& filename)
+{
+	std::ofstream out_file(filename);
+	if (!out_file) {
+		std::cerr << "Unable to open file " << filename << std::endl;
+		return;
+	}
+
+	out_file << "button=";
+	for (const auto& b : input.button) {
+		out_file << b << " ";
+	}
+	out_file << "\naxis=";
+	for (const auto& a : input.axis) {
+		out_file << a << " ";
+	}
+	out_file << "\nlstick_axis_y_invert=" << input.lstick_axis_y_invert;
+	out_file << "\nlstick_axis_x_invert=" << input.lstick_axis_x_invert;
+	out_file << "\nrstick_axis_y_invert=" << input.rstick_axis_y_invert;
+	out_file << "\nrstick_axis_x_invert=" << input.rstick_axis_x_invert;
+	out_file << "\nhotkey_button=" << input.hotkey_button;
+	out_file << "\nquit_button=" << input.quit_button;
+	out_file << "\nreset_button=" << input.reset_button;
+	out_file << "\nmenu_button=" << input.menu_button;
+	out_file << "\nload_state_button=" << input.load_state_button;
+	out_file << "\nsave_state_button=" << input.save_state_button;
+	out_file << "\nvkbd_button=" << input.vkbd_button;
+	out_file << "\nnumber_of_hats=" << input.number_of_hats;
+	out_file << "\nnumber_of_axis=" << input.number_of_axis;
+	out_file << "\nis_retroarch=" << input.is_retroarch;
+
+	out_file.close();
+}
+
+void read_controller_mapping_from_file(host_input_button& input, const std::string& filename)
+{
+	std::ifstream in_file(filename);
+	if (!in_file) {
+		std::cerr << "Unable to open file " << filename << std::endl;
+		return;
+	}
+
+	std::string line;
+	while (std::getline(in_file, line)) {
+		std::istringstream iss(line);
+		std::string key;
+		if (std::getline(iss, key, '=')) {
+			if (key == "button") {
+				for (auto& b : input.button) {
+					iss >> b;
+				}
+			}
+			else if (key == "axis") {
+				for (auto& a : input.axis) {
+					iss >> a;
+				}
+			}
+			else if (key == "lstick_axis_y_invert") {
+				iss >> input.lstick_axis_y_invert;
+			}
+			else if (key == "lstick_axis_x_invert") {
+				iss >> input.lstick_axis_x_invert;
+			}
+			else if (key == "rstick_axis_y_invert") {
+				iss >> input.rstick_axis_y_invert;
+			}
+			else if (key == "rstick_axis_x_invert") {
+				iss >> input.rstick_axis_x_invert;
+			}
+			else if (key == "hotkey_button") {
+				iss >> input.hotkey_button;
+			}
+			else if (key == "quit_button") {
+				iss >> input.quit_button;
+			}
+			else if (key == "reset_button") {
+				iss >> input.reset_button;
+			}
+			else if (key == "menu_button") {
+				iss >> input.menu_button;
+			}
+			else if (key == "load_state_button") {
+				iss >> input.load_state_button;
+			}
+			else if (key == "save_state_button") {
+				iss >> input.save_state_button;
+			}
+			else if (key == "vkbd_button") {
+				iss >> input.vkbd_button;
+			}
+			else if (key == "number_of_hats") {
+				iss >> input.number_of_hats;
+			}
+			else if (key == "number_of_axis") {
+				iss >> input.number_of_axis;
+			}
+			else if (key == "is_retroarch") {
+				iss >> input.is_retroarch;
+			}
+		}
+	}
+
+	in_file.close();
+}
