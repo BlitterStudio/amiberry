@@ -539,7 +539,9 @@ void gui_display(int shortcut)
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 	clearallkeys ();
-
+#ifdef USE_DISPMANX
+	update_display(&changed_prefs);
+#endif
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);
