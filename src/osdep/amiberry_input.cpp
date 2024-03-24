@@ -1244,10 +1244,10 @@ void read_controller_button(const int id, const int button, const int state)
 		int retroarch_offset = SDL_CONTROLLER_BUTTON_MAX + SDL_CONTROLLER_AXIS_MAX * 2;
 
 		// detect RetroArch events, with or without Hotkey
-		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, true);
-		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, true);
-		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, true);
-		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, true);
+		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1 + held_offset, true);
+		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2 + held_offset, true);
+		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3 + held_offset, true);
+		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4 + held_offset, true);
 
 		setjoybuttonstate(id, button + held_offset, state);
 	}
@@ -1286,10 +1286,10 @@ void read_joystick_buttons(const int id)
 		int retroarch_offset = SDL_CONTROLLER_BUTTON_MAX + SDL_CONTROLLER_AXIS_MAX * 2;
 
 		// detect RetroArch events, with or without Hotkey
-		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, false);
-		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, false);
-		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, false);
-		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, false);
+		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1 + held_offset, false);
+		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2 + held_offset, false);
+		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3 + held_offset, false);
+		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4 + held_offset, false);
 
 		// Check all Joystick buttons, including axes acting as buttons
 		for (int did_button = 0; did_button < did->buttons; did_button++)
