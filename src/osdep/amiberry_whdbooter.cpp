@@ -992,155 +992,145 @@ void parse_slave_custom_fields(whdload_slave& slave, const std::string& custom)
 
 game_hardware_options parse_settings_from_xml(uae_prefs* prefs, const char* filepath)
 {
-	game_hardware_options game_detail{};
 	tinyxml2::XMLDocument doc;
-	auto error = false;
 	write_log(_T("WHDBooter - Searching whdload_db.xml for %s\n"), whdload_prefs.filename.c_str());
 
-	auto* f = fopen(whd_config.c_str(), _T("rb"));
-	if (f)
+	FILE* f = fopen(whd_config.c_str(), _T("rb"));
+	if (!f)
 	{
-		auto err = doc.LoadFile(f);
-		if (err != tinyxml2::XML_SUCCESS)
-		{
-			write_log(_T("Failed to parse '%s':  %d\n"), whd_config.c_str(), err);
-			error = true;
-		}
-		fclose(f);
-	}
-	else
-	{
-		error = true;
+		write_log(_T("Failed to open '%s'\n"), whd_config.c_str());
+		return {};
 	}
 
-	if (!error)
+	tinyxml2::XMLError err = doc.LoadFile(f);
+	fclose(f);
+	if (err != tinyxml2::XML_SUCCESS)
 	{
-		auto sha1 = my_get_sha1_of_file(filepath);
-		std::transform(sha1.begin(), sha1.end(), sha1.begin(), ::tolower);
-		auto* game_node = doc.FirstChildElement("whdbooter");
-		game_node = game_node->FirstChildElement("game");
-		while (game_node != nullptr)
+		write_log(_T("Failed to parse '%s':  %d\n"), whd_config.c_str(), err);
+		return {};
+	}
+
+	game_hardware_options game_detail{};
+	auto sha1 = my_get_sha1_of_file(filepath);
+	std::transform(sha1.begin(), sha1.end(), sha1.begin(), ::tolower);
+
+	tinyxml2::XMLElement* game_node = doc.FirstChildElement("whdbooter")->FirstChildElement("game");
+	while (game_node != nullptr)
+	{
+		// Ideally we'd just match by sha1, but filename has worked up until now, so try that first
+		// then fall back to sha1 if a user has renamed the file!
+		//
+		if (game_node->Attribute("filename", whdload_prefs.filename.c_str()) || 
+			game_node->Attribute("sha1", sha1.c_str()))
 		{
-			// Ideally we'd just match by sha1, but filename has worked up until now, so try that first
-			// then fall back to sha1 if a user has renamed the file!
-			//
-			int found = 0;
-			if (game_node->Attribute("filename", whdload_prefs.filename.c_str()) || 
-				game_node->Attribute("sha1", sha1.c_str()))
+			// Name
+			auto xml_element = game_node->FirstChildElement("name");
+			if (xml_element)
 			{
-				found = 1;
+				whdload_prefs.game_name.assign(xml_element->GetText());
 			}
 
-			if (found)
+			// Sub Path
+			xml_element = game_node->FirstChildElement("subpath");
+			if (xml_element)
 			{
-				// Name
-				auto xml_element = game_node->FirstChildElement("name");
-				if (xml_element)
-				{
-					whdload_prefs.game_name.assign(xml_element->GetText());
-				}
-
-				// Sub Path
-				xml_element = game_node->FirstChildElement("subpath");
-				if (xml_element)
-				{
-					whdload_prefs.sub_path.assign(xml_element->GetText());
-				}
-
-				// Variant UUID
-				xml_element = game_node->FirstChildElement("variant_uuid");
-				if (xml_element)
-				{
-					whdload_prefs.variant_uuid.assign(xml_element->GetText());
-				}
-
-				// Slave count
-				xml_element = game_node->FirstChildElement("slave_count");
-				if (xml_element)
-				{
-					whdload_prefs.slave_count = xml_element->IntText(0);
-				}
-
-				// Default slave
-				xml_element = game_node->FirstChildElement("slave_default");
-				if (xml_element)
-				{
-					whdload_prefs.slave_default.assign(xml_element->GetText());
-					write_log("WHDBooter - Selected Slave: %s \n", whdload_prefs.slave_default.c_str());
-				}
-
-				// Slave_libraries
-				xml_element = game_node->FirstChildElement("slave_libraries");
-				if (xml_element->GetText() != nullptr)
-				{
-					if (strcmpi(xml_element->GetText(), "true") == 0)
-						whdload_prefs.slave_libraries = true;
-				}
-
-				// Get slaves and settings
-				xml_element = game_node->FirstChildElement("slave");
-				whdload_prefs.slaves.clear();
-
-				for (int i = 0; i < whdload_prefs.slave_count && xml_element; ++i)
-				{
-					whdload_slave slave;
-					const char* slave_text = nullptr;
-
-					slave_text = xml_element->FirstChildElement("filename")->GetText();
-					if (slave_text)
-						slave.filename.assign(slave_text);
-
-					slave_text = xml_element->FirstChildElement("datapath")->GetText();
-					if (slave_text)
-						slave.data_path.assign(slave_text);
-
-					auto customElement = xml_element->FirstChildElement("custom");
-					if (customElement && ((slave_text = customElement->GetText())))
-					{
-						auto custom = std::string(slave_text);
-						parse_slave_custom_fields(slave, custom);
-					}
-
-					whdload_prefs.slaves.emplace_back(slave);
-
-					// Set the default slave as the selected one
-					if (slave.filename == whdload_prefs.slave_default)
-						whdload_prefs.selected_slave = slave;
-
-					xml_element = xml_element->NextSiblingElement("slave");
-				}
-
-				// get hardware
-				xml_element = game_node->FirstChildElement("hardware");
-				if (xml_element)
-				{
-					std::string hardware;
-					hardware.assign(xml_element->GetText());
-					if (!hardware.empty())
-					{
-						game_detail = get_game_hardware_settings(hardware);
-						write_log("WHDBooter - Game H/W Settings: \n%s\n", hardware.c_str());
-					}
-				}
-
-				// get custom controls
-				xml_element = game_node->FirstChildElement("custom_controls");
-				if (xml_element)
-				{
-					std::string custom_settings;
-					custom_settings.assign(xml_element->GetText());
-					if (!custom_settings.empty())
-					{
-						parse_custom_settings(prefs, custom_settings);
-						write_log("WHDBooter - Game Custom Settings: \n%s\n", custom_settings.c_str());
-					}
-				}
-
-				break;
+				whdload_prefs.sub_path.assign(xml_element->GetText());
 			}
-			game_node = game_node->NextSiblingElement();
+
+			// Variant UUID
+			xml_element = game_node->FirstChildElement("variant_uuid");
+			if (xml_element)
+			{
+				whdload_prefs.variant_uuid.assign(xml_element->GetText());
+			}
+
+			// Slave count
+			xml_element = game_node->FirstChildElement("slave_count");
+			if (xml_element)
+			{
+				whdload_prefs.slave_count = xml_element->IntText(0);
+			}
+
+			// Default slave
+			xml_element = game_node->FirstChildElement("slave_default");
+			if (xml_element)
+			{
+				whdload_prefs.slave_default.assign(xml_element->GetText());
+				write_log("WHDBooter - Selected Slave: %s \n", whdload_prefs.slave_default.c_str());
+			}
+
+			// Slave_libraries
+			xml_element = game_node->FirstChildElement("slave_libraries");
+			if (xml_element->GetText() != nullptr)
+			{
+				if (strcmpi(xml_element->GetText(), "true") == 0)
+					whdload_prefs.slave_libraries = true;
+			}
+
+			// Get slaves and settings
+			xml_element = game_node->FirstChildElement("slave");
+			whdload_prefs.slaves.clear();
+
+			for (int i = 0; i < whdload_prefs.slave_count && xml_element; ++i)
+			{
+				whdload_slave slave;
+				const char* slave_text = nullptr;
+
+				slave_text = xml_element->FirstChildElement("filename")->GetText();
+				if (slave_text)
+					slave.filename.assign(slave_text);
+
+				slave_text = xml_element->FirstChildElement("datapath")->GetText();
+				if (slave_text)
+					slave.data_path.assign(slave_text);
+
+				auto customElement = xml_element->FirstChildElement("custom");
+				if (customElement && ((slave_text = customElement->GetText())))
+				{
+					auto custom = std::string(slave_text);
+					parse_slave_custom_fields(slave, custom);
+				}
+
+				whdload_prefs.slaves.emplace_back(slave);
+
+				// Set the default slave as the selected one
+				if (slave.filename == whdload_prefs.slave_default)
+					whdload_prefs.selected_slave = slave;
+
+				xml_element = xml_element->NextSiblingElement("slave");
+			}
+
+			// get hardware
+			xml_element = game_node->FirstChildElement("hardware");
+			if (xml_element)
+			{
+				std::string hardware;
+				hardware.assign(xml_element->GetText());
+				if (!hardware.empty())
+				{
+					game_detail = get_game_hardware_settings(hardware);
+					write_log("WHDBooter - Game H/W Settings: \n%s\n", hardware.c_str());
+				}
+			}
+
+			// get custom controls
+			xml_element = game_node->FirstChildElement("custom_controls");
+			if (xml_element)
+			{
+				std::string custom_settings;
+				custom_settings.assign(xml_element->GetText());
+				if (!custom_settings.empty())
+				{
+					parse_custom_settings(prefs, custom_settings);
+					write_log("WHDBooter - Game Custom Settings: \n%s\n", custom_settings.c_str());
+				}
+			}
+
+			break;
 		}
+		game_node = game_node->NextSiblingElement();
 	}
+
 	return game_detail;
 }
 
