@@ -192,36 +192,6 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 
 void set_scaling_option(uae_prefs* p, int width, int height)
 {
-#ifdef USE_DISPMANX
-	SDL_Rect viewport;
-	// Correct Aspect Ratio
-	if (currprefs.gfx_correct_aspect == 0)
-	{
-		// Fullscreen.
-		vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
-	}
-	else
-	{
-		const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
-		const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
-
-		float scale;
-		if (want_aspect > real_aspect)
-		{
-			scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
-		}
-		else
-		{
-			scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
-		}
-
-		viewport.w = static_cast<int>(SDL_floor(width * scale));
-		viewport.x = (modeInfo.width - viewport.w) / 2;
-		viewport.h = static_cast<int>(SDL_floor(height * scale));
-		viewport.y = (modeInfo.height - viewport.h) / 2;
-		vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
-	}
-#else
 	if (p->scaling_method == -1) {
 		if (isModeAspectRatioExact(&sdl_mode, width, height))
 #ifdef USE_OPENGL
@@ -260,7 +230,6 @@ void set_scaling_option(uae_prefs* p, int width, int height)
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
-#endif // USE_DISPMANX
 }
 
 static float SDL2_getrefreshrate(int monid)
@@ -303,6 +272,7 @@ static int display_thread(void* unused)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 	struct amigadisplay* ad = &adisplays[0];
+	auto* avidinfo = &adisplays[0].gfxvidinfo;
 
 	uint32_t vc_image_ptr;
 
@@ -361,54 +331,52 @@ static int display_thread(void* unused)
 					rgb_mode = VC_IMAGE_RGBX32;
 					pixel_format = SDL_PIXELFORMAT_RGBA32;
 				}
+				display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
+				display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
 			}
 			else
 			{
-				//display_depth = 16;
-				//rgb_mode = VC_IMAGE_RGB565;
+				mon->currentmode.native_depth = mon->currentmode.current_depth;
+
+				if (currprefs.gfx_resolution > avidinfo->gfx_resolution_reserved)
+					avidinfo->gfx_resolution_reserved = currprefs.gfx_resolution;
+				if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
+					avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
+
+				if (!currprefs.gfx_autoresolution) {
+					mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
+					mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution;
+				}
+				else {
+					mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << avidinfo->gfx_resolution_reserved;
+					mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << avidinfo->gfx_vresolution_reserved;
+				}
+				if (avidinfo->gfx_resolution_reserved == RES_SUPERHIRES)
+					mon->currentmode.amiga_height *= 2;
+				if (mon->currentmode.amiga_height > 1280)
+					mon->currentmode.amiga_height = 1280;
+
+				avidinfo->drawbuffer.inwidth = avidinfo->drawbuffer.outwidth = mon->currentmode.amiga_width;
+				avidinfo->drawbuffer.inheight = avidinfo->drawbuffer.outheight = mon->currentmode.amiga_height;
+
+				mon->currentmode.pitch = mon->currentmode.amiga_width * mon->currentmode.current_depth >> 3;
+
 				display_depth = 32;
 				rgb_mode = VC_IMAGE_RGBX32;
 				pixel_format = SDL_PIXELFORMAT_RGBA32;
 			}
 
-			if (!amiga_surface)
-				amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, display_depth, pixel_format);
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, mon->screen_is_picasso ? display_width : 1920, mon->screen_is_picasso ? display_height : 1280, display_depth, pixel_format);
 
 			if (!displayHandle)
 				displayHandle = vc_dispmanx_display_open(0);
 
 			if (!amigafb_resource_1)
-				amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
+				amigafb_resource_1 = vc_dispmanx_resource_create(rgb_mode, amiga_surface->w, amiga_surface->h, &vc_image_ptr);
 			if (!amigafb_resource_2)
-				amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
+				amigafb_resource_2 = vc_dispmanx_resource_create(rgb_mode, amiga_surface->w, amiga_surface->h, &vc_image_ptr);
 			if (!blackfb_resource)
-				blackfb_resource = vc_dispmanx_resource_create(rgb_mode, display_width, display_height, &vc_image_ptr);
-
-			vc_dispmanx_rect_set(&blit_rect, 0, 0, display_width, display_height);
-			vc_dispmanx_resource_write_data(amigafb_resource_1, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
-			vc_dispmanx_resource_write_data(blackfb_resource, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
-			vc_dispmanx_rect_set(&src_rect, 0, 0, display_width << 16, display_height << 16);
-
-			// Use the full screen size for the black frame
-			vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
-
-			if (DispManXElementpresent == 0)
-			{
-				DispManXElementpresent = 1;
-				updateHandle = vc_dispmanx_update_start(0);
-
-				if (!blackscreen_element)
-					blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
-						&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
-						nullptr, DISPMANX_NO_ROTATE);
-
-				if (!elementHandle)
-					elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
-						&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
-						nullptr, DISPMANX_NO_ROTATE);
-
-				vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
-			}
+				blackfb_resource = vc_dispmanx_resource_create(rgb_mode, amiga_surface->w, amiga_surface->h, &vc_image_ptr);
 
 			uae_sem_post(&display_sem);
 			break;
@@ -2404,9 +2372,9 @@ static void open_screen(struct uae_prefs* p)
 		allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, 0, 1920, 1280, display_depth);
 		if (currprefs.monitoremu || currprefs.cs_cd32fmv || ((currprefs.genlock || currprefs.genlock_effects) && currprefs.genlock_image) || currprefs.cs_color_burst || currprefs.gfx_grayscale) {
 			allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
-			                mon->currentmode.amiga_width > 1024 ? mon->currentmode.amiga_width : 1024,
-			                mon->currentmode.amiga_height > 1024 ? mon->currentmode.amiga_height : 1024,
-			                mon->currentmode.current_depth);
+				mon->currentmode.amiga_width > 1024 ? mon->currentmode.amiga_width : 1024,
+				mon->currentmode.amiga_height > 1024 ? mon->currentmode.amiga_height : 1024,
+				mon->currentmode.current_depth);
 		}
 		init_row_map();
 	}
@@ -2879,6 +2847,80 @@ bool target_graphics_buffer_update(int monid, bool force)
 	}
 
 #ifdef USE_DISPMANX
+	vc_dispmanx_rect_set(&blit_rect, dx, dy, w, h);
+	vc_dispmanx_resource_write_data(amigafb_resource_1, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
+	vc_dispmanx_resource_write_data(blackfb_resource, rgb_mode, amiga_surface->pitch, amiga_surface->pixels, &blit_rect);
+	vc_dispmanx_rect_set(&src_rect, dx, dy, w << 16, h << 16);
+
+	// Use the full screen size for the black frame
+	vc_dispmanx_rect_set(&black_rect, 0, 0, modeInfo.width, modeInfo.height);
+
+	// Correct Aspect Ratio
+	if (currprefs.gfx_correct_aspect == 0)
+	{
+		// Fullscreen.
+		vc_dispmanx_rect_set(&dst_rect, 0, 0, modeInfo.width, modeInfo.height);
+	}
+	else
+	{
+		int width, height;
+		if (mon->screen_is_picasso)
+		{
+			width = w;
+			height = w;
+		}
+		else
+		{
+			if (currprefs.gfx_vresolution == VRES_NONDOUBLE)
+			{
+				if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
+					height *= 2;
+			}
+			else
+			{
+				if (currprefs.gfx_resolution == RES_LORES)
+					width *= 2;
+			}
+		}
+
+		const auto want_aspect = static_cast<float>(width) / static_cast<float>(height);
+		const auto real_aspect = static_cast<float>(modeInfo.width) / static_cast<float>(modeInfo.height);
+
+		float scale;
+		if (want_aspect > real_aspect)
+		{
+			scale = static_cast<float>(modeInfo.width) / static_cast<float>(width);
+		}
+		else
+		{
+			scale = static_cast<float>(modeInfo.height) / static_cast<float>(height);
+		}
+
+		SDL_Rect viewport;
+		viewport.w = static_cast<int>(SDL_floor(width * scale));
+		viewport.x = (modeInfo.width - viewport.w) / 2;
+		viewport.h = static_cast<int>(SDL_floor(height * scale));
+		viewport.y = (modeInfo.height - viewport.h) / 2;
+		vc_dispmanx_rect_set(&dst_rect, viewport.x, viewport.y, viewport.w, viewport.h);
+	}
+	if (DispManXElementpresent == 0)
+	{
+		DispManXElementpresent = 1;
+		updateHandle = vc_dispmanx_update_start(0);
+
+		if (!blackscreen_element)
+			blackscreen_element = vc_dispmanx_element_add(updateHandle, displayHandle, 0,
+				&black_rect, blackfb_resource, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
+				nullptr, DISPMANX_NO_ROTATE);
+
+		if (!elementHandle)
+			elementHandle = vc_dispmanx_element_add(updateHandle, displayHandle, 1,
+				&dst_rect, amigafb_resource_1, &src_rect, DISPMANX_PROTECTION_NONE, &dmx_alpha,
+				nullptr, DISPMANX_NO_ROTATE);
+
+		vc_dispmanx_update_submit(updateHandle, nullptr, nullptr);
+	}
+
 	if (currprefs.gfx_monitor[monid].gfx_size.height != changed_prefs.gfx_monitor[monid].gfx_size.height)
 	{
 		update_display(&changed_prefs);
@@ -2935,8 +2977,8 @@ bool target_graphics_buffer_update(int monid, bool force)
 		if (mon->amiga_renderer) {
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
 				SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
-				renderQuad = {dx, dy, w, h};
-				crop_rect = {dx, dy, w, h};
+				renderQuad = { dx, dy, w, h };
+				crop_rect = { dx, dy, w, h };
 			}
 			else
 			{
@@ -2990,8 +3032,8 @@ bool target_graphics_buffer_update(int monid, bool force)
 			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
 				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
 				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
-					renderQuad = {dx, dy, scaled_width, scaled_height};
-					crop_rect = {dx, dy, w, h};
+					renderQuad = { dx, dy, scaled_width, scaled_height };
+					crop_rect = { dx, dy, w, h };
 				}
 				else if (currprefs.gfx_manual_crop)
 				{
