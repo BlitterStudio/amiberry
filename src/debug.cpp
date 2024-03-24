@@ -7504,9 +7504,10 @@ void debug (void)
 #ifdef WITH_PPC
 	uae_ppc_pause(1);
 #endif
-	inputdevice_unacquire ();
+	inputdevice_unacquire();
 	pause_sound ();
 	setmouseactive(0, 0);
+	target_inputdevice_unacquire(true);
 	activate_console ();
 	trace_mode = 0;
 	exception_debugging = 0;

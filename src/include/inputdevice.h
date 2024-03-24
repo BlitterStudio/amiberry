@@ -386,7 +386,9 @@ extern int inputdevice_istest (void);
 extern void inputdevice_settest (int);
 extern int inputdevice_testread_count (void);
 
-extern bool target_can_autoswitchdevice(void);
+bool target_can_autoswitchdevice(void);
+void target_inputdevice_acquire(void);
+void target_inputdevice_unacquire(bool);
 
 bool key_specialpressed(void);
 bool key_shiftpressed(void);

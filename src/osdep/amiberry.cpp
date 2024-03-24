@@ -655,17 +655,21 @@ bool ismouseactive (void)
 	return mouseactive > 0;
 }
 
-//TODO: Tablet only
-void target_inputdevice_unacquire(void)
+//TODO: maybe implement this
+void target_inputdevice_unacquire(bool full)
 {
-//	close_tablet(tablet);
-//	tablet = NULL;
+	//close_tablet(tablet);
+	//tablet = NULL;
+	//if (full) {
+	//	rawinput_release();
+	//}
 }
 void target_inputdevice_acquire(void)
 {
-//	struct AmigaMonitor* mon = &AMonitors[0];
-//	target_inputdevice_unacquire();
-//	tablet = open_tablet(mon->hAmigaWnd);
+	//struct AmigaMonitor* mon = &AMonitors[0];
+	//target_inputdevice_unacquire(false);
+	//tablet = open_tablet(mon->hAmigaWnd);
+	//rawinput_alloc();
 }
 
 static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpause)

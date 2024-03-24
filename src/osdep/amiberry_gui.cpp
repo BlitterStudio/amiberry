@@ -506,6 +506,7 @@ void gui_display(int shortcut)
 
 	if (setpaused(7)) {
 		inputdevice_unacquire();
+		//rawinput_release();
 		wait_keyrelease();
 		clearallkeys();
 		setmouseactive(0, 0);
@@ -539,7 +540,10 @@ void gui_display(int shortcut)
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);
 	}
+	//rawinput_alloc();
 	fpscounter_reset();
+	//screenshot_free();
+	//write_disk_history();
 	gui_active--;
 	here--;
 }
