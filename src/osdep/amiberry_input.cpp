@@ -1392,7 +1392,7 @@ struct inputdevice_functions inputdevicefunc_joystick = {
 };
 
 // We use setid to set up custom events
-int input_get_default_joystick(struct uae_input_device* uid, int i, int port, int af, int mode, bool gp, bool joymouseswap)
+int input_get_default_joystick(struct uae_input_device* uid, int i, int port, int af, int mode, bool gp, bool joymouseswap, bool default_osk)
 {
 	struct didata* did = NULL;
 	int h, v;
@@ -1567,7 +1567,7 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	return 0;
 }
 
-int input_get_default_joystick_analog(struct uae_input_device* uid, int i, int port, int af, bool gp, bool joymouseswap)
+int input_get_default_joystick_analog(struct uae_input_device* uid, int i, int port, int af, bool gp, bool joymouseswap, bool default_osk)
 {
 	struct didata* did;
 	
