@@ -358,10 +358,10 @@ static NavigationMap nav_map[] =
 	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkMidiRoute", "cboSampler" },
 
 	// PanelCustom
-	{ "0: Mouse", "Custom controls", "1: Joystick", "", "None" },
-	{ "1: Joystick", "0: Mouse", "2: Parallel 1", "", "HotKey" },
-	{ "2: Parallel 1", "1: Joystick", "3: Parallel 2", "", "HotKey" },
-	{ "3: Parallel 2", "2: Parallel 1", "Custom controls", "", "cmdSetHotkey" },
+	{ "0: Mouse", "Custom controls", "1: Joystick", "cmdSaveMapping", "None" },
+	{ "1: Joystick", "0: Mouse", "2: Parallel 1", "cmdSaveMapping", "HotKey" },
+	{ "2: Parallel 1", "1: Joystick", "3: Parallel 2", "cmdSaveMapping", "HotKey" },
+	{ "3: Parallel 2", "2: Parallel 1", "Custom controls", "cmdSaveMapping", "cmdSetHotkey" },
 
 	{ "None", "Custom controls", "HotKey", "0: Mouse", "cboCustomButtonAction0" },
 	{ "HotKey", "None", "cmdSetHotkey", "1: Joystick", "cboCustomButtonAction0" },
@@ -423,7 +423,7 @@ static NavigationMap nav_map[] =
 	{ "cboCustomButtonAction12", "cboCustomButtonAction5", "Custom controls", "cboCustomButtonAction11", "cboCustomButtonAction13" },
 	{ "cboCustomButtonAction13", "cboCustomButtonAction6", "Custom controls", "cboCustomButtonAction12", "cboCustomButtonAction14" },
 	{ "cboCustomButtonAction14", "cboCustomAxisAction0", "Custom controls", "cboCustomButtonAction13", "cboCustomAxisAction1" },
-
+	// Left column bottom
 	{ "cboCustomAxisAction0", "Custom controls", "cboCustomButtonAction14", "cboCustomButtonAction6", "cboCustomAxisAction1" },
 	{ "cboCustomAxisAction1", "Custom controls", "cboCustomAxisAction4", "cboCustomAxisAction0", "cboCustomAxisAction2" },
 	{ "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction5", "cboCustomAxisAction1", "cboCustomAxisAction3" },
@@ -432,6 +432,7 @@ static NavigationMap nav_map[] =
 	{ "cboCustomAxisAction4", "cboCustomAxisAction1", "Custom controls", "cboCustomButtonAction14", "cboCustomAxisAction5" },
 	{ "cboCustomAxisAction5", "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction4", "cmdSetHotkey" },
 #endif
+	{ "cmdSaveMapping", "Custom controls", "Custom controls", "cboCustomAxisAction3", "0: Mouse" },
 
 	// PanelDiskSwapper
 	// active				move left			move right			move up			move down

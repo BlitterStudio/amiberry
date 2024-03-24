@@ -38,6 +38,8 @@ static gcn::Label* lblPortInput;
 static gcn::TextField* txtPortInput;
 static gcn::Label* lblRetroarch;
 
+static gcn::Button* cmdSaveMapping;
+
 static int SelectedPort = 1;
 static int SelectedFunction = 0;
 
@@ -94,6 +96,16 @@ public:
 			const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
 			didata* did = &di_joystick[host_joy_id];
 			did->mapping.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
+		}
+		else if (actionEvent.getSource()->getId() == "cmdSaveMapping")
+		{
+			//save the mapping to the controllers path with the controller name
+			const std::string& controller_name = txtPortInput->getText();
+			const std::string controller_path = get_controllers_path();
+			const std::string controller_file = controller_path + controller_name + ".controller";
+			const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
+			const didata* did = &di_joystick[host_joy_id];
+			save_controller_mapping_to_file(did->mapping, controller_file);
 		}
 
 		RefreshPanelCustom();
@@ -291,6 +303,12 @@ void InitPanelCustom(const config_category& category)
 	lblRetroarch = new gcn::Label("[-]");
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
 
+	cmdSaveMapping = new gcn::Button("Save Mapping");
+	cmdSaveMapping->setId("cmdSaveMapping");
+	cmdSaveMapping->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdSaveMapping->setBaseColor(gui_baseCol);
+	cmdSaveMapping->addActionListener(grpActionListener);
+
 	txtPortInput->setSize(grpPort->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()),
 		TEXTFIELD_HEIGHT);
 	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
@@ -366,6 +384,8 @@ void InitPanelCustom(const config_category& category)
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
+	category.panel->add(cmdSaveMapping, DISTANCE_BORDER, category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT);
+
 	RefreshPanelCustom();
 }
 
@@ -401,6 +421,7 @@ void ExitPanelCustom()
 	delete lblPortInput;
 	delete txtPortInput;
 	delete lblRetroarch;
+	delete cmdSaveMapping;
 
 	delete grpActionListener;
 	delete customActionListener;
@@ -606,6 +627,7 @@ void RefreshPanelCustom()
 		{
 			lblRetroarch->setCaption("[N]");
 			txtPortInput->setText(did->name);
+			cmdSaveMapping->setEnabled(true);
 		}
 	}
 
@@ -633,6 +655,8 @@ void RefreshPanelCustom()
 		lblRetroarch->setCaption("[_]");
 		const std::string text = "Not a valid Input Controller for Joystick Emulation.";
 		txtPortInput->setText(text);
+
+		cmdSaveMapping->setEnabled(false);
 	}
 }
 

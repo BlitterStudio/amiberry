@@ -990,9 +990,21 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 	}
 	else
 	{
-		write_log("No Retroarch controller cfg file found, using the default mapping\n");
-		fill_default_controller();
-		did->mapping = default_controller_map;
+		const std::string controller_name = did->controller_name;
+		const std::string controller_path = get_controllers_path();
+		const std::string controller_file = controller_path + controller_name + ".controller";
+		if (my_existsfile2(controller_file.c_str()))
+		{
+			write_log("Controller cfg file found, using that for mapping\n");
+			read_controller_mapping_from_file(did->mapping, controller_file);
+		}
+		else
+		{
+			// No retroarch file, no controller file, use the default mapping
+			write_log("No Retroarch controller cfg file found, using the default mapping\n");
+			fill_default_controller();
+			did->mapping = default_controller_map;
+		}
 	}
 
 	if (did->mapping.hotkey_button != SDL_CONTROLLER_BUTTON_INVALID)
