@@ -4060,6 +4060,9 @@ int main(int argc, char* argv[])
 	}
 #endif
 	alloc_AmigaMem();
+	if (lstAvailableROMs.empty())
+		RescanROMs();
+
 	uae_time_calibrate();
 	
 	if (
