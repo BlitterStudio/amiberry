@@ -807,62 +807,71 @@ void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 
 void print_version()
 {
-	std::cout << get_version_string() << "\n" << get_copyright_notice() << std::endl;
+	std::cout << get_version_string() << "\n" << get_copyright_notice() << '\n';
 	exit(0);
 }
 
 void usage()
 {
-	std::cout << __ver << std::endl;
-	std::cout << "Usage:" << std::endl;
-	std::cout << " -h                         Show this help." << std::endl;
-	std::cout << " --help                     \n" << std::endl;
-	std::cout << " -f <file>                  Load a configuration file." << std::endl;
-	std::cout << " --config <file>            " << std::endl;
-	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" << std::endl;
-	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
-	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << std::endl;
-	std::cout << " --statefile <file>         Load a save state file." << std::endl;
-	std::cout << " -s <option>=<value>        Set one or more configuration options directly, without loading a file." << std::endl;
-	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
-	std::cout << "\nAdditional options:" << std::endl;
-	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << std::endl;
-	std::cout << " -1 <disk.adf>              " << std::endl;
-	std::cout << " -2 <disk.adf>              " << std::endl;
-	std::cout << " -3 <disk.adf>              \n" << std::endl;
-	std::cout << " -diskswapper=d1.adf,d2.adf Comma-separated list of disk images to pre-load to the Disk Swapper." << std::endl;
-	std::cout << " -r <kick.rom>              Load main ROM from the specified path." << std::endl;
-	std::cout << " -K <kick.rom>              Load extended ROM from the specified path." << std::endl;
-	std::cout << " -m VOLNAME:mount_point     Attach a volume directly to the specified mount point." << std::endl;
-	std::cout << " -W DEVNAME:hardfile        Attach a hardfile with the specified device name." << std::endl;
-	std::cout << " -S <value>                 Sound parameter specification." << std::endl;
-	std::cout << " -R <value>                 Output framerate in frames per second." << std::endl;
-	std::cout << " -i                         Enable illegal memory." << std::endl;
-	std::cout << " -J <xy>                    Specify joystick 0 (x) and 1 (y). Possible values: 0/1 for joystick, M for mouse, and a/b/c." << std::endl;
-	std::cout << " -w <value>                 CPU emulation speed. Possible values: 0 (Cycle Exact), -1 (Max)." << std::endl;
-	std::cout << " -G                         Don't show the GUI, start emulation directly." << std::endl;
-	std::cout << " -n                         Enable Immediate Blits. Only available when illegal memory is not enabled." << std::endl;
-	std::cout << " -v <value>                 Set Chipset. Possible values: 0 (OCS), 1 (ECS Agnus), 2 (ECS Denise), 3 (Full ECS), 4 (AGA)." << std::endl;
-	std::cout << " -C <value>                 Set CPU specs." << std::endl;
-	std::cout << " -Z <value>                 Z3 FastRAM size, value in 1MB blocks, i.e. 2=2MB." << std::endl;
-	std::cout << " -U <value>                 RTG Memory size, value in 1MB blocks, i.e. 2=2MB." << std::endl;
-	std::cout << " -F <value>                 Fastmem size, value in 1MB blocks, i.e. 2=2MB." << std::endl;
-	std::cout << " -b <value>                 Bogomem size, value in 256KB blocks, i.e. 2=512KB." << std::endl;
-	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
-	std::cout << " -I <value>                 Set keyboard layout language. Possible values: de, dk, us, se, fr, it, es." << std::endl;
-	std::cout << " -O <value>                 Set graphics specs." << std::endl;
-	std::cout << " -H <value>                 Color mode." << std::endl;
-	std::cout << " -o <amiberry cnf>=<value>  Set Amiberry configuration parameter with value." << std::endl;
-	std::cout << "                            See: https://github.com/midwan/amiberry/wiki/Amiberry.conf-options" << std::endl;
-	std::cout << "\nExample 1:" << std::endl;
-	std::cout << "amiberry --model A1200 -G" << std::endl;
-	std::cout << "This will use the A1200 default settings as found in the QuickStart panel." << std::endl;
-	std::cout << "Additionally, it will override 'use_gui' to 'no', so that it enters emulation directly." << std::endl;
-	std::cout << "\nExample 2:" << std::endl;
-	std::cout << "amiberry --config conf/A500.uae --statefile savestates/game.uss -s use_gui=no" << std::endl;
-	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << std::endl;
-	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << std::endl;
+	std::cout << __ver << '\n';
+	std::cout << "Usage:" << '\n';
+	std::cout << " -h                         Show this help." << '\n';
+	std::cout << " --help                     \n" << '\n';
+	std::cout << " -f <file>                  Load a configuration file." << '\n';
+	std::cout << " --config <file>            " << '\n';
+	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
+	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" <<
+		'\n';
+	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << '\n';
+	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << '\n';
+	std::cout << " --statefile <file>         Load a save state file." << '\n';
+	std::cout << " -s <option>=<value>        Set one or more configuration options directly, without loading a file." <<
+		'\n';
+	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." <<
+		'\n';
+	std::cout << "\nAdditional options:" << '\n';
+	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << '\n';
+	std::cout << " -1 <disk.adf>              " << '\n';
+	std::cout << " -2 <disk.adf>              " << '\n';
+	std::cout << " -3 <disk.adf>              \n" << '\n';
+	std::cout << " -diskswapper=d1.adf,d2.adf Comma-separated list of disk images to pre-load to the Disk Swapper." <<
+		'\n';
+	std::cout << " -r <kick.rom>              Load main ROM from the specified path." << '\n';
+	std::cout << " -K <kick.rom>              Load extended ROM from the specified path." << '\n';
+	std::cout << " -m VOLNAME:mount_point     Attach a volume directly to the specified mount point." << '\n';
+	std::cout << " -W DEVNAME:hardfile        Attach a hardfile with the specified device name." << '\n';
+	std::cout << " -S <value>                 Sound parameter specification." << '\n';
+	std::cout << " -R <value>                 Output framerate in frames per second." << '\n';
+	std::cout << " -i                         Enable illegal memory." << '\n';
+	std::cout << " -J <xy>                    Specify joystick 0 (x) and 1 (y). Possible values: 0/1 for joystick, M for mouse, and a/b/c." <<
+		'\n';
+	std::cout << " -w <value>                 CPU emulation speed. Possible values: 0 (Cycle Exact), -1 (Max)." << '\n';
+	std::cout << " -G                         Don't show the GUI, start emulation directly." << '\n';
+	std::cout << " -n                         Enable Immediate Blits. Only available when illegal memory is not enabled." <<
+		'\n';
+	std::cout << " -v <value>                 Set Chipset. Possible values: 0 (OCS), 1 (ECS Agnus), 2 (ECS Denise), 3 (Full ECS), 4 (AGA)." <<
+		'\n';
+	std::cout << " -C <value>                 Set CPU specs." << '\n';
+	std::cout << " -Z <value>                 Z3 FastRAM size, value in 1MB blocks, i.e. 2=2MB." << '\n';
+	std::cout << " -U <value>                 RTG Memory size, value in 1MB blocks, i.e. 2=2MB." << '\n';
+	std::cout << " -F <value>                 Fastmem size, value in 1MB blocks, i.e. 2=2MB." << '\n';
+	std::cout << " -b <value>                 Bogomem size, value in 256KB blocks, i.e. 2=512KB." << '\n';
+	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << '\n';
+	std::cout << " -I <value>                 Set keyboard layout language. Possible values: de, dk, us, se, fr, it, es." <<
+		'\n';
+	std::cout << " -O <value>                 Set graphics specs." << '\n';
+	std::cout << " -H <value>                 Color mode." << '\n';
+	std::cout << " -o <amiberry cnf>=<value>  Set Amiberry configuration parameter with value." << '\n';
+	std::cout << "                            See: https://github.com/midwan/amiberry/wiki/Amiberry.conf-options" <<
+		'\n';
+	std::cout << "\nExample 1:" << '\n';
+	std::cout << "amiberry --model A1200 -G" << '\n';
+	std::cout << "This will use the A1200 default settings as found in the QuickStart panel." << '\n';
+	std::cout << "Additionally, it will override 'use_gui' to 'no', so that it enters emulation directly." << '\n';
+	std::cout << "\nExample 2:" << '\n';
+	std::cout << "amiberry --config conf/A500.uae --statefile savestates/game.uss -s use_gui=no" << '\n';
+	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << '\n';
+	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << '\n';
 	exit(0);
 }
 
@@ -1305,7 +1314,7 @@ void check_error_sdl(const bool check, const char* message)
 {
 	if (check)
 	{
-		std::cout << message << " " << SDL_GetError() << std::endl;
+		std::cout << message << " " << SDL_GetError() << '\n';
 		SDL_Quit();
 		exit(-1);
 	}
