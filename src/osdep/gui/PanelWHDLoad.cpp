@@ -461,6 +461,17 @@ void RefreshPanelWHDLoad()
 bool HelpPanelWHDLoad(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	//TODO
+	helptext.emplace_back("WHDLoad auto-config:");
+	helptext.emplace_back("Select a WHDLoad LHA file to auto-configure the emulator for game.");
+	helptext.emplace_back("The game name, UUID, default slave, and other options will be parsed from the XML.");
+	helptext.emplace_back("You can also select a slave from the list.");
+	helptext.emplace_back("The custom fields can be used to add custom options per slave.");
+	helptext.emplace_back("The global options are used for all games.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Button Wait: Wait for button press before starting the game.");
+	helptext.emplace_back("Show Splash: Show the WHDLoad splash screen.");
+	helptext.emplace_back("Config Delay: Delay in seconds before starting the game.");
+	helptext.emplace_back("Write Cache: Enable Write cache before starting the game.");
+	helptext.emplace_back("Quit on Exit: Quit Amiberry when the game exits.");
 	return true;
 }
