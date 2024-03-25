@@ -1297,11 +1297,15 @@ void read_joystick_buttons(const int id)
 
 		int retroarch_offset = SDL_CONTROLLER_BUTTON_MAX + SDL_CONTROLLER_AXIS_MAX * 2;
 
-		// detect RetroArch events, with or without Hotkey
-		set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, false);
-		set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, false);
-		set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, false);
-		set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, false);
+		if (did->mapping.hotkey_button == SDL_CONTROLLER_BUTTON_INVALID
+			|| SDL_JoystickGetButton(did->joystick, did->mapping.hotkey_button) & 1)
+		{
+			// detect RetroArch events, with or without Hotkey
+			set_button_state(did, id, did->mapping.menu_button, retroarch_offset + 1, false);
+			set_button_state(did, id, did->mapping.quit_button, retroarch_offset + 2, false);
+			set_button_state(did, id, did->mapping.reset_button, retroarch_offset + 3, false);
+			set_button_state(did, id, did->mapping.vkbd_button, retroarch_offset + 4, false);
+		}
 
 		// Check all Joystick buttons, including axes acting as buttons
 		for (int did_button = 0; did_button < did->buttons; did_button++)
