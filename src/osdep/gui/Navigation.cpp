@@ -44,7 +44,7 @@ static NavigationMap nav_map[] =
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
 	{"Savestates", "State0", "State0", "Priority", "Virtual Keyboard"},
 	{"Virtual Keyboard", "chkVkEnabled", "chkVkEnabled", "Savestates", "WHDLoad"},
-	{"WHDLoad", "", "", "Virtual Keyboard", "Quit"},
+	{"WHDLoad", "cmdWhdloadEject", "cmdWhdloadEject", "Virtual Keyboard", "Quit"},
 	{"Shutdown", "Start", "Quit", "WHDLoad", "About"},
 	{"Quit", "Shutdown", "Restart", "WHDLoad", "About"},
 	{"Restart", "Quit", "Help", "WHDLoad", "About"},
@@ -70,7 +70,7 @@ static NavigationMap nav_map[] =
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
-	{"cboAModel", "Quickstart", "qsNTSC", "cboWhdload", "cboAConfig"},
+	{"cboAModel", "Quickstart", "qsNTSC", "cboQsWhdload", "cboAConfig"},
 	{"qsNTSC", "cboAModel", "Quickstart", "qsMode", "cboAConfig"},
 	{"cboAConfig", "Quickstart", "Quickstart", "cboAModel", "qscmdSel0"},
 	{"qsDF0", "Quickstart", "cboqsType0", "cboAConfig", "cboqsDisk0"},
@@ -92,10 +92,10 @@ static NavigationMap nav_map[] =
 	{"qsCDSelect", "qscdEject", "Quickstart", "cboqsDisk1", "cboCD"},
 	{"cboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
 	{"qsMode", "Quickstart", "Quickstart", "cboCD", "cmdSetConfig"},
-	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cmdWhdloadEject"},
-	{"cmdWhdloadEject", "Quickstart", "cmdWhdloadSelect", "cmdSetConfig", "cboWhdload"},
-	{"cmdWhdloadSelect", "cmdWhdloadEject", "Quickstart", "cmdSetConfig", "cboWhdload"},
-	{"cboWhdload", "Quickstart", "Quickstart", "cmdWhdloadEject", "cboAModel"},
+	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cmdQsWhdloadEject"},
+	{"cmdQsWhdloadEject", "Quickstart", "cmdQsWhdloadSelect", "cmdSetConfig", "cboQsWhdload"},
+	{"cmdQsWhdloadSelect", "cmdQsWhdloadEject", "Quickstart", "cmdSetConfig", "cboQsWhdload"},
+	{"cboQsWhdload", "Quickstart", "Quickstart", "cmdQsWhdloadEject", "cboAModel"},
 
 	// PanelConfig
 	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
@@ -563,6 +563,20 @@ static NavigationMap nav_map[] =
 	{ "cmdVkSetHotkey",  "Virtual Keyboard", "cmdVkSetHotkeyClear", "cboVkStyle", "chkRetroArchVkbd"},
 	{ "cmdVkSetHotkeyClear", "cmdVkSetHotkey", "Virtual Keyboard", "cboVkStyle", "chkRetroArchVkbd"},
 	{ "chkRetroArchVkbd", "Virtual Keyboard", "Virtual Keyboard", "cmdVkSetHotkey", "chkVkEnabled"},
+
+	// WHDLoad
+	{ "cmdWhdloadEject", "WHDLoad", "cmdWhdloadSelect", "chkQuitOnExit", "cboWhdload" },
+	{ "cmdWhdloadSelect", "cmdWhdloadEject", "WHDLoad", "chkQuitOnExit", "cboWhdload" },
+	{ "cboWhdload", "WHDLoad", "WHDLoad", "cmdWhdloadSelect", "cboSlaves" },
+
+	{ "cboSlaves", "WHDLoad", "WHDLoad", "cboWhdload", "cmdCustomFields" },
+
+	{ "cmdCustomFields", "WHDLoad", "WHDLoad", "cboSlaves", "chkButtonWait" },
+	{ "chkButtonWait", "WHDLoad", "WHDLoad", "cmdCustomFields", "chkShowSplash" },
+	{ "chkShowSplash", "WHDLoad", "WHDLoad", "chkButtonWait", "chkWriteCache" },
+
+	{ "chkWriteCache", "WHDLoad", "WHDLoad", "chkShowSplash", "chkQuitOnExit" },
+	{ "chkQuitOnExit", "WHDLoad", "WHDLoad", "chkWriteCache", "cmdWhdloadEject" },
 
 	//  active            move left         move right        move up           move down
 	// EditFilesysVirtual
