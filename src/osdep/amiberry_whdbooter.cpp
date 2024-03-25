@@ -332,6 +332,9 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	write_log("\nCD Autoload: %s  \n\n", filepath);
 
+	if (lstAvailableROMs.empty())
+		RescanROMs();
+
 	conf_path = get_configuration_path();
 	whdload_prefs.filename = get_game_filename(filepath);
 
@@ -1281,6 +1284,9 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
 	write_log("WHDBooter Launched\n");
+
+	if (lstAvailableROMs.empty())
+		RescanROMs();
 
 	conf_path = get_configuration_path();
 	whdbooter_path = get_whdbootpath();
