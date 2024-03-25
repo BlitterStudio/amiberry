@@ -1277,7 +1277,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		if (file_exists(destination) && keep_backup)
 		{
 			write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
-			std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
+			const std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
 			if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
 			{
 				write_log(strerror(errno));
@@ -1299,7 +1299,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 
 void download_rtb(const std::string& filename)
 {
-	std::string destination_filename = "save-data/Kickstarts/" + filename;
+	const std::string destination_filename = "save-data/Kickstarts/" + filename;
 	const std::string destination = prefix_with_whdboot_path(destination_filename);
 	if (!file_exists(destination))
 	{
