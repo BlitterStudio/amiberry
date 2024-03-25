@@ -4080,6 +4080,9 @@ int main(int argc, char* argv[])
 		abort();
 	}
 #endif
+	if (lstAvailableROMs.empty())
+		RescanROMs();
+
 	uae_time_calibrate();
 	
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
