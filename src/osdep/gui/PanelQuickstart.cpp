@@ -870,19 +870,19 @@ void InitPanelQuickstart(const config_category& category)
 	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
 	cboWhdload->setBaseColor(gui_baseCol);
 	cboWhdload->setBackgroundColor(colTextboxBackground);
-	cboWhdload->setId("cboWhdload");
+	cboWhdload->setId("cboQsWhdload");
 	cboWhdload->addActionListener(whdloadActionListener);
 
 	cmdWhdloadEject = new gcn::Button("Eject");
 	cmdWhdloadEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadEject->setBaseColor(gui_baseCol);
-	cmdWhdloadEject->setId("cmdWhdloadEject");
+	cmdWhdloadEject->setId("cmdQsWhdloadEject");
 	cmdWhdloadEject->addActionListener(whdloadButtonActionListener);
 
 	cmdWhdloadSelect = new gcn::Button("Select file");
 	cmdWhdloadSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadSelect->setBaseColor(gui_baseCol);
-	cmdWhdloadSelect->setId("cmdWhdloadSelect");
+	cmdWhdloadSelect->setId("cmdQsWhdloadSelect");
 	cmdWhdloadSelect->addActionListener(whdloadButtonActionListener);
 
 	category.panel->add(lblModel, DISTANCE_BORDER, posY);
