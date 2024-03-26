@@ -4193,7 +4193,6 @@ int main(int argc, char* argv[])
 	romlist_clear();
 	free_keyring();
 
-
 	logging_cleanup();
 
 	SDL_Quit();

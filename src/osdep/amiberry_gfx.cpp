@@ -215,11 +215,19 @@ static void SDL2_init()
 		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
 
+	// If KMSDRM is detected, force Full-Window mode
+	if (kmsdrm_detected)
+	{
+		currprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
+		amiberry_options.single_window_mode = true;
+	}
+
 	if (!mon->amiga_window)
 	{
 		write_log("Creating Amiberry window...\n");
 		Uint32 mode;
-		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
+		if (sdl_mode.w >= 800 && sdl_mode.h >= 600)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
