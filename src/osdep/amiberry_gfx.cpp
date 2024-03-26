@@ -923,6 +923,8 @@ void show_screen(int monid, int mode)
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
+	if (amiga_texture == nullptr || amiga_surface == nullptr)
+		return;
 	SDL_RenderClear(mon->amiga_renderer);
 	SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
 	SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
@@ -937,14 +939,14 @@ void show_screen(int monid, int mode)
 
 int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 {
-	//gfx_lock();
+	gfx_lock();
 	//if (amiga_surface && SDL_MUSTLOCK(amiga_surface))
 	//	SDL_LockSurface(amiga_surface);
 	//int pitch;
 	//SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&vb->bufmem), &pitch);
 	if (first)
 		init_row_map();
-	//gfx_unlock();
+	gfx_unlock();
 	return 1;
 }
 
@@ -953,6 +955,7 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 	//if (amiga_surface && SDL_MUSTLOCK(amiga_surface))
 	//	SDL_UnlockSurface(amiga_surface);
 	//SDL_UnlockTexture(texture);
+	gfx_unlock();
 }
 
 uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
@@ -2234,7 +2237,7 @@ int machdep_init()
 		ad->picasso_requested_on = false;
 		ad->picasso_on = false;
 		mon->screen_is_picasso = 0;
-		memset(&mon->currentmode, 0, sizeof(*&mon->currentmode));
+		memset(&mon->currentmode, 0, sizeof(mon->currentmode));
 	}
 
 	return 1;
