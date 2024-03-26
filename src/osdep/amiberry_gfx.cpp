@@ -2077,6 +2077,8 @@ int graphics_init(bool mousecapture)
 			SDL_WINDOW_FULLSCREEN_DESKTOP);
 		check_error_sdl(mon->sdl_window == nullptr, "Unable to create window");
 	}
+	write_log("Dispmanx detected, forcing Full-window mode\n");
+	currprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
 #else
 	write_log("Getting Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
@@ -2095,12 +2097,18 @@ int graphics_init(bool mousecapture)
 		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
 
+	// If KMSDRM is detected, force Full-window mode
+	if (kmsdrm_detected)
+	{
+		write_log("KMSDRM detected, forcing Full-window mode\n");
+		currprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+	}
 	write_log("Creating Amiberry window...\n");
 
 	if (!mon->sdl_window)
 	{
 		Uint32 sdl_window_mode;
-		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
+		if (sdl_mode.w >= 800 && sdl_mode.h >= 600)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
