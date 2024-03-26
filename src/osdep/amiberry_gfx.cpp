@@ -1054,8 +1054,10 @@ void auto_crop_image()
 
 			if (currprefs.gfx_correct_aspect == 0)
 			{
+#ifndef USE_DISPMANX				
 				width = sdl_mode.w;
 				height = sdl_mode.h;
+#endif		
 			}
 			else
 			{
