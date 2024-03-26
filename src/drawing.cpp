@@ -5200,9 +5200,13 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 		if (!initial) {
 			if (ad->framecnt == 0) {
 #ifdef AMIBERRY
-				if (currprefs.multithreaded_drawing)
+				if (currprefs.multithreaded_drawing && drawing_tid)
 				{
-					if (drawing_tid)
+					if (quit_program < 0)
+					{
+						quit_drawing_thread();
+					}
+					else
 					{
 						while (drawing_thread_busy)
 							sleep_micros(10);
@@ -5238,12 +5242,9 @@ void vsync_handle_redraw(int long_field, int lof_changed, uae_u16 bplcon0p, uae_
 
 		if (quit_program < 0) {
 #ifdef AMIBERRY
-			if (currprefs.multithreaded_drawing)
+			if (currprefs.multithreaded_drawing && drawing_tid)
 			{
-				if (drawing_tid)
-				{
-					quit_drawing_thread();
-				}
+				quit_drawing_thread();
 			}
 #endif
 #ifdef SAVESTATE
