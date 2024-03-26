@@ -131,6 +131,7 @@ SDL_Surface* gui_screen;
 SDL_Event gui_event;
 SDL_Event touch_event;
 SDL_Texture* gui_texture;
+SDL_Rect gui_renderQuad;
 
 /*
 * Gui SDL stuff we need
@@ -259,12 +260,15 @@ void update_gui_screen()
 
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+		gui_renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
 	else
-		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
+		gui_renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
 	
-	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &gui_renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(mon->gui_renderer);
+
+	if (mon->amiga_window)
+		show_screen(0, 0);
 }
 
 void amiberry_gui_init()
