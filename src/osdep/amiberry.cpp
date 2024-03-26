@@ -2199,6 +2199,9 @@ void target_default_options(struct uae_prefs* p, int type)
 	// GFX_WINDOW = 0
 	// GFX_FULLSCREEN = 1
 	// GFX_FULLWINDOW = 2
+#ifdef USE_DISPMANX
+	p->gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+#else
 	if (amiberry_options.default_fullscreen_mode >= 0 && amiberry_options.default_fullscreen_mode <= 2)
 	{
 		p->gfx_apmode[0].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
@@ -2209,6 +2212,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 		p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 	}
+#endif
 	
 	p->scaling_method = -1; //Default is Auto
 	if (amiberry_options.default_scaling_method != -1)

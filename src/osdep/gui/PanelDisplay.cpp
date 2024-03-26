@@ -774,10 +774,12 @@ void RefreshPanelDisplay()
 
 #ifdef USE_DISPMANX
 	cboScreenmode->setEnabled(false);
+	changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
 #endif
 	if (kmsdrm_detected)
 	{
 		cboScreenmode->setEnabled(false);
+		changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
 	}
 
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
