@@ -4196,6 +4196,8 @@ int main(int argc, char* argv[])
 
 	logging_cleanup();
 
+	SDL_Quit();
+
 	if (host_poweroff)
 		target_shutdown();
 	return 0;
