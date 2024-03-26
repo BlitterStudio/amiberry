@@ -732,12 +732,6 @@ void RefreshPanelDisplay()
 		}
 	}
 
-	if (mon->amigawin_rect.w && mon->amigawin_rect.h)
-	{
-		txtAmigaWidth->setText(std::to_string(mon->amigawin_rect.w));
-		txtAmigaHeight->setText(std::to_string(mon->amigawin_rect.h));
-	}
-
 	chkAutoCrop->setSelected(changed_prefs.gfx_auto_crop);
 #if !defined USE_DISPMANX
 	if (changed_prefs.gfx_auto_crop)
