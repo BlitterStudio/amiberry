@@ -71,6 +71,7 @@
 #endif
 #include <sys/ioctl.h>
 
+#include "fsdb.h"
 #include "fsdb_host.h"
 #include "keyboard.h"
 
@@ -1137,12 +1138,16 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	_tcscat(optionsfile, restart_config);
 
-	if (! target_cfgfile_load(&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
-		write_log(_T("failed to load config '%s'\n"), optionsfile);
-	}
-	else
+	const std::string config_file_path = get_configuration_path() + string(optionsfile) + ".uae";
+	if (my_existsfile2(config_file_path.c_str()))
 	{
-		config_loaded = true;
+		if (!target_cfgfile_load(&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
+			write_log(_T("failed to load config '%s'\n"), optionsfile);
+		}
+		else
+		{
+			config_loaded = true;
+		}
 	}
 
 	parse_cmdline(argc, argv);
