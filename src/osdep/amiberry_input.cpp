@@ -907,6 +907,8 @@ void fix_didata(struct didata* did)
 			const auto axis_name = SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(a));
 			if (axis_name != nullptr)
 				did->axisname[a] = axis_name;
+			else
+				did->axisname[a] = std::string("Axis ").append(std::to_string(a));
 			if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
 				did->axistype[a] = AXISTYPE_POV_X;
 			else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
