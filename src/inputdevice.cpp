@@ -523,14 +523,10 @@ static void copyjport (const struct uae_prefs *src, struct uae_prefs *dst, int n
 	dst->jports[num].mode = src->jports[num].mode;
 	dst->jports[num].submode = src->jports[num].submode;
 	dst->jports[num].autofire = src->jports[num].autofire;
+	dst->jports[num].nokeyboardoverride = src->jports[num].nokeyboardoverride;
 #ifdef AMIBERRY
 	dst->jports[num].mousemap = src->jports[num].mousemap;
-	dst->jports[num].amiberry_custom_none = src->jports[num].amiberry_custom_none;
-	dst->jports[num].amiberry_custom_hotkey = src->jports[num].amiberry_custom_hotkey;
-	dst->jports[num].amiberry_custom_axis_none = src->jports[num].amiberry_custom_axis_none;
-	dst->jports[num].amiberry_custom_axis_hotkey = src->jports[num].amiberry_custom_axis_hotkey;
 #endif
-	dst->jports[num].nokeyboardoverride = src->jports[num].nokeyboardoverride;
 }
 
 #define MAX_STORED_JPORTS 8

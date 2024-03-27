@@ -11,16 +11,24 @@
 #include "uae.h"
 #include "xwin.h"
 
-#define MAX_MOUSE_BUTTONS	  3
-#define MAX_MOUSE_AXES        4
-#define FIRST_MOUSE_AXIS	  0
+enum
+{
+	MAX_MOUSE_BUTTONS = 3,
+	MAX_MOUSE_AXES = 4,
+	FIRST_MOUSE_AXIS = 0
+};
+
 #define FIRST_MOUSE_BUTTON	MAX_MOUSE_AXES
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 #define SET_BIT(var,pos) ((var) |= 1 << (pos))
 
-#define MAX_JOY_BUTTONS	  16
-#define MAX_JOY_AXES	   8
-#define FIRST_JOY_AXIS	   0
+enum
+{
+	MAX_JOY_BUTTONS = 16,
+	MAX_JOY_AXES = 8,
+	FIRST_JOY_AXIS = 0
+};
+
 #define FIRST_JOY_BUTTON	MAX_JOY_AXES
 
 int key_swap_hack = 0;
@@ -29,14 +37,12 @@ static struct didata di_mouse[MAX_INPUT_DEVICES];
 static struct didata di_keyboard[MAX_INPUT_DEVICES];
 struct didata di_joystick[MAX_INPUT_DEVICES];
 
-static struct host_input_button default_controller_map;
-
 static int num_mouse = 1, num_keyboard = 1, num_joystick = 0, num_retroarch_kbdjoy = 0;
 static int joystick_inited, retroarch_inited;
 const auto analog_upper_bound = 32767;
 const auto analog_lower_bound = -analog_upper_bound;
 
-static int isrealbutton(struct didata* did, int num)
+static int isrealbutton(const struct didata* did, const int num)
 {
 	if (num >= did->buttons)
 		return 0;
@@ -56,7 +62,7 @@ static void fixbuttons(struct didata* did)
 	did->buttons++;
 }
 
-static void addplusminus(struct didata* did, int i)
+static void addplusminus(struct didata* did, const int i)
 {
 	if (did->buttons + 1 >= ID_BUTTON_TOTAL)
 		return;
@@ -82,7 +88,7 @@ static void fixthings(struct didata* did)
 		addplusminus(did, i);
 }
 
-int find_in_array(const int arr[], int n, int key)
+int find_in_array(const int arr[], const int n, const int key)
 {
 	int index = -1;
 
@@ -97,51 +103,51 @@ int find_in_array(const int arr[], int n, int key)
 	return index;
 }
 
-static void fill_default_controller()
+void fill_default_controller(controller_mapping& mapping)
 {
-	default_controller_map.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 
-	default_controller_map.lstick_axis_y_invert = false;
-	default_controller_map.lstick_axis_x_invert = false;
-	default_controller_map.rstick_axis_y_invert = false;
-	default_controller_map.rstick_axis_x_invert = false;
+	mapping.lstick_axis_y_invert = false;
+	mapping.lstick_axis_x_invert = false;
+	mapping.rstick_axis_y_invert = false;
+	mapping.rstick_axis_x_invert = false;
 
-	default_controller_map.number_of_hats = 1;
-	default_controller_map.number_of_axis = -1;
-	default_controller_map.is_retroarch = false;
+	mapping.number_of_hats = 1;
+	mapping.number_of_axis = -1;
+	mapping.is_retroarch = false;
 
 	for (auto b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++)
-		default_controller_map.button[b] = b;
+		mapping.button[b] = b;
 
 	for (auto a = 0; a < SDL_CONTROLLER_AXIS_MAX; a++)
-		default_controller_map.axis[a] = a;
+		mapping.axis[a] = a;
 }
 
-static void fill_blank_controller()
+void fill_blank_controller(controller_mapping& mapping)
 {
-	default_controller_map.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
-	default_controller_map.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.quit_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.reset_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.menu_button = SDL_CONTROLLER_BUTTON_INVALID;
+	mapping.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 
-	default_controller_map.lstick_axis_y_invert = false;
-	default_controller_map.lstick_axis_x_invert = false;
-	default_controller_map.rstick_axis_y_invert = false;
-	default_controller_map.rstick_axis_x_invert = false;
+	mapping.lstick_axis_y_invert = false;
+	mapping.lstick_axis_x_invert = false;
+	mapping.rstick_axis_y_invert = false;
+	mapping.rstick_axis_x_invert = false;
 
-	default_controller_map.number_of_hats = -1;
-	default_controller_map.number_of_axis = -1;
-	default_controller_map.is_retroarch = false;
+	mapping.number_of_hats = -1;
+	mapping.number_of_axis = -1;
+	mapping.is_retroarch = false;
 
-	for (auto& b : default_controller_map.button)
+	for (auto& b : mapping.button)
 		b = SDL_CONTROLLER_BUTTON_INVALID;
 
-	for (auto& axi : default_controller_map.axis)
+	for (auto& axi : mapping.axis)
 		axi = SDL_CONTROLLER_AXIS_INVALID;
 }
 
@@ -247,16 +253,16 @@ constexpr int remap_event_list[] = {
 
 constexpr int remap_event_list_size = std::size(remap_event_list);
 
-const TCHAR* find_inputevent_name(int key)
+const TCHAR* find_inputevent_name(const int key)
 {
 	const auto* output = "None";
 
-	for (auto i = 0; i < remap_event_list_size; ++i)
+	for (const int i : remap_event_list)
 	{
-		if (remap_event_list[i] == key)
+		if (i == key)
 		{
-			const auto* tempevent = inputdevice_get_eventinfo(remap_event_list[i]);
-			output = _T(tempevent->name);
+			const auto* input_event = inputdevice_get_eventinfo(i);
+			output = _T(input_event->name);
 			break;
 		}
 		output = "None";
@@ -264,24 +270,18 @@ const TCHAR* find_inputevent_name(int key)
 	return output;
 }
 
-int find_inputevent(TCHAR* key)
+int find_inputevent(const TCHAR* key)
 {
-	auto index = -1;
-	char tmp1[255], tmp2[255];
-
 	for (auto i = 0; i < remap_event_list_size; ++i)
 	{
-		const auto* tempevent = inputdevice_get_eventinfo(remap_event_list[i]);
-		snprintf(tmp1, 255, "%s", tempevent->name);
-		snprintf(tmp2, 255, "%s", key);
+		const auto* input_event = inputdevice_get_eventinfo(remap_event_list[i]);
 
-		if (!_tcscmp(tmp1, tmp2))
+		if (!_tcscmp(input_event->name, key))
 		{
-			index = i;
-			break;
+			return i;
 		}
 	}
-	return index;
+	return -1;
 }
 
 //# Keyboard input. Will recognize letters (a to z) and the following special keys (where kp_
@@ -351,7 +351,7 @@ std::vector<std::string> remap_key_map_list_strings = {
 //static uae_u8 di_keycodes[MAX_INPUT_DEVICES][MAX_KEYCODES];
 static int keyboard_german;
 
-int keyhack (int scancode, int pressed, int num)
+int keyhack (const int scancode, const int pressed, const int num)
 {
 	static unsigned char backslashstate, apostrophstate;
 	const Uint8* state = SDL_GetKeyboardState(NULL);
@@ -627,7 +627,7 @@ static void setid(struct uae_input_device* uid, const int i, const int slot, con
 
 int input_get_default_mouse(struct uae_input_device* uid, const int i, const int port, const int af, const bool gp, bool wheel, bool joymouseswap)
 {
-	struct didata* did = NULL;
+	struct didata* did;
 	
 	if (!joymouseswap) {
 		if (i >= num_mouse)
@@ -663,7 +663,7 @@ int input_get_default_mouse(struct uae_input_device* uid, const int i, const int
 
 int input_get_default_lightpen(struct uae_input_device* uid, int i, int port, int af, bool gp, bool joymouseswap, int submode)
 {
-	struct didata* did = NULL;
+	struct didata* did;
 
 	if (!joymouseswap) {
 		if (i >= num_mouse)
@@ -772,7 +772,7 @@ void release_keys(void)
 	//}
 }
 
-static int acquire_kb(int num, int flags)
+static int acquire_kb(const int num, int flags)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 	struct didata* did = &di_keyboard[num];
@@ -780,7 +780,7 @@ static int acquire_kb(int num, int flags)
 	return did->acquired > 0 ? 1 : 0;
 }
 
-static void unacquire_kb(int num)
+static void unacquire_kb(const int num)
 {
 	struct didata* did = &di_keyboard[num];
 	struct AmigaMonitor* mon = &AMonitors[0];
@@ -943,7 +943,7 @@ void fix_didata(struct didata* did)
 	fixthings(did);
 }
 
-void setup_mapping(struct didata* did, const std::string& controllers, const int i)
+void setup_mapping(struct didata* did, const std::string& controllers, const int id)
 {
 	std::string retroarch_config_file;
 	if (!did->joystick_name.empty())
@@ -960,8 +960,7 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 
 	if (retroarch_config_exists || retroarch_file_exists)
 	{
-		fill_blank_controller();
-		did->mapping = default_controller_map;
+		fill_blank_controller(did->mapping);
 
 		if (retroarch_config_exists)
 		{
@@ -975,7 +974,7 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 			for (auto p = 1; p < 5; p++)
 			{
 				const int pindex = find_retroarch("input_player" + std::to_string(p) + "_joypad_index", retroarch_file);
-				if (pindex == i)
+				if (pindex == id)
 				{
 					found_player = p;
 					break;
@@ -1002,8 +1001,7 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 		{
 			// No retroarch file, no controller file, use the default mapping
 			write_log("No Retroarch controller cfg file found, using the default mapping\n");
-			fill_default_controller();
-			did->mapping = default_controller_map;
+			fill_default_controller(did->mapping);
 		}
 	}
 
@@ -1099,7 +1097,7 @@ static int acquire_joystick(const int num, int flags)
 	return did->acquired > 0 ? 1 : 0;
 }
 
-static void unacquire_joystick(int num)
+static void unacquire_joystick(const int num)
 {
 	if (num < 0) {
 		return;
@@ -1272,7 +1270,7 @@ void read_controller_axis(const int id, const int axis, const int value)
 	if (isfocus() || currprefs.inactive_input & 4)
 	{
 		// If analog mouse mapping is used, the Left stick acts as a mouse
-		if (axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
+		if (axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.jports[id].mousemap > 0)
 		{
 			if (value > joystick_dead_zone || value < -joystick_dead_zone)
 				setmousestate(id, axis, value / 10000, 0);
@@ -1353,7 +1351,7 @@ void read_joystick_axis(const int id, const int axis, int value)
 				int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[did_axis]);
 
 				// If analog mouse mapping is used, the Left stick acts as a mouse
-				if (did_axis <= SDL_CONTROLLER_AXIS_LEFTY && did->mousemap > 0)
+				if (did_axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.jports[id].mousemap > 0)
 				{
 					if (data > joystick_dead_zone || data < -joystick_dead_zone)
 						setmousestate(id, did_axis, data / 1000, 0);
@@ -1445,9 +1443,6 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	setid(uid, i, ID_AXIS_OFFSET + SDL_CONTROLLER_AXIS_LEFTX, 0, port, h, gp);
 	setid(uid, i, ID_AXIS_OFFSET + SDL_CONTROLLER_AXIS_LEFTY, 0, port, v, gp);
 
-	// Sync mouse map option to did struct, so we can use it while reading
-	did->mousemap = currprefs.jports[port].mousemap;
-
 	if (port >= 2) {
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_A, 0, port, port == 3 ? INPUTEVENT_PAR_JOY2_FIRE_BUTTON : INPUTEVENT_PAR_JOY1_FIRE_BUTTON, af, gp);
 	}
@@ -1514,12 +1509,12 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 
 	// Configure a few extra default mappings, for convenience
 	std::array<int, SDL_CONTROLLER_BUTTON_MAX> button_map[2]{};
-	button_map[0] = currprefs.jports[port].amiberry_custom_none;
-	button_map[1] = currprefs.jports[port].amiberry_custom_hotkey;
+	button_map[0] = did->mapping.amiberry_custom_none;
+	button_map[1] = did->mapping.amiberry_custom_hotkey;
 
 	std::array<int, SDL_CONTROLLER_AXIS_MAX> axis_map[2]{};
-	axis_map[0] = currprefs.jports[port].amiberry_custom_axis_none;
-	axis_map[1] = currprefs.jports[port].amiberry_custom_axis_hotkey;
+	axis_map[0] = did->mapping.amiberry_custom_axis_none;
+	axis_map[1] = did->mapping.amiberry_custom_axis_hotkey;
 
 	// Only applies for normal joysticks, as CD32 pads will use these buttons already
 	if (mode < JSEM_MODE_JOYSTICK_CD32)

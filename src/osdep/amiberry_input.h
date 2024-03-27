@@ -7,16 +7,19 @@
 #define MAX_MAPPINGS 256
 #endif
 
-#define AXISTYPE_NORMAL 0
-#define AXISTYPE_POV_X 1
-#define AXISTYPE_POV_Y 2
-#define AXISTYPE_SLIDER 3
-#define AXISTYPE_DIAL 4
+enum
+{
+	AXISTYPE_NORMAL = 0,
+	AXISTYPE_POV_X = 1,
+	AXISTYPE_POV_Y = 2,
+	AXISTYPE_SLIDER = 3,
+	AXISTYPE_DIAL = 4
+};
 
-struct host_input_button {
+struct controller_mapping {
 	std::array<int, SDL_CONTROLLER_BUTTON_MAX> button;
 	std::array<int, SDL_CONTROLLER_AXIS_MAX> axis;
-	
+
 	bool lstick_axis_y_invert{};
 	bool lstick_axis_x_invert{};
 
@@ -33,8 +36,13 @@ struct host_input_button {
 
 	int number_of_hats{};
 	int number_of_axis{};
-	
+
 	bool is_retroarch{};
+
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_none;
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_hotkey;
+	std::array<int, SDL_CONTROLLER_AXIS_MAX> amiberry_custom_axis_none;
+	std::array<int, SDL_CONTROLLER_AXIS_MAX> amiberry_custom_axis_hotkey;
 };
 
 struct didata {
@@ -44,14 +52,14 @@ struct didata {
 	std::string controller_name{};
 	std::string joystick_name{};
 
-	int mousemap{};
 	bool is_controller{};
 	SDL_GameController* controller{};
 	SDL_Joystick* joystick{};
 	SDL_JoystickID joystick_id{};
-	host_input_button mapping;
 	uae_s16 axles{};
 	uae_s16 buttons{}, buttons_real{};
+
+	controller_mapping mapping;
 
 	std::array<uae_s16, MAX_MAPPINGS> axismappings;
 	std::array<std::string, MAX_MAPPINGS> axisname;
@@ -88,7 +96,7 @@ extern int kb_retroarch_player4_3[15];
 extern int kb_cd32_retroarch_player4[23];
 
 extern const TCHAR* find_inputevent_name(int key);
-extern int find_inputevent(TCHAR* key);
+extern int find_inputevent(const TCHAR* key);
 extern int find_in_array(const int arr[], int n, int key);
 extern const int default_button_mapping[];
 extern const int default_axis_mapping[];
@@ -105,7 +113,7 @@ extern bool init_kb_from_retroarch(int index, const std::string& retroarch_file)
 extern std::string sanitize_retroarch_name(std::string s);
 extern int find_retroarch(const std::string& find_setting, const std::string& retroarch_file);
 extern bool find_retroarch_polarity(const std::string& find_setting, const std::string& retroarch_file);
-extern host_input_button map_from_retroarch(host_input_button mapping, const std::string& control_config, const int player);
+extern controller_mapping map_from_retroarch(controller_mapping mapping, const std::string& control_config, const int player);
 
 extern void read_joystick_buttons(int id);
 extern void read_joystick_axis(int id, int axis, int value);
@@ -114,5 +122,5 @@ extern void read_joystick_hat(int id, int hat, int value);
 extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
 
-extern void save_controller_mapping_to_file(const host_input_button& input, const std::string& filename);
-extern void read_controller_mapping_from_file(host_input_button& input, const std::string& filename);
+extern void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename);
+extern void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename);

@@ -2090,7 +2090,7 @@ void target_fixup_options(struct uae_prefs* p)
 		}
 	}
 	/* switch from 32 to 16 or vice versa if mode does not exist */
-	if (1 || isfullscreen() > 0) {
+	//if (1 || isfullscreen() > 0) {
 		int depth = p->color_mode == 5 ? 4 : 2;
 		for (int i = 0; md->DisplayModes[i].depth >= 0; i++) {
 			if (md->DisplayModes[i].depth == depth) {
@@ -2101,7 +2101,7 @@ void target_fixup_options(struct uae_prefs* p)
 		if (depth) {
 			p->color_mode = p->color_mode == 5 ? 2 : 5;
 		}
-	}
+	//}
 
 	if ((p->gfx_apmode[0].gfx_vsyncmode || p->gfx_apmode[1].gfx_vsyncmode)) {
 		if (p->produce_sound && sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL2) {
@@ -2889,7 +2889,6 @@ void get_saveimage_path(char* out, int size, int dir)
 std::string get_configuration_path()
 {
 	return fix_trailing(config_path);
-
 }
 
 void get_configuration_path(char* out, int size)
@@ -4300,7 +4299,7 @@ void clear_whdload_prefs()
 #include <iostream>
 #include <sstream>
 
-void save_controller_mapping_to_file(const host_input_button& input, const std::string& filename)
+void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename)
 {
 	std::ofstream out_file(filename);
 	if (!out_file) {
@@ -4330,11 +4329,27 @@ void save_controller_mapping_to_file(const host_input_button& input, const std::
 	out_file << "\nnumber_of_hats=" << input.number_of_hats;
 	out_file << "\nnumber_of_axis=" << input.number_of_axis;
 	out_file << "\nis_retroarch=" << input.is_retroarch;
+	out_file << "\namiberry_custom_none=";
+	for (const auto& b : input.amiberry_custom_none) {
+		out_file << b << " ";
+	}
+	out_file << "\namiberry_custom_hotkey=";
+	for (const auto& b : input.amiberry_custom_hotkey) {
+		out_file << b << " ";
+	}
+	out_file << "\namiberry_custom_axis_none=";
+	for (const auto& a : input.amiberry_custom_axis_none) {
+		out_file << a << " ";
+	}
+	out_file << "\namiberry_custom_axis_hotkey=";
+	for (const auto& a : input.amiberry_custom_axis_hotkey) {
+		out_file << a << " ";
+	}
 
 	out_file.close();
 }
 
-void read_controller_mapping_from_file(host_input_button& input, const std::string& filename)
+void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename)
 {
 	std::ifstream in_file(filename);
 	if (!in_file) {
@@ -4398,6 +4413,26 @@ void read_controller_mapping_from_file(host_input_button& input, const std::stri
 			}
 			else if (key == "is_retroarch") {
 				iss >> input.is_retroarch;
+			}
+			else if (key == "amiberry_custom_none") {
+				for (auto& b : input.amiberry_custom_none) {
+					iss >> b;
+				}
+			}
+			else if (key == "amiberry_custom_hotkey") {
+				for (auto& b : input.amiberry_custom_hotkey) {
+					iss >> b;
+				}
+			}
+			else if (key == "amiberry_custom_axis_none") {
+				for (auto& a : input.amiberry_custom_axis_none) {
+					iss >> a;
+				}
+			}
+			else if (key == "amiberry_custom_axis_hotkey") {
+				for (auto& a : input.amiberry_custom_axis_hotkey) {
+					iss >> a;
+				}
 			}
 		}
 	}
