@@ -122,6 +122,7 @@ void activate_debugger (void)
 		return;
 
 	debugger_load_libraries();
+	open_console();
 
 	debugger_used = 1;
 	inside_debugger = 1;
@@ -7177,6 +7178,7 @@ static TCHAR input[MAX_LINEWIDTH];
 
 static void debug_1 (void)
 {
+	open_console();
 	custom_dumpstate(0);
 	m68k_dumpstate(&nextpc, debug_pc);
 	debug_pc = 0xffffffff;
