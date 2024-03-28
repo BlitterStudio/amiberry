@@ -6283,15 +6283,18 @@ static void reset_decisions_hsync_start(void)
 	thisline_decision.fmode = fmode;
 
 	if (!aga_mode && ecs_denise && exthblank) {
-		// ECS Denise + EXTBLANK: VBLANK blanking is different
-		thisline_decision.vb = VB_NOVB;
+		// ECS Denise + EXTBLANK: VBLANK blanking is different.
 		if (new_beamcon0 & BEAMCON0_BLANKEN) {
-			// blanking working same as AGA
-			thisline_decision.vb = vb_start_line >= 1 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
+			// Follow Agnus VBLANK state directly via CSYNC connection. Ignore strobe vblank state.
+			thisline_decision.vb = vb_state || vb_end_line ? VB_PRGVB : VB_NOVB;
+		}
+		else {
+			// CSYNC: follow CSYNC state
+			thisline_decision.vb = vs_state_on ? VB_PRGVB : VB_NOVB;
 		}
 	} else if (ecs_agnus) {
 		// Visible vblank end is delayed by 1 line
-		thisline_decision.vb = vb_start_line >= 1 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
+		thisline_decision.vb = vb_start_line >= 2 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
 	} else {
 		thisline_decision.vb = vb_start_line >= 2 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
 	}
