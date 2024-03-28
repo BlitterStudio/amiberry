@@ -377,7 +377,6 @@ STATIC_INLINE bool is_hdf_rdb()
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
 }
 
-extern std::string whdload_filename;
 extern std::string screenshot_filename;
 extern int current_state_num;
 extern int delay_savestate_frame;

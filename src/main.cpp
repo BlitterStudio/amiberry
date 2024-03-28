@@ -1045,6 +1045,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				if (_tcscmp(txt2.c_str(), ".lha") == 0)
 				{
 					write_log("WHDLoad... %s\n", txt);
+					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
+					whdload_prefs.whdload_filename = std::string(txt);
 					whdload_auto_prefs(&currprefs, txt);
 					xfree(txt);
 				}
@@ -1053,6 +1055,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					|| _tcscmp(txt2.c_str(), ".chd") == 0)
 				{
 					write_log("CDTV/CD32... %s\n", txt);
+					add_file_to_mru_list(lstMRUCDList, std::string(txt));
 					cd_auto_prefs(&currprefs, txt);
 					xfree(txt);
 				}

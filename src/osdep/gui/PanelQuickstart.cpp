@@ -143,8 +143,6 @@ static gcn::StringListModel diskfileList;
 static gcn::StringListModel cdfileList;
 static gcn::StringListModel whdloadFileList;
 
-std::string whdload_filename;
-
 static void AdjustDropDownControls();
 
 static void CountModelConfigs()
@@ -395,21 +393,21 @@ public:
 
 				if (idx < 0)
 				{
-					whdload_filename = "";
+					whdload_prefs.whdload_filename = "";
 				}
 				else
 				{
 					const auto element = get_full_path_from_disk_list(whdloadFileList.getElementAt(idx));
-					if (element != whdload_filename)
+					if (element != whdload_prefs.whdload_filename)
 					{
-						whdload_filename.assign(element);
+						whdload_prefs.whdload_filename.assign(element);
 						lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
-						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_filename);
+						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_prefs.whdload_filename);
 						bIgnoreListChange = true;
 						cboWhdload->setSelected(0);
 						bIgnoreListChange = false;
 					}
-					whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
+					whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
 				}
 				refresh_all_panels();
 			}
@@ -429,22 +427,22 @@ public:
 			//---------------------------------------
 			// Eject WHDLoad file
 			//---------------------------------------
-			whdload_filename = "";
+			whdload_prefs.whdload_filename = "";
 		}
 		else if (actionEvent.getSource() == cmdWhdloadSelect)
 		{
 			std::string tmp;
-			if (!whdload_filename.empty())
-				tmp = whdload_filename;
+			if (!whdload_prefs.whdload_filename.empty())
+				tmp = whdload_prefs.whdload_filename;
 			else
 				tmp = get_whdload_arch_path();
 
 			tmp = SelectFile("Select WHDLoad LHA file", tmp, whdload_filter);
 			{
-				whdload_filename = tmp;
-				add_file_to_mru_list(lstMRUWhdloadList, whdload_filename);
+				whdload_prefs.whdload_filename = tmp;
+				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
 				RefreshWhdListModel();
-				whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
+				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
 
 				AdjustDropDownControls();
 			}
@@ -1025,11 +1023,11 @@ static void AdjustDropDownControls()
 	}
 
 	cboWhdload->clearSelected();
-	if (!whdload_filename.empty())
+	if (!whdload_prefs.whdload_filename.empty())
 	{
 		for (auto i = 0; i < static_cast<int>(lstMRUWhdloadList.size()); ++i)
 		{
-			if (lstMRUWhdloadList[i] == whdload_filename)
+			if (lstMRUWhdloadList[i] == whdload_prefs.whdload_filename)
 			{
 				cboWhdload->setSelected(i);
 				break;
