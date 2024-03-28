@@ -11632,7 +11632,7 @@ static void decide_sprites_fetch(int endhpos)
 							s->dmacycle = 1;
 						}
 					}
-					if (dmaen(DMA_SPRITE) && s->dmacycle && !vb_end_line) {
+					if (dmaen(DMA_SPRITE) && s->dmacycle && !vb_start_line && !vb_end_line) {
 						bool dodma = false;
 
 						decide_bpl_fetch(hpos + 1);
