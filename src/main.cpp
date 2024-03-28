@@ -701,7 +701,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	p->scsi = 0;
 #endif
 #if !defined (SANA2)
-	p->sana2 = 0;
+	p->sana2 = false;
 #endif
 #if !defined (UAESERIAL)
 	p->uaeserial = false;
@@ -775,7 +775,6 @@ void uae_reset (int hardreset, int keyboardreset)
 		if (hardreset)
 			quit_program = -UAE_RESET_HARD;
 	}
-
 }
 
 void uae_quit (void)
@@ -1132,8 +1131,7 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	_tcscat(optionsfile, restart_config);
 
-	const std::string config_file_path = get_configuration_path() + string(optionsfile) + ".uae";
-	if (my_existsfile2(config_file_path.c_str()))
+	if (my_existsfile2(optionsfile))
 	{
 		if (!target_cfgfile_load(&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
 			write_log(_T("failed to load config '%s'\n"), optionsfile);
