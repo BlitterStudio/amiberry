@@ -138,7 +138,7 @@ enum
 };
 
 static const char* diskfile_filter[] = {
-	".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", ".zip",
+	".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp",
 	".7z", ".lha", ".lzh", ".lzx", "\0"
 };
 static const char* harddisk_filter[] = {".hdf", ".hdz", ".lha", "zip", ".vhd", ".chd", ".7z", "\0"};
