@@ -211,7 +211,6 @@ public:
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
 						disk_insert(i, tmp.c_str());
-						add_file_to_mru_list(lstMRUDiskList, tmp);
 						RefreshDiskListModel();
 						current_dir = extract_path(tmp);
 
@@ -612,8 +611,8 @@ void RefreshPanelFloppy()
 	int i;
 	auto prev_available = true;
 
-	AdjustDropDownControls();
 	RefreshDiskListModel();
+	AdjustDropDownControls();
 
 	changed_prefs.nr_floppies = 0;
 	for (i = 0; i < 4; ++i)

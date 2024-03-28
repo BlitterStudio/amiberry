@@ -3899,6 +3899,7 @@ void target_getdate(int* y, int* m, int* d)
 
 void target_addtorecent(const TCHAR* name, int t)
 {
+	add_file_to_mru_list(lstMRUDiskList, std::string(name));
 }
 
 void target_reset()
