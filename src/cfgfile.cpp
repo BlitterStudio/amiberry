@@ -7638,10 +7638,31 @@ int parse_cmdline_option (struct uae_prefs *p, TCHAR c, const TCHAR *arg)
 	switch (c) {
 	case 'h': usage(); exit(0);
 
-	case '0': cmdpath (p->floppyslots[0].df, arg, 255); break;
-	case '1': cmdpath (p->floppyslots[1].df, arg, 255); break;
-	case '2': cmdpath (p->floppyslots[2].df, arg, 255); break;
-	case '3': cmdpath (p->floppyslots[3].df, arg, 255); break;
+	case '0': 
+		cmdpath (p->floppyslots[0].df, arg, 255);
+#ifdef AMIBERRY
+		target_addtorecent(arg, 0);
+#endif
+		break;
+	case '1': 
+		cmdpath (p->floppyslots[1].df, arg, 255);
+#ifdef AMIBERRY
+		target_addtorecent(arg, 0);
+#endif
+		break;
+	case '2': 
+		cmdpath (p->floppyslots[2].df, arg, 255);
+#ifdef AMIBERRY
+		target_addtorecent(arg, 0);
+#endif
+		break;
+	case '3': 
+		cmdpath (p->floppyslots[3].df, arg, 255);
+#ifdef AMIBERRY
+		target_addtorecent(arg, 0);
+#endif
+		break;
+
 	case 'r': cmdpath (p->romfile, arg, 255); break;
 	case 'K': cmdpath (p->romextfile, arg, 255); break;
 	case 'p': _tcsncpy (p->prtname, arg, 255); p->prtname[255] = 0; break;
