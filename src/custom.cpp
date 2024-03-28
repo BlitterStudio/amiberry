@@ -8951,11 +8951,13 @@ static void BEAMCON0(int hpos, uae_u16 v)
 				dumpsync();
 			}
 			beamcon0_changed = true;
+			beamcon0_saved = v;
+			record_register_change(hpos, 0x1dc, new_beamcon0);
+			check_harddis();
+			calcdiw();
+			vb_check();
+			decide_vline(hpos);
 		}
-		beamcon0_saved = v;
-		record_register_change(hpos, 0x1dc, new_beamcon0);
-		check_harddis();
-		calcdiw();
 		if (beamcon0_changed) {
 			init_beamcon0(false);
 		}
