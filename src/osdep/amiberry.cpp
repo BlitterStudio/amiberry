@@ -1391,8 +1391,7 @@ void handle_controller_button_event(const SDL_Event& event)
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
 			const didata* did = &di_joystick[id];
-			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
-			if (did->mapping.is_retroarch || !did->is_controller) continue;
+			if (did->name.empty() || did->joystick_id != event.caxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
 
 			read_controller_button(id, button, state);
 			break;
@@ -1471,7 +1470,7 @@ void handle_joy_hat_motion_event(const SDL_Event& event)
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
 		const didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || did->joystick_id != id) continue;
+		if (did->name.empty() || did->joystick_id != which || did->joystick_id != id || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
 		read_joystick_hat(which, hat, value);
 		break;

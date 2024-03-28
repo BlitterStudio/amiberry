@@ -6485,7 +6485,7 @@ static void setbuttonstateall (struct uae_input_device *id, struct uae_input_dev
 				autofire = 0;
 			}
 
-			 if (buttonstate < 0) {
+			if (buttonstate < 0) {
 				state = buttonstate;
 			} else if (invert) {
 				state = buttonstate ? 0 : 1;

@@ -296,7 +296,7 @@ public:
 		else if (actionEvent.getSource() == cmdRemap0)
 		{
 			const auto host_joy_id = changed_prefs.jports[0].id - JSEM_JOYS;
-			auto mapping = show_controller_map(host_joy_id, false);
+			const auto mapping = show_controller_map(host_joy_id, false);
 			if (!mapping.empty())
 			{
 				SDL_GameControllerAddMapping(mapping.c_str());
@@ -307,7 +307,7 @@ public:
 		else if (actionEvent.getSource() == cmdRemap1)
 		{
 			const auto host_joy_id = changed_prefs.jports[1].id - JSEM_JOYS;
-			auto mapping = show_controller_map(host_joy_id, false);
+			const auto mapping = show_controller_map(host_joy_id, false);
 			if (!mapping.empty())
 			{
 				SDL_GameControllerAddMapping(mapping.c_str());

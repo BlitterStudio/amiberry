@@ -1218,18 +1218,18 @@ static bool invert_axis(int axis, const didata* did)
 	}
 }
 
-void set_button_state(const didata* did, const int id, int button, const int offset, const bool is_controller)
+void set_button_state(const didata* did, const int id, int button, const int button_offset, const bool is_controller)
 {
 	if (button != SDL_CONTROLLER_BUTTON_INVALID)
 	{
 		const auto button_state = is_controller
 			? SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(button)) & 1
 			: SDL_JoystickGetButton(did->joystick, button) & 1;
-		setjoybuttonstate(id, offset, button_state);
+		setjoybuttonstate(id, button_offset, button_state);
 	}
 }
 
-void set_axis_state(const didata* did, const int id, const int axis, int value, const bool invert)
+void set_axis_state(const int id, const int axis, int value, const bool invert)
 {
 	if (invert)
 	{
@@ -1279,7 +1279,7 @@ void read_controller_axis(const int id, const int axis, const int value)
 		}
 		else
 		{
-			set_axis_state(did, id, axis, value, invert_axis(axis, did));
+			set_axis_state(id, axis, value, invert_axis(axis, did));
 		}
 	}
 }
@@ -1350,7 +1350,7 @@ void read_joystick_axis(const int id, const int axis, int value)
 		{
 			if (did->mapping.axis[did_axis] != SDL_CONTROLLER_AXIS_INVALID)
 			{
-				int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[did_axis]);
+				const int data = SDL_JoystickGetAxis(did->joystick, did->mapping.axis[did_axis]);
 
 				// If analog mouse mapping is used, the Left stick acts as a mouse
 				if (did_axis <= SDL_CONTROLLER_AXIS_LEFTY && currprefs.jports[id].mousemap > 0)
@@ -1360,7 +1360,7 @@ void read_joystick_axis(const int id, const int axis, int value)
 				}
 				else
 				{
-					set_axis_state(did, id, did_axis, data, invert_axis(did_axis, did));
+					set_axis_state(id, did_axis, data, invert_axis(did_axis, did));
 				}
 			}
 		}
@@ -1495,10 +1495,20 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	}
 	else
 	{
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_UP, 0, port, port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP, gp);
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_DOWN, 0, port, port ? INPUTEVENT_JOY2_DOWN : INPUTEVENT_JOY1_DOWN, gp);
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_LEFT, 0, port, port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT, gp);
-		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_RIGHT, 0, port, port ? INPUTEVENT_JOY2_RIGHT : INPUTEVENT_JOY1_RIGHT, gp);
+		if (port >= 2)
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_UP, 0, port, port == 3 ? INPUTEVENT_PAR_JOY2_UP : INPUTEVENT_PAR_JOY1_UP, gp);
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_DOWN, 0, port, port == 3 ? INPUTEVENT_PAR_JOY2_DOWN : INPUTEVENT_PAR_JOY1_DOWN, gp);
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_LEFT, 0, port, port == 3 ? INPUTEVENT_PAR_JOY2_LEFT : INPUTEVENT_PAR_JOY1_LEFT, gp);
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_RIGHT, 0, port, port == 3 ? INPUTEVENT_PAR_JOY2_RIGHT : INPUTEVENT_PAR_JOY1_RIGHT, gp);
+		}
+		else
+		{
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_UP, 0, port, port ? INPUTEVENT_JOY2_UP : INPUTEVENT_JOY1_UP, gp);
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_DOWN, 0, port, port ? INPUTEVENT_JOY2_DOWN : INPUTEVENT_JOY1_DOWN, gp);
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_LEFT, 0, port, port ? INPUTEVENT_JOY2_LEFT : INPUTEVENT_JOY1_LEFT, gp);
+			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_DPAD_RIGHT, 0, port, port ? INPUTEVENT_JOY2_RIGHT : INPUTEVENT_JOY1_RIGHT, gp);
+		}
 	}
 
 	// If mouse map is enabled (we're emulating a mouse on Port 0 from this controller's Analog stick)
