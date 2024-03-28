@@ -11658,7 +11658,7 @@ static void decide_sprites_fetch(int endhpos)
 								sprbplconflict2 = 0x140 + num * 8 + slot + (s->dmacycle ? 4 : 0);
 								sprbplconflict_hpos = sprbplconflict_hpos2 = hpos + RGA_PIPELINE_OFFSET_SPRITE;
 								sprbplconflict_dat = dat & ~CYCLE_PIPE_SPRITE;
-							} else if (bprun_end == hpos) {
+							} else if (bprun_end == hpos || (cycle_line_pipe[offset] & CYCLE_PIPE_BITPLANE)) {
 								// last bitplane cycle is available for sprites (if bitplane ends before all sprites)
 								sprbplconflict = 0x140 + num * 8 + slot + (s->dmacycle ? 4 : 0);
 								sprbplconflict_hpos = hpos + RGA_PIPELINE_OFFSET_SPRITE;
