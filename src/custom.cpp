@@ -7361,6 +7361,13 @@ static void init_beamcon0(bool fakehz)
 		if (vsstrt > 0 && vsstrt < maxvpos / 2) {
 			maxvpos_display_vsync += vsstrt - 1;
 		}
+		// if (weird mode where) vblank starts after vsync start+3: minfirstline = vsstrt+3
+		if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME && firstblankedline >= vsstrt + 3 && minfirstline > vsstrt + 3 && firstblankedline < minfirstline) {
+			minfirstline = vsstrt + 3;
+			if (minfirstline_hw > minfirstline) {
+				minfirstline_hw = minfirstline;
+			}
+		}
 	} else {
 		firstblankedline = maxvpos + 1;
 	}
