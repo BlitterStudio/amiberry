@@ -303,9 +303,9 @@ void InitPanelCustom(const config_category& category)
 	lblRetroarch = new gcn::Label("[-]");
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
 
-	cmdSaveMapping = new gcn::Button("Save Mapping");
+	cmdSaveMapping = new gcn::Button("Save as default mapping");
 	cmdSaveMapping->setId("cmdSaveMapping");
-	cmdSaveMapping->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdSaveMapping->setSize(BUTTON_WIDTH * 3, BUTTON_HEIGHT);
 	cmdSaveMapping->setBaseColor(gui_baseCol);
 	cmdSaveMapping->addActionListener(grpActionListener);
 
@@ -673,7 +673,7 @@ bool HelpPanelCustom(std::vector<std::string>& helptext)
 	helptext.emplace_back("- Parallel port Joystick inputs");
 	helptext.emplace_back("- CD32 gamepad inputs");
 	helptext.emplace_back("- All keyboard keys");
-	helptext.emplace_back("- Various emulator functions (ie; Autocrop, Quit, Reset, Enter GUI)");
+	helptext.emplace_back("- Various emulator functions (i.e. Autocrop, Quit, Reset, Enter GUI)");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Furthermore, this panel will display different information depending on if you are using");
 	helptext.emplace_back("a RetroArch mapping (ie; like RetroPie) or not. If this is a RetroArch mapping, then a");
@@ -688,10 +688,13 @@ bool HelpPanelCustom(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can also assign a Hotkey which can be used in combination with the buttons, which");
 	helptext.emplace_back("provides an extra set of custom controls. The controls used while the Hotkey button is");
-	helptext.emplace_back("pressed can be seen if you switch from \"None\" to the \"Hotkey\" option. The Hotkey itself");
+	helptext.emplace_back(R"(pressed can be seen if you switch from "None" to the "Hotkey" option. The Hotkey itself)");
 	helptext.emplace_back("can also be assigned from here as well.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can also remap the game controller D-Pad to act like the Left Analog joystick.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back(R"(You can use the "Save as default mapping button", to save the current mapping as the default,)");
+	helptext.emplace_back("for the current controller. It will be automatically applied on startup for this controller.");
+	helptext.emplace_back("This option is only available in non-Retroarch environments.");
 	return true;
 }
