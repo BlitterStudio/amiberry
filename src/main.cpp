@@ -960,6 +960,8 @@ std::string get_filename_extension(const TCHAR* filename)
 	return fName.substr(pos, fName.length());
 }
 
+extern void SetLastActiveConfig(const char* filename);
+
 static void parse_cmdline (int argc, TCHAR **argv)
 {
 	static bool started;
@@ -1133,7 +1135,41 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					|| _tcscmp(txt2.c_str(), ".zip") == 0
 					)
 				{
-					disk_insert(0, txt);
+					write_log("Floppy... %s\n", txt);
+
+					// Check if a config file exists with the same name as the disk image
+					auto full_path = std::string(txt);
+					std::filesystem::path p(full_path);
+					std::string filename = p.filename().string();
+
+					std::string config_extension = "uae";
+					const std::size_t pos = filename.find_last_of(".");
+					if (pos != std::string::npos) {
+						filename = filename.substr(0, pos) + "." + config_extension;
+					}
+					else {
+						// No extension found
+						filename += "." + config_extension;
+					}
+
+					std::string config_full_path = get_configuration_path() + filename;
+					if (my_existsfile2(config_full_path.c_str()))
+					{
+						write_log("Loading configuration file %s\n", config_full_path.c_str());
+						currprefs.mountitems = 0;
+						target_cfgfile_load(&currprefs, config_full_path.c_str(),
+							firstconfig
+							? CONFIG_TYPE_ALL
+							: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
+						currprefs.start_gui = false;
+					}
+					else
+					{
+						write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
+						disk_insert(0, txt);
+						SetLastActiveConfig(txt);
+						currprefs.start_gui = false;
+					}
 				}
 #endif
 				else
