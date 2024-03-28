@@ -14043,6 +14043,9 @@ static void hsync_handler_post(bool onvsync)
 				vbstop_m = vpos;
 				vb_end_line = true;
 				vb_state = false;
+				if (vbstrt == vpos) {
+					vb_start_line = 0;
+				}
 			}
 		}
 
