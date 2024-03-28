@@ -7122,9 +7122,10 @@ static void init_beamcon0(bool fakehz)
 		hardwired_vbstrt = maxvpos;
 		equ_vblank_endline = EQU_ENDLINE_NTSC;
 		equ_vblank_toggle = false;
-		vblank_hz_shf = clk / ((maxvpos + 0.0f) * (maxhpos + 0.5f));
-		vblank_hz_lof = clk / ((maxvpos + 1.0f) * (maxhpos + 0.5f));
-		vblank_hz_lace = clk / ((maxvpos + 0.5f) * (maxhpos + 0.5f));
+		float half = (beamcon0 & BEAMCON0_LOLDIS) ? 0 : 0.5f;
+		vblank_hz_shf = clk / ((maxvpos + 0.0f) * (maxhpos + half));
+		vblank_hz_lof = clk / ((maxvpos + 1.0f) * (maxhpos + half));
+		vblank_hz_lace = clk / ((maxvpos + 0.5f) * (maxhpos + half));
 	}
 
 	dmal_htotal_mask = 0xffff;
@@ -7403,10 +7404,11 @@ static void init_beamcon0(bool fakehz)
 	}
 
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
-		vblank_hz_nom = vblank_hz = clk / (maxvpos * maxhpos);
+		float half = (beamcon0 & BEAMCON0_PAL) ? 0 : ((beamcon0 & BEAMCON0_LOLDIS) ? 0 : 0.5f);
+		vblank_hz_nom = vblank_hz = clk / (maxvpos * (maxhpos + half));
 		vblank_hz_shf = vblank_hz;
-		vblank_hz_lof = clk / ((maxvpos + 1.0f) * maxhpos);
-		vblank_hz_lace = clk / ((maxvpos + 0.5f) * maxhpos);
+		vblank_hz_lof = clk / ((maxvpos + 1.0f) * (maxhpos + half));
+		vblank_hz_lace = clk / ((maxvpos + 0.5f) * (maxhpos + half));
 
 		maxvpos_nom = maxvpos;
 		maxvpos_display = maxvpos;
