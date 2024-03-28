@@ -74,11 +74,11 @@ static void AdjustDropDownControls()
 	bIgnoreListChange = true;
 
 	cboWhdload->clearSelected();
-	if (!whdload_filename.empty())
+	if (!whdload_prefs.whdload_filename.empty())
 	{
 		for (auto i = 0; i < static_cast<int>(lstMRUWhdloadList.size()); ++i)
 		{
-			if (lstMRUWhdloadList[i] == whdload_filename)
+			if (lstMRUWhdloadList[i] == whdload_prefs.whdload_filename)
 			{
 				cboWhdload->setSelected(i);
 				break;
@@ -106,21 +106,21 @@ public:
 
 				if (idx < 0)
 				{
-					whdload_filename = "";
+					whdload_prefs.whdload_filename = "";
 				}
 				else
 				{
 					const auto element = get_full_path_from_disk_list(whdloadFileList.getElementAt(idx));
-					if (element != whdload_filename)
+					if (element != whdload_prefs.whdload_filename)
 					{
-						whdload_filename.assign(element);
+						whdload_prefs.whdload_filename.assign(element);
 						lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
-						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_filename);
+						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_prefs.whdload_filename);
 						bIgnoreListChange = true;
 						cboWhdload->setSelected(0);
 						bIgnoreListChange = false;
 					}
-					whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
+					whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
 				}
 				refresh_all_panels();
 			}
@@ -130,23 +130,23 @@ public:
 			//---------------------------------------
 			// Eject WHDLoad file
 			//---------------------------------------
-			whdload_filename = "";
+			whdload_prefs.whdload_filename = "";
 			refresh_all_panels();
 		}
 		else if (source == cmdWhdloadSelect)
 		{
 			std::string tmp;
-			if (!whdload_filename.empty())
-				tmp = whdload_filename;
+			if (!whdload_prefs.whdload_filename.empty())
+				tmp = whdload_prefs.whdload_filename;
 			else
 				tmp = get_whdload_arch_path();
 
 			tmp = SelectFile("Select WHDLoad LHA file", tmp, whdload_filter);
 			{
-				whdload_filename.assign(tmp);
-				add_file_to_mru_list(lstMRUWhdloadList, whdload_filename);
+				whdload_prefs.whdload_filename.assign(tmp);
+				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
 				RefreshWhdListModel();
-				whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
+				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
 
 				AdjustDropDownControls();
 			}
@@ -430,9 +430,9 @@ void RefreshPanelWHDLoad()
 	RefreshWhdListModel();
 	AdjustDropDownControls();
 
-	cmdCustomFields->setEnabled(!whdload_filename.empty());
+	cmdCustomFields->setEnabled(!whdload_prefs.whdload_filename.empty());
 
-	if (whdload_filename.empty())
+	if (whdload_prefs.whdload_filename.empty())
 	{
 		clear_whdload_prefs();
 		slaves_list.clear();
