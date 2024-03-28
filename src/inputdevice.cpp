@@ -269,10 +269,17 @@ int inputdevice_uaelib (const TCHAR *s, const TCHAR *parm)
 		for (int i = 0; akss[i].name; i++) {
 			if (!_tcscmp(s, akss[i].name)) {
 				int v = _tstol(parm);
-				if (!_tcscmp(parm, _T("0")) || !_tcscmp(parm, _T("1")))
+				if (!_tcscmp(parm, _T("0"))) {
+					v = SET_ONOFF_OFF_VALUE;
 					parm = NULL;
-				else
-					v = 1;
+				}
+				else if (!_tcscmp(parm, _T("1"))) {
+					v = SET_ONOFF_ON_VALUE;
+					parm = NULL;
+				}
+				else {
+					v = SET_ONOFF_PRESS_VALUE;
+				}
 				inputdevice_add_inputcode(akss[i].aks, v, parm);
 				return 1;
 			}
