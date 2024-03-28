@@ -1420,6 +1420,12 @@ int load_keyring (struct uae_prefs *p, const TCHAR *path)
 			break;
 		case 4:
 			_tcscpy (tmp, start_path_data.c_str());
+#ifdef AMIBERRY
+			// Ensure we have a trailing slash
+			if (start_path_data.back() != '/' && start_path_data.back() != '\\') {
+				_tcscat(tmp, _T("/"));
+			}
+#endif
 			_tcscat (tmp, _T("rom.key"));
 			break;
 		case 5:

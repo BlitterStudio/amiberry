@@ -1066,7 +1066,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					xfree(txt);
 				}
 				else
-					write_log("Can't find extension ... %s\n", txt);
+					write_log("Unknown extension for autoload... %s\n", txt);
 			}
 		}
 		else if (_tcscmp(argv[i], _T("--cli")) == 0)
@@ -1109,16 +1109,47 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			// check if it is config file or statefile
 			if (!loaded) {
 				auto* const txt = parsetextpath(argv[i]);
-				auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
-				if (z) {
-					const auto type = zfile_gettype(z);
-					zfile_fclose(z);
-					if (type == ZFILE_CONFIGURATION) {
-						currprefs.mountitems = 0;
-						target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
-					} else if (type == ZFILE_STATEFILE) {
-						savestate_state = STATE_DORESTORE;
-						_tcscpy(savestate_fname, txt);
+				const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
+#ifdef AMIBERRY
+				if (_tcscmp(txt2.c_str(), ".lha") == 0)
+				{
+					write_log("WHDLoad... %s\n", txt);
+					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
+					whdload_prefs.whdload_filename = std::string(txt);
+					whdload_auto_prefs(&currprefs, txt);
+				}
+				else if (_tcscmp(txt2.c_str(), ".cue") == 0
+					|| _tcscmp(txt2.c_str(), ".iso") == 0
+					|| _tcscmp(txt2.c_str(), ".chd") == 0)
+				{
+					write_log("CDTV/CD32... %s\n", txt);
+					add_file_to_mru_list(lstMRUCDList, std::string(txt));
+					cd_auto_prefs(&currprefs, txt);
+				}
+				else if (_tcscmp(txt2.c_str(), ".adf") == 0
+					|| _tcscmp(txt2.c_str(), ".adz") == 0
+					|| _tcscmp(txt2.c_str(), ".dms") == 0
+					|| _tcscmp(txt2.c_str(), ".ipf") == 0
+					|| _tcscmp(txt2.c_str(), ".zip") == 0
+					)
+				{
+					disk_insert(0, txt);
+				}
+#endif
+				else
+				{
+					auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
+					if (z) {
+						const auto type = zfile_gettype(z);
+						zfile_fclose(z);
+						if (type == ZFILE_CONFIGURATION) {
+							currprefs.mountitems = 0;
+							target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
+						}
+						else if (type == ZFILE_STATEFILE) {
+							savestate_state = STATE_DORESTORE;
+							_tcscpy(savestate_fname, txt);
+						}
 					}
 				}
 				xfree(txt);
