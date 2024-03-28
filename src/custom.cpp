@@ -1937,17 +1937,15 @@ static void end_estimate_last_fetch_cycle(int hpos)
 	if (estimated_cycles_empty != estimated_cycles) {
 		estimated_cycles = estimated_cycles_empty;
 		estimate_cycles_empty_index = hpos;
-		uae_s8 *est = NULL;
+		uae_s8* est = maxhposeven ? estimated_cycles_buf1 : estimated_cycles_buf0;
 		if (maxhpos == estimated_maxhpos[0]) {
 			est = estimated_cycles_buf0;
 		} else if (maxhpos == estimated_maxhpos[1]) {
 			est = estimated_cycles_buf1;
 		}
-		if (est) {
-			for (int i = 0; i < RGA_PIPELINE_ADJUST; i++) {
-				int pos = (hpos + i) % maxhpos;
-				estimated_cycles_empty[pos] = est[pos];
-			}
+		for (int i = 0; i < RGA_PIPELINE_ADJUST; i++) {
+			int pos = (hpos + i) % maxhpos;
+			estimated_cycles_empty[pos] = est[pos];
 		}
 	}
 #else
