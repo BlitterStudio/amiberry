@@ -6560,13 +6560,18 @@ static void dumpsync(void)
 		return;
 	}
 	cnt--;
-	write_log(_T("BEAMCON0=%04X VTOTAL=%03d HTOTAL=%03d (%03X)\n"), new_beamcon0, vtotal, htotal, htotal);
-	write_log(_T(" HS=%04X-%04X HB=%04X-%04X HC=%04X\n"), hsstrt, hsstop, hbstrt, hbstop, hcenter);
-	write_log(_T(" VS=%04d-%04d VB=%04d-%04d\n"), vsstrt, vsstop, vbstrt, vbstop);
-	write_log(_T(" HSYNCSTART=%04X.%d HSYNCEND=%04X.%d\n"),
+	write_log(_T("BEAMCON0=%04X VTOTAL=%04X (%03d) HTOTAL=%04X (%03d)\n"), new_beamcon0, vtotal, vtotal, htotal, htotal);
+	write_log(_T(" HS=%04X-%04X (%d-%d) HB=%04X-%04X (%d-%d) HC=%04X (%d)\n"),
+		hsstrt, hsstop, hsstrt, hsstop, hbstrt, hbstop, hbstrt, hbstop, hcenter, hcenter);
+	write_log(_T(" VS=%04X-%04X (%d-%d) VB=%04X-%04X (%d-%d)\n"),
+		vsstrt, vsstop, vsstrt, vsstop, vbstrt, vbstop, vbstrt, vbstop);
+	write_log(_T(" HSYNCSTART=%04X.%X (%d.%d) HSYNCEND=%04X.%X (%d.%d)\n"),
 		hsyncstartpos >> CCK_SHRES_SHIFT, hsyncstartpos & ((1 << CCK_SHRES_SHIFT) - 1),
+		hsyncstartpos >> CCK_SHRES_SHIFT, hsyncstartpos & ((1 << CCK_SHRES_SHIFT) - 1),
+		hsyncendpos >> CCK_SHRES_SHIFT, hsyncendpos & ((1 << CCK_SHRES_SHIFT) - 1),
 		hsyncendpos >> CCK_SHRES_SHIFT, hsyncendpos & ((1 << CCK_SHRES_SHIFT) - 1));
-	write_log(_T(" Lines=%d-%d\n"),
+	write_log(_T(" Lines=%04X-%04X (%d-%d)\n"),
+		minfirstline, maxvpos_display + maxvpos_display_vsync,
 		minfirstline, maxvpos_display + maxvpos_display_vsync);
 	write_log(_T("PC=%08x COP=%08x\n"), M68K_GETPC, cop_state.ip);
 }
