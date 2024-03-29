@@ -671,8 +671,8 @@ bool HelpPanelCustom(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can also remap the game controller D-Pad to act like the Left Analog joystick.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back(R"(You can use the "Save as default mapping button", to save the current mapping as the default,)");
-	helptext.emplace_back("for the current controller. It will be automatically applied on startup for this controller.");
-	helptext.emplace_back("This option is only available in non-Retroarch environments.");
+	helptext.emplace_back(R"(You can use the "Save as default mapping" button, which will save the current mapping)");
+	helptext.emplace_back("as the default for the current controller. It will be automatically applied on startup");
+	helptext.emplace_back("for this controller. This option is only available in non-Retroarch environments.");
 	return true;
 }
