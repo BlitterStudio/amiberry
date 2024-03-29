@@ -232,8 +232,6 @@ void InitPanelConfig(const struct config_category& category)
 	{
 		strcpy(last_active_config, last_loaded_config);
 		remove_file_extension(last_active_config);
-		txtName->setText(last_active_config);
-		txtDesc->setText(changed_prefs.description);
 	}
 
 	ensureVisible = -1;
@@ -271,6 +269,12 @@ void RefreshPanelConfig()
 {
 	ReadConfigFileList();
 	InitConfigsList();
+
+	if (last_active_config[0])
+	{
+		txtName->setText(last_active_config);
+		txtDesc->setText(changed_prefs.description);
+	}
 
 	// Search current entry
 	if (!txtName->getText().empty())

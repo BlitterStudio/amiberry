@@ -443,8 +443,9 @@ public:
 				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
 				RefreshWhdListModel();
 				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-
+				
 				AdjustDropDownControls();
+				SetLastActiveConfig(whdload_prefs.whdload_filename.c_str());
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
@@ -644,14 +645,14 @@ public:
 						current_dir = extract_path(tmp);
 
 						AdjustDropDownControls();
+						SetLastActiveConfig(tmp.c_str());
 					}
 				}
 				cmdqsDFxSelect[i]->requestFocus();
 			}
 		}
 
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
+		refresh_all_panels();
 	}
 };
 

@@ -397,4 +397,6 @@ extern void save_mapping_to_file(const std::string& mapping);
 extern void clear_whdload_prefs();
 extern void create_startup_sequence();
 
+extern void SetLastActiveConfig(const char* filename);
+
 #endif // GUI_HANDLING_H

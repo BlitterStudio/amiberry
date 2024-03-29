@@ -75,7 +75,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry v6.3.0 (2024-03-28)";
+static const char __ver[40] = "$VER: Amiberry v6.3.0 (2024-03-29)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -1113,6 +1113,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
 					whdload_prefs.whdload_filename = std::string(txt);
 					whdload_auto_prefs(&currprefs, txt);
+					SetLastActiveConfig(txt);
 				}
 				else if (_tcscmp(txt2.c_str(), ".cue") == 0
 					|| _tcscmp(txt2.c_str(), ".iso") == 0
@@ -1121,6 +1122,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					write_log("CDTV/CD32... %s\n", txt);
 					add_file_to_mru_list(lstMRUCDList, std::string(txt));
 					cd_auto_prefs(&currprefs, txt);
+					SetLastActiveConfig(txt);
 				}
 				else if (_tcscmp(txt2.c_str(), ".adf") == 0
 					|| _tcscmp(txt2.c_str(), ".adz") == 0
