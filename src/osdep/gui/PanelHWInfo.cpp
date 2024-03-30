@@ -196,6 +196,6 @@ void ExitPanelHWInfo()
 bool HelpPanelHWInfo(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("This panel shows the information about the configured hardware.");
+	helptext.emplace_back("This panel shows the information about the configured hardware being emulated.");
 	return true;
 }
