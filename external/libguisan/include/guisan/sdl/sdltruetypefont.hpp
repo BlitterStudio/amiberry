@@ -48,6 +48,7 @@
 #include <string>
 
 #include "SDL_ttf.h"
+#include "guisan/color.hpp"
 
 #include "guisan/font.hpp"
 #include "guisan/platform.hpp"
@@ -128,6 +129,12 @@ namespace gcn
 		 */
 		virtual bool isAntiAlias();
 
+		/**
+		 * Set the color of the font.
+		 *
+		 * @param color the color of the font.
+		 */
+		virtual void setColor(const Color& color);
 
 		// Inherited from Font
 
@@ -146,6 +153,7 @@ namespace gcn
 
 		std::string mFilename;
 		bool mAntiAlias;
+		Color mColor;
 	};
 }
 

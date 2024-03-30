@@ -154,6 +154,7 @@ gcn::Color gui_baseCol;
 gcn::Color colTextboxBackground;
 gcn::Color colSelectorInactive;
 gcn::Color colSelectorActive;
+gcn::Color font_color;
 
 gcn::FocusHandler* focusHdl;
 gcn::Widget* activeWidget;
@@ -997,6 +998,7 @@ void gui_widgets_init()
 	colSelectorInactive = gui_theme.selector_inactive;
 	colSelectorActive = gui_theme.selector_active;
 	colTextboxBackground = gui_theme.textbox_background;
+	font_color = gui_theme.font_color;
 
 	//-------------------------------------------------
 	// Create container for main page
@@ -1018,6 +1020,7 @@ void gui_widgets_init()
 		font.append(gui_theme.font_name);
 		gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
 		gui_font->setAntiAlias(false);
+		gui_font->setColor(font_color);
 	}
 	catch (gcn::Exception& e)
 	{

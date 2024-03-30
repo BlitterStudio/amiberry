@@ -2360,6 +2360,29 @@ void target_default_options(struct uae_prefs* p, int type)
 		gui_theme.base_color = gcn::Color(170, 170, 170);
 	}
 
+	// Font color
+	if (amiberry_options.gui_theme_font_color[0])
+	{
+		// parse string as comma-separated numbers
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_font_color);
+		if (result.size() == 3)
+		{
+			gui_theme.font_color = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.font_color = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.font_color = gcn::Color(0, 0, 0);
+		}
+	}
+	else
+	{
+		gui_theme.font_color = gcn::Color(0, 0, 0);
+	}
+
 	// Selector Inactive
 	if (amiberry_options.gui_theme_selector_inactive[0])
 	{
