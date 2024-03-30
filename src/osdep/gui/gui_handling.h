@@ -176,6 +176,7 @@ extern gcn::Color gui_baseCol;
 extern gcn::Color colTextboxBackground;
 extern gcn::Color colSelectorInactive;
 extern gcn::Color colSelectorActive;
+extern gcn::Color font_color;
 
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
