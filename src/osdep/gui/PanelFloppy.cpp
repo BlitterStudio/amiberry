@@ -706,7 +706,7 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 {
 	helptext.clear();
 	helptext.emplace_back("You can enable/disable each drive by clicking the checkbox next to DFx or by selecting");
-	helptext.emplace_back(R"(the drive type in the dropdown control. The "3.5" DD" drive type is the right choice)");
+	helptext.emplace_back(R"(the drive type in the dropdown control. The 3.5" DD drive type is the right choice)");
 	helptext.emplace_back("for nearly all ADF and ADZ floppy image files.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The option \"Write-protected\" indicates if the emulator can write to the ADF or not.");
@@ -725,7 +725,7 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 	helptext.emplace_back("DrawBridge-related options below. You can use these options to select which DrawBridge");
 	helptext.emplace_back("driver to use, as well as optionally enable some of the extra features the driver offers.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back(R"(You can also use the "Create 3.5\" DD disk" and "Create 3.5\" HD disk", to make)");
+	helptext.emplace_back(R"(You can also use the "Create 3.5" DD disk" and "Create 3.5" HD disk", to make)");
 	helptext.emplace_back("a new and empty disk image, for use with the emulator.");
 	return true;
 }
