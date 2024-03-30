@@ -329,7 +329,6 @@ void RefreshPanelWHDLoad();
 bool HelpPanelWHDLoad(std::vector<std::string>& helptext);
 
 void refresh_all_panels();
-void register_refresh_func(void (*func)());
 void focus_bug_workaround(gcn::Window* wnd);
 void disable_resume();
 

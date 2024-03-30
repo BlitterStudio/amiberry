@@ -260,7 +260,7 @@ static void MakeCurrentVisible()
 {
 	if (ensureVisible >= 0)
 	{
-		scrAreaConfigs->setVerticalScrollAmount(ensureVisible * 19);
+		scrAreaConfigs->setVerticalScrollAmount(ensureVisible * 14);
 		ensureVisible = -1;
 	}
 }
@@ -286,7 +286,7 @@ void RefreshPanelConfig()
 				// Select current entry
 				lstConfigs->setSelected(i);
 				ensureVisible = i;
-				register_refresh_func(MakeCurrentVisible);
+				MakeCurrentVisible();
 				break;
 			}
 		}

@@ -212,13 +212,6 @@ void gui_restart()
 	gui_running = false;
 }
 
-static void (*refresh_func_after_draw)() = nullptr;
-
-void register_refresh_func(void (*func)())
-{
-	refresh_func_after_draw = func;
-}
-
 void focus_bug_workaround(gcn::Window* wnd)
 {
 	// When modal dialog opens via mouse, the dialog will not
@@ -977,13 +970,6 @@ void amiberry_gui_run()
 
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 			disable_resume();
-
-		if (refresh_func_after_draw != nullptr)
-		{
-			void (*currFunc)() = refresh_func_after_draw;
-			refresh_func_after_draw = nullptr;
-			currFunc();
-		}
 
 		cap_fps(start);
 	}
