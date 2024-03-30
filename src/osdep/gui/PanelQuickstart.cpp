@@ -143,8 +143,6 @@ static gcn::StringListModel diskfileList;
 static gcn::StringListModel cdfileList;
 static gcn::StringListModel whdloadFileList;
 
-std::string whdload_filename;
-
 static void AdjustDropDownControls();
 
 static void CountModelConfigs()
@@ -395,21 +393,21 @@ public:
 
 				if (idx < 0)
 				{
-					whdload_filename = "";
+					whdload_prefs.whdload_filename = "";
 				}
 				else
 				{
 					const auto element = get_full_path_from_disk_list(whdloadFileList.getElementAt(idx));
-					if (element != whdload_filename)
+					if (element != whdload_prefs.whdload_filename)
 					{
-						whdload_filename.assign(element);
+						whdload_prefs.whdload_filename.assign(element);
 						lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
-						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_filename);
+						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_prefs.whdload_filename);
 						bIgnoreListChange = true;
 						cboWhdload->setSelected(0);
 						bIgnoreListChange = false;
 					}
-					whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
+					whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
 				}
 				refresh_all_panels();
 			}
@@ -429,24 +427,25 @@ public:
 			//---------------------------------------
 			// Eject WHDLoad file
 			//---------------------------------------
-			whdload_filename = "";
+			whdload_prefs.whdload_filename = "";
 		}
 		else if (actionEvent.getSource() == cmdWhdloadSelect)
 		{
 			std::string tmp;
-			if (!whdload_filename.empty())
-				tmp = whdload_filename;
+			if (!whdload_prefs.whdload_filename.empty())
+				tmp = whdload_prefs.whdload_filename;
 			else
 				tmp = get_whdload_arch_path();
 
 			tmp = SelectFile("Select WHDLoad LHA file", tmp, whdload_filter);
 			{
-				whdload_filename = tmp;
-				add_file_to_mru_list(lstMRUWhdloadList, whdload_filename);
+				whdload_prefs.whdload_filename = tmp;
+				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
 				RefreshWhdListModel();
-				whdload_auto_prefs(&changed_prefs, whdload_filename.c_str());
-
+				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
+				
 				AdjustDropDownControls();
+				SetLastActiveConfig(whdload_prefs.whdload_filename.c_str());
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
@@ -642,20 +641,18 @@ public:
 					{
 						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
 						disk_insert(i, tmp.c_str());
-						add_file_to_mru_list(lstMRUDiskList, tmp);
-						current_dir = extract_path(tmp);
 						RefreshDiskListModel();
 						current_dir = extract_path(tmp);
 
 						AdjustDropDownControls();
+						SetLastActiveConfig(tmp.c_str());
 					}
 				}
 				cmdqsDFxSelect[i]->requestFocus();
 			}
 		}
 
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
+		refresh_all_panels();
 	}
 };
 
@@ -870,19 +867,19 @@ void InitPanelQuickstart(const config_category& category)
 	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
 	cboWhdload->setBaseColor(gui_baseCol);
 	cboWhdload->setBackgroundColor(colTextboxBackground);
-	cboWhdload->setId("cboWhdload");
+	cboWhdload->setId("cboQsWhdload");
 	cboWhdload->addActionListener(whdloadActionListener);
 
 	cmdWhdloadEject = new gcn::Button("Eject");
 	cmdWhdloadEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadEject->setBaseColor(gui_baseCol);
-	cmdWhdloadEject->setId("cmdWhdloadEject");
+	cmdWhdloadEject->setId("cmdQsWhdloadEject");
 	cmdWhdloadEject->addActionListener(whdloadButtonActionListener);
 
 	cmdWhdloadSelect = new gcn::Button("Select file");
 	cmdWhdloadSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadSelect->setBaseColor(gui_baseCol);
-	cmdWhdloadSelect->setId("cmdWhdloadSelect");
+	cmdWhdloadSelect->setId("cmdQsWhdloadSelect");
 	cmdWhdloadSelect->addActionListener(whdloadButtonActionListener);
 
 	category.panel->add(lblModel, DISTANCE_BORDER, posY);
@@ -1027,11 +1024,11 @@ static void AdjustDropDownControls()
 	}
 
 	cboWhdload->clearSelected();
-	if (!whdload_filename.empty())
+	if (!whdload_prefs.whdload_filename.empty())
 	{
 		for (auto i = 0; i < static_cast<int>(lstMRUWhdloadList.size()); ++i)
 		{
-			if (lstMRUWhdloadList[i] == whdload_filename)
+			if (lstMRUWhdloadList[i] == whdload_prefs.whdload_filename)
 			{
 				cboWhdload->setSelected(i);
 				break;

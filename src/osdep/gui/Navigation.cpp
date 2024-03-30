@@ -44,7 +44,7 @@ static NavigationMap nav_map[] =
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
 	{"Savestates", "State0", "State0", "Priority", "Virtual Keyboard"},
 	{"Virtual Keyboard", "chkVkEnabled", "chkVkEnabled", "Savestates", "WHDLoad"},
-	{"WHDLoad", "", "", "Virtual Keyboard", "Quit"},
+	{"WHDLoad", "cmdWhdloadEject", "cmdWhdloadEject", "Virtual Keyboard", "Quit"},
 	{"Shutdown", "Start", "Quit", "WHDLoad", "About"},
 	{"Quit", "Shutdown", "Restart", "WHDLoad", "About"},
 	{"Restart", "Quit", "Help", "WHDLoad", "About"},
@@ -70,7 +70,7 @@ static NavigationMap nav_map[] =
 
 	//  active            move left         move right        move up           move down
 	// PanelQuickstart
-	{"cboAModel", "Quickstart", "qsNTSC", "cboWhdload", "cboAConfig"},
+	{"cboAModel", "Quickstart", "qsNTSC", "cboQsWhdload", "cboAConfig"},
 	{"qsNTSC", "cboAModel", "Quickstart", "qsMode", "cboAConfig"},
 	{"cboAConfig", "Quickstart", "Quickstart", "cboAModel", "qscmdSel0"},
 	{"qsDF0", "Quickstart", "cboqsType0", "cboAConfig", "cboqsDisk0"},
@@ -92,10 +92,10 @@ static NavigationMap nav_map[] =
 	{"qsCDSelect", "qscdEject", "Quickstart", "cboqsDisk1", "cboCD"},
 	{"cboCD", "Quickstart", "Quickstart", "qsCDSelect", "qsMode"},
 	{"qsMode", "Quickstart", "Quickstart", "cboCD", "cmdSetConfig"},
-	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cmdWhdloadEject"},
-	{"cmdWhdloadEject", "Quickstart", "cmdWhdloadSelect", "cmdSetConfig", "cboWhdload"},
-	{"cmdWhdloadSelect", "cmdWhdloadEject", "Quickstart", "cmdSetConfig", "cboWhdload"},
-	{"cboWhdload", "Quickstart", "Quickstart", "cmdWhdloadEject", "cboAModel"},
+	{"cmdSetConfig", "Quickstart", "Quickstart", "qsMode", "cmdQsWhdloadEject"},
+	{"cmdQsWhdloadEject", "Quickstart", "cmdQsWhdloadSelect", "cmdSetConfig", "cboQsWhdload"},
+	{"cmdQsWhdloadSelect", "cmdQsWhdloadEject", "Quickstart", "cmdSetConfig", "cboQsWhdload"},
+	{"cboQsWhdload", "Quickstart", "Quickstart", "cmdQsWhdloadEject", "cboAModel"},
 
 	// PanelConfig
 	{"ConfigList", "Configurations", "ConfigLoad", "", ""},
@@ -359,10 +359,10 @@ static NavigationMap nav_map[] =
 	{ "cboProtectionDongle", "IO Ports", "IO Ports", "chkMidiRoute", "cboSampler" },
 
 	// PanelCustom
-	{ "0: Mouse", "Custom controls", "1: Joystick", "", "None" },
-	{ "1: Joystick", "0: Mouse", "2: Parallel 1", "", "HotKey" },
-	{ "2: Parallel 1", "1: Joystick", "3: Parallel 2", "", "HotKey" },
-	{ "3: Parallel 2", "2: Parallel 1", "Custom controls", "", "cmdSetHotkey" },
+	{ "0: Mouse", "Custom controls", "1: Joystick", "cmdSaveMapping", "None" },
+	{ "1: Joystick", "0: Mouse", "2: Parallel 1", "cmdSaveMapping", "HotKey" },
+	{ "2: Parallel 1", "1: Joystick", "3: Parallel 2", "cmdSaveMapping", "HotKey" },
+	{ "3: Parallel 2", "2: Parallel 1", "Custom controls", "cmdSaveMapping", "cmdSetHotkey" },
 
 	{ "None", "Custom controls", "HotKey", "0: Mouse", "cboCustomButtonAction0" },
 	{ "HotKey", "None", "cmdSetHotkey", "1: Joystick", "cboCustomButtonAction0" },
@@ -424,7 +424,7 @@ static NavigationMap nav_map[] =
 	{ "cboCustomButtonAction12", "cboCustomButtonAction5", "Custom controls", "cboCustomButtonAction11", "cboCustomButtonAction13" },
 	{ "cboCustomButtonAction13", "cboCustomButtonAction6", "Custom controls", "cboCustomButtonAction12", "cboCustomButtonAction14" },
 	{ "cboCustomButtonAction14", "cboCustomAxisAction0", "Custom controls", "cboCustomButtonAction13", "cboCustomAxisAction1" },
-
+	// Left column bottom
 	{ "cboCustomAxisAction0", "Custom controls", "cboCustomButtonAction14", "cboCustomButtonAction6", "cboCustomAxisAction1" },
 	{ "cboCustomAxisAction1", "Custom controls", "cboCustomAxisAction4", "cboCustomAxisAction0", "cboCustomAxisAction2" },
 	{ "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction5", "cboCustomAxisAction1", "cboCustomAxisAction3" },
@@ -433,6 +433,7 @@ static NavigationMap nav_map[] =
 	{ "cboCustomAxisAction4", "cboCustomAxisAction1", "Custom controls", "cboCustomButtonAction14", "cboCustomAxisAction5" },
 	{ "cboCustomAxisAction5", "cboCustomAxisAction2", "Custom controls", "cboCustomAxisAction4", "cmdSetHotkey" },
 #endif
+	{ "cmdSaveMapping", "Custom controls", "Custom controls", "cboCustomAxisAction3", "0: Mouse" },
 
 	// PanelDiskSwapper
 	// active				move left			move right			move up			move down
@@ -563,6 +564,20 @@ static NavigationMap nav_map[] =
 	{ "cmdVkSetHotkey",  "Virtual Keyboard", "cmdVkSetHotkeyClear", "cboVkStyle", "chkRetroArchVkbd"},
 	{ "cmdVkSetHotkeyClear", "cmdVkSetHotkey", "Virtual Keyboard", "cboVkStyle", "chkRetroArchVkbd"},
 	{ "chkRetroArchVkbd", "Virtual Keyboard", "Virtual Keyboard", "cmdVkSetHotkey", "chkVkEnabled"},
+
+	// WHDLoad
+	{ "cmdWhdloadEject", "WHDLoad", "cmdWhdloadSelect", "chkQuitOnExit", "cboWhdload" },
+	{ "cmdWhdloadSelect", "cmdWhdloadEject", "WHDLoad", "chkQuitOnExit", "cboWhdload" },
+	{ "cboWhdload", "WHDLoad", "WHDLoad", "cmdWhdloadSelect", "cboSlaves" },
+
+	{ "cboSlaves", "WHDLoad", "WHDLoad", "cboWhdload", "cmdCustomFields" },
+
+	{ "cmdCustomFields", "WHDLoad", "WHDLoad", "cboSlaves", "chkButtonWait" },
+	{ "chkButtonWait", "WHDLoad", "WHDLoad", "cmdCustomFields", "chkShowSplash" },
+	{ "chkShowSplash", "WHDLoad", "WHDLoad", "chkButtonWait", "chkWriteCache" },
+
+	{ "chkWriteCache", "WHDLoad", "WHDLoad", "chkShowSplash", "chkQuitOnExit" },
+	{ "chkQuitOnExit", "WHDLoad", "WHDLoad", "chkWriteCache", "cmdWhdloadEject" },
 
 	//  active            move left         move right        move up           move down
 	// EditFilesysVirtual

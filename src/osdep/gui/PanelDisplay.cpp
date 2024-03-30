@@ -771,6 +771,13 @@ void RefreshPanelDisplay()
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFilterLowRes->setSelected(changed_prefs.gfx_lores_mode);
 
+	if (kmsdrm_detected)
+	{
+		changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
+		cboScreenmode->setEnabled(false);
+	}
+
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
 	{
 		cboScreenmode->setSelected(0);

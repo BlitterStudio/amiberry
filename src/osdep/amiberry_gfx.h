@@ -116,20 +116,7 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 #define  SYSTEM_GREEN_MASK     (amiga_surface->format->Gmask)
 #define  SYSTEM_BLUE_MASK      (amiga_surface->format->Bmask)
 
-#ifdef USE_DISPMANX
-#include <bcm_host.h>
-extern DISPMANX_DISPLAY_HANDLE_T displayHandle;
-extern DISPMANX_MODEINFO_T modeInfo;
-extern DISPMANX_UPDATE_HANDLE_T updateHandle;
-extern DISPMANX_ELEMENT_HANDLE_T blackscreen_element;
-extern VC_RECT_T src_rect;
-extern VC_RECT_T dst_rect;
-extern VC_RECT_T blit_rect;
-extern VC_RECT_T black_rect;
-extern VC_IMAGE_TYPE_T rgb_mode;
-#else
 extern SDL_Texture* amiga_texture;
-#endif
 extern SDL_DisplayMode sdl_mode;
 extern SDL_Rect crop_rect;
 

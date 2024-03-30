@@ -20,8 +20,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v5.7.0 (2024-03-23)")
-#define AMIBERRYDATE MAKEBD(2024, 3, 23)
+#define AMIBERRYVERSION _T("Amiberry v5.7.0 (2024-03-30)")
+#define AMIBERRYDATE MAKEBD(2024, 3, 30)
 #define COPYRIGHT _T("Copyright (C) 2016-2024 Dimitris Panokostas")
 
 #define IHF_WINDOWHIDDEN 6
@@ -66,9 +66,6 @@ extern int emulating;
 extern bool config_loaded;
 
 extern int z3_base_adr;
-#ifdef USE_DISPMANX
-extern unsigned long time_per_frame;
-#endif
 extern bool volatile flip_in_progress;
 
 extern void setmouseactive(int monid, int active);

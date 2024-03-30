@@ -296,7 +296,7 @@ public:
 		else if (actionEvent.getSource() == cmdRemap0)
 		{
 			const auto host_joy_id = changed_prefs.jports[0].id - JSEM_JOYS;
-			auto mapping = show_controller_map(host_joy_id, false);
+			const auto mapping = show_controller_map(host_joy_id, false);
 			if (!mapping.empty())
 			{
 				SDL_GameControllerAddMapping(mapping.c_str());
@@ -307,7 +307,7 @@ public:
 		else if (actionEvent.getSource() == cmdRemap1)
 		{
 			const auto host_joy_id = changed_prefs.jports[1].id - JSEM_JOYS;
-			auto mapping = show_controller_map(host_joy_id, false);
+			const auto mapping = show_controller_map(host_joy_id, false);
 			if (!mapping.empty())
 			{
 				SDL_GameControllerAddMapping(mapping.c_str());
@@ -670,29 +670,19 @@ void RefreshPanelInput()
 		cboAutofireRate->setSelected(3);
 
 	// changed mouse map
-	joysmm[0]->setSelected(changed_prefs.jports[0].mousemap);
-	joysmm[1]->setSelected(changed_prefs.jports[1].mousemap);
-
-	if (joysm[0]->getSelected() == 0)
-	{
-		joysmm[0]->setEnabled(false);
-		lblPort0mousemode->setEnabled(false);
-	}
-	else
-	{
-		joysmm[0]->setEnabled(true);
-		lblPort0mousemode->setEnabled(true);
+	for (int i = 0; i < 2; ++i) {
+		joysmm[i]->setSelected(changed_prefs.jports[i].mousemap);
 	}
 
-	if (joysm[1]->getSelected() == 0)
-	{
-		joysmm[1]->setEnabled(false);
-		lblPort1mousemode->setEnabled(false);
-	}
-	else
-	{
-		joysmm[1]->setEnabled(true);
-		lblPort1mousemode->setEnabled(true);
+	for (int i = 0; i < 2; i++) {
+		const bool is_enabled = joysm[i]->getSelected() != 0;
+		joysmm[i]->setEnabled(is_enabled);
+		if (i == 0) {
+			lblPort0mousemode->setEnabled(is_enabled);
+		}
+		else {
+			lblPort1mousemode->setEnabled(is_enabled);
+		}
 	}
 
 	for (auto i = 0; i < 5; ++i)

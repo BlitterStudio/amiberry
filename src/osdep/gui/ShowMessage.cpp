@@ -183,6 +183,7 @@ static void InitShowMessage(const std::string& message)
 		gui_top = new gcn::Container();
 		gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
 		gui_baseCol = gui_theme.base_color;
+		font_color = gui_theme.font_color;
 		gui_top->setBaseColor(gui_baseCol);
 		uae_gui->setTop(gui_top);
 	}
@@ -194,6 +195,7 @@ static void InitShowMessage(const std::string& message)
 		{
 			gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
 			gui_font->setAntiAlias(false);
+			gui_font->setColor(font_color);
 		}
 		catch (exception& ex)
 		{

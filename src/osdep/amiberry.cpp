@@ -655,17 +655,21 @@ bool ismouseactive (void)
 	return mouseactive > 0;
 }
 
-//TODO: Tablet only
-void target_inputdevice_unacquire(void)
+//TODO: maybe implement this
+void target_inputdevice_unacquire(bool full)
 {
-//	close_tablet(tablet);
-//	tablet = NULL;
+	//close_tablet(tablet);
+	//tablet = NULL;
+	//if (full) {
+	//	rawinput_release();
+	//}
 }
 void target_inputdevice_acquire(void)
 {
-//	struct AmigaMonitor* mon = &AMonitors[0];
-//	target_inputdevice_unacquire();
-//	tablet = open_tablet(mon->hAmigaWnd);
+	//struct AmigaMonitor* mon = &AMonitors[0];
+	//target_inputdevice_unacquire(false);
+	//tablet = open_tablet(mon->hAmigaWnd);
+	//rawinput_alloc();
 }
 
 static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpause)
@@ -1387,8 +1391,7 @@ void handle_controller_button_event(const SDL_Event& event)
 	else {
 		for (auto id = 0; id < MAX_INPUT_DEVICES; id++) {
 			const didata* did = &di_joystick[id];
-			if (did->name.empty() || did->joystick_id != event.cbutton.which) continue;
-			if (did->mapping.is_retroarch || !did->is_controller) continue;
+			if (did->name.empty() || did->joystick_id != event.caxis.which || did->mapping.is_retroarch || !did->is_controller) continue;
 
 			read_controller_button(id, button, state);
 			break;
@@ -1467,7 +1470,7 @@ void handle_joy_hat_motion_event(const SDL_Event& event)
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
 		const didata* did = &di_joystick[id];
-		if (did->name.empty() || did->joystick_id != which || did->joystick_id != id) continue;
+		if (did->name.empty() || did->joystick_id != which || did->joystick_id != id || (!did->mapping.is_retroarch && did->is_controller)) continue;
 
 		read_joystick_hat(which, hat, value);
 		break;
@@ -2045,19 +2048,11 @@ void target_fixup_options(struct uae_prefs* p)
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
-#if !defined USE_DISPMANX
 	if (p->gfx_auto_crop)
 	{
 		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
-#endif
-
-#ifdef USE_DISPMANX
-	// Always disable Virtual Mouse mode on Dispmanx, as it doesn't work as expected in some cases
-	if (p->input_tablet > 0)
-		p->input_tablet = TABLET_OFF;
-#endif
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
@@ -2094,7 +2089,7 @@ void target_fixup_options(struct uae_prefs* p)
 		}
 	}
 	/* switch from 32 to 16 or vice versa if mode does not exist */
-	if (1 || isfullscreen() > 0) {
+	//if (1 || isfullscreen() > 0) {
 		int depth = p->color_mode == 5 ? 4 : 2;
 		for (int i = 0; md->DisplayModes[i].depth >= 0; i++) {
 			if (md->DisplayModes[i].depth == depth) {
@@ -2105,7 +2100,7 @@ void target_fixup_options(struct uae_prefs* p)
 		if (depth) {
 			p->color_mode = p->color_mode == 5 ? 2 : 5;
 		}
-	}
+	//}
 
 	if ((p->gfx_apmode[0].gfx_vsyncmode || p->gfx_apmode[1].gfx_vsyncmode)) {
 		if (p->produce_sound && sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL2) {
@@ -2264,18 +2259,11 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_vresolution = VRES_NONDOUBLE;
 		p->gfx_pscanlines = 0;
 	}
-#if !defined USE_DISPMANX
+
 	if (amiberry_options.default_horizontal_centering)
-#else
-	if (amiberry_options.default_horizontal_centering && !p->gfx_auto_crop)
-#endif
 		p->gfx_xcenter = 2;
 
-#if !defined USE_DISPMANX
 	if (amiberry_options.default_vertical_centering)
-#else
-	if (amiberry_options.default_vertical_centering && !p->gfx_auto_crop)
-#endif
 		p->gfx_ycenter = 2;
 
 	if (amiberry_options.default_frameskip)
@@ -2372,6 +2360,29 @@ void target_default_options(struct uae_prefs* p, int type)
 	else
 	{
 		gui_theme.base_color = gcn::Color(170, 170, 170);
+	}
+
+	// Font color
+	if (amiberry_options.gui_theme_font_color[0])
+	{
+		// parse string as comma-separated numbers
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_font_color);
+		if (result.size() == 3)
+		{
+			gui_theme.font_color = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.font_color = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.font_color = gcn::Color(0, 0, 0);
+		}
+	}
+	else
+	{
+		gui_theme.font_color = gcn::Color(0, 0, 0);
 	}
 
 	// Selector Inactive
@@ -2902,7 +2913,6 @@ void get_saveimage_path(char* out, int size, int dir)
 std::string get_configuration_path()
 {
 	return fix_trailing(config_path);
-
 }
 
 void get_configuration_path(char* out, int size)
@@ -3423,6 +3433,9 @@ void save_amiberry_settings(void)
 	// GUI Theme: Font size
 	write_int_option("gui_theme_font_size", amiberry_options.gui_theme_font_size);
 
+	// GUI Theme: Font color
+	write_string_option("gui_theme_font_color", amiberry_options.gui_theme_font_color);
+
 	// GUI Theme: Base color
 	write_string_option("gui_theme_base_color", amiberry_options.gui_theme_base_color);
 
@@ -3657,6 +3670,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
 		ret |= cfgfile_string(option, value, "gui_theme_font_name", amiberry_options.gui_theme_font_name, sizeof amiberry_options.gui_theme_font_name);
 		ret |= cfgfile_intval(option, value, "gui_theme_font_size", &amiberry_options.gui_theme_font_size, 1);
+		ret |= cfgfile_string(option, value, "gui_theme_font_color", amiberry_options.gui_theme_font_color, sizeof amiberry_options.gui_theme_font_color);
 		ret |= cfgfile_string(option, value, "gui_theme_base_color", amiberry_options.gui_theme_base_color, sizeof amiberry_options.gui_theme_base_color);
 		ret |= cfgfile_string(option, value, "gui_theme_selector_inactive", amiberry_options.gui_theme_selector_inactive, sizeof amiberry_options.gui_theme_selector_inactive);
 		ret |= cfgfile_string(option, value, "gui_theme_selector_active", amiberry_options.gui_theme_selector_active, sizeof amiberry_options.gui_theme_selector_active);
@@ -3913,6 +3927,7 @@ void target_getdate(int* y, int* m, int* d)
 
 void target_addtorecent(const TCHAR* name, int t)
 {
+	add_file_to_mru_list(lstMRUDiskList, std::string(name));
 }
 
 void target_reset()
@@ -4094,20 +4109,12 @@ int main(int argc, char* argv[])
 	}
 #endif
 	alloc_AmigaMem();
+	if (lstAvailableROMs.empty())
+		RescanROMs();
+
 	uae_time_calibrate();
 	
-	if (
-#ifdef USE_DISPMANX
-		SDL_Init(SDL_INIT_TIMER
-			| SDL_INIT_AUDIO
-			| SDL_INIT_JOYSTICK
-			| SDL_INIT_HAPTIC
-			| SDL_INIT_GAMECONTROLLER
-			| SDL_INIT_EVENTS) != 0
-#else
-		SDL_Init(SDL_INIT_EVERYTHING) != 0
-#endif
-		)
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
@@ -4219,6 +4226,8 @@ int main(int argc, char* argv[])
 
 	logging_cleanup();
 
+	SDL_Quit();
+
 	if (host_poweroff)
 		target_shutdown();
 	return 0;
@@ -4316,4 +4325,149 @@ void clear_whdload_prefs()
 	whdload_prefs.slaves = {};
 	whdload_prefs.selected_slave = {};
 	whdload_prefs.custom.clear();
+}
+
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
+void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename)
+{
+	std::ofstream out_file(filename);
+	if (!out_file) {
+		std::cerr << "Unable to open file " << filename << std::endl;
+		return;
+	}
+
+	out_file << "button=";
+	for (const auto& b : input.button) {
+		out_file << b << " ";
+	}
+	out_file << "\naxis=";
+	for (const auto& a : input.axis) {
+		out_file << a << " ";
+	}
+	out_file << "\nlstick_axis_y_invert=" << input.lstick_axis_y_invert;
+	out_file << "\nlstick_axis_x_invert=" << input.lstick_axis_x_invert;
+	out_file << "\nrstick_axis_y_invert=" << input.rstick_axis_y_invert;
+	out_file << "\nrstick_axis_x_invert=" << input.rstick_axis_x_invert;
+	out_file << "\nhotkey_button=" << input.hotkey_button;
+	out_file << "\nquit_button=" << input.quit_button;
+	out_file << "\nreset_button=" << input.reset_button;
+	out_file << "\nmenu_button=" << input.menu_button;
+	out_file << "\nload_state_button=" << input.load_state_button;
+	out_file << "\nsave_state_button=" << input.save_state_button;
+	out_file << "\nvkbd_button=" << input.vkbd_button;
+	out_file << "\nnumber_of_hats=" << input.number_of_hats;
+	out_file << "\nnumber_of_axis=" << input.number_of_axis;
+	out_file << "\nis_retroarch=" << input.is_retroarch;
+	out_file << "\namiberry_custom_none=";
+	for (const auto& b : input.amiberry_custom_none) {
+		out_file << b << " ";
+	}
+	out_file << "\namiberry_custom_hotkey=";
+	for (const auto& b : input.amiberry_custom_hotkey) {
+		out_file << b << " ";
+	}
+	out_file << "\namiberry_custom_axis_none=";
+	for (const auto& a : input.amiberry_custom_axis_none) {
+		out_file << a << " ";
+	}
+	out_file << "\namiberry_custom_axis_hotkey=";
+	for (const auto& a : input.amiberry_custom_axis_hotkey) {
+		out_file << a << " ";
+	}
+
+	out_file.close();
+}
+
+void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename)
+{
+	std::ifstream in_file(filename);
+	if (!in_file) {
+		std::cerr << "Unable to open file " << filename << std::endl;
+		return;
+	}
+
+	std::string line;
+	while (std::getline(in_file, line)) {
+		std::istringstream iss(line);
+		std::string key;
+		if (std::getline(iss, key, '=')) {
+			if (key == "button") {
+				for (auto& b : input.button) {
+					iss >> b;
+				}
+			}
+			else if (key == "axis") {
+				for (auto& a : input.axis) {
+					iss >> a;
+				}
+			}
+			else if (key == "lstick_axis_y_invert") {
+				iss >> input.lstick_axis_y_invert;
+			}
+			else if (key == "lstick_axis_x_invert") {
+				iss >> input.lstick_axis_x_invert;
+			}
+			else if (key == "rstick_axis_y_invert") {
+				iss >> input.rstick_axis_y_invert;
+			}
+			else if (key == "rstick_axis_x_invert") {
+				iss >> input.rstick_axis_x_invert;
+			}
+			else if (key == "hotkey_button") {
+				iss >> input.hotkey_button;
+			}
+			else if (key == "quit_button") {
+				iss >> input.quit_button;
+			}
+			else if (key == "reset_button") {
+				iss >> input.reset_button;
+			}
+			else if (key == "menu_button") {
+				iss >> input.menu_button;
+			}
+			else if (key == "load_state_button") {
+				iss >> input.load_state_button;
+			}
+			else if (key == "save_state_button") {
+				iss >> input.save_state_button;
+			}
+			else if (key == "vkbd_button") {
+				iss >> input.vkbd_button;
+			}
+			else if (key == "number_of_hats") {
+				iss >> input.number_of_hats;
+			}
+			else if (key == "number_of_axis") {
+				iss >> input.number_of_axis;
+			}
+			else if (key == "is_retroarch") {
+				iss >> input.is_retroarch;
+			}
+			else if (key == "amiberry_custom_none") {
+				for (auto& b : input.amiberry_custom_none) {
+					iss >> b;
+				}
+			}
+			else if (key == "amiberry_custom_hotkey") {
+				for (auto& b : input.amiberry_custom_hotkey) {
+					iss >> b;
+				}
+			}
+			else if (key == "amiberry_custom_axis_none") {
+				for (auto& a : input.amiberry_custom_axis_none) {
+					iss >> a;
+				}
+			}
+			else if (key == "amiberry_custom_axis_hotkey") {
+				for (auto& a : input.amiberry_custom_axis_hotkey) {
+					iss >> a;
+				}
+			}
+		}
+	}
+
+	in_file.close();
 }

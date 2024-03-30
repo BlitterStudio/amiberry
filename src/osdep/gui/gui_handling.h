@@ -138,7 +138,7 @@ enum
 };
 
 static const char* diskfile_filter[] = {
-	".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp", ".zip",
+	".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp",
 	".7z", ".lha", ".lzh", ".lzx", "\0"
 };
 static const char* harddisk_filter[] = {".hdf", ".hdz", ".lha", "zip", ".vhd", ".chd", ".7z", "\0"};
@@ -176,6 +176,7 @@ extern gcn::Color gui_baseCol;
 extern gcn::Color colTextboxBackground;
 extern gcn::Color colSelectorInactive;
 extern gcn::Color colSelectorActive;
+extern gcn::Color font_color;
 
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
@@ -322,7 +323,6 @@ void RefreshPanelWHDLoad();
 bool HelpPanelWHDLoad(std::vector<std::string>& helptext);
 
 void refresh_all_panels();
-void register_refresh_func(void (*func)());
 void focus_bug_workaround(gcn::Window* wnd);
 void disable_resume();
 
@@ -377,7 +377,6 @@ STATIC_INLINE bool is_hdf_rdb()
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
 }
 
-extern std::string whdload_filename;
 extern std::string screenshot_filename;
 extern int current_state_num;
 extern int delay_savestate_frame;
@@ -397,5 +396,7 @@ extern amiberry_hotkey get_hotkey_from_config(std::string config_option);
 extern void save_mapping_to_file(const std::string& mapping);
 extern void clear_whdload_prefs();
 extern void create_startup_sequence();
+
+extern void SetLastActiveConfig(const char* filename);
 
 #endif // GUI_HANDLING_H

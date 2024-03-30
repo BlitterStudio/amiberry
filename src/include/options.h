@@ -597,6 +597,8 @@ struct whdload_slave
 };
 struct whdload_options
 {
+	std::string whdload_filename;
+
 	std::string filename;
 	std::string game_name;
 	std::string sub_path;
@@ -1101,7 +1103,6 @@ struct uae_prefs
 	bool use_retroarch_statebuttons;
 	bool use_retroarch_vkbd;
 
-	
 #endif
 };
 
@@ -1289,6 +1290,7 @@ struct amiberry_gui_theme
 	gcn::Color textbox_background;
 	std::string font_name;
 	int font_size;
+	gcn::Color font_color;
 };
 
 struct amiberry_options
@@ -1352,6 +1354,7 @@ struct amiberry_options
 	char gui_theme_selector_inactive[128] = "170, 170, 170";
 	char gui_theme_selector_active[128] = "103, 136, 187";
 	char gui_theme_textbox_background[128] = "220, 220, 220";
+	char gui_theme_font_color[128] = "0, 0, 0";
 };
 
 extern struct amiberry_options amiberry_options;

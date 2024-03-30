@@ -62,6 +62,7 @@ namespace gcn
 		mAntiAlias = true;
 		mFilename = filename;
 		mFont = NULL;
+		mColor = { 0, 0, 0, 255 };
 
 		mFont = TTF_OpenFont(filename.c_str(), size);
 
@@ -91,7 +92,7 @@ namespace gcn
 
 	void SDLTrueTypeFont::drawString(gcn::Graphics* graphics, const std::string& text, const int x, const int y)
 	{
-		if (text == "")
+		if (text.empty())
 		{
 			return;
 		}
@@ -109,20 +110,11 @@ namespace gcn
 		// This is needed for drawing the Glyph in the middle if we have spacing
 		const int yoffset = getRowSpacing() / 2;
 
-		Color col;
-		if (sdlGraphics)
-		{
-			col = sdlGraphics->getColor();
-		}
-		else
-		{
-			col = sdl2Graphics->getColor();
-		}
-
 		SDL_Color sdlCol;
-		sdlCol.b = col.b;
-		sdlCol.r = col.r;
-		sdlCol.g = col.g;
+		sdlCol.r = mColor.r;
+		sdlCol.g = mColor.g;
+		sdlCol.b = mColor.b;
+		sdlCol.a = mColor.a;
 
 		SDL_Surface* textSurface;
 		if (mAntiAlias)
@@ -184,5 +176,10 @@ namespace gcn
 	bool SDLTrueTypeFont::isAntiAlias()
 	{
 		return mAntiAlias;
+	}
+
+	void SDLTrueTypeFont::setColor(const Color& color)
+	{
+		mColor = color;
 	}
 }

@@ -506,6 +506,7 @@ void gui_display(int shortcut)
 
 	if (setpaused(7)) {
 		inputdevice_unacquire();
+		//rawinput_release();
 		wait_keyrelease();
 		clearallkeys();
 		setmouseactive(0, 0);
@@ -513,9 +514,6 @@ void gui_display(int shortcut)
 
 	if (shortcut == -1)
 	{
-#ifdef USE_DISPMANX
-		graphics_subshutdown();
-#endif
 		prefs_to_gui();
 		run_gui();
 		gui_to_prefs();
@@ -537,14 +535,15 @@ void gui_display(int shortcut)
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 	clearallkeys ();
-#ifdef USE_DISPMANX
-	update_display(&changed_prefs);
-#endif
+
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);
 	}
+	//rawinput_alloc();
 	fpscounter_reset();
+	//screenshot_free();
+	//write_disk_history();
 	gui_active--;
 	here--;
 }

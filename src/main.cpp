@@ -71,10 +71,11 @@
 #endif
 #include <sys/ioctl.h>
 
+#include "fsdb.h"
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry 5.6.9 (2024-03-21)";
+static const char __ver[40] = "$VER: Amiberry 5.7.0 (2024-03-30)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 struct uae_prefs currprefs, changed_prefs;
@@ -706,7 +707,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 	p->scsi = 0;
 #endif
 #if !defined (SANA2)
-	p->sana2 = 0;
+	p->sana2 = false;
 #endif
 #if !defined (UAESERIAL)
 	p->uaeserial = false;
@@ -780,7 +781,6 @@ void uae_reset (int hardreset, int keyboardreset)
 		if (hardreset)
 			quit_program = -UAE_RESET_HARD;
 	}
-
 }
 
 void uae_quit (void)
@@ -807,62 +807,71 @@ void uae_restart(struct uae_prefs *p, int opengui, const TCHAR *cfgfile)
 
 void print_version()
 {
-	std::cout << get_version_string() << "\n" << get_copyright_notice() << std::endl;
+	std::cout << get_version_string() << "\n" << get_copyright_notice() << '\n';
 	exit(0);
 }
 
 void usage()
 {
-	std::cout << __ver << std::endl;
-	std::cout << "Usage:" << std::endl;
-	std::cout << " -h                         Show this help." << std::endl;
-	std::cout << " --help                     \n" << std::endl;
-	std::cout << " -f <file>                  Load a configuration file." << std::endl;
-	std::cout << " --config <file>            " << std::endl;
-	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << std::endl;
-	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" << std::endl;
-	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << std::endl;
-	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << std::endl;
-	std::cout << " --statefile <file>         Load a save state file." << std::endl;
-	std::cout << " -s <option>=<value>        Set one or more configuration options directly, without loading a file." << std::endl;
-	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." << std::endl;
-	std::cout << "\nAdditional options:" << std::endl;
-	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << std::endl;
-	std::cout << " -1 <disk.adf>              " << std::endl;
-	std::cout << " -2 <disk.adf>              " << std::endl;
-	std::cout << " -3 <disk.adf>              \n" << std::endl;
-	std::cout << " -diskswapper=d1.adf,d2.adf Comma-separated list of disk images to pre-load to the Disk Swapper." << std::endl;
-	std::cout << " -r <kick.rom>              Load main ROM from the specified path." << std::endl;
-	std::cout << " -K <kick.rom>              Load extended ROM from the specified path." << std::endl;
-	std::cout << " -m VOLNAME:mount_point     Attach a volume directly to the specified mount point." << std::endl;
-	std::cout << " -W DEVNAME:hardfile        Attach a hardfile with the specified device name." << std::endl;
-	std::cout << " -S <value>                 Sound parameter specification." << std::endl;
-	std::cout << " -R <value>                 Output framerate in frames per second." << std::endl;
-	std::cout << " -i                         Enable illegal memory." << std::endl;
-	std::cout << " -J <xy>                    Specify joystick 0 (x) and 1 (y). Possible values: 0/1 for joystick, M for mouse, and a/b/c." << std::endl;
-	std::cout << " -w <value>                 CPU emulation speed. Possible values: 0 (Cycle Exact), -1 (Max)." << std::endl;
-	std::cout << " -G                         Don't show the GUI, start emulation directly." << std::endl;
-	std::cout << " -n                         Enable Immediate Blits. Only available when illegal memory is not enabled." << std::endl;
-	std::cout << " -v <value>                 Set Chipset. Possible values: 0 (OCS), 1 (ECS Agnus), 2 (ECS Denise), 3 (Full ECS), 4 (AGA)." << std::endl;
-	std::cout << " -C <value>                 Set CPU specs." << std::endl;
-	std::cout << " -Z <value>                 Z3 FastRAM size, value in 1MB blocks, i.e. 2=2MB." << std::endl;
-	std::cout << " -U <value>                 RTG Memory size, value in 1MB blocks, i.e. 2=2MB." << std::endl;
-	std::cout << " -F <value>                 Fastmem size, value in 1MB blocks, i.e. 2=2MB." << std::endl;
-	std::cout << " -b <value>                 Bogomem size, value in 256KB blocks, i.e. 2=512KB." << std::endl;
-	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << std::endl;
-	std::cout << " -I <value>                 Set keyboard layout language. Possible values: de, dk, us, se, fr, it, es." << std::endl;
-	std::cout << " -O <value>                 Set graphics specs." << std::endl;
-	std::cout << " -H <value>                 Color mode." << std::endl;
-	std::cout << " -o <amiberry cnf>=<value>  Set Amiberry configuration parameter with value." << std::endl;
-	std::cout << "                            See: https://github.com/midwan/amiberry/wiki/Amiberry.conf-options" << std::endl;
-	std::cout << "\nExample 1:" << std::endl;
-	std::cout << "amiberry --model A1200 -G" << std::endl;
-	std::cout << "This will use the A1200 default settings as found in the QuickStart panel." << std::endl;
-	std::cout << "Additionally, it will override 'use_gui' to 'no', so that it enters emulation directly." << std::endl;
-	std::cout << "\nExample 2:" << std::endl;
-	std::cout << "amiberry --config conf/A500.uae --statefile savestates/game.uss -s use_gui=no" << std::endl;
-	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << std::endl;
-	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << std::endl;
+	std::cout << __ver << '\n';
+	std::cout << "Usage:" << '\n';
+	std::cout << " -h                         Show this help." << '\n';
+	std::cout << " --help                     \n" << '\n';
+	std::cout << " -f <file>                  Load a configuration file." << '\n';
+	std::cout << " --config <file>            " << '\n';
+	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
+	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" <<
+		'\n';
+	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << '\n';
+	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << '\n';
+	std::cout << " --statefile <file>         Load a save state file." << '\n';
+	std::cout << " -s <option>=<value>        Set one or more configuration options directly, without loading a file." <<
+		'\n';
+	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." <<
+		'\n';
+	std::cout << "\nAdditional options:" << '\n';
+	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << '\n';
+	std::cout << " -1 <disk.adf>              " << '\n';
+	std::cout << " -2 <disk.adf>              " << '\n';
+	std::cout << " -3 <disk.adf>              \n" << '\n';
+	std::cout << " -diskswapper=d1.adf,d2.adf Comma-separated list of disk images to pre-load to the Disk Swapper." <<
+		'\n';
+	std::cout << " -r <kick.rom>              Load main ROM from the specified path." << '\n';
+	std::cout << " -K <kick.rom>              Load extended ROM from the specified path." << '\n';
+	std::cout << " -m VOLNAME:mount_point     Attach a volume directly to the specified mount point." << '\n';
+	std::cout << " -W DEVNAME:hardfile        Attach a hardfile with the specified device name." << '\n';
+	std::cout << " -S <value>                 Sound parameter specification." << '\n';
+	std::cout << " -R <value>                 Output framerate in frames per second." << '\n';
+	std::cout << " -i                         Enable illegal memory." << '\n';
+	std::cout << " -J <xy>                    Specify joystick 0 (x) and 1 (y). Possible values: 0/1 for joystick, M for mouse, and a/b/c." <<
+		'\n';
+	std::cout << " -w <value>                 CPU emulation speed. Possible values: 0 (Cycle Exact), -1 (Max)." << '\n';
+	std::cout << " -G                         Don't show the GUI, start emulation directly." << '\n';
+	std::cout << " -n                         Enable Immediate Blits. Only available when illegal memory is not enabled." <<
+		'\n';
+	std::cout << " -v <value>                 Set Chipset. Possible values: 0 (OCS), 1 (ECS Agnus), 2 (ECS Denise), 3 (Full ECS), 4 (AGA)." <<
+		'\n';
+	std::cout << " -C <value>                 Set CPU specs." << '\n';
+	std::cout << " -Z <value>                 Z3 FastRAM size, value in 1MB blocks, i.e. 2=2MB." << '\n';
+	std::cout << " -U <value>                 RTG Memory size, value in 1MB blocks, i.e. 2=2MB." << '\n';
+	std::cout << " -F <value>                 Fastmem size, value in 1MB blocks, i.e. 2=2MB." << '\n';
+	std::cout << " -b <value>                 Bogomem size, value in 256KB blocks, i.e. 2=512KB." << '\n';
+	std::cout << " -c <value>                 Size of chip memory (in number of 512 KBytes chunks)." << '\n';
+	std::cout << " -I <value>                 Set keyboard layout language. Possible values: de, dk, us, se, fr, it, es." <<
+		'\n';
+	std::cout << " -O <value>                 Set graphics specs." << '\n';
+	std::cout << " -H <value>                 Color mode." << '\n';
+	std::cout << " -o <amiberry cnf>=<value>  Set Amiberry configuration parameter with value." << '\n';
+	std::cout << "                            See: https://github.com/midwan/amiberry/wiki/Amiberry.conf-options" <<
+		'\n';
+	std::cout << "\nExample 1:" << '\n';
+	std::cout << "amiberry --model A1200 -G" << '\n';
+	std::cout << "This will use the A1200 default settings as found in the QuickStart panel." << '\n';
+	std::cout << "Additionally, it will override 'use_gui' to 'no', so that it enters emulation directly." << '\n';
+	std::cout << "\nExample 2:" << '\n';
+	std::cout << "amiberry --config conf/A500.uae --statefile savestates/game.uss -s use_gui=no" << '\n';
+	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << '\n';
+	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << '\n';
 	exit(0);
 }
 
@@ -950,6 +959,8 @@ std::string get_filename_extension(const TCHAR* filename)
 		return "";
 	return fName.substr(pos, fName.length());
 }
+
+extern void SetLastActiveConfig(const char* filename);
 
 static void parse_cmdline (int argc, TCHAR **argv)
 {
@@ -1042,6 +1053,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				if (_tcscmp(txt2.c_str(), ".lha") == 0)
 				{
 					write_log("WHDLoad... %s\n", txt);
+					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
+					whdload_prefs.whdload_filename = std::string(txt);
 					whdload_auto_prefs(&currprefs, txt);
 					xfree(txt);
 				}
@@ -1050,11 +1063,12 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					|| _tcscmp(txt2.c_str(), ".chd") == 0)
 				{
 					write_log("CDTV/CD32... %s\n", txt);
+					add_file_to_mru_list(lstMRUCDList, std::string(txt));
 					cd_auto_prefs(&currprefs, txt);
 					xfree(txt);
 				}
 				else
-					write_log("Can't find extension ... %s\n", txt);
+					write_log("Unknown extension for autoload... %s\n", txt);
 			}
 		}
 		else if (_tcscmp(argv[i], _T("--cli")) == 0)
@@ -1097,16 +1111,83 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			// check if it is config file or statefile
 			if (!loaded) {
 				auto* const txt = parsetextpath(argv[i]);
-				auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
-				if (z) {
-					const auto type = zfile_gettype(z);
-					zfile_fclose(z);
-					if (type == ZFILE_CONFIGURATION) {
+				const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
+#ifdef AMIBERRY
+				if (_tcscmp(txt2.c_str(), ".lha") == 0)
+				{
+					write_log("WHDLoad... %s\n", txt);
+					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
+					whdload_prefs.whdload_filename = std::string(txt);
+					whdload_auto_prefs(&currprefs, txt);
+					SetLastActiveConfig(txt);
+				}
+				else if (_tcscmp(txt2.c_str(), ".cue") == 0
+					|| _tcscmp(txt2.c_str(), ".iso") == 0
+					|| _tcscmp(txt2.c_str(), ".chd") == 0)
+				{
+					write_log("CDTV/CD32... %s\n", txt);
+					add_file_to_mru_list(lstMRUCDList, std::string(txt));
+					cd_auto_prefs(&currprefs, txt);
+					SetLastActiveConfig(txt);
+				}
+				else if (_tcscmp(txt2.c_str(), ".adf") == 0
+					|| _tcscmp(txt2.c_str(), ".adz") == 0
+					|| _tcscmp(txt2.c_str(), ".dms") == 0
+					|| _tcscmp(txt2.c_str(), ".ipf") == 0
+					|| _tcscmp(txt2.c_str(), ".zip") == 0
+					)
+				{
+					write_log("Floppy... %s\n", txt);
+
+					// Check if a config file exists with the same name as the disk image
+					auto full_path = std::string(txt);
+					std::filesystem::path p(full_path);
+					std::string filename = p.filename().string();
+
+					std::string config_extension = "uae";
+					const std::size_t pos = filename.find_last_of(".");
+					if (pos != std::string::npos) {
+						filename = filename.substr(0, pos) + "." + config_extension;
+					}
+					else {
+						// No extension found
+						filename += "." + config_extension;
+					}
+
+					std::string config_full_path = get_configuration_path() + filename;
+					if (my_existsfile2(config_full_path.c_str()))
+					{
+						write_log("Loading configuration file %s\n", config_full_path.c_str());
 						currprefs.mountitems = 0;
-						target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
-					} else if (type == ZFILE_STATEFILE) {
-						savestate_state = STATE_DORESTORE;
-						_tcscpy(savestate_fname, txt);
+						target_cfgfile_load(&currprefs, config_full_path.c_str(),
+							firstconfig
+							? CONFIG_TYPE_ALL
+							: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
+						currprefs.start_gui = false;
+					}
+					else
+					{
+						write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
+						disk_insert(0, txt);
+						SetLastActiveConfig(txt);
+						currprefs.start_gui = false;
+					}
+				}
+#endif
+				else
+				{
+					auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
+					if (z) {
+						const auto type = zfile_gettype(z);
+						zfile_fclose(z);
+						if (type == ZFILE_CONFIGURATION) {
+							currprefs.mountitems = 0;
+							target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
+						}
+						else if (type == ZFILE_STATEFILE) {
+							savestate_state = STATE_DORESTORE;
+							_tcscpy(savestate_fname, txt);
+						}
 					}
 				}
 				xfree(txt);
@@ -1128,12 +1209,15 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	_tcscat(optionsfile, restart_config);
 
-	if (! target_cfgfile_load(&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
-		write_log(_T("failed to load config '%s'\n"), optionsfile);
-	}
-	else
+	if (my_existsfile2(optionsfile))
 	{
-		config_loaded = true;
+		if (!target_cfgfile_load(&currprefs, optionsfile, CONFIG_TYPE_DEFAULT, default_config)) {
+			write_log(_T("failed to load config '%s'\n"), optionsfile);
+		}
+		else
+		{
+			config_loaded = true;
+		}
 	}
 
 	parse_cmdline(argc, argv);
@@ -1268,7 +1352,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		if (file_exists(destination) && keep_backup)
 		{
 			write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
-			std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
+			const std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
 			if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
 			{
 				write_log(strerror(errno));
@@ -1290,7 +1374,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 
 void download_rtb(const std::string& filename)
 {
-	std::string destination_filename = "save-data/Kickstarts/" + filename;
+	const std::string destination_filename = "save-data/Kickstarts/" + filename;
 	const std::string destination = prefix_with_whdboot_path(destination_filename);
 	if (!file_exists(destination))
 	{
@@ -1305,7 +1389,7 @@ void check_error_sdl(const bool check, const char* message)
 {
 	if (check)
 	{
-		std::cout << message << " " << SDL_GetError() << std::endl;
+		std::cout << message << " " << SDL_GetError() << '\n';
 		SDL_Quit();
 		exit(-1);
 	}

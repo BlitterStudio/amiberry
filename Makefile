@@ -92,11 +92,6 @@ CPPFLAGS64=-DCPU_AARCH64
 #Neon flags
 NEON_FLAGS=-DUSE_ARMNEON -DARM_HAS_DIV
 
-# Raspberry Pi 1 CPU flags
-ifneq (,$(findstring rpi1,$(PLATFORM)))
-	CPUFLAGS = -mcpu=arm1176jzf-s -mfpu=vfp
-endif
-
 # Raspberry Pi 2 CPU flags
 ifneq (,$(findstring rpi2,$(PLATFORM)))
 	CPUFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
@@ -121,34 +116,15 @@ endif
 ifneq (,$(findstring osx-m1,$(PLATFORM)))
 	CPUFLAGS=-mcpu=apple-m1
 endif
-#
-# DispmanX Common flags (RPI-specific)
-#
-DISPMANX_FLAGS = -DUSE_DISPMANX -I/opt/vc/include
-DISPMANX_LDFLAGS = -lbcm_host -lvchiq_arm -L/opt/vc/lib -Wl,-rpath=/opt/vc/lib
-
-#
-# SDL2 with DispmanX targets (RPI only)
-#
-# Raspberry Pi 1/2/3/4 (SDL2, DispmanX)
-ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi2 rpi3 rpi4))
-	CPPFLAGS += $(CPPFLAGS32) $(DISPMANX_FLAGS)
-	LDFLAGS += $(DISPMANX_LDFLAGS)
-	ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2 rpi3 rpi4))
-	   CPPFLAGS += $(NEON_FLAGS)
-	   HAVE_NEON = 1
-	endif    
 
 #
 # SDL2 targets
 #
-# Raspberry Pi 1/2/3/4/5 (SDL2)
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1-sdl2 rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
+# Raspberry Pi 2/3/4/5 (SDL2)
+ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
 	CPPFLAGS += $(CPPFLAGS32)
-	ifeq ($(PLATFORM),$(filter $(PLATFORM), rpi2-sdl2 rpi3-sdl2 rpi4-sdl2 rpi5-sdl2))
-	   CPPFLAGS += $(NEON_FLAGS)
-	   HAVE_NEON = 1
-	endif
+	CPPFLAGS += $(NEON_FLAGS)
+	HAVE_NEON = 1
 
 # OrangePi (SDL2)
 else ifeq ($(PLATFORM),orangepi-pc)
@@ -217,20 +193,6 @@ else ifeq ($(PLATFORM),rpi4-64-opengl)
 	CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
 	CPPFLAGS += $(CPPFLAGS64) -DUSE_OPENGL
 	LDFLAGS += -lGL
-	AARCH64 = 1
-
-# Raspberry Pi 3 (SDL2 64-bit with DispmanX)
-else ifeq ($(PLATFORM),rpi3-64-dmx)
-	CPUFLAGS = -mcpu=cortex-a53
-	CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
-	LDFLAGS += $(DISPMANX_LDFLAGS)
-	AARCH64 = 1
-
-# Raspberry Pi 4 (SDL2 64-bit with DispmanX)
-else ifeq ($(PLATFORM),rpi4-64-dmx)
-	CPUFLAGS = -mcpu=cortex-a72+crc+simd+fp
-	CPPFLAGS += $(CPPFLAGS64) $(DISPMANX_FLAGS)
-	LDFLAGS += $(DISPMANX_LDFLAGS)
 	AARCH64 = 1
 
 # Raspberry Pi 5 (SDL2 64-bit)

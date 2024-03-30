@@ -131,6 +131,7 @@ SDL_Surface* gui_screen;
 SDL_Event gui_event;
 SDL_Event touch_event;
 SDL_Texture* gui_texture;
+SDL_Rect gui_renderQuad;
 
 /*
 * Gui SDL stuff we need
@@ -153,6 +154,7 @@ gcn::Color gui_baseCol;
 gcn::Color colTextboxBackground;
 gcn::Color colSelectorInactive;
 gcn::Color colSelectorActive;
+gcn::Color font_color;
 
 gcn::FocusHandler* focusHdl;
 gcn::Widget* activeWidget;
@@ -204,13 +206,6 @@ void gui_restart()
 	gui_running = false;
 }
 
-static void (*refresh_func_after_draw)() = nullptr;
-
-void register_refresh_func(void (*func)())
-{
-	refresh_func_after_draw = func;
-}
-
 void focus_bug_workaround(gcn::Window* wnd)
 {
 	// When modal dialog opens via mouse, the dialog will not
@@ -259,12 +254,15 @@ void update_gui_screen()
 
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+		gui_renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
 	else
-		renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
+		gui_renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
 	
-	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &gui_renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(mon->gui_renderer);
+
+	if (mon->amiga_window)
+		show_screen(0, 0);
 }
 
 void amiberry_gui_init()
@@ -865,13 +863,6 @@ void amiberry_gui_run()
 		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
 			disable_resume();
 
-		if (refresh_func_after_draw != nullptr)
-		{
-			void (*currFunc)() = refresh_func_after_draw;
-			refresh_func_after_draw = nullptr;
-			currFunc();
-		}
-
 		cap_fps(start);
 	}
 
@@ -1007,6 +998,7 @@ void gui_widgets_init()
 	colSelectorInactive = gui_theme.selector_inactive;
 	colSelectorActive = gui_theme.selector_active;
 	colTextboxBackground = gui_theme.textbox_background;
+	font_color = gui_theme.font_color;
 
 	//-------------------------------------------------
 	// Create container for main page
@@ -1028,6 +1020,7 @@ void gui_widgets_init()
 		font.append(gui_theme.font_name);
 		gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
 		gui_font->setAntiAlias(false);
+		gui_font->setColor(font_color);
 	}
 	catch (gcn::Exception& e)
 	{
