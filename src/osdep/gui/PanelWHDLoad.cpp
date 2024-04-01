@@ -166,6 +166,7 @@ public:
 		else if (source == cmdCustomFields)
 		{
 			ShowCustomFields();
+			cmdCustomFields->requestFocus();
 		}
 		else if (source == chkButtonWait)
 		{
