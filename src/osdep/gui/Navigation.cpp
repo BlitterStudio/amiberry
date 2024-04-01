@@ -166,20 +166,19 @@ static NavigationMap nav_map[] =
 	{ "sldMbResHighmem", "", "", "sldMbResLowmem", "sldChipmem" },
 
 	// PanelFloppy
-	{ "DF0:", "Floppy drives", "cboType0", "cmdSaveForDisk", "cboDisk0" },
-	{ "cboType0", "DF0:", "chkWP0", "cmdSaveForDisk", "cboDisk0" },
-	{ "chkWP0", "cboType0", "cmdInfo0", "cmdSaveForDisk", "cboDisk0" },
-	{ "cmdInfo0", "chkWP0", "cmdEject0", "cmdSaveForDisk", "cboDisk0" },
-	{ "cmdEject0", "chkWP0", "cmdSel0", "cmdCreateHDDisk", "cboDisk0" },
+	{ "DF0:", "Floppy drives", "cboType0", "cmdCreateDDDisk", "cboDisk0" },
+	{ "cboType0", "DF0:", "chkWP0", "cmdCreateDDDisk", "cboDisk0" },
+	{ "chkWP0", "cboType0", "cmdInfo0", "cmdCreateDDDisk", "cboDisk0" },
+	{ "cmdInfo0", "chkWP0", "cmdEject0", "cmdCreateDDDisk", "cboDisk0" },
+	{ "cmdEject0", "cmdInfo0", "cmdSel0", "cmdCreateHDDisk", "cboDisk0" },
 	{ "cmdSel0", "cmdEject0", "Floppy drives", "cmdCreateHDDisk", "cboDisk0" },
-	{ "cboDisk0", "Floppy drives", "Floppy drives", "DF0:", "chkLoadDiskCfg" },
-	{ "chkLoadDiskCfg", "Floppy drives", "Floppy drives", "cboDisk0", "DF1:" },
-	{ "DF1:", "Floppy drives", "cboType1", "chkLoadDiskCfg", "cboDisk1" },
-	{ "cboType1", "DF1:", "chkWP1", "chkLoadDiskCfg", "cboDisk1" },
-	{ "chkWP1", "cboType1", "cmdInfo1", "chkLoadDiskCfg", "cboDisk1" },
-	{ "cmdInfo1", "chkWP1", "cmdEject1", "chkLoadDiskCfg", "cboDisk1" },
-	{ "cmdEject1", "cmdInfo1", "cmdSel1", "chkLoadDiskCfg", "cboDisk1" },
-	{ "cmdSel1", "cmdEject1", "Floppy drives", "chkLoadDiskCfg", "cboDisk1" },
+	{ "cboDisk0", "Floppy drives", "Floppy drives", "DF0:", "DF1:" },
+	{ "DF1:", "Floppy drives", "cboType1", "cboDisk0", "cboDisk1" },
+	{ "cboType1", "DF1:", "chkWP1", "cboDisk0", "cboDisk1" },
+	{ "chkWP1", "cboType1", "cmdInfo1", "cboDisk0", "cboDisk1" },
+	{ "cmdInfo1", "chkWP1", "cmdEject1", "cboDisk0", "cboDisk1" },
+	{ "cmdEject1", "cmdInfo1", "cmdSel1", "cboDisk0", "cboDisk1" },
+	{ "cmdSel1", "cmdEject1", "Floppy drives", "cboDisk0", "cboDisk1" },
 	{ "cboDisk1", "Floppy drives", "Floppy drives", "DF1:", "DF2:" },
 	{ "DF2:", "Floppy drives", "cboType2", "cboDisk1", "cboDisk2" },
 	{ "cboType2", "DF2:", "chkWP2", "cboDisk1", "cboDisk2" },
@@ -197,14 +196,13 @@ static NavigationMap nav_map[] =
 	{ "cboDisk3", "Floppy drives", "Floppy drives", "DF3:", "sldDriveSpeed" },
 	{ "sldDriveSpeed", "", "", "cboDisk3", "cboDBDriver" },
 	
-	{ "cboDBDriver", "Floppy drives", "", "sldDriveSpeed", "chkDBSmartSpeed" },
-	{ "chkDBSmartSpeed", "Floppy drives", "", "cboDBDriver", "chkDBAutoCache" },
-	{ "chkDBAutoCache", "Floppy drives", "", "chkDBSmartSpeed", "chkDBCableDriveB" },
-	{ "chkDBCableDriveB", "Floppy drives", "", "chkDBAutoCache", "cmdSaveForDisk"},
+	{ "cboDBDriver", "Floppy drives", "Floppy drives", "sldDriveSpeed", "chkDBSmartSpeed" },
+	{ "chkDBSmartSpeed", "Floppy drives", "Floppy drives", "cboDBDriver", "chkDBAutoCache" },
+	{ "chkDBAutoCache", "Floppy drives", "Floppy drives", "chkDBSmartSpeed", "chkDBCableDriveB" },
+	{ "chkDBCableDriveB", "Floppy drives", "Floppy drives", "chkDBAutoCache", "cmdCreateDDDisk"},
 
-	{ "cmdSaveForDisk", "Floppy drives", "cmdCreateDDDisk", "chkDBCableDriveB", "DF0:" },
-	{ "cmdCreateDDDisk", "cmdSaveForDisk", "cmdCreateHDDisk", "chkDBCableDriveB", "cboType0" },
-	{ "cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "chkDBCableDriveB", "cmdEject0" },
+	{ "cmdCreateDDDisk", "Floppy drives", "cmdCreateHDDisk", "chkDBCableDriveB", "DF0:" },
+	{ "cmdCreateHDDisk", "cmdCreateDDDisk", "Floppy drives", "chkDBCableDriveB", "DF0:" },
 
 	//  active            move left           move right          move up           move down
 	// PanelHD
@@ -707,7 +705,7 @@ bool handle_navigation(const int direction)
 				if (focus_target != nullptr && active_name.substr(0, 3) == "cbo")
 				{
 					auto* dropdown = dynamic_cast<gcn::DropDown*>(active_widget);
-					if (dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
+					if (dropdown && dropdown->isEnabled() && dropdown->isDroppedDown() && (direction == DIRECTION_UP || direction == DIRECTION_DOWN))
 						focus_target = nullptr; // Up/down navigates in list if dropped down
 				}
 			}
