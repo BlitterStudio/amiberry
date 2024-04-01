@@ -142,7 +142,7 @@ namespace gcn
 
 		virtual int getHeight() const;
 
-		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y);
+		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y, bool enabled);
 
 	protected:
 		TTF_Font *mFont;

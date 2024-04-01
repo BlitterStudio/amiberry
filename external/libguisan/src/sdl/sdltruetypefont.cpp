@@ -90,7 +90,7 @@ namespace gcn
 		return TTF_FontHeight(mFont) + mRowSpacing;
 	}
 
-	void SDLTrueTypeFont::drawString(gcn::Graphics* graphics, const std::string& text, const int x, const int y)
+	void SDLTrueTypeFont::drawString(gcn::Graphics* graphics, const std::string& text, const int x, const int y, bool enabled)
 	{
 		if (text.empty())
 		{
@@ -111,10 +111,20 @@ namespace gcn
 		const int yoffset = getRowSpacing() / 2;
 
 		SDL_Color sdlCol;
-		sdlCol.r = mColor.r;
-		sdlCol.g = mColor.g;
-		sdlCol.b = mColor.b;
-		sdlCol.a = mColor.a;
+		if (enabled)
+		{
+			sdlCol.r = mColor.r;
+			sdlCol.g = mColor.g;
+			sdlCol.b = mColor.b;
+			sdlCol.a = mColor.a;
+		}
+		else
+		{
+			sdlCol.r = 128;
+			sdlCol.g = 128;
+			sdlCol.b = 128;
+			sdlCol.a = mColor.a;
+		}
 
 		SDL_Surface* textSurface;
 		if (mAntiAlias)
