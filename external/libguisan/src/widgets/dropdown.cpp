@@ -177,7 +177,7 @@ namespace gcn
 		}
 
 		if (mListBox->getListModel() && mListBox->getSelected() >= 0)
-			graphics->drawText(mListBox->getListModel()->getElementAt(mListBox->getSelected()), 2, 1);
+			graphics->drawText(mListBox->getListModel()->getElementAt(mListBox->getSelected()), 2, 1, Graphics::LEFT, isEnabled());
 
 		drawButton(graphics);
 
