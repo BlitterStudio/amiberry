@@ -153,7 +153,7 @@ namespace gcn
     }
 
     void Graphics::drawText(const std::string& text, int x, int y,
-                            unsigned int alignment)
+                            unsigned int alignment, bool enabled)
     {
         if (mFont == NULL)
         {
@@ -163,13 +163,13 @@ namespace gcn
         switch (alignment)
         {
           case LEFT:
-              mFont->drawString(this, text, x, y);
+              mFont->drawString(this, text, x, y, enabled);
               break;
           case CENTER:
-              mFont->drawString(this, text, x - mFont->getWidth(text) / 2, y);
+              mFont->drawString(this, text, x - mFont->getWidth(text) / 2, y, enabled);
               break;
           case RIGHT:
-              mFont->drawString(this, text, x - mFont->getWidth(text), y);
+              mFont->drawString(this, text, x - mFont->getWidth(text), y, enabled);
               break;
           default:
               throw GCN_EXCEPTION("Unknown alignment.");

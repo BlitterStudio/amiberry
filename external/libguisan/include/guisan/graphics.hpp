@@ -251,10 +251,11 @@ namespace gcn
 		 * @param x the x coordinate where to draw the text.
 		 * @param y the y coordinate where to draw the text.
 		 * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
+		 * @param enabled true if the text should be drawn as enabled, false if it should be drawn as disabled.
 		 * @throws Exception when no Font is set.
 		 */
 		virtual void drawText(const std::string& text, int x, int y,
-							  unsigned int alignment = LEFT);
+							  unsigned int alignment = LEFT, bool enabled = true);
 
 		/**
 		 * Alignments for text drawing.

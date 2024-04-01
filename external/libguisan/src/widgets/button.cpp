@@ -193,11 +193,11 @@ namespace gcn
 
 		if (isPressed())
 		{
-			graphics->drawText(getCaption(), textX + 1, textY + 1, getAlignment());
+			graphics->drawText(getCaption(), textX + 1, textY + 1, getAlignment(), isEnabled());
 		}
 		else
 		{
-			graphics->drawText(getCaption(), textX, textY, getAlignment());
+			graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
 
 			if (isFocused())
 			{
