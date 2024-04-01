@@ -94,7 +94,7 @@ namespace gcn
 
 		// Inherited from Font
 
-		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y);
+		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y, bool enabled);
 
 		virtual int getWidth(const std::string& text) const;
 
