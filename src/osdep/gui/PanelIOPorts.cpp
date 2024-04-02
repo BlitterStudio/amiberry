@@ -177,6 +177,7 @@ void InitPanelIO(const config_category& category)
 	cboSampler->setSize(350, cboSampler->getHeight());
 	cboSampler->setBaseColor(gui_baseCol);
 	cboSampler->setBackgroundColor(colTextboxBackground);
+	cboSampler->setSelectionColor(gui_selection_color);
 	cboSampler->setId("cboSampler");
 	cboSampler->addActionListener(ioActionListener);
 
@@ -200,6 +201,7 @@ void InitPanelIO(const config_category& category)
 	cboSerialPort->setSize(350, cboSerialPort->getHeight());
 	cboSerialPort->setBaseColor(gui_baseCol);
 	cboSerialPort->setBackgroundColor(colTextboxBackground);
+	cboSerialPort->setSelectionColor(gui_selection_color);
 	cboSerialPort->setId("cboSerialPort");
 	cboSerialPort->addActionListener(ioActionListener);
 
@@ -245,6 +247,7 @@ void InitPanelIO(const config_category& category)
 	cboMidiOut->setSize(200, cboMidiOut->getHeight());
 	cboMidiOut->setBaseColor(gui_baseCol);
 	cboMidiOut->setBackgroundColor(colTextboxBackground);
+	cboMidiOut->setSelectionColor(gui_selection_color);
 	cboMidiOut->setId("cboMidiOut");
 	cboMidiOut->addActionListener(ioActionListener);
 
@@ -254,6 +257,7 @@ void InitPanelIO(const config_category& category)
 	cboMidiIn->setSize(200, cboMidiIn->getHeight());
 	cboMidiIn->setBaseColor(gui_baseCol);
 	cboMidiIn->setBackgroundColor(colTextboxBackground);
+	cboMidiIn->setSelectionColor(gui_selection_color);
 	cboMidiIn->setId("cboMidiIn");
 	cboMidiIn->addActionListener(ioActionListener);
 
@@ -279,6 +283,7 @@ void InitPanelIO(const config_category& category)
 	cboProtectionDongle->setSize(350, cboProtectionDongle->getHeight());
 	cboProtectionDongle->setBaseColor(gui_baseCol);
 	cboProtectionDongle->setBackgroundColor(colTextboxBackground);
+	cboProtectionDongle->setSelectionColor(gui_selection_color);
 	cboProtectionDongle->setId("cboProtectionDongle");
 	cboProtectionDongle->addActionListener(ioActionListener);
 

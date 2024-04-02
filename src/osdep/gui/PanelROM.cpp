@@ -215,6 +215,7 @@ void InitPanelROM(const config_category& category)
 	cboMainROM->setSize(textFieldWidth, cboMainROM->getHeight());
 	cboMainROM->setBaseColor(gui_baseCol);
 	cboMainROM->setBackgroundColor(colTextboxBackground);
+	cboMainROM->setSelectionColor(gui_selection_color);
 	cboMainROM->setId("cboMainROM");
 	cboMainROM->addActionListener(mainROMActionListener);
 	cmdMainROM = new gcn::Button("...");
@@ -228,6 +229,7 @@ void InitPanelROM(const config_category& category)
 	cboExtROM->setSize(textFieldWidth, cboExtROM->getHeight());
 	cboExtROM->setBaseColor(gui_baseCol);
 	cboExtROM->setBackgroundColor(colTextboxBackground);
+	cboExtROM->setSelectionColor(gui_selection_color);
 	cboExtROM->setId("cboExtROM");
 	cboExtROM->addActionListener(extROMActionListener);
 	cmdExtROM = new gcn::Button("...");
@@ -241,6 +243,7 @@ void InitPanelROM(const config_category& category)
 	cboCartROM->setSize(textFieldWidth, cboCartROM->getHeight());
 	cboCartROM->setBaseColor(gui_baseCol);
 	cboCartROM->setBackgroundColor(colTextboxBackground);
+	cboCartROM->setSelectionColor(gui_selection_color);
 	cboCartROM->setId("cboCartROM");
 	cboCartROM->addActionListener(cartROMActionListener);
 	cmdCartROM = new gcn::Button("...");
@@ -254,6 +257,7 @@ void InitPanelROM(const config_category& category)
 	cboUAEROM->setSize(textFieldWidth, cboUAEROM->getHeight());
 	cboUAEROM->setBaseColor(gui_baseCol);
 	cboUAEROM->setBackgroundColor(colTextboxBackground);
+	cboUAEROM->setSelectionColor(gui_selection_color);
 	cboUAEROM->setId("cboUAEROM");
 	cboUAEROM->addActionListener(romButtonActionListener);
 

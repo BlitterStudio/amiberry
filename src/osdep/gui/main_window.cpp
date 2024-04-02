@@ -161,6 +161,7 @@ gcn::Color gui_baseCol;
 gcn::Color colTextboxBackground;
 gcn::Color colSelectorInactive;
 gcn::Color colSelectorActive;
+gcn::Color gui_selection_color;
 gcn::Color font_color;
 
 gcn::FocusHandler* focusHdl;
@@ -1107,6 +1108,7 @@ void gui_widgets_init()
 	colSelectorInactive = gui_theme.selector_inactive;
 	colSelectorActive = gui_theme.selector_active;
 	colTextboxBackground = gui_theme.textbox_background;
+	gui_selection_color = gui_theme.selection_color;
 	font_color = gui_theme.font_color;
 
 	//-------------------------------------------------

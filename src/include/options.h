@@ -1285,6 +1285,7 @@ struct amiberry_gui_theme
 	gcn::Color selector_inactive;
 	gcn::Color selector_active;
 	gcn::Color textbox_background;
+	gcn::Color selection_color;
 	std::string font_name;
 	int font_size;
 	gcn::Color font_color;
@@ -1350,6 +1351,7 @@ struct amiberry_options
 	char gui_theme_selector_inactive[128] = "170, 170, 170";
 	char gui_theme_selector_active[128] = "103, 136, 187";
 	char gui_theme_textbox_background[128] = "220, 220, 220";
+	char gui_theme_selection_color[128] = "195, 217, 217";
 	char gui_theme_font_color[128] = "0, 0, 0";
 };
 

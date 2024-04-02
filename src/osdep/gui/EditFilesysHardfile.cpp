@@ -428,12 +428,14 @@ static void InitEditFilesysHardfile()
 	cboController = new gcn::DropDown(&controllerListModel);
 	cboController->setSize(180, DROPDOWN_HEIGHT);
 	cboController->setBaseColor(gui_baseCol);
+	cboController->setSelectionColor(gui_selection_color);
 	cboController->setId("hdfController");
 	cboController->addActionListener(filesysHardfileActionListener);
 	
 	cboUnit = new gcn::DropDown(&unitListModel);
 	cboUnit->setSize(60, DROPDOWN_HEIGHT);
 	cboUnit->setBaseColor(gui_baseCol);
+	cboUnit->setSelectionColor(gui_selection_color);
 	cboUnit->setId("cboHdfUnit");
 	cboUnit->addActionListener(filesysHardfileActionListener);
 	

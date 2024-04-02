@@ -401,6 +401,7 @@ void InitPanelFloppy(const config_category& category)
 		cboDFxType[i] = new gcn::DropDown(&driveTypeList);
 		cboDFxType[i]->setBaseColor(gui_baseCol);
 		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
+		cboDFxType[i]->setSelectionColor(gui_selection_color);
 		id_string = "cboType" + to_string(i);
 		cboDFxType[i]->setId(id_string);
 		cboDFxType[i]->addActionListener(driveTypeActionListener);
@@ -438,6 +439,7 @@ void InitPanelFloppy(const config_category& category)
 		cboDFxFile[i]->setSize(textFieldWidth, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_baseCol);
 		cboDFxFile[i]->setBackgroundColor(colTextboxBackground);
+		cboDFxFile[i]->setSelectionColor(gui_selection_color);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
 	}
 
@@ -469,6 +471,7 @@ void InitPanelFloppy(const config_category& category)
 	cboDBDriver->setSize(350, cboDBDriver->getHeight());
 	cboDBDriver->setBaseColor(gui_baseCol);
 	cboDBDriver->setBackgroundColor(colTextboxBackground);
+	cboDBDriver->setSelectionColor(gui_selection_color);
 	cboDBDriver->addActionListener(dfxCheckActionListener);
 
 	chkDBSerialAuto = new gcn::CheckBox("DrawBridge: Auto-Detect serial port");
@@ -479,6 +482,7 @@ void InitPanelFloppy(const config_category& category)
 	cboDBSerialPort->setSize(200, cboDBSerialPort->getHeight());
 	cboDBSerialPort->setBaseColor(gui_baseCol);
 	cboDBSerialPort->setBackgroundColor(colTextboxBackground);
+	cboDBSerialPort->setSelectionColor(gui_selection_color);
 	cboDBSerialPort->setId("cboDBSerialPort");
 	cboDBSerialPort->addActionListener(dfxCheckActionListener);
 

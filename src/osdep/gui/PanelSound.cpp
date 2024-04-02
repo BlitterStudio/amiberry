@@ -318,6 +318,7 @@ void InitPanelSound(const config_category& category)
 	cboSoundcard->setSize(category.panel->getWidth() - lblSoundcard->getWidth() - 8 - DISTANCE_BORDER * 2, cboSoundcard->getHeight());
 	cboSoundcard->setBaseColor(gui_baseCol);
 	cboSoundcard->setBackgroundColor(colTextboxBackground);
+	cboSoundcard->setSelectionColor(gui_selection_color);
 	cboSoundcard->setId("cboSoundcard");
 	cboSoundcard->addActionListener(sound_action_listener);
 
@@ -347,6 +348,7 @@ void InitPanelSound(const config_category& category)
 	cboFrequency->setSize(90, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_baseCol);
 	cboFrequency->setBackgroundColor(colTextboxBackground);
+	cboFrequency->setSelectionColor(gui_selection_color);
 	cboFrequency->setId("cboFrequency");
 	cboFrequency->addActionListener(sound_action_listener);
 
@@ -356,6 +358,7 @@ void InitPanelSound(const config_category& category)
 	cboSwapChannels->setSize(95, cboSwapChannels->getHeight());
 	cboSwapChannels->setBaseColor(gui_baseCol);
 	cboSwapChannels->setBackgroundColor(colTextboxBackground);
+	cboSwapChannels->setSelectionColor(gui_selection_color);
 	cboSwapChannels->setId("cboSwapChannels");
 	cboSwapChannels->addActionListener(sound_action_listener);
 
@@ -365,6 +368,7 @@ void InitPanelSound(const config_category& category)
 	cboChannelMode->setSize(200, cboChannelMode->getHeight());
 	cboChannelMode->setBaseColor(gui_baseCol);
 	cboChannelMode->setBackgroundColor(colTextboxBackground);
+	cboChannelMode->setSelectionColor(gui_selection_color);
 	cboChannelMode->setId("cboChannelMode");
 	cboChannelMode->addActionListener(sound_action_listener);
 	
@@ -374,6 +378,7 @@ void InitPanelSound(const config_category& category)
 	cboInterpolation->setSize(200, cboInterpolation->getHeight());
 	cboInterpolation->setBaseColor(gui_baseCol);
 	cboInterpolation->setBackgroundColor(colTextboxBackground);
+	cboInterpolation->setSelectionColor(gui_selection_color);
 	cboInterpolation->setId("cboInterpol");
 	cboInterpolation->addActionListener(sound_action_listener);
 
@@ -383,6 +388,7 @@ void InitPanelSound(const config_category& category)
 	cboFilter->setSize(200, cboFilter->getHeight());
 	cboFilter->setBaseColor(gui_baseCol);
 	cboFilter->setBackgroundColor(colTextboxBackground);
+	cboFilter->setSelectionColor(gui_selection_color);
 	cboFilter->setId("cboFilter");
 	cboFilter->addActionListener(sound_action_listener);
 
@@ -392,6 +398,7 @@ void InitPanelSound(const config_category& category)
 	cboSeparation->setSize(120, cboSeparation->getHeight());
 	cboSeparation->setBaseColor(gui_baseCol);
 	cboSeparation->setBackgroundColor(colTextboxBackground);
+	cboSeparation->setSelectionColor(gui_selection_color);
 	cboSeparation->setId("cboSeparation");
 	cboSeparation->addActionListener(sound_action_listener);
 	
@@ -401,6 +408,7 @@ void InitPanelSound(const config_category& category)
 	cboStereoDelay->setSize(120, cboStereoDelay->getHeight());
 	cboStereoDelay->setBaseColor(gui_baseCol);
 	cboStereoDelay->setBackgroundColor(colTextboxBackground);
+	cboStereoDelay->setSelectionColor(gui_selection_color);
 	cboStereoDelay->setId("cboStereoDelay");
 	cboStereoDelay->addActionListener(sound_action_listener);
 

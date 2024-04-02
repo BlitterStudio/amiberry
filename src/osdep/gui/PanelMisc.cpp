@@ -398,6 +398,7 @@ void InitPanelMisc(const config_category& category)
 	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_num->setBaseColor(gui_baseCol);
 	cboKBDLed_num->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_num->setSelectionColor(gui_selection_color);
 	cboKBDLed_num->setId("cboNumlock");
 	cboKBDLed_num->addActionListener(miscActionListener);
 
@@ -406,6 +407,7 @@ void InitPanelMisc(const config_category& category)
 	cboKBDLed_scr = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_scr->setBaseColor(gui_baseCol);
 	cboKBDLed_scr->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_scr->setSelectionColor(gui_selection_color);
 	cboKBDLed_scr->setId("cboScrolllock");
 	cboKBDLed_scr->addActionListener(miscActionListener);
 
@@ -414,6 +416,7 @@ void InitPanelMisc(const config_category& category)
 	cboKBDLed_cap = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_cap->setBaseColor(gui_baseCol);
 	cboKBDLed_cap->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_cap->setSelectionColor(gui_selection_color);
 	cboKBDLed_cap->setId("cboCapsLock");
 	cboKBDLed_cap->addActionListener(miscActionListener);
 

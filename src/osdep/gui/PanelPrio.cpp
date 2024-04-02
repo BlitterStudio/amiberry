@@ -149,6 +149,7 @@ void InitPanelPrio(const config_category& category)
 	cboActiveRunAtPrio->setSize(150, cboActiveRunAtPrio->getHeight());
 	cboActiveRunAtPrio->setBaseColor(gui_baseCol);
 	cboActiveRunAtPrio->setBackgroundColor(colTextboxBackground);
+	cboActiveRunAtPrio->setSelectionColor(gui_selection_color);
 	cboActiveRunAtPrio->setId("cboActiveRunAtPrio");
 	cboActiveRunAtPrio->addActionListener(prioActionListener);
 
@@ -186,6 +187,7 @@ void InitPanelPrio(const config_category& category)
 	cboInactiveRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
 	cboInactiveRunAtPrio->setBaseColor(gui_baseCol);
 	cboInactiveRunAtPrio->setBackgroundColor(colTextboxBackground);
+	cboInactiveRunAtPrio->setSelectionColor(gui_selection_color);
 	cboInactiveRunAtPrio->setId("cboInactiveRunAtPrio");
 	cboInactiveRunAtPrio->addActionListener(prioActionListener);
 
@@ -221,6 +223,7 @@ void InitPanelPrio(const config_category& category)
 	cboMinimizedRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
 	cboMinimizedRunAtPrio->setBaseColor(gui_baseCol);
 	cboMinimizedRunAtPrio->setBackgroundColor(colTextboxBackground);
+	cboMinimizedRunAtPrio->setSelectionColor(gui_selection_color);
 	cboMinimizedRunAtPrio->setId("cboMinimizedRunAtPrio");
 	cboMinimizedRunAtPrio->addActionListener(prioActionListener);
 

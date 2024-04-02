@@ -2444,6 +2444,29 @@ void target_default_options(struct uae_prefs* p, int type)
 	{
 		gui_theme.textbox_background = gcn::Color(220, 220, 220);
 	}
+
+	// Selection color (e.g. dropdowns)
+	if (amiberry_options.gui_theme_selection_color[0])
+	{
+		// parse string as comma-separated numbers
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selection_color);
+		if (result.size() == 3)
+		{
+			gui_theme.selection_color = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.selection_color = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.selection_color = gcn::Color(195, 217, 217);
+		}
+	}
+	else
+	{
+		gui_theme.selection_color = gcn::Color(195, 217, 217);
+	}
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
