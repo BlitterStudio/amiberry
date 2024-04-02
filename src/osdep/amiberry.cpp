@@ -3451,6 +3451,9 @@ void save_amiberry_settings(void)
 	// GUI Theme: Selector Active color
 	write_string_option("gui_theme_selector_active", amiberry_options.gui_theme_selector_active);
 
+	// GUI Theme: Selection color
+	write_string_option("gui_theme_selection_color", amiberry_options.gui_theme_selection_color);
+
 	// GUI Theme: Textbox Background color
 	write_string_option("gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background);
 
@@ -3679,6 +3682,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "gui_theme_base_color", amiberry_options.gui_theme_base_color, sizeof amiberry_options.gui_theme_base_color);
 		ret |= cfgfile_string(option, value, "gui_theme_selector_inactive", amiberry_options.gui_theme_selector_inactive, sizeof amiberry_options.gui_theme_selector_inactive);
 		ret |= cfgfile_string(option, value, "gui_theme_selector_active", amiberry_options.gui_theme_selector_active, sizeof amiberry_options.gui_theme_selector_active);
+		ret |= cfgfile_string(option, value, "gui_theme_selection_color", amiberry_options.gui_theme_selection_color, sizeof amiberry_options.gui_theme_selection_color);
 		ret |= cfgfile_string(option, value, "gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background, sizeof amiberry_options.gui_theme_textbox_background);
 	}
 	return ret;
