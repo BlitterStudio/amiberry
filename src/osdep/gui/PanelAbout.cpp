@@ -9,6 +9,7 @@
 static gcn::Label* lblEmulatorVersion;
 static gcn::Label* lblCopyright;
 static gcn::Label* lblSDL_compiled_version;
+static gcn::Label* lblSDL_driver;
 static gcn::Icon* icon;
 static gcn::Image* amiberryLogoImage;
 static gcn::TextBox* textBox;
@@ -21,6 +22,11 @@ void InitPanelAbout(const config_category& category)
 	lblEmulatorVersion = new gcn::Label(get_version_string());
 	lblCopyright = new gcn::Label(get_copyright_notice());
 	lblSDL_compiled_version = new gcn::Label(get_sdl2_version_string());
+#ifdef USE_DISPMANX
+	lblSDL_driver = new gcn::Label("SDL2 video driver: DispmanX");
+#else
+	lblSDL_driver = new gcn::Label("SDL2 video driver: " + std::string(sdl_video_driver));
+#endif
 	
 	textBox = new gcn::TextBox(
 		"This program is free software: you can redistribute it and/or modify\n"
@@ -66,11 +72,13 @@ void InitPanelAbout(const config_category& category)
 	pos_y += icon->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblEmulatorVersion, DISTANCE_BORDER, pos_y);
-	pos_y += lblEmulatorVersion->getHeight() + DISTANCE_NEXT_Y;
+	pos_y += lblEmulatorVersion->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(lblCopyright, DISTANCE_BORDER, pos_y);
-	pos_y += lblCopyright->getHeight() + DISTANCE_NEXT_Y;
+	pos_y += lblCopyright->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(lblSDL_compiled_version, DISTANCE_BORDER, pos_y);
-	pos_y += lblSDL_compiled_version->getHeight() + DISTANCE_NEXT_Y;
+	pos_y += lblSDL_compiled_version->getHeight() + DISTANCE_NEXT_Y / 2;
+	category.panel->add(lblSDL_driver, DISTANCE_BORDER, pos_y);
+	pos_y += lblSDL_driver->getHeight() + DISTANCE_NEXT_Y;
 	textBoxScrollArea->setHeight(category.panel->getHeight() - DISTANCE_BORDER - pos_y);
 	category.panel->add(textBoxScrollArea, DISTANCE_BORDER, pos_y);
 
@@ -82,6 +90,7 @@ void ExitPanelAbout()
 	delete lblEmulatorVersion;
 	delete lblCopyright;
 	delete lblSDL_compiled_version;
+	delete lblSDL_driver;
 	delete icon;
 	delete amiberryLogoImage;
 	delete textBoxScrollArea;
