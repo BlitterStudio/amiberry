@@ -7203,8 +7203,11 @@ int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ign
 		cfgfile_warning(_T("cfgfile_load_2 failed\n"));
 		goto end;
 	}
+	// In Amiberry, we only use this function for adding recent disks, not configs
+#ifndef AMIBERRY
 	if (userconfig)
 		target_addtorecent (filename, 0);
+#endif
 	if (!ignorelink) {
 		if (p->config_all_path[0]) {
 			get_configuration_path(tmp, sizeof(tmp) / sizeof(TCHAR));
