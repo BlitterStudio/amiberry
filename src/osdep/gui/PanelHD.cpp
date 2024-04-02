@@ -408,6 +408,7 @@ void InitPanelHD(const config_category& category)
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_baseCol);
 	cboCDFile->setBackgroundColor(colTextboxBackground);
+	cboCDFile->setSelectionColor(gui_selection_color);
 	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
 

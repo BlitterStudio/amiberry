@@ -176,6 +176,7 @@ void InitPanelRTG(const config_category& category)
 	cboBoard->setSize(300, cboBoard->getHeight());
 	cboBoard->setBaseColor(gui_baseCol);
 	cboBoard->setBackgroundColor(colTextboxBackground);
+	cboBoard->setSelectionColor(gui_selection_color);
 	cboBoard->setId("cboBoard");
 	cboBoard->addActionListener(rtg_action_listener);
 
@@ -223,6 +224,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgRefreshRate->setSize(150, cboRtgRefreshRate->getHeight());
 	cboRtgRefreshRate->setBaseColor(gui_baseCol);
 	cboRtgRefreshRate->setBackgroundColor(colTextboxBackground);
+	cboRtgRefreshRate->setSelectionColor(gui_selection_color);
 	cboRtgRefreshRate->setId("cboRtgRefreshRate");
 	cboRtgRefreshRate->addActionListener(rtg_action_listener);
 
@@ -232,6 +234,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgBufferMode->setSize(150, cboRtgBufferMode->getHeight());
 	cboRtgBufferMode->setBaseColor(gui_baseCol);
 	cboRtgBufferMode->setBackgroundColor(colTextboxBackground);
+	cboRtgBufferMode->setSelectionColor(gui_selection_color);
 	cboRtgBufferMode->setId("cboRtgBufferMode");
 	cboRtgBufferMode->addActionListener(rtg_action_listener);
 
@@ -241,6 +244,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgAspectRatio->setSize(150, cboRtgAspectRatio->getHeight());
 	cboRtgAspectRatio->setBaseColor(gui_baseCol);
 	cboRtgAspectRatio->setBackgroundColor(colTextboxBackground);
+	cboRtgAspectRatio->setSelectionColor(gui_selection_color);
 	cboRtgAspectRatio->setId("cboRtgAspectRatio");
 	cboRtgAspectRatio->addActionListener(rtg_action_listener);
 
@@ -251,6 +255,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtg16bitModes->setSize(150, cboRtg16bitModes->getHeight());
 	cboRtg16bitModes->setBaseColor(gui_baseCol);
 	cboRtg16bitModes->setBackgroundColor(colTextboxBackground);
+	cboRtg16bitModes->setSelectionColor(gui_selection_color);
 	cboRtg16bitModes->setId("cboRtg16bitModes");
 	cboRtg16bitModes->addActionListener(rtg_action_listener);
 
@@ -258,6 +263,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtg32bitModes->setSize(150, cboRtg32bitModes->getHeight());
 	cboRtg32bitModes->setBaseColor(gui_baseCol);
 	cboRtg32bitModes->setBackgroundColor(colTextboxBackground);
+	cboRtg32bitModes->setSelectionColor(gui_selection_color);
 	cboRtg32bitModes->setId("cboRtg32bitModes");
 	cboRtg32bitModes->addActionListener(rtg_action_listener);
 	

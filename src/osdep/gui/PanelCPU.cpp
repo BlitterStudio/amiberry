@@ -448,6 +448,7 @@ void InitPanelCPU(const struct config_category& category)
 	cboCPUFrequency->setSize(100, cboCPUFrequency->getHeight());
 	cboCPUFrequency->setBaseColor(gui_baseCol);
 	cboCPUFrequency->setBackgroundColor(colTextboxBackground);
+	cboCPUFrequency->setSelectionColor(gui_selection_color);
 	cboCPUFrequency->addActionListener(cpuActionListener);
 	cboCPUFrequency->setId("cboCPUFrequency");
 	lblCPUFrequencyMHz = new gcn::Label("50 MHz");

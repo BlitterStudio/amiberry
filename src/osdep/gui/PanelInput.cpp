@@ -351,12 +351,14 @@ void InitPanelInput(const config_category& category)
 		joys[i]->setSize(textFieldWidth, joys[i]->getHeight());
 		joys[i]->setBaseColor(gui_baseCol);
 		joys[i]->setBackgroundColor(colTextboxBackground);
+		joys[i]->setSelectionColor(gui_selection_color);
 		joys[i]->addActionListener(inputPortsActionListener);
 
 		joysaf[i] = new gcn::DropDown(&autoFireList);
 		joysaf[i]->setSize(200, joysaf[i]->getHeight());
 		joysaf[i]->setBaseColor(gui_baseCol);
 		joysaf[i]->setBackgroundColor(colTextboxBackground);
+		joysaf[i]->setSelectionColor(gui_selection_color);
 		joysaf[i]->addActionListener(inputPortsActionListener);
 
 		if (i < 2)
@@ -365,12 +367,14 @@ void InitPanelInput(const config_category& category)
 			joysm[i]->setSize(150, joysm[i]->getHeight());
 			joysm[i]->setBaseColor(gui_baseCol);
 			joysm[i]->setBackgroundColor(colTextboxBackground);
+			joysm[i]->setSelectionColor(gui_selection_color);
 			joysm[i]->addActionListener(inputPortsActionListener);
 
 			joysmm[i] = new gcn::DropDown(&ctrlPortMouseModeList);
 			joysmm[i]->setSize(95, joysmm[i]->getHeight());
 			joysmm[i]->setBaseColor(gui_baseCol);
 			joysmm[i]->setBackgroundColor(colTextboxBackground);
+			joysmm[i]->setSelectionColor(gui_selection_color);
 			joysmm[i]->addActionListener(inputPortsActionListener);
 		}
 		
@@ -431,6 +435,7 @@ void InitPanelInput(const config_category& category)
 	cboAutofireRate->setSize(95, cboAutofireRate->getHeight());
 	cboAutofireRate->setBaseColor(gui_baseCol);
 	cboAutofireRate->setBackgroundColor(colTextboxBackground);
+	cboAutofireRate->setSelectionColor(gui_selection_color);
 	cboAutofireRate->setId("cboAutofireRate");
 	cboAutofireRate->addActionListener(inputActionListener);
 

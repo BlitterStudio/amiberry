@@ -255,6 +255,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	cboVkLanguage->setSize(120, cboVkLanguage->getHeight());
 	cboVkLanguage->setBaseColor(gui_baseCol);
 	cboVkLanguage->setBackgroundColor(colTextboxBackground);
+	cboVkLanguage->setSelectionColor(gui_selection_color);
 	cboVkLanguage->setId("cboVkLanguage");
 	cboVkLanguage->setListModel(languageListModel);
 	cboVkLanguage->addActionListener(languageDrpActionListener);
@@ -267,6 +268,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	cboVkStyle->setSize(120, cboVkStyle->getHeight());
 	cboVkStyle->setBaseColor(gui_baseCol);
 	cboVkStyle->setBackgroundColor(colTextboxBackground);
+	cboVkStyle->setSelectionColor(gui_selection_color);
 	cboVkStyle->setId("cboVkStyle");
 	cboVkStyle->setListModel(styleListModel);
 	cboVkStyle->addActionListener(styleDrpActionListener);

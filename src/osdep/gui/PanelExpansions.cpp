@@ -885,6 +885,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSelectCat->setSize(250, cboScsiRomSelectCat->getHeight());
 	cboScsiRomSelectCat->setBaseColor(gui_baseCol);
 	cboScsiRomSelectCat->setBackgroundColor(colTextboxBackground);
+	cboScsiRomSelectCat->setSelectionColor(gui_selection_color);
 	cboScsiRomSelectCat->setId("cboScsiRomSelectCat");
 	cboScsiRomSelectCat->addActionListener(expansions_action_listener);
 	
@@ -892,6 +893,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSelect->setSize(250, cboScsiRomSelect->getHeight());
 	cboScsiRomSelect->setBaseColor(gui_baseCol);
 	cboScsiRomSelect->setBackgroundColor(colTextboxBackground);
+	cboScsiRomSelect->setSelectionColor(gui_selection_color);
 	cboScsiRomSelect->setId("cboScsiRomSelect");
 	cboScsiRomSelect->addActionListener(expansions_action_listener);
 
@@ -899,6 +901,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSubSelect->setSize(250, cboScsiRomSubSelect->getHeight());
 	cboScsiRomSubSelect->setBaseColor(gui_baseCol);
 	cboScsiRomSubSelect->setBackgroundColor(colTextboxBackground);
+	cboScsiRomSubSelect->setSelectionColor(gui_selection_color);
 	cboScsiRomSubSelect->setId("cboScsiRomSubSelect");
 	cboScsiRomSubSelect->addActionListener(expansions_action_listener);
 
@@ -910,6 +913,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomFile->setSize(200, cboScsiRomFile->getHeight());
 	cboScsiRomFile->setBaseColor(gui_baseCol);
 	cboScsiRomFile->setBackgroundColor(colTextboxBackground);
+	cboScsiRomFile->setSelectionColor(gui_selection_color);
 	cboScsiRomFile->setId("cboScsiRomFile");
 	cboScsiRomFile->addActionListener(expansions_action_listener);
 
@@ -917,6 +921,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomId->setSize(30, cboScsiRomId->getHeight());
 	cboScsiRomId->setBaseColor(gui_baseCol);
 	cboScsiRomId->setBackgroundColor(colTextboxBackground);
+	cboScsiRomId->setSelectionColor(gui_selection_color);
 	cboScsiRomId->setId("cboScsiRomId");
 	cboScsiRomId->addActionListener(expansions_action_listener);
 
@@ -924,6 +929,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSelectNum->setSize(30, cboScsiRomSelectNum->getHeight());
 	cboScsiRomSelectNum->setBaseColor(gui_baseCol);
 	cboScsiRomSelectNum->setBackgroundColor(colTextboxBackground);
+	cboScsiRomSelectNum->setSelectionColor(gui_selection_color);
 	cboScsiRomSelectNum->setId("cboScsiRomSelectNum");
 	cboScsiRomSelectNum->addActionListener(expansions_action_listener);
 	
@@ -946,6 +952,7 @@ void InitPanelExpansions(const config_category& category)
 	cboExpansionBoardItemSelector->setSize(250, cboExpansionBoardItemSelector->getHeight());
 	cboExpansionBoardItemSelector->setBaseColor(gui_baseCol);
 	cboExpansionBoardItemSelector->setBackgroundColor(colTextboxBackground);
+	cboExpansionBoardItemSelector->setSelectionColor(gui_selection_color);
 	cboExpansionBoardItemSelector->setId("cboExpansionBoardItemSelector");
 	cboExpansionBoardItemSelector->addActionListener(expansions_action_listener);
 
@@ -954,6 +961,7 @@ void InitPanelExpansions(const config_category& category)
 	cboExpansionBoardSelector->setSize(250, cboExpansionBoardSelector->getHeight());
 	cboExpansionBoardSelector->setBaseColor(gui_baseCol);
 	cboExpansionBoardSelector->setBackgroundColor(colTextboxBackground);
+	cboExpansionBoardSelector->setSelectionColor(gui_selection_color);
 	cboExpansionBoardSelector->setId("cboExpansionBoardSelector");
 	cboExpansionBoardSelector->addActionListener(expansions_action_listener);
 
@@ -969,6 +977,7 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardType->setSize(250, cboCpuBoardType->getHeight());
 	cboCpuBoardType->setBaseColor(gui_baseCol);
 	cboCpuBoardType->setBackgroundColor(colTextboxBackground);
+	cboCpuBoardType->setSelectionColor(gui_selection_color);
 	cboCpuBoardType->setId("cboCpuBoardType");
 	cboCpuBoardType->addActionListener(expansions_action_listener);
 	cboCpuBoardType->setEnabled(false); //TODO enable this when implemented
@@ -977,6 +986,7 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardSubType->setSize(250, cboCpuBoardSubType->getHeight());
 	cboCpuBoardSubType->setBaseColor(gui_baseCol);
 	cboCpuBoardSubType->setBackgroundColor(colTextboxBackground);
+	cboCpuBoardSubType->setSelectionColor(gui_selection_color);
 	cboCpuBoardSubType->setId("cboCpuBoardSubType");
 	cboCpuBoardSubType->addActionListener(expansions_action_listener);
 	cboCpuBoardSubType->setEnabled(false); //TODO enable this when implemented
@@ -985,6 +995,7 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardRomFile->setSize(250, cboCpuBoardRomFile->getHeight());
 	cboCpuBoardRomFile->setBaseColor(gui_baseCol);
 	cboCpuBoardRomFile->setBackgroundColor(colTextboxBackground);
+	cboCpuBoardRomFile->setSelectionColor(gui_selection_color);
 	cboCpuBoardRomFile->setId("cboCpuBoardRomFile");
 	cboCpuBoardRomFile->addActionListener(expansions_action_listener);
 	cboCpuBoardRomFile->setEnabled(false); //TODO Enable this when implemented
@@ -993,6 +1004,7 @@ void InitPanelExpansions(const config_category& category)
 	cboAcceleratorBoardItemSelector->setSize(250, cboAcceleratorBoardItemSelector->getHeight());
 	cboAcceleratorBoardItemSelector->setBaseColor(gui_baseCol);
 	cboAcceleratorBoardItemSelector->setBackgroundColor(colTextboxBackground);
+	cboAcceleratorBoardItemSelector->setSelectionColor(gui_selection_color);
 	cboAcceleratorBoardItemSelector->setId("cboAcceleratorBoardItemSelector");
 	cboAcceleratorBoardItemSelector->addActionListener(expansions_action_listener);
 
@@ -1000,6 +1012,7 @@ void InitPanelExpansions(const config_category& category)
 	cboAcceleratorBoardSelector->setSize(250, cboAcceleratorBoardItemSelector->getHeight());
 	cboAcceleratorBoardSelector->setBaseColor(gui_baseCol);
 	cboAcceleratorBoardSelector->setBackgroundColor(colTextboxBackground);
+	cboAcceleratorBoardSelector->setSelectionColor(gui_selection_color);
 	cboAcceleratorBoardSelector->setId("cboAcceleratorBoardSelector");
 	cboAcceleratorBoardSelector->addActionListener(expansions_action_listener);
 

@@ -760,6 +760,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboModel->setSize(160, cboModel->getHeight());
 	cboModel->setBaseColor(gui_baseCol);
 	cboModel->setBackgroundColor(colTextboxBackground);
+	cboModel->setSelectionColor(gui_selection_color);
 	cboModel->setId("cboAModel");
 	cboModel->addActionListener(amigaModelActionListener);
 
@@ -770,6 +771,7 @@ void InitPanelQuickstart(const config_category& category)
 					   cboConfig->getHeight());
 	cboConfig->setBaseColor(gui_baseCol);
 	cboConfig->setBackgroundColor(colTextboxBackground);
+	cboConfig->setSelectionColor(gui_selection_color);
 	cboConfig->setId("cboAConfig");
 	cboConfig->addActionListener(amigaModelActionListener);
 
@@ -789,6 +791,7 @@ void InitPanelQuickstart(const config_category& category)
 		cboqsDFxType[i] = new gcn::DropDown(&qsDriveTypeList);
 		cboqsDFxType[i]->setBaseColor(gui_baseCol);
 		cboqsDFxType[i]->setBackgroundColor(colTextboxBackground);
+		cboqsDFxType[i]->setSelectionColor(gui_selection_color);
 		snprintf(tmp, 20, "cboqsType%d", i);
 		cboqsDFxType[i]->setId(tmp);
 		cboqsDFxType[i]->addActionListener(qsDriveTypeActionListener);
@@ -826,6 +829,7 @@ void InitPanelQuickstart(const config_category& category)
 		cboqsDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboqsDFxFile[i]->getHeight());
 		cboqsDFxFile[i]->setBaseColor(gui_baseCol);
 		cboqsDFxFile[i]->setBackgroundColor(colTextboxBackground);
+		cboqsDFxFile[i]->setSelectionColor(gui_selection_color);
 		cboqsDFxFile[i]->addActionListener(diskFileActionListener);
 	}
 
@@ -849,6 +853,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_baseCol);
 	cboCDFile->setBackgroundColor(colTextboxBackground);
+	cboCDFile->setSelectionColor(gui_selection_color);
 	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
 
@@ -867,6 +872,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
 	cboWhdload->setBaseColor(gui_baseCol);
 	cboWhdload->setBackgroundColor(colTextboxBackground);
+	cboWhdload->setSelectionColor(gui_selection_color);
 	cboWhdload->setId("cboQsWhdload");
 	cboWhdload->addActionListener(whdloadActionListener);
 
