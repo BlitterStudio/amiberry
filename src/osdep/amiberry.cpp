@@ -2116,6 +2116,14 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	set_key_configs(p);
+
+	// Disable multithreaded drawing if Single Window mode is enabled
+	// Otherwise, we have issues when the GUI window opens and it closes the emulation one,
+	// since the thread is still trying to draw on it
+	if (amiberry_options.single_window_mode)
+	{
+		p->multithreaded_drawing = false;
+	}
 #endif
 }
 

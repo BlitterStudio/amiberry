@@ -220,7 +220,6 @@ static void SDL2_init()
 	{
 		currprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
 		currprefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
-		amiberry_options.single_window_mode = true;
 	}
 
 	if (!mon->amiga_window)
