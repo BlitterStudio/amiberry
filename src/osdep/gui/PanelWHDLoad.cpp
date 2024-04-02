@@ -206,6 +206,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
 	cboWhdload->setBaseColor(gui_baseCol);
 	cboWhdload->setBackgroundColor(colTextboxBackground);
+	cboWhdload->setSelectionColor(gui_selection_color);
 	cboWhdload->setId("cboWhdload");
 	cboWhdload->addActionListener(whdloadActionListener);
 
@@ -248,6 +249,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	cboSlaves->setSize(textfield_width, cboSlaves->getHeight());
 	cboSlaves->setBaseColor(gui_baseCol);
 	cboSlaves->setBackgroundColor(colTextboxBackground);
+	cboSlaves->setSelectionColor(gui_selection_color);
 	cboSlaves->addActionListener(whdloadActionListener);
 
 	lblSlaveDataPath = new gcn::Label("Slave Data path:");

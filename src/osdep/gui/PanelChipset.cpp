@@ -202,6 +202,7 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset->setSize(120, cboChipset->getHeight());
 	cboChipset->setBaseColor(gui_baseCol);
 	cboChipset->setBackgroundColor(colTextboxBackground);
+	cboChipset->setSelectionColor(gui_selection_color);
 	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
 

@@ -153,6 +153,7 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 			dropdown->setSize(textfield_width, dropdown->getHeight());
 			dropdown->setBaseColor(gui_baseCol);
 			dropdown->setBackgroundColor(colTextboxBackground);
+			dropdown->setSelectionColor(gui_selection_color);
 			dropdown->addActionListener(showCustomFieldsActionListener);
 			dropdown->setPosition(pos_x2, pos_y);
 			widget.list.emplace_back(dropdown);

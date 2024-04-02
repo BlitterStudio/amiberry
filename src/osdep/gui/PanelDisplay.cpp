@@ -336,6 +336,7 @@ void InitPanelDisplay(const config_category& category)
 	cboFullscreen->setSize(150, cboFullscreen->getHeight());
 	cboFullscreen->setBaseColor(gui_baseCol);
 	cboFullscreen->setBackgroundColor(colTextboxBackground);
+	cboFullscreen->setSelectionColor(gui_selection_color);
 	cboFullscreen->setId("cboFullscreen");
 	cboFullscreen->addActionListener(amigaScreenActionListener);
 
@@ -462,6 +463,7 @@ void InitPanelDisplay(const config_category& category)
 	cboScreenmode->setSize(150, cboScreenmode->getHeight());
 	cboScreenmode->setBaseColor(gui_baseCol);
 	cboScreenmode->setBackgroundColor(colTextboxBackground);
+	cboScreenmode->setSelectionColor(gui_selection_color);
 	cboScreenmode->setId("cboScreenmode");
 	cboScreenmode->addActionListener(amigaScreenActionListener);
 
@@ -471,6 +473,7 @@ void InitPanelDisplay(const config_category& category)
 	cboResolution->setSize(150, cboResolution->getHeight());
 	cboResolution->setBaseColor(gui_baseCol);
 	cboResolution->setBackgroundColor(colTextboxBackground);
+	cboResolution->setSelectionColor(gui_selection_color);
 	cboResolution->setId("cboResolution");
 	cboResolution->addActionListener(amigaScreenActionListener);
 	
@@ -534,6 +537,7 @@ void InitPanelDisplay(const config_category& category)
 	cboScalingMethod->setSize(150, cboScalingMethod->getHeight());
 	cboScalingMethod->setBaseColor(gui_baseCol);
 	cboScalingMethod->setBackgroundColor(colTextboxBackground);
+	cboScalingMethod->setSelectionColor(gui_selection_color);
 	cboScalingMethod->setId("cboScalingMethod");
 	cboScalingMethod->addActionListener(scalingMethodActionListener);
 	category.panel->add(lblScalingMethod, DISTANCE_BORDER, posY);
