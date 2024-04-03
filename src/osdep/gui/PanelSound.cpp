@@ -324,22 +324,32 @@ void InitPanelSound(const config_category& category)
 
 	chkSystemDefault = new gcn::CheckBox("System default");
 	chkSystemDefault->setId("chkSystemDefault");
+	chkSystemDefault->setBaseColor(gui_baseCol);
+	chkSystemDefault->setBackgroundColor(colTextboxBackground);
 	chkSystemDefault->addActionListener(sound_action_listener);
 
 	optSoundDisabled = new gcn::RadioButton("Disabled", "radiosoundgroup");
 	optSoundDisabled->setId("sndDisable");
+	optSoundDisabled->setBaseColor(gui_baseCol);
+	optSoundDisabled->setBackgroundColor(colTextboxBackground);
 	optSoundDisabled->addActionListener(sound_action_listener);
 
 	optSoundDisabledEmu = new gcn::RadioButton("Disabled, but emulated", "radiosoundgroup");
 	optSoundDisabledEmu->setId("sndDisEmu");
+	optSoundDisabledEmu->setBaseColor(gui_baseCol);
+	optSoundDisabledEmu->setBackgroundColor(colTextboxBackground);
 	optSoundDisabledEmu->addActionListener(sound_action_listener);
 
 	optSoundEmulated = new gcn::RadioButton("Enabled", "radiosoundgroup");
 	optSoundEmulated->setId("sndEmulate");
+	optSoundEmulated->setBaseColor(gui_baseCol);
+	optSoundEmulated->setBackgroundColor(colTextboxBackground);
 	optSoundEmulated->addActionListener(sound_action_listener);
 
 	chkAutoSwitching = new gcn::CheckBox("Automatic switching");
 	chkAutoSwitching->setId("chkAutoSwitching");
+	chkAutoSwitching->setBaseColor(gui_baseCol);
+	chkAutoSwitching->setBackgroundColor(colTextboxBackground);
 	chkAutoSwitching->addActionListener(sound_action_listener);
 
 	lblFrequency = new gcn::Label("Frequency:");
@@ -458,6 +468,8 @@ void InitPanelSound(const config_category& category)
 
 	chkFloppySound = new gcn::CheckBox("Enable floppy drive sound");
 	chkFloppySound->setId("chkFloppySound");
+	chkFloppySound->setBaseColor(gui_baseCol);
+	chkFloppySound->setBackgroundColor(colTextboxBackground);
 	chkFloppySound->addActionListener(sound_action_listener);
 	
 	sldFloppySoundEmpty = new gcn::Slider(0, 100);
@@ -491,10 +503,14 @@ void InitPanelSound(const config_category& category)
 
 	optSoundPull = new gcn::RadioButton("Pull audio", "radioaudiomethod");
 	optSoundPull->setId("optSoundPull");
+	optSoundPull->setBaseColor(gui_baseCol);
+	optSoundPull->setBackgroundColor(colTextboxBackground);
 	optSoundPull->addActionListener(sound_action_listener);
 
 	optSoundPush = new gcn::RadioButton("Push audio", "radioaudiomethod");
 	optSoundPush->setId("optSoundPush");
+	optSoundPush->setBaseColor(gui_baseCol);
+	optSoundPush->setBackgroundColor(colTextboxBackground);
 	optSoundPush->addActionListener(sound_action_listener);
 	
 	grpSound = new gcn::Window("Sound Emulation");

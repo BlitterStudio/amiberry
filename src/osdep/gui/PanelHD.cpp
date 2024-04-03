@@ -352,6 +352,7 @@ void InitPanelHD(const config_category& category)
 			listCells[row][col] = new gcn::TextField();
 			listCells[row][col]->setSize(COLUMN_SIZE[col], SMALL_BUTTON_HEIGHT);
 			listCells[row][col]->setEnabled(false);
+			listCells[row][col]->setBaseColor(gui_baseCol);
 			listCells[row][col]->setBackgroundColor(colTextboxBackground);
 		}
 	}
@@ -386,10 +387,14 @@ void InitPanelHD(const config_category& category)
 
 	chkCD = new gcn::CheckBox("CD drive/image");
 	chkCD->setId("chkCD");
+	chkCD->setBaseColor(gui_baseCol);
+	chkCD->setBackgroundColor(colTextboxBackground);
 	chkCD->addActionListener(cdCheckActionListener);
 
 	chkCDTurbo = new gcn::CheckBox("CDTV/CDTV-CR/CD32 turbo CD read speed");
 	chkCDTurbo->setId("chkCDTurbo");
+	chkCDTurbo->setBaseColor(gui_baseCol);
+	chkCDTurbo->setBackgroundColor(colTextboxBackground);
 	chkCDTurbo->addActionListener(cdCheckActionListener);
 
 	cmdCDEject = new gcn::Button("Eject");

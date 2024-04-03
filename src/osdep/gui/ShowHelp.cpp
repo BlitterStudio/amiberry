@@ -61,6 +61,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	lstHelp->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	lstHelp->setBaseColor(gui_baseCol);
 	lstHelp->setBackgroundColor(gui_baseCol);
+	lstHelp->setSelectionColor(gui_selection_color);
 	lstHelp->setWrappingEnabled(true);
 
 	scrAreaHelp = new gcn::ScrollArea(lstHelp);
@@ -71,6 +72,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	scrAreaHelp->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaHelp->setBaseColor(gui_baseCol);
 	scrAreaHelp->setBackgroundColor(gui_baseCol);
+	scrAreaHelp->setSelectionColor(gui_selection_color);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);

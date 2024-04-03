@@ -222,16 +222,22 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	vkEnabledActionListener = new VkEnabledCheckboxActionListener();
 	chkVkEnabled = new gcn::CheckBox(_T("Virtual Keyboard enabled"));
 	chkVkEnabled->setId("chkVkEnabled");
+	chkVkEnabled->setBaseColor(gui_baseCol);
+	chkVkEnabled->setBackgroundColor(colTextboxBackground);
 	chkVkEnabled->addActionListener(vkEnabledActionListener);
 
 	hiresChkActionListener = new HiresCheckboxActionListener();
 	chkVkHires = new gcn::CheckBox(_T("High-Resolution"));
 	chkVkHires->setId("chkVkHires");
+	chkVkHires->setBaseColor(gui_baseCol);
+	chkVkHires->setBackgroundColor(colTextboxBackground);
 	chkVkHires->addActionListener(hiresChkActionListener);
 
 	exitChkActionListener = new ExitCheckboxActionListener();
 	chkVkExit = new gcn::CheckBox(_T("Quit button on keyboard"));
 	chkVkExit->setId("chkVkExit");
+	chkVkExit->setBaseColor(gui_baseCol);
+	chkVkExit->setBackgroundColor(colTextboxBackground);
 	chkVkExit->addActionListener(exitChkActionListener);
 
 	transparencySldActionListener = new TransparencySliderActionListener();
@@ -280,6 +286,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	txtVkSetHotkey = new gcn::TextField();
 	txtVkSetHotkey->setEnabled(false);
 	txtVkSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
+	txtVkSetHotkey->setBaseColor(gui_baseCol);
 	txtVkSetHotkey->setBackgroundColor(colTextboxBackground);
 	cmdVkSetHotkey = new gcn::Button("...");
 	cmdVkSetHotkey->setId("cmdVkSetHotkey");
@@ -294,6 +301,8 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 
 	chkRetroArchVkbd = new gcn::CheckBox("Use RetroArch Vkbd button");
 	chkRetroArchVkbd->setId("chkRetroArchVkbd");
+	chkRetroArchVkbd->setBaseColor(gui_baseCol);
+	chkRetroArchVkbd->setBackgroundColor(colTextboxBackground);
 	chkRetroArchVkbd->addActionListener(vkHotkeyActionListener);
 
 	int x = DISTANCE_BORDER;

@@ -158,10 +158,14 @@ void InitPanelPrio(const config_category& category)
 
 	chkActivePauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkActivePauseEmulation->setId("chkActivePauseEmulation");
+	chkActivePauseEmulation->setBaseColor(gui_baseCol);
+	chkActivePauseEmulation->setBackgroundColor(colTextboxBackground);
 	chkActivePauseEmulation->addActionListener(prioActionListener);
 
 	chkActiveDisableSound = new gcn::CheckBox("Disable sound");
 	chkActiveDisableSound->setId("chkActiveDisableSound");
+	chkActiveDisableSound->setBaseColor(gui_baseCol);
+	chkActiveDisableSound->setBackgroundColor(colTextboxBackground);
 	chkActiveDisableSound->addActionListener(prioActionListener);
 
 	grpWhenActive = new gcn::Window("When Active");
@@ -193,14 +197,20 @@ void InitPanelPrio(const config_category& category)
 
 	chkInactivePauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkInactivePauseEmulation->setId("chkInactivePauseEmulation");
+	chkInactivePauseEmulation->setBaseColor(gui_baseCol);
+	chkInactivePauseEmulation->setBackgroundColor(colTextboxBackground);
 	chkInactivePauseEmulation->addActionListener(prioActionListener);
 
 	chkInactiveDisableSound = new gcn::CheckBox("Disable sound");
 	chkInactiveDisableSound->setId("chkInactiveDisableSound");
+	chkInactiveDisableSound->setBaseColor(gui_baseCol);
+	chkInactiveDisableSound->setBackgroundColor(colTextboxBackground);
 	chkInactiveDisableSound->addActionListener(prioActionListener);
 
 	chkInactiveDisableControllers = new gcn::CheckBox("Disable input");
 	chkInactiveDisableControllers->setId("chkInactiveDisableControllers");
+	chkInactiveDisableControllers->setBaseColor(gui_baseCol);
+	chkInactiveDisableControllers->setBackgroundColor(colTextboxBackground);
 	chkInactiveDisableControllers->addActionListener(prioActionListener);
 
 	grpWhenInactive = new gcn::Window("When Inactive");
@@ -229,14 +239,20 @@ void InitPanelPrio(const config_category& category)
 
 	chkMinimizedPauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkMinimizedPauseEmulation->setId("chkMinimizedPauseEmulation");
+	chkMinimizedPauseEmulation->setBaseColor(gui_baseCol);
+	chkMinimizedPauseEmulation->setBackgroundColor(colTextboxBackground);
 	chkMinimizedPauseEmulation->addActionListener(prioActionListener);
 
 	chkMinimizedDisableSound = new gcn::CheckBox("Disable sound");
 	chkMinimizedDisableSound->setId("chkMinimizedDisableSound");
+	chkMinimizedDisableSound->setBaseColor(gui_baseCol);
+	chkMinimizedDisableSound->setBackgroundColor(colTextboxBackground);
 	chkMinimizedDisableSound->addActionListener(prioActionListener);
 
 	chkMinimizedDisableControllers = new gcn::CheckBox("Disable input");
 	chkMinimizedDisableControllers->setId("chkMinimizedDisableControllers");
+	chkMinimizedDisableControllers->setBaseColor(gui_baseCol);
+	chkMinimizedDisableControllers->setBackgroundColor(colTextboxBackground);
 	chkMinimizedDisableControllers->addActionListener(prioActionListener);
 
 	grpWhenMinimized = new gcn::Window("When Minimized");

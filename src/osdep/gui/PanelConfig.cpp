@@ -166,6 +166,7 @@ void InitPanelConfig(const struct config_category& category)
 	lblName->setAlignment(gcn::Graphics::RIGHT);
 	txtName = new gcn::TextField();
 	txtName->setSize(300, TEXTFIELD_HEIGHT);
+	txtName->setBaseColor(gui_baseCol);
 	txtName->setBackgroundColor(colTextboxBackground);
 
 	lblDesc = new gcn::Label("Description:");
@@ -173,6 +174,7 @@ void InitPanelConfig(const struct config_category& category)
 	lblDesc->setAlignment(gcn::Graphics::RIGHT);
 	txtDesc = new gcn::TextField();
 	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
+	txtDesc->setBaseColor(gui_baseCol);
 	txtDesc->setBackgroundColor(colTextboxBackground);
 
 	cmdLoad = new gcn::Button("Load");
@@ -211,6 +213,7 @@ void InitPanelConfig(const struct config_category& category)
 	scrAreaConfigs->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
 	scrAreaConfigs->setBaseColor(gui_baseCol);
+	scrAreaConfigs->setSelectionColor(gui_selection_color);
 
 	category.panel->add(scrAreaConfigs);
 	category.panel->add(lblName, DISTANCE_BORDER, scrAreaConfigs->getY() + scrAreaConfigs->getHeight() + DISTANCE_NEXT_Y);

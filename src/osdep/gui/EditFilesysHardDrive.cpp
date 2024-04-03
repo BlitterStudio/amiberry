@@ -94,6 +94,8 @@ static void InitEditFilesysHardDrive()
 	txtPath = new gcn::TextField();
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtHDDPath");
+	txtPath->setBaseColor(gui_baseCol);
+	txtPath->setBackgroundColor(colTextboxBackground);
 
 	int posY = DISTANCE_BORDER;
 

@@ -192,30 +192,44 @@ void InitPanelRTG(const config_category& category)
 
 	chkRtgMatchDepth = new gcn::CheckBox("Match host and RTG color depth if possible");
 	chkRtgMatchDepth->setId("chkRtgMatchDepth");
+	chkRtgMatchDepth->setBaseColor(gui_baseCol);
+	chkRtgMatchDepth->setBackgroundColor(colTextboxBackground);
 	chkRtgMatchDepth->addActionListener(rtg_action_listener);
 
 	chkRtgAutoscale = new gcn::CheckBox("Scale if smaller than display size setting");
 	chkRtgAutoscale->setId("chkRtgAutoscale");
+	chkRtgAutoscale->setBaseColor(gui_baseCol);
+	chkRtgAutoscale->setBackgroundColor(colTextboxBackground);
 	chkRtgAutoscale->addActionListener(rtg_action_listener);
 
 	chkRtgAllowScaling = new gcn::CheckBox("Always scale in windowed mode");
 	chkRtgAllowScaling->setId("chkRtgAllowScaling");
+	chkRtgAllowScaling->setBaseColor(gui_baseCol);
+	chkRtgAllowScaling->setBackgroundColor(colTextboxBackground);
 	chkRtgAllowScaling->addActionListener(rtg_action_listener);
 
 	chkRtgAlwaysCenter = new gcn::CheckBox("Always center");
 	chkRtgAlwaysCenter->setId("chkRtgAlwaysCenter");
+	chkRtgAlwaysCenter->setBaseColor(gui_baseCol);
+	chkRtgAlwaysCenter->setBackgroundColor(colTextboxBackground);
 	chkRtgAlwaysCenter->addActionListener(rtg_action_listener);
 
 	chkRtgHardwareInterrupt = new gcn::CheckBox("Hardware vertical blank interrupt");
 	chkRtgHardwareInterrupt->setId("chkRtgHardwareInterrupt");
+	chkRtgHardwareInterrupt->setBaseColor(gui_baseCol);
+	chkRtgHardwareInterrupt->setBackgroundColor(colTextboxBackground);
 	chkRtgHardwareInterrupt->addActionListener(rtg_action_listener);
 
 	chkRtgHardwareSprite = new gcn::CheckBox("Hardware sprite emulation");
 	chkRtgHardwareSprite->setId("chkRtgHardwareSprite");
+	chkRtgHardwareSprite->setBaseColor(gui_baseCol);
+	chkRtgHardwareSprite->setBackgroundColor(colTextboxBackground);
 	chkRtgHardwareSprite->addActionListener(rtg_action_listener);
 
 	chkRtgMultithreaded = new gcn::CheckBox("Multithreaded");
 	chkRtgMultithreaded->setId("chkRtgMultithreaded");
+	chkRtgMultithreaded->setBaseColor(gui_baseCol);
+	chkRtgMultithreaded->setBackgroundColor(colTextboxBackground);
 	chkRtgMultithreaded->addActionListener(rtg_action_listener);
 
 	lblRtgRefreshRate = new gcn::Label("Refresh rate:");

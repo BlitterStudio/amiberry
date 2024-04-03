@@ -303,6 +303,7 @@ void InitPanelPaths(const config_category& category)
 	lblSystemROMs = new gcn::Label("System ROMs:");
 	txtSystemROMs = new gcn::TextField();
 	txtSystemROMs->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtSystemROMs->setBaseColor(gui_baseCol);
 	txtSystemROMs->setBackgroundColor(colTextboxBackground);
 
 	cmdSystemROMs = new gcn::Button("...");
@@ -314,6 +315,7 @@ void InitPanelPaths(const config_category& category)
 	lblConfigPath = new gcn::Label("Configuration files:");
 	txtConfigPath = new gcn::TextField();
 	txtConfigPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtConfigPath->setBaseColor(gui_baseCol);
 	txtConfigPath->setBackgroundColor(colTextboxBackground);
 
 	cmdConfigPath = new gcn::Button("...");
@@ -325,6 +327,7 @@ void InitPanelPaths(const config_category& category)
 	lblNvramFiles = new gcn::Label("NVRAM files:");
 	txtNvramFiles = new gcn::TextField();
 	txtNvramFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtNvramFiles->setBaseColor(gui_baseCol);
 	txtNvramFiles->setBackgroundColor(colTextboxBackground);
 
 	cmdNvramFiles = new gcn::Button("...");
@@ -335,6 +338,7 @@ void InitPanelPaths(const config_category& category)
 	lblScreenshotFiles = new gcn::Label("Screenshots:");
 	txtScreenshotFiles = new gcn::TextField();
 	txtScreenshotFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtScreenshotFiles->setBaseColor(gui_baseCol);
 	txtScreenshotFiles->setBackgroundColor(colTextboxBackground);
 
 	cmdScreenshotFiles = new gcn::Button("...");
@@ -345,6 +349,7 @@ void InitPanelPaths(const config_category& category)
 	lblStateFiles = new gcn::Label("Save state files:");
 	txtStateFiles = new gcn::TextField();
 	txtStateFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtStateFiles->setBaseColor(gui_baseCol);
 	txtStateFiles->setBackgroundColor(colTextboxBackground);
 
 	cmdStateFiles = new gcn::Button("...");
@@ -355,6 +360,7 @@ void InitPanelPaths(const config_category& category)
 	lblControllersPath = new gcn::Label("Controller files:");
 	txtControllersPath = new gcn::TextField();
 	txtControllersPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtControllersPath->setBaseColor(gui_baseCol);
 	txtControllersPath->setBackgroundColor(colTextboxBackground);
 
 	cmdControllersPath = new gcn::Button("...");
@@ -366,6 +372,7 @@ void InitPanelPaths(const config_category& category)
 	lblRetroArchFile = new gcn::Label("RetroArch configuration file (retroarch.cfg):");
 	txtRetroArchFile = new gcn::TextField();
 	txtRetroArchFile->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtRetroArchFile->setBaseColor(gui_baseCol);
 	txtRetroArchFile->setBackgroundColor(colTextboxBackground);
 
 	cmdRetroArchFile = new gcn::Button("...");
@@ -377,6 +384,7 @@ void InitPanelPaths(const config_category& category)
 	lblWHDBootPath = new gcn::Label("WHDBoot files:");
 	txtWHDBootPath = new gcn::TextField();
 	txtWHDBootPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtWHDBootPath->setBaseColor(gui_baseCol);
 	txtWHDBootPath->setBackgroundColor(colTextboxBackground);
 
 	cmdWHDBootPath = new gcn::Button("...");
@@ -388,6 +396,7 @@ void InitPanelPaths(const config_category& category)
 	lblWHDLoadArchPath = new gcn::Label("WHDLoad Archives (LHA):");
 	txtWHDLoadArchPath = new gcn::TextField();
 	txtWHDLoadArchPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtWHDLoadArchPath->setBaseColor(gui_baseCol);
 	txtWHDLoadArchPath->setBackgroundColor(colTextboxBackground);
 
 	cmdWHDLoadArchPath = new gcn::Button("...");
@@ -404,6 +413,7 @@ void InitPanelPaths(const config_category& category)
 	lblLogfilePath = new gcn::Label("Amiberry logfile path:");
 	txtLogfilePath = new gcn::TextField();
 	txtLogfilePath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtLogfilePath->setBaseColor(gui_baseCol);
 	txtLogfilePath->setBackgroundColor(colTextboxBackground);
 
 	cmdLogfilePath = new gcn::Button("...");

@@ -234,22 +234,34 @@ void InitPanelCustom(const config_category& category)
 
 	optPort0 = new gcn::RadioButton("0: Mouse", "radioportgroup");
 	optPort0->setId("0: Mouse");
+	optPort0->setBaseColor(gui_baseCol);
+	optPort0->setBackgroundColor(colTextboxBackground);
 	optPort0->addActionListener(grpActionListener);
 	optPort1 = new gcn::RadioButton("1: Joystick", "radioportgroup");
 	optPort1->setId("1: Joystick");
+	optPort1->setBaseColor(gui_baseCol);
+	optPort1->setBackgroundColor(colTextboxBackground);
 	optPort1->addActionListener(grpActionListener);
 	optPort2 = new gcn::RadioButton("2: Parallel 1", "radioportgroup");
 	optPort2->setId("2: Parallel 1");
+	optPort2->setBaseColor(gui_baseCol);
+	optPort2->setBackgroundColor(colTextboxBackground);
 	optPort2->addActionListener(grpActionListener);
 	optPort3 = new gcn::RadioButton("3: Parallel 2", "radioportgroup");
 	optPort3->setId("3: Parallel 2");
+	optPort3->setBaseColor(gui_baseCol);
+	optPort3->setBackgroundColor(colTextboxBackground);
 	optPort3->addActionListener(grpActionListener);
 
 	optMultiNone = new gcn::RadioButton("None", "radiomultigroup");
 	optMultiNone->setId("None");
+	optMultiNone->setBaseColor(gui_baseCol);
+	optMultiNone->setBackgroundColor(colTextboxBackground);
 	optMultiNone->addActionListener(grpActionListener);
 	optMultiSelect = new gcn::RadioButton("HotKey", "radiomultigroup");
 	optMultiSelect->setId("HotKey");
+	optMultiSelect->setBaseColor(gui_baseCol);
+	optMultiSelect->setBackgroundColor(colTextboxBackground);
 	optMultiSelect->addActionListener(grpActionListener);
 
 	grpPort = new gcn::Window("Joystick Port");
@@ -270,6 +282,7 @@ void InitPanelCustom(const config_category& category)
 	txtSetHotkey = new gcn::TextField();
 	txtSetHotkey->setEnabled(false);
 	txtSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
+	txtSetHotkey->setBaseColor(gui_baseCol);
 	txtSetHotkey->setBackgroundColor(colTextboxBackground);
 	cmdSetHotkey = new gcn::Button("...");
 	cmdSetHotkey->setId("cmdSetHotkey");
