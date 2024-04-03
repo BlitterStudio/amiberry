@@ -43,6 +43,7 @@ bool gfxboard_isgfxboardscreen(int monid);
 
 extern struct gfxboard_func a2410_func;
 extern struct gfxboard_func harlequin_func;
+extern struct gfxboard_func rainbowii_func;
 
 extern void vga_io_put(int board, int portnum, uae_u8 v);
 extern uae_u8 vga_io_get(int board, int portnum);
@@ -84,7 +85,21 @@ int pcem_getvramsize(void);
 #define GFXBOARD_ID_RETINA_Z2 21
 #define GFXBOARD_ID_RETINA_Z3 22
 #define GFXBOARD_ID_ALTAIS_Z3 23
-#define GFXBOARD_ID_VOODOO5_PCI 24
+#define GFXBOARD_ID_S3TRIO64_PCI 24
+#define GFXBOARD_ID_PERMEDIA2_PCI 25
+#define GFXBOARD_ID_RAINBOWIII 26
+#define GFXBOARD_ID_VISIONA 27
+#define GFXBOARD_ID_EGS_110_24 28
+#define GFXBOARD_ID_DOMINO 29
+#define GFXBOARD_ID_MERLIN_Z2 30
+#define GFXBOARD_ID_MERLIN_Z3 31
+#define GFXBOARD_ID_OMNIBUS_ET4000 32
+#define GFXBOARD_ID_OMNIBUS_ET4000W32 33
+#define GFXBOARD_ID_GRAFFITY_Z2 34
+#define GFXBOARD_ID_GRAFFITY_Z3 35
+#define GFXBOARD_ID_RAINBOWII 36
+#define GFXBOARD_ID_GD5446_PCI 37
+#define GFXBOARD_ID_VOODOO5_PCI 38
 
 #define GFXBOARD_BUSTYPE_Z 0
 #define GFXBOARD_BUSTYPE_PCI 1
