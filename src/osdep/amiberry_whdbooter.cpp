@@ -344,7 +344,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	if (std::filesystem::exists(uae_config))
 	{
-		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		return;
 	}
 
@@ -1314,12 +1314,11 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename(whdload_prefs.filename);
 
-	// If we have a config file, we will use it.
-	// We will need it for the WHDLoad options too.
+	// If we have a config file, we use that first
 	if (std::filesystem::exists(uae_config))
 	{
 		write_log("WHDBooter -  %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
-		target_cfgfile_load(&currprefs, uae_config.c_str(), CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 	}
 
 	// setups for tmp folder.
