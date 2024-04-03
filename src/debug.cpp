@@ -5672,6 +5672,7 @@ int instruction_breakpoint(TCHAR **c)
 	struct breakpoint_node *bpn;
 	int i;
 	TCHAR next = 0;
+	bool err;
 
 	if (more_params (c)) {
 		TCHAR nc = _totupper ((*c)[0]);
@@ -5775,35 +5776,40 @@ int instruction_breakpoint(TCHAR **c)
 			return 0;
 		}
 		trace_mode = TRACE_RANGE_PC;
-		trace_param[0] = readhex(c, NULL);
-		if (more_params (c)) {
-			trace_param[1] = readhex(c, NULL);
-			return 1;
-		} else {
-			for (i = 0; i < BREAKPOINT_TOTAL; i++) {
-				bpn = &bpnodes[i];
-				if (bpn->enabled && bpn->value1 == trace_param[0]) {
-					bpn->enabled = 0;
-					console_out (_T("Breakpoint removed.\n"));
-					trace_mode = 0;
-					return 0;
-				}
-			}
-			for (i = 0; i < BREAKPOINT_TOTAL; i++) {
-				bpn = &bpnodes[i];
-				if (bpn->enabled)
-					continue;
-				bpn->value1 = trace_param[0];
-				bpn->type = BREAKPOINT_REG_PC;
-				bpn->oper = BREAKPOINT_CMP_EQUAL;
-				bpn->enabled = 1;
-				check_breakpoint_extra(c, bpn);
-				console_out (_T("Breakpoint added.\n"));
-				trace_mode = 0;
-				break;
-			}
+		trace_param[0] = readhex(c, &err);
+		if (err) {
+			trace_mode = 0;
 			return 0;
 		}
+		if (more_params (c)) {
+			trace_param[1] = readhex(c, &err);
+			if (!err) {
+				return 1;
+			}
+		}
+		for (i = 0; i < BREAKPOINT_TOTAL; i++) {
+			bpn = &bpnodes[i];
+			if (bpn->enabled && bpn->value1 == trace_param[0]) {
+				bpn->enabled = 0;
+				console_out(_T("Breakpoint removed.\n"));
+				trace_mode = 0;
+				return 0;
+			}
+		}
+		for (i = 0; i < BREAKPOINT_TOTAL; i++) {
+			bpn = &bpnodes[i];
+			if (bpn->enabled)
+				continue;
+			bpn->value1 = trace_param[0];
+			bpn->type = BREAKPOINT_REG_PC;
+			bpn->oper = BREAKPOINT_CMP_EQUAL;
+			bpn->enabled = 1;
+			check_breakpoint_extra(c, bpn);
+			console_out(_T("Breakpoint added.\n"));
+			trace_mode = 0;
+			break;
+		}
+		return 0;
 	}
 	trace_mode = TRACE_RAM_PC;
 	return 1;
