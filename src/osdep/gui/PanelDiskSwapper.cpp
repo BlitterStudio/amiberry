@@ -264,6 +264,7 @@ void InitPanelDiskSwapper(const config_category& category)
 			diskSwapperListCells[row][column] = new gcn::TextField();
 			diskSwapperListCells[row][column]->setSize(diskswapper_column_size[column], SMALL_BUTTON_HEIGHT);
 			diskSwapperListCells[row][column]->setEnabled(false);
+			diskSwapperListCells[row][column]->setBaseColor(gui_baseCol);
 			diskSwapperListCells[row][column]->setBackgroundColor(colTextboxBackground);
 			if (column == 0)
 				diskSwapperListCells[row][column]->setText(std::to_string(row + 1));

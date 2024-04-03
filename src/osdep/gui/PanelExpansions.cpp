@@ -907,6 +907,8 @@ void InitPanelExpansions(const config_category& category)
 
 	chkScsiRomSelected = new gcn::CheckBox("Enabled");
 	chkScsiRomSelected->setId("chkScsiRomSelected");
+	chkScsiRomSelected->setBaseColor(gui_baseCol);
+	chkScsiRomSelected->setBackgroundColor(colTextboxBackground);
 	chkScsiRomSelected->addActionListener(expansions_action_listener);
 
 	cboScsiRomFile = new gcn::DropDown(&scsirom_file_list);
@@ -942,10 +944,14 @@ void InitPanelExpansions(const config_category& category)
 
 	chkScsiRomFileAutoboot = new gcn::CheckBox("Autoboot disabled");
 	chkScsiRomFileAutoboot->setId("chkScsiRomFileAutoboot");
+	chkScsiRomFileAutoboot->setBaseColor(gui_baseCol);
+	chkScsiRomFileAutoboot->setBackgroundColor(colTextboxBackground);
 	chkScsiRomFileAutoboot->addActionListener(expansions_action_listener);
 
 	chkScsiRomFilePcmcia = new gcn::CheckBox("PCMCIA inserted");
 	chkScsiRomFilePcmcia->setId("chkScsiRomFilePcmcia");
+	chkScsiRomFilePcmcia->setBaseColor(gui_baseCol);
+	chkScsiRomFilePcmcia->setBackgroundColor(colTextboxBackground);
 	chkScsiRomFilePcmcia->addActionListener(expansions_action_listener);
 	
 	cboExpansionBoardItemSelector = new gcn::DropDown(&expansionboard_itemselector_list);
@@ -967,11 +973,15 @@ void InitPanelExpansions(const config_category& category)
 
 	chkExpansionBoardCheckbox = new gcn::CheckBox("");
 	chkExpansionBoardCheckbox->setId("chkExpansionBoardCheckbox");
+	chkExpansionBoardCheckbox->setBaseColor(gui_baseCol);
+	chkExpansionBoardCheckbox->setBackgroundColor(colTextboxBackground);
 	chkExpansionBoardCheckbox->addActionListener(expansions_action_listener);
 
 	txtExpansionBoardStringBox = new gcn::TextBox();
 	txtExpansionBoardStringBox->setSize(200, txtExpansionBoardStringBox->getHeight());
 	txtExpansionBoardStringBox->setId("txtExpansionBoardStringBox");
+	txtExpansionBoardStringBox->setBaseColor(gui_baseCol);
+	txtExpansionBoardStringBox->setBackgroundColor(colTextboxBackground);
 	
 	cboCpuBoardType = new gcn::DropDown(&cpuboards_list);
 	cboCpuBoardType->setSize(250, cboCpuBoardType->getHeight());
@@ -1018,22 +1028,32 @@ void InitPanelExpansions(const config_category& category)
 
 	chkAcceleratorBoardCheckbox = new gcn::CheckBox("");
 	chkAcceleratorBoardCheckbox->setId("chkAcceleratorBoardCheckbox");
+	chkAcceleratorBoardCheckbox->setBaseColor(gui_baseCol);
+	chkAcceleratorBoardCheckbox->setBackgroundColor(colTextboxBackground);
 	chkAcceleratorBoardCheckbox->addActionListener(expansions_action_listener);
 	
 	chkBSDSocket = new gcn::CheckBox("bsdsocket.library");
 	chkBSDSocket->setId("chkBSDSocket");
+	chkBSDSocket->setBaseColor(gui_baseCol);
+	chkBSDSocket->setBackgroundColor(colTextboxBackground);
 	chkBSDSocket->addActionListener(expansions_action_listener);
 
 	chkScsi = new gcn::CheckBox("uaescsi.device");
 	chkScsi->setId("chkSCSI");
+	chkScsi->setBaseColor(gui_baseCol);
+	chkScsi->setBackgroundColor(colTextboxBackground);
 	chkScsi->addActionListener(expansions_action_listener);
 
 	chkCD32Fmv = new gcn::CheckBox("CD32 Full Motion Video cartridge");
 	chkCD32Fmv->setId("chkCD32Fmv");
+	chkCD32Fmv->setBaseColor(gui_baseCol);
+	chkCD32Fmv->setBackgroundColor(colTextboxBackground);
 	chkCD32Fmv->addActionListener(expansions_action_listener);
 
 	chkSana2 = new gcn::CheckBox("uaenet.device");
 	chkSana2->setId("chkSana2");
+	chkSana2->setBaseColor(gui_baseCol);
+	chkSana2->setBackgroundColor(colTextboxBackground);
 	chkSana2->addActionListener(expansions_action_listener);
 	chkSana2->setEnabled(false); //TODO enable this when SANA2 support is implemented
 	

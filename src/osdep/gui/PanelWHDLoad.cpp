@@ -227,18 +227,21 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtGameName = new gcn::TextField();
 	txtGameName->setId("txtGameName");
 	txtGameName->setSize(textfield_width, TEXTFIELD_HEIGHT);
+	txtGameName->setBaseColor(gui_baseCol);
 	txtGameName->setBackgroundColor(colTextboxBackground);
 
 	lblVariantUuid = new gcn::Label("UUID:");
 	txtVariantUuid = new gcn::TextField();
 	txtVariantUuid->setId("txtVariantUuid");
 	txtVariantUuid->setSize(textfield_width, TEXTFIELD_HEIGHT);
+	txtVariantUuid->setBaseColor(gui_baseCol);
 	txtVariantUuid->setBackgroundColor(colTextboxBackground);
 
 	lblSlaveDefault = new gcn::Label("Slave Default:");
 	txtSlaveDefault = new gcn::TextField();
 	txtSlaveDefault->setId("txtSlaveDefault");
 	txtSlaveDefault->setSize(textfield_width, TEXTFIELD_HEIGHT);
+	txtSlaveDefault->setBaseColor(gui_baseCol);
 	txtSlaveDefault->setBackgroundColor(colTextboxBackground);
 
 	chkSlaveLibraries = new gcn::CheckBox("Slave Libraries");
@@ -256,6 +259,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtSlaveDataPath = new gcn::TextField();
 	txtSlaveDataPath->setId("txtSlaveDataPath");
 	txtSlaveDataPath->setSize(textfield_width, TEXTFIELD_HEIGHT);
+	txtSlaveDataPath->setBaseColor(gui_baseCol);
 	txtSlaveDataPath->setBackgroundColor(colTextboxBackground);
 
 	cmdCustomFields = new gcn::Button("Custom Fields");
@@ -268,26 +272,36 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtCustomText = new gcn::TextField();
 	txtCustomText->setId("txtCustomText");
 	txtCustomText->setSize(textfield_width, TEXTFIELD_HEIGHT);
+	txtCustomText->setBaseColor(gui_baseCol);
 	txtCustomText->setBackgroundColor(colTextboxBackground);
 
 	chkButtonWait = new gcn::CheckBox("Button Wait");
 	chkButtonWait->setId("chkButtonWait");
+	chkButtonWait->setBaseColor(gui_baseCol);
+	chkButtonWait->setBackgroundColor(colTextboxBackground);
 	chkButtonWait->addActionListener(whdloadActionListener);
 	chkShowSplash = new gcn::CheckBox("Show Splash");
 	chkShowSplash->setId("chkShowSplash");
+	chkShowSplash->setBaseColor(gui_baseCol);
+	chkShowSplash->setBackgroundColor(colTextboxBackground);
 	chkShowSplash->addActionListener(whdloadActionListener);
 
 	lblConfigDelay = new gcn::Label("Config Delay:");
 	txtConfigDelay = new gcn::TextField();
 	txtConfigDelay->setId("txtConfigDelay");
 	txtConfigDelay->setSize(textfield_width, TEXTFIELD_HEIGHT);
+	txtConfigDelay->setBaseColor(gui_baseCol);
 	txtConfigDelay->setBackgroundColor(colTextboxBackground);
 
 	chkWriteCache = new gcn::CheckBox("Write Cache");
 	chkWriteCache->setId("chkWriteCache");
+	chkWriteCache->setBaseColor(gui_baseCol);
+	chkWriteCache->setBackgroundColor(colTextboxBackground);
 	chkWriteCache->addActionListener(whdloadActionListener);
 	chkQuitOnExit = new gcn::CheckBox("Quit on Exit");
 	chkQuitOnExit->setId("chkQuitOnExit");
+	chkQuitOnExit->setBaseColor(gui_baseCol);
+	chkQuitOnExit->setBackgroundColor(colTextboxBackground);
 	chkQuitOnExit->addActionListener(whdloadActionListener);
 
 	constexpr int pos_x1 = DISTANCE_BORDER;

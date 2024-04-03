@@ -263,6 +263,8 @@ void InitPanelROM(const config_category& category)
 
 	chkShapeShifter = new gcn::CheckBox("ShapeShifter support");
 	chkShapeShifter->setId("chkShapeShifter");
+	chkShapeShifter->setBaseColor(gui_baseCol);
+	chkShapeShifter->setBackgroundColor(colTextboxBackground);
 	chkShapeShifter->addActionListener(romButtonActionListener);
 
 	int posY = DISTANCE_BORDER;

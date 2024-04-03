@@ -474,24 +474,36 @@ void InitPanelInput(const config_category& category)
 	
 	chkMouseHack = new gcn::CheckBox("Virtual mouse driver");
 	chkMouseHack->setId("chkMouseHack");
+	chkMouseHack->setBaseColor(gui_baseCol);
+	chkMouseHack->setBackgroundColor(colTextboxBackground);
 	chkMouseHack->addActionListener(inputActionListener);
 
 	chkMagicMouseUntrap = new gcn::CheckBox("Magic Mouse untrap");
 	chkMagicMouseUntrap->setId("chkMagicMouseUntrap");
+	chkMagicMouseUntrap->setBaseColor(gui_baseCol);
+	chkMagicMouseUntrap->setBackgroundColor(colTextboxBackground);
 	chkMagicMouseUntrap->addActionListener(inputActionListener);
 
 	optBoth = new gcn::RadioButton("Both", "radioCursorGroup");
 	optBoth->setId("optBoth");
+	optBoth->setBaseColor(gui_baseCol);
+	optBoth->setBackgroundColor(colTextboxBackground);
 	optBoth->addActionListener(inputActionListener);
 	optNative = new gcn::RadioButton("Native only", "radioCursorGroup");
 	optNative->setId("optNative");
+	optNative->setBaseColor(gui_baseCol);
+	optNative->setBackgroundColor(colTextboxBackground);
 	optNative->addActionListener(inputActionListener);
 	optHost = new gcn::RadioButton("Host only", "radioCursorGroup");
 	optHost->setId("optHost");
+	optHost->setBaseColor(gui_baseCol);
+	optHost->setBackgroundColor(colTextboxBackground);
 	optHost->addActionListener(inputActionListener);
 	
 	chkInputAutoswitch = new gcn::CheckBox("Mouse/Joystick autoswitching");
 	chkInputAutoswitch->setId("chkInputAutoswitch");
+	chkInputAutoswitch->setBaseColor(gui_baseCol);
+	chkInputAutoswitch->setBackgroundColor(colTextboxBackground);
 	chkInputAutoswitch->addActionListener(inputActionListener);
 
 	int posY = DISTANCE_BORDER;

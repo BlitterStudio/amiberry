@@ -128,18 +128,24 @@ static void InitEditFilesysVirtual()
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
 	txtDevice->setId("txtVirtDevice");
+	txtDevice->setBaseColor(gui_baseCol);
+	txtDevice->setBackgroundColor(colTextboxBackground);
 
 	lblVolume = new gcn::Label("Volume Label:");
 	lblVolume->setAlignment(gcn::Graphics::RIGHT);
 	txtVolume = new gcn::TextField();
 	txtVolume->setSize(60, TEXTFIELD_HEIGHT);
 	txtVolume->setId("txtVirtVolume");
+	txtVolume->setBaseColor(gui_baseCol);
+	txtVolume->setBackgroundColor(colTextboxBackground);
 
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(380, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtVirtPath");
+	txtPath->setBaseColor(gui_baseCol);
+	txtPath->setBackgroundColor(colTextboxBackground);
 	
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -148,16 +154,22 @@ static void InitEditFilesysVirtual()
 	cmdPath->addActionListener(filesysVirtualActionListener);
 
 	chkReadWrite = new gcn::CheckBox("Read/Write", true);
+	chkReadWrite->setBaseColor(gui_baseCol);
+	chkReadWrite->setBackgroundColor(colTextboxBackground);
 	chkReadWrite->setId("chkVirtRW");
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("chkAutoboot");
+	chkAutoboot->setBaseColor(gui_baseCol);
+	chkAutoboot->setBackgroundColor(colTextboxBackground);
 	chkAutoboot->addActionListener(filesysVirtualActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
+	txtBootPri->setBaseColor(gui_baseCol);
+	txtBootPri->setBackgroundColor(colTextboxBackground);
 
 	int posY = DISTANCE_BORDER;
 	int posX = DISTANCE_BORDER;

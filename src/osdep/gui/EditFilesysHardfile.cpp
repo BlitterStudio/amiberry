@@ -370,14 +370,20 @@ static void InitEditFilesysHardfile()
 	txtDevice = new gcn::TextField();
 	txtDevice->setId("txtHdfDev");
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
+	txtDevice->setBaseColor(gui_baseCol);
+	txtDevice->setBackgroundColor(colTextboxBackground);
 	txtDevice->addFocusListener(filesysHardfileFocusListener);
 
 	chkReadWrite = new gcn::CheckBox("Read/Write", true);
 	chkReadWrite->setId("chkHdfRW");
+	chkReadWrite->setBaseColor(gui_baseCol);
+	chkReadWrite->setBackgroundColor(colTextboxBackground);
 	chkReadWrite->addActionListener(filesysHardfileActionListener);
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("hdfAutoboot");
+	chkAutoboot->setBaseColor(gui_baseCol);
+	chkAutoboot->setBackgroundColor(colTextboxBackground);
 	chkAutoboot->addActionListener(filesysHardfileActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
@@ -385,30 +391,40 @@ static void InitEditFilesysHardfile()
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setId("txtHdfBootPri");
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
+	txtBootPri->setBaseColor(gui_baseCol);
+	txtBootPri->setBackgroundColor(colTextboxBackground);
 	txtBootPri->addFocusListener(filesysHardfileFocusListener);
 	
 	lblSurfaces = new gcn::Label("Surfaces:");
 	lblSurfaces->setAlignment(gcn::Graphics::RIGHT);
 	txtSurfaces = new gcn::TextField();
 	txtSurfaces->setSize(40, TEXTFIELD_HEIGHT);
+	txtSurfaces->setBaseColor(gui_baseCol);
+	txtSurfaces->setBackgroundColor(colTextboxBackground);
 	txtSurfaces->addFocusListener(filesysHardfileFocusListener);
 	
 	lblReserved = new gcn::Label("Reserved:");
 	lblReserved->setAlignment(gcn::Graphics::RIGHT);
 	txtReserved = new gcn::TextField();
 	txtReserved->setSize(40, TEXTFIELD_HEIGHT);
+	txtReserved->setBaseColor(gui_baseCol);
+	txtReserved->setBackgroundColor(colTextboxBackground);
 	txtReserved->addFocusListener(filesysHardfileFocusListener);
 	
 	lblSectors = new gcn::Label("Sectors:");
 	lblSectors->setAlignment(gcn::Graphics::RIGHT);
 	txtSectors = new gcn::TextField();
 	txtSectors->setSize(40, TEXTFIELD_HEIGHT);
+	txtSectors->setBaseColor(gui_baseCol);
+	txtSectors->setBackgroundColor(colTextboxBackground);
 	txtSectors->addFocusListener(filesysHardfileFocusListener);
 	
 	lblBlocksize = new gcn::Label("Blocksize:");
 	lblBlocksize->setAlignment(gcn::Graphics::RIGHT);
 	txtBlocksize = new gcn::TextField();
 	txtBlocksize->setSize(40, TEXTFIELD_HEIGHT);
+	txtBlocksize->setBaseColor(gui_baseCol);
+	txtBlocksize->setBackgroundColor(colTextboxBackground);
 	txtBlocksize->addFocusListener(filesysHardfileFocusListener);
 	
 	lblPath = new gcn::Label("Path:");
@@ -416,6 +432,8 @@ static void InitEditFilesysHardfile()
 	txtPath = new gcn::TextField();
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtHdfPath");
+	txtPath->setBaseColor(gui_baseCol);
+	txtPath->setBackgroundColor(colTextboxBackground);
 	
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -428,6 +446,7 @@ static void InitEditFilesysHardfile()
 	cboController = new gcn::DropDown(&controllerListModel);
 	cboController->setSize(180, DROPDOWN_HEIGHT);
 	cboController->setBaseColor(gui_baseCol);
+	cboController->setBackgroundColor(colTextboxBackground);
 	cboController->setSelectionColor(gui_selection_color);
 	cboController->setId("hdfController");
 	cboController->addActionListener(filesysHardfileActionListener);
@@ -435,6 +454,7 @@ static void InitEditFilesysHardfile()
 	cboUnit = new gcn::DropDown(&unitListModel);
 	cboUnit->setSize(60, DROPDOWN_HEIGHT);
 	cboUnit->setBaseColor(gui_baseCol);
+	cboUnit->setBackgroundColor(colTextboxBackground);
 	cboUnit->setSelectionColor(gui_selection_color);
 	cboUnit->setId("cboHdfUnit");
 	cboUnit->addActionListener(filesysHardfileActionListener);

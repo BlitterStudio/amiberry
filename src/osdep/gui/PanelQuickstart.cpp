@@ -777,6 +777,8 @@ void InitPanelQuickstart(const config_category& category)
 
 	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("qsNTSC");
+	chkNTSC->setBaseColor(gui_baseCol);
+	chkNTSC->setBackgroundColor(colTextboxBackground);
 	chkNTSC->addActionListener(ntscButtonActionListener);
 
 	for (auto i = 0; i < 2; ++i)
@@ -786,6 +788,8 @@ void InitPanelQuickstart(const config_category& category)
 		chkqsDFx[i] = new gcn::CheckBox(tmp);
 		snprintf(tmp, 20, "qsDF%d", i);
 		chkqsDFx[i]->setId(tmp);
+		chkqsDFx[i]->setBaseColor(gui_baseCol);
+		chkqsDFx[i]->setBackgroundColor(colTextboxBackground);
 		chkqsDFx[i]->addActionListener(qsdfxCheckActionListener);
 
 		cboqsDFxType[i] = new gcn::DropDown(&qsDriveTypeList);
@@ -799,6 +803,8 @@ void InitPanelQuickstart(const config_category& category)
 		chkqsDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
 		snprintf(tmp, 20, "qsWP%d", i);
 		chkqsDFxWriteProtect[i]->setId(tmp);
+		chkqsDFxWriteProtect[i]->setBaseColor(gui_baseCol);
+		chkqsDFxWriteProtect[i]->setBackgroundColor(colTextboxBackground);
 		chkqsDFxWriteProtect[i]->addActionListener(qsdfxCheckActionListener);
 
 
@@ -835,6 +841,8 @@ void InitPanelQuickstart(const config_category& category)
 
 	chkCD = new gcn::CheckBox("CD drive");
 	chkCD->setId("qsCD drive");
+	chkCD->setBaseColor(gui_baseCol);
+	chkCD->setBackgroundColor(colTextboxBackground);
 	chkCD->setEnabled(false);
 
 	cmdCDEject = new gcn::Button("Eject");
@@ -859,6 +867,8 @@ void InitPanelQuickstart(const config_category& category)
 
 	chkQuickstartMode = new gcn::CheckBox("Start in Quickstart mode");
 	chkQuickstartMode->setId("qsMode");
+	chkQuickstartMode->setBaseColor(gui_baseCol);
+	chkQuickstartMode->setBackgroundColor(colTextboxBackground);
 	chkQuickstartMode->addActionListener(quickstartModeActionListener);
 
 	cmdSetConfiguration = new gcn::Button("Set configuration");

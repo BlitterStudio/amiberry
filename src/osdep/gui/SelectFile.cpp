@@ -226,7 +226,8 @@ static void InitSelectFile(const std::string& title)
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
-
+	txtCurrent->setBaseColor(gui_baseCol);
+	txtCurrent->setBackgroundColor(colTextboxBackground);
 	txtCurrent->setEnabled(true);
 	editFilePathActionListener =  new EditFilePathActionListener();
 	txtCurrent->addActionListener(editFilePathActionListener);
@@ -237,6 +238,8 @@ static void InitSelectFile(const std::string& title)
 	lstFiles = new gcn::ListBox(fileList);
 	lstFiles->setSize(DIALOG_WIDTH - 45, DIALOG_HEIGHT - 108);
 	lstFiles->setBaseColor(gui_baseCol);
+	lstFiles->setBackgroundColor(colTextboxBackground);
+	lstFiles->setSelectionColor(gui_selection_color);
 	lstFiles->setWrappingEnabled(true);
 	lstFiles->addActionListener(selectFileActionListener);
 
@@ -246,6 +249,8 @@ static void InitSelectFile(const std::string& title)
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFiles->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFiles->setBaseColor(gui_baseCol);
+	scrAreaFiles->setBackgroundColor(colTextboxBackground);
+	scrAreaFiles->setSelectionColor(gui_selection_color);
 	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
 	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
 

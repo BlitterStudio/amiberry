@@ -183,6 +183,8 @@ void InitPanelIO(const config_category& category)
 
 	chkSamplerStereo = new gcn::CheckBox("Stereo sampler");
 	chkSamplerStereo->setId("chkSamplerStereo");
+	chkSamplerStereo->setBaseColor(gui_baseCol);
+	chkSamplerStereo->setBackgroundColor(colTextboxBackground);
 	chkSamplerStereo->addActionListener(ioActionListener);
 
 	grpParallelPort = new gcn::Window("Parallel Port");
@@ -207,22 +209,32 @@ void InitPanelIO(const config_category& category)
 
 	chkSerialDirect = new gcn::CheckBox("Direct");
 	chkSerialDirect->setId("chkSerialDirect");
+	chkSerialDirect->setBaseColor(gui_baseCol);
+	chkSerialDirect->setBackgroundColor(colTextboxBackground);
 	chkSerialDirect->addActionListener(ioActionListener);
 
 	chkRTSCTS = new gcn::CheckBox("Host RTS/CTS");
 	chkRTSCTS->setId("chkRTSCTS");
+	chkRTSCTS->setBaseColor(gui_baseCol);
+	chkRTSCTS->setBackgroundColor(colTextboxBackground);
 	chkRTSCTS->addActionListener(ioActionListener);
 
 	chkUaeSerial = new gcn::CheckBox("uaeserial.device");
 	chkUaeSerial->setId("chkUaeSerial");
+	chkUaeSerial->setBaseColor(gui_baseCol);
+	chkUaeSerial->setBackgroundColor(colTextboxBackground);
 	chkUaeSerial->addActionListener(ioActionListener);
 
 	chkSerialStatus = new gcn::CheckBox("Serial status (RTS/CTS/DTR/DTE/CD)");
 	chkSerialStatus->setId("chkSerialStatus");
+	chkSerialStatus->setBaseColor(gui_baseCol);
+	chkSerialStatus->setBackgroundColor(colTextboxBackground);
 	chkSerialStatus->addActionListener(ioActionListener);
 
 	chkSerialStatusRi = new gcn::CheckBox("Serial status: Ring Indicator");
 	chkSerialStatusRi->setId("chkSerialStatusRi");
+	chkSerialStatusRi->setBaseColor(gui_baseCol);
+	chkSerialStatusRi->setBackgroundColor(colTextboxBackground);
 	chkSerialStatusRi->addActionListener(ioActionListener);
 
 	grpSerialPort = new gcn::Window("Serial Port");
@@ -263,6 +275,8 @@ void InitPanelIO(const config_category& category)
 
 	chkMidiRoute = new gcn::CheckBox("Route MIDI In to MIDI Out");
 	chkMidiRoute->setId("chkMidiRoute");
+	chkMidiRoute->setBaseColor(gui_baseCol);
+	chkMidiRoute->setBackgroundColor(colTextboxBackground);
 	chkMidiRoute->addActionListener(ioActionListener);
 
 	grpMidi = new gcn::Window("MIDI");

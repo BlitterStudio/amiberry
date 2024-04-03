@@ -166,34 +166,50 @@ void InitPanelChipset(const struct config_category& category)
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
 	optOCS->setId("optOCS");
+	optOCS->setBaseColor(gui_baseCol);
+	optOCS->setBackgroundColor(colTextboxBackground);
 	optOCS->addActionListener(chipsetActionListener);
 
 	optECSAgnus = new gcn::RadioButton("ECS Agnus", "radiochipsetgroup");
 	optECSAgnus->setId("optECSAgnus");
+	optECSAgnus->setBaseColor(gui_baseCol);
+	optECSAgnus->setBackgroundColor(colTextboxBackground);
 	optECSAgnus->addActionListener(chipsetActionListener);
 
 	optECSDenise = new gcn::RadioButton("ECS Denise", "radiochipsetgroup");
 	optECSDenise->setId("optECSDenise");
+	optECSDenise->setBaseColor(gui_baseCol);
+	optECSDenise->setBackgroundColor(colTextboxBackground);
 	optECSDenise->addActionListener(chipsetActionListener);
 	
 	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
 	optECS->setId("optFullECS");
+	optECS->setBaseColor(gui_baseCol);
+	optECS->setBackgroundColor(colTextboxBackground);
 	optECS->addActionListener(chipsetActionListener);
 
 	optAGA = new gcn::RadioButton("AGA", "radiochipsetgroup");
 	optAGA->setId("optAGA");
+	optAGA->setBaseColor(gui_baseCol);
+	optAGA->setBackgroundColor(colTextboxBackground);
 	optAGA->addActionListener(chipsetActionListener);
 
 	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("chkNTSC");
+	chkNTSC->setBaseColor(gui_baseCol);
+	chkNTSC->setBackgroundColor(colTextboxBackground);
 	chkNTSC->addActionListener(chipsetActionListener);
 
 	chkCycleExact = new gcn::CheckBox("Cycle Exact (Full)");
 	chkCycleExact->setId("chkCycleExact");
+	chkCycleExact->setBaseColor(gui_baseCol);
+	chkCycleExact->setBackgroundColor(colTextboxBackground);
 	chkCycleExact->addActionListener(chipsetActionListener);
 
 	chkMemoryCycleExact = new gcn::CheckBox("Cycle Exact (DMA/Memory)");
 	chkMemoryCycleExact->setId("chkMemoryCycleExact");
+	chkMemoryCycleExact->setBaseColor(gui_baseCol);
+	chkMemoryCycleExact->setBackgroundColor(colTextboxBackground);
 	chkMemoryCycleExact->addActionListener(chipsetActionListener);
 
 	lblChipset = new gcn::Label("Chipset Extra:");
@@ -205,10 +221,6 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset->setSelectionColor(gui_selection_color);
 	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
-
-	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
-	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
-	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
 
 	grpChipset = new gcn::Window("Chipset");
 	grpChipset->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
@@ -233,14 +245,20 @@ void InitPanelChipset(const struct config_category& category)
 
 	optBlitNormal = new gcn::RadioButton("Normal", "radiocblittergroup");
 	optBlitNormal->setId("optBlitNormal");
+	optBlitNormal->setBaseColor(gui_baseCol);
+	optBlitNormal->setBackgroundColor(colTextboxBackground);
 	optBlitNormal->addActionListener(chipsetActionListener);
 
 	optBlitImmed = new gcn::RadioButton("Immediate", "radiocblittergroup");
 	optBlitImmed->setId("optBlitImmed");
+	optBlitImmed->setBaseColor(gui_baseCol);
+	optBlitImmed->setBackgroundColor(colTextboxBackground);
 	optBlitImmed->addActionListener(chipsetActionListener);
 
 	optBlitWait = new gcn::RadioButton("Wait for blitter", "radiocblittergroup");
 	optBlitWait->setId("optBlitWait");
+	optBlitWait->setBaseColor(gui_baseCol);
+	optBlitWait->setBackgroundColor(colTextboxBackground);
 	optBlitWait->addActionListener(chipsetActionListener);
 
 	grpBlitter = new gcn::Window("Blitter");
@@ -257,11 +275,16 @@ void InitPanelChipset(const struct config_category& category)
 
 	chkFastCopper = new gcn::CheckBox("Fast copper");
 	chkFastCopper->setId("chkFastCopper");
+	chkFastCopper->setBaseColor(gui_baseCol);
+	chkFastCopper->setBackgroundColor(colTextboxBackground);
 	chkFastCopper->addActionListener(chipsetActionListener);
 
 	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
 	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
+	chkMultithreadedDrawing->setBaseColor(gui_baseCol);
+	chkMultithreadedDrawing->setBackgroundColor(colTextboxBackground);
 	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
+
 	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	grpCopper = new gcn::Window("Copper");
@@ -277,18 +300,26 @@ void InitPanelChipset(const struct config_category& category)
 
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("optCollNone");
+	optCollNone->setBaseColor(gui_baseCol);
+	optCollNone->setBackgroundColor(colTextboxBackground);
 	optCollNone->addActionListener(chipsetActionListener);
 
 	optCollSprites = new gcn::RadioButton("Sprites only", "radioccollisiongroup");
 	optCollSprites->setId("optCollSprites");
+	optCollSprites->setBaseColor(gui_baseCol);
+	optCollSprites->setBackgroundColor(colTextboxBackground);
 	optCollSprites->addActionListener(chipsetActionListener);
 
 	optCollPlayfield = new gcn::RadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
 	optCollPlayfield->setId("optCollPlayfield");
+	optCollPlayfield->setBaseColor(gui_baseCol);
+	optCollPlayfield->setBackgroundColor(colTextboxBackground);
 	optCollPlayfield->addActionListener(chipsetActionListener);
 
 	optCollFull = new gcn::RadioButton("Full (rarely needed)", "radioccollisiongroup");
 	optCollFull->setId("optCollFull");
+	optCollFull->setBaseColor(gui_baseCol);
+	optCollFull->setBackgroundColor(colTextboxBackground);
 	optCollFull->addActionListener(chipsetActionListener);
 
 	grpCollisionLevel = new gcn::Window("Collision Level");

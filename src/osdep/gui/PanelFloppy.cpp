@@ -396,6 +396,8 @@ void InitPanelFloppy(const config_category& category)
 		id_string = "DF" + to_string(i) + ":";
 		chkDFx[i] = new gcn::CheckBox(id_string);
 		chkDFx[i]->setId(id_string);
+		chkDFx[i]->setBaseColor(gui_baseCol);
+		chkDFx[i]->setBackgroundColor(colTextboxBackground);
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 
 		cboDFxType[i] = new gcn::DropDown(&driveTypeList);
@@ -409,8 +411,9 @@ void InitPanelFloppy(const config_category& category)
 		chkDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
 		id_string = "chkWP" + to_string(i);
 		chkDFxWriteProtect[i]->setId(id_string);
+		chkDFxWriteProtect[i]->setBaseColor(gui_baseCol);
+		chkDFxWriteProtect[i]->setBackgroundColor(colTextboxBackground);
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
-		
 
 		cmdDFxInfo[i] = new gcn::Button("?");
 		id_string = "cmdInfo" + to_string(i);
@@ -476,6 +479,8 @@ void InitPanelFloppy(const config_category& category)
 
 	chkDBSerialAuto = new gcn::CheckBox("DrawBridge: Auto-Detect serial port");
 	chkDBSerialAuto->setId("chkDBSerialAuto");
+	chkDBSerialAuto->setBaseColor(gui_baseCol);
+	chkDBSerialAuto->setBackgroundColor(colTextboxBackground);
 	chkDBSerialAuto->addActionListener(dfxCheckActionListener);
 
 	cboDBSerialPort = new gcn::DropDown(&serial_ports_list);
@@ -488,14 +493,20 @@ void InitPanelFloppy(const config_category& category)
 
 	chkDBSmartSpeed = new gcn::CheckBox("DrawBridge: Smart Speed (Dynamically switch on Turbo)");
 	chkDBSmartSpeed->setId("chkDBSmartSpeed");
+	chkDBSmartSpeed->setBaseColor(gui_baseCol);
+	chkDBSmartSpeed->setBackgroundColor(colTextboxBackground);
 	chkDBSmartSpeed->addActionListener(dfxCheckActionListener);
 
 	chkDBAutoCache = new gcn::CheckBox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)");
 	chkDBAutoCache->setId("chkDBAutoCache");
+	chkDBAutoCache->setBaseColor(gui_baseCol);
+	chkDBAutoCache->setBackgroundColor(colTextboxBackground);
 	chkDBAutoCache->addActionListener(dfxCheckActionListener);
 
 	chkDBCableDriveB = new gcn::CheckBox("DrawBridge: Connected as Drive B");
 	chkDBCableDriveB->setId("chkDBCableDriveB");
+	chkDBCableDriveB->setBaseColor(gui_baseCol);
+	chkDBCableDriveB->setBackgroundColor(colTextboxBackground);
 	chkDBCableDriveB->addActionListener(dfxCheckActionListener);
 
 	for (i = 0; i < 4; ++i)
