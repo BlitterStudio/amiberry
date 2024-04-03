@@ -293,37 +293,57 @@ void InitPanelCPU(const struct config_category& category)
 
 	optCPU68000 = new gcn::RadioButton("68000", "radiocpugroup");
 	optCPU68000->setId("optCPU68000");
+	optCPU68000->setBaseColor(gui_baseCol);
+	optCPU68000->setBackgroundColor(colTextboxBackground);
 	optCPU68000->addActionListener(cpuActionListener);
 	optCPU68010 = new gcn::RadioButton("68010", "radiocpugroup");
 	optCPU68010->setId("optCPU68010");
+	optCPU68010->setBaseColor(gui_baseCol);
+	optCPU68010->setBackgroundColor(colTextboxBackground);
 	optCPU68010->addActionListener(cpuActionListener);
 	optCPU68020 = new gcn::RadioButton("68020", "radiocpugroup");
 	optCPU68020->setId("optCPU68020");
+	optCPU68020->setBaseColor(gui_baseCol);
+	optCPU68020->setBackgroundColor(colTextboxBackground);
 	optCPU68020->addActionListener(cpuActionListener);
 	optCPU68030 = new gcn::RadioButton("68030", "radiocpugroup");
 	optCPU68030->setId("optCPU68030");
+	optCPU68030->setBaseColor(gui_baseCol);
+	optCPU68030->setBackgroundColor(colTextboxBackground);
 	optCPU68030->addActionListener(cpuActionListener);
 	optCPU68040 = new gcn::RadioButton("68040", "radiocpugroup");
 	optCPU68040->setId("optCPU68040");
+	optCPU68040->setBaseColor(gui_baseCol);
+	optCPU68040->setBackgroundColor(colTextboxBackground);
 	optCPU68040->addActionListener(cpuActionListener);
 	optCPU68060 = new gcn::RadioButton("68060", "radiocpugroup");
 	optCPU68060->setId("optCPU68060");
+	optCPU68060->setBaseColor(gui_baseCol);
+	optCPU68060->setBackgroundColor(colTextboxBackground);
 	optCPU68060->addActionListener(cpuActionListener);
 
 	chk24Bit = new gcn::CheckBox("24-bit addressing", true);
 	chk24Bit->setId("chk24Bit");
+	chk24Bit->setBaseColor(gui_baseCol);
+	chk24Bit->setBackgroundColor(colTextboxBackground);
 	chk24Bit->addActionListener(cpuActionListener);
 
 	chkCPUCompatible = new gcn::CheckBox("More compatible", true);
 	chkCPUCompatible->setId("chkCPUCompatible");
+	chkCPUCompatible->setBaseColor(gui_baseCol);
+	chkCPUCompatible->setBackgroundColor(colTextboxBackground);
 	chkCPUCompatible->addActionListener(cpuActionListener);
 
 	chkCpuDataCache = new gcn::CheckBox("Data cache");
 	chkCpuDataCache->setId("chkCpuDataCache");
+	chkCpuDataCache->setBaseColor(gui_baseCol);
+	chkCpuDataCache->setBackgroundColor(colTextboxBackground);
 	chkCpuDataCache->addActionListener(cpuActionListener);
 
 	chkJIT = new gcn::CheckBox("JIT", true);
 	chkJIT->setId("chkJIT");
+	chkJIT->setBaseColor(gui_baseCol);
+	chkJIT->setBackgroundColor(colTextboxBackground);
 	chkJIT->addActionListener(cpuActionListener);
 
 	grpCPU = new gcn::Window("CPU");
@@ -346,12 +366,18 @@ void InitPanelCPU(const struct config_category& category)
 
 	optMMUNone = new gcn::RadioButton("None", "radiommugroup");
 	optMMUNone->setId("optMMUNone");
+	optMMUNone->setBaseColor(gui_baseCol);
+	optMMUNone->setBackgroundColor(colTextboxBackground);
 	optMMUNone->addActionListener(cpuActionListener);
 	optMMUEnabled = new gcn::RadioButton("MMU", "radiommugroup");
 	optMMUEnabled->setId("optMMUEnabled");
+	optMMUEnabled->setBaseColor(gui_baseCol);
+	optMMUEnabled->setBackgroundColor(colTextboxBackground);
 	optMMUEnabled->addActionListener(cpuActionListener);
 	optMMUEC = new gcn::RadioButton("EC", "radiommugroup");
 	optMMUEC->setId("optMMUEC");
+	optMMUEC->setBaseColor(gui_baseCol);
+	optMMUEC->setBackgroundColor(colTextboxBackground);
 	optMMUEC->addActionListener(cpuActionListener);
 
 	grpMMU = new gcn::Window("MMU");
@@ -367,22 +393,32 @@ void InitPanelCPU(const struct config_category& category)
 
 	optFPUnone = new gcn::RadioButton("None", "radiofpugroup");
 	optFPUnone->setId("optFPUnone");
+	optFPUnone->setBaseColor(gui_baseCol);
+	optFPUnone->setBackgroundColor(colTextboxBackground);
 	optFPUnone->addActionListener(cpuActionListener);
 
 	optFPU68881 = new gcn::RadioButton("68881", "radiofpugroup");
 	optFPU68881->setId("optFPU68881");
+	optFPU68881->setBaseColor(gui_baseCol);
+	optFPU68881->setBackgroundColor(colTextboxBackground);
 	optFPU68881->addActionListener(cpuActionListener);
 
 	optFPU68882 = new gcn::RadioButton("68882", "radiofpugroup");
 	optFPU68882->setId("optFPU68882");
+	optFPU68882->setBaseColor(gui_baseCol);
+	optFPU68882->setBackgroundColor(colTextboxBackground);
 	optFPU68882->addActionListener(cpuActionListener);
 
 	optFPUinternal = new gcn::RadioButton("CPU internal", "radiofpugroup");
 	optFPUinternal->setId("optFPUinternal");
+	optFPUinternal->setBaseColor(gui_baseCol);
+	optFPUinternal->setBackgroundColor(colTextboxBackground);
 	optFPUinternal->addActionListener(cpuActionListener);
 
 	chkFPUStrict = new gcn::CheckBox("More compatible", true);
 	chkFPUStrict->setId("chkFPUStrict");
+	chkFPUStrict->setBaseColor(gui_baseCol);
+	chkFPUStrict->setBackgroundColor(colTextboxBackground);
 	chkFPUStrict->addActionListener(cpuActionListener);
 
 	grpFPU = new gcn::Window("FPU");
@@ -400,10 +436,14 @@ void InitPanelCPU(const struct config_category& category)
 
 	optCPUSpeedFastest = new gcn::RadioButton("Fastest Possible", "radiocpuspeedgroup");
 	optCPUSpeedFastest->setId("optCPUSpeedFastest");
+	optCPUSpeedFastest->setBaseColor(gui_baseCol);
+	optCPUSpeedFastest->setBackgroundColor(colTextboxBackground);
 	optCPUSpeedFastest->addActionListener(cpuActionListener);
 
 	optCPUSpeedReal = new gcn::RadioButton("A500/A1200 or cycle exact", "radiocpuspeedgroup");
 	optCPUSpeedReal->setId("optCPUSpeedReal");
+	optCPUSpeedReal->setBaseColor(gui_baseCol);
+	optCPUSpeedReal->setBackgroundColor(colTextboxBackground);
 	optCPUSpeedReal->addActionListener(cpuActionListener);
 
 	lblCpuSpeed = new gcn::Label("CPU Speed:");
@@ -455,6 +495,8 @@ void InitPanelCPU(const struct config_category& category)
 
 	chkCPUMultiThread = new gcn::CheckBox("Multi-threaded CPU");
 	chkCPUMultiThread->setId("chkCPUMultiThread");
+	chkCPUMultiThread->setBaseColor(gui_baseCol);
+	chkCPUMultiThread->setBackgroundColor(colTextboxBackground);
 	chkCPUMultiThread->addActionListener(cpuActionListener);
 
 	grpCPUCycleExact = new gcn::Window("Cycle-Exact CPU Emulation Speed");
@@ -482,24 +524,38 @@ void InitPanelCPU(const struct config_category& category)
 
 	chkFPUJIT = new gcn::CheckBox("FPU Support", true);
 	chkFPUJIT->setId("chkFPUJIT");
+	chkFPUJIT->setBaseColor(gui_baseCol);
+	chkFPUJIT->setBackgroundColor(colTextboxBackground);
 	chkFPUJIT->addActionListener(cpuActionListener);
 	chkConstantJump = new gcn::CheckBox("Constant jump");
 	chkConstantJump->setId("chkConstantJump");
+	chkConstantJump->setBaseColor(gui_baseCol);
+	chkConstantJump->setBackgroundColor(colTextboxBackground);
 	chkConstantJump->addActionListener(cpuActionListener);
 	chkHardFlush = new gcn::CheckBox("Hard flush");
 	chkHardFlush->setId("chkHardFlush");
+	chkHardFlush->setBaseColor(gui_baseCol);
+	chkHardFlush->setBackgroundColor(colTextboxBackground);
 	chkHardFlush->addActionListener(cpuActionListener);
 	optDirect = new gcn::RadioButton("Direct", "radiomemaccessgroup");
 	optDirect->setId("optDirect");
+	optDirect->setBaseColor(gui_baseCol);
+	optDirect->setBackgroundColor(colTextboxBackground);
 	optDirect->addActionListener(cpuActionListener);
 	optIndirect = new gcn::RadioButton("Indirect", "radiomemaccessgroup");
 	optIndirect->setId("optIndirect");
+	optIndirect->setBaseColor(gui_baseCol);
+	optIndirect->setBackgroundColor(colTextboxBackground);
 	optIndirect->addActionListener(cpuActionListener);
 	chkNoFlags = new gcn::CheckBox("No flags");
 	chkNoFlags->setId("chkNoFlags");
+	chkNoFlags->setBaseColor(gui_baseCol);
+	chkNoFlags->setBackgroundColor(colTextboxBackground);
 	chkNoFlags->addActionListener(cpuActionListener);
 	chkCatchExceptions = new gcn::CheckBox("Catch unexpected exceptions");
 	chkCatchExceptions->setId("chkCatchExceptions");
+	chkCatchExceptions->setBaseColor(gui_baseCol);
+	chkCatchExceptions->setBackgroundColor(colTextboxBackground);
 	chkCatchExceptions->addActionListener(cpuActionListener);
 
 	grpAdvJitSettings = new gcn::Window("Advanced JIT Settings");

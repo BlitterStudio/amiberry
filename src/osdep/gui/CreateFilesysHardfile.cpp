@@ -110,8 +110,12 @@ static void InitCreateFilesysHardfile()
 	txtDevice = new gcn::TextField();
 	txtDevice->setId("txtCreateDevice");
 	txtDevice->setSize(80, TEXTFIELD_HEIGHT);
+	txtDevice->setBaseColor(gui_baseCol);
+	txtDevice->setBackgroundColor(colTextboxBackground);
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
+	chkAutoboot->setBaseColor(gui_baseCol);
+	chkAutoboot->setBackgroundColor(colTextboxBackground);
 	chkAutoboot->setId("chkCreateHdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
@@ -119,13 +123,19 @@ static void InitCreateFilesysHardfile()
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setId("txtCreateBootPri");
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
+	txtBootPri->setBaseColor(gui_baseCol);
+	txtBootPri->setBackgroundColor(colTextboxBackground);
 
 	lblSize = new gcn::Label("Size (MB):");
 	lblSize->setAlignment(gcn::Graphics::RIGHT);
 	txtSize = new gcn::TextField();
 	txtSize->setSize(60, TEXTFIELD_HEIGHT);
+	txtSize->setBaseColor(gui_baseCol);
+	txtSize->setBackgroundColor(colTextboxBackground);
 
 	chkDynamic = new gcn::CheckBox("Dynamic VHD", true);
+	chkDynamic->setBaseColor(gui_baseCol);
+	chkDynamic->setBackgroundColor(colTextboxBackground);
 	chkDynamic->setId("chkDynamic");
 
 	lblPath = new gcn::Label("Path:");
@@ -133,6 +143,8 @@ static void InitCreateFilesysHardfile()
 	txtPath = new gcn::TextField();
 	txtPath->setId("txtCreatePath");
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
+	txtPath->setBaseColor(gui_baseCol);
+	txtPath->setBackgroundColor(colTextboxBackground);
 
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);

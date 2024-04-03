@@ -355,6 +355,7 @@ void InitPanelDisplay(const config_category& category)
 	sldAmigaWidth->addActionListener(amigaScreenActionListener);
 	txtAmigaWidth = new gcn::TextField();
 	txtAmigaWidth->setSize(35, TEXTFIELD_HEIGHT);
+	txtAmigaWidth->setBaseColor(gui_baseCol);
 	txtAmigaWidth->setBackgroundColor(colTextboxBackground);
 	txtAmigaWidth->addActionListener(amigaScreenActionListener);
 
@@ -369,19 +370,26 @@ void InitPanelDisplay(const config_category& category)
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
 	txtAmigaHeight = new gcn::TextField();
 	txtAmigaHeight->setSize(35, TEXTFIELD_HEIGHT);
+	txtAmigaHeight->setBaseColor(gui_baseCol);
 	txtAmigaHeight->setBackgroundColor(colTextboxBackground);
 	txtAmigaHeight->addActionListener(amigaScreenActionListener);
 
 	chkAutoCrop = new gcn::CheckBox("Auto Crop");
 	chkAutoCrop->setId("chkAutoCrop");
+	chkAutoCrop->setBaseColor(gui_baseCol);
+	chkAutoCrop->setBackgroundColor(colTextboxBackground);
 	chkAutoCrop->addActionListener(amigaScreenActionListener);
 
 	chkBorderless = new gcn::CheckBox("Borderless");
 	chkBorderless->setId("chkBorderless");
+	chkBorderless->setBaseColor(gui_baseCol);
+	chkBorderless->setBackgroundColor(colTextboxBackground);
 	chkBorderless->addActionListener(amigaScreenActionListener);
 
 	chkVsync = new gcn::CheckBox("VSync");
 	chkVsync->setId("chkVsync");
+	chkVsync->setBaseColor(gui_baseCol);
+	chkVsync->setBackgroundColor(colTextboxBackground);
 	chkVsync->addActionListener(amigaScreenActionListener);
 
 	lblHOffset = new gcn::Label("H. Offset:");
@@ -410,29 +418,43 @@ void InitPanelDisplay(const config_category& category)
 
 	chkHorizontal = new gcn::CheckBox("Horizontal");
 	chkHorizontal->setId("chkHorizontal");
+	chkHorizontal->setBaseColor(gui_baseCol);
+	chkHorizontal->setBackgroundColor(colTextboxBackground);
 	chkHorizontal->addActionListener(amigaScreenActionListener);
 	chkVertical = new gcn::CheckBox("Vertical");
 	chkVertical->setId("chkVertical");
+	chkVertical->setBaseColor(gui_baseCol);
+	chkVertical->setBackgroundColor(colTextboxBackground);
 	chkVertical->addActionListener(amigaScreenActionListener);
 
 	chkFlickerFixer = new gcn::CheckBox("Remove interlace artifacts");
 	chkFlickerFixer->setId("chkFlickerFixer");
+	chkFlickerFixer->setBaseColor(gui_baseCol);
+	chkFlickerFixer->setBackgroundColor(colTextboxBackground);
 	chkFlickerFixer->addActionListener(amigaScreenActionListener);
 
 	chkFilterLowRes = new gcn::CheckBox("Filtered Low Res");
 	chkFilterLowRes->setId("chkFilterLowRes");
+	chkFilterLowRes->setBaseColor(gui_baseCol);
+	chkFilterLowRes->setBackgroundColor(colTextboxBackground);
 	chkFilterLowRes->addActionListener(amigaScreenActionListener);
 
 	chkBlackerThanBlack = new gcn::CheckBox("Blacker than black");
 	chkBlackerThanBlack->setId("chkBlackerThanBlack");
+	chkBlackerThanBlack->setBaseColor(gui_baseCol);
+	chkBlackerThanBlack->setBackgroundColor(colTextboxBackground);
 	chkBlackerThanBlack->addActionListener(amigaScreenActionListener);
 	
 	chkAspect = new gcn::CheckBox("Correct Aspect Ratio");
 	chkAspect->setId("chkAspect");
+	chkAspect->setBaseColor(gui_baseCol);
+	chkAspect->setBackgroundColor(colTextboxBackground);
 	chkAspect->addActionListener(amigaScreenActionListener);
 
 	chkFrameskip = new gcn::CheckBox("Refresh:");
 	chkFrameskip->setId("chkFrameskip");
+	chkFrameskip->setBaseColor(gui_baseCol);
+	chkFrameskip->setBackgroundColor(colTextboxBackground);
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
 	sldRefresh = new gcn::Slider(1, 10);
@@ -550,22 +572,32 @@ void InitPanelDisplay(const config_category& category)
 	
 	optSingle = new gcn::RadioButton("Single", "linemodegroup");
 	optSingle->setId("optSingle");
+	optSingle->setBaseColor(gui_baseCol);
+	optSingle->setBackgroundColor(colTextboxBackground);
 	optSingle->addActionListener(lineModeActionListener);
 
 	optDouble = new gcn::RadioButton("Double", "linemodegroup");
 	optDouble->setId("optDouble");
+	optDouble->setBaseColor(gui_baseCol);
+	optDouble->setBackgroundColor(colTextboxBackground);
 	optDouble->addActionListener(lineModeActionListener);
 
 	optScanlines = new gcn::RadioButton("Scanlines", "linemodegroup");
 	optScanlines->setId("optScanlines");
+	optScanlines->setBaseColor(gui_baseCol);
+	optScanlines->setBackgroundColor(colTextboxBackground);
 	optScanlines->addActionListener(lineModeActionListener);
 
 	optDouble2 = new gcn::RadioButton("Double, fields", "linemodegroup");
 	optDouble2->setId("optDouble2");
+	optDouble2->setBaseColor(gui_baseCol);
+	optDouble2->setBackgroundColor(colTextboxBackground);
 	optDouble2->addActionListener(lineModeActionListener);
 
 	optDouble3 = new gcn::RadioButton("Double, fields+", "linemodegroup");
 	optDouble3->setId("optDouble3");
+	optDouble3->setBaseColor(gui_baseCol);
+	optDouble3->setBackgroundColor(colTextboxBackground);
 	optDouble3->addActionListener(lineModeActionListener);
 	
 	grpLineMode = new gcn::Window("Line mode");
@@ -583,18 +615,26 @@ void InitPanelDisplay(const config_category& category)
 
 	optISingle = new gcn::RadioButton("Single", "ilinemodegroup");
 	optISingle->setId("optISingle");
+	optISingle->setBaseColor(gui_baseCol);
+	optISingle->setBackgroundColor(colTextboxBackground);
 	optISingle->addActionListener(lineModeActionListener);
 
 	optIDouble = new gcn::RadioButton("Double, frames", "ilinemodegroup");
 	optIDouble->setId("optIDouble");
+	optIDouble->setBaseColor(gui_baseCol);
+	optIDouble->setBackgroundColor(colTextboxBackground);
 	optIDouble->addActionListener(lineModeActionListener);
 
 	optIDouble2 = new gcn::RadioButton("Double, fields", "ilinemodegroup");
 	optIDouble2->setId("optIDouble2");
+	optIDouble2->setBaseColor(gui_baseCol);
+	optIDouble2->setBackgroundColor(colTextboxBackground);
 	optIDouble2->addActionListener(lineModeActionListener);
 	
 	optIDouble3 = new gcn::RadioButton("Double, fields+", "ilinemodegroup");
 	optIDouble3->setId("optIDouble3");
+	optIDouble3->setBaseColor(gui_baseCol);
+	optIDouble3->setBackgroundColor(colTextboxBackground);
 	optIDouble3->addActionListener(lineModeActionListener);
 
 	grpILineMode = new gcn::Window("Interlaced line mode");

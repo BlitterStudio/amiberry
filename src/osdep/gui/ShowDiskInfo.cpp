@@ -59,7 +59,8 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	lstInfo->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	lstInfo->setBaseColor(gui_baseCol);
-	lstInfo->setBackgroundColor(gui_baseCol);
+	lstInfo->setBackgroundColor(colTextboxBackground);
+	lstInfo->setSelectionColor(gui_selection_color);
 	lstInfo->setWrappingEnabled(true);
 
 	scrAreaInfo = new gcn::ScrollArea(lstInfo);
@@ -69,7 +70,8 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	scrAreaInfo->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaInfo->setBaseColor(gui_baseCol);
-	scrAreaInfo->setBackgroundColor(gui_baseCol);
+	scrAreaInfo->setBackgroundColor(colTextboxBackground);
+	scrAreaInfo->setSelectionColor(gui_selection_color);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);

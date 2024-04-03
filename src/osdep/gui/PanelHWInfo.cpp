@@ -154,6 +154,7 @@ void InitPanelHWInfo(const config_category& category)
 			listCells[row][col] = new gcn::TextField();
 			listCells[row][col]->setSize(COLUMN_SIZE[col] - 8, TEXTFIELD_HEIGHT);
 			listCells[row][col]->setEnabled(false);
+			listCells[row][col]->setBaseColor(gui_baseCol);
 			listCells[row][col]->setBackgroundColor(colTextboxBackground);
 		}
 	}
@@ -181,6 +182,7 @@ void InitPanelHWInfo(const config_category& category)
 
 	scrlHwInfo = new gcn::ScrollArea(grpHwInfo);
 	scrlHwInfo->setBackgroundColor(gui_baseCol);
+	scrlHwInfo->setSelectionColor(gui_selection_color);
 	scrlHwInfo->setBaseColor(gui_baseCol);
 	scrlHwInfo->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	scrlHwInfo->setHeight(category.panel->getHeight() - DISTANCE_BORDER * 2);
