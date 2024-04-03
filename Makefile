@@ -338,10 +338,7 @@ CXX    ?= g++
 STRIP  ?= strip
 PROG   = amiberry
 
-#
-# SDL2 options
-#
-all: guisan mt32emu $(PROG)
+all: $(PROG)
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
 export CXXFLAGS = $(CFLAGS) -std=gnu++17
@@ -662,7 +659,7 @@ OBJS = \
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
-$(PROG): $(OBJS) $(C_OBJS)
+$(PROG): $(OBJS) $(C_OBJS) guisan mt32emu
 	$(CXX) -o $(PROG) $(OBJS) $(C_OBJS) $(LDFLAGS)
 ifndef DEBUG
 # want to keep a copy of the binary before stripping? Then enable the below line
