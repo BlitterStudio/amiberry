@@ -222,6 +222,12 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
 
+	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
+	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
+	chkMultithreadedDrawing->setBaseColor(gui_baseCol);
+	chkMultithreadedDrawing->setBackgroundColor(colTextboxBackground);
+	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
+
 	grpChipset = new gcn::Window("Chipset");
 	grpChipset->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpChipset->add(optOCS, 10, 10);
@@ -278,14 +284,6 @@ void InitPanelChipset(const struct config_category& category)
 	chkFastCopper->setBaseColor(gui_baseCol);
 	chkFastCopper->setBackgroundColor(colTextboxBackground);
 	chkFastCopper->addActionListener(chipsetActionListener);
-
-	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
-	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
-	chkMultithreadedDrawing->setBaseColor(gui_baseCol);
-	chkMultithreadedDrawing->setBackgroundColor(colTextboxBackground);
-	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
-
-	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	grpCopper = new gcn::Window("Copper");
 	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X,
