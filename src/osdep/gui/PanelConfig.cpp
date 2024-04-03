@@ -68,7 +68,7 @@ public:
 				disable_resume();
 			}
 			
-			target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, 0, 0);
+			target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 			strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
 			refresh_all_panels();
 		}
@@ -144,7 +144,7 @@ public:
 			{
 				disable_resume();
 			}
-			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, 0, 0);
+			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
 			refresh_all_panels();
 			

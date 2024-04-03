@@ -348,7 +348,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	if (std::filesystem::exists(uae_config))
 	{
-		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		return;
 	}
 
@@ -561,7 +561,7 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 		{
 			prefs->gfx_manual_crop = true;
 			prefs->gfx_manual_crop_height = std::stoi(game_detail.scr_height);
-			prefs->gfx_vertical_offset = ((AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution) - prefs->gfx_manual_crop_height) / 2;
+			prefs->gfx_vertical_offset = ((AMIGA_HEIGHT_MAX << prefs->gfx_vresolution) - prefs->gfx_manual_crop_height) / 2;
 		}
 	}
 
@@ -571,7 +571,7 @@ void set_gfx_settings(uae_prefs* prefs, const game_hardware_options& game_detail
 		{
 			prefs->gfx_manual_crop = true;
 			prefs->gfx_manual_crop_width = std::stoi(game_detail.scr_width);
-			prefs->gfx_horizontal_offset = ((AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution) - prefs->gfx_manual_crop_width) / 2;
+			prefs->gfx_horizontal_offset = ((AMIGA_WIDTH_MAX << prefs->gfx_resolution) - prefs->gfx_manual_crop_width) / 2;
 		}
 	}
 
@@ -1226,12 +1226,11 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename(whdload_prefs.filename);
 
-	// If we have a config file, we will use it.
-	// We will need it for the WHDLoad options too.
+	// If we have a config file, we use that first
 	if (std::filesystem::exists(uae_config))
 	{
 		write_log("WHDBooter -  %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
-		target_cfgfile_load(&currprefs, uae_config.c_str(), CONFIG_TYPE_ALL, 0);
+		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 	}
 
 	// setups for tmp folder.
