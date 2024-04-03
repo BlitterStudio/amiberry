@@ -7106,6 +7106,7 @@ static void init_beamcon0(bool fakehz)
 	}
 #endif
 	float clk = (float)(currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL);
+	int hardwired_vsstrt = 0;
 	if (!isntsc) {
 		maxvpos = MAXVPOS_PAL;
 		maxhpos = MAXHPOS_PAL;
@@ -7168,6 +7169,7 @@ static void init_beamcon0(bool fakehz)
 	// A1000 Agnus VBSTRT=first line, OCS and later: VBSTRT=last line
 	if (agnusa1000) {
 		maxvpos_display_vsync++;
+		hardwired_vsstrt++;
 	}
 
 	vblank_firstline_hw = minfirstline;
@@ -7354,16 +7356,26 @@ static void init_beamcon0(bool fakehz)
 		if (vsstrt > 0 && vsstrt < maxvpos / 2) {
 			maxvpos_display_vsync += vsstrt - 1;
 		}
-	} else if (beamcon0 & bemcon0_vsync_mask) {
-		firstblankedline = maxvpos + 1;
-	} else if (beamcon0 & BEAMCON0_VARVBEN) {
-		firstblankedline = vbstrt;
-		if (vsstrt > 0 && vsstrt < maxvpos / 2) {
-			maxvpos_display_vsync += vsstrt - 1;
-		}
 		// if (weird mode where) vblank starts after vsync start+3: minfirstline = vsstrt+3
 		if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME && firstblankedline >= vsstrt + 3 && minfirstline > vsstrt + 3 && firstblankedline < minfirstline) {
 			minfirstline = vsstrt + 3;
+			if (minfirstline_hw > minfirstline) {
+				minfirstline_hw = minfirstline;
+			}
+		}
+	} else if (beamcon0 & bemcon0_vsync_mask) {
+		firstblankedline = maxvpos + 1;
+	} else if (beamcon0 & BEAMCON0_VARVBEN) {
+		if (minfirstline > vbstop) {
+			minfirstline = vbstop;
+			if (minfirstline < 3) {
+				minfirstline = 3;
+			}
+		}
+		firstblankedline = vbstrt;
+		// if (weird mode where) vblank starts after vsync start+3: minfirstline = vsstrt+3
+		if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME && firstblankedline >= hardwired_vsstrt + 3 && minfirstline > hardwired_vsstrt + 3 && firstblankedline < minfirstline) {
+			minfirstline = hardwired_vsstrt + 3;
 			if (minfirstline_hw > minfirstline) {
 				minfirstline_hw = minfirstline;
 			}
