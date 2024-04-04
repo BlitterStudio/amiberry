@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 313
+#define NEXT_ROM_ID 314
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -582,8 +582,10 @@ static struct romdata roms[] = {
 	ALTROMPN(113, 1, 2, 32768, ROMTYPE_QUAD | ROMTYPE_ODD  | ROMTYPE_8BIT, _T("U27"), 0x38373cf6, 0xfe8aa931, 0xada6b6f3, 0x6b48ca3c, 0x9b86677d, 0xbee4da59)
 	ALTROMPN(113, 1, 3, 32768, ROMTYPE_QUAD | ROMTYPE_EVEN | ROMTYPE_8BIT, _T("U25"), 0xc9e990d3, 0xb251ef73, 0x1374e796, 0xa87cbc7e, 0x9263320a, 0x28a71d2b)
 	ALTROMPN(113, 1, 4, 32768, ROMTYPE_QUAD | ROMTYPE_ODD  | ROMTYPE_8BIT, _T("U26"), 0x2e117fe0, 0xbb2de2da, 0x6db4e92c, 0x636fefe6, 0x13a32699, 0xcea31011)
-	{ _T("Apollo 1240/1260"), 5, 60, 5, 60, _T("APOLLO12XX\0"), 131072, 119, 0, 0, ROMTYPE_CB_APOLLO, 0, 0, NULL,
+	{ _T("Apollo 1240/1260"), 5, 60, 5, 60, _T("APOLLO12XX\0"), 131072, 119, 0, 0, ROMTYPE_CB_APOLLO_12xx, 0, 0, NULL,
 	0xcd009ad9, 0x1c3b4851,0xc5a221e3,0xa7ca24fc,0xc1df4a5b,0x9f2343ad },
+	{ _T("Apollo 630"), 5, 61, 5, 61, _T("APOLLO630\0"), 16384, 313, 0, 0, ROMTYPE_CB_APOLLO_630, 0, 0, NULL,
+	0x286cf453, 0xe0597cb6,0x5a6471b3,0xfd674e7b,0xc9e2423d,0x43e51ffc },
 	{ _T("GVP A3001 Series I"), 3, 3, 3, 3, _T("A3001SI\0"), 8192, 114, 0, 0, ROMTYPE_CB_A3001S1, 0, 0, NULL,
 	0xaaff7c65, 0x424cf3da,0xcc9da794,0x0ba74446,0x69dd1691,0x44ae87ee, NULL, NULL },
 	{ _T("Kupke Golem 030"), 0, 0, 0, 0, _T("GOLEM030\0"), 8192, 126, 0, 0, ROMTYPE_CB_GOLEM030, 0, 0, NULL,
