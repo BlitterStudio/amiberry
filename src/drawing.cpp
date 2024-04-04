@@ -679,6 +679,11 @@ static void set_hblanking_limits(void)
 	bool doblank = false;
 	int hbstrt = ((maxhpos_short + 8) << CCK_SHRES_SHIFT) - 3;
 	int hbstop = (47 << CCK_SHRES_SHIFT) - 7;
+	if (denisea1000) {
+		hbstop = (47 << CCK_SHRES_SHIFT) - 7;
+	} else if (!ecs_denise) {
+		hbstop = (47 << CCK_SHRES_SHIFT) - 3;
+	}
 
 	if (currprefs.gfx_overscanmode < OVERSCANMODE_OVERSCAN) {
 		int mult = (OVERSCANMODE_OVERSCAN - currprefs.gfx_overscanmode) * 4;

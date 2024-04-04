@@ -385,7 +385,7 @@ static uae_u32 refmask;
 static int refresh_handled_slot;
 static bool refptr_preupdated;
 static bool hstrobe_conflict;
-static uae_u16 last_hstrobe;
+static uae_u16 strobe_vblank;
 static bool vhposw_modified;
 static int line_disabled;
 static bool custom_disabled;
@@ -1939,7 +1939,7 @@ static void end_estimate_last_fetch_cycle(int hpos)
 	if (estimated_cycles_empty != estimated_cycles) {
 		estimated_cycles = estimated_cycles_empty;
 		estimate_cycles_empty_index = hpos;
-		uae_s8* est = maxhposeven ? estimated_cycles_buf1 : estimated_cycles_buf0;
+		uae_s8 *est = maxhposeven ? estimated_cycles_buf1 : estimated_cycles_buf0;
 		if (maxhpos == estimated_maxhpos[0]) {
 			est = estimated_cycles_buf0;
 		} else if (maxhpos == estimated_maxhpos[1]) {
@@ -6302,19 +6302,21 @@ static void reset_decisions_hsync_start(void)
 		if (new_beamcon0 & BEAMCON0_BLANKEN) {
 			// Follow Agnus VBLANK state directly via CSYNC connection. Ignore strobe vblank state.
 			thisline_decision.vb = vb_state || vb_end_line ? VB_PRGVB : VB_NOVB;
-		}
-		else {
+		} else {
 			// CSYNC: follow CSYNC state
 			thisline_decision.vb = vs_state_on ? VB_PRGVB : VB_NOVB;
 		}
 	} else if (ecs_agnus) {
 		// Visible vblank end is delayed by 1 line
 		thisline_decision.vb = vb_start_line >= 2 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
-		if (hstrobe_conflict && last_hstrobe == 0x3a && thisline_decision.vb) {
+		if (hstrobe_conflict && strobe_vblank && thisline_decision.vb) {
 			thisline_decision.vb = VB_XBLANK;
 		}
 	} else {
 		thisline_decision.vb = vb_start_line >= 2 + vblank_extraline || vb_end_next_line ? 0 : VB_NOVB;
+		if (hstrobe_conflict && strobe_vblank && thisline_decision.vb) {
+			thisline_decision.vb = VB_XBLANK;
+		}
 	}
 
 	// if programmed vblank
@@ -6586,7 +6588,7 @@ static void dumpsync(void)
 		hsyncstartpos >> CCK_SHRES_SHIFT, hsyncstartpos & ((1 << CCK_SHRES_SHIFT) - 1),
 		hsyncstartpos >> CCK_SHRES_SHIFT, hsyncstartpos & ((1 << CCK_SHRES_SHIFT) - 1),
 		hsyncendpos >> CCK_SHRES_SHIFT, hsyncendpos & ((1 << CCK_SHRES_SHIFT) - 1),
-		hsyncendpos >> CCK_SHRES_SHIFT, hsyncendpos & ((1 << CCK_SHRES_SHIFT) - 1));
+		hsyncendpos >> CCK_SHRES_SHIFT, hsyncendpos &((1 << CCK_SHRES_SHIFT) - 1));
 	write_log(_T(" Lines=%04X-%04X (%d-%d)\n"),
 		minfirstline, maxvpos_display + maxvpos_display_vsync,
 		minfirstline, maxvpos_display + maxvpos_display_vsync);
@@ -6727,6 +6729,11 @@ static void updateextblk(void)
 	if (!exthblank) {
 		hbstrt_v2 = (8 << CCK_SHRES_SHIFT) - 3;
 		hbstop_v2 = (47 << CCK_SHRES_SHIFT) - 7;
+		if (denisea1000) {
+			hbstop_v2 = (47 << CCK_SHRES_SHIFT) - 7;
+		} else if (!ecs_denise) {
+			hbstop_v2 = (47 << CCK_SHRES_SHIFT) - 3;
+		}
 		hbstrt_v2 = adjust_hr(hbstrt_v2);
 		hbstop_v2 = adjust_hr(hbstop_v2);
 	}
@@ -6841,9 +6848,7 @@ static void updateextblk(void)
 	denisehtotal <<= CCK_SHRES_SHIFT;
 
 	// ECS Denise has 1 extra lores pixel in right border
-	if (currprefs.gfx_overscanmode >= OVERSCANMODE_ULTRA) {
-		denisehtotal += 2 << (CCK_SHRES_SHIFT - 1);
-	} else if (ecs_denise) {
+	if (ecs_denise) {
 		denisehtotal += 1 << (CCK_SHRES_SHIFT - 1);
 	}
 
@@ -14161,8 +14166,7 @@ static void hsync_handler_post(bool onvsync)
 
 	if (issyncstopped()) {
 		issyncstopped_count++;
-	}
-	else {
+	} else {
 		issyncstopped_count = 0;
 	}
 
@@ -14172,7 +14176,13 @@ static void hsync_handler_post(bool onvsync)
 		uae_u16 strobe = get_strobe_reg(i);
 		if (i == 0) {
 			if (!hstrobe_conflict) {
-				last_hstrobe = strobe;
+				if (strobe == 0x38 || (strobe == 0x3a && ecs_denise)) {
+					// OCS: only STREQU enables vblank. STREQU and STRVBL if ECS Denise.
+					strobe_vblank = 1;
+				} else if (strobe == 0x3c) {
+					// STRHOR disables vblank
+					strobe_vblank = 0;
+				}
 			}
 		}
 		alloc_cycle(hp, strobe != 0x1fe ? CYCLE_STROBE : CYCLE_REFRESH);
@@ -14558,7 +14568,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 	hdiwstate_blank = diw_states::DIW_waiting_start;
 	maxvpos_display_vsync_next = false;
 	hstrobe_conflict = false;
-	last_hstrobe = 0;
+	strobe_vblank = 0;
 
 	irq_forced_delay = 0;
 	irq_forced = 0;
@@ -15195,9 +15205,17 @@ static int REGPARAM2 custom_wput_1 (int hpos, uaecptr addr, uae_u32 value, int n
 #endif
 	case 0x034: POTGO(value); break;
 
-	case 0x038: last_hstrobe = 0x38; break;
-	case 0x03a: last_hstrobe = 0x3a; break;
-	case 0x03c: last_hstrobe = 0x3c; break;
+	case 0x038:
+		strobe_vblank = 1;
+		break;
+	case 0x03a:
+		if (ecs_denise) {
+			strobe_vblank = 1;
+		}
+		break;
+	case 0x03c:
+		strobe_vblank = 0;
+		break;
 
 	case 0x040: BLTCON0(hpos, value); break;
 	case 0x042: BLTCON1(hpos, value); break;
