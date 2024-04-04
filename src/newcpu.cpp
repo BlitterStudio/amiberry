@@ -497,8 +497,9 @@ static bool get_trace(uaecptr addr, int accessmode, int size, uae_u32 *data)
 		x_do_cycles(c);
 		return false;
 	}
-	if (cputrace.memoryoffset > 0 || cputrace.cyclecounter_pre) {
-		gui_message(_T("CPU trace: GET %08x %d %d NOT FOUND!\n"), addr, accessmode, size);
+	if ((cputrace.writecounter > 0 || cputrace.readcounter > 0) && cputrace.cyclecounter_pre) {
+		gui_message(_T("CPU trace: GET %08x %d %d (%d %d %d) NOT FOUND!\n"),
+			addr, accessmode, size, cputrace.readcounter, cputrace.writecounter, cputrace.cyclecounter_pre);
 	}
 	check_trace();
 	*data = 0;
