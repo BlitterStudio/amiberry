@@ -288,7 +288,7 @@ static void RefreshWhdListModel()
 	}
 }
 
-class QSCDButtonActionListener : public gcn::ActionListener
+class QSCDActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -303,11 +303,14 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
 		{
+			//---------------------------------------
+			// Insert CD into drive
+			//---------------------------------------
 			std::string tmp;
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				tmp = std::string(changed_prefs.cdslots[0].name);
 			else
-				tmp = current_dir;
+				tmp = get_cdrom_path();
 
 			tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
 			{
@@ -317,7 +320,6 @@ public:
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					add_file_to_mru_list(lstMRUCDList, tmp);
-					current_dir = extract_path(tmp);
 
 					RefreshCDListModel();
 					AdjustDropDownControls();
@@ -325,99 +327,44 @@ public:
 			}
 			cmdCDSelect->requestFocus();
 		}
+		else if (actionEvent.getSource() == cboCDFile && !bIgnoreListChange)
+		{
+			//---------------------------------------
+			// CD image from list selected
+			//---------------------------------------
+			const auto idx = cboCDFile->getSelected();
+
+			if (idx < 0)
+			{
+				strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+				AdjustDropDownControls();
+			}
+			else
+			{
+				const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
+				if (element != changed_prefs.cdslots[0].name)
+				{
+					strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+					DISK_history_add(changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
+					changed_prefs.cdslots[0].inuse = true;
+					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
+					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
+					bIgnoreListChange = true;
+					cboCDFile->setSelected(0);
+					bIgnoreListChange = false;
+				}
+			}
+		}
 
 		RefreshPanelHD();
 		RefreshPanelQuickstart();
 	}
 };
 
-static QSCDButtonActionListener* cdButtonActionListener;
-
-class QSCDFileActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		//---------------------------------------
-		// CD image from list selected
-		//---------------------------------------
-		if (!bIgnoreListChange)
-		{
-			if (actionEvent.getSource() == cboCDFile)
-			{
-				const auto idx = cboCDFile->getSelected();
-
-				if (idx < 0)
-				{
-					strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
-					AdjustDropDownControls();
-				}
-				else
-				{
-					const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
-					if (element != changed_prefs.cdslots[0].name)
-					{
-						strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
-						DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
-						changed_prefs.cdslots[0].inuse = true;
-						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
-						lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
-						bIgnoreListChange = true;
-						cboCDFile->setSelected(0);
-						bIgnoreListChange = false;
-					}
-				}
-				RefreshPanelHD();
-				RefreshPanelQuickstart();
-			}
-		}
-	}
-};
-
-static QSCDFileActionListener* cdFileActionListener;
+static QSCDActionListener* cdActionListener;
 
 class QSWHDLoadActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		//---------------------------------------
-		// WHDLoad file from list selected
-		//---------------------------------------
-		if (!bIgnoreListChange)
-		{
-			if (actionEvent.getSource() == cboWhdload)
-			{
-				const auto idx = cboWhdload->getSelected();
-
-				if (idx < 0)
-				{
-					whdload_prefs.whdload_filename = "";
-				}
-				else
-				{
-					const auto element = get_full_path_from_disk_list(whdloadFileList.getElementAt(idx));
-					if (element != whdload_prefs.whdload_filename)
-					{
-						whdload_prefs.whdload_filename.assign(element);
-						lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
-						lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_prefs.whdload_filename);
-						bIgnoreListChange = true;
-						cboWhdload->setSelected(0);
-						bIgnoreListChange = false;
-					}
-					whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-				}
-				refresh_all_panels();
-			}
-		}
-	}
-};
-
-static QSWHDLoadActionListener* whdloadActionListener;
-
-class QSWHDLoadButtonActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -431,6 +378,9 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdWhdloadSelect)
 		{
+			//---------------------------------------
+			// Insert WHDLoad file
+			//---------------------------------------
 			std::string tmp;
 			if (!whdload_prefs.whdload_filename.empty())
 				tmp = whdload_prefs.whdload_filename;
@@ -443,19 +393,45 @@ public:
 				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
 				RefreshWhdListModel();
 				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-				
+
 				AdjustDropDownControls();
 				SetLastActiveConfig(whdload_prefs.whdload_filename.c_str());
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
-		refresh_all_panels();
+		else if (actionEvent.getSource() == cboWhdload && !bIgnoreListChange)
+		{
+			//---------------------------------------
+			// WHDLoad file from list selected
+			//---------------------------------------
+			const auto idx = cboWhdload->getSelected();
+
+			if (idx < 0)
+			{
+				whdload_prefs.whdload_filename = "";
+			}
+			else
+			{
+				const auto element = get_full_path_from_disk_list(whdloadFileList.getElementAt(idx));
+				if (element != whdload_prefs.whdload_filename)
+				{
+					whdload_prefs.whdload_filename.assign(element);
+					lstMRUWhdloadList.erase(lstMRUWhdloadList.begin() + idx);
+					lstMRUWhdloadList.insert(lstMRUWhdloadList.begin(), whdload_prefs.whdload_filename);
+					bIgnoreListChange = true;
+					cboWhdload->setSelected(0);
+					bIgnoreListChange = false;
+				}
+				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
+			}
+			refresh_all_panels();
+		}
 	}
 };
 
-static QSWHDLoadButtonActionListener* whdloadButtonActionListener;
+static QSWHDLoadActionListener* whdloadActionListener;
 
-class AmigaModelActionListener : public gcn::ActionListener
+class QuickstartActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -491,7 +467,25 @@ public:
 			refresh_all_panels();
 		}
 
-		if (actionEvent.getSource() == cmdSetConfiguration)
+		if (actionEvent.getSource() == chkNTSC)
+		{
+			if (chkNTSC->isSelected())
+			{
+				changed_prefs.ntscmode = true;
+				changed_prefs.chipset_refreshrate = 60;
+			}
+			else
+			{
+				changed_prefs.ntscmode = false;
+				changed_prefs.chipset_refreshrate = 50;
+			}
+			RefreshPanelChipset();
+		}
+		else if (actionEvent.getSource() == chkQuickstartMode)
+		{
+			amiberry_options.quickstart_start = chkQuickstartMode->isSelected();
+		}
+		else if (actionEvent.getSource() == cmdSetConfiguration)
 		{
 			AdjustPrefs();
 			refresh_all_panels();
@@ -499,34 +493,14 @@ public:
 	}
 };
 
-static AmigaModelActionListener* amigaModelActionListener;
+static QuickstartActionListener* quickstartActionListener;
 
-class QSNTSCButtonActionListener : public gcn::ActionListener
+class QSDiskActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (chkNTSC->isSelected())
-		{
-			changed_prefs.ntscmode = true;
-			changed_prefs.chipset_refreshrate = 60;
-		}
-		else
-		{
-			changed_prefs.ntscmode = false;
-			changed_prefs.chipset_refreshrate = 50;
-		}
-		RefreshPanelChipset();
-	}
-};
-
-static QSNTSCButtonActionListener* ntscButtonActionListener;
-
-class QSDFxCheckActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
+		int sub;
 		for (auto i = 0; i < 2; ++i)
 		{
 			if (actionEvent.getSource() == chkqsDFx[i])
@@ -547,35 +521,18 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) <= 0)
 					return;
 				disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
-									 chkqsDFxWriteProtect[i]->isSelected());
+					chkqsDFxWriteProtect[i]->isSelected());
 				if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != chkqsDFxWriteProtect[i]->
 					isSelected())
 				{
 					// Failed to change write protection -> maybe filesystem doesn't support this
 					ShowMessage("Set/Clear write protect", "Failed to change write permission.",
-								"Maybe underlying filesystem doesn't support this.", "", "Ok", "");
+						"Maybe underlying filesystem doesn't support this.", "", "Ok", "");
 					chkqsDFxWriteProtect[i]->requestFocus();
 				}
 				DISK_reinsert(i);
 			}
-		}
-
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
-	}
-};
-
-static QSDFxCheckActionListener* qsdfxCheckActionListener;
-
-class QSDriveTypeActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		int sub;
-		for (auto i = 0; i < 2; ++i)
-		{
-			if (actionEvent.getSource() == cboqsDFxType[i])
+			else if (actionEvent.getSource() == cboqsDFxType[i])
 			{
 				const auto selectedType = cboqsDFxType[i]->getSelected();
 				const int dfxtype = todfxtype(i, selectedType - 1, &sub);
@@ -592,22 +549,7 @@ public:
 					changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
 				}
 			}
-		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
-	}
-};
-
-static QSDriveTypeActionListener* qsDriveTypeActionListener;
-
-class QSDFxButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		for (auto i = 0; i < 2; ++i)
-		{
-			if (actionEvent.getSource() == cmdqsDFxInfo[i])
+			else if (actionEvent.getSource() == cmdqsDFxInfo[i])
 			{
 				//---------------------------------------
 				// Show info about current disk-image
@@ -634,7 +576,8 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
 					tmp = std::string(changed_prefs.floppyslots[i].df);
 				else
-					tmp = current_dir;
+					tmp = get_floppy_path();
+
 				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
@@ -642,7 +585,6 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
 						disk_insert(i, tmp.c_str());
 						RefreshDiskListModel();
-						current_dir = extract_path(tmp);
 
 						AdjustDropDownControls();
 						SetLastActiveConfig(tmp.c_str());
@@ -650,22 +592,7 @@ public:
 				}
 				cmdqsDFxSelect[i]->requestFocus();
 			}
-		}
-
-		refresh_all_panels();
-	}
-};
-
-static QSDFxButtonActionListener* qsdfxButtonActionListener;
-
-class QSDiskFileActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		for (auto i = 0; i < 2; ++i)
-		{
-			if (actionEvent.getSource() == cboqsDFxFile[i])
+			else if (actionEvent.getSource() == cboqsDFxFile[i])
 			{
 				//---------------------------------------
 				// Disk image from list selected
@@ -703,18 +630,7 @@ public:
 	}
 };
 
-static QSDiskFileActionListener* diskFileActionListener;
-
-class QuickstartModeActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		amiberry_options.quickstart_start = chkQuickstartMode->isSelected();
-	}
-};
-
-static QuickstartModeActionListener* quickstartModeActionListener;
+static QSDiskActionListener* qs_diskActionListener;
 
 void InitPanelQuickstart(const config_category& category)
 {
@@ -742,17 +658,10 @@ void InitPanelQuickstart(const config_category& category)
 		cdfileList.add(std::string(filename).append(" { ").append(full_path).append(" }"));
 	}
 
-	amigaModelActionListener = new AmigaModelActionListener();
-	ntscButtonActionListener = new QSNTSCButtonActionListener();
-	qsdfxCheckActionListener = new QSDFxCheckActionListener();
-	qsDriveTypeActionListener = new QSDriveTypeActionListener();
-	qsdfxButtonActionListener = new QSDFxButtonActionListener();
-	diskFileActionListener = new QSDiskFileActionListener();
-	cdButtonActionListener = new QSCDButtonActionListener();
-	cdFileActionListener = new QSCDFileActionListener();
-	quickstartModeActionListener = new QuickstartModeActionListener();
+	quickstartActionListener = new QuickstartActionListener();
+	qs_diskActionListener = new QSDiskActionListener();
+	cdActionListener = new QSCDActionListener();
 	whdloadActionListener = new QSWHDLoadActionListener();
-	whdloadButtonActionListener = new QSWHDLoadButtonActionListener();
 
 	lblModel = new gcn::Label("Amiga model:");
 	lblModel->setAlignment(gcn::Graphics::RIGHT);
@@ -762,7 +671,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboModel->setBackgroundColor(colTextboxBackground);
 	cboModel->setSelectionColor(gui_selection_color);
 	cboModel->setId("cboAModel");
-	cboModel->addActionListener(amigaModelActionListener);
+	cboModel->addActionListener(quickstartActionListener);
 
 	lblConfig = new gcn::Label("Config:");
 	lblConfig->setAlignment(gcn::Graphics::RIGHT);
@@ -773,13 +682,13 @@ void InitPanelQuickstart(const config_category& category)
 	cboConfig->setBackgroundColor(colTextboxBackground);
 	cboConfig->setSelectionColor(gui_selection_color);
 	cboConfig->setId("cboAConfig");
-	cboConfig->addActionListener(amigaModelActionListener);
+	cboConfig->addActionListener(quickstartActionListener);
 
 	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("qsNTSC");
 	chkNTSC->setBaseColor(gui_baseCol);
 	chkNTSC->setBackgroundColor(colTextboxBackground);
-	chkNTSC->addActionListener(ntscButtonActionListener);
+	chkNTSC->addActionListener(quickstartActionListener);
 
 	for (auto i = 0; i < 2; ++i)
 	{
@@ -790,7 +699,7 @@ void InitPanelQuickstart(const config_category& category)
 		chkqsDFx[i]->setId(tmp);
 		chkqsDFx[i]->setBaseColor(gui_baseCol);
 		chkqsDFx[i]->setBackgroundColor(colTextboxBackground);
-		chkqsDFx[i]->addActionListener(qsdfxCheckActionListener);
+		chkqsDFx[i]->addActionListener(qs_diskActionListener);
 
 		cboqsDFxType[i] = new gcn::DropDown(&qsDriveTypeList);
 		cboqsDFxType[i]->setBaseColor(gui_baseCol);
@@ -798,36 +707,35 @@ void InitPanelQuickstart(const config_category& category)
 		cboqsDFxType[i]->setSelectionColor(gui_selection_color);
 		snprintf(tmp, 20, "cboqsType%d", i);
 		cboqsDFxType[i]->setId(tmp);
-		cboqsDFxType[i]->addActionListener(qsDriveTypeActionListener);
+		cboqsDFxType[i]->addActionListener(qs_diskActionListener);
 
 		chkqsDFxWriteProtect[i] = new gcn::CheckBox("Write-protected");
 		snprintf(tmp, 20, "qsWP%d", i);
 		chkqsDFxWriteProtect[i]->setId(tmp);
 		chkqsDFxWriteProtect[i]->setBaseColor(gui_baseCol);
 		chkqsDFxWriteProtect[i]->setBackgroundColor(colTextboxBackground);
-		chkqsDFxWriteProtect[i]->addActionListener(qsdfxCheckActionListener);
-
+		chkqsDFxWriteProtect[i]->addActionListener(qs_diskActionListener);
 
 		cmdqsDFxInfo[i] = new gcn::Button("?");
 		snprintf(tmp, 20, "qsInfo%d", i);
 		cmdqsDFxInfo[i]->setId(tmp);
 		cmdqsDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		cmdqsDFxInfo[i]->setBaseColor(gui_baseCol);
-		cmdqsDFxInfo[i]->addActionListener(qsdfxButtonActionListener);
+		cmdqsDFxInfo[i]->addActionListener(qs_diskActionListener);
 
 		cmdqsDFxEject[i] = new gcn::Button("Eject");
 		snprintf(tmp, 20, "qscmdEject%d", i);
 		cmdqsDFxEject[i]->setId(tmp);
 		cmdqsDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 		cmdqsDFxEject[i]->setBaseColor(gui_baseCol);
-		cmdqsDFxEject[i]->addActionListener(qsdfxButtonActionListener);
+		cmdqsDFxEject[i]->addActionListener(qs_diskActionListener);
 
 		cmdqsDFxSelect[i] = new gcn::Button("Select file");
 		snprintf(tmp, 20, "qscmdSel%d", i);
 		cmdqsDFxSelect[i]->setId(tmp);
 		cmdqsDFxSelect[i]->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 		cmdqsDFxSelect[i]->setBaseColor(gui_baseCol);
-		cmdqsDFxSelect[i]->addActionListener(qsdfxButtonActionListener);
+		cmdqsDFxSelect[i]->addActionListener(qs_diskActionListener);
 
 		cboqsDFxFile[i] = new gcn::DropDown(&diskfileList);
 		snprintf(tmp, 20, "cboqsDisk%d", i);
@@ -836,7 +744,7 @@ void InitPanelQuickstart(const config_category& category)
 		cboqsDFxFile[i]->setBaseColor(gui_baseCol);
 		cboqsDFxFile[i]->setBackgroundColor(colTextboxBackground);
 		cboqsDFxFile[i]->setSelectionColor(gui_selection_color);
-		cboqsDFxFile[i]->addActionListener(diskFileActionListener);
+		cboqsDFxFile[i]->addActionListener(qs_diskActionListener);
 	}
 
 	chkCD = new gcn::CheckBox("CD drive");
@@ -849,13 +757,13 @@ void InitPanelQuickstart(const config_category& category)
 	cmdCDEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdCDEject->setBaseColor(gui_baseCol);
 	cmdCDEject->setId("qscdEject");
-	cmdCDEject->addActionListener(cdButtonActionListener);
+	cmdCDEject->addActionListener(cdActionListener);
 
 	cmdCDSelect = new gcn::Button("Select image");
 	cmdCDSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdCDSelect->setBaseColor(gui_baseCol);
 	cmdCDSelect->setId("qsCDSelect");
-	cmdCDSelect->addActionListener(cdButtonActionListener);
+	cmdCDSelect->addActionListener(cdActionListener);
 
 	cboCDFile = new gcn::DropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
@@ -863,19 +771,19 @@ void InitPanelQuickstart(const config_category& category)
 	cboCDFile->setBackgroundColor(colTextboxBackground);
 	cboCDFile->setSelectionColor(gui_selection_color);
 	cboCDFile->setId("cboCD");
-	cboCDFile->addActionListener(cdFileActionListener);
+	cboCDFile->addActionListener(cdActionListener);
 
 	chkQuickstartMode = new gcn::CheckBox("Start in Quickstart mode");
 	chkQuickstartMode->setId("qsMode");
 	chkQuickstartMode->setBaseColor(gui_baseCol);
 	chkQuickstartMode->setBackgroundColor(colTextboxBackground);
-	chkQuickstartMode->addActionListener(quickstartModeActionListener);
+	chkQuickstartMode->addActionListener(quickstartActionListener);
 
 	cmdSetConfiguration = new gcn::Button("Set configuration");
 	cmdSetConfiguration->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
 	cmdSetConfiguration->setBaseColor(gui_baseCol);
 	cmdSetConfiguration->setId("cmdSetConfig");
-	cmdSetConfiguration->addActionListener(amigaModelActionListener);
+	cmdSetConfiguration->addActionListener(quickstartActionListener);
 
 	lblWhdload = new gcn::Label("WHDLoad auto-config:");
 	cboWhdload = new gcn::DropDown(&whdloadFileList);
@@ -890,13 +798,13 @@ void InitPanelQuickstart(const config_category& category)
 	cmdWhdloadEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadEject->setBaseColor(gui_baseCol);
 	cmdWhdloadEject->setId("cmdQsWhdloadEject");
-	cmdWhdloadEject->addActionListener(whdloadButtonActionListener);
+	cmdWhdloadEject->addActionListener(whdloadActionListener);
 
 	cmdWhdloadSelect = new gcn::Button("Select file");
 	cmdWhdloadSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadSelect->setBaseColor(gui_baseCol);
 	cmdWhdloadSelect->setId("cmdQsWhdloadSelect");
-	cmdWhdloadSelect->addActionListener(whdloadButtonActionListener);
+	cmdWhdloadSelect->addActionListener(whdloadActionListener);
 
 	category.panel->add(lblModel, DISTANCE_BORDER, posY);
 	category.panel->add(cboModel, DISTANCE_BORDER + lblModel->getWidth() + 8, posY);
@@ -992,17 +900,10 @@ void ExitPanelQuickstart()
 	delete cmdWhdloadEject;
 	delete cmdWhdloadSelect;
 
-	delete amigaModelActionListener;
-	delete ntscButtonActionListener;
-	delete qsdfxCheckActionListener;
-	delete qsDriveTypeActionListener;
-	delete qsdfxButtonActionListener;
-	delete diskFileActionListener;
-	delete cdButtonActionListener;
-	delete cdFileActionListener;
-	delete quickstartModeActionListener;
+	delete quickstartActionListener;
+	delete qs_diskActionListener;
+	delete cdActionListener;
 	delete whdloadActionListener;
-	delete whdloadButtonActionListener;
 }
 
 static void AdjustDropDownControls()
