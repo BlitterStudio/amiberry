@@ -11,7 +11,7 @@
 #include "fsdb_host.h"
 #include "statusline.h"
 
-static gcn::ScrollArea* scrollArea;
+static gcn::ScrollArea* scrlMisc;
 static gcn::Window* grpMiscOptions;
 
 static gcn::CheckBox* chkAltTabRelease;
@@ -624,17 +624,17 @@ void InitPanelMisc(const config_category& category)
 
 	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 40, 800);
 
-	scrollArea = new gcn::ScrollArea(grpMiscOptions);
-	scrollArea->setId("scrlMisc");
-	scrollArea->setBackgroundColor(gui_baseCol);
-	scrollArea->setBaseColor(gui_baseCol);
-	scrollArea->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 25);
-	scrollArea->setHeight(600);
-	scrollArea->setBorderSize(1);
-	scrollArea->setFocusable(true);
-	category.panel->add(scrollArea, DISTANCE_BORDER, DISTANCE_BORDER);
+	scrlMisc = new gcn::ScrollArea(grpMiscOptions);
+	scrlMisc->setId("scrlMisc");
+	scrlMisc->setBackgroundColor(gui_baseCol);
+	scrlMisc->setBaseColor(gui_baseCol);
+	scrlMisc->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 25);
+	scrlMisc->setHeight(600);
+	scrlMisc->setBorderSize(1);
+	scrlMisc->setFocusable(true);
+	category.panel->add(scrlMisc, DISTANCE_BORDER, DISTANCE_BORDER);
 
-	const auto column2_x = scrollArea->getWidth() + 20;
+	const auto column2_x = scrlMisc->getWidth() + 20;
 	posY = DISTANCE_BORDER;
 	
 	category.panel->add(lblOpenGUI, column2_x, posY);
@@ -748,7 +748,7 @@ void ExitPanelMisc()
 	delete miscActionListener;
 
 	delete grpMiscOptions;
-	delete scrollArea;
+	delete scrlMisc;
 }
 
 void RefreshPanelMisc()

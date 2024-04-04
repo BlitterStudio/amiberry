@@ -1,1 +1,1 @@
-Directory for NVRAM files
+Directory for WHDLoad (.lha) files

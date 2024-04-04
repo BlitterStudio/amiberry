@@ -243,7 +243,7 @@ public:
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				tmp = std::string(changed_prefs.cdslots[0].name);
 			else
-				tmp = current_dir;
+				tmp = get_cdrom_path();
 
 			tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
 			{
@@ -253,7 +253,6 @@ public:
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					add_file_to_mru_list(lstMRUCDList, tmp);
-					current_dir = extract_path(tmp);
 
 					RefreshCDListModel();
 					AdjustDropDownControls();
