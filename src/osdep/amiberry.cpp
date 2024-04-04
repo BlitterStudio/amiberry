@@ -288,6 +288,9 @@ std::string controllers_path;
 std::string retroarch_file;
 std::string whdboot_path;
 std::string whdload_arch_path;
+std::string floppy_path;
+std::string harddrive_path;
+std::string cdrom_path;
 std::string logfile_path;
 std::string floppy_sounds_dir;
 std::string data_dir;
@@ -3044,6 +3047,36 @@ void set_whdload_arch_path(const std::string& newpath)
 	whdload_arch_path = newpath;
 }
 
+std::string get_floppy_path()
+{
+	return fix_trailing(floppy_path);
+}
+
+void set_floppy_path(const std::string& newpath)
+{
+	floppy_path = newpath;
+}
+
+std::string get_harddrive_path()
+{
+	return fix_trailing(harddrive_path);
+}
+
+void set_harddrive_path(const std::string& newpath)
+{
+	harddrive_path = newpath;
+}
+
+std::string get_cdrom_path()
+{
+	return fix_trailing(cdrom_path);
+}
+
+void set_cdrom_path(const std::string& newpath)
+{
+	cdrom_path = newpath;
+}
+
 std::string get_logfile_path()
 {
 	return logfile_path;
@@ -3489,6 +3522,9 @@ void save_amiberry_settings(void)
 	write_string_option("retroarch_config", retroarch_file);
 	write_string_option("whdboot_path", whdboot_path);
 	write_string_option("whdload_arch_path", whdload_arch_path);
+	write_string_option("floppy_path", floppy_path);
+	write_string_option("harddrive_path", harddrive_path);
+	write_string_option("cdrom_path", cdrom_path);
 	write_string_option("logfile_path", logfile_path);
 	write_string_option("rom_path", rom_path);
 	write_string_option("rp9_path", rp9_path);
@@ -3629,6 +3665,9 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file);
 		ret |= cfgfile_string(option, value, "whdboot_path", whdboot_path);
 		ret |= cfgfile_string(option, value, "whdload_arch_path", whdload_arch_path);
+		ret |= cfgfile_string(option, value, "floppy_path", floppy_path);
+		ret |= cfgfile_string(option, value, "harddrive_path", harddrive_path);
+		ret |= cfgfile_string(option, value, "cdrom_path", cdrom_path);
 		ret |= cfgfile_string(option, value, "logfile_path", logfile_path);
 		ret |= cfgfile_string(option, value, "rom_path", rom_path);
 		ret |= cfgfile_string(option, value, "rp9_path", rp9_path);
@@ -3885,7 +3924,7 @@ static void init_amiberry_paths(void)
 		init_macos_amiberry_folders(macos_amiberry_directory);
 		macos_copy_amiberry_files_to_userdir(macos_amiberry_directory);
 	}
-	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path =
+	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = video_dir = macos_amiberry_directory;
 
@@ -3894,6 +3933,9 @@ static void init_amiberry_paths(void)
 	data_dir.append("/Data/");
 	whdboot_path.append("/Whdboot/");
 	whdload_arch_path.append("/Lha/");
+	floppy_path.append("/Floppies/");
+	harddrive_path.append("/Harddrives/");
+	cdrom_path.append("/CDROMs/");
 	logfile_path.append("/Amiberry.log");
 	rom_path.append("/Kickstarts/");
 	rp9_path.append("/RP9/");
@@ -3905,7 +3947,7 @@ static void init_amiberry_paths(void)
 	nvram_dir.append("/Nvram/");
 	video_dir.append("/Videos/");
 #else
-	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = 
+	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = video_dir = 
 		start_path_data;
@@ -3915,6 +3957,9 @@ static void init_amiberry_paths(void)
 	data_dir.append("/data/");
 	whdboot_path.append("/whdboot/");
 	whdload_arch_path.append("/lha/");
+	floppy_path.append("/floppies/");
+	harddrive_path.append("/harddrives/");
+	cdrom_path.append("/cdroms/");
 	logfile_path.append("/amiberry.log");
 	rom_path.append("/kickstarts/");
 	rp9_path.append("/rp9/");

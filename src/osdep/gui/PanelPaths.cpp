@@ -10,6 +10,9 @@
 #include "gui_handling.h"
 #include "tinyxml2.h"
 
+static gcn::ScrollArea* scrlPaths;
+static gcn::Window* grpPaths;
+
 static gcn::Label* lblSystemROMs;
 static gcn::TextField* txtSystemROMs;
 static gcn::Button* cmdSystemROMs;
@@ -45,6 +48,18 @@ static gcn::Button* cmdWHDBootPath;
 static gcn::Label* lblWHDLoadArchPath;
 static gcn::TextField* txtWHDLoadArchPath;
 static gcn::Button* cmdWHDLoadArchPath;
+
+static gcn::Label* lblFloppyPath;
+static gcn::TextField* txtFloppyPath;
+static gcn::Button* cmdFloppyPath;
+
+static gcn::Label* lblCDPath;
+static gcn::TextField* txtCDPath;
+static gcn::Button* cmdCDPath;
+
+static gcn::Label* lblHardDrivesPath;
+static gcn::TextField* txtHardDrivesPath;
+static gcn::Button* cmdHardDrivesPath;
 
 static gcn::CheckBox* chkEnableLogging;
 static gcn::Label* lblLogfilePath;
@@ -142,6 +157,33 @@ public:
 				set_whdload_arch_path(path);
 			}
 			cmdWHDLoadArchPath->requestFocus();
+		}
+
+		else if (actionEvent.getSource() == cmdFloppyPath)
+		{
+			path = SelectFolder("Folder for Floppies", get_floppy_path());
+			{
+				set_floppy_path(path);
+			}
+			cmdFloppyPath->requestFocus();
+		}
+
+		else if (actionEvent.getSource() == cmdCDPath)
+		{
+			path = SelectFolder("Folder for CD-ROMs", get_cdrom_path());
+			{
+				set_cdrom_path(path);
+			}
+			cmdCDPath->requestFocus();
+		}
+
+		else if (actionEvent.getSource() == cmdHardDrivesPath)
+		{
+			path = SelectFolder("Folder for Hard Drives", get_harddrive_path());
+			{
+				set_harddrive_path(path);
+			}
+			cmdHardDrivesPath->requestFocus();
 		}
 
 		else if (actionEvent.getSource() == cmdLogfilePath)
@@ -296,9 +338,11 @@ static DownloadControllerDbActionListener* downloadControllerDbActionListener;
 
 void InitPanelPaths(const config_category& category)
 {
-	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH - DISTANCE_NEXT_X;
-	int yPos = DISTANCE_BORDER;
+	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - SMALL_BUTTON_WIDTH * 2 - DISTANCE_NEXT_X;
 	folderButtonActionListener = new FolderButtonActionListener();
+
+	grpPaths = new gcn::Window();
+	grpPaths->setId("grpPaths");
 
 	lblSystemROMs = new gcn::Label("System ROMs:");
 	txtSystemROMs = new gcn::TextField();
@@ -405,6 +449,42 @@ void InitPanelPaths(const config_category& category)
 	cmdWHDLoadArchPath->setBaseColor(gui_baseCol);
 	cmdWHDLoadArchPath->addActionListener(folderButtonActionListener);
 
+	lblFloppyPath = new gcn::Label("Floppies path:");
+	txtFloppyPath = new gcn::TextField();
+	txtFloppyPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtFloppyPath->setBaseColor(gui_baseCol);
+	txtFloppyPath->setBackgroundColor(colTextboxBackground);
+
+	cmdFloppyPath = new gcn::Button("...");
+	cmdFloppyPath->setId("cmdFloppyPath");
+	cmdFloppyPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdFloppyPath->setBaseColor(gui_baseCol);
+	cmdFloppyPath->addActionListener(folderButtonActionListener);
+
+	lblCDPath = new gcn::Label("CD-ROMs path:");
+	txtCDPath = new gcn::TextField();
+	txtCDPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtCDPath->setBaseColor(gui_baseCol);
+	txtCDPath->setBackgroundColor(colTextboxBackground);
+
+	cmdCDPath = new gcn::Button("...");
+	cmdCDPath->setId("cmdCDPath");
+	cmdCDPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdCDPath->setBaseColor(gui_baseCol);
+	cmdCDPath->addActionListener(folderButtonActionListener);
+
+	lblHardDrivesPath = new gcn::Label("Hard drives path:");
+	txtHardDrivesPath = new gcn::TextField();
+	txtHardDrivesPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtHardDrivesPath->setBaseColor(gui_baseCol);
+	txtHardDrivesPath->setBackgroundColor(colTextboxBackground);
+
+	cmdHardDrivesPath = new gcn::Button("...");
+	cmdHardDrivesPath->setId("cmdHardDrivesPath");
+	cmdHardDrivesPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdHardDrivesPath->setBaseColor(gui_baseCol);
+	cmdHardDrivesPath->addActionListener(folderButtonActionListener);
+
 	enableLoggingActionListener = new EnableLoggingActionListener();
 	chkEnableLogging = new gcn::CheckBox("Enable logging", true);
 	chkEnableLogging->setId("chkEnableLogging");
@@ -421,61 +501,97 @@ void InitPanelPaths(const config_category& category)
 	cmdLogfilePath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdLogfilePath->setBaseColor(gui_baseCol);
 	cmdLogfilePath->addActionListener(folderButtonActionListener);
-	
-	category.panel->add(lblSystemROMs, DISTANCE_BORDER, yPos);
+
+	int yPos = DISTANCE_BORDER;
+	grpPaths->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
+	grpPaths->setBaseColor(gui_baseCol);
+	grpPaths->setBackgroundColor(colTextboxBackground);
+
+	grpPaths->add(lblSystemROMs, DISTANCE_BORDER, yPos);
 	yPos += lblSystemROMs->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtSystemROMs, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdSystemROMs, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtSystemROMs, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdSystemROMs, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtSystemROMs->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblConfigPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblConfigPath, DISTANCE_BORDER, yPos);
 	yPos += lblConfigPath->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtConfigPath, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdConfigPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtConfigPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdConfigPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtConfigPath->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblNvramFiles, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblNvramFiles, DISTANCE_BORDER, yPos);
 	yPos += lblNvramFiles->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtNvramFiles, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdNvramFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtNvramFiles, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdNvramFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtNvramFiles->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblScreenshotFiles, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblScreenshotFiles, DISTANCE_BORDER, yPos);
 	yPos += lblScreenshotFiles->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtScreenshotFiles, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdScreenshotFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtScreenshotFiles, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdScreenshotFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtScreenshotFiles->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblStateFiles, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblStateFiles, DISTANCE_BORDER, yPos);
 	yPos += lblStateFiles->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtStateFiles, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdStateFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtStateFiles, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdStateFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtStateFiles->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblControllersPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblControllersPath, DISTANCE_BORDER, yPos);
 	yPos += lblControllersPath->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtControllersPath, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdControllersPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtControllersPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdControllersPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtControllersPath->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblRetroArchFile, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblRetroArchFile, DISTANCE_BORDER, yPos);
 	yPos += lblRetroArchFile->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtRetroArchFile, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdRetroArchFile, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtRetroArchFile, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdRetroArchFile, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtRetroArchFile->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblWHDBootPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblWHDBootPath, DISTANCE_BORDER, yPos);
 	yPos += lblWHDBootPath->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtWHDBootPath, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdWHDBootPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtWHDBootPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdWHDBootPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtWHDBootPath->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(lblWHDLoadArchPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(lblWHDLoadArchPath, DISTANCE_BORDER, yPos);
 	yPos += lblWHDLoadArchPath->getHeight() + DISTANCE_NEXT_Y / 2;
-	category.panel->add(txtWHDLoadArchPath, DISTANCE_BORDER, yPos);
-	category.panel->add(cmdWHDLoadArchPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
+	grpPaths->add(txtWHDLoadArchPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdWHDLoadArchPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
+	yPos += txtWHDLoadArchPath->getHeight() + DISTANCE_NEXT_Y;
 
-	yPos += txtWHDLoadArchPath->getHeight() + DISTANCE_NEXT_Y * 2;
+	grpPaths->add(lblFloppyPath, DISTANCE_BORDER, yPos);
+	yPos += lblFloppyPath->getHeight() + DISTANCE_NEXT_Y / 2;
+	grpPaths->add(txtFloppyPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdFloppyPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
+	yPos += txtFloppyPath->getHeight() + DISTANCE_NEXT_Y;
+
+	grpPaths->add(lblCDPath, DISTANCE_BORDER, yPos);
+	yPos += lblCDPath->getHeight() + DISTANCE_NEXT_Y / 2;
+	grpPaths->add(txtCDPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdCDPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
+	yPos += txtCDPath->getHeight() + DISTANCE_NEXT_Y;
+
+	grpPaths->add(lblHardDrivesPath, DISTANCE_BORDER, yPos);
+	yPos += lblHardDrivesPath->getHeight() + DISTANCE_NEXT_Y / 2;
+	grpPaths->add(txtHardDrivesPath, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdHardDrivesPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
+
+	grpPaths->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2 - 15, txtHardDrivesPath->getY() + txtHardDrivesPath->getHeight() + DISTANCE_NEXT_Y);
+	grpPaths->setTitleBarHeight(1);
+
+	scrlPaths = new gcn::ScrollArea(grpPaths);
+	scrlPaths->setId("scrlPaths");
+	scrlPaths->setBaseColor(gui_baseCol);
+	scrlPaths->setBackgroundColor(colTextboxBackground);
+	scrlPaths->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
+	scrlPaths->setHeight(category.panel->getHeight() - TEXTFIELD_HEIGHT * 6);
+	scrlPaths->setBorderSize(1);
+	scrlPaths->setFocusable(true);
+	category.panel->add(scrlPaths, DISTANCE_BORDER, DISTANCE_BORDER);
+
+	yPos = scrlPaths->getY() + scrlPaths->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblLogfilePath, DISTANCE_BORDER, yPos);
 	category.panel->add(chkEnableLogging, lblLogfilePath->getX() + lblLogfilePath->getWidth() + DISTANCE_NEXT_X * 3, yPos);
@@ -551,11 +667,26 @@ void ExitPanelPaths()
 	delete txtWHDLoadArchPath;
 	delete cmdWHDLoadArchPath;
 
+	delete lblFloppyPath;
+	delete txtFloppyPath;
+	delete cmdFloppyPath;
+
+	delete lblCDPath;
+	delete txtCDPath;
+	delete cmdCDPath;
+
+	delete lblHardDrivesPath;
+	delete txtHardDrivesPath;
+	delete cmdHardDrivesPath;
+
 	delete chkEnableLogging;
 	delete lblLogfilePath;
 	delete txtLogfilePath;
 	delete cmdLogfilePath;
-	
+
+	delete grpPaths;
+	delete scrlPaths;
+
 	delete cmdRescanROMs;
 	delete cmdDownloadXML;
 	delete cmdDownloadCtrlDb;
@@ -589,6 +720,9 @@ void RefreshPanelPaths()
 	txtRetroArchFile->setText(get_retroarch_file());
 	txtWHDBootPath->setText(get_whdbootpath());
 	txtWHDLoadArchPath->setText(get_whdload_arch_path());
+	txtFloppyPath->setText(get_floppy_path());
+	txtCDPath->setText(get_cdrom_path());
+	txtHardDrivesPath->setText(get_harddrive_path());
 
 	chkEnableLogging->setSelected(get_logfile_enabled());
 	txtLogfilePath->setText(get_logfile_path());

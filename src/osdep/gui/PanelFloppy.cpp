@@ -204,7 +204,8 @@ public:
 				if (strlen(changed_prefs.floppyslots[i].df) > 0)
 					tmp = std::string(changed_prefs.floppyslots[i].df);
 				else
-					tmp = current_dir;
+					tmp = get_floppy_path();
+
 				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
@@ -212,7 +213,6 @@ public:
 						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
 						disk_insert(i, tmp.c_str());
 						RefreshDiskListModel();
-						current_dir = extract_path(tmp);
 
 						AdjustDropDownControls();
 					}

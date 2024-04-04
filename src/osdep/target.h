@@ -20,8 +20,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v5.7.0 (2024-04-03)")
-#define AMIBERRYDATE MAKEBD(2024, 4, 3)
+#define AMIBERRYVERSION _T("Amiberry v5.7.0 (2024-04-04)")
+#define AMIBERRYDATE MAKEBD(2024, 4, 4)
 #define COPYRIGHT _T("Copyright (C) 2016-2024 Dimitris Panokostas")
 
 #define IHF_WINDOWHIDDEN 6
@@ -115,6 +115,12 @@ extern std::string get_whdbootpath();
 extern void set_whdbootpath(const std::string& newpath);
 extern std::string get_whdload_arch_path();
 extern void set_whdload_arch_path(const std::string& newpath);
+extern std::string get_floppy_path();
+extern void set_floppy_path(const std::string& newpath);
+extern std::string get_harddrive_path();
+extern void set_harddrive_path(const std::string& newpath);
+extern std::string get_cdrom_path();
+extern void set_cdrom_path(const std::string& newpath);
 
 extern bool get_logfile_enabled();
 extern void set_logfile_enabled(bool enabled);
