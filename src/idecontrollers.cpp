@@ -134,6 +134,7 @@ static struct ide_thread_state idecontroller_its;
 
 static struct ide_board *ide_boards[MAX_IDE_UNITS + 1];
 
+static int dev_hd_mode;
 static int dev_hd_io_base, dev_hd_io_total;
 static int dev_hd_io_size;
 static int dev_hd_data_base;
@@ -1046,30 +1047,43 @@ static uae_u32 ide_read_byte2(struct ide_board *board, uaecptr addr)
 
 	} else if (board->type == DEV_IDE) {
 
-		if (addr == 0x88) {
-			v = 0xff;
-		} else if (addr == 0x86 || addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
-			if (addr == 0x86) {
-				board->dma_ptr = 0x80;
-				board->dma_cnt = 1;
+		if (dev_hd_mode == 1) {
+
+			struct ide_hdf *ide = board->ide[0];
+			int reg = (addr & 7);
+			if (reg == 2) {
+				v = ide->secbuf[board->dma_cnt & (ide->blocksize - 1)];
+				board->dma_cnt++;
 			}
-			v = board->rom[board->dma_ptr * 2 + 0x8000];
-			board->dma_ptr++;
-			if (board->dma_cnt == 1) {
-				uae_u8 v2 = board->rom[board->dma_ptr * 2 + 0x8000];
-				board->dma_ptr++;
-				if (v != (v2 ^ 0xff)) {
-					write_log("error!\n");
-				}
-				board->dma_cnt = 0;
-			}
+
 		} else {
-			int reg = get_dev_hd_reg(addr, board);
-			if (reg >= 0) {
-				v = get_ide_reg(board, reg);
+
+			if (addr == 0x88) {
+				v = 0xff;
+			} else if (addr == 0x86 || addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
+				if (addr == 0x86) {
+					board->dma_ptr = 0x80;
+					board->dma_cnt = 1;
+				}
+				v = board->rom[board->dma_ptr * 2 + 0x8000];
+				board->dma_ptr++;
+				if (board->dma_cnt == 1) {
+					uae_u8 v2 = board->rom[board->dma_ptr * 2 + 0x8000];
+					board->dma_ptr++;
+					if (v != (v2 ^ 0xff)) {
+						write_log("error!\n");
+					}
+					board->dma_cnt = 0;
+				}
 			} else {
-				v = board->rom[addr];
+				int reg = get_dev_hd_reg(addr, board);
+				if (reg >= 0) {
+					v = get_ide_reg(board, reg);
+				} else {
+					v = board->rom[addr];
+				}
 			}
+
 		}
 	}
 
@@ -1387,9 +1401,14 @@ static uae_u32 ide_read_word(struct ide_board *board, uaecptr addr)
 
 		} else if (board->type == DEV_IDE) {
 
-			int reg = get_dev_hd_reg(addr, board);
-			if (reg == IDE_DATA) {
-				v = get_ide_reg(board, reg);
+			if (dev_hd_mode == 1) {
+
+			} else {
+
+				int reg = get_dev_hd_reg(addr, board);
+				if (reg == IDE_DATA) {
+					v = get_ide_reg(board, reg);
+				}
 			}
 
 		}
@@ -1763,18 +1782,53 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 
 		} else if (board->type == DEV_IDE) {
 
-			if (addr == 0x86) {
-				board->dma_ptr = 0;
-				board->dma_cnt = 0;
-			} else if (addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
-				board->dma_ptr <<= 8;
-				board->dma_ptr |= v;
-				board->dma_ptr &= 0xffffff;
-			} else {
-				int reg = get_dev_hd_reg(addr, board);
-				if (reg >= 0) {
-					put_ide_reg(board, reg, v);
+			if (dev_hd_mode == 1) {
+
+				struct ide_hdf *ide = board->ide[0];
+				int reg = (addr & 7);
+				if (reg == 0 || reg == 4) {
+					board->dma_cnt = 0;
+				} else if (reg == 1) {
+					board->dma_ptr >>= 8;
+					board->dma_ptr |= v << 24;
+					board->dma_cnt++;
+					if (board->dma_cnt == 4) {
+						uae_u32 error = 0;
+						hdf_read(&ide->hdhfd.hfd, ide->secbuf, board->dma_ptr * ide->blocksize, ide->blocksize, &error);
+						board->dma_cnt = 0;
+					}
+				} else if (reg == 4 + 1) {
+					board->dma_ptr >>= 8;
+					board->dma_ptr |= v << 24;
+					board->dma_cnt++;
+					if (board->dma_cnt == 4) {
+						board->dma_cnt = 0;
+					}
+				} else if (reg == 4 + 2) {
+					ide->secbuf[board->dma_cnt & (ide->blocksize - 1)] = v;
+					board->dma_cnt++;
+					if (board->dma_cnt == ide->blocksize) {
+						uae_u32 error = 0;
+						hdf_write(&ide->hdhfd.hfd, ide->secbuf, board->dma_ptr *ide->blocksize, ide->blocksize, &error);
+					}
 				}
+
+			} else {
+
+				if (addr == 0x86) {
+					board->dma_ptr = 0;
+					board->dma_cnt = 0;
+				} else if (addr == 0x90 || addr == 0x92 || addr == 0x94 || addr == 0x96) {
+					board->dma_ptr <<= 8;
+					board->dma_ptr |= v;
+					board->dma_ptr &= 0xffffff;
+				} else {
+					int reg = get_dev_hd_reg(addr, board);
+					if (reg >= 0) {
+						put_ide_reg(board, reg, v);
+					}
+				}
+
 			}
 
 		}
@@ -3157,6 +3211,7 @@ bool dev_hd_init(struct autoconfig_info *aci)
 		aci->start = 0xe90000;
 		aci->size = 0x10000;
 	}
+	dev_hd_mode = 1;
 	dev_hd_io_base = 0x4000;
 	dev_hd_io_size = 4;
 	dev_hd_data_base = 0x4800;
