@@ -199,9 +199,9 @@ void InitPanelConfig(const struct config_category& category)
 	const int list_height = category.panel->getHeight() - 2 * DISTANCE_BORDER - 2 * lblName->getHeight() - 3 * DISTANCE_NEXT_Y - 2 * BUTTON_HEIGHT;
 	lstConfigs = new gcn::ListBox(&configsList);
 	lstConfigs->setSize(list_width, list_height);
-	lstConfigs->setBaseColor(colTextboxBackground);
+	lstConfigs->setBaseColor(gui_baseCol);
 	lstConfigs->setBackgroundColor(colTextboxBackground);
-	lstConfigs->setSelectionColor(colSelectorActive);
+	lstConfigs->setSelectionColor(gui_selection_color);
 	lstConfigs->setWrappingEnabled(true);
 	lstConfigs->setId("ConfigList");
 	lstConfigs->addActionListener(configsListActionListener);
