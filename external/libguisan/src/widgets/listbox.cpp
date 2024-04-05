@@ -138,8 +138,6 @@ namespace gcn
 			startRow = 0;
 		}
 
-		const auto inactive_color = Color(170, 170, 170);
-		
 		// The y coordinate where we start to draw the text is
 		// simply the y coordinate multiplied with the font height.
 		auto y = rowHeight * startRow;
@@ -148,10 +146,7 @@ namespace gcn
 		{
 			if (i == mSelected)
 			{
-				if (isFocused())
-					graphics->setColor(getSelectionColor());
-				else
-					graphics->setColor(inactive_color);
+				graphics->setColor(getSelectionColor());
 				graphics->fillRectangle(Rectangle(0, y, getWidth(), rowHeight));
 				graphics->setColor(getForegroundColor());
 			}
