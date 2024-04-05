@@ -6119,13 +6119,15 @@ static void set_ocs_denise_blank(uae_u32 v)
 {
 	int hpos = current_hpos();
 	sync_color_changes(hpos);
-	record_color_change2(hpos, 0, COLOR_CHANGE_BLANK | 1);
+	int pos = hpos_to_diwx(hpos) + 2; // +1 hires
+	record_color_change2(-pos, 0, COLOR_CHANGE_BLANK | 1);
 }
 static void reset_ocs_denise_blank(uae_u32 v)
 {
 	int hpos = current_hpos();
 	sync_color_changes(hpos);
-	record_color_change2(hpos, 0, COLOR_CHANGE_BLANK | 0);
+	int pos = hpos_to_diwx(hpos) + 2; // +1 hires
+	record_color_change2(-pos, 0, COLOR_CHANGE_BLANK | 0);
 }
 
 /* Set the state of all decisions to "undecided" for a new scanline. */
@@ -6166,15 +6168,15 @@ static void reset_decisions_scanline_start(void)
 	if (!ecs_denise && currprefs.gfx_overscanmode > OVERSCANMODE_OVERSCAN) {
 		if (!ecs_agnus) {
 			if (vb_start_line == 2 + vblank_extraline) {
-				event2_newevent_xx(-1, 3 * CYCLE_UNIT, 0, set_ocs_denise_blank);
+				event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, set_ocs_denise_blank);
 			}
 		} else {
 			if (vb_start_line == 1 + vblank_extraline) {
-				event2_newevent_xx(-1, 3 * CYCLE_UNIT, 0, set_ocs_denise_blank);
+				event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, set_ocs_denise_blank);
 			}
 		}
 		if (vb_end_next_line2) {
-			event2_newevent_xx(-1, 3 * CYCLE_UNIT, 0, reset_ocs_denise_blank);
+			event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, reset_ocs_denise_blank);
 		}
 	}
 
@@ -6728,12 +6730,10 @@ static void updateextblk(void)
 
 	if (!exthblank) {
 		hbstrt_v2 = (8 << CCK_SHRES_SHIFT) - 3;
-		hbstop_v2 = (47 << CCK_SHRES_SHIFT) - 7;
-		if (denisea1000) {
-			hbstop_v2 = (47 << CCK_SHRES_SHIFT) - 7;
-		} else if (!ecs_denise) {
-			hbstop_v2 = (47 << CCK_SHRES_SHIFT) - 3;
+		if (!ecs_denise) {
+			hbstrt_v2 -= 4;
 		}
+		hbstop_v2 = (47 << CCK_SHRES_SHIFT) - 7;
 		hbstrt_v2 = adjust_hr(hbstrt_v2);
 		hbstop_v2 = adjust_hr(hbstop_v2);
 	}
@@ -13089,7 +13089,7 @@ static void hsync_handlerh(bool onvsync)
 	estimate_last_fetch_cycle(hpos);
 
 	if (vb_end_next_line && !ecs_denise && currprefs.gfx_overscanmode > OVERSCANMODE_OVERSCAN) {
-		event2_newevent_xx(-1, 3 * CYCLE_UNIT, 0, set_ocs_denise_blank);
+		event2_newevent_xx(-1, 2 * CYCLE_UNIT, 0, set_ocs_denise_blank);
 	}
 
 	eventtab[ev_hsynch].evtime = get_cycles() + HSYNCTIME;
