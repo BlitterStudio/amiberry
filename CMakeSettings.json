@@ -59,9 +59,9 @@
       "remoteCopySourcesMethod": "rsync"
     },
     {
-      "name": "Linux-arm64-GCC-Release",
+      "name": "Linux-arm-GCC-Release",
       "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
+      "configurationType": "Release",
       "cmakeExecutable": "cmake",
       "remoteCopySourcesExclusionList": [ ".vs", ".git", "out" ],
       "cmakeCommandArgs": "",
@@ -78,7 +78,7 @@
       "remoteCopySourcesMethod": "rsync"
     },
     {
-      "name": "Linux-arm64-GCC-Debug-OpenGL",
+      "name": "Linux-arm-GCC-Debug-OpenGL",
       "generator": "Ninja",
       "configurationType": "Debug",
       "cmakeExecutable": "cmake",
@@ -120,8 +120,7 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_clang_x64" ],
-      "wslPath": "${defaultWSLPath}",
-      "variables": []
+      "wslPath": "${defaultWSLPath}"
     }
   ]
 }
