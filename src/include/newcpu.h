@@ -201,13 +201,13 @@ STATIC_INLINE void set_special_exter(uae_u32 x)
 {
 	atomic_or(&regs.spcflags, x);
 }
-STATIC_INLINE void set_special(uae_u32 x)
+STATIC_INLINE void set_special (uae_u32 x)
 {
 	atomic_or(&regs.spcflags, x);
 	cycles_do_special();
 }
 
-STATIC_INLINE void unset_special(uae_u32 x)
+STATIC_INLINE void unset_special (uae_u32 x)
 {
 	atomic_and(&regs.spcflags, ~x);
 }
@@ -260,25 +260,25 @@ STATIC_INLINE void m68k_incpc(int o)
 
 STATIC_INLINE uae_u32 get_dibyte(int o)
 {
-	return do_get_mem_byte((uae_u8*)((regs).pc_p + (o)+1));
+	return do_get_mem_byte((uae_u8 *)((regs).pc_p + (o) + 1));
 }
 STATIC_INLINE uae_u32 get_diword(int o)
 {
-	return do_get_mem_word((uae_u16*)((regs).pc_p + (o)));
+	return do_get_mem_word((uae_u16 *)((regs).pc_p + (o)));
 }
 STATIC_INLINE uae_u32 get_dilong(int o)
 {
-	return do_get_mem_long((uae_u32*)((regs).pc_p + (o)));
+	return do_get_mem_long((uae_u32 *)((regs).pc_p + (o)));
 }
 STATIC_INLINE uae_u32 next_diword(void)
 {
-	uae_u32 r = do_get_mem_word((uae_u16*)((regs).pc_p));
+	uae_u32 r = do_get_mem_word((uae_u16 *)((regs).pc_p));
 	m68k_incpc(2);
 	return r;
 }
 STATIC_INLINE uae_u32 next_dilong(void)
 {
-	uae_u32 r = do_get_mem_long((uae_u32*)((regs).pc_p));
+	uae_u32 r = do_get_mem_long((uae_u32 *)((regs).pc_p));
 	m68k_incpc(4);
 	return r;
 }

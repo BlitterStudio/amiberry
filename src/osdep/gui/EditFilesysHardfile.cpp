@@ -74,7 +74,7 @@ static void sethd(void)
 
 static void sethardfile(void)
 {
-	std::string strdevname, strroot;
+	std::string strdevname;
 	char tmp[32];
 	auto ide = current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST;
 	auto rdb = is_hdf_rdb();
@@ -83,8 +83,7 @@ static void sethardfile(void)
 	sethd();
 	if (!disables)
 		current_hfdlg.ci.bootpri = 0;
-	strroot.assign(current_hfdlg.ci.rootdir);
-	txtPath->setText(strroot);
+	txtPath->setText(get_harddrive_path());
 	strdevname.assign(current_hfdlg.ci.devname);
 	txtDevice->setText(strdevname);
 	snprintf(tmp, sizeof(tmp) - 1, "%d", rdb ? current_hfdlg.ci.psecs : current_hfdlg.ci.sectors);
@@ -177,6 +176,7 @@ public:
 		{
 			wndEditFilesysHardfile->releaseModalFocus();
 			const std::string tmp = SelectFile("Select hard disk file", txtPath->getText(), harddisk_filter);
+			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
 				fileSelected = true;
@@ -874,7 +874,6 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (dialogResult)
 	{
-		current_dir = extract_path(txtPath->getText());
 		uaedev_config_info ci{};
 
 		memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));

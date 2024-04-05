@@ -48,6 +48,7 @@ public:
 		{
 			wndCreateFilesysHardfile->releaseModalFocus();
 			const std::string tmp = SelectFile("Create hard disk file", txtPath->getText(), harddisk_filter, true);
+			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
 				fileSelected = true;
@@ -496,7 +497,7 @@ bool CreateFilesysHardfile()
 
 	CreateDefaultDevicename(tmp);
 	txtDevice->setText(tmp);
-	txtPath->setText(current_dir);
+	txtPath->setText(get_harddrive_path());
 	fileSelected = false;
 
 	txtBootPri->setText("0");

@@ -313,6 +313,7 @@ public:
 				tmp = get_cdrom_path();
 
 			tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
+			if (!tmp.empty())
 			{
 				if (strncmp(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
 				{
@@ -388,6 +389,7 @@ public:
 				tmp = get_whdload_arch_path();
 
 			tmp = SelectFile("Select WHDLoad LHA file", tmp, whdload_filter);
+			if (!tmp.empty())
 			{
 				whdload_prefs.whdload_filename = tmp;
 				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
@@ -579,6 +581,7 @@ public:
 					tmp = get_floppy_path();
 
 				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
+				if (!tmp.empty())
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
 					{

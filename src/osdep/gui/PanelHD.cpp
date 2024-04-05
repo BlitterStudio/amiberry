@@ -246,6 +246,7 @@ public:
 				tmp = get_cdrom_path();
 
 			tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
+			if (!tmp.empty())
 			{
 				if (strncmp(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
 				{

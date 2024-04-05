@@ -33,10 +33,10 @@ static const int COLUMN_SIZE[] =
 {
 	40, // Type
 	200, // Name
-	90, // Start
-	90, // End
-	90, // Size
-	90 // ID
+	100, // Start
+	100, // End
+	100, // Size
+	100 // ID
 };
 
 static gcn::Window* grpHwInfo;
@@ -178,7 +178,7 @@ void InitPanelHWInfo(const config_category& category)
 		grpHwInfo->add(listEntry[row], DISTANCE_BORDER, posY);
 		posY += listEntry[row]->getHeight() + 4;
 	}
-	grpHwInfo->setSize(category.panel->getWidth() + 15, category.panel->getHeight() - DISTANCE_BORDER * 4);
+	grpHwInfo->setSize(category.panel->getWidth() + 55, category.panel->getHeight() - DISTANCE_BORDER * 4);
 
 	scrlHwInfo = new gcn::ScrollArea(grpHwInfo);
 	scrlHwInfo->setBackgroundColor(gui_baseCol);

@@ -143,6 +143,7 @@ public:
 				tmp = get_whdload_arch_path();
 
 			tmp = SelectFile("Select WHDLoad LHA file", tmp, whdload_filter);
+			if (!tmp.empty())
 			{
 				whdload_prefs.whdload_filename.assign(tmp);
 				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);

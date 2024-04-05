@@ -61,7 +61,7 @@
     {
       "name": "Linux-arm-GCC-Release",
       "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
+      "configurationType": "Release",
       "cmakeExecutable": "cmake",
       "remoteCopySourcesExclusionList": [ ".vs", ".git", "out" ],
       "cmakeCommandArgs": "",
@@ -120,8 +120,7 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_clang_x64" ],
-      "wslPath": "${defaultWSLPath}",
-      "variables": []
+      "wslPath": "${defaultWSLPath}"
     }
   ]
 }

@@ -147,6 +147,7 @@ void handleROMSelection(const gcn::ActionEvent& actionEvent, char* prefsFile, co
 	std::string tmp;
 	const char* filter[] = { ".rom", ".bin", "\0" };
 	tmp = SelectFile("Select ROM", current_dir, filter);
+	if (!tmp.empty())
 	{
 		auto* const newrom = new AvailableROM();
 		newrom->Name = extract_filename(tmp);
