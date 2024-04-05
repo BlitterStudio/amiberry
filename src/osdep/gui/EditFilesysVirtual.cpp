@@ -507,7 +507,7 @@ bool EditFilesysVirtual(const int unit_no)
 
 	mountedinfo mi{};
 	uaedev_config_data* uci;
-	std::string strdevname, strvolname, strroot;
+	std::string strdevname, strvolname;
 	char tmp[32];
 
 	dialogResult = false;
@@ -531,8 +531,7 @@ bool EditFilesysVirtual(const int unit_no)
 	txtDevice->setText(strdevname);
 	strvolname.assign(current_fsvdlg.ci.volname);
 	txtVolume->setText(strvolname);
-	strroot.assign(current_fsvdlg.ci.rootdir);
-	txtPath->setText(strroot);
+	txtPath->setText(get_harddrive_path());
 	chkReadWrite->setSelected(!current_fsvdlg.ci.readonly);
 	chkAutoboot->setSelected(current_fsvdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
 	snprintf(tmp, sizeof(tmp) - 1, "%d", current_fsvdlg.ci.bootpri >= -127 ? current_fsvdlg.ci.bootpri : -127);
@@ -571,8 +570,6 @@ bool EditFilesysVirtual(const int unit_no)
 			else if (uci->configoffset >= 0)
 				filesys_eject(uci->configoffset);
 		}
-
-		current_dir = extract_path(txtPath->getText());
 	}
 
 	ExitEditFilesysVirtual();
