@@ -103,10 +103,7 @@ typedef unsigned long DWORD;
 
 void ahi_updatesound(int force)
 {
-	//HRESULT hr;
-	DWORD pos;
-	//DWORD dwBytes1, dwBytes2;
-	//LPVOID dwData1, dwData2;
+	Uint32 pos = 0;
 	static int oldpos;
 
 	if (sound_flushes2 == 1) {
@@ -114,19 +111,14 @@ void ahi_updatesound(int force)
 		intcount = 1;
 		INTREQ(0x8000 | 0x2000);
 		SDL_PauseAudioDevice(ahi_dev, 0);
-		//hr = lpDSB2->Play(0, 0, DSBPLAY_LOOPING);
-		//if (hr == DSERR_BUFFERLOST) {
-		//	lpDSB2->Restore();
-		//	hr = lpDSB2->Play(0, 0, DSBPLAY_LOOPING);
-		//}
 	}
 
 	Uint32 queuedAudioSize = SDL_GetQueuedAudioSize(ahi_dev);
 	if (queuedAudioSize != 0) {
 		pos = queuedAudioSize;
 		pos -= ahitweak;
-		if (pos < 0)
-			pos += ahisndbufsize;
+		//if (pos < 0)
+		//	pos += ahisndbufsize;
 		if (pos >= ahisndbufsize)
 			pos -= ahisndbufsize;
 		pos = (pos / (amigablksize * 4)) * (amigablksize * 4);
