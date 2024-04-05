@@ -48,6 +48,7 @@ public:
 		{
 			wndCreateFilesysHardfile->releaseModalFocus();
 			const std::string tmp = SelectFile("Create hard disk file", txtPath->getText(), harddisk_filter, true);
+			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
 				fileSelected = true;

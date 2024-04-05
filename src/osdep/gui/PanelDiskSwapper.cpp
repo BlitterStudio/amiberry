@@ -146,6 +146,7 @@ public:
 					tmp = current_dir;
 
 				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
+				if (!tmp.empty())
 				{
 					if (strncmp(changed_prefs.dfxlist[i], tmp.c_str(), MAX_DPATH) != 0)
 					{

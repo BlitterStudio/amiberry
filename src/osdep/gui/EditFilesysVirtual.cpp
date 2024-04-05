@@ -50,6 +50,7 @@ public:
 		{
 			wndEditFilesysVirtual->releaseModalFocus();
 			const std::string tmp = SelectFolder("Select folder", txtPath->getText());
+			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
 				txtVolume->setText(volName);

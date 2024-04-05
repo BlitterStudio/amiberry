@@ -176,6 +176,7 @@ public:
 		{
 			wndEditFilesysHardfile->releaseModalFocus();
 			const std::string tmp = SelectFile("Select hard disk file", txtPath->getText(), harddisk_filter);
+			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
 				fileSelected = true;
