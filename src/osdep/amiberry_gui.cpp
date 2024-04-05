@@ -361,6 +361,7 @@ void disk_selection(const int drive, uae_prefs* prefs)
 	else
 		tmp = current_dir;
 	tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
+	if (!tmp.empty())
 	{
 		if (strncmp(prefs->floppyslots[drive].df, tmp.c_str(), MAX_DPATH) != 0)
 		{

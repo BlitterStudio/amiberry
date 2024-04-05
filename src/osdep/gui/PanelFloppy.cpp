@@ -207,6 +207,7 @@ public:
 					tmp = get_floppy_path();
 
 				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
+				if (!tmp.empty())
 				{
 					if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
 					{
@@ -327,6 +328,7 @@ public:
 			// Create 3.5" DD Disk
 			char diskname[MAX_DPATH];
 			tmp = SelectFile("Create 3.5\" DD disk file", current_dir, diskfile_filter, true);
+			if (!tmp.empty())
 			{
 				extract_filename(tmp.c_str(), diskname);
 				remove_file_extension(diskname);
@@ -344,6 +346,7 @@ public:
 			// Create 3.5" HD Disk
 			char diskname[MAX_DPATH];
 			tmp = SelectFile("Create 3.5\" HD disk file", current_dir, diskfile_filter, true);
+			if (!tmp.empty())
 			{
 				extract_filename(tmp.c_str(), diskname);
 				remove_file_extension(diskname);

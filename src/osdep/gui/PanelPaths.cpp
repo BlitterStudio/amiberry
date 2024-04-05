@@ -82,6 +82,7 @@ public:
 		{
 			get_rom_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for System ROMs", std::string(tmp));
+			if (!path.empty())
 			{
 				set_rom_path(path);
 			}
@@ -91,6 +92,7 @@ public:
 		{
 			get_configuration_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for configuration files", std::string(tmp));
+			if (!path.empty())
 			{
 				set_configuration_path(path);
 			}
@@ -100,6 +102,7 @@ public:
 		{
 			get_nvram_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for NVRAM files", std::string(tmp));
+			if (!path.empty())
 			{
 				set_nvram_path(path);
 			}
@@ -108,6 +111,7 @@ public:
 		else if (actionEvent.getSource() == cmdScreenshotFiles)
 		{
 			path = SelectFolder("Folder for Screenshot files", get_screenshot_path());
+			if (!path.empty())
 			{
 				set_screenshot_path(path);
 			}
@@ -117,6 +121,7 @@ public:
 		{
 			get_savestate_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for Save state files", std::string(tmp));
+			if (!path.empty())
 			{
 				set_savestate_path(path);
 			}
@@ -125,6 +130,7 @@ public:
 		else if (actionEvent.getSource() == cmdControllersPath)
 		{
 			path = SelectFolder("Folder for controller files", get_controllers_path());
+			if (!path.empty())
 			{
 				set_controllers_path(path);
 			}
@@ -135,6 +141,7 @@ public:
 		{
 			const char* filter[] = {"retroarch.cfg", "\0"};
 			path = SelectFile("Select RetroArch Config File", get_retroarch_file(), filter);
+			if (!path.empty())
 			{
 				set_retroarch_file(path);
 			}
@@ -144,6 +151,7 @@ public:
 		else if (actionEvent.getSource() == cmdWHDBootPath)
 		{
 			path = SelectFolder("Folder for WHDBoot files", get_whdbootpath());
+			if (!path.empty())
 			{
 				set_whdbootpath(path);
 			}
@@ -153,6 +161,7 @@ public:
 		else if (actionEvent.getSource() == cmdWHDLoadArchPath)
 		{
 			path = SelectFolder("Folder for WHDLoad Archives", get_whdload_arch_path());
+			if (!path.empty())
 			{
 				set_whdload_arch_path(path);
 			}
@@ -162,6 +171,7 @@ public:
 		else if (actionEvent.getSource() == cmdFloppyPath)
 		{
 			path = SelectFolder("Folder for Floppies", get_floppy_path());
+			if (!path.empty())
 			{
 				set_floppy_path(path);
 			}
@@ -171,6 +181,7 @@ public:
 		else if (actionEvent.getSource() == cmdCDPath)
 		{
 			path = SelectFolder("Folder for CD-ROMs", get_cdrom_path());
+			if (!path.empty())
 			{
 				set_cdrom_path(path);
 			}
@@ -180,6 +191,7 @@ public:
 		else if (actionEvent.getSource() == cmdHardDrivesPath)
 		{
 			path = SelectFolder("Folder for Hard Drives", get_harddrive_path());
+			if (!path.empty())
 			{
 				set_harddrive_path(path);
 			}
@@ -190,6 +202,7 @@ public:
 		{
 			const char* filter[] = { "amiberry.log", "\0" };
 			path = SelectFile("Select Amiberry Log file", get_logfile_path(), filter, true);
+			if (!path.empty())
 			{
 				set_logfile_path(path);
 			}
