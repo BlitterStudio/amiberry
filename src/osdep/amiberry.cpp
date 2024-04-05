@@ -2924,7 +2924,6 @@ void get_saveimage_path(char* out, int size, int dir)
 std::string get_configuration_path()
 {
 	return fix_trailing(config_path);
-
 }
 
 void get_configuration_path(char* out, int size)
@@ -4290,6 +4289,8 @@ int main(int argc, char* argv[])
 	free_AmigaMem();
 
 	logging_cleanup();
+
+	SDL_Quit();
 
 	if (host_poweroff)
 		target_shutdown();
