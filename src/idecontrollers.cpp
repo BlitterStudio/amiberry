@@ -1794,7 +1794,7 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 					board->dma_cnt++;
 					if (board->dma_cnt == 4) {
 						uae_u32 error = 0;
-						hdf_read(&ide->hdhfd.hfd, ide->secbuf, board->dma_ptr * ide->blocksize, ide->blocksize, &error);
+						hdf_read(&ide->hdhfd.hfd, ide->secbuf, board->dma_ptr * ide->blocksize, ide->blocksize);
 						board->dma_cnt = 0;
 					}
 				} else if (reg == 4 + 1) {
@@ -1809,7 +1809,7 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 					board->dma_cnt++;
 					if (board->dma_cnt == ide->blocksize) {
 						uae_u32 error = 0;
-						hdf_write(&ide->hdhfd.hfd, ide->secbuf, board->dma_ptr *ide->blocksize, ide->blocksize, &error);
+						hdf_write(&ide->hdhfd.hfd, ide->secbuf, board->dma_ptr *ide->blocksize, ide->blocksize);
 					}
 				}
 
