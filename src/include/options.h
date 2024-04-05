@@ -543,7 +543,7 @@ struct whdload_custom
 	/**
 	 * \brief The value of this custom field. This will be sent to WHDLoad
 	 */
-	int value;
+	int value = 0;
 	/**
 	 * \brief The type of the custom field: None, Boolean, Bit or List
 	 */
