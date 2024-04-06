@@ -748,8 +748,7 @@ void vkbd_update(bool createTextures)
 	{
 		int width, height;
 		SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
-		int renderedWidth, rendererHeight;
-		SDL_RenderGetLogicalSize(mon->amiga_renderer, &renderedWidth, &rendererHeight);
+		int renderedWidth = crop_rect.w, rendererHeight = crop_rect.h;
 
 		vkbdEndX = (renderedWidth - width) / 2;
 		vkbdEndY = rendererHeight - height;
