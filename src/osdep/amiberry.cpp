@@ -508,15 +508,12 @@ static void setcursorshape(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (!mon->screen_is_picasso || !currprefs.rtg_hardwaresprite)
+		if (!(mon->screen_is_picasso && currprefs.rtg_hardwaresprite))
 			SDL_ShowCursor(SDL_DISABLE);
 	}
 	else if (!picasso_setwincursor(monid)) {
 		if (SDL_GetCursor() != normalcursor)
-		{
 			SDL_SetCursor(normalcursor);
-			SDL_ShowCursor(SDL_ENABLE);
-		}
 	}
 }
 
@@ -544,8 +541,10 @@ void set_showcursor(BOOL v)
 
 void releasecapture(struct AmigaMonitor* mon)
 {
-	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
-	SDL_SetRelativeMouseMode(SDL_FALSE);
+	// Disable relative mouse mode, which effectively releases the mouse capture
+	if (SDL_SetRelativeMouseMode(SDL_FALSE) < 0) {
+		write_log("Unable to release mouse capture: %s\n", SDL_GetError());
+	}
 	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
 }
@@ -553,84 +552,22 @@ void releasecapture(struct AmigaMonitor* mon)
 void updatemouseclip(struct AmigaMonitor* mon)
 {
 	if (mon_cursorclipped) {
+		int x, y, w, h;
+		SDL_GetWindowPosition(mon->amiga_window, &x, &y);
+		SDL_GetWindowSize(mon->amiga_window, &w, &h);
+		mon->amigawinclip_rect.x = x;
+		mon->amigawinclip_rect.y = y;
+		mon->amigawinclip_rect.w = w;
+		mon->amigawinclip_rect.h = h;
+
 		mon->amigawinclip_rect = mon->amigawin_rect;
-		if (!isfullscreen()) {
-			int idx = 0;
-			//reenumeratemonitors(); //disabled as we only support 1 monitor anyway
-			while (Displays[idx].monitorname) {
-				SDL_Rect out;
-				struct MultiDisplay* md = &Displays[idx];
-				idx++;
-				if (md->rect.x == md->workrect.x && md->rect.w == md->workrect.w
-					&& md->rect.y == md->workrect.y && md->rect.h == md->workrect.h)
-					continue;
-				// not in this monitor?
-				//if (!IntersectRect(&out, &md->rect, &mon->amigawin_rect))
-				//	continue;
-				for (int e = 0; e < 4; e++) {
-					int v1, v2, x, y;
-					int* lp;
-					switch (e)
-					{
-					case 0:
-					default:
-						v1 = md->rect.x;
-						v2 = md->workrect.x;
-						lp = &mon->amigawinclip_rect.x;
-						x = v1 - 1;
-						y = (md->rect.h - md->rect.y) / 2;
-						break;
-					case 1:
-						v1 = md->rect.y;
-						v2 = md->workrect.y;
-						lp = &mon->amigawinclip_rect.y;
-						x = (md->rect.w - md->rect.x) / 2;
-						y = v1 - 1;
-						break;
-					case 2:
-						v1 = md->rect.w;
-						v2 = md->workrect.w;
-						lp = &mon->amigawinclip_rect.w;
-						x = v1 + 1;
-						y = (md->rect.h - md->rect.y) / 2;
-						break;
-					case 3:
-						v1 = md->rect.h;
-						v2 = md->workrect.h;
-						lp = &mon->amigawinclip_rect.h;
-						x = (md->rect.w - md->rect.x) / 2;
-						y = v1 + 1;
-						break;
-					}
-					// is there another monitor sharing this edge?
-					//POINT pt;
-					//pt.x = x;
-					//pt.y = y;
-					//if (MonitorFromPoint(pt, MONITOR_DEFAULTTONULL))
-					//	continue;
-					// restrict mouse clip bounding box to this edge
-					if (e >= 2) {
-						if (*lp > v2) {
-							*lp = v2;
-						}
-					}
-					else {
-						if (*lp < v2) {
-							*lp = v2;
-						}
-					}
-				}
-			}
-			// Too small or invalid?
-			if (mon->amigawinclip_rect.w <= mon->amigawinclip_rect.x + 7 || mon->amigawinclip_rect.h <= mon->amigawinclip_rect.y + 7)
-				mon->amigawinclip_rect = mon->amigawin_rect;
-		}
+
 		if (mon_cursorclipped == mon->monitor_id + 1) {
 #if MOUSECLIP_LOG
 			write_log(_T("CLIP mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, isfullscreen());
 #endif
-			//if (!ClipCursor(&mon->amigawinclip_rect))
-			//	write_log(_T("ClipCursor error %d\n"), GetLastError());
+			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+			SDL_WarpMouseInWindow(mon->amiga_window, w / 2, h / 2);
 		}
 	}
 }
@@ -651,6 +588,20 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 		currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.x = changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.x;
 		currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.y = changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.y;
 	}
+}
+
+static bool iswindowfocus(struct AmigaMonitor* mon)
+{
+	bool donotfocus = false;
+	Uint32 flags = SDL_GetWindowFlags(mon->amiga_window);
+
+	if (!(flags & SDL_WINDOW_INPUT_FOCUS)) {
+		donotfocus = true;
+	}
+
+	if (isfullscreen() > 0)
+		donotfocus = false;
+	return donotfocus == false;
 }
 
 bool ismouseactive (void)
@@ -685,8 +636,11 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 		return;
 
 	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
-		auto* c = SDL_GetCursor();
-		if (c != normalcursor)
+		if (SDL_GetCursor() != normalcursor)
+			return;
+	}
+	if (active) {
+		if (!SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_SHOWN)
 			return;
 	}
 	
@@ -707,23 +661,51 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 		SDL_SetCursor(normalcursor);
 	}
 
+	bool gotfocus = false;
+	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+		SDL_Window* window = SDL_GetMouseFocus();
+		if (window && (window == AMonitors[i].amiga_window)) {
+			mon = &AMonitors[i];
+			break;
+		}
+	}
+	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
+		if (iswindowfocus(&AMonitors[i])) {
+			gotfocus = true;
+			break;
+		}
+	}
+	if (!gotfocus) {
+		write_log("Tried to capture mouse but window didn't have focus! F=%d A=%d\n", focus, mouseactive);
+		focus = 0;
+		mouseactive = 0;
+		active = 0;
+		releasecapture(mon);
+		recapture = 0;
+	}
+
 	if (mouseactive > 0)
 		focus = mon->monitor_id + 1;
 
 	if (mouseactive) {
 		if (focus) {
-			SDL_RaiseWindow(mon->amiga_window);
+			// Set the input focus to the main window
+			if (SDL_GetKeyboardFocus() != mon->amiga_window) {
+				SDL_SetWindowInputFocus(mon->amiga_window);
+			}
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
+			// Hide the cursor and capture the mouse input
+			SDL_ShowCursor(SDL_DISABLE);
+			SDL_SetRelativeMouseMode(SDL_TRUE);
 			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 			updatewinrect(mon, false);
 			// SDL2 hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
 			// unless it's configured to use Virtual Mouse (absolute movement).
-			SDL_SetRelativeMouseMode(SDL_TRUE);
 			mon_cursorclipped = mon->monitor_id + 1;
-			//updatemouseclip(mon);
+			updatemouseclip(mon);
 			setcursor(mon, -30000, -30000);
 		}
 		if (lastmouseactive != mouseactive) {
