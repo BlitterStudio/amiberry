@@ -517,35 +517,12 @@ static void setcursorshape(int monid)
 	}
 }
 
-void set_showcursor(BOOL v)
-{
-	if (v) {
-		int vv = SDL_ShowCursor(SDL_ENABLE);
-		if (vv > 1) {
-			SDL_ShowCursor(SDL_DISABLE);
-		}
-	}
-	else {
-		int max = 10;
-		while (max-- > 0) {
-			int vv = SDL_ShowCursor(SDL_DISABLE);
-			if (vv < 0) {
-				while (vv < -1) {
-					vv = SDL_ShowCursor(SDL_ENABLE);
-				}
-				break;
-			}
-		}
-	}
-}
-
 void releasecapture(struct AmigaMonitor* mon)
 {
-	// Disable relative mouse mode, which effectively releases the mouse capture
-	if (SDL_SetRelativeMouseMode(SDL_FALSE) < 0) {
-		write_log("Unable to release mouse capture: %s\n", SDL_GetError());
-	}
-	set_showcursor(TRUE);
+	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
+	SDL_SetRelativeMouseMode(SDL_FALSE);
+	//set_showcursor(TRUE);
+	SDL_ShowCursor(SDL_ENABLE);
 	mon_cursorclipped = 0;
 }
 
@@ -689,6 +666,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
+			SDL_RaiseWindow(mon->amiga_window);
 			// Set the input focus to the main window
 			if (SDL_GetKeyboardFocus() != mon->amiga_window) {
 				SDL_SetWindowInputFocus(mon->amiga_window);
