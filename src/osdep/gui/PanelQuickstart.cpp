@@ -466,7 +466,6 @@ public:
 					AdjustPrefs();
 				}
 			}
-			refresh_all_panels();
 		}
 
 		if (actionEvent.getSource() == chkNTSC)
@@ -481,7 +480,6 @@ public:
 				changed_prefs.ntscmode = false;
 				changed_prefs.chipset_refreshrate = 50;
 			}
-			RefreshPanelChipset();
 		}
 		else if (actionEvent.getSource() == chkQuickstartMode)
 		{
@@ -490,8 +488,8 @@ public:
 		else if (actionEvent.getSource() == cmdSetConfiguration)
 		{
 			AdjustPrefs();
-			refresh_all_panels();
 		}
+		refresh_all_panels();
 	}
 };
 
