@@ -2127,7 +2127,6 @@ exit:
 	} else {
 		if (p96_cursor == old_cursor && normalcursor != NULL) {
 			SDL_SetCursor(normalcursor);
-			SDL_ShowCursor(SDL_ENABLE);
 		}
 	}
 	if (old_cursor) {
@@ -2322,7 +2321,6 @@ int picasso_setwincursor(int monid)
 #ifdef AMIBERRY
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
-		SDL_ShowCursor(SDL_ENABLE);
 		return 1;
 	} else if (!ad->picasso_on) {
 		if (createwindowscursor(monid, 0, 1))
