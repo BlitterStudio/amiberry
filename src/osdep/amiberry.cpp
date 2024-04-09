@@ -504,48 +504,26 @@ void setpriority(int prio)
 	}
 }
 
-static void setcursorshape(int monid)
+void setcursorshape(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (!(mon->screen_is_picasso && currprefs.rtg_hardwaresprite))
+		if (mon->screen_is_picasso && currprefs.rtg_hardwaresprite)
+			SDL_ShowCursor(SDL_ENABLE);
+		else
 			SDL_ShowCursor(SDL_DISABLE);
 	}
 	else if (!picasso_setwincursor(monid)) {
-		if (SDL_GetCursor() != normalcursor)
-			SDL_SetCursor(normalcursor);
-	}
-}
-
-void set_showcursor(BOOL v)
-{
-	if (v) {
-		int vv = SDL_ShowCursor(SDL_ENABLE);
-		if (vv > 1) {
-			SDL_ShowCursor(SDL_DISABLE);
-		}
-	}
-	else {
-		int max = 10;
-		while (max-- > 0) {
-			int vv = SDL_ShowCursor(SDL_DISABLE);
-			if (vv < 0) {
-				while (vv < -1) {
-					vv = SDL_ShowCursor(SDL_ENABLE);
-				}
-				break;
-			}
-		}
+		SDL_SetCursor(normalcursor);
+		SDL_ShowCursor(SDL_ENABLE);
 	}
 }
 
 void releasecapture(struct AmigaMonitor* mon)
 {
-	// Disable relative mouse mode, which effectively releases the mouse capture
-	if (SDL_SetRelativeMouseMode(SDL_FALSE) < 0) {
-		write_log("Unable to release mouse capture: %s\n", SDL_GetError());
-	}
-	set_showcursor(TRUE);
+	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
+	SDL_SetRelativeMouseMode(SDL_FALSE);
+	SDL_ShowCursor(SDL_ENABLE);
 	mon_cursorclipped = 0;
 }
 
@@ -689,21 +667,22 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
+			SDL_RaiseWindow(mon->amiga_window);
 			// Set the input focus to the main window
-			if (SDL_GetKeyboardFocus() != mon->amiga_window) {
-				SDL_SetWindowInputFocus(mon->amiga_window);
+			if (SDL_GetKeyboardFocus() != mon->amiga_window && SDL_GetKeyboardFocus() != mon->gui_window) {
+				SDL_SetWindowInputFocus(mon->gui_window);
 			}
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
-			// Hide the cursor and capture the mouse input
-			SDL_ShowCursor(SDL_DISABLE);
-			SDL_SetRelativeMouseMode(SDL_TRUE);
 			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
-			updatewinrect(mon, false);
 			// SDL2 hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
 			// unless it's configured to use Virtual Mouse (absolute movement).
+			if (!currprefs.input_tablet)
+				SDL_SetRelativeMouseMode(SDL_TRUE);
+			
+			updatewinrect(mon, false);
 			mon_cursorclipped = mon->monitor_id + 1;
 			updatemouseclip(mon);
 			setcursor(mon, -30000, -30000);

@@ -154,3 +154,5 @@ extern void start_drawing_thread();
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
 extern bool kmsdrm_detected;
+
+extern void setcursorshape(int monid);
