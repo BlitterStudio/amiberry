@@ -618,7 +618,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 			return;
 	}
 	if (active) {
-		if (!SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_SHOWN)
+		if (!(SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_SHOWN))
 			return;
 	}
 	
