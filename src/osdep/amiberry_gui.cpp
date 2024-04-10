@@ -540,6 +540,7 @@ void gui_display(int shortcut)
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);
+		setcursorshape(0);
 	}
 	//rawinput_alloc();
 	fpscounter_reset();

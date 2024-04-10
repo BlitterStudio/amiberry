@@ -1993,12 +1993,7 @@ static void open_screen(struct uae_prefs* p)
 	target_graphics_buffer_update(mon->monitor_id, false);
 	picasso_refresh(mon->monitor_id);
 	setmouseactive(mon->monitor_id, -1);
-
-	if (currprefs.input_tablet > 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && isfullscreen() <= 0) {
-		if (mousehack_alive()) {
-			setcursorshape(mon->monitor_id);
-		}
-	}
+	setcursorshape(mon->monitor_id);
 
 	if (vkbd_allowed(0))
 	{

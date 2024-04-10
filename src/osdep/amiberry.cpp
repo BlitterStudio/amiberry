@@ -507,7 +507,7 @@ void setpriority(int prio)
 void setcursorshape(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
+	if (currprefs.input_tablet && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
 		if (mon->screen_is_picasso && currprefs.rtg_hardwaresprite)
 			SDL_ShowCursor(SDL_ENABLE);
 		else
@@ -668,10 +668,6 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	if (mouseactive) {
 		if (focus) {
 			SDL_RaiseWindow(mon->amiga_window);
-			// Set the input focus to the main window
-			if (SDL_GetKeyboardFocus() != mon->amiga_window && SDL_GetKeyboardFocus() != mon->gui_window) {
-				SDL_SetWindowInputFocus(mon->gui_window);
-			}
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
