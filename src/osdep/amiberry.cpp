@@ -716,6 +716,7 @@ void setmouseactive(int monid, int active)
 	if (active > 1)
 		SDL_RaiseWindow(mon->amiga_window);
 	setmouseactive2(mon, active, true);
+	setcursorshape(monid);
 }
 
 static void amiberry_active(struct AmigaMonitor* mon, int minimized)

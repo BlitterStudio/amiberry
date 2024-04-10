@@ -1993,7 +1993,6 @@ static void open_screen(struct uae_prefs* p)
 	target_graphics_buffer_update(mon->monitor_id, false);
 	picasso_refresh(mon->monitor_id);
 	setmouseactive(mon->monitor_id, -1);
-	setcursorshape(mon->monitor_id);
 
 	if (vkbd_allowed(0))
 	{
