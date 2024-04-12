@@ -784,7 +784,9 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back(" ");
         helptext.emplace_back("- System ROMs: The Amiga Kickstart files are by default located under 'kickstarts'.");
         helptext.emplace_back("  After changing the location of the Kickstart ROMs, or adding additional ROMs, ");
-        helptext.emplace_back("  click on the \"Rescan\" button to refresh the list of the available ROMs.");
+        helptext.emplace_back("  click on the \"Rescan\" button to refresh the list of the available ROMs. Please");
+        helptext.emplace_back("  note that the directory \"mt32-roms\" must exist in this location, and contain the");
+        helptext.emplace_back("  required MT-32 roms if you wish to use that MIDI feature in Amiberry.");
         helptext.emplace_back(" ");
         helptext.emplace_back("- Configuration files: These are located under \"conf\" by default. This is where your");
         helptext.emplace_back("  configurations will be stored, but also where Amiberry keeps the special amiberry.conf");
@@ -806,6 +808,15 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back("  (ie; in RetroPie). Amiberry can pick-up the configuration file from the path specified");
         helptext.emplace_back("  here, and load it automatically, applying any mappings it contains. You can ignore this");
         helptext.emplace_back("  path if you're not using RetroArch.");
+        helptext.emplace_back(" ");
+        helptext.emplace_back("- WHDboot files: This directory contains the files required by the whd-booter process");
+        helptext.emplace_back("  to launch WHDLoad game archives. In normal usage you should not need to change this.");
+        helptext.emplace_back(" ");
+        helptext.emplace_back("- Below that are 4 additional paths, that can be used to better organize your various");
+        helptext.emplace_back("  Amiga files, and streamline GUI operations when it comes to selecting the different");
+        helptext.emplace_back("  types of Amiga media. The file selector buttons in Amiberry associated with each of");
+        helptext.emplace_back("  the media types, will open these path locations. The defaults are shown, but these");
+        helptext.emplace_back("  can be changed to better suit your requirements.");
         helptext.emplace_back(" ");
         helptext.emplace_back("These settings are saved automatically when you click Rescan, or exit the emulator.");
         helptext.emplace_back(" ");
