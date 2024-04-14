@@ -124,6 +124,12 @@ static int x_size_table[MAX_SCREEN_MODES] = { 640, 640, 720, 800, 800, 960, 1024
 static int y_size_table[MAX_SCREEN_MODES] = { 400, 480, 400, 480, 600, 540, 768, 720, 800, 1024, 768, 768, 1050, 1080 };
 #endif
 
+void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
+{
+	SDL_GetWindowPosition(window, &rect->x, &rect->y);
+	SDL_GetWindowSize(window, &rect->w, &rect->h);
+}
+
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
 bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int height)
