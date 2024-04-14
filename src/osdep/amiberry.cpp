@@ -363,13 +363,13 @@ int sleep_millis_main(int ms)
 
 static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 {
-	int dx = (mon->amigawinclip_rect.x - mon->amigawin_rect.x) + (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2;
-	int dy = (mon->amigawinclip_rect.y - mon->amigawin_rect.y) + (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2;
+	int dx = (mon->amigawinclip_rect.x - mon->amigawin_rect.x) + ((mon->amigawinclip_rect.x + mon->amigawinclip_rect.w) - mon->amigawinclip_rect.x) / 2;
+	int dy = (mon->amigawinclip_rect.y - mon->amigawin_rect.y) + ((mon->amigawinclip_rect.y + mon->amigawinclip_rect.h) - mon->amigawinclip_rect.y) / 2;
 	mon->mouseposx = oldx - dx;
 	mon->mouseposy = oldy - dy;
 
-	mon->windowmouse_max_w = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 - 50;
-	mon->windowmouse_max_h = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 - 50;
+	mon->windowmouse_max_w = mon->amigawinclip_rect.w / 2 - 50;
+	mon->windowmouse_max_h = mon->amigawinclip_rect.h / 2 - 50;
 	if (mon->windowmouse_max_w < 10)
 		mon->windowmouse_max_w = 10;
 	if (mon->windowmouse_max_h < 10)
@@ -387,13 +387,13 @@ static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 			return;
 	}
 	mon->mouseposx = mon->mouseposy = 0;
-	if (oldx < 0 || oldy < 0 || oldx > mon->amigawin_rect.w - mon->amigawin_rect.x || oldy > mon->amigawin_rect.h - mon->amigawin_rect.y) {
+	if (oldx < 0 || oldy < 0 || oldx > mon->amigawin_rect.w || oldy > mon->amigawin_rect.h) {
 		write_log(_T("Mouse out of range: mon=%d %dx%d (%dx%d %dx%d)\n"), mon->monitor_id, oldx, oldy,
 			mon->amigawin_rect.x, mon->amigawin_rect.y, mon->amigawin_rect.w, mon->amigawin_rect.h);
 		return;
 	}
-	int cx = (mon->amigawinclip_rect.w - mon->amigawinclip_rect.x) / 2 + mon->amigawin_rect.x + (mon->amigawinclip_rect.x - mon->amigawin_rect.x);
-	int cy = (mon->amigawinclip_rect.h - mon->amigawinclip_rect.y) / 2 + mon->amigawin_rect.y + (mon->amigawinclip_rect.y - mon->amigawin_rect.y);
+	int cx = mon->amigawinclip_rect.w / 2 + mon->amigawin_rect.x + (mon->amigawinclip_rect.x - mon->amigawin_rect.x);
+	int cy = mon->amigawinclip_rect.h / 2 + mon->amigawin_rect.y + (mon->amigawinclip_rect.y - mon->amigawin_rect.y);
 
 	SDL_WarpMouseGlobal(cx, cy);
 }
@@ -504,7 +504,7 @@ void setpriority(int prio)
 	}
 }
 
-void setcursorshape(int monid)
+static void setcursorshape(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
@@ -519,33 +519,53 @@ void setcursorshape(int monid)
 	}
 }
 
+void set_showcursor(BOOL v)
+{
+	if (v) {
+		int vv = SDL_ShowCursor(SDL_ENABLE);
+		if (vv > 1) {
+			SDL_ShowCursor(SDL_DISABLE);
+		}
+	}
+	else {
+		int max = 10;
+		while (max-- > 0) {
+			int vv = SDL_ShowCursor(SDL_DISABLE);
+			if (vv < 0) {
+				while (vv < -1) {
+					vv = SDL_ShowCursor(SDL_ENABLE);
+				}
+				break;
+			}
+		}
+	}
+}
+
 void releasecapture(struct AmigaMonitor* mon)
 {
 	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
-	SDL_ShowCursor(SDL_ENABLE);
+	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
 }
 
 void updatemouseclip(struct AmigaMonitor* mon)
 {
 	if (mon_cursorclipped) {
-		int x, y, w, h;
-		SDL_GetWindowPosition(mon->amiga_window, &x, &y);
-		SDL_GetWindowSize(mon->amiga_window, &w, &h);
-		mon->amigawinclip_rect.x = x;
-		mon->amigawinclip_rect.y = y;
-		mon->amigawinclip_rect.w = w;
-		mon->amigawinclip_rect.h = h;
-
 		mon->amigawinclip_rect = mon->amigawin_rect;
+		if (!isfullscreen()) {
+			GetWindowRect(mon->amiga_window, &mon->amigawinclip_rect);
 
+			// Too small or invalid?
+			if (mon->amigawinclip_rect.w <= mon->amigawinclip_rect.x + 7 || mon->amigawinclip_rect.h <= mon->amigawinclip_rect.y + 7)
+				mon->amigawinclip_rect = mon->amigawin_rect;
+		}
 		if (mon_cursorclipped == mon->monitor_id + 1) {
 #if MOUSECLIP_LOG
 			write_log(_T("CLIP mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, isfullscreen());
 #endif
-			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
-			SDL_WarpMouseInWindow(mon->amiga_window, w / 2, h / 2);
+			//SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+			//SDL_WarpMouseInWindow(mon->amiga_window, mon->amigawinclip_rect.w / 2, mon->amigawinclip_rect.h / 2);
 		}
 	}
 }
@@ -598,14 +618,19 @@ void target_inputdevice_unacquire(bool full)
 }
 void target_inputdevice_acquire(void)
 {
-	//struct AmigaMonitor* mon = &AMonitors[0];
-	//target_inputdevice_unacquire(false);
+	struct AmigaMonitor* mon = &AMonitors[0];
+	target_inputdevice_unacquire(false);
 	//tablet = open_tablet(mon->hAmigaWnd);
 	//rawinput_alloc();
 }
 
 static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpause)
 {
+#ifdef RETROPLATFORM
+	bool isrp = rp_isactive() != 0;
+#else
+	bool isrp = false;
+#endif
 	int lastmouseactive = mouseactive;
 
 	if (active == 0)
@@ -613,12 +638,12 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	if (mouseactive == active && active >= 0)
 		return;
 
-	if (active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+	if (!isrp && active == 1 && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
 		if (SDL_GetCursor() != normalcursor)
 			return;
 	}
 	if (active) {
-		if (!(SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_SHOWN))
+		if (!isrp && !(SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_SHOWN))
 			return;
 	}
 	
@@ -628,6 +653,8 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	mouseactive = active ? mon->monitor_id + 1 : 0;
 
 	mon->mouseposx = mon->mouseposy = 0;
+	releasecapture(mon);
+	recapture = 0;
 
 	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
 		if (mousehack_alive())
@@ -667,7 +694,6 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 
 	if (mouseactive) {
 		if (focus) {
-			SDL_RaiseWindow(mon->amiga_window);
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
@@ -844,6 +870,7 @@ void disablecapture()
 {
 	setmouseactive(0, 0);
 	focus = 0;
+	mouseinside = false;
 	if (currprefs.active_nocapture_pause && sound_closed == 0) {
 		setpaused(2);
 		sound_closed = 1;
@@ -861,10 +888,24 @@ void setmouseactivexy(int monid, int x, int y, int dir)
 
 	if (isfullscreen() > 0)
 		return;
+	x += mon->amigawin_rect.x;
+	y += mon->amigawin_rect.y;
+	if (dir & 1)
+		x = mon->amigawin_rect.x - diff;
+	if (dir & 2)
+		x = mon->amigawin_rect.x + mon->amigawin_rect.w + diff;
+	if (dir & 4)
+		y = mon->amigawin_rect.y - diff;
+	if (dir & 8)
+		y = mon->amigawin_rect.y + mon->amigawin_rect.h + diff;
+	if (!dir) {
+		x += mon->amigawin_rect.w / 2;
+		y += mon->amigawin_rect.h / 2;
+	}
 
 	if (mouseactive) {
 		disablecapture();
-		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
+		SDL_WarpMouseGlobal(x, y);
 		if (dir) {
 			recapture = 1;
 		}
@@ -1234,7 +1275,7 @@ void handle_moved_event(AmigaMonitor* mon)
 	if (isfullscreen() <= 0)
 	{
 		updatewinrect(mon, false);
-		//updatemouseclip(0);
+		updatemouseclip(mon);
 	}
 }
 
@@ -1482,6 +1523,7 @@ void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor* mon)
 	if (button == SDL_BUTTON_LEFT && !mouseactive && (!mousehack_alive() || currprefs.input_tablet != TABLET_MOUSEHACK ||
 		(currprefs.input_tablet == TABLET_MOUSEHACK && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))))
 	{
+		mouseinside = true;
 		if (!pause_emulation || currprefs.active_nocapture_pause)
 			setmouseactive(mon->monitor_id, (clicks == 1 || isfullscreen() > 0) ? 2 : 1);
 	}
@@ -1524,9 +1566,8 @@ void handle_finger_motion_event(const SDL_Event& event)
 void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor* mon)
 {
 	monitor_off = 0;
-	mouseinside = true;
 
-	if (recapture && isfullscreen() <= 0) {
+	if (mouseinside && recapture && isfullscreen() <= 0) {
 		enablecapture(mon->monitor_id);
 		return;
 	}
@@ -2646,55 +2687,55 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		return 1;
 	}
 	if (cfgfile_yesno(option, value, _T("map_drives_auto"), &p->automount_removable)
-	    || cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives)
-	    || cfgfile_yesno(option, value, _T("borderless"), &p->borderless)
-	    || cfgfile_yesno(option, value, _T("blank_monitors"), &p->blankmonitors)
-	    || cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause)
-	    || cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound)
-	    || cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause)
-	    || cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound)
-	    || cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1)
-	    || cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause)
-	    || cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound)
-	    || cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1)
-	    || cfgfile_string(option, value, _T("midi_device"), p->midioutdev, sizeof p->midioutdev)
-	    || cfgfile_string(option, value, _T("midiout_device_name"), p->midioutdev, sizeof p->midioutdev)
-	    || cfgfile_string(option, value, _T("midiin_device_name"), p->midiindev, sizeof p->midiindev)
-	    || cfgfile_yesno(option, value, _T("midirouter"), &p->midirouter)
-	    || cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key)
-	    || cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop)
-	    || cfgfile_yesno(option, value, _T("gui_always_on_top"), &p->gui_alwaysontop)
-	    || cfgfile_intval(option, value, _T("drawbridge_driver"), &p->drawbridge_driver, 1)
+		|| cfgfile_yesno(option, value, _T("map_cd_drives"), &p->automount_cddrives)
+		|| cfgfile_yesno(option, value, _T("borderless"), &p->borderless)
+		|| cfgfile_yesno(option, value, _T("blank_monitors"), &p->blankmonitors)
+		|| cfgfile_yesno(option, value, _T("active_nocapture_pause"), &p->active_nocapture_pause)
+		|| cfgfile_yesno(option, value, _T("active_nocapture_nosound"), &p->active_nocapture_nosound)
+		|| cfgfile_yesno(option, value, _T("inactive_pause"), &p->inactive_pause)
+		|| cfgfile_yesno(option, value, _T("inactive_nosound"), &p->inactive_nosound)
+		|| cfgfile_intval(option, value, _T("inactive_input"), &p->inactive_input, 1)
+		|| cfgfile_yesno(option, value, _T("minimized_pause"), &p->minimized_pause)
+		|| cfgfile_yesno(option, value, _T("minimized_nosound"), &p->minimized_nosound)
+		|| cfgfile_intval(option, value, _T("minimized_input"), &p->minimized_input, 1)
+		|| cfgfile_string(option, value, _T("midi_device"), p->midioutdev, sizeof p->midioutdev)
+		|| cfgfile_string(option, value, _T("midiout_device_name"), p->midioutdev, sizeof p->midioutdev)
+		|| cfgfile_string(option, value, _T("midiin_device_name"), p->midiindev, sizeof p->midiindev)
+		|| cfgfile_yesno(option, value, _T("midirouter"), &p->midirouter)
+		|| cfgfile_yesno(option, value, _T("right_control_is_right_win"), &p->right_control_is_right_win_key)
+		|| cfgfile_yesno(option, value, _T("always_on_top"), &p->main_alwaysontop)
+		|| cfgfile_yesno(option, value, _T("gui_always_on_top"), &p->gui_alwaysontop)
+		|| cfgfile_intval(option, value, _T("drawbridge_driver"), &p->drawbridge_driver, 1)
 		|| cfgfile_yesno(option, value, _T("drawbridge_serial_autodetect"), &p->drawbridge_serial_auto)
 		|| cfgfile_string(option, value, _T("drawbridge_serial_port"), p->drawbridge_serial_port, sizeof p->drawbridge_serial_port)
-	    || cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed)
-	    || cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache)
-	    || cfgfile_yesno(option, value, _T("drawbridge_connected_drive_b"), &p->drawbridge_connected_drive_b)
-	    || cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release)
-	    || cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
-	    || cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
-	    || cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)
-	    || cfgfile_yesno(option, value, _T("use_retroarch_vkbd"), &p->use_retroarch_vkbd)
-	    || cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1)
-	    || cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1)
-	    || cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1)
-	    || cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1)
-	    || cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
-	    || cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
-	    || cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
+		|| cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed)
+		|| cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache)
+		|| cfgfile_yesno(option, value, _T("drawbridge_connected_drive_b"), &p->drawbridge_connected_drive_b)
+		|| cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release)
+		|| cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
+		|| cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
+		|| cfgfile_yesno(option, value, _T("use_retroarch_reset"), &p->use_retroarch_reset)
+		|| cfgfile_yesno(option, value, _T("use_retroarch_vkbd"), &p->use_retroarch_vkbd)
+		|| cfgfile_intval(option, value, _T("sound_pullmode"), &p->sound_pullmode, 1)
+		|| cfgfile_intval(option, value, _T("samplersoundcard"), &p->samplersoundcard, 1)
+		|| cfgfile_intval(option, value, "kbd_led_num", &p->kbd_led_num, 1)
+		|| cfgfile_intval(option, value, "kbd_led_scr", &p->kbd_led_scr, 1)
+		|| cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
+		|| cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
+		|| cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
 		|| cfgfile_intval(option, value, "gfx_manual_crop_width", &p->gfx_manual_crop_width, 1)
 		|| cfgfile_intval(option, value, "gfx_manual_crop_height", &p->gfx_manual_crop_height, 1)
-	    || cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
-	    || cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
+		|| cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
+		|| cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
 		|| cfgfile_yesno(option, value, _T("gfx_manual_crop"), &p->gfx_manual_crop)
-	    || cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
-	    || cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
-	    || cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
-	    || cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry)
-	    || cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay)
-	    || cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
-	    || cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
-	    || cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+		|| cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
+		|| cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
+		|| cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
+		|| cfgfile_string(option, value, "quit_amiberry", p->quit_amiberry, sizeof p->quit_amiberry)
+		|| cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay)
+		|| cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
+		|| cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
+		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
 
 	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled)
@@ -4020,7 +4061,7 @@ void* uaenative_get_uaevar(void)
 	uaevar.amigawnd = mon->hAmigaWnd;
 #endif
 	// WARNING: not 64-bit safe!
-    uaevar.z3offset = (uae_u32)(uae_u64)get_real_address(z3fastmem_bank[0].start) - z3fastmem_bank[0].start;
+	uaevar.z3offset = (uae_u32)(uae_u64)get_real_address(z3fastmem_bank[0].start) - z3fastmem_bank[0].start;
 	return &uaevar;
 }
 
@@ -4051,10 +4092,10 @@ bool data_dir_exists(const char* directory)
 
 int main(int argc, char* argv[])
 {
-    for (auto i = 1; i < argc; i++) {
-        if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
-            usage();
-    }
+	for (auto i = 1; i < argc; i++) {
+		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
+			usage();
+	}
 
 	struct sigaction action{};
 	mainthreadid = uae_thread_get_id(nullptr);
@@ -4076,8 +4117,8 @@ int main(int argc, char* argv[])
 	max_uae_height = 8192;
 
 	// Get startup path
-    const auto external_files_dir = getenv("EXTERNAL_FILES_DIR");
-    const auto xdg_data_home = getenv("XDG_DATA_HOME");
+	const auto external_files_dir = getenv("EXTERNAL_FILES_DIR");
+	const auto xdg_data_home = getenv("XDG_DATA_HOME");
 	if (external_files_dir != nullptr && data_dir_exists(external_files_dir))
 	{
 		start_path_data = std::string(external_files_dir);
