@@ -995,10 +995,6 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Brightness\" - Allows adjustment of the output image brightness, from -200 to 200.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("\"Use SDL2 multi-threaded rendering\" - Enables multi-threaded drawing using SDL2.");
-	helptext.emplace_back("Provides a performance benefit, however not all systems support it.");
-    helptext.emplace_back("Disable this if you notice problems, like a black screen when starting emulation.");
-	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Line Mode\" - These options define how the Amiga screen is drawn.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back(" - Single: This will draw single lines only, which will be stretched vertically to");
