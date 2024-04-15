@@ -5832,25 +5832,6 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	if (cfgfile_string(option, value, _T("jit_blacklist"), p->jitblacklist, sizeof p->jitblacklist / sizeof(TCHAR)))
 		return 1;
 
-	if (cfgfile_yesno(option, value, _T("denise_noehb"), &dummybool)) {
-		if (dummybool) {
-			p->cs_denisemodel = DENISEMODEL_A1000NOEHB;
-		}
-		return 1;
-	}
-	if (cfgfile_yesno(option, value, _T("ics_agnus"), &dummybool)) {
-		if (dummybool) {
-			p->cs_agnusmodel = AGNUSMODEL_A1000;
-		}
-		return 1;
-	}
-	if (cfgfile_yesno(option, value, _T("agnus_bltbusybug"), &dummybool)) {
-		if (dummybool) {
-			p->cs_agnusmodel = AGNUSMODEL_A1000;
-		}
-		return 1;
-	}
-
 	if (cfgfile_yesno(option, value, _T("immediate_blits"), &p->immediate_blits)
 #ifdef AMIBERRY
 		|| cfgfile_yesno(option, value, _T("fast_copper"), &p->fast_copper)
