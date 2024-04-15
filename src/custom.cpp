@@ -476,6 +476,7 @@ static int last_diwlastword;
 static int hb_last_diwlastword;
 static int last_hdiw;
 static diw_states vdiwstate, hdiwstate, hdiwstate_blank;
+static int hdiwbplstart;
 static int bpl_hstart;
 static bool exthblank, exthblank_state, hcenterblank_state;
 static int hsyncdebug;
@@ -4263,8 +4264,10 @@ static void beginning_of_plane_block_early(int hpos)
 
 static void start_noborder(int hpos)
 {
-	bpl_shifter = 1;
-	reset_bpl_vars();
+	if (bpl_shifter <= 0) {
+		bpl_shifter = 1;
+		reset_bpl_vars();
+	}
 	if (thisline_decision.plfleft < 0) {
 		thisline_decision.plfleft = hpos * 2;
 		if (hdiwstate == diw_states::DIW_waiting_stop && thisline_decision.diwfirstword < 0) {
@@ -4301,9 +4304,37 @@ static void beginning_of_plane_block(int hpos)
 	}
 
 	// do not mistake end of bitplane as start of low value hblank programmed mode
-	if (bpl_shifter <= 0 && hpos > REFRESH_FIRST_HPOS) {
-		if (ecs_denise || hpos >= OCS_DENISE_HBLANK_DISABLE_HPOS || hdiwstate == diw_states::DIW_waiting_stop) {
-			start_noborder(hpos + hpos_hsync_extra);
+	if (hpos > REFRESH_FIRST_HPOS) {
+		if (ecs_denise && bpl_shifter <= 0) {
+			bpl_shifter = 1;
+			reset_bpl_vars();
+			thisline_decision.plfleft = hpos * 2;
+			if (hdiwstate == diw_states::DIW_waiting_stop && thisline_decision.diwfirstword < 0) {
+				thisline_decision.diwfirstword = min_diwlastword;
+			}
+		} else if (!ecs_denise && hdiwbplstart < 0) {
+			// if OCS Denise and first BPL1DAT is earlier than OCS_DENISE_HBLANK_DISABLE_HPOS:
+			// -> bitplane shifter works normally but HDIW won't open.
+			if (bpl_shifter <= 0) {
+				bpl_shifter = 1;
+				reset_bpl_vars();
+				thisline_decision.plfleft = hpos * 2;
+				if (hpos >= OCS_DENISE_HBLANK_DISABLE_HPOS) {
+					if (hdiwstate == diw_states::DIW_waiting_stop && thisline_decision.diwfirstword < 0) {
+						thisline_decision.diwfirstword = min_diwlastword;
+					}
+					hdiwbplstart = min_diwlastword;
+				} else {
+					hdiwbplstart = -1;
+				}
+			}
+			// HDIW only opens when next BPL1DAT position is >= OCS_DENISE_HBLANK_DISABLE_HPOS
+			if (hdiwbplstart < 0 && hpos >= OCS_DENISE_HBLANK_DISABLE_HPOS) {
+				int v = hpos_to_diwx(hpos);
+				v -= 4; // 1 lores pixel
+				v = coord_diw_shres_to_window_x(v);
+				hdiwbplstart = v;
+			}
 		}
 	}
 
@@ -6031,6 +6062,14 @@ static void finish_decisions(int hpos)
 		thisline_decision.plflinelen = 0;
 		thisline_decision.bplres = output_res(RES_LORES);
 	}
+	if (!ecs_denise) {
+		if (thisline_decision.diwfirstword < hdiwbplstart) {
+			thisline_decision.diwfirstword = hdiwbplstart;
+		} else if (hdiwbplstart < 0) {
+			thisline_decision.diwfirstword = -1;
+			thisline_decision.diwlastword = -1;
+		}
+	}
 
 #if 0
 	if (hstrobe_conflict) {
@@ -6236,6 +6275,7 @@ static void reset_decisions_hsync_start(void)
 			MARK_LINE_CHANGED;
 		}
 	}
+	hdiwbplstart = -1;
 
 	thisline_decision.ctable = -1;
 	thisline_changed = 0;
@@ -9431,7 +9471,7 @@ static void BPLxDAT_next(uae_u32 vv)
 
 	if (num == 0) {
 		// ECS/AGA: HSYNC start - 1: $0C is first possible.
-		if ((ecs_denise && hpos != hsyncstartpos_start_cycles - 1) || (!ecs_denise && hpos >= OCS_DENISE_HBLANK_DISABLE_HPOS)) {
+		if (hpos != hsyncstartpos_start_cycles - 1) {
 			beginning_of_plane_block(hpos);
 			bprun_pipeline_flush_delay = maxhpos;
 			if (bplcon0_planes_changed) {
