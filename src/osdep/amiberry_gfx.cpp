@@ -2220,10 +2220,6 @@ int graphics_init(bool mousecapture)
 		currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
 	}
 
-#ifdef USE_OPENGL
-	// Disable the render thread under OpenGL (not supported)
-	amiberry_options.use_sdl2_render_thread = false;
-#endif
 #ifdef USE_DISPMANX
 	if (display_pipe == nullptr) {
 		display_pipe = xmalloc(smp_comm_pipe, 1);
