@@ -14,7 +14,7 @@ bool alf_init(struct autoconfig_info *aci);
 
 void apollo_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 bool apollo_init_hd(struct autoconfig_info *aci);
-bool apollo_init_cpu(struct autoconfig_info *aci);
+bool apollo_init_cpu_12xx(struct autoconfig_info *aci);
 
 void masoboshi_add_idescsi_unit (int ch, struct uaedev_config_info *ci, struct romconfig *rc);
 bool masoboshi_init(struct autoconfig_info *aci);
