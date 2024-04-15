@@ -4293,6 +4293,16 @@ static const struct expansionsubromtype a2090_sub[] = {
 };
 #endif
 
+static const struct expansionboardsettings merlin_settings[] = {
+	{
+		_T("Serial number\0"),
+		_T("serial\0"),
+		2, false, 0
+	},
+	{
+		NULL
+	}
+};
 static const struct expansionboardsettings voodoo_settings[] = {
 	{
 		_T("Direct VRAM access in little endian modes"), _T("directvram")
@@ -6090,6 +6100,14 @@ const struct expansionromtype expansionroms[] = {
 		NULL, NULL, NULL, NULL, ROMTYPE_PICASSOIV | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_RTG
+	},
+	{
+		_T("merlin"), _T("Merlin"), _T("X-Pert Computer Services"),
+		NULL, NULL, NULL, NULL, ROMTYPE_MERLIN | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, merlin_settings
 	},
 	{
 		_T("vooodoo3_3k"), _T("Voodoo 3 3000"), _T("3dfx"),

@@ -3,7 +3,7 @@
 *
 * Cirrus Logic based graphics board emulation
 *
-* Copyright 2013 Toni Wilen
+* Copyright 2013-2024 Toni Wilen
 *
 */
 
@@ -92,6 +92,16 @@ const TCHAR *gfxboard_get_configname(int type)
 		return _T("ZorroII");
 	if (type == GFXBOARD_UAE_Z3)
 		return _T("ZorroIII");
+	return NULL;
+}
+
+struct gfxboard_func *gfxboard_get_func(struct rtgboardconfig *rbc)
+{
+	int type = rbc->rtgmem_type;
+	if (type == GFXBOARD_UAE_Z2)
+		return NULL;
+	if (type == GFXBOARD_UAE_Z3)
+		return NULL;
 	return NULL;
 }
 
