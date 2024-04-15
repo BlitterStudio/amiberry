@@ -591,7 +591,7 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 static bool iswindowfocus(struct AmigaMonitor* mon)
 {
 	bool donotfocus = false;
-	Uint32 flags = SDL_GetWindowFlags(mon->amiga_window);
+	Uint32 flags = SDL_GetWindowFlags(mon->sdl_window);
 
 	if (!(flags & SDL_WINDOW_INPUT_FOCUS)) {
 		donotfocus = true;
@@ -669,7 +669,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	bool gotfocus = false;
 	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
 		SDL_Window* window = SDL_GetMouseFocus();
-		if (window && (window == AMonitors[i].amiga_window)) {
+		if (window && (window == AMonitors[i].sdl_window)) {
 			mon = &AMonitors[i];
 			break;
 		}
@@ -697,7 +697,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
-			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+			SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
 			// SDL2 hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
 			// unless it's configured to use Virtual Mouse (absolute movement).
