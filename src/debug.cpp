@@ -2498,9 +2498,9 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 	if (ipl >= 0) {
 		_stprintf(l1, _T("[%02X %03X %d]"), hpos, dhpos, ipl);
 	} else if (ipl == -2) {
-		_stprintf(l1, _T("[%02X     -]"), hpos);
+		_stprintf(l1, _T("[%02X %03X -]"), hpos, dhpos);
 	} else {
-		_stprintf(l1, _T("[%02X      ]"), hpos);
+		_stprintf(l1, _T("[%02X %03X  ]"), hpos, dhpos);
 	}
 	if (l4) {
 		_tcscpy(l4, _T("          "));
