@@ -364,13 +364,6 @@ find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
-if (USE_DISPMANX)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DISPMANX)
-    target_include_directories(${PROJECT_NAME} PRIVATE /opt/vc/include)
-    target_link_libraries(${PROJECT_NAME} PRIVATE bcm_host vchiq_arm)
-    target_link_directories(${PROJECT_NAME} PRIVATE /opt/vc/lib)
-endif()
-
 if (USE_DBUS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DBUS)
     find_package(PkgConfig REQUIRED)

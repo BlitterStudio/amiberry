@@ -4755,6 +4755,17 @@ static const struct expansionboardsettings harlequin_settings[] = {
 	}
 };
 
+static const struct expansionboardsettings rainbow2_settings[] = {
+	{
+		_T("Mode\0") _T("NTSC\0") _T("PAL\0"),
+		_T("mode\0") _T("ntsc\0") _T("pal\0"),
+		true
+	},
+	{
+		NULL
+	}
+};
+
 static const struct expansionboardsettings cubo_settings[] = {
 	{
 		_T("DIP1 #1"),
@@ -6126,6 +6137,14 @@ const struct expansionromtype expansionroms[] = {
 		0, 0, 0, false, NULL,
 		false, 0, harlequin_settings
 	},
+	{
+		_T("rainbowii"), _T("Rainbow II"), _T("Ingenieurburo Helfrich"),
+		NULL, NULL, NULL, NULL, ROMTYPE_RAINBOWII | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, rainbow2_settings
+	},
 
 	/* Sound Cards */
 #ifdef WITH_TOCCATA
@@ -6943,11 +6962,20 @@ static const struct cpuboardsubtype csa_sub[] = {
 	}
 };
 
-static const struct expansionboardsettings apollo_settings[] = {
+static const struct expansionboardsettings apollo12xx_settings[] = {
 	{
 		_T("SCSI module installed"),
 		_T("scsi")
 	},
+	{
+		_T("Memory disable"),
+		_T("memory")
+	},
+	{
+		NULL
+	}
+};
+static const struct expansionboardsettings apollo630_settings[] = {
 	{
 		_T("Memory disable"),
 		_T("memory")
@@ -6961,13 +6989,24 @@ static const struct cpuboardsubtype apollo_sub[] = {
 	{
 		_T("Apollo 1240/1260"),
 		_T("Apollo"),
-		ROMTYPE_CB_APOLLO, 0, 4,
+		ROMTYPE_CB_APOLLO_12xx, 0, 4,
 		apollo_add_scsi_unit, EXPANSIONTYPE_SCSI,
 		BOARD_MEMORY_CUSTOM_32,
 		64 * 1024 * 1024,
 		0,
-		apollo_init_cpu, NULL, 2, 0,
-		apollo_settings
+		apollo_init_cpu_12xx, NULL, 2, 0,
+		apollo12xx_settings
+	},
+	{
+		_T("Apollo 630"),
+		_T("Apollo630"),
+		ROMTYPE_CB_APOLLO_630, 0, 4,
+		NULL, 0,
+		BOARD_MEMORY_CUSTOM_32,
+		128 * 1024 * 1024,
+		0,
+		NULL, NULL, 0, 0,
+		apollo630_settings
 	},
 	{
 		NULL

@@ -120,7 +120,8 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_clang_x64" ],
-      "wslPath": "${defaultWSLPath}"
+      "wslPath": "${defaultWSLPath}",
+      "variables": []
     }
   ]
 }
