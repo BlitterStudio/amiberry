@@ -1954,7 +1954,7 @@ static uae_u32 shsprite(int dpix, uae_u32 spix_val, uae_u32 v, int add, int spr)
 	struct spritepixelsbuf *spb = &spritepixels[dpix];
 	int sdpix = dpix;
 	if (spb->flags & 2) {
-		sdpix -= add;
+		sdpix -= add >> 1;
 	}
 	int mask = 3;
 	sprcol1 = sh_render_sprites(sdpix, bpldualpf, spix_val, 0);
