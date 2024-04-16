@@ -181,7 +181,8 @@ public:
 				txtPath->setText(tmp);
 				fileSelected = true;
 				default_hfdlg(&current_hfdlg);
-				CreateDefaultDevicename(current_hfdlg.ci.devname);
+				if (current_fsvdlg.ci.devname[0] == 0)
+					CreateDefaultDevicename(current_fsvdlg.ci.devname);
 			}
 			wndEditFilesysHardfile->requestModalFocus();
 			cmdPath->requestFocus();

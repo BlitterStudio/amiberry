@@ -55,7 +55,8 @@ public:
 				txtPath->setText(tmp);
 				txtVolume->setText(volName);
 				default_fsvdlg(&current_fsvdlg);
-				CreateDefaultDevicename(current_fsvdlg.ci.devname);
+				if (current_fsvdlg.ci.devname[0] == 0)
+					CreateDefaultDevicename(current_fsvdlg.ci.devname);
 				_tcscpy(current_fsvdlg.ci.volname, current_fsvdlg.ci.devname);
 				_tcscpy(current_fsvdlg.ci.rootdir, tmp.c_str());
 			}

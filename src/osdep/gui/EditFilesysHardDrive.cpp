@@ -46,7 +46,8 @@ public:
 			dialogResult = true;
 		}
 		default_hfdlg(&current_hfdlg);
-		CreateDefaultDevicename(current_hfdlg.ci.devname);
+		if (current_fsvdlg.ci.devname[0] == 0)
+			CreateDefaultDevicename(current_fsvdlg.ci.devname);
 		_tcscpy(current_hfdlg.ci.rootdir, txtPath->getText().c_str());
 		// Set RDB mode if IDE or SCSI
 		if (current_hfdlg.ci.controller_type > 0) {
