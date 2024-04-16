@@ -9223,7 +9223,7 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 	return configure_rom (p, roms, romcheck);
 }
 
-static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
+static int bip_a600(struct uae_prefs* p, int config, int compa, int romcheck)
 {
 	int roms[4];
 
@@ -9231,20 +9231,26 @@ static int bip_a600 (struct uae_prefs *p, int config, int compa, int romcheck)
 	roms[1] = 9;
 	roms[2] = 8;
 	roms[3] = -1;
-	set_68000_compa (p, compa);
+	set_68000_compa(p, compa);
 	p->cs_compatible = CP_A600;
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x100000;
 	if (config > 0)
 		p->cs_rtc = 1;
-	if (config == 1)
+	switch (config)
+	{
+	case 1:
 		p->chipmem.size = 0x200000;
-	if (config == 2)
+		break;
+	case 2:
 		p->chipmem.size = 0x200000;
 		p->fastmem[0].size = 0x400000;
-	if (config == 3)
+		break;
+	case 3:
 		p->chipmem.size = 0x200000;
 		p->fastmem[0].size = 0x800000;
+		break;
+	}
 	p->chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 	built_in_chipset_prefs(p);
 	return configure_rom (p, roms, romcheck);
