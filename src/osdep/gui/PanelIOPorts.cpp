@@ -452,7 +452,7 @@ bool HelpPanelIO(std::vector<std::string>& helptext)
 	helptext.emplace_back("         can also emulate a Roland MT-32 MIDI device using Amiberry, if you have");
 	helptext.emplace_back("         the required MT-32 ROM files installed. Please note that the path for ");
 	helptext.emplace_back("         these ROM files must be in your System ROMs: directory as set in the ");
-	helptext.emplace_back(R"(       "Paths" panel, or inside a "mt32-roms" directory under that location.)");
+	helptext.emplace_back(R"(         "Paths" panel, or inside a "mt32-roms" directory under that location.)");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("         If the required MT-32 ROMs are detected by Amiberry, you can then select");
 	helptext.emplace_back("         the emulated MT-32 device, using the MIDI \"Out:\" dropdown options. This");
