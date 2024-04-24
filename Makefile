@@ -548,19 +548,7 @@ OBJS = \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
-	src/floppybridge/ArduinoFloppyBridge.o \
-	src/floppybridge/ArduinoInterface.o \
-	src/floppybridge/CommonBridgeTemplate.o \
 	src/floppybridge/floppybridge_lib.o \
-	src/floppybridge/ftdi.o \
-	src/floppybridge/GreaseWeazleBridge.o \
-	src/floppybridge/GreaseWeazleInterface.o \
-	src/floppybridge/pll.o \
-	src/floppybridge/RotationExtractor.o \
-	src/floppybridge/SerialIO.o \
-	src/floppybridge/SuperCardProBridge.o \
-	src/floppybridge/SuperCardProInterface.o \
-	src/floppybridge/FloppyBridge.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -687,6 +675,11 @@ mt32emu:
 	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
 	cmake --build external/mt32emu/build --target all --parallel
 	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
+
+floppybridge:
+	cmake -DCMAKE_BUILD_TYPE=Release -S external/floppybridge -B external/floppybridge/build
+	cmake --build external/floppybridge/build --target all --parallel
+	cp external/floppybridge/build/libfloppybridge.so .
 
 gencpu:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
