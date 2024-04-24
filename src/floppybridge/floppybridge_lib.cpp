@@ -42,7 +42,11 @@ HMODULE WIN32_LoadLibrary(const TCHAR*);
 #ifdef _WIN32
 #define MODULENAME _T("FloppyBridge.dll")
 #else
+#ifdef AMIBERRY
+#define MODULENAME "libfloppybridge"
+#else
 #define MODULENAME "libfloppybridge.so"
+#endif
 #endif
 #endif
 
@@ -221,7 +225,11 @@ void prepareBridge() {
 #endif
 #endif
 #else
+#ifdef AMIBERRY
+	hBridgeDLLHandle = uae_dlopen_plugin(MODULENAME);
+#else
 	hBridgeDLLHandle = dlopen(MODULENAME, RTLD_NOW);
+#endif
 #endif
 
 	// Did it open?
@@ -356,12 +364,8 @@ std::vector<std::string> stringListsForProfiles;
 
 // Returns TRUE if the floppy bridge library has been loaded and is ready to be queried
 bool FloppyBridgeAPI::isAvailable() {
-#ifdef AMIBERRY
-	return true;
-#else
 	prepareBridge();
 	return hBridgeDLLHandle != 0;
-#endif
 }
 
 // Populates bridgeInformation with information about the Bridge DLL. This should be called and shown somewhere

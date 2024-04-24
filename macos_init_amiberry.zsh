@@ -27,6 +27,14 @@ for file in $CWD_VAR/../Resources/Abr/**/*(.); do
 	fi
 done
 
+for file in $CWD_VAR/../Resources/Cdroms/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Cdroms${file##*/Cdroms}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Cdroms${file##*/Cdroms}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Cdroms${file##*/Cdroms}")
+		cp $file "$USERDIR/Documents/Amiberry/Cdroms${file##*/Cdroms}"
+	fi
+done
+
 for file in $CWD_VAR/../Resources/Controllers/**/*(.); do
 	if [[ ! -f "$USERDIR/Documents/Amiberry/Controllers${file##*/Controllers}" ]]; then
 		echo "Copying $file to $USERDIR/Documents/Amiberry/Controllers${file##*/Controllers}"
@@ -51,6 +59,22 @@ for file in $CWD_VAR/../Resources/Data/**/*(.); do
 	fi
 done
 
+for file in $CWD_VAR/../Resources/Floppies/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Floppies${file##*/Floppies}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Floppies${file##*/Floppies}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Floppies${file##*/Floppies}")
+		cp $file "$USERDIR/Documents/Amiberry/Floppies${file##*/Floppies}"
+	fi
+done
+
+for file in $CWD_VAR/../Resources/Harddrives/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Harddrives${file##*/Harddrives}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Harddrives${file##*/Harddrives}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Harddrives${file##*/Harddrives}")
+		cp $file "$USERDIR/Documents/Amiberry/Harddrives${file##*/Harddrives}"
+	fi
+done
+
 for file in $CWD_VAR/../Resources/Savestates/**/*(.); do
 	if [[ ! -f "$USERDIR/Documents/Amiberry/Savestates${file##*/Savestates}" ]]; then
 		echo "Copying $file to $USERDIR/Documents/Amiberry/Savestates${file##*/Savestates}"
@@ -72,6 +96,14 @@ for file in $CWD_VAR/../Resources/Screenshots/**/*(.); do
 		echo "Copying $file to $USERDIR/Documents/Amiberry/Screenshots${file##*/Screenshots}"
 		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Screenshots${file##*/Screenshots}")
 		cp $file "$USERDIR/Documents/Amiberry/Screenshots${file##*/Screenshots}"
+	fi
+done
+
+for file in $CWD_VAR/../Resources/Lha/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Lha${file##*/Lha}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Lha${file##*/Lha}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Lha${file##*/Lha}")
+		cp $file "$USERDIR/Documents/Amiberry/Lha${file##*/Lha}"
 	fi
 done
 
