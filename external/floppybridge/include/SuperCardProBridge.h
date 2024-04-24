@@ -1,8 +1,8 @@
-#ifndef GREASEWEAZLE_FLOPPY_BRIDGE
-#define GREASEWEAZLE_FLOPPY_BRIDGE
-/* WinUAE Greaseweazle Interface for *UAE
+#ifndef SUPERCARDPRO_FLOPPY_BRIDGE
+#define SUPERCARDPRO_FLOPPY_BRIDGE
+/* WinUAE Supercard Pro Interface for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -19,17 +19,17 @@
 */
 
 //
-// ROMTYPE_GREASEWEAZLEREADER_WRITER must be defined for this to work
+// ROMTYPE_SUPERCARDPRO_WRITER must be defined for this to work
 
-
-#ifdef ROMTYPE_GREASEWEAZLEREADER_WRITER
+#ifdef ROMTYPE_SUPERCARDPRO_WRITER
 
 #include "floppybridge_abstract.h"
 #include "CommonBridgeTemplate.h"
-#include "GreaseWeazleInterface.h"
+#include "SuperCardProInterface.h"
 #include "pll.h"
 
-class GreaseWeazleDiskBridge : public CommonBridgeTemplate {
+
+class SupercardProDiskBridge : public CommonBridgeTemplate {
 private:
 	// When the motor last switched on	
 	std::chrono::time_point<std::chrono::steady_clock> m_motorTurnOnTime;
@@ -37,15 +37,15 @@ private:
 
 	// Which com port should we use? or blank for automatic
 	std::string m_comPort;
-
+	
 	// Which drive to use
-	CommonBridgeTemplate::DriveSelection m_useDrive;
+	bool m_useDriveA = false;
 
 	// Is this a HD disk?
 	bool m_isHDDisk = false;
 
 	// Hardware connection
-	GreaseWeazle::GreaseWeazleInterface m_io;
+	SuperCardPro::SCPInterface m_io;
 
 	// Remember where we are
 	int m_currentCylinder = 0;
@@ -101,7 +101,7 @@ protected:
 	virtual bool performNoClickSeek() override;
 
 	// Called when data should be read from the drive.
-	//		pll:           supplied if you use it
+	//		pll:		   supplied if you use it
 	//		maxBufferSize: Maximum number of RotationExtractor::MFMSample in the buffer.  If we're trying to detect a disk, this might be set VERY LOW
 	// 	    buffer:		   Where to save to.  When a buffer is saved, position 0 MUST be where the INDEX pulse is.  RevolutionExtractor will do this for you
 	//		indexMarker:   Used by rotationExtractor if you use it, to help be consistent where the INDEX position is read back at
@@ -114,7 +114,7 @@ protected:
 	// Parameters are:	rawMFMData						The raw data to be written.  This is an actual MFM stream, going from MSB to LSB for each byte
 	//					numBytes						Number of bits in the buffer to write
 	//					writeFromIndex					If an attempt should be made to write this from the INDEX pulse rather than just a random position
-	//					suggestUsingPrecompensation		A suggestion that you might want to use write precompensation, optional
+	//					suggestUsingPrecompensation		A suggestion that you might want to use write pre-compensation, optional
 	// Returns TRUE if success, or false if it fails.  Largely doesnt matter as most stuff should verify with a read straight after
 	virtual bool writeData(const unsigned char* rawMFMData, const unsigned int numBits, const bool writeFromIndex, const bool suggestUsingPrecompensation) override;
 
@@ -122,15 +122,14 @@ protected:
 	// It's virtual as the default method issues a read and looks for data.  If you have a better implementation then override this
 	virtual bool attemptToDetectDiskChange() override;
 
-	;
-
 public:
-	GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, CommonBridgeTemplate::DriveSelection drive);
+	SupercardProDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB);
 
 	// This is for the static version
-	GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings);
+	SupercardProDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings);
 
-	virtual ~GreaseWeazleDiskBridge();
+
+	virtual ~SupercardProDiskBridge();
 
 	static const BridgeDriver* staticBridgeInformation();
 };

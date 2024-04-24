@@ -1,6 +1,6 @@
 /* WinUAE Greaseweazle Interface for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -34,13 +34,13 @@ static const FloppyDiskBridge::BridgeDriver DriverGreaseweazleFloppy = {
 };
 
 // Flags from WINUAE
-GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, CommonBridgeTemplate::DriveSelection drive) :
+GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, FloppyBridge::DriveSelection drive) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_useDrive(drive), m_comPort(autoDetectComPort ? "" : comPort) {
 }
 
 // This is for the static version
-GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) :
-	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false), m_useDrive((DriveSelection)((uaeSettings & 0x0F) == 0)), m_comPort("") {
+GreaseWeazleDiskBridge::GreaseWeazleDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings) :
+	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false), m_useDrive((FloppyBridge::DriveSelection)((uaeSettings & 0x0F) == 0)), m_comPort("") {
 }
 
 

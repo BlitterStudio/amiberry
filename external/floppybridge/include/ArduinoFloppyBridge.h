@@ -2,7 +2,7 @@
 #define ARDUINO_FLOPPY_BRIDGE
 /* DrawBridge (Arduino Reader/Writer) Bridge for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -118,10 +118,10 @@ protected:
 	virtual bool attemptToDetectDiskChange() override;
 
 public:
-	ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort);
+	ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort);
 
 	// This is for the static version
-	ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings);
+	ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings);
 
 	virtual ~ArduinoFloppyDiskBridge();
 

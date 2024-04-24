@@ -1,6 +1,6 @@
 /* WinUAE Supercard Pro Interface for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -35,12 +35,12 @@ static const FloppyDiskBridge::BridgeDriver DriverSupercardProFloppy = {
 
 
 // Flags from WINUAE
-SupercardProDiskBridge::SupercardProDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB) :
+SupercardProDiskBridge::SupercardProDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_comPort(autoDetectComPort ? comPort : ""), m_useDriveA(!driveOnB) {
 }
 
 // This is for the static version
-SupercardProDiskBridge::SupercardProDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) :
+SupercardProDiskBridge::SupercardProDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false), m_useDriveA((uaeSettings & 0x0F) == 0), m_comPort("") {
 }
 

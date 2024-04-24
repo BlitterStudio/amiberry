@@ -1,6 +1,6 @@
 /* FloppyBridge DLL for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -52,15 +52,17 @@ HINSTANCE hInstance;
 
 
 
-static BridgeAbout BridgeInformation = { "FloppyBridge, Copyright(C) 2021-2023 RobSmithDev", "https://amiga.robsmithdev.co.uk/winuae", 1, 4, 0, 0, 0};
-static BridgeAbout BridgeInformationUpdate = { "FloppyBridge UPDATE AVAILABLE, Copyright(C) 2021-2023 RobSmithDev", "https://amiga.robsmithdev.co.uk/winuae", 1, 4, 0, 0, 0 };
+static FloppyBridge::BridgeAbout BridgeInformation = { "FloppyBridge, Copyright(C) 2021-2024 RobSmithDev", "https://amiga.robsmithdev.co.uk/winuae", 1, 6, 0, 0, 0};
+static FloppyBridge::BridgeAbout BridgeInformationUpdate = { "FloppyBridge UPDATE AVAILABLE, Copyright(C) 2021-2024 RobSmithDev", "https://amiga.robsmithdev.co.uk/winuae", 1, 6, 0, 0, 0 };
 static bool hasUpdateChecked = false;
+static bool enableUsageNotifications = true;
+
 std::vector<SerialIO::SerialPortInformation> serialports;
 #ifdef _WIN32
 std::vector<HBITMAP> bridgeLogos;
 #endif
 std::unordered_map<unsigned int, BridgeConfig*> profileList;
-FloppyBridgeProfileInformationDLL* profileCache = nullptr;
+FloppyBridge::FloppyBridgeProfileInformationDLL* profileCache = nullptr;
 std::string profileStringExported;
 
 
@@ -104,7 +106,7 @@ bool BridgeConfig::fromString(char* serialisedOptions) {
 
     unsigned int i = atoi(params[1].c_str());
     autoCache = (i & 1) != 0;
-    driveCable = (CommonBridgeTemplate::DriveSelection)(((i & 2)>>1) | ((i & 48) >> 3));
+    driveCable = (FloppyBridge::DriveSelection)(((i & 2)>>1) | ((i & 48) >> 3));
     autoDetectComPort = (i & 4) != 0;
     smartSpeed = (i & 8) != 0;
 #ifdef _WIN32
@@ -114,12 +116,12 @@ bool BridgeConfig::fromString(char* serialisedOptions) {
 #endif
 
     i = atoi(params[3].c_str());
-    if (i > (unsigned int)CommonBridgeTemplate::BridgeMode::bmMax) return false;
-    bridgeMode = (CommonBridgeTemplate::BridgeMode)i;
+    if (i > (unsigned int)FloppyBridge::BridgeMode::bmMax) return false;
+    bridgeMode = (FloppyBridge::BridgeMode)i;
 
     i = atoi(params[4].c_str());
-    if (i > (unsigned int)CommonBridgeTemplate::BridgeDensityMode::bdmMax) return false;
-    bridgeDensity = (CommonBridgeTemplate::BridgeDensityMode)i;
+    if (i > (unsigned int)FloppyBridge::BridgeDensityMode::bdmMax) return false;
+    bridgeDensity = (FloppyBridge::BridgeDensityMode)i;
 
     return true;
 }
@@ -141,7 +143,7 @@ void BridgeConfig::toString(char** serialisedOptions) {
 };
 
 // Returns a pointer to information about the project
-void handleAbout(bool checkForUpdates, BridgeAbout** output) {
+void handleAbout(bool checkForUpdates, FloppyBridge::BridgeAbout** output) {
 #ifdef _WIN32
     checkForUpdates |= BridgeProfileListEditor::shouldAutoCheckForUpdates();
 #endif
@@ -160,14 +162,14 @@ void handleAbout(bool checkForUpdates, BridgeAbout** output) {
                 in_addr add = *((in_addr*)address->h_addr_list[0]);
 
 #ifdef _WIN32
-                BridgeInformation.updateMajorVersion = add.S_un.S_un_b.s_b1;
-                BridgeInformation.updateMinorVersion = add.S_un.S_un_b.s_b2;
+             //   BridgeInformation.updateMajorVersion = add.S_un.S_un_b.s_b1;
+              //  BridgeInformation.updateMinorVersion = add.S_un.S_un_b.s_b2;
                 BridgeInformationUpdate.updateMajorVersion = add.S_un.S_un_b.s_b1;
                 BridgeInformationUpdate.updateMinorVersion = add.S_un.S_un_b.s_b2;
 #else
                 uint32_t bytes = htonl(add.s_addr);
-                BridgeInformation.updateMajorVersion = bytes >> 24;
-                BridgeInformation.updateMinorVersion = (bytes >> 16) & 0xFF;
+             ///   BridgeInformation.updateMajorVersion = bytes >> 24;
+             //   BridgeInformation.updateMinorVersion = (bytes >> 16) & 0xFF;
                 BridgeInformationUpdate.updateMajorVersion = bytes >> 24;
                 BridgeInformationUpdate.updateMinorVersion = (bytes >> 16) & 0xFF;
 #endif  
@@ -180,10 +182,10 @@ void handleAbout(bool checkForUpdates, BridgeAbout** output) {
     }
 #ifdef _WIN32
     if (output) 
-        if (BridgeInformationUpdate.isUpdateAvailable) *output = (BridgeAbout*)&BridgeInformationUpdate; else *output = (BridgeAbout*)&BridgeInformation;
+        if (BridgeInformationUpdate.isUpdateAvailable) *output = (FloppyBridge::BridgeAbout*)&BridgeInformationUpdate; else *output = (FloppyBridge::BridgeAbout*)&BridgeInformation;
 
 #else
-    if (output) *output = (BridgeAbout*)&BridgeInformation;
+    if (output) *output = (FloppyBridge::BridgeAbout*)&BridgeInformation;
 #endif 
 }
 
@@ -204,13 +206,19 @@ bool handleGetDriverInfo(unsigned int driverIndex, FloppyDiskBridge::BridgeDrive
 extern "C" {
 
     // Returns a pointer to information about the project
-    FLOPPYBRIDGE_API void CALLING_CONVENSION BRIDGE_About(bool checkForUpdates, BridgeAbout** output) {
+    FLOPPYBRIDGE_API void CALLING_CONVENSION BRIDGE_About(bool checkForUpdates, FloppyBridge::BridgeAbout** output) {
         handleAbout(checkForUpdates, output);
     }
 
     // Returns the number of 'Bridge' Drivers available 
     FLOPPYBRIDGE_API unsigned int CALLING_CONVENSION BRIDGE_NumDrivers(void) {
         return MAX_NUM_DRIVERS;
+    }
+
+    // Used to turn on or off the windows messages used to disable the virtual drive system while this is in use.
+    // Defaults to TRUE which is what it should do!    
+    FLOPPYBRIDGE_API void CALLING_CONVENSION BRIDGE_EnableUsageNotifications(bool enable) {
+        enableUsageNotifications = enable;
     }
 
     // Enumerates the com ports and returns how many of them were found.  
@@ -250,7 +258,6 @@ extern "C" {
                 lengthRequired--;
             }
             // Add terminator
-            output += tmp.length();
             *output = '\0'; output++;
 
             return true;
@@ -277,8 +284,17 @@ extern "C" {
         return bridgeDriverHandle->config.fromString(serialisedOptions);
     }
 
-
-
+    // Used to signal to the virtual drive system that we're going to be using it so let go.
+    void releaseVirtualDrives(bool release, int controllerType) {
+        if (!enableUsageNotifications) return;
+#ifdef _WIN32
+        HWND remoteWindow = FindWindow(L"VIRTUALDRIVE_CONTROLLER_CLASS", L"DiskFlashback Tray Control");
+        if (remoteWindow) {
+            // Signal to release all interfaces of this type
+            SendMessage(remoteWindow, WM_USER + 2, (controllerType & 0x7FFF) | (release ? 0 : 0x8000), (LPARAM)GetCurrentProcessId());
+        }
+#endif
+    }
      
 
 #ifdef _WIN32
@@ -326,14 +342,14 @@ extern "C" {
 #endif
 
     // Retrieve a list of all of the profiles currently loaded that can be used.
-    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_GetAllProfiles(FloppyBridgeProfileInformationDLL** profiles, unsigned int* numProfiles) {
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_GetAllProfiles(FloppyBridge::FloppyBridgeProfileInformationDLL** profiles, unsigned int* numProfiles) {
         if (profileCache) free(profileCache);
         if (!numProfiles) return false;
         if (!profiles) return false;
-        profileCache = (FloppyBridgeProfileInformationDLL*)malloc(sizeof(FloppyBridgeProfileInformationDLL) * profileList.size());
+        profileCache = (FloppyBridge::FloppyBridgeProfileInformationDLL*)malloc(sizeof(FloppyBridge::FloppyBridgeProfileInformationDLL) * profileList.size());
         if (!profileCache) return false;
 
-        FloppyBridgeProfileInformationDLL* output = profileCache;
+        FloppyBridge::FloppyBridgeProfileInformationDLL* output = profileCache;
         for (auto& profile : profileList) {
             output->name = profile.second->profileName;
             output->bridgeMode = profile.second->bridgeMode;
@@ -474,6 +490,10 @@ extern "C" {
         if (bridgeDriverHandle) {
             if (bridgeDriverHandle->bridge) {
                 bridgeDriverHandle->bridge->shutdown();
+
+                // Restore virtual drives
+                releaseVirtualDrives(false, bridgeDriverHandle->config.bridgeIndex);
+
                 delete bridgeDriverHandle->bridge;
                 bridgeDriverHandle->bridge = nullptr;
 
@@ -547,24 +567,33 @@ extern "C" {
         return true;
     }
 
-    // Opens the driver for this bridge selection.  If it returns false, errorMessage is a pointer to the error, if TRUE, then errorMessage may be set to a warning message for compatibility issues
+    // Opens the driver for this bridge selection.  If it returns false, errorMessage is a pointer to the error, if TRUE, then errorMessage may be set to a warning message for compatability issues
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_Open(BridgeOpened* bridgeDriverHandle, char** errorMessage) {
         if (bridgeDriverHandle->config.bridgeIndex >= BRIDGE_NumDrivers()) return false;
 
         // Make sure it's not already open
         BRIDGE_Close(bridgeDriverHandle);
 
+        releaseVirtualDrives(true, bridgeDriverHandle->config.bridgeIndex);
+
+#ifdef _WIN32
+        HCURSOR lastCursor = SetCursor(LoadCursor(0, IDC_WAIT));
+#endif
         memset(bridgeDriverHandle->lastMessage, 0, sizeof(bridgeDriverHandle->lastMessage));
 
         switch (bridgeDriverHandle->config.bridgeIndex) {
         case 0: bridgeDriverHandle->bridge = new ArduinoFloppyDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse); break;
         case 1: bridgeDriverHandle->bridge = new GreaseWeazleDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse, bridgeDriverHandle->config.driveCable); break;
-        case 2: bridgeDriverHandle->bridge = new SupercardProDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse, bridgeDriverHandle->config.driveCable == CommonBridgeTemplate::DriveSelection::dsDriveB); break;
+        case 2: bridgeDriverHandle->bridge = new SupercardProDiskBridge(bridgeDriverHandle->config.bridgeMode, bridgeDriverHandle->config.bridgeDensity, bridgeDriverHandle->config.autoCache, bridgeDriverHandle->config.smartSpeed, bridgeDriverHandle->config.autoDetectComPort, bridgeDriverHandle->config.comPortToUse, bridgeDriverHandle->config.driveCable == FloppyBridge::DriveSelection::dsDriveB); break;
         default: return false;
         }
 
         // Try to open the device.  Returns FALSE if it fails and sets the error message
         bool result = bridgeDriverHandle->bridge->initialise();
+
+#ifdef _WIN32
+        SetCursor(lastCursor);
+#endif
 
         // If the device opens successfully, the error message is actually a warning message instead
         const char* error = bridgeDriverHandle->bridge->getLastErrorMessage();
@@ -578,6 +607,9 @@ extern "C" {
             if (strlen(bridgeDriverHandle->lastMessage)) *errorMessage = bridgeDriverHandle->lastMessage; else *errorMessage = NULL;
 
         if (!result) {
+            // Restore virtual drive
+            releaseVirtualDrives(false, bridgeDriverHandle->config.bridgeIndex);
+
             delete bridgeDriverHandle->bridge;
             bridgeDriverHandle->bridge = nullptr;
         }
@@ -593,10 +625,22 @@ extern "C" {
         return true;
     }
 
+    // Not normally used, and doesnt do anythin if the driver is connected either
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_SetDriverIndex(BridgeOpened* bridgeDriverHandle, unsigned int driverIndex) {
+        if (!bridgeDriverHandle) return false;
+        if ((driverIndex<0) || (driverIndex >= MAX_NUM_DRIVERS)) return false;
+        if (bridgeDriverHandle->config.bridgeIndex != driverIndex) {
+            bridgeDriverHandle->config.bridgeIndex = driverIndex;
+            BRIDGE_GetDriverInfo(driverIndex, &bridgeDriverHandle->driverDetails);
+        }
+        return true;
+    }
+
     // Creates an instance of a driver.  At this point it is not configured, just initialized
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_FreeDriver(BridgeOpened* bridgeDriverHandle) {
         if (!bridgeDriverHandle) return false;
         if (bridgeDriverHandle->bridge) {
+            releaseVirtualDrives(false, bridgeDriverHandle->config.bridgeIndex);
             bridgeDriverHandle->bridge->shutdown();
             delete bridgeDriverHandle->bridge;
         }
@@ -608,31 +652,31 @@ extern "C" {
     ////////////// These must be called before opening the driver, but can also be called after ////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Get the currently selected mode
-    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetMode(BridgeOpened* bridgeDriverHandle, CommonBridgeTemplate::BridgeMode* bridgeMode) {
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetMode(BridgeOpened* bridgeDriverHandle, FloppyBridge::BridgeMode* bridgeMode) {
         if (!bridgeDriverHandle) return false;
         if (!bridgeMode) return false;
         *bridgeMode = bridgeDriverHandle->config.bridgeMode;
         return true;
     }
     // Set the currently selected mode.  This can also be changed *while* the driver is running
-    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetMode(BridgeOpened* bridgeDriverHandle, CommonBridgeTemplate::BridgeMode bridgeMode) {
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetMode(BridgeOpened* bridgeDriverHandle, FloppyBridge::BridgeMode bridgeMode) {
         if (!bridgeDriverHandle) return false;
-        if (bridgeMode > CommonBridgeTemplate::BridgeMode::bmMax) return false;
+        if (bridgeMode > FloppyBridge::BridgeMode::bmMax) return false;
         bridgeDriverHandle->config.bridgeMode = bridgeMode;
         if (bridgeDriverHandle->bridge) bridgeDriverHandle->bridge->changeBridgeMode(bridgeMode);
         return true;
     }
     // Get the current DD/HD mode
-    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetDensityMode(BridgeOpened* bridgeDriverHandle, CommonBridgeTemplate::BridgeDensityMode* densityMode) {
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetDensityMode(BridgeOpened* bridgeDriverHandle, FloppyBridge::BridgeDensityMode* densityMode) {
         if (!bridgeDriverHandle) return false;
         if (!densityMode) return false;
         *densityMode = bridgeDriverHandle->config.bridgeDensity;
         return true;
     }
     // Get the current DD/HD mode.  This can also be changed *while* the driver is running
-    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetDensityMode(BridgeOpened* bridgeDriverHandle, CommonBridgeTemplate::BridgeDensityMode densityMode) {
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetDensityMode(BridgeOpened* bridgeDriverHandle, FloppyBridge::BridgeDensityMode densityMode) {
         if (!bridgeDriverHandle) return false;
-        if (densityMode > CommonBridgeTemplate::BridgeDensityMode::bdmMax) return false;
+        if (densityMode > FloppyBridge::BridgeDensityMode::bdmMax) return false;
         bridgeDriverHandle->config.bridgeDensity = densityMode;
         if (bridgeDriverHandle->bridge) bridgeDriverHandle->bridge->changeBridgeDensity(densityMode);
         return true;
@@ -714,29 +758,34 @@ extern "C" {
         if (!bridgeDriverHandle) return false;
         if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
         if (!isOnB) return false;
-        (*isOnB) = bridgeDriverHandle->config.driveCable == CommonBridgeTemplate::DriveSelection::dsDriveB;
+        (*isOnB) = bridgeDriverHandle->config.driveCable == FloppyBridge::DriveSelection::dsDriveB;
         return true;
     }
     // Set the cable on the drive where the floppy drive is (A or B) - Obsolete
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetCable(BridgeOpened* bridgeDriverHandle, bool isOnB) {
         if (!bridgeDriverHandle) return false;
         if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
-        bridgeDriverHandle->config.driveCable = isOnB ? CommonBridgeTemplate::DriveSelection::dsDriveB : CommonBridgeTemplate::DriveSelection::dsDriveA;
+        bridgeDriverHandle->config.driveCable = isOnB ? FloppyBridge::DriveSelection::dsDriveB : FloppyBridge::DriveSelection::dsDriveA;
         return true;
     }
     // Get the cable on the drive where the floppy drive is (A, B, 0, 1 or 2)
-    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetCable2(BridgeOpened* bridgeDriverHandle, int* driveSelection) {
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverGetCable2(BridgeOpened* bridgeDriverHandle, FloppyBridge::DriveSelection* driveSelection) {
         if (!bridgeDriverHandle) return false;
         if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
         if (!driveSelection) return false;
-        (*driveSelection) = (int)bridgeDriverHandle->config.driveCable;
+        *driveSelection = bridgeDriverHandle->config.driveCable;
         return true;
     }
     // Set the cable on the drive where the floppy drive is (A, B, 0, 1 or 2)
-    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetCable2(BridgeOpened* bridgeDriverHandle, int driveSelection) {
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_DriverSetCable2(BridgeOpened* bridgeDriverHandle, FloppyBridge::DriveSelection driveSelection) {
         if (!bridgeDriverHandle) return false;
-        if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
-        bridgeDriverHandle->config.driveCable = (CommonBridgeTemplate::DriveSelection)driveSelection;
+        if ((driveSelection == FloppyBridge::DriveSelection::dsDriveA) || (driveSelection == FloppyBridge::DriveSelection::dsDriveB)) {
+            if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_AB)) return false;
+        }
+        else {
+            if (!(bridgeDriverHandle->driverDetails->configOptions & CONFIG_OPTIONS_DRIVE_123)) return false;
+        }
+        bridgeDriverHandle->config.driveCable = driveSelection;
         return true;
     }
 
@@ -843,6 +892,24 @@ extern "C" {
     FLOPPYBRIDGE_API bool CALLING_CONVENSION DRIVER_getMFMBit(BridgeOpened* bridgeDriverHandle, int mfmPositionBits) {
         if ((bridgeDriverHandle) && (bridgeDriverHandle->bridge)) {
             return bridgeDriverHandle->bridge->getMFMBit(mfmPositionBits);
+        }
+        return 1;
+    }
+    FLOPPYBRIDGE_API int CALLING_CONVENSION DRIVER_setDirectMode(BridgeOpened* bridgeDriverHandle, bool directMode) {
+        if ((bridgeDriverHandle) && (bridgeDriverHandle->bridge)) {
+            return bridgeDriverHandle->bridge->setDirectMode(directMode);
+        }
+        return 1;
+    }
+    FLOPPYBRIDGE_API int CALLING_CONVENSION DRIVER_getTrack(BridgeOpened* bridgeDriverHandle, bool side, unsigned int track, bool resyncIndex, int bufferSizeInBytes, void* data) {
+        if ((bridgeDriverHandle) && (bridgeDriverHandle->bridge)) {
+            return bridgeDriverHandle->bridge->getMFMTrack(side, track, resyncIndex, bufferSizeInBytes, data);
+        }
+        return 1;
+    }
+    FLOPPYBRIDGE_API int CALLING_CONVENSION DRIVER_putTrack(BridgeOpened* bridgeDriverHandle, bool side, unsigned int track, bool writeFromIndex, int bufferSizeInBytes, void* data) {
+        if ((bridgeDriverHandle) && (bridgeDriverHandle->bridge)) {
+            return bridgeDriverHandle->bridge->writeMFMTrackToBuffer(side, track, writeFromIndex, bufferSizeInBytes, data);
         }
         return 1;
     }

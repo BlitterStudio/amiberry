@@ -2,7 +2,7 @@
 #define COMMON_BRIDGE_TEMPLATE
 /* CommonBridgeTemplate for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 * 
 * This library is multi-licensed under the terms of the Mozilla Public 
@@ -35,10 +35,10 @@
 #include <vector>
 #include <deque>
 #include <mutex>
-#include <string>
 #include <condition_variable>
 #include "floppybridge_abstract.h"
 #include "RotationExtractor.h"
+#include "floppybridge_common.h"
 #include "pll.h"
 
 // Maximum data we can receive.  
@@ -59,29 +59,9 @@
 
 // Some of the functions in FloppyDiskBridge are implemented, some not.
 class CommonBridgeTemplate : public FloppyDiskBridge {
-public:
-	enum class DriveSelection { dsDriveA = 0, dsDriveB = 1, dsDrive0 = 2, dsDrive1 = 3, dsDrive2 = 4, dsDrive3 = 5 };
-
-	// Type of bridge mode
-	enum class BridgeMode : unsigned char {
-		bmFast = 0,
-		bmCompatible = 1,
-		bmTurboAmigaDOS = 2,
-		bmStalling = 3,
-		bmMax = 3
-	};
-
-	// How to use disk density
-	enum class BridgeDensityMode : unsigned char {
-		bdmAuto = 0,
-		bdmDDOnly = 1,
-		bdmHDOnly = 2,
-		bdmMax = 2
-	};
-
 protected:
 	// Type of queue message
-	enum class QueueCommand { qcTerminate, qcMotorOn, qcMotorOff, qcMotorOffDelay, writeMFMData, qcGotoToTrack, qcSelectDiskSide, qcResetDrive, qcNoClickSeek, qcNOP};
+	enum class QueueCommand { qcTerminate, qcMotorOn, qcMotorOff, qcMotorOffDelay, writeMFMData, qcGotoToTrack, qcSelectDiskSide, qcResetDrive, qcNoClickSeek, qcDirectLock, qcNOP};
 
 	// Represent which side of the disk we're looking at.  
 	enum class DiskSurface {
@@ -144,6 +124,15 @@ private:
 
 	// For extracting rotations from disks
 	RotationExtractor m_extractor;
+
+	// In direct mode FloppyBridge doesnt do some functions in the background
+	// Its useful if you're using FloppyBridge just for direct access to the interfaces
+	bool m_directMode;
+	std::mutex m_directModeReadyLock;
+	std::condition_variable m_directModeReady;
+	std::condition_variable m_directModeRelease;
+	bool m_driveLockReleased = true;
+	bool m_driveLockReady = false;
 
 	// PLL for running data through
 	PLL::BridgePLL m_pll;
@@ -208,10 +197,10 @@ private:
 	std::thread* m_control;
 
 	// Current mode that the bridge operates in
-	BridgeMode m_bridgeMode;
+	FloppyBridge::BridgeMode m_bridgeMode;
 
 	// Hwo to handle HD and DD disks
-	BridgeDensityMode m_bridgeDensity;
+	FloppyBridge::BridgeDensityMode m_bridgeDensity;
 
 	// If we're currently in HD mode
 	bool m_inHDMode;
@@ -279,11 +268,6 @@ private:
 	// A lock to prevent buffer switch being accessed or changed in two places at once
 	std::mutex m_switchBufferLock;
 
-	// A semaphore to track the number messages waiting in the queue
-	std::mutex m_queueSemaphoreLock;
-	std::condition_variable m_queueSemaphoreFlag;
-	unsigned int m_queueSemaphore;
-
 	// An event that is set the moment data is available
 	std::mutex m_readBufferAvailableLock;
 	std::condition_variable m_readBufferAvailableFlag;
@@ -313,6 +297,7 @@ private:
 	// Add a command for the thread to process
 	void queueCommand(const QueueCommand command, const bool optionB, const bool shouldAbortStreaming = true);
 	void queueCommand(const QueueCommand command, const int optionI = 0, const bool shouldAbortStreaming = true);
+
 	// Push a specific message onto the queue
 	void pushOntoQueue(const QueueInfo& info, const bool shouldAbortStreaming = true, bool insertAtStart = false);
 
@@ -351,6 +336,9 @@ private:
 
 	// Check if the motor should be turned off
 	void checkMotorOff();
+
+	// For direct mode, allows you to lock the main thread queue so you can directly use the drive
+	void threadLockControl(bool enter);
 protected:
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Stuff that you need to implement in your derived class, a lot less than on the original bridge - These are all allowed to block as they're called from a thread
@@ -436,14 +424,14 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// 
 	// Flags from WINUAE
-	CommonBridgeTemplate(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool shouldAutoCache, bool useSmartSpeed);
+	CommonBridgeTemplate(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool shouldAutoCache, bool useSmartSpeed);
 	virtual ~CommonBridgeTemplate();
 
 	// Change to a different bridge-mode (in real-time)
-	void changeBridgeMode(BridgeMode bridgeMode);
+	void changeBridgeMode(FloppyBridge::BridgeMode bridgeMode);
 
 	// Change to a different bridge-density (in real-time)
-	void changeBridgeDensity(BridgeDensityMode bridgeDensity);
+	void changeBridgeDensity(FloppyBridge::BridgeDensityMode bridgeDensity);
 
 	// Call to start the system up
 	virtual bool initialise() override final;
@@ -492,6 +480,16 @@ public:
 
 	// Returns TRUE if data is ready and available
 	virtual bool isMFMDataAvailable() override final;
+
+	// Requests an entire track of data.  Returns 0 if the track is not available
+	// The return value is the wrap point in bits (last byte is shifted to MSB)
+	virtual int getMFMTrack(bool side, unsigned int track, bool resyncRotation, const int bufferSizeInBytes, void* output) override final;
+
+	// write data to the MFM track buffer to be written to disk - poll isWriteComplete to check for completion
+	virtual bool writeMFMTrackToBuffer(bool side, unsigned int track, bool writeFromIndex, int sizeInBytes, void* mfmData) override final;
+
+	// A special mode that DISABLES FloppyBridge from auto-reading tracks and allows writeMFMTrackToBuffer and getMFMTrack to operate directly.
+	virtual bool setDirectMode(bool directModeEnable) override final;
 
 	// While not doing anything else, the library should be continuously streaming the current track if the motor is on.  mfmBufferPosition is in BITS 
 	virtual bool getMFMBit(const int mfmPositionBits) override final;

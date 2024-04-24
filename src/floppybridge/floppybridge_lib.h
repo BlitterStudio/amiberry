@@ -15,24 +15,22 @@
 */
 
 #pragma once
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 
 #include "floppybridge_abstract.h"
+#include "floppybridge_common.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
 #include <vector>
 #include <string>
 
-#ifdef _WIN32
-#include "..\windows\FloppyBridge.h"
-#else
-#include "FloppyBridge.h"
-#endif
 
 #define BRIDGE_STRING_MAX_LENGTH 255
 typedef TCHAR TCharString[BRIDGE_STRING_MAX_LENGTH];
 
-typedef BridgeOpened* BridgeDriverHandle;
+typedef void* BridgeDriverHandle;
 
 // Class to access the 'floppybridge' via a DLL but using the same interface
 class FloppyBridgeAPI : public FloppyDiskBridge {
@@ -68,6 +66,7 @@ public:
 	static const unsigned int ConfigOption_AutoDetectComport	= 0x04;	// The driver supports automatic com port detection and selection
 	static const unsigned int ConfigOption_DriveABCable			= 0x08;	// The driver allows you to specify using cable select for Drive A or Drive B
 	static const unsigned int ConfigOption_SmartSpeed			= 0x10;	// The driver supports dynamically switching between normal and Turbo hopefully without breaking copy protection
+	static const unsigned int ConfigOption_SupportsShugartMode  = 0x20; // The driver supports Shugart modes as well as IBM PC modes
 
 	// Information about a Bridge Driver (eg: DrawBridge, Greaseweazle etc)
 	struct DriverInformation {
@@ -93,8 +92,8 @@ public:
 		unsigned int driverIndex;
 
 		// Some basic information
-		CommonBridgeTemplate::BridgeMode bridgeMode;
-		CommonBridgeTemplate::BridgeDensityMode bridgeDensityMode;
+		FloppyBridge::BridgeMode bridgeMode;
+		FloppyBridge::BridgeDensityMode bridgeDensityMode;
 
 		// Profile name
 		TCharString name;
@@ -181,6 +180,10 @@ public:
 	// Deletes a profile by ID.
 	static bool deleteProfile(unsigned int profileID);
 
+#ifdef _WIN32
+	// By default FloppyBridge will inform DiskFlashback when it wants the drive. Use this to turn that feature off
+	static void enableUsageNotifications(bool enable);
+#endif
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -193,55 +196,65 @@ public:
 	// Returns a pointer to a string containing the current config.  This can be used with setConfigFromString() or createDriverFromString()
 	bool getConfigAsString(char** config) const;
 	// Applies the config to the currently driver.  Returns TRUE if successful.
-	bool setConfigFromString(char* config) const;
+	bool setConfigFromString(const char* config) const;
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// This for setting and getting the driver index in use. Shouldnt normally be changed while in use
+	bool getDriverIndex(int& driverIndex) const;
+	// Set it
+	bool setDriverIndex(const int driverIndex);
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Return the current bridge mode selected
-	bool getBridgeMode(CommonBridgeTemplate::BridgeMode* mode) const;
+	bool getBridgeMode(FloppyBridge::BridgeMode* mode) const;
 	// Set the currently active bridge mode.  This can be set while the bridge is in use
-	bool setBridgeMode(CommonBridgeTemplate::BridgeMode newMode) const;
+	bool setBridgeMode(const FloppyBridge::BridgeMode newMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Return the current bridge density mode selected
-	bool getBridgeDensityMode(CommonBridgeTemplate::BridgeDensityMode* mode) const;
+	bool getBridgeDensityMode(FloppyBridge::BridgeDensityMode* mode) const;
 	// Set the currently active bridge density mode.  This can be set while the bridge is in use
-	bool setBridgeDensityMode(CommonBridgeTemplate::BridgeDensityMode newMode) const;
+	bool setBridgeDensityMode(const FloppyBridge::BridgeDensityMode newMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_AutoCache bit set in DriverInformation::configOptions
 	// Returns if auto-disk caching (while the drive is idle) mode is enabled
 	bool getAutoCacheMode(bool* autoCacheMode) const;
 	// Sets if auto-disk caching (while the drive is idle) mode is enabled.  This can be set while the bridge is in use
-	bool setAutoCacheMode(bool autoCacheMode) const;
+	bool setAutoCacheMode(const bool autoCacheMode) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_ComPort bit set in DriverInformation::configOptions
 	// Returns the currently selected COM port.  This port is only used if auto detect com port is false
 	bool getComPort(TCharString* comPort) const;
 	// Sets the com port to use.  This port is only used if auto detect com port is false.
-	bool setComPort(TCHAR* comPort) const;
+	bool setComPort(const TCHAR* comPort) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_AutoDetectComport bit set in DriverInformation::configOptions
 	// Returns if com port auto-detect is enabled
 	bool getComPortAutoDetect(bool* autoDetect) const;
 	// Sets if auto-detect com port should be used
-	bool setComPortAutoDetect(bool autoDetect) const;
+	bool setComPortAutoDetect(const bool autoDetect) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// These require ConfigOption_DriveABCable bit set in DriverInformation::configOptions
+	// DEPRECATED: These require ConfigOption_DriveABCable bit set in DriverInformation::configOptions
 	// Returns if the driver should use a drive connected as Drive B (true) on the cable rather than Drive A (false)
 	bool getDriveCableSelection(bool* connectToDriveB) const;
 	// Sets if the driver should use a drive connected as Drive B (true) on the cable rather than Drive A (false)
-	bool setDriveCableSelection(bool connectToDriveB) const;
+	bool setDriveCableSelection(const bool connectToDriveB) const;
+
+	// New versions! = connectToDrive 
+	bool getDriveCableSelection(FloppyBridge::DriveSelection* connectToDrive) const;
+	// Sets if the driver should use a drive connected as Drive B (true) on the cable rather than Drive A (false)
+	bool setDriveCableSelection(const FloppyBridge::DriveSelection connectToDrive) const;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// These require ConfigOption_SmartSpeed bit set in DriverInformation::configOptions
 	// Returns if the driver currently has Smart Speed enabled which can dynamically switch between normal and turbo disk speed without breaking copy protection
 	bool getSmartSpeedEnabled(bool* enabled) const;
 	//  Sets if the driver can dynamically switch between normal and turbo disk speed without breaking copy protectionThis can be set while the bridge is in use
-	bool setSmartSpeedEnabled(bool enabled) const;
-
+	bool setSmartSpeedEnabled(const bool enabled) const;
 
 
 
@@ -256,7 +269,7 @@ public:
 	virtual ~FloppyBridgeAPI();
 	virtual bool initialise() override;
 	virtual void shutdown() override;
-	virtual const BridgeDriver* getDriverInfo() override;
+	virtual const BridgeDriver* getDriverInfo() override;	
 	virtual unsigned char getBitSpeed() override;
 	virtual DriveTypeID getDriveTypeID() override;
 	virtual const char* getLastErrorMessage() override;
@@ -280,12 +293,16 @@ public:
 	virtual void setSurface(bool side) override;
 	virtual int maxMFMBitPosition() override;
 	virtual void writeShortToBuffer(bool side, unsigned int track, unsigned short mfmData, int mfmPosition)  override;
+	virtual int getMFMTrack(bool side, unsigned int track, bool resyncRotation, const int bufferSizeInBytes, void* output) override;
+	virtual bool setDirectMode(bool directModeEnable) override;
+	virtual bool writeMFMTrackToBuffer(bool side, unsigned int track, bool writeFromIndex, int sizeInBytes, void* mfmData) override;
 	virtual bool isWriteProtected() override;
 	virtual unsigned int commitWriteBuffer(bool side, unsigned int track)  override;
 	virtual bool isWritePending() override;
 	virtual bool isWriteComplete() override;
 	virtual bool canTurboWrite() override;
 	virtual bool isReadyToWrite() override;
+	const unsigned int getDriverTypeIndex() const;
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

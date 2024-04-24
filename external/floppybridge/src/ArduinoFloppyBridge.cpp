@@ -1,6 +1,6 @@
 /* DrawBridge (Arduino Reader/Writer) Bridge for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -37,12 +37,12 @@ static const FloppyDiskBridge::BridgeDriver DriverArduinoFloppy = {
 };
 
 // Flags from WINUAE
-ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort) :
+ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_comPort(autoDetectComPort ? "" : comPort) {
 }
 
 // This is for the static version
-ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) : 
+ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false) {
 
 	if (uaeSettings > 0) {
