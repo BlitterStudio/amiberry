@@ -249,6 +249,8 @@ private:
 	// When the last seek operation occured
 	std::chrono::time_point<std::chrono::steady_clock> m_lastSeek;
 
+	// Number of reads since step or head change
+	uint32_t m_readLoops;
 
 	// Set to true once the motor is spun up
 	bool m_motorIsReady;
