@@ -171,6 +171,7 @@ struct floppyslot
 	int dfxtype;
 	int dfxsubtype;
 	TCHAR dfxsubtypeid[32];
+	TCHAR dfxprofile[32];
 	int dfxclick;
 	TCHAR dfxclickexternal[256];
 	bool forcedwriteprotect;

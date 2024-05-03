@@ -50,7 +50,9 @@
 #include "clipboard.h"
 #include "fsdb.h"
 #include "scsidev.h"
-#include "floppybridge/floppybridge_lib.h"
+#ifdef FLOPPYBRIDGE
+#include "floppybridge_lib.h"
+#endif
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"

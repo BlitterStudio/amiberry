@@ -30,7 +30,7 @@
 #define BRIDGE_STRING_MAX_LENGTH 255
 typedef TCHAR TCharString[BRIDGE_STRING_MAX_LENGTH];
 
-typedef void* BridgeDriverHandle;
+
 
 // Class to access the 'floppybridge' via a DLL but using the same interface
 class FloppyBridgeAPI : public FloppyDiskBridge {
@@ -272,6 +272,7 @@ public:
 	virtual const BridgeDriver* getDriverInfo() override;	
 	virtual unsigned char getBitSpeed() override;
 	virtual DriveTypeID getDriveTypeID() override;
+	virtual bool isStillWorking() override;
 	virtual const char* getLastErrorMessage() override;
 	virtual bool resetDrive(int trackNumber) override;
 	virtual bool isAtCylinder0() override;

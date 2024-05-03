@@ -130,7 +130,8 @@ public:
 	// Check if the disk has changed.  Basically returns FALSE if there's no disk in the drive
 	virtual bool hasDiskChanged() = 0;
 
-
+	// Return TRUE if the drive is still connected and working
+	virtual bool isStillWorking() { return true; };
 
 	/////////////////////// Reading Data /////////////////////////////////////////////////////
 	// Return TRUE if we're at the INDEX marker/sensor.  mfmPositionBits is in BITS

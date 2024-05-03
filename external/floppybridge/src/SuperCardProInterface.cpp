@@ -340,7 +340,7 @@ bool SCPInterface::selectTrack(const unsigned char trackIndex, bool ignoreDiskIn
 }
 
 // Checks the pins from boards that support it
-void SCPInterface::checkPins() {
+bool SCPInterface::checkPins() {
 	SCPResponse response;
 
 	selectDrive(true);
@@ -348,13 +348,13 @@ void SCPInterface::checkPins() {
 
 	if (!ret) {
 		if (!m_motorIsEnabled) selectDrive(false);
-		return;
+		return false;
 	}
 
 	unsigned char bytes[2];
 	if (m_comPort.read(bytes, 2) != 2) {
 		if (!m_motorIsEnabled) selectDrive(false);
-		return;
+		return false;
 	}
 	if (!m_motorIsEnabled) selectDrive(false);
 
@@ -362,6 +362,7 @@ void SCPInterface::checkPins() {
 	m_isWriteProtected = (status & (1 << 7)) == 0;
 	m_diskInDrive = (status & (1 << 6)) !=0;
 	m_isAtTrack0 = (status & (1 << 5)) == 0;
+	return true;
 }
 
 // Search for track 0
@@ -388,7 +389,8 @@ bool SCPInterface::selectSurface(const DiskSurface side) {
 
 // Read RAW data from the current track and surface 
 SCPErr SCPInterface::checkForDisk(bool force) {
-	if (force) checkPins();
+	if (force)
+		if (!checkPins()) return SCPErr::scpUnknownError;
 
 	return m_diskInDrive ? SCPErr::scpOK : SCPErr::scpNoDiskInDrive;
 }

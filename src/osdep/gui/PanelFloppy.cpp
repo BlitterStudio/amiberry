@@ -10,7 +10,9 @@
 #include "options.h"
 #include "disk.h"
 #include "gui_handling.h"
-#include "floppybridge/floppybridge_lib.h"
+#ifdef FLOPPYBRIDGE
+#include "floppybridge_lib.h"
+#endif
 #include "parser.h"
 
 static gcn::CheckBox* chkDFx[4];
@@ -35,7 +37,9 @@ static gcn::CheckBox* chkDBSmartSpeed;
 static gcn::CheckBox* chkDBAutoCache;
 static gcn::CheckBox* chkDBCableDriveB;
 
+#ifdef FLOPPYBRIDGE
 static std::vector<FloppyBridgeAPI::DriverInformation> driver_list{};
+#endif
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 
@@ -96,6 +100,7 @@ class DFxCheckActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+#ifdef FLOPPYBRIDGE
 		if (actionEvent.getSource() == cboDBDriver)
 		{
 			changed_prefs.drawbridge_driver = cboDBDriver->getSelected();
@@ -130,6 +135,7 @@ public:
 			changed_prefs.drawbridge_connected_drive_b = chkDBCableDriveB->isSelected();
 		}
 		else
+#endif
 		{
 			for (auto i = 0; i < 4; ++i)
 			{
@@ -370,7 +376,7 @@ void InitPanelFloppy(const config_category& category)
 	int posY = DISTANCE_BORDER;
 	int i;
 	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
-
+#ifdef FLOPPYBRIDGE
 	FloppyBridgeAPI::getDriverList(driver_list);
 	driverNameList.clear();
 	for (const auto &item : driver_list)
@@ -383,7 +389,7 @@ void InitPanelFloppy(const config_category& category)
 	for(const auto& port : serial_ports) {
 		serial_ports_list.add(port);
 	}
-
+#endif
 	dfxCheckActionListener = new DFxCheckActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
 	dfxButtonActionListener = new DFxButtonActionListener();
@@ -672,6 +678,7 @@ void RefreshPanelFloppy()
 	chkDBAutoCache->setEnabled(false);
 	chkDBSmartSpeed->setEnabled(false);
 	chkDBCableDriveB->setEnabled(false);
+#ifdef FLOPPYBRIDGE
 	for (i = 0; i < 4; ++i)
 	{
 		// is DrawBridge selected?
@@ -718,6 +725,7 @@ void RefreshPanelFloppy()
 			break;
 		}
 	}
+#endif
 }
 
 bool HelpPanelFloppy(std::vector<std::string>& helptext)

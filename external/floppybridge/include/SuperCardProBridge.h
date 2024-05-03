@@ -37,7 +37,10 @@ private:
 
 	// Which com port should we use? or blank for automatic
 	std::string m_comPort;
-	
+
+	// Used to detect disconnection of SupercardPRO while in use
+	bool m_wasIOError = false;
+
 	// Which drive to use
 	bool m_useDriveA = false;
 
@@ -59,6 +62,9 @@ protected:
 
 	// This is called by the main thread in case you need to do anything specific at regular intervals
 	virtual void poll() override;
+
+	// Return TRUE if the drive is still connected and working
+	virtual bool isStillWorking() override;
 
 	// If your device supports being able to abort a disk read, mid-read then implement this
 	virtual void abortDiskReading() override;

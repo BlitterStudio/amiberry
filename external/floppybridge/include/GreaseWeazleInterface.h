@@ -180,7 +180,7 @@ namespace GreaseWeazle {
 		bool selectDrive(bool select);
 
 		// Polls for the state of pins on the board
-		void checkPins();
+		bool checkPins();
 	public:
 		// Constructor for this class
 		GreaseWeazleInterface();

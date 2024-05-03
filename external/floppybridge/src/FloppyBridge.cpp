@@ -550,7 +550,7 @@ extern "C" {
     // Creates an instance of a driver from a config string.  This will automatically choose the correct driver index
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_CreateDriverFromProfileID(unsigned int profileID, BridgeOpened** bridgeDriverHandle) {
         if (!bridgeDriverHandle) return false;
-        auto f = profileList.find(profileID);
+        const auto f = profileList.find(profileID);
         if (f == profileList.end()) return false;
 
         if (!BRIDGE_CreateDriver(f->second->bridgeIndex, bridgeDriverHandle)) return false;
@@ -847,6 +847,13 @@ extern "C" {
         }
         return false;
     }
+    FLOPPYBRIDGE_API bool CALLING_CONVENSION DRIVER_isStillWorking(BridgeOpened* bridgeDriverHandle) {
+        if ((bridgeDriverHandle) && (bridgeDriverHandle->bridge)) {
+            return bridgeDriverHandle->bridge->isStillWorking();
+        }
+        return false;
+    }
+
     FLOPPYBRIDGE_API void CALLING_CONVENSION DRIVER_setMotorStatus(BridgeOpened* bridgeDriverHandle, bool side, bool turnOn) {
         if ((bridgeDriverHandle) && (bridgeDriverHandle->bridge)) {
             bridgeDriverHandle->bridge->setMotorStatus(side, turnOn);

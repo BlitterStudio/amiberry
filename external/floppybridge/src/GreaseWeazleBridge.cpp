@@ -193,7 +193,8 @@ bool GreaseWeazleDiskBridge::checkWriteProtectStatus(const bool forceCheck) {
 bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
-		if (m_io.checkForDisk(forceCheck) == GWResponse::drNoDiskInDrive) {
+		switch (m_io.checkForDisk(forceCheck)) {
+		case GWResponse::drNoDiskInDrive:
 			if ((m_currentCylinder == 0) && (m_io.supportsDiskChange())) {
 				m_io.performNoClickSeek();
 			}
@@ -201,12 +202,17 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 				m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, TrackSearchSpeed::tssNormal, true);
 				m_io.selectTrack(m_currentCylinder, TrackSearchSpeed::tssNormal, true);
 			}
+			break;
+		case GWResponse::drError:
+			m_wasIOError = true;
+			return false;
 		}
 	}
 
 	switch (m_io.checkForDisk(forceCheck)) {
 	case GWResponse::drOK: return true;
 	case GWResponse::drNoDiskInDrive: return false;
+	case GWResponse::drError:m_wasIOError = true; return false;
 	default: return isDiskInDrive();
 	}
 }
@@ -218,9 +224,16 @@ bool GreaseWeazleDiskBridge::performNoClickSeek() {
 	// Claim we did it anyway
 	if (!m_io.supportsDiskChange()) return true;
 
-	if (m_io.performNoClickSeek() == GWResponse::drOK) {
+	switch (m_io.performNoClickSeek()) {
+	case GWResponse::drOK:
 		updateLastManualCheckTime();
 		return true;
+	case GWResponse::drOldFirmware:
+		return false;
+	case GWResponse::drError:
+		m_wasIOError = true;
+		return false;
+
 	}
 	return false;
 }
@@ -283,6 +296,11 @@ bool GreaseWeazleDiskBridge::writeData(const unsigned char* rawMFMData, const un
 	case GWResponse::drWriteProtected: setWriteProtectStatus(true); return false;
 	default:  return false;
 	}
+}
+
+// Return TRUE if the drive is still connected and working
+bool GreaseWeazleDiskBridge::isStillWorking() {
+	return !m_wasIOError;
 }
 
 // This is called by the main thread incase you need to do anything specific at regular intervals

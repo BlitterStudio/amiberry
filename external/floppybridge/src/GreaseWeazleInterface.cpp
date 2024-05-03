@@ -336,8 +336,9 @@ GWResponse GreaseWeazleInterface::performNoClickSeek() {
 	sendCommand(Cmd::NoClickStep, nullptr, 0, response);
 	if (!m_motorIsEnabled) selectDrive(false);
 
+	if (response == Ack::BadCommand) return GWResponse::drError;
 	if (response == Ack::Okay) {
-		checkPins();
+		if (!checkPins()) return GWResponse::drError;
 
 		return GWResponse::drOK;
 	} 
@@ -381,12 +382,13 @@ GWResponse GreaseWeazleInterface::selectTrack(const unsigned char trackIndex, co
 }
 
 // Checks the pins from boards that support it
-void GreaseWeazleInterface::checkPins() {
+bool GreaseWeazleInterface::checkPins() {
 	Ack response;
 	selectDrive(true);
 
 	if ((!sendCommand(Cmd::GetPin, PIN_WRPROT, response)) || (response != Ack::Okay)) {
 		m_pinWrProtectAvailable = false;
+		if (response == Ack::BadCommand) return false;
 	}
 	else {
 		unsigned char value = 0;
@@ -403,6 +405,7 @@ void GreaseWeazleInterface::checkPins() {
 	else {
 		if ((!sendCommand(Cmd::GetPin, PIN_DISKCHG_IBMPC, response)) || (response != Ack::Okay)) {
 			m_pinDskChangeAvailable = false;
+			if (response == Ack::BadCommand) return false;
 		}
 		else {
 			unsigned char value = 0;
@@ -415,6 +418,7 @@ void GreaseWeazleInterface::checkPins() {
 	}
 
 	if (!m_motorIsEnabled) selectDrive(false);
+	return true;
 }
 
 // Search for track 0
@@ -624,7 +628,8 @@ GWResponse GreaseWeazleInterface::checkDiskCapacity(bool& isHD) {
 
 // Read RAW data from the current track and surface 
 GWResponse GreaseWeazleInterface::checkForDisk(bool force) {
-	if (force) checkPins();
+	if (force)
+		if (!checkPins()) return GWResponse::drError;
 
 	if (m_pinDskChangeAvailable) {
 		return m_diskInDrive ? GWResponse::drOK : GWResponse::drNoDiskInDrive;
@@ -646,6 +651,7 @@ GWResponse GreaseWeazleInterface::checkForDisk(bool force) {
 		Ack response = Ack::Okay;
 		if (!sendCommand(Cmd::ReadFlux, (void*)&header, sizeof(header), response)) {
 			selectDrive(false);
+			if (response == Ack::BadCommand) return GWResponse::drError;
 			return GWResponse::drOK;
 		}
 
@@ -659,7 +665,7 @@ GWResponse GreaseWeazleInterface::checkForDisk(bool force) {
 		// Check for errors
 		response = Ack::Okay;
 		sendCommand(Cmd::GetFluxStatus, nullptr, 0, response);
-
+		if (response == Ack::BadCommand) return GWResponse::drError;
 		selectDrive(false);
 
 		if (!alreadySpun) enableMotor(false, false);

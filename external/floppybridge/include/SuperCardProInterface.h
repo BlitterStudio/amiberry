@@ -149,7 +149,7 @@ namespace SuperCardPro {
 		bool selectDrive(bool select);
 
 		// Polls for the state of pins on the board
-		void checkPins();
+		bool checkPins();
 
 		// Various variants
 		bool sendCommand(const SCPCommand command, SCPResponse& response);

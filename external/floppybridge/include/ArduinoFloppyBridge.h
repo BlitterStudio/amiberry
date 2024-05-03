@@ -40,6 +40,9 @@ private:
 	// type of disk inserted
 	bool m_isHDDisk = false;
 
+	// Used to detect disconnection of DrawBridge while in use
+	bool m_wasIOError = false;
+
 	// Hardware connection
 	ArduinoFloppyReader::ArduinoInterface m_io;
 
@@ -57,6 +60,9 @@ protected:
 
 	// If your device supports being able to abort a disk read, mid-read then implement this
 	virtual void abortDiskReading() override;
+
+	// Return TRUE if the drive is still connected and working
+	virtual bool isStillWorking() override;
 
 	// If your device supports the DiskChange option then return TRUE here.  If not, then the code will simulate it
 	virtual bool supportsDiskChange() override;

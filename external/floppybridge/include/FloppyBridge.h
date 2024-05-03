@@ -40,6 +40,9 @@
 
 #endif 
 
+#define BRIDGEDRIVERHANDLE
+#include "floppybridge_common.h"
+
 #include "CommonBridgeTemplate.h"
 
 #define MAX_NUM_DRIVERS     3
