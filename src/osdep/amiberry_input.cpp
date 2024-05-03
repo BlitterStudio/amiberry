@@ -1477,15 +1477,15 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_B)) {
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_B, 0, port, port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE, gp);
 		}
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_X))
+		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_X))
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_X, 0, port, port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN, gp);
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_Y))
+		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_Y))
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_Y, 0, port, port ? INPUTEVENT_JOY2_CD32_YELLOW : INPUTEVENT_JOY1_CD32_YELLOW, gp);
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_LEFTSHOULDER))
+		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_LEFTSHOULDER))
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_LEFTSHOULDER, 0, port, port ? INPUTEVENT_JOY2_CD32_RWD : INPUTEVENT_JOY1_CD32_RWD, gp);
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER))
+		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER))
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 0, port, port ? INPUTEVENT_JOY2_CD32_FFW : INPUTEVENT_JOY1_CD32_FFW, gp);
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_START))
+		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_START))
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_START, 0, port, port ? INPUTEVENT_JOY2_CD32_PLAY : INPUTEVENT_JOY1_CD32_PLAY, gp);
 	}
 
