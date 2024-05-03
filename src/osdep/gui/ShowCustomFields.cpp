@@ -108,7 +108,7 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 {
 	constexpr int textfield_width = 350;
 	constexpr int pos_x1 = DISTANCE_BORDER;
-	constexpr int pos_x2 = 150;
+	constexpr int pos_x2 = 200;
 
 	for (int i = 0; i < number; i++) {
 		std::string id;
