@@ -1516,7 +1516,7 @@ static bool fault_if_68040_integer_nonmaskable(uae_u16 opcode, uae_u16 extra, ua
 	return false;
 }
 
-static int get_fp_value(uae_u32 opcode, uae_u16 extra, fpdata *src, uaecptr oldpc, uae_u32 *adp, bool *adsetp)
+static int get_fp_value(uae_u32 opcode, uae_u16 extra, fpdata *src, uaecptr oldpc, uaecptr *adp, bool *adsetp)
 {
 	int size, mode, reg;
 	uae_u32 ad = 0;
@@ -1745,7 +1745,7 @@ static int get_fp_value(uae_u32 opcode, uae_u16 extra, fpdata *src, uaecptr oldp
 	return 1;
 }
 
-static int put_fp_value2(fpdata *value, uae_u32 opcode, uae_u16 extra, uaecptr oldpc, uae_u32 *adp, bool *adsetp)
+static int put_fp_value2(fpdata *value, uae_u32 opcode, uae_u16 extra, uaecptr oldpc, uaecptr *adp, bool *adsetp)
 {
 	int size, mode, reg;
 	uae_u32 ad = 0;
@@ -2021,7 +2021,7 @@ static int get_fp_ad (uae_u32 opcode, uae_u32 *ad, bool *adset)
 	return 1;
 }
 
-static int put_fp_value(fpdata *value, uae_u32 opcode, uae_u16 extra, uaecptr oldpc, uae_u32 *adp, bool *adsetp)
+static int put_fp_value(fpdata *value, uae_u32 opcode, uae_u16 extra, uaecptr oldpc, uaecptr *adp, bool *adsetp)
 {
 	int v = put_fp_value2(value, opcode, extra, oldpc, adp, adsetp);
 	if (v == -2) {
