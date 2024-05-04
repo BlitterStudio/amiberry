@@ -361,21 +361,21 @@ bool my_existslink(const char* name)
 bool my_existsfile2(const char* name)
 {
 	struct stat st {};
-	return lstat(name, &st) != -1 && !S_ISDIR(st.st_mode);
+	return stat(name, &st) != -1 && S_ISREG(st.st_mode);
 }
 
 bool my_existsfile(const char* name)
 {
 	struct stat st {};
 	auto output = iso_8859_1_to_utf8(string(name));
-	return lstat(output.c_str(), &st) != -1 && !S_ISDIR(st.st_mode);
+	return stat(output.c_str(), &st) != -1 && S_ISREG(st.st_mode);
 }
 
 bool my_existsdir(const char* name)
 {
 	struct stat st {};
 	auto output = iso_8859_1_to_utf8(string(name));
-	return lstat(output.c_str(), &st) != -1 && S_ISDIR(st.st_mode);
+	return stat(output.c_str(), &st) != -1 && S_ISDIR(st.st_mode);
 }
 
 uae_s64 my_fsize(struct my_openfile_s* mos)
