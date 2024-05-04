@@ -17,7 +17,7 @@ on:
 jobs:
 
   build-macOS-x86_64:
-    runs-on: macos-latest
+    runs-on: macos-13
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -26,6 +26,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          brew update
           brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
 
       - name: make capsimg
@@ -57,7 +58,7 @@ jobs:
           path: amiberry-${{ github.ref_name }}-macOS-x86_64.zip
 
   build-macOS-M1:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -66,6 +67,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          brew update
           brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
 
       - name: make capsimg
