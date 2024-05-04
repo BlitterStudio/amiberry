@@ -1253,10 +1253,14 @@ setup_exter:
 	lea.l exter_server_new(pc),a0
 	move.l a0,18(a1)
 	move.w #$0214,8(a1)
-	cmp.w #35,20(a6)
-	bcc.s .high
+	cmp.w #34,20(a6) ; ==1.3
+	beq.s .ks13
+	cmp.w #33,20(a6) ; !=1.2
+	bne.s .notks1312
+.ks13
 	move.w #$02ff,8(a1)
-.high
+.notks1312
+
 	moveq #3,d0
 	jsr -168(a6) ; AddIntServer
 
