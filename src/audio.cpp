@@ -1965,12 +1965,12 @@ static bool audio_state_channel2 (int nr, bool perfin)
 				cdp->intreq2 = false;
 			}
 		} else {
-			if (napnav) {
-				setirq(nr, 32);
-			}
 			// cycle-accurate period check was not needed, do delayed check
 			if (!cdp->irqcheck) {
 				cdp->irqcheck = isirq(nr);
+			}
+			if (napnav) {
+				setirq(nr, 32);
 			}
 			if (cdp->irqcheck > 0) {
 #if DEBUG_AUDIO > 0
