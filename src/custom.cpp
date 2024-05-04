@@ -354,6 +354,7 @@ static uae_u16 bplcon0_saved, bplcon1_saved, bplcon2_saved;
 static uae_u16 bplcon3_saved, bplcon4_saved;
 static int varsync_changed, varsync_maybe_changed[2];
 static int varhblank_lines, varhblank_val[2];
+static int exthblank_lines[2];
 static uae_u16 vt_old, ht_old, hs_old, vs_old;
 uae_u16 vtotal, htotal;
 static int maxvpos_stored, maxhpos_stored;
@@ -478,7 +479,7 @@ static int last_hdiw;
 static diw_states vdiwstate, hdiwstate, hdiwstate_blank;
 static int hdiwbplstart;
 static int bpl_hstart;
-static bool exthblank, exthblank_state, hcenterblank_state;
+static bool exthblank, exthblank_prev, exthblank_state, hcenterblank_state;
 static int hsyncdebug;
 static int last_diw_hpos;
 static int last_recorded_diw_hpos;
@@ -12373,7 +12374,8 @@ static void vsync_check_vsyncmode(void)
 {
 	if (varsync_maybe_changed[0] == 1 || varsync_maybe_changed[1] == 1 || varhblank_lines == -1) {
 		init_hz_normal();
-	} else if (varsync_changed == 1) {
+	}
+	else if (varsync_changed == 1 || ((beamcon0 & BEAMCON0_VARBEAMEN) && exthblank_prev != exthblank && (abs(exthblank_lines[0] - exthblank_lines[1]) > maxvpos * 3 / 4))) {
 		init_hz_normal();
 	} else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change && vposw_change < 4) {
 		init_hz_vposw();
@@ -12387,6 +12389,8 @@ static void vsync_check_vsyncmode(void)
 	varsync_maybe_changed[0] = 0;
 	varsync_maybe_changed[1] = 0;
 	varhblank_lines = 0;
+	exthblank_lines[0] = exthblank_lines[1] = 0;
+	exthblank_prev = exthblank;
 }
 
 static void check_display_mode_change(void)
@@ -14190,6 +14194,8 @@ static void hsync_handler_post(bool onvsync)
 	if (!(new_beamcon0 & BEAMCON0_VARVBEN)) {
 		vb_check();
 	}
+
+	exthblank_lines[exthblank ? 1 : 0]++;
 
 	if (varhblank_lines > 0) {
 		varhblank_lines--;
