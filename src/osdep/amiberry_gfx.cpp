@@ -218,8 +218,8 @@ static void SDL2_init()
 	// If KMSDRM is detected, force Full-Window mode
 	if (kmsdrm_detected)
 	{
-		currprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
-		currprefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
 	}
 
 	if (!mon->amiga_window)
