@@ -489,6 +489,7 @@ struct romboard
 	uae_u32 size;
 	uae_u32 start_address;
 	uae_u32 end_address;
+	int fault;
 	struct boardloadfile lf;
 };
 #define MAX_RAM_BOARDS 4
