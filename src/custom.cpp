@@ -905,6 +905,17 @@ static int expand_sprres(uae_u16 con0, uae_u16 con3)
 	return res;
 }
 
+static int islinetoggle(void)
+{
+	int linetoggle = 0;
+	if (!(new_beamcon0 & BEAMCON0_LOLDIS) && !(new_beamcon0 & BEAMCON0_PAL) && ecs_agnus) {
+		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
+	} else if (!ecs_agnus && currprefs.ntscmode) {
+		linetoggle = 1; // hardwired NTSC Agnus
+	}
+	return linetoggle;
+}
+
 STATIC_INLINE uae_u8 *pfield_xlateptr(uaecptr plpt, int bytecount)
 {
 	if (!chipmem_check_indirect(plpt, bytecount)) {
@@ -2050,6 +2061,7 @@ static void estimate_last_fetch_cycle(int hpos)
 #else
 		estimated_cycles = estimated_cycles_buf0;
 #endif
+		uae_s8 *ecycs = estimated_cycles;
 		// bitplane DMA end can wrap around, even in non-overrun cases
 		int start_pos = (hpos + RGA_PIPELINE_ADJUST) % maxhpos;
 		int start_pos2 = start_pos;
@@ -2067,13 +2079,16 @@ static void estimate_last_fetch_cycle(int hpos)
 #endif
 
 			if (!off2 && start_pos + fetchstart <= end_pos) {
-				memcpy(estimated_cycles + start_pos, curr_diagram, fetchstart);
+				memcpy(ecycs + start_pos, curr_diagram, fetchstart);
 				start_pos += fetchstart;
 			} else {
-				estimated_cycles[start_pos] = curr_diagram[off2];
+				ecycs[start_pos] = curr_diagram[off2];
 				start_pos++;
 				if (start_pos >= maxhpos) {
 					start_pos = 0;
+					if (islinetoggle()) {
+						ecycs = maxhposeven ? estimated_cycles_buf0 : estimated_cycles_buf1;
+					}
 				}
 				if (start_pos == REFRESH_FIRST_HPOS) {
 					// bpl sequencer repeated this cycle
@@ -2089,10 +2104,10 @@ static void estimate_last_fetch_cycle(int hpos)
 			// zero rest of buffer
 			if (end_pos != start_pos2) {
 				if (end_pos > start_pos2) {
-					memset(estimated_cycles + end_pos, 0, maxhpos - end_pos);
-					memset(estimated_cycles, 0, start_pos2);
+					memset(ecycs + end_pos, 0, maxhpos - end_pos);
+					memset(ecycs, 0, start_pos2);
 				} else {
-					memset(estimated_cycles + end_pos, 0, start_pos2 - end_pos);
+					memset(ecycs + end_pos, 0, start_pos2 - end_pos);
 				}
 			}
 			estimated_bplcon0 = bplcon0;
@@ -2324,17 +2339,6 @@ int get_bitplane_dma_rel(int hpos, int off)
 		return v & 0x0f;
 	}
 	return 0;
-}
-
-static int islinetoggle(void)
-{
-	int linetoggle = 0;
-	if (!(new_beamcon0 & BEAMCON0_LOLDIS) && !(new_beamcon0 & BEAMCON0_PAL) && ecs_agnus) {
-		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
-	} else if (!ecs_agnus && currprefs.ntscmode) {
-		linetoggle = 1; // hardwired NTSC Agnus
-	}
-	return linetoggle;
 }
 
 static void compute_shifter_mask(void)
@@ -6169,6 +6173,7 @@ static void reset_ocs_denise_blank(uae_u32 v)
 	int pos = hpos_to_diwx(hpos) + 2; // +1 hires
 	record_color_change2(-pos, 0, COLOR_CHANGE_BLANK | 0);
 }
+
 
 /* Set the state of all decisions to "undecided" for a new scanline. */
 static void reset_decisions_scanline_start(void)
@@ -12374,8 +12379,7 @@ static void vsync_check_vsyncmode(void)
 {
 	if (varsync_maybe_changed[0] == 1 || varsync_maybe_changed[1] == 1 || varhblank_lines == -1) {
 		init_hz_normal();
-	}
-	else if (varsync_changed == 1 || ((beamcon0 & BEAMCON0_VARBEAMEN) && exthblank_prev != exthblank && (abs(exthblank_lines[0] - exthblank_lines[1]) > maxvpos * 3 / 4))) {
+	} else if (varsync_changed == 1 || ((beamcon0 & BEAMCON0_VARBEAMEN) && exthblank_prev != exthblank && (abs(exthblank_lines[0] - exthblank_lines[1]) > maxvpos * 3 / 4))) {
 		init_hz_normal();
 	} else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change && vposw_change < 4) {
 		init_hz_vposw();
@@ -13243,10 +13247,12 @@ static void hsync_handler_pre(bool onvsync)
 	hpos_hsync_extra = maxhpos;
 
 	lol_prev = lol;
-	if (islinetoggle())
+	if (islinetoggle()) {
 		lol = lol ? 0 : 1;
-	else
+	} else {
 		lol = 0;
+	}
+	memset(cycle_line_slot, 0, maxhposm1 + 1);
 
 	// to record decisions correctly between end of scanline and start of hsync
 	if (!eventtab[ev_hsynch].active) {
@@ -13949,8 +13955,7 @@ void vsync_event_done(void)
 	//		linesync_beam_single_dual();
 	//	else
 	//		linesync_beam_single_single();
-	//}
-	//else {
+	//} else {
 	//	if (currprefs.gfx_variable_sync)
 	//		linesync_beam_vrr();
 	//	else if (vsync_vblank >= 85)
@@ -13974,8 +13979,6 @@ static void delayed_framestart(uae_u32 v)
 // this prepares for new line
 static void hsync_handler_post(bool onvsync)
 {
-	memset(cycle_line_slot, 0, maxhposm1 + 1);
-
 	// genlock active:
 	// vertical: interlaced = toggles every other field, non-interlaced = both fields (normal)
 	// horizontal: PAL = every line, NTSC = every other line
@@ -14215,6 +14218,7 @@ static void hsync_handler_post(bool onvsync)
 	} else {
 		issyncstopped_count = 0;
 	}
+
 
 	int hp = REFRESH_FIRST_HPOS;
 	refptr_p = refptr;
