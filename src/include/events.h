@@ -64,7 +64,8 @@ struct ev2
 
 // hsync handlers must have priority over misc
 enum {
-	ev_cia, ev_audio, ev_hsync, ev_hsynch, ev_misc,
+	ev_cia, ev_hsync, ev_hsynch, ev_misc,
+	ev_audio,
 	ev_max
 };
 
