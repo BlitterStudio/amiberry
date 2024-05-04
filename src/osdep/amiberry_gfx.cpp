@@ -2642,7 +2642,11 @@ void close_rtg(int monid, bool reset)
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	close_windows(mon);
 	if (reset) {
+		struct amigadisplay* ad = &adisplays[monid];
 		mon->screen_is_picasso = false;
+		ad->picasso_on = false;
+		ad->picasso_requested_on = false;
+		ad->picasso_requested_forced_on = false;
 	}
 }
 
