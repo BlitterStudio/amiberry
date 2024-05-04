@@ -2107,14 +2107,15 @@ int graphics_init(bool mousecapture)
 	if (kmsdrm_detected)
 	{
 		write_log("KMSDRM detected, forcing Full-window mode\n");
-		currprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
 	}
-	write_log("Creating Amiberry window...\n");
 
 	if (!mon->sdl_window)
 	{
+		write_log("Creating Amiberry window...\n");
 		Uint32 sdl_window_mode;
-		if (sdl_mode.w >= 800 && sdl_mode.h >= 600)
+		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
 			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
