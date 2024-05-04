@@ -299,27 +299,36 @@ void RefreshPanelConfig()
 bool HelpPanelConfig(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("In this panel you can see a list of all your previously saved configurations. You can");
-	helptext.emplace_back(R"("Load", "Save" or "Delete" configurations from this list, using the buttons as are)");
-	helptext.emplace_back("detailed below.");
+	helptext.emplace_back("In this panel, you can see a list of all your previously saved configurations. The");
+	helptext.emplace_back("Configuration file (.uae) contains all the emulator settings available in it. Loading");
+	helptext.emplace_back("such a file, will apply those settings to Amiberry immediately. Accordingly, you can");
+	helptext.emplace_back("Save your current settings in a file here, for future use.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("A Configuration file (.uae) contains all the emulator settings available in it. Loading");
-	helptext.emplace_back("such a file, will apply those settings to Amiberry immediately. Accordingly, you can Save");
-	helptext.emplace_back("your current settings in a file here, for future use.");
+	helptext.emplace_back("Please note the \"default\" config name is special for Amiberry, since if it exists,");
+	helptext.emplace_back("it will be loaded automatically on startup. This will override the emulator options");
+	helptext.emplace_back("Amiberry sets internally at startup, and this may impact on compatibility when using");
+	helptext.emplace_back("the Quickstart panel.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Please note the \"default\" config name is special for Amiberry, since if it exists, it will");
-	helptext.emplace_back("be loaded automatically on startup. This will override the emulator options Amiberry sets");
-	helptext.emplace_back("internally at startup, and may impact on compatibility when using the Quickstart panel.");
+	helptext.emplace_back("To load a configuration, select the entry in the list, and then click on the \"Load\"");
+	helptext.emplace_back("button. Note that if you double-click on an entry in the list, the emulation starts");
+	helptext.emplace_back("immediately using that configuration.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("To load a configuration, select the entry in the list and then click on \"Load\". Note that");
-	helptext.emplace_back("if you double-click on an entry in the list, the emulation starts with this configuration.");
+	helptext.emplace_back("To create/save a new configuration, set all emulator options as required, then enter");
+	helptext.emplace_back("a new \"Name\", optionally provide a short description, and then click on the \"Save\"");
+	helptext.emplace_back("button. When trying to Save a configuration, if the supplied filename already exists,");
+	helptext.emplace_back("it will be automatically renamed to \"configuration.backup\", to keep as a backup.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("To create/save a new configuration, set all emulator options required, then enter a new");
-	helptext.emplace_back(R"("Name", optionally provide a short description, and then click on "Save".)");
-	helptext.emplace_back("When trying to Save a configuration, if the supplied filename already exists, it will be");
-	helptext.emplace_back("automatically renamed to \"configuration.backup\", to keep as a backup.");
+	helptext.emplace_back("Please note a special case exists when creating/saving a configuration file for use ");
+	helptext.emplace_back("with floppy disk images and whdload archives. The auto-config logic in Amiberry will");
+	helptext.emplace_back("scan for a configuration file of the same \"Name\" as the disk image or .lha archive");
+	helptext.emplace_back("being loaded. After you load a floppy disk image or whdload archive, and Start the ");
+	helptext.emplace_back("emulation, you can use the \"F12\" key to show the GUI, and in this panel the \"Name\"");
+	helptext.emplace_back("field for the configuartion will be filled correctly. Do not change this, as it will");
+	helptext.emplace_back("stop auto-config from working. You may change the description if you desire.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("To delete the currently selected file from the disk (and the list), click on \"Delete\"");
+	helptext.emplace_back("To delete the currently selected configuration file from the disk (and the list),");
+	helptext.emplace_back("click on the \"Delete\" button.");
+
 	helptext.emplace_back(" ");
 	return true;
 }
