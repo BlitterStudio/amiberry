@@ -20,7 +20,7 @@
 
 #define UAEMAJOR 6
 #define UAEMINOR 3
-#define UAESUBREV 0
+#define UAESUBREV 1
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -510,6 +510,7 @@ struct ramboard
 	bool nodma;
 	bool force16bit;
 	bool chipramtiming;
+	int fault;
 	struct boardloadfile lf;
 };
 struct expansion_params

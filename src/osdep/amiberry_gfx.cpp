@@ -218,8 +218,8 @@ static void SDL2_init()
 	// If KMSDRM is detected, force Full-Window mode
 	if (kmsdrm_detected)
 	{
-		currprefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
-		currprefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
 	}
 
 	if (!mon->amiga_window)
@@ -2642,7 +2642,11 @@ void close_rtg(int monid, bool reset)
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	close_windows(mon);
 	if (reset) {
+		struct amigadisplay* ad = &adisplays[monid];
 		mon->screen_is_picasso = false;
+		ad->picasso_on = false;
+		ad->picasso_requested_on = false;
+		ad->picasso_requested_forced_on = false;
 	}
 }
 

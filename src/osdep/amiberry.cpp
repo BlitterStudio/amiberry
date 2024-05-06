@@ -658,14 +658,17 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	releasecapture(mon);
 	recapture = 0;
 
-	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
-		if (mousehack_alive())
-		{
-			releasecapture(mon);
+	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		if (currprefs.input_tablet > 0) {
+			if (mousehack_alive()) {
+				releasecapture(mon);
+				recapture = 0;
+				return;
+			}
+			SDL_SetCursor(normalcursor);
+		} else {
 			recapture = 0;
-			return;
 		}
-		SDL_SetCursor(normalcursor);
 	}
 
 	bool gotfocus = false;

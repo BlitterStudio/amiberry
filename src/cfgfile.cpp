@@ -1576,7 +1576,8 @@ static void cfgfile_write_board_rom(struct uae_prefs *prefs, struct zfile *f, st
 				_stprintf(buf, _T("%s%s_rom"), name, i ? _T("_ext") : _T(""));
 				cfgfile_dwrite_str (f, buf, rc->romident);
 			}
-			if (rc->autoboot_disabled || rc->dma24bit || rc->inserted || ert->subtypes || ert->settings || ert->id_jumper || br->device_order > 0 || is_custom_romboard(br)) {
+			if (rc->autoboot_disabled || rc->dma24bit || rc->inserted || ert->subtypes ||
+				ert->settings || ert->id_jumper || br->device_order > 0 || is_custom_romboard(br)) {
 				TCHAR buf2[256];
 				buf2[0] = 0;
 				auto* p = buf2;
@@ -1753,6 +1754,10 @@ static bool cfgfile_readramboard(const TCHAR *option, const TCHAR *value, const 
 			if (s)
 				rb->product = (uae_u8)_tstol(s);
 			xfree(s);
+			s = cfgfile_option_get(value, _T("fault"));
+			if (s)
+				rb->fault = _tstol(s);
+			xfree(s);
 			if (cfgfile_option_get_bool(value, _T("no_reset_unmap")))
 				rb->no_reset_unmap = true;
 			if (cfgfile_option_get_bool(value, _T("nodma")))
@@ -1887,6 +1892,12 @@ static void cfgfile_writeramboard(struct uae_prefs *prefs, struct zfile *f, cons
 		if (tmp2[0])
 			*p++ = ',';
 		_tcscpy(p, _T("force16bit=true"));
+		p += _tcslen(p);
+	}
+	if (rb->fault) {
+		if (tmp2[0])
+			*p++ = ',';
+		_stprintf(p, _T("fault=%d"), rb->fault);
 		p += _tcslen(p);
 	}
 	if (!_tcsicmp(tmp1, _T("chipmem_options")) || !_tcsicmp(tmp1, _T("bogomem_options"))) {
@@ -5660,7 +5671,7 @@ static bool cfgfile_read_board_rom(struct uae_prefs *p, const TCHAR *option, con
 						brc->roms[idx].dma24bit = true;
 					}
 					if (cfgfile_option_bool(buf2, _T("inserted")) == 1) {
-						brc->roms[idx].inserted= true;
+						brc->roms[idx].inserted = true;
 					}
 					p = cfgfile_option_get(buf2, _T("order"));
 					if (p) {

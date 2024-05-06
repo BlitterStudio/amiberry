@@ -1453,7 +1453,7 @@ static bool set_params_filesys(struct uae_prefs *prefs, struct expansion_params 
 
 static void add_rtarea_pointer(struct autoconfig_info *aci)
 {
-	if (aci->doinit) {
+	if (aci && aci->doinit) {
 		uaecptr addr = 0;
 		if (aci->prefs->uaeboard > 1) {
 			addr = aci->start + 0x10000;
@@ -1975,7 +1975,7 @@ void create_68060_nofpu(void)
 
 static bool expamem_init_filesys(struct autoconfig_info *aci)
 {
-	struct uae_prefs *p = aci->prefs;
+	struct uae_prefs* p = aci ? aci->prefs : &currprefs;
 	bool ks12 = ks12orolder();
 	bool hide = p->uae_hide_autoconfig;
 	bool rom = !(ks12 || !do_mount || p->uaeboard_nodiag);
@@ -3973,7 +3973,7 @@ void expansion_map(void)
 		mapped_free(&filesys_bank);
 		mapped_malloc(&filesys_bank);
 		map_banks_z2(&filesys_bank, filesys_bank.start >> 16, 1);
-		expamem_init_filesys(0);
+		expamem_init_filesys(NULL);
 		expamem_map_filesys_update();
 	}
 }

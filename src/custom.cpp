@@ -139,6 +139,7 @@ int lof_display; // what display device thinks
 int scandoubled_line;
 static bool lof_lastline, lof_prev_lastline;
 static int lol, lol_prev;
+static bool linetoggle;
 static int next_lineno;
 static int linear_vpos;
 static enum nln_how nextline_how;
@@ -354,6 +355,7 @@ static uae_u16 bplcon0_saved, bplcon1_saved, bplcon2_saved;
 static uae_u16 bplcon3_saved, bplcon4_saved;
 static int varsync_changed, varsync_maybe_changed[2];
 static int varhblank_lines, varhblank_val[2];
+static int exthblank_lines[2];
 static uae_u16 vt_old, ht_old, hs_old, vs_old;
 uae_u16 vtotal, htotal;
 static int maxvpos_stored, maxhpos_stored;
@@ -478,7 +480,7 @@ static int last_hdiw;
 static diw_states vdiwstate, hdiwstate, hdiwstate_blank;
 static int hdiwbplstart;
 static int bpl_hstart;
-static bool exthblank, exthblank_state, hcenterblank_state;
+static bool exthblank, exthblank_prev, exthblank_state, hcenterblank_state;
 static int hsyncdebug;
 static int last_diw_hpos;
 static int last_recorded_diw_hpos;
@@ -902,6 +904,17 @@ static int expand_sprres(uae_u16 con0, uae_u16 con3)
 #endif
 	}
 	return res;
+}
+
+static int islinetoggle(void)
+{
+	int linetoggle = 0;
+	if (!(new_beamcon0 & BEAMCON0_LOLDIS) && !(new_beamcon0 & BEAMCON0_PAL) && ecs_agnus) {
+		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
+	} else if (!ecs_agnus && currprefs.ntscmode) {
+		linetoggle = 1; // hardwired NTSC Agnus
+	}
+	return linetoggle;
 }
 
 STATIC_INLINE uae_u8 *pfield_xlateptr(uaecptr plpt, int bytecount)
@@ -1922,6 +1935,7 @@ static uae_s8 estimated_cycles_empty[MAX_CHIPSETSLOTS + MAX_CHIPSETSLOTS_EXTRA];
 static int estimate_cycles_empty_index = -1;
 static uae_u16 estimated_bplcon0, estimated_fm, estimated_plfstrt, estimated_plfstop;
 static uae_s8 *estimated_cycles = estimated_cycles_empty;
+static uae_s8 *estimated_cycles_next = estimated_cycles_empty;
 static bool estimated_empty;
 static int estimated_maxhpos[2];
 
@@ -1939,16 +1953,41 @@ static void end_estimate_last_fetch_cycle(int hpos)
 	}
 	if (estimated_cycles_empty != estimated_cycles) {
 		estimated_cycles = estimated_cycles_empty;
+		estimated_cycles_next = estimated_cycles_empty;
 		estimate_cycles_empty_index = hpos;
-		uae_s8 *est = maxhposeven ? estimated_cycles_buf1 : estimated_cycles_buf0;
-		if (maxhpos == estimated_maxhpos[0]) {
-			est = estimated_cycles_buf0;
-		} else if (maxhpos == estimated_maxhpos[1]) {
-			est = estimated_cycles_buf1;
-		}
-		for (int i = 0; i < RGA_PIPELINE_ADJUST; i++) {
-			int pos = (hpos + i) % maxhpos;
-			estimated_cycles_empty[pos] = est[pos];
+		if (linetoggle) {
+			uae_s8 *est = maxhposeven ? estimated_cycles_buf1 : estimated_cycles_buf0;
+			uae_s8 *est_n = maxhposeven ? estimated_cycles_buf0 : estimated_cycles_buf1;
+			if (maxhpos == estimated_maxhpos[0]) {
+				est = estimated_cycles_buf0;
+				est_n = estimated_cycles_buf1;
+			} else if (maxhpos == estimated_maxhpos[1]) {
+				est = estimated_cycles_buf1;
+				est_n = estimated_cycles_buf0;
+			}
+			for (int i = 0; i < RGA_PIPELINE_ADJUST; i++) {
+				int pos = hpos + i;
+				if (pos >= maxhpos) {
+					pos -= maxhpos;
+					estimated_cycles_empty[pos] = est_n[pos];
+				} else {
+					estimated_cycles_empty[pos] = est[pos];
+				}
+			}
+		} else {
+			uae_s8 *est = maxhposeven ? estimated_cycles_buf1 : estimated_cycles_buf0;
+			if (maxhpos == estimated_maxhpos[0]) {
+				est = estimated_cycles_buf0;
+			} else if (maxhpos == estimated_maxhpos[1]) {
+				est = estimated_cycles_buf1;
+			}
+			for (int i = 0; i < RGA_PIPELINE_ADJUST; i++) {
+				int pos = hpos + i;
+				if (pos >= maxhpos) {
+					pos -= maxhpos;
+				}
+				estimated_cycles_empty[pos] = est[pos];
+			}
 		}
 	}
 #else
@@ -1974,13 +2013,28 @@ static void estimate_last_fetch_cycle(int hpos)
 
 #if OPTIMIZED_ESTIMATE
 		if (estimated_bplcon0 == bplcon0 && bpl_hstart == hpos && estimated_plfstrt == bpl_hstart && estimated_plfstop == plfstop && estimated_fm == fetchmode) {
-			if (maxhpos == estimated_maxhpos[0]) {
-				estimated_cycles = estimated_cycles_buf0;
-				return;
-			}
-			if (maxhpos == estimated_maxhpos[1]) {
-				estimated_cycles = estimated_cycles_buf1;
-				return;
+			if (linetoggle) {
+				if (maxhpos == estimated_maxhpos[0]) {
+					estimated_cycles = estimated_cycles_buf0;
+					estimated_cycles_next = estimated_cycles_buf1;
+					return;
+				}
+				if (maxhpos == estimated_maxhpos[1]) {
+					estimated_cycles = estimated_cycles_buf1;
+					estimated_cycles_next = estimated_cycles_buf0;
+					return;
+				}
+			} else {
+				if (maxhpos == estimated_maxhpos[0]) {
+					estimated_cycles = estimated_cycles_buf0;
+					estimated_cycles_next = estimated_cycles;
+					return;
+				}
+				if (maxhpos == estimated_maxhpos[1]) {
+					estimated_cycles = estimated_cycles_buf1;
+					estimated_cycles_next = estimated_cycles;
+					return;
+				}
 			}
 		} else {
 			estimated_maxhpos[0] = estimated_maxhpos[1] = -1;
@@ -2046,9 +2100,16 @@ static void estimate_last_fetch_cycle(int hpos)
 
 #if OPTIMIZED_ESTIMATE
 		estimated_cycles = maxhposeven ? estimated_cycles_buf1 : estimated_cycles_buf0;
+		if (linetoggle) {
+			estimated_cycles_next = maxhposeven ? estimated_cycles_buf0 : estimated_cycles_buf1;
+		} else {
+			estimated_cycles_next = estimated_cycles;
+		}
 #else
 		estimated_cycles = estimated_cycles_buf0;
+		estimated_cycles_next = estimated_cycles;
 #endif
+		uae_s8 *ecycs = estimated_cycles;
 		// bitplane DMA end can wrap around, even in non-overrun cases
 		int start_pos = (hpos + RGA_PIPELINE_ADJUST) % maxhpos;
 		int start_pos2 = start_pos;
@@ -2066,13 +2127,16 @@ static void estimate_last_fetch_cycle(int hpos)
 #endif
 
 			if (!off2 && start_pos + fetchstart <= end_pos) {
-				memcpy(estimated_cycles + start_pos, curr_diagram, fetchstart);
+				memcpy(ecycs + start_pos, curr_diagram, fetchstart);
 				start_pos += fetchstart;
 			} else {
-				estimated_cycles[start_pos] = curr_diagram[off2];
+				ecycs[start_pos] = curr_diagram[off2];
 				start_pos++;
 				if (start_pos >= maxhpos) {
 					start_pos = 0;
+					if (linetoggle) {
+						ecycs = estimated_cycles_next;
+					}
 				}
 				if (start_pos == REFRESH_FIRST_HPOS) {
 					// bpl sequencer repeated this cycle
@@ -2088,10 +2152,10 @@ static void estimate_last_fetch_cycle(int hpos)
 			// zero rest of buffer
 			if (end_pos != start_pos2) {
 				if (end_pos > start_pos2) {
-					memset(estimated_cycles + end_pos, 0, maxhpos - end_pos);
-					memset(estimated_cycles, 0, start_pos2);
+					memset(ecycs + end_pos, 0, maxhpos - end_pos);
+					memset(ecycs, 0, start_pos2);
 				} else {
-					memset(estimated_cycles + end_pos, 0, start_pos2 - end_pos);
+					memset(ecycs + end_pos, 0, start_pos2 - end_pos);
 				}
 			}
 			estimated_bplcon0 = bplcon0;
@@ -2325,17 +2389,6 @@ int get_bitplane_dma_rel(int hpos, int off)
 	return 0;
 }
 
-static int islinetoggle(void)
-{
-	int linetoggle = 0;
-	if (!(new_beamcon0 & BEAMCON0_LOLDIS) && !(new_beamcon0 & BEAMCON0_PAL) && ecs_agnus) {
-		linetoggle = 1; // NTSC and !LOLDIS -> LOL toggles every line
-	} else if (!ecs_agnus && currprefs.ntscmode) {
-		linetoggle = 1; // hardwired NTSC Agnus
-	}
-	return linetoggle;
-}
-
 static void compute_shifter_mask(void)
 {
 	int shifter_size = 16 << (fetchmode + LORES_TO_SHRES_SHIFT - toscr_res);
@@ -2395,7 +2448,7 @@ static void set_delay_lastcycle(void)
 {
 	delay_lastcycle[0] = (((maxhpos + 0) * 2) + 2) << LORES_TO_SHRES_SHIFT;
 	delay_lastcycle[1] = delay_lastcycle[0];
-	if (islinetoggle()) {
+	if (linetoggle) {
 		delay_lastcycle[1] += 1 << LORES_TO_SHRES_SHIFT;
 	}
 	delay_hsynccycle = (((maxhpos + hsyncstartpos_start_cycles) * 2) - DDF_OFFSET) << LORES_TO_SHRES_SHIFT;
@@ -6169,6 +6222,7 @@ static void reset_ocs_denise_blank(uae_u32 v)
 	record_color_change2(-pos, 0, COLOR_CHANGE_BLANK | 0);
 }
 
+
 /* Set the state of all decisions to "undecided" for a new scanline. */
 static void reset_decisions_scanline_start(void)
 {
@@ -6590,7 +6644,7 @@ void compute_vsynctime(void)
 	}
 	vsynctimebase_orig = vsynctimebase;
 
-	if (islinetoggle()) {
+	if (linetoggle) {
 		shpos += 0.5f;
 	}
 	if (interlace_seen) {
@@ -7112,7 +7166,7 @@ void compute_framesync(void)
 
 	compute_vsynctime();
 
-	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (islinetoggle() ? 0.5f : 0.0f));
+	hblank_hz = (currprefs.ntscmode ? CHIPSET_CLOCK_NTSC : CHIPSET_CLOCK_PAL) / (maxhpos + (linetoggle ? 0.5f : 0.0f));
 
 	write_log(_T("%s mode%s%s V=%.4fHz H=%0.4fHz (%dx%d+%d) IDX=%d (%s) D=%d RTG=%d/%d\n"),
 		isntsc ? _T("NTSC") : _T("PAL"),
@@ -7960,7 +8014,7 @@ static uae_u16 VPOSR(void)
 				lofr = lofr ? 0 : 1;
 			}
 		}
-		if (islinetoggle()) {
+		if (linetoggle) {
 			lolr = lolr ? 0 : 1;
 		}
 	}
@@ -10335,9 +10389,13 @@ bool bitplane_dma_access(int hpos, int coffset)
 		hpos += coffset;
 		if (hpos >= maxhpos) {
 			hpos -= maxhpos;
-		}
-		if (estimated_cycles[hpos] > 0) {
-			return true;
+			if (estimated_cycles_next[hpos] > 0) {
+				return true;
+			}
+		} else {
+			if (estimated_cycles[hpos] > 0) {
+				return true;
+			}
 		}
 	}
 	return false;
@@ -12373,7 +12431,7 @@ static void vsync_check_vsyncmode(void)
 {
 	if (varsync_maybe_changed[0] == 1 || varsync_maybe_changed[1] == 1 || varhblank_lines == -1) {
 		init_hz_normal();
-	} else if (varsync_changed == 1) {
+	} else if (varsync_changed == 1 || ((beamcon0 & BEAMCON0_VARBEAMEN) && exthblank_prev != exthblank && (abs(exthblank_lines[0] - exthblank_lines[1]) > maxvpos * 3 / 4))) {
 		init_hz_normal();
 	} else if (vpos_count > 0 && abs(vpos_count - vpos_count_diff) > 1 && vposw_change && vposw_change < 4) {
 		init_hz_vposw();
@@ -12387,6 +12445,8 @@ static void vsync_check_vsyncmode(void)
 	varsync_maybe_changed[0] = 0;
 	varsync_maybe_changed[1] = 0;
 	varhblank_lines = 0;
+	exthblank_lines[0] = exthblank_lines[1] = 0;
+	exthblank_prev = exthblank;
 }
 
 static void check_display_mode_change(void)
@@ -13239,10 +13299,22 @@ static void hsync_handler_pre(bool onvsync)
 	hpos_hsync_extra = maxhpos;
 
 	lol_prev = lol;
-	if (islinetoggle())
+	if (islinetoggle()) {
 		lol = lol ? 0 : 1;
-	else
+		estimated_cycles_next = estimated_cycles;
+		if (maxhpos == estimated_maxhpos[0]) {
+			estimated_cycles = estimated_cycles_buf0;
+			estimated_cycles_next = estimated_cycles_buf1;
+		} else if (maxhpos == estimated_maxhpos[1]) {
+			estimated_cycles = estimated_cycles_buf1;
+			estimated_cycles_next = estimated_cycles_buf0;
+		}
+		linetoggle = true;
+	} else {
 		lol = 0;
+		linetoggle = false;
+	}
+	memset(cycle_line_slot, 0, maxhposm1 + 1);
 
 	// to record decisions correctly between end of scanline and start of hsync
 	if (!eventtab[ev_hsynch].active) {
@@ -13945,8 +14017,7 @@ void vsync_event_done(void)
 	//		linesync_beam_single_dual();
 	//	else
 	//		linesync_beam_single_single();
-	//}
-	//else {
+	//} else {
 	//	if (currprefs.gfx_variable_sync)
 	//		linesync_beam_vrr();
 	//	else if (vsync_vblank >= 85)
@@ -13970,8 +14041,6 @@ static void delayed_framestart(uae_u32 v)
 // this prepares for new line
 static void hsync_handler_post(bool onvsync)
 {
-	memset(cycle_line_slot, 0, maxhposm1 + 1);
-
 	// genlock active:
 	// vertical: interlaced = toggles every other field, non-interlaced = both fields (normal)
 	// horizontal: PAL = every line, NTSC = every other line
@@ -14020,7 +14089,7 @@ static void hsync_handler_post(bool onvsync)
 		if (cia_hsync < maxhpos) {
 			int newcount;
 			CIAA_tod_handler(cia_hsync);
-			newcount = (int)((vblank_hz * (2 * maxvpos + (interlace_seen ? 1 : 0)) * (2 * maxhpos + (islinetoggle () ? 1 : 0))) / ((currprefs.cs_ciaatod == 2 ? 60 : 50) * 4));
+			newcount = (int)((vblank_hz * (2 * maxvpos + (interlace_seen ? 1 : 0)) * (2 * maxhpos + (linetoggle ? 1 : 0))) / ((currprefs.cs_ciaatod == 2 ? 60 : 50) * 4));
 			cia_hsync += newcount;
 		} else {
 			cia_hsync -= maxhpos;
@@ -14191,6 +14260,8 @@ static void hsync_handler_post(bool onvsync)
 		vb_check();
 	}
 
+	exthblank_lines[exthblank ? 1 : 0]++;
+
 	if (varhblank_lines > 0) {
 		varhblank_lines--;
 		if (!varhblank_lines) {
@@ -14209,6 +14280,7 @@ static void hsync_handler_post(bool onvsync)
 	} else {
 		issyncstopped_count = 0;
 	}
+
 
 	int hp = REFRESH_FIRST_HPOS;
 	refptr_p = refptr;

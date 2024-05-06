@@ -143,7 +143,7 @@ public:
 				if (strlen(changed_prefs.dfxlist[i]) > 0)
 					tmp = std::string(changed_prefs.dfxlist[i]);
 				else
-					tmp = current_dir;
+					tmp = get_floppy_path();
 
 				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
 				if (!tmp.empty())

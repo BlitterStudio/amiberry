@@ -2662,6 +2662,13 @@ static void setmemorywidth(struct ramboard *mb, addrbank *ab)
 			ce_banktype[i] = ce_banktype[0];
 		}
 	}
+	if (mb->fault) {
+		ab->baseaddr_direct_w = NULL;
+		ab->baseaddr_direct_r = NULL;
+		ab->lput = &dummy_lput;
+		ab->wput = &dummy_wput;
+		ab->bput = &dummy_bput;
+	}
 }
 
 static void fill_ce_banks (void)

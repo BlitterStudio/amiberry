@@ -7748,7 +7748,7 @@ static void exception3_read_special(uae_u32 opcode, uaecptr addr, int size, int 
 }
 
 // 68010 special prefetch handling
-void exception3_read_prefetch_only(uae_u32 opcode, uae_u32 addr)
+void exception3_read_prefetch_only(uae_u32 opcode, uaecptr addr)
 {
 	if (currprefs.cpu_model == 68010) {
 		uae_u16 prev = regs.read_buffer;
