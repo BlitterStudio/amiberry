@@ -9,6 +9,7 @@
 #include "options.h"
 #include "rommgr.h"
 #include "gui_handling.h"
+#include "uae.h"
 
 static gcn::Label* lblMainROM;
 static gcn::DropDown* cboMainROM;
@@ -146,7 +147,7 @@ void handleROMSelection(const gcn::ActionEvent& actionEvent, char* prefsFile, co
 {
 	std::string tmp;
 	const char* filter[] = { ".rom", ".bin", "\0" };
-	tmp = SelectFile("Select ROM", current_dir, filter);
+	tmp = SelectFile("Select ROM", get_rom_path(), filter);
 	if (!tmp.empty())
 	{
 		auto* const newrom = new AvailableROM();
