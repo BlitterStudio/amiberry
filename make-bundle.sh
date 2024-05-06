@@ -28,11 +28,15 @@ export CODE_SIGN_ENTITLEMENTS=Entitlements.plist
 codesign --entitlements=Entitlements.plist --force -s - Amiberry.app
 # Copy directories into the bundle
 cp -R abr Amiberry.app/Contents/Resources/Abr
+cp -R cdroms Amiberry.app/Contents/Resources/Cdroms
 cp -R conf Amiberry.app/Contents/Resources/Configurations
 cp -R controllers Amiberry.app/Contents/Resources/Controllers
 cp -R data Amiberry.app/Contents/Resources/Data
+cp -R floppies Amiberry.app/Contents/Resources/Floppies
+cp -R harddrives Amiberry.app/Contents/Resources/Harddrives
 cp -R inputrecordings Amiberry.app/Contents/Resources/Inputrecordings
 cp -R kickstarts Amiberry.app/Contents/Resources/Kickstarts
+cp -R lha Amiberry.app/Contents/Resources/Lha
 cp -R nvram Amiberry.app/Contents/Resources/Nvram
 cp -R savestates Amiberry.app/Contents/Resources/Savestates
 cp -R screenshots Amiberry.app/Contents/Resources/Screenshots
