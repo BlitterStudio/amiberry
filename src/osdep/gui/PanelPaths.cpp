@@ -10,6 +10,8 @@
 #include "gui_handling.h"
 #include "tinyxml2.h"
 
+extern int console_logging;
+
 static gcn::ScrollArea* scrlPaths;
 static gcn::Window* grpPaths;
 
@@ -62,6 +64,7 @@ static gcn::TextField* txtHardDrivesPath;
 static gcn::Button* cmdHardDrivesPath;
 
 static gcn::CheckBox* chkEnableLogging;
+static gcn::CheckBox* chkLogToConsole;
 static gcn::Label* lblLogfilePath;
 static gcn::TextField* txtLogfilePath;
 static gcn::Button* cmdLogfilePath;
@@ -222,8 +225,16 @@ class EnableLoggingActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		set_logfile_enabled(chkEnableLogging->isSelected());
-		logging_init();
+		if (actionEvent.getSource() == chkEnableLogging)
+		{
+			set_logfile_enabled(chkEnableLogging->isSelected());
+			logging_init();
+		}
+		else if (actionEvent.getSource() == chkLogToConsole)
+		{
+			console_logging = chkLogToConsole->isSelected() ? 1 : 0;
+		}
+		
 		RefreshPanelPaths();
 	}
 };
@@ -502,6 +513,9 @@ void InitPanelPaths(const config_category& category)
 	chkEnableLogging = new gcn::CheckBox("Enable logging", true);
 	chkEnableLogging->setId("chkEnableLogging");
 	chkEnableLogging->addActionListener(enableLoggingActionListener);
+	chkLogToConsole = new gcn::CheckBox("Log to console", false);
+	chkLogToConsole->setId("chkLogToConsole");
+	chkLogToConsole->addActionListener(enableLoggingActionListener);
 	
 	lblLogfilePath = new gcn::Label("Amiberry logfile path:");
 	txtLogfilePath = new gcn::TextField();
@@ -608,6 +622,7 @@ void InitPanelPaths(const config_category& category)
 
 	category.panel->add(lblLogfilePath, DISTANCE_BORDER, yPos);
 	category.panel->add(chkEnableLogging, lblLogfilePath->getX() + lblLogfilePath->getWidth() + DISTANCE_NEXT_X * 3, yPos);
+	category.panel->add(chkLogToConsole, chkEnableLogging->getX() + chkEnableLogging->getWidth() + DISTANCE_NEXT_X / 2, yPos);
 	yPos += lblLogfilePath->getHeight() + DISTANCE_NEXT_Y / 2;
 	category.panel->add(txtLogfilePath, DISTANCE_BORDER, yPos);
 	category.panel->add(cmdLogfilePath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X, yPos);
@@ -693,6 +708,7 @@ void ExitPanelPaths()
 	delete cmdHardDrivesPath;
 
 	delete chkEnableLogging;
+	delete chkLogToConsole;
 	delete lblLogfilePath;
 	delete txtLogfilePath;
 	delete cmdLogfilePath;
@@ -738,6 +754,7 @@ void RefreshPanelPaths()
 	txtHardDrivesPath->setText(get_harddrive_path());
 
 	chkEnableLogging->setSelected(get_logfile_enabled());
+	chkLogToConsole->setSelected(console_logging > 0);
 	txtLogfilePath->setText(get_logfile_path());
 	
 	lblLogfilePath->setEnabled(chkEnableLogging->isSelected());
