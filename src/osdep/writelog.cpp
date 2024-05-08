@@ -9,22 +9,37 @@
 #include <cstdio>
 #include <iostream>
 
+#include "sysconfig.h"
 #include "sysdeps.h"
-#include "uae.h"
+
 #include "options.h"
+#include "custom.h"
+#include "events.h"
+#include "uae.h"
+
+#define SHOW_CONSOLE 0
+
+static int nodatestamps = 0;
+
+int consoleopen = 1;
+static int realconsole;
+static int bootlogmode;
 
 FILE* debugfile = nullptr;
+int console_logging = 0;
 static int debugger_type = -1;
+extern int lof_store;
+static int console_input_linemode = -1;
+int always_flush_log = 1;
+TCHAR* conlogfile = NULL;
 
 #define WRITE_LOG_BUF_SIZE 4096
 
-int consoleopen = 0;
-static int realconsole;
-static TCHAR *console_buffer;
-static int console_buffer_size;
+/* console functions for debugger */
 
-void flush_log(void) {
-
+bool is_console_open(void)
+{
+	return consoleopen;
 }
 
 static void openconsole (void)
@@ -155,6 +170,11 @@ void close_console (void)
 			if (GetWindowRect (hwnd, &r)) {
 				r.bottom -= r.top;
 				r.right -= r.left;
+				int dpi = getdpiforwindow(hwnd);
+				r.left = r.left * 96 / dpi;
+				r.right = r.right * 96 / dpi;
+				r.top = r.top * 96 / dpi;
+				r.bottom = r.bottom * 96 / dpi;
 #ifdef FSUAE
 #else
 				regsetint (NULL, _T("LoggerPosX"), r.left);
@@ -174,26 +194,18 @@ void close_console (void)
 
 static void writeconsole_2 (const TCHAR *buffer)
 {
-	unsigned int temp;
-
 	if (!consoleopen)
 		openconsole ();
 
 	if (consoleopen > 0) {
-#ifdef _WIN32
-		WriteOutput (buffer, _tcslen (buffer));
-#endif
-	} else if (realconsole) {
-#ifdef AMIBERRY
-		fputs (buffer, stdout);
-#else
-		fputws (buffer, stdout);
-#endif
-		fflush (stdout);
-	} else if (consoleopen < 0) {
-#ifdef _WIN32
-		WriteConsole (stdoutput, buffer, _tcslen (buffer), &temp, 0);
-#endif
+		SDL_Log("%s", buffer);
+	}
+	else if (realconsole) {
+		fprintf(stdout, "%s", buffer);
+		fflush(stdout);
+	}
+	else if (consoleopen < 0) {
+		SDL_Log("%s", buffer);
 	}
 }
 
@@ -215,6 +227,19 @@ static void writeconsole (const TCHAR *buffer)
 		writeconsole_2 (buffer);
 	}
 }
+
+static void flushconsole(void)
+{
+	if (consoleopen > 0) {
+		fflush(stdout);
+	}
+	else if (realconsole) {
+		fflush(stdout);
+	}
+}
+
+static TCHAR* console_buffer;
+static int console_buffer_size;
 
 TCHAR *setconsolemode (TCHAR *buffer, int maxlen)
 {
@@ -258,7 +283,7 @@ void console_out(const TCHAR* format, ...)
 	va_start(parms, format);
 	_vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
 	va_end(parms);
-	cout << buffer << endl;
+	cout << buffer << '\n';
 }
 
 bool console_isch (void)
@@ -389,19 +414,130 @@ int console_get (TCHAR *out, int maxlen)
 
 void console_flush (void)
 {
-	fflush(stdout);
+	flushconsole();
+}
+
+static int lfdetected = 1;
+
+TCHAR* write_log_get_ts(void)
+{
+	static char out[100];
+	static char lastts[100];
+	char curts[100];
+
+	if (bootlogmode)
+		return NULL;
+	if (nodatestamps)
+		return NULL;
+	if (!vsync_counter)
+		return NULL;
+
+	Uint32 ticks = SDL_GetTicks();
+	time_t seconds = ticks / 1000;
+	int milliseconds = ticks % 1000;
+
+	struct tm* t = localtime(&seconds);
+	strftime(curts, sizeof(curts), "%Y-%m-%d %H:%M:%S\n", t);
+
+	char* p = out;
+	*p = 0;
+	if (strncmp(curts, lastts, strlen(curts) - 3)) { // "xx\n"
+		strcat(p, curts);
+		p += strlen(p);
+		strcpy(lastts, curts);
+	}
+	strftime(p, sizeof(out) - (p - out), "%S-", t);
+	p += strlen(p);
+	sprintf(p, "%03d", milliseconds);
+	p += strlen(p);
+	if (vsync_counter != 0xffffffff)
+		sprintf(p, " [%d %03d%s%03d]", vsync_counter, current_hpos_safe(), lof_store ? "-" : "=", vpos);
+	strcat(p, ": ");
+	return out;
 }
 
 void write_log(const char* format, ...)
 {
-	if (amiberry_options.write_logfile && debugfile)
+	if (!SHOW_CONSOLE && !console_logging && !debugfile)
+		return;
+
+	int count;
+	TCHAR buffer[WRITE_LOG_BUF_SIZE], *ts;
+	int bufsize = WRITE_LOG_BUF_SIZE;
+	TCHAR* bufp;
+	va_list parms;
+
+	if (amiberry_options.write_logfile)
 	{
-		va_list parms;
+		if (!_tcsicmp(format, _T("*")))
+			count = 0;
+
 		va_start(parms, format);
-		vfprintf(debugfile, format, parms);
-		fflush(debugfile);
+		bufp = buffer;
+		for (;;) {
+			count = _vsntprintf(bufp, bufsize - 1, format, parms);
+			if (count < 0) {
+				bufsize *= 10;
+				if (bufp != buffer)
+					xfree(bufp);
+				bufp = xmalloc(TCHAR, bufsize);
+				continue;
+			}
+			break;
+		}
+		bufp[bufsize - 1] = 0;
+		if (!_tcsncmp(bufp, _T("write "), 6))
+			bufsize--;
+		ts = write_log_get_ts();
+		if (bufp[0] == '*')
+			count++;
+		if (SHOW_CONSOLE || console_logging) {
+			if (lfdetected && ts)
+				writeconsole(ts);
+			writeconsole(bufp);
+		}
+		if (debugfile) {
+			if (lfdetected && ts)
+				fprintf(debugfile, _T("%s"), ts);
+			fprintf(debugfile, _T("%s"), bufp);
+		}
+		lfdetected = 0;
+		if (bufp[0] != '\0' && bufp[_tcslen(bufp) - 1] == '\n')
+			lfdetected = 1;
 		va_end(parms);
+		if (bufp != buffer)
+			xfree(bufp);
+		if (always_flush_log)
+			flush_log();
 	}
+}
+
+void flush_log(void)
+{
+	if (debugfile)
+		fflush(debugfile);
+	flushconsole();
+}
+
+void f_out(void* f, const TCHAR* format, ...)
+{
+	int count;
+	TCHAR buffer[WRITE_LOG_BUF_SIZE];
+	va_list parms;
+	va_start(parms, format);
+
+	if (f == NULL || !consoleopen)
+		return;
+	count = _vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+	openconsole();
+	writeconsole(buffer);
+	va_end(parms);
+}
+
+void log_close(FILE* f)
+{
+	if (f)
+		fclose(f);
 }
 
 void jit_abort(const TCHAR* format, ...)
