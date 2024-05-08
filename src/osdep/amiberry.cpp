@@ -4345,24 +4345,25 @@ void drawbridge_update_profiles(uae_prefs* p)
 #ifdef FLOPPYBRIDGE
 	const unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
 
-	const std::string profile_name_fast = "Fast";
+	const std::string profile_name_normal = "Normal";
 	const std::string profile_name_comp = "Compatible";
 	const std::string profile_name_turbo = "Turbo";
 	const std::string profile_name_stalling = "Stalling";
 
-	const std::string bridge_mode_fast = "0";
+	const std::string bridge_mode_normal = "0";
 	const std::string bridge_mode_comp = "1";
 	const std::string bridge_mode_turbo = "2";
 	const std::string bridge_mode_stalling = "3";
+
 	const std::string bridge_density_auto = "0";
 
 	std::string serial_port = p->drawbridge_serial_port;
 	if (serial_port.empty())
-		serial_port = "COM0";
+		serial_port = "/dev/ttyUSB0";
 
 	std::string tmp;
 	// Fast
-	tmp = std::string("1") + "|" + profile_name_fast + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_fast + "|" + bridge_density_auto + "]";
+	tmp = std::string("1") + "|" + profile_name_normal + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_normal + "|" + bridge_density_auto + "]";
 	// Compatible
 	tmp += std::string("2") + "|" + profile_name_comp + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_comp + "|" + bridge_density_auto + "]";
 	// Turbo
