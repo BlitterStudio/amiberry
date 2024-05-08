@@ -4361,8 +4361,9 @@ void drawbridge_update_profiles(uae_prefs* p)
 	if (serial_port.empty())
 		serial_port = "/dev/ttyUSB0";
 
+	// profileID | profileName [ drawbridge_driver | flags | serial_port | bridge_mode | bridge_density ]
 	std::string tmp;
-	// Fast
+	// Normal
 	tmp = std::string("1") + "|" + profile_name_normal + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_normal + "|" + bridge_density_auto + "]";
 	// Compatible
 	tmp += std::string("2") + "|" + profile_name_comp + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_comp + "|" + bridge_density_auto + "]";

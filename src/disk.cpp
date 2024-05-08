@@ -5376,27 +5376,27 @@ static void floppybridge_init2(struct uae_prefs *p)
 					xfree(a);
 				}
 				if (!bridge) {
-				const TCHAR *name = _tcschr(p->floppyslots[dr].dfxsubtypeid, ':');
-				if (name) {
-					int id = _tstol(p->floppyslots[dr].dfxsubtypeid);
-					name++;
-					for (int i = 0; i < bridgeprofiles.size(); i++) {
-						FloppyBridgeAPI::FloppyBridgeProfileInformation fbpi = bridgeprofiles.at(i);
-						if (fbpi.profileID == id && !_tcscmp(fbpi.name, name)) {
-							bridge = FloppyBridgeAPI::createDriverFromProfileID(id);
-							break;
-						}
-					}
-					if (!bridge) {
+					const TCHAR* name = _tcschr(p->floppyslots[dr].dfxsubtypeid, ':');
+					if (name) {
+						int id = _tstol(p->floppyslots[dr].dfxsubtypeid);
+						name++;
 						for (int i = 0; i < bridgeprofiles.size(); i++) {
 							FloppyBridgeAPI::FloppyBridgeProfileInformation fbpi = bridgeprofiles.at(i);
-							if (!_tcscmp(fbpi.name, name)) {
-								bridge = FloppyBridgeAPI::createDriverFromProfileID(fbpi.profileID);
+							if (fbpi.profileID == id && !_tcscmp(fbpi.name, name)) {
+								bridge = FloppyBridgeAPI::createDriverFromProfileID(id);
 								break;
 							}
 						}
+						if (!bridge) {
+							for (int i = 0; i < bridgeprofiles.size(); i++) {
+								FloppyBridgeAPI::FloppyBridgeProfileInformation fbpi = bridgeprofiles.at(i);
+								if (!_tcscmp(fbpi.name, name)) {
+									bridge = FloppyBridgeAPI::createDriverFromProfileID(fbpi.profileID);
+									break;
+								}
+							}
+						}
 					}
-				}
 				}
 				if (!bridge && p->floppyslots[dr].dfxsubtypeid[0]) {
 					int id = _tstol(p->floppyslots[dr].dfxsubtypeid);

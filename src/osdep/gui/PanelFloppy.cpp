@@ -79,7 +79,7 @@ public:
 				if (dfxtype == DRV_FB)
 				{
 					TCHAR tmp[32];
-					_stprintf(tmp, _T("%d:%s"), selectedType - 6, drivebridgeModes[selectedType - 6].data());
+					_stprintf(tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
 					_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
 				}
 				else
@@ -410,6 +410,7 @@ void InitPanelFloppy(const config_category& category)
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 
 		cboDFxType[i] = new gcn::DropDown(&driveTypeList);
+		cboDFxType[i]->setSize(150, cboDFxType[i]->getHeight());
 		cboDFxType[i]->setBaseColor(gui_baseCol);
 		cboDFxType[i]->setBackgroundColor(colTextboxBackground);
 		cboDFxType[i]->setSelectionColor(gui_selection_color);
