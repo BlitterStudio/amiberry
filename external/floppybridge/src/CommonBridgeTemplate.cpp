@@ -585,7 +585,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 				}
 				else {
 					if ((revolutionExtracted) && (!m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next.ready)) {
-						
+
 						// Try for a re-play
 						MFMCache& trackData = m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next;
 						trackData.amountReadInBits = 0;
@@ -1610,7 +1610,11 @@ bool CommonBridgeTemplate::writeMFMTrackToBuffer(bool side, unsigned int track, 
 	abortDiskReading();
 
 	sizeInBytes = std::min(sizeInBytes, (MFM_BUFFER_MAX_TRACK_LENGTH * 8) - 16);
+#ifdef _WIN32
+	memcpy_s(m_currentWriteTrack.mfmBuffer, sizeof(m_currentWriteTrack.mfmBuffer), mfmData, sizeInBytes);
+#else
 	memcpy(m_currentWriteTrack.mfmBuffer, mfmData, sizeInBytes);
+#endif
 	m_currentWriteTrack.floppyBufferSizeBits = sizeInBytes * 8;
 
 	m_writePending = false;

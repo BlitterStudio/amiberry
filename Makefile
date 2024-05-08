@@ -43,7 +43,7 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie
 
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
@@ -548,7 +548,7 @@ OBJS = \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
-	src/floppybridge/floppybridge_lib.o \
+	external/floppybridge/src/floppybridge_lib.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \

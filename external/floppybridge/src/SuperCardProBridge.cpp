@@ -58,6 +58,7 @@ bool SupercardProDiskBridge::attemptToDetectDiskChange() {
 	switch (m_io.checkForDisk(true)) {
 	case SCPErr::scpOK: return true;
 	case SCPErr::scpNoDiskInDrive: return false;
+	case SCPErr::scpUnknownError: m_wasIOError = true; return false;
 	default: return isDiskInDrive();
 	}
 }

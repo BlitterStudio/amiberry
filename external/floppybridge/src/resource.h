@@ -6,9 +6,12 @@
 #define IDB_BRIDGELOGO1                 102
 #define IDB_BRIDGELOGO2                 103
 #define IDD_PROFILEEDITOR               104
-#define IDB_BITMAP1                     108
-#define IDB_PATREON                     108
 #define IDD_PROFILELISTEDITOR           109
+#define IDB_DONATE                      110
+#define IDB_SMALLLOGO0                  111
+#define IDB_SMALLLOGO1                  112
+#define IDB_SMALLLOGO3                  113
+#define IDB_SMALLLOGO2                  113
 #define IDC_LIST1                       1001
 #define IDCREATE                        1004
 #define IDC_PROFILENAME                 1004
@@ -25,7 +28,10 @@
 #define IDC_URL                         1012
 #define IDC_AUTODETECT                  1013
 #define IDC_URL_MAIN                    1014
-#define IDC_PATREON                     1019
+#define IDC_AUTOCHECK                   1015
+#define IDC_URL2                        1015
+#define IDC_UPDATENOW                   1016
+#define IDC_DONATE                      1017
 #define IDC_PROFILELIST_TITLE           1200
 #define IDC_CHECKUPDATES                1202
 
@@ -33,9 +39,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        109
+#define _APS_NEXT_RESOURCE_VALUE        114
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1015
+#define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

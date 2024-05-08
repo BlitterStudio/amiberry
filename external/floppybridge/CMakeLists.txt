@@ -15,5 +15,5 @@ add_library(floppybridge SHARED
 	src/SuperCardProBridge.cpp
 	src/SuperCardProInterface.cpp
 )
-target_include_directories(floppybridge PRIVATE include)
+target_include_directories(floppybridge PRIVATE src)
 install (TARGETS floppybridge DESTINATION lib)
