@@ -78,6 +78,7 @@
 static const char __ver[40] = "$VER: Amiberry 5.7.0 (2024-04-20)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
+extern int console_logging;
 struct uae_prefs currprefs, changed_prefs;
 int config_changed, config_changed_flags;
 
@@ -975,15 +976,18 @@ static void parse_cmdline (int argc, TCHAR **argv)
 
 	for (auto i = 1; i < argc; i++) {
 		if (!_tcsncmp(argv[i], _T("-diskswapper="), 13)) {
-			auto* txt = parsetextpath (argv[i] + 13);
-			parse_diskswapper (txt);
+			auto* txt = parsetextpath(argv[i] + 13);
+			parse_diskswapper(txt);
 			xfree(txt);
-		} else if (_tcsncmp (argv[i], _T("-cfgparam="), 10) == 0) {
+		}
+		else if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			;
-		} else if (_tcscmp (argv[i], _T("-cfgparam")) == 0) {
+		}
+		else if (_tcscmp(argv[i], _T("-cfgparam")) == 0) {
 			if (i + 1 < argc)
 				i++;
-		} else if (_tcscmp(argv[i], _T("--config")) == 0 || _tcscmp(argv[i], _T("-f")) == 0) {
+		}
+		else if (_tcscmp(argv[i], _T("--config")) == 0 || _tcscmp(argv[i], _T("-f")) == 0) {
 			if (i + 1 == argc)
 				write_log(_T("Missing argument for '--config' option.\n"));
 			else
@@ -998,7 +1002,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				firstconfig = false;
 			}
 			loaded = true;
-		} else if (_tcscmp(argv[i], _T("--model")) == 0 || _tcscmp(argv[i], _T("-m")) == 0) {
+		}
+		else if (_tcscmp(argv[i], _T("--model")) == 0 || _tcscmp(argv[i], _T("-m")) == 0) {
 			if (i + 1 == argc)
 				write_log(_T("Missing argument for '--model' option.\n"));
 			else
@@ -1029,7 +1034,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					bip_cdtv(&currprefs, -1);
 				}
 			}
-		} else if (_tcscmp(argv[i], _T("--statefile")) == 0) {
+		}
+		else if (_tcscmp(argv[i], _T("--statefile")) == 0) {
 			if (i + 1 == argc)
 				write_log(_T("Missing argument for '--statefile' option.\n"));
 			else
@@ -1058,7 +1064,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					whdload_auto_prefs(&currprefs, txt);
 					xfree(txt);
 				}
-				else if (_tcscmp(txt2.c_str(), ".cue") == 0 
+				else if (_tcscmp(txt2.c_str(), ".cue") == 0
 					|| _tcscmp(txt2.c_str(), ".iso") == 0
 					|| _tcscmp(txt2.c_str(), ".chd") == 0)
 				{
@@ -1073,6 +1079,8 @@ static void parse_cmdline (int argc, TCHAR **argv)
 		}
 		else if (_tcscmp(argv[i], _T("--cli")) == 0)
 			console_emulation = true;
+		else if (_tcscmp(argv[i], _T("--log")) == 0)
+			console_logging = 1;
 		else if (_tcscmp(argv[i], _T("-s")) == 0)
 		{
 			if (i + 1 == argc)
