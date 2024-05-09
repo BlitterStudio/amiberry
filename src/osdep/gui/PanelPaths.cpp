@@ -605,7 +605,7 @@ void InitPanelPaths(const config_category& category)
 	grpPaths->add(txtHardDrivesPath, DISTANCE_BORDER, yPos);
 	grpPaths->add(cmdHardDrivesPath, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 
-	grpPaths->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2 - 15, txtHardDrivesPath->getY() + txtHardDrivesPath->getHeight() + DISTANCE_NEXT_Y);
+	grpPaths->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2 - 14, txtHardDrivesPath->getY() + txtHardDrivesPath->getHeight() + DISTANCE_NEXT_Y);
 	grpPaths->setTitleBarHeight(1);
 
 	scrlPaths = new gcn::ScrollArea(grpPaths);
