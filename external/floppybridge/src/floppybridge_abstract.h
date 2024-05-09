@@ -1,13 +1,13 @@
 /* floppybridge_abstract
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This library defines a standard interface for connecting physical disk drives to *UAE
 *
 * Derived classes must be implemented so they are unlikely to cause a delay in any function
 * as doing so would cause audio and mouse cursors to stutter
-* 
+*
 * This is free and unencumbered released into the public domain.
 * See the file COPYING for more details, or visit <http://unlicense.org>.
 *
@@ -70,13 +70,13 @@ public:
 	virtual void shutdown() {}
 
 	// Returns the name of interface.  This pointer should remain valid *after* the class is destroyed so should be static
-	virtual const BridgeDriver* getDriverInfo()  = 0;
+	virtual const BridgeDriver* getDriverInfo() = 0;
 
 	// Return the 'bit cell' time in uSec.  Standard DD Amiga disks this would be 2uS, HD disks would be 1us I guess, but mainly used for =4 for SD I think
 	virtual unsigned char getBitSpeed() { return 2; }
 
 	// Return the type of disk connected.  This is used to tell WinUAE if we're DD or HD.  This must return INSTANTLY
-	virtual DriveTypeID getDriveTypeID()  = 0;
+	virtual DriveTypeID getDriveTypeID() = 0;
 
 	// Call to get the last error message.  If the board initialised this may return a compatibility warning instead
 	virtual const char* getLastErrorMessage() { return NULL; }
@@ -87,87 +87,98 @@ public:
 
 
 	// Reset the drive.  This should reset it to the state it would be at powerup, ie: motor switched off etc.  The current cylinder number can be 'unknown' at this point
-	virtual bool resetDrive(int trackNumber)  = 0;
+	virtual bool resetDrive(int trackNumber) = 0;
 
 
 
 
 	/////////////////////// Head movement Controls //////////////////////////////////////////
 	// Return TRUE if the drive is currently on cylinder 0
-	virtual bool isAtCylinder0()  = 0;
+	virtual bool isAtCylinder0() = 0;
 
 	// Return the number of cylinders the drive supports.  Eg: 80 or 82 (or 40)
-	virtual unsigned char getMaxCylinder()  = 0;
+	virtual unsigned char getMaxCylinder() = 0;
 
 	// Seek to a specific cylinder
-	virtual void gotoCylinder(int cylinderNumber, bool side)  = 0;
+	virtual void gotoCylinder(int cylinderNumber, bool side) = 0;
 
 	// Handle the drive stepping to track -1 - this is used to 'no-click' detect the disk
 	virtual void handleNoClickStep(bool side) = 0;
 
 	// Return the current cylinder number we're on
-	virtual unsigned char getCurrentCylinderNumber()  = 0;
+	virtual unsigned char getCurrentCylinderNumber() = 0;
 
 
 
 	/////////////////////// Drive Motor Controls /////////////////////////////////////////////
 	// Return true if the motor is spinning, but not necessarily up to speed
-	virtual bool isMotorRunning()  = 0;
+	virtual bool isMotorRunning() = 0;
 
 	// Turn on and off the motor
-	virtual void setMotorStatus(bool side, bool turnOn)  = 0;
+	virtual void setMotorStatus(bool side, bool turnOn) = 0;
 
 	// Returns TRUE if the drive is ready (ie: the motor has spun up to speed to speed)
-	virtual bool isReady()  = 0;
+	virtual bool isReady() = 0;
 
 	// Returns the currently selected side
 	virtual bool getCurrentSide() = 0;
 
 	/////////////////////// Disk Detection ///////////////////////////////////////////////////
 	// Return TRUE if there is a disk in the drive.  This is usually called after gotoCylinder
-	virtual bool isDiskInDrive()  = 0;
+	virtual bool isDiskInDrive() = 0;
 
 	// Check if the disk has changed.  Basically returns FALSE if there's no disk in the drive
-	virtual bool hasDiskChanged()  = 0;
+	virtual bool hasDiskChanged() = 0;
 
-
+	// Return TRUE if the drive is still connected and working
+	virtual bool isStillWorking() { return true; };
 
 	/////////////////////// Reading Data /////////////////////////////////////////////////////
 	// Return TRUE if we're at the INDEX marker/sensor.  mfmPositionBits is in BITS
-	virtual bool isMFMPositionAtIndex(int mfmPositionBits)  = 0;
+	virtual bool isMFMPositionAtIndex(int mfmPositionBits) = 0;
 
 	// Returns TRUE if data is ready and available
 	virtual bool isMFMDataAvailable() = 0;
 
 	// This returns a single MFM bit at the position provided
-	virtual bool getMFMBit(const int mfmPositionBits)  = 0;
+	virtual bool getMFMBit(const int mfmPositionBits) = 0;
+
+	// Requests an entire track of data.  Returns 0 if the track is not available
+	// The return value is the wrap point in bits (last byte is shifted to MSB)
+	virtual int getMFMTrack(bool side, unsigned int track, bool resyncRotation, const int bufferSizeInBytes, void* output) = 0;
+
+	// write data to the MFM track buffer to be written to disk - poll isWriteComplete to check for completion
+	virtual bool writeMFMTrackToBuffer(bool side, unsigned int track, bool writeFromIndex, int sizeInBytes, void* mfmData) = 0;
+
+	// A special mode that DISABLES FloppyBridge from auto-reading tracks and allows writeMFMTrackToBuffer and getMFMTrack to operate directly.
+	virtual bool setDirectMode(bool directModeEnable) = 0;
 
 	// This asks the time taken to read the bit at mfmPositionBits.  1000=100%, <1000 data is read faster, >1000 data is read slower.
 	// This number is used in a loop (scaled) starting with a number, and decrementing by this number.
 	// Each loop a single bit is read.  So the smaller the number, the more loops that occur, and the more bits that are read
-	virtual int getMFMSpeed(const int mfmPositionBits)  = 0;
+	virtual int getMFMSpeed(const int mfmPositionBits) = 0;
 
 	// This is called in both modes.  It is called when WinUAE detects a full revolution of data has been read.  This could allow you to switch to a different recording of the same cylinder if needed.
-	virtual void mfmSwitchBuffer(bool side)  = 0;
+	virtual void mfmSwitchBuffer(bool side) = 0;
 
 	// Quick confirmation from UAE that we're actually on the same side
-	virtual void setSurface(bool side)  = 0;
+	virtual void setSurface(bool side) = 0;
 
 	// Return the maximum size of bits available in this revolution.  This is the maximum passed to getMFMBit
-	virtual int maxMFMBitPosition()  = 0;
+	virtual int maxMFMBitPosition() = 0;
 
 	/////////////////////// Writing Data /////////////////////////////////////////////////////
 
 	// Submits a single WORD of data received during a DMA transfer to the disk buffer.  This needs to be saved.  It is usually flushed when commitWriteBuffer is called
 	// You should reset this buffer if side or track changes, mfmPosition is provided purely for any index sync you may wish to do
-	virtual void writeShortToBuffer(bool side, unsigned int track, unsigned short mfmData, int mfmPosition)  = 0;
+	virtual void writeShortToBuffer(bool side, unsigned int track, unsigned short mfmData, int mfmPosition) = 0;
 
 	// Return TRUE if the currently inserted disk is write protected
-	virtual bool isWriteProtected()  = 0;
+	virtual bool isWriteProtected() = 0;
 
 	// Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
 	// and the buffer should be reset upon completion.  You should return the new track length (maxMFMBitPosition) with optional padding if needed
-	virtual unsigned int commitWriteBuffer(bool side, unsigned int track)  = 0;
+	virtual unsigned int commitWriteBuffer(bool side, unsigned int track) = 0;
 
 	// Returns TRUE if commitWriteBuffer has been called but not written to disk yet
 	virtual bool isWritePending() = 0;

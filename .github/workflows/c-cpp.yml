@@ -32,6 +32,9 @@ jobs:
       - name: make capsimg
         run: make capsimg
 
+      - name: make floppybridge
+        run: make floppybridge
+
       - name: make for macOS X64
         run: make -j4 PLATFORM=osx-x86
 
@@ -70,6 +73,9 @@ jobs:
       - name: make capsimg
         run: make capsimg
 
+      - name: make floppybridge
+        run: make floppybridge
+
       - name: make for macOS M1
         run: make -j4 PLATFORM=osx-m1
 
@@ -106,6 +112,7 @@ jobs:
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
+          make floppybridge
           make -j8 PLATFORM=x86-64
 
     - name: Upload artifact
@@ -116,6 +123,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -133,7 +141,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -156,6 +164,7 @@ jobs:
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
+          make floppybridge
           make -j8 PLATFORM=x86-64
 
     - name: Upload artifact
@@ -166,6 +175,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -183,7 +193,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -206,6 +216,7 @@ jobs:
         options: -v ${{ github.workspace }}:/build
         run: |
           make capsimg
+          make floppybridge
           make -j8 PLATFORM=x86-64
 
     - name: Upload artifact
@@ -216,6 +227,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -233,7 +245,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -253,6 +265,9 @@ jobs:
     - name: make capsimg
       run: make capsimg
 
+    - name: make floppybridge
+      run: make floppybridge
+
     - name: build for RPI4 64-bit
       run: make -j4 PLATFORM=rpi4-64-sdl2
 
@@ -264,6 +279,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -281,7 +297,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-manjaro-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-manjaro-aarch64-rpi4.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -314,6 +330,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -331,7 +348,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi5.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi5.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -365,6 +382,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -382,7 +400,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi5.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi5.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -415,6 +433,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -432,7 +451,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi4.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -466,6 +485,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -483,7 +503,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi4.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -516,6 +536,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -533,7 +554,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi4.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -567,6 +588,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -584,7 +606,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi4.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -617,6 +639,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -634,7 +657,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi4.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -668,6 +691,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -685,7 +709,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi4.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -719,6 +743,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -736,7 +761,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi3.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -770,6 +795,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -787,7 +813,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi3.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -821,6 +847,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -838,7 +865,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi3.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -872,6 +899,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -889,7 +917,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi3.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -923,6 +951,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -940,7 +969,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi3.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -974,6 +1003,7 @@ jobs:
         path: |
           amiberry
           capsimg.so
+          libfloppybridge.so
           abr/**
           cdroms/**
           conf/**
@@ -991,7 +1021,7 @@ jobs:
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip amiberry capsimg.so libfloppybridge.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'

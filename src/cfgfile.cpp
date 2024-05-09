@@ -2067,6 +2067,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				_stprintf(tmp, _T("floppy%dsubtypeid"), i);
 				cfgfile_dwrite_escape(f, tmp, _T("%s"), p->floppyslots[i].dfxsubtypeid);
 			}
+			if (p->floppyslots[i].dfxprofile[0]) {
+				_stprintf(tmp, _T("floppy%dprofile"), i);
+				cfgfile_dwrite_escape(f, tmp, _T("%s"), p->floppyslots[i].dfxprofile);
+			}
 		}
 #endif
 		_stprintf (tmp, _T("floppy%dsound"), i);
@@ -6298,6 +6302,10 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		}
 		_stprintf(tmpbuf, _T("floppy%dsubtypeid"), i);
 		if (cfgfile_string_escape(option, value, tmpbuf, p->floppyslots[i].dfxsubtypeid, sizeof p->floppyslots[i].dfxsubtypeid / sizeof(TCHAR))) {
+			return 1;
+		}
+		_stprintf(tmpbuf, _T("floppy%dprofile"), i);
+		if (cfgfile_string_escape(option, value, tmpbuf, p->floppyslots[i].dfxprofile, sizeof p->floppyslots[i].dfxprofile / sizeof(TCHAR))) {
 			return 1;
 		}
 	}

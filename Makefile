@@ -43,7 +43,7 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/floppybridge -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie
 
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
@@ -240,7 +240,7 @@ else ifeq ($(PLATFORM),oga)
 # macOS Apple Silicon (SDL2, 64-bit, M1)
 else ifeq ($(PLATFORM),osx-m1)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
@@ -248,7 +248,7 @@ else ifeq ($(PLATFORM),osx-m1)
 # macOS intel (SDL2, 64-bit, x86-64)
 else ifeq ($(PLATFORM),osx-x86)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS)
+	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS)
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
@@ -548,19 +548,7 @@ OBJS = \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
 	src/machdep/support.o \
-	src/floppybridge/ArduinoFloppyBridge.o \
-	src/floppybridge/ArduinoInterface.o \
-	src/floppybridge/CommonBridgeTemplate.o \
-	src/floppybridge/floppybridge_lib.o \
-	src/floppybridge/ftdi.o \
-	src/floppybridge/GreaseWeazleBridge.o \
-	src/floppybridge/GreaseWeazleInterface.o \
-	src/floppybridge/pll.o \
-	src/floppybridge/RotationExtractor.o \
-	src/floppybridge/SerialIO.o \
-	src/floppybridge/SuperCardProBridge.o \
-	src/floppybridge/SuperCardProInterface.o \
-	src/floppybridge/FloppyBridge.o \
+	external/floppybridge/src/floppybridge_lib.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
 	src/osdep/cda_play.o \
@@ -687,6 +675,11 @@ mt32emu:
 	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
 	cmake --build external/mt32emu/build --target all --parallel
 	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
+
+floppybridge:
+	cmake -DCMAKE_BUILD_TYPE=Release -S external/floppybridge -B external/floppybridge/build
+	cmake --build external/floppybridge/build --target all --parallel
+	cp external/floppybridge/build/libfloppybridge.so .
 
 gencpu:
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp

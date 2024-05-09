@@ -1,6 +1,6 @@
 /* ArduinoFloppyReaderWriter aka DrawBridge
 *
-* Copyright (C) 2017-2022 Robert Smith (@RobSmithDev)
+* Copyright (C) 2017-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This library is free software; you can redistribute it and/or
@@ -1782,25 +1782,20 @@ DiagnosticResponse ArduinoInterface::writeCurrentTrackPrecomp(const unsigned cha
 			// Write to stream. Based on the rules above we apply some precomp
 			int precomp = 0;
 			if (usePrecomp) {
-				switch (sequence) {
-				case 0x09:
-				case 0x0A:
-				case 0x4A: // early;
+				const unsigned char BitSeq5 = (sequence & 0x3E);  // extract these bits 00111110 - bit 3 is the ACTUAL bit
+				// The actual idea is that the magnetic fields will repel each other, so we push them closer hoping they will land in the correct spot!
+				switch (BitSeq5) {
+				case 0x28:     // xx10100x
 					precomp = PRECOMP_ERLY;
 					break;
-
-				case 0x28:
-				case 0x29:
-				case 0x48: // late
+				case 0x0A:     // xx00101x
 					precomp = PRECOMP_LATE;
 					break;
-
 				default:
 					precomp = PRECOMP_NONE;
-					break;
+					break;				
 				}
-			}
-			else precomp = PRECOMP_NONE;
+			} else precomp = PRECOMP_NONE;
 
 			*output |= ((lastCount - 2) | precomp) << (i * 4);
 			lastCount = count;
@@ -2373,6 +2368,21 @@ void ArduinoInterface::enumeratePorts(std::vector<std::wstring>& portList) {
 	}
 }
 
+// Reset reason information
+DiagnosticResponse ArduinoInterface::getResetReason(bool& WD, bool& BOD, bool& ExtReset, bool& PowerOn) {
+	if ((m_version.major > 1) || ((m_version.major == 1) && (m_version.minor > 9)) || ((m_version.major == 1) && (m_version.minor == 9) && (m_version.buildNumber >= 26))) {
+		// TODO
+		return DiagnosticResponse::drOldFirmware;
+	}
+	return DiagnosticResponse::drOldFirmware;
+}
+DiagnosticResponse ArduinoInterface::clearResetReason() {
+	if ((m_version.major > 1) || ((m_version.major == 1) && (m_version.minor > 9)) || ((m_version.major == 1) && (m_version.minor == 9) && (m_version.buildNumber >= 26))) {
+		// TODO
+		return DiagnosticResponse::drOldFirmware;
+	}
+	return DiagnosticResponse::drOldFirmware;
+}
 
 // Run a command that returns 1 or 0 for its response
 DiagnosticResponse ArduinoInterface::runCommand(const char command, const char parameter, char* actualResponse) {

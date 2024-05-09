@@ -1,6 +1,6 @@
 /* WinUAE Supercard Pro Interface for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -35,12 +35,12 @@ static const FloppyDiskBridge::BridgeDriver DriverSupercardProFloppy = {
 
 
 // Flags from WINUAE
-SupercardProDiskBridge::SupercardProDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB) :
+SupercardProDiskBridge::SupercardProDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, bool driveOnB) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_comPort(autoDetectComPort ? comPort : ""), m_useDriveA(!driveOnB) {
 }
 
 // This is for the static version
-SupercardProDiskBridge::SupercardProDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) :
+SupercardProDiskBridge::SupercardProDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false), m_useDriveA((uaeSettings & 0x0F) == 0), m_comPort("") {
 }
 
@@ -58,6 +58,7 @@ bool SupercardProDiskBridge::attemptToDetectDiskChange() {
 	switch (m_io.checkForDisk(true)) {
 	case SCPErr::scpOK: return true;
 	case SCPErr::scpNoDiskInDrive: return false;
+	case SCPErr::scpUnknownError: m_wasIOError = true; return false;
 	default: return isDiskInDrive();
 	}
 }
@@ -65,6 +66,11 @@ bool SupercardProDiskBridge::attemptToDetectDiskChange() {
 // If your device supports the DiskChange option then return TRUE here.  If not, then the code will simulate it
 bool SupercardProDiskBridge::supportsDiskChange() {
 	return true;
+}
+
+// Return TRUE if the drive is still connected and working
+bool SupercardProDiskBridge::isStillWorking() {
+	return !m_wasIOError;
 }
 
 // Called when the class is about to shut down
@@ -155,7 +161,8 @@ bool SupercardProDiskBridge::checkWriteProtectStatus(const bool forceCheck) {
 bool SupercardProDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
-		if (m_io.checkForDisk(forceCheck) == SCPErr::scpNoDiskInDrive) {
+		switch (m_io.checkForDisk(forceCheck)) {
+		case SCPErr::scpNoDiskInDrive:
 			if (m_currentCylinder == 0) {
 				m_io.performNoClickSeek();
 			}
@@ -163,12 +170,15 @@ bool SupercardProDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 				m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, true);
 				m_io.selectTrack(m_currentCylinder, true);
 			}
+			break;
+		case SCPErr::scpUnknownError: m_wasIOError = true; return false;
 		}
 	}
 
 	switch (m_io.checkForDisk(forceCheck)) {
 	case SCPErr::scpOK: return true;
 	case SCPErr::scpNoDiskInDrive: return false;
+	case SCPErr::scpUnknownError: m_wasIOError = true; return false;
 	default: return isDiskInDrive();
 	}
 }

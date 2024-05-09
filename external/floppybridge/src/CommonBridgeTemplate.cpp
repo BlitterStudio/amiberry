@@ -1,6 +1,6 @@
 /* CommonBridgeTemplate for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -70,6 +70,13 @@ OUTPUT_TIME_IN_NS should not be set(revolution extractor)
 // We need to poll the drive once theres a disk in there to know when it's been removed.  This is the poll interval
 #define DISKCHANGE_ONCE_INSERTED_CHECK_INTERVAL		500
 
+// Auto-sense the disk, just like Amiga OS will, be do this if it hasn't - Fast mode used for no-click check
+#define DISKCHANGE_BEFORE_INSERTED_CHECK_INTERVAL_FAST	250
+
+// We need to poll the drive once theres a disk in there to know when it's been removed.   - Fast mode used for no-click check
+#define DISKCHANGE_ONCE_INSERTED_CHECK_INTERVAL_FAST	250
+
+
 // Auto-sense the disk, just like Amiga OS will, be do this if it hasn't - this is for non dick change hardware
 #define DISKCHANGE_BEFORE_INSERTED_CHECK_INTERVAL_NODSKCHG 3000
 
@@ -88,11 +95,11 @@ OUTPUT_TIME_IN_NS should not be set(revolution extractor)
 #endif
 
 // Flags from WINUAE
-CommonBridgeTemplate::CommonBridgeTemplate(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool shouldAutoCache, bool useSmartSpeed) :
+CommonBridgeTemplate::CommonBridgeTemplate(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool shouldAutoCache, bool useSmartSpeed) :
 	m_currentWriteStartMfmPosition(0), m_delayStreaming(false), m_driveResetStatus(false), m_driveStreamingData(false), m_isCurrentlyHeadCheating(false), m_inHDMode(false),
 	m_control(nullptr), m_currentTrack(0), m_actualCurrentCylinder(0), m_writeProtected(false), m_diskInDrive(false), m_firstTrackMode(false), m_autocacheModifiedCurrentCylinder(false),
 	m_bridgeMode(bridgeMode), m_bridgeDensity(bridgeDensity), m_motorSpinningUp(false), m_motorIsReady(false), m_isMotorRunning(false), m_autoCacheMotorStatus(false), m_useSmartSpeed(useSmartSpeed),
-	m_queueSemaphore(0), m_readBufferAvailable(false), m_floppySide(DiskSurface::dsLower), m_actualFloppySide(DiskSurface::dsLower), m_shouldAutoCache(shouldAutoCache), m_pll(true, true),
+	m_readBufferAvailable(false), m_floppySide(DiskSurface::dsLower), m_actualFloppySide(DiskSurface::dsLower), m_shouldAutoCache(shouldAutoCache), m_pll(true, true), m_readLoops(0),
 	m_lastSeek(std::chrono::steady_clock::now()) {
 
 	memset(&m_mfmRead, 0, sizeof(m_mfmRead));;
@@ -100,12 +107,12 @@ CommonBridgeTemplate::CommonBridgeTemplate(BridgeMode bridgeMode, BridgeDensityM
 }
 
 // Change to a different bridge-mode (in real-time)
-void CommonBridgeTemplate::changeBridgeMode(BridgeMode bridgeMode) {
+void CommonBridgeTemplate::changeBridgeMode(FloppyBridge::BridgeMode bridgeMode) {
 	m_bridgeMode = bridgeMode;
 }
 
 // Change to a different bridge-density (in real-time)
-void CommonBridgeTemplate::changeBridgeDensity(BridgeDensityMode bridgeDensity) {
+void CommonBridgeTemplate::changeBridgeDensity(FloppyBridge::BridgeDensityMode bridgeDensity) {
 	m_bridgeDensity = bridgeDensity;
 }
 
@@ -205,14 +212,9 @@ void CommonBridgeTemplate::pushOntoQueue(const QueueInfo& info, const bool shoul
 		std::lock_guard lock(m_queueProtect);
 		if (insertAtStart) m_queue.push_front(info); else m_queue.push_back(info);
 	}
-	{
-		std::lock_guard lock(m_queueSemaphoreLock);
-		m_queueSemaphore++;
-		m_queueSemaphoreFlag.notify_one();
-	}
 
 	// A little sneaky trick.  If there's a command to move on, but we have like 90% of the data and we don't have a complete reading for that track yet, it makes sense to carry on and finish it.
-	if ((m_driveStreamingData) && ((m_bridgeMode == BridgeMode::bmStalling) || m_extractor.isNearlyReady()) && (!m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].current.ready)) return;
+	if ((m_driveStreamingData) && ((m_bridgeMode == FloppyBridge::BridgeMode::bmStalling) || m_extractor.isNearlyReady()) && (!m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].current.ready)) return;
 	if (m_firstTrackMode) return;  // don't stop me now
 
 	// Make it drop out of streaming if that's what its doing
@@ -225,6 +227,7 @@ bool CommonBridgeTemplate::processQueue() {
 
 	{
 		std::lock_guard lock(m_queueProtect);
+		// Check the statue again under lock to *make sure* it actually contains something
 		if (m_queue.empty()) return false;
 
 		cmd = m_queue.front();
@@ -246,6 +249,10 @@ bool CommonBridgeTemplate::isReadyForManualDiskCheck() {
 	const auto timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_lastDiskCheckTime).count();
 	
 	if (supportsDiskChange()) {
+		if ((m_currentTrack == 0) && (m_directMode)) {
+			return ((timePassed > DISKCHANGE_ONCE_INSERTED_CHECK_INTERVAL_FAST) && (m_diskInDrive)) ||
+				((timePassed > DISKCHANGE_BEFORE_INSERTED_CHECK_INTERVAL_FAST) && (!m_diskInDrive));
+		} else
 		return ((timePassed > DISKCHANGE_ONCE_INSERTED_CHECK_INTERVAL) && (m_diskInDrive)) ||
 			   ((timePassed > DISKCHANGE_BEFORE_INSERTED_CHECK_INTERVAL) && (!m_diskInDrive));
 	}
@@ -270,45 +277,36 @@ void CommonBridgeTemplate::mainThread() {
 		bool lastDiskState = m_diskInDrive;
 		bool diskInDrive = m_diskInDrive;
 
-		bool queueReady = false;
-
 		{
 			bool autoCachingRequired = false;
-			if (m_shouldAutoCache) {
+			if (m_shouldAutoCache && (!m_directMode)) {
 				int nextCylinder;
 				DiskSurface nextSurface;
 				autoCachingRequired = getNextTrackToAutoCache(nextCylinder, nextSurface);
 			}
-
-			// Check if we should do this
-			const auto queuePause = std::chrono::milliseconds((m_motorIsReady || autoCachingRequired) ? 1 : 50);
-
-			{
-				std::unique_lock lck(m_queueSemaphoreLock);
-				queueReady = m_queueSemaphoreFlag.wait_for(lck, queuePause, [this] { return m_queueSemaphore > 0; });
-			}
 		}
-		if (queueReady) {
-			{
-				std::lock_guard lck(m_queueSemaphoreLock);
-				m_queueSemaphore--;
-			}
-
+		
+		if (!m_queue.empty()) {
 			if (processQueue())
 				return;
 		}
 		else {
 			// Trigger background reading if we're not busy
 			if (m_motorIsReady) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(2));
 				const auto timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_delayStreamingStart).count();
 				if ((!m_delayStreaming) || ((m_delayStreaming) && (timePassed > 100)))
 					handleBackgroundDiskRead();
 			}
-			else
+			else {
 				handleBackgroundCaching();
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}			
+
 
 			// If the queue is empty, the motor isn't on, and we think there's a disk in the drive we periodically check as we don't have any other way to find out
-			if ((isReadyForManualDiskCheck()) && (m_queue.empty())) {
+			if (isReadyForManualDiskCheck() && m_queue.empty()) {
+
 				// Monitor for disk
 				if (!supportsDiskChange()) {
 					diskInDrive = attemptToDetectDiskChange();
@@ -356,7 +354,7 @@ void CommonBridgeTemplate::mainThread() {
 // Internally check the disk density
 void CommonBridgeTemplate::internalCheckDiskDensity(bool newDiskInserted) {
 	switch (m_bridgeDensity) {
-	case BridgeDensityMode::bdmAuto:
+	case FloppyBridge::BridgeDensityMode::bdmAuto:
 		// Run the test
 		if (m_diskInDrive || newDiskInserted) {
 			// To do this properly we should be on track 0, lower side.
@@ -374,11 +372,11 @@ void CommonBridgeTemplate::internalCheckDiskDensity(bool newDiskInserted) {
 		}
 		break;
 
-	case BridgeDensityMode::bdmDDOnly:
+	case FloppyBridge::BridgeDensityMode::bdmDDOnly:
 		forceDiskDensity(false);
 		break;
 
-	case BridgeDensityMode::bdmHDOnly:
+	case FloppyBridge::BridgeDensityMode::bdmHDOnly:
 		forceDiskDensity(true);
 		break;
 	}
@@ -495,6 +493,9 @@ void CommonBridgeTemplate::saveNextBuffer(const int cylinder, const DiskSurface 
 
 // Handle reading the disk data in the background while the queue is idle
 void CommonBridgeTemplate::handleBackgroundDiskRead() {
+	// Disabled in Direct mode
+	if (m_directMode && (!m_firstTrackMode)) return;
+
 	// Don't do anything until the motor is ready.  The flag that checks for disk change will also report spin ready status if the drive hasn't spun up properly yet
 	if (!((m_motorIsReady) && (!m_motorSpinningUp))) {
 		if (m_shouldAutoCache) handleBackgroundCaching();
@@ -517,8 +518,11 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 		m_autocacheModifiedCurrentCylinder = false;
 	}
 
+	uint32_t trackRead = 0;
+
 	// Switch this depending on whats going on
-	m_extractor.setAlwaysUseIndex(m_firstTrackMode || (m_bridgeMode == BridgeMode::bmCompatible) || (m_bridgeMode == BridgeMode::bmStalling));
+	m_extractor.setAlwaysUseIndex(m_firstTrackMode || (m_bridgeMode == FloppyBridge::BridgeMode::bmCompatible) || (m_bridgeMode == FloppyBridge::BridgeMode::bmStalling));
+
 	{
 		// Scope it
 		MFMCache& trackData = m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next;
@@ -528,17 +532,20 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 		m_driveStreamingData = true;
 		bool revolutionExtracted = false;
 
-
 		// Grab full revolutions if possible.
 		ReadResponse r =  readData(m_pll, MFM_BUFFER_MAX_TRACK_LENGTH, trackData.mfmBuffer, m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].startBitPatterns,
-			[this, &trackData, &flipSide, &revolutionExtracted](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
+			[this, &trackData, &flipSide, &revolutionExtracted, &trackRead](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
 				trackData.amountReadInBits = dataLengthInBits;
 
 				saveNextBuffer(m_actualCurrentCylinder, m_actualFloppySide);
 				revolutionExtracted = true;
+				trackRead++;
+
+				// Stop!
+				if (m_directMode) return false;
 
 				// This is a little cache prediction, but could cause issues with things needing to re-read the same track over and over.  However eventually it will continue anyway
-				if (m_bridgeMode != BridgeMode::bmStalling && m_bridgeMode != BridgeMode::bmCompatible && !m_inHDMode || m_firstTrackMode) {
+				if (m_bridgeMode != FloppyBridge::BridgeMode::bmStalling && m_bridgeMode != FloppyBridge::BridgeMode::bmCompatible && !m_inHDMode || m_firstTrackMode) {
 					// So, as a little speed up.  Is the other side of this track in memory?
 					if (!m_mfmRead[m_actualCurrentCylinder][1 - (int)m_actualFloppySide].current.ready) {
 						// No.  Is anything else going on?
@@ -553,9 +560,12 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 				// If we have everything then stop
 				if (!m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next.ready) return false;
 
-				// Else read another revolution
-				return m_queue.empty();
+				// Stop if too many
+				if (trackRead >= 10) return false;
+				m_readLoops++;
 
+				// Else read another revolution
+				return !m_queue.empty();
 			});
 		switch (r) {
 			case ReadResponse::rrNoDiskInDrive:
@@ -572,9 +582,10 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 					m_delayStreaming = false;
 					m_lastDiskCheckTime = std::chrono::steady_clock::now();
 					m_inHDMode = false;
-				} else 
+				}
+				else {
 					if ((revolutionExtracted) && (!m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next.ready)) {
-						
+
 						// Try for a re-play
 						MFMCache& trackData = m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next;
 						trackData.amountReadInBits = 0;
@@ -588,6 +599,7 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 							});
 					}
 
+				}
 				break;
 		}
 	}
@@ -678,12 +690,14 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 	// Stopped streaming
 	m_driveStreamingData = false;
 
-	// Just flag this so we don't get an immediate check
-	m_lastDiskCheckTime = std::chrono::steady_clock::now();
+	// Just flag this so we don't get an immediate check - but only for the first 5 reads
+	if (m_readLoops<5) m_lastDiskCheckTime = std::chrono::steady_clock::now();
 }
 
 // Return TRUE if we're at the INDEX marker - we fake the start of the buffer being where the index marker is.
 bool CommonBridgeTemplate::isMFMPositionAtIndex(int mfmPositionBits) {
+	if (m_directMode) return 0;
+
 	if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
 		return (mfmPositionBits == 0) || (mfmPositionBits == m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits);
 	}
@@ -692,6 +706,8 @@ bool CommonBridgeTemplate::isMFMPositionAtIndex(int mfmPositionBits) {
 
 // Return the maximum size of the internal track buffer in BITS
 int CommonBridgeTemplate::maxMFMBitPosition() {
+	if (m_directMode) return 0;
+
 	if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready)
 		if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits)
 			return m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits;
@@ -707,6 +723,8 @@ int CommonBridgeTemplate::maxMFMBitPosition() {
 
 // This is called to switch to a different copy of the track so multiple revolutions can be read
 void CommonBridgeTemplate::mfmSwitchBuffer(bool side) {
+	if (m_directMode) return;
+
 	switchDiskSide(side);
 	internalSwitchCylinder(m_currentTrack, m_floppySide);
 }
@@ -742,6 +760,7 @@ void CommonBridgeTemplate::internalSwitchCylinder(const int cylinder, const Disk
 
 // Get the speed at this position.  1000=100%.  
 int CommonBridgeTemplate::getMFMSpeed(const int mfmPositionBits) {
+	if (m_directMode) return 1000;
 	if (mfmPositionBits < 0) return DRIVE_GARBAGE_SPEED;
 	if (!isReady()) return DRIVE_GARBAGE_SPEED;
 
@@ -758,7 +777,7 @@ int CommonBridgeTemplate::getMFMSpeed(const int mfmPositionBits) {
 		if (m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits < 1) return 1000;
 
 		if (m_inHDMode) return 100; else
-			if ((m_bridgeMode == BridgeMode::bmTurboAmigaDOS) || (((m_bridgeMode == BridgeMode::bmFast) || (m_bridgeMode == BridgeMode::bmCompatible)) && (m_mfmRead[m_currentTrack][(int)m_floppySide].current.supportsSmartSpeed))) return 100;
+			if ((m_bridgeMode == FloppyBridge::BridgeMode::bmTurboAmigaDOS) || (((m_bridgeMode == FloppyBridge::BridgeMode::bmFast) || (m_bridgeMode == FloppyBridge::BridgeMode::bmCompatible)) && (m_mfmRead[m_currentTrack][(int)m_floppySide].current.supportsSmartSpeed))) return 100;
 
 		const int modPositionBit = mfmPositionBits % m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits;
 
@@ -782,13 +801,113 @@ int CommonBridgeTemplate::getMFMSpeed(const int mfmPositionBits) {
 
 // Returns TRUE if data is ready and available
 bool CommonBridgeTemplate::isMFMDataAvailable() {
-	if (m_bridgeMode == BridgeMode::bmStalling) return true;
+	if (m_directMode) return false;
+	if (m_bridgeMode == FloppyBridge::BridgeMode::bmStalling) return true;
 	return m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready;
+}
+
+// Requests an entire track of data.  Returns 0 if the track is not available
+// The return value is the wrap point in bits (last byte is shifted to MSB)
+int CommonBridgeTemplate::getMFMTrack(bool side, unsigned int track, bool resyncRotation, const int bufferSizeInBytes, void* output) {
+	if (m_directMode) {
+		threadLockControl(true);
+
+		// Goto the correct track
+		if ((m_actualCurrentCylinder != track) || (m_currentTrack != track)) {
+			if (!setCurrentCylinder(track)) {
+				threadLockControl(false);
+				return false;
+			}
+			m_actualCurrentCylinder = track;
+			m_currentTrack = track;
+			m_autocacheModifiedCurrentCylinder = false;
+			m_lastWroteTo = -1;
+		}
+
+		// Do the write
+		DiskSurface _side = side ? DiskSurface::dsUpper : DiskSurface::dsLower;
+		if (m_actualFloppySide != _side) {
+			m_actualFloppySide = _side;
+			setActiveSurface(_side);
+		}
+
+		MFMCache& trackData = m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next;
+		trackData.amountReadInBits = 0;
+		trackData.ready = false;
+
+		m_extractor.setAlwaysUseIndex(resyncRotation);
+
+		// Grab full revolutions if possible.
+		ReadResponse r = readData(m_pll, bufferSizeInBytes, trackData.mfmBuffer, 
+			m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].startBitPatterns,
+			[this, &trackData](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
+				trackData.amountReadInBits = dataLengthInBits;
+				return false;  // stop reading
+		});
+
+		// Release thread
+		threadLockControl(false);
+
+		RotationExtractor::MFMSample* sample = trackData.mfmBuffer;
+		const int bitsRemaining = trackData.amountReadInBits;
+		const int bytesToCopy = std::min((bitsRemaining + 7) / 8, bufferSizeInBytes);
+		unsigned char* outByte = (unsigned char*)output;
+
+		for (int byte = 0; byte < bytesToCopy; byte++) {
+			*outByte++ = sample->mfmData;
+			sample++;
+		}
+
+		// Clear the data read
+		trackData.amountReadInBits = 0;
+
+		return bitsRemaining;
+	}
+
+	// Be in the right place
+	gotoCylinder(track, side);
+
+	if (m_bridgeMode != FloppyBridge::BridgeMode::bmStalling) {
+		if (!isReady()) return 0;
+	}
+	else {
+		if (!m_motorIsReady) return 0;
+		if (!m_diskInDrive) return 0;
+	}
+	if (bufferSizeInBytes < 1) return 0;
+
+	if (!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
+		if (m_bridgeMode == FloppyBridge::BridgeMode::bmStalling) {
+			const unsigned int DelayBetweenChecksMS = 5;
+			const auto TimeToWait = std::chrono::milliseconds(450);
+
+			// Try to wait
+			std::unique_lock<std::mutex> lck(m_readBufferAvailableLock);
+			m_readBufferAvailableFlag.wait_for(lck, TimeToWait, [this] { return m_readBufferAvailable; });
+
+			if (!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) return 0;
+		} else 
+			return 0;
+	}
+	RotationExtractor::MFMSample* sample = m_mfmRead[m_currentTrack][(int)m_floppySide].current.mfmBuffer;
+
+	const int bitsRemaining = m_mfmRead[m_currentTrack][(int)m_floppySide].current.amountReadInBits;
+	const int bytesToCopy = std::min((bitsRemaining + 7) / 8, bufferSizeInBytes);
+	unsigned char* outByte = (unsigned char*)output;
+	
+	for (int byte = 0; byte < bytesToCopy; byte++) {
+		*outByte++ = sample->mfmData;
+		sample++;
+	}
+	
+	return bitsRemaining;
 }
 
 // Read a single bit from the data stream.   this should call triggerReadWriteAtIndex where appropriate
 bool CommonBridgeTemplate::getMFMBit(const int mfmPositionBits) {
-	if (m_bridgeMode != BridgeMode::bmStalling) {
+	if (m_directMode) return false;
+
+	if (m_bridgeMode != FloppyBridge::BridgeMode::bmStalling) {
 		if (!isReady()) return DRIVE_GARBAGE_VALUE;
 	} else {
 		if (!m_motorIsReady) return DRIVE_GARBAGE_VALUE;
@@ -810,7 +929,7 @@ bool CommonBridgeTemplate::getMFMBit(const int mfmPositionBits) {
 	}
 
 	// Given the reading is quick enough mostly this is ok.  It kinda simulates the drive settling time, just a little extended
-	if (m_bridgeMode != BridgeMode::bmStalling) return DRIVE_GARBAGE_VALUE;
+	if (m_bridgeMode != FloppyBridge::BridgeMode::bmStalling) return DRIVE_GARBAGE_VALUE;
 
 	// Allow a little bit of head settling time
 	if ((!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) && (!m_writePending)) {
@@ -861,10 +980,10 @@ bool CommonBridgeTemplate::isReady() {
 	return (m_motorIsReady) && (!m_motorSpinningUp) && (m_diskInDrive) && (!m_firstTrackMode);
 };
 
-
 // Handle caching track data in the background
 void CommonBridgeTemplate::handleBackgroundCaching() {
 	if (!m_shouldAutoCache) return;
+	if (m_directMode) return;
 	if (!m_queue.empty()) return;
 	if (m_lastWroteTo >= 0) return;  // don't do this if a write is happening
 	if (!m_diskInDrive) {
@@ -1026,7 +1145,6 @@ void CommonBridgeTemplate::checkMotorOff() {
 	}
 }
 
-
 // Handle processing the command
 void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 	// See what command is being ran
@@ -1038,7 +1156,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 			m_pendingTrackWrites.clear();
 		}
 		m_writePending = false;
-		m_writeComplete = false;
+		m_writeComplete = true;
 		m_autoCacheMotorStatus = false;
 		setMotorStatus(false);
 		internalSetMotorStatus(false);
@@ -1048,9 +1166,19 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		m_motorSpinningUp = false;
 		m_writeCompletePending = false;
 		m_motorIsReady = false;
+		m_driveLockReleased = true;
+		m_driveLockReady = false;
 		m_isMotorRunning = false;		
+		m_readLoops = 0;
 		m_lastSeek = std::chrono::steady_clock::now();
 		resetMFMCache();
+		// Get some real disk status values
+		if (supportsDiskChange()) {
+			m_diskInDrive = getDiskChangeStatus(true);
+		}
+		else {
+			m_diskInDrive = attemptToDetectDiskChange();
+		}
 		{
 			std::lock_guard lock(m_driveResetStatusFlagLock);
 			m_driveResetStatus = true;
@@ -1064,6 +1192,7 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		m_firstTrackMode = false;
 		m_motorSpinningUp = true;
 		m_motorSpinningUpStart = std::chrono::steady_clock::now();
+		m_readLoops = 0;
 		break;
 
 	case QueueCommand::qcNoClickSeek:
@@ -1071,16 +1200,25 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 			// If it fails, simulate it
 			if (!performNoClickSeek()) {
 				setCurrentCylinder(1);
-				setCurrentCylinder(0);				
+				setCurrentCylinder(0);
+				m_readLoops = 0;
 			}
 		}
 		break;
 
 	case QueueCommand::qcGotoToTrack:
-		setCurrentCylinder(info.option.i);
-		m_actualCurrentCylinder = info.option.i;
+		// Now supports side switch too
+		{	const DiskSurface newSide = (info.option.i & 1) ? DiskSurface::dsUpper : DiskSurface::dsLower;
+			if (m_actualFloppySide != newSide) {
+				m_actualFloppySide = newSide;
+				setActiveSurface(m_actualFloppySide);
+			}
+		}		
+		setCurrentCylinder(info.option.i >> 1);
+		m_actualCurrentCylinder = info.option.i >> 1;
 		m_autocacheModifiedCurrentCylinder = false;
 		m_lastWroteTo = -1;
+		m_readLoops = 0;
 		break;
 
 	case QueueCommand::qcMotorOffDelay:
@@ -1094,12 +1232,28 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 		m_motorSpinningUp = false;
 		m_motorIsReady = false;
 		m_lastWroteTo = -1;
+		m_readLoops = 0;
 		break;
 
 	case QueueCommand::qcSelectDiskSide:
 		m_actualFloppySide = info.option.b ? DiskSurface::dsUpper : DiskSurface::dsLower;
 		setActiveSurface(m_actualFloppySide);
 		m_lastWroteTo = -1;
+		m_readLoops = 0;
+		break;
+
+	// When we get here we signal we're here and wait to be released
+	case QueueCommand::qcDirectLock:
+		{
+			std::lock_guard lock(m_directModeReadyLock);
+			m_driveLockReady = true;
+			m_driveLockReleased = false;
+			m_directModeReady.notify_one();
+		}
+		{
+			std::unique_lock lck(m_directModeReadyLock);
+			m_directModeRelease.wait(lck, [this] { return m_driveLockReleased; });
+		}
 		break;
 
 	case QueueCommand::writeMFMData:
@@ -1141,6 +1295,43 @@ void CommonBridgeTemplate::processCommand(const QueueInfo& info) {
 
 	default:
 		break;
+	}
+}
+
+// For direct mode, allows you to lock the main thread queue so you can directly use the drive
+void CommonBridgeTemplate::threadLockControl(bool enter) {
+	if (!m_directMode) return;
+
+	if (!m_control) return;
+
+	if (enter) {
+		std::chrono::time_point<std::chrono::steady_clock> startTime = std::chrono::steady_clock::now();;
+
+		if (!m_driveLockReleased) return;
+		// Reset flags
+		{
+			std::lock_guard lock(m_directModeReadyLock);
+			m_driveLockReady = false;
+		}
+
+		// Queue the request for exclusive access
+		queueCommand(QueueCommand::qcDirectLock);
+		// Wait for it
+		std::unique_lock lck(m_directModeReadyLock);
+		m_directModeReady.wait(lck, [this] { return m_driveLockReady; });
+
+
+		const auto timePassedSinceSeek = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
+	} else {
+		std::chrono::time_point<std::chrono::steady_clock> startTime = std::chrono::steady_clock::now();;
+
+		if (!m_driveLockReady) return;
+		// Notify we're done
+		std::lock_guard lock(m_directModeReadyLock);
+		m_driveLockReleased = true;
+		m_directModeRelease.notify_one();
+
+		const auto timePassedSinceSeek = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 	}
 }
 
@@ -1187,10 +1378,6 @@ bool CommonBridgeTemplate::initialise() {
 	{
 		std::lock_guard lock(m_queueProtect);
 		m_queue.clear();
-	}
-	{
-		std::lock_guard lock(m_queueSemaphoreLock);
-		m_queueSemaphore = 0;
 	}
 	
 	m_lastError = "";
@@ -1305,20 +1492,22 @@ void CommonBridgeTemplate::handleNoClickStep(bool side) {
 
 // Seek to a specific track
 void CommonBridgeTemplate::gotoCylinder(int trackNumber, bool side) {
-	switchDiskSide(side);
-	if (m_currentTrack == trackNumber) return;
+	if (m_currentTrack == trackNumber) {
+		switchDiskSide(side);
+		return;
+	}
+	m_floppySide = side ? DiskSurface::dsUpper : DiskSurface::dsLower;
 	resetWriteBuffer();
 	m_currentTrack = trackNumber;
 
 	bool queueUpdated = false;
-	
 
 	// We want to see if there are other 'goto track' commands in the queue just before this one.  If there is, we can replace them
 	{
 		std::lock_guard lock(m_queueProtect);
 		if (!m_queue.empty()) {
 			if (m_queue.back().command == QueueCommand::qcGotoToTrack) {
-				m_queue.back().option.i = trackNumber;
+				m_queue.back().option.i = (trackNumber * 2) + (side ? 1 : 0);
 				queueUpdated = true;
 				if (!m_mfmRead[m_currentTrack][(int)m_floppySide].current.ready) {
 					std::lock_guard lock(m_readBufferAvailableLock);
@@ -1335,7 +1524,7 @@ void CommonBridgeTemplate::gotoCylinder(int trackNumber, bool side) {
 			m_readBufferAvailable = false;
 		}
 
-		queueCommand(QueueCommand::qcGotoToTrack, trackNumber);
+		queueCommand(QueueCommand::qcGotoToTrack, (trackNumber * 2) + (side ? 1 : 0), true);
 	}
 
 	m_lastSeek = std::chrono::steady_clock::now();
@@ -1347,6 +1536,96 @@ void CommonBridgeTemplate::resetWriteBuffer() {
 	m_currentWriteTrack.floppyBufferSizeBits = 0;
 	m_currentWriteTrack.trackNumber = -1;
 	m_currentWriteStartMfmPosition = 0;
+}
+
+// A special mode that DISABLES FloppyBridge from auto-reading tracks and allows writeMFMTrackToBuffer and getMFMTrack to operate directly.
+bool CommonBridgeTemplate::setDirectMode(bool directModeEnable) {
+	m_directMode = directModeEnable;
+	abortDiskReading();
+	threadLockControl(true);
+	threadLockControl(false);
+	resetMFMCache();
+
+	// Wait for queue to empty
+	for (;;) {
+		{
+			std::lock_guard lock(m_queueProtect);
+			if (m_queue.empty()) return true;
+		}
+#ifdef _WIN32
+		Sleep(100);
+#else
+		usleep(100000);
+#endif
+	}
+
+	return true;
+}
+
+#include <algorithm>
+#include <cstring>
+
+// write data to the MFM track buffer to be written to disk - poll isWriteComplete to check for completion
+bool CommonBridgeTemplate::writeMFMTrackToBuffer(bool side, unsigned int track, bool writeFromIndex, int sizeInBytes, void* mfmData) {
+	if (m_directMode) {
+		threadLockControl(true);
+
+		// Goto the correct track
+		if ((m_actualCurrentCylinder != track) || (m_currentTrack != track)) {
+			if (!setCurrentCylinder(track)) {
+				threadLockControl(false);
+				return false;
+			}
+			m_actualCurrentCylinder = track;
+			m_currentTrack = track;
+			m_autocacheModifiedCurrentCylinder = false;
+			m_lastWroteTo = -1;
+		}
+
+		// Do the write
+		DiskSurface _side = side ? DiskSurface::dsUpper : DiskSurface::dsLower;
+		if (m_actualFloppySide != _side) {
+			m_actualFloppySide = _side;
+			setActiveSurface(_side);
+		}
+			
+		bool ret = writeData((const unsigned char*)mfmData, sizeInBytes * 8, writeFromIndex, m_actualCurrentCylinder >= WRITE_PRECOMP_START);
+		// Delay the completion until we've read a track back
+		m_writeCompletePending = false;
+		m_writePending = false;
+		m_writeComplete = true;
+
+		// Release thread
+		threadLockControl(false);
+
+		return ret;
+	}
+
+
+	gotoCylinder(track, side);
+
+	// Prevent background reading while we're busy
+	m_delayStreaming = true;
+	m_delayStreamingStart = std::chrono::steady_clock::now();
+	abortDiskReading();
+
+	sizeInBytes = std::min(sizeInBytes, (MFM_BUFFER_MAX_TRACK_LENGTH * 8) - 16);
+#ifdef _WIN32
+	memcpy_s(m_currentWriteTrack.mfmBuffer, sizeof(m_currentWriteTrack.mfmBuffer), mfmData, sizeInBytes);
+#else
+	memcpy(m_currentWriteTrack.mfmBuffer, mfmData, sizeInBytes);
+#endif
+	m_currentWriteTrack.floppyBufferSizeBits = sizeInBytes * 8;
+
+	m_writePending = false;
+	m_writeComplete = false;
+	m_writeCompletePending = false;
+
+	m_currentWriteTrack.trackNumber = track;
+	m_currentWriteTrack.side = side ? DiskSurface::dsUpper : DiskSurface::dsLower;
+	m_currentWriteStartMfmPosition = writeFromIndex ? 0 : 31;
+
+	return commitWriteBuffer(side, track) > 0;
 }
 
 // Submits a single WORD of data received during a DMA transfer to the disk buffer.  This needs to be saved.  It is usually flushed when commitWriteBuffer is called
@@ -1380,7 +1659,6 @@ void CommonBridgeTemplate::writeShortToBuffer(bool side, unsigned int track, uns
 bool CommonBridgeTemplate::isReadyToWrite() {
 	return (m_currentWriteTrack.floppyBufferSizeBits);
 }
-
 
 // Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
 // and the buffer should be reset upon completion.  You should return the new track length (maxMFMBitPosition) with optional padding if needed
@@ -1426,7 +1704,6 @@ unsigned int CommonBridgeTemplate::commitWriteBuffer(bool side, unsigned int tra
 
 	return maxMFMBitPosition();
 }
-
 
 // Returns TRUE if commitWriteBuffer has been called but not written to disk yet
 bool CommonBridgeTemplate::isWritePending() {

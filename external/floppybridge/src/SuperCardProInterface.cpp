@@ -1,6 +1,6 @@
 /* Supercard Pro C++ Interface for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -340,7 +340,7 @@ bool SCPInterface::selectTrack(const unsigned char trackIndex, bool ignoreDiskIn
 }
 
 // Checks the pins from boards that support it
-void SCPInterface::checkPins() {
+bool SCPInterface::checkPins() {
 	SCPResponse response;
 
 	selectDrive(true);
@@ -348,13 +348,13 @@ void SCPInterface::checkPins() {
 
 	if (!ret) {
 		if (!m_motorIsEnabled) selectDrive(false);
-		return;
+		return false;
 	}
 
 	unsigned char bytes[2];
 	if (m_comPort.read(bytes, 2) != 2) {
 		if (!m_motorIsEnabled) selectDrive(false);
-		return;
+		return false;
 	}
 	if (!m_motorIsEnabled) selectDrive(false);
 
@@ -362,6 +362,7 @@ void SCPInterface::checkPins() {
 	m_isWriteProtected = (status & (1 << 7)) == 0;
 	m_diskInDrive = (status & (1 << 6)) !=0;
 	m_isAtTrack0 = (status & (1 << 5)) == 0;
+	return true;
 }
 
 // Search for track 0
@@ -388,7 +389,8 @@ bool SCPInterface::selectSurface(const DiskSurface side) {
 
 // Read RAW data from the current track and surface 
 SCPErr SCPInterface::checkForDisk(bool force) {
-	if (force) checkPins();
+	if (force)
+		if (!checkPins()) return SCPErr::scpUnknownError;
 
 	return m_diskInDrive ? SCPErr::scpOK : SCPErr::scpNoDiskInDrive;
 }
@@ -437,34 +439,46 @@ SCPErr SCPInterface::writeCurrentTrackPrecomp(const unsigned char* mfmData, cons
 		} while (((sequence & 0x08) == 0) && (pos < numBytes + 8));
 
 		// Validate range
-		if (count < 2) count = 2;  // <2 would be a 11 sequence, not allowed
+		if (count < 1) count = 1;  
 		if (count > 5) count = 5;  // max we support 01, 001, 0001, 00001
 		
 		// Calculate the time for this in nanoseconds
 		int timeInNS = extraTimeFromPrevious + (count * 2000);     // 2=4000, 3=6000, 4=8000, (5=10000 although is isn't strictly allowed)
 
 		if (usePrecomp) {
-			switch (sequence) {
-			case 0x09:
-			case 0x0A:
-			case 0x4A: // early;
+			const unsigned char BitSeq5 = (sequence & 0x3E);  // extract these bits 00111110 - bit 3 is the ACTUAL bit
+			// Updated from https://github.com/keirf/greaseweazle/blob/master/src/greaseweazle/track.py
+			// The actual idea is that the magnetic fields will repel each other, so we push them closer hoping they will land in the correct spot!
+			switch (BitSeq5) {
+			case 0x28:     // xx10100x
 				timeInNS -= precompTime;
 				extraTimeFromPrevious = precompTime;
 				break;
-
-			case 0x28:
-			case 0x29:
-			case 0x48: // late
+			case 0x0A:     // xx00101x
 				timeInNS += precompTime;
 				extraTimeFromPrevious = -precompTime;
 				break;
-
 			default:
-				extraTimeFromPrevious = 0;
+			{
+				const unsigned char BitSeq3 = (sequence & 0x1C);  // extract these bits 00011100 - bit 3 is the ACTUAL bit
+				switch (BitSeq3) {
+				case 0x18:   // xxx110xx
+					timeInNS -= precompTime;
+					extraTimeFromPrevious = precompTime;
+					break;
+				case 0x0C:   // xxx011xx
+					timeInNS += precompTime;
+					extraTimeFromPrevious = precompTime;
+					break;
+				default:
+					extraTimeFromPrevious = 0;
+					break;
+				}
 				break;
 			}
+			}
 		}
-
+		
 		if (m_isHDMode) timeInNS /= 2;
 
 		// convert for SCP
