@@ -375,7 +375,7 @@ add_subdirectory(external/floppybridge)
 add_subdirectory(external/libguisan)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src external/floppybridge/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu floppybridge ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
 target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 
 if (USE_OPENGL)
