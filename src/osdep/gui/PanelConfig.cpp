@@ -121,6 +121,7 @@ public:
 
 static ConfigButtonActionListener* configButtonActionListener;
 
+static Uint32 last_click_time = 0;
 class ConfigsListActionListener : public gcn::ActionListener
 {
 public:
@@ -128,7 +129,8 @@ public:
 	{
 		const int selected_item = lstConfigs->getSelected();
 		if (selected_item == -1) return;
-		
+		const Uint32 current_time = SDL_GetTicks();
+
 		if (txtName->getText() != ConfigFilesList[selected_item]->Name || txtDesc->getText() != ConfigFilesList[
 			selected_item]->Description)
 		{
@@ -138,11 +140,12 @@ public:
 			txtName->setText(ConfigFilesList[selected_item]->Name);
 			txtDesc->setText(ConfigFilesList[selected_item]->Description);
 		}
-		else
+
+		//-----------------------------------------------
+		// Double click on selected config -> Load it and start emulation
+		// ----------------------------------------------
+		if (current_time - last_click_time < 1000)
 		{
-			//-----------------------------------------------
-			// Second click on selected config -> Load it and start emulation
-			// ----------------------------------------------
 			if (emulating)
 			{
 				disable_resume();
@@ -150,10 +153,11 @@ public:
 			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected_item]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 			strncpy(last_active_config, ConfigFilesList[selected_item]->Name, MAX_DPATH);
 			refresh_all_panels();
-			
+
 			uae_reset(1, 1);
 			gui_running = false;
 		}
+		last_click_time = current_time;
 	}
 };
 
