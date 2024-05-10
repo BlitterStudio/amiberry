@@ -85,7 +85,10 @@ public:
 				strncat(filename, ".uae", MAX_DPATH - 1);
 				strncpy(changed_prefs.description, txtDesc->getText().c_str(), 256);
 				if (cfgfile_save(&changed_prefs, filename, 0))
+				{
+					strncpy(last_active_config, txtName->getText().c_str(), MAX_DPATH);
 					RefreshPanelConfig();
+				}
 			}
 		}
 		else if (actionEvent.getSource() == cmdDelete)
