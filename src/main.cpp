@@ -1000,6 +1000,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
 				xfree(txt);
 				firstconfig = false;
+				config_loaded = true;
 			}
 			loaded = true;
 		}
@@ -1172,6 +1173,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 							? CONFIG_TYPE_ALL
 							: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
 						currprefs.start_gui = false;
+						config_loaded = true;
 					}
 					else
 					{
@@ -1191,6 +1193,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 						if (type == ZFILE_CONFIGURATION) {
 							currprefs.mountitems = 0;
 							target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
+							config_loaded = true;
 						}
 						else if (type == ZFILE_STATEFILE) {
 							savestate_state = STATE_DORESTORE;
