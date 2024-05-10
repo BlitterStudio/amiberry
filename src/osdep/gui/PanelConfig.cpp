@@ -144,7 +144,7 @@ public:
 		//-----------------------------------------------
 		// Double click on selected config -> Load it and start emulation
 		// ----------------------------------------------
-		if (current_time - last_click_time < 1000)
+		if (current_time - last_click_time <= 500)
 		{
 			if (emulating)
 			{
