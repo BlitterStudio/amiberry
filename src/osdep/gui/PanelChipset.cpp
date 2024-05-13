@@ -90,7 +90,7 @@ public:
 					chkCycleExact->setSelected(n1);
 				}
 			}
-			else if (actionEvent.getSource() == chkMemoryCycleExact)
+			else if (actionEvent.getSource() == chkCycleExact)
 			{
 				if (n1)
 				{
