@@ -1567,7 +1567,10 @@ static int initpcmcia (const TCHAR *path, int readonly, int type, int reset, str
 		ide_initialize(idedrive, PCMCIA_IDE_ID);
 
 		pcmcia_common_size = 0;
-		pcmcia_readonly = uci->readonly;
+		pcmcia_readonly = false;
+		if (uci) {
+			pcmcia_readonly = uci->readonly;
+		}
 		pcmcia_attrs_size = 0x40000;
 		pcmcia_attrs = xcalloc (uae_u8, pcmcia_attrs_size);
 		pcmcia_type = type;
