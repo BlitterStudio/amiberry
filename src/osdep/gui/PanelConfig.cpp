@@ -104,12 +104,9 @@ public:
 				if (ShowMessage("Delete Configuration", msg, "", "", "Yes", "No"))
 				{
 					remove(ConfigFilesList[i]->FullPath);
-					if (!strcmp(last_active_config, ConfigFilesList[i]->Name))
-					{
-						txtName->setText("");
-						txtDesc->setText("");
-						last_active_config[0] = '\0';
-					}
+					txtName->setText("");
+					txtDesc->setText("");
+					last_active_config[0] = '\0';
 					ConfigFilesList.erase(ConfigFilesList.begin() + i);
 					RefreshPanelConfig();
 				}
