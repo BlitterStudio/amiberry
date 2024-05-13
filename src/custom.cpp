@@ -2564,6 +2564,14 @@ static uae_u16 get_strobe_reg(int slot)
 		strobe = 0x3c;
 		if (vb_start_line > 1 && vpos < get_equ_vblank_endline() && vpos >= get_equ_vblank_startline()) {
 			strobe = 0x38;
+			if (vpos == 0) {
+				if (agnusa1000) {
+					strobe = 0x3c;
+				}
+				else if (!ecs_agnus) {
+					strobe = 0x3a;
+				}
+			}
 		} else if (vb_start_line > 1 || vb_end_line || vb_end_next_line) {
 			strobe = 0x3a;
 		}
