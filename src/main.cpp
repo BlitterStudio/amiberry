@@ -831,6 +831,8 @@ void usage()
 	std::cout << "                            Edit a configuration file in order to know valid parameters and settings." <<
 		'\n';
 	std::cout << "\nAdditional options:" << '\n';
+	std::cout << "amiberry <file>             Auto-detect the type of file and use the default action for it." << '\n';
+	std::cout << "                            Supported file types are: .uae config, .lha WHDLoad, CD images and disk images." << '\n';
 	std::cout << " -0 <disk.adf>              Insert specified ADF image into emulated floppy drive 0-3." << '\n';
 	std::cout << " -1 <disk.adf>              " << '\n';
 	std::cout << " -2 <disk.adf>              " << '\n';
@@ -873,6 +875,9 @@ void usage()
 	std::cout << "amiberry --config conf/A500.uae --statefile savestates/game.uss -s use_gui=no" << '\n';
 	std::cout << "This will load the conf/A500.uae configuration file, with the save state named game." << '\n';
 	std::cout << "It will override 'use_gui' to 'no', so that it enters emulation directly." << '\n';
+	std::cout << "\nExample 3:" << '\n';
+	std::cout << "amiberry lha/MyGame.lha" << '\n';
+	std::cout << "This will load the WHDLoad game MyGame.lha, using the autoload mechanism." << '\n';
 	exit(0);
 }
 
