@@ -621,7 +621,7 @@ void InitPanelMisc(const config_category& category)
 	grpMiscOptions->add(chkRetroArchMenu, DISTANCE_BORDER, posY);
 	posY += chkRetroArchMenu->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkRetroArchReset, DISTANCE_BORDER, posY);
-
+	grpMiscOptions->setTitleBarHeight(1);
 	grpMiscOptions->setSize(category.panel->getWidth() - category.panel->getWidth() / 3 - 40, 800);
 
 	scrlMisc = new gcn::ScrollArea(grpMiscOptions);
