@@ -125,6 +125,7 @@ void InitPanelSavestate(const config_category& category)
 	for (int i = 0; i < 15; ++i) {
 		radioButtons[i] = new gcn::RadioButton(std::to_string(i), "radiostategroup");
 		radioButtons[i]->setId("State" + std::to_string(i));
+		radioButtons[i]->setBaseColor(gui_baseCol);
 		radioButtons[i]->setBackgroundColor(colTextboxBackground);
 		radioButtons[i]->addActionListener(savestateActionListener);
 	}
