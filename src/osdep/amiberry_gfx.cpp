@@ -2704,7 +2704,7 @@ void toggle_fullscreen(int monid, int mode)
 	}
 	*p = v;
 	devices_unsafeperiod();
-	updatewinfsmode(monid, &currprefs);
+	updatewinfsmode(monid, &changed_prefs);
 }
 
 void destroy_crtemu()
