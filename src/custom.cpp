@@ -7290,10 +7290,13 @@ static void init_beamcon0(bool fakehz)
 	maxvpos_nom = maxvpos;
 	maxvpos_display = maxvpos;
 	maxvpos_display_vsync = 1;
-	// A1000 Agnus VBSTRT=first line, OCS and later: VBSTRT=last line
 	if (agnusa1000) {
+		// A1000 Agnus VBSTRT=first line, OCS and later: VBSTRT=last line
 		maxvpos_display_vsync++;
 		hardwired_vsstrt++;
+	} else if (!ecs_agnus && !ecs_denise) {
+		// OCS Agnus + OCS Denise: line 0 is visible
+		maxvpos_display_vsync++;
 	}
 
 	vblank_firstline_hw = minfirstline;
