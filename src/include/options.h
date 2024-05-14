@@ -1161,6 +1161,7 @@ extern int cfgfile_intval(const TCHAR* option, const TCHAR* value, const TCHAR* 
 extern int cfgfile_strval(const TCHAR* option, const TCHAR* value, const TCHAR* name, int* location, const TCHAR* table[], int more);
 extern int cfgfile_string(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
 #ifdef AMIBERRY
+extern int cfgfile_floatval(const TCHAR* option, const TCHAR* value, const TCHAR* name, float* location);
 extern int cfgfile_string(const std::string& option, const std::string& value, const std::string& name, std::string& location);
 #endif
 extern int cfgfile_string_escape(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
@@ -1294,6 +1295,7 @@ struct amiberry_gui_theme
 struct amiberry_options
 {
 	bool single_window_mode = false;
+	float window_scaling = 1.0;
 	bool quickstart_start = true;
 	bool read_config_descriptions = true;
 	bool write_logfile = false;

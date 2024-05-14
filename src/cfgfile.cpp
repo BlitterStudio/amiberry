@@ -3048,7 +3048,11 @@ static int cfgfile_floatval (const TCHAR *option, const TCHAR *value, const TCHA
 	return 1;
 }
 
+#ifdef AMIBERRY
+int cfgfile_floatval(const TCHAR* option, const TCHAR* value, const TCHAR* name, float* location)
+#else
 static int cfgfile_floatval (const TCHAR *option, const TCHAR *value, const TCHAR *name, float *location)
+#endif
 {
 	return cfgfile_floatval (option, value, name, NULL, location);
 }
