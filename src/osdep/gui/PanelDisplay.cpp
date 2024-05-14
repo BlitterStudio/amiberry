@@ -342,6 +342,8 @@ void InitPanelDisplay(const config_category& category)
 
 	chkManualCrop = new gcn::CheckBox("Manual Crop");
 	chkManualCrop->setId("chkManualCrop");
+	chkManualCrop->setBaseColor(gui_baseCol);
+	chkManualCrop->setBackgroundColor(colTextboxBackground);
 	chkManualCrop->addActionListener(amigaScreenActionListener);
 
 	lblAmigaWidth = new gcn::Label("Width:");
