@@ -218,8 +218,8 @@ static void SDL2_init()
 	// If KMSDRM is detected, force Full-Window mode
 	if (kmsdrm_detected)
 	{
-		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
-		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
 	}
 
 	if (!mon->amiga_window)
@@ -229,9 +229,9 @@ static void SDL2_init()
 		if (sdl_mode.w >= 800 && sdl_mode.h >= 600)
 		{
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
-			if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+			if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW)
 				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-			else if (currprefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+			else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLSCREEN)
 				mode = SDL_WINDOW_FULLSCREEN;
 			else
 				mode = SDL_WINDOW_RESIZABLE;
@@ -388,7 +388,7 @@ bool vkbd_allowed(int monid)
 static int isfullscreen_2(struct uae_prefs* p)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
-	const auto idx = mon->screen_is_picasso ? 1 : 0;
+	const auto idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
 	return p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLSCREEN ? 1 : p->gfx_apmode[idx].gfx_fullscreen == GFX_FULLWINDOW ? -1 : 0;
 }
 int isfullscreen()
@@ -561,7 +561,7 @@ static bool get_display_vblank_params(int displayindex, int* activeheightp, int*
 static void display_vblank_thread(struct AmigaMonitor* mon)
 {
 	struct amigadisplay* ad = &adisplays[mon->monitor_id];
-	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
+	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
 
 	if (waitvblankthread_mode > 0)
 		return;
@@ -871,7 +871,7 @@ bool render_screen(int monid, int mode, bool immediate)
 bool show_screen_maybe(int monid, bool show)
 {
 	struct amigadisplay* ad = &adisplays[monid];
-	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
+	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
 	if (!ap->gfx_vflip || ap->gfx_vsyncmode == 0 || ap->gfx_vsync <= 0) {
 		if (show)
 			show_screen(monid, 0);
@@ -1063,25 +1063,25 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 		}
 		mon->currentmode.current_width = static_cast<int>(state->Width * currprefs.rtg_horiz_zoom_mult * mx);
 		mon->currentmode.current_height = static_cast<int>(state->Height * currprefs.rtg_vert_zoom_mult * my);
-		currprefs.gfx_apmode[1].gfx_interlaced = false;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_interlaced = false;
 		if (currprefs.rtgvblankrate == 0) {
-			currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.gfx_apmode[0].gfx_refreshrate;
-			if (currprefs.gfx_apmode[0].gfx_interlaced) {
-				currprefs.gfx_apmode[1].gfx_refreshrate *= 2;
+			currprefs.gfx_apmode[APMODE_RTG].gfx_refreshrate = currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate;
+			if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced) {
+				currprefs.gfx_apmode[APMODE_RTG].gfx_refreshrate *= 2;
 			}
 		} else if (currprefs.rtgvblankrate < 0) {
-			currprefs.gfx_apmode[1].gfx_refreshrate = 0;
+			currprefs.gfx_apmode[APMODE_RTG].gfx_refreshrate = 0;
 		} else {
-			currprefs.gfx_apmode[1].gfx_refreshrate = currprefs.rtgvblankrate;
+			currprefs.gfx_apmode[APMODE_RTG].gfx_refreshrate = currprefs.rtgvblankrate;
 		}
-		if (currprefs.gfx_apmode[1].gfx_vsync)
-			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[1].gfx_vsyncmode;
+		if (currprefs.gfx_apmode[APMODE_RTG].gfx_vsync)
+			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[APMODE_RTG].gfx_vsyncmode;
 	} else {
 #endif
 		mon->currentmode.current_width = currprefs.gfx_monitor[mon->monitor_id].gfx_size.width;
 		mon->currentmode.current_height = currprefs.gfx_monitor[mon->monitor_id].gfx_size.height;
-		if (currprefs.gfx_apmode[0].gfx_vsync)
-			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[0].gfx_vsyncmode;
+		if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync)
+			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsyncmode;
 #ifdef PICASSO96
 	}
 #endif
@@ -1271,13 +1271,13 @@ int check_prefs_changed_gfx()
 	monitors[0] = true;
 
 	c |= currprefs.color_mode != changed_prefs.color_mode ? 2 | 16 : 0;
-	c |= currprefs.gfx_apmode[0].gfx_fullscreen != changed_prefs.gfx_apmode[0].gfx_fullscreen ? 16 : 0;
-	c |= currprefs.gfx_apmode[1].gfx_fullscreen != changed_prefs.gfx_apmode[1].gfx_fullscreen ? 16 : 0;
-	c |= currprefs.gfx_apmode[0].gfx_vsync != changed_prefs.gfx_apmode[0].gfx_vsync ? 2 | 16 : 0;
-	c |= currprefs.gfx_apmode[1].gfx_vsync != changed_prefs.gfx_apmode[1].gfx_vsync ? 2 | 16 : 0;
-	c |= currprefs.gfx_apmode[0].gfx_vsyncmode != changed_prefs.gfx_apmode[0].gfx_vsyncmode ? 2 | 16 : 0;
-	c |= currprefs.gfx_apmode[1].gfx_vsyncmode != changed_prefs.gfx_apmode[1].gfx_vsyncmode ? 2 | 16 : 0;
-	c |= currprefs.gfx_apmode[0].gfx_refreshrate != changed_prefs.gfx_apmode[0].gfx_refreshrate ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen ? 16 : 0;
+	c |= currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen != changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen ? 16 : 0;
+	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsync ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[APMODE_RTG].gfx_vsync != changed_prefs.gfx_apmode[APMODE_RTG].gfx_vsync ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsyncmode != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsyncmode ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[APMODE_RTG].gfx_vsyncmode != changed_prefs.gfx_apmode[APMODE_RTG].gfx_vsyncmode ? 2 | 16 : 0;
+	c |= currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate != changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate ? 2 | 16 : 0;
 	c |= currprefs.gfx_autoresolution != changed_prefs.gfx_autoresolution ? (2 | 8 | 16) : 0;
 	c |= currprefs.gfx_autoresolution_vga != changed_prefs.gfx_autoresolution_vga ? (2 | 8 | 16) : 0;
 	c |= currprefs.gfx_api != changed_prefs.gfx_api ? (1 | 8 | 32) : 0;
@@ -1391,8 +1391,8 @@ int check_prefs_changed_gfx()
 		bool setpause = false;
 		bool dontcapture = false;
 		int keepfsmode =
-			currprefs.gfx_apmode[0].gfx_fullscreen == changed_prefs.gfx_apmode[0].gfx_fullscreen &&
-			currprefs.gfx_apmode[1].gfx_fullscreen == changed_prefs.gfx_apmode[1].gfx_fullscreen;
+			currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen &&
+			currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen == changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen;
 
 		currprefs.gfx_autoresolution = changed_prefs.gfx_autoresolution;
 		currprefs.gfx_autoresolution_vga = changed_prefs.gfx_autoresolution_vga;
@@ -1440,13 +1440,13 @@ int check_prefs_changed_gfx()
 		currprefs.gfx_monitor[0].gfx_size_win.x = changed_prefs.gfx_monitor[0].gfx_size_win.x;
 		currprefs.gfx_monitor[0].gfx_size_win.y = changed_prefs.gfx_monitor[0].gfx_size_win.y;
 
-		currprefs.gfx_apmode[0].gfx_fullscreen = changed_prefs.gfx_apmode[0].gfx_fullscreen;
-		currprefs.gfx_apmode[1].gfx_fullscreen = changed_prefs.gfx_apmode[1].gfx_fullscreen;
-		currprefs.gfx_apmode[0].gfx_vsync = changed_prefs.gfx_apmode[0].gfx_vsync;
-		currprefs.gfx_apmode[1].gfx_vsync = changed_prefs.gfx_apmode[1].gfx_vsync;
-		currprefs.gfx_apmode[0].gfx_vsyncmode = changed_prefs.gfx_apmode[0].gfx_vsyncmode;
-		currprefs.gfx_apmode[1].gfx_vsyncmode = changed_prefs.gfx_apmode[1].gfx_vsyncmode;
-		currprefs.gfx_apmode[0].gfx_refreshrate = changed_prefs.gfx_apmode[0].gfx_refreshrate;
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen;
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsync;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_vsync = changed_prefs.gfx_apmode[APMODE_RTG].gfx_vsync;
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsyncmode = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_vsyncmode;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_vsyncmode = changed_prefs.gfx_apmode[APMODE_RTG].gfx_vsyncmode;
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate;
 
 		currprefs.multithreaded_drawing = changed_prefs.multithreaded_drawing;
 		currprefs.gfx_horizontal_offset = changed_prefs.gfx_horizontal_offset;
@@ -1907,9 +1907,9 @@ static void open_screen(struct uae_prefs* p)
 	}
 
 	if (wasfullwindow_a == 0)
-		wasfullwindow_a = p->gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+		wasfullwindow_a = p->gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
 	if (wasfullwindow_p == 0)
-		wasfullwindow_p = p->gfx_apmode[1].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
+		wasfullwindow_p = p->gfx_apmode[APMODE_RTG].gfx_fullscreen == GFX_FULLWINDOW ? 1 : -1;
 
 	updatewinfsmode(0, p);
 
@@ -2508,8 +2508,10 @@ void updatedisplayarea(int monid)
 
 void updatewinfsmode(int monid, struct uae_prefs* p)
 {
-	const struct AmigaMonitor* mon = &AMonitors[0];
-	auto* avidinfo = &adisplays[0].gfxvidinfo;
+	const struct AmigaMonitor* mon = &AMonitors[monid];
+	auto* const ad = &adisplays[monid];
+	const int id = ad->picasso_on ? APMODE_RTG : APMODE_NATIVE;
+	auto* avidinfo = &adisplays[monid].gfxvidinfo;
 	const bool borderless = p->borderless;
 
 	if (mon->amiga_window)
@@ -2519,19 +2521,19 @@ void updatewinfsmode(int monid, struct uae_prefs* p)
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
 		const bool is_borderless = window_flags & SDL_WINDOW_BORDERLESS;
 
-		if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLSCREEN && !is_fullscreen)
+		if (p->gfx_apmode[id].gfx_fullscreen == GFX_FULLSCREEN && !is_fullscreen)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_fs;
 			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
 			set_config_changed();
 		}
-		else if (p->gfx_apmode[monid].gfx_fullscreen == GFX_FULLWINDOW && !is_fullwindow)
+		else if (p->gfx_apmode[id].gfx_fullscreen == GFX_FULLWINDOW && !is_fullwindow)
 		{
-			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
+			p->gfx_monitor[id].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 			set_config_changed();
 		}
-		else if (p->gfx_apmode[monid].gfx_fullscreen != GFX_FULLSCREEN && p->gfx_apmode[monid].gfx_fullscreen != GFX_FULLWINDOW && (is_fullscreen || is_fullwindow) && !kmsdrm_detected)
+		else if (p->gfx_apmode[id].gfx_fullscreen == GFX_WINDOW && (is_fullscreen || is_fullwindow) && !kmsdrm_detected)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 			SDL_SetWindowFullscreen(mon->amiga_window, 0);
@@ -2653,7 +2655,7 @@ void close_rtg(int monid, bool reset)
 void toggle_fullscreen(int monid, int mode)
 {
 	auto* const ad = &adisplays[monid];
-	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[1].gfx_fullscreen : &changed_prefs.gfx_apmode[0].gfx_fullscreen;
+	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen : &changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
 	const auto wfw = ad->picasso_on ? wasfullwindow_p : wasfullwindow_a;
 	auto v = *p;
 	static int prevmode = -1;
