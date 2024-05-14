@@ -246,6 +246,9 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtSlaveDefault->setBackgroundColor(colTextboxBackground);
 
 	chkSlaveLibraries = new gcn::CheckBox("Slave Libraries");
+	chkSlaveLibraries->setId("chkSlaveLibraries");
+	chkSlaveLibraries->setBaseColor(gui_baseCol);
+	chkSlaveLibraries->setBackgroundColor(colTextboxBackground);
 
 	lblSlaves = new gcn::Label("Slaves:");
 	cboSlaves = new gcn::DropDown(&slaves_list);

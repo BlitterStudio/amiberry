@@ -512,9 +512,13 @@ void InitPanelPaths(const config_category& category)
 	enableLoggingActionListener = new EnableLoggingActionListener();
 	chkEnableLogging = new gcn::CheckBox("Enable logging", true);
 	chkEnableLogging->setId("chkEnableLogging");
+	chkEnableLogging->setBaseColor(gui_baseCol);
+	chkEnableLogging->setBackgroundColor(colTextboxBackground);
 	chkEnableLogging->addActionListener(enableLoggingActionListener);
 	chkLogToConsole = new gcn::CheckBox("Log to console", false);
 	chkLogToConsole->setId("chkLogToConsole");
+	chkLogToConsole->setBaseColor(gui_baseCol);
+	chkLogToConsole->setBackgroundColor(colTextboxBackground);
 	chkLogToConsole->addActionListener(enableLoggingActionListener);
 	
 	lblLogfilePath = new gcn::Label("Amiberry logfile path:");
