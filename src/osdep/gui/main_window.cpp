@@ -318,8 +318,8 @@ void amiberry_gui_init()
             mon->gui_window = SDL_CreateWindow("Amiberry GUI",
                                                SDL_WINDOWPOS_CENTERED,
                                                SDL_WINDOWPOS_CENTERED,
-                                               GUI_HEIGHT,
-                                               GUI_WIDTH,
+                                               GUI_HEIGHT * amiberry_options.window_scaling,
+                                               GUI_WIDTH * amiberry_options.window_scaling,
                                                mode);
         }
         else
@@ -327,8 +327,8 @@ void amiberry_gui_init()
             mon->gui_window = SDL_CreateWindow("Amiberry GUI",
                                                SDL_WINDOWPOS_CENTERED,
                                                SDL_WINDOWPOS_CENTERED,
-                                               GUI_WIDTH,
-                                               GUI_HEIGHT,
+                                               GUI_WIDTH * amiberry_options.window_scaling,
+                                               GUI_HEIGHT * amiberry_options.window_scaling,
                                                mode);
         }
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
