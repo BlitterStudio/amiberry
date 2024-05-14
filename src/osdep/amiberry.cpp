@@ -1387,7 +1387,7 @@ void handle_controller_button_event(const SDL_Event& event)
 		inputdevice_add_inputcode(AKS_FREEZEBUTTON, state, nullptr);
 	}
 	else if (fullscreen_key.button && button == fullscreen_key.button) {
-		inputdevice_add_inputcode(AKS_TOGGLEWINDOWEDFULLSCREEN, state, nullptr);
+		inputdevice_add_inputcode(AKS_TOGGLEDEFAULTSCREEN, state, nullptr);
 	}
 	else if (minimize_key.button && button == minimize_key.button) {
 		minimizewindow(0);
