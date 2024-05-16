@@ -183,7 +183,7 @@ STATIC_INLINE xcolnr getxcolor(int c)
 		return CONVERT_RGB(c);
 	else
 #endif
-		return xcolors[c];
+		return xcolors[c & 0xfff];
 }
 
 /* functions for reading, writing, copying and comparing struct color_entry */
@@ -246,6 +246,7 @@ STATIC_INLINE void color_reg_cpy (struct color_entry *dst, struct color_entry *s
 #define COLOR_CHANGE_BLANK 0x20000000
 #define COLOR_CHANGE_ACTBORDER (COLOR_CHANGE_BLANK | COLOR_CHANGE_BRDBLANK)
 #define COLOR_CHANGE_MASK 0xf0000000
+#define COLOR_CHANGE_GENLOCK 0x01000000
 struct color_change {
 	int linepos;
 	int regno;

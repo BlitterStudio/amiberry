@@ -936,16 +936,12 @@ static void docols(struct color_entry *colentry)
 	if (aga_mode) {
 		for (int i = 0; i < 256; i++) {
 			int v = color_reg_get(colentry, i);
-			if (v < 0 || v > 16777215)
-				continue;
 			colentry->acolors[i] = getxcolor(v);
 		}
 	} else {
 #endif
 		for (int i = 0; i < 32; i++) {
 			int v = color_reg_get(colentry, i);
-			if (v < 0 || v > 4095)
-				continue;
 			colentry->acolors[i] = getxcolor(v);
 		}
 #ifdef AGA
@@ -10296,7 +10292,6 @@ bool get_custom_color_reg(int colreg, uae_u8 *r, uae_u8 *g, uae_u8 *b)
 
 static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 {
-	bool colzero = false;
 	bool samecycle = false;
 
 	// skip color register write color change state update if COLOR0 register was already written in same cycle
@@ -10341,14 +10336,11 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 			cb = b + (b << 4);
 			color_regs_genlock[colreg] = v >> 15;
 		}
-		cval = (cr << 16) | (cg << 8) | cb | (color_regs_genlock[colreg] ? 0x80000000 : 0);
-		if (cval && colreg == 0)
-			colzero = true;
-
-		if (cval == current_colors.color_regs_aga[colreg])
+		cval = (cr << 16) | (cg << 8) | cb | (color_regs_genlock[colreg] ? COLOR_CHANGE_GENLOCK : 0);
+		if (cval == current_colors.color_regs_aga[colreg]) {
 			return;
-
-		if (colreg == 0) {
+		}
+		if ((cval & 0xffffff) && colreg == 0) {
 			checkautoscalecol0();
 		}
 
@@ -10362,17 +10354,14 @@ static void COLOR_WRITE(int hpos, uae_u16 v, int num)
 
 	} else {
 #endif
-		if (ecs_denise) {
-			color_regs_genlock[num] = v >> 15;
+		if (!ecs_denise) {
+			v &= 0xfff;
 		}
-		v &= 0xfff;
-		if (num && v == 0) {
-			colzero = true;
-		}
+		color_regs_genlock[num] = v >> 15;
 		if (current_colors.color_regs_ecs[num] == v) {
 			return;
 		}
-		if (num == 0) {
+		if ((v & 0xfff) && num == 0) {
 			checkautoscalecol0();
 		}
 
@@ -11535,13 +11524,13 @@ static void cursorsprite(void)
 	}
 	if (aga_mode) {
 		int sbasecol = ((bplcon4 >> 4) & 15) << 4;
-		sprite_0_colors[1] = current_colors.color_regs_aga[sbasecol + 1];
-		sprite_0_colors[2] = current_colors.color_regs_aga[sbasecol + 2];
-		sprite_0_colors[3] = current_colors.color_regs_aga[sbasecol + 3];
+		sprite_0_colors[1] = current_colors.color_regs_aga[sbasecol + 1] & 0xffffff;
+		sprite_0_colors[2] = current_colors.color_regs_aga[sbasecol + 2] & 0xffffff;
+		sprite_0_colors[3] = current_colors.color_regs_aga[sbasecol + 3] & 0xffffff;
 	} else {
-		sprite_0_colors[1] = xcolors[current_colors.color_regs_ecs[17]];
-		sprite_0_colors[2] = xcolors[current_colors.color_regs_ecs[18]];
-		sprite_0_colors[3] = xcolors[current_colors.color_regs_ecs[19]];
+		sprite_0_colors[1] = xcolors[current_colors.color_regs_ecs[17] & 0xfff];
+		sprite_0_colors[2] = xcolors[current_colors.color_regs_ecs[18] & 0xfff];
+		sprite_0_colors[3] = xcolors[current_colors.color_regs_ecs[19] & 0xfff];
 	}
 	sprite_0_width = sprite_width;
 	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
@@ -16080,10 +16069,11 @@ uae_u8 *restore_custom_agacolors(uae_u8 *src)
 #ifdef AGA
 		uae_u32 v = RL;
 		color_regs_genlock[i] = 0;
-		if (v & 0x80000000)
+		if (v & 0x80000000) {
 			color_regs_genlock[i] = 1;
-		v &= 0x80ffffff;
-		current_colors.color_regs_aga[i] = v;
+		}
+		v &= 0xffffff;
+		current_colors.color_regs_aga[i] = v | (color_regs_genlock[i] ? COLOR_CHANGE_GENLOCK : 0);
 #else
 		RL;
 #endif
@@ -16111,7 +16101,7 @@ uae_u8 *save_custom_agacolors(size_t *len, uae_u8 *dstptr)
 		dstbak = dst = xmalloc (uae_u8, 256 * 4);
 	for (int i = 0; i < 256; i++)
 #ifdef AGA
-		SL (current_colors.color_regs_aga[i] | (color_regs_genlock[i] ? 0x80000000 : 0));
+		SL((current_colors.color_regs_aga[i] & 0xffffff) | (color_regs_genlock[i] ? 0x80000000 : 0));
 #else
 		SL (0);
 #endif

@@ -1524,7 +1524,7 @@ static bool get_genlock_very_rare_and_complex_case(uae_u8 v)
 		} else {
 			// color key match?
 			if (aga_mode) {
-				if (colors_for_drawing.color_regs_aga[v] & 0x80000000)
+				if (colors_for_drawing.color_regs_aga[v] & COLOR_CHANGE_GENLOCK)
 					return false;
 			} else {
 				if (colors_for_drawing.color_regs_ecs[v] & 0x8000)
