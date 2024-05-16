@@ -512,6 +512,9 @@ public:
 					changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
 				else
 					changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
+
+				RefreshPanelFloppy();
+				RefreshPanelQuickstart();
 			}
 			else if (actionEvent.getSource() == chkqsDFxWriteProtect[i])
 			{
