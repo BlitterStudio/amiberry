@@ -670,6 +670,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboModel->setSize(160, cboModel->getHeight());
 	cboModel->setBaseColor(gui_base_color);
 	cboModel->setBackgroundColor(gui_textbox_background_color);
+	cboModel->setForegroundColor(gui_foreground_color);
 	cboModel->setSelectionColor(gui_selection_color);
 	cboModel->setId("cboAModel");
 	cboModel->addActionListener(quickstartActionListener);
@@ -681,6 +682,7 @@ void InitPanelQuickstart(const config_category& category)
 					   cboConfig->getHeight());
 	cboConfig->setBaseColor(gui_base_color);
 	cboConfig->setBackgroundColor(gui_textbox_background_color);
+	cboConfig->setForegroundColor(gui_foreground_color);
 	cboConfig->setSelectionColor(gui_selection_color);
 	cboConfig->setId("cboAConfig");
 	cboConfig->addActionListener(quickstartActionListener);
@@ -689,6 +691,7 @@ void InitPanelQuickstart(const config_category& category)
 	chkNTSC->setId("qsNTSC");
 	chkNTSC->setBaseColor(gui_base_color);
 	chkNTSC->setBackgroundColor(gui_textbox_background_color);
+	chkNTSC->setForegroundColor(gui_foreground_color);
 	chkNTSC->addActionListener(quickstartActionListener);
 
 	for (auto i = 0; i < 2; ++i)
@@ -700,11 +703,13 @@ void InitPanelQuickstart(const config_category& category)
 		chkqsDFx[i]->setId(tmp);
 		chkqsDFx[i]->setBaseColor(gui_base_color);
 		chkqsDFx[i]->setBackgroundColor(gui_textbox_background_color);
+		chkqsDFx[i]->setForegroundColor(gui_foreground_color);
 		chkqsDFx[i]->addActionListener(qs_diskActionListener);
 
 		cboqsDFxType[i] = new gcn::DropDown(&qsDriveTypeList);
 		cboqsDFxType[i]->setBaseColor(gui_base_color);
 		cboqsDFxType[i]->setBackgroundColor(gui_textbox_background_color);
+		cboqsDFxType[i]->setForegroundColor(gui_foreground_color);
 		cboqsDFxType[i]->setSelectionColor(gui_selection_color);
 		snprintf(tmp, 20, "cboqsType%d", i);
 		cboqsDFxType[i]->setId(tmp);
@@ -715,6 +720,7 @@ void InitPanelQuickstart(const config_category& category)
 		chkqsDFxWriteProtect[i]->setId(tmp);
 		chkqsDFxWriteProtect[i]->setBaseColor(gui_base_color);
 		chkqsDFxWriteProtect[i]->setBackgroundColor(gui_textbox_background_color);
+		chkqsDFxWriteProtect[i]->setForegroundColor(gui_foreground_color);
 		chkqsDFxWriteProtect[i]->addActionListener(qs_diskActionListener);
 
 		cmdqsDFxInfo[i] = new gcn::Button("?");
@@ -722,6 +728,7 @@ void InitPanelQuickstart(const config_category& category)
 		cmdqsDFxInfo[i]->setId(tmp);
 		cmdqsDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		cmdqsDFxInfo[i]->setBaseColor(gui_base_color);
+		cmdqsDFxInfo[i]->setForegroundColor(gui_foreground_color);
 		cmdqsDFxInfo[i]->addActionListener(qs_diskActionListener);
 
 		cmdqsDFxEject[i] = new gcn::Button("Eject");
@@ -729,6 +736,7 @@ void InitPanelQuickstart(const config_category& category)
 		cmdqsDFxEject[i]->setId(tmp);
 		cmdqsDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 		cmdqsDFxEject[i]->setBaseColor(gui_base_color);
+		cmdqsDFxEject[i]->setForegroundColor(gui_foreground_color);
 		cmdqsDFxEject[i]->addActionListener(qs_diskActionListener);
 
 		cmdqsDFxSelect[i] = new gcn::Button("Select file");
@@ -736,6 +744,7 @@ void InitPanelQuickstart(const config_category& category)
 		cmdqsDFxSelect[i]->setId(tmp);
 		cmdqsDFxSelect[i]->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 		cmdqsDFxSelect[i]->setBaseColor(gui_base_color);
+		cmdqsDFxSelect[i]->setForegroundColor(gui_foreground_color);
 		cmdqsDFxSelect[i]->addActionListener(qs_diskActionListener);
 
 		cboqsDFxFile[i] = new gcn::DropDown(&diskfileList);
@@ -744,6 +753,7 @@ void InitPanelQuickstart(const config_category& category)
 		cboqsDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboqsDFxFile[i]->getHeight());
 		cboqsDFxFile[i]->setBaseColor(gui_base_color);
 		cboqsDFxFile[i]->setBackgroundColor(gui_textbox_background_color);
+		cboqsDFxFile[i]->setForegroundColor(gui_foreground_color);
 		cboqsDFxFile[i]->setSelectionColor(gui_selection_color);
 		cboqsDFxFile[i]->addActionListener(qs_diskActionListener);
 	}
@@ -752,17 +762,20 @@ void InitPanelQuickstart(const config_category& category)
 	chkCD->setId("qsCD drive");
 	chkCD->setBaseColor(gui_base_color);
 	chkCD->setBackgroundColor(gui_textbox_background_color);
+	chkCD->setForegroundColor(gui_foreground_color);
 	chkCD->setEnabled(false);
 
 	cmdCDEject = new gcn::Button("Eject");
 	cmdCDEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdCDEject->setBaseColor(gui_base_color);
+	cmdCDEject->setForegroundColor(gui_foreground_color);
 	cmdCDEject->setId("qscdEject");
 	cmdCDEject->addActionListener(cdActionListener);
 
 	cmdCDSelect = new gcn::Button("Select image");
 	cmdCDSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdCDSelect->setBaseColor(gui_base_color);
+	cmdCDSelect->setForegroundColor(gui_foreground_color);
 	cmdCDSelect->setId("qsCDSelect");
 	cmdCDSelect->addActionListener(cdActionListener);
 
@@ -770,6 +783,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_base_color);
 	cboCDFile->setBackgroundColor(gui_textbox_background_color);
+	cboCDFile->setForegroundColor(gui_foreground_color);
 	cboCDFile->setSelectionColor(gui_selection_color);
 	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdActionListener);
@@ -778,11 +792,13 @@ void InitPanelQuickstart(const config_category& category)
 	chkQuickstartMode->setId("qsMode");
 	chkQuickstartMode->setBaseColor(gui_base_color);
 	chkQuickstartMode->setBackgroundColor(gui_textbox_background_color);
+	chkQuickstartMode->setForegroundColor(gui_foreground_color);
 	chkQuickstartMode->addActionListener(quickstartActionListener);
 
 	cmdSetConfiguration = new gcn::Button("Set configuration");
 	cmdSetConfiguration->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
 	cmdSetConfiguration->setBaseColor(gui_base_color);
+	cmdSetConfiguration->setForegroundColor(gui_foreground_color);
 	cmdSetConfiguration->setId("cmdSetConfig");
 	cmdSetConfiguration->addActionListener(quickstartActionListener);
 
@@ -791,6 +807,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
 	cboWhdload->setBaseColor(gui_base_color);
 	cboWhdload->setBackgroundColor(gui_textbox_background_color);
+	cboWhdload->setForegroundColor(gui_foreground_color);
 	cboWhdload->setSelectionColor(gui_selection_color);
 	cboWhdload->setId("cboQsWhdload");
 	cboWhdload->addActionListener(whdloadActionListener);
@@ -798,12 +815,14 @@ void InitPanelQuickstart(const config_category& category)
 	cmdWhdloadEject = new gcn::Button("Eject");
 	cmdWhdloadEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadEject->setBaseColor(gui_base_color);
+	cmdWhdloadEject->setForegroundColor(gui_foreground_color);
 	cmdWhdloadEject->setId("cmdQsWhdloadEject");
 	cmdWhdloadEject->addActionListener(whdloadActionListener);
 
 	cmdWhdloadSelect = new gcn::Button("Select file");
 	cmdWhdloadSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
 	cmdWhdloadSelect->setBaseColor(gui_base_color);
+	cmdWhdloadSelect->setForegroundColor(gui_foreground_color);
 	cmdWhdloadSelect->setId("cmdQsWhdloadSelect");
 	cmdWhdloadSelect->addActionListener(whdloadActionListener);
 

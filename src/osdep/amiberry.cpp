@@ -2490,6 +2490,29 @@ void target_default_options(struct uae_prefs* p, int type)
 	{
 		gui_theme.selection_color = gcn::Color(195, 217, 217);
 	}
+
+	// Foreground color
+	if (amiberry_options.gui_theme_foreground_color[0])
+	{
+		// parse string as comma-separated numbers
+		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_foreground_color);
+		if (result.size() == 3)
+		{
+			gui_theme.foreground_color = gcn::Color(result[0], result[1], result[2]);
+		}
+		else if (result.size() == 4)
+		{
+			gui_theme.foreground_color = gcn::Color(result[0], result[1], result[2], result[3]);
+		}
+		else
+		{
+			gui_theme.foreground_color = gcn::Color(0, 0, 0);
+		}
+	}
+	else
+	{
+		gui_theme.foreground_color = gcn::Color(0, 0, 0);
+	}
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -3523,6 +3546,9 @@ void save_amiberry_settings(void)
 	// GUI Theme: Selection color
 	write_string_option("gui_theme_selection_color", amiberry_options.gui_theme_selection_color);
 
+	// GUI Theme: Foreground color
+	write_string_option("gui_theme_foreground_color", amiberry_options.gui_theme_foreground_color);
+
 	// GUI Theme: Textbox Background color
 	write_string_option("gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background);
 
@@ -3760,6 +3786,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "gui_theme_selector_inactive", amiberry_options.gui_theme_selector_inactive, sizeof amiberry_options.gui_theme_selector_inactive);
 		ret |= cfgfile_string(option, value, "gui_theme_selector_active", amiberry_options.gui_theme_selector_active, sizeof amiberry_options.gui_theme_selector_active);
 		ret |= cfgfile_string(option, value, "gui_theme_selection_color", amiberry_options.gui_theme_selection_color, sizeof amiberry_options.gui_theme_selection_color);
+		ret |= cfgfile_string(option, value, "gui_theme_foreground_color", amiberry_options.gui_theme_foreground_color, sizeof amiberry_options.gui_theme_foreground_color);
 		ret |= cfgfile_string(option, value, "gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background, sizeof amiberry_options.gui_theme_textbox_background);
 	}
 	return ret;

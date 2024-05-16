@@ -155,6 +155,7 @@ gcn::Color gui_textbox_background_color;
 gcn::Color gui_selector_inactive_color;
 gcn::Color gui_selector_active_color;
 gcn::Color gui_selection_color;
+gcn::Color gui_foreground_color;
 gcn::Color gui_font_color;
 
 gcn::FocusHandler* focusHdl;
@@ -1000,6 +1001,7 @@ void gui_widgets_init()
 	gui_selector_active_color = gui_theme.selector_active;
 	gui_textbox_background_color = gui_theme.textbox_background;
 	gui_selection_color = gui_theme.selection_color;
+	gui_foreground_color = gui_theme.foreground_color;
 	gui_font_color = gui_theme.font_color;
 
 	//-------------------------------------------------
@@ -1009,6 +1011,7 @@ void gui_widgets_init()
 	gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
 	gui_top->setBaseColor(gui_base_color);
 	gui_top->setBackgroundColor(gui_base_color);
+	gui_top->setForegroundColor(gui_foreground_color);
 	uae_gui->setTop(gui_top);
 
 	//-------------------------------------------------
@@ -1049,24 +1052,28 @@ void gui_widgets_init()
 	cmdQuit = new gcn::Button("Quit");
 	cmdQuit->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdQuit->setBaseColor(gui_base_color);
+	cmdQuit->setForegroundColor(gui_foreground_color);
 	cmdQuit->setId("Quit");
 	cmdQuit->addActionListener(mainButtonActionListener);
 
 	cmdShutdown = new gcn::Button("Shutdown");
 	cmdShutdown->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdShutdown->setBaseColor(gui_base_color);
+	cmdShutdown->setForegroundColor(gui_foreground_color);
 	cmdShutdown->setId("Shutdown");
 	cmdShutdown->addActionListener(mainButtonActionListener);
 
 	cmdReset = new gcn::Button("Reset");
 	cmdReset->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdReset->setBaseColor(gui_base_color);
+	cmdReset->setForegroundColor(gui_foreground_color);
 	cmdReset->setId("Reset");
 	cmdReset->addActionListener(mainButtonActionListener);
 
 	cmdRestart = new gcn::Button("Restart");
 	cmdRestart->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdRestart->setBaseColor(gui_base_color);
+	cmdRestart->setForegroundColor(gui_foreground_color);
 	cmdRestart->setId("Restart");
 	cmdRestart->addActionListener(mainButtonActionListener);
 
@@ -1075,12 +1082,14 @@ void gui_widgets_init()
 		cmdStart->setCaption("Resume");
 	cmdStart->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdStart->setBaseColor(gui_base_color);
+	cmdStart->setForegroundColor(gui_foreground_color);
 	cmdStart->setId("Start");
 	cmdStart->addActionListener(mainButtonActionListener);
 
 	cmdHelp = new gcn::Button("Help");
 	cmdHelp->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdHelp->setBaseColor(gui_base_color);
+	cmdHelp->setForegroundColor(gui_foreground_color);
 	cmdHelp->setId("Help");
 	cmdHelp->addActionListener(mainButtonActionListener);
 
@@ -1092,12 +1101,14 @@ void gui_widgets_init()
 	selectors->setBorderSize(0);
 	selectors->setBaseColor(gui_selector_inactive_color);
 	selectors->setBackgroundColor(gui_base_color);
+	selectors->setForegroundColor(gui_foreground_color);
 
 	constexpr auto selectorScrollAreaWidth = SELECTOR_WIDTH + 2;
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
 	selectorsScrollArea->setBaseColor(gui_selector_inactive_color);
 	selectorsScrollArea->setBackgroundColor(gui_selector_inactive_color);
+	selectorsScrollArea->setForegroundColor(gui_foreground_color);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setBorderSize(1);
 	
@@ -1117,6 +1128,7 @@ void gui_widgets_init()
 		categories[i].panel->setId(categories[i].category);
 		categories[i].panel->setSize(GUI_WIDTH - panelStartX - DISTANCE_BORDER, workAreaHeight);
 		categories[i].panel->setBaseColor(gui_base_color);
+		categories[i].panel->setForegroundColor(gui_foreground_color);
 		categories[i].panel->setBorderSize(1);
 		categories[i].panel->setVisible(false);
 			

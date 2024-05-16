@@ -47,6 +47,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	wndShowHelp->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
 	wndShowHelp->setBaseColor(gui_base_color);
 	wndShowHelp->setBackgroundColor(gui_base_color);
+	wndShowHelp->setForegroundColor(gui_foreground_color);
 	wndShowHelp->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	showHelpActionListener = new ShowHelpActionListener();
@@ -62,6 +63,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	lstHelp->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	lstHelp->setBaseColor(gui_base_color);
 	lstHelp->setBackgroundColor(gui_base_color);
+	lstHelp->setForegroundColor(gui_foreground_color);
 	lstHelp->setSelectionColor(gui_selection_color);
 	lstHelp->setWrappingEnabled(true);
 
@@ -73,6 +75,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	scrAreaHelp->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaHelp->setBaseColor(gui_base_color);
 	scrAreaHelp->setBackgroundColor(gui_base_color);
+	scrAreaHelp->setForegroundColor(gui_foreground_color);
 	scrAreaHelp->setSelectionColor(gui_selection_color);
 
 	cmdOK = new gcn::Button("Ok");
@@ -80,6 +83,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->addActionListener(showHelpActionListener);
 
 	wndShowHelp->add(scrAreaHelp, DISTANCE_BORDER, DISTANCE_BORDER);

@@ -224,6 +224,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkVkEnabled->setId("chkVkEnabled");
 	chkVkEnabled->setBaseColor(gui_base_color);
 	chkVkEnabled->setBackgroundColor(gui_textbox_background_color);
+	chkVkEnabled->setForegroundColor(gui_foreground_color);
 	chkVkEnabled->addActionListener(vkEnabledActionListener);
 
 	hiresChkActionListener = new HiresCheckboxActionListener();
@@ -231,6 +232,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkVkHires->setId("chkVkHires");
 	chkVkHires->setBaseColor(gui_base_color);
 	chkVkHires->setBackgroundColor(gui_textbox_background_color);
+	chkVkHires->setForegroundColor(gui_foreground_color);
 	chkVkHires->addActionListener(hiresChkActionListener);
 
 	exitChkActionListener = new ExitCheckboxActionListener();
@@ -238,6 +240,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkVkExit->setId("chkVkExit");
 	chkVkExit->setBaseColor(gui_base_color);
 	chkVkExit->setBackgroundColor(gui_textbox_background_color);
+	chkVkExit->setForegroundColor(gui_foreground_color);
 	chkVkExit->addActionListener(exitChkActionListener);
 
 	transparencySldActionListener = new TransparencySliderActionListener();
@@ -246,6 +249,8 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	sldVkTransparency = new gcn::Slider(0, 100);
 	sldVkTransparency->setSize(100, SLIDER_HEIGHT);
 	sldVkTransparency->setBaseColor(gui_base_color);
+	sldVkTransparency->setBackgroundColor(gui_textbox_background_color);
+	sldVkTransparency->setForegroundColor(gui_foreground_color);
 	sldVkTransparency->setMarkerLength(20);
 	sldVkTransparency->setStepLength(1);
 	sldVkTransparency->setId("sldVkTransparency");
@@ -261,6 +266,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	cboVkLanguage->setSize(120, cboVkLanguage->getHeight());
 	cboVkLanguage->setBaseColor(gui_base_color);
 	cboVkLanguage->setBackgroundColor(gui_textbox_background_color);
+	cboVkLanguage->setForegroundColor(gui_foreground_color);
 	cboVkLanguage->setSelectionColor(gui_selection_color);
 	cboVkLanguage->setId("cboVkLanguage");
 	cboVkLanguage->setListModel(languageListModel);
@@ -274,6 +280,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	cboVkStyle->setSize(120, cboVkStyle->getHeight());
 	cboVkStyle->setBaseColor(gui_base_color);
 	cboVkStyle->setBackgroundColor(gui_textbox_background_color);
+	cboVkStyle->setForegroundColor(gui_foreground_color);
 	cboVkStyle->setSelectionColor(gui_selection_color);
 	cboVkStyle->setId("cboVkStyle");
 	cboVkStyle->setListModel(styleListModel);
@@ -288,13 +295,16 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	txtVkSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
 	txtVkSetHotkey->setBaseColor(gui_base_color);
 	txtVkSetHotkey->setBackgroundColor(gui_textbox_background_color);
+	txtVkSetHotkey->setForegroundColor(gui_foreground_color);
 	cmdVkSetHotkey = new gcn::Button("...");
 	cmdVkSetHotkey->setId("cmdVkSetHotkey");
 	cmdVkSetHotkey->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdVkSetHotkey->setBaseColor(gui_base_color);
+	cmdVkSetHotkey->setForegroundColor(gui_foreground_color);
 	cmdVkSetHotkey->addActionListener(vkHotkeyActionListener);
 	cmdVkSetHotkeyClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 	cmdVkSetHotkeyClear->setBaseColor(gui_base_color);
+	cmdVkSetHotkeyClear->setForegroundColor(gui_foreground_color);
 	cmdVkSetHotkeyClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdVkSetHotkeyClear->setId("cmdVkSetHotkeyClear");
 	cmdVkSetHotkeyClear->addActionListener(vkHotkeyActionListener);
@@ -303,6 +313,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkRetroArchVkbd->setId("chkRetroArchVkbd");
 	chkRetroArchVkbd->setBaseColor(gui_base_color);
 	chkRetroArchVkbd->setBackgroundColor(gui_textbox_background_color);
+	chkRetroArchVkbd->setForegroundColor(gui_foreground_color);
 	chkRetroArchVkbd->addActionListener(vkHotkeyActionListener);
 
 	int x = DISTANCE_BORDER;

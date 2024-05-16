@@ -197,10 +197,12 @@ static void InitControllerMap()
 	wndControllerMap->setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 	wndControllerMap->setPosition((GUI_WIDTH - SCREEN_WIDTH) / 2, (GUI_HEIGHT - SCREEN_HEIGHT) / 2);
 	wndControllerMap->setBaseColor(gui_base_color);
+	wndControllerMap->setForegroundColor(gui_foreground_color);
 	wndControllerMap->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	txtInformation = new gcn::TextBox(info_text);
 	txtInformation->setBackgroundColor(gui_base_color);
+	txtInformation->setForegroundColor(gui_foreground_color);
 	txtInformation->setEditable(false);
 
 	lblMessage = new gcn::Label("Press: ");

@@ -45,6 +45,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	wndShowDiskInfo->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndShowDiskInfo->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
 	wndShowDiskInfo->setBaseColor(gui_base_color);
+	wndShowDiskInfo->setForegroundColor(gui_foreground_color);
 	wndShowDiskInfo->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	showDiskInfoActionListener = new ShowDiskInfoActionListener();
@@ -60,6 +61,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	lstInfo->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	lstInfo->setBaseColor(gui_base_color);
 	lstInfo->setBackgroundColor(gui_textbox_background_color);
+	lstInfo->setForegroundColor(gui_foreground_color);
 	lstInfo->setSelectionColor(gui_selection_color);
 	lstInfo->setWrappingEnabled(true);
 
@@ -71,6 +73,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	scrAreaInfo->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaInfo->setBaseColor(gui_base_color);
 	scrAreaInfo->setBackgroundColor(gui_textbox_background_color);
+	scrAreaInfo->setForegroundColor(gui_foreground_color);
 	scrAreaInfo->setSelectionColor(gui_selection_color);
 
 	cmdOK = new gcn::Button("Ok");
@@ -78,6 +81,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->addActionListener(showDiskInfoActionListener);
 
 	wndShowDiskInfo->add(scrAreaInfo, DISTANCE_BORDER, DISTANCE_BORDER);

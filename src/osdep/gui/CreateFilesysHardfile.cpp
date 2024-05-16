@@ -85,6 +85,7 @@ static void InitCreateFilesysHardfile()
 	wndCreateFilesysHardfile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndCreateFilesysHardfile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
 	wndCreateFilesysHardfile->setBaseColor(gui_base_color);
+	wndCreateFilesysHardfile->setForegroundColor(gui_foreground_color);
 	wndCreateFilesysHardfile->setCaption("Create hardfile");
 	wndCreateFilesysHardfile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -95,6 +96,7 @@ static void InitCreateFilesysHardfile()
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->setId("cmdCreateHdfOK");
 	cmdOK->addActionListener(createFilesysHardfileActionListener);
 
@@ -103,6 +105,7 @@ static void InitCreateFilesysHardfile()
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_base_color);
+	cmdCancel->setForegroundColor(gui_foreground_color);
 	cmdCancel->setId("cmdCreateHdfCancel");
 	cmdCancel->addActionListener(createFilesysHardfileActionListener);
 
@@ -113,10 +116,12 @@ static void InitCreateFilesysHardfile()
 	txtDevice->setSize(80, TEXTFIELD_HEIGHT);
 	txtDevice->setBaseColor(gui_base_color);
 	txtDevice->setBackgroundColor(gui_textbox_background_color);
+	txtDevice->setForegroundColor(gui_foreground_color);
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setBaseColor(gui_base_color);
 	chkAutoboot->setBackgroundColor(gui_textbox_background_color);
+	chkAutoboot->setForegroundColor(gui_foreground_color);
 	chkAutoboot->setId("chkCreateHdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
@@ -126,6 +131,7 @@ static void InitCreateFilesysHardfile()
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
 	txtBootPri->setBaseColor(gui_base_color);
 	txtBootPri->setBackgroundColor(gui_textbox_background_color);
+	txtBootPri->setForegroundColor(gui_foreground_color);
 
 	lblSize = new gcn::Label("Size (MB):");
 	lblSize->setAlignment(gcn::Graphics::RIGHT);
@@ -133,10 +139,12 @@ static void InitCreateFilesysHardfile()
 	txtSize->setSize(60, TEXTFIELD_HEIGHT);
 	txtSize->setBaseColor(gui_base_color);
 	txtSize->setBackgroundColor(gui_textbox_background_color);
+	txtSize->setForegroundColor(gui_foreground_color);
 
 	chkDynamic = new gcn::CheckBox("Dynamic VHD", true);
 	chkDynamic->setBaseColor(gui_base_color);
 	chkDynamic->setBackgroundColor(gui_textbox_background_color);
+	chkDynamic->setForegroundColor(gui_foreground_color);
 	chkDynamic->setId("chkDynamic");
 
 	lblPath = new gcn::Label("Path:");
@@ -146,10 +154,12 @@ static void InitCreateFilesysHardfile()
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtPath->setBaseColor(gui_base_color);
 	txtPath->setBackgroundColor(gui_textbox_background_color);
+	txtPath->setForegroundColor(gui_foreground_color);
 
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdPath->setBaseColor(gui_base_color);
+	cmdPath->setForegroundColor(gui_foreground_color);
 	cmdPath->setId("cmdCreateHdfPath");
 	cmdPath->addActionListener(createFilesysHardfileActionListener);
 

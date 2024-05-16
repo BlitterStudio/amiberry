@@ -217,6 +217,7 @@ void InitPanelROM(const config_category& category)
 	cboMainROM->setSize(textFieldWidth, cboMainROM->getHeight());
 	cboMainROM->setBaseColor(gui_base_color);
 	cboMainROM->setBackgroundColor(gui_textbox_background_color);
+	cboMainROM->setForegroundColor(gui_foreground_color);
 	cboMainROM->setSelectionColor(gui_selection_color);
 	cboMainROM->setId("cboMainROM");
 	cboMainROM->addActionListener(mainROMActionListener);
@@ -224,6 +225,7 @@ void InitPanelROM(const config_category& category)
 	cmdMainROM->setId("MainROM");
 	cmdMainROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdMainROM->setBaseColor(gui_base_color);
+	cmdMainROM->setForegroundColor(gui_foreground_color);
 	cmdMainROM->addActionListener(romButtonActionListener);
 
 	lblExtROM = new gcn::Label("Extended ROM File:");
@@ -231,6 +233,7 @@ void InitPanelROM(const config_category& category)
 	cboExtROM->setSize(textFieldWidth, cboExtROM->getHeight());
 	cboExtROM->setBaseColor(gui_base_color);
 	cboExtROM->setBackgroundColor(gui_textbox_background_color);
+	cboExtROM->setForegroundColor(gui_foreground_color);
 	cboExtROM->setSelectionColor(gui_selection_color);
 	cboExtROM->setId("cboExtROM");
 	cboExtROM->addActionListener(extROMActionListener);
@@ -238,6 +241,7 @@ void InitPanelROM(const config_category& category)
 	cmdExtROM->setId("ExtROM");
 	cmdExtROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdExtROM->setBaseColor(gui_base_color);
+	cmdExtROM->setForegroundColor(gui_foreground_color);
 	cmdExtROM->addActionListener(romButtonActionListener);
 
 	lblCartROM = new gcn::Label("Cartridge ROM File:");
@@ -245,6 +249,7 @@ void InitPanelROM(const config_category& category)
 	cboCartROM->setSize(textFieldWidth, cboCartROM->getHeight());
 	cboCartROM->setBaseColor(gui_base_color);
 	cboCartROM->setBackgroundColor(gui_textbox_background_color);
+	cboCartROM->setForegroundColor(gui_foreground_color);
 	cboCartROM->setSelectionColor(gui_selection_color);
 	cboCartROM->setId("cboCartROM");
 	cboCartROM->addActionListener(cartROMActionListener);
@@ -252,13 +257,15 @@ void InitPanelROM(const config_category& category)
 	cmdCartROM->setId("CartROM");
 	cmdCartROM->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdCartROM->setBaseColor(gui_base_color);
+	cmdCartROM->setForegroundColor(gui_foreground_color);
 	cmdCartROM->addActionListener(romButtonActionListener);
 
 	lblUAEROM = new gcn::Label("Advanced UAE expansion board/Boot ROM:");
 	cboUAEROM = new gcn::DropDown(&uaeList);
 	cboUAEROM->setSize(textFieldWidth, cboUAEROM->getHeight());
 	cboUAEROM->setBaseColor(gui_base_color);
-	cboUAEROM->setBackgroundColor(gui_textbox_background_color);
+	cboUAEROM->setBackgroundColor(gui_textbox_background_color);\
+	cboUAEROM->setForegroundColor(gui_foreground_color);
 	cboUAEROM->setSelectionColor(gui_selection_color);
 	cboUAEROM->setId("cboUAEROM");
 	cboUAEROM->addActionListener(romButtonActionListener);
@@ -267,6 +274,7 @@ void InitPanelROM(const config_category& category)
 	chkShapeShifter->setId("chkShapeShifter");
 	chkShapeShifter->setBaseColor(gui_base_color);
 	chkShapeShifter->setBackgroundColor(gui_textbox_background_color);
+	chkShapeShifter->setForegroundColor(gui_foreground_color);
 	chkShapeShifter->addActionListener(romButtonActionListener);
 
 	int posY = DISTANCE_BORDER;
