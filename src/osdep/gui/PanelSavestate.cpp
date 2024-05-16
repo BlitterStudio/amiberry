@@ -126,8 +126,8 @@ void InitPanelSavestate(const config_category& category)
 	for (int i = 0; i < 15; ++i) {
 		radioButtons[i] = new gcn::RadioButton(std::to_string(i), "radiostategroup");
 		radioButtons[i]->setId("State" + std::to_string(i));
-		radioButtons[i]->setBaseColor(gui_baseCol);
-		radioButtons[i]->setBackgroundColor(colTextboxBackground);
+		radioButtons[i]->setBaseColor(gui_base_color);
+		radioButtons[i]->setBackgroundColor(gui_textbox_background_color);
 		radioButtons[i]->addActionListener(savestateActionListener);
 	}
 
@@ -142,23 +142,23 @@ void InitPanelSavestate(const config_category& category)
 	grpNumber->setMovable(false);
 	grpNumber->setSize(BUTTON_WIDTH - 20, TITLEBAR_HEIGHT + pos_y);
 	grpNumber->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpNumber->setBaseColor(gui_baseCol);
+	grpNumber->setBaseColor(gui_base_color);
 
 	grpScreenshot = new gcn::Window("State screenshot");
 	grpScreenshot->setMovable(false);
 	grpScreenshot->setSize(category.panel->getWidth() - grpNumber->getWidth() - DISTANCE_BORDER * 2 - DISTANCE_NEXT_X, grpNumber->getHeight());
 	grpScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpScreenshot->setBaseColor(gui_baseCol);
+	grpScreenshot->setBaseColor(gui_base_color);
 
 	cmdLoadState = new gcn::Button("Load State");
 	cmdLoadState->setSize(BUTTON_WIDTH + 10, BUTTON_HEIGHT);
-	cmdLoadState->setBaseColor(gui_baseCol);
+	cmdLoadState->setBaseColor(gui_base_color);
 	cmdLoadState->setId("cmdLoadState");
 	cmdLoadState->addActionListener(savestateActionListener);
 
 	cmdSaveState = new gcn::Button("Save State");
 	cmdSaveState->setSize(BUTTON_WIDTH + 10, BUTTON_HEIGHT);
-	cmdSaveState->setBaseColor(gui_baseCol);
+	cmdSaveState->setBaseColor(gui_base_color);
 	cmdSaveState->setId("cmdSaveState");
 	cmdSaveState->addActionListener(savestateActionListener);
 

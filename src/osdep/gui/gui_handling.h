@@ -172,12 +172,12 @@ extern gcn::Container* gui_top;
 
 // GUI Colors
 extern amiberry_gui_theme gui_theme;
-extern gcn::Color gui_baseCol;
-extern gcn::Color colTextboxBackground;
-extern gcn::Color colSelectorInactive;
-extern gcn::Color colSelectorActive;
+extern gcn::Color gui_base_color;
+extern gcn::Color gui_textbox_background_color;
+extern gcn::Color gui_selector_inactive_color;
+extern gcn::Color gui_selector_active_color;
 extern gcn::Color gui_selection_color;
-extern gcn::Color font_color;
+extern gcn::Color gui_font_color;
 
 extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;

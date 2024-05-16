@@ -151,8 +151,8 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 			auto dropdown = new gcn::DropDown(&custom_list[custom_list_index]);
 			dropdown->setId("cboCustomFieldList_" + std::to_string(i));
 			dropdown->setSize(textfield_width, dropdown->getHeight());
-			dropdown->setBaseColor(gui_baseCol);
-			dropdown->setBackgroundColor(colTextboxBackground);
+			dropdown->setBaseColor(gui_base_color);
+			dropdown->setBackgroundColor(gui_textbox_background_color);
 			dropdown->setSelectionColor(gui_selection_color);
 			dropdown->addActionListener(showCustomFieldsActionListener);
 			dropdown->setPosition(pos_x2, pos_y);
@@ -195,7 +195,7 @@ static void InitShowCustomFields()
 	wndShowCustomFields = new gcn::Window("Custom Fields");
 	wndShowCustomFields->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndShowCustomFields->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndShowCustomFields->setBaseColor(gui_baseCol);
+	wndShowCustomFields->setBaseColor(gui_base_color);
 	wndShowCustomFields->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	showCustomFieldsActionListener = new ShowCustomFieldsActionListener();
@@ -213,7 +213,7 @@ static void InitShowCustomFields()
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol);
+	cmdOK->setBaseColor(gui_base_color);
 	cmdOK->addActionListener(showCustomFieldsActionListener);
 
 	wndShowCustomFields->add(cmdOK);

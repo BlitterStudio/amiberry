@@ -205,21 +205,21 @@ void InitPanelWHDLoad(const struct config_category& category)
 	lblWhdload = new gcn::Label("WHDLoad auto-config:");
 	cboWhdload = new gcn::DropDown(&whdloadFileList);
 	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
-	cboWhdload->setBaseColor(gui_baseCol);
-	cboWhdload->setBackgroundColor(colTextboxBackground);
+	cboWhdload->setBaseColor(gui_base_color);
+	cboWhdload->setBackgroundColor(gui_textbox_background_color);
 	cboWhdload->setSelectionColor(gui_selection_color);
 	cboWhdload->setId("cboWhdload");
 	cboWhdload->addActionListener(whdloadActionListener);
 
 	cmdWhdloadEject = new gcn::Button("Eject");
 	cmdWhdloadEject->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
-	cmdWhdloadEject->setBaseColor(gui_baseCol);
+	cmdWhdloadEject->setBaseColor(gui_base_color);
 	cmdWhdloadEject->setId("cmdWhdloadEject");
 	cmdWhdloadEject->addActionListener(whdloadActionListener);
 
 	cmdWhdloadSelect = new gcn::Button("Select file");
 	cmdWhdloadSelect->setSize(BUTTON_WIDTH + 10, SMALL_BUTTON_HEIGHT);
-	cmdWhdloadSelect->setBaseColor(gui_baseCol);
+	cmdWhdloadSelect->setBaseColor(gui_base_color);
 	cmdWhdloadSelect->setId("cmdWhdloadSelect");
 	cmdWhdloadSelect->addActionListener(whdloadActionListener);
 
@@ -228,34 +228,34 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtGameName = new gcn::TextField();
 	txtGameName->setId("txtGameName");
 	txtGameName->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtGameName->setBaseColor(gui_baseCol);
-	txtGameName->setBackgroundColor(colTextboxBackground);
+	txtGameName->setBaseColor(gui_base_color);
+	txtGameName->setBackgroundColor(gui_textbox_background_color);
 
 	lblVariantUuid = new gcn::Label("UUID:");
 	txtVariantUuid = new gcn::TextField();
 	txtVariantUuid->setId("txtVariantUuid");
 	txtVariantUuid->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtVariantUuid->setBaseColor(gui_baseCol);
-	txtVariantUuid->setBackgroundColor(colTextboxBackground);
+	txtVariantUuid->setBaseColor(gui_base_color);
+	txtVariantUuid->setBackgroundColor(gui_textbox_background_color);
 
 	lblSlaveDefault = new gcn::Label("Slave Default:");
 	txtSlaveDefault = new gcn::TextField();
 	txtSlaveDefault->setId("txtSlaveDefault");
 	txtSlaveDefault->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtSlaveDefault->setBaseColor(gui_baseCol);
-	txtSlaveDefault->setBackgroundColor(colTextboxBackground);
+	txtSlaveDefault->setBaseColor(gui_base_color);
+	txtSlaveDefault->setBackgroundColor(gui_textbox_background_color);
 
 	chkSlaveLibraries = new gcn::CheckBox("Slave Libraries");
 	chkSlaveLibraries->setId("chkSlaveLibraries");
-	chkSlaveLibraries->setBaseColor(gui_baseCol);
-	chkSlaveLibraries->setBackgroundColor(colTextboxBackground);
+	chkSlaveLibraries->setBaseColor(gui_base_color);
+	chkSlaveLibraries->setBackgroundColor(gui_textbox_background_color);
 
 	lblSlaves = new gcn::Label("Slaves:");
 	cboSlaves = new gcn::DropDown(&slaves_list);
 	cboSlaves->setId("cboSlaves");
 	cboSlaves->setSize(textfield_width, cboSlaves->getHeight());
-	cboSlaves->setBaseColor(gui_baseCol);
-	cboSlaves->setBackgroundColor(colTextboxBackground);
+	cboSlaves->setBaseColor(gui_base_color);
+	cboSlaves->setBackgroundColor(gui_textbox_background_color);
 	cboSlaves->setSelectionColor(gui_selection_color);
 	cboSlaves->addActionListener(whdloadActionListener);
 
@@ -263,12 +263,12 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtSlaveDataPath = new gcn::TextField();
 	txtSlaveDataPath->setId("txtSlaveDataPath");
 	txtSlaveDataPath->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtSlaveDataPath->setBaseColor(gui_baseCol);
-	txtSlaveDataPath->setBackgroundColor(colTextboxBackground);
+	txtSlaveDataPath->setBaseColor(gui_base_color);
+	txtSlaveDataPath->setBackgroundColor(gui_textbox_background_color);
 
 	cmdCustomFields = new gcn::Button("Custom Fields");
 	cmdCustomFields->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
-	cmdCustomFields->setBaseColor(gui_baseCol);
+	cmdCustomFields->setBaseColor(gui_base_color);
 	cmdCustomFields->setId("cmdCustomFields");
 	cmdCustomFields->addActionListener(whdloadActionListener);
 
@@ -276,36 +276,36 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtCustomText = new gcn::TextField();
 	txtCustomText->setId("txtCustomText");
 	txtCustomText->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtCustomText->setBaseColor(gui_baseCol);
-	txtCustomText->setBackgroundColor(colTextboxBackground);
+	txtCustomText->setBaseColor(gui_base_color);
+	txtCustomText->setBackgroundColor(gui_textbox_background_color);
 
 	chkButtonWait = new gcn::CheckBox("Button Wait");
 	chkButtonWait->setId("chkButtonWait");
-	chkButtonWait->setBaseColor(gui_baseCol);
-	chkButtonWait->setBackgroundColor(colTextboxBackground);
+	chkButtonWait->setBaseColor(gui_base_color);
+	chkButtonWait->setBackgroundColor(gui_textbox_background_color);
 	chkButtonWait->addActionListener(whdloadActionListener);
 	chkShowSplash = new gcn::CheckBox("Show Splash");
 	chkShowSplash->setId("chkShowSplash");
-	chkShowSplash->setBaseColor(gui_baseCol);
-	chkShowSplash->setBackgroundColor(colTextboxBackground);
+	chkShowSplash->setBaseColor(gui_base_color);
+	chkShowSplash->setBackgroundColor(gui_textbox_background_color);
 	chkShowSplash->addActionListener(whdloadActionListener);
 
 	lblConfigDelay = new gcn::Label("Config Delay:");
 	txtConfigDelay = new gcn::TextField();
 	txtConfigDelay->setId("txtConfigDelay");
 	txtConfigDelay->setSize(textfield_width, TEXTFIELD_HEIGHT);
-	txtConfigDelay->setBaseColor(gui_baseCol);
-	txtConfigDelay->setBackgroundColor(colTextboxBackground);
+	txtConfigDelay->setBaseColor(gui_base_color);
+	txtConfigDelay->setBackgroundColor(gui_textbox_background_color);
 
 	chkWriteCache = new gcn::CheckBox("Write Cache");
 	chkWriteCache->setId("chkWriteCache");
-	chkWriteCache->setBaseColor(gui_baseCol);
-	chkWriteCache->setBackgroundColor(colTextboxBackground);
+	chkWriteCache->setBaseColor(gui_base_color);
+	chkWriteCache->setBackgroundColor(gui_textbox_background_color);
 	chkWriteCache->addActionListener(whdloadActionListener);
 	chkQuitOnExit = new gcn::CheckBox("Quit on Exit");
 	chkQuitOnExit->setId("chkQuitOnExit");
-	chkQuitOnExit->setBaseColor(gui_baseCol);
-	chkQuitOnExit->setBackgroundColor(colTextboxBackground);
+	chkQuitOnExit->setBaseColor(gui_base_color);
+	chkQuitOnExit->setBackgroundColor(gui_textbox_background_color);
 	chkQuitOnExit->addActionListener(whdloadActionListener);
 
 	constexpr int pos_x1 = DISTANCE_BORDER;
@@ -352,7 +352,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	grpWHDLoadGlobal = new gcn::Window("Global options");
 	grpWHDLoadGlobal->setMovable(false);
 	grpWHDLoadGlobal->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpWHDLoadGlobal->setBaseColor(gui_baseCol);
+	grpWHDLoadGlobal->setBaseColor(gui_base_color);
 
 	pos_y = 10;
 		grpWHDLoadGlobal->add(chkButtonWait, pos_x1, pos_y);
