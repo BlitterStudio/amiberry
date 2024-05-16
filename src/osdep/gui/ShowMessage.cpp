@@ -196,8 +196,11 @@ static void InitShowMessage(const std::string& message)
 		gui_top = new gcn::Container();
 		gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
 		gui_base_color = gui_theme.base_color;
+		gui_foreground_color = gui_theme.foreground_color;
 		gui_font_color = gui_theme.font_color;
 		gui_top->setBaseColor(gui_base_color);
+		gui_top->setBackgroundColor(gui_base_color);
+		gui_top->setForegroundColor(gui_foreground_color);
 		uae_gui->setTop(gui_top);
 	}
 	if (gui_font == nullptr)
@@ -224,12 +227,15 @@ static void InitShowMessage(const std::string& message)
 	wndShowMessage->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndShowMessage->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
 	wndShowMessage->setBaseColor(gui_base_color);
+	wndShowMessage->setBackgroundColor(gui_base_color);
+	wndShowMessage->setForegroundColor(gui_foreground_color);
 	wndShowMessage->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	showMessageActionListener = new ShowMessageActionListener();
 
 	txtMessageText = new gcn::TextBox(message);
 	txtMessageText->setBackgroundColor(gui_base_color);
+	txtMessageText->setForegroundColor(gui_foreground_color);
 	txtMessageText->setEditable(false);
 	lblText1 = new gcn::Label("");
 	lblText1->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER, LABEL_HEIGHT);
@@ -241,6 +247,7 @@ static void InitShowMessage(const std::string& message)
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->addActionListener(showMessageActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
@@ -248,6 +255,7 @@ static void InitShowMessage(const std::string& message)
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_base_color);
+	cmdCancel->setForegroundColor(gui_foreground_color);
 	cmdCancel->addActionListener(showMessageActionListener);
 
 	wndShowMessage->add(txtMessageText, DISTANCE_BORDER, DISTANCE_BORDER);

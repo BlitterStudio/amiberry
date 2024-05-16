@@ -147,6 +147,7 @@ static void InitSelectFolder(const std::string& title)
 	wndSelectFolder->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndSelectFolder->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
 	wndSelectFolder->setBaseColor(gui_base_color);
+	wndSelectFolder->setForegroundColor(gui_foreground_color);
 	wndSelectFolder->setCaption(title);
 	wndSelectFolder->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -157,6 +158,7 @@ static void InitSelectFolder(const std::string& title)
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->addActionListener(folderButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
@@ -164,6 +166,7 @@ static void InitSelectFolder(const std::string& title)
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
 	cmdCancel->setBaseColor(gui_base_color);
+	cmdCancel->setForegroundColor(gui_foreground_color);
 	cmdCancel->addActionListener(folderButtonActionListener);
 
 	txtCurrent = new gcn::TextField();
@@ -171,6 +174,7 @@ static void InitSelectFolder(const std::string& title)
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
 	txtCurrent->setBaseColor(gui_base_color);
 	txtCurrent->setBackgroundColor(gui_textbox_background_color);
+	txtCurrent->setForegroundColor(gui_foreground_color);
 	txtCurrent->setEnabled(true);
 	editDirPathActionListener = new EditDirPathActionListener();
 	txtCurrent->addActionListener(editDirPathActionListener);
@@ -181,6 +185,7 @@ static void InitSelectFolder(const std::string& title)
 	lstFolders->setSize(DIALOG_WIDTH - 45, DIALOG_HEIGHT - 108);
 	lstFolders->setBaseColor(gui_base_color);
 	lstFolders->setBackgroundColor(gui_textbox_background_color);
+	lstFolders->setForegroundColor(gui_foreground_color);
 	lstFolders->setSelectionColor(gui_selection_color);
 	lstFolders->setWrappingEnabled(true);
 	lstFolders->addActionListener(listBoxActionListener);
@@ -192,6 +197,7 @@ static void InitSelectFolder(const std::string& title)
 	scrAreaFolders->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFolders->setBaseColor(gui_base_color);
 	scrAreaFolders->setBackgroundColor(gui_textbox_background_color);
+	scrAreaFolders->setForegroundColor(gui_foreground_color);
 	scrAreaFolders->setSelectionColor(gui_selection_color);
 	scrAreaFolders->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
 	scrAreaFolders->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);

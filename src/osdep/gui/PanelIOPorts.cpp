@@ -177,6 +177,7 @@ void InitPanelIO(const config_category& category)
 	cboSampler->setSize(350, cboSampler->getHeight());
 	cboSampler->setBaseColor(gui_base_color);
 	cboSampler->setBackgroundColor(gui_textbox_background_color);
+	cboSampler->setForegroundColor(gui_foreground_color);
 	cboSampler->setSelectionColor(gui_selection_color);
 	cboSampler->setId("cboSampler");
 	cboSampler->addActionListener(ioActionListener);
@@ -185,6 +186,7 @@ void InitPanelIO(const config_category& category)
 	chkSamplerStereo->setId("chkSamplerStereo");
 	chkSamplerStereo->setBaseColor(gui_base_color);
 	chkSamplerStereo->setBackgroundColor(gui_textbox_background_color);
+	chkSamplerStereo->setForegroundColor(gui_foreground_color);
 	chkSamplerStereo->addActionListener(ioActionListener);
 
 	grpParallelPort = new gcn::Window("Parallel Port");
@@ -197,12 +199,14 @@ void InitPanelIO(const config_category& category)
 	grpParallelPort->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpParallelPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSamplerStereo->getY() + chkSamplerStereo->getHeight() + DISTANCE_NEXT_Y * 3);
 	grpParallelPort->setBaseColor(gui_base_color);
+	grpParallelPort->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpParallelPort);
 
 	cboSerialPort = new gcn::DropDown(&serial_ports_list);
 	cboSerialPort->setSize(350, cboSerialPort->getHeight());
 	cboSerialPort->setBaseColor(gui_base_color);
 	cboSerialPort->setBackgroundColor(gui_textbox_background_color);
+	cboSerialPort->setForegroundColor(gui_foreground_color);
 	cboSerialPort->setSelectionColor(gui_selection_color);
 	cboSerialPort->setId("cboSerialPort");
 	cboSerialPort->addActionListener(ioActionListener);
@@ -211,30 +215,35 @@ void InitPanelIO(const config_category& category)
 	chkSerialDirect->setId("chkSerialDirect");
 	chkSerialDirect->setBaseColor(gui_base_color);
 	chkSerialDirect->setBackgroundColor(gui_textbox_background_color);
+	chkSerialDirect->setForegroundColor(gui_foreground_color);
 	chkSerialDirect->addActionListener(ioActionListener);
 
 	chkRTSCTS = new gcn::CheckBox("Host RTS/CTS");
 	chkRTSCTS->setId("chkRTSCTS");
 	chkRTSCTS->setBaseColor(gui_base_color);
 	chkRTSCTS->setBackgroundColor(gui_textbox_background_color);
+	chkRTSCTS->setForegroundColor(gui_foreground_color);
 	chkRTSCTS->addActionListener(ioActionListener);
 
 	chkUaeSerial = new gcn::CheckBox("uaeserial.device");
 	chkUaeSerial->setId("chkUaeSerial");
 	chkUaeSerial->setBaseColor(gui_base_color);
 	chkUaeSerial->setBackgroundColor(gui_textbox_background_color);
+	chkUaeSerial->setForegroundColor(gui_foreground_color);
 	chkUaeSerial->addActionListener(ioActionListener);
 
 	chkSerialStatus = new gcn::CheckBox("Serial status (RTS/CTS/DTR/DTE/CD)");
 	chkSerialStatus->setId("chkSerialStatus");
 	chkSerialStatus->setBaseColor(gui_base_color);
 	chkSerialStatus->setBackgroundColor(gui_textbox_background_color);
+	chkSerialStatus->setForegroundColor(gui_foreground_color);
 	chkSerialStatus->addActionListener(ioActionListener);
 
 	chkSerialStatusRi = new gcn::CheckBox("Serial status: Ring Indicator");
 	chkSerialStatusRi->setId("chkSerialStatusRi");
 	chkSerialStatusRi->setBaseColor(gui_base_color);
 	chkSerialStatusRi->setBackgroundColor(gui_textbox_background_color);
+	chkSerialStatusRi->setForegroundColor(gui_foreground_color);
 	chkSerialStatusRi->addActionListener(ioActionListener);
 
 	grpSerialPort = new gcn::Window("Serial Port");
@@ -251,6 +260,7 @@ void InitPanelIO(const config_category& category)
 	grpSerialPort->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpSerialPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkSerialStatus->getY() + chkSerialStatus->getHeight() + DISTANCE_NEXT_Y * 4);
 	grpSerialPort->setBaseColor(gui_base_color);
+	grpSerialPort->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpSerialPort, DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
 
 	lblMidiOut = new gcn::Label("Out:");
@@ -259,6 +269,7 @@ void InitPanelIO(const config_category& category)
 	cboMidiOut->setSize(200, cboMidiOut->getHeight());
 	cboMidiOut->setBaseColor(gui_base_color);
 	cboMidiOut->setBackgroundColor(gui_textbox_background_color);
+	cboMidiOut->setForegroundColor(gui_foreground_color);
 	cboMidiOut->setSelectionColor(gui_selection_color);
 	cboMidiOut->setId("cboMidiOut");
 	cboMidiOut->addActionListener(ioActionListener);
@@ -269,6 +280,7 @@ void InitPanelIO(const config_category& category)
 	cboMidiIn->setSize(200, cboMidiIn->getHeight());
 	cboMidiIn->setBaseColor(gui_base_color);
 	cboMidiIn->setBackgroundColor(gui_textbox_background_color);
+	cboMidiIn->setForegroundColor(gui_foreground_color);
 	cboMidiIn->setSelectionColor(gui_selection_color);
 	cboMidiIn->setId("cboMidiIn");
 	cboMidiIn->addActionListener(ioActionListener);
@@ -277,6 +289,7 @@ void InitPanelIO(const config_category& category)
 	chkMidiRoute->setId("chkMidiRoute");
 	chkMidiRoute->setBaseColor(gui_base_color);
 	chkMidiRoute->setBackgroundColor(gui_textbox_background_color);
+	chkMidiRoute->setForegroundColor(gui_foreground_color);
 	chkMidiRoute->addActionListener(ioActionListener);
 
 	grpMidi = new gcn::Window("MIDI");
@@ -291,12 +304,14 @@ void InitPanelIO(const config_category& category)
 	grpMidi->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpMidi->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkMidiRoute->getY() + chkMidiRoute->getHeight() + DISTANCE_NEXT_Y * 4);
 	grpMidi->setBaseColor(gui_base_color);
+	grpMidi->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpMidi, DISTANCE_BORDER, grpSerialPort->getY() + grpSerialPort->getHeight() + DISTANCE_NEXT_Y);
 
 	cboProtectionDongle = new gcn::DropDown(&dongle_list);
 	cboProtectionDongle->setSize(350, cboProtectionDongle->getHeight());
 	cboProtectionDongle->setBaseColor(gui_base_color);
 	cboProtectionDongle->setBackgroundColor(gui_textbox_background_color);
+	cboProtectionDongle->setForegroundColor(gui_foreground_color);
 	cboProtectionDongle->setSelectionColor(gui_selection_color);
 	cboProtectionDongle->setId("cboProtectionDongle");
 	cboProtectionDongle->addActionListener(ioActionListener);
@@ -308,6 +323,7 @@ void InitPanelIO(const config_category& category)
 	grpDongle->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpDongle->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, category.panel->getHeight() - grpParallelPort->getHeight() - grpSerialPort->getHeight() - grpMidi->getHeight() - TITLEBAR_HEIGHT * 3);
 	grpDongle->setBaseColor(gui_base_color);
+	grpDongle->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpDongle, DISTANCE_BORDER, grpMidi->getY() + grpMidi->getHeight() + DISTANCE_NEXT_Y);
 
 	RefreshPanelIO();

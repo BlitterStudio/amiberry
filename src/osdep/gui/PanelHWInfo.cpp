@@ -137,6 +137,7 @@ void InitPanelHWInfo(const config_category& category)
 	grpHwInfo = new gcn::Window("Hardware Information");
 	grpHwInfo->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpHwInfo->setBaseColor(gui_base_color);
+	grpHwInfo->setForegroundColor(gui_foreground_color);
 	grpHwInfo->setTitleBarHeight(1);
 
 	for (col = 0; col < COL_COUNT; ++col)
@@ -147,6 +148,7 @@ void InitPanelHWInfo(const config_category& category)
 		listEntry[row] = new gcn::Container();
 		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, TEXTFIELD_HEIGHT + 4);
 		listEntry[row]->setBaseColor(gui_base_color);
+		listEntry[row]->setForegroundColor(gui_foreground_color);
 		listEntry[row]->setBorderSize(0);
 
 		for (col = 0; col < COL_COUNT; ++col)
@@ -156,6 +158,7 @@ void InitPanelHWInfo(const config_category& category)
 			listCells[row][col]->setEnabled(false);
 			listCells[row][col]->setBaseColor(gui_base_color);
 			listCells[row][col]->setBackgroundColor(gui_textbox_background_color);
+			listCells[row][col]->setForegroundColor(gui_foreground_color);
 		}
 	}
 
@@ -182,6 +185,7 @@ void InitPanelHWInfo(const config_category& category)
 
 	scrlHwInfo = new gcn::ScrollArea(grpHwInfo);
 	scrlHwInfo->setBackgroundColor(gui_base_color);
+	scrlHwInfo->setForegroundColor(gui_foreground_color);
 	scrlHwInfo->setSelectionColor(gui_selection_color);
 	scrlHwInfo->setBaseColor(gui_base_color);
 	scrlHwInfo->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);

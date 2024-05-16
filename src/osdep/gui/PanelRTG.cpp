@@ -176,6 +176,7 @@ void InitPanelRTG(const config_category& category)
 	cboBoard->setSize(300, cboBoard->getHeight());
 	cboBoard->setBaseColor(gui_base_color);
 	cboBoard->setBackgroundColor(gui_textbox_background_color);
+	cboBoard->setForegroundColor(gui_foreground_color);
 	cboBoard->setSelectionColor(gui_selection_color);
 	cboBoard->setId("cboBoard");
 	cboBoard->addActionListener(rtg_action_listener);
@@ -185,6 +186,8 @@ void InitPanelRTG(const config_category& category)
 	sldGfxmem = new gcn::Slider(0, 8);
 	sldGfxmem->setSize(cboBoard->getWidth() - lblGfxmem->getWidth() - lblGfxsize->getWidth(), SLIDER_HEIGHT);
 	sldGfxmem->setBaseColor(gui_base_color);
+	sldGfxmem->setBackgroundColor(gui_textbox_background_color);
+	sldGfxmem->setForegroundColor(gui_foreground_color);
 	sldGfxmem->setMarkerLength(marker_length);
 	sldGfxmem->setStepLength(1);
 	sldGfxmem->setId("Gfxmem");
@@ -194,42 +197,49 @@ void InitPanelRTG(const config_category& category)
 	chkRtgMatchDepth->setId("chkRtgMatchDepth");
 	chkRtgMatchDepth->setBaseColor(gui_base_color);
 	chkRtgMatchDepth->setBackgroundColor(gui_textbox_background_color);
+	chkRtgMatchDepth->setForegroundColor(gui_foreground_color);
 	chkRtgMatchDepth->addActionListener(rtg_action_listener);
 
 	chkRtgAutoscale = new gcn::CheckBox("Scale if smaller than display size setting");
 	chkRtgAutoscale->setId("chkRtgAutoscale");
 	chkRtgAutoscale->setBaseColor(gui_base_color);
 	chkRtgAutoscale->setBackgroundColor(gui_textbox_background_color);
+	chkRtgAutoscale->setForegroundColor(gui_foreground_color);
 	chkRtgAutoscale->addActionListener(rtg_action_listener);
 
 	chkRtgAllowScaling = new gcn::CheckBox("Always scale in windowed mode");
 	chkRtgAllowScaling->setId("chkRtgAllowScaling");
 	chkRtgAllowScaling->setBaseColor(gui_base_color);
 	chkRtgAllowScaling->setBackgroundColor(gui_textbox_background_color);
+	chkRtgAllowScaling->setForegroundColor(gui_foreground_color);
 	chkRtgAllowScaling->addActionListener(rtg_action_listener);
 
 	chkRtgAlwaysCenter = new gcn::CheckBox("Always center");
 	chkRtgAlwaysCenter->setId("chkRtgAlwaysCenter");
 	chkRtgAlwaysCenter->setBaseColor(gui_base_color);
 	chkRtgAlwaysCenter->setBackgroundColor(gui_textbox_background_color);
+	chkRtgAlwaysCenter->setForegroundColor(gui_foreground_color);
 	chkRtgAlwaysCenter->addActionListener(rtg_action_listener);
 
 	chkRtgHardwareInterrupt = new gcn::CheckBox("Hardware vertical blank interrupt");
 	chkRtgHardwareInterrupt->setId("chkRtgHardwareInterrupt");
 	chkRtgHardwareInterrupt->setBaseColor(gui_base_color);
 	chkRtgHardwareInterrupt->setBackgroundColor(gui_textbox_background_color);
+	chkRtgHardwareInterrupt->setForegroundColor(gui_foreground_color);
 	chkRtgHardwareInterrupt->addActionListener(rtg_action_listener);
 
 	chkRtgHardwareSprite = new gcn::CheckBox("Hardware sprite emulation");
 	chkRtgHardwareSprite->setId("chkRtgHardwareSprite");
 	chkRtgHardwareSprite->setBaseColor(gui_base_color);
 	chkRtgHardwareSprite->setBackgroundColor(gui_textbox_background_color);
+	chkRtgHardwareSprite->setForegroundColor(gui_foreground_color);
 	chkRtgHardwareSprite->addActionListener(rtg_action_listener);
 
 	chkRtgMultithreaded = new gcn::CheckBox("Multithreaded");
 	chkRtgMultithreaded->setId("chkRtgMultithreaded");
 	chkRtgMultithreaded->setBaseColor(gui_base_color);
 	chkRtgMultithreaded->setBackgroundColor(gui_textbox_background_color);
+	chkRtgMultithreaded->setForegroundColor(gui_foreground_color);
 	chkRtgMultithreaded->addActionListener(rtg_action_listener);
 
 	lblRtgRefreshRate = new gcn::Label("Refresh rate:");
@@ -238,6 +248,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgRefreshRate->setSize(150, cboRtgRefreshRate->getHeight());
 	cboRtgRefreshRate->setBaseColor(gui_base_color);
 	cboRtgRefreshRate->setBackgroundColor(gui_textbox_background_color);
+	cboRtgRefreshRate->setForegroundColor(gui_foreground_color);
 	cboRtgRefreshRate->setSelectionColor(gui_selection_color);
 	cboRtgRefreshRate->setId("cboRtgRefreshRate");
 	cboRtgRefreshRate->addActionListener(rtg_action_listener);
@@ -248,6 +259,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgBufferMode->setSize(150, cboRtgBufferMode->getHeight());
 	cboRtgBufferMode->setBaseColor(gui_base_color);
 	cboRtgBufferMode->setBackgroundColor(gui_textbox_background_color);
+	cboRtgBufferMode->setForegroundColor(gui_foreground_color);
 	cboRtgBufferMode->setSelectionColor(gui_selection_color);
 	cboRtgBufferMode->setId("cboRtgBufferMode");
 	cboRtgBufferMode->addActionListener(rtg_action_listener);
@@ -258,6 +270,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgAspectRatio->setSize(150, cboRtgAspectRatio->getHeight());
 	cboRtgAspectRatio->setBaseColor(gui_base_color);
 	cboRtgAspectRatio->setBackgroundColor(gui_textbox_background_color);
+	cboRtgAspectRatio->setForegroundColor(gui_foreground_color);
 	cboRtgAspectRatio->setSelectionColor(gui_selection_color);
 	cboRtgAspectRatio->setId("cboRtgAspectRatio");
 	cboRtgAspectRatio->addActionListener(rtg_action_listener);
@@ -269,6 +282,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtg16bitModes->setSize(150, cboRtg16bitModes->getHeight());
 	cboRtg16bitModes->setBaseColor(gui_base_color);
 	cboRtg16bitModes->setBackgroundColor(gui_textbox_background_color);
+	cboRtg16bitModes->setForegroundColor(gui_foreground_color);
 	cboRtg16bitModes->setSelectionColor(gui_selection_color);
 	cboRtg16bitModes->setId("cboRtg16bitModes");
 	cboRtg16bitModes->addActionListener(rtg_action_listener);
@@ -277,6 +291,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtg32bitModes->setSize(150, cboRtg32bitModes->getHeight());
 	cboRtg32bitModes->setBaseColor(gui_base_color);
 	cboRtg32bitModes->setBackgroundColor(gui_textbox_background_color);
+	cboRtg32bitModes->setForegroundColor(gui_foreground_color);
 	cboRtg32bitModes->setSelectionColor(gui_selection_color);
 	cboRtg32bitModes->setId("cboRtg32bitModes");
 	cboRtg32bitModes->addActionListener(rtg_action_listener);

@@ -244,10 +244,12 @@ void InitPanelDiskSwapper(const config_category& category)
 		diskSwapperListEntry[row] = new gcn::Container();
 		diskSwapperListEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, SMALL_BUTTON_HEIGHT + 4);
 		diskSwapperListEntry[row]->setBaseColor(gui_base_color);
+		diskSwapperListEntry[row]->setForegroundColor(gui_foreground_color);
 		diskSwapperListEntry[row]->setBorderSize(0);
 
 		cmdDiskSwapperListAdd[row] = new gcn::Button("...");
 		cmdDiskSwapperListAdd[row]->setBaseColor(gui_base_color);
+		cmdDiskSwapperListAdd[row]->setForegroundColor(gui_foreground_color);
 		cmdDiskSwapperListAdd[row]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		snprintf(tmp, 20, "cmdDiskSwapperAdd%d", row);
 		cmdDiskSwapperListAdd[row]->setId(tmp);
@@ -255,6 +257,7 @@ void InitPanelDiskSwapper(const config_category& category)
 
 		cmdDiskSwapperListDelete[row] = new gcn::ImageButton(prefix_with_data_path("delete.png"));
 		cmdDiskSwapperListDelete[row]->setBaseColor(gui_base_color);
+		cmdDiskSwapperListDelete[row]->setForegroundColor(gui_foreground_color);
 		cmdDiskSwapperListDelete[row]->setSize(SMALL_BUTTON_HEIGHT, SMALL_BUTTON_HEIGHT);
 		snprintf(tmp, 20, "cmdDiskSwapperDel%d", row);
 		cmdDiskSwapperListDelete[row]->setId(tmp);
@@ -267,6 +270,7 @@ void InitPanelDiskSwapper(const config_category& category)
 			diskSwapperListCells[row][column]->setEnabled(false);
 			diskSwapperListCells[row][column]->setBaseColor(gui_base_color);
 			diskSwapperListCells[row][column]->setBackgroundColor(gui_textbox_background_color);
+			diskSwapperListCells[row][column]->setForegroundColor(gui_foreground_color);
 			if (column == 0)
 				diskSwapperListCells[row][column]->setText(std::to_string(row + 1));
 		}
@@ -274,6 +278,7 @@ void InitPanelDiskSwapper(const config_category& category)
 		cmdDiskSwapperListDrive[row] = new gcn::Button("");
 		cmdDiskSwapperListDrive[row]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 		cmdDiskSwapperListDrive[row]->setBaseColor(gui_base_color);
+		cmdDiskSwapperListDrive[row]->setForegroundColor(gui_foreground_color);
 		snprintf(tmp, 20, "cmdDiskSwapperDrv%d", row);
 		cmdDiskSwapperListDrive[row]->setId(tmp);
 		cmdDiskSwapperListDrive[row]->addActionListener(diskSwapperDriveActionListener);
@@ -281,6 +286,7 @@ void InitPanelDiskSwapper(const config_category& category)
 
 	cmdDiskSwapperRemoveAll = new gcn::Button("Remove All");
 	cmdDiskSwapperRemoveAll->setBaseColor(gui_base_color);
+	cmdDiskSwapperRemoveAll->setForegroundColor(gui_foreground_color);
 	cmdDiskSwapperRemoveAll->setSize(cmdDiskSwapperRemoveAll->getWidth() + 10, BUTTON_HEIGHT);
 	cmdDiskSwapperRemoveAll->setId("cmdDiskSwapperRemoveAll");
 	cmdDiskSwapperRemoveAll->addActionListener(diskSwapperRemoveAllActionListener);

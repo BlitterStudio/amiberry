@@ -885,6 +885,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSelectCat->setSize(250, cboScsiRomSelectCat->getHeight());
 	cboScsiRomSelectCat->setBaseColor(gui_base_color);
 	cboScsiRomSelectCat->setBackgroundColor(gui_textbox_background_color);
+	cboScsiRomSelectCat->setForegroundColor(gui_foreground_color);
 	cboScsiRomSelectCat->setSelectionColor(gui_selection_color);
 	cboScsiRomSelectCat->setId("cboScsiRomSelectCat");
 	cboScsiRomSelectCat->addActionListener(expansions_action_listener);
@@ -893,6 +894,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSelect->setSize(250, cboScsiRomSelect->getHeight());
 	cboScsiRomSelect->setBaseColor(gui_base_color);
 	cboScsiRomSelect->setBackgroundColor(gui_textbox_background_color);
+	cboScsiRomSelect->setForegroundColor(gui_foreground_color);
 	cboScsiRomSelect->setSelectionColor(gui_selection_color);
 	cboScsiRomSelect->setId("cboScsiRomSelect");
 	cboScsiRomSelect->addActionListener(expansions_action_listener);
@@ -901,6 +903,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSubSelect->setSize(250, cboScsiRomSubSelect->getHeight());
 	cboScsiRomSubSelect->setBaseColor(gui_base_color);
 	cboScsiRomSubSelect->setBackgroundColor(gui_textbox_background_color);
+	cboScsiRomSubSelect->setForegroundColor(gui_foreground_color);
 	cboScsiRomSubSelect->setSelectionColor(gui_selection_color);
 	cboScsiRomSubSelect->setId("cboScsiRomSubSelect");
 	cboScsiRomSubSelect->addActionListener(expansions_action_listener);
@@ -909,12 +912,14 @@ void InitPanelExpansions(const config_category& category)
 	chkScsiRomSelected->setId("chkScsiRomSelected");
 	chkScsiRomSelected->setBaseColor(gui_base_color);
 	chkScsiRomSelected->setBackgroundColor(gui_textbox_background_color);
+	chkScsiRomSelected->setForegroundColor(gui_foreground_color);
 	chkScsiRomSelected->addActionListener(expansions_action_listener);
 
 	cboScsiRomFile = new gcn::DropDown(&scsirom_file_list);
 	cboScsiRomFile->setSize(200, cboScsiRomFile->getHeight());
 	cboScsiRomFile->setBaseColor(gui_base_color);
 	cboScsiRomFile->setBackgroundColor(gui_textbox_background_color);
+	cboScsiRomFile->setForegroundColor(gui_foreground_color);
 	cboScsiRomFile->setSelectionColor(gui_selection_color);
 	cboScsiRomFile->setId("cboScsiRomFile");
 	cboScsiRomFile->addActionListener(expansions_action_listener);
@@ -923,6 +928,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomId->setSize(30, cboScsiRomId->getHeight());
 	cboScsiRomId->setBaseColor(gui_base_color);
 	cboScsiRomId->setBackgroundColor(gui_textbox_background_color);
+	cboScsiRomId->setForegroundColor(gui_foreground_color);
 	cboScsiRomId->setSelectionColor(gui_selection_color);
 	cboScsiRomId->setId("cboScsiRomId");
 	cboScsiRomId->addActionListener(expansions_action_listener);
@@ -931,6 +937,7 @@ void InitPanelExpansions(const config_category& category)
 	cboScsiRomSelectNum->setSize(30, cboScsiRomSelectNum->getHeight());
 	cboScsiRomSelectNum->setBaseColor(gui_base_color);
 	cboScsiRomSelectNum->setBackgroundColor(gui_textbox_background_color);
+	cboScsiRomSelectNum->setForegroundColor(gui_foreground_color);
 	cboScsiRomSelectNum->setSelectionColor(gui_selection_color);
 	cboScsiRomSelectNum->setId("cboScsiRomSelectNum");
 	cboScsiRomSelectNum->addActionListener(expansions_action_listener);
@@ -938,6 +945,7 @@ void InitPanelExpansions(const config_category& category)
 	btnScsiRomChooser = new gcn::Button("...");
 	btnScsiRomChooser->setBaseColor(gui_base_color);
 	btnScsiRomChooser->setBackgroundColor(gui_textbox_background_color);
+	btnScsiRomChooser->setForegroundColor(gui_foreground_color);
 	btnScsiRomChooser->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	btnScsiRomChooser->setId("btnScsiRomChooser");
 	btnScsiRomChooser->addActionListener(expansions_action_listener);
@@ -946,18 +954,21 @@ void InitPanelExpansions(const config_category& category)
 	chkScsiRomFileAutoboot->setId("chkScsiRomFileAutoboot");
 	chkScsiRomFileAutoboot->setBaseColor(gui_base_color);
 	chkScsiRomFileAutoboot->setBackgroundColor(gui_textbox_background_color);
+	chkScsiRomFileAutoboot->setForegroundColor(gui_foreground_color);
 	chkScsiRomFileAutoboot->addActionListener(expansions_action_listener);
 
 	chkScsiRomFilePcmcia = new gcn::CheckBox("PCMCIA inserted");
 	chkScsiRomFilePcmcia->setId("chkScsiRomFilePcmcia");
 	chkScsiRomFilePcmcia->setBaseColor(gui_base_color);
 	chkScsiRomFilePcmcia->setBackgroundColor(gui_textbox_background_color);
+	chkScsiRomFilePcmcia->setForegroundColor(gui_foreground_color);
 	chkScsiRomFilePcmcia->addActionListener(expansions_action_listener);
 	
 	cboExpansionBoardItemSelector = new gcn::DropDown(&expansionboard_itemselector_list);
 	cboExpansionBoardItemSelector->setSize(250, cboExpansionBoardItemSelector->getHeight());
 	cboExpansionBoardItemSelector->setBaseColor(gui_base_color);
 	cboExpansionBoardItemSelector->setBackgroundColor(gui_textbox_background_color);
+	cboExpansionBoardItemSelector->setForegroundColor(gui_foreground_color);
 	cboExpansionBoardItemSelector->setSelectionColor(gui_selection_color);
 	cboExpansionBoardItemSelector->setId("cboExpansionBoardItemSelector");
 	cboExpansionBoardItemSelector->addActionListener(expansions_action_listener);
@@ -967,6 +978,7 @@ void InitPanelExpansions(const config_category& category)
 	cboExpansionBoardSelector->setSize(250, cboExpansionBoardSelector->getHeight());
 	cboExpansionBoardSelector->setBaseColor(gui_base_color);
 	cboExpansionBoardSelector->setBackgroundColor(gui_textbox_background_color);
+	cboExpansionBoardSelector->setForegroundColor(gui_foreground_color);
 	cboExpansionBoardSelector->setSelectionColor(gui_selection_color);
 	cboExpansionBoardSelector->setId("cboExpansionBoardSelector");
 	cboExpansionBoardSelector->addActionListener(expansions_action_listener);
@@ -975,6 +987,7 @@ void InitPanelExpansions(const config_category& category)
 	chkExpansionBoardCheckbox->setId("chkExpansionBoardCheckbox");
 	chkExpansionBoardCheckbox->setBaseColor(gui_base_color);
 	chkExpansionBoardCheckbox->setBackgroundColor(gui_textbox_background_color);
+	chkExpansionBoardCheckbox->setForegroundColor(gui_foreground_color);
 	chkExpansionBoardCheckbox->addActionListener(expansions_action_listener);
 
 	txtExpansionBoardStringBox = new gcn::TextBox();
@@ -982,11 +995,13 @@ void InitPanelExpansions(const config_category& category)
 	txtExpansionBoardStringBox->setId("txtExpansionBoardStringBox");
 	txtExpansionBoardStringBox->setBaseColor(gui_base_color);
 	txtExpansionBoardStringBox->setBackgroundColor(gui_textbox_background_color);
+	txtExpansionBoardStringBox->setForegroundColor(gui_foreground_color);
 	
 	cboCpuBoardType = new gcn::DropDown(&cpuboards_list);
 	cboCpuBoardType->setSize(250, cboCpuBoardType->getHeight());
 	cboCpuBoardType->setBaseColor(gui_base_color);
 	cboCpuBoardType->setBackgroundColor(gui_textbox_background_color);
+	cboCpuBoardType->setForegroundColor(gui_foreground_color);
 	cboCpuBoardType->setSelectionColor(gui_selection_color);
 	cboCpuBoardType->setId("cboCpuBoardType");
 	cboCpuBoardType->addActionListener(expansions_action_listener);
@@ -996,6 +1011,7 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardSubType->setSize(250, cboCpuBoardSubType->getHeight());
 	cboCpuBoardSubType->setBaseColor(gui_base_color);
 	cboCpuBoardSubType->setBackgroundColor(gui_textbox_background_color);
+	cboCpuBoardSubType->setForegroundColor(gui_foreground_color);
 	cboCpuBoardSubType->setSelectionColor(gui_selection_color);
 	cboCpuBoardSubType->setId("cboCpuBoardSubType");
 	cboCpuBoardSubType->addActionListener(expansions_action_listener);
@@ -1005,6 +1021,7 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardRomFile->setSize(250, cboCpuBoardRomFile->getHeight());
 	cboCpuBoardRomFile->setBaseColor(gui_base_color);
 	cboCpuBoardRomFile->setBackgroundColor(gui_textbox_background_color);
+	cboCpuBoardRomFile->setForegroundColor(gui_foreground_color);
 	cboCpuBoardRomFile->setSelectionColor(gui_selection_color);
 	cboCpuBoardRomFile->setId("cboCpuBoardRomFile");
 	cboCpuBoardRomFile->addActionListener(expansions_action_listener);
@@ -1014,6 +1031,7 @@ void InitPanelExpansions(const config_category& category)
 	cboAcceleratorBoardItemSelector->setSize(250, cboAcceleratorBoardItemSelector->getHeight());
 	cboAcceleratorBoardItemSelector->setBaseColor(gui_base_color);
 	cboAcceleratorBoardItemSelector->setBackgroundColor(gui_textbox_background_color);
+	cboAcceleratorBoardItemSelector->setForegroundColor(gui_foreground_color);
 	cboAcceleratorBoardItemSelector->setSelectionColor(gui_selection_color);
 	cboAcceleratorBoardItemSelector->setId("cboAcceleratorBoardItemSelector");
 	cboAcceleratorBoardItemSelector->addActionListener(expansions_action_listener);
@@ -1022,6 +1040,7 @@ void InitPanelExpansions(const config_category& category)
 	cboAcceleratorBoardSelector->setSize(250, cboAcceleratorBoardItemSelector->getHeight());
 	cboAcceleratorBoardSelector->setBaseColor(gui_base_color);
 	cboAcceleratorBoardSelector->setBackgroundColor(gui_textbox_background_color);
+	cboAcceleratorBoardSelector->setForegroundColor(gui_foreground_color);
 	cboAcceleratorBoardSelector->setSelectionColor(gui_selection_color);
 	cboAcceleratorBoardSelector->setId("cboAcceleratorBoardSelector");
 	cboAcceleratorBoardSelector->addActionListener(expansions_action_listener);
@@ -1030,30 +1049,35 @@ void InitPanelExpansions(const config_category& category)
 	chkAcceleratorBoardCheckbox->setId("chkAcceleratorBoardCheckbox");
 	chkAcceleratorBoardCheckbox->setBaseColor(gui_base_color);
 	chkAcceleratorBoardCheckbox->setBackgroundColor(gui_textbox_background_color);
+	chkAcceleratorBoardCheckbox->setForegroundColor(gui_foreground_color);
 	chkAcceleratorBoardCheckbox->addActionListener(expansions_action_listener);
 	
 	chkBSDSocket = new gcn::CheckBox("bsdsocket.library");
 	chkBSDSocket->setId("chkBSDSocket");
 	chkBSDSocket->setBaseColor(gui_base_color);
 	chkBSDSocket->setBackgroundColor(gui_textbox_background_color);
+	chkBSDSocket->setForegroundColor(gui_foreground_color);
 	chkBSDSocket->addActionListener(expansions_action_listener);
 
 	chkScsi = new gcn::CheckBox("uaescsi.device");
 	chkScsi->setId("chkSCSI");
 	chkScsi->setBaseColor(gui_base_color);
 	chkScsi->setBackgroundColor(gui_textbox_background_color);
+	chkScsi->setForegroundColor(gui_foreground_color);
 	chkScsi->addActionListener(expansions_action_listener);
 
 	chkCD32Fmv = new gcn::CheckBox("CD32 Full Motion Video cartridge");
 	chkCD32Fmv->setId("chkCD32Fmv");
 	chkCD32Fmv->setBaseColor(gui_base_color);
 	chkCD32Fmv->setBackgroundColor(gui_textbox_background_color);
+	chkCD32Fmv->setForegroundColor(gui_foreground_color);
 	chkCD32Fmv->addActionListener(expansions_action_listener);
 
 	chkSana2 = new gcn::CheckBox("uaenet.device");
 	chkSana2->setId("chkSana2");
 	chkSana2->setBaseColor(gui_base_color);
 	chkSana2->setBackgroundColor(gui_textbox_background_color);
+	chkSana2->setForegroundColor(gui_foreground_color);
 	chkSana2->addActionListener(expansions_action_listener);
 	chkSana2->setEnabled(false); //TODO enable this when SANA2 support is implemented
 	
@@ -1093,6 +1117,7 @@ void InitPanelExpansions(const config_category& category)
 	grpAcceleratorBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 200);
 	grpAcceleratorBoard->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAcceleratorBoard->setBaseColor(gui_base_color);
+	grpAcceleratorBoard->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpAcceleratorBoard);
 	
 	grpMiscExpansions = new gcn::Window("Miscellaneous Expansions");
@@ -1107,6 +1132,7 @@ void InitPanelExpansions(const config_category& category)
 	grpMiscExpansions->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + posY + chkCD32Fmv->getHeight() + DISTANCE_NEXT_Y);
 	grpMiscExpansions->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpMiscExpansions->setBaseColor(gui_base_color);
+	grpMiscExpansions->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpMiscExpansions);
 
 	RefreshPanelExpansions();

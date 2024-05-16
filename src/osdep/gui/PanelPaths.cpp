@@ -373,11 +373,13 @@ void InitPanelPaths(const config_category& category)
 	txtSystemROMs->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtSystemROMs->setBaseColor(gui_base_color);
 	txtSystemROMs->setBackgroundColor(gui_textbox_background_color);
+	txtSystemROMs->setForegroundColor(gui_foreground_color);
 
 	cmdSystemROMs = new gcn::Button("...");
 	cmdSystemROMs->setId("cmdSystemROMs");
 	cmdSystemROMs->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdSystemROMs->setBaseColor(gui_base_color);
+	cmdSystemROMs->setForegroundColor(gui_foreground_color);
 	cmdSystemROMs->addActionListener(folderButtonActionListener);
 
 	lblConfigPath = new gcn::Label("Configuration files:");
@@ -385,116 +387,136 @@ void InitPanelPaths(const config_category& category)
 	txtConfigPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtConfigPath->setBaseColor(gui_base_color);
 	txtConfigPath->setBackgroundColor(gui_textbox_background_color);
+	txtConfigPath->setForegroundColor(gui_foreground_color);
 
 	cmdConfigPath = new gcn::Button("...");
 	cmdConfigPath->setId("cmdConfigPath");
 	cmdConfigPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdConfigPath->setBaseColor(gui_base_color);
+	cmdConfigPath->setForegroundColor(gui_foreground_color);
 	cmdConfigPath->addActionListener(folderButtonActionListener);
 
 	lblNvramFiles = new gcn::Label("NVRAM files:");
 	txtNvramFiles = new gcn::TextField();
 	txtNvramFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtNvramFiles->setBaseColor(gui_base_color);
+	txtNvramFiles->setForegroundColor(gui_foreground_color);
 	txtNvramFiles->setBackgroundColor(gui_textbox_background_color);
 
 	cmdNvramFiles = new gcn::Button("...");
 	cmdNvramFiles->setId("cmdNvramFiles");
 	cmdNvramFiles->setBaseColor(gui_base_color);
+	cmdNvramFiles->setForegroundColor(gui_foreground_color);
 	cmdNvramFiles->addActionListener(folderButtonActionListener);
 
 	lblScreenshotFiles = new gcn::Label("Screenshots:");
 	txtScreenshotFiles = new gcn::TextField();
 	txtScreenshotFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtScreenshotFiles->setBaseColor(gui_base_color);
+	txtScreenshotFiles->setForegroundColor(gui_foreground_color);
 	txtScreenshotFiles->setBackgroundColor(gui_textbox_background_color);
 
 	cmdScreenshotFiles = new gcn::Button("...");
 	cmdScreenshotFiles->setId("cmdScreenshotFiles");
 	cmdScreenshotFiles->setBaseColor(gui_base_color);
+	cmdScreenshotFiles->setForegroundColor(gui_foreground_color);
 	cmdScreenshotFiles->addActionListener(folderButtonActionListener);
 
 	lblStateFiles = new gcn::Label("Save state files:");
 	txtStateFiles = new gcn::TextField();
 	txtStateFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtStateFiles->setBaseColor(gui_base_color);
+	txtStateFiles->setForegroundColor(gui_foreground_color);
 	txtStateFiles->setBackgroundColor(gui_textbox_background_color);
 
 	cmdStateFiles = new gcn::Button("...");
 	cmdStateFiles->setId("cmdStateFiles");
 	cmdStateFiles->setBaseColor(gui_base_color);
+	cmdStateFiles->setForegroundColor(gui_foreground_color);
 	cmdStateFiles->addActionListener(folderButtonActionListener);
 
 	lblControllersPath = new gcn::Label("Controller files:");
 	txtControllersPath = new gcn::TextField();
 	txtControllersPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtControllersPath->setBaseColor(gui_base_color);
+	txtControllersPath->setForegroundColor(gui_foreground_color);
 	txtControllersPath->setBackgroundColor(gui_textbox_background_color);
 
 	cmdControllersPath = new gcn::Button("...");
 	cmdControllersPath->setId("cmdControllersPath");
 	cmdControllersPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdControllersPath->setBaseColor(gui_base_color);
+	cmdControllersPath->setForegroundColor(gui_foreground_color);
 	cmdControllersPath->addActionListener(folderButtonActionListener);
 
 	lblRetroArchFile = new gcn::Label("RetroArch configuration file (retroarch.cfg):");
 	txtRetroArchFile = new gcn::TextField();
 	txtRetroArchFile->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtRetroArchFile->setBaseColor(gui_base_color);
+	txtRetroArchFile->setForegroundColor(gui_foreground_color);
 	txtRetroArchFile->setBackgroundColor(gui_textbox_background_color);
 
 	cmdRetroArchFile = new gcn::Button("...");
 	cmdRetroArchFile->setId("cmdRetroArchFile");
 	cmdRetroArchFile->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdRetroArchFile->setBaseColor(gui_base_color);
+	cmdRetroArchFile->setForegroundColor(gui_foreground_color);
 	cmdRetroArchFile->addActionListener(folderButtonActionListener);
 
 	lblWHDBootPath = new gcn::Label("WHDBoot files:");
 	txtWHDBootPath = new gcn::TextField();
 	txtWHDBootPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtWHDBootPath->setBaseColor(gui_base_color);
+	txtWHDBootPath->setForegroundColor(gui_foreground_color);
 	txtWHDBootPath->setBackgroundColor(gui_textbox_background_color);
 
 	cmdWHDBootPath = new gcn::Button("...");
 	cmdWHDBootPath->setId("cmdWHDBootPath");
 	cmdWHDBootPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdWHDBootPath->setBaseColor(gui_base_color);
+	cmdWHDBootPath->setForegroundColor(gui_foreground_color);
 	cmdWHDBootPath->addActionListener(folderButtonActionListener);
 
 	lblWHDLoadArchPath = new gcn::Label("WHDLoad Archives (LHA):");
 	txtWHDLoadArchPath = new gcn::TextField();
 	txtWHDLoadArchPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtWHDLoadArchPath->setBaseColor(gui_base_color);
+	txtWHDLoadArchPath->setForegroundColor(gui_foreground_color);
 	txtWHDLoadArchPath->setBackgroundColor(gui_textbox_background_color);
 
 	cmdWHDLoadArchPath = new gcn::Button("...");
 	cmdWHDLoadArchPath->setId("cmdWHDLoadArchPath");
 	cmdWHDLoadArchPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdWHDLoadArchPath->setBaseColor(gui_base_color);
+	cmdWHDLoadArchPath->setForegroundColor(gui_foreground_color);
 	cmdWHDLoadArchPath->addActionListener(folderButtonActionListener);
 
 	lblFloppyPath = new gcn::Label("Floppies path:");
 	txtFloppyPath = new gcn::TextField();
 	txtFloppyPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtFloppyPath->setBaseColor(gui_base_color);
+	txtFloppyPath->setForegroundColor(gui_foreground_color);
 	txtFloppyPath->setBackgroundColor(gui_textbox_background_color);
 
 	cmdFloppyPath = new gcn::Button("...");
 	cmdFloppyPath->setId("cmdFloppyPath");
 	cmdFloppyPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdFloppyPath->setBaseColor(gui_base_color);
+	cmdFloppyPath->setForegroundColor(gui_foreground_color);
 	cmdFloppyPath->addActionListener(folderButtonActionListener);
 
 	lblCDPath = new gcn::Label("CD-ROMs path:");
 	txtCDPath = new gcn::TextField();
 	txtCDPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtCDPath->setBaseColor(gui_base_color);
+	txtCDPath->setForegroundColor(gui_foreground_color);
 	txtCDPath->setBackgroundColor(gui_textbox_background_color);
 
 	cmdCDPath = new gcn::Button("...");
 	cmdCDPath->setId("cmdCDPath");
 	cmdCDPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdCDPath->setBaseColor(gui_base_color);
+	cmdCDPath->setForegroundColor(gui_foreground_color);
 	cmdCDPath->addActionListener(folderButtonActionListener);
 
 	lblHardDrivesPath = new gcn::Label("Hard drives path:");
@@ -502,11 +524,13 @@ void InitPanelPaths(const config_category& category)
 	txtHardDrivesPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtHardDrivesPath->setBaseColor(gui_base_color);
 	txtHardDrivesPath->setBackgroundColor(gui_textbox_background_color);
+	txtHardDrivesPath->setForegroundColor(gui_foreground_color);
 
 	cmdHardDrivesPath = new gcn::Button("...");
 	cmdHardDrivesPath->setId("cmdHardDrivesPath");
 	cmdHardDrivesPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdHardDrivesPath->setBaseColor(gui_base_color);
+	cmdHardDrivesPath->setForegroundColor(gui_foreground_color);
 	cmdHardDrivesPath->addActionListener(folderButtonActionListener);
 
 	enableLoggingActionListener = new EnableLoggingActionListener();
@@ -514,11 +538,13 @@ void InitPanelPaths(const config_category& category)
 	chkEnableLogging->setId("chkEnableLogging");
 	chkEnableLogging->setBaseColor(gui_base_color);
 	chkEnableLogging->setBackgroundColor(gui_textbox_background_color);
+	chkEnableLogging->setForegroundColor(gui_foreground_color);
 	chkEnableLogging->addActionListener(enableLoggingActionListener);
 	chkLogToConsole = new gcn::CheckBox("Log to console", false);
 	chkLogToConsole->setId("chkLogToConsole");
 	chkLogToConsole->setBaseColor(gui_base_color);
 	chkLogToConsole->setBackgroundColor(gui_textbox_background_color);
+	chkLogToConsole->setForegroundColor(gui_foreground_color);
 	chkLogToConsole->addActionListener(enableLoggingActionListener);
 	
 	lblLogfilePath = new gcn::Label("Amiberry logfile path:");
@@ -526,11 +552,13 @@ void InitPanelPaths(const config_category& category)
 	txtLogfilePath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtLogfilePath->setBaseColor(gui_base_color);
 	txtLogfilePath->setBackgroundColor(gui_textbox_background_color);
+	txtLogfilePath->setForegroundColor(gui_foreground_color);
 
 	cmdLogfilePath = new gcn::Button("...");
 	cmdLogfilePath->setId("cmdLogfilePath");
 	cmdLogfilePath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdLogfilePath->setBaseColor(gui_base_color);
+	cmdLogfilePath->setForegroundColor(gui_foreground_color);
 	cmdLogfilePath->addActionListener(folderButtonActionListener);
 
 	int yPos = DISTANCE_BORDER;
@@ -616,6 +644,7 @@ void InitPanelPaths(const config_category& category)
 	scrlPaths->setId("scrlPaths");
 	scrlPaths->setBaseColor(gui_base_color);
 	scrlPaths->setBackgroundColor(gui_textbox_background_color);
+	scrlPaths->setForegroundColor(gui_foreground_color);
 	scrlPaths->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	scrlPaths->setHeight(category.panel->getHeight() - TEXTFIELD_HEIGHT * 6);
 	scrlPaths->setBorderSize(1);
@@ -635,6 +664,7 @@ void InitPanelPaths(const config_category& category)
 	cmdRescanROMs = new gcn::Button("Rescan Paths");
 	cmdRescanROMs->setSize(cmdRescanROMs->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdRescanROMs->setBaseColor(gui_base_color);
+	cmdRescanROMs->setForegroundColor(gui_foreground_color);
 	cmdRescanROMs->setId("cmdRescanROMs");
 	cmdRescanROMs->addActionListener(rescanROMsButtonActionListener);
 
@@ -642,6 +672,7 @@ void InitPanelPaths(const config_category& category)
 	cmdDownloadXML = new gcn::Button("Update WHDLoad XML");
 	cmdDownloadXML->setSize(cmdDownloadXML->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdDownloadXML->setBaseColor(gui_base_color);
+	cmdDownloadXML->setForegroundColor(gui_foreground_color);
 	cmdDownloadXML->setId("cmdDownloadXML");
 	cmdDownloadXML->addActionListener(downloadXMLButtonActionListener);
 
@@ -649,6 +680,7 @@ void InitPanelPaths(const config_category& category)
 	cmdDownloadCtrlDb = new gcn::Button("Update Controllers DB");
 	cmdDownloadCtrlDb->setSize(cmdDownloadCtrlDb->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdDownloadCtrlDb->setBaseColor(gui_base_color);
+	cmdDownloadCtrlDb->setForegroundColor(gui_foreground_color);
 	cmdDownloadCtrlDb->setId("cmdDownloadCtrlDb");
 	cmdDownloadCtrlDb->addActionListener(downloadControllerDbActionListener);
 	
