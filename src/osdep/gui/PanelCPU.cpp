@@ -293,57 +293,57 @@ void InitPanelCPU(const struct config_category& category)
 
 	optCPU68000 = new gcn::RadioButton("68000", "radiocpugroup");
 	optCPU68000->setId("optCPU68000");
-	optCPU68000->setBaseColor(gui_baseCol);
-	optCPU68000->setBackgroundColor(colTextboxBackground);
+	optCPU68000->setBaseColor(gui_base_color);
+	optCPU68000->setBackgroundColor(gui_textbox_background_color);
 	optCPU68000->addActionListener(cpuActionListener);
 	optCPU68010 = new gcn::RadioButton("68010", "radiocpugroup");
 	optCPU68010->setId("optCPU68010");
-	optCPU68010->setBaseColor(gui_baseCol);
-	optCPU68010->setBackgroundColor(colTextboxBackground);
+	optCPU68010->setBaseColor(gui_base_color);
+	optCPU68010->setBackgroundColor(gui_textbox_background_color);
 	optCPU68010->addActionListener(cpuActionListener);
 	optCPU68020 = new gcn::RadioButton("68020", "radiocpugroup");
 	optCPU68020->setId("optCPU68020");
-	optCPU68020->setBaseColor(gui_baseCol);
-	optCPU68020->setBackgroundColor(colTextboxBackground);
+	optCPU68020->setBaseColor(gui_base_color);
+	optCPU68020->setBackgroundColor(gui_textbox_background_color);
 	optCPU68020->addActionListener(cpuActionListener);
 	optCPU68030 = new gcn::RadioButton("68030", "radiocpugroup");
 	optCPU68030->setId("optCPU68030");
-	optCPU68030->setBaseColor(gui_baseCol);
-	optCPU68030->setBackgroundColor(colTextboxBackground);
+	optCPU68030->setBaseColor(gui_base_color);
+	optCPU68030->setBackgroundColor(gui_textbox_background_color);
 	optCPU68030->addActionListener(cpuActionListener);
 	optCPU68040 = new gcn::RadioButton("68040", "radiocpugroup");
 	optCPU68040->setId("optCPU68040");
-	optCPU68040->setBaseColor(gui_baseCol);
-	optCPU68040->setBackgroundColor(colTextboxBackground);
+	optCPU68040->setBaseColor(gui_base_color);
+	optCPU68040->setBackgroundColor(gui_textbox_background_color);
 	optCPU68040->addActionListener(cpuActionListener);
 	optCPU68060 = new gcn::RadioButton("68060", "radiocpugroup");
 	optCPU68060->setId("optCPU68060");
-	optCPU68060->setBaseColor(gui_baseCol);
-	optCPU68060->setBackgroundColor(colTextboxBackground);
+	optCPU68060->setBaseColor(gui_base_color);
+	optCPU68060->setBackgroundColor(gui_textbox_background_color);
 	optCPU68060->addActionListener(cpuActionListener);
 
 	chk24Bit = new gcn::CheckBox("24-bit addressing", true);
 	chk24Bit->setId("chk24Bit");
-	chk24Bit->setBaseColor(gui_baseCol);
-	chk24Bit->setBackgroundColor(colTextboxBackground);
+	chk24Bit->setBaseColor(gui_base_color);
+	chk24Bit->setBackgroundColor(gui_textbox_background_color);
 	chk24Bit->addActionListener(cpuActionListener);
 
 	chkCPUCompatible = new gcn::CheckBox("More compatible", true);
 	chkCPUCompatible->setId("chkCPUCompatible");
-	chkCPUCompatible->setBaseColor(gui_baseCol);
-	chkCPUCompatible->setBackgroundColor(colTextboxBackground);
+	chkCPUCompatible->setBaseColor(gui_base_color);
+	chkCPUCompatible->setBackgroundColor(gui_textbox_background_color);
 	chkCPUCompatible->addActionListener(cpuActionListener);
 
 	chkCpuDataCache = new gcn::CheckBox("Data cache");
 	chkCpuDataCache->setId("chkCpuDataCache");
-	chkCpuDataCache->setBaseColor(gui_baseCol);
-	chkCpuDataCache->setBackgroundColor(colTextboxBackground);
+	chkCpuDataCache->setBaseColor(gui_base_color);
+	chkCpuDataCache->setBackgroundColor(gui_textbox_background_color);
 	chkCpuDataCache->addActionListener(cpuActionListener);
 
 	chkJIT = new gcn::CheckBox("JIT", true);
 	chkJIT->setId("chkJIT");
-	chkJIT->setBaseColor(gui_baseCol);
-	chkJIT->setBackgroundColor(colTextboxBackground);
+	chkJIT->setBaseColor(gui_base_color);
+	chkJIT->setBackgroundColor(gui_textbox_background_color);
 	chkJIT->addActionListener(cpuActionListener);
 
 	grpCPU = new gcn::Window("CPU");
@@ -361,23 +361,23 @@ void InitPanelCPU(const struct config_category& category)
 	grpCPU->setMovable(false);
 	grpCPU->setSize(chk24Bit->getWidth() + 20, TITLEBAR_HEIGHT + 290 + chkJIT->getHeight() + DISTANCE_NEXT_Y);
 	grpCPU->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpCPU->setBaseColor(gui_baseCol);
+	grpCPU->setBaseColor(gui_base_color);
 	category.panel->add(grpCPU);
 
 	optMMUNone = new gcn::RadioButton("None", "radiommugroup");
 	optMMUNone->setId("optMMUNone");
-	optMMUNone->setBaseColor(gui_baseCol);
-	optMMUNone->setBackgroundColor(colTextboxBackground);
+	optMMUNone->setBaseColor(gui_base_color);
+	optMMUNone->setBackgroundColor(gui_textbox_background_color);
 	optMMUNone->addActionListener(cpuActionListener);
 	optMMUEnabled = new gcn::RadioButton("MMU", "radiommugroup");
 	optMMUEnabled->setId("optMMUEnabled");
-	optMMUEnabled->setBaseColor(gui_baseCol);
-	optMMUEnabled->setBackgroundColor(colTextboxBackground);
+	optMMUEnabled->setBaseColor(gui_base_color);
+	optMMUEnabled->setBackgroundColor(gui_textbox_background_color);
 	optMMUEnabled->addActionListener(cpuActionListener);
 	optMMUEC = new gcn::RadioButton("EC", "radiommugroup");
 	optMMUEC->setId("optMMUEC");
-	optMMUEC->setBaseColor(gui_baseCol);
-	optMMUEC->setBackgroundColor(colTextboxBackground);
+	optMMUEC->setBaseColor(gui_base_color);
+	optMMUEC->setBackgroundColor(gui_textbox_background_color);
 	optMMUEC->addActionListener(cpuActionListener);
 
 	grpMMU = new gcn::Window("MMU");
@@ -388,37 +388,37 @@ void InitPanelCPU(const struct config_category& category)
 	grpMMU->setMovable(false);
 	grpMMU->setSize(grpCPU->getWidth(), TITLEBAR_HEIGHT + 40 + optMMUEnabled->getHeight() + DISTANCE_NEXT_Y);
 	grpMMU->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpMMU->setBaseColor(gui_baseCol);
+	grpMMU->setBaseColor(gui_base_color);
 	category.panel->add(grpMMU);
 
 	optFPUnone = new gcn::RadioButton("None", "radiofpugroup");
 	optFPUnone->setId("optFPUnone");
-	optFPUnone->setBaseColor(gui_baseCol);
-	optFPUnone->setBackgroundColor(colTextboxBackground);
+	optFPUnone->setBaseColor(gui_base_color);
+	optFPUnone->setBackgroundColor(gui_textbox_background_color);
 	optFPUnone->addActionListener(cpuActionListener);
 
 	optFPU68881 = new gcn::RadioButton("68881", "radiofpugroup");
 	optFPU68881->setId("optFPU68881");
-	optFPU68881->setBaseColor(gui_baseCol);
-	optFPU68881->setBackgroundColor(colTextboxBackground);
+	optFPU68881->setBaseColor(gui_base_color);
+	optFPU68881->setBackgroundColor(gui_textbox_background_color);
 	optFPU68881->addActionListener(cpuActionListener);
 
 	optFPU68882 = new gcn::RadioButton("68882", "radiofpugroup");
 	optFPU68882->setId("optFPU68882");
-	optFPU68882->setBaseColor(gui_baseCol);
-	optFPU68882->setBackgroundColor(colTextboxBackground);
+	optFPU68882->setBaseColor(gui_base_color);
+	optFPU68882->setBackgroundColor(gui_textbox_background_color);
 	optFPU68882->addActionListener(cpuActionListener);
 
 	optFPUinternal = new gcn::RadioButton("CPU internal", "radiofpugroup");
 	optFPUinternal->setId("optFPUinternal");
-	optFPUinternal->setBaseColor(gui_baseCol);
-	optFPUinternal->setBackgroundColor(colTextboxBackground);
+	optFPUinternal->setBaseColor(gui_base_color);
+	optFPUinternal->setBackgroundColor(gui_textbox_background_color);
 	optFPUinternal->addActionListener(cpuActionListener);
 
 	chkFPUStrict = new gcn::CheckBox("More compatible", true);
 	chkFPUStrict->setId("chkFPUStrict");
-	chkFPUStrict->setBaseColor(gui_baseCol);
-	chkFPUStrict->setBackgroundColor(colTextboxBackground);
+	chkFPUStrict->setBaseColor(gui_base_color);
+	chkFPUStrict->setBackgroundColor(gui_textbox_background_color);
 	chkFPUStrict->addActionListener(cpuActionListener);
 
 	grpFPU = new gcn::Window("FPU");
@@ -431,25 +431,25 @@ void InitPanelCPU(const struct config_category& category)
 	grpFPU->setMovable(false);
 	grpFPU->setSize(grpCPU->getWidth(), TITLEBAR_HEIGHT + 130 + chkFPUStrict->getHeight() + DISTANCE_NEXT_Y);
 	grpFPU->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpFPU->setBaseColor(gui_baseCol);
+	grpFPU->setBaseColor(gui_base_color);
 	category.panel->add(grpFPU);
 
 	optCPUSpeedFastest = new gcn::RadioButton("Fastest Possible", "radiocpuspeedgroup");
 	optCPUSpeedFastest->setId("optCPUSpeedFastest");
-	optCPUSpeedFastest->setBaseColor(gui_baseCol);
-	optCPUSpeedFastest->setBackgroundColor(colTextboxBackground);
+	optCPUSpeedFastest->setBaseColor(gui_base_color);
+	optCPUSpeedFastest->setBackgroundColor(gui_textbox_background_color);
 	optCPUSpeedFastest->addActionListener(cpuActionListener);
 
 	optCPUSpeedReal = new gcn::RadioButton("A500/A1200 or cycle exact", "radiocpuspeedgroup");
 	optCPUSpeedReal->setId("optCPUSpeedReal");
-	optCPUSpeedReal->setBaseColor(gui_baseCol);
-	optCPUSpeedReal->setBackgroundColor(colTextboxBackground);
+	optCPUSpeedReal->setBaseColor(gui_base_color);
+	optCPUSpeedReal->setBackgroundColor(gui_textbox_background_color);
 	optCPUSpeedReal->addActionListener(cpuActionListener);
 
 	lblCpuSpeed = new gcn::Label("CPU Speed:");
 	sldCpuSpeed = new gcn::Slider(-9, 50);
 	sldCpuSpeed->setSize(320, SLIDER_HEIGHT);
-	sldCpuSpeed->setBaseColor(gui_baseCol);
+	sldCpuSpeed->setBaseColor(gui_base_color);
 	sldCpuSpeed->setMarkerLength(20);
 	sldCpuSpeed->setStepLength(1);
 	sldCpuSpeed->setId("sldCpuSpeed");
@@ -459,7 +459,7 @@ void InitPanelCPU(const struct config_category& category)
 	lblCpuIdle = new gcn::Label("CPU Idle:");
 	sldCpuIdle = new gcn::Slider(0, 10);
 	sldCpuIdle->setSize(90, SLIDER_HEIGHT);
-	sldCpuIdle->setBaseColor(gui_baseCol);
+	sldCpuIdle->setBaseColor(gui_base_color);
 	sldCpuIdle->setMarkerLength(20);
 	sldCpuIdle->setStepLength(1);
 	sldCpuIdle->setId("sldCpuIdle");
@@ -479,15 +479,15 @@ void InitPanelCPU(const struct config_category& category)
 	grpCPUSpeed->setMovable(false);
 	grpCPUSpeed->setSize(395, 190);
 	grpCPUSpeed->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpCPUSpeed->setBaseColor(gui_baseCol);
+	grpCPUSpeed->setBaseColor(gui_base_color);
 
 	category.panel->add(grpCPUSpeed);
 
 	lblCPUFrequency = new gcn::Label("CPU Frequency:");
 	cboCPUFrequency = new gcn::DropDown(&cpu_freq_list);
 	cboCPUFrequency->setSize(100, cboCPUFrequency->getHeight());
-	cboCPUFrequency->setBaseColor(gui_baseCol);
-	cboCPUFrequency->setBackgroundColor(colTextboxBackground);
+	cboCPUFrequency->setBaseColor(gui_base_color);
+	cboCPUFrequency->setBackgroundColor(gui_textbox_background_color);
 	cboCPUFrequency->setSelectionColor(gui_selection_color);
 	cboCPUFrequency->addActionListener(cpuActionListener);
 	cboCPUFrequency->setId("cboCPUFrequency");
@@ -495,8 +495,8 @@ void InitPanelCPU(const struct config_category& category)
 
 	chkCPUMultiThread = new gcn::CheckBox("Multi-threaded CPU");
 	chkCPUMultiThread->setId("chkCPUMultiThread");
-	chkCPUMultiThread->setBaseColor(gui_baseCol);
-	chkCPUMultiThread->setBackgroundColor(colTextboxBackground);
+	chkCPUMultiThread->setBaseColor(gui_base_color);
+	chkCPUMultiThread->setBackgroundColor(gui_textbox_background_color);
 	chkCPUMultiThread->addActionListener(cpuActionListener);
 
 	grpCPUCycleExact = new gcn::Window("Cycle-Exact CPU Emulation Speed");
@@ -508,14 +508,14 @@ void InitPanelCPU(const struct config_category& category)
 	grpCPUCycleExact->setMovable(false);
 	grpCPUCycleExact->setSize(grpCPUSpeed->getWidth(), 140);
 	grpCPUCycleExact->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpCPUCycleExact->setBaseColor(gui_baseCol);
+	grpCPUCycleExact->setBaseColor(gui_base_color);
 
 	category.panel->add(grpCPUCycleExact);
 
 	lblJitCacheSize = new gcn::Label("Cache size:");
 	sldJitCacheSize = new gcn::Slider(0, 5);
 	sldJitCacheSize->setSize(150, SLIDER_HEIGHT);
-	sldJitCacheSize->setBaseColor(gui_baseCol);
+	sldJitCacheSize->setBaseColor(gui_base_color);
 	sldJitCacheSize->setMarkerLength(20);
 	sldJitCacheSize->setStepLength(1);
 	sldJitCacheSize->setId("sldJitCacheSize");
@@ -524,38 +524,38 @@ void InitPanelCPU(const struct config_category& category)
 
 	chkFPUJIT = new gcn::CheckBox("FPU Support", true);
 	chkFPUJIT->setId("chkFPUJIT");
-	chkFPUJIT->setBaseColor(gui_baseCol);
-	chkFPUJIT->setBackgroundColor(colTextboxBackground);
+	chkFPUJIT->setBaseColor(gui_base_color);
+	chkFPUJIT->setBackgroundColor(gui_textbox_background_color);
 	chkFPUJIT->addActionListener(cpuActionListener);
 	chkConstantJump = new gcn::CheckBox("Constant jump");
 	chkConstantJump->setId("chkConstantJump");
-	chkConstantJump->setBaseColor(gui_baseCol);
-	chkConstantJump->setBackgroundColor(colTextboxBackground);
+	chkConstantJump->setBaseColor(gui_base_color);
+	chkConstantJump->setBackgroundColor(gui_textbox_background_color);
 	chkConstantJump->addActionListener(cpuActionListener);
 	chkHardFlush = new gcn::CheckBox("Hard flush");
 	chkHardFlush->setId("chkHardFlush");
-	chkHardFlush->setBaseColor(gui_baseCol);
-	chkHardFlush->setBackgroundColor(colTextboxBackground);
+	chkHardFlush->setBaseColor(gui_base_color);
+	chkHardFlush->setBackgroundColor(gui_textbox_background_color);
 	chkHardFlush->addActionListener(cpuActionListener);
 	optDirect = new gcn::RadioButton("Direct", "radiomemaccessgroup");
 	optDirect->setId("optDirect");
-	optDirect->setBaseColor(gui_baseCol);
-	optDirect->setBackgroundColor(colTextboxBackground);
+	optDirect->setBaseColor(gui_base_color);
+	optDirect->setBackgroundColor(gui_textbox_background_color);
 	optDirect->addActionListener(cpuActionListener);
 	optIndirect = new gcn::RadioButton("Indirect", "radiomemaccessgroup");
 	optIndirect->setId("optIndirect");
-	optIndirect->setBaseColor(gui_baseCol);
-	optIndirect->setBackgroundColor(colTextboxBackground);
+	optIndirect->setBaseColor(gui_base_color);
+	optIndirect->setBackgroundColor(gui_textbox_background_color);
 	optIndirect->addActionListener(cpuActionListener);
 	chkNoFlags = new gcn::CheckBox("No flags");
 	chkNoFlags->setId("chkNoFlags");
-	chkNoFlags->setBaseColor(gui_baseCol);
-	chkNoFlags->setBackgroundColor(colTextboxBackground);
+	chkNoFlags->setBaseColor(gui_base_color);
+	chkNoFlags->setBackgroundColor(gui_textbox_background_color);
 	chkNoFlags->addActionListener(cpuActionListener);
 	chkCatchExceptions = new gcn::CheckBox("Catch unexpected exceptions");
 	chkCatchExceptions->setId("chkCatchExceptions");
-	chkCatchExceptions->setBaseColor(gui_baseCol);
-	chkCatchExceptions->setBackgroundColor(colTextboxBackground);
+	chkCatchExceptions->setBaseColor(gui_base_color);
+	chkCatchExceptions->setBackgroundColor(gui_textbox_background_color);
 	chkCatchExceptions->addActionListener(cpuActionListener);
 
 	grpAdvJitSettings = new gcn::Window("Advanced JIT Settings");
@@ -573,7 +573,7 @@ void InitPanelCPU(const struct config_category& category)
 	grpAdvJitSettings->setMovable(false);
 	grpAdvJitSettings->setSize(grpCPUCycleExact->getWidth(), 160);
 	grpAdvJitSettings->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpAdvJitSettings->setBaseColor(gui_baseCol);
+	grpAdvJitSettings->setBaseColor(gui_base_color);
 
 	category.panel->add(grpAdvJitSettings);
 

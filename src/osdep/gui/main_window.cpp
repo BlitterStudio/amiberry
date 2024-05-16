@@ -150,12 +150,12 @@ gcn::Container* selectors;
 gcn::ScrollArea* selectorsScrollArea;
 
 // GUI Colors
-gcn::Color gui_baseCol;
-gcn::Color colTextboxBackground;
-gcn::Color colSelectorInactive;
-gcn::Color colSelectorActive;
+gcn::Color gui_base_color;
+gcn::Color gui_textbox_background_color;
+gcn::Color gui_selector_inactive_color;
+gcn::Color gui_selector_active_color;
 gcn::Color gui_selection_color;
-gcn::Color font_color;
+gcn::Color gui_font_color;
 
 gcn::FocusHandler* focusHdl;
 gcn::Widget* activeWidget;
@@ -995,20 +995,20 @@ void gui_widgets_init()
 	//-------------------------------------------------
 	// Define base colors
 	//-------------------------------------------------
-	gui_baseCol = gui_theme.base_color;
-	colSelectorInactive = gui_theme.selector_inactive;
-	colSelectorActive = gui_theme.selector_active;
-	colTextboxBackground = gui_theme.textbox_background;
+	gui_base_color = gui_theme.base_color;
+	gui_selector_inactive_color = gui_theme.selector_inactive;
+	gui_selector_active_color = gui_theme.selector_active;
+	gui_textbox_background_color = gui_theme.textbox_background;
 	gui_selection_color = gui_theme.selection_color;
-	font_color = gui_theme.font_color;
+	gui_font_color = gui_theme.font_color;
 
 	//-------------------------------------------------
 	// Create container for main page
 	//-------------------------------------------------
 	gui_top = new gcn::Container();
 	gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
-	gui_top->setBaseColor(gui_baseCol);
-	gui_top->setBackgroundColor(gui_baseCol);
+	gui_top->setBaseColor(gui_base_color);
+	gui_top->setBackgroundColor(gui_base_color);
 	uae_gui->setTop(gui_top);
 
 	//-------------------------------------------------
@@ -1022,7 +1022,7 @@ void gui_widgets_init()
 		font.append(gui_theme.font_name);
 		gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
 		gui_font->setAntiAlias(false);
-		gui_font->setColor(font_color);
+		gui_font->setColor(gui_font_color);
 	}
 	catch (gcn::Exception& e)
 	{
@@ -1048,25 +1048,25 @@ void gui_widgets_init()
 
 	cmdQuit = new gcn::Button("Quit");
 	cmdQuit->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdQuit->setBaseColor(gui_baseCol);
+	cmdQuit->setBaseColor(gui_base_color);
 	cmdQuit->setId("Quit");
 	cmdQuit->addActionListener(mainButtonActionListener);
 
 	cmdShutdown = new gcn::Button("Shutdown");
 	cmdShutdown->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdShutdown->setBaseColor(gui_baseCol);
+	cmdShutdown->setBaseColor(gui_base_color);
 	cmdShutdown->setId("Shutdown");
 	cmdShutdown->addActionListener(mainButtonActionListener);
 
 	cmdReset = new gcn::Button("Reset");
 	cmdReset->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdReset->setBaseColor(gui_baseCol);
+	cmdReset->setBaseColor(gui_base_color);
 	cmdReset->setId("Reset");
 	cmdReset->addActionListener(mainButtonActionListener);
 
 	cmdRestart = new gcn::Button("Restart");
 	cmdRestart->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdRestart->setBaseColor(gui_baseCol);
+	cmdRestart->setBaseColor(gui_base_color);
 	cmdRestart->setId("Restart");
 	cmdRestart->addActionListener(mainButtonActionListener);
 
@@ -1074,13 +1074,13 @@ void gui_widgets_init()
 	if (emulating)
 		cmdStart->setCaption("Resume");
 	cmdStart->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdStart->setBaseColor(gui_baseCol);
+	cmdStart->setBaseColor(gui_base_color);
 	cmdStart->setId("Start");
 	cmdStart->addActionListener(mainButtonActionListener);
 
 	cmdHelp = new gcn::Button("Help");
 	cmdHelp->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdHelp->setBaseColor(gui_baseCol);
+	cmdHelp->setBaseColor(gui_base_color);
 	cmdHelp->setId("Help");
 	cmdHelp->addActionListener(mainButtonActionListener);
 
@@ -1090,14 +1090,14 @@ void gui_widgets_init()
 	constexpr auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
 	selectors = new gcn::Container();
 	selectors->setBorderSize(0);
-	selectors->setBaseColor(colSelectorInactive);
-	selectors->setBackgroundColor(gui_baseCol);
+	selectors->setBaseColor(gui_selector_inactive_color);
+	selectors->setBackgroundColor(gui_base_color);
 
 	constexpr auto selectorScrollAreaWidth = SELECTOR_WIDTH + 2;
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
-	selectorsScrollArea->setBaseColor(colSelectorInactive);
-	selectorsScrollArea->setBackgroundColor(colSelectorInactive);
+	selectorsScrollArea->setBaseColor(gui_selector_inactive_color);
+	selectorsScrollArea->setBackgroundColor(gui_selector_inactive_color);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setBorderSize(1);
 	
@@ -1108,15 +1108,15 @@ void gui_widgets_init()
 	for (i = 0; categories[i].category != nullptr; ++i)
 	{
 		categories[i].selector = new gcn::SelectorEntry(categories[i].category, prefix_with_data_path(categories[i].imagepath));
-		categories[i].selector->setActiveColor(colSelectorActive);
-		categories[i].selector->setInactiveColor(colSelectorInactive);
+		categories[i].selector->setActiveColor(gui_selector_active_color);
+		categories[i].selector->setInactiveColor(gui_selector_inactive_color);
 		categories[i].selector->setSize(SELECTOR_WIDTH, SELECTOR_HEIGHT);
 		categories[i].selector->addFocusListener(panelFocusListener);
 
 		categories[i].panel = new gcn::Container();
 		categories[i].panel->setId(categories[i].category);
 		categories[i].panel->setSize(GUI_WIDTH - panelStartX - DISTANCE_BORDER, workAreaHeight);
-		categories[i].panel->setBaseColor(gui_baseCol);
+		categories[i].panel->setBaseColor(gui_base_color);
 		categories[i].panel->setBorderSize(1);
 		categories[i].panel->setVisible(false);
 			

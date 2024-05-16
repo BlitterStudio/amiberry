@@ -299,153 +299,153 @@ void InitPanelMisc(const config_category& category)
 	
 	chkStatusLine = new gcn::CheckBox("Status Line native");
 	chkStatusLine->setId("chkStatusLineNative");
-	chkStatusLine->setBaseColor(gui_baseCol);
-	chkStatusLine->setBackgroundColor(colTextboxBackground);
+	chkStatusLine->setBaseColor(gui_base_color);
+	chkStatusLine->setBackgroundColor(gui_textbox_background_color);
 	chkStatusLine->addActionListener(miscActionListener);
 
 	chkStatusLineRtg = new gcn::CheckBox("Status Line RTG");
 	chkStatusLineRtg->setId("chkStatusLineRtg");
-	chkStatusLineRtg->setBaseColor(gui_baseCol);
-	chkStatusLineRtg->setBackgroundColor(colTextboxBackground);
+	chkStatusLineRtg->setBaseColor(gui_base_color);
+	chkStatusLineRtg->setBackgroundColor(gui_textbox_background_color);
 	chkStatusLineRtg->addActionListener(miscActionListener);
 
 	chkShowGUI = new gcn::CheckBox("Show GUI on startup");
 	chkShowGUI->setId("chkShowGUI");
-	chkShowGUI->setBaseColor(gui_baseCol);
-	chkShowGUI->setBackgroundColor(colTextboxBackground);
+	chkShowGUI->setBaseColor(gui_base_color);
+	chkShowGUI->setBackgroundColor(gui_textbox_background_color);
 	chkShowGUI->addActionListener(miscActionListener);
 
 	chkMouseUntrap = new gcn::CheckBox("Untrap = middle button");
 	chkMouseUntrap->setId("chkMouseUntrap");
-	chkMouseUntrap->setBaseColor(gui_baseCol);
-	chkMouseUntrap->setBackgroundColor(colTextboxBackground);
+	chkMouseUntrap->setBaseColor(gui_base_color);
+	chkMouseUntrap->setBackgroundColor(gui_textbox_background_color);
 	chkMouseUntrap->addActionListener(miscActionListener);
 
 	chkAltTabRelease = new gcn::CheckBox("Alt-Tab releases control");
 	chkAltTabRelease->setId("chkAltTabRelease");
-	chkAltTabRelease->setBaseColor(gui_baseCol);
-	chkAltTabRelease->setBackgroundColor(colTextboxBackground);
+	chkAltTabRelease->setBaseColor(gui_base_color);
+	chkAltTabRelease->setBackgroundColor(gui_textbox_background_color);
 	chkAltTabRelease->addActionListener(miscActionListener);
 	
 	chkRetroArchQuit = new gcn::CheckBox("Use RetroArch Quit Button");
 	chkRetroArchQuit->setId("chkRetroArchQuit");
-	chkRetroArchQuit->setBaseColor(gui_baseCol);
-	chkRetroArchQuit->setBackgroundColor(colTextboxBackground);
+	chkRetroArchQuit->setBaseColor(gui_base_color);
+	chkRetroArchQuit->setBackgroundColor(gui_textbox_background_color);
 	chkRetroArchQuit->addActionListener(miscActionListener);
 
 	chkRetroArchMenu = new gcn::CheckBox("Use RetroArch Menu Button");
 	chkRetroArchMenu->setId("chkRetroArchMenu");
-	chkRetroArchMenu->setBaseColor(gui_baseCol);
-	chkRetroArchMenu->setBackgroundColor(colTextboxBackground);
+	chkRetroArchMenu->setBaseColor(gui_base_color);
+	chkRetroArchMenu->setBackgroundColor(gui_textbox_background_color);
 	chkRetroArchMenu->addActionListener(miscActionListener);
 
 	chkRetroArchReset = new gcn::CheckBox("Use RetroArch Reset Button");
 	chkRetroArchReset->setId("chkRetroArchReset");
-	chkRetroArchReset->setBaseColor(gui_baseCol);
-	chkRetroArchReset->setBackgroundColor(colTextboxBackground);
+	chkRetroArchReset->setBaseColor(gui_base_color);
+	chkRetroArchReset->setBackgroundColor(gui_textbox_background_color);
 	chkRetroArchReset->addActionListener(miscActionListener);
 
 	chkMasterWP = new gcn::CheckBox("Master floppy write protection");
 	chkMasterWP->setId("chkMasterWP");
-	chkMasterWP->setBaseColor(gui_baseCol);
-	chkMasterWP->setBackgroundColor(colTextboxBackground);
+	chkMasterWP->setBaseColor(gui_base_color);
+	chkMasterWP->setBackgroundColor(gui_textbox_background_color);
 	chkMasterWP->addActionListener(miscActionListener);
 
 	chkHDReadOnly = new gcn::CheckBox("Master harddrive write protection");
 	chkHDReadOnly->setId("chkHDReadOnly");
-	chkHDReadOnly->setBaseColor(gui_baseCol);
-	chkHDReadOnly->setBackgroundColor(colTextboxBackground);
+	chkHDReadOnly->setBaseColor(gui_base_color);
+	chkHDReadOnly->setBackgroundColor(gui_textbox_background_color);
 	chkHDReadOnly->addActionListener(miscActionListener);
 	
 	chkClipboardSharing = new gcn::CheckBox("Clipboard sharing");
 	chkClipboardSharing->setId("chkClipboardSharing");
-	chkClipboardSharing->setBaseColor(gui_baseCol);
-	chkClipboardSharing->setBackgroundColor(colTextboxBackground);
+	chkClipboardSharing->setBaseColor(gui_base_color);
+	chkClipboardSharing->setBackgroundColor(gui_textbox_background_color);
 	chkClipboardSharing->addActionListener(miscActionListener);
 
 	chkRCtrlIsRAmiga = new gcn::CheckBox("RCtrl = RAmiga");
 	chkRCtrlIsRAmiga->setId("chkRCtrlIsRAmiga");
-	chkRCtrlIsRAmiga->setBaseColor(gui_baseCol);
-	chkRCtrlIsRAmiga->setBackgroundColor(colTextboxBackground);
+	chkRCtrlIsRAmiga->setBaseColor(gui_base_color);
+	chkRCtrlIsRAmiga->setBackgroundColor(gui_textbox_background_color);
 	chkRCtrlIsRAmiga->addActionListener(miscActionListener);
 
 	chkMainAlwaysOnTop = new gcn::CheckBox("Always on top");
 	chkMainAlwaysOnTop->setId("chkMainAlwaysOnTop");
-	chkMainAlwaysOnTop->setBaseColor(gui_baseCol);
-	chkMainAlwaysOnTop->setBackgroundColor(colTextboxBackground);
+	chkMainAlwaysOnTop->setBaseColor(gui_base_color);
+	chkMainAlwaysOnTop->setBackgroundColor(gui_textbox_background_color);
 	chkMainAlwaysOnTop->addActionListener(miscActionListener);
 
 	chkGuiAlwaysOnTop = new gcn::CheckBox("GUI Always on top");
 	chkGuiAlwaysOnTop->setId("chkGuiAlwaysOnTop");
-	chkGuiAlwaysOnTop->setBaseColor(gui_baseCol);
-	chkGuiAlwaysOnTop->setBackgroundColor(colTextboxBackground);
+	chkGuiAlwaysOnTop->setBaseColor(gui_base_color);
+	chkGuiAlwaysOnTop->setBackgroundColor(gui_textbox_background_color);
 	chkGuiAlwaysOnTop->addActionListener(miscActionListener);
 
 	chkSyncClock = new gcn::CheckBox("Synchronize clock");
 	chkSyncClock->setId("chkSyncClock");
-	chkSyncClock->setBaseColor(gui_baseCol);
-	chkSyncClock->setBackgroundColor(colTextboxBackground);
+	chkSyncClock->setBaseColor(gui_base_color);
+	chkSyncClock->setBackgroundColor(gui_textbox_background_color);
 	chkSyncClock->addActionListener(miscActionListener);
 
 	chkResetDelay = new gcn::CheckBox("One second reboot pause");
 	chkResetDelay->setId("chkResetDelay");
-	chkResetDelay->setBaseColor(gui_baseCol);
-	chkResetDelay->setBackgroundColor(colTextboxBackground);
+	chkResetDelay->setBaseColor(gui_base_color);
+	chkResetDelay->setBackgroundColor(gui_textbox_background_color);
 	chkResetDelay->addActionListener(miscActionListener);
 
 	chkFasterRTG = new gcn::CheckBox("Faster RTG");
 	chkFasterRTG->setId("chkFasterRTG");
-	chkFasterRTG->setBaseColor(gui_baseCol);
-	chkFasterRTG->setBackgroundColor(colTextboxBackground);
+	chkFasterRTG->setBaseColor(gui_base_color);
+	chkFasterRTG->setBackgroundColor(gui_textbox_background_color);
 	chkFasterRTG->addActionListener(miscActionListener);
 
 	chkAllowNativeCode = new gcn::CheckBox("Allow native code");
 	chkAllowNativeCode->setId("chkAllowNativeCode");
-	chkAllowNativeCode->setBaseColor(gui_baseCol);
-	chkAllowNativeCode->setBackgroundColor(colTextboxBackground);
+	chkAllowNativeCode->setBaseColor(gui_base_color);
+	chkAllowNativeCode->setBackgroundColor(gui_textbox_background_color);
 	chkAllowNativeCode->addActionListener(miscActionListener);
 
 	chkIllegalMem = new gcn::CheckBox("Log illegal memory accesses");
 	chkIllegalMem->setId("chkIllegalMem");
-	chkIllegalMem->setBaseColor(gui_baseCol);
-	chkIllegalMem->setBackgroundColor(colTextboxBackground);
+	chkIllegalMem->setBaseColor(gui_base_color);
+	chkIllegalMem->setBackgroundColor(gui_textbox_background_color);
 	chkIllegalMem->addActionListener(miscActionListener);
 
 	chkMinimizeInactive = new gcn::CheckBox("Minimize when focus is lost");
 	chkMinimizeInactive->setId("chkMinimizeInactive");
-	chkMinimizeInactive->setBaseColor(gui_baseCol);
-	chkMinimizeInactive->setBackgroundColor(colTextboxBackground);
+	chkMinimizeInactive->setBaseColor(gui_base_color);
+	chkMinimizeInactive->setBackgroundColor(gui_textbox_background_color);
 	chkMinimizeInactive->addActionListener(miscActionListener);
 
 	chkCaptureAlways = new gcn::CheckBox("Capture mouse when window is activated");
 	chkCaptureAlways->setId("chkCaptureAlways");
-	chkCaptureAlways->setBaseColor(gui_baseCol);
-	chkCaptureAlways->setBackgroundColor(colTextboxBackground);
+	chkCaptureAlways->setBaseColor(gui_base_color);
+	chkCaptureAlways->setBackgroundColor(gui_textbox_background_color);
 	chkCaptureAlways->addActionListener(miscActionListener);
 
 	chkHideAutoconfig = new gcn::CheckBox("Hide all UAE autoconfig boards");
 	chkHideAutoconfig->setId("chkHideAutoconfig");
-	chkHideAutoconfig->setBaseColor(gui_baseCol);
-	chkHideAutoconfig->setBackgroundColor(colTextboxBackground);
+	chkHideAutoconfig->setBaseColor(gui_base_color);
+	chkHideAutoconfig->setBackgroundColor(gui_textbox_background_color);
 	chkHideAutoconfig->addActionListener(miscActionListener);
 
 	chkScsiDisable = new gcn::CheckBox("A600/A1200/A4000 IDE scsi.device disable");
 	chkScsiDisable->setId("chkScsiDisable");
-	chkScsiDisable->setBaseColor(gui_baseCol);
-	chkScsiDisable->setBackgroundColor(colTextboxBackground);
+	chkScsiDisable->setBaseColor(gui_base_color);
+	chkScsiDisable->setBackgroundColor(gui_textbox_background_color);
 	chkScsiDisable->addActionListener(miscActionListener);
 
 	chkWarpModeReset = new gcn::CheckBox("Warp mode reset");
 	chkWarpModeReset->setId("chkWarpModeReset");
-	chkWarpModeReset->setBaseColor(gui_baseCol);
-	chkWarpModeReset->setBackgroundColor(colTextboxBackground);
+	chkWarpModeReset->setBaseColor(gui_base_color);
+	chkWarpModeReset->setBackgroundColor(gui_textbox_background_color);
 	chkWarpModeReset->addActionListener(miscActionListener);
 	
 	lblNumLock = new gcn::Label("NumLock:");
 	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
-	cboKBDLed_num->setBaseColor(gui_baseCol);
-	cboKBDLed_num->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_num->setBaseColor(gui_base_color);
+	cboKBDLed_num->setBackgroundColor(gui_textbox_background_color);
 	cboKBDLed_num->setSelectionColor(gui_selection_color);
 	cboKBDLed_num->setId("cboNumlock");
 	cboKBDLed_num->addActionListener(miscActionListener);
@@ -453,8 +453,8 @@ void InitPanelMisc(const config_category& category)
 	lblScrLock = new gcn::Label("ScrollLock:");
 	lblScrLock->setAlignment(gcn::Graphics::RIGHT);
 	cboKBDLed_scr = new gcn::DropDown(&KBDLedList);
-	cboKBDLed_scr->setBaseColor(gui_baseCol);
-	cboKBDLed_scr->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_scr->setBaseColor(gui_base_color);
+	cboKBDLed_scr->setBackgroundColor(gui_textbox_background_color);
 	cboKBDLed_scr->setSelectionColor(gui_selection_color);
 	cboKBDLed_scr->setId("cboScrolllock");
 	cboKBDLed_scr->addActionListener(miscActionListener);
@@ -462,8 +462,8 @@ void InitPanelMisc(const config_category& category)
 	lblCapLock = new gcn::Label("CapsLock:");
 	lblCapLock->setAlignment(gcn::Graphics::LEFT);
 	cboKBDLed_cap = new gcn::DropDown(&KBDLedList);
-	cboKBDLed_cap->setBaseColor(gui_baseCol);
-	cboKBDLed_cap->setBackgroundColor(colTextboxBackground);
+	cboKBDLed_cap->setBaseColor(gui_base_color);
+	cboKBDLed_cap->setBackgroundColor(gui_textbox_background_color);
 	cboKBDLed_cap->setSelectionColor(gui_selection_color);
 	cboKBDLed_cap->setId("cboCapsLock");
 	cboKBDLed_cap->addActionListener(miscActionListener);
@@ -473,15 +473,15 @@ void InitPanelMisc(const config_category& category)
 	txtOpenGUI = new gcn::TextField();
 	txtOpenGUI->setEnabled(false);
 	txtOpenGUI->setSize(120, TEXTFIELD_HEIGHT);
-	txtOpenGUI->setBaseColor(gui_baseCol);
-	txtOpenGUI->setBackgroundColor(colTextboxBackground);
+	txtOpenGUI->setBaseColor(gui_base_color);
+	txtOpenGUI->setBackgroundColor(gui_textbox_background_color);
 	cmdKeyOpenGUI = new gcn::Button("...");
 	cmdKeyOpenGUI->setId("cmdKeyOpenGUI");
 	cmdKeyOpenGUI->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdKeyOpenGUI->setBaseColor(gui_baseCol);
+	cmdKeyOpenGUI->setBaseColor(gui_base_color);
 	cmdKeyOpenGUI->addActionListener(miscActionListener);
 	cmdKeyOpenGUIClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
-	cmdKeyOpenGUIClear->setBaseColor(gui_baseCol);
+	cmdKeyOpenGUIClear->setBaseColor(gui_base_color);
 	cmdKeyOpenGUIClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyOpenGUIClear->setId("cmdKeyOpenGUIClear");
 	cmdKeyOpenGUIClear->addActionListener(miscActionListener);
@@ -491,15 +491,15 @@ void InitPanelMisc(const config_category& category)
 	txtKeyForQuit = new gcn::TextField();
 	txtKeyForQuit->setEnabled(false);
 	txtKeyForQuit->setSize(120, TEXTFIELD_HEIGHT);
-	txtKeyForQuit->setBaseColor(gui_baseCol);
-	txtKeyForQuit->setBackgroundColor(colTextboxBackground);
+	txtKeyForQuit->setBaseColor(gui_base_color);
+	txtKeyForQuit->setBackgroundColor(gui_textbox_background_color);
 	cmdKeyForQuit = new gcn::Button("...");
 	cmdKeyForQuit->setId("cmdKeyForQuit");
 	cmdKeyForQuit->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdKeyForQuit->setBaseColor(gui_baseCol);
+	cmdKeyForQuit->setBaseColor(gui_base_color);
 	cmdKeyForQuit->addActionListener(miscActionListener);
 	cmdKeyForQuitClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
-	cmdKeyForQuitClear->setBaseColor(gui_baseCol);
+	cmdKeyForQuitClear->setBaseColor(gui_base_color);
 	cmdKeyForQuitClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyForQuitClear->setId("cmdKeyForQuitClear");
 	cmdKeyForQuitClear->addActionListener(miscActionListener);
@@ -509,15 +509,15 @@ void InitPanelMisc(const config_category& category)
 	txtKeyActionReplay = new gcn::TextField();
 	txtKeyActionReplay->setEnabled(false);
 	txtKeyActionReplay->setSize(120, TEXTFIELD_HEIGHT);
-	txtKeyActionReplay->setBaseColor(gui_baseCol);
-	txtKeyActionReplay->setBackgroundColor(colTextboxBackground);
+	txtKeyActionReplay->setBaseColor(gui_base_color);
+	txtKeyActionReplay->setBackgroundColor(gui_textbox_background_color);
 	cmdKeyActionReplay = new gcn::Button("...");
 	cmdKeyActionReplay->setId("cmdKeyActionReplay");
 	cmdKeyActionReplay->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdKeyActionReplay->setBaseColor(gui_baseCol);
+	cmdKeyActionReplay->setBaseColor(gui_base_color);
 	cmdKeyActionReplay->addActionListener(miscActionListener);
 	cmdKeyActionReplayClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
-	cmdKeyActionReplayClear->setBaseColor(gui_baseCol);
+	cmdKeyActionReplayClear->setBaseColor(gui_base_color);
 	cmdKeyActionReplayClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyActionReplayClear->setId("cmdKeyActionReplayClear");
 	cmdKeyActionReplayClear->addActionListener(miscActionListener);
@@ -527,15 +527,15 @@ void InitPanelMisc(const config_category& category)
 	txtKeyFullScreen = new gcn::TextField();
 	txtKeyFullScreen->setEnabled(false);
 	txtKeyFullScreen->setSize(120, TEXTFIELD_HEIGHT);
-	txtKeyFullScreen->setBaseColor(gui_baseCol);
-	txtKeyFullScreen->setBackgroundColor(colTextboxBackground);
+	txtKeyFullScreen->setBaseColor(gui_base_color);
+	txtKeyFullScreen->setBackgroundColor(gui_textbox_background_color);
 	cmdKeyFullScreen = new gcn::Button("...");
 	cmdKeyFullScreen->setId("cmdKeyFullScreen");
 	cmdKeyFullScreen->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdKeyFullScreen->setBaseColor(gui_baseCol);
+	cmdKeyFullScreen->setBaseColor(gui_base_color);
 	cmdKeyFullScreen->addActionListener(miscActionListener);
 	cmdKeyFullScreenClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
-	cmdKeyFullScreenClear->setBaseColor(gui_baseCol);
+	cmdKeyFullScreenClear->setBaseColor(gui_base_color);
 	cmdKeyFullScreenClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyFullScreenClear->setId("cmdKeyFullScreenClear");
 	cmdKeyFullScreenClear->addActionListener(miscActionListener);
@@ -545,22 +545,22 @@ void InitPanelMisc(const config_category& category)
 	txtKeyMinimize = new gcn::TextField();
 	txtKeyMinimize->setEnabled(false);
 	txtKeyMinimize->setSize(120, TEXTFIELD_HEIGHT);
-	txtKeyMinimize->setBaseColor(gui_baseCol);
-	txtKeyMinimize->setBackgroundColor(colTextboxBackground);
+	txtKeyMinimize->setBaseColor(gui_base_color);
+	txtKeyMinimize->setBackgroundColor(gui_textbox_background_color);
 	cmdKeyMinimize = new gcn::Button("...");
 	cmdKeyMinimize->setId("cmdKeyMinimize");
 	cmdKeyMinimize->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdKeyMinimize->setBaseColor(gui_baseCol);
+	cmdKeyMinimize->setBaseColor(gui_base_color);
 	cmdKeyMinimize->addActionListener(miscActionListener);
 	cmdKeyMinimizeClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
-	cmdKeyMinimizeClear->setBaseColor(gui_baseCol);
+	cmdKeyMinimizeClear->setBaseColor(gui_base_color);
 	cmdKeyMinimizeClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdKeyMinimizeClear->setId("cmdKeyMinimizeClear");
 	cmdKeyMinimizeClear->addActionListener(miscActionListener);
 
 	int posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	grpMiscOptions->setBaseColor(gui_baseCol);
+	grpMiscOptions->setBaseColor(gui_base_color);
 	grpMiscOptions->add(chkMouseUntrap, DISTANCE_BORDER, posY);
 	posY += chkMouseUntrap->getHeight() + DISTANCE_NEXT_Y;
 	grpMiscOptions->add(chkShowGUI, DISTANCE_BORDER, posY);
@@ -626,8 +626,8 @@ void InitPanelMisc(const config_category& category)
 
 	scrlMisc = new gcn::ScrollArea(grpMiscOptions);
 	scrlMisc->setId("scrlMisc");
-	scrlMisc->setBackgroundColor(gui_baseCol);
-	scrlMisc->setBaseColor(gui_baseCol);
+	scrlMisc->setBackgroundColor(gui_base_color);
+	scrlMisc->setBaseColor(gui_base_color);
 	scrlMisc->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 25);
 	scrlMisc->setHeight(600);
 	scrlMisc->setBorderSize(1);

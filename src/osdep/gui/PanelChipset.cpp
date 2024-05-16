@@ -167,66 +167,66 @@ void InitPanelChipset(const struct config_category& category)
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
 	optOCS->setId("optOCS");
-	optOCS->setBaseColor(gui_baseCol);
-	optOCS->setBackgroundColor(colTextboxBackground);
+	optOCS->setBaseColor(gui_base_color);
+	optOCS->setBackgroundColor(gui_textbox_background_color);
 	optOCS->addActionListener(chipsetActionListener);
 
 	optECSAgnus = new gcn::RadioButton("ECS Agnus", "radiochipsetgroup");
 	optECSAgnus->setId("optECSAgnus");
-	optECSAgnus->setBaseColor(gui_baseCol);
-	optECSAgnus->setBackgroundColor(colTextboxBackground);
+	optECSAgnus->setBaseColor(gui_base_color);
+	optECSAgnus->setBackgroundColor(gui_textbox_background_color);
 	optECSAgnus->addActionListener(chipsetActionListener);
 
 	optECSDenise = new gcn::RadioButton("ECS Denise", "radiochipsetgroup");
 	optECSDenise->setId("optECSDenise");
-	optECSDenise->setBaseColor(gui_baseCol);
-	optECSDenise->setBackgroundColor(colTextboxBackground);
+	optECSDenise->setBaseColor(gui_base_color);
+	optECSDenise->setBackgroundColor(gui_textbox_background_color);
 	optECSDenise->addActionListener(chipsetActionListener);
 	
 	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
 	optECS->setId("optFullECS");
-	optECS->setBaseColor(gui_baseCol);
-	optECS->setBackgroundColor(colTextboxBackground);
+	optECS->setBaseColor(gui_base_color);
+	optECS->setBackgroundColor(gui_textbox_background_color);
 	optECS->addActionListener(chipsetActionListener);
 
 	optAGA = new gcn::RadioButton("AGA", "radiochipsetgroup");
 	optAGA->setId("optAGA");
-	optAGA->setBaseColor(gui_baseCol);
-	optAGA->setBackgroundColor(colTextboxBackground);
+	optAGA->setBaseColor(gui_base_color);
+	optAGA->setBackgroundColor(gui_textbox_background_color);
 	optAGA->addActionListener(chipsetActionListener);
 
 	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("chkNTSC");
-	chkNTSC->setBaseColor(gui_baseCol);
-	chkNTSC->setBackgroundColor(colTextboxBackground);
+	chkNTSC->setBaseColor(gui_base_color);
+	chkNTSC->setBackgroundColor(gui_textbox_background_color);
 	chkNTSC->addActionListener(chipsetActionListener);
 
 	chkCycleExact = new gcn::CheckBox("Cycle Exact (Full)");
 	chkCycleExact->setId("chkCycleExact");
-	chkCycleExact->setBaseColor(gui_baseCol);
-	chkCycleExact->setBackgroundColor(colTextboxBackground);
+	chkCycleExact->setBaseColor(gui_base_color);
+	chkCycleExact->setBackgroundColor(gui_textbox_background_color);
 	chkCycleExact->addActionListener(chipsetActionListener);
 
 	chkMemoryCycleExact = new gcn::CheckBox("Cycle Exact (DMA/Memory)");
 	chkMemoryCycleExact->setId("chkMemoryCycleExact");
-	chkMemoryCycleExact->setBaseColor(gui_baseCol);
-	chkMemoryCycleExact->setBackgroundColor(colTextboxBackground);
+	chkMemoryCycleExact->setBaseColor(gui_base_color);
+	chkMemoryCycleExact->setBackgroundColor(gui_textbox_background_color);
 	chkMemoryCycleExact->addActionListener(chipsetActionListener);
 
 	lblChipset = new gcn::Label("Chipset Extra:");
 	lblChipset->setAlignment(gcn::Graphics::RIGHT);
 	cboChipset = new gcn::DropDown(&chipsetList);
 	cboChipset->setSize(120, cboChipset->getHeight());
-	cboChipset->setBaseColor(gui_baseCol);
-	cboChipset->setBackgroundColor(colTextboxBackground);
+	cboChipset->setBaseColor(gui_base_color);
+	cboChipset->setBackgroundColor(gui_textbox_background_color);
 	cboChipset->setSelectionColor(gui_selection_color);
 	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
 
 	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
 	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
-	chkMultithreadedDrawing->setBaseColor(gui_baseCol);
-	chkMultithreadedDrawing->setBackgroundColor(colTextboxBackground);
+	chkMultithreadedDrawing->setBaseColor(gui_base_color);
+	chkMultithreadedDrawing->setBackgroundColor(gui_textbox_background_color);
 	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
 
 	grpChipset = new gcn::Window("Chipset");
@@ -246,32 +246,32 @@ void InitPanelChipset(const struct config_category& category)
 	grpChipset->setMovable(false);
 	grpChipset->setSize(cboChipset->getX() + cboChipset->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + 250 + chkMultithreadedDrawing->getHeight() + DISTANCE_NEXT_Y * 2);
 	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpChipset->setBaseColor(gui_baseCol);
+	grpChipset->setBaseColor(gui_base_color);
 
 	category.panel->add(grpChipset);
 
 	chkKeyboardConnected = new gcn::CheckBox("Keyboard connected");
 	chkKeyboardConnected->setId("chkKeyboardConnected");
-	chkKeyboardConnected->setBaseColor(gui_baseCol);
-	chkKeyboardConnected->setBackgroundColor(colTextboxBackground);
+	chkKeyboardConnected->setBaseColor(gui_base_color);
+	chkKeyboardConnected->setBackgroundColor(gui_textbox_background_color);
 	chkKeyboardConnected->addActionListener(chipsetActionListener);
 
 	chkSubpixelEmu = new gcn::CheckBox("Subpixel Display emulation");
 	chkSubpixelEmu->setId("chkSubpixelEmu");
-	chkSubpixelEmu->setBaseColor(gui_baseCol);
-	chkSubpixelEmu->setBackgroundColor(colTextboxBackground);
+	chkSubpixelEmu->setBaseColor(gui_base_color);
+	chkSubpixelEmu->setBackgroundColor(gui_textbox_background_color);
 	chkSubpixelEmu->addActionListener(chipsetActionListener);
 
 	chkBlitImmed = new gcn::CheckBox("Immediate Blitter");
 	chkBlitImmed->setId("chkBlitImmed");
-	chkBlitImmed->setBaseColor(gui_baseCol);
-	chkBlitImmed->setBackgroundColor(colTextboxBackground);
+	chkBlitImmed->setBaseColor(gui_base_color);
+	chkBlitImmed->setBackgroundColor(gui_textbox_background_color);
 	chkBlitImmed->addActionListener(chipsetActionListener);
 
 	chkBlitWait = new gcn::CheckBox("Wait for Blitter");
 	chkBlitWait->setId("chkBlitWait");
-	chkBlitWait->setBaseColor(gui_baseCol);
-	chkBlitWait->setBackgroundColor(colTextboxBackground);
+	chkBlitWait->setBaseColor(gui_base_color);
+	chkBlitWait->setBackgroundColor(gui_textbox_background_color);
 	chkBlitWait->addActionListener(chipsetActionListener);
 
 	grpOptions = new gcn::Window("Options");
@@ -283,32 +283,32 @@ void InitPanelChipset(const struct config_category& category)
 	grpOptions->setMovable(false);
 	grpOptions->setSize(chkSubpixelEmu->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, TITLEBAR_HEIGHT + 100 + chkBlitWait->getHeight() + DISTANCE_NEXT_Y);
 	grpOptions->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpOptions->setBaseColor(gui_baseCol);
+	grpOptions->setBaseColor(gui_base_color);
 
 	category.panel->add(grpOptions);
 
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("optCollNone");
-	optCollNone->setBaseColor(gui_baseCol);
-	optCollNone->setBackgroundColor(colTextboxBackground);
+	optCollNone->setBaseColor(gui_base_color);
+	optCollNone->setBackgroundColor(gui_textbox_background_color);
 	optCollNone->addActionListener(chipsetActionListener);
 
 	optCollSprites = new gcn::RadioButton("Sprites only", "radioccollisiongroup");
 	optCollSprites->setId("optCollSprites");
-	optCollSprites->setBaseColor(gui_baseCol);
-	optCollSprites->setBackgroundColor(colTextboxBackground);
+	optCollSprites->setBaseColor(gui_base_color);
+	optCollSprites->setBackgroundColor(gui_textbox_background_color);
 	optCollSprites->addActionListener(chipsetActionListener);
 
 	optCollPlayfield = new gcn::RadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
 	optCollPlayfield->setId("optCollPlayfield");
-	optCollPlayfield->setBaseColor(gui_baseCol);
-	optCollPlayfield->setBackgroundColor(colTextboxBackground);
+	optCollPlayfield->setBaseColor(gui_base_color);
+	optCollPlayfield->setBackgroundColor(gui_textbox_background_color);
 	optCollPlayfield->addActionListener(chipsetActionListener);
 
 	optCollFull = new gcn::RadioButton("Full (rarely needed)", "radioccollisiongroup");
 	optCollFull->setId("optCollFull");
-	optCollFull->setBaseColor(gui_baseCol);
-	optCollFull->setBackgroundColor(colTextboxBackground);
+	optCollFull->setBaseColor(gui_base_color);
+	optCollFull->setBackgroundColor(gui_textbox_background_color);
 	optCollFull->addActionListener(chipsetActionListener);
 
 	grpCollisionLevel = new gcn::Window("Collision Level");
@@ -320,7 +320,7 @@ void InitPanelChipset(const struct config_category& category)
 	grpCollisionLevel->setMovable(false);
 	grpCollisionLevel->setSize(grpChipset->getWidth(), TITLEBAR_HEIGHT + 100 + optCollFull->getHeight() + DISTANCE_NEXT_Y);
 	grpCollisionLevel->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpCollisionLevel->setBaseColor(gui_baseCol);
+	grpCollisionLevel->setBaseColor(gui_base_color);
 
 	category.panel->add(grpCollisionLevel);
 
