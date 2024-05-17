@@ -823,8 +823,8 @@ void usage()
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
 	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" <<
 		'\n';
-	std::cout << " --autoload <file>          Load a WHDLoad game or .CUE CD32 image using the WHDBooter." << '\n';
-	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation (for CD32)." << '\n';
+	std::cout << " --autoload <file>          Load an .lha WHDLoad game or a CD32 CD image, using the WHDBooter." << '\n';
+	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation." << '\n';
 	std::cout << " --statefile <file>         Load a save state file." << '\n';
 	std::cout << " -s <option>=<value>        Set one or more configuration options directly, without loading a file." <<
 		'\n';
