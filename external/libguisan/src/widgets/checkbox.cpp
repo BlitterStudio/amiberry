@@ -152,7 +152,10 @@ namespace gcn
 		graphics->setColor(backCol);
 		graphics->fillRectangle(Rectangle(2, 2, h - 2, h - 2));
 
-		graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
 
 		if (isFocused())
 		{

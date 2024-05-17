@@ -122,7 +122,7 @@ namespace gcn
 			graphics->setColor(Color(128, 128, 128));
 		
 		graphics->setFont(getFont());
-		graphics->drawText(mText, 1 - mXScroll, 2);
+		graphics->drawText(mText, 1 - mXScroll, 2, Graphics::LEFT, isEnabled());
 	}
 
 	void TextField::drawBorder(Graphics* graphics)

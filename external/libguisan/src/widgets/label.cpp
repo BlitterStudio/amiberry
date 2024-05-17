@@ -121,11 +121,11 @@ namespace gcn
 		}
 
 		graphics->setFont(getFont());
-		Color color = getForegroundColor();
-		if (!isEnabled())
-			color = Color(128, 128, 128);
-		graphics->setColor(color);
-		graphics->drawText(getCaption(), textX, textY, getAlignment());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
+		graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
 	}
 
 	void Label::drawBorder(Graphics* graphics)

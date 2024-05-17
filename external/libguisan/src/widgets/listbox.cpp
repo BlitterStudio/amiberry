@@ -155,11 +155,11 @@ namespace gcn
 			// draw the text with a center vertical alignment.
 			if (rowHeight > getFont()->getHeight())
 			{
-				graphics->drawText(mListModel->getElementAt(i), 2, y + rowHeight / 2 - getFont()->getHeight() / 2);
+				graphics->drawText(mListModel->getElementAt(i), 2, y + rowHeight / 2 - getFont()->getHeight() / 2, Graphics::LEFT, isEnabled());
 			}
 			else
 			{
-				graphics->drawText(mListModel->getElementAt(i), 2, y);
+				graphics->drawText(mListModel->getElementAt(i), 2, y, Graphics::LEFT, isEnabled());
 			}
 
 			y += rowHeight;
