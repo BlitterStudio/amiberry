@@ -228,7 +228,7 @@ namespace gcn
         graphics->setColor(getForegroundColor());
         graphics->setFont(getFont());
         graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
-        graphics->drawText(getCaption(), textX, textY, getAlignment());
+        graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
         graphics->popClipArea();
     }
 

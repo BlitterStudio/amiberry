@@ -130,15 +130,9 @@ namespace gcn
 
 	void Slider::draw(gcn::Graphics* graphics)
 	{
-		const auto alpha = getBaseColor().a;
-		auto faceColor = getBaseColor();
-		faceColor.a = alpha;
-
 		auto backCol = getBackgroundColor();
-		if (isEnabled())
+		if (!isEnabled())
 			backCol = backCol - 0x303030;
-		else
-			backCol = faceColor - 0x101010;
 		
 		graphics->setColor(backCol);
 		graphics->fillRectangle(gcn::Rectangle(0, 0, getWidth(), getHeight()));
