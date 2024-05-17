@@ -188,7 +188,7 @@ namespace gcn
 		if (!isEnabled())
 			color = color - 0x303030;
 		graphics->setColor(color);
-		graphics->drawText(getCaption(), textX, textY, getAlignment());
+		graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
 	}
 
 	void ProgressBar::drawBorder(Graphics* graphics)

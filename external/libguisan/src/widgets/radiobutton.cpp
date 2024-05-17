@@ -78,9 +78,7 @@ namespace gcn
 		addKeyListener(this);
 	}
 
-	RadioButton::RadioButton(const std::string& caption,
-							 const std::string& group,
-							 bool selected)
+	RadioButton::RadioButton(const std::string& caption, const std::string& group, bool selected)
 	{
 		setCaption(caption);
 		setGroup(group);
@@ -108,9 +106,11 @@ namespace gcn
 		drawBox(graphics);
 		graphics->popClipArea();
 
-
 		graphics->setFont(getFont());
-		graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
 
 		if (isFocused())
 		{
@@ -119,7 +119,7 @@ namespace gcn
 
 		const int h = getHeight() + getHeight() / 2;
 
-		graphics->drawText(getCaption(), h - 2, 0);
+		graphics->drawText(getCaption(), h - 2, 0, Graphics::LEFT, isEnabled());
 	}
 
 	void RadioButton::drawBorder(Graphics* graphics)
@@ -127,8 +127,8 @@ namespace gcn
 		Color faceColor = getBaseColor();
 		Color highlightColor, shadowColor;
 		int alpha = getBaseColor().a;
-		int width = getWidth() + getBorderSize() * 2 - 1;
-		int height = getHeight() + getBorderSize() * 2 - 1;
+		int width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
+		int height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
 		highlightColor = faceColor + 0x303030;
 		highlightColor.a = alpha;
 		shadowColor = faceColor - 0x303030;
@@ -199,7 +199,10 @@ namespace gcn
 		graphics->drawLine(1, hh + 1, hh, h);
 		graphics->drawLine(hh + 1, h - 1, h, hh);
 
-		graphics->setColor(getForegroundColor());
+		if (isEnabled())
+			graphics->setColor(getForegroundColor());
+		else
+			graphics->setColor(Color(128, 128, 128));
 
 		const int hhh = hh - 3;
 		if (mSelected)
