@@ -86,8 +86,6 @@ static void InitShowMessage(const std::string& message)
 				mode |= SDL_WINDOW_HIDDEN;
 			else
 				mode |= SDL_WINDOW_SHOWN;
-			// Set Window allow high DPI by default
-			mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 		}
 		else
 		{
