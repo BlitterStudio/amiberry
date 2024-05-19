@@ -753,6 +753,9 @@ void RefreshPanelCPU()
 	optFPU68882->setEnabled(changed_prefs.cpu_model < 68040 && (changed_prefs.cpu_model >= 68020 || !changed_prefs.cpu_compatible));
 	optFPUinternal->setEnabled(changed_prefs.cpu_model >= 68040);
 
+	optMMUEC->setEnabled(changed_prefs.cpu_model >= 68030 && changed_prefs.cachesize == 0);
+	optMMUEnabled->setEnabled(changed_prefs.cpu_model >= 68030 && changed_prefs.cachesize == 0);
+
 	// Set Values
 	sldCpuSpeed->setValue(static_cast<int>(changed_prefs.m68k_speed_throttle / 100));
 	auto cpu_speed_info = to_string(static_cast<int>(changed_prefs.m68k_speed_throttle / 10));
@@ -762,6 +765,7 @@ void RefreshPanelCPU()
 	chkCPUCompatible->setSelected(changed_prefs.cpu_compatible);
 	chk24Bit->setSelected(changed_prefs.address_space_24);
 	chkCpuDataCache->setSelected(changed_prefs.cpu_data_cache);
+	chkCpuDataCache->setEnabled(changed_prefs.cpu_model >= 68030 && changed_prefs.cachesize == 0 && changed_prefs.cpu_compatible);
 	chkFPUStrict->setSelected(changed_prefs.fpu_strict);
 
 	sldCpuIdle->setValue(changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15);
