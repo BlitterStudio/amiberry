@@ -271,6 +271,7 @@ static void InitSelectFile(const std::string& title)
 		txtFilename->setSize(350, TEXTFIELD_HEIGHT);
 		txtFilename->setId("Filename");
 		txtFilename->setBaseColor(gui_base_color);
+		txtFilename->setBackgroundColor(gui_textbox_background_color);
 		txtFilename->setForegroundColor(gui_foreground_color);
 		txtFilename->setPosition(lblFilename->getX() + lblFilename->getWidth() + DISTANCE_NEXT_X, lblFilename->getY());
 
