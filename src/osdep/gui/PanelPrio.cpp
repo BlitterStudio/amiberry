@@ -147,8 +147,9 @@ void InitPanelPrio(const config_category& category)
 	lblActiveRunAtPrio->setAlignment(gcn::Graphics::CENTER);
 	cboActiveRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboActiveRunAtPrio->setSize(150, cboActiveRunAtPrio->getHeight());
-	cboActiveRunAtPrio->setBaseColor(gui_baseCol);
-	cboActiveRunAtPrio->setBackgroundColor(colTextboxBackground);
+	cboActiveRunAtPrio->setBaseColor(gui_base_color);
+	cboActiveRunAtPrio->setBackgroundColor(gui_textbox_background_color);
+	cboActiveRunAtPrio->setForegroundColor(gui_foreground_color);
 	cboActiveRunAtPrio->setSelectionColor(gui_selection_color);
 	cboActiveRunAtPrio->setId("cboActiveRunAtPrio");
 	cboActiveRunAtPrio->addActionListener(prioActionListener);
@@ -158,14 +159,16 @@ void InitPanelPrio(const config_category& category)
 
 	chkActivePauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkActivePauseEmulation->setId("chkActivePauseEmulation");
-	chkActivePauseEmulation->setBaseColor(gui_baseCol);
-	chkActivePauseEmulation->setBackgroundColor(colTextboxBackground);
+	chkActivePauseEmulation->setBaseColor(gui_base_color);
+	chkActivePauseEmulation->setBackgroundColor(gui_textbox_background_color);
+	chkActivePauseEmulation->setForegroundColor(gui_foreground_color);
 	chkActivePauseEmulation->addActionListener(prioActionListener);
 
 	chkActiveDisableSound = new gcn::CheckBox("Disable sound");
 	chkActiveDisableSound->setId("chkActiveDisableSound");
-	chkActiveDisableSound->setBaseColor(gui_baseCol);
-	chkActiveDisableSound->setBackgroundColor(colTextboxBackground);
+	chkActiveDisableSound->setBaseColor(gui_base_color);
+	chkActiveDisableSound->setBackgroundColor(gui_textbox_background_color);
+	chkActiveDisableSound->setForegroundColor(gui_foreground_color);
 	chkActiveDisableSound->addActionListener(prioActionListener);
 
 	grpWhenActive = new gcn::Window("When Active");
@@ -182,35 +185,40 @@ void InitPanelPrio(const config_category& category)
 	grpWhenActive->setMovable(false);
 	grpWhenActive->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpWhenActive->setSize(cboActiveRunAtPrio->getWidth() + DISTANCE_BORDER * 3, TITLEBAR_HEIGHT + chkActiveDisableSound->getY() + chkActiveDisableSound->getHeight() + DISTANCE_NEXT_Y * 3);
-	grpWhenActive->setBaseColor(gui_baseCol);
+	grpWhenActive->setBaseColor(gui_base_color);
+	grpWhenActive->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpWhenActive);
 	
 	lblInactiveRunAtPrio = new gcn::Label("Run at priority:");
 	lblInactiveRunAtPrio->setAlignment(gcn::Graphics::CENTER);
 	cboInactiveRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboInactiveRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
-	cboInactiveRunAtPrio->setBaseColor(gui_baseCol);
-	cboInactiveRunAtPrio->setBackgroundColor(colTextboxBackground);
+	cboInactiveRunAtPrio->setBaseColor(gui_base_color);
+	cboInactiveRunAtPrio->setBackgroundColor(gui_textbox_background_color);
+	cboInactiveRunAtPrio->setForegroundColor(gui_foreground_color);
 	cboInactiveRunAtPrio->setSelectionColor(gui_selection_color);
 	cboInactiveRunAtPrio->setId("cboInactiveRunAtPrio");
 	cboInactiveRunAtPrio->addActionListener(prioActionListener);
 
 	chkInactivePauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkInactivePauseEmulation->setId("chkInactivePauseEmulation");
-	chkInactivePauseEmulation->setBaseColor(gui_baseCol);
-	chkInactivePauseEmulation->setBackgroundColor(colTextboxBackground);
+	chkInactivePauseEmulation->setBaseColor(gui_base_color);
+	chkInactivePauseEmulation->setBackgroundColor(gui_textbox_background_color);
+	chkInactivePauseEmulation->setForegroundColor(gui_foreground_color);
 	chkInactivePauseEmulation->addActionListener(prioActionListener);
 
 	chkInactiveDisableSound = new gcn::CheckBox("Disable sound");
 	chkInactiveDisableSound->setId("chkInactiveDisableSound");
-	chkInactiveDisableSound->setBaseColor(gui_baseCol);
-	chkInactiveDisableSound->setBackgroundColor(colTextboxBackground);
+	chkInactiveDisableSound->setBaseColor(gui_base_color);
+	chkInactiveDisableSound->setBackgroundColor(gui_textbox_background_color);
+	chkInactiveDisableSound->setForegroundColor(gui_foreground_color);
 	chkInactiveDisableSound->addActionListener(prioActionListener);
 
 	chkInactiveDisableControllers = new gcn::CheckBox("Disable input");
 	chkInactiveDisableControllers->setId("chkInactiveDisableControllers");
-	chkInactiveDisableControllers->setBaseColor(gui_baseCol);
-	chkInactiveDisableControllers->setBackgroundColor(colTextboxBackground);
+	chkInactiveDisableControllers->setBaseColor(gui_base_color);
+	chkInactiveDisableControllers->setBackgroundColor(gui_textbox_background_color);
+	chkInactiveDisableControllers->setForegroundColor(gui_foreground_color);
 	chkInactiveDisableControllers->addActionListener(prioActionListener);
 
 	grpWhenInactive = new gcn::Window("When Inactive");
@@ -224,35 +232,40 @@ void InitPanelPrio(const config_category& category)
 	grpWhenInactive->setMovable(false);
 	grpWhenInactive->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpWhenInactive->setSize(grpWhenActive->getWidth(), grpWhenActive->getHeight());
-	grpWhenInactive->setBaseColor(gui_baseCol);
+	grpWhenInactive->setBaseColor(gui_base_color);
+	grpWhenInactive->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpWhenInactive);
 
 	lblMinimizedRunAtPrio = new gcn::Label("Run at priority:");
 	lblMinimizedRunAtPrio->setAlignment(gcn::Graphics::CENTER);
 	cboMinimizedRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboMinimizedRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
-	cboMinimizedRunAtPrio->setBaseColor(gui_baseCol);
-	cboMinimizedRunAtPrio->setBackgroundColor(colTextboxBackground);
+	cboMinimizedRunAtPrio->setBaseColor(gui_base_color);
+	cboMinimizedRunAtPrio->setBackgroundColor(gui_textbox_background_color);
+	cboMinimizedRunAtPrio->setForegroundColor(gui_foreground_color);
 	cboMinimizedRunAtPrio->setSelectionColor(gui_selection_color);
 	cboMinimizedRunAtPrio->setId("cboMinimizedRunAtPrio");
 	cboMinimizedRunAtPrio->addActionListener(prioActionListener);
 
 	chkMinimizedPauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkMinimizedPauseEmulation->setId("chkMinimizedPauseEmulation");
-	chkMinimizedPauseEmulation->setBaseColor(gui_baseCol);
-	chkMinimizedPauseEmulation->setBackgroundColor(colTextboxBackground);
+	chkMinimizedPauseEmulation->setBaseColor(gui_base_color);
+	chkMinimizedPauseEmulation->setBackgroundColor(gui_textbox_background_color);
+	chkMinimizedPauseEmulation->setForegroundColor(gui_foreground_color);
 	chkMinimizedPauseEmulation->addActionListener(prioActionListener);
 
 	chkMinimizedDisableSound = new gcn::CheckBox("Disable sound");
 	chkMinimizedDisableSound->setId("chkMinimizedDisableSound");
-	chkMinimizedDisableSound->setBaseColor(gui_baseCol);
-	chkMinimizedDisableSound->setBackgroundColor(colTextboxBackground);
+	chkMinimizedDisableSound->setBaseColor(gui_base_color);
+	chkMinimizedDisableSound->setBackgroundColor(gui_textbox_background_color);
+	chkMinimizedDisableSound->setForegroundColor(gui_foreground_color);
 	chkMinimizedDisableSound->addActionListener(prioActionListener);
 
 	chkMinimizedDisableControllers = new gcn::CheckBox("Disable input");
 	chkMinimizedDisableControllers->setId("chkMinimizedDisableControllers");
-	chkMinimizedDisableControllers->setBaseColor(gui_baseCol);
-	chkMinimizedDisableControllers->setBackgroundColor(colTextboxBackground);
+	chkMinimizedDisableControllers->setBaseColor(gui_base_color);
+	chkMinimizedDisableControllers->setBackgroundColor(gui_textbox_background_color);
+	chkMinimizedDisableControllers->setForegroundColor(gui_foreground_color);
 	chkMinimizedDisableControllers->addActionListener(prioActionListener);
 
 	grpWhenMinimized = new gcn::Window("When Minimized");
@@ -265,7 +278,8 @@ void InitPanelPrio(const config_category& category)
 	grpWhenMinimized->setMovable(false);
 	grpWhenMinimized->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpWhenMinimized->setSize(grpWhenActive->getWidth(), grpWhenInactive->getHeight());
-	grpWhenMinimized->setBaseColor(gui_baseCol);
+	grpWhenMinimized->setBaseColor(gui_base_color);
+	grpWhenMinimized->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpWhenMinimized);
 	
 	RefreshPanelPrio();

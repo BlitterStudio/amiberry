@@ -194,34 +194,40 @@ void InitPanelCustom(const config_category& category)
 
 	optPort0 = new gcn::RadioButton("0: Mouse", "radioportgroup");
 	optPort0->setId("0: Mouse");
-	optPort0->setBaseColor(gui_baseCol);
-	optPort0->setBackgroundColor(colTextboxBackground);
+	optPort0->setBaseColor(gui_base_color);
+	optPort0->setBackgroundColor(gui_textbox_background_color);
+	optPort0->setForegroundColor(gui_foreground_color);
 	optPort0->addActionListener(grpActionListener);
 	optPort1 = new gcn::RadioButton("1: Joystick", "radioportgroup");
 	optPort1->setId("1: Joystick");
-	optPort1->setBaseColor(gui_baseCol);
-	optPort1->setBackgroundColor(colTextboxBackground);
+	optPort1->setBaseColor(gui_base_color);
+	optPort1->setBackgroundColor(gui_textbox_background_color);
+	optPort1->setForegroundColor(gui_foreground_color);
 	optPort1->addActionListener(grpActionListener);
 	optPort2 = new gcn::RadioButton("2: Parallel 1", "radioportgroup");
 	optPort2->setId("2: Parallel 1");
-	optPort2->setBaseColor(gui_baseCol);
-	optPort2->setBackgroundColor(colTextboxBackground);
+	optPort2->setBaseColor(gui_base_color);
+	optPort2->setBackgroundColor(gui_textbox_background_color);
+	optPort2->setForegroundColor(gui_foreground_color);
 	optPort2->addActionListener(grpActionListener);
 	optPort3 = new gcn::RadioButton("3: Parallel 2", "radioportgroup");
 	optPort3->setId("3: Parallel 2");
-	optPort3->setBaseColor(gui_baseCol);
-	optPort3->setBackgroundColor(colTextboxBackground);
+	optPort3->setBaseColor(gui_base_color);
+	optPort3->setBackgroundColor(gui_textbox_background_color);
+	optPort3->setForegroundColor(gui_foreground_color);
 	optPort3->addActionListener(grpActionListener);
 
 	optMultiNone = new gcn::RadioButton("None", "radiomultigroup");
 	optMultiNone->setId("None");
-	optMultiNone->setBaseColor(gui_baseCol);
-	optMultiNone->setBackgroundColor(colTextboxBackground);
+	optMultiNone->setBaseColor(gui_base_color);
+	optMultiNone->setBackgroundColor(gui_textbox_background_color);
+	optMultiNone->setForegroundColor(gui_foreground_color);
 	optMultiNone->addActionListener(grpActionListener);
 	optMultiSelect = new gcn::RadioButton("HotKey", "radiomultigroup");
 	optMultiSelect->setId("HotKey");
-	optMultiSelect->setBaseColor(gui_baseCol);
-	optMultiSelect->setBackgroundColor(colTextboxBackground);
+	optMultiSelect->setBaseColor(gui_base_color);
+	optMultiSelect->setBackgroundColor(gui_textbox_background_color);
+	optMultiSelect->setForegroundColor(gui_foreground_color);
 	optMultiSelect->addActionListener(grpActionListener);
 
 	grpPort = new gcn::Window("Joystick Port");
@@ -233,7 +239,8 @@ void InitPanelCustom(const config_category& category)
 	grpPort->add(optPort3, optPort2->getX() + optPort2->getWidth() + DISTANCE_NEXT_X, optPort0->getY());
 	grpPort->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + optPort0->getHeight() * 2 + 5);
 	grpPort->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpPort->setBaseColor(gui_baseCol);
+	grpPort->setBaseColor(gui_base_color);
+	grpPort->setForegroundColor(gui_foreground_color);
 
 	category.panel->add(grpPort);
 
@@ -242,15 +249,18 @@ void InitPanelCustom(const config_category& category)
 	txtSetHotkey = new gcn::TextField();
 	txtSetHotkey->setEnabled(false);
 	txtSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
-	txtSetHotkey->setBaseColor(gui_baseCol);
-	txtSetHotkey->setBackgroundColor(colTextboxBackground);
+	txtSetHotkey->setBaseColor(gui_base_color);
+	txtSetHotkey->setBackgroundColor(gui_textbox_background_color);
+	txtSetHotkey->setForegroundColor(gui_foreground_color);
 	cmdSetHotkey = new gcn::Button("...");
 	cmdSetHotkey->setId("cmdSetHotkey");
 	cmdSetHotkey->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdSetHotkey->setBaseColor(gui_baseCol);
+	cmdSetHotkey->setBaseColor(gui_base_color);
+	cmdSetHotkey->setForegroundColor(gui_foreground_color);
 	cmdSetHotkey->addActionListener(grpActionListener);
 	cmdSetHotkeyClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
-	cmdSetHotkeyClear->setBaseColor(gui_baseCol);
+	cmdSetHotkeyClear->setBaseColor(gui_base_color);
+	cmdSetHotkeyClear->setForegroundColor(gui_foreground_color);
 	cmdSetHotkeyClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdSetHotkeyClear->setId("cmdSetHotkeyClear");
 	cmdSetHotkeyClear->addActionListener(grpActionListener);
@@ -270,8 +280,9 @@ void InitPanelCustom(const config_category& category)
 
 	txtPortInput = new gcn::TextField();
 	txtPortInput->setEnabled(false);
-	txtPortInput->setBaseColor(gui_baseCol);
-	txtPortInput->setBackgroundColor(colTextboxBackground);
+	txtPortInput->setBaseColor(gui_base_color);
+	txtPortInput->setBackgroundColor(gui_textbox_background_color);
+	txtPortInput->setForegroundColor(gui_foreground_color);
 
 	lblRetroarch = new gcn::Label("[-]");
 	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
@@ -279,7 +290,8 @@ void InitPanelCustom(const config_category& category)
 	cmdSaveMapping = new gcn::Button("Save as default mapping");
 	cmdSaveMapping->setId("cmdSaveMapping");
 	cmdSaveMapping->setSize(BUTTON_WIDTH * 3, BUTTON_HEIGHT);
-	cmdSaveMapping->setBaseColor(gui_baseCol);
+	cmdSaveMapping->setBaseColor(gui_base_color);
+	cmdSaveMapping->setForegroundColor(gui_foreground_color);
 	cmdSaveMapping->addActionListener(grpActionListener);
 
 	txtPortInput->setSize(grpPort->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()),
@@ -293,8 +305,9 @@ void InitPanelCustom(const config_category& category)
 
 		cboCustomButtonAction[i] = new gcn::DropDown(&CustomEventList);
 		cboCustomButtonAction[i]->setSize(cboCustomButtonAction[i]->getWidth() * 2, cboCustomButtonAction[i]->getHeight());
-		cboCustomButtonAction[i]->setBaseColor(gui_baseCol);
-		cboCustomButtonAction[i]->setBackgroundColor(colTextboxBackground);
+		cboCustomButtonAction[i]->setBaseColor(gui_base_color);
+		cboCustomButtonAction[i]->setBackgroundColor(gui_textbox_background_color);
+		cboCustomButtonAction[i]->setForegroundColor(gui_foreground_color);
 		cboCustomButtonAction[i]->setSelectionColor(gui_selection_color);
 
 		std::string cbo_id = "cboCustomButtonAction" + std::to_string(i);
@@ -310,8 +323,9 @@ void InitPanelCustom(const config_category& category)
 
 		cboCustomAxisAction[i] = new gcn::DropDown(&CustomEventList);
 		cboCustomAxisAction[i]->setSize(cboCustomAxisAction[i]->getWidth() * 2, cboCustomAxisAction[i]->getHeight());
-		cboCustomAxisAction[i]->setBaseColor(gui_baseCol);
-		cboCustomAxisAction[i]->setBackgroundColor(colTextboxBackground);
+		cboCustomAxisAction[i]->setBaseColor(gui_base_color);
+		cboCustomAxisAction[i]->setBackgroundColor(gui_textbox_background_color);
+		cboCustomAxisAction[i]->setForegroundColor(gui_foreground_color);
 		cboCustomAxisAction[i]->setSelectionColor(gui_selection_color);
 
 		std::string cbo_id = "cboCustomAxisAction" + std::to_string(i);

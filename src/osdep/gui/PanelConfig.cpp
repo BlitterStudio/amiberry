@@ -170,32 +170,37 @@ void InitPanelConfig(const struct config_category& category)
 	lblName->setAlignment(gcn::Graphics::RIGHT);
 	txtName = new gcn::TextField();
 	txtName->setSize(300, TEXTFIELD_HEIGHT);
-	txtName->setBaseColor(gui_baseCol);
-	txtName->setBackgroundColor(colTextboxBackground);
+	txtName->setBaseColor(gui_base_color);
+	txtName->setBackgroundColor(gui_textbox_background_color);
+	txtName->setForegroundColor(gui_foreground_color);
 
 	lblDesc = new gcn::Label("Description:");
 	lblDesc->setSize(lblDesc->getWidth(), lblDesc->getHeight());
 	lblDesc->setAlignment(gcn::Graphics::RIGHT);
 	txtDesc = new gcn::TextField();
 	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
-	txtDesc->setBaseColor(gui_baseCol);
-	txtDesc->setBackgroundColor(colTextboxBackground);
+	txtDesc->setBaseColor(gui_base_color);
+	txtDesc->setBackgroundColor(gui_textbox_background_color);
+	txtDesc->setForegroundColor(gui_foreground_color);
 
 	cmdLoad = new gcn::Button("Load");
 	cmdLoad->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdLoad->setBaseColor(gui_baseCol);
+	cmdLoad->setBaseColor(gui_base_color);
+	cmdLoad->setForegroundColor(gui_foreground_color);
 	cmdLoad->setId("ConfigLoad");
 	cmdLoad->addActionListener(configButtonActionListener);
 
 	cmdSave = new gcn::Button("Save");
 	cmdSave->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdSave->setBaseColor(gui_baseCol);
+	cmdSave->setBaseColor(gui_base_color);
+	cmdSave->setForegroundColor(gui_foreground_color);
 	cmdSave->setId("ConfigSave");
 	cmdSave->addActionListener(configButtonActionListener);
 
 	cmdDelete = new gcn::Button("Delete");
 	cmdDelete->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdDelete->setBaseColor(gui_baseCol);
+	cmdDelete->setBaseColor(gui_base_color);
+	cmdDelete->setForegroundColor(gui_foreground_color);
 	cmdDelete->setId("CfgDelete");
 	cmdDelete->addActionListener(configButtonActionListener);
 
@@ -203,8 +208,9 @@ void InitPanelConfig(const struct config_category& category)
 	const int list_height = category.panel->getHeight() - 2 * DISTANCE_BORDER - 2 * lblName->getHeight() - 3 * DISTANCE_NEXT_Y - 2 * BUTTON_HEIGHT;
 	lstConfigs = new gcn::ListBox(&configsList);
 	lstConfigs->setSize(list_width, list_height);
-	lstConfigs->setBaseColor(gui_baseCol);
-	lstConfigs->setBackgroundColor(colTextboxBackground);
+	lstConfigs->setBaseColor(gui_base_color);
+	lstConfigs->setBackgroundColor(gui_textbox_background_color);
+	lstConfigs->setForegroundColor(gui_foreground_color);
 	lstConfigs->setSelectionColor(gui_selection_color);
 	lstConfigs->setWrappingEnabled(true);
 	lstConfigs->setId("ConfigList");
@@ -215,8 +221,9 @@ void InitPanelConfig(const struct config_category& category)
 	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	scrAreaConfigs->setSize(lstConfigs->getWidth() + SCROLLBAR_WIDTH, lstConfigs->getHeight() + DISTANCE_NEXT_Y);
 	scrAreaConfigs->setScrollbarWidth(SCROLLBAR_WIDTH);
-	scrAreaConfigs->setBackgroundColor(colTextboxBackground);
-	scrAreaConfigs->setBaseColor(gui_baseCol);
+	scrAreaConfigs->setBackgroundColor(gui_textbox_background_color);
+	scrAreaConfigs->setForegroundColor(gui_foreground_color);
+	scrAreaConfigs->setBaseColor(gui_base_color);
 	scrAreaConfigs->setSelectionColor(gui_selection_color);
 
 	category.panel->add(scrAreaConfigs);

@@ -203,7 +203,8 @@ static void InitSelectFile(const std::string& title)
 	wndSelectFile = new gcn::Window("Load");
 	wndSelectFile->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndSelectFile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndSelectFile->setBaseColor(gui_baseCol);
+	wndSelectFile->setBaseColor(gui_base_color);
+	wndSelectFile->setForegroundColor(gui_foreground_color);
 	wndSelectFile->setCaption(title);
 	wndSelectFile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -213,21 +214,24 @@ static void InitSelectFile(const std::string& title)
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 					   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol);
+	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->addActionListener(fileButtonActionListener);
 
 	cmdCancel = new gcn::Button("Cancel");
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 						   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol);
+	cmdCancel->setBaseColor(gui_base_color);
+	cmdCancel->setForegroundColor(gui_foreground_color);
 	cmdCancel->addActionListener(fileButtonActionListener);
 
 	txtCurrent = new gcn::TextField();
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
-	txtCurrent->setBaseColor(gui_baseCol);
-	txtCurrent->setBackgroundColor(colTextboxBackground);
+	txtCurrent->setBaseColor(gui_base_color);
+	txtCurrent->setBackgroundColor(gui_textbox_background_color);
+	txtCurrent->setForegroundColor(gui_foreground_color);
 	txtCurrent->setEnabled(true);
 	editFilePathActionListener =  new EditFilePathActionListener();
 	txtCurrent->addActionListener(editFilePathActionListener);
@@ -237,8 +241,9 @@ static void InitSelectFile(const std::string& title)
 
 	lstFiles = new gcn::ListBox(fileList);
 	lstFiles->setSize(DIALOG_WIDTH - 45, DIALOG_HEIGHT - 108);
-	lstFiles->setBaseColor(gui_baseCol);
-	lstFiles->setBackgroundColor(colTextboxBackground);
+	lstFiles->setBaseColor(gui_base_color);
+	lstFiles->setBackgroundColor(gui_textbox_background_color);
+	lstFiles->setForegroundColor(gui_foreground_color);
 	lstFiles->setSelectionColor(gui_selection_color);
 	lstFiles->setWrappingEnabled(true);
 	lstFiles->addActionListener(selectFileActionListener);
@@ -248,8 +253,9 @@ static void InitSelectFile(const std::string& title)
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFiles->setScrollbarWidth(SCROLLBAR_WIDTH);
-	scrAreaFiles->setBaseColor(gui_baseCol);
-	scrAreaFiles->setBackgroundColor(colTextboxBackground);
+	scrAreaFiles->setBaseColor(gui_base_color);
+	scrAreaFiles->setBackgroundColor(gui_textbox_background_color);
+	scrAreaFiles->setForegroundColor(gui_foreground_color);
 	scrAreaFiles->setSelectionColor(gui_selection_color);
 	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
 	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
@@ -264,6 +270,9 @@ static void InitSelectFile(const std::string& title)
 		txtFilename = new gcn::TextField();
 		txtFilename->setSize(350, TEXTFIELD_HEIGHT);
 		txtFilename->setId("Filename");
+		txtFilename->setBaseColor(gui_base_color);
+		txtFilename->setBackgroundColor(gui_textbox_background_color);
+		txtFilename->setForegroundColor(gui_foreground_color);
 		txtFilename->setPosition(lblFilename->getX() + lblFilename->getWidth() + DISTANCE_NEXT_X, lblFilename->getY());
 
 		wndSelectFile->add(lblFilename);

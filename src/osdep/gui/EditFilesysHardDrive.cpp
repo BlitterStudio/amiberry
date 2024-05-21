@@ -68,7 +68,8 @@ static void InitEditFilesysHardDrive()
 	wndEditFilesysHardDrive = new gcn::Window("Edit");
 	wndEditFilesysHardDrive->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndEditFilesysHardDrive->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndEditFilesysHardDrive->setBaseColor(gui_baseCol);
+	wndEditFilesysHardDrive->setBaseColor(gui_base_color);
+	wndEditFilesysHardDrive->setForegroundColor(gui_foreground_color);
 	wndEditFilesysHardDrive->setCaption("Hard Drive settings");
 	wndEditFilesysHardDrive->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -78,7 +79,8 @@ static void InitEditFilesysHardDrive()
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol);
+	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->setId("cmdHDDOk");
 	cmdOK->addActionListener(filesysHardDriveActionListener);
 
@@ -86,7 +88,8 @@ static void InitEditFilesysHardDrive()
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol);
+	cmdCancel->setBaseColor(gui_base_color);
+	cmdCancel->setForegroundColor(gui_foreground_color);
 	cmdCancel->setId("cmdHDDCancel");
 	cmdCancel->addActionListener(filesysHardDriveActionListener);
 
@@ -95,8 +98,9 @@ static void InitEditFilesysHardDrive()
 	txtPath = new gcn::TextField();
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtHDDPath");
-	txtPath->setBaseColor(gui_baseCol);
-	txtPath->setBackgroundColor(colTextboxBackground);
+	txtPath->setBaseColor(gui_base_color);
+	txtPath->setBackgroundColor(gui_textbox_background_color);
+	txtPath->setForegroundColor(gui_foreground_color);
 
 	int posY = DISTANCE_BORDER;
 

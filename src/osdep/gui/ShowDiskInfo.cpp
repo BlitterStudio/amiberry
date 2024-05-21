@@ -44,7 +44,8 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	wndShowDiskInfo = new gcn::Window("DiskInfo");
 	wndShowDiskInfo->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndShowDiskInfo->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndShowDiskInfo->setBaseColor(gui_baseCol);
+	wndShowDiskInfo->setBaseColor(gui_base_color);
+	wndShowDiskInfo->setForegroundColor(gui_foreground_color);
 	wndShowDiskInfo->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	showDiskInfoActionListener = new ShowDiskInfoActionListener();
@@ -58,8 +59,9 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	lstInfo->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4 - 20,
 	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	lstInfo->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
-	lstInfo->setBaseColor(gui_baseCol);
-	lstInfo->setBackgroundColor(colTextboxBackground);
+	lstInfo->setBaseColor(gui_base_color);
+	lstInfo->setBackgroundColor(gui_textbox_background_color);
+	lstInfo->setForegroundColor(gui_foreground_color);
 	lstInfo->setSelectionColor(gui_selection_color);
 	lstInfo->setWrappingEnabled(true);
 
@@ -69,15 +71,17 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	scrAreaInfo->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	scrAreaInfo->setScrollbarWidth(SCROLLBAR_WIDTH);
-	scrAreaInfo->setBaseColor(gui_baseCol);
-	scrAreaInfo->setBackgroundColor(colTextboxBackground);
+	scrAreaInfo->setBaseColor(gui_base_color);
+	scrAreaInfo->setBackgroundColor(gui_textbox_background_color);
+	scrAreaInfo->setForegroundColor(gui_foreground_color);
 	scrAreaInfo->setSelectionColor(gui_selection_color);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol);
+	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->addActionListener(showDiskInfoActionListener);
 
 	wndShowDiskInfo->add(scrAreaInfo, DISTANCE_BORDER, DISTANCE_BORDER);

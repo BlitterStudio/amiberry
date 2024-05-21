@@ -103,7 +103,8 @@ static void InitEditFilesysVirtual()
 	wndEditFilesysVirtual = new gcn::Window("Edit");
 	wndEditFilesysVirtual->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
 	wndEditFilesysVirtual->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndEditFilesysVirtual->setBaseColor(gui_baseCol);
+	wndEditFilesysVirtual->setBaseColor(gui_base_color);
+	wndEditFilesysVirtual->setForegroundColor(gui_foreground_color);
 	wndEditFilesysVirtual->setCaption("Volume settings");
 	wndEditFilesysVirtual->setTitleBarHeight(TITLEBAR_HEIGHT);
 
@@ -113,7 +114,8 @@ static void InitEditFilesysVirtual()
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 	                   DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_baseCol);
+	cmdOK->setBaseColor(gui_base_color);
+	cmdOK->setForegroundColor(gui_foreground_color);
 	cmdOK->setId("cmdVirtOK");
 	cmdOK->addActionListener(filesysVirtualActionListener);
 
@@ -121,7 +123,8 @@ static void InitEditFilesysVirtual()
 	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 	                       DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_baseCol);
+	cmdCancel->setBaseColor(gui_base_color);
+	cmdCancel->setForegroundColor(gui_foreground_color);
 	cmdCancel->setId("cmdVirtCancel");
 	cmdCancel->addActionListener(filesysVirtualActionListener);
 
@@ -130,48 +133,55 @@ static void InitEditFilesysVirtual()
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
 	txtDevice->setId("txtVirtDevice");
-	txtDevice->setBaseColor(gui_baseCol);
-	txtDevice->setBackgroundColor(colTextboxBackground);
+	txtDevice->setBaseColor(gui_base_color);
+	txtDevice->setBackgroundColor(gui_textbox_background_color);
+	txtDevice->setForegroundColor(gui_foreground_color);
 
 	lblVolume = new gcn::Label("Volume Label:");
 	lblVolume->setAlignment(gcn::Graphics::RIGHT);
 	txtVolume = new gcn::TextField();
 	txtVolume->setSize(60, TEXTFIELD_HEIGHT);
 	txtVolume->setId("txtVirtVolume");
-	txtVolume->setBaseColor(gui_baseCol);
-	txtVolume->setBackgroundColor(colTextboxBackground);
+	txtVolume->setBaseColor(gui_base_color);
+	txtVolume->setBackgroundColor(gui_textbox_background_color);
+	txtVolume->setForegroundColor(gui_foreground_color);
 
 	lblPath = new gcn::Label("Path:");
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(380, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtVirtPath");
-	txtPath->setBaseColor(gui_baseCol);
-	txtPath->setBackgroundColor(colTextboxBackground);
+	txtPath->setBaseColor(gui_base_color);
+	txtPath->setBackgroundColor(gui_textbox_background_color);
+	txtPath->setForegroundColor(gui_foreground_color);
 	
 	cmdPath = new gcn::Button("...");
 	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdPath->setBaseColor(gui_baseCol);
+	cmdPath->setBaseColor(gui_base_color);
+	cmdPath->setForegroundColor(gui_foreground_color);
 	cmdPath->setId("cmdVirtPath");
 	cmdPath->addActionListener(filesysVirtualActionListener);
 
 	chkReadWrite = new gcn::CheckBox("Read/Write", true);
-	chkReadWrite->setBaseColor(gui_baseCol);
-	chkReadWrite->setBackgroundColor(colTextboxBackground);
+	chkReadWrite->setBaseColor(gui_base_color);
+	chkReadWrite->setForegroundColor(gui_foreground_color);
+	chkReadWrite->setBackgroundColor(gui_textbox_background_color);
 	chkReadWrite->setId("chkVirtRW");
 
 	chkAutoboot = new gcn::CheckBox("Bootable", true);
 	chkAutoboot->setId("chkAutoboot");
-	chkAutoboot->setBaseColor(gui_baseCol);
-	chkAutoboot->setBackgroundColor(colTextboxBackground);
+	chkAutoboot->setBaseColor(gui_base_color);
+	chkAutoboot->setBackgroundColor(gui_textbox_background_color);
+	chkAutoboot->setForegroundColor(gui_foreground_color);
 	chkAutoboot->addActionListener(filesysVirtualActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
-	txtBootPri->setBaseColor(gui_baseCol);
-	txtBootPri->setBackgroundColor(colTextboxBackground);
+	txtBootPri->setBaseColor(gui_base_color);
+	txtBootPri->setBackgroundColor(gui_textbox_background_color);
+	txtBootPri->setForegroundColor(gui_foreground_color);
 
 	int posY = DISTANCE_BORDER;
 	int posX = DISTANCE_BORDER;
