@@ -540,11 +540,11 @@ void InitPanelFloppy(const config_category& category)
 	{
 		posX = DISTANCE_BORDER;
 		category.panel->add(chkDFx[i], posX, posY);
-		posX += chkDFx[i]->getWidth() + DISTANCE_NEXT_X * 2;
+		posX += chkDFx[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cboDFxType[i], posX, posY);
-		posX += cboDFxType[i]->getWidth() + DISTANCE_NEXT_X * 2;
+		posX += cboDFxType[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(chkDFxWriteProtect[i], posX, posY);
-		posX += 3 + chkDFxWriteProtect[i]->getWidth() + 4 * DISTANCE_NEXT_X;
+		posX += 3 + chkDFxWriteProtect[i]->getWidth() + 3 * DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxInfo[i], posX, posY);
 		posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cmdDFxEject[i], posX, posY);
