@@ -29,6 +29,7 @@
 // Everything in protected needs implementing, but that's a lot less logic than on your own
 // All the thread sync and WinUAE i/o is done for you in this class
 
+#include <string>
 #include <thread>
 #include <functional>
 #include <queue>

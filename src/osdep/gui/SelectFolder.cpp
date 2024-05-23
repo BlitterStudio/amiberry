@@ -119,13 +119,11 @@ class ListBoxActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		std::string foldername = "";
-
 		const auto selected_item = lstFolders->getSelected();
-		foldername = workingDir.append("/").append(dirList.getElementAt(selected_item));
+		const std::string folder_name = workingDir.append("/").append(dirList.getElementAt(selected_item));
 
 		volName = dirList.getElementAt(selected_item);
-		checkfoldername(foldername);
+		checkfoldername(folder_name);
 	}
 };
 
