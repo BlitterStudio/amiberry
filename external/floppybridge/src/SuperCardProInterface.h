@@ -2,7 +2,7 @@
 #define SUPERCARDPRO_INTERFACE
 /* Supercard Pro C++ Interface for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -149,7 +149,7 @@ namespace SuperCardPro {
 		bool selectDrive(bool select);
 
 		// Polls for the state of pins on the board
-		void checkPins();
+		bool checkPins();
 
 		// Various variants
 		bool sendCommand(const SCPCommand command, SCPResponse& response);

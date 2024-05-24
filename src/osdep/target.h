@@ -20,8 +20,8 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYVERSION _T("Amiberry v5.7.0 (2024-04-20)")
-#define AMIBERRYDATE MAKEBD(2024, 4, 20)
+#define AMIBERRYVERSION _T("Amiberry v5.7.1 (2024-05-24)")
+#define AMIBERRYDATE MAKEBD(2024, 5, 24)
 #define COPYRIGHT _T("Copyright (C) 2016-2024 Dimitris Panokostas")
 
 #define IHF_WINDOWHIDDEN 6
@@ -102,6 +102,7 @@ string prefix_with_application_directory_path(string currentpath);
 extern void get_configuration_path(char* out, int size);
 extern void set_configuration_path(const std::string& newpath);
 extern void set_nvram_path(const std::string& newpath);
+extern void set_plugins_path(const std::string& newpath);
 extern void set_screenshot_path(const std::string& newpath);
 extern void set_savestate_path(const std::string& newpath);
 extern std::string get_controllers_path();

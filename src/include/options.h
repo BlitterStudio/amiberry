@@ -20,7 +20,7 @@
 
 #define UAEMAJOR 5
 #define UAEMINOR 7
-#define UAESUBREV 0
+#define UAESUBREV 1
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -171,10 +171,10 @@ struct floppyslot
 	int dfxtype;
 	int dfxsubtype;
 	TCHAR dfxsubtypeid[32];
+	TCHAR dfxprofile[32];
 	int dfxclick;
 	TCHAR dfxclickexternal[256];
 	bool forcedwriteprotect;
-	TCHAR config[256];
 };
 
 #define ASPECTMULT 1024
@@ -509,6 +509,7 @@ struct ramboard
 	bool nodma;
 	bool force16bit;
 	bool chipramtiming;
+	int fault;
 	struct boardloadfile lf;
 };
 struct expansion_params

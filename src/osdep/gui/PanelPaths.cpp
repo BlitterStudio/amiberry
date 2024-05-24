@@ -31,6 +31,10 @@ static gcn::Label* lblNvramFiles;
 static gcn::TextField* txtNvramFiles;
 static gcn::Button* cmdNvramFiles;
 
+static gcn::Label* lblPluginFiles;
+static gcn::TextField* txtPluginFiles;
+static gcn::Button* cmdPluginFiles;
+
 static gcn::Label* lblScreenshotFiles;
 static gcn::TextField* txtScreenshotFiles;
 static gcn::Button* cmdScreenshotFiles;
@@ -110,6 +114,15 @@ public:
 				set_nvram_path(path);
 			}
 			cmdNvramFiles->requestFocus();
+		}
+		else if (actionEvent.getSource() == cmdPluginFiles)
+		{
+			path = SelectFolder("Folder for Plugins", get_plugins_path());
+			if (!path.empty())
+			{
+				set_plugins_path(path);
+			}
+			cmdPluginFiles->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdScreenshotFiles)
 		{
@@ -409,6 +422,19 @@ void InitPanelPaths(const config_category& category)
 	cmdNvramFiles->setForegroundColor(gui_foreground_color);
 	cmdNvramFiles->addActionListener(folderButtonActionListener);
 
+	lblPluginFiles = new gcn::Label("Plugins path:");
+	txtPluginFiles = new gcn::TextField();
+	txtPluginFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
+	txtPluginFiles->setBaseColor(gui_base_color);
+	txtPluginFiles->setForegroundColor(gui_foreground_color);
+	txtPluginFiles->setBackgroundColor(gui_textbox_background_color);
+
+	cmdPluginFiles = new gcn::Button("...");
+	cmdPluginFiles->setId("cmdPluginFiles");
+	cmdPluginFiles->setBaseColor(gui_base_color);
+	cmdPluginFiles->setForegroundColor(gui_foreground_color);
+	cmdPluginFiles->addActionListener(folderButtonActionListener);
+
 	lblScreenshotFiles = new gcn::Label("Screenshots:");
 	txtScreenshotFiles = new gcn::TextField();
 	txtScreenshotFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
@@ -584,6 +610,12 @@ void InitPanelPaths(const config_category& category)
 	grpPaths->add(cmdNvramFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
 	yPos += txtNvramFiles->getHeight() + DISTANCE_NEXT_Y;
 
+	grpPaths->add(lblPluginFiles, DISTANCE_BORDER, yPos);
+	yPos += lblPluginFiles->getHeight() + DISTANCE_NEXT_Y / 2;
+	grpPaths->add(txtPluginFiles, DISTANCE_BORDER, yPos);
+	grpPaths->add(cmdPluginFiles, DISTANCE_BORDER + textFieldWidth + DISTANCE_NEXT_X / 2, yPos);
+	yPos += txtPluginFiles->getHeight() + DISTANCE_NEXT_Y;
+
 	grpPaths->add(lblScreenshotFiles, DISTANCE_BORDER, yPos);
 	yPos += lblScreenshotFiles->getHeight() + DISTANCE_NEXT_Y / 2;
 	grpPaths->add(txtScreenshotFiles, DISTANCE_BORDER, yPos);
@@ -707,6 +739,10 @@ void ExitPanelPaths()
 	delete txtNvramFiles;
 	delete cmdNvramFiles;
 
+	delete lblPluginFiles;
+	delete txtPluginFiles;
+	delete cmdPluginFiles;
+
 	delete lblScreenshotFiles;
 	delete txtScreenshotFiles;
 	delete cmdScreenshotFiles;
@@ -776,6 +812,7 @@ void RefreshPanelPaths()
 	get_nvram_path(tmp, MAX_DPATH);
 	txtNvramFiles->setText(tmp);
 
+	txtPluginFiles->setText(get_plugins_path());
 	txtScreenshotFiles->setText(get_screenshot_path());
 
 	get_savestate_path(tmp, MAX_DPATH);
@@ -850,6 +887,9 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back(" ");
         helptext.emplace_back("- NVRAM files: the location where CDTV/CD32 modes will store their NVRAM files.");
         helptext.emplace_back(" ");
+		helptext.emplace_back("- Plugins path: the location where external plugins (such as the CAPSimg or the");
+		helptext.emplace_back("  floppybridge plugin) are stored.");
+		helptext.emplace_back(" ");
         helptext.emplace_back("- Screenshots: any screenshots you take will be saved by default in this location.");
         helptext.emplace_back(" ");
         helptext.emplace_back("- Save state files: if you use them, they will be saved in the specified location.");

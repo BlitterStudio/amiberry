@@ -2,7 +2,7 @@
 #define ARDUINO_FLOPPY_READER_WRITER_INTERFACE
 /* ArduinoFloppyReaderWriter aka DrawBridge
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -252,6 +252,9 @@ namespace ArduinoFloppyReader {
 		// Same as the above, but this uses the newer much more accurate flux read
 		DiagnosticResponse readFlux(PLL::BridgePLL& pll, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns, std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation);
 
+		// Reset reason information
+		DiagnosticResponse getResetReason(bool& WD, bool& BOD, bool& ExtReset, bool& PowerOn);
+		DiagnosticResponse clearResetReason();
 
 		// Stops the read streaming immediately and any data in the buffer will be discarded. The above function will exit when the Arduino has also stopped streaming data
 		bool abortReadStreaming();

@@ -100,12 +100,14 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 	UAE_DLHANDLE handle = uae_dlopen(path);
 #else
 	TCHAR path[MAX_DPATH];
-	std::string directory = start_path_data;
-	_tcscpy(path, directory.append("/").append(name).c_str());
+	std::string directory = get_plugins_path();
+	_tcscpy(path, directory.append(name).c_str());
 #ifdef _WIN64
 	_tcscat(path, _T("_x64"));
 #endif
-	_tcscat(path, LT_MODULE_EXT);
+    if (_tcscmp(path + _tcslen(path) - _tcslen(LT_MODULE_EXT), LT_MODULE_EXT) != 0) {
+        _tcscat(path, LT_MODULE_EXT);
+    }
 	UAE_DLHANDLE handle = uae_dlopen(path);
 #endif
 	if (handle) {

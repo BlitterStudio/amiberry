@@ -28,9 +28,6 @@ endif ()
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-set(libmt32emu_SHARED FALSE)
-add_subdirectory(external/mt32emu)
-
 include(CheckSymbolExists)
 function(detect_architecture symbol arch)
     if (NOT DEFINED ARCHITECTURE)
@@ -240,19 +237,7 @@ add_executable(${PROJECT_NAME}
         src/archivers/zip/unzip.cpp
         src/caps/caps_amiberry.cpp
         src/machdep/support.cpp
-        src/floppybridge/ArduinoFloppyBridge.cpp
-        src/floppybridge/ArduinoInterface.cpp
-        src/floppybridge/CommonBridgeTemplate.cpp
-        src/floppybridge/floppybridge_lib.cpp
-        src/floppybridge/ftdi.cpp
-        src/floppybridge/GreaseWeazleBridge.cpp
-        src/floppybridge/GreaseWeazleInterface.cpp
-        src/floppybridge/pll.cpp
-        src/floppybridge/RotationExtractor.cpp
-        src/floppybridge/SerialIO.cpp
-        src/floppybridge/SuperCardProBridge.cpp
-        src/floppybridge/SuperCardProInterface.cpp
-        src/floppybridge/FloppyBridge.cpp
+        external/floppybridge/src/floppybridge_lib.cpp
         src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
@@ -380,8 +365,12 @@ find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
 find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
 find_library(LIBMPEG2 mpeg2 REQUIRED)
 
+set(libmt32emu_SHARED FALSE)
+add_subdirectory(external/mt32emu)
+add_subdirectory(external/floppybridge)
 add_subdirectory(external/libguisan)
-target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src external/floppybridge/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
 target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 
@@ -425,6 +414,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/nvram $<TARGET_FILE_DIR:${PROJECT_NAME}>/nvram)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/plugins $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/savestates $<TARGET_FILE_DIR:${PROJECT_NAME}>/savestates)

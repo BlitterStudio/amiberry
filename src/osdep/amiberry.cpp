@@ -50,7 +50,9 @@
 #include "clipboard.h"
 #include "fsdb.h"
 #include "scsidev.h"
-#include "floppybridge/floppybridge_lib.h"
+#ifdef FLOPPYBRIDGE
+#include "floppybridge_lib.h"
+#endif
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
@@ -300,6 +302,7 @@ std::string ripper_path;
 std::string input_dir;
 std::string screenshot_dir;
 std::string nvram_dir;
+std::string plugins_dir;
 std::string video_dir;
 std::string amiberry_conf_file;
 
@@ -656,14 +659,17 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	releasecapture(mon);
 	recapture = 0;
 
-	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
-		if (mousehack_alive())
-		{
-			releasecapture(mon);
+	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		if (currprefs.input_tablet > 0) {
+			if (mousehack_alive()) {
+				releasecapture(mon);
+				recapture = 0;
+				return;
+			}
+			SDL_SetCursor(normalcursor);
+		} else {
 			recapture = 0;
-			return;
 		}
-		SDL_SetCursor(normalcursor);
 	}
 
 	bool gotfocus = false;
@@ -2987,6 +2993,11 @@ void set_nvram_path(const std::string& newpath)
 	nvram_dir = newpath;
 }
 
+void set_plugins_path(const std::string& newpath)
+{
+	plugins_dir = newpath;
+}
+
 void set_video_path(const std::string& newpath)
 {
 	video_dir = newpath;
@@ -3148,6 +3159,11 @@ void fetch_inputfilepath(TCHAR* out, int size)
 void get_nvram_path(TCHAR* out, int size)
 {
 	_tcsncpy(out, fix_trailing(nvram_dir).c_str(), size - 1);
+}
+
+std::string get_plugins_path()
+{
+	return fix_trailing(plugins_dir);
 }
 
 std::string get_screenshot_path()
@@ -3570,6 +3586,7 @@ void save_amiberry_settings(void)
 	write_string_option("ripper_path", ripper_path);
 	write_string_option("inputrecordings_dir", input_dir);
 	write_string_option("nvram_dir", nvram_dir);
+	write_string_option("plugins_dir", plugins_dir);
 	write_string_option("video_dir", video_dir);
 
 	// The number of ROMs in the last scan
@@ -3713,6 +3730,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir);
 		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir);
+		ret |= cfgfile_string(option, value, "plugins_dir", plugins_dir);
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
@@ -3963,6 +3981,7 @@ static void init_amiberry_paths(void)
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = video_dir = macos_amiberry_directory;
+	plugins_dir = start_path_data;
 
 	config_path.append("/Configurations/");
 	controllers_path.append("/Controllers/");
@@ -3985,7 +4004,7 @@ static void init_amiberry_paths(void)
 #else
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
-		input_dir = screenshot_dir = nvram_dir = video_dir = 
+		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = 
 		start_path_data;
 
 	config_path.append("/conf/");
@@ -4005,6 +4024,7 @@ static void init_amiberry_paths(void)
 	input_dir.append("/inputrecordings/");
 	screenshot_dir.append("/screenshots/");
 	nvram_dir.append("/nvram/");
+	plugins_dir.append("/plugins/");
 	video_dir.append("/videos/");
 #endif
 	amiberry_conf_file = config_path;
@@ -4380,24 +4400,26 @@ void drawbridge_update_profiles(uae_prefs* p)
 #ifdef FLOPPYBRIDGE
 	const unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
 
-	const std::string profile_name_fast = "Fast";
+	const std::string profile_name_normal = "Normal";
 	const std::string profile_name_comp = "Compatible";
 	const std::string profile_name_turbo = "Turbo";
 	const std::string profile_name_stalling = "Stalling";
 
-	const std::string bridge_mode_fast = "0";
+	const std::string bridge_mode_normal = "0";
 	const std::string bridge_mode_comp = "1";
 	const std::string bridge_mode_turbo = "2";
 	const std::string bridge_mode_stalling = "3";
+
 	const std::string bridge_density_auto = "0";
 
 	std::string serial_port = p->drawbridge_serial_port;
 	if (serial_port.empty())
-		serial_port = "COM0";
+		serial_port = "/dev/ttyUSB0";
 
+	// profileID | profileName [ drawbridge_driver | flags | serial_port | bridge_mode | bridge_density ]
 	std::string tmp;
-	// Fast
-	tmp = std::string("1") + "|" + profile_name_fast + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_fast + "|" + bridge_density_auto + "]";
+	// Normal
+	tmp = std::string("1") + "|" + profile_name_normal + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_normal + "|" + bridge_density_auto + "]";
 	// Compatible
 	tmp += std::string("2") + "|" + profile_name_comp + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_comp + "|" + bridge_density_auto + "]";
 	// Turbo

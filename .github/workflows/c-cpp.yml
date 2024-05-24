@@ -115,7 +115,6 @@ jobs:
         name: amiberry-debian-buster-x86_64
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -127,13 +126,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-x86_64.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -165,7 +165,6 @@ jobs:
         name: amiberry-debian-bullseye-x86_64
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -177,13 +176,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-x86_64.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -215,7 +215,6 @@ jobs:
         name: amiberry-debian-bookworm-x86_64
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -227,13 +226,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-x86_64.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -263,7 +263,6 @@ jobs:
         name: amiberry-manjaro-aarch64-rpi4
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -275,13 +274,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-manjaro-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-manjaro-aarch64-rpi4.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -313,7 +313,6 @@ jobs:
         name: amiberry-debian-bookworm-aarch64-rpi5
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -325,13 +324,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi5.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi5.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -364,7 +364,6 @@ jobs:
         name: amiberry-debian-bookworm-armhf-rpi5
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -376,13 +375,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi5.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi5.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -414,7 +414,6 @@ jobs:
         name: amiberry-debian-buster-aarch64-rpi4
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -426,13 +425,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi4.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -465,7 +465,6 @@ jobs:
         name: amiberry-debian-buster-armhf-rpi4
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -477,13 +476,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi4.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -515,7 +515,6 @@ jobs:
         name: amiberry-debian-bullseye-aarch64-rpi4
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -527,13 +526,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi4.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -566,7 +566,6 @@ jobs:
         name: amiberry-debian-bullseye-armhf-rpi4
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -578,13 +577,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi4.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -616,7 +616,6 @@ jobs:
         name: amiberry-debian-bookworm-aarch64-rpi4
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -628,13 +627,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi4.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -667,7 +667,6 @@ jobs:
         name: amiberry-debian-bookworm-armhf-rpi4
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -679,13 +678,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi4.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi4.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -718,7 +718,6 @@ jobs:
         name: amiberry-debian-buster-aarch64-rpi3
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -730,13 +729,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-aarch64-rpi3.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -769,7 +769,6 @@ jobs:
         name: amiberry-debian-buster-armhf-rpi3
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -781,13 +780,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-buster-armhf-rpi3.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -820,7 +820,6 @@ jobs:
         name: amiberry-debian-bullseye-aarch64-rpi3
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -832,13 +831,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-aarch64-rpi3.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -871,7 +871,6 @@ jobs:
         name: amiberry-debian-bullseye-armhf-rpi3
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -883,13 +882,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf-rpi3.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -922,7 +922,6 @@ jobs:
         name: amiberry-debian-bookworm-aarch64-rpi3
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -934,13 +933,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-aarch64-rpi3.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'
@@ -973,7 +973,6 @@ jobs:
         name: amiberry-debian-bookworm-armhf-rpi3
         path: |
           amiberry
-          capsimg.so
           abr/**
           cdroms/**
           conf/**
@@ -985,13 +984,14 @@ jobs:
           kickstarts/**
           lha/**
           nvram/**
+          plugins/**
           savestates/**
           screenshots/**
           whdboot/**
 
     - name: ZIP binaries
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip amiberry capsimg.so abr cdroms conf controllers data floppies harddrives kickstarts lha savestates screenshots whdboot
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf-rpi3.zip amiberry abr cdroms conf controllers data floppies harddrives kickstarts lha nvram plugins savestates screenshots whdboot
 
     - name: Upload artifact
       if: github.ref_type == 'tag'

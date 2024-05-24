@@ -2327,7 +2327,7 @@ static void allocate_memory (void)
 		if (currprefs.cs_compatible == CP_DRACO || currprefs.cs_compatible == CP_CASABLANCA) {
 			a3000hmem_bank.start = 0x40000000;
 		} else {
-		a3000hmem_bank.start = 0x08000000;
+			a3000hmem_bank.start = 0x08000000;
 		}
 		if (a3000hmem_bank.reserved_size) {
 			if (!mapped_malloc (&a3000hmem_bank)) {
@@ -2360,6 +2360,10 @@ static void allocate_memory (void)
 			restore_ram (a3000lmem_filepos, a3000lmem_bank.baseaddr);
 		if (a3000hmem_bank.allocated_size > 0)
 			restore_ram (a3000hmem_filepos, a3000hmem_bank.baseaddr);
+	} else {
+#ifdef ARCADIA
+		alg_flag = 0;
+#endif
 	}
 #ifdef AGA
 	chipmem_bank_ce2.baseaddr = chipmem_bank.baseaddr;
@@ -2388,6 +2392,13 @@ static void setmemorywidth(struct ramboard *mb, addrbank *ab)
 		for (int i = (ab->start >> 16); i < ((ab->start + ab->allocated_size) >> 16); i++) {
 			ce_banktype[i] = ce_banktype[0];
 		}
+	}
+	if (mb->fault) {
+		ab->baseaddr_direct_w = NULL;
+		ab->baseaddr_direct_r = NULL;
+		ab->lput = &dummy_lput;
+		ab->wput = &dummy_wput;
+		ab->bput = &dummy_bput;
 	}
 }
 
@@ -2746,9 +2757,6 @@ void memory_reset (void)
 	bool gayleorfatgary;
 
 	highest_ram = 0;
-#ifdef ARCADIA
-	alg_flag = 0;
-#endif
 	need_hardreset = false;
 	rom_write_enabled = true;
 #ifdef JIT

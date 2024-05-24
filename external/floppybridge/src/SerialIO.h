@@ -2,7 +2,7 @@
 #define DISKREADERWRITER_SERIAL_IO
 /* ArduinoFloppyReader (and writer)
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
