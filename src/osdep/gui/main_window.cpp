@@ -285,14 +285,6 @@ void amiberry_gui_init()
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 	}
 
-	if (amiberry_options.single_window_mode)
-	{
-		if (mon->amiga_window)
-		{
-			close_windows(mon);
-		}
-	}
-
 	if (!mon->gui_window)
 	{
         Uint32 mode;

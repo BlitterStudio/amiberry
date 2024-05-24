@@ -66,14 +66,6 @@ static void InitShowMessage(const std::string& message)
 		check_error_sdl(gui_screen == nullptr, "Unable to create SDL surface:");
 	}
 
-	if (amiberry_options.single_window_mode)
-	{
-		if (mon->amiga_window)
-		{
-			close_windows(mon);
-		}
-	}
-
 	if (!mon->gui_window)
 	{
 		Uint32 mode;
