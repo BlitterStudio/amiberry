@@ -1,6 +1,6 @@
 /* ArduinoFloppyReader (and writer) - Rotation Extractor
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -108,7 +108,7 @@ uint32_t RotationExtractor::getOverlapPosition(uint32_t& numberOfBadMatches) con
 uint32_t RotationExtractor::getTrueIndexPosition(const uint32_t nextRevolutionStart, const uint32_t startingPoint)
 {
 	// Where to start from
-	const uint32_t firstPoint = startingPoint == INDEX_NOT_FOUND ? m_sequenceIndex : startingPoint;
+	const uint32_t firstPoint = startingPoint == INDEX_NOT_FOUND ? (m_sequenceIndex == INDEX_NOT_FOUND ? 0 : m_sequenceIndex) : startingPoint;
 
 	// First. Do we actually have a 'index marker' buffer?
 	if (!m_indexSequence.valid) {

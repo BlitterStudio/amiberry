@@ -27,8 +27,8 @@ enum
 
 static const std::vector<std::string> floppy_drive_types = {
 	"Disabled", "3.5\" DD", "3.5\" HD", "5.25\" (40)",
-	"5.25\" (80)", "3.5\" ESCOM", "DB: Fast", "DB: Compatible",
-	"DB: Turbo", "DB: Stalling"
+	"5.25\" (80)", "3.5\" ESCOM", "FB: Normal", "FB: Compatible",
+	"FB: Turbo", "FB: Stalling"
 };
 
 static const TCHAR* memsize_names[] = {
@@ -146,10 +146,10 @@ static const char* cdfile_filter[] = {".cue", ".ccd", ".iso", ".mds", ".nrg", ".
 static const char* whdload_filter[] = {".lha", "\0"};
 static string drivebridgeModes[] =
 {
-	"Fast",
+	"Normal",
 	"Compatible",
 	"Turbo",
-	"Accurate"
+	"Stalling"
 };
 
 using ConfigCategory = struct config_category

@@ -1,6 +1,6 @@
 /* DrawBridge (Arduino Reader/Writer) Bridge for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -37,12 +37,12 @@ static const FloppyDiskBridge::BridgeDriver DriverArduinoFloppy = {
 };
 
 // Flags from WINUAE
-ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort) :
+ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, enableAutoCache, useSmartSpeed), m_comPort(autoDetectComPort ? "" : comPort) {
 }
 
 // This is for the static version
-ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings) : 
+ArduinoFloppyDiskBridge::ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings) :
 	CommonBridgeTemplate(bridgeMode, bridgeDensity, false, false) {
 
 	if (uaeSettings > 0) {
@@ -161,6 +161,12 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 	return false;
 }
 
+// Return TRUE if the drive is still connected and working
+bool ArduinoFloppyDiskBridge::isStillWorking() {
+	return !m_wasIOError;
+}
+
+
 // Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
 void ArduinoFloppyDiskBridge::checkDiskType() {
 	bool capacity;
@@ -222,7 +228,12 @@ bool ArduinoFloppyDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	}
 
 	// Perform the check, if required
-	return m_io.checkForDisk(forceCheck) != ArduinoFloppyReader::DiagnosticResponse::drNoDiskInDrive;
+	switch (m_io.checkForDisk(forceCheck)) {
+	case ArduinoFloppyReader::DiagnosticResponse::drNoDiskInDrive: return false;
+	case ArduinoFloppyReader::DiagnosticResponse::drOK: return true;
+	case ArduinoFloppyReader::DiagnosticResponse::drOldFirmware: return false;
+	default:m_wasIOError = true; return false;
+	}
 }
 
 // If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
@@ -232,10 +243,19 @@ bool ArduinoFloppyDiskBridge::performNoClickSeek() {
 	// Claim we did it anyway
 	if (!m_io.getFirwareVersion().fullControlMod) return true;
 
-	if (m_io.performNoClickSeek() == ArduinoFloppyReader::DiagnosticResponse::drOK) {
+	switch (m_io.performNoClickSeek()) {
+	case ArduinoFloppyReader::DiagnosticResponse::drOK:
 		updateLastManualCheckTime();
 		return true;
+	case ArduinoFloppyReader::DiagnosticResponse::drOldFirmware:
+		return false;
+	case ArduinoFloppyReader::DiagnosticResponse::drReadResponseFailed:
+	case ArduinoFloppyReader::DiagnosticResponse::drSendFailed:
+	case ArduinoFloppyReader::DiagnosticResponse::drSendParameterFailed:
+		m_wasIOError = true;
+		return false;
 	}
+
 	return false;
 }
 

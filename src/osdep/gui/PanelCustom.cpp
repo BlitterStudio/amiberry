@@ -119,43 +119,24 @@ class CustomActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
+		didata* did = &di_joystick[host_joy_id];
+
 		for (auto t = 0; t < SDL_CONTROLLER_BUTTON_MAX; t++)
 		{
 			if (actionEvent.getSource() == cboCustomButtonAction[t])
 			{
-				std::array<int, SDL_CONTROLLER_BUTTON_MAX> temp_button_map{};
-
-				// get map
 				switch (SelectedFunction)
 				{
 				case 0:
-					temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_none;
+					did->mapping.amiberry_custom_none[t] = remap_event_list[cboCustomButtonAction[t]->getSelected() - 1];
 					break;
 				case 1:
-					temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
+					did->mapping.amiberry_custom_hotkey[t] = remap_event_list[cboCustomButtonAction[t]->getSelected() - 1];
 					break;
 				default:
 					break;
 				}
-
-				// get the selected action from the drop-down, and 
-				// push it into the 'temp map'
-				temp_button_map[t] = remap_event_list[cboCustomButtonAction[t]->getSelected() - 1];
-
-				switch (SelectedFunction)
-				{
-				case 0:
-					changed_prefs.jports[SelectedPort].amiberry_custom_none = temp_button_map;
-					break;
-				case 1:
-					changed_prefs.jports[SelectedPort].amiberry_custom_hotkey = temp_button_map;
-					break;
-				default:
-					break;
-				}
-
-				inputdevice_updateconfig(nullptr, &changed_prefs);
-				RefreshPanelCustom();
 			}
 		}
 
@@ -163,41 +144,22 @@ public:
 		{
 			if (actionEvent.getSource() == cboCustomAxisAction[t])
 			{
-				std::array<int, SDL_CONTROLLER_AXIS_MAX> temp_axis_map{};
-
-				// get map
 				switch (SelectedFunction)
 				{
 				case 0:
-					temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_none;
+					did->mapping.amiberry_custom_axis_none[t] = remap_event_list[cboCustomAxisAction[t]->getSelected() - 1];
 					break;
 				case 1:
-					temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_hotkey;
+					did->mapping.amiberry_custom_axis_hotkey[t] = remap_event_list[cboCustomAxisAction[t]->getSelected() - 1];
 					break;
 				default:
 					break;
 				}
-
-				// get the selected action from the drop-down
-				// and push it into the temp map
-				temp_axis_map[t] = remap_event_list[cboCustomAxisAction[t]->getSelected() - 1];
-
-				switch (SelectedFunction)
-				{
-				case 0:
-					changed_prefs.jports[SelectedPort].amiberry_custom_axis_none = temp_axis_map;
-					break;
-				case 1:
-					changed_prefs.jports[SelectedPort].amiberry_custom_axis_hotkey = temp_axis_map;
-					break;
-				default:
-					break;
-				}
-
-				inputdevice_updateconfig(nullptr, &changed_prefs);
-				RefreshPanelCustom();
 			}
 		}
+
+		inputdevice_updateconfig(nullptr, &changed_prefs);
+		RefreshPanelCustom();
 	}
 };
 
@@ -205,8 +167,6 @@ static CustomActionListener* customActionListener;
 
 void InitPanelCustom(const config_category& category)
 {
-	int i;
-
 	if (CustomEventList.getNumberOfElements() == 0)
 	{
 		CustomEventList.add("None");
@@ -336,9 +296,9 @@ void InitPanelCustom(const config_category& category)
 
 	txtPortInput->setSize(grpPort->getWidth() - (lblPortInput->getWidth() + DISTANCE_NEXT_X * 2 + lblRetroarch->getWidth()),
 		TEXTFIELD_HEIGHT);
-	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
+	for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
 		lblCustomButtonAction[i] = new gcn::Label(label_button_list[i]);
-	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
+	for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
 	{
 		lblCustomButtonAction[i]->setSize(lblCustomButtonAction[14]->getWidth(), lblCustomButtonAction[14]->getHeight());
 		lblCustomButtonAction[i]->setAlignment(gcn::Graphics::RIGHT);
@@ -355,7 +315,7 @@ void InitPanelCustom(const config_category& category)
 		cboCustomButtonAction[i]->addActionListener(customActionListener);
 	}
 
-	for (i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
+	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
 	{
 		lblCustomAxisAction[i] = new gcn::Label(label_axis_list[i]);
 		lblCustomAxisAction[i]->setSize(lblCustomButtonAction[14]->getWidth(), lblCustomButtonAction[14]->getHeight());
@@ -382,14 +342,14 @@ void InitPanelCustom(const config_category& category)
 
 	// Column 1
 	constexpr auto column1 = 5;
-	for (i = 0; i < SDL_CONTROLLER_BUTTON_MAX / 2; i++)
+	for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX / 2; i++)
 	{
 		category.panel->add(lblCustomButtonAction[i], column1, posY);
 		category.panel->add(cboCustomButtonAction[i], lblCustomButtonAction[i]->getX() + lblCustomButtonAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
-	for (i = 0; i < SDL_CONTROLLER_AXIS_MAX / 2 + 1; i++)
+	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX / 2 + 1; i++)
 	{
 		category.panel->add(lblCustomAxisAction[i], column1, posY);
 		category.panel->add(cboCustomAxisAction[i], lblCustomAxisAction[i]->getX() + lblCustomAxisAction[i]->getWidth() + 4, posY);
@@ -399,14 +359,14 @@ void InitPanelCustom(const config_category& category)
 	// Column 2
 	posY = txtPortInput->getY() + txtPortInput->getHeight() + DISTANCE_NEXT_Y;
 	const auto column2 = cboCustomButtonAction[0]->getX() + cboCustomButtonAction[0]->getWidth() + 4;
-	for (i = SDL_CONTROLLER_BUTTON_MAX / 2; i < SDL_CONTROLLER_BUTTON_MAX; i++)
+	for (int i = SDL_CONTROLLER_BUTTON_MAX / 2; i < SDL_CONTROLLER_BUTTON_MAX; i++)
 	{
 		category.panel->add(lblCustomButtonAction[i], column2, posY);
 		category.panel->add(cboCustomButtonAction[i], lblCustomButtonAction[i]->getX() + lblCustomButtonAction[i]->getWidth() + 4, posY);
 		posY = posY + DROPDOWN_HEIGHT + 6;
 	}
 
-	for (i = SDL_CONTROLLER_AXIS_MAX / 2 + 1; i < SDL_CONTROLLER_AXIS_MAX; i++)
+	for (int i = SDL_CONTROLLER_AXIS_MAX / 2 + 1; i < SDL_CONTROLLER_AXIS_MAX; i++)
 	{
 		category.panel->add(lblCustomAxisAction[i], column2, posY);
 		category.panel->add(cboCustomAxisAction[i], lblCustomAxisAction[i]->getX() + lblCustomAxisAction[i]->getWidth() + 4, posY);
@@ -456,7 +416,142 @@ void ExitPanelCustom()
 	delete customActionListener;
 }
 
-void RefreshPanelCustom()
+gcn::StringListModel* determine_list_model(const didata* did, const int button, const bool is_button_mapped)
+{
+	gcn::StringListModel* list_model;
+	// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
+	if (button == did->mapping.hotkey_button && is_button_mapped)
+	{
+		list_model = &CustomEventList_HotKey;
+	}
+	else if (button == did->mapping.quit_button && is_button_mapped && SelectedFunction == 1 && changed_prefs.use_retroarch_quit)
+	{
+		list_model = &CustomEventList_Quit;
+	}
+	else if (button == did->mapping.menu_button && is_button_mapped && SelectedFunction == 1 && changed_prefs.use_retroarch_menu)
+	{
+		list_model = &CustomEventList_Menu;
+	}
+	else if (button == did->mapping.reset_button && is_button_mapped && SelectedFunction == 1 && changed_prefs.use_retroarch_reset)
+	{
+		list_model = &CustomEventList_Reset;
+	}
+	else if (button == did->mapping.vkbd_button && is_button_mapped && ((SelectedFunction == 1 && changed_prefs.use_retroarch_vkbd) || (SelectedFunction == 0 && !did->mapping.is_retroarch)))
+	{
+		list_model = &CustomEventList_Vkbd;
+	}
+	else
+	{
+		list_model = &CustomEventList;
+	}
+	return list_model;
+}
+
+void disable_all_controls()
+{
+	for (auto& n : cboCustomButtonAction)
+	{
+		n->setListModel(&CustomEventList);
+		n->setEnabled(false);
+	}
+	for (auto& n : lblCustomButtonAction)
+	{
+		n->setEnabled(false);
+	}
+	for (auto& n : cboCustomAxisAction)
+	{
+		n->setListModel(&CustomEventList);
+		n->setEnabled(false);
+	}
+	for (auto& n : lblCustomAxisAction)
+	{
+		n->setEnabled(false);
+	}
+
+	lblRetroarch->setCaption("[_]");
+	const std::string text = "Not a valid Input Controller for Joystick Emulation.";
+	txtPortInput->setText(text);
+
+	cmdSaveMapping->setEnabled(false);
+}
+
+void process_axis(const didata* did, const int n)
+{
+	std::array<int, SDL_CONTROLLER_AXIS_MAX> axis_map{};
+	switch (SelectedFunction)
+	{
+	case 0:
+		axis_map = did->mapping.amiberry_custom_axis_none;
+		break;
+	case 1:
+		axis_map = did->mapping.amiberry_custom_axis_hotkey;
+		break;
+	default:
+		break;
+	}
+	const auto axis = did->mapping.axis[n];
+
+	// disable unmapped axes
+	cboCustomAxisAction[n]->setEnabled(axis > -1);
+	lblCustomAxisAction[n]->setEnabled(axis > -1);
+
+	cboCustomAxisAction[n]->setListModel(&CustomEventList);
+
+	if (axis_map[n] > 0)
+	{
+		// Custom mapping found
+		const auto x = find_in_array(remap_event_list, remap_event_list_size, axis_map[n]);
+		cboCustomAxisAction[n]->setSelected(x + 1);
+	}
+	else if (did->mapping.is_retroarch)
+	{
+		cboCustomAxisAction[n]->setSelected(0);
+	}
+	else
+	{
+		// Default mapping
+		const auto evt = default_axis_mapping[axis];
+		const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
+		cboCustomAxisAction[n]->setSelected(x + 1);
+	}
+}
+
+void update_button_action_selection(const didata* did, const int n, const array<int, 21>::value_type button)
+{
+	std::array<int, SDL_CONTROLLER_BUTTON_MAX> button_map{};
+	switch (SelectedFunction)
+	{
+	case 0:
+		button_map = did->mapping.amiberry_custom_none;
+		break;
+	case 1:
+		button_map = did->mapping.amiberry_custom_hotkey;
+		break;
+	default:
+		break;
+	}
+
+	if (button_map[n] > 0)
+	{
+		// Custom mapping found
+		const auto x = find_in_array(remap_event_list, remap_event_list_size, button_map[n]);
+		cboCustomButtonAction[n]->setSelected(x + 1);
+	}
+	// Retroarch mapping is not the same, so we skip this to avoid incorrect actions showing in the GUI
+	else if (did->mapping.is_retroarch)
+	{
+		cboCustomButtonAction[n]->setSelected(0);
+	}
+	else
+	{
+		// Default mapping
+		const auto evt = default_button_mapping[button];
+		const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
+		cboCustomButtonAction[n]->setSelected(x + 1);
+	}
+}
+
+void update_selected_port()
 {
 	optPort0->setSelected(SelectedPort == 0);
 	optPort1->setSelected(SelectedPort == 1);
@@ -465,179 +560,85 @@ void RefreshPanelCustom()
 
 	optMultiNone->setSelected(SelectedFunction == 0);
 	optMultiSelect->setSelected(SelectedFunction == 1);
+}
 
-	// Refresh the drop-down section here
-	// get map
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> temp_button_map{};
-	switch (SelectedFunction)
+bool is_valid_joystick(const int id)
+{
+	return id >= JSEM_JOYS && id < JSEM_MICE - 1;
+}
+
+void update_hotkey_button(didata* did)
+{
+	if (did->mapping.hotkey_button)
 	{
-	case 0:
-		temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_none;
-		break;
-	case 1:
-		temp_button_map = changed_prefs.jports[SelectedPort].amiberry_custom_hotkey;
-		break;
-	default:
-		break;
-	}
-
-	std::array<int, SDL_CONTROLLER_AXIS_MAX> temp_axis_map{};
-	switch (SelectedFunction)
-	{
-	case 0:
-		temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_none;
-		break;
-	case 1:
-		temp_axis_map = changed_prefs.jports[SelectedPort].amiberry_custom_axis_hotkey;
-		break;
-	default:
-		break;
-	}
-
-	// update the joystick port and disable those not available
-	if (changed_prefs.jports[SelectedPort].id >= JSEM_JOYS
-		&& changed_prefs.jports[SelectedPort].id < JSEM_MICE - 1)
-	{
-		const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
-		didata* did = &di_joystick[host_joy_id];
-
-		if (did->mapping.hotkey_button)
+		// Check if the controller is not using retroarch mapping
+		if (did->is_controller && !did->mapping.is_retroarch)
 		{
-			if (did->is_controller && !did->mapping.is_retroarch)
+			const auto hotkey_text = SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button));
+			if (hotkey_text != nullptr) txtSetHotkey->setText(hotkey_text);
+			cmdSetHotkey->setEnabled(true);
+			cmdSetHotkeyClear->setEnabled(true);
+		}
+		else
+		{
+			const std::string hotkey_text = to_string(did->mapping.hotkey_button);
+			if (!hotkey_text.empty()) txtSetHotkey->setText(hotkey_text);
+			if (did->mapping.is_retroarch)
 			{
-				const auto hotkey_text = SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(did->mapping.hotkey_button));
-				if (hotkey_text != nullptr) txtSetHotkey->setText(hotkey_text);
-				cmdSetHotkey->setEnabled(true);
-				cmdSetHotkeyClear->setEnabled(true);
-			}
-			else
-			{
-				const std::string hotkey_text = to_string(did->mapping.hotkey_button);
-				if (!hotkey_text.empty()) txtSetHotkey->setText(hotkey_text);
-				if (did->mapping.is_retroarch)
-				{
-					// Disable editing buttons, as these are controlled by the retroarch config anyway
-					cmdSetHotkey->setEnabled(false);
-					cmdSetHotkeyClear->setEnabled(false);
-				}
+				// Disable editing buttons, as these are controlled by the retroarch config anyway
+				cmdSetHotkey->setEnabled(false);
+				cmdSetHotkeyClear->setEnabled(false);
 			}
 		}
+	}
+}
 
+void process_button(const didata* did, const int n)
+{
+	const auto button = did->mapping.button[n];
+
+	// disable unmapped buttons
+	const bool is_button_mapped = button > -1;
+	cboCustomButtonAction[n]->setEnabled(is_button_mapped);
+	lblCustomButtonAction[n]->setEnabled(is_button_mapped);
+
+	gcn::StringListModel* list_model = determine_list_model(did, button, is_button_mapped);
+	cboCustomButtonAction[n]->setListModel(list_model);
+	if (list_model != &CustomEventList)
+	{
+		cboCustomButtonAction[n]->setEnabled(false);
+		lblCustomButtonAction[n]->setEnabled(false);
+	}
+
+	update_button_action_selection(did, n, button);
+}
+
+void RefreshPanelCustom()
+{
+	update_selected_port();
+
+	const auto host_joy_id = changed_prefs.jports[SelectedPort].id - JSEM_JOYS;
+	didata* did = &di_joystick[host_joy_id];
+
+	// Check if the selected port is a valid joystick
+	if (is_valid_joystick(changed_prefs.jports[SelectedPort].id))
+	{
+		// Check if the hotkey button is set
+		update_hotkey_button(did);
+
+		// Process each button
 		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
 		{
-			const auto temp_button = did->mapping.button[n];
-
-			// disable unmapped buttons
-			cboCustomButtonAction[n]->setEnabled(temp_button > -1);
-			lblCustomButtonAction[n]->setEnabled(temp_button > -1);
-
-			// set hotkey/quit/reset/menu on NONE field (and disable hotkey)
-			if (temp_button == did->mapping.hotkey_button
-				&& temp_button != -1)
-			{
-				cboCustomButtonAction[n]->setListModel(&CustomEventList_HotKey);
-				cboCustomButtonAction[n]->setEnabled(false);
-				lblCustomButtonAction[n]->setEnabled(false);
-			}
-
-			else if (temp_button == did->mapping.quit_button
-				&& temp_button != -1
-				&& SelectedFunction == 1
-				&& changed_prefs.use_retroarch_quit)
-			{
-				cboCustomButtonAction[n]->setListModel(&CustomEventList_Quit);
-				cboCustomButtonAction[n]->setEnabled(false);
-				lblCustomButtonAction[n]->setEnabled(false);
-			}
-
-			else if (temp_button == did->mapping.menu_button
-				&& temp_button != -1
-				&& SelectedFunction == 1
-				&& changed_prefs.use_retroarch_menu)
-			{
-				cboCustomButtonAction[n]->setListModel(&CustomEventList_Menu);
-				cboCustomButtonAction[n]->setEnabled(false);
-				lblCustomButtonAction[n]->setEnabled(false);
-			}
-
-			else if (temp_button == did->mapping.reset_button
-				&& temp_button != -1
-				&& SelectedFunction == 1
-				&& changed_prefs.use_retroarch_reset)
-			{
-				cboCustomButtonAction[n]->setListModel(&CustomEventList_Reset);
-				cboCustomButtonAction[n]->setEnabled(false);
-				lblCustomButtonAction[n]->setEnabled(false);
-			}
-
-			else if ((temp_button == did->mapping.vkbd_button
-				&& temp_button != -1
-				&& SelectedFunction == 1
-				&& changed_prefs.use_retroarch_vkbd)
-				||
-				(temp_button == did->mapping.vkbd_button
-				&& temp_button != -1
-				&& SelectedFunction == 0
-				&& !did->mapping.is_retroarch)
-				)
-			{
-				cboCustomButtonAction[n]->setListModel(&CustomEventList_Vkbd);
-				cboCustomButtonAction[n]->setEnabled(false);
-				lblCustomButtonAction[n]->setEnabled(false);
-			}
-
-			else
-				cboCustomButtonAction[n]->setListModel(&CustomEventList);
-
-			if (temp_button_map[n] > 0)
-			{
-				// Custom mapping found
-				const auto x = find_in_array(remap_event_list, remap_event_list_size, temp_button_map[n]);
-				cboCustomButtonAction[n]->setSelected(x + 1);
-			}
-			// Retroarch mapping is not the same, so we skip this to avoid incorrect actions showing in the GUI
-			else if (did->mapping.is_retroarch)
-			{
-				cboCustomButtonAction[n]->setSelected(0);
-			}
-			else
-			{
-				// Default mapping
-				const auto evt = default_button_mapping[temp_button];
-				const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
-				cboCustomButtonAction[n]->setSelected(x + 1);
-			}
+			process_button(did, n);
 		}
 
+		// Process each axis
 		for (auto n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
 		{
-			const auto temp_axis = did->mapping.axis[n];
-
-			// disable unmapped axes
-			cboCustomAxisAction[n]->setEnabled(temp_axis > -1);
-			lblCustomAxisAction[n]->setEnabled(temp_axis > -1);
-
-			cboCustomAxisAction[n]->setListModel(&CustomEventList);
-
-			if (temp_axis_map[n] > 0)
-			{
-				// Custom mapping found
-				const auto x = find_in_array(remap_event_list, remap_event_list_size, temp_axis_map[n]);
-				cboCustomAxisAction[n]->setSelected(x + 1);
-			}
-			else if (did->mapping.is_retroarch)
-			{
-				cboCustomAxisAction[n]->setSelected(0);
-			}
-			else
-			{
-				// Default mapping
-				const auto evt = default_axis_mapping[temp_axis];
-				const auto x = find_in_array(remap_event_list, remap_event_list_size, evt);
-				cboCustomAxisAction[n]->setSelected(x + 1);
-			}
+			process_axis(did, n);
 		}
 
+		// Enable DPad buttons if hats are present
 		if (did->mapping.number_of_hats > 0)
 		{
 			for (int i = SDL_CONTROLLER_BUTTON_DPAD_UP; i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT; i++)
@@ -647,6 +648,7 @@ void RefreshPanelCustom()
 			}
 		}
 
+		// Set controller name and enable save button if not using retroarch mapping
 		if (did->mapping.is_retroarch)
 		{
 			lblRetroarch->setCaption("[R]");
@@ -659,33 +661,9 @@ void RefreshPanelCustom()
 			cmdSaveMapping->setEnabled(true);
 		}
 	}
-
 	else
 	{
-		for (auto& n : cboCustomButtonAction)
-		{
-			n->setListModel(&CustomEventList);
-			n->setEnabled(false);
-		}
-		for (auto& n : lblCustomButtonAction)
-		{
-			n->setEnabled(false);
-		}
-		for (auto& n : cboCustomAxisAction)
-		{
-			n->setListModel(&CustomEventList);
-			n->setEnabled(false);
-		}
-		for (auto& n : lblCustomAxisAction)
-		{
-			n->setEnabled(false);
-		}
-
-		lblRetroarch->setCaption("[_]");
-		const std::string text = "Not a valid Input Controller for Joystick Emulation.";
-		txtPortInput->setText(text);
-
-		cmdSaveMapping->setEnabled(false);
+		disable_all_controls();
 	}
 }
 

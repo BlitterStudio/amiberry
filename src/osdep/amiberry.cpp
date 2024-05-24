@@ -50,7 +50,9 @@
 #include "clipboard.h"
 #include "fsdb.h"
 #include "scsidev.h"
-#include "floppybridge/floppybridge_lib.h"
+#ifdef FLOPPYBRIDGE
+#include "floppybridge_lib.h"
+#endif
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
@@ -300,6 +302,7 @@ std::string ripper_path;
 std::string input_dir;
 std::string screenshot_dir;
 std::string nvram_dir;
+std::string plugins_dir;
 std::string video_dir;
 std::string amiberry_conf_file;
 
@@ -576,16 +579,19 @@ bool ismouseactive (void)
 	return mouseactive > 0;
 }
 
-//TODO: Tablet only
-void target_inputdevice_unacquire(void)
+//TODO: maybe implement this
+void target_inputdevice_unacquire(bool full)
 {
-//	close_tablet(tablet);
-//	tablet = NULL;
+	//close_tablet(tablet);
+	//tablet = NULL;
+	//if (full) {
+	//	rawinput_release();
+	//}
 }
 void target_inputdevice_acquire(void)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
-	target_inputdevice_unacquire();
+	target_inputdevice_unacquire(false);
 	//tablet = open_tablet(mon->hAmigaWnd);
 	//rawinput_alloc();
 }
@@ -622,14 +628,17 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	releasecapture(mon);
 	recapture = 0;
 
-	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0) {
-		if (mousehack_alive())
-		{
-			releasecapture(mon);
+	if (isfullscreen() <= 0 && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)) {
+		if (currprefs.input_tablet > 0) {
+			if (mousehack_alive()) {
+				releasecapture(mon);
+				recapture = 0;
+				return;
+			}
+			SDL_SetCursor(normalcursor);
+		} else {
 			recapture = 0;
-			return;
 		}
-		SDL_SetCursor(normalcursor);
 	}
 
 	bool gotfocus = false;
@@ -2068,7 +2077,7 @@ void target_fixup_options(struct uae_prefs* p)
 		}
 	}
 	/* switch from 32 to 16 or vice versa if mode does not exist */
-	if (1 || isfullscreen() > 0) {
+	//if (1 || isfullscreen() > 0) {
 		int depth = p->color_mode == 5 ? 4 : 2;
 		for (int i = 0; md->DisplayModes[i].depth >= 0; i++) {
 			if (md->DisplayModes[i].depth == depth) {
@@ -2079,7 +2088,7 @@ void target_fixup_options(struct uae_prefs* p)
 		if (depth) {
 			p->color_mode = p->color_mode == 5 ? 2 : 5;
 		}
-	}
+	//}
 
 	if ((p->gfx_apmode[0].gfx_vsyncmode || p->gfx_apmode[1].gfx_vsyncmode)) {
 		if (p->produce_sound && sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL2) {
@@ -2095,6 +2104,14 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	set_key_configs(p);
+
+	// Disable multithreaded drawing if Single Window mode is enabled
+	// Otherwise, we have issues when the GUI window opens, and it closes the emulation one,
+	// since the thread is still trying to draw on it
+	if (amiberry_options.single_window_mode)
+	{
+		p->multithreaded_drawing = false;
+	}
 #endif
 }
 
@@ -2965,6 +2982,11 @@ void set_nvram_path(const std::string& newpath)
 	nvram_dir = newpath;
 }
 
+void set_plugins_path(const std::string& newpath)
+{
+	plugins_dir = newpath;
+}
+
 void set_video_path(const std::string& newpath)
 {
 	video_dir = newpath;
@@ -3126,6 +3148,11 @@ void fetch_inputfilepath(TCHAR* out, int size)
 void get_nvram_path(TCHAR* out, int size)
 {
 	_tcsncpy(out, fix_trailing(nvram_dir).c_str(), size - 1);
+}
+
+std::string get_plugins_path()
+{
+	return fix_trailing(plugins_dir);
 }
 
 std::string get_screenshot_path()
@@ -3324,6 +3351,17 @@ void save_amiberry_settings(void)
 		snprintf(buffer, MAX_DPATH, "%s=%s\n", name, value.c_str());
 		fputs(buffer, f);
 		};
+
+	auto write_float_option = [&](const char* name, float value) {
+		snprintf(buffer, MAX_DPATH, "%s=%f\n", name, value);
+		fputs(buffer, f);
+		};
+
+	// Use the old Single-Window mode (useful in cases where multiple overlapping windows are a problem)
+	write_bool_option("single_window_mode", amiberry_options.single_window_mode);
+
+	// Set the window scaling option (the default is 1.0)
+	write_float_option("window_scaling", amiberry_options.window_scaling);
 
 	// Should the Quickstart Panel be the default when opening the GUI?
 	write_int_option("Quickstart", amiberry_options.quickstart_start);
@@ -3537,6 +3575,7 @@ void save_amiberry_settings(void)
 	write_string_option("ripper_path", ripper_path);
 	write_string_option("inputrecordings_dir", input_dir);
 	write_string_option("nvram_dir", nvram_dir);
+	write_string_option("plugins_dir", plugins_dir);
 	write_string_option("video_dir", video_dir);
 
 	// The number of ROMs in the last scan
@@ -3680,6 +3719,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "inputrecordings_dir", input_dir);
 		ret |= cfgfile_string(option, value, "screenshot_dir", screenshot_dir);
 		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir);
+		ret |= cfgfile_string(option, value, "plugins_dir", plugins_dir);
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
@@ -3688,6 +3728,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
+		ret |= cfgfile_yesno(option, value, "single_window_mode", &amiberry_options.single_window_mode);
+		ret |= cfgfile_floatval(option, value, "window_scaling", &amiberry_options.window_scaling);
 		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
 		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
@@ -3928,6 +3970,7 @@ static void init_amiberry_paths(void)
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = video_dir = macos_amiberry_directory;
+	plugins_dir = start_path_data;
 
 	config_path.append("/Configurations/");
 	controllers_path.append("/Controllers/");
@@ -3950,7 +3993,7 @@ static void init_amiberry_paths(void)
 #else
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
-		input_dir = screenshot_dir = nvram_dir = video_dir = 
+		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = 
 		start_path_data;
 
 	config_path.append("/conf/");
@@ -3970,6 +4013,7 @@ static void init_amiberry_paths(void)
 	input_dir.append("/inputrecordings/");
 	screenshot_dir.append("/screenshots/");
 	nvram_dir.append("/nvram/");
+	plugins_dir.append("/plugins/");
 	video_dir.append("/videos/");
 #endif
 	amiberry_conf_file = config_path;
@@ -4357,24 +4401,26 @@ void drawbridge_update_profiles(uae_prefs* p)
 #ifdef FLOPPYBRIDGE
 	const unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
 
-	const std::string profile_name_fast = "Fast";
+	const std::string profile_name_normal = "Normal";
 	const std::string profile_name_comp = "Compatible";
 	const std::string profile_name_turbo = "Turbo";
 	const std::string profile_name_stalling = "Stalling";
 
-	const std::string bridge_mode_fast = "0";
+	const std::string bridge_mode_normal = "0";
 	const std::string bridge_mode_comp = "1";
 	const std::string bridge_mode_turbo = "2";
 	const std::string bridge_mode_stalling = "3";
+
 	const std::string bridge_density_auto = "0";
 
 	std::string serial_port = p->drawbridge_serial_port;
 	if (serial_port.empty())
-		serial_port = "COM0";
+		serial_port = "/dev/ttyUSB0";
 
+	// profileID | profileName [ drawbridge_driver | flags | serial_port | bridge_mode | bridge_density ]
 	std::string tmp;
-	// Fast
-	tmp = std::string("1") + "|" + profile_name_fast + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_fast + "|" + bridge_density_auto + "]";
+	// Normal
+	tmp = std::string("1") + "|" + profile_name_normal + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_normal + "|" + bridge_density_auto + "]";
 	// Compatible
 	tmp += std::string("2") + "|" + profile_name_comp + "[" + std::to_string(p->drawbridge_driver) + "|" + std::to_string(flags) + "|" + serial_port + "|" + bridge_mode_comp + "|" + bridge_density_auto + "]";
 	// Turbo
@@ -4423,7 +4469,7 @@ void clear_whdload_prefs()
 #include <iostream>
 #include <sstream>
 
-void save_controller_mapping_to_file(const host_input_button& input, const std::string& filename)
+void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename)
 {
 	std::ofstream out_file(filename);
 	if (!out_file) {
@@ -4453,11 +4499,27 @@ void save_controller_mapping_to_file(const host_input_button& input, const std::
 	out_file << "\nnumber_of_hats=" << input.number_of_hats;
 	out_file << "\nnumber_of_axis=" << input.number_of_axis;
 	out_file << "\nis_retroarch=" << input.is_retroarch;
+	out_file << "\namiberry_custom_none=";
+	for (const auto& b : input.amiberry_custom_none) {
+		out_file << b << " ";
+	}
+	out_file << "\namiberry_custom_hotkey=";
+	for (const auto& b : input.amiberry_custom_hotkey) {
+		out_file << b << " ";
+	}
+	out_file << "\namiberry_custom_axis_none=";
+	for (const auto& a : input.amiberry_custom_axis_none) {
+		out_file << a << " ";
+	}
+	out_file << "\namiberry_custom_axis_hotkey=";
+	for (const auto& a : input.amiberry_custom_axis_hotkey) {
+		out_file << a << " ";
+	}
 
 	out_file.close();
 }
 
-void read_controller_mapping_from_file(host_input_button& input, const std::string& filename)
+void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename)
 {
 	std::ifstream in_file(filename);
 	if (!in_file) {
@@ -4521,6 +4583,26 @@ void read_controller_mapping_from_file(host_input_button& input, const std::stri
 			}
 			else if (key == "is_retroarch") {
 				iss >> input.is_retroarch;
+			}
+			else if (key == "amiberry_custom_none") {
+				for (auto& b : input.amiberry_custom_none) {
+					iss >> b;
+				}
+			}
+			else if (key == "amiberry_custom_hotkey") {
+				for (auto& b : input.amiberry_custom_hotkey) {
+					iss >> b;
+				}
+			}
+			else if (key == "amiberry_custom_axis_none") {
+				for (auto& a : input.amiberry_custom_axis_none) {
+					iss >> a;
+				}
+			}
+			else if (key == "amiberry_custom_axis_hotkey") {
+				for (auto& a : input.amiberry_custom_axis_hotkey) {
+					iss >> a;
+				}
 			}
 		}
 	}

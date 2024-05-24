@@ -115,6 +115,13 @@ void update_debug_info(void) {
 	// using console debugging on Linux/Mac OS X.
 }
 
+void open_console(void)
+{
+	if (!consoleopen) {
+		openconsole();
+	}
+}
+
 void reopen_console (void)
 {
 #ifdef _WIN32
@@ -259,7 +266,7 @@ static void console_put (const TCHAR *buffer)
 	if (console_buffer) {
 		if (_tcslen (console_buffer) + _tcslen (buffer) < console_buffer_size)
 			_tcscat (console_buffer, buffer);
-	} else {
+	} else if (consoleopen) {
 		openconsole ();
 		writeconsole (buffer);
 	}

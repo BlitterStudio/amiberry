@@ -1453,7 +1453,7 @@ static bool set_params_filesys(struct uae_prefs *prefs, struct expansion_params 
 
 static void add_rtarea_pointer(struct autoconfig_info *aci)
 {
-	if (aci->doinit) {
+	if (aci && aci->doinit) {
 		uaecptr addr = 0;
 		if (aci->prefs->uaeboard > 1) {
 			addr = aci->start + 0x10000;
@@ -1975,7 +1975,7 @@ void create_68060_nofpu(void)
 
 static bool expamem_init_filesys(struct autoconfig_info *aci)
 {
-	struct uae_prefs *p = aci->prefs;
+	struct uae_prefs* p = aci ? aci->prefs : &currprefs;
 	bool ks12 = ks12orolder();
 	bool hide = p->uae_hide_autoconfig;
 	bool rom = !(ks12 || !do_mount || p->uaeboard_nodiag);
@@ -3973,7 +3973,7 @@ void expansion_map(void)
 		mapped_free(&filesys_bank);
 		mapped_malloc(&filesys_bank);
 		map_banks_z2(&filesys_bank, filesys_bank.start >> 16, 1);
-		expamem_init_filesys(0);
+		expamem_init_filesys(NULL);
 		expamem_map_filesys_update();
 	}
 }
@@ -4293,6 +4293,16 @@ static const struct expansionsubromtype a2090_sub[] = {
 };
 #endif
 
+static const struct expansionboardsettings merlin_settings[] = {
+	{
+		_T("Serial number\0"),
+		_T("serial\0"),
+		2, false, 0
+	},
+	{
+		NULL
+	}
+};
 static const struct expansionboardsettings voodoo_settings[] = {
 	{
 		_T("Direct VRAM access in little endian modes"), _T("directvram")
@@ -4749,6 +4759,17 @@ static const struct expansionboardsettings harlequin_settings[] = {
 	{
 		_T("Genlock"),
 		_T("genlock")
+	},
+	{
+		NULL
+	}
+};
+
+static const struct expansionboardsettings rainbow2_settings[] = {
+	{
+		_T("Mode\0") _T("NTSC\0") _T("PAL\0"),
+		_T("mode\0") _T("ntsc\0") _T("pal\0"),
+		true
 	},
 	{
 		NULL
@@ -6081,6 +6102,14 @@ const struct expansionromtype expansionroms[] = {
 		false, EXPANSIONTYPE_RTG
 	},
 	{
+		_T("merlin"), _T("Merlin"), _T("X-Pert Computer Services"),
+		NULL, NULL, NULL, NULL, ROMTYPE_MERLIN | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, merlin_settings
+	},
+	{
 		_T("vooodoo3_3k"), _T("Voodoo 3 3000"), _T("3dfx"),
 		NULL, NULL, NULL, NULL, ROMTYPE_VOODOO3 | ROMTYPE_NONE, 0, 0, BOARD_IGNORE, false,
 		NULL, 0,
@@ -6125,6 +6154,14 @@ const struct expansionromtype expansionroms[] = {
 		false, EXPANSIONTYPE_RTG,
 		0, 0, 0, false, NULL,
 		false, 0, harlequin_settings
+	},
+	{
+		_T("rainbowii"), _T("Rainbow II"), _T("Ingenieurburo Helfrich"),
+		NULL, NULL, NULL, NULL, ROMTYPE_RAINBOWII | ROMTYPE_NOT, 0, 0, BOARD_IGNORE, false,
+		NULL, 0,
+		false, EXPANSIONTYPE_RTG,
+		0, 0, 0, false, NULL,
+		false, 0, rainbow2_settings
 	},
 
 	/* Sound Cards */
@@ -6943,11 +6980,20 @@ static const struct cpuboardsubtype csa_sub[] = {
 	}
 };
 
-static const struct expansionboardsettings apollo_settings[] = {
+static const struct expansionboardsettings apollo12xx_settings[] = {
 	{
 		_T("SCSI module installed"),
 		_T("scsi")
 	},
+	{
+		_T("Memory disable"),
+		_T("memory")
+	},
+	{
+		NULL
+	}
+};
+static const struct expansionboardsettings apollo630_settings[] = {
 	{
 		_T("Memory disable"),
 		_T("memory")
@@ -6961,13 +7007,24 @@ static const struct cpuboardsubtype apollo_sub[] = {
 	{
 		_T("Apollo 1240/1260"),
 		_T("Apollo"),
-		ROMTYPE_CB_APOLLO, 0, 4,
+		ROMTYPE_CB_APOLLO_12xx, 0, 4,
 		apollo_add_scsi_unit, EXPANSIONTYPE_SCSI,
 		BOARD_MEMORY_CUSTOM_32,
 		64 * 1024 * 1024,
 		0,
-		apollo_init_cpu, NULL, 2, 0,
-		apollo_settings
+		apollo_init_cpu_12xx, NULL, 2, 0,
+		apollo12xx_settings
+	},
+	{
+		_T("Apollo 630"),
+		_T("Apollo630"),
+		ROMTYPE_CB_APOLLO_630, 0, 4,
+		NULL, 0,
+		BOARD_MEMORY_CUSTOM_32,
+		128 * 1024 * 1024,
+		0,
+		NULL, NULL, 0, 0,
+		apollo630_settings
 	},
 	{
 		NULL

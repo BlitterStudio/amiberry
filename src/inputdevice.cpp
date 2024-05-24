@@ -269,10 +269,17 @@ int inputdevice_uaelib (const TCHAR *s, const TCHAR *parm)
 		for (int i = 0; akss[i].name; i++) {
 			if (!_tcscmp(s, akss[i].name)) {
 				int v = _tstol(parm);
-				if (!_tcscmp(parm, _T("0")) || !_tcscmp(parm, _T("1")))
+				if (!_tcscmp(parm, _T("0"))) {
+					v = SET_ONOFF_OFF_VALUE;
 					parm = NULL;
-				else
-					v = 1;
+				}
+				else if (!_tcscmp(parm, _T("1"))) {
+					v = SET_ONOFF_ON_VALUE;
+					parm = NULL;
+				}
+				else {
+					v = SET_ONOFF_PRESS_VALUE;
+				}
 				inputdevice_add_inputcode(akss[i].aks, v, parm);
 				return 1;
 			}
@@ -523,14 +530,10 @@ static void copyjport (const struct uae_prefs *src, struct uae_prefs *dst, int n
 	dst->jports[num].mode = src->jports[num].mode;
 	dst->jports[num].submode = src->jports[num].submode;
 	dst->jports[num].autofire = src->jports[num].autofire;
+	dst->jports[num].nokeyboardoverride = src->jports[num].nokeyboardoverride;
 #ifdef AMIBERRY
 	dst->jports[num].mousemap = src->jports[num].mousemap;
-	dst->jports[num].amiberry_custom_none = src->jports[num].amiberry_custom_none;
-	dst->jports[num].amiberry_custom_hotkey = src->jports[num].amiberry_custom_hotkey;
-	dst->jports[num].amiberry_custom_axis_none = src->jports[num].amiberry_custom_axis_none;
-	dst->jports[num].amiberry_custom_axis_hotkey = src->jports[num].amiberry_custom_axis_hotkey;
 #endif
-	dst->jports[num].nokeyboardoverride = src->jports[num].nokeyboardoverride;
 }
 
 #define MAX_STORED_JPORTS 8
@@ -1027,6 +1030,7 @@ void write_inputdevice_config (struct uae_prefs *p, struct zfile *f)
 	cfgfile_dwrite(f, _T("input.devicematchflags"), _T("%d"), p->input_device_match_mask);
 	cfgfile_dwrite_bool(f, _T("input.autoswitchleftright"), p->input_autoswitchleftright);
 	cfgfile_dwrite_bool(f, _T("input.advancedmultiinput"), p->input_advancedmultiinput);
+	cfgfile_dwrite_bool(f, _T("input.default_osk"), p->input_default_onscreen_keyboard);
 #ifndef AMIBERRY // not used in Amiberry
 	for (id = 0; id < MAX_INPUT_SETTINGS; id++) {
 		TCHAR tmp[MAX_DPATH];
@@ -1588,6 +1592,8 @@ void read_inputdevice_config (struct uae_prefs *pr, const TCHAR *option, TCHAR *
 		pr->input_autoswitchleftright = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
 	if (!_tcsicmp(p, _T("advancedmultiinput")))
 		pr->input_advancedmultiinput = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
+	if (!_tcsicmp(p, _T("default_osk")))
+		pr->input_default_onscreen_keyboard = !_tcsicmp(value, _T("true")) || _tstol(value) != 0;
 	if (!_tcsicmp(p, _T("keyboard_type"))) {
 		cfgfile_strval(p, value, p, &pr->input_keyboard_type, kbtypes, 0);
 		keyboard_default = keyboard_default_table[pr->input_keyboard_type];
@@ -7570,11 +7576,11 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 				case JSEM_MODE_JOYSTICK:
 				case JSEM_MODE_GAMEPAD:
 				case JSEM_MODE_JOYSTICK_CD32:
-					input_get_default_joystick (mice, joy, i, af, mode, !gameports, true);
+					input_get_default_joystick (mice, joy, i, af, mode, !gameports, true, prefs->input_default_onscreen_keyboard);
 					joymodes[i] = mode;
 					break;
 				case JSEM_MODE_JOYSTICK_ANALOG:
-					input_get_default_joystick_analog (mice, joy, i, af, !gameports, true);
+					input_get_default_joystick_analog (mice, joy, i, af, !gameports, true, prefs->input_default_onscreen_keyboard);
 					joymodes[i] = JSEM_MODE_JOYSTICK_ANALOG;
 					break;
 				}
@@ -7605,7 +7611,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 				{
 					bool iscd32 = mode == JSEM_MODE_JOYSTICK_CD32 || (mode == JSEM_MODE_DEFAULT && prefs->cs_cd32cd);
 					int jmode = iscd32 ? JSEM_MODE_JOYSTICK_CD32 : mode;
-					input_get_default_joystick(joysticks, joy, i, af, jmode, !gameports, false);
+					input_get_default_joystick(joysticks, joy, i, af, jmode, !gameports, false, prefs->input_default_onscreen_keyboard);
 					if (iscd32)
 						joymodes[i] = JSEM_MODE_JOYSTICK_CD32;
 					else if (mode == JSEM_MODE_GAMEPAD)
@@ -7615,7 +7621,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					break;
 				}
 				case JSEM_MODE_JOYSTICK_ANALOG:
-					input_get_default_joystick_analog(joysticks, joy, i, af, !gameports, false);
+					input_get_default_joystick_analog(joysticks, joy, i, af, !gameports, false, prefs->input_default_onscreen_keyboard);
 					joymodes[i] = JSEM_MODE_JOYSTICK_ANALOG;
 					break;
 				case JSEM_MODE_MOUSE:
@@ -7629,7 +7635,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					}
 					else
 					{
-						input_get_default_joystick(joysticks, joy, i, af, mode, !gameports, false);
+						input_get_default_joystick(joysticks, joy, i, af, mode, !gameports, false, prefs->input_default_onscreen_keyboard);
 						joymodes[i] = JSEM_MODE_WHEELMOUSE;
 					}
 #endif
@@ -7640,7 +7646,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 					break;
 				case JSEM_MODE_MOUSE_CDTV:
 					joymodes[i] = JSEM_MODE_MOUSE_CDTV;
-					input_get_default_joystick(joysticks, joy, i, af, mode, !gameports, false);
+					input_get_default_joystick(joysticks, joy, i, af, mode, !gameports, false, prefs->input_default_onscreen_keyboard);
 					break;
 
 				}
@@ -7794,7 +7800,7 @@ static void compatibility_copy (struct uae_prefs *prefs, bool gameports)
 			if (joy >= 0) {
 				if (gameports)
 					cleardev (joysticks, joy);
-				input_get_default_joystick (joysticks, joy, i, af, 0, !gameports, false);
+				input_get_default_joystick (joysticks, joy, i, af, 0, !gameports, false, prefs->input_default_onscreen_keyboard);
 				_tcsncpy (prefs->jports[i].idc.name, idev[IDTYPE_JOYSTICK].get_friendlyname (joy), MAX_JPORT_NAME - 1);
 				_tcsncpy (prefs->jports[i].idc.configname, idev[IDTYPE_JOYSTICK].get_uniquename (joy), MAX_JPORT_CONFIG - 1);
 				prefs->jports[i].idc.name[MAX_JPORT_NAME - 1] = 0;
@@ -8375,6 +8381,7 @@ void inputdevice_default_prefs (struct uae_prefs *p)
 	p->input_autoswitchleftright = false;
 	p->input_device_match_mask = -1;
 	keyboard_default = keyboard_default_table[p->input_keyboard_type];
+	p->input_default_onscreen_keyboard = true;
 	inputdevice_default_kb_all (p);
 
 }
@@ -9395,9 +9402,6 @@ void inputdevice_releasebuttons(void)
 	}
 }
 
-void target_inputdevice_acquire(void);
-void target_inputdevice_unacquire(void);
-
 void inputdevice_acquire (int allmode)
 {
 	int i;
@@ -9457,7 +9461,7 @@ void inputdevice_unacquire(int inputmask)
 	if (!input_acquired)
 		return;
 
-	target_inputdevice_unacquire();
+	target_inputdevice_unacquire(false);
 
 	input_acquired = 0;
 	if (!(inputmask & 4))

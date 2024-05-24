@@ -157,8 +157,9 @@ void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
 extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
+extern void quit_drawing_thread();
+extern void start_drawing_thread();
 
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);
 extern bool kmsdrm_detected;
-extern bool sdl2_thread_changed;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 project(amiberry)
 enable_language(C CXX ASM)
 
@@ -10,6 +10,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 set(CMAKE_ASM_COMPILER "${CMAKE_C_COMPILER}")
 set(CMAKE_ASM_COMPILER_ARG1 "${CMAKE_C_COMPILER_ARG1}")
+
+option(USE_DBUS "Use DBus" OFF)
+option(USE_OPENGL "Use OpenGL" OFF)
+option(WITH_LTO "Enable Link Time Optimization" OFF)
 
 # Set build type to "Release" if user did not specify any build type yet
 # Other possible values: Debug, Release, RelWithDebInfo and MinSizeRel
@@ -23,9 +27,6 @@ endif ()
 
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
-set(libmt32emu_SHARED FALSE)
-add_subdirectory(external/mt32emu)
 
 include(CheckSymbolExists)
 function(detect_architecture symbol arch)
@@ -236,19 +237,7 @@ add_executable(${PROJECT_NAME}
         src/archivers/zip/unzip.cpp
         src/caps/caps_amiberry.cpp
         src/machdep/support.cpp
-        src/floppybridge/ArduinoFloppyBridge.cpp
-        src/floppybridge/ArduinoInterface.cpp
-        src/floppybridge/CommonBridgeTemplate.cpp
-        src/floppybridge/floppybridge_lib.cpp
-        src/floppybridge/ftdi.cpp
-        src/floppybridge/GreaseWeazleBridge.cpp
-        src/floppybridge/GreaseWeazleInterface.cpp
-        src/floppybridge/pll.cpp
-        src/floppybridge/RotationExtractor.cpp
-        src/floppybridge/SerialIO.cpp
-        src/floppybridge/SuperCardProBridge.cpp
-        src/floppybridge/SuperCardProInterface.cpp
-        src/floppybridge/FloppyBridge.cpp
+        external/floppybridge/src/floppybridge_lib.cpp
         src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
@@ -335,7 +324,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
-    add_definitions(-DCPU_AARCH64)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
     target_sources(${PROJECT_NAME} PRIVATE
             src/osdep/aarch64_helper.s
             src/jit/compemu.cpp
@@ -346,7 +335,7 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
 endif ()
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR ARCHITECTURE MATCHES "arm32")
-    add_definitions(-DCPU_arm -DARMV6_ASSEMBLY -DARMV6T2 -DUSE_ARMNEON -DARM_HAS_DIV)
+   target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV)
     target_sources(${PROJECT_NAME} PRIVATE
             src/osdep/neon_helper.s
             src/jit/compemu.cpp
@@ -361,7 +350,7 @@ find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
 if (USE_DBUS)
-    add_definitions(-DUSE_DBUS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DBUS)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DBUS REQUIRED dbus-1)
     target_include_directories(${PROJECT_NAME} PRIVATE ${DBUS_INCLUDE_DIRS})
@@ -376,13 +365,17 @@ find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
 find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
 find_library(LIBMPEG2 mpeg2 REQUIRED)
 
+set(libmt32emu_SHARED FALSE)
+add_subdirectory(external/mt32emu)
+add_subdirectory(external/floppybridge)
 add_subdirectory(external/libguisan)
-target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src external/floppybridge/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
 target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 
 if (USE_OPENGL)
-    add_definitions(-DUSE_OPENGL)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
     find_package(OpenGL REQUIRED)
     find_package(GLEW REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
@@ -421,6 +414,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/nvram $<TARGET_FILE_DIR:${PROJECT_NAME}>/nvram)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/plugins $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/savestates $<TARGET_FILE_DIR:${PROJECT_NAME}>/savestates)

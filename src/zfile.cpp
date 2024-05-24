@@ -1758,10 +1758,10 @@ static void manglefilename(const std::string& in, std::string& out, int outsize)
 {
 	out = in;
 	std::replace(out.begin(), out.end(), '\\', '/');
-	out.erase(std::unique(out.begin(), out.end(), [](char a, char b) { return a == '/' && b == '/'; }), out.end());
+	out.erase(std::unique(out.begin(), out.end(), [](const char a, const char b) { return a == '/' && b == '/'; }), out.end());
 }
 
-int zfile_zopen(const std::string& name, zfile_callback zc, void* user)
+int zfile_zopen(const std::string& name, const zfile_callback zc, void* user)
 {
 	struct zfile* l;
 	int ztype;

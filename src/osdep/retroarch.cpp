@@ -233,7 +233,7 @@ std::string ra_player_input(std::string retroarch_string, const int player)
 	return retroarch_string;
 }
 
-host_input_button map_from_retroarch(host_input_button mapping, const std::string& control_config, const int player)
+controller_mapping map_from_retroarch(controller_mapping mapping, const std::string& control_config, const int player)
 {
 	mapping.is_retroarch = true;
 	const std::string button_keys[] = { "input_enable_hotkey_btn", "input_exit_emulator_btn", "input_reset_btn", "input_menu_toggle_btn", "input_osk_toggle_btn" };

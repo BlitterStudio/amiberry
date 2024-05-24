@@ -20,7 +20,7 @@
 
 #define UAEMAJOR 5
 #define UAEMINOR 7
-#define UAESUBREV 0
+#define UAESUBREV 1
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -111,10 +111,6 @@ struct jport
 	bool changed{};
 #ifdef AMIBERRY
 	int mousemap{};
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_none;
-	std::array<int, SDL_CONTROLLER_BUTTON_MAX> amiberry_custom_hotkey;
-	std::array<int, SDL_CONTROLLER_AXIS_MAX> amiberry_custom_axis_none;
-	std::array<int, SDL_CONTROLLER_AXIS_MAX> amiberry_custom_axis_hotkey;
 #endif
 };
 
@@ -175,10 +171,10 @@ struct floppyslot
 	int dfxtype;
 	int dfxsubtype;
 	TCHAR dfxsubtypeid[32];
+	TCHAR dfxprofile[32];
 	int dfxclick;
 	TCHAR dfxclickexternal[256];
 	bool forcedwriteprotect;
-	TCHAR config[256];
 };
 
 #define ASPECTMULT 1024
@@ -513,6 +509,7 @@ struct ramboard
 	bool nodma;
 	bool force16bit;
 	bool chipramtiming;
+	int fault;
 	struct boardloadfile lf;
 };
 struct expansion_params
@@ -1068,6 +1065,7 @@ struct uae_prefs
 	bool input_autoswitch;
 	bool input_autoswitchleftright;
 	bool input_advancedmultiinput;
+	bool input_default_onscreen_keyboard;
 	struct uae_input_device joystick_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device mouse_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
 	struct uae_input_device keyboard_settings[MAX_INPUT_SETTINGS][MAX_INPUT_DEVICES];
@@ -1161,6 +1159,7 @@ extern int cfgfile_intval(const TCHAR* option, const TCHAR* value, const TCHAR* 
 extern int cfgfile_strval(const TCHAR* option, const TCHAR* value, const TCHAR* name, int* location, const TCHAR* table[], int more);
 extern int cfgfile_string(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
 #ifdef AMIBERRY
+extern int cfgfile_floatval(const TCHAR* option, const TCHAR* value, const TCHAR* name, float* location);
 extern int cfgfile_string(const std::string& option, const std::string& value, const std::string& name, std::string& location);
 #endif
 extern int cfgfile_string_escape(const TCHAR* option, const TCHAR* value, const TCHAR* name, TCHAR* location, int maxsz);
@@ -1294,6 +1293,8 @@ struct amiberry_gui_theme
 
 struct amiberry_options
 {
+	bool single_window_mode = false;
+	float window_scaling = 1.0;
 	bool quickstart_start = true;
 	bool read_config_descriptions = true;
 	bool write_logfile = false;

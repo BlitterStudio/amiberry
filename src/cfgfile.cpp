@@ -1576,7 +1576,8 @@ static void cfgfile_write_board_rom(struct uae_prefs *prefs, struct zfile *f, st
 				_stprintf(buf, _T("%s%s_rom"), name, i ? _T("_ext") : _T(""));
 				cfgfile_dwrite_str (f, buf, rc->romident);
 			}
-			if (rc->autoboot_disabled || rc->dma24bit || rc->inserted || ert->subtypes || ert->settings || ert->id_jumper || br->device_order > 0 || is_custom_romboard(br)) {
+			if (rc->autoboot_disabled || rc->dma24bit || rc->inserted || ert->subtypes ||
+				ert->settings || ert->id_jumper || br->device_order > 0 || is_custom_romboard(br)) {
 				TCHAR buf2[256];
 				buf2[0] = 0;
 				auto* p = buf2;
@@ -1753,6 +1754,10 @@ static bool cfgfile_readramboard(const TCHAR *option, const TCHAR *value, const 
 			if (s)
 				rb->product = (uae_u8)_tstol(s);
 			xfree(s);
+			s = cfgfile_option_get(value, _T("fault"));
+			if (s)
+				rb->fault = _tstol(s);
+			xfree(s);
 			if (cfgfile_option_get_bool(value, _T("no_reset_unmap")))
 				rb->no_reset_unmap = true;
 			if (cfgfile_option_get_bool(value, _T("nodma")))
@@ -1887,6 +1892,12 @@ static void cfgfile_writeramboard(struct uae_prefs *prefs, struct zfile *f, cons
 		if (tmp2[0])
 			*p++ = ',';
 		_tcscpy(p, _T("force16bit=true"));
+		p += _tcslen(p);
+	}
+	if (rb->fault) {
+		if (tmp2[0])
+			*p++ = ',';
+		_stprintf(p, _T("fault=%d"), rb->fault);
 		p += _tcslen(p);
 	}
 	if (!_tcsicmp(tmp1, _T("chipmem_options")) || !_tcsicmp(tmp1, _T("bogomem_options"))) {
@@ -2055,6 +2066,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			if (p->floppyslots[i].dfxsubtypeid[0] || p->floppyslots[i].dfxtype == DRV_FB) {
 				_stprintf(tmp, _T("floppy%dsubtypeid"), i);
 				cfgfile_dwrite_escape(f, tmp, _T("%s"), p->floppyslots[i].dfxsubtypeid);
+			}
+			if (p->floppyslots[i].dfxprofile[0]) {
+				_stprintf(tmp, _T("floppy%dprofile"), i);
+				cfgfile_dwrite_escape(f, tmp, _T("%s"), p->floppyslots[i].dfxprofile);
 			}
 		}
 #endif
@@ -2226,59 +2241,30 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			}
 		}
 #ifdef AMIBERRY
+		std::string mode;
+		std::string buffer;
+		didata* did = &di_joystick[jp->id];
+
 		// custom options SAVING
-		std::array<int, SDL_CONTROLLER_BUTTON_MAX> custom_button_map{};
-		const TCHAR* custom_name;
-		
-		// get all the custom actions
-		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
+		for (int m = 0; m < 2; ++m)
 		{
-			for (auto m = 0; m < 2; m++)
+			mode = (m == 0) ? "none" : "hotkey";
+			for (int n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
 			{
-				// this allows us to go through the available function keys
-				// currently only 'none' and 'hotkey'
-				if (m == 0)
-				{
-					custom_button_map = jp->amiberry_custom_none;
-					custom_name = _T("_amiberry_custom_none_");
-				}
-				else
-				{
-					custom_button_map = jp->amiberry_custom_hotkey;
-					custom_name = _T("_amiberry_custom_hotkey_");
-				}
-				const auto b = custom_button_map[n];
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
+				const auto b = (m == 0) ? did->mapping.amiberry_custom_none[n] : did->mapping.amiberry_custom_hotkey[n];
 
-				if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
-				else { snprintf(tmp2, 1, "%s", ""); }
-
-				_stprintf(tmp1, "joyport%d%s%s", i, custom_name, SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n)));
-				cfgfile_dwrite_str(f, tmp1, tmp2);
+				_tcscpy(tmp2, (b > 0) ? _T(find_inputevent_name(b)) : _T(""));
+				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
 			}
-		}
 
-		std::array<int, SDL_CONTROLLER_AXIS_MAX> custom_axis_map{};
-		for (auto n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
-		{
-			for (auto m = 0; m < 2; m++)
+			for (int n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
 			{
-				if (m == 0)
-				{
-					custom_axis_map = jp->amiberry_custom_axis_none;
-					custom_name = _T("_amiberry_custom_axis_none_");
-				}
-				else
-				{
-					custom_axis_map = jp->amiberry_custom_axis_hotkey;
-					custom_name = _T("_amiberry_custom_axis_hotkey_");
-				}
-				const auto b = custom_axis_map[n];
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
+				const auto b = (m == 0) ? did->mapping.amiberry_custom_axis_none[n] : did->mapping.amiberry_custom_axis_hotkey[n];
 
-				if (b > 0) { _tcscpy(tmp2, _T(find_inputevent_name(b))); }
-				else { snprintf(tmp2, 1, "%s", ""); }
-
-				_stprintf(tmp1, "joyport%d%s%s", i, custom_name, SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n)));
-				cfgfile_dwrite_str(f, tmp1, tmp2);
+				_tcscpy(tmp2, (b > 0) ? _T(find_inputevent_name(b)) : _T(""));
+				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
 			}
 		}
 #endif
@@ -3060,7 +3046,11 @@ static int cfgfile_floatval (const TCHAR *option, const TCHAR *value, const TCHA
 	return 1;
 }
 
+#ifdef AMIBERRY
+int cfgfile_floatval(const TCHAR* option, const TCHAR* value, const TCHAR* name, float* location)
+#else
 static int cfgfile_floatval (const TCHAR *option, const TCHAR *value, const TCHAR *name, float *location)
+#endif
 {
 	return cfgfile_floatval (option, value, name, NULL, location);
 }
@@ -3443,74 +3433,46 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	}
 
 #ifdef AMIBERRY
-	std::string tmp1;
+	std::string mode;
 	std::string buffer;
+
 	// custom options LOADING
 	for (i = 0; i < MAX_JPORTS; ++i)
 	{
-		std::array<int, SDL_CONTROLLER_BUTTON_MAX> custom_button_map{};
+		const auto host_joy_id = currprefs.jports[i].id - JSEM_JOYS;
+		didata* did = &di_joystick[host_joy_id];
 
-		for (auto n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
+		for (int m = 0; m < 2; ++m)
 		{
-			for (auto m = 0; m < 2; ++m)
-			{
-				if (m == 0)
-				{
-					tmp1 = "none";
-					custom_button_map = p->jports[i].amiberry_custom_none;
-				}
-				else if (m == 1)
-				{
-					tmp1 = "hotkey";
-					custom_button_map = p->jports[i].amiberry_custom_hotkey;
-				}
-				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + tmp1 + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
+			mode = (m == 0) ? "none" : "hotkey";
 
-				// this is where we need to check if we have this particular option!!
+			for (int n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
+			{
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
 				if (buffer == string(option))
 				{
-					auto b = 0;
-					if (find_inputevent(value) > -1) { b = remap_event_list[find_inputevent(value)]; }
-					custom_button_map[n] = b;
+					auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
 
 					if (m == 0)
-						p->jports[i].amiberry_custom_none = custom_button_map;
-					else if (m == 1)
-						p->jports[i].amiberry_custom_hotkey = custom_button_map;
+						did->mapping.amiberry_custom_none[n] = b;
+					else
+						did->mapping.amiberry_custom_hotkey[n] = b;
 
 					return 1;
 				}
 			}
-		}
 
-		std::array<int, SDL_CONTROLLER_AXIS_MAX> custom_axis_map{};
-		for (auto n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
-		{
-			for (auto m = 0; m < 2; ++m)
+			for (int n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
 			{
-				if (m == 0)
-				{
-					tmp1 = "none";
-					custom_axis_map = p->jports[i].amiberry_custom_axis_none;
-				}
-				else if (m == 1)
-				{
-					tmp1 = "hotkey";
-					custom_axis_map = p->jports[i].amiberry_custom_axis_hotkey;
-				}
-				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + tmp1 + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
-
-				// this is where we need to check if we have this particular option!!
+				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
 				if (buffer == string(option))
 				{
-					auto b = 0;
-					if (find_inputevent(value) > -1) { b = remap_event_list[find_inputevent(value)]; }
-					custom_axis_map[n] = b;
+					auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
 
 					if (m == 0)
-						p->jports[i].amiberry_custom_axis_none = custom_axis_map;
-					else if (m == 1)
-						p->jports[i].amiberry_custom_axis_hotkey = custom_axis_map;
+						did->mapping.amiberry_custom_axis_none[n] = b;
+					else
+						did->mapping.amiberry_custom_axis_hotkey[n] = b;
 
 					return 1;
 				}
@@ -5711,7 +5673,7 @@ static bool cfgfile_read_board_rom(struct uae_prefs *p, const TCHAR *option, con
 						brc->roms[idx].dma24bit = true;
 					}
 					if (cfgfile_option_bool(buf2, _T("inserted")) == 1) {
-						brc->roms[idx].inserted= true;
+						brc->roms[idx].inserted = true;
 					}
 					p = cfgfile_option_get(buf2, _T("order"));
 					if (p) {
@@ -6324,6 +6286,10 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		}
 		_stprintf(tmpbuf, _T("floppy%dsubtypeid"), i);
 		if (cfgfile_string_escape(option, value, tmpbuf, p->floppyslots[i].dfxsubtypeid, sizeof p->floppyslots[i].dfxsubtypeid / sizeof(TCHAR))) {
+			return 1;
+		}
+		_stprintf(tmpbuf, _T("floppy%dprofile"), i);
+		if (cfgfile_string_escape(option, value, tmpbuf, p->floppyslots[i].dfxprofile, sizeof p->floppyslots[i].dfxprofile / sizeof(TCHAR))) {
 			return 1;
 		}
 	}

@@ -328,9 +328,13 @@ static bool is_fusionforty(struct uae_prefs *p)
 {
 	return ISCPUBOARDP(p, BOARD_RCS, BOARD_RCS_SUB_FUSIONFORTY);
 }
-static bool is_apollo(struct uae_prefs *p)
+static bool is_apollo12xx(struct uae_prefs *p)
 {
-	return ISCPUBOARDP(p, BOARD_ACT, BOARD_ACT_SUB_APOLLO);
+	return ISCPUBOARDP(p, BOARD_ACT, BOARD_ACT_SUB_APOLLO_12xx);
+}
+static bool is_apollo630(struct uae_prefs *p)
+{
+	return ISCPUBOARDP(p, BOARD_ACT, BOARD_ACT_SUB_APOLLO_630);
 }
 static bool is_kupke(struct uae_prefs *p)
 {
@@ -1008,7 +1012,6 @@ void cpuboard_gvpmaprom(int b)
 		!ISCPUBOARDP(&currprefs, BOARD_GVP, BOARD_GVP_SUB_GFORCE040))
 		return;
 
-	write_log(_T("GVP MAPROM=%d\n"), b);
 	if (b < 0 || b > 7)
 		return;
 	if (!b) {
@@ -2528,6 +2531,7 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 	const TCHAR *boardname;
 	struct uae_prefs *p = aci->prefs;
 	uae_u32 romtype = 0, romtype2 = 0;
+	uae_u8 autoconfig_data[16] = { 0 };
 
 	boardname = cpuboards[p->cpuboard_type].subtypes[p->cpuboard_subtype].name;
 	aci->label = boardname;
@@ -2576,8 +2580,11 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 		case BOARD_ACT:
 		switch(p->cpuboard_subtype)
 		{
-			case BOARD_ACT_SUB_APOLLO:
-			romtype = ROMTYPE_CB_APOLLO;
+			case BOARD_ACT_SUB_APOLLO_12xx:
+			romtype = ROMTYPE_CB_APOLLO_12xx;
+			break;
+			case BOARD_ACT_SUB_APOLLO_630:
+			romtype = ROMTYPE_CB_APOLLO_630;
 			break;
 		}
 		break;

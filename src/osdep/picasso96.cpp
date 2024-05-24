@@ -4900,6 +4900,10 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 		}
 	}
 
+	if (dy < 0 || dy >= state->Height) {
+		return;
+	}
+
 	uae_u8 *src2 = src + y * srcbytesperrow;
 	uae_u8 *dst2 = dst + dy * dstbytesperrow;
 

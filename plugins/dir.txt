@@ -1,0 +1,1 @@
+Directory for Amiberry plugin files (capsimg.so, libfloppybridge.so, etc)

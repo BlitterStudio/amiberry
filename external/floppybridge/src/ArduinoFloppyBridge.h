@@ -2,7 +2,7 @@
 #define ARDUINO_FLOPPY_BRIDGE
 /* DrawBridge (Arduino Reader/Writer) Bridge for *UAE
 *
-* Copyright (C) 2021-2023 Robert Smith (@RobSmithDev)
+* Copyright (C) 2021-2024 Robert Smith (@RobSmithDev)
 * https://amiga.robsmithdev.co.uk
 *
 * This file is multi-licensed under the terms of the Mozilla Public
@@ -40,6 +40,9 @@ private:
 	// type of disk inserted
 	bool m_isHDDisk = false;
 
+	// Used to detect disconnection of DrawBridge while in use
+	bool m_wasIOError = false;
+
 	// Hardware connection
 	ArduinoFloppyReader::ArduinoInterface m_io;
 
@@ -57,6 +60,9 @@ protected:
 
 	// If your device supports being able to abort a disk read, mid-read then implement this
 	virtual void abortDiskReading() override;
+
+	// Return TRUE if the drive is still connected and working
+	virtual bool isStillWorking() override;
 
 	// If your device supports the DiskChange option then return TRUE here.  If not, then the code will simulate it
 	virtual bool supportsDiskChange() override;
@@ -118,10 +124,10 @@ protected:
 	virtual bool attemptToDetectDiskChange() override;
 
 public:
-	ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort);
+	ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort);
 
 	// This is for the static version
-	ArduinoFloppyDiskBridge(BridgeMode bridgeMode, BridgeDensityMode bridgeDensity, int uaeSettings);
+	ArduinoFloppyDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, int uaeSettings);
 
 	virtual ~ArduinoFloppyDiskBridge();
 

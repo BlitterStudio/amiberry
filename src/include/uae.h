@@ -85,6 +85,7 @@ extern int saveimageoriginalpath;
 extern void get_saveimage_path(char* out, int size, int dir);
 extern std::string get_configuration_path();
 extern void get_nvram_path(TCHAR* out, int size);
+extern std::string get_plugins_path();
 extern void fetch_luapath (TCHAR *out, int size);
 extern std::string get_screenshot_path();
 extern void fetch_ripperpath (TCHAR *out, int size);
