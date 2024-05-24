@@ -43,12 +43,10 @@ using namespace std;
 #if defined(__arm__) || defined(_M_ARM)
 #define CPU_arm 1
 #define ARM_ASSEMBLY 1
-#define ARMV6_ASSEMBLY 1
 #elif defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__aarch64__)
 #define CPU_arm 1
 #define CPU_64_BIT 1
 #define ARM_ASSEMBLY 1
-#define ARMV6_ASSEMBLY 1
 #elif defined(__x86_64__) || defined(_M_AMD64)
 #define CPU_x86_64 1
 #define CPU_64_BIT 1

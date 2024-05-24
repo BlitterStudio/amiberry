@@ -84,7 +84,7 @@ ifdef USE_OLDGCC
 endif
 
 #Common flags for all 32bit targets
-CPPFLAGS32=-DARMV6T2
+CPPFLAGS32=-DARMV6_ASSEMBLY -DARMV6T2
 
 #Common flags for all 64bit targets
 CPPFLAGS64=-DCPU_AARCH64
