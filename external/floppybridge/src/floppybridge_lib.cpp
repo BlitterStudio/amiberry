@@ -20,6 +20,7 @@
 #include <locale>
 #include <algorithm>
 #include <cstring>
+
 #ifndef _WIN32
 #include <dlfcn.h>
 #endif
@@ -207,6 +208,8 @@ _DRIVER_putTrack DRIVER_putTrack = nullptr;
 _DRIVER_setDirectMode DRIVER_setDirectMode = nullptr;
 _DRIVER_isStillWorking DRIVER_isStillWorking = nullptr;
 
+// This is normally declared in uae/dlopen.h, but if we include that here, it breaks the build
+extern void* uae_dlopen_plugin(const TCHAR* name);
 
 // Sets up the bridge.  We assume it will persist while the application is open.
 void prepareBridge() {
@@ -223,7 +226,7 @@ void prepareBridge() {
 #endif
 #endif
 #else
-	hBridgeDLLHandle = dlopen(MODULENAME, RTLD_NOW);
+	hBridgeDLLHandle = uae_dlopen_plugin(MODULENAME);
 #endif
 
 	// Did it open?

@@ -647,7 +647,7 @@ OBJS = \
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
-$(PROG): $(OBJS) $(C_OBJS) guisan mt32emu
+$(PROG): $(OBJS) $(C_OBJS) guisan mt32emu floppybridge
 	$(CXX) -o $(PROG) $(OBJS) $(C_OBJS) $(LDFLAGS)
 ifndef DEBUG
 # want to keep a copy of the binary before stripping? Then enable the below line
@@ -657,6 +657,15 @@ endif
 ifdef	APPBUNDLE
 	sh make-bundle.sh
 endif
+
+gencpu:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
+
+gencomp:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp src/jit/gencomp.cpp src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
+
+gencomp_arm:
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp_arm src/jit/gencomp_arm.c src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
 
 clean:
 	$(RM) $(PROG) $(PROG)-debug $(C_OBJS) $(OBJS) $(ASMS) $(DEPS)
@@ -668,30 +677,27 @@ cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
 	$(MAKE) -C external/libguisan cleanprofile
 
+# The GUI library that Amiberry uses
 guisan:
 	$(MAKE) -C external/libguisan
 
+# The MT32 emulator library that Amiberry uses, for internal MIDI emulation
 mt32emu:
 	cmake -DCMAKE_BUILD_TYPE=Release -Dlibmt32emu_SHARED=FALSE -S external/mt32emu -B external/mt32emu/build
 	cmake --build external/mt32emu/build --target all --parallel
 	cp external/mt32emu/build/libmt32emu.a external/mt32emu/
 
+# Optional external libraries (plugins)
+
+# The floppy bridge library that Amiberry uses, for accessing floppy drives
 floppybridge:
 	cmake -DCMAKE_BUILD_TYPE=Release -S external/floppybridge -B external/floppybridge/build
 	cmake --build external/floppybridge/build --target all --parallel
-	cp external/floppybridge/build/libfloppybridge.so .
+	cp external/floppybridge/build/libfloppybridge.so ./plugins
 
-gencpu:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencpu src/cpudefs.cpp src/gencpu.cpp src/readcpu.cpp src/osdep/charset.cpp
-
-gencomp:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp src/jit/gencomp.cpp src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
-
-gencomp_arm:
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o gencomp_arm src/jit/gencomp_arm.c src/cpudefs.cpp src/readcpu.cpp src/osdep/charset.cpp
-
+# The CAPSImg library that Amiberry uses, for accessing IPF disk images
 capsimg:
 	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)
-	cp external/capsimg/capsimg.so ./
+	cp external/capsimg/capsimg.so ./plugins
 
 -include $(DEPS)

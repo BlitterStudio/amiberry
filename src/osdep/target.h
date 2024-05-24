@@ -102,6 +102,7 @@ string prefix_with_application_directory_path(string currentpath);
 extern void get_configuration_path(char* out, int size);
 extern void set_configuration_path(const std::string& newpath);
 extern void set_nvram_path(const std::string& newpath);
+extern void set_plugins_path(const std::string& newpath);
 extern void set_screenshot_path(const std::string& newpath);
 extern void set_savestate_path(const std::string& newpath);
 extern std::string get_controllers_path();
