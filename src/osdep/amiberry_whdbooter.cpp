@@ -353,16 +353,9 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	prefs->start_gui = false;
 
 	const auto is_cdtv = _tcsstr(filepath, _T("CDTV")) != nullptr || _tcsstr(filepath, _T("cdtv")) != nullptr;
-	const auto is_cd32 = _tcsstr(filepath, _T("CD32")) != nullptr || _tcsstr(filepath, _T("cd32")) != nullptr;
+	bool is_cd32 = false;
 
-	// CD32
-	if (is_cd32)
-	{
-		_tcscpy(prefs->description, _T("AutoBoot Configuration [CD32]"));
-		// SET THE BASE AMIGA (CD32)
-		built_in_prefs(prefs, 8, 3, 0, 0);
-	}
-	else if (is_cdtv)
+	if (is_cdtv)
 	{
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [CDTV]"));
 		// SET THE BASE AMIGA (CDTV)
@@ -370,9 +363,10 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	}
 	else
 	{
-		_tcscpy(prefs->description, _T("AutoBoot Configuration [A1200CD]"));
-		// SET THE BASE AMIGA (Expanded A1200)
-		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
+		is_cd32 = true;
+		_tcscpy(prefs->description, _T("AutoBoot Configuration [CD32]"));
+		// SET THE BASE AMIGA (CD32)
+		built_in_prefs(prefs, 8, 3, 0, 0);
 	}
 
 	// enable CD
