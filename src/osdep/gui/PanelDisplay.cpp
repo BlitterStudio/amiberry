@@ -359,6 +359,7 @@ void InitPanelDisplay(const config_category& category)
 	sldAmigaWidth->setStepLength(1);
 	sldAmigaWidth->setId("sldWidth");
 	sldAmigaWidth->addActionListener(amigaScreenActionListener);
+
 	txtAmigaWidth = new gcn::TextField();
 	txtAmigaWidth->setSize(35, TEXTFIELD_HEIGHT);
 	txtAmigaWidth->setBaseColor(gui_base_color);
@@ -377,6 +378,7 @@ void InitPanelDisplay(const config_category& category)
 	sldAmigaHeight->setStepLength(1);
 	sldAmigaHeight->setId("sldHeight");
 	sldAmigaHeight->addActionListener(amigaScreenActionListener);
+
 	txtAmigaHeight = new gcn::TextField();
 	txtAmigaHeight->setSize(35, TEXTFIELD_HEIGHT);
 	txtAmigaHeight->setBaseColor(gui_base_color);

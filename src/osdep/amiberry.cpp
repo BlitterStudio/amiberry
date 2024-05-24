@@ -755,7 +755,7 @@ static void amiberry_active(struct AmigaMonitor* mon, int minimized)
 {
 	monitor_off = 0;
 	
-	focus = 1;
+	focus = mon->monitor_id + 1;
 	auto pri = currprefs.inactive_priority;
 	if (!minimized)
 		pri = currprefs.active_capture_priority;
@@ -1302,7 +1302,6 @@ void handle_leave_event()
 
 void handle_focus_lost_event(AmigaMonitor* mon)
 {
-	focus = 0;
 	amiberry_inactive(mon, minimized);
 	if (isfullscreen() <= 0 && currprefs.minimize_inactive)
 		minimizewindow(mon->monitor_id);
