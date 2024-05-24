@@ -631,10 +631,6 @@ ifdef AARCH64
 OBJS += src/osdep/aarch64_helper.o
 src/osdep/aarch64_helper.o: src/osdep/aarch64_helper.s
 	$(AS) $(CPUFLAGS) -o src/osdep/aarch64_helper.o -c src/osdep/aarch64_helper.s
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),rpi1 rpi1-sdl2))
-OBJS += src/osdep/arm_helper.o
-src/osdep/arm_helper.o: src/osdep/arm_helper.s
-	$(AS) $(CPUFLAGS) -o src/osdep/arm_helper.o -c src/osdep/arm_helper.s
 else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-m1))
 	USE_JIT = 0
 OBJS += src/osdep/aarch64_helper_osx.o
