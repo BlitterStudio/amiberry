@@ -31,6 +31,7 @@ static int bootlogmode;
 
 FILE* debugfile = nullptr;
 int console_logging = 0;
+int debugger_active = 0;
 static int debugger_type = -1;
 //extern BOOL debuggerinitializing;
 BOOL debuggerinitializing = false;
