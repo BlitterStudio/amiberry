@@ -8,6 +8,9 @@
 #include <cstdarg>
 #include <cstdio>
 #include <iostream>
+#include <unistd.h>
+#include <termios.h>
+#include <sys/ioctl.h>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -15,6 +18,7 @@
 #include "options.h"
 #include "custom.h"
 #include "events.h"
+#include "debug.h"
 #include "uae.h"
 
 #define SHOW_CONSOLE 0
@@ -28,6 +32,8 @@ static int bootlogmode;
 FILE* debugfile = nullptr;
 int console_logging = 0;
 static int debugger_type = -1;
+//extern BOOL debuggerinitializing;
+BOOL debuggerinitializing = false;
 extern int lof_store;
 static int console_input_linemode = -1;
 int always_flush_log = 1;
@@ -42,15 +48,55 @@ bool is_console_open(void)
 	return consoleopen;
 }
 
+static void getconsole(void)
+{
+	struct termios term;
+	struct winsize ws;
+
+	// Get the terminal attributes
+	tcgetattr(STDIN_FILENO, &term);
+
+	// Set the terminal attributes for line input and echo
+	term.c_lflag |= (ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &term);
+
+	// Set the console input/output code page to UTF-8
+	setlocale(LC_ALL, "en_US.UTF-8");
+
+	// Get the console window size
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
+
+	// Set the console window size to a maximum of 5000 lines
+	if (ws.ws_row < 5000)
+	{
+		ws.ws_row = 5000;
+		ioctl(STDOUT_FILENO, TIOCSWINSZ, &ws);
+	}
+}
+
+void activate_console(void)
+{
+	if (!consoleopen)
+		return;
+	//SetForegroundWindow(GetConsoleWindow());
+}
+
+static void open_console_window(void)
+{
+	//AllocConsole();
+	getconsole();
+	consoleopen = -1;
+	reopen_console();
+}
+
 static void openconsole (void)
 {
-#ifdef _WIN32
 	if (realconsole) {
 		if (debugger_type == 2) {
-			open_debug_window ();
+			//open_debug_window ();
 			consoleopen = 1;
 		} else {
-			close_debug_window ();
+			//close_debug_window ();
 			consoleopen = -1;
 		}
 		return;
@@ -59,7 +105,7 @@ static void openconsole (void)
 		if (consoleopen > 0 || debuggerinitializing)
 			return;
 		if (debugger_type < 0) {
-#ifdef FSUAE
+#ifdef AMIBERRY
 #else
 			regqueryint (NULL, _T("DebuggerType"), &debugger_type);
 #endif
@@ -69,10 +115,10 @@ static void openconsole (void)
 			return;
 		}
 		close_console ();
-		if (open_debug_window ()) {
-			consoleopen = 1;
-			return;
-		}
+		//if (open_debug_window ()) {
+		//	consoleopen = 1;
+		//	return;
+		//}
 		open_console_window ();
 	} else {
 		if (consoleopen < 0)
@@ -80,18 +126,6 @@ static void openconsole (void)
 		close_console ();
 		open_console_window ();
 	}
-#endif
-}
-
-void activate_console (void)
-{
-	if (!consoleopen)
-		return;
-#ifdef _WIN32
-	SetForegroundWindow (GetConsoleWindow ());
-#else
-
-#endif
 }
 
 void debugger_change (int mode)
@@ -165,9 +199,9 @@ void reopen_console (void)
 
 void close_console (void)
 {
-#ifdef _WIN32
 	if (realconsole)
 		return;
+#ifdef _WIN32
 	if (consoleopen > 0) {
 		close_debug_window ();
 	} else if (consoleopen < 0) {
@@ -282,15 +316,9 @@ void console_out_f (const TCHAR *format,...)
 	va_end(arg_ptr);
 }
 
-void console_out(const TCHAR* format, ...)
+void console_out(const TCHAR* txt)
 {
-	va_list parms;
-	TCHAR buffer[WRITE_LOG_BUF_SIZE];
-
-	va_start(parms, format);
-	_vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
-	va_end(parms);
-	cout << buffer << '\n';
+	console_put(txt);
 }
 
 bool console_isch (void)
@@ -312,58 +340,23 @@ bool console_isch (void)
 #endif
 }
 
-void f_out(FILE* f, const TCHAR* format, ...)
-{
-	if (f == nullptr)
-	{
-		return;
-	}
-	TCHAR buffer[WRITE_LOG_BUF_SIZE];
-	va_list parms;
-	va_start(parms, format);
-	_vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
-	va_end(parms);
-	cout << buffer << endl;
-}
-
-TCHAR* buf_out (TCHAR *buffer, int *bufsize, const TCHAR *format, ...) {
-	if (buffer == NULL) {
-		return 0;
-	}
-	va_list parms;
-	va_start (parms, format);
-	vsnprintf (buffer, (*bufsize) - 1, format, parms);
-	va_end (parms);
-	*bufsize -= _tcslen (buffer);
-	return buffer + _tcslen (buffer);
-}
-
-void console_out (const TCHAR *txt)
-{
-	printf("%s", txt);
-}
-
 TCHAR console_getch(void)
 {
-	//flushmsgpump();
+	fflush(stdout);
 	if (console_buffer)
 	{
 		return 0;
 	}
 	if (realconsole)
 	{
-		return getwc(stdin);
+		return getchar();
 	}
 	if (consoleopen < 0)
 	{
-		unsigned long len;
-
-		for (;;)
-		{
-			const auto out = getchar();
-			putchar(out);
-			return out;
-		}
+		char out[2];
+		out[0] = getchar();
+		out[1] = '\0';
+		return out[0];
 	}
 	return 0;
 }
@@ -526,19 +519,31 @@ void flush_log(void)
 	flushconsole();
 }
 
-void f_out(void* f, const TCHAR* format, ...)
+void f_out(FILE* f, const TCHAR* format, ...)
 {
-	int count;
 	TCHAR buffer[WRITE_LOG_BUF_SIZE];
 	va_list parms;
 	va_start(parms, format);
 
 	if (f == NULL || !consoleopen)
 		return;
-	count = _vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+	_vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
 	openconsole();
 	writeconsole(buffer);
 	va_end(parms);
+}
+
+TCHAR* buf_out(TCHAR* buffer, int* bufsize, const TCHAR* format, ...)
+{
+	va_list parms;
+	va_start(parms, format);
+
+	if (buffer == NULL)
+		return 0;
+	_vsntprintf(buffer, (*bufsize) - 1, format, parms);
+	va_end(parms);
+	*bufsize -= _tcslen(buffer);
+	return buffer + _tcslen(buffer);
 }
 
 void log_close(FILE* f)
