@@ -1162,7 +1162,7 @@ void create_startup_sequence()
 	// CUSTOM options
 	for (int i = 1; i <= 5; ++i) {
 		auto& custom = whdload_prefs.selected_slave.get_custom(i);
-		if (custom.type != none && custom.value != 0) {
+		if (custom.value != 0) {
 			whd_bootscript << " CUSTOM" << i << "=" << custom.value;
 		}
 	}
