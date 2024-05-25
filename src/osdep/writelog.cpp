@@ -458,58 +458,55 @@ TCHAR* write_log_get_ts(void)
 
 void write_log(const char* format, ...)
 {
-	if (!SHOW_CONSOLE && !console_logging && !debugfile)
-		return;
-
 	int count;
 	TCHAR buffer[WRITE_LOG_BUF_SIZE], *ts;
 	int bufsize = WRITE_LOG_BUF_SIZE;
 	TCHAR* bufp;
 	va_list parms;
 
-	if (amiberry_options.write_logfile)
-	{
-		if (!_tcsicmp(format, _T("*")))
-			count = 0;
+	if (!amiberry_options.write_logfile && !console_logging && !debugfile)
+		return;
 
-		va_start(parms, format);
-		bufp = buffer;
-		for (;;) {
-			count = _vsntprintf(bufp, bufsize - 1, format, parms);
-			if (count < 0) {
-				bufsize *= 10;
-				if (bufp != buffer)
-					xfree(bufp);
-				bufp = xmalloc(TCHAR, bufsize);
-				continue;
-			}
-			break;
+	if (!_tcsicmp(format, _T("*")))
+		count = 0;
+
+	va_start(parms, format);
+	bufp = buffer;
+	for (;;) {
+		count = _vsntprintf(bufp, bufsize - 1, format, parms);
+		if (count < 0) {
+			bufsize *= 10;
+			if (bufp != buffer)
+				xfree(bufp);
+			bufp = xmalloc(TCHAR, bufsize);
+			continue;
 		}
-		bufp[bufsize - 1] = 0;
-		if (!_tcsncmp(bufp, _T("write "), 6))
-			bufsize--;
-		ts = write_log_get_ts();
-		if (bufp[0] == '*')
-			count++;
-		if (SHOW_CONSOLE || console_logging) {
-			if (lfdetected && ts)
-				writeconsole(ts);
-			writeconsole(bufp);
-		}
-		if (debugfile) {
-			if (lfdetected && ts)
-				fprintf(debugfile, _T("%s"), ts);
-			fprintf(debugfile, _T("%s"), bufp);
-		}
-		lfdetected = 0;
-		if (bufp[0] != '\0' && bufp[_tcslen(bufp) - 1] == '\n')
-			lfdetected = 1;
-		va_end(parms);
-		if (bufp != buffer)
-			xfree(bufp);
-		if (always_flush_log)
-			flush_log();
+		break;
 	}
+	bufp[bufsize - 1] = 0;
+	if (!_tcsncmp(bufp, _T("write "), 6))
+		bufsize--;
+	ts = write_log_get_ts();
+	if (bufp[0] == '*')
+		count++;
+	if (SHOW_CONSOLE || console_logging) {
+		if (lfdetected && ts)
+			writeconsole(ts);
+		writeconsole(bufp);
+	}
+	if (debugfile) {
+		if (lfdetected && ts)
+			fprintf(debugfile, _T("%s"), ts);
+		fprintf(debugfile, _T("%s"), bufp);
+	}
+	lfdetected = 0;
+	if (bufp[0] != '\0' && bufp[_tcslen(bufp) - 1] == '\n')
+		lfdetected = 1;
+	va_end(parms);
+	if (bufp != buffer)
+		xfree(bufp);
+	if (always_flush_log)
+		flush_log();
 }
 
 void flush_log(void)
