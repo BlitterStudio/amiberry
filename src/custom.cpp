@@ -8927,8 +8927,8 @@ static void rethink_intreq(void)
 
 static void intreq_checks(uae_u16 oldreq, uae_u16 newreq)
 {
-	if ((oldreq & 0x0800) && !(newreq & 0x0800)) {
-		serial_rbf_clear();
+	if ((oldreq & 0x0800) != (newreq & 0x0800)) {
+		serial_rbf_change((newreq & 0x0800) ? 1 : 0);
 	}
 }
 
@@ -8937,17 +8937,12 @@ static void event_doint_delay_do_ext(uae_u32 v)
 	uae_u16 old = intreq2;
 	setclr(&intreq, (1 << v) | 0x8000);
 	setclr(&intreq2, (1 << v) | 0x8000);
-	intreq_checks(old, intreq2);
 
 	doint();
 }
 
 static void event_send_interrupt_do_ext(uae_u32 v)
 {
-	//uae_u16 old = intreq;
-	//setclr(&intreq, (1 << v) | 0x8000);
-	//intreq_checks(old);
-
 	event2_newevent_xx(-1, 1 * CYCLE_UNIT, v, event_doint_delay_do_ext);
 }
 
@@ -8968,7 +8963,6 @@ static void event_doint_delay_do_intreq(uae_u32 v)
 {
 	uae_u16 old = intreq2;
 	setclr(&intreq2, v);
-	intreq_checks(old, intreq2);
 
 	doint();
 }
@@ -9037,6 +9031,7 @@ bool INTREQ_0(uae_u16 v)
 
 	if (old != intreq) {
 		doint_delay_intreq(v);
+		intreq_checks(old, intreq);
 	}
 	return true;
 }
