@@ -621,6 +621,7 @@ public:
 							disk_insert(i, changed_prefs.floppyslots[i].df);
 							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
 							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
+							RefreshDiskListModel();
 							bIgnoreListChange = true;
 							cboqsDFxFile[i]->setSelected(0);
 							bIgnoreListChange = false;
