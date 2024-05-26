@@ -956,9 +956,9 @@ static void do_process_packet_command (struct ide_hdf *ide)
 				ide->intdrq = true;
 			} else {
 				if (IDE_LOG > 1)
-					write_log(_T("IDE%d ATAPI write finished, %d bytes\n"), ide->num, ide->data_size);
-				memcpy (&ide->scsi->buffer, ide->secbuf, ide->data_size);
-				ide->scsi->data_len = ide->data_size;
+					write_log(_T("IDE%d ATAPI write finished, %d bytes\n"), ide->num, ide->packet_data_size);
+				memcpy(ide->scsi->buffer, ide->secbuf, ide->packet_data_size);
+				ide->scsi->data_len = ide->packet_data_size;
 				scsi_emulate_cmd (ide->scsi);
 			}
 		}
