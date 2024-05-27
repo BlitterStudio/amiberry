@@ -105,9 +105,11 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 #ifdef _WIN64
 	_tcscat(path, _T("_x64"));
 #endif
+#ifndef __MACH__
     if (_tcscmp(path + _tcslen(path) - _tcslen(LT_MODULE_EXT), LT_MODULE_EXT) != 0) {
         _tcscat(path, LT_MODULE_EXT);
     }
+#endif
 	UAE_DLHANDLE handle = uae_dlopen(path);
 #endif
 	if (handle) {
