@@ -43,7 +43,7 @@ HMODULE WIN32_LoadLibrary(const TCHAR*);
 #ifdef _WIN32
 #define MODULENAME _T("FloppyBridge.dll")
 #else
-#define MODULENAME "libfloppybridge.so"
+#define MODULENAME "libfloppybridge"
 #endif
 #endif
 
