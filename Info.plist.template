@@ -20,7 +20,7 @@
 		<key>CFBundleShortVersionString</key>
 		<string>VERSION</string>
 		<key>CFBundleInfoDictionaryVersion</key>
-		<string>6.0</string>
+		<string>6.3</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>IFMajorVersion</key>

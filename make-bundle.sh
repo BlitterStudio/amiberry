@@ -16,10 +16,6 @@ mkdir -p Amiberry.app/Contents/Frameworks
 mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
-# Copy capsimg.so into App bundle
-cp plugins/capsimg.so Amiberry.app/Contents/Resources/capsimg.so
-# Copy floppybridge lib into App bundle
-cp plugins/libfloppybridge.so Amiberry.app/Contents/Resources/libfloppybridge.so
 # Copy init script into the bundle
 cp macos_init_amiberry.zsh Amiberry.app/Contents/Resources
 chmod +x Amiberry.app/Contents/Resources/macos_init_amiberry.zsh
@@ -40,6 +36,7 @@ cp -R inputrecordings Amiberry.app/Contents/Resources/Inputrecordings
 cp -R kickstarts Amiberry.app/Contents/Resources/Kickstarts
 cp -R lha Amiberry.app/Contents/Resources/Lha
 cp -R nvram Amiberry.app/Contents/Resources/Nvram
+cp -R plugins Amiberry.app/Contents/Resources/Plugins
 cp -R savestates Amiberry.app/Contents/Resources/Savestates
 cp -R screenshots Amiberry.app/Contents/Resources/Screenshots
 cp -R whdboot Amiberry.app/Contents/Resources/Whdboot
