@@ -3967,8 +3967,7 @@ static void init_amiberry_paths(void)
 	}
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
-		input_dir = screenshot_dir = nvram_dir = video_dir = macos_amiberry_directory;
-	plugins_dir = start_path_data;
+		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = macos_amiberry_directory;
 
 	config_path.append("/Configurations/");
 	controllers_path.append("/Controllers/");
@@ -3987,6 +3986,7 @@ static void init_amiberry_paths(void)
 	input_dir.append("/Inputrecordings/");
 	screenshot_dir.append("/Screenshots/");
 	nvram_dir.append("/Nvram/");
+	plugins_dir.append("/Plugins/");
 	video_dir.append("/Videos/");
 #else
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
@@ -4117,8 +4117,7 @@ const TCHAR** uaenative_get_library_dirs(void)
 		nats = xcalloc(const TCHAR*, 3);
 	if (path == NULL) {
 		path = xcalloc(TCHAR, MAX_DPATH);
-		_tcscpy(path, start_path_data.c_str());
-		_tcscat(path, _T("plugins"));
+		_tcscpy(path, plugins_dir.c_str());
 	}
 	nats[0] = start_path_data.c_str();
 	nats[1] = path;
