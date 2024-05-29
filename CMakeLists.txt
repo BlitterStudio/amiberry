@@ -272,6 +272,7 @@ add_executable(${PROJECT_NAME}
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
         src/osdep/gui/ControllerMap.cpp
+        src/osdep/gui/CreateFolder.cpp
         src/osdep/gui/SelectorEntry.cpp
         src/osdep/gui/ShowCustomFields.cpp
         src/osdep/gui/ShowHelp.cpp

@@ -36,21 +36,7 @@ static gcn::Button* cmdCancel;
 static gcn::ListBox* lstFolders;
 static gcn::ScrollArea* scrAreaFolders;
 static gcn::TextField* txtCurrent;
-
-
-class FolderRequesterButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == cmdOK)
-		{
-			dialogResult = true;
-		}
-		dialogFinished = true;
-	}
-};
-static FolderRequesterButtonActionListener* folderButtonActionListener;
+static gcn::Button* cmdCreateFolder;
 
 class SelectDirListModel : public gcn::ListModel
 {
@@ -129,6 +115,34 @@ public:
 
 static ListBoxActionListener* listBoxActionListener;
 
+class FolderRequesterButtonActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == cmdOK)
+		{
+			dialogResult = true;
+			dialogFinished = true;
+		}
+		else if (actionEvent.getSource() == cmdCancel)
+		{
+			dialogResult = false;
+			dialogFinished = true;
+		}
+		else if (actionEvent.getSource() == cmdCreateFolder)
+		{
+			wndSelectFolder->releaseModalFocus();
+			if (Create_Folder(workingDir))
+			{
+				checkfoldername(workingDir);
+				wndSelectFolder->requestModalFocus();
+			}
+		}
+	}
+};
+static FolderRequesterButtonActionListener* folderButtonActionListener;
+
 class EditDirPathActionListener : public gcn::ActionListener
 {
 public:
@@ -150,6 +164,13 @@ static void InitSelectFolder(const std::string& title)
 	wndSelectFolder->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	folderButtonActionListener = new FolderRequesterButtonActionListener();
+
+	cmdCreateFolder = new gcn::Button("Create Folder");
+	cmdCreateFolder->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdCreateFolder->setPosition(DISTANCE_BORDER, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCreateFolder->setBaseColor(gui_base_color);
+	cmdCreateFolder->setForegroundColor(gui_foreground_color);
+	cmdCreateFolder->addActionListener(folderButtonActionListener);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
@@ -200,6 +221,7 @@ static void InitSelectFolder(const std::string& title)
 	scrAreaFolders->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
 	scrAreaFolders->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
 
+	wndSelectFolder->add(cmdCreateFolder);
 	wndSelectFolder->add(cmdOK);
 	wndSelectFolder->add(cmdCancel);
 	wndSelectFolder->add(txtCurrent);
@@ -218,6 +240,7 @@ static void ExitSelectFolder()
 	wndSelectFolder->releaseModalFocus();
 	gui_top->remove(wndSelectFolder);
 
+	delete cmdCreateFolder;
 	delete cmdOK;
 	delete cmdCancel;
 	delete folderButtonActionListener;
@@ -235,11 +258,13 @@ static void navigate_right()
 	const auto* const focusHdl = gui_top->_getFocusHandler();
 	const auto* const activeWidget = focusHdl->getFocused();
 	if (activeWidget == lstFolders)
-		cmdOK->requestFocus();
+		cmdCreateFolder->requestFocus();
 	else if (activeWidget == cmdCancel)
 		lstFolders->requestFocus();
 	else if (activeWidget == cmdOK)
 		cmdCancel->requestFocus();
+	else if (activeWidget == cmdCreateFolder)
+		cmdOK->requestFocus();
 }
 
 static void navigate_left()
@@ -251,6 +276,8 @@ static void navigate_left()
 	else if (activeWidget == cmdCancel)
 		cmdOK->requestFocus();
 	else if (activeWidget == cmdOK)
+		cmdCreateFolder->requestFocus();
+	else if (activeWidget == cmdCreateFolder)
 		lstFolders->requestFocus();
 }
 
