@@ -42,6 +42,7 @@ static gcn::ScrollArea* scrAreaFiles;
 static gcn::TextField* txtCurrent;
 static gcn::Label* lblFilename;
 static gcn::TextField* txtFilename;
+static gcn::Button* cmdCreateFolder;
 
 class SelectFileListModel : public gcn::ListModel
 {
@@ -95,42 +96,6 @@ public:
 
 static SelectFileListModel* fileList;
 
-class FileButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		if (actionEvent.getSource() == cmdOK)
-		{
-			const auto selected_item = lstFiles->getSelected();
-			if (createNew)
-			{
-				if (txtFilename->getText().empty())
-					return;
-				std::string tmp = workingDir.append("/").append(txtFilename->getText());
-
-				if (tmp.find(filefilter[0]) == std::string::npos)
-					tmp = tmp.append(filefilter[0]);
-
-				if (my_existsfile2(tmp.c_str()) == 1)
-					return; // File already exists
-				workingDir = tmp;
-				dialogResult = true;
-			}
-			else
-			{
-				if (fileList->isDir(selected_item))
-					return; // Directory selected -> Ok not possible
-				workingDir = workingDir.append("/").append(fileList->getElementAt(selected_item));
-				dialogResult = true;
-			}
-		}
-		dialogFinished = true;
-	}
-};
-
-static FileButtonActionListener* fileButtonActionListener;
-
 static void checkfoldername(const std::string& current)
 {
 	DIR* dir;
@@ -165,6 +130,56 @@ static void checkfilename(std::string current)
 		}
 	}
 }
+
+class FileButtonActionListener : public gcn::ActionListener
+{
+public:
+	void action(const gcn::ActionEvent& actionEvent) override
+	{
+		if (actionEvent.getSource() == cmdOK)
+		{
+			const auto selected_item = lstFiles->getSelected();
+			if (createNew)
+			{
+				if (txtFilename->getText().empty())
+					return;
+				std::string tmp = workingDir.append("/").append(txtFilename->getText());
+
+				if (tmp.find(filefilter[0]) == std::string::npos)
+					tmp = tmp.append(filefilter[0]);
+
+				if (my_existsfile2(tmp.c_str()) == 1)
+					return; // File already exists
+				workingDir = tmp;
+				dialogResult = true;
+			}
+			else
+			{
+				if (fileList->isDir(selected_item))
+					return; // Directory selected -> Ok not possible
+				workingDir = workingDir.append("/").append(fileList->getElementAt(selected_item));
+				dialogResult = true;
+			}
+			dialogFinished = true;
+		}
+		else if (actionEvent.getSource() == cmdCancel)
+		{
+			dialogResult = false;
+			dialogFinished = true;
+		}
+		else if (actionEvent.getSource() == cmdCreateFolder)
+		{
+			wndSelectFile->releaseModalFocus();
+			if (Create_Folder(workingDir))
+			{
+				checkfoldername(workingDir);
+				wndSelectFile->requestModalFocus();
+			}
+		}
+	}
+};
+
+static FileButtonActionListener* fileButtonActionListener;
 
 class SelectFileActionListener : public gcn::ActionListener
 {
@@ -209,6 +224,13 @@ static void InitSelectFile(const std::string& title)
 	wndSelectFile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	fileButtonActionListener = new FileButtonActionListener();
+
+	cmdCreateFolder = new gcn::Button("Create Folder");
+	cmdCreateFolder->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdCreateFolder->setPosition(DISTANCE_BORDER, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
+	cmdCreateFolder->setBaseColor(gui_base_color);
+	cmdCreateFolder->setForegroundColor(gui_foreground_color);
+	cmdCreateFolder->addActionListener(fileButtonActionListener);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
@@ -279,6 +301,7 @@ static void InitSelectFile(const std::string& title)
 		wndSelectFile->add(txtFilename);
 	}
 
+	wndSelectFile->add(cmdCreateFolder);
 	wndSelectFile->add(cmdOK);
 	wndSelectFile->add(cmdCancel);
 	wndSelectFile->add(txtCurrent);
@@ -304,6 +327,7 @@ static void ExitSelectFile()
 	wndSelectFile->releaseModalFocus();
 	gui_top->remove(wndSelectFile);
 
+	delete cmdCreateFolder;
 	delete cmdOK;
 	delete cmdCancel;
 	delete fileButtonActionListener;

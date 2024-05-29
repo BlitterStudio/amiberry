@@ -341,6 +341,7 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 
 std::string SelectFolder(const std::string& title, std::string value);
 std::string SelectFile(const std::string& title, std::string value, const char* filter[], bool create = false);
+bool Create_Folder(const std::string& path);
 
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
