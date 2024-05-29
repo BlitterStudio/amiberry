@@ -324,6 +324,7 @@ public:
 
 					RefreshCDListModel();
 					AdjustDropDownControls();
+					SetLastActiveConfig(tmp.c_str());
 				}
 			}
 			cmdCDSelect->requestFocus();
