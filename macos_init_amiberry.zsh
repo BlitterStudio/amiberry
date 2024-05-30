@@ -116,10 +116,10 @@ for file in $CWD_VAR/../Resources/Nvram/**/*(.); do
 done
 
 for file in $CWD_VAR/../Resources/Plugins/**/*(.); do
-	if [[ ! -f "$USERDIR/Documents/Amiberry/Plugins{file##*/Plugins}" ]]; then
-		echo "Copying $file to $USERDIR/Documents/Amiberry/Plugins{file##*/Plugins}"
-		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Plugins{file##*/Plugins}")
-		cp $file "$USERDIR/Documents/Amiberry/Plugins{file##*/Plugins}"
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Plugins${file##*/Plugins}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Plugins${file##*/Plugins}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Plugins${file##*/Plugins}")
+		cp $file "$USERDIR/Documents/Amiberry/Plugins${file##*/Plugins}"
 	fi
 done
 
