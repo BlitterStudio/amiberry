@@ -239,6 +239,9 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdCDSelectFile)
 		{
+			//---------------------------------------
+			// Insert CD into drive
+			//---------------------------------------
 			std::string tmp;
 			if (strlen(changed_prefs.cdslots[0].name) > 0)
 				tmp = std::string(changed_prefs.cdslots[0].name);
@@ -250,7 +253,7 @@ public:
 			{
 				if (strncmp(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, tmp.c_str(), sizeof changed_prefs.cdslots[0].name);
+					strncpy(changed_prefs.cdslots[0].name, tmp.c_str(), MAX_DPATH);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					add_file_to_mru_list(lstMRUCDList, tmp);
@@ -291,8 +294,7 @@ public:
 				const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
 				if (element != changed_prefs.cdslots[0].name)
 				{
-					strncpy(changed_prefs.cdslots[0].name, element.c_str(),
-					        sizeof changed_prefs.cdslots[0].name);
+					strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
 					DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
 					changed_prefs.cdslots[0].inuse = true;
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
