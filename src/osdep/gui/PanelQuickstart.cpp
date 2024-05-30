@@ -298,7 +298,7 @@ public:
 			//---------------------------------------
 			// Eject CD from drive
 			//---------------------------------------
-			strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+			changed_prefs.cdslots[0].name[0] = 0;
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelect)
@@ -338,7 +338,7 @@ public:
 
 			if (idx < 0)
 			{
-				strncpy(changed_prefs.cdslots[0].name, "", MAX_DPATH);
+				changed_prefs.cdslots[0].name[0] = 0;
 				AdjustDropDownControls();
 			}
 			else
@@ -352,6 +352,7 @@ public:
 					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
 					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
+					RefreshCDListModel();
 					bIgnoreListChange = true;
 					cboCDFile->setSelected(0);
 					bIgnoreListChange = false;
