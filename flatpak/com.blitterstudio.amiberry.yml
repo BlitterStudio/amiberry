@@ -81,12 +81,17 @@ modules:
       - install -Dm644 flatpak/256x256.png /app/share/icons/hicolor/256x256/apps/amiberry.png
       - mkdir -p /app/data
       - cp -R abr /app/data
+      - cp -R cdroms /app/data
       - cp -R conf /app/data
       - cp -R controllers /app/data
       - cp -R data /app/data
+      - cp -R floppies /app/data
+      - cp -R harddrives /app/data
       - cp -R inputrecordings /app/data
       - cp -R kickstarts /app/data
+      - cp -R lha /app/data 
       - cp -R nvram /app/data
+      - cp -R plugins /app/data
       - cp -R savestates /app/data
       - cp -R screenshots /app/data
       - cp -R whdboot /app/data
