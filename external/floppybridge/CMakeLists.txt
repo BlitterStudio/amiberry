@@ -2,18 +2,18 @@ cmake_minimum_required(VERSION 3.13)
 project (floppybridge VERSION 1.6.0)
 enable_language(C CXX)
 add_library(floppybridge SHARED
-	src/ArduinoFloppyBridge.cpp
-	src/ArduinoInterface.cpp
-	src/CommonBridgeTemplate.cpp
-	src/FloppyBridge.cpp
-	src/ftdi.cpp
-	src/GreaseWeazleBridge.cpp
-	src/GreaseWeazleInterface.cpp
-	src/pll.cpp
-	src/RotationExtractor.cpp
-	src/SerialIO.cpp
-	src/SuperCardProBridge.cpp
-	src/SuperCardProInterface.cpp
+    src/ArduinoFloppyBridge.cpp
+    src/ArduinoInterface.cpp
+    src/CommonBridgeTemplate.cpp
+    src/FloppyBridge.cpp
+    src/ftdi.cpp
+    src/GreaseWeazleBridge.cpp
+    src/GreaseWeazleInterface.cpp
+    src/pll.cpp
+    src/RotationExtractor.cpp
+    src/SerialIO.cpp
+    src/SuperCardProBridge.cpp
+    src/SuperCardProInterface.cpp
 )
 target_include_directories(floppybridge PRIVATE src)
 
@@ -24,8 +24,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         COMMAND install_name_tool -id libfloppybridge.so libfloppybridge.so
     )
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	message(STATUS "Linux platform detected")
-	add_custom_command(TARGET floppybridge POST_BUILD
-		COMMAND cp libfloppybridge.so ../../plugins/libfloppybridge.so
-	)
+    message(STATUS "Linux platform detected")
+    add_custom_command(TARGET floppybridge POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:floppybridge> ../../../plugins/
+    )
 endif ()
