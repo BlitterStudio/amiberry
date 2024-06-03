@@ -42,7 +42,6 @@ static gcn::ScrollArea* scrAreaFiles;
 static gcn::TextField* txtCurrent;
 static gcn::Label* lblFilename;
 static gcn::TextField* txtFilename;
-static gcn::Button* cmdCreateFolder;
 
 class SelectFileListModel : public gcn::ListModel
 {
@@ -167,15 +166,6 @@ public:
 			dialogResult = false;
 			dialogFinished = true;
 		}
-		else if (actionEvent.getSource() == cmdCreateFolder)
-		{
-			wndSelectFile->releaseModalFocus();
-			if (Create_Folder(workingDir))
-			{
-				checkfoldername(workingDir);
-				wndSelectFile->requestModalFocus();
-			}
-		}
 	}
 };
 
@@ -224,13 +214,6 @@ static void InitSelectFile(const std::string& title)
 	wndSelectFile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	fileButtonActionListener = new FileButtonActionListener();
-
-	cmdCreateFolder = new gcn::Button("Create Folder");
-	cmdCreateFolder->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
-	cmdCreateFolder->setPosition(DISTANCE_BORDER, DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCreateFolder->setBaseColor(gui_base_color);
-	cmdCreateFolder->setForegroundColor(gui_foreground_color);
-	cmdCreateFolder->addActionListener(fileButtonActionListener);
 
 	cmdOK = new gcn::Button("Ok");
 	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
@@ -301,7 +284,6 @@ static void InitSelectFile(const std::string& title)
 		wndSelectFile->add(txtFilename);
 	}
 
-	wndSelectFile->add(cmdCreateFolder);
 	wndSelectFile->add(cmdOK);
 	wndSelectFile->add(cmdCancel);
 	wndSelectFile->add(txtCurrent);
@@ -327,7 +309,6 @@ static void ExitSelectFile()
 	wndSelectFile->releaseModalFocus();
 	gui_top->remove(wndSelectFile);
 
-	delete cmdCreateFolder;
 	delete cmdOK;
 	delete cmdCancel;
 	delete fileButtonActionListener;
