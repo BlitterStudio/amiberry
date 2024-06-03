@@ -23,4 +23,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         COMMAND cp libfloppybridge.dylib libfloppybridge.so
         COMMAND install_name_tool -id libfloppybridge.so libfloppybridge.so
     )
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	message(STATUS "Linux platform detected")
+	add_custom_command(TARGET floppybridge POST_BUILD
+		COMMAND cp libfloppybridge.so ../../plugins/libfloppybridge.so
+	)
 endif ()
