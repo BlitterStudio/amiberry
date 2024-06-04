@@ -515,14 +515,9 @@ void gui_display(int shortcut)
 
 	if (shortcut == -1)
 	{
-#ifdef USE_DISPMANX
-		graphics_subshutdown();
-#endif
 		prefs_to_gui();
 		run_gui();
 		gui_to_prefs();
-
-		clearscreen();
 
 		gui_update();
 		gui_purge_events();
@@ -541,7 +536,7 @@ void gui_display(int shortcut)
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
 	clearallkeys ();
-	update_display(&changed_prefs);
+
 	if (resumepaused(7)) {
 		inputdevice_acquire(TRUE);
 		setmouseactive(0, 1);

@@ -184,17 +184,10 @@ extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
 
-extern gcn::SDLGraphics *gui_graphics;
-extern gcn::SDLTrueTypeFont *gui_font;
-
-#ifdef USE_DISPMANX
-extern DISPMANX_RESOURCE_HANDLE_T gui_resource;
-extern DISPMANX_RESOURCE_HANDLE_T black_gui_resource;
-extern DISPMANX_ELEMENT_HANDLE_T gui_element;
-extern int element_present;
-#else
+extern gcn::SDLGraphics* gui_graphics;
+extern gcn::SDLTrueTypeFont* gui_font;
 extern SDL_Texture* gui_texture;
-#endif
+
 
 extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
@@ -393,9 +386,6 @@ extern int delay_savestate_frame;
 extern int last_x;
 extern int last_y;
 
-#ifdef USE_DISPMANX
-extern void init_dispmanx_gui();
-#endif
 extern void update_gui_screen();
 extern void cap_fps(Uint64 start);
 extern long get_file_size(const std::string& filename);

@@ -313,6 +313,39 @@ int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 
+int getdpiforwindow(SDL_Window* hwnd)
+{
+	float diagDPI = -1;
+	float horiDPI = -1;
+	float vertDPI = -1;
+
+	SDL_GetDisplayDPI(0, &diagDPI, &horiDPI, &vertDPI);
+	return static_cast<int>(vertDPI);
+}
+
+uae_s64 spincount;
+extern bool calculated_scanline;
+
+void target_spin(int total)
+{
+	if (!spincount || calculated_scanline)
+		return;
+	if (total > 10)
+		total = 10;
+	while (total-- >= 0) {
+		uae_s64 v1 = read_processor_time();
+		v1 += spincount;
+		while (v1 > read_processor_time());
+	}
+}
+
+extern int vsync_activeheight;
+
+void target_calibrate_spin(void)
+{
+	spincount = 0;
+}
+
 void sleep_micros (int ms)
 {
 	usleep(ms);
@@ -404,7 +437,9 @@ bool resumepaused(int priority)
 	if (pausemouseactive)
 	{
 		pausemouseactive = 0;
-		setmouseactive(mon->monitor_id, isfullscreen() > 0 ? 1 : -1);
+		// In Amiberry, we'll do this for Full Window and Fullscreen both.
+		// Otherwise, KMSDRM did not get the focus after resuming from the GUI
+		setmouseactive(mon->monitor_id, isfullscreen() != 0 ? 1 : -1);
 	}
 	pause_emulation = 0;
 	setsystime();
@@ -513,7 +548,7 @@ void set_showcursor(BOOL v)
 
 void releasecapture(struct AmigaMonitor* mon)
 {
-	SDL_SetWindowGrab(mon->sdl_window, SDL_FALSE);
+	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	set_showcursor(TRUE);
 	mon_cursorclipped = 0;
@@ -524,7 +559,7 @@ void updatemouseclip(struct AmigaMonitor* mon)
 	if (mon_cursorclipped) {
 		mon->amigawinclip_rect = mon->amigawin_rect;
 		if (!isfullscreen()) {
-			GetWindowRect(mon->sdl_window, &mon->amigawinclip_rect);
+			GetWindowRect(mon->amiga_window, &mon->amigawinclip_rect);
 
 			// Too small or invalid?
 			if (mon->amigawinclip_rect.w <= mon->amigawinclip_rect.x + 7 || mon->amigawinclip_rect.h <= mon->amigawinclip_rect.y + 7)
@@ -545,10 +580,8 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 	int f = isfullscreen();
 	if (!allowfullscreen && f > 0)
 		return;
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawin_rect.x, &mon->amigawin_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawin_rect.w, &mon->amigawin_rect.h);
-	SDL_GetWindowPosition(mon->sdl_window, &mon->amigawinclip_rect.x, &mon->amigawinclip_rect.y);
-	SDL_GetWindowSize(mon->sdl_window, &mon->amigawinclip_rect.w, &mon->amigawinclip_rect.h);
+	GetWindowRect(mon->amiga_window, &mon->amigawin_rect);
+	GetWindowRect(mon->amiga_window, &mon->amigawinclip_rect);
 #if MOUSECLIP_LOG
 	write_log(_T("GetWindowRect mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, f);
 #endif
@@ -563,7 +596,7 @@ void updatewinrect(struct AmigaMonitor* mon, bool allowfullscreen)
 static bool iswindowfocus(struct AmigaMonitor* mon)
 {
 	bool donotfocus = false;
-	Uint32 flags = SDL_GetWindowFlags(mon->sdl_window);
+	Uint32 flags = SDL_GetWindowFlags(mon->amiga_window);
 
 	if (!(flags & SDL_WINDOW_INPUT_FOCUS)) {
 		donotfocus = true;
@@ -615,7 +648,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 			return;
 	}
 	if (active) {
-		if (!isrp && !(SDL_GetWindowFlags(mon->sdl_window) & SDL_WINDOW_SHOWN))
+		if (!isrp && !(SDL_GetWindowFlags(mon->amiga_window) & SDL_WINDOW_SHOWN))
 			return;
 	}
 	
@@ -644,7 +677,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 	bool gotfocus = false;
 	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
 		SDL_Window* window = SDL_GetMouseFocus();
-		if (window && (window == AMonitors[i].sdl_window)) {
+		if (window && (window == AMonitors[i].amiga_window)) {
 			mon = &AMonitors[i];
 			break;
 		}
@@ -672,7 +705,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 #if MOUSECLIP_HIDE
 			set_showcursor(FALSE);
 #endif
-			SDL_SetWindowGrab(mon->sdl_window, SDL_TRUE);
+			SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 			// SDL2 hides the cursor when Relative mode is enabled
 			// This means that the RTG hardware sprite will no longer be shown,
 			// unless it's configured to use Virtual Mouse (absolute movement).
@@ -715,7 +748,7 @@ void setmouseactive(int monid, int active)
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
 	if (active > 1)
-		SDL_RaiseWindow(mon->sdl_window);
+		SDL_RaiseWindow(mon->amiga_window);
 	setmouseactive2(mon, active, true);
 	setcursorshape(monid);
 }
@@ -824,8 +857,8 @@ static void amiberry_inactive(struct AmigaMonitor* mon, int minimized)
 void minimizewindow(int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (mon->sdl_window)
-		SDL_MinimizeWindow(mon->sdl_window);
+	if (mon->amiga_window)
+		SDL_MinimizeWindow(mon->amiga_window);
 }
 
 void enablecapture(int monid)
@@ -1595,7 +1628,7 @@ void process_event(const SDL_Event& event)
 	AmigaMonitor* mon = &AMonitors[0];
 
 	// Handle window events
-	if (event.type == SDL_WINDOWEVENT)
+	if (event.type == SDL_WINDOWEVENT && SDL_GetWindowFromID(event.window.windowID) == mon->amiga_window)
 	{
 		handle_window_event(event, mon);
 	}
@@ -2026,21 +2059,11 @@ void target_fixup_options(struct uae_prefs* p)
 	// Always use these pixel formats, for optimal performance
 	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
-#if !defined USE_DISPMANX
 	if (p->gfx_auto_crop)
 	{
-		// Make sure that Width/Height are set to max, and Auto-Center disabled
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
+		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
-#endif
-
-#ifdef USE_DISPMANX
-	// Always disable Virtual Mouse mode on Dispmanx, as it doesn't work as expected in some cases
-	if (p->input_tablet > 0)
-		p->input_tablet = TABLET_OFF;
-#endif
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
@@ -2104,14 +2127,6 @@ void target_fixup_options(struct uae_prefs* p)
 	}
 
 	set_key_configs(p);
-
-	// Disable multithreaded drawing if Single Window mode is enabled
-	// Otherwise, we have issues when the GUI window opens, and it closes the emulation one,
-	// since the thread is still trying to draw on it
-	if (amiberry_options.single_window_mode)
-	{
-		p->multithreaded_drawing = false;
-	}
 #endif
 }
 
@@ -2203,15 +2218,14 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->gfx_monitor[0].gfx_size_win.width = amiberry_options.default_width;
 	p->gfx_monitor[0].gfx_size_win.height = amiberry_options.default_height;
 
+	p->gfx_manual_crop = false;
+	p->gfx_manual_crop_width = AMIGA_WIDTH_MAX << p->gfx_resolution;
+	p->gfx_manual_crop_height = AMIGA_HEIGHT_MAX << p->gfx_vresolution;
 	p->gfx_horizontal_offset = 0;
 	p->gfx_vertical_offset = 0;
 	if (amiberry_options.default_auto_crop)
 	{
 		p->gfx_auto_crop = amiberry_options.default_auto_crop;
-#if !defined USE_DISPMANX
-		p->gfx_monitor[0].gfx_size.width = p->gfx_monitor[0].gfx_size_win.width = 720;
-		p->gfx_monitor[0].gfx_size.height = p->gfx_monitor[0].gfx_size_win.height = 568;
-#endif
 	}
 	
 	p->gfx_correct_aspect = amiberry_options.default_correct_aspect_ratio;
@@ -2219,9 +2233,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	// GFX_WINDOW = 0
 	// GFX_FULLSCREEN = 1
 	// GFX_FULLWINDOW = 2
-#ifdef USE_DISPMANX
-	p->gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
-#else
 	if (amiberry_options.default_fullscreen_mode >= 0 && amiberry_options.default_fullscreen_mode <= 2)
 	{
 		p->gfx_apmode[0].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
@@ -2232,7 +2243,6 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 		p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 	}
-#endif
 	
 	p->scaling_method = -1; //Default is Auto
 	if (amiberry_options.default_scaling_method != -1)
@@ -2260,26 +2270,15 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_vresolution = VRES_NONDOUBLE;
 		p->gfx_pscanlines = 0;
 	}
-#if !defined USE_DISPMANX
+
 	if (amiberry_options.default_horizontal_centering)
-#else
-	if (amiberry_options.default_horizontal_centering && !p->gfx_auto_crop)
-#endif
 		p->gfx_xcenter = 2;
 
-#if !defined USE_DISPMANX
 	if (amiberry_options.default_vertical_centering)
-#else
-	if (amiberry_options.default_vertical_centering && !p->gfx_auto_crop)
-#endif
 		p->gfx_ycenter = 2;
 
 	if (amiberry_options.default_frameskip)
 		p->gfx_framerate = 2;
-
-#ifdef USE_OPENGL
-	amiberry_options.use_sdl2_render_thread = false;
-#endif
 
 	if (amiberry_options.default_stereo_separation >= 0 && amiberry_options.default_stereo_separation <= 10)
 		p->sound_stereo_separation = amiberry_options.default_stereo_separation;
@@ -2606,6 +2605,9 @@ void target_save_options(struct zfile* f, struct uae_prefs* p)
 	cfgfile_target_dwrite(f, _T("gfx_horizontal_offset"), _T("%d"), p->gfx_horizontal_offset);
 	cfgfile_target_dwrite(f, _T("gfx_vertical_offset"), _T("%d"), p->gfx_vertical_offset);
 	cfgfile_target_dwrite_bool(f, _T("gfx_auto_crop"), p->gfx_auto_crop);
+	cfgfile_target_dwrite_bool(f, _T("gfx_manual_crop"), p->gfx_manual_crop);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_width"), _T("%d"), p->gfx_manual_crop_width);
+	cfgfile_target_dwrite(f, _T("gfx_manual_crop_height"), _T("%d"), p->gfx_manual_crop_height);
 	cfgfile_target_dwrite(f, _T("gfx_correct_aspect"), _T("%d"), p->gfx_correct_aspect);
 	cfgfile_target_dwrite(f, _T("kbd_led_num"), _T("%d"), p->kbd_led_num);
 	cfgfile_target_dwrite(f, _T("kbd_led_scr"), _T("%d"), p->kbd_led_scr);
@@ -2744,8 +2746,11 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 		|| cfgfile_intval(option, value, "kbd_led_cap", &p->kbd_led_cap, 1)
 		|| cfgfile_intval(option, value, "gfx_horizontal_offset", &p->gfx_horizontal_offset, 1)
 		|| cfgfile_intval(option, value, "gfx_vertical_offset", &p->gfx_vertical_offset, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_width", &p->gfx_manual_crop_width, 1)
+		|| cfgfile_intval(option, value, "gfx_manual_crop_height", &p->gfx_manual_crop_height, 1)
 		|| cfgfile_yesno(option, value, _T("gfx_auto_height"), &p->gfx_auto_crop)
 		|| cfgfile_yesno(option, value, _T("gfx_auto_crop"), &p->gfx_auto_crop)
+		|| cfgfile_yesno(option, value, _T("gfx_manual_crop"), &p->gfx_manual_crop)
 		|| cfgfile_intval(option, value, "gfx_correct_aspect", &p->gfx_correct_aspect, 1)
 		|| cfgfile_intval(option, value, "scaling_method", &p->scaling_method, 1)
 		|| cfgfile_string(option, value, "open_gui", p->open_gui, sizeof p->open_gui)
@@ -3357,9 +3362,6 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 		};
 
-	// Use the old Single-Window mode (useful in cases where multiple overlapping windows are a problem)
-	write_bool_option("single_window_mode", amiberry_options.single_window_mode);
-
 	// Set the window scaling option (the default is 1.0)
 	write_float_option("window_scaling", amiberry_options.window_scaling);
 
@@ -3728,7 +3730,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
-		ret |= cfgfile_yesno(option, value, "single_window_mode", &amiberry_options.single_window_mode);
 		ret |= cfgfile_floatval(option, value, "window_scaling", &amiberry_options.window_scaling);
 		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
@@ -4238,24 +4239,12 @@ int main(int argc, char* argv[])
 
 	uae_time_calibrate();
 	
-	if (
-#ifdef USE_DISPMANX
-		SDL_Init(SDL_INIT_TIMER
-			| SDL_INIT_AUDIO
-			| SDL_INIT_JOYSTICK
-			| SDL_INIT_HAPTIC
-			| SDL_INIT_GAMECONTROLLER
-			| SDL_INIT_EVENTS) != 0
-#else
-		SDL_Init(SDL_INIT_EVERYTHING) != 0
-#endif
-		)
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
 #ifdef USE_OPENGL
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);

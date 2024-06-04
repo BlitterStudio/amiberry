@@ -985,6 +985,9 @@ struct uae_prefs
 	int kbd_led_cap;
 
 	bool gfx_auto_crop;
+	bool gfx_manual_crop;
+	int gfx_manual_crop_width;
+	int gfx_manual_crop_height;
 	int gfx_horizontal_offset;
 	int gfx_vertical_offset;
 	int gfx_correct_aspect;
@@ -1293,7 +1296,6 @@ struct amiberry_gui_theme
 
 struct amiberry_options
 {
-	bool single_window_mode = false;
 	float window_scaling = 1.0;
 	bool quickstart_start = true;
 	bool read_config_descriptions = true;

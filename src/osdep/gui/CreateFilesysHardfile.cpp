@@ -484,7 +484,7 @@ static void CreateFilesysHardfileLoop()
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
 
-		SDL_RenderClear(mon->sdl_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
@@ -517,7 +517,7 @@ bool CreateFilesysHardfile()
 	// Prepare the screen once
 	uae_gui->logic();
 
-	SDL_RenderClear(mon->sdl_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 
 	uae_gui->draw();
 	update_gui_screen();

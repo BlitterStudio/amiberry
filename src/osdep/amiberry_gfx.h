@@ -71,8 +71,10 @@ struct winuae_currentmode {
 #define MAX_AMIGAMONITORS 1
 struct AmigaMonitor {
 	int monitor_id;
-	SDL_Window* sdl_window;
-	SDL_Renderer* sdl_renderer;
+	SDL_Window* amiga_window;
+	SDL_Renderer* amiga_renderer;
+	SDL_Window* gui_window;
+	SDL_Renderer* gui_renderer;
 	struct MultiDisplay* md;
 
 	SDL_Rect amigawin_rect, mainwin_rect;
@@ -114,20 +116,7 @@ extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 #define  SYSTEM_GREEN_MASK     (amiga_surface->format->Gmask)
 #define  SYSTEM_BLUE_MASK      (amiga_surface->format->Bmask)
 
-#ifdef USE_DISPMANX
-#include <bcm_host.h>
-extern DISPMANX_DISPLAY_HANDLE_T displayHandle;
-extern DISPMANX_MODEINFO_T modeInfo;
-extern DISPMANX_UPDATE_HANDLE_T updateHandle;
-extern DISPMANX_ELEMENT_HANDLE_T blackscreen_element;
-extern VC_RECT_T src_rect;
-extern VC_RECT_T dst_rect;
-extern VC_RECT_T blit_rect;
-extern VC_RECT_T black_rect;
-extern VC_IMAGE_TYPE_T rgb_mode;
-#else
 extern SDL_Texture* amiga_texture;
-#endif
 extern SDL_DisplayMode sdl_mode;
 extern SDL_Rect crop_rect;
 
@@ -150,6 +139,8 @@ extern void close_windows(struct AmigaMonitor*);
 extern void updatewinfsmode(int monid, struct uae_prefs* p);
 extern void gfx_lock(void);
 extern void gfx_unlock(void);
+
+extern void destroy_crtemu();
 
 struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);

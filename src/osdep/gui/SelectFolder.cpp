@@ -105,13 +105,11 @@ class ListBoxActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		std::string foldername = "";
-
 		const auto selected_item = lstFolders->getSelected();
-		foldername = workingDir.append("/").append(dirList.getElementAt(selected_item));
+		const std::string folder_name = workingDir.append("/").append(dirList.getElementAt(selected_item));
 
 		volName = dirList.getElementAt(selected_item);
-		checkfoldername(foldername);
+		checkfoldername(folder_name);
 	}
 };
 
@@ -346,7 +344,7 @@ static void SelectFolderLoop()
 	{
 		// Now we let the Gui object perform its logic.
 		uae_gui->logic();
-		SDL_RenderClear(mon->sdl_renderer);
+		SDL_RenderClear(mon->gui_renderer);
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
 		// Finally we update the screen.
@@ -367,7 +365,7 @@ std::string SelectFolder(const std::string& title, std::string value)
 	// Prepare the screen once
 	uae_gui->logic();
 
-	SDL_RenderClear(mon->sdl_renderer);
+	SDL_RenderClear(mon->gui_renderer);
 
 	uae_gui->draw();
 	update_gui_screen();

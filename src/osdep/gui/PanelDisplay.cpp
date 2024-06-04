@@ -5,16 +5,19 @@
 
 #include "sysdeps.h"
 #include "options.h"
+#include "uae.h"
 #include "custom.h"
+#include "xwin.h"
 #include "gui_handling.h"
+#include "drawing.h"
 
-const int amigawidth_values[] = { 640, 704, 720 };
-const int amigaheight_values[] = { 400, 480, 512, 568 };
+const int amigawidth_values[] = { 640, 704, 720, 752 };
+const int amigaheight_values[] = { 400, 480, 512, 568, 576 };
 
 enum
 {
-	AMIGAWIDTH_COUNT = 3,
-	AMIGAHEIGHT_COUNT = 4
+	AMIGAWIDTH_COUNT = 4,
+	AMIGAHEIGHT_COUNT = 5
 };
 
 const int fullscreen_width_values[] = { 640, 720, 800, 1024, 1280, 1280, 1920 };
@@ -32,6 +35,7 @@ static const std::vector<std::string> scaling_method = { "Auto", "Pixelated", "S
 static gcn::StringListModel scaling_method_list(scaling_method);
 
 static gcn::Window* grpAmigaScreen;
+static gcn::CheckBox* chkManualCrop;
 static gcn::Label* lblAmigaWidth;
 static gcn::TextField* txtAmigaWidth;
 static gcn::Slider* sldAmigaWidth;
@@ -97,41 +101,34 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		AmigaMonitor* mon = &AMonitors[0];
-
-		if (actionEvent.getSource() == sldAmigaWidth)
+		if (actionEvent.getSource() == chkManualCrop)
 		{
-			if (changed_prefs.gfx_monitor[0].gfx_size_win.width != amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())])
-				changed_prefs.gfx_monitor[0].gfx_size_win.width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
+			changed_prefs.gfx_manual_crop = chkManualCrop->isSelected();
+			if (changed_prefs.gfx_auto_crop)
+				changed_prefs.gfx_auto_crop = false;
+		}
+		else if (actionEvent.getSource() == sldAmigaWidth)
+		{
+			const int new_width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
+			const int new_x = ((AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution) - new_width) / 2;
 
-			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
+			changed_prefs.gfx_manual_crop_width = new_width;
+			changed_prefs.gfx_horizontal_offset = new_x;
 		}
 		else if (actionEvent.getSource() == sldAmigaHeight)
 		{
-			if (changed_prefs.gfx_monitor[0].gfx_size_win.height != amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())])
-				changed_prefs.gfx_monitor[0].gfx_size_win.height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
+			const int new_height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
+			const int new_y = ((AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution) - new_height) / 2;
 
-			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
-		}
-		else if (actionEvent.getSource() == txtAmigaWidth)
-		{
-			changed_prefs.gfx_monitor[0].gfx_size_win.width = std::stoi(txtAmigaWidth->getText());
-			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
-		}
-		else if (actionEvent.getSource() == txtAmigaHeight)
-		{
-			changed_prefs.gfx_monitor[0].gfx_size_win.height = std::stoi(txtAmigaHeight->getText());
-			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
+			changed_prefs.gfx_manual_crop_height = new_height;
+			changed_prefs.gfx_vertical_offset = new_y;
 		}
 
 		else if (actionEvent.getSource() == chkAutoCrop)
 		{
 			changed_prefs.gfx_auto_crop = chkAutoCrop->isSelected();
-#if !defined USE_DISPMANX
-			changed_prefs.gfx_monitor[0].gfx_size_win.width = 720;
-			changed_prefs.gfx_monitor[0].gfx_size_win.height = 568;
-
-			mon->amigawin_rect.w = mon->amigawin_rect.h = 0;
-#endif
+			if (changed_prefs.gfx_manual_crop)
+				changed_prefs.gfx_manual_crop = false;
 		}
 
 		else if (actionEvent.getSource() == chkBorderless)
@@ -344,6 +341,13 @@ void InitPanelDisplay(const config_category& category)
 	cboFullscreen->setId("cboFullscreen");
 	cboFullscreen->addActionListener(amigaScreenActionListener);
 
+	chkManualCrop = new gcn::CheckBox("Manual Crop");
+	chkManualCrop->setId("chkManualCrop");
+	chkManualCrop->setBaseColor(gui_base_color);
+	chkManualCrop->setBackgroundColor(gui_textbox_background_color);
+	chkManualCrop->setForegroundColor(gui_foreground_color);
+	chkManualCrop->addActionListener(amigaScreenActionListener);
+
 	lblAmigaWidth = new gcn::Label("Width:");
 	lblAmigaWidth->setAlignment(gcn::Graphics::LEFT);
 	sldAmigaWidth = new gcn::Slider(0, AMIGAWIDTH_COUNT - 1);
@@ -382,11 +386,7 @@ void InitPanelDisplay(const config_category& category)
 	txtAmigaHeight->setForegroundColor(gui_foreground_color);
 	txtAmigaHeight->addActionListener(amigaScreenActionListener);
 
-#if defined USE_DISPMANX
-	chkAutoCrop = new gcn::CheckBox("Auto Height");
-#else
 	chkAutoCrop = new gcn::CheckBox("Auto Crop");
-#endif
 	chkAutoCrop->setId("chkAutoCrop");
 	chkAutoCrop->setBaseColor(gui_base_color);
 	chkAutoCrop->setBackgroundColor(gui_textbox_background_color);
@@ -541,6 +541,9 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(lblScreenmode, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(cboScreenmode, lblScreenmode->getX() + lblScreenmode->getWidth() + 8, posY);
 	posY += cboScreenmode->getHeight() + DISTANCE_NEXT_Y;
+
+	grpAmigaScreen->add(chkManualCrop, DISTANCE_BORDER, posY);
+	posY += chkManualCrop->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->add(lblAmigaWidth, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldAmigaWidth, lblAmigaWidth->getX() + lblAmigaHeight->getWidth() + DISTANCE_NEXT_X, posY);
@@ -723,6 +726,7 @@ void ExitPanelDisplay()
 	delete sldBrightness;
 	delete lblBrightnessValue;
 	delete amigaScreenActionListener;
+	delete chkManualCrop;
 	delete lblAmigaWidth;
 	delete sldAmigaWidth;
 	delete txtAmigaWidth;
@@ -791,44 +795,50 @@ void RefreshPanelDisplay()
 	int i;
 	for (i = 0; i < AMIGAWIDTH_COUNT; ++i)
 	{
-		if (changed_prefs.gfx_monitor[0].gfx_size_win.width == amigawidth_values[i])
+		if (changed_prefs.gfx_manual_crop_width == amigawidth_values[i])
 		{
 			sldAmigaWidth->setValue(i);
-			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.width));
+			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_manual_crop_width));
 			break;
 		}
 		if (i == AMIGAWIDTH_COUNT - 1)
 		{
-			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.width));
+			txtAmigaWidth->setText(std::to_string(changed_prefs.gfx_manual_crop_width));
 			break;
 		}
 	}
 
 	for (i = 0; i < AMIGAHEIGHT_COUNT; ++i)
 	{
-		if (changed_prefs.gfx_monitor[0].gfx_size_win.height == amigaheight_values[i])
+		if (changed_prefs.gfx_manual_crop_height == amigaheight_values[i])
 		{
 			sldAmigaHeight->setValue(i);
-			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.height));
+			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_manual_crop_height));
 			break;
 		}
 		if (i == AMIGAHEIGHT_COUNT - 1)
 		{
-			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.height));
+			txtAmigaHeight->setText(std::to_string(changed_prefs.gfx_manual_crop_height));
 			break;
 		}
 	}
 
-	chkAutoCrop->setSelected(changed_prefs.gfx_auto_crop);
-#if !defined USE_DISPMANX
 	if (changed_prefs.gfx_auto_crop)
 	{
-		changed_prefs.gfx_monitor[0].gfx_size_win.width = 720;
-		changed_prefs.gfx_monitor[0].gfx_size_win.height = 568;
 		changed_prefs.gfx_xcenter = 0;
 		changed_prefs.gfx_ycenter = 0;
 	}
-#endif
+
+	chkManualCrop->setSelected(changed_prefs.gfx_manual_crop);
+	chkAutoCrop->setSelected(changed_prefs.gfx_auto_crop);
+
+	sldAmigaWidth->setEnabled(changed_prefs.gfx_manual_crop);
+	sldAmigaHeight->setEnabled(changed_prefs.gfx_manual_crop);
+	txtAmigaWidth->setEnabled(changed_prefs.gfx_manual_crop);
+	txtAmigaHeight->setEnabled(changed_prefs.gfx_manual_crop);
+	sldHOffset->setEnabled(changed_prefs.gfx_manual_crop);
+	sldVOffset->setEnabled(changed_prefs.gfx_manual_crop);
+
 	chkBorderless->setSelected(changed_prefs.borderless);
 	chkVsync->setSelected(changed_prefs.gfx_apmode[0].gfx_vsync > 0);
 
@@ -840,10 +850,8 @@ void RefreshPanelDisplay()
 	lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
 	lblVOffsetValue->adjustSize();
 
-#if !defined USE_DISPMANX
 	chkHorizontal->setEnabled(!changed_prefs.gfx_auto_crop);
 	chkVertical->setEnabled(!changed_prefs.gfx_auto_crop);
-#endif
 	chkHorizontal->setSelected(changed_prefs.gfx_xcenter == 2);
 	chkVertical->setSelected(changed_prefs.gfx_ycenter == 2);
 
@@ -853,29 +861,17 @@ void RefreshPanelDisplay()
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFilterLowRes->setSelected(changed_prefs.gfx_lores_mode);
 
-#ifdef USE_DISPMANX
-	cboScreenmode->setEnabled(false);
-	changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
-#endif
 	if (kmsdrm_detected)
 	{
-		cboScreenmode->setEnabled(false);
 		changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
+		cboScreenmode->setEnabled(false);
 	}
 
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
 	{
 		cboScreenmode->setSelected(0);
 		cboFullscreen->setEnabled(false);
-#if !defined USE_DISPMANX
-		lblAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
-		sldAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
-		txtAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
-
-		lblAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
-		sldAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
-		txtAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
-#endif
 	}
 	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 	{
@@ -886,15 +882,6 @@ void RefreshPanelDisplay()
 	{
 		cboScreenmode->setSelected(2);
 		cboFullscreen->setEnabled(false);
-#if !defined USE_DISPMANX
-		lblAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
-		sldAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
-		txtAmigaWidth->setEnabled(!chkAutoCrop->isSelected());
-
-		lblAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
-		sldAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
-		txtAmigaHeight->setEnabled(!chkAutoCrop->isSelected());
-#endif
 	}
 
 	//Disable Borderless checkbox in non-Windowed modes
@@ -919,11 +906,6 @@ void RefreshPanelDisplay()
 			changed_prefs.gfx_monitor[0].gfx_size_fs.height = fullscreen_height_values[2];
 		}
 	}
-	
-#ifdef USE_DISPMANX
-	lblScalingMethod->setEnabled(false);
-	cboScalingMethod->setEnabled(false);
-#endif
 
 	cboScalingMethod->setSelected(changed_prefs.scaling_method + 1);
 	

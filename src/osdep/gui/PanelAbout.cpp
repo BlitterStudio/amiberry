@@ -22,11 +22,7 @@ void InitPanelAbout(const config_category& category)
 	lblEmulatorVersion = new gcn::Label(get_version_string());
 	lblCopyright = new gcn::Label(get_copyright_notice());
 	lblSDL_compiled_version = new gcn::Label(get_sdl2_version_string());
-#ifdef USE_DISPMANX
-	lblSDL_driver = new gcn::Label("SDL2 video driver: DispmanX");
-#else
 	lblSDL_driver = new gcn::Label("SDL2 video driver: " + std::string(sdl_video_driver));
-#endif
 	
 	textBox = new gcn::TextBox(
 		"This program is free software: you can redistribute it and/or modify\n"
