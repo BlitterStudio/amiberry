@@ -10,7 +10,7 @@
 
 ![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
 
-Amiberry is an optimized Amiga emulator, for ARM, ARM64, x86_64 (macOS and Linux) and RISC-V platforms.
+Amiberry is an optimized Amiga emulator, for ARM32, ARM64, x86_64 (macOS and Linux) and RISC-V platforms.
 
 The core emulation comes from [WinUAE](https://www.winuae.net), and the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
 
@@ -22,23 +22,24 @@ It includes JIT support, to get high-performance results on CPU-intensive emulat
 
 Amiberry has been tested on the following Linux distros:
 
-- Debian/RPI-OS Buster, Bullseye and Bookworm ARM and x86_64
-- Ubuntu ARM and x86 (64-bit)
-- Manjaro ARM (64-bit)
-- DietPi ARM (32-bit)
-- RetroPie ARM (32-bit)
-it should also work on several others.
+- Debian/RPI-OS Bullseye, Bookworm ARM32, ARM64 and x86_64
+- Ubuntu ARM64 and x86_64
+- Manjaro ARM and x86_64
+- DietPi
+- RetroPie
+it should also work on several others, as long as the requirements are met.
 
-Some even include it in their app ecosystem (e.g. DietPi, RetroPie and others), so you can install and upgrade it directly from their menu system.
+Some distros include it in their app ecosystem (e.g. DietPi, RetroPie and others), so you can install and upgrade it directly from their menu system.
 
 ### macOS
 
-Amiberry has experimental support for macOS, and has been tested on:
+Amiberry supports macOS, and has been tested on:
 
 - Catalina (x86_64)
-- Monterey (x86_64 and M1)
+- Monterey (x86_64 and Apple Silicon)
+- Newer macOS versions should work as well
 
-You will need to install the required libraries using Homebrew.
+Under macOS, you will need to install the required libraries using Homebrew.
 If you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-macOS)
 
 ### Dependencies
@@ -61,7 +62,7 @@ if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can buil
 
       yay -S amiberry
 
-Additionally, please note that you will probably also need some Kickstart ROMs. Amiberry includes the AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation).
+Additionally, please note that you will probably also need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
 
 ## Getting Amiberry
 
