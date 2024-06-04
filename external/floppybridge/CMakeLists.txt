@@ -26,6 +26,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     message(STATUS "Linux platform detected")
     add_custom_command(TARGET floppybridge POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:floppybridge> ${CMAKE_SOURCE_DIR}/../../plugins/
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:floppybridge> ${CMAKE_SOURCE_DIR}/../plugins
     )
 endif ()
