@@ -9,3 +9,5 @@ Categories=Game;Emulator;
 Icon=amiberry
 Exec=amiberry.sh
 Terminal=false
+
+Keywords=emulator;raspberry-pi;rpi;emulation;amiga;amiga-emulator;
