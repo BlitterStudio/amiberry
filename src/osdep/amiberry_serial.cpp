@@ -782,6 +782,13 @@ static void serdatcopy(void)
 
 		event2_newevent_x_replace(per, 0, sersend_ce);
 	}
+	else {
+
+		if (serloop_enabled) {
+			sersend_serloop(0);
+		}
+
+	}
 
 	checksend();
 }
