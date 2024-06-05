@@ -559,7 +559,7 @@ struct whdload_custom
 	std::vector<std::string> labels;
 	/**
 	 * \brief When the type is a Bit, it can contain multiple entries for the same custom field.
-	 * Each entry has it's own label and a different value that goes with it.
+	 * Each entry has its own label and a different value that goes with it.
 	 */
 	std::vector<std::pair<std::string, int>> label_bit_pairs;
 };
