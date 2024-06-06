@@ -2243,7 +2243,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 #ifdef AMIBERRY
 		std::string mode;
 		std::string buffer;
-		didata* did = &di_joystick[jp->id];
+		didata* did = &di_joystick[jp->id - JSEM_JOYS];
 
 		// custom options SAVING
 		for (int m = 0; m < 2; ++m)
