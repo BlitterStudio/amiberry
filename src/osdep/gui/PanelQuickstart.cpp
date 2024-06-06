@@ -228,6 +228,9 @@ static void AdjustPrefs()
 		// No CD available
 		changed_prefs.cdslots[0].inuse = false;
 		changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+
+		// Set joystick port to Default
+		changed_prefs.jports[1].mode = 0;
 		break;
 	case 6: // A4000
 	case 7: // A4000T
@@ -238,6 +241,9 @@ static void AdjustPrefs()
 		// No CD available
 		changed_prefs.cdslots[0].inuse = false;
 		changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+
+		// Set joystick port to Default
+		changed_prefs.jports[1].mode = 0;
 		break;
 
 	case 8: // CD32
@@ -249,6 +255,8 @@ static void AdjustPrefs()
 		changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 		changed_prefs.gfx_monitor[0].gfx_size.width = 720;
 		changed_prefs.gfx_monitor[0].gfx_size.height = 568;
+		// Set joystick port to CD32 mode
+		changed_prefs.jports[1].mode = 7;
 		break;
 	default:
 		break;
