@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>com.blitterstudio.amiberry</id>
   <launchable type="desktop-id">com.blitterstudio.amiberry.desktop</launchable>
-  <name>Amiberry Preview</name>
+  <name>Amiberry</name>
   <developer_name>BlitterStudio</developer_name>
   <summary>An Amiga emulator for Linux</summary>
 
@@ -44,6 +44,7 @@
     </screenshot>
   </screenshots>
   <releases>
+	<release version="v6.3.2" date="2024-06-06"/>
 	<release version="v6.3.1" date="2024-06-03"/>
 	<release version="v6.3.0" date="2024-04-20"/>
 	<release version="v6.2.0" date="2024-02-24"/>
