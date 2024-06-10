@@ -785,7 +785,7 @@ bool HelpPanelInput(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back("You can use the Swap Ports button to swap the devices between port 0 and 1.");
 	helptext.emplace_back("Auto-switching enables you to switch Port 0 between Mouse-Joystick based on");
-	helptext.emplace_back("which device is being used. Only works if type is left to Default.");
+	helptext.emplace_back("which device is being used.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Mouse Map: This allows you to use the Left analog stick on your controller");
 	helptext.emplace_back("to emulate a mouse in Port 0, with the Shoulder buttons acting as Mouse buttons.");
