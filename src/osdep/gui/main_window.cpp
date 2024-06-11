@@ -349,6 +349,8 @@ void amiberry_gui_init()
 		}
 	}
 
+    SDL_RaiseWindow(mon->gui_window);
+
 	if (mon->gui_renderer == nullptr)
 	{
 		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);

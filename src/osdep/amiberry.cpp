@@ -2234,7 +2234,6 @@ void target_default_options(struct uae_prefs* p, int type)
 	{
 		p->gfx_apmode[0].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
 		p->gfx_apmode[1].gfx_fullscreen = amiberry_options.default_fullscreen_mode;
-		p->gui_alwaysontop = true;
 	}
 	else
 	{
