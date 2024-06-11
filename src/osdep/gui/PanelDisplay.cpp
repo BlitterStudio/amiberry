@@ -31,7 +31,7 @@ static gcn::StringListModel fullscreen_modes_list(fullscreen_modes);
 static const std::vector<std::string> resolution = { "LowRes", "HighRes (normal)", "SuperHighRes" };
 static gcn::StringListModel resolution_list(resolution);
 
-static const std::vector<std::string> scaling_method = { "Auto", "Pixelated", "Smooth" };
+static const std::vector<std::string> scaling_method = { "Auto", "Pixelated", "Smooth", "Integer" };
 static gcn::StringListModel scaling_method_list(scaling_method);
 
 static gcn::Window* grpAmigaScreen;
