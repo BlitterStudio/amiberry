@@ -139,47 +139,12 @@ void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
 
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
-bool isModeAspectRatioExact(const SDL_DisplayMode* mode, const int width, const int height)
+bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int height)
 {
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
-void set_integer_scale(const SDL_DisplayMode* mode, const int width, const int height)
-{
-	const struct AmigaMonitor* mon = &AMonitors[0];
-	float scale;
-	SDL_Rect viewport;
-
-	const float want_aspect = (float)width / height;
-	const float real_aspect = (float)mode->w / mode->h;
-
-	/* Clear the scale because we're setting viewport in output coordinates */
-	SDL_RenderSetScale(mon->amiga_renderer, 1.0f, 1.0f);
-
-	if (want_aspect > real_aspect) {
-		scale = (float)(mode->w / width); /* This an integer division! */
-	}
-	else {
-		scale = (float)(mode->h / height); /* This an integer division! */
-	}
-
-	if (scale < 1.0f) {
-		scale = 1.0f;
-	}
-
-	viewport.w = (int)SDL_floor(width * scale);
-	viewport.x = (mode->w - viewport.w) / 2;
-	viewport.h = (int)SDL_floor(height * scale);
-	viewport.y = (mode->h - viewport.h) / 2;
-
-	/* Set the new viewport */
-	SDL_RenderSetViewport(mon->amiga_renderer, &viewport);
-
-	/* Set the new scale */
-	SDL_RenderSetScale(mon->amiga_renderer, scale, scale);
-}
-
-void set_scaling_option(const uae_prefs* p, const int width, const int height)
+void set_scaling_option(uae_prefs* p, int width, int height)
 {
 	if (p->scaling_method == -1) {
 		if (isModeAspectRatioExact(&sdl_mode, width, height))
@@ -189,6 +154,7 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
 		}
 		else
@@ -198,6 +164,7 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+			SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
 		}
 	} else if (p->scaling_method == 0)
@@ -208,6 +175,7 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
 	}
 	else if (p->scaling_method == 1)
@@ -217,12 +185,14 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #else
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
 	}
 	else if (p->scaling_method == 2)
 	{
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		set_integer_scale(&sdl_mode, width, height);
+		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_TRUE);
 	}
 
 #ifdef USE_OPENGL
