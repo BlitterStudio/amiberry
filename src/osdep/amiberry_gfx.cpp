@@ -148,44 +148,56 @@ void set_scaling_option(uae_prefs* p, int width, int height)
 {
 	if (p->scaling_method == -1) {
 		if (isModeAspectRatioExact(&sdl_mode, width, height))
-#ifdef USE_OPENGL
 		{
+#ifdef USE_OPENGL
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		}
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+			SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
+		}
 		else
-#ifdef USE_OPENGL
 		{
+#ifdef USE_OPENGL
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		}
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+			SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
+		}
 	} else if (p->scaling_method == 0)
-#ifdef USE_OPENGL
+
 	{
+#ifdef USE_OPENGL
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	}
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
+	}
 	else if (p->scaling_method == 1)
-#ifdef USE_OPENGL
+
 	{
+#ifdef USE_OPENGL
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-	glBindTexture(GL_TEXTURE_2D, 0);
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
+	}
 	else if (p->scaling_method == 2)
+	{
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_TRUE);
+	}
+
+#ifdef USE_OPENGL
+	glBindTexture(GL_TEXTURE_2D, 0);
+#endif
 }
 
 static float SDL2_getrefreshrate(int monid)
