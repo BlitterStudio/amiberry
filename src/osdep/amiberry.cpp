@@ -2155,7 +2155,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		//p->notaskbarbutton = false;
 		//p->nonotificationicon = false;
 		p->main_alwaysontop = false;
-		p->gui_alwaysontop = false;
+		p->gui_alwaysontop = true;
 		//p->guikey = -1;
 		p->automount_removable = false;
 		//p->automount_drives = 0;
