@@ -184,6 +184,8 @@ void set_scaling_option(uae_prefs* p, int width, int height)
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 #endif
+	else if (p->scaling_method == 2)
+		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_TRUE);
 }
 
 static float SDL2_getrefreshrate(int monid)

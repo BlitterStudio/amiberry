@@ -2244,8 +2244,8 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->scaling_method = -1; //Default is Auto
 	if (amiberry_options.default_scaling_method != -1)
 	{
-		// only valid values are -1 (Auto), 0 (Nearest) and 1 (Linear)
-		if (amiberry_options.default_scaling_method == 0 || amiberry_options.default_scaling_method == 1)
+		// only valid values are -1 (Auto), 0 (Nearest), 1 (Linear) 2 (Integer)
+		if (amiberry_options.default_scaling_method >= 0 && amiberry_options.default_scaling_method <= 2)
 			p->scaling_method = amiberry_options.default_scaling_method;
 	}
 	
