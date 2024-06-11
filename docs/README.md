@@ -16,6 +16,8 @@ The core emulation comes from [WinUAE](https://www.winuae.net), and the main GUI
 
 It includes JIT support, to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
 
+There are currently two Amiberry versions available: v5.x and v6.x - see [here](https://github.com/BlitterStudio/amiberry/wiki/First-Installation) to see which is the best pick for your needs.
+
 ## Requirements
 
 ### Linux
