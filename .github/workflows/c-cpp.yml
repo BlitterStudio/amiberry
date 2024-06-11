@@ -35,13 +35,16 @@ jobs:
       - name: make for macOS X64
         run: make -j4 PLATFORM=osx-x86
 
+      - name: ZIP binaries
+        if: github.ref_type != 'tag'
+        run: zip -r amiberry-macOS-x86_64.zip Amiberry.app
+
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
-          path: |
-            Amiberry.app/**
+          path: amiberry-macOS-x86_64.zip
 
       - name: ZIP binaries
         if: github.ref_type == 'tag'
@@ -73,13 +76,16 @@ jobs:
       - name: make for macOS M1
         run: make -j4 PLATFORM=osx-m1
 
+      - name: ZIP binaries
+        if: github.ref_type != 'tag'
+        run: zip -r amiberry-macOS-m1.zip Amiberry.app
+        
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-m1
-          path: |
-            Amiberry.app/**
+          path: amiberry-macOS-m1.zip
 
       - name: ZIP binaries
         if: github.ref_type == 'tag'
