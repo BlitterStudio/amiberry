@@ -34,6 +34,9 @@ static gcn::StringListModel resolution_list(resolution);
 static const std::vector<std::string> scaling_method = { "Auto", "Pixelated", "Smooth", "Integer" };
 static gcn::StringListModel scaling_method_list(scaling_method);
 
+static const std::vector<std::string> res_autoswitch = { "Disabled", "Always On", "10%", "33%", "66%" };
+static gcn::StringListModel res_autoswitch_list(res_autoswitch);
+
 static gcn::Window* grpAmigaScreen;
 static gcn::CheckBox* chkManualCrop;
 static gcn::Label* lblAmigaWidth;
@@ -94,6 +97,9 @@ static gcn::CheckBox* chkBlackerThanBlack;
 static gcn::Label* lblBrightness;
 static gcn::Slider* sldBrightness;
 static gcn::Label* lblBrightnessValue;
+
+static gcn::Label* lblResSwitch;
+static gcn::DropDown* cboResSwitch;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -217,6 +223,21 @@ public:
 
 		else if (actionEvent.getSource() == chkFilterLowRes)
 			changed_prefs.gfx_lores_mode = chkFilterLowRes->isSelected() ? 1 : 0;
+
+		else if (actionEvent.getSource() == cboResSwitch)
+		{
+			int pos = cboResSwitch->getSelected();
+			if (pos == 0)
+				changed_prefs.gfx_autoresolution = 0;
+			else if (pos == 1)
+				changed_prefs.gfx_autoresolution = 1;
+			else if (pos == 2)
+				changed_prefs.gfx_autoresolution = 10;
+			else if (pos == 3)
+				changed_prefs.gfx_autoresolution = 33;
+			else if (pos == 4)
+				changed_prefs.gfx_autoresolution = 66;
+		}
 
 		RefreshPanelDisplay();
 	}
@@ -530,6 +551,17 @@ void InitPanelDisplay(const config_category& category)
 	cboResolution->setSelectionColor(gui_selection_color);
 	cboResolution->setId("cboResolution");
 	cboResolution->addActionListener(amigaScreenActionListener);
+
+	lblResSwitch = new gcn::Label("Res. autoswitch:");
+	lblResSwitch->setAlignment(gcn::Graphics::RIGHT);
+	cboResSwitch = new gcn::DropDown(&res_autoswitch_list);
+	cboResSwitch->setSize(150, cboResSwitch->getHeight());
+	cboResSwitch->setBaseColor(gui_base_color);
+	cboResSwitch->setBackgroundColor(gui_textbox_background_color);
+	cboResSwitch->setForegroundColor(gui_foreground_color);
+	cboResSwitch->setSelectionColor(gui_selection_color);
+	cboResSwitch->setId("cboResSwitch");
+	cboResSwitch->addActionListener(amigaScreenActionListener);
 	
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
@@ -598,12 +630,16 @@ void InitPanelDisplay(const config_category& category)
 	cboScalingMethod->setId("cboScalingMethod");
 	cboScalingMethod->addActionListener(scalingMethodActionListener);
 	category.panel->add(lblScalingMethod, DISTANCE_BORDER, posY);
-	category.panel->add(cboScalingMethod, lblScalingMethod->getX() + lblScalingMethod->getWidth() + 8, posY);
+	category.panel->add(cboScalingMethod, lblScalingMethod->getX() + lblScalingMethod->getWidth() + 15, posY);
 	posY += cboScalingMethod->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblResolution, DISTANCE_BORDER, posY);
 	category.panel->add(cboResolution, cboScalingMethod->getX(), posY);
 	posY += cboResolution->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(lblResSwitch, DISTANCE_BORDER, posY);
+	category.panel->add(cboResSwitch, cboScalingMethod->getX(), posY);
+	posY += cboResSwitch->getHeight() + DISTANCE_NEXT_Y;
 	
 	optSingle = new gcn::RadioButton("Single", "linemodegroup");
 	optSingle->setId("optSingle");
@@ -776,6 +812,9 @@ void ExitPanelDisplay()
 	delete lblResolution;
 	delete cboResolution;
 	delete chkFilterLowRes;
+
+	delete lblResSwitch;
+	delete cboResSwitch;
 }
 
 void RefreshPanelDisplay()
@@ -908,7 +947,18 @@ void RefreshPanelDisplay()
 	}
 
 	cboScalingMethod->setSelected(changed_prefs.scaling_method + 1);
-	
+
+	if (changed_prefs.gfx_autoresolution == 0 || changed_prefs.gfx_autoresolution > 99)
+		cboResSwitch->setSelected(0);
+	else if (changed_prefs.gfx_autoresolution == 1)
+		cboResSwitch->setSelected(1);
+	else if (changed_prefs.gfx_autoresolution <= 10)
+		cboResSwitch->setSelected(2);
+	else if (changed_prefs.gfx_autoresolution <= 33)
+		cboResSwitch->setSelected(3);
+	else if (changed_prefs.gfx_autoresolution <= 99)
+		cboResSwitch->setSelected(4);
+
 	if (changed_prefs.gfx_vresolution == VRES_NONDOUBLE && changed_prefs.gfx_pscanlines == 0)
 	{
 		optSingle->setSelected(true);
@@ -948,6 +998,18 @@ void RefreshPanelDisplay()
 		optIDouble3->setSelected(true);
 	
 	cboResolution->setSelected(changed_prefs.gfx_resolution);
+
+	bool isdouble = changed_prefs.gfx_vresolution > 0;
+	optSingle->setEnabled(!changed_prefs.gfx_autoresolution);
+	optDouble->setEnabled(!changed_prefs.gfx_autoresolution);
+	optScanlines->setEnabled(!changed_prefs.gfx_autoresolution);
+	optDouble2->setEnabled(!changed_prefs.gfx_autoresolution);
+	optDouble3->setEnabled(!changed_prefs.gfx_autoresolution);
+	optISingle->setEnabled(!changed_prefs.gfx_autoresolution && !isdouble);
+	optIDouble->setEnabled(!changed_prefs.gfx_autoresolution && isdouble);
+	optIDouble2->setEnabled(!changed_prefs.gfx_autoresolution && isdouble);
+	optIDouble3->setEnabled(!changed_prefs.gfx_autoresolution && isdouble);
+	cboResolution->setEnabled(!changed_prefs.gfx_autoresolution);
 }
 
 bool HelpPanelDisplay(std::vector<std::string>& helptext)
