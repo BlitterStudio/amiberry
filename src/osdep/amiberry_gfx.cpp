@@ -144,7 +144,7 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
-void set_scaling_option(uae_prefs* p, int width, int height)
+void set_scaling_option(const uae_prefs* p, const int width, const int height)
 {
 	if (p->scaling_method == -1) {
 		if (isModeAspectRatioExact(&sdl_mode, width, height))
@@ -2779,8 +2779,13 @@ void auto_crop_image()
 		last_cy = cy;
 		force_auto_crop = false;
 
-		int width = (cw * 2) >> currprefs.gfx_resolution;
-		int height = (ch * 2) >> currprefs.gfx_vresolution;
+		int width = cw;
+		int height = ch;
+		if (currprefs.gfx_vresolution == VRES_NONDOUBLE)
+		{
+			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
+				height *= 2;
+		}
 		if (currprefs.gfx_correct_aspect == 0)
 		{
 			width = sdl_mode.w;
