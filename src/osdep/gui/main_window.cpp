@@ -303,7 +303,7 @@ void amiberry_gui_init()
         else
         {
             // otherwise go for Full-window
-            mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+            mode = SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALWAYS_ON_TOP;
         }
 
         if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
@@ -351,8 +351,6 @@ void amiberry_gui_init()
 		}
 	}
 
-    SDL_RaiseWindow(mon->gui_window);
-
 	if (mon->gui_renderer == nullptr)
 	{
 		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -373,6 +371,8 @@ void amiberry_gui_init()
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
+
+	SDL_RaiseWindow(mon->gui_window);
 
 	//-------------------------------------------------
 	// Create helpers for GUI framework
