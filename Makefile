@@ -112,7 +112,7 @@ ifneq (,$(findstring rpi5,$(PLATFORM)))
      CPUFLAGS = -mcpu=cortex-a76 -mfpu=neon-fp-armv8
 endif
 
-# Mac OS X M1 CPU flags
+# MacOS Apple Silicon CPU flags
 ifneq (,$(findstring osx-m1,$(PLATFORM)))
 	CPUFLAGS=-mcpu=apple-m1
 endif
@@ -237,7 +237,7 @@ else ifeq ($(PLATFORM),oga)
 	CPPFLAGS += $(CPPFLAGS64)
 	AARCH64 = 1
 
-# macOS Apple Silicon (SDL2, 64-bit, M1)
+# macOS Apple Silicon (SDL2, 64-bit, Apple Silicon)
 else ifeq ($(PLATFORM),osx-m1)
 	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
 	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
