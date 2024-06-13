@@ -38,5 +38,6 @@ extern void vkbd_redraw(void);
 extern void vkbd_toggle(void);
 extern bool vkbd_process(int state, int* keycode, int* pressed);
 extern bool vkbd_is_active(void);
+extern void vkbd_update_position_from_texture();
 
 #endif // VKBD_H

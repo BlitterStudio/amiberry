@@ -702,6 +702,19 @@ static int vkbd_find_index(int key)
 	return index;
 }
 
+void vkbd_update_position_from_texture()
+{
+	int width, height;
+	SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
+	int renderedWidth = crop_rect.w, rendererHeight = crop_rect.h;
+
+	vkbdEndX = (renderedWidth - width) / 2;
+	vkbdEndY = rendererHeight - height;
+
+	vkbdStartX = (renderedWidth - width) / 2;
+	vkbdStartY = rendererHeight;
+}
+
 void vkbd_update(bool createTextures)
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -746,15 +759,7 @@ void vkbd_update(bool createTextures)
 
 	if (createTextures)
 	{
-		int width, height;
-		SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
-		int renderedWidth = crop_rect.w, rendererHeight = crop_rect.h;
-
-		vkbdEndX = (renderedWidth - width) / 2;
-		vkbdEndY = rendererHeight - height;
-
-		vkbdStartX = (renderedWidth - width) / 2;
-		vkbdStartY = rendererHeight;
+		vkbd_update_position_from_texture();
 	}
 #endif
 

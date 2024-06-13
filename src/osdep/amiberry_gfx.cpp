@@ -2809,6 +2809,11 @@ void auto_crop_image()
 			SDL_RenderSetLogicalSize(mon->amiga_renderer, height, width);
 			renderQuad = { -(width - height) / 2, (width - height) / 2, width, height };
 		}
+
+		if (vkbd_allowed(0))
+		{
+			vkbd_update_position_from_texture();
+		}
 #endif
 	}
 
