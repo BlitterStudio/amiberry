@@ -290,7 +290,7 @@ void amiberry_gui_init()
         Uint32 mode;
         if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
         {
-			mode =  SDL_WINDOW_RESIZABLE;
+			mode = SDL_WINDOW_RESIZABLE;
             if (currprefs.gui_alwaysontop)
                 mode |= SDL_WINDOW_ALWAYS_ON_TOP;
             if (currprefs.start_minimized)
@@ -372,6 +372,7 @@ void amiberry_gui_init()
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 
+	SDL_SetWindowGrab(mon->gui_window, SDL_TRUE);
 	SDL_RaiseWindow(mon->gui_window);
 
 	//-------------------------------------------------
