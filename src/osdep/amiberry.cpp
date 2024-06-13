@@ -615,11 +615,13 @@ bool ismouseactive (void)
 //TODO: maybe implement this
 void target_inputdevice_unacquire(bool full)
 {
+	struct AmigaMonitor* mon = &AMonitors[0];
 	//close_tablet(tablet);
 	//tablet = NULL;
-	//if (full) {
-	//	rawinput_release();
-	//}
+	if (full) {
+		//rawinput_release();
+		SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+	}
 }
 void target_inputdevice_acquire(void)
 {
@@ -627,6 +629,7 @@ void target_inputdevice_acquire(void)
 	target_inputdevice_unacquire(false);
 	//tablet = open_tablet(mon->hAmigaWnd);
 	//rawinput_alloc();
+	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 }
 
 static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpause)

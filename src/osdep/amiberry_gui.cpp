@@ -542,6 +542,8 @@ void gui_display(int shortcut)
 		setmouseactive(0, 1);
 	}
 	//rawinput_alloc();
+	struct AmigaMonitor* mon = &AMonitors[0];
+	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 	fpscounter_reset();
 	//screenshot_free();
 	//write_disk_history();
