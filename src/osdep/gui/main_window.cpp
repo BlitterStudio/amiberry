@@ -372,7 +372,6 @@ void amiberry_gui_init()
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 
-	SDL_SetWindowGrab(mon->gui_window, SDL_TRUE);
 	SDL_RaiseWindow(mon->gui_window);
 
 	//-------------------------------------------------
