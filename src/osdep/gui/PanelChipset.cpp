@@ -96,14 +96,14 @@ public:
 					n2 = true;
 					chkMemoryCycleExact->setSelected(n2);
 				}
-				else
-				{
-					if (changed_prefs.cpu_model < 68020)
-					{
-						n2 = false;
-						chkMemoryCycleExact->setSelected(n2);
-					}
-				}
+				//else
+				//{
+				//	if (changed_prefs.cpu_model < 68020)
+				//	{
+				//		n2 = false;
+				//		chkMemoryCycleExact->setSelected(n2);
+				//	}
+				//}
 			}
 			changed_prefs.cpu_cycle_exact = n1;
 			changed_prefs.cpu_memory_cycle_exact = changed_prefs.blitter_cycle_exact = n2;
