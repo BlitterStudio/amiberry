@@ -257,6 +257,8 @@ static void SDL2_init()
 				mode |= SDL_WINDOW_HIDDEN;
 			else
 				mode |= SDL_WINDOW_SHOWN;
+			// Set Window allow high DPI by default
+			mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 #ifdef USE_OPENGL
 			mode |= SDL_WINDOW_OPENGL;
 #endif
