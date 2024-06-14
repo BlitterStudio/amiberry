@@ -2244,15 +2244,20 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 		p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 	}
-	
-	p->scaling_method = -1; //Default is Auto
+
+	//Default is Auto
+	p->scaling_method = -1; 
 	if (amiberry_options.default_scaling_method != -1)
 	{
-		// only valid values are -1 (Auto), 0 (Nearest), 1 (Linear) 2 (Integer)
+		// only valid values are -1 (Auto), 0 (Nearest), 1 (Linear), 2 (Integer)
 		if (amiberry_options.default_scaling_method >= 0 && amiberry_options.default_scaling_method <= 2)
 			p->scaling_method = amiberry_options.default_scaling_method;
 	}
-	
+
+	if (amiberry_options.default_gfx_autoresolution)
+	{
+		p->gfx_autoresolution = amiberry_options.default_gfx_autoresolution;
+	}
 	if (amiberry_options.default_line_mode == 1)
 	{
 		// Double line mode
@@ -3431,6 +3436,9 @@ void save_amiberry_settings(void)
 	// Valid options are: -1 Auto, 0 Nearest Neighbor, 1 Linear
 	write_int_option("default_scaling_method", amiberry_options.default_scaling_method);
 
+	// Enable Auto Resolution Switching by default?
+	write_int_option("default_gfx_autoresolution", amiberry_options.default_gfx_autoresolution);
+
 	// Enable frameskip by default?
 	write_bool_option("default_frameskip", amiberry_options.default_frameskip);
 
@@ -3755,6 +3763,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
 		ret |= cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
+		ret |= cfgfile_intval(option, value, "default_gfx_autoresolution", &amiberry_options.default_gfx_autoresolution, 1);
 		ret |= cfgfile_yesno(option, value, "default_frameskip", &amiberry_options.default_frameskip);
 		ret |= cfgfile_yesno(option, value, "default_correct_aspect_ratio", &amiberry_options.default_correct_aspect_ratio);
 		ret |= cfgfile_yesno(option, value, "default_auto_height", &amiberry_options.default_auto_crop);
