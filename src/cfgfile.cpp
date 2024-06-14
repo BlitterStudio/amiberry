@@ -2241,29 +2241,35 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			}
 		}
 #ifdef AMIBERRY
+		// custom controls SAVING
 		std::string mode;
 		std::string buffer;
-		didata* did = &di_joystick[jp->id - JSEM_JOYS];
 
-		// custom options SAVING
+		const auto host_joy_id = jp->id - JSEM_JOYS;
+		// skip non-joystick ports
+		if (host_joy_id < 0 || host_joy_id > MAX_INPUT_DEVICES)
+			continue;
+
+		didata* did = &di_joystick[host_joy_id];
+
 		for (int m = 0; m < 2; ++m)
 		{
-			mode = (m == 0) ? "none" : "hotkey";
+			mode = m == 0 ? "none" : "hotkey";
 			for (int n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n) // loop through all buttons
 			{
 				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
-				const auto b = (m == 0) ? did->mapping.amiberry_custom_none[n] : did->mapping.amiberry_custom_hotkey[n];
+				const auto b = m == 0 ? did->mapping.amiberry_custom_none[n] : did->mapping.amiberry_custom_hotkey[n];
 
-				_tcscpy(tmp2, (b > 0) ? _T(find_inputevent_name(b)) : _T(""));
+				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));
 				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
 			}
 
 			for (int n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
 			{
 				buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
-				const auto b = (m == 0) ? did->mapping.amiberry_custom_axis_none[n] : did->mapping.amiberry_custom_axis_hotkey[n];
+				const auto b = m == 0 ? did->mapping.amiberry_custom_axis_none[n] : did->mapping.amiberry_custom_axis_hotkey[n];
 
-				_tcscpy(tmp2, (b > 0) ? _T(find_inputevent_name(b)) : _T(""));
+				_tcscpy(tmp2, b > 0 ? _T(find_inputevent_name(b)) : _T(""));
 				cfgfile_dwrite_str(f, buffer.c_str(), tmp2);
 			}
 		}
@@ -3434,80 +3440,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		return 1;
 	}
 
-#ifdef AMIBERRY
-	auto option_string = string(option);
-	// Only do this loop if the option starts with "joyport"
-	if (option_string.rfind("joyport", 0) == 0)
-	{
-		std::string buffer;
-		std::string mode;
-		// custom options LOADING
-		for (i = 0; i < MAX_JPORTS; ++i)
-		{
-			const auto host_joy_id = currprefs.jports[i].id - JSEM_JOYS;
-			didata* did = &di_joystick[host_joy_id];
-
-			for (int m = 0; m < 2; ++m)
-			{
-				mode = (m == 0) ? "none" : "hotkey";
-
-				for (int n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
-				{
-					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
-					if (buffer == option_string)
-					{
-						auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
-
-						if (m == 0)
-							did->mapping.amiberry_custom_none[n] = b;
-						else
-							did->mapping.amiberry_custom_hotkey[n] = b;
-
-						return 1;
-					}
-				}
-
-				for (int n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
-				{
-					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
-					if (buffer == option_string)
-					{
-						auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
-
-						if (m == 0)
-							did->mapping.amiberry_custom_axis_none[n] = b;
-						else
-							did->mapping.amiberry_custom_axis_hotkey[n] = b;
-
-						return 1;
-					}
-				}
-			}
-		}
-	}
-
-	if (option_string.rfind("whdload_", 0) == 0)
-	{
-		/* Read in WHDLoad Options  */
-		if (cfgfile_string(option, value, _T("whdload_slave"), whdload_prefs.selected_slave.filename)
-			|| cfgfile_intval(option, value, _T("whdload_custom1"), &whdload_prefs.selected_slave.custom1.value, 1)
-			|| cfgfile_intval(option, value, _T("whdload_custom2"), &whdload_prefs.selected_slave.custom2.value, 1)
-			|| cfgfile_intval(option, value, _T("whdload_custom3"), &whdload_prefs.selected_slave.custom3.value, 1)
-			|| cfgfile_intval(option, value, _T("whdload_custom4"), &whdload_prefs.selected_slave.custom4.value, 1)
-			|| cfgfile_intval(option, value, _T("whdload_custom5"), &whdload_prefs.selected_slave.custom5.value, 1)
-			|| cfgfile_string(option, value, _T("whdload_custom"), whdload_prefs.custom)
-			|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &whdload_prefs.button_wait)
-			|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &whdload_prefs.show_splash)
-			|| cfgfile_intval(option, value, _T("whdload_configdelay"), &whdload_prefs.config_delay, 1)
-			|| cfgfile_yesno(option, value, _T("whdload_writecache"), &whdload_prefs.write_cache)
-			|| cfgfile_yesno(option, value, _T("whdload_quit_on_exit"), &whdload_prefs.quit_on_exit)
-			)
-		{
-			return 1;
-		}
-	}
-#endif
-
 	for (tmpp = option; *tmpp != '\0'; tmpp++)
 		if (_istupper (*tmpp))
 			*tmpp = _totlower (*tmpp);
@@ -4667,6 +4599,34 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 			}
 		}
 		return 1;
+	}
+#endif
+
+#ifdef AMIBERRY
+	auto option_string = string(option);
+
+	if (load_custom_options(p, option_string, value))
+		return 1;
+		
+	if (option_string.rfind("whdload_", 0) == 0)
+	{
+		/* Read in WHDLoad Options  */
+		if (cfgfile_string(option, value, _T("whdload_slave"), whdload_prefs.selected_slave.filename)
+			|| cfgfile_intval(option, value, _T("whdload_custom1"), &whdload_prefs.selected_slave.custom1.value, 1)
+			|| cfgfile_intval(option, value, _T("whdload_custom2"), &whdload_prefs.selected_slave.custom2.value, 1)
+			|| cfgfile_intval(option, value, _T("whdload_custom3"), &whdload_prefs.selected_slave.custom3.value, 1)
+			|| cfgfile_intval(option, value, _T("whdload_custom4"), &whdload_prefs.selected_slave.custom4.value, 1)
+			|| cfgfile_intval(option, value, _T("whdload_custom5"), &whdload_prefs.selected_slave.custom5.value, 1)
+			|| cfgfile_string(option, value, _T("whdload_custom"), whdload_prefs.custom)
+			|| cfgfile_yesno(option, value, _T("whdload_buttonwait"), &whdload_prefs.button_wait)
+			|| cfgfile_yesno(option, value, _T("whdload_showsplash"), &whdload_prefs.show_splash)
+			|| cfgfile_intval(option, value, _T("whdload_configdelay"), &whdload_prefs.config_delay, 1)
+			|| cfgfile_yesno(option, value, _T("whdload_writecache"), &whdload_prefs.write_cache)
+			|| cfgfile_yesno(option, value, _T("whdload_quit_on_exit"), &whdload_prefs.quit_on_exit)
+			)
+		{
+			return 1;
+		}
 	}
 #endif
 

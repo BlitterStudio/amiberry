@@ -347,6 +347,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	if (std::filesystem::exists(uae_config))
 	{
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
+		config_loaded = true;
 		return;
 	}
 
@@ -1180,7 +1181,6 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
-	bool custom_config_loaded = false;
 	write_log("WHDBooter Launched\n");
 
 	if (lstAvailableROMs.empty())
@@ -1242,7 +1242,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	{
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
-		custom_config_loaded = true;
+		config_loaded = true;
 	}
 
 	// If we have a slave, create a startup-sequence
@@ -1307,7 +1307,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 #endif
 
 	// if we already loaded a .uae config, we don't need to do the below manual setup for hardware
-	if (custom_config_loaded)
+	if (config_loaded)
 	{
 		write_log("WHDBooter - %s found; ignoring WHD Quickstart setup.\n", uae_config.c_str());
 		return;
