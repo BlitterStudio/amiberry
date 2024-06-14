@@ -1314,6 +1314,7 @@ struct amiberry_options
 	bool default_horizontal_centering = false;
 	bool default_vertical_centering = false;
 	int default_scaling_method = -1;
+	int default_gfx_autoresolution = 0;
 	bool default_frameskip = false;
 	bool default_correct_aspect_ratio = true;
 	bool default_auto_crop = false;
