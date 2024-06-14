@@ -285,12 +285,26 @@ void amiberry_gui_init()
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 	}
 
+	// If KMSDRM is detected, force Full-Window mode
+	if (kmsdrm_detected)
+	{
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	}
+
 	if (!mon->gui_window)
 	{
+		write_log("Creating Amiberry GUI window...\n");
         Uint32 mode;
-        if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
+        if (sdl_mode.w >= 800 && sdl_mode.h >= 600)
         {
-			mode = SDL_WINDOW_RESIZABLE;
+			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
+			if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW)
+				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+			else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLSCREEN)
+				mode = SDL_WINDOW_FULLSCREEN;
+			else
+				mode = SDL_WINDOW_RESIZABLE;
             if (currprefs.gui_alwaysontop)
                 mode |= SDL_WINDOW_ALWAYS_ON_TOP;
             if (currprefs.start_minimized)
@@ -306,23 +320,23 @@ void amiberry_gui_init()
             mode = SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALWAYS_ON_TOP;
         }
 
-        if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
+        if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
         {
-            mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-                                               SDL_WINDOWPOS_CENTERED,
-                                               SDL_WINDOWPOS_CENTERED,
-                                               GUI_HEIGHT * amiberry_options.window_scaling,
-                                               GUI_WIDTH * amiberry_options.window_scaling,
-                                               mode);
+			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
+				GUI_WIDTH * amiberry_options.window_scaling,
+				GUI_HEIGHT * amiberry_options.window_scaling,
+				mode);
         }
         else
         {
-            mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-                                               SDL_WINDOWPOS_CENTERED,
-                                               SDL_WINDOWPOS_CENTERED,
-                                               GUI_WIDTH * amiberry_options.window_scaling,
-                                               GUI_HEIGHT * amiberry_options.window_scaling,
-                                               mode);
+			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
+				GUI_HEIGHT * amiberry_options.window_scaling,
+				GUI_WIDTH * amiberry_options.window_scaling,
+				mode);
         }
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
@@ -331,23 +345,6 @@ void amiberry_gui_init()
 		{
 			SDL_SetWindowIcon(mon->gui_window, icon_surface);
 			SDL_FreeSurface(icon_surface);
-		}
-	}
-	else if (mon->gui_window)
-	{
-		const auto window_flags = SDL_GetWindowFlags(mon->gui_window);
-		const bool is_maximized = window_flags & SDL_WINDOW_MAXIMIZED;
-		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
-		if (!is_maximized && !is_fullscreen)
-		{
-			if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-			{
-				SDL_SetWindowSize(mon->gui_window, GUI_HEIGHT, GUI_WIDTH);
-			}
-			else
-			{
-				SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
-			}
 		}
 	}
 
