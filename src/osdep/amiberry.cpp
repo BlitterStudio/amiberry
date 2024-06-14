@@ -1649,7 +1649,8 @@ void process_event(const SDL_Event& event)
 		
 		case SDL_JOYDEVICEADDED:
 		case SDL_JOYDEVICEREMOVED:
-			handle_joy_device_event();
+			// Disable this for now, as it forces a re-import of joysticks which will reset the controller mappings
+			//handle_joy_device_event();
 			break;
 
 		case SDL_CONTROLLERBUTTONDOWN:
@@ -2318,6 +2319,10 @@ void target_default_options(struct uae_prefs* p, int type)
 	p->use_retroarch_menu = amiberry_options.default_retroarch_menu;
 	p->use_retroarch_reset = amiberry_options.default_retroarch_reset;
 	p->use_retroarch_vkbd = amiberry_options.default_retroarch_vkbd;
+
+	// Default IDs for ports 0 and 1: Mouse and first joystick
+	p->jports[0].id = JSEM_MICE;
+	p->jports[1].id = JSEM_JOYS;
 
 	whdload_prefs.button_wait = amiberry_options.default_whd_buttonwait;
 	whdload_prefs.show_splash = amiberry_options.default_whd_showsplash;

@@ -1071,6 +1071,59 @@ static int init_joystick()
 	return 1;
 }
 
+bool load_custom_options(const uae_prefs* p, const std::string& option, const TCHAR* value)
+{
+	// Only do this loop if the option starts with "joyport"
+	if (option.rfind("joyport", 0) == 0)
+	{
+		std::string buffer;
+
+		for (int i = 0; i < MAX_JPORTS; ++i)
+		{
+			const auto host_joy_id = p->jports[i].id - JSEM_JOYS;
+			// skip non-joystick ports
+			if (host_joy_id < 0 || host_joy_id > MAX_INPUT_DEVICES)
+				continue;
+
+			didata* did = &di_joystick[host_joy_id];
+
+			for (int m = 0; m < 2; ++m)
+			{
+				std::string mode = m == 0 ? "none" : "hotkey";
+				for (int n = 0; n < SDL_CONTROLLER_BUTTON_MAX; ++n)
+				{
+					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_" + mode + "_" + SDL_GameControllerGetStringForButton(static_cast<SDL_GameControllerButton>(n));
+					if (buffer == option)
+					{
+						const auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
+						if (m == 0)
+							did->mapping.amiberry_custom_none[n] = b;
+						else
+							did->mapping.amiberry_custom_hotkey[n] = b;
+						return true;
+					}
+				}
+
+				for (int n = 0; n < SDL_CONTROLLER_AXIS_MAX; ++n)
+				{
+					buffer = "joyport" + std::to_string(i) + "_amiberry_custom_axis_" + mode + "_" + SDL_GameControllerGetStringForAxis(static_cast<SDL_GameControllerAxis>(n));
+					if (buffer == option)
+					{
+						const auto b = (find_inputevent(value) > -1) ? remap_event_list[find_inputevent(value)] : 0;
+						if (m == 0)
+							did->mapping.amiberry_custom_axis_none[n] = b;
+						else
+							did->mapping.amiberry_custom_axis_hotkey[n] = b;
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 void import_joysticks()
 {
 	joystick_inited = 0;
