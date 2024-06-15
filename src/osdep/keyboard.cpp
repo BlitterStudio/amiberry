@@ -436,7 +436,7 @@ bool my_kbd_handler(int keyboard, int scancode, int newstate, bool alwaysrelease
 				&& (fullscreen_key.modifiers.lalt || fullscreen_key.modifiers.ralt) == alt_state
 				&& (fullscreen_key.modifiers.lgui || fullscreen_key.modifiers.rgui) == win_state)
 			{
-				inputdevice_add_inputcode(AKS_TOGGLEDEFAULTSCREEN, 1, nullptr);
+				inputdevice_add_inputcode(AKS_TOGGLEWINDOWFULLWINDOW, 1, nullptr);
 				scancode = 0;
 			}
 		}
