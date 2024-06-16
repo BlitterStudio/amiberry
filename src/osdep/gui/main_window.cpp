@@ -296,15 +296,10 @@ void amiberry_gui_init()
 	{
 		write_log("Creating Amiberry GUI window...\n");
         Uint32 mode;
-        if (sdl_mode.w >= 800 && sdl_mode.h >= 600)
+        if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
         {
 			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
-			if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW)
-				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-			else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLSCREEN)
-				mode = SDL_WINDOW_FULLSCREEN;
-			else
-				mode = SDL_WINDOW_RESIZABLE;
+			mode = SDL_WINDOW_RESIZABLE;
             if (currprefs.gui_alwaysontop)
                 mode |= SDL_WINDOW_ALWAYS_ON_TOP;
             if (currprefs.start_minimized)
