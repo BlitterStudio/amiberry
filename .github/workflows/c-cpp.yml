@@ -17,13 +17,19 @@ on:
 jobs:
 
   build-macOS-x86_64:
-    runs-on: macos-14
+    runs-on: macos-13
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
         with:
           submodules: 'true'
 
+      - name: Fix homebrew in Github Runner
+        run: |
+          for f in $(find /usr/local/bin -type l -print); do \
+            (readlink $f | grep -q -s "/Library") && echo Removing "$f" && rm -f "$f"; \
+          done || exit 0
+          
       - name: Install dependencies
         run: |
           brew update
