@@ -285,35 +285,29 @@ void amiberry_gui_init()
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 	}
 
-	// If KMSDRM is detected, force Full-Window mode
-	if (kmsdrm_detected)
-	{
-		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
-		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
-	}
-
 	if (!mon->gui_window)
 	{
 		write_log("Creating Amiberry GUI window...\n");
         Uint32 mode;
-        if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
+        if (!kmsdrm_detected)
         {
-			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
+			// Only enable Windowed mode if we're running under x11
 			mode = SDL_WINDOW_RESIZABLE;
-            if (currprefs.gui_alwaysontop)
-                mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-            if (currprefs.start_minimized)
-                mode |= SDL_WINDOW_HIDDEN;
-            else
-                mode |= SDL_WINDOW_SHOWN;
-			// Set Window allow high DPI by default
-			mode |= SDL_WINDOW_ALLOW_HIGHDPI;
-        }
+		}
+		else
+		{
+			// otherwise go for Full-window
+			mode = SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALWAYS_ON_TOP;
+		}
+
+        if (currprefs.gui_alwaysontop)
+            mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+        if (currprefs.start_minimized)
+            mode |= SDL_WINDOW_HIDDEN;
         else
-        {
-            // otherwise go for Full-window
-            mode = SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALWAYS_ON_TOP;
-        }
+            mode |= SDL_WINDOW_SHOWN;
+		// Set Window allow high DPI by default
+		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 
         if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
         {

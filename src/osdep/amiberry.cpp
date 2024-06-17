@@ -677,29 +677,6 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, bool allowpaus
 		}
 	}
 
-	bool gotfocus = false;
-	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
-		SDL_Window* window = SDL_GetMouseFocus();
-		if (window && (window == AMonitors[i].amiga_window)) {
-			mon = &AMonitors[i];
-			break;
-		}
-	}
-	for (int i = 0; i < MAX_AMIGAMONITORS; i++) {
-		if (iswindowfocus(&AMonitors[i])) {
-			gotfocus = true;
-			break;
-		}
-	}
-	if (!gotfocus) {
-		write_log("Tried to capture mouse but window didn't have focus! F=%d A=%d\n", focus, mouseactive);
-		focus = 0;
-		mouseactive = 0;
-		active = 0;
-		releasecapture(mon);
-		recapture = 0;
-	}
-
 	if (mouseactive > 0)
 		focus = mon->monitor_id + 1;
 

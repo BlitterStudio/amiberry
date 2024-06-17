@@ -229,45 +229,39 @@ static void SDL2_init()
 		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
 
-	// If KMSDRM is detected, force Full-Window mode
-	if (kmsdrm_detected)
-	{
-		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
-		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
-	}
-
 	if (!mon->amiga_window)
 	{
 		write_log("Creating Amiberry window...\n");
 		Uint32 mode;
-		if (sdl_mode.w >= 800 && sdl_mode.h >= 600)
+		if (!kmsdrm_detected)
 		{
-			// Only enable Windowed mode if we're running under x11 and the resolution is at least 800x600
+			// Only enable Windowed mode if we're running under x11
 			if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW)
 				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 			else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLSCREEN)
 				mode = SDL_WINDOW_FULLSCREEN;
 			else
 				mode = SDL_WINDOW_RESIZABLE;
-			if (currprefs.borderless)
-				mode |= SDL_WINDOW_BORDERLESS;
-			if (currprefs.main_alwaysontop)
-				mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-			if (currprefs.start_minimized)
-				mode |= SDL_WINDOW_HIDDEN;
-			else
-				mode |= SDL_WINDOW_SHOWN;
-			// Set Window allow high DPI by default
-			mode |= SDL_WINDOW_ALLOW_HIGHDPI;
-#ifdef USE_OPENGL
-			mode |= SDL_WINDOW_OPENGL;
-#endif
 		}
 		else
 		{
 			// otherwise go for Full-window
 			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 		}
+		
+		if (currprefs.borderless)
+			mode |= SDL_WINDOW_BORDERLESS;
+		if (currprefs.main_alwaysontop)
+			mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+		if (currprefs.start_minimized)
+			mode |= SDL_WINDOW_HIDDEN;
+		else
+			mode |= SDL_WINDOW_SHOWN;
+		// Set Window allow high DPI by default
+		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef USE_OPENGL
+		mode |= SDL_WINDOW_OPENGL;
+#endif
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
