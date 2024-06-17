@@ -3166,39 +3166,43 @@ void get_floppy_sounds_path(char* out, int size)
 
 int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int isdefault)
 {
+	int type2;
 	auto result = 0;
 
-	write_log(_T("target_cfgfile_load(): load file %s\n"), filename);
+	if (type < 0)
+		type = 0;
 
-	discard_prefs(p, type);
-	default_prefs(p, true, 0);
+	if (type == 0 || type == 1) {
+		discard_prefs(p, 0);
+	}
+	type2 = type;
+	if (type == 0 || type == 3) {
+		default_prefs(p, true, type);
+		write_log(_T("config reset\n"));
+	}
 
 	const char* ptr = strstr(const_cast<char*>(filename), ".uae");
 	if (ptr)
 	{
-		auto config_type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
-		result = cfgfile_load(p, filename, &config_type, 0, 1);
+		result = cfgfile_load(p, filename, &type2, 0, isdefault ? 0 : 1);
 	}
+	if (!result)
+		return result;
+	if (type > 0)
+		return result;
 	if (result)
 		extract_filename(filename, last_loaded_config);
 
-	if (result)
+	for (auto i = 0; i < p->nr_floppies; ++i)
 	{
-		for (auto i = 0; i < p->nr_floppies; ++i)
-		{
-			if (!DISK_validate_filename(p, p->floppyslots[i].df, i, nullptr, 0, nullptr, nullptr, nullptr))
-				p->floppyslots[i].df[0] = 0;
-			disk_insert(i, p->floppyslots[i].df);
-			if (strlen(p->floppyslots[i].df) > 0)
-				add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
-		}
-
-		if (!isdefault)
-			inputdevice_updateconfig(nullptr, p);
-
-		SetLastActiveConfig(filename);
+		if (!DISK_validate_filename(p, p->floppyslots[i].df, i, nullptr, 0, nullptr, nullptr, nullptr))
+			p->floppyslots[i].df[0] = 0;
+		disk_insert(i, p->floppyslots[i].df);
+		if (strlen(p->floppyslots[i].df) > 0)
+			add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
 	}
 
+	SetLastActiveConfig(filename);
 	return result;
 }
 
