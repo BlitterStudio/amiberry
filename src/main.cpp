@@ -1120,99 +1120,95 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				usage();
 			if (ret && extra_arg)
 				i++;
-		} else if (i == argc - 1) {
-			// if last config entry is an orphan and nothing else was loaded:
-			// check if it is config file or statefile
-			if (!loaded) {
-				auto* const txt = parsetextpath(argv[i]);
-				const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
+		} else if (!loaded) {
+			auto* const txt = parsetextpath(argv[i]);
+			const auto txt2 = get_filename_extension(txt); // Extract the extension from the string  (incl '.')
 #ifdef AMIBERRY
-				if (_tcscmp(txt2.c_str(), ".lha") == 0)
-				{
-					write_log("WHDLoad... %s\n", txt);
-					add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
-					whdload_prefs.whdload_filename = std::string(txt);
-					whdload_auto_prefs(&currprefs, txt);
-					SetLastActiveConfig(txt);
-				}
-				else if (_tcscmp(txt2.c_str(), ".cue") == 0
-					|| _tcscmp(txt2.c_str(), ".iso") == 0
-					|| _tcscmp(txt2.c_str(), ".chd") == 0)
-				{
-					write_log("CDTV/CD32... %s\n", txt);
-					add_file_to_mru_list(lstMRUCDList, std::string(txt));
-					cd_auto_prefs(&currprefs, txt);
-					SetLastActiveConfig(txt);
-				}
-				else if (_tcscmp(txt2.c_str(), ".adf") == 0
-					|| _tcscmp(txt2.c_str(), ".adz") == 0
-					|| _tcscmp(txt2.c_str(), ".dms") == 0
-					|| _tcscmp(txt2.c_str(), ".ipf") == 0
-					|| _tcscmp(txt2.c_str(), ".zip") == 0
-					)
-				{
-					write_log("Floppy... %s\n", txt);
+			if (_tcscmp(txt2.c_str(), ".lha") == 0)
+			{
+				write_log("WHDLoad... %s\n", txt);
+				add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
+				whdload_prefs.whdload_filename = std::string(txt);
+				whdload_auto_prefs(&currprefs, txt);
+				SetLastActiveConfig(txt);
+			}
+			else if (_tcscmp(txt2.c_str(), ".cue") == 0
+				|| _tcscmp(txt2.c_str(), ".iso") == 0
+				|| _tcscmp(txt2.c_str(), ".chd") == 0)
+			{
+				write_log("CDTV/CD32... %s\n", txt);
+				add_file_to_mru_list(lstMRUCDList, std::string(txt));
+				cd_auto_prefs(&currprefs, txt);
+				SetLastActiveConfig(txt);
+			}
+			else if (_tcscmp(txt2.c_str(), ".adf") == 0
+				|| _tcscmp(txt2.c_str(), ".adz") == 0
+				|| _tcscmp(txt2.c_str(), ".dms") == 0
+				|| _tcscmp(txt2.c_str(), ".ipf") == 0
+				|| _tcscmp(txt2.c_str(), ".zip") == 0
+				)
+			{
+				write_log("Floppy... %s\n", txt);
 
-					// Check if a config file exists with the same name as the disk image
-					auto full_path = std::string(txt);
-					std::filesystem::path p(full_path);
-					std::string filename = p.filename().string();
+				// Check if a config file exists with the same name as the disk image
+				auto full_path = std::string(txt);
+				std::filesystem::path p(full_path);
+				std::string filename = p.filename().string();
 
-					std::string config_extension = "uae";
-					const std::size_t pos = filename.find_last_of(".");
-					if (pos != std::string::npos) {
-						filename = filename.substr(0, pos) + "." + config_extension;
-					}
-					else {
-						// No extension found
-						filename += "." + config_extension;
-					}
-
-					std::string config_full_path = get_configuration_path() + filename;
-					if (my_existsfile2(config_full_path.c_str()))
-					{
-						write_log("Loading configuration file %s\n", config_full_path.c_str());
-						currprefs.mountitems = 0;
-						target_cfgfile_load(&currprefs, config_full_path.c_str(),
-							firstconfig
-							? CONFIG_TYPE_ALL
-							: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
-						currprefs.start_gui = false;
-						config_loaded = true;
-					}
-					else
-					{
-						write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
-						disk_insert(0, txt);
-						SetLastActiveConfig(txt);
-						currprefs.start_gui = false;
-					}
+				std::string config_extension = "uae";
+				const std::size_t pos = filename.find_last_of(".");
+				if (pos != std::string::npos) {
+					filename = filename.substr(0, pos) + "." + config_extension;
 				}
-#endif
+				else {
+					// No extension found
+					filename += "." + config_extension;
+				}
+
+				std::string config_full_path = get_configuration_path() + filename;
+				if (my_existsfile2(config_full_path.c_str()))
+				{
+					write_log("Loading configuration file %s\n", config_full_path.c_str());
+					currprefs.mountitems = 0;
+					target_cfgfile_load(&currprefs, config_full_path.c_str(),
+						firstconfig
+						? CONFIG_TYPE_ALL
+						: CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST | CONFIG_TYPE_NORESET, 0);
+					currprefs.start_gui = false;
+					config_loaded = true;
+				}
 				else
 				{
-					auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
-					if (z) {
-						const auto type = zfile_gettype(z);
-						zfile_fclose(z);
-						if (type == ZFILE_CONFIGURATION) {
-							currprefs.mountitems = 0;
-							target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
-							config_loaded = true;
-						}
-						else if (type == ZFILE_STATEFILE) {
-							savestate_state = STATE_DORESTORE;
-							_tcscpy(savestate_fname, txt);
-						}
-					}
+					write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
+					disk_insert(0, txt);
+					SetLastActiveConfig(txt);
+					currprefs.start_gui = false;
 				}
-				xfree(txt);
 			}
+#endif
 			else
 			{
-				printf("Unknown option %s\n", argv[i]);
-				usage();
+				auto* const z = zfile_fopen(txt, _T("rb"), ZFD_NORMAL);
+				if (z) {
+					const auto type = zfile_gettype(z);
+					zfile_fclose(z);
+					if (type == ZFILE_CONFIGURATION) {
+						currprefs.mountitems = 0;
+						target_cfgfile_load(&currprefs, txt, CONFIG_TYPE_ALL, 0);
+						config_loaded = true;
+					}
+					else if (type == ZFILE_STATEFILE) {
+						savestate_state = STATE_DORESTORE;
+						_tcscpy(savestate_fname, txt);
+					}
+				}
 			}
+			xfree(txt);
+		}
+		else
+		{
+			printf("Unknown option %s\n", argv[i]);
+			usage();
 		}
 	}
 }
