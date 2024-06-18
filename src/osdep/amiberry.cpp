@@ -3184,10 +3184,14 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, int
 	const char* ptr = strstr(const_cast<char*>(filename), ".uae");
 	if (ptr)
 	{
+		write_log(_T("target_cfgfile_load: loading file %s\n"), filename);
 		result = cfgfile_load(p, filename, &type2, 0, isdefault ? 0 : 1);
 	}
 	if (!result)
+	{
+		write_log(_T("target_cfgfile_load: loading file %s failed\n"), filename);
 		return result;
+	}
 	if (type > 0)
 		return result;
 	if (result)
