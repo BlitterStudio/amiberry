@@ -9,8 +9,13 @@ set(CMAKE_C_FLAGS_DEBUG "-Og -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-d
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
+# Use libgpiod to control GPIO LEDs?
+option(USE_GPIOD "Use GPIOD" OFF)
+# Use DBUS to control the emulator?
 option(USE_DBUS "Use DBus" OFF)
+# Use OpenGL for rendering?
 option(USE_OPENGL "Use OpenGL" OFF)
+# Enable Link Time Optimization?
 option(WITH_LTO "Enable Link Time Optimization" OFF)
 
 # Set build type to "Release" if user did not specify any build type yet
@@ -353,6 +358,12 @@ endif ()
 find_package(SDL2 REQUIRED CONFIG REQUIRED COMPONENTS SDL2)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+
+if (USE_GPIOD)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GPIOD)
+    find_library(LIBGPIOD_LIBRARIES gpiod REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBGPIOD_LIBRARIES})
+endif ()
 
 if (USE_DBUS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DBUS)
