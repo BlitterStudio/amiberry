@@ -1503,10 +1503,10 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	}
 	else {
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_A, 0, port, port ? INPUTEVENT_JOY2_FIRE_BUTTON : INPUTEVENT_JOY1_FIRE_BUTTON, af, gp);
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_B))
+		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_B))
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_B, 0, port, port ? INPUTEVENT_JOY2_2ND_BUTTON : INPUTEVENT_JOY1_2ND_BUTTON, gp);
 		if (mode != JSEM_MODE_JOYSTICK) {
-			if (isrealbutton(did, SDL_CONTROLLER_BUTTON_X))
+			//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_X))
 				setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_X, 0, port, port ? INPUTEVENT_JOY2_3RD_BUTTON : INPUTEVENT_JOY1_3RD_BUTTON, gp);
 		}
 	}
@@ -1522,9 +1522,9 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 
 	if (mode == JSEM_MODE_JOYSTICK_CD32) {
 		setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_A, port, port ? INPUTEVENT_JOY2_CD32_RED : INPUTEVENT_JOY1_CD32_RED, af, gp);
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_B)) {
+		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_B)) {
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_B, 0, port, port ? INPUTEVENT_JOY2_CD32_BLUE : INPUTEVENT_JOY1_CD32_BLUE, gp);
-		}
+		//}
 		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_X))
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_X, 0, port, port ? INPUTEVENT_JOY2_CD32_GREEN : INPUTEVENT_JOY1_CD32_GREEN, gp);
 		//if (isrealbutton(did, SDL_CONTROLLER_BUTTON_Y))
@@ -1585,18 +1585,18 @@ int input_get_default_joystick(struct uae_input_device* uid, int i, int port, in
 	if (mode < JSEM_MODE_JOYSTICK_CD32)
 	{
 		// Key P: commonly used for Pause in many games => START
-		if (isrealbutton(did, SDL_CONTROLLER_BUTTON_START) && !button_map[0][SDL_CONTROLLER_BUTTON_START])
+		if (!button_map[0][SDL_CONTROLLER_BUTTON_START])
 			setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_START, 0, port, INPUTEVENT_KEY_P, gp);
 
 		// Mouse map uses these already, so we skip them if that's enabled
 		if (currprefs.jports[port].mousemap == 0)
 		{
 			// Space bar used on many games as a 2nd fire button => LShoulder
-			if (isrealbutton(did, SDL_CONTROLLER_BUTTON_LEFTSHOULDER) && !button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_LEFTSHOULDER])
 				setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_LEFTSHOULDER, 0, port, INPUTEVENT_KEY_SPACE, gp);
 
 			// Return => RShoulder
-			if (isrealbutton(did, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) && !button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
+			if (!button_map[0][SDL_CONTROLLER_BUTTON_RIGHTSHOULDER])
 				setid(uid, i, ID_BUTTON_OFFSET + SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 0, port, INPUTEVENT_KEY_RETURN, gp);
 		}
 	}
