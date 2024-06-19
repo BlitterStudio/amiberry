@@ -9254,7 +9254,6 @@ static void swapjoydevice (struct uae_input_device *uid, const int **swaps)
 // swap gameports ports, remember to handle customized ports too
 void inputdevice_swap_compa_ports (struct uae_prefs *prefs, int portswap)
 {
-	struct jport tmp;
 #if 0
 	if ((prefs->jports[portswap].id == JPORT_CUSTOM || prefs->jports[portswap + 1].id == JPORT_CUSTOM)) {
 		const int *swaps[2];
@@ -9267,10 +9266,11 @@ void inputdevice_swap_compa_ports (struct uae_prefs *prefs, int portswap)
 		}
 	}
 #endif
+	struct jport tmp = { 0 };
 	memcpy (&tmp, &prefs->jports[portswap], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap], &prefs->jports[portswap + 1], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap + 1], &tmp, sizeof (struct jport));
-	inputdevice_updateconfig (NULL, prefs);
+	inputdevice_updateconfig(NULL, prefs);
 }
 
 // swap device "devnum" ports 0<>1 and 2<>3

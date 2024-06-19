@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 314
+#define NEXT_ROM_ID 316
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -1026,6 +1026,15 @@ static struct romdata roms[] = {
 	0xf78c8fa2, 0x07656cbf,0xdb6135f2,0x6add3b5f,0xa4ce5d46,0xdda706f9, NULL, NULL, 10 },
 	ALTROMPN(302, 1, 1, 65536, ROMTYPE_EVEN  | ROMTYPE_8BIT, NULL, 0x01c9a503, 0xf61ec2cd,0x241b2bf8,0xa982e81e,0x5a181786,0x01f0a0a0)
 	ALTROMPN(302, 1, 2, 65536, ROMTYPE_ODD   | ROMTYPE_8BIT, NULL, 0x78eb6fd6, 0xe4048180,0x95f03b6e,0x0746620f,0x5ce48c3f,0x7149b8a0)
+	{ _T("Picmatic Marbella Vice (100Hz TV)"), 0, 0, 0, 0, _T("ALG\0"), 131072, 315, 0, 0, ROMTYPE_ALG, 0, 0, NULL,
+	0xae2d2805, 0x0e392b46,0x15777fe5,0x24ed27ab,0xf8539d4b,0xb1e3ba9d, NULL, NULL, 10 },
+	ALTROMPN(315, 1, 1, 65536, ROMTYPE_EVEN  | ROMTYPE_8BIT, NULL, 0xd2b5e5ca, 0xde765039,0x61076aca,0xd405db9e,0x83bd5334,0xb02bf908)
+	ALTROMPN(315, 1, 2, 65536, ROMTYPE_ODD   | ROMTYPE_8BIT, NULL, 0x2c9ebccb, 0x4e8dcb85,0x26a8debb,0x70f3f567,0x13903ba8,0xbfbb3ed5)
+	// spilz0d4-odd-27-9-95-salvajes-displays-27c512.u4, spilz0d4-even-27-9-95-salvajes-displays-27c512.u5
+	{ _T("Picmatic Tierras Salvajes (100Hz TV)"), 0, 0, 0, 0, _T("ALG\0"), 131072, 314, 0, 0, ROMTYPE_ALG, 0, 0, NULL,
+	0xe6c539ec, 0xa5f70818,0xd93ab33c,0xa4149a50,0xc38b2a13,0x0ee5d7ab, NULL, NULL, 10 },
+	ALTROMPN(314, 1, 1, 65536, ROMTYPE_EVEN  | ROMTYPE_8BIT, NULL, 0x730e4696, 0x4db0cc7d,0x160de5e7,0x0f1d1842,0xfa94adb8,0xee7f954f)
+	ALTROMPN(314, 1, 2, 65536, ROMTYPE_ODD   | ROMTYPE_8BIT, NULL, 0xd46dd5e0, 0x7d808c6e,0xd88bf9a9,0x8cdb468c,0xe71c0952,0xb0b5d7b2)
 
 	{ NULL }
 
