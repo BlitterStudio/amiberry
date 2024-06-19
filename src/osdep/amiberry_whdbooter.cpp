@@ -22,6 +22,7 @@
 #include "custom.h"
 #include "xwin.h"
 #include "drawing.h"
+#include "midiemu.h"
 
 extern void SetLastActiveConfig(const char* filename);
 extern std::string current_dir;
@@ -353,6 +354,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	prefs->start_gui = false;
 
+	const auto is_mt32 = _tcsstr(filepath, _T("MT32")) != nullptr || _tcsstr(filepath, _T("mt32")) != nullptr;
 	const auto is_cdtv = _tcsstr(filepath, _T("CDTV")) != nullptr || _tcsstr(filepath, _T("cdtv")) != nullptr;
 	bool is_cd32 = false;
 
@@ -368,6 +370,22 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [CD32]"));
 		// SET THE BASE AMIGA (CD32)
 		built_in_prefs(prefs, 8, 3, 0, 0);
+	}
+
+	if (is_mt32)
+	{
+		// Check if we have the MT32 ROMs
+		auto mt32_available = midi_emu_available(_T("MT-32"));
+		auto cm32_available = midi_emu_available(_T("CM-32L"));
+		if (!mt32_available && !cm32_available)
+		{
+			write_log("MT32/CM32L MIDI Emulation not available (ROMs missing)\n");
+		}
+		else
+		{
+			// Enable MIDI output
+			_tcscpy(prefs->midioutdev, mt32_available ? "Munt MT-32" : "Munt CM-32L");
+		}
 	}
 
 	// enable CD
@@ -1320,6 +1338,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// DO CHECKS FOR AGA / CD32
 	const auto is_aga = _tcsstr(filename, "AGA") != nullptr || strcmpi(game_detail.chipset.c_str(), "AGA") == 0;
 	const auto is_cd32 = _tcsstr(filename, "CD32") != nullptr || strcmpi(game_detail.chipset.c_str(), "CD32") == 0;
+	const auto is_mt32 = _tcsstr(filename, _T("MT32")) != nullptr || _tcsstr(filename, _T("mt32")) != nullptr;
 
 	if (is_aga || is_cd32 || !a600_available)
 	{
@@ -1334,6 +1353,22 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		write_log("WHDBooter - Host: A600 ROM selected\n");
 		built_in_prefs(prefs, 2, A600_CONFIG, 0, 0);
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad]"));
+	}
+
+	if (is_mt32)
+	{
+		// Check if we have the MT32 ROMs
+		auto mt32_available = midi_emu_available(_T("MT-32"));
+		auto cm32_available = midi_emu_available(_T("CM-32L"));
+		if (!mt32_available && !cm32_available)
+		{
+			write_log("MT32/CM32L MIDI Emulation not available (ROMs missing)\n");
+		}
+		else
+		{
+			// Enable MIDI output
+			_tcscpy(prefs->midioutdev, mt32_available ? "Munt MT-32" : "Munt CM-32L");
+		}
 	}
 
 	// SET THE WHD BOOTER AND GAME DATA
