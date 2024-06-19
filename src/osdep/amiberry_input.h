@@ -52,6 +52,7 @@ struct didata {
 	std::string controller_name{};
 	std::string joystick_name{};
 
+	std::string guid{};
 	bool is_controller{};
 	SDL_GameController* controller{};
 	SDL_Joystick* joystick{};

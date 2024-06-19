@@ -836,6 +836,7 @@ void open_as_game_controller(struct didata* did, const int i)
 	did->joystick = SDL_GameControllerGetJoystick(did->controller);
 	did->joystick_id = SDL_JoystickInstanceID(did->joystick);
 	SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
+	did->guid = std::string(guid_str);
 
 	if (SDL_GameControllerNameForIndex(i) != nullptr)
 		did->controller_name.assign(SDL_GameControllerNameForIndex(i));
@@ -865,6 +866,7 @@ void open_as_joystick(struct didata* did, const int i)
 	did->is_controller = false;
 	did->joystick_id = SDL_JoystickInstanceID(did->joystick);
 	SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(did->joystick), guid_str, 33);
+	did->guid = std::string(guid_str);
 
 	if (SDL_JoystickNameForIndex(i) != nullptr)
 		did->joystick_name.assign(SDL_JoystickNameForIndex(i));

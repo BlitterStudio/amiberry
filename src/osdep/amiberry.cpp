@@ -1344,13 +1344,17 @@ void handle_clipboard_update_event()
 	}
 }
 
-void handle_joy_device_event()
+void handle_joy_device_event(const int which, const bool removed)
 {
-	write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
-	if (inputdevice_devicechange(&currprefs))
+	const didata* existing_did = &di_joystick[which];
+	if (existing_did->guid == "" || removed)
 	{
-		import_joysticks();
-		joystick_refresh_needed = true;
+		write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
+		if (inputdevice_devicechange(&currprefs))
+		{
+			import_joysticks();
+			joystick_refresh_needed = true;
+		}
 	}
 }
 
@@ -1625,9 +1629,10 @@ void process_event(const SDL_Event& event)
 			break;
 		
 		case SDL_JOYDEVICEADDED:
+			handle_joy_device_event(event.jdevice.which, false);
+			break;
 		case SDL_JOYDEVICEREMOVED:
-			// Disable this for now, as it forces a re-import of joysticks which will reset the controller mappings
-			//handle_joy_device_event();
+			handle_joy_device_event(0, true);
 			break;
 
 		case SDL_CONTROLLERBUTTONDOWN:
