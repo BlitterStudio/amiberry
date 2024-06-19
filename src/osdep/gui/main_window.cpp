@@ -422,6 +422,7 @@ void check_input()
 
 	auto got_event = 0;
 	didata* did = &di_joystick[0];
+	didata* existing_did = nullptr;
 	
 	while (SDL_PollEvent(&gui_event))
 	{
@@ -437,10 +438,18 @@ void check_input()
 			break;
 
 		case SDL_JOYDEVICEADDED:
-		//case SDL_CONTROLLERDEVICEADDED:
+			// Check if we need to re-import joysticks
+			existing_did = &di_joystick[gui_event.jdevice.which];
+			if (existing_did->guid == "")
+			{
+				write_log("GUI: SDL2 Controller/Joystick added, re-running import joysticks...\n");
+				import_joysticks();
+				joystick_refresh_needed = true;
+				RefreshPanelInput();
+			}
+			return;
 		case SDL_JOYDEVICEREMOVED:
-		//case SDL_CONTROLLERDEVICEREMOVED:
-			write_log("GUI: SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
+			write_log("GUI: SDL2 Controller/Joystick removed, re-running import joysticks...\n");
 			if (inputdevice_devicechange(&currprefs))
 			{
 				import_joysticks();
