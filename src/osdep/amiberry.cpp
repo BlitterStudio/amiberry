@@ -1347,7 +1347,7 @@ void handle_clipboard_update_event()
 void handle_joy_device_event(const int which, const bool removed)
 {
 	const didata* existing_did = &di_joystick[which];
-	if (existing_did->guid == "" || removed)
+	if (existing_did->guid.empty() || removed)
 	{
 		write_log("SDL2 Controller/Joystick added or removed, re-running import joysticks...\n");
 		if (inputdevice_devicechange(&currprefs))
@@ -1632,7 +1632,7 @@ void process_event(const SDL_Event& event)
 			handle_joy_device_event(event.jdevice.which, false);
 			break;
 		case SDL_JOYDEVICEREMOVED:
-			handle_joy_device_event(0, true);
+			handle_joy_device_event(event.jdevice.which, true);
 			break;
 
 		case SDL_CONTROLLERBUTTONDOWN:
