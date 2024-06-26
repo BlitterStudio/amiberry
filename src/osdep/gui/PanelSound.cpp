@@ -540,7 +540,7 @@ void InitPanelSound(const config_category& category)
 	optSoundPush->setId("optSoundPush");
 	optSoundPush->setBaseColor(gui_base_color);
 	optSoundPush->setBackgroundColor(gui_textbox_background_color);
-	optSoundPull->setForegroundColor(gui_foreground_color);
+	optSoundPush->setForegroundColor(gui_foreground_color);
 	optSoundPush->addActionListener(sound_action_listener);
 	
 	grpSound = new gcn::Window("Sound Emulation");
