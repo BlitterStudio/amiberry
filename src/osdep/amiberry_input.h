@@ -114,7 +114,7 @@ extern bool init_kb_from_retroarch(int index, const std::string& retroarch_file)
 extern std::string sanitize_retroarch_name(std::string s);
 extern int find_retroarch(const std::string& find_setting, const std::string& retroarch_file);
 extern bool find_retroarch_polarity(const std::string& find_setting, const std::string& retroarch_file);
-extern controller_mapping map_from_retroarch(controller_mapping mapping, const std::string& control_config, const int player);
+extern void map_from_retroarch(controller_mapping& mapping, const std::string& control_config, const int player);
 
 extern void read_joystick_buttons(int id);
 extern void read_joystick_axis(int id, int axis, int value);
