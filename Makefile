@@ -673,6 +673,10 @@ clean:
 	$(MAKE) -C external/libguisan clean && $(RM) external/libguisan/libguisan.a
 	$(RM) -r external/mt32emu/build
 	$(RM) external/mt32emu/libmt32emu.a
+	$(RM) -r external/floppybridge/build
+	$(RM) external/floppybridge/libfloppybridge.so
+	$(RM) -r external/capsimage/build
+	$(RM) external/capsimage/libcapsimage.so
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
