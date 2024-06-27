@@ -3990,7 +3990,8 @@ static void init_amiberry_paths(void)
 
 	config_path.append("/Configurations/");
 	controllers_path.append("/Controllers/");
-	data_dir = macos_library_directory.append("/");
+	data_dir = macos_library_directory;
+	data_dir.append("/");
 	whdboot_path.append("/Whdboot/");
 	whdload_arch_path.append("/Lha/");
 	floppy_path.append("/Floppies/");
