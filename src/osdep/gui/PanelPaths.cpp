@@ -216,7 +216,7 @@ public:
 
 		else if (actionEvent.getSource() == cmdLogfilePath)
 		{
-			const char* filter[] = { "amiberry.log", "\0" };
+			const char* filter[] = { ".log", "\0" };
 			path = SelectFile("Select Amiberry Log file", get_logfile_path(), filter, true);
 			if (!path.empty())
 			{
