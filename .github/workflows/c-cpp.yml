@@ -36,9 +36,6 @@ jobs:
           brew upgrade
           brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
 
-      - name: make capsimg
-        run: make capsimg
-
       - name: make for macOS X64
         run: make -j4 PLATFORM=osx-x86
 
@@ -78,9 +75,6 @@ jobs:
           brew upgrade
           brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
 
-      - name: make capsimg
-        run: make capsimg
-
       - name: make for macOS Apple Silicon
         run: make -j4 PLATFORM=osx-m1
 
@@ -119,7 +113,6 @@ jobs:
         image: midwan/amiberry-debian-x86_64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=x86-64
 
     - name: Upload artifact
@@ -169,7 +162,6 @@ jobs:
         image: midwan/amiberry-debian-x86_64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=x86-64
 
     - name: Upload artifact
@@ -213,9 +205,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
-
-    - name: make capsimg
-      run: make capsimg
 
     - name: build for RPI4 64-bit
       run: make -j4 PLATFORM=rpi4-64-sdl2
@@ -267,7 +256,6 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi5-64-sdl2
 
     - name: Upload artifact
@@ -318,7 +306,6 @@ jobs:
         image: midwan/amiberry-debian-armhf:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi5-sdl2
 
     - name: Upload artifact
@@ -368,7 +355,6 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
 
     - name: Upload artifact
@@ -419,7 +405,6 @@ jobs:
         image: midwan/amiberry-debian-armhf:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi4-sdl2
 
     - name: Upload artifact
@@ -469,7 +454,6 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi4-64-sdl2
 
     - name: Upload artifact
@@ -520,7 +504,6 @@ jobs:
         image: midwan/amiberry-debian-armhf:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi4-sdl2
 
     - name: Upload artifact
@@ -571,7 +554,6 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
 
     - name: Upload artifact
@@ -622,7 +604,6 @@ jobs:
         image: midwan/amiberry-debian-armhf:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi3-sdl2
 
     - name: Upload artifact
@@ -673,7 +654,6 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi3-64-sdl2
 
     - name: Upload artifact
@@ -724,7 +704,6 @@ jobs:
         image: midwan/amiberry-debian-armhf:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          make capsimg
           make -j8 PLATFORM=rpi3-sdl2
 
     - name: Upload artifact
