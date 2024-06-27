@@ -3990,7 +3990,7 @@ static void init_amiberry_paths(void)
 
 	config_path.append("/Configurations/");
 	controllers_path.append("/Controllers/");
-	data_dir = macos_library_directory;
+	data_dir = macos_library_directory.append("/");
 	whdboot_path.append("/Whdboot/");
 	whdload_arch_path.append("/Lha/");
 	floppy_path.append("/Floppies/");
@@ -4009,6 +4009,7 @@ static void init_amiberry_paths(void)
 	video_dir.append("/Videos/");
 
 	amiberry_conf_file = data_dir;
+	amiberry_conf_file.append("amiberry.conf");
 #else
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
@@ -4036,8 +4037,8 @@ static void init_amiberry_paths(void)
 	video_dir.append("/videos/");
 
 	amiberry_conf_file = config_path;
-#endif
 	amiberry_conf_file.append("amiberry.conf");
+#endif
 
 	retroarch_file = config_path;
 	retroarch_file.append("retroarch.cfg");
