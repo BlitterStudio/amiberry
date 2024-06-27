@@ -698,7 +698,8 @@ floppybridge:
 
 # The CAPSImg library that Amiberry uses, for accessing IPF disk images
 capsimg:
-	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)
-	cp external/capsimg/capsimg.so ./plugins
+	cmake -DCMAKE_BUILD_TYPE=Release -S external/capsimage -B external/capsimage/build
+	cmake --build external/capsimage/build --target all --parallel
+	cp external/capsimg/build/libcapsimage.so ./plugins
 
 -include $(DEPS)

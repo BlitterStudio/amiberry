@@ -10,7 +10,7 @@ set(MINOR_VERSION 1)
 option(BUILD_SHARED_LIBS "Build a dynamic library instead of static library" ON)
 
 if (APPLE)
-  option(BUILD_FRAMEWORK "Build a macOS framework instead of a shared library" ON)
+  option(BUILD_FRAMEWORK "Build a macOS framework instead of a shared library" OFF)
   set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
   set(BUILD_SHARED_LIBS ON)
 endif()
@@ -31,10 +31,10 @@ set(API_HEADERS ${API_HEADERS} ${CMAKE_BINARY_DIR}/CapsLibVersion.h)
 
 add_library(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${API_HEADERS})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
-  VERSION ${MAJOR_VERSION}.${MINOR_VERSION}
-  SOVERSION ${MAJOR_VERSION}
-  CXX_STANDARD 11)
+#set_target_properties(${PROJECT_NAME} PROPERTIES
+#  VERSION ${MAJOR_VERSION}.${MINOR_VERSION}
+#  SOVERSION ${MAJOR_VERSION}
+#  CXX_STANDARD 11)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
   ${CMAKE_BINARY_DIR}
@@ -74,3 +74,11 @@ install(TARGETS ${PROJECT_NAME}
 if (NOT APPLE OR NOT BUILD_FRAMEWORK)
   install(FILES ${API_HEADERS} DESTINATION include/caps${INCLUDE_SUFFIX})
 endif()
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT BUILD_FRAMEWORK)
+    message(STATUS "macOS platform detected")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND cp libcapsimage.dylib libcapsimage.so
+        COMMAND install_name_tool -id libcapsimage.so libcapsimage.so
+    )
+endif ()
