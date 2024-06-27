@@ -37,6 +37,9 @@ static gcn::StringListModel scaling_method_list(scaling_method);
 static const std::vector<std::string> res_autoswitch = { "Disabled", "Always On", "10%", "33%", "66%" };
 static gcn::StringListModel res_autoswitch_list(res_autoswitch);
 
+static const std::vector<std::string> vsync_options = { "-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz" };
+static gcn::StringListModel vsync_options_list(vsync_options);
+
 static gcn::Window* grpAmigaScreen;
 static gcn::CheckBox* chkManualCrop;
 static gcn::Label* lblAmigaWidth;
@@ -61,7 +64,11 @@ static gcn::Label* lblScreenmode;
 static gcn::DropDown* cboScreenmode;
 static gcn::Label* lblFullscreen;
 static gcn::DropDown* cboFullscreen;
-static gcn::CheckBox* chkVsync;
+
+static gcn::Label* lblVSyncNative;
+static gcn::DropDown* cboVSyncNative;
+static gcn::Label* lblVSyncRtg;
+static gcn::DropDown* cboVSyncRtg;
 
 static gcn::Window* grpCentering;
 static gcn::CheckBox* chkHorizontal;
@@ -139,9 +146,6 @@ public:
 
 		else if (actionEvent.getSource() == chkBorderless)
 			changed_prefs.borderless = chkBorderless->isSelected();
-
-		else if (actionEvent.getSource() == chkVsync)
-			changed_prefs.gfx_apmode[0].gfx_vsync = chkVsync->isSelected();
 
 		else if (actionEvent.getSource() == sldHOffset)
 		{
@@ -237,6 +241,42 @@ public:
 				changed_prefs.gfx_autoresolution = 33;
 			else if (pos == 4)
 				changed_prefs.gfx_autoresolution = 66;
+		}
+
+		int i = cboVSyncNative->getSelected();
+		changed_prefs.gfx_apmode[0].gfx_vsync = 0;
+		changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		if (i == 1) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 1;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+		}
+		else if (i == 2) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+		}
+		else if (i == 3) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 1;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		}
+		else if (i == 4) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		}
+		else if (i == 5) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = -1;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		}
+
+		i = cboVSyncRtg->getSelected();
+		changed_prefs.gfx_apmode[1].gfx_vsync = 0;
+		changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
+		if (i == 1) {
+			changed_prefs.gfx_apmode[1].gfx_vsync = 1;
+			changed_prefs.gfx_apmode[1].gfx_vsyncmode = 1;
+		}
+		else if (i == 2) {
+			changed_prefs.gfx_apmode[1].gfx_vsync = -1;
+			changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
 		}
 
 		RefreshPanelDisplay();
@@ -421,12 +461,27 @@ void InitPanelDisplay(const config_category& category)
 	chkBorderless->setForegroundColor(gui_foreground_color);
 	chkBorderless->addActionListener(amigaScreenActionListener);
 
-	chkVsync = new gcn::CheckBox("VSync");
-	chkVsync->setId("chkVsync");
-	chkVsync->setBaseColor(gui_base_color);
-	chkVsync->setBackgroundColor(gui_textbox_background_color);
-	chkVsync->setForegroundColor(gui_foreground_color);
-	chkVsync->addActionListener(amigaScreenActionListener);
+	lblVSyncNative = new gcn::Label("VSync Native:");
+	lblVSyncNative->setAlignment(gcn::Graphics::LEFT);
+	cboVSyncNative = new gcn::DropDown(&vsync_options_list);
+	cboVSyncNative->setSize(150, cboVSyncNative->getHeight());
+	cboVSyncNative->setBaseColor(gui_base_color);
+	cboVSyncNative->setBackgroundColor(gui_textbox_background_color);
+	cboVSyncNative->setForegroundColor(gui_foreground_color);
+	cboVSyncNative->setSelectionColor(gui_selection_color);
+	cboVSyncNative->setId("cboVSyncNative");
+	cboVSyncNative->addActionListener(amigaScreenActionListener);
+
+	lblVSyncRtg = new gcn::Label("VSync RTG:");
+	lblVSyncRtg->setAlignment(gcn::Graphics::LEFT);
+	cboVSyncRtg = new gcn::DropDown(&vsync_options_list);
+	cboVSyncRtg->setSize(150, cboVSyncRtg->getHeight());
+	cboVSyncRtg->setBaseColor(gui_base_color);
+	cboVSyncRtg->setBackgroundColor(gui_textbox_background_color);
+	cboVSyncRtg->setForegroundColor(gui_foreground_color);
+	cboVSyncRtg->setSelectionColor(gui_selection_color);
+	cboVSyncRtg->setId("cboVSyncRtg");
+	cboVSyncRtg->addActionListener(amigaScreenActionListener);
 
 	lblHOffset = new gcn::Label("H. Offset:");
 	lblHOffset->setAlignment(gcn::Graphics::LEFT);
@@ -590,8 +645,13 @@ void InitPanelDisplay(const config_category& category)
 	posY += sldAmigaHeight->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(chkAutoCrop, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(chkBorderless, chkAutoCrop->getX() + chkAutoCrop->getWidth() + DISTANCE_NEXT_X, posY);
-	grpAmigaScreen->add(chkVsync, chkBorderless->getX() + chkBorderless->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += chkVsync->getHeight() + DISTANCE_NEXT_Y;
+	posY += chkAutoCrop->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(lblVSyncNative, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(cboVSyncNative, lblVSyncNative->getX() + lblVSyncNative->getWidth() + 8, posY);
+	posY += cboVSyncNative->getHeight() + DISTANCE_NEXT_Y;
+	grpAmigaScreen->add(lblVSyncRtg, DISTANCE_BORDER, posY);
+	grpAmigaScreen->add(cboVSyncRtg, cboVSyncNative->getX(), posY);
+	posY += cboVSyncRtg->getHeight() + DISTANCE_NEXT_Y;
 	grpAmigaScreen->add(lblHOffset, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(sldHOffset, lblHOffset->getX() + lblHOffset->getWidth() + DISTANCE_NEXT_X, posY);
 	grpAmigaScreen->add(lblHOffsetValue, sldHOffset->getX() + sldHOffset->getWidth() + 8, posY + 2);
@@ -601,7 +661,7 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(lblVOffsetValue, sldVOffset->getX() + sldVOffset->getWidth() + 8, posY + 2);
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(chkVsync->getX() + chkVsync->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X * 3, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
+	grpAmigaScreen->setSize(cboVSyncNative->getX() + cboVSyncNative->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X * 4, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
 	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_base_color);
 	grpAmigaScreen->setForegroundColor(gui_foreground_color);
@@ -790,7 +850,11 @@ void ExitPanelDisplay()
 	delete cboScreenmode;
 	delete lblFullscreen;
 	delete cboFullscreen;
-	delete chkVsync;
+
+	delete lblVSyncNative;
+	delete lblVSyncRtg;
+	delete cboVSyncNative;
+	delete cboVSyncRtg;
 
 	delete optSingle;
 	delete optDouble;
@@ -879,7 +943,21 @@ void RefreshPanelDisplay()
 	sldVOffset->setEnabled(changed_prefs.gfx_manual_crop);
 
 	chkBorderless->setSelected(changed_prefs.borderless);
-	chkVsync->setSelected(changed_prefs.gfx_apmode[0].gfx_vsync > 0);
+
+	int v = changed_prefs.gfx_apmode[0].gfx_vsync;
+	if (v < 0)
+		v = 5;
+	else if (v > 0) {
+		v = v + (changed_prefs.gfx_apmode[0].gfx_vsyncmode || !v ? 0 : 2);
+	}
+	cboVSyncNative->setSelected(v);
+
+	v = changed_prefs.gfx_apmode[1].gfx_vsync;
+	if (v < 0)
+		v = 2;
+	else if (v > 0)
+		v = 1;
+	cboVSyncRtg->setSelected(v);
 
 	sldHOffset->setValue(changed_prefs.gfx_horizontal_offset);
 	lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));
