@@ -3,17 +3,17 @@
 CWD_VAR=$(cd "$(dirname "$0")"; pwd)
 USERDIR=`echo ~`
 
-if [[ ! -f "$USERDIR/Documents/Amiberry/Configurations/amiberry.conf" ]]; then
-	cat $CWD_VAR/../Resources/Configurations/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" > "$USERDIR/Documents/Amiberry/Configurations/amiberry.conf"
+if [[ ! -f "$USERDIR/Library/Application Support/Amiberry/amiberry.conf" ]]; then
+	cat $CWD_VAR/../Resources/Configurations/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" > "$USERDIR/Library/Application Support/Amiberry/amiberry.conf"
 fi
 
 for file in $CWD_VAR/../Resources/Configurations/**/*(.); do
 	if [[ "$file" != "$CWD_VAR/../Resources/Configurations/amiberry-osx.conf" ]]; then
 		if [[ "$file" != "$CWD_VAR/../Resources/Configurations/amiberry.conf" ]]; then
-			if [[ ! -f "$USERDIR/Documents/Amiberry/Configurations${file##*/Configurations}" ]]; then
-				echo "Copying $file to $USERDIR/Documents/Amiberry/Configurations${file##*/Configurations}"
-				mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Configurations${file##*/Configurations}")
-				cp $file "$USERDIR/Documents/Amiberry/Configurations${file##*/Configurations}"
+			if [[ ! -f "$USERDIR/Library/Application Support/Amiberry${file##*/Configurations}" ]]; then
+				echo "Copying $file to $USERDIR/Library/Application Support/Amiberry${file##*/Configurations}"
+				mkdir -p $(dirname "$USERDIR/Library/Application Support/Amiberry${file##*/Configurations}")
+				cp $file "$USERDIR/Library/Application Support/Amiberry${file##*/Configurations}"
 			fi
 		fi
 	fi
