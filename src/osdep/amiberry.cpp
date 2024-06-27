@@ -3910,14 +3910,6 @@ void init_macos_amiberry_folders(const std::string& macos_amiberry_directory)
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 
-	directory = macos_amiberry_directory + "/Data";
-	if (!my_existsdir(directory.c_str()))
-		my_mkdir(directory.c_str());
-
-	directory = macos_amiberry_directory + "/Data/floppy_sounds";
-	if (!my_existsdir(directory.c_str()))
-		my_mkdir(directory.c_str());
-
 	directory = macos_amiberry_directory + "/Savestates";
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
@@ -3931,6 +3923,16 @@ void init_macos_amiberry_folders(const std::string& macos_amiberry_directory)
 		my_mkdir(directory.c_str());
 
 	directory = macos_amiberry_directory + "/Nvram";
+	if (!my_existsdir(directory.c_str()))
+		my_mkdir(directory.c_str());
+}
+
+void init_macos_library_folders(const std::string& macos_amiberry_directory)
+{
+	if (!my_existsdir(macos_amiberry_directory.c_str()))
+		my_mkdir(macos_amiberry_directory.c_str());
+
+	std::string directory = macos_amiberry_directory + "/floppy_sounds";
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 }
@@ -3965,22 +3967,31 @@ static void init_amiberry_paths(void)
 {
 	current_dir = start_path_data;
 #ifdef __MACH__
-	// MacOS stores these files under the user Documents/Amiberry folder
+	// On MacOS, we these files under the user Documents/Amiberry folder by default
+	// If the folder is missing, we create it and copy the files from the app bundle
+	// The exception is the Data folder and amiberry.conf, which live in the user Library/Application Support/Amiberry folder
 	const std::string macos_home_directory = getenv("HOME");
+	const std::string macos_library_directory = macos_home_directory + "/Library/Application Support/Amiberry";
 	const std::string macos_amiberry_directory = macos_home_directory + "/Documents/Amiberry";
-	if (!my_existsdir(macos_amiberry_directory.c_str()))
+
+	if (!my_existsdir(macos_amiberry_directory.c_str()) || !my_existsdir(macos_library_directory.c_str()))
 	{
-		// Amiberry home dir is missing, generate it and all directories under it
+		//If  Amiberry library dir is missing, generate it
+		init_macos_library_folders(macos_library_directory);
+
+		// If Amiberry home dir is missing, generate it and all directories under it
 		init_macos_amiberry_folders(macos_amiberry_directory);
 		macos_copy_amiberry_files_to_userdir(macos_amiberry_directory);
 	}
-	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
+
+	config_path = controllers_path = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = macos_amiberry_directory;
 
 	config_path.append("/Configurations/");
 	controllers_path.append("/Controllers/");
-	data_dir.append("/Data/");
+	data_dir = macos_library_directory;
+	data_dir.append("/");
 	whdboot_path.append("/Whdboot/");
 	whdload_arch_path.append("/Lha/");
 	floppy_path.append("/Floppies/");
@@ -3997,6 +4008,9 @@ static void init_amiberry_paths(void)
 	nvram_dir.append("/Nvram/");
 	plugins_dir.append("/Plugins/");
 	video_dir.append("/Videos/");
+
+	amiberry_conf_file = data_dir;
+	amiberry_conf_file.append("amiberry.conf");
 #else
 	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
@@ -4022,9 +4036,10 @@ static void init_amiberry_paths(void)
 	nvram_dir.append("/nvram/");
 	plugins_dir.append("/plugins/");
 	video_dir.append("/videos/");
-#endif
+
 	amiberry_conf_file = config_path;
 	amiberry_conf_file.append("amiberry.conf");
+#endif
 
 	retroarch_file = config_path;
 	retroarch_file.append("retroarch.cfg");
