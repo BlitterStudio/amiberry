@@ -1368,27 +1368,27 @@ void read_joystick_buttons(const int id)
 			if (did->mapping.button[did_button] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
 				const int did_state = SDL_JoystickGetButton(did->joystick, did->mapping.button[did_button]) & 1;
-				if (did->buttonaxisparent[did_button] >= 0)
-				{
-					int bstate;
-					const int axis = did->buttonaxisparent[did_button];
-					const int dir = did->buttonaxisparentdir[did_button];
+				//if (did->buttonaxisparent[did_button] >= 0)
+				//{
+				//	int bstate;
+				//	const int axis = did->buttonaxisparent[did_button];
+				//	const int dir = did->buttonaxisparentdir[did_button];
 
-					const int data = SDL_JoystickGetAxis(did->joystick, axis);
-					if (dir)
-						bstate = data > joystick_dead_zone ? 1 : 0;
-					else
-						bstate = data < -joystick_dead_zone ? 1 : 0;
+				//	const int data = SDL_JoystickGetAxis(did->joystick, axis);
+				//	if (dir)
+				//		bstate = data > joystick_dead_zone ? 1 : 0;
+				//	else
+				//		bstate = data < -joystick_dead_zone ? 1 : 0;
 
-					if (axisold[id][did_button] != bstate) {
-						setjoybuttonstate(id, did_button, bstate);
-						axisold[id][did_button] = bstate;
-					}
-				}
-				else
-				{
+				//	if (axisold[id][did_button] != bstate) {
+				//		setjoybuttonstate(id, did_button, bstate);
+				//		axisold[id][did_button] = bstate;
+				//	}
+				//}
+				//else
+				//{
 					setjoybuttonstate(id, did_button + held_offset, did_state);
-				}
+				//}
 			}
 		}
 	}
