@@ -648,7 +648,7 @@ OBJS = \
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
-$(PROG): $(OBJS) $(C_OBJS) guisan mt32emu floppybridge
+$(PROG): $(OBJS) $(C_OBJS) guisan mt32emu floppybridge capsimg
 	$(CXX) -o $(PROG) $(OBJS) $(C_OBJS) $(LDFLAGS)
 ifndef DEBUG
 # want to keep a copy of the binary before stripping? Then enable the below line
