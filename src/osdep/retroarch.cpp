@@ -233,7 +233,7 @@ std::string ra_player_input(std::string retroarch_string, const int player)
 	return retroarch_string;
 }
 
-controller_mapping map_from_retroarch(controller_mapping mapping, const std::string& control_config, const int player)
+void map_from_retroarch(controller_mapping& mapping, const std::string& control_config, const int player)
 {
 	mapping.is_retroarch = true;
 	const std::string button_keys[] = { "input_enable_hotkey_btn", "input_exit_emulator_btn", "input_reset_btn", "input_menu_toggle_btn", "input_osk_toggle_btn" };
@@ -280,6 +280,4 @@ controller_mapping map_from_retroarch(controller_mapping mapping, const std::str
 	write_log("Controller Detection: invert left  x axis: %d\n", mapping.lstick_axis_x_invert);
 	write_log("Controller Detection: invert right y axis: %d\n", mapping.rstick_axis_y_invert);
 	write_log("Controller Detection: invert right x axis: %d\n", mapping.rstick_axis_x_invert);
-
-	return mapping;
 }

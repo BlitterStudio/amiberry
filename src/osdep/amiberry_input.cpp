@@ -947,7 +947,7 @@ void fix_didata(struct didata* did)
 	fixthings(did);
 }
 
-void setup_mapping(struct didata* did, const std::string& controllers, const int id)
+void setup_mapping(didata* did, const std::string& controllers, const int id)
 {
 	std::string retroarch_config_file;
 	if (!did->joystick_name.empty())
@@ -969,7 +969,7 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 		if (retroarch_config_exists)
 		{
 			write_log("Retroarch controller cfg file found, using that for mapping\n");
-			did->mapping = map_from_retroarch(did->mapping, retroarch_config_file, -1);
+			map_from_retroarch(did->mapping, retroarch_config_file, -1);
 		}
 		else
 		{
@@ -987,7 +987,7 @@ void setup_mapping(struct didata* did, const std::string& controllers, const int
 			if (found_player != -1)
 			{
 				write_log("Controller index found in retroarch cfg, using that for mapping\n");
-				did->mapping = map_from_retroarch(did->mapping, retroarch_file, found_player);
+				map_from_retroarch(did->mapping, retroarch_file, found_player);
 			}
 		}
 	}
