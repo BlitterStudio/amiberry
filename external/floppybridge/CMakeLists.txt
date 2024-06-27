@@ -15,11 +15,11 @@ add_library(floppybridge SHARED
     src/SuperCardProBridge.cpp
     src/SuperCardProInterface.cpp
 )
-target_include_directories(floppybridge PRIVATE src)
+target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     message(STATUS "macOS platform detected")
-    add_custom_command(TARGET floppybridge POST_BUILD
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND cp libfloppybridge.dylib libfloppybridge.so
         COMMAND install_name_tool -id libfloppybridge.so libfloppybridge.so
     )

@@ -380,6 +380,7 @@ find_library(LIBMPEG2 mpeg2 REQUIRED)
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
+add_subdirectory(external/capsimage)
 add_subdirectory(external/libguisan)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src external/floppybridge/src)
@@ -438,7 +439,12 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/whdboot $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/
         DEPENDS external/floppybridge)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/
+        DEPENDS external/capsimage)
