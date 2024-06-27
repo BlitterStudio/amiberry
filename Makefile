@@ -700,6 +700,6 @@ floppybridge:
 capsimg:
 	cmake -DCMAKE_BUILD_TYPE=Release -S external/capsimage -B external/capsimage/build
 	cmake --build external/capsimage/build --target all --parallel
-	cp external/capsimg/build/libcapsimage.so ./plugins
+	cp external/capsimage/build/libcapsimage.so ./plugins
 
 -include $(DEPS)
