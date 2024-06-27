@@ -1,0 +1,26 @@
+
+SPS DECODER LIBRARY
+-=================-
+
+HISTORY
+
+2002-12-23 - Initial release
+2003-04-02 - Added flakey/weak bit protection support, bitshifting support
+2003-05-23 - Added memory mapped image support, Speedlock support
+2003-07-05 - Now supports inconsistent gap lengths, a few other minor improvements
+2003-07-14 - Updated: Amiga
+2003-11-25 - Very small memory footprint & fast startup time, a few minor improvements
+2004-02-13 - Multi-platform source port (Linux/Amiga)
+2004-05-02 - New flakey bit API, related changes
+2004-07-31 - Multiple interfaces, overlap/dropout access, version & capability info
+2004-08-09 - Updated: Linux & Amiga
+2004-09-27 - Support for more protection systems
+2004-10-04 - Support for protection system on by Adam Brierley
+2010-06-08 - Generic MFM support, comprehensive gap handling, WD177x FDC emulator
+2011-07-11 - Helper functions to make KryoFlux write functionality easier
+2014-06-14 - Direct support for CT RAW, major refactoring, migrated to SPStudio 
+
+
+--
+The Software Preservation Society
+http://www.softpres.org

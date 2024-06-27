@@ -1,0 +1,7 @@
+.*
+!.gitignore
+!.travis.yml
+Thumbs.db
+/out
+/CMakeSettings.json
+/Releases
