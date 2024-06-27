@@ -67,11 +67,7 @@ int caps_init (void)
 
 	if (init)
 		return 1;
-#ifdef ANDROID
-	UAE_DLHANDLE h = uae_dlopen_plugin(_T("libcapsimage.so"));
-#else
-	UAE_DLHANDLE h = uae_dlopen_plugin(_T("capsimg"));
-#endif
+	UAE_DLHANDLE h = uae_dlopen_plugin(_T("libcapsimage"));
 	if (!h) {
 		if (noticed)
 			return 0;

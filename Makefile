@@ -648,7 +648,7 @@ OBJS = \
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 
-$(PROG): $(OBJS) $(C_OBJS) guisan mt32emu floppybridge
+$(PROG): $(OBJS) $(C_OBJS) guisan mt32emu floppybridge capsimg
 	$(CXX) -o $(PROG) $(OBJS) $(C_OBJS) $(LDFLAGS)
 ifndef DEBUG
 # want to keep a copy of the binary before stripping? Then enable the below line
@@ -673,6 +673,10 @@ clean:
 	$(MAKE) -C external/libguisan clean && $(RM) external/libguisan/libguisan.a
 	$(RM) -r external/mt32emu/build
 	$(RM) external/mt32emu/libmt32emu.a
+	$(RM) -r external/floppybridge/build
+	$(RM) external/floppybridge/libfloppybridge.so
+	$(RM) -r external/capsimage/build
+	$(RM) external/capsimage/libcapsimage.so
 
 cleanprofile:
 	$(RM) $(OBJS:%.o=%.gcda)
@@ -698,7 +702,8 @@ floppybridge:
 
 # The CAPSImg library that Amiberry uses, for accessing IPF disk images
 capsimg:
-	cd external/capsimg && ./bootstrap && ./configure && $(MAKE)
-	cp external/capsimg/capsimg.so ./plugins
+	cmake -DCMAKE_BUILD_TYPE=Release -S external/capsimage -B external/capsimage/build
+	cmake --build external/capsimage/build --target all --parallel
+	cp external/capsimage/build/libcapsimage.so ./plugins
 
 -include $(DEPS)
