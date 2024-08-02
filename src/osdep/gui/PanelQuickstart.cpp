@@ -637,10 +637,10 @@ public:
 							bIgnoreListChange = false;
 						}
 					}
-					RefreshPanelFloppy();
-					RefreshPanelQuickstart();
 				}
 			}
+			RefreshPanelFloppy();
+			RefreshPanelQuickstart();
 		}
 	}
 };
