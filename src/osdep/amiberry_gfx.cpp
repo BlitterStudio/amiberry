@@ -830,7 +830,7 @@ void sortdisplays()
 	for (int mode = 0; mode < 2; mode++)
 	{
 		SDL_DisplayMode dm;
-		for (idx = 0; idx <= numDispModes; idx++)
+		for (idx = 0; idx < numDispModes; idx++)
 		{
 			if (SDL_GetDisplayMode(0, idx, &dm) != 0) {
 				write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
@@ -858,7 +858,6 @@ void sortdisplays()
 			if (!found && SDL_BITSPERPIXEL(dm.format) > 8) {
 				addmode(md, &dm, mode);
 			}
-			idx++;
 		}
 
 	}
