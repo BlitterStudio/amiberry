@@ -829,7 +829,21 @@ void RefreshPanelPaths()
 	chkEnableLogging->setSelected(get_logfile_enabled());
 	chkLogToConsole->setSelected(console_logging > 0);
 	txtLogfilePath->setText(get_logfile_path());
-	
+
+	txtSystemROMs->setEnabled(false);
+	txtConfigPath->setEnabled(false);
+	txtCDPath->setEnabled(false);
+	txtControllersPath->setEnabled(false);
+	txtFloppyPath->setEnabled(false);
+	txtHardDrivesPath->setEnabled(false);
+	txtNvramFiles->setEnabled(false);
+	txtPluginFiles->setEnabled(false);
+	txtRetroArchFile->setEnabled(false);
+	txtScreenshotFiles->setEnabled(false);
+	txtStateFiles->setEnabled(false);
+	txtWHDBootPath->setEnabled(false);
+	txtWHDLoadArchPath->setEnabled(false);
+
 	lblLogfilePath->setEnabled(chkEnableLogging->isSelected());
 	txtLogfilePath->setEnabled(chkEnableLogging->isSelected());
 	cmdLogfilePath->setEnabled(chkEnableLogging->isSelected());
