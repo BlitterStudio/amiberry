@@ -308,7 +308,7 @@ void my_closedir(struct my_opendir_s* mod)
 {
 	if (mod) {
 		closedir(mod->dir);
-		xfree(mod);
+		delete mod;
 	}
 }
 
