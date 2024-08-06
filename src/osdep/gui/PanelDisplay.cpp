@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <guisan/sdl.hpp>
+#include <sstream>
 #include "SelectorEntry.hpp"
 #include "StringListModel.h"
 
