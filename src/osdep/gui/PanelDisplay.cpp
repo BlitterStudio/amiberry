@@ -1,5 +1,8 @@
 #include <guisan.hpp>
+#include <iomanip>
+#include <stdexcept>
 #include <guisan/sdl.hpp>
+#include <sstream>
 #include "SelectorEntry.hpp"
 #include "StringListModel.h"
 
@@ -39,6 +42,9 @@ static gcn::StringListModel res_autoswitch_list(res_autoswitch);
 
 static const std::vector<std::string> vsync_options = { "-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz" };
 static gcn::StringListModel vsync_options_list(vsync_options);
+
+static std::vector<std::string> fps_options = { "PAL", "NTSC"};
+static gcn::StringListModel fps_options_list(fps_options);
 
 static gcn::Window* grpAmigaScreen;
 static gcn::CheckBox* chkManualCrop;
@@ -98,6 +104,12 @@ static gcn::CheckBox* chkFilterLowRes;
 static gcn::CheckBox* chkFrameskip;
 static gcn::Slider* sldRefresh;
 static gcn::Label* lblFrameRate;
+
+static gcn::DropDown* cboFpsRate;
+static gcn::CheckBox* chkFpsAdj;
+static gcn::Slider* sldFpsAdj;
+static gcn::TextField* txtFpsAdj;
+
 static gcn::CheckBox* chkAspect;
 static gcn::CheckBox* chkBlackerThanBlack;
 
@@ -107,6 +119,84 @@ static gcn::Label* lblBrightnessValue;
 
 static gcn::Label* lblResSwitch;
 static gcn::DropDown* cboResSwitch;
+
+class AmigaScreenKeyListener : public gcn::KeyListener
+{
+public:
+	void keyReleased(gcn::KeyEvent& keyEvent) override
+	{
+		if (keyEvent.getSource() == txtFpsAdj && chkFpsAdj->isSelected())
+		{
+			if (keyEvent.getKey().getValue() == gcn::Key::ENTER)
+			{
+				const std::string tmp = txtFpsAdj->getText();
+				if (!tmp.empty()) {
+					TCHAR label[16];
+					label[0] = 0;
+					auto label_string = fps_options[cboFpsRate->getSelected()];
+					strncpy(label, label_string.c_str(), sizeof(label) - 1);
+					label[sizeof(label) - 1] = '\0';
+
+					struct chipset_refresh* cr;
+					for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
+						cr = &changed_prefs.cr[i];
+						if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
+							if (changed_prefs.cr_selected != i) {
+								changed_prefs.cr_selected = i;
+								chkFpsAdj->setSelected(cr->locked);
+								sldFpsAdj->setEnabled(cr->locked);
+								txtFpsAdj->setEnabled(cr->locked);
+							}
+							else {
+								cr->locked = chkFpsAdj->isSelected();
+								if (cr->locked) {
+									cr->inuse = true;
+								}
+								else {
+									// deactivate if plain uncustomized PAL or NTSC
+									if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
+										cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
+										(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
+										cr->inuse = false;
+									}
+								}
+							}
+							break;
+						}
+					}
+					try
+					{
+						double rate;
+						std::stringstream ss(tmp);
+						ss >> rate;
+						if (ss.fail()) {
+							throw std::invalid_argument("Invalid FPS argument in text box");
+						}
+
+						// Round the rate to 6 decimal places
+						rate = std::round(rate * 1e6) / 1e6;
+
+						cr->rate = static_cast<float>(rate);
+					}
+					catch (const std::invalid_argument&) 
+					{
+						write_log("Invalid FPS argument in text box, ignoring value\n");
+					}
+					catch (const std::out_of_range&) {
+						write_log("Out of range FPS argument in text box, ignoring value\n");
+					}
+
+					TCHAR buffer[20];
+					_stprintf(buffer, _T("%.6f"), cr->rate);
+					txtFpsAdj->setText(std::string(buffer));
+					sldFpsAdj->setValue(cr->rate);
+				}
+			}
+		}
+	}
+};
+
+AmigaScreenKeyListener* amigaScreenKeyListener;
 
 class AmigaScreenActionListener : public gcn::ActionListener
 {
@@ -166,6 +256,81 @@ public:
 			sldRefresh->setValue(changed_prefs.gfx_framerate);
 			lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
 			lblFrameRate->adjustSize();
+		}
+		else if (actionEvent.getSource() == cboFpsRate
+			|| actionEvent.getSource() == chkFpsAdj
+			|| actionEvent.getSource() == sldFpsAdj)
+		{
+			sldFpsAdj->setEnabled(chkFpsAdj->isSelected());
+			txtFpsAdj->setEnabled(chkFpsAdj->isSelected());
+
+			int i;
+			bool updaterate = false, updateslider = false;
+			TCHAR label[16];
+			label[0] = 0;
+			auto label_string = fps_options[cboFpsRate->getSelected()];
+			strncpy(label, label_string.c_str(), sizeof(label) - 1);
+			label[sizeof(label) - 1] = '\0';
+
+			struct chipset_refresh* cr;
+			for (i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
+				cr = &changed_prefs.cr[i];
+				if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
+					if (changed_prefs.cr_selected != i) {
+						changed_prefs.cr_selected = i;
+						updaterate = true;
+						updateslider = true;
+						chkFpsAdj->setSelected(cr->locked);
+						sldFpsAdj->setEnabled(cr->locked);
+						txtFpsAdj->setEnabled(cr->locked);
+					}
+					else {
+						cr->locked = chkFpsAdj->isSelected();
+						if (cr->locked) {
+							cr->inuse = true;
+						}
+						else {
+							// deactivate if plain uncustomized PAL or NTSC
+							if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
+								cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
+								(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
+								cr->inuse = false;
+							}
+						}
+					}
+					break;
+				}
+			}
+			if (cr->locked) {
+				if (actionEvent.getSource() == sldFpsAdj) {
+					i = sldFpsAdj->getValue();//xSendDlgItemMessage(hDlg, IDC_FRAMERATE2, TBM_GETPOS, 0, 0);
+					if (i != (int)cr->rate)
+						cr->rate = (float)i;
+					updaterate = true;
+				}
+			}
+			else if (i == CHIPSET_REFRESH_PAL) {
+				cr->rate = 50.0f;
+			}
+			else if (i == CHIPSET_REFRESH_NTSC) {
+				cr->rate = 60.0f;
+			}
+			if (cr->rate > 0 && cr->rate < 1) {
+				cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
+				updaterate = true;
+			}
+			if (cr->rate > 300) {
+				cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
+				updaterate = true;
+			}
+			if (updaterate) {
+				TCHAR buffer[20];
+				_stprintf(buffer, _T("%.6f"), cr->rate);
+				txtFpsAdj->setText(std::string(buffer));
+			}
+			if (updateslider) {
+				sldFpsAdj->setValue(cr->rate);
+			}
 		}
 		else if (actionEvent.getSource() == sldBrightness)
 		{
@@ -386,6 +551,7 @@ static LineModeActionListener* lineModeActionListener;
 void InitPanelDisplay(const config_category& category)
 {
 	amigaScreenActionListener = new AmigaScreenActionListener();
+	amigaScreenKeyListener = new AmigaScreenKeyListener();
 	scalingMethodActionListener = new ScalingMethodActionListener();
 	lineModeActionListener = new LineModeActionListener();
 	
@@ -570,6 +736,38 @@ void InitPanelDisplay(const config_category& category)
 	sldRefresh->addActionListener(amigaScreenActionListener);
 	lblFrameRate = new gcn::Label("50");
 	lblFrameRate->setAlignment(gcn::Graphics::LEFT);
+
+	chkFpsAdj = new gcn::CheckBox("FPS Adj:");
+	chkFpsAdj->setId("chkFpsAdj");
+	chkFpsAdj->setBaseColor(gui_base_color);
+	chkFpsAdj->setBackgroundColor(gui_textbox_background_color);
+	chkFpsAdj->setForegroundColor(gui_foreground_color);
+	chkFpsAdj->addActionListener(amigaScreenActionListener);
+
+	cboFpsRate = new gcn::DropDown(&fps_options_list);
+	cboFpsRate->setSize(80, cboFpsRate->getHeight());
+	cboFpsRate->setBaseColor(gui_base_color);
+	cboFpsRate->setBackgroundColor(gui_textbox_background_color);
+	cboFpsRate->setForegroundColor(gui_foreground_color);
+	cboFpsRate->setSelectionColor(gui_selection_color);
+	cboFpsRate->setId("cboFpsRate");
+	cboFpsRate->addActionListener(amigaScreenActionListener);
+
+	sldFpsAdj = new gcn::Slider(1, 99);
+	sldFpsAdj->setSize(100, SLIDER_HEIGHT);
+	sldFpsAdj->setBaseColor(gui_base_color);
+	sldFpsAdj->setBackgroundColor(gui_textbox_background_color);
+	sldFpsAdj->setForegroundColor(gui_foreground_color);
+	sldFpsAdj->setMarkerLength(20);
+	sldFpsAdj->setStepLength(1);
+	sldFpsAdj->setId("sldFpsAdj");
+	sldFpsAdj->addActionListener(amigaScreenActionListener);
+	txtFpsAdj = new gcn::TextField();
+	txtFpsAdj->setSize(80, TEXTFIELD_HEIGHT);
+	txtFpsAdj->setBaseColor(gui_base_color);
+	txtFpsAdj->setBackgroundColor(gui_textbox_background_color);
+	txtFpsAdj->setForegroundColor(gui_foreground_color);
+	txtFpsAdj->addKeyListener(amigaScreenKeyListener);
 
 	lblBrightness = new gcn::Label("Brightness:");
 	lblBrightness->setAlignment(gcn::Graphics::LEFT);
@@ -804,6 +1002,11 @@ void InitPanelDisplay(const config_category& category)
 	category.panel->add(chkFrameskip, DISTANCE_BORDER, posY);
 	category.panel->add(sldRefresh, chkFrameskip->getX() + chkFrameskip->getWidth() + DISTANCE_NEXT_X + 1, posY);
 	category.panel->add(lblFrameRate, sldRefresh->getX() + sldRefresh->getWidth() + 8, posY + 2);
+
+	category.panel->add(chkFpsAdj, lblFrameRate->getX() + lblFrameRate->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(sldFpsAdj, chkFpsAdj->getX() + chkFpsAdj->getWidth() + DISTANCE_NEXT_X + 1, posY);
+	category.panel->add(txtFpsAdj, sldFpsAdj->getX() + sldFpsAdj->getWidth() + 8, posY);
+	category.panel->add(cboFpsRate, txtFpsAdj->getX(), chkFlickerFixer->getY());
 	posY += chkFrameskip->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblBrightness, DISTANCE_BORDER, posY);
@@ -818,10 +1021,15 @@ void ExitPanelDisplay()
 	delete chkFrameskip;
 	delete sldRefresh;
 	delete lblFrameRate;
+	delete cboFpsRate;
+	delete chkFpsAdj;
+	delete sldFpsAdj;
+	delete txtFpsAdj;
 	delete lblBrightness;
 	delete sldBrightness;
 	delete lblBrightnessValue;
 	delete amigaScreenActionListener;
+	delete amigaScreenKeyListener;
 	delete chkManualCrop;
 	delete lblAmigaWidth;
 	delete sldAmigaWidth;
@@ -881,6 +1089,47 @@ void ExitPanelDisplay()
 	delete cboResSwitch;
 }
 
+void refresh_fps_options()
+{
+	TCHAR buffer[MAX_DPATH];
+	int rates[MAX_CHIPSET_REFRESH_TOTAL];
+	int v;
+	double d;
+
+	fps_options.clear();
+	v = 0;
+	chipset_refresh* selectcr = changed_prefs.ntscmode ? &changed_prefs.cr[CHIPSET_REFRESH_NTSC] : &changed_prefs.cr[CHIPSET_REFRESH_PAL];
+	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
+		struct chipset_refresh* cr = &changed_prefs.cr[i];
+		if (cr->rate > 0) {
+			_tcscpy(buffer, cr->label);
+			if (!buffer[0])
+				_stprintf(buffer, _T(":%d"), i);
+			//xSendDlgItemMessage(hDlg, IDC_RATE2BOX, CB_ADDSTRING, 0, (LPARAM)buffer);
+			fps_options.emplace_back(buffer);
+			d = changed_prefs.chipset_refreshrate;
+			if (abs(d) < 1)
+				d = currprefs.ntscmode ? 60.0 : 50.0;
+			if (selectcr && selectcr->index == cr->index)
+				changed_prefs.cr_selected = i;
+			rates[i] = v;
+			v++;
+		}
+	}
+
+	if (changed_prefs.cr_selected < 0 || changed_prefs.cr[changed_prefs.cr_selected].rate <= 0)
+		changed_prefs.cr_selected = CHIPSET_REFRESH_PAL;
+	selectcr = &changed_prefs.cr[changed_prefs.cr_selected];
+	cboFpsRate->setSelected(rates[changed_prefs.cr_selected]);
+	sldFpsAdj->setValue(selectcr->rate + 0.5);
+	_stprintf(buffer, _T("%.6f"), selectcr->rate);
+	txtFpsAdj->setText(std::string(buffer));
+	chkFpsAdj->setSelected(selectcr->locked);
+
+	txtFpsAdj->setEnabled(selectcr->locked != 0);
+	sldFpsAdj->setEnabled(selectcr->locked != 0);
+}
+
 void RefreshPanelDisplay()
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -890,6 +1139,8 @@ void RefreshPanelDisplay()
 	sldRefresh->setValue(changed_prefs.gfx_framerate);
 	lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
 	lblFrameRate->adjustSize();
+
+	refresh_fps_options();
 
 	sldBrightness->setValue(changed_prefs.gfx_luminance);
 	lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
@@ -1157,6 +1408,10 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back("situations where you are doing high computational work (like 3D-rendering) and you");
 	helptext.emplace_back("don't care about the redraw on the screen. This option can also be useful to get");
 	helptext.emplace_back("to get some more games playable.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("\"FPS Adj.\" - This option allows you to specify a custom frame rate, instead of");
+	helptext.emplace_back("the default ones (PAL or NTSC). This can be useful if your monitor does not handle");
+	helptext.emplace_back("the exact refresh rate required, and you want to have perfect VSync");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("\"Brightness\" - Allows adjustment of the output image brightness, from -200 to 200.");
 	helptext.emplace_back(" ");
