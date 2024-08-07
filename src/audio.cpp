@@ -1859,9 +1859,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 		cdp->state = 2;
 		loadper(nr);
 		cdp->pbufldl = true;
-		if (!currprefs.cpu_memory_cycle_exact) {
-			cdp->intreq2 = false;
-		}
+		cdp->intreq2 = false;
 		cdp->volcnt = 0;
 		audio_state_channel2(nr, false);
 		break;
@@ -2581,8 +2579,8 @@ void AUDxDAT(int nr, uae_u16 v, uaecptr addr)
 	if (!currprefs.cachesize && (cdp->per < PERIOD_LOW * CYCLE_UNIT || currprefs.cpu_compatible)) {
 		int cyc = 0;
 		if (chan_ena) {
-			cyc = 1 * CYCLE_UNIT;
 			// AUDxLEN is processed after 1 CCK delay
+			cyc = 1 * CYCLE_UNIT;
 			if ((cdp->state & 15) == 2 || (cdp->state & 15) == 3) {
 				// But INTREQ2 is set immediately
 				if (cdp->wlen == 1) {
