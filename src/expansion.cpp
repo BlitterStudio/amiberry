@@ -1975,7 +1975,7 @@ void create_68060_nofpu(void)
 
 static bool expamem_init_filesys(struct autoconfig_info *aci)
 {
-	struct uae_prefs* p = aci ? aci->prefs : &currprefs;
+	struct uae_prefs *p = aci ? aci->prefs : &currprefs;
 	bool ks12 = ks12orolder();
 	bool hide = p->uae_hide_autoconfig;
 	bool rom = !(ks12 || !do_mount || p->uaeboard_nodiag);
@@ -5717,7 +5717,7 @@ const struct expansionromtype expansionroms[] = {
 		false, EXPANSIONTYPE_SCSI
 	},
 	{
-		_T("golem"), _T("HD3000"), _T("Kupke"),
+		_T("golemhd3000"), _T("HD3000"), _T("Kupke"),
 		NULL, hd3000_init, NULL, hd3000_add_scsi_unit, ROMTYPE_GOLEMHD3000, 0, 0, BOARD_AUTOCONFIG_Z2, true,
 		NULL, 0,
 		true, EXPANSIONTYPE_CUSTOM | EXPANSIONTYPE_SCSI
