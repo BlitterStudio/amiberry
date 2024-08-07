@@ -7170,8 +7170,16 @@ int cfgfile_load (struct uae_prefs *p, const TCHAR *filename, int *type, int ign
 	write_log (_T("load config '%s':%d\n"), filename, type ? *type : -1);
 	v = cfgfile_load_2 (p, filename, 1, type);
 	if (!v) {
-		cfgfile_warning(_T("cfgfile_load_2 failed\n"));
-		goto end;
+		cfgfile_warning(_T("cfgfile_load_2 failed, retrying with defined config path\n"));
+		// Do another attempt with the configuration path
+		get_configuration_path(tmp, sizeof(tmp) / sizeof(TCHAR));
+		std::string full_path = std::string(tmp) + std::string(filename);
+		v = cfgfile_load_2(p, full_path.c_str(), 1, type);
+		if (!v)
+		{
+			cfgfile_warning(_T("cfgfile_load_2 failed, giving up\n"));
+			goto end;
+		}
 	}
 	// In Amiberry, we only use this function for adding recent disks, not configs
 #ifndef AMIBERRY
