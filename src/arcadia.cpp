@@ -658,8 +658,10 @@ static uae_u32 REGPARAM2 alg_bget (uaecptr addr)
 			// Picmatic 100Hz games
 			int reg = (addr >> 12) & 15;
 			uae_u8 v = 0;
-			uae_u16 x = lightpen_x[1 - picmatic_ply];
-			uae_u16 y = lightpen_y[1 - picmatic_ply] >> currprefs.gfx_vresolution;
+			uae_s16 x = lightpen_x[1 - picmatic_ply];
+			x <<= 1;
+			x >>= currprefs.gfx_resolution;
+			uae_s16 y = lightpen_y[1 - picmatic_ply] >> currprefs.gfx_vresolution;
 			if (reg == 3) {
 				v = 0xff;
 				// left trigger
@@ -1179,11 +1181,13 @@ static void sony_serial_read(uae_u16 w)
 			write_log("LD: USER INDEX\n");
 		break;
 	case 0x81: // USER INDEX ON
+		ld_user_index = 1;
 		ack();
 		if (log_ld)
 			write_log("LD: USER INDEX ON\n");
 		break;
 	case 0x82: // USER INDEX OFF
+		ld_user_index = 0;
 		ack();
 		if (log_ld)
 			write_log(_T("LD: USER INDEX OFF\n"));
@@ -1258,6 +1262,9 @@ static void alg_vsync(void)
 								write_log(_T("LD: Repeat complete\n"));
 							}
 							ld_repcnt = -1;
+							ld_mode = LD_MODE_STILL;
+							ld_direction = 0;
+							pausevideograb(1);
 						} else {
 							ld_address = ld_startaddress;
 							getsetpositionvideograb(ld_address);
