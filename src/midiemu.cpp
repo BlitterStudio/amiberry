@@ -20,12 +20,17 @@ static int midi_evt_time;
 static int midi_emu_freq;
 int midi_emu;
 
-static const TCHAR *cm32lctl[] = {
+static const TCHAR* cm32lctl[] = {
 		_T("cm32l_control"),
 		_T("ctrl_cm32l"),
 		_T("ctrl_cm32ln_1_00"),
 		_T("ctrl_cm32l_1_02"),
 		_T("ctrl_cm32l_1_00"),
+		_T("CM32L_CONTROL"),
+		_T("CTRL_CM32L"),
+		_T("CTRL_CM32LN_1_00"),
+		_T("CTRL_CM32L_1_02"),
+		_T("CTRL_CM32L_1_00"),
 		NULL
 };
 static const TCHAR *mt32ctl[] = {
@@ -40,6 +45,17 @@ static const TCHAR *mt32ctl[] = {
 		_T("ctrl_mt32_2_07"),
 		_T("ctrl_mt32_2_06"),
 		_T("ctrl_mt32_2_03"),
+		_T("MT32_CONTROL"),
+		_T("CTRL_MT32"),
+		_T("CTRL_MT32_1_07"),
+		_T("CTRL_MT32_1_06"),
+		_T("CTRL_MT32_1_05"),
+		_T("CTRL_MT32_1_04"),
+		_T("CTRL_MT32_BLUER"),
+		_T("CTRL_MT32_2_04"),
+		_T("CTRL_MT32_2_07"),
+		_T("CTRL_MT32_2_06"),
+		_T("CTRL_MT32_2_03"),
 		NULL
 };
 
@@ -50,39 +66,54 @@ static bool check_rom(const TCHAR *path, const TCHAR *name)
 	_tcscat(rpath, name);
 	_tcscat(rpath, _T(".rom"));
 	bool exists = my_existsfile(rpath);
+	if (!exists)
+	{
+		// try with uppercase also
+		_tcscpy(rpath, path);
+		_tcscat(rpath, name);
+		_tcscat(rpath, _T(".ROM"));
+		exists = my_existsfile(rpath);
+	}
 	return exists;
 }
 
-static bool load_rom(const TCHAR *path, const TCHAR *name)
+static bool load_rom(const TCHAR* path, const TCHAR* name)
 {
 	mt32emu_return_code err;
 	TCHAR rpath[MAX_DPATH];
-	_tcscpy(rpath, path);
-	_tcscat(rpath, name);
-	_tcscat(rpath, _T(".rom"));
-	write_log(_T("mt32emu_add_rom_file(%s)\n"), rpath);
-	char *n = ua(rpath);
-	err = mt32emu_add_rom_file(mt32context, n);
-	xfree(n);
-	if (err < 0) {
+	char* n;
+
+	// Helper function to attempt loading a ROM file
+	auto try_load_rom = [&](const TCHAR* extension) -> bool {
 		_tcscpy(rpath, path);
 		_tcscat(rpath, name);
-		_tcscat(rpath, _T("_a.rom"));
-		char *n = ua(rpath);
+		_tcscat(rpath, extension);
+		write_log(_T("mt32emu_add_rom_file(%s)\n"), rpath);
+		n = ua(rpath);
 		err = mt32emu_add_rom_file(mt32context, n);
 		xfree(n);
-		if (err >= 0) {
-			_tcscpy(rpath, path);
-			_tcscat(rpath, name);
-			_tcscat(rpath, _T("_b.rom"));
-			char *n = ua(rpath);
-			err = mt32emu_add_rom_file(mt32context, n);
-			xfree(n);
+		return err >= 0;
+		};
+
+	// Try loading with ".rom" and ".ROM" extensions
+	if (try_load_rom(_T(".rom")) || try_load_rom(_T(".ROM"))) {
+		write_log("-> %d\n", err);
+		return true;
+	}
+
+	// Try loading with "_a.rom" and "_a.ROM" extensions
+	if (try_load_rom(_T("_a.rom")) || try_load_rom(_T("_A.ROM"))) {
+		// Try loading with "_b.rom" and "_b.ROM" extensions
+		if (try_load_rom(_T("_b.rom")) || try_load_rom(_T("_B.ROM"))) {
+			write_log("-> %d\n", err);
+			return true;
 		}
 	}
+
 	write_log("-> %d\n", err);
-	return err >= 0;
+	return false;
 }
+
 
 static void midi_emu_add_roms(void)
 {
@@ -97,17 +128,21 @@ static void midi_emu_add_roms(void)
 		return;
 	}
 	if (midi_emu == 1) {
-		if (!load_rom(path, _T("pcm_mt32"))) {
-			if (!load_rom(path, _T("mt32_pcm"))) {
+		if (!load_rom(path, _T("pcm_mt32")) && !load_rom(path, _T("PCM_MT32"))) {
+			if (!load_rom(path, _T("mt32_pcm")) && !load_rom(path, _T("MT32_PCM"))) {
 				load_rom(path, _T("pcm_mt32_l"));
+				load_rom(path, _T("PCM_MT32_L"));
 				load_rom(path, _T("pcm_mt32_h"));
+				load_rom(path, _T("PCM_MT32_H"));
 			}
 		}
 	} else {
-		if (!load_rom(path, _T("pcm_cm32l"))) {
-			if (!load_rom(path, _T("cm32l_pcm"))) {
+		if (!load_rom(path, _T("pcm_cm32l")) && !load_rom(path, _T("PCM_CM32L"))) {
+			if (!load_rom(path, _T("cm32l_pcm")) && !load_rom(path, _T("CM32L_PCM"))) {
 				load_rom(path, _T("pcm_mt32"));
+				load_rom(path, _T("PCM_MT32"));
 				load_rom(path, _T("pcm_cm32l_h"));
+				load_rom(path, _T("PCM_CM32L_H"));
 			}
 		}
 	}
@@ -145,14 +180,18 @@ bool midi_emu_available(const TCHAR *id)
 			continue;
 		}
 		if (me == 1) {
-			if (!check_rom(path, _T("pcm_mt32")) && !check_rom(path, _T("mt32_pcm"))) {
-				if (!check_rom(path, _T("pcm_mt32_l")) || !check_rom(path, _T("pcm_mt32_h"))) {
+			if (!check_rom(path, _T("pcm_mt32")) && !check_rom(path, _T("mt32_pcm"))
+				&& !check_rom(path, _T("PCM_MT32")) && !check_rom(path, _T("MT32_PCM"))) {
+				if ((!check_rom(path, _T("pcm_mt32_l")) && !check_rom(path, _T("PCM_MT32_L")))
+					|| (!check_rom(path, _T("pcm_mt32_h")) && !check_rom(path, _T("PCM_MT32_H")))) {
 					continue;
 				}
 			}
 		} else {
-			if (!check_rom(path, _T("pcm_cm32l")) && !check_rom(path, _T("cm32l_pcm"))) {
-				if (!check_rom(path, _T("pcm_mt32")) || !check_rom(path, _T("pcm_cm32l_h"))) {
+			if (!check_rom(path, _T("pcm_cm32l")) && !check_rom(path, _T("cm32l_pcm"))
+				&& !check_rom(path, _T("PCM_CM32L")) && !check_rom(path, _T("CM32L_PCM"))) {
+				if ((!check_rom(path, _T("pcm_mt32")) && !check_rom(path, _T("PCM_MT32")))
+					|| (!check_rom(path, _T("pcm_cm32l_h")) && !check_rom(path, _T("PCM_CM32L_H")))) {
 					continue;
 				}
 			}
