@@ -42,7 +42,7 @@ Amiberry supports macOS, and has been tested on:
 - Newer macOS versions should work as well
 
 Under macOS, you will need to install the required libraries using Homebrew.
-If you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-macOS)
+For more details on how to do that or if you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-macOS)
 
 ### Dependencies
 
