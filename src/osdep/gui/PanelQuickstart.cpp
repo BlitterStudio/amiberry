@@ -364,6 +364,7 @@ public:
 					bIgnoreListChange = true;
 					cboCDFile->setSelected(0);
 					bIgnoreListChange = false;
+					SetLastActiveConfig(element.c_str());
 				}
 			}
 		}
@@ -635,6 +636,7 @@ public:
 							bIgnoreListChange = true;
 							cboqsDFxFile[i]->setSelected(0);
 							bIgnoreListChange = false;
+							SetLastActiveConfig(element.c_str());
 						}
 					}
 				}

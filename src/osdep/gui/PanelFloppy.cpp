@@ -222,6 +222,7 @@ public:
 						RefreshDiskListModel();
 
 						AdjustDropDownControls();
+						SetLastActiveConfig(tmp.c_str());
 					}
 				}
 				cmdDFxSelect[i]->requestFocus();
@@ -270,6 +271,7 @@ public:
 							bIgnoreListChange = true;
 							cboDFxFile[i]->setSelected(0);
 							bIgnoreListChange = false;
+							SetLastActiveConfig(element.c_str());
 						}
 					}
 				}
