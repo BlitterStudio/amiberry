@@ -260,6 +260,7 @@ public:
 
 					RefreshCDListModel();
 					AdjustDropDownControls();
+					SetLastActiveConfig(tmp.c_str());
 				}
 			}
 			cmdCDSelectFile->requestFocus();
@@ -304,6 +305,7 @@ public:
 					bIgnoreListChange = true;
 					cboCDFile->setSelected(0);
 					bIgnoreListChange = false;
+					SetLastActiveConfig(element.c_str());
 				}
 			}
 		}
