@@ -814,7 +814,7 @@ void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 		dy = 0;
 	}
 
-	//if (specialmonitor_uses_control_lines()) {
+	//if (specialmonitor_uses_control_lines() || !blank) {
 	//	w = -1;
 	//	h = -1;
 	//}

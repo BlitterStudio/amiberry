@@ -250,6 +250,10 @@ static void akiko_nvram_write (int offset, uae_u32 v)
 	switch (offset)
 	{
 	case 0:
+	{
+#if EEPROM_DEBUG
+		uae_u8 o = (cd32_i2c_data_scl ? 0x80 : 0x00) | (cd32_i2c_data_sda ? 0x40 : 0x00);
+#endif
 		if (cd32_i2c_direction & 0x80)
 			cd32_i2c_data_scl = (v & 0x80) != 0;
 		else
@@ -260,10 +264,22 @@ static void akiko_nvram_write (int offset, uae_u32 v)
 		else
 			cd32_i2c_data_sda = true;
 		eeprom_i2c_set(cd32_eeprom, BITBANG_I2C_SDA, cd32_i2c_data_sda);
+#if EEPROM_DEBUG
+		uae_u8 n = (cd32_i2c_data_scl ? 0x80 : 0x00) | (cd32_i2c_data_sda ? 0x40 : 0x00);
+		write_log(_T("Data write: %02x->%02x (%02x)\n"), o, v, n);
+#endif
 		break;
+	}
 	case 2:
+	{
+#if EEPROM_DEBUG
+		if (cd32_i2c_direction != v) {
+			write_log(_T("Direction write: %02x->%02x\n"), cd32_i2c_direction, v);
+		}
+#endif
 		cd32_i2c_direction = v;
 		break;
+	}
 	}
 }
 
@@ -275,9 +291,15 @@ static uae_u32 akiko_nvram_read (int offset)
 	case 0:
 		v |= eeprom_i2c_set(cd32_eeprom, BITBANG_I2C_SCL, cd32_i2c_data_scl) ? 0x80 : 0x00;
 		v |= eeprom_i2c_set(cd32_eeprom, BITBANG_I2C_SDA, cd32_i2c_data_sda) ? 0x40 : 0x00;
+#if EEPROM_DEBUG
+		write_log(_T("Data read: %02x\n"), v);
+#endif
 		break;
 	case 2:
 		v = cd32_i2c_direction;
+#if EEPROM_DEBUG
+		write_log(_T("Direction read: %02x\n"), v);
+#endif
 		break;
 	}
 	return v;
@@ -292,6 +314,20 @@ static uae_u32 akiko_buffer[8];
 static int akiko_read_offset, akiko_write_offset;
 static uae_u32 akiko_result[8];
 
+#if 0
+static void akiko_c2p_do (void)
+{
+	int i;
+
+	for (i = 0; i < 8; i++)
+		akiko_result[i] = 0;
+	/* FIXME: better c2p algoritm than this piece of crap.... */
+	for (i = 0; i < 8 * 32; i++) {
+		if (akiko_buffer[7 - (i >> 5)] & (1 << (i & 31)))
+			akiko_result[i & 7] |= 1 << (i >> 3);
+	}
+}
+#else
 /* Optimised Chunky-to-Planar algorithm by Mequa */
 static uae_u32 akiko_precalc_shift[32];
 static uae_u32 akiko_precalc_bytenum[32][8];
@@ -345,6 +381,7 @@ static void akiko_c2p_do(void)
 						   |  (((akiko_buffer[7] & akiko_precalc_shift[i+24]) != 0) << (akiko_precalc_bytenum[i+24][7]));
 	}
 }
+#endif
 
 static void akiko_c2p_write(int offset, uae_u32 v)
 {
@@ -525,6 +562,14 @@ static void subfunc (uae_u8 *data, int cnt)
 	if (!(cdrom_flags & CDFLAG_SUBCODE))
 		return;
 	uae_sem_wait (&sub_sem);
+#if 0
+	int total = 0;
+	for (int i = 0; i < MAX_SUBCODEBUFFER; i++) {
+		if (subcodebufferinuse[i])
+			total++;
+	}
+	write_log (_T("%d "), total);
+#endif
 	if (subcodebufferinuse[subcodebufferoffsetw]) {
 		memset (subcodebufferinuse, 0,sizeof (subcodebufferinuse));
 		subcodebufferoffsetw = subcodebufferoffset = 0;
@@ -705,6 +750,8 @@ static int cd_qcode (uae_u8 *d)
 			d[10] = tobcd ((uae_u8)(msf >> 0));
 		}
 	}
+//	write_log (_T("%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X.%02X\n"),
+//		d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11]);
 	return 0;
 }
 

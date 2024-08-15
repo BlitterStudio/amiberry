@@ -5791,7 +5791,7 @@ int instruction_breakpoint(TCHAR **c)
 			bpn = &bpnodes[i];
 			if (bpn->enabled && bpn->value1 == trace_param[0]) {
 				bpn->enabled = 0;
-				console_out(_T("Breakpoint removed.\n"));
+				console_out (_T("Breakpoint removed.\n"));
 				trace_mode = 0;
 				return 0;
 			}
@@ -5805,7 +5805,7 @@ int instruction_breakpoint(TCHAR **c)
 			bpn->oper = BREAKPOINT_CMP_EQUAL;
 			bpn->enabled = 1;
 			check_breakpoint_extra(c, bpn);
-			console_out(_T("Breakpoint added.\n"));
+			console_out (_T("Breakpoint added.\n"));
 			trace_mode = 0;
 			break;
 		}

@@ -2563,8 +2563,7 @@ static uae_u16 get_strobe_reg(int slot)
 			if (vpos == 0) {
 				if (agnusa1000) {
 					strobe = 0x3c;
-				}
-				else if (!ecs_agnus) {
+				} else if (!ecs_agnus) {
 					strobe = 0x3a;
 				}
 			}
@@ -16096,7 +16095,7 @@ uae_u8 *save_custom_agacolors(size_t *len, uae_u8 *dstptr)
 		dstbak = dst = xmalloc (uae_u8, 256 * 4);
 	for (int i = 0; i < 256; i++)
 #ifdef AGA
-		SL((current_colors.color_regs_aga[i] & 0xffffff) | (color_regs_genlock[i] ? 0x80000000 : 0));
+		SL ((current_colors.color_regs_aga[i] & 0xffffff) | (color_regs_genlock[i] ? 0x80000000 : 0));
 #else
 		SL (0);
 #endif

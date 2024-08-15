@@ -409,7 +409,7 @@ static void enforcer_display_hit (const TCHAR *addressmode, uae_u32 pc, uaecptr 
 	_stprintf (enforcer_buf_ptr, _T("Name: \"%s\"\n\n"), native_task_name);
 	enforcer_buf_ptr += _tcslen (enforcer_buf_ptr);
 
-	write_log (enforcer_buf);
+	console_out (enforcer_buf);
 	write_log (_T("%s"), enforcer_buf);
 #ifdef DEBUGGER
 	if (!debug_enforcer()) {

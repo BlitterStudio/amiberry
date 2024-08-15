@@ -799,7 +799,7 @@ void draco_bustimeout(uaecptr addr)
 {
 	write_log("draco bus timeout %08x PC=%08x\n", addr, M68K_GETPC);
 	if (currprefs.cs_compatible == CP_DRACO) {
-	draco_reg[3] |= DRSTAT_BUSTIMO;
+		draco_reg[3] |= DRSTAT_BUSTIMO;
 	} else {
 		draco_reg[2] |= 0x80;
 	}
@@ -886,7 +886,7 @@ static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
 
 	if (maxcnt >= 0) {
 		if (addr != 0x020007c3) {
-		write_log(_T("draco_bget %08x %08x\n"), addr, M68K_GETPC);
+			write_log(_T("draco_bget %08x %08x\n"), addr, M68K_GETPC);
 		}
 		maxcnt--;
 	}
@@ -904,7 +904,7 @@ static uae_u32 REGPARAM2 draco_bget(uaecptr addr)
 		if (currprefs.cs_compatible == CP_CASABLANCA) {
 			v = casa_video_bget(addr);
 		} else {
-		draco_bustimeout(addr);
+			draco_bustimeout(addr);
 		}
 		return v;
 	}
@@ -1180,11 +1180,11 @@ static void REGPARAM2 draco_bput(uaecptr addr, uae_u32 b)
 
 	if (addr >= 0x20000000) {
 		if (currprefs.cs_compatible == CP_DRACO) {
-	if (addr >= 0x28000000 && addr < 0x30000000 && draco_have_vmotion) {
-		vmotion_write(addr & 0x07ffffff, b);
-		return;
-	}
-		draco_bustimeout(addr);
+			if (addr >= 0x28000000 && addr < 0x30000000 && draco_have_vmotion) {
+				vmotion_write(addr & 0x07ffffff, b);
+				return;
+			}
+			draco_bustimeout(addr);
 		}
 		return;
 	}
@@ -1378,41 +1378,41 @@ static void draco_hsync(void)
 #endif
 
 	if (currprefs.cs_compatible == CP_DRACO) {
-	ot = draco_timer;
-	draco_timer -= tm;
-	if ((draco_timer > 0xf000 && ot < 0x1000) || (draco_timer < 0x1000 && ot > 0xf000)) {
-		draco_reg[7] |= DRSTAT2_TMRIRQPEN;
-		if (draco_reg[7] & DRSTAT2_TMRINTENA) {
-			draco_irq();
+		ot = draco_timer;
+		draco_timer -= tm;
+		if ((draco_timer > 0xf000 && ot < 0x1000) || (draco_timer < 0x1000 && ot > 0xf000)) {
+			draco_reg[7] |= DRSTAT2_TMRIRQPEN;
+			if (draco_reg[7] & DRSTAT2_TMRINTENA) {
+				draco_irq();
+			}
 		}
-	}
 
-	if (draco_kbd_buffer_len > 0) {
-		draco_keyboard_send();
-	}
-
-	if (draco_kbd_buffer_len == 0 && draco_kbd_in_buffer_len  > 0 && !(draco_reg[3] & DRSTAT_KBDRECV)) {
-		uae_u8 code = (uae_u8)draco_kbd_in_buffer[0];
-		uae_u8 state = (draco_kbd_in_buffer[0] & 0x8000) ? 1 : 0;
-		for (int i = 1; i < draco_kbd_in_buffer_len; i++) {
-			draco_kbd_in_buffer[i - i] = draco_kbd_in_buffer[i];
+		if (draco_kbd_buffer_len > 0) {
+			draco_keyboard_send();
 		}
-		draco_kbd_in_buffer_len--;
-		draco_key_process(code, state);
-	}
 
-	hcnt++;
-	if (hcnt >= 60) {
-		draco_1wire_rtc_count();
-		hcnt = 0;
-	}
+		if (draco_kbd_buffer_len == 0 && draco_kbd_in_buffer_len  > 0 && !(draco_reg[3] & DRSTAT_KBDRECV)) {
+			uae_u8 code = (uae_u8)draco_kbd_in_buffer[0];
+			uae_u8 state = (draco_kbd_in_buffer[0] & 0x8000) ? 1 : 0;
+			for (int i = 1; i < draco_kbd_in_buffer_len; i++) {
+				draco_kbd_in_buffer[i - i] = draco_kbd_in_buffer[i];
+			}
+			draco_kbd_in_buffer_len--;
+			draco_key_process(code, state);
+		}
 
-	draco_watchdog++;
-	if (0 && draco_watchdog > 312 * 50) {
-		IRQ_forced(7, -1);
-		activate_debugger();
-		draco_watchdog = 0;
-	}
+		hcnt++;
+		if (hcnt >= 60) {
+			draco_1wire_rtc_count();
+			hcnt = 0;
+		}
+
+		draco_watchdog++;
+		if (0 && draco_watchdog > 312 * 50) {
+			IRQ_forced(7, -1);
+			activate_debugger();
+			draco_watchdog = 0;
+		}
 	}
 
 	x86_floppy_run();

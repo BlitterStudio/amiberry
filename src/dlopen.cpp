@@ -44,6 +44,11 @@ UAE_DLHANDLE uae_dlopen(const TCHAR *path)
 
 void *uae_dlsym(UAE_DLHANDLE handle, const char *name)
 {
+#if 0
+	if (handle == NULL) {
+		return NULL;
+	}
+#endif
 #ifdef _WIN32
 	return (void *) GetProcAddress(handle, name);
 #else

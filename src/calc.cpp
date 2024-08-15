@@ -765,7 +765,7 @@ int calc(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
         outstring[0] = 0;
     }
     for (int i = 0; i < STACK_SIZE; i++) {
-        struct calcstack* s = &stack[i];
+        struct calcstack *s = &stack[i];
         memset(s, 0, sizeof(struct calcstack));
     }
     if (parse_values(input, output2)) {
