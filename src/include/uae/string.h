@@ -38,6 +38,7 @@
 #define _tcsicmp strcasecmp
 #define _tcslen SDL_strlen
 #define uaestrlen SDL_strlen
+#define uaetcslen SDL_strlen
 #define _tcsncat strncat
 #define _tcsncmp SDL_strncmp
 #define _tcsncpy strncpy

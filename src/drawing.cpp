@@ -55,7 +55,9 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
-//#include "specialmonitors.h"
+#ifdef WITH_SPECIALMONITORS
+#include "specialmonitors.h"
+#endif
 #include "devices.h"
 #include "gfxboard.h"
 
@@ -813,11 +815,12 @@ void set_custom_limits (int w, int h, int dx, int dy, bool blank)
 		h = 0;
 		dy = 0;
 	}
-
-	//if (specialmonitor_uses_control_lines() || !blank) {
-	//	w = -1;
-	//	h = -1;
-	//}
+#ifdef WITH_SPECIALMONITORS
+	if (specialmonitor_uses_control_lines() || !blank) {
+		w = -1;
+		h = -1;
+	}
+#endif
 
 	if (w <= 0 || dx < 0) {
 		visible_left_start = 0;
@@ -4786,7 +4789,9 @@ static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 		refresh_indicator_update(vb);
 }
 
-//extern bool beamracer_debug;
+#ifdef WITH_BEAMRACER
+extern bool beamracer_debug;
+#endif
 
 void draw_lines(int end, int section)
 {
@@ -4812,7 +4817,9 @@ void draw_lines(int end, int section)
 			return;
 	}
 
-	//int section_color_cnt = 4;
+#ifdef WITH_BEAMRACER
+	int section_color_cnt = 4;
+#endif
 
 	vidinfo->outbuffer = vb;
 	if (!lockscr(vb, false, vb->last_drawn_line ? false : true, display_reset > 0))
@@ -4862,7 +4869,8 @@ void draw_lines(int end, int section)
 		hposblank = 0;
 		pfield_draw_line(vb, line, whereline, wherenext);
 
-#if 0
+#ifdef WITH_BEAMRACER
+#if 1
 		if (beamracer_debug) {
 			if (vb->last_drawn_line == end - 4) {
 				section_color_cnt = 4;
@@ -4877,6 +4885,7 @@ void draw_lines(int end, int section)
 				}
 			}
 		}
+#endif
 #endif
 
 		vb->last_drawn_line++;
@@ -4975,7 +4984,7 @@ static void finish_drawing_frame(bool drawlines)
 
 	draw_frame_extras(vb, -1, -1);
 
-#ifndef AMIBERRY
+#ifdef WITH_SPECIALMONITORS
 	// video port adapters
 	if (currprefs.monitoremu) {
 		struct vidbuf_description *outvi = &adisplays[currprefs.monitoremu_mon].gfxvidinfo;
@@ -5055,15 +5064,17 @@ static void finish_drawing_frame(bool drawlines)
 #endif
 
 	// grayscale
-	//if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated &&
-	//	((!currprefs.genlock && (!bplcolorburst_field && currprefs.cs_color_burst)) || currprefs.gfx_grayscale)) {
-	//	setspecialmonitorpos(&vidinfo->tempbuffer);
-	//	emulate_grayscale(vb, &vidinfo->tempbuffer);
-	//	vb = vidinfo->outbuffer = &vidinfo->tempbuffer;
-	//	if (vb->nativepositioning)
-	//		setnativeposition(vb);
-	//	vidinfo->drawbuffer.tempbufferinuse = true;
-	//}
+#ifdef WITH_SPECIALMONITORS
+	if (!currprefs.monitoremu && vidinfo->tempbuffer.bufmem_allocated &&
+		((!currprefs.genlock && (!bplcolorburst_field && currprefs.cs_color_burst)) || currprefs.gfx_grayscale)) {
+		setspecialmonitorpos(&vidinfo->tempbuffer);
+		emulate_grayscale(vb, &vidinfo->tempbuffer);
+		vb = vidinfo->outbuffer = &vidinfo->tempbuffer;
+		if (vb->nativepositioning)
+			setnativeposition(vb);
+		vidinfo->drawbuffer.tempbufferinuse = true;
+	}
+#endif
 
 	unlockscr(vb, display_reset ? -2 : -1, -1);
 #ifdef AMIBERRY

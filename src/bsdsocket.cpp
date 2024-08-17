@@ -1802,15 +1802,15 @@ static uae_u32 REGPARAM2 bsdsocklib_init(TrapContext *ctx)
 	_stprintf(verStr, _T("UAE %d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 	tmp1 = 0;
 	for (i = number_sys_error; i--;)
-		tmp1 += _tcslen (errortexts[i]) + 1;
+		tmp1 += uaetcslen (errortexts[i]) + 1;
 	for (i = number_host_error; i--;)
-		tmp1 += _tcslen (herrortexts[i]) + 1;
+		tmp1 += uaetcslen (herrortexts[i]) + 1;
 	for (i = number_sana2io_error; i--;)
-		tmp1 += _tcslen (sana2io_errlist[i]) + 1;
+		tmp1 += uaetcslen (sana2io_errlist[i]) + 1;
 	for (i = number_sana2wire_error; i--;)
-		tmp1 += _tcslen (sana2wire_errlist[i]) + 1;
-	tmp1 += _tcslen(strErr) + 1;
-	tmp1 += _tcslen(verStr) + 1;
+		tmp1 += uaetcslen (sana2wire_errlist[i]) + 1;
+	tmp1 += uaetcslen(strErr) + 1;
+	tmp1 += uaetcslen(verStr) + 1;
 
 #if NEWTRAP
 	trap_call_add_dreg(ctx, 0, tmp1);

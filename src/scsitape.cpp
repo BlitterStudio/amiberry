@@ -201,7 +201,11 @@ static void erase (struct scsi_data_tape *tape)
 			if (ext && !_tcsicmp (ext, _T(".tape"))) {
 				_stprintf (path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, filename);
 				if (my_existsfile (path))
+#ifdef _WIN32
+					my_unlink (path, false);
+#else
 					my_unlink (path);
+#endif
 			}
 		}
 		my_closedir (od);

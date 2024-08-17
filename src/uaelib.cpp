@@ -355,6 +355,7 @@ static int native_dos_op(TrapContext *ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2,
 	return 0;
 }
 
+#ifdef AMIBERRY
 // Execute a command on the Host OS
 static uae_u32 emulib_execute_on_host(TrapContext* ctx, uaecptr name)
 {
@@ -366,6 +367,7 @@ static uae_u32 emulib_execute_on_host(TrapContext* ctx, uaecptr name)
 	return 1;
 }
 
+// Open a shell session on the Host OS (TODO: not fully implemented yet)
 #if 0
 static uae_u32 emulib_host_session(TrapContext* ctx, uaecptr name, uae_u32 out, uae_u32 outsize)
 {
@@ -391,6 +393,7 @@ static uae_u32 emulib_host_session(TrapContext* ctx, uaecptr name, uae_u32 out, 
 	return 0;
 }
 #endif
+#endif //AMIBERRY
 
 static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3, uae_u32 ARG4, uae_u32 ARG5)
 {
@@ -448,11 +451,13 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 			trap_set_dreg(ctx, 1, d1);
 			return d0;
 		}
+#ifdef AMIBERRY
 		case 88:
 		if (currprefs.native_code)
 			return emulib_execute_on_host(ctx, ARG1);
 		return 0;
 		//case 89: return emulib_host_session(ctx, ARG1, ARG2, ARG3);
+#endif
 	}
 	return 0;
 }

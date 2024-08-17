@@ -1061,7 +1061,7 @@ repeat:
 				int l = p[0];
 				char t = p[l];
 				p[l] = 0;
-				au_copy (inode->i_comment + _tcslen (inode->i_comment), maxcomment + 1 - _tcslen (inode->i_comment), p + 1);
+				au_copy (inode->i_comment + uaetcslen (inode->i_comment), maxcomment + 1 - uaetcslen (inode->i_comment), p + 1);
 				p[l] = t;
 			}
 			break;

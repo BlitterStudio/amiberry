@@ -15,7 +15,9 @@
 #include "sana2.h"
 #include "clipboard.h"
 #include "cpuboard.h"
-//#include "sndboard.h"
+#ifdef WITH_SNDBOARD
+#include "sndboard.h"
+#endif
 #include "statusline.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
@@ -62,7 +64,9 @@
 #endif
 #include "ethernet.h"
 #include "drawing.h"
-//#include "videograb.h"
+#ifdef AVIOUTPUT
+#include "videograb.h"
+#endif
 #ifdef AHI
 #include "ahi_v1.h"
 #endif
@@ -318,7 +322,9 @@ void devices_rethink(void)
 void devices_update_sound(float clk, float syncadjust)
 {
 	update_sound (clk);
-	//update_sndboard_sound (clk / syncadjust);
+#ifdef WITH_SNDBOARD
+	update_sndboard_sound (clk / syncadjust);
+#endif
 	update_cda_sound(clk / syncadjust);
 #ifdef WITH_X86
 	x86_update_sound(clk / syncadjust);
@@ -478,7 +484,9 @@ void devices_pause(void)
 #ifdef RETROPLATFORM
 	rp_pause(1);
 #endif
-	//pausevideograb(1);
+#ifdef AVIOUTPUT
+	pausevideograb(1);
+#endif
 	ethernet_pause(1);
 }
 
@@ -494,7 +502,9 @@ void devices_unpause(void)
 #ifdef WITH_DSP
 	dsp_pause(0);
 #endif
-	//pausevideograb(0);
+#ifdef AVIOUTPUT
+	pausevideograb(0);
+#endif
 	ethernet_pause(0);
 }
 

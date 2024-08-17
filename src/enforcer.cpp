@@ -309,7 +309,7 @@ static void enforcer_display_hit (const TCHAR *addressmode, uae_u32 pc, uaecptr 
 		oldaddrs[i] = addr;
 		if (j == i && addr != pc) {
 			if (enforcer_decode_hunk_and_offset (buf, addr)) {
-				int l = _tcslen (buf);
+				int l = uaetcslen (buf);
 
 				if (ENFORCER_BUF_SIZE - (enforcer_buf_ptr - enforcer_buf) > l + 256) {
 					_tcscpy (enforcer_buf_ptr, buf);

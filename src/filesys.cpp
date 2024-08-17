@@ -586,12 +586,12 @@ static void close_filesys_unit (UnitInfo *uip)
 	if (uip->unit_pipe)
 	{
 		destroy_comm_pipe(uip->unit_pipe);
-		xfree(uip->unit_pipe);
+		xfree (uip->unit_pipe);
 	}
 	if (uip->back_pipe)
 	{
 		destroy_comm_pipe(uip->back_pipe);
-		xfree(uip->back_pipe);
+		xfree (uip->back_pipe);
 	}
 	if (uip->cd_open) {
 		sys_command_close (uip->cddevno);
@@ -756,14 +756,14 @@ static void stripsemicolon (TCHAR *s)
 {
 	if (!s)
 		return;
-	while (_tcslen(s) > 0 && s[_tcslen(s) - 1] == ':')
-		s[_tcslen(s) - 1] = 0;
+	while (uaetcslen(s) > 0 && s[uaetcslen(s) - 1] == ':')
+		s[uaetcslen(s) - 1] = 0;
 }
 static void stripspace (TCHAR *s)
 {
 	if (!s)
 		return;
-	for (int i = 0; i < _tcslen (s); i++) {
+	for (int i = 0; i < uaetcslen (s); i++) {
 		if (s[i] == ' ')
 			s[i] = '_';
 	}
@@ -772,7 +772,7 @@ static void striplength (TCHAR *s, int len)
 {
 	if (!s)
 		return;
-	if (_tcslen (s) <= len)
+	if (uaetcslen (s) <= len)
 		return;
 	s[len] = 0;
 }
@@ -790,7 +790,7 @@ TCHAR *validatevolumename (TCHAR *s, const TCHAR *def)
 	stripsemicolon (s);
 	fixcharset (s);
 	striplength (s, 30);
-	if (_tcslen(s) == 0 && def) {
+	if (uaetcslen(s) == 0 && def) {
 		xfree(s);
 		s = my_strdup(def);
 	}
@@ -802,7 +802,7 @@ TCHAR *validatedevicename (TCHAR *s, const TCHAR *def)
 	stripspace (s);
 	fixcharset (s);
 	striplength (s, 30);
-	if (_tcslen(s) == 0 && def) {
+	if (uaetcslen(s) == 0 && def) {
 		xfree(s);
 		s = my_strdup(def);
 	}
@@ -824,18 +824,18 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 	else if (my_existsdir (path))
 		archivehd = 0;
 
-	if (zv && zv->volumename && _tcslen(zv->volumename) > 0) {
+	if (zv && zv->volumename && uaetcslen(zv->volumename) > 0) {
 		nvol = my_strdup(zv->volumename);
 		nvol = validatevolumename (nvol, def);
 		return nvol;
 	}
 
-	if ((!volname || _tcslen (volname) == 0) && path[0] && archivehd >= 0) {
+	if ((!volname || uaetcslen (volname) == 0) && path && archivehd >= 0) {
 		p = my_strdup (path);
-		for (i = _tcslen (p) - 1; i >= 0; i--) {
+		for (i = uaetcslen (p) - 1; i >= 0; i--) {
 			TCHAR c = p[i];
 			if (c == ':' || c == '/' || c == '\\') {
-				if (i == _tcslen (p) - 1)
+				if (i == uaetcslen (p) - 1)
 					continue;
 				if (!_tcscmp (p + i, _T(":\\"))) {
 					xfree (p);
@@ -853,13 +853,13 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 			nvol = my_strdup (p + i);
 	}
 	if (!nvol && archivehd >= 0) {
-		if (volname && _tcslen (volname) > 0)
+		if (volname && uaetcslen (volname) > 0)
 			nvol = my_strdup (volname);
 		else
 			nvol = my_strdup (def);
 	}
 	if (!nvol) {
-		if (volname && _tcslen (volname))
+		if (volname && uaetcslen (volname))
 			nvol = my_strdup (volname);
 		else
 			nvol = my_strdup (_T(""));
@@ -1015,7 +1015,7 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 		if (nr == i || !mountinfo.ui[i].open || mountinfo.ui[i].rootdir == NULL || is_hardfile (i) == FILESYS_CD)
 			continue;
-		if (_tcslen(c.rootdir) > 0 && samepath(mountinfo.ui[i].rootdir, c.rootdir)) {
+		if (uaetcslen(c.rootdir) > 0 && samepath(mountinfo.ui[i].rootdir, c.rootdir)) {
 			error_log (_T("directory/hardfile '%s' already added."), c.rootdir);
 			return -1;
 		}
@@ -1063,7 +1063,7 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 		ui->volname = filesys_createvolname (c.volname, c.rootdir, ui->zarchive, _T("harddrive"));
 		ui->volflags = flags;
 		TCHAR *vs = au(UAEFS_VERSION);
-		TCHAR *vsp = vs + _tcslen(vs) - 1;
+		TCHAR *vsp = vs + uaetcslen(vs) - 1;
 		while (vsp != vs) {
 			if (*vsp == ' ') {
 				*vsp++ = 0;
@@ -1915,7 +1915,7 @@ static void filesys_delayed_change (Unit *u, int frames, const TCHAR *rootdir, c
 	if (volume)
 		u->newvolume = my_strdup (volume);
 	filesys_eject (u->unit);
-	if (!rootdir || _tcslen (rootdir) == 0)
+	if (!rootdir || uaetcslen (rootdir) == 0)
 		u->reinsertdelay = 0;
 	if (u->reinsertdelay > 0)
 		write_log (_T("FILESYS: delayed insert %d: '%s' ('%s')\n"), u->unit, volume ? volume : _T("<none>"), rootdir);
@@ -2245,7 +2245,7 @@ int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_conf
 		if (is_virtual (u->unit)) {
 			ui = &mountinfo.ui[u->unit];
 			// inserted >= 2: drag&drop insert, do not replace existing normal drives
-			if (inserted < 2 && ui->rootdir && !memcmp (ui->rootdir, rootdir, _tcslen (rootdir)) && _tcslen (rootdir) + 3 >= _tcslen (ui->rootdir)) {
+			if (inserted < 2 && ui->rootdir && !memcmp (ui->rootdir, rootdir, uaetcslen (rootdir)) && uaetcslen (rootdir) + 3 >= uaetcslen (ui->rootdir)) {
 				if (filesys_isvolume(u) && inserted) {
 					if (uci)ctx, 
 						filesys_delayed_change (u, 50, rootdir, uci->ci.volname, uci->ci.readonly, 0);
@@ -2594,7 +2594,7 @@ void filesys_flush_cache (void)
 
 static void update_child_names (Unit *unit, a_inode *a, a_inode *parent)
 {
-	int l0 = _tcslen (parent->nname) + 2;
+	int l0 = uaetcslen (parent->nname) + 2;
 
 	while (a != 0) {
 		TCHAR *name_start;
@@ -2607,7 +2607,7 @@ static void update_child_names (Unit *unit, a_inode *a, a_inode *parent)
 			write_log (_T("malformed file name"));
 		}
 		name_start++;
-		new_name = xmalloc (TCHAR, _tcslen (name_start) + l0);
+		new_name = xmalloc (TCHAR, uaetcslen (name_start) + l0);
 		_tcscpy (new_name, parent->nname);
 		_tcscat (new_name, dirsep);
 		_tcscat (new_name, name_start);
@@ -2726,7 +2726,7 @@ static a_inode *aino_from_lock(TrapContext *ctx, Unit *unit, uaecptr lock)
 TCHAR *build_nname (const TCHAR *d, const TCHAR *n)
 {
 	TCHAR dsep[2] = { FSDB_DIR_SEPARATOR, 0 };
-	TCHAR *p = xmalloc (TCHAR, _tcslen (d) + 1 + _tcslen (n) + 1);
+	TCHAR *p = xmalloc (TCHAR, uaetcslen (d) + 1 + uaetcslen (n) + 1);
 	_tcscpy (p, d);
 	_tcscat (p, dsep);
 	_tcscat (p, n);
@@ -2735,7 +2735,7 @@ TCHAR *build_nname (const TCHAR *d, const TCHAR *n)
 
 TCHAR *build_aname (const TCHAR *d, const TCHAR *n)
 {
-	TCHAR *p = xmalloc (TCHAR, _tcslen (d) + 1 + _tcslen (n) + 1);
+	TCHAR *p = xmalloc (TCHAR, uaetcslen (d) + 1 + uaetcslen (n) + 1);
 	_tcscpy (p, d);
 	_tcscat (p, _T("/"));
 	_tcscat (p, n);
@@ -2779,14 +2779,33 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 
 	/* See if we have a file that has the same name as the aname we are
 	* looking for.  */
+#ifdef _WIN32
+	TCHAR *relalt = NULL;
+	found = fsdb_search_dir (base->nname, rel, &relalt);
+#else
 	found = fsdb_search_dir (base->nname, rel);
+#endif
 	if (found == 0) {
 		return found;
 	}
 	if (found == rel) {
+#ifdef _WIN32
+		if (relalt) {
+			TCHAR *v = build_nname(base->nname, relalt);
+			xfree(relalt);
+			return v;
+		}
+#endif
 		return build_nname(base->nname, rel);
 	}
 	*modified_rel = found;
+#ifdef _WIN32
+	if (relalt) {
+		TCHAR *v = build_nname(base->nname, relalt);
+		xfree(relalt);
+		return v;
+	}
+#endif
 	return build_nname (base->nname, found);
 }
 
@@ -2997,7 +3016,7 @@ static a_inode *create_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int is
 static a_inode *lookup_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int *err)
 {
 	a_inode *c = base->child;
-	int l0 = _tcslen (rel);
+	int l0 = uaetcslen (rel);
 
 	aino_test (base);
 	aino_test (c);
@@ -3008,7 +3027,7 @@ static a_inode *lookup_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int *e
 	}
 
 	while (c != 0) {
-		int l1 = _tcslen (c->aname);
+		int l1 = uaetcslen (c->aname);
 		if (l0 <= l1 && same_aname (rel, c->aname + l1 - l0)
 			&& (l0 == l1 || c->aname[l1-l0-1] == '/') && c->mountcount == unit->mountcount)
 			break;
@@ -3026,7 +3045,7 @@ static a_inode *lookup_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int *e
 static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, TCHAR *rel, uae_u32 *err, uae_u64 uniq_external, struct virtualfilesysobject *vfso)
 {
 	a_inode *c = base->child;
-	int l0 = _tcslen (rel);
+	int l0 = uaetcslen (rel);
 	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 
 	aino_test (base);
@@ -3034,7 +3053,7 @@ static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, TCHAR *
 
 	*err = 0;
 	while (c != 0) {
-		int l1 = _tcslen (c->nname);
+		int l1 = uaetcslen (c->nname);
 		/* Note: using _tcscmp here.  */
 		if (l0 <= l1 && _tcscmp (rel, c->nname + l1 - l0) == 0
 			&& (l0 == l1 || c->nname[l1-l0-1] == FSDB_DIR_SEPARATOR) && c->mountcount == unit->mountcount)
@@ -3790,7 +3809,6 @@ static void action_add_notify(TrapContext *ctx, Unit *unit, dpacket *packet)
 		return;
 	}
 
-	p = name + _tcslen (name) - 1;
 #if 0
 	write_log (_T("Notify:\n"));
 	write_log (_T("nr_Name '%s'\n"), char1 (trap_get_long(ctx, nr + 0)));
@@ -3806,6 +3824,7 @@ static void action_add_notify(TrapContext *ctx, Unit *unit, dpacket *packet)
 	}
 #endif
 
+	p = name + uaetcslen (name) - 1;
 	if (p[0] == ':')
 		p--;
 	while (p > name && p[0] != ':' && p[0] != '/')
@@ -3930,7 +3949,7 @@ static void action_read_link_add_parent(Unit *u, a_inode *a, TCHAR *path)
 		_tcscat (path, a->aname);
 		_tcscat (path, _T(":"));
 	} else {
-		if (path[0] && path[_tcslen (path) - 1] != ':')
+		if (path[0] && path[uaetcslen (path) - 1] != ':')
 			_tcscat (path, _T("/"));
 		_tcscat (path, a->aname);
 	}
@@ -4017,7 +4036,7 @@ static void action_read_link(TrapContext *ctx, Unit *unit, dpacket *packet)
 		a = find_aino(ctx, unit, lock, namep, &err);
 		if (err != ERROR_IS_SOFT_LINK)
 			break;
-		for (i = _tcslen (namep) - 1; i > 0; i--) {
+		for (i = uaetcslen (namep) - 1; i > 0; i--) {
 			if (namep[i] == '/') {
 				namep[i] = 0;
 				xfree (extrapath);
@@ -4665,7 +4684,7 @@ end:
 
 static bool filesys_name_invalid(const TCHAR *fn)
 {
-	return _tcslen (fn) > currprefs.filesys_max_name;
+	return uaetcslen (fn) > currprefs.filesys_max_name;
 }
 
 static int filesys_readdir(struct fs_dirhandle *d, TCHAR *fn, uae_u64 *uniq)
@@ -4971,7 +4990,7 @@ static void load_injected_icons(void)
 static void inject_icons_to_directory(Unit *unit, a_inode *base)
 {
 	for (a_inode *aino = base->child; aino; aino = aino->sibling) {
-		int len = _tcslen(aino->aname);
+		int len = uaetcslen(aino->aname);
 		if (len >= 5 && !_tcsicmp(aino->aname + len - 5, _T(".info")))
 			continue;
 		TCHAR tmp[256];
@@ -5748,12 +5767,12 @@ static void action_set_comment(TrapContext *ctx, Unit * unit, dpacket *packet)
 
 	if (fsdb_cando (unit)) {
 		commented = bstr(ctx, unit, comment);
-		if (_tcslen (commented) > 80) {
+		if (uaetcslen (commented) > 80) {
 			PUT_PCK_RES1 (packet, DOS_FALSE);
 			PUT_PCK_RES2 (packet, ERROR_COMMENT_TOO_BIG);
 			return;
 		}
-		if (_tcslen (commented) > 0) {
+		if (uaetcslen (commented) > 0) {
 			TCHAR *p = commented;
 			commented = xmalloc (TCHAR, 81);
 			_tcsncpy (commented, p, 80);
@@ -6148,7 +6167,11 @@ static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 				return;
 			}
 		} else {
+#ifdef _WIN32
+			if (my_unlink (a->nname, false) == -1) {
+#else
 			if (my_unlink (a->nname) == -1) {
+#endif
 				PUT_PCK_RES1 (packet, DOS_FALSE);
 				PUT_PCK_RES2 (packet, dos_errno ());
 				return;
@@ -8230,8 +8253,8 @@ static TCHAR *device_dupfix (TrapContext *ctx, uaecptr expbase, TCHAR *devname)
 	while (modified) {
 		modified = 0;
 		if (device_isdup (ctx, expbase, newname)) {
-			if (_tcslen (newname) > 2 && newname[_tcslen (newname) - 2] == '_') {
-				newname[_tcslen (newname) - 1]++;
+			if (uaetcslen (newname) > 2 && newname[uaetcslen (newname) - 2] == '_') {
+				newname[uaetcslen (newname) - 1]++;
 			} else {
 				_tcscat (newname, _T("_0"));
 			}
@@ -8253,7 +8276,7 @@ static const TCHAR *dostypes(TCHAR *dt, uae_u32 dostype)
 		} else {
 			dt[j++] = '\\';
 			_stprintf (&dt[j], _T("%d"), c);
-			j += _tcslen (&dt[j]);
+			j += uaetcslen (&dt[j]);
 		}
 	}
 	dt[j] = 0;
@@ -8392,7 +8415,7 @@ static void get_new_device (TrapContext *ctx, int type, uaecptr parmpacket, TCHA
 	TCHAR buffer[80];
 	uaecptr expbase = trap_get_long(ctx, parmpacket + PP_EXPLIB);
 
-	if (*devname == 0 || _tcslen (*devname) == 0) {
+	if (*devname == 0 || uaetcslen (*devname) == 0) {
 		int un = unit_no;
 		for (;;) {
 			_stprintf (buffer, type == FILESYS_CD ? _T("CD%d") : _T("DH%d"), un++);
@@ -8801,7 +8824,7 @@ static void addfakefilesys (TrapContext *ctx, uaecptr parmpacket, uae_u32 dostyp
 
 static uaecptr getfakefilesysseg (UnitInfo *uip)
 {
-	if (uip->filesysdir && _tcslen (uip->filesysdir) > 0) {
+	if (uip->filesysdir && uaetcslen (uip->filesysdir) > 0) {
 		for (int i = 0; &mountinfo.ui[i] != uip; i++) {
 			UnitInfo *uip2 = &mountinfo.ui[i];
 			if (!uip2->filesysdir)
@@ -8856,11 +8879,11 @@ static int dofakefilesys (TrapContext *ctx, UnitInfo *uip, uaecptr parmpacket, s
 	}
 
 	tmp[0] = 0;
-	if (uip->filesysdir && _tcslen (uip->filesysdir) > 0) {
+	if (uip->filesysdir && uaetcslen (uip->filesysdir) > 0) {
 		cfgfile_resolve_path_out_load(uip->filesysdir, tmp, MAX_DPATH, PATH_HDF);
 	} else if ((dostype & 0xffffff00) == DISK_TYPE_DOS) {
 		_tcscpy (tmp, currprefs.romfile);
-		int i = _tcslen (tmp);
+		int i = uaetcslen (tmp);
 		while (i > 0 && tmp[i - 1] != '/' && tmp[i - 1] != '\\')
 			i--;
 		_tcscpy (tmp + i, _T("FastFileSystem"));
@@ -9625,7 +9648,7 @@ static a_inode *restore_filesys_get_base (Unit *u, TCHAR *npath)
 	/* iterate from root to last to previous path part,
 	* create ainos if not already created.
 	*/
-	path = xcalloc(TCHAR, _tcslen (npath) + 2);
+	path = xcalloc(TCHAR, uaetcslen (npath) + 2);
 	cnt = 1;
 	for (;;) {
 		_tcscpy (path, npath);
@@ -9690,10 +9713,10 @@ static TCHAR *makenativepath (UnitInfo *ui, TCHAR *apath)
 {
 	TCHAR *pn;
 	/* create native path. FIXME: handle 'illegal' characters */
-	pn = xcalloc (TCHAR, _tcslen (apath) + 1 + _tcslen (ui->rootdir) + 1);
+	pn = xcalloc (TCHAR, uaetcslen (apath) + 1 + uaetcslen (ui->rootdir) + 1);
 	_stprintf (pn, _T("%s/%s"), ui->rootdir, apath);
 	if (FSDB_DIR_SEPARATOR != '/') {
-		for (int i = 0; i < _tcslen (pn); i++) {
+		for (int i = 0; i < uaetcslen (pn); i++) {
 			if (pn[i] == '/')
 				pn[i] = FSDB_DIR_SEPARATOR;
 		}
@@ -9874,7 +9897,7 @@ static uae_u8 *restore_notify (UnitInfo *ui, Unit *u, uae_u8 *src)
 
 	n->notifyrequest = restore_u32 ();
 	s = restore_string ();
-	n->fullname = xmalloc (TCHAR, _tcslen (ui->volname) + 2 + _tcslen (s) + 1);
+	n->fullname = xmalloc (TCHAR, uaetcslen (ui->volname) + 2 + uaetcslen (s) + 1);
 	_stprintf (n->fullname, _T("%s:%s"), ui->volname, s);
 	xfree(s);
 	s = _tcsrchr (n->fullname, '/');
@@ -9945,8 +9968,8 @@ static TCHAR *getfullaname (a_inode *a)
 
 	p = xcalloc (TCHAR, MAX_DPATH);
 	while (a) {
-		int len = _tcslen (a->aname);
-		memmove (p + len + 1, p, (_tcslen (p) + 1) * sizeof (TCHAR));
+		int len = uaetcslen (a->aname);
+		memmove (p + len + 1, p, (uaetcslen (p) + 1) * sizeof (TCHAR));
 		memcpy (p, a->aname, len * sizeof (TCHAR));
 		if (!first)
 			p[len] = '/';
@@ -10026,8 +10049,8 @@ static uae_u8 *save_notify (UnitInfo *ui, uae_u8 *dst, Notify *n)
 	TCHAR *s;
 	save_u32 (n->notifyrequest);
 	s = n->fullname;
-	if (_tcslen (s) >= _tcslen (ui->volname) && !_tcsncmp (n->fullname, ui->volname, _tcslen (ui->volname)))
-		s = n->fullname + _tcslen (ui->volname) + 1;
+	if (uaetcslen (s) >= uaetcslen (ui->volname) && !_tcsncmp (n->fullname, ui->volname, uaetcslen (ui->volname)))
+		s = n->fullname + uaetcslen (ui->volname) + 1;
 	save_string (s);
 	write_log (_T("FS: notify %08X '%s'\n"), n->notifyrequest, n->fullname);
 	return dst;

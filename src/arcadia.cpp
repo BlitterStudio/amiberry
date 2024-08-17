@@ -187,7 +187,7 @@ static struct arcadiarom *is_arcadia (const TCHAR *xpath, int cnt)
 
 	_tcscpy (path, xpath);
 	p = path;
-	for (i = _tcslen (xpath) - 1; i > 0; i--) {
+	for (i = uaetcslen (xpath) - 1; i > 0; i--) {
 		if (path[i] == '\\' || path[i] == '/') {
 			path[i++] = 0;
 			p = path + i;

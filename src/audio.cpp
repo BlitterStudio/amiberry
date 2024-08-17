@@ -33,7 +33,9 @@
 #include "gui.h"
 #include "xwin.h"
 #include "debug.h"
-//#include "sndboard.h"
+#ifdef WITH_SNDBOARD
+#include "sndboard.h"
+#endif
 #ifdef AVIOUTPUT
 #include "avioutput.h"
 #endif
@@ -225,7 +227,7 @@ static void namesplit (TCHAR *s)
 {
 	int l;
 
-	l = _tcslen(s) - 1;
+	l = uaetcslen(s) - 1;
 	while (l >= 0) {
 		if (s[l] == '.')
 			s[l] = 0;
@@ -2179,7 +2181,9 @@ void set_audio (void)
 
 	sound_cd_volume[0] = sound_cd_volume[1] = (100 - (currprefs.sound_volume_cd < 0 ? 0 : currprefs.sound_volume_cd)) * 32768 / 100;
 	sound_paula_volume[0] = sound_paula_volume[1] = (100 - currprefs.sound_volume_paula) * 32768 / 100;
-	//sndboard_ext_volume();
+#ifdef WITH_SNDBOARD
+	sndboard_ext_volume();
+#endif
 
 	if (ch >= 0) {
 		if (currprefs.produce_sound >= 2) {
@@ -2510,7 +2514,7 @@ void event_audxdat_func(uae_u32 v)
 					if (cdp->minperloop >= PERIOD_MIN_LOOP_COUNT) {
 						cdp->per = PERIOD_MIN_LOOP * CYCLE_UNIT;
 					}
-			}
+				}
 				if (!(v & 0x80000000)) {
 					cdp->intreq2 = true;
 				}

@@ -48,12 +48,16 @@
 #include "gayle.h"
 #include "idecontrollers.h"
 #include "cpuboard.h"
-//#include "sndboard.h"
+#ifdef WITH_SNDBOARD
+#include "sndboard.h"
+#endif
 #ifdef WITH_PPC
 #include "uae/ppc.h"
 #endif
 #include "autoconf.h"
-//#include "specialmonitors.h"
+#ifdef WITH_SPECIALMONITORS
+#include "specialmonitors.h"
+#endif
 #include "inputdevice.h"
 #ifdef WITH_PCI
 #include "pci.h"
@@ -71,6 +75,7 @@
 #ifdef WITH_DSP
 #include "dsp3210/dsp_glue.h"
 #endif
+
 
 #define CARD_FLAG_CAN_Z3 1
 #define CARD_FLAG_CHILD 8
@@ -3744,12 +3749,14 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 		}
 	}
 #endif
-	//if (p->monitoremu == MONITOREMU_FIRECRACKER24) {
-	//	cards_set[cardno].flags = 0;
-	//	cards_set[cardno].name = _T("FireCracker24");
-	//	cards_set[cardno].zorro = 2;
-	//	cards_set[cardno++].initnum = specialmonitor_autoconfig_init;
-	//}
+#ifdef WITH_SPECIALMONITORS
+	if (p->monitoremu == MONITOREMU_FIRECRACKER24) {
+		cards_set[cardno].flags = 0;
+		cards_set[cardno].name = _T("FireCracker24");
+		cards_set[cardno].zorro = 2;
+		cards_set[cardno++].initnum = specialmonitor_autoconfig_init;
+	}
+#endif
 
 	/* Z3 boards last */
 
@@ -5363,6 +5370,7 @@ const struct expansionromtype expansionroms[] = {
 
 	/* PCI Bridgeboards */
 #ifdef WITH_PCI
+
 	{
 		_T("grex"), _T("G-REX"), _T("DCE"),
 		NULL, grex_init, NULL, NULL, ROMTYPE_GREX | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
@@ -5394,6 +5402,7 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, bridge_settings
 	},
 #endif
+
 	/* SCSI/IDE expansion */
 
 	{
@@ -6053,6 +6062,7 @@ const struct expansionromtype expansionroms[] = {
 
 	/* PC Bridgeboards */
 #ifdef WITH_X86
+
 	{
 		_T("a1060"), _T("A1060 Sidecar"), _T("Commodore"),
 		NULL, a1060_init, NULL, NULL, ROMTYPE_A1060 | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, true,
@@ -6094,6 +6104,7 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, x86at386_bridge_settings
 	},
 #endif
+
 	// only here for rom selection and settings
 	{
 		_T("picassoiv"), _T("Picasso IV"), _T("Village Tronic"),
@@ -6238,6 +6249,7 @@ const struct expansionromtype expansionroms[] = {
 	},
 #endif
 
+
 #if 0
 	{
 		_T("pmx"), _T("pmx"), NULL,
@@ -6353,6 +6365,7 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, ne2k_isa_settings
 	},
 #endif
+
 #ifdef CATWEASEL
 		/* Catweasel */
 	{
@@ -6403,6 +6416,7 @@ const struct expansionromtype expansionroms[] = {
 		false, 0, x86_mouse_settings
 	},
 #endif
+
 
 	{
 		NULL

@@ -1364,7 +1364,7 @@ void addkeydir(const TCHAR *path)
 	_tcscpy(tmp, path);
 	if (zfile_exists(tmp)) {
 		int i;
-		for (i = _tcslen(tmp) - 1; i > 0; i--) {
+		for (i = uaetcslen(tmp) - 1; i > 0; i--) {
 			if (tmp[i] == '\\' || tmp[i] == '/')
 				break;
 		}
@@ -2300,7 +2300,7 @@ struct zfile *read_rom_name_guess (const TCHAR *filename, TCHAR *out)
 	struct zfile *f;
 	const TCHAR *name;
 
-	for (i = _tcslen(filename) - 1; i >= 0; i--) {
+	for (i = uaetcslen(filename) - 1; i >= 0; i--) {
 		if (filename[i] == '/' || filename[i] == '\\')
 			break;
 	}
@@ -2310,7 +2310,7 @@ struct zfile *read_rom_name_guess (const TCHAR *filename, TCHAR *out)
 
 	for (i = 0; i < romlist_cnt; i++) {
 		TCHAR *n = rl[i].path;
-		for (j = _tcslen(n) - 1; j >= 0; j--) {
+		for (j = uaetcslen(n) - 1; j >= 0; j--) {
 			if (n[j] == '/' || n[j] == '\\')
 				break;
 		}
@@ -2370,7 +2370,7 @@ static void clean_path(TCHAR *s)
 		if (s[v] == 0) {
 			break;
 		}
-		memmove(s + v, s + v + 1, (_tcslen(s + v + 1) + 1) * sizeof(TCHAR));
+		memmove(s + v, s + v + 1, (uaetcslen(s + v + 1) + 1) * sizeof(TCHAR));
 	}
 }
 

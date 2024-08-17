@@ -1076,7 +1076,7 @@ static void saveimagecutpathpart(TCHAR *name)
 {
 	int i;
 
-	i = _tcslen (name) - 1;
+	i = uaetcslen(name) - 1;
 	while (i > 0) {
 		if (name[i] == '/' || name[i] == '\\') {
 			name[i] = 0;
@@ -1103,7 +1103,7 @@ static void saveimagecutfilepart(TCHAR *name)
 	int i;
 
 	_tcscpy(tmp, name);
-	i = _tcslen(tmp) - 1;
+	i = uaetcslen(tmp) - 1;
 	while (i > 0) {
 		if (tmp[i] == '/' || tmp[i] == '\\') {
 			_tcscpy(name, tmp + i + 1);
@@ -5429,6 +5429,7 @@ static void floppybridge_init2(struct uae_prefs *p)
 			floppy[dr].bridge = NULL;
 			bridge_driver[dr] = NULL;
 		}
+
 	}
 }
 

@@ -51,7 +51,9 @@
 #include "crc32.h"
 #include "devices.h"
 #include "rommgr.h"
-//#include "specialmonitors.h"
+#ifdef WITH_SPECIALMONITORS
+#include "specialmonitors.h"
+#endif
 
 #define BPL_ERASE_TEST 0
 
@@ -9637,9 +9639,11 @@ static void DDFSTOP(int hpos, uae_u16 v)
 static void FMODE(int hpos, uae_u16 v)
 {
 	if (!aga_mode) {
-		//if (currprefs.monitoremu) {
-		//	specialmonitor_store_fmode(vpos, hpos, v);
-		//}
+#ifdef WITH_SPECIALMONITORS
+		if (currprefs.monitoremu) {
+			specialmonitor_store_fmode(vpos, hpos, v);
+		}
+#endif
 		fmode_saved = v;
 		v = 0;
 	}
@@ -13337,7 +13341,7 @@ static void hsync_handler_pre(bool onvsync)
 
 // low latency vsync
 
-#ifndef AMIBERRY
+#ifdef WITH_BEAMRACER
 #define LLV_DEBUG 0
 
 static bool sync_timeout_check(frame_time_t max)
@@ -14006,19 +14010,21 @@ void vsync_event_done(void)
 		events_reset_syncline();
 		return;
 	}
-	//if (currprefs.gfx_display_sections <= 1) {
-	//	if (vsync_vblank >= 85)
-	//		linesync_beam_single_dual();
-	//	else
-	//		linesync_beam_single_single();
-	//} else {
-	//	if (currprefs.gfx_variable_sync)
-	//		linesync_beam_vrr();
-	//	else if (vsync_vblank >= 85)
-	//		linesync_beam_multi_dual();
-	//	else
-	//		linesync_beam_multi_single();
-	//}
+#ifdef WITH_BEAMRACER
+	if (currprefs.gfx_display_sections <= 1) {
+		if (vsync_vblank >= 85)
+			linesync_beam_single_dual();
+		else
+			linesync_beam_single_single();
+	} else {
+		if (currprefs.gfx_variable_sync)
+			linesync_beam_vrr();
+		else if (vsync_vblank >= 85)
+			linesync_beam_multi_dual();
+		else
+			linesync_beam_multi_single();
+	}
+#endif
 }
 
 static void check_vblank_copjmp(uae_u32 v)
@@ -14348,21 +14354,21 @@ static void hsync_handler_post(bool onvsync)
 		maybe_process_pull_audio();
 
 	} else if (isvsync_chipset() < 0) {
-
-		//if (currprefs.gfx_display_sections <= 1) {
-		//	if (vsync_vblank >= 85)
-		//		input_read_done = linesync_beam_single_dual();
-		//	else
-		//		input_read_done = linesync_beam_single_single();
-		//} else {
-		//	if (currprefs.gfx_variable_sync)
-		//		input_read_done = linesync_beam_vrr();
-		//	else if (vsync_vblank >= 85)
-		//		input_read_done = linesync_beam_multi_dual();
-		//	else
-		//		input_read_done = linesync_beam_multi_single();
-		//}
-
+#ifdef WITH_BEAMRACER
+		if (currprefs.gfx_display_sections <= 1) {
+			if (vsync_vblank >= 85)
+				input_read_done = linesync_beam_single_dual();
+			else
+				input_read_done = linesync_beam_single_single();
+		} else {
+			if (currprefs.gfx_variable_sync)
+				input_read_done = linesync_beam_vrr();
+			else if (vsync_vblank >= 85)
+				input_read_done = linesync_beam_multi_dual();
+			else
+				input_read_done = linesync_beam_multi_single();
+		}
+#endif
 	} else if (!currprefs.cpu_thread && !cpu_sleepmode && currprefs.m68k_speed < 0 && !currprefs.cpu_memory_cycle_exact) {
 
 		static int sleeps_remaining;
@@ -14799,8 +14805,9 @@ void custom_reset(bool hardreset, bool keyboardreset)
 			INTENA(0x8000 | 0x4000 | 0x1000 | 0x2000 | 0x0080 | 0x0010 | 0x0008 | 0x0001);
 		}
 	}
-
-	//specialmonitor_reset();
+#ifdef WITH_SPECIALMONITORS
+	specialmonitor_reset();
+#endif
 
 	unset_special (~(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE));
 
