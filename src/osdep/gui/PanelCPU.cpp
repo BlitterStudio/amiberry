@@ -322,7 +322,7 @@ void InitPanelCPU(const struct config_category& category)
 	chkJIT->setBaseColor(gui_base_color);
 	chkJIT->setBackgroundColor(gui_textbox_background_color);
 	chkJIT->setForegroundColor(gui_foreground_color);
-	chkJIT->addActionListener(cpuButtonActionListener);
+	chkJIT->addActionListener(jitActionListener);
 
 	grpCPU = new gcn::Window("CPU");
 	grpCPU->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
