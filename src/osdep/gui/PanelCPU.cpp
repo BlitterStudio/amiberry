@@ -308,7 +308,7 @@ void InitPanelCPU(const struct config_category& category)
 	chk24Bit->setBaseColor(gui_base_color);
 	chk24Bit->setBackgroundColor(gui_textbox_background_color);
 	chk24Bit->setForegroundColor(gui_foreground_color);
-	chk24Bit->addActionListener(cpuButtonActionListener);
+	chk24Bit->addActionListener(cpu24BitActionListener);
 
 	chkCPUCompatible = new gcn::CheckBox("More compatible", true);
 	chkCPUCompatible->setId("CPUComp");
