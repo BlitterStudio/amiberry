@@ -234,6 +234,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtGameName->setBaseColor(gui_base_color);
 	txtGameName->setBackgroundColor(gui_textbox_background_color);
 	txtGameName->setForegroundColor(gui_foreground_color);
+	txtGameName->setEnabled(false);
 
 	lblVariantUuid = new gcn::Label("UUID:");
 	txtVariantUuid = new gcn::TextField();
@@ -242,6 +243,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtVariantUuid->setBaseColor(gui_base_color);
 	txtVariantUuid->setBackgroundColor(gui_textbox_background_color);
 	txtVariantUuid->setForegroundColor(gui_foreground_color);
+	txtVariantUuid->setEnabled(false);
 
 	lblSlaveDefault = new gcn::Label("Slave Default:");
 	txtSlaveDefault = new gcn::TextField();
@@ -250,6 +252,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtSlaveDefault->setBaseColor(gui_base_color);
 	txtSlaveDefault->setBackgroundColor(gui_textbox_background_color);
 	txtSlaveDefault->setForegroundColor(gui_foreground_color);
+	txtSlaveDefault->setEnabled(false);
 
 	chkSlaveLibraries = new gcn::CheckBox("Slave Libraries");
 	chkSlaveLibraries->setId("chkSlaveLibraries");
@@ -274,6 +277,7 @@ void InitPanelWHDLoad(const struct config_category& category)
 	txtSlaveDataPath->setBaseColor(gui_base_color);
 	txtSlaveDataPath->setBackgroundColor(gui_textbox_background_color);
 	txtSlaveDataPath->setForegroundColor(gui_foreground_color);
+	txtSlaveDataPath->setEnabled(false);
 
 	cmdCustomFields = new gcn::Button("Custom Fields");
 	cmdCustomFields->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
