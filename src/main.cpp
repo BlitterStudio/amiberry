@@ -148,10 +148,10 @@ uae_u32 uaesetrandseed(uae_u32 seed)
 
 void my_trim(TCHAR *s)
 {
-	while (_tcslen (s) > 0 && _tcscspn (s, _T("\t \r\n")) == 0)
-		memmove (s, s + 1, (_tcslen (s + 1) + 1) * sizeof (TCHAR));
-	int len = _tcslen (s);
-	while (len > 0 && _tcscspn (s + len - 1, _T("\t \r\n")) == 0)
+	while (uaetcslen(s) > 0 && _tcscspn(s, _T("\t \r\n")) == 0)
+		memmove (s, s + 1, (uaetcslen(s + 1) + 1) * sizeof (TCHAR));
+	int len = uaetcslen(s);
+	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		s[--len] = '\0';
 }
 
@@ -161,7 +161,7 @@ TCHAR *my_strdup_trim (const TCHAR *s)
 		return my_strdup(s);
 	while (_tcscspn(s, _T("\t \r\n")) == 0)
 		s++;
-	int len = _tcslen(s);
+	int len = uaetcslen(s);
 	while (len > 0 && _tcscspn(s + len - 1, _T("\t \r\n")) == 0)
 		len--;
 	auto* out = xmalloc(TCHAR, len + 1);

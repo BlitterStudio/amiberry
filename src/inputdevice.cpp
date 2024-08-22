@@ -272,12 +272,10 @@ int inputdevice_uaelib (const TCHAR *s, const TCHAR *parm)
 				if (!_tcscmp(parm, _T("0"))) {
 					v = SET_ONOFF_OFF_VALUE;
 					parm = NULL;
-				}
-				else if (!_tcscmp(parm, _T("1"))) {
+				} else if(!_tcscmp(parm, _T("1"))) {
 					v = SET_ONOFF_ON_VALUE;
 					parm = NULL;
-				}
-				else {
+				} else {
 					v = SET_ONOFF_PRESS_VALUE;
 				}
 				inputdevice_add_inputcode(akss[i].aks, v, parm);
@@ -5893,6 +5891,9 @@ void inputdevice_reset (void)
 	cubo_flag = 0;
 #ifdef ARCADIA
 	alg_flag &= 1;
+#endif
+#ifdef WITH_DRACO
+	draco_keybord_repeat_cnt = 0;
 #endif
 }
 

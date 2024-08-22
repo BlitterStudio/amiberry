@@ -4,11 +4,10 @@
  * Toni Wilen 2023-2024
  */
 
-#ifdef WITH_DRACO
-
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef WITH_DRACO
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
