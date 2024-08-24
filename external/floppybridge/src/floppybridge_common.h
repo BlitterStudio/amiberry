@@ -13,6 +13,7 @@
 */
 #pragma once
 
+
 typedef void* BridgeDriverHandle;
 
 namespace FloppyBridge {

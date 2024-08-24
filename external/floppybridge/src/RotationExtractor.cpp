@@ -30,6 +30,7 @@
 // This isn't 100% perfect but does seem to work.
 
 #include "RotationExtractor.h"
+#include <cstring>
 
 RotationExtractor::RotationExtractor() : m_sequences(new MFMSequenceInfo[MAX_REVOLUTION_SEQUENCES]),
 										 m_initialSequences(
@@ -505,4 +506,75 @@ bool RotationExtractor::extractRotation(MFMSample* output, uint32_t& outputBits,
 
 	// and success!
 	return true;
+}
+
+
+// Reset this back to "empty"
+void LinearExtractor::reset(bool isHD) {
+	m_totalTime = 0;
+	m_currentPosition = m_outputBuffer;
+	m_outputStreamPos = 0;
+	m_outputStreamBit = 0;
+}
+
+// Set where the data should be saved to
+void LinearExtractor::setOutputBuffer(void* outputBuffer, const uint32_t bufferSizeInBytes) {
+	m_outputBuffer = (uint8_t*)outputBuffer;
+	reset(false);
+	m_totalSize = bufferSizeInBytes;
+}
+
+// Write a 0 or 1 to the bit stream
+inline void LinearExtractor::writeLinearBit(const bool value) {
+	if (!m_currentPosition) return;
+	(*m_currentPosition) <<= 1;
+	if (value) *m_currentPosition |= 1; 
+	m_outputStreamBit++;
+	if (m_outputStreamBit >= 8) {
+		m_outputStreamBit = 0;
+		m_outputStreamPos++;
+		if (m_outputStreamPos >= m_totalSize)
+			m_currentPosition = nullptr;
+		else m_currentPosition++;
+	}
+}
+
+// Copies the supplied buffer directly in
+void LinearExtractor::copyToBuffer(void* data, const uint32_t dataSize) {
+	uint32_t amountToCopy = dataSize;
+	if (amountToCopy > m_totalSize) amountToCopy = m_totalSize;
+	if (!m_outputBuffer) return;
+	if (!data) return;
+#ifdef _WIN32
+	memcpy_s(m_outputBuffer, m_totalSize, data, amountToCopy);
+#else
+	memcpy(m_outputBuffer, data, amountToCopy);
+#endif
+	m_outputStreamPos = dataSize;
+	m_outputStreamBit = 0;
+	m_currentPosition = nullptr;
+}
+
+
+// Submit a single sequence to the list - abstract function
+void LinearExtractor::submitSequence(const MFMSequenceInfo& sequence, bool isIndex, bool discardEarlySamples) {
+	if (!m_currentPosition) return;
+
+	m_totalTime += sequence.timeNS;
+
+	// And write the output stream
+	uint32_t bitsToWrite = (uint32_t)sequence.mfm;
+	if (bitsToWrite > 3) bitsToWrite = 3;
+	for (uint32_t s = 0; s < bitsToWrite; s++) writeLinearBit(false);
+	if (sequence.mfm != MFMSequence::mfm000) writeLinearBit(true);
+}
+
+// Finalise the buffer (shifting the bits for the current byte into place) and returns the total number of bits received
+uint32_t LinearExtractor::finaliseAndGetNumBits() {
+	// Shift the remaining bits into place
+	if (m_outputStreamBit && m_currentPosition) {
+		(*m_currentPosition) <<= 8 - m_outputStreamBit;
+		m_currentPosition = nullptr;
+	}
+	return (m_outputStreamPos * 8) + m_outputStreamBit;
 }

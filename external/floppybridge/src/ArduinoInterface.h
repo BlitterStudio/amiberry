@@ -171,6 +171,7 @@ namespace ArduinoFloppyReader {
 		bool			m_isStreaming;
 		bool			m_isHDMode;
 		std::mutex		m_protectAbort;
+		void*			m_tempBuffer = nullptr;
 
 		// Read a desired number of bytes into the target pointer
 		bool deviceRead(void* target, const unsigned int numBytes, const bool failIfNotAllRead = false);
@@ -248,7 +249,7 @@ namespace ArduinoFloppyReader {
 
 		// Reads a complete rotation of the disk, and returns it using the callback function which can return FALSE to stop
 		// An instance of BridgePLL is required.  
-		DiagnosticResponse readRotation(RotationExtractor& extractor, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns, std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation, bool useHalfPLL);
+		DiagnosticResponse readRotation(MFMExtractionTarget& extractor, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns, std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation, bool useHalfPLL);
 		// Same as the above, but this uses the newer much more accurate flux read
 		DiagnosticResponse readFlux(PLL::BridgePLL& pll, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns, std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation);
 
@@ -288,6 +289,9 @@ namespace ArduinoFloppyReader {
 
 		// Choose which surface of the disk to read from
 		DiagnosticResponse  selectSurface(const DiskSurface side);
+
+		// Reads just enough data to fulfill most extractions needed, but doesnt care about rotation position or index - pll should have the LinearExtractor configured
+		DiagnosticResponse readData(PLL::BridgePLL& pll);
 
 		// Read RAW data from the current track and surface selected - this works properly with the HD and DD options
 		// dataLength must be either RAW_TRACKDATA_LENGTH or RAW_TRACKDATA_LENGTH_HD.  If you mismatch the type then the function will return an error

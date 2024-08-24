@@ -225,14 +225,14 @@ bool GreaseWeazleDiskBridge::performNoClickSeek() {
 	if (!m_io.supportsDiskChange()) return true;
 
 	switch (m_io.performNoClickSeek()) {
-	case GWResponse::drOK:
-		updateLastManualCheckTime();
-		return true;
-	case GWResponse::drOldFirmware:
-		return false;
-	case GWResponse::drError:
-		m_wasIOError = true;
-		return false;
+		case GWResponse::drOK:
+			updateLastManualCheckTime();
+			return true;
+		case GWResponse::drOldFirmware:
+			return false;
+		case GWResponse::drError:
+			m_wasIOError = true;
+			return false;
 
 	}
 	return false;
@@ -277,9 +277,24 @@ CommonBridgeTemplate::ReadResponse GreaseWeazleDiskBridge::readData(PLL::BridgeP
 	case GWResponse::drOK: return ReadResponse::rrOK;
 	case GWResponse::drNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
 	default:  return ReadResponse::rrError;
-	}
-	
+	}	
 }
+
+// Called for a direct read. This does not match up a rotation and should be used with the pll initialized with the LinearExtractor
+//		pll:           required 
+// Returns: ReadResponse, explains its self
+CommonBridgeTemplate::ReadResponse GreaseWeazleDiskBridge::readLinearData(PLL::BridgePLL& pll) {
+	GWResponse result = m_io.readData(pll);
+	m_motorTurnOnTime = std::chrono::steady_clock::now();
+
+	switch (result) {
+	case GWResponse::drOK: return ReadResponse::rrOK;
+	case GWResponse::drNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
+	default:  return ReadResponse::rrError;
+	}
+}
+
+
 
 // Called when a cylinder revolution should be written to the disk.
 // Parameters are:	rawMFMData						The raw data to be written.  This is an actual MFM stream, going from MSB to LSB for each byte

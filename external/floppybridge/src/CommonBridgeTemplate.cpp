@@ -807,7 +807,8 @@ bool CommonBridgeTemplate::isMFMDataAvailable() {
 }
 
 // Requests an entire track of data.  Returns 0 if the track is not available
-// The return value is the wrap point in bits (last byte is shifted to MSB)
+// The return value is the wrap point in bits (last byte is shifted to MSB) or in Direct mode, just the number of bits received
+// resyncRotation is ignored in direct mode
 int CommonBridgeTemplate::getMFMTrack(bool side, unsigned int track, bool resyncRotation, const int bufferSizeInBytes, void* output) {
 	if (m_directMode) {
 		threadLockControl(true);
@@ -831,37 +832,22 @@ int CommonBridgeTemplate::getMFMTrack(bool side, unsigned int track, bool resync
 			setActiveSurface(_side);
 		}
 
-		MFMCache& trackData = m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].next;
-		trackData.amountReadInBits = 0;
-		trackData.ready = false;
+		m_linearExtractor.setOutputBuffer(output, bufferSizeInBytes);
+		// Switch to linear extractor
+		m_pll.setRotationExtractor(&m_linearExtractor);
 
-		m_extractor.setAlwaysUseIndex(resyncRotation);
+		ReadResponse r = readLinearData(m_pll);
+		// put it back!
+		m_pll.setRotationExtractor(&m_extractor);
 
-		// Grab full revolutions if possible.
-		ReadResponse r = readData(m_pll, bufferSizeInBytes, trackData.mfmBuffer, 
-			m_mfmRead[m_actualCurrentCylinder][(int)m_actualFloppySide].startBitPatterns,
-			[this, &trackData](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
-				trackData.amountReadInBits = dataLengthInBits;
-				return false;  // stop reading
-		});
+		// Prevent disk check while we're doing this
+		m_lastDiskCheckTime = std::chrono::steady_clock::now();
 
 		// Release thread
 		threadLockControl(false);
 
-		RotationExtractor::MFMSample* sample = trackData.mfmBuffer;
-		const int bitsRemaining = trackData.amountReadInBits;
-		const int bytesToCopy = std::min((bitsRemaining + 7) / 8, bufferSizeInBytes);
-		unsigned char* outByte = (unsigned char*)output;
-
-		for (int byte = 0; byte < bytesToCopy; byte++) {
-			*outByte++ = sample->mfmData;
-			sample++;
-		}
-
-		// Clear the data read
-		trackData.amountReadInBits = 0;
-
-		return bitsRemaining;
+		// Finalise the output and get the mumber of bits
+		return m_linearExtractor.finaliseAndGetNumBits();
 	}
 
 	// Be in the right place
@@ -1388,6 +1374,7 @@ bool CommonBridgeTemplate::initialise() {
 		internalSetMotorStatus(false);
 		m_autoCacheMotorStatus = false;
 		setActiveSurface(m_actualFloppySide);
+		setCurrentCylinder(0);
 
 		// Get some real disk status values
 		if (supportsDiskChange()) {
@@ -1594,6 +1581,9 @@ bool CommonBridgeTemplate::writeMFMTrackToBuffer(bool side, unsigned int track, 
 		m_writeCompletePending = false;
 		m_writePending = false;
 		m_writeComplete = true;
+
+		// Prevent disk check while we're doing this
+		m_lastDiskCheckTime = std::chrono::steady_clock::now();
 
 		// Release thread
 		threadLockControl(false);

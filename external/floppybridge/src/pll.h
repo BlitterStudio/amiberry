@@ -55,7 +55,7 @@ namespace PLL {
 		const bool m_enabled;
 
 		// Rotation extractor
-		RotationExtractor* m_extractor = nullptr;
+		MFMExtractionTarget* m_extractor = nullptr;
 
 		// Clock
 		int32_t m_clock = 0;
@@ -93,14 +93,14 @@ namespace PLL {
 		void prepareExtractor(bool isHD, const RotationExtractor::IndexSequenceMarker& indexSequence);
 
 		// Change the rotation extractor
-		void setRotationExtractor(RotationExtractor* extractor) { m_extractor = extractor; }
+		void setRotationExtractor(MFMExtractionTarget* extractor) { m_extractor = extractor; }
 
 		// Re-plays the data back into the rotation extractor but with (random) +/- 64ns of jitter
 		void rePlayData(const unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
 			std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation);
 
 		// Return the active rotation extractor
-		RotationExtractor* rotationExtractor() { return m_extractor; }
+		MFMExtractionTarget* rotationExtractor() { return m_extractor; }
 
 		// Pass on some functions from the extractor
 		bool canExtract() { return m_extractor->canExtract(); }

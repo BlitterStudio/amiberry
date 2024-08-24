@@ -116,6 +116,11 @@ protected:
 	virtual ReadResponse readData(PLL::BridgePLL& pll, const unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
 		std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation) override;
 
+	// Called for a direct read. This does not match up a rotation and should be used with the pll initialized with the LinearExtractor
+	//		pll:           required 
+	// Returns: ReadResponse, explains its self
+	virtual ReadResponse readLinearData(PLL::BridgePLL& pll) override;
+
 	// Called when a cylinder revolution should be written to the disk.
 	// Parameters are:	rawMFMData						The raw data to be written.  This is an actual MFM stream, going from MSB to LSB for each byte
 	//					numBytes						Number of bits in the buffer to write
@@ -127,7 +132,6 @@ protected:
 	// A manual way to check for disk change.  This is simulated by issuing a read message and seeing if there's any data.  Returns TRUE if data or an INDEX pulse was detected
 	// It's virtual as the default method issues a read and looks for data.  If you have a better implementation then override this
 	virtual bool attemptToDetectDiskChange() override;
-
 
 public:
 	GreaseWeazleDiskBridge(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool enableAutoCache, bool useSmartSpeed, bool autoDetectComPort, char* comPort, FloppyBridge::DriveSelection drive);

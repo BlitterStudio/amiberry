@@ -61,11 +61,9 @@
 
 #include <stdint.h>
 
-
-// Class to extract a single rotation from an incoming mfm data sequence.
-class RotationExtractor {
+// A class that can receive data 
+class MFMExtractionTarget {
 public:
-
 	// Enum for the possible sequences we support - mfm1 is not normally allowed.
 	enum class MFMSequence : unsigned char { mfm1 = 0, mfm01 = 1, mfm001 = 2, mfm0001 = 3, mfm000 = 4 };
 
@@ -109,6 +107,38 @@ public:
 		bool valid = false;
 	};
 
+	// Return the total amount of time data received so far
+	[[nodiscard]] virtual uint32_t totalTimeReceived() const = 0;
+
+	// Get and set the sequence identified as data round the INDEX pulse so that next time we get consistent revolution starting points
+	virtual void setIndexSequence(const IndexSequenceMarker& sequence) = 0;
+	virtual void getIndexSequence(IndexSequenceMarker& sequence) const = 0;
+
+	// Reset this back to "empty"
+	virtual void reset(bool isHD) = 0;
+
+	// Submit a single sequence to the list - abstract function
+	virtual void submitSequence(const MFMSequenceInfo& sequence, bool isIndex, bool discardEarlySamples = true) = 0;
+
+	// Returns TRUE if we are readt to extract (eg: full revolution or buffer full)
+	[[nodiscard]] virtual bool canExtract() const = 0;
+
+	// Returns TRUE if this has learnt the time of a disk revolution
+	[[nodiscard]] virtual bool hasLearntRotationSpeed() const = 0;
+
+	// Returns TRUE if we're in INDEX mode
+	[[nodiscard]] virtual bool isInIndexMode() const = 0;
+
+	// Extracts the data we have so far. Might need canExtract to be true depending on the implementation
+	[[nodiscard]] virtual bool extractRotation(MFMSample* output, uint32_t& outputBits, uint32_t maxBufferSizeBytes, bool usePLLTime = false) = 0;
+
+	// I want the destructor virtual
+	virtual ~MFMExtractionTarget() {};
+};
+
+
+// Class to extract a single rotation from an incoming mfm data sequence and ensure it's a perfect MFM rotation
+class RotationExtractor : public MFMExtractionTarget  {
 private:
 	// How long a revolution is
 	uint32_t m_revolutionTime = 0;
@@ -158,11 +188,11 @@ public:
 	virtual ~RotationExtractor();
 
 	// Get and set the sequence identified as data round the INDEX pulse so that next time we get consistent revolution starting points
-	void setIndexSequence(const IndexSequenceMarker& sequence) { m_indexSequence = sequence; }
-	void getIndexSequence(IndexSequenceMarker& sequence) const { sequence = m_indexSequence; }
+	virtual void setIndexSequence(const IndexSequenceMarker& sequence) override { m_indexSequence = sequence; }
+	virtual void getIndexSequence(IndexSequenceMarker& sequence) const override { sequence = m_indexSequence; }
 
 	// Reset this back to "empty"
-	void reset(bool isHD);
+	virtual void reset(bool isHD) override;
 
 	// Return TRUE if we're in HD mode
 	[[nodiscard]] bool isHD() const { return m_isHD; }
@@ -182,13 +212,13 @@ public:
 	void setRevolutionTime(const uint32_t time) { m_revolutionTime = time; m_revolutionTimeNearlyComplete = (uint32_t)(time * 0.9f); }
 
 	// Return the total amount of time data received so far
-	[[nodiscard]] uint32_t totalTimeReceived() const { return m_timeReceived; }
+	[[nodiscard]] virtual uint32_t totalTimeReceived() const override { return m_timeReceived; };
 
 	// Returns TRUE if this has learnt the time of a disk revolution
-	[[nodiscard]] bool hasLearntRotationSpeed() const { return m_revolutionTime > (m_isHD ? 300000000U : 150000000U); }
+	[[nodiscard]] bool hasLearntRotationSpeed() const override { return m_revolutionTime > (m_isHD ? 300000000U : 150000000U); }
 
 	// Returns TRUE if we're in INDEX mode
-	[[nodiscard]] bool isInIndexMode() const { return m_useIndex; }
+	[[nodiscard]] bool isInIndexMode() const override { return m_useIndex; }
 
 	// Sets the code so it always uses the index marker when finding revolutions
 	void setAlwaysUseIndex(bool useIndex) { m_useIndex = useIndex; }
@@ -200,15 +230,59 @@ public:
 	[[nodiscard]] bool isNearlyReady() const { return (m_revolutionTimeNearlyComplete) && (m_currentTime >= m_revolutionTimeNearlyComplete) && (!m_useIndex); }
 
 	// Submit a single sequence to the list
-	void submitSequence(const MFMSequenceInfo& sequence, bool isIndex, bool discardEarlySamples = true);
+	virtual void submitSequence(const MFMSequenceInfo& sequence, bool isIndex, bool discardEarlySamples = true) override;
 
 	// Returns TRUE if we should be able to extract a revolution
-	[[nodiscard]] bool canExtract() const { return (m_revolutionReadyAt != INDEX_NOT_FOUND) && (m_revolutionReady) && (m_sequencePos>100); }
+	[[nodiscard]] virtual bool canExtract() const override { return (m_revolutionReadyAt != INDEX_NOT_FOUND) && (m_revolutionReady) && (m_sequencePos>100); }
 
 	// Extracts a single rotation and updates the buffer to remove it.  Returns FALSE if no rotation is available
 	// If calculateSpeedFactor is true, we're in INDEX mode, and HIGH_RESOLUTION_MODE is defined then this will output time in NS rather than the speed factor value
-	[[nodiscard]] bool extractRotation(MFMSample* output, uint32_t& outputBits, uint32_t maxBufferSizeBytes, bool usePLLTime = false);
+	[[nodiscard]] virtual bool extractRotation(MFMSample* output, uint32_t& outputBits, uint32_t maxBufferSizeBytes, bool usePLLTime = false) override;
 };
+
+
+// Simple class to just receive that data being sent from the PLL into a linear MFM buffer. It doesn't try to find rotations 
+class LinearExtractor : public MFMExtractionTarget {
+private:
+	uint8_t* m_outputBuffer = nullptr;
+	uint8_t* m_currentPosition = nullptr;
+	uint32_t m_outputStreamPos = 0;
+	uint32_t m_outputStreamBit = 0;
+	uint32_t m_totalSize = 0;
+	uint32_t m_totalTime = 0;
+
+	// Write a 0 or 1 to the bit stream
+	inline void writeLinearBit(const bool value);
+public: 
+	// Dont care about this
+	virtual void setIndexSequence(const IndexSequenceMarker& sequence) override {};
+	virtual void getIndexSequence(IndexSequenceMarker& sequence) const override {};
+	virtual bool hasLearntRotationSpeed() const override { return true; };
+	virtual bool isInIndexMode() const override { return false; };
+	virtual bool extractRotation(MFMSample* output, uint32_t& outputBits, uint32_t maxBufferSizeBytes, bool usePLLTime = false) override { return false; };
+
+	// Returns TRUE if we are readt to extract (eg: full revolution or buffer full)
+	virtual bool canExtract() const override { return m_outputStreamPos >= m_totalSize; };
+
+	// Set where the data should be saved to
+	void setOutputBuffer(void* outputBuffer, const uint32_t bufferSizeInBytes);
+
+	// Finalise the buffer (shifting the bits for the current byte into place) and returns the total number of bits received
+	uint32_t finaliseAndGetNumBits();
+
+	// Return the total amount of time data received so far
+	virtual uint32_t totalTimeReceived() const override { return m_totalTime; };
+
+	// Reset this back to "empty"
+	virtual void reset(bool isHD) override;
+
+	// Copies the supplied buffer directly in
+	void copyToBuffer(void* data, const uint32_t dataSize);
+
+	// Submit a single sequence to the list - abstract function
+	virtual void submitSequence(const MFMSequenceInfo& sequence, bool isIndex, bool discardEarlySamples = true) override;
+};
+
 
 
 #endif

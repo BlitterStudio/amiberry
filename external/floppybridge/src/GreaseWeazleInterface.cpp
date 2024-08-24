@@ -915,20 +915,103 @@ inline void unpackStreamQueue(std::queue<unsigned char>& queue, PLLData& pllData
 
 }
 
+// Reads "enough" data to extract data from the disk. This doesnt care about creating a perfect revolution - pll should have the LinearExtractor configured
+GWResponse GreaseWeazleInterface::readData(PLL::BridgePLL& pll) {
+	GWReadFlux header;
+
+	// 220ms is long enough for even the worst drives. If a revolution takes longer than this then theres a problem anyway
+	header.ticks = nSecToTicks(220 * 1000 * 1000, m_gwVersionInformation.sample_freq);
+	header.max_index = 0;
+	header.max_index_linger = 0;
+
+	m_shouldAbortReading = false;
+
+	// Sample storage
+	std::queue<unsigned char> queue;
+
+	// Reset ready for extraction	
+	pll.rotationExtractor()->reset(m_inHDMode);
+
+	selectDrive(true);
+
+	// Write request
+	Ack response = Ack::Okay;
+	if (!sendCommand(Cmd::ReadFlux, (void*)&header, sizeof(header), response)) {
+		if (!m_motorIsEnabled) selectDrive(false);
+		return GWResponse::drReadResponseFailed;
+	}
+	int32_t failCount = 0;
+
+	// Buffer to read into
+	unsigned char tempReadBuffer[64] = { 0 };
+	bool zeroDetected = false;
+
+	applyCommTimeouts(true);
+
+	PLLData pllData;
+	pllData.freq = m_gwVersionInformation.sample_freq;
+
+	do {
+		// More efficient to read several bytes in one go		
+		uint32_t bytesAvailable = m_comPort.getBytesWaiting();
+		if (bytesAvailable < 1) bytesAvailable = 1;
+		if (bytesAvailable > sizeof(tempReadBuffer)) bytesAvailable = sizeof(tempReadBuffer);
+		uint32_t bytesRead = m_comPort.read(tempReadBuffer, m_shouldAbortReading ? 1 : bytesAvailable);
+		if (bytesRead < 1) {
+			failCount++;
+			if (failCount > 10) break;
+		}
+		else failCount = 0;
+
+		// If theres this many we can process as this is the maximum we need to process
+		if ((!m_shouldAbortReading) && (bytesRead)) {
+
+			for (uint32_t a = 0; a < bytesRead; a++) {
+				queue.push(tempReadBuffer[a]);
+				zeroDetected |= tempReadBuffer[a] == 0;
+			}
+
+			unpackStreamQueue(queue, pllData, pll, m_inHDMode);			
+		}
+		else {
+			for (uint32_t a = 0; a < bytesRead; a++) zeroDetected |= tempReadBuffer[a] == 0;
+		}
+	} while (!zeroDetected);
+
+	applyCommTimeouts(false);
+
+	// Check for errors
+	response = Ack::Okay;
+	sendCommand(Cmd::GetFluxStatus, nullptr, 0, response);
+
+	if (!m_motorIsEnabled) selectDrive(false);
+
+	// Update this flag
+	m_diskInDrive = response != Ack::NoIndex;
+
+	switch (response) {
+	case Ack::FluxOverflow: return GWResponse::drSerialOverrun;
+	case Ack::NoIndex: return GWResponse::drNoDiskInDrive;
+	case Ack::Okay: return GWResponse::drOK;
+	default: return  GWResponse::drReadResponseFailed;
+	}
+}
+
 // Reads a complete rotation of the disk, and returns it using the callback function which can return FALSE to stop
 // An instance of RotationExtractor is required.  This is purely to save on re-allocations.  It is internally reset each time
+// This is slower than the above because this one focuses on an accurate rotation image of the data rather than just a stream
 GWResponse GreaseWeazleInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns,
 	std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation) {	
 	GWReadFlux header;
 
-	const uint32_t extraTime = OVERLAP_SEQUENCE_MATCHES * (OVERLAP_EXTRA_BUFFER) * 8000;
+	const uint32_t extraTime = OVERLAP_SEQUENCE_MATCHES * (OVERLAP_EXTRA_BUFFER) * 8000;  // this is approx 49mS
 	if ((pll.rotationExtractor()->isInIndexMode()) || (!pll.rotationExtractor()->hasLearntRotationSpeed())) {
 		header.ticks = 0;
 		header.max_index = 1;
-		header.max_index_linger = nSecToTicks((212 * 1000 * 1000) + extraTime, m_gwVersionInformation.sample_freq);
+		header.max_index_linger = nSecToTicks((210 * 1000 * 1000) + extraTime, m_gwVersionInformation.sample_freq);
 	}
 	else {
-		header.ticks = nSecToTicks((212 * 1000 * 1000) + extraTime, m_gwVersionInformation.sample_freq);
+		header.ticks = nSecToTicks((210 * 1000 * 1000) + extraTime, m_gwVersionInformation.sample_freq);
 		header.max_index = 0;
 		header.max_index_linger = 0;
 	}
