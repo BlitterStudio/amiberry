@@ -335,7 +335,6 @@ static int native_dos_op(TrapContext *ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2,
 	TCHAR tmp[MAX_DPATH];
 	char *s;
 	int v;
-	std::string tmp_string;
 
 	if (mode)
 		return -1;
@@ -345,11 +344,7 @@ static int native_dos_op(TrapContext *ctx, uae_u32 mode, uae_u32 p1, uae_u32 p2,
 	v = get_native_path(ctx, p1, tmp);
 	if (v)
 		return v;
-	
-	tmp_string.assign(tmp);
-	replace(tmp_string, " ", "\\ ");
-	
-	s = ua (tmp_string.c_str());
+	s = ua (tmp);
 	trap_put_string(ctx, (uae_u8*)s, p2, p3);
 	xfree (s);
 	return 0;
