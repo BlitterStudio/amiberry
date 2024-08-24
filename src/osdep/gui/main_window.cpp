@@ -263,7 +263,7 @@ void update_gui_screen()
 	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &gui_renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(mon->gui_renderer);
 
-	if (mon->amiga_window)
+	if (mon->amiga_window && !kmsdrm_detected)
 		show_screen(0, 0);
 }
 
