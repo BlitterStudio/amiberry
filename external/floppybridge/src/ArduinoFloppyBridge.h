@@ -111,6 +111,11 @@ protected:
 	virtual ReadResponse readData(PLL::BridgePLL& pll, const unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
 		std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation) override;
 
+	// Called for a direct read. This does not match up a rotation and should be used with the pll initialized with the LinearExtractor
+	//		pll:           required 
+	// Returns: ReadResponse, explains its self
+	virtual ReadResponse readLinearData(PLL::BridgePLL& pll) override;
+
 	// Called when a cylinder revolution should be written to the disk.
 	// Parameters are:	rawMFMData						The raw data to be written.  This is an actual MFM stream, going from MSB to LSB for each byte
 	//					numBytes						Number of bits in the buffer to write

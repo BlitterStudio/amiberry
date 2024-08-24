@@ -41,7 +41,8 @@
 #include <WinSock2.h>
 #include "bridgeProfileListEditor.h"
 #include "bridgeProfileEditor.h"
-
+#include <WinDNS.h>
+#pragma comment(lib, "Dnsapi.lib")
 HINSTANCE hInstance;
 
 #else
@@ -154,31 +155,56 @@ void handleAbout(bool checkForUpdates, FloppyBridge::BridgeAbout** output) {
         // Start winsock
         WSADATA data;
         WSAStartup(MAKEWORD(2, 0), &data);
-#endif
-        // Fetch version from 'A' record in the DNS record
+
+        DNS_RECORD* dnsRecord;
+        std::wstring versionString;
+
+        // Look up TXT record 
+        DNS_STATUS error = DnsQuery(L"floppybridge-amiga.robsmithdev.co.uk", DNS_TYPE_TEXT, DNS_QUERY_BYPASS_CACHE, NULL, &dnsRecord, NULL);
+        if (!error) {
+            const DNS_RECORD* record = dnsRecord;
+            while (record) {
+                if (record->wType == DNS_TYPE_TEXT) {
+                    const DNS_TXT_DATAW* pData = &record->Data.TXT;
+                    for (DWORD string = 0; string < pData->dwStringCount; string++) {
+                        const std::wstring text = pData->pStringArray[string];
+                        if ((text.length() >= 9) && (text.substr(0, 2) == L"v=")) versionString = text.substr(2);
+                    }
+                }
+                record = record->pNext;
+            }
+            DnsRecordListFree(dnsRecord, DnsFreeRecordList);  //DnsFreeRecordListDeep
+        }
+
+        if (!versionString.empty()) {
+            // A little hacky to convert a.b.c.d into an array
+            sockaddr_in tmp;
+            INT len = sizeof(tmp);
+            if (WSAStringToAddress((wchar_t*)versionString.c_str(), AF_INET, NULL, (sockaddr*)&tmp, &len) == 0) {
+                const in_addr add = tmp.sin_addr;
+                BridgeInformationUpdate.updateMajorVersion = add.S_un.S_un_b.s_b1;
+                BridgeInformationUpdate.updateMinorVersion = add.S_un.S_un_b.s_b2;
+                BridgeInformation.isUpdateAvailable = ((BridgeInformation.majorVersion < BridgeInformation.updateMajorVersion) ||
+                    ((BridgeInformation.majorVersion == BridgeInformation.updateMajorVersion) && (BridgeInformation.minorVersion < BridgeInformation.updateMinorVersion))) ? 1 : 0;
+                BridgeInformationUpdate.isUpdateAvailable = BridgeInformation.isUpdateAvailable;;
+            }
+        }
+#else
+        // Fetch version from 'A' record in the DNS record - this is probably not used by anything anyway
         hostent* address = gethostbyname("floppybridge-amiga.robsmithdev.co.uk");
         if ((address) && (address->h_addrtype == AF_INET)) {
             if (address->h_addr_list[0] != 0) {
                 in_addr add = *((in_addr*)address->h_addr_list[0]);
-
-#ifdef _WIN32
-             //   BridgeInformation.updateMajorVersion = add.S_un.S_un_b.s_b1;
-              //  BridgeInformation.updateMinorVersion = add.S_un.S_un_b.s_b2;
-                BridgeInformationUpdate.updateMajorVersion = add.S_un.S_un_b.s_b1;
-                BridgeInformationUpdate.updateMinorVersion = add.S_un.S_un_b.s_b2;
-#else
                 uint32_t bytes = htonl(add.s_addr);
-             ///   BridgeInformation.updateMajorVersion = bytes >> 24;
-             //   BridgeInformation.updateMinorVersion = (bytes >> 16) & 0xFF;
                 BridgeInformationUpdate.updateMajorVersion = bytes >> 24;
                 BridgeInformationUpdate.updateMinorVersion = (bytes >> 16) & 0xFF;
-#endif  
+
                 BridgeInformation.isUpdateAvailable = ((BridgeInformation.majorVersion < BridgeInformation.updateMajorVersion) ||
                     ((BridgeInformation.majorVersion == BridgeInformation.updateMajorVersion) && (BridgeInformation.minorVersion < BridgeInformation.updateMinorVersion))) ? 1 : 0;
-              
                 BridgeInformationUpdate.isUpdateAvailable = BridgeInformation.isUpdateAvailable;;
             }
         }
+#endif
     }
 #ifdef _WIN32
     if (output) 
@@ -422,7 +448,7 @@ extern "C" {
     // Returns a pointer to a string containing the details for a profile
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_GetProfileConfigFromString(unsigned int profileID, char** profilesConfigString) {
         if (!profilesConfigString) return false;
-        auto f = profileList.find(profileID);
+        const auto f = profileList.find(profileID);
         if (f == profileList.end()) return false;
 
         f->second->toString(profilesConfigString);
@@ -550,7 +576,7 @@ extern "C" {
     // Creates an instance of a driver from a config string.  This will automatically choose the correct driver index
     FLOPPYBRIDGE_API bool CALLING_CONVENSION BRIDGE_CreateDriverFromProfileID(unsigned int profileID, BridgeOpened** bridgeDriverHandle) {
         if (!bridgeDriverHandle) return false;
-        const auto f = profileList.find(profileID);
+        auto f = profileList.find(profileID);
         if (f == profileList.end()) return false;
 
         if (!BRIDGE_CreateDriver(f->second->bridgeIndex, bridgeDriverHandle)) return false;

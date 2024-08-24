@@ -211,6 +211,9 @@ namespace GreaseWeazle {
 		GWResponse readRotation(PLL::BridgePLL& pll, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns,
 			std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation);
 
+		// Reads "enough" data to extract data from the disk. This doesn't care about creating a perfect revolution - pll should have the LinearExtractor configured
+		GWResponse readData(PLL::BridgePLL& pll);
+
 		// Turns on and off the reading interface.  dontWait disables the GW timeout waiting, so you must instead.  Returns drOK, drError, 
 		GWResponse enableMotor(const bool enable, const bool dontWait = false);
 

@@ -230,9 +230,24 @@ CommonBridgeTemplate::ReadResponse SupercardProDiskBridge::readData(PLL::BridgeP
 	case SCPErr::scpOK: return ReadResponse::rrOK;
 	case SCPErr::scpNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
 	default:  return ReadResponse::rrError;
-	}
-	
+	}	
 }
+
+
+// Called for a direct read. This does not match up a rotation and should be used with the pll initialized with the LinearExtractor
+//		pll:           required 
+// Returns: ReadResponse, explains its self
+CommonBridgeTemplate::ReadResponse SupercardProDiskBridge::readLinearData(PLL::BridgePLL& pll) {
+	SCPErr result = m_io.readData(pll);
+	m_motorTurnOnTime = std::chrono::steady_clock::now();
+
+	switch (result) {
+		case SCPErr::scpOK: return ReadResponse::rrOK;
+		case SCPErr::scpNoDiskInDrive: return ReadResponse::rrNoDiskInDrive;
+		default:  return ReadResponse::rrError;
+	}
+}
+
 
 // Called when a cylinder revolution should be written to the disk.
 // Parameters are:	rawMFMData						The raw data to be written.  This is an actual MFM stream, going from MSB to LSB for each byte

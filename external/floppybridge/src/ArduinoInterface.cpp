@@ -186,6 +186,7 @@ ArduinoInterface::ArduinoInterface() {
 
 // Free me
 ArduinoInterface::~ArduinoInterface() {
+	if (m_tempBuffer) free(m_tempBuffer);
 	abortReadStreaming();
 	closePort();
 }
@@ -991,6 +992,202 @@ DiagnosticResponse ArduinoInterface::readCurrentTrack(RawTrackDataDD& trackData,
 	return readCurrentTrack(&trackData, RAW_TRACKDATA_LENGTH_DD, readFromIndexPulse);
 }
 
+// Reads just enough data to fulfill most extractions needed, but doesnt care about rotation position or index - pll should have the LinearExtractor configured
+DiagnosticResponse ArduinoInterface::readData(PLL::BridgePLL& pll) {
+	pll.rotationExtractor()->reset(m_isHDMode);
+	LinearExtractor* linearExtractor = dynamic_cast<LinearExtractor*>(pll.rotationExtractor());
+	if (!linearExtractor) return DiagnosticResponse::drError;
+
+	if (!m_tempBuffer) {
+		m_tempBuffer = malloc(RAW_TRACKDATA_LENGTH_HD);
+		if (!m_tempBuffer) return DiagnosticResponse::drError;
+	}
+
+	const uint32_t sizeRequired = m_isHDMode ? RAW_TRACKDATA_LENGTH_HD : RAW_TRACKDATA_LENGTH_DD;
+	DiagnosticResponse response = readCurrentTrack(m_tempBuffer, sizeRequired, false);
+	if (response != DiagnosticResponse::drOK) return response;
+	linearExtractor->copyToBuffer(m_tempBuffer, sizeRequired);
+	return response;
+	
+	m_lastCommand = LastCommand::lcReadTrackStream;
+
+	if (m_version.major == 1 && m_version.minor < 8) {
+		m_lastError = DiagnosticResponse::drOldFirmware;
+		return m_lastError;
+	}
+
+	const bool highPrecisionMode = !m_isHDMode && m_version.deviceFlags1 & FLAGS_HIGH_PRECISION_SUPPORT;
+	char mode = highPrecisionMode ? COMMAND_READTRACKSTREAM_HIGHPRECISION : COMMAND_READTRACKSTREAM;
+
+	if (mode == COMMAND_READTRACKSTREAM_HIGHPRECISION && m_version.deviceFlags1 & FLAGS_FLUX_READ) mode = COMMAND_READTRACKSTREAM_HALFPLL;
+	m_lastError = runCommand(mode);
+	if (m_lastError != DiagnosticResponse::drOK) return m_lastError;
+	m_isStreaming = true;
+
+	applyCommTimeouts(true);
+	unsigned char tempReadBuffer[4096] = { 0 };
+
+	// Let the class know we're doing some streaming stuff
+	m_abortStreaming = false;
+	m_abortSignalled = false;
+
+	// Number of times we failed to read anything
+	int32_t readFail = 0;
+
+	// Sliding window for abort
+	char slidingWindow[5] = { 0,0,0,0,0 };
+	bool timeout = false;
+	bool dataState = false;
+	bool isFirstByte = true;
+	unsigned char mfmSequences = 0;
+
+	MFMExtractionTarget* extractor = pll.rotationExtractor();
+
+	for (;;) {
+
+		// More efficient to read several bytes in one go		
+		unsigned int bytesAvailable = m_comPort.getBytesWaiting();
+		if (bytesAvailable < 1) bytesAvailable = 1;
+		if (bytesAvailable > sizeof tempReadBuffer) bytesAvailable = sizeof tempReadBuffer;
+		unsigned int bytesRead = m_comPort.read(tempReadBuffer, bytesAvailable);
+		for (size_t a = 0; a < bytesRead; a++) {
+			const unsigned char byteRead = tempReadBuffer[a];
+			if (m_abortSignalled) {
+				// Make space
+				for (int s = 0; s < 4; s++) slidingWindow[s] = slidingWindow[s + 1];
+				// Append the new byte
+				slidingWindow[4] = byteRead;
+
+				// Watch the sliding window for the pattern we need
+				if (slidingWindow[0] == 'X' && slidingWindow[1] == 'Y' && slidingWindow[2] == 'Z' && slidingWindow[3] == SPECIAL_ABORT_CHAR && slidingWindow[4] == '1') {
+					m_isStreaming = false;
+					m_comPort.purgeBuffers();
+					m_lastError = timeout ? DiagnosticResponse::drError : DiagnosticResponse::drOK;
+					applyCommTimeouts(false);
+					return m_lastError;
+				}
+			}
+			else {
+				unsigned char tmp;
+				RotationExtractor::MFMSequenceInfo sequence{};
+				if (m_isHDMode) {
+					for (int i = 6; i >= 0; i -= 2) {
+						tmp = byteRead >> i & 0x03;
+						sequence.mfm = (RotationExtractor::MFMSequence)((tmp == 0x03 ? 0 : tmp) + 1);
+						sequence.timeNS = 2000 + (unsigned int)sequence.mfm * 2000;
+						extractor->submitSequence(sequence, tmp == 0x03);
+					}
+				}
+				else {
+					if (highPrecisionMode) {
+						if (isFirstByte) {
+							// Throw away the first byte
+							isFirstByte = false;
+							if (byteRead != 0xC3) {
+								// This should never happen.
+								abortReadStreaming();
+							}
+						}
+						else {
+							if (dataState) {
+
+								if (mode == COMMAND_READTRACKSTREAM_HALFPLL) {
+									const int32_t sequences[4] = { (mfmSequences >> 6) & 0x03, (mfmSequences >> 4) & 0x03, (mfmSequences >> 2) & 0x03, mfmSequences & 0x03 };
+
+									// First remove any flux time that us 000 as thats always fixed
+									int32_t readSpeed = (unsigned int)(byteRead & 0x7F) * 2000 / 128;
+
+									// Output the fluxes
+									for (int a = 0; a < 4; a++) {
+										if (sequences[a] == 0) {
+											sequence.mfm = RotationExtractor::MFMSequence::mfm000;
+											sequence.timeNS = 5000 + readSpeed;
+										}
+										else {
+											sequence.mfm = (RotationExtractor::MFMSequence)sequences[a];
+											sequence.timeNS = 1000 + readSpeed + (((int)sequence.mfm) * 2000);
+										}
+										sequence.pllTimeNS = sequence.timeNS;
+										extractor->submitSequence(sequence, ((byteRead & 0x80) != 0) && (a == 0));
+									}
+
+								}
+								else {
+									int32_t readSpeed = (unsigned int)(byteRead & 0x7F) * 2000 / 128;
+									tmp = mfmSequences >> 6 & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor->submitSequence(sequence, (byteRead & 0x80) != 0);
+
+									tmp = mfmSequences >> 4 & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor->submitSequence(sequence, false);
+
+									tmp = mfmSequences >> 2 & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor->submitSequence(sequence, false);
+
+									tmp = mfmSequences & 0x03;
+									sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+									sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + (sequence.mfm == RotationExtractor::MFMSequence::mfm000 ? -2000 : readSpeed);
+									extractor->submitSequence(sequence, false);
+								}
+
+								dataState = false;
+							}
+							else {
+								// in 'false' mode we get the flux data
+								dataState = true;
+								mfmSequences = byteRead;
+							}
+						}
+					}
+					else {
+						unsigned short readSpeed = (unsigned long long)((unsigned int)((byteRead & 0x07) * 16) * 2000) / 128;
+
+						// Now packet up the data in the format the rotation extractor expects it to be in
+						tmp = byteRead >> 5 & 0x03;
+						sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+						sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + readSpeed;
+
+						extractor->submitSequence(sequence, (byteRead & 0x80) != 0);
+
+						tmp = byteRead >> 3 & 0x03;
+						sequence.mfm = tmp == 0 ? RotationExtractor::MFMSequence::mfm000 : (RotationExtractor::MFMSequence)(tmp);
+						sequence.timeNS = 1000 + (unsigned int)sequence.mfm * 2000 + readSpeed;
+
+						extractor->submitSequence(sequence, false);
+					}
+				}
+
+				// Is it ready to extract? - takes 15-16ms to abort so take that into account
+				if ((extractor->canExtract() || extractor->totalTimeReceived()>(220000000 - 14000000))) {
+					if (!m_abortSignalled) abortReadStreaming();
+				}				
+			}
+		}
+		if (bytesRead < 1) {
+			readFail++;
+			if (readFail > 30) {
+				m_abortStreaming = false; // force the 'abort' command to be sent
+				abortReadStreaming();
+				m_lastError = DiagnosticResponse::drReadResponseFailed;
+				m_isStreaming = false;
+				applyCommTimeouts(false);
+				return m_lastError;
+			}
+			else {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+		}
+		else {
+			readFail = 0;
+		}
+	}
+}
+
 // Read RAW data from the current track and surface HD mode
 DiagnosticResponse ArduinoInterface::readCurrentTrack(void* trackData, const int dataLength, const bool readFromIndexPulse) {
 	m_lastCommand = LastCommand::lcReadTrack;
@@ -1161,7 +1358,7 @@ DiagnosticResponse ArduinoInterface::readCurrentTrack(void* trackData, const int
 
 // Reads a complete rotation of the disk, and returns it using the callback function which can return FALSE to stop
 // An instance of RotationExtractor is required.  This is purely to save on re-allocations.  It is internally reset each time
-DiagnosticResponse ArduinoInterface::readRotation(RotationExtractor& extractor, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns, std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation, bool useHalfPLL) {
+DiagnosticResponse ArduinoInterface::readRotation(MFMExtractionTarget& extractor, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns, std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation, bool useHalfPLL) {
 	m_lastCommand = LastCommand::lcReadTrackStream;
 
 	if (m_version.major == 1 && m_version.minor < 8) {

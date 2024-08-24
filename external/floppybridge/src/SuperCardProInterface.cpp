@@ -265,8 +265,8 @@ bool SCPInterface::enableMotor(const bool enable, const bool dontWait) {
 		if (dontWait) {
 			payload[0] = htons(1000);   // Drive select delay (microseconds)
 			payload[1] = htons(5000);   // Step command delay (microseconds)
-			payload[2] = htons(1);      // Motor on delay (milliseconds)
-			payload[3] = htons(1);      // Track Seek Delay (Milliseconds)
+			payload[2] = htons(150);      // Motor on delay (milliseconds) - for some reason if less than 100 then seeking doesnt work properly
+			payload[3] = htons(5);      // Track Seek Delay (Milliseconds)
 			payload[4] = htons(MOTOR_AUTOOFF_DELAY);   // Before turning off the motor automatically (milliseconds)
 		}
 		else {
@@ -315,9 +315,10 @@ bool SCPInterface::performNoClickSeek() {
 
 // Select the track, this makes the motor seek to this position
 bool SCPInterface::selectTrack(const unsigned char trackIndex, bool ignoreDiskInsertCheck) {
-	if (m_currentTrack < 0) return false;
+	//if (m_currentTrack < 0) return false;
 	if (trackIndex < 0) return false;
-	if (trackIndex > 81) return false;
+	if (trackIndex > 83) return false;
+
 
 	selectDrive(true);
 	SCPResponse response;
@@ -918,6 +919,124 @@ SCPErr SCPInterface::readRotation(PLL::BridgePLL& pll, const unsigned int maxOut
 	}
 }
 
+// Reads just enough data to fulfill most extractions needed, but doesnt care about rotation position or index - pll should have the LinearExtractor configured
+SCPErr SCPInterface::readData(PLL::BridgePLL& pll) {
+	SCPResponse response;
+
+	pll.rotationExtractor()->reset(m_isHDMode);
+
+	// Issue a read-request
+	selectDrive(true);
+
+	// Request real-time flux stream, 8-bit resolution, and 50ns timings.
+	const unsigned char payload[1] = { STREAMFLAGS_RESOLUTION_50NS | FLAGS_BITSIZE_8BIT | STREAMFLAGS_IMMEDIATEREAD | STREAMFLAGS_RAWFLUX };
+	bool ret = sendCommand(SCPCommand::DoCMD_STARTSTREAM, payload, 1, response);
+	if (!ret) {
+		if (!m_motorIsEnabled) selectDrive(false);
+		if ((response == SCPResponse::pr_NotReady) || (response == SCPResponse::pr_NoDisk)) {
+			m_diskInDrive = false;
+			return SCPErr::scpNoDiskInDrive;
+		}
+		return SCPErr::scpUnknownError;
+	}
+
+	applyCommTimeouts(true);
+	unsigned char tempReadBuffer[4096] = { 0 };
+
+	m_isStreaming = true;
+	m_abortStreaming = false;
+	m_abortSignalled = false;
+
+	// Number of times we failed to read anything
+	int readFail = 0;
+
+	// Sliding window for abort
+	unsigned char slidingWindow[4] = { 0,0,0,0 };
+	bool timeout = false;
+	bool dataState = false;
+	bool isFirstByte = true;
+	unsigned char mfmSequences = 0;
+	int hitIndex = 0;
+	uint32_t tickInNS = 0;
+
+	for (;;) {
+
+		// More efficient to read several bytes in one go	
+		unsigned int bytesAvailable = m_comPort.getBytesWaiting();
+		if (bytesAvailable < 1) bytesAvailable = 1;
+		if (bytesAvailable > sizeof(tempReadBuffer)) bytesAvailable = sizeof(tempReadBuffer);
+		unsigned int bytesRead = m_comPort.read(tempReadBuffer, m_abortSignalled ? 1 : bytesAvailable);
+		for (size_t a = 0; a < bytesRead; a++) {
+			const unsigned char byteRead = tempReadBuffer[a];
+
+			if (m_abortSignalled) {
+				for (int s = 0; s < 3; s++) slidingWindow[s] = slidingWindow[s + 1];
+				slidingWindow[3] = byteRead;
+
+				// Watch the sliding window for the pattern we need
+				if ((slidingWindow[0] == 0xDE) && (slidingWindow[1] == 0xAD) && (slidingWindow[2] == (unsigned char)SCPCommand::DoCMD_STOPSTREAM)) {
+					m_isStreaming = false;
+					m_comPort.purgeBuffers();
+					applyCommTimeouts(false);
+					if (!m_diskInDrive) return SCPErr::scpNoDiskInDrive;
+					if (timeout) return SCPErr::scpUnknownError;
+					if (slidingWindow[3] == (unsigned char)SCPResponse::pr_Overrun) return SCPErr::scpOverrun;
+					return SCPErr::scpOK;
+				}
+			}
+			else {
+				switch (byteRead) {
+				case 0xFF:
+					hitIndex = 1;
+					break;
+				case 0x00:
+					if (hitIndex == 1) hitIndex = 2; else {
+						tickInNS += m_isHDMode ? (256 * 100) : (256 * 50);
+						hitIndex = 0;
+					}
+					break;
+				default:
+					pll.submitFlux(tickInNS + (m_isHDMode ? (byteRead * 100UL) : (byteRead * 50UL)), hitIndex == 2);
+					tickInNS = 0;
+					hitIndex = 0;
+					break;
+				}
+
+				// Is it ready to extract?
+				if ((pll.canExtract()) || (pll.totalTimeReceived() > 220000000)) {
+					if (!m_abortSignalled) abortReadStreaming();
+				} 
+				else
+				if (pll.totalTimeReceived() > (m_isHDMode ? 1200000000U : 600000000U)) {
+					// No data, stop
+					abortReadStreaming();
+					timeout = true;
+				}
+			}
+		}
+		if (bytesRead < 1) {
+			readFail++;
+			if (readFail > 30) {
+				if (!m_abortStreaming) {
+					abortReadStreaming();
+					readFail = 0;
+					m_diskInDrive = false;
+				}
+				else {
+					m_isStreaming = false;
+					applyCommTimeouts(false);
+					return SCPErr::scpUnknownError;
+				}
+			}
+			else {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+		}
+		else {
+			readFail = 0;
+		}
+	}
+}
 
 // Stops the read streaming immediately and any data in the buffer will be discarded.
 bool SCPInterface::abortReadStreaming() {

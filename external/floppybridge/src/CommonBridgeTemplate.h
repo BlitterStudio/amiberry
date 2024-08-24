@@ -126,6 +126,9 @@ private:
 	// For extracting rotations from disks
 	RotationExtractor m_extractor;
 
+	// For doing the same as above, but no searching for rotations, just get the data
+	LinearExtractor m_linearExtractor;
+
 	// In direct mode FloppyBridge doesnt do some functions in the background
 	// Its useful if you're using FloppyBridge just for direct access to the interfaces
 	bool m_directMode;
@@ -408,6 +411,11 @@ protected:
 	// Returns: ReadResponse, explains its self
 	virtual ReadResponse readData(PLL::BridgePLL& pll, const unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
 		std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation)  = 0;
+
+	// Called for a direct read. This does not match up a rotation and should be used with the pll initialized with the LinearExtractor
+	//		pll:           required 
+	// Returns: ReadResponse, explains its self
+	virtual ReadResponse readLinearData(PLL::BridgePLL& pll) = 0;
 
 	// Called when a cylinder revolution should be written to the disk.
 	// Parameters are:	rawMFMData						The raw data to be written.  This is an actual MFM stream, going from MSB to LSB for each byte

@@ -177,6 +177,9 @@ namespace SuperCardPro {
 		SCPErr readRotation(PLL::BridgePLL& pll, const unsigned int maxOutputSize, RotationExtractor::MFMSample* firstOutputBuffer, RotationExtractor::IndexSequenceMarker& startBitPatterns,
 			std::function<bool(RotationExtractor::MFMSample** mfmData, const unsigned int dataLengthInBits)> onRotation);
 
+		// Reads just enough data to fulfill most extractions needed, but doesnt care about rotation position or index - pll should have the LinearExtractor configured
+		SCPErr readData(PLL::BridgePLL& pll);
+
 		// Turns on and off the reading interface.  dontWait disables the GW timeout waiting, so you must instead.  
 		bool enableMotor(const bool enable, const bool dontWait = false);
 
