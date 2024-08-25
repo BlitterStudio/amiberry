@@ -620,7 +620,7 @@ void target_inputdevice_unacquire(bool full)
 	//tablet = NULL;
 	if (full) {
 		//rawinput_release();
-		SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+		SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	}
 }
 void target_inputdevice_acquire(void)
