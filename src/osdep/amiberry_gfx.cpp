@@ -229,6 +229,13 @@ static void SDL2_init()
 		mon->currentmode.freq = sdl_mode.refresh_rate;
 	}
 
+	// If KMSDRM is detected, force Full-Window mode
+	if (kmsdrm_detected)
+	{
+		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
+		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+	}
+
 	if (!mon->amiga_window)
 	{
 		write_log("Creating Amiberry window...\n");
