@@ -408,7 +408,11 @@ int console_get (TCHAR *out, int maxlen)
 		return -1;
 	}
 	int len = strlen(out);
-	return len - 1;
+	while (len > 0 && (out[len - 1] == '\r' || out[len - 1] == '\n')) {
+		out[len - 1] = 0;
+		len--;
+	}
+	return len;
 #endif
 }
 
