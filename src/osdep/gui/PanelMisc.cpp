@@ -881,8 +881,9 @@ bool HelpPanelMisc(std::vector<std::string>& helptext)
         helptext.emplace_back(" ");
         helptext.emplace_back("- Always on top: Set Amiberry window to be always on top of other windows.");
         helptext.emplace_back(" ");
-        helptext.emplace_back("- GUI Always on top: Set Amiberry GUI window to be always on top of other windows.");
-        helptext.emplace_back(" ");
+		helptext.emplace_back("- GUI Always on top: Set Amiberry GUI window to be always on top of other windows.");
+		helptext.emplace_back("  When using Fullscreen mode in x11, enable this option to promote the GUI window.");
+		helptext.emplace_back(" ");
         helptext.emplace_back("- Synchronize clock: Syncs the Amiga clock to the host time.");
         helptext.emplace_back(" ");
         helptext.emplace_back("- One second reboot pause: This option inserts a one-second delay, during reboots.");
