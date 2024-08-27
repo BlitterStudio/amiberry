@@ -366,24 +366,24 @@ void InitPanelHD(const config_category& category)
 		}
 	}
 
-	cmdAddDirectory = new gcn::Button("Add Directory");
+	cmdAddDirectory = new gcn::Button("Add Directory/Archive");
 	cmdAddDirectory->setBaseColor(gui_base_color);
 	cmdAddDirectory->setForegroundColor(gui_foreground_color);
-	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 30, BUTTON_HEIGHT);
+	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 5, BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
 	cmdAddDirectory->addActionListener(hdAddActionListener);
 
 	cmdAddHardfile = new gcn::Button("Add Hardfile");
 	cmdAddHardfile->setBaseColor(gui_base_color);
 	cmdAddHardfile->setForegroundColor(gui_foreground_color);
-	cmdAddHardfile->setSize(cmdAddHardfile->getWidth() + 30, BUTTON_HEIGHT);
+	cmdAddHardfile->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddHardfile->setId("cmdAddHDF");
 	cmdAddHardfile->addActionListener(hdAddActionListener);
 
 	cmdAddHardDrive = new gcn::Button("Add Hard Drive");
 	cmdAddHardDrive->setBaseColor(gui_base_color);
 	cmdAddHardDrive->setForegroundColor(gui_foreground_color);
-	cmdAddHardDrive->setSize(cmdAddHardDrive->getWidth() + 30, BUTTON_HEIGHT);
+	cmdAddHardDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddHardDrive->setId("cmdAddHardDrive");
 	cmdAddHardDrive->addActionListener(hdAddActionListener);
 
@@ -419,8 +419,8 @@ void InitPanelHD(const config_category& category)
 	cmdCDEject->setId("cmdCDEject");
 	cmdCDEject->addActionListener(cdButtonActionListener);
 
-	cmdCDSelectFile = new gcn::Button("Select Image");
-	cmdCDSelectFile->setSize(SMALL_BUTTON_WIDTH * 4, SMALL_BUTTON_HEIGHT);
+	cmdCDSelectFile = new gcn::Button("Select image file");
+	cmdCDSelectFile->setSize(SMALL_BUTTON_WIDTH * 6, SMALL_BUTTON_HEIGHT);
 	cmdCDSelectFile->setBaseColor(gui_base_color);
 	cmdCDSelectFile->setForegroundColor(gui_foreground_color);
 	cmdCDSelectFile->setId("cmdCDSelectFile");
