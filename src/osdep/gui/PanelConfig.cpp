@@ -305,6 +305,10 @@ void RefreshPanelConfig()
 			}
 		}
 	}
+	else if (configsList.getNumberOfElements() > 0)
+	{
+		lstConfigs->setSelected(0);
+	}
 }
 
 bool HelpPanelConfig(std::vector<std::string>& helptext)
