@@ -1211,6 +1211,13 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 {
 	_tcscpy (optionsfile, _T(""));
 
+	write_log("Command line parameters:");
+	for (int i = 0; i < argc; i++)
+	{
+		write_log(" %s", argv[i]);
+	}
+	write_log("\n");
+
 	parse_cmdline_2(argc, argv);
 
 	_tcscat(optionsfile, restart_config);
