@@ -53,6 +53,8 @@ static gcn::Button* cmdAddDirectory;
 static gcn::Button* cmdAddHardfile;
 static gcn::Button* cmdAddHardDrive;
 static gcn::Button* cmdCreateHardfile;
+static gcn::Button* cmdAddCDDrive;
+static gcn::Button* cmdAddTapeDrive;
 
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
@@ -387,6 +389,20 @@ void InitPanelHD(const config_category& category)
 	cmdAddHardDrive->setId("cmdAddHardDrive");
 	cmdAddHardDrive->addActionListener(hdAddActionListener);
 
+	cmdAddCDDrive = new gcn::Button("Add CD Drive");
+	cmdAddCDDrive->setBaseColor(gui_base_color);
+	cmdAddCDDrive->setForegroundColor(gui_foreground_color);
+	cmdAddCDDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
+	cmdAddCDDrive->setId("cmdAddCDDrive");
+	cmdAddCDDrive->addActionListener(hdAddActionListener);
+
+	cmdAddTapeDrive = new gcn::Button("Add Tape Drive");
+	cmdAddTapeDrive->setBaseColor(gui_base_color);
+	cmdAddTapeDrive->setForegroundColor(gui_foreground_color);
+	cmdAddTapeDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
+	cmdAddTapeDrive->setId("cmdAddTapeDrive");
+	cmdAddTapeDrive->addActionListener(hdAddActionListener);
+
 	cmdCreateHardfile = new gcn::Button("Create Hardfile");
 	cmdCreateHardfile->setBaseColor(gui_base_color);
 	cmdCreateHardfile->setForegroundColor(gui_foreground_color);
@@ -465,7 +481,9 @@ void InitPanelHD(const config_category& category)
 	category.panel->add(cmdAddHardDrive, cmdAddHardfile->getX() + cmdAddHardfile->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdAddDirectory->getHeight() + DISTANCE_NEXT_Y;
 
-	category.panel->add(cmdCreateHardfile, cmdAddDirectory->getX(), posY);
+	category.panel->add(cmdAddCDDrive, cmdAddDirectory->getX(), posY);
+	category.panel->add(cmdAddTapeDrive, cmdAddCDDrive->getX() + cmdAddCDDrive->getWidth() + DISTANCE_NEXT_X, posY);
+	category.panel->add(cmdCreateHardfile, cmdAddTapeDrive->getX() + cmdAddTapeDrive->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdCreateHardfile->getHeight() + DISTANCE_NEXT_Y * 2;
 
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
@@ -501,6 +519,8 @@ void ExitPanelHD()
 	delete cmdAddDirectory;
 	delete cmdAddHardfile;
 	delete cmdAddHardDrive;
+	delete cmdAddCDDrive;
+	delete cmdAddTapeDrive;
 	delete cmdCreateHardfile;
 
 	delete chkCD;
