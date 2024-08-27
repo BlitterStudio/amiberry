@@ -550,10 +550,6 @@ static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuf
 		memset(sndbuffer, 0, sd->sndbufsize);
 		s->silence_written++; // In push mode no sound gen means no audio push so this might not incremented frequently
 	}
-
-	int avail = SDL_GetQueuedAudioSize(s->dev);
-	docorrection(s, (s->sndbufsize - avail) * 1000 / s->sndbufsize, (float)(s->sndbufsize - avail), 100);
-
 	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
 }
 
