@@ -440,7 +440,7 @@ void check_input()
 		case SDL_JOYDEVICEADDED:
 			// Check if we need to re-import joysticks
 			existing_did = &di_joystick[gui_event.jdevice.which];
-			if (existing_did->guid == "")
+			if (existing_did->guid.empty())
 			{
 				write_log("GUI: SDL2 Controller/Joystick added, re-running import joysticks...\n");
 				import_joysticks();

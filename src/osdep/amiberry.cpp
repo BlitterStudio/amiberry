@@ -1627,7 +1627,7 @@ void process_event(const SDL_Event& event)
 		case SDL_CLIPBOARDUPDATE:
 			handle_clipboard_update_event();
 			break;
-		
+
 		case SDL_JOYDEVICEADDED:
 			handle_joy_device_event(event.jdevice.which, false);
 			break;
