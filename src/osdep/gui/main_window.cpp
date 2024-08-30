@@ -273,7 +273,17 @@ void amiberry_gui_init()
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+	{
 		kmsdrm_detected = true;
+		if (!mon->gui_window && mon->amiga_window)
+		{
+			mon->gui_window = mon->amiga_window;
+		}
+		if (!mon->gui_renderer && mon->amiga_renderer)
+		{
+			mon->gui_renderer = mon->amiga_renderer;
+		}
+	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
 	//-------------------------------------------------
@@ -297,7 +307,7 @@ void amiberry_gui_init()
 		else
 		{
 			// otherwise go for Full-window
-			mode = SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALWAYS_ON_TOP;
+			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 		}
 
         if (currprefs.gui_alwaysontop)
@@ -404,13 +414,13 @@ void amiberry_gui_halt()
 		SDL_DestroyTexture(gui_texture);
 		gui_texture = nullptr;
 	}
-	if (mon->gui_renderer)
+	if (mon->gui_renderer && !kmsdrm_detected)
 	{
 		SDL_DestroyRenderer(mon->gui_renderer);
 		mon->gui_renderer = nullptr;
 	}
 
-	if (mon->gui_window) {
+	if (mon->gui_window && !kmsdrm_detected) {
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
 	}
