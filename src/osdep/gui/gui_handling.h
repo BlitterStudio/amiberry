@@ -4,6 +4,7 @@
 #include <guisan/sdl/sdlinput.hpp>
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
+#include "filesys.h"
 #include "options.h"
 
 enum
@@ -141,9 +142,10 @@ static const char* diskfile_filter[] = {
 	".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp",
 	".7z", ".lha", ".lzh", ".lzx", "\0"
 };
-static const char* harddisk_filter[] = {".hdf", ".hdz", ".lha", "zip", ".vhd", ".chd", ".7z", "\0"};
-static const char* cdfile_filter[] = {".cue", ".ccd", ".iso", ".mds", ".nrg", ".chd", "\0"};
-static const char* whdload_filter[] = {".lha", "\0"};
+static const char* harddisk_filter[] = {".hdf", ".hdz", ".lha", ".zip", ".vhd", ".chd", ".7z", "\0"};
+static const char* archive_filter[] = { ".zip", ".7z", ".rar", ".lha", ".lzh", ".lzx", "\0" };
+static const char* cdfile_filter[] = { ".cue", ".ccd", ".iso", ".mds", ".nrg", ".chd", "\0" };
+static const char* whdload_filter[] = { ".lha", "\0" };
 static string drivebridgeModes[] =
 {
 	"Normal",
@@ -339,6 +341,7 @@ bool Create_Folder(const std::string& path);
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
 bool EditFilesysHardDrive(int unit_no);
+bool EditTapeDrive(int unit_no);
 bool CreateFilesysHardfile();
 void ShowHelp(const char* title, const std::vector<std::string>& text);
 void ShowDiskInfo(const char* title, const std::vector<std::string>& text);
@@ -375,10 +378,28 @@ extern void CreateDefaultDevicename(char* name);
 extern bool DevicenameExists(const char* name);
 extern int tweakbootpri(int bp, int ab, int dnm);
 
+struct controller_map
+{
+	int type;
+	std::string display;
+};
+extern std::vector<controller_map> controller;
+extern std::vector<string> controller_unit;
+extern std::vector<string> controller_type;
+extern std::vector<string> controller_feature_level;
+
 STATIC_INLINE bool is_hdf_rdb()
 {
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;
 }
+
+extern void new_filesys(int entry);
+extern void new_cddrive(int entry);
+extern void new_tapedrive(int entry);
+extern void new_hardfile(int entry);
+extern void new_harddrive(int entry);
+
+extern void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media);
 
 extern std::string screenshot_filename;
 extern int current_state_num;

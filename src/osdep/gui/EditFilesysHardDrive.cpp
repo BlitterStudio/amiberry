@@ -45,7 +45,7 @@ public:
 			}
 			dialogResult = true;
 		}
-		default_hfdlg(&current_hfdlg);
+		default_hfdlg(&current_hfdlg, true);
 		if (current_fsvdlg.ci.devname[0] == 0)
 			CreateDefaultDevicename(current_fsvdlg.ci.devname);
 		_tcscpy(current_hfdlg.ci.rootdir, txtPath->getText().c_str());
@@ -54,8 +54,8 @@ public:
 			current_hfdlg.ci.sectors = current_hfdlg.ci.reserved = current_hfdlg.ci.surfaces = 0;
 		}
 		hardfile_testrdb(&current_hfdlg);
-		updatehdfinfo(true, true);
-		updatehdfinfo(false, false);
+		updatehdfinfo(true, true, true);
+		updatehdfinfo(false, false, true);
 
 		dialogFinished = true;
 	}
@@ -409,6 +409,8 @@ bool EditFilesysHardDrive(const int unit_no)
 	dialogResult = false;
 	dialogFinished = false;
 
+	inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
+
 	InitEditFilesysHardDrive();
 
 	if (unit_no >= 0)
@@ -422,12 +424,12 @@ bool EditFilesysHardDrive(const int unit_no)
 	}
 	else
 	{
-		default_hfdlg(&current_hfdlg);
+		default_hfdlg(&current_hfdlg, true);
 		CreateDefaultDevicename(current_hfdlg.ci.devname);
 		fileSelected = false;
 	}
 
-	updatehdfinfo(true, false);
+	updatehdfinfo(true, false, true);
 
 	// Prepare the screen once
 	uae_gui->logic();
@@ -447,15 +449,7 @@ bool EditFilesysHardDrive(const int unit_no)
 	if (dialogResult)
 	{
 		current_dir = extract_path(txtPath->getText());
-
-		uaedev_config_info ci{};
-		memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));
-		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
-		if (uci) {
-			auto* const hfd = get_hardfile_data(uci->configoffset);
-			if (hfd)
-				hardfile_media_change(hfd, &ci, true, false);
-		}
+		new_harddrive(-1);
 	}
 
 	ExitEditFilesysHardDrive();

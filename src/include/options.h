@@ -1229,6 +1229,14 @@ extern struct uae_prefs currprefs, changed_prefs;
 extern int machdep_init(void);
 extern void machdep_free(void);
 
+struct cddlg_vals
+{
+	struct uaedev_config_info ci;
+};
+struct tapedlg_vals
+{
+	struct uaedev_config_info ci;
+};
 struct fsvdlg_vals
 {
 	struct uaedev_config_info ci;
@@ -1244,13 +1252,16 @@ struct hfdlg_vals
 	int forcedcylinders;
 	bool rdb;
 };
+extern struct cddlg_vals current_cddlg;
+extern struct tapedlg_vals current_tapedlg;
 extern struct fsvdlg_vals current_fsvdlg;
 extern struct hfdlg_vals current_hfdlg;
 
 extern void hardfile_testrdb(struct hfdlg_vals* hdf);
+extern void default_tapedlg(struct tapedlg_vals* f);
 extern void default_fsvdlg(struct fsvdlg_vals* f);
-extern void default_hfdlg(struct hfdlg_vals* f);
-extern void updatehdfinfo(bool force, bool defaults);
+extern void default_hfdlg(struct hfdlg_vals* f, bool rdb);
+extern void updatehdfinfo(bool force, bool defaults, bool realdrive);
 
 #ifdef AMIBERRY
 struct amiberry_customised_layout

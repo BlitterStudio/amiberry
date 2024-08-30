@@ -289,6 +289,7 @@ add_executable(${PROJECT_NAME}
         src/osdep/gui/EditFilesysVirtual.cpp
         src/osdep/gui/EditFilesysHardfile.cpp
         src/osdep/gui/EditFilesysHardDrive.cpp
+        src/osdep/gui/EditTapeDrive.cpp
         src/osdep/gui/PanelAbout.cpp
         src/osdep/gui/PanelPaths.cpp
         src/osdep/gui/PanelQuickstart.cpp

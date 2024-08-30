@@ -602,12 +602,13 @@ static NavigationMap nav_map[] =
 	// EditFilesysVirtual
 	{ "txtVirtDevice", "", "", "txtVirtPath", "txtVirtVolume" },
 	{ "txtVirtVolume", "", "", "txtVirtDevice", "txtVirtPath" },
-	{ "txtVirtPath", "", "", "txtVirtVolume", "cmdVirtPath" },
-	{ "cmdVirtPath", "", "", "txtVirtBootPri", "cmdVirtCancel" },
-	{ "chkVirtRW", "txtVirtDev", "txtVirtDev", "cmdVirtOK", "chkAutoboot" },
-	{ "chkAutoboot", "txtVirtVol", "txtVirtBootPri", "chkVirtRW", "cmdVirtPath" },
-	{ "cmdVirtOK", "cmdVirtCancel", "cmdVirtCancel", "cmdVirtPath", "chkVirtRW" },
-	{ "cmdVirtCancel", "cmdVirtOK", "cmdVirtOK", "cmdVirtPath", "chkVirtRW" },
+	{ "txtVirtPath", "", "", "txtVirtVolume", "cmdVirtSelectDir" },
+	{ "cmdVirtSelectDir", "cmdVirtSelectFile", "cmdVirtSelectFile", "chkVirtBootable", "cmdVirtCancel" },
+	{ "cmdVirtSelectFile", "cmdVirtSelectDir", "cmdVirtSelectDir", "chkVirtBootable", "cmdVirtOK" },
+	{ "chkVirtRW", "txtVirtDev", "txtVirtDev", "cmdVirtOK", "chkVirtBootable" },
+	{ "chkVirtBootable", "txtVirtVol", "txtVirtBootPri", "chkVirtRW", "cmdVirtSelectDir" },
+	{ "cmdVirtOK", "cmdVirtCancel", "cmdVirtCancel", "cmdVirtSelectDir", "chkVirtRW" },
+	{ "cmdVirtCancel", "cmdVirtOK", "cmdVirtOK", "cmdVirtSelectFile", "chkVirtRW" },
 
 	// EditFilesysHardfile
 	{ "txtHdfDev", "", "", "cmdHdfOK", "chkHdfRW" },

@@ -15,6 +15,7 @@
 #include "blkdev.h"
 #include "gui_handling.h"
 #include "fsdb_host.h"
+#include "rommgr.h"
 
 enum
 {
@@ -62,6 +63,25 @@ static gcn::Button* cmdCDEject;
 static gcn::Button* cmdCDSelectFile;
 static gcn::CheckBox* chkCDTurbo;
 
+static void harddisktype(TCHAR* s, struct uaedev_config_info* ci)
+{
+	switch (ci->type)
+	{
+	case UAEDEV_CD:
+		_tcscpy(s, _T("CD"));
+		break;
+	case UAEDEV_TAPE:
+		_tcscpy(s, _T("TAPE"));
+		break;
+	case UAEDEV_HDF:
+		_tcscpy(s, _T("HDF"));
+		break;
+	default:
+		_tcscpy(s, _T("n/a"));
+		break;
+	}
+}
+
 static int GetHDType(const int index)
 {
 	mountedinfo mi{};
@@ -69,8 +89,9 @@ static int GetHDType(const int index)
 	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
 	if (type < 0)
 	{
-		auto* const uci = &changed_prefs.mountconfig[index];
-		type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
+		auto* uci = &changed_prefs.mountconfig[index];
+		struct uaedev_config_info* ci = &uci->ci;
+		type = ci->type == UAEDEV_HDF || ci->type == UAEDEV_CD || ci->type == UAEDEV_TAPE ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
 	}
 	return type;
 }
@@ -133,6 +154,17 @@ public:
 					if (EditFilesysHardDrive(i))
 						gui_force_rtarea_hdchange();
 				}
+				else if (GetHDType(i) == FILESYS_CD)
+				{
+					//TODO
+					//if (EditCDDrive(i))
+					//	gui_force_rtarea_hdchange();
+				}
+				else if (GetHDType(i) == FILESYS_TAPE)
+				{
+					if (EditTapeDrive(i))
+						gui_force_rtarea_hdchange();
+				}
 				listCmdProps[i]->requestFocus();
 				break;
 			}
@@ -167,6 +199,19 @@ public:
 			if (EditFilesysHardDrive(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddHardDrive->requestFocus();
+			RefreshPanelHD();
+		}
+		else if (actionEvent.getSource() == cmdAddCDDrive)
+		{
+			//TODO
+			cmdAddCDDrive->requestFocus();
+			RefreshPanelHD();
+		}
+		else if (actionEvent.getSource() == cmdAddTapeDrive)
+		{
+			if (EditTapeDrive(-1))
+				gui_force_rtarea_hdchange();
+			cmdAddTapeDrive->requestFocus();
 			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdCreateHardfile)
@@ -371,7 +416,7 @@ void InitPanelHD(const config_category& category)
 	cmdAddDirectory = new gcn::Button("Add Directory/Archive");
 	cmdAddDirectory->setBaseColor(gui_base_color);
 	cmdAddDirectory->setForegroundColor(gui_foreground_color);
-	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 5, BUTTON_HEIGHT);
+	cmdAddDirectory->setSize(cmdAddDirectory->getWidth() + 8, BUTTON_HEIGHT);
 	cmdAddDirectory->setId("cmdAddDir");
 	cmdAddDirectory->addActionListener(hdAddActionListener);
 
@@ -561,8 +606,11 @@ static void AdjustDropDownControls()
 void RefreshPanelHD()
 {
 	char tmp[32];
-	mountedinfo mi{};
-	auto nosize = 0;
+	TCHAR size_str[32];
+	TCHAR blocksize_str[32];
+	TCHAR devname_str[256];
+	TCHAR volname_str[256];
+	TCHAR bootpri_str[32];
 
 	AdjustDropDownControls();
 
@@ -572,47 +620,144 @@ void RefreshPanelHD()
 		{
 			auto* uci = &changed_prefs.mountconfig[row];
 			auto* const ci = &uci->ci;
-			auto type = get_filesys_unitconfig(&changed_prefs, row, &mi);
+			int nosize = 0, type, ctype;
+			struct mountedinfo mi;
+			TCHAR* rootdir, * rootdirp;
+
+			type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
-				type = uci->ci.type == UAEDEV_DIR ? FILESYS_VIRTUAL : FILESYS_HARDFILE;
+				type = ci->type == UAEDEV_HDF || ci->type == UAEDEV_CD || ci->type == UAEDEV_TAPE ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
 				nosize = 1;
 			}
 			if (mi.size < 0)
 				nosize = 1;
+			rootdir = my_strdup(mi.rootdir);
+			rootdirp = rootdir;
+			if (!_tcsncmp(rootdirp, _T("HD_"), 3))
+				rootdirp += 3;
+			if (rootdirp[0] == ':') {
+				rootdirp++;
+				TCHAR* p = _tcschr(rootdirp, ':');
+				if (p)
+					*p = 0;
+			}
 
-			if (type == FILESYS_VIRTUAL)
-			{
-				listCells[row][COL_DEVICE]->setText(ci->devname);
-				listCells[row][COL_VOLUME]->setText(ci->volname);
-				listCells[row][COL_PATH]->setText(ci->rootdir);
-				if (ci->readonly)
-					listCells[row][COL_READWRITE]->setText("no");
-				else
-					listCells[row][COL_READWRITE]->setText("yes");
-				listCells[row][COL_SIZE]->setText("n/a");
-				snprintf(tmp, 32, "%d", ci->bootpri);
-				listCells[row][COL_BOOTPRI]->setText(tmp);
-			}
+			if (nosize)
+				_tcscpy(size_str, _T("n/a"));
+			else if (mi.size >= 1024 * 1024 * 1024)
+				_stprintf(size_str, _T("%.1fG"), ((double)(uae_u32)(mi.size / (1024 * 1024))) / 1024.0);
+			else if (mi.size < 10 * 1024 * 1024)
+				_stprintf(size_str, _T("%lldK"), mi.size / 1024);
 			else
-			{
-				listCells[row][COL_DEVICE]->setText(ci->devname);
-				listCells[row][COL_VOLUME]->setText("n/a");
-				listCells[row][COL_PATH]->setText(ci->rootdir);
-				if (ci->readonly)
-					listCells[row][COL_READWRITE]->setText("no");
-				else
-					listCells[row][COL_READWRITE]->setText("yes");
-				if (nosize)
-					snprintf(tmp, 32, "n/a");
-				else if (mi.size >= 1024 * 1024 * 1024)
-					snprintf(tmp, 32, "%.1fG", static_cast<double>(uae_u32(mi.size / (1024 * 1024))) / 1024.0);
-				else
-					snprintf(tmp, 32, "%.1fM", static_cast<double>(uae_u32(mi.size / 1024)) / 1024.0);
-				listCells[row][COL_SIZE]->setText(tmp);
-				snprintf(tmp, 32, "%d", ci->bootpri);
-				listCells[row][COL_BOOTPRI]->setText(tmp);
+				_stprintf(size_str, _T("%.1fM"), ((double)(uae_u32)(mi.size / (1024))) / 1024.0);
+
+			ctype = ci->controller_type;
+			if (ctype >= HD_CONTROLLER_TYPE_IDE_FIRST && ctype <= HD_CONTROLLER_TYPE_IDE_LAST) {
+				const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
+				const TCHAR* idedevs[] = {
+					_T("IDE:%d"),
+					_T("A600/A1200/A4000:%d"),
+				};
+				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				if (ert) {
+					if (ci->controller_type_unit == 0)
+						_stprintf(devname_str, _T("%s:%d"), ert->friendlyname, ci->controller_unit);
+					else
+						_stprintf(devname_str, _T("%s:%d/%d"), ert->friendlyname, ci->controller_unit, ci->controller_type_unit + 1);
+				}
+				else {
+					_stprintf(devname_str, idedevs[ctype - HD_CONTROLLER_TYPE_IDE_FIRST], ci->controller_unit);
+				}
+				harddisktype(volname_str, ci);
+				_tcscpy(bootpri_str, _T("n/a"));
 			}
+			else if (ctype >= HD_CONTROLLER_TYPE_SCSI_FIRST && ctype <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+				TCHAR sid[8];
+				const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
+				const TCHAR* scsidevs[] = {
+					_T("SCSI:%s"),
+					_T("A3000:%s"),
+					_T("A4000T:%s"),
+					_T("CDTV:%s"),
+				};
+				if (ci->controller_unit == 8 && ert && !_tcscmp(ert->name, _T("a2091")))
+					_tcscpy(sid, _T("XT"));
+				else if (ci->controller_unit == 8 && ert && !_tcscmp(ert->name, _T("a2090a")))
+					_tcscpy(sid, _T("ST-506"));
+				else
+					_stprintf(sid, _T("%d"), ci->controller_unit);
+				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				if (ert) {
+					if (ci->controller_type_unit == 0)
+						_stprintf(devname_str, _T("%s:%s"), ert->friendlyname, sid);
+					else
+						_stprintf(devname_str, _T("%s:%s/%d"), ert->friendlyname, sid, ci->controller_type_unit + 1);
+				}
+				else {
+					_stprintf(devname_str, scsidevs[ctype - HD_CONTROLLER_TYPE_SCSI_FIRST], sid);
+				}
+				harddisktype(volname_str, ci);
+				_tcscpy(bootpri_str, _T("n/a"));
+			}
+			else if (ctype >= HD_CONTROLLER_TYPE_CUSTOM_FIRST && ctype <= HD_CONTROLLER_TYPE_CUSTOM_LAST) {
+				TCHAR sid[8];
+				const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
+				_stprintf(sid, _T("%d"), ci->controller_unit);
+				if (ert) {
+					if (ci->controller_type_unit == 0)
+						_stprintf(devname_str, _T("%s:%s"), ert->friendlyname, sid);
+					else
+						_stprintf(devname_str, _T("%s:%s/%d"), ert->friendlyname, sid, ci->controller_type_unit + 1);
+				}
+				else {
+					_stprintf(devname_str, _T("PCMCIA"));
+				}
+				harddisktype(volname_str, ci);
+				_tcscpy(bootpri_str, _T("n/a"));
+			}
+			else if (type == FILESYS_HARDFILE) {
+				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				_tcscpy(devname_str, ci->devname);
+				_tcscpy(volname_str, _T("n/a"));
+				_stprintf(bootpri_str, _T("%d"), ci->bootpri);
+			}
+			else if (type == FILESYS_HARDFILE_RDB || type == FILESYS_HARDDRIVE || ci->controller_type != HD_CONTROLLER_TYPE_UAE) {
+				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				_stprintf(devname_str, _T("UAE:%d"), ci->controller_unit);
+				_tcscpy(volname_str, _T("n/a"));
+				_tcscpy(bootpri_str, _T("n/a"));
+			}
+			else if (type == FILESYS_TAPE) {
+				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				_tcscpy(devname_str, _T("UAE"));
+				harddisktype(volname_str, ci);
+				_tcscpy(bootpri_str, _T("n/a"));
+			}
+			else {
+				_tcscpy(blocksize_str, _T("n/a"));
+				_tcscpy(devname_str, ci->devname);
+				_tcscpy(volname_str, ci->volname);
+				_tcscpy(size_str, _T("n/a"));
+				_stprintf(bootpri_str, _T("%d"), ci->bootpri);
+			}
+			if (!mi.ismedia) {
+				_tcscpy(blocksize_str, _T("n/a"));
+				_tcscpy(size_str, _T("n/a"));
+			}
+			if (rootdirp[0] == 0) {
+				xfree(rootdir);
+				rootdir = my_strdup(_T("-"));
+				rootdirp = rootdir;
+			}
+
+			listCells[row][COL_DEVICE]->setText(devname_str);
+			listCells[row][COL_VOLUME]->setText(volname_str);
+			listCells[row][COL_PATH]->setText(rootdirp);
+			listCells[row][COL_READWRITE]->setText(ci->readonly ? _T("no") : _T("yes"));
+			listCells[row][COL_SIZE]->setText(size_str);
+			listCells[row][COL_BOOTPRI]->setText(bootpri_str);
+
 			listCmdProps[row]->setEnabled(true);
 			listCmdDelete[row]->setEnabled(true);
 		}

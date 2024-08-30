@@ -29,7 +29,7 @@ static gcn::Button *cmdOK;
 static gcn::Button *cmdCancel;
 static gcn::Label *lblDevice;
 static gcn::TextField *txtDevice;
-static gcn::CheckBox *chkAutoboot;
+static gcn::CheckBox *chkVirtBootable;
 static gcn::Label *lblBootPri;
 static gcn::TextField *txtBootPri;
 static gcn::Label *lblPath;
@@ -118,11 +118,11 @@ static void InitCreateFilesysHardfile()
 	txtDevice->setBackgroundColor(gui_textbox_background_color);
 	txtDevice->setForegroundColor(gui_foreground_color);
 
-	chkAutoboot = new gcn::CheckBox("Bootable", true);
-	chkAutoboot->setBaseColor(gui_base_color);
-	chkAutoboot->setBackgroundColor(gui_textbox_background_color);
-	chkAutoboot->setForegroundColor(gui_foreground_color);
-	chkAutoboot->setId("chkCreateHdfAutoboot");
+	chkVirtBootable = new gcn::CheckBox("Bootable", true);
+	chkVirtBootable->setBaseColor(gui_base_color);
+	chkVirtBootable->setBackgroundColor(gui_textbox_background_color);
+	chkVirtBootable->setForegroundColor(gui_foreground_color);
+	chkVirtBootable->setId("chkCreateHdfAutoboot");
 
 	lblBootPri = new gcn::Label("Boot priority:");
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
@@ -172,8 +172,8 @@ static void InitCreateFilesysHardfile()
 	wndCreateFilesysHardfile->add(txtDevice, posX, posY);
 	posX += txtDevice->getWidth() + DISTANCE_BORDER * 2;
 
-	wndCreateFilesysHardfile->add(chkAutoboot, posX, posY + 1);
-	posX += chkAutoboot->getWidth() + DISTANCE_BORDER;
+	wndCreateFilesysHardfile->add(chkVirtBootable, posX, posY + 1);
+	posX += chkVirtBootable->getWidth() + DISTANCE_BORDER;
 
 	wndCreateFilesysHardfile->add(lblBootPri, posX, posY);
 	wndCreateFilesysHardfile->add(txtBootPri, posX + lblBootPri->getWidth() + 8, posY);
@@ -206,7 +206,7 @@ static void ExitCreateFilesysHardfile()
 
 	delete lblDevice;
 	delete txtDevice;
-	delete chkAutoboot;
+	delete chkVirtBootable;
 	delete lblBootPri;
 	delete txtBootPri;
 	delete lblPath;
@@ -584,7 +584,7 @@ bool CreateFilesysHardfile()
 				ci.bootpri = -127;
 			if (ci.bootpri > 127)
 				ci.bootpri = 127;
-			if (!chkAutoboot->isSelected()) {
+			if (!chkVirtBootable->isSelected()) {
 				ci.bootpri = BOOTPRI_NOAUTOBOOT;
 			}
 
