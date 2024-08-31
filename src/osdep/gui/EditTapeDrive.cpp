@@ -507,12 +507,15 @@ bool EditTapeDrive(const int unit_no)
 		uci = &changed_prefs.mountconfig[unit_no];
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 		memcpy(&current_tapedlg.ci, uci, sizeof(uaedev_config_info));
+
 		txtTapeDrivePath->setText(current_tapedlg.ci.rootdir);
+		cboTapeDriveController->setSelected(current_tapedlg.ci.controller_type);
+		cboTapeDriveUnit->setSelected(current_tapedlg.ci.controller_unit);
 	}
 	else
 	{
 		default_tapedlg(&current_tapedlg);
-		txtTapeDrivePath->setText(current_dir);
+		txtTapeDrivePath->setText(get_harddrive_path());
 	}
 
 	// Prepare the screen once

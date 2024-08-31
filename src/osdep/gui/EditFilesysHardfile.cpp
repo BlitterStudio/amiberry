@@ -199,10 +199,15 @@ public:
 			if (!tmp.empty())
 			{
 				txtHfPath->setText(tmp);
-				fileSelected = true;
 				default_hfdlg(&current_hfdlg, false);
+				strncpy(current_hfdlg.ci.rootdir, tmp.c_str(), sizeof(current_hfdlg.ci.rootdir) - 1);
+				fileSelected = true;
+				
 				if (current_fsvdlg.ci.devname[0] == 0)
-					CreateDefaultDevicename(current_fsvdlg.ci.devname);
+					CreateDefaultDevicename(current_hfdlg.ci.devname);
+				
+				hardfile_testrdb(&current_hfdlg);
+				sethardfile();
 			}
 			wndEditFilesysHardfile->requestModalFocus();
 			cmdHfPath->requestFocus();
@@ -308,7 +313,7 @@ public:
 		int v;
 		int* p;
 		if (event.getSource() == txtDevice) {
-			strncpy(current_hfdlg.ci.devname, (char*)txtDevice->getText().c_str(), MAX_DPATH - 1);
+			strncpy(current_hfdlg.ci.devname, txtDevice->getText().c_str(), MAX_DPATH - 1);
 
 		}
 		else if (event.getSource() == txtBootPri) {
@@ -644,7 +649,6 @@ static void InitEditFilesysHardfile()
 
 	wndEditFilesysHardfile->requestModalFocus();
 	focus_bug_workaround(wndEditFilesysHardfile);
-	txtDevice->requestFocus();
 }
 
 static void ExitEditFilesysHardfile()
@@ -1027,11 +1031,11 @@ bool EditFilesysHardfile(const int unit_no)
 	{
 		default_hfdlg(&current_hfdlg, false);
 		fileSelected = false;
-
-		updatehdfinfo(true, false, false);
-		sethardfile();
 	}
-		
+
+	updatehdfinfo(true, false, false);
+	sethardfile();
+
 	// Prepare the screen once
 	uae_gui->logic();
 

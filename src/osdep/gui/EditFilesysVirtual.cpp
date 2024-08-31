@@ -116,7 +116,6 @@ public:
 
 static FilesysVirtualActionListener* filesysVirtualActionListener;
 
-
 static void InitEditFilesysVirtual()
 {
 	wndEditFilesysVirtual = new gcn::Window("Edit");
