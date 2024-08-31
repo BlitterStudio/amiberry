@@ -50,7 +50,16 @@ public:
 		if (actionEvent.getSource() == cmdVirtSelectDir)
 		{
 			wndEditFilesysVirtual->releaseModalFocus();
-			const std::string tmp = SelectFolder("Select folder", txtPath->getText());
+			std::string path;
+			if (txtPath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtPath->getText();
+			}
+			const std::string tmp = SelectFolder("Select folder", path);
 			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
@@ -67,7 +76,16 @@ public:
 		else if (actionEvent.getSource() == cmdVirtSelectFile)
 		{
 			wndEditFilesysVirtual->releaseModalFocus();
-			const std::string tmp = SelectFile("Select archive", txtPath->getText(), archive_filter);
+			std::string path;
+			if (txtPath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtPath->getText();
+			}
+			const std::string tmp = SelectFile("Select archive", path, archive_filter);
 			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
@@ -569,9 +587,11 @@ bool EditFilesysVirtual(const int unit_no)
 	}
 	strdevname.assign(current_fsvdlg.ci.devname);
 	txtDevice->setText(strdevname);
+
 	strvolname.assign(current_fsvdlg.ci.volname);
 	txtVolume->setText(strvolname);
-	txtPath->setText(get_harddrive_path());
+
+	txtPath->setText(std::string(current_fsvdlg.ci.rootdir));
 	chkReadWrite->setSelected(!current_fsvdlg.ci.readonly);
 	chkVirtBootable->setSelected(current_fsvdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
 	snprintf(tmp, sizeof(tmp) - 1, "%d", current_fsvdlg.ci.bootpri >= -127 ? current_fsvdlg.ci.bootpri : -127);

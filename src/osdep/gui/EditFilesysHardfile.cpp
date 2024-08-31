@@ -167,7 +167,16 @@ public:
 		if (actionEvent.getSource() == cmdHfGeometry)
 		{
 			wndEditFilesysHardfile->releaseModalFocus();
-			const std::string tmp = SelectFile("Select hard disk geometry file", txtHfGeometry->getText(), nullptr);
+			std::string path;
+			if (txtHfGeometry->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtHfGeometry->getText();
+			}
+			const std::string tmp = SelectFile("Select hard disk geometry file", path, nullptr);
 			if (!tmp.empty())
 			{
 				txtHfGeometry->setText(tmp);
@@ -181,7 +190,16 @@ public:
 		else if (actionEvent.getSource() == cmdHfFilesys)
 		{
 			wndEditFilesysHardfile->releaseModalFocus();
-			const std::string tmp = SelectFile("Select hard disk filesystem file", txtHfFilesys->getText(), nullptr);
+			std::string path;
+			if (txtHfFilesys->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtHfFilesys->getText();
+			}
+			const std::string tmp = SelectFile("Select hard disk filesystem file", path, nullptr);
 			if (!tmp.empty())
 			{
 				txtHfFilesys->setText(tmp);
@@ -195,7 +213,16 @@ public:
 		else if (actionEvent.getSource() == cmdHfPath)
 		{
 			wndEditFilesysHardfile->releaseModalFocus();
-			const std::string tmp = SelectFile("Select hard disk file", txtHfPath->getText(), harddisk_filter);
+			std::string path;
+			if (txtHfPath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtHfPath->getText();
+			}
+			const std::string tmp = SelectFile("Select hard disk file", path, harddisk_filter);
 			if (!tmp.empty())
 			{
 				txtHfPath->setText(tmp);
@@ -203,7 +230,7 @@ public:
 				strncpy(current_hfdlg.ci.rootdir, tmp.c_str(), sizeof(current_hfdlg.ci.rootdir) - 1);
 				fileSelected = true;
 				
-				if (current_fsvdlg.ci.devname[0] == 0)
+				if (current_hfdlg.ci.devname[0] == 0)
 					CreateDefaultDevicename(current_hfdlg.ci.devname);
 				
 				hardfile_testrdb(&current_hfdlg);
