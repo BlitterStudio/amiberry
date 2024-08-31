@@ -672,7 +672,7 @@ void InitPanelMisc(const config_category& category)
 	scrlMisc->setBackgroundColor(gui_base_color);
 	scrlMisc->setBaseColor(gui_base_color);
 	scrlMisc->setForegroundColor(gui_foreground_color);
-	scrlMisc->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 25);
+	scrlMisc->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 27);
 	scrlMisc->setHeight(600);
 	scrlMisc->setBorderSize(1);
 	scrlMisc->setFocusable(true);
