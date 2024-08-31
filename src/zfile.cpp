@@ -1974,10 +1974,10 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 	if (_tcslen (name) <= 2)
 		return NULL;
 	if (name[1] != ':') {
-		_tcscpy (tmp, start_path_data.c_str());
+		_tcscpy (tmp, home_dir.c_str());
 #ifdef AMIBERRY
 		// Ensure we have a trailing slash
-		if (start_path_data.back() != '/' && start_path_data.back() != '\\') {
+		if (home_dir.back() != '/' && home_dir.back() != '\\') {
 			_tcscat(tmp, _T("/"));
 		}
 #endif

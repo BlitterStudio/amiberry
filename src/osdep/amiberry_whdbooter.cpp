@@ -244,7 +244,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	write_log("SymLink Kickstart ROMs for Booter\n");
 
 	// here we can do some checks for Kickstarts we might need to make symlinks for
-	current_dir = start_path_data;
+	current_dir = home_dir;
 
 	// are we using save-data/ ?
 	kickstart_path = get_savedatapath(true);

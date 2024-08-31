@@ -1936,22 +1936,22 @@ static struct zfile *get_kickstart_filehandle(struct uae_prefs *p)
 		// don't check default paths if romfile is empty
 		if (p->romfile[0] != 0) {
 #endif
-			_stprintf(tmprom2, _T("%s/%s"), start_path_data.c_str(), p->romfile);
+			_stprintf(tmprom2, _T("%s/%s"), home_dir.c_str(), p->romfile);
 			f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 #ifdef AMIBERRY
 		}
 #endif
 		if (f == NULL) {
-			_stprintf(tmprom2, _T("%s/roms/kick.rom"), start_path_data.c_str());
+			_stprintf(tmprom2, _T("%s/roms/kick.rom"), home_dir.c_str());
 			f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 			if (f == NULL) {
-				_stprintf(tmprom2, _T("%s/kick.rom"), start_path_data.c_str());
+				_stprintf(tmprom2, _T("%s/kick.rom"), home_dir.c_str());
 				f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 				if (f == NULL) {
-					_stprintf(tmprom2, _T("%s/../shared/rom/kick.rom"), start_path_data.c_str());
+					_stprintf(tmprom2, _T("%s/../shared/rom/kick.rom"), home_dir.c_str());
 					f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 					if (f == NULL) {
-						_stprintf(tmprom2, _T("%s/../System/rom/kick.rom"), start_path_data.c_str());
+						_stprintf(tmprom2, _T("%s/../System/rom/kick.rom"), home_dir.c_str());
 						f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 						if (f == NULL) {
 							f = read_rom_name_guess(tmprom, tmprom2);

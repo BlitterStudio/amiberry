@@ -1430,17 +1430,17 @@ int load_keyring (struct uae_prefs *p, const TCHAR *path)
 			_tcscpy (tmp, _T("roms/rom.key"));
 			break;
 		case 4:
-			_tcscpy (tmp, start_path_data.c_str());
+			_tcscpy (tmp, home_dir.c_str());
 #ifdef AMIBERRY
 			// Ensure we have a trailing slash
-			if (start_path_data.back() != '/' && start_path_data.back() != '\\') {
+			if (home_dir.back() != '/' && home_dir.back() != '\\') {
 				_tcscat(tmp, _T("/"));
 			}
 #endif
 			_tcscat (tmp, _T("rom.key"));
 			break;
 		case 5:
-			_stprintf (tmp, _T("%s../shared/rom/rom.key"), start_path_data.c_str());
+			_stprintf (tmp, _T("%s../shared/rom/rom.key"), home_dir.c_str());
 			break;
 		case 6:
 			if (p) {

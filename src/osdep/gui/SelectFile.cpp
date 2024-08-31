@@ -109,7 +109,7 @@ static void checkfoldername(const std::string& current)
 	}
 	else
 	{
-		workingDir = start_path_data;
+		workingDir = home_dir;
 		fileList->changeDir(workingDir.c_str());
 	}
 	txtCurrent->setText(workingDir);
