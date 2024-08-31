@@ -4167,7 +4167,7 @@ std::string get_data_directory()
 	{
 		// If the ENV variable is set, use it
 		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
-		return {env_data_dir};
+		return { env_data_dir };
 	}
 	if (directory_exists("/usr/share/amiberry", "/data"))
 	{
@@ -4179,21 +4179,20 @@ std::string get_data_directory()
 	{
 		// If the XDG_DATA_HOME is set, use it
 		write_log("Using data directory from XDG_DATA_HOME: %s\n", xdg_data_home);
-		home_dir = std::string(xdg_data_home);
-		return home_dir;
+		return { xdg_data_home };
 	}
 
 	// Fallback Portable mode, all in the startup path (default behavior for previous Amiberry versions)
 	char tmp[MAX_DPATH];
 	getcwd(tmp, MAX_DPATH);
 	write_log("Using data directory from startup path: %s\n", tmp);
-	home_dir = std::string(tmp);
-	return home_dir;
+	return { tmp };
 }
 
 std::string get_home_directory()
 {
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	const auto xdg_data_home = getenv("XDG_DATA_HOME");
 	const auto user_home_dir = getenv("HOME");
 
 	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
@@ -4202,7 +4201,12 @@ std::string get_home_directory()
 		write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
 		return { env_home_dir };
 	}
-
+	if (xdg_data_home != nullptr)
+	{
+		// If the XDG_DATA_HOME is set, use it
+		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home);
+		return { xdg_data_home };
+	}
 	if (user_home_dir != nullptr && directory_exists(user_home_dir, "/.amiberry"))
 	{
 		// $HOME/.amiberry exists, use it
@@ -4248,6 +4252,7 @@ int main(int argc, char* argv[])
 	const std::string home_directory = get_home_directory();
 
 	init_amiberry_paths(data_directory, home_directory);
+
 	// Parse command line to get possibly set amiberry_config.
 	// Do not remove used args yet.
 	if (!parse_amiberry_cmd_line(&argc, argv, 0))
