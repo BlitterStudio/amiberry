@@ -346,6 +346,10 @@ void amiberry_gui_init()
 			SDL_FreeSurface(icon_surface);
 		}
 	}
+	else if (kmsdrm_detected)
+	{
+		SDL_SetWindowSize(mon->gui_window, GUI_WIDTH * amiberry_options.window_scaling, GUI_HEIGHT * amiberry_options.window_scaling);
+	}
 
 	if (mon->gui_renderer == nullptr)
 	{
@@ -355,6 +359,8 @@ void amiberry_gui_init()
 
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	// Disable integer scaling for the GUI
+	SDL_RenderSetIntegerScale(mon->gui_renderer, SDL_FALSE);
 
 	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
