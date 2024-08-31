@@ -53,7 +53,6 @@ public:
 				wndEditTapeDrive->setCaption("Path is empty!");
 				return;
 			}
-			_tcscpy(current_tapedlg.ci.rootdir, txtTapeDrivePath->getText().c_str());
 			dialogResult = true;
 			dialogFinished = true;
 		}
@@ -65,28 +64,51 @@ public:
 		else if (actionEvent.getSource() == cmdTapeDriveSelectDir)
 		{
 			wndEditTapeDrive->releaseModalFocus();
-			std::string tmp = SelectFolder("Select Directory", txtTapeDrivePath->getText());
+			std::string path;
+			if (txtTapeDrivePath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtTapeDrivePath->getText();
+			}
+			std::string tmp = SelectFolder("Select Directory", path);
 			if (!tmp.empty())
 			{
 				txtTapeDrivePath->setText(tmp);
+				default_tapedlg(&current_tapedlg);
+				strncpy(current_tapedlg.ci.rootdir, tmp.c_str(), sizeof(current_tapedlg.ci.rootdir) - 1);
 			}
 			wndEditTapeDrive->requestModalFocus();
 		}
 		else if (actionEvent.getSource() == cmdTapeDriveSelectFile)
 		{
 			wndEditTapeDrive->releaseModalFocus();
-			std::string tmp = SelectFile("Select Tape Image", txtTapeDrivePath->getText(), harddisk_filter);
+			std::string path;
+			if (txtTapeDrivePath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtTapeDrivePath->getText();
+			}
+			std::string tmp = SelectFile("Select Tape Image", path, harddisk_filter);
 			if (!tmp.empty())
 			{
 				txtTapeDrivePath->setText(tmp);
+				default_tapedlg(&current_tapedlg);
+				strncpy(current_tapedlg.ci.rootdir, tmp.c_str(), sizeof(current_tapedlg.ci.rootdir) - 1);
 			}
 			wndEditTapeDrive->requestModalFocus();
 		}
 		else if (actionEvent.getSource() == cboTapeDriveController)
 		{
-			current_tapedlg.ci.controller_type = controller[cboTapeDriveController->getSelected()].type % HD_CONTROLLER_NEXT_UNIT;
-			current_tapedlg.ci.controller_type_unit = controller[cboTapeDriveController->getSelected()].type / HD_CONTROLLER_NEXT_UNIT;
-			inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, current_tapedlg.ci.rootdir);
+			auto posn = controller[cboTapeDriveController->getSelected()].type;
+			current_tapedlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
+			current_tapedlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
+			inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, current_tapedlg.ci.rootdir[0] != 0);
 		}
 		else if (actionEvent.getSource() == cboTapeDriveUnit)
 		{
@@ -515,7 +537,6 @@ bool EditTapeDrive(const int unit_no)
 	else
 	{
 		default_tapedlg(&current_tapedlg);
-		txtTapeDrivePath->setText(get_harddrive_path());
 	}
 
 	// Prepare the screen once
