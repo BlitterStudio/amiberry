@@ -62,7 +62,7 @@ extern int quit_program;
 extern bool console_emulation;
 
 extern TCHAR warning_buffer[256];
-extern std::string start_path_data;
+extern std::string home_dir;
 extern TCHAR start_path_data_exe[];
 extern TCHAR start_path_plugins[];
 

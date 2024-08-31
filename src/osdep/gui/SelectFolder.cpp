@@ -94,7 +94,7 @@ static void checkfoldername(const std::string& current)
 	}
 	else
 	{
-		workingDir = start_path_data;
+		workingDir = home_dir;
 		dirList = workingDir;
 	}
 	txtCurrent->setText(workingDir);
