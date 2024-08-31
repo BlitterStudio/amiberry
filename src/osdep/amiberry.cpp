@@ -271,7 +271,7 @@ extern void signal_term(int signum, siginfo_t* info, void* ptr);
 
 extern void SetLastActiveConfig(const char* filename);
 
-std::string start_path_data;
+std::string home_dir;
 std::string current_dir;
 
 #ifndef __MACH__
@@ -1627,7 +1627,7 @@ void process_event(const SDL_Event& event)
 		case SDL_CLIPBOARDUPDATE:
 			handle_clipboard_update_event();
 			break;
-		
+
 		case SDL_JOYDEVICEADDED:
 			handle_joy_device_event(event.jdevice.which, false);
 			break;
@@ -3963,9 +3963,9 @@ void macos_copy_amiberry_files_to_userdir(std::string macos_amiberry_directory)
 }
 #endif
 
-static void init_amiberry_paths(void)
+static void init_amiberry_paths(const std::string& data_directory, const std::string& home_directory)
 {
-	current_dir = start_path_data;
+	current_dir = home_dir = home_directory;
 #ifdef __MACH__
 	// On MacOS, we these files under the user Documents/Amiberry folder by default
 	// If the folder is missing, we create it and copy the files from the app bundle
@@ -4012,10 +4012,11 @@ static void init_amiberry_paths(void)
 	amiberry_conf_file = data_dir;
 	amiberry_conf_file.append("amiberry.conf");
 #else
-	config_path = controllers_path = data_dir = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
+	data_dir = data_directory;
+	config_path = controllers_path = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = 
-		start_path_data;
+		home_directory;
 
 	config_path.append("/conf/");
 	controllers_path.append("/controllers/");
@@ -4143,17 +4144,80 @@ const TCHAR** uaenative_get_library_dirs(void)
 		path = xcalloc(TCHAR, MAX_DPATH);
 		_tcscpy(path, plugins_dir.c_str());
 	}
-	nats[0] = start_path_data.c_str();
+	nats[0] = home_dir.c_str();
 	nats[1] = path;
 	return nats;
 }
 
-bool data_dir_exists(const char* directory)
+bool directory_exists(std::string directory, const std::string& sub_dir)
 {
-	if (directory == nullptr) return false;
-	const std::string dataDir = "/data";
-	const std::string check_for = directory + dataDir;
-	return my_existsdir(check_for.c_str());
+	if (directory.empty() || sub_dir.empty()) return false;
+	directory += sub_dir;
+	return my_existsdir(directory.c_str());
+}
+
+std::string get_data_directory()
+{
+	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
+	const auto xdg_data_home = getenv("XDG_DATA_HOME");
+
+	if (env_data_dir != nullptr && directory_exists(env_data_dir, "/data"))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
+		return { env_data_dir };
+	}
+	if (directory_exists("/usr/share/amiberry", "/data"))
+	{
+		// If the data directory exists, use it
+		write_log("Using data directory from /usr/share/amiberry\n");
+		return "/usr/share/amiberry";
+	}
+	if (xdg_data_home != nullptr && directory_exists(xdg_data_home, "/data"))
+	{
+		// If the XDG_DATA_HOME is set, use it
+		write_log("Using data directory from XDG_DATA_HOME: %s\n", xdg_data_home);
+		return { xdg_data_home };
+	}
+
+	// Fallback Portable mode, all in the startup path (default behavior for previous Amiberry versions)
+	char tmp[MAX_DPATH];
+	getcwd(tmp, MAX_DPATH);
+	write_log("Using data directory from startup path: %s\n", tmp);
+	return { tmp };
+}
+
+std::string get_home_directory()
+{
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	const auto xdg_data_home = getenv("XDG_DATA_HOME");
+	const auto user_home_dir = getenv("HOME");
+
+	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
+		return { env_home_dir };
+	}
+	if (xdg_data_home != nullptr)
+	{
+		// If the XDG_DATA_HOME is set, use it
+		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home);
+		return { xdg_data_home };
+	}
+	if (user_home_dir != nullptr && directory_exists(user_home_dir, "/.amiberry"))
+	{
+		// $HOME/.amiberry exists, use it
+		write_log("Using home directory from $HOME/.amiberry\n");
+		std::string result = std::string(user_home_dir);
+		return result.append("/.amiberry");
+	}
+
+	// Fallback Portable mode, all in startup path
+	write_log("Using home directory from startup path\n");
+	char tmp[MAX_DPATH];
+	getcwd(tmp, MAX_DPATH);
+	return {tmp};
 }
 
 int main(int argc, char* argv[])
@@ -4182,25 +4246,11 @@ int main(int argc, char* argv[])
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
-	// Get startup path
-	const auto external_files_dir = getenv("EXTERNAL_FILES_DIR");
-	const auto xdg_data_home = getenv("XDG_DATA_HOME");
-	if (external_files_dir != nullptr && data_dir_exists(external_files_dir))
-	{
-		start_path_data = std::string(external_files_dir);
-	}
-	else if (xdg_data_home != nullptr && data_dir_exists(xdg_data_home))
-	{
-		start_path_data = std::string(xdg_data_home);
-	}
-	else
-	{
-		char tmp[MAX_DPATH];
-		getcwd(tmp, MAX_DPATH);
-		start_path_data = std::string(tmp);
-	}
+	const std::string data_directory = get_data_directory();
+	const std::string home_directory = get_home_directory();
 
-	init_amiberry_paths();
+	init_amiberry_paths(data_directory, home_directory);
+
 	// Parse command line to get possibly set amiberry_config.
 	// Do not remove used args yet.
 	if (!parse_amiberry_cmd_line(&argc, argv, 0))
@@ -4394,7 +4444,7 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		out[len - 1] = '\0';
 	}
 	else {
-		strncpy(out, start_path_data.c_str(), len - 1);
+		strncpy(out, home_dir.c_str(), len - 1);
 		strncat(out, "/", len - 1);
 		strncat(out, path, len - 1);
 		strncat(out, "/", len - 1);

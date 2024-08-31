@@ -217,7 +217,17 @@ static void SDL2_init()
 	write_log("Getting Current Video Driver...\n");
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+	{
 		kmsdrm_detected = true;
+		if (!mon->amiga_window && mon->gui_window)
+		{
+			mon->amiga_window = mon->gui_window;
+		}
+		if (!mon->amiga_renderer && mon->gui_renderer)
+		{
+			mon->amiga_renderer = mon->gui_renderer;
+		}
+	}
 
 	const auto should_be_zero = SDL_GetCurrentDisplayMode(0, &sdl_mode);
 	if (should_be_zero == 0)
@@ -2298,6 +2308,30 @@ void graphics_leave()
 	struct AmigaMonitor* mon = &AMonitors[0];
 	close_windows(mon);
 
+	if (kmsdrm_detected)
+	{
+		if (mon->amiga_renderer)
+		{
+			SDL_DestroyRenderer(mon->amiga_renderer);
+			mon->amiga_renderer = nullptr;
+		}
+		if (mon->gui_renderer)
+		{
+			SDL_DestroyRenderer(mon->gui_renderer);
+			mon->gui_renderer = nullptr;
+		}
+		if (mon->amiga_window)
+		{
+			SDL_DestroyWindow(mon->amiga_window);
+			mon->amiga_window = nullptr;
+		}
+		if (mon->gui_window)
+		{
+			SDL_DestroyWindow(mon->gui_window);
+			mon->gui_window = nullptr;
+		}
+	}
+
 	SDL_DestroyMutex(screen_cs);
 	screen_cs = nullptr;
 	screen_cs_allocated = false;
@@ -2325,13 +2359,13 @@ void close_windows(struct AmigaMonitor* mon)
 		gl_context = nullptr;
 	}
 #else
-	if (mon->amiga_renderer)
+	if (mon->amiga_renderer && !kmsdrm_detected)
 	{
 		SDL_DestroyRenderer(mon->amiga_renderer);
 		mon->amiga_renderer = nullptr;
 	}
 #endif
-	if (mon->amiga_window)
+	if (mon->amiga_window && !kmsdrm_detected)
 	{
 		SDL_DestroyWindow(mon->amiga_window);
 		mon->amiga_window = nullptr;

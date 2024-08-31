@@ -552,6 +552,10 @@ void gui_display(int shortcut)
 	//rawinput_alloc();
 	struct AmigaMonitor* mon = &AMonitors[0];
 	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+	if (kmsdrm_detected && amiga_surface != nullptr)
+	{
+		target_graphics_buffer_update(mon->monitor_id, true);
+	}
 	fpscounter_reset();
 	//screenshot_free();
 	//write_disk_history();

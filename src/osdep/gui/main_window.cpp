@@ -273,7 +273,17 @@ void amiberry_gui_init()
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
+	{
 		kmsdrm_detected = true;
+		if (!mon->gui_window && mon->amiga_window)
+		{
+			mon->gui_window = mon->amiga_window;
+		}
+		if (!mon->gui_renderer && mon->amiga_renderer)
+		{
+			mon->gui_renderer = mon->amiga_renderer;
+		}
+	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
 	//-------------------------------------------------
@@ -297,7 +307,7 @@ void amiberry_gui_init()
 		else
 		{
 			// otherwise go for Full-window
-			mode = SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALWAYS_ON_TOP;
+			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 		}
 
         if (currprefs.gui_alwaysontop)
@@ -336,6 +346,10 @@ void amiberry_gui_init()
 			SDL_FreeSurface(icon_surface);
 		}
 	}
+	else if (kmsdrm_detected)
+	{
+		SDL_SetWindowSize(mon->gui_window, GUI_WIDTH * amiberry_options.window_scaling, GUI_HEIGHT * amiberry_options.window_scaling);
+	}
 
 	if (mon->gui_renderer == nullptr)
 	{
@@ -345,6 +359,8 @@ void amiberry_gui_init()
 
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	// Disable integer scaling for the GUI
+	SDL_RenderSetIntegerScale(mon->gui_renderer, SDL_FALSE);
 
 	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
@@ -404,13 +420,13 @@ void amiberry_gui_halt()
 		SDL_DestroyTexture(gui_texture);
 		gui_texture = nullptr;
 	}
-	if (mon->gui_renderer)
+	if (mon->gui_renderer && !kmsdrm_detected)
 	{
 		SDL_DestroyRenderer(mon->gui_renderer);
 		mon->gui_renderer = nullptr;
 	}
 
-	if (mon->gui_window) {
+	if (mon->gui_window && !kmsdrm_detected) {
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
 	}
@@ -440,7 +456,7 @@ void check_input()
 		case SDL_JOYDEVICEADDED:
 			// Check if we need to re-import joysticks
 			existing_did = &di_joystick[gui_event.jdevice.which];
-			if (existing_did->guid == "")
+			if (existing_did->guid.empty())
 			{
 				write_log("GUI: SDL2 Controller/Joystick added, re-running import joysticks...\n");
 				import_joysticks();
