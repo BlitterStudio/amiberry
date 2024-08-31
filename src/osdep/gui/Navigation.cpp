@@ -628,13 +628,11 @@ static NavigationMap nav_map[] =
 	{ "cmdHDDCancel", "cmdHDDOk", "cmdHDDOk", "txtHDDPath", "txtHDDPath" },
 
 	// CreateFilesysHardfile
-	{ "txtCreateDevice", "", "", "cmdCreateHdfOK", "chkCreateHdfAutoboot" },
-	{ "chkCreateHdfAutoboot", "txtCreateDevice", "txtCreateBootPri", "cmdCreateHdfOK", "cmdCreateHdfPath" },
-	{ "txtCreateBootPri", "", "", "chkCreateHdfAutoboot", "cmdCreateHdfPath" },
-	{ "cmdCreateHdfPath", "txtCreatePath", "txtCreatePath", "txtCreateBootPri", "chkDynamic" },
+	{ "txtCreateDevice", "", "", "cmdCreateHdfOK", "cmdCreateHdfOK" },
+	{ "cmdCreateHdfPath", "txtCreatePath", "txtCreatePath", "cmdCreateHdfOK", "chkDynamic" },
 	{ "chkDynamic", "", "", "cmdCreateHdfPath", "cmdCreateHdfOK" },
-	{ "cmdCreateHdfOK", "cmdCreateHdfCancel", "cmdCreateHdfCancel", "chkDynamic", "txtCreateDevice" },
-	{ "cmdCreateHdfCancel", "cmdCreateHdfOK", "cmdCreateHdfOK", "chkDynamic", "txtCreateDevice" },
+	{ "cmdCreateHdfOK", "cmdCreateHdfCancel", "cmdCreateHdfCancel", "chkDynamic", "cmdCreateHdfPath" },
+	{ "cmdCreateHdfCancel", "cmdCreateHdfOK", "cmdCreateHdfOK", "chkDynamic", "cmdCreateHdfPath" },
 
 	{ "END", "", "", "", "" }
 };
