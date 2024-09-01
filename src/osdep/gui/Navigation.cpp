@@ -623,7 +623,7 @@ static NavigationMap nav_map[] =
 	{ "chkHdfRDB", "", "", "chkHdfDoNotMount", "cboHdfController" },
 	{ "cboHdfController", "cboHdfUnit", "cboHdfUnit", "chkHdfRDB", "cmdHdfOK" },
 	{ "cboHdfUnit", "cboHdfController", "cboHdfController", "cmdHdfPath", "cmdHdfOK" },
-	{ "cboHdfType", "cboHdfUnit", "cboHdfController", "cboHdfFeatureLevel", "cmdHdfOK" },
+	{ "cboHdfControllerTpe", "cboHdfUnit", "cboHdfController", "cboHdfFeatureLevel", "cmdHdfOK" },
 	{ "cboHdfFeatureLevel", "", "", "chkHdfRDB", "cboHdfUnit" },
 	{ "cmdHdfOK", "cmdHdfCancel", "cmdHdfCancel", "cboHdfController", "cmdHdfPath" },
 	{ "cmdHdfCancel", "cmdHdfOK", "cmdHdfOK", "cboHdfController", "cmdHdfPath" },

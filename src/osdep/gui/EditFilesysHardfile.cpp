@@ -56,7 +56,7 @@ static gcn::CheckBox* chkRdbMode;
 static gcn::Label* lblController;
 static gcn::DropDown* cboController;
 static gcn::DropDown* cboUnit;
-static gcn::DropDown* cboHdfType;
+static gcn::DropDown* cboHdfControllerType;
 static gcn::DropDown* cboHdfFeatureLevel;
 
 static gcn::TextField* txtHdfLine1;
@@ -88,14 +88,14 @@ static void sethardfiletypes()
 {
 	bool ide = current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST;
 	bool scsi = current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_SCSI_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_SCSI_LAST;
-	cboHdfType->setEnabled(ide);
+	cboHdfControllerType->setEnabled(ide);
 	cboHdfFeatureLevel->setEnabled(ide || scsi);
 	if (!ide) {
 		current_hfdlg.ci.controller_media_type = 0;
 	}
 	if (current_hfdlg.ci.controller_media_type && current_hfdlg.ci.unit_feature_level == 0)
 		current_hfdlg.ci.unit_feature_level = 1;
-	cboHdfType->setSelected(current_hfdlg.ci.controller_media_type);
+	cboHdfControllerType->setSelected(current_hfdlg.ci.controller_media_type);
 	cboHdfFeatureLevel->setSelected(current_hfdlg.ci.unit_feature_level);
 }
 
@@ -251,9 +251,9 @@ public:
 			current_hfdlg.ci.controller_unit = cboUnit->getSelected();
 			sethardfile();
 		}
-		else if (actionEvent.getSource() == cboHdfType)
+		else if (actionEvent.getSource() == cboHdfControllerType)
 		{
-			current_hfdlg.ci.controller_media_type = cboHdfType->getSelected();
+			current_hfdlg.ci.controller_media_type = cboHdfControllerType->getSelected();
 			sethardfile();
 		}
 		else if (actionEvent.getSource() == cboHdfFeatureLevel)
@@ -520,14 +520,14 @@ static void InitEditFilesysHardfile()
 	cboUnit->setId("cboHdfUnit");
 	cboUnit->addActionListener(filesysHardfileActionListener);
 
-	cboHdfType = new gcn::DropDown(&hdfTypeListModel);
-	cboHdfType->setSize(80, DROPDOWN_HEIGHT);
-	cboHdfType->setBaseColor(gui_base_color);
-	cboHdfType->setBackgroundColor(gui_textbox_background_color);
-	cboHdfType->setForegroundColor(gui_foreground_color);
-	cboHdfType->setSelectionColor(gui_selection_color);
-	cboHdfType->setId("cboHdfType");
-	cboHdfType->addActionListener(filesysHardfileActionListener);
+	cboHdfControllerType = new gcn::DropDown(&hdfTypeListModel);
+	cboHdfControllerType->setSize(80, DROPDOWN_HEIGHT);
+	cboHdfControllerType->setBaseColor(gui_base_color);
+	cboHdfControllerType->setBackgroundColor(gui_textbox_background_color);
+	cboHdfControllerType->setForegroundColor(gui_foreground_color);
+	cboHdfControllerType->setSelectionColor(gui_selection_color);
+	cboHdfControllerType->setId("cboHdfControllerType");
+	cboHdfControllerType->addActionListener(filesysHardfileActionListener);
 
 	cboHdfFeatureLevel = new gcn::DropDown(&hdfFeatureLevelListModel);
 	cboHdfFeatureLevel->setSize(168, DROPDOWN_HEIGHT);
@@ -646,7 +646,7 @@ static void InitEditFilesysHardfile()
 	posY = lblController->getY() + lblController->getHeight() + 8;
 	wndEditFilesysHardfile->add(cboController, DISTANCE_BORDER, posY);
 	wndEditFilesysHardfile->add(cboUnit, cboController->getX() + cboController->getWidth() + 8, posY);
-	wndEditFilesysHardfile->add(cboHdfType, cboUnit->getX() + cboUnit->getWidth() + 8, posY);
+	wndEditFilesysHardfile->add(cboHdfControllerType, cboUnit->getX() + cboUnit->getWidth() + 8, posY);
 	wndEditFilesysHardfile->add(cboHdfFeatureLevel, cboUnit->getX(), lblController->getY());
 
 	posX = chkVirtBootable->getX() + chkVirtBootable->getWidth() + DISTANCE_NEXT_X * 10;
@@ -710,7 +710,7 @@ static void ExitEditFilesysHardfile()
 	delete lblController;
 	delete cboController;
 	delete cboUnit;
-	delete cboHdfType;
+	delete cboHdfControllerType;
 	delete cboHdfFeatureLevel;
 	delete txtHdfLine1;
 	delete txtHdfLine2;
