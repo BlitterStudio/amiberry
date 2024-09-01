@@ -482,8 +482,10 @@ OBJS = \
 	src/scsi.o \
 	src/scsiemul.o \
 	src/scsitape.o \
+	src/specialmonitors.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
+	src/test_card.o \
 	src/tinyxml2.o \
 	src/traps.o \
 	src/uaeexe.o \

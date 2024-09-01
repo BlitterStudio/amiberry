@@ -140,8 +140,10 @@ add_executable(${PROJECT_NAME}
         src/scsi.cpp
         src/scsiemul.cpp
         src/scsitape.cpp
+        src/specialmonitors.cpp
         src/statusline.cpp
         src/tabletlibrary.cpp
+        src/test_card.cpp
         src/tinyxml2.cpp
         src/traps.cpp
         src/uaeexe.cpp
