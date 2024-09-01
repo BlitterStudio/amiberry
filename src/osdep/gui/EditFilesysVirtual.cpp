@@ -263,7 +263,7 @@ static void InitEditFilesysVirtual()
 
 	wndEditFilesysVirtual->requestModalFocus();
 	focus_bug_workaround(wndEditFilesysVirtual);
-	txtDevice->requestFocus();
+	cmdVirtSelectDir->requestFocus();
 }
 
 static void ExitEditFilesysVirtual()
@@ -557,7 +557,6 @@ static void EditFilesysVirtualLoop()
 		update_gui_screen();
 	}
 }
-
 
 bool EditFilesysVirtual(const int unit_no)
 {

@@ -213,6 +213,7 @@ static void InitEditTapeDrive()
 
 	wndEditTapeDrive->requestModalFocus();
 	focus_bug_workaround(wndEditTapeDrive);
+	cmdTapeDriveSelectDir->requestFocus();
 }
 
 static void ExitEditTapeDrive()

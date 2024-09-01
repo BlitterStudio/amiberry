@@ -398,7 +398,7 @@ static void InitEditFilesysHardfile()
 	wndEditFilesysHardfile->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
 	wndEditFilesysHardfile->setBaseColor(gui_base_color);
 	wndEditFilesysHardfile->setForegroundColor(gui_foreground_color);
-	wndEditFilesysHardfile->setCaption("Volume settings");
+	wndEditFilesysHardfile->setCaption("Hardfile settings");
 	wndEditFilesysHardfile->setTitleBarHeight(TITLEBAR_HEIGHT);
 
 	filesysHardfileActionListener = new FilesysHardfileActionListener();
@@ -508,7 +508,7 @@ static void InitEditFilesysHardfile()
 	cboController->setBackgroundColor(gui_textbox_background_color);
 	cboController->setForegroundColor(gui_foreground_color);
 	cboController->setSelectionColor(gui_selection_color);
-	cboController->setId("hdfController");
+	cboController->setId("cboHdfController");
 	cboController->addActionListener(filesysHardfileActionListener);
 
 	cboUnit = new gcn::DropDown(&unitListModel);
@@ -676,6 +676,7 @@ static void InitEditFilesysHardfile()
 
 	wndEditFilesysHardfile->requestModalFocus();
 	focus_bug_workaround(wndEditFilesysHardfile);
+	cmdHfPath->requestFocus();
 }
 
 static void ExitEditFilesysHardfile()

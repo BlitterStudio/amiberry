@@ -158,6 +158,7 @@ static void InitCreateFilesysHardfile()
 
 	wndCreateFilesysHardfile->requestModalFocus();
 	focus_bug_workaround(wndCreateFilesysHardfile);
+	cmdPath->requestFocus();
 }
 
 static void ExitCreateFilesysHardfile()
