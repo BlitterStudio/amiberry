@@ -307,9 +307,9 @@ void InitPanelChipset(const struct config_category& category)
 	grpOptions->add(optBlitNormal, 10, 10);
 	grpOptions->add(optBlitImmed, 10, 40);
 	grpOptions->add(optBlitWait, 10, 70);
-	grpOptions->add(chkMultithreadedDrawing, 10, 130);
-	grpOptions->add(lblSpecialMonitors, 10, 170);
-	grpOptions->add(cboSpecialMonitors, 10, 200);
+	grpOptions->add(chkMultithreadedDrawing, 10, 110);
+	grpOptions->add(lblSpecialMonitors, 10, 150);
+	grpOptions->add(cboSpecialMonitors, 10, 180);
 
 	grpOptions->setMovable(false);
 	grpOptions->setSize(lblSpecialMonitors->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, TITLEBAR_HEIGHT + cboSpecialMonitors->getY() + cboSpecialMonitors->getHeight() + DISTANCE_NEXT_Y * 6);

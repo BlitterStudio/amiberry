@@ -242,8 +242,7 @@ bool scsi_emulate_analyze (struct scsi_data *sd)
 	case 0x55: // MODE SELECT (10)
 		if (cmd_len == 6) {
 			data_len = sd->cmd[4];
-		}
-		else {
+		} else {
 			data_len = (sd->cmd[7] << 8) | sd->cmd[8];
 		}
 		scsi_grow_buffer(sd, data_len);

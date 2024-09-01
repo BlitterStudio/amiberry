@@ -77,6 +77,28 @@
 #include "rp.h"
 #endif
 
+#define TRACING_ENABLED 1
+int log_filesys = 0;
+
+#define TRAPMD 1
+
+#if TRACING_ENABLED
+#if 0
+#define TRACE(x) if (log_filesys > 0 && (unit->volflags & MYVOLUMEINFO_CDFS)) { write_log x; }
+#else
+#define TRACE(x) if (log_filesys > 0) { write_log x; }
+#endif
+#define TRACEI(x) if (log_filesys > 0) { write_log x; }
+#define TRACE2(x) if (log_filesys >= 2) { write_log x; }
+#define TRACE3(x) if (log_filesys >= 3) { write_log x; }
+#define DUMPLOCK(c,u,x) dumplock(c,u,x)
+#else
+#define TRACE(x)
+#define DUMPLOCK(c,u,x)
+#define TRACE2(x)
+#define TRACE3(x)
+#endif
+
 #define KS12_BOOT_HACK 1
 
 #define UNIT_LED(unit) ((unit)->ui.unit_type == UNIT_CDFS ? LED_CD : LED_HD)
@@ -564,12 +586,12 @@ static void close_filesys_unit (UnitInfo *uip)
 	if (uip->unit_pipe)
 	{
 		destroy_comm_pipe(uip->unit_pipe);
-		xfree(uip->unit_pipe);
+		xfree (uip->unit_pipe);
 	}
 	if (uip->back_pipe)
 	{
 		destroy_comm_pipe(uip->back_pipe);
-		xfree(uip->back_pipe);
+		xfree (uip->back_pipe);
 	}
 	if (uip->cd_open) {
 		sys_command_close (uip->cddevno);
@@ -734,14 +756,14 @@ static void stripsemicolon (TCHAR *s)
 {
 	if (!s)
 		return;
-	while (_tcslen(s) > 0 && s[_tcslen(s) - 1] == ':')
-		s[_tcslen(s) - 1] = 0;
+	while (uaetcslen(s) > 0 && s[uaetcslen(s) - 1] == ':')
+		s[uaetcslen(s) - 1] = 0;
 }
 static void stripspace (TCHAR *s)
 {
 	if (!s)
 		return;
-	for (int i = 0; i < _tcslen (s); i++) {
+	for (int i = 0; i < uaetcslen (s); i++) {
 		if (s[i] == ' ')
 			s[i] = '_';
 	}
@@ -750,7 +772,7 @@ static void striplength (TCHAR *s, int len)
 {
 	if (!s)
 		return;
-	if (_tcslen (s) <= len)
+	if (uaetcslen (s) <= len)
 		return;
 	s[len] = 0;
 }
@@ -768,7 +790,7 @@ TCHAR *validatevolumename (TCHAR *s, const TCHAR *def)
 	stripsemicolon (s);
 	fixcharset (s);
 	striplength (s, 30);
-	if (_tcslen(s) == 0 && def) {
+	if (uaetcslen(s) == 0 && def) {
 		xfree(s);
 		s = my_strdup(def);
 	}
@@ -780,7 +802,7 @@ TCHAR *validatedevicename (TCHAR *s, const TCHAR *def)
 	stripspace (s);
 	fixcharset (s);
 	striplength (s, 30);
-	if (_tcslen(s) == 0 && def) {
+	if (uaetcslen(s) == 0 && def) {
 		xfree(s);
 		s = my_strdup(def);
 	}
@@ -802,18 +824,18 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 	else if (my_existsdir (path))
 		archivehd = 0;
 
-	if (zv && zv->volumename && _tcslen(zv->volumename) > 0) {
+	if (zv && zv->volumename && uaetcslen(zv->volumename) > 0) {
 		nvol = my_strdup(zv->volumename);
 		nvol = validatevolumename (nvol, def);
 		return nvol;
 	}
 
-	if ((!volname || _tcslen (volname) == 0) && path[0] && archivehd >= 0) {
+	if ((!volname || uaetcslen (volname) == 0) && path && archivehd >= 0) {
 		p = my_strdup (path);
-		for (i = _tcslen (p) - 1; i >= 0; i--) {
+		for (i = uaetcslen (p) - 1; i >= 0; i--) {
 			TCHAR c = p[i];
 			if (c == ':' || c == '/' || c == '\\') {
-				if (i == _tcslen (p) - 1)
+				if (i == uaetcslen (p) - 1)
 					continue;
 				if (!_tcscmp (p + i, _T(":\\"))) {
 					xfree (p);
@@ -831,13 +853,13 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 			nvol = my_strdup (p + i);
 	}
 	if (!nvol && archivehd >= 0) {
-		if (volname && _tcslen (volname) > 0)
+		if (volname && uaetcslen (volname) > 0)
 			nvol = my_strdup (volname);
 		else
 			nvol = my_strdup (def);
 	}
 	if (!nvol) {
-		if (volname && _tcslen (volname))
+		if (volname && uaetcslen (volname))
 			nvol = my_strdup (volname);
 		else
 			nvol = my_strdup (_T(""));
@@ -993,7 +1015,7 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 	for (i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 		if (nr == i || !mountinfo.ui[i].open || mountinfo.ui[i].rootdir == NULL || is_hardfile (i) == FILESYS_CD)
 			continue;
-		if (_tcslen(c.rootdir) > 0 && samepath(mountinfo.ui[i].rootdir, c.rootdir)) {
+		if (uaetcslen(c.rootdir) > 0 && samepath(mountinfo.ui[i].rootdir, c.rootdir)) {
 			error_log (_T("directory/hardfile '%s' already added."), c.rootdir);
 			return -1;
 		}
@@ -1041,7 +1063,7 @@ static int set_filesys_unit_1 (int nr, struct uaedev_config_info *ci, bool custo
 		ui->volname = filesys_createvolname (c.volname, c.rootdir, ui->zarchive, _T("harddrive"));
 		ui->volflags = flags;
 		TCHAR *vs = au(UAEFS_VERSION);
-		TCHAR *vsp = vs + _tcslen(vs) - 1;
+		TCHAR *vsp = vs + uaetcslen(vs) - 1;
 		while (vsp != vs) {
 			if (*vsp == ' ') {
 				*vsp++ = 0;
@@ -1544,7 +1566,15 @@ static TCHAR *char1(TrapContext *ctx, uaecptr addr)
 {
 	uae_char buf[1024];
 
+#if TRAPMD
 	trap_get_string(ctx, (uae_u8*)buf, addr, sizeof(buf));
+#else
+	unsigned int i = 0;
+	do {
+		buf[i] = trap_get_byte(ctx, addr);
+		addr++;
+	} while (buf[i++] && i < sizeof (buf));
+#endif
 	return au_fs(buf);
 }
 
@@ -1554,7 +1584,12 @@ static TCHAR *bstr1(TrapContext *ctx, uaecptr addr)
 	int n = trap_get_byte(ctx, addr);
 
 	addr++;
+#if TRAPMD
 	trap_get_bytes(ctx, (uae_u8*)buf, addr, n);
+#else
+	for (int i = 0; i < n; i++, addr++)
+		buf[i] = trap_get_byte(ctx, addr);
+#endif
 	buf[n] = 0;
 	return au_fs(buf);
 }
@@ -1565,7 +1600,12 @@ static TCHAR *bstr(TrapContext *ctx, Unit *unit, uaecptr addr)
 	uae_char buf[257];
 
 	addr++;
+#if TRAPMD
 	trap_get_bytes(ctx, (uae_u8*)buf, addr, n);
+#else
+	for (int i = 0; i < n; i++, addr++)
+		buf[i] = trap_get_byte(ctx, addr);
+#endif
 	buf[n] = 0;
 	au_fs_copy (unit->tmpbuf3, sizeof (unit->tmpbuf3) / sizeof (TCHAR), buf);
 	return unit->tmpbuf3;
@@ -1875,7 +1915,7 @@ static void filesys_delayed_change (Unit *u, int frames, const TCHAR *rootdir, c
 	if (volume)
 		u->newvolume = my_strdup (volume);
 	filesys_eject (u->unit);
-	if (!rootdir || _tcslen (rootdir) == 0)
+	if (!rootdir || uaetcslen (rootdir) == 0)
 		u->reinsertdelay = 0;
 	if (u->reinsertdelay > 0)
 		write_log (_T("FILESYS: delayed insert %d: '%s' ('%s')\n"), u->unit, volume ? volume : _T("<none>"), rootdir);
@@ -2205,7 +2245,7 @@ int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_conf
 		if (is_virtual (u->unit)) {
 			ui = &mountinfo.ui[u->unit];
 			// inserted >= 2: drag&drop insert, do not replace existing normal drives
-			if (inserted < 2 && ui->rootdir && !memcmp (ui->rootdir, rootdir, _tcslen (rootdir)) && _tcslen (rootdir) + 3 >= _tcslen (ui->rootdir)) {
+			if (inserted < 2 && ui->rootdir && !memcmp (ui->rootdir, rootdir, uaetcslen (rootdir)) && uaetcslen (rootdir) + 3 >= uaetcslen (ui->rootdir)) {
 				if (filesys_isvolume(u) && inserted) {
 					if (uci)ctx, 
 						filesys_delayed_change (u, 50, rootdir, uci->ci.volname, uci->ci.readonly, 0);
@@ -2355,6 +2395,20 @@ int hardfile_media_change (struct hardfiledata *hfd, struct uaedev_config_info *
 	}
 	return 0;
 }
+
+#if 0
+int hardfile_remount (int nr)
+{
+	/* this does work but every media reinsert duplicates the device.. */
+#if 0
+	if (!mountertask)
+		return 0;
+	automountunit = nr;
+	uae_Signal (mountertask, 1 << 13);
+#endif
+	return 1;
+}
+#endif
 
 bool filesys_do_disk_change (int cdunitnum, bool insert)
 {
@@ -2508,9 +2562,18 @@ static void recycle_aino (Unit *unit, a_inode *new_aino)
 		/* Still in use */
 		return;
 
+	TRACE3((_T("Recycling; cache size %u, total_locked %d\n"),
+		unit->aino_cache_size, unit->total_locked_ainos));
 	if (unit->aino_cache_size > 5000 + unit->total_locked_ainos) {
 		/* Reap a few. */
 		flush_cache (unit, 50);
+#if 0
+		{
+			TCHAR buffer[40];
+			_stprintf (buffer, "%d ainos reaped.\n", i);
+			TRACE ((buffer));
+		}
+#endif
 	}
 
 	aino_test (new_aino);
@@ -2531,7 +2594,7 @@ void filesys_flush_cache (void)
 
 static void update_child_names (Unit *unit, a_inode *a, a_inode *parent)
 {
-	int l0 = _tcslen (parent->nname) + 2;
+	int l0 = uaetcslen (parent->nname) + 2;
 
 	while (a != 0) {
 		TCHAR *name_start;
@@ -2544,7 +2607,7 @@ static void update_child_names (Unit *unit, a_inode *a, a_inode *parent)
 			write_log (_T("malformed file name"));
 		}
 		name_start++;
-		new_name = xmalloc (TCHAR, _tcslen (name_start) + l0);
+		new_name = xmalloc (TCHAR, uaetcslen (name_start) + l0);
 		_tcscpy (new_name, parent->nname);
 		_tcscat (new_name, dirsep);
 		_tcscat (new_name, name_start);
@@ -2569,6 +2632,8 @@ static void delete_aino (Unit *unit, a_inode *aino)
 {
 	a_inode **aip;
 
+	TRACE((_T("deleting aino %x\n"), aino->uniq));
+
 	aino_test (aino);
 	aino->dirty = 1;
 	aino->deleted = 1;
@@ -2577,13 +2642,16 @@ static void delete_aino (Unit *unit, a_inode *aino)
 	/* If any ExKeys are currently pointing at us, advance them.  */
 	if (aino->parent->exnext_count > 0) {
 		int i;
+		TRACE((_T("entering exkey validation\n")));
 		for (i = 0; i < EXKEYS; i++) {
 			ExamineKey *k = unit->examine_keys + i;
 			if (k->uniq == 0)
 				continue;
 			if (k->aino == aino->parent) {
+				TRACE((_T("Same parent found for %d\n"), i));
 				if (k->curr_file == aino) {
 					k->curr_file = aino->sibling;
+					TRACE((_T("Advancing curr_file\n")));
 				}
 			}
 		}
@@ -2658,7 +2726,7 @@ static a_inode *aino_from_lock(TrapContext *ctx, Unit *unit, uaecptr lock)
 TCHAR *build_nname (const TCHAR *d, const TCHAR *n)
 {
 	TCHAR dsep[2] = { FSDB_DIR_SEPARATOR, 0 };
-	TCHAR *p = xmalloc (TCHAR, _tcslen (d) + 1 + _tcslen (n) + 1);
+	TCHAR *p = xmalloc (TCHAR, uaetcslen (d) + 1 + uaetcslen (n) + 1);
 	_tcscpy (p, d);
 	_tcscat (p, dsep);
 	_tcscat (p, n);
@@ -2667,7 +2735,7 @@ TCHAR *build_nname (const TCHAR *d, const TCHAR *n)
 
 TCHAR *build_aname (const TCHAR *d, const TCHAR *n)
 {
-	TCHAR *p = xmalloc (TCHAR, _tcslen (d) + 1 + _tcslen (n) + 1);
+	TCHAR *p = xmalloc (TCHAR, uaetcslen (d) + 1 + uaetcslen (n) + 1);
 	_tcscpy (p, d);
 	_tcscat (p, _T("/"));
 	_tcscat (p, n);
@@ -2711,14 +2779,33 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 
 	/* See if we have a file that has the same name as the aname we are
 	* looking for.  */
+#ifdef _WIN32
+	TCHAR *relalt = NULL;
+	found = fsdb_search_dir (base->nname, rel, &relalt);
+#else
 	found = fsdb_search_dir (base->nname, rel);
+#endif
 	if (found == 0) {
 		return found;
 	}
 	if (found == rel) {
+#ifdef _WIN32
+		if (relalt) {
+			TCHAR *v = build_nname(base->nname, relalt);
+			xfree(relalt);
+			return v;
+		}
+#endif
 		return build_nname(base->nname, rel);
 	}
 	*modified_rel = found;
+#ifdef _WIN32
+	if (relalt) {
+		TCHAR *v = build_nname(base->nname, relalt);
+		xfree(relalt);
+		return v;
+	}
+#endif
 	return build_nname (base->nname, found);
 }
 
@@ -2732,6 +2819,9 @@ static TCHAR *create_nname (Unit *unit, a_inode *base, TCHAR *rel)
 	/* If the name is used otherwise in the directory (or globally), we
 	* need a new unique nname.  */
 	if (fsdb_name_invalid (base, rel) || fsdb_used_as_nname (base, rel)) {
+#if 0
+oh_dear:
+#endif
 		if (currprefs.filesys_no_uaefsdb && !(base->volflags & MYVOLUMEINFO_STREAMS)) {
 			write_log (_T("illegal filename '%s', no stream supporting filesystem and uaefsdb disabled\n"), rel);
 			return 0;
@@ -2740,6 +2830,14 @@ static TCHAR *create_nname (Unit *unit, a_inode *base, TCHAR *rel)
 		return p;
 	}
 	p = build_nname (base->nname, rel);
+#if 0
+	/* Delete this code once we know everything works.  */
+	if (access (p, R_OK) >= 0 || errno != ENOENT) {
+		write_log (_T("Filesystem in trouble... please report.\n"));
+		xfree (p);
+		goto oh_dear;
+	}
+#endif
 	return p;
 }
 
@@ -2847,6 +2945,8 @@ static a_inode *new_child_aino(Unit *unit, a_inode *base, TCHAR *rel)
 	a_inode *aino = NULL;
 	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 
+	TRACE((_T("new_child_aino %s, %s\n"), base->aname, rel));
+
 	if (!isvirtual) {
 		aino = fsdb_lookup_aino_aname(base, rel);
 	}
@@ -2883,6 +2983,7 @@ static a_inode *new_child_aino(Unit *unit, a_inode *base, TCHAR *rel)
 	init_child_aino(unit, base, aino);
 
 	recycle_aino(unit, aino);
+	TRACE((_T("created aino %x, lookup, amigaos_mode %d\n"), aino->uniq, aino->amigaos_mode));
 	return aino;
 }
 
@@ -2908,13 +3009,14 @@ static a_inode *create_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int is
 	aino->dirty = 1;
 
 	recycle_aino (unit, aino);
+	TRACE((_T("created aino %x, create\n"), aino->uniq));
 	return aino;
 }
 
 static a_inode *lookup_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int *err)
 {
 	a_inode *c = base->child;
-	int l0 = _tcslen (rel);
+	int l0 = uaetcslen (rel);
 
 	aino_test (base);
 	aino_test (c);
@@ -2925,7 +3027,7 @@ static a_inode *lookup_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int *e
 	}
 
 	while (c != 0) {
-		int l1 = _tcslen (c->aname);
+		int l1 = uaetcslen (c->aname);
 		if (l0 <= l1 && same_aname (rel, c->aname + l1 - l0)
 			&& (l0 == l1 || c->aname[l1-l0-1] == '/') && c->mountcount == unit->mountcount)
 			break;
@@ -2943,7 +3045,7 @@ static a_inode *lookup_child_aino (Unit *unit, a_inode *base, TCHAR *rel, int *e
 static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, TCHAR *rel, uae_u32 *err, uae_u64 uniq_external, struct virtualfilesysobject *vfso)
 {
 	a_inode *c = base->child;
-	int l0 = _tcslen (rel);
+	int l0 = uaetcslen (rel);
 	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
 
 	aino_test (base);
@@ -2951,7 +3053,7 @@ static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, TCHAR *
 
 	*err = 0;
 	while (c != 0) {
-		int l1 = _tcslen (c->nname);
+		int l1 = uaetcslen (c->nname);
 		/* Note: using _tcscmp here.  */
 		if (l0 <= l1 && _tcscmp (rel, c->nname + l1 - l0) == 0
 			&& (l0 == l1 || c->nname[l1-l0-1] == FSDB_DIR_SEPARATOR) && c->mountcount == unit->mountcount)
@@ -2990,6 +3092,7 @@ static a_inode *lookup_child_aino_for_exnext (Unit *unit, a_inode *base, TCHAR *
 	init_child_aino (unit, base, c);
 
 	recycle_aino (unit, c);
+	TRACE((_T("created aino %s:%d, exnext\n"), c->nname, c->uniq));
 
 	return c;
 }
@@ -3004,6 +3107,7 @@ static a_inode *get_aino (Unit *unit, a_inode *base, const TCHAR *rel, int *err)
 	aino_test (base);
 
 	*err = 0;
+	TRACE((_T("get_path(%s,%s)\n"), base->aname, rel));
 
 	/* root-relative path? */
 	for (i = 0; rel[i] && rel[i] != '/' && rel[i] != ':'; i++)
@@ -3074,6 +3178,15 @@ static Notify *new_notify (Unit *unit, TCHAR *name)
 	n->partname = name;
 	return n;
 }
+
+#if 0
+static void free_notify_item (Notify *n)
+{
+	xfree (n->fullname);
+	xfree (n->partname);
+	xfree (n);
+}
+#endif
 
 static void free_notify (Unit *unit, int hash, Notify *n)
 {
@@ -3457,11 +3570,13 @@ static void	do_info(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr info,
 
 static void action_disk_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+	TRACE((_T("ACTION_DISK_INFO\n")));
 	do_info(ctx, unit, packet, GET_PCK_ARG1 (packet) << 2, true);
 }
 
 static void action_info(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+	TRACE((_T("ACTION_INFO\n")));
 	do_info(ctx, unit, packet, GET_PCK_ARG2 (packet) << 2, false);
 }
 
@@ -3519,6 +3634,31 @@ static Key *new_key (Unit *unit)
 	return k;
 }
 
+#if TRACING_ENABLED
+static void dumplock(TrapContext *ctx, Unit *unit, uaecptr lock)
+{
+	a_inode *a;
+	TRACE((_T("LOCK: 0x%x"), lock));
+	if (!lock) {
+		TRACE((_T("\n")));
+		return;
+	}
+	TRACE((_T("{ next=0x%x, mode=%d, handler=0x%x, volume=0x%x, aino %x "),
+		trap_get_long(ctx, lock) << 2, trap_get_long(ctx, lock + 8),
+		trap_get_long(ctx, lock + 12), trap_get_long(ctx, lock + 16),
+		trap_get_long(ctx, lock + 4)));
+	if (log_filesys > 0) {
+		a = aino_from_lock(ctx, unit, lock);
+		if (a == 0) {
+			TRACE((_T("not found!")));
+		} else {
+			TRACE((_T("%s"), a->nname));
+		}
+	}
+	TRACE((_T(" }\n")));
+}
+#endif
+
 static a_inode *find_aino(TrapContext* ctx, Unit *unit, uaecptr lock, const TCHAR *name, int *err)
 {
 	a_inode *a;
@@ -3529,12 +3669,15 @@ static a_inode *find_aino(TrapContext* ctx, Unit *unit, uaecptr lock, const TCHA
 			/* That's the best we can hope to do. */
 			a = get_aino (unit, &unit->rootnode, name, err);
 		} else {
+			TRACE((_T("aino: 0x%08lx"), (unsigned long int)olda->uniq));
+			TRACE((_T(" \"%s\"\n"), olda->nname));
 			a = get_aino (unit, olda, name, err);
 		}
 	} else {
 		a = get_aino (unit, &unit->rootnode, name, err);
 	}
 	if (a) {
+		TRACE((_T("aino=\"%s\"\n"), a->nname));
 	}
 	aino_test (a);
 	return a;
@@ -3545,6 +3688,8 @@ static uaecptr make_lock(TrapContext *ctx, Unit *unit, uae_u32 uniq, uae_u32 mod
 	/* allocate lock from the list kept by the assembly code */
 	uaecptr lock;
 
+#if TRAPMD
+
 	struct trapmd md1[] = 
 	{
 		{ TRAPCMD_GET_LONG, { unit->locklist }, 1, 0 },
@@ -3554,6 +3699,15 @@ static uaecptr make_lock(TrapContext *ctx, Unit *unit, uae_u32 uniq, uae_u32 mod
 	trap_multi(ctx, md1, sizeof md1 / sizeof(struct trapmd));
 	lock = md1[0].params[0] + 4;
 
+#else
+
+	lock = trap_get_long(ctx, unit->locklist);
+	trap_put_long(ctx, unit->locklist, trap_get_long(ctx, lock));
+	lock += 4;
+
+#endif
+
+#if TRAPMD
 	struct trapmd md2[] =
 	{
 		{ TRAPCMD_PUT_LONG, { lock + 4, uniq } },
@@ -3568,6 +3722,20 @@ static uaecptr make_lock(TrapContext *ctx, Unit *unit, uae_u32 uniq, uae_u32 mod
 	};
 	trap_multi(ctx, md2, sizeof md2 / sizeof(struct trapmd));
 
+#else
+
+	trap_put_long(ctx, lock + 4, uniq);
+	trap_put_long(ctx, lock + 8, mode);
+	trap_put_long(ctx, lock + 12, unit->port);
+	trap_put_long(ctx, lock + 16, unit->volume >> 2);
+
+	/* prepend to lock chain */
+	trap_put_long(ctx, lock, trap_get_long(ctx, unit->volume + 28));
+	trap_put_long(ctx, unit->volume + 28, lock >> 2);
+
+#endif
+
+	DUMPLOCK(ctx, unit, lock);
 	return lock;
 }
 
@@ -3630,6 +3798,8 @@ static void action_add_notify(TrapContext *ctx, Unit *unit, dpacket *packet)
 	Notify *n;
 	TCHAR *name, *p, *partname;
 
+	TRACE((_T("ACTION_ADD_NOTIFY\n")));
+
 	name = char1(ctx, trap_get_long(ctx, nr + 4));
 	flags = trap_get_long(ctx, nr + 12);
 
@@ -3639,7 +3809,22 @@ static void action_add_notify(TrapContext *ctx, Unit *unit, dpacket *packet)
 		return;
 	}
 
-	p = name + _tcslen (name) - 1;
+#if 0
+	write_log (_T("Notify:\n"));
+	write_log (_T("nr_Name '%s'\n"), char1 (trap_get_long(ctx, nr + 0)));
+	write_log (_T("nr_FullName '%s'\n"), name);
+	write_log (_T("nr_UserData %08X\n"), trap_get_long(ctx, nr + 8));
+	write_log (_T("nr_Flags %08X\n"), flags);
+	if (flags & NRF_SEND_MESSAGE) {
+		write_log (_T("Message NotifyRequest, port = %08X\n"), trap_get_long(ctx, nr + 16));
+	} else if (flags & NRF_SEND_SIGNAL) {
+		write_log (_T("Signal NotifyRequest, Task = %08X signal = %d\n"), trap_get_long(ctx, nr + 16), trap_get_long(ctx, nr + 20));
+	} else {
+		write_log (_T("corrupt NotifyRequest\n"));
+	}
+#endif
+
+	p = name + uaetcslen (name) - 1;
 	if (p[0] == ':')
 		p--;
 	while (p > name && p[0] != ':' && p[0] != '/')
@@ -3664,6 +3849,7 @@ static void	action_remove_notify(TrapContext *ctx, Unit *unit, dpacket *packet)
 	Notify *n;
 	int hash;
 
+	TRACE((_T("ACTION_REMOVE_NOTIFY\n")));
 	for (hash = 0; hash < NOTIFY_HASH_SIZE; hash++) {
 		for (n = unit->notifyhash[hash]; n; n = n->next) {
 			if (n->notifyrequest == nr) {
@@ -3704,6 +3890,7 @@ static void free_lock(TrapContext *ctx, Unit *unit, uaecptr lock)
 		trap_put_long(ctx, current << 2, trap_get_long(ctx, lock));
 	}
 	lock -= 4;
+#if TRAPMD
 	struct trapmd md2[] =
 	{
 		{ TRAPCMD_GET_LONG, { unit->locklist }, 1, 1 },
@@ -3711,6 +3898,10 @@ static void free_lock(TrapContext *ctx, Unit *unit, uaecptr lock)
 		{ TRAPCMD_PUT_LONG, { unit->locklist, lock } }
 	};
 	trap_multi(ctx, md2, sizeof md2 / sizeof(struct trapmd));
+#else
+	trap_put_long(ctx, lock, trap_get_long(ctx, unit->locklist));
+	trap_put_long(ctx, unit->locklist, lock);
+#endif
 }
 
 static void action_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
@@ -3722,8 +3913,12 @@ static void action_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 	int err;
 
 	if (mode != SHARED_LOCK && mode != EXCLUSIVE_LOCK) {
+		TRACE((_T("Bad mode %d (should be %d or %d).\n"), mode, SHARED_LOCK, EXCLUSIVE_LOCK));
 		mode = SHARED_LOCK;
 	}
+
+	TRACE((_T("ACTION_LOCK(0x%08x, \"%s\", %d)\n"), lock, bstr(ctx, unit, name), mode));
+	DUMPLOCK(ctx, unit, lock);
 
 	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
 	if (err == 0 && a->softlink) {
@@ -3754,7 +3949,7 @@ static void action_read_link_add_parent(Unit *u, a_inode *a, TCHAR *path)
 		_tcscat (path, a->aname);
 		_tcscat (path, _T(":"));
 	} else {
-		if (path[0] && path[_tcslen (path) - 1] != ':')
+		if (path[0] && path[uaetcslen (path) - 1] != ':')
 			_tcscat (path, _T("/"));
 		_tcscat (path, a->aname);
 	}
@@ -3841,7 +4036,7 @@ static void action_read_link(TrapContext *ctx, Unit *unit, dpacket *packet)
 		a = find_aino(ctx, unit, lock, namep, &err);
 		if (err != ERROR_IS_SOFT_LINK)
 			break;
-		for (i = _tcslen (namep) - 1; i > 0; i--) {
+		for (i = uaetcslen (namep) - 1; i > 0; i--) {
 			if (namep[i] == '/') {
 				namep[i] = 0;
 				xfree (extrapath);
@@ -3916,6 +4111,8 @@ static void action_free_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
 	a_inode *a;
+	TRACE((_T("ACTION_FREE_LOCK(0x%x)\n"), lock));
+	DUMPLOCK(ctx, unit, lock);
 
 	a = aino_from_lock(ctx, unit, lock);
 	if (a == 0) {
@@ -3962,6 +4159,7 @@ static uaecptr action_dup_lock_2(TrapContext *ctx, Unit *unit, dpacket *packet, 
 static void action_dup_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
+	TRACE((_T("ACTION_DUP_LOCK(0x%x)\n"), lock));
 	if (!lock) {
 		PUT_PCK_RES1 (packet, 0);
 		return;
@@ -3973,6 +4171,7 @@ static void action_dup_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 static void action_lock_from_fh(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	Key *k = lookup_key (unit, GET_PCK_ARG1 (packet));
+	TRACE((_T("ACTION_COPY_DIR_FH(0x%x,'%s')\n"), GET_PCK_ARG1 (packet), k ? k->aino->aname : _T("<null>")));
 	if (k == 0) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		return;
@@ -3983,6 +4182,8 @@ static void action_lock_from_fh(TrapContext *ctx, Unit *unit, dpacket *packet)
 static void free_exkey (Unit *unit, a_inode *aino)
 {
 	if (--aino->exnext_count == 0) {
+		TRACE ((_T("Freeing ExKey and reducing total_locked from %d by %d\n"),
+			unit->total_locked_ainos, aino->locked_children));
 		unit->total_locked_ainos -= aino->locked_children;
 		aino->locked_children = 0;
 	}
@@ -4055,6 +4256,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 	/* AmigaOS docs say these have to contain the same value. */
 	put_long_host(buf + 120, entrytype);
 
+	TRACE((_T("name=\"%s\"\n"), xs));
 	x2 = x = ua_fs (xs, -1);
 	n = uaestrlen(x);
 	if (n > 107)
@@ -4098,6 +4300,7 @@ static void get_fileinfo(TrapContext *ctx, Unit *unit, dpacket *packet, uaecptr 
 	if (aino->comment == 0 || !fsdb_can)
 		put_long_host(buf + 144, 0);
 	else {
+		TRACE((_T("comment=\"%s\"\n"), aino->comment));
 		i = 144;
 		xs = aino->comment;
 		if (!xs)
@@ -4325,6 +4528,7 @@ static void action_free_record(TrapContext *ctx, Unit *unit, dpacket *packet)
 	PUT_PCK_RES2 (packet, ERROR_RECORD_NOT_LOCKED);
 }
 
+#define EXALL_DEBUG 0
 #define EXALL_END 0xde1111ad
 
 static ExAllKey *getexall (Unit *unit, uaecptr control, int id)
@@ -4429,6 +4633,11 @@ static int exalldo(TrapContext *ctx, uaecptr exalldata, uae_u32 exalldatasize, u
 	if (exalldata + exalldatasize - exp < size + size2)
 		goto end; /* not enough space */
 
+#if EXALL_DEBUG > 0
+	write_log (_T("ID=%d, %d, %08x: '%s'%s\n"),
+		trap_get_long(ctx, control + 4), trap_get_long(ctx, control + 0), exp, xs, aino->dir ? _T(" [DIR]") : _T(""));
+#endif
+
 	trap_put_long(ctx, exp, exp + size + size2); /* ed_Next */
 	if (type >= 1) {
 		trap_put_long(ctx, exp + 4, exp + size2);
@@ -4475,7 +4684,7 @@ end:
 
 static bool filesys_name_invalid(const TCHAR *fn)
 {
-	return _tcslen (fn) > currprefs.filesys_max_name;
+	return uaetcslen (fn) > currprefs.filesys_max_name;
 }
 
 static int filesys_readdir(struct fs_dirhandle *d, TCHAR *fn, uae_u64 *uniq)
@@ -4540,7 +4749,9 @@ static int action_examine_all_end(TrapContext *ctx, Unit *unit, dpacket *packet)
 		return 0;
 	id = trap_get_long(ctx, control + 4);
 	eak = getexall (unit, control, id);
-
+#if EXALL_DEBUG > 0
+	write_log (_T("EXALL_END ID=%d %x\n"), id, eak);
+#endif
 	if (!eak) {
 		write_log (_T("FILESYS: EXALL_END non-existing ID %d\n"), id);
 		doserr = ERROR_OBJECT_WRONG_TYPE;
@@ -4576,6 +4787,13 @@ static int action_examine_all(TrapContext *ctx, Unit *unit, dpacket *packet)
 	uae_u32 id, doserr = ERROR_NO_MORE_ENTRIES;
 
 	ok = 0;
+
+#if EXALL_DEBUG > 0
+	write_log (_T("exall: %08x %08x-%08x %d %d %08x\n"),
+		lock, exalldata, exalldata + exalldatasize, exalldatasize, type, control);
+	write_log (_T("exall: MatchString %08x, MatchFunc %08x\n"),
+		trap_get_long(ctx, control + 8), trap_get_long(ctx, control + 12));
+#endif
 
 	trap_put_long(ctx, control + 0, 0); /* eac_Entries */
 
@@ -4618,6 +4836,9 @@ static int action_examine_all(TrapContext *ctx, Unit *unit, dpacket *packet)
 			base = aino_from_lock(ctx, unit, lock);
 		if (base == 0)
 			base = &unit->rootnode;
+#if EXALL_DEBUG > 0
+		write_log("exall: ID=%d '%s'\n", eak->id, base->nname);
+#endif
 		d = fs_opendir (unit, base);
 		if (!d)
 			goto fail;
@@ -4679,6 +4900,9 @@ static uae_u32 exall_helper(TrapContext *ctx)
 	uaecptr control = get_long_host(packet.packet_data + dp_Arg5);
 	uae_u32 id = trap_get_long(ctx, control + 4);
 
+#if EXALL_DEBUG > 0
+	write_log (_T("FILESYS: EXALL extra round ID=%d\n"), id);
+#endif
 	if (id == EXALL_END)
 		return 1;
 	for (u = units; u; u = u->next) {
@@ -4716,6 +4940,9 @@ static void action_examine_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
 	uaecptr info = GET_PCK_ARG2 (packet) << 2;
 	a_inode *aino = 0;
+
+	TRACE((_T("ACTION_EXAMINE_OBJECT(0x%x,0x%x)\n"), lock, info));
+	DUMPLOCK(ctx, unit, lock);
 
 	if (lock != 0)
 		aino = aino_from_lock(ctx, unit, lock);
@@ -4763,7 +4990,7 @@ static void load_injected_icons(void)
 static void inject_icons_to_directory(Unit *unit, a_inode *base)
 {
 	for (a_inode *aino = base->child; aino; aino = aino->sibling) {
-		int len = _tcslen(aino->aname);
+		int len = uaetcslen(aino->aname);
 		if (len >= 5 && !_tcsicmp(aino->aname + len - 5, _T(".info")))
 			continue;
 		TCHAR tmp[256];
@@ -4808,6 +5035,8 @@ static void populate_directory (Unit *unit, a_inode *base)
 		base->locked_children++;
 		unit->total_locked_ainos++;
 	}
+	TRACE3((_T("Populating directory, child %s, locked_children %d\n"),
+		base->child ? base->child->nname : _T("<NULL>"), base->locked_children));
 	for (;;) {
 		uae_u64 uniq = 0;
 		TCHAR fn[MAX_DPATH];
@@ -4839,15 +5068,19 @@ static bool do_examine(TrapContext *ctx, Unit *unit, dpacket *packet, a_inode *a
 		name = aino->nname;
 		get_fileinfo(ctx, unit, packet, info, aino, longfilesize);
 		if (!aino->vfso && !(unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS)) && !fsdb_exists(name)) {
+			TRACE ((_T("%s orphaned"), name));
 			return false;
 		}
 		return true;
 	}
+	TRACE((_T("no more entries\n")));
 	free_exkey (unit, aino->parent);
 	PUT_PCK_RES1 (packet, DOS_FALSE);
 	PUT_PCK_RES2 (packet, ERROR_NO_MORE_ENTRIES);
 	return true;
 }
+
+#define EXNEXT_DEBUG 0
 
 static void action_examine_next(TrapContext *ctx, Unit *unit, dpacket *packet, bool largefilesize)
 {
@@ -4856,7 +5089,9 @@ static void action_examine_next(TrapContext *ctx, Unit *unit, dpacket *packet, b
 	a_inode *aino = 0, *daino = 0;
 	uae_u32 uniq;
 
+	TRACE((_T("ACTION_EXAMINE_NEXT(0x%x,0x%x,%d)\n"), lock, info, largefilesize));
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
+	DUMPLOCK(ctx, unit, lock);
 
 	if (lock != 0)
 		aino = aino_from_lock(ctx, unit, lock);
@@ -4878,16 +5113,27 @@ static void action_examine_next(TrapContext *ctx, Unit *unit, dpacket *packet, b
 		} else {
 			daino = lookup_aino(unit, uniq);
 			if (!daino) {
+#if EXNEXT_DEBUG
+				write_log(_T("EXNEXT but next entry is missing! (%d)\n"), uniq);
+#endif
 				// deleted? Look for next larger uniq in same directory.
 				daino = aino->child;
 				while (daino && uniq >= daino->uniq) {
 					daino = daino->sibling;
 				}
+#if EXNEXT_DEBUG
+				if (daino) {
+					write_log(_T("Using next found entry %d\n"), uniq);
+				}
+#endif
 				// didn't find, what about previous?
 				if (!daino) {
 					daino = aino->child;
 					while (daino && uniq >= daino->uniq) {
 						if (daino->sibling && daino->sibling->uniq >= uniq) {
+#if EXNEXT_DEBUG
+							write_log(_T("Using previous entry %d\n"), uniq);
+#endif
 							break;
 						}
 						daino = daino->sibling;
@@ -4896,6 +5142,9 @@ static void action_examine_next(TrapContext *ctx, Unit *unit, dpacket *packet, b
 				// didn't find any but there are still entries? restart from beginning.
 				if (!daino && aino->child) {
 					daino = aino->child;
+#if EXNEXT_DEBUG
+					write_log(_T("Re-starting from beginning %d\n"), daino->uniq);
+#endif
 				}
 			} else {
 				daino = daino->sibling;
@@ -4933,6 +5182,10 @@ static void do_find(TrapContext *ctx, Unit *unit, dpacket *packet, int mode, int
 	mode_t openmode;
 	int aino_created = 0;
 	int isvirtual = unit->volflags & (MYVOLUMEINFO_ARCHIVE | MYVOLUMEINFO_CDFS);
+
+	TRACE((_T("ACTION_FIND_*(0x%08x,0x%08x,\"%s\",%d,%d)\n"), fh, lock, bstr(ctx, unit, name), mode, create));
+	TRACE((_T("fh=%x lock=%x name=%x\n"), fh, lock, name));
+	DUMPLOCK(ctx, unit, lock);
 
 	aino = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
 
@@ -5066,6 +5319,9 @@ static void action_fh_from_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 	mode_t openmode;
 	int mode;
 
+	TRACE((_T("ACTION_FH_FROM_LOCK(0x%x,0x%x)\n"), fh, lock));
+	DUMPLOCK(ctx, unit,lock);
+
 	if (!lock) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, 0);
@@ -5084,6 +5340,7 @@ static void action_fh_from_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 
 	prepare_for_open (aino->nname);
 
+	TRACE ((_T("  mode is %d\n"), mode));
 	openmode = (((mode & A_FIBF_READ) ? O_WRONLY
 		: (mode & A_FIBF_WRITE) ? O_RDONLY
 		: O_RDWR));
@@ -5162,6 +5419,7 @@ static void updatedirtime (a_inode *a1, int now)
 static void	action_end(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	Key *k;
+	TRACE((_T("ACTION_END(0x%x)\n"), GET_PCK_ARG1 (packet)));
 
 	k = lookup_key (unit, GET_PCK_ARG1 (packet));
 	if (k != 0) {
@@ -5192,7 +5450,7 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 		/* PUT_PCK_RES2 (packet, EINVAL); */
 		return;
 	}
-
+	TRACE((_T("ACTION_READ(%s,0x%x,%d)\n"), k->aino->nname, addr, size));
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
 	if (size == 0) {
@@ -5301,6 +5559,8 @@ static void	action_read(TrapContext *ctx, Unit *unit, dpacket *packet)
 			k->file_pos += actual;
 		}
 	}
+
+	TRACE((_T("=%d\n"), actual));
 }
 
 static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
@@ -5318,6 +5578,7 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 	}
 
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 2);
+	TRACE((_T("ACTION_WRITE(%s,0x%x,%d)\n"), k->aino->nname, addr, size));
 
 	if (is_writeprotected(unit) || k->aino->vfso) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5389,6 +5650,7 @@ static void action_write(TrapContext *ctx, Unit *unit, dpacket *packet)
 		xfree (buf);
 	}
 
+	TRACE((_T("=%d\n"), actual));
 	PUT_PCK_RES1 (packet, actual);
 	if (actual != size)
 		PUT_PCK_RES2 (packet, dos_errno ());
@@ -5420,6 +5682,7 @@ static void	action_seek(TrapContext *ctx, Unit *unit, dpacket *packet)
 		whence = SEEK_SET;
 
 	cur = k->file_pos;
+	TRACE((_T("ACTION_SEEK(%s,%d,%d)=%lld\n"), k->aino->nname, pos, mode, cur));
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
 	filesize = key_filesize(k);
@@ -5453,6 +5716,8 @@ static void	action_set_protect(TrapContext *ctx, Unit *unit, dpacket *packet)
 	uae_u32 mask = GET_PCK_ARG4 (packet);
 	a_inode *a;
 	int err;
+
+	TRACE((_T("ACTION_SET_PROTECT(0x%x,\"%s\",0x%x)\n"), lock, bstr(ctx, unit, name), mask));
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5502,12 +5767,12 @@ static void action_set_comment(TrapContext *ctx, Unit * unit, dpacket *packet)
 
 	if (fsdb_cando (unit)) {
 		commented = bstr(ctx, unit, comment);
-		if (_tcslen (commented) > 80) {
+		if (uaetcslen (commented) > 80) {
 			PUT_PCK_RES1 (packet, DOS_FALSE);
 			PUT_PCK_RES2 (packet, ERROR_COMMENT_TOO_BIG);
 			return;
 		}
-		if (_tcslen (commented) > 0) {
+		if (uaetcslen (commented) > 0) {
 			TCHAR *p = commented;
 			commented = xmalloc (TCHAR, 81);
 			_tcsncpy (commented, p, 80);
@@ -5516,6 +5781,7 @@ static void action_set_comment(TrapContext *ctx, Unit * unit, dpacket *packet)
 			commented = NULL;
 		}
 	}
+	TRACE ((_T("ACTION_SET_COMMENT(0x%x,\"%s\")\n"), lock, commented));
 
 	a = find_aino(ctx, unit, lock, bstr(ctx, unit, name), &err);
 	if (err != 0) {
@@ -5551,6 +5817,9 @@ static void	action_same_lock(TrapContext *ctx, Unit *unit, dpacket *packet)
 	uaecptr lock1 = GET_PCK_ARG1 (packet) << 2;
 	uaecptr lock2 = GET_PCK_ARG2 (packet) << 2;
 
+	TRACE((_T("ACTION_SAME_LOCK(0x%x,0x%x)\n"), lock1, lock2));
+	DUMPLOCK(ctx, unit, lock1); DUMPLOCK(ctx, unit, lock2);
+
 	if (!lock1 || !lock2) {
 		PUT_PCK_RES1 (packet, lock1 == lock2 ? DOS_TRUE : DOS_FALSE);
 	} else {
@@ -5573,6 +5842,7 @@ static void	action_change_mode(TrapContext *ctx, Unit *unit, dpacket *packet)
 	unsigned long uniq;
 	a_inode *a = NULL, *olda = NULL;
 	int err = 0;
+	TRACE((_T("ACTION_CHANGE_MODE(0x%x,%d,%d)\n"), object, type, mode));
 
 	if (! object || (type != CHANGE_FH && type != CHANGE_LOCK)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5658,12 +5928,15 @@ static void	action_parent(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
 
+	TRACE((_T("ACTION_PARENT(0x%x)\n"),lock));
+
 	if (!lock) {
 		PUT_PCK_RES1 (packet, 0);
 		PUT_PCK_RES2 (packet, 0);
 	} else {
 		action_parent_common(ctx, unit, packet, trap_get_long(ctx, lock + 4));
 	}
+	TRACE((_T("=%x %d\n"), GET_PCK_RES1 (packet), GET_PCK_RES2 (packet)));
 }
 
 static void	action_create_dir(TrapContext *ctx, Unit *unit, dpacket *packet)
@@ -5673,6 +5946,7 @@ static void	action_create_dir(TrapContext *ctx, Unit *unit, dpacket *packet)
 	a_inode *aino;
 	int err;
 
+	TRACE((_T("ACTION_CREATE_DIR(0x%x,\"%s\")\n"), lock, bstr(ctx, unit, name)));
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5720,6 +5994,9 @@ static void	action_examine_fh(TrapContext *ctx, Unit *unit, dpacket *packet, boo
 	a_inode *aino = 0;
 	uaecptr info = GET_PCK_ARG2 (packet) << 2;
 
+	TRACE((_T("ACTION_EXAMINE_FH(0x%x,0x%x,%d)\n"),
+		GET_PCK_ARG1 (packet), GET_PCK_ARG2 (packet), largefilesize ));
+
 	k = lookup_key (unit, GET_PCK_ARG1 (packet));
 	if (k != 0)
 		aino = k->aino;
@@ -5745,6 +6022,7 @@ static void	action_set_file_size(TrapContext *ctx, Unit *unit, dpacket *packet)
 	if (mode < 0)
 		whence = SEEK_SET;
 
+	TRACE((_T("ACTION_SET_FILE_SIZE(0x%lx, %d, 0x%x)\n"), GET_PCK_ARG1 (packet), offset, mode));
 
 	k = lookup_key (unit, GET_PCK_ARG1 (packet));
 	if (k == 0) {
@@ -5854,6 +6132,7 @@ static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 	a_inode *a;
 	int err;
 
+	TRACE((_T("ACTION_DELETE_OBJECT(0x%x,\"%s\")\n"), lock, bstr(ctx, unit, name)));
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5888,7 +6167,11 @@ static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 				return;
 			}
 		} else {
+#ifdef _WIN32
+			if (my_unlink (a->nname, false) == -1) {
+#else
 			if (my_unlink (a->nname) == -1) {
+#endif
 				PUT_PCK_RES1 (packet, DOS_FALSE);
 				PUT_PCK_RES2 (packet, dos_errno ());
 				return;
@@ -5915,6 +6198,8 @@ static void	action_set_date(TrapContext *ctx, Unit *unit, dpacket *packet)
 	a_inode *a;
 	struct mytimeval tv;
 	int err = 0;
+
+	TRACE((_T("ACTION_SET_DATE(0x%x,\"%s\")\n"), lock, bstr(ctx, unit, name)));
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -5959,6 +6244,9 @@ static void	action_rename_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 	int err1, err2;
 	Key *k1, *knext;
 	int wehavekeys = 0;
+
+	TRACE((_T("ACTION_RENAME_OBJECT(0x%x,\"%s\","), lock1, bstr(ctx, unit, name1)));
+	TRACE((_T("0x%x,\"%s\")\n"), lock2, bstr(ctx, unit, name2)));
 
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
@@ -6065,6 +6353,8 @@ static void	action_rename_disk(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
 	uaecptr name = GET_PCK_ARG1 (packet) << 2;
 
+	TRACE((_T("ACTION_RENAME_DISK(\"%s\")\n"), bstr(ctx, unit, name)));
+
 	if (is_writeprotected(unit)) {
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, ERROR_DISK_WRITE_PROTECTED);
@@ -6081,17 +6371,20 @@ static void	action_rename_disk(TrapContext *ctx, Unit *unit, dpacket *packet)
 
 static void	action_is_filesystem(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+	TRACE((_T("ACTION_IS_FILESYSTEM()\n")));
 	PUT_PCK_RES1 (packet, DOS_TRUE);
 }
 
 static void	action_flush(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+	TRACE((_T("ACTION_FLUSH()\n")));
 	PUT_PCK_RES1 (packet, DOS_TRUE);
 	flush_cache (unit, 0);
 }
 
 static void	action_more_cache(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+	TRACE((_T("ACTION_MORE_CACHE()\n")));
 	PUT_PCK_RES1 (packet, 50); /* bug but AmigaOS expects it */
 	if (GET_PCK_ARG1 (packet) != 0)
 		flush_cache (unit, 0);
@@ -6103,6 +6396,7 @@ static void	action_inhibit(TrapContext *ctx, Unit *unit, dpacket *packet)
 	PUT_PCK_RES1 (packet, DOS_TRUE);
 	flush_cache (unit, 0);
 	unit->inhibited = GET_PCK_ARG1 (packet) != 0;
+	TRACE((_T("ACTION_INHIBIT(%d:%d)\n"), unit->unit, unit->inhibited));
 	if (unit->ui.canremove && !unit->ui.configureddrive && unit->ui.open && old && !GET_PCK_ARG1(packet)) {
 		filesys_delayed_eject(unit);
 	}
@@ -6110,6 +6404,7 @@ static void	action_inhibit(TrapContext *ctx, Unit *unit, dpacket *packet)
 
 static void	action_write_protect(TrapContext *ctx, Unit *unit, dpacket *packet)
 {
+	TRACE((_T("ACTION_WRITE_PROTECT()\n")));
 	PUT_PCK_RES1 (packet, DOS_TRUE);
 	if (GET_PCK_ARG1 (packet)) {
 		if (!unit->ui.locked) {
@@ -6228,6 +6523,7 @@ static void action_change_file_position64(TrapContext *ctx, Unit *unit, dpacket 
 	if (mode < 0)
 		whence = SEEK_SET;
 
+	TRACE((_T("ACTION_CHANGE_FILE_POSITION64(%s,%lld,%d)\n"), k->aino->nname, pos, mode));
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
 	cur = k->file_pos;
@@ -6258,6 +6554,7 @@ static void action_change_file_position64(TrapContext *ctx, Unit *unit, dpacket 
 		PUT_PCK64_RES2 (packet, 0);
 		k->file_pos = key_seek(k, 0, SEEK_CUR);
 	}
+	TRACE((_T("= oldpos %lld newpos %lld\n"), cur, k->file_pos));
 }
 
 static void action_get_file_position64(TrapContext *ctx, Unit *unit, dpacket *packet)
@@ -6271,6 +6568,7 @@ static void action_get_file_position64(TrapContext *ctx, Unit *unit, dpacket *pa
 		PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
 		return;
 	}
+	TRACE((_T("ACTION_GET_FILE_POSITION64(%s)=%lld\n"), k->aino->nname, k->file_pos));
 	PUT_PCK64_RES1 (packet, k->file_pos);
 	PUT_PCK64_RES2 (packet, 0);
 }
@@ -6288,6 +6586,8 @@ static void action_change_file_size64(TrapContext *ctx, Unit *unit, dpacket *pac
 		whence = SEEK_END;
 	if (mode < 0)
 		whence = SEEK_SET;
+
+	TRACE((_T("ACTION_CHANGE_FILE_SIZE64(0x%x, %lld, 0x%x)\n"), GET_PCK64_ARG1 (packet), offset, mode));
 
 	k = lookup_key (unit, GET_PCK64_ARG1 (packet));
 	if (k == 0) {
@@ -6337,8 +6637,9 @@ static void action_get_file_size64(TrapContext *ctx, Unit *unit, dpacket *packet
 		PUT_PCK64_RES2 (packet, ERROR_INVALID_LOCK);
 		return;
 	}
-
+	TRACE((_T("ACTION_GET_FILE_SIZE64(%s)\n"), k->aino->nname));
 	filesize = key_filesize(k);
+	TRACE((_T("ACTION_GET_FILE_SIZE64(%s)=%lld\n"), k->aino->nname, filesize));
 	if (filesize >= 0) {
 		PUT_PCK64_RES1 (packet, filesize);
 		PUT_PCK64_RES2 (packet, 0);
@@ -6355,6 +6656,9 @@ static void action_examine_object64(TrapContext *ctx, Unit *unit, dpacket *packe
 	uaecptr lock = GET_PCK_ARG1 (packet) << 2;
 	uaecptr info = GET_PCK_ARG2 (packet) << 2;
 	a_inode *aino = 0;
+
+	TRACE((_T("ACTION_EXAMINE_OBJECT(0x%x,0x%x)\n"), lock, info));
+	DUMPLOCK(ctx, unit, lock);
 
 	if (lock != 0)
 		aino = aino_from_lock(ctx, unit, lock);
@@ -6375,6 +6679,8 @@ static void action_set_file_size64(TrapContext *ctx, Unit *unit, dpacket *packet
 		whence = SEEK_END;
 	if (mode < 0)
 		whence = SEEK_SET;
+
+	TRACE((_T("ACTION_SET_FILE_SIZE64(0x%x, %lld, 0x%x)\n"), GET_PCK_ARG1 (packet), offset, mode));
 
 	k = lookup_key (unit, GET_PCK_ARG1 (packet));
 	if (k == 0) {
@@ -6431,6 +6737,7 @@ static void action_seek64(TrapContext *ctx, Unit *unit, dpacket *packet)
 	if (mode < 0)
 		whence = SEEK_SET;
 
+	TRACE((_T("ACTION_SEEK64(%s,%lld,%d)\n"), k->aino->nname, pos, mode));
 	gui_flicker_led (UNIT_LED(unit), unit->unit, 1);
 
 	cur = k->file_pos;
@@ -6461,6 +6768,7 @@ static void action_seek64(TrapContext *ctx, Unit *unit, dpacket *packet)
 		set_quadp(ctx, GET_PCK_ARG3(packet), cur);
 		k->file_pos = key_seek(k, 0, SEEK_CUR);
 	}
+	TRACE((_T("= oldpos %lld newpos %lld\n"), cur, k->file_pos));
 }
 
 static int action_lock_record64(TrapContext *ctx, Unit *unit, dpacket *packet, uae_u32 msg)
@@ -6623,6 +6931,7 @@ static uae_u32 REGPARAM2 exter_int_helper(TrapContext *ctx)
 					lockend = lockv;
 					cnt++;
 				}
+				TRACE3((_T("message_lock: %d %x %x %x\n"), cnt, locks, lockend, trap_get_areg(ctx, 3)));
 				trap_put_long(ctx, lockend, trap_get_long(ctx, trap_get_areg(ctx, 3)));
 				trap_put_long(ctx, trap_get_areg(ctx, 3), locks);
 			}
@@ -6754,6 +7063,7 @@ static int handle_packet(TrapContext *ctx, Unit *unit, dpacket *pck, uae_u32 msg
 	uae_s32 type = GET_PCK_TYPE (pck);
 	PUT_PCK_RES2 (pck, 0);
 
+	TRACE((_T("unit=%p packet=%d\n"), unit, type));
 	if (unit->inhibited && isvolume
 		&& type != ACTION_INHIBIT && type != ACTION_MORE_CACHE
 		&& type != ACTION_DISK_INFO) {
@@ -6875,6 +7185,7 @@ static int filesys_iteration(UnitInfo *ui)
 	readdpacket(ctx, &packet, pck);
 
 	int isvolume = 0;
+#if TRAPMD
 	trapmd md[] = {
 		{ TRAPCMD_GET_LONG, { morelocks }, 2, 0 },
 		{ TRAPCMD_GET_LONG, { ui->self->locklist }, 2, 1 },
@@ -6887,6 +7198,13 @@ static int filesys_iteration(UnitInfo *ui)
 	if (ui->self->volume) {
 		isvolume = md[4].params[0] || ui->self->ui.unknown_media;
 	}
+#else
+	trap_put_long(ctx, trap_get_long(ctx, morelocks), trap_get_long(ctx, ui->self->locklist));
+	trap_put_long(ctx, ui->self->locklist, morelocks);
+	if (ui->self->volume) {
+		isvolume = trap_get_byte(ctx, ui->self->volume + 64) || ui->self->ui.unknown_media;
+	}
+#endif
 
 	int ret = handle_packet(ctx, ui->self, &packet, msg, isvolume);
 	if (!ret) {
@@ -6921,6 +7239,12 @@ static int filesys_iteration(UnitInfo *ui)
 
 	/* The message is sent by our interrupt handler, so make sure an interrupt happens. */
 	do_uae_int_requested();
+#if 0
+	uae_u32 v = trap_get_long(ctx, ui->self->locklist);
+	if (v != 0)
+		write_comm_pipe_int (ui->back_pipe, (int)v, 0);
+	trap_put_long(ctx, ui->self->locklist, 0);
+#endif
 
 	trap_background_set_complete(ctx);
 	return 1;
@@ -6964,6 +7288,7 @@ static uae_u32 REGPARAM2 filesys_handler(TrapContext *ctx)
 			goto error;
 		/* Get two more locks and hand them over to the other thread. */
 
+#if TRAPMD
 		struct trapmd md[] = {
 			// morelocks = trap_get_long(ctx, trap_get_areg(ctx, 3));
 			/* 0 */ { TRAPCMD_GET_LONG, { trap_get_areg(ctx, 3) }, 1, 0 },
@@ -6984,6 +7309,16 @@ static uae_u32 REGPARAM2 filesys_handler(TrapContext *ctx)
 		};
 		trap_multi(ctx, md, sizeof md / sizeof(struct trapmd));
 		morelocks = md[0].params[0];
+#else
+		uae_u32 morelocksptr;
+		morelocks = trap_get_long(ctx, trap_get_areg(ctx, 3));
+		morelocksptr = trap_get_long(ctx, morelocks);
+		trap_put_long(ctx, trap_get_areg(ctx, 3), trap_get_long(ctx, morelocksptr));
+		trap_put_long(ctx, morelocksptr, 0);
+
+		/* The packet wasn't processed yet. */
+		trap_put_long(ctx, message_addr + 4, 0);
+#endif
 
 		trap_set_background(ctx);
 		write_comm_pipe_pvoid(unit->ui.unit_pipe, ctx, 0);
@@ -7006,6 +7341,7 @@ error:
 		PUT_PCK_RES1 (&packet, DOS_FALSE);
 		PUT_PCK_RES2 (&packet, ERROR_ACTION_NOT_KNOWN);
 	}
+	TRACE((_T("reply: %8x, %d\n"), GET_PCK_RES1(&packet), GET_PCK_RES2(&packet)));
 
 	writedpacket(ctx, &packet);
 
@@ -7116,6 +7452,16 @@ static void filesys_prepare_reset2 (void)
 	}
 #endif
 	filesys_free_handles();
+#if 0
+	Unit *u;
+	u = units;
+	while (u != 0) {
+		free_all_ainos (u, &u->rootnode);
+		u->rootnode.next = u->rootnode.prev = &u->rootnode;
+		u->aino_cache_size = 0;
+		u = u->next;
+	}
+#endif
 }
 
 void filesys_prepare_reset (void)
@@ -7601,6 +7947,45 @@ static uae_u32 REGPARAM2 filesys_diagentry (TrapContext *ctx)
 	return 1;
 }
 
+#define FS_TEST_HACK 0
+#if FS_TEST_HACK
+static uae_u32 REGPARAM2 ks13patchstartup(TrapContext *ctx)
+{
+	uaecptr startup = trap_get_areg(ctx, 0);
+	uaecptr doslib = 0x00c06230;
+	uaecptr root = get_long(doslib + 34);
+	uaecptr node = (get_long(root + 24) << 2) + 4;
+	uaecptr dp_arg2 = get_long(startup + 24);
+	for (;;) {
+		node = get_long(node) << 2;
+		if (!node)
+			break;
+		if (get_long(node + 4) != 0)
+			continue;
+		if (get_long(node + 28) != dp_arg2)
+			continue;
+		put_long(startup + 20, get_long(node + 40)); // dp_Arg1 = dol_Node
+		put_long(startup + 28, node >> 2); // dp_Arg3 = dl
+		activate_debugger();
+		return dp_arg2 << 2;
+	}
+	return 0;
+}
+
+static void patchhackfs(uaecptr seg)
+{
+	int o = rtarea_base + 0xFEFA;
+	put_long(seg + 9806, 0x70ff70ff);
+	seg += 9632;
+	put_word(seg, 0x4eb9);
+	put_long(seg + 2, o);
+	put_word(seg + 6, 0x2440); // move.l d0,a2
+	org(o);
+	calltrap(deftrap2(ks13patchstartup, 0, _T("ks13patchstartup")));
+	dw(RTS);
+}
+#endif
+
 static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
 {
 	uaecptr devicenode = trap_get_areg(ctx, 3);
@@ -7662,6 +8047,9 @@ static uae_u32 REGPARAM2 filesys_dev_bootfilesys (TrapContext *ctx)
 							data = (trap_get_long(ctx, rtarea_base + bootrom_header + 4 + 6 * 4) + rtarea_base + bootrom_header) >> 2;
 						}
 						write_log(_T("Filesys %08x entry=%08x\n"), dostype, data << 2);
+#if FS_TEST_HACK
+						patchhackfs(data << 2);
+#endif
 					}
 					trap_put_long(ctx, devicenode + 4 + i * 4, data);
 				}
@@ -7865,8 +8253,8 @@ static TCHAR *device_dupfix (TrapContext *ctx, uaecptr expbase, TCHAR *devname)
 	while (modified) {
 		modified = 0;
 		if (device_isdup (ctx, expbase, newname)) {
-			if (_tcslen (newname) > 2 && newname[_tcslen (newname) - 2] == '_') {
-				newname[_tcslen (newname) - 1]++;
+			if (uaetcslen (newname) > 2 && newname[uaetcslen (newname) - 2] == '_') {
+				newname[uaetcslen (newname) - 1]++;
 			} else {
 				_tcscat (newname, _T("_0"));
 			}
@@ -7888,7 +8276,7 @@ static const TCHAR *dostypes(TCHAR *dt, uae_u32 dostype)
 		} else {
 			dt[j++] = '\\';
 			_stprintf (&dt[j], _T("%d"), c);
-			j += _tcslen (&dt[j]);
+			j += uaetcslen (&dt[j]);
 		}
 	}
 	dt[j] = 0;
@@ -8027,7 +8415,7 @@ static void get_new_device (TrapContext *ctx, int type, uaecptr parmpacket, TCHA
 	TCHAR buffer[80];
 	uaecptr expbase = trap_get_long(ctx, parmpacket + PP_EXPLIB);
 
-	if (*devname == 0 || _tcslen (*devname) == 0) {
+	if (*devname == 0 || uaetcslen (*devname) == 0) {
 		int un = unit_no;
 		for (;;) {
 			_stprintf (buffer, type == FILESYS_CD ? _T("CD%d") : _T("DH%d"), un++);
@@ -8169,6 +8557,17 @@ static int pt_rdsk (TrapContext *ctx, uae_u8 *bufrdb, int rdblock, UnitInfo *uip
 	hfd->rdbcylinders = rl (bufrdb + 64);
 	hfd->rdbsectors = rl (bufrdb + 68);
 	hfd->rdbheads = rl (bufrdb + 72);
+#if 0
+	{
+		int cyls, secs, heads;
+		getchsgeometry_hdf (hfd, hfd->virtsize, &cyls, &secs, &heads);
+		if (cyls * secs * heads > hfd->cylinders * hfd->sectors * hfd->heads) {
+			hfd->cylinders = cyls;
+			hfd->sectors = secs;
+			hfd->heads = heads;
+		}
+	}
+#endif
 	fileblock = rl (bufrdb + 32);
 
 	buf = xmalloc (uae_u8, readblocksize);
@@ -8425,7 +8824,7 @@ static void addfakefilesys (TrapContext *ctx, uaecptr parmpacket, uae_u32 dostyp
 
 static uaecptr getfakefilesysseg (UnitInfo *uip)
 {
-	if (uip->filesysdir && _tcslen (uip->filesysdir) > 0) {
+	if (uip->filesysdir && uaetcslen (uip->filesysdir) > 0) {
 		for (int i = 0; &mountinfo.ui[i] != uip; i++) {
 			UnitInfo *uip2 = &mountinfo.ui[i];
 			if (!uip2->filesysdir)
@@ -8480,11 +8879,11 @@ static int dofakefilesys (TrapContext *ctx, UnitInfo *uip, uaecptr parmpacket, s
 	}
 
 	tmp[0] = 0;
-	if (uip->filesysdir && _tcslen (uip->filesysdir) > 0) {
+	if (uip->filesysdir && uaetcslen (uip->filesysdir) > 0) {
 		cfgfile_resolve_path_out_load(uip->filesysdir, tmp, MAX_DPATH, PATH_HDF);
 	} else if ((dostype & 0xffffff00) == DISK_TYPE_DOS) {
 		_tcscpy (tmp, currprefs.romfile);
-		int i = _tcslen (tmp);
+		int i = uaetcslen (tmp);
 		while (i > 0 && tmp[i - 1] != '/' && tmp[i - 1] != '\\')
 			i--;
 		_tcscpy (tmp + i, _T("FastFileSystem"));
@@ -9030,6 +9429,8 @@ void filesys_install (void)
 {
 	uaecptr loop;
 
+	TRACEI ((_T("Installing filesystem\n")));
+
 	uae_sem_init(&singlethread_int_sem, 0, 1);
 	uae_sem_init(&shellexec_sem, 0, 1);
 	init_comm_pipe(&shellexecute_pipe, 100, 1);
@@ -9247,7 +9648,7 @@ static a_inode *restore_filesys_get_base (Unit *u, TCHAR *npath)
 	/* iterate from root to last to previous path part,
 	* create ainos if not already created.
 	*/
-	path = xcalloc(TCHAR, _tcslen (npath) + 2);
+	path = xcalloc(TCHAR, uaetcslen (npath) + 2);
 	cnt = 1;
 	for (;;) {
 		_tcscpy (path, npath);
@@ -9312,10 +9713,10 @@ static TCHAR *makenativepath (UnitInfo *ui, TCHAR *apath)
 {
 	TCHAR *pn;
 	/* create native path. FIXME: handle 'illegal' characters */
-	pn = xcalloc (TCHAR, _tcslen (apath) + 1 + _tcslen (ui->rootdir) + 1);
+	pn = xcalloc (TCHAR, uaetcslen (apath) + 1 + uaetcslen (ui->rootdir) + 1);
 	_stprintf (pn, _T("%s/%s"), ui->rootdir, apath);
 	if (FSDB_DIR_SEPARATOR != '/') {
-		for (int i = 0; i < _tcslen (pn); i++) {
+		for (int i = 0; i < uaetcslen (pn); i++) {
 			if (pn[i] == '/')
 				pn[i] = FSDB_DIR_SEPARATOR;
 		}
@@ -9496,7 +9897,7 @@ static uae_u8 *restore_notify (UnitInfo *ui, Unit *u, uae_u8 *src)
 
 	n->notifyrequest = restore_u32 ();
 	s = restore_string ();
-	n->fullname = xmalloc (TCHAR, _tcslen (ui->volname) + 2 + _tcslen (s) + 1);
+	n->fullname = xmalloc (TCHAR, uaetcslen (ui->volname) + 2 + uaetcslen (s) + 1);
 	_stprintf (n->fullname, _T("%s:%s"), ui->volname, s);
 	xfree(s);
 	s = _tcsrchr (n->fullname, '/');
@@ -9567,8 +9968,8 @@ static TCHAR *getfullaname (a_inode *a)
 
 	p = xcalloc (TCHAR, MAX_DPATH);
 	while (a) {
-		int len = _tcslen (a->aname);
-		memmove (p + len + 1, p, (_tcslen (p) + 1) * sizeof (TCHAR));
+		int len = uaetcslen (a->aname);
+		memmove (p + len + 1, p, (uaetcslen (p) + 1) * sizeof (TCHAR));
 		memcpy (p, a->aname, len * sizeof (TCHAR));
 		if (!first)
 			p[len] = '/';
@@ -9648,8 +10049,8 @@ static uae_u8 *save_notify (UnitInfo *ui, uae_u8 *dst, Notify *n)
 	TCHAR *s;
 	save_u32 (n->notifyrequest);
 	s = n->fullname;
-	if (_tcslen (s) >= _tcslen (ui->volname) && !_tcsncmp (n->fullname, ui->volname, _tcslen (ui->volname)))
-		s = n->fullname + _tcslen (ui->volname) + 1;
+	if (uaetcslen (s) >= uaetcslen (ui->volname) && !_tcsncmp (n->fullname, ui->volname, uaetcslen (ui->volname)))
+		s = n->fullname + uaetcslen (ui->volname) + 1;
 	save_string (s);
 	write_log (_T("FS: notify %08X '%s'\n"), n->notifyrequest, n->fullname);
 	return dst;

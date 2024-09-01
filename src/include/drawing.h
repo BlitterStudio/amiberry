@@ -63,13 +63,13 @@ STATIC_INLINE int shres_coord_hw_to_window_x (int x)
 	return x;
 }
 
-STATIC_INLINE int coord_hw_to_window_x(int x)
+STATIC_INLINE int coord_hw_to_window_x (int x)
 {
 	x -= DISPLAY_LEFT_SHIFT;
 	return x << lores_shift;
 }
 
-STATIC_INLINE int coord_window_to_hw_x(int x)
+STATIC_INLINE int coord_window_to_hw_x (int x)
 {
 	x >>= lores_shift;
 	return x + DISPLAY_LEFT_SHIFT;
@@ -80,12 +80,12 @@ STATIC_INLINE int coord_diw_lores_to_window_x(int x)
 	return (x - DISPLAY_LEFT_SHIFT + DIW_DDF_OFFSET - 1) << lores_shift;
 }
 
-STATIC_INLINE int coord_diw_shres_to_window_x(int x)
+STATIC_INLINE int coord_diw_shres_to_window_x (int x)
 {
 	return (x - DISPLAY_LEFT_SHIFT_SHRES + DIW_DDF_OFFSET_SHRES - (1 << 2)) >> shres_shift;
 }
 
-STATIC_INLINE int coord_window_to_diw_x(int x)
+STATIC_INLINE int coord_window_to_diw_x (int x)
 {
 	x = coord_window_to_hw_x (x);
 	return x - DIW_DDF_OFFSET;

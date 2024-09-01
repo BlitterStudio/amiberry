@@ -714,16 +714,17 @@ void Utf16_To_Char(CBuf* buf, const UInt16* s)
 	Utf16_To_Utf8Buf(buf, s, len);
 }
 #endif
-struct zvolume* archive_directory_7z(struct zfile* z)
+
+struct zvolume *archive_directory_7z (struct zfile *z)
 {
 	SRes res;
-	struct zvolume* zv;
+	struct zvolume *zv;
 	int i;
-	struct SevenZContext* ctx;
+	struct SevenZContext *ctx;
 	UInt16* temp = NULL;
 
-	init_7z();
-	ctx = xcalloc(struct SevenZContext, 1);
+	init_7z ();
+	ctx = xcalloc (struct SevenZContext, 1);
 	ctx->blockIndex = 0xffffffff;
 	ctx->archiveStream.s.Read = SzFileReadImp;
 	ctx->archiveStream.s.Seek = SzFileSeekImp;
@@ -732,9 +733,9 @@ struct zvolume* archive_directory_7z(struct zfile* z)
 #else
 	ctx->archiveStream.file.file = (FILE*)z;
 #endif
-	LookToRead_CreateVTable(&ctx->lookStream, False);
+	LookToRead_CreateVTable (&ctx->lookStream, False);
 	ctx->lookStream.realStream = &ctx->archiveStream.s;
-	LookToRead_Init(&ctx->lookStream);
+	LookToRead_Init (&ctx->lookStream);
 
 	SzArEx_Init (&ctx->db);
 	res = SzArEx_Open (&ctx->db, &ctx->lookStream.s, &allocImp, &allocTempImp);

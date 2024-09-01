@@ -1294,7 +1294,7 @@ int save_state (const TCHAR *filename, const TCHAR *description)
 
 void savestate_quick (int slot, int save)
 {
-	int i, len = _tcslen(savestate_fname);
+	int i, len = uaetcslen(savestate_fname);
 	i = len - 1;
 	while (i >= 0 && savestate_fname[i] != '_')
 		i--;

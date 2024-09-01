@@ -60,7 +60,7 @@ extern int vpos, lof_store;
 
 extern int n_frames;
 
-STATIC_INLINE int dmaen(unsigned int dmamask)
+STATIC_INLINE int dmaen (unsigned int dmamask)
 {
 	return (dmamask & dmacon) && (dmacon & 0x200);
 }
@@ -225,7 +225,7 @@ STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 	return (bplcon0 >> 12) & 7; // normal planes bits
 }
 
-extern void fpscounter_reset(void);
+extern void fpscounter_reset (void);
 extern frame_time_t idletime;
 extern int lightpen_x[2], lightpen_y[2];
 extern int lightpen_cx[2], lightpen_cy[2], lightpen_active, lightpen_enabled, lightpen_enabled2;
@@ -236,15 +236,15 @@ struct customhack {
 };
 void customhack_put (struct customhack *ch, uae_u16 v, int hpos);
 uae_u16 customhack_get (struct customhack *ch, int hpos);
-extern void alloc_cycle_ext(int, int);
-extern void alloc_cycle_blitter(int hpos, uaecptr *ptr, int);
-extern bool ispal(void);
-extern bool isvga(void);
-extern int current_maxvpos(void);
-extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
-extern void compute_framesync(void);
+extern void alloc_cycle_ext (int, int);
+extern void alloc_cycle_blitter (int hpos, uaecptr *ptr, int);
+extern bool ispal (void);
+extern bool isvga (void);
+extern int current_maxvpos (void);
+extern struct chipset_refresh *get_chipset_refresh (struct uae_prefs*);
+extern void compute_framesync (void);
 extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
-int is_bitplane_dma(int hpos);
+int is_bitplane_dma (int hpos);
 void custom_cpuchange(void);
 
 struct custom_store

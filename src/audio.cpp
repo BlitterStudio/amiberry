@@ -33,7 +33,9 @@
 #include "gui.h"
 #include "xwin.h"
 #include "debug.h"
-//#include "sndboard.h"
+#ifdef WITH_SNDBOARD
+#include "sndboard.h"
+#endif
 #ifdef AVIOUTPUT
 #include "avioutput.h"
 #endif
@@ -225,7 +227,7 @@ static void namesplit (TCHAR *s)
 {
 	int l;
 
-	l = _tcslen(s) - 1;
+	l = uaetcslen(s) - 1;
 	while (l >= 0) {
 		if (s[l] == '.')
 			s[l] = 0;
@@ -1859,9 +1861,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 		cdp->state = 2;
 		loadper(nr);
 		cdp->pbufldl = true;
-		if (!currprefs.cpu_memory_cycle_exact) {
-			cdp->intreq2 = false;
-		}
+		cdp->intreq2 = false;
 		cdp->volcnt = 0;
 		audio_state_channel2(nr, false);
 		break;
@@ -2181,7 +2181,9 @@ void set_audio (void)
 
 	sound_cd_volume[0] = sound_cd_volume[1] = (100 - (currprefs.sound_volume_cd < 0 ? 0 : currprefs.sound_volume_cd)) * 32768 / 100;
 	sound_paula_volume[0] = sound_paula_volume[1] = (100 - currprefs.sound_volume_paula) * 32768 / 100;
-	//sndboard_ext_volume();
+#ifdef WITH_SNDBOARD
+	sndboard_ext_volume();
+#endif
 
 	if (ch >= 0) {
 		if (currprefs.produce_sound >= 2) {
@@ -2512,7 +2514,7 @@ void event_audxdat_func(uae_u32 v)
 					if (cdp->minperloop >= PERIOD_MIN_LOOP_COUNT) {
 						cdp->per = PERIOD_MIN_LOOP * CYCLE_UNIT;
 					}
-			}
+				}
 				if (!(v & 0x80000000)) {
 					cdp->intreq2 = true;
 				}
@@ -2581,8 +2583,8 @@ void AUDxDAT(int nr, uae_u16 v, uaecptr addr)
 	if (!currprefs.cachesize && (cdp->per < PERIOD_LOW * CYCLE_UNIT || currprefs.cpu_compatible)) {
 		int cyc = 0;
 		if (chan_ena) {
-			cyc = 1 * CYCLE_UNIT;
 			// AUDxLEN is processed after 1 CCK delay
+			cyc = 1 * CYCLE_UNIT;
 			if ((cdp->state & 15) == 2 || (cdp->state & 15) == 3) {
 				// But INTREQ2 is set immediately
 				if (cdp->wlen == 1) {

@@ -4,8 +4,9 @@
 * Arcadia
 * American Laser games
 * Cubo
+* Picmatic
 *
-* Copyright 2005-2017 Toni Wilen
+* Copyright 2005-2024 Toni Wilen
 *
 *
 */
@@ -186,7 +187,7 @@ static struct arcadiarom *is_arcadia (const TCHAR *xpath, int cnt)
 
 	_tcscpy (path, xpath);
 	p = path;
-	for (i = _tcslen (xpath) - 1; i > 0; i--) {
+	for (i = uaetcslen (xpath) - 1; i > 0; i--) {
 		if (path[i] == '\\' || path[i] == '/') {
 			path[i++] = 0;
 			p = path + i;
@@ -611,7 +612,7 @@ static int algmemory_modified;
 static int algmemory_initialized;
 static int alg_game_id;
 static int alg_picmatic_nova;
-static uae_u8 picmatic_io;
+static uae_u8 picmatic_io, picmatic_ply;
 
 static void alg_nvram_write (void)
 {
@@ -652,8 +653,38 @@ static uae_u32 REGPARAM2 alg_wget (uaecptr addr)
 
 static uae_u32 REGPARAM2 alg_bget (uaecptr addr)
 {
-	if (alg_picmatic_nova == 1 && (addr & 0xffff0000) == 0xf60000) {
-		return 0;
+	if ((addr & 0xffff0001) == 0xf60001) {
+		if (alg_picmatic_nova == 1) {
+			// Picmatic 100Hz games
+			int reg = (addr >> 12) & 15;
+			uae_u8 v = 0;
+			uae_s16 x = lightpen_x[1 - picmatic_ply];
+			x <<= 1;
+			x >>= currprefs.gfx_resolution;
+			uae_s16 y = lightpen_y[1 - picmatic_ply] >> currprefs.gfx_vresolution;
+			if (reg == 3) {
+				v = 0xff;
+				// left trigger
+				if (alg_flag & 64)
+					v &= ~0x20;
+				// right trigger
+				if (alg_flag & 128)
+					v &= ~0x10;
+				// left holster
+				if (alg_flag & 256)
+					v &= ~0x80;
+				// right holster
+				if (alg_flag & 512)
+					v &= ~0x40;
+			} else if (reg == 0) {
+				v = y & 0xff;
+			} else if (reg == 1) {
+				v = x & 0xff;
+			} else if (reg == 2) {
+				v = ((x >> 8) << 4) | (y >> 8); 
+			}
+			return v;
+		}
 	}
 	uaecptr addr2 = addr;
 	addr >>= 1;
@@ -673,9 +704,17 @@ static void REGPARAM2 alg_wput (uaecptr addr, uae_u32 w)
 static void REGPARAM2 alg_bput (uaecptr addr, uae_u32 b)
 {
 	if (alg_picmatic_nova == 1 && (addr & 0xffff0000) == 0xf60000) {
-		if (!(addr & 0xffff)) {
+		int reg = (addr >> 12) & 15;
+		if (reg == 0) {
 			picmatic_io = b;
+		} if (reg == 5) {
+			// Picmatic 100Hz games
+			picmatic_ply = 0;
+		} else if (reg == 6) {
+			// Picmatic 100Hz games
+			picmatic_ply = 1;
 		}
+		//write_log(_T("ALG BPUT %08X %02X %08X\n"), addr, b & 255, M68K_GETPC);
 		return;
 	}
 	uaecptr addr2 = addr;
@@ -1142,11 +1181,13 @@ static void sony_serial_read(uae_u16 w)
 			write_log("LD: USER INDEX\n");
 		break;
 	case 0x81: // USER INDEX ON
+		ld_user_index = 1;
 		ack();
 		if (log_ld)
 			write_log("LD: USER INDEX ON\n");
 		break;
 	case 0x82: // USER INDEX OFF
+		ld_user_index = 0;
 		ack();
 		if (log_ld)
 			write_log(_T("LD: USER INDEX OFF\n"));
@@ -1221,6 +1262,9 @@ static void alg_vsync(void)
 								write_log(_T("LD: Repeat complete\n"));
 							}
 							ld_repcnt = -1;
+							ld_mode = LD_MODE_STILL;
+							ld_direction = 0;
+							pausevideograb(1);
 						} else {
 							ld_address = ld_startaddress;
 							getsetpositionvideograb(ld_address);
@@ -1529,7 +1573,7 @@ void alg_map_banks(void)
 		algmemory_initialized = 1;
 	}
 	struct romdata *rd = get_alg_rom(currprefs.romextfile);
-	if (rd->id == 198 || rd->id == 301 || rd->id == 302) {
+	if (rd->id == 198 || rd->id == 301 || rd->id == 302 || rd->id == 315 || rd->id == 314) {
 		map_banks(&alg_ram_bank, 0xf4, 1, 0);
 	} else if (rd->id == 182 || rd->id == 273 || rd->size < 0x40000) {
 		map_banks(&alg_ram_bank, 0xf5, 1, 0);
@@ -1537,7 +1581,7 @@ void alg_map_banks(void)
 		map_banks(&alg_ram_bank, 0xf7, 1, 0);
 	}
 	alg_game_id = rd->id;
-	alg_picmatic_nova = rd->id == 198 || rd->id == 301 || rd->id == 302 ? 1 : (rd->id == 197 ? 2 : 0);
+	alg_picmatic_nova = rd->id == 198 || rd->id == 301 || rd->id == 302 || rd->id == 315 || rd->id == 314 ? 1 : (rd->id == 197 ? 2 : 0);
 	if (alg_picmatic_nova == 1) {
 		map_banks(&alg_ram_bank, 0xf6, 1, 0);
 	}
@@ -1559,6 +1603,7 @@ void alg_map_banks(void)
 		}
 	} else {
 		picmatic_io = 0;
+		picmatic_ply = 0;
 		ld_repcnt = -1;
 		ld_mark = -1;
 		ld_audio = 0;
@@ -1619,6 +1664,8 @@ uae_u8 *restore_alg(uae_u8 *src)
 	for (int i = 0; i < 32; i++) {
 		ld_uidx_data[i] = restore_u8();
 	}
+	picmatic_ply = restore_u8();
+
 	return src;
 }
 
@@ -1668,6 +1715,7 @@ uae_u8 *save_alg(size_t *len)
 	for (int i = 0; i < 32; i++) {
 		save_u8(ld_uidx_data[i]);
 	}
+	save_u8(picmatic_ply);
 	*len = dst - dstbak;
 	return dstbak;
 }

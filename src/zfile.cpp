@@ -1190,7 +1190,7 @@ static struct zfile *xz (struct zfile *z, int *retcode)
 	allocImp.Free = SzFree;
 	if (!iscrc)
 	{
-		CrcGenerateTable();
+		CrcGenerateTable ();
 		Crc64GenerateTable();
 	}
 	iscrc = true;
@@ -1674,13 +1674,13 @@ static struct zfile *openzip (const TCHAR *pname)
 
 	zippath[0] = 0;
 	_tcscpy (name, pname);
-	i = _tcslen (name) - 2;
+	i = uaetcslen (name) - 2;
 	while (i > 0) {
 		if ((name[i] == '/' || name[i] == '\\') && i > 4) {
 			v = name[i];
 			name[i] = 0;
 			for (j = 0; plugins_7z[j]; j++) {
-				int len = _tcslen (plugins_7z[j]);
+				int len = uaetcslen (plugins_7z[j]);
 				if (name[i - len - 1] == '.' && !strcasecmp (name + i - len, plugins_7z[j])) {
 					struct zfile *f = zfile_fopen_nozip (name, _T("rb"));
 					if (f) {
@@ -1986,6 +1986,25 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 		if (f)
 			return f;
 	}
+#if 0
+	name += 2;
+	if (name[0] == '/' || name[0] == '\\')
+		name++;
+	for (;;) {
+		_tcscpy (tmp, start_path_data);
+		_tcscpy (tmp, name);
+		f = zfile_fopen_x (tmp, mode, mask);
+		if (f)
+			return f;
+		while (name[0]) {
+			name++;
+			if (name[-1] == '/' || name[-1] == '\\')
+				break;
+		}
+		if (name[0] == 0)
+			break;
+	}
+#endif
 	return NULL;
 }
 
@@ -2589,7 +2608,7 @@ TCHAR *zfile_getfilename (struct zfile *f)
 	int i;
 	if (f->name == NULL)
 		return NULL;
-	for (i = _tcslen (f->name) - 1; i >= 0; i--) {
+	for (i = uaetcslen(f->name) - 1; i >= 0; i--) {
 		if (f->name[i] == '\\' || f->name[i] == '/' || f->name[i] == ':') {
 			i++;
 			return &f->name[i];
@@ -2657,11 +2676,11 @@ static struct znode *znode_alloc (struct znode *parent, const TCHAR *name)
 			if (ext && ext > tmpname + 2 && ext[-2] == '.') {
 				ext[-1]++;
 			} else if (ext) {
-				memmove (ext + 2, ext, (_tcslen (ext) + 1) * sizeof (TCHAR));
+				memmove (ext + 2, ext, (uaetcslen(ext) + 1) * sizeof (TCHAR));
 				ext[0] = '.';
 				ext[1] = '1';
 			} else {
-				int len = _tcslen (tmpname);
+				int len = uaetcslen(tmpname);
 				tmpname[len] = '.';
 				tmpname[len + 1] = '1';
 				tmpname[len + 2] = 0;
@@ -2753,7 +2772,7 @@ static struct zvolume *zvolume_alloc_2 (const TCHAR *name, struct zfile *z, unsi
 	i = 0;
 	if (name[0] != '/' && name[0] != '\\' && _tcsncmp(name, _T(".\\"), 2) != 0 && _tcsncmp(name, _T("..\\"), 3) != 0) {
 		if (_tcschr (name, ':') == 0) {
-			for (i = _tcslen (name) - 1; i > 0; i--) {
+			for (i = uaetcslen (name) - 1; i > 0; i--) {
 				if (name[i] == FSDB_DIR_SEPARATOR) {
 					i++;
 					break;
@@ -2982,11 +3001,40 @@ static struct zvolume *prepare_recursive_volume (struct zvolume *zv, const TCHAR
 		goto end;
 	zvnew = zfile_fopen_archive_ext (zv->parentz, zf, flags);
 	if (!zvnew && !(flags & ZFD_NORECURSE)) {
+#if 1
 		zvnew = archive_directory_plain (zf);
 		if (zvnew) {
 			zfile_fopen_archive_recurse (zvnew, flags);
 			done = 1;
 		}
+#else
+		int rc;
+		int index;
+		struct zfile *zf2, *zf3;
+		TCHAR oldname[MAX_DPATH];
+		_tcscpy (oldname, zf->name);
+		index = 0;
+		for (;;) {
+			zf3 = zfile_dup (zf);
+			if (!zf3)
+				break;
+			zf2 = zuncompress (&zv->root, zf3, 0, ZFD_ALL, &rc, index);
+			if (zf2) {
+				zvnew = archive_directory_plain (zf2);
+				if (zvnew) {
+					zvnew->parent = zv->parent;
+					zfile_fopen_archive_recurse (zvnew);
+					done = 1;
+				}
+			} else {
+				zfile_fclose (zf3);
+				if (rc <= 0)
+					break;
+			}
+			index++;
+			break; // TODO
+		}
+#endif
 	} else if (zvnew) {
 		zvnew->parent = zv->parent;
 		zfile_fopen_archive_recurse (zvnew, flags);
@@ -3019,8 +3067,8 @@ static struct znode *get_znode (struct zvolume *zv, const TCHAR *ppath, int recu
 			if (!_tcsicmp (zpath, path))
 				return zn;
 		} else {
-			int len = _tcslen (zpath);
-			if (_tcslen (path) >= len && (path[len] == 0 || path[len] == FSDB_DIR_SEPARATOR) && !_tcsnicmp (zpath, path, len)) {
+			int len = uaetcslen(zpath);
+			if (uaetcslen(path) >= len && (path[len] == 0 || path[len] == FSDB_DIR_SEPARATOR) && !_tcsnicmp (zpath, path, len)) {
 				if (path[len] == 0)
 					return zn;
 				if (zn->vchild) {
@@ -3211,6 +3259,17 @@ struct zvolume *zfile_fopen_archive (const TCHAR *filename, int flags)
 	zv = zfile_fopen_archive_ext (NULL, zf, flags);
 	if (!zv)
 		zv = zfile_fopen_archive_data (NULL, zf, flags);
+#if 0
+	if (!zv) {
+		struct zfile *zf2 = zuncompress (zf, 0, 0);
+		if (zf2 != zf) {
+			zf = zf2;
+			zv = zfile_fopen_archive_ext (zf, flags);
+			if (!zv)
+				zv = zfile_fopen_archive_data (zf, flags);
+		}
+	}
+#endif
 	/* pointless but who cares? */
 	if (!zv && !(flags & ZFD_NORECURSE))
 		zv = archive_directory_plain (zf);

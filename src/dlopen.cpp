@@ -44,6 +44,11 @@ UAE_DLHANDLE uae_dlopen(const TCHAR *path)
 
 void *uae_dlsym(UAE_DLHANDLE handle, const char *name)
 {
+#if 0
+	if (handle == NULL) {
+		return NULL;
+	}
+#endif
 #ifdef _WIN32
 	return (void *) GetProcAddress(handle, name);
 #else
@@ -105,9 +110,9 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 #ifdef _WIN64
 	_tcscat(path, _T("_x64"));
 #endif
-    if (_tcscmp(path + _tcslen(path) - _tcslen(LT_MODULE_EXT), LT_MODULE_EXT) != 0) {
-        _tcscat(path, LT_MODULE_EXT);
-    }
+	if (_tcscmp(path + _tcslen(path) - _tcslen(LT_MODULE_EXT), LT_MODULE_EXT) != 0) {
+		_tcscat(path, LT_MODULE_EXT);
+	}
 	UAE_DLHANDLE handle = uae_dlopen(path);
 #endif
 	if (handle) {

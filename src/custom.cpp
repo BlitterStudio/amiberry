@@ -495,12 +495,12 @@ STATIC_INLINE int nodraw(void)
 	return !currprefs.cpu_memory_cycle_exact && ad->framecnt != 0;
 }
 
-static int doflickerfix(void)
+static int doflickerfix (void)
 {
 	return currprefs.gfx_vresolution && doublescan < 0 && vpos < MAXVPOS;
 }
 
-uae_u32 get_copper_address(int copno)
+uae_u32 get_copper_address (int copno)
 {
 	switch (copno) {
 	case 1: return cop1lc;
@@ -510,7 +510,7 @@ uae_u32 get_copper_address(int copno)
 	}
 }
 
-void reset_frame_rate_hack(void)
+void reset_frame_rate_hack (void)
 {
 	if (currprefs.m68k_speed >= 0) {
 		return;
@@ -518,8 +518,8 @@ void reset_frame_rate_hack(void)
 
 	rpt_did_reset = 1;
 	events_reset_syncline();
-	vsyncmintime = read_processor_time() + vsynctimebase;
-	write_log(_T("Resetting frame rate hack\n"));
+	vsyncmintime = read_processor_time () + vsynctimebase;
+	write_log (_T("Resetting frame rate hack\n"));
 }
 
 static void setclr(uae_u16 *p, uae_u16 val)
@@ -537,19 +537,19 @@ static void alloc_cycle(int hpos, int type)
 	cycle_line[hpos] = type;
 #endif
 }
-static void alloc_cycle_maybe(int hpos, int type)
+static void alloc_cycle_maybe (int hpos, int type)
 {
 	if ((cycle_line[hpos] & CYCLE_MASK) == 0) {
-		alloc_cycle(hpos, type);
+		alloc_cycle (hpos, type);
 	}
 }
 
-void alloc_cycle_ext(int hpos, int type)
+void alloc_cycle_ext (int hpos, int type)
 {
-	alloc_cycle(hpos, type);
+	alloc_cycle (hpos, type);
 }
 
-void alloc_cycle_blitter(int hpos, uaecptr *ptr, int chnum)
+void alloc_cycle_blitter (int hpos, uaecptr *ptr, int chnum)
 {
 	if (cycle_line[hpos] & CYCLE_COPPER_SPECIAL) {
 		if ((currprefs.cs_hacks & 1) && currprefs.cpu_model == 68000) {
@@ -560,7 +560,7 @@ void alloc_cycle_blitter(int hpos, uaecptr *ptr, int chnum)
 			//activate_debugger();
 		}
 	}
-	alloc_cycle(hpos, CYCLE_BLITTER);
+	alloc_cycle (hpos, CYCLE_BLITTER);
 }
 
 static int expand_sprres(uae_u16 con0, uae_u16 con3)
@@ -6207,6 +6207,11 @@ static void DDFSTOP(int hpos, uae_u16 v)
 static void FMODE(int hpos, uae_u16 v)
 {
 	if (!(currprefs.chipset_mask & CSMASK_AGA)) {
+#ifdef WITH_SPECIALMONITORS
+		if (currprefs.monitoremu) {
+			specialmonitor_store_fmode(vpos, hpos, v);
+		}
+#endif
 		v = 0;
 	}
 	v &= 0xC00F;
@@ -9470,8 +9475,9 @@ void custom_reset(bool hardreset, bool keyboardreset)
 		blit_interrupt = 1;
 		init_sprites();
 	}
-
-	//specialmonitor_reset();
+#ifdef WITH_SPECIALMONITORS
+	specialmonitor_reset();
+#endif
 
 	unset_special (~(SPCFLAG_BRK | SPCFLAG_MODE_CHANGE));
 

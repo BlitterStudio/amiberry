@@ -13,6 +13,13 @@
 #include "uae/types.h"
 #include "thread.h"
 
+#define BSD_TRACING_ENABLED 0
+
+extern int log_bsd;
+
+#define ISBSDTRACE (log_bsd || BSD_TRACING_ENABLED) 
+#define BSDTRACE(x) do { if (ISBSDTRACE) { write_log x; } } while(0)
+
 extern int init_socket_layer (void);
 extern void deinit_socket_layer (void);
 

@@ -272,12 +272,10 @@ int inputdevice_uaelib (const TCHAR *s, const TCHAR *parm)
 				if (!_tcscmp(parm, _T("0"))) {
 					v = SET_ONOFF_OFF_VALUE;
 					parm = NULL;
-				}
-				else if (!_tcscmp(parm, _T("1"))) {
+				} else if(!_tcscmp(parm, _T("1"))) {
 					v = SET_ONOFF_ON_VALUE;
 					parm = NULL;
-				}
-				else {
+				} else {
 					v = SET_ONOFF_PRESS_VALUE;
 				}
 				inputdevice_add_inputcode(akss[i].aks, v, parm);
@@ -5337,7 +5335,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		isaks = true;
 	}
 
-#ifndef AMIBERRY
+#ifdef DEBUGGER
 	if (isaks) {
 		if (debug_trainer_event(ie->data, state))
 		{
@@ -5898,6 +5896,9 @@ void inputdevice_reset (void)
 	cubo_flag = 0;
 #ifdef ARCADIA
 	alg_flag &= 1;
+#endif
+#ifdef WITH_DRACO
+	draco_keybord_repeat_cnt = 0;
 #endif
 }
 
@@ -9259,7 +9260,6 @@ static void swapjoydevice (struct uae_input_device *uid, const int **swaps)
 // swap gameports ports, remember to handle customized ports too
 void inputdevice_swap_compa_ports (struct uae_prefs *prefs, int portswap)
 {
-	struct jport tmp;
 #if 0
 	if ((prefs->jports[portswap].id == JPORT_CUSTOM || prefs->jports[portswap + 1].id == JPORT_CUSTOM)) {
 		const int *swaps[2];
@@ -9272,10 +9272,11 @@ void inputdevice_swap_compa_ports (struct uae_prefs *prefs, int portswap)
 		}
 	}
 #endif
+	struct jport tmp = { 0 };
 	memcpy (&tmp, &prefs->jports[portswap], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap], &prefs->jports[portswap + 1], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap + 1], &tmp, sizeof (struct jport));
-	inputdevice_updateconfig (NULL, prefs);
+	inputdevice_updateconfig(NULL, prefs);
 }
 
 // swap device "devnum" ports 0<>1 and 2<>3

@@ -414,7 +414,7 @@ bool ini_getdata_multi(struct ini_data *ini, const TCHAR *section, const TCHAR *
 	if (!ini_getstring_multi(ini, section, key, &out2, ctx))
 		return false;
 
-	len = _tcslen(out2);
+	len = uaetcslen(out2);
 	outp = xcalloc(uae_u8, len);
 	if (!outp)
 		goto err;

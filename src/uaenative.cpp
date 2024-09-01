@@ -90,8 +90,7 @@ static int g_max_handle = -1;
     #define ARCH_NAME _T("unknown")
 #endif
 
-//#define MODULE_SUFFIX (OS_NAME _T("-") ARCH_NAME LT_MODULE_EXT)
-#define MODULE_SUFFIX (OS_NAME _T("-") ARCH_NAME)
+#define MODULE_SUFFIX (OS_NAME _T("-") ARCH_NAME LT_MODULE_EXT)
 
 static int UNICALL uni_version(void)
 {

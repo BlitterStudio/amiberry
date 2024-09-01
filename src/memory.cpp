@@ -2009,11 +2009,11 @@ static int load_kickstart (void)
 		//	(tmp[0] == 0x7f && tmp[1] == 'E' && tmp[2] == 'L' && tmp[3] == 'F')) {
 		//	struct zfile *zf = read_executable_rom(f, ROM_SIZE_512, 3);
 		//	if (zf) {
-		//		int size = zfile_size(zf);
+		//		int size = zfile_size32(zf);
 		//		zfile_fclose(f);
 		//		f = zf;
 		//		if (size > ROM_SIZE_512) {
-		//			maxsize = zfile_size(zf);
+		//			maxsize = zfile_size32(zf);
 		//			singlebigrom = true;
 		//			extendedkickmem2a_bank.reserved_size = 524288;
 		//			extendedkickmem2a_bank.mask = extendedkickmem2a_bank.allocated_size - 1;

@@ -203,7 +203,11 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				num3 = track % 10;
 				on = gid->drive_motor;
 				if (gid->drive_writing) {
+#ifdef _WIN32
+					on_rgb = 0xcc0000;
+#else
 					on_rgb = 0x0000cc;
+#endif
 				}
 				half = gui_data.drive_side ? 1 : -1;
 				if (!gid->floppy_inserted) {
@@ -218,19 +222,33 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			on_rgb2 = rgbmuldiv(on_rgb, 2, 3);
 		} else if (led == LED_POWER) {
 			pos = 3;
+#ifdef _WIN32
+			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16;
+			on = 1;
+			off_rgb = 0x330000;
+#else
 			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x000033) << 16;
 			on = 1;
 			off_rgb = 0x000033;
+#endif
 		} else if (led == LED_CD) {
 			pos = 5;
 			if (gui_data.cd >= 0) {
 				on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
+#ifdef _WIN32
+				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : 0x0000cc;
+#else
 				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : 0xcc0000;
+#endif
 				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO)) {
 					on_rgb &= 0xfefefe;
 					on_rgb >>= 1;
 				}
+#ifdef _WIN32
+				off_rgb = 0x000033;
+#else
 				off_rgb = 0x330000;
+#endif
 				num1 = -1;
 				num2 = 10;
 				num3 = 12;
@@ -239,8 +257,13 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			pos = 4;
 			if (gui_data.hd >= 0) {
 				on = gui_data.hd;
+#ifdef _WIN32
+				on_rgb = on == 2 ? 0xcc0000 : 0x0000cc;
+				off_rgb = 0x000033;
+#else
 				on_rgb = on == 2 ? 0x0000cc : 0xcc0000;
 				off_rgb = 0x330000;
+#endif
 				num1 = -1;
 				num2 = 11;
 				num3 = 12;
@@ -288,7 +311,11 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 		} else if (led == LED_CPU) {
 			int idle = (gui_data.idle + 5) / 10;
 			pos = 1;
+#ifdef _WIN32
+			on_rgb = 0xcc0000;
+#else
 			on_rgb = 0x0000cc;
+#endif
 			off_rgb = 0x111111;
 			if (gui_data.cpu_halted) {
 				idle = 0;
@@ -333,9 +360,17 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			if (on < 0)
 				on_rgb = 0xcccc00; // underflow
 			else if (on == 2)
+#ifdef _WIN32
+				on_rgb = 0xcc0000; // really big overflow
+#else
 				on_rgb = 0x0000cc; // really big overflow
+#endif
 			else if (on == 1)
+#ifdef _WIN32
+				on_rgb = 0x0000cc; // "normal" overflow
+#else
 				on_rgb = 0xcc0000; // "normal" overflow
+#endif
 			off_rgb = 0x111111;
 			am = 3;
 		} else if (led == LED_MD) {
@@ -344,7 +379,11 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				pos = 7 + 3;
 				if (gui_data.md >= 0) {
 					on = gui_data.md;
+#ifdef _WIN32
+					on_rgb = on == 2 ? 0xcc0000 : 0x00cc00;
+#else
 					on_rgb = on == 2 ? 0x0000cc : 0x00cc00;
+#endif
 					off_rgb = 0x003300;
 				}
 				num1 = -1;
@@ -361,7 +400,11 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				if (on & 1)
 					on_rgb |= 0x00cc00;
 				if (on & 2)
+#ifdef _WIN32
+					on_rgb |= 0xcc0000;
+#else
 					on_rgb |= 0x0000cc;
+#endif
 				off_rgb = 0x111111;
 				num1 = -1;
 				num2 = -1;

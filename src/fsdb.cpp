@@ -112,6 +112,7 @@ static void fsdb_fixup (FILE *f, uae_u8 *buf, int size, a_inode *base)
 		xfree (nname);
 		return;
 	}
+	TRACE ((_T("uaefsdb '%s' deleted\n"), nname));
 	/* someone deleted this file/dir outside of emulation.. */
 	buf[0] = 0;
 	xfree (nname);
@@ -287,6 +288,7 @@ static void write_aino (FILE *f, a_inode *aino)
 	aino->db_offset = ftell (f);
 	fwrite (buf, 1, sizeof buf, f);
 	aino->has_dbentry = aino->needs_dbentry;
+	TRACE ((_T("%d '%s' '%s' written\n"), aino->db_offset, aino->aname, aino->nname));
 }
 
 /* Write back the db file for a directory.  */
@@ -300,9 +302,15 @@ void fsdb_dir_writeback (a_inode *dir)
 	uae_u8 *tmpbuf;
 	int size, i;
 
+	TRACE ((_T("fsdb writeback %s\n"), dir->aname));
 	/* First pass: clear dirty bits where unnecessary, and see if any work
 	* needs to be done.  */
 	for (aino = dir->child; aino; aino = aino->sibling) {
+		/*
+		int old_needs_dbentry = aino->needs_dbentry || aino->has_dbentry;
+		aino->needs_dbentry = needs_dbentry (aino);
+		entries_needed |= aino->has_dbentry | aino->needs_dbentry;
+		*/
 		int old_needs_dbentry = aino->has_dbentry;
 		int need = needs_dbentry (aino);
 		aino->needs_dbentry = need;
@@ -316,10 +324,12 @@ void fsdb_dir_writeback (a_inode *dir)
 	}
 	if (! entries_needed) {
 		kill_fsdb (dir);
+		TRACE ((_T("fsdb removed\n")));
 		return;
 	}
 
 	if (! changes_needed) {
+		TRACE ((_T("not modified\n")));
 		return;
 	}
 
@@ -327,6 +337,7 @@ void fsdb_dir_writeback (a_inode *dir)
 	if (f == 0) {
 		f = get_fsdb (dir, _T("w+b"));
 		if (f == 0) {
+			TRACE ((_T("failed\n")));
 			/* This shouldn't happen... */
 			return;
 		}
@@ -339,6 +350,7 @@ void fsdb_dir_writeback (a_inode *dir)
 		tmpbuf = (uae_u8*)malloc (size);
 		fread (tmpbuf, 1, size, f);
 	}
+	TRACE ((_T("**** updating '%s' %d\n"), dir->aname, size));
 
 	for (aino = dir->child; aino; aino = aino->sibling) {
 		if (! aino->dirty)
@@ -364,6 +376,7 @@ void fsdb_dir_writeback (a_inode *dir)
 		}
 		write_aino (f, aino);
 	}
+	TRACE ((_T("end\n")));
 	fclose (f);
 	xfree (tmpbuf);
 }
