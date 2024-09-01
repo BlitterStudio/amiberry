@@ -637,9 +637,13 @@ static NavigationMap nav_map[] =
 	{ "cmdTapeDriveCancel", "cmdTapeDriveOK", "cmdTapeDriveOK", "cboTapeDriveUnit", "cmdTapeDriveSelectFile" },
 
 	// EditFilesysHardDrive
-	{ "txtHDDPath", "", "", "cmdHDDOk", "cmdHDDOk" },
-	{ "cmdHDDOk", "cmdHDDCancel", "cmdHDDCancel", "txtHDDPath", "txtHDDPath" },
-	{ "cmdHDDCancel", "cmdHDDOk", "cmdHDDOk", "txtHDDPath", "txtHDDPath" },
+	{ "txtHDDPath", "", "", "cmdHDDOk", "cboHDController" },
+	{ "cboHDController", "cboHDFeatureLevel", "cboHDControllerUnit", "cmdHDDOk", "cmdHDDOk" },
+	{ "cboHDControllerUnit", "cboHDController", "cboHDControllerType", "cmdHDDOk", "cmdHDDOk" },
+	{ "cboHDControllerType", "cboHDControllerUnit", "cboHDFeatureLevel", "cmdHDDOk", "cmdHDDOk" },
+	{ "cboHDFeatureLevel", "cboHDControllerType", "cboHDController", "cmdHDDOk", "cmdHDDOk" },
+	{ "cmdHDDOk", "cmdHDDCancel", "cmdHDDCancel", "cboHDController", "cboHDController" },
+	{ "cmdHDDCancel", "cmdHDDOk", "cmdHDDOk", "cboHDController", "cboHDController" },
 
 	// CreateFilesysHardfile
 	{ "txtCreateDevice", "", "", "cmdCreateHdfOK", "cmdCreateHdfOK" },
