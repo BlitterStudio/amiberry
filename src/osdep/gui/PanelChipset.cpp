@@ -7,6 +7,7 @@
 #include "options.h"
 #include "custom.h"
 #include "gui_handling.h"
+#include "specialmonitors.h"
 
 static gcn::Window* grpChipset;
 static gcn::RadioButton* optOCS;
@@ -19,13 +20,15 @@ static gcn::CheckBox* chkCycleExact;
 static gcn::CheckBox* chkMemoryCycleExact;
 static gcn::Label* lblChipset;
 static gcn::DropDown* cboChipset;
-static gcn::Window* grpBlitter;
+static gcn::Window* grpOptions;
 static gcn::RadioButton* optBlitNormal;
 static gcn::RadioButton* optBlitImmed;
 static gcn::RadioButton* optBlitWait;
 static gcn::Window* grpCopper;
 static gcn::CheckBox* chkFastCopper;
 static gcn::CheckBox* chkMultithreadedDrawing;
+static gcn::Label* lblSpecialMonitors;
+static gcn::DropDown* cboSpecialMonitors;
 static gcn::Window* grpCollisionLevel;
 static gcn::RadioButton* optCollNone;
 static gcn::RadioButton* optCollSprites;
@@ -60,6 +63,7 @@ static chipset chipsets[] = {
 };
 
 static gcn::StringListModel chipsetList;
+static gcn::StringListModel specialMonitorsList;
 
 class ChipsetActionListener : public gcn::ActionListener
 {
@@ -68,6 +72,7 @@ public:
 	{
 		changed_prefs.immediate_blits = optBlitImmed->isSelected();
 		changed_prefs.waiting_blits = optBlitWait->isSelected();
+		changed_prefs.monitoremu = cboSpecialMonitors->getSelected();
 
 		auto n2 = chkMemoryCycleExact->isSelected();
 		auto n1 = chkCycleExact->isSelected();
@@ -162,6 +167,12 @@ void InitPanelChipset(const struct config_category& category)
 	for (int i = 0; chipsets[i].compatible >= 0; ++i)
 		chipsetList.add(chipsets[i].name);
 
+	specialMonitorsList.clear();
+	specialMonitorsList.add("-");
+	specialMonitorsList.add("Autodetect");
+	for (int i = 0; specialmonitorfriendlynames[i]; ++i)
+		specialMonitorsList.add(specialmonitorfriendlynames[i]);
+
 	chipsetActionListener = new ChipsetActionListener();
 
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
@@ -231,13 +242,6 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset->setId("cboChipset");
 	cboChipset->addActionListener(chipsetActionListener);
 
-	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
-	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
-	chkMultithreadedDrawing->setBaseColor(gui_base_color);
-	chkMultithreadedDrawing->setBackgroundColor(gui_textbox_background_color);
-	chkMultithreadedDrawing->setForegroundColor(gui_foreground_color);
-	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
-
 	grpChipset = new gcn::Window("Chipset");
 	grpChipset->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpChipset->add(optOCS, 10, 10);
@@ -250,10 +254,9 @@ void InitPanelChipset(const struct config_category& category)
 	grpChipset->add(chkMemoryCycleExact, 10, 150);
 	grpChipset->add(lblChipset, 60, 180);
 	grpChipset->add(cboChipset, 60 + lblChipset->getWidth() + 10, 180);
-	grpChipset->add(chkMultithreadedDrawing, 10, 250);
 
 	grpChipset->setMovable(false);
-	grpChipset->setSize(cboChipset->getX() + cboChipset->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + 250 + chkMultithreadedDrawing->getHeight() + DISTANCE_NEXT_Y * 2);
+	grpChipset->setSize(cboChipset->getX() + cboChipset->getWidth() + DISTANCE_BORDER, TITLEBAR_HEIGHT + 250 + DISTANCE_NEXT_Y * 2);
 	grpChipset->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpChipset->setBaseColor(gui_base_color);
 	grpChipset->setForegroundColor(gui_foreground_color);
@@ -281,17 +284,40 @@ void InitPanelChipset(const struct config_category& category)
 	optBlitWait->setForegroundColor(gui_foreground_color);
 	optBlitWait->addActionListener(chipsetActionListener);
 
-	grpBlitter = new gcn::Window("Blitter");
-	grpBlitter->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	grpBlitter->add(optBlitNormal, 10, 10);
-	grpBlitter->add(optBlitImmed, 10, 40);
-	grpBlitter->add(optBlitWait, 10, 70);
-	grpBlitter->setMovable(false);
-	grpBlitter->setSize(optBlitWait->getWidth() + DISTANCE_BORDER + 10, 125);
-	grpBlitter->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpBlitter->setBaseColor(gui_base_color);
+	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
+	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
+	chkMultithreadedDrawing->setBaseColor(gui_base_color);
+	chkMultithreadedDrawing->setBackgroundColor(gui_textbox_background_color);
+	chkMultithreadedDrawing->setForegroundColor(gui_foreground_color);
+	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
 
-	category.panel->add(grpBlitter);
+	lblSpecialMonitors = new gcn::Label("Video port display hardware:");
+	lblSpecialMonitors->setAlignment(gcn::Graphics::RIGHT);
+	cboSpecialMonitors = new gcn::DropDown(&specialMonitorsList);
+	cboSpecialMonitors->setSize(lblSpecialMonitors->getWidth(), cboSpecialMonitors->getHeight());
+	cboSpecialMonitors->setBaseColor(gui_base_color);
+	cboSpecialMonitors->setBackgroundColor(gui_textbox_background_color);
+	cboSpecialMonitors->setForegroundColor(gui_foreground_color);
+	cboSpecialMonitors->setSelectionColor(gui_selection_color);
+	cboSpecialMonitors->setId("cboSpecialMonitors");
+	cboSpecialMonitors->addActionListener(chipsetActionListener);
+
+	grpOptions = new gcn::Window("Options");
+	grpOptions->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_BORDER, DISTANCE_BORDER);
+	grpOptions->add(optBlitNormal, 10, 10);
+	grpOptions->add(optBlitImmed, 10, 40);
+	grpOptions->add(optBlitWait, 10, 70);
+	grpOptions->add(chkMultithreadedDrawing, 10, 130);
+	grpOptions->add(lblSpecialMonitors, 10, 170);
+	grpOptions->add(cboSpecialMonitors, 10, 200);
+
+	grpOptions->setMovable(false);
+	grpOptions->setSize(lblSpecialMonitors->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, TITLEBAR_HEIGHT + cboSpecialMonitors->getY() + cboSpecialMonitors->getHeight() + DISTANCE_NEXT_Y * 6);
+	grpOptions->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpOptions->setBaseColor(gui_base_color);
+	grpOptions->setForegroundColor(gui_foreground_color);
+
+	category.panel->add(grpOptions);
 
 	chkFastCopper = new gcn::CheckBox("Fast copper");
 	chkFastCopper->setId("chkFastCopper");
@@ -302,10 +328,10 @@ void InitPanelChipset(const struct config_category& category)
 
 	grpCopper = new gcn::Window("Copper");
 	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X,
-	                       grpBlitter->getY() + grpBlitter->getHeight() + DISTANCE_NEXT_Y);
+		grpOptions->getY() + grpOptions->getHeight() + DISTANCE_NEXT_Y);
 	grpCopper->add(chkFastCopper, 10, 10);
 	grpCopper->setMovable(false);
-	grpCopper->setSize(grpBlitter->getWidth(), 65);
+	grpCopper->setSize(grpOptions->getWidth(), 65);
 	grpCopper->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCopper->setBaseColor(gui_base_color);
 
@@ -374,11 +400,14 @@ void ExitPanelChipset()
 	delete optBlitNormal;
 	delete optBlitImmed;
 	delete optBlitWait;
-	delete grpBlitter;
+	delete chkMultithreadedDrawing;
+	delete lblSpecialMonitors;
+	delete cboSpecialMonitors;
+	delete grpOptions;
 
 	delete chkFastCopper;
-	delete chkMultithreadedDrawing;
 	delete grpCopper;
+
 	delete optCollNone;
 	delete optCollSprites;
 	delete optCollPlayfield;
@@ -422,6 +451,9 @@ void RefreshPanelChipset()
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
 
+	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
+	cboSpecialMonitors->setSelected(changed_prefs.monitoremu);
+
 	if (changed_prefs.collision_level == 0)
 		optCollNone->setSelected(true);
 	else if (changed_prefs.collision_level == 1)
@@ -446,7 +478,7 @@ void RefreshPanelChipset()
 		}
 	}
 	cboChipset->setSelected(idx);
-	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
+	
 }
 
 bool HelpPanelChipset(std::vector<std::string>& helptext)

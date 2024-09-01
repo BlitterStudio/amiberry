@@ -6852,6 +6852,7 @@ static const struct cpuboardsubtype dbk_sub[] = {
 		ncr_dkb_autoconfig_init, NULL, BOARD_AUTOCONFIG_Z2, 0,
 		cpuboard_dkb_cobra_settings
 	},
+#ifdef WITH_PCI
 	{
 		_T("Wildfire"),
 		_T("wildfire"),
@@ -6862,6 +6863,7 @@ static const struct cpuboardsubtype dbk_sub[] = {
 		0,
 		dkb_wildfire_pci_init, NULL, BOARD_NONAUTOCONFIG_BEFORE, 0
 	},
+#endif // WITH_PCI
 #endif
 	{
 		NULL

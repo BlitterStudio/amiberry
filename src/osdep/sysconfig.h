@@ -116,6 +116,20 @@
 /* #define WITH_SCSI_IOCTL */
 /* #define WITH_SCSI_SPTI */
 
+// Sound boards support
+//#define WITH_SNDBOARD
+
+// CPU accelerator board support
+//#define WITH_CPUBOARD
+
+// Special Monitors support
+#define WITH_SPECIALMONITORS
+
+//#define VIDEOGRAB 1
+
+// Beam racing support
+//#define WITH_BEAMRACER
+
 #define A_ZIP
 /* #define A_RAR */
 #define A_7Z

@@ -138,8 +138,10 @@ add_executable(${PROJECT_NAME}
         src/scsi.cpp
         src/scsiemul.cpp
         src/scsitape.cpp
+        src/specialmonitors.cpp
         src/statusline.cpp
         src/tabletlibrary.cpp
+        src/test_card.cpp
         src/tinyxml2.cpp
         src/traps.cpp
         src/uaeexe.cpp
@@ -286,6 +288,7 @@ add_executable(${PROJECT_NAME}
         src/osdep/gui/EditFilesysVirtual.cpp
         src/osdep/gui/EditFilesysHardfile.cpp
         src/osdep/gui/EditFilesysHardDrive.cpp
+        src/osdep/gui/EditTapeDrive.cpp
         src/osdep/gui/PanelAbout.cpp
         src/osdep/gui/PanelPaths.cpp
         src/osdep/gui/PanelQuickstart.cpp

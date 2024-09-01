@@ -53,7 +53,9 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #ifdef CD32
 #include "cd32_fmv.h"
 #endif
-//#include "specialmonitors.h"
+#ifdef WITH_SPECIALMONITORS
+#include "specialmonitors.h"
+#endif
 #include "devices.h"
 #include "gfxboard.h"
 

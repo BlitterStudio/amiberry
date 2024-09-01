@@ -51,7 +51,9 @@
 #include "crc32.h"
 #include "devices.h"
 #include "rommgr.h"
-//#include "specialmonitors.h"
+#ifdef WITH_SPECIALMONITORS
+#include "specialmonitors.h"
+#endif
 
 #define CUSTOM_DEBUG 0
 #define SPRITE_DEBUG 0

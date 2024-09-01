@@ -27,11 +27,6 @@ static bool fileSelected = false;
 static gcn::Window *wndCreateFilesysHardfile;
 static gcn::Button *cmdOK;
 static gcn::Button *cmdCancel;
-static gcn::Label *lblDevice;
-static gcn::TextField *txtDevice;
-static gcn::CheckBox *chkAutoboot;
-static gcn::Label *lblBootPri;
-static gcn::TextField *txtBootPri;
 static gcn::Label *lblPath;
 static gcn::TextField *txtPath;
 static gcn::Button *cmdPath;
@@ -47,7 +42,16 @@ public:
 		if (actionEvent.getSource() == cmdPath)
 		{
 			wndCreateFilesysHardfile->releaseModalFocus();
-			const std::string tmp = SelectFile("Create hard disk file", txtPath->getText(), harddisk_filter, true);
+			std::string path;
+			if (txtPath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtPath->getText();
+			}
+			const std::string tmp = SelectFile("Create hard disk file", path, harddisk_filter, true);
 			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
@@ -60,11 +64,6 @@ public:
 		{
 			if (actionEvent.getSource() == cmdOK)
 			{
-				if (txtDevice->getText().empty())
-				{
-					wndCreateFilesysHardfile->setCaption("Please enter a device name.");
-					return;
-				}
 				if (!fileSelected)
 				{
 					wndCreateFilesysHardfile->setCaption("Please select a new filename.");
@@ -109,30 +108,6 @@ static void InitCreateFilesysHardfile()
 	cmdCancel->setId("cmdCreateHdfCancel");
 	cmdCancel->addActionListener(createFilesysHardfileActionListener);
 
-	lblDevice = new gcn::Label("Device Name:");
-	lblDevice->setAlignment(gcn::Graphics::RIGHT);
-	txtDevice = new gcn::TextField();
-	txtDevice->setId("txtCreateDevice");
-	txtDevice->setSize(80, TEXTFIELD_HEIGHT);
-	txtDevice->setBaseColor(gui_base_color);
-	txtDevice->setBackgroundColor(gui_textbox_background_color);
-	txtDevice->setForegroundColor(gui_foreground_color);
-
-	chkAutoboot = new gcn::CheckBox("Bootable", true);
-	chkAutoboot->setBaseColor(gui_base_color);
-	chkAutoboot->setBackgroundColor(gui_textbox_background_color);
-	chkAutoboot->setForegroundColor(gui_foreground_color);
-	chkAutoboot->setId("chkCreateHdfAutoboot");
-
-	lblBootPri = new gcn::Label("Boot priority:");
-	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
-	txtBootPri = new gcn::TextField();
-	txtBootPri->setId("txtCreateBootPri");
-	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
-	txtBootPri->setBaseColor(gui_base_color);
-	txtBootPri->setBackgroundColor(gui_textbox_background_color);
-	txtBootPri->setForegroundColor(gui_foreground_color);
-
 	lblSize = new gcn::Label("Size (MB):");
 	lblSize->setAlignment(gcn::Graphics::RIGHT);
 	txtSize = new gcn::TextField();
@@ -166,27 +141,14 @@ static void InitCreateFilesysHardfile()
 	int posY = DISTANCE_BORDER;
 	int posX = DISTANCE_BORDER;
 
-	wndCreateFilesysHardfile->add(lblDevice, DISTANCE_BORDER, posY);
-	posX += lblDevice->getWidth() + 8;
-
-	wndCreateFilesysHardfile->add(txtDevice, posX, posY);
-	posX += txtDevice->getWidth() + DISTANCE_BORDER * 2;
-
-	wndCreateFilesysHardfile->add(chkAutoboot, posX, posY + 1);
-	posX += chkAutoboot->getWidth() + DISTANCE_BORDER;
-
-	wndCreateFilesysHardfile->add(lblBootPri, posX, posY);
-	wndCreateFilesysHardfile->add(txtBootPri, posX + lblBootPri->getWidth() + 8, posY);
-	posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
-
 	wndCreateFilesysHardfile->add(lblPath, DISTANCE_BORDER, posY);
 	wndCreateFilesysHardfile->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);
 	wndCreateFilesysHardfile->add(cmdPath, wndCreateFilesysHardfile->getWidth() - DISTANCE_BORDER - SMALL_BUTTON_WIDTH,
 								  posY);
 	posY += txtPath->getHeight() + DISTANCE_NEXT_Y;
 
-	wndCreateFilesysHardfile->add(lblSize, lblDevice->getX(), posY);
-	wndCreateFilesysHardfile->add(txtSize, txtDevice->getX(), posY);
+	wndCreateFilesysHardfile->add(lblSize, lblPath->getX(), posY);
+	wndCreateFilesysHardfile->add(txtSize, lblSize->getX() + lblSize->getWidth() + 8, posY);
 	wndCreateFilesysHardfile->add(chkDynamic, txtSize->getX() + txtSize->getWidth() + DISTANCE_NEXT_X, posY);
 
 	wndCreateFilesysHardfile->add(cmdOK);
@@ -196,7 +158,7 @@ static void InitCreateFilesysHardfile()
 
 	wndCreateFilesysHardfile->requestModalFocus();
 	focus_bug_workaround(wndCreateFilesysHardfile);
-	txtDevice->requestFocus();
+	cmdPath->requestFocus();
 }
 
 static void ExitCreateFilesysHardfile()
@@ -204,11 +166,6 @@ static void ExitCreateFilesysHardfile()
 	wndCreateFilesysHardfile->releaseModalFocus();
 	gui_top->remove(wndCreateFilesysHardfile);
 
-	delete lblDevice;
-	delete txtDevice;
-	delete chkAutoboot;
-	delete lblBootPri;
-	delete txtBootPri;
 	delete lblPath;
 	delete txtPath;
 	delete cmdPath;
@@ -225,8 +182,6 @@ static void ExitCreateFilesysHardfile()
 
 static void CreateFilesysHardfileLoop()
 {
-	//FocusBugWorkaround(wndCreateFilesysHardfile);
-
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	int got_event = 0;
@@ -496,8 +451,6 @@ static void CreateFilesysHardfileLoop()
 bool CreateFilesysHardfile()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
-
-	char tmp[32];
 	char zero = 0;
 
 	dialogResult = false;
@@ -505,12 +458,8 @@ bool CreateFilesysHardfile()
 
 	InitCreateFilesysHardfile();
 
-	CreateDefaultDevicename(tmp);
-	txtDevice->setText(tmp);
-	txtPath->setText(get_harddrive_path());
 	fileSelected = false;
 
-	txtBootPri->setText("0");
 	txtSize->setText("100");
 	chkDynamic->setSelected(false);
 
@@ -566,46 +515,6 @@ bool CreateFilesysHardfile()
 				ShowMessage("Create Hardfile", "Unable to create new file size.", "", "", "Ok", "");
 				ExitCreateFilesysHardfile();
 				dialogResult = false;
-			}
-		}
-		
-		if (dialogResult) {
-			uaedev_config_data* uci;
-			uaedev_config_info ci{};
-
-			uci_set_defaults(&ci, false);
-			strncpy(ci.devname, (char*)txtDevice->getText().c_str(), MAX_DPATH - 1);
-			strncpy(ci.rootdir, (char*)init_path, MAX_DPATH - 1);
-			ci.type = UAEDEV_HDF;
-			ci.surfaces = (size / 1024) + 1;
-
-			ci.bootpri = atoi(txtBootPri->getText().c_str());
-			if (ci.bootpri < -127)
-				ci.bootpri = -127;
-			if (ci.bootpri > 127)
-				ci.bootpri = 127;
-			if (!chkAutoboot->isSelected()) {
-				ci.bootpri = BOOTPRI_NOAUTOBOOT;
-			}
-
-			ci.controller_type = 0;
-			ci.controller_type_unit = 0;
-			ci.controller_unit = 0;
-			ci.unit_feature_level = 1;
-			ci.readonly = 0;
-
-			int blocksize = 512;
-			uae_u64 bsize = size * 1024 * 1024;
-			bsize &= ~(blocksize - 1);
-
-			getchspgeometry(bsize, &ci.pcyls, &ci.pheads, &ci.psecs, false);
-			gethdfgeometry(bsize, &ci);
-
-			uci = add_filesys_config(&changed_prefs, -1, &ci);
-			if (uci) {
-				hardfiledata* hfd = get_hardfile_data(uci->configoffset);
-				if (hfd)
-					hardfile_media_change(hfd, &ci, true, false);
 			}
 		}
 	}
