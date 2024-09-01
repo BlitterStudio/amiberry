@@ -482,8 +482,10 @@ OBJS = \
 	src/scsi.o \
 	src/scsiemul.o \
 	src/scsitape.o \
+	src/specialmonitors.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
+	src/test_card.o \
 	src/tinyxml2.o \
 	src/traps.o \
 	src/uaeexe.o \
@@ -592,6 +594,7 @@ OBJS = \
 	src/osdep/gui/EditFilesysVirtual.o \
 	src/osdep/gui/EditFilesysHardfile.o \
 	src/osdep/gui/EditFilesysHardDrive.o \
+	src/osdep/gui/EditTapeDrive.o \
 	src/osdep/gui/PanelAbout.o \
 	src/osdep/gui/PanelPaths.o \
 	src/osdep/gui/PanelQuickstart.o \

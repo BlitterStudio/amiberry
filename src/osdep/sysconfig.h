@@ -125,7 +125,9 @@
 //#define WITH_CPUBOARD
 
 // Special Monitors support
-//#define WITH_SPECIALMONITORS
+#define WITH_SPECIALMONITORS
+
+//#define VIDEOGRAB 1
 
 // Beam racing support
 //#define WITH_BEAMRACER

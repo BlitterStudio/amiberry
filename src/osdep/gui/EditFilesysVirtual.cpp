@@ -17,8 +17,8 @@
 
 enum
 {
-	DIALOG_WIDTH = 550,
-	DIALOG_HEIGHT = 202
+	DIALOG_WIDTH = 600,
+	DIALOG_HEIGHT = 250
 };
 
 extern std::string volName;
@@ -35,21 +35,31 @@ static gcn::Label* lblVolume;
 static gcn::TextField* txtVolume;
 static gcn::Label* lblPath;
 static gcn::TextField* txtPath;
-static gcn::Button* cmdPath;
 static gcn::CheckBox* chkReadWrite;
-static gcn::CheckBox* chkAutoboot;
+static gcn::CheckBox* chkVirtBootable;
 static gcn::Label* lblBootPri;
 static gcn::TextField* txtBootPri;
+static gcn::Button* cmdVirtSelectDir;
+static gcn::Button* cmdVirtSelectFile;
 
 class FilesysVirtualActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == cmdPath)
+		if (actionEvent.getSource() == cmdVirtSelectDir)
 		{
 			wndEditFilesysVirtual->releaseModalFocus();
-			const std::string tmp = SelectFolder("Select folder", txtPath->getText());
+			std::string path;
+			if (txtPath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtPath->getText();
+			}
+			const std::string tmp = SelectFolder("Select folder", path);
 			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
@@ -61,11 +71,38 @@ public:
 				_tcscpy(current_fsvdlg.ci.rootdir, tmp.c_str());
 			}
 			wndEditFilesysVirtual->requestModalFocus();
-			cmdPath->requestFocus();
+			cmdVirtSelectDir->requestFocus();
 		}
-		else if (actionEvent.getSource() == chkAutoboot) {
+		else if (actionEvent.getSource() == cmdVirtSelectFile)
+		{
+			wndEditFilesysVirtual->releaseModalFocus();
+			std::string path;
+			if (txtPath->getText().empty())
+			{
+				path = get_harddrive_path();
+			}
+			else
+			{
+				path = txtPath->getText();
+			}
+			const std::string tmp = SelectFile("Select archive", path, archive_filter);
+			if (!tmp.empty())
+			{
+				txtPath->setText(tmp);
+				TCHAR* s = filesys_createvolname(NULL, tmp.c_str(), NULL, _T("Harddrive"));
+				txtVolume->setText(std::string(s));
+				default_fsvdlg(&current_fsvdlg);
+				if (current_fsvdlg.ci.devname[0] == 0)
+					CreateDefaultDevicename(current_fsvdlg.ci.devname);
+				_tcscpy(current_fsvdlg.ci.volname, current_fsvdlg.ci.devname);
+				_tcscpy(current_fsvdlg.ci.rootdir, tmp.c_str());
+			}
+			wndEditFilesysVirtual->requestModalFocus();
+			cmdVirtSelectFile->requestFocus();
+		}
+		else if (actionEvent.getSource() == chkVirtBootable) {
 			char tmp[32];
-			if (chkAutoboot->isSelected()) {
+			if (chkVirtBootable->isSelected()) {
 				current_fsvdlg.ci.bootpri = 0;
 			}
 			else {
@@ -96,7 +133,6 @@ public:
 };
 
 static FilesysVirtualActionListener* filesysVirtualActionListener;
-
 
 static void InitEditFilesysVirtual()
 {
@@ -131,7 +167,7 @@ static void InitEditFilesysVirtual()
 	lblDevice = new gcn::Label("Device Name:");
 	lblDevice->setAlignment(gcn::Graphics::RIGHT);
 	txtDevice = new gcn::TextField();
-	txtDevice->setSize(60, TEXTFIELD_HEIGHT);
+	txtDevice->setSize(120, TEXTFIELD_HEIGHT);
 	txtDevice->setId("txtVirtDevice");
 	txtDevice->setBaseColor(gui_base_color);
 	txtDevice->setBackgroundColor(gui_textbox_background_color);
@@ -140,27 +176,35 @@ static void InitEditFilesysVirtual()
 	lblVolume = new gcn::Label("Volume Label:");
 	lblVolume->setAlignment(gcn::Graphics::RIGHT);
 	txtVolume = new gcn::TextField();
-	txtVolume->setSize(60, TEXTFIELD_HEIGHT);
+	txtVolume->setSize(120, TEXTFIELD_HEIGHT);
 	txtVolume->setId("txtVirtVolume");
 	txtVolume->setBaseColor(gui_base_color);
 	txtVolume->setBackgroundColor(gui_textbox_background_color);
 	txtVolume->setForegroundColor(gui_foreground_color);
 
 	lblPath = new gcn::Label("Path:");
+	lblPath->setWidth(lblVolume->getWidth());
 	lblPath->setAlignment(gcn::Graphics::RIGHT);
 	txtPath = new gcn::TextField();
-	txtPath->setSize(380, TEXTFIELD_HEIGHT);
+	txtPath->setSize(450, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtVirtPath");
 	txtPath->setBaseColor(gui_base_color);
 	txtPath->setBackgroundColor(gui_textbox_background_color);
 	txtPath->setForegroundColor(gui_foreground_color);
 	
-	cmdPath = new gcn::Button("...");
-	cmdPath->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-	cmdPath->setBaseColor(gui_base_color);
-	cmdPath->setForegroundColor(gui_foreground_color);
-	cmdPath->setId("cmdVirtPath");
-	cmdPath->addActionListener(filesysVirtualActionListener);
+	cmdVirtSelectDir = new gcn::Button("Select Directory");
+	cmdVirtSelectDir->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdVirtSelectDir->setBaseColor(gui_base_color);
+	cmdVirtSelectDir->setForegroundColor(gui_foreground_color);
+	cmdVirtSelectDir->setId("cmdVirtSelectDir");
+	cmdVirtSelectDir->addActionListener(filesysVirtualActionListener);
+
+	cmdVirtSelectFile = new gcn::Button("Select Archive");
+	cmdVirtSelectFile->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdVirtSelectFile->setBaseColor(gui_base_color);
+	cmdVirtSelectFile->setForegroundColor(gui_foreground_color);
+	cmdVirtSelectFile->setId("cmdVirtSelectFile");
+	cmdVirtSelectFile->addActionListener(filesysVirtualActionListener);
 
 	chkReadWrite = new gcn::CheckBox("Read/Write", true);
 	chkReadWrite->setBaseColor(gui_base_color);
@@ -168,17 +212,17 @@ static void InitEditFilesysVirtual()
 	chkReadWrite->setBackgroundColor(gui_textbox_background_color);
 	chkReadWrite->setId("chkVirtRW");
 
-	chkAutoboot = new gcn::CheckBox("Bootable", true);
-	chkAutoboot->setId("chkAutoboot");
-	chkAutoboot->setBaseColor(gui_base_color);
-	chkAutoboot->setBackgroundColor(gui_textbox_background_color);
-	chkAutoboot->setForegroundColor(gui_foreground_color);
-	chkAutoboot->addActionListener(filesysVirtualActionListener);
+	chkVirtBootable = new gcn::CheckBox("Bootable", true);
+	chkVirtBootable->setId("chkVirtBootable");
+	chkVirtBootable->setBaseColor(gui_base_color);
+	chkVirtBootable->setBackgroundColor(gui_textbox_background_color);
+	chkVirtBootable->setForegroundColor(gui_foreground_color);
+	chkVirtBootable->addActionListener(filesysVirtualActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
 	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
 	txtBootPri = new gcn::TextField();
-	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
+	txtBootPri->setSize(45, TEXTFIELD_HEIGHT);
 	txtBootPri->setBaseColor(gui_base_color);
 	txtBootPri->setBackgroundColor(gui_textbox_background_color);
 	txtBootPri->setForegroundColor(gui_foreground_color);
@@ -187,10 +231,10 @@ static void InitEditFilesysVirtual()
 	int posX = DISTANCE_BORDER;
 
 	wndEditFilesysVirtual->add(lblDevice, DISTANCE_BORDER, posY);
-	posX += lblDevice->getWidth() + 8;
+	posX += lblVolume->getWidth() + 8;
 
 	wndEditFilesysVirtual->add(txtDevice, posX, posY);
-	posX += txtDevice->getWidth() + DISTANCE_BORDER * 2;
+	posX += txtDevice->getWidth() + DISTANCE_NEXT_X * 2;
 
 	wndEditFilesysVirtual->add(chkReadWrite, posX, posY + 1);
 	posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
@@ -198,16 +242,19 @@ static void InitEditFilesysVirtual()
 	wndEditFilesysVirtual->add(lblVolume, DISTANCE_BORDER, posY);
 	wndEditFilesysVirtual->add(txtVolume, txtDevice->getX(), posY);
 
-	wndEditFilesysVirtual->add(chkAutoboot, chkReadWrite->getX(), posY + 1);
-	posX += chkAutoboot->getWidth() + DISTANCE_BORDER * 2;
+	wndEditFilesysVirtual->add(chkVirtBootable, chkReadWrite->getX(), posY + 1);
+	posX += chkVirtBootable->getWidth() + DISTANCE_NEXT_Y * 3;
 
-	wndEditFilesysVirtual->add(lblBootPri, posX, posY);
+	wndEditFilesysVirtual->add(lblBootPri, posX, posY + 1);
 	wndEditFilesysVirtual->add(txtBootPri, posX + lblBootPri->getWidth() + 8, posY);
 	posY += txtDevice->getHeight() + DISTANCE_NEXT_Y;
 
 	wndEditFilesysVirtual->add(lblPath, DISTANCE_BORDER, posY);
-	wndEditFilesysVirtual->add(txtPath, DISTANCE_BORDER + lblDevice->getWidth() + 8, posY);
-	wndEditFilesysVirtual->add(cmdPath, wndEditFilesysVirtual->getWidth() - DISTANCE_BORDER - SMALL_BUTTON_WIDTH, posY);
+	wndEditFilesysVirtual->add(txtPath, lblVolume->getX() + lblVolume->getWidth() + 8, posY);
+	posY += txtPath->getHeight() + DISTANCE_NEXT_Y;
+
+	wndEditFilesysVirtual->add(cmdVirtSelectDir, txtPath->getX(), posY);
+	wndEditFilesysVirtual->add(cmdVirtSelectFile, cmdVirtSelectDir->getX() + cmdVirtSelectDir->getWidth() + DISTANCE_NEXT_X, posY);
 
 	wndEditFilesysVirtual->add(cmdOK);
 	wndEditFilesysVirtual->add(cmdCancel);
@@ -216,7 +263,7 @@ static void InitEditFilesysVirtual()
 
 	wndEditFilesysVirtual->requestModalFocus();
 	focus_bug_workaround(wndEditFilesysVirtual);
-	txtDevice->requestFocus();
+	cmdVirtSelectDir->requestFocus();
 }
 
 static void ExitEditFilesysVirtual()
@@ -230,9 +277,10 @@ static void ExitEditFilesysVirtual()
 	delete txtVolume;
 	delete lblPath;
 	delete txtPath;
-	delete cmdPath;
+	delete cmdVirtSelectDir;
+	delete cmdVirtSelectFile;
 	delete chkReadWrite;
-	delete chkAutoboot;
+	delete chkVirtBootable;
 	delete lblBootPri;
 	delete txtBootPri;
 
@@ -245,8 +293,6 @@ static void ExitEditFilesysVirtual()
 
 static void EditFilesysVirtualLoop()
 {
-	//FocusBugWorkaround(wndEditFilesysVirtual);
-
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	int got_event = 0;
@@ -512,7 +558,6 @@ static void EditFilesysVirtualLoop()
 	}
 }
 
-
 bool EditFilesysVirtual(const int unit_no)
 {
 	const AmigaMonitor* mon = &AMonitors[0];
@@ -541,11 +586,13 @@ bool EditFilesysVirtual(const int unit_no)
 	}
 	strdevname.assign(current_fsvdlg.ci.devname);
 	txtDevice->setText(strdevname);
+
 	strvolname.assign(current_fsvdlg.ci.volname);
 	txtVolume->setText(strvolname);
-	txtPath->setText(get_harddrive_path());
+
+	txtPath->setText(std::string(current_fsvdlg.ci.rootdir));
 	chkReadWrite->setSelected(!current_fsvdlg.ci.readonly);
-	chkAutoboot->setSelected(current_fsvdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
+	chkVirtBootable->setSelected(current_fsvdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
 	snprintf(tmp, sizeof(tmp) - 1, "%d", current_fsvdlg.ci.bootpri >= -127 ? current_fsvdlg.ci.bootpri : -127);
 	txtBootPri->setText(tmp);
 	
@@ -566,22 +613,12 @@ bool EditFilesysVirtual(const int unit_no)
 
 	if (dialogResult)
 	{
-		uaedev_config_info ci{};
-		
-		strncpy(current_fsvdlg.ci.devname, (char*)txtDevice->getText().c_str(), MAX_DPATH - 1);
-		strncpy(current_fsvdlg.ci.volname, (char*)txtVolume->getText().c_str(), MAX_DPATH - 1);
+		strncpy(current_fsvdlg.ci.devname, txtDevice->getText().c_str(), MAX_DPATH - 1);
+		strncpy(current_fsvdlg.ci.volname, txtVolume->getText().c_str(), MAX_DPATH - 1);
 		current_fsvdlg.ci.readonly = !chkReadWrite->isSelected();
-		current_fsvdlg.ci.bootpri = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkAutoboot->isSelected() ? 1 : 0, 0);
+		current_fsvdlg.ci.bootpri = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkVirtBootable->isSelected() ? 1 : 0, 0);
 
-		memcpy(&ci, &current_fsvdlg.ci, sizeof(uaedev_config_info));
-		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
-		if (uci)
-		{
-			if (uci->ci.rootdir[0])
-				filesys_media_change(uci->ci.rootdir, unit_no, uci);
-			else if (uci->configoffset >= 0)
-				filesys_eject(uci->configoffset);
-		}
+		new_filesys(-1);
 	}
 
 	ExitEditFilesysVirtual();

@@ -29,11 +29,14 @@
 #include "blkdev.h"
 #include "memory.h"
 #include "amiberry_gfx.h"
+#include "autoconf.h"
 #include "disk.h"
 #include "xwin.h"
 #include "drawing.h"
 #include "fsdb.h"
+#include "gayle.h"
 #include "parser.h"
+#include "scsi.h"
 
 #ifdef AMIBERRY
 #ifndef __MACH__
@@ -49,6 +52,11 @@ int gui_active;
 std::vector<std::string> serial_ports;
 std::vector<std::string> midi_in_ports;
 std::vector<std::string> midi_out_ports;
+
+std::vector<controller_map> controller;
+std::vector<string> controller_unit;
+std::vector<string> controller_type;
+std::vector<string> controller_feature_level;
 
 struct gui_msg
 {
@@ -868,6 +876,8 @@ int tweakbootpri(int bp, int ab, int dnm)
 	return bp;
 }
 
+struct cddlg_vals current_cddlg;
+struct tapedlg_vals current_tapedlg;
 struct fsvdlg_vals current_fsvdlg;
 struct hfdlg_vals current_hfdlg;
 
@@ -880,6 +890,7 @@ void hardfile_testrdb (struct hfdlg_vals* hdf)
 	memset(&hfd, 0, sizeof hfd);
 	hfd.ci.readonly = true;
 	hfd.ci.blocksize = 512;
+	hdf->rdb = 0;
 	if (hdf_open(&hfd, hdf->ci.rootdir) > 0) {
 		for (auto i = 0; i < 16; i++) {
 			hdf_read_rdb(&hfd, id, i * 512, 512);
@@ -898,6 +909,7 @@ void hardfile_testrdb (struct hfdlg_vals* hdf)
 				//hdf->ci.devname[0] = 0;
 				if (blocksize >= 512)
 					hdf->ci.blocksize = blocksize;
+				hdf->rdb = 1;
 				break;
 			}
 		}
@@ -910,18 +922,299 @@ void default_fsvdlg(struct fsvdlg_vals* f)
 	memset(f, 0, sizeof(struct fsvdlg_vals));
 	f->ci.type = UAEDEV_DIR;
 }
-
-void default_hfdlg(struct hfdlg_vals* f)
+void default_tapedlg(struct tapedlg_vals* f)
 {
-	auto ctrl = f->ci.controller_type;
-	auto unit = f->ci.controller_unit;
+	memset(f, 0, sizeof(struct tapedlg_vals));
+	f->ci.type = UAEDEV_TAPE;
+}
+void default_hfdlg(struct hfdlg_vals* f, bool rdb)
+{
+	int ctrl = f->ci.controller_type;
+	int unit = f->ci.controller_unit;
 	memset(f, 0, sizeof(struct hfdlg_vals));
-	uci_set_defaults(&f->ci, false);
+	uci_set_defaults(&f->ci, rdb);
 	f->original = true;
 	f->ci.type = UAEDEV_HDF;
 	f->ci.controller_type = ctrl;
 	f->ci.controller_unit = unit;
 	f->ci.unit_feature_level = 1;
+}
+
+void default_rdb_hfdlg(struct hfdlg_vals* f, const TCHAR* filename)
+{
+	default_hfdlg(f, true);
+	_tcscpy(current_hfdlg.ci.rootdir, filename);
+	hardfile_testrdb(f);
+}
+
+void updatehdfinfo(bool force, bool defaults, bool realdrive)
+{
+	uae_u8 id[512] = { 0 };
+	uae_u32 i;
+	bool phys = is_hdf_rdb();
+
+	uae_u64 bsize = 0;
+	if (force) {
+		auto gotrdb = false;
+		auto blocksize = 512;
+		struct hardfiledata hfd {};
+		memset(id, 0, sizeof id);
+		memset(&hfd, 0, sizeof hfd);
+		hfd.ci.readonly = true;
+		hfd.ci.blocksize = blocksize;
+		current_hfdlg.size = 0;
+		current_hfdlg.dostype = 0;
+		if (hdf_open(&hfd, current_hfdlg.ci.rootdir) > 0) {
+			for (i = 0; i < 16; i++) {
+				hdf_read(&hfd, id, static_cast<uae_u64>(i) * 512, 512);
+				bsize = hfd.virtsize;
+				current_hfdlg.size = hfd.virtsize;
+				if (!memcmp(id, "RDSK", 4) || !memcmp(id, "CDSK", 4)) {
+					blocksize = (id[16] << 24) | (id[17] << 16) | (id[18] << 8) | (id[19] << 0);
+					gotrdb = true;
+					break;
+				}
+			}
+			if (i == 16) {
+				hdf_read(&hfd, id, 0, 512);
+				current_hfdlg.dostype = (id[0] << 24) | (id[1] << 16) | (id[2] << 8) | (id[3] << 0);
+			}
+		}
+		if (defaults) {
+			if (blocksize > 512) {
+				hfd.ci.blocksize = blocksize;
+			}
+		}
+		if (hfd.ci.chs) {
+			current_hfdlg.ci.physical_geometry = true;
+			current_hfdlg.ci.chs = true;
+			current_hfdlg.ci.pcyls = hfd.ci.pcyls;
+			current_hfdlg.ci.pheads = hfd.ci.pheads;
+			current_hfdlg.ci.psecs = hfd.ci.psecs;
+		}
+		if (!current_hfdlg.ci.physical_geometry) {
+			if (current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) {
+				getchspgeometry(bsize, &current_hfdlg.ci.pcyls, &current_hfdlg.ci.pheads, &current_hfdlg.ci.psecs, true);
+			}
+			else {
+				getchspgeometry(bsize, &current_hfdlg.ci.pcyls, &current_hfdlg.ci.pheads, &current_hfdlg.ci.psecs, false);
+			}
+			if (defaults && !gotrdb && !realdrive) {
+				gethdfgeometry(bsize, &current_hfdlg.ci);
+				phys = false;
+			}
+		}
+		else {
+			current_hfdlg.forcedcylinders = current_hfdlg.ci.pcyls;
+		}
+		hdf_close(&hfd);
+	}
+
+	if (current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) {
+		if (current_hfdlg.ci.unit_feature_level == HD_LEVEL_ATA_1 && bsize >= 4 * static_cast<uae_u64>(0x40000000))
+			current_hfdlg.ci.unit_feature_level = HD_LEVEL_ATA_2;
+	}
+}
+
+void new_filesys(int entry)
+{
+	struct uaedev_config_data* uci;
+	struct uaedev_config_info ci;
+	memcpy(&ci, &current_fsvdlg.ci, sizeof(struct uaedev_config_info));
+	uci = add_filesys_config(&changed_prefs, entry, &ci);
+	if (uci) {
+		if (uci->ci.rootdir[0])
+			filesys_media_change(uci->ci.rootdir, 1, uci);
+		else if (uci->configoffset >= 0)
+			filesys_eject(uci->configoffset);
+	}
+}
+
+void new_cddrive(int entry)
+{
+	struct uaedev_config_info ci = { 0 };
+	ci.device_emu_unit = 0;
+	ci.controller_type = current_cddlg.ci.controller_type;
+	ci.controller_unit = current_cddlg.ci.controller_unit;
+	ci.type = UAEDEV_CD;
+	ci.readonly = true;
+	ci.blocksize = 2048;
+	add_filesys_config(&changed_prefs, entry, &ci);
+}
+
+void new_tapedrive(int entry)
+{
+	struct uaedev_config_data* uci;
+	struct uaedev_config_info ci = { 0 };
+	ci.controller_type = current_tapedlg.ci.controller_type;
+	ci.controller_unit = current_tapedlg.ci.controller_unit;
+	ci.readonly = current_tapedlg.ci.readonly;
+	_tcscpy(ci.rootdir, current_tapedlg.ci.rootdir);
+	ci.type = UAEDEV_TAPE;
+	ci.blocksize = 512;
+	uci = add_filesys_config(&changed_prefs, entry, &ci);
+	if (uci && uci->unitnum >= 0) {
+		tape_media_change(uci->unitnum, &ci);
+	}
+}
+
+void new_hardfile(int entry)
+{
+	struct uaedev_config_data* uci;
+	struct uaedev_config_info ci;
+	memcpy(&ci, &current_hfdlg.ci, sizeof(struct uaedev_config_info));
+	uci = add_filesys_config(&changed_prefs, entry, &ci);
+	if (uci) {
+		struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
+		if (hfd)
+			hardfile_media_change(hfd, &ci, true, false);
+		pcmcia_disk_reinsert(&changed_prefs, &uci->ci, false);
+	}
+}
+
+void new_harddrive(int entry)
+{
+	struct uaedev_config_data* uci;
+
+	uci = add_filesys_config(&changed_prefs, entry, &current_hfdlg.ci);
+	if (uci) {
+		struct hardfiledata* hfd = get_hardfile_data(uci->configoffset);
+		if (hfd)
+			hardfile_media_change(hfd, &current_hfdlg.ci, true, false);
+		pcmcia_disk_reinsert(&changed_prefs, &uci->ci, false);
+	}
+}
+
+void addhdcontroller(const struct expansionromtype* erc, int firstid, int flags)
+{
+	TCHAR name[MAX_DPATH];
+	name[0] = 0;
+	if (erc->friendlymanufacturer && _tcsicmp(erc->friendlymanufacturer, erc->friendlyname)) {
+		_tcscat(name, erc->friendlymanufacturer);
+		_tcscat(name, _T(" "));
+	}
+	_tcscat(name, erc->friendlyname);
+	if (changed_prefs.cpuboard_type && erc->romtype == ROMTYPE_CPUBOARD) {
+		const struct cpuboardsubtype* cbt = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
+		if (!(cbt->deviceflags & flags))
+			return;
+		_tcscat(name, _T(" ("));
+		_tcscat(name, cbt->name);
+		_tcscat(name, _T(")"));
+	}
+	if (get_boardromconfig(&changed_prefs, erc->romtype, NULL) || get_boardromconfig(&changed_prefs, erc->romtype_extra, NULL)) {
+		std::string name_string = std::string(name);
+		controller.push_back({ firstid, name_string });
+		for (int j = 1; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
+			if (is_board_enabled(&changed_prefs, erc->romtype, j)) {
+				TCHAR tmp[MAX_DPATH];
+				_stprintf(tmp, _T("%s [%d]"), name, j + 1);
+				std::string tmp_string = std::string(tmp);
+				controller.push_back({ firstid + j * HD_CONTROLLER_NEXT_UNIT, tmp_string });
+			}
+		}
+	}
+}
+
+void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
+{
+	controller.clear();
+	controller.push_back({ HD_CONTROLLER_TYPE_UAE, _T("UAE (uaehf.device)") });
+	controller.push_back({ HD_CONTROLLER_TYPE_IDE_AUTO, _T("IDE (Auto)") });
+
+	for (auto i = 0; expansionroms[i].name; i++) {
+		const auto* const erc = &expansionroms[i];
+		if (erc->deviceflags & EXPANSIONTYPE_IDE) {
+			addhdcontroller(erc, HD_CONTROLLER_TYPE_IDE_EXPANSION_FIRST + i, EXPANSIONTYPE_IDE);
+		}
+	}
+
+	controller.push_back({ HD_CONTROLLER_TYPE_SCSI_AUTO, _T("SCSI (Auto)") });
+	for (int i = 0; expansionroms[i].name; i++) {
+		const struct expansionromtype* erc = &expansionroms[i];
+		if (erc->deviceflags & EXPANSIONTYPE_SCSI) {
+			addhdcontroller(erc, HD_CONTROLLER_TYPE_SCSI_EXPANSION_FIRST + i, EXPANSIONTYPE_SCSI);
+		}
+	}
+
+	for (int i = 0; expansionroms[i].name; i++) {
+		const struct expansionromtype* erc = &expansionroms[i];
+		if (erc->deviceflags & EXPANSIONTYPE_CUSTOMDISK) {
+			addhdcontroller(erc, HD_CONTROLLER_TYPE_CUSTOM_FIRST + i, EXPANSIONTYPE_CUSTOMDISK);
+			break;
+		}
+	}
+
+	controller_unit.clear();
+	if (ctype >= HD_CONTROLLER_TYPE_IDE_FIRST && ctype <= HD_CONTROLLER_TYPE_IDE_LAST) {
+		const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
+		int ports = 2 + (ert ? ert->extrahdports : 0);
+		for (int i = 0; i < ports; i += 2) {
+			TCHAR tmp[100];
+			_stprintf(tmp, _T("%d"), i + 0);
+			controller_unit.push_back({ std::string(tmp) });
+			_stprintf(tmp, _T("%d"), i + 1);
+			controller_unit.push_back({ std::string(tmp) });
+		}
+		//if (media)
+		//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, TRUE);
+	}
+	else if (ctype >= HD_CONTROLLER_TYPE_SCSI_FIRST && ctype <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+		const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
+		controller_unit.emplace_back("0");
+		controller_unit.emplace_back("1");
+		if (!ert || !(ert->deviceflags & (EXPANSIONTYPE_SASI | EXPANSIONTYPE_CUSTOM))) {
+			controller_unit.emplace_back("2");
+			controller_unit.emplace_back("3");
+			controller_unit.emplace_back("4");
+			controller_unit.emplace_back("5");
+			controller_unit.emplace_back("6");
+			controller_unit.emplace_back("7");
+			if (devtype == UAEDEV_HDF && ert && !_tcscmp(ert->name, _T("a2091")))
+				controller_unit.emplace_back("XT");
+			if (devtype == UAEDEV_HDF && ert && !_tcscmp(ert->name, _T("a2090a"))) {
+				controller_unit.emplace_back("ST-506 #1");
+				controller_unit.emplace_back("ST-506 #2");
+			}
+		}
+		//if (media)
+		//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, TRUE);
+	}
+	else if (ctype >= HD_CONTROLLER_TYPE_CUSTOM_FIRST && ctype <= HD_CONTROLLER_TYPE_CUSTOM_LAST) {
+		//ew(hDlg, IDC_HDF_CONTROLLER_UNIT, FALSE);
+	}
+	else if (ctype == HD_CONTROLLER_TYPE_UAE) {
+		for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
+			TCHAR tmp[100];
+			_stprintf(tmp, _T("%d"), i);
+			controller_unit.push_back({ std::string(tmp) });
+		}
+		//if (media)
+		//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, TRUE);
+	}
+	//else {
+	//	ew(hDlg, IDC_HDF_CONTROLLER_UNIT, FALSE);
+	//}
+
+	controller_type.clear();
+	controller_type.emplace_back("HD");
+	controller_type.emplace_back("CF");
+
+	controller_feature_level.clear();
+	if (ctype >= HD_CONTROLLER_TYPE_IDE_FIRST && ctype <= HD_CONTROLLER_TYPE_IDE_LAST) {
+		controller_feature_level.emplace_back("ATA-1");
+		controller_feature_level.emplace_back("ATA-2+");
+		controller_feature_level.emplace_back("ATA-2+ Strict");
+	}
+	else if (ctype >= HD_CONTROLLER_TYPE_SCSI_FIRST && ctype <= HD_CONTROLLER_TYPE_SCSI_LAST) {
+		const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
+		controller_feature_level.emplace_back("SCSI-1");
+		controller_feature_level.emplace_back("SCSI-2");
+		if (ert && (ert->deviceflags & (EXPANSIONTYPE_CUSTOM | EXPANSIONTYPE_CUSTOM_SECONDARY | EXPANSIONTYPE_SASI))) {
+			controller_feature_level.emplace_back("SASI");
+			controller_feature_level.emplace_back("SASI CHS");
+		}
+	}
 }
 
 bool isguiactive(void)

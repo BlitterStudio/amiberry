@@ -84,7 +84,8 @@ public:
 		read_directory(path, &dirs, &files);
 		if (std::find(dirs.begin(), dirs.end(), "..") == dirs.end())
 			dirs.insert(dirs.begin(), "..");
-		FilterFiles(&files, filefilter);
+		if (filefilter != nullptr)
+			FilterFiles(&files, filefilter);
 	}
 
 	bool isDir(unsigned int i) const
@@ -144,8 +145,10 @@ public:
 					return;
 				std::string tmp = workingDir.append("/").append(txtFilename->getText());
 
-				if (tmp.find(filefilter[0]) == std::string::npos)
-					tmp = tmp.append(filefilter[0]);
+				if (filefilter != nullptr) {
+					if (tmp.find(filefilter[0]) == std::string::npos)
+						tmp = tmp.append(filefilter[0]);
+				}
 
 				if (my_existsfile2(tmp.c_str()) == 1)
 					return; // File already exists

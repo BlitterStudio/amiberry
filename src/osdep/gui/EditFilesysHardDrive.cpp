@@ -14,11 +14,13 @@
 #include "gui_handling.h"
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
+#include "rommgr.h"
+#include "StringListModel.h"
 
 enum
 {
 	DIALOG_WIDTH = 600,
-	DIALOG_HEIGHT = 200
+	DIALOG_HEIGHT = 250
 };
 
 static bool dialogResult = false;
@@ -26,38 +28,133 @@ static bool dialogFinished = false;
 static bool fileSelected = false;
 
 static gcn::Window* wndEditFilesysHardDrive;
-static gcn::Button* cmdOK;
-static gcn::Button* cmdCancel;
-static gcn::Label* lblPath;
-static gcn::TextField* txtPath;
+static gcn::Button* cmdHDDOk;
+static gcn::Button* cmdHDDCancel;
+static gcn::Label* lblHDPath;
+static gcn::TextField* txtHDPath;
+
+static gcn::Label* lblHDController;
+static gcn::DropDown* cboHDController;
+static gcn::DropDown* cboHDControllerUnit;
+static gcn::DropDown* cboHDControllerType;
+static gcn::DropDown* cboHDFeatureLevel;
+
+static gcn::StringListModel controllerListModel;
+static gcn::StringListModel unitListModel;
+static gcn::StringListModel controllerTypeListModel;
+static gcn::StringListModel hdFeatureLevelListModel;
+
+static void sethardfiletypes()
+{
+	bool ide = current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST;
+	bool scsi = current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_SCSI_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_SCSI_LAST;
+	cboHDControllerType->setEnabled(ide);
+	cboHDFeatureLevel->setEnabled(ide || scsi);
+	if (!ide) {
+		current_hfdlg.ci.controller_media_type = 0;
+	}
+	if (current_hfdlg.ci.controller_media_type && current_hfdlg.ci.unit_feature_level == 0)
+		current_hfdlg.ci.unit_feature_level = 1;
+	cboHDControllerType->setSelected(current_hfdlg.ci.controller_media_type);
+	cboHDFeatureLevel->setSelected(current_hfdlg.ci.unit_feature_level);
+}
+
+static void sethd()
+{
+	bool rdb = is_hdf_rdb();
+	bool physgeo = (rdb) || current_hfdlg.ci.chs;
+	bool enablegeo = (!rdb || (physgeo && current_hfdlg.ci.geometry[0] == 0)) && !current_hfdlg.ci.chs;
+	const struct expansionromtype* ert = get_unit_expansion_rom(current_hfdlg.ci.controller_type);
+	if (ert && current_hfdlg.ci.controller_unit >= 8) {
+		if (!_tcscmp(ert->name, _T("a2091"))) {
+			current_hfdlg.ci.unit_feature_level = HD_LEVEL_SASI_CHS;
+		}
+		else if (!_tcscmp(ert->name, _T("a2090a"))) {
+			current_hfdlg.ci.unit_feature_level = HD_LEVEL_SCSI_1;
+		}
+	}
+	if (!physgeo)
+		current_hfdlg.ci.physical_geometry = false;
+}
+
+static void sethardfilegeo()
+{
+	if (current_hfdlg.ci.geometry[0]) {
+		current_hfdlg.ci.physical_geometry = true;
+		get_hd_geometry(&current_hfdlg.ci);
+	}
+	else if (current_hfdlg.ci.chs) {
+		current_hfdlg.ci.physical_geometry = true;
+	}
+}
+
+static void setharddrive()
+{
+	sethardfilegeo();
+	sethd();
+	txtHDPath->setText(current_hfdlg.ci.rootdir);
+	auto selIndex = 0;
+	for (auto i = 0; i < controller.size(); ++i) {
+		if (controller[i].type == current_hfdlg.ci.controller_type)
+			selIndex = i;
+	}
+	cboHDController->setSelected(selIndex);
+	cboHDControllerUnit->setSelected(current_hfdlg.ci.controller_unit);
+	sethardfiletypes();
+}
 
 class FilesysHardDriveActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent &action_event) override
 	{
-		if (action_event.getSource() == cmdOK)
+		if (action_event.getSource() == cmdHDDOk)
 		{
-			if (txtPath->getText().empty())
+			if (txtHDPath->getText().empty())
 			{
 				wndEditFilesysHardDrive->setCaption("Please select a device.");
 				return;
 			}
-			dialogResult = true;
-		}
-		default_hfdlg(&current_hfdlg);
-		if (current_fsvdlg.ci.devname[0] == 0)
-			CreateDefaultDevicename(current_fsvdlg.ci.devname);
-		_tcscpy(current_hfdlg.ci.rootdir, txtPath->getText().c_str());
-		// Set RDB mode if IDE or SCSI
-		if (current_hfdlg.ci.controller_type > 0) {
-			current_hfdlg.ci.sectors = current_hfdlg.ci.reserved = current_hfdlg.ci.surfaces = 0;
-		}
-		hardfile_testrdb(&current_hfdlg);
-		updatehdfinfo(true, true);
-		updatehdfinfo(false, false);
+			_tcscpy(current_hfdlg.ci.rootdir, txtHDPath->getText().c_str());
+			// Set RDB mode if IDE or SCSI
+			if (current_hfdlg.ci.controller_type > 0) {
+				current_hfdlg.ci.sectors = current_hfdlg.ci.reserved = current_hfdlg.ci.surfaces = 0;
+			}
 
-		dialogFinished = true;
+			dialogResult = true;
+			dialogFinished = true;
+		}
+		else if (action_event.getSource() == cboHDController)
+		{
+			int posn = cboHDController->getSelected();
+			current_hfdlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
+			current_hfdlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
+			current_hfdlg.forcedcylinders = 0;
+			current_hfdlg.ci.cyls = current_hfdlg.ci.highcyl = current_hfdlg.ci.sectors = current_hfdlg.ci.surfaces = 0;
+			updatehdfinfo(true, true, true);
+			inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
+			setharddrive();
+		}
+		else if (action_event.getSource() == cboHDControllerUnit)
+		{
+			current_hfdlg.ci.controller_unit = cboHDControllerUnit->getSelected();
+			setharddrive();
+		}
+		else if (action_event.getSource() == cboHDControllerType)
+		{
+			current_hfdlg.ci.controller_media_type = cboHDControllerType->getSelected();
+			setharddrive();
+		}
+		else if (action_event.getSource() == cboHDFeatureLevel)
+		{
+			current_hfdlg.ci.unit_feature_level = cboHDFeatureLevel->getSelected();
+			setharddrive();
+		}
+		else if (action_event.getSource() == cmdHDDCancel)
+		{
+			dialogResult = false;
+			dialogFinished = true;
+		}
 	}
 };
 
@@ -75,46 +172,91 @@ static void InitEditFilesysHardDrive()
 
 	filesysHardDriveActionListener = new FilesysHardDriveActionListener();
 
-	cmdOK = new gcn::Button("Ok");
-	cmdOK->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	cmdHDDOk = new gcn::Button("Ok");
+	cmdHDDOk->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+	cmdHDDOk->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdOK->setBaseColor(gui_base_color);
-	cmdOK->setForegroundColor(gui_foreground_color);
-	cmdOK->setId("cmdHDDOk");
-	cmdOK->addActionListener(filesysHardDriveActionListener);
+	cmdHDDOk->setBaseColor(gui_base_color);
+	cmdHDDOk->setForegroundColor(gui_foreground_color);
+	cmdHDDOk->setId("cmdHDDOk");
+	cmdHDDOk->addActionListener(filesysHardDriveActionListener);
 
-	cmdCancel = new gcn::Button("Cancel");
-	cmdCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	cmdCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
+	cmdHDDCancel = new gcn::Button("Cancel");
+	cmdHDDCancel->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+	cmdHDDCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - BUTTON_WIDTH,
 		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdCancel->setBaseColor(gui_base_color);
-	cmdCancel->setForegroundColor(gui_foreground_color);
-	cmdCancel->setId("cmdHDDCancel");
-	cmdCancel->addActionListener(filesysHardDriveActionListener);
+	cmdHDDCancel->setBaseColor(gui_base_color);
+	cmdHDDCancel->setForegroundColor(gui_foreground_color);
+	cmdHDDCancel->setId("cmdHDDCancel");
+	cmdHDDCancel->addActionListener(filesysHardDriveActionListener);
 
-	lblPath = new gcn::Label("Path:");
-	lblPath->setAlignment(gcn::Graphics::RIGHT);
-	txtPath = new gcn::TextField();
-	txtPath->setSize(500, TEXTFIELD_HEIGHT);
-	txtPath->setId("txtHDDPath");
-	txtPath->setBaseColor(gui_base_color);
-	txtPath->setBackgroundColor(gui_textbox_background_color);
-	txtPath->setForegroundColor(gui_foreground_color);
+	lblHDPath = new gcn::Label("Path:");
+	lblHDPath->setAlignment(gcn::Graphics::RIGHT);
+	txtHDPath = new gcn::TextField();
+	txtHDPath->setSize(500, TEXTFIELD_HEIGHT);
+	txtHDPath->setId("txtHDDPath");
+	txtHDPath->setBaseColor(gui_base_color);
+	txtHDPath->setBackgroundColor(gui_textbox_background_color);
+	txtHDPath->setForegroundColor(gui_foreground_color);
+
+	lblHDController = new gcn::Label("Controller:");
+	lblHDController->setAlignment(gcn::Graphics::RIGHT);
+	cboHDController = new gcn::DropDown(&controllerListModel);
+	cboHDController->setSize(200, DROPDOWN_HEIGHT);
+	cboHDController->setBaseColor(gui_base_color);
+	cboHDController->setBackgroundColor(gui_textbox_background_color);
+	cboHDController->setForegroundColor(gui_foreground_color);
+	cboHDController->setSelectionColor(gui_selection_color);
+	cboHDController->setId("cboHDController");
+	cboHDController->addActionListener(filesysHardDriveActionListener);
+
+	cboHDControllerUnit = new gcn::DropDown(&unitListModel);
+	cboHDControllerUnit->setSize(60, DROPDOWN_HEIGHT);
+	cboHDControllerUnit->setBaseColor(gui_base_color);
+	cboHDControllerUnit->setBackgroundColor(gui_textbox_background_color);
+	cboHDControllerUnit->setForegroundColor(gui_foreground_color);
+	cboHDControllerUnit->setSelectionColor(gui_selection_color);
+	cboHDControllerUnit->setId("cboHDControllerUnit");
+	cboHDControllerUnit->addActionListener(filesysHardDriveActionListener);
+
+	cboHDControllerType = new gcn::DropDown(&controllerTypeListModel);
+	cboHDControllerType->setSize(60, DROPDOWN_HEIGHT);
+	cboHDControllerType->setBaseColor(gui_base_color);
+	cboHDControllerType->setBackgroundColor(gui_textbox_background_color);
+	cboHDControllerType->setForegroundColor(gui_foreground_color);
+	cboHDControllerType->setSelectionColor(gui_selection_color);
+	cboHDControllerType->setId("cboHDControllerType");
+	cboHDControllerType->addActionListener(filesysHardDriveActionListener);
+
+	cboHDFeatureLevel = new gcn::DropDown(&hdFeatureLevelListModel);
+	cboHDFeatureLevel->setSize(80, DROPDOWN_HEIGHT);
+	cboHDFeatureLevel->setBaseColor(gui_base_color);
+	cboHDFeatureLevel->setBackgroundColor(gui_textbox_background_color);
+	cboHDFeatureLevel->setForegroundColor(gui_foreground_color);
+	cboHDFeatureLevel->setSelectionColor(gui_selection_color);
+	cboHDFeatureLevel->setId("cboHDFeatureLevel");
+	cboHDFeatureLevel->addActionListener(filesysHardDriveActionListener);
 
 	int posY = DISTANCE_BORDER;
 
-	wndEditFilesysHardDrive->add(lblPath, DISTANCE_BORDER, posY);
-	wndEditFilesysHardDrive->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);
-	posY += txtPath->getHeight() + DISTANCE_NEXT_Y;
+	wndEditFilesysHardDrive->add(lblHDPath, DISTANCE_BORDER, posY);
+	wndEditFilesysHardDrive->add(txtHDPath, DISTANCE_BORDER + lblHDPath->getWidth() + 8, posY);
+	posY += txtHDPath->getHeight() + DISTANCE_NEXT_Y;
 
-	wndEditFilesysHardDrive->add(cmdOK);
-	wndEditFilesysHardDrive->add(cmdCancel);
+	wndEditFilesysHardDrive->add(lblHDController, DISTANCE_BORDER, posY);
+	wndEditFilesysHardDrive->add(cboHDController, DISTANCE_BORDER + lblHDController->getWidth() + 8, posY);
+	wndEditFilesysHardDrive->add(cboHDControllerUnit, cboHDController->getX() + cboHDController->getWidth() + DISTANCE_NEXT_X, posY);
+	wndEditFilesysHardDrive->add(cboHDControllerType, cboHDControllerUnit->getX() + cboHDControllerUnit->getWidth() + DISTANCE_NEXT_X, posY);
+	wndEditFilesysHardDrive->add(cboHDFeatureLevel, cboHDControllerType->getX() + cboHDControllerType->getWidth() + DISTANCE_NEXT_X, posY);
+
+	wndEditFilesysHardDrive->add(cmdHDDOk);
+	wndEditFilesysHardDrive->add(cmdHDDCancel);
 
 	gui_top->add(wndEditFilesysHardDrive);
+
 	wndEditFilesysHardDrive->requestModalFocus();
 	focus_bug_workaround(wndEditFilesysHardDrive);
-	txtPath->requestFocus();
+	cmdHDDCancel->requestFocus();
 }
 
 static void ExitEditFilesysHardDrive()
@@ -122,13 +264,17 @@ static void ExitEditFilesysHardDrive()
 	wndEditFilesysHardDrive->releaseModalFocus();
 	gui_top->remove(wndEditFilesysHardDrive);
 
-	delete lblPath;
-	delete txtPath;
-	delete cmdCancel;
-	delete cmdOK;
+	delete lblHDPath;
+	delete txtHDPath;
+	delete lblHDController;
+	delete cboHDController;
+	delete cboHDControllerUnit;
+	delete cboHDControllerType;
+	delete cboHDFeatureLevel;
+	delete cmdHDDCancel;
+	delete cmdHDDOk;
 
 	delete filesysHardDriveActionListener;
-
 	delete wndEditFilesysHardDrive;
 }
 
@@ -409,6 +555,28 @@ bool EditFilesysHardDrive(const int unit_no)
 	dialogResult = false;
 	dialogFinished = false;
 
+	inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
+
+	controllerListModel.clear();
+	for (const auto& [type, display] : controller) {
+		controllerListModel.add(display);
+	}
+
+	unitListModel.clear();
+	for (const auto& controller_unit_item : controller_unit) {
+		unitListModel.add(controller_unit_item);
+	}
+
+	controllerTypeListModel.clear();
+	for (const auto& type : controller_type) {
+		controllerTypeListModel.add(type);
+	}
+
+	hdFeatureLevelListModel.clear();
+	for (const auto& feature_level : controller_feature_level) {
+		hdFeatureLevelListModel.add(feature_level);
+	}
+
 	InitEditFilesysHardDrive();
 
 	if (unit_no >= 0)
@@ -422,12 +590,11 @@ bool EditFilesysHardDrive(const int unit_no)
 	}
 	else
 	{
-		default_hfdlg(&current_hfdlg);
-		CreateDefaultDevicename(current_hfdlg.ci.devname);
+		default_hfdlg(&current_hfdlg, true);
 		fileSelected = false;
 	}
 
-	updatehdfinfo(true, false);
+	updatehdfinfo(true, false, true);
 
 	// Prepare the screen once
 	uae_gui->logic();
@@ -446,16 +613,8 @@ bool EditFilesysHardDrive(const int unit_no)
 
 	if (dialogResult)
 	{
-		current_dir = extract_path(txtPath->getText());
-
-		uaedev_config_info ci{};
-		memcpy(&ci, &current_hfdlg.ci, sizeof(uaedev_config_info));
-		uci = add_filesys_config(&changed_prefs, unit_no, &ci);
-		if (uci) {
-			auto* const hfd = get_hardfile_data(uci->configoffset);
-			if (hfd)
-				hardfile_media_change(hfd, &ci, true, false);
-		}
+		current_dir = extract_path(txtHDPath->getText());
+		new_harddrive(-1);
 	}
 
 	ExitEditFilesysHardDrive();

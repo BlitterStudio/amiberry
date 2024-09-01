@@ -2596,7 +2596,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		}
 		cfgfile_dwrite_str(f, _T("genlock_effects"), tmp);
 	}
-#ifndef AMIBERRY
+#ifdef WITH_SPECIALMONITORS
 	cfgfile_dwrite_strarr(f, _T("monitoremu"), specialmonitorconfignames, p->monitoremu);
 #endif
 	cfgfile_dwrite(f, _T("monitoremu_monitor"), _T("%d"), p->monitoremu_mon);
@@ -6033,7 +6033,7 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_strval(option, value, _T("comp_trustnaddr"), &p->comptrustnaddr, compmode, 0)
 		|| cfgfile_strval(option, value, _T("collision_level"), &p->collision_level, collmode, 0)
 		|| cfgfile_strval(option, value, _T("parallel_matrix_emulation"), &p->parallel_matrix_emulation, epsonprinter, 0)
-#ifndef AMIBERRY
+#ifdef WITH_SPECIALMONITORS
 		|| cfgfile_strval(option, value, _T("monitoremu"), &p->monitoremu, specialmonitorconfignames, 0)
 #endif
 		|| cfgfile_strval(option, value, _T("genlockmode"), &p->genlock_image, genlockmodes, 0)
@@ -7573,8 +7573,8 @@ static void parse_hardfile_spec (struct uae_prefs *p, const TCHAR *spec)
 	}
 	const std::string x2 = parameter.substr(pos + 1, parameter.length());
 #ifdef FILESYS
-	default_hfdlg(&current_hfdlg);
-	updatehdfinfo(true, false);
+	default_hfdlg(&current_hfdlg, false);
+	updatehdfinfo(true, false, false);
 
 	current_hfdlg.ci.type = UAEDEV_HDF;
 	_tcscpy(current_hfdlg.ci.devname, x1.c_str());
