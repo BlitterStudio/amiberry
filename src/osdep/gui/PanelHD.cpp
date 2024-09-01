@@ -440,6 +440,8 @@ void InitPanelHD(const config_category& category)
 	cmdAddCDDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddCDDrive->setId("cmdAddCDDrive");
 	cmdAddCDDrive->addActionListener(hdAddActionListener);
+	// TODO enable when this is implemented
+	cmdAddCDDrive->setEnabled(false);
 
 	cmdAddTapeDrive = new gcn::Button("Add Tape Drive");
 	cmdAddTapeDrive->setBaseColor(gui_base_color);
