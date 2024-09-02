@@ -19,14 +19,6 @@ for file in $CWD_VAR/../Resources/Configurations/**/*(.); do
 	fi
 done
 
-for file in $CWD_VAR/../Resources/Abr/**/*(.); do
-	if [[ ! -f "$USERDIR/Documents/Amiberry/Abr${file##*/Abr}" ]]; then
-		echo "Copying $file to $USERDIR/Documents/Amiberry/Abr${file##*/Abr}"
-		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Abr${file##*/Abr}")
-		cp $file "$USERDIR/Documents/Amiberry/Abr${file##*/Abr}"
-	fi
-done
-
 for file in $CWD_VAR/../Resources/Cdroms/**/*(.); do
 	if [[ ! -f "$USERDIR/Documents/Amiberry/Cdroms${file##*/Cdroms}" ]]; then
 		echo "Copying $file to $USERDIR/Documents/Amiberry/Cdroms${file##*/Cdroms}"

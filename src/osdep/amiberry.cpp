@@ -4448,7 +4448,7 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		out[len - 1] = '\0';
 	}
 	else {
-		strncpy(out, home_dir.c_str(), len - 1);
+		strncpy(out, plugins_dir.c_str(), len - 1);
 		strncat(out, "/", len - 1);
 		strncat(out, path, len - 1);
 		strncat(out, "/", len - 1);

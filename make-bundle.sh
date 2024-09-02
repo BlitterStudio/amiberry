@@ -29,7 +29,6 @@ cat Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$
 export CODE_SIGN_ENTITLEMENTS=Entitlements.plist
 codesign --entitlements=Entitlements.plist --force -s - Amiberry.app
 # Copy directories into the bundle
-cp -R abr Amiberry.app/Contents/Resources/Abr
 cp -R cdroms Amiberry.app/Contents/Resources/Cdroms
 cp -R conf Amiberry.app/Contents/Resources/Configurations
 cp -R controllers Amiberry.app/Contents/Resources/Controllers
