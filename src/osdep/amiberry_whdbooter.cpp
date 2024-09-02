@@ -1071,19 +1071,31 @@ void create_startup_sequence()
 	{
 		whd_bootscript << "DH3:C/Assign LIBS: DH3:LIBS/ ADD\n";
 	}
+	if (amiberry_options.use_jst_instead_of_whd)
+		whd_bootscript << "IF NOT EXISTS JST\n";
+	else
+		whd_bootscript << "IF NOT EXISTS WHDLoad\n";
 
-	whd_bootscript << "IF NOT EXISTS WHDLoad\n";
 	whd_bootscript << "DH3:C/Assign C: DH3:C/ ADD\n";
 	whd_bootscript << "ENDIF\n";
 
 	whd_bootscript << "CD \"Games:" << whdload_prefs.sub_path << "\"\n";
-	whd_bootscript << "WHDLoad SLAVE=\"Games:" << whdload_prefs.sub_path << "/" << whdload_prefs.selected_slave.filename << "\"";
+	if (amiberry_options.use_jst_instead_of_whd)
+		whd_bootscript << "JST SLAVE=\"Games:" << whdload_prefs.sub_path << "/" << whdload_prefs.selected_slave.filename << "\"";
+	else
+		whd_bootscript << "WHDLoad SLAVE=\"Games:" << whdload_prefs.sub_path << "/" << whdload_prefs.selected_slave.filename << "\"";
 
 	// Write Cache
-	whd_bootscript << " PRELOAD NOREQ";
+	if (amiberry_options.use_jst_instead_of_whd)
+		whd_bootscript << " PRELOAD ";
+	else
+		whd_bootscript << " PRELOAD NOREQ";
 	if (!whdload_prefs.write_cache)
 	{
-		whd_bootscript << " NOWRITECACHE";
+		if (amiberry_options.use_jst_instead_of_whd)
+			whd_bootscript << " NOCACHE";
+		else
+			whd_bootscript << " NOWRITECACHE";
 	}
 
 	// CUSTOM options
@@ -1209,6 +1221,8 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
 	write_log("WHDBooter Launched\n");
+	if (amiberry_options.use_jst_instead_of_whd)
+		write_log("WHDBooter - Using JST instead of WHDLoad\n");
 
 	if (lstAvailableROMs.empty())
 		RescanROMs();
@@ -1241,9 +1255,6 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	std::filesystem::create_directories("/tmp/amiberry/devs");
 	whd_startup = "/tmp/amiberry/s/startup-sequence";
 	std::filesystem::remove(whd_startup);
-
-	// LOAD HOST OPTIONS
-	whd_path = whdbooter_path / "WHDLoad";
 
 	// are we using save-data/ ?
 	kickstart_path = std::filesystem::path(get_savedatapath(true)) / "Kickstarts";
@@ -1281,11 +1292,23 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
 	if (std::filesystem::exists(whd_startup))
 	{
-		// create a symlink to WHDLoad in /tmp/amiberry/
-		whd_path = whdbooter_path / "WHDLoad";
-		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
-			write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
-			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
+		if (amiberry_options.use_jst_instead_of_whd)
+		{
+			// create a symlink to JST in /tmp/amiberry/
+			whd_path = whdbooter_path / "JST";
+			if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/JST")) {
+				write_log("WHDBooter - Creating symlink to JST in /tmp/amiberry/c/ \n");
+				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/JST");
+			}
+		}
+		else
+		{
+			// create a symlink to WHDLoad in /tmp/amiberry/
+			whd_path = whdbooter_path / "WHDLoad";
+			if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
+				write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
+				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
+			}
 		}
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
