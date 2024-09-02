@@ -235,7 +235,75 @@ void DBusHandle()
 					}
 				}
 			}
+			
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "INSERTFLOPPY"))
+			{
+				std::cout << "DBUS: Received INSERTFLOPPY" << std::endl;
+				bool error = false;
+				char *diskpathstr = nullptr;
+				char *drivenumstr = nullptr;
+				dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &diskpathstr,DBUS_TYPE_STRING, &drivenumstr, DBUS_TYPE_INVALID);
+				respond = true;
+				if(dbus_error_is_set(&err))
+				{
+					std::cout << "DBUS Arguments Error: " << err.message << std::endl;
+					dbus_error_free(&err);
+					status = false;
+					error = true;
+				}
+				if(!diskpathstr || !drivenumstr)
+				{
+					error = true;
+					status = false;
+				}
+				if(!error)
+				{
+					int drivenum = -1;
+					drivenum = atol(drivenumstr);
 
+					if( (drivenum >= 0) && (drivenum <= 3) )
+					{
+						_tcsncpy(changed_prefs.floppyslots[drivenum].df, diskpathstr, MAX_DPATH);
+						changed_prefs.floppyslots[drivenum].df[MAX_DPATH - 1] = 0;
+						set_config_changed();
+					}
+					else
+					{
+						status = false;
+					}
+				}
+			}
+			
+			if(dbus_message_is_method_call(msg, AMIBERRY_DBUS_INTERFACE, "INSERTCD"))
+			{
+				std::cout << "DBUS: Received INSERTCD" << std::endl;
+				bool error = false;
+				char *diskpathstr = nullptr;
+				dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &diskpathstr, DBUS_TYPE_INVALID);
+				respond = true;
+				if(dbus_error_is_set(&err))
+				{
+					std::cout << "DBUS Arguments Error: " << err.message << std::endl;
+					dbus_error_free(&err);
+					status = false;
+					error = true;
+				}
+				if(!diskpathstr)
+				{
+					error = true;
+					status = false;
+				}
+				if(!error)
+				{
+					_tcsncpy(changed_prefs.cdslots[0].name, diskpathstr , MAX_DPATH);
+					changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
+					changed_prefs.cdslots[0].inuse = true;
+					
+					std::cout << "CD Type: " << changed_prefs.cdslots[0].type << "\n";
+					set_config_changed();
+				}
+			}
+			
 			if(respond)
 			{
 				if((reply = dbus_message_new_method_return(msg)))
