@@ -4137,15 +4137,21 @@ const TCHAR** uaenative_get_library_dirs(void)
 {
 	static const TCHAR** nats;
 	static TCHAR* path;
-
+	static TCHAR* libpath;
+	
 	if (nats == NULL)
-		nats = xcalloc(const TCHAR*, 3);
+		nats = xcalloc(const TCHAR*, 4);
 	if (path == NULL) {
 		path = xcalloc(TCHAR, MAX_DPATH);
 		_tcscpy(path, plugins_dir.c_str());
 	}
+	if (libpath == NULL)
+	{
+		libpath = strdup(_T("/usr/lib/amiberry"));
+	}
 	nats[0] = home_dir.c_str();
 	nats[1] = path;
+	nats[2] = libpath; 
 	return nats;
 }
 
