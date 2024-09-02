@@ -3504,6 +3504,9 @@ void save_amiberry_settings(void)
 	// WHDLoad Quit emulator after game exits
 	write_bool_option("default_whd_quit_on_exit", amiberry_options.default_whd_quit_on_exit);
 
+	// Use JST instead of WHDLoad
+	write_bool_option("use_jst_instead_of_whd", amiberry_options.use_jst_instead_of_whd);
+
 	// Disable Shutdown button in GUI
 	write_bool_option("disable_shutdown_button", amiberry_options.disable_shutdown_button);
 
@@ -3780,6 +3783,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_whd_configdelay", &amiberry_options.default_whd_configdelay, 1);
 		ret |= cfgfile_yesno(option, value, "default_whd_writecache", &amiberry_options.default_whd_writecache);
 		ret |= cfgfile_yesno(option, value, "default_whd_quit_on_exit", &amiberry_options.default_whd_quit_on_exit);
+		ret |= cfgfile_yesno(option, value, "use_jst_instead_of_whd", &amiberry_options.use_jst_instead_of_whd);
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
 		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
