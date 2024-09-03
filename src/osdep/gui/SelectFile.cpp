@@ -103,7 +103,7 @@ static void checkfoldername(const std::string& current)
 	if ((dir = opendir(current.c_str())))
 	{
 		char actualpath[MAX_DPATH];
-		fileList->changeDir(current.c_str());
+		fileList->changeDir(current);
 		auto* const ptr = realpath(current.c_str(), actualpath);
 		workingDir = std::string(ptr);
 		closedir(dir);
@@ -111,7 +111,7 @@ static void checkfoldername(const std::string& current)
 	else
 	{
 		workingDir = home_dir;
-		fileList->changeDir(workingDir.c_str());
+		fileList->changeDir(workingDir);
 	}
 	txtCurrent->setText(workingDir);
 }
@@ -143,15 +143,13 @@ public:
 			{
 				if (txtFilename->getText().empty())
 					return;
-				std::string tmp = workingDir.append("/").append(txtFilename->getText());
+				std::string tmp = workingDir + "/" + fileList->getElementAt(selected_item);
 
 				if (filefilter != nullptr) {
 					if (tmp.find(filefilter[0]) == std::string::npos)
 						tmp = tmp.append(filefilter[0]);
 				}
 
-				if (my_existsfile2(tmp.c_str()) == 1)
-					return; // File already exists
 				workingDir = tmp;
 				dialogResult = true;
 			}
@@ -159,7 +157,7 @@ public:
 			{
 				if (fileList->isDir(selected_item))
 					return; // Directory selected -> Ok not possible
-				workingDir = workingDir.append("/").append(fileList->getElementAt(selected_item));
+				workingDir = workingDir + "/" + fileList->getElementAt(selected_item);
 				dialogResult = true;
 			}
 			dialogFinished = true;
@@ -179,10 +177,9 @@ class SelectFileActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		std::string foldername = "";
-
 		const auto selected_item = lstFiles->getSelected();
-		foldername = workingDir.append("/").append(fileList->getElementAt(selected_item));
+
+		const std::string foldername = workingDir + "/" + fileList->getElementAt(selected_item);
 		if (fileList->isDir(selected_item))
 			checkfoldername(foldername);
 		else if (!createNew)
@@ -190,6 +187,10 @@ public:
 			workingDir = foldername;
 			dialogResult = true;
 			dialogFinished = true;
+		}
+		else if (createNew && selected_item > 0)
+		{
+			txtFilename->setText(fileList->getElementAt(selected_item));
 		}
 	}
 };
@@ -453,16 +454,14 @@ std::string SelectFile(const std::string& title, std::string value, const char* 
 	checkfoldername(workingDir);
 	checkfilename(value);
 
-	if (selectedOnStart >= 0)
+	if (selectedOnStart >= 0 && fileList->getNumberOfElements() > 32)
 	{
 		scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 15);
 	}
 	
 	// Prepare the screen once
 	uae_gui->logic();
-
 	SDL_RenderClear(mon->gui_renderer);
-
 	uae_gui->draw();
 	update_gui_screen();
 
