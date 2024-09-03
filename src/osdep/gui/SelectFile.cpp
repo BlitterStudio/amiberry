@@ -266,7 +266,7 @@ static void InitSelectFile(const std::string& title)
 	scrAreaFiles->setBackgroundColor(gui_textbox_background_color);
 	scrAreaFiles->setForegroundColor(gui_foreground_color);
 	scrAreaFiles->setSelectionColor(gui_selection_color);
-	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
+	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
 	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
 
 	if (createNew)
