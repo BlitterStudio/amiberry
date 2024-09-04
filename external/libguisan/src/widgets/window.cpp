@@ -229,6 +229,30 @@ namespace gcn
         graphics->popClipArea();
     }
 
+    void Window::drawFrame(Graphics* graphics)
+    {
+        Color faceColor = getBaseColor();
+        Color highlightColor, shadowColor;
+        int alpha = getBaseColor().a;
+        int width = getWidth() + getFrameSize() * 2 - 1;
+        int height = getHeight() + getFrameSize() * 2 - 1;
+        highlightColor = faceColor + 0x303030;
+        highlightColor.a = alpha;
+        shadowColor = faceColor - 0x303030;
+        shadowColor.a = alpha;
+
+        unsigned int i;
+        for (i = 0; i < getFrameSize(); ++i)
+        {
+            graphics->setColor(highlightColor);
+            graphics->drawLine(i, i, width - i, i);
+            graphics->drawLine(i, i + 1, i, height - i - 1);
+            graphics->setColor(shadowColor);
+            graphics->drawLine(width - i, i + 1, width - i, height - i);
+            graphics->drawLine(i, height - i, width - i - 1, height - i);
+        }
+    }
+
     void Window::mousePressed(MouseEvent& mouseEvent)
     {
         if (mouseEvent.getSource() != this)

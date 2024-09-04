@@ -204,6 +204,7 @@ namespace gcn
 
         virtual void draw(Graphics* graphics);
 
+		virtual void drawFrame(Graphics* graphics);
 
         // Inherited from MouseListener
 
