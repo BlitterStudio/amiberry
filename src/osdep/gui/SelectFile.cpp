@@ -23,7 +23,7 @@
 
 enum
 {
-	DIALOG_WIDTH = 520,
+	DIALOG_WIDTH = 600,
 	DIALOG_HEIGHT = 600
 };
 
@@ -107,11 +107,13 @@ static void checkfoldername(const std::string& current)
 		auto* const ptr = realpath(current.c_str(), actualpath);
 		workingDir = std::string(ptr);
 		closedir(dir);
+		lstFiles->adjustSize();
 	}
 	else
 	{
 		workingDir = home_dir;
 		fileList->changeDir(workingDir);
+		lstFiles->adjustSize();
 	}
 	txtCurrent->setText(workingDir);
 }
@@ -267,7 +269,7 @@ static void InitSelectFile(const std::string& title)
 	scrAreaFiles->setForegroundColor(gui_foreground_color);
 	scrAreaFiles->setSelectionColor(gui_selection_color);
 	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::ShowAuto);
-	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::ShowAlways);
+	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::ShowAuto);
 
 	if (createNew)
 	{
@@ -458,7 +460,7 @@ std::string SelectFile(const std::string& title, std::string value, const char* 
 	{
 		scrAreaFiles->setVerticalScrollAmount(selectedOnStart * 15);
 	}
-	
+
 	// Prepare the screen once
 	uae_gui->logic();
 	SDL_RenderClear(mon->gui_renderer);

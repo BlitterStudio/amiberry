@@ -320,6 +320,17 @@ namespace gcn
     {
         if (mListModel != NULL)
         {
+			int maxElementLength = getWidth();
+            for (int i = 0; i < mListModel->getNumberOfElements(); i++)
+            {
+				const auto elementLength =  getFont()->getWidth(mListModel->getElementAt(i));
+                if (elementLength > maxElementLength)
+                {
+                    maxElementLength = elementLength;
+                }
+            }
+            if (maxElementLength > getWidth())
+                setWidth(maxElementLength + 4);
             setHeight(getRowHeight() * mListModel->getNumberOfElements());
         }
     }
