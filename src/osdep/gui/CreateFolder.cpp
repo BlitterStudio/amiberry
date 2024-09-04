@@ -73,7 +73,7 @@ static void InitCreateFolder(const std::string& path)
 	createFolderButtonActionListener = new CreateFolderRequesterButtonActionListener();
 
 	lblCreateFolder = new gcn::Label("Enter the name of the folder you want to create:");
-	lblCreateFolder->setAlignment(gcn::Graphics::RIGHT);
+	lblCreateFolder->setAlignment(gcn::Graphics::Right);
 	lblCreateFolder->setBaseColor(gui_base_color);
 	lblCreateFolder->setForegroundColor(gui_foreground_color);
 	lblCreateFolder->setPosition(10, 30);

@@ -67,35 +67,38 @@
 
 namespace gcn
 {
-	Image* SDLImageLoader::load(const std::string& filename,
-	                            bool convertToDisplayFormat)
-	{
-		SDL_Surface* loadedSurface = loadSDLSurface(filename);
+    SDLImageLoader::SDLImageLoader() : mRenderer(NULL)
+    {}
 
-		if (loadedSurface == NULL)
-		{
-			throw GCN_EXCEPTION(
-				std::string("Unable to load image file: ") + filename);
-		}
+    Image* SDLImageLoader::load(const std::string& filename,
+                                bool convertToDisplayFormat)
+    {
+        SDL_Surface *loadedSurface = loadSDLSurface(filename);
 
-		SDL_Surface* surface = convertToStandardFormat(loadedSurface);
-		SDL_FreeSurface(loadedSurface);
+        if (loadedSurface == NULL)
+        {
+            throw GCN_EXCEPTION(
+                    std::string("Unable to load image file: ") + filename);
+        }
 
-		if (surface == NULL)
-		{
-			throw GCN_EXCEPTION(
-				std::string("Not enough memory to load: ") + filename);
-		}
+        SDL_Surface *surface = convertToStandardFormat(loadedSurface);
+        SDL_FreeSurface(loadedSurface);
 
-		mImage = new SDLImage(surface, true, mRenderer);
+        if (surface == NULL)
+        {
+            throw GCN_EXCEPTION(
+                    std::string("Not enough memory to load: ") + filename);
+        }
 
-		if (convertToDisplayFormat)
-		{
+        mImage = new SDLImage(surface, true, mRenderer);
+
+        if (convertToDisplayFormat)
+        {
             mImage->convertToDisplayFormat();
-		}
+        }
 
-		return mImage;
-	}
+        return mImage;
+    }
 
     void SDLImageLoader::free()
     {
@@ -105,50 +108,50 @@ namespace gcn
             mImage = nullptr;
         }
     }
-
-	void SDLImageLoader::setRenderer(SDL_Renderer* renderer)
-	{
+    
+    void SDLImageLoader::setRenderer(SDL_Renderer* renderer)
+    {
 		mRenderer = renderer;
 	}
 
-	SDL_Surface* SDLImageLoader::loadSDLSurface(const std::string& filename)
-	{
-		return IMG_Load(filename.c_str());
-	}
+    SDL_Surface* SDLImageLoader::loadSDLSurface(const std::string& filename)
+    {
+        return IMG_Load(filename.c_str());
+    }
+    
+    SDL_Texture* SDLImageLoader::loadSDLTexture(const std::string& filename)
+    {
+        return IMG_LoadTexture(mRenderer, filename.c_str());
+    }
 
-	SDL_Texture* SDLImageLoader::loadSDLTexture(const std::string& filename)
-	{
-		return IMG_LoadTexture(mRenderer, filename.c_str());
-	}
-
-	SDL_Surface* SDLImageLoader::convertToStandardFormat(SDL_Surface* surface)
-	{
-		Uint32 rmask, gmask, bmask, amask;
+    SDL_Surface* SDLImageLoader::convertToStandardFormat(SDL_Surface* surface)
+    {
+        Uint32 rmask, gmask, bmask, amask;
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
         rmask = 0xff000000;
         gmask = 0x00ff0000;
         bmask = 0x0000ff00;
         amask = 0x000000ff;
 #else
-		rmask = 0x000000ff;
-		gmask = 0x0000ff00;
-		bmask = 0x00ff0000;
-		amask = 0xff000000;
+        rmask = 0x000000ff;
+        gmask = 0x0000ff00;
+        bmask = 0x00ff0000;
+        amask = 0xff000000;
 #endif
 
-		SDL_Surface* colorSurface = SDL_CreateRGBSurface(SDL_SWSURFACE,
-		                                          0, 0, 32,
-		                                          rmask, gmask, bmask, amask);
+        SDL_Surface *colorSurface = SDL_CreateRGBSurface(SDL_SWSURFACE,
+                0, 0, 32,
+                rmask, gmask, bmask, amask);
 
-		SDL_Surface* tmp = NULL;
+        SDL_Surface *tmp = NULL;
 
-		if (colorSurface != NULL)
-		{
-			tmp = SDL_ConvertSurface(surface, colorSurface->format,
-			                         SDL_SWSURFACE);
-			SDL_FreeSurface(colorSurface);
-		}
+        if (colorSurface != NULL)
+        {
+            tmp = SDL_ConvertSurface(surface, colorSurface->format,
+                                     SDL_SWSURFACE);
+            SDL_FreeSurface(colorSurface);
+        }
 
-		return tmp;
-	}
+        return tmp;
+    }
 }

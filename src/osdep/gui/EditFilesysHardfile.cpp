@@ -405,7 +405,7 @@ static void InitEditFilesysHardfile()
 	filesysHardfileFocusListener = new FilesysHardfileFocusListener();
 
 	lblHfPath = new gcn::Label("Path:");
-	lblHfPath->setAlignment(gcn::Graphics::RIGHT);
+	lblHfPath->setAlignment(gcn::Graphics::Right);
 	txtHfPath = new gcn::TextField();
 	txtHfPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtHfPath->setId("txtHdfPath");
@@ -421,7 +421,7 @@ static void InitEditFilesysHardfile()
 	cmdHfPath->addActionListener(filesysHardfileActionListener);
 
 	lblHfGeometry = new gcn::Label("Geometry:");
-	lblHfGeometry->setAlignment(gcn::Graphics::RIGHT);
+	lblHfGeometry->setAlignment(gcn::Graphics::Right);
 	txtHfGeometry = new gcn::TextField();
 	txtHfGeometry->setSize(500, TEXTFIELD_HEIGHT);
 	txtHfGeometry->setId("txtHdfGeometry");
@@ -437,7 +437,7 @@ static void InitEditFilesysHardfile()
 	cmdHfGeometry->addActionListener(filesysHardfileActionListener);
 
 	lblHfFilesys = new gcn::Label("Filesys:");
-	lblHfFilesys->setAlignment(gcn::Graphics::RIGHT);
+	lblHfFilesys->setAlignment(gcn::Graphics::Right);
 	txtHfFilesys = new gcn::TextField();
 	txtHfFilesys->setSize(500, TEXTFIELD_HEIGHT);
 	txtHfFilesys->setId("txtHdfFilesys");
@@ -453,7 +453,7 @@ static void InitEditFilesysHardfile()
 	cmdHfFilesys->addActionListener(filesysHardfileActionListener);
 
 	lblDevice = new gcn::Label("Device:");
-	lblDevice->setAlignment(gcn::Graphics::RIGHT);
+	lblDevice->setAlignment(gcn::Graphics::Right);
 	txtDevice = new gcn::TextField();
 	txtDevice->setId("txtHdfDev");
 	txtDevice->setSize(100, TEXTFIELD_HEIGHT);
@@ -463,7 +463,7 @@ static void InitEditFilesysHardfile()
 	txtDevice->addFocusListener(filesysHardfileFocusListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
-	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
+	lblBootPri->setAlignment(gcn::Graphics::Right);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setId("txtHdfBootPri");
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
@@ -501,7 +501,7 @@ static void InitEditFilesysHardfile()
 	chkRdbMode->addActionListener(filesysHardfileActionListener);
 
 	lblController = new gcn::Label("Controller:");
-	lblController->setAlignment(gcn::Graphics::RIGHT);
+	lblController->setAlignment(gcn::Graphics::Right);
 	cboController = new gcn::DropDown(&controllerListModel);
 	cboController->setSize(250, DROPDOWN_HEIGHT);
 	cboController->setBaseColor(gui_base_color);
@@ -553,7 +553,7 @@ static void InitEditFilesysHardfile()
 	txtHdfLine2->setEnabled(false);
 
 	lblSurfaces = new gcn::Label("Surfaces:");
-	lblSurfaces->setAlignment(gcn::Graphics::RIGHT);
+	lblSurfaces->setAlignment(gcn::Graphics::Right);
 	txtSurfaces = new gcn::TextField();
 	txtSurfaces->setSize(60, TEXTFIELD_HEIGHT);
 	txtSurfaces->setBaseColor(gui_base_color);
@@ -562,7 +562,7 @@ static void InitEditFilesysHardfile()
 	txtSurfaces->addFocusListener(filesysHardfileFocusListener);
 
 	lblReserved = new gcn::Label("Reserved:");
-	lblReserved->setAlignment(gcn::Graphics::RIGHT);
+	lblReserved->setAlignment(gcn::Graphics::Right);
 	txtReserved = new gcn::TextField();
 	txtReserved->setSize(60, TEXTFIELD_HEIGHT);
 	txtReserved->setBaseColor(gui_base_color);
@@ -571,7 +571,7 @@ static void InitEditFilesysHardfile()
 	txtReserved->addFocusListener(filesysHardfileFocusListener);
 
 	lblSectors = new gcn::Label("Sectors:");
-	lblSectors->setAlignment(gcn::Graphics::RIGHT);
+	lblSectors->setAlignment(gcn::Graphics::Right);
 	txtSectors = new gcn::TextField();
 	txtSectors->setSize(60, TEXTFIELD_HEIGHT);
 	txtSectors->setBaseColor(gui_base_color);
@@ -580,7 +580,7 @@ static void InitEditFilesysHardfile()
 	txtSectors->addFocusListener(filesysHardfileFocusListener);
 
 	lblBlocksize = new gcn::Label("Blocksize:");
-	lblBlocksize->setAlignment(gcn::Graphics::RIGHT);
+	lblBlocksize->setAlignment(gcn::Graphics::Right);
 	txtBlocksize = new gcn::TextField();
 	txtBlocksize->setSize(60, TEXTFIELD_HEIGHT);
 	txtBlocksize->setBaseColor(gui_base_color);

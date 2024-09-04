@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -62,53 +62,47 @@
 
 namespace gcn
 {
-	class Key;
+    class Key;
 
-	/**
-	 * Key listeners base class. Inorder to use this class you must inherit
-	 * from it and implements it's functions. KeyListeners listen for key
-	 * events on a Widgets. When a Widget recives a key event, the
-	 * corresponding function in all it's key listeners will be called.
-	 * Only focused Widgets will generate key events.
-	 *
-	 * @see Widget::addKeyListener
-	 */
-	class GCN_CORE_DECLSPEC KeyListener
-	{
-	public:
+    /**
+     * Interface for listening for key events from widgets.
+     *
+     * @see Widget::addKeyListener, Widget::removeKeyListener
+     */
+    class GCN_CORE_DECLSPEC KeyListener
+    {
+    public:
 
-		/**
-		 * Destructor
-		 */
-		virtual ~KeyListener() { }
+        /**
+         * Destructor.
+         */
+        virtual ~KeyListener() { }
 
-		/**
-		 * Called if a key is pressed when the widget has keyboard focus.
-		 * If a key is held down the widget will generate multiple key
-		 * presses.
-		 *
-		 * @param keyEvent discribes the event.
-		 */
-		virtual void keyPressed(KeyEvent& keyEvent) { }
+        /**
+         * Called if a key is pressed when the widget has keyboard focus.
+         * If a key is held down the widget will generate multiple key
+         * presses.
+         *
+         * @param keyEvent Discribes the event.
+         */
+        virtual void keyPressed(KeyEvent& keyEvent) { }
 
-		/**
-		 * Called if a key is released when the widget has keyboard focus.
-		 *
-		 * @param keyEvent discribes the event.
-		 */
-		virtual void keyReleased(KeyEvent& keyEvent) { }
+        /**
+         * Called if a key is released when the widget has keyboard focus.
+         *
+         * @param keyEvent Discribes the event.
+         */
+        virtual void keyReleased(KeyEvent& keyEvent) { }
 
-	protected:
-		/**
-		 * Constructor.
-		 *
-		 * You should not be able to make an instance of KeyListener,
-		 * therefore its constructor is protected. To use KeyListener
-		 * you must inherit from this class and implement it's
-		 * functions.
-		 */
-		KeyListener() { }
-	};
+    protected:
+        /**
+         * Constructor.
+         *
+         * You should not be able to make an instance of KeyListener,
+         * therefore its constructor is protected.
+         */
+        KeyListener() { }
+    };
 }
 
 #endif // end GCN_KEYLISTENER_HPP

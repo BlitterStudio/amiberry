@@ -1103,7 +1103,7 @@ void gui_widgets_init()
 	//--------------------------------------------------
 	constexpr auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
 	selectors = new gcn::Container();
-	selectors->setBorderSize(0);
+	selectors->setFrameSize(0);
 	selectors->setBaseColor(gui_selector_inactive_color);
 	selectors->setBackgroundColor(gui_base_color);
 	selectors->setForegroundColor(gui_foreground_color);
@@ -1115,7 +1115,7 @@ void gui_widgets_init()
 	selectorsScrollArea->setBackgroundColor(gui_selector_inactive_color);
 	selectorsScrollArea->setForegroundColor(gui_foreground_color);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
-	selectorsScrollArea->setBorderSize(1);
+	selectorsScrollArea->setFrameSize(1);
 	
 	const auto panelStartX = DISTANCE_BORDER + selectorsScrollArea->getWidth() + DISTANCE_BORDER;
 
@@ -1134,7 +1134,7 @@ void gui_widgets_init()
 		categories[i].panel->setSize(GUI_WIDTH - panelStartX - DISTANCE_BORDER, workAreaHeight);
 		categories[i].panel->setBaseColor(gui_base_color);
 		categories[i].panel->setForegroundColor(gui_foreground_color);
-		categories[i].panel->setBorderSize(1);
+		categories[i].panel->setFrameSize(1);
 		categories[i].panel->setVisible(false);
 			
 		selectorsHeight += categories[i].selector->getHeight();

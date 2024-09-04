@@ -72,8 +72,9 @@ namespace gcn
     class GCN_EXTENSION_DECLSPEC SDLImageLoader : public ImageLoader
     {
     public:
+        SDLImageLoader();
+        void setRenderer(SDL_Renderer* renderer);
 
-		void setRenderer(SDL_Renderer* renderer); 
         // Inherited from ImageLoader
 
         virtual Image* load(const std::string& filename, bool convertToDisplayFormat = true);

@@ -384,7 +384,7 @@ void InitPanelHD(const config_category& category)
 		listEntry[row]->setBaseColor(gui_base_color);
 		listEntry[row]->setBackgroundColor(gui_textbox_background_color);
 		listEntry[row]->setForegroundColor(gui_foreground_color);
-		listEntry[row]->setBorderSize(0);
+		listEntry[row]->setFrameSize(0);
 
 		listCmdProps[row] = new gcn::Button("...");
 		listCmdProps[row]->setBaseColor(gui_base_color);

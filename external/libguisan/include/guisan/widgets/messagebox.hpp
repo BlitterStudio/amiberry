@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  * Copyright (c) 2017 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -59,6 +59,7 @@
 
 #include <string>
 
+#include "guisan/graphics.hpp"
 #include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
 #include "guisan/widgets/window.hpp"
@@ -121,32 +122,18 @@ namespace gcn
         const std::string& getCaption() const;
 
         /**
-         * Sets the alignment for the caption.
-         *
-         * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
-         */
-        void setAlignment(unsigned int alignment);
-
-        /**
-         * Gets the alignment for the caption.
-         *
-         * @return alignment of caption.
-         */
-        unsigned int getAlignment() const;
-        
-        /**
          * Sets the position for the button(s) in the MessageBox.
          *
-         * @param alignment Graphics::LEFT, Graphics::CENTER or Graphics::RIGHT.
+         * @param alignment The alignment of the button(s).
          */
-        void setButtonAlignment(unsigned int alignment);
+        void setButtonAlignment(Graphics::Alignment alignment);
 
         /**
          * Gets the position for the button(s) in the MessageBox.
          *
          * @return alignment of buttons.
          */
-        unsigned int getButtonAlignment() const;
+        Graphics::Alignment getButtonAlignment() const;
 
         /**
          * Sets the padding of the window which is the distance between the
@@ -222,8 +209,6 @@ namespace gcn
 
         virtual void draw(Graphics* graphics);
 
-        virtual void drawBorder(Graphics* graphics);
-
 
         // Inherited from MouseListener
 
@@ -236,7 +221,7 @@ namespace gcn
     protected:
         std::string mMessage;
         int mNbButtons;
-        unsigned int mButtonAlignment;
+        Graphics::Alignment mButtonAlignment;
         int mClickedButton;
         
         Button **mButtons;

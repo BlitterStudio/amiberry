@@ -62,38 +62,45 @@
 
 namespace gcn
 {
-	/**
-	 * Listener of focus events from Widgets. To be able to listen for 
-	 * focus events you must make a class which inherits from this class 
-	 * and implements it's functions.
-	 *
-	 * @see Widget::addFocusListener
-	 * @author Olof Naessén
-	 * @since 0.7.0
-	 */
-	class GCN_CORE_DECLSPEC FocusListener
-	{
-	public:
+    /**
+     * Interface for listening for focus events from widgets.
+     *
+     * @see Widget::addFocusListener, Widget::removeFocusListener
+     * @author Olof Naessén
+     * @since 0.7.0
+     */
+    class GCN_CORE_DECLSPEC FocusListener
+    {
+    public:
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~FocusListener() { }
+        /**
+         * Destructor.
+         */
+        virtual ~FocusListener() { }
 
-		/**
-		 * Called when a widget gains focus. 
-		 *
-		 * @param event describes the event.
-		 */
-		virtual void focusGained(const Event& event) { };
+        /**
+         * Called when a widget gains focus. 
+         *
+         * @param event describes the event.
+         */
+        virtual void focusGained(const Event& event) { };
 
-		/**
-		 * Called when a widget loses focus. 
-		 *
-		 * @param event discribes the event.
-		 */
-		virtual void focusLost(const Event& event) { };
-	};
+        /**
+         * Called when a widget loses focus. 
+         *
+         * @param event Discribes the event.
+         */
+        virtual void focusLost(const Event& event) { };
+
+    protected:
+        /**
+         * Constructor.
+         *
+         * You should not be able to make an instance of FocusListener,
+         * therefore its constructor is protected.
+         */
+        FocusListener() {}
+    };
 }
 
 #endif // end GCN_FOCUSLISTENER_HPP

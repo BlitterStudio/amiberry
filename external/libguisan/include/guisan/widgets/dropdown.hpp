@@ -72,238 +72,258 @@
 
 namespace gcn
 {
-	/**
-	 * An implementation of a drop downable list from which an item can be selected.
-	 * The drop down consists of an internal ScrollArea and an internal ListBox. 
-	 * The drop down also uses an internal FocusHandler to handle the focus of the 
-	 * internal ScrollArea and the internal ListBox. The scroll area and the list box
-	 * can be passed to the drop down if a custom scroll area and or a custom list box
-	 * is preferable.
-	 *
-	 * To be able display a list the drop down uses a user provided list model. 
-	 * A list model can be any class that implements the ListModel interface. 
-	 *
-	 * If an item is selected in the drop down a select event will be sent to all selection 
-	 * listeners of the drop down. If an item is selected by using a mouse click or by using 
-	 * the enter or space key an action event will be sent to all action listeners of the 
-	 * drop down.
-	 */
-	class GCN_CORE_DECLSPEC DropDown :
-		public ActionListener,
-		public BasicContainer,
-		public KeyListener,
-		public MouseListener,
-		public FocusListener,
-		public SelectionListener
-	{
-	public:
-		/**
-		 * Constructor.
-		 *
-		 * @param listModel the ListModel to use.
-		 * @param scrollArea the ScrollArea to use.
-		 * @param listBox the listBox to use.
-		 * @see ListModel, ScrollArea, ListBox.
-		 */
-		DropDown(ListModel* listModel = NULL,
-		         ScrollArea* scrollArea = NULL,
-		         ListBox* listBox = NULL);
+    /**
+     * An implementation of a drop downable list from which an item can be
+     * selected. The drop down consists of an internal ScrollArea and an
+     * internal ListBox. The drop down also uses an internal FocusHandler to
+     * handle the focus of the internal ScollArea and the internal ListBox.
+     * The scroll area and the list box can be passed to the drop down
+     * if a custom scroll area and/or a custom list box is preferable.
+     *
+     * To be able display a list the drop down uses a user provided list model.
+     * A list model can be any class that implements the ListModel interface.
+     *
+     * If an item is selected in the drop down a select event will be sent to
+     * all selection listeners of the drop down. If an item is selected by
+     * using a mouse click or by using the enter or space key an action event
+     * will be sent to all action listeners of the drop down.
+     */
+    class GCN_CORE_DECLSPEC DropDown :
+        public ActionListener,
+        public BasicContainer,
+        public KeyListener,
+        public MouseListener,
+        public FocusListener,
+        public SelectionListener
+    {
+    public:
+        /**
+         * Constructor.
+         *
+         * @param listModel the ListModel to use.
+         * @param scrollArea the ScrollArea to use.
+         * @param listBox the listBox to use.
+         * @see ListModel, ScrollArea, ListBox.
+         */
+        DropDown(ListModel *listModel = NULL,
+                 ScrollArea *scrollArea = NULL,
+                 ListBox *listBox = NULL);
 
-		/**
-		* Destructor.
-		*/
-		virtual ~DropDown();
+        /**
+         * Destructor.
+         */
+        virtual ~DropDown();
 
-		/**
-		* Gets the selected item as an index in the list model.
-		*
-		* @return the selected item as an index in the list model.
-		* @see setSelected
-		*/
-		int getSelected() const;
+        /**
+         * Gets the selected item as an index in the list model.
+         *
+         * @return the selected item as an index in the list model.
+         * @see setSelected
+         */
+        int getSelected() const;
 
-		/**
-		* Sets the selected item. The selected item is represented by
-		* an index from the list model.
-		*
-		* @param selected the selected item as an index from the list model.
-		* @see getSelected
-		*/
-		void setSelected(int selected) const;
+        /**
+         * Sets the selected item. The selected item is represented by
+         * an index from the list model.
+         *
+         * @param selected the selected item as an index from the list model.
+         * @see getSelected
+         */
+        void setSelected(int selected) const;
 
-		/*
-		 * Clears any selected item
-		 */
-		void clearSelected(void) const;
+        /*
+         * Clears any selected item
+         */
+        void clearSelected(void) const;
 
-		/**
-		* Sets the list model to use when displaying the list.
-		*
-		* @param listModel the list model to use.
-		* @see getListModel
-		*/
-		void setListModel(ListModel* listModel);
+        /**
+         * Sets the list model to use when displaying the list.
+         *
+         * @param listModel the list model to use.
+         * @see getListModel
+         */
+        void setListModel(ListModel *listModel);
 
-		/**
-		* Gets the list model used.
-		*
-		* @return the ListModel used.
-		* @see setListModel
-		*/
-		ListModel* getListModel();
+        /**
+         * Gets the list model used.
+         *
+         * @return the ListModel used.
+         * @see setListModel
+         */
+        ListModel *getListModel();
 
-		/**
-		* Adjusts the height of the drop down to fit the height of the
-		* drop down's parent's height. It's used to not make the drop down
-		* draw itself outside of it's parent if folded down.
-		*/
-		void adjustHeight();
+        /**
+         * Adjusts the height of the drop down to fit the height of the
+         * drop down's parent's height. It's used to not make the drop down
+         * draw itself outside of its parent if folded down.
+         */
+        void adjustHeight();
 
-		/**
-		* Adds a selection listener to the drop down. When the selection
-		* changes an event will be sent to all selection listeners of the
-		* drop down.
-		*
-		* @param selectionListener the selection listener to add.
-		* @since 0.8.0
-		*/
-		void addSelectionListener(SelectionListener* selectionListener);
+        /**
+         * Adds a selection listener to the drop down. When the selection
+         * changes an event will be sent to all selection listeners of the
+         * drop down.
+         *
+         * If you delete your selection listener, be sure to also remove it
+         * using removeSelectionListener().
+         *
+         * @param selectionListener the selection listener to add.
+         * @since 0.8.0
+         */
+        void addSelectionListener(SelectionListener* selectionListener);
 
-		/**
-		* Removes a selection listener from the drop down.
-		*
-		* @param selectionListener the selection listener to remove.
-		* @since 0.8.0
-		*/
-		void removeSelectionListener(SelectionListener* selectionListener);
+        /**
+         * Removes a selection listener from the drop down.
+         *
+         * @param selectionListener the selection listener to remove.
+         * @since 0.8.0
+         */
+        void removeSelectionListener(SelectionListener* selectionListener);
 
-		/*
-		 * Returns the current Dropdown status
-		 */
-		bool isDroppedDown();
+        /*
+         * Returns the current Dropdown status
+         */
+        bool isDroppedDown();
 
-		/**
-		* Sets the DropDown Widget to dropped-down mode.
-		*/
-		virtual void dropDown();
+        /**
+         * Sets the DropDown Widget to dropped-down mode.
+         */
+        virtual void dropDown();
 
-		/**
-		* Sets the DropDown Widget to folded-up mode.
-		*/
-		virtual void foldUp();
+        /**
+        * Sets the DropDown Widget to folded-up mode.
+        */
+        virtual void foldUp();
 
-		// Inherited from Widget
+        // Inherited from Widget
 
-		virtual void draw(Graphics* graphics);
+        virtual void draw(Graphics* graphics);
 
-		virtual void drawBorder(Graphics* graphics);
+        void setBaseColor(const Color& color);
 
-		void setBaseColor(const Color& color);
+        void setBackgroundColor(const Color& color);
 
-		void setBackgroundColor(const Color& color);
+        void setForegroundColor(const Color& color);
 
-		void setForegroundColor(const Color& color);
+        void setFont(Font *font);
 
-		void setFont(Font* font);
-
-		void setSelectionColor(const Color& color);
-
-
-		// Inherited from BasicContainer
-
-		virtual Rectangle getChildrenArea();
+        void setSelectionColor(const Color& color);
 
 
-		// Inherited from FocusListener
+        // Inherited from BasicContainer
 
-		virtual void focusLost(const Event& event);
-
-
-		// Inherited from ActionListener
-
-		virtual void action(const ActionEvent& actionEvent);
+        virtual Rectangle getChildrenArea();
 
 
-		// Inherited from DeathListener
+        // Inherited from FocusListener
 
-		virtual void death(const Event& event);
-
-
-		// Inherited from KeyListener
-
-		virtual void keyPressed(KeyEvent& keyEvent);
+        virtual void focusLost(const Event& event);
 
 
-		// Inherited from MouseListener
+        // Inherited from ActionListener
 
-		virtual void mousePressed(MouseEvent& mouseEvent);
-
-		virtual void mouseReleased(MouseEvent& mouseEvent);
-
-		virtual void mouseWheelMovedUp(MouseEvent& mouseEvent);
-
-		virtual void mouseWheelMovedDown(MouseEvent& mouseEvent);
-
-		virtual void mouseDragged(MouseEvent& mouseEvent);
+        virtual void action(const ActionEvent& actionEvent);
 
 
-		// Inherited from SelectionListener
+        // Inherited from DeathListener
 
-		virtual void valueChanged(const SelectionEvent& event);
+        virtual void death(const Event& event);
 
 
-	protected:
-		/**
-		* Draws the button with the little down arrow.
-		*
-		* @param graphics a Graphics object to draw with.
-		*/
-		virtual void drawButton(Graphics* graphics);
+        // Inherited from KeyListener
 
-		bool mDroppedDown;
+        virtual void keyPressed(KeyEvent& keyEvent);
 
-		/**
-		* Distributes a value changed event to all selection listeners
-		* of the drop down.
-		*
-		* @since 0.8.0
-		*/
-		void distributeValueChangedEvent();
 
-		bool mPushed;
+        // Inherited from MouseListener
 
-		/**
-		* Holds what the height is if the drop down is folded up. Used when
-		* checking if the list of the drop down was clicked or if the upper part
-		* of the drop down was clicked on a mouse click
-		*/
-		int mFoldedUpHeight;
+        virtual void mousePressed(MouseEvent& mouseEvent);
 
-		/**
-		* The scroll area used.
-		*/
-		ScrollArea* mScrollArea;
-		ListBox* mListBox;
-		FocusHandler mInternalFocusHandler;
-		bool mInternalScrollArea;
-		bool mInternalListBox;
-		bool mIsDragged;
+        virtual void mouseReleased(MouseEvent& mouseEvent);
 
-		/**
-		* Typedef.
-		*/
-		typedef std::list<SelectionListener*> SelectionListenerList;
+        virtual void mouseWheelMovedUp(MouseEvent& mouseEvent);
 
-		/**
-		* The selection listener's of the drop down.
-		*/
-		SelectionListenerList mSelectionListeners;
+        virtual void mouseWheelMovedDown(MouseEvent& mouseEvent);
 
-		/**
-		* Typedef.
-		*/
-		typedef SelectionListenerList::iterator SelectionListenerIterator;
-	};
+        virtual void mouseDragged(MouseEvent& mouseEvent);
+
+
+	// Inherited from SelectionListener
+
+        virtual void valueChanged(const SelectionEvent& event);
+
+
+    protected:
+        /**
+         * Draws the button with the little down arrow.
+         *
+         * @param graphics a Graphics object to draw with.
+         */
+        virtual void drawButton(Graphics *graphics);
+
+        bool mDroppedDown;
+
+        /**
+         * Distributes a value changed event to all selection listeners
+         * of the drop down.
+         *
+         * @since 0.8.0
+         */
+        void distributeValueChangedEvent();
+
+        /**
+         * True if the drop down has been pushed with the mouse, false
+         * otherwise.
+         */
+        bool mPushed;
+
+        /**
+         * Holds what the height is if the drop down is folded up.
+         * Used when checking if the list of the drop down was clicked
+         * or if the upper part of the drop down was clicked on a mouse click.
+         */
+        int mFoldedUpHeight;
+
+        /**
+         * The scroll area used.
+         */
+        ScrollArea* mScrollArea;
+        ListBox* mListBox;
+
+        /**
+         * The internal focus handler used to keep track of focus for the
+         * internal list box.
+         */
+        FocusHandler mInternalFocusHandler;
+
+        /**
+         * True if an internal scroll area is used, false if a scroll area
+         * has been passed to the drop down which the drop down should not
+         * deleted in it's destructor.
+         */
+        bool mInternalScrollArea;
+
+        /**
+         * True if an internal list box is used, false if a list box
+         * has been passed to the drop down which the drop down should not
+         * deleted in it's destructor.
+         */
+        bool mInternalListBox;
+
+        /**
+         * True if the drop down is dragged.
+         */
+        bool mIsDragged;
+
+        typedef std::list<SelectionListener*> SelectionListenerList;
+
+        /**
+         * The selection listener's of the drop down.
+         */
+        SelectionListenerList mSelectionListeners;
+
+        typedef SelectionListenerList::iterator SelectionListenerIterator;
+    };
 }
 
 #endif // end GCN_DROPDOWN_HPP

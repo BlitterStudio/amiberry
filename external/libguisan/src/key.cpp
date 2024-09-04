@@ -89,7 +89,7 @@ namespace gcn
 
 	bool Key::isPrintable() const
 	{
-		return 0 < mValue && mValue < 1000;
+		return 32 <= mValue && mValue < 1000;
 	}
 
 	int Key::getValue() const
@@ -103,5 +103,15 @@ namespace gcn
 			return static_cast<char>(mValue);
 
 		return '\0';
+	}
+
+	bool Key::operator==(const Key& key) const
+	{
+		return mValue == key.mValue;
+	}
+
+	bool Key::operator!=(const Key& key) const
+	{
+		return (mValue != key.mValue);
 	}
 }

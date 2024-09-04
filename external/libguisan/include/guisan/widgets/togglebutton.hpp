@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  * Copyright (c) 2020 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -69,70 +69,70 @@
 
 namespace gcn
 {
-	/**
-	 * A toggle button, which can stay selected. Think of it as a checkbox,
-	 * but dressed as a regular button. Add an ActionListener to it to know when it
-	 * has been clicked.
-	 *
-	 */
-	class GCN_CORE_DECLSPEC ToggleButton : public Button
-	{
-	public:
-		/**
-		 * Constructor.
-		 */
-		ToggleButton();
+    /**
+     * A toggle button, which can stay selected. Think of it as a checkbox,
+     * but dressed as a regular button. Add an ActionListener to it to know when it
+     * has been clicked.
+     *
+     */
+    class GCN_CORE_DECLSPEC ToggleButton : public Button
+    {
+    public:
+        /**
+         * Constructor.
+         */
+        ToggleButton();
 
-		/**
-		 * Constructor.
-		 *
-		 * @param caption the caption of the ToggleButton.
-		 */
-		ToggleButton(const std::string& caption);
+        /**
+         * Constructor.
+         *
+         * @param caption the caption of the ToggleButton.
+         */
+        ToggleButton(const std::string& caption);
+        
+        /**
+         * Checks if the button is selected.
+         *
+         * @return True if the button is selected, false otherwise.
+         * @see setSelected
+         */
+        bool isSelected() const;
 
-		/**
-		 * Checks if the button is selected.
-		 *
-		 * @return True if the button is selected, false otherwise.
-		 * @see setSelected
-		 */
-		bool isSelected() const;
-
-		/**
-		 * Sets the button to be selected.
-		 *
-		 * @param selected True if the button should be set as selected.
-		 * @see isSelected
-		 */
-		void setSelected(bool selected);
-
-
-		//Inherited from Widget
-
-		virtual void draw(Graphics* graphics);
+        /**
+         * Sets the button to be selected.
+         *
+         * @param selected True if the button should be set as selected.
+         * @see isSelected
+         */
+        void setSelected(bool selected);
 
 
-		// Inherited from MouseListener
+        //Inherited from Widget
 
-		virtual void mouseReleased(MouseEvent& mouseEvent);
+        virtual void draw(Graphics* graphics);
 
 
-		// Inherited from KeyListener
+        // Inherited from MouseListener
 
-		virtual void keyReleased(KeyEvent& keyEvent);
+        virtual void mouseReleased(MouseEvent& mouseEvent);
 
-	protected:
-		/**
-		 * Toggles the button between being selected and
-		 * not being selected.
-		 */
-		virtual void toggleSelected();
 
-		/**
-		 * True if the button is selected, false otherwise. 
-		 */
-		bool mSelected;
-	};
+        // Inherited from KeyListener
+
+        virtual void keyReleased(KeyEvent& keyEvent);
+
+    protected:
+        /**
+         * Toggles the button between being selected and
+         * not being selected.
+         */
+        virtual void toggleSelected();
+    
+        /**
+         * True if the button is selected, false otherwise. 
+         */
+        bool mSelected;
+    };
 }
 
 #endif // end GCN_TOGGLEBUTTON_HPP

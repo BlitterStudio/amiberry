@@ -65,7 +65,7 @@ void InitPanelAbout(const config_category& category)
 	textBoxScrollArea->setForegroundColor(gui_foreground_color);
 	textBoxScrollArea->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 
-	textBoxScrollArea->setBorderSize(1);
+	textBoxScrollArea->setFrameSize(1);
 	
 	int pos_y = DISTANCE_BORDER;
 	category.panel->add(icon, DISTANCE_BORDER, pos_y);

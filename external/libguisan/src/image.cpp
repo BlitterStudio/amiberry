@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -65,7 +65,7 @@
 
 namespace gcn
 {
-	ImageLoader* Image::mImageLoader = NULL;
+	ImageLoader* Image::mImageLoader = nullptr;
 
 	Image::Image()
 	= default;
@@ -85,7 +85,7 @@ namespace gcn
 
 	Image* Image::load(const std::string& filename, bool convertToDisplayFormat)
 	{
-		if (mImageLoader == NULL)
+		if (mImageLoader == nullptr)
 		{
 			throw GCN_EXCEPTION("Trying to load an image but no image loader is set.");
 		}

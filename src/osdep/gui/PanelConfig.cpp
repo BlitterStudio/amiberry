@@ -167,7 +167,7 @@ void InitPanelConfig(const struct config_category& category)
 
 	lblName = new gcn::Label("Name:");
 	lblName->setSize(lblName->getWidth(), lblName->getHeight());
-	lblName->setAlignment(gcn::Graphics::RIGHT);
+	lblName->setAlignment(gcn::Graphics::Right);
 	txtName = new gcn::TextField();
 	txtName->setSize(300, TEXTFIELD_HEIGHT);
 	txtName->setBaseColor(gui_base_color);
@@ -176,7 +176,7 @@ void InitPanelConfig(const struct config_category& category)
 
 	lblDesc = new gcn::Label("Description:");
 	lblDesc->setSize(lblDesc->getWidth(), lblDesc->getHeight());
-	lblDesc->setAlignment(gcn::Graphics::RIGHT);
+	lblDesc->setAlignment(gcn::Graphics::Right);
 	txtDesc = new gcn::TextField();
 	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
 	txtDesc->setBaseColor(gui_base_color);
@@ -217,7 +217,7 @@ void InitPanelConfig(const struct config_category& category)
 	lstConfigs->addActionListener(configsListActionListener);
 
 	scrAreaConfigs = new gcn::ScrollArea(lstConfigs);
-	scrAreaConfigs->setBorderSize(1);
+	scrAreaConfigs->setFrameSize(1);
 	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	scrAreaConfigs->setSize(lstConfigs->getWidth() + SCROLLBAR_WIDTH, lstConfigs->getHeight() + DISTANCE_NEXT_Y);
 	scrAreaConfigs->setScrollbarWidth(SCROLLBAR_WIDTH);

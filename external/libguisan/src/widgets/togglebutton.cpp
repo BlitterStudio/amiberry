@@ -69,135 +69,135 @@
 
 namespace gcn
 {
-	ToggleButton::ToggleButton()
-		: Button(), mSelected(false)
-	{
+    ToggleButton::ToggleButton()
+        : Button(), mSelected(false)
+    {
     
-	}
+    }
 
-	ToggleButton::ToggleButton(const std::string& caption)
-		: Button(caption), mSelected(false)
-	{
+    ToggleButton::ToggleButton(const std::string& caption)
+            : Button(caption), mSelected(false)
+    {
     
-	}
+    }
 
-	void ToggleButton::draw(Graphics* graphics)
-	{
-		Color faceColor = getBaseColor();
-		Color highlightColor, shadowColor;
-		const int alpha = getBaseColor().a;
+    void ToggleButton::draw(Graphics* graphics)
+    {
+        Color faceColor = getBaseColor();
+        Color highlightColor, shadowColor;
+        const int alpha = getBaseColor().a;
 
-		if (isPressed() || isSelected())
-		{
-			faceColor = faceColor - 0x303030;
-			faceColor.a = alpha;
-			highlightColor = faceColor - 0x303030;
-			highlightColor.a = alpha;
-			shadowColor = faceColor + 0x303030;
-			shadowColor.a = alpha;
-		}
-		else
-		{
-			highlightColor = faceColor + 0x303030;
-			highlightColor.a = alpha;
-			shadowColor = faceColor - 0x303030;
-			shadowColor.a = alpha;
-		}
+        if (isPressed() || isSelected())
+        {
+            faceColor = faceColor - 0x303030;
+            faceColor.a = alpha;
+            highlightColor = faceColor - 0x303030;
+            highlightColor.a = alpha;
+            shadowColor = faceColor + 0x303030;
+            shadowColor.a = alpha;
+        }
+        else
+        {
+            highlightColor = faceColor + 0x303030;
+            highlightColor.a = alpha;
+            shadowColor = faceColor - 0x303030;
+            shadowColor.a = alpha;
+        }
 
-		graphics->setColor(faceColor);
-		graphics->fillRectangle(Rectangle(1, 1, getDimension().width - 1, getHeight() - 1));
+        graphics->setColor(faceColor);
+        graphics->fillRectangle(Rectangle(1, 1, getDimension().width-1, getHeight() - 1));
 
-		graphics->setColor(highlightColor);
-		graphics->drawLine(0, 0, getWidth() - 1, 0);
-		graphics->drawLine(0, 1, 0, getHeight() - 1);
+        graphics->setColor(highlightColor);
+        graphics->drawLine(0, 0, getWidth() - 1, 0);
+        graphics->drawLine(0, 1, 0, getHeight() - 1);
 
-		graphics->setColor(shadowColor);
-		graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
-		graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
+        graphics->setColor(shadowColor);
+        graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
+        graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
 
-		graphics->setColor(getForegroundColor());
+        graphics->setColor(getForegroundColor());
 
-		int textX;
-		const int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+        int textX;
+        const int textY = getHeight() / 2 - getFont()->getHeight() / 2;
 
-		switch (getAlignment())
-		{
-		case Graphics::LEFT:
-			textX = static_cast<int>(mSpacing);
-			break;
-		case Graphics::CENTER:
-			textX = getWidth() / 2;
-			break;
-		case Graphics::RIGHT:
-			textX = getWidth() - static_cast<int>(mSpacing);
-			break;
-		default:
-			throw GCN_EXCEPTION("Unknown alignment.");
-		}
+        switch (getAlignment())
+        {
+          case Graphics::Left:
+              textX = mSpacing;
+              break;
+          case Graphics::Center:
+              textX = getWidth() / 2;
+              break;
+          case Graphics::Right:
+              textX = getWidth() - mSpacing;
+              break;
+          default:
+              throw GCN_EXCEPTION("Unknown alignment.");
+        }
 
-		graphics->setFont(getFont());
+        graphics->setFont(getFont());
 
-		if (isPressed() || isSelected())
-		{
-			graphics->drawText(getCaption(), textX + 1, textY + 1, getAlignment(), isEnabled());
-		}
-		else
-		{
-			graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
+        if (isPressed() || isSelected())
+        {
+            graphics->drawText(getCaption(), textX + 1, textY + 1, getAlignment(), isEnabled());
+        }
+        else
+        {
+            graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
 
-			if (isFocused())
-			{
-				graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4,
-				                                  getHeight() - 4));
-			}
-		}
-	}
+            if (isFocused())
+            {
+                graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4,
+                                                  getHeight() - 4));
+            }
+        }
+    }
+    
+    bool ToggleButton::isSelected() const
+    {
+        return mSelected;
+    }
 
-	bool ToggleButton::isSelected() const
-	{
-		return mSelected;
-	}
+    void ToggleButton::setSelected(bool selected)
+    {
+        mSelected = selected;
+    }
 
-	void ToggleButton::setSelected(bool selected)
-	{
-		mSelected = selected;
-	}
+    void ToggleButton::mouseReleased(MouseEvent& mouseEvent)
+    {
+        if (mouseEvent.getButton() == MouseEvent::Left
+            && mMousePressed
+            && mHasMouse)
+        {
+            mMousePressed = false;
+            toggleSelected();
+            distributeActionEvent();
+            mouseEvent.consume();
+        }
+        else if (mouseEvent.getButton() == MouseEvent::Left)
+        {
+            mMousePressed = false;
+            mouseEvent.consume();
+        }
+    }
 
-	void ToggleButton::mouseReleased(MouseEvent& mouseEvent)
-	{
-		if (mouseEvent.getButton() == MouseEvent::LEFT
-			&& mMousePressed
-			&& mHasMouse)
-		{
-			mMousePressed = false;
-			toggleSelected();
-			generateAction();
-			mouseEvent.consume();
-		}
-		else if (mouseEvent.getButton() == MouseEvent::LEFT)
-		{
-			mMousePressed = false;
-			mouseEvent.consume();
-		}
-	}
+    void ToggleButton::keyReleased(KeyEvent& keyEvent)
+    {
+        const Key key = keyEvent.getKey();
 
-	void ToggleButton::keyReleased(KeyEvent& keyEvent)
-	{
-		const Key key = keyEvent.getKey();
-
-		if ((key.getValue() == Key::ENTER
-				|| key.getValue() == Key::SPACE)
-			&& mKeyPressed)
-		{
-			mKeyPressed = false;
-			toggleSelected();
-			generateAction();
-			keyEvent.consume();
-		}
-	}
-
-	void ToggleButton::toggleSelected()
-	{
-		mSelected = !mSelected;
-	}
+        if ((key.getValue() == Key::Enter
+             || key.getValue() == Key::Space)
+            && mKeyPressed)
+        {
+            mKeyPressed = false;
+            toggleSelected();
+            distributeActionEvent();
+            keyEvent.consume();
+        }
+    }
+    
+    void ToggleButton::toggleSelected()
+    {
+        mSelected = !mSelected;
+    }
 }

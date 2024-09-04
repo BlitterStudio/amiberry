@@ -681,7 +681,7 @@ void InitPanelQuickstart(const config_category& category)
 	whdloadActionListener = new QSWHDLoadActionListener();
 
 	lblModel = new gcn::Label("Amiga model:");
-	lblModel->setAlignment(gcn::Graphics::RIGHT);
+	lblModel->setAlignment(gcn::Graphics::Right);
 	cboModel = new gcn::DropDown(&amigaModelList);
 	cboModel->setSize(160, cboModel->getHeight());
 	cboModel->setBaseColor(gui_base_color);
@@ -692,7 +692,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboModel->addActionListener(quickstartActionListener);
 
 	lblConfig = new gcn::Label("Config:");
-	lblConfig->setAlignment(gcn::Graphics::RIGHT);
+	lblConfig->setAlignment(gcn::Graphics::Right);
 	cboConfig = new gcn::DropDown(&amigaConfigList);
 	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER,
 					   cboConfig->getHeight());

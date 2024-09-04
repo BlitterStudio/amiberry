@@ -76,18 +76,18 @@ namespace gcn
         setMovable(false);
         
         mLabel = new Label(message);
-        mLabel->setAlignment(Graphics::LEFT);
+        mLabel->setAlignment(Graphics::Left);
         mLabel->adjustSize();
 
         mText = new TextField();
         
         mButtonOK = new Button(ok);
-        mButtonOK->setAlignment(Graphics::CENTER);
+        mButtonOK->setAlignment(Graphics::Center);
         mButtonOK->addMouseListener(this);
         mButtonOK->adjustSize();
 
         mButtonCancel = new Button(cancel);
-        mButtonCancel->setAlignment(Graphics::CENTER);
+        mButtonCancel->setAlignment(Graphics::Center);
         mButtonCancel->addMouseListener(this);
         mButtonCancel->adjustSize();
         
@@ -101,19 +101,19 @@ namespace gcn
             mButtonCancel->setWidth(mButtonOK->getWidth());
         }
         
-        setHeight((int)getTitleBarHeight() + mLabel->getHeight() + mText->getHeight() + 6 * mPadding + mButtonOK->getHeight() + 2 * getBorderSize());
-        setWidth(mLabel->getWidth() + 2 * mPadding + 2 * getBorderSize());
-        if(2 * mButtonOK->getWidth() + 4 * mPadding + 2 * getBorderSize() > getWidth()) 
+        setHeight((int)getTitleBarHeight() + mLabel->getHeight() + mText->getHeight() + 6 * mPadding + mButtonOK->getHeight() + 2 * getFrameSize());
+        setWidth(mLabel->getWidth() + 2 * mPadding + 2 * getFrameSize());
+        if(2 * mButtonOK->getWidth() + 4 * mPadding + 2 * getFrameSize() > getWidth()) 
         {
-            setWidth(2 * mButtonOK->getWidth() + 4*mPadding + 2 * getBorderSize());
+            setWidth(2 * mButtonOK->getWidth() + 4*mPadding + 2 * getFrameSize());
         }
-        mText->setWidth(getWidth() - 2 * getBorderSize() - 5 * mPadding);
+        mText->setWidth(getWidth() - 2 * getFrameSize() - 5 * mPadding);
         
         this->add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
         this->add(mText, 2*mPadding, 2 * mPadding + mLabel->getHeight());
-        int yButtons = getHeight() - (int)getTitleBarHeight() - getBorderSize() - 2*mPadding - mButtonOK->getHeight();
+        int yButtons = getHeight() - (int)getTitleBarHeight() - getFrameSize() - 2*mPadding - mButtonOK->getHeight();
         this->add(mButtonOK, (getWidth() - 2 * mButtonOK->getWidth())/4, yButtons);
-        this->add(mButtonCancel, getWidth() - 2*getBorderSize() - mButtonOK->getWidth() - mPadding, yButtons);
+        this->add(mButtonCancel, getWidth() - 2*getFrameSize() - mButtonOK->getWidth() - mPadding, yButtons);
         
         try
         {
@@ -140,8 +140,8 @@ namespace gcn
         Color faceColor = getBaseColor();
         Color highlightColor, shadowColor;
         int alpha = getBaseColor().a;
-        //int width = getWidth() + getBorderSize() * 2 - 1;
-        //int height = getHeight() + getBorderSize() * 2 - 1;
+        //int width = getWidth() + getFrameSize() * 2 - 1;
+        //int height = getHeight() + getFrameSize() * 2 - 1;
         highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
         shadowColor = faceColor - 0x303030;
@@ -212,13 +212,13 @@ namespace gcn
 
         switch (getAlignment())
         {
-          case Graphics::LEFT:
+          case Graphics::Left:
               textX = 4;
               break;
-          case Graphics::CENTER:
+          case Graphics::Center:
               textX = getWidth() / 2;
               break;
-          case Graphics::RIGHT:
+          case Graphics::Right:
               textX = getWidth() - 4;
               break;
           default:
@@ -230,30 +230,6 @@ namespace gcn
         graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
         graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
         graphics->popClipArea();
-    }
-
-    void InputBox::drawBorder(Graphics* graphics)
-    {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
-
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
-        {
-            graphics->setColor(highlightColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(shadowColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
     }
 
     void InputBox::mousePressed(MouseEvent& mouseEvent)
@@ -270,8 +246,8 @@ namespace gcn
 
         mDragOffsetX = mouseEvent.getX();
         mDragOffsetY = mouseEvent.getY();
-        
-        mIsMoving = mouseEvent.getY() <= (int)mTitleBarHeight;
+
+        mMoved = mouseEvent.getY() <= (int)mTitleBarHeight;
     }
 
     void InputBox::mouseReleased(MouseEvent& mouseEvent)
@@ -281,19 +257,19 @@ namespace gcn
             if(mouseEvent.getSource() == mButtonOK)
             {
                 mClickedButton = 0;
-                generateAction();
+                distributeActionEvent();
             }
             if(mouseEvent.getSource() == mButtonCancel)
             {
                 mClickedButton = 1;
                 setVisible(false);
-                generateAction();
+                distributeActionEvent();
             }
          
         }
         else
         {
-            mIsMoving = false;
+            mMoved = false;
         }
     }
 
@@ -304,7 +280,7 @@ namespace gcn
             return;
         }
         
-        if (isMovable() && mIsMoving)
+        if (isMovable() && mMoved)
         {
             setPosition(mouseEvent.getX() - mDragOffsetX + getX(),
                         mouseEvent.getY() - mDragOffsetY + getY());

@@ -68,489 +68,466 @@
 
 namespace gcn
 {
-	TextBox::TextBox()
-	{
-		mCaretColumn = 0;
-		mCaretRow = 0;
-		mEditable = true;
-		mOpaque = true;
-
-		setFocusable(true);
-
-		addMouseListener(this);
-		addKeyListener(this);
-		adjustSize();
-		setBorderSize(1);
-		setText("");
-	}
-
-	TextBox::TextBox(const std::string& text)
-	{
-		mCaretColumn = 0;
-		mCaretRow = 0;
-		mEditable = true;
-		mOpaque = true;
-
-		setText(text);
-
-		setFocusable(true);
-
-		addMouseListener(this);
-		addKeyListener(this);
-		adjustSize();
-		setBorderSize(1);
-	}
-
-	void TextBox::setText(const std::string& text)
-	{
-		mCaretColumn = 0;
-		mCaretRow = 0;
-
-		mTextRows.clear();
-
-		std::string::size_type pos, lastPos = 0;
-		int length;
-		do
-		{
-			pos = text.find('\n', lastPos);
-
-			if (pos != std::string::npos)
-			{
-				length = static_cast<int>(pos - lastPos);
-			}
-			else
-			{
-				length = static_cast<int>(text.size() - lastPos);
-			}
-			std::string sub = text.substr(lastPos, length);
-			mTextRows.push_back(sub);
-			lastPos = pos + 1;
-		}
-		while (pos != std::string::npos);
-
-		adjustSize();
-	}
-
-	void TextBox::draw(Graphics* graphics)
-	{
-		if (mOpaque)
-		{
-			graphics->setColor(getBackgroundColor());
-			graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
-		}
-
-		if (isFocused() && isEditable())
-		{
-			drawCaret(graphics, getFont()->getWidth(mTextRows[mCaretRow].substr(0, mCaretColumn)),
-					  mCaretRow * getFont()->getHeight());
-		}
-
-		graphics->setColor(getForegroundColor());
-		graphics->setFont(getFont());
-
-		for (unsigned int i = 0; i < mTextRows.size(); i++)
-		{
-			// Move the text one pixel so we can have a caret before a letter.
-			graphics->drawText(mTextRows[i], 2, i * (getFont()->getHeight() + 2), Graphics::LEFT, isEnabled());
-		}
-	}
-
-	void TextBox::drawBorder(Graphics* graphics)
-	{
-		const int width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		const int height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-
-		graphics->setColor(getBackgroundColor());
-
-		unsigned int i;
-		for (i = 0; i < getBorderSize(); ++i)
-		{
-			graphics->drawLine(i, i, width - i, i);
-			graphics->drawLine(i, i + 1, i, height - i - 1);
-			graphics->drawLine(width - i, i + 1, width - i, height - i);
-			graphics->drawLine(i, height - i, width - i - 1, height - i);
-		}
-	}
-
-	void TextBox::drawCaret(Graphics* graphics, int x, int y)
-	{
-		graphics->setColor(getForegroundColor());
-		graphics->drawLine(x, getFont()->getHeight() + y, x, y);
-	}
-
-	void TextBox::mousePressed(MouseEvent& mouseEvent)
-	{
-		if (mouseEvent.getButton() == MouseEvent::LEFT)
-		{
-			mCaretRow = mouseEvent.getY() / getFont()->getHeight();
-
-			if (mCaretRow >= static_cast<int>(mTextRows.size()))
-			{
-				mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-			}
-
-			mCaretColumn = getFont()->getStringIndexAt(mTextRows[mCaretRow], mouseEvent.getX());
-		}
-	}
-
-	void TextBox::mouseDragged(MouseEvent& mouseEvent)
-	{
-		mouseEvent.consume();
-	}
-
-	void TextBox::keyPressed(KeyEvent& keyEvent)
-	{
-		const Key key = keyEvent.getKey();
-
-		if (key.getValue() == Key::LEFT)
-		{
-			--mCaretColumn;
-			if (mCaretColumn < 0)
-			{
-				--mCaretRow;
-
-				if (mCaretRow < 0)
-				{
-					mCaretRow = 0;
-					mCaretColumn = 0;
-				}
-				else
-				{
-					mCaretColumn = mTextRows[mCaretRow].size();
-				}
-			}
-		}
-
-		else if (key.getValue() == Key::RIGHT)
-		{
-			++mCaretColumn;
-			if (mCaretColumn > static_cast<int>(mTextRows[mCaretRow].size()))
-			{
-				++mCaretRow;
-
-				if (mCaretRow >= static_cast<int>(mTextRows.size()))
-				{
-					mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-					if (mCaretRow < 0)
-					{
-						mCaretRow = 0;
-					}
-
-					mCaretColumn = mTextRows[mCaretRow].size();
-				}
-				else
-				{
-					mCaretColumn = 0;
-				}
-			}
-		}
-
-		else if (key.getValue() == Key::DOWN)
-		{
-			setCaretRow(mCaretRow + 1);
-		}
-
-		else if (key.getValue() == Key::UP)
-		{
-			setCaretRow(mCaretRow - 1);
-		}
-
-		else if (key.getValue() == Key::HOME)
-		{
-			mCaretColumn = 0;
-		}
-
-		else if (key.getValue() == Key::END)
-		{
-			mCaretColumn = mTextRows[mCaretRow].size();
-		}
-
-		else if (key.getValue() == Key::ENTER && mEditable)
-		{
-			mTextRows.insert(mTextRows.begin() + mCaretRow + 1,
-							 mTextRows[mCaretRow].substr(mCaretColumn, mTextRows[mCaretRow].size() - mCaretColumn));
-			mTextRows[mCaretRow].resize(mCaretColumn);
-			++mCaretRow;
-			mCaretColumn = 0;
-		}
-
-		else if (key.getValue() == Key::BACKSPACE
-			&& mCaretColumn != 0
-			&& mEditable)
-		{
-			mTextRows[mCaretRow].erase(mCaretColumn - 1, 1);
-			--mCaretColumn;
-		}
-
-		else if (key.getValue() == Key::BACKSPACE
-			&& mCaretColumn == 0
-			&& mCaretRow != 0
-			&& mEditable)
-		{
-			mCaretColumn = mTextRows[mCaretRow - 1].size();
-			mTextRows[mCaretRow - 1] += mTextRows[mCaretRow];
-			mTextRows.erase(mTextRows.begin() + mCaretRow);
-			--mCaretRow;
-		}
-
-		else if (key.getValue() == Key::DELETE
-			&& mCaretColumn < static_cast<int>(mTextRows[mCaretRow].size())
-			&& mEditable)
-		{
-			mTextRows[mCaretRow].erase(mCaretColumn, 1);
-		}
-
-		else if (key.getValue() == Key::DELETE
-			&& mCaretColumn == static_cast<int>(mTextRows[mCaretRow].size())
-			&& mCaretRow < static_cast<int>(mTextRows.size()) - 1
-			&& mEditable)
-		{
-			mTextRows[mCaretRow] += mTextRows[mCaretRow + 1];
-			mTextRows.erase(mTextRows.begin() + mCaretRow + 1);
-		}
-
-		else if (key.getValue() == Key::PAGE_UP)
-		{
-			Widget* par = getParent();
-
-			if (par != NULL)
-			{
-				const int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
-				mCaretRow -= rowsPerPage;
-
-				if (mCaretRow < 0)
-				{
-					mCaretRow = 0;
-				}
-			}
-		}
-
-		else if (key.getValue() == Key::PAGE_DOWN)
-		{
-			Widget* par = getParent();
-
-			if (par != NULL)
-			{
-				const int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
-				mCaretRow += rowsPerPage;
-
-				if (mCaretRow >= static_cast<int>(mTextRows.size()))
-				{
-					mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-				}
-			}
-		}
-
-		else if (key.getValue() == Key::TAB
-			&& mEditable)
-		{
-			mTextRows[mCaretRow].insert(mCaretColumn, std::string("    "));
-			mCaretColumn += 4;
-		}
-
-		else if (key.isCharacter() && mEditable && !keyEvent.isAltPressed()
-			&& !keyEvent.isControlPressed())
-		{
-			if(keyEvent.isShiftPressed() && key.isLetter())
-			{
-				mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, static_cast<char>(key.getValue() - 32)));
-			}
-			else
-			{
-				mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, static_cast<char>(key.getValue())));
-			}
-			++mCaretColumn;
-		}
-
-		adjustSize();
-		scrollToCaret();
-
-		keyEvent.consume();
-	}
-
-	void TextBox::adjustSize()
-	{
-		int width = 0;
-		for (const auto& mTextRow : mTextRows)
-		{
-			const int w = getFont()->getWidth(mTextRow);
-			if (width < w)
-			{
-				width = w;
-			}
-		}
-
-		setWidth(width + 1);
-		setHeight((getFont()->getHeight() + 2) * static_cast<int>(mTextRows.size()));
-	}
-
-	void TextBox::setCaretPosition(unsigned int position)
-	{
-		for (int row = 0; row < static_cast<int>(mTextRows.size()); row++)
-		{
-			if (position <= mTextRows[row].size())
-			{
-				mCaretRow = row;
-				mCaretColumn = static_cast<int>(position);
-				return; // we are done
-			}
-			else
-			{
-				position--;
-			}
-		}
-
-		// position beyond end of text
-		mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-		mCaretColumn = mTextRows[mCaretRow].size();
-	}
-
-	unsigned int TextBox::getCaretPosition() const
-	{
-		int pos = 0;
-
-		for (int row = 0; row < mCaretRow; row++)
-		{
-			pos += mTextRows[row].size();
-		}
-
-		return pos + mCaretColumn;
-	}
-
-	void TextBox::setCaretRowColumn(int row, int column)
-	{
-		setCaretRow(row);
-		setCaretColumn(column);
-	}
-
-	void TextBox::setCaretRow(int row)
-	{
-		mCaretRow = row;
-
-		if (mCaretRow >= static_cast<int>(mTextRows.size()))
-		{
-			mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-		}
-
-		if (mCaretRow < 0)
-		{
-			mCaretRow = 0;
-		}
-
-		setCaretColumn(mCaretColumn);
-	}
-
-	unsigned int TextBox::getCaretRow() const
-	{
-		return mCaretRow;
-	}
-
-	void TextBox::setCaretColumn(int column)
-	{
-		mCaretColumn = column;
-
-		if (mCaretColumn > static_cast<int>(mTextRows[mCaretRow].size()))
-		{
-			mCaretColumn = mTextRows[mCaretRow].size();
-		}
-
-		if (mCaretColumn < 0)
-		{
-			mCaretColumn = 0;
-		}
-	}
-
-	unsigned int TextBox::getCaretColumn() const
-	{
-		return mCaretColumn;
-	}
-
-	const std::string& TextBox::getTextRow(int row) const
-	{
-		return mTextRows[row];
-	}
-
-	void TextBox::setTextRow(int row, const std::string& text)
-	{
-		mTextRows[row] = text;
-
-		if (mCaretRow == row)
-		{
-			setCaretColumn(mCaretColumn);
-		}
-
-		adjustSize();
-	}
-
-	unsigned int TextBox::getNumberOfRows() const
-	{
-		return mTextRows.size();
-	}
-
-	std::string TextBox::getText() const
-	{
-		if (mTextRows.empty())
-		{
-			return std::string("");
-		}
-
-		int i;
-		std::string text;
-
-		for (i = 0; i < static_cast<int>(mTextRows.size()) - 1; ++i)
-		{
-			text = text.append(mTextRows[i]).append("\n");
-		}
-
-		text += mTextRows[i];
-
-		return text;
-	}
-
-	void TextBox::fontChanged()
-	{
-		adjustSize();
-	}
-
-	void TextBox::scrollToCaret()
-	{
-		Widget* par = getParent();
-		if (par == NULL)
-		{
-			return;
-		}
-
-		Rectangle scroll;
-		scroll.x = getFont()->getWidth(mTextRows[mCaretRow].substr(0, mCaretColumn));
-		scroll.y = getFont()->getHeight() * mCaretRow;
-		scroll.width = getFont()->getWidth(" ");
-		scroll.height = getFont()->getHeight() + 2; // add 2 for some extra space
-		par->showWidgetPart(this, scroll);
-	}
-
-	void TextBox::setEditable(bool editable)
-	{
-		mEditable = editable;
-	}
-
-	bool TextBox::isEditable() const
-	{
-		return mEditable;
-	}
-
-	void TextBox::addRow(const std::string row)
-	{
-		mTextRows.push_back(row);
-		adjustSize();
-	}
-
-	bool TextBox::isOpaque()
-	{
-		return mOpaque;
-	}
-
-	void TextBox::setOpaque(bool opaque)
-	{
-		mOpaque = opaque;
-	}
+    TextBox::TextBox()
+    {
+        mCaretColumn = 0;
+        mCaretRow = 0;
+        mEditable = true;
+        mOpaque = true;
+
+        setFocusable(true);
+
+        addMouseListener(this);
+        addKeyListener(this);
+        adjustSize();
+        setFrameSize(1);
+    }
+
+    TextBox::TextBox(const std::string& text)
+    {
+        mCaretColumn = 0;
+        mCaretRow = 0;
+        mEditable = true;
+        mOpaque = true;
+
+        setText(text);
+
+        setFocusable(true);
+
+        addMouseListener(this);
+        addKeyListener(this);
+        adjustSize();
+        setFrameSize(1);
+    }
+
+    void TextBox::setText(const std::string& text)
+    {
+        mCaretColumn = 0;
+        mCaretRow = 0;
+
+        mTextRows.clear();
+
+        std::string::size_type pos, lastPos = 0;
+        int length;
+        do
+        {
+            pos = text.find('\n', lastPos);
+
+            if (pos != std::string::npos)
+            {
+                length = static_cast<int>(pos - lastPos);
+            }
+            else
+            {
+                length = static_cast<int>(text.size() - lastPos);
+            }
+            std::string sub = text.substr(lastPos, length);
+            mTextRows.push_back(sub);
+            lastPos = pos + 1;
+
+        } while (pos != std::string::npos);
+
+        adjustSize();
+    }
+
+    void TextBox::draw(Graphics* graphics)
+    {
+        unsigned int i;
+
+        if (mOpaque)
+        {
+            graphics->setColor(getBackgroundColor());
+            graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
+        }
+
+        if (isFocused() && isEditable())
+        {
+            drawCaret(graphics, getFont()->getWidth(mTextRows[mCaretRow].substr(0, mCaretColumn)), mCaretRow * getFont()->getHeight());
+        }
+
+        graphics->setColor(getForegroundColor());
+        graphics->setFont(getFont());
+
+        for (unsigned int i = 0; i < mTextRows.size(); i++)
+        {
+            // Move the text one pixel so we can have a caret before a letter.
+            graphics->drawText(mTextRows[i], 2, i * (getFont()->getHeight() + 2));
+        }
+    }
+
+    void TextBox::drawCaret(Graphics* graphics, int x, int y)
+    {
+        graphics->setColor(getForegroundColor());
+        graphics->drawLine(x, getFont()->getHeight() + y, x, y);
+    }
+
+    void TextBox::mousePressed(MouseEvent& mouseEvent)
+    {
+        if (mouseEvent.getButton() == MouseEvent::Left)
+        {
+            mCaretRow = mouseEvent.getY() / getFont()->getHeight();
+
+            if (mCaretRow >= static_cast<int>(mTextRows.size()))
+            {
+                mCaretRow = static_cast<int>(mTextRows.size()) - 1;
+            }
+
+            mCaretColumn = getFont()->getStringIndexAt(mTextRows[mCaretRow], mouseEvent.getX());
+        }
+    }
+
+    void TextBox::mouseDragged(MouseEvent& mouseEvent)
+    {
+        mouseEvent.consume();
+    }
+
+    void TextBox::keyPressed(KeyEvent& keyEvent)
+    {
+        const Key key = keyEvent.getKey();
+
+        if (key.getValue() == Key::Left)
+        {
+            --mCaretColumn;
+            if (mCaretColumn < 0)
+            {
+                --mCaretRow;
+
+                if (mCaretRow < 0)
+                {
+                    mCaretRow = 0;
+                    mCaretColumn = 0;
+                }
+                else
+                {
+                    mCaretColumn = mTextRows[mCaretRow].size();
+                }
+            }
+        }
+
+        else if (key.getValue() == Key::Right)
+        {
+            ++mCaretColumn;
+            if (mCaretColumn > static_cast<int>(mTextRows[mCaretRow].size()))
+            {
+                ++mCaretRow;
+
+                if (mCaretRow >= static_cast<int>(mTextRows.size()))
+                {
+                    mCaretRow = static_cast<int>(mTextRows.size()) - 1;
+                    if (mCaretRow < 0)
+                    {
+                        mCaretRow = 0;
+                    }
+
+                    mCaretColumn = mTextRows[mCaretRow].size();
+                }
+                else
+                {
+                    mCaretColumn = 0;
+                }
+            }
+        }
+
+        else if (key.getValue() == Key::Down)
+        {
+            setCaretRow(mCaretRow + 1);
+        }
+
+        else if (key.getValue() == Key::Up)
+        {
+            setCaretRow(mCaretRow - 1);
+        }
+
+        else if (key.getValue() == Key::Home)
+        {
+            mCaretColumn = 0;
+        }
+
+        else if (key.getValue() == Key::End)
+        {
+            mCaretColumn = mTextRows[mCaretRow].size();
+        }
+
+        else if (key.getValue() == Key::Enter && mEditable)
+        {
+            mTextRows.insert(mTextRows.begin() + mCaretRow + 1,
+                             mTextRows[mCaretRow].substr(mCaretColumn, mTextRows[mCaretRow].size() - mCaretColumn));
+            mTextRows[mCaretRow].resize(mCaretColumn);
+            ++mCaretRow;
+            mCaretColumn = 0;
+        }
+
+        else if (key.getValue() == Key::Backspace
+                 && mCaretColumn != 0
+                 && mEditable)
+        {
+            mTextRows[mCaretRow].erase(mCaretColumn - 1, 1);
+            --mCaretColumn;
+        }
+
+        else if (key.getValue() == Key::Backspace
+                 && mCaretColumn == 0
+                 && mCaretRow != 0
+                 && mEditable)
+        {
+            mCaretColumn = mTextRows[mCaretRow - 1].size();
+            mTextRows[mCaretRow - 1] += mTextRows[mCaretRow];
+            mTextRows.erase(mTextRows.begin() + mCaretRow);
+            --mCaretRow;
+        }
+
+        else if (key.getValue() == Key::Delete
+                 && mCaretColumn < (int)mTextRows[mCaretRow].size()
+                 && mEditable)
+        {
+            mTextRows[mCaretRow].erase(mCaretColumn, 1);
+        }
+
+        else if (key.getValue() == Key::Delete
+                 && mCaretColumn == (int)mTextRows[mCaretRow].size()
+                 && mCaretRow < ((int)mTextRows.size() - 1)
+                 && mEditable)
+        {
+            mTextRows[mCaretRow] += mTextRows[mCaretRow + 1];
+            mTextRows.erase(mTextRows.begin() + mCaretRow + 1);
+        }
+
+        else if(key.getValue() == Key::PageUp)
+        {
+            Widget* par = getParent();
+
+            if (par != NULL)
+            {
+                const int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
+                mCaretRow -= rowsPerPage;
+
+                if (mCaretRow < 0)
+                {
+                    mCaretRow = 0;
+                }
+            }
+        }
+
+        else if(key.getValue() == Key::PageDown)
+        {
+            Widget* par = getParent();
+
+            if (par != NULL)
+            {
+                const int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
+                mCaretRow += rowsPerPage;
+
+                if (mCaretRow >= static_cast<int>(mTextRows.size()))
+                {
+                    mCaretRow = static_cast<int>(mTextRows.size()) - 1;
+                }
+            }
+        }
+
+        else if(key.getValue() == Key::Tab
+                && mEditable)
+        {
+            mTextRows[mCaretRow].insert(mCaretColumn,std::string("    "));
+            mCaretColumn += 4;
+        }
+
+        else if (key.isCharacter() && mEditable && !keyEvent.isAltPressed()
+                 && !keyEvent.isControlPressed())
+        {
+            if(keyEvent.isShiftPressed() && key.isLetter())
+            {
+                mTextRows[mCaretRow].insert(mCaretColumn,std::string(1, static_cast<char>(key.getValue() - 32)));
+            }
+            else
+            {
+                mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, static_cast<char>(key.getValue())));
+            }
+            ++mCaretColumn;
+        }
+
+        adjustSize();
+        scrollToCaret();
+
+        keyEvent.consume();
+    }
+
+    void TextBox::adjustSize()
+    {
+        int width = 0;
+        for (const auto& mTextRow : mTextRows)
+        {
+            const int w = getFont()->getWidth(mTextRow);
+            if (width < w)
+            {
+                width = w;
+            }
+        }
+
+        setWidth(width + 1);
+        setHeight((getFont()->getHeight() + 2) * static_cast<int>(mTextRows.size()));
+    }
+
+    void TextBox::setCaretPosition(unsigned int position)
+    {
+        for (int row = 0; row < static_cast<int>(mTextRows.size()); row++)
+        {
+            if (position <= mTextRows[row].size())
+            {
+                mCaretRow = row;
+                mCaretColumn = static_cast<int>(position);
+                return; // we are done
+            }
+            else
+            {
+                position--;
+            }
+        }
+
+        // position beyond end of text
+        mCaretRow = static_cast<int>(mTextRows.size()) - 1;
+        mCaretColumn = mTextRows[mCaretRow].size();
+    }
+
+    unsigned int TextBox::getCaretPosition() const
+    {
+        int pos = 0;
+
+        for (int row = 0; row < mCaretRow; row++)
+        {
+            pos += mTextRows[row].size();
+        }
+
+        return pos + mCaretColumn;
+    }
+
+    void TextBox::setCaretRowColumn(int row, int column)
+    {
+        setCaretRow(row);
+        setCaretColumn(column);
+    }
+
+    void TextBox::setCaretRow(int row)
+    {
+        mCaretRow = row;
+
+        if (mCaretRow >= static_cast<int>(mTextRows.size()))
+        {
+            mCaretRow = static_cast<int>(mTextRows.size()) - 1;
+        }
+
+        if (mCaretRow < 0)
+        {
+            mCaretRow = 0;
+        }
+
+        setCaretColumn(mCaretColumn);
+    }
+
+    unsigned int TextBox::getCaretRow() const
+    {
+        return mCaretRow;
+    }
+
+    void TextBox::setCaretColumn(int column)
+    {
+        mCaretColumn = column;
+
+        if (mCaretColumn > static_cast<int>(mTextRows[mCaretRow].size()))
+        {
+            mCaretColumn = mTextRows[mCaretRow].size();
+        }
+
+        if (mCaretColumn < 0)
+        {
+            mCaretColumn = 0;
+        }
+    }
+
+    unsigned int TextBox::getCaretColumn() const
+    {
+        return mCaretColumn;
+    }
+
+    const std::string& TextBox::getTextRow(int row) const
+    {
+        return mTextRows[row];
+    }
+
+    void TextBox::setTextRow(int row, const std::string& text)
+    {
+        mTextRows[row] = text;
+
+        if (mCaretRow == row)
+        {
+            setCaretColumn(mCaretColumn);
+        }
+
+        adjustSize();
+    }
+
+    unsigned int TextBox::getNumberOfRows() const
+    {
+        return mTextRows.size();
+    }
+
+    std::string TextBox::getText() const
+    {
+        if (mTextRows.empty())
+        {
+            return std::string("");
+        }
+
+        int i;
+        std::string text;
+
+        for (i = 0; i < static_cast<int>(mTextRows.size()) - 1; ++i)
+        {
+            text = text.append(mTextRows[i]).append("\n");
+        }
+
+        text += mTextRows[i];
+
+        return text;
+    }
+
+    void TextBox::fontChanged()
+    {
+        adjustSize();
+    }
+
+    void TextBox::scrollToCaret()
+    {
+        Rectangle scroll;
+        scroll.x = getFont()->getWidth(mTextRows[mCaretRow].substr(0, mCaretColumn));
+        scroll.y = getFont()->getHeight() * mCaretRow;
+        scroll.width = getFont()->getWidth(" ");
+        scroll.height = getFont()->getHeight() + 2; // add 2 for some extra space
+        showPart(scroll);
+    }
+
+    void TextBox::setEditable(bool editable)
+    {
+        mEditable = editable;
+    }
+
+    bool TextBox::isEditable() const
+    {
+        return mEditable;
+    }
+
+    void TextBox::addRow(const std::string& row)
+    {
+        mTextRows.push_back(row);
+        adjustSize();
+    }
+
+    bool TextBox::isOpaque()
+    {
+        return mOpaque;
+    }
+
+    void TextBox::setOpaque(bool opaque)
+    {
+        mOpaque = opaque;
+    }
 }

@@ -76,13 +76,13 @@ namespace gcn
         setMovable(false);
         
         mLabel = new Label(message);
-        mLabel->setAlignment(Graphics::LEFT);
+        mLabel->setAlignment(Graphics::Left);
         mLabel->adjustSize();
         
         mNbButtons = 1;
         mButtons = new Button*[1];
         mButtons[0] = new Button("OK");
-        mButtons[0]->setAlignment(Graphics::CENTER);
+        mButtons[0]->setAlignment(Graphics::Center);
         mButtons[0]->addMouseListener(this);
         
         setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
@@ -114,7 +114,7 @@ namespace gcn
         setMovable(false);
         
         mLabel = new Label(message);
-        mLabel->setAlignment(Graphics::LEFT);
+        mLabel->setAlignment(Graphics::Left);
         mLabel->adjustSize();
 		setWidth(mLabel->getWidth() + 4*mPadding);
         
@@ -128,7 +128,7 @@ namespace gcn
             for(int i = 0 ; i < size ; i++)
             {
                 mButtons[i] = new Button(*(buttons+i));
-                mButtons[i]->setAlignment(Graphics::CENTER);
+                mButtons[i]->setAlignment(Graphics::Center);
                 mButtons[i]->addMouseListener(this);
                 maxBtnWidth = maxBtnWidth > mButtons[i]->getWidth() ? maxBtnWidth : mButtons[i]->getWidth();
             }
@@ -209,17 +209,7 @@ namespace gcn
         return mCaption;
     }
 
-    void MessageBox::setAlignment(unsigned int alignment)
-    {
-        mAlignment = alignment;
-    }
-
-    unsigned int MessageBox::getAlignment() const
-    {
-        return mAlignment;
-    }
-    
-    void MessageBox::setButtonAlignment(unsigned int alignment)
+    void MessageBox::setButtonAlignment(Graphics::Alignment alignment)
     {
         mButtonAlignment = alignment;
         
@@ -228,13 +218,13 @@ namespace gcn
         {
             switch (alignment)
             {
-              case Graphics::LEFT:
+              case Graphics::Left:
                   // Nothing to do
                   break;
-              case Graphics::CENTER:
+              case Graphics::Center:
                   leftPadding += (getWidth() - (mButtons[0]->getWidth()*mNbButtons + 2*mPadding + mPadding*(mNbButtons-1)))/2;
                   break;
-              case Graphics::RIGHT:
+              case Graphics::Right:
                   leftPadding += (getWidth() - (mButtons[0]->getWidth()*mNbButtons + 2*mPadding + mPadding*(mNbButtons-1)));
                   break;
               default:
@@ -246,8 +236,8 @@ namespace gcn
             }
         }
     }
-    
-    unsigned int MessageBox::getButtonAlignment() const
+
+    Graphics::Alignment MessageBox::getButtonAlignment() const
     {
         return mButtonAlignment;
     }
@@ -257,8 +247,8 @@ namespace gcn
         Color faceColor = getBaseColor();
         Color highlightColor, shadowColor;
         int alpha = getBaseColor().a;
-        //int width = getWidth() + getBorderSize() * 2 - 1;
-        //int height = getHeight() + getBorderSize() * 2 - 1;
+        //int width = getWidth() + getFrameSize() * 2 - 1;
+        //int height = getHeight() + getFrameSize() * 2 - 1;
         highlightColor = faceColor + 0x303030;
         highlightColor.a = alpha;
         shadowColor = faceColor - 0x303030;
@@ -329,13 +319,13 @@ namespace gcn
 
         switch (getAlignment())
         {
-          case Graphics::LEFT:
+          case Graphics::Left:
               textX = 4;
               break;
-          case Graphics::CENTER:
+          case Graphics::Center:
               textX = getWidth() / 2;
               break;
-          case Graphics::RIGHT:
+          case Graphics::Right:
               textX = getWidth() - 4;
               break;
           default:
@@ -347,30 +337,6 @@ namespace gcn
         graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
         graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
         graphics->popClipArea();
-    }
-
-    void MessageBox::drawBorder(Graphics* graphics)
-    {
-        Color faceColor = getBaseColor();
-        Color highlightColor, shadowColor;
-        int alpha = getBaseColor().a;
-        int width = getWidth() + getBorderSize() * 2 - 1;
-        int height = getHeight() + getBorderSize() * 2 - 1;
-        highlightColor = faceColor + 0x303030;
-        highlightColor.a = alpha;
-        shadowColor = faceColor - 0x303030;
-        shadowColor.a = alpha;
-
-        unsigned int i;
-        for (i = 0; i < getBorderSize(); ++i)
-        {
-            graphics->setColor(highlightColor);
-            graphics->drawLine(i,i, width - i, i);
-            graphics->drawLine(i,i + 1, i, height - i - 1);
-            graphics->setColor(shadowColor);
-            graphics->drawLine(width - i,i + 1, width - i, height - i);
-            graphics->drawLine(i,height - i, width - i - 1, height - i);
-        }
     }
 
     void MessageBox::mousePressed(MouseEvent& mouseEvent)
@@ -387,8 +353,8 @@ namespace gcn
 
         mDragOffsetX = mouseEvent.getX();
         mDragOffsetY = mouseEvent.getY();
-        
-        mIsMoving = mouseEvent.getY() <= (int)mTitleBarHeight;
+
+        mMoved = mouseEvent.getY() <= (int)mTitleBarHeight;
     }
 
     void MessageBox::mouseReleased(MouseEvent& mouseEvent)
@@ -400,14 +366,14 @@ namespace gcn
                 if(mouseEvent.getSource() == mButtons[i])
                 {
                     mClickedButton = i;
-                    generateAction();
+                    distributeActionEvent();
                     break;
                 }
             }
         }
         else
         {
-            mIsMoving = false;
+            mMoved = false;
         }
     }
 
@@ -418,7 +384,7 @@ namespace gcn
             return;
         }
         
-        if (isMovable() && mIsMoving)
+        if (isMovable() && mMoved)
         {
             setPosition(mouseEvent.getX() - mDragOffsetX + getX(),
                         mouseEvent.getY() - mDragOffsetY + getY());

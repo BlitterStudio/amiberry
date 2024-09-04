@@ -196,7 +196,7 @@ retry:
 	}
 	if (reset) {
 		auto list_model = itemselector->getListModel();
-		list_model->clear();
+		list_model->clear_elements();
 		for (int i = 0; ebs[i].name; i++) {
 			eb = &ebs[i];
 			list_model->add(eb->name);
@@ -214,7 +214,7 @@ retry:
 	}
 	else if (eb->type == EXPANSIONBOARD_MULTI) {
 		auto list_model = selector->getListModel();
-		list_model->clear();
+		list_model->clear_elements();
 		int itemcnt = -1;
 		const TCHAR* p = eb->name;
 		while (p[0]) {
@@ -563,7 +563,7 @@ static void values_to_expansion2_expansion_roms()
 		chkScsiRomFileAutoboot->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEAUTOBOOT, false);
 		chkScsiRomFilePcmcia->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEPCMCIA, false);
 		auto list_model = cboScsiRomFile->getListModel();
-		list_model->clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMFILE, CB_RESETCONTENT, 0, 0);
+		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMFILE, CB_RESETCONTENT, 0, 0);
 		cboScsiRomFile->setEnabled(false); //ew(hDlg, IDC_SCSIROMFILE, false);
 		btnScsiRomChooser->setEnabled(false); //ew(hDlg, IDC_SCSIROMCHOOSER, false);
 		//ew(hDlg, IDC_SCSIROM24BITDMA, 0);
@@ -1200,7 +1200,7 @@ void RefreshPanelExpansions()
 	}
 	else {
 		auto list_model = cboCpuBoardRomFile->getListModel();
-		list_model->clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
+		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
 	}
 
 	gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);

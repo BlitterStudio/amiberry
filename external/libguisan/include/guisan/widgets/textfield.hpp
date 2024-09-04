@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -66,110 +66,146 @@
 
 namespace gcn
 {
-	/**
-	 * A text field in which you can write or display a line of text.
-	 */
-	class GCN_CORE_DECLSPEC TextField :
-		public Widget,
-		public MouseListener,
-		public KeyListener
-	{
-	public:
-		/**
-		 * Default constructor.
-		 */
-		TextField();
+    /**
+     * An implementation of a text field where a user can enter a line of text.
+     */
+    class GCN_CORE_DECLSPEC TextField:
+        public Widget,
+        public MouseListener,
+        public KeyListener
+    {
+    public:
+        /**
+         * Constructor.
+         */
+        TextField();
 
-		/**
-		 * Constructor. Initializes the textfield with a given string.
-		 *
-		 * @param text the initial text.
-		 */
-		TextField(const std::string& text);
+        /**
+         * Constructor. The text field will be automatically resized
+         * to fit the text.
+         *
+         * @param text The default text of the text field.
+         */
+        TextField(const std::string& text);
 
-		/**
-		 * Sets the text.
-		 *
-		 * @param text the new text in the TextField.
-		 */
-		void setText(const std::string& text);
+        /**
+         * Sets the text of the text field.
+         *
+         * @param text The text of the text field.
+         * @see getText
+         */
+        void setText(const std::string& text);
 
-		/**
-		 * Gets the text.
-		 *
-		 * @return the text of the TextField.
-		 */
-		const std::string& getText() const;
+        /**
+         * Gets the text of the text field.
+         *
+         * @return The text of the text field.
+         * @see setText
+         */
+        const std::string& getText() const;
 
-		/**
-		 * Draws the caret (the little marker in the text that shows where the
-		 * letters you type will appear). Easily overloaded if you want to
-		 * change the style of the caret.
-		 *
-		 * @param graphics the Graphics object to draw with.
-		 * @param x the caret's x-position.
-		 */
-		virtual void drawCaret(Graphics* graphics, int x);
+        /**
+         * Adjusts the size of the text field to fit the text.
+         */
+        void adjustSize();
 
-		/**
-		 * Adjusts the size of the TextField to fit the font size. The
-		 * constructor taking a string uses this function to initialize the
-		 * size of the TextField.
-		 */
-		void adjustSize();
+        /**
+         * Adjusts the height of the text field to fit caption.
+         */
+        void adjustHeight();
 
-		/**
-		 * Adjusts the height of the text field to fit the font size. The
-		 * height of the TextField is initialized with this function by the
-		 * constructors.
-		 */
-		void adjustHeight();
+        /**
+         * Checks if the text field is editable.
+         *
+         * @return True it the text field is editable, false otherwise.
+         * @see setEditable
+         */
+        bool isEditable() const { return mEditable; }
 
-		/**
-		 * Sets the caret position.
-		 *
-		 * @param position the caret position.
-		 */
-		void setCaretPosition(unsigned int position);
+        /**
+         * Sets the text field to be editable or not. A text field is editable
+         * by default.
+         *
+         * @param editable True if the text field should be editable, false
+         *                 otherwise.
+         */
+        void setEditable(bool editable) { mEditable = editable; }
 
-		/**
-		 * Gets the caret position.
-		 *
-		 * @return the caret position.
-		 */
-		unsigned int getCaretPosition() const;
+        /**
+         * Sets the caret position. As there is only one line of text
+         * in a text field the position is the caret's x coordinate.
+         *
+         * @param position The caret position.
+         * @see getCaretPosition
+         */
+        void setCaretPosition(unsigned int position);
 
-
-		// Inherited from Widget
-
-		virtual void fontChanged();
-
-		virtual void draw(Graphics* graphics);
-
-		virtual void drawBorder(Graphics* graphics);
-
-
-		// Inherited from MouseListener
-
-		virtual void mousePressed(MouseEvent& mouseEvent);
-
-		virtual void mouseDragged(MouseEvent& mouseEvent);
+        /**
+         * Gets the caret position. As there is only one line of text
+         * in a text field the position is the caret's x coordinate.
+         *
+         * @return The caret position.
+         * @see setCaretPosition
+         */
+        unsigned int getCaretPosition() const;
 
 
-		// Inherited from KeyListener
+        // Inherited from Widget
 
-		virtual void keyPressed(KeyEvent& keyEvent);
+        virtual void fontChanged();
 
-	protected:
-		/**
-		 * Scrolls the text horizontally so that the caret shows if needed.
-		 */
-		void fixScroll();
+        virtual void draw(Graphics* graphics);
 
-		std::string mText;
-		unsigned int mCaretPosition;
-		int mXScroll;
-	};
+
+        // Inherited from MouseListener
+
+        virtual void mousePressed(MouseEvent& mouseEvent);
+
+        virtual void mouseDragged(MouseEvent& mouseEvent);
+
+        // Inherited from KeyListener
+
+        virtual void keyPressed(KeyEvent& keyEvent);
+
+    protected:
+        /**
+         * Draws the caret. Overloaded this method if you want to
+         * change the style of the caret.
+         *
+         * @param graphics the Graphics object to draw with.
+         * @param x the caret's x-position.
+         */
+        virtual void drawCaret(Graphics* graphics, int x);
+
+        /**
+         * Scrolls the text horizontally so that the caret shows if needed.
+         * The method is used any time a user types in the text field so the
+         * caret always will be shown.
+         */
+        void fixScroll();
+
+        /**
+         * Holds the text of the text box.
+         */
+        std::string mText;
+
+        /**
+         * Holds the caret position.
+         */
+        unsigned int mCaretPosition;
+
+        /**
+         * Holds the amount scrolled in x. If a user types more characters than
+         * the text field can display, due to the text field being to small, the
+         * text needs to scroll in order to show the last type character.
+         */
+        int mXScroll;
+
+        /**
+         * True if the text field is editable, false otherwise.
+         */
+        bool mEditable;
+    };
 }
 
 #endif // end GCN_TEXTFIELD_HPP

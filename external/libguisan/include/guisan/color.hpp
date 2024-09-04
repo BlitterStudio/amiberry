@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -59,107 +59,127 @@
 
 #include "guisan/platform.hpp"
 
+#include <iostream>
+
 namespace gcn
 {
-	/**
-	 * Represents a color with red, green, blue and alpha components.
-	 */
-	class GCN_CORE_DECLSPEC Color
-	{
-	public:
+    /**
+     * Represents a color with red, green, blue and alpha components.
+     */
+    class GCN_CORE_DECLSPEC Color
+    {
+    public:
 
-		/**
-		 * Constructor. Initializes the color to black.
-		 */
-		Color();
+        /**
+         * Constructor. Initializes the color to black.
+         */
+        Color();
 
-		/**
-		 * Constructs a color from the bytes in an integer. Call it with
-		 * a hexadecimal constant for HTML-style color representation.
-		 * The alpha component will be set to 255.
-		 *
-		 * EXAMPLE: Color(0xff50a0) constructs Gui-chan's favourite color.
-		 *
-		 * NOTE: Because of this constructor, integers will be automatically
-		 *       casted to a color by your compiler.
-		 *
-		 * @param color the color.
-		 */
-		Color(int color);
+        /**
+         * Constructor. Constructs a color from the bytes in an integer. 
+         * Call it with a hexadecimal constant for HTML-style color representation.
+         * The alpha component is 255 by default.
+         *
+         * EXAMPLE: Color(0xff50a0) constructs a very nice pinkish color.
+         *
+         * NOTE: Because of this constructor, integers will be automatically
+         *       casted to a color by your compiler.
+         *
+         * @param color The color to initialise the object with.
+         */
+        Color(int color);
 
-		/**
-		 * Constructor.
-		 *
-		 * @param r Red color component (range 0-255).
-		 * @param g Green color component  (range 0-255).
-		 * @param b Blue color component (range 0-255).
-		 * @param a Color alpha, used for transparency. A value of 0 means
-		 *          totaly transparent, 255 is totaly opaque (the default).
-		 */
-		Color(int r, int g, int b, int a = 255);
+        /**
+         * Constructor. The default alpha value is 255.
+         *
+         * @param r Red color component (range 0-255).
+         * @param g Green color component  (range 0-255).
+         * @param b Blue color component (range 0-255).
+         * @param a Alpha, used for transparency. A value of 0 means
+         *          totaly transparent, 255 is totaly opaque.
+         */
+        Color(int r, int g, int b, int a = 255);
 
-		/**
-		 * Adds the RGB values of two colors together. The values will be
-		 * clamped if they go out of range.
-		 *
-		 * @param color a color to add to this color.
-		 * @return the resulting color with alpha set to 255.
-		 */
-		Color operator+(const Color& color) const;
+        /**
+         * Adds the RGB values of two colors together. The values will be
+         * clamped if they go out of range. 
+         *
+         * WARNING: This function will reset the alpha value of the
+         *          returned color to 255.
+         *
+         * @param color A color to add to this color.
+         * @return The added colors with an alpha value set to 255.
+         */
+        Color operator+(const Color& color) const;
 
-		/**
-		 * Subtracts the RGB values of one color from another.
-		 * The values will be clamped if they go out of range.
-		 *
-		 * @param color a color to subtract from this color.
-		 * @return the resulting color with alpha set to 255.
-		 */
-		Color operator-(const Color& color) const;
+        /**
+         * Subtracts the RGB values of one color from another.
+         * The values will be clamped if they go out of range.
+         *
+         * WARNING: This function will reset the alpha value of the
+         *          returned color to 255.
+         *
+         * @param color A color to subtract from this color.
+         * @return The subtracted colors with an alpha value set to 255.
+         */
+        Color operator-(const Color& color) const;
 
-		/**
-		 * Multiplies the RGB values of a color with a float value.
-		 * The values will be clamped if they go out of range.
-		 *
-		 * @param value the value to multiply the color with.
-		 * @return the resulting color with alpha untouched.
-		 */
-		Color operator*(float value) const;
+        /**
+         * Multiplies the RGB values of a color with a float value.
+         * The values will be clamped if they go out of range.
+         *
+         * @param value The value to multiply the color with.
+         * @return The multiplied colors. The alpha value will, unlike
+         *         the add and subtract operations, be multiplied as
+         *         well.
+         */
+        Color operator*(float value) const;
 
-		/**
-		 * Compares two colors.
-		 *
-		 * @return true if the two colors have the same RGBA components.
-		 */
-		bool operator==(const Color& color) const;
+        /**
+         * Compares two colors.
+         *
+         * @return True if the two colors have the same RGBA components
+         *         false otherwise.
+         */
+        bool operator==(const Color& color) const;
 
-		/**
-		 * Compares two colors.
-		 *
-		 * @return true if the two colors have different RGBA components.
-		 */
-		bool operator!=(const Color& color) const;
+        /**
+         * Compares two colors.
+         *
+         * @return True if the two colors have different RGBA components,
+         *         false otherwise.
+         */
+        bool operator!=(const Color& color) const;
 
-		/**
-		 * Red color component (range 0-255).
-		 */
-		int r;
+        /**
+         * Output operator for output.
+         *
+         * @param out The stream to output to.
+         * @param color The color to output.
+         */
+        friend std::ostream& operator<<(std::ostream& out, const Color& Color);
 
-		/**
-		 * Green color component (range 0-255).
-		 */
-		int g;
+        /**
+         * Holds the red color component (range 0-255).
+         */
+        int r;
 
-		/**
-		 * Blue color component (range 0-255).
-		 */
-		int b;
+        /**
+         *  Holds the green color component (range 0-255).
+         */
+        int g;
 
-		/**
-		 * Color alpha, used for transparency. A value of 0 means totaly
-		 * transparent, 255 is totaly opaque (the default)
-		 */
-		int a;
-	};
+        /**
+         *  Holds the blue color component (range 0-255).
+         */
+        int b;
+
+        /**
+         * Holds the alpha color component. A value of 0 means totally
+         * transparent while a value of 255 is considered opaque.
+         */
+        int a;
+    };
 }
 
 #endif // end GCN_COLOR_HPP

@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -61,61 +61,66 @@
 
 namespace gcn
 {
-	class KeyInput;
-	class MouseInput;
+    class KeyInput;
+    class MouseInput;
 
-	/**
-	 * Used for grabbing user input and heavily used internally by Guichan. 
-	 * We include implemented Input classes for some common platforms like
-	 * the Allegro library, the OpenGL library and the SDL library. To make
-	 * Guichan usable under another platform, an Input class must be
-	 * implemented.
-	 *
-	 * @see SDLInput, AllegroInput
-	 */
-	class GCN_CORE_DECLSPEC Input
-	{
-	public:
+    /**
+     * Abstract class for providing functions for user input.
+     *
+     * Guisan contains implementations of Input for common
+     * libraries like the SDL library.
+     * To make Guisan usable with other libraries, an Input
+     * class must be implemented.
+     *
+     * @see SDLInput
+     */
+    class GCN_CORE_DECLSPEC Input
+    {
+    public:
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~Input() { }
+        /**
+         * Destructor.
+         */
+        virtual ~Input(){ }
 
-		/**
-		 * Checks whether the key queue is empty or not.
-		 *
-		 * @return true if the key queue is empty.
-		 */
-		virtual bool isKeyQueueEmpty() = 0;
+        /**
+         * Checks if the key queue is empty, or not.
+         *
+         * @return True if the key queue is empty,
+         *         false otherwise.
+         */
+        virtual bool isKeyQueueEmpty() = 0;
 
-		/**
-		 * Dequeues the key input queue.
-		 *
-		 * @return key input.
-		 */
-		virtual KeyInput dequeueKeyInput() = 0;
+        /**
+         * Dequeues the key input queue.
+         *
+         * @return The first key input in the key input queue.
+         */
+        virtual KeyInput dequeueKeyInput() = 0;
 
-		/**
-		 * Checks whether the mouse queue is empyt or not.
-		 *
-		 * @return true if the mouse queue is empty.
-		 */
-		virtual bool isMouseQueueEmpty() = 0;
+        /**
+         * Checks if the mouse queue is empyt, or not.
+         *
+         * @return True if the mouse queue is empty,
+         *         false otherwise.
+         */
+        virtual bool isMouseQueueEmpty() = 0;
 
-		/**
-		 * Dequeues the mouse input queue.
-		 *
-		 * @return mouse input.
-		 */
-		virtual MouseInput dequeueMouseInput() = 0;
+        /**
+         * Dequeues the mouse input queue.
+         *
+         * @return The first mouse input in the mouse input queue.
+         */
+        virtual MouseInput dequeueMouseInput() = 0;
 
-		/**
-		 * Polls all exsisting input. It exists for Input implementation
-		 * compatibility. It is used internally by the library.
-		 */
-		virtual void _pollInput() = 0;
-	};
+        /**
+         * Polls all existing input. Called when input should
+         * be polled. The function exists for compatibility reason
+         * where some libraries need to poll input at a certain
+         * logic rate.
+         */
+        virtual void _pollInput() = 0;
+    };
 }
 
 #endif // end GCN_INPUT_HPP

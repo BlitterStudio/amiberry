@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -66,95 +66,71 @@
 
 namespace gcn
 {
-	Label::Label()
-	{
-		mAlignment = Graphics::LEFT;
-	}
+    Label::Label()
+    {
+        mAlignment = Graphics::Left;
+    }
 
-	Label::Label(const std::string& caption)
-	{
-		mCaption = caption;
-		mAlignment = Graphics::LEFT;
+    Label::Label(const std::string& caption)
+    {
+        mCaption = caption;
+        mAlignment = Graphics::Left;
 
-		setWidth(getFont()->getWidth(caption));
-		setHeight(getFont()->getHeight() + 2);
-	}
+        setWidth(getFont()->getWidth(caption));
+        setHeight(getFont()->getHeight() + 2);
+    }
 
-	const std::string& Label::getCaption() const
-	{
-		return mCaption;
-	}
+    const std::string &Label::getCaption() const
+    {
+        return mCaption;
+    }
 
-	void Label::setCaption(const std::string& caption)
-	{
-		mCaption = caption;
-	}
+    void Label::setCaption(const std::string& caption)
+    {
+        mCaption = caption;
+    }
 
-	void Label::setAlignment(unsigned int alignment)
-	{
-		mAlignment = alignment;
-	}
+    void Label::setAlignment(Graphics::Alignment alignment)
+    {
+        mAlignment = alignment;
+    }
 
-	unsigned int Label::getAlignment() const
-	{
-		return mAlignment;
-	}
+    Graphics::Alignment Label::getAlignment() const
+    {
+        return mAlignment;
+    }
 
-	void Label::draw(Graphics* graphics)
-	{
-		int textX;
-		int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+    void Label::draw(Graphics* graphics)
+    {
+        int textX;
+        int textY = getHeight() / 2 - getFont()->getHeight() / 2;
 
-		switch (getAlignment())
-		{
-		case Graphics::LEFT:
-			textX = 0;
-			break;
-		case Graphics::CENTER:
-			textX = getWidth() / 2;
-			break;
-		case Graphics::RIGHT:
-			textX = getWidth();
-			break;
-		default:
-			throw GCN_EXCEPTION("Unknown alignment.");
-		}
+        switch (getAlignment())
+        {
+        case Graphics::Left:
+            textX = 0;
+            break;
+        case Graphics::Center:
+            textX = getWidth() / 2;
+            break;
+        case Graphics::Right:
+            textX = getWidth();
+            break;
+        default:
+            throw GCN_EXCEPTION("Unknown alignment.");
+        }
 
-		graphics->setFont(getFont());
-		if (isEnabled())
-			graphics->setColor(getForegroundColor());
-		else
-			graphics->setColor(Color(128, 128, 128));
-		graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
-	}
+        graphics->setFont(getFont());
+        Color color = getForegroundColor();
+        if (!isEnabled())
+            color = Color(128, 128, 128);
+        graphics->setColor(color);
+        graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
+    }
 
-	void Label::drawBorder(Graphics* graphics)
-	{
-		Color faceColor = getBaseColor();
-		Color highlightColor, shadowColor;
-		int alpha = getBaseColor().a;
-		int width = getWidth() + getBorderSize() * 2 - 1;
-		int height = getHeight() + getBorderSize() * 2 - 1;
-		highlightColor = faceColor + 0x303030;
-		highlightColor.a = alpha;
-		shadowColor = faceColor - 0x303030;
-		shadowColor.a = alpha;
-
-		unsigned int i;
-		for (i = 0; i < getBorderSize(); ++i)
-		{
-			graphics->setColor(shadowColor);
-			graphics->drawLine(i, i, width - i, i);
-			graphics->drawLine(i, i + 1, i, height - i - 1);
-			graphics->setColor(highlightColor);
-			graphics->drawLine(width - i, i + 1, width - i, height - i);
-			graphics->drawLine(i, height - i, width - i - 1, height - i);
-		}
-	}
-
-	void Label::adjustSize()
-	{
-		setWidth(getFont()->getWidth(getCaption()));
-		setHeight(getFont()->getHeight());
-	}
+    void Label::adjustSize()
+    {
+        setWidth(getFont()->getWidth(getCaption()));
+        setHeight(getFont()->getHeight());
+    }
 }

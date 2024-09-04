@@ -72,427 +72,438 @@
 
 namespace gcn
 {
-	TabbedArea::TabbedArea()
-		: mSelectedTab(NULL)
-	{
-		setBorderSize(1);
-		setFocusable(true);
-		addKeyListener(this);
-		addMouseListener(this);
-
-		mTabContainer = new Container();
-		mTabContainer->setOpaque(false);
-		mWidgetContainer = new Container();
-
-		add(mTabContainer);
-		add(mWidgetContainer);
-	}
-
-	TabbedArea::~TabbedArea()
-	{
-		remove(mTabContainer);
-		remove(mWidgetContainer);
-
-		delete mTabContainer;
-		delete mWidgetContainer;
-
-		for (auto& i : mTabsToCleanUp)
-		{
-			delete i;
-		}
-	}
-
-	void TabbedArea::addTab(const std::string& caption, Widget* widget)
-	{
-		Tab* tab = new Tab();
-		tab->setSize(70, 20);
-		tab->setCaption(caption);
-		mTabsToCleanUp.push_back(tab);
-
-		addTab(tab, widget);
-	}
-
-	void TabbedArea::addTab(Tab* tab, Widget* widget)
-	{
-		tab->setTabbedArea(this);
-		tab->addActionListener(this);
-
-		mTabContainer->add(tab);
-		mTabs.emplace_back(tab, widget);
-
-
-		if (mSelectedTab == NULL)
-		{
-			setSelectedTab(tab);
-		}
-
-		adjustTabPositions();
-		adjustSize();
-	}
-
-	void TabbedArea::removeTabWithIndex(unsigned int index)
-	{
-		if (index >= mTabs.size())
-		{
-			throw GCN_EXCEPTION("No such tab index.");
-		}
-
-		removeTab(mTabs[index].first);
-	}
-
-	void TabbedArea::removeTab(Tab* tab)
-	{
-		int tabIndexToBeSelected = - 1;
-
-		if (tab == mSelectedTab)
-		{
-			int index = getSelectedTabIndex();
-
-			if (index == static_cast<int>(mTabs.size()) - 1
-				&& mTabs.size() >= 2)
-			{
-				tabIndexToBeSelected = index--;
-			}
-			else if (index == static_cast<int>(mTabs.size()) - 1
-				&& mTabs.size() == 1)
-			{
-				tabIndexToBeSelected = -1;
-			}
-			else
-			{
-				tabIndexToBeSelected = index;
-			}
-		}
-
-		for (auto iter = mTabs.begin(); iter != mTabs.end(); ++iter)
-		{
-			if (iter->first == tab)
-			{
-				mTabContainer->remove(tab);
-				mTabs.erase(iter);
-				break;
-			}
-		}
-
-		for (auto iter2 = mTabsToCleanUp.begin(); iter2 != mTabsToCleanUp.end(); ++iter2)
-		{
-			if (*iter2 == tab)
-			{
-				mTabsToCleanUp.erase(iter2);
-				delete tab;
-				break;
-			}
-		}
-
-		if (tabIndexToBeSelected == -1)
-		{
-			mSelectedTab = NULL;
-			mWidgetContainer->clear();
-		}
-		else
-		{
-			setSelectedTabWithIndex(tabIndexToBeSelected);
-		}
-
-		adjustSize();
-		adjustTabPositions();
-	}
-
-	bool TabbedArea::isTabSelected(unsigned int index) const
-	{
-		if (index >= mTabs.size())
-		{
-			throw GCN_EXCEPTION("No such tab index.");
-		}
-
-		return mSelectedTab == mTabs[index].first;
-	}
-
-	bool TabbedArea::isTabSelected(Tab* tab)
-	{
-		return mSelectedTab == tab;
-	}
-
-	void TabbedArea::setSelectedTabWithIndex(unsigned int index)
-	{
-		if (index >= mTabs.size())
-		{
-			throw GCN_EXCEPTION("No such tab index.");
-		}
-
-		setSelectedTab(mTabs[index].first);
-	}
-
-	void TabbedArea::setSelectedTab(Tab* tab)
-	{
-		unsigned int i;
-		for (i = 0; i < mTabs.size(); i++)
-		{
-			if (mTabs[i].first == mSelectedTab)
-			{
-				mWidgetContainer->remove(mTabs[i].second);
-			}
-		}
-
-		for (i = 0; i < mTabs.size(); i++)
-		{
-			if (mTabs[i].first == tab)
-			{
-				mSelectedTab = tab;
-				mWidgetContainer->add(mTabs[i].second);
-			}
-		}
-	}
-
-	int TabbedArea::getSelectedTabIndex() const
-	{
-		for (auto i = 0; i < static_cast<int>(mTabs.size()); i++)
-		{
-			if (mTabs[i].first == mSelectedTab)
-			{
-				return i;
-			}
-		}
-
-		return -1;
-	}
-
-	Tab* TabbedArea::getSelectedTab()
-	{
-		return mSelectedTab;
-	}
-
-
-	void TabbedArea::draw(Graphics* graphics)
-	{
-		graphics->setColor(getBaseColor() + 0x303030);
-		graphics->drawLine(0,
-						   mTabContainer->getHeight(),
-						   getWidth(),
-						   mTabContainer->getHeight());
-
-		if (mSelectedTab != NULL)
-		{
-			graphics->setColor(getBaseColor());
-			graphics->drawLine(mSelectedTab->getX(),
-							   mTabContainer->getHeight(),
-							   mSelectedTab->getX() + mSelectedTab->getWidth(),
-							   mTabContainer->getHeight());
-		}
-
-		drawChildren(graphics);
-	}
-
-	void TabbedArea::drawBorder(Graphics* graphics)
-	{
-		Color faceColor = getBaseColor();
-		Color highlightColor, shadowColor;
-		int alpha = getBaseColor().a;
-		int width = getWidth() + getBorderSize() * 2 - 1;
-		int height = getHeight() + getBorderSize() * 2 - 1;
-		highlightColor = faceColor + 0x303030;
-		highlightColor.a = alpha;
-		shadowColor = faceColor - 0x303030;
-		shadowColor.a = alpha;
-
-		unsigned int i;
-		for (i = 0; i < getBorderSize(); ++i)
-		{
-			graphics->setColor(highlightColor);
-			graphics->drawLine(i, i + mWidgetContainer->getY(), i, height - i - 1);
-			graphics->setColor(shadowColor);
-			graphics->drawLine(width - i, i + 1 + mWidgetContainer->getY(), width - i, height - i);
-			graphics->drawLine(i, height - i, width - i - 1, height - i);
-		}
-	}
-
-
-	void TabbedArea::logic()
-	{
-
-	}
-
-	void TabbedArea::adjustSize()
-	{
-		int maxTabHeight = 0;
-		for (auto& mTab : mTabs)
-		{
-			if (mTab.first->getHeight() > maxTabHeight)
-			{
-				maxTabHeight = mTab.first->getHeight();
-			}
-		}
-
-		if (getHeight() < maxTabHeight)
-		{
-			mTabContainer->setHeight(maxTabHeight);
-		}
-		else
-		{
-			mTabContainer->setHeight(maxTabHeight);
-			mWidgetContainer->setHeight(getHeight() - maxTabHeight - 1);
-			mWidgetContainer->setY(maxTabHeight + 1);
-		}
-
-		mTabContainer->setWidth(getWidth());
-		mWidgetContainer->setWidth(getWidth());
-	}
-
-	void TabbedArea::adjustTabPositions()
-	{
-		int maxTabHeight = 0;
-		unsigned int i;
-		for (i = 0; i < mTabs.size(); i++)
-		{
-			if (mTabs[i].first->getHeight() > maxTabHeight)
-			{
-				maxTabHeight = mTabs[i].first->getHeight();
-			}
-		}
-
-		int x = 0;
-		for (i = 0; i < mTabs.size(); i++)
-		{
-			Tab* tab = mTabs[i].first;
-
-			if (x == 0)
-			{
-				x = tab->getBorderSize() + 2;
-			}
-
-			tab->setX(x);
-
-			if (tab->getHeight() < maxTabHeight)
-			{
-				tab->setY(maxTabHeight
-					- tab->getHeight()
-					+ static_cast<int>(tab->getBorderSize()));
-			}
-			else
-			{
-				tab->setY(static_cast<int>(mTabs[i].first->getBorderSize()));
-			}
-
-			x += tab->getWidth() + tab->getBorderSize() * 2;
-		}
-	}
-
-	void TabbedArea::setWidth(int width)
-	{
-		Widget::setWidth(width);
-		adjustSize();
-	}
-
-
-	void TabbedArea::setHeight(int height)
-	{
-		Widget::setHeight(height);
-		adjustSize();
-	}
-
-	void TabbedArea::setSize(int width, int height)
-	{
-		setWidth(width);
-		setHeight(height);
-	}
-
-	void TabbedArea::setDimension(const Rectangle& dimension)
-	{
-		setX(dimension.x);
-		setY(dimension.y);
-		setWidth(dimension.width);
-		setHeight(dimension.height);
-	}
-
-	void TabbedArea::keyPressed(KeyEvent& keyEvent)
-	{
-		if (keyEvent.isConsumed() || !isFocused())
-		{
-			return;
-		}
-
-		if (keyEvent.getKey().getValue() == Key::LEFT)
-		{
-			int index = getSelectedTabIndex();
-			index--;
-
-			if (index < 0)
-			{
-				return;
-			}
-			else
-			{
-				setSelectedTab(mTabs[index].first);
-			}
-
-			keyEvent.consume();
-		}
-		else if (keyEvent.getKey().getValue() == Key::RIGHT)
-		{
-			int index = getSelectedTabIndex();
-			index++;
-
-			if (index >= static_cast<int>(mTabs.size()))
-			{
-				return;
-			}
-			else
-			{
-				setSelectedTab(mTabs[index].first);
-			}
-
-			keyEvent.consume();
-		}
-	}
-
-
-	void TabbedArea::mousePressed(MouseEvent& mouseEvent)
-	{
-		if (mouseEvent.isConsumed()
-			&& mouseEvent.getSource()->isFocusable())
-		{
-			return;
-		}
-
-		if (mouseEvent.getButton() == MouseEvent::LEFT)
-		{
-			Widget* widget = mTabContainer->getWidgetAt(mouseEvent.getX(), mouseEvent.getY());
-			Tab* tab = dynamic_cast<Tab*>(widget);
-
-			if (tab != NULL)
-			{
-				setSelectedTab(tab);
-			}
-		}
-
-		requestFocus();
-	}
-
-	void TabbedArea::death(const Event& event)
-	{
-		Widget* source = event.getSource();
-		Tab* tab = dynamic_cast<Tab*>(source);
-
-		if (tab != NULL)
-		{
-			removeTab(tab);
-		}
-		else
-		{
-			BasicContainer::death(event);
-		}
-	}
-
-	void TabbedArea::action(const ActionEvent& actionEvent)
-	{
-		Widget* source = actionEvent.getSource();
-		Tab* tab = dynamic_cast<Tab*>(source);
-
-		if (tab == NULL)
-		{
-			throw GCN_EXCEPTION("Received an action from a widget that's not a tab!");
-		}
-
-		setSelectedTab(tab);
-	}
-}
+    TabbedArea::TabbedArea() : mSelectedTab(NULL), mOpaque(false)
+    {
+        setFrameSize(1);
+        setFocusable(true);
+        addKeyListener(this);
+        addMouseListener(this);
+
+        mTabContainer = new Container();
+        mTabContainer->setOpaque(false);
+        mWidgetContainer = new Container();
+
+        add(mTabContainer);
+        add(mWidgetContainer);
+    }
+
+    TabbedArea::~TabbedArea()
+    {
+        remove(mTabContainer);
+        remove(mWidgetContainer);
+
+        delete mTabContainer;
+        delete mWidgetContainer;
+
+        for (unsigned int i = 0; i < mTabsToDelete.size(); i++)
+        {
+            delete mTabsToDelete[i];
+        }
+    }
+
+    void TabbedArea::addTab(const std::string& caption, Widget* widget)
+    {
+        Tab* tab = new Tab();
+        tab->setCaption(caption);
+        mTabsToDelete.push_back(tab);
+
+        addTab(tab, widget);
+    }
+
+    void TabbedArea::addTab(Tab* tab, Widget* widget)
+    {
+        tab->setTabbedArea(this);
+        tab->addActionListener(this);
+
+        mTabContainer->add(tab);
+        mTabs.push_back(std::pair<Tab*, Widget*>(tab, widget));
+
+        if (mSelectedTab == NULL)
+        {
+            setSelectedTab(tab);
+        }
+
+        adjustTabPositions();
+        adjustSize();
+    }
+
+    void TabbedArea::removeTabWithIndex(unsigned int index)
+    {
+        if (index >= mTabs.size())
+        {
+            throw GCN_EXCEPTION("No such tab index.");
+        }
+
+        removeTab(mTabs[index].first);
+    }
+
+    void TabbedArea::removeTab(Tab* tab)
+    {
+        int tabIndexToBeSelected = - 1;
+
+        if (tab == mSelectedTab)
+        {
+            int index = getSelectedTabIndex();
+
+            if (index == (int)mTabs.size() - 1
+                && mTabs.size() >= 2)
+            {
+                tabIndexToBeSelected = index--;
+            }
+            else if (index == static_cast<int>(mTabs.size()) - 1
+                     && mTabs.size() == 1)
+            {
+                tabIndexToBeSelected = -1;
+            }
+            else
+            {
+                tabIndexToBeSelected = index;
+            }
+        }
+
+        std::vector<std::pair<Tab*, Widget*> >::iterator iter;
+        for (iter = mTabs.begin(); iter != mTabs.end(); iter++)
+        {
+            if (iter->first == tab)
+            {
+                mTabContainer->remove(tab);
+                mTabs.erase(iter);
+                break;
+            }
+        }
+
+        std::vector<Tab*>::iterator iter2;
+        for (iter2 = mTabsToDelete.begin(); iter2 != mTabsToDelete.end(); iter2++)
+        {
+            if (*iter2 == tab)
+            {
+                mTabsToDelete.erase(iter2);
+                delete tab;
+                break;
+            }
+        }
+
+        if (tabIndexToBeSelected == -1)
+        {
+            mSelectedTab = NULL;
+            mWidgetContainer->clear();
+        }
+        else
+        {
+            setSelectedTab(tabIndexToBeSelected);
+        }
+
+        adjustSize();
+        adjustTabPositions();
+    }
+
+    bool TabbedArea::isTabSelected(unsigned int index) const
+    {
+        if (index >= mTabs.size())
+        {
+            throw GCN_EXCEPTION("No such tab index.");
+        }
+
+        return mSelectedTab == mTabs[index].first;
+    }
+
+    bool TabbedArea::isTabSelected(Tab* tab)
+    {
+        return mSelectedTab == tab;
+    }
+
+    void TabbedArea::setSelectedTab(unsigned int index)
+    {
+        if (index >= mTabs.size())
+        {
+            throw GCN_EXCEPTION("No such tab index.");
+        }
+        
+        setSelectedTab(mTabs[index].first);
+    }
+
+    void TabbedArea::setSelectedTab(Tab* tab)
+    {
+        unsigned int i;
+        for (i = 0; i < mTabs.size(); i++)
+        {
+            if (mTabs[i].first == mSelectedTab)
+            {
+                mWidgetContainer->remove(mTabs[i].second);
+            }
+        }
+
+        for (i = 0; i < mTabs.size(); i++)
+        {
+            if (mTabs[i].first == tab)
+            {
+                mSelectedTab = tab;
+                mWidgetContainer->add(mTabs[i].second);
+            }
+        }
+    }
+
+    int TabbedArea::getSelectedTabIndex() const
+    {
+        for (auto i = 0; i < static_cast<int>(mTabs.size()); i++)
+        {
+            if (mTabs[i].first == mSelectedTab)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    Tab* TabbedArea::getSelectedTab()
+    {
+        return mSelectedTab;
+    }
+
+    void TabbedArea::setOpaque(bool opaque)
+    {
+        mOpaque = opaque;
+    }
+
+    bool TabbedArea::isOpaque() const
+    {
+        return mOpaque;
+    }
+
+    void TabbedArea::draw(Graphics *graphics)
+    {
+        const Color& faceColor = getBaseColor();
+        int alpha = getBaseColor().a;
+        Color highlightColor = faceColor + 0x303030;
+        highlightColor.a = alpha;
+        Color shadowColor = faceColor - 0x303030;
+        shadowColor.a = alpha;
+
+        // Draw a border.
+        graphics->setColor(highlightColor);
+        graphics->drawLine(0, mTabContainer->getHeight(), 0, getHeight() - 2);
+        graphics->setColor(shadowColor);
+        graphics->drawLine(
+            getWidth() - 1, mTabContainer->getHeight() + 1, getWidth() - 1, getHeight() - 1);
+        graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
+
+        if (mOpaque)
+        {
+            graphics->setColor(getBaseColor());
+            graphics->fillRectangle(Rectangle(1, 1, getWidth() - 2, getHeight() - 2));
+        }
+
+        // Draw a line underneath the tabs.
+        graphics->setColor(highlightColor);
+        graphics->drawLine(1,
+                           mTabContainer->getHeight(),
+                           getWidth() - 1,
+                           mTabContainer->getHeight());
+
+        // If a tab is selected,
+        // remove the line right underneath the selected tab.
+        if (mSelectedTab != NULL)
+        {
+            graphics->setColor(getBaseColor());
+            graphics->drawLine(mSelectedTab->getX() + 1,
+                               mTabContainer->getHeight(),
+                               mSelectedTab->getX() + mSelectedTab->getWidth() - 2,
+                               mTabContainer->getHeight());
+        }
+
+        drawChildren(graphics);
+    }
+
+    void TabbedArea::adjustSize()
+    {
+        int maxTabHeight = 0;
+        for (unsigned int i = 0; i < mTabs.size(); i++)
+        {
+            if (mTabs[i].first->getHeight() > maxTabHeight)
+            {
+                maxTabHeight = mTabs[i].first->getHeight();
+            }
+        }
+
+        mTabContainer->setSize(getWidth() - 2, maxTabHeight);
+
+        mWidgetContainer->setPosition(1, maxTabHeight + 1);
+        mWidgetContainer->setSize(getWidth() - 2, getHeight() - maxTabHeight - 2);
+    }
+
+    void TabbedArea::adjustTabPositions()
+    {
+        int maxTabHeight = 0;
+        unsigned int i;
+        for (i = 0; i < mTabs.size(); i++)
+        {
+            if (mTabs[i].first->getHeight() > maxTabHeight)
+            {
+                maxTabHeight = mTabs[i].first->getHeight();
+            }
+        }
+
+        int x = 0;
+        for (i = 0; i < mTabs.size(); i++)
+        {
+            Tab* tab = mTabs[i].first;
+
+            tab->setPosition(x, maxTabHeight - tab->getHeight());
+
+            x += tab->getWidth();
+        }
+    }
+
+    void TabbedArea::setWidth(int width)
+    {
+        // This may seem odd, but we want the TabbedArea to adjust
+        // its size properly before we call Widget::setWidth as
+        // Widget::setWidth might distribute a resize event.
+        gcn::Rectangle dim = mDimension;
+        mDimension.width = width;
+        adjustSize();
+        mDimension = dim;
+        Widget::setWidth(width);
+    }
+
+    void TabbedArea::setHeight(int height)
+    {
+        // This may seem odd, but we want the TabbedArea to adjust
+        // its size properly before we call Widget::setHeight as
+        // Widget::setHeight might distribute a resize event.
+        gcn::Rectangle dim = mDimension;
+        mDimension.height = height;
+        adjustSize();
+        mDimension = dim;
+        Widget::setHeight(height);
+    }
+
+    void TabbedArea::setSize(int width, int height)
+    {
+        // This may seem odd, but we want the TabbedArea to adjust
+        // its size properly before we call Widget::setSize as
+        // Widget::setSize might distribute a resize event.
+        gcn::Rectangle dim = mDimension;
+        mDimension.width = width;
+        mDimension.height = height;
+        adjustSize();
+        mDimension = dim;
+        Widget::setSize(width, height);
+    }
+
+    void TabbedArea::setDimension(const Rectangle& dimension)
+    {
+        // This may seem odd, but we want the TabbedArea to adjust
+        // it's size properly before we call Widget::setDimension as
+        // Widget::setDimension might distribute a resize event.
+        gcn::Rectangle dim = mDimension;
+        mDimension = dimension;
+        adjustSize();
+        mDimension = dim;
+        Widget::setDimension(dimension);
+    }
+
+    void TabbedArea::keyPressed(KeyEvent& keyEvent)
+    {
+        if (keyEvent.isConsumed() || !isFocused())
+        {
+            return;
+        }
+
+        if (keyEvent.getKey().getValue() == Key::Left)
+        {
+            int index = getSelectedTabIndex();
+            index--;
+
+            if (index < 0)
+            {
+                return;
+            }
+            else
+            {
+                setSelectedTab(mTabs[index].first);
+            }
+
+            keyEvent.consume();
+        }
+        else if (keyEvent.getKey().getValue() == Key::Right)
+        {
+            int index = getSelectedTabIndex();
+            index++;
+            
+            if (index >= static_cast<int>(mTabs.size()))
+            {
+                return;
+            }
+            else
+            {
+                setSelectedTab(mTabs[index].first);
+            }
+
+            keyEvent.consume();
+        }
+    }
+
+    void TabbedArea::mousePressed(MouseEvent& mouseEvent)
+    {
+        if (mouseEvent.isConsumed())
+        {
+            return;
+        }
+
+        if (mouseEvent.getButton() == MouseEvent::Left)
+        {
+            Widget* widget = mTabContainer->getWidgetAt(mouseEvent.getX(), mouseEvent.getY());
+            Tab* tab = dynamic_cast<Tab*>(widget);
+
+            if (tab != NULL)
+            {
+                setSelectedTab(tab);
+            }
+        }
+
+        // Request focus only if the source of the event is not focusable.
+        // If the source of the event is focused
+        // we don't want to steal the focus.
+        if (!mouseEvent.getSource()->isFocusable())
+        {
+            requestFocus();
+        }
+    }
+
+    void TabbedArea::death(const Event& event)
+    {
+        Widget* source = event.getSource();
+        Tab* tab = dynamic_cast<Tab*>(source);
+
+        if (tab != NULL)
+        {
+            removeTab(tab);
+        }
+        else
+        {
+            BasicContainer::death(event);
+        }
+    }
+
+    void TabbedArea::action(const ActionEvent& actionEvent)
+    {
+        Widget* source = actionEvent.getSource();
+        Tab* tab = dynamic_cast<Tab*>(source);
+
+        if (tab == NULL)
+        {
+            throw GCN_EXCEPTION("Received an action from a widget that's not a tab!");
+        }
+
+        setSelectedTab(tab);
+    }
+
+    void TabbedArea::setBaseColor(const Color& color)
+    {
+        Widget::setBaseColor(color);
+        mWidgetContainer->setBaseColor(color);
+        mTabContainer->setBaseColor(color);
+    }
+} // namespace gcn

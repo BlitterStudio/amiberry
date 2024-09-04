@@ -245,7 +245,7 @@ void InitPanelCustom(const config_category& category)
 	category.panel->add(grpPort);
 
 	lblSetHotkey = new gcn::Label("Set Hotkey:");
-	lblSetHotkey->setAlignment(gcn::Graphics::RIGHT);
+	lblSetHotkey->setAlignment(gcn::Graphics::Right);
 	txtSetHotkey = new gcn::TextField();
 	txtSetHotkey->setEnabled(false);
 	txtSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
@@ -276,7 +276,7 @@ void InitPanelCustom(const config_category& category)
 
 	// the input-device should be listed
 	lblPortInput = new gcn::Label("Input Device:");
-	lblPortInput->setAlignment(gcn::Graphics::RIGHT);
+	lblPortInput->setAlignment(gcn::Graphics::Right);
 
 	txtPortInput = new gcn::TextField();
 	txtPortInput->setEnabled(false);
@@ -285,7 +285,7 @@ void InitPanelCustom(const config_category& category)
 	txtPortInput->setForegroundColor(gui_foreground_color);
 
 	lblRetroarch = new gcn::Label("[-]");
-	lblRetroarch->setAlignment(gcn::Graphics::LEFT);
+	lblRetroarch->setAlignment(gcn::Graphics::Left);
 
 	cmdSaveMapping = new gcn::Button("Save as default mapping");
 	cmdSaveMapping->setId("cmdSaveMapping");
@@ -301,7 +301,7 @@ void InitPanelCustom(const config_category& category)
 	for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
 	{
 		lblCustomButtonAction[i]->setSize(lblCustomButtonAction[14]->getWidth(), lblCustomButtonAction[14]->getHeight());
-		lblCustomButtonAction[i]->setAlignment(gcn::Graphics::RIGHT);
+		lblCustomButtonAction[i]->setAlignment(gcn::Graphics::Right);
 
 		cboCustomButtonAction[i] = new gcn::DropDown(&CustomEventList);
 		cboCustomButtonAction[i]->setSize(cboCustomButtonAction[i]->getWidth() * 2, cboCustomButtonAction[i]->getHeight());
@@ -319,7 +319,7 @@ void InitPanelCustom(const config_category& category)
 	{
 		lblCustomAxisAction[i] = new gcn::Label(label_axis_list[i]);
 		lblCustomAxisAction[i]->setSize(lblCustomButtonAction[14]->getWidth(), lblCustomButtonAction[14]->getHeight());
-		lblCustomAxisAction[i]->setAlignment(gcn::Graphics::RIGHT);
+		lblCustomAxisAction[i]->setAlignment(gcn::Graphics::Right);
 
 		cboCustomAxisAction[i] = new gcn::DropDown(&CustomEventList);
 		cboCustomAxisAction[i]->setSize(cboCustomAxisAction[i]->getWidth() * 2, cboCustomAxisAction[i]->getHeight());

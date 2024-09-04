@@ -172,7 +172,7 @@ void InitPanelIO(const config_category& category)
 	int posY = DISTANCE_BORDER;
 
 	lblSampler = new gcn::Label("Sampler:");
-	lblSampler->setAlignment(gcn::Graphics::RIGHT);
+	lblSampler->setAlignment(gcn::Graphics::Right);
 	cboSampler = new gcn::DropDown(&sampler_list);
 	cboSampler->setSize(350, cboSampler->getHeight());
 	cboSampler->setBaseColor(gui_base_color);
@@ -264,7 +264,7 @@ void InitPanelIO(const config_category& category)
 	category.panel->add(grpSerialPort, DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
 
 	lblMidiOut = new gcn::Label("Out:");
-	lblMidiOut->setAlignment(gcn::Graphics::RIGHT);
+	lblMidiOut->setAlignment(gcn::Graphics::Right);
 	cboMidiOut = new gcn::DropDown(&midi_out_ports_list);
 	cboMidiOut->setSize(200, cboMidiOut->getHeight());
 	cboMidiOut->setBaseColor(gui_base_color);
@@ -275,7 +275,7 @@ void InitPanelIO(const config_category& category)
 	cboMidiOut->addActionListener(ioActionListener);
 
 	lblMidiIn = new gcn::Label("In:");
-	lblMidiIn->setAlignment(gcn::Graphics::RIGHT);
+	lblMidiIn->setAlignment(gcn::Graphics::Right);
 	cboMidiIn = new gcn::DropDown(&midi_in_ports_list);
 	cboMidiIn->setSize(200, cboMidiIn->getHeight());
 	cboMidiIn->setBaseColor(gui_base_color);

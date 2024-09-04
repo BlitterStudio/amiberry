@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -68,28 +68,25 @@ namespace gcn
 		  mFilename("?"),
 		  mLine(0)
 	{
-
 	}
 
-	Exception::Exception(const std::string& message)
+	Exception::Exception(std::string message)
 		: mFunction("?"),
-		  mMessage(message),
+		  mMessage(std::move(message)),
 		  mFilename("?"),
 		  mLine(0)
 	{
-
 	}
 
-	Exception::Exception(const std::string& message,
-	                     const std::string& function,
-	                     const std::string& filename,
-	                     int line)
-		: mFunction(function),
-		  mMessage(message),
-		  mFilename(filename),
+	Exception::Exception(std::string message,
+	                     std::string function,
+	                     std::string filename,
+	                     unsigned int line)
+		: mFunction(std::move(function)),
+		  mMessage(std::move(message)),
+		  mFilename(std::move(filename)),
 		  mLine(line)
 	{
-
 	}
 
 	const std::string& Exception::getFunction() const
@@ -107,7 +104,7 @@ namespace gcn
 		return mFilename;
 	}
 
-	int Exception::getLine() const
+	unsigned int Exception::getLine() const
 	{
 		return mLine;
 	}

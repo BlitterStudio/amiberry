@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -66,81 +66,98 @@
 
 namespace gcn
 {
-	class Label;
-	class TabbedArea;
+    class Label;
+    class TabbedArea;
 
-	/**
-	 * A simple tab widget used as the default tab in the TabbedArea widget.
-	 */
-	class GCN_CORE_DECLSPEC Tab :
-		public BasicContainer,
-		public MouseListener
-	{
-	public:
+    /**
+     * An implementation of a simple tab to be used in a tabbed area.
+     *
+     * @see TabbedArea
+     * @since 0.8.0
+     */
+    class GCN_CORE_DECLSPEC Tab:
+        public BasicContainer,
+        public MouseListener
+    {
+    public:
 
-		/**
-		 * Constructor.
-		 */
-		Tab();
+        /**
+         * Constructor.
+         */
+        Tab();
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~Tab();
+        /**
+         * Destructor.
+         */
+        virtual ~Tab();
 
-		/**
-		 * Adjusts the tab size to fit the label.
-		 */
-		void adjustSize();
+        /**
+         * Adjusts the size of the tab to fit the caption. If this tab was
+         * added to a TabbedArea, it will also adjust the tab positions.
+         */
+        void adjustSize();
 
-		/**
-		 * Sets the tabbed area the tab should be a part of.
-		 *
-		 * @param tabbedArea The tabbed area the tab should be a part of.
-		 */
-		void setTabbedArea(TabbedArea* tabbedArea);
+        /**
+         * Sets the tabbed area the tab should be a part of.
+         *
+         * @param tabbedArea The tabbed area the tab should be a part of.
+         * @see getTabbedArea
+         */
+        void setTabbedArea(TabbedArea* tabbedArea);
 
-		/**
-		 * Gets the tabbed are the tab is a part of.
-		 *
-		 * @return The tabbed are the tab is a part of.
-		 */
-		TabbedArea* getTabbedArea();
+        /**
+         * Gets the tabbed are the tab is a part of.
+         *
+         * @return The tabbed are the tab is a part of.
+         * @see setTabbedArea
+         */
+        TabbedArea* getTabbedArea();
 
-		/**
-		 * Sets the caption of the tab.
-		 *
-		 * @param caption The caption of the tab.         
-		 */
-		void setCaption(const std::string& caption);
+        /**
+         * Sets the caption of the tab. It's advisable to call
+         * adjustSize after setting the caption to make the tab
+         * fit the caption.
+         *
+         * @param caption The caption of the tab.
+         * @see getCaption, adjustSize
+         */
+        void setCaption(const std::string& caption);
 
-		/**
-		 * Gets the caption of the tab.
-		 *
-		 * @return The caption of the tab.
-		 */
-		const std::string& getCaption() const;
+        /**
+         * Gets the caption of the tab.
+         *
+         * @return The caption of the tab.
+         * @see setCaption
+         */
+        const std::string& getCaption() const;
+
+        // Inherited from Widget
+
+        virtual void draw(Graphics *graphics);
 
 
-		// Inherited from Widget
+        // Inherited from MouseListener
 
-		virtual void draw(Graphics* graphics);
+        virtual void mouseEntered(MouseEvent& mouseEvent);
 
-		virtual void drawBorder(Graphics* graphics);
+        virtual void mouseExited(MouseEvent& mouseEvent);
 
+    protected:
+        /**
+         * Holds the label of the tab.
+         */
+        Label* mLabel;
 
-		// Inherited from MouseListener
+        /**
+         * Holds the tabbed area the tab is a part of.
+         */
+        TabbedArea* mTabbedArea;
 
-		virtual void mouseEntered(MouseEvent& mouseEvent);
-
-		virtual void mouseExited(MouseEvent& mouseEvent);
-
-	protected:
-		Label* mLabel;
-		TabbedArea* mTabbedArea;
-		std::string mCaption;
-		bool mHasMouse;
-	};
+        /**
+         * True if the tab has the mouse, false otherwise.
+         */
+        bool mHasMouse;
+    };
 }
 
 #endif // end GCN_TABBEDAREA_HPP

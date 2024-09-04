@@ -127,7 +127,7 @@ public:
 	{
 		if (keyEvent.getSource() == txtFpsAdj && chkFpsAdj->isSelected())
 		{
-			if (keyEvent.getKey().getValue() == gcn::Key::ENTER)
+			if (keyEvent.getKey().getValue() == gcn::Key::Enter)
 			{
 				const std::string tmp = txtFpsAdj->getText();
 				if (!tmp.empty()) {
@@ -558,7 +558,7 @@ void InitPanelDisplay(const config_category& category)
 	int posY = DISTANCE_BORDER;
 
 	lblFullscreen = new gcn::Label("Fullscreen:");
-	lblFullscreen->setAlignment(gcn::Graphics::LEFT);
+	lblFullscreen->setAlignment(gcn::Graphics::Left);
 	cboFullscreen = new gcn::DropDown(&fullscreen_resolutions_list);
 	cboFullscreen->setSize(150, cboFullscreen->getHeight());
 	cboFullscreen->setBaseColor(gui_base_color);
@@ -576,7 +576,7 @@ void InitPanelDisplay(const config_category& category)
 	chkManualCrop->addActionListener(amigaScreenActionListener);
 
 	lblAmigaWidth = new gcn::Label("Width:");
-	lblAmigaWidth->setAlignment(gcn::Graphics::LEFT);
+	lblAmigaWidth->setAlignment(gcn::Graphics::Left);
 	sldAmigaWidth = new gcn::Slider(0, AMIGAWIDTH_COUNT - 1);
 	sldAmigaWidth->setSize(180, SLIDER_HEIGHT);
 	sldAmigaWidth->setBaseColor(gui_base_color);
@@ -595,7 +595,7 @@ void InitPanelDisplay(const config_category& category)
 	txtAmigaWidth->addActionListener(amigaScreenActionListener);
 
 	lblAmigaHeight = new gcn::Label("Height:");
-	lblAmigaHeight->setAlignment(gcn::Graphics::LEFT);
+	lblAmigaHeight->setAlignment(gcn::Graphics::Left);
 	sldAmigaHeight = new gcn::Slider(0, AMIGAHEIGHT_COUNT - 1);
 	sldAmigaHeight->setSize(180, SLIDER_HEIGHT);
 	sldAmigaHeight->setBaseColor(gui_base_color);
@@ -628,7 +628,7 @@ void InitPanelDisplay(const config_category& category)
 	chkBorderless->addActionListener(amigaScreenActionListener);
 
 	lblVSyncNative = new gcn::Label("VSync Native:");
-	lblVSyncNative->setAlignment(gcn::Graphics::LEFT);
+	lblVSyncNative->setAlignment(gcn::Graphics::Left);
 	cboVSyncNative = new gcn::DropDown(&vsync_options_list);
 	cboVSyncNative->setSize(150, cboVSyncNative->getHeight());
 	cboVSyncNative->setBaseColor(gui_base_color);
@@ -639,7 +639,7 @@ void InitPanelDisplay(const config_category& category)
 	cboVSyncNative->addActionListener(amigaScreenActionListener);
 
 	lblVSyncRtg = new gcn::Label("VSync RTG:");
-	lblVSyncRtg->setAlignment(gcn::Graphics::LEFT);
+	lblVSyncRtg->setAlignment(gcn::Graphics::Left);
 	cboVSyncRtg = new gcn::DropDown(&vsync_options_list);
 	cboVSyncRtg->setSize(150, cboVSyncRtg->getHeight());
 	cboVSyncRtg->setBaseColor(gui_base_color);
@@ -650,7 +650,7 @@ void InitPanelDisplay(const config_category& category)
 	cboVSyncRtg->addActionListener(amigaScreenActionListener);
 
 	lblHOffset = new gcn::Label("H. Offset:");
-	lblHOffset->setAlignment(gcn::Graphics::LEFT);
+	lblHOffset->setAlignment(gcn::Graphics::Left);
 	sldHOffset = new gcn::Slider(-80, 80);
 	sldHOffset->setSize(200, SLIDER_HEIGHT);
 	sldHOffset->setBaseColor(gui_base_color);
@@ -661,10 +661,10 @@ void InitPanelDisplay(const config_category& category)
 	sldHOffset->setId("sldHOffset");
 	sldHOffset->addActionListener(amigaScreenActionListener);
 	lblHOffsetValue = new gcn::Label("-60");
-	lblHOffsetValue->setAlignment(gcn::Graphics::LEFT);
+	lblHOffsetValue->setAlignment(gcn::Graphics::Left);
 
 	lblVOffset = new gcn::Label("V. Offset:");
-	lblVOffset->setAlignment(gcn::Graphics::LEFT);
+	lblVOffset->setAlignment(gcn::Graphics::Left);
 	sldVOffset = new gcn::Slider(-80, 80);
 	sldVOffset->setSize(200, SLIDER_HEIGHT);
 	sldVOffset->setBaseColor(gui_base_color);
@@ -675,7 +675,7 @@ void InitPanelDisplay(const config_category& category)
 	sldVOffset->setId("sldVOffset");
 	sldVOffset->addActionListener(amigaScreenActionListener);
 	lblVOffsetValue = new gcn::Label("-20");
-	lblVOffsetValue->setAlignment(gcn::Graphics::LEFT);
+	lblVOffsetValue->setAlignment(gcn::Graphics::Left);
 
 	chkHorizontal = new gcn::CheckBox("Horizontal");
 	chkHorizontal->setId("chkHorizontal");
@@ -735,7 +735,7 @@ void InitPanelDisplay(const config_category& category)
 	sldRefresh->setId("sldRefresh");
 	sldRefresh->addActionListener(amigaScreenActionListener);
 	lblFrameRate = new gcn::Label("50");
-	lblFrameRate->setAlignment(gcn::Graphics::LEFT);
+	lblFrameRate->setAlignment(gcn::Graphics::Left);
 
 	chkFpsAdj = new gcn::CheckBox("FPS Adj:");
 	chkFpsAdj->setId("chkFpsAdj");
@@ -770,7 +770,7 @@ void InitPanelDisplay(const config_category& category)
 	txtFpsAdj->addKeyListener(amigaScreenKeyListener);
 
 	lblBrightness = new gcn::Label("Brightness:");
-	lblBrightness->setAlignment(gcn::Graphics::LEFT);
+	lblBrightness->setAlignment(gcn::Graphics::Left);
 	sldBrightness = new gcn::Slider(-200, 200);
 	sldBrightness->setSize(100, SLIDER_HEIGHT);
 	sldBrightness->setBaseColor(gui_base_color);
@@ -781,10 +781,10 @@ void InitPanelDisplay(const config_category& category)
 	sldBrightness->setId("sldBrightness");
 	sldBrightness->addActionListener(amigaScreenActionListener);
 	lblBrightnessValue = new gcn::Label("0.0");
-	lblBrightnessValue->setAlignment(gcn::Graphics::LEFT);
+	lblBrightnessValue->setAlignment(gcn::Graphics::Left);
 
 	lblScreenmode = new gcn::Label("Screen mode:");
-	lblScreenmode->setAlignment(gcn::Graphics::RIGHT);
+	lblScreenmode->setAlignment(gcn::Graphics::Right);
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
 	cboScreenmode->setSize(150, cboScreenmode->getHeight());
 	cboScreenmode->setBaseColor(gui_base_color);
@@ -795,7 +795,7 @@ void InitPanelDisplay(const config_category& category)
 	cboScreenmode->addActionListener(amigaScreenActionListener);
 
 	lblResolution = new gcn::Label("Resolution:");
-	lblResolution->setAlignment(gcn::Graphics::RIGHT);
+	lblResolution->setAlignment(gcn::Graphics::Right);
 	cboResolution = new gcn::DropDown(&resolution_list);
 	cboResolution->setSize(150, cboResolution->getHeight());
 	cboResolution->setBaseColor(gui_base_color);
@@ -806,7 +806,7 @@ void InitPanelDisplay(const config_category& category)
 	cboResolution->addActionListener(amigaScreenActionListener);
 
 	lblResSwitch = new gcn::Label("Res. autoswitch:");
-	lblResSwitch->setAlignment(gcn::Graphics::RIGHT);
+	lblResSwitch->setAlignment(gcn::Graphics::Right);
 	cboResSwitch = new gcn::DropDown(&res_autoswitch_list);
 	cboResSwitch->setSize(150, cboResSwitch->getHeight());
 	cboResSwitch->setBaseColor(gui_base_color);
@@ -878,7 +878,7 @@ void InitPanelDisplay(const config_category& category)
 	posY = DISTANCE_BORDER + grpAmigaScreen->getHeight() + DISTANCE_NEXT_Y;
 
 	lblScalingMethod = new gcn::Label("Scaling method:");
-	lblScalingMethod->setAlignment(gcn::Graphics::RIGHT);
+	lblScalingMethod->setAlignment(gcn::Graphics::Right);
 	cboScalingMethod = new gcn::DropDown(&scaling_method_list);
 	cboScalingMethod->setSize(150, cboScalingMethod->getHeight());
 	cboScalingMethod->setBaseColor(gui_base_color);

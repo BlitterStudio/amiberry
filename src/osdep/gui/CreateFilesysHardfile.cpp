@@ -109,7 +109,7 @@ static void InitCreateFilesysHardfile()
 	cmdCancel->addActionListener(createFilesysHardfileActionListener);
 
 	lblSize = new gcn::Label("Size (MB):");
-	lblSize->setAlignment(gcn::Graphics::RIGHT);
+	lblSize->setAlignment(gcn::Graphics::Right);
 	txtSize = new gcn::TextField();
 	txtSize->setSize(60, TEXTFIELD_HEIGHT);
 	txtSize->setBaseColor(gui_base_color);
@@ -123,7 +123,7 @@ static void InitCreateFilesysHardfile()
 	chkDynamic->setId("chkDynamic");
 
 	lblPath = new gcn::Label("Path:");
-	lblPath->setAlignment(gcn::Graphics::RIGHT);
+	lblPath->setAlignment(gcn::Graphics::Right);
 	txtPath = new gcn::TextField();
 	txtPath->setId("txtCreatePath");
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);

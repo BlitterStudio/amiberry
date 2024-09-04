@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  * Copyright (c) 2017 Gwilherm Baudic
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -66,203 +66,179 @@
 
 namespace gcn
 {
-	ProgressBar::ProgressBar() : Label()
-	{
-		mAlignment = Graphics::CENTER;
-		mStart = 0;
-		mValue = 0;
-		mEnd = 100;
+    ProgressBar::ProgressBar() : Label()
+    {
+        mAlignment = Graphics::Center;
+        mStart = 0;
+        mValue = 0;
+        mEnd = 100;
+        
+        setHeight(getFont()->getHeight());
+        setFrameSize(1);
+    }
+    
+    ProgressBar::ProgressBar(const unsigned int start,
+        const unsigned int end, const unsigned int value) : Label()
+    {
+        mAlignment = Graphics::Center;
 
-		setHeight(getFont()->getHeight());
-		setBorderSize(1);
-	}
+        if (start > end)
+        {
+            mStart = end;
+            mEnd = start;
+        }
+        else
+        {
+            mStart = start;
+            mEnd = end;
+        }
 
-	ProgressBar::ProgressBar(const unsigned int start,
-							 const unsigned int end, const unsigned int value) : Label()
-	{
-		mAlignment = Graphics::CENTER;
+        if ((value >= start && value <= end) || (start == 0 && end == 0))
+        {
+            mValue = value;
+        }
+        else
+        {
+            mValue = start;
+        }
 
-		if (start > end)
-		{
-			mStart = end;
-			mEnd = start;
-		}
-		else
-		{
-			mStart = start;
-			mEnd = end;
-		}
+        setHeight(getFont()->getHeight());
+        setFrameSize(1);
+    }
 
-		if ((value >= start && value <= end) || (start == 0 && end == 0))
-		{
-			mValue = value;
-		}
-		else
-		{
-			mValue = start;
-		}
+    ProgressBar::ProgressBar(const std::string& caption) : Label(caption)
+    {
+        mCaption = caption;
+        mAlignment = Graphics::Center;
 
-		setHeight(getFont()->getHeight());
-		setBorderSize(1);
-	}
+        setHeight(getFont()->getHeight());
+        setFrameSize(1);
+    }
 
-	ProgressBar::ProgressBar(const std::string& caption) : Label(caption)
-	{
-		mCaption = caption;
-		mAlignment = Graphics::CENTER;
+    const std::string &ProgressBar::getCaption() const
+    {
+        return mCaption;
+    }
 
-		setHeight(getFont()->getHeight());
-		setBorderSize(1);
-	}
+    void ProgressBar::setCaption(const std::string& caption)
+    {
+        mCaption = caption;
+    }
 
-	const std::string& ProgressBar::getCaption() const
-	{
-		return mCaption;
-	}
+    void ProgressBar::setAlignment(Graphics::Alignment alignment)
+    {
+        mAlignment = alignment;
+    }
 
-	void ProgressBar::setCaption(const std::string& caption)
-	{
-		mCaption = caption;
-	}
+    Graphics::Alignment ProgressBar::getAlignment() const
+    {
+        return mAlignment;
+    }
 
-	void ProgressBar::setAlignment(unsigned int alignment)
-	{
-		mAlignment = alignment;
-	}
+    void ProgressBar::draw(Graphics* graphics)
+    {
+        graphics->setColor(getBackgroundColor());
+        graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
-	unsigned int ProgressBar::getAlignment() const
-	{
-		return mAlignment;
-	}
+        int textX;
+        int textY = getHeight() / 2 - getFont()->getHeight() / 2;
 
-	void ProgressBar::draw(Graphics* graphics)
-	{
-		graphics->setColor(getBackgroundColor());
-		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
+        graphics->setColor(getSelectionColor());
+        int progressWidth;
+        if (mStart == 0 && mEnd == 0)
+        {
+            // Infinite scrollbar
+            progressWidth = getWidth() / 5;
+            int barX = getWidth() * static_cast<int>(mValue) / 100;
 
-		int textX;
-		int textY = getHeight() / 2 - getFont()->getHeight() / 2;
+            if (barX + progressWidth > getWidth())
+            {
+                graphics->fillRectangle(Rectangle(barX, 0, getWidth() - barX, getHeight()));
+                graphics->fillRectangle(Rectangle(0, 0, progressWidth - (getWidth() - barX), getHeight()));
+            }
+            else
+            {
+                graphics->fillRectangle(Rectangle(barX, 0, progressWidth, getHeight()));
+            }
+        }
+        else
+        {
+            // Standard scrollbar
+            progressWidth = getWidth() * static_cast<int>(mValue) / static_cast<int>(mEnd - mStart);
+            graphics->fillRectangle(Rectangle(0, 0, progressWidth, getHeight()));
+        }
 
-		graphics->setColor(getSelectionColor());
-		int progressWidth;
-		if (mStart == 0 && mEnd == 0)
-		{
-			// Infinite scrollbar
-			progressWidth = getWidth() / 5;
-			int barX = getWidth() * static_cast<int>(mValue) / 100;
+        switch (getAlignment())
+        {
+        case Graphics::Left:
+            textX = 0;
+            break;
+        case Graphics::Center:
+            textX = getWidth() / 2;
+            break;
+        case Graphics::Right:
+            textX = getWidth();
+            break;
+        default:
+            throw GCN_EXCEPTION("Unknown alignment.");
+        }
 
-			if (barX + progressWidth > getWidth())
-			{
-				graphics->fillRectangle(Rectangle(barX, 0, getWidth() - barX, getHeight()));
-				graphics->fillRectangle(Rectangle(0, 0, progressWidth - (getWidth() - barX), getHeight()));
-			}
-			else
-			{
-				graphics->fillRectangle(Rectangle(barX, 0, progressWidth, getHeight()));
-			}
-		}
-		else
-		{
-			// Standard scrollbar
-			progressWidth = getWidth() * static_cast<int>(mValue) / static_cast<int>(mEnd - mStart);
-			graphics->fillRectangle(Rectangle(0, 0, progressWidth, getHeight()));
-		}
+        graphics->setFont(getFont());
+        Color color = getForegroundColor();
+        if (!isEnabled())
+            color = color - 0x303030;
+        graphics->setColor(color);
+        graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
+    }
 
-		switch (getAlignment())
-		{
-		case Graphics::LEFT:
-			textX = 0;
-			break;
-		case Graphics::CENTER:
-			textX = getWidth() / 2;
-			break;
-		case Graphics::RIGHT:
-			textX = getWidth();
-			break;
-		default:
-			throw GCN_EXCEPTION("Unknown alignment.");
-		}
+    void ProgressBar::adjustSize()
+    {
+        setHeight(getFont()->getHeight());
+    }
 
-		graphics->setFont(getFont());
-		Color color = getForegroundColor();
-		if (!isEnabled())
-			color = color - 0x303030;
-		graphics->setColor(color);
-		graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
-	}
+    void ProgressBar::setStart(const unsigned int start)
+    {
+        if (start <= mEnd)
+        {
+            mStart = start;
+        }
+    }
 
-	void ProgressBar::drawBorder(Graphics* graphics)
-	{
-		Color faceColor = getBaseColor();
-		Color highlightColor, shadowColor;
-		int alpha = getBaseColor().a;
-		int width = getWidth() + getBorderSize() * 2 - 1;
-		int height = getHeight() + getBorderSize() * 2 - 1;
-		highlightColor = faceColor + 0x303030;
-		highlightColor.a = alpha;
-		shadowColor = faceColor - 0x303030;
-		shadowColor.a = alpha;
+    unsigned int ProgressBar::getStart() const
+    {
+        return mStart;
+    }
 
-		unsigned int i;
-		for (i = 0; i < getBorderSize(); ++i)
-		{
-			graphics->setColor(shadowColor);
-			graphics->drawLine(i, i, width - i, i);
-			graphics->drawLine(i, i + 1, i, height - i - 1);
-			graphics->setColor(highlightColor);
-			graphics->drawLine(width - i, i + 1, width - i, height - i);
-			graphics->drawLine(i, height - i, width - i - 1, height - i);
-		}
-	}
+    void ProgressBar::setEnd(const unsigned int end)
+    {
+        if (end >= mStart)
+        {
+            mEnd = end;
+        }
+    }
 
-	void ProgressBar::adjustSize()
-	{
-		setHeight(getFont()->getHeight());
-	}
+    unsigned int ProgressBar::getEnd() const
+    {
+        return mEnd;
+    }
 
-	void ProgressBar::setStart(const unsigned int start)
-	{
-		if (start <= mEnd)
-		{
-			mStart = start;
-		}
-	}
+    void ProgressBar::setValue(const unsigned int value)
+    {
+        if (value >= mStart && value <= mEnd)
+        {
+            mValue = value;
+        }
+        else
+        {
+            if (mStart == 0 && mEnd == 0)
+            {
+                mValue = value % 100;
+            }
+        }
+    }
 
-	unsigned int ProgressBar::getStart() const
-	{
-		return mStart;
-	}
-
-	void ProgressBar::setEnd(const unsigned int end)
-	{
-		if (end >= mStart)
-		{
-			mEnd = end;
-		}
-	}
-
-	unsigned int ProgressBar::getEnd() const
-	{
-		return mEnd;
-	}
-
-	void ProgressBar::setValue(const unsigned int value)
-	{
-		if (value >= mStart && value <= mEnd)
-		{
-			mValue = value;
-		}
-		else
-		{
-			if (mStart == 0 && mEnd == 0)
-			{
-				mValue = value % 100;
-			}
-		}
-	}
-
-	unsigned int ProgressBar::getValue() const
-	{
-		return mValue;
-	}
+    unsigned int ProgressBar::getValue() const
+    {
+        return mValue;
+    }
 }

@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -62,66 +62,71 @@
 
 namespace gcn
 {
-	class Image;
+    class Image;
 
-	/**
-	 * A simple button that displays an image instead of a caption.
-	 */
-	class GCN_CORE_DECLSPEC ImageButton : public gcn::Button
-	{
-	public:
-		/**
-		 * Constructor.
-		 *
-		 * @param filename The filename of the image to display.
-		 */
-		ImageButton(const std::string& filename);
+    /**
+     * A simple button that displays an image instead of a caption.
+     */
+    class GCN_CORE_DECLSPEC ImageButton : public gcn::Button
+    {
+    public:
+        /**
+         * Default constructor.
+         */
+        ImageButton();
 
-		/**
-		 * Constructor.
-		 *
-		 * @param image The image to display.
-		 */
-		ImageButton(Image* image);
+        /**
+         * Constructor.
+         *
+         * @param filename The filename of the image to display.
+         */
+        ImageButton(const std::string& filename);
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~ImageButton();
+        /**
+         * Constructor.
+         *
+         * @param image The image to display.
+         */
+        ImageButton(const Image* image);
 
-		/**
-		 * Adjusts the size of the image button to fit the image.
-		 */
-		void adjustSize();
+        /**
+         * Destructor.
+         */
+        virtual ~ImageButton();
 
-		/**
-		 * Sets the image to display.
-		 *
-		 * @param image The image to display.
-		 */
-		void setImage(Image* image);
+        /**
+         * Adjusts the size of the image button to fit the image.
+         */
+        void adjustSize();
 
-		/**
-		 * Gets the image of the image button.
-		 *
-		 * @return The image of the image button.
-		 */
-		Image* getImage();
+        /**
+         * Sets the image to display. Existing Image is freed automatically, 
+         * if it was loaded internally.
+         *
+         * @param image The image to display.
+         */
+        void setImage(const Image* image);
 
+        /**
+         * Gets current image.
+         *
+         * @return The current image.
+         */
+        const Image* getImage() const;
 
-		// Inherited from Widget
+        // Inherited from Widget
 
-		void draw(gcn::Graphics* graphics);
+        void draw(gcn::Graphics* graphics);
 
-	protected:
-		gcn::Image* mImage;
+    protected:
+        const Image* mImage;
 
-		/**
-		 * True if the image has been loaded internally, false otherwise.
-		 * An image not loaded internally should not be deleted in the
-		 * destructor.
-		 */
-		bool mInternalImage;
-	};
+        /**
+         * True if the image has been loaded internally, false otherwise.
+         * An image not loaded internally should not be deleted in the
+         * destructor.
+         */
+        bool mInternalImage;
+    };
 }
 #endif

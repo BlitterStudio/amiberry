@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -61,42 +61,46 @@
 
 namespace gcn
 {
-	class Widget;
+    class Widget;
 
-	/**
-	 * Base class for all events.
-	 *
-	 * @author Olof NaessÃ©n
-	 * @since 0.6.0
-	 */
-	class GCN_CORE_DECLSPEC Event
-	{
-	public:
+    /**
+     * Base class for all events. All events in Guisan should
+     * inherit from this class.
+     *
+     * @author Olof Naessén
+     * @since 0.6.0
+     */
+    class GCN_CORE_DECLSPEC Event
+    {
+    public:
 
-		/**
-		 * Constructor.
-		 *
-		 * @param source the source widget of the event.
-		 */
-		Event(Widget* source);
+        /**
+         * Constructor.
+         *
+         * @param source The source widget of the event.
+         */
+        Event(Widget* source);
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~Event();
+        /**
+         * Destructor.
+         */
+        virtual ~Event();
 
-		/**
-		 * Gets the source widget of the event.
-		 *
-		 * @return the source widget of the event.
-		 */
-		Widget* getSource() const;
+        /**
+         * Gets the source widget of the event. The function
+         * is used to tell which widget fired an event.
+         *
+         * @return The source widget of the event.
+         */
+        Widget* getSource() const;
 
 
-	protected:
-		Widget* mSource;
-		unsigned int mType;
-	};
+    protected:
+        /**
+         * Holds the source widget of the event.
+         */
+        Widget* mSource;
+    };
 }
 
 #endif // end GCN_EVENT_HPP

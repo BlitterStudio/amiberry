@@ -149,7 +149,7 @@ void InitPanelHWInfo(const config_category& category)
 		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, TEXTFIELD_HEIGHT + 4);
 		listEntry[row]->setBaseColor(gui_base_color);
 		listEntry[row]->setForegroundColor(gui_foreground_color);
-		listEntry[row]->setBorderSize(0);
+		listEntry[row]->setFrameSize(0);
 
 		for (col = 0; col < COL_COUNT; ++col)
 		{
@@ -190,7 +190,7 @@ void InitPanelHWInfo(const config_category& category)
 	scrlHwInfo->setBaseColor(gui_base_color);
 	scrlHwInfo->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	scrlHwInfo->setHeight(category.panel->getHeight() - DISTANCE_BORDER * 2);
-	scrlHwInfo->setBorderSize(1);
+	scrlHwInfo->setFrameSize(1);
 	category.panel->add(scrlHwInfo, DISTANCE_BORDER, DISTANCE_BORDER);
 
 	RefreshPanelHWInfo();

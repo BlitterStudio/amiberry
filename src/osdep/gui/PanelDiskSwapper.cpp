@@ -245,7 +245,7 @@ void InitPanelDiskSwapper(const config_category& category)
 		diskSwapperListEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, SMALL_BUTTON_HEIGHT + 4);
 		diskSwapperListEntry[row]->setBaseColor(gui_base_color);
 		diskSwapperListEntry[row]->setForegroundColor(gui_foreground_color);
-		diskSwapperListEntry[row]->setBorderSize(0);
+		diskSwapperListEntry[row]->setFrameSize(0);
 
 		cmdDiskSwapperListAdd[row] = new gcn::Button("...");
 		cmdDiskSwapperListAdd[row]->setBaseColor(gui_base_color);

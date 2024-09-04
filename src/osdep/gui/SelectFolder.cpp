@@ -53,12 +53,12 @@ public:
 		return static_cast<int>(dirs.size());
 	}
 
-	void add(const std::string& elem) override
+	void add(const std::string& elem)
 	{
 		dirs.push_back(elem);
 	}
 
-	void clear() override
+	void clear()
 	{
 		dirs.clear();
 	}
@@ -210,7 +210,7 @@ static void InitSelectFolder(const std::string& title)
 	lstFolders->addActionListener(listBoxActionListener);
 
 	scrAreaFolders = new gcn::ScrollArea(lstFolders);
-	scrAreaFolders->setBorderSize(1);
+	scrAreaFolders->setFrameSize(1);
 	scrAreaFolders->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFolders->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFolders->setScrollbarWidth(SCROLLBAR_WIDTH);
@@ -218,8 +218,8 @@ static void InitSelectFolder(const std::string& title)
 	scrAreaFolders->setBackgroundColor(gui_textbox_background_color);
 	scrAreaFolders->setForegroundColor(gui_foreground_color);
 	scrAreaFolders->setSelectionColor(gui_selection_color);
-	scrAreaFolders->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_AUTO);
-	scrAreaFolders->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
+	scrAreaFolders->setHorizontalScrollPolicy(gcn::ScrollArea::ShowAuto);
+	scrAreaFolders->setVerticalScrollPolicy(gcn::ScrollArea::ShowAlways);
 
 	wndSelectFolder->add(cmdCreateFolder);
 	wndSelectFolder->add(cmdOK);

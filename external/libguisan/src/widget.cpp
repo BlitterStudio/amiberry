@@ -68,6 +68,7 @@
 #include "guisan/event.hpp"
 #include "guisan/exception.hpp"
 #include "guisan/focushandler.hpp"
+#include "guisan/graphics.hpp"
 #include "guisan/keyinput.hpp"
 #include "guisan/keylistener.hpp"
 #include "guisan/mouseinput.hpp"
@@ -76,7 +77,7 @@
 
 namespace gcn
 {
-	Font* Widget::mGlobalFont = NULL;
+	Font* Widget::mGlobalFont = nullptr;
 	DefaultFont Widget::mDefaultFont;
 	std::list<Widget*> Widget::mWidgets;
 
@@ -85,16 +86,16 @@ namespace gcn
 		  mBackgroundColor(0xffffff),
 		  mBaseColor(0xDDDDE3),
 		  mSelectionColor(0xc3d9ff),
-		  mFocusHandler(NULL),
-		  mInternalFocusHandler(NULL),
-		  mParent(NULL),
+		  mFocusHandler(nullptr),
+		  mInternalFocusHandler(nullptr),
+		  mParent(nullptr),
 		  mBorderSize(0),
 		  mFocusable(false),
 		  mVisible(true),
 		  mTabIn(true),
 		  mTabOut(true),
 		  mEnabled(true),
-		  mCurrentFont(NULL)
+		  mCurrentFont(nullptr)
 	{
 		mWidgets.push_back(this);
 	}
@@ -107,9 +108,33 @@ namespace gcn
 			mDeathListener->death(event);
 		}
 
-		_setFocusHandler(NULL);
+		_setFocusHandler(nullptr);
 
 		mWidgets.remove(this);
+	}
+
+	void Widget::drawFrame(Graphics* graphics)
+	{
+		Color faceColor = getBaseColor();
+		Color highlightColor, shadowColor;
+		int alpha = getBaseColor().a;
+		int width = getWidth() + getFrameSize() * 2 - 1;
+		int height = getHeight() + getFrameSize() * 2 - 1;
+		highlightColor = faceColor + 0x303030;
+		highlightColor.a = alpha;
+		shadowColor = faceColor - 0x303030;
+		shadowColor.a = alpha;
+
+		unsigned int i;
+		for (i = 0; i < getFrameSize(); ++i)
+		{
+			graphics->setColor(shadowColor);
+			graphics->drawLine(i, i, width - i, i);
+			graphics->drawLine(i, i + 1, i, height - i - 1);
+			graphics->setColor(highlightColor);
+			graphics->drawLine(width - i, i + 1, width - i, height - i);
+			graphics->drawLine(i, height - i, width - i - 1, height - i);
+		}
 	}
 
 	void Widget::_setParent(Widget* parent)
@@ -201,12 +226,12 @@ namespace gcn
 		}
 	}
 
-	void Widget::setBorderSize(unsigned int borderSize)
+	void Widget::setFrameSize(unsigned int borderSize)
 	{
 		mBorderSize = borderSize;
 	}
 
-	unsigned int Widget::getBorderSize() const
+	unsigned int Widget::getFrameSize() const
 	{
 		return mBorderSize;
 	}
@@ -253,7 +278,7 @@ namespace gcn
 
 	void Widget::requestFocus()
 	{
-		if (mFocusHandler == NULL)
+		if (mFocusHandler == nullptr)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
@@ -301,7 +326,7 @@ namespace gcn
 
 	bool Widget::isVisible() const
 	{
-		if (getParent() == NULL)
+		if (getParent() == nullptr)
 		{
 			return mVisible;
 		}
@@ -431,7 +456,7 @@ namespace gcn
 
 	void Widget::getAbsolutePosition(int& x, int& y) const
 	{
-		if (getParent() == NULL)
+		if (getParent() == nullptr)
 		{
 			x = mDimension.x;
 			y = mDimension.y;
@@ -447,20 +472,11 @@ namespace gcn
 		y = parentY + mDimension.y + getParent()->getChildrenArea().y;
 	}
 
-	void Widget::generateAction()
-	{
-		for (auto& mActionListener : mActionListeners)
-		{
-			ActionEvent actionEvent(this, mActionEventId);
-			mActionListener->action(actionEvent);
-		}
-	}
-
 	Font* Widget::getFont() const
 	{
-		if (mCurrentFont == NULL)
+		if (mCurrentFont == nullptr)
 		{
-			if (mGlobalFont == NULL)
+			if (mGlobalFont == nullptr)
 			{
 				return &mDefaultFont;
 			}
@@ -477,7 +493,7 @@ namespace gcn
 
 		for (auto& mWidget : mWidgets)
 		{
-			if (mWidget->mCurrentFont == NULL)
+			if (mWidget->mCurrentFont == nullptr)
 			{
 				mWidget->fontChanged();
 			}
@@ -544,7 +560,7 @@ namespace gcn
 
 	void Widget::requestModalFocus()
 	{
-		if (mFocusHandler == NULL)
+		if (mFocusHandler == nullptr)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
@@ -554,7 +570,7 @@ namespace gcn
 
 	void Widget::requestModalMouseInputFocus()
 	{
-		if (mFocusHandler == NULL)
+		if (mFocusHandler == nullptr)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
@@ -564,7 +580,7 @@ namespace gcn
 
 	void Widget::releaseModalFocus()
 	{
-		if (mFocusHandler == NULL)
+		if (mFocusHandler == nullptr)
 		{
 			return;
 		}
@@ -574,7 +590,7 @@ namespace gcn
 
 	void Widget::releaseModalMouseInputFocus()
 	{
-		if (mFocusHandler == NULL)
+		if (mFocusHandler == nullptr)
 		{
 			return;
 		}
@@ -582,31 +598,31 @@ namespace gcn
 		mFocusHandler->releaseModalMouseInputFocus(this);
 	}
 
-	bool Widget::hasModalFocus() const
+	bool Widget::isModalFocused() const
 	{
-		if (mFocusHandler == NULL)
+		if (mFocusHandler == nullptr)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
 
-		if (getParent() != NULL)
+		if (getParent() != nullptr)
 		{
-			return mFocusHandler->getModalFocused() == this || getParent()->hasModalFocus();
+			return (mFocusHandler->getModalFocused() == this) || getParent()->isModalFocused();
 		}
 
 		return mFocusHandler->getModalFocused() == this;
 	}
 
-	bool Widget::hasModalMouseInputFocus() const
+	bool Widget::isModalMouseInputFocused() const
 	{
-		if (mFocusHandler == NULL)
+		if (mFocusHandler == nullptr)
 		{
 			throw GCN_EXCEPTION("No focushandler set (did you add the widget to the gui?).");
 		}
 
-		if (getParent() != NULL)
+		if (getParent() != nullptr)
 		{
-			return mFocusHandler->getModalMouseInputFocused() == this || getParent()->hasModalMouseInputFocus();
+			return (mFocusHandler->getModalMouseInputFocused() == this) || getParent()->isModalMouseInputFocused();
 		}
 
 		return mFocusHandler->getModalMouseInputFocused() == this;
@@ -614,7 +630,7 @@ namespace gcn
 
 	Widget* Widget::getWidgetAt(int x, int y)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	const std::list<MouseListener*>& Widget::_getMouseListeners()
@@ -684,6 +700,16 @@ namespace gcn
 		}
 	}
 
+	void Widget::distributeActionEvent()
+	{
+		ActionListenerIterator iter;
+		for (iter = mActionListeners.begin(); iter != mActionListeners.end(); ++iter)
+		{
+			ActionEvent actionEvent(this, mActionEventId);
+			(*iter)->action(actionEvent);
+		}
+	}
+
 	void Widget::distributeShownEvent()
 	{
 		for (auto& mWidgetListener : mWidgetListeners)
@@ -691,5 +717,29 @@ namespace gcn
 			Event event(this);
 			mWidgetListener->widgetShown(event);
 		}
+	}
+
+	void Widget::showPart(Rectangle rectangle)
+	{
+		if (mParent != nullptr)
+		{
+			mParent->showWidgetPart(this, rectangle);
+		}
+	}
+
+	Widget* Widget::getTop() const
+	{
+		if (getParent() == nullptr) return nullptr;
+
+		Widget* widget = getParent();
+		Widget* parent = getParent()->getParent();
+
+		while (parent != nullptr)
+		{
+			widget = parent;
+			parent = parent->getParent();
+		}
+
+		return widget;
 	}
 }

@@ -65,95 +65,170 @@
 
 namespace gcn
 {
-	/**
-	 * Implements basic container behaviour. Most container will suffice by
-	 * inheriting from this class.
-	 *
-	 * @see Container
-	 */
-	class GCN_CORE_DECLSPEC BasicContainer : public Widget, public DeathListener
-	{
-	public:
-		/**
-		 * Destructor
-		 */
-		virtual ~BasicContainer();
+    /**
+     * A base class for containers. The class implements the most
+     * common things for a container. If you are implementing a 
+     * container, consider inheriting from this class.
+     *
+     * @see Container
+     * @since 0.6.0
+     */
+    class GCN_CORE_DECLSPEC BasicContainer : public Widget, public DeathListener
+    {
+    public:
+        /**
+         * Constructor.
+         */
+        BasicContainer();
+
+        /**
+         * Destructor
+         */
+        virtual ~BasicContainer();
+
+        // Inherited from Widget
+
+        /**
+         * Shows a certain part of a widget in the basic container.
+         * Used when widgets want a specific part to be visible in
+         * its parent. An example is a TextArea that wants a specific
+         * part of its text to be visible when a TextArea is a child
+         * of a ScrollArea.
+         *
+         * @param widget The widget whom wants a specific part of
+         *               itself to be visible.
+         * @param rectangle The rectangle to be visible.
+         */
+        virtual void showWidgetPart(Widget* widget, Rectangle area);
+
+        virtual void moveToTop(Widget* widget);
+
+        virtual void moveToBottom(Widget* widget);
+
+        virtual Rectangle getChildrenArea();
+
+        virtual void focusNext();
+
+        virtual void focusPrevious();
+
+        virtual void logic();
+
+        virtual void _setFocusHandler(FocusHandler* focusHandler);
+
+        void setInternalFocusHandler(FocusHandler* focusHandler);
+
+        virtual Widget *getWidgetAt(int x, int y);
 
 
-		// Inherited from Widget
+        // Inherited from DeathListener
 
-		virtual void moveToTop(Widget* widget);
+        virtual void death(const Event& event);
 
-		virtual void moveToBottom(Widget* widget);
+    protected:
+        /**
+         * Moves a widget to the top. Normally one wants to use
+         * Widget::moveToTop instead.
+         *
+         * THIS METHOD IS NOT SAFE TO CALL INSIDE A WIDGETS LOGIC FUNCTION
+         * INSIDE ANY LISTENER FUNCTIONS!
+         *
+         * @param widget The widget to move to the top.
+         * @since 1.1.0
+         */
+        void _moveToTopWithNoChecks(Widget* widget);
 
-		virtual Rectangle getChildrenArea();
+        /**
+         * Moves a widget to the bottom. Normally one wants to use
+         * Widget::moveToBottom instead.
+         *
+         * THIS METHOD IS NOT SAFE TO CALL INSIDE A WIDGETS LOGIC FUNCTION
+         * INSIDE ANY LISTENER FUNCTIONS!
+         *
+         * @param The widget to move to the bottom.
+         * @since 1.1.0
+         */
+        void _moveToBottomWithNoChecks(Widget* widget);
 
-		virtual void focusNext();
+        /**
+         * Adds a widget to the basic container.
+         *
+         * THIS METHOD IS NOT SAFE TO CALL INSIDE A WIDGETS LOGIC FUNCTION
+         * INSIDE ANY LISTENER FUNCTIONS!
+         *
+         * @param widget The widget to add.
+         * @see remove, clear
+         */
+        void add(Widget* widget);
 
-		virtual void focusPrevious();
+        /**
+         * Removes a widget from the basic container.
+         *
+         * THIS METHOD IS NOT SAFE TO CALL INSIDE A WIDGETS LOGIC FUNCTION
+         * INSIDE ANY LISTENER FUNCTIONS!
+         *
+         * @param widget The widget to remove.
+         * @see add, clear
+         */
+        virtual void remove(Widget* widget);
 
-		virtual void logic();
+        /**
+         * Clears the basic container from all widgets.
+         *
+         * THIS METHOD IS NOT SAFE TO CALL INSIDE A WIDGETS LOGIC FUNCTION
+         * INSIDE ANY LISTENER FUNCTIONS!
+         *
+         * @see remove, clear
+         */
+        virtual void clear();
+        
+        /**
+         * Draws the children widgets of the basic container.
+         *
+         * @param graphics A graphics object to draw with.
+         */
+        virtual void drawChildren(Graphics* graphics);
 
-		virtual void _setFocusHandler(FocusHandler* focusHandler);
+        /**
+         * Calls logic for the children widgets of the basic
+         * container.
+         */
+        virtual void logicChildren();
 
-		void setInternalFocusHandler(FocusHandler* focusHandler);
+        /**
+         * Finds a widget given an id. This function can be useful
+         * when implementing a GUI generator for Guisan, such as
+         * the ability to create a Guisan GUI from an XML file.
+         *
+         * @param id The id to find a widget by.
+         * @return The widget with the corrosponding id, 
+                   NULL of no widget is found.
+         */
+        virtual Widget* findWidgetById(const std::string& id);
 
-		virtual void showWidgetPart(Widget* widget, Rectangle area);
+        typedef std::list<Widget *> WidgetList;
+        typedef WidgetList::iterator WidgetListIterator;
+        typedef WidgetList::reverse_iterator WidgetListReverseIterator;
 
-		virtual Widget* getWidgetAt(int x, int y);
+        /**
+         * Holds all widgets of the basic container.
+         */
+        WidgetList mWidgets;
 
+        /**
+         * Holds a widget that should be moved to the top.
+         */
+        Widget* mWidgetToBeMovedToTheTop;
 
-		// Inherited from DeathListener
+        /**
+         * Holds a widget that should be moved to the bottom.
+         */
+        Widget* mWidgetToBeMovedToTheBottom;
 
-		virtual void death(const Event& event);
-
-	protected:
-		/**
-		 * Adds a widget to the basic container.
-		 *
-		 * @param widget the widget to add.
-		 */
-		void add(Widget* widget);
-
-		/**
-		 * Removes a widget from the basic container.
-		 *
-		 * @param widget the widget to remove.
-		 */
-		virtual void remove(Widget* widget);
-
-		/**
-		 * Clears the basic container from all widgets.
-		 */
-		virtual void clear();
-
-		/**
-		 * Draws children widgets.
-		 *
-		 * @param graphics a Graphics object to draw with.
-		 */
-		virtual void drawChildren(Graphics* graphics);
-
-		/**
-		 * Calls logic for children widgets.
-		 */
-		virtual void logicChildren();
-
-		/**
-		 * Finds a widget given an id.
-		 *
-		 * @param id the id to find a widget by.
-		 * @return the widget with the corresponding id, 
-				   NULL of no widget is found.
-		 */
-		virtual Widget* findWidgetById(const std::string& id);
-
-		typedef std::list<Widget*> WidgetList;
-		typedef WidgetList::iterator WidgetListIterator;
-		typedef WidgetList::reverse_iterator WidgetListReverseIterator;
-
-		WidgetList mWidgets;
-	};
+        /**
+         * True if logic is currently being processed, false otherwise.
+         */
+        bool mLogicIsProcessing;
+    };
 }
 
 #endif // end GCN_BASICCONTAINER_HPP

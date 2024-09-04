@@ -170,7 +170,7 @@ void InitPanelRTG(const config_category& category)
 	rtg_action_listener = new RTGActionListener();
 
 	lblBoard = new gcn::Label("RTG Graphics Board:");
-	lblBoard->setAlignment(gcn::Graphics::LEFT);
+	lblBoard->setAlignment(gcn::Graphics::Left);
 
 	cboBoard = new gcn::DropDown(&rtg_boards_list);
 	cboBoard->setSize(300, cboBoard->getHeight());
@@ -243,7 +243,7 @@ void InitPanelRTG(const config_category& category)
 	chkRtgMultithreaded->addActionListener(rtg_action_listener);
 
 	lblRtgRefreshRate = new gcn::Label("Refresh rate:");
-	lblRtgRefreshRate->setAlignment(gcn::Graphics::LEFT);
+	lblRtgRefreshRate->setAlignment(gcn::Graphics::Left);
 	cboRtgRefreshRate = new gcn::DropDown(&rtg_refreshrates_list);
 	cboRtgRefreshRate->setSize(150, cboRtgRefreshRate->getHeight());
 	cboRtgRefreshRate->setBaseColor(gui_base_color);
@@ -254,7 +254,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgRefreshRate->addActionListener(rtg_action_listener);
 
 	lblRtgBufferMode = new gcn::Label("Buffer mode:");
-	lblRtgBufferMode->setAlignment(gcn::Graphics::LEFT);
+	lblRtgBufferMode->setAlignment(gcn::Graphics::Left);
 	cboRtgBufferMode = new gcn::DropDown(&rtg_buffermodes_list);
 	cboRtgBufferMode->setSize(150, cboRtgBufferMode->getHeight());
 	cboRtgBufferMode->setBaseColor(gui_base_color);
@@ -265,7 +265,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgBufferMode->addActionListener(rtg_action_listener);
 
 	lblRtgAspectRatio = new gcn::Label("Aspect Ratio:");
-	lblRtgAspectRatio->setAlignment(gcn::Graphics::LEFT);
+	lblRtgAspectRatio->setAlignment(gcn::Graphics::Left);
 	cboRtgAspectRatio = new gcn::DropDown(&rtg_aspectratios_list);
 	cboRtgAspectRatio->setSize(150, cboRtgAspectRatio->getHeight());
 	cboRtgAspectRatio->setBaseColor(gui_base_color);
@@ -276,7 +276,7 @@ void InitPanelRTG(const config_category& category)
 	cboRtgAspectRatio->addActionListener(rtg_action_listener);
 
 	lblRtgColorModes = new gcn::Label("Color modes:");
-	lblRtgColorModes->setAlignment(gcn::Graphics::LEFT);
+	lblRtgColorModes->setAlignment(gcn::Graphics::Left);
 
 	cboRtg16bitModes = new gcn::DropDown(&rtg_16bit_modes_list);
 	cboRtg16bitModes->setSize(150, cboRtg16bitModes->getHeight());

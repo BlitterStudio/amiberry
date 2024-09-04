@@ -61,6 +61,8 @@
 #include <guisan/actionlistener.hpp>
 #include <guisan/cliprectangle.hpp>
 #include <guisan/color.hpp>
+#include <guisan/containerevent.hpp>
+#include <guisan/containerlistener.hpp>
 #include <guisan/deathlistener.hpp>
 #include <guisan/event.hpp>
 #include <guisan/exception.hpp>

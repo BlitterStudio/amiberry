@@ -466,7 +466,7 @@ void InitPanelMisc(const config_category& category)
 	chkWarpModeReset->addActionListener(miscActionListener);
 	
 	lblNumLock = new gcn::Label("NumLock:");
-	lblNumLock->setAlignment(gcn::Graphics::RIGHT);
+	lblNumLock->setAlignment(gcn::Graphics::Right);
 	cboKBDLed_num = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_num->setBaseColor(gui_base_color);
 	cboKBDLed_num->setBackgroundColor(gui_textbox_background_color);
@@ -476,7 +476,7 @@ void InitPanelMisc(const config_category& category)
 	cboKBDLed_num->addActionListener(miscActionListener);
 
 	lblScrLock = new gcn::Label("ScrollLock:");
-	lblScrLock->setAlignment(gcn::Graphics::RIGHT);
+	lblScrLock->setAlignment(gcn::Graphics::Right);
 	cboKBDLed_scr = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_scr->setBaseColor(gui_base_color);
 	cboKBDLed_scr->setBackgroundColor(gui_textbox_background_color);
@@ -486,7 +486,7 @@ void InitPanelMisc(const config_category& category)
 	cboKBDLed_scr->addActionListener(miscActionListener);
 
 	lblCapLock = new gcn::Label("CapsLock:");
-	lblCapLock->setAlignment(gcn::Graphics::LEFT);
+	lblCapLock->setAlignment(gcn::Graphics::Left);
 	cboKBDLed_cap = new gcn::DropDown(&KBDLedList);
 	cboKBDLed_cap->setBaseColor(gui_base_color);
 	cboKBDLed_cap->setBackgroundColor(gui_textbox_background_color);
@@ -496,7 +496,7 @@ void InitPanelMisc(const config_category& category)
 	cboKBDLed_cap->addActionListener(miscActionListener);
 
 	lblOpenGUI = new gcn::Label("Open GUI:");
-	lblOpenGUI->setAlignment(gcn::Graphics::RIGHT);
+	lblOpenGUI->setAlignment(gcn::Graphics::Right);
 	txtOpenGUI = new gcn::TextField();
 	txtOpenGUI->setEnabled(false);
 	txtOpenGUI->setSize(120, TEXTFIELD_HEIGHT);
@@ -517,7 +517,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyOpenGUIClear->addActionListener(miscActionListener);
 
 	lblKeyForQuit = new gcn::Label("Quit Key:");
-	lblKeyForQuit->setAlignment(gcn::Graphics::RIGHT);
+	lblKeyForQuit->setAlignment(gcn::Graphics::Right);
 	txtKeyForQuit = new gcn::TextField();
 	txtKeyForQuit->setEnabled(false);
 	txtKeyForQuit->setSize(120, TEXTFIELD_HEIGHT);
@@ -538,7 +538,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyForQuitClear->addActionListener(miscActionListener);
 
 	lblKeyActionReplay = new gcn::Label("Action Replay:");
-	lblKeyActionReplay->setAlignment(gcn::Graphics::RIGHT);
+	lblKeyActionReplay->setAlignment(gcn::Graphics::Right);
 	txtKeyActionReplay = new gcn::TextField();
 	txtKeyActionReplay->setEnabled(false);
 	txtKeyActionReplay->setSize(120, TEXTFIELD_HEIGHT);
@@ -559,7 +559,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyActionReplayClear->addActionListener(miscActionListener);
 
 	lblKeyFullScreen = new gcn::Label("FullScreen:");
-	lblKeyFullScreen->setAlignment(gcn::Graphics::RIGHT);
+	lblKeyFullScreen->setAlignment(gcn::Graphics::Right);
 	txtKeyFullScreen = new gcn::TextField();
 	txtKeyFullScreen->setEnabled(false);
 	txtKeyFullScreen->setSize(120, TEXTFIELD_HEIGHT);
@@ -580,7 +580,7 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyFullScreenClear->addActionListener(miscActionListener);
 
 	lblKeyMinimize = new gcn::Label("Minimize:");
-	lblKeyMinimize->setAlignment(gcn::Graphics::RIGHT);
+	lblKeyMinimize->setAlignment(gcn::Graphics::Right);
 	txtKeyMinimize = new gcn::TextField();
 	txtKeyMinimize->setEnabled(false);
 	txtKeyMinimize->setSize(120, TEXTFIELD_HEIGHT);
@@ -674,7 +674,7 @@ void InitPanelMisc(const config_category& category)
 	scrlMisc->setForegroundColor(gui_foreground_color);
 	scrlMisc->setWidth(category.panel->getWidth() - (category.panel->getWidth() / 3) - 27);
 	scrlMisc->setHeight(600);
-	scrlMisc->setBorderSize(1);
+	scrlMisc->setFrameSize(1);
 	scrlMisc->setFocusable(true);
 	category.panel->add(scrlMisc, DISTANCE_BORDER, DISTANCE_BORDER);
 
