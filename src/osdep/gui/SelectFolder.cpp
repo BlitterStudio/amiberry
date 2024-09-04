@@ -21,7 +21,7 @@
 
 enum
 {
-	DIALOG_WIDTH = 520,
+	DIALOG_WIDTH = 600,
 	DIALOG_HEIGHT = 600
 };
 
@@ -91,11 +91,13 @@ static void checkfoldername(const std::string& current)
 		auto* const ptr = realpath(current.c_str(), actualpath);
 		workingDir = std::string(ptr);
 		closedir(dir);
+		lstFolders->adjustSize();
 	}
 	else
 	{
 		workingDir = home_dir;
 		dirList = workingDir;
+		lstFolders->adjustSize();
 	}
 	txtCurrent->setText(workingDir);
 }
@@ -219,7 +221,7 @@ static void InitSelectFolder(const std::string& title)
 	scrAreaFolders->setForegroundColor(gui_foreground_color);
 	scrAreaFolders->setSelectionColor(gui_selection_color);
 	scrAreaFolders->setHorizontalScrollPolicy(gcn::ScrollArea::ShowAuto);
-	scrAreaFolders->setVerticalScrollPolicy(gcn::ScrollArea::ShowAlways);
+	scrAreaFolders->setVerticalScrollPolicy(gcn::ScrollArea::ShowAuto);
 
 	wndSelectFolder->add(cmdCreateFolder);
 	wndSelectFolder->add(cmdOK);
