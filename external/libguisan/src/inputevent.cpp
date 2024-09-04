@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -63,18 +63,19 @@
 namespace gcn
 {
 	InputEvent::InputEvent(Widget* source,
-						   bool isShiftPressed,
-						   bool isControlPressed,
-						   bool isAltPressed,
-						   bool isMetaPressed)
-		: Event(source),
-		  mShiftPressed(isShiftPressed),
-		  mControlPressed(isControlPressed),
-		  mAltPressed(isAltPressed),
-		  mMetaPressed(isMetaPressed),
-		  mIsConsumed(false)
+	                       Widget* distributor,
+	                       bool isShiftPressed,
+	                       bool isControlPressed,
+	                       bool isAltPressed,
+	                       bool isMetaPressed) :
+		Event(source),
+		mShiftPressed(isShiftPressed),
+		mControlPressed(isControlPressed),
+		mAltPressed(isAltPressed),
+		mMetaPressed(isMetaPressed),
+		mIsConsumed(false),
+		mDistributor(distributor)
 	{
-
 	}
 
 	bool InputEvent::isShiftPressed() const
@@ -106,4 +107,9 @@ namespace gcn
 	{
 		return mIsConsumed;
 	}
-}
+
+	Widget* InputEvent::getDistributor() const
+	{
+		return mDistributor;
+	}
+} // namespace gcn

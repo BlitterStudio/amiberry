@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -62,46 +62,47 @@
 
 namespace gcn
 {
-	/**
-	 * A font only capable of drawing rectangles. It is used by default
-	 * merely to show that no font have been set.
-	 */
-	class GCN_CORE_DECLSPEC DefaultFont : public Font
-	{
-	public:
+    /**
+     * A font only capable of drawing rectangles. It is used by default
+     * in Guisan if no font has been set merely to show that no font has 
+     * been set.
+     */
+    class GCN_CORE_DECLSPEC DefaultFont : public Font
+    {
+    public:
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~DefaultFont() { }
+        /**
+         * Destructor.
+         */
+        virtual ~DefaultFont(){}
 
-		/**
-		 * Draws a glyph as a rectangle. The glyphs always be drawn as
-		 * rectangles no matter the glyph.
-		 *
-		 * NOTE: You normally won't use this function to draw text since
-		 *       the Graphics class contains better functions for drawing
-		 *       text.
-		 *
-		 * @param graphics a Graphics object to be used for drawing.
-		 * @param glyph a glyph to draw.
-		 * @param x the x coordinate where to draw the glyph.
-		 * @param y the y coordinate where to draw the glyph.
-		 * @return the width of the glyph in pixels.
-		 */
-		virtual int drawGlyph(Graphics* graphics, unsigned char glyph, int x, int y);
+        /**
+         * Draws a glyph as a rectangle. The glyphs will always be drawn as
+         * rectangles no matter the glyph.
+         *
+         * NOTE: You normally won't use this function to draw text since
+         *       the Graphics class contains better functions for drawing
+         *       text.
+         *
+         * @param graphics A Graphics object to be used for drawing.
+         * @param glyph The glyph to draw.
+         * @param x The x coordinate where to draw the glyph.
+         * @param y The y coordinate where to draw the glyph.
+         * @return The width of the drawn glyph in pixels.
+         */
+        virtual int drawGlyph(Graphics* graphics, unsigned char glyph, int x, int y);
 
 
-		// Inherited from Font
+        // Inherited from Font
 
-		virtual void drawString(Graphics* graphics, const std::string& text, int x, int y, bool enabled);
+        virtual void drawString(Graphics* graphics, const std::string& text, int x, int y, bool enabled);
 
-		virtual int getWidth(const std::string& text) const;
+        virtual int getWidth(const std::string& text) const;
 
-		virtual int getHeight() const;
+        virtual int getHeight() const;
 
-		virtual int getStringIndexAt(const std::string& text, int x);
-	};
+        virtual int getStringIndexAt(const std::string& text, int x) const;
+    };
 }
 
 #endif // end GCN_DEFAULTFONT_HPP

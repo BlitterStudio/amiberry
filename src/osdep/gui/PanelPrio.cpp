@@ -144,7 +144,7 @@ void InitPanelPrio(const config_category& category)
 	int posY = DISTANCE_BORDER;
 
 	lblActiveRunAtPrio = new gcn::Label("Run at priority:");
-	lblActiveRunAtPrio->setAlignment(gcn::Graphics::CENTER);
+	lblActiveRunAtPrio->setAlignment(gcn::Graphics::Center);
 	cboActiveRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboActiveRunAtPrio->setSize(150, cboActiveRunAtPrio->getHeight());
 	cboActiveRunAtPrio->setBaseColor(gui_base_color);
@@ -155,7 +155,7 @@ void InitPanelPrio(const config_category& category)
 	cboActiveRunAtPrio->addActionListener(prioActionListener);
 
 	lblActiveMouseUncaptured = new gcn::Label("Mouse uncaptured:");
-	lblActiveMouseUncaptured->setAlignment(gcn::Graphics::CENTER);
+	lblActiveMouseUncaptured->setAlignment(gcn::Graphics::Center);
 
 	chkActivePauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkActivePauseEmulation->setId("chkActivePauseEmulation");
@@ -190,7 +190,7 @@ void InitPanelPrio(const config_category& category)
 	category.panel->add(grpWhenActive);
 	
 	lblInactiveRunAtPrio = new gcn::Label("Run at priority:");
-	lblInactiveRunAtPrio->setAlignment(gcn::Graphics::CENTER);
+	lblInactiveRunAtPrio->setAlignment(gcn::Graphics::Center);
 	cboInactiveRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboInactiveRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
 	cboInactiveRunAtPrio->setBaseColor(gui_base_color);
@@ -237,7 +237,7 @@ void InitPanelPrio(const config_category& category)
 	category.panel->add(grpWhenInactive);
 
 	lblMinimizedRunAtPrio = new gcn::Label("Run at priority:");
-	lblMinimizedRunAtPrio->setAlignment(gcn::Graphics::CENTER);
+	lblMinimizedRunAtPrio->setAlignment(gcn::Graphics::Center);
 	cboMinimizedRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboMinimizedRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
 	cboMinimizedRunAtPrio->setBaseColor(gui_base_color);

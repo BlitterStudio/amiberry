@@ -679,7 +679,7 @@ void InitPanelPaths(const config_category& category)
 	scrlPaths->setForegroundColor(gui_foreground_color);
 	scrlPaths->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	scrlPaths->setHeight(category.panel->getHeight() - TEXTFIELD_HEIGHT * 6);
-	scrlPaths->setBorderSize(1);
+	scrlPaths->setFrameSize(1);
 	scrlPaths->setFocusable(true);
 	category.panel->add(scrlPaths, DISTANCE_BORDER, DISTANCE_BORDER);
 

@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -66,26 +66,36 @@ namespace gcn
     class Widget;
 
     /**
-     * Key event.
+     * Represents a key event.
      */
     class GCN_CORE_DECLSPEC KeyEvent: public InputEvent
     {
     public:
+        /**
+         * Key event types.
+         */
+        enum
+        {
+            Pressed = 0,
+            Released
+        };
 
         /**
          * Constructor.
          *
-         * @param source the source widget of the event.
-         * @param isShiftPressed true if shift is pressed, false otherwise.
-         * @param isControlPressed true if control is pressed, false otherwise.
-         * @param isAltPressed true if alt is pressed, false otherwise.
-         * @param isMetaPressed true if meta is pressed, false otherwise.
-         * @param type the type of the event.
-         * @param isNumericPad true if the event occured on the numeric pad,
+         * @param source The widget the event concerns.
+         * @param distributor The distributor of the event.
+         * @param isShiftPressed True if shift is pressed, false otherwise.
+         * @param isControlPressed True if control is pressed, false otherwise.
+         * @param isAltPressed True if alt is pressed, false otherwise.
+         * @param isMetaPressed True if meta is pressed, false otherwise.
+         * @param type The type of the event. A value from KeyEventType.
+         * @param isNumericPad True if the event occured on the numeric pad,
          *                     false otherwise.
-         * @param key represents the key of the event.
+         * @param key The key of the event.
          */
         KeyEvent(Widget* source,
+                 Widget* distributor,
                  bool isShiftPressed,
                  bool isControlPressed,
                  bool isAltPressed,
@@ -102,36 +112,39 @@ namespace gcn
         /**
          * Gets the type of the event.
          *
-         * @return the type of the event.
+         * @return The type of the event.
          */
         unsigned int getType() const;
 
         /**
-         * Checks whether the key event occured on the numeric pad.
+         * Checks if the key event occurred on the numeric pad.
          *
-         * @return true if key event occured on the numeric pad.
+         * @return True if key event occurred on the numeric pad,
+         *         false otherwise.
          */
         bool isNumericPad() const;
 
         /**
          * Gets the key of the event.
          *
-         * @return the key of the event.
+         * @return The key of the event.
          */
         const Key& getKey() const;
 
-        /**
-         * Key event types.
-         */
-        enum
-        {
-            PRESSED = 0,
-            RELEASED
-        };
-
     protected:
+        /**
+         * Holds the type of the key event.
+         */
         unsigned int mType;
+
+        /**
+         * True if the numeric pad was used, false otherwise.
+         */
         bool mIsNumericPad;
+
+        /** 
+         * Holds the key of the key event.
+         */
         Key mKey;
     };
 }

@@ -59,12 +59,12 @@ public:
 		return dirs.size() + files.size();
 	}
 
-	void add(const std::string& elem) override
+	void add(const std::string& elem)
 	{
 		dirs.push_back(elem);
 	}
 
-	void clear() override
+	void clear() 
 	{
 		dirs.clear();
 		files.clear();
@@ -258,7 +258,7 @@ static void InitSelectFile(const std::string& title)
 	lstFiles->addActionListener(selectFileActionListener);
 
 	scrAreaFiles = new gcn::ScrollArea(lstFiles);
-	scrAreaFiles->setBorderSize(1);
+	scrAreaFiles->setFrameSize(1);
 	scrAreaFiles->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFiles->setScrollbarWidth(SCROLLBAR_WIDTH);
@@ -266,15 +266,15 @@ static void InitSelectFile(const std::string& title)
 	scrAreaFiles->setBackgroundColor(gui_textbox_background_color);
 	scrAreaFiles->setForegroundColor(gui_foreground_color);
 	scrAreaFiles->setSelectionColor(gui_selection_color);
-	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
-	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::SHOW_ALWAYS);
+	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::ShowAuto);
+	scrAreaFiles->setVerticalScrollPolicy(gcn::ScrollArea::ShowAlways);
 
 	if (createNew)
 	{
 		scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128 - TEXTFIELD_HEIGHT - DISTANCE_NEXT_Y);
 		lblFilename = new gcn::Label("Filename:");
 		lblFilename->setSize(80, LABEL_HEIGHT);
-		lblFilename->setAlignment(gcn::Graphics::LEFT);
+		lblFilename->setAlignment(gcn::Graphics::Left);
 		lblFilename->setPosition(DISTANCE_BORDER, scrAreaFiles->getY() + scrAreaFiles->getHeight() + DISTANCE_NEXT_Y);
 		txtFilename = new gcn::TextField();
 		txtFilename->setSize(350, TEXTFIELD_HEIGHT);

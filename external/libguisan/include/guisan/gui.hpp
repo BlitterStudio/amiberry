@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -67,329 +67,432 @@
 
 namespace gcn
 {
-	class FocusHandler;
-	class Graphics;
-	class Input;
-	class KeyListener;
-	class Widget;
+    class FocusHandler;
+    class Graphics;
+    class Input;
+    class KeyListener;
+    class Widget;
 
-	// The following comment will appear in the doxygen main page.
-	/**
-	 * @mainpage
-	 * @section Introduction
-	 * This documentation is mostly intended as a reference to the API. If you want to get started with Guichan, we suggest you check out the programs in the examples directory of the Guichan release.
-	 * @n
-	 * @n
-	 * This documentation is, and will always be, work in progress. If you find any errors, typos or inconsistencies, or if you feel something needs to be explained in more detail - don't hesitate to tell us.
-	 */
+    // The following comment will appear in the doxygen main page.
+    /**
+     * @mainpage
+     * @section Introduction
+     * This documentation is mostly intended as a reference to the API. If you want to get started with Guichan, we suggest you check out the programs in the examples directory of the Guichan release.
+     * @n
+     * @n
+     * This documentation is, and will always be, work in progress. If you find any errors, typos or inconsistencies, or if you feel something needs to be explained in more detail - don't hesitate to tell us.
+     */
 
-	/**
-	 * Gui core class. Contains a special widget called the top widget.
-	 * If you want to be able to have more then one Widget in your Gui,
-	 * the top widget should be a Container.
-	 *
-	 * NOTE: For the Gui to function properly you need to set a Graphics
-	 *       object to use and an Input object to use.
-	 */
-	class GCN_CORE_DECLSPEC Gui
-	{
-	public:
+    /**
+     * Contains a Guisan GUI. This is the core class of Guisan to which
+     * implementations of back ends are passed, to make Guisan work with
+     * a specific library, and to where the top widget (root widget of GUI)
+     * is added. If you want to be able to have more then one widget in your 
+     * GUI, the top widget should be a container.
+     *
+     * A Gui object cannot work properly without passing back end 
+     * implementations to it. A Gui object must have an implementation of a
+     * Graphics and an implementation of Input. 
+     *
+     * NOTE: A complete GUI also must have the ability to load images.
+     *       Images are loaded with the Image class, so to make Guisan
+     *       able to load images an implementation of ImageLoader must be
+     *       passed to Image.
+     *
+     * @see Graphics, Input, Image
+     */
+    class GCN_CORE_DECLSPEC Gui
+    {
+    public:
 
-		/**
-		 * Constructor.
-		 */
-		Gui();
+        /**
+         * Constructor.
+         */
+        Gui();
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~Gui();
+        /**
+         * Destructor.
+         */
+        virtual ~Gui();
 
-		/**
-		 * Sets the top Widget.
-		 *
-		 * @param top the top Widget.
-		 */
-		virtual void setTop(Widget* top);
+        /**
+         * Sets the top widget. The top widget is the root widget
+         * of the GUI. If you want a GUI to be able to contain more
+         * than one widget the top widget should be a container.
+         *
+         * @param top The top widget.
+         * @see Container
+         * @since 0.1.0
+         */
+        virtual void setTop(Widget* top);
 
-		/**
-		 * Gets the top Widget.
-		 *
-		 * @return the top widget. NULL if no top widget has been set.
-		 */
-		virtual Widget* getTop() const;
+        /**
+         * Gets the top widget. The top widget is the root widget
+         * of the GUI.
+         *
+         * @return The top widget. NULL if no top widget has been set.
+         * @since 0.1.0
+         */
+        virtual Widget* getTop() const;
 
-		/**
-		 * Sets the Graphics object to use for drawing.
-		 *
-		 * @param graphics the Graphics object to use for drawing.
-		 * @see SDLGraphics, OpenGLGraphics, AllegroGraphics
-		 */
-		virtual void setGraphics(Graphics* graphics);
+        /**
+         * Sets the graphics object to use for drawing.
+         *
+         * @param graphics The graphics object to use for drawing.
+         * @see getGraphics, OpenGLGraphics, SDLGraphics
+         * @since 0.1.0
+         */
+        virtual void setGraphics(Graphics* graphics);
 
-		/**
-		 * Gets the Graphics object used for drawing.
-		 *
-		 *  @return the Graphics object used for drawing. NULL if no
-		 *          Graphics object has been set.
-		 */
-		virtual Graphics* getGraphics() const;
+        /**
+         * Gets the graphics object used for drawing.
+         *
+         *  @return The graphics object used for drawing. NULL if no
+         *          graphics object has been set.
+         * @see setGraphics, OpenGLGraphics, SDLGraphics
+         * @since 0.1.0
+         */
+        virtual Graphics* getGraphics() const;
 
-		/**
-		 * Sets the Input object to use for input handling.
-		 *
-		 * @param input the Input object to use for input handling.
-		 * @see SDLInput, AllegroInput
-		 */
-		virtual void setInput(Input* input);
+        /**
+         * Sets the input object to use for input handling.
+         *
+         * @param input The input object to use for input handling.
+         * @see getInput, SDLInput
+         * @since 0.1.0
+         */
+        virtual void setInput(Input* input);
 
-		/**
-		 * Gets the Input object being used for input handling.
-		 *
-		 *  @return the Input object used for handling input. NULL if no
-		 *          Input object has been set.
-		 */
-		virtual Input* getInput() const;
+        /**
+         * Gets the input object being used for input handling.
+         *
+         *  @return The input object used for handling input. NULL if no
+         *          input object has been set.
+         * @see setInput, SDLInput
+         * @since 0.1.0
+         */
+        virtual Input* getInput() const;
 
-		/**
-		 * Performs the Gui logic. By calling this function all logic
-		 * functions down in the Gui heirarchy will be called.
-		 * What performs in Logic can be just about anything like
-		 * adjusting a Widgets size or doing some calculations.
-		 *
-		 * NOTE: Logic also deals with user input (Mouse and Keyboard)
-		 *       for Widgets.
-		 */
-		virtual void logic();
+        /**
+         * Performs logic of the GUI. By calling this function all logic
+         * functions down in the GUI heirarchy will be called. When logic
+         * is called for Gui, user input will be handled.
+         *
+         * @see Widget::logic
+         * @since 0.1.0
+         */
+        virtual void logic();
 
-		/**
-		 * Draws the Gui. By calling this funcion all draw functions
-		 * down in the Gui hierarchy will be called.
-		 */
-		virtual void draw();
+        /**
+         * Draws the GUI. By calling this funcion all draw functions
+         * down in the GUI hierarchy will be called. When draw is called
+         * the used Graphics object will be initialised and drawing of
+         * the top widget will commence.
+         *
+         * @see Widget::draw
+         * @since 0.1.0
+         */
+        virtual void draw();
 
-		/**
-		 * Focus none of the Widgets in the Gui.
-		 */
-		virtual void focusNone();
+        /**
+         * Focuses none of the widgets in the Gui.
+         *
+         * @since 0.1.0
+         */
+        virtual void focusNone();
 
-		/**
-		 * Toggles the use of the tab key to focus Widgets.
-		 * By default, tabbing is enabled.
-		 *
-		 * @param tabbing set to false if you want to disable tabbing.
-		 */
-		virtual void setTabbingEnabled(bool tabbing);
+        /**
+         * Sets tabbing enabled, or not. Tabbing is the usage of
+         * changing focus by utilising the tab key.
+         *
+         * @param tabbing True if tabbing should be enabled, false
+         *                otherwise.
+         * @see isTabbingEnabled
+         * @since 0.1.0
+         */
+        virtual void setTabbingEnabled(bool tabbing);
 
-		/**
-		 * Checks if tabbing is enabled.
-		 *
-		 * @return true if tabbing is enabled.
-		 */
-		virtual bool isTabbingEnabled();
+        /**
+         * Checks if tabbing is enabled.
+         *
+         * @return True if tabbing is enabled, false otherwise.
+         * @see setTabbingEnabled
+         * @since 0.1.0
+         */
+        virtual bool isTabbingEnabled();
 
-		/**
-		 * Adds a global KeyListener to the Gui.
-		 *
-		 * @param keyListener a KeyListener to add.
-		 */
-		virtual void addGlobalKeyListener(KeyListener* keyListener);
+        /**
+         * Adds a global key listener to the Gui. A global key listener
+         * will receive all key events generated from the GUI and global
+         * key listeners will receive the events before key listeners
+         * of widgets.
+         *
+         * @param keyListener The key listener to add.
+         * @see removeGlobalKeyListener
+         * @since 0.5.0
+         */
+        virtual void addGlobalKeyListener(KeyListener* keyListener);
 
-		/**
-		 * Remove global KeyListener from the Gui.
-		 *
-		 * @param keyListener a KeyListener to remove.
-		 * @throws Exception if the KeyListener hasn't been added.
-		 */
-		virtual void removeGlobalKeyListener(KeyListener* keyListener);
+        /**
+         * Removes global key listener from the Gui.
+         *
+         * @param keyListener The key listener to remove.
+         * @throws Exception if the key listener hasn't been added.
+         * @see addGlobalKeyListener
+         * @since 0.5.0
+         */
+        virtual void removeGlobalKeyListener(KeyListener* keyListener);
 
-	protected:
-		/**
-		 * Handles all mouse input.
-		 *
-		 * @since 0.6.0
-		 */
-		virtual void handleMouseInput();
+    protected:
+        /**
+         * Handles all mouse input.
+         *
+         * @since 0.6.0
+         */
+        virtual void handleMouseInput();
 
-		/**
-		 * Handles key input.
-		 *
-		 * @since 0.6.0
-		 */
-		virtual void handleKeyInput();
+        /**
+         * Handles key input.
+         *
+         * @since 0.6.0
+         */
+        virtual void handleKeyInput();
 
-		/**
-		 * Handles mouse moved input.
-		 *
-		 * @param mouseInput the mouse input to handle.
-		 * @since 0.6.0
-		 */
-		virtual void handleMouseMoved(const MouseInput& mouseInput);
+        /**
+         * Handles mouse moved input.
+         *
+         * @param mouseInput The mouse input to handle.
+         * @since 0.6.0
+         */
+        virtual void handleMouseMoved(const MouseInput& mouseInput);
 
-		/**
-		 * Handles mouse pressed input.
-		 *
-		 * @param mouseInput the mouse input to handle.
-		 * @since 0.6.0
-		 */
-		virtual void handleMousePressed(const MouseInput& mouseInput);
+        /**
+         * Handles mouse pressed input.
+         *
+         * @param mouseInput The mouse input to handle.
+         * @since 0.6.0
+         */
+        virtual void handleMousePressed(const MouseInput& mouseInput);
 
-		/**
-		 *
-		 * Handles mouse wheel moved down input.
-		 *
-		 * @param mouseInput the mouse input to handle.
-		 * @since 0.6.0
-		 */
-		virtual void handleMouseWheelMovedDown(const MouseInput& mouseInput);
+        /**
+         *
+         * Handles mouse wheel moved down input.
+         *
+         * @param mouseInput The mouse input to handle.
+         * @since 0.6.0
+         */
+        virtual void handleMouseWheelMovedDown(const MouseInput& mouseInput);
 
-		/**
-		 * Handles mouse wheel moved up input.
-		 *
-		 * @param mouseInput the mouse input to handle.
-		 * @since 0.6.0
-		 */
-		virtual void handleMouseWheelMovedUp(const MouseInput& mouseInput);
+        /**
+         * Handles mouse wheel moved up input.
+         *
+         * @param mouseInput The mouse input to handle.
+         * @since 0.6.0
+         */
+        virtual void handleMouseWheelMovedUp(const MouseInput& mouseInput);
 
-		/**
-		 * Handles mouse released input.
-		 *
-		 * @param mouseInput the mouse input to handle.
-		 * @since 0.6.0
-		 */
-		virtual void handleMouseReleased(const MouseInput& mouseInput);
+        /**
+         * Handles mouse released input.
+         *
+         * @param mouseInput The mouse input to handle.
+         * @since 0.6.0
+         */
+        virtual void handleMouseReleased(const MouseInput& mouseInput);
 
-		/**
-		 * Handles modal focus. Modal focus needs to be checked at 
-		 * each logic iteration as it might be necessary to distribute
-		 * mouse entered or mouse exited events.
-		 *
-		 * @since 0.8.0
-		 */
-		virtual void handleModalFocus();
+        /**
+         * Handles modal focus. Modal focus needs to be checked at 
+         * each logic iteration as it might be necessary to distribute
+         * mouse entered or mouse exited events.
+         *
+         * @since 0.8.0
+         */
+        virtual void handleModalFocus();
 
-		/**
-		 * Handles modal mouse input focus. Modal mouse input focus needs 
-		 * to be checked at each logic iteration as it might be necessary to 
-		 * distribute mouse entered or mouse exited events.
-		 *
-		 * @since 0.8.0
-		 */
-		virtual void handleModalMouseInputFocus();
+        /**
+         * Handles modal mouse input focus. Modal mouse input focus needs 
+         * to be checked at each logic iteration as it might be necessary to 
+         * distribute mouse entered or mouse exited events.
+         *
+         * @since 0.8.0
+         */
+        virtual void handleModalMouseInputFocus();
 
-		/**
-		 * Handles modal focus gained. If modal focus has been gaind it might 
-		 * be necessary to distribute mouse entered or mouse exited events.
-		 *
-		 * @since 0.8.0
-		 */
-		virtual void handleModalFocusGained();
+        /**
+         * Handles modal focus gained. If modal focus has been gaind it might 
+         * be necessary to distribute mouse entered or mouse exited events.
+         *
+         * @since 0.8.0
+         */
+        virtual void handleModalFocusGained();
 
-		/**
-		 * Handles modal mouse input focus gained. If modal focus has been gaind 
-		 * it might be necessary to distribute mouse entered or mouse exited events.
-		 *
-		 * @since 0.8.0
-		 */
-		virtual void handleModalFocusReleased();
+        /**
+         * Handles modal mouse input focus gained. If modal focus has been gaind 
+         * it might be necessary to distribute mouse entered or mouse exited events.
+         *
+         * @since 0.8.0
+         */
+        virtual void handleModalFocusReleased();
 
-		/**
-		 * Distributes a mouse event.
-		 *
-		 * @param type The type of the event to distribute,
-		 * @param button The button of the event (if any used) to distribute.
-		 * @param x The x coordinate of the event.
-		 * @param y The y coordinate of the event.
-		 * @param fource indicates whether the distribution should be forced or not.
-		 *               A forced distribution distributes the event even if a widget
-		 *               is not enabled, not visible, another widget has modal
-		 *               focus or another widget has modal mouse input focus. 
-		 *               Default value is false.
-		 * @param toSourceOnly indicates whether the distribution should be to the
-		 *                     source widget only or to it's parent's mouse listeners
-		 *                     as well.
-		 *
-		 * @since 0.6.0
-		 */
-		virtual void distributeMouseEvent(Widget* source,
-										  int type,
-										  int button,
-										  int x,
-										  int y,
-										  bool force = false,
-										  bool toSourceOnly = false);
+        /**
+         * Distributes a mouse event.
+         *
+         * @param type The type of the event to distribute,
+         * @param button The button of the event (if any used) to distribute.
+         * @param x The x coordinate of the event.
+         * @param y The y coordinate of the event.
+         * @param fource indicates whether the distribution should be forced or not.
+         *               A forced distribution distributes the event even if a widget
+         *               is not enabled, not visible, another widget has modal
+         *               focus or another widget has modal mouse input focus. 
+         *               Default value is false.
+         * @param toSourceOnly indicates whether the distribution should be to the
+         *                     source widget only or to it's parent's mouse listeners
+         *                     as well.
+         *
+         * @since 0.6.0
+         */
+        virtual void distributeMouseEvent(Widget* source,
+                                          int type,
+                                          int button,
+                                          int x,
+                                          int y,
+                                          bool force = false,
+                                          bool toSourceOnly = false);
 
-		/**
-		 * Distributes a key event.
-		 *
-		 * @param keyEvent the key event to distribute.
+        /**
+         * Distributes a key event.
+         *
+         * @param keyEvent The key event to distribute.
 
-		 * @since 0.6.0
-		 */
-		virtual void distributeKeyEvent(KeyEvent& keyEvent);
+         * @since 0.6.0
+         */
+        virtual void distributeKeyEvent(KeyEvent& keyEvent);
 
-		/**
-		 * Distributes a key event to the global key listeners.
-		 *
-		 * @param keyEvent the key event to distribute.
-		 *
-		 * @since 0.6.0
-		 */
-		virtual void distributeKeyEventToGlobalKeyListeners(KeyEvent& keyEvent);
+        /**
+         * Distributes a key event to the global key listeners.
+         *
+         * @param keyEvent The key event to distribute.
+         *
+         * @since 0.6.0
+         */
+        virtual void distributeKeyEventToGlobalKeyListeners(KeyEvent& keyEvent);
 
-		/**
-		 * Gets the widget at a certain position.
-		 *
-		 * @return the widget at a certain position.
-		 * @since 0.6.0
-		 */
-		virtual Widget* getWidgetAt(int x, int y);
+        /**
+         * Gets the widget at a certain position.
+         *
+         * @return The widget at a certain position.
+         * @since 0.6.0
+         */
+        virtual Widget* getWidgetAt(int x, int y);
 
-		/**
-		 * Gets the source of the mouse event.
-		 *
-		 * @return the source widget of the mouse event.
-		 * @since 0.6.0
-		 */
-		virtual Widget* getMouseEventSource(int x, int y);
+        /**
+         * Gets the source of the mouse event.
+         *
+         * @return The source widget of the mouse event.
+         * @since 0.6.0
+         */
+        virtual Widget* getMouseEventSource(int x, int y);
 
-		/**
-		 * Gets the source of the key event.
-		 *
-		 * @return the source widget of the key event.
-		 * @since 0.6.0
-		 */
-		virtual Widget* getKeyEventSource();
+        /**
+         * Gets the source of the key event.
+         *
+         * @return The source widget of the key event.
+         * @since 0.6.0
+         */
+        virtual Widget* getKeyEventSource();
 
-		Widget* mTop;
-		Graphics* mGraphics;
-		Input* mInput;
-		FocusHandler* mFocusHandler;
+        /**
+         * Holds the top widget.
+         */
+        Widget* mTop;
 
-		bool mTabbing;
+        /**
+         * Holds the graphics implementation used.
+         */
+        Graphics* mGraphics;
 
-		typedef std::list<KeyListener*> KeyListenerList;
-		typedef KeyListenerList::iterator KeyListenerListIterator;
+        /**
+         * Holds the input implementation used.
+         */
+        Input* mInput;
 
-		KeyListenerList mKeyListeners;
+        /**
+         * Holds the focus handler for the Gui.
+         */
+        FocusHandler* mFocusHandler;
 
-		// Current input state
-		bool mShiftPressed;
-		bool mMetaPressed;
-		bool mControlPressed;
-		bool mAltPressed;
+        /**
+         * True if tabbing is enabled, false otherwise.
+         */
+        bool mTabbing;
 
-		// Last mouse state
-		unsigned int mLastMousePressButton;
-		int mLastMousePressTimeStamp;
-		int mLastMouseX;
-		int mLastMouseY;
-		int mClickCount;
-		int mLastMouseDragButton;
+        typedef std::list<KeyListener*> KeyListenerList;
+        typedef KeyListenerList::iterator KeyListenerListIterator;
 
-		// Widget with mouse stack
-		std::deque<Widget*> mWidgetWithMouseQueue;
-	};
+        /**
+         * Holds the global key listeners of the Gui.
+         */
+        KeyListenerList mKeyListeners;
+
+        /**
+         * True if shift is pressed, false otherwise.
+         */
+        bool mShiftPressed;
+
+        /**
+         * True if meta is pressed, false otherwise.
+         */
+        bool mMetaPressed;
+
+        /**
+         * True if control is pressed, false otherwise.
+         */
+        bool mControlPressed;
+
+        /**
+         * True if alt is pressed, false otherwise.
+         */
+        bool mAltPressed;
+
+        /**
+         * Holds the last mouse button pressed.
+         */
+        unsigned int mLastMousePressButton;
+
+        /**
+         * Holds the last mouse press time stamp.
+         */
+        int mLastMousePressTimeStamp;
+
+        /**
+         * Holds the last mouse x coordinate.
+         */
+        int mLastMouseX;
+
+        /**
+         * Holds the last mouse y coordinate.
+         */
+        int mLastMouseY;
+
+        /**
+         * Holds the current click count. Used to keep track
+         * of clicks for a the last pressed button.
+         */
+        int mClickCount;
+
+        /**
+         * Holds the last button used when a drag of a widget
+         * was initiated. Used to be able to release a drag
+         * when the same button is released.
+         */
+        int mLastMouseDragButton;
+
+        /**
+         * Holds a stack with all the widgets with the mouse.
+         * Used to properly distribute mouse events.
+         */
+        std::deque<Widget*> mWidgetWithMouseQueue;
+    };
 }
 
 #endif // end GCN_GUI_HPP

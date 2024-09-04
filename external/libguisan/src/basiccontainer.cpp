@@ -69,6 +69,13 @@
 
 namespace gcn
 {
+	BasicContainer::BasicContainer() :
+		mWidgetToBeMovedToTheTop(nullptr),
+		mWidgetToBeMovedToTheBottom(nullptr),
+		mLogicIsProcessing(false)
+	{
+	}
+
 	BasicContainer::~BasicContainer()
 	{
 		clear();
@@ -76,29 +83,31 @@ namespace gcn
 
 	void BasicContainer::moveToTop(Widget* widget)
 	{
-		for (auto iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
-		{
-			if (*iter == widget)
-			{
-				mWidgets.erase(iter);
-				mWidgets.push_back(widget);
-				return;
-			}
-		}
-
-		throw GCN_EXCEPTION("There is no such widget in this container.");
-	}
-
-	void BasicContainer::moveToBottom(Widget* widget)
-	{
-		const auto iter = find(mWidgets.begin(), mWidgets.end(), widget);
+		WidgetListIterator iter = std::find(mWidgets.begin(), mWidgets.end(), widget);
 
 		if (iter == mWidgets.end())
 		{
 			throw GCN_EXCEPTION("There is no such widget in this container.");
 		}
-		mWidgets.erase(iter);
-		mWidgets.push_front(widget);
+
+		if (mLogicIsProcessing)
+			mWidgetToBeMovedToTheTop = widget;
+		else
+			_moveToTopWithNoChecks(widget);
+	}
+
+	void BasicContainer::moveToBottom(Widget* widget)
+	{
+		WidgetListIterator iter = find(mWidgets.begin(), mWidgets.end(), widget);
+
+		if (iter == mWidgets.end())
+		{
+			throw GCN_EXCEPTION("There is no such widget in this container.");
+		}
+		if (mLogicIsProcessing)
+			mWidgetToBeMovedToTheBottom = widget;
+		else
+			_moveToBottomWithNoChecks(widget);
 	}
 
 	void BasicContainer::death(const Event& event)
@@ -196,7 +205,7 @@ namespace gcn
 
 		if (!r.isPointInRect(x, y))
 		{
-			return NULL;
+			return nullptr;
 		}
 
 		x -= r.x;
@@ -210,19 +219,35 @@ namespace gcn
 			}
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	void BasicContainer::logic()
 	{
+		mLogicIsProcessing = true;
+		mWidgetToBeMovedToTheTop = nullptr;
+		mWidgetToBeMovedToTheBottom = nullptr;
 		logicChildren();
+		mLogicIsProcessing = false;
+
+		if (mWidgetToBeMovedToTheTop != nullptr)
+		{
+			_moveToTopWithNoChecks(mWidgetToBeMovedToTheTop);
+			mWidgetToBeMovedToTheTop = nullptr;
+		}
+
+		if (mWidgetToBeMovedToTheBottom != nullptr)
+		{
+			_moveToTopWithNoChecks(mWidgetToBeMovedToTheBottom);
+			mWidgetToBeMovedToTheBottom = nullptr;
+		}
 	}
 
 	void BasicContainer::_setFocusHandler(FocusHandler* focusHandler)
 	{
 		Widget::_setFocusHandler(focusHandler);
 
-		if (mInternalFocusHandler != NULL)
+		if (mInternalFocusHandler != nullptr)
 		{
 			return;
 		}
@@ -237,7 +262,7 @@ namespace gcn
 	{
 		mWidgets.push_back(widget);
 
-		if (mInternalFocusHandler == NULL)
+		if (mInternalFocusHandler == nullptr)
 		{
 			widget->_setFocusHandler(_getFocusHandler());
 		}
@@ -257,8 +282,8 @@ namespace gcn
 			if (*iter == widget)
 			{
 				mWidgets.erase(iter);
-				widget->_setFocusHandler(NULL);
-				widget->_setParent(NULL);
+				widget->_setFocusHandler(nullptr);
+				widget->_setParent(nullptr);
 				widget->removeDeathListener(this);
 				return;
 			}
@@ -271,8 +296,8 @@ namespace gcn
 	{
 		for (auto& mWidget : mWidgets)
 		{
-			mWidget->_setFocusHandler(NULL);
-			mWidget->_setParent(NULL);
+			mWidget->_setFocusHandler(nullptr);
+			mWidget->_setParent(nullptr);
 			mWidget->removeDeathListener(this);
 		}
 
@@ -287,17 +312,17 @@ namespace gcn
 		{
 			if (mWidget->isVisible())
 			{
-				// If the widget has a border,
+				// If the widget has a frame,
 				// draw it before drawing the widget
-				if (mWidget->getBorderSize() > 0)
+				if (mWidget->getFrameSize() > 0)
 				{
 					Rectangle rec = mWidget->getDimension();
-					rec.x -= static_cast<int>(mWidget->getBorderSize());
-					rec.y -= static_cast<int>(mWidget->getBorderSize());
-					rec.width += 2 * static_cast<int>(mWidget->getBorderSize());
-					rec.height += 2 * static_cast<int>(mWidget->getBorderSize());
+					rec.x -= mWidget->getFrameSize();
+					rec.y -= mWidget->getFrameSize();
+					rec.width += 2 * mWidget->getFrameSize();
+					rec.height += 2 * mWidget->getFrameSize();
 					graphics->pushClipArea(rec);
-					mWidget->drawBorder(graphics);
+					mWidget->drawFrame(graphics);
 					graphics->popClipArea();
 				}
 
@@ -352,7 +377,7 @@ namespace gcn
 
 		for (auto& mWidget : mWidgets)
 		{
-			if (mInternalFocusHandler == NULL)
+			if (mInternalFocusHandler == nullptr)
 			{
 				mWidget->_setFocusHandler(_getFocusHandler());
 			}
@@ -372,19 +397,31 @@ namespace gcn
 				return mWidget;
 			}
 
-			BasicContainer *basicContainer = dynamic_cast<BasicContainer*>(mWidget);
+			auto basicContainer = dynamic_cast<BasicContainer*>(mWidget);
 
-			if (basicContainer != NULL)
+			if (basicContainer != nullptr)
 			{
-				Widget *widget = basicContainer->findWidgetById(id);
+				Widget* widget = basicContainer->findWidgetById(id);
 
-				if (widget != NULL)
+				if (widget != nullptr)
 				{
 					return widget;
 				}
 			}
 		}
 
-		return NULL;
+		return nullptr;
+	}
+
+	void BasicContainer::_moveToTopWithNoChecks(Widget* widget)
+	{
+		mWidgets.remove(widget);
+		mWidgets.push_back(widget);
+	}
+
+	void BasicContainer::_moveToBottomWithNoChecks(Widget* widget)
+	{
+		mWidgets.remove(widget);
+		mWidgets.push_front(widget);
 	}
 }

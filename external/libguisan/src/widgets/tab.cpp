@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -68,103 +68,115 @@
 
 namespace gcn
 {
-	Tab::Tab()
-		: mHasMouse(false)
-	{
-		mLabel = new Label();
-		mLabel->setPosition(4, 4);
-		add(mLabel);
-		setBorderSize(1);
+    Tab::Tab() : mTabbedArea(NULL), mHasMouse(false)
+    {
+        mLabel = new Label();
+        mLabel->setPosition(4, 4);
+        add(mLabel);
+        setFrameSize(1);
 
-		addMouseListener(this);
-	}
+        addMouseListener(this);
+    }
 
-	Tab::~Tab()
-	{
-		delete mLabel;
-	}
+    Tab::~Tab()
+    {
+        delete mLabel;
+    }
 
-	void Tab::adjustSize()
-	{
-		setHeight(mLabel->getHeight() + 8);
-	}
+    void Tab::adjustSize()
+    {
+        setSize(mLabel->getWidth() + 8, mLabel->getHeight() + 8);
 
-	void Tab::setTabbedArea(TabbedArea* tabbedArea)
-	{
-		mTabbedArea = tabbedArea;
-	}
+        if (mTabbedArea != NULL)
+        {
+            mTabbedArea->adjustTabPositions();
+        }
+    }
 
-	TabbedArea* Tab::getTabbedArea()
-	{
-		return mTabbedArea;
-	}
+    void Tab::setTabbedArea(TabbedArea* tabbedArea)
+    {
+        mTabbedArea = tabbedArea;
+    }
 
-	void Tab::setCaption(const std::string& caption)
-	{
-		mCaption = caption;
-		mLabel->setCaption(caption);
-		mLabel->adjustSize();
-	}
+    TabbedArea* Tab::getTabbedArea()
+    {
+        return mTabbedArea;
+    }
 
-	const std::string& Tab::getCaption() const
-	{
-		return mCaption;
-	}
+    void Tab::setCaption(const std::string& caption)
+    {
+        mLabel->setCaption(caption);
+        mLabel->adjustSize();
+        adjustSize();
+    }
 
-	void Tab::draw(Graphics* graphics)
-	{
-		if (mTabbedArea->isTabSelected(this) || mHasMouse)
-		{
-			graphics->setColor(getBaseColor());
-		}
-		else
-		{
-			graphics->setColor(getBaseColor() - 0x151515);
-		}
+    const std::string& Tab::getCaption() const
+    {
+        return mLabel->getCaption();
+    }
 
-		graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
+    void Tab::draw(Graphics *graphics)
+    {
+        const Color& faceColor = getBaseColor();
+        const int alpha = getBaseColor().a;
+        Color highlightColor = faceColor + 0x303030;
+        highlightColor.a = alpha;
+        Color shadowColor = faceColor - 0x303030;
+        shadowColor.a = alpha;
 
-		drawChildren(graphics);
+        Color borderColor;
+        Color baseColor;
 
-		if (mTabbedArea->isFocused()
-			&& mTabbedArea->isTabSelected(this))
-		{
-			graphics->setColor(Color(0x000000));
-			graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4, getHeight() - 4));
-		}
-	}
+        if ((mTabbedArea != NULL && mTabbedArea->isTabSelected(this)) || mHasMouse)
+        {
+            // Draw a border.
+            graphics->setColor(highlightColor);
+            graphics->drawLine(0, 0, getWidth() - 1, 0);
+            graphics->drawLine(0, 1, 0, getHeight() - 1);
+            graphics->setColor(shadowColor);
+            graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
 
-	void Tab::drawBorder(Graphics* graphics)
-	{
-		Color faceColor = getBaseColor();
-		Color highlightColor, shadowColor;
-		int alpha = getBaseColor().a;
-		int width = getWidth() + getBorderSize() * 2 - 1;
-		int height = getHeight() + getBorderSize() * 2 - 1;
-		highlightColor = faceColor + 0x303030;
-		highlightColor.a = alpha;
-		shadowColor = faceColor - 0x303030;
-		shadowColor.a = alpha;
+            borderColor = highlightColor;
+            baseColor = getBaseColor();
+        }
+        else
+        {
+            // Draw a border.
+            graphics->setColor(shadowColor);
+            graphics->drawLine(0, 0, getWidth() - 1, 0);
+            graphics->drawLine(0, 1, 0, getHeight() - 1);
+            graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
 
-		unsigned int i;
-		for (i = 0; i < getBorderSize(); ++i)
-		{
-			graphics->setColor(highlightColor);
-			graphics->drawLine(i, i, width - i, i);
-			graphics->drawLine(i, i + 1, i, height - i - 1);
-			graphics->setColor(shadowColor);
-			graphics->drawLine(width - i, i + 1, width - i, height - i);
-			graphics->drawLine(i, height - i, width - i - 1, height - i);
-		}
-	}
+            baseColor = getBaseColor() - 0x151515;
+            baseColor.a = alpha;
+        }
 
-	void Tab::mouseEntered(MouseEvent& mouseEvent)
-	{
-		mHasMouse = true;
-	}
+        // Push a clip area so the other drawings don't need to worry
+        // about the border.
+        graphics->pushClipArea(Rectangle(1, 1, getWidth() - 2, getHeight() - 1));
+        const Rectangle currentClipArea = graphics->getCurrentClipArea();
 
-	void Tab::mouseExited(MouseEvent& mouseEvent)
-	{
-		mHasMouse = false;
-	}
+        graphics->setColor(baseColor);
+        graphics->fillRectangle(Rectangle(0, 0, currentClipArea.width, currentClipArea.height));
+
+        drawChildren(graphics);
+
+        if (mTabbedArea != NULL && mTabbedArea->isFocused() && mTabbedArea->isTabSelected(this))
+        {
+            graphics->setColor(Color(0x000000));
+            graphics->drawRectangle(
+                Rectangle(2, 2, currentClipArea.width - 4, currentClipArea.height - 4));
+        }
+        graphics->popClipArea();
+    }
+
+    void Tab::mouseEntered(MouseEvent& mouseEvent)
+    {
+        mHasMouse = true;
+    }
+
+    void Tab::mouseExited(MouseEvent& mouseEvent)
+    {
+        mHasMouse = false;
+    }
 }

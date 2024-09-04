@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -63,51 +63,70 @@
 
 namespace gcn
 {
-	/**
-	 * Implements an icon capable of displaying an image.
-	 */
-	class GCN_CORE_DECLSPEC Icon : public Widget
-	{
-	public:
-		/**
-		 * Constructor.
-		 *
-		 * @param filename The filename of the image to display.
-		 */
-		Icon(const std::string& filename);
+    /**
+     * Implements an icon capable of displaying an image.
+     */
+    class GCN_CORE_DECLSPEC Icon: public Widget
+    {
+    public:
+        /**
+         * Default constructor.
+         */
+        Icon();
 
-		/**
-		 * Constructor.
-		 *
-		 * @param image The image to display.
-		 */
-		Icon(Image* image);
+        /**
+         * Constructor.
+         *
+         * @param filename The filename of the image to display.
+         */
+        Icon(const std::string& filename);
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~Icon();
+        /**
+         * Constructor.
+         *
+         * @param image The image to display.
+         */
+        Icon(const Image* image);
+
+        /**
+         * Destructor.
+         */
+        virtual ~Icon();
+
+        /**
+         * Sets the image to display. Existing image is freed automatically
+         * if it was loaded internally.
+         *
+         * @param image The image to display. 
+         */
+        void setImage(const Image* image);
+
+        /**
+         * Gets the current image.
+         *
+         * @return The current image.
+         */
+        const Image* getImage() const;
 
 
-		// Inherited from Widget
+        // Inherited from Widget
 
-		virtual void draw(Graphics* graphics);
+        virtual void draw(Graphics* graphics);
 
-		virtual void drawBorder(Graphics* graphics);
 
-	protected:
-		/**
-		 * The image to display.
-		 */
-		Image* mImage;
+    protected:
+        /**
+         * The image to display.
+         */
+        const Image* mImage;
 
-		/**
-		 * True if the image has been loaded internally, false otherwise.
-		 * An image not loaded internally should not be deleted in the
-		 * destructor.
-		 */
-		bool mInternalImage;
-	};
+        /**
+         * True if the image has been loaded internally, false otherwise.
+         * An image not loaded internally should not be deleted in the
+         * destructor.
+         */
+        bool mInternalImage;
+    };
 }
 
 #endif // end GCN_ICON_HPP

@@ -334,16 +334,16 @@ void InitPanelInput(const config_category& category)
 	const auto textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER - 60;
 
 	lblPort0 = new gcn::Label("Port 0:");
-	lblPort0->setAlignment(gcn::Graphics::RIGHT);
+	lblPort0->setAlignment(gcn::Graphics::Right);
 
 	lblPort1 = new gcn::Label("Port 1:");
-	lblPort1->setAlignment(gcn::Graphics::RIGHT);
+	lblPort1->setAlignment(gcn::Graphics::Right);
 
 	lblPort2 = new gcn::Label("Port 2:");
-	lblPort2->setAlignment(gcn::Graphics::LEFT);
+	lblPort2->setAlignment(gcn::Graphics::Left);
 
 	lblPort3 = new gcn::Label("Port 3:");
-	lblPort3->setAlignment(gcn::Graphics::LEFT);
+	lblPort3->setAlignment(gcn::Graphics::Left);
 	
 	for (auto i = 0; i < MAX_JPORTS; i++)
 	{
@@ -431,13 +431,13 @@ void InitPanelInput(const config_category& category)
 	cmdSwapPorts->addActionListener(inputActionListener);
 
 	lblPort0mousemode = new gcn::Label("Mouse Map Port0:");
-	lblPort0mousemode->setAlignment(gcn::Graphics::RIGHT);
+	lblPort0mousemode->setAlignment(gcn::Graphics::Right);
 
 	lblPort1mousemode = new gcn::Label("Mouse Map Port1:");
-	lblPort1mousemode->setAlignment(gcn::Graphics::RIGHT);
+	lblPort1mousemode->setAlignment(gcn::Graphics::Right);
 
 	lblAutofireRate = new gcn::Label("Autofire Rate:");
-	lblAutofireRate->setAlignment(gcn::Graphics::RIGHT);
+	lblAutofireRate->setAlignment(gcn::Graphics::Right);
 	cboAutofireRate = new gcn::DropDown(&autoFireRateList);
 	cboAutofireRate->setSize(95, cboAutofireRate->getHeight());
 	cboAutofireRate->setBaseColor(gui_base_color);
@@ -448,7 +448,7 @@ void InitPanelInput(const config_category& category)
 	cboAutofireRate->addActionListener(inputActionListener);
 
 	lblDigitalJoyMouseSpeed = new gcn::Label("Digital joy-mouse speed:");
-	lblDigitalJoyMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
+	lblDigitalJoyMouseSpeed->setAlignment(gcn::Graphics::Right);
 	lblDigitalJoyMouseSpeedInfo = new gcn::Label("100");
 	sldDigitalJoyMouseSpeed = new gcn::Slider(0, 4);
 	sldDigitalJoyMouseSpeed->setSize(100, SLIDER_HEIGHT);
@@ -461,7 +461,7 @@ void InitPanelInput(const config_category& category)
 	sldDigitalJoyMouseSpeed->addActionListener(inputActionListener);
 
 	lblAnalogJoyMouseSpeed = new gcn::Label("Analog joy-mouse speed:");
-	lblAnalogJoyMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
+	lblAnalogJoyMouseSpeed->setAlignment(gcn::Graphics::Right);
 	lblAnalogJoyMouseSpeedInfo = new gcn::Label("100");
 	sldAnalogJoyMouseSpeed = new gcn::Slider(0, 13);
 	sldAnalogJoyMouseSpeed->setSize(100, SLIDER_HEIGHT);
@@ -474,7 +474,7 @@ void InitPanelInput(const config_category& category)
 	sldAnalogJoyMouseSpeed->addActionListener(inputActionListener);
 
 	lblMouseSpeed = new gcn::Label("Mouse speed:");
-	lblMouseSpeed->setAlignment(gcn::Graphics::RIGHT);
+	lblMouseSpeed->setAlignment(gcn::Graphics::Right);
 	lblMouseSpeedInfo = new gcn::Label("100");
 	sldMouseSpeed = new gcn::Slider(0, 13);
 	sldMouseSpeed->setSize(100, SLIDER_HEIGHT);

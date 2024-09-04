@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -62,50 +62,56 @@
 
 namespace gcn
 {
-	/**
-	 * A rectangle used when dealing with clipping. It is a regular
-	 * Rectangle extended with variables for x offsets and y offsets.
-	 */
-	class GCN_CORE_DECLSPEC ClipRectangle : public Rectangle
-	{
-	public:
+    /**
+     * A rectangle used when dealing with clipping. A clip rectangle is
+     * a regular rectangle extended with variables for x offsets and y 
+     * offsets. The offsets are used for calculations from relative
+     * screen coordinates to actual screen coordinates.
+     */
+    class GCN_CORE_DECLSPEC ClipRectangle : public Rectangle
+    {
+    public:
 
-		/**
-		 * Constructor.
-		 */
-		ClipRectangle();
+        /**
+         * Constructor.
+         */
+        ClipRectangle();
 
-		/**
-		 * Constructor.
-		 *
-		 * @param x the rectangle x coordinate.
-		 * @param y the rectangle y coordinate.
-		 * @param width the rectangle width.
-		 * @param height the rectangle height.
-		 * @param xOffset origin of drawing (used by Graphics).
-		 * @param yOffset origin of drawing (used by Graphics) .
-		 */
-		ClipRectangle(int x, int y, int width, int height,
-					  int xOffset, int yOffset);
+        /**
+         * Constructor.
+         *
+         * @param x The rectangle x coordinate.
+         * @param y The rectangle y coordinate.
+         * @param width The rectangle width.
+         * @param height The rectangle height.
+         * @param xOffset The offset of the x coordinate. Used to for
+         *                calculating the actual screen coordinate from
+         *                the relative screen coordinate.
+         * @param yOffset The offset of the y coordinate. Used to for
+         *                calculating the actual screen coordinate from
+         *                the relative screen coordinate.
+         */
+        ClipRectangle(int x, int y, int width, int height, int xOffset, int yOffset);
 
-		/**
-		 * Copies x, y, width and height field from a Rectangle.
-		 *
-		 * @param other the Rectangle to copy from.
-		 * @returns a ClipRectangle.
-		 */
-		const ClipRectangle& operator=(const Rectangle& other);
+        /**
+         * Copy constructor. Copies x, y, width and height 
+         * field from a rectangle to a clip rectangle.
+         *
+         * @param other The rectangle to copy data from.
+         * @returns A clip rectangle with data copyied from a rectangle.
+         */
+        const ClipRectangle& operator=(const Rectangle& other);
 
-		/**
-		 * x-origin of drawing (used by Graphics).
-		 */
-		int xOffset;
+        /**
+         * Holds the x offset of the x coordinate.
+         */
+        int xOffset;
 
-		/**
-		 * y-origin of drawing (used by Graphics).
-		 */
-		int yOffset;
-	};
+        /**
+         * Holds the y offset of the y coordinate.
+         */
+        int yOffset;
+    };
 }
 
 #endif // end GCN_CLIPRECTANGLE_HPP

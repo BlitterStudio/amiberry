@@ -191,7 +191,7 @@ static void InitEditFilesysHardDrive()
 	cmdHDDCancel->addActionListener(filesysHardDriveActionListener);
 
 	lblHDPath = new gcn::Label("Path:");
-	lblHDPath->setAlignment(gcn::Graphics::RIGHT);
+	lblHDPath->setAlignment(gcn::Graphics::Right);
 	txtHDPath = new gcn::TextField();
 	txtHDPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtHDPath->setId("txtHDDPath");
@@ -200,7 +200,7 @@ static void InitEditFilesysHardDrive()
 	txtHDPath->setForegroundColor(gui_foreground_color);
 
 	lblHDController = new gcn::Label("Controller:");
-	lblHDController->setAlignment(gcn::Graphics::RIGHT);
+	lblHDController->setAlignment(gcn::Graphics::Right);
 	cboHDController = new gcn::DropDown(&controllerListModel);
 	cboHDController->setSize(200, DROPDOWN_HEIGHT);
 	cboHDController->setBaseColor(gui_base_color);

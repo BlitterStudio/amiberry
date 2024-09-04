@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -66,103 +66,111 @@
 
 namespace gcn
 {
-	class Key;
+    class Key;
+    
+    /**
+     * Implementation of a generic input which can be used with any 
+     * back end.
+     */
+    class GCN_CORE_DECLSPEC GenericInput: public Input
+    {
+    public:
 
-	/**
-	 * Generic input which can be used with any backend.
-	 */
-	class GCN_CORE_DECLSPEC GenericInput : public Input
-	{
-	public:
+        /**
+         * Constructor.
+         */
+        GenericInput();
 
-		/**
-		 * Constructor.
-		 */
-		GenericInput();
+        /**
+         * Pushes a key pressed event.
+         *
+         * NOTE: If a special key is pressed, like the F1 key,
+         *       the corresponding Guichan key value found
+         *       in the enum in Key should be pushed as the
+         *       unicode value.
+         *
+         * @param unicode The unicode value of the key. 
+         */
+        void pushKeyPressed(int unicode);
 
-		/**
-		 * Pushes a key pressed event.
-		 *
-		 * NOTE: If a special key is pressed, like the F1 key,
-		 *       the corresponding Guichan key value found
-		 *       in the enum in Key should be pushed as the
-		 *       unicode value.
-		 *
-		 * @param unicode the unicode value of the key. 
-		 */
-		void pushKeyPressed(int unicode);
+        /**
+         * Pushes a key released event.
+         *
+         * NOTE: If a special key is pressed, like the F1 key,
+         *       the corresponding Guichan key value found
+         *       in the enum in Key should be pushed as the
+         *       unicode value.
+         *
+         * @param unicode The unicode value of the key. 
+         */
+        void pushKeyReleased(int unicode);
+        
+        /**
+         * Pushes a mouse button pressed event.
+         *
+         * @param x The x coordinate of the mouse event.
+         * @param y The y coordinate of the mouse event.
+         * @param button The button of the mouse event.
+         */
+        void pushMouseButtonPressed(int x, int y, int button);
 
-		/**
-		 * Pushes a key released event.
-		 *
-		 * NOTE: If a special key is pressed, like the F1 key,
-		 *       the corresponding Guichan key value found
-		 *       in the enum in Key should be pushed as the
-		 *       unicode value.
-		 *
-		 * @param unicode the unicode value of the key. 
-		 */
-		void pushKeyReleased(int unicode);
+        /**
+         * Pushes a mouse button released event.
+         *
+         * @param x The x coordinate of the mouse event.
+         * @param y The y coordinate of the mouse event.
+         * @param button The button of the mouse event.
+         */
+        void pushMouseButtonReleased(int x, int y, int button);
+        
+        /**
+         * Pushes a mouse wheel moved up event.
+         *
+         * @param x The x coordinate of the mouse event.
+         * @param y The y coordinate of the mouse event.
+         */
+        void pushMouseWheelMovedUp(int x, int y);
+        
+        /**
+         * Pushes a mouse wheel moved down event.
+         *
+         * @param x The x coordinate of the mouse event.
+         * @param y The y coordinate of the mouse event.
+         */
+        void pushMouseWheelMovedDown(int x, int y);
 
-		/**
-		 * Pushes a mouse button pressed event.
-		 *
-		 * @param x the x coordinate of the mouse event.
-		 * @param y the y coordinate of the mouse event.
-		 * @param button the button of the mouse event.
-		 */
-		void pushMouseButtonPressed(int x, int y, int button);
+        /**
+         * Pushes a mouse moved event.
+         *
+         * @param x The x coordinate of the mouse event.
+         * @param y The y coordinate of the mouse event.
+         */
+        void pushMouseMoved(int x, int y);
 
-		/**
-		 * Pushes a mouse button released event.
-		 *
-		 * @param x the x coordinate of the mouse event.
-		 * @param y the y coordinate of the mouse event.
-		 * @param button the button of the mouse event.
-		 */
-		void pushMouseButtonReleased(int x, int y, int button);
+        
+        // Inherited from Input
 
-		/**
-		 * Pushes a mouse wheel moved up event.
-		 *
-		 * @param x the x coordinate of the mouse event.
-		 * @param y the y coordinate of the mouse event.
-		 */
-		void pushMouseWheelMovedUp(int x, int y);
+        virtual bool isKeyQueueEmpty();
 
-		/**
-		 * Pushes a mouse wheel moved down event.
-		 *
-		 * @param x the x coordinate of the mouse event.
-		 * @param y the y coordinate of the mouse event.
-		 */
-		void pushMouseWheelMovedDown(int x, int y);
+        virtual KeyInput dequeueKeyInput();
 
-		/**
-		 * Pushes a mouse moved event.
-		 *
-		 * @param x the x coordinate of the mouse event.
-		 * @param y the y coordinate of the mouse event.
-		 */
-		void pushMouseMoved(int x, int y);
+        virtual bool isMouseQueueEmpty();
 
+        virtual MouseInput dequeueMouseInput();
 
-		// Inherited from Input
+        virtual void _pollInput();
 
-		virtual bool isKeyQueueEmpty();
+    protected:
+        /**
+         * Holds the key input queue.
+         */
+        std::queue<KeyInput> mKeyInputQueue;
 
-		virtual KeyInput dequeueKeyInput();
-
-		virtual bool isMouseQueueEmpty();
-
-		virtual MouseInput dequeueMouseInput();
-
-		virtual void _pollInput();
-
-	protected:
-		std::queue<KeyInput> mKeyInputQueue;
-		std::queue<MouseInput> mMouseInputQueue;
-	};
+        /**
+         * Holds the mouse input queue.
+         */
+        std::queue<MouseInput> mMouseInputQueue;
+    };
 }
 
 #endif // end GCN_INPUT_HPP

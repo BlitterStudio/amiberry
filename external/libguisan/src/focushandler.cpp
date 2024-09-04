@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -67,21 +67,20 @@
 namespace gcn
 {
 	FocusHandler::FocusHandler()
-		: mFocusedWidget(NULL),
-		  mModalFocusedWidget(NULL),
-		  mModalMouseInputFocusedWidget(NULL),
-		  mDraggedWidget(NULL),
-		  mLastWidgetWithMouse(NULL),
-		  mLastWidgetWithModalFocus(NULL),
-		  mLastWidgetWithModalMouseInputFocus(NULL),
-		  mLastWidgetPressed(NULL)
+		: mFocusedWidget(nullptr),
+		  mModalFocusedWidget(nullptr),
+		  mModalMouseInputFocusedWidget(nullptr),
+		  mDraggedWidget(nullptr),
+		  mLastWidgetWithMouse(nullptr),
+		  mLastWidgetWithModalFocus(nullptr),
+		  mLastWidgetWithModalMouseInputFocus(nullptr),
+		  mLastWidgetPressed(nullptr)
 	{
-
 	}
 
 	void FocusHandler::requestFocus(Widget* widget)
 	{
-		if (widget == NULL
+		if (widget == nullptr
 			|| widget == mFocusedWidget)
 		{
 			return;
@@ -102,13 +101,13 @@ namespace gcn
 			throw GCN_EXCEPTION("Trying to focus a non-existing widget.");
 		}
 
-		Widget *oldFocused = mFocusedWidget;
+		Widget* oldFocused = mFocusedWidget;
 
 		if (oldFocused != widget)
 		{
 			mFocusedWidget = mWidgets.at(toBeFocusedIndex);
 
-			if (oldFocused != NULL)
+			if (oldFocused != nullptr)
 			{
 				const Event focusEvent(oldFocused);
 				distributeFocusLostEvent(focusEvent);
@@ -121,14 +120,14 @@ namespace gcn
 
 	void FocusHandler::requestModalFocus(Widget* widget)
 	{
-		if (mModalFocusedWidget != NULL && mModalFocusedWidget != widget)
+		if (mModalFocusedWidget != nullptr && mModalFocusedWidget != widget)
 		{
 			throw GCN_EXCEPTION("Another widget already has modal focus.");
 		}
 
 		mModalFocusedWidget = widget;
 
-		if (mFocusedWidget != NULL && !mFocusedWidget->hasModalFocus())
+		if (mFocusedWidget != nullptr && !mFocusedWidget->isModalFocused())
 		{
 			focusNone();
 		}
@@ -136,7 +135,7 @@ namespace gcn
 
 	void FocusHandler::requestModalMouseInputFocus(Widget* widget)
 	{
-		if (mModalMouseInputFocusedWidget != NULL
+		if (mModalMouseInputFocusedWidget != nullptr
 			&& mModalMouseInputFocusedWidget != widget)
 		{
 			throw GCN_EXCEPTION("Another widget already has modal input focus.");
@@ -149,7 +148,7 @@ namespace gcn
 	{
 		if (mModalFocusedWidget == widget)
 		{
-			mModalFocusedWidget = NULL;
+			mModalFocusedWidget = nullptr;
 		}
 	}
 
@@ -157,7 +156,7 @@ namespace gcn
 	{
 		if (mModalMouseInputFocusedWidget == widget)
 		{
-			mModalMouseInputFocusedWidget = NULL;
+			mModalMouseInputFocusedWidget = nullptr;
 		}
 	}
 
@@ -235,7 +234,7 @@ namespace gcn
 	{
 		if (mWidgets.empty())
 		{
-			mFocusedWidget = NULL;
+			mFocusedWidget = nullptr;
 			return;
 		}
 
@@ -305,7 +304,7 @@ namespace gcn
 	{
 		if (isFocused(widget))
 		{
-			mFocusedWidget = NULL;
+			mFocusedWidget = nullptr;
 		}
 
 		for (auto iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
@@ -319,41 +318,40 @@ namespace gcn
 
 		if (mDraggedWidget == widget)
 		{
-			mDraggedWidget = NULL;
+			mDraggedWidget = nullptr;
 			return;
 		}
 
 		if (mLastWidgetWithMouse == widget)
 		{
-			mLastWidgetWithMouse = NULL;
+			mLastWidgetWithMouse = nullptr;
 			return;
 		}
 
 		if (mLastWidgetWithModalFocus == widget)
 		{
-			mLastWidgetWithModalFocus = NULL;
+			mLastWidgetWithModalFocus = nullptr;
 			return;
 		}
 
 		if (mLastWidgetWithModalMouseInputFocus == widget)
 		{
-			mLastWidgetWithModalMouseInputFocus = NULL;
+			mLastWidgetWithModalMouseInputFocus = nullptr;
 			return;
 		}
 
 		if (mLastWidgetPressed == widget)
 		{
-			mLastWidgetPressed = NULL;
-            return;
+			mLastWidgetPressed = nullptr;
 		}
 	}
 
 	void FocusHandler::focusNone()
 	{
-		if (mFocusedWidget != NULL)
+		if (mFocusedWidget != nullptr)
 		{
 			Widget* focused = mFocusedWidget;
-			mFocusedWidget = NULL;
+			mFocusedWidget = nullptr;
 
 			const Event focusEvent(focused);
 			distributeFocusLostEvent(focusEvent);
@@ -362,7 +360,7 @@ namespace gcn
 
 	void FocusHandler::tabNext()
 	{
-		if (mFocusedWidget != NULL)
+		if (mFocusedWidget != nullptr)
 		{
 			if (!mFocusedWidget->isTabOutEnabled())
 			{
@@ -372,7 +370,7 @@ namespace gcn
 
 		if (mWidgets.empty())
 		{
-			mFocusedWidget = NULL;
+			mFocusedWidget = nullptr;
 			return;
 		}
 
@@ -415,8 +413,8 @@ namespace gcn
 
 			if (mWidgets.at(focusedWidget)->isFocusable() &&
 				mWidgets.at(focusedWidget)->isTabInEnabled() &&
-				(mModalFocusedWidget == NULL ||
-					mWidgets.at(focusedWidget)->hasModalFocus()))
+				(mModalFocusedWidget == nullptr ||
+					mWidgets.at(focusedWidget)->isModalFocused()))
 			{
 				done = true;
 			}
@@ -439,7 +437,7 @@ namespace gcn
 
 	void FocusHandler::tabPrevious()
 	{
-		if (mFocusedWidget != NULL)
+		if (mFocusedWidget != nullptr)
 		{
 			if (!mFocusedWidget->isTabOutEnabled())
 			{
@@ -449,7 +447,7 @@ namespace gcn
 
 		if (mWidgets.empty())
 		{
-			mFocusedWidget = NULL;
+			mFocusedWidget = nullptr;
 			return;
 		}
 
@@ -492,8 +490,8 @@ namespace gcn
 
 			if (mWidgets.at(focusedWidget)->isFocusable() &&
 				mWidgets.at(focusedWidget)->isTabInEnabled() &&
-				(mModalFocusedWidget == NULL ||
-					mWidgets.at(focusedWidget)->hasModalFocus()))
+				(mModalFocusedWidget == nullptr ||
+					mWidgets.at(focusedWidget)->isModalFocused()))
 			{
 				done = true;
 			}

@@ -69,17 +69,15 @@ namespace gcn
 		b(0),
 		a(255)
 	{
-
 	}
 
 	Color::Color(int color)
 		:
-		r(color >> 16 & 0xFF),
-		g(color >> 8 & 0xFF),
-		b(color >> 8 & 0xFF),
+		r((color >> 16) & 0xFF),
+		g((color >> 8) & 0xFF),
+		b((color >> 8) & 0xFF),
 		a(255)
 	{
-
 	}
 
 	Color::Color(int ar, int ag, int ab, int aa)
@@ -89,7 +87,6 @@ namespace gcn
 		b(ab),
 		a(aa)
 	{
-
 	}
 
 	Color Color::operator+(const Color& color) const
@@ -133,5 +130,11 @@ namespace gcn
 	bool Color::operator!=(const Color& color) const
 	{
 		return !(r == color.r && g == color.g && b == color.b && a == color.a);
+	}
+
+	std::ostream& operator<<(std::ostream& out, const Color& color)
+	{
+		return out << "Color [r = " << color.r << ", g = " << color.g << ", b = " << color.b
+			<< ", a = " << color.a << "]";
 	}
 }

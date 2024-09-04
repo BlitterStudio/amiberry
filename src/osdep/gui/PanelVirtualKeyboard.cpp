@@ -103,11 +103,11 @@ public:
 		return m_values.size();
 	}
 
-	void add(const std::string& elem) override
+	void add(const std::string& elem)
 	{
 	}
 
-	void clear() override
+	void clear()
 	{
 	}
 	
@@ -256,7 +256,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	sldVkTransparency->setId("sldVkTransparency");
 	sldVkTransparency->addActionListener(transparencySldActionListener);
 	lblVkTransparencyValue = new gcn::Label("100%");
-	lblVkTransparencyValue->setAlignment(gcn::Graphics::LEFT);
+	lblVkTransparencyValue->setAlignment(gcn::Graphics::Left);
 
 	lblVkLanguage = new gcn::Label(_T("Keyboard Layout:"));
 
@@ -289,7 +289,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	vkHotkeyActionListener = new VkHotkeyActionListener();
 
 	lblVkSetHotkey = new gcn::Label("Toggle button:");
-	lblVkSetHotkey->setAlignment(gcn::Graphics::RIGHT);
+	lblVkSetHotkey->setAlignment(gcn::Graphics::Right);
 	txtVkSetHotkey = new gcn::TextField();
 	txtVkSetHotkey->setEnabled(false);
 	txtVkSetHotkey->setSize(120, TEXTFIELD_HEIGHT);

@@ -66,7 +66,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	lstInfo->setWrappingEnabled(true);
 
 	scrAreaInfo = new gcn::ScrollArea(lstInfo);
-	scrAreaInfo->setBorderSize(1);
+	scrAreaInfo->setFrameSize(1);
 	scrAreaInfo->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaInfo->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);

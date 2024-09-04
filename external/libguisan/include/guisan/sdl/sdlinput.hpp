@@ -119,13 +119,13 @@ namespace gcn
 		int convertMouseButton(int button);
 
 		/**
-		 * Converts an SDL event key to a key value.
+		 * Converts an SDL event to a Guisan key value.
 		 *
-		 * @param event an SDL event with a key to convert.
-		 * @return a key value.
+		 * @param event The SDL event to convert.
+		 * @return A Guisan key value.
 		 * @see Key
 		 */
-		int convertKeyCharacter(SDL_Event event);
+		Key convertSDLEventToGuichanKeyValue(SDL_Event event);
 
 		std::queue<KeyInput> mKeyInputQueue;
 		std::queue<MouseInput> mMouseInputQueue;

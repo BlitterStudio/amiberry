@@ -68,7 +68,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	lstHelp->setWrappingEnabled(true);
 
 	scrAreaHelp = new gcn::ScrollArea(lstHelp);
-	scrAreaHelp->setBorderSize(1);
+	scrAreaHelp->setFrameSize(1);
 	scrAreaHelp->setPosition(DISTANCE_BORDER, 10 + TEXTFIELD_HEIGHT + 10);
 	scrAreaHelp->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4,
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);

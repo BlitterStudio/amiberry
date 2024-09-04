@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -63,41 +63,42 @@
 
 namespace gcn
 {
-	/**
-	 * Represents a list. It is used in certain Widgets, like the ListBox, to
-	 * handle a list with string elements. If you want to use Widgets like
-	 * ListBox, you should inherit from this class and implement it's
-	 * functions.
-	 */
-	class GCN_CORE_DECLSPEC ListModel
-	{
-	public:
-		/**
-		 * Destructor.
-		 */
-		virtual ~ListModel() = default;
+    /**
+     * An interface for a model that represents a list. It is
+     * used in certain widgets, like the ListBox, to handle a
+     * lists with string elements. If you want to use widgets
+     * like ListBox, make a derived class from this class that
+     * represents your list.
+     */
+    class GCN_CORE_DECLSPEC ListModel
+    {
+    public:
+        /**
+         * Destructor.
+         */
+        virtual ~ListModel() { }
 
-		/**
-		 * Gets the number of elements in the ListModel.
-		 *
-		 * @return the number of elements in the ListModel
-		 */
-		virtual int getNumberOfElements() = 0;
+        /**
+         * Gets the number of elements in the list.
+         *
+         * @return The number of elements in the list
+         */
+        virtual int getNumberOfElements() = 0;
 
-		/**
-		 * Gets an element at a certain index in the list.
-		 *
-		 * @param i an index in the list.
-		 * @return an element as a string.
-		 */
-		virtual std::string getElementAt(int i) = 0;
+        /**
+         * Gets an element at a certain index in the list.
+         *
+         * @param i An index in the list.
+         * @return An element as a string at the a certain index.
+         */
+        virtual std::string getElementAt(int i) = 0;
 
-		// Add a new element
-		virtual void add(const std::string& str) { }
+	// Add a new element
+	virtual void add(std::string str) { }
 
-		// Clear all elements
-		virtual void clear() { }
-	};
+	// Clear all elements
+	virtual void clear_elements() { }
+    };
 }
 
 #endif // end GCN_LISTMODEL_HPP

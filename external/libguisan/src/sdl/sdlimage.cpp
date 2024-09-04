@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -65,138 +65,138 @@
 
 namespace gcn
 {
-	SDLImage::SDLImage(SDL_Surface* surface, bool autoFree, SDL_Renderer* renderer)
-	{
-		mAutoFree = autoFree;
-		mSurface = surface;
+    SDLImage::SDLImage(SDL_Surface* surface, bool autoFree, SDL_Renderer* renderer)
+    {
+        mAutoFree = autoFree;
+        mSurface = surface;
 		mRenderer = renderer;
 		if (renderer)
 		{
 			mTexture = SDL_CreateTextureFromSurface(renderer, surface);
 			SDL_SetTextureBlendMode(mTexture, SDL_BLENDMODE_BLEND);
-		}
-	}
+		}       
+    }
 
-	SDLImage::~SDLImage()
-	{
-		if (mAutoFree)
-		{
-			SDLImage::free();
-		}
-	}
+    SDLImage::~SDLImage()
+    {
+        if (mAutoFree)
+        {
+            free();
+        }
+    }
 
-	SDL_Surface* SDLImage::getSurface() const
-	{
-		return mSurface;
-	}
-
-	SDL_Texture* SDLImage::getTexture() const
-	{
+    SDL_Surface* SDLImage::getSurface() const
+    {
+        return mSurface;
+    }
+    
+    SDL_Texture* SDLImage::getTexture() const
+    {
 		return mTexture;
 	}
 
-	int SDLImage::getWidth() const
-	{
-		if (mSurface == NULL)
-		{
-			throw GCN_EXCEPTION("Trying to get the width of a non loaded image.");
-		}
+    int SDLImage::getWidth() const
+    {
+        if (mSurface == NULL)
+        {
+            throw GCN_EXCEPTION("Trying to get the width of a non loaded image.");
+        }
 
-		return mSurface->w;
-	}
+        return mSurface->w;
+    }
 
-	int SDLImage::getHeight() const
-	{
-		if (mSurface == NULL)
-		{
-			throw GCN_EXCEPTION("Trying to get the height of a non loaded image.");
-		}
+    int SDLImage::getHeight() const
+    {
+        if (mSurface == NULL)
+        {
+            throw GCN_EXCEPTION("Trying to get the height of a non loaded image.");
+        }
 
-		return mSurface->h;
-	}
+        return mSurface->h;
+    }
 
-	Color SDLImage::getPixel(int x, int y)
-	{
-		if (mSurface == NULL)
-		{
-			throw GCN_EXCEPTION("Trying to get a pixel from a non loaded image.");
-		}
+    Color SDLImage::getPixel(int x, int y)
+    {
+        if (mSurface == NULL)
+        {
+            throw GCN_EXCEPTION("Trying to get a pixel from a non loaded image.");
+        }
 
-		return SDLgetPixel(mSurface, x, y);
-	}
+        return SDLgetPixel(mSurface, x, y);
+    }
 
-	void SDLImage::putPixel(int x, int y, const Color& color)
-	{
-		if (mSurface == NULL)
-		{
-			throw GCN_EXCEPTION("Trying to put a pixel in a non loaded image.");
-		}
+    void SDLImage::putPixel(int x, int y, const Color& color)
+    {
+        if (mSurface == NULL)
+        {
+            throw GCN_EXCEPTION("Trying to put a pixel in a non loaded image.");
+        }
 
-		SDLputPixel(mSurface, x, y, color);
-	}
+        SDLputPixel(mSurface, x, y, color);
+    }
 
-	void SDLImage::convertToDisplayFormat()
-	{
-		if (mSurface == NULL)
-		{
-			throw GCN_EXCEPTION("Trying to convert a non loaded image to display format.");
-		}
+    void SDLImage::convertToDisplayFormat()
+    {
+        if (mSurface == NULL)
+        {
+            throw GCN_EXCEPTION("Trying to convert a non loaded image to display format.");
+        }
 
-		int i;
-		bool hasPink = false;
+        int i;
+        bool hasPink = false;
 
-		unsigned int surfaceMask = SDL_PIXELFORMAT_RGBX8888;
+        unsigned int surfaceMask = SDL_PIXELFORMAT_RGBX8888;
 
-		for (i = 0; i < mSurface->w * mSurface->h; ++i)
-		{
-			if (static_cast<unsigned int*>(mSurface->pixels)[i] == SDL_MapRGB(mSurface->format, 255, 0, 255))
-			{
-				hasPink = true;
-				break;
-			}
-		}
+        for (i = 0; i < mSurface->w * mSurface->h; ++i)
+        {
+            if (static_cast<unsigned int*>(mSurface->pixels)[i] == SDL_MapRGB(mSurface->format, 255, 0, 255))
+            {
+                hasPink = true;
+                break;
+            }
+        }
 
-		for (i = 0; i < mSurface->w * mSurface->h; ++i)
-		{
-			Uint8 r, g, b, a;
+        for (i = 0; i < mSurface->w * mSurface->h; ++i)
+        {
+            Uint8 r, g, b, a;
 
-			SDL_GetRGBA(static_cast<unsigned int*>(mSurface->pixels)[i], mSurface->format,
-						&r, &g, &b, &a);
+            SDL_GetRGBA(static_cast<unsigned int*>(mSurface->pixels)[i], mSurface->format,
+                        &r, &g, &b, &a);
 
-			if (a != 255)
-			{
-				surfaceMask = SDL_PIXELFORMAT_RGBA8888;
-				break;
-			}
-		}
+            if (a != 255)
+            {
+                surfaceMask = SDL_PIXELFORMAT_RGBA8888;
+                break;
+            }
+        }
 
-		SDL_Surface* tmp = SDL_ConvertSurfaceFormat(mSurface, surfaceMask, 0);
-		SDL_FreeSurface(mSurface);
-		mSurface = NULL;
+        SDL_Surface* tmp = SDL_ConvertSurfaceFormat(mSurface, surfaceMask, 0);
+        SDL_FreeSurface(mSurface);
+        mSurface = NULL;
 
-		if (hasPink)
-		{
-			SDL_SetColorKey(tmp, SDL_TRUE,
-							SDL_MapRGB(tmp->format, 255, 0, 255));
-		}
+        if (hasPink)
+        {
+            SDL_SetColorKey(tmp, SDL_TRUE,
+                            SDL_MapRGB(tmp->format,255,0,255));
+        }
 
-		if (surfaceMask == SDL_PIXELFORMAT_RGBA8888)
-			SDL_SetSurfaceAlphaMod(tmp, 255);
+        if (surfaceMask == SDL_PIXELFORMAT_RGBA8888)
+            SDL_SetSurfaceAlphaMod(tmp, 255);
 
-		mSurface = tmp;
+        mSurface = tmp;
 
 		if (mRenderer)
 		{
-			SDL_Texture* tmpTexture = SDL_CreateTextureFromSurface(mRenderer, tmp);
+			SDL_Texture *tmpTexture = SDL_CreateTextureFromSurface(mRenderer, tmp);
 			SDL_SetTextureBlendMode(tmpTexture, SDL_BLENDMODE_BLEND);
 			SDL_DestroyTexture(mTexture);
 			mTexture = tmpTexture;
-		}
-	}
+		}	
+    }
 
-	void SDLImage::free()
-	{
-		SDL_FreeSurface(mSurface);
-		SDL_DestroyTexture(mTexture);
-	}
+    void SDLImage::free()
+    {
+        SDL_FreeSurface(mSurface);
+        SDL_DestroyTexture(mTexture);
+    }
 }

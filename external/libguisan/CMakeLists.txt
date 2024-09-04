@@ -5,6 +5,7 @@ add_library(guisan STATIC
         src/basiccontainer.cpp
         src/cliprectangle.cpp
         src/color.cpp
+        src/containerevent.cpp
         src/defaultfont.cpp
         src/event.cpp
         src/exception.cpp

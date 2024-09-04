@@ -64,33 +64,44 @@
 
 namespace gcn
 {
-	/**
-	 * Listener of value change events from Widgets. To be able to
-	 * listen for value changes you must make a class which inherits
-	 * from this class and implements the valueChanged function.
-	 *
-	 * @see ListBox::addSelectionListener
-	 * @author Olof Naessén
-	 * @since 0.8.0
-	 */
-	class GCN_CORE_DECLSPEC SelectionListener
-	{
-	public:
+    /**
+     * Interface for listening for selection events from widgets.
+     *
+     * @see ListBox::addSelectionListener,
+     *      ListBox::removeSelectionListener,
+     *      DropDown::addSelectionListener,
+     *      DropDown::removeSelectionListener
+     * @author Olof Naessén
+     * @since 0.8.0
+     */
+    class GCN_CORE_DECLSPEC SelectionListener
+    {
+    public:
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~SelectionListener() { }
+        /**
+         * Destructor.
+         */
+        virtual ~SelectionListener() { }
 
-		/**
-		 * Called when a value has been changed in a Widget. It is used
-		 * to be able to recieve a notification that a value has been changed.
-		 *
-		 * @param event the event of the value change.
-		 * @since 0.8.0
-		 */
-		virtual void valueChanged(const SelectionEvent& event) { }
-	};
+        /**
+         * Called when the value of a selection has been changed in a Widget.
+         * It is used to be able to receive a notification that a value has
+         * been changed.
+         *
+         * @param event The event of the value change.
+         * @since 0.8.0
+         */
+        virtual void valueChanged(const SelectionEvent& event) { };
+
+    protected:
+        /**
+         * Constructor.
+         *
+         * You should not be able to make an instance of SelectionListener,
+         * therefore its constructor is protected.
+         */
+        SelectionListener() {}
+    };
 }
 
 #endif // end GCN_SELECTIONLISTENER_HPP

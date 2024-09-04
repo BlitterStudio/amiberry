@@ -232,7 +232,7 @@ void InitPanelChipset(const struct config_category& category)
 	chkMemoryCycleExact->addActionListener(chipsetActionListener);
 
 	lblChipset = new gcn::Label("Chipset Extra:");
-	lblChipset->setAlignment(gcn::Graphics::RIGHT);
+	lblChipset->setAlignment(gcn::Graphics::Right);
 	cboChipset = new gcn::DropDown(&chipsetList);
 	cboChipset->setSize(120, cboChipset->getHeight());
 	cboChipset->setBaseColor(gui_base_color);
@@ -292,7 +292,7 @@ void InitPanelChipset(const struct config_category& category)
 	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
 
 	lblSpecialMonitors = new gcn::Label("Video port display hardware:");
-	lblSpecialMonitors->setAlignment(gcn::Graphics::RIGHT);
+	lblSpecialMonitors->setAlignment(gcn::Graphics::Right);
 	cboSpecialMonitors = new gcn::DropDown(&specialMonitorsList);
 	cboSpecialMonitors->setSize(lblSpecialMonitors->getWidth(), cboSpecialMonitors->getHeight());
 	cboSpecialMonitors->setBaseColor(gui_base_color);

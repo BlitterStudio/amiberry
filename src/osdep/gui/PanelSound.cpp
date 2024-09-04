@@ -313,7 +313,7 @@ void InitPanelSound(const config_category& category)
 	sound_action_listener = new SoundActionListener();
 
 	lblSoundcard = new gcn::Label("Device:");
-	lblSoundcard->setAlignment(gcn::Graphics::RIGHT);
+	lblSoundcard->setAlignment(gcn::Graphics::Right);
 	cboSoundcard = new gcn::DropDown(&soundcard_list);
 	cboSoundcard->setSize(category.panel->getWidth() - lblSoundcard->getWidth() - 8 - DISTANCE_BORDER * 2, cboSoundcard->getHeight());
 	cboSoundcard->setBaseColor(gui_base_color);
@@ -359,7 +359,7 @@ void InitPanelSound(const config_category& category)
 	chkAutoSwitching->addActionListener(sound_action_listener);
 
 	lblFrequency = new gcn::Label("Frequency:");
-	lblFrequency->setAlignment(gcn::Graphics::RIGHT);
+	lblFrequency->setAlignment(gcn::Graphics::Right);
 	cboFrequency = new gcn::DropDown(&frequency_type_list);
 	cboFrequency->setSize(90, cboFrequency->getHeight());
 	cboFrequency->setBaseColor(gui_base_color);
@@ -370,7 +370,7 @@ void InitPanelSound(const config_category& category)
 	cboFrequency->addActionListener(sound_action_listener);
 
 	lblSwapChannels = new gcn::Label("Swap channels:");
-	lblSwapChannels->setAlignment(gcn::Graphics::RIGHT);
+	lblSwapChannels->setAlignment(gcn::Graphics::Right);
 	cboSwapChannels = new gcn::DropDown(&swap_channels_list);
 	cboSwapChannels->setSize(95, cboSwapChannels->getHeight());
 	cboSwapChannels->setBaseColor(gui_base_color);
@@ -381,7 +381,7 @@ void InitPanelSound(const config_category& category)
 	cboSwapChannels->addActionListener(sound_action_listener);
 
 	lblChannelMode = new gcn::Label("Channel mode:");
-	lblChannelMode->setAlignment(gcn::Graphics::RIGHT);
+	lblChannelMode->setAlignment(gcn::Graphics::Right);
 	cboChannelMode = new gcn::DropDown(&channel_mode_list);
 	cboChannelMode->setSize(200, cboChannelMode->getHeight());
 	cboChannelMode->setBaseColor(gui_base_color);
@@ -392,7 +392,7 @@ void InitPanelSound(const config_category& category)
 	cboChannelMode->addActionListener(sound_action_listener);
 	
 	lblInterpolation = new gcn::Label("Interpolation:");
-	lblInterpolation->setAlignment(gcn::Graphics::RIGHT);
+	lblInterpolation->setAlignment(gcn::Graphics::Right);
 	cboInterpolation = new gcn::DropDown(&interpolation_type_list);
 	cboInterpolation->setSize(200, cboInterpolation->getHeight());
 	cboInterpolation->setBaseColor(gui_base_color);
@@ -403,7 +403,7 @@ void InitPanelSound(const config_category& category)
 	cboInterpolation->addActionListener(sound_action_listener);
 
 	lblFilter = new gcn::Label("Filter:");
-	lblFilter->setAlignment(gcn::Graphics::RIGHT);
+	lblFilter->setAlignment(gcn::Graphics::Right);
 	cboFilter = new gcn::DropDown(&filter_type_list);
 	cboFilter->setSize(200, cboFilter->getHeight());
 	cboFilter->setBaseColor(gui_base_color);
@@ -414,7 +414,7 @@ void InitPanelSound(const config_category& category)
 	cboFilter->addActionListener(sound_action_listener);
 
 	lblSeparation = new gcn::Label("Stereo separation:");
-	lblSeparation->setAlignment(gcn::Graphics::RIGHT);
+	lblSeparation->setAlignment(gcn::Graphics::Right);
 	cboSeparation = new gcn::DropDown(&separation_list);
 	cboSeparation->setSize(120, cboSeparation->getHeight());
 	cboSeparation->setBaseColor(gui_base_color);
@@ -425,7 +425,7 @@ void InitPanelSound(const config_category& category)
 	cboSeparation->addActionListener(sound_action_listener);
 	
 	lblStereoDelay = new gcn::Label("Stereo delay:");
-	lblStereoDelay->setAlignment(gcn::Graphics::RIGHT);
+	lblStereoDelay->setAlignment(gcn::Graphics::Right);
 	cboStereoDelay = new gcn::DropDown(&stereo_delay_list);
 	cboStereoDelay->setSize(120, cboStereoDelay->getHeight());
 	cboStereoDelay->setBaseColor(gui_base_color);
@@ -436,7 +436,7 @@ void InitPanelSound(const config_category& category)
 	cboStereoDelay->addActionListener(sound_action_listener);
 
 	lblPaulaVol = new gcn::Label("Paula Volume:");
-	lblPaulaVol->setAlignment(gcn::Graphics::RIGHT);
+	lblPaulaVol->setAlignment(gcn::Graphics::Right);
 	sldPaulaVol = new gcn::Slider(0, 100);
 	sldPaulaVol->setSize(150, SLIDER_HEIGHT);
 	sldPaulaVol->setBaseColor(gui_base_color);
@@ -449,7 +449,7 @@ void InitPanelSound(const config_category& category)
 	lblPaulaVolInfo = new gcn::Label("100 %");
 
 	lblCDVol = new gcn::Label("CD Volume:");
-	lblCDVol->setAlignment(gcn::Graphics::RIGHT);
+	lblCDVol->setAlignment(gcn::Graphics::Right);
 	sldCDVol = new gcn::Slider(0, 100);
 	sldCDVol->setSize(150, SLIDER_HEIGHT);
 	sldCDVol->setBaseColor(gui_base_color);
@@ -462,7 +462,7 @@ void InitPanelSound(const config_category& category)
 	lblCDVolInfo = new gcn::Label("100 %");
 
 	lblAHIVol = new gcn::Label("AHI Volume:");
-	lblAHIVol->setAlignment(gcn::Graphics::RIGHT);
+	lblAHIVol->setAlignment(gcn::Graphics::Right);
 	sldAHIVol = new gcn::Slider(0, 100);
 	sldAHIVol->setSize(150, SLIDER_HEIGHT);
 	sldAHIVol->setBaseColor(gui_base_color);
@@ -475,7 +475,7 @@ void InitPanelSound(const config_category& category)
 	lblAHIVolInfo = new gcn::Label("100 %");
 
 	lblMIDIVol = new gcn::Label("MIDI Volume:");
-	lblMIDIVol->setAlignment(gcn::Graphics::RIGHT);
+	lblMIDIVol->setAlignment(gcn::Graphics::Right);
 	sldMIDIVol = new gcn::Slider(0, 100);
 	sldMIDIVol->setSize(150, SLIDER_HEIGHT);
 	sldMIDIVol->setBaseColor(gui_base_color);

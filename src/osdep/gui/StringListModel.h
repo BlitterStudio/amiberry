@@ -27,11 +27,11 @@ namespace gcn {
 			return mStrings.at(i);
 		}
 
-		void add(const std::string &str) override {
+		void add(const std::string &str) {
 			mStrings.push_back(str);
 		}
 
-		void clear() override {
+		void clear() {
 			mStrings.clear();
 		}
 

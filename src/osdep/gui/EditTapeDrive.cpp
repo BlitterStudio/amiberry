@@ -149,7 +149,7 @@ static void InitEditTapeDrive()
 	cmdTapeDriveCancel->addActionListener(tapeDriveActionListener);
 
 	lblTapeDrivePath = new gcn::Label("Path:");
-	lblTapeDrivePath->setAlignment(gcn::Graphics::RIGHT);
+	lblTapeDrivePath->setAlignment(gcn::Graphics::Right);
 	txtTapeDrivePath = new gcn::TextField();
 	txtTapeDrivePath->setSize(490, TEXTFIELD_HEIGHT);
 	txtTapeDrivePath->setId("txtTapeDrivePath");
@@ -172,7 +172,7 @@ static void InitEditTapeDrive()
 	cmdTapeDriveSelectFile->addActionListener(tapeDriveActionListener);
 
 	lblTapeDriveController = new gcn::Label("Controller:");
-	lblTapeDriveController->setAlignment(gcn::Graphics::RIGHT);
+	lblTapeDriveController->setAlignment(gcn::Graphics::Right);
 	cboTapeDriveController = new gcn::DropDown(&controllerListModel);
 	cboTapeDriveController->setSize(180, DROPDOWN_HEIGHT);
 	cboTapeDriveController->setBaseColor(gui_base_color);

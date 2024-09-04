@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004, 2005, 2006, 2007 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004, 2005, 2006, 2007 Olof Naessén and Per Larsson
  *
  *                                                         Js_./
  * Per Larsson a.k.a finalman                          _RqZ{a<^_aa
- * Olof NaessÃ©n a.k.a jansem/yakslem                _asww7!uY`>  )\a//
+ * Olof Naessén a.k.a jansem/yakslem                _asww7!uY`>  )\a//
  *                                                 _Qhm`] _f "'c  1!5m
  * Visit: http://guichan.darkbits.org             )Qk<P ` _: :+' .'  "{[
  *                                               .)j(] .d_/ '-(  P .   S
@@ -62,65 +62,64 @@
 
 namespace gcn
 {
-	class Graphics;
+    class Graphics;
 
-	/**
-	 * Holder of a font. Fonts should inherit from this class and
-	 * implements it's functions.
-	 *
-	 * @see ImageFont
-	 */
-	class GCN_CORE_DECLSPEC Font
-	{
-	public:
+    /**
+     * Interface for a font.
+     *
+     * @see ImageFont
+     */
+    class GCN_CORE_DECLSPEC Font
+    {
+    public:
 
-		/**
-		 * Destructor.
-		 */
-		virtual ~Font() { }
+        /**
+         * Destructor.
+         */
+        virtual ~Font(){ }
 
-		/**
-		 * Gets the width of a string. The width of a string is not necesserily
-		 * the sum of all the widths of it's glyphs.
-		 *
-		 * @param text the string to return the width of.
-		 * @return the width of a string.
-		 */
-		virtual int getWidth(const std::string& text) const = 0;
+        /**
+         * Gets the width of a string. The width of a string is not necesserily
+         * the sum of all the widths of it's glyphs.
+         *
+         * @param text The string to return the width of.
+         * @return The width of a string.
+         */
+        virtual int getWidth(const std::string& text) const = 0;
 
-		/**
-		 * Gets the height of the glyphs in the font.
-		 *
-		 * @return the height of the glyphs int the font.
-		 */
-		virtual int getHeight() const = 0;
+        /**
+         * Gets the height of the glyphs in the font.
+         *
+         * @return The height of the glyphs int the font.
+         */
+        virtual int getHeight() const = 0;
 
-		/**
-		 * Gets a string index in a string providing an x coordinate.
-		 * Used to retrive a string index (for a character in a
-		 * string) at a certain x position. It is especially useful
-		 * when a mouse clicks in a TextField and you want to know which
-		 * character was clicked.
-		 *
-		 * @return a string index in a string providing an x coordinate.
-		 */
-		virtual int getStringIndexAt(const std::string& text, int x);
+        /**
+         * Gets a string index in a string providing an x coordinate.
+         * Used to retrive a string index (for a character in a
+         * string) at a certain x position. It is especially useful
+         * when a mouse clicks in a TextField and you want to know which
+         * character was clicked.
+         *
+         * @return A string index in a string providing an x coordinate.
+         */
+        virtual int getStringIndexAt(const std::string& text, int x) const;
 
-		/**
-		 * Draws a string.
-		 *
-		 * NOTE: You normally won't use this function to draw text since
-		 *       Graphics contains better functions for drawing text.
-		 *
-		 * @param graphics a Graphics object to use for drawing.
-		 * @param text the string to draw.
-		 * @param x the x coordinate where to draw the string.
-		 * @param y the y coordinate where to draw the string.
-		 * @param enabled true if the string should be drawn as enabled
-		 */
-		virtual void drawString(Graphics* graphics, const std::string& text,
-								int x, int y, bool enabled) = 0;
-	};
+        /**
+         * Draws a string.
+         *
+         * NOTE: You normally won't use this function to draw text since
+         *       Graphics contains better functions for drawing text.
+         *
+         * @param graphics A Graphics object to use for drawing.
+         * @param text The string to draw.
+         * @param x The x coordinate where to draw the string.
+         * @param y The y coordinate where to draw the string.
+		 * @param enabled True if the string should be drawn as enabled
+         */
+        virtual void drawString(Graphics* graphics, const std::string& text,
+                                int x, int y, bool enabled) = 0;
+    };
 }
 
 #endif // end GCN_FONT_HPP

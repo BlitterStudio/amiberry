@@ -6,11 +6,11 @@
  * /______/ //______/ //_/ //_____/\ /_/ //_/ //_/ //_/ //_/ /|_/ /
  * \______\/ \______\/ \_\/ \_____\/ \_\/ \_\/ \_\/ \_\/ \_\/ \_\/
  *
- * Copyright (c) 2004 - 2008 Olof NaessÃ©n and Per Larsson
+ * Copyright (c) 2004 - 2008 Olof Naessén and Per Larsson
  *
  *
  * Per Larsson a.k.a finalman
- * Olof NaessÃ©n a.k.a jansem/yakslem
+ * Olof Naessén a.k.a jansem/yakslem
  *
  * Visit: http://guichan.sourceforge.net
  *
@@ -61,12 +61,11 @@ namespace gcn
 		mGlyphSpacing = 0;
 		mAntiAlias = true;
 		mFilename = filename;
-		mFont = NULL;
-		mColor = { 0, 0, 0, 255 };
+		mFont = nullptr;
 
 		mFont = TTF_OpenFont(filename.c_str(), size);
 
-		if (mFont == NULL)
+		if (mFont == nullptr)
 		{
 			throw GCN_EXCEPTION("SDLTrueTypeFont::SDLTrueTypeFont. "+std::string(TTF_GetError()));
 		}
@@ -90,18 +89,19 @@ namespace gcn
 		return TTF_FontHeight(mFont) + mRowSpacing;
 	}
 
-	void SDLTrueTypeFont::drawString(gcn::Graphics* graphics, const std::string& text, const int x, const int y, bool enabled)
+	void SDLTrueTypeFont::drawString(Graphics* graphics, const std::string& text, const int x, const int y,
+	                                 bool enabled)
 	{
 		if (text.empty())
 		{
 			return;
 		}
 
-		gcn::SDLGraphics* sdlGraphics = dynamic_cast<gcn::SDLGraphics*>(graphics);
-		gcn::SDL2Graphics* sdl2Graphics = dynamic_cast<gcn::SDL2Graphics*>(graphics);
+		auto sdlGraphics = dynamic_cast<SDLGraphics*>(graphics);
+		auto sdl2Graphics = dynamic_cast<SDL2Graphics*>(graphics);
 
 
-		if (sdlGraphics == NULL && sdl2Graphics == NULL)
+		if (sdlGraphics == nullptr && sdl2Graphics == nullptr)
 		{
 			throw GCN_EXCEPTION("SDLTrueTypeFont::drawString. Graphics object not an SDL graphics object!");
 			return;
@@ -110,21 +110,20 @@ namespace gcn
 		// This is needed for drawing the Glyph in the middle if we have spacing
 		const int yoffset = getRowSpacing() / 2;
 
-		SDL_Color sdlCol;
-		if (enabled)
+		Color col;
+		if (sdlGraphics)
 		{
-			sdlCol.r = mColor.r;
-			sdlCol.g = mColor.g;
-			sdlCol.b = mColor.b;
-			sdlCol.a = mColor.a;
+			col = sdlGraphics->getColor();
 		}
 		else
 		{
-			sdlCol.r = 128;
-			sdlCol.g = 128;
-			sdlCol.b = 128;
-			sdlCol.a = mColor.a;
+			col = sdl2Graphics->getColor();
 		}
+
+		SDL_Color sdlCol;
+		sdlCol.b = col.b;
+		sdlCol.r = col.r;
+		sdlCol.g = col.g;
 
 		SDL_Surface* textSurface;
 		if (mAntiAlias)

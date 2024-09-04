@@ -66,56 +66,62 @@
 
 namespace gcn
 {
-	Icon::Icon(const std::string& filename)
-	{
-		mImage = Image::load(filename);
-		mInternalImage = true;
-		setHeight(mImage->getHeight());
-		setWidth(mImage->getWidth());
-	}
+    Icon::Icon()
+        : mImage(0)
+        , mInternalImage(false)
+    {
+        setSize(0, 0);
+    }
 
-	Icon::Icon(Image* image)
-	{
-		mImage = image;
-		mInternalImage = false;
-		setHeight(mImage->getHeight());
-		setWidth(mImage->getWidth());
-	}
+    Icon::Icon(const std::string& filename)
+        : mImage(0),
+          mInternalImage(false)
+    {
+        mImage = Image::load(filename);
+        mInternalImage = true;
+        setSize(mImage->getWidth(), mImage->getHeight());
+    }
 
-	Icon::~Icon()
-	{
-		if (mInternalImage)
-		{
-			delete mImage;
-		}
-	}
+    Icon::Icon(const Image* image)
+        : mImage(image),
+          mInternalImage(false)
+    {
+        setSize(mImage->getWidth(), mImage->getHeight());
+    }
 
-	void Icon::draw(Graphics* graphics)
-	{
-		graphics->drawImage(mImage, 0, 0);
-	}
+    Icon::~Icon()
+    {
+        if (mInternalImage)
+        {
+            delete mImage;
+        }
+    }
 
-	void Icon::drawBorder(Graphics* graphics)
-	{
-		Color faceColor = getBaseColor();
-		Color highlightColor, shadowColor;
-		int alpha = getBaseColor().a;
-		int width = getWidth() + static_cast<int>(getBorderSize()) * 2 - 1;
-		int height = getHeight() + static_cast<int>(getBorderSize()) * 2 - 1;
-		highlightColor = faceColor + 0x303030;
-		highlightColor.a = alpha;
-		shadowColor = faceColor - 0x303030;
-		shadowColor.a = alpha;
+    void Icon::setImage(const Image* image)
+    {
+        if (mInternalImage)
+        {
+            delete mImage;
+        }
 
-		unsigned int i;
-		for (i = 0; i < getBorderSize(); ++i)
-		{
-			graphics->setColor(shadowColor);
-			graphics->drawLine(i, i, width - i, i);
-			graphics->drawLine(i, i + 1, i, height - i - 1);
-			graphics->setColor(highlightColor);
-			graphics->drawLine(width - i, i + 1, width - i, height - i);
-			graphics->drawLine(i, height - i, width - i - 1, height - i);
-		}
-	}
+        mImage = image;
+        mInternalImage = false;
+        setSize(mImage->getWidth(), mImage->getHeight());
+    }
+
+    const Image* Icon::getImage() const
+    {
+        return mImage;
+    }
+
+    void Icon::draw(Graphics* graphics)
+    {
+        if (mImage != NULL)
+        {
+            const int x = (getWidth() - mImage->getWidth()) / 2;
+            const int y = (getHeight() - mImage->getHeight()) / 2;
+            graphics->drawImage(mImage, x, y);
+        }
+    }
+
 }

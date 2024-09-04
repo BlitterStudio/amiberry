@@ -41,12 +41,12 @@ public:
 		return int(roms.size());
 	}
 
-	void add(const std::string& elem) override
+	void add(const std::string& elem)
 	{
 		roms.emplace_back(elem);
 	}
 
-	void clear() override
+	void clear()
 	{
 		roms.clear();
 	}

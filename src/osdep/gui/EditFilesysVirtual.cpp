@@ -165,7 +165,7 @@ static void InitEditFilesysVirtual()
 	cmdCancel->addActionListener(filesysVirtualActionListener);
 
 	lblDevice = new gcn::Label("Device Name:");
-	lblDevice->setAlignment(gcn::Graphics::RIGHT);
+	lblDevice->setAlignment(gcn::Graphics::Right);
 	txtDevice = new gcn::TextField();
 	txtDevice->setSize(120, TEXTFIELD_HEIGHT);
 	txtDevice->setId("txtVirtDevice");
@@ -174,7 +174,7 @@ static void InitEditFilesysVirtual()
 	txtDevice->setForegroundColor(gui_foreground_color);
 
 	lblVolume = new gcn::Label("Volume Label:");
-	lblVolume->setAlignment(gcn::Graphics::RIGHT);
+	lblVolume->setAlignment(gcn::Graphics::Right);
 	txtVolume = new gcn::TextField();
 	txtVolume->setSize(120, TEXTFIELD_HEIGHT);
 	txtVolume->setId("txtVirtVolume");
@@ -184,7 +184,7 @@ static void InitEditFilesysVirtual()
 
 	lblPath = new gcn::Label("Path:");
 	lblPath->setWidth(lblVolume->getWidth());
-	lblPath->setAlignment(gcn::Graphics::RIGHT);
+	lblPath->setAlignment(gcn::Graphics::Right);
 	txtPath = new gcn::TextField();
 	txtPath->setSize(450, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtVirtPath");
@@ -220,7 +220,7 @@ static void InitEditFilesysVirtual()
 	chkVirtBootable->addActionListener(filesysVirtualActionListener);
 
 	lblBootPri = new gcn::Label("Boot priority:");
-	lblBootPri->setAlignment(gcn::Graphics::RIGHT);
+	lblBootPri->setAlignment(gcn::Graphics::Right);
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(45, TEXTFIELD_HEIGHT);
 	txtBootPri->setBaseColor(gui_base_color);
