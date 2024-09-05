@@ -85,8 +85,8 @@ namespace gcn
         addFocusListener(this);
     }
 
-    Button::Button(const std::string& caption)
-            : mCaption(caption),
+    Button::Button(std::string caption)
+            : mCaption(std::move(caption)),
               mHasMouse(false),
               mKeyPressed(false),
               mMousePressed(false),

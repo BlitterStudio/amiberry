@@ -130,6 +130,11 @@ namespace gcn
 
         graphics->setColor(getForegroundColor());
 
+        if (isEnabled())
+            graphics->setColor(getForegroundColor());
+        else
+            graphics->setColor(Color(128, 128, 128));
+
         if (isFocused())
         {
             graphics->drawRectangle(Rectangle(0, 0, getWidth(), getHeight()));

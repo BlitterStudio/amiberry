@@ -93,7 +93,7 @@ namespace gcn
          *
          * @param caption the caption of the Button.
          */
-        Button(const std::string& caption);
+        Button(std::string caption);
 
         /**
          * Sets the Button caption.

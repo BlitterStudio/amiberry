@@ -146,7 +146,7 @@ namespace gcn
             graphics->setColor(Color(128, 128, 128));
 
         graphics->setFont(getFont());
-        graphics->drawText(mText, 1 - mXScroll, 1);
+        graphics->drawText(mText, 1 - mXScroll, 2, Graphics::Left, isEnabled());
         graphics->popClipArea();
     }
 
