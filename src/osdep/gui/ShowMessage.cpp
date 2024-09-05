@@ -216,6 +216,7 @@ static void InitShowMessage(const std::string& message)
 	txtMessageText->setBackgroundColor(gui_base_color);
 	txtMessageText->setForegroundColor(gui_foreground_color);
 	txtMessageText->setEditable(false);
+	txtMessageText->setFrameSize(0);
 	lblText1 = new gcn::Label("");
 	lblText1->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER, LABEL_HEIGHT);
 	lblText2 = new gcn::Label("");

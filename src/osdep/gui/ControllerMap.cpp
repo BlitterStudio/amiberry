@@ -204,6 +204,7 @@ static void InitControllerMap()
 	txtInformation->setBackgroundColor(gui_base_color);
 	txtInformation->setForegroundColor(gui_foreground_color);
 	txtInformation->setEditable(false);
+	txtInformation->setFrameSize(0);
 
 	lblMessage = new gcn::Label("Press: ");
 	lblPressButtonAxis = new gcn::Label("");
