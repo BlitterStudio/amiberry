@@ -861,9 +861,23 @@ namespace gcn
         virtual const std::list<FocusListener*>& _getFocusListeners();
 
         /**
-         * Gets the area of the widget that the widget's children occupy.
+         * Gets the area of the widget occupied by the widget's children.
+         * By default this method returns an empty rectangle as not all
+         * widgets are containers. If you want to make a container this
+         * method should return the area where the children resides. This
+         * method is used when drawing children of a widget when computing
+         * clip rectangles for the children.
          *
-         * @return The area of the widget that the widget's children occupy.
+         * An example of a widget that overloads this method is ScrollArea.
+         * A ScrollArea has a view of its contant and that view is the
+         * children area. The size of a ScrollArea's children area might
+         * vary depending on if the scroll bars of the ScrollArea is shown
+         * or not.
+         *
+         * @return The area of the widget occupied by the widget's children.
+         * @see BasicContainer
+         * @see BasicContainer::getChildrenArea
+         * @see BasicContainer::drawChildren
          * @since 0.1.0
          */
         virtual Rectangle getChildrenArea();
