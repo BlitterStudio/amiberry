@@ -110,20 +110,20 @@ namespace gcn
 		// This is needed for drawing the Glyph in the middle if we have spacing
 		const int yoffset = getRowSpacing() / 2;
 
-		Color col;
-		if (sdlGraphics)
+		SDL_Color sdlCol;
+		if (enabled)
 		{
-			col = sdlGraphics->getColor();
+			sdlCol.r = mColor.r;
+			sdlCol.g = mColor.g;
+			sdlCol.b = mColor.b;
+			sdlCol.a = mColor.a;
 		}
 		else
 		{
-			col = sdl2Graphics->getColor();
+			sdlCol.r = 128;
+			sdlCol.g = 128;
+			sdlCol.b = 128;
 		}
-
-		SDL_Color sdlCol;
-		sdlCol.b = col.b;
-		sdlCol.r = col.r;
-		sdlCol.g = col.g;
 
 		SDL_Surface* textSurface;
 		if (mAntiAlias)
