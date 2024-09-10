@@ -131,7 +131,7 @@ void InitPanelRAM(const config_category& category)
 	sldFastmem->addActionListener(memorySliderActionListener);
 	lblFastsize = new gcn::Label("None");
 
-	lblZ3mem = new gcn::Label("Z3 fast:");
+	lblZ3mem = new gcn::Label("Z3 Fast:");
 	if (can_have_1gb())
 		sldZ3mem = new gcn::Slider(0, 11);
 	else
