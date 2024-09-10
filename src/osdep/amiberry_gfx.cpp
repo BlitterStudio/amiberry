@@ -285,8 +285,8 @@ static void SDL2_init()
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				800,
-				600,
+				800 * amiberry_options.window_scaling,
+				600 * amiberry_options.window_scaling,
 				mode);
 		}
 		else
@@ -294,8 +294,8 @@ static void SDL2_init()
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				600,
-				800,
+				600 * amiberry_options.window_scaling,
+				800 * amiberry_options.window_scaling,
 				mode);
 		}
 		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
@@ -2456,7 +2456,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 	{
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, w, h);
+			SDL_SetWindowSize(mon->amiga_window, w * amiberry_options.window_scaling, h * amiberry_options.window_scaling);
 		}
 #ifdef USE_OPENGL
 		renderQuad = { dx, dy, w, h };
@@ -2502,7 +2502,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
+			SDL_SetWindowSize(mon->amiga_window, scaled_width * amiberry_options.window_scaling, scaled_height * amiberry_options.window_scaling);
 		}
 #ifdef USE_OPENGL
 		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
