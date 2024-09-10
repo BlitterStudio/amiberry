@@ -65,15 +65,13 @@
 #include "guisan/graphics.hpp"
 #include "guisan/key.hpp"
 #include "guisan/mouseinput.hpp"
+#include "guisan/text.hpp"
 
 namespace gcn
 {
-    TextBox::TextBox()
+    TextBox::TextBox() : mEditable(true), mOpaque(true)
     {
-        mCaretColumn = 0;
-        mCaretRow = 0;
-        mEditable = true;
-        mOpaque = true;
+        mText = new Text();
 
         setFocusable(true);
 
@@ -83,14 +81,9 @@ namespace gcn
         setFrameSize(1);
     }
 
-    TextBox::TextBox(const std::string& text)
+    TextBox::TextBox(const std::string& text) : mEditable(true), mOpaque(true)
     {
-        mCaretColumn = 0;
-        mCaretRow = 0;
-        mEditable = true;
-        mOpaque = true;
-
-        setText(text);
+        mText = new Text(text);
 
         setFocusable(true);
 
@@ -102,38 +95,13 @@ namespace gcn
 
     void TextBox::setText(const std::string& text)
     {
-        mCaretColumn = 0;
-        mCaretRow = 0;
-
-        mTextRows.clear();
-
-        std::string::size_type pos, lastPos = 0;
-        int length;
-        do
-        {
-            pos = text.find('\n', lastPos);
-
-            if (pos != std::string::npos)
-            {
-                length = static_cast<int>(pos - lastPos);
-            }
-            else
-            {
-                length = static_cast<int>(text.size() - lastPos);
-            }
-            std::string sub = text.substr(lastPos, length);
-            mTextRows.push_back(sub);
-            lastPos = pos + 1;
-
-        } while (pos != std::string::npos);
+        mText->setContent(text);
 
         adjustSize();
     }
 
     void TextBox::draw(Graphics* graphics)
     {
-        unsigned int i;
-
         if (mOpaque)
         {
             graphics->setColor(getBackgroundColor());
@@ -142,37 +110,31 @@ namespace gcn
 
         if (isFocused() && isEditable())
         {
-            drawCaret(graphics, getFont()->getWidth(mTextRows[mCaretRow].substr(0, mCaretColumn)), mCaretRow * getFont()->getHeight());
+            drawCaret(graphics, mText->getCaretX(getFont()), mText->getCaretY(getFont()));
         }
 
         graphics->setColor(getForegroundColor());
         graphics->setFont(getFont());
 
-        for (unsigned int i = 0; i < mTextRows.size(); i++)
+        for (unsigned i = 0; i < mText->getNumberOfRows(); i++)
         {
             // Move the text one pixel so we can have a caret before a letter.
-            graphics->drawText(mTextRows[i], 2, i * (getFont()->getHeight() + 2));
+            graphics->drawText(mText->getRow(i), 1, i * getFont()->getHeight());
         }
     }
 
     void TextBox::drawCaret(Graphics* graphics, int x, int y)
     {
         graphics->setColor(getForegroundColor());
-        graphics->drawLine(x, getFont()->getHeight() + y, x, y);
+        graphics->drawLine(x, y, x, y + getFont()->getHeight());
     }
 
     void TextBox::mousePressed(MouseEvent& mouseEvent)
     {
         if (mouseEvent.getButton() == MouseEvent::Left)
         {
-            mCaretRow = mouseEvent.getY() / getFont()->getHeight();
-
-            if (mCaretRow >= static_cast<int>(mTextRows.size()))
-            {
-                mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-            }
-
-            mCaretColumn = getFont()->getStringIndexAt(mTextRows[mCaretRow], mouseEvent.getX());
+            mText->setCaretPosition(mouseEvent.getX(), mouseEvent.getY(), getFont());
+            mouseEvent.consume();
         }
     }
 
@@ -187,162 +149,90 @@ namespace gcn
 
         if (key.getValue() == Key::Left)
         {
-            --mCaretColumn;
-            if (mCaretColumn < 0)
-            {
-                --mCaretRow;
-
-                if (mCaretRow < 0)
-                {
-                    mCaretRow = 0;
-                    mCaretColumn = 0;
-                }
-                else
-                {
-                    mCaretColumn = mTextRows[mCaretRow].size();
-                }
-            }
+            mText->setCaretPosition(mText->getCaretPosition() - 1);
         }
 
         else if (key.getValue() == Key::Right)
         {
-            ++mCaretColumn;
-            if (mCaretColumn > static_cast<int>(mTextRows[mCaretRow].size()))
-            {
-                ++mCaretRow;
-
-                if (mCaretRow >= static_cast<int>(mTextRows.size()))
-                {
-                    mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-                    if (mCaretRow < 0)
-                    {
-                        mCaretRow = 0;
-                    }
-
-                    mCaretColumn = mTextRows[mCaretRow].size();
-                }
-                else
-                {
-                    mCaretColumn = 0;
-                }
-            }
+            mText->setCaretPosition(mText->getCaretPosition() + 1);
         }
 
         else if (key.getValue() == Key::Down)
         {
-            setCaretRow(mCaretRow + 1);
+            mText->setCaretRow(mText->getCaretRow() + 1);
         }
 
         else if (key.getValue() == Key::Up)
         {
-            setCaretRow(mCaretRow - 1);
+            mText->setCaretRow(mText->getCaretRow() - 1);
         }
 
         else if (key.getValue() == Key::Home)
         {
-            mCaretColumn = 0;
+            mText->setCaretColumn(0);
         }
 
         else if (key.getValue() == Key::End)
         {
-            mCaretColumn = mTextRows[mCaretRow].size();
+            mText->setCaretColumn(mText->getNumberOfCharacters(mText->getCaretRow()));
         }
 
         else if (key.getValue() == Key::Enter && mEditable)
         {
-            mTextRows.insert(mTextRows.begin() + mCaretRow + 1,
-                             mTextRows[mCaretRow].substr(mCaretColumn, mTextRows[mCaretRow].size() - mCaretColumn));
-            mTextRows[mCaretRow].resize(mCaretColumn);
-            ++mCaretRow;
-            mCaretColumn = 0;
+            mText->insert('\n');
         }
 
-        else if (key.getValue() == Key::Backspace
-                 && mCaretColumn != 0
-                 && mEditable)
+        else if (key.getValue() == Key::Backspace && mEditable)
         {
-            mTextRows[mCaretRow].erase(mCaretColumn - 1, 1);
-            --mCaretColumn;
+            mText->remove(-1);
         }
 
-        else if (key.getValue() == Key::Backspace
-                 && mCaretColumn == 0
-                 && mCaretRow != 0
-                 && mEditable)
+        else if (key.getValue() == Key::Delete && mEditable)
         {
-            mCaretColumn = mTextRows[mCaretRow - 1].size();
-            mTextRows[mCaretRow - 1] += mTextRows[mCaretRow];
-            mTextRows.erase(mTextRows.begin() + mCaretRow);
-            --mCaretRow;
+            mText->remove(1);
         }
 
-        else if (key.getValue() == Key::Delete
-                 && mCaretColumn < (int)mTextRows[mCaretRow].size()
-                 && mEditable)
-        {
-            mTextRows[mCaretRow].erase(mCaretColumn, 1);
-        }
-
-        else if (key.getValue() == Key::Delete
-                 && mCaretColumn == (int)mTextRows[mCaretRow].size()
-                 && mCaretRow < ((int)mTextRows.size() - 1)
-                 && mEditable)
-        {
-            mTextRows[mCaretRow] += mTextRows[mCaretRow + 1];
-            mTextRows.erase(mTextRows.begin() + mCaretRow + 1);
-        }
-
-        else if(key.getValue() == Key::PageUp)
+        else if (key.getValue() == Key::PageUp)
         {
             Widget* par = getParent();
 
             if (par != NULL)
             {
-                const int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
-                mCaretRow -= rowsPerPage;
-
-                if (mCaretRow < 0)
-                {
-                    mCaretRow = 0;
-                }
+                int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
+                mText->setCaretRow(mText->getCaretRow() - rowsPerPage);
             }
         }
 
-        else if(key.getValue() == Key::PageDown)
+        else if (key.getValue() == Key::PageDown)
         {
             Widget* par = getParent();
 
             if (par != NULL)
             {
-                const int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
-                mCaretRow += rowsPerPage;
-
-                if (mCaretRow >= static_cast<int>(mTextRows.size()))
-                {
-                    mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-                }
+                int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
+                mText->setCaretRow(mText->getCaretRow() + rowsPerPage);
             }
         }
 
-        else if(key.getValue() == Key::Tab
-                && mEditable)
+        else if (key.getValue() == Key::Tab && mEditable)
         {
-            mTextRows[mCaretRow].insert(mCaretColumn,std::string("    "));
-            mCaretColumn += 4;
+            mText->insert(' ');
+            mText->insert(' ');
+            mText->insert(' ');
+            mText->insert(' ');
         }
 
         else if (key.isCharacter() && mEditable && !keyEvent.isAltPressed()
                  && !keyEvent.isControlPressed())
         {
-            if(keyEvent.isShiftPressed() && key.isLetter())
+            if (keyEvent.isShiftPressed() && key.isLetter())
             {
-                mTextRows[mCaretRow].insert(mCaretColumn,std::string(1, static_cast<char>(key.getValue() - 32)));
+                mText->insert(key.getValue() - 32);
             }
             else
             {
-                mTextRows[mCaretRow].insert(mCaretColumn, std::string(1, static_cast<char>(key.getValue())));
+                mText->insert(key.getValue());
             }
-            ++mCaretColumn;
         }
 
         adjustSize();
@@ -353,141 +243,66 @@ namespace gcn
 
     void TextBox::adjustSize()
     {
-        int width = 0;
-        for (const auto& mTextRow : mTextRows)
-        {
-            const int w = getFont()->getWidth(mTextRow);
-            if (width < w)
-            {
-                width = w;
-            }
-        }
-
-        setWidth(width + 1);
-        setHeight((getFont()->getHeight() + 2) * static_cast<int>(mTextRows.size()));
+        const Rectangle& dim = mText->getDimension(getFont());
+        setSize(dim.width, dim.height);
     }
 
     void TextBox::setCaretPosition(unsigned int position)
     {
-        for (int row = 0; row < static_cast<int>(mTextRows.size()); row++)
-        {
-            if (position <= mTextRows[row].size())
-            {
-                mCaretRow = row;
-                mCaretColumn = static_cast<int>(position);
-                return; // we are done
-            }
-            else
-            {
-                position--;
-            }
-        }
-
-        // position beyond end of text
-        mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-        mCaretColumn = mTextRows[mCaretRow].size();
+        mText->setCaretPosition(position);
     }
 
     unsigned int TextBox::getCaretPosition() const
     {
-        int pos = 0;
-
-        for (int row = 0; row < mCaretRow; row++)
-        {
-            pos += mTextRows[row].size();
-        }
-
-        return pos + mCaretColumn;
+        return mText->getCaretPosition();
     }
 
     void TextBox::setCaretRowColumn(int row, int column)
     {
-        setCaretRow(row);
-        setCaretColumn(column);
+        mText->setCaretRow(row);
+        mText->setCaretColumn(column);
     }
 
     void TextBox::setCaretRow(int row)
     {
-        mCaretRow = row;
-
-        if (mCaretRow >= static_cast<int>(mTextRows.size()))
-        {
-            mCaretRow = static_cast<int>(mTextRows.size()) - 1;
-        }
-
-        if (mCaretRow < 0)
-        {
-            mCaretRow = 0;
-        }
-
-        setCaretColumn(mCaretColumn);
+        mText->setCaretRow(row);
     }
 
     unsigned int TextBox::getCaretRow() const
     {
-        return mCaretRow;
+        return mText->getCaretRow();
     }
 
     void TextBox::setCaretColumn(int column)
     {
-        mCaretColumn = column;
-
-        if (mCaretColumn > static_cast<int>(mTextRows[mCaretRow].size()))
-        {
-            mCaretColumn = mTextRows[mCaretRow].size();
-        }
-
-        if (mCaretColumn < 0)
-        {
-            mCaretColumn = 0;
-        }
+        mText->setCaretColumn(column);
     }
 
     unsigned int TextBox::getCaretColumn() const
     {
-        return mCaretColumn;
+        return mText->getCaretColumn();
     }
 
-    const std::string& TextBox::getTextRow(int row) const
+    std::string TextBox::getTextRow(int row) const
     {
-        return mTextRows[row];
+        return mText->getRow(row);
     }
 
     void TextBox::setTextRow(int row, const std::string& text)
     {
-        mTextRows[row] = text;
-
-        if (mCaretRow == row)
-        {
-            setCaretColumn(mCaretColumn);
-        }
+        mText->setRow(row, text);
 
         adjustSize();
     }
 
     unsigned int TextBox::getNumberOfRows() const
     {
-        return mTextRows.size();
+        return mText->getNumberOfRows();
     }
 
     std::string TextBox::getText() const
     {
-        if (mTextRows.empty())
-        {
-            return std::string("");
-        }
-
-        int i;
-        std::string text;
-
-        for (i = 0; i < static_cast<int>(mTextRows.size()) - 1; ++i)
-        {
-            text = text.append(mTextRows[i]).append("\n");
-        }
-
-        text += mTextRows[i];
-
-        return text;
+        return mText->getContent();
     }
 
     void TextBox::fontChanged()
@@ -497,12 +312,7 @@ namespace gcn
 
     void TextBox::scrollToCaret()
     {
-        Rectangle scroll;
-        scroll.x = getFont()->getWidth(mTextRows[mCaretRow].substr(0, mCaretColumn));
-        scroll.y = getFont()->getHeight() * mCaretRow;
-        scroll.width = getFont()->getWidth(" ");
-        scroll.height = getFont()->getHeight() + 2; // add 2 for some extra space
-        showPart(scroll);
+        showPart(mText->getCaretDimension(getFont()));
     }
 
     void TextBox::setEditable(bool editable)
@@ -517,7 +327,7 @@ namespace gcn
 
     void TextBox::addRow(const std::string& row)
     {
-        mTextRows.push_back(row);
+        mText->addRow(row);
         adjustSize();
     }
 

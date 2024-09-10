@@ -25,6 +25,7 @@ add_library(guisan STATIC
         src/mouseinput.cpp
         src/rectangle.cpp
         src/selectionevent.cpp
+        src/text.cpp
         src/widget.cpp
         src/sdl/sdl.cpp
         src/sdl/sdl2graphics.cpp

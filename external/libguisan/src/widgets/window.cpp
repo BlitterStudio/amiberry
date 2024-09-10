@@ -322,20 +322,7 @@ namespace gcn
 
     void Window::resizeToContent()
     {
-        int w = 0, h = 0;
-        for (auto& mWidget : mWidgets)
-        {
-            if (mWidget->getX() + mWidget->getWidth() > w)
-            {
-                w = mWidget->getX() + mWidget->getWidth();
-            }
-
-            if (mWidget->getY() + mWidget->getHeight() > h)
-            {
-                h = mWidget->getY() + mWidget->getHeight();
-            }
-        }
-
-        setSize(w + 2 * static_cast<int>(getPadding()), h + static_cast<int>(getPadding()) + static_cast<int>(getTitleBarHeight()));
+        BasicContainer::resizeToContent();
+        setSize(getWidth() + 2 * getPadding(), getHeight() + getPadding() + getTitleBarHeight());
     }
 }

@@ -821,7 +821,7 @@ namespace gcn
         virtual bool isModalMouseInputFocused() const;
 
         /**
-         * Gets a widget from a certain position in the widget.
+         * Gets a widget at a certain position in the widget.
          * This function is used to decide which gets mouse input,
          * thus it can be overloaded to change that behaviour.
          *
@@ -835,6 +835,19 @@ namespace gcn
          * @since 0.6.0
          */
         virtual Widget *getWidgetAt(int x, int y);
+
+        /**
+         * Gets all widgets inside a certain area of the widget.
+         *
+         * NOTE: This always returns an empty list if the widget is not
+         *       a container.
+         *
+         * @param area The area to check.
+         * @param ignore If supplied, this widget will be ignored.
+         * @return A list of widgets. An empty list if no widgets was found.
+         * @since 1.1.0
+         */
+        virtual std::list<Widget*> getWidgetsIn(const Rectangle& area, Widget* ignore = NULL);
 
         /**
          * Gets the mouse listeners of the widget.
