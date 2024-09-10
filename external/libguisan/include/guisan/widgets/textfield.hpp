@@ -66,6 +66,8 @@
 
 namespace gcn
 {
+    class Text;
+
     /**
      * An implementation of a text field where a user can enter a line of text.
      */
@@ -102,7 +104,7 @@ namespace gcn
          * @return The text of the text field.
          * @see setText
          */
-        const std::string& getText() const;
+        std::string getText() const;
 
         /**
          * Adjusts the size of the text field to fit the text.
@@ -185,14 +187,14 @@ namespace gcn
         void fixScroll();
 
         /**
-         * Holds the text of the text box.
+         * True if the text field is editable, false otherwise.
          */
-        std::string mText;
+        bool mEditable;
 
         /**
-         * Holds the caret position.
+         * Holds the text of the text field.
          */
-        unsigned int mCaretPosition;
+        Text* mText;
 
         /**
          * Holds the amount scrolled in x. If a user types more characters than
@@ -200,11 +202,6 @@ namespace gcn
          * text needs to scroll in order to show the last type character.
          */
         int mXScroll;
-
-        /**
-         * True if the text field is editable, false otherwise.
-         */
-        bool mEditable;
     };
 }
 

@@ -67,7 +67,7 @@ namespace gcn
 {
     /**
      * A base class for containers. The class implements the most
-     * common things for a container. If you are implementing a 
+     * common things for a container. If you are implementing a
      * container, consider inheriting from this class.
      *
      * @see Container
@@ -119,6 +119,7 @@ namespace gcn
 
         virtual Widget *getWidgetAt(int x, int y);
 
+        virtual std::list<Widget*> getWidgetsIn(const Rectangle& area, Widget* ignore = NULL);
 
         // Inherited from DeathListener
 
@@ -180,7 +181,7 @@ namespace gcn
          * @see remove, clear
          */
         virtual void clear();
-        
+
         /**
          * Draws the children widgets of the basic container.
          *
@@ -204,6 +205,11 @@ namespace gcn
                    NULL of no widget is found.
          */
         virtual Widget* findWidgetById(const std::string& id);
+
+        /**
+         * Resizes the BasicContainer to fit it's content exactly.
+         */
+        void resizeToContent();
 
         typedef std::list<Widget *> WidgetList;
         typedef WidgetList::iterator WidgetListIterator;

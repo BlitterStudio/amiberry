@@ -185,6 +185,11 @@ namespace gcn
          */
         const std::list<Widget*>& getChildren() const;
 
+        /**
+         * Resizes the Container's size to fit te content exactly.
+         */
+        void resizeToContent();
+
         // Inherited from Widget
 
         virtual void draw(Graphics* graphics);
