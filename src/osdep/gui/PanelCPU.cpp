@@ -721,6 +721,7 @@ void RefreshPanelCPU()
 	}
 
 	// Set Enable status
+	sldCpuSpeed->setScaleEnd(changed_prefs.m68k_speed < 0 || (changed_prefs.cpu_memory_cycle_exact && !changed_prefs.cpu_cycle_exact) ? 0 : 50);
 	sldCpuSpeed->setEnabled(!changed_prefs.cpu_cycle_exact);
 	chk24Bit->setEnabled(changed_prefs.cpu_model <= 68030 && changed_prefs.cachesize == 0);
 	sldCpuIdle->setEnabled(changed_prefs.m68k_speed != 0);
