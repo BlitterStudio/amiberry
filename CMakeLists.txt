@@ -452,3 +452,58 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/
         DEPENDS external/capsimage)
+
+# Install the executable
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION /usr/bin)
+
+# Install additional directories
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/cdroms
+    DESTINATION /usr/share/${PROJECT_NAME}/cdroms
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
+    DESTINATION /usr/share/${PROJECT_NAME}/conf
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
+    DESTINATION /usr/share/${PROJECT_NAME}/controllers
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
+    DESTINATION /usr/share/${PROJECT_NAME}/data
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/floppies
+    DESTINATION /usr/share/${PROJECT_NAME}/floppies
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/harddrives
+    DESTINATION /usr/share/${PROJECT_NAME}/harddrives
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/inputrecordings
+    DESTINATION /usr/share/${PROJECT_NAME}/inputrecordings
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/kickstarts
+    DESTINATION /usr/share/${PROJECT_NAME}/kickstarts
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/lha
+    DESTINATION /usr/share/${PROJECT_NAME}/lha
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/nvram
+    DESTINATION /usr/share/${PROJECT_NAME}/nvram
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
+    DESTINATION /usr/share/${PROJECT_NAME}/plugins
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/savestates
+    DESTINATION /usr/share/${PROJECT_NAME}/savestates
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/screenshots
+    DESTINATION /usr/share/${PROJECT_NAME}/screenshots
+)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
+    DESTINATION /usr/share/${PROJECT_NAME}/whdboot
+)
+
+# Install shared libraries
+install(FILES ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so
+    DESTINATION /usr/share/${PROJECT_NAME}/plugins
+)
+install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
+    DESTINATION /usr/share/${PROJECT_NAME}/plugins
+)
