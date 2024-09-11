@@ -204,7 +204,7 @@ static int isromext(const std::string& path)
 		return 0;
 	const std::string ext = path.substr(ext_pos + 1);
 
-	static const std::vector<std::string> extensions = { "rom", "adf", "key", "a500", "a1200", "a4000" };
+	static const std::vector<std::string> extensions = { "rom", "bin", "adf", "key", "a500", "a1200", "a4000", "cdtv", "cd32" };
 	if (std::find(extensions.begin(), extensions.end(), ext) != extensions.end())
 		return 1;
 
