@@ -1,0 +1,12 @@
+Source: amiberry
+Maintainer: Dimitris Panokostas <midwan@gmail.com>
+Section: games
+Priority: optional
+Standards-Version: 4.6.2
+Build-Depends: debhelper-compat (= 13)
+
+Package: amiberry
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: An optimized Amiga emulator
+  Amiberry is an optimized multi-platform Amiga emulator
