@@ -94,6 +94,8 @@ ConfigCategory categories[] = {
 	},
 	{"WHDLoad", "drive.ico", nullptr, nullptr, InitPanelWHDLoad, ExitPanelWHDLoad, RefreshPanelWHDLoad, HelpPanelWHDLoad},
 
+	{"Themes", "amigainfo.ico", nullptr, nullptr, InitPanelThemes, ExitPanelThemes, RefreshPanelThemes, HelpPanelThemes},
+
 	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
 
@@ -1026,6 +1028,7 @@ void gui_widgets_init()
 
 	try
 	{
+		//TODO remove the data path from there, when we use full path to the font
 		std::string font = get_data_path();
 		font.append(gui_theme.font_name);
 		gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);

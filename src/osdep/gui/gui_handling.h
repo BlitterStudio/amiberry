@@ -326,6 +326,11 @@ void ExitPanelWHDLoad();
 void RefreshPanelWHDLoad();
 bool HelpPanelWHDLoad(std::vector<std::string>& helptext);
 
+void InitPanelThemes(const struct config_category& category);
+void ExitPanelThemes();
+void RefreshPanelThemes();
+bool HelpPanelThemes(std::vector<std::string>& helptext);
+
 void refresh_all_panels();
 void focus_bug_workaround(gcn::Window* wnd);
 void disable_resume();

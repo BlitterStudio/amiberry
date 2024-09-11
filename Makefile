@@ -619,6 +619,7 @@ OBJS = \
 	src/osdep/gui/PanelSavestate.o \
 	src/osdep/gui/PanelVirtualKeyboard.o \
 	src/osdep/gui/PanelWHDLoad.o \
+	src/osdep/gui/PanelThemes.o \
 	src/osdep/gui/main_window.o \
 	src/osdep/gui/Navigation.o \
 	src/osdep/vkbd/vkbd.o \

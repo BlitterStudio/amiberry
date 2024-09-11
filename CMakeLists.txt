@@ -316,6 +316,7 @@ add_executable(${PROJECT_NAME}
         src/osdep/gui/PanelSavestate.cpp
         src/osdep/gui/PanelVirtualKeyboard.cpp
         src/osdep/gui/PanelWHDLoad.cpp
+        src/osdep/gui/PanelThemes.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/gui/Navigation.cpp
         src/osdep/vkbd/vkbd.cpp
@@ -345,7 +346,7 @@ add_executable(${PROJECT_NAME}
         src/jit/compstbl.cpp
         src/jit/compemu_fpp.cpp
         src/jit/compemu_support.cpp
-)
+ )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
