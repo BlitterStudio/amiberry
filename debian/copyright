@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Amiberry
+Upstream-Contact: Dimitris Panokostas <midwan@gmail.com>
+Source: https://github.com/BlitterStudio/amiberry
+
+Files: *
+License: GPL-3
