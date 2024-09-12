@@ -457,7 +457,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         DEPENDS external/capsimage)
 
 # Install the executable
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
 
 # Install additional directories
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/cdroms
@@ -510,3 +510,5 @@ install(FILES ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so
 install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
     DESTINATION share/${PROJECT_NAME}/plugins
 )
+
+include(CPack)
