@@ -64,10 +64,10 @@ namespace gcn
 {
     InputEvent::InputEvent(Widget* source,
                            Widget* distributor,
-                           bool isShiftPressed,
-                           bool isControlPressed,
-                           bool isAltPressed,
-                           bool isMetaPressed) :
+                           const bool isShiftPressed,
+                           const bool isControlPressed,
+                           const bool isAltPressed,
+                           const bool isMetaPressed) :
         Event(source),
         mShiftPressed(isShiftPressed),
         mControlPressed(isControlPressed),

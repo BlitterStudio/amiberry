@@ -116,7 +116,7 @@ namespace gcn
         tab->addActionListener(this);
 
         mTabContainer->add(tab);
-        mTabs.push_back(std::pair<Tab*, Widget*>(tab, widget));
+        mTabs.emplace_back(tab, widget);
 
         if (mSelectedTab == NULL)
         {
@@ -127,7 +127,7 @@ namespace gcn
         adjustSize();
     }
 
-    void TabbedArea::removeTabWithIndex(unsigned int index)
+    void TabbedArea::removeTabWithIndex(const unsigned int index)
     {
         if (index >= mTabs.size())
         {
@@ -162,7 +162,7 @@ namespace gcn
         }
 
         std::vector<std::pair<Tab*, Widget*> >::iterator iter;
-        for (iter = mTabs.begin(); iter != mTabs.end(); iter++)
+        for (iter = mTabs.begin(); iter != mTabs.end(); ++iter)
         {
             if (iter->first == tab)
             {
@@ -173,7 +173,7 @@ namespace gcn
         }
 
         std::vector<Tab*>::iterator iter2;
-        for (iter2 = mTabsToDelete.begin(); iter2 != mTabsToDelete.end(); iter2++)
+        for (iter2 = mTabsToDelete.begin(); iter2 != mTabsToDelete.end(); ++iter2)
         {
             if (*iter2 == tab)
             {
@@ -197,7 +197,7 @@ namespace gcn
         adjustTabPositions();
     }
 
-    bool TabbedArea::isTabSelected(unsigned int index) const
+    bool TabbedArea::isTabSelected(const unsigned int index) const
     {
         if (index >= mTabs.size())
         {
@@ -212,7 +212,7 @@ namespace gcn
         return mSelectedTab == tab;
     }
 
-    void TabbedArea::setSelectedTab(unsigned int index)
+    void TabbedArea::setSelectedTab(const unsigned int index)
     {
         if (index >= mTabs.size())
         {
@@ -256,12 +256,12 @@ namespace gcn
         return -1;
     }
 
-    Tab* TabbedArea::getSelectedTab()
+    Tab* TabbedArea::getSelectedTab() const
     {
         return mSelectedTab;
     }
 
-    void TabbedArea::setOpaque(bool opaque)
+    void TabbedArea::setOpaque(const bool opaque)
     {
         mOpaque = opaque;
     }
@@ -315,7 +315,7 @@ namespace gcn
         drawChildren(graphics);
     }
 
-    void TabbedArea::adjustSize()
+    void TabbedArea::adjustSize() const
     {
         int maxTabHeight = 0;
         for (unsigned int i = 0; i < mTabs.size(); i++)
@@ -332,7 +332,7 @@ namespace gcn
         mWidgetContainer->setSize(getWidth() - 2, getHeight() - maxTabHeight - 2);
     }
 
-    void TabbedArea::adjustTabPositions()
+    void TabbedArea::adjustTabPositions() const
     {
         int maxTabHeight = 0;
         unsigned int i;
@@ -355,7 +355,7 @@ namespace gcn
         }
     }
 
-    void TabbedArea::setWidth(int width)
+    void TabbedArea::setWidth(const int width)
     {
         // This may seem odd, but we want the TabbedArea to adjust
         // its size properly before we call Widget::setWidth as
@@ -367,7 +367,7 @@ namespace gcn
         Widget::setWidth(width);
     }
 
-    void TabbedArea::setHeight(int height)
+    void TabbedArea::setHeight(const int height)
     {
         // This may seem odd, but we want the TabbedArea to adjust
         // its size properly before we call Widget::setHeight as
@@ -379,7 +379,7 @@ namespace gcn
         Widget::setHeight(height);
     }
 
-    void TabbedArea::setSize(int width, int height)
+    void TabbedArea::setSize(const int width, const int height)
     {
         // This may seem odd, but we want the TabbedArea to adjust
         // its size properly before we call Widget::setSize as

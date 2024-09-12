@@ -106,7 +106,7 @@ namespace gcn
     }
     
     MessageBox::MessageBox(const std::string& caption, const std::string& message,
-            const std::string *buttons, int size)
+            const std::string *buttons, const int size)
             :Window(caption),mMessage(message),mClickedButton(-1)
     {
         setCaption(caption);
@@ -179,7 +179,7 @@ namespace gcn
         delete mButtons;
     }
 
-    void MessageBox::setPadding(unsigned int padding)
+    void MessageBox::setPadding(const unsigned int padding)
     {
         mPadding = padding;
     }
@@ -189,12 +189,12 @@ namespace gcn
         return mPadding;
     }
 
-    void MessageBox::setTitleBarHeight(unsigned int height)
+    void MessageBox::setTitleBarHeight(const unsigned int height)
     {
         mTitleBarHeight = height;
     }
 
-    unsigned int MessageBox::getTitleBarHeight()
+    unsigned int MessageBox::getTitleBarHeight() const
     {
         return mTitleBarHeight;
     }
@@ -209,7 +209,7 @@ namespace gcn
         return mCaption;
     }
 
-    void MessageBox::setButtonAlignment(Graphics::Alignment alignment)
+    void MessageBox::setButtonAlignment(const Graphics::Alignment alignment)
     {
         mButtonAlignment = alignment;
         
@@ -406,12 +406,12 @@ namespace gcn
         return mMovable;
     }
 
-    void MessageBox::setOpaque(bool opaque)
+    void MessageBox::setOpaque(const bool opaque)
     {
         mOpaque = opaque;
     }
 
-    bool MessageBox::isOpaque()
+    bool MessageBox::isOpaque() const
     {
         return mOpaque;
     }
@@ -421,7 +421,7 @@ namespace gcn
         WidgetListIterator it;
 
         int w = 0, h = 0;
-        for (it = mWidgets.begin(); it != mWidgets.end(); it++)
+        for (it = mWidgets.begin(); it != mWidgets.end(); ++it)
         {
             if ((*it)->getX() + (*it)->getWidth() > w)
             {

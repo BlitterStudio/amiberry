@@ -123,7 +123,7 @@ namespace gcn
         }
     }
 
-    void TextBox::drawCaret(Graphics* graphics, int x, int y)
+    void TextBox::drawCaret(Graphics* graphics, const int x, const int y)
     {
         graphics->setColor(getForegroundColor());
         graphics->drawLine(x, y, x, y + getFont()->getHeight());
@@ -247,7 +247,7 @@ namespace gcn
         setSize(dim.width, dim.height);
     }
 
-    void TextBox::setCaretPosition(unsigned int position)
+    void TextBox::setCaretPosition(const unsigned int position) const
     {
         mText->setCaretPosition(position);
     }
@@ -257,13 +257,13 @@ namespace gcn
         return mText->getCaretPosition();
     }
 
-    void TextBox::setCaretRowColumn(int row, int column)
+    void TextBox::setCaretRowColumn(const int row, const int column) const
     {
         mText->setCaretRow(row);
         mText->setCaretColumn(column);
     }
 
-    void TextBox::setCaretRow(int row)
+    void TextBox::setCaretRow(const int row) const
     {
         mText->setCaretRow(row);
     }
@@ -273,7 +273,7 @@ namespace gcn
         return mText->getCaretRow();
     }
 
-    void TextBox::setCaretColumn(int column)
+    void TextBox::setCaretColumn(const int column) const
     {
         mText->setCaretColumn(column);
     }
@@ -283,12 +283,12 @@ namespace gcn
         return mText->getCaretColumn();
     }
 
-    std::string TextBox::getTextRow(int row) const
+    std::string TextBox::getTextRow(const int row) const
     {
         return mText->getRow(row);
     }
 
-    void TextBox::setTextRow(int row, const std::string& text)
+    void TextBox::setTextRow(const int row, const std::string& text)
     {
         mText->setRow(row, text);
 
@@ -315,7 +315,7 @@ namespace gcn
         showPart(mText->getCaretDimension(getFont()));
     }
 
-    void TextBox::setEditable(bool editable)
+    void TextBox::setEditable(const bool editable)
     {
         mEditable = editable;
     }
@@ -331,12 +331,12 @@ namespace gcn
         adjustSize();
     }
 
-    bool TextBox::isOpaque()
+    bool TextBox::isOpaque() const
     {
         return mOpaque;
     }
 
-    void TextBox::setOpaque(bool opaque)
+    void TextBox::setOpaque(const bool opaque)
     {
         mOpaque = opaque;
     }

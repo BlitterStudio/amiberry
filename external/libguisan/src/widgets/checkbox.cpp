@@ -76,7 +76,7 @@ namespace gcn
         addKeyListener(this);
     }
 
-    CheckBox::CheckBox(const std::string &caption, bool selected)
+    CheckBox::CheckBox(const std::string &caption, const bool selected)
     {
         setCaption(caption);
         setSelected(selected);
@@ -155,7 +155,7 @@ namespace gcn
         return mSelected;
     }
 
-    void CheckBox::setSelected(bool selected)
+    void CheckBox::setSelected(const bool selected)
     {
         mSelected = selected;
     }

@@ -176,7 +176,7 @@ namespace gcn
         return mSelected;
     }
 
-    void ListBox::setSelected(int selected)
+    void ListBox::setSelected(const int selected)
     {
         if (mListModel == NULL)
         {
@@ -311,7 +311,7 @@ namespace gcn
         adjustSize();
     }
 
-    ListModel* ListBox::getListModel()
+    ListModel* ListBox::getListModel() const
     {
         return mListModel;
     }
@@ -340,7 +340,7 @@ namespace gcn
         return mWrappingEnabled;
     }
 
-    void ListBox::setWrappingEnabled(bool wrappingEnabled)
+    void ListBox::setWrappingEnabled(const bool wrappingEnabled)
     {
         mWrappingEnabled = wrappingEnabled;
     }

@@ -71,7 +71,7 @@ namespace gcn
     {}
 
     Image* SDLImageLoader::load(const std::string& filename,
-                                bool convertToDisplayFormat)
+                                const bool convertToDisplayFormat)
     {
         SDL_Surface *loadedSurface = loadSDLSurface(filename);
 

@@ -96,7 +96,7 @@ namespace gcn
          * @param text The text of the text field.
          * @see getText
          */
-        void setText(const std::string& text);
+        void setText(const std::string& text) const;
 
         /**
          * Gets the text of the text field.
@@ -140,7 +140,7 @@ namespace gcn
          * @param position The caret position.
          * @see getCaretPosition
          */
-        void setCaretPosition(unsigned int position);
+        void setCaretPosition(unsigned int position) const;
 
         /**
          * Gets the caret position. As there is only one line of text

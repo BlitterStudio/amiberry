@@ -208,7 +208,7 @@ namespace gcn
         mFocusHandler->focusNone();
     }
 
-    void Gui::setTabbingEnabled(bool tabbing)
+    void Gui::setTabbingEnabled(const bool tabbing)
     {
         mTabbing = tabbing;
     }
@@ -356,7 +356,7 @@ namespace gcn
             || !mTop->getDimension().isContaining(mouseInput.getX(), mouseInput.getY()))
         {
             std::set<Widget*>::const_iterator iter;
-            for (iter = mLastWidgetsWithMouse.begin(); iter != mLastWidgetsWithMouse.end(); iter++)
+            for (iter = mLastWidgetsWithMouse.begin(); iter != mLastWidgetsWithMouse.end(); ++iter)
             {
                 distributeMouseEvent((*iter),
                                      MouseEvent::Exited,
@@ -392,7 +392,7 @@ namespace gcn
 
             std::set<Widget*>::const_iterator iter;
             for (iter = mWidgetsWithMouseExited.begin(); iter != mWidgetsWithMouseExited.end();
-                 iter++)
+                 ++iter)
             {
                 distributeMouseEvent((*iter),
                                      MouseEvent::Exited,
@@ -409,7 +409,7 @@ namespace gcn
             }
 
             for (iter = mWidgetsWithMouseEntered.begin(); iter != mWidgetsWithMouseEntered.end();
-                 iter++)
+                 ++iter)
             {
                 Widget* widget = (*iter);
                 // If a widget has modal mouse input focus we
@@ -642,7 +642,7 @@ namespace gcn
         }
     }
 
-    Widget* Gui::getWidgetAt(int x, int y)
+    Widget* Gui::getWidgetAt(const int x, const int y)
     {
         // If the widget's parent has no child then we have found the widget..
         Widget* parent = mTop;
@@ -660,7 +660,7 @@ namespace gcn
         return parent;
     }
 
-    std::set<Widget*> Gui::getWidgetsAt(int x, int y)
+    std::set<Widget*> Gui::getWidgetsAt(const int x, const int y)
     {
         std::set<Widget*> result;
 
@@ -677,7 +677,7 @@ namespace gcn
         return result;
     }
 
-    Widget* Gui::getMouseEventSource(int x, int y)
+    Widget* Gui::getMouseEventSource(const int x, const int y)
     {
         Widget* widget = getWidgetAt(x, y);
 
@@ -704,12 +704,12 @@ namespace gcn
     }
 
     void Gui::distributeMouseEvent(Widget* source,
-                                   int type,
-                                   int button,
-                                   int x,
-                                   int y,
-                                   bool force,
-                                   bool toSourceOnly)
+                                   const int type,
+                                   const int button,
+                                   const int x,
+                                   const int y,
+                                   const bool force,
+                                   const bool toSourceOnly)
     {
         Widget* parent = source;
         Widget* widget = source;
@@ -963,7 +963,7 @@ namespace gcn
 
         for (std::set<Widget*>::const_iterator iter = mWidgetsWithMouse.begin();
              iter != mWidgetsWithMouse.end();
-             iter++)
+             ++iter)
         {
             distributeMouseEvent((*iter),
                                  MouseEvent::Exited,

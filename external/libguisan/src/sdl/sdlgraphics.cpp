@@ -104,7 +104,7 @@ namespace gcn
         mTarget = target;
     }
 
-    bool SDLGraphics::pushClipArea(Rectangle area)
+    bool SDLGraphics::pushClipArea(const Rectangle area)
     {
         SDL_Rect rect;
         const bool result = Graphics::pushClipArea(area);
@@ -144,9 +144,9 @@ namespace gcn
         return mTarget;
     }
 
-    void SDLGraphics::drawImage(const Image* image, int srcX,
-                                int srcY, int dstX, int dstY,
-                                int width, int height)
+    void SDLGraphics::drawImage(const Image* image, const int srcX,
+                                const int srcY, const int dstX, const int dstY,
+                                const int width, const int height)
     {
     if (mClipStack.empty()) {
         throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
@@ -668,7 +668,7 @@ namespace gcn
         return mColor;
     }
 
-    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
+    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, const SDL_Rect source,
                                      SDL_Rect destination)
     {
         if (mClipStack.empty()) {

@@ -146,7 +146,7 @@ namespace gcn
          * @param position the positon of the caret.
          * @see getCaretPosition
          */
-        void setCaretPosition(unsigned int position);
+        void setCaretPosition(unsigned int position) const;
 
         /**
          * Gets the row number where the caret is currently located.
@@ -162,7 +162,7 @@ namespace gcn
          * @param The row where the caret should be currently located.
          * @see getCaretRow
          */
-        void setCaretRow(int row);
+        void setCaretRow(int row) const;
 
         /**
          * Gets the column where the caret is currently located.
@@ -178,7 +178,7 @@ namespace gcn
          * @param The column where the caret should be currently located.
          * @see getCaretColumn
          */
-        void setCaretColumn(int column);
+        void setCaretColumn(int column) const;
 
         /**
          * Sets the row and the column where the caret should be currently
@@ -188,7 +188,7 @@ namespace gcn
          * @param column The column where the caret should be currently located.
          * @see getCaretRow, getCaretColumn
          */
-        void setCaretRowColumn(int row, int column);
+        void setCaretRowColumn(int row, int column) const;
 
         /**
          * Scrolls the text to the caret if the text box is in a scroll area.
@@ -227,7 +227,7 @@ namespace gcn
          * @return True if the text box is opaque, false otherwise.
          * @see setOpaque
          */
-        bool isOpaque();
+        bool isOpaque() const;
 
         /**
          * Sets the text box to be opaque or not. An opaque text box will draw

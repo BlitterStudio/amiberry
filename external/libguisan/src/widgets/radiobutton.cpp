@@ -80,7 +80,7 @@ namespace gcn
 
     RadioButton::RadioButton(const std::string& caption,
         const std::string& group,
-        bool selected)
+        const bool selected)
     {
         setCaption(caption);
         setGroup(group);
@@ -199,7 +199,7 @@ namespace gcn
         return mSelected;
     }
 
-    void RadioButton::setSelected(bool selected)
+    void RadioButton::setSelected(const bool selected)
     {
         if (selected && !mGroup.empty())
         {
@@ -207,7 +207,7 @@ namespace gcn
 
             for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
                 iter != iterEnd;
-                iter++)
+                ++iter)
             {
                 if (iter->second->isSelected())
                 {
@@ -264,7 +264,7 @@ namespace gcn
 
             for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
                 iter != iterEnd;
-                iter++)
+                ++iter)
             {
                 if (iter->second == this)
                 {

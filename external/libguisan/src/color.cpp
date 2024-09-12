@@ -71,7 +71,7 @@ namespace gcn
     {
     }
 
-    Color::Color(int color)
+    Color::Color(const int color)
         :
         r((color >> 16) & 0xFF),
         g((color >> 8) & 0xFF),
@@ -80,7 +80,7 @@ namespace gcn
     {
     }
 
-    Color::Color(int ar, int ag, int ab, int aa)
+    Color::Color(const int ar, const int ag, const int ab, const int aa)
         :
         r(ar),
         g(ag),
@@ -111,7 +111,7 @@ namespace gcn
         return result;
     }
 
-    Color Color::operator*(float value) const
+    Color Color::operator*(const float value) const
     {
         Color result(r * static_cast<int>(value), g * static_cast<int>(value), b * static_cast<int>(value), a);
 

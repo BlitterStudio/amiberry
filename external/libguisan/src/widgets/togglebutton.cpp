@@ -161,7 +161,7 @@ namespace gcn
         return mSelected;
     }
 
-    void ToggleButton::setSelected(bool selected)
+    void ToggleButton::setSelected(const bool selected)
     {
         mSelected = selected;
     }

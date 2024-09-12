@@ -83,7 +83,7 @@ namespace gcn
         return mImageLoader;
     }
 
-    Image* Image::load(const std::string& filename, bool convertToDisplayFormat)
+    Image* Image::load(const std::string& filename, const bool convertToDisplayFormat)
     {
         if (mImageLoader == nullptr)
         {

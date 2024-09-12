@@ -125,7 +125,7 @@ namespace gcn
         mCaption = caption;
     }
 
-    void ProgressBar::setAlignment(Graphics::Alignment alignment)
+    void ProgressBar::setAlignment(const Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }

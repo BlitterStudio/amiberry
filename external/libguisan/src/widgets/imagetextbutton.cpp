@@ -67,20 +67,20 @@
 
 namespace gcn
 {
-    ImageTextButton::ImageTextButton(const std::string& filename, std::string& caption) : ImageButton(filename)
+    ImageTextButton::ImageTextButton(const std::string& filename, const std::string& caption) : ImageButton(filename)
     {
         setCaption(caption);
         setWidth(mImage->getWidth() + mImage->getWidth() / 2);
         setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-        mAlignment = ImageTextButton::BOTTOM;
+        mAlignment = BOTTOM;
     }
 
-    ImageTextButton::ImageTextButton(Image* image, std::string& caption) : ImageButton(image)
+    ImageTextButton::ImageTextButton(const Image* image, const std::string& caption) : ImageButton(image)
     {
         setCaption(caption);
         setWidth(mImage->getWidth() + mImage->getWidth() / 2);
         setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-        mAlignment = ImageTextButton::BOTTOM;
+        mAlignment = BOTTOM;
     }
 
     ImageTextButton::~ImageTextButton()
@@ -123,7 +123,7 @@ namespace gcn
         mInternalImage = false;
     }
 
-    Image* ImageTextButton::getImage()
+    Image* ImageTextButton::getImage() const
     {
         return mImage;
     }
@@ -220,7 +220,7 @@ namespace gcn
         }
     }
     
-    void ImageTextButton::setAlignment(unsigned int alignment)
+    void ImageTextButton::setAlignment(const unsigned int alignment)
     {
         mAlignment = alignment;
     }

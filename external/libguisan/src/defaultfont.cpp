@@ -77,14 +77,14 @@ namespace gcn
         return 8 * static_cast<int>(text.size());
     }
 
-    int DefaultFont::drawGlyph(Graphics* graphics, unsigned char glyph, int x, int y)
+    int DefaultFont::drawGlyph(Graphics* graphics, unsigned char glyph, const int x, const int y)
     {
         graphics->drawRectangle(Rectangle(x, y, 8, 8));
 
         return 8;
     }
 
-    void DefaultFont::drawString(Graphics* graphics, const std::string& text, int x, int y, bool enabled)
+    void DefaultFont::drawString(Graphics* graphics, const std::string& text, int x, const int y, bool enabled)
     {
         for (auto i = 0; i < static_cast<int>(text.size()); ++i)
         {
@@ -93,7 +93,7 @@ namespace gcn
         }
     }
 
-    int DefaultFont::getStringIndexAt(const std::string& text, int x) const
+    int DefaultFont::getStringIndexAt(const std::string& text, const int x) const
     {
         if (x > static_cast<int>(text.size()) * 8)
         {

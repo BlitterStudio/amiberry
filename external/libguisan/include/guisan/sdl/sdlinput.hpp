@@ -125,7 +125,7 @@ namespace gcn
          * @return A Guisan key value.
          * @see Key
          */
-        Key convertSDLEventToGuichanKeyValue(SDL_Event event);
+        Key convertSDLEventToGuichanKeyValue(const SDL_Event& event);
 
         std::queue<KeyInput> mKeyInputQueue;
         std::queue<MouseInput> mMouseInputQueue;

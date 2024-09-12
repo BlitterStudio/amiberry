@@ -64,7 +64,6 @@ namespace gcn
 {
     Exception::Exception()
         : mFunction("?"),
-          mMessage(""),
           mFilename("?"),
           mLine(0)
     {
@@ -81,7 +80,7 @@ namespace gcn
     Exception::Exception(std::string message,
                          std::string function,
                          std::string filename,
-                         unsigned int line)
+                         const unsigned int line)
         : mFunction(std::move(function)),
           mMessage(std::move(message)),
           mFilename(std::move(filename)),

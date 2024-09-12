@@ -164,8 +164,8 @@ namespace gcn
     }
 
     ImageFont::ImageFont(const std::string& filename,
-                         unsigned char glyphsFrom,
-                         unsigned char glyphsTo)
+                         const unsigned char glyphsFrom,
+                         const unsigned char glyphsTo)
     {
         mFilename = filename;
         mImage = Image::load(filename, false);
@@ -214,7 +214,7 @@ namespace gcn
         delete mImage;
     }
 
-    int ImageFont::getWidth(unsigned char glyph) const
+    int ImageFont::getWidth(const unsigned char glyph) const
     {
         if (mGlyph[glyph].width == 0)
         {
@@ -229,7 +229,7 @@ namespace gcn
         return mHeight + mRowSpacing;
     }
 
-    int ImageFont::drawGlyph(Graphics* graphics, unsigned char glyph, int x, int y)
+    int ImageFont::drawGlyph(Graphics* graphics, const unsigned char glyph, const int x, const int y)
     {
         // This is needed for drawing the glyph in the middle if we have spacing
         int yoffset = getRowSpacing() / 2;
@@ -253,18 +253,16 @@ namespace gcn
         return mGlyph[glyph].width + mGlyphSpacing;
     }
 
-    void ImageFont::drawString(Graphics* graphics, const std::string& text, int x, int y, bool enabled)
+    void ImageFont::drawString(Graphics* graphics, const std::string& text, int x, const int y, bool enabled)
     {
-        unsigned int i;
-
-        for (i = 0; i < text.size(); ++i)
+	    for (unsigned int i = 0; i < text.size(); ++i)
         {
             drawGlyph(graphics, text.at(i), x, y);
             x += getWidth(text.at(i));
         }
     }
 
-    void ImageFont::setRowSpacing(int spacing)
+    void ImageFont::setRowSpacing(const int spacing)
     {
         mRowSpacing = spacing;
     }
@@ -274,7 +272,7 @@ namespace gcn
         return mRowSpacing;
     }
 
-    void ImageFont::setGlyphSpacing(int spacing)
+    void ImageFont::setGlyphSpacing(const int spacing)
     {
         mGlyphSpacing = spacing;
     }
@@ -335,7 +333,7 @@ namespace gcn
 
         } while (color != separator);
 
-        return Rectangle(x, y, width, mHeight);
+        return {x, y, width, mHeight};
     }
 
     int ImageFont::getWidth(const std::string& text) const
@@ -350,7 +348,7 @@ namespace gcn
         return size - mGlyphSpacing;
     }
 
-    int ImageFont::getStringIndexAt(const std::string& text, int x) const
+    int ImageFont::getStringIndexAt(const std::string& text, const int x) const
     {
         int size = 0;
 
