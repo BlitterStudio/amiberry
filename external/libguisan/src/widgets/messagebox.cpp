@@ -86,22 +86,22 @@ namespace gcn
         mButtons[0]->addMouseListener(this);
         
         setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
-		setWidth(mLabel->getWidth() + 4*mPadding);
+        setWidth(mLabel->getWidth() + 4*mPadding);
         if(mButtons[0]->getWidth() + 4*mPadding > getWidth()) 
         {
             setWidth(mButtons[0]->getWidth() + 4*mPadding);
         }
         
-		this->add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
+        this->add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
         this->add(mButtons[0], (getWidth() - mButtons[0]->getWidth())/2, getHeight() - (int)getTitleBarHeight() - mPadding - mButtons[0]->getHeight());
         
         try
         {
-        	requestModalFocus();
+            requestModalFocus();
         } 
         catch (Exception e) 
         {
-        	// Not having modal focus is not critical
+            // Not having modal focus is not critical
         }
     }
     
@@ -116,7 +116,7 @@ namespace gcn
         mLabel = new Label(message);
         mLabel->setAlignment(Graphics::Left);
         mLabel->adjustSize();
-		setWidth(mLabel->getWidth() + 4*mPadding);
+        setWidth(mLabel->getWidth() + 4*mPadding);
         
         //Create buttons and label
         if(size > 0) 
@@ -148,9 +148,9 @@ namespace gcn
             {
                 padding += (getWidth() - (mButtons[0]->getWidth()*size + 4*mPadding + mPadding*(size-1)))/2;
             }
-			add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
+            add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
             
-			setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
+            setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
             for(int i = 0 ; i < size ; i++)
             {
                 add(mButtons[i], padding + (maxBtnWidth + mPadding)*i, getHeight() - (int)getTitleBarHeight() - mPadding - mButtons[0]->getHeight());
@@ -159,18 +159,18 @@ namespace gcn
         
         try
         {
-        	requestModalFocus();
+            requestModalFocus();
         } 
         catch (Exception e) 
         {
-        	// Not having modal focus is not critical
+            // Not having modal focus is not critical
         }
     }
 
     MessageBox::~MessageBox()
     {
-    	releaseModalFocus();
-    	
+        releaseModalFocus();
+        
         delete mLabel;
         for(int i = 0 ; i < mNbButtons ; i++)
         {
@@ -441,11 +441,11 @@ namespace gcn
     {
         return mClickedButton;
     }
-	
-	void MessageBox::addToContainer(Container* container)
-	{
-		int x = container->getWidth() - getWidth();
-		int y = container->getHeight() - getHeight();
-		container->add(this, x/2, y/2);
-	}
+    
+    void MessageBox::addToContainer(Container* container)
+    {
+        int x = container->getWidth() - getWidth();
+        int y = container->getHeight() - getHeight();
+        container->add(this, x/2, y/2);
+    }
 }

@@ -134,7 +134,7 @@ namespace gcn
         /*
          * Clears any selected item
          */
-        void clearSelected(void) const;
+        void clearSelected() const;
 
         /**
          * Sets the list model to use when displaying the list.
@@ -183,7 +183,7 @@ namespace gcn
         /*
          * Returns the current Dropdown status
          */
-        bool isDroppedDown();
+        bool isDroppedDown() const;
 
         /**
          * Sets the DropDown Widget to dropped-down mode.
@@ -248,7 +248,7 @@ namespace gcn
         virtual void mouseDragged(MouseEvent& mouseEvent);
 
 
-	// Inherited from SelectionListener
+        // Inherited from SelectionListener
 
         virtual void valueChanged(const SelectionEvent& event);
 

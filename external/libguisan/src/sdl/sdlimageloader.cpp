@@ -111,8 +111,8 @@ namespace gcn
     
     void SDLImageLoader::setRenderer(SDL_Renderer* renderer)
     {
-		mRenderer = renderer;
-	}
+        mRenderer = renderer;
+    }
 
     SDL_Surface* SDLImageLoader::loadSDLSurface(const std::string& filename)
     {

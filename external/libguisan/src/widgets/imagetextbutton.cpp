@@ -85,48 +85,48 @@ namespace gcn
 
     ImageTextButton::~ImageTextButton()
     {
-	    if (mInternalImage)
-            delete mImage;
-    }
-	
-	void ImageTextButton::adjustSize()
-	{
-		switch(getAlignment())
-		{
-			case LEFT: //fallthrough
-			case RIGHT:
-			  setWidth(mImage->getWidth() + getFont()->getWidth(mCaption) + 2*mSpacing);
-			  setHeight(mImage->getHeight() + 2*mSpacing);
-			  break;
-			case TOP: //fallthrough
-			case BOTTOM:
-			  if(mImage->getWidth() > getFont()->getWidth(mCaption))
-			  {
-				  setWidth(mImage->getWidth() + 2*mSpacing);
-			  }
-			  else
-			  {
-				  setWidth(getFont()->getWidth(mCaption) + 2*mSpacing);
-			  }
-			  setHeight(mImage->getHeight() + getFont()->getHeight() + 2*mSpacing);
-			  break;
-			default:
-              throw GCN_EXCEPTION("Unknown alignment.");
-		}
-	}
-
-	void ImageTextButton::setImage(Image* image)
-	{
         if (mInternalImage)
             delete mImage;
-		mImage = image;
-        mInternalImage = false;
-	}
+    }
+    
+    void ImageTextButton::adjustSize()
+    {
+        switch(getAlignment())
+        {
+            case LEFT: //fallthrough
+            case RIGHT:
+              setWidth(mImage->getWidth() + getFont()->getWidth(mCaption) + 2*mSpacing);
+              setHeight(mImage->getHeight() + 2*mSpacing);
+              break;
+            case TOP: //fallthrough
+            case BOTTOM:
+              if(mImage->getWidth() > getFont()->getWidth(mCaption))
+              {
+                  setWidth(mImage->getWidth() + 2*mSpacing);
+              }
+              else
+              {
+                  setWidth(getFont()->getWidth(mCaption) + 2*mSpacing);
+              }
+              setHeight(mImage->getHeight() + getFont()->getHeight() + 2*mSpacing);
+              break;
+            default:
+              throw GCN_EXCEPTION("Unknown alignment.");
+        }
+    }
 
-	Image* ImageTextButton::getImage()
-	{
-		return mImage;
-	}
+    void ImageTextButton::setImage(Image* image)
+    {
+        if (mInternalImage)
+            delete mImage;
+        mImage = image;
+        mInternalImage = false;
+    }
+
+    Image* ImageTextButton::getImage()
+    {
+        return mImage;
+    }
 
     void ImageTextButton::draw(Graphics* graphics)
     {
@@ -175,25 +175,25 @@ namespace gcn
               imageY = mSpacing;
               textY = getHeight() / 2 - getFont()->getHeight() / 2;
               break;
-			case RIGHT:
-			  imageX = mSpacing;
+            case RIGHT:
+              imageX = mSpacing;
               textX = mSpacing + mImage->getWidth();
               imageY = mSpacing;
               textY = getHeight() / 2 - getFont()->getHeight() / 2;
-			  break;
-			case TOP:
-			  imageY = mSpacing + getFont()->getHeight();
-			  textY = mSpacing;
-			  imageX = getWidth() / 2 - mImage->getWidth() / 2;
-			  textX = getWidth() / 2 - getFont()->getWidth(mCaption) / 2; 
-			  break;
-			case BOTTOM:
-			  imageY = mSpacing;
-			  textY = mSpacing + mImage->getHeight();
-			  imageX = getWidth() / 2 - mImage->getWidth() / 2;
-			  textX = getWidth() / 2 - getFont()->getWidth(mCaption) / 2; 
-			  break;
-			default:
+              break;
+            case TOP:
+              imageY = mSpacing + getFont()->getHeight();
+              textY = mSpacing;
+              imageX = getWidth() / 2 - mImage->getWidth() / 2;
+              textX = getWidth() / 2 - getFont()->getWidth(mCaption) / 2; 
+              break;
+            case BOTTOM:
+              imageY = mSpacing;
+              textY = mSpacing + mImage->getHeight();
+              imageX = getWidth() / 2 - mImage->getWidth() / 2;
+              textX = getWidth() / 2 - getFont()->getWidth(mCaption) / 2; 
+              break;
+            default:
               throw GCN_EXCEPTION("Unknown alignment.");
         }
 
