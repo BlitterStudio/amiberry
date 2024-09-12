@@ -276,7 +276,7 @@ namespace gcn
         return mListBox->getSelected();
     }
 
-    void DropDown::setSelected(int selected) const
+    void DropDown::setSelected(const int selected) const
     {
         if (selected >= 0)
         {
@@ -400,7 +400,7 @@ namespace gcn
         adjustHeight();
     }
 
-    ListModel *DropDown::getListModel()
+    ListModel *DropDown::getListModel() const
     {
         return mListBox->getListModel();
     }
@@ -504,11 +504,12 @@ namespace gcn
         if (mDroppedDown)
         {
             // Calculate the children area (with the one pixel border in mind)
-            return Rectangle(
-                1, mFoldedUpHeight + 1, getWidth() - 2, getHeight() - mFoldedUpHeight - 2);
+            return {
+	            1, mFoldedUpHeight + 1, getWidth() - 2, getHeight() - mFoldedUpHeight - 2
+            };
         }
 
-        return Rectangle();
+        return {};
     }
 
     void DropDown::setBaseColor(const Color& color)

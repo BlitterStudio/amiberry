@@ -70,7 +70,7 @@ namespace gcn
         height = 0;
     }
 
-    Rectangle::Rectangle(int x, int y, int width, int height)
+    Rectangle::Rectangle(const int x, const int y, const int width, const int height)
     {
         this->x = x;
         this->y = y;
@@ -78,7 +78,7 @@ namespace gcn
         this->height = height;
     }
 
-    void Rectangle::setAll(int x, int y, int width, int height)
+    void Rectangle::setAll(const int x, const int y, const int width, const int height)
     {
         this->x = x;
         this->y = y;
@@ -125,7 +125,7 @@ namespace gcn
         return true;
     }
 
-    bool Rectangle::isContaining(int x, int y) const
+    bool Rectangle::isContaining(const int x, const int y) const
     {
         if (isEmpty()) return false;
         return ((x >= this->x) && (y >= this->y)

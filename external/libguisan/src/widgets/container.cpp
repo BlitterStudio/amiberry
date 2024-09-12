@@ -71,9 +71,7 @@ namespace gcn
     }
 
     Container::~Container()
-    {
-
-    }
+    = default;
 
     void Container::draw(Graphics* graphics)
     {
@@ -86,7 +84,7 @@ namespace gcn
         drawChildren(graphics);
     }
 
-    void Container::setOpaque(bool opaque)
+    void Container::setOpaque(const bool opaque)
     {
         mOpaque = opaque;
     }
@@ -102,7 +100,7 @@ namespace gcn
         distributeWidgetAddedEvent(widget);
     }
 
-    void Container::add(Widget* widget, int x, int y)
+    void Container::add(Widget* widget, const int x, const int y)
     {
         widget->setPosition(x, y);
         BasicContainer::add(widget);

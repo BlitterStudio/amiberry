@@ -133,7 +133,7 @@ namespace gcn
          *
          * @return the content of the ScrollArea.
          */
-        Widget* getContent();
+        Widget* getContent() const;
 
         /**
          * Sets the horizontal scrollbar policy.
@@ -416,42 +416,42 @@ namespace gcn
          *
          * @return the dimension of the up button.
          */
-        Rectangle getUpButtonDimension();
+        Rectangle getUpButtonDimension() const;
 
         /**
          * Gets the down button dimension.
          *
          * @return the dimension of the down button.
          */
-        Rectangle getDownButtonDimension();
+        Rectangle getDownButtonDimension() const;
 
         /**
          * Gets the left button dimension.
          *
          * @return the dimension of the left button.
          */
-        Rectangle getLeftButtonDimension();
+        Rectangle getLeftButtonDimension() const;
 
         /**
          * Gets the right button dimension.
          *
          * @return the dimension of the right button.
          */
-        Rectangle getRightButtonDimension();
+        Rectangle getRightButtonDimension() const;
 
         /**
          * Gets the vertical scrollbar dimension.
          *
          * @return the dimension of the vertical scrollbar.
          */
-        Rectangle getVerticalBarDimension();
+        Rectangle getVerticalBarDimension() const;
 
         /**
          * Gets the horizontal scrollbar dimension.
          *
          * @return the dimension of the horizontal scrollbar.
          */
-        Rectangle getHorizontalBarDimension();
+        Rectangle getHorizontalBarDimension() const;
 
         /**
          * Gets the vertical marker dimension.

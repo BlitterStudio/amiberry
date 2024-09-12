@@ -149,7 +149,7 @@ namespace gcn
         return mParent;
     }
 
-    void Widget::setWidth(int width)
+    void Widget::setWidth(const int width)
     {
         Rectangle newDimension = mDimension;
         newDimension.width = width;
@@ -162,7 +162,7 @@ namespace gcn
         return mDimension.width;
     }
 
-    void Widget::setHeight(int height)
+    void Widget::setHeight(const int height)
     {
         Rectangle newDimension = mDimension;
         newDimension.height = height;
@@ -175,7 +175,7 @@ namespace gcn
         return mDimension.height;
     }
 
-    void Widget::setX(int x)
+    void Widget::setX(const int x)
     {
         Rectangle newDimension = mDimension;
         newDimension.x = x;
@@ -188,7 +188,7 @@ namespace gcn
         return mDimension.x;
     }
 
-    void Widget::setY(int y)
+    void Widget::setY(const int y)
     {
         Rectangle newDimension = mDimension;
         newDimension.y = y;
@@ -201,7 +201,7 @@ namespace gcn
         return mDimension.y;
     }
 
-    void Widget::setPosition(int x, int y)
+    void Widget::setPosition(const int x, const int y)
     {
         Rectangle newDimension = mDimension;
         newDimension.x = x;
@@ -228,7 +228,7 @@ namespace gcn
         }
     }
 
-    void Widget::setFrameSize(unsigned int borderSize)
+    void Widget::setFrameSize(const unsigned int borderSize)
     {
         mBorderSize = borderSize;
     }
@@ -263,7 +263,7 @@ namespace gcn
         return (mFocusHandler->isFocused(this));
     }
 
-    void Widget::setFocusable(bool focusable)
+    void Widget::setFocusable(const bool focusable)
     {
         if (!focusable && isFocused())
         {
@@ -307,7 +307,7 @@ namespace gcn
         }
     }
 
-    void Widget::setVisible(bool visible)
+    void Widget::setVisible(const bool visible)
     {
         if (!visible && isFocused())
         {
@@ -533,7 +533,7 @@ namespace gcn
         return mTabIn;
     }
 
-    void Widget::setTabInEnabled(bool enabled)
+    void Widget::setTabInEnabled(const bool enabled)
     {
         mTabIn = enabled;
     }
@@ -543,12 +543,12 @@ namespace gcn
         return mTabOut;
     }
 
-    void Widget::setTabOutEnabled(bool enabled)
+    void Widget::setTabOutEnabled(const bool enabled)
     {
         mTabOut = enabled;
     }
 
-    void Widget::setSize(int width, int height)
+    void Widget::setSize(const int width, const int height)
     {
         Rectangle newDimension = mDimension;
         newDimension.width = width;
@@ -557,7 +557,7 @@ namespace gcn
         setDimension(newDimension);
     }
 
-    void Widget::setEnabled(bool enabled)
+    void Widget::setEnabled(const bool enabled)
     {
         mEnabled = enabled;
     }
@@ -736,7 +736,7 @@ namespace gcn
         }
     }
 
-    void Widget::showPart(Rectangle rectangle)
+    void Widget::showPart(const Rectangle rectangle)
     {
         if (mParent != NULL)
         {

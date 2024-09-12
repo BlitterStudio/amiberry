@@ -162,7 +162,7 @@ namespace gcn
          *
          * @return the title bar height.
          */
-        unsigned int getTitleBarHeight();
+        unsigned int getTitleBarHeight() const;
 
         /**
          * Check if the window is movable.
@@ -184,7 +184,7 @@ namespace gcn
          *
          * @return true or false.
          */
-        bool isOpaque();
+        bool isOpaque() const;
         
         /**
          * Add this MessageBox to a parent container, centered both horizontally and vertically

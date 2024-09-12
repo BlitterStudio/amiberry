@@ -64,15 +64,15 @@ namespace gcn
 {
     MouseEvent::MouseEvent(Widget* source,
                            Widget* distributor,
-                           bool isShiftPressed,
-                           bool isControlPressed,
-                           bool isAltPressed,
-                           bool isMetaPressed,
-                           unsigned int type,
-                           unsigned int button,
-                           int x,
-                           int y,
-                           int clickCount) :
+                           const bool isShiftPressed,
+                           const bool isControlPressed,
+                           const bool isAltPressed,
+                           const bool isMetaPressed,
+                           const unsigned int type,
+                           const unsigned int button,
+                           const int x,
+                           const int y,
+                           const int clickCount) :
         InputEvent(
             source, distributor, isShiftPressed, isControlPressed, isAltPressed, isMetaPressed),
         mType(type),

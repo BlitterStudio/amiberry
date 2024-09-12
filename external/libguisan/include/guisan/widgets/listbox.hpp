@@ -134,7 +134,7 @@ namespace gcn
          * @return the list model used.
          * @see setListModel
          */
-        ListModel *getListModel();
+        ListModel *getListModel() const;
 
         /**
          * Adjusts the size of the list box to fit its list model.

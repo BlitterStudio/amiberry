@@ -65,7 +65,7 @@
 
 namespace gcn
 {
-    SDLImage::SDLImage(SDL_Surface* surface, bool autoFree, SDL_Renderer* renderer)
+    SDLImage::SDLImage(SDL_Surface* surface, const bool autoFree, SDL_Renderer* renderer)
     {
         mAutoFree = autoFree;
         mSurface = surface;
@@ -115,7 +115,7 @@ namespace gcn
         return mSurface->h;
     }
 
-    Color SDLImage::getPixel(int x, int y)
+    Color SDLImage::getPixel(const int x, const int y)
     {
         if (mSurface == NULL)
         {
@@ -125,7 +125,7 @@ namespace gcn
         return SDLgetPixel(mSurface, x, y);
     }
 
-    void SDLImage::putPixel(int x, int y, const Color& color)
+    void SDLImage::putPixel(const int x, const int y, const Color& color)
     {
         if (mSurface == NULL)
         {

@@ -90,7 +90,7 @@ namespace gcn
         mCaption = caption;
     }
 
-    void Label::setAlignment(Graphics::Alignment alignment)
+    void Label::setAlignment(const Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }

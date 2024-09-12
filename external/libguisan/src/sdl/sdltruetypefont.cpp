@@ -55,8 +55,9 @@
 
 namespace gcn
 {
-    SDLTrueTypeFont::SDLTrueTypeFont(const std::string& filename, int size)
+    SDLTrueTypeFont::SDLTrueTypeFont(const std::string& filename, const int size)
     {
+        mHeight = 0;
         mRowSpacing = 0;
         mGlyphSpacing = 0;
         mAntiAlias = true;
@@ -90,7 +91,7 @@ namespace gcn
     }
 
     void SDLTrueTypeFont::drawString(Graphics* graphics, const std::string& text, const int x, const int y,
-                                     bool enabled)
+                                     const bool enabled)
     {
         if (text.empty())
         {
@@ -157,7 +158,7 @@ namespace gcn
         SDL_FreeSurface(textSurface);
     }
 
-    void SDLTrueTypeFont::setRowSpacing(int spacing)
+    void SDLTrueTypeFont::setRowSpacing(const int spacing)
     {
         mRowSpacing = spacing;
     }
@@ -167,7 +168,7 @@ namespace gcn
         return mRowSpacing;
     }
 
-    void SDLTrueTypeFont::setGlyphSpacing(int spacing)
+    void SDLTrueTypeFont::setGlyphSpacing(const int spacing)
     {
         mGlyphSpacing = spacing;
     }
@@ -177,7 +178,7 @@ namespace gcn
         return mGlyphSpacing;
     }
 
-    void SDLTrueTypeFont::setAntiAlias(bool antiAlias)
+    void SDLTrueTypeFont::setAntiAlias(const bool antiAlias)
     {
         mAntiAlias = antiAlias;
     }

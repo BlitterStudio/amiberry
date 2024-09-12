@@ -112,7 +112,7 @@ namespace gcn
         return mCaption;
     }
 
-    void Button::setAlignment(Graphics::Alignment alignment)
+    void Button::setAlignment(const Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }
@@ -122,7 +122,7 @@ namespace gcn
         return mAlignment;
     }
 
-    void Button::setSpacing(unsigned int spacing)
+    void Button::setSpacing(const unsigned int spacing)
     {
         mSpacing = spacing;
     }

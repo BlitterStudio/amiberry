@@ -207,7 +207,7 @@ namespace gcn
          * @return The selected tab.
          * @see isTabSelected, setSelectedTab
          */
-        Tab* getSelectedTab();
+        Tab* getSelectedTab() const;
 
 
         // Inherited from Widget
@@ -247,12 +247,12 @@ namespace gcn
         /**
          * Adjusts the size of the tab container and the widget container.
          */
-        void adjustSize();
+        void adjustSize() const;
 
         /**
          * Adjusts the positions of the tabs.
          */
-        void adjustTabPositions();
+        void adjustTabPositions() const;
 
         /**
          * Holds the selected tab.

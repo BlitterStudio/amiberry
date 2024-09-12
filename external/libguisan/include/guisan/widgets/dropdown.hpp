@@ -150,7 +150,7 @@ namespace gcn
          * @return the ListModel used.
          * @see setListModel
          */
-        ListModel *getListModel();
+        ListModel *getListModel() const;
 
         /**
          * Adjusts the height of the drop down to fit the height of the

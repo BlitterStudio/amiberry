@@ -154,7 +154,7 @@ namespace gcn
          * @return The title bar height.
          * @see setTitleBarHeight
          */
-        unsigned int getTitleBarHeight();
+        unsigned int getTitleBarHeight() const;
 
         /**
          * Sets the window to be moveble or not.
@@ -187,7 +187,7 @@ namespace gcn
          * @return True if the window is opaque, false otherwise.
          * @see setOpaque
          */
-        bool isOpaque();
+        bool isOpaque() const;
 
         /**
          * Resizes the window to fit the content.
