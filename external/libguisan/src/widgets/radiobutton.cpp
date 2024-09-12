@@ -110,7 +110,10 @@ namespace gcn
 
 
         graphics->setFont(getFont());
-        graphics->setColor(getForegroundColor());
+        if (isEnabled())
+            graphics->setColor(getForegroundColor());
+        else
+            graphics->setColor(Color(128, 128, 128));
 
         if (isFocused())
         {
@@ -119,7 +122,7 @@ namespace gcn
 
         const int h = getHeight() + getHeight() / 2;
 
-        graphics->drawText(getCaption(), h - 2, 0);
+        graphics->drawText(getCaption(), h - 2, 0, Graphics::Left, isEnabled());
     }
 
     void RadioButton::drawBox(Graphics* graphics)
