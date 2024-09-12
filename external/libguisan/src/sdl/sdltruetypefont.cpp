@@ -55,140 +55,140 @@
 
 namespace gcn
 {
-	SDLTrueTypeFont::SDLTrueTypeFont(const std::string& filename, int size)
-	{
-		mRowSpacing = 0;
-		mGlyphSpacing = 0;
-		mAntiAlias = true;
-		mFilename = filename;
-		mFont = nullptr;
+    SDLTrueTypeFont::SDLTrueTypeFont(const std::string& filename, int size)
+    {
+        mRowSpacing = 0;
+        mGlyphSpacing = 0;
+        mAntiAlias = true;
+        mFilename = filename;
+        mFont = nullptr;
 
-		mFont = TTF_OpenFont(filename.c_str(), size);
+        mFont = TTF_OpenFont(filename.c_str(), size);
 
-		if (mFont == nullptr)
-		{
-			throw GCN_EXCEPTION("SDLTrueTypeFont::SDLTrueTypeFont. "+std::string(TTF_GetError()));
-		}
-	}
+        if (mFont == nullptr)
+        {
+            throw GCN_EXCEPTION("SDLTrueTypeFont::SDLTrueTypeFont. "+std::string(TTF_GetError()));
+        }
+    }
 
-	SDLTrueTypeFont::~SDLTrueTypeFont()
-	{
-		TTF_CloseFont(mFont);
-	}
+    SDLTrueTypeFont::~SDLTrueTypeFont()
+    {
+        TTF_CloseFont(mFont);
+    }
 
-	int SDLTrueTypeFont::getWidth(const std::string& text) const
-	{
-		int w, h;
-		TTF_SizeText(mFont, text.c_str(), &w, &h);
+    int SDLTrueTypeFont::getWidth(const std::string& text) const
+    {
+        int w, h;
+        TTF_SizeText(mFont, text.c_str(), &w, &h);
 
-		return w;
-	}
+        return w;
+    }
 
-	int SDLTrueTypeFont::getHeight() const
-	{
-		return TTF_FontHeight(mFont) + mRowSpacing;
-	}
+    int SDLTrueTypeFont::getHeight() const
+    {
+        return TTF_FontHeight(mFont) + mRowSpacing;
+    }
 
-	void SDLTrueTypeFont::drawString(Graphics* graphics, const std::string& text, const int x, const int y,
-	                                 bool enabled)
-	{
-		if (text.empty())
-		{
-			return;
-		}
+    void SDLTrueTypeFont::drawString(Graphics* graphics, const std::string& text, const int x, const int y,
+                                     bool enabled)
+    {
+        if (text.empty())
+        {
+            return;
+        }
 
-		auto sdlGraphics = dynamic_cast<SDLGraphics*>(graphics);
-		auto sdl2Graphics = dynamic_cast<SDL2Graphics*>(graphics);
+        auto sdlGraphics = dynamic_cast<SDLGraphics*>(graphics);
+        auto sdl2Graphics = dynamic_cast<SDL2Graphics*>(graphics);
 
 
-		if (sdlGraphics == nullptr && sdl2Graphics == nullptr)
-		{
-			throw GCN_EXCEPTION("SDLTrueTypeFont::drawString. Graphics object not an SDL graphics object!");
-			return;
-		}
+        if (sdlGraphics == nullptr && sdl2Graphics == nullptr)
+        {
+            throw GCN_EXCEPTION("SDLTrueTypeFont::drawString. Graphics object not an SDL graphics object!");
+            return;
+        }
 
-		// This is needed for drawing the Glyph in the middle if we have spacing
-		const int yoffset = getRowSpacing() / 2;
+        // This is needed for drawing the Glyph in the middle if we have spacing
+        const int yoffset = getRowSpacing() / 2;
 
-		SDL_Color sdlCol;
-		if (enabled)
-		{
-			sdlCol.r = mColor.r;
-			sdlCol.g = mColor.g;
-			sdlCol.b = mColor.b;
-			sdlCol.a = mColor.a;
-		}
-		else
-		{
-			sdlCol.r = 128;
-			sdlCol.g = 128;
-			sdlCol.b = 128;
-		}
+        SDL_Color sdlCol;
+        if (enabled)
+        {
+            sdlCol.r = mColor.r;
+            sdlCol.g = mColor.g;
+            sdlCol.b = mColor.b;
+            sdlCol.a = mColor.a;
+        }
+        else
+        {
+            sdlCol.r = 128;
+            sdlCol.g = 128;
+            sdlCol.b = 128;
+        }
 
-		SDL_Surface* textSurface;
-		if (mAntiAlias)
-		{
-			textSurface = TTF_RenderText_Blended(mFont, text.c_str(), sdlCol);
-		}
-		else
-		{
-			textSurface = TTF_RenderText_Solid(mFont, text.c_str(), sdlCol);
-		}
+        SDL_Surface* textSurface;
+        if (mAntiAlias)
+        {
+            textSurface = TTF_RenderText_Blended(mFont, text.c_str(), sdlCol);
+        }
+        else
+        {
+            textSurface = TTF_RenderText_Solid(mFont, text.c_str(), sdlCol);
+        }
 
-		SDL_Rect dst, src;
-		dst.x = x;
-		dst.y = y + yoffset;
-		src.w = textSurface->w;
-		src.h = textSurface->h;
-		src.x = 0;
-		src.y = 0;
-		dst.w = src.w;
-		dst.h = src.h;
+        SDL_Rect dst, src;
+        dst.x = x;
+        dst.y = y + yoffset;
+        src.w = textSurface->w;
+        src.h = textSurface->h;
+        src.x = 0;
+        src.y = 0;
+        dst.w = src.w;
+        dst.h = src.h;
 
-		if (sdlGraphics)
-		{
-			sdlGraphics->drawSDLSurface(textSurface, src, dst);
-		}
-		else
-		{
-			sdl2Graphics->drawSDLSurface(textSurface, src, dst);
-		}
+        if (sdlGraphics)
+        {
+            sdlGraphics->drawSDLSurface(textSurface, src, dst);
+        }
+        else
+        {
+            sdl2Graphics->drawSDLSurface(textSurface, src, dst);
+        }
 
-		SDL_FreeSurface(textSurface);
-	}
+        SDL_FreeSurface(textSurface);
+    }
 
-	void SDLTrueTypeFont::setRowSpacing(int spacing)
-	{
-		mRowSpacing = spacing;
-	}
+    void SDLTrueTypeFont::setRowSpacing(int spacing)
+    {
+        mRowSpacing = spacing;
+    }
 
-	int SDLTrueTypeFont::getRowSpacing()
-	{
-		return mRowSpacing;
-	}
+    int SDLTrueTypeFont::getRowSpacing()
+    {
+        return mRowSpacing;
+    }
 
-	void SDLTrueTypeFont::setGlyphSpacing(int spacing)
-	{
-		mGlyphSpacing = spacing;
-	}
+    void SDLTrueTypeFont::setGlyphSpacing(int spacing)
+    {
+        mGlyphSpacing = spacing;
+    }
 
-	int SDLTrueTypeFont::getGlyphSpacing()
-	{
-		return mGlyphSpacing;
-	}
+    int SDLTrueTypeFont::getGlyphSpacing()
+    {
+        return mGlyphSpacing;
+    }
 
-	void SDLTrueTypeFont::setAntiAlias(bool antiAlias)
-	{
-		mAntiAlias = antiAlias;
-	}
+    void SDLTrueTypeFont::setAntiAlias(bool antiAlias)
+    {
+        mAntiAlias = antiAlias;
+    }
 
-	bool SDLTrueTypeFont::isAntiAlias()
-	{
-		return mAntiAlias;
-	}
+    bool SDLTrueTypeFont::isAntiAlias()
+    {
+        return mAntiAlias;
+    }
 
-	void SDLTrueTypeFont::setColor(const Color& color)
-	{
-		mColor = color;
-	}
+    void SDLTrueTypeFont::setColor(const Color& color)
+    {
+        mColor = color;
+    }
 }

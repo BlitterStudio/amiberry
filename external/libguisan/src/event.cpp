@@ -62,16 +62,16 @@
 
 namespace gcn
 {
-	Event::Event(Widget* source)
-		: mSource(source)
-	{
-	}
+    Event::Event(Widget* source)
+        : mSource(source)
+    {
+    }
 
-	Event::~Event()
-	= default;
+    Event::~Event()
+    = default;
 
-	Widget* Event::getSource() const
-	{
-		return mSource;
-	}
+    Widget* Event::getSource() const
+    {
+        return mSource;
+    }
 }

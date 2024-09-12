@@ -81,7 +81,7 @@ namespace gcn
 
     void Text::setContent(const std::string& content)
     {
-		mRows.clear();
+        mRows.clear();
         std::string::size_type pos, lastPos = 0;
         int length;
         do

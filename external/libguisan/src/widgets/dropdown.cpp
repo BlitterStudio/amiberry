@@ -256,10 +256,10 @@ namespace gcn
         graphics->fillRectangle(
             Rectangle(1, 1, currentClipArea.width - 2, currentClipArea.height - 2));
 
-		if (isEnabled())
-			graphics->setColor(getForegroundColor());
+        if (isEnabled())
+            graphics->setColor(getForegroundColor());
         else
-			graphics->setColor(Color(128, 128, 128));
+            graphics->setColor(Color(128, 128, 128));
 
         int i;
         int n = currentClipArea.height / 3;
@@ -461,7 +461,7 @@ namespace gcn
         mListBox->requestFocus();
     }
 
-    bool DropDown::isDroppedDown()
+    bool DropDown::isDroppedDown() const
     {
         return mDroppedDown;
     }

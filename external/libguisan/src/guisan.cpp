@@ -59,9 +59,10 @@
  * For comments regarding functions please see the header file.
  */
 
-extern "C" {
-const char* gcnGuisanVersion()
+extern "C"
 {
-	return "1.0.0";
-}
+    const char* gcnGuisanVersion()
+    {
+        return "1.0.0";
+    }
 }

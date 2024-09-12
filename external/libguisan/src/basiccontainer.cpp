@@ -203,7 +203,7 @@ namespace gcn
     {
         Rectangle r = getChildrenArea();
 
-        if (!r.isPointInRect(x, y))
+        if (!r.isContaining(x, y))
         {
             return NULL;
         }
@@ -214,7 +214,7 @@ namespace gcn
         WidgetListReverseIterator it;
         for (it = mWidgets.rbegin(); it != mWidgets.rend(); it++)
         {
-            if ((*it)->isVisible() && (*it)->getDimension().isPointInRect(x, y))
+            if ((*it)->isVisible() && (*it)->getDimension().isContaining(x, y))
             {
                 return (*it);
             }

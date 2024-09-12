@@ -205,9 +205,8 @@ namespace gcn
 
     void SDL2Graphics::fillRectangle(const Rectangle& rectangle)
     {
-		if (mClipStack.empty())
-		{
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+        if (mClipStack.empty()) {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
             "called a draw function outside of _beginDraw() and _endDraw()?");
     }
 
@@ -267,7 +266,7 @@ namespace gcn
         x += top.xOffset;
         y += top.yOffset;
 
-        if(!top.isPointInRect(x,y))
+        if(!top.isContaining(x,y))
             return;
 
         saveRenderColor();
@@ -382,7 +381,7 @@ namespace gcn
         const int x1 = rectangle.x;
         const int x2 = rectangle.x + rectangle.width - 1;
         const int y1 = rectangle.y;
-	const int y2 = rectangle.y + rectangle.height - 1;
+        const int y2 = rectangle.y + rectangle.height - 1;
 
         drawHLine(x1, y1, x2);
         drawHLine(x1, y2, x2);

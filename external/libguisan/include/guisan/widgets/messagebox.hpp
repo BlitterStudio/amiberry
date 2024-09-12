@@ -78,7 +78,7 @@ namespace gcn
 
         /**
          * Constructor.
-		 * This version only has a single button labeled "OK". 
+         * This version only has a single button labeled "OK". 
          *
          * @param caption the MessageBox caption.
          * @param message the message to display in the MessageBox
@@ -185,14 +185,14 @@ namespace gcn
          * @return true or false.
          */
         bool isOpaque();
-		
-		/**
-		 * Add this MessageBox to a parent container, centered both horizontally and vertically
-		 * If instead, you want to place it somewhere else, use Container::add(). 
-		 *
-		 * @param container parent container
-		 */
-		void addToContainer(Container* container);
+        
+        /**
+         * Add this MessageBox to a parent container, centered both horizontally and vertically
+         * If instead, you want to place it somewhere else, use Container::add(). 
+         *
+         * @param container parent container
+         */
+        void addToContainer(Container* container);
 
         /**
          * Resizes the container to fit the content exactly.
