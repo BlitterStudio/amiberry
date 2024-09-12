@@ -35,7 +35,7 @@ static NavigationMap nav_map[] =
 	{"RTG board", "cboBoard", "cboBoard", "Expansions", "Hardware info"},
 	{"Hardware info", "", "", "RTG board", "Display"},
 	{"Display", "cboScreenmode", "cboScreenmode", "Hardware info", "Sound"},
-	{"Sound", "cboSoundcard", "cboSoundcard", "Display", "Input"},
+	{"Sound", "chkSystemDefault", "chkSystemDefault", "Display", "Input"},
 	{"Input", "cboPort0mode", "cboPort0", "Sound", "IO Ports"},
 	{"IO Ports", "cboSampler", "cboSampler", "Input", "Custom controls"},
 	{"Custom controls", "Right Trigger", "0: Mouse", "IO Ports", "Disk swapper"},
