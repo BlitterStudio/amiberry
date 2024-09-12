@@ -153,7 +153,10 @@ namespace gcn
         graphics->drawLine(getWidth() - 1, 1, getWidth() - 1, getHeight() - 1);
         graphics->drawLine(1, getHeight() - 1, getWidth() - 1, getHeight() - 1);
 
-        graphics->setColor(getForegroundColor());
+        if (isEnabled())
+            graphics->setColor(getForegroundColor());
+        else
+            graphics->setColor(Color(128, 128, 128));
 
         const int textX = getWidth() / 2 - (mImage ? mImage->getWidth() : 0) / 2;
         const int textY = getHeight() / 2 - (mImage ? mImage->getHeight() : 0) / 2;

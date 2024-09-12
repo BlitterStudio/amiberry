@@ -225,7 +225,10 @@ namespace gcn
               throw GCN_EXCEPTION("Unknown alignment.");
         }
 
-        graphics->setColor(getForegroundColor());
+        if (isEnabled())
+            graphics->setColor(getForegroundColor());
+        else
+            graphics->setColor(Color(128, 128, 128));
         graphics->setFont(getFont());
         graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
         graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
