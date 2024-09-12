@@ -24,3 +24,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         COMMAND install_name_tool -id libfloppybridge.so libfloppybridge.so
     )
 endif ()
+
+install(TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
