@@ -3967,7 +3967,7 @@ void macos_copy_amiberry_files_to_userdir(std::string macos_amiberry_directory)
 }
 #endif
 
-static void init_amiberry_paths(const std::string& data_directory, const std::string& home_directory)
+static void init_amiberry_paths(const std::string& data_directory, const std::string& home_directory, const std::string& config_directory)
 {
 	current_dir = home_dir = home_directory;
 #ifdef __MACH__
@@ -4017,12 +4017,12 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
 	amiberry_conf_file.append("amiberry.conf");
 #else
 	data_dir = data_directory;
-	config_path = controllers_path = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
+	config_path = config_directory;
+	controllers_path = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = 
 		home_directory;
 
-	config_path.append("/conf/");
 	controllers_path.append("/controllers/");
 	data_dir.append("/data/");
 	whdboot_path.append("/whdboot/");
@@ -4043,11 +4043,11 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
 	video_dir.append("/videos/");
 
 	amiberry_conf_file = config_path;
-	amiberry_conf_file.append("amiberry.conf");
+	amiberry_conf_file.append("/amiberry.conf");
 #endif
 
 	retroarch_file = config_path;
-	retroarch_file.append("retroarch.cfg");
+	retroarch_file.append("/retroarch.cfg");
 
 	floppy_sounds_dir = data_dir;
 	floppy_sounds_dir.append("floppy_sounds/");
@@ -4230,6 +4230,46 @@ std::string get_home_directory()
 	return {tmp};
 }
 
+std::string get_config_directory()
+{
+	const auto env_conf_dir = getenv("AMIBERRY_CONFIG_DIR");
+	const auto xdg_config_home = getenv("XDG_CONFIG_HOME");
+	const auto user_home_dir = getenv("HOME");
+
+	if (env_conf_dir != nullptr && my_existsdir(env_conf_dir))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", env_conf_dir);
+		return { env_conf_dir };
+	}
+	if (xdg_config_home != nullptr && directory_exists(xdg_config_home, "/amiberry"))
+	{
+		// If the XDG_CONFIG_HOME is set, use it
+		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", xdg_config_home);
+		return { std::string(xdg_config_home) + "/amiberry" };
+	}
+	if (user_home_dir != nullptr && directory_exists(user_home_dir, "/.config/amiberry"))
+	{
+		// $HOME/.config/amiberry exists, use it
+		write_log("Using config directory from $HOME/.config/amiberry\n");
+		auto result = std::string(user_home_dir);
+		return result.append("/.config/amiberry");
+	}
+	if (user_home_dir != nullptr && directory_exists(user_home_dir, "/.amiberry/conf"))
+	{
+		// $HOME/.amiberry/conf exists, use it
+		write_log("Using config directory from $HOME/.amiberry/conf\n");
+		auto result = std::string(user_home_dir);
+		return result.append("/.amiberry/conf");
+	}
+
+	// Fallback Portable mode, all in startup path
+	write_log("Using config directory from startup path\n");
+	char tmp[MAX_DPATH];
+	getcwd(tmp, MAX_DPATH);
+	return { std::string(tmp) + "/conf" };
+}
+
 int main(int argc, char* argv[])
 {
 	for (auto i = 1; i < argc; i++) {
@@ -4258,8 +4298,9 @@ int main(int argc, char* argv[])
 
 	const std::string data_directory = get_data_directory();
 	const std::string home_directory = get_home_directory();
+	const std::string config_directory = get_config_directory();
 
-	init_amiberry_paths(data_directory, home_directory);
+	init_amiberry_paths(data_directory, home_directory, config_directory);
 
 	// Parse command line to get possibly set amiberry_config.
 	// Do not remove used args yet.
