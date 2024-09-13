@@ -39,6 +39,7 @@ struct my_openfile_s {
 };
 
 #ifdef AMIBERRY
+static bool has_logged_iconv_fail = false;
 void utf8_to_latin1_string(std::string& input, std::string& output)
 {
 	std::vector<char> in_buf(input.begin(), input.end());
@@ -48,7 +49,14 @@ void utf8_to_latin1_string(std::string& input, std::string& output)
 	std::string dst;
 
 	auto* iconv_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
-
+	if (iconv_ == (iconv_t)-1) {
+		if (!has_logged_iconv_fail) {
+			write_log("iconv_open failed: will be copying directory entries verbatim\n");
+			has_logged_iconv_fail = true;
+		}
+		output = input;
+		return;
+	}
 	while (src_size > 0) {
 		char* dst_ptr = buf.data();
 		size_t dst_size = buf.size();
