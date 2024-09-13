@@ -190,7 +190,7 @@ void InitPanelRTG(const config_category& category)
 	sldGfxmem->setForegroundColor(gui_foreground_color);
 	sldGfxmem->setMarkerLength(marker_length);
 	sldGfxmem->setStepLength(1);
-	sldGfxmem->setId("Gfxmem");
+	sldGfxmem->setId("sldGfxmem");
 	sldGfxmem->addActionListener(rtg_action_listener);
 
 	chkRtgMatchDepth = new gcn::CheckBox("Match host and RTG color depth if possible");
