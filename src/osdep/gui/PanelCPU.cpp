@@ -282,6 +282,7 @@ public:
 		RefreshPanelCPU();
 		RefreshPanelRAM();
 		RefreshPanelChipset();
+		RefreshPanelRTG();
 	}
 };
 
