@@ -103,7 +103,6 @@ add_executable(${PROJECT_NAME}
         src/drawing.cpp
         src/driveclick.cpp
         src/enforcer.cpp
-        src/ersatz.cpp
         src/ethernet.cpp
         src/events.cpp
         src/expansion.cpp
@@ -129,6 +128,7 @@ add_executable(${PROJECT_NAME}
         src/inputrecord.cpp
         src/isofs.cpp
         src/keybuf.cpp
+        src/luascript.cpp
         src/main.cpp
         src/memory.cpp
         src/midiemu.cpp
@@ -145,6 +145,7 @@ add_executable(${PROJECT_NAME}
         src/scsi.cpp
         src/scsiemul.cpp
         src/scsitape.cpp
+        src/slirp_uae.cpp
         src/sndboard.cpp
         src/specialmonitors.cpp
         src/statusline.cpp
