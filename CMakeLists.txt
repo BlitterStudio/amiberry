@@ -78,6 +78,7 @@ add_executable(${PROJECT_NAME}
         src/blkdev_cdimage.cpp
         src/bsdsocket.cpp
         src/calc.cpp
+        src/catweasel.cpp
         src/cd32_fmv.cpp
         src/cd32_fmv_genlock.cpp
         src/cdrom.cpp
@@ -102,6 +103,7 @@ add_executable(${PROJECT_NAME}
         src/drawing.cpp
         src/driveclick.cpp
         src/enforcer.cpp
+        src/ersatz.cpp
         src/ethernet.cpp
         src/events.cpp
         src/expansion.cpp
@@ -110,10 +112,12 @@ add_executable(${PROJECT_NAME}
         src/flashrom.cpp
         src/fpp.cpp
         src/fpp_native.cpp
+        src/framebufferboards.cpp
         src/fsdb.cpp
         src/fsusage.cpp
         src/gayle.cpp
         src/gfxboard.cpp
+        src/gfxlib.cpp
         src/gfxutil.cpp
         src/hardfile.cpp
         src/hrtmon.rom.cpp
@@ -132,6 +136,7 @@ add_executable(${PROJECT_NAME}
         src/ncr9x_scsi.cpp
         src/ncr_scsi.cpp
         src/parser.cpp
+        src/pci.cpp
         src/rommgr.cpp
         src/rtc.cpp
         src/sampler.cpp
@@ -140,6 +145,7 @@ add_executable(${PROJECT_NAME}
         src/scsi.cpp
         src/scsiemul.cpp
         src/scsitape.cpp
+        src/sndboard.cpp
         src/specialmonitors.cpp
         src/statusline.cpp
         src/tabletlibrary.cpp
@@ -152,6 +158,7 @@ add_executable(${PROJECT_NAME}
         src/uaeresource.cpp
         src/uaeserial.cpp
         src/vm.cpp
+        src/x86.cpp
         src/zfile.cpp
         src/zfile_archive.cpp
         src/archivers/7z/7zAlloc.c
@@ -247,6 +254,8 @@ add_executable(${PROJECT_NAME}
         src/archivers/zip/unzip.cpp
         src/caps/caps_amiberry.cpp
         src/machdep/support.cpp
+        src/mame/a2410.cpp
+        src/mame/tm34010/tms34010.cpp
         external/floppybridge/src/floppybridge_lib.cpp
         src/osdep/ahi_v1.cpp
         src/osdep/bsdsocket_host.cpp
@@ -276,6 +285,72 @@ add_executable(${PROJECT_NAME}
         src/osdep/socket.cpp
         src/osdep/retroarch.cpp
         src/osdep/vpar.cpp
+        src/pcem/386.cpp
+        src/pcem/386_common.cpp
+        src/pcem/386_dynarec.cpp
+        src/pcem/808x.cpp
+        src/pcem/cpu.cpp
+        src/pcem/dosbox/dbopl.cpp
+        src/pcem/dma.cpp
+        src/pcem/keyboard.cpp
+        src/pcem/keyboard_at.cpp
+        src/pcem/keyboard_at_draco.cpp
+        src/pcem/mem.cpp
+        src/pcem/mouse_ps2.cpp
+        src/pcem/mouse_serial.cpp
+        src/pcem/dosbox/nukedopl.cpp
+        src/pcem/nvr.cpp
+        src/pcem/pcemglue.cpp
+        src/pcem/pcemrtc.cpp
+        src/pcem/pic.cpp
+        src/pcem/pit.cpp
+        src/pcem/serial.cpp
+        src/pcem/sound_cms.cpp
+        src/pcem/sound_dbopl.cpp
+        src/pcem/sound_mpu401_uart.cpp
+        src/pcem/sound_opl.cpp
+        src/pcem/sound_sb.cpp
+        src/pcem/sound_sb_dsp.cpp
+        src/pcem/sound_speaker.cpp
+        src/pcem/timer.cpp
+        src/pcem/vid_bt482_ramdac.cpp
+        src/pcem/vid_cl5429.cpp
+        src/pcem/vid_et4000.cpp
+        src/pcem/vid_et4000w32.cpp
+        src/pcem/vid_inmos.cpp
+        src/pcem/vid_ncr.cpp
+        src/pcem/vid_permedia2.cpp
+        src/pcem/vid_s3.cpp
+        src/pcem/vid_s3_virge.cpp
+        src/pcem/vid_sc1502x_ramdac.cpp
+        src/pcem/vid_sdac_ramdac.cpp
+        src/pcem/vid_svga.cpp
+        src/pcem/vid_svga_render.cpp
+        src/pcem/vid_voodoo.cpp
+        src/pcem/vid_voodoo_banshee.cpp
+        src/pcem/vid_voodoo_banshee_blitter.cpp
+        src/pcem/vid_voodoo_blitter.cpp
+        src/pcem/vid_voodoo_display.cpp
+        src/pcem/vid_voodoo_fb.cpp
+        src/pcem/vid_voodoo_fifo.cpp
+        src/pcem/vid_voodoo_reg.cpp
+        src/pcem/vid_voodoo_render.cpp
+        src/pcem/vid_voodoo_setup.cpp
+        src/pcem/vid_voodoo_texture.cpp
+        src/pcem/x86seg.cpp
+        src/pcem/x87.cpp
+        src/pcem/x87_timings.cpp
+        src/ppc/ppc.cpp
+        src/ppc/ppcd.cpp
+        src/qemuvga/cirrus_vga.cpp
+        src/qemuvga/es1370.cpp
+        src/qemuvga/esp.cpp
+        src/qemuvga/lsi53c710.cpp
+        src/qemuvga/lsi53c895a.cpp
+        src/qemuvga/ne2000.cpp
+        src/qemuvga/qemu.cpp
+        src/qemuvga/qemuuaeglue.cpp
+        src/qemuvga/vga.cpp
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
         src/osdep/gui/ControllerMap.cpp
@@ -393,7 +468,7 @@ add_subdirectory(external/libguisan)
 # Add dependencies to ensure external libraries are built
 add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers external/libguisan/include external/mt32emu/src external/floppybridge/src)
+target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} src src/osdep src/include src/threaddep src/archivers src/ppc/pearpc external/libguisan/include external/mt32emu/src external/floppybridge/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
 target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
 

@@ -2689,9 +2689,10 @@ static void CopyLibResolutionStructureU2A(TrapContext *ctx, struct LibResolution
 	trap_put_long(ctx, amigamemptr + PSSO_LibResolution_BoardInfo, libres->BoardInfo);
 }
 
-#ifdef _WIN32
+
 void picasso_allocatewritewatch (int index, int gfxmemsize)
 {
+#ifdef _WIN32
 	SYSTEM_INFO si;
 
 	xfree (gwwbuf[index]);
@@ -2700,12 +2701,16 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 	gwwbufsize[index] = gfxmemsize / gwwpagesize[index] + 1;
 	gwwpagemask[index] = gwwpagesize[index] - 1;
 	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
+#endif
 }
 
+#ifdef _WIN32
 static ULONG_PTR writewatchcount[MAX_RTG_BOARDS];
 static int watch_offset[MAX_RTG_BOARDS];
+#endif
 int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **startp)
 {
+#ifdef _WIN32
 	ULONG ps;
 	writewatchcount[index] = gwwbufsize[index];
 	watch_offset[index] = offset;
@@ -2724,9 +2729,13 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	if (startp)
 		*startp = start;
 	return (int)writewatchcount[index];
+#else
+	return -1;
+#endif
 }
 bool picasso_is_vram_dirty (int index, uaecptr addr, int size)
 {
+#ifdef _WIN32
 	static ULONG_PTR last;
 	uae_u8 *a = addr + natmem_offset + watch_offset[index];
 	int s = size;
@@ -2748,8 +2757,10 @@ bool picasso_is_vram_dirty (int index, uaecptr addr, int size)
 		last = 0;
 	}
 	return false;
-}
+#else
+	return true;
 #endif
+}
 
 static void init_alloc (TrapContext *ctx, int size)
 {

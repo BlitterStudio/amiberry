@@ -534,4 +534,15 @@ void Midi_Reopen(void)
 	}
 }
 
+int Midi_Parse(midi_direction_e direction, uint8_t* c)
+{
+	if (direction == midi_input) {
+		return midi_recv_byte(c);
+	}
+	else {
+		midi_send_byte(*c);
+		return 1;
+	}
+}
+
 #endif /* WITH_MIDI */

@@ -106,6 +106,10 @@ int mouseactive;
 int minimized;
 int monitor_off;
 
+static SDL_cond* cpu_wakeup_event;
+static SDL_mutex* cpu_wakeup_mutex;
+static volatile bool cpu_wakeup_event_triggered;
+
 int quickstart_model = 0;
 int quickstart_conf = 0;
 bool host_poweroff = false;
@@ -346,22 +350,62 @@ void target_calibrate_spin(void)
 	spincount = 0;
 }
 
+static int init_mmtimer()
+{
+	cpu_wakeup_event = SDL_CreateCond();
+	cpu_wakeup_mutex = SDL_CreateMutex();
+	if (!cpu_wakeup_event || !cpu_wakeup_mutex) {
+		write_log(_T("Failed to create CPU wakeup event/mutex\n"));
+		return 0;
+	}
+	return 1;
+}
+
+void sleep_cpu_wakeup(void)
+{
+	if (!cpu_wakeup_event_triggered) {
+		cpu_wakeup_event_triggered = true;
+		SDL_CondSignal(cpu_wakeup_event);
+	}
+}
+
+int get_sound_event();
+static int sleep_millis2(int ms, bool main)
+{
+	frame_time_t start = 0;
+	int cnt;
+	int ret = 0;
+
+	if (ms < 0)
+		ms = -ms;
+	if (main) {
+		if (SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, 0) == SDL_MUTEX_TIMEDOUT) {
+			return 0;
+		}
+		start = read_processor_time();
+	}
+	if (main) {
+		SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, ms);
+		cpu_wakeup_event_triggered = false;
+	}
+
+	if (main)
+		idletime += read_processor_time() - start;
+	return ret;
+}
+
 void sleep_micros (int ms)
 {
 	usleep(ms);
 }
 
-void sleep_millis(int ms)
-{
-	SDL_Delay(ms);
-}
-
 int sleep_millis_main(int ms)
 {
-	const auto start = read_processor_time();
-	SDL_Delay(ms);
-	idletime += read_processor_time() - start;
-	return 0;
+	return sleep_millis2(ms, true);
+}
+int sleep_millis(int ms)
+{
+	return sleep_millis2(ms, false);
 }
 
 static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
@@ -4358,6 +4402,8 @@ int main(int argc, char* argv[])
 	if (lstAvailableROMs.empty())
 		RescanROMs();
 
+	if (!init_mmtimer())
+		return 0;
 	uae_time_calibrate();
 	
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
