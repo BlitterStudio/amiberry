@@ -95,7 +95,7 @@
 #define WITH_UAENATIVE
 /* #define WITH_SLIRP */
 /* #define WITH_BUILTIN_SLIRP */
-/* #define WITH_TABLETLIBRARY */
+#define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */
 #define WITH_PPC
 #define WITH_QEMU_CPU
@@ -106,8 +106,8 @@
 /* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU
-//#define WITH_DSP
-//#define WITH_DRACO
+#define WITH_DSP
+#define WITH_DRACO
 
 // Use portmidi library for MIDI devices
 #define WITH_MIDI
