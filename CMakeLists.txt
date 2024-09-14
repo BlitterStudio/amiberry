@@ -254,6 +254,8 @@ add_executable(${PROJECT_NAME}
         src/archivers/wrp/warp.cpp
         src/archivers/zip/unzip.cpp
         src/caps/caps_amiberry.cpp
+        src/dsp3210/dsp_glue.cpp
+        src/dsp3210/DSP3210_emulation.cpp
         src/machdep/support.cpp
         src/mame/a2410.cpp
         src/mame/tm34010/tms34010.cpp
