@@ -18,7 +18,7 @@
 #include "events.h"
 #include "custom.h"
 #include "inputdevice.h"
-//#include "gfxfilter.h"
+#include "gfxfilter.h"
 #include "savestate.h"
 #include "memory.h"
 #include "autoconf.h"

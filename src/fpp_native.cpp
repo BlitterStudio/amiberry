@@ -199,7 +199,6 @@ static void fp_set_mode(uae_u32 mode_control)
 				break;
 		}
 	}
-
 	native_set_fpucw(mode_control);
 #endif
 	fpu_mode_control = mode_control;
