@@ -140,6 +140,7 @@ add_executable(${PROJECT_NAME}
         src/rommgr.cpp
         src/rtc.cpp
         src/sampler.cpp
+        src/sana2.cpp
         src/savestate.cpp
         src/scp.cpp
         src/scsi.cpp

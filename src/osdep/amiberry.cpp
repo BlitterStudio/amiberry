@@ -87,6 +87,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
+int log_net;
 int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
