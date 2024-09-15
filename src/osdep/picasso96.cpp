@@ -2007,9 +2007,6 @@ static int createwindowscursor(int monid, int set, int chipset)
 		int hiressprite = sprite_0_width / 16;
 		int ds = h * ((w + 15) / 16) * 4;
 		if (!sprite_0 || !mousehack_alive() || w > CURSORMAXWIDTH || h > CURSORMAXHEIGHT || !valid_address(src, ds)) {
-			if (p96_cursor) {
-				SDL_SetCursor(normalcursor);
-			}
 			goto exit;
 		}
 		int yy = 0;
@@ -2065,6 +2062,8 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 	}
 
+	p96_cursor = NULL;
+
 	write_log(_T("p96_cursor: %dx%d\n"), w, h);
 
 	tmp_sprite_w = tmp_sprite_h = 0;
@@ -2089,9 +2088,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 	//formatted_cursor_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
 
 end:
-	if (!isdata) {
-		p96_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-	} else if (ret) {
+	if (isdata) {
 		p96_cursor = SDL_CreateColorCursor(formatted_cursor_surface, 0, 0);
 		tmp_sprite_w = w;
 		tmp_sprite_h = h;
@@ -2120,19 +2117,21 @@ end:
 		write_log(_T("RTG Windows color cursor creation failed\n"));
 	}
 
-exit:
-	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (!currprefs.rtg_hardwaresprite)
-			SDL_ShowCursor(SDL_DISABLE);
-	} else {
-		if (p96_cursor == old_cursor && normalcursor != NULL) {
-			SDL_SetCursor(normalcursor);
-		}
-	}
 	if (old_cursor) {
 		SDL_FreeCursor(old_cursor);
+		old_cursor = NULL;
 	}
-	old_cursor = NULL;
+
+	return ret;
+
+exit:
+	if (p96_cursor) {
+		if (SDL_GetCursor() == p96_cursor) {
+			SDL_SetCursor(normalcursor);
+		}
+		SDL_FreeCursor(p96_cursor);
+		p96_cursor = NULL;
+	}
 
 	return ret;
 #else
