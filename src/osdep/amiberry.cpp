@@ -380,12 +380,13 @@ static int sleep_millis2(int ms, bool main)
 	if (ms < 0)
 		ms = -ms;
 	if (main) {
-		if (SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, 0) == SDL_MUTEX_TIMEDOUT) {
+		if (SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, 0) == 0) {
 			return 0;
 		}
 		start = read_processor_time();
 
-		SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, ms);
+		SDL_Delay(ms);
+		//SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, ms);
 		cpu_wakeup_event_triggered = false;
 	}
 	else {
