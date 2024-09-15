@@ -4319,6 +4319,9 @@ static void REGPARAM2 s3virge_mb0_lput(struct pci_board_state *pcibs, uaecptr ad
 			b = do_byteswap_32(b);
 			b = (b >> 16) | (b << 16);
 			break;
+		case 2:
+			b = do_byteswap_32(b);
+			break;
 		}
 	} else if (swap < -1) {
 
@@ -4370,6 +4373,9 @@ static uae_u32 REGPARAM2 s3virge_mb0_lget(struct pci_board_state *pcibs, uaecptr
 			break;
 		case 1:
 			v = (v >> 16) | (v << 16);
+			v = do_byteswap_32(v);
+			break;
+		case 2:
 			v = do_byteswap_32(v);
 			break;
 		}
