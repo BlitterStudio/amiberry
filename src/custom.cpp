@@ -8644,8 +8644,6 @@ static void compute_spcflag_copper(void);
 // normal COPJMP write: takes 2 more cycles
 static void COPJMP(int num, int vblank)
 {
-	bool wasstopped = cop_state.state == COP_stop && !vblank;
-
 	unset_special(SPCFLAG_COPPER);
 	cop_state.ignore_next = 0;
 
@@ -8688,7 +8686,11 @@ static void COPJMP(int num, int vblank)
 	}
 	cop_state.vblankip = cop1lc;
 	copper_enabled_thisline = 0;
-	cop_state.strobe |= num;
+	if (vblank) {
+		cop_state.strobe = num;
+	} else {
+		cop_state.strobe |= num;
+	}
 	cop_state.last_strobe = num;
 
 	if (custom_disabled) {
@@ -8696,12 +8698,7 @@ static void COPJMP(int num, int vblank)
 		return;
 	}
 
-	if (wasstopped) {
-		/* dma disabled, copper idle and accessed both COPxJMPs -> copper stops! */
-		cop_state.state = COP_stop;
-	} else if (is_copper_dma(false)) {
-		compute_spcflag_copper();
-	}
+	compute_spcflag_copper();
 }
 
 STATIC_INLINE void COPCON(uae_u16 a)
@@ -11099,11 +11096,11 @@ static void do_copper_fetch(int hpos, uae_u16 id)
 			}
 
 			if (reg == 0x88) {
-				cop_state.strobe |= 1;
+				cop_state.strobe = 1;
 				cop_state.last_strobe = 1;
 				cop_state.state = COP_strobe_delay1;
 			} else if (reg == 0x8a) {
-				cop_state.strobe |= 2;
+				cop_state.strobe = 2;
 				cop_state.last_strobe = 2;
 				cop_state.state = COP_strobe_delay1;
 			} else {
