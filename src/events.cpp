@@ -29,6 +29,7 @@ static const int pissoff_nojit_value = 256 * CYCLE_UNIT;
 
 evt_t event_cycles, nextevent, currcycle;
 int is_syncline;
+static int syncline_cnt;
 frame_time_t is_syncline_end;
 int cycles_to_next_event;
 int max_cycles_to_next_event;
@@ -269,6 +270,19 @@ void do_cycles_slow(int cycles_to_add)
 	}
 #endif
 #endif
+
+	if (syncline_cnt > 0) {
+		syncline_cnt--;
+		return;
+	}
+	if (is_syncline) {
+		// runs CPU emulation with chipset stopped
+		// when there is free time to do so
+		if (event_check_vsync()) {
+			syncline_cnt = 16;
+			return;
+		}
+	}
 
 	if (!currprefs.cpu_thread) {
 		if ((pissoff -= cycles_to_add) >= 0)

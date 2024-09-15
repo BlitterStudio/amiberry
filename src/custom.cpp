@@ -12209,8 +12209,9 @@ static bool framewait(void)
 				}
 			}
 		}
-		idletime += read_processor_time() - start;
-		curr_time = read_processor_time();
+		evt_t tnow = read_processor_time();
+		idletime += tnow - start;
+		curr_time = tnow;
 		vsyncmintime = curr_time;
 		vsyncmaxtime = vsyncwaittime = curr_time + vstb;
 		if (frame_rendered) {
