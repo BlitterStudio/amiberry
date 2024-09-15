@@ -5858,7 +5858,7 @@ static void decide_sprites2(int start, int end, int *countp, int *nrs, int *posn
 			hw_xp = sprxp >> sprite_buffer_res;
 		}
 
-		if (hw_xp >= start && hw_xp < end) {
+		if (((hw_xp >= start) || ((spr[i].pos & 1) && hw_xp == start - 1)) && hw_xp < end) {
 			int xdiff = hw_xp - start;
 			int sprxp_abs = (last_sprite_point_abs + xdiff) << sprite_buffer_res;
 			// add hires/shres back
