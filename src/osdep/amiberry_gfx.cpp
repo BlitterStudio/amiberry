@@ -1120,7 +1120,7 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 #if FORCE16BIT
 	mon->currentmode.current_depth = 16;
 #else
-	mon->currentmode.current_depth = currprefs.color_mode < 5 ? 16 : 32;
+	mon->currentmode.current_depth = currprefs.color_mode < 5 && currprefs.gfx_api == 1 ? 16 : 32;
 #endif
 	if (mon->screen_is_picasso && canmatchdepth() && isfullscreen() > 0) {
 		int pbits = state->BytesPerPixel * 8;
