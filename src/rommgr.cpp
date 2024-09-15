@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 316
+#define NEXT_ROM_ID 319
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -592,7 +592,9 @@ static struct romdata roms[] = {
 	0xaaff7c65, 0x424cf3da,0xcc9da794,0x0ba74446,0x69dd1691,0x44ae87ee, NULL, NULL },
 	{ _T("Kupke Golem 030"), 0, 0, 0, 0, _T("GOLEM030\0"), 8192, 126, 0, 0, ROMTYPE_CB_GOLEM030, 0, 0, NULL,
 	0x05d473f4, 0x574ec567, 0xcc67e06f, 0x91dcecb9, 0x8c204399, 0x5fe2a09f, NULL, NULL },
-	{ _T("DKB WildFire"), 1, 1, 1, 1, _T("WILDFIRE\0"), 18352, 143, 0, 0, ROMTYPE_CB_DBK_WF, 0, 0, NULL,
+	{ _T("DKB WildFire v1.0"), 1, 0, 1, 0, _T("WILDFIRE\0"), 18016, 318, 0, 0, ROMTYPE_CB_DBK_WF, 0, 0, NULL,
+	0x08fc84f6, 0xec27aab5, 0x0cdd0db9, 0x6ddd9db3, 0xeff92183, 0xcbaf3f78, NULL, NULL },
+	{ _T("DKB WildFire v1.1"), 1, 1, 1, 1, _T("WILDFIRE\0"), 18352, 143, 0, 0, ROMTYPE_CB_DBK_WF, 0, 0, NULL,
 	0xb2dae8c4, 0xcdfe2d96, 0xe44d4f8d, 0x3833a5e8, 0xb6c832fd, 0xc7b341a9, NULL, NULL },
 	{ _T("M-Tec E-Matrix 530"), 0, 0, 0, 0, _T("EMATRIX530\0"), 65536, 144, 0, 0, ROMTYPE_CB_EMATRIX, 0, 0, NULL,
 	0x3942d827, 0x5aaf118f, 0x61fc3083, 0x1435b87c, 0x8bdab6a4, 0x59b4ee22, NULL, NULL },
@@ -674,6 +676,8 @@ static struct romdata roms[] = {
 	0xe8201bad, 0xdefea015,0x596fce32,0x11e84397,0x23046a31,0x5a7726dc, NULL, NULL },
 	{ _T("Masoboshi MC-702 v2.201"), 2, 201, 2, 201, _T("MASOBOSHI\0"), 32768, 120, 0, 0, ROMTYPE_MASOBOSHI, 0, 0, NULL,
 	0xcd99b98a, 0x3897e46a,0x66d5833f,0x849b8e81,0x30acb3cb,0x319a2fa0, NULL, NULL },
+	{ _T("Masoboshi MC-702 v2.197"), 2, 197, 2, 197, _T("MASOBOSHI\0"), 32768, 316, 0, 0, ROMTYPE_MASOBOSHI, 0, 0, NULL,
+	0x534e170c, 0xcf7c6c51,0x1c767f68,0x934aa897,0xb08b70bc,0xcf2a367f, NULL, NULL },
 	{ _T("Roctec RocHard RH800C v1"), 1, 0, 1, 0, _T("ROCHARD\0"), 16384, 138, 0, 0, ROMTYPE_ROCHARD, 0, 0, NULL,
 	0x0e980aec, 0xbcafa14d,0xe80576cb,0xe3e0c638,0x1ca90379,0xe078a8bd, NULL, NULL },
 	ALTROMPN(138, 1, 1, 8192, ROMTYPE_ODD  | ROMTYPE_8BIT, NULL, 0xde3a855b, 0xda2fe069, 0xd78c9ccc, 0xc221711f, 0x1e598298, 0x2bdabffd)
