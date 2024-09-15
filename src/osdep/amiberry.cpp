@@ -371,10 +371,10 @@ void sleep_cpu_wakeup(void)
 }
 
 int get_sound_event();
+
 static int sleep_millis2(int ms, bool main)
 {
 	frame_time_t start = 0;
-	int cnt;
 	int ret = 0;
 
 	if (ms < 0)
@@ -384,10 +384,12 @@ static int sleep_millis2(int ms, bool main)
 			return 0;
 		}
 		start = read_processor_time();
-	}
-	if (main) {
+
 		SDL_CondWaitTimeout(cpu_wakeup_event, cpu_wakeup_mutex, ms);
 		cpu_wakeup_event_triggered = false;
+	}
+	else {
+		SDL_Delay(ms);
 	}
 
 	if (main)
