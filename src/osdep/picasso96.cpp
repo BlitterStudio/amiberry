@@ -6059,7 +6059,9 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			maxy = vidinfo->height;
 			if (miny > vidinfo->height - TD_TOTAL_HEIGHT)
 				miny = vidinfo->height - TD_TOTAL_HEIGHT;
+#ifdef AMIBERRY
 			picasso_statusline(monid, dstp);
+#endif
 		}
 	}
 	if (maxy >= 0) {
@@ -6143,7 +6145,6 @@ addrbank gfxmem4_bank = {
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
-
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 
 /* Call this function first, near the beginning of code flow
@@ -6852,9 +6853,11 @@ static void picasso_reset2(int monid)
 			render_pipe = xmalloc(smp_comm_pipe, 1);
 			init_comm_pipe(render_pipe, 10, 1);
 		}
+#ifdef AMIBERRY
 		if (render_cs == nullptr) {
 			uae_sem_init(&render_cs, 0, -1);
 		}
+#endif
 		if (render_thread_state <= 0) {
 			render_thread_state = 0;
 			uae_start_thread(_T("rtg"), render_thread, nullptr, &render_tid);
