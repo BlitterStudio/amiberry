@@ -984,7 +984,7 @@ static void rtg_render(void)
 			if (vidinfo->full_refresh > 0)
 				vidinfo->full_refresh--;
 		}
-#ifndef AMIBERRY
+#ifdef GFXBOARD
 		gfxboard_vsync_handler(full, true);
 #endif
 		if (currprefs.rtg_multithread && uaegfx_active && quit_program == 0) {
@@ -1218,7 +1218,7 @@ void picasso_refresh(int monid)
 	rtg_clear(monid);
 
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
-#ifndef AMIBERRY
+#ifdef GFXBOARD
 		gfxboard_refresh(monid);
 #endif
 		unlockrtg();
@@ -1350,7 +1350,7 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 
 	if (thisisvsync) {
 		rtg_render();
-#ifndef AMIBERRY // AVI output
+#ifdef AVIOUTPUT
 		frame_drawn(monid);
 #endif
 	}
@@ -1436,7 +1436,7 @@ static void picasso_handle_hsync(void)
 				}
 				picasso_trigger_vblank();
 			}
-#ifndef AMIBERRY
+#ifdef GFXBOARD
 			gfxboard_vsync_handler(false, false);
 #endif
 		} else {
@@ -6116,7 +6116,6 @@ addrbank gfxmem_bank = {
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
-#ifndef AMIBERRY // We only have 1 RTG card for now
 extern addrbank gfxmem2_bank;
 MEMORY_FUNCTIONS(gfxmem2);
 addrbank gfxmem2_bank = {
@@ -6144,7 +6143,7 @@ addrbank gfxmem4_bank = {
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
-#endif
+
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 
 /* Call this function first, near the beginning of code flow
@@ -6154,11 +6153,9 @@ void InitPicasso96(int monid)
 {
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	gfxmem_banks[0] = &gfxmem_bank;
-#ifndef AMIBERRY // We only have 1 RTG card for now
 	gfxmem_banks[1] = &gfxmem2_bank;
 	gfxmem_banks[2] = &gfxmem3_bank;
 	gfxmem_banks[3] = &gfxmem4_bank;
-#endif
 
 	//fastscreen
 	oldscr = 0;
