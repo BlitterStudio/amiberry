@@ -170,12 +170,13 @@ static NavigationMap nav_map[] =
 	// PanelROM
 	{ "cboMainROM", "ROM", "MainROM", "cboCartROM", "cboExtROM" },
 	{ "MainROM", "cboMainROM", "ROM", "CartROM", "ExtROM" },
-	{ "cboExtROM", "ROM", "ExtROM", "cboMainROM", "cboCartROM" },
-	{ "ExtROM", "cboExtROM", "ROM", "MainROM", "CartROM" },
-	{ "cboCartROM", "ROM", "CartROM", "cboExtROM", "cboUAEROM" },
-	{ "CartROM", "cboCartROM", "ROM", "ExtROM", "cboUAEROM" },
+	{ "cboExtROM", "ROM", "ExtROM", "cboMainROM", "chkMapRom" },
+	{ "ExtROM", "cboExtROM", "ROM", "MainROM", "chkShapeShifter" },
+	{ "chkMapRom", "ROM", "chkShapeShifter", "cboExtROM", "cboCartROM" },
+	{ "chkShapeShifter", "chkMapRom", "ROM", "cboExtROM", "cboCartROM" },
+	{ "cboCartROM", "ROM", "CartROM", "chkMapRom", "cboUAEROM" },
+	{ "CartROM", "cboCartROM", "ROM", "chkShapeShifter", "cboUAEROM" },
 	{ "cboUAEROM", "ROM", "ROM", "cboCartROM", "chkShapeShifter" },
-	{ "chkShapeShifter", "ROM", "ROM", "cboUAEROM", "cboMainROM" },
 
 	// PanelRAM
 	{ "sldChipmem", "", "", "RAM", "sldSlowmem" },
