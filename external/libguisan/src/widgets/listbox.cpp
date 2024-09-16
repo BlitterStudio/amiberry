@@ -133,7 +133,7 @@ namespace gcn
             startRow = 0;
         }
 
-        const auto inactive_color = Color(170, 170, 170);
+        const auto inactive_color = getSelectionColor() - 0x303030;
 
         // The y coordinate where we start to draw the text is
         // simply the y coordinate multiplied with the font height.
