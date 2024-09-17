@@ -74,6 +74,7 @@ void cpuboard_gvpmaprom(int);
 #define BOARD_GVP_SUB_A1230SI 6
 #define BOARD_GVP_SUB_A1230SII 7
 #define BOARD_GVP_SUB_QUIKPAK 8
+#define BOARD_GVP_SUB_TREXII 9
 
 #define BOARD_KUPKE 6
 

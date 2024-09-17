@@ -110,14 +110,60 @@ namespace gcn
         bool isIntersecting(const Rectangle& rectangle) const;
 
         /**
-         * Checks if a point is inside the rectangle
+         * Checks the rectangle contains a point.
          *
          * @param x The x coordinate of the point.
          * @param y The y coordinate of the point.
-         * @return True if the point is inside the rectangle.
-         * @since 0.1.0
+         * @return True if the rectangle contains the point,
+         *         false otherwise.
+         * @since 1.1.0
          */
-        bool isPointInRect(int x, int y) const;
+        bool isContaining(int x, int y) const;
+
+        /**
+         * Checks if the rectangle contains a rectangle.
+         *
+         * @param other The rectangle to check.
+         * @return True if the rectangle contains the rectangle,
+         *         false otherwise.
+         * @since 1.1.0
+         */
+        bool isContaining(const Rectangle& other) const;
+
+        /**
+         * Checks whether the rectangle is empty or not. A rectangle
+         * is considered empty when it's width or height is either
+         * zero or negative.
+         *
+         * @return True if the rectangle is empty, false otherwise.
+         */
+        bool isEmpty() const;
+
+        /**
+         * Adds a rectangle to this rectangle. The resulting rectangle
+         * is the union of the two rectangles.
+         *
+         * @param rh The rectangle to add.
+         * @return The union of the two rectangles.
+         */
+        Rectangle operator+(const Rectangle& rh) const;
+
+        /**
+         * Adds a rectangle to this rectangle. This rectangle will be
+         * the union of the two rectangles.
+         *
+         * @param rh The rectangle to add.
+         * @return A reference to this rectangle.
+         */
+        const Rectangle& operator+=(const Rectangle& rh);
+
+        /**
+         * Gets the intersection between two rectangles.
+         *
+         * @param rh The rectangle to calculate the intersection with.
+         * @return The intersection between two rectangles.
+         */
+        Rectangle intersection(const Rectangle& rh) const;
 
         /**
          * Output operator for output.

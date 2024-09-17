@@ -78,6 +78,7 @@ struct Trap
 /* Defined traps */
 static struct Trap  traps[MAX_TRAPS];
 static unsigned int trap_count = 1;
+static volatile int hardware_trap_state[MAX_TRAPS];
 
 volatile uae_atomic hwtrap_waiting;
 
@@ -579,8 +580,16 @@ static int hardware_trap_thread(void *arg)
 	size_t tid = (size_t)arg;
 	for (;;) {
 		TrapContext *ctx = (TrapContext*)read_comm_pipe_pvoid_blocking(&trap_thread_pipe[tid]);
-		if (!ctx)
-			break;
+		if (!ctx) {
+			if (!hardware_trap_state[tid]) {
+				break;
+			}
+			while (comm_pipe_has_data(&trap_thread_pipe[tid])) {
+				read_comm_pipe_pvoid_blocking(&trap_thread_pipe[tid]);
+			}
+			hardware_trap_state[tid] = 0;
+			continue;
+		}
 
 		if (trap_in_use[ctx->trap_slot]) {
 			write_log(_T("TRAP SLOT %d ALREADY IN USE!\n"));
@@ -704,6 +713,14 @@ void free_host_trap_context(TrapContext *ctx)
 static uae_u32 call_hardware_trap_back(TrapContext *ctx, uae_u16 cmd, uae_u32 p1, uae_u32 p2, uae_u32 p3, uae_u32 p4)
 {
 	int trap_slot = ((ctx->amiga_trap_data & 0xffff) - RTAREA_TRAP_DATA) / RTAREA_TRAP_DATA_SLOT_SIZE;
+
+	if (hardware_trap_kill[trap_slot] != 1) {
+		if (hardware_trap_kill[trap_slot] == 0) {
+			hardware_trap_kill[trap_slot] = 2;
+		}
+		return 0;
+	}
+	
 	uae_u8 *data = ctx->host_trap_data + RTAREA_TRAP_DATA_SECOND;
 	uae_u8 *status = ctx->host_trap_status + RTAREA_TRAP_STATUS_SECOND;
 
@@ -741,14 +758,16 @@ static uae_u32 call_hardware_trap_back(TrapContext *ctx, uae_u16 cmd, uae_u32 p1
 	}
 
 	for (;;) {
-		if (hardware_trap_kill[trap_slot] < 0)
+		if (hardware_trap_kill[trap_slot] != 0 && hardware_trap_kill[trap_slot] != 1) {
 			return 0;
-		uae_u8 v = *d;
-		if (v == 0x01 || v == 0x02 || v == 0x03)
-			break;
+		}
 		if (hardware_trap_kill[trap_slot] == 0) {
 			hardware_trap_kill[trap_slot] = 2;
 			return  0;
+		}
+		uae_u8 v = *d;
+		if (v == 0x01 || v == 0x02 || v == 0x03) {
+			break;
 		}
 		if (uae_sem_trywait_delay(&hardware_trap_event[trap_slot], 100) == -2) {
 			hardware_trap_kill[trap_slot] = 3;
@@ -832,9 +851,34 @@ void init_traps(void)
 	}
 }
 
+void reset_traps(void)
+{
+	for (int i = 0; i < TRAP_THREADS; i++) {
+		if (trap_thread_id[i]) {
+			int htk = hardware_trap_kill[i];
+			hardware_trap_kill[i] = -1;
+			hardware_trap_state[i] = 1;
+			write_comm_pipe_pvoid(&trap_thread_pipe[i], NULL, 1);
+			while (hardware_trap_state[i] > 0) {
+				for (int j = 0; j < RTAREA_TRAP_DATA_SIZE / RTAREA_TRAP_DATA_SLOT_SIZE; j++) {
+					uae_sem_post(&hardware_trap_event[j]);
+					uae_sem_post(&hardware_trap_event2[j]);
+				}
+				sleep_millis(1);
+			}
+			hardware_trap_kill[i] = htk;
+		}
+	}
+	for (int j = 0; j < RTAREA_TRAP_DATA_SIZE / RTAREA_TRAP_DATA_SLOT_SIZE; j++) {
+		uae_sem_unpost(&hardware_trap_event[j]);
+		uae_sem_unpost(&hardware_trap_event2[j]);
+	}
+}
+
 void free_traps(void)
 {
 	for (int i = 0; i < TRAP_THREADS; i++) {
+		hardware_trap_state[i] = 0;
 		if (trap_thread_id[i]) {
 			if (hardware_trap_kill[i] >= 0) {
 				hardware_trap_kill[i] = 0;

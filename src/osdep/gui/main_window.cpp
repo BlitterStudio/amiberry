@@ -21,6 +21,7 @@
 #include "fsdb_host.h"
 #include "autoconf.h"
 #include "amiberry_input.h"
+#include "fsdb.h"
 #include "inputdevice.h"
 #include "xwin.h"
 
@@ -1028,10 +1029,18 @@ void gui_widgets_init()
 
 	try
 	{
-		//TODO remove the data path from there, when we use full path to the font
-		std::string font = get_data_path();
-		font.append(gui_theme.font_name);
-		gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
+		// Check if the font_name contains the full path to the file (e.g. in /usr/share/fonts)
+		if (my_existsfile2(gui_theme.font_name.c_str()))
+		{
+			gui_font = new gcn::SDLTrueTypeFont(gui_theme.font_name, gui_theme.font_size);
+		}
+		else
+		{
+			// Try to open it from the data directory
+			std::string font = get_data_path();
+			font.append(gui_theme.font_name);
+			gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
+		}
 		gui_font->setAntiAlias(false);
 		gui_font->setColor(gui_font_color);
 	}

@@ -12,7 +12,7 @@
 #include "custom.h"
 #include "rtgmodes.h"
 #include "xwin.h"
-//#include "gfxfilter.h"
+#include "gfxfilter.h"
 #include "machdep/maccess.h"
 
 #include <math.h>
@@ -331,7 +331,7 @@ void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int r
 		int lbmask = (1 << blue_bits) - 1;
 		for (i = 65535; i >= 0; i--) {
 			uae_u32 r, g, b, c;
-			uae_u32 j = byte_swap ? uae_bswap_16(i) : i;
+			uae_u32 j = byte_swap ? do_byteswap_16(i) : i;
 			r = (((j >>   red_shift) & lrmask) << lrbits) | lowbits (j,   red_shift, lrbits);
 			g = (((j >> green_shift) & lgmask) << lgbits) | lowbits (j, green_shift, lgbits);
 			b = (((j >>  blue_shift) & lbmask) << lbbits) | lowbits (j,  blue_shift, lbbits);
@@ -364,13 +364,13 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 		bc[i] = doColor(uae_gamma[j][2], bw, bs) | doAlpha(alpha, aw, as);
 		if (byte_swap) {
 			if (bpp <= 16) {
-				rc[i] = uae_bswap_16(rc[i]);
-				gc[i] = uae_bswap_16(gc[i]);
-				bc[i] = uae_bswap_16 (bc[i]);
+				rc[i] = do_byteswap_16(rc[i]);
+				gc[i] = do_byteswap_16(gc[i]);
+				bc[i] = do_byteswap_16 (bc[i]);
 			} else {
-				rc[i] = uae_bswap_32(rc[i]);
-				gc[i] = uae_bswap_32(gc[i]);
-				bc[i] = uae_bswap_32(bc[i]);
+				rc[i] = do_byteswap_32(rc[i]);
+				gc[i] = do_byteswap_32(gc[i]);
+				bc[i] = do_byteswap_32(bc[i]);
 			}
 		}
 		if (bpp <= 16) {
@@ -407,9 +407,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 		xcolors[i] = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs) | doAlpha(alpha, aw, as);
 		if (byte_swap) {
 			if (bpp <= 16) {
-				xcolors[i] = uae_bswap_16(xcolors[i]);
+				xcolors[i] = do_byteswap_16(xcolors[i]);
 			} else {
-				xcolors[i] = uae_bswap_32(xcolors[i]);
+				xcolors[i] = do_byteswap_32(xcolors[i]);
 			}
 		}
 		if (bpp <= 16) {
@@ -470,9 +470,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			xcolors[i] = doMask(r, 5, 11) | doMask(g, 6, 5) | doMask(b, 5, 0);
 			if (byte_swap) {
 				if (bpp <= 16)
-					xcolors[i] = uae_bswap_16(xcolors[i]);
+					xcolors[i] = do_byteswap_16(xcolors[i]);
 				else
-					xcolors[i] = uae_bswap_32(xcolors[i]);
+					xcolors[i] = do_byteswap_32(xcolors[i]);
 			}
 			if (bpp <= 16) {
 				/* Fill upper 16 bits of each colour value

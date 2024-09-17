@@ -66,7 +66,7 @@
 
 namespace gcn
 {
-    Slider::Slider(double scaleEnd)
+    Slider::Slider(const double scaleEnd)
     {
         mDragged = false;
 
@@ -84,7 +84,7 @@ namespace gcn
         addKeyListener(this);
     }
 
-    Slider::Slider(double scaleStart, double scaleEnd)
+    Slider::Slider(const double scaleStart, const double scaleEnd)
     {
         mDragged = false;
 
@@ -102,7 +102,7 @@ namespace gcn
         addKeyListener(this);
     }
 
-    void Slider::setScale(double scaleStart, double scaleEnd)
+    void Slider::setScale(const double scaleStart, const double scaleEnd)
     {
         mScaleStart = scaleStart;
         mScaleEnd = scaleEnd;
@@ -113,7 +113,7 @@ namespace gcn
         return mScaleStart;
     }
 
-    void Slider::setScaleStart(double scaleStart)
+    void Slider::setScaleStart(const double scaleStart)
     {
         mScaleStart = scaleStart;
     }
@@ -123,7 +123,7 @@ namespace gcn
         return mScaleEnd;
     }
 
-    void Slider::setScaleEnd(double scaleEnd)
+    void Slider::setScaleEnd(const double scaleEnd)
     {
         mScaleEnd = scaleEnd;
     }
@@ -237,7 +237,7 @@ namespace gcn
         mouseEvent.consume();
     }
 
-    void Slider::setValue(double value)
+    void Slider::setValue(const double value)
     {
         if (value > getScaleEnd())
         {
@@ -264,7 +264,7 @@ namespace gcn
         return mMarkerLength;
     }
 
-    void Slider::setMarkerLength(int length)
+    void Slider::setMarkerLength(const int length)
     {
         mMarkerLength = length;
     }
@@ -305,7 +305,7 @@ namespace gcn
         }
     }
 
-    void Slider::setOrientation(Orientation orientation)
+    void Slider::setOrientation(const Orientation orientation)
     {
         mOrientation = orientation;
     }
@@ -315,7 +315,7 @@ namespace gcn
         return mOrientation;
     }
 
-    double Slider::markerPositionToValue(int v) const
+    double Slider::markerPositionToValue(const int v) const
     {
         int w;
         if (getOrientation() == Horizontal)
@@ -331,7 +331,7 @@ namespace gcn
         return (1.0 - pos) * getScaleStart() + pos * getScaleEnd();
     }
 
-    int Slider::valueToMarkerPosition(double value) const
+    int Slider::valueToMarkerPosition(const double value) const
     {
         int v;
         if (getOrientation() == Horizontal)
@@ -360,7 +360,7 @@ namespace gcn
         return w;
     }
 
-    void Slider::setStepLength(double length)
+    void Slider::setStepLength(const double length)
     {
         mStepLength = length;
     }

@@ -81,7 +81,8 @@ static amigamodels amodels[] = {
 		4, "Amiga 1000", {
 			"512 KB Chip RAM",
 			"ICS Denise without EHB support",
-			"256 KB Chip RAM"
+			"256 KB Chip RAM",
+			"A1000 Velvet prototype",
 			"\0"
 		}
 	},
@@ -89,7 +90,16 @@ static amigamodels amodels[] = {
 		5, "Amiga 1200", {
 			"Basic non-expanded configuration",
 			"4 MB Fast RAM expanded configuration",
+#ifdef WITH_CPUBOARD
+			"Blizzard 1230 IV",
+			"Blizzard 1240",
+			"Blizzard 1260",
+#ifdef WITH_PPC
+			"Blizzard PPC",
+#endif
+#else
 			"8 MB Fast RAM expanded configuration"
+#endif
 			"\0"
 		}
 	},
@@ -105,6 +115,9 @@ static amigamodels amodels[] = {
 		1, "Amiga 4000", {
 			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
 			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+#ifdef WITH_PPC
+			"CyberStorm PPC",
+#endif
 			"\0"
 		}
 	},
@@ -127,13 +140,31 @@ static amigamodels amodels[] = {
 	{
 		4, "CDTV", {
 			"CDTV",
+			"Floppy drive and 64KB SRAM card expanded",
+			"CDTV-CR",
+			"\0"
+		}
+	},
+	{4, "American Laser Games / Picmatic", {
+			"\0"
+		}
+	},
+	{
+		4, "Arcadia Multi Select system", {
+			"\0"
+		}
+	},
+	{
+		1, "Macrosystem", {
+			"DraCo",
+			"Casablanca",
 			"\0"
 		}
 	},
 	{-1}
 };
 
-static const int numModels = 10;
+static const int numModels = 13;
 static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
 
@@ -177,10 +208,13 @@ static void SetControlState(const int model)
 	case 5: // A3000
 	case 6: // A4000
 	case 7: // A4000T
+	case 12: // Macrosystem
 		break;
 
 	case 8: // CD32
 	case 9: // CDTV
+	case 10: // American Laser Games / Picmatic
+	case 11: // Arcadia Multi Select system
 		// No floppy drive available, CD available
 		df0_editable = false;
 		df1_visible = false;
@@ -234,6 +268,7 @@ static void AdjustPrefs()
 		break;
 	case 6: // A4000
 	case 7: // A4000T
+	case 12: // Macrosystem
 		// df0 always active
 		changed_prefs.floppyslots[0].dfxtype = DRV_35_HD;
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
@@ -248,6 +283,8 @@ static void AdjustPrefs()
 
 	case 8: // CD32
 	case 9: // CDTV
+	case 10:// American Laser Games / Picmatic
+	case 11:// Arcadia Multi Select system
 		// No floppy drive available, CD available
 		changed_prefs.floppyslots[0].dfxtype = DRV_NONE;
 		changed_prefs.floppyslots[1].dfxtype = DRV_NONE;

@@ -92,7 +92,7 @@ namespace gcn
         addKeyListener(this);
     }
 
-    void TextField::setText(const std::string& text)
+    void TextField::setText(const std::string& text) const
     {
         mText->setRow(0, text);
     }
@@ -148,7 +148,7 @@ namespace gcn
         graphics->popClipArea();
     }
 
-    void TextField::drawCaret(Graphics* graphics, int x)
+    void TextField::drawCaret(Graphics* graphics, const int x)
     {
         // Check the current clip area as a clip area with a different
         // size than the widget might have been pushed (which is the
@@ -270,7 +270,7 @@ namespace gcn
         }
     }
 
-    void TextField::setCaretPosition(unsigned int position)
+    void TextField::setCaretPosition(const unsigned int position) const
     {
         mText->setCaretPosition(position);
     }

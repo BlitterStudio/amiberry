@@ -1,5 +1,6 @@
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
+
 #include "SelectorEntry.hpp"
 #include "StringListModel.h"
 
@@ -7,6 +8,7 @@
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
+#include "cpuboard.h"
 #include "gui_handling.h"
 
 static gcn::Window* grpCPU;
@@ -49,6 +51,12 @@ static gcn::DropDown* cboCPUFrequency;
 static gcn::Label* lblCPUFrequencyMHz;
 
 static gcn::CheckBox* chkCPUMultiThread;
+
+static gcn::Window* grpPPCOptions;
+static gcn::CheckBox* chkPPCEnabled;
+static gcn::Label* lblPPCIdle;
+static gcn::Slider* sldPPCIdle;
+static gcn::Label* lblPPCIdleInfo;
 
 static gcn::Window* grpAdvJitSettings;
 static gcn::Label* lblJitCacheSize;
@@ -244,9 +252,27 @@ public:
 		}
 #endif
 
+		if (chkPPCEnabled->isSelected())
+		{
+			if (changed_prefs.ppc_mode == 0)
+				changed_prefs.ppc_mode = 1;
+			if (changed_prefs.ppc_mode == 1 && changed_prefs.cpu_model < 68040)
+				changed_prefs.ppc_mode = 0;
+		}
+		else if (!chkPPCEnabled->isSelected() && changed_prefs.ppc_mode == 1)
+		{
+			changed_prefs.ppc_mode = 0;
+		}
+
 		changed_prefs.cpu_idle = static_cast<int>(sldCpuIdle->getValue());
 		if (changed_prefs.cpu_idle > 0)
 			changed_prefs.cpu_idle = (12 - changed_prefs.cpu_idle) * 15;
+		changed_prefs.ppc_cpu_idle = static_cast<int>(sldPPCIdle->getValue());
+		std::string ppc_idle_info = changed_prefs.ppc_cpu_idle == 10
+			? "max"
+			: changed_prefs.ppc_cpu_idle == 0 ? "disabled"
+			: std::to_string(changed_prefs.ppc_cpu_idle);
+		lblPPCIdleInfo->setCaption(ppc_idle_info);
 
 		const int freq_idx = cboCPUFrequency->getSelected();
 		const int m = changed_prefs.cpu_clock_multiplier;
@@ -282,6 +308,7 @@ public:
 		RefreshPanelCPU();
 		RefreshPanelRAM();
 		RefreshPanelChipset();
+		RefreshPanelRTG();
 	}
 };
 
@@ -543,6 +570,39 @@ void InitPanelCPU(const struct config_category& category)
 
 	category.panel->add(grpCPUCycleExact);
 
+	chkPPCEnabled = new gcn::CheckBox("PPC emulation (Blizzard PPC/CyberStorm PPC)", false);
+	chkPPCEnabled->setId("chkPPCEnabled");
+	chkPPCEnabled->setBaseColor(gui_base_color);
+	chkPPCEnabled->setBackgroundColor(gui_textbox_background_color);
+	chkPPCEnabled->setForegroundColor(gui_foreground_color);
+	chkPPCEnabled->addActionListener(cpuActionListener);
+
+	lblPPCIdle = new gcn::Label("Stopped M68K CPU Idle:");
+	sldPPCIdle = new gcn::Slider(0, 10);
+	sldPPCIdle->setSize(90, SLIDER_HEIGHT);
+	sldPPCIdle->setBaseColor(gui_base_color);
+	sldPPCIdle->setBackgroundColor(gui_textbox_background_color);
+	sldPPCIdle->setForegroundColor(gui_foreground_color);
+	sldPPCIdle->setMarkerLength(20);
+	sldPPCIdle->setStepLength(1);
+	sldPPCIdle->setId("sldPPCIdle");
+	sldPPCIdle->addActionListener(cpuActionListener);
+	lblPPCIdleInfo = new gcn::Label("disabled");
+
+	grpPPCOptions = new gcn::Window("PowerPC CPU Options");
+	grpPPCOptions->setPosition(grpCPUCycleExact->getX(), grpCPUCycleExact->getY() + grpCPUCycleExact->getHeight() + DISTANCE_NEXT_Y / 2);
+	grpPPCOptions->add(chkPPCEnabled, 10, 10);
+	grpPPCOptions->add(lblPPCIdle, chkPPCEnabled->getX(), chkPPCEnabled->getY() + chkPPCEnabled->getHeight() + DISTANCE_NEXT_Y);
+	grpPPCOptions->add(sldPPCIdle, lblPPCIdle->getX() + lblPPCIdle->getWidth() + DISTANCE_NEXT_X / 2, lblPPCIdle->getY());
+	grpPPCOptions->add(lblPPCIdleInfo, sldPPCIdle->getX() + sldPPCIdle->getWidth() + 8, lblPPCIdle->getY());
+	grpPPCOptions->setMovable(false);
+	grpPPCOptions->setSize(grpCPUCycleExact->getWidth(), 120);
+	grpPPCOptions->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpPPCOptions->setBaseColor(gui_base_color);
+	grpPPCOptions->setForegroundColor(gui_foreground_color);
+
+	category.panel->add(grpPPCOptions);
+
 	lblJitCacheSize = new gcn::Label("Cache size:");
 	sldJitCacheSize = new gcn::Slider(0, 5);
 	sldJitCacheSize->setSize(150, SLIDER_HEIGHT);
@@ -599,7 +659,7 @@ void InitPanelCPU(const struct config_category& category)
 	chkCatchExceptions->addActionListener(cpuActionListener);
 
 	grpAdvJitSettings = new gcn::Window("Advanced JIT Settings");
-	grpAdvJitSettings->setPosition(grpCPUCycleExact->getX(), grpCPUCycleExact->getY() + grpCPUCycleExact->getHeight() + DISTANCE_NEXT_Y / 2);
+	grpAdvJitSettings->setPosition(grpPPCOptions->getX(), grpPPCOptions->getY() + grpPPCOptions->getHeight() + DISTANCE_NEXT_Y / 2);
 	grpAdvJitSettings->add(lblJitCacheSize, 10, 10);
 	grpAdvJitSettings->add(sldJitCacheSize, lblJitCacheSize->getX() + lblJitCacheSize->getWidth() + DISTANCE_NEXT_X / 2, 10);
 	grpAdvJitSettings->add(lblJitCacheSizeInfo, sldJitCacheSize->getX() + sldJitCacheSize->getWidth() + DISTANCE_NEXT_X / 2, 10);
@@ -665,6 +725,12 @@ void ExitPanelCPU()
 	delete lblCPUFrequencyMHz;
 	delete chkCPUMultiThread;
 
+	delete grpPPCOptions;
+	delete chkPPCEnabled;
+	delete lblPPCIdle;
+	delete sldPPCIdle;
+	delete lblPPCIdleInfo;
+
 	delete lblJitCacheSize;
 	delete sldJitCacheSize;
 	delete lblJitCacheSizeInfo;
@@ -725,6 +791,7 @@ void RefreshPanelCPU()
 	sldCpuSpeed->setEnabled(!changed_prefs.cpu_cycle_exact);
 	chk24Bit->setEnabled(changed_prefs.cpu_model <= 68030 && changed_prefs.cachesize == 0);
 	sldCpuIdle->setEnabled(changed_prefs.m68k_speed != 0);
+	sldPPCIdle->setEnabled(changed_prefs.ppc_mode != 0);
 	lblCpuIdleInfo->setEnabled(sldCpuIdle->isEnabled());
 
 	bool cpu_based_enable = changed_prefs.cpu_model >= 68020 && changed_prefs.address_space_24 == 0;
@@ -756,6 +823,11 @@ void RefreshPanelCPU()
 
 	optMMUEC->setEnabled(changed_prefs.cpu_model >= 68030 && changed_prefs.cachesize == 0);
 	optMMUEnabled->setEnabled(changed_prefs.cpu_model >= 68030 && changed_prefs.cachesize == 0);
+	chkCpuDataCache->setEnabled(changed_prefs.cpu_model >= 68030 && changed_prefs.cachesize == 0 && changed_prefs.cpu_compatible);
+	chkPPCEnabled->setEnabled(changed_prefs.cpu_model >= 68040 && (changed_prefs.ppc_mode == 1 || (changed_prefs.ppc_mode == 0 && !is_ppc_cpu(&changed_prefs))));
+	lblPPCIdle->setEnabled(chkPPCEnabled->isEnabled());
+	sldPPCIdle->setEnabled(chkPPCEnabled->isEnabled());
+	lblPPCIdleInfo->setEnabled(sldPPCIdle->isEnabled());
 
 	// Set Values
 	sldCpuSpeed->setValue(static_cast<int>(changed_prefs.m68k_speed_throttle / 100));
@@ -773,6 +845,13 @@ void RefreshPanelCPU()
 	auto cpu_idle_string = to_string((changed_prefs.cpu_idle == 0 ? 0 : 12 - changed_prefs.cpu_idle / 15) * 10);
 	cpu_idle_string.append("%");
 	lblCpuIdleInfo->setCaption(cpu_idle_string);
+
+	sldPPCIdle->setValue(changed_prefs.ppc_cpu_idle);
+	auto ppc_idle_string = changed_prefs.ppc_cpu_idle == 0
+		? "disabled"
+		: changed_prefs.ppc_cpu_idle == 10 ? "max" :
+		std::to_string(changed_prefs.ppc_cpu_idle);
+	lblPPCIdleInfo->setCaption(ppc_idle_string);
 
 	if (changed_prefs.cpu_model == 68000)
 		optCPU68000->setSelected(true);
@@ -854,6 +933,8 @@ void RefreshPanelCPU()
 	chkCPUMultiThread->setEnabled(false);
 	//chkCPUMultiThread->setEnabled(!no_thread && !emulating);
 	chkCPUMultiThread->setSelected(changed_prefs.cpu_thread);
+
+	chkPPCEnabled->setSelected(changed_prefs.ppc_mode || is_ppc_cpu(&changed_prefs));
 }
 
 bool HelpPanelCPU(std::vector<std::string>& helptext)

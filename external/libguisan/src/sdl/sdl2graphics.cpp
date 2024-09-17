@@ -74,11 +74,11 @@
 
 namespace gcn
 {
-    SDL2Graphics::SDL2Graphics()
+    SDL2Graphics::SDL2Graphics(): mTarget(nullptr), mRenderTarget(nullptr), mTexture(nullptr), r(0), g(0), b(0), a(0)
     {
         mAlpha = false;
     }
-    
+
     SDL2Graphics::~SDL2Graphics()
     {
         if(mRenderTarget != NULL)
@@ -103,7 +103,7 @@ namespace gcn
         popClipArea();
     }
     
-    void SDL2Graphics::setTarget(SDL_Renderer* renderer, int width, int height)
+    void SDL2Graphics::setTarget(SDL_Renderer* renderer, const int width, const int height)
     {
         mRenderTarget = renderer;
         // An internal surface is still required to be able to handle surfaces and colorkeys
@@ -115,7 +115,7 @@ namespace gcn
         SDL_SetTextureBlendMode(mTexture, SDL_BLENDMODE_BLEND);
     }
 
-    bool SDL2Graphics::pushClipArea(Rectangle area)
+    bool SDL2Graphics::pushClipArea(const Rectangle area)
     {
         SDL_Rect rect;
         bool result = Graphics::pushClipArea(area);
@@ -157,9 +157,9 @@ namespace gcn
         return mRenderTarget;
     }
 
-    void SDL2Graphics::drawImage(const Image* image, int srcX,
-                                int srcY, int dstX, int dstY,
-                                int width, int height)
+    void SDL2Graphics::drawImage(const Image* image, const int srcX,
+                                 const int srcY, const int dstX, const int dstY,
+                                 const int width, const int height)
     {
         if (mClipStack.empty()) {
             throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
@@ -205,9 +205,8 @@ namespace gcn
 
     void SDL2Graphics::fillRectangle(const Rectangle& rectangle)
     {
-		if (mClipStack.empty())
-		{
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+        if (mClipStack.empty()) {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
             "called a draw function outside of _beginDraw() and _endDraw()?");
     }
 
@@ -267,7 +266,7 @@ namespace gcn
         x += top.xOffset;
         y += top.yOffset;
 
-        if(!top.isPointInRect(x,y))
+        if(!top.isContaining(x,y))
             return;
 
         saveRenderColor();
@@ -382,7 +381,7 @@ namespace gcn
         const int x1 = rectangle.x;
         const int x2 = rectangle.x + rectangle.width - 1;
         const int y1 = rectangle.y;
-	const int y2 = rectangle.y + rectangle.height - 1;
+        const int y2 = rectangle.y + rectangle.height - 1;
 
         drawHLine(x1, y1, x2);
         drawHLine(x1, y2, x2);
@@ -422,7 +421,7 @@ namespace gcn
         return mColor;
     }
 
-    void SDL2Graphics::drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
+    void SDL2Graphics::drawSDLSurface(SDL_Surface* surface, const SDL_Rect source,
                                      SDL_Rect destination)
     {
         if (mClipStack.empty()) {
@@ -447,7 +446,7 @@ namespace gcn
         SDL_RenderCopy(mRenderTarget, mTexture, &temp, &destination);
     }
 
-    void SDL2Graphics::drawSDLTexture(SDL_Texture * texture, SDL_Rect source, 
+    void SDL2Graphics::drawSDLTexture(SDL_Texture * texture, const SDL_Rect source, 
                                       SDL_Rect destination)
     {
         if (mClipStack.empty()) {

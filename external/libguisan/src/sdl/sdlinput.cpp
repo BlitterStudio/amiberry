@@ -147,7 +147,7 @@ namespace gcn
         return mouseInput;
     }
 
-    void SDLInput::pushInput(SDL_Event event)
+    void SDLInput::pushInput(const SDL_Event event)
     {
         KeyInput keyInput;
         MouseInput mouseInput;
@@ -258,7 +258,7 @@ namespace gcn
         } // end switch
     }
 
-    int SDLInput::convertMouseButton(int button)
+    int SDLInput::convertMouseButton(const int button)
     {
         switch (button)
         {
@@ -277,7 +277,7 @@ namespace gcn
         }
     }
 
-    Key SDLInput::convertSDLEventToGuichanKeyValue(SDL_Event event)
+    Key SDLInput::convertSDLEventToGuichanKeyValue(const SDL_Event& event)
     {
         int value = -1;
 

@@ -80,7 +80,7 @@ namespace gcn
 
     RadioButton::RadioButton(const std::string& caption,
         const std::string& group,
-        bool selected)
+        const bool selected)
     {
         setCaption(caption);
         setGroup(group);
@@ -110,7 +110,10 @@ namespace gcn
 
 
         graphics->setFont(getFont());
-        graphics->setColor(getForegroundColor());
+        if (isEnabled())
+            graphics->setColor(getForegroundColor());
+        else
+            graphics->setColor(Color(128, 128, 128));
 
         if (isFocused())
         {
@@ -119,7 +122,7 @@ namespace gcn
 
         const int h = getHeight() + getHeight() / 2;
 
-        graphics->drawText(getCaption(), h - 2, 0);
+        graphics->drawText(getCaption(), h - 2, 0, Graphics::Left, isEnabled());
     }
 
     void RadioButton::drawBox(Graphics* graphics)
@@ -196,7 +199,7 @@ namespace gcn
         return mSelected;
     }
 
-    void RadioButton::setSelected(bool selected)
+    void RadioButton::setSelected(const bool selected)
     {
         if (selected && !mGroup.empty())
         {
@@ -204,7 +207,7 @@ namespace gcn
 
             for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
                 iter != iterEnd;
-                iter++)
+                ++iter)
             {
                 if (iter->second->isSelected())
                 {
@@ -261,7 +264,7 @@ namespace gcn
 
             for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
                 iter != iterEnd;
-                iter++)
+                ++iter)
             {
                 if (iter->second == this)
                 {

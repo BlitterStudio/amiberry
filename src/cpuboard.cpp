@@ -300,6 +300,10 @@ static bool is_tekmagic(struct uae_prefs *p)
 {
 	return ISCPUBOARDP(p, BOARD_GVP, BOARD_GVP_SUB_TEKMAGIC);
 }
+static bool is_trexii(struct uae_prefs *p)
+{
+	return ISCPUBOARDP(p, BOARD_GVP, BOARD_GVP_SUB_TREXII);
+}
 static bool is_a2630(struct uae_prefs *p)
 {
 	return ISCPUBOARDP(p, BOARD_COMMODORE, BOARD_COMMODORE_SUB_A26x0);
@@ -784,7 +788,7 @@ static uae_u32 REGPARAM2 blizzardea_bget(uaecptr addr)
 	uae_u8 v = 0;
 
 	addr &= blizzardea_bank.mask;
-	if (is_tekmagic(&currprefs)) {
+	if (is_tekmagic(&currprefs) || is_trexii(&currprefs)) {
 		cpuboard_non_byte_ea = true;
 		v = cpuboard_ncr710_io_bget(addr);
 	} else if (is_quikpak(&currprefs)) {
@@ -842,7 +846,7 @@ static void REGPARAM2 blizzardea_wput(uaecptr addr, uae_u32 w)
 static void REGPARAM2 blizzardea_bput(uaecptr addr, uae_u32 b)
 {
 	addr &= blizzardea_bank.mask;
-	if (is_tekmagic(&currprefs)) {
+	if (is_tekmagic(&currprefs) || is_trexii(&currprefs)) {
 		cpuboard_non_byte_ea = true;
 		cpuboard_ncr710_io_bput(addr, b);
 	} else if (is_quikpak(&currprefs)) {
@@ -1666,7 +1670,7 @@ void cpuboard_map(void)
 			map_banks(&dummy_bank, 0xf00000 >> 16, 0x80000 >> 16, 0);
 		}
 	}
-	if (is_tekmagic(&currprefs) || is_quikpak(&currprefs)) {
+	if (is_tekmagic(&currprefs) || is_quikpak(&currprefs) || is_trexii(&currprefs)) {
 		map_banks(&blizzardf0_bank, 0xf00000 >> 16, 131072 >> 16, 0);
 		map_banks(&blizzardea_bank, 0xf40000 >> 16, 65536 >> 16, 0);
 	}
@@ -2014,7 +2018,7 @@ static void cpuboard_init_2(void)
 		blizzardram_bank.label = _T("fusionforty");
 		mapped_malloc(&blizzardram_bank);
 
-	} else if (is_tekmagic(&currprefs) || is_quikpak(&currprefs)) {
+	} else if (is_tekmagic(&currprefs) || is_quikpak(&currprefs) || is_trexii(&currprefs)) {
 
 		blizzardf0_bank.start = 0x00f00000;
 		blizzardf0_bank.reserved_size = 131072;
@@ -2929,6 +2933,14 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 		aci->start = 0xf40000;
 		aci->size = f0rom_size;
 	} else if (is_tekmagic(p)) {
+		earom_size = 65536;
+		f0rom_size = 131072;
+		zfile_fread(blizzardf0_bank.baseaddr, 1, f0rom_size, autoconfig_rom);
+		autoconf = false;
+		cpuboard_non_byte_ea = false;
+		aci->start = 0xf00000;
+		aci->size = f0rom_size;
+	} else if (is_trexii(p)) {
 		earom_size = 65536;
 		f0rom_size = 131072;
 		zfile_fread(blizzardf0_bank.baseaddr, 1, f0rom_size, autoconfig_rom);

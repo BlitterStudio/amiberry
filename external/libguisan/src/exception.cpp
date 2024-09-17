@@ -62,50 +62,49 @@
 
 namespace gcn
 {
-	Exception::Exception()
-		: mFunction("?"),
-		  mMessage(""),
-		  mFilename("?"),
-		  mLine(0)
-	{
-	}
+    Exception::Exception()
+        : mFunction("?"),
+          mFilename("?"),
+          mLine(0)
+    {
+    }
 
-	Exception::Exception(std::string message)
-		: mFunction("?"),
-		  mMessage(std::move(message)),
-		  mFilename("?"),
-		  mLine(0)
-	{
-	}
+    Exception::Exception(std::string message)
+        : mFunction("?"),
+          mMessage(std::move(message)),
+          mFilename("?"),
+          mLine(0)
+    {
+    }
 
-	Exception::Exception(std::string message,
-	                     std::string function,
-	                     std::string filename,
-	                     unsigned int line)
-		: mFunction(std::move(function)),
-		  mMessage(std::move(message)),
-		  mFilename(std::move(filename)),
-		  mLine(line)
-	{
-	}
+    Exception::Exception(std::string message,
+                         std::string function,
+                         std::string filename,
+                         const unsigned int line)
+        : mFunction(std::move(function)),
+          mMessage(std::move(message)),
+          mFilename(std::move(filename)),
+          mLine(line)
+    {
+    }
 
-	const std::string& Exception::getFunction() const
-	{
-		return mFunction;
-	}
+    const std::string& Exception::getFunction() const
+    {
+        return mFunction;
+    }
 
-	const std::string& Exception::getMessage() const
-	{
-		return mMessage;
-	}
+    const std::string& Exception::getMessage() const
+    {
+        return mMessage;
+    }
 
-	const std::string& Exception::getFilename() const
-	{
-		return mFilename;
-	}
+    const std::string& Exception::getFilename() const
+    {
+        return mFilename;
+    }
 
-	unsigned int Exception::getLine() const
-	{
-		return mLine;
-	}
+    unsigned int Exception::getLine() const
+    {
+        return mLine;
+    }
 }

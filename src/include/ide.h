@@ -143,7 +143,7 @@ void remove_ide_unit(struct ide_hdf **idetable, int ch);
 void alloc_ide_mem (struct ide_hdf **ide, int max, struct ide_thread_state *its);
 void ide_reset_device(struct ide_hdf *ide);
 
-//void ata_byteswapidentity(uae_u8 *d);
+void ata_byteswapidentity(uae_u8 *d);
 void ata_parse_identity(uae_u8 *out, struct uaedev_config_info *uci, bool *lba48, int *max_multiple);
 bool ata_get_identity(struct ini_data *ini, uae_u8 *out, bool overwrite);
 

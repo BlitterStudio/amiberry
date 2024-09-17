@@ -78,11 +78,11 @@ namespace gcn
     {
         mAlpha = false;
     }
-	
-	SDLGraphics::~SDLGraphics()
-	{
+    
+    SDLGraphics::~SDLGraphics()
+    {
 
-	}
+    }
 
     void SDLGraphics::_beginDraw()
     {
@@ -104,7 +104,7 @@ namespace gcn
         mTarget = target;
     }
 
-    bool SDLGraphics::pushClipArea(Rectangle area)
+    bool SDLGraphics::pushClipArea(const Rectangle area)
     {
         SDL_Rect rect;
         const bool result = Graphics::pushClipArea(area);
@@ -144,16 +144,16 @@ namespace gcn
         return mTarget;
     }
 
-    void SDLGraphics::drawImage(const Image* image, int srcX,
-                                int srcY, int dstX, int dstY,
-                                int width, int height)
+    void SDLGraphics::drawImage(const Image* image, const int srcX,
+                                const int srcY, const int dstX, const int dstY,
+                                const int width, const int height)
     {
-	if (mClipStack.empty()) {
-		throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-			"called a draw function outside of _beginDraw() and _endDraw()?");
-	}
+    if (mClipStack.empty()) {
+        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+            "called a draw function outside of _beginDraw() and _endDraw()?");
+    }
 
-	const ClipRectangle& top = mClipStack.top();
+    const ClipRectangle& top = mClipStack.top();
         SDL_Rect src;
         SDL_Rect dst;
         src.x = srcX;
@@ -175,10 +175,10 @@ namespace gcn
 
     void SDLGraphics::fillRectangle(const Rectangle& rectangle)
     {
-	if (mClipStack.empty()) {
-		throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-			"called a draw function outside of _beginDraw() and _endDraw()?");
-	}
+    if (mClipStack.empty()) {
+        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+            "called a draw function outside of _beginDraw() and _endDraw()?");
+    }
 
         const ClipRectangle& top = mClipStack.top();
 
@@ -223,17 +223,17 @@ namespace gcn
 
     void SDLGraphics::drawPoint(int x, int y)
     {
-	if (mClipStack.empty()) {
-		throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-			"called a draw function outside of _beginDraw() and _endDraw()?");
-	}
+    if (mClipStack.empty()) {
+        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+            "called a draw function outside of _beginDraw() and _endDraw()?");
+    }
 
         const ClipRectangle& top = mClipStack.top();
 
         x += top.xOffset;
         y += top.yOffset;
 
-        if(!top.isPointInRect(x,y))
+        if(!top.isContaining(x,y))
             return;
 
         if (mAlpha)
@@ -248,10 +248,10 @@ namespace gcn
 
     void SDLGraphics::drawHLine(int x1, int y, int x2)
     {
-	if (mClipStack.empty()) {
-		throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-			"called a draw function outside of _beginDraw() and _endDraw()?");
-	}
+    if (mClipStack.empty()) {
+        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+            "called a draw function outside of _beginDraw() and _endDraw()?");
+    }
         const ClipRectangle& top = mClipStack.top();
 
         x1 += top.xOffset;
@@ -359,10 +359,10 @@ namespace gcn
 
     void SDLGraphics::drawVLine(int x, int y1, int y2)
     {
-	if (mClipStack.empty()) {
-		throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-			"called a draw function outside of _beginDraw() and _endDraw()?");
-	}
+    if (mClipStack.empty()) {
+        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+            "called a draw function outside of _beginDraw() and _endDraw()?");
+    }
         const ClipRectangle& top = mClipStack.top();
 
         x += top.xOffset;
@@ -472,7 +472,7 @@ namespace gcn
         const int x1 = rectangle.x;
         const int x2 = rectangle.x + rectangle.width - 1;
         const int y1 = rectangle.y;
-	const int y2 = rectangle.y + rectangle.height - 1;
+        const int y2 = rectangle.y + rectangle.height - 1;
 
         drawHLine(x1, y1, x2);
         drawHLine(x1, y2, x2);
@@ -494,10 +494,10 @@ namespace gcn
             return;
         }
 
-	if (mClipStack.empty()) {
-		throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-			"called a draw function outside of _beginDraw() and _endDraw()?");
-	}
+    if (mClipStack.empty()) {
+        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+            "called a draw function outside of _beginDraw() and _endDraw()?");
+    }
         const ClipRectangle& top = mClipStack.top();
 
         x1 += top.xOffset;
@@ -508,7 +508,7 @@ namespace gcn
         // Draw a line with Bresenham
 
         const int dx = ABS(x2 - x1);
-	const int dy = ABS(y2 - y1);
+        const int dy = ABS(y2 - y1);
 
         if (dx > dy)
         {
@@ -532,7 +532,7 @@ namespace gcn
 
                 for (int x = x1; x <= x2; x++)
                 {
-                    if (top.isPointInRect(x, y))
+                    if (top.isContaining(x, y))
                     {
                         if (mAlpha)
                         {
@@ -560,7 +560,7 @@ namespace gcn
 
                 for (int x = x1; x <= x2; x++)
                 {
-                    if (top.isPointInRect(x, y))
+                    if (top.isContaining(x, y))
                     {
                         if (mAlpha)
                         {
@@ -604,7 +604,7 @@ namespace gcn
 
                 for (int y = y1; y <= y2; y++)
                 {
-                    if (top.isPointInRect(x, y))
+                    if (top.isContaining(x, y))
                     {
                         if (mAlpha)
                         {
@@ -632,7 +632,7 @@ namespace gcn
 
                 for (int y = y1; y <= y2; y++)
                 {
-                    if (top.isPointInRect(x, y))
+                    if (top.isContaining(x, y))
                     {
                         if (mAlpha)
                         {
@@ -668,13 +668,13 @@ namespace gcn
         return mColor;
     }
 
-    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
+    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, const SDL_Rect source,
                                      SDL_Rect destination)
     {
-		if (mClipStack.empty()) {
-			throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-				"called a draw function outside of _beginDraw() and _endDraw()?");
-		}
+        if (mClipStack.empty()) {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+                "called a draw function outside of _beginDraw() and _endDraw()?");
+        }
         const ClipRectangle& top = mClipStack.top();
 
         destination.x += top.xOffset;

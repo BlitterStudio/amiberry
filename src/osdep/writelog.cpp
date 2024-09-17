@@ -233,6 +233,14 @@ void close_console (void)
 	consoleopen = 0;
 }
 
+int read_log(void)
+{
+	if (consoleopen >= 0)
+		return -1;
+	//TODO needs implementation
+	return -1;
+}
+
 static void writeconsole_2 (const TCHAR *buffer)
 {
 	if (!consoleopen)

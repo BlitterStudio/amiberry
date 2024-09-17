@@ -133,7 +133,7 @@ namespace gcn
             startRow = 0;
         }
 
-        const auto inactive_color = Color(170, 170, 170);
+        const auto inactive_color = getSelectionColor() - 0x303030;
 
         // The y coordinate where we start to draw the text is
         // simply the y coordinate multiplied with the font height.
@@ -176,7 +176,7 @@ namespace gcn
         return mSelected;
     }
 
-    void ListBox::setSelected(int selected)
+    void ListBox::setSelected(const int selected)
     {
         if (mListModel == NULL)
         {
@@ -311,7 +311,7 @@ namespace gcn
         adjustSize();
     }
 
-    ListModel* ListBox::getListModel()
+    ListModel* ListBox::getListModel() const
     {
         return mListModel;
     }
@@ -320,10 +320,10 @@ namespace gcn
     {
         if (mListModel != NULL)
         {
-			int maxElementLength = getWidth();
+            int maxElementLength = getWidth();
             for (int i = 0; i < mListModel->getNumberOfElements(); i++)
             {
-				const auto elementLength =  getFont()->getWidth(mListModel->getElementAt(i));
+                const auto elementLength =  getFont()->getWidth(mListModel->getElementAt(i));
                 if (elementLength > maxElementLength)
                 {
                     maxElementLength = elementLength;
@@ -340,7 +340,7 @@ namespace gcn
         return mWrappingEnabled;
     }
 
-    void ListBox::setWrappingEnabled(bool wrappingEnabled)
+    void ListBox::setWrappingEnabled(const bool wrappingEnabled)
     {
         mWrappingEnabled = wrappingEnabled;
     }

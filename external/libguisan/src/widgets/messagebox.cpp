@@ -86,27 +86,27 @@ namespace gcn
         mButtons[0]->addMouseListener(this);
         
         setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
-		setWidth(mLabel->getWidth() + 4*mPadding);
+        setWidth(mLabel->getWidth() + 4*mPadding);
         if(mButtons[0]->getWidth() + 4*mPadding > getWidth()) 
         {
             setWidth(mButtons[0]->getWidth() + 4*mPadding);
         }
         
-		this->add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
+        this->add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
         this->add(mButtons[0], (getWidth() - mButtons[0]->getWidth())/2, getHeight() - (int)getTitleBarHeight() - mPadding - mButtons[0]->getHeight());
         
         try
         {
-        	requestModalFocus();
+            requestModalFocus();
         } 
         catch (Exception e) 
         {
-        	// Not having modal focus is not critical
+            // Not having modal focus is not critical
         }
     }
     
     MessageBox::MessageBox(const std::string& caption, const std::string& message,
-            const std::string *buttons, int size)
+            const std::string *buttons, const int size)
             :Window(caption),mMessage(message),mClickedButton(-1)
     {
         setCaption(caption);
@@ -116,7 +116,7 @@ namespace gcn
         mLabel = new Label(message);
         mLabel->setAlignment(Graphics::Left);
         mLabel->adjustSize();
-		setWidth(mLabel->getWidth() + 4*mPadding);
+        setWidth(mLabel->getWidth() + 4*mPadding);
         
         //Create buttons and label
         if(size > 0) 
@@ -148,9 +148,9 @@ namespace gcn
             {
                 padding += (getWidth() - (mButtons[0]->getWidth()*size + 4*mPadding + mPadding*(size-1)))/2;
             }
-			add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
+            add(mLabel, (getWidth() - mLabel->getWidth())/2 - mPadding, mPadding);
             
-			setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
+            setHeight((int)getTitleBarHeight() + mLabel->getHeight() + 4*mPadding + mButtons[0]->getHeight());
             for(int i = 0 ; i < size ; i++)
             {
                 add(mButtons[i], padding + (maxBtnWidth + mPadding)*i, getHeight() - (int)getTitleBarHeight() - mPadding - mButtons[0]->getHeight());
@@ -159,18 +159,18 @@ namespace gcn
         
         try
         {
-        	requestModalFocus();
+            requestModalFocus();
         } 
         catch (Exception e) 
         {
-        	// Not having modal focus is not critical
+            // Not having modal focus is not critical
         }
     }
 
     MessageBox::~MessageBox()
     {
-    	releaseModalFocus();
-    	
+        releaseModalFocus();
+        
         delete mLabel;
         for(int i = 0 ; i < mNbButtons ; i++)
         {
@@ -179,7 +179,7 @@ namespace gcn
         delete mButtons;
     }
 
-    void MessageBox::setPadding(unsigned int padding)
+    void MessageBox::setPadding(const unsigned int padding)
     {
         mPadding = padding;
     }
@@ -189,12 +189,12 @@ namespace gcn
         return mPadding;
     }
 
-    void MessageBox::setTitleBarHeight(unsigned int height)
+    void MessageBox::setTitleBarHeight(const unsigned int height)
     {
         mTitleBarHeight = height;
     }
 
-    unsigned int MessageBox::getTitleBarHeight()
+    unsigned int MessageBox::getTitleBarHeight() const
     {
         return mTitleBarHeight;
     }
@@ -209,7 +209,7 @@ namespace gcn
         return mCaption;
     }
 
-    void MessageBox::setButtonAlignment(Graphics::Alignment alignment)
+    void MessageBox::setButtonAlignment(const Graphics::Alignment alignment)
     {
         mButtonAlignment = alignment;
         
@@ -406,12 +406,12 @@ namespace gcn
         return mMovable;
     }
 
-    void MessageBox::setOpaque(bool opaque)
+    void MessageBox::setOpaque(const bool opaque)
     {
         mOpaque = opaque;
     }
 
-    bool MessageBox::isOpaque()
+    bool MessageBox::isOpaque() const
     {
         return mOpaque;
     }
@@ -421,7 +421,7 @@ namespace gcn
         WidgetListIterator it;
 
         int w = 0, h = 0;
-        for (it = mWidgets.begin(); it != mWidgets.end(); it++)
+        for (it = mWidgets.begin(); it != mWidgets.end(); ++it)
         {
             if ((*it)->getX() + (*it)->getWidth() > w)
             {
@@ -441,11 +441,11 @@ namespace gcn
     {
         return mClickedButton;
     }
-	
-	void MessageBox::addToContainer(Container* container)
-	{
-		int x = container->getWidth() - getWidth();
-		int y = container->getHeight() - getHeight();
-		container->add(this, x/2, y/2);
-	}
+    
+    void MessageBox::addToContainer(Container* container)
+    {
+        int x = container->getWidth() - getWidth();
+        int y = container->getHeight() - getHeight();
+        container->add(this, x/2, y/2);
+    }
 }

@@ -66,131 +66,100 @@
 
 namespace gcn
 {
-	Graphics::Graphics()
-	{
-		mFont = nullptr;
-	}
+    Graphics::Graphics()
+    {
+        mFont = nullptr;
+    }
 
-	bool Graphics::pushClipArea(Rectangle area)
-	{
-		// Ignore area with a negative width or height
-		// by simple pushing an empty clip area to the stack.
-		if (area.width < 0 || area.height < 0)
-		{
-			ClipRectangle carea;
-			mClipStack.push(carea);
-			return true;
-		}
-		if (mClipStack.empty())
-		{
-			ClipRectangle carea;
-			carea.x = area.x;
-			carea.y = area.y;
-			carea.width = area.width;
-			carea.height = area.height;
-			carea.xOffset = area.x;
-			carea.yOffset = area.y;
-			mClipStack.push(carea);
-			return true;
-		}
+    bool Graphics::pushClipArea(const Rectangle area)
+    {
+        // Ignore area with a negative width or height
+        // by simple pushing an empty clip area to the stack.
+        if (area.isEmpty())
+        {
+            ClipRectangle carea;
+            mClipStack.push(carea);
+            return true;
+        }
+        if (mClipStack.empty())
+        {
+            ClipRectangle carea;
+            carea.x = area.x;
+            carea.y = area.y;
+            carea.width = area.width;
+            carea.height = area.height;
+            carea.xOffset = area.x;
+            carea.yOffset = area.y;
+            mClipStack.push(carea);
+            return true;
+        }
 
-		const ClipRectangle& top = mClipStack.top();
-		ClipRectangle carea;
-		carea = area;
-		carea.xOffset = top.xOffset + carea.x;
-		carea.yOffset = top.yOffset + carea.y;
-		carea.x += top.xOffset;
-		carea.y += top.yOffset;
+        const ClipRectangle& top = mClipStack.top();
+        ClipRectangle carea;
+        carea = area;
+        carea.xOffset = top.xOffset + carea.x;
+        carea.yOffset = top.yOffset + carea.y;
+        carea.x += top.xOffset;
+        carea.y += top.yOffset;
 
-		// Clamp the pushed clip rectangle.
-		if (carea.x < top.x)
-		{
-			carea.x = top.x;
-		}
+        carea = top.intersection(carea);
 
-		if (carea.y < top.y)
-		{
-			carea.y = top.y;
-		}
+        mClipStack.push(carea);
 
-		if (carea.x + carea.width > top.x + top.width)
-		{
-			carea.width = top.x + top.width - carea.x;
+        return !carea.isEmpty();
+    }
 
-			if (carea.width < 0)
-			{
-				carea.width = 0;
-			}
-		}
+    void Graphics::popClipArea()
+    {
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Tried to pop clip area from empty stack.");
+        }
 
-		if (carea.y + carea.height > top.y + top.height)
-		{
-			carea.height = top.y + top.height - carea.y;
+        mClipStack.pop();
+    }
 
-			if (carea.height < 0)
-			{
-				carea.height = 0;
-			}
-		}
+    const ClipRectangle& Graphics::getCurrentClipArea()
+    {
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("The clip area stack is empty.");
+        }
 
-		bool result = carea.isIntersecting(top);
+        return mClipStack.top();
+    }
 
-		mClipStack.push(carea);
+    void Graphics::drawImage(const Image* image, const int dstX, const int dstY)
+    {
+        drawImage(image, 0, 0, dstX, dstY, image->getWidth(), image->getHeight());
+    }
 
-		return result;
-	}
+    void Graphics::setFont(Font* font)
+    {
+        mFont = font;
+    }
 
-	void Graphics::popClipArea()
-	{
-		if (mClipStack.empty())
-		{
-			throw GCN_EXCEPTION("Tried to pop clip area from empty stack.");
-		}
+    void Graphics::drawText(const std::string& text, const int x, const int y,
+                            const Alignment alignment, const bool enabled)
+    {
+        if (mFont == nullptr)
+        {
+            throw GCN_EXCEPTION("No font set.");
+        }
 
-		mClipStack.pop();
-	}
-
-	const ClipRectangle& Graphics::getCurrentClipArea()
-	{
-		if (mClipStack.empty())
-		{
-			throw GCN_EXCEPTION("The clip area stack is empty.");
-		}
-
-		return mClipStack.top();
-	}
-
-	void Graphics::drawImage(const Image* image, int dstX, int dstY)
-	{
-		drawImage(image, 0, 0, dstX, dstY, image->getWidth(), image->getHeight());
-	}
-
-	void Graphics::setFont(Font* font)
-	{
-		mFont = font;
-	}
-
-	void Graphics::drawText(const std::string& text, int x, int y,
-	                        Alignment alignment, bool enabled)
-	{
-		if (mFont == nullptr)
-		{
-			throw GCN_EXCEPTION("No font set.");
-		}
-
-		switch (alignment)
-		{
-		case Left:
-			mFont->drawString(this, text, x, y, enabled);
-			break;
-		case Center:
-			mFont->drawString(this, text, x - mFont->getWidth(text) / 2, y, enabled);
-			break;
-		case Right:
-			mFont->drawString(this, text, x - mFont->getWidth(text), y, enabled);
-			break;
-		default:
-			throw GCN_EXCEPTION("Unknown alignment.");
-		}
-	}
+        switch (alignment)
+        {
+        case Left:
+            mFont->drawString(this, text, x, y, enabled);
+            break;
+        case Center:
+            mFont->drawString(this, text, x - mFont->getWidth(text) / 2, y, enabled);
+            break;
+        case Right:
+            mFont->drawString(this, text, x - mFont->getWidth(text), y, enabled);
+            break;
+        default:
+            throw GCN_EXCEPTION("Unknown alignment.");
+        }
+    }
 }

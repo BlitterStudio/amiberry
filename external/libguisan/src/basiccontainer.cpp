@@ -131,7 +131,7 @@ namespace gcn
     {
         WidgetListIterator it;
 
-        for (it = mWidgets.begin(); it != mWidgets.end(); it++)
+        for (it = mWidgets.begin(); it != mWidgets.end(); ++it)
         {
             if ((*it)->isFocused())
             {
@@ -146,9 +146,9 @@ namespace gcn
             it = mWidgets.begin();
         }
 
-        it++;
+        ++it;
 
-        for ( ; it != end; it++)
+        for ( ; it != end; ++it)
         {
             if (it == mWidgets.end())
             {
@@ -167,7 +167,7 @@ namespace gcn
     {
         WidgetListReverseIterator it;
 
-        for (it = mWidgets.rbegin(); it != mWidgets.rend(); it++)
+        for (it = mWidgets.rbegin(); it != mWidgets.rend(); ++it)
         {
             if ((*it)->isFocused())
             {
@@ -177,14 +177,14 @@ namespace gcn
 
         WidgetListReverseIterator end = it;
 
-        it++;
+        ++it;
 
         if (it == mWidgets.rend())
         {
             it = mWidgets.rbegin();
         }
 
-        for ( ; it != end; it++)
+        for ( ; it != end; ++it)
         {
             if (it == mWidgets.rend())
             {
@@ -203,7 +203,7 @@ namespace gcn
     {
         Rectangle r = getChildrenArea();
 
-        if (!r.isPointInRect(x, y))
+        if (!r.isContaining(x, y))
         {
             return NULL;
         }
@@ -212,9 +212,9 @@ namespace gcn
         y -= r.y;
 
         WidgetListReverseIterator it;
-        for (it = mWidgets.rbegin(); it != mWidgets.rend(); it++)
+        for (it = mWidgets.rbegin(); it != mWidgets.rend(); ++it)
         {
-            if ((*it)->isVisible() && (*it)->getDimension().isPointInRect(x, y))
+            if ((*it)->isVisible() && (*it)->getDimension().isContaining(x, y))
             {
                 return (*it);
             }
@@ -254,7 +254,7 @@ namespace gcn
         }
 
         WidgetListIterator iter;
-        for (iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             (*iter)->_setFocusHandler(focusHandler);
         }
@@ -280,7 +280,7 @@ namespace gcn
     void BasicContainer::remove(Widget* widget)
     {
         WidgetListIterator iter;
-        for (iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             if (*iter == widget)
             {
@@ -299,7 +299,7 @@ namespace gcn
     {
         WidgetListIterator iter;
 
-        for (iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             (*iter)->_setFocusHandler(NULL);
             (*iter)->_setParent(NULL);
@@ -314,7 +314,7 @@ namespace gcn
         graphics->pushClipArea(getChildrenArea());
 
         WidgetListIterator iter;
-        for (iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             if ((*iter)->isVisible())
             {
@@ -344,7 +344,7 @@ namespace gcn
     void BasicContainer::logicChildren()
     {
         WidgetListIterator iter;
-        for (iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             (*iter)->logic();
         }
@@ -383,7 +383,7 @@ namespace gcn
         Widget::setInternalFocusHandler(focusHandler);
 
         WidgetListIterator iter;
-        for (iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             if (mInternalFocusHandler == NULL)
             {
@@ -399,7 +399,7 @@ namespace gcn
     Widget* BasicContainer::findWidgetById(const std::string& id)
     {
         WidgetListIterator iter;
-        for (iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             if ((*iter)->getId() == id)
             {
@@ -438,7 +438,7 @@ namespace gcn
     {
         int w = 0, h = 0;
 
-        for (WidgetListIterator it = mWidgets.begin(); it != mWidgets.end(); it++)
+        for (WidgetListIterator it = mWidgets.begin(); it != mWidgets.end(); ++it)
         {
             if ((*it)->getX() + (*it)->getWidth() > w)
             {
@@ -458,7 +458,7 @@ namespace gcn
     {
         std::list<Widget*> result;
 
-        for (std::list<Widget*>::const_iterator iter = mWidgets.begin(); iter != mWidgets.end(); iter++)
+        for (std::list<Widget*>::const_iterator iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
         {
             Widget* widget = (*iter);
             if (ignore != widget && widget->getDimension().isIntersecting(area))

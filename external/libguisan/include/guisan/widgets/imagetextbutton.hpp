@@ -78,7 +78,7 @@ namespace gcn
          * @param filename The filename of the image to display.
          * @param caption The text to display. 
          */
-        ImageTextButton(const std::string& filename, std::string& caption);
+        ImageTextButton(const std::string& filename, const std::string& caption);
 
         /**
          * Constructor.
@@ -86,7 +86,7 @@ namespace gcn
          * @param image The image to display.
          * @param caption The text to display.
          */
-        ImageTextButton(Image* image, std::string& caption);
+        ImageTextButton(const Image* image, const std::string& caption);
 
         /**
          * Destructor.
@@ -110,7 +110,7 @@ namespace gcn
          *
          * @return The image of the image button.
          */
-        Image* getImage();
+        Image* getImage() const;
 
 
         // Inherited from Widget

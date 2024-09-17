@@ -95,7 +95,7 @@ namespace gcn
     Window::~Window()
     = default;
 
-    void Window::setPadding(unsigned int padding)
+    void Window::setPadding(const unsigned int padding)
     {
         mPadding = padding;
     }
@@ -105,12 +105,12 @@ namespace gcn
         return mPadding;
     }
 
-    void Window::setTitleBarHeight(unsigned int height)
+    void Window::setTitleBarHeight(const unsigned int height)
     {
         mTitleBarHeight = height;
     }
 
-    unsigned int Window::getTitleBarHeight()
+    unsigned int Window::getTitleBarHeight() const
     {
         return mTitleBarHeight;
     }
@@ -125,7 +125,7 @@ namespace gcn
         return mCaption;
     }
 
-    void Window::setAlignment(Graphics::Alignment alignment)
+    void Window::setAlignment(const Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }
@@ -300,7 +300,7 @@ namespace gcn
             static_cast<int>(getHeight() - getPadding() - getTitleBarHeight()));
     }
 
-    void Window::setMovable(bool movable)
+    void Window::setMovable(const bool movable)
     {
         mMovable = movable;
     }
@@ -310,12 +310,12 @@ namespace gcn
         return mMovable;
     }
 
-    void Window::setOpaque(bool opaque)
+    void Window::setOpaque(const bool opaque)
     {
         mOpaque = opaque;
     }
 
-    bool Window::isOpaque()
+    bool Window::isOpaque() const
     {
         return mOpaque;
     }
