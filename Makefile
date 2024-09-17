@@ -341,7 +341,7 @@ PROG   = amiberry
 all: $(PROG)
 
 export CFLAGS := $(CPUFLAGS) $(CFLAGS) $(EXTRA_CFLAGS)
-export CXXFLAGS = $(CFLAGS) -std=gnu++17
+export CXXFLAGS = $(CFLAGS) -std=gnu++2a
 export CPPFLAGS
 
 ifdef GCC_PROFILE
