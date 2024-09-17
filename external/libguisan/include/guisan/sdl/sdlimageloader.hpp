@@ -60,7 +60,7 @@
 #include "guisan/imageloader.hpp"
 #include "guisan/platform.hpp"
 
-#include "SDL.h"
+#include <SDL.h>
 
 namespace gcn
 {

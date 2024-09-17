@@ -57,7 +57,7 @@
 #ifndef GCN_SDLPIXEL_HPP
 #define GCN_SDLPIXEL_HPP
 
-#include "SDL.h"
+#include <SDL.h>
 #include "guisan/color.hpp"
 
 namespace gcn
