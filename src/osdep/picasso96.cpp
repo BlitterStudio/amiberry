@@ -984,7 +984,7 @@ static void rtg_render(void)
 			if (vidinfo->full_refresh > 0)
 				vidinfo->full_refresh--;
 		}
-#ifndef AMIBERRY
+#ifdef GFXBOARD
 		gfxboard_vsync_handler(full, true);
 #endif
 		if (currprefs.rtg_multithread && uaegfx_active && quit_program == 0) {
@@ -1218,7 +1218,7 @@ void picasso_refresh(int monid)
 	rtg_clear(monid);
 
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
-#ifndef AMIBERRY
+#ifdef GFXBOARD
 		gfxboard_refresh(monid);
 #endif
 		unlockrtg();
@@ -1350,7 +1350,7 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 
 	if (thisisvsync) {
 		rtg_render();
-#ifndef AMIBERRY // AVI output
+#ifdef AVIOUTPUT
 		frame_drawn(monid);
 #endif
 	}
@@ -1436,7 +1436,7 @@ static void picasso_handle_hsync(void)
 				}
 				picasso_trigger_vblank();
 			}
-#ifndef AMIBERRY
+#ifdef GFXBOARD
 			gfxboard_vsync_handler(false, false);
 #endif
 		} else {
@@ -2007,9 +2007,6 @@ static int createwindowscursor(int monid, int set, int chipset)
 		int hiressprite = sprite_0_width / 16;
 		int ds = h * ((w + 15) / 16) * 4;
 		if (!sprite_0 || !mousehack_alive() || w > CURSORMAXWIDTH || h > CURSORMAXHEIGHT || !valid_address(src, ds)) {
-			if (p96_cursor) {
-				SDL_SetCursor(normalcursor);
-			}
 			goto exit;
 		}
 		int yy = 0;
@@ -2065,6 +2062,8 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 	}
 
+	p96_cursor = NULL;
+
 	write_log(_T("p96_cursor: %dx%d\n"), w, h);
 
 	tmp_sprite_w = tmp_sprite_h = 0;
@@ -2089,9 +2088,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 	//formatted_cursor_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
 
 end:
-	if (!isdata) {
-		p96_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-	} else if (ret) {
+	if (isdata) {
 		p96_cursor = SDL_CreateColorCursor(formatted_cursor_surface, 0, 0);
 		tmp_sprite_w = w;
 		tmp_sprite_h = h;
@@ -2120,19 +2117,21 @@ end:
 		write_log(_T("RTG Windows color cursor creation failed\n"));
 	}
 
-exit:
-	if (currprefs.input_tablet && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (!currprefs.rtg_hardwaresprite)
-			SDL_ShowCursor(SDL_DISABLE);
-	} else {
-		if (p96_cursor == old_cursor && normalcursor != NULL) {
-			SDL_SetCursor(normalcursor);
-		}
-	}
 	if (old_cursor) {
 		SDL_FreeCursor(old_cursor);
+		old_cursor = NULL;
 	}
-	old_cursor = NULL;
+
+	return ret;
+
+exit:
+	if (p96_cursor) {
+		if (SDL_GetCursor() == p96_cursor) {
+			SDL_SetCursor(normalcursor);
+		}
+		SDL_FreeCursor(p96_cursor);
+		p96_cursor = NULL;
+	}
 
 	return ret;
 #else
@@ -2689,9 +2688,10 @@ static void CopyLibResolutionStructureU2A(TrapContext *ctx, struct LibResolution
 	trap_put_long(ctx, amigamemptr + PSSO_LibResolution_BoardInfo, libres->BoardInfo);
 }
 
-#ifdef _WIN32
+
 void picasso_allocatewritewatch (int index, int gfxmemsize)
 {
+#ifdef _WIN32
 	SYSTEM_INFO si;
 
 	xfree (gwwbuf[index]);
@@ -2700,12 +2700,16 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 	gwwbufsize[index] = gfxmemsize / gwwpagesize[index] + 1;
 	gwwpagemask[index] = gwwpagesize[index] - 1;
 	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
+#endif
 }
 
+#ifdef _WIN32
 static ULONG_PTR writewatchcount[MAX_RTG_BOARDS];
 static int watch_offset[MAX_RTG_BOARDS];
+#endif
 int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **startp)
 {
+#ifdef _WIN32
 	ULONG ps;
 	writewatchcount[index] = gwwbufsize[index];
 	watch_offset[index] = offset;
@@ -2724,9 +2728,13 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	if (startp)
 		*startp = start;
 	return (int)writewatchcount[index];
+#else
+	return -1;
+#endif
 }
 bool picasso_is_vram_dirty (int index, uaecptr addr, int size)
 {
+#ifdef _WIN32
 	static ULONG_PTR last;
 	uae_u8 *a = addr + natmem_offset + watch_offset[index];
 	int s = size;
@@ -2748,8 +2756,10 @@ bool picasso_is_vram_dirty (int index, uaecptr addr, int size)
 		last = 0;
 	}
 	return false;
-}
+#else
+	return true;
 #endif
+}
 
 static void init_alloc (TrapContext *ctx, int size)
 {
@@ -6048,7 +6058,9 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			maxy = vidinfo->height;
 			if (miny > vidinfo->height - TD_TOTAL_HEIGHT)
 				miny = vidinfo->height - TD_TOTAL_HEIGHT;
+#ifdef AMIBERRY
 			picasso_statusline(monid, dstp);
+#endif
 		}
 	}
 	if (maxy >= 0) {
@@ -6105,7 +6117,6 @@ addrbank gfxmem_bank = {
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
-#ifndef AMIBERRY // We only have 1 RTG card for now
 extern addrbank gfxmem2_bank;
 MEMORY_FUNCTIONS(gfxmem2);
 addrbank gfxmem2_bank = {
@@ -6133,7 +6144,6 @@ addrbank gfxmem4_bank = {
 	dummy_lgeti, dummy_wgeti,
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
-#endif
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 
 /* Call this function first, near the beginning of code flow
@@ -6143,11 +6153,9 @@ void InitPicasso96(int monid)
 {
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	gfxmem_banks[0] = &gfxmem_bank;
-#ifndef AMIBERRY // We only have 1 RTG card for now
 	gfxmem_banks[1] = &gfxmem2_bank;
 	gfxmem_banks[2] = &gfxmem3_bank;
 	gfxmem_banks[3] = &gfxmem4_bank;
-#endif
 
 	//fastscreen
 	oldscr = 0;
@@ -6844,9 +6852,11 @@ static void picasso_reset2(int monid)
 			render_pipe = xmalloc(smp_comm_pipe, 1);
 			init_comm_pipe(render_pipe, 10, 1);
 		}
+#ifdef AMIBERRY
 		if (render_cs == nullptr) {
 			uae_sem_init(&render_cs, 0, -1);
 		}
+#endif
 		if (render_thread_state <= 0) {
 			render_thread_state = 0;
 			uae_start_thread(_T("rtg"), render_thread, nullptr, &render_tid);

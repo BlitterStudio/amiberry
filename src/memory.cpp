@@ -18,7 +18,7 @@
 #include "uae.h"
 #include "memory.h"
 #include "rommgr.h"
-//#include "ersatz.h"
+#include "ersatz.h"
 #include "zfile.h"
 #include "custom.h"
 #include "events.h"

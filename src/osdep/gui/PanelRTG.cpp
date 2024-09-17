@@ -11,8 +11,8 @@
 #include "gfxboard.h"
 #include "gui_handling.h"
 
-static const std::vector<std::string> rtg_boards = { "-", "UAE [Zorro II]", "UAE [Zorro III]" };
-static gcn::StringListModel rtg_boards_list(rtg_boards);
+static std::vector<std::string> rtg_boards;
+static gcn::StringListModel rtg_boards_list;
 
 static const std::vector<std::string> rtg_refreshrates = { "Chipset", "Default", "50", "60", "70", "75" };
 static gcn::StringListModel rtg_refreshrates_list(rtg_refreshrates);
@@ -165,6 +165,27 @@ RTGActionListener* rtg_action_listener;
 
 void InitPanelRTG(const config_category& category)
 {
+	rtg_boards.clear();
+	rtg_boards.emplace_back("-");
+	int v = 0;
+	TCHAR tmp[256];
+	for (;;) {
+		int index = gfxboard_get_id_from_index(v);
+		if (index < 0)
+			break;
+		const TCHAR* n1 = gfxboard_get_name(index);
+		const TCHAR* n2 = gfxboard_get_manufacturername(index);
+		v++;
+		_tcscpy(tmp, n1);
+		if (n2) {
+			_tcscat(tmp, _T(" ("));
+			_tcscat(tmp, n2);
+			_tcscat(tmp, _T(")"));
+		}
+		rtg_boards.emplace_back(tmp);
+	}
+	rtg_boards_list = gcn::StringListModel(rtg_boards);
+
 	constexpr int marker_length = 20;
 
 	rtg_action_listener = new RTGActionListener();

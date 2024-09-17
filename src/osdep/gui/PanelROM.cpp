@@ -22,6 +22,7 @@ static gcn::DropDown* cboCartROM;
 static gcn::Button* cmdCartROM;
 static gcn::Label* lblUAEROM;
 static gcn::DropDown* cboUAEROM;
+static gcn::CheckBox* chkMapRom;
 static gcn::CheckBox* chkShapeShifter;
 
 class ROMListModel : public gcn::ListModel
@@ -191,6 +192,10 @@ public:
 				changed_prefs.boot_rom = 1; // disabled
 			}
 		}
+		else if (actionEvent.getSource() == chkMapRom)
+		{
+			changed_prefs.maprom = chkMapRom->isSelected() ? 0x0f000000 : 0;
+		}
 		else if (actionEvent.getSource() == chkShapeShifter)
 		{
 			changed_prefs.kickshifter = chkShapeShifter->isSelected();
@@ -244,6 +249,20 @@ void InitPanelROM(const config_category& category)
 	cmdExtROM->setForegroundColor(gui_foreground_color);
 	cmdExtROM->addActionListener(romButtonActionListener);
 
+	chkMapRom = new gcn::CheckBox("MapROM emulation");
+	chkMapRom->setId("chkMapRom");
+	chkMapRom->setBaseColor(gui_base_color);
+	chkMapRom->setBackgroundColor(gui_textbox_background_color);
+	chkMapRom->setForegroundColor(gui_foreground_color);
+	chkMapRom->addActionListener(romButtonActionListener);
+
+	chkShapeShifter = new gcn::CheckBox("ShapeShifter support");
+	chkShapeShifter->setId("chkShapeShifter");
+	chkShapeShifter->setBaseColor(gui_base_color);
+	chkShapeShifter->setBackgroundColor(gui_textbox_background_color);
+	chkShapeShifter->setForegroundColor(gui_foreground_color);
+	chkShapeShifter->addActionListener(romButtonActionListener);
+
 	lblCartROM = new gcn::Label("Cartridge ROM File:");
 	cboCartROM = new gcn::DropDown(cartROMList);
 	cboCartROM->setSize(textFieldWidth, cboCartROM->getHeight());
@@ -270,13 +289,6 @@ void InitPanelROM(const config_category& category)
 	cboUAEROM->setId("cboUAEROM");
 	cboUAEROM->addActionListener(romButtonActionListener);
 
-	chkShapeShifter = new gcn::CheckBox("ShapeShifter support");
-	chkShapeShifter->setId("chkShapeShifter");
-	chkShapeShifter->setBaseColor(gui_base_color);
-	chkShapeShifter->setBackgroundColor(gui_textbox_background_color);
-	chkShapeShifter->setForegroundColor(gui_foreground_color);
-	chkShapeShifter->addActionListener(romButtonActionListener);
-
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblMainROM, DISTANCE_BORDER, posY);
 	posY += lblMainROM->getHeight() + 4;
@@ -290,6 +302,10 @@ void InitPanelROM(const config_category& category)
 	category.panel->add(cmdExtROM, DISTANCE_BORDER + cboExtROM->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboExtROM->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(chkMapRom, DISTANCE_BORDER, posY);
+	category.panel->add(chkShapeShifter, chkMapRom->getX() + chkMapRom->getWidth() + DISTANCE_NEXT_X * 2, posY);
+	posY += chkMapRom->getHeight() + DISTANCE_NEXT_Y * 2;
+
 	category.panel->add(lblCartROM, DISTANCE_BORDER, posY);
 	posY += lblCartROM->getHeight() + 4;
 	category.panel->add(cboCartROM, DISTANCE_BORDER, posY);
@@ -299,9 +315,6 @@ void InitPanelROM(const config_category& category)
 	category.panel->add(lblUAEROM, DISTANCE_BORDER, posY);
 	posY += lblUAEROM->getHeight() + 4;
 	category.panel->add(cboUAEROM, DISTANCE_BORDER, posY);
-	posY += cboUAEROM->getHeight() + DISTANCE_NEXT_Y * 2;
-
-	category.panel->add(chkShapeShifter, DISTANCE_BORDER, posY);
 
 	RefreshPanelROM();
 }
@@ -328,6 +341,7 @@ void ExitPanelROM()
 
 	delete lblUAEROM;
 	delete cboUAEROM;
+	delete chkMapRom;
 	delete chkShapeShifter;
 	delete romButtonActionListener;
 }
@@ -363,7 +377,7 @@ void RefreshPanelROM()
 		cboUAEROM->setSelected(changed_prefs.uaeboard + 1);
 	}
 	cboUAEROM->setEnabled(!emulating);
-
+	chkMapRom->setSelected(changed_prefs.maprom);
 	chkShapeShifter->setSelected(changed_prefs.kickshifter);
 }
 

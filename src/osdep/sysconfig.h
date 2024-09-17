@@ -84,10 +84,10 @@
 #define SAVESTATE /* State file support */
 #define A2091 /* A590/A2091 SCSI */
 #define A2065 /* A2065 Ethernet card */
-/* #define GFXBOARD */ /* Hardware graphics board */
-/* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */
-/* #define NCR9X */ /* 53C9X SCSI */
-/* #define SANA2 */ /* SANA2 network driver */
+#define GFXBOARD /* Hardware graphics board */
+#define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
+#define NCR9X /* 53C9X SCSI */
+#define SANA2 /* SANA2 network driver */
 #define AMAX /* A-Max ROM adapter emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
 #define WITH_CHD
@@ -95,19 +95,19 @@
 #define WITH_UAENATIVE
 /* #define WITH_SLIRP */
 /* #define WITH_BUILTIN_SLIRP */
-/* #define WITH_TABLETLIBRARY */
+#define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */
-/* #define WITH_PPC */
-/* #define WITH_QEMU_CPU */
-/* #define WITH_TOCCATA */
-/* #define WITH_PCI */
-/* #define WITH_X86 */
+#define WITH_PPC
+#define WITH_QEMU_CPU
+#define WITH_TOCCATA
+#define WITH_PCI
+#define WITH_X86
 #define WITH_THREADED_CPU
 /* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU
-//#define WITH_DSP
-//#define WITH_DRACO
+#define WITH_DSP
+#define WITH_DRACO
 
 // Use portmidi library for MIDI devices
 #define WITH_MIDI
@@ -119,10 +119,10 @@
 /* #define WITH_SCSI_SPTI */
 
 // Sound boards support
-//#define WITH_SNDBOARD
+#define WITH_SNDBOARD
 
 // CPU accelerator board support
-//#define WITH_CPUBOARD
+#define WITH_CPUBOARD
 
 // Special Monitors support
 #define WITH_SPECIALMONITORS
