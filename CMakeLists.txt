@@ -5,7 +5,7 @@ enable_language(C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe")
-set(CMAKE_C_FLAGS_DEBUG "-Og -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic -pipe")
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG -Wl,--export-dynamic -pipe")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
