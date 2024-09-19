@@ -612,9 +612,20 @@ if(APPLE)
     set(CPACK_GENERATOR "Bundle")
     set(CPACK_BUNDLE_NAME "Amiberry")
     set(CPACK_BUNDLE_PLIST ${CMAKE_SOURCE_DIR}/Info.plist)
-    set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/Icon.icns)
+    set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/data/amiberry.png)
 else()
-    set(CPACK_GENERATOR "TGZ")
+    set(CPACK_GENERATOR "TGZ;DEB")
+    SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+    SET(CPACK_PACKAGE_VENDOR "BlitterStudio")
+    SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+    SET(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, libflac8, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
+    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Amiberry is an optimized Amiga emulator various platforms.")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_VERSION "6.3.5") # Adjust version as needed
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 
 include(CPack)
