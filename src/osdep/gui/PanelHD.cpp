@@ -546,7 +546,6 @@ void InitPanelHD(const config_category& category)
 	RefreshPanelHD();
 }
 
-
 void ExitPanelHD()
 {
 	int col;
@@ -584,7 +583,6 @@ void ExitPanelHD()
 	delete hdEditActionListener;
 	delete hdAddActionListener;
 }
-
 
 static void AdjustDropDownControls()
 {
@@ -781,11 +779,10 @@ void RefreshPanelHD()
 
 	if (changed_prefs.cdslots[0].inuse && changed_prefs.cdslots[0].name[0])
 	{
-		struct device_info di = { 0 };
+		struct device_info di = {};
 		blkdev_get_info(&changed_prefs, 0, &di);
 	}
 }
-
 
 int count_HDs(uae_prefs* p)
 {

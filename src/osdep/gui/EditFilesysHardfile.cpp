@@ -1081,7 +1081,7 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (dialogResult)
 	{
-		new_hardfile(-1);
+		new_hardfile(unit_no);
 	}
 
 	ExitEditFilesysHardfile();
