@@ -474,7 +474,7 @@ add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
 
 target_include_directories(${PROJECT_NAME} PRIVATE src src/osdep src/include src/threaddep src/archivers src/ppc/pearpc external/libguisan/include external/mt32emu/src external/floppybridge/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2_image::SDL2_image SDL2_ttf::SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
-#set (CMAKE_SHARED_LINKER_FLAGS "-Wl,--as-needed")
+set (CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed,-no-pie")
 
 if (USE_OPENGL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
