@@ -241,7 +241,7 @@ else ifeq ($(PLATFORM),oga)
 else ifeq ($(PLATFORM),osx-m1)
 	LDFLAGS += -L/opt/homebrew/lib/ -framework IOKit -framework Foundation
 	CPPFLAGS += $(CPPPFLAGS64)
-	CPPFLAGS = -I/opt/homebrew/include
+	CPPFLAGS += -I/opt/homebrew/include
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
