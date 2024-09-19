@@ -17,7 +17,7 @@ mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
 # Copy capsimg.so into App bundle
-cp plugins/capsimg.so Amiberry.app/Contents/Resources/capsimg.so
+cp plugins/libcapsimg.so Amiberry.app/Contents/Resources/libcapsimg.so
 # Copy floppybridge lib into App bundle
 cp plugins/libfloppybridge.so Amiberry.app/Contents/Resources/libfloppybridge.so
 # Copy init script into the bundle
