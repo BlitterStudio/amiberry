@@ -47,7 +47,7 @@ CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/includ
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie
 
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
-LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -lstdc++fs -no-pie
+LDFLAGS += -Wl,-O1 -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -lstdc++fs -no-pie
 
 ifdef USE_OPENGL
 	CFLAGS += -DUSE_OPENGL
@@ -76,7 +76,7 @@ endif
 ifndef DEBUG
 	CFLAGS += -O3
 else
-	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
+	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG
 endif
 
 ifdef USE_OLDGCC
