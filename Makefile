@@ -83,10 +83,10 @@ ifdef USE_OLDGCC
 	CFLAGS += -DUSE_OLDGCC
 endif
 
-#Common flags for all 32bit targets
+#Common flags for all ARM 32bit targets
 CPPFLAGS32=-DARMV6T2
 
-#Common flags for all 64bit targets
+#Common flags for all ARM 64bit targets
 CPPFLAGS64=-DCPU_AARCH64
 
 #Neon flags
