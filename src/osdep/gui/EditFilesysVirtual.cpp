@@ -618,7 +618,7 @@ bool EditFilesysVirtual(const int unit_no)
 		current_fsvdlg.ci.readonly = !chkReadWrite->isSelected();
 		current_fsvdlg.ci.bootpri = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkVirtBootable->isSelected() ? 1 : 0, 0);
 
-		new_filesys(-1);
+		new_filesys(unit_no);
 	}
 
 	ExitEditFilesysVirtual();
