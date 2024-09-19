@@ -34,7 +34,7 @@ jobs:
         run: |
           brew update
           brew upgrade
-          brew install autoconf cmake sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
+          brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler
 
       - name: make for macOS X64
         run: make -j4 PLATFORM=osx-x86
@@ -73,7 +73,7 @@ jobs:
         run: |
           brew update
           brew upgrade
-          brew install autoconf cmake sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
+          brew install autoconf sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler
 
       - name: make for macOS Apple Silicon
         run: make -j4 PLATFORM=osx-m1
