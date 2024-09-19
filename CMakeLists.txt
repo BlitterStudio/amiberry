@@ -553,59 +553,58 @@ if (APPLE)
     install(TARGETS ${PROJECT_NAME} BUNDLE DESTINATION .)
 else ()
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+    # Install additional directories
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/cdroms
+        DESTINATION share/${PROJECT_NAME}/cdroms
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
+        DESTINATION share/${PROJECT_NAME}/conf
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
+        DESTINATION share/${PROJECT_NAME}/controllers
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
+        DESTINATION share/${PROJECT_NAME}/data
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/floppies
+        DESTINATION share/${PROJECT_NAME}/floppies
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/harddrives
+        DESTINATION share/${PROJECT_NAME}/harddrives
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/inputrecordings
+        DESTINATION share/${PROJECT_NAME}/inputrecordings
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/kickstarts
+        DESTINATION share/${PROJECT_NAME}/kickstarts
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/lha
+        DESTINATION share/${PROJECT_NAME}/lha
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/nvram
+        DESTINATION share/${PROJECT_NAME}/nvram
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
+        DESTINATION share/${PROJECT_NAME}/plugins
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/savestates
+        DESTINATION share/${PROJECT_NAME}/savestates
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/screenshots
+        DESTINATION share/${PROJECT_NAME}/screenshots
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
+        DESTINATION share/${PROJECT_NAME}/whdboot
+    )
+
+    # Install shared libraries
+    install(FILES ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so
+        DESTINATION share/${PROJECT_NAME}/plugins
+    )
+    install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
+        DESTINATION share/${PROJECT_NAME}/plugins
+    )
 endif ()
-
-# Install additional directories
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/cdroms
-    DESTINATION share/${PROJECT_NAME}/cdroms
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
-    DESTINATION share/${PROJECT_NAME}/conf
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-    DESTINATION share/${PROJECT_NAME}/controllers
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-    DESTINATION share/${PROJECT_NAME}/data
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/floppies
-    DESTINATION share/${PROJECT_NAME}/floppies
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/harddrives
-    DESTINATION share/${PROJECT_NAME}/harddrives
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/inputrecordings
-    DESTINATION share/${PROJECT_NAME}/inputrecordings
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/kickstarts
-    DESTINATION share/${PROJECT_NAME}/kickstarts
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/lha
-    DESTINATION share/${PROJECT_NAME}/lha
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/nvram
-    DESTINATION share/${PROJECT_NAME}/nvram
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
-    DESTINATION share/${PROJECT_NAME}/plugins
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/savestates
-    DESTINATION share/${PROJECT_NAME}/savestates
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/screenshots
-    DESTINATION share/${PROJECT_NAME}/screenshots
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-    DESTINATION share/${PROJECT_NAME}/whdboot
-)
-
-# Install shared libraries
-install(FILES ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so
-    DESTINATION share/${PROJECT_NAME}/plugins
-)
-install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
-    DESTINATION share/${PROJECT_NAME}/plugins
-)
 
 include(InstallRequiredSystemLibraries)
 
