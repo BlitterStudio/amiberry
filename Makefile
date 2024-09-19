@@ -240,7 +240,7 @@ else ifeq ($(PLATFORM),oga)
 # macOS Apple Silicon (SDL2, 64-bit, Apple Silicon)
 else ifeq ($(PLATFORM),osx-m1)
 	LDFLAGS += -L/opt/homebrew/lib/ -framework IOKit -framework Foundation -liconv
-	CPPFLAGS += $(CPPPFLAGS64)
+	CPPFLAGS += $(CPPFLAGS64)
 	CPPFLAGS += -I/opt/homebrew/include
 	CXX=/usr/bin/c++
 #	DEBUG=1
