@@ -583,6 +583,11 @@ else ()
     install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
         DESTINATION share/${PROJECT_NAME}/plugins
     )
+
+    # Install desktop file
+    install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
+        DESTINATION share/applications
+    )
 endif ()
 
 include(InstallRequiredSystemLibraries)
@@ -595,6 +600,7 @@ if(APPLE)
     set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/data/amiberry.png)
 else()
     set(CPACK_GENERATOR "TGZ;DEB")
+    set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
     SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
     SET(CPACK_PACKAGE_VERSION_MAJOR "6")
     SET(CPACK_PACKAGE_VERSION_MINOR "3")
