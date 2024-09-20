@@ -100,25 +100,25 @@ jobs:
           name: amiberry-macOS-64bit-apple-silicon
           path: amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
 
-  build-debian-bullseye-x86_64:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+  # build-debian-bullseye-x86_64:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
 
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-x86_64:bullseye
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build && cmake --build build -j4
-          cpack --config build/CPackConfig.cmake
+  #   - name: Run the build process with Docker
+  #     uses: addnab/docker-run-action@v3
+  #     with:
+  #       image: midwan/amiberry-debian-x86_64:bullseye
+  #       options: -v ${{ github.workspace }}:/build
+  #       run: |
+  #         cmake -B build && cmake --build build -j4
+  #         cpack --config build/CPackConfig.cmake
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bullseye-x86_64
-        path: amiberry_*.deb
+  #   - name: Upload artifact
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: amiberry-debian-bullseye-x86_64
+  #       path: amiberry_*.deb
 
   build-debian-bookworm-x86_64:
     runs-on: ubuntu-latest
@@ -180,45 +180,45 @@ jobs:
         name: amiberry-debian-bookworm-armhf
         path: amiberry_*.deb
 
-  build-debian-bullseye-aarch64:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+  # build-debian-bullseye-aarch64:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
 
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-aarch64:bullseye
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build && cmake --build build -j4
-          cpack --config build/CPackConfig.cmake
+  #   - name: Run the build process with Docker
+  #     uses: addnab/docker-run-action@v3
+  #     with:
+  #       image: midwan/amiberry-debian-aarch64:bullseye
+  #       options: -v ${{ github.workspace }}:/build
+  #       run: |
+  #         cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build && cmake --build build -j4
+  #         cpack --config build/CPackConfig.cmake
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bullseye-aarch64
-        path: amiberry_*.deb
+  #   - name: Upload artifact
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: amiberry-debian-bullseye-aarch64
+  #       path: amiberry_*.deb
 
-  build-debian-bullseye-armhf:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+  # build-debian-bullseye-armhf:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v4
 
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-armhf:bullseye
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build && cmake --build build -j4
-          cpack --config build/CPackConfig.cmake
+  #   - name: Run the build process with Docker
+  #     uses: addnab/docker-run-action@v3
+  #     with:
+  #       image: midwan/amiberry-debian-armhf:bullseye
+  #       options: -v ${{ github.workspace }}:/build
+  #       run: |
+  #         cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build && cmake --build build -j4
+  #         cpack --config build/CPackConfig.cmake
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bullseye-armhf
-        path: amiberry_*.deb
+  #   - name: Upload artifact
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: amiberry-debian-bullseye-armhf
+  #       path: amiberry_*.deb
 
   create-release:
     needs: [build-macOS-x86_64, build-macOS-apple-silicon, build-debian-bullseye-x86_64, build-debian-bookworm-x86_64, build-debian-bookworm-aarch64, build-debian-bookworm-armhf, build-debian-bullseye-aarch64, build-debian-bullseye-armhf]
