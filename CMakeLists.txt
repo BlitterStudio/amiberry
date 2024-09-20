@@ -31,31 +31,10 @@ endif ()
 # Needed so that cmake uses our find modules.
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-include(CheckSymbolExists)
-function(detect_architecture symbol arch)
-    if (NOT DEFINED ARCHITECTURE)
-        set(CMAKE_REQUIRED_QUIET 1)
-        check_symbol_exists("${symbol}" "" ARCHITECTURE_${arch})
-        unset(CMAKE_REQUIRED_QUIET)
-
-        # The output variable needs to be unique across invocations otherwise
-        # CMake's crazy scope rules will keep it defined
-        if (ARCHITECTURE_${arch})
-            set(ARCHITECTURE "${arch}" PARENT_SCOPE)
-        endif ()
-    endif ()
-endfunction()
-
-detect_architecture("__x86_64__" x86_64)
-detect_architecture("__aarch64__" arm64)
-detect_architecture("__arm__" arm32)
-
-message(STATUS "Target architecture: ${ARCHITECTURE}")
-
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(MACOS TRUE)
     message(STATUS "macOS platform detected")
-    if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
         include_directories("/opt/homebrew/include")
         set(CMAKE_EXE_LINKER_FLAGS "-L/opt/homebrew/lib -framework IOKit -framework Foundation -liconv")
     else ()
@@ -442,9 +421,9 @@ endif()
 target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR ARCHITECTURE MATCHES "arm64")
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" )
     target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
-elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" OR ARCHITECTURE MATCHES "arm32")
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
     target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV)
 endif ()
 
