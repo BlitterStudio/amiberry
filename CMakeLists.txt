@@ -602,6 +602,7 @@ else()
     SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
     SET(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
     SET(CPACK_DEBIAN_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+    set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, libflac8, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
     set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Amiberry is an optimized Amiga emulator various platforms.")
