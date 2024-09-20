@@ -534,46 +534,46 @@ else ()
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
     # Install additional directories
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/cdroms
-        DESTINATION share/${PROJECT_NAME}/cdroms
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
-        DESTINATION share/${PROJECT_NAME}/conf
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-        DESTINATION share/${PROJECT_NAME}/controllers
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-        DESTINATION share/${PROJECT_NAME}/data
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/floppies
-        DESTINATION share/${PROJECT_NAME}/floppies
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/harddrives
-        DESTINATION share/${PROJECT_NAME}/harddrives
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/inputrecordings
-        DESTINATION share/${PROJECT_NAME}/inputrecordings
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/kickstarts
-        DESTINATION share/${PROJECT_NAME}/kickstarts
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/lha
-        DESTINATION share/${PROJECT_NAME}/lha
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/nvram
-        DESTINATION share/${PROJECT_NAME}/nvram
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
-        DESTINATION share/${PROJECT_NAME}/plugins
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/savestates
-        DESTINATION share/${PROJECT_NAME}/savestates
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/screenshots
-        DESTINATION share/${PROJECT_NAME}/screenshots
+        DESTINATION share/${PROJECT_NAME}
     )
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-        DESTINATION share/${PROJECT_NAME}/whdboot
+        DESTINATION share/${PROJECT_NAME}
     )
 
     # Install shared libraries
