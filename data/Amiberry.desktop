@@ -12,9 +12,6 @@ Name = Amiberry
 # A comment which can/will be used as a tooltip
 Comment = Amiga Emulator
 
-# The path to the folder in which the executable is run
-Path = $HOME
-
 # The executable of the application, possibly with arguments
 Exec = /usr/bin/amiberry
 
