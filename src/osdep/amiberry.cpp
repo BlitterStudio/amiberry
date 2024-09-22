@@ -4350,7 +4350,7 @@ int main(int argc, char* argv[])
 
 	init_amiberry_paths(data_directory, home_directory, config_directory);
 
-	// Parse command line to get possibly set amiberry_config.
+	// Parse command line to possibly set amiberry_config.
 	// Do not remove used args yet.
 	if (!parse_amiberry_cmd_line(&argc, argv, 0))
 	{
