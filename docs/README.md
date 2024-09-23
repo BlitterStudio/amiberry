@@ -1,4 +1,4 @@
-# Amiga emulator for ARM boards
+# Optimized Amiga emulator for multiple platforms
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X4FHDY4)
 
@@ -10,13 +10,13 @@
 
 ![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
 
-Amiberry is an optimized Amiga emulator, for ARM32, ARM64, x86_64 (macOS and Linux) and RISC-V platforms.
+Amiberry is an optimized Amiga emulator for ARM32, ARM64, x86_64 and RISC-V platforms. It runs on both macOS and Linux. Windows users can always use [WinUAE](https://www.winuae.net).
 
-The core emulation comes from [WinUAE](https://www.winuae.net), and the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
+The core emulation comes from [WinUAE](https://www.winuae.net), and even the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry-Lite tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
 
-It includes JIT support, to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
+It includes JIT support for ARM32/ARM64, to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
 
-There are currently two Amiberry versions available: **v5.x and v6.x** - [see here](https://github.com/BlitterStudio/amiberry/wiki/First-Installation) to see which is the best pick for your needs.
+There are currently two Amiberry versions available: **Amiberry and Amiberry-Lite** - [see here](https://github.com/BlitterStudio/amiberry/wiki/First-Installation) to see which is the best pick for your needs.
 
 ## Requirements
 
@@ -26,23 +26,30 @@ Amiberry has been tested on the following Linux distros:
 
 - Debian/RPI-OS Bullseye, Bookworm ARM32, ARM64 and x86_64
 - Ubuntu ARM64 and x86_64
-- Manjaro ARM and x86_64
+- Manjaro ARM64 and x86_64
 - DietPi
 - RetroPie
+- Batocera
+- Knulli
+- MuOS
+- TheRA
 it should also work on several others, as long as the requirements are met.
 
 Some distros include it in their app ecosystem (e.g. DietPi, RetroPie and others), so you can install and upgrade it directly from their menu system.
 
 ### macOS
 
-Amiberry supports macOS, and has been tested on:
+Amiberry also runs on macOS, and has been tested on:
 
 - Catalina (x86_64)
 - Monterey (x86_64 and Apple Silicon)
-- Newer macOS versions should work as well
+- Sonoma (x86_64)
+- Newer macOS versions _should_ work as well
 
 Under macOS, you will need to install the required libraries using Homebrew.
 For more details on how to do that or if you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-macOS)
+
+Also, please keep in mind that Amiberry on macOS is self-signed, so you will need to allow it to run through Apple's security dialogs that will block it by default (since it's coming from a non-recognized Developer account).
 
 ### Dependencies
 
