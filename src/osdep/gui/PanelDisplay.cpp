@@ -14,7 +14,7 @@
 #include "gui_handling.h"
 #include "drawing.h"
 
-const int amigawidth_values[] = { 640, 704, 720, 752 };
+const int amigawidth_values[] = { 640, 704, 720, 754 };
 const int amigaheight_values[] = { 400, 480, 512, 568, 576 };
 
 enum

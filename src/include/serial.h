@@ -26,10 +26,10 @@ extern uae_u16 SERDATR (void);
 extern void  SERPER (uae_u16 w);
 extern void  SERDAT (uae_u16 w);
 
-extern void serial_rbf_clear (void);
 extern uae_u8 serial_writestatus(uae_u8, uae_u8);
 extern uae_u8 serial_readstatus(uae_u8, uae_u8);
 extern void serial_uartbreak(int);
+extern void serial_rbf_change(bool);
 extern uae_u16 serdat;
 
 extern int doreadser, serstat;

@@ -57,7 +57,7 @@
 #ifndef GCN_SDL2GRAPHICS_HPP
 #define GCN_SDL2GRAPHICS_HPP
 
-#include "SDL.h"
+#include <SDL.h>
 
 #include "guisan/color.hpp"
 #include "guisan/graphics.hpp"
