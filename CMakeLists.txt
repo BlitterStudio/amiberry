@@ -4,8 +4,8 @@ enable_language(C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe")
-set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG -pipe")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe -fno-pie -no-pie")
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG -pipe -fno-pie -no-pie")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 
@@ -418,7 +418,6 @@ else ()
     add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 endif()
 
-target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
@@ -464,10 +463,7 @@ add_subdirectory(external/libguisan)
 add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
 
 target_include_directories(${PROJECT_NAME} PRIVATE src src/osdep src/include src/threaddep src/archivers src/ppc/pearpc external/libguisan/include external/mt32emu/src external/floppybridge/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png mpg123 mpeg2convert mpeg2 serialport z)
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-as-needed,-no-pie")
-endif ()
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png MPG123::libmpg123 mpeg2convert mpeg2 serialport z pthread dl)
 
 if (USE_OPENGL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
