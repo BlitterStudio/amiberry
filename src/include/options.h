@@ -18,9 +18,9 @@
 #include "traps.h"
 #include "guisan/color.hpp"
 
-#define UAEMAJOR 5
-#define UAEMINOR 7
-#define UAESUBREV 4
+#define UAEMAJOR 6
+#define UAEMINOR 3
+#define UAESUBREV 5
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -763,7 +763,6 @@ struct uae_prefs
 	int collision_level;
 	int leds_on_screen;
 #ifdef AMIBERRY
-	int fast_copper;
 	int multithreaded_drawing;
 #endif
 	int leds_on_screen_mask[2];
@@ -835,9 +834,6 @@ struct uae_prefs
 	bool cs_cdtvcr;
 	bool cs_df0idhw;
 	bool cs_resetwarning;
-	bool cs_denisenoehb;
-	bool cs_dipagnus;
-	bool cs_agnusbltbusybug;
 	bool cs_ciatodbug;
 	bool cs_z3autoconfig;
 	bool cs_1mchipjumper;
@@ -854,6 +850,9 @@ struct uae_prefs
 	int cs_hvcsync;
 	int cs_eclockphase;
 	int cs_eclocksync;
+	int cs_agnusmodel;
+	int cs_agnussize;
+	int cs_denisemodel;
 	bool cs_memorypatternfill;
 	bool cs_ipldelay;
 	bool cs_floppydatapullup;

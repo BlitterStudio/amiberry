@@ -17,6 +17,7 @@ typedef SDL_sem *uae_sem_t;
 int uae_sem_init(uae_sem_t* sem, int dummy, int initial_state);
 void uae_sem_destroy(uae_sem_t* event);
 #define uae_sem_post(PSEM) SDL_SemPost (*(PSEM))
+#define uae_sem_unpost(PSEM) SDL_SemPost (*(PSEM))
 #define uae_sem_wait(PSEM) SDL_SemWait (*(PSEM))
 #define uae_sem_trywait(PSEM) SDL_SemTryWait (*(PSEM))
 #define uae_sem_trywait_delay(PSEM, ms) SDL_SemWaitTimeout(*(PSEM), ms)

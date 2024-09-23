@@ -21,11 +21,10 @@ static gcn::CheckBox* chkMemoryCycleExact;
 static gcn::Label* lblChipset;
 static gcn::DropDown* cboChipset;
 static gcn::Window* grpOptions;
-static gcn::RadioButton* optBlitNormal;
-static gcn::RadioButton* optBlitImmed;
-static gcn::RadioButton* optBlitWait;
-static gcn::Window* grpCopper;
-static gcn::CheckBox* chkFastCopper;
+static gcn::CheckBox* chkKeyboardConnected;
+static gcn::CheckBox* chkSubpixelEmu;
+static gcn::CheckBox* chkBlitImmed;
+static gcn::CheckBox* chkBlitWait;
 static gcn::CheckBox* chkMultithreadedDrawing;
 static gcn::Label* lblSpecialMonitors;
 static gcn::DropDown* cboSpecialMonitors;
@@ -70,8 +69,10 @@ class ChipsetActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		changed_prefs.immediate_blits = optBlitImmed->isSelected();
-		changed_prefs.waiting_blits = optBlitWait->isSelected();
+		changed_prefs.keyboard_connected = chkKeyboardConnected->isSelected();
+		changed_prefs.chipset_hr = chkSubpixelEmu->isSelected();
+		changed_prefs.immediate_blits = chkBlitImmed->isSelected();
+		changed_prefs.waiting_blits = chkBlitWait->isSelected();
 		changed_prefs.monitoremu = cboSpecialMonitors->getSelected();
 
 		auto n2 = chkMemoryCycleExact->isSelected();
@@ -101,27 +102,28 @@ public:
 					n2 = true;
 					chkMemoryCycleExact->setSelected(n2);
 				}
-				//else
-				//{
-				//	if (changed_prefs.cpu_model < 68020)
-				//	{
-				//		n2 = false;
-				//		chkMemoryCycleExact->setSelected(n2);
-				//	}
-				//}
+				else
+				{
+					if (changed_prefs.cpu_model < 68020)
+					{
+						n2 = false;
+						chkMemoryCycleExact->setSelected(n2);
+					}
+				}
 			}
 			changed_prefs.cpu_cycle_exact = n1;
 			changed_prefs.cpu_memory_cycle_exact = changed_prefs.blitter_cycle_exact = n2;
 			if (n2)
 			{
-				if (changed_prefs.cpu_model == 68000)
-					changed_prefs.cpu_compatible = true;
 				if (changed_prefs.cpu_model <= 68030)
+				{
 					changed_prefs.m68k_speed = 0;
+					changed_prefs.cpu_compatible = true;
+				}
 				if (changed_prefs.immediate_blits)
 				{
 					changed_prefs.immediate_blits = false;
-					optBlitImmed->setSelected(false);
+					chkBlitImmed->setSelected(false);
 				}
 				changed_prefs.gfx_framerate = 1;
 				changed_prefs.cachesize = 0;
@@ -151,7 +153,6 @@ public:
 			built_in_chipset_prefs(&changed_prefs);
 		}
 
-		changed_prefs.fast_copper = chkFastCopper->isSelected();
 		changed_prefs.multithreaded_drawing = chkMultithreadedDrawing->isSelected();
 
 		RefreshPanelCPU();
@@ -263,26 +264,33 @@ void InitPanelChipset(const struct config_category& category)
 
 	category.panel->add(grpChipset);
 
-	optBlitNormal = new gcn::RadioButton("Normal", "radiocblittergroup");
-	optBlitNormal->setId("optBlitNormal");
-	optBlitNormal->setBaseColor(gui_base_color);
-	optBlitNormal->setBackgroundColor(gui_textbox_background_color);
-	optBlitNormal->setForegroundColor(gui_foreground_color);
-	optBlitNormal->addActionListener(chipsetActionListener);
+	chkKeyboardConnected = new gcn::CheckBox("Keyboard connected");
+	chkKeyboardConnected->setId("chkKeyboardConnected");
+	chkKeyboardConnected->setBaseColor(gui_base_color);
+	chkKeyboardConnected->setBackgroundColor(gui_textbox_background_color);
+	chkKeyboardConnected->setForegroundColor(gui_foreground_color);
+	chkKeyboardConnected->addActionListener(chipsetActionListener);
 
-	optBlitImmed = new gcn::RadioButton("Immediate", "radiocblittergroup");
-	optBlitImmed->setId("optBlitImmed");
-	optBlitImmed->setBaseColor(gui_base_color);
-	optBlitImmed->setBackgroundColor(gui_textbox_background_color);
-	optBlitImmed->setForegroundColor(gui_foreground_color);
-	optBlitImmed->addActionListener(chipsetActionListener);
+	chkSubpixelEmu = new gcn::CheckBox("Subpixel Display emulation");
+	chkSubpixelEmu->setId("chkSubpixelEmu");
+	chkSubpixelEmu->setBaseColor(gui_base_color);
+	chkSubpixelEmu->setBackgroundColor(gui_textbox_background_color);
+	chkSubpixelEmu->setForegroundColor(gui_foreground_color);
+	chkSubpixelEmu->addActionListener(chipsetActionListener);
 
-	optBlitWait = new gcn::RadioButton("Wait for blitter", "radiocblittergroup");
-	optBlitWait->setId("optBlitWait");
-	optBlitWait->setBaseColor(gui_base_color);
-	optBlitWait->setBackgroundColor(gui_textbox_background_color);
-	optBlitWait->setForegroundColor(gui_foreground_color);
-	optBlitWait->addActionListener(chipsetActionListener);
+	chkBlitImmed = new gcn::CheckBox("Immediate Blitter");
+	chkBlitImmed->setId("chkBlitImmed");
+	chkBlitImmed->setBaseColor(gui_base_color);
+	chkBlitImmed->setBackgroundColor(gui_textbox_background_color);
+	chkBlitImmed->setForegroundColor(gui_foreground_color);
+	chkBlitImmed->addActionListener(chipsetActionListener);
+
+	chkBlitWait = new gcn::CheckBox("Wait for Blitter");
+	chkBlitWait->setId("chkBlitWait");
+	chkBlitWait->setBaseColor(gui_base_color);
+	chkBlitWait->setBackgroundColor(gui_textbox_background_color);
+	chkBlitWait->setForegroundColor(gui_foreground_color);
+	chkBlitWait->addActionListener(chipsetActionListener);
 
 	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
 	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
@@ -304,38 +312,21 @@ void InitPanelChipset(const struct config_category& category)
 
 	grpOptions = new gcn::Window("Options");
 	grpOptions->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_BORDER, DISTANCE_BORDER);
-	grpOptions->add(optBlitNormal, 10, 10);
-	grpOptions->add(optBlitImmed, 10, 40);
-	grpOptions->add(optBlitWait, 10, 70);
-	grpOptions->add(chkMultithreadedDrawing, 10, 110);
-	grpOptions->add(lblSpecialMonitors, 10, 150);
-	grpOptions->add(cboSpecialMonitors, 10, 180);
+	grpOptions->add(chkKeyboardConnected, 10, 10);
+	grpOptions->add(chkSubpixelEmu, 10, 40);
+	grpOptions->add(chkBlitImmed, 10, 70);
+	grpOptions->add(chkBlitWait, 10, 100);
+	grpOptions->add(chkMultithreadedDrawing, 10, 130);
+	grpOptions->add(lblSpecialMonitors, 10, 170);
+	grpOptions->add(cboSpecialMonitors, 10, 200);
 
 	grpOptions->setMovable(false);
-	grpOptions->setSize(lblSpecialMonitors->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, TITLEBAR_HEIGHT + cboSpecialMonitors->getY() + cboSpecialMonitors->getHeight() + DISTANCE_NEXT_Y * 6);
+	grpOptions->setSize(chkSubpixelEmu->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, TITLEBAR_HEIGHT + cboSpecialMonitors->getY() + cboSpecialMonitors->getHeight() + DISTANCE_NEXT_Y * 6);
 	grpOptions->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpOptions->setBaseColor(gui_base_color);
 	grpOptions->setForegroundColor(gui_foreground_color);
 
 	category.panel->add(grpOptions);
-
-	chkFastCopper = new gcn::CheckBox("Fast copper");
-	chkFastCopper->setId("chkFastCopper");
-	chkFastCopper->setBaseColor(gui_base_color);
-	chkFastCopper->setBackgroundColor(gui_textbox_background_color);
-	chkFastCopper->setForegroundColor(gui_foreground_color);
-	chkFastCopper->addActionListener(chipsetActionListener);
-
-	grpCopper = new gcn::Window("Copper");
-	grpCopper->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_NEXT_X,
-		grpOptions->getY() + grpOptions->getHeight() + DISTANCE_NEXT_Y);
-	grpCopper->add(chkFastCopper, 10, 10);
-	grpCopper->setMovable(false);
-	grpCopper->setSize(grpOptions->getWidth(), 65);
-	grpCopper->setTitleBarHeight(TITLEBAR_HEIGHT);
-	grpCopper->setBaseColor(gui_base_color);
-
-	category.panel->add(grpCopper);
 
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("optCollNone");
@@ -397,17 +388,16 @@ void ExitPanelChipset()
 	delete grpChipset;
 	delete chipsetActionListener;
 
-	delete optBlitNormal;
-	delete optBlitImmed;
-	delete optBlitWait;
+	delete chkKeyboardConnected;
+	delete chkSubpixelEmu;
+	delete chkBlitImmed;
+	delete chkBlitWait;
 	delete chkMultithreadedDrawing;
 	delete lblSpecialMonitors;
 	delete cboSpecialMonitors;
 	delete grpOptions;
 
-	delete chkFastCopper;
-	delete grpCopper;
-
+	
 	delete optCollNone;
 	delete optCollSprites;
 	delete optCollPlayfield;
@@ -417,24 +407,22 @@ void ExitPanelChipset()
 
 void RefreshPanelChipset()
 {
-	if (changed_prefs.immediate_blits)
-		optBlitImmed->setSelected(true);
-	else if (changed_prefs.waiting_blits)
-		optBlitWait->setSelected(true);
-	else
-		optBlitNormal->setSelected(true);
-
-	if (changed_prefs.cpu_memory_cycle_exact)
-	{
-		chkFastCopper->setEnabled(false);
-		chkFastCopper->setSelected(false);
+	// Set Enabled status
+#if !defined (CPUEMU_13)
+	chkMemoryCycleExact->setEnabled(false);
+#else
+	chkMemoryCycleExact->setEnabled(changed_prefs.cpu_model >= 68020);
+#endif
+	if (changed_prefs.immediate_blits || (changed_prefs.cpu_memory_cycle_exact && changed_prefs.cpu_model <= 68010)) {
+		changed_prefs.waiting_blits = 0;
+		chkBlitWait->setSelected(false);
+		chkBlitWait->setEnabled(false);
 	}
 	else
 	{
-		chkFastCopper->setEnabled(true);
-		chkFastCopper->setSelected(changed_prefs.fast_copper);
+		chkBlitWait->setEnabled(true);
 	}
-
+	chkBlitImmed->setEnabled(!changed_prefs.cpu_cycle_exact);
 	chkMultithreadedDrawing->setEnabled(!emulating);
 
 	// Set Values
@@ -450,7 +438,10 @@ void RefreshPanelChipset()
 		optAGA->setSelected(true);
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
-
+	chkKeyboardConnected->setSelected(changed_prefs.keyboard_connected);
+	chkSubpixelEmu->setSelected(changed_prefs.chipset_hr);
+	chkBlitImmed->setSelected(changed_prefs.immediate_blits);
+	chkBlitWait->setSelected(changed_prefs.waiting_blits);
 	chkMultithreadedDrawing->setSelected(changed_prefs.multithreaded_drawing);
 	cboSpecialMonitors->setSelected(changed_prefs.monitoremu);
 
@@ -465,8 +456,6 @@ void RefreshPanelChipset()
 
 	chkCycleExact->setSelected(changed_prefs.cpu_cycle_exact);
 	chkMemoryCycleExact->setSelected(changed_prefs.cpu_memory_cycle_exact);
-	chkCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
-	chkMemoryCycleExact->setEnabled(changed_prefs.cpu_model <= 68010);
 
 	auto idx = 0;
 	for (auto i = 0; i < chipsetList.getNumberOfElements(); ++i)
@@ -498,12 +487,7 @@ bool HelpPanelChipset(std::vector<std::string>& helptext)
 	helptext.emplace_back("started.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(If you see graphic issues in a game, try the "Immediate" or "Wait for blitter")");
-	helptext.emplace_back("Blitter options and/or disable \"Fast copper\".");
-	helptext.emplace_back(" ");
-	helptext.emplace_back("\"Fast copper\" uses a prediction algorithm instead of checking the copper state");
-	helptext.emplace_back("on a more regular basis. This may cause issues but brings a big performance improvement.");
-	helptext.emplace_back("The option was removed in WinUAE in an early state, but for most games, it works fine and");
-	helptext.emplace_back("the improved performance is helpful for low powered devices.");
+	helptext.emplace_back("Blitter options.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(For "Collision Level", select "Sprites and Sprites vs. Playfield" which is fine)");
 	helptext.emplace_back("for nearly all games.");

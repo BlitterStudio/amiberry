@@ -43,11 +43,11 @@ SDL_CONFIG ?= sdl2-config
 export SDL_CFLAGS := $(shell $(SDL_CONFIG) --cflags)
 export SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 
-CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
+CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Isrc/ppc/pearpc -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie
 
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
-LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -lstdc++fs -no-pie
+LDFLAGS += -Wl,-O1 -lpthread -lz -lpng -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -no-pie
 
 ifdef USE_OPENGL
 	CFLAGS += -DUSE_OPENGL
@@ -76,21 +76,21 @@ endif
 ifndef DEBUG
 	CFLAGS += -O3
 else
-	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
+	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG
 endif
 
 ifdef USE_OLDGCC
 	CFLAGS += -DUSE_OLDGCC
 endif
 
-#Common flags for all 32bit targets
-CPPFLAGS32=-DARMV6_ASSEMBLY -DARMV6T2
+#Common flags for all ARM 32bit targets
+CPPFLAGS32=-DARMV6T2
 
-#Common flags for all 64bit targets
+#Common flags for all ARM 64bit targets
 CPPFLAGS64=-DCPU_AARCH64
 
 #Neon flags
-NEON_FLAGS=-DUSE_ARMNEON -DARM_HAS_DIV
+NEON_FLAGS=-DARM_HAS_DIV
 
 # Raspberry Pi 2 CPU flags
 ifneq (,$(findstring rpi2,$(PLATFORM)))
@@ -239,16 +239,17 @@ else ifeq ($(PLATFORM),oga)
 
 # macOS Apple Silicon (SDL2, 64-bit, Apple Silicon)
 else ifeq ($(PLATFORM),osx-m1)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
+	LDFLAGS += -L/opt/homebrew/lib/ -framework IOKit -framework Foundation -liconv
+	CPPFLAGS += $(CPPFLAGS64)
+	CPPFLAGS += -I/opt/homebrew/include
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
 
 # macOS intel (SDL2, 64-bit, x86-64)
 else ifeq ($(PLATFORM),osx-x86)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS)
+	LDFLAGS += -L/usr/local/lib -framework IOKit -framework Foundation -liconv
+	CPPFLAGS += -I/usr/local/include
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
@@ -420,6 +421,7 @@ OBJS = \
 	src/blkdev_cdimage.o \
 	src/bsdsocket.o \
 	src/calc.o \
+	src/catweasel.o \
 	src/cd32_fmv.o \
 	src/cd32_fmv_genlock.o \
 	src/cdrom.o \
@@ -432,8 +434,10 @@ OBJS = \
 	src/crc32.o \
 	src/custom.o \
 	src/debug.o \
+	src/debugmem.o \
 	src/def_icons.o \
 	src/devices.o \
+	src/disasm.o \
 	src/disk.o \
 	src/diskutil.o \
 	src/dlopen.o \
@@ -441,6 +445,7 @@ OBJS = \
 	src/draco.o \
 	src/drawing.o \
 	src/driveclick.o \
+	src/enforcer.o \
 	src/ethernet.o \
 	src/events.o \
 	src/expansion.o \
@@ -448,10 +453,13 @@ OBJS = \
 	src/filesys.o \
 	src/flashrom.o \
 	src/fpp.o \
+	src/fpp_native.o \
+	src/framebufferboards.o \
 	src/fsdb.o \
 	src/fsusage.o \
 	src/gayle.o \
 	src/gfxboard.o \
+	src/gfxlib.o \
 	src/gfxutil.o \
 	src/hardfile.o \
 	src/hrtmon.rom.o \
@@ -463,6 +471,7 @@ OBJS = \
 	src/inputrecord.o \
 	src/isofs.o \
 	src/keybuf.o \
+	src/luascript.o \
 	src/main.o \
 	src/memory.o \
 	src/midiemu.o \
@@ -470,14 +479,18 @@ OBJS = \
 	src/ncr9x_scsi.o \
 	src/ncr_scsi.o \
 	src/parser.o \
+	src/pci.o \
 	src/rommgr.o \
 	src/rtc.o \
 	src/sampler.o \
+	src/sana2.o \
 	src/savestate.o \
 	src/scp.o \
 	src/scsi.o \
 	src/scsiemul.o \
 	src/scsitape.o \
+	src/slirp_uae.o \
+	src/sndboard.o \
 	src/specialmonitors.o \
 	src/statusline.o \
 	src/tabletlibrary.o \
@@ -489,6 +502,8 @@ OBJS = \
 	src/uaenative.o \
 	src/uaeresource.o \
 	src/uaeserial.o \
+	src/vm.o \
+	src/x86.o \
 	src/zfile.o \
 	src/zfile_archive.o \
 	src/archivers/chd/avhuff.o \
@@ -544,7 +559,11 @@ OBJS = \
 	src/archivers/wrp/warp.o \
 	src/archivers/zip/unzip.o \
 	src/caps/caps_amiberry.o \
+	src/dsp3210/dsp_glue.o \
+    src/dsp3210/DSP3210_emulation.o \
 	src/machdep/support.o \
+	src/mame/a2410.o \
+	src/mame/tm34010/tms34010.o \
 	external/floppybridge/src/floppybridge_lib.o \
 	src/osdep/ahi_v1.o \
 	src/osdep/bsdsocket_host.o \
@@ -574,6 +593,72 @@ OBJS = \
 	src/osdep/socket.o \
 	src/osdep/retroarch.o \
 	src/osdep/vpar.o \
+	src/pcem/386.o \
+    src/pcem/386_common.o \
+    src/pcem/386_dynarec.o \
+    src/pcem/808x.o \
+    src/pcem/cpu.o \
+    src/pcem/dosbox/dbopl.o \
+    src/pcem/dma.o \
+    src/pcem/keyboard.o \
+    src/pcem/keyboard_at.o \
+    src/pcem/keyboard_at_draco.o \
+    src/pcem/mem.o \
+    src/pcem/mouse_ps2.o \
+    src/pcem/mouse_serial.o \
+    src/pcem/dosbox/nukedopl.o \
+    src/pcem/nvr.o \
+    src/pcem/pcemglue.o \
+    src/pcem/pcemrtc.o \
+    src/pcem/pic.o \
+    src/pcem/pit.o \
+    src/pcem/serial.o \
+    src/pcem/sound_cms.o \
+    src/pcem/sound_dbopl.o \
+    src/pcem/sound_mpu401_uart.o \
+    src/pcem/sound_opl.o \
+    src/pcem/sound_sb.o \
+    src/pcem/sound_sb_dsp.o \
+    src/pcem/sound_speaker.o \
+    src/pcem/timer.o \
+    src/pcem/vid_bt482_ramdac.o \
+    src/pcem/vid_cl5429.o \
+    src/pcem/vid_et4000.o \
+    src/pcem/vid_et4000w32.o \
+    src/pcem/vid_inmos.o \
+    src/pcem/vid_ncr.o \
+    src/pcem/vid_permedia2.o \
+    src/pcem/vid_s3.o \
+    src/pcem/vid_s3_virge.o \
+    src/pcem/vid_sc1502x_ramdac.o \
+    src/pcem/vid_sdac_ramdac.o \
+    src/pcem/vid_svga.o \
+    src/pcem/vid_svga_render.o \
+    src/pcem/vid_voodoo.o \
+    src/pcem/vid_voodoo_banshee.o \
+    src/pcem/vid_voodoo_banshee_blitter.o \
+    src/pcem/vid_voodoo_blitter.o \
+    src/pcem/vid_voodoo_display.o \
+    src/pcem/vid_voodoo_fb.o \
+    src/pcem/vid_voodoo_fifo.o \
+    src/pcem/vid_voodoo_reg.o \
+    src/pcem/vid_voodoo_render.o \
+    src/pcem/vid_voodoo_setup.o \
+    src/pcem/vid_voodoo_texture.o \
+    src/pcem/x86seg.o \
+    src/pcem/x87.o \
+    src/pcem/x87_timings.o \
+    src/ppc/ppc.o \
+    src/ppc/ppcd.o \
+    src/qemuvga/cirrus_vga.o \
+    src/qemuvga/es1370.o \
+    src/qemuvga/esp.o \
+    src/qemuvga/lsi53c710.o \
+    src/qemuvga/lsi53c895a.o \
+    src/qemuvga/ne2000.o \
+    src/qemuvga/qemu.o \
+    src/qemuvga/qemuuaeglue.o \
+    src/qemuvga/vga.o \
 	src/sounddep/sound.o \
 	src/threaddep/threading.o \
 	src/osdep/gui/ControllerMap.o \
@@ -622,40 +707,27 @@ OBJS = \
 	src/readcpu.o \
 	src/cpudefs.o \
 	src/cpustbl.o \
+	src/cpummu.o \
+	src/cpummu30.o \
 	src/cpuemu_0.o \
-	src/cpuemu_4.o \
 	src/cpuemu_11.o \
 	src/cpuemu_13.o \
+	src/cpuemu_20.o \
+	src/cpuemu_21.o \
+	src/cpuemu_22.o \
+	src/cpuemu_23.o \
+	src/cpuemu_24.o \
+	src/cpuemu_31.o \
+	src/cpuemu_32.o \
+	src/cpuemu_33.o \
+	src/cpuemu_34.o \
+	src/cpuemu_35.o \
 	src/cpuemu_40.o \
-	src/cpuemu_44.o
-
-USE_JIT=1
-
-ifdef AARCH64
-OBJS += src/osdep/aarch64_helper.o
-src/osdep/aarch64_helper.o: src/osdep/aarch64_helper.s
-	$(AS) $(CPUFLAGS) -o src/osdep/aarch64_helper.o -c src/osdep/aarch64_helper.s
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-m1))
-	USE_JIT = 0
-OBJS += src/osdep/aarch64_helper_osx.o
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),osx-x86))
-	USE_JIT = 0
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),x86-64))
-	USE_JIT = 0
-else ifeq ($(PLATFORM),$(filter $(PLATFORM),riscv64))
-	USE_JIT = 0
-else
-OBJS += src/osdep/neon_helper.o
-src/osdep/neon_helper.o: src/osdep/neon_helper.s
-	$(AS) $(CPUFLAGS) -o src/osdep/neon_helper.o -c src/osdep/neon_helper.s
-endif
-
-ifeq ($(USE_JIT),1)
-OBJS += src/jit/compemu.o \
+	src/cpuemu_50.o \
+	src/jit/compemu.o \
 	src/jit/compstbl.o \
-	src/jit/compemu_fpp.o \
-	src/jit/compemu_support.o
-endif
+	src/jit/compemu_support.o \
+	src/jit/compemu_fpp.o
 
 DEPS = $(OBJS:%.o=%.d) $(C_OBJS:%.o=%.d)
 

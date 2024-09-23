@@ -83,6 +83,7 @@ extern uae_u32 CallFunc (TrapContext *context, uaecptr func);
  */
 void init_traps(void);
 void free_traps(void);
+void reset_traps(void);
 void init_extended_traps(void);
 
 #define deftrap(f) define_trap((f), 0, _T(#f))

@@ -62,7 +62,6 @@ struct game_hardware_options
 	std::string chip = "nul";
 	std::string fast = "nul";
 	std::string z3 = "nul";
-	std::string fastcopper = "nul";
 };
 
 std::filesystem::path whdbooter_path;
@@ -203,7 +202,6 @@ game_hardware_options get_game_hardware_settings(const std::string& hardware)
 	output_detail.fast = find_whdload_game_option("FAST_RAM", hardware);
 	output_detail.z3 = find_whdload_game_option("Z3_RAM", hardware);
 	output_detail.cpu_exact = find_whdload_game_option("CPU_EXACT", hardware);
-	output_detail.fastcopper = find_whdload_game_option("FAST_COPPER", hardware);
 
 	return output_detail;
 }
@@ -645,17 +643,17 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 	// CPU SPEED
 	if (strcmpi(game_detail.clock.c_str(), "7") == 0)
 	{
-		line_string = "cpu_speed=real";
+		line_string = "cpu_multiplier=2";
 		parse_cfg_line(prefs, line_string);
 	}
 	else if (strcmpi(game_detail.clock.c_str(), "14") == 0)
 	{
-		line_string = "finegrain_cpu_speed=1024";
+		line_string = "cpu_multiplier=4";
 		parse_cfg_line(prefs, line_string);
 	}
 	else if (strcmpi(game_detail.clock.c_str(), "28") == 0 || strcmpi(game_detail.clock.c_str(), "25") == 0)
 	{
-		line_string = "finegrain_cpu_speed=128";
+		line_string = "cpu_multiplier=8";
 		parse_cfg_line(prefs, line_string);
 	}
 	else if (strcmpi(game_detail.clock.c_str(), "max") == 0)
@@ -704,13 +702,6 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 		parse_cfg_line(prefs, line_string);
 	}
 
-	// FAST COPPER
-	if (strcmpi(game_detail.fastcopper.c_str(), "true") == 0)
-	{
-		line_string = "fast_copper=true";
-		parse_cfg_line(prefs, line_string);
-	}
-
 	// BLITTER=IMMEDIATE/WAIT/NORMAL
 	if (strcmpi(game_detail.blitter.c_str(), "immediate") == 0)
 	{
@@ -719,7 +710,7 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 	}
 	else if (strcmpi(game_detail.blitter.c_str(), "normal") == 0)
 	{
-		line_string = "waiting_blits=disabled";
+		line_string = "waiting_blits=automatic";
 		parse_cfg_line(prefs, line_string);
 	}
 
@@ -1347,7 +1338,6 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	write_log("WHDBooter - Game: Fast Ram   : %s  \n", game_detail.fast.c_str());
 	write_log("WHDBooter - Game: Z3 Ram     : %s  \n", game_detail.z3.c_str());
 	write_log("WHDBooter - Game: CPU Exact  : %s  \n", game_detail.cpu_exact.c_str());
-	write_log("WHDBooter - Game: Fast Copper: %s  \n", game_detail.fastcopper.c_str());
 
 	write_log("WHDBooter - Host: Controller 1   : %s  \n", amiberry_options.default_controller1);
 	write_log("WHDBooter - Host: Controller 2   : %s  \n", amiberry_options.default_controller2);

@@ -26,7 +26,6 @@ extern frame_time_t vsynctimebase, syncbase;
 extern void reset_frame_rate_hack(void);
 extern evt_t vsync_cycles;
 extern evt_t start_cycles;
-extern int event2_count;
 extern bool event_wait;
 
 extern void event_init(void);
@@ -37,7 +36,6 @@ extern void do_cycles_ce020(int cycles);
 extern void events_schedule(void);
 extern void do_cycles_slow(int cycles_to_add);
 extern void events_reset_syncline(void);
-extern void modify_eventcounter(int diff);
 extern void clear_events(void);
 
 extern bool is_cycle_ce(uaecptr);
@@ -48,10 +46,6 @@ extern evt_t is_syncline_end;
 typedef void (*evfunc)(void);
 typedef void (*evfunc2)(uae_u32);
 
-typedef void (*do_cycles_func)(int);
-extern do_cycles_func do_cycles;
-void do_cycles_cpu_fastest(int cycles_to_add);
-void do_cycles_cpu_norm(int cycles_to_add);
 struct ev
 {
 	bool active;
@@ -70,13 +64,13 @@ struct ev2
 
 // hsync handlers must have priority over misc
 enum {
-	ev_copper, 
-	ev_cia, ev_audio, ev_hsync, ev_hsynch, ev_misc,
+	ev_cia, ev_hsync, ev_hsynch, ev_misc,
+	ev_audio,
 	ev_max
 };
 
 enum {
-	ev2_blitter, ev2_disk, ev2_misc,
+	ev2_blitter, ev2_misc,
 	ev2_max = 12
 };
 
@@ -84,11 +78,11 @@ extern int pissoff_value;
 extern int pissoff;
 
 #define countdown pissoff
+#define do_cycles do_cycles_slow
 
 extern struct ev eventtab[ev_max];
 extern struct ev2 eventtab2[ev2_max];
 
-extern int hpos_offset;
 extern int maxhpos;
 
 STATIC_INLINE void cycles_do_special (void)

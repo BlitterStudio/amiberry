@@ -43,10 +43,12 @@ using namespace std;
 #if defined(__arm__) || defined(_M_ARM)
 #define CPU_arm 1
 #define ARM_ASSEMBLY 1
+#define ARMV6_ASSEMBLY 1
 #elif defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__aarch64__)
 #define CPU_arm 1
 #define CPU_64_BIT 1
 #define ARM_ASSEMBLY 1
+#define ARMV6_ASSEMBLY 1
 #elif defined(__x86_64__) || defined(_M_AMD64)
 #define CPU_x86_64 1
 #define CPU_64_BIT 1
@@ -348,6 +350,7 @@ extern void mallocemu_free (void *ptr);
 #endif
 
 extern void write_log (const TCHAR *,...);
+extern int read_log(void);
 
 extern void flush_log (void);
 extern TCHAR *setconsolemode (TCHAR *buffer, int maxlen);
@@ -364,6 +367,7 @@ extern TCHAR console_getch(void);
 extern void f_out(FILE*, const TCHAR*, ...);
 extern TCHAR* buf_out (TCHAR *buffer, int *bufsize, const TCHAR *format, ...);
 extern void gui_message (const TCHAR *,...);
+extern TCHAR* write_log_get_ts(void);
 
 #ifndef O_BINARY
 #define O_BINARY 0

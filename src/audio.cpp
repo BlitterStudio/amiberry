@@ -1520,9 +1520,9 @@ uae_u16 audio_dmal(void)
 	for (int nr = 0; nr < AUDIO_CHANNELS_PAULA; nr++) {
 		struct audio_channel_data *cdp = audio_channel + nr;
 		if (cdp->dr)
-			dmal |= 1 << (nr * 2);
-		if (cdp->dsr)
 			dmal |= 1 << (nr * 2 + 1);
+		if (cdp->dsr)
+			dmal |= 1 << (nr * 2 + 0);
 		cdp->dr = cdp->dsr = false;
 	}
 	return dmal;

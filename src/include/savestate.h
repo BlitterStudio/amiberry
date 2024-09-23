@@ -116,7 +116,7 @@ extern uae_u8 *restore_custom_slots(uae_u8 *src);
 extern uae_u8 *save_custom_slots(size_t *len, uae_u8 *dstptr);
 
 extern uae_u8 *restore_blitter (uae_u8 *src);
-extern uae_u8 *save_blitter (size_t *len, uae_u8 *);
+extern uae_u8 *save_blitter (size_t *len, uae_u8 *, bool);
 extern uae_u8 *restore_blitter_new (uae_u8 *src);
 extern uae_u8 *save_blitter_new (size_t *len, uae_u8 *);
 extern void restore_blitter_finish (void);

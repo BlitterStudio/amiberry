@@ -12,7 +12,24 @@
 #include "uae/types.h"
 #include "machdep/rpt.h"
 
-extern bool aga_mode;
+#define BEAMCON0_HARDDIS	0x4000
+#define BEAMCON0_LPENDIS	0x2000
+#define BEAMCON0_VARVBEN	0x1000
+#define BEAMCON0_LOLDIS		0x0800
+#define BEAMCON0_CSCBEN		0x0400
+#define BEAMCON0_VARVSYEN	0x0200
+#define BEAMCON0_VARHSYEN	0x0100
+#define BEAMCON0_VARBEAMEN	0x0080
+#define BEAMCON0_DUAL		0x0040
+#define BEAMCON0_PAL		0x0020
+#define BEAMCON0_VARCSYEN	0x0010
+#define BEAMCON0_BLANKEN	0x0008
+#define BEAMCON0_CSYTRUE	0x0004
+#define BEAMCON0_VSYTRUE	0x0002
+#define BEAMCON0_HSYTRUE	0x0001
+
+extern bool aga_mode, ecs_agnus, ecs_denise;
+extern bool agnusa1000, denisea1000_noehb, denisea1000;
 extern bool direct_rgb;
 
 /* These are the masks that are ORed together in the chipset_mask option.
@@ -28,23 +45,25 @@ extern bool direct_rgb;
 #define MAXHPOS_ROWS 256
 #define MAXVPOS_LINES_ECS 2048
 #define MAXVPOS_LINES_OCS 512
-#define HPOS_SHIFT 3
 
-uae_u32 get_copper_address (int copno);
+#define BLIT_NASTY_CPU_STEAL_CYCLE_COUNT 3
 
-extern int custom_init (void);
-extern void custom_prepare (void);
-extern void custom_reset (bool hardreset, bool keyboardreset);
-extern int intlev (void);
-extern void dumpcustom (void);
+uae_u32 get_copper_address(int copno);
 
-extern void do_copper (void);
+extern int custom_init(void);
+extern void custom_prepare(void);
+extern void custom_reset(bool hardreset, bool keyboardreset);
+extern int intlev(void);
+extern void intlev_ack(int);
+extern void dumpcustom(void);
 
-extern void notice_new_xcolors (void);
+extern void do_copper(void);
+
+extern void notice_new_xcolors(void);
 extern void notice_screen_contents_lost(int monid);
-extern void init_row_map (void);
-extern void init_hz_normal (void);
-extern void init_custom (void);
+extern void init_row_map(void);
+extern void init_hz_normal(void);
+extern void init_custom(void);
 
 extern void set_picasso_hack_rate(int hz);
 
@@ -56,32 +75,15 @@ extern uae_u32 hsync_counter, vsync_counter;
 extern uae_u16 dmacon;
 extern uae_u16 intena, intreq, intreqr;
 
-extern int vpos, lof_store;
+extern int vpos, lof_store, lof_display;
+extern int scandoubled_line;
 
 extern int n_frames;
 
-STATIC_INLINE int dmaen (unsigned int dmamask)
+STATIC_INLINE int dmaen(unsigned int dmamask)
 {
 	return (dmamask & dmacon) && (dmacon & 0x200);
 }
-
-#define SPCFLAG_STOP 2
-#define SPCFLAG_COPPER 4
-#define SPCFLAG_INT 8
-#define SPCFLAG_BRK 16
-#define SPCFLAG_UAEINT 32
-#define SPCFLAG_TRACE 64
-#define SPCFLAG_DOTRACE 128
-#define SPCFLAG_DOINT 256 /* arg, JIT fails without this.. */
-#define SPCFLAG_BLTNASTY 512
-#define SPCFLAG_EXEC 1024
-#define SPCFLAG_ACTION_REPLAY 2048
-#define SPCFLAG_TRAP 4096 /* enforcer-hack */
-#define SPCFLAG_MODE_CHANGE 8192
-#ifdef JIT
-#define SPCFLAG_END_COMPILE 16384
-#endif
-#define SPCFLAG_CHECK 32768
 
 extern uae_u16 adkcon;
 
@@ -102,7 +104,7 @@ extern uae_u16 INTREQR(void);
 #define MAXVPOS 312
 #else
 #define MAXHPOS 256
-#define MAXVPOS 592
+#define MAXVPOS 800
 #endif
 
 /* PAL/NTSC values */
@@ -116,23 +118,27 @@ extern uae_u16 INTREQR(void);
 #define VBLANK_ENDLINE_PAL 26
 #define VBLANK_ENDLINE_NTSC 21
 // line when sprite DMA fetches first control words
-#define VBLANK_SPRITE_PAL 25
-#define VBLANK_SPRITE_NTSC 20
+#define VBLANK_STOP_PAL 25
+#define VBLANK_STOP_NTSC 20
 #define VBLANK_HZ_PAL 50
 #define VBLANK_HZ_NTSC 60
 #define VSYNC_ENDLINE_PAL 5
 #define VSYNC_ENDLINE_NTSC 6
 #define EQU_ENDLINE_PAL 8
-#define EQU_ENDLINE_NTSC 10
+#define EQU_ENDLINE_NTSC 9
 
-extern int maxhpos, maxhpos_short;
-extern int maxvpos, maxvpos_nom, maxvpos_display;
-extern int hsyncstartpos, hsyncendpos;
-extern int minfirstline, vblank_endline, numscrlines;
+#define OCS_DENISE_HBLANK_DISABLE_HPOS 0x2e
+
+extern int maxhpos, maxhposm0, maxhpos_short;
+extern int maxvpos, maxvpos_nom, maxvpos_display, maxvpos_display_vsync, maxhpos_display;
+extern int maxvsize_display;
+extern int hsyncstartpos_hw, hsyncendpos_hw;
+extern int minfirstline, minfirstline_linear, vblank_endline, numscrlines;
 extern float vblank_hz, fake_vblank_hz;
 extern float hblank_hz;
 extern int vblank_skip, doublescan;
-extern bool programmedmode;
+extern int programmedmode;
+extern int vblank_firstline_hw;
 extern int display_reset;
 
 #define DMA_AUD0      0x0001
@@ -147,29 +153,29 @@ extern int display_reset;
 #define DMA_MASTER    0x0200
 #define DMA_BLITPRI   0x0400
 
-#define CYCLE_REFRESH	1
-#define CYCLE_STROBE	2
-#define CYCLE_MISC		3
-#define CYCLE_SPRITE	4
-#define CYCLE_COPPER	5
-#define CYCLE_BLITTER	6
-#define CYCLE_CPU		7
-#define CYCLE_CPUNASTY	8
-#define CYCLE_COPPER_SPECIAL 0x10
+#define CYCLE_BITPLANE  1
+#define CYCLE_REFRESH	2
+#define CYCLE_STROBE	3
+#define CYCLE_MISC		4
+#define CYCLE_SPRITE	5
+#define CYCLE_COPPER	6
+#define CYCLE_BLITTER	7
+#define CYCLE_CPU		8
 
 #define CYCLE_MASK 0x0f
 
 extern uae_u32 timeframes;
 extern evt_t frametime;
-extern uae_u16 htotal, vtotal, beamcon0;
+extern uae_u16 htotal, vtotal, beamcon0, new_beamcon0;
+extern uae_u16 bemcon0_hsync_mask, bemcon0_vsync_mask;
 
-/* 100 words give you 1600 horizontal pixels. Should be more than enough for
-* superhires. Don't forget to update the definition in genp2c.c as well.
-* needs to be larger for superhires support */
+// 100 words give you 1600 horizontal pixels. Should be more than enough for superhires. 
+// Extreme overscan superhires needs more.
+// must be divisible by 8
 #ifdef CUSTOM_SIMPLE
-#define MAX_WORDS_PER_LINE 50
+#define MAX_WORDS_PER_LINE 56
 #else
-#define MAX_WORDS_PER_LINE 100
+#define MAX_WORDS_PER_LINE 112
 #endif
 
 extern uae_u32 hirestab_h[256][2];
@@ -201,14 +207,14 @@ extern int xbluecolor_s, xbluecolor_b, xbluecolor_m;
 /* get resolution from bplcon0 */
 STATIC_INLINE int GET_RES_DENISE(uae_u16 con0)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_DENISE)) {
+	if (!ecs_denise) {
 		con0 &= ~0x40; // SUPERHIRES
 	}
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
 }
 STATIC_INLINE int GET_RES_AGNUS(uae_u16 con0)
 {
-	if (!(currprefs.chipset_mask & CSMASK_ECS_AGNUS)) {
+	if (!ecs_agnus) {
 		con0 &= ~0x40; // SUPERHIRES
 	}
 	return ((con0) & 0x40) ? RES_SUPERHIRES : ((con0) & 0x8000) ? RES_HIRES : RES_LORES;
@@ -225,7 +231,7 @@ STATIC_INLINE int GET_PLANES(uae_u16 bplcon0)
 	return (bplcon0 >> 12) & 7; // normal planes bits
 }
 
-extern void fpscounter_reset (void);
+extern void fpscounter_reset(void);
 extern frame_time_t idletime;
 extern int lightpen_x[2], lightpen_y[2];
 extern int lightpen_cx[2], lightpen_cy[2], lightpen_active, lightpen_enabled, lightpen_enabled2;
@@ -234,18 +240,47 @@ struct customhack {
 	uae_u16 v;
 	int vpos, hpos;
 };
-void customhack_put (struct customhack *ch, uae_u16 v, int hpos);
-uae_u16 customhack_get (struct customhack *ch, int hpos);
-extern void alloc_cycle_ext (int, int);
-extern void alloc_cycle_blitter (int hpos, uaecptr *ptr, int);
-extern bool ispal (void);
-extern bool isvga (void);
-extern int current_maxvpos (void);
-extern struct chipset_refresh *get_chipset_refresh (struct uae_prefs*);
-extern void compute_framesync (void);
+extern void alloc_cycle_ext(int, int);
+extern bool alloc_cycle_blitter(int hpos, uaecptr *ptr, int, int);
+extern uaecptr alloc_cycle_blitter_conflict_or(int, int, bool*);
+extern bool ispal(int *lines);
+extern bool isvga(void);
+extern int current_maxvpos(void);
+extern struct chipset_refresh *get_chipset_refresh(struct uae_prefs*);
+extern void compute_framesync(void);
 extern void getsyncregisters(uae_u16 *phsstrt, uae_u16 *phsstop, uae_u16 *pvsstrt, uae_u16 *pvsstop);
-int is_bitplane_dma (int hpos);
+bool blitter_cant_access(int hpos);
 void custom_cpuchange(void);
+bool bitplane_dma_access(int hpos, int offset);
+void custom_dumpstate(int);
+bool get_ras_cas(uaecptr, int*, int*);
+void get_mode_blanking_limits(int *phbstop, int *phbstrt, int *pvbstop, int *pvbstrt);
+
+#define RGA_PIPELINE_ADJUST 4
+#define MAX_CHIPSETSLOTS 256
+#define MAX_CHIPSETSLOTS_EXTRA 12
+extern uae_u8 cycle_line_slot[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
+extern uae_u16 cycle_line_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
+extern uae_u16 blitter_pipe[MAX_CHIPSETSLOTS + RGA_PIPELINE_ADJUST + MAX_CHIPSETSLOTS_EXTRA];
+
+#define CYCLE_PIPE_CPUSTEAL 0x8000
+#define CYCLE_PIPE_NONE 0x4000
+#define CYCLE_PIPE_BLITTER 0x100
+#define CYCLE_PIPE_COPPER 0x80
+#define CYCLE_PIPE_SPRITE 0x40
+#define CYCLE_PIPE_BITPLANE 0x20
+#define CYCLE_PIPE_MODULO 0x10
+
+#define RGA_PIPELINE_MASK 255
+
+#define RGA_PIPELINE_OFFSET_BLITTER 1
+
+extern int rga_pipeline_blitter;
+
+STATIC_INLINE int get_rga_pipeline(int hpos, int off)
+{
+	return (hpos + off) % maxhposm0;
+}
 
 struct custom_store
 {

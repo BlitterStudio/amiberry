@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.16)
 project(capsimage)
 
 set(PROJECT_TITLE CAPSImage)
@@ -71,9 +71,9 @@ install(TARGETS ${PROJECT_NAME}
   FRAMEWORK DESTINATION "/Library/Frameworks"
   PUBLIC_HEADER DESTINATION include/caps${INCLUDE_SUFFIX})
 
-if (NOT APPLE OR NOT BUILD_FRAMEWORK)
-  install(FILES ${API_HEADERS} DESTINATION include/caps${INCLUDE_SUFFIX})
-endif()
+#if (NOT APPLE OR NOT BUILD_FRAMEWORK)
+#  install(FILES ${API_HEADERS} DESTINATION include/caps${INCLUDE_SUFFIX})
+#endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT BUILD_FRAMEWORK)
     message(STATUS "macOS platform detected")

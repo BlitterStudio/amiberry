@@ -31,7 +31,6 @@ static int bootlogmode;
 
 FILE* debugfile = nullptr;
 int console_logging = 0;
-int debugger_active = 0;
 static int debugger_type = -1;
 //extern BOOL debuggerinitializing;
 BOOL debuggerinitializing = false;
@@ -232,6 +231,14 @@ void close_console (void)
 
 #endif
 	consoleopen = 0;
+}
+
+int read_log(void)
+{
+	if (consoleopen >= 0)
+		return -1;
+	//TODO needs implementation
+	return -1;
 }
 
 static void writeconsole_2 (const TCHAR *buffer)

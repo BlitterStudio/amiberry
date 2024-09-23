@@ -295,26 +295,26 @@ static void get_expansionrom_gui(expansionrom_gui* eg)
 
 static void setcpuboardmemsize()
 {
-	//if (changed_prefs.cpuboardmem1.size > cpuboard_maxmemory(&changed_prefs))
-	//	changed_prefs.cpuboardmem1.size = cpuboard_maxmemory(&changed_prefs);
+	if (changed_prefs.cpuboardmem1.size > cpuboard_maxmemory(&changed_prefs))
+		changed_prefs.cpuboardmem1.size = cpuboard_maxmemory(&changed_prefs);
 
-	//if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_Z2) {
-	//	changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
-	//}
-	//if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_25BITMEM) {
-	//	changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
-	//}
-	//if (changed_prefs.cpuboard_type == 0) {
-	//	changed_prefs.mem25bit.size = 0;
-	//}
+	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_Z2) {
+		changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
+	}
+	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_25BITMEM) {
+		changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
+	}
+	if (changed_prefs.cpuboard_type == 0) {
+		changed_prefs.mem25bit.size = 0;
+	}
 
-	//if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_HIGHMEM)
-	//	changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_HIGHMEM)
+		changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
 
-	//int maxmem = cpuboard_maxmemory(&changed_prefs);
-	//if (changed_prefs.cpuboardmem1.size > maxmem) {
-	//	changed_prefs.cpuboardmem1.size = maxmem;
-	//}
+	int maxmem = cpuboard_maxmemory(&changed_prefs);
+	if (changed_prefs.cpuboardmem1.size > maxmem) {
+		changed_prefs.cpuboardmem1.size = maxmem;
+	}
 	//if (maxmem <= 8 * 1024 * 1024)
 	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_Z2));
 	//else if (maxmem <= 16 * 1024 * 1024)
@@ -328,19 +328,19 @@ static void setcpuboardmemsize()
 	//else
 	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_256M));
 
-	//int mem_size = 0;
-	//switch (changed_prefs.cpuboardmem1.size) {
-	//case 0x00000000: mem_size = 0; break;
-	//case 0x00100000: mem_size = 1; break;
-	//case 0x00200000: mem_size = 2; break;
-	//case 0x00400000: mem_size = 3; break;
-	//case 0x00800000: mem_size = 4; break;
-	//case 0x01000000: mem_size = 5; break;
-	//case 0x02000000: mem_size = 6; break;
-	//case 0x04000000: mem_size = 7; break;
-	//case 0x08000000: mem_size = 8; break;
-	//case 0x10000000: mem_size = 9; break;
-	//}
+	int mem_size = 0;
+	switch (changed_prefs.cpuboardmem1.size) {
+	case 0x00000000: mem_size = 0; break;
+	case 0x00100000: mem_size = 1; break;
+	case 0x00200000: mem_size = 2; break;
+	case 0x00400000: mem_size = 3; break;
+	case 0x00800000: mem_size = 4; break;
+	case 0x01000000: mem_size = 5; break;
+	case 0x02000000: mem_size = 6; break;
+	case 0x04000000: mem_size = 7; break;
+	case 0x08000000: mem_size = 8; break;
+	case 0x10000000: mem_size = 9; break;
+	}
 	//SendDlgItemMessage(hDlg, IDC_CPUBOARDMEM, TBM_SETPOS, TRUE, mem_size);
 	//SetDlgItemText(hDlg, IDC_CPUBOARDRAM, memsize_names[msi_cpuboard[mem_size]]);
 	//SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);
@@ -859,7 +859,7 @@ public:
 			changed_prefs.cpuboard_subtype = 0;
 			changed_prefs.cpuboard_settings = 0;
 			updatecpuboardsubtypes();
-			//cpuboard_set_cpu(&changed_prefs);
+			cpuboard_set_cpu(&changed_prefs);
 			setcpuboardmemsize();
 			RefreshPanelExpansions();
 		}
@@ -868,7 +868,7 @@ public:
 			changed_prefs.cpuboard_subtype = cboCpuBoardSubType->getSelected();
 			changed_prefs.cpuboard_settings = 0;
 			updatecpuboardsubtypes();
-			//cpuboard_set_cpu(&changed_prefs);
+			cpuboard_set_cpu(&changed_prefs);
 			setcpuboardmemsize();
 			RefreshPanelExpansions();
 		}	
@@ -1079,7 +1079,7 @@ void InitPanelExpansions(const config_category& category)
 	chkSana2->setBackgroundColor(gui_textbox_background_color);
 	chkSana2->setForegroundColor(gui_foreground_color);
 	chkSana2->addActionListener(expansions_action_listener);
-	chkSana2->setEnabled(false); //TODO enable this when SANA2 support is implemented
+	chkSana2->setEnabled(true);
 	
 	int posY = DISTANCE_BORDER;
 	int posX = DISTANCE_BORDER;

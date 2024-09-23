@@ -49,7 +49,7 @@ static TCHAR *parsedvaluess[MAX_VALUES];
 // 2            * / %           left to right
 // 3            + -             left to right
 // 4            =               right to left
-static int op_preced(const TCHAR c)
+static int op_preced(const unsigned char c)
 {
     switch(c)    {
         case 0xf0: case 0xf1: case 0xf2:
@@ -70,7 +70,7 @@ static int op_preced(const TCHAR c)
     return 0;
 }
  
-static bool op_left_assoc(const TCHAR c)
+static bool op_left_assoc(const unsigned char c)
 {
     switch(c)    {
         // left to right
@@ -85,7 +85,7 @@ static bool op_left_assoc(const TCHAR c)
     return false;
 }
  
-static unsigned int op_arg_count(const TCHAR c)
+static unsigned int op_arg_count(const unsigned char c)
 {
     switch(c)  {
         case '?':
@@ -310,7 +310,7 @@ static TCHAR *stacktostring(struct calcstack *st)
 }
 
 
-static TCHAR *docalcxs(TCHAR op, TCHAR *v1, TCHAR *v2, double *voutp)
+static TCHAR *docalcxs(unsigned char op, TCHAR *v1, TCHAR *v2, double *voutp)
 {
     TCHAR tmp[MAX_DPATH];
     tmp[0] = 0;
@@ -348,7 +348,7 @@ static TCHAR *docalcxs(TCHAR op, TCHAR *v1, TCHAR *v2, double *voutp)
     return my_strdup(tmp);
 }
 
-static bool docalcx(TCHAR op, double v1, double v2, double *valp)
+static bool docalcx(unsigned char op, double v1, double v2, double *valp)
 {
     double v = 0;
 	switch (op)
@@ -422,7 +422,7 @@ static bool docalcx(TCHAR op, double v1, double v2, double *valp)
 
 static bool docalc2(TCHAR op, struct calcstack *sv1, struct calcstack *sv2, double *valp, TCHAR *sp)
 {
-    *sp = NULL;
+    sp = NULL;
     *valp = 0;
     if (isstackstring(sv1) || isstackstring(sv2)) {
         TCHAR *v1 = stacktostring(sv1);
@@ -481,7 +481,7 @@ static TCHAR *chartostack(TCHAR c)
 	return s;
 }
 
-static struct calcstack stack[STACK_SIZE];
+static struct calcstack calc_stack[STACK_SIZE];
 
 static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
 {
@@ -506,7 +506,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
                 // If the token is a value or identifier
         if(is_ident(c))    {
                         // Push it onto the stack.
-			stack[sl].s = chartostack (c);
+            calc_stack[sl].s = chartostack (c);
             ++sl;
         }
                 // Otherwise, the token is an operator  (operator here includes both operators, and functions).
@@ -526,7 +526,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
                         if(is_function(c)) {
                                 calc_log ((_T("%c("), c));
                                 while(nargs > 0){
-                                        sc = &stack[sl - nargs]; // to remove reverse order of arguments
+                                        sc = &calc_stack[sl - nargs]; // to remove reverse order of arguments
                                         if(nargs > 1)   {
                                                 calc_log ((_T("%s, "), sc));
                                         }
@@ -539,25 +539,25 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
                         }
                         else   {
                                 if(nargs == 1) {
-                                        sc = &stack[sl - 1];
+                                        sc = &calc_stack[sl - 1];
                                         sl--;
 										docalc1 (c, sc, val, &val, vals);
 										calc_log ((_T("%c %s = %f;\n"), c, stacktostr(sc), val));
                                }
                                 else if (nargs == 2) {
-                                        sc = &stack[sl - 2];
+                                        sc = &calc_stack[sl - 2];
                                         calc_log ((_T("%s %c "), stacktostr(sc), c));
-                                        sc2 = &stack[sl - 1];
+                                        sc2 = &calc_stack[sl - 1];
 										docalc2 (c, sc, sc2, &val, vals);
                                         sl--;sl--;
                                         calc_log ((_T("%s = %f;\n"), stacktostr(sc2), val));
                                } else if (nargs == 3) {
                                         // ternary
-                                        sc = &stack[sl - 3];
+                                        sc = &calc_stack[sl - 3];
                                         if (sc->val != 0) {
-                                            sc2 = &stack[sl - 2];
+                                            sc2 = &calc_stack[sl - 2];
                                         } else {
-                                            sc2 = &stack[sl - 1];
+                                            sc2 = &calc_stack[sl - 1];
                                         }
                                         sl--;sl--;sl--;
                                         if (isstackstring(sc2)) {
@@ -569,11 +569,11 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
                                }
                         }
                         // Push the returned results, if any, back onto the stack.
-						stack[sl].val = val;
-                        xfree(stack[sl].vals);
-                        stack[sl].vals = my_strdup(vals);
-                        xfree(stack[sl].s);
-                        stack[sl].s = NULL;
+                        calc_stack[sl].val = val;
+                        xfree(calc_stack[sl].vals);
+                        calc_stack[sl].vals = my_strdup(vals);
+                        xfree(calc_stack[sl].s);
+                        calc_stack[sl].s = NULL;
             ++sl;
         }
         ++strpos;
@@ -581,7 +581,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
         // If there is only one value in the stack
         // That value is the result of the calculation.
         if(sl == 1) {
-                sc = &stack[sl - 1];
+                sc = &calc_stack[sl - 1];
                 sl--;
 				calc_log ((_T("result = %f\n"), val));
 				if (outval)
@@ -595,10 +595,10 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
 				ok = true;
 		}
 		for (i = 0; i < STACK_SIZE; i++) {
-            xfree(stack[i].s);
-            stack[i].s = NULL;
-            xfree(stack[i].vals);
-            stack[i].vals = NULL;
+            xfree(calc_stack[i].s);
+            calc_stack[i].s = NULL;
+            xfree(calc_stack[i].vals);
+            calc_stack[i].vals = NULL;
         }
  
 		// If there are more values in the stack
@@ -684,20 +684,64 @@ static bool parse_values(const TCHAR *ins, TCHAR *out)
             *in = '@' | 0x80;
             *(in + 1) = ' ';
         }
-        if (_istdigit (*in)) {
+        if (_totupper (*in) == 'R') {
+            if (ident >= MAX_VALUES)
+                return false;
+            TCHAR *tmpp = in + 1;
+            int idx = getregidx(&tmpp);
+            if (idx >= 0) {
+                *p++ = ident + 'a';
+                uae_u32 val = returnregx(idx);
+                parsedvaluesd[ident++] = val;
+                in = tmpp;
+            } else {
+                in++;
+            }
+            op = 0;
+        } else if (_istxdigit(*in) || *in == '$') {
 			if (ident >= MAX_VALUES)
 				return false;
-			if (op > 1 && (in[-1] == '-' || in[-1] == '+')) {
-				instart--;
-				p--;
-			}
-			*p++ = ident + 'a';
-			while (_istdigit (*in) || *in == '.')
-				in++;
-			tmp = *in;
-			*in = 0;
-			parsedvaluesd[ident++] = _tstof (instart);
-			*in = tmp;
+            if (op > 1 && (in[-1] == '-' || in[-1] == '+')) {
+                instart--;
+                p--;
+            }
+            *p++ = ident + 'a';
+            bool hex = false;
+            if (*in == '$') {
+                in++;
+                hex = true;
+            }
+            if (!hex) {
+                TCHAR *tmpp = in;
+                while (_istxdigit(*tmpp)) {
+                    tmp = _totupper(*tmpp);
+                    if (tmp >= 'A' && tmp <= 'F') {
+                        hex = true;
+                    }
+                    tmpp++;
+                }
+            }
+            if (hex) {
+                uae_u32 val = 0;
+                while (_istxdigit(*in)) {
+                    val *= 16;
+                    TCHAR c = _totupper(*in);
+                    if (_istdigit(c)) {
+                        val += c - '0';
+                    } else {
+                        val += c - 'A' + 10;
+                    }
+                    in++;
+                }
+                parsedvaluesd[ident++] = val;
+            } else {
+			    while (_istdigit(*in) || *in == '.')
+				    in++;
+			    tmp = *in;
+			    *in = 0;
+			    parsedvaluesd[ident++] = _tstof(instart);
+                *in = tmp;
+            }
 			op = 0;
 		} else {
 			if (is_operator(*in))
@@ -721,7 +765,7 @@ int calc(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
         outstring[0] = 0;
     }
     for (int i = 0; i < STACK_SIZE; i++) {
-        struct calcstack *s = &stack[i];
+        struct calcstack *s = &calc_stack[i];
         memset(s, 0, sizeof(struct calcstack));
     }
     if (parse_values(input, output2)) {
@@ -744,7 +788,7 @@ int calc(const TCHAR *input, double *outval, TCHAR *outstring, int maxlen)
         parsedvaluess[i] = NULL;
     }
     for (int i = 0; i < STACK_SIZE; i++) {
-        struct calcstack *s = &stack[i];
+        struct calcstack *s = &calc_stack[i];
         xfree(s->vals);
         xfree(s->s);
         memset(s, 0, sizeof(struct calcstack));

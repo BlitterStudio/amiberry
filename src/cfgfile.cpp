@@ -18,7 +18,7 @@
 #include "events.h"
 #include "custom.h"
 #include "inputdevice.h"
-//#include "gfxfilter.h"
+#include "gfxfilter.h"
 #include "savestate.h"
 #include "memory.h"
 #include "autoconf.h"
@@ -327,7 +327,7 @@ static const TCHAR *obsolete[] = {
 	_T("gfx_immediate_blits"), _T("gfx_ntsc"), _T("win32"), _T("gfx_filter_bits"),
 	_T("sound_pri_cutoff"), _T("sound_pri_time"), _T("sound_min_buff"), _T("sound_bits"),
 	_T("gfx_test_speed"), _T("gfxlib_replacement"), _T("enforcer"), _T("catweasel_io"),
-	_T("kickstart_key_file"), _T("sound_adjust"), _T("sound_latency"),
+	_T("kickstart_key_file"), _T("fast_copper"), _T("sound_adjust"), _T("sound_latency"),
 	_T("serial_hardware_dtrdsr"), _T("gfx_filter_upscale"),
 	_T("gfx_autoscale"), _T("parallel_sampler"), _T("parallel_ascii_emulation"),
 	_T("avoid_vid"), _T("avoid_dga"), _T("z3chipmem_size"), _T("state_replay_buffer"), _T("state_replay"),
@@ -2551,7 +2551,6 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("waiting_blits"), waitblits, p->waiting_blits);
 	cfgfile_dwrite (f, _T("blitter_throttle"), _T("%.8f"), p->blitter_speed_throttle);
 #ifdef AMIBERRY
-	cfgfile_write_bool (f, _T("fast_copper"), p->fast_copper);
 	cfgfile_write_bool(f, _T("multithreaded_drawing"), p->multithreaded_drawing);
 #endif
 	cfgfile_write_bool (f, _T("ntsc"), p->ntscmode);
@@ -2735,10 +2734,10 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite(f, _T("ramsey"), _T("%d"), p->cs_ramseyrev);
 	cfgfile_dwrite_bool(f, _T("pcmcia"), p->cs_pcmcia);
 	cfgfile_dwrite_bool(f, _T("resetwarning"), p->cs_resetwarning);
-	cfgfile_dwrite_bool(f, _T("denise_noehb"), p->cs_denisenoehb);
-	cfgfile_dwrite_bool(f, _T("agnus_bltbusybug"), p->cs_agnusbltbusybug);
+	cfgfile_dwrite_bool(f, _T("denise_noehb"), p->cs_denisemodel == DENISEMODEL_VELVET || p->cs_denisemodel == DENISEMODEL_A1000NOEHB);
+	cfgfile_dwrite_bool(f, _T("agnus_bltbusybug"), p->cs_agnusmodel == AGNUSMODEL_A1000);
 	cfgfile_dwrite_bool(f, _T("bkpt_halt"), p->cs_bkpthang);
-	cfgfile_dwrite_bool(f, _T("ics_agnus"), p->cs_dipagnus);
+	cfgfile_dwrite_bool(f, _T("ics_agnus"), p->cs_agnusmodel == AGNUSMODEL_A1000);
 	cfgfile_dwrite_bool(f, _T("cia_todbug"), p->cs_ciatodbug);
 	cfgfile_dwrite_bool(f, _T("z3_autoconfig"), p->cs_z3autoconfig);
 	cfgfile_dwrite_bool(f, _T("1mchipjumper"), p->cs_1mchipjumper);
@@ -2756,6 +2755,9 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite(f, _T("chipset_hacks"), _T("0x%x"), p->cs_hacks);
 	cfgfile_dwrite(f, _T("eclockphase"), _T("%d"), p->cs_eclockphase);
 	cfgfile_dwrite_strarr(f, _T("eclocksync"), eclocksync, p->cs_eclocksync);
+	cfgfile_dwrite_strarr(f, _T("agnusmodel"), agnusmodel, p->cs_agnusmodel);
+	cfgfile_dwrite_strarr(f, _T("agnussize"), agnussize, p->cs_agnussize);
+	cfgfile_dwrite_strarr(f, _T("denisemodel"), denisemodel, p->cs_denisemodel);
 	if (p->seed) {
 		cfgfile_write(f, _T("rndseed"), _T("%d"), p->seed);
 	}
@@ -5869,9 +5871,27 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 	if (cfgfile_string(option, value, _T("jit_blacklist"), p->jitblacklist, sizeof p->jitblacklist / sizeof(TCHAR)))
 		return 1;
 
+	if (cfgfile_yesno(option, value, _T("denise_noehb"), &dummybool)) {
+		if (dummybool) {
+			p->cs_denisemodel = DENISEMODEL_A1000NOEHB;
+		}
+		return 1;
+	}
+	if (cfgfile_yesno(option, value, _T("ics_agnus"), &dummybool)) {
+		if (dummybool) {
+			p->cs_agnusmodel = AGNUSMODEL_A1000;
+		}
+		return 1;
+	}
+	if (cfgfile_yesno(option, value, _T("agnus_bltbusybug"), &dummybool)) {
+		if (dummybool) {
+			p->cs_agnusmodel = AGNUSMODEL_A1000;
+		}
+		return 1;
+	}
+
 	if (cfgfile_yesno(option, value, _T("immediate_blits"), &p->immediate_blits)
 #ifdef AMIBERRY
-		|| cfgfile_yesno(option, value, _T("fast_copper"), &p->fast_copper)
 		|| cfgfile_yesno(option, value, _T("multithreaded_drawing"), &p->multithreaded_drawing)
 #endif
 		|| cfgfile_yesno(option, value, _T("fpu_no_unimplemented"), &p->fpu_no_unimplemented)
@@ -5888,14 +5908,11 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("ksmirror_a8"), &p->cs_ksmirror_a8)
 		|| cfgfile_yesno(option, value, _T("resetwarning"), &p->cs_resetwarning)
 		|| cfgfile_yesno(option, value, _T("cia_todbug"), &p->cs_ciatodbug)
-		|| cfgfile_yesno(option, value, _T("denise_noehb"), &p->cs_denisenoehb)
-		|| cfgfile_yesno(option, value, _T("ics_agnus"), &p->cs_dipagnus)
 		|| cfgfile_yesno(option, value, _T("z3_autoconfig"), &p->cs_z3autoconfig)
 		|| cfgfile_yesno(option, value, _T("color_burst"), &p->cs_color_burst)
 		|| cfgfile_yesno(option, value, _T("toshiba_gary"), &p->cs_toshibagary)
 		|| cfgfile_yesno(option, value, _T("rom_is_slow"), &p->cs_romisslow)
 		|| cfgfile_yesno(option, value, _T("1mchipjumper"), &p->cs_1mchipjumper)
-		|| cfgfile_yesno(option, value, _T("agnus_bltbusybug"), &p->cs_agnusbltbusybug)
 		|| cfgfile_yesno(option, value, _T("bkpt_halt"), &p->cs_bkpthang)
 		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_vblank"), &p->rtg_hardwareinterrupt)
 		|| cfgfile_yesno(option, value, _T("gfxcard_hardware_sprite"), &p->rtg_hardwaresprite)
@@ -6034,6 +6051,9 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_strval(option, value, _T("ciaa_type"), &p->cs_ciatype[0], ciatype, 0)
 		|| cfgfile_strval(option, value, _T("ciab_type"), &p->cs_ciatype[1], ciatype, 0)
 		|| cfgfile_strboolval(option, value, _T("comp_flushmode"), &p->comp_hardflush, flushmode, 0)
+		|| cfgfile_strval(option, value, _T("agnusmodel"), &p->cs_agnusmodel, agnusmodel, 0)
+		|| cfgfile_strval(option, value, _T("agnussize"), &p->cs_agnussize, agnussize, 0)
+		|| cfgfile_strval(option, value, _T("denisemodel"), &p->cs_denisemodel, denisemodel, 0)
 		|| cfgfile_strval(option, value, _T("eclocksync"), &p->cs_eclocksync, eclocksync, 0))
 		return 1;
 
@@ -8904,9 +8924,9 @@ static void set_68020_compa (struct uae_prefs *p, int compa, int cd32)
 	case 0:
 		p->m68k_speed = 0;
 		if ((p->cpu_model == 68020 || p->cpu_model == 68030) && p->cachesize == 0) {
-			//p->cpu_cycle_exact = 1;
-			//p->cpu_memory_cycle_exact = 1;
-			//p->blitter_cycle_exact = 1;
+			p->cpu_cycle_exact = 1;
+			p->cpu_memory_cycle_exact = 1;
+			p->blitter_cycle_exact = 1;
 			if (p->cpu_model == 68020)
 				p->cpu_clock_multiplier = 4 << 8;
 			else
@@ -8916,8 +8936,8 @@ static void set_68020_compa (struct uae_prefs *p, int compa, int cd32)
 	case 1:
 		p->m68k_speed = 0;
 		if ((p->cpu_model == 68020 || p->cpu_model == 68030) && p->cachesize == 0) {
-			//p->blitter_cycle_exact = 1;
-			//p->cpu_memory_cycle_exact = 1;
+			p->blitter_cycle_exact = 1;
+			p->cpu_memory_cycle_exact = 1;
 			if (p->cpu_model == 68020)
 				p->cpu_clock_multiplier = 4 << 8;
 			else
@@ -8963,7 +8983,7 @@ static void set_68000_compa (struct uae_prefs *p, int compa)
 	switch (compa)
 	{
 	case 0:
-		//p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 1;
+		p->cpu_cycle_exact = p->cpu_memory_cycle_exact = p->blitter_cycle_exact = 1;
 		break;
 	case 1:
 		break;
@@ -9011,11 +9031,7 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->floppy_speed = 0;
 	p->cpu_idle = 150;
 	p->cs_compatible = CP_A3000;
-#ifdef AMIBERRY
-	p->z3fastmem[0].size = 8 * 1024 * 1024;
-#else
 	p->mbresmem_low.size = 8 * 1024 * 1024;
-#endif
 	built_in_chipset_prefs (p);
 	p->cs_ciaatod = p->ntscmode ? 2 : 1;
 	return configure_rom (p, roms, romcheck);
@@ -9038,11 +9054,7 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x200000;
-#ifdef AMIBERRY
-	p->z3fastmem[0].size = 8 * 1024 * 1024;
-#else
 	p->mbresmem_low.size = 8 * 1024 * 1024;
-#endif
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
 	switch (config)
@@ -9095,11 +9107,7 @@ static int bip_a4000t (struct uae_prefs *p, int config, int compa, int romcheck)
 
 	p->bogomem.size = 0;
 	p->chipmem.size = 0x200000;
-#ifdef AMIBERRY
-	p->z3fastmem[0].size = 8 * 1024 * 1024;
-#else
 	p->mbresmem_low.size = 8 * 1024 * 1024;
-#endif
 	p->cpu_model = 68030;
 	p->fpu_model = 68882;
 	if (config > 0) {
@@ -9135,10 +9143,9 @@ static void bip_velvet(struct uae_prefs *p, int config, int compa, int romcheck)
 	p->cs_compatible = CP_VELVET;
 	p->bogomem.chipramtiming = false;
 	p->chipmem.size = 0x40000;
-	p->cs_dipagnus = 1;
-	p->cs_agnusbltbusybug = 1;
 	built_in_chipset_prefs (p);
-	p->cs_denisenoehb = 1;
+	p->cs_agnusmodel = AGNUSMODEL_VELVET;
+	p->cs_denisemodel = DENISEMODEL_VELVET;
 	p->cs_cia6526 = 1;
 }
 
@@ -9155,11 +9162,12 @@ static int bip_a1000 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	p->cs_compatible = CP_A1000;
 	p->bogomem.chipramtiming = false;
-	p->cs_dipagnus = 1;
-	p->cs_agnusbltbusybug = 1;
+	p->cs_agnusmodel = AGNUSMODEL_A1000;
+	p->cs_denisemodel = DENISEMODEL_A1000;
 	built_in_chipset_prefs (p);
-	if (config > 0)
-		p->cs_denisenoehb = 1;
+	if (config > 0) {
+		p->cs_denisemodel = DENISEMODEL_A1000NOEHB;
+	}
 	if (config > 1)
 		p->chipmem.size = 0x40000;
 	if (config > 2) {
@@ -9290,7 +9298,6 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->cs_rtc = 1;
 		break;
 	}
-	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
 #endif
 	return 1;
 }
@@ -9347,32 +9354,30 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 		roms_bliz[0] = 90;
 		configure_rom(p, roms_bliz, romcheck);
 		break;
+#ifdef WITH_PPC
+		case 5:
+			cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+			p->cpuboardmem1.size = 256 * 1024 * 1024;
+			p->cpu_model = 68060;
+			p->fpu_model = 68060;
+			p->ppc_mode = 1;
+			p->cs_rtc = 1;
+			roms[0] = 15;
+			roms[1] = 11;
+			roms[2] = -1;
+			roms_bliz[0] = 100;
+			configure_rom(p, roms_bliz, romcheck);
+			break;
+#endif
 #else
 		case 2:
 		p->fastmem[0].size = 0x800000;
 		p->cs_rtc = 1;
 		break;
 #endif
-#ifdef WITH_PPC
-		case 5:
-		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
-		p->cpuboardmem1.size = 256 * 1024 * 1024;
-		p->cpu_model = 68060;
-		p->fpu_model = 68060;
-		p->ppc_mode = 1;
-		p->cs_rtc = 1;
-		roms[0] = 15;
-		roms[1] = 11;
-		roms[2] = -1;
-		roms_bliz[0] = 100;
-		configure_rom(p, roms_bliz, romcheck);
-		break;
-#endif
+
 	}
 	set_68020_compa (p, compa, 0);
-#ifdef AMIBERRY
-	p->m68k_speed = M68K_SPEED_14MHZ_CYCLES;
-#endif
 	return configure_rom (p, roms, romcheck);
 }
 
@@ -9786,9 +9791,9 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 	p->cs_ramseyrev = -1;
 	p->cs_deniserev = -1;
 	p->cs_agnusrev = -1;
-	p->cs_denisenoehb = 0;
-	p->cs_dipagnus = 0;
-	p->cs_agnusbltbusybug = 0;
+	p->cs_agnusmodel = 0;
+	p->cs_agnussize = 0;
+	p->cs_denisemodel = 0;
 	p->cs_bkpthang = 0;
 	p->cs_mbdmac = 0;
 	p->cs_pcmcia = 0;
@@ -9893,8 +9898,8 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 		p->cs_a1000ram = 1;
 		p->cs_ciaatod = p->ntscmode ? 2 : 1;
 		p->cs_ksmirror_e0 = 0;
-		p->cs_agnusbltbusybug = 1;
-		p->cs_dipagnus = 1;
+		p->cs_agnusmodel = AGNUSMODEL_A1000;
+		p->cs_denisemodel = DENISEMODEL_A1000;
 		p->cs_ciatodbug = true;
 		if (has_expansion_with_rtc(p, 0x80000))
 			p->cs_rtc = 1;
@@ -9902,9 +9907,8 @@ int built_in_chipset_prefs (struct uae_prefs *p)
 	case CP_VELVET: // A1000 Prototype
 		p->cs_ciaatod = p->ntscmode ? 2 : 1;
 		p->cs_ksmirror_e0 = 0;
-		p->cs_agnusbltbusybug = 1;
-		p->cs_dipagnus = 1;
-		p->cs_denisenoehb = 1;
+		p->cs_agnusmodel = AGNUSMODEL_A1000;
+		p->cs_denisemodel = DENISEMODEL_A1000NOEHB;
 		break;
 	case CP_A1200: // A1200
 		p->cs_ide = IDE_A600A1200;

@@ -37,6 +37,8 @@ static gcn::DropDown* cboPort0mode;
 static gcn::DropDown* cboPort1mode;
 static gcn::Button* cmdSwapPorts;
 
+static gcn::Label* lblEmulatedParallelPort;
+
 static gcn::Label* lblPort0mousemode;
 static gcn::DropDown* cboPort0mousemode;
 static gcn::Label* lblPort1mousemode;
@@ -430,6 +432,8 @@ void InitPanelInput(const config_category& category)
 	cmdSwapPorts->setForegroundColor(gui_foreground_color);
 	cmdSwapPorts->addActionListener(inputActionListener);
 
+	lblEmulatedParallelPort = new gcn::Label("Emulated Parallel Port joystick adapter");
+
 	lblPort0mousemode = new gcn::Label("Mouse Map Port0:");
 	lblPort0mousemode->setAlignment(gcn::Graphics::Right);
 
@@ -547,8 +551,11 @@ void InitPanelInput(const config_category& category)
 
 	category.panel->add(cmdSwapPorts, joysaf[1]->getX(), posY);
 	category.panel->add(chkInputAutoswitch, cmdSwapPorts->getX() + cmdSwapPorts->getWidth() + DISTANCE_NEXT_X, posY + BUTTON_HEIGHT/4);
-	posY += chkInputAutoswitch->getHeight() + DISTANCE_NEXT_Y * 2;
-	
+	posY += chkInputAutoswitch->getHeight() + DISTANCE_NEXT_Y * 3;
+
+	category.panel->add(lblEmulatedParallelPort, DISTANCE_BORDER, posY);
+	posY += lblEmulatedParallelPort->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(lblPort2, DISTANCE_BORDER, posY);
 	category.panel->add(joys[2], DISTANCE_BORDER + lblPort2->getWidth() + 8, posY);
 	posY += joys[2]->getHeight() + DISTANCE_NEXT_Y;
@@ -628,6 +635,8 @@ void ExitPanelInput()
 	delete lblPort0mousemode;
 	delete lblPort1mousemode;
 	delete cmdSwapPorts;
+
+	delete lblEmulatedParallelPort;
 
 	delete lblAutofireRate;
 	delete cboAutofireRate;

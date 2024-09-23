@@ -15,7 +15,7 @@
 #include "zfile.h"
 #include "gui.h"
 #include "uae.h"
-//#include "uae/endian.h"
+#include "uae/endian.h"
 
 #include <stdint.h>
 #if defined __MACH__

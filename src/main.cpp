@@ -75,7 +75,7 @@
 #include "fsdb_host.h"
 #include "keyboard.h"
 
-static const char __ver[40] = "$VER: Amiberry 5.7.4 (2024-09-01)";
+static const char __ver[40] = "$VER: Amiberry v6.3.5 (2024-09-20)";
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
 extern int console_logging;
@@ -417,12 +417,6 @@ void fixup_cpu (struct uae_prefs *p)
 		}
 	}
 
-#ifdef AMIBERRY
-	if (p->cpu_memory_cycle_exact && p->fast_copper != 0) {
-		p->fast_copper = 0;
-		error_log(_T("Cycle-exact mode not compatible with fast copper."));
-	}
-#endif
 }
 
 void fixup_prefs (struct uae_prefs *p, bool userconfig)
@@ -1424,7 +1418,11 @@ static int real_main2 (int argc, TCHAR **argv)
 	}
 
 #ifdef NATMEM_OFFSET
+#ifdef AMIBERRY
+	preinit_shm ();
+#else
 	//preinit_shm ();
+#endif
 #endif
 
 	event_init();
@@ -1483,6 +1481,9 @@ static int real_main2 (int argc, TCHAR **argv)
 	gui_data.net = -1;
 	gui_data.md = (currprefs.cs_cd32nvram || currprefs.cs_cdtvram) ? 0 : -1;
 
+#ifdef JIT
+	compiler_init();
+#endif
 #ifdef NATMEM_OFFSET
 	if (!init_shm ()) {
 		if (currprefs.start_gui)

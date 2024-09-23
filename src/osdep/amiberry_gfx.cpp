@@ -107,6 +107,11 @@ bool gfx_hdr;
 static SDL_mutex* screen_cs = nullptr;
 static bool screen_cs_allocated;
 
+/* If we have to lock the SDL surface, then we remember the address
+ * of its pixel data - and recalculate the row maps only when this
+ * address changes */
+static void* old_pixels;
+
 void gfx_lock(void)
 {
 	SDL_LockMutex(screen_cs);
@@ -967,8 +972,11 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 	//	SDL_LockSurface(amiga_surface);
 	//int pitch;
 	//SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&vb->bufmem), &pitch);
-	if (first)
+	if (amiga_surface->pixels != old_pixels) {
+	//if (first)
 		init_row_map();
+		old_pixels = amiga_surface->pixels;
+	}
 	gfx_unlock();
 	return 1;
 }
@@ -1112,7 +1120,7 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 #if FORCE16BIT
 	mon->currentmode.current_depth = 16;
 #else
-	mon->currentmode.current_depth = currprefs.color_mode < 5 ? 16 : 32;
+	mon->currentmode.current_depth = currprefs.color_mode < 5 && currprefs.gfx_api == 1 ? 16 : 32;
 #endif
 	if (mon->screen_is_picasso && canmatchdepth() && isfullscreen() > 0) {
 		int pbits = state->BytesPerPixel * 8;
@@ -1985,6 +1993,9 @@ static void open_screen(struct uae_prefs* p)
 
 		display_width = mon->currentmode.amiga_width;
 		display_height = mon->currentmode.amiga_height;
+
+		// Force recalculation of row maps - if we're locking
+		old_pixels = (void*)-1;
 	}
 
 	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, mon->screen_is_picasso ? display_width : 1920, mon->screen_is_picasso ? display_height : 1280, display_depth, pixel_format);
@@ -2550,7 +2561,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 
 void updatedisplayarea(int monid)
 {
-	set_custom_limits(-1, -1, -1, -1);
+	set_custom_limits(-1, -1, -1, -1, false);
 	show_screen(monid, 0);
 }
 

@@ -16,12 +16,13 @@ extern void CIA_vsync_prehandler(void);
 extern void CIA_hsync_prehandler(void);
 extern void CIA_hsync_posthandler(bool, bool);
 extern void CIA_handler(void);
-extern void CIAA_tod_inc(int);
+extern void CIAA_tod_handler(int);
 extern void CIAB_tod_handler(int);
 
-extern void diskindex_handler (void);
 extern void cia_parallelack (void);
 extern void cia_diskindex (void);
+extern void cia_adjust_eclock_phase(int);
+extern void cia_set_eclockphase(void);
 
 extern void dumpcia(void);
 extern void rethink_cias(void);

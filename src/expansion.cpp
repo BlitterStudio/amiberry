@@ -6555,6 +6555,14 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 		BOARD_MEMORY_HIGHMEM,
 		128 * 1024 * 1024,
 	},
+	{
+		_T("T-Rex II"),
+		_T("trexii"),
+		ROMTYPE_CB_TREXII, 0, 4,
+		tekmagic_add_scsi_unit, EXPANSIONTYPE_SCSI,
+		BOARD_MEMORY_HIGHMEM,
+		128 * 1024 * 1024
+	},
 #endif
 	{
 		NULL

@@ -237,6 +237,7 @@ void devices_reset(int hardreset)
 	driveclick_reset();
 #endif
 	ethernet_reset();
+	reset_traps();
 #ifdef FILESYS
 	filesys_prepare_reset();
 	filesys_reset();
@@ -350,13 +351,14 @@ void virtualdevice_free(void)
 
 	execute_device_items(device_leaves_early, device_leave_early_cnt);
 
+	reset_traps();
+	free_traps();
 #ifdef FILESYS
 	filesys_cleanup();
 #endif
 #ifdef BSDSOCKET
 	bsdlib_reset();
 #endif
-	free_traps();
 	sampler_free();
 	inputdevice_close();
 	DISK_free();
@@ -453,6 +455,7 @@ void devices_restore_start(void)
 	restore_cia_start();
 	restore_blkdev_start();
 	restore_blitter_start();
+	restore_custom_start();
 	changed_prefs.bogomem.size = 0;
 	changed_prefs.chipmem.size = 0;
 	for (int i = 0; i < MAX_RAM_BOARDS; i++) {

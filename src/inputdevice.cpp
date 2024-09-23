@@ -3698,7 +3698,7 @@ static bool is_mouse_pullup (int joy)
 
 static int lightpen_port_number(void)
 {
-	return currprefs.cs_dipagnus ? 0 : 1;
+	return (currprefs.cs_agnusmodel == AGNUSMODEL_A1000 || currprefs.cs_agnusmodel == AGNUSMODEL_VELVET) ? 0 : 1;
 }
 
 static void charge_cap (int joy, int idx, int charge)
@@ -4632,7 +4632,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 
 	if (code == 0)
 		return false;
-	if (state && needcputrace(code) && can_cpu_tracer() == true && is_cpu_tracer () == false && !input_play && !input_record) {
+	if (state && needcputrace(code) && can_cpu_tracer() == true && is_cpu_tracer () == false && !input_play && !input_record && !debugging) {
 		if (set_cpu_tracer (true)) {
 			tracer_enable = 1;
 			return true; // wait for next frame
@@ -4864,7 +4864,7 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		changed_prefs.cdslots[0].inuse = false;
 		break;
 	case AKS_IRQ7:
-		//IRQ_forced(7, -1);
+		IRQ_forced(7, -1);
 		break;
 	case AKS_PAUSE:
 		pausemode(newstate > 0 ? 1 : newstate);
@@ -5335,19 +5335,14 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		isaks = true;
 	}
 
-#ifdef DEBUGGER
 	if (isaks) {
 		if (debug_trainer_event(ie->data, state))
-		{
 			return 0;
-		}
 	} else {
 		if (debug_trainer_event(nr, state))
-		{
 			return 0;
-		}
 	}
-#endif
+
 	if (!isaks) {
 		if (input_record && input_record != INPREC_RECORD_PLAYING)
 			inprec_recordevent (nr, state, max, autofire);

@@ -377,16 +377,11 @@ STATIC_INLINE void do_cycles_ce000_internal(int clocks)
 {
 	if (currprefs.m68k_speed < 0)
 		return;
-	x_do_cycles (clocks * CYCLE_UNIT / 2);
+	x_do_cycles (clocks * cpucycleunit);
 }
 STATIC_INLINE void do_cycles_ce000 (int clocks)
 {
-	x_do_cycles (clocks * CYCLE_UNIT / 2);
-}
-
-STATIC_INLINE void ipl_fetch (void)
-{
-	regs.ipl = regs.ipl_pin;
+	x_do_cycles (clocks * cpucycleunit);
 }
 
 uae_u32 mem_access_delay_word_read (uaecptr addr);

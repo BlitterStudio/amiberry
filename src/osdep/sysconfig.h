@@ -13,7 +13,7 @@
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "Amiberry"
 
-#if defined(ARMV6T2) || defined(CPU_AARCH64)
+#if defined(__x86_64__) || defined(_M_AMD64)
 #ifndef __MACH__ // not for macOS
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
@@ -25,20 +25,20 @@
 #define UAE
 #endif
 
-/* #define DEBUGGER */
+#define DEBUGGER
 #define FILESYS /* filesys emulation */
 #define UAE_FILESYS_THREADS
 #define AUTOCONFIG /* autoconfig support, fast ram, harddrives etc.. */
 //#define NOFLAGS_SUPPORT_GENCPU
 #define NOFLAGS_SUPPORT_GENCOMP
 //#define HAVE_GET_WORD_UNSWAPPED
-#define NATMEM_OFFSET regs.natmem_offset
+#define NATMEM_OFFSET natmem_offset
 #define USE_NORMAL_CALLING_CONVENTION 0
 //#define USE_X86_FPUCW 1
 /* #define CATWEASEL */ /* Catweasel MK2/3 support */
 #define AHI /* AHI sound emulation */
 //#define AHI_v2 // AHI v2 was never completed on the Amiga-side
-/* #define ENFORCER */ /* UAE Enforcer */
+#define ENFORCER /* UAE Enforcer */
 #define ECS_DENISE /* ECS DENISE new features */
 #define AGA /* AGA chipset emulation (ECS_DENISE must be enabled) */
 #define CD32 /* CD32 emulation */
@@ -51,22 +51,24 @@
 #define UAESERIAL /* uaeserial.device emulation */
 #define FPUEMU /* FPU emulation */
 #define FPU_UAE
-/* #define MMUEMU */ /* Aranym 68040 MMU */
-/* #define FULLMMU */ /* Aranym 68040 MMU */
+#define MMUEMU /* Aranym 68040 MMU */
+#define FULLMMU /* Aranym 68040 MMU */
 #define CPUEMU_0 /* generic 680x0 emulation */
 #define CPUEMU_11 /* 68000/68010 prefetch emulation */
 #define CPUEMU_13 /* 68000/68010 cycle-exact cpu&blitter */
-/* #define CPUEMU_20 */ /* 68020 prefetch */
-/* #define CPUEMU_21 */ /* 68020 "cycle-exact" + blitter */
-/* #define CPUEMU_22 */ /* 68030 prefetch */
-/* #define CPUEMU_23 */ /* 68030 "cycle-exact" + blitter */
-/* #define CPUEMU_24 */ /* 68060 "cycle-exact" + blitter */
-/* #define CPUEMU_25 */ /* 68040 "cycle-exact" + blitter */
-/* #define CPUEMU_31 */ /* Aranym 68040 MMU */
-/* #define CPUEMU_32 */ /* Previous 68030 MMU */
-/* #define CPUEMU_33 */ /* 68060 MMU */
+#define CPUEMU_20 /* 68020 prefetch */
+#define CPUEMU_21 /* 68020 "cycle-exact" + blitter */
+#define CPUEMU_22 /* 68030 prefetch */
+#define CPUEMU_23 /* 68030 "cycle-exact" + blitter */
+#define CPUEMU_24 /* 68060 "cycle-exact" + blitter */
+#define CPUEMU_25 /* 68040 "cycle-exact" + blitter */
+#define CPUEMU_31 /* Aranym 68040 MMU */
+#define CPUEMU_32 /* Previous 68030 MMU */
+#define CPUEMU_33 /* 68060 MMU */
+#define CPUEMU_34 /* 68030 MMU + cache */
+#define CPUEMU_35 /* 68030 MMU + cache + CE */
 #define CPUEMU_40 /* generic 680x0 with JIT direct memory access */
-/* #define CPUEMU_50 */ /* generic 680x0 with indirect memory access */
+#define CPUEMU_50 /* generic 680x0 with indirect memory access */
 #define ACTION_REPLAY /* Action Replay 1/2/3 support */
 #define PICASSO96 /* Picasso96 display card emulation */
 #define UAEGFX_INTERNAL /* built-in libs:picasso96/uaegfx.card */
@@ -82,10 +84,10 @@
 #define SAVESTATE /* State file support */
 #define A2091 /* A590/A2091 SCSI */
 #define A2065 /* A2065 Ethernet card */
-/* #define GFXBOARD */ /* Hardware graphics board */
-/* #define NCR */ /* A4000T/A4091, 53C710/53C770 SCSI */
-/* #define NCR9X */ /* 53C9X SCSI */
-/* #define SANA2 */ /* SANA2 network driver */
+#define GFXBOARD /* Hardware graphics board */
+#define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
+#define NCR9X /* 53C9X SCSI */
+#define SANA2 /* SANA2 network driver */
 #define AMAX /* A-Max ROM adapter emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
 #define WITH_CHD
@@ -93,19 +95,19 @@
 #define WITH_UAENATIVE
 /* #define WITH_SLIRP */
 /* #define WITH_BUILTIN_SLIRP */
-/* #define WITH_TABLETLIBRARY */
+#define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */
-/* #define WITH_PPC */
-/* #define WITH_QEMU_CPU */
-/* #define WITH_TOCCATA */
-/* #define WITH_PCI */
-/* #define WITH_X86 */
+#define WITH_PPC
+#define WITH_QEMU_CPU
+#define WITH_TOCCATA
+#define WITH_PCI
+#define WITH_X86
 #define WITH_THREADED_CPU
 /* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU
-//#define WITH_DSP
-//#define WITH_DRACO
+#define WITH_DSP
+#define WITH_DRACO
 
 // Use portmidi library for MIDI devices
 #define WITH_MIDI
@@ -117,10 +119,10 @@
 /* #define WITH_SCSI_SPTI */
 
 // Sound boards support
-//#define WITH_SNDBOARD
+#define WITH_SNDBOARD
 
 // CPU accelerator board support
-//#define WITH_CPUBOARD
+#define WITH_CPUBOARD
 
 // Special Monitors support
 #define WITH_SPECIALMONITORS
@@ -581,10 +583,6 @@ typedef int32_t uae_atomic;
 
 #define strcmpi(x,y) SDL_strcasecmp(x,y)
 #define stricmp(x,y) SDL_strcasecmp(x,y)
-
-#define M68K_SPEED_7MHZ_CYCLES 0
-#define M68K_SPEED_14MHZ_CYCLES 1024
-#define M68K_SPEED_25MHZ_CYCLES 128
 
 typedef int SOCKET;
 #define INVALID_SOCKET -1
