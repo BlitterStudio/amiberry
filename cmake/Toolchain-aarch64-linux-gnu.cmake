@@ -1,6 +1,6 @@
 set(CMAKE_SYSTEM_NAME Linux)
-SET(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
-SET(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 set(CMAKE_CROSSCOMPILING TRUE)
-
+set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE arm64)

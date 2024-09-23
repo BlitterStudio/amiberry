@@ -1,6 +1,6 @@
 set(CMAKE_SYSTEM_NAME Linux)
-SET(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
-SET(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 set(CMAKE_CROSSCOMPILING TRUE)
-
+set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE armhf)
