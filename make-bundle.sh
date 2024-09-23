@@ -16,10 +16,8 @@ mkdir -p Amiberry.app/Contents/Frameworks
 mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
-# Copy capsimg.so into App bundle
-cp plugins/capsimg.so Amiberry.app/Contents/Resources/capsimg.so
-# Copy floppybridge lib into App bundle
-cp plugins/libfloppybridge.so Amiberry.app/Contents/Resources/libfloppybridge.so
+# Copy plugin libs into App bundle
+cp plugins/*.so Amiberry.app/Contents/Resources/
 # Copy init script into the bundle
 cp macos_init_amiberry.zsh Amiberry.app/Contents/Resources
 chmod +x Amiberry.app/Contents/Resources/macos_init_amiberry.zsh
@@ -46,9 +44,3 @@ cp -R whdboot Amiberry.app/Contents/Resources/Whdboot
 
 # Overwrite default conf with OSX specific one
 cat conf/amiberry-osx.conf | sed -e "s#USERDIR#$USERDIR#g" >Amiberry.app/Contents/Resources/Configurations/amiberry.conf
-# Use dylibbundler to install into app if exists
-dylibbundler -od -b -x Amiberry.app/Contents/MacOS/Amiberry -d Amiberry.app/Contents/libs/ -s external/libguisan/dylib/
-if [ $? -gt 0 ]; then
-    echo "Can't find dylibbundler, use brew to install it, or manually copy external/libguisan/dylib/libguisan.dylib into /usr/local/lib (you'll need sudo)"
-fi
-

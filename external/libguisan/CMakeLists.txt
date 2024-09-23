@@ -55,12 +55,6 @@ add_library(guisan STATIC
         src/widgets/textfield.cpp
         src/widgets/togglebutton.cpp
         src/widgets/window.cpp)
-target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ./include)
+target_include_directories(${PROJECT_NAME} PRIVATE include)
+target_link_libraries(${PROJECT_NAME} SDL2 SDL2_ttf SDL2_image)
 
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${SDL2IMAGE_LIBRARIES})
-
-install(TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)

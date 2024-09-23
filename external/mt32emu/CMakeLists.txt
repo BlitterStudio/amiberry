@@ -323,63 +323,64 @@ target_include_directories(mt32emu
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME Runtime)
 set(libmt32emu_COMPONENT_DEVEL COMPONENT Devel)
 
-install(TARGETS mt32emu EXPORT MT32EmuTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} ${libmt32emu_COMPONENT_DEVEL}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_SKIP
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-# TODO: Use NAMELINK_COMPONENT with CMake 3.12 instead.
 if(libmt32emu_SHARED)
-  install(TARGETS mt32emu EXPORT MT32EmuTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ${libmt32emu_COMPONENT_DEVEL} NAMELINK_ONLY
-  )
-endif()
+    install(TARGETS mt32emu EXPORT MT32EmuTargets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} ${libmt32emu_COMPONENT_DEVEL}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} NAMELINK_SKIP
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    # TODO: Use NAMELINK_COMPONENT with CMake 3.12 instead.
 
-install(DIRECTORY
-  "${CMAKE_CURRENT_BINARY_DIR}/include/mt32emu"
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  ${libmt32emu_COMPONENT_DEVEL}
-)
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/include/mt32emu.h
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  ${libmt32emu_COMPONENT_DEVEL}
-)
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/mt32emu.pc
-  DESTINATION ${libmt32emu_PKGCONFIG_INSTALL_DIR}
-  ${libmt32emu_COMPONENT_DEVEL}
-)
-install(EXPORT MT32EmuTargets
-  DESTINATION ${libmt32emu_CMAKE_PACKAGE_INSTALL_DIR}
-  NAMESPACE MT32Emu::
-  ${libmt32emu_COMPONENT_DEVEL}
-)
-configure_file(cmake/MT32EmuConfig.cmake.in cmake/MT32EmuConfig.cmake @ONLY)
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(cmake/MT32EmuConfigVersion.cmake
-  VERSION ${libmt32emu_VERSION}
-  COMPATIBILITY SameMajorVersion
-)
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/cmake/MT32EmuConfig.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/cmake/MT32EmuConfigVersion.cmake
-  DESTINATION ${libmt32emu_CMAKE_PACKAGE_INSTALL_DIR}
-  ${libmt32emu_COMPONENT_DEVEL}
-)
-if(libmt32emu_EXT_MODULE)
-  install(FILES
-    cmake/CheckDependencies.cmake
-    cmake/${libmt32emu_EXT_MODULE}
-    DESTINATION ${libmt32emu_CMAKE_PACKAGE_INSTALL_DIR}
-    ${libmt32emu_COMPONENT_DEVEL}
-  )
-endif()
+    install(TARGETS mt32emu EXPORT MT32EmuTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ${libmt32emu_COMPONENT_DEVEL} NAMELINK_ONLY
+    )
 
-install(FILES
-  AUTHORS.txt COPYING.txt COPYING.LESSER.txt NEWS.txt README.md TODO.txt
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/munt/${PROJECT_NAME}
-)
+    install(DIRECTORY
+      "${CMAKE_CURRENT_BINARY_DIR}/include/mt32emu"
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      ${libmt32emu_COMPONENT_DEVEL}
+    )
+    install(FILES
+      ${CMAKE_CURRENT_BINARY_DIR}/include/mt32emu.h
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      ${libmt32emu_COMPONENT_DEVEL}
+    )
+    install(FILES
+      ${CMAKE_CURRENT_BINARY_DIR}/mt32emu.pc
+      DESTINATION ${libmt32emu_PKGCONFIG_INSTALL_DIR}
+      ${libmt32emu_COMPONENT_DEVEL}
+    )
+    install(EXPORT MT32EmuTargets
+      DESTINATION ${libmt32emu_CMAKE_PACKAGE_INSTALL_DIR}
+      NAMESPACE MT32Emu::
+      ${libmt32emu_COMPONENT_DEVEL}
+    )
+    configure_file(cmake/MT32EmuConfig.cmake.in cmake/MT32EmuConfig.cmake @ONLY)
+    include(CMakePackageConfigHelpers)
+    write_basic_package_version_file(cmake/MT32EmuConfigVersion.cmake
+      VERSION ${libmt32emu_VERSION}
+      COMPATIBILITY SameMajorVersion
+    )
+    install(FILES
+      ${CMAKE_CURRENT_BINARY_DIR}/cmake/MT32EmuConfig.cmake
+      ${CMAKE_CURRENT_BINARY_DIR}/cmake/MT32EmuConfigVersion.cmake
+      DESTINATION ${libmt32emu_CMAKE_PACKAGE_INSTALL_DIR}
+      ${libmt32emu_COMPONENT_DEVEL}
+    )
+    if(libmt32emu_EXT_MODULE)
+      install(FILES
+        cmake/CheckDependencies.cmake
+        cmake/${libmt32emu_EXT_MODULE}
+        DESTINATION ${libmt32emu_CMAKE_PACKAGE_INSTALL_DIR}
+        ${libmt32emu_COMPONENT_DEVEL}
+      )
+    endif()
+
+    install(FILES
+      AUTHORS.txt COPYING.txt COPYING.LESSER.txt NEWS.txt README.md TODO.txt
+      DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/munt/${PROJECT_NAME}
+    )
+endif()
 
 # Facilitates usage of the library in another project either through
 # an imported target or directly from the build tree.

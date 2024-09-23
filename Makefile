@@ -47,7 +47,7 @@ CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -Iexternal/libguisan/includ
 CFLAGS=-pipe -Wno-shift-overflow -Wno-narrowing -fno-pie
 
 LDFLAGS = $(SDL_LDFLAGS) -lSDL2_image -lSDL2_ttf -lserialport -lportmidi -lguisan -Lexternal/libguisan/lib -lmt32emu -Lexternal/mt32emu
-LDFLAGS += -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed -lpthread -lz -lpng -lrt -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -lstdc++fs -no-pie
+LDFLAGS += -Wl,-O1 -lpthread -lz -lpng -lFLAC -lmpg123 -ldl -lmpeg2convert -lmpeg2 -no-pie
 
 ifdef USE_OPENGL
 	CFLAGS += -DUSE_OPENGL
@@ -76,17 +76,17 @@ endif
 ifndef DEBUG
 	CFLAGS += -O3
 else
-	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG -Wl,--export-dynamic
+	CFLAGS += -g -rdynamic -funwind-tables -DDEBUG
 endif
 
 ifdef USE_OLDGCC
 	CFLAGS += -DUSE_OLDGCC
 endif
 
-#Common flags for all 32bit targets
+#Common flags for all ARM 32bit targets
 CPPFLAGS32=-DARMV6T2
 
-#Common flags for all 64bit targets
+#Common flags for all ARM 64bit targets
 CPPFLAGS64=-DCPU_AARCH64
 
 #Neon flags
@@ -239,16 +239,17 @@ else ifeq ($(PLATFORM),oga)
 
 # macOS Apple Silicon (SDL2, 64-bit, Apple Silicon)
 else ifeq ($(PLATFORM),osx-m1)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -L/opt/homebrew/lib/ -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/opt/homebrew/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 -DCPU_AARCH64 $(SDL_CFLAGS)
+	LDFLAGS += -L/opt/homebrew/lib/ -framework IOKit -framework Foundation -liconv
+	CPPFLAGS += $(CPPFLAGS64)
+	CPPFLAGS += -I/opt/homebrew/include
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1
 
 # macOS intel (SDL2, 64-bit, x86-64)
 else ifeq ($(PLATFORM),osx-x86)
-	LDFLAGS = -L/usr/local/lib external/libguisan/dylib/libguisan.dylib -Lexternal/mt32emu -lSDL2_image -lSDL2_ttf -lpng -liconv -lz -lFLAC -lmpg123 -lmpeg2 -lmpeg2convert -lserialport -lportmidi -lmt32emu $(SDL_LDFLAGS) -framework IOKit -framework Foundation
-	CPPFLAGS = -MD -MT $@ -MF $(@:%.o=%.d) $(SDL_CFLAGS) -I/usr/local/include -Iexternal/libguisan/include -Isrc -Isrc/osdep -Isrc/threaddep -Isrc/include -Isrc/archivers -Iexternal/floppybridge/src -Iexternal/mt32emu/src -D_FILE_OFFSET_BITS=64 $(SDL_CFLAGS)
+	LDFLAGS += -L/usr/local/lib -framework IOKit -framework Foundation -liconv
+	CPPFLAGS += -I/usr/local/include
 	CXX=/usr/bin/c++
 #	DEBUG=1
 	APPBUNDLE=1

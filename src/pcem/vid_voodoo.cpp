@@ -1350,127 +1350,176 @@ void voodoo_close(void *p)
 static device_config_t voodoo_config[] =
 {
         {
-                .name = "type",
-                .description = "Voodoo type",
-                .type = CONFIG_SELECTION,
-                .default_int = 0,
-                .selection =
+                "type", // name
+                "Voodoo type", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                0, // default_int
                 {
                         {
-                                .description = "Voodoo Graphics",
-                                .value = VOODOO_1
+                                "Voodoo Graphics", // description
+                                VOODOO_1 // value
                         },
                         {
-                                .description = "Obsidian SB50 + Amethyst (2 TMUs)",
-                                .value = VOODOO_SB50
+                                "Obsidian SB50 + Amethyst (2 TMUs)", // description
+                                VOODOO_SB50 // value
                         },
                         {
-                                .description = "Voodoo 2",
-                                .value = VOODOO_2
+                                "Voodoo 2", // description
+                                VOODOO_2 // value
                         },
                         {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
                 }
         },
         {
-                .name = "framebuffer_memory",
-                .description = "Framebuffer memory size",
-                .type = CONFIG_SELECTION,
-                .default_int = 2,
-                .selection =
+                "framebuffer_memory", // name
+                "Framebuffer memory size", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                2, // default_int
                 {
                         {
-                                .description = "2 MB",
-                                .value = 2
+                                "2 MB", // description
+                                2 // value
                         },
                         {
-                                .description = "4 MB",
-                                .value = 4
+                                "4 MB", // description
+                                4 // value
                         },
                         {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
                 }
         },
         {
-                .name = "texture_memory",
-                .description = "Texture memory size",
-                .type = CONFIG_SELECTION,
-                .default_int = 2,
-                .selection =
+                "texture_memory", // name
+                "Texture memory size", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                2, // default_int
                 {
                         {
-                                .description = "2 MB",
-                                .value = 2
+                                "2 MB", // description
+                                2 // value
                         },
                         {
-                                .description = "4 MB",
-                                .value = 4
+                                "4 MB", // description
+                                4 // value
                         },
                         {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
                 }
         },
         {
-                .name = "bilinear",
-                .description = "Bilinear filtering",
-                .type = CONFIG_BINARY,
-                .default_int = 1
-        },
-        {
-                .name = "dithersub",
-                .description = "Dither subtraction",
-                .type = CONFIG_BINARY,
-                .default_int = 1
-        },
-        {
-                .name = "dacfilter",
-                .description = "Screen Filter",
-                .type = CONFIG_BINARY,
-                .default_int = 0
-        },
-        {
-                .name = "render_threads",
-                .description = "Render threads",
-                .type = CONFIG_SELECTION,
-                .default_int = 2,
-                .selection =
+                "bilinear", // name
+                "Bilinear filtering", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
                 {
                         {
-                                .description = "1",
-                                .value = 1
-                        },
-                        {
-                                .description = "2",
-                                .value = 2
-                        },
-                        {
-                                .description = "4",
-                                .value = 4
-                        },
-                        {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
                 }
         },
         {
-                .name = "sli",
-                .description = "SLI",
-                .type = CONFIG_BINARY,
-                .default_int = 0
+                "dithersub", // name
+                "Dither subtraction", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "dacfilter", // name
+                "Screen Filter", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "render_threads", // name
+                "Render threads", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                2, // default_int
+                {
+                        {
+                                "1", // description
+                                1 // value
+                        },
+                        {
+                                "2", // description
+                                2 // value
+                        },
+                        {
+                                "4", // description
+                                4 // value
+                        },
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "sli", // name
+                "SLI", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
         },
 #ifndef NO_CODEGEN
         {
-                .name = "recompiler",
-                .description = "Recompiler",
-                .type = CONFIG_BINARY,
-                .default_int = 1
+                "recompiler", // name
+                "Recompiler", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
         },
 #endif
         {
-                .type = -1
+                "", // name (end of config)
+                "", // description
+                -1, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description
+                                0 // value
+                        }
+                }
         }
 };
 

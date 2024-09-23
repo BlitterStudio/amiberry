@@ -3057,80 +3057,114 @@ void gd5429_add_status_info(char *s, int max_len, void *p)
 static device_config_t avga2_config[] =
 {
         {
-                .name = "memory",
-                .description = "Memory size",
-                .type = CONFIG_SELECTION,
-                .default_int = 512,
-                .selection =
+                "memory", // name
+                "Memory size", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                512, // default_int
                 {
                         {
-                                .description = "256 kB",
-                                .value = 256
+                                "", // description
+                                256 // value
                         },
                         {
-                                .description = "512 kB",
-                                .value = 512
+                                "", // description
+                                512 // value
                         },
                         {
-                                .description = ""
+                                "", // description
+                                0 // value (end of selection)
                         }
-                },
+                }
         },
         {
-                .type = -1
+                "", // name (end of config)
+                "", // description
+                -1, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description
+                                0 // value
+                        }
+                }
         }
 };
 
 static device_config_t gd5429_config[] =
 {
         {
-                .name = "memory",
-                .description = "Memory size",
-                .type = CONFIG_SELECTION,
-                .default_int = 2,
-                .selection =
+                "memory", // name
+                "Memory size", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                2, // default_int
                 {
                         {
-                                .description = "1 MB",
-                                .value = 1
+                                "1 MB", // description
+                                1 // value
                         },
                         {
-                                .description = "2 MB",
-                                .value = 2
+                                "2 MB", // description
+                                2 // value
                         },
                         {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
-                },
+                }
         },
         {
-                .type = -1
+                "", // name (end of config)
+                "", // description
+                -1, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description
+                                0 // value
+                        }
+                }
         }
 };
+
 static device_config_t gd5434_config[] =
 {
         {
-                .name = "memory",
-                .description = "Memory size",
-                .type = CONFIG_SELECTION,
-                .default_int = 4,
-                .selection =
+                "memory", // name
+                "Memory size", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                4, // default_int
                 {
                         {
-                                .description = "2 MB",
-                                .value = 2
+                                "2 MB", // description
+                                2 // value
                         },
                         {
-                                .description = "4 MB",
-                                .value = 4
+                                "4 MB", // description
+                                4 // value
                         },
                         {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
-                },
+                }
         },
         {
-                .type = -1
+                "", // name (end of config)
+                "", // description
+                -1, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description
+                                0 // value
+                        }
+                }
         }
 };
 

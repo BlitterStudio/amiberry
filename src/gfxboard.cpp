@@ -5963,7 +5963,7 @@ static uae_u8 get_io_merlin(struct rtggfxboard *gb, uae_u32 addr)
 				uae_u8 aa = a >> 3;
 				uae_u8 d = 0xff;
 				if ((a & 7) == 3) {
-					uae_u8 ser[4] = { gb->extradata[0] >> 24, (uae_u8)(gb->extradata[0] >> 16), (uae_u8)(gb->extradata[0] >> 8), (uae_u8)(gb->extradata[0] >> 0) };
+					uae_u8 ser[4] = { static_cast<uae_u8>(gb->extradata[0] >> 24), (uae_u8)(gb->extradata[0] >> 16), (uae_u8)(gb->extradata[0] >> 8), (uae_u8)(gb->extradata[0] >> 0) };
 					if (aa == 0x7c) {
 						d = ser[0];
 					} else if (aa == 0x7d) {

@@ -1,31 +1,58 @@
-# - Find mpg123
-# Find the native mpg123 includes and libraries
-#
-#  MPG123_INCLUDE_DIRS - where to find mpg123.h, etc.
-#  MPG123_LIBRARIES    - List of libraries when using mpg123.
-#  MPG123_FOUND        - True if Mpg123 found.
+#[=======================================================================[.rst:
+Findmpg123
+-------
 
-if (MPG123_INCLUDE_DIR)
+Finds the mpg123 library.
+
+Imported Targets
+^^^^^^^^^^^^^^^^
+
+This module provides the following imported targets, if found:
+
+``MPG123::libmpg123``
+  The mpg123 library
+
+Result Variables
+^^^^^^^^^^^^^^^^
+
+This will define the following variables:
+
+``mpg123_FOUND``
+  True if the system has the mpg123 package.
+``mpg123_VERSION``
+	The version of mpg123 that was found on the system.
+
+Cache Variables
+^^^^^^^^^^^^^^^
+
+The following cache variables may also be set:
+
+``mpg123_INCLUDE_DIR``
+  The directory containing ``mpg123.h``.
+``mpg123_LIBRARY``
+  The path to the mpg123 library.
+
+#]=======================================================================]
+
+if (mpg123_INCLUDE_DIR)
     # Already in cache, be silent
-    set(MPG123_FIND_QUIETLY TRUE)
+    set(mpg123_FIND_QUIETLY TRUE)
 endif ()
 
 find_package (PkgConfig QUIET)
 pkg_check_modules(PC_MPG123 QUIET libmpg123>=1.25.10)
 
-set (MPG123_VERSION ${PC_MPG123_VERSION})
-
-find_path (MPG123_INCLUDE_DIR mpg123.h
+find_path (mpg123_INCLUDE_DIR mpg123.h
 	HINTS
 		${PC_MPG123_INCLUDEDIR}
 		${PC_MPG123_INCLUDE_DIRS}
-		${MPG123_ROOT}
+		${mpg123_ROOT}
 	)
 
 # MSVC built mpg123 may be named mpg123_static.
 # The provided project files name the library with the lib prefix.
 
-find_library (MPG123_LIBRARY
+find_library (mpg123_LIBRARY
 	NAMES
 		mpg123
 		mpg123_static
@@ -34,31 +61,35 @@ find_library (MPG123_LIBRARY
 	HINTS
 		${PC_MPG123_LIBDIR}
 		${PC_MPG123_LIBRARY_DIRS}
-		${MPG123_ROOT}
+		${mpg123_ROOT}
 	)
 
-# Handle the QUIETLY and REQUIRED arguments and set MPG123_FOUND
+if (PC_MPG123_FOUND)
+	set (mpg123_VERSION ${PC_MPG123_VERSION})
+elseif (mpg123_INCLUDE_DIR)
+	file (READ "${mpg123_INCLUDE_DIR}/mpg123.h" _mpg123_h)
+	string (REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" _mpg123_version_re "${_mpg123_h}")
+	set (mpg123_VERSION "${_mpg123_version_re}")
+endif ()
+
+# Handle the QUIETLY and REQUIRED arguments and set mpg123_FOUND
 # to TRUE if all listed variables are TRUE.
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args (mpg123
 	REQUIRED_VARS
-		MPG123_LIBRARY
-		MPG123_INCLUDE_DIR
+		mpg123_LIBRARY
+		mpg123_INCLUDE_DIR
 	VERSION_VAR
-		MPG123_VERSION
+		mpg123_VERSION
 	)
 
-if (MPG123_FOUND)
-	set (MPG123_LIBRARIES ${MPG123_LIBRARY})
-	set (MPG123_INCLUDE_DIRS ${MPG123_INCLUDE_DIR})
-
-	if (NOT TARGET MPG123::libmpg123)
-		add_library (MPG123::libmpg123 UNKNOWN IMPORTED)
-		set_target_properties (MPG123::libmpg123 PROPERTIES
-			INTERFACE_INCLUDE_DIRECTORIES "${MPG123_INCLUDE_DIRS}"
-			IMPORTED_LOCATION "${MPG123_LIBRARIES}"
+if (mpg123_FOUND AND NOT TARGET MPG123::libmpg123)
+	add_library (MPG123::libmpg123 UNKNOWN IMPORTED)
+	set_target_properties (MPG123::libmpg123
+		PROPERTIES 
+			IMPORTED_LOCATION "${mpg123_LIBRARY}"
+			INTERFACE_INCLUDE_DIRECTORIES "${mpg123_INCLUDE_DIR}"
 		)
-	endif ()
 endif ()
 
-mark_as_advanced(MPG123_INCLUDE_DIR MPG123_LIBRARY)
+mark_as_advanced(mpg123_INCLUDE_DIR mpg123_LIBRARY)

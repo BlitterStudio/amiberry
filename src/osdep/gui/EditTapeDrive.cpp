@@ -557,7 +557,7 @@ bool EditTapeDrive(const int unit_no)
 
 	if (dialogResult)
 	{
-		new_tapedrive(-1);
+		new_tapedrive(unit_no);
 	}
 
 	ExitEditTapeDrive();

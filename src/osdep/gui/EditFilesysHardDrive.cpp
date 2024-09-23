@@ -614,7 +614,7 @@ bool EditFilesysHardDrive(const int unit_no)
 	if (dialogResult)
 	{
 		current_dir = extract_path(txtHDPath->getText());
-		new_harddrive(-1);
+		new_harddrive(unit_no);
 	}
 
 	ExitEditFilesysHardDrive();

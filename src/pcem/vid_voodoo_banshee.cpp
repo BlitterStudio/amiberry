@@ -2579,134 +2579,213 @@ static void banshee_pci_write(int func, int addr, uint8_t val, void *p)
 static device_config_t banshee_sgram_config[] =
 {
         {
-                .name = "memory",
-                .description = "Memory size",
-                .type = CONFIG_SELECTION,
-                .default_int = 16,
-                .selection =
+                "memory", // name
+                "Memory size", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                16, // default_int
                 {
                         {
-                                .description = "8 MB",
-                                .value = 8
+                                "8 MB", // description
+                                8 // value
                         },
                         {
-                                .description = "16 MB",
-                                .value = 16
+                                "16 MB", // description
+                                16 // value
                         },
                         {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
                 }
         },
         {
-                .name = "bilinear",
-                .description = "Bilinear filtering",
-                .type = CONFIG_BINARY,
-                .default_int = 1
-        },
-        {
-                .name = "dithersub",
-                .description = "Dither subtraction",
-                .type = CONFIG_BINARY,
-                .default_int = 1
-        },
-        {
-                .name = "dacfilter",
-                .description = "Screen Filter",
-                .type = CONFIG_BINARY,
-                .default_int = 0
-        },
-        {
-                .name = "render_threads",
-                .description = "Render threads",
-                .type = CONFIG_SELECTION,
-                .default_int = 2,
-                .selection =
+                "bilinear", // name
+                "Bilinear filtering", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
                 {
                         {
-                                .description = "1",
-                                .value = 1
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "dithersub", // name
+                "Dither subtraction", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "dacfilter", // name
+                "Screen Filter", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "render_threads", // name
+                "Render threads", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                2, // default_int
+                {
+                        {
+                                "1", // description
+                                1 // value
                         },
                         {
-                                .description = "2",
-                                .value = 2
+                                "2", // description
+                                2 // value
                         },
                         {
-                                .description = "4",
-                                .value = 4
+                                "4", // description
+                                4 // value
                         },
                         {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
                 }
         },
 #ifndef NO_CODEGEN
         {
-                .name = "recompiler",
-                .description = "Recompiler",
-                .type = CONFIG_BINARY,
-                .default_int = 1
+                "recompiler", // name
+                "Recompiler", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
         },
 #endif
         {
-                .type = -1
+                "", // name (end of config)
+                "", // description
+                -1, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description
+                                0 // value
+                        }
+                }
         }
 };
 
 static device_config_t banshee_sdram_config[] =
 {
         {
-                .name = "bilinear",
-                .description = "Bilinear filtering",
-                .type = CONFIG_BINARY,
-                .default_int = 1
-        },
-        {
-                .name = "dithersub",
-                .description = "Dither subtraction",
-                .type = CONFIG_BINARY,
-                .default_int = 1
-        },
-        {
-                .name = "dacfilter",
-                .description = "Screen Filter",
-                .type = CONFIG_BINARY,
-                .default_int = 0
-        },
-        {
-                .name = "render_threads",
-                .description = "Render threads",
-                .type = CONFIG_SELECTION,
-                .default_int = 2,
-                .selection =
+                "bilinear", // name
+                "Bilinear filtering", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
                 {
                         {
-                                .description = "1",
-                                .value = 1
-                        },
-                        {
-                                .description = "2",
-                                .value = 2
-                        },
-                        {
-                                .description = "4",
-                                .value = 4
-                        },
-                        {
-                                .description = ""
+                                "", // description (end of selection)
+                                0 // value
                         }
-                },
+                }
+        },
+        {
+                "dithersub", // name
+                "Dither subtraction", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "dacfilter", // name
+                "Screen Filter", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
+        },
+        {
+                "render_threads", // name
+                "Render threads", // description
+                CONFIG_SELECTION, // type
+                "", // default_string
+                2, // default_int
+                {
+                        {
+                                "1", // description
+                                1 // value
+                        },
+                        {
+                                "2", // description
+                                2 // value
+                        },
+                        {
+                                "4", // description
+                                4 // value
+                        },
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
         },
 #ifndef NO_CODEGEN
         {
-                .name = "recompiler",
-                .description = "Recompiler",
-                .type = CONFIG_BINARY,
-                .default_int = 1
+                "recompiler", // name
+                "Recompiler", // description
+                CONFIG_BINARY, // type
+                "", // default_string
+                1, // default_int
+                {
+                        {
+                                "", // description (end of selection)
+                                0 // value
+                        }
+                }
         },
 #endif
         {
-                .type = -1
+                "", // name (end of config)
+                "", // description
+                -1, // type
+                "", // default_string
+                0, // default_int
+                {
+                        {
+                                "", // description
+                                0 // value
+                        }
+                }
         }
 };
 

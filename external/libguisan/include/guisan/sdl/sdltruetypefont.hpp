@@ -47,7 +47,7 @@
 #include <map>
 #include <string>
 
-#include "SDL_ttf.h"
+#include <SDL_ttf.h>
 #include "guisan/color.hpp"
 
 #include "guisan/font.hpp"
