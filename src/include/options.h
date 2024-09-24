@@ -468,7 +468,7 @@ struct boardromconfig
 	int device_order;
 	struct romconfig roms[MAX_BOARD_ROMS];
 };
-#define MAX_RTG_BOARDS 1
+#define MAX_RTG_BOARDS 4
 struct rtgboardconfig
 {
 	int rtg_index;
