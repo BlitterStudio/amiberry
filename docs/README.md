@@ -69,7 +69,7 @@ Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package nam
 
 if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run [Amiberry](https://aur.archlinux.org/packages/amiberry) through:
 
-      yay -S amiberry
+      yay -S amiberry-lite
 
 Additionally, please note that you will probably also need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
 
