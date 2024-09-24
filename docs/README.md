@@ -12,9 +12,9 @@
 
 Amiberry is an optimized Amiga emulator for ARM32, ARM64, x86_64 and RISC-V platforms. It runs on both macOS and Linux. Windows users can always use [WinUAE](https://www.winuae.net).
 
-The core emulation comes from [WinUAE](https://www.winuae.net), and even the main GUI is designed to look similar to that. However, not all WinUAE features are implemented, as Amiberry-Lite tries to achieve a balance between good performance on low-powered hardware and emulation accuracy.
+The core emulation comes from [WinUAE](https://www.winuae.net), and even the main GUI is designed to look similar to that.
 
-It includes JIT support for ARM32/ARM64, to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
+It includes JIT support, to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
 
 There are currently two Amiberry versions available: **Amiberry and Amiberry-Lite** - [see here](https://github.com/BlitterStudio/amiberry/wiki/First-Installation) to see which is the best pick for your needs.
 
@@ -93,24 +93,17 @@ Alternatively, you can of course compile the latest version of Amiberry from sou
 
 ### First, clone this repository locally
 
-      cd ~
       git clone https://github.com/BlitterStudio/amiberry
       cd amiberry
 
-### Then, choose a platform to compile for
+### Build using CMake (recommended)
 
-Amiberry's Makefile includes several targets, to cover various platforms.
-You will need to specify your platform using the following syntax:
+Amiberry can be built using CMake or the old Makefile approach. The recommended and simpler way, is using CMake:
 
-      make PLATFORM=<platform>
+      cmake -B build && cmake --build build -j4
 
-Where `<platform>` is one of the supported platforms. 
+### Build using the Makefile (old approach)
 
-If you have more than 1GB of RAM, you can also use multiple CPU cores to compile it faster, by adding `-j<cores>`, where `<cores>` is the number of CPU cores you want to use. For example, on a Raspberry Pi 4 (32-bit) with at least 2GB of RAM, you can use all four CPU cores with the following:
-
-      make -j4 PLATFORM=rpi4
-
-Please consult the [relevant Wiki page](https://github.com/BlitterStudio/amiberry/wiki/Available-Platforms) for the full list of available platforms, as there are many (and separate for 32-bit and 64-bit ones).
-Alternatively, you can also check the Makefile itself for a full list of supported platforms.
+If you want to use the Makefile instead, please consult the [relevant Wiki page](https://github.com/BlitterStudio/amiberry/wiki/Available-Platforms) for the full list of available platforms, as there are many (and separate for 32-bit and 64-bit ones). Alternatively, you can also check the Makefile itself for a full list of supported platforms.
 
 For more documentation subjects, please check the [Wiki page](https://github.com/BlitterStudio/amiberry/wiki)
