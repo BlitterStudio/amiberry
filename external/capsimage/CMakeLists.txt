@@ -9,7 +9,7 @@ set(MINOR_VERSION 1)
 
 option(BUILD_SHARED_LIBS "Build a dynamic library instead of static library" ON)
 
-if (APPLE)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   option(BUILD_FRAMEWORK "Build a macOS framework instead of a shared library" OFF)
   set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
   set(BUILD_SHARED_LIBS ON)
@@ -44,7 +44,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   src/Codec
   src/Device)
 
-if (APPLE AND BUILD_FRAMEWORK)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND BUILD_FRAMEWORK)
   set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME ${PROJECT_TITLE}
     FRAMEWORK TRUE
