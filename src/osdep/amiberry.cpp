@@ -4065,32 +4065,128 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
 	amiberry_conf_file.append("amiberry.conf");
 #else
 	data_dir = data_directory;
+    data_dir.append("/data/");
+
 	config_path = config_directory;
+
 	controllers_path = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
 		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = 
 		home_directory;
 
 	controllers_path.append("/controllers/");
-	data_dir.append("/data/");
+    if (!my_existsdir(controllers_path.c_str()))
+    {
+        my_mkdir(controllers_path.c_str());
+        // copy default controller files, if they exist in /usr/share/amiberry/controllers
+        std::string default_controller_path = "/usr/share/amiberry/controllers/";
+        if (my_existsdir(default_controller_path.c_str()))
+        {
+            std::string command = "cp -r " + default_controller_path + "* " + controllers_path;
+            system(command.c_str());
+        }
+        // change permissions to user writable
+        std::string command = "chmod -R 755 " + controllers_path;
+    }
+
 	whdboot_path.append("/whdboot/");
+    if (!my_existsdir(whdboot_path.c_str()))
+    {
+        my_mkdir(whdboot_path.c_str());
+        // copy default whdboot files, if they exist in /usr/share/amiberry/whdboot
+        std::string default_whdboot_path = "/usr/share/amiberry/whdboot/";
+        if (my_existsdir(default_whdboot_path.c_str()))
+        {
+            std::string command = "cp -r " + default_whdboot_path + "* " + whdboot_path;
+            system(command.c_str());
+        }
+        // change permissions to user writable
+        std::string command = "chmod -R 755 " + whdboot_path;
+    }
+
 	whdload_arch_path.append("/lha/");
+    if (!my_existsdir(whdload_arch_path.c_str()))
+        my_mkdir(whdload_arch_path.c_str());
+
 	floppy_path.append("/floppies/");
+    if (!my_existsdir(floppy_path.c_str()))
+        my_mkdir(floppy_path.c_str());
+
 	harddrive_path.append("/harddrives/");
+    if (!my_existsdir(harddrive_path.c_str()))
+        my_mkdir(harddrive_path.c_str());
+
 	cdrom_path.append("/cdroms/");
+    if (!my_existsdir(cdrom_path.c_str()))
+        my_mkdir(cdrom_path.c_str());
+
 	logfile_path.append("/amiberry.log");
+
 	rom_path.append("/kickstarts/");
+    if (!my_existsdir(rom_path.c_str()))
+    {
+        my_mkdir(rom_path.c_str());
+        // copy default kickstart files, if they exist in /usr/share/amiberry/kickstarts
+        std::string default_kickstart_path = "/usr/share/amiberry/kickstarts/";
+        if (my_existsdir(default_kickstart_path.c_str()))
+        {
+            std::string command = "cp -r " + default_kickstart_path + "* " + rom_path;
+            system(command.c_str());
+        }
+        // change permissions to user writable
+        std::string command = "chmod -R 755 " + rom_path;
+    }
+
 	rp9_path.append("/rp9/");
+    if (!my_existsdir(rp9_path.c_str()))
+        my_mkdir(rp9_path.c_str());
+
 	saveimage_dir.append("/savestates/");
+    if (!my_existsdir(saveimage_dir.c_str()))
+        my_mkdir(saveimage_dir.c_str());
+
 	savestate_dir.append("/savestates/");
+    if (!my_existsdir(savestate_dir.c_str()))
+        my_mkdir(savestate_dir.c_str());
+
 	ripper_path.append("/ripper/");
+    if (!my_existsdir(ripper_path.c_str()))
+        my_mkdir(ripper_path.c_str());
+
 	input_dir.append("/inputrecordings/");
+    if (!my_existsdir(input_dir.c_str()))
+        my_mkdir(input_dir.c_str());
+
 	screenshot_dir.append("/screenshots/");
+    if (!my_existsdir(screenshot_dir.c_str()))
+        my_mkdir(screenshot_dir.c_str());
+
 	nvram_dir.append("/nvram/");
+    if (!my_existsdir(nvram_dir.c_str()))
+        my_mkdir(nvram_dir.c_str());
+
 	plugins_dir.append("/plugins/");
+    if (!my_existsdir(plugins_dir.c_str()))
+    {
+        my_mkdir(plugins_dir.c_str());
+        // copy default plugin files, if they exist in /usr/share/amiberry/plugins
+        std::string default_plugin_path = "/usr/share/amiberry/plugins/";
+        if (my_existsdir(default_plugin_path.c_str()))
+        {
+            std::string command = "cp -r " + default_plugin_path + "* " + plugins_dir;
+            system(command.c_str());
+        }
+        // change permissions to user writable
+        std::string command = "chmod -R 755 " + plugins_dir;
+    }
+
 	video_dir.append("/videos/");
+    if (!my_existsdir(video_dir.c_str()))
+        my_mkdir(video_dir.c_str());
 
 	amiberry_conf_file = config_path;
+    if (!my_existsdir(config_path.c_str()))
+        my_mkdir(config_path.c_str());
 	amiberry_conf_file.append("/amiberry.conf");
 #endif
 
@@ -4221,13 +4317,14 @@ std::string get_data_directory()
 
 	if (env_data_dir != nullptr && directory_exists(env_data_dir, "/data"))
 	{
-		// If the ENV variable is set, use it
+		// If the ENV variable is set, and it actually contains our data dir, use it
 		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
 		return { env_data_dir };
 	}
 	if (directory_exists("/usr/share/amiberry", "/data"))
 	{
-		// If the data directory exists, use it
+		// If the data directory exists in /usr/share/amiberry, use it
+        // This would be the default location after an installation with the .deb package
 		write_log("Using data directory from /usr/share/amiberry\n");
 		return "/usr/share/amiberry";
 	}
@@ -4263,8 +4360,13 @@ std::string get_home_directory()
 		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home);
 		return { xdg_data_home };
 	}
-	if (user_home_dir != nullptr && directory_exists(user_home_dir, "/.amiberry"))
+	if (user_home_dir != nullptr)
 	{
+        if (!directory_exists(user_home_dir, "/.amiberry"))
+        {
+            // If $HOME exists, but not the .amiberry subdirectory, create it
+            my_mkdir((std::string(user_home_dir) + "/.amiberry").c_str());
+        }
 		// $HOME/.amiberry exists, use it
 		write_log("Using home directory from $HOME/.amiberry\n");
 		std::string result = std::string(user_home_dir);
@@ -4290,28 +4392,33 @@ std::string get_config_directory()
 		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", env_conf_dir);
 		return { env_conf_dir };
 	}
-	if (xdg_config_home != nullptr && directory_exists(xdg_config_home, "/amiberry"))
+	if (xdg_config_home != nullptr)
 	{
 		// If the XDG_CONFIG_HOME is set, use it
+        if (!directory_exists(xdg_config_home, "/amiberry"))
+        {
+            // If the XDG_CONFIG_HOME exists, but not the amiberry subdirectory, create it
+            my_mkdir((std::string(xdg_config_home) + "/amiberry").c_str());
+        }
 		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", xdg_config_home);
 		return { std::string(xdg_config_home) + "/amiberry" };
 	}
-	if (user_home_dir != nullptr && directory_exists(user_home_dir, "/.config/amiberry"))
+	if (user_home_dir != nullptr)
 	{
+        if (!directory_exists(user_home_dir, "/.config/amiberry"))
+        {
+            // If $HOME/.config exists, but not the amiberry subdirectory, create it
+            my_mkdir((std::string(user_home_dir) + "/.config/amiberry").c_str());
+        }
 		// $HOME/.config/amiberry exists, use it
+        // This should be the most used scenario
 		write_log("Using config directory from $HOME/.config/amiberry\n");
 		auto result = std::string(user_home_dir);
 		return result.append("/.config/amiberry");
 	}
-	if (user_home_dir != nullptr && directory_exists(user_home_dir, "/.amiberry/conf"))
-	{
-		// $HOME/.amiberry/conf exists, use it
-		write_log("Using config directory from $HOME/.amiberry/conf\n");
-		auto result = std::string(user_home_dir);
-		return result.append("/.amiberry/conf");
-	}
 
 	// Fallback Portable mode, all in startup path
+    // Should never really end up here, unless $HOME is not defined
 	write_log("Using config directory from startup path\n");
 	char tmp[MAX_DPATH];
 	getcwd(tmp, MAX_DPATH);
