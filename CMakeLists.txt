@@ -480,46 +480,25 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     install(TARGETS ${PROJECT_NAME} BUNDLE DESTINATION .)
 else ()
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+
     # Install additional directories
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/cdroms
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
-        DESTINATION share/${PROJECT_NAME}
-    )
+    # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
         DESTINATION share/${PROJECT_NAME}
     )
+    # This one contains the data files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
         DESTINATION share/${PROJECT_NAME}
     )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/floppies
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/harddrives
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/inputrecordings
-        DESTINATION share/${PROJECT_NAME}
-    )
+    # This one contains the AROS kickstart files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/kickstarts
         DESTINATION share/${PROJECT_NAME}
     )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/lha
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/nvram
-        DESTINATION share/${PROJECT_NAME}
-    )
+    # This one contains the plugins
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
         DESTINATION share/${PROJECT_NAME}
     )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/savestates
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/screenshots
-        DESTINATION share/${PROJECT_NAME}
-    )
+    # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
         DESTINATION share/${PROJECT_NAME}
     )
