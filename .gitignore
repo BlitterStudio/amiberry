@@ -226,3 +226,4 @@ cmake-build-debug-remote-host
 cmake-build-release-remote-host
 cmake-build-debug-opengl
 cmake-build-*
+_CPack_Packages
