@@ -352,9 +352,7 @@ class DownloadControllerDbActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char config_path[MAX_DPATH];
-		get_configuration_path(config_path, MAX_DPATH);
-		auto destination = std::string(config_path);
+		std::string destination = get_controllers_path();
 		destination += "gamecontrollerdb.txt";
 		write_log("Downloading % ...\n", destination.c_str());
 		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
@@ -876,7 +874,7 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back("custom edits that may have been made.");
         helptext.emplace_back(" ");
         helptext.emplace_back("The \"Update Controllers DB\" button will attempt to download the latest version of");
-        helptext.emplace_back("the bundled gamecontrollerdb.txt file, to be stored in the Configuration files path.");
+        helptext.emplace_back("the bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.");
         helptext.emplace_back("The file contains the \"official\" mappings for recognized controllers by SDL2 itself.");
         helptext.emplace_back("Please note that this is separate from the user-configurable gamecontrollerdb_user.txt");
         helptext.emplace_back("file, which is contained in the Controllers path. That file is never overwritten, and");
