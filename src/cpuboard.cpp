@@ -1670,7 +1670,7 @@ void cpuboard_map(void)
 			map_banks(&dummy_bank, 0xf00000 >> 16, 0x80000 >> 16, 0);
 		}
 	}
-	if (is_tekmagic(&currprefs) || is_quikpak(&currprefs) || is_trexii(&currprefs)) {
+	if (is_quikpak(&currprefs) || is_trexii(&currprefs)) {
 		map_banks(&blizzardf0_bank, 0xf00000 >> 16, 131072 >> 16, 0);
 		map_banks(&blizzardea_bank, 0xf40000 >> 16, 65536 >> 16, 0);
 	}
@@ -1727,6 +1727,14 @@ void cpuboard_map(void)
 	}
 
 	if (is_a1230s1(&currprefs)) {
+		if (cpuboardmem1_bank.allocated_size) {
+			map_banks(&cpuboardmem1_bank, cpuboardmem1_bank.start >> 16, cpuboardmem1_bank.allocated_size >> 16, cpuboardmem1_bank.allocated_size >> 16);
+		}
+	}
+
+	if (is_tekmagic(&currprefs)) {
+		map_banks(&blizzardf0_bank, 0xf00000 >> 16, 131072 >> 16, 0);
+		map_banks(&blizzardea_bank, 0xf40000 >> 16, 65536 >> 16, 0);
 		if (cpuboardmem1_bank.allocated_size) {
 			map_banks(&cpuboardmem1_bank, cpuboardmem1_bank.start >> 16, cpuboardmem1_bank.allocated_size >> 16, cpuboardmem1_bank.allocated_size >> 16);
 		}
@@ -2018,7 +2026,23 @@ static void cpuboard_init_2(void)
 		blizzardram_bank.label = _T("fusionforty");
 		mapped_malloc(&blizzardram_bank);
 
-	} else if (is_tekmagic(&currprefs) || is_quikpak(&currprefs) || is_trexii(&currprefs)) {
+	} else if (is_tekmagic(&currprefs)) {
+
+		blizzardf0_bank.start = 0x00f00000;
+		blizzardf0_bank.reserved_size = 131072;
+		blizzardf0_bank.mask = blizzardf0_bank.reserved_size - 1;
+		mapped_malloc(&blizzardf0_bank);
+
+		blizzardea_bank.reserved_size = 65536;
+		blizzardea_bank.mask = blizzardea_bank.reserved_size - 1;
+		mapped_malloc(&blizzardea_bank);
+
+		cpuboardmem1_bank.start = 0x02000000;
+		cpuboardmem1_bank.reserved_size = cpuboard_size;
+		cpuboardmem1_bank.mask = cpuboardmem1_bank.reserved_size - 1;
+		mapped_malloc(&cpuboardmem1_bank);
+
+	} else if (is_quikpak(&currprefs) || is_trexii(&currprefs)) {
 
 		blizzardf0_bank.start = 0x00f00000;
 		blizzardf0_bank.reserved_size = 131072;
