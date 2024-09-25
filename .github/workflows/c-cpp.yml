@@ -21,8 +21,6 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-        with:
-          submodules: 'true'
 
       - name: Fix homebrew in Github Runner
         run: |
@@ -66,8 +64,6 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-        with:
-          submodules: 'true'
 
       - name: Install dependencies
         run: |
