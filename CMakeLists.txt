@@ -592,7 +592,7 @@ endif ()
 
 include(InstallRequiredSystemLibraries)
 
-if(APPLE)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(CPACK_GENERATOR "Bundle")
     set(CPACK_BUNDLE_NAME "Amiberry")
     set(CPACK_BUNDLE_PLIST ${CMAKE_SOURCE_DIR}/Info.plist)
