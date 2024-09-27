@@ -4075,7 +4075,7 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
 
 	controllers_path = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
 		logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
-		input_dir = screenshot_dir = nvram_dir = plugins_dir = video_dir = 
+		input_dir = screenshot_dir = nvram_dir = video_dir =
 		home_directory;
 
 	controllers_path.append("/controllers/");
