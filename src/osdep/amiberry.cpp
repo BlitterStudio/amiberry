@@ -4079,10 +4079,10 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
     {
         my_mkdir(controllers_path.c_str());
         // copy default controller files, if they exist in /usr/share/amiberry/controllers
-        std::string default_controller_path = "/usr/share/amiberry/controllers/";
+        const std::string default_controller_path = "/usr/share/amiberry/controllers/";
         if (my_existsdir(default_controller_path.c_str()))
         {
-            std::string command = "cp -r " + default_controller_path + "* " + controllers_path;
+	        const std::string command = "cp -r " + default_controller_path + "* " + controllers_path;
             system(command.c_str());
         }
         // change permissions to user writable
@@ -4094,10 +4094,10 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
     {
         my_mkdir(whdboot_path.c_str());
         // copy default whdboot files, if they exist in /usr/share/amiberry/whdboot
-        std::string default_whdboot_path = "/usr/share/amiberry/whdboot/";
+        const std::string default_whdboot_path = "/usr/share/amiberry/whdboot/";
         if (my_existsdir(default_whdboot_path.c_str()))
         {
-            std::string command = "cp -r " + default_whdboot_path + "* " + whdboot_path;
+	        const std::string command = "cp -r " + default_whdboot_path + "* " + whdboot_path;
             system(command.c_str());
         }
         // change permissions to user writable
@@ -4127,10 +4127,10 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
     {
         my_mkdir(rom_path.c_str());
         // copy default kickstart files, if they exist in /usr/share/amiberry/kickstarts
-        std::string default_kickstart_path = "/usr/share/amiberry/kickstarts/";
+        const std::string default_kickstart_path = "/usr/share/amiberry/kickstarts/";
         if (my_existsdir(default_kickstart_path.c_str()))
         {
-            std::string command = "cp -r " + default_kickstart_path + "* " + rom_path;
+	        const std::string command = "cp -r " + default_kickstart_path + "* " + rom_path;
             system(command.c_str());
         }
         // change permissions to user writable
@@ -4170,10 +4170,10 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
     {
         my_mkdir(plugins_dir.c_str());
         // copy default plugin files, if they exist in /usr/share/amiberry/plugins
-        std::string default_plugin_path = "/usr/share/amiberry/plugins/";
+        const std::string default_plugin_path = "/usr/share/amiberry/plugins/";
         if (my_existsdir(default_plugin_path.c_str()))
         {
-            std::string command = "cp -r " + default_plugin_path + "* " + plugins_dir;
+	        const std::string command = "cp -r " + default_plugin_path + "* " + plugins_dir;
             system(command.c_str());
         }
         // change permissions to user writable
@@ -4243,7 +4243,7 @@ uae_u32 emulib_target_getcpurate(uae_u32 v, uae_u32* low)
 	*low = 0;
 	if (v == 1)
 	{
-		*low = 1e+9; /* We have nano seconds */
+		*low = 1e+9; /* We have nanoseconds */
 		return 0;
 	}
 	if (v == 2)
@@ -4362,15 +4362,15 @@ std::string get_home_directory()
 	}
 	if (user_home_dir != nullptr)
 	{
-        if (!directory_exists(user_home_dir, "/.amiberry"))
+        if (!directory_exists(user_home_dir, "/Amiberry"))
         {
-            // If $HOME exists, but not the .amiberry subdirectory, create it
-            my_mkdir((std::string(user_home_dir) + "/.amiberry").c_str());
+            // If $HOME exists, but not the Amiberry subdirectory, create it
+            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
         }
-		// $HOME/.amiberry exists, use it
-		write_log("Using home directory from $HOME/.amiberry\n");
+		// $HOME/Amiberry exists, use it
+		write_log("Using home directory from $HOME/Amiberry\n");
 		std::string result = std::string(user_home_dir);
-		return result.append("/.amiberry");
+		return result.append("/Amiberry");
 	}
 
 	// Fallback Portable mode, all in startup path
