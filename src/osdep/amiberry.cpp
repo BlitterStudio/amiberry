@@ -4442,7 +4442,7 @@ std::string get_plugins_directory()
         write_log("Using plugins directory from $HOME/Amiberry/plugins\n");
         return { std::string(user_home_dir) + "/Amiberry/plugins" };
     }
-    
+
     // Fallback Portable mode, all in the startup path
     write_log("Using plugins directory from startup path\n");
     char tmp[MAX_DPATH];

@@ -495,7 +495,7 @@ else ()
         DESTINATION share/${PROJECT_NAME}
     )
     # This one contains the plugins
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/abr
         DESTINATION lib/${PROJECT_NAME}
     )
     # This one contains the whdboot files
