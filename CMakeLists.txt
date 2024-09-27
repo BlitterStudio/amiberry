@@ -511,6 +511,13 @@ else ()
     install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
         DESTINATION share/icons/hicolor/256x256/apps
     )
+    # Install Debian files
+    install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog
+        DESTINATION usr/share/doc/${PROJECT_NAME}
+    )
+    install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
+        DESTINATION usr/share/doc/${PROJECT_NAME}
+    )
 endif ()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
