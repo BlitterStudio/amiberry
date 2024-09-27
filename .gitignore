@@ -3,8 +3,8 @@
 ### Amiberry files ###
 conf/*.uae
 conf/*.conf
-kickstarts/*.rom
-kickstarts/*.key
+roms/*.rom
+roms/*.key
 /amiberry*
 
 ### VisualGDB ###

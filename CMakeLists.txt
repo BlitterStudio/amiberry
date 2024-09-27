@@ -491,7 +491,7 @@ else ()
         DESTINATION share/${PROJECT_NAME}
     )
     # This one contains the AROS kickstart files
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/kickstarts
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
         DESTINATION share/${PROJECT_NAME}
     )
     # This one contains the plugins

@@ -34,7 +34,7 @@ cp -R data Amiberry.app/Contents/Resources/Data
 cp -R floppies Amiberry.app/Contents/Resources/Floppies
 cp -R harddrives Amiberry.app/Contents/Resources/Harddrives
 cp -R inputrecordings Amiberry.app/Contents/Resources/Inputrecordings
-cp -R kickstarts Amiberry.app/Contents/Resources/Kickstarts
+cp -R roms Amiberry.app/Contents/Resources/Roms
 cp -R lha Amiberry.app/Contents/Resources/Lha
 cp -R nvram Amiberry.app/Contents/Resources/Nvram
 cp -R plugins Amiberry.app/Contents/Resources/Plugins

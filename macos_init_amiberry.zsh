@@ -35,11 +35,11 @@ for file in $CWD_VAR/../Resources/Controllers/**/*(.); do
 	fi
 done
 
-for file in $CWD_VAR/../Resources/Kickstarts/**/*(.); do
-	if [[ ! -f "$USERDIR/Documents/Amiberry/Kickstarts${file##*/Kickstarts}" ]]; then
-		echo "Copying $file to $USERDIR/Documents/Amiberry/Kickstarts${file##*/Kickstarts}"
-		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Kickstarts${file##*/Kickstarts}")
-		cp $file "$USERDIR/Documents/Amiberry/Kickstarts${file##*/Kickstarts}"
+for file in $CWD_VAR/../Resources/Roms/**/*(.); do
+	if [[ ! -f "$USERDIR/Documents/Amiberry/Roms${file##*/Roms}" ]]; then
+		echo "Copying $file to $USERDIR/Documents/Amiberry/Roms${file##*/Roms}"
+		mkdir -p $(dirname "$USERDIR/Documents/Amiberry/Roms${file##*/Roms}")
+		cp $file "$USERDIR/Documents/Amiberry/Roms${file##*/Roms}"
 	fi
 done
 

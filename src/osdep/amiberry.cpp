@@ -3930,7 +3930,7 @@ void init_macos_amiberry_folders(const std::string& macos_amiberry_directory)
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 
-	directory = macos_amiberry_directory + "/Kickstarts";
+	directory = macos_amiberry_directory + "/Roms";
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 
@@ -4050,7 +4050,7 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
 	harddrive_path.append("/Harddrives/");
 	cdrom_path.append("/CDROMs/");
 	logfile_path.append("/Amiberry.log");
-	rom_path.append("/Kickstarts/");
+	rom_path.append("/Roms/");
 	rp9_path.append("/RP9/");
 	saveimage_dir.append("/Savestates/");
 	savestate_dir.append("/Savestates/");
@@ -4126,12 +4126,12 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
 
 	logfile_path.append("/amiberry.log");
 
-	rom_path.append("/kickstarts/");
+	rom_path.append("/roms/");
     if (!my_existsdir(rom_path.c_str()))
     {
         my_mkdir(rom_path.c_str());
-        // copy default kickstart files, if they exist in /usr/share/amiberry/kickstarts
-        const std::string default_kickstart_path = "/usr/share/amiberry/kickstarts/";
+        // copy default kickstart files, if they exist in /usr/share/amiberry/roms
+        const std::string default_kickstart_path = "/usr/share/amiberry/roms/";
         if (my_existsdir(default_kickstart_path.c_str()))
         {
 	        const std::string command = "cp -r " + default_kickstart_path + "* " + rom_path;

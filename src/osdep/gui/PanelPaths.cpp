@@ -885,7 +885,7 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back(" ");
         helptext.emplace_back("The paths for Amiberry resources include;");
         helptext.emplace_back(" ");
-		helptext.emplace_back("- System ROMs: The Amiga Kickstart files are by default located under 'kickstarts'.");
+		helptext.emplace_back("- System ROMs: The Amiga Kickstart files are by default located under 'roms'.");
 		helptext.emplace_back("  After changing the location of the Kickstart ROMs, or adding any additional ROMs, ");
 		helptext.emplace_back("  click on the \"Rescan\" button to refresh the list of the available ROMs. Please");
 		helptext.emplace_back("  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory");
