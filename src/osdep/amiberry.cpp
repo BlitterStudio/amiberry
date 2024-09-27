@@ -4405,16 +4405,19 @@ std::string get_config_directory()
 	}
 	if (user_home_dir != nullptr)
 	{
-        if (!directory_exists(user_home_dir, "/.config/amiberry"))
+        if (!directory_exists(user_home_dir, "/Amiberry"))
         {
-            // If $HOME/.config exists, but not the amiberry subdirectory, create it
-            my_mkdir((std::string(user_home_dir) + "/.config/amiberry").c_str());
+            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
         }
-		// $HOME/.config/amiberry exists, use it
+		// $HOME/Amiberry exists, use it
+		if (!directory_exists(user_home_dir, "/Amiberry/conf"))
+		{
+			my_mkdir((std::string(user_home_dir) + "/Amiberry/conf").c_str());
+		}
         // This should be the most used scenario
-		write_log("Using config directory from $HOME/.config/amiberry\n");
+		write_log("Using config directory from $HOME/Amiberry/conf\n");
 		auto result = std::string(user_home_dir);
-		return result.append("/.config/amiberry");
+		return result.append("/Amiberry/conf");
 	}
 
 	// Fallback Portable mode, all in startup path
