@@ -172,6 +172,6 @@ records:
   - delay: 135
     content: "\r\n= = = = = = = = = = = = = = = = = = = = =\r\nInstalling dependencies for 'amiberry' : Amiga emulator with JIT support (forked from uae4arm)\r\n= = = = = = = = = = = = = = = = = = = = =\r\n\r\n"
   - delay: 860
-    content: "/home/pi/RetroPie-Setup/tmp/build/amiberry /home/pi\r\n\r\n= = = = = = = = = = = = = = = = = = = = =\r\nGetting sources for 'amiberry' : Amiga emulator with JIT support (forked from uae4arm)\r\n= = = = = = = = = = = = = = = = = = = = =\r\n\r\ngit clone --recursive --depth 1 \"https://github.com/midwan/amiberry/\" \"/home/pi/RetroPie-Setup/tmp/build/amiberry\"\r\n"
+    content: "/home/pi/RetroPie-Setup/tmp/build/amiberry /home/pi\r\n\r\n= = = = = = = = = = = = = = = = = = = = =\r\nGetting sources for 'amiberry' : Amiga emulator with JIT support (forked from uae4arm)\r\n= = = = = = = = = = = = = = = = = = = = =\r\n\r\ngit clone --recursive --depth 1 \"https://github.com/BlitterStudio/amiberry/\" \"/home/pi/RetroPie-Setup/tmp/build/amiberry\"\r\n"
   - delay: 7
     content: "Cloning into '/home/pi/RetroPie-Setup/tmp/build/amiberry'...\r\n"

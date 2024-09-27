@@ -314,12 +314,12 @@ public:
 		//  download WHDLoad executable
 		destination = prefix_with_whdboot_path("WHDLoad");
 		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
 
 		//  download boot-data.zip
 		destination = prefix_with_whdboot_path("boot-data.zip");
 		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
 
 		// download kickstart RTB files for maximum compatibility
 		download_rtb("kick33180.A500.RTB");
