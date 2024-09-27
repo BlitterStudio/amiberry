@@ -496,7 +496,7 @@ else ()
     )
     # This one contains the plugins
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
-        DESTINATION share/${PROJECT_NAME}
+        DESTINATION lib/${PROJECT_NAME}
     )
     # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
@@ -505,17 +505,15 @@ else ()
 
     # Install shared libraries
     install(FILES ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so
-        DESTINATION share/${PROJECT_NAME}/plugins
+        DESTINATION lib/${PROJECT_NAME}/
     )
     install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
-        DESTINATION share/${PROJECT_NAME}/plugins
+        DESTINATION lib/${PROJECT_NAME}/
     )
-
     # Install desktop file
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
         DESTINATION share/applications
     )
-
     # Install icon
     install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
         DESTINATION share/icons/hicolor/256x256/apps
