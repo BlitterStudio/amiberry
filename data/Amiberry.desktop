@@ -9,11 +9,14 @@ Version = 1.0
 # The name of the application
 Name = Amiberry
 
+GenericName = Amiga Emulator
+
 # A comment which can/will be used as a tooltip
-Comment = Amiga Emulator
+Comment = Optimized Amiga Emulator
 
 # The executable of the application, possibly with arguments
-Exec = /usr/bin/amiberry
+Exec = /usr/bin/amiberry %f
+TryExec = /usr/bin/amiberry
 
 # The name of the icon that will be used to display this entry
 Icon = amiberry
@@ -21,8 +24,12 @@ Icon = amiberry
 # Describes whether this application needs to be run in a terminal or not
 Terminal = false
 
+Type=Application
+
 # Describes the categories in which this entry should be shown
 Categories = Game;Emulator;
+
+MimeType=application/x-amiga-disk-image;application/x-lha;
 
 # Describes the encoding for the desktop entry
 Encoding=UTF-8
