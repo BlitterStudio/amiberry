@@ -503,13 +503,6 @@ else ()
         DESTINATION share/${PROJECT_NAME}
     )
 
-    # Install shared libraries
-    install(FILES ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so
-        DESTINATION lib/${PROJECT_NAME}/
-    )
-    install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
-        DESTINATION lib/${PROJECT_NAME}/
-    )
     # Install desktop file
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
         DESTINATION share/applications
@@ -549,8 +542,7 @@ else()
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
     set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "An optimized Amiga emulator for various platforms.")
-    set(CPACK_DEBIAN_EXTENDED_DESCRIPTION "Amiberry is an optimized Amiga emulator for ARM, ARM64, AMD64 and RISC-V systems. It is based on the latest release of the WinUAE emulator and offers a lot of features.")
-    set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
     set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
     set(CPACK_STRIP_FILES "YES")
 endif()
