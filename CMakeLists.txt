@@ -515,6 +515,11 @@ else ()
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
         DESTINATION share/applications
     )
+
+    # Install icon
+    install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
+        DESTINATION share/icons/hicolor/256x256/apps
+    )
 endif ()
 
 include(InstallRequiredSystemLibraries)
