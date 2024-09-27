@@ -548,7 +548,8 @@ else()
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.")
+    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.
+    Amiberry is an optimized Amiga emulator for various platforms. It is based on the latest WinUAE and supports the latest Amiga hardware, including the A4000T, A4000D, A1200, A3000 and A600. It is also the most advanced Amiga emulator, supporting the most advanced features, including AGA, RTG, JIT, and more.")
     set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
     set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
     set(CPACK_STRIP_FILES "YES")
