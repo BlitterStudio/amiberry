@@ -513,10 +513,10 @@ else ()
     )
     # Install Debian files
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog
-        DESTINATION usr/share/doc/${PROJECT_NAME}
+        DESTINATION share/doc/${PROJECT_NAME}
     )
     install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
-        DESTINATION usr/share/doc/${PROJECT_NAME}
+        DESTINATION share/doc/${PROJECT_NAME}
     )
 endif ()
 
