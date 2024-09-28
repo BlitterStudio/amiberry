@@ -20,6 +20,12 @@
         <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
         <key>CFBundlePackageType</key>
         <string>APPL</string>
+        <key>NSMainStoryboardFile</key>
+        <string>Main</string>
+        <key>NSPrincipalClass</key>
+        <string>NSApplication</string>
+        <key>NSHighResolutionCapable</key>
+        <true/>
         <key>CFBundleShortVersionString</key>
         <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
         <key>CFBundleVersion</key>
