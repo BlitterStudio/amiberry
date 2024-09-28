@@ -535,7 +535,7 @@ install(FILES ${CMAKE_SOURCE_DIR}/docs/amiberry.1.gz
 
 set(CPACK_VERBATIM_VARIABLES YES)
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    set(CPACK_GENERATOR DragNDrop TZG)
+    set(CPACK_GENERATOR DragNDrop)
 else ()
     set(CPACK_GENERATOR TGZ DEB)
 endif ()
