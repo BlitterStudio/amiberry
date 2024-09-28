@@ -3918,7 +3918,6 @@ void create_missing_amiberry_folders()
     std::string directory;
 	if (_NSGetExecutablePath(exepath, &size) == 0)
 	{
-		std::string directory;
 		size_t last_slash_idx = string(exepath).rfind('/');
 		if (std::string::npos != last_slash_idx)
 		{
@@ -3930,13 +3929,23 @@ void create_missing_amiberry_folders()
 			directory = directory.substr(0, last_slash_idx);
 		}
     }
+	if (!my_existsdir(data_dir.c_str()))
+	{
+		my_mkdir(data_dir.c_str());
+		const std::string default_data_dir = directory + "/Resources/Data/";
+		if (my_existsdir(default_data_dir.c_str()))
+		{
+			const std::string command = "cp -r " + default_data_dir + "* " + data_dir;
+			system(command.c_str());
+		}
+	}
 #endif
 
     if (!my_existsdir(controllers_path.c_str()))
     {
         my_mkdir(controllers_path.c_str());
 #ifdef __MACH__
-        const std::string default_controller_path = directory + "Resources/Controllers/";
+        const std::string default_controller_path = directory + "/Resources/Controllers/";
 #else
         const std::string default_controller_path = "/usr/share/amiberry/controllers/";
 #endif
@@ -3951,7 +3960,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(whdboot_path.c_str());
 #ifdef __MACH__
-        const std::string default_whdboot_path = directory + "Resources/Whdboot/";
+        const std::string default_whdboot_path = directory + "/Resources/Whdboot/";
 #else
         const std::string default_whdboot_path = "/usr/share/amiberry/whdboot/";
 #endif
@@ -3974,7 +3983,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(rom_path.c_str());
 #ifdef __MACH__
-        const std::string default_roms_path = directory + "Resources/Roms/";
+        const std::string default_roms_path = directory + "/Resources/Roms/";
 #else
         const std::string default_roms_path = "/usr/share/amiberry/roms/";
 #endif
@@ -4184,14 +4193,6 @@ std::string get_data_directory()
     // On macOS, we use the Library/Application Support/Amiberry folder for data
     const std::string macos_home_directory = getenv("HOME");
 	const std::string macos_library_directory = macos_home_directory + "/Library/Application Support/Amiberry/";
-
-    // Create directories if they don't exist
-    if (!my_existsdir(macos_library_directory.c_str()))
-		my_mkdir(macos_library_directory.c_str());
-    std::string directory = macos_library_directory + "floppy_sounds";
-	if (!my_existsdir(directory.c_str()))
-		my_mkdir(directory.c_str());
-
     return macos_library_directory;
 #else
 	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
