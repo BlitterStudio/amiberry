@@ -3,16 +3,10 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
-    branches: 
-      - master
-      - preview
-    tags: 
+    tags:
       - v*.*.*
       - preview-v*.*.*
   pull_request:
-    branches:
-      - master
-      - preview
 
 jobs:
 
