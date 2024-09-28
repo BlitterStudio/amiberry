@@ -414,8 +414,16 @@ set(SOURCE_FILES
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/Info.plist
+            MACOSX_BUNDLE TRUE
+            MACOSX_BUNDLE_EXECUTABLE_NAME "Amiberry"
+            MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME} ${PROJECT_VERSION}"
+            MACOSX_BUNDLE_ICON_FILE "data/amiberry.png"
+            MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.amiberry"
+            MACOSX_BUNDLE_LONG_VERSION_STRING ${PROJECT_VERSION}
+            MACOSX_BUNDLE_BUNDLE_NAME "Amiberry"
+            MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+            MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+            MACOSX_BUNDLE_COPYRIGHT "Copyright 2016-2024 Dimitris Panokostas"
     )
 else ()
     add_executable(${PROJECT_NAME} ${SOURCE_FILES})
