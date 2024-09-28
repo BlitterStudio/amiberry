@@ -739,7 +739,7 @@ ifndef DEBUG
 	$(STRIP) $(PROG)
 endif
 ifdef	APPBUNDLE
-	sh make-bundle.sh
+	sh macos/make-bundle.sh
 endif
 
 gencpu:
