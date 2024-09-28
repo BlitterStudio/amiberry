@@ -534,44 +534,35 @@ else ()
     )
 endif ()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(CPACK_GENERATOR "Bundle")
-    set(CPACK_BUNDLE_NAME "Amiberry")
-    set(CPACK_BUNDLE_PLIST ${CMAKE_SOURCE_DIR}/Info.plist)
-    set(CPACK_BUNDLE_APPLE_ENTITLEMENTS ${CMAKE_SOURCE_DIR}/Entitlements.plist)
-    set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/data/amiberry.png)
-    set(CPACK_STRIP_FILES "YES")
+set(CPACK_GENERATOR "DEB")
+set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
+SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+SET(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+SET(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+SET(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+SET(CPACK_PACKAGE_VENDOR "BlitterStudio")
+SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+SET(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
+SET(CPACK_DEBIAN_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+    SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
 else()
-    set(CPACK_GENERATOR "DEB")
-    set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
-    SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
-    SET(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-    SET(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-    SET(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-    SET(CPACK_PACKAGE_VENDOR "BlitterStudio")
-    SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
-    SET(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
-    SET(CPACK_DEBIAN_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
-    if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
-    else()
-        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-    endif()
-    set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+    SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+endif()
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
 "Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.
 Amiberry is an optimized Amiga emulator for various platforms. It is based on
 the latest WinUAE and supports various Amiga models, including the A4000T,
 A4000D, A1200, A3000 and A600. Additionally, it includes several unique
 features, such as support for WHDLoad titles, RetroArch integration, custom
 Controller Mappings and more.")
-    set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
-    set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-    set(CPACK_STRIP_FILES "YES")
-endif()
+set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
+set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+set(CPACK_STRIP_FILES "YES")
 
 include(CPack)
