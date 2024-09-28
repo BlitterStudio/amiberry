@@ -32,27 +32,27 @@ jobs:
         if: github.ref_type != 'tag'
         run: |
           cd build
-          zip -r amiberry-macOS-x86_64.zip Amiberry.app
+          zip -r ../amiberry-macOS-x86_64.zip Amiberry.app
 
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
-          path: ../amiberry-macOS-x86_64.zip
+          path: amiberry-macOS-x86_64.zip
 
       - name: ZIP binaries
         if: github.ref_type == 'tag'
         run: |
           cd build
-          zip -r amiberry-${{ github.ref_name }}-macOS-x86_64.zip Amiberry.app
+          zip -r ../amiberry-${{ github.ref_name }}-macOS-x86_64.zip Amiberry.app
 
       - name: Upload artifact
         if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
-          path: ../amiberry-${{ github.ref_name }}-macOS-x86_64.zip
+          path: amiberry-${{ github.ref_name }}-macOS-x86_64.zip
 
   build-macOS-Apple-Silicon:
     runs-on: macos-latest
