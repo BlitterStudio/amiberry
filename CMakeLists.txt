@@ -529,6 +529,9 @@ install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
 install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
     DESTINATION ${CMAKE_INSTALL_DOCDIR}
 )
+install(FILES ${CMAKE_SOURCE_DIR}/docs/amiberry.1.gz
+    DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+)
 
 set(CPACK_VERBATIM_VARIABLES YES)
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
