@@ -3935,7 +3935,7 @@ void create_missing_amiberry_folders()
 		const std::string default_data_dir = directory + "/Resources/Data/";
 		if (my_existsdir(default_data_dir.c_str()))
 		{
-			const std::string command = "cp -r " + default_data_dir + "* " + data_dir;
+			const std::string command = "cp -r " + default_data_dir + "* " + '"' + data_dir + '"';
 			system(command.c_str());
 		}
 	}
