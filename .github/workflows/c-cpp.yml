@@ -3,9 +3,6 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
-    tags:
-      - v*.*.*
-      - preview-v*.*.*
   pull_request:
 
 jobs:
