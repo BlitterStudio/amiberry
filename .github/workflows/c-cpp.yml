@@ -21,8 +21,6 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-        with:
-          submodules: 'true'
 
       - name: Fix homebrew in Github Runner
         run: |
@@ -66,8 +64,6 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-        with:
-          submodules: 'true'
 
       - name: Install dependencies
         run: |
@@ -100,7 +96,7 @@ jobs:
           name: amiberry-macOS-64bit-apple-silicon
           path: amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
 
-  build-debian-bullseye-x86_64:
+  build-debian-bullseye-amd64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -117,10 +113,10 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: amiberry-debian-bullseye-x86_64
+        name: amiberry-debian-bullseye-amd64
         path: amiberry_*.deb
 
-  build-debian-bookworm-x86_64:
+  build-debian-bookworm-amd64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -137,10 +133,10 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: amiberry-debian-bookworm-x86_64
+        name: amiberry-debian-bookworm-amd64
         path: amiberry_*.deb
 
-  build-debian-bookworm-aarch64:
+  build-debian-bookworm-arm64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -157,7 +153,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: amiberry-debian-bookworm-aarch64
+        name: amiberry-debian-bookworm-arm64
         path: amiberry_*.deb
 
   build-debian-bookworm-armhf:
@@ -180,7 +176,7 @@ jobs:
         name: amiberry-debian-bookworm-armhf
         path: amiberry_*.deb
 
-  build-debian-bullseye-aarch64:
+  build-debian-bullseye-arm64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -197,7 +193,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: amiberry-debian-bullseye-aarch64
+        name: amiberry-debian-bullseye-arm64
         path: amiberry_*.deb
 
   build-debian-bullseye-armhf:
@@ -221,7 +217,7 @@ jobs:
         path: amiberry_*.deb
 
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-apple-silicon, build-debian-bookworm-x86_64, build-debian-bookworm-aarch64, build-debian-bookworm-armhf, build-debian-bullseye-x86_64, build-debian-bullseye-aarch64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
@@ -248,15 +244,15 @@ jobs:
           artifacts: |
             amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
             amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
-            amiberry-debian-bookworm-x86_64/amiberry_*.deb
-            amiberry-debian-bookworm-aarch64/amiberry_*.deb
+            amiberry-debian-bookworm-amd64/amiberry_*.deb
+            amiberry-debian-bookworm-arm64/amiberry_*.deb
             amiberry-debian-bookworm-armhf/amiberry_*.deb
-            amiberry-debian-bullseye-x86_64/amiberry_*.deb
-            amiberry-debian-bullseye-aarch64/amiberry_*.deb
+            amiberry-debian-bullseye-amd64/amiberry_*.deb
+            amiberry-debian-bullseye-arm64/amiberry_*.deb
             amiberry-debian-bullseye-armhf/amiberry_*.deb
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-apple-silicon, build-debian-bookworm-x86_64, build-debian-bookworm-aarch64, build-debian-bookworm-armhf, build-debian-bullseye-x86_64, build-debian-bullseye-aarch64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     steps:
@@ -284,9 +280,9 @@ jobs:
           artifacts: |
             amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
             amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
-            amiberry-debian-bookworm-x86_64/amiberry_*.deb
-            amiberry-debian-bookworm-aarch64/amiberry_*.deb
+            amiberry-debian-bookworm-amd64/amiberry_*.deb
+            amiberry-debian-bookworm-arm64/amiberry_*.deb
             amiberry-debian-bookworm-armhf/amiberry_*.deb
-            amiberry-debian-bullseye-x86_64/amiberry_*.deb
-            amiberry-debian-bullseye-aarch64/amiberry_*.deb
+            amiberry-debian-bullseye-amd64/amiberry_*.deb
+            amiberry-debian-bullseye-arm64/amiberry_*.deb
             amiberry-debian-bullseye-armhf/amiberry_*.deb

@@ -10,9 +10,9 @@ If you haven't already, come find us in one of these platforms:
 
 Bug reporting is an important part of making Amiberry better. If you believe you have found a bug, then please follow these steps:
 
-* **Ensure the bug has not already been reported.** Check the existing Github [Issues](https://github.com/midwan/amiberry/issues).
+* **Ensure the bug has not already been reported.** Check the existing Github [Issues](https://github.com/BlitterStudio/amiberry/issues).
 
-* If you're unable to find an open issue that addresses the problem, [open a new one](https://github.com/midwan/amiberry/issues/new). 
+* If you're unable to find an open issue that addresses the problem, [open a new one](https://github.com/BlitterStudio/amiberry/issues/new). 
 Be sure to include a **title and clear description**, as much relevant information as possible and **steps to recreate** the problem.
 
 * Please use the relevant **bug report template** to create the issue. It was designed to help you fill in what we need, in order to locate

@@ -859,7 +859,7 @@ void usage()
 	std::cout << " -O <value>                 Set graphics specs." << '\n';
 	std::cout << " -H <value>                 Color mode." << '\n';
 	std::cout << " -o <amiberry cnf>=<value>  Set Amiberry configuration parameter with value." << '\n';
-	std::cout << "                            See: https://github.com/midwan/amiberry/wiki/Amiberry.conf-options" <<
+	std::cout << "                            See: https://github.com/BlitterStudio/amiberry/wiki/Amiberry.conf-options" <<
 		'\n';
 	std::cout << "\nExample 1:" << '\n';
 	std::cout << "amiberry --model A1200 -G" << '\n';
@@ -1392,7 +1392,7 @@ void download_rtb(const std::string& filename)
 	if (!file_exists(destination))
 	{
 		write_log("Downloading %s ...\n", destination.c_str());
-		const std::string url = "https://github.com/midwan/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
+		const std::string url = "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
 		download_file(url,  destination, false);
 	}
 }

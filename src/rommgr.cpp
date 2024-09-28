@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 319
+#define NEXT_ROM_ID 322
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -122,6 +122,9 @@ static struct romdata roms[] = {
 	0xb01c4b56, 0xbba8e5cd,0x118b8d92,0xafed5693,0x5eeb9770,0x2a662d8f },
 	{ _T("Cloanto Amiga Forever 2010 ROM key"), 0, 0, 0, 0, 0, 1544, 73, 0, 1, ROMTYPE_KEY, 0, 0, NULL,
 	0x8c4dd05c, 0x05034f62,0x0b5bb7b2,0x86954ea9,0x164fdb90,0xfb2897a4 },
+
+	{ _T("6500/1 Keyboard MCU ROM"), 0, 0, 0, 0, _T("KBDMCU\0"), 2048, 321, 0, 0, ROMTYPE_KBMCU, 0, 0, NULL,
+	0x4a3fc332, 0x83b21d0c, 0x8b93fc9b, 0x9b3b287f, 0xde4ec8f3, 0xbadac5a2 },
 
 	{ _T("KS ROM v23.93 (Velvet)"), 23, 93, 23, 93, _T("VELVET\0"), 131072, 125, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xadcb44c9, 0x7c36b2ba,0x298da3da,0xce60d0ba,0x8511d470,0x76a40d5c, NULL, NULL, 4 },
@@ -606,8 +609,12 @@ static struct romdata roms[] = {
 	0x3befa0c0, 0x4414673c, 0xa52f78a0, 0xae656824, 0xfd08b54f, 0xa1de237c, NULL, NULL },
 	ALTROMPN(166, 1, 1, 32768, ROMTYPE_ODD  | ROMTYPE_8BIT, NULL, 0xb64e3bbf, 0xd6f4fc81, 0x38325a78, 0x74ff1c15, 0x7c93f1a2, 0x444904ae)
 	ALTROMPN(166, 1, 2, 32768, ROMTYPE_EVEN | ROMTYPE_8BIT, NULL, 0x541b5988, 0x3546517b, 0x57cecd2f, 0x9fbfcd0c, 0xf26fdbbf, 0xfb009e3e)
-	{ _T("QuikPak 4060 XP"), 2, 1, 2, 1, _T("QUIKPAK\0"), 32768, 239, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
+	{ _T("QuikPak 4060 XP v2.1"), 2, 1, 2, 1, _T("QUIKPAK\0"), 32768, 239, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
 	0x3a8eb518, 0x902dd0ba, 0x56c2afd0, 0xbb425bf5, 0x264fbc62, 0x90ad2c4e, NULL, NULL },
+	{ _T("QuikPak 4060 XP v2.2"), 2, 2, 2, 2, _T("QUIKPAK\0"), 65536, 319, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
+	0x47009144, 0x547fd232, 0xd774e872, 0x37a83d30, 0xeb06e3d6, 0xb88456c2, NULL, NULL },
+	{ _T("QuikPak 4060"), 0, 0, 0, 0, _T("QUIKPAK\0"), 32768, 320, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
+	0x2b12aa6d, 0x023cd8a5, 0x7f24a992, 0x12d64c93, 0x69da614a, 0x3f6d0932, NULL, NULL },
 
 	{ _T("Preferred Technologies Nexus"), 1, 0, 1, 0, _T("PTNEXUS\0"), 8192, 139, 0, 0, ROMTYPE_PTNEXUS, 0, 0, NULL,
 	0xf495879a, 0xa3bd0202, 0xe14aa5b6, 0x49d3ce88, 0x22975950, 0x6500dbc2, NULL, NULL },

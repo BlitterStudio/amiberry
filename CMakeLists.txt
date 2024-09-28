@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
+    message(FATAL_ERROR "Prevented in-tree build. Please create a build directory outside of the amiberry source code and run \"cmake -S ${CMAKE_SOURCE_DIR} -B .\" from there")
+endif ()
 project(amiberry VERSION 6.3.5)
 enable_language(C CXX)
 
@@ -409,7 +412,7 @@ set(SOURCE_FILES
     src/jit/compemu_support.cpp
 )
 
-if (APPLE)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
     set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE TRUE
@@ -473,129 +476,58 @@ if (USE_OPENGL)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
 endif ()
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/cdroms $<TARGET_FILE_DIR:${PROJECT_NAME}>/cdroms)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/conf $<TARGET_FILE_DIR:${PROJECT_NAME}>/conf)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/controllers $<TARGET_FILE_DIR:${PROJECT_NAME}>/controllers)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/data $<TARGET_FILE_DIR:${PROJECT_NAME}>/data)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/floppies $<TARGET_FILE_DIR:${PROJECT_NAME}>/floppies)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/harddrives $<TARGET_FILE_DIR:${PROJECT_NAME}>/harddrives)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/inputrecordings $<TARGET_FILE_DIR:${PROJECT_NAME}>/inputrecordings)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/kickstarts $<TARGET_FILE_DIR:${PROJECT_NAME}>/kickstarts)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/lha $<TARGET_FILE_DIR:${PROJECT_NAME}>/lha)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/nvram $<TARGET_FILE_DIR:${PROJECT_NAME}>/nvram)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/plugins $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/savestates $<TARGET_FILE_DIR:${PROJECT_NAME}>/savestates)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/screenshots $<TARGET_FILE_DIR:${PROJECT_NAME}>/screenshots)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/whdboot $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/
-        DEPENDS external/floppybridge)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so $<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/
-        DEPENDS external/capsimage)
-
 # Install the executable
-if (APPLE)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     install(TARGETS ${PROJECT_NAME} BUNDLE DESTINATION .)
 else ()
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+
     # Install additional directories
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/cdroms
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/conf
-        DESTINATION share/${PROJECT_NAME}
-    )
+    # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
         DESTINATION share/${PROJECT_NAME}
     )
+    # This one contains the data files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
         DESTINATION share/${PROJECT_NAME}
     )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/floppies
+    # This one contains the AROS kickstart files
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
         DESTINATION share/${PROJECT_NAME}
     )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/harddrives
-        DESTINATION share/${PROJECT_NAME}
+    # This one contains the plugins
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/abr
+        DESTINATION lib/${PROJECT_NAME}
     )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/inputrecordings
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/kickstarts
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/lha
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/nvram
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/savestates
-        DESTINATION share/${PROJECT_NAME}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/screenshots
-        DESTINATION share/${PROJECT_NAME}
-    )
+    # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
         DESTINATION share/${PROJECT_NAME}
-    )
-
-    # Install shared libraries
-    install(FILES ${CMAKE_BINARY_DIR}/external/floppybridge/libfloppybridge.so
-        DESTINATION share/${PROJECT_NAME}/plugins
-    )
-    install(FILES ${CMAKE_BINARY_DIR}/external/capsimage/libcapsimage.so
-        DESTINATION share/${PROJECT_NAME}/plugins
     )
 
     # Install desktop file
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
         DESTINATION share/applications
     )
+    # Install icon
+    install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
+        DESTINATION share/icons/hicolor/256x256/apps
+    )
+    # Install Debian files
+    install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
+        DESTINATION share/doc/${PROJECT_NAME}
+    )
+    install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
+        DESTINATION share/doc/${PROJECT_NAME}
+    )
 endif ()
 
-include(InstallRequiredSystemLibraries)
-
-if(APPLE)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(CPACK_GENERATOR "Bundle")
     set(CPACK_BUNDLE_NAME "Amiberry")
     set(CPACK_BUNDLE_PLIST ${CMAKE_SOURCE_DIR}/Info.plist)
     set(CPACK_BUNDLE_APPLE_ENTITLEMENTS ${CMAKE_SOURCE_DIR}/Entitlements.plist)
     set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/data/amiberry.png)
+    set(CPACK_STRIP_FILES "YES")
 else()
     set(CPACK_GENERATOR "DEB")
     set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
@@ -607,12 +539,26 @@ else()
     SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
     SET(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
     SET(CPACK_DEBIAN_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
+    else()
+        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+    endif()
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Amiberry is an optimized Amiga emulator various platforms.")
-    set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+"Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.
+Amiberry is an optimized Amiga emulator for various platforms. It is based on
+the latest WinUAE and supports various Amiga models, including the A4000T,
+A4000D, A1200, A3000 and A600. Additionally, it includes several unique
+features, such as support for WHDLoad titles, RetroArch integration, custom
+Controller Mappings and more.")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
     set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+    set(CPACK_STRIP_FILES "YES")
 endif()
 
 include(CPack)

@@ -1033,10 +1033,9 @@ static int init_joystick()
 		num_joystick = MAX_INPUT_DEVICES;
 
 	// set up variables / paths etc.
-	char cfg[MAX_DPATH];
-	get_configuration_path(cfg, MAX_DPATH);
-	strcat(cfg, "gamecontrollerdb.txt");
-	SDL_GameControllerAddMappingsFromFile(cfg);
+	std::string cfg = get_controllers_path();
+	cfg += "gamecontrollerdb.txt";
+	SDL_GameControllerAddMappingsFromFile(cfg.c_str());
 
 	std::string controllers = get_controllers_path();
 	controllers.append("gamecontrollerdb_user.txt");
