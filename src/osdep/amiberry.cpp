@@ -3974,14 +3974,14 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(rom_path.c_str());
 #ifdef __MACH__
-        const std::string default_whdboot_path = directory + "Resources/Roms/";
+        const std::string default_roms_path = directory + "Resources/Roms/";
 #else
-        const std::string default_kickstart_path = "/usr/share/amiberry/roms/";
+        const std::string default_roms_path = "/usr/share/amiberry/roms/";
 #endif
         // copy default kickstart files, if they exist in /usr/share/amiberry/roms
-        if (my_existsdir(default_kickstart_path.c_str()))
+        if (my_existsdir(default_roms_path.c_str()))
         {
-            const std::string command = "cp -r " + default_kickstart_path + "* " + rom_path;
+            const std::string command = "cp -r " + default_roms_path + "* " + rom_path;
             system(command.c_str());
         }
     }
@@ -4186,9 +4186,9 @@ std::string get_data_directory()
 	const std::string macos_library_directory = macos_home_directory + "/Library/Application Support/Amiberry/";
 
     // Create directories if they don't exist
-    if (!my_existsdir(macos_amiberry_directory.c_str()))
-		my_mkdir(macos_amiberry_directory.c_str());
-    std::string directory = macos_amiberry_directory + "floppy_sounds";
+    if (!my_existsdir(macos_library_directory.c_str()))
+		my_mkdir(macos_library_directory.c_str());
+    std::string directory = macos_library_directory + "floppy_sounds";
 	if (!my_existsdir(directory.c_str()))
 		my_mkdir(directory.c_str());
 
