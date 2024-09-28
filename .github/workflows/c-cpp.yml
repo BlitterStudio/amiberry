@@ -30,7 +30,9 @@ jobs:
 
       - name: ZIP binaries
         if: github.ref_type != 'tag'
-        run: zip -r amiberry-macOS-x86_64.zip Amiberry.app
+        run: |
+          cd build
+          zip -r amiberry-macOS-x86_64.zip Amiberry.app
 
       - name: Upload artifact
         if: github.ref_type != 'tag'
@@ -41,7 +43,9 @@ jobs:
 
       - name: ZIP binaries
         if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-macOS-x86_64.zip build/Amiberry.app
+        run: |
+          cd build
+          zip -r amiberry-${{ github.ref_name }}-macOS-x86_64.zip Amiberry.app
 
       - name: Upload artifact
         if: github.ref_type == 'tag'
@@ -67,7 +71,9 @@ jobs:
 
       - name: ZIP binaries
         if: github.ref_type != 'tag'
-        run: zip -r amiberry-macOS-apple-silicon.zip build/Amiberry.app
+        run: |
+          cd build
+          zip -r amiberry-macOS-apple-silicon.zip Amiberry.app
         
       - name: Upload artifact
         if: github.ref_type != 'tag'
@@ -78,7 +84,9 @@ jobs:
 
       - name: ZIP binaries
         if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip Amiberry.app
+        run: |
+          cd build
+          zip -r amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip Amiberry.app
 
       - name: Upload artifact
         if: github.ref_type == 'tag'
