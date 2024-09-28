@@ -41,7 +41,6 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(MACOS TRUE)
     message(STATUS "macOS platform detected")
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         include_directories("/opt/homebrew/include")
@@ -417,23 +416,20 @@ set(SOURCE_FILES
     src/jit/compemu_support.cpp
 )
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-            MACOSX_BUNDLE TRUE
-            MACOSX_BUNDLE_EXECUTABLE_NAME "Amiberry"
-            MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME} ${PROJECT_VERSION}"
-            MACOSX_BUNDLE_ICON_FILE "data/amiberry.png"
-            MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.amiberry"
-            MACOSX_BUNDLE_LONG_VERSION_STRING ${PROJECT_VERSION}
-            MACOSX_BUNDLE_BUNDLE_NAME "Amiberry"
-            MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
-            MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-            MACOSX_BUNDLE_COPYRIGHT "Copyright 2016-2024 Dimitris Panokostas"
-    )
-else ()
-    add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-endif()
+add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_EXECUTABLE_NAME "Amiberry"
+        MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME} ${PROJECT_VERSION}"
+        MACOSX_BUNDLE_ICON_FILE "data/amiberry.png"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.amiberry"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.blitterstudio.amiberry"
+        MACOSX_BUNDLE_LONG_VERSION_STRING ${PROJECT_VERSION}
+        MACOSX_BUNDLE_BUNDLE_NAME "Amiberry"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_COPYRIGHT "(c) 2016-2024 Dimitris Panokostas"
+)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
 
@@ -489,60 +485,72 @@ if (USE_OPENGL)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
 endif ()
 
+include(GNUInstallDirs)
+
 # Install the executable
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    install(TARGETS ${PROJECT_NAME} BUNDLE DESTINATION .)
+install(TARGETS ${PROJECT_NAME}
+        BUNDLE DESTINATION .
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+# This one contains the gamecontrollersdb.txt file
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
+    DESTINATION ${CMAKE_INSTALL_DATADIR}
+)
+# This one contains the data files
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
+    DESTINATION ${CMAKE_INSTALL_DATADIR}
+)
+# This one contains the AROS kickstart files
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
+    DESTINATION ${CMAKE_INSTALL_DATADIR}
+)
+# This one contains the plugins
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/abr
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
+)
+# This one contains the whdboot files
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
+    DESTINATION ${CMAKE_INSTALL_DATADIR}
+)
+# Install desktop file
+install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
+    DESTINATION share/applications
+)
+# Install icon
+install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
+    DESTINATION share/icons/hicolor/256x256/apps
+)
+# Install Debian files
+install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
+set(CPACK_VERBATIM_VARIABLES YES)
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    set(CPACK_GENERATOR DragNDrop TZG)
 else ()
-    install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
-
-    # Install additional directories
-    # This one contains the gamecontrollersdb.txt file
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-        DESTINATION share/${PROJECT_NAME}
-    )
-    # This one contains the data files
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-        DESTINATION share/${PROJECT_NAME}
-    )
-    # This one contains the AROS kickstart files
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
-        DESTINATION share/${PROJECT_NAME}
-    )
-    # This one contains the plugins
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/abr
-        DESTINATION lib/${PROJECT_NAME}
-    )
-    # This one contains the whdboot files
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-        DESTINATION share/${PROJECT_NAME}
-    )
-
-    # Install desktop file
-    install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
-        DESTINATION share/applications
-    )
-    # Install icon
-    install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
-        DESTINATION share/icons/hicolor/256x256/apps
-    )
-    # Install Debian files
-    install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
-        DESTINATION share/doc/${PROJECT_NAME}
-    )
-    install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
-        DESTINATION share/doc/${PROJECT_NAME}
-    )
+    set(CPACK_GENERATOR TGZ DEB)
 endif ()
-
-set(CPACK_GENERATOR "DEB")
 set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
+
 SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
 SET(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 SET(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 SET(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 SET(CPACK_PACKAGE_VENDOR "BlitterStudio")
+
 SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 SET(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
+
+set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
+set(CPACK_DMG_VOLUME_NAME "${CMAKE_PROJECT_NAME}")
+
+# DEB packaging
 SET(CPACK_DEBIAN_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
