@@ -17,7 +17,7 @@ mkdir -p Amiberry.app/Contents/Resources
 # Copy executable into App bundle
 cp amiberry Amiberry.app/Contents/MacOS/Amiberry
 # Copy parameter list into the bundle
-cat Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$VERSION/" | sed -e "s/MAJOR/$MAJOR/" | sed -e "s/MINOR/$MINOR/" > Amiberry.app/Contents/Info.plist
+cat macos/Info.plist.template | sed -e "s/LONGVERSION/$LONGVER/" | sed -e "s/VERSION/$VERSION/" | sed -e "s/MAJOR/$MAJOR/" | sed -e "s/MINOR/$MINOR/" > Amiberry.app/Contents/Info.plist
 # Self-sign binary
 export CODE_SIGN_ENTITLEMENTS=Entitlements.plist
 codesign --entitlements=Entitlements.plist --force -s - Amiberry.app
