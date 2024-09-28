@@ -4,7 +4,7 @@
 
 <a rel="me" href="https://mastodon.social/@midwan">Follow me Mastodon!</a>
 
-[![C/C++ CI](https://github.com/midwan/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/midwan/amiberry/actions/workflows/c-cpp.yml)
+[![C/C++ CI](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml)
 
 [![Discord](https://img.shields.io/badge/My-Discord-%235865F2.svg)](https://discord.gg/wWndKTGpGV)
 
@@ -85,7 +85,7 @@ A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitter
 
 ### Standalone binaries
 
-The latest `stable` releases come with binaries for several different platforms, that you can download from the [Releases](https://github.com/midwan/amiberry/releases) area. If your platform is not included, or if you want to test a newer version than the stable release, then you will have to compile it yourself. Read on to see how to do that.
+The latest `stable` releases come with binaries for several different platforms, that you can download from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area. If your platform is not included, or if you want to test a newer version than the stable release, then you will have to compile it yourself. Read on to see how to do that.
 
 ### Compile from source
 

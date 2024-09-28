@@ -314,12 +314,12 @@ public:
 		//  download WHDLoad executable
 		destination = prefix_with_whdboot_path("WHDLoad");
 		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
 
 		//  download boot-data.zip
 		destination = prefix_with_whdboot_path("boot-data.zip");
 		write_log("Downloading %s ...\n", destination.c_str());
-		download_file("https://github.com/midwan/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
 
 		// download kickstart RTB files for maximum compatibility
 		download_rtb("kick33180.A500.RTB");
@@ -352,9 +352,7 @@ class DownloadControllerDbActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		char config_path[MAX_DPATH];
-		get_configuration_path(config_path, MAX_DPATH);
-		auto destination = std::string(config_path);
+		std::string destination = get_controllers_path();
 		destination += "gamecontrollerdb.txt";
 		write_log("Downloading % ...\n", destination.c_str());
 		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
@@ -876,7 +874,7 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back("custom edits that may have been made.");
         helptext.emplace_back(" ");
         helptext.emplace_back("The \"Update Controllers DB\" button will attempt to download the latest version of");
-        helptext.emplace_back("the bundled gamecontrollerdb.txt file, to be stored in the Configuration files path.");
+        helptext.emplace_back("the bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.");
         helptext.emplace_back("The file contains the \"official\" mappings for recognized controllers by SDL2 itself.");
         helptext.emplace_back("Please note that this is separate from the user-configurable gamecontrollerdb_user.txt");
         helptext.emplace_back("file, which is contained in the Controllers path. That file is never overwritten, and");
@@ -887,7 +885,7 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back(" ");
         helptext.emplace_back("The paths for Amiberry resources include;");
         helptext.emplace_back(" ");
-		helptext.emplace_back("- System ROMs: The Amiga Kickstart files are by default located under 'kickstarts'.");
+		helptext.emplace_back("- System ROMs: The Amiga Kickstart files are by default located under 'roms'.");
 		helptext.emplace_back("  After changing the location of the Kickstart ROMs, or adding any additional ROMs, ");
 		helptext.emplace_back("  click on the \"Rescan\" button to refresh the list of the available ROMs. Please");
 		helptext.emplace_back("  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory");
