@@ -26,7 +26,7 @@ jobs:
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler
 
       - name: make for macOS X64
-        run: make -j4 PLATFORM=osx-x86
+        run: cmake -B build && cmake --build build -j4
 
       - name: ZIP binaries
         if: github.ref_type != 'tag'
@@ -63,7 +63,7 @@ jobs:
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler
 
       - name: make for macOS Apple Silicon
-        run: make -j4 PLATFORM=osx-m1
+        run: cmake -B build && cmake --build build -j4
 
       - name: ZIP binaries
         if: github.ref_type != 'tag'
