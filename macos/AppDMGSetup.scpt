@@ -78,7 +78,7 @@ on run argv
         -- x-start, y-start, x-end, y-end (aka. x, z, width, height)
         -- Making this 540 x 400 in size + some random 8 pixel to actually fit the content ¯\_(ツ)_/¯
         set the bounds to {400, 100, 940, 528}
-        set position of item "SmallSDL2App.app" to {140, 200}
+        set position of item "amiberry.app" to {140, 200}
         set position of item "Applications" to {405, 200}
       end tell
       delay 5
