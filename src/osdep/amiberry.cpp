@@ -3932,7 +3932,7 @@ void create_missing_amiberry_folders()
 	if (!my_existsdir(data_dir.c_str()))
 	{
 		my_mkdir(data_dir.c_str());
-		const std::string default_data_dir = directory + "/Resources/Data/";
+		const std::string default_data_dir = directory + "/Resources/data/";
 		if (my_existsdir(default_data_dir.c_str()))
 		{
 			const std::string command = "cp -r " + default_data_dir + "* " + '"' + data_dir + '"';
@@ -3945,7 +3945,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(controllers_path.c_str());
 #ifdef __MACH__
-        const std::string default_controller_path = directory + "/Resources/Controllers/";
+        const std::string default_controller_path = directory + "/Resources/controllers/";
 #else
         const std::string default_controller_path = "/usr/share/amiberry/controllers/";
 #endif
@@ -3960,7 +3960,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(whdboot_path.c_str());
 #ifdef __MACH__
-        const std::string default_whdboot_path = directory + "/Resources/Whdboot/";
+        const std::string default_whdboot_path = directory + "/Resources/whdboot/";
 #else
         const std::string default_whdboot_path = "/usr/share/amiberry/whdboot/";
 #endif
@@ -3983,7 +3983,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(rom_path.c_str());
 #ifdef __MACH__
-        const std::string default_roms_path = directory + "/Resources/Roms/";
+        const std::string default_roms_path = directory + "/Resources/roms/";
 #else
         const std::string default_roms_path = "/usr/share/amiberry/roms/";
 #endif
