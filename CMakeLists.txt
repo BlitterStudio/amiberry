@@ -547,15 +547,15 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 else()
     # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-        DESTINATION ${CMAKE_INSTALL_DATADIR}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
     # This one contains the data files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-        DESTINATION ${CMAKE_INSTALL_DATADIR}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
     # This one contains the AROS kickstart files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
-        DESTINATION ${CMAKE_INSTALL_DATADIR}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
     # This one contains the plugins
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/abr
@@ -563,7 +563,7 @@ else()
     )
     # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-        DESTINATION ${CMAKE_INSTALL_DATADIR}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
     # Install desktop file
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
@@ -571,7 +571,7 @@ else()
     )
     # Install icon
     install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
-        DESTINATION share/icons/hicolor/256x256/apps
+        DESTINATION share/icons/hicolor/512x512/apps
     )
     # Install Debian files
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
