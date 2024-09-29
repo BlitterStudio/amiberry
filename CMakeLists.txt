@@ -424,7 +424,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_COPYRIGHT "(c) 2016-2024 Dimitris Panokostas"
-        INSTALL_RPATH "@executable_path/../Frameworks"
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
