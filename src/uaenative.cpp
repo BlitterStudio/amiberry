@@ -73,7 +73,7 @@ static int g_max_handle = -1;
 #define OS_NAME _T("windows")
 #endif
 #else
-#ifdef MACH
+#ifdef __MACH__
 #ifndef OS_NAME
 #define OS_NAME _T("macos")
 #endif
