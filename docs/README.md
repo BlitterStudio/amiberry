@@ -13,12 +13,11 @@
 Amiberry is an optimized Amiga emulator for ARM32, ARM64, x86_64 and RISC-V platforms. It runs on both macOS and Linux. Windows users can always use [WinUAE](https://www.winuae.net).
 
 The core emulation comes from [WinUAE](https://www.winuae.net), and even the main GUI is designed to look similar to that.
-
 It includes JIT support, to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
 
 There are currently two Amiberry versions available: **Amiberry and Amiberry-Lite** - [see here](https://github.com/BlitterStudio/amiberry/wiki/First-Installation) to see which is the best pick for your needs.
 
-## Requirements
+## Platforms
 
 ### Linux
 
@@ -43,15 +42,15 @@ Amiberry also runs on macOS, and has been tested on:
 
 - Catalina (x86_64)
 - Monterey (x86_64 and Apple Silicon)
-- Sonoma (x86_64)
+- Sonoma (x86_64 and Apple Silicon)
+- Sequoia (x86_64 and Apple Silicon)
 - Newer macOS versions _should_ work as well
 
-Under macOS, you will need to install the required libraries using Homebrew.
-For more details on how to do that or if you want to compile it from source, please refer to the [relevant wiki page.](https://github.com/BlitterStudio/amiberry/wiki/Compiling-for-macOS)
+## Dependencies
 
-Also, please keep in mind that Amiberry on macOS is self-signed, so you will need to allow it to run through Apple's security dialogs that will block it by default (since it's coming from a non-recognized Developer account).
+Please note that you will probably also need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
 
-### Dependencies
+### Linux
 
 Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display, input handling and audio output. Additionally, a few extra libraries are used for CD32 MPEG and mp3 decoding.
 
@@ -59,21 +58,27 @@ If you just want to just run the Amiberry binary, you can install the required l
 
       sudo apt install cmake libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 flac mpg123 libmpeg2-4 libserialport0 libportmidi0
 
-If you want to compile Amiberry from source, you'll need the `-dev` version of the same packages instead. For example, on Debian-based distros:
-
-      sudo apt install cmake libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev libserialport-dev libportmidi-dev
-
-Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package names are these (these include the `dev` versions by default):
-
-      sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport portmidi
-
 if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run [Amiberry](https://aur.archlinux.org/packages/amiberry) through:
 
       yay -S amiberry
 
-Additionally, please note that you will probably also need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
+### macOS
+
+The macOS application bundle includes all the required libraries, so you don't need to install anything extra.
 
 ## Getting Amiberry
+
+### DEB packages
+
+Amiberry is available as a DEB package for ARM32, ARM64 and x86_64 Debian-based Linux platforms. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
+Then you can install it with:
+    
+        sudo dpkg -i amiberry_7.0.0_arm64.deb
+
+### macOS
+
+Amiberry is available as a DMG package for macOS. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
+After installing it in your Applications folder, you'll need to open a console and run `xattr -rd com.apple.quarantine Amiberry.app`, to whitelist it and allow it to run.
 
 ### Distro package management
 
@@ -83,27 +88,45 @@ Several popular distros (like RetroPie, DietPi, Pimiga and others) already inclu
 
 A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry)
 
-### Standalone binaries
-
-The latest `stable` releases come with binaries for several different platforms, that you can download from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area. If your platform is not included, or if you want to test a newer version than the stable release, then you will have to compile it yourself. Read on to see how to do that.
-
-### Compile from source
+## Compile from source
 
 Alternatively, you can of course compile the latest version of Amiberry from source yourself. To do that, follow these steps:
 
-### First, clone this repository locally
+### Linux
+
+You'll need the `-dev` version of the required packages. For example, on Debian-based distros:
+
+      sudo apt install cmake libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev libserialport-dev libportmidi-dev
+
+Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package names are these (these include the `dev` versions by default):
+
+      sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport portmidi
+
+### macOS
+
+Under macOS, you will need to install the required libraries using [Homebrew](https://docs.brew.sh/Installation):
+
+        brew install cmake sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
+
+### Clone this repository locally
 
       git clone https://github.com/BlitterStudio/amiberry
       cd amiberry
 
-### Build using CMake (recommended)
+### Build Amiberry
 
-Amiberry can be built using CMake or the old Makefile approach. The recommended and simpler way, is using CMake:
+Amiberry requires CMake to build. The following commands will create a `build` directory, configure the build, and then compile the source code:
 
-      cmake -B build && cmake --build build -j4
+      cmake -B build && cmake --build build
 
-### Build using the Makefile (old approach)
+You can also use Ninja, if you prefer:
 
-If you want to use the Makefile instead, please consult the [relevant Wiki page](https://github.com/BlitterStudio/amiberry/wiki/Available-Platforms) for the full list of available platforms, as there are many (and separate for 32-bit and 64-bit ones). Alternatively, you can also check the Makefile itself for a full list of supported platforms.
+      cmake -B build -G Ninja && cmake --build build
+
+### Packaging
+
+The following will create a DEB package for Debian-based distros, or a DMG package for macOS:
+
+    cpack --config build/CPackConfig.cmake
 
 For more documentation subjects, please check the [Wiki page](https://github.com/BlitterStudio/amiberry/wiki)
