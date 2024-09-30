@@ -2,9 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
     message(FATAL_ERROR "Prevented in-tree build. Please create a build directory outside of the amiberry source code and run \"cmake -S ${CMAKE_SOURCE_DIR} -B .\" from there")
 endif ()
-project(amiberry VERSION 6.3.5)
-enable_language(C CXX)
 
+set(VERSION "6.3.5")
+project(amiberry VERSION ${VERSION})
+
+enable_language(C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe -fno-pie -no-pie")
@@ -35,8 +37,6 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(MACOS TRUE)
-    message(STATUS "macOS platform detected")
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         include_directories("/opt/homebrew/include")
         set(CMAKE_EXE_LINKER_FLAGS "-L/opt/homebrew/lib -framework IOKit -framework Foundation -liconv")
@@ -411,15 +411,20 @@ set(SOURCE_FILES
     src/jit/compemu_support.cpp
 )
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
-    set_target_properties(${PROJECT_NAME} PROPERTIES
+add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/Info.plist
-    )
-else ()
-    add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-endif()
+        MACOSX_BUNDLE_EXECUTABLE_NAME "Amiberry"
+        MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME} ${PROJECT_VERSION}"
+        MACOSX_BUNDLE_ICON_FILE "data/amiberry.png"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.amiberry"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.blitterstudio.amiberry"
+        MACOSX_BUNDLE_LONG_VERSION_STRING ${PROJECT_VERSION}
+        MACOSX_BUNDLE_BUNDLE_NAME "Amiberry"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_COPYRIGHT "(c) 2016-2024 Dimitris Panokostas"
+)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
 
@@ -428,11 +433,6 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
     target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV)
 endif ()
-
-find_package(SDL2 CONFIG REQUIRED)
-find_package(SDL2_image MODULE REQUIRED)
-find_package(SDL2_ttf MODULE REQUIRED)
-include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 
 if (USE_GPIOD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GPIOD)
@@ -447,6 +447,11 @@ if (USE_DBUS)
     target_include_directories(${PROJECT_NAME} PRIVATE ${DBUS_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} PRIVATE ${DBUS_LIBRARIES})
 endif ()
+
+find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2_image MODULE REQUIRED)
+find_package(SDL2_ttf MODULE REQUIRED)
+include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
@@ -475,89 +480,162 @@ if (USE_OPENGL)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
 endif ()
 
-# Install the executable
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    install(TARGETS ${PROJECT_NAME} BUNDLE DESTINATION .)
-else ()
-    install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+include(GNUInstallDirs)
 
-    # Install additional directories
+# Install the executable
+install(TARGETS ${PROJECT_NAME}
+        BUNDLE DESTINATION .
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/controllers
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/controllers)
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/data
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/data)
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/roms
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/roms)
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/whdboot
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/whdboot)
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:capsimage>
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/$<TARGET_FILE_NAME:capsimage>)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:floppybridge>
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/$<TARGET_FILE_NAME:floppybridge>)
+     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+         COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/)
+
+    if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
+        install(FILES $<TARGET_FILE:capsimage>
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/)
+        install(FILES $<TARGET_FILE:floppybridge>
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/)
+
+        # This one contains the gamecontrollersdb.txt file
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+        )
+        # This one contains the data files
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+        )
+        # This one contains the AROS kickstart files
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+        )
+        # This one contains the whdboot files
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources
+        )
+    endif ()
+else()
     # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
-        DESTINATION share/${PROJECT_NAME}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
     # This one contains the data files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/data
-        DESTINATION share/${PROJECT_NAME}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
     # This one contains the AROS kickstart files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
-        DESTINATION share/${PROJECT_NAME}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
     # This one contains the plugins
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/abr
-        DESTINATION lib/${PROJECT_NAME}
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME}
     )
     # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
-        DESTINATION share/${PROJECT_NAME}
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
     )
-
     # Install desktop file
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
         DESTINATION share/applications
     )
     # Install icon
     install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
-        DESTINATION share/icons/hicolor/256x256/apps
+        DESTINATION share/icons/hicolor/512x512/apps
     )
     # Install Debian files
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
-        DESTINATION share/doc/${PROJECT_NAME}
+        DESTINATION ${CMAKE_INSTALL_DOCDIR}
     )
     install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
-        DESTINATION share/doc/${PROJECT_NAME}
+        DESTINATION ${CMAKE_INSTALL_DOCDIR}
     )
-endif ()
+    install(FILES ${CMAKE_SOURCE_DIR}/docs/amiberry.1.gz
+        DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+    )
+endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(CPACK_GENERATOR "Bundle")
-    set(CPACK_BUNDLE_NAME "Amiberry")
-    set(CPACK_BUNDLE_PLIST ${CMAKE_SOURCE_DIR}/Info.plist)
-    set(CPACK_BUNDLE_APPLE_ENTITLEMENTS ${CMAKE_SOURCE_DIR}/Entitlements.plist)
-    set(CPACK_BUNDLE_ICON ${CMAKE_SOURCE_DIR}/data/amiberry.png)
-    set(CPACK_STRIP_FILES "YES")
+# Base package settings
+set(CPACK_VERBATIM_VARIABLES YES)
+set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
+set(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(CPACK_PACKAGE_VENDOR "BlitterStudio")
+
+# macOS settings for DragNDrop generator
+set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
+set(CPACK_DMG_VOLUME_NAME "${CMAKE_PROJECT_NAME}")
+set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/macos/AppDMGBackground.tiff")
+set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/macos/AppDMGSetup.scpt")
+
+# Linux DEB settings
+set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
+set(CPACK_DEBIAN_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
 else()
-    set(CPACK_GENERATOR "DEB")
-    set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
-    SET(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
-    SET(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-    SET(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-    SET(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-    SET(CPACK_PACKAGE_VENDOR "BlitterStudio")
-    SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
-    SET(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
-    SET(CPACK_DEBIAN_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
-    if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
-    else()
-        SET(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-    endif()
-    set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.27), libstdc++6 (>= 8.3.0), libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
-"Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+endif()
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+        "Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.
 Amiberry is an optimized Amiga emulator for various platforms. It is based on
 the latest WinUAE and supports various Amiga models, including the A4000T,
 A4000D, A1200, A3000 and A600. Additionally, it includes several unique
 features, such as support for WHDLoad titles, RetroArch integration, custom
 Controller Mappings and more.")
-    set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
-    set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-    set(CPACK_STRIP_FILES "YES")
-endif()
+set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
+
+# Package resources
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/docs/README.md")
+
+# Strip binaries
+set(CPACK_STRIP_FILES "YES")
+
+# Generator selection per platform
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    set(CPACK_GENERATOR TGZ DragNDrop)
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    set(CPACK_GENERATOR TGZ DEB)
+else ()
+    set(CPACK_GENERATOR TGZ)
+endif ()
 
 include(CPack)

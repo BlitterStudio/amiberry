@@ -324,7 +324,11 @@ typedef int32_t uae_atomic;
 #define HAVE_ISINF
 
 #ifndef LT_MODULE_EXT
+#ifdef __MACH__
+#define LT_MODULE_EXT _T(".dylib")
+#else
 #define LT_MODULE_EXT _T(".so")
+#endif
 #endif
 
 /* Define if you have the bcopy function.  */

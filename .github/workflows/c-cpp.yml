@@ -3,16 +3,7 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
-    branches: 
-      - master
-      - preview
-    tags: 
-      - v*.*.*
-      - preview-v*.*.*
   pull_request:
-    branches:
-      - master
-      - preview
 
 jobs:
 
@@ -35,29 +26,15 @@ jobs:
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler
 
       - name: make for macOS X64
-        run: make -j4 PLATFORM=osx-x86
-
-      - name: ZIP binaries
-        if: github.ref_type != 'tag'
-        run: zip -r amiberry-macOS-x86_64.zip Amiberry.app
+        run: |
+          cmake -B build && cmake --build build -j4
+          cpack --config build/CPackConfig.cmake
 
       - name: Upload artifact
-        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
-          path: amiberry-macOS-x86_64.zip
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-macOS-x86_64.zip Amiberry.app
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-macOS-64bit-intel
-          path: amiberry-${{ github.ref_name }}-macOS-x86_64.zip
+          path: amiberry-*.dmg
 
   build-macOS-Apple-Silicon:
     runs-on: macos-latest
@@ -72,29 +49,15 @@ jobs:
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler
 
       - name: make for macOS Apple Silicon
-        run: make -j4 PLATFORM=osx-m1
+        run: |
+          cmake -B build && cmake --build build -j4
+          cpack --config build/CPackConfig.cmake
 
-      - name: ZIP binaries
-        if: github.ref_type != 'tag'
-        run: zip -r amiberry-macOS-apple-silicon.zip Amiberry.app
-        
       - name: Upload artifact
-        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-apple-silicon
-          path: amiberry-macOS-apple-silicon.zip
-
-      - name: ZIP binaries
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip Amiberry.app
-
-      - name: Upload artifact
-        if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-macOS-64bit-apple-silicon
-          path: amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
+          path: amiberry-*.dmg
 
   build-debian-bullseye-amd64:
     runs-on: ubuntu-latest
@@ -107,7 +70,7 @@ jobs:
         image: midwan/amiberry-debian-x86_64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -B build && cmake --build build -j4
+          cmake -B build -G Ninja && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -127,7 +90,7 @@ jobs:
         image: midwan/amiberry-debian-x86_64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -B build && cmake --build build -j4
+          cmake -B build -G Ninja && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -147,7 +110,7 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -167,7 +130,7 @@ jobs:
         image: midwan/amiberry-debian-armhf:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -187,7 +150,7 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -207,7 +170,7 @@ jobs:
         image: midwan/amiberry-debian-armhf:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
