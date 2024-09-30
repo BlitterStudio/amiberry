@@ -4041,7 +4041,7 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
     screenshot_dir.append("/Screenshots/");
     nvram_dir.append("/Nvram/");
     video_dir.append("/Videos/");
-    amiberry_conf_file = data_dir;
+    amiberry_conf_file = config_path;
 	amiberry_conf_file.append("amiberry.conf");
 #else
     data_dir.append("/data/");
@@ -4190,10 +4190,23 @@ bool directory_exists(std::string directory, const std::string& sub_dir)
 std::string get_data_directory()
 {
 #ifdef __MACH__
-    // On macOS, we use the Library/Application Support/Amiberry folder for data
-    const std::string macos_home_directory = getenv("HOME");
-	const std::string macos_library_directory = macos_home_directory + "/Library/Application Support/Amiberry/";
-    return macos_library_directory;
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	std::string directory;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		size_t last_slash_idx = string(exepath).rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = string(exepath).substr(0, last_slash_idx);
+		}
+		last_slash_idx = directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = directory.substr(0, last_slash_idx);
+		}
+	}
+	return directory + "/Resources/data/";
 #else
 	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
 	const auto xdg_data_home = getenv("XDG_DATA_HOME");
