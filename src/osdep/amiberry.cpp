@@ -3614,8 +3614,6 @@ void save_amiberry_settings(void)
 	write_string_option("gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background);
 
 	// Paths
-	write_string_option("path", current_dir);
-	write_string_option("config_path", config_path);
 	write_string_option("controllers_path", controllers_path);
 	write_string_option("retroarch_config", retroarch_file);
 	write_string_option("whdboot_path", whdboot_path);
@@ -3627,7 +3625,6 @@ void save_amiberry_settings(void)
 	write_string_option("rom_path", rom_path);
 	write_string_option("rp9_path", rp9_path);
 	write_string_option("floppy_sounds_dir", floppy_sounds_dir);
-	write_string_option("data_dir", data_dir);
 	write_string_option("saveimage_dir", saveimage_dir);
 	write_string_option("savestate_dir", savestate_dir);
 	write_string_option("screenshot_dir", screenshot_dir);
@@ -3758,8 +3755,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	}
 	else
 	{
-		ret |= cfgfile_string(option, value, "path", current_dir);
-		ret |= cfgfile_string(option, value, "config_path", config_path);
 		ret |= cfgfile_string(option, value, "controllers_path", controllers_path);
 		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file);
 		ret |= cfgfile_string(option, value, "whdboot_path", whdboot_path);
@@ -3771,7 +3766,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "rom_path", rom_path);
 		ret |= cfgfile_string(option, value, "rp9_path", rp9_path);
 		ret |= cfgfile_string(option, value, "floppy_sounds_dir", floppy_sounds_dir);
-		ret |= cfgfile_string(option, value, "data_dir", data_dir);
 		ret |= cfgfile_string(option, value, "saveimage_dir", saveimage_dir);
 		ret |= cfgfile_string(option, value, "savestate_dir", savestate_dir);
 		ret |= cfgfile_string(option, value, "ripper_path", ripper_path);
@@ -3929,16 +3923,6 @@ void create_missing_amiberry_folders()
 			directory = directory.substr(0, last_slash_idx);
 		}
     }
-	if (!my_existsdir(data_dir.c_str()))
-	{
-		my_mkdir(data_dir.c_str());
-		const std::string default_data_dir = directory + "/Resources/data/";
-		if (my_existsdir(default_data_dir.c_str()))
-		{
-			const std::string command = "cp -r " + default_data_dir + "* " + '"' + data_dir + '"';
-			system(command.c_str());
-		}
-	}
 #endif
 
     if (!my_existsdir(controllers_path.c_str()))
