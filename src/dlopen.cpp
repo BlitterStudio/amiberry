@@ -100,7 +100,7 @@ UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 			directory = directory.substr(0, last_slash_idx);
 		}
 	}
-	_tcscpy(path, directory.append("/Resources/").append(name).c_str());
+	_tcscpy(path, directory.append("/Frameworks/").append(name).c_str());
 	_tcscat(path, LT_MODULE_EXT);
 	UAE_DLHANDLE handle = uae_dlopen(path);
 #else

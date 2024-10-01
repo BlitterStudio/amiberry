@@ -64,21 +64,13 @@ configure_file(src/config.h.in ${CMAKE_BINARY_DIR}/config.h)
 configure_file(src/LibIPF/CapsLibVersion.h.in ${CMAKE_BINARY_DIR}/CapsLibVersion.h)
 target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_CONFIG_H=1)
 
-install(TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib/amiberry
-  RUNTIME DESTINATION bin
-  FRAMEWORK DESTINATION "/Library/Frameworks"
-  PUBLIC_HEADER DESTINATION include/caps${INCLUDE_SUFFIX})
+#install(TARGETS ${PROJECT_NAME}
+#  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/amiberry
+#  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+#  FRAMEWORK DESTINATION "/Library/Frameworks"
+#  PUBLIC_HEADER DESTINATION include/caps${INCLUDE_SUFFIX})
 
 #if (NOT APPLE OR NOT BUILD_FRAMEWORK)
 #  install(FILES ${API_HEADERS} DESTINATION include/caps${INCLUDE_SUFFIX})
 #endif()
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT BUILD_FRAMEWORK)
-    message(STATUS "macOS platform detected")
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND cp libcapsimage.dylib libcapsimage.so
-        COMMAND install_name_tool -id libcapsimage.so libcapsimage.so
-    )
-endif ()
