@@ -59,6 +59,72 @@ jobs:
           name: amiberry-macOS-64bit-apple-silicon
           path: amiberry-*.dmg
 
+  build-ubuntu-amd64:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev
+
+      - name: make for Ubuntu 24.04 AMD64
+        run: |
+          cmake -B build -G Ninja && cmake --build build -j4
+          cpack --config build/CPackConfig.cmake
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-ubuntu-24.04-amd64
+          path: amiberry_*.deb
+
+  build-ubuntu-22-amd64:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev
+
+      - name: make for Ubuntu 22.04 AMD64
+        run: |
+          cmake -B build -G Ninja && cmake --build build -j4
+          cpack --config build/CPackConfig.cmake
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-ubuntu-22.04-amd64
+          path: amiberry_*.deb
+
+  build-ubuntu-20-amd64:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev
+
+      - name: make for Ubuntu 20.04 AMD64
+        run: |
+          cmake -B build -G Ninja && cmake --build build -j4
+          cpack --config build/CPackConfig.cmake
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-ubuntu-20.04-amd64
+          path: amiberry_*.deb
+
   build-debian-bullseye-amd64:
     runs-on: ubuntu-latest
     steps:
