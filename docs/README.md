@@ -10,7 +10,7 @@
 
 ![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
 
-Amiberry is an optimized Amiga emulator for ARM32, ARM64, x86_64 and RISC-V platforms. It runs on both macOS and Linux. Windows users can always use [WinUAE](https://www.winuae.net).
+Amiberry is an optimized Amiga emulator for Linux and macOS. Windows users should always use [WinUAE](https://www.winuae.net), but Amiberry even runs on WSL.
 
 The core emulation comes from [WinUAE](https://www.winuae.net), and even the main GUI is designed to look similar to that.
 It includes JIT support, to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
@@ -19,21 +19,21 @@ There are currently two Amiberry versions available: **Amiberry and Amiberry-Lit
 
 ## Platforms
 
-Amiberry runs on Linux and macOS platforms (ARM32, ARM64, x86_64 and RISC-V).
+Amiberry runs on Intel (x86 and x86_64/amd64), ARM (32bit and 64bit) and RISC-V.
 
-## Dependencies
+## Run-time dependencies
 
 Please note that you will need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
 
 ### Linux
 
-If you want to run the Amiberry binary, you will need to install the required libraries on Debian/Raspbian/Ubuntu derived distros like this:
+If you want to run the Amiberry binary, you will need to install the required libraries. Amiberry depends on SDL2, SDL2_ttf, SDL2_image, FLAC, mpg123, libmpg2, libserialport and portmdi.
+On Debian/Raspberry Pi OS/Ubuntu derived distros like this:
 
       sudo apt install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 flac mpg123 libmpeg2-4 libserialport0 libportmidi0
 
-if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run [Amiberry](https://aur.archlinux.org/packages/amiberry) through:
-
-      yay -S amiberry
+On Arch Linux and derivatives
+      sudo pacman -S 
 
 ### macOS
 
@@ -71,9 +71,9 @@ You'll need the `-dev` version of the required packages. For example, on Debian-
 
       sudo apt install cmake libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev libserialport-dev libportmidi-dev
 
-Or if you're using an Arch-based distro (e.g. Manjaro), the relevant package names are these (these include the `dev` versions by default):
+Or if you're using an Arch-based distro (e.g. Manjaro), you just need the the build tools in addition to the runtime dependencies.
 
-      sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport portmidi
+      sudo pacman -S base-devel cmake
 
 ### macOS
 
