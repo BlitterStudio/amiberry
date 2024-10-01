@@ -21,32 +21,18 @@ There are currently two Amiberry versions available: **Amiberry and Amiberry-Lit
 
 Amiberry runs on Linux and macOS platforms (ARM32, ARM64, x86_64 and RISC-V).
 
-## Dependencies
-
-Please note that you will need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
-
-### Linux
-
-If you want to run the Amiberry binary, you will need to install the required libraries on Debian/Raspbian/Ubuntu derived distros like this:
-
-      sudo apt install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 flac mpg123 libmpeg2-4 libserialport0 libportmidi0
-
-if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run [Amiberry](https://aur.archlinux.org/packages/amiberry) through:
-
-      yay -S amiberry
-
-### macOS
-
-The macOS application bundle includes all the required libraries, so you don't need to install anything extra.
-
 ## Getting Amiberry
 
 ### DEB packages
 
 Amiberry is available as a DEB package for ARM32, ARM64 and x86_64 Debian-based Linux platforms. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
-Then you can install it with:
+Then, assuming you have it in your current directory, you can install it with:
     
-        sudo dpkg -i amiberry_7.0.0_arm64.deb
+      sudo apt update && sudo apt install ./amiberry_7.0.0_arm64.deb
+
+if you have an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run [Amiberry](https://aur.archlinux.org/packages/amiberry) through:
+
+      yay -S amiberry
 
 ### macOS
 
