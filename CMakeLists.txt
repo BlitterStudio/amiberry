@@ -3,10 +3,14 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
     message(FATAL_ERROR "Prevented in-tree build. Please create a build directory outside of the amiberry source code and run \"cmake -S ${CMAKE_SOURCE_DIR} -B .\" from there")
 endif ()
 
-set(VERSION "6.3.5")
-project(amiberry VERSION ${VERSION})
+set(VERSION 6.3.5)
+project(amiberry
+        VERSION ${VERSION}
+        LANGUAGES C CXX
+        DESCRIPTION "Optimized Amiga emulator for various platforms"
+        HOMEPAGE_URL "https://amiberry.com"
+)
 
-enable_language(C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -433,7 +437,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_COPYRIGHT "(c) 2016-2024 Dimitris Panokostas"
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64)
+target_compile_definitions(${PROJECT_NAME} PRIVATE _FILE_OFFSET_BITS=64 -DAMIBERRY_VERSION="${PROJECT_VERSION}")
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
@@ -618,7 +622,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
 else()
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
 endif()
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://amiberry.com")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE ${PROJECT_HOMEPAGE_URL})
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Dimitris Panokostas <midwan@gmail.com>") # Required
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
         "Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.

@@ -135,7 +135,7 @@ bool mouse_grabbed = false;
 
 std::string get_version_string()
 {
-	return AMIBERRYVERSION;
+	return "Amiberry " + std::string(AMIBERRY_VERSION);
 }
 
 std::string get_copyright_notice()
