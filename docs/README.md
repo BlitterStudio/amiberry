@@ -19,42 +19,15 @@ There are currently two Amiberry versions available: **Amiberry and Amiberry-Lit
 
 ## Platforms
 
-### Linux
-
-Amiberry has been tested on the following Linux distros:
-
-- Debian/RPI-OS Bullseye, Bookworm ARM32, ARM64 and x86_64
-- Ubuntu ARM64 and x86_64
-- Manjaro ARM64 and x86_64
-- DietPi
-- RetroPie
-- Batocera
-- Knulli
-- MuOS
-- TheRA
-it should also work on several others, as long as the requirements are met.
-
-Some distros include it in their app ecosystem (e.g. DietPi, RetroPie and others), so you can install and upgrade it directly from their menu system.
-
-### macOS
-
-Amiberry also runs on macOS, and has been tested on:
-
-- Catalina (x86_64)
-- Monterey (x86_64 and Apple Silicon)
-- Sonoma (x86_64 and Apple Silicon)
-- Sequoia (x86_64 and Apple Silicon)
-- Newer macOS versions _should_ work as well
+Amiberry runs on Linux and macOS platforms (ARM32, ARM64, x86_64 and RISC-V).
 
 ## Dependencies
 
-Please note that you will probably also need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
+Please note that you will need some Kickstart ROMs. Amiberry includes the free AROS ROM, so you can start it up and use AROS with it directly, but most games will require a Kickstart 1.3 (for A500 emulation) or Kickstart 3.x (for A1200 emulation). Amiga Forever is a good source for those.
 
 ### Linux
 
-Amiberry requires the [SDL2 framework](https://libsdl.org) for graphics display, input handling and audio output. Additionally, a few extra libraries are used for CD32 MPEG and mp3 decoding.
-
-If you just want to just run the Amiberry binary, you can install the required libraries on Debian/Raspbian/Ubuntu derived distros like this:
+If you want to run the Amiberry binary, you will need to install the required libraries on Debian/Raspbian/Ubuntu derived distros like this:
 
       sudo apt install libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-image-2.0-0 flac mpg123 libmpeg2-4 libserialport0 libportmidi0
 
