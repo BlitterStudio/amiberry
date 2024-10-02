@@ -4355,12 +4355,6 @@ std::string get_plugins_directory()
 		write_log("Using config directory from AMIBERRY_PLUGINS_DIR: %s\n", env_plugins_dir);
 		return { env_plugins_dir };
 	}
-	// Check if we have the plugins installed locally (with a make install)
-	if (directory_exists("/usr/local/lib", "/amiberry"))
-	{
-		write_log("Using plugins directory from /usr/local/lib/amiberry\n");
-		return "/usr/local/lib/amiberry";
-	}
     // Check if we have the plugins installed system-wide (with a .deb package)
     if (my_existsdir(AMIBERRY_LIBDIR))
     {
