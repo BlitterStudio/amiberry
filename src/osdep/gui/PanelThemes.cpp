@@ -62,7 +62,7 @@ static gcn::Label* lblThemeTextBgColorB;
 static gcn::TextField* txtThemeTextBgColorB;
 
 //TODO add a Save button here, to save the settings to amiberry.conf
-
+static gcn::Button* cmdSaveAmiberryConfig
 
 class ThemesButtonActionListener : public gcn::ActionListener
 {
@@ -92,11 +92,17 @@ void InitPanelThemes(const config_category& category)
 	themesButtonActionListener = new ThemesButtonActionListener();
 
 	lblThemeFont = new gcn::Label("Font:");
+  lblThemeFontSize = new gcn::Label("Font Size");
 	txtThemeFont = new gcn::TextField();
+  txtThemeFontSize = new gnc::TextField();
 	txtThemeFont->setSize(480, TEXTFIELD_HEIGHT);
 	txtThemeFont->setBaseColor(gui_base_color);
 	txtThemeFont->setBackgroundColor(gui_textbox_background_color);
 	txtThemeFont->setForegroundColor(gui_foreground_color);
+  txtThemeFontSize->setSize(480, TEXTFIELD_HEIGHT);
+  txtThemeFontSize->SetBaseColor(gui_base_color);
+  txtThemeFontSize->setBackgroundColor(gui_textbox_background_color);
+	txtThemeFontSize->setForegroundColor(gui_foreground_color);
 
 	cmdThemeFont = new gcn::Button("...");
 	cmdThemeFont->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
@@ -105,9 +111,11 @@ void InitPanelThemes(const config_category& category)
 	cmdThemeFont->addActionListener(themesButtonActionListener);
 
 	// TODO add the rest of the widgets here
-
-
-
+  cmdThemeFontSize = new gcn::Button("...");
+  cmdThemeFontSize->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdThemeFontSize->setBaseColor(gui_base_color);
+	cmdThemeFontSize->setForegroundColor(gui_foreground_color);
+	cmdThemeFontSize->addActionListener(themesButtonActionListener);
 
 	int pos_x = DISTANCE_BORDER;
 	int pos_y = DISTANCE_BORDER;
@@ -117,6 +125,49 @@ void InitPanelThemes(const config_category& category)
 	category.panel->add(txtThemeFont, pos_x, pos_y);
 	pos_x += txtThemeFont->getWidth() + DISTANCE_NEXT_X;
 	category.panel->add(cmdThemeFont, pos_x, pos_y);
+	pos_x += cmdThemeFont->getWidth() + DISTANCE_NEXT_X;
+  category.panel->add(lblThemeFontSize, pos_x, pos_y);
+  pos_x += lblThemeFontSize->getWidth() + DISTANCE_NEXT_X;
+  category.panel->add(txtThemeFontSize, pos_x, pos_y);
+  pos_x += txtThemeFontSize->getWidth() + DISTANCE_NEXT_X;
+  category.panel->add(cmdThemeFontSize, pos_x, pos_y);
+  pos_x += cmdThemeFontSize->getWidth() + DISTANCE_NEXT_X;
+  //lblThemeFontColorR;
+	//txtThemeFontColorR;
+	//lblThemeFontColorG;
+	//txtThemeFontColorG;
+	//lblThemeFontColorB;
+	//txtThemeFontColorB;
+	//lblThemeBaseColorR;
+	//txtThemeBaseColorR;
+	//lblThemeBaseColorG;
+	//txtThemeBaseColorG;
+	//lblThemeBaseColorB;
+	//txtThemeBaseColorB;
+	//lblThemeSelectorInactiveColorR;
+	//txtThemeSelectorInactiveColorR;
+	//lblThemeSelectorInactiveColorG;
+	//txtThemeSelectorInactiveColorG;
+	//lblThemeSelectorInactiveColorB;
+	//txtThemeSelectorInactiveColorB;
+	//lblThemeSelectorActiveColorR;
+	//txtThemeSelectorActiveColorR;
+	//lblThemeSelectorActiveColorG;
+	//txtThemeSelectorActiveColorG;
+	//lblThemeSelectorActiveColorB;
+	//txtThemeSelectorActiveColorB;
+	//lblThemeSelectionColorR;
+	//txtThemeSelectionColorR;
+	//lblThemeSelectionColorG;
+	//txtThemeSelectionColorG;
+	//lblThemeSelectionColorB;
+	//txtThemeSelectionColorB;
+	//lblThemeTextBgColorR;
+	//txtThemeTextBgColorR;
+	//lblThemeTextBgColorG;
+	//txtThemeTextBgColorG;
+	//lblThemeTextBgColorB;
+	//txtThemeTextBgColorB;
 
 	RefreshPanelThemes();
 }
@@ -128,8 +179,8 @@ void ExitPanelThemes()
 	delete cmdThemeFont;
 
 	//TODO uncomment these, when the widgets are added
-	//delete lblThemeFontSize;
-	//delete txtThemeFontSize;
+	delete lblThemeFontSize;
+	delete txtThemeFontSize;
 	//delete lblThemeFontColorR;
 	//delete txtThemeFontColorR;
 	//delete lblThemeFontColorG;
