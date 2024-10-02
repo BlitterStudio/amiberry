@@ -492,6 +492,10 @@ if (USE_OPENGL)
 endif ()
 
 include(GNUInstallDirs)
+add_definitions(
+    -DAMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
+    -DAMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
+)
 
 # Install the executable
 install(TARGETS ${PROJECT_NAME}
