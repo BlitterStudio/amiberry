@@ -11,12 +11,6 @@ project(amiberry
         HOMEPAGE_URL "https://amiberry.com"
 )
 
-# temporary solution for setting the AMIBERRY_DATADIR and AMIBERRY_LIBDIR locations without hardcoding them in the code
-# these should be set to the correct locations on the target system
-# for example, on a Debian system, these would be set to /usr/share/amiberry and /usr/lib/amiberry
-set(AMIBERRY_DATADIR /usr/share/${PROJECT_NAME})
-set(AMIBERRY_LIBDIR /usr/lib/${PROJECT_NAME})
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -499,8 +493,8 @@ endif ()
 
 include(GNUInstallDirs)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-    -DAMIBERRY_DATADIR="${AMIBERRY_DATADIR}"
-    -DAMIBERRY_LIBDIR="${AMIBERRY_LIBDIR}"
+    -DAMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
+    -DAMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
 )
 
 # Install the executable
