@@ -3931,9 +3931,9 @@ void create_missing_amiberry_folders()
 #ifdef __MACH__
         const std::string default_controller_path = directory + "/Resources/controllers/";
 #else
-        const std::string default_controller_path = "/usr/share/amiberry/controllers/";
+        const std::string default_controller_path = AMIBERRY_DATADIR "/controllers/";
 #endif
-        // copy default controller files, if they exist in /usr/share/amiberry/controllers
+        // copy default controller files, if they exist in AMIBERRY_DATADIR/controllers
         if (my_existsdir(default_controller_path.c_str()))
         {
             const std::string command = "cp -r " + default_controller_path + "* " + controllers_path;
@@ -3946,9 +3946,9 @@ void create_missing_amiberry_folders()
 #ifdef __MACH__
         const std::string default_whdboot_path = directory + "/Resources/whdboot/";
 #else
-        const std::string default_whdboot_path = "/usr/share/amiberry/whdboot/";
+        const std::string default_whdboot_path = AMIBERRY_DATADIR "/whdboot/";
 #endif
-        // copy default whdboot files, if they exist in /usr/share/amiberry/whdboot
+        // copy default whdboot files, if they exist in AMIBERRY_DATADIR/whdboot
         if (my_existsdir(default_whdboot_path.c_str()))
         {
             const std::string command = "cp -r " + default_whdboot_path + "* " + whdboot_path;
@@ -3969,9 +3969,9 @@ void create_missing_amiberry_folders()
 #ifdef __MACH__
         const std::string default_roms_path = directory + "/Resources/roms/";
 #else
-        const std::string default_roms_path = "/usr/share/amiberry/roms/";
+        const std::string default_roms_path = AMIBERRY_DATADIR "/roms/";
 #endif
-        // copy default kickstart files, if they exist in /usr/share/amiberry/roms
+        // copy default kickstart files, if they exist in AMIBERRY_DATADIR/roms
         if (my_existsdir(default_roms_path.c_str()))
         {
             const std::string command = "cp -r " + default_roms_path + "* " + rom_path;
@@ -4156,7 +4156,7 @@ const TCHAR** uaenative_get_library_dirs(void)
 	}
 	if (libpath == NULL)
 	{
-		libpath = strdup(_T("/usr/lib/amiberry"));
+		libpath = strdup(_T(AMIBERRY_LIBDIR));
 	}
 	nats[0] = home_dir.c_str();
 	nats[1] = path;
@@ -4201,12 +4201,12 @@ std::string get_data_directory()
 		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
 		return { env_data_dir };
 	}
-	if (directory_exists("/usr/share/amiberry", "/data"))
+	if (directory_exists(AMIBERRY_DATADIR, "/data"))
 	{
-		// If the data directory exists in /usr/share/amiberry, use it
+		// If the data directory exists in AMIBERRY_DATADIR, use it
         // This would be the default location after an installation with the .deb package
-		write_log("Using data directory from /usr/share/amiberry\n");
-		return "/usr/share/amiberry";
+		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
+		return AMIBERRY_DATADIR;
 	}
 	if (xdg_data_home != nullptr && directory_exists(xdg_data_home, "/data"))
 	{
@@ -4294,7 +4294,7 @@ std::string get_config_directory()
 	if (env_conf_dir != nullptr && my_existsdir(env_conf_dir))
 	{
 		// If the ENV variable is set, use it
-		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", env_conf_dir);
+		write_log("Using config directory from AMIBERRY_CONFIG_DIR: %s\n", env_conf_dir);
 		return { env_conf_dir };
 	}
 	if (xdg_config_home != nullptr)
@@ -4348,13 +4348,19 @@ std::string get_plugins_directory()
     }
     return { std::string(user_home_dir) + "/Amiberry/Plugins" };
 #else
+	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
+	if (env_plugins_dir != nullptr && my_existsdir(env_plugins_dir))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using config directory from AMIBERRY_PLUGINS_DIR: %s\n", env_plugins_dir);
+		return { env_plugins_dir };
+	}
     // Check if we have the plugins installed system-wide (with a .deb package)
-    if (directory_exists("/usr/lib", "/amiberry"))
+    if (my_existsdir(AMIBERRY_LIBDIR))
     {
-        write_log("Using plugins directory from /usr/lib/amiberry\n");
-        return "/usr/lib/amiberry";
+        write_log("Using plugins directory from " AMIBERRY_LIBDIR "\n");
+        return AMIBERRY_LIBDIR;
     }
-
     const auto user_home_dir = getenv("HOME");
     if (user_home_dir != nullptr)
     {
