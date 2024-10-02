@@ -78,8 +78,19 @@ You can also use Ninja, if you prefer:
 
       cmake -B build -G Ninja && cmake --build build
 
+### Local installation
+
+You can use the following command to install Amiberry locally:
+
+      cmake --install build
+
+Or combine it with a PREFIX to install it in a specific directory (the default is /usr/local/):
+
+      cmake --install build --prefix /usr
+
 ### Packaging
-The following will create a DEB package for Debian-based distros, or a DMG package on macOS:
+
+The following will create both a TAR.GZ archive and DEB package for Debian-based distros, or a DMG package on macOS:
 
     cpack --config build/CPackConfig.cmake
 
