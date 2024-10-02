@@ -4294,7 +4294,7 @@ std::string get_config_directory()
 	if (env_conf_dir != nullptr && my_existsdir(env_conf_dir))
 	{
 		// If the ENV variable is set, use it
-		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", env_conf_dir);
+		write_log("Using config directory from AMIBERRY_CONFIG_DIR: %s\n", env_conf_dir);
 		return { env_conf_dir };
 	}
 	if (xdg_config_home != nullptr)
@@ -4348,13 +4348,25 @@ std::string get_plugins_directory()
     }
     return { std::string(user_home_dir) + "/Amiberry/Plugins" };
 #else
+	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
+	if (env_plugins_dir != nullptr && my_existsdir(env_plugins_dir))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using config directory from AMIBERRY_PLUGINS_DIR: %s\n", env_plugins_dir);
+		return { env_plugins_dir };
+	}
+	// Check if we have the plugins installed locally (with a make install)
+	if (directory_exists("/usr/local/lib", "/amiberry"))
+	{
+		write_log("Using plugins directory from /usr/local/lib/amiberry\n");
+		return "/usr/local/lib/amiberry";
+	}
     // Check if we have the plugins installed system-wide (with a .deb package)
     if (directory_exists("/usr/lib", "/amiberry"))
     {
         write_log("Using plugins directory from /usr/lib/amiberry\n");
         return "/usr/lib/amiberry";
     }
-
     const auto user_home_dir = getenv("HOME");
     if (user_home_dir != nullptr)
     {
