@@ -72,7 +72,7 @@ jobs:
 
       - name: make for Ubuntu 24.04 AMD64
         run: |
-          cmake -B build -G Ninja && cmake --build build -j4
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
       - name: Upload artifact
@@ -94,7 +94,7 @@ jobs:
 
       - name: make for Ubuntu 22.04 AMD64
         run: |
-          cmake -B build -G Ninja && cmake --build build -j4
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
       - name: Upload artifact
@@ -116,7 +116,7 @@ jobs:
 
       - name: make for Ubuntu 20.04 AMD64
         run: |
-          cmake -B build -G Ninja && cmake --build build -j4
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
       - name: Upload artifact
@@ -136,7 +136,7 @@ jobs:
         image: midwan/amiberry-debian-x86_64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -B build -G Ninja && cmake --build build -j4
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -156,7 +156,7 @@ jobs:
         image: midwan/amiberry-debian-x86_64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -B build -G Ninja && cmake --build build -j4
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -176,7 +176,7 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -196,7 +196,7 @@ jobs:
         image: midwan/amiberry-debian-armhf:bookworm
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -216,7 +216,7 @@ jobs:
         image: midwan/amiberry-debian-aarch64:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -236,7 +236,7 @@ jobs:
         image: midwan/amiberry-debian-armhf:bullseye
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack --config build/CPackConfig.cmake
 
     - name: Upload artifact
