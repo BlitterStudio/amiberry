@@ -492,7 +492,7 @@ if (USE_OPENGL)
 endif ()
 
 include(GNUInstallDirs)
-add_definitions(
+target_compile_definitions(${PROJECT_NAME} PRIVATE
     -DAMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
     -DAMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
 )
@@ -533,6 +533,8 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:floppybridge>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/$<TARGET_FILE_NAME:floppybridge>)
+
+    # Gather all dependencies with dylibbundler
      add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
          COMMAND dylibbundler -od -b -x $<TARGET_FILE:${PROJECT_NAME}> -d $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/ -p @executable_path/../Frameworks/)
 
@@ -556,6 +558,27 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
             DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources)
     endif ()
 else()
+    # Copy dirs to the build directory so we can debug locally
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/controllers
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/controllers)
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/data
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/data)
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/roms
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/roms)
+
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/whdboot
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/whdboot)
+
     install(FILES $<TARGET_FILE:capsimage>
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
     install(FILES $<TARGET_FILE:floppybridge>
@@ -577,10 +600,10 @@ else()
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
     # Install desktop file
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
-        DESTINATION share/applications)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     # Install icon
     install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
-        DESTINATION share/icons/hicolor/512x512/apps)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
     # Install Debian files
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
