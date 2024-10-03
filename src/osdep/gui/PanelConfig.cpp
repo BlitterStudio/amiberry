@@ -100,10 +100,14 @@ public:
 			i = lstConfigs->getSelected();
 			if (i >= 0 && ConfigFilesList[i]->Name[0] != '\0')
 			{
-				snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
+				(void)snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
 				if (ShowMessage("Delete Configuration", msg, "", "", "Yes", "No"))
 				{
-					remove(ConfigFilesList[i]->FullPath);
+					if (remove(ConfigFilesList[i]->FullPath) != 0)
+					{
+						(void)snprintf(msg, 256, "Failed to delete '%s'", ConfigFilesList[i]->Name);
+						ShowMessage("Delete Configuration", msg, "", "", "Ok", "");
+					}
 					txtName->setText("");
 					txtDesc->setText("");
 					last_active_config[0] = '\0';
