@@ -699,7 +699,7 @@ void InitPanelPaths(const config_category& category)
 	cmdRescanROMs->addActionListener(rescanROMsButtonActionListener);
 
 	downloadXMLButtonActionListener = new DownloadXMLButtonActionListener();
-	cmdDownloadXML = new gcn::Button("Update WHDLoad XML");
+	cmdDownloadXML = new gcn::Button("Update WHDBooter files");
 	cmdDownloadXML->setSize(cmdDownloadXML->getWidth() + DISTANCE_BORDER, BUTTON_HEIGHT);
 	cmdDownloadXML->setBaseColor(gui_base_color);
 	cmdDownloadXML->setForegroundColor(gui_foreground_color);
@@ -865,14 +865,16 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back("for Amiberry to pick them up. This button will regenerate the amiberry.conf file");
         helptext.emplace_back("if it's missing, and will be populated with the default values.");
         helptext.emplace_back(" ");
-        helptext.emplace_back("The \"Update WHDLoad XML\" button will attempt to download the latest XML used for");
-        helptext.emplace_back("the WHDLoad-booter functionality of Amiberry. It requires an internet connection to");
-        helptext.emplace_back("work, obviously. The downloaded file will be stored in the default location of");
+        helptext.emplace_back("The \"Update WHDBooter files\" button will attempt to download the latest XML used for");
+        helptext.emplace_back("the WHDLoad-booter functionality of Amiberry, along with all related files in the");
+		helptext.emplace_back("\"whdboot\" directory. It requires an internet connection and write permissions in the");
+        helptext.emplace_back("destination directory. The downloaded XML file will be stored in the default location");
         helptext.emplace_back("(whdboot/game-data/whdload_db.xml). Once the file is successfully downloaded, you");
         helptext.emplace_back("will also get a dialog box informing you about the details. A backup copy of the");
         helptext.emplace_back("existing whdload_db.xml is made (whdboot/game-data/whdload_db.bak), to preserve any");
-        helptext.emplace_back("custom edits that may have been made.");
-        helptext.emplace_back(" ");
+        helptext.emplace_back("custom edits that may have been made. The rest of the files will be updated with the");
+        helptext.emplace_back("latest version from the repository.");
+		helptext.emplace_back(" ");
         helptext.emplace_back("The \"Update Controllers DB\" button will attempt to download the latest version of");
         helptext.emplace_back("the bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.");
         helptext.emplace_back("The file contains the \"official\" mappings for recognized controllers by SDL2 itself.");
