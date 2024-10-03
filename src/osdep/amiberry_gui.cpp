@@ -29,6 +29,9 @@
 #include "blkdev.h"
 #include "memory.h"
 #include "amiberry_gfx.h"
+#ifdef ARCADIA
+#include "arcadia.h"
+#endif
 #include "autoconf.h"
 #include "disk.h"
 #include "xwin.h"
@@ -122,7 +125,7 @@ void ClearAvailableROMList()
 	lstAvailableROMs.clear();
 }
 
-static void addrom(struct romdata* rd, const char* path)
+static int addrom(struct romdata* rd, const char* path)
 {
 	char tmpName[MAX_DPATH];
 	auto* const tmp = new AvailableROM();
@@ -133,6 +136,7 @@ static void addrom(struct romdata* rd, const char* path)
 	tmp->ROMType = rd->type;
 	lstAvailableROMs.emplace_back(tmp);
 	romlist_add(path, rd);
+	return 1;
 }
 
 struct romscandata
@@ -233,10 +237,26 @@ static int scan_rom_2(struct zfile* f, void* dummy)
 
 static void scan_rom(const std::string& path)
 {
+	struct romdata* rd;
+	int cnt = 0;
+
 	if (!isromext(path)) {
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return;
 	}
+#ifdef ARCADIA
+	for (;;) {
+		TCHAR tmp[MAX_DPATH];
+		_tcscpy(tmp, path.c_str());
+		rd = scan_arcadia_rom(tmp, cnt++);
+		if (rd) {
+			if (!addrom(rd, tmp))
+				return;
+			continue;
+		}
+		break;
+	}
+#endif
 	zfile_zopen(path, scan_rom_2, nullptr);
 }
 
