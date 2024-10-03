@@ -316,6 +316,16 @@ public:
 		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
 
+		//  download JST executable
+		destination = prefix_with_whdboot_path("JST");
+		write_log("Downloading %s ...\n", destination.c_str());
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", destination, false);
+
+		//  download AmiQuit executable
+		destination = prefix_with_whdboot_path("AmiQuit");
+		write_log("Downloading %s ...\n", destination.c_str());
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", destination, false);
+
 		//  download boot-data.zip
 		destination = prefix_with_whdboot_path("boot-data.zip");
 		write_log("Downloading %s ...\n", destination.c_str());
