@@ -614,6 +614,7 @@ else()
 endif()
 
 # Base package settings
+set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_VERBATIM_VARIABLES YES)
 set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
 set(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
