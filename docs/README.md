@@ -45,53 +45,6 @@ A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitter
 
 ## Compile from source
 
-Alternatively, you can compile the latest version of Amiberry from source. To do that, follow these steps:
-
-### Linux
-
-You'll need the `-dev` version of the required packages. For example, on Debian-based distros:
-
-      sudo apt install cmake libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev libserialport-dev libportmidi-dev
-
-Or if you're using an Arch-based distro (e.g. Manjaro), the relevant packages are:
-
-      sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport portmidi
-
-### macOS
-
-Under macOS, you will need to install the required libraries using [Homebrew](https://docs.brew.sh/Installation):
-
-        brew install cmake sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
-
-### Clone this repository locally
-
-      git clone https://github.com/BlitterStudio/amiberry
-      cd amiberry
-
-### Build Amiberry
-
-Amiberry requires CMake to build. The following commands will create a `build` directory, configure the build, and then compile the source code:
-
-      cmake -B build && cmake --build build
-
-You can also use Ninja, if you prefer:
-
-      cmake -B build -G Ninja && cmake --build build
-
-### Local installation
-
-You can use the following command to install Amiberry locally:
-
-      cmake --install build
-
-Or combine it with a PREFIX to install it in a specific directory (the default is /usr/local/):
-
-      cmake --install build --prefix /usr
-
-### Packaging
-
-The following will create both a TAR.GZ archive and DEB package for Debian-based distros, or a DMG package on macOS:
-
-    cpack --config build/CPackConfig.cmake
+Alternatively, you can [compile the latest version of Amiberry from source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source).
 
 For more documentation subjects, please check the [Wiki page](https://github.com/BlitterStudio/amiberry/wiki)
