@@ -16,6 +16,7 @@ add_library(floppybridge SHARED
     src/SuperCardProInterface.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE src)
+target_link_libraries(${PROJECT_NAME} PRIVATE pthread dl)
 
 #install(TARGETS ${PROJECT_NAME}
 #  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
