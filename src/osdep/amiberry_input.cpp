@@ -763,7 +763,7 @@ static void close_kb()
 void release_keys(void)
 {
 	// only run this if SDL2 version is 2.24 or higher
-	if constexpr (SDL_VERSION_ATLEAST(2, 0, 24))
+	if constexpr (SDL_VERSION_ATLEAST(2, 24, 0))
 		SDL_ResetKeyboard();
 	else
 	{
