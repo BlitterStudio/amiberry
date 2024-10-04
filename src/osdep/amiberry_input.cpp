@@ -761,7 +761,7 @@ static void close_kb()
 void release_keys(void)
 {
 	SDL_PumpEvents();
-
+	SDL_ResetKeyboard();
 	//for (int j = 0; j < MAX_INPUT_DEVICES; j++) {
 	//	for (int i = 0; i < MAX_KEYCODES; i++) {
 	//		if (di_keycodes[j][i]) {
