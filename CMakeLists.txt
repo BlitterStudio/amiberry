@@ -13,12 +13,10 @@ project(amiberry
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe -fno-pie")
-set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG -pipe -fno-pie")
-set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
-
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+set(CMAKE_C_FLAGS "-pipe")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG ${CMAKE_C_FLAGS}")
 
 # Use libgpiod to control GPIO LEDs?
 option(USE_GPIOD "Use GPIOD" OFF)
@@ -476,8 +474,10 @@ add_subdirectory(external/libguisan)
 # Add dependencies to ensure external libraries are built
 add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
 
+target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_include_directories(${PROJECT_NAME} PRIVATE src src/osdep src/include src/threaddep src/archivers src/ppc/pearpc external/libguisan/include external/mt32emu/src external/floppybridge/src)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png MPG123::libmpg123 mpeg2convert mpeg2 serialport z pthread dl)
+target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
 
 if (USE_OPENGL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
