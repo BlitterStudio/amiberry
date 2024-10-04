@@ -13,14 +13,9 @@ project(amiberry
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    # Silence warnings about unused arguments
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe -fno-pie")
-    set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG -pipe -fno-pie")
-else ()
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe -fno-pie -no-pie")
-    set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG -pipe -fno-pie -no-pie")
-endif ()
+set(CMAKE_C_FLAGS_RELEASE "-O3 -pipe -fno-pie")
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG -pipe -fno-pie")
+set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
