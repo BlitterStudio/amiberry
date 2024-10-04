@@ -758,33 +758,21 @@ static void close_kb()
 {
 }
 
-
-
 void release_keys(void)
 {
-	// only run this if SDL2 version is 2.24 or higher
-	if constexpr (SDL_VERSION_ATLEAST(2, 24, 0))
-		SDL_ResetKeyboard();
-	else
-	{
-		const Uint8* state = SDL_GetKeyboardState(NULL);
-		SDL_Event event;
+	const Uint8* state = SDL_GetKeyboardState(NULL);
+	SDL_Event event;
 
-		for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
-			if (state[i]) {
-				event.type = SDL_KEYUP;
-				event.key.keysym.scancode = (SDL_Scancode)i;
-				event.key.keysym.sym = SDL_GetKeyFromScancode((SDL_Scancode)i);
-				event.key.keysym.mod = 0;
-				event.key.state = SDL_RELEASED;
-				SDL_PushEvent(&event);
-			}
-		}
-	}
+	for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
+		if (state[i]) {
+			event.type = SDL_KEYUP;
+			event.key.keysym.scancode = (SDL_Scancode)i;
+			event.key.keysym.sym = SDL_GetKeyFromScancode((SDL_Scancode)i);
+			event.key.keysym.mod = 0;
+			event.key.state = SDL_RELEASED;
+			SDL_PushEvent(&event);
 
-	for (int j = 0; j < MAX_INPUT_DEVICES; j++) {
-		for (int i = 0; i < SDL_NUM_SCANCODES; i++) {
-			my_kbd_handler(j, i, 0, true);
+			my_kbd_handler(0, i, 0, true);
 		}
 	}
 }
