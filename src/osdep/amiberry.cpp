@@ -4171,6 +4171,38 @@ bool directory_exists(std::string directory, const std::string& sub_dir)
 	return my_existsdir(directory.c_str());
 }
 
+// Get the value of one of the XDG_*_HOME variables, as per the spec:
+// https://specifications.freedesktop.org/basedir-spec/latest/
+static std::string get_xdg_home(const char *var, const std::string& suffix)
+{
+	// If the variable is set explicitly, return its value
+	const auto env_value = getenv(var);
+	if (env_value != nullptr)
+	{
+		return { env_value };
+	}
+
+	// If HOME is set, construct the default value relative to it
+	const auto home_dir = getenv("HOME");
+	if (home_dir != nullptr)
+	{
+		return std::string(home_dir) + suffix;
+	}
+
+	// Return "" so directory_exists will fail
+	return { "" };
+}
+
+static std::string get_xdg_data_home()
+{
+	return get_xdg_home("XDG_DATA_HOME", "/.local/share");
+}
+
+static std::string get_xdg_config_home()
+{
+	return get_xdg_home("XDG_CONFIG_HOME", "/.config");
+}
+
 std::string get_data_directory()
 {
 #ifdef __MACH__
@@ -4193,7 +4225,7 @@ std::string get_data_directory()
 	return directory + "/Resources/data/";
 #else
 	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
-	const auto xdg_data_home = getenv("XDG_DATA_HOME");
+	const auto xdg_data_home = get_xdg_data_home();
 
 	if (env_data_dir != nullptr && directory_exists(env_data_dir, "/data"))
 	{
@@ -4208,10 +4240,10 @@ std::string get_data_directory()
 		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
 		return AMIBERRY_DATADIR;
 	}
-	if (xdg_data_home != nullptr && directory_exists(xdg_data_home, "/amiberry/data"))
+	if (directory_exists(xdg_data_home, "/amiberry/data"))
 	{
-		// If the XDG_DATA_HOME is set, use it
-		std::string xdg_data_home_amiberry = std::string(xdg_data_home) + "/amiberry/data";
+		// If XDG_DATA_HOME/amiberry/data exists, use it
+		const std::string xdg_data_home_amiberry = xdg_data_home + "/amiberry";
 		write_log("Using data directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry.c_str());
 		return { xdg_data_home_amiberry };
 	}
@@ -4237,7 +4269,7 @@ std::string get_home_directory()
     return result.append("/Amiberry");
 #else
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-	const auto xdg_data_home = getenv("XDG_DATA_HOME");
+	const auto xdg_data_home = get_xdg_data_home();
 	const auto user_home_dir = getenv("HOME");
 
 	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
@@ -4246,15 +4278,10 @@ std::string get_home_directory()
 		write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
 		return { env_home_dir };
 	}
-	if (xdg_data_home != nullptr)
+	if (directory_exists(xdg_data_home, "/amiberry"))
 	{
-		if (!directory_exists(xdg_data_home, "/amiberry"))
-		{
-			// If $XDG_DATA_HOME exists, but not the Amiberry subdirectory, create it
-			my_mkdir((std::string(xdg_data_home) + "/amiberry").c_str());
-		}
-		// If the XDG_DATA_HOME is set, use it
-		std::string xdg_data_home_amiberry = std::string(xdg_data_home) + "/amiberry";
+		// If XDG_DATA_HOME/amiberry exists, use it
+		const std::string xdg_data_home_amiberry = xdg_data_home + "/amiberry";
 		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry.c_str());
 		return { xdg_data_home_amiberry };
 	}
@@ -4295,7 +4322,8 @@ std::string get_config_directory()
     return result.append("/Amiberry/Configurations");
 #else
 	const auto env_conf_dir = getenv("AMIBERRY_CONFIG_DIR");
-	const auto xdg_config_home = getenv("XDG_CONFIG_HOME");
+	const auto xdg_config_home = get_xdg_config_home();
+	const auto xdg_data_home = get_xdg_data_home();
 	const auto user_home_dir = getenv("HOME");
 
 	if (env_conf_dir != nullptr && my_existsdir(env_conf_dir))
@@ -4304,16 +4332,21 @@ std::string get_config_directory()
 		write_log("Using config directory from AMIBERRY_CONFIG_DIR: %s\n", env_conf_dir);
 		return { env_conf_dir };
 	}
-	if (xdg_config_home != nullptr)
+	if (directory_exists(xdg_config_home, "/amiberry"))
 	{
-		// If the XDG_CONFIG_HOME is set, use it
-        if (!directory_exists(xdg_config_home, "/amiberry"))
-        {
-            // If the XDG_CONFIG_HOME exists, but not the amiberry subdirectory, create it
-            my_mkdir((std::string(xdg_config_home) + "/amiberry").c_str());
-        }
-		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", xdg_config_home);
-		return { std::string(xdg_config_home) + "/amiberry" };
+		// If XDG_CONFIG_HOME/amiberry exists, use it
+		const std::string xdg_config_home_amiberry = xdg_config_home + "/amiberry";
+		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", xdg_config_home_amiberry.c_str());
+		return { xdg_config_home_amiberry };
+	}
+	if (directory_exists(xdg_data_home, "/amiberry/conf"))
+	{
+		// If XDG_DATA_HOME/amiberry/conf exists, use it
+		// This lets users just rename ~/Amiberry to XDG_DATA_HOME/amiberry,
+		// if they don't want it in their home directory
+		const std::string xdg_data_home_amiberry_conf = xdg_data_home + "/amiberry/conf";
+		write_log("Using config directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry_conf.c_str());
+		return { xdg_data_home_amiberry_conf };
 	}
 	if (user_home_dir != nullptr)
 	{

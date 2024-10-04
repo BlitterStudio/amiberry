@@ -105,4 +105,4 @@ modules:
       - type: script
         dest-filename: amiberry.sh
         commands:
-          - "if [ ! -e \"$XDG_DATA_HOME/data\" ]; then cp -R /app/data/* $XDG_DATA_HOME; fi; exec /app/bin/amiberry"
+          - "if [ ! -e \"$XDG_DATA_HOME/amiberry/data\" ]; then mkdir -p \"$XDG_DATA_HOME/amiberry\"; cp -R /app/data/* \"$XDG_DATA_HOME/amiberry\"; fi; exec /app/bin/amiberry"
