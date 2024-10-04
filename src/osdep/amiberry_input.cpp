@@ -762,14 +762,12 @@ void release_keys(void)
 {
 	SDL_PumpEvents();
 	SDL_ResetKeyboard();
-	//for (int j = 0; j < MAX_INPUT_DEVICES; j++) {
-	//	for (int i = 0; i < MAX_KEYCODES; i++) {
-	//		if (di_keycodes[j][i]) {
-	//			di_keycodes[j][i] = 0;
-	//			my_kbd_handler(j, i, 0, true);
-	//		}
-	//	}
-	//}
+
+	for (int j = 0; j < MAX_INPUT_DEVICES; j++) {
+		for (int i = 0; i < SDL_NUM_SCANCODES; i++) {
+			my_kbd_handler(j, i, 0, true);
+		}
+	}
 }
 
 static int acquire_kb(const int num, int flags)
