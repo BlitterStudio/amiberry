@@ -2,9 +2,8 @@ app-id: com.blitterstudio.amiberry
 runtime: org.freedesktop.Platform
 runtime-version: "23.08"
 sdk: org.freedesktop.Sdk
-command: amiberry.sh
+command: amiberry
 rename-icon: amiberry
-copy-icon: true
 finish-args:
   - --device=all
   # X11 + XShm access
@@ -71,38 +70,15 @@ modules:
 
   - name: amiberry
     buildsystem: cmake-ninja
+    builddir: true
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
     post-install:
-      - install -Dp -m 755 amiberry /app/bin/amiberry
       - install -D -m644 -t /app/share/applications/ flatpak/${FLATPAK_ID}.desktop
       - install -D -m644 -t /app/share/metainfo/ flatpak/${FLATPAK_ID}.metainfo.xml
-      - install -D -m755 -t /app/bin/ ./amiberry.sh
-      - install -Dm644 flatpak/256x256.png /app/share/icons/hicolor/256x256/apps/amiberry.png
-      - mkdir -p /app/data
-      - cp -R abr /app/data
-      - cp -R cdroms /app/data
-      - cp -R conf /app/data
-      - cp -R controllers /app/data
-      - cp -R data /app/data
-      - cp -R floppies /app/data
-      - cp -R harddrives /app/data
-      - cp -R inputrecordings /app/data
-      - cp -R kickstarts /app/data
-      - cp -R lha /app/data 
-      - cp -R nvram /app/data
-      - cp -R plugins /app/data
-      - cp -R savestates /app/data
-      - cp -R screenshots /app/data
-      - cp -R whdboot /app/data
 
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
         tag: flatpak-preview
         commit: 730906a44483d922b2db3c7642c61b675543a70f
-
-      - type: script
-        dest-filename: amiberry.sh
-        commands:
-          - "if [ ! -e \"$XDG_DATA_HOME/data\" ]; then cp -R /app/data/* $XDG_DATA_HOME; fi; exec /app/bin/amiberry"
