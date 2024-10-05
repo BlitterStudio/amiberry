@@ -4208,11 +4208,12 @@ std::string get_data_directory()
 		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
 		return AMIBERRY_DATADIR;
 	}
-	if (xdg_data_home != nullptr && directory_exists(xdg_data_home, "/data"))
+	if (xdg_data_home != nullptr && directory_exists(xdg_data_home, "/amiberry/data"))
 	{
 		// If the XDG_DATA_HOME is set, use it
-		write_log("Using data directory from XDG_DATA_HOME: %s\n", xdg_data_home);
-		return { xdg_data_home };
+		std::string xdg_data_home_amiberry = std::string(xdg_data_home) + "/amiberry/data";
+		write_log("Using data directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry.c_str());
+		return { xdg_data_home_amiberry };
 	}
 
 	// Fallback Portable mode, all in the startup path (default behavior for previous Amiberry versions)
@@ -4247,9 +4248,15 @@ std::string get_home_directory()
 	}
 	if (xdg_data_home != nullptr)
 	{
+		if (!directory_exists(xdg_data_home, "/amiberry"))
+		{
+			// If $XDG_DATA_HOME exists, but not the Amiberry subdirectory, create it
+			my_mkdir((std::string(xdg_data_home) + "/amiberry").c_str());
+		}
 		// If the XDG_DATA_HOME is set, use it
-		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home);
-		return { xdg_data_home };
+		std::string xdg_data_home_amiberry = std::string(xdg_data_home) + "/amiberry";
+		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry.c_str());
+		return { xdg_data_home_amiberry };
 	}
 	if (user_home_dir != nullptr)
 	{
