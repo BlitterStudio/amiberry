@@ -205,6 +205,7 @@ static void InitShowCustomFields()
 	wndShowCustomFields->setBaseColor(gui_base_color);
 	wndShowCustomFields->setForegroundColor(gui_foreground_color);
 	wndShowCustomFields->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndShowCustomFields->setMovable(false);
 
 	showCustomFieldsActionListener = new ShowCustomFieldsActionListener();
 	int pos_y = DISTANCE_BORDER;

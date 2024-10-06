@@ -49,6 +49,7 @@ static void InitShowHelp(const std::vector<std::string>& helptext)
 	wndShowHelp->setBackgroundColor(gui_base_color);
 	wndShowHelp->setForegroundColor(gui_foreground_color);
 	wndShowHelp->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndShowHelp->setMovable(false);
 
 	showHelpActionListener = new ShowHelpActionListener();
 

@@ -127,6 +127,7 @@ static void InitEditTapeDrive()
 	wndEditTapeDrive->setForegroundColor(gui_foreground_color);
 	wndEditTapeDrive->setCaption("Tape Drive Settings");
 	wndEditTapeDrive->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndEditTapeDrive->setMovable(false);
 
 	tapeDriveActionListener = new TapeDriveActionListener();
 
