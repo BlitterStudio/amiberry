@@ -125,6 +125,26 @@ jobs:
           name: amiberry-ubuntu-20.04-amd64
           path: amiberry_*.deb
 
+  build-fedora-latest-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: midwan/amiberry-fedora-x86_64:latest
+        options: -v ${{ github.workspace }}:/build
+        run: |
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
+          cpack --config build/CPackConfig.cmake
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: amiberry-fedora-latest-x86_64
+        path: amiberry_*.rpm
+
   build-debian-bullseye-amd64:
     runs-on: ubuntu-latest
     steps:
@@ -246,7 +266,7 @@ jobs:
         path: amiberry_*.deb
 
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-latest-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
@@ -273,6 +293,7 @@ jobs:
           artifacts: |
             amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
             amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
+            amiberry-fedora-latest-x86_64/amiberry_*.rpm
             amiberry-ubuntu-24.04-amd64/amiberry_*.deb
             amiberry-ubuntu-22.04-amd64/amiberry_*.deb
             amiberry-ubuntu-20.04-amd64/amiberry_*.deb
@@ -284,7 +305,7 @@ jobs:
             amiberry-debian-bullseye-armhf/amiberry_*.deb
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64,build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-latest-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64,build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     steps:
@@ -312,6 +333,7 @@ jobs:
           artifacts: |
             amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
             amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
+            amiberry-fedora-latest-x86_64/amiberry_*.rpm
             amiberry-ubuntu-24.04-amd64/amiberry_*.deb
             amiberry-ubuntu-22.04-amd64/amiberry_*.deb
             amiberry-ubuntu-20.04-amd64/amiberry_*.deb
