@@ -164,6 +164,7 @@ static void InitSelectFolder(const std::string& title)
 	wndSelectFolder->setForegroundColor(gui_foreground_color);
 	wndSelectFolder->setCaption(title);
 	wndSelectFolder->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndSelectFolder->setMovable(false);
 
 	folderButtonActionListener = new FolderRequesterButtonActionListener();
 

@@ -218,6 +218,7 @@ static void InitSelectFile(const std::string& title)
 	wndSelectFile->setForegroundColor(gui_foreground_color);
 	wndSelectFile->setCaption(title);
 	wndSelectFile->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndSelectFile->setMovable(false);
 
 	fileButtonActionListener = new FileButtonActionListener();
 

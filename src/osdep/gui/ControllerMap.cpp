@@ -199,6 +199,7 @@ static void InitControllerMap()
 	wndControllerMap->setBaseColor(gui_base_color);
 	wndControllerMap->setForegroundColor(gui_foreground_color);
 	wndControllerMap->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndControllerMap->setMovable(false);
 
 	txtInformation = new gcn::TextBox(info_text);
 	txtInformation->setBackgroundColor(gui_base_color);

@@ -169,6 +169,7 @@ static void InitEditFilesysHardDrive()
 	wndEditFilesysHardDrive->setForegroundColor(gui_foreground_color);
 	wndEditFilesysHardDrive->setCaption("Hard Drive settings");
 	wndEditFilesysHardDrive->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndEditFilesysHardDrive->setMovable(false);
 
 	filesysHardDriveActionListener = new FilesysHardDriveActionListener();
 

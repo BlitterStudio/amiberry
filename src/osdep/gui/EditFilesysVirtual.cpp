@@ -143,6 +143,7 @@ static void InitEditFilesysVirtual()
 	wndEditFilesysVirtual->setForegroundColor(gui_foreground_color);
 	wndEditFilesysVirtual->setCaption("Volume settings");
 	wndEditFilesysVirtual->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndEditFilesysVirtual->setMovable(false);
 
 	filesysVirtualActionListener = new FilesysVirtualActionListener();
 

@@ -209,6 +209,7 @@ static void InitShowMessage(const std::string& message)
 	wndShowMessage->setBackgroundColor(gui_base_color);
 	wndShowMessage->setForegroundColor(gui_foreground_color);
 	wndShowMessage->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndShowMessage->setMovable(false);
 
 	showMessageActionListener = new ShowMessageActionListener();
 
