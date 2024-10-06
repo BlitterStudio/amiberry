@@ -4183,10 +4183,10 @@ static std::string get_xdg_home(const char *var, const std::string& suffix)
 	}
 
 	// If HOME is set, construct the default value relative to it
-	const auto home_dir = getenv("HOME");
-	if (home_dir != nullptr)
+	const auto home = getenv("HOME");
+	if (home != nullptr)
 	{
-		return std::string(home_dir) + suffix;
+		return std::string(home) + suffix;
 	}
 
 	// Return "" so directory_exists will fail
@@ -4203,6 +4203,7 @@ static std::string get_xdg_config_home()
 	return get_xdg_home("XDG_CONFIG_HOME", "/.config");
 }
 
+// this is where the required assets are stored, like fonts, icons, etc.
 std::string get_data_directory()
 {
 #ifdef __MACH__
@@ -4243,7 +4244,7 @@ std::string get_data_directory()
 	if (directory_exists(xdg_data_home, "/amiberry/data"))
 	{
 		// If XDG_DATA_HOME/amiberry/data exists, use it
-		const std::string xdg_data_home_amiberry = xdg_data_home + "/amiberry";
+		std::string xdg_data_home_amiberry = xdg_data_home + "/amiberry";
 		write_log("Using data directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry.c_str());
 		return { xdg_data_home_amiberry };
 	}
@@ -4256,6 +4257,8 @@ std::string get_data_directory()
 #endif
 }
 
+// This path wil be used to create most of the user-specific files and directories
+// Kickstart ROMs, HDD images, Floppy images will live under this directory
 std::string get_home_directory()
 {
 #ifdef __MACH__
@@ -4281,7 +4284,7 @@ std::string get_home_directory()
 	if (directory_exists(xdg_data_home, "/amiberry"))
 	{
 		// If XDG_DATA_HOME/amiberry exists, use it
-		const std::string xdg_data_home_amiberry = xdg_data_home + "/amiberry";
+		std::string xdg_data_home_amiberry = xdg_data_home + "/amiberry";
 		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry.c_str());
 		return { xdg_data_home_amiberry };
 	}
@@ -4306,6 +4309,7 @@ std::string get_home_directory()
 #endif
 }
 
+// The location of .uae configurations and the global amiberry.conf file
 std::string get_config_directory()
 {
 #ifdef __MACH__
@@ -4335,7 +4339,7 @@ std::string get_config_directory()
 	if (directory_exists(xdg_config_home, "/amiberry"))
 	{
 		// If XDG_CONFIG_HOME/amiberry exists, use it
-		const std::string xdg_config_home_amiberry = xdg_config_home + "/amiberry";
+		std::string xdg_config_home_amiberry = xdg_config_home + "/amiberry";
 		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", xdg_config_home_amiberry.c_str());
 		return { xdg_config_home_amiberry };
 	}
@@ -4344,7 +4348,7 @@ std::string get_config_directory()
 		// If XDG_DATA_HOME/amiberry/conf exists, use it
 		// This lets users just rename ~/Amiberry to XDG_DATA_HOME/amiberry,
 		// if they don't want it in their home directory
-		const std::string xdg_data_home_amiberry_conf = xdg_data_home + "/amiberry/conf";
+		std::string xdg_data_home_amiberry_conf = xdg_data_home + "/amiberry/conf";
 		write_log("Using config directory from XDG_DATA_HOME: %s\n", xdg_data_home_amiberry_conf.c_str());
 		return { xdg_data_home_amiberry_conf };
 	}
@@ -4374,6 +4378,7 @@ std::string get_config_directory()
 #endif
 }
 
+// Plugins that Amiberry can use, usually in the form of shared libraries
 std::string get_plugins_directory()
 {
 #ifdef __MACH__
