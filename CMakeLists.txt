@@ -609,8 +609,8 @@ else()
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     # Install icon
-    install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
+    install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
     # Install Debian files
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
