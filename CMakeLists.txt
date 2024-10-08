@@ -4,7 +4,14 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
 endif ()
 
 set(VERSION 6.3.5)
-project(amiberry
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(PROJECT_NAME "Amiberry")
+else ()
+    set(PROJECT_NAME "amiberry")
+endif ()
+
+project(${PROJECT_NAME}
         VERSION ${VERSION}
         LANGUAGES C CXX
         DESCRIPTION "Optimized Amiga emulator for various platforms"
