@@ -639,7 +639,7 @@ the latest WinUAE and supports various Amiga models, including the A4000T,
 A4000D, A1200, A3000 and A600. Additionally, it includes several unique
 features, such as support for WHDLoad titles, RetroArch integration, custom
 Controller Mappings and more.")
-set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/docs/README.md")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/docs/Description.txt")
 
 # macOS settings for DragNDrop generator
 set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
