@@ -71,8 +71,6 @@ modules:
   - name: amiberry
     buildsystem: cmake-ninja
     builddir: true
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=Release
     post-install:
       - install -D -m644 -t /app/share/applications/ flatpak/${FLATPAK_ID}.desktop
       - install -D -m644 -t /app/share/metainfo/ flatpak/${FLATPAK_ID}.metainfo.xml
