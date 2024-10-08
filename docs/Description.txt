@@ -1,0 +1,6 @@
+Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.
+Amiberry is an optimized Amiga emulator for various platforms. It is based on
+the latest WinUAE and supports various Amiga models, including the A4000T,
+A4000D, A1200, A3000 and A600. Additionally, it includes several unique
+features, such as support for WHDLoad titles, RetroArch integration, custom
+Controller Mappings and more.
