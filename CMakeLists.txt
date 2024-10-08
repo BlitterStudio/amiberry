@@ -4,7 +4,14 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
 endif ()
 
 set(VERSION 6.3.5)
-project(amiberry
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(PROJECT_NAME "Amiberry")
+else ()
+    set(PROJECT_NAME "amiberry")
+endif ()
+
+project(${PROJECT_NAME}
         VERSION ${VERSION}
         LANGUAGES C CXX
         DESCRIPTION "Optimized Amiga emulator for various platforms"
@@ -432,7 +439,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_EXECUTABLE_NAME "Amiberry"
         MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME} ${PROJECT_VERSION}"
-        MACOSX_BUNDLE_ICON_FILE "data/amiberry.png"
+        MACOSX_BUNDLE_ICON_FILE "data/icon"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.amiberry"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.blitterstudio.amiberry"
         MACOSX_BUNDLE_LONG_VERSION_STRING ${PROJECT_VERSION}
@@ -609,8 +616,8 @@ else()
     install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     # Install icon
-    install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
+    install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
     # Install Debian files
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
@@ -639,7 +646,7 @@ the latest WinUAE and supports various Amiga models, including the A4000T,
 A4000D, A1200, A3000 and A600. Additionally, it includes several unique
 features, such as support for WHDLoad titles, RetroArch integration, custom
 Controller Mappings and more.")
-set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/docs/README.md")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/docs/Description.txt")
 
 # macOS settings for DragNDrop generator
 set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE OFF)
