@@ -3,8 +3,8 @@ runtime: org.freedesktop.Platform
 runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 command: amiberry
-rename-desktop-file: Amiberry
-rename-appdata-file: Amiberry
+rename-desktop-file: Amiberry.desktop
+rename-appdata-file: Amiberry.metainfo.xml
 rename-icon: amiberry
 finish-args:
   - --device=all
