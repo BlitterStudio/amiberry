@@ -4657,6 +4657,12 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 		// make sure out is null-terminated in any case
 		out[len - 1] = '\0';
 	}
+	else if (strcmp(path, "abr") == 0)
+	{
+		strncpy(out, data_dir.c_str(), len - 1);
+		strncat(out, "abr/", len - 1);
+		out[len - 1] = '\0';
+	}
 	else {
 		strncpy(out, plugins_dir.c_str(), len - 1);
 		strncat(out, "/", len - 1);
