@@ -1,6 +1,6 @@
 app-id: com.blitterstudio.amiberry
 runtime: org.freedesktop.Platform
-runtime-version: "23.08"
+runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 command: amiberry
 rename-icon: amiberry
@@ -58,11 +58,11 @@ modules:
       - -DCMAKE_BUILD_TYPE=Release
     sources:
       - type: git
-        url: https://github.com/PortMidi/PortMidi
+        url: https://github.com/PortMidi/portmidi.git
         tag: v2.0.4
         commit: b808babecdc5d05205467dab5c1006c5ac0fdfd4
     cleanup:
-      - /bin
+      - /lib/cmake
       - /lib/pkgconfig
       - /include
       - '*.a'
@@ -74,9 +74,8 @@ modules:
     post-install:
       - install -D -m644 -t /app/share/applications/ flatpak/${FLATPAK_ID}.desktop
       - install -D -m644 -t /app/share/metainfo/ flatpak/${FLATPAK_ID}.metainfo.xml
-
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
         tag: flatpak-preview
-        commit: 7882b2c8fc77b1540d886eb39b8742f86d0b6032
+        commit: 8714e0e346b5be644d5b51a581f517ca662c3661
