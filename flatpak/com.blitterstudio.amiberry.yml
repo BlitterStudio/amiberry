@@ -79,4 +79,4 @@ modules:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
         tag: flatpak-preview
-        commit: 730906a44483d922b2db3c7642c61b675543a70f
+        commit: 7882b2c8fc77b1540d886eb39b8742f86d0b6032
