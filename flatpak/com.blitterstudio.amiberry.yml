@@ -77,5 +77,4 @@ modules:
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
-        tag: flatpak-preview
-        commit: 8714e0e346b5be644d5b51a581f517ca662c3661
+        branch: fix-flatpak

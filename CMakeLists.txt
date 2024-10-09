@@ -485,7 +485,7 @@ find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
-find_helper(LIBSERIALPORT_LIBRARIES libserialport serialport.h serialport)
+find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
 find_helper(PORTMIDI portmidi portmidi.h portmidi)
 find_helper(LIBMPEG2 libmpeg2 mpeg2convert.h mpeg2convert)
 
