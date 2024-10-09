@@ -487,7 +487,8 @@ find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
 find_helper(PORTMIDI portmidi portmidi.h portmidi)
-find_helper(LIBMPEG2 libmpeg2 mpeg2convert.h mpeg2convert)
+find_helper(LIBMPEG2_CONVERT libmpeg2convert mpeg2convert.h mpeg2convert)
+find_helper(LIBMPEG2 libmpeg2 mpeg2.h mpeg2)
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
@@ -500,7 +501,7 @@ add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_include_directories(${PROJECT_NAME} PRIVATE src src/osdep src/include src/threaddep src/archivers src/ppc/pearpc external/libguisan/include external/mt32emu/src external/floppybridge/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC ${PORTMIDI_LIBRARIES} png MPG123::libmpg123 ${LIBMPEG2_LIBRARIES} mpeg2 ${LIBSERIALPORT_LIBRARIES} z pthread dl)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC ${PORTMIDI_LIBRARIES} png MPG123::libmpg123 ${LIBMPEG2_LIBRARIES} ${LIBMPEG2_CONVERT_LIBRARIES} ${LIBSERIALPORT_LIBRARIES} z pthread dl)
 target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
 
 if (USE_OPENGL)
