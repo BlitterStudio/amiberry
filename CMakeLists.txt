@@ -597,6 +597,7 @@ else()
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
     install(FILES $<TARGET_FILE:floppybridge>
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
+
     # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
@@ -606,9 +607,6 @@ else()
     # This one contains the AROS kickstart files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
-    # This one contains the plugins
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/plugins/abr
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/${PROJECT_NAME})
     # This one contains the whdboot files
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
