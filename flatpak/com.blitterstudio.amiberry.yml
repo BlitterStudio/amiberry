@@ -3,6 +3,8 @@ runtime: org.freedesktop.Platform
 runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
 command: amiberry
+rename-desktop-file: Amiberry
+rename-appdata-file: Amiberry
 rename-icon: amiberry
 finish-args:
   - --device=all
@@ -71,9 +73,6 @@ modules:
   - name: amiberry
     buildsystem: cmake-ninja
     builddir: true
-    post-install:
-      - install -D -m644 -t /app/share/applications/ flatpak/${FLATPAK_ID}.desktop
-      - install -D -m644 -t /app/share/metainfo/ flatpak/${FLATPAK_ID}.metainfo.xml
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry

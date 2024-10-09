@@ -622,13 +622,15 @@ else()
     # Install icon
     install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.svg
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
-    # Install Debian files
+
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
     install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
     install(FILES ${CMAKE_SOURCE_DIR}/docs/amiberry.1.gz
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+    install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
 endif()
 
 # Base package settings

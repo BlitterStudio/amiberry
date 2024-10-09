@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.blitterstudio.amiberry</id>
-  <launchable type="desktop-id">com.blitterstudio.amiberry.desktop</launchable>
+  <id>amiberry</id>
+  <launchable type="desktop-id">Amiberry.desktop</launchable>
   <name>Amiberry</name>
   <developer_name>BlitterStudio</developer_name>
-  <summary>An Amiga emulator for Linux</summary>
+  <summary>A multi-platform Amiga emulator</summary>
 
   <metadata_license>FSFAP</metadata_license>
   <content_rating type="oars-1.1" />
