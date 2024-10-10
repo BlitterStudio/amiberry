@@ -1,0 +1,43 @@
+include(FindHelper)
+
+if (USE_GPIOD)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GPIOD)
+    find_library(LIBGPIOD_LIBRARIES gpiod REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBGPIOD_LIBRARIES})
+endif ()
+
+if (USE_DBUS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_DBUS)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(DBUS REQUIRED dbus-1)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${DBUS_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${DBUS_LIBRARIES})
+endif ()
+
+if (USE_OPENGL)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
+    find_package(OpenGL REQUIRED)
+    find_package(GLEW REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
+endif ()
+
+find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2_image MODULE REQUIRED)
+find_package(SDL2_ttf MODULE REQUIRED)
+include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+
+find_package(FLAC REQUIRED)
+find_package(mpg123 REQUIRED)
+find_package(PNG REQUIRED)
+find_package(ZLIB REQUIRED)
+find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
+find_helper(PORTMIDI portmidi portmidi.h portmidi)
+find_helper(LIBMPEG2_CONVERT libmpeg2convert mpeg2convert.h mpeg2convert)
+find_helper(LIBMPEG2 libmpeg2 mpeg2.h mpeg2)
+
+set(libmt32emu_SHARED FALSE)
+add_subdirectory(external/mt32emu)
+add_subdirectory(external/floppybridge)
+add_subdirectory(external/capsimage)
+add_subdirectory(external/libguisan)
+

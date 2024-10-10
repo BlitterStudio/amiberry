@@ -1,0 +1,38 @@
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe")
+set(CMAKE_C_FLAGS_RELEASE "-O3 ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -funwind-tables -DDEBUG ${CMAKE_C_FLAGS}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
+set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
+set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-undefined -Wl,-z,combreloc")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed -Wl,--gc-sections -Wl,--strip-all")
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} -g")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS} -Wl,--as-needed -Wl,--gc-sections -Wl,--strip-all")
+    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS} -g")
+else ()
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,-dead_strip")
+endif()
+
+# Set build type to "Release" if user did not specify any build type yet
+# Other possible values: Debug, Release, RelWithDebInfo and MinSizeRel
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif (NOT CMAKE_BUILD_TYPE)
+
+if (WITH_LTO)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif ()
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        include_directories("/opt/homebrew/include")
+        set(CMAKE_EXE_LINKER_FLAGS "-L/opt/homebrew/lib -framework IOKit -framework Foundation -liconv")
+    else ()
+        include_directories("/usr/local/include")
+        set(CMAKE_EXE_LINKER_FLAGS "-L/usr/local/lib -framework IOKit -framework Foundation -liconv")
+    endif ()
+endif ()
