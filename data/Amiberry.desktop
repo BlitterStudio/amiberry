@@ -15,8 +15,8 @@ GenericName = Amiga Emulator
 Comment = Optimized Amiga Emulator
 
 # The executable of the application, possibly with arguments
-Exec = /usr/bin/amiberry %f
-TryExec = /usr/bin/amiberry
+Exec = amiberry %f
+TryExec = amiberry
 
 # The name of the icon that will be used to display this entry
 Icon = amiberry

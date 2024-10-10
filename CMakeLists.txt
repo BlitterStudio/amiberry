@@ -1,9 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
     message(FATAL_ERROR "Prevented in-tree build. Please create a build directory outside of the amiberry source code and run \"cmake -S ${CMAKE_SOURCE_DIR} -B .\" from there")
 endif ()
 
-set(VERSION 6.3.5)
+## Determine proper semantic version
+set(VERSION_MAJOR "7")
+set(VERSION_MINOR "0")
+set(VERSION_PATCH "0")
+
+set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(PROJECT_NAME "Amiberry")
@@ -56,9 +62,6 @@ if (WITH_LTO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif ()
 
-# Needed so that cmake uses our find modules.
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
         include_directories("/opt/homebrew/include")
@@ -68,6 +71,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         set(CMAKE_EXE_LINKER_FLAGS "-L/usr/local/lib -framework IOKit -framework Foundation -liconv")
     endif ()
 endif ()
+
+include(FindHelper)
 
 # Define the list of source files
 set(SOURCE_FILES
@@ -480,9 +485,10 @@ find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
-find_library(LIBSERIALPORT_LIBRARIES serialport REQUIRED)
-find_library(PORTMIDI_LIBRARIES portmidi REQUIRED)
-find_library(LIBMPEG2 mpeg2 REQUIRED)
+find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
+find_helper(PORTMIDI portmidi portmidi.h portmidi)
+find_helper(LIBMPEG2_CONVERT libmpeg2convert mpeg2convert.h mpeg2convert)
+find_helper(LIBMPEG2 libmpeg2 mpeg2.h mpeg2)
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
@@ -495,7 +501,7 @@ add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
 target_include_directories(${PROJECT_NAME} PRIVATE src src/osdep src/include src/threaddep src/archivers src/ppc/pearpc external/libguisan/include external/mt32emu/src external/floppybridge/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC portmidi png MPG123::libmpg123 mpeg2convert mpeg2 serialport z pthread dl)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf guisan mt32emu ${DBUS_LIBRARIES} FLAC ${PORTMIDI_LIBRARIES} png MPG123::libmpg123 ${LIBMPEG2_LIBRARIES} ${LIBMPEG2_CONVERT_LIBRARIES} ${LIBSERIALPORT_LIBRARIES} z pthread dl)
 target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
 
 if (USE_OPENGL)
@@ -616,13 +622,15 @@ else()
     # Install icon
     install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.svg
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
-    # Install Debian files
+
     install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
     install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
     install(FILES ${CMAKE_SOURCE_DIR}/docs/amiberry.1.gz
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+    install(FILES ${CMAKE_SOURCE_DIR}/data/Amiberry.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
 endif()
 
 # Base package settings
