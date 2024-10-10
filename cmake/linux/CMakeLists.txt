@@ -37,7 +37,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
 # Install desktop file
-install(FILES ${CMAKE_SOURCE_DIR}/packaging/Amiberry.desktop
+install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 # Install icon
 install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.svg
