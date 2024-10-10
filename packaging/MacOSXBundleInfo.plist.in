@@ -42,6 +42,8 @@
 					<string>uae</string>
 					<string>adf</string>
 					<string>lha</string>
+					<string>ipf</string>
+					<string>dms</string>
 				</array>
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
