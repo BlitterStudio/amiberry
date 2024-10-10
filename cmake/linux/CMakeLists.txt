@@ -37,7 +37,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/roms
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
 # Install desktop file
-install(FILES ${CMAKE_SOURCE_DIR}/packaging/Amiberry.desktop
+install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 # Install icon
 install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.svg
@@ -47,7 +47,9 @@ install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/debian/copyright
         DESTINATION ${CMAKE_INSTALL_DOCDIR})
-install(FILES ${CMAKE_SOURCE_DIR}/packaging/amiberry.1.gz
+install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/man/amiberry.1.gz
         DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
-install(FILES ${CMAKE_SOURCE_DIR}/packaging/Amiberry.metainfo.xml
+install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.metainfo.xml
         DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/mime/amiberry.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
