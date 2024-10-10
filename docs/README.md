@@ -19,29 +19,35 @@ There are currently two Amiberry editions available: **Amiberry and Amiberry-Lit
 
 ## Getting Amiberry
 
-### DEB packages
+### Linux
 
-Amiberry is available as a DEB package for ARM32, ARM64(aarch64) and x86_64 Debian-based Linux platforms. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
-Then, assuming you have it in your current directory, you can install it with:
+Amiberry is available as a Flatpak, DEB and RPM package for ARM32, ARM64 (aarch64) and x86_64 Linux platforms. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
+
+A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry)
+
+For DEB packages:
 
       sudo apt update && sudo apt install ./amiberry_7.0.0_arm64.deb
 
-If you on Arch Linux you'll find Amiberry on the [AUR](https://aur.archlinux.org/packages/amiberry) or if you use an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run:
+Or the RPM package:
+
+      sudo dnf install ./amiberry-7.0.0-1.x86_64.rpm
+
+Or just use the graphical front-end your distro provides (double clicking on the DEB/RPM package should do that)
+
+If you're on Arch Linux you'll find Amiberry on the [AUR](https://aur.archlinux.org/packages/amiberry) or if you use an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run:
 
       yay -S amiberry
 
 ### macOS
 
 Amiberry is available as a DMG package for macOS. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
-After installing it in your Applications folder, you'll need to open a console and run `xattr -rd com.apple.quarantine Amiberry.app`, to whitelist it and allow it to run.
+
+After installing it in your Applications folder, you'll need to open a console and run `xattr -rd com.apple.quarantine Amiberry.app`, to whitelist it and allow it to run. Alternatively, macOS might ask you about allowing it to run, and you'll have to manually do that (the exact steps differ from one macOS version to another).
 
 ### Distro package management
 
 Some distros (like RetroPie, DietPi, Pimiga and others) already include Amiberry either pre-installed, or through their package management systems. Please follow the methods provided in those distros for a smoother experience, and refer to their owners for support during this process.
-
-### Flatpak
-
-A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry)
 
 ## Compile from source
 
