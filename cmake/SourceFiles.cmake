@@ -428,6 +428,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         dl
 )
 
+# Add dependencies to ensure external libraries are built
+add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
+
 # Install the executable
 install(TARGETS ${PROJECT_NAME}
         BUNDLE DESTINATION .
@@ -436,7 +439,7 @@ install(TARGETS ${PROJECT_NAME}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-# Settings for packaging per platform
+# Settings for installing per platform
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     include(cmake/linux/CMakeLists.txt)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")

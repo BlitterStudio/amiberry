@@ -41,5 +41,3 @@ add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 add_subdirectory(external/libguisan)
 
-# Add dependencies to ensure external libraries are built
-add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
