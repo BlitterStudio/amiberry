@@ -765,7 +765,7 @@ static void close_kb()
 void release_keys(void)
 {
 	// Special handling in case Alt-Tab was still stuck in pressed state
-	if (currprefs.alt_tab_release)
+	if (currprefs.alt_tab_release && key_altpressed())
 	{
 		my_kbd_handler(0, SDL_SCANCODE_LALT, 0, true);
 		my_kbd_handler(0, SDL_SCANCODE_TAB, 0, true);
