@@ -360,10 +360,6 @@ int keyhack (const int scancode, const int pressed, const int num)
 	if (currprefs.alt_tab_release)
 	{
 		if (pressed && state[SDL_SCANCODE_LALT] && scancode == SDL_SCANCODE_TAB) {
-			// Ensure we release Alt-Tab before we release capture
-			inputdevice_translatekeycode(num, SDL_SCANCODE_TAB, 0, true);
-			inputdevice_translatekeycode(num, SDL_SCANCODE_LALT, 0, true);
-
 			disablecapture();
 			return -1;
 		}
@@ -764,6 +760,13 @@ static void close_kb()
 
 void release_keys(void)
 {
+	// Special handling in case Alt-Tab was still stuck in pressed state
+	if (currprefs.alt_tab_release && key_altpressed())
+	{
+		my_kbd_handler(0, SDL_SCANCODE_LALT, 0, true);
+		my_kbd_handler(0, SDL_SCANCODE_TAB, 0, true);
+	}
+
 	const Uint8* state = SDL_GetKeyboardState(NULL);
 	SDL_Event event;
 
