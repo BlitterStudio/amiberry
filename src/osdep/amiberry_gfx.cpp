@@ -149,6 +149,11 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
+// Scaling methods available:
+// -1: Auto select between Nearest Neighbor and Linear (default)
+// 0: Nearest Neighbor
+// 1: Linear
+// 2: Integer Scaling (Nearest Neighbor)
 void set_scaling_option(const uae_prefs* p, const int width, const int height)
 {
 	if (p->scaling_method == -1) {
