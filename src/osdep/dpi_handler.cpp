@@ -18,16 +18,15 @@ void DPIHandler::set_render_scale([[maybe_unused]] SDL_Renderer* renderer) {
 #endif
 }
 
-#if SDL_VERSION_ATLEAST(2, 0, 18)
 void DPIHandler::set_font_size(TTF_Font* font, float size) {
     constexpr int display_index{0};
     float hdpi{};
     float vdpi{};
     SDL_GetDisplayDPI(display_index, nullptr, &hdpi, &vdpi);
-
+#if SDL_VERSION_ATLEAST(2, 0, 18)
     TTF_SetFontSizeDPI(font,
         static_cast<int>(size / get_scale()),
         static_cast<unsigned int>(hdpi),
         static_cast<unsigned int>(vdpi));
-}
 #endif
+}
