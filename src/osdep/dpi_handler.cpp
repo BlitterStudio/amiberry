@@ -7,7 +7,7 @@ float DPIHandler::get_scale() {
 
     SDL_GetDisplayDPI(display_index, nullptr, &dpi, nullptr);
 
-    return std::floor(dpi / default_dpi);
+    return floor(dpi / default_dpi);
 }
 
 void DPIHandler::set_render_scale([[maybe_unused]] SDL_Renderer* renderer) {
