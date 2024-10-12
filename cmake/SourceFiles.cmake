@@ -202,6 +202,7 @@ set(SOURCE_FILES
         src/osdep/bsdsocket_host.cpp
         src/osdep/cda_play.cpp
         src/osdep/charset.cpp
+        src/osdep/dpi_handler.cpp
         src/osdep/fsdb_host.cpp
         src/osdep/clipboard.cpp
         src/osdep/amiberry_hardfile.cpp

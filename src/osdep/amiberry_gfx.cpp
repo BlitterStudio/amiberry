@@ -56,6 +56,8 @@
 #include "midiemu.h"
 #endif
 
+#include "dpi_handler.hpp"
+
 #ifdef AMIBERRY
 static bool force_auto_crop = false;
 
@@ -295,8 +297,8 @@ static void SDL2_init()
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				800 * amiberry_options.window_scaling,
-				600 * amiberry_options.window_scaling,
+				800,
+				600,
 				mode);
 		}
 		else
@@ -304,8 +306,8 @@ static void SDL2_init()
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				600 * amiberry_options.window_scaling,
-				800 * amiberry_options.window_scaling,
+				600,
+				800,
 				mode);
 		}
 		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
@@ -336,6 +338,7 @@ static void SDL2_init()
 		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
+	DPIHandler::set_render_scale(mon->amiga_renderer);
 #endif
 
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
@@ -2472,7 +2475,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 	{
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, w * amiberry_options.window_scaling, h * amiberry_options.window_scaling);
+			SDL_SetWindowSize(mon->amiga_window, w, h);
 		}
 #ifdef USE_OPENGL
 		renderQuad = { dx, dy, w, h };
@@ -2518,7 +2521,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, scaled_width * amiberry_options.window_scaling, scaled_height * amiberry_options.window_scaling);
+			SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
 		}
 #ifdef USE_OPENGL
 		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>
+#include <dpi_handler.hpp>
 
 #include <guisan.hpp>
 #include <SDL_image.h>
@@ -325,8 +326,8 @@ void amiberry_gui_init()
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				GUI_WIDTH * amiberry_options.window_scaling,
-				GUI_HEIGHT * amiberry_options.window_scaling,
+				GUI_WIDTH,
+				GUI_HEIGHT,
 				mode);
         }
         else
@@ -334,8 +335,8 @@ void amiberry_gui_init()
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				GUI_HEIGHT * amiberry_options.window_scaling,
-				GUI_WIDTH * amiberry_options.window_scaling,
+				GUI_HEIGHT,
+				GUI_WIDTH,
 				mode);
         }
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
@@ -349,7 +350,7 @@ void amiberry_gui_init()
 	}
 	else if (kmsdrm_detected)
 	{
-		SDL_SetWindowSize(mon->gui_window, GUI_WIDTH * amiberry_options.window_scaling, GUI_HEIGHT * amiberry_options.window_scaling);
+		SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
 	}
 
 	if (mon->gui_renderer == nullptr)
@@ -357,6 +358,7 @@ void amiberry_gui_init()
 		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
 	}
+	DPIHandler::set_render_scale(mon->gui_renderer);
 
 	// make the scaled rendering look smoother (linear scaling).
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
