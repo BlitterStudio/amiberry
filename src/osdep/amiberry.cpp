@@ -4244,16 +4244,24 @@ static void init_amiberry_dirs()
     data_dir = get_data_directory();
     config_path = get_config_directory();
     plugins_dir = get_plugins_directory();
-	const std::string xdg_data_home = get_xdg_data_home();
-	const std::string xdg_config_home = get_xdg_config_home();
+
+	std::string xdg_data_home = get_xdg_data_home();
+	xdg_data_home += "/" + amiberry_dir;
+	if (!my_existsdir(xdg_data_home.c_str()))
+		my_mkdir(xdg_data_home.c_str());
+
+	std::string xdg_config_home = get_xdg_config_home();
+	xdg_config_home += "/" + amiberry_dir;
+	if (!my_existsdir(xdg_config_home.c_str()))
+		my_mkdir(xdg_config_home.c_str());
 
 	// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
-	amiberry_conf_file = xdg_config_home + "/" + amiberry_dir + "/amiberry.conf";
+	amiberry_conf_file = xdg_config_home + "/amiberry.conf";
 
 	// These paths are relative to the XDG_DATA_HOME directory
     controllers_path = whdboot_path = saveimage_dir = savestate_dir =
     ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
-    xdg_data_home + "/" + amiberry_dir;
+    xdg_data_home;
 
 	// These go in $HOME/Amiberry by default
     whdload_arch_path = floppy_path = harddrive_path =
