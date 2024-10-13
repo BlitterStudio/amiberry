@@ -1306,7 +1306,6 @@ struct amiberry_gui_theme
 
 struct amiberry_options
 {
-	float window_scaling = 1.0;
 	bool quickstart_start = true;
 	bool read_config_descriptions = true;
 	bool write_logfile = false;

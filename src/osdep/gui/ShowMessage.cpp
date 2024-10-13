@@ -92,8 +92,8 @@ static void InitShowMessage(const std::string& message)
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				GUI_HEIGHT * amiberry_options.window_scaling,
-				GUI_WIDTH * amiberry_options.window_scaling,
+				GUI_HEIGHT,
+				GUI_WIDTH,
 				mode);
 		}
 		else
@@ -101,8 +101,8 @@ static void InitShowMessage(const std::string& message)
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				GUI_WIDTH * amiberry_options.window_scaling,
-				GUI_HEIGHT * amiberry_options.window_scaling,
+				GUI_WIDTH,
+				GUI_HEIGHT,
 				mode);
 		}
 		check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
