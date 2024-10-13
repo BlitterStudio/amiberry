@@ -4084,16 +4084,23 @@ std::string get_config_directory()
 std::string get_plugins_directory()
 {
 #ifdef __MACH__
-    const auto user_home_dir = getenv("HOME");
-    if (!directory_exists(user_home_dir, "/Amiberry"))
-    {
-        my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-    }
-    if (!directory_exists(user_home_dir, "/Amiberry/Plugins"))
-    {
-        my_mkdir((std::string(user_home_dir) + "/Amiberry/Plugins").c_str());
-    }
-    return { std::string(user_home_dir) + "/Amiberry/Plugins" };
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	std::string directory;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		size_t last_slash_idx = string(exepath).rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = string(exepath).substr(0, last_slash_idx);
+		}
+		last_slash_idx = directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = directory.substr(0, last_slash_idx);
+		}
+	}
+	return directory + "/Frameworks/";
 #else
 	// 1: Check if the $AMIBERRY_PLUGINS_DIR ENV variable is set
 	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
