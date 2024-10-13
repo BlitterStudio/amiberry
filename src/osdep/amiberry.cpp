@@ -4253,7 +4253,7 @@ static void init_amiberry_dirs()
 	// These paths are relative to the XDG_DATA_HOME directory
     controllers_path = whdboot_path = saveimage_dir = savestate_dir =
     ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
-    xdg_data_home + "/" + amiberry_dir + "/";
+    xdg_data_home + "/" + amiberry_dir;
 
 	// These go in $HOME/Amiberry by default
     whdload_arch_path = floppy_path = harddrive_path =
