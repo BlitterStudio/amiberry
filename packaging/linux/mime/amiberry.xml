@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="application/x-amiga--disk-image">
+        <comment>Amiga disk image</comment>
+        <generic-icon name="media-floppy"/>
+        <glob pattern="*.adf"/>
+    </mime-type>
     <mime-type type="application/x-SPS-virtual-media-image">
         <comment>Interchangeable Preservation Format</comment>
         <generic-icon name="media-floppy"/>
