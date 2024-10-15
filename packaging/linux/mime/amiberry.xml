@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-    <mime-type type="application/x-amiga--disk-image">
+    <mime-type type="application/x-amiga-disk-image">
         <comment>Amiga disk image</comment>
         <generic-icon name="media-floppy"/>
+        <magic priority="60">
+            <match type="string" value="DOS\x0" offset="0"/>
+        </magic>
         <glob pattern="*.adf"/>
     </mime-type>
     <mime-type type="application/x-SPS-virtual-media-image">
@@ -23,7 +26,7 @@
     </mime-type>
     <mime-type type="application/x-WHDLoad-game-archive">
         <comment>WHDLoad Amiga Package</comment>
-        <generic-icon name="package-x-generic"/>
+        <generic-icon name="input-gaming"/>
         <magic-deleteall/>
         <magic priority="60">
             <match type="big32" value="0x001000084" offset="8:11"/>
