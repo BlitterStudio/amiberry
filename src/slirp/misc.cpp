@@ -172,8 +172,7 @@ int fork_exec(struct socket *so, char *ex, int do_pty)
 
 int slirp_openpty(int *amaster, int *aslave)
 {
-	register int master, slave;
-
+    int master, slave;
 #ifdef HAVE_GRANTPT
 	char *ptr;
 	
@@ -201,7 +200,7 @@ int slirp_openpty(int *amaster, int *aslave)
 #else
 	
 	static char line[] = "/dev/ptyXX";
-	register const char *cp1, *cp2;
+	const char *cp1, *cp2;
 	
 	for (cp1 = "pqrsPQRS"; *cp1; cp1++) {
 		line[8] = *cp1;
