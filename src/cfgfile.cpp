@@ -47,6 +47,7 @@
 
 #ifdef AMIBERRY
 #include "amiberry_input.h"
+#include <arpa/inet.h>
 #endif
 
 #define cfgfile_warning write_log
@@ -2347,19 +2348,22 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	for (i = 0; i < MAX_SLIRP_REDIRS; i++) {
 		struct slirp_redir *sr = &p->slirp_redirs[i];
 		if (sr->proto && sr->srcport) {
-			uae_u32 v = htonl (sr->addr);
-			if (v) {
-				_stprintf (tmp, _T("%s:%d:%d:%d.%d.%d.%d"),
+			struct in_addr addr;
+			addr.s_addr = sr->addr;
+			const char* addr_str = inet_ntoa(addr);
+			if (addr_str) {
+				_stprintf(tmp, _T("%s:%d:%d:%s"),
 					sr->proto == 1 ? _T("tcp") : _T("udp"),
-					sr->dstport, sr->srcport,
-					(v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff);
-			} else {
-				_stprintf (tmp, _T("%s:%d:%d"),
+					sr->dstport, sr->srcport, addr_str);
+			}
+			else {
+				_stprintf(tmp, _T("%s:%d:%d"),
 					sr->proto == 1 ? _T("tcp") : _T("udp"),
 					sr->dstport, sr->srcport);
 			}
-			cfgfile_write_str (f, _T("slirp_redir"), tmp);
+			cfgfile_write_str(f, _T("slirp_redir"), tmp);
 		}
+
 	}
 #endif /* WITH_SLIRP */
 

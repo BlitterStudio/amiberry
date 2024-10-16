@@ -93,8 +93,8 @@
 #define WITH_CHD
 /* #define WITH_LUA */ /* lua scripting */
 #define WITH_UAENATIVE
-/* #define WITH_SLIRP */
-/* #define WITH_BUILTIN_SLIRP */
+#define WITH_SLIRP
+#define WITH_BUILTIN_SLIRP
 #define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */
 #define WITH_PPC
