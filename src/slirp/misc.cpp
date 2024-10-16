@@ -276,7 +276,7 @@ int fork_exec(struct socket *so, char *ex, int do_pty)
 		addr.sin_addr.s_addr = INADDR_ANY;
 		
 		if ((s = socket(AF_INET, SOCK_STREAM, 0)) < 0 ||
-		    bind(s, (struct sockaddr *)&addr, addrlen) < 0 ||
+		    bind(s, (struct sockaddr *)&addr, (socklen_t)addrlen) < 0 ||
 		    listen(s, 1) < 0) {
 			lprint("Error: inet socket: %s\n", strerror(errno));
 			closesocket(s);
