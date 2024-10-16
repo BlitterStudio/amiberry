@@ -338,7 +338,7 @@ SLIRP_SOCKET udp_attach(struct socket *so)
 		addr.sin_family = AF_INET;
 		addr.sin_port = 0;
 		addr.sin_addr.s_addr = INADDR_ANY;
-		if(bind(so->s, (struct sockaddr *)&addr, sizeof(addr))<0) {
+		if(::bind(so->s, (struct sockaddr *)&addr, sizeof(addr))<0) {
 			int error = WSAGetLastError();
 			closesocket(so->s);
 			so->s = -1;
@@ -636,7 +636,7 @@ struct socket *udp_listen(u_int port, u_int32_t laddr, u_int lport, int flags)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = port;
 
-	if (bind(so->s,(struct sockaddr *)&addr, addrlen) < 0) {
+	if (::bind(so->s,(struct sockaddr *)&addr, addrlen) < 0) {
 		udp_detach(so);
 		return NULL;
 	}
