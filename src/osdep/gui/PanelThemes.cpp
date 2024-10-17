@@ -19,72 +19,102 @@ static gcn::Button* cmdThemeFont;
 static gcn::Label* lblThemeFontSize;
 static gcn::TextField* txtThemeFontSize;
 
+// Theme font color RGB values
+static gcn::Window* grpThemeFontColor;
 static gcn::Label* lblThemeFontColorR;
-static gcn::TextField* txtThemeFontColorR;
+static gcn::Slider* sldThemeFontColorR;
+static gcn::Label* lblThemeFontColorRValue;
 static gcn::Label* lblThemeFontColorG;
-static gcn::TextField* txtThemeFontColorG;
+static gcn::Slider* sldThemeFontColorG;
+static gcn::Label* lblThemeFontColorGValue;
 static gcn::Label* lblThemeFontColorB;
-static gcn::TextField* txtThemeFontColorB;
+static gcn::Slider* sldThemeFontColorB;
+static gcn::Label* lblThemeFontColorBValue;
 
-static gcn::Label* lblThemeBaseColor;
+// Theme base color RGB values
+static gcn::Window* grpThemeBaseColor;
 static gcn::Label* lblThemeBaseColorR;
-static gcn::TextField* txtThemeBaseColorR;
+static gcn::Slider* sldThemeBaseColorR;
+static gcn::Label* lblThemeBaseColorRValue;
 static gcn::Label* lblThemeBaseColorG;
-static gcn::TextField* txtThemeBaseColorG;
+static gcn::Slider* sldThemeBaseColorG;
+static gcn::Label* lblThemeBaseColorGValue;
 static gcn::Label* lblThemeBaseColorB;
-static gcn::TextField* txtThemeBaseColorB;
+static gcn::Slider* sldThemeBaseColorB;
+static gcn::Label* lblThemeBaseColorBValue;
 
-static gcn::Label* lblThemeSelectorInactiveColor;
+// Theme selector inactive color RGB values
+static gcn::Window* grpThemeSelectorInactiveColor;
 static gcn::Label* lblThemeSelectorInactiveColorR;
-static gcn::TextField* txtThemeSelectorInactiveColorR;
+static gcn::Slider* sldThemeSelectorInactiveColorR;
+static gcn::Label* lblThemeSelectorInactiveColorRValue;
 static gcn::Label* lblThemeSelectorInactiveColorG;
-static gcn::TextField* txtThemeSelectorInactiveColorG;
+static gcn::Slider* sldThemeSelectorInactiveColorG;
+static gcn::Label* lblThemeSelectorInactiveColorGValue;
 static gcn::Label* lblThemeSelectorInactiveColorB;
-static gcn::TextField* txtThemeSelectorInactiveColorB;
+static gcn::Slider* sldThemeSelectorInactiveColorB;
+static gcn::Label* lblThemeSelectorInactiveColorBValue;
 
-static gcn::Label* lblThemeSelectorActiveColor;
+// Theme selector active color RGB values
+static gcn::Window* grpThemeSelectorActiveColor;
 static gcn::Label* lblThemeSelectorActiveColorR;
-static gcn::TextField* txtThemeSelectorActiveColorR;
+static gcn::Slider* sldThemeSelectorActiveColorR;
+static gcn::Label* lblThemeSelectorActiveColorRValue;
 static gcn::Label* lblThemeSelectorActiveColorG;
-static gcn::TextField* txtThemeSelectorActiveColorG;
+static gcn::Slider* sldThemeSelectorActiveColorG;
+static gcn::Label* lblThemeSelectorActiveColorGValue;
 static gcn::Label* lblThemeSelectorActiveColorB;
-static gcn::TextField* txtThemeSelectorActiveColorB;
+static gcn::Slider* sldThemeSelectorActiveColorB;
+static gcn::Label* lblThemeSelectorActiveColorBValue;
 
-static gcn::Label* lblThemeSelectionColor;
+// Theme selection color RGB values
+static gcn::Window* grpThemeSelectionColor;
 static gcn::Label* lblThemeSelectionColorR;
-static gcn::TextField* txtThemeSelectionColorR;
+static gcn::Slider* sldThemeSelectionColorR;
+static gcn::Label* lblThemeSelectionColorRValue;
 static gcn::Label* lblThemeSelectionColorG;
-static gcn::TextField* txtThemeSelectionColorG;
+static gcn::Slider* sldThemeSelectionColorG;
+static gcn::Label* lblThemeSelectionColorGValue;
 static gcn::Label* lblThemeSelectionColorB;
-static gcn::TextField* txtThemeSelectionColorB;
+static gcn::Slider* sldThemeSelectionColorB;
+static gcn::Label* lblThemeSelectionColorBValue;
 
-static gcn::Label* lblThemeTextBgColor;
+// Theme text background color RGB values
+static gcn::Window* grpThemeTextBgColor;
 static gcn::Label* lblThemeTextBgColorR;
-static gcn::TextField* txtThemeTextBgColorR;
+static gcn::Slider* sldThemeTextBgColorR;
+static gcn::Label* lblThemeTextBgColorRValue;
 static gcn::Label* lblThemeTextBgColorG;
-static gcn::TextField* txtThemeTextBgColorG;
+static gcn::Slider* sldThemeTextBgColorG;
+static gcn::Label* lblThemeTextBgColorGValue;
 static gcn::Label* lblThemeTextBgColorB;
-static gcn::TextField* txtThemeTextBgColorB;
+static gcn::Slider* sldThemeTextBgColorB;
+static gcn::Label* lblThemeTextBgColorBValue;
 
-static gcn::Label* lblThemeFgColor;
+// Theme foreground color RGB values
+static gcn::Window* grpThemeFgColor;
 static gcn::Label* lblThemeFgColorR;
-static gcn::TextField* txtThemeFgColorR;
+static gcn::Slider* sldThemeFgColorR;
+static gcn::Label* lblThemeFgColorRValue;
 static gcn::Label* lblThemeFgColorG;
-static gcn::TextField* txtThemeFgColorG;
+static gcn::Slider* sldThemeFgColorG;
+static gcn::Label* lblThemeFgColorGValue;
 static gcn::Label* lblThemeFgColorB;
-static gcn::TextField* txtThemeFgColorB;
+static gcn::Slider* sldThemeFgColorB;
+static gcn::Label* lblThemeFgColorBValue;
 
+// Save, Reset and Load buttons
 static gcn::Button* cmdThemeSave;
 static gcn::Button* cmdThemeReset;
 static gcn::Button* cmdThemeLoad;
 
 //TODO add a DropDown for the available preset themes
 
-class ThemesButtonActionListener : public gcn::ActionListener
+class ThemesActionListener : public gcn::ActionListener
 {
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-        auto source = actionEvent.getSource();
+		const auto source = actionEvent.getSource();
 		if (source == cmdThemeFont)
 		{
 			const char* filter[] = { ".ttf", "\0" };
@@ -115,20 +145,127 @@ class ThemesButtonActionListener : public gcn::ActionListener
         {
             //TODO Load the values from amiberry.conf
         }
+        else if (source == sldThemeFontColorR)
+        {
+            gui_theme.font_color.r = static_cast<int>(sldThemeFontColorR->getValue());
+            lblThemeFontColorRValue->setCaption(std::to_string(sldThemeFontColorR->getValue()));
+        }
+        else if (source == sldThemeFontColorG)
+        {
+            gui_theme.font_color.g = static_cast<int>(sldThemeFontColorG->getValue());
+            lblThemeFontColorGValue->setCaption(std::to_string(sldThemeFontColorG->getValue()));
+        }
+        else if (source == sldThemeFontColorB)
+        {
+            gui_theme.font_color.b = static_cast<int>(sldThemeFontColorB->getValue());
+            lblThemeFontColorBValue->setCaption(std::to_string(sldThemeFontColorB->getValue()));
+        }
+        else if (source == sldThemeBaseColorR)
+        {
+            gui_theme.base_color.r = static_cast<int>(sldThemeBaseColorR->getValue());
+            lblThemeBaseColorRValue->setCaption(std::to_string(sldThemeBaseColorR->getValue()));
+        }
+        else if (source == sldThemeBaseColorG)
+        {
+            gui_theme.base_color.g = static_cast<int>(sldThemeBaseColorG->getValue());
+            lblThemeBaseColorGValue->setCaption(std::to_string(sldThemeBaseColorG->getValue()));
+        }
+        else if (source == sldThemeBaseColorB)
+        {
+            gui_theme.base_color.b = static_cast<int>(sldThemeBaseColorB->getValue());
+            lblThemeBaseColorBValue->setCaption(std::to_string(sldThemeBaseColorB->getValue()));
+        }
+        else if (source == sldThemeSelectorInactiveColorR)
+        {
+            gui_theme.selector_inactive.r = static_cast<int>(sldThemeSelectorInactiveColorR->getValue());
+            lblThemeSelectorInactiveColorRValue->setCaption(std::to_string(sldThemeSelectorInactiveColorR->getValue()));
+        }
+        else if (source == sldThemeSelectorInactiveColorG)
+        {
+            gui_theme.selector_inactive.g = static_cast<int>(sldThemeSelectorInactiveColorG->getValue());
+            lblThemeSelectorInactiveColorGValue->setCaption(std::to_string(sldThemeSelectorInactiveColorG->getValue()));
+        }
+        else if (source == sldThemeSelectorInactiveColorB)
+        {
+            gui_theme.selector_inactive.b = static_cast<int>(sldThemeSelectorInactiveColorB->getValue());
+            lblThemeSelectorInactiveColorBValue->setCaption(std::to_string(sldThemeSelectorInactiveColorB->getValue()));
+        }
+		else if (source == sldThemeSelectorActiveColorR)
+		{
+			gui_theme.selector_active.r = static_cast<int>(sldThemeSelectorActiveColorR->getValue());
+			lblThemeSelectorActiveColorRValue->setCaption(std::to_string(sldThemeSelectorActiveColorR->getValue()));
+		}
+		else if (source == sldThemeSelectorActiveColorG)
+		{
+			gui_theme.selector_active.g = static_cast<int>(sldThemeSelectorActiveColorG->getValue());
+			lblThemeSelectorActiveColorGValue->setCaption(std::to_string(sldThemeSelectorActiveColorG->getValue()));
+		}
+		else if (source == sldThemeSelectorActiveColorB)
+		{
+			gui_theme.selector_active.b = static_cast<int>(sldThemeSelectorActiveColorB->getValue());
+			lblThemeSelectorActiveColorBValue->setCaption(std::to_string(sldThemeSelectorActiveColorB->getValue()));
+		}
+		else if (source == sldThemeSelectionColorR)
+		{
+			gui_theme.selection_color.r = static_cast<int>(sldThemeSelectionColorR->getValue());
+			lblThemeSelectionColorRValue->setCaption(std::to_string(sldThemeSelectionColorR->getValue()));
+		}
+		else if (source == sldThemeSelectionColorG)
+		{
+			gui_theme.selection_color.g = static_cast<int>(sldThemeSelectionColorG->getValue());
+			lblThemeSelectionColorGValue->setCaption(std::to_string(sldThemeSelectionColorG->getValue()));
+		}
+		else if (source == sldThemeSelectionColorB)
+		{
+			gui_theme.selection_color.b = static_cast<int>(sldThemeSelectionColorB->getValue());
+			lblThemeSelectionColorBValue->setCaption(std::to_string(sldThemeSelectionColorB->getValue()));
+		}
+		else if (source == sldThemeTextBgColorR)
+		{
+			gui_theme.textbox_background.r = static_cast<int>(sldThemeTextBgColorR->getValue());
+			lblThemeTextBgColorRValue->setCaption(std::to_string(sldThemeTextBgColorR->getValue()));
+		}
+        else if (source == sldThemeTextBgColorG)
+        {
+            gui_theme.textbox_background.g = static_cast<int>(sldThemeTextBgColorG->getValue());
+            lblThemeTextBgColorGValue->setCaption(std::to_string(sldThemeTextBgColorG->getValue()));
+        }
+		else if (source == sldThemeTextBgColorB)
+		{
+			gui_theme.textbox_background.b = static_cast<int>(sldThemeTextBgColorB->getValue());
+			lblThemeTextBgColorBValue->setCaption(std::to_string(sldThemeTextBgColorB->getValue()));
+		}
+		else if (source == sldThemeFgColorR)
+		{
+			gui_theme.foreground_color.r = static_cast<int>(sldThemeFgColorR->getValue());
+			lblThemeFgColorRValue->setCaption(std::to_string(sldThemeFgColorR->getValue()));
+		}
+		else if (source == sldThemeFgColorG)
+		{
+			gui_theme.foreground_color.g = static_cast<int>(sldThemeFgColorG->getValue());
+			lblThemeFgColorGValue->setCaption(std::to_string(sldThemeFgColorG->getValue()));
+		}
+		else if (source == sldThemeFgColorB)
+		{
+			gui_theme.foreground_color.b = static_cast<int>(sldThemeFgColorB->getValue());
+			lblThemeFgColorBValue->setCaption(std::to_string(sldThemeFgColorB->getValue()));
+		}
 
 		RefreshPanelThemes();
 	}
 };
 
-static ThemesButtonActionListener* themesButtonActionListener;
+static ThemesActionListener* themesActionListener;
 
 void InitPanelThemes(const config_category& category)
 {
-	themesButtonActionListener = new ThemesButtonActionListener();
+	themesActionListener = new ThemesActionListener();
+	constexpr int slider_width = 150;
+	constexpr int marker_length = 20;
 
 	lblThemeFont = new gcn::Label("Font:");
 	txtThemeFont = new gcn::TextField();
-	txtThemeFont->setSize(480, TEXTFIELD_HEIGHT);
+	txtThemeFont->setSize(350, TEXTFIELD_HEIGHT);
 	txtThemeFont->setBaseColor(gui_base_color);
 	txtThemeFont->setBackgroundColor(gui_textbox_background_color);
 	txtThemeFont->setForegroundColor(gui_foreground_color);
@@ -137,9 +274,9 @@ void InitPanelThemes(const config_category& category)
 	cmdThemeFont->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdThemeFont->setBaseColor(gui_base_color);
 	cmdThemeFont->setForegroundColor(gui_foreground_color);
-	cmdThemeFont->addActionListener(themesButtonActionListener);
+	cmdThemeFont->addActionListener(themesActionListener);
 
-    lblThemeFontSize = new gcn::Label("Font size:");
+    lblThemeFontSize = new gcn::Label("Size:");
     txtThemeFontSize = new gcn::TextField();
     txtThemeFontSize->setSize(50, TEXTFIELD_HEIGHT);
     txtThemeFontSize->setId("txtThemeFontSize");
@@ -147,186 +284,380 @@ void InitPanelThemes(const config_category& category)
     txtThemeFontSize->setBackgroundColor(gui_textbox_background_color);
     txtThemeFontSize->setForegroundColor(gui_foreground_color);
 
+	// Note: this really should be extracted into a new type of Guisan widget (RGB Slider)
+
     // Theme font color RGB values
-    lblThemeFontColorR = new gcn::Label("Red:");
-    txtThemeFontColorR = new gcn::TextField();
-    txtThemeFontColorR->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeFontColorR->setId("txtThemeFontColorR");
-    txtThemeFontColorR->setBaseColor(gui_base_color);
-    txtThemeFontColorR->setBackgroundColor(gui_textbox_background_color);
-    txtThemeFontColorR->setForegroundColor(gui_foreground_color);
+    lblThemeFontColorR = new gcn::Label("R:");
+    sldThemeFontColorR = new gcn::Slider(0, 255);
+    sldThemeFontColorR->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeFontColorR->setId("sldThemeFontColorR");
+    sldThemeFontColorR->setBaseColor(gui_base_color);
+    sldThemeFontColorR->setBackgroundColor(gui_textbox_background_color);
+    sldThemeFontColorR->setForegroundColor(gui_foreground_color);
+    sldThemeFontColorR->setMarkerLength(marker_length);
+    sldThemeFontColorR->setStepLength(1);
+    sldThemeFontColorR->addActionListener(themesActionListener);
+    lblThemeFontColorRValue = new gcn::Label("255");
 
-    lblThemeFontColorG = new gcn::Label("Green:");
-    txtThemeFontColorG = new gcn::TextField();
-    txtThemeFontColorG->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeFontColorG->setId("txtThemeFontColorG");
-    txtThemeFontColorG->setBaseColor(gui_base_color);
-    txtThemeFontColorG->setBackgroundColor(gui_textbox_background_color);
-    txtThemeFontColorG->setForegroundColor(gui_foreground_color);
+    lblThemeFontColorG = new gcn::Label("G:");
+    sldThemeFontColorG = new gcn::Slider(0, 255);
+    sldThemeFontColorG->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeFontColorG->setId("sldThemeFontColorG");
+    sldThemeFontColorG->setBaseColor(gui_base_color);
+    sldThemeFontColorG->setBackgroundColor(gui_textbox_background_color);
+    sldThemeFontColorG->setForegroundColor(gui_foreground_color);
+    sldThemeFontColorG->setMarkerLength(marker_length);
+    sldThemeFontColorG->setStepLength(1);
+    sldThemeFontColorG->addActionListener(themesActionListener);
+    lblThemeFontColorGValue = new gcn::Label("255");
 
-    lblThemeFontColorB = new gcn::Label("Blue:");
-    txtThemeFontColorB = new gcn::TextField();
-    txtThemeFontColorB->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeFontColorB->setId("txtThemeFontColorB");
-    txtThemeFontColorB->setBaseColor(gui_base_color);
-    txtThemeFontColorB->setBackgroundColor(gui_textbox_background_color);
-    txtThemeFontColorB->setForegroundColor(gui_foreground_color);
+    lblThemeFontColorB = new gcn::Label("B:");
+    sldThemeFontColorB = new gcn::Slider(0, 255);
+    sldThemeFontColorB->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeFontColorB->setId("sldThemeFontColorB");
+    sldThemeFontColorB->setBaseColor(gui_base_color);
+    sldThemeFontColorB->setBackgroundColor(gui_textbox_background_color);
+    sldThemeFontColorB->setForegroundColor(gui_foreground_color);
+    sldThemeFontColorB->setMarkerLength(marker_length);
+    sldThemeFontColorB->setStepLength(1);
+    sldThemeFontColorB->addActionListener(themesActionListener);
+    lblThemeFontColorBValue = new gcn::Label("255");
 
-    lblThemeBaseColor = new gcn::Label("Base color");
+    grpThemeFontColor = new gcn::Window("Font color");
+    grpThemeFontColor->setBaseColor(gui_base_color);
+    grpThemeFontColor->setForegroundColor(gui_foreground_color);
+    grpThemeFontColor->setMovable(false);
+    grpThemeFontColor->setTitleBarHeight(TITLEBAR_HEIGHT);
+    grpThemeFontColor->add(lblThemeFontColorR, 10, 10);
+    grpThemeFontColor->add(sldThemeFontColorR, lblThemeFontColorR->getX() + lblThemeFontColorR->getWidth() + 8, 10);
+    grpThemeFontColor->add(lblThemeFontColorRValue, sldThemeFontColorR->getX() + sldThemeFontColorR->getWidth() + 8, 10);
+    grpThemeFontColor->add(lblThemeFontColorG, 10, 40);
+    grpThemeFontColor->add(sldThemeFontColorG, sldThemeFontColorR->getX(), 40);
+    grpThemeFontColor->add(lblThemeFontColorGValue,sldThemeFontColorG->getX() + sldThemeFontColorG->getWidth() + 8, 40);
+    grpThemeFontColor->add(lblThemeFontColorB, 10, 70);
+    grpThemeFontColor->add(sldThemeFontColorB, sldThemeFontColorR->getX(), 70);
+    grpThemeFontColor->add(lblThemeFontColorBValue, sldThemeFontColorB->getX() + sldThemeFontColorB->getWidth() + 8, 70);
+    int grp_width = lblThemeFontColorRValue->getX() + lblThemeFontColorRValue->getWidth() + DISTANCE_BORDER;
+    int grp_height = lblThemeFontColorB->getY() + lblThemeFontColorB->getHeight() + DISTANCE_BORDER + 5;
+    grpThemeFontColor->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
+
     // Theme base color RGB values
-    lblThemeBaseColorR = new gcn::Label("Red:");
-    txtThemeBaseColorR = new gcn::TextField();
-    txtThemeBaseColorR->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeBaseColorR->setId("txtThemeBaseColorR");
-    txtThemeBaseColorR->setBaseColor(gui_base_color);
-    txtThemeBaseColorR->setBackgroundColor(gui_textbox_background_color);
-    txtThemeBaseColorR->setForegroundColor(gui_foreground_color);
+    lblThemeBaseColorR = new gcn::Label("R:");
+    sldThemeBaseColorR = new gcn::Slider(0, 255);
+    sldThemeBaseColorR->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeBaseColorR->setId("sldThemeBaseColorR");
+    sldThemeBaseColorR->setBaseColor(gui_base_color);
+    sldThemeBaseColorR->setBackgroundColor(gui_textbox_background_color);
+    sldThemeBaseColorR->setForegroundColor(gui_foreground_color);
+    sldThemeBaseColorR->setMarkerLength(marker_length);
+	sldThemeBaseColorR->setStepLength(1);
+	sldThemeBaseColorR->addActionListener(themesActionListener);
+	lblThemeBaseColorRValue = new gcn::Label("255");
 
-    lblThemeBaseColorG = new gcn::Label("Green:");
-    txtThemeBaseColorG = new gcn::TextField();
-    txtThemeBaseColorG->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeBaseColorG->setId("txtThemeBaseColorG");
-    txtThemeBaseColorG->setBaseColor(gui_base_color);
-    txtThemeBaseColorG->setBackgroundColor(gui_textbox_background_color);
-    txtThemeBaseColorG->setForegroundColor(gui_foreground_color);
+    lblThemeBaseColorG = new gcn::Label("G:");
+    sldThemeBaseColorG = new gcn::Slider(0, 255);
+    sldThemeBaseColorG->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeBaseColorG->setId("sldThemeBaseColorG");
+    sldThemeBaseColorG->setBaseColor(gui_base_color);
+    sldThemeBaseColorG->setBackgroundColor(gui_textbox_background_color);
+    sldThemeBaseColorG->setForegroundColor(gui_foreground_color);
+	sldThemeBaseColorG->setMarkerLength(marker_length);
+	sldThemeBaseColorG->setStepLength(1);
+	sldThemeBaseColorG->addActionListener(themesActionListener);
+	lblThemeBaseColorGValue = new gcn::Label("255");
 
-    lblThemeBaseColorB = new gcn::Label("Blue:");
-    txtThemeBaseColorB = new gcn::TextField();
-    txtThemeBaseColorB->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeBaseColorB->setId("txtThemeBaseColorB");
-    txtThemeBaseColorB->setBaseColor(gui_base_color);
-    txtThemeBaseColorB->setBackgroundColor(gui_textbox_background_color);
-    txtThemeBaseColorB->setForegroundColor(gui_foreground_color);
+    lblThemeBaseColorB = new gcn::Label("B:");
+    sldThemeBaseColorB = new gcn::Slider(0, 255);
+    sldThemeBaseColorB->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeBaseColorB->setId("sldThemeBaseColorB");
+    sldThemeBaseColorB->setBaseColor(gui_base_color);
+    sldThemeBaseColorB->setBackgroundColor(gui_textbox_background_color);
+    sldThemeBaseColorB->setForegroundColor(gui_foreground_color);
+	sldThemeBaseColorB->setMarkerLength(marker_length);
+	sldThemeBaseColorB->setStepLength(1);
+	sldThemeBaseColorB->addActionListener(themesActionListener);
+	lblThemeBaseColorBValue = new gcn::Label("255");
 
-    lblThemeSelectorInactiveColor = new gcn::Label("Selector inactive color");
+    grpThemeBaseColor = new gcn::Window("Base color");
+    grpThemeBaseColor->setBaseColor(gui_base_color);
+    grpThemeBaseColor->setForegroundColor(gui_foreground_color);
+    grpThemeBaseColor->setMovable(false);
+    grpThemeBaseColor->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpThemeBaseColor->add(lblThemeBaseColorR, 10, 10);
+	grpThemeBaseColor->add(sldThemeBaseColorR, lblThemeBaseColorR->getX() + lblThemeBaseColorR->getWidth() + 8, 10);
+	grpThemeBaseColor->add(lblThemeBaseColorRValue, sldThemeBaseColorR->getX() + sldThemeBaseColorR->getWidth() + 8, 10);
+	grpThemeBaseColor->add(lblThemeBaseColorG, 10, 40);
+	grpThemeBaseColor->add(sldThemeBaseColorG, sldThemeBaseColorR->getX(), 40);
+	grpThemeBaseColor->add(lblThemeBaseColorGValue, sldThemeBaseColorG->getX() + sldThemeBaseColorG->getWidth() + 8, 40);
+	grpThemeBaseColor->add(lblThemeBaseColorB, 10, 70);
+	grpThemeBaseColor->add(sldThemeBaseColorB, sldThemeBaseColorR->getX(), 70);
+	grpThemeBaseColor->add(lblThemeBaseColorBValue, sldThemeBaseColorB->getX() + sldThemeBaseColorB->getWidth() + 8, 70);
+	grpThemeBaseColor->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
+
     // Theme selector inactive color RGB values
-    lblThemeSelectorInactiveColorR = new gcn::Label("Red:");
-    txtThemeSelectorInactiveColorR = new gcn::TextField();
-    txtThemeSelectorInactiveColorR->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectorInactiveColorR->setId("txtThemeSelectorInactiveColorR");
-    txtThemeSelectorInactiveColorR->setBaseColor(gui_base_color);
-    txtThemeSelectorInactiveColorR->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectorInactiveColorR->setForegroundColor(gui_foreground_color);
+    lblThemeSelectorInactiveColorR = new gcn::Label("R:");
+    sldThemeSelectorInactiveColorR = new gcn::Slider(0, 255);
+    sldThemeSelectorInactiveColorR->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectorInactiveColorR->setId("sldThemeSelectorInactiveColorR");
+    sldThemeSelectorInactiveColorR->setBaseColor(gui_base_color);
+    sldThemeSelectorInactiveColorR->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectorInactiveColorR->setForegroundColor(gui_foreground_color);
+	sldThemeSelectorInactiveColorR->setMarkerLength(marker_length);
+	sldThemeSelectorInactiveColorR->setStepLength(1);
+	sldThemeSelectorInactiveColorR->addActionListener(themesActionListener);
+	lblThemeSelectorInactiveColorRValue = new gcn::Label("255");
 
-    lblThemeSelectorInactiveColorG = new gcn::Label("Green:");
-    txtThemeSelectorInactiveColorG = new gcn::TextField();
-    txtThemeSelectorInactiveColorG->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectorInactiveColorG->setId("txtThemeSelectorInactiveColorG");
-    txtThemeSelectorInactiveColorG->setBaseColor(gui_base_color);
-    txtThemeSelectorInactiveColorG->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectorInactiveColorG->setForegroundColor(gui_foreground_color);
+    lblThemeSelectorInactiveColorG = new gcn::Label("G:");
+    sldThemeSelectorInactiveColorG = new gcn::Slider(0, 255);
+    sldThemeSelectorInactiveColorG->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectorInactiveColorG->setId("sldThemeSelectorInactiveColorG");
+    sldThemeSelectorInactiveColorG->setBaseColor(gui_base_color);
+    sldThemeSelectorInactiveColorG->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectorInactiveColorG->setForegroundColor(gui_foreground_color);
+	sldThemeSelectorInactiveColorG->setMarkerLength(marker_length);
+	sldThemeSelectorInactiveColorG->setStepLength(1);
+	sldThemeSelectorInactiveColorG->addActionListener(themesActionListener);
+	lblThemeSelectorInactiveColorGValue = new gcn::Label("255");
 
-    lblThemeSelectorInactiveColorB = new gcn::Label("Blue:");
-    txtThemeSelectorInactiveColorB = new gcn::TextField();
-    txtThemeSelectorInactiveColorB->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectorInactiveColorB->setId("txtThemeSelectorInactiveColorB");
-    txtThemeSelectorInactiveColorB->setBaseColor(gui_base_color);
-    txtThemeSelectorInactiveColorB->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectorInactiveColorB->setForegroundColor(gui_foreground_color);
+    lblThemeSelectorInactiveColorB = new gcn::Label("B:");
+    sldThemeSelectorInactiveColorB = new gcn::Slider(0, 255);
+    sldThemeSelectorInactiveColorB->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectorInactiveColorB->setId("sldThemeSelectorInactiveColorB");
+    sldThemeSelectorInactiveColorB->setBaseColor(gui_base_color);
+    sldThemeSelectorInactiveColorB->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectorInactiveColorB->setForegroundColor(gui_foreground_color);
+	sldThemeSelectorInactiveColorB->setMarkerLength(marker_length);
+	sldThemeSelectorInactiveColorB->setStepLength(1);
+	sldThemeSelectorInactiveColorB->addActionListener(themesActionListener);
+	lblThemeSelectorInactiveColorBValue = new gcn::Label("255");
 
-    lblThemeSelectorActiveColor = new gcn::Label("Selector active color");
+    grpThemeSelectorInactiveColor = new gcn::Window("Selector inactive color");
+    grpThemeSelectorInactiveColor->setBaseColor(gui_base_color);
+    grpThemeSelectorInactiveColor->setForegroundColor(gui_foreground_color);
+    grpThemeSelectorInactiveColor->setMovable(false);
+    grpThemeSelectorInactiveColor->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpThemeSelectorInactiveColor->add(lblThemeSelectorInactiveColorR, 10, 10);
+	grpThemeSelectorInactiveColor->add(sldThemeSelectorInactiveColorR, lblThemeSelectorInactiveColorR->getX() + lblThemeSelectorInactiveColorR->getWidth() + 8, 10);
+	grpThemeSelectorInactiveColor->add(lblThemeSelectorInactiveColorRValue, sldThemeSelectorInactiveColorR->getX() + sldThemeSelectorInactiveColorR->getWidth() + 8, 10);
+	grpThemeSelectorInactiveColor->add(lblThemeSelectorInactiveColorG, 10, 40);
+	grpThemeSelectorInactiveColor->add(sldThemeSelectorInactiveColorG, sldThemeSelectorInactiveColorR->getX(), 40);
+	grpThemeSelectorInactiveColor->add(lblThemeSelectorInactiveColorGValue, sldThemeSelectorInactiveColorG->getX() + sldThemeSelectorInactiveColorG->getWidth() + 8, 40);
+	grpThemeSelectorInactiveColor->add(lblThemeSelectorInactiveColorB, 10, 70);
+	grpThemeSelectorInactiveColor->add(sldThemeSelectorInactiveColorB, sldThemeSelectorInactiveColorR->getX(), 70);
+	grpThemeSelectorInactiveColor->add(lblThemeSelectorInactiveColorBValue, sldThemeSelectorInactiveColorB->getX() + sldThemeSelectorInactiveColorB->getWidth() + 8, 70);
+	grpThemeSelectorInactiveColor->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
+
     // Theme selector active color RGB values
-    lblThemeSelectorActiveColorR = new gcn::Label("Red:");
-    txtThemeSelectorActiveColorR = new gcn::TextField();
-    txtThemeSelectorActiveColorR->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectorActiveColorR->setId("txtThemeSelectorActiveColorR");
-    txtThemeSelectorActiveColorR->setBaseColor(gui_base_color);
-    txtThemeSelectorActiveColorR->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectorActiveColorR->setForegroundColor(gui_foreground_color);
+    lblThemeSelectorActiveColorR = new gcn::Label("R:");
+    sldThemeSelectorActiveColorR = new gcn::Slider(0, 255);
+    sldThemeSelectorActiveColorR->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectorActiveColorR->setId("sldThemeSelectorActiveColorR");
+    sldThemeSelectorActiveColorR->setBaseColor(gui_base_color);
+    sldThemeSelectorActiveColorR->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectorActiveColorR->setForegroundColor(gui_foreground_color);
+	sldThemeSelectorActiveColorR->setMarkerLength(marker_length);
+	sldThemeSelectorActiveColorR->setStepLength(1);
+	sldThemeSelectorActiveColorR->addActionListener(themesActionListener);
+	lblThemeSelectorActiveColorRValue = new gcn::Label("255");
 
-    lblThemeSelectorActiveColorG = new gcn::Label("Green:");
-    txtThemeSelectorActiveColorG = new gcn::TextField();
-    txtThemeSelectorActiveColorG->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectorActiveColorG->setId("txtThemeSelectorActiveColorG");
-    txtThemeSelectorActiveColorG->setBaseColor(gui_base_color);
-    txtThemeSelectorActiveColorG->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectorActiveColorG->setForegroundColor(gui_foreground_color);
+    lblThemeSelectorActiveColorG = new gcn::Label("G:");
+    sldThemeSelectorActiveColorG = new gcn::Slider(0, 255);
+    sldThemeSelectorActiveColorG->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectorActiveColorG->setId("sldThemeSelectorActiveColorG");
+    sldThemeSelectorActiveColorG->setBaseColor(gui_base_color);
+    sldThemeSelectorActiveColorG->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectorActiveColorG->setForegroundColor(gui_foreground_color);
+	sldThemeSelectorActiveColorG->setMarkerLength(marker_length);
+	sldThemeSelectorActiveColorG->setStepLength(1);
+	sldThemeSelectorActiveColorG->addActionListener(themesActionListener);
+	lblThemeSelectorActiveColorGValue = new gcn::Label("255");
 
-    lblThemeSelectorActiveColorB = new gcn::Label("Blue:");
-    txtThemeSelectorActiveColorB = new gcn::TextField();
-    txtThemeSelectorActiveColorB->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectorActiveColorB->setId("txtThemeSelectorActiveColorB");
-    txtThemeSelectorActiveColorB->setBaseColor(gui_base_color);
-    txtThemeSelectorActiveColorB->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectorActiveColorB->setForegroundColor(gui_foreground_color);
+    lblThemeSelectorActiveColorB = new gcn::Label("B:");
+    sldThemeSelectorActiveColorB = new gcn::Slider(0, 255);
+    sldThemeSelectorActiveColorB->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectorActiveColorB->setId("sldThemeSelectorActiveColorB");
+    sldThemeSelectorActiveColorB->setBaseColor(gui_base_color);
+    sldThemeSelectorActiveColorB->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectorActiveColorB->setForegroundColor(gui_foreground_color);
+	sldThemeSelectorActiveColorB->setMarkerLength(marker_length);
+	sldThemeSelectorActiveColorB->setStepLength(1);
+	sldThemeSelectorActiveColorB->addActionListener(themesActionListener);
+	lblThemeSelectorActiveColorBValue = new gcn::Label("255");
 
-    lblThemeSelectionColor = new gcn::Label("Selection color");
+    grpThemeSelectorActiveColor = new gcn::Window("Selector active color");
+    grpThemeSelectorActiveColor->setBaseColor(gui_base_color);
+    grpThemeSelectorActiveColor->setForegroundColor(gui_foreground_color);
+    grpThemeSelectorActiveColor->setMovable(false);
+    grpThemeSelectorActiveColor->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpThemeSelectorActiveColor->add(lblThemeSelectorActiveColorR, 10, 10);
+	grpThemeSelectorActiveColor->add(sldThemeSelectorActiveColorR, lblThemeSelectorActiveColorR->getX() + lblThemeSelectorActiveColorR->getWidth() + 8, 10);
+	grpThemeSelectorActiveColor->add(lblThemeSelectorActiveColorRValue, sldThemeSelectorActiveColorR->getX() + sldThemeSelectorActiveColorR->getWidth() + 8, 10);
+	grpThemeSelectorActiveColor->add(lblThemeSelectorActiveColorG, 10, 40);
+	grpThemeSelectorActiveColor->add(sldThemeSelectorActiveColorG, sldThemeSelectorActiveColorR->getX(), 40);
+	grpThemeSelectorActiveColor->add(lblThemeSelectorActiveColorGValue, sldThemeSelectorActiveColorG->getX() + sldThemeSelectorActiveColorG->getWidth() + 8, 40);
+	grpThemeSelectorActiveColor->add(lblThemeSelectorActiveColorB, 10, 70);
+	grpThemeSelectorActiveColor->add(sldThemeSelectorActiveColorB, sldThemeSelectorActiveColorR->getX(), 70);
+	grpThemeSelectorActiveColor->add(lblThemeSelectorActiveColorBValue, sldThemeSelectorActiveColorB->getX() + sldThemeSelectorActiveColorB->getWidth() + 8, 70);
+	grpThemeSelectorActiveColor->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
+
     // Theme selection color RGB values
-    lblThemeSelectionColorR = new gcn::Label("Red:");
-    txtThemeSelectionColorR = new gcn::TextField();
-    txtThemeSelectionColorR->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectionColorR->setId("txtThemeSelectionColorR");
-    txtThemeSelectionColorR->setBaseColor(gui_base_color);
-    txtThemeSelectionColorR->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectionColorR->setForegroundColor(gui_foreground_color);
+    lblThemeSelectionColorR = new gcn::Label("R:");
+    sldThemeSelectionColorR = new gcn::Slider(0, 255);
+    sldThemeSelectionColorR->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectionColorR->setId("sldThemeSelectionColorR");
+    sldThemeSelectionColorR->setBaseColor(gui_base_color);
+    sldThemeSelectionColorR->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectionColorR->setForegroundColor(gui_foreground_color);
+	sldThemeSelectionColorR->setMarkerLength(marker_length);
+	sldThemeSelectionColorR->setStepLength(1);
+	sldThemeSelectionColorR->addActionListener(themesActionListener);
+	lblThemeSelectionColorRValue = new gcn::Label("255");
 
-    lblThemeSelectionColorG = new gcn::Label("Green:");
-    txtThemeSelectionColorG = new gcn::TextField();
-    txtThemeSelectionColorG->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectionColorG->setId("txtThemeSelectionColorG");
-    txtThemeSelectionColorG->setBaseColor(gui_base_color);
-    txtThemeSelectionColorG->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectionColorG->setForegroundColor(gui_foreground_color);
+    lblThemeSelectionColorG = new gcn::Label("G:");
+    sldThemeSelectionColorG = new gcn::Slider(0, 255);
+    sldThemeSelectionColorG->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectionColorG->setId("sldThemeSelectionColorG");
+    sldThemeSelectionColorG->setBaseColor(gui_base_color);
+    sldThemeSelectionColorG->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectionColorG->setForegroundColor(gui_foreground_color);
+	sldThemeSelectionColorG->setMarkerLength(marker_length);
+	sldThemeSelectionColorG->setStepLength(1);
+	sldThemeSelectionColorG->addActionListener(themesActionListener);
+	lblThemeSelectionColorGValue = new gcn::Label("255");
 
-    lblThemeSelectionColorB = new gcn::Label("Blue:");
-    txtThemeSelectionColorB = new gcn::TextField();
-    txtThemeSelectionColorB->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeSelectionColorB->setId("txtThemeSelectionColorB");
-    txtThemeSelectionColorB->setBaseColor(gui_base_color);
-    txtThemeSelectionColorB->setBackgroundColor(gui_textbox_background_color);
-    txtThemeSelectionColorB->setForegroundColor(gui_foreground_color);
+    lblThemeSelectionColorB = new gcn::Label("B:");
+    sldThemeSelectionColorB = new gcn::Slider(0, 255);
+    sldThemeSelectionColorB->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeSelectionColorB->setId("sldThemeSelectionColorB");
+    sldThemeSelectionColorB->setBaseColor(gui_base_color);
+    sldThemeSelectionColorB->setBackgroundColor(gui_textbox_background_color);
+    sldThemeSelectionColorB->setForegroundColor(gui_foreground_color);
+	sldThemeSelectionColorB->setMarkerLength(marker_length);
+	sldThemeSelectionColorB->setStepLength(1);
+	sldThemeSelectionColorB->addActionListener(themesActionListener);
+	lblThemeSelectionColorBValue = new gcn::Label("255");
 
-    lblThemeTextBgColor = new gcn::Label("Text background color");
+    grpThemeSelectionColor = new gcn::Window("Selection color");
+    grpThemeSelectionColor->setBaseColor(gui_base_color);
+    grpThemeSelectionColor->setForegroundColor(gui_foreground_color);
+    grpThemeSelectionColor->setMovable(false);
+    grpThemeSelectionColor->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpThemeSelectionColor->add(lblThemeSelectionColorR, 10, 10);
+	grpThemeSelectionColor->add(sldThemeSelectionColorR, lblThemeSelectionColorR->getX() + lblThemeSelectionColorR->getWidth() + 8, 10);
+	grpThemeSelectionColor->add(lblThemeSelectionColorRValue, sldThemeSelectionColorR->getX() + sldThemeSelectionColorR->getWidth() + 8, 10);
+	grpThemeSelectionColor->add(lblThemeSelectionColorG, 10, 40);
+	grpThemeSelectionColor->add(sldThemeSelectionColorG, sldThemeSelectionColorR->getX(), 40);
+	grpThemeSelectionColor->add(lblThemeSelectionColorGValue, sldThemeSelectionColorG->getX() + sldThemeSelectionColorG->getWidth() + 8, 40);
+	grpThemeSelectionColor->add(lblThemeSelectionColorB, 10, 70);
+	grpThemeSelectionColor->add(sldThemeSelectionColorB, sldThemeSelectionColorR->getX(), 70);
+	grpThemeSelectionColor->add(lblThemeSelectionColorBValue, sldThemeSelectionColorB->getX() + sldThemeSelectionColorB->getWidth() + 8, 70);
+	grpThemeSelectionColor->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
+
     // Theme text background color RGB values
-    lblThemeTextBgColorR = new gcn::Label("Red:");
-    txtThemeTextBgColorR = new gcn::TextField();
-    txtThemeTextBgColorR->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeTextBgColorR->setId("txtThemeTextBgColorR");
-    txtThemeTextBgColorR->setBaseColor(gui_base_color);
-    txtThemeTextBgColorR->setBackgroundColor(gui_textbox_background_color);
-    txtThemeTextBgColorR->setForegroundColor(gui_foreground_color);
+    lblThemeTextBgColorR = new gcn::Label("R:");
+    sldThemeTextBgColorR = new gcn::Slider(0, 255);
+    sldThemeTextBgColorR->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeTextBgColorR->setId("sldThemeTextBgColorR");
+    sldThemeTextBgColorR->setBaseColor(gui_base_color);
+    sldThemeTextBgColorR->setBackgroundColor(gui_textbox_background_color);
+    sldThemeTextBgColorR->setForegroundColor(gui_foreground_color);
+	sldThemeTextBgColorR->setMarkerLength(marker_length);
+	sldThemeTextBgColorR->setStepLength(1);
+	sldThemeTextBgColorR->addActionListener(themesActionListener);
+	lblThemeTextBgColorRValue = new gcn::Label("255");
 
-    lblThemeTextBgColorG = new gcn::Label("Green:");
-    txtThemeTextBgColorG = new gcn::TextField();
-    txtThemeTextBgColorG->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeTextBgColorG->setId("txtThemeTextBgColorG");
-    txtThemeTextBgColorG->setBaseColor(gui_base_color);
-    txtThemeTextBgColorG->setBackgroundColor(gui_textbox_background_color);
-    txtThemeTextBgColorG->setForegroundColor(gui_foreground_color);
+    lblThemeTextBgColorG = new gcn::Label("G:");
+    sldThemeTextBgColorG = new gcn::Slider(0, 255);
+    sldThemeTextBgColorG->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeTextBgColorG->setId("sldThemeTextBgColorG");
+    sldThemeTextBgColorG->setBaseColor(gui_base_color);
+    sldThemeTextBgColorG->setBackgroundColor(gui_textbox_background_color);
+    sldThemeTextBgColorG->setForegroundColor(gui_foreground_color);
+	sldThemeTextBgColorG->setMarkerLength(marker_length);
+	sldThemeTextBgColorG->setStepLength(1);
+	sldThemeTextBgColorG->addActionListener(themesActionListener);
+	lblThemeTextBgColorGValue = new gcn::Label("255");
 
-    lblThemeTextBgColorB = new gcn::Label("Blue:");
-    txtThemeTextBgColorB = new gcn::TextField();
-    txtThemeTextBgColorB->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeTextBgColorB->setId("txtThemeTextBgColorB");
-    txtThemeTextBgColorB->setBaseColor(gui_base_color);
-    txtThemeTextBgColorB->setBackgroundColor(gui_textbox_background_color);
-    txtThemeTextBgColorB->setForegroundColor(gui_foreground_color);
+    lblThemeTextBgColorB = new gcn::Label("B:");
+    sldThemeTextBgColorB = new gcn::Slider(0, 255);
+    sldThemeTextBgColorB->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeTextBgColorB->setId("sldThemeTextBgColorB");
+    sldThemeTextBgColorB->setBaseColor(gui_base_color);
+    sldThemeTextBgColorB->setBackgroundColor(gui_textbox_background_color);
+    sldThemeTextBgColorB->setForegroundColor(gui_foreground_color);
+	sldThemeTextBgColorB->setMarkerLength(marker_length);
+	sldThemeTextBgColorB->setStepLength(1);
+	sldThemeTextBgColorB->addActionListener(themesActionListener);
+	lblThemeTextBgColorBValue = new gcn::Label("255");
 
-    lblThemeFgColor = new gcn::Label("Foreground color");
+    grpThemeTextBgColor = new gcn::Window("Text background color");
+    grpThemeTextBgColor->setBaseColor(gui_base_color);
+    grpThemeTextBgColor->setForegroundColor(gui_foreground_color);
+    grpThemeTextBgColor->setMovable(false);
+    grpThemeTextBgColor->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpThemeTextBgColor->add(lblThemeTextBgColorR, 10, 10);
+	grpThemeTextBgColor->add(sldThemeTextBgColorR, lblThemeTextBgColorR->getX() + lblThemeTextBgColorR->getWidth() + 8, 10);
+	grpThemeTextBgColor->add(lblThemeTextBgColorRValue, sldThemeTextBgColorR->getX() + sldThemeTextBgColorR->getWidth() + 8, 10);
+	grpThemeTextBgColor->add(lblThemeTextBgColorG, 10, 40);
+	grpThemeTextBgColor->add(sldThemeTextBgColorG, sldThemeTextBgColorR->getX(), 40);
+	grpThemeTextBgColor->add(lblThemeTextBgColorGValue, sldThemeTextBgColorG->getX() + sldThemeTextBgColorG->getWidth() + 8, 40);
+	grpThemeTextBgColor->add(lblThemeTextBgColorB, 10, 70);
+	grpThemeTextBgColor->add(sldThemeTextBgColorB, sldThemeTextBgColorR->getX(), 70);
+	grpThemeTextBgColor->add(lblThemeTextBgColorBValue, sldThemeTextBgColorB->getX() + sldThemeTextBgColorB->getWidth() + 8, 70);
+	grpThemeTextBgColor->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
+
     // Theme foreground color RGB values
-    lblThemeFgColorR = new gcn::Label("Red:");
-    txtThemeFgColorR = new gcn::TextField();
-    txtThemeFgColorR->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeFgColorR->setId("txtThemeFgColorR");
-    txtThemeFgColorR->setBaseColor(gui_base_color);
-    txtThemeFgColorR->setBackgroundColor(gui_textbox_background_color);
-    txtThemeFgColorR->setForegroundColor(gui_foreground_color);
+    lblThemeFgColorR = new gcn::Label("R:");
+    sldThemeFgColorR = new gcn::Slider(0, 255);
+    sldThemeFgColorR->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeFgColorR->setId("sldThemeFgColorR");
+    sldThemeFgColorR->setBaseColor(gui_base_color);
+    sldThemeFgColorR->setBackgroundColor(gui_textbox_background_color);
+    sldThemeFgColorR->setForegroundColor(gui_foreground_color);
+	sldThemeFgColorR->setMarkerLength(marker_length);
+	sldThemeFgColorR->setStepLength(1);
+	sldThemeFgColorR->addActionListener(themesActionListener);
+	lblThemeFgColorRValue = new gcn::Label("255");
 
-    lblThemeFgColorG = new gcn::Label("Green:");
-    txtThemeFgColorG = new gcn::TextField();
-    txtThemeFgColorG->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeFgColorG->setId("txtThemeFgColorG");
-    txtThemeFgColorG->setBaseColor(gui_base_color);
-    txtThemeFgColorG->setBackgroundColor(gui_textbox_background_color);
-    txtThemeFgColorG->setForegroundColor(gui_foreground_color);
+    lblThemeFgColorG = new gcn::Label("G:");
+    sldThemeFgColorG = new gcn::Slider(0, 255);
+    sldThemeFgColorG->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeFgColorG->setId("sldThemeFgColorG");
+    sldThemeFgColorG->setBaseColor(gui_base_color);
+    sldThemeFgColorG->setBackgroundColor(gui_textbox_background_color);
+    sldThemeFgColorG->setForegroundColor(gui_foreground_color);
+	sldThemeFgColorG->setMarkerLength(marker_length);
+	sldThemeFgColorG->setStepLength(1);
+	sldThemeFgColorG->addActionListener(themesActionListener);
+	lblThemeFgColorGValue = new gcn::Label("255");
 
-    lblThemeFgColorB = new gcn::Label("Blue:");
-    txtThemeFgColorB = new gcn::TextField();
-    txtThemeFgColorB->setSize(50, TEXTFIELD_HEIGHT);
-    txtThemeFgColorB->setId("txtThemeFgColorB");
-    txtThemeFgColorB->setBaseColor(gui_base_color);
-    txtThemeFgColorB->setBackgroundColor(gui_textbox_background_color);
-    txtThemeFgColorB->setForegroundColor(gui_foreground_color);
+    lblThemeFgColorB = new gcn::Label("B:");
+    sldThemeFgColorB = new gcn::Slider(0, 255);
+    sldThemeFgColorB->setSize(slider_width, SLIDER_HEIGHT);
+    sldThemeFgColorB->setId("sldThemeFgColorB");
+    sldThemeFgColorB->setBaseColor(gui_base_color);
+    sldThemeFgColorB->setBackgroundColor(gui_textbox_background_color);
+    sldThemeFgColorB->setForegroundColor(gui_foreground_color);
+	sldThemeFgColorB->setMarkerLength(marker_length);
+	sldThemeFgColorB->setStepLength(1);
+	sldThemeFgColorB->addActionListener(themesActionListener);
+	lblThemeFgColorBValue = new gcn::Label("255");
+
+    grpThemeFgColor = new gcn::Window("Foreground color");
+    grpThemeFgColor->setBaseColor(gui_base_color);
+    grpThemeFgColor->setForegroundColor(gui_foreground_color);
+    grpThemeFgColor->setMovable(false);
+    grpThemeFgColor->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpThemeFgColor->add(lblThemeFgColorR, 10, 10);
+	grpThemeFgColor->add(sldThemeFgColorR, lblThemeFgColorR->getX() + lblThemeFgColorR->getWidth() + 8, 10);
+	grpThemeFgColor->add(lblThemeFgColorRValue, sldThemeFgColorR->getX() + sldThemeFgColorR->getWidth() + 8, 10);
+	grpThemeFgColor->add(lblThemeFgColorG, 10, 40);
+	grpThemeFgColor->add(sldThemeFgColorG, sldThemeFgColorR->getX(), 40);
+	grpThemeFgColor->add(lblThemeFgColorGValue, sldThemeFgColorG->getX() + sldThemeFgColorG->getWidth() + 8, 40);
+	grpThemeFgColor->add(lblThemeFgColorB, 10, 70);
+	grpThemeFgColor->add(sldThemeFgColorB, sldThemeFgColorR->getX(), 70);
+	grpThemeFgColor->add(lblThemeFgColorBValue, sldThemeFgColorB->getX() + sldThemeFgColorB->getWidth() + 8, 70);
+	grpThemeFgColor->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
 
     // Save button
     cmdThemeSave = new gcn::Button("Save");
@@ -334,151 +665,57 @@ void InitPanelThemes(const config_category& category)
     cmdThemeSave->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
     cmdThemeSave->setBaseColor(gui_base_color);
     cmdThemeSave->setForegroundColor(gui_foreground_color);
-    cmdThemeSave->addActionListener(themesButtonActionListener);
+    cmdThemeSave->addActionListener(themesActionListener);
     // Reset button
     cmdThemeReset = new gcn::Button("Reset");
     cmdThemeReset->setId("cmdThemeReset");
     cmdThemeReset->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
     cmdThemeReset->setBaseColor(gui_base_color);
     cmdThemeReset->setForegroundColor(gui_foreground_color);
-    cmdThemeReset->addActionListener(themesButtonActionListener);
+    cmdThemeReset->addActionListener(themesActionListener);
     // Load button
     cmdThemeLoad = new gcn::Button("Load");
     cmdThemeLoad->setId("cmdThemeLoad");
     cmdThemeLoad->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
     cmdThemeLoad->setBaseColor(gui_base_color);
     cmdThemeLoad->setForegroundColor(gui_foreground_color);
-    cmdThemeLoad->addActionListener(themesButtonActionListener);
+    cmdThemeLoad->addActionListener(themesActionListener);
 
-
+    // Positioning
 	int pos_x = DISTANCE_BORDER;
 	int pos_y = DISTANCE_BORDER;
 
 	category.panel->add(lblThemeFont, pos_x, pos_x);
-	pos_x += lblThemeFont->getWidth() + DISTANCE_NEXT_X;
+	pos_x += lblThemeFont->getWidth() + 8;
 	category.panel->add(txtThemeFont, pos_x, pos_y);
-	pos_x += txtThemeFont->getWidth() + DISTANCE_NEXT_X;
+	pos_x += txtThemeFont->getWidth() + 8;
 	category.panel->add(cmdThemeFont, pos_x, pos_y);
+	pos_x += cmdThemeFont->getWidth() + DISTANCE_NEXT_X;
+    category.panel->add(lblThemeFontSize, pos_x, pos_y);
+	pos_x += lblThemeFontSize->getWidth() + 8;
+    category.panel->add(txtThemeFontSize, pos_x, pos_y);
     pos_y += txtThemeFont->getHeight() + DISTANCE_NEXT_Y;
 
-    category.panel->add(lblThemeFontSize, DISTANCE_BORDER, pos_y);
-    pos_x = lblThemeFontSize->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(txtThemeFontSize, pos_x, pos_y);
-
-    pos_x += txtThemeFontSize->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeFontColorR, pos_x, pos_y);
-    pos_x += lblThemeFontColorR->getWidth() + 8;
-    category.panel->add(txtThemeFontColorR, pos_x, pos_y);
-    pos_x += txtThemeFontColorR->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeFontColorG, pos_x, pos_y);
-    pos_x += lblThemeFontColorG->getWidth() + 8;
-    category.panel->add(txtThemeFontColorG, pos_x, pos_y);
-    pos_x += txtThemeFontColorG->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeFontColorB, pos_x, pos_y);
-    pos_x += lblThemeFontColorB->getWidth() + 8;
-    category.panel->add(txtThemeFontColorB, pos_x, pos_y);
-
-    pos_y += txtThemeFontSize->getHeight() + DISTANCE_NEXT_Y * 2;
-
     pos_x = DISTANCE_BORDER;
-    category.panel->add(lblThemeBaseColor, pos_x, pos_y);
-    pos_y += lblThemeBaseColor->getHeight() + DISTANCE_NEXT_Y;
-    category.panel->add(lblThemeBaseColorR, pos_x, pos_y);
-    pos_x += lblThemeBaseColorR->getWidth() + 8;
-    category.panel->add(txtThemeBaseColorR, pos_x, pos_y);
-    pos_x += txtThemeBaseColorR->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeBaseColorG, pos_x, pos_y);
-    pos_x += lblThemeBaseColorG->getWidth() + 8;
-    category.panel->add(txtThemeBaseColorG, pos_x, pos_y);
-    pos_x += txtThemeBaseColorG->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeBaseColorB, pos_x, pos_y);
-    pos_x += lblThemeBaseColorB->getWidth() + 8;
-    category.panel->add(txtThemeBaseColorB, pos_x, pos_y);
+    category.panel->add(grpThemeFontColor, pos_x, pos_y);
+	pos_x = grpThemeFontColor->getX() + grpThemeFontColor->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(grpThemeBaseColor, pos_x, pos_y);
 
-    pos_y += txtThemeBaseColorR->getHeight() + DISTANCE_NEXT_Y * 2;
+    pos_y += grpThemeFontColor->getHeight() + DISTANCE_NEXT_Y;
 
-    pos_x = DISTANCE_BORDER;
-    category.panel->add(lblThemeSelectorInactiveColor, pos_x, pos_y);
-    pos_y += lblThemeSelectorInactiveColor->getHeight() + DISTANCE_NEXT_Y;
-    category.panel->add(lblThemeSelectorInactiveColorR, pos_x, pos_y);
-    pos_x += lblThemeSelectorInactiveColorR->getWidth() + 8;
-    category.panel->add(txtThemeSelectorInactiveColorR, pos_x, pos_y);
-    pos_x += txtThemeSelectorInactiveColorR->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeSelectorInactiveColorG, pos_x, pos_y);
-    pos_x += lblThemeSelectorInactiveColorG->getWidth() + 8;
-    category.panel->add(txtThemeSelectorInactiveColorG, pos_x, pos_y);
-    pos_x += txtThemeSelectorInactiveColorG->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeSelectorInactiveColorB, pos_x, pos_y);
-    pos_x += lblThemeSelectorInactiveColorB->getWidth() + 8;
-    category.panel->add(txtThemeSelectorInactiveColorB, pos_x, pos_y);
+	category.panel->add(grpThemeSelectorInactiveColor, DISTANCE_BORDER, pos_y);
+	pos_x = grpThemeSelectorInactiveColor->getX() + grpThemeSelectorInactiveColor->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(grpThemeSelectorActiveColor, pos_x, pos_y);
 
-    pos_y += txtThemeSelectorInactiveColorR->getHeight() + DISTANCE_NEXT_Y * 2;
+	pos_y += grpThemeSelectorInactiveColor->getHeight() + DISTANCE_NEXT_Y;
 
-    pos_x = DISTANCE_BORDER;
-    category.panel->add(lblThemeSelectorActiveColor, pos_x, pos_y);
-    pos_y += lblThemeSelectorActiveColor->getHeight() + DISTANCE_NEXT_Y;
-    category.panel->add(lblThemeSelectorActiveColorR, pos_x, pos_y);
-    pos_x += lblThemeSelectorActiveColorR->getWidth() + 8;
-    category.panel->add(txtThemeSelectorActiveColorR, pos_x, pos_y);
-    pos_x += txtThemeSelectorActiveColorR->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeSelectorActiveColorG, pos_x, pos_y);
-    pos_x += lblThemeSelectorActiveColorG->getWidth() + 8;
-    category.panel->add(txtThemeSelectorActiveColorG, pos_x, pos_y);
-    pos_x += txtThemeSelectorActiveColorG->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeSelectorActiveColorB, pos_x, pos_y);
-    pos_x += lblThemeSelectorActiveColorB->getWidth() + 8;
-    category.panel->add(txtThemeSelectorActiveColorB, pos_x, pos_y);
+	category.panel->add(grpThemeSelectionColor, DISTANCE_BORDER, pos_y);
+	pos_x = grpThemeSelectionColor->getX() + grpThemeSelectionColor->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(grpThemeTextBgColor, pos_x, pos_y);
 
-    pos_y += txtThemeSelectorActiveColorR->getHeight() + DISTANCE_NEXT_Y * 2;
+	pos_y += grpThemeSelectionColor->getHeight() + DISTANCE_NEXT_Y;
 
-    pos_x = DISTANCE_BORDER;
-    category.panel->add(lblThemeSelectionColor, pos_x, pos_y);
-    pos_y += lblThemeSelectionColor->getHeight() + DISTANCE_NEXT_Y;
-    category.panel->add(lblThemeSelectionColorR, pos_x, pos_y);
-    pos_x += lblThemeSelectionColorR->getWidth() + 8;
-    category.panel->add(txtThemeSelectionColorR, pos_x, pos_y);
-    pos_x += txtThemeSelectionColorR->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeSelectionColorG, pos_x, pos_y);
-    pos_x += lblThemeSelectionColorG->getWidth() + 8;
-    category.panel->add(txtThemeSelectionColorG, pos_x, pos_y);
-    pos_x += txtThemeSelectionColorG->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeSelectionColorB, pos_x, pos_y);
-    pos_x += lblThemeSelectionColorB->getWidth() + 8;
-    category.panel->add(txtThemeSelectionColorB, pos_x, pos_y);
-
-    pos_y += txtThemeSelectionColorR->getHeight() + DISTANCE_NEXT_Y * 2;
-
-    pos_x = DISTANCE_BORDER;
-    category.panel->add(lblThemeTextBgColor, pos_x, pos_y);
-    pos_y += lblThemeTextBgColor->getHeight() + DISTANCE_NEXT_Y;
-    category.panel->add(lblThemeTextBgColorR, pos_x, pos_y);
-    pos_x += lblThemeTextBgColorR->getWidth() + 8;
-    category.panel->add(txtThemeTextBgColorR, pos_x, pos_y);
-    pos_x += txtThemeTextBgColorR->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeTextBgColorG, pos_x, pos_y);
-    pos_x += lblThemeTextBgColorG->getWidth() + 8;
-    category.panel->add(txtThemeTextBgColorG, pos_x, pos_y);
-    pos_x += txtThemeTextBgColorG->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeTextBgColorB, pos_x, pos_y);
-    pos_x += lblThemeTextBgColorB->getWidth() + 8;
-    category.panel->add(txtThemeTextBgColorB, pos_x, pos_y);
-
-    pos_y += txtThemeTextBgColorR->getHeight() + DISTANCE_NEXT_Y * 2;
-
-    pos_x = DISTANCE_BORDER;
-    category.panel->add(lblThemeFgColor, pos_x, pos_y);
-    pos_y += lblThemeFgColor->getHeight() + DISTANCE_NEXT_Y;
-    category.panel->add(lblThemeFgColorR, pos_x, pos_y);
-    pos_x += lblThemeFgColorR->getWidth() + 8;
-    category.panel->add(txtThemeFgColorR, pos_x, pos_y);
-    pos_x += txtThemeFgColorR->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeFgColorG, pos_x, pos_y);
-    pos_x += lblThemeFgColorG->getWidth() + 8;
-    category.panel->add(txtThemeFgColorG, pos_x, pos_y);
-    pos_x += txtThemeFgColorG->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(lblThemeFgColorB, pos_x, pos_y);
-    pos_x += lblThemeFgColorB->getWidth() + 8;
-    category.panel->add(txtThemeFgColorB, pos_x, pos_y);
+	category.panel->add(grpThemeFgColor, DISTANCE_BORDER, pos_y);
 
     // Bottom buttons
     pos_x = DISTANCE_BORDER;
@@ -502,99 +739,150 @@ void ExitPanelThemes()
 	delete lblThemeFontSize;
 	delete txtThemeFontSize;
 
+    delete grpThemeFontColor;
     delete lblThemeFontColorR;
-    delete txtThemeFontColorR;
+    delete sldThemeFontColorR;
+    delete lblThemeFontColorRValue;
     delete lblThemeFontColorG;
-    delete txtThemeFontColorG;
+    delete sldThemeFontColorG;
+    delete lblThemeFontColorGValue;
     delete lblThemeFontColorB;
-    delete txtThemeFontColorB;
+    delete sldThemeFontColorB;
+    delete lblThemeFontColorBValue;
 
-    delete lblThemeBaseColor;
+    delete grpThemeBaseColor;
 	delete lblThemeBaseColorR;
-	delete txtThemeBaseColorR;
+	delete sldThemeBaseColorR;
+	delete lblThemeBaseColorRValue;
 	delete lblThemeBaseColorG;
-	delete txtThemeBaseColorG;
+	delete sldThemeBaseColorG;
+	delete lblThemeBaseColorGValue;
 	delete lblThemeBaseColorB;
-	delete txtThemeBaseColorB;
+	delete sldThemeBaseColorB;
+	delete lblThemeBaseColorBValue;
 
-    delete lblThemeSelectorInactiveColor;
+    delete grpThemeSelectorInactiveColor;
     delete lblThemeSelectorInactiveColorR;
-	delete txtThemeSelectorInactiveColorR;
+	delete sldThemeSelectorInactiveColorR;
+	delete lblThemeSelectorInactiveColorRValue;
 	delete lblThemeSelectorInactiveColorG;
-	delete txtThemeSelectorInactiveColorG;
+	delete sldThemeSelectorInactiveColorG;
+	delete lblThemeSelectorInactiveColorGValue;
 	delete lblThemeSelectorInactiveColorB;
-	delete txtThemeSelectorInactiveColorB;
+	delete sldThemeSelectorInactiveColorB;
+	delete lblThemeSelectorInactiveColorBValue;
 
-    delete lblThemeSelectorActiveColor;
+    delete grpThemeSelectorActiveColor;
 	delete lblThemeSelectorActiveColorR;
-	delete txtThemeSelectorActiveColorR;
+	delete sldThemeSelectorActiveColorR;
+    delete lblThemeSelectorActiveColorRValue;
 	delete lblThemeSelectorActiveColorG;
-	delete txtThemeSelectorActiveColorG;
+	delete sldThemeSelectorActiveColorG;
+	delete lblThemeSelectorActiveColorGValue;
 	delete lblThemeSelectorActiveColorB;
-	delete txtThemeSelectorActiveColorB;
+	delete sldThemeSelectorActiveColorB;
+	delete lblThemeSelectorActiveColorBValue;
 
-    delete lblThemeSelectionColor;
+    delete grpThemeSelectionColor;
 	delete lblThemeSelectionColorR;
-	delete txtThemeSelectionColorR;
+	delete sldThemeSelectionColorR;
+	delete lblThemeSelectionColorRValue;
 	delete lblThemeSelectionColorG;
-	delete txtThemeSelectionColorG;
+	delete sldThemeSelectionColorG;
+	delete lblThemeSelectionColorGValue;
 	delete lblThemeSelectionColorB;
-	delete txtThemeSelectionColorB;
+	delete sldThemeSelectionColorB;
+	delete lblThemeSelectionColorBValue;
 
-    delete lblThemeTextBgColor;
+    delete grpThemeTextBgColor;
 	delete lblThemeTextBgColorR;
-	delete txtThemeTextBgColorR;
+	delete sldThemeTextBgColorR;
+	delete lblThemeTextBgColorRValue;
 	delete lblThemeTextBgColorG;
-	delete txtThemeTextBgColorG;
+	delete sldThemeTextBgColorG;
+	delete lblThemeTextBgColorGValue;
 	delete lblThemeTextBgColorB;
-	delete txtThemeTextBgColorB;
+	delete sldThemeTextBgColorB;
+	delete lblThemeTextBgColorBValue;
 
-    delete lblThemeFgColor;
+    delete grpThemeFgColor;
     delete lblThemeFgColorR;
-    delete txtThemeFgColorR;
+    delete sldThemeFgColorR;
+	delete lblThemeFgColorRValue;
     delete lblThemeFgColorG;
-    delete txtThemeFgColorG;
+    delete sldThemeFgColorG;
+	delete lblThemeFgColorGValue;
     delete lblThemeFgColorB;
-    delete txtThemeFgColorB;
+    delete sldThemeFgColorB;
+	delete lblThemeFgColorBValue;
 
     delete cmdThemeSave;
     delete cmdThemeReset;
     delete cmdThemeLoad;
 
-	delete themesButtonActionListener;
+	delete themesActionListener;
 }
 
 void RefreshPanelThemes()
 {
 	txtThemeFont->setText(gui_theme.font_name);
     txtThemeFontSize->setText(std::to_string(gui_theme.font_size));
-    txtThemeFontColorR->setText(std::to_string(gui_theme.font_color.r));
-    txtThemeFontColorG->setText(std::to_string(gui_theme.font_color.g));
-    txtThemeFontColorB->setText(std::to_string(gui_theme.font_color.b));
 
-    txtThemeBaseColorR->setText(std::to_string(gui_theme.base_color.r));
-    txtThemeBaseColorG->setText(std::to_string(gui_theme.base_color.g));
-    txtThemeBaseColorB->setText(std::to_string(gui_theme.base_color.b));
+	// Theme font color RGB values
+    sldThemeFontColorR->setValue(gui_theme.font_color.r);
+    sldThemeFontColorG->setValue(gui_theme.font_color.g);
+    sldThemeFontColorB->setValue(gui_theme.font_color.b);
+    lblThemeFontColorRValue->setCaption(std::to_string(gui_theme.font_color.r));
+    lblThemeFontColorGValue->setCaption(std::to_string(gui_theme.font_color.g));
+    lblThemeFontColorBValue->setCaption(std::to_string(gui_theme.font_color.b));
 
-    txtThemeSelectorInactiveColorR->setText(std::to_string(gui_theme.selector_inactive.r));
-    txtThemeSelectorInactiveColorG->setText(std::to_string(gui_theme.selector_inactive.g));
-    txtThemeSelectorInactiveColorB->setText(std::to_string(gui_theme.selector_inactive.b));
+	// Theme base color RGB values
+    sldThemeBaseColorR->setValue(gui_theme.base_color.r);
+    sldThemeBaseColorG->setValue(gui_theme.base_color.g);
+    sldThemeBaseColorB->setValue(gui_theme.base_color.b);
+	lblThemeBaseColorRValue->setCaption(std::to_string(gui_theme.base_color.r));
+	lblThemeBaseColorGValue->setCaption(std::to_string(gui_theme.base_color.g));
+	lblThemeBaseColorBValue->setCaption(std::to_string(gui_theme.base_color.b));
 
-    txtThemeSelectorActiveColorR->setText(std::to_string(gui_theme.selector_active.r));
-    txtThemeSelectorActiveColorG->setText(std::to_string(gui_theme.selector_active.g));
-    txtThemeSelectorActiveColorB->setText(std::to_string(gui_theme.selector_active.b));
+	// Theme selector inactive color RGB values
+    sldThemeSelectorInactiveColorR->setValue(gui_theme.selector_inactive.r);
+    sldThemeSelectorInactiveColorG->setValue(gui_theme.selector_inactive.g);
+    sldThemeSelectorInactiveColorB->setValue(gui_theme.selector_inactive.b);
+	lblThemeSelectorInactiveColorRValue->setCaption(std::to_string(gui_theme.selector_inactive.r));
+	lblThemeSelectorInactiveColorGValue->setCaption(std::to_string(gui_theme.selector_inactive.g));
+	lblThemeSelectorInactiveColorBValue->setCaption(std::to_string(gui_theme.selector_inactive.b));
 
-    txtThemeSelectionColorR->setText(std::to_string(gui_theme.selection_color.r));
-    txtThemeSelectionColorG->setText(std::to_string(gui_theme.selection_color.g));
-    txtThemeSelectionColorB->setText(std::to_string(gui_theme.selection_color.b));
+	// Theme selector active color RGB values
+    sldThemeSelectorActiveColorR->setValue(gui_theme.selector_active.r);
+    sldThemeSelectorActiveColorG->setValue(gui_theme.selector_active.g);
+    sldThemeSelectorActiveColorB->setValue(gui_theme.selector_active.b);
+	lblThemeSelectorActiveColorRValue->setCaption(std::to_string(gui_theme.selector_active.r));
+	lblThemeSelectorActiveColorGValue->setCaption(std::to_string(gui_theme.selector_active.g));
+	lblThemeSelectorActiveColorBValue->setCaption(std::to_string(gui_theme.selector_active.b));
 
-    txtThemeTextBgColorR->setText(std::to_string(gui_theme.textbox_background.r));
-    txtThemeTextBgColorG->setText(std::to_string(gui_theme.textbox_background.g));
-    txtThemeTextBgColorB->setText(std::to_string(gui_theme.textbox_background.b));
+	// Theme selection color RGB values
+    sldThemeSelectionColorR->setValue(gui_theme.selection_color.r);
+    sldThemeSelectionColorG->setValue(gui_theme.selection_color.g);
+    sldThemeSelectionColorB->setValue(gui_theme.selection_color.b);
+	lblThemeSelectionColorRValue->setCaption(std::to_string(gui_theme.selection_color.r));
+	lblThemeSelectionColorGValue->setCaption(std::to_string(gui_theme.selection_color.g));
+	lblThemeSelectionColorBValue->setCaption(std::to_string(gui_theme.selection_color.b));
 
-    txtThemeFgColorR->setText(std::to_string(gui_theme.foreground_color.r));
-    txtThemeFgColorG->setText(std::to_string(gui_theme.foreground_color.g));
-    txtThemeFgColorB->setText(std::to_string(gui_theme.foreground_color.b));
+	// Theme text background color RGB values
+    sldThemeTextBgColorR->setValue(gui_theme.textbox_background.r);
+    sldThemeTextBgColorG->setValue(gui_theme.textbox_background.g);
+    sldThemeTextBgColorB->setValue(gui_theme.textbox_background.b);
+	lblThemeTextBgColorRValue->setCaption(std::to_string(gui_theme.textbox_background.r));
+	lblThemeTextBgColorGValue->setCaption(std::to_string(gui_theme.textbox_background.g));
+	lblThemeTextBgColorBValue->setCaption(std::to_string(gui_theme.textbox_background.b));
+
+	// Theme foreground color RGB values
+    sldThemeFgColorR->setValue(gui_theme.foreground_color.r);
+    sldThemeFgColorG->setValue(gui_theme.foreground_color.g);
+    sldThemeFgColorB->setValue(gui_theme.foreground_color.b);
+	lblThemeFgColorRValue->setCaption(std::to_string(gui_theme.foreground_color.r));
+	lblThemeFgColorGValue->setCaption(std::to_string(gui_theme.foreground_color.g));
+	lblThemeFgColorBValue->setCaption(std::to_string(gui_theme.foreground_color.b));
 }
 
 bool HelpPanelThemes(std::vector<std::string>& helptext)
