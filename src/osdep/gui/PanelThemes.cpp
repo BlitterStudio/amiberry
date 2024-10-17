@@ -47,6 +47,9 @@ static gcn::Button* cmdThemeLoad;
 
 //TODO add a DropDown for the available preset themes
 
+constexpr int slider_width = 150;
+constexpr int marker_length = 20;
+
 class ThemesActionListener : public gcn::ActionListener
 {
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -55,7 +58,7 @@ class ThemesActionListener : public gcn::ActionListener
 		if (source == cmdThemeFont)
 		{
 			const char* filter[] = { ".ttf", "\0" };
-			std::string font = SelectFile("Select font", "/usr/share/fonts/truetype/", filter, false);
+			const std::string font = SelectFile("Select font", "/usr/share/fonts/truetype/", filter, false);
 			if (!font.empty())
 			{
 				txtThemeFont->setText(font);
@@ -148,7 +151,7 @@ class ThemesActionListener : public gcn::ActionListener
         }
     }
 
-	static void UpdateColorComponent(int& colorComponent, gcn::Slider* slider, gcn::Label* label) {
+	static void UpdateColorComponent(int& colorComponent, const gcn::Slider* slider, gcn::Label* label) {
         colorComponent = static_cast<int>(slider->getValue());
         label->setCaption(std::to_string(slider->getValue()));
     }
@@ -168,9 +171,9 @@ class ThemesActionListener : public gcn::ActionListener
 
 static ThemesActionListener* themesActionListener;
 
-gcn::Slider* CreateSlider(int width, int marker_length) {
+gcn::Slider* CreateSlider() {
     auto slider = new gcn::Slider(0, 255);
-    slider->setSize(width, SLIDER_HEIGHT);
+    slider->setSize(slider_width, SLIDER_HEIGHT);
     slider->setBaseColor(gui_base_color);
     slider->setBackgroundColor(gui_textbox_background_color);
     slider->setForegroundColor(gui_foreground_color);
@@ -190,17 +193,17 @@ gcn::Button* CreateButton(const std::string& caption, const std::string& id) {
     return button;
 }
 
-void InitRGBColorComponents(RGBColorComponents& components, const std::string& title, int slider_width, int marker_length) {
+void InitRGBColorComponents(RGBColorComponents& components, const std::string& title) {
     components.labelR = new gcn::Label("R:");
-    components.sliderR = CreateSlider(slider_width, marker_length);
+    components.sliderR = CreateSlider();
     components.valueR = new gcn::Label("255");
 
     components.labelG = new gcn::Label("G:");
-    components.sliderG = CreateSlider(slider_width, marker_length);
+    components.sliderG = CreateSlider();
     components.valueG = new gcn::Label("255");
 
     components.labelB = new gcn::Label("B:");
-    components.sliderB = CreateSlider(slider_width, marker_length);
+    components.sliderB = CreateSlider();
     components.valueB = new gcn::Label("255");
 
     components.group = new gcn::Window(title);
@@ -217,8 +220,8 @@ void InitRGBColorComponents(RGBColorComponents& components, const std::string& t
     components.group->add(components.labelB, 10, 70);
     components.group->add(components.sliderB, components.sliderR->getX(), 70);
     components.group->add(components.valueB, components.sliderB->getX() + components.sliderB->getWidth() + 8, 70);
-    int grp_width = components.valueR->getX() + components.valueR->getWidth() + DISTANCE_BORDER;
-    int grp_height = components.labelB->getY() + components.labelB->getHeight() + DISTANCE_BORDER + 5;
+    const int grp_width = components.valueR->getX() + components.valueR->getWidth() + DISTANCE_BORDER;
+    const int grp_height = components.labelB->getY() + components.labelB->getHeight() + DISTANCE_BORDER + 5;
     components.group->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
 }
 
@@ -272,12 +275,11 @@ void PositionComponents(const config_category& category) {
 void InitPanelThemes(const config_category& category)
 {
 	themesActionListener = new ThemesActionListener();
-	constexpr int slider_width = 150;
-	constexpr int marker_length = 20;
+
 
 	lblThemeFont = new gcn::Label("Font:");
 	txtThemeFont = new gcn::TextField();
-	txtThemeFont->setSize(350, TEXTFIELD_HEIGHT);
+	txtThemeFont->setSize(380, TEXTFIELD_HEIGHT);
 	txtThemeFont->setBaseColor(gui_base_color);
 	txtThemeFont->setBackgroundColor(gui_textbox_background_color);
 	txtThemeFont->setForegroundColor(gui_foreground_color);
@@ -296,13 +298,13 @@ void InitPanelThemes(const config_category& category)
     txtThemeFontSize->setBackgroundColor(gui_textbox_background_color);
     txtThemeFontSize->setForegroundColor(gui_foreground_color);
 
-    InitRGBColorComponents(themeFontColor, "Font color", slider_width, marker_length);
-    InitRGBColorComponents(themeBaseColor, "Base color", slider_width, marker_length);
-    InitRGBColorComponents(themeSelectorInactiveColor, "Selector inactive color", slider_width, marker_length);
-    InitRGBColorComponents(themeSelectorActiveColor, "Selector active color", slider_width, marker_length);
-    InitRGBColorComponents(themeSelectionColor, "Selection color", slider_width, marker_length);
-    InitRGBColorComponents(themeTextBgColor, "Text background color", slider_width, marker_length);
-    InitRGBColorComponents(themeFgColor, "Foreground color", slider_width, marker_length);
+    InitRGBColorComponents(themeFontColor, "Font color");
+    InitRGBColorComponents(themeBaseColor, "Base color");
+    InitRGBColorComponents(themeSelectorInactiveColor, "Selector inactive color");
+    InitRGBColorComponents(themeSelectorActiveColor, "Selector active color");
+    InitRGBColorComponents(themeSelectionColor, "Selection color");
+    InitRGBColorComponents(themeTextBgColor, "Text background color");
+    InitRGBColorComponents(themeFgColor, "Foreground color");
 
     cmdThemeSave = CreateButton("Save", "cmdThemeSave");
     cmdThemeReset = CreateButton("Reset", "cmdThemeReset");
