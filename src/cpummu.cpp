@@ -656,8 +656,8 @@ static uae_u32 mmu_fill_atc(uaecptr addr, bool super, uae_u32 tag, bool write, s
     uae_u32 status = 0;
     int i;
 	int old_s;
-
-	// Use supervisor mode to access descriptors (really is fc = 7)
+    
+    // Use supervisor mode to access descriptors (really is fc = 7)
     old_s = regs.s;
     regs.s = 1;
 

@@ -47,6 +47,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	wndShowDiskInfo->setBaseColor(gui_base_color);
 	wndShowDiskInfo->setForegroundColor(gui_foreground_color);
 	wndShowDiskInfo->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndShowDiskInfo->setMovable(false);
 
 	showDiskInfoActionListener = new ShowDiskInfoActionListener();
 

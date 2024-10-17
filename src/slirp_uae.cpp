@@ -137,13 +137,13 @@ static volatile int slirp_thread_active;
 static uae_thread_id slirp_tid;
 extern uae_sem_t slirp_sem2;
 
-static void slirp_receive_func(void *arg)
+static int slirp_receive_func(void *arg)
 {
 	slirp_thread_active = 1;
 	while (slirp_thread_active) {
 		// Wait for packets to arrive
 		fd_set rfds, wfds, xfds;
-		INT_PTR nfds;
+		int nfds;
 		int ret, timeout;
 
 		// ... in the output queue
@@ -164,7 +164,7 @@ static void slirp_receive_func(void *arg)
 			tv.tv_sec = 0;
 			tv.tv_usec = timeout;
 			ret = select(0, &rfds, &wfds, &xfds, &tv);
-			if (ret == SOCKET_ERROR) {
+			if (ret == -1) {
 				write_log(_T("SLIRP socket ERR=%d\n"), WSAGetLastError());
 			}
 		}
@@ -175,6 +175,7 @@ static void slirp_receive_func(void *arg)
 		}
 	}
 	slirp_thread_active = -1;
+	return 0;
 }
 
 int slirp_can_output(void)

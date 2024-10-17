@@ -19,79 +19,38 @@ There are currently two Amiberry editions available: **Amiberry and Amiberry-Lit
 
 ## Getting Amiberry
 
-### DEB packages
+### Linux
 
-Amiberry is available as a DEB package for ARM32, ARM64(aarch64) and x86_64 Debian-based Linux platforms. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
-Then, assuming you have it in your current directory, you can install it with:
+Amiberry is available as a Flatpak, DEB and RPM package for ARM32, ARM64 (aarch64) and x86_64 Linux platforms. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
+
+A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry)
+
+For DEB packages:
 
       sudo apt update && sudo apt install ./amiberry_7.0.0_arm64.deb
 
-If you on Arch Linux you'll find Amiberry on the [AUR](https://aur.archlinux.org/packages/amiberry) or if you use an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run:
+Or the RPM package:
+
+      sudo dnf install ./amiberry-7.0.0-1.x86_64.rpm
+
+Or just use the graphical front-end your distro provides (double clicking on the DEB/RPM package should do that)
+
+If you're on Arch Linux you'll find Amiberry on the [AUR](https://aur.archlinux.org/packages/amiberry) or if you use an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run:
 
       yay -S amiberry
 
 ### macOS
 
 Amiberry is available as a DMG package for macOS. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
-After installing it in your Applications folder, you'll need to open a console and run `xattr -rd com.apple.quarantine Amiberry.app`, to whitelist it and allow it to run.
+
+After installing it in your Applications folder, you'll need to open a console and run `xattr -rd com.apple.quarantine Amiberry.app`, to whitelist it and allow it to run. Alternatively, macOS might ask you about allowing it to run, and you'll have to manually do that (the exact steps differ from one macOS version to another).
 
 ### Distro package management
 
 Some distros (like RetroPie, DietPi, Pimiga and others) already include Amiberry either pre-installed, or through their package management systems. Please follow the methods provided in those distros for a smoother experience, and refer to their owners for support during this process.
 
-### Flatpak
-
-A flatpak version is available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry)
-
 ## Compile from source
 
-Alternatively, you can compile the latest version of Amiberry from source. To do that, follow these steps:
-
-### Linux
-
-You'll need the `-dev` version of the required packages. For example, on Debian-based distros:
-
-      sudo apt install cmake libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libflac-dev libmpg123-dev libpng-dev libmpeg2-4-dev libserialport-dev libportmidi-dev
-
-Or if you're using an Arch-based distro (e.g. Manjaro), the relevant packages are:
-
-      sudo pacman -S base-devel cmake sdl2 sdl2_ttf sdl2_image flac mpg123 libmpeg2 libserialport portmidi
-
-### macOS
-
-Under macOS, you will need to install the required libraries using [Homebrew](https://docs.brew.sh/Installation):
-
-        brew install cmake sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi dylibbundler wget
-
-### Clone this repository locally
-
-      git clone https://github.com/BlitterStudio/amiberry
-      cd amiberry
-
-### Build Amiberry
-
-Amiberry requires CMake to build. The following commands will create a `build` directory, configure the build, and then compile the source code:
-
-      cmake -B build && cmake --build build
-
-You can also use Ninja, if you prefer:
-
-      cmake -B build -G Ninja && cmake --build build
-
-### Local installation
-
-You can use the following command to install Amiberry locally:
-
-      cmake --install build
-
-Or combine it with a PREFIX to install it in a specific directory (the default is /usr/local/):
-
-      cmake --install build --prefix /usr
-
-### Packaging
-
-The following will create both a TAR.GZ archive and DEB package for Debian-based distros, or a DMG package on macOS:
-
-    cpack --config build/CPackConfig.cmake
+Alternatively, you can [compile the latest version of Amiberry from source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source).
 
 For more documentation subjects, please check the [Wiki page](https://github.com/BlitterStudio/amiberry/wiki)

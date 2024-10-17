@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>amiberry</id>
+  <launchable type="desktop-id">Amiberry.desktop</launchable>
+  <name>Amiberry</name>
+  <developer_name>BlitterStudio</developer_name>
+  <summary>A multi-platform Amiga emulator</summary>
+
+  <metadata_license>FSFAP</metadata_license>
+  <content_rating type="oars-1.1" />
+  <project_license>GPL-3.0-or-later</project_license>
+  <update_contact>midwan_AT_gmail.com</update_contact>
+  <url type="homepage">https://amiberry.com</url>
+  <url type="bugtracker">https://github.com/BlitterStudio/amiberry/issues</url>
+  <url type="faq">https://github.com/BlitterStudio/amiberry/wiki/FAQ</url>
+  <url type="help">https://github.com/BlitterStudio/amiberry/wiki</url>
+  <url type="donation">https://ko-fi.com/midwan</url>
+  <url type="vcs-browser">https://github.com/BlitterStudio/amiberry</url>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+    <control>gamepad</control>
+  </supports>
+
+  <description>
+    <p>Amiberry is an optimized multi-platform Amiga emulator (ARM, ARM64, x86-64 and RISC-V).</p>
+    <p>It is based on the latest WinUAE, with several unique features on top of it,
+    like a WHDLoad booter, custom controls, Host-Run functionality and more.</p>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://github.com/user-attachments/assets/79586083-be34-4002-a19a-dbed7582d1d0</image>
+      <caption>Amiberry running AmiKit</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://user-images.githubusercontent.com/3877365/282777854-399ca178-18a1-4e1a-ab7b-9163d5835b51.png</image>
+      <caption>Amiberry GUI (Quickstart panel)</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://user-images.githubusercontent.com/3877365/282777821-c2f1d912-8f64-4244-9fef-981beeb7d407.png</image>
+      <caption>Amiberry running a classic A500 configuration</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://user-images.githubusercontent.com/3877365/282777836-6e37cf55-68ff-4dcd-9092-bbee8a8a6af0.png</image>
+      <caption>Amiberry running an A1200 configuration</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+	<release version="v6.3.4" date="2024-09-01"/>
+	<release version="v6.3.3" date="2024-06-19"/>
+	<release version="v6.3.2" date="2024-06-06"/>
+	<release version="v6.3.1" date="2024-06-03"/>
+	<release version="v6.3.0" date="2024-04-20"/>
+	<release version="v6.2.0" date="2024-02-24"/>
+	<release version="v6.1.3" date="2024-01-19"/>
+	<release version="v6.1.2" date="2023-12-20"/>
+	<release version="v6.1.1" date="2023-12-17"/>
+	<release version="v6.1.0" date="2023-12-15"/>
+	<release version="v6.0.0" date="2023-11-20"/>
+  </releases>
+</component>

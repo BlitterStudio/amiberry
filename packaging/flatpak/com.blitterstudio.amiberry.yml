@@ -1,0 +1,80 @@
+app-id: com.blitterstudio.amiberry
+runtime: org.freedesktop.Platform
+runtime-version: "24.08"
+sdk: org.freedesktop.Sdk
+command: amiberry
+rename-desktop-file: Amiberry.desktop
+rename-appdata-file: Amiberry.metainfo.xml
+rename-icon: amiberry
+finish-args:
+  - --device=all
+  # X11 + XShm access
+  - --share=ipc
+  # Wayland access
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Needs to talk to the network:
+  - --share=network
+  # Allow bluetooth (e.g. controllers)
+  - --allow=bluetooth
+  # Play sounds using PulseAudio
+  - --socket=pulseaudio
+  # Filesystem access
+  - --filesystem=host
+
+modules:
+  - name: libmpeg2
+    config-opts:
+      - --disable-static
+    rm-configure: true
+    sources:
+      - type: archive
+        url: https://libmpeg2.sourceforge.net/files/libmpeg2-0.5.1.tar.gz
+        sha256: dee22e893cb5fc2b2b6ebd60b88478ab8556cb3b93f9a0d7ce8f3b61851871d4
+      - type: script
+        dest-filename: autogen.sh
+        commands:
+          - autoreconf -vfi
+    cleanup:
+      - /bin
+      - /include
+      - /lib/pkgconfig
+      - "*.la"
+      - "*.a"
+
+  - name: libserialport
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://github.com/sigrokproject/libserialport
+        tag: libserialport-0.1.1
+        commit: 348a6d353af8ac142f68fbf9fe0f4d070448d945
+    cleanup:
+      - /include
+      - "*.la"
+      - "*.a"
+
+  - name: portmidi
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: git
+        url: https://github.com/PortMidi/portmidi.git
+        tag: v2.0.4
+        commit: b808babecdc5d05205467dab5c1006c5ac0fdfd4
+    cleanup:
+      - /lib/cmake
+      - /lib/pkgconfig
+      - /include
+      - '*.a'
+      - '*.la'
+
+  - name: amiberry
+    buildsystem: cmake-ninja
+    builddir: true
+    sources:
+      - type: git
+        url: https://github.com/BlitterStudio/amiberry
+        tag: flatpak-7.0.0
+        commit: 44fa30332ed4190cb0a8eb2d5bcf0da0fdd76aba

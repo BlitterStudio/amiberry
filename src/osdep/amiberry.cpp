@@ -3413,9 +3413,6 @@ void save_amiberry_settings(void)
 		fputs(buffer, f);
 		};
 
-	// Set the window scaling option (the default is 1.0)
-	write_float_option("window_scaling", amiberry_options.window_scaling);
-
 	// Should the Quickstart Panel be the default when opening the GUI?
 	write_int_option("Quickstart", amiberry_options.quickstart_start);
 
@@ -3781,7 +3778,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "ROMs", &numROMs, 1);
 		ret |= cfgfile_intval(option, value, "MRUDiskList", &numDisks, 1);
 		ret |= cfgfile_intval(option, value, "MRUCDList", &numCDs, 1);
-		ret |= cfgfile_floatval(option, value, "window_scaling", &amiberry_options.window_scaling);
 		ret |= cfgfile_yesno(option, value, "Quickstart", &amiberry_options.quickstart_start);
 		ret |= cfgfile_yesno(option, value, "read_config_descriptions", &amiberry_options.read_config_descriptions);
 		ret |= cfgfile_yesno(option, value, "write_logfile", &amiberry_options.write_logfile);
@@ -3904,12 +3900,52 @@ static int get_env_dir( char * path, const char *path_template, const char *envn
 	return ret;
 }
 
-void create_missing_amiberry_folders()
+// Get the value of one of the XDG_*_HOME variables, as per the spec:
+// https://specifications.freedesktop.org/basedir-spec/latest/
+static std::string get_xdg_home(const char *var, const std::string& suffix)
+{
+	// If the variable is set explicitly, return its value
+	const auto env_value = getenv(var);
+	if (env_value != nullptr)
+	{
+		return { env_value };
+	}
+
+	// If HOME is set, construct the default value relative to it
+	const auto home = getenv("HOME");
+	if (home != nullptr)
+	{
+		return std::string(home) + suffix;
+	}
+
+	// Return "" so directory_exists will fail
+	return { "" };
+}
+
+static std::string get_xdg_data_home()
+{
+	return get_xdg_home("XDG_DATA_HOME", "/.local/share");
+}
+
+static std::string get_xdg_config_home()
+{
+	return get_xdg_home("XDG_CONFIG_HOME", "/.config");
+}
+
+bool directory_exists(std::string directory, const std::string& sub_dir)
+{
+	if (directory.empty() || sub_dir.empty()) return false;
+	directory += sub_dir;
+	return my_existsdir(directory.c_str());
+}
+
+// this is where the required assets are stored, like fonts, icons, etc.
+std::string get_data_directory()
 {
 #ifdef __MACH__
-    char exepath[MAX_DPATH];
+	char exepath[MAX_DPATH];
 	uint32_t size = sizeof exepath;
-    std::string directory;
+	std::string directory;
 	if (_NSGetExecutablePath(exepath, &size) == 0)
 	{
 		size_t last_slash_idx = string(exepath).rfind('/');
@@ -3922,6 +3958,203 @@ void create_missing_amiberry_folders()
 		{
 			directory = directory.substr(0, last_slash_idx);
 		}
+	}
+	return directory + "/Resources/data/";
+#else
+	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
+	const auto xdg_data_home = get_xdg_data_home();
+
+	// 1: Check if the $AMIBERRY_DATA_DIR ENV variable is set
+	if (env_data_dir != nullptr && my_existsdir(env_data_dir))
+	{
+		// If the ENV variable is set, and it actually contains our data dir, use it
+		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
+		return {env_data_dir};
+	}
+	// 2: Check for system-wide installation (e.g. from a .deb package)
+	if (directory_exists(AMIBERRY_DATADIR, "/data"))
+	{
+		// If the data directory exists in AMIBERRY_DATADIR, use it
+        // This would be the default location after an installation with the .deb package
+		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
+		return std::string(AMIBERRY_DATADIR) + "/data/";
+	}
+
+	// 3: Fallback Portable mode, all in the startup path
+	char tmp[MAX_DPATH];
+	getcwd(tmp, MAX_DPATH);
+	write_log("Using data directory from startup path: %s\n", tmp);
+	return  std::string(tmp) + "/data/";
+#endif
+}
+
+// This path wil be used to create most of the user-specific files and directories
+// Kickstart ROMs, HDD images, Floppy images will live under this directory
+std::string get_home_directory()
+{
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	const auto user_home_dir = getenv("HOME");
+
+	// 1: Check if the $AMIBERRY_HOME_DIR ENV variable is set
+	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
+		return { env_home_dir };
+	}
+	// 2: Check $HOME/Amiberry
+	if (user_home_dir != nullptr)
+	{
+        if (!directory_exists(user_home_dir, "/Amiberry"))
+        {
+            // If $HOME exists, but not the Amiberry subdirectory, create it
+            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
+        }
+		// $HOME/Amiberry exists, use it
+		write_log("Using home directory from $HOME/Amiberry\n");
+        auto result = std::string(user_home_dir);
+		return result.append("/Amiberry");
+	}
+
+	// 3: Fallback Portable mode, all in startup path
+	write_log("Using home directory from startup path\n");
+	char tmp[MAX_DPATH];
+	getcwd(tmp, MAX_DPATH);
+	return {tmp};
+}
+
+// The location of .uae configurations and the global amiberry.conf file
+std::string get_config_directory()
+{
+#ifdef __MACH__
+    const auto user_home_dir = getenv("HOME");
+    if (!directory_exists(user_home_dir, "/Amiberry"))
+    {
+        my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
+    }
+    if (!directory_exists(user_home_dir, "/Amiberry/Configurations"))
+    {
+        my_mkdir((std::string(user_home_dir) + "/Amiberry/Configurations").c_str());
+    }
+    auto result = std::string(user_home_dir);
+    return result.append("/Amiberry/Configurations");
+#else
+	const auto env_conf_dir = getenv("AMIBERRY_CONFIG_DIR");
+	const auto user_home_dir = getenv("HOME");
+
+	// 1: Check if the $AMIBERRY_CONFIG_DIR ENV variable is set
+	if (env_conf_dir != nullptr && my_existsdir(env_conf_dir))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using config directory from AMIBERRY_CONFIG_DIR: %s\n", env_conf_dir);
+		return { env_conf_dir };
+	}
+	// 2: Check $HOME/Amiberry/conf
+	if (user_home_dir != nullptr)
+	{
+        if (!directory_exists(user_home_dir, "/Amiberry"))
+        {
+            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
+        }
+		// $HOME/Amiberry exists, use it
+		if (!directory_exists(user_home_dir, "/Amiberry/conf"))
+		{
+			my_mkdir((std::string(user_home_dir) + "/Amiberry/conf").c_str());
+		}
+        // This should be the most used scenario
+		write_log("Using config directory from $HOME/Amiberry/conf\n");
+		auto result = std::string(user_home_dir);
+		return result.append("/Amiberry/conf");
+	}
+
+	// 3: Fallback Portable mode, all in startup path
+    // Should never really end up here, unless $HOME is not defined
+	write_log("Using config directory from startup path\n");
+	char tmp[MAX_DPATH];
+	getcwd(tmp, MAX_DPATH);
+	return { std::string(tmp) + "/conf" };
+#endif
+}
+
+// Plugins that Amiberry can use, usually in the form of shared libraries
+std::string get_plugins_directory()
+{
+#ifdef __MACH__
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	std::string directory;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		size_t last_slash_idx = string(exepath).rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = string(exepath).substr(0, last_slash_idx);
+		}
+		last_slash_idx = directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = directory.substr(0, last_slash_idx);
+		}
+	}
+	return directory + "/Frameworks/";
+#else
+	// 1: Check if the $AMIBERRY_PLUGINS_DIR ENV variable is set
+	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
+	if (env_plugins_dir != nullptr && my_existsdir(env_plugins_dir))
+	{
+		// If the ENV variable is set, use it
+		write_log("Using config directory from AMIBERRY_PLUGINS_DIR: %s\n", env_plugins_dir);
+		return { env_plugins_dir };
+	}
+    // 2: Check system-wide location (e.g. installed from a .deb package)
+    if (my_existsdir(AMIBERRY_LIBDIR))
+    {
+        write_log("Using plugins directory from " AMIBERRY_LIBDIR "\n");
+        return AMIBERRY_LIBDIR;
+    }
+	// 3: Check for ~/Amiberry/plugins
+    const auto user_home_dir = getenv("HOME");
+    if (user_home_dir != nullptr)
+    {
+        if (!directory_exists(user_home_dir, "/Amiberry"))
+        {
+            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
+        }
+        // $HOME/Amiberry exists, use it
+        if (!directory_exists(user_home_dir, "/Amiberry/plugins"))
+        {
+            my_mkdir((std::string(user_home_dir) + "/Amiberry/plugins").c_str());
+        }
+        write_log("Using plugins directory from $HOME/Amiberry/plugins\n");
+        return { std::string(user_home_dir) + "/Amiberry/plugins" };
+    }
+
+    // 4: Fallback Portable mode, all in the startup path
+    write_log("Using plugins directory from startup path\n");
+    char tmp[MAX_DPATH];
+    getcwd(tmp, MAX_DPATH);
+    return { std::string(tmp) + "/plugins" };
+#endif
+}
+
+void create_missing_amiberry_folders()
+{
+#ifdef __MACH__
+    char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+    std::string app_directory;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		size_t last_slash_idx = string(exepath).rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			app_directory = string(exepath).substr(0, last_slash_idx);
+		}
+		last_slash_idx = app_directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			app_directory = app_directory.substr(0, last_slash_idx);
+		}
     }
 #endif
 
@@ -3929,7 +4162,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(controllers_path.c_str());
 #ifdef __MACH__
-        const std::string default_controller_path = directory + "/Resources/controllers/";
+        const std::string default_controller_path = app_directory + "/Resources/controllers/";
 #else
         const std::string default_controller_path = AMIBERRY_DATADIR "/controllers/";
 #endif
@@ -3944,7 +4177,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(whdboot_path.c_str());
 #ifdef __MACH__
-        const std::string default_whdboot_path = directory + "/Resources/whdboot/";
+        const std::string default_whdboot_path = app_directory + "/Resources/whdboot/";
 #else
         const std::string default_whdboot_path = AMIBERRY_DATADIR "/whdboot/";
 #endif
@@ -3967,7 +4200,7 @@ void create_missing_amiberry_folders()
     {
         my_mkdir(rom_path.c_str());
 #ifdef __MACH__
-        const std::string default_roms_path = directory + "/Resources/roms/";
+        const std::string default_roms_path = app_directory + "/Resources/roms/";
 #else
         const std::string default_roms_path = AMIBERRY_DATADIR "/roms/";
 #endif
@@ -3996,17 +4229,40 @@ void create_missing_amiberry_folders()
         my_mkdir(video_dir.c_str());
 }
 
-static void init_amiberry_paths(const std::string& data_directory, const std::string& home_directory, const std::string& config_directory, const std::string& plugins_directory)
+static void init_amiberry_dirs()
 {
-	current_dir = home_dir = home_directory;
-    data_dir = data_directory;
-    config_path = config_directory;
-    plugins_dir = plugins_directory;
+#ifdef __MACH__
+	const std::string amiberry_dir = "Amiberry";
+#else
+	const std::string amiberry_dir = "amiberry";
+#endif
+	current_dir = home_dir = get_home_directory();
+    data_dir = get_data_directory();
+    config_path = get_config_directory();
+    plugins_dir = get_plugins_directory();
 
-    controllers_path = whdboot_path = whdload_arch_path = floppy_path = harddrive_path = cdrom_path =
-    logfile_path = rom_path = rp9_path = saveimage_dir = savestate_dir = ripper_path =
-    input_dir = screenshot_dir = nvram_dir = video_dir =
-            home_directory;
+	std::string xdg_data_home = get_xdg_data_home();
+	xdg_data_home += "/" + amiberry_dir;
+	if (!my_existsdir(xdg_data_home.c_str()))
+		my_mkdir(xdg_data_home.c_str());
+
+	std::string xdg_config_home = get_xdg_config_home();
+	xdg_config_home += "/" + amiberry_dir;
+	if (!my_existsdir(xdg_config_home.c_str()))
+		my_mkdir(xdg_config_home.c_str());
+
+	// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
+	amiberry_conf_file = xdg_config_home + "/amiberry.conf";
+
+	// These paths are relative to the XDG_DATA_HOME directory
+    controllers_path = whdboot_path = saveimage_dir = savestate_dir =
+    ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
+    xdg_data_home;
+
+	// These go in $HOME/Amiberry by default
+    whdload_arch_path = floppy_path = harddrive_path =
+    cdrom_path = logfile_path = rom_path = rp9_path =
+    home_dir;
 
 #ifdef __MACH__
     controllers_path.append("/Controllers/");
@@ -4025,10 +4281,7 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
     screenshot_dir.append("/Screenshots/");
     nvram_dir.append("/Nvram/");
     video_dir.append("/Videos/");
-    amiberry_conf_file = config_path;
-	amiberry_conf_file.append("amiberry.conf");
 #else
-    data_dir.append("/data/");
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
 	whdload_arch_path.append("/lha/");
@@ -4045,8 +4298,6 @@ static void init_amiberry_paths(const std::string& data_directory, const std::st
 	screenshot_dir.append("/screenshots/");
 	nvram_dir.append("/nvram/");
 	video_dir.append("/videos/");
-	amiberry_conf_file = config_path;
-	amiberry_conf_file.append("/amiberry.conf");
 #endif
 
 	retroarch_file = config_path;
@@ -4164,227 +4415,6 @@ const TCHAR** uaenative_get_library_dirs(void)
 	return nats;
 }
 
-bool directory_exists(std::string directory, const std::string& sub_dir)
-{
-	if (directory.empty() || sub_dir.empty()) return false;
-	directory += sub_dir;
-	return my_existsdir(directory.c_str());
-}
-
-std::string get_data_directory()
-{
-#ifdef __MACH__
-	char exepath[MAX_DPATH];
-	uint32_t size = sizeof exepath;
-	std::string directory;
-	if (_NSGetExecutablePath(exepath, &size) == 0)
-	{
-		size_t last_slash_idx = string(exepath).rfind('/');
-		if (std::string::npos != last_slash_idx)
-		{
-			directory = string(exepath).substr(0, last_slash_idx);
-		}
-		last_slash_idx = directory.rfind('/');
-		if (std::string::npos != last_slash_idx)
-		{
-			directory = directory.substr(0, last_slash_idx);
-		}
-	}
-	return directory + "/Resources/data/";
-#else
-	const auto env_data_dir = getenv("AMIBERRY_DATA_DIR");
-	const auto xdg_data_home = getenv("XDG_DATA_HOME");
-
-	if (env_data_dir != nullptr && directory_exists(env_data_dir, "/data"))
-	{
-		// If the ENV variable is set, and it actually contains our data dir, use it
-		write_log("Using data directory from AMIBERRY_DATA_DIR: %s\n", env_data_dir);
-		return { env_data_dir };
-	}
-	if (directory_exists(AMIBERRY_DATADIR, "/data"))
-	{
-		// If the data directory exists in AMIBERRY_DATADIR, use it
-        // This would be the default location after an installation with the .deb package
-		write_log("Using data directory from " AMIBERRY_DATADIR "\n");
-		return AMIBERRY_DATADIR;
-	}
-	if (xdg_data_home != nullptr && directory_exists(xdg_data_home, "/data"))
-	{
-		// If the XDG_DATA_HOME is set, use it
-		write_log("Using data directory from XDG_DATA_HOME: %s\n", xdg_data_home);
-		return { xdg_data_home };
-	}
-
-	// Fallback Portable mode, all in the startup path (default behavior for previous Amiberry versions)
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	write_log("Using data directory from startup path: %s\n", tmp);
-	return { tmp };
-#endif
-}
-
-std::string get_home_directory()
-{
-#ifdef __MACH__
-    const std::string user_home_dir = getenv("HOME");
-    if (!directory_exists(user_home_dir, "/Amiberry"))
-    {
-        // If $HOME exists, but not the Amiberry subdirectory, create it
-        my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-    }
-    std::string result = std::string(user_home_dir);
-    return result.append("/Amiberry");
-#else
-	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
-	const auto xdg_data_home = getenv("XDG_DATA_HOME");
-	const auto user_home_dir = getenv("HOME");
-
-	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
-	{
-		// If the ENV variable is set, use it
-		write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
-		return { env_home_dir };
-	}
-	if (xdg_data_home != nullptr)
-	{
-		// If the XDG_DATA_HOME is set, use it
-		write_log("Using home directory from XDG_DATA_HOME: %s\n", xdg_data_home);
-		return { xdg_data_home };
-	}
-	if (user_home_dir != nullptr)
-	{
-        if (!directory_exists(user_home_dir, "/Amiberry"))
-        {
-            // If $HOME exists, but not the Amiberry subdirectory, create it
-            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-        }
-		// $HOME/Amiberry exists, use it
-		write_log("Using home directory from $HOME/Amiberry\n");
-		std::string result = std::string(user_home_dir);
-		return result.append("/Amiberry");
-	}
-
-	// Fallback Portable mode, all in startup path
-	write_log("Using home directory from startup path\n");
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	return {tmp};
-#endif
-}
-
-std::string get_config_directory()
-{
-#ifdef __MACH__
-    const auto user_home_dir = getenv("HOME");
-    if (!directory_exists(user_home_dir, "/Amiberry"))
-    {
-        my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-    }
-    if (!directory_exists(user_home_dir, "/Amiberry/Configurations"))
-    {
-        my_mkdir((std::string(user_home_dir) + "/Amiberry/Configurations").c_str());
-    }
-    auto result = std::string(user_home_dir);
-    return result.append("/Amiberry/Configurations");
-#else
-	const auto env_conf_dir = getenv("AMIBERRY_CONFIG_DIR");
-	const auto xdg_config_home = getenv("XDG_CONFIG_HOME");
-	const auto user_home_dir = getenv("HOME");
-
-	if (env_conf_dir != nullptr && my_existsdir(env_conf_dir))
-	{
-		// If the ENV variable is set, use it
-		write_log("Using config directory from AMIBERRY_CONFIG_DIR: %s\n", env_conf_dir);
-		return { env_conf_dir };
-	}
-	if (xdg_config_home != nullptr)
-	{
-		// If the XDG_CONFIG_HOME is set, use it
-        if (!directory_exists(xdg_config_home, "/amiberry"))
-        {
-            // If the XDG_CONFIG_HOME exists, but not the amiberry subdirectory, create it
-            my_mkdir((std::string(xdg_config_home) + "/amiberry").c_str());
-        }
-		write_log("Using config directory from XDG_CONFIG_HOME: %s\n", xdg_config_home);
-		return { std::string(xdg_config_home) + "/amiberry" };
-	}
-	if (user_home_dir != nullptr)
-	{
-        if (!directory_exists(user_home_dir, "/Amiberry"))
-        {
-            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-        }
-		// $HOME/Amiberry exists, use it
-		if (!directory_exists(user_home_dir, "/Amiberry/conf"))
-		{
-			my_mkdir((std::string(user_home_dir) + "/Amiberry/conf").c_str());
-		}
-        // This should be the most used scenario
-		write_log("Using config directory from $HOME/Amiberry/conf\n");
-		auto result = std::string(user_home_dir);
-		return result.append("/Amiberry/conf");
-	}
-
-	// Fallback Portable mode, all in startup path
-    // Should never really end up here, unless $HOME is not defined
-	write_log("Using config directory from startup path\n");
-	char tmp[MAX_DPATH];
-	getcwd(tmp, MAX_DPATH);
-	return { std::string(tmp) + "/conf" };
-#endif
-}
-
-std::string get_plugins_directory()
-{
-#ifdef __MACH__
-    const auto user_home_dir = getenv("HOME");
-    if (!directory_exists(user_home_dir, "/Amiberry"))
-    {
-        my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-    }
-    if (!directory_exists(user_home_dir, "/Amiberry/Plugins"))
-    {
-        my_mkdir((std::string(user_home_dir) + "/Amiberry/Plugins").c_str());
-    }
-    return { std::string(user_home_dir) + "/Amiberry/Plugins" };
-#else
-	const auto env_plugins_dir = getenv("AMIBERRY_PLUGINS_DIR");
-	if (env_plugins_dir != nullptr && my_existsdir(env_plugins_dir))
-	{
-		// If the ENV variable is set, use it
-		write_log("Using config directory from AMIBERRY_PLUGINS_DIR: %s\n", env_plugins_dir);
-		return { env_plugins_dir };
-	}
-    // Check if we have the plugins installed system-wide (with a .deb package)
-    if (my_existsdir(AMIBERRY_LIBDIR))
-    {
-        write_log("Using plugins directory from " AMIBERRY_LIBDIR "\n");
-        return AMIBERRY_LIBDIR;
-    }
-    const auto user_home_dir = getenv("HOME");
-    if (user_home_dir != nullptr)
-    {
-        if (!directory_exists(user_home_dir, "/Amiberry"))
-        {
-            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-        }
-        // $HOME/Amiberry exists, use it
-        if (!directory_exists(user_home_dir, "/Amiberry/plugins"))
-        {
-            my_mkdir((std::string(user_home_dir) + "/Amiberry/plugins").c_str());
-        }
-        write_log("Using plugins directory from $HOME/Amiberry/plugins\n");
-        return { std::string(user_home_dir) + "/Amiberry/plugins" };
-    }
-
-    // Fallback Portable mode, all in the startup path
-    write_log("Using plugins directory from startup path\n");
-    char tmp[MAX_DPATH];
-    getcwd(tmp, MAX_DPATH);
-    return { std::string(tmp) + "/plugins" };
-#endif
-}
-
 int main(int argc, char* argv[])
 {
 	for (auto i = 1; i < argc; i++) {
@@ -4411,12 +4441,7 @@ int main(int argc, char* argv[])
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
-	const std::string data_directory = get_data_directory();
-	const std::string home_directory = get_home_directory();
-	const std::string config_directory = get_config_directory();
-    const std::string plugins_directory = get_plugins_directory();
-
-	init_amiberry_paths(data_directory, home_directory, config_directory, plugins_directory);
+	init_amiberry_dirs();
 
 	// Parse command line to possibly set amiberry_config.
 	// Do not remove used args yet.
@@ -4610,6 +4635,12 @@ bool get_plugin_path(TCHAR* out, int len, const TCHAR* path)
 			strncpy(out, "floppy_sounds", len);
 		}
 		// make sure out is null-terminated in any case
+		out[len - 1] = '\0';
+	}
+	else if (strcmp(path, "abr") == 0)
+	{
+		strncpy(out, data_dir.c_str(), len - 1);
+		strncat(out, "abr/", len - 1);
 		out[len - 1] = '\0';
 	}
 	else {

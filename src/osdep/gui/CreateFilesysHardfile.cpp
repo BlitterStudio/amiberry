@@ -87,6 +87,7 @@ static void InitCreateFilesysHardfile()
 	wndCreateFilesysHardfile->setForegroundColor(gui_foreground_color);
 	wndCreateFilesysHardfile->setCaption("Create hardfile");
 	wndCreateFilesysHardfile->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndCreateFilesysHardfile->setMovable(false);
 
 	createFilesysHardfileActionListener = new CreateFilesysHardfileActionListener();
 

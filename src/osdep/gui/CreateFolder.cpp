@@ -68,6 +68,7 @@ static void InitCreateFolder(const std::string& path)
 	wndCreateFolder->setBaseColor(gui_base_color);
 	wndCreateFolder->setForegroundColor(gui_foreground_color);
 	wndCreateFolder->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndCreateFolder->setMovable(false);
 	gui_top->add(wndCreateFolder);
 
 	createFolderButtonActionListener = new CreateFolderRequesterButtonActionListener();

@@ -400,6 +400,7 @@ static void InitEditFilesysHardfile()
 	wndEditFilesysHardfile->setForegroundColor(gui_foreground_color);
 	wndEditFilesysHardfile->setCaption("Hardfile settings");
 	wndEditFilesysHardfile->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndEditFilesysHardfile->setMovable(false);
 
 	filesysHardfileActionListener = new FilesysHardfileActionListener();
 	filesysHardfileFocusListener = new FilesysHardfileFocusListener();

@@ -760,16 +760,28 @@ static void close_kb()
 
 void release_keys(void)
 {
-	SDL_PumpEvents();
+	// Special handling in case Alt-Tab was still stuck in pressed state
+	if (currprefs.alt_tab_release && key_altpressed())
+	{
+		my_kbd_handler(0, SDL_SCANCODE_LALT, 0, true);
+		my_kbd_handler(0, SDL_SCANCODE_TAB, 0, true);
+	}
 
-	//for (int j = 0; j < MAX_INPUT_DEVICES; j++) {
-	//	for (int i = 0; i < MAX_KEYCODES; i++) {
-	//		if (di_keycodes[j][i]) {
-	//			di_keycodes[j][i] = 0;
-	//			my_kbd_handler(j, i, 0, true);
-	//		}
-	//	}
-	//}
+	const Uint8* state = SDL_GetKeyboardState(NULL);
+	SDL_Event event;
+
+	for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
+		if (state[i]) {
+			event.type = SDL_KEYUP;
+			event.key.keysym.scancode = (SDL_Scancode)i;
+			event.key.keysym.sym = SDL_GetKeyFromScancode((SDL_Scancode)i);
+			event.key.keysym.mod = 0;
+			event.key.state = SDL_RELEASED;
+			SDL_PushEvent(&event);
+
+			my_kbd_handler(0, i, 0, true);
+		}
+	}
 }
 
 static int acquire_kb(const int num, int flags)

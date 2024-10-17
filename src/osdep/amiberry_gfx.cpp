@@ -56,6 +56,8 @@
 #include "midiemu.h"
 #endif
 
+#include "dpi_handler.hpp"
+
 #ifdef AMIBERRY
 static bool force_auto_crop = false;
 
@@ -149,6 +151,11 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
+// Scaling methods available:
+// -1: Auto select between Nearest Neighbor and Linear (default)
+// 0: Nearest Neighbor
+// 1: Linear
+// 2: Integer Scaling (Nearest Neighbor)
 void set_scaling_option(const uae_prefs* p, const int width, const int height)
 {
 	if (p->scaling_method == -1) {
@@ -290,8 +297,8 @@ static void SDL2_init()
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				800 * amiberry_options.window_scaling,
-				600 * amiberry_options.window_scaling,
+				800,
+				600,
 				mode);
 		}
 		else
@@ -299,8 +306,8 @@ static void SDL2_init()
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				600 * amiberry_options.window_scaling,
-				800 * amiberry_options.window_scaling,
+				600,
+				800,
 				mode);
 		}
 		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
@@ -331,6 +338,7 @@ static void SDL2_init()
 		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
+	DPIHandler::set_render_scale(mon->amiga_renderer);
 #endif
 
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
@@ -2467,7 +2475,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 	{
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, w * amiberry_options.window_scaling, h * amiberry_options.window_scaling);
+			SDL_SetWindowSize(mon->amiga_window, w, h);
 		}
 #ifdef USE_OPENGL
 		renderQuad = { dx, dy, w, h };
@@ -2513,7 +2521,7 @@ bool target_graphics_buffer_update(int monid, bool force)
 
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, scaled_width * amiberry_options.window_scaling, scaled_height * amiberry_options.window_scaling);
+			SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
 		}
 #ifdef USE_OPENGL
 		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
@@ -2645,7 +2653,7 @@ bool toggle_rtg(int monid, int mode)
 		}
 		if (rtg_index < 0) {
 			if (ad->picasso_on) {
-				//gfxboard_rtg_disable(monid, old_index);
+				gfxboard_rtg_disable(monid, old_index);
 				ad->picasso_requested_on = false;
 				statusline_add_message(STATUSTYPE_DISPLAY, _T("Chipset display"));
 				set_config_changed();
@@ -2655,22 +2663,22 @@ bool toggle_rtg(int monid, int mode)
 		}
 		struct rtgboardconfig* r = &currprefs.rtgboards[rtg_index];
 		if (r->rtgmem_size > 0 && r->monitor_id == monid) {
-//			if (r->rtgmem_type >= GFXBOARD_HARDWARE) {
-//				int idx = gfxboard_toggle(r->monitor_id, rtg_index, mode >= -1);
-//				if (idx >= 0) {
-//					rtg_index = idx;
-//					return true;
-//				}
-//				if (idx < -1) {
-//					rtg_index = -1;
-//					return false;
-//				}
-//			} else {
-				//gfxboard_toggle(r->monitor_id, -1, -1);
+			if (r->rtgmem_type >= GFXBOARD_HARDWARE) {
+				int idx = gfxboard_toggle(r->monitor_id, rtg_index, mode >= -1);
+				if (idx >= 0) {
+					rtg_index = idx;
+					return true;
+				}
+				if (idx < -1) {
+					rtg_index = -1;
+					return false;
+				}
+			} else {
+				gfxboard_toggle(r->monitor_id, -1, -1);
 				if (mode < -1)
 					return true;
 				devices_unsafeperiod();
-				//gfxboard_rtg_disable(monid, old_index);
+				gfxboard_rtg_disable(monid, old_index);
 				// can always switch from RTG to custom
 				if (ad->picasso_requested_on && ad->picasso_on) {
 					ad->picasso_requested_on = false;
@@ -2688,7 +2696,7 @@ bool toggle_rtg(int monid, int mode)
 					set_config_changed();
 					return true;
 				}
-//			}
+			}
 		}
 		if (mode >= 0 && mode <= MAX_RTG_BOARDS) {
 			rtg_index = old_index;
