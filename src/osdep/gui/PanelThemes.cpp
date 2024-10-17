@@ -30,6 +30,7 @@ struct RGBColorComponents {
     gcn::Label* labelB;
     gcn::Slider* sliderB;
     gcn::Label* valueB;
+	gcn::Window* colorBox;
 };
 
 static RGBColorComponents themeFontColor;
@@ -75,7 +76,9 @@ class ThemesActionListener : public gcn::ActionListener
         }
         else if (source == cmdThemeLoad)
         {
-            //TODO Load the values from amiberry.conf
+			//TODO Load the values from amiberry.conf
+			// not sure if this is needed if we add a DropDown for the available preset themes
+            // since then we can just load the selected theme from there
         }
         else 
         {
@@ -206,6 +209,12 @@ void InitRGBColorComponents(RGBColorComponents& components, const std::string& t
     components.sliderB = CreateSlider();
     components.valueB = new gcn::Label("255");
 
+	components.colorBox = new gcn::Window();
+	components.colorBox->setSize(50, 50);
+	components.colorBox->setMovable(false);
+    components.colorBox->setTitleBarHeight(1);
+	components.colorBox->setFrameSize(0);
+
     components.group = new gcn::Window(title);
     components.group->setBaseColor(gui_base_color);
     components.group->setForegroundColor(gui_foreground_color);
@@ -220,7 +229,8 @@ void InitRGBColorComponents(RGBColorComponents& components, const std::string& t
     components.group->add(components.labelB, 10, 70);
     components.group->add(components.sliderB, components.sliderR->getX(), 70);
     components.group->add(components.valueB, components.sliderB->getX() + components.sliderB->getWidth() + 8, 70);
-    const int grp_width = components.valueR->getX() + components.valueR->getWidth() + DISTANCE_BORDER;
+	components.group->add(components.colorBox, components.valueR->getX() + components.valueR->getWidth() + 8, 10);
+    const int grp_width = components.colorBox->getX() + components.colorBox->getWidth() + DISTANCE_BORDER;
     const int grp_height = components.labelB->getY() + components.labelB->getHeight() + DISTANCE_BORDER + 5;
     components.group->setSize(grp_width, TITLEBAR_HEIGHT + grp_height);
 }
@@ -276,7 +286,6 @@ void InitPanelThemes(const config_category& category)
 {
 	themesActionListener = new ThemesActionListener();
 
-
 	lblThemeFont = new gcn::Label("Font:");
 	txtThemeFont = new gcn::TextField();
 	txtThemeFont->setSize(380, TEXTFIELD_HEIGHT);
@@ -326,6 +335,7 @@ void DeleteRGBColorComponents(const RGBColorComponents& components) {
     delete components.labelB;
     delete components.sliderB;
     delete components.valueB;
+	delete components.colorBox;
 }
 
 void ExitPanelThemes()
@@ -359,6 +369,7 @@ void RefreshRGBColorComponents(const RGBColorComponents& components, const gcn::
     components.valueR->setCaption(std::to_string(color.r));
     components.valueG->setCaption(std::to_string(color.g));
     components.valueB->setCaption(std::to_string(color.b));
+	components.colorBox->setBaseColor(color);
 }
 
 void RefreshPanelThemes()
