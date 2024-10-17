@@ -657,8 +657,8 @@ int get_vertical_visible_height(bool useoldsize)
 		if (hardwired) {
 			get_vblanking_limits(&vbstrt, &vbstop, true);
 			int hh = vbstop - vbstrt;
-			if (interlace_seen && !lof_store) {
-				hh++;
+			if (interlace_seen && lof_display) {
+				hh -= 1 << currprefs.gfx_vresolution;
 			}
 			if (h > hh) {
 				h = hh;
