@@ -104,6 +104,7 @@ extern void set_nvram_path(const std::string& newpath);
 extern void set_plugins_path(const std::string& newpath);
 extern void set_screenshot_path(const std::string& newpath);
 extern void set_savestate_path(const std::string& newpath);
+extern void set_themes_path(const std::string& newpath);
 extern std::string get_controllers_path();
 extern void set_controllers_path(const std::string& newpath);
 
@@ -121,6 +122,7 @@ extern std::string get_harddrive_path();
 extern void set_harddrive_path(const std::string& newpath);
 extern std::string get_cdrom_path();
 extern void set_cdrom_path(const std::string& newpath);
+extern std::string get_themes_path();
 
 extern bool get_logfile_enabled();
 extern void set_logfile_enabled(bool enabled);

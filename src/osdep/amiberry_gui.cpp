@@ -40,6 +40,7 @@
 #include "gayle.h"
 #include "parser.h"
 #include "scsi.h"
+#include "target.h"
 
 #ifdef AMIBERRY
 #ifndef __MACH__
@@ -411,6 +412,14 @@ bool gui_ask_disk(int drv, TCHAR *name)
 
 static void prefs_to_gui()
 {
+	//
+	// GUI Theme section
+	//
+	if (amiberry_options.gui_theme[0])
+		load_theme(amiberry_options.gui_theme);
+	else
+		load_default_theme();
+
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
 	memcpy(&changed_prefs.mountconfig, &currprefs.mountconfig, MOUNT_CONFIG_SIZE * sizeof(struct uaedev_config_info));
@@ -1390,5 +1399,95 @@ void save_mapping_to_file(const std::string& mapping)
 	{
 		file_output << '\n' << mapping << '\n';
 		file_output.close();
+	}
+}
+
+void load_default_theme()
+{
+	gui_theme.font_name = "AmigaTopaz.ttf";
+	gui_theme.font_size = 15;
+	gui_theme.font_color = { 0, 0, 0 };
+	gui_theme.base_color = { 170, 170, 170 };
+	gui_theme.selector_inactive = { 170, 170, 170 };
+	gui_theme.selector_active = { 103, 136, 187 };
+	gui_theme.selection_color = { 195, 217, 217 };
+	gui_theme.textbox_background = { 220, 220, 220 };
+	gui_theme.foreground_color = { 0, 0, 0 };
+}
+
+void save_theme(const std::string& theme_filename)
+{
+	std::string filename = get_themes_path();
+	filename.append(theme_filename);
+	std::ofstream file_output; // out file stream
+	file_output.open(filename, ios::out);
+	if (file_output.is_open())
+	{
+		file_output << "font_name=" << gui_theme.font_name << '\n';
+		file_output << "font_size=" << gui_theme.font_size << '\n';
+		file_output << "font_color=" << gui_theme.font_color.r << "," << gui_theme.font_color.g << "," << gui_theme.font_color.b << '\n';
+		file_output << "base_color=" << gui_theme.base_color.r << "," << gui_theme.base_color.g << "," << gui_theme.base_color.b << '\n';
+		file_output << "selector_inactive=" << gui_theme.selector_inactive.r << "," << gui_theme.selector_inactive.g << "," << gui_theme.selector_inactive.b << '\n';
+		file_output << "selector_active=" << gui_theme.selector_active.r << "," << gui_theme.selector_active.g << "," << gui_theme.selector_active.b << '\n';
+		file_output << "selection_color=" << gui_theme.selection_color.r << "," << gui_theme.selection_color.g << "," << gui_theme.selection_color.b << '\n';
+		file_output << "textbox_background=" << gui_theme.textbox_background.r << "," << gui_theme.textbox_background.g << "," << gui_theme.textbox_background.b << '\n';
+		file_output << "foreground_color=" << gui_theme.foreground_color.r << "," << gui_theme.foreground_color.g << "," << gui_theme.foreground_color.b << '\n';
+		file_output.close();
+	}
+}
+
+void load_theme(const std::string& theme_filename)
+{
+	std::string filename = get_themes_path();
+	filename.append(theme_filename);
+	std::ifstream file_input(filename);
+	if (file_input.is_open())
+	{
+		std::string line;
+		while (std::getline(file_input, line))
+		{
+			std::string key = line.substr(0, line.find('='));
+			std::string value = line.substr(line.find('=') + 1);
+			if (key == "font_name")
+				gui_theme.font_name = value;
+			else if (key == "font_size")
+				gui_theme.font_size = std::stoi(value);
+			else if (key == "font_color")
+			{
+				const std::vector<int> rgb = parse_color_string(value);
+				gui_theme.font_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+			}
+			else if (key == "base_color")
+			{
+				const std::vector<int> rgb = parse_color_string(value);
+				gui_theme.base_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+			}
+			else if (key == "selector_inactive")
+			{
+				const std::vector<int> rgb = parse_color_string(value);
+				gui_theme.selector_inactive = gcn::Color(rgb[0], rgb[1], rgb[2]);
+			}
+			else if (key == "selector_active")
+			{
+				const std::vector<int> rgb = parse_color_string(value);
+				gui_theme.selector_active = gcn::Color(rgb[0], rgb[1], rgb[2]);
+			}
+			else if (key == "selection_color")
+			{
+				const std::vector<int> rgb = parse_color_string(value);
+				gui_theme.selection_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+			}
+			else if (key == "textbox_background")
+			{
+				const std::vector<int> rgb = parse_color_string(value);
+				gui_theme.textbox_background = gcn::Color(rgb[0], rgb[1], rgb[2]);
+			}
+			else if (key == "foreground_color")
+			{
+				const std::vector<int> rgb = parse_color_string(value);
+				gui_theme.foreground_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+			}
+		}
+		file_input.close();
 	}
 }

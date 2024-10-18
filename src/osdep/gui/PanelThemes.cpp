@@ -68,7 +68,7 @@ class ThemesActionListener : public gcn::ActionListener
 		}
         else if (source == cmdThemeReset)
         {
-            ResetTheme();
+            load_default_theme();
         }
         else if (source == cmdThemeSave)
         {
@@ -157,18 +157,6 @@ class ThemesActionListener : public gcn::ActionListener
 	static void UpdateColorComponent(int& colorComponent, const gcn::Slider* slider, gcn::Label* label) {
         colorComponent = static_cast<int>(slider->getValue());
         label->setCaption(std::to_string(slider->getValue()));
-    }
-
-	static void ResetTheme() {
-        gui_theme.font_name = "AmigaTopaz.ttf";
-        gui_theme.font_size = 15;
-        gui_theme.font_color = { 0, 0, 0 };
-        gui_theme.base_color = { 170, 170, 170 };
-        gui_theme.selector_inactive = { 170, 170, 170 };
-        gui_theme.selector_active = { 103, 136, 187 };
-        gui_theme.selection_color = { 195, 217, 217 };
-        gui_theme.textbox_background = { 220, 220, 220 };
-        gui_theme.foreground_color = { 0, 0, 0 };
     }
 };
 

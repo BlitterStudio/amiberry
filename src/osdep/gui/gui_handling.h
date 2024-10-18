@@ -426,6 +426,11 @@ extern void save_mapping_to_file(const std::string& mapping);
 extern void clear_whdload_prefs();
 extern void create_startup_sequence();
 
+extern std::vector<int> parse_color_string(const std::string& input);
+extern void save_theme(const std::string& theme_filename);
+extern void load_theme(const std::string& theme_filename);
+extern void load_default_theme();
+
 extern void SetLastActiveConfig(const char* filename);
 
 #endif // GUI_HANDLING_H
