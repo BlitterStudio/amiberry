@@ -12,6 +12,9 @@
 #include "gui_handling.h"
 #include "StringListModel.h"
 
+static gcn::Label* lblThemePreset;
+static gcn::DropDown* cboThemePreset;
+
 static gcn::Label* lblThemeFont;
 static gcn::TextField* txtThemeFont;
 static gcn::Button* cmdThemeFont;
@@ -44,12 +47,25 @@ static RGBColorComponents themeFgColor;
 // Save, Reset and Load buttons
 static gcn::Button* cmdThemeSave;
 static gcn::Button* cmdThemeReset;
-static gcn::Button* cmdThemeLoad;
+static gcn::Button* cmdThemeUse;
 
-//TODO add a DropDown for the available preset themes
+static gcn::StringListModel themes_list;
 
 constexpr int slider_width = 150;
 constexpr int marker_length = 20;
+
+// populate the themes_list with all filenames under the themes directory
+static void populate_themes_list()
+{
+	themes_list.clear();
+	const std::string themes_dir = get_themes_path();
+    std::vector<std::string> files;
+    read_directory(themes_dir, nullptr, &files);
+	for (const auto& file : files)
+	{
+		themes_list.add(file);
+	}
+}
 
 class ThemesActionListener : public gcn::ActionListener
 {
@@ -72,14 +88,27 @@ class ThemesActionListener : public gcn::ActionListener
         }
         else if (source == cmdThemeSave)
         {
-            //TODO Save the values to amiberry.conf
+            save_theme(amiberry_options.gui_theme);
         }
-        else if (source == cmdThemeLoad)
+        else if (source == cmdThemeUse)
         {
-			//TODO Load the values from amiberry.conf
-			// not sure if this is needed if we add a DropDown for the available preset themes
-            // since then we can just load the selected theme from there
+            apply_theme();
         }
+		else if (source == cboThemePreset)
+		{
+			const auto selected_theme = cboThemePreset->getSelected();
+			if (selected_theme >= 0 && selected_theme < themes_list.getNumberOfElements())
+			{
+				const auto theme = themes_list.getElementAt(selected_theme);
+
+                if (std::strcmp(theme.c_str(), amiberry_options.gui_theme) != 0)
+				{
+                    std::strcpy(amiberry_options.gui_theme, theme.c_str());
+					load_theme(theme);
+                    apply_theme();
+				}
+			}
+		}
         else 
         {
             HandleSliderAction(source);
@@ -184,6 +213,18 @@ gcn::Button* CreateButton(const std::string& caption, const std::string& id) {
     return button;
 }
 
+gcn::DropDown* CreateDropDown(const std::string& id) {
+	auto dropDown = new gcn::DropDown(&themes_list);
+	dropDown->setSize(200, dropDown->getHeight());
+	dropDown->setId(id);
+	dropDown->setBaseColor(gui_base_color);
+	dropDown->setBackgroundColor(gui_textbox_background_color);
+	dropDown->setForegroundColor(gui_foreground_color);
+	dropDown->setSelectionColor(gui_selection_color);
+	dropDown->addActionListener(themesActionListener);
+	return dropDown;
+}
+
 void InitRGBColorComponents(RGBColorComponents& components, const std::string& title) {
     components.labelR = new gcn::Label("R:");
     components.sliderR = CreateSlider();
@@ -227,8 +268,14 @@ void PositionComponents(const config_category& category) {
     int pos_x = DISTANCE_BORDER;
     int pos_y = DISTANCE_BORDER;
 
-    category.panel->add(lblThemeFont, pos_x, pos_x);
-    pos_x += lblThemeFont->getWidth() + 8;
+	category.panel->add(lblThemePreset, pos_x, pos_y);
+	pos_x += lblThemePreset->getWidth() + 8;
+	category.panel->add(cboThemePreset, pos_x, pos_y);
+	pos_y += cboThemePreset->getHeight() + DISTANCE_NEXT_Y;
+
+	pos_x = DISTANCE_BORDER;
+    category.panel->add(lblThemeFont, pos_x, pos_y);
+    pos_x = cboThemePreset->getX();
     category.panel->add(txtThemeFont, pos_x, pos_y);
     pos_x += txtThemeFont->getWidth() + 8;
     category.panel->add(cmdThemeFont, pos_x, pos_y);
@@ -236,26 +283,26 @@ void PositionComponents(const config_category& category) {
     category.panel->add(lblThemeFontSize, pos_x, pos_y);
     pos_x += lblThemeFontSize->getWidth() + 8;
     category.panel->add(txtThemeFontSize, pos_x, pos_y);
-    pos_y += txtThemeFont->getHeight() + DISTANCE_NEXT_Y;
+    pos_y += txtThemeFont->getHeight() + DISTANCE_NEXT_Y / 2;
 
     pos_x = DISTANCE_BORDER;
     category.panel->add(themeFontColor.group, pos_x, pos_y);
     pos_x = themeFontColor.group->getX() + themeFontColor.group->getWidth() + DISTANCE_NEXT_X;
     category.panel->add(themeBaseColor.group, pos_x, pos_y);
 
-    pos_y += themeFontColor.group->getHeight() + DISTANCE_NEXT_Y;
+    pos_y += themeFontColor.group->getHeight() + DISTANCE_NEXT_Y / 2;
 
     category.panel->add(themeSelectorInactiveColor.group, DISTANCE_BORDER, pos_y);
     pos_x = themeSelectorInactiveColor.group->getX() + themeSelectorInactiveColor.group->getWidth() + DISTANCE_NEXT_X;
     category.panel->add(themeSelectorActiveColor.group, pos_x, pos_y);
 
-    pos_y += themeSelectorInactiveColor.group->getHeight() + DISTANCE_NEXT_Y;
+    pos_y += themeSelectorInactiveColor.group->getHeight() + DISTANCE_NEXT_Y / 2;
 
     category.panel->add(themeSelectionColor.group, DISTANCE_BORDER, pos_y);
     pos_x = themeSelectionColor.group->getX() + themeSelectionColor.group->getWidth() + DISTANCE_NEXT_X;
     category.panel->add(themeTextBgColor.group, pos_x, pos_y);
 
-    pos_y += themeSelectionColor.group->getHeight() + DISTANCE_NEXT_Y;
+    pos_y += themeSelectionColor.group->getHeight() + DISTANCE_NEXT_Y / 2;
 
     category.panel->add(themeFgColor.group, DISTANCE_BORDER, pos_y);
 
@@ -267,12 +314,15 @@ void PositionComponents(const config_category& category) {
     pos_x += cmdThemeSave->getWidth() + DISTANCE_NEXT_X;
     category.panel->add(cmdThemeReset, pos_x, pos_y);
     pos_x += cmdThemeReset->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(cmdThemeLoad, pos_x, pos_y);
+    category.panel->add(cmdThemeUse, pos_x, pos_y);
 }
 
 void InitPanelThemes(const config_category& category)
 {
 	themesActionListener = new ThemesActionListener();
+
+	lblThemePreset = new gcn::Label("Theme:");
+	cboThemePreset = CreateDropDown("cboThemePreset");
 
 	lblThemeFont = new gcn::Label("Font:");
 	txtThemeFont = new gcn::TextField();
@@ -305,7 +355,7 @@ void InitPanelThemes(const config_category& category)
 
     cmdThemeSave = CreateButton("Save", "cmdThemeSave");
     cmdThemeReset = CreateButton("Reset", "cmdThemeReset");
-    cmdThemeLoad = CreateButton("Load", "cmdThemeLoad");
+    cmdThemeUse = CreateButton("Use", "cmdThemeUse");
 
     PositionComponents(category);
 
@@ -328,6 +378,8 @@ void DeleteRGBColorComponents(const RGBColorComponents& components) {
 
 void ExitPanelThemes()
 {
+	delete lblThemePreset;
+    delete cboThemePreset;
 	delete lblThemeFont;
 	delete txtThemeFont;
 	delete cmdThemeFont;
@@ -345,7 +397,7 @@ void ExitPanelThemes()
 
     delete cmdThemeSave;
     delete cmdThemeReset;
-    delete cmdThemeLoad;
+    delete cmdThemeUse;
 
 	delete themesActionListener;
 }
@@ -362,6 +414,20 @@ void RefreshRGBColorComponents(const RGBColorComponents& components, const gcn::
 
 void RefreshPanelThemes()
 {
+	populate_themes_list();
+
+    // find selected theme in the list
+	int selected_theme = 0;
+	for (int i = 0; i < themes_list.getNumberOfElements(); i++)
+	{
+		if (themes_list.getElementAt(i) == amiberry_options.gui_theme)
+		{
+			selected_theme = i;
+			break;
+		}
+	}
+	cboThemePreset->setSelected(selected_theme);
+
 	txtThemeFont->setText(gui_theme.font_name);
     txtThemeFontSize->setText(std::to_string(gui_theme.font_size));
 

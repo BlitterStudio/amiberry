@@ -1415,6 +1415,73 @@ void load_default_theme()
 	gui_theme.foreground_color = { 0, 0, 0 };
 }
 
+// Get the path to the system fonts
+std::string get_system_fonts_path()
+{
+	std::string path;
+#ifdef _WIN32
+	char buffer[MAX_DPATH];
+	GetWindowsDirectoryA(buffer, MAX_DPATH);
+	path = buffer;
+	path.append("\\Fonts\\");
+#else
+	path = "/usr/share/fonts/truetype/";
+#endif
+	return path;
+}
+
+void apply_theme()
+{
+	gui_base_color = gui_theme.base_color;
+	gui_selector_inactive_color = gui_theme.selector_inactive;
+	gui_selector_active_color = gui_theme.selector_active;
+	gui_textbox_background_color = gui_theme.textbox_background;
+	gui_selection_color = gui_theme.selection_color;
+	gui_foreground_color = gui_theme.foreground_color;
+	gui_font_color = gui_theme.font_color;
+
+	try
+	{
+		// Check if the font_name contains the full path to the file (e.g. in /usr/share/fonts)
+		if (my_existsfile2(gui_theme.font_name.c_str()))
+		{
+			gui_font = new gcn::SDLTrueTypeFont(gui_theme.font_name, gui_theme.font_size);
+		}
+		else
+		{
+			// If only a font name was given, try to open it from the data directory
+			std::string font = get_data_path();
+			font.append(gui_theme.font_name);
+			if (my_existsfile2(font.c_str()))
+				gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
+			else
+			{
+				// If the font file was not found in the data directory, fallback to a system font
+				// TODO This needs a separate implementation for macOS!
+				font = get_system_fonts_path();
+				font.append("freefont/FreeSans.ttf");
+			}
+		}
+		gui_font->setAntiAlias(true);
+		gui_font->setColor(gui_font_color);
+	}
+	catch (gcn::Exception& e)
+	{
+		gui_running = false;
+		std::cout << e.getMessage() << '\n';
+		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", e.getMessage().c_str());
+		abort();
+	}
+	catch (std::exception& ex)
+	{
+		gui_running = false;
+		cout << ex.what() << '\n';
+		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
+		abort();
+	}
+	gcn::Widget::setGlobalFont(gui_font);
+}
+
 void save_theme(const std::string& theme_filename)
 {
 	std::string filename = get_themes_path();
