@@ -126,7 +126,7 @@ void InitPanelSavestate(const config_category& category)
 		radioButtons[i] = new gcn::RadioButton(std::to_string(i), "radiostategroup");
 		radioButtons[i]->setId("State" + std::to_string(i));
 		radioButtons[i]->setBaseColor(gui_base_color);
-		radioButtons[i]->setBackgroundColor(gui_textbox_background_color);
+		radioButtons[i]->setBackgroundColor(gui_background_color);
 		radioButtons[i]->setForegroundColor(gui_foreground_color);
 		radioButtons[i]->addActionListener(savestateActionListener);
 	}

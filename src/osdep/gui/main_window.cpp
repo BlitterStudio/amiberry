@@ -155,7 +155,7 @@ gcn::ScrollArea* selectorsScrollArea;
 
 // GUI Colors
 gcn::Color gui_base_color;
-gcn::Color gui_textbox_background_color;
+gcn::Color gui_background_color;
 gcn::Color gui_selector_inactive_color;
 gcn::Color gui_selector_active_color;
 gcn::Color gui_selection_color;
@@ -1078,15 +1078,15 @@ void gui_widgets_init()
 	constexpr auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
 	selectors = new gcn::Container();
 	selectors->setFrameSize(0);
-	selectors->setBaseColor(gui_selector_inactive_color);
+	selectors->setBaseColor(gui_base_color);
 	selectors->setBackgroundColor(gui_base_color);
 	selectors->setForegroundColor(gui_foreground_color);
 
 	constexpr auto selectorScrollAreaWidth = SELECTOR_WIDTH + 2;
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
-	selectorsScrollArea->setBaseColor(gui_selector_inactive_color);
-	selectorsScrollArea->setBackgroundColor(gui_selector_inactive_color);
+	selectorsScrollArea->setBaseColor(gui_base_color);
+	selectorsScrollArea->setBackgroundColor(gui_base_color);
 	selectorsScrollArea->setForegroundColor(gui_foreground_color);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setFrameSize(1);

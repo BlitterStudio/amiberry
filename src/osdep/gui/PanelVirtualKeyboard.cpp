@@ -223,7 +223,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkVkEnabled = new gcn::CheckBox(_T("Virtual Keyboard enabled"));
 	chkVkEnabled->setId("chkVkEnabled");
 	chkVkEnabled->setBaseColor(gui_base_color);
-	chkVkEnabled->setBackgroundColor(gui_textbox_background_color);
+	chkVkEnabled->setBackgroundColor(gui_background_color);
 	chkVkEnabled->setForegroundColor(gui_foreground_color);
 	chkVkEnabled->addActionListener(vkEnabledActionListener);
 
@@ -231,7 +231,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkVkHires = new gcn::CheckBox(_T("High-Resolution"));
 	chkVkHires->setId("chkVkHires");
 	chkVkHires->setBaseColor(gui_base_color);
-	chkVkHires->setBackgroundColor(gui_textbox_background_color);
+	chkVkHires->setBackgroundColor(gui_background_color);
 	chkVkHires->setForegroundColor(gui_foreground_color);
 	chkVkHires->addActionListener(hiresChkActionListener);
 
@@ -239,7 +239,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkVkExit = new gcn::CheckBox(_T("Quit button on keyboard"));
 	chkVkExit->setId("chkVkExit");
 	chkVkExit->setBaseColor(gui_base_color);
-	chkVkExit->setBackgroundColor(gui_textbox_background_color);
+	chkVkExit->setBackgroundColor(gui_background_color);
 	chkVkExit->setForegroundColor(gui_foreground_color);
 	chkVkExit->addActionListener(exitChkActionListener);
 
@@ -249,7 +249,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	sldVkTransparency = new gcn::Slider(0, 100);
 	sldVkTransparency->setSize(100, SLIDER_HEIGHT);
 	sldVkTransparency->setBaseColor(gui_base_color);
-	sldVkTransparency->setBackgroundColor(gui_textbox_background_color);
+	sldVkTransparency->setBackgroundColor(gui_background_color);
 	sldVkTransparency->setForegroundColor(gui_foreground_color);
 	sldVkTransparency->setMarkerLength(20);
 	sldVkTransparency->setStepLength(1);
@@ -265,7 +265,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	cboVkLanguage = new gcn::DropDown();
 	cboVkLanguage->setSize(120, cboVkLanguage->getHeight());
 	cboVkLanguage->setBaseColor(gui_base_color);
-	cboVkLanguage->setBackgroundColor(gui_textbox_background_color);
+	cboVkLanguage->setBackgroundColor(gui_background_color);
 	cboVkLanguage->setForegroundColor(gui_foreground_color);
 	cboVkLanguage->setSelectionColor(gui_selection_color);
 	cboVkLanguage->setId("cboVkLanguage");
@@ -279,7 +279,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	cboVkStyle = new gcn::DropDown();
 	cboVkStyle->setSize(120, cboVkStyle->getHeight());
 	cboVkStyle->setBaseColor(gui_base_color);
-	cboVkStyle->setBackgroundColor(gui_textbox_background_color);
+	cboVkStyle->setBackgroundColor(gui_background_color);
 	cboVkStyle->setForegroundColor(gui_foreground_color);
 	cboVkStyle->setSelectionColor(gui_selection_color);
 	cboVkStyle->setId("cboVkStyle");
@@ -294,7 +294,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	txtVkSetHotkey->setEnabled(false);
 	txtVkSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
 	txtVkSetHotkey->setBaseColor(gui_base_color);
-	txtVkSetHotkey->setBackgroundColor(gui_textbox_background_color);
+	txtVkSetHotkey->setBackgroundColor(gui_background_color);
 	txtVkSetHotkey->setForegroundColor(gui_foreground_color);
 	cmdVkSetHotkey = new gcn::Button("...");
 	cmdVkSetHotkey->setId("cmdVkSetHotkey");
@@ -312,7 +312,7 @@ void InitPanelVirtualKeyboard(const struct config_category& category)
 	chkRetroArchVkbd = new gcn::CheckBox("Use RetroArch Vkbd button");
 	chkRetroArchVkbd->setId("chkRetroArchVkbd");
 	chkRetroArchVkbd->setBaseColor(gui_base_color);
-	chkRetroArchVkbd->setBackgroundColor(gui_textbox_background_color);
+	chkRetroArchVkbd->setBackgroundColor(gui_background_color);
 	chkRetroArchVkbd->setForegroundColor(gui_foreground_color);
 	chkRetroArchVkbd->addActionListener(vkHotkeyActionListener);
 

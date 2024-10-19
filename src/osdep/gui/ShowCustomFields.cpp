@@ -126,7 +126,7 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 			checkbox->setId("chkCustomFieldBit_" + std::to_string(i));
 			checkbox->setForegroundColor(gui_foreground_color);
 			checkbox->setBaseColor(gui_base_color);
-			checkbox->setBackgroundColor(gui_textbox_background_color);
+			checkbox->setBackgroundColor(gui_background_color);
 			checkbox->setPosition(pos_x2, pos_y);
 			widget.bit.emplace_back(checkbox);
 			wndShowCustomFields->add(checkbox);
@@ -140,7 +140,7 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 			checkbox->setId("chkCustomFieldBool_" + std::to_string(i));
 			checkbox->setForegroundColor(gui_foreground_color);
 			checkbox->setBaseColor(gui_base_color);
-			checkbox->setBackgroundColor(gui_textbox_background_color);
+			checkbox->setBackgroundColor(gui_background_color);
 			checkbox->setPosition(pos_x2, pos_y);
 			widget.boolean.emplace_back(checkbox);
 			wndShowCustomFields->add(checkbox);
@@ -158,7 +158,7 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 			dropdown->setId("cboCustomFieldList_" + std::to_string(i));
 			dropdown->setSize(textfield_width, dropdown->getHeight());
 			dropdown->setBaseColor(gui_base_color);
-			dropdown->setBackgroundColor(gui_textbox_background_color);
+			dropdown->setBackgroundColor(gui_background_color);
 			dropdown->setForegroundColor(gui_foreground_color);
 			dropdown->setSelectionColor(gui_selection_color);
 			dropdown->addActionListener(showCustomFieldsActionListener);

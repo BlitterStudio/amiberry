@@ -722,7 +722,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboModel = new gcn::DropDown(&amigaModelList);
 	cboModel->setSize(160, cboModel->getHeight());
 	cboModel->setBaseColor(gui_base_color);
-	cboModel->setBackgroundColor(gui_textbox_background_color);
+	cboModel->setBackgroundColor(gui_background_color);
 	cboModel->setForegroundColor(gui_foreground_color);
 	cboModel->setSelectionColor(gui_selection_color);
 	cboModel->setId("cboAModel");
@@ -734,7 +734,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboConfig->setSize(category.panel->getWidth() - lblConfig->getWidth() - 8 - 2 * DISTANCE_BORDER,
 					   cboConfig->getHeight());
 	cboConfig->setBaseColor(gui_base_color);
-	cboConfig->setBackgroundColor(gui_textbox_background_color);
+	cboConfig->setBackgroundColor(gui_background_color);
 	cboConfig->setForegroundColor(gui_foreground_color);
 	cboConfig->setSelectionColor(gui_selection_color);
 	cboConfig->setId("cboAConfig");
@@ -743,7 +743,7 @@ void InitPanelQuickstart(const config_category& category)
 	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("qsNTSC");
 	chkNTSC->setBaseColor(gui_base_color);
-	chkNTSC->setBackgroundColor(gui_textbox_background_color);
+	chkNTSC->setBackgroundColor(gui_background_color);
 	chkNTSC->setForegroundColor(gui_foreground_color);
 	chkNTSC->addActionListener(quickstartActionListener);
 
@@ -755,13 +755,13 @@ void InitPanelQuickstart(const config_category& category)
 		snprintf(tmp, 20, "qsDF%d", i);
 		chkqsDFx[i]->setId(tmp);
 		chkqsDFx[i]->setBaseColor(gui_base_color);
-		chkqsDFx[i]->setBackgroundColor(gui_textbox_background_color);
+		chkqsDFx[i]->setBackgroundColor(gui_background_color);
 		chkqsDFx[i]->setForegroundColor(gui_foreground_color);
 		chkqsDFx[i]->addActionListener(qs_diskActionListener);
 
 		cboqsDFxType[i] = new gcn::DropDown(&qsDriveTypeList);
 		cboqsDFxType[i]->setBaseColor(gui_base_color);
-		cboqsDFxType[i]->setBackgroundColor(gui_textbox_background_color);
+		cboqsDFxType[i]->setBackgroundColor(gui_background_color);
 		cboqsDFxType[i]->setForegroundColor(gui_foreground_color);
 		cboqsDFxType[i]->setSelectionColor(gui_selection_color);
 		snprintf(tmp, 20, "cboqsType%d", i);
@@ -772,7 +772,7 @@ void InitPanelQuickstart(const config_category& category)
 		snprintf(tmp, 20, "qsWP%d", i);
 		chkqsDFxWriteProtect[i]->setId(tmp);
 		chkqsDFxWriteProtect[i]->setBaseColor(gui_base_color);
-		chkqsDFxWriteProtect[i]->setBackgroundColor(gui_textbox_background_color);
+		chkqsDFxWriteProtect[i]->setBackgroundColor(gui_background_color);
 		chkqsDFxWriteProtect[i]->setForegroundColor(gui_foreground_color);
 		chkqsDFxWriteProtect[i]->addActionListener(qs_diskActionListener);
 
@@ -805,7 +805,7 @@ void InitPanelQuickstart(const config_category& category)
 		cboqsDFxFile[i]->setId(tmp);
 		cboqsDFxFile[i]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboqsDFxFile[i]->getHeight());
 		cboqsDFxFile[i]->setBaseColor(gui_base_color);
-		cboqsDFxFile[i]->setBackgroundColor(gui_textbox_background_color);
+		cboqsDFxFile[i]->setBackgroundColor(gui_background_color);
 		cboqsDFxFile[i]->setForegroundColor(gui_foreground_color);
 		cboqsDFxFile[i]->setSelectionColor(gui_selection_color);
 		cboqsDFxFile[i]->addActionListener(qs_diskActionListener);
@@ -814,7 +814,7 @@ void InitPanelQuickstart(const config_category& category)
 	chkCD = new gcn::CheckBox("CD drive");
 	chkCD->setId("qsCD drive");
 	chkCD->setBaseColor(gui_base_color);
-	chkCD->setBackgroundColor(gui_textbox_background_color);
+	chkCD->setBackgroundColor(gui_background_color);
 	chkCD->setForegroundColor(gui_foreground_color);
 	chkCD->setEnabled(false);
 
@@ -835,7 +835,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboCDFile = new gcn::DropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_base_color);
-	cboCDFile->setBackgroundColor(gui_textbox_background_color);
+	cboCDFile->setBackgroundColor(gui_background_color);
 	cboCDFile->setForegroundColor(gui_foreground_color);
 	cboCDFile->setSelectionColor(gui_selection_color);
 	cboCDFile->setId("cboCD");
@@ -844,7 +844,7 @@ void InitPanelQuickstart(const config_category& category)
 	chkQuickstartMode = new gcn::CheckBox("Start in Quickstart mode");
 	chkQuickstartMode->setId("qsMode");
 	chkQuickstartMode->setBaseColor(gui_base_color);
-	chkQuickstartMode->setBackgroundColor(gui_textbox_background_color);
+	chkQuickstartMode->setBackgroundColor(gui_background_color);
 	chkQuickstartMode->setForegroundColor(gui_foreground_color);
 	chkQuickstartMode->addActionListener(quickstartActionListener);
 
@@ -859,7 +859,7 @@ void InitPanelQuickstart(const config_category& category)
 	cboWhdload = new gcn::DropDown(&whdloadFileList);
 	cboWhdload->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboWhdload->getHeight());
 	cboWhdload->setBaseColor(gui_base_color);
-	cboWhdload->setBackgroundColor(gui_textbox_background_color);
+	cboWhdload->setBackgroundColor(gui_background_color);
 	cboWhdload->setForegroundColor(gui_foreground_color);
 	cboWhdload->setSelectionColor(gui_selection_color);
 	cboWhdload->setId("cboQsWhdload");

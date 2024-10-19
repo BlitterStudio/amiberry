@@ -175,7 +175,7 @@ void InitPanelConfig(const struct config_category& category)
 	txtName = new gcn::TextField();
 	txtName->setSize(300, TEXTFIELD_HEIGHT);
 	txtName->setBaseColor(gui_base_color);
-	txtName->setBackgroundColor(gui_textbox_background_color);
+	txtName->setBackgroundColor(gui_background_color);
 	txtName->setForegroundColor(gui_foreground_color);
 
 	lblDesc = new gcn::Label("Description:");
@@ -184,7 +184,7 @@ void InitPanelConfig(const struct config_category& category)
 	txtDesc = new gcn::TextField();
 	txtDesc->setSize(300, TEXTFIELD_HEIGHT);
 	txtDesc->setBaseColor(gui_base_color);
-	txtDesc->setBackgroundColor(gui_textbox_background_color);
+	txtDesc->setBackgroundColor(gui_background_color);
 	txtDesc->setForegroundColor(gui_foreground_color);
 
 	cmdLoad = new gcn::Button("Load");
@@ -213,7 +213,7 @@ void InitPanelConfig(const struct config_category& category)
 	lstConfigs = new gcn::ListBox(&configsList);
 	lstConfigs->setSize(list_width, list_height);
 	lstConfigs->setBaseColor(gui_base_color);
-	lstConfigs->setBackgroundColor(gui_textbox_background_color);
+	lstConfigs->setBackgroundColor(gui_background_color);
 	lstConfigs->setForegroundColor(gui_foreground_color);
 	lstConfigs->setSelectionColor(gui_selection_color);
 	lstConfigs->setWrappingEnabled(true);
@@ -225,7 +225,7 @@ void InitPanelConfig(const struct config_category& category)
 	scrAreaConfigs->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	scrAreaConfigs->setSize(lstConfigs->getWidth() + SCROLLBAR_WIDTH, lstConfigs->getHeight() + DISTANCE_NEXT_Y);
 	scrAreaConfigs->setScrollbarWidth(SCROLLBAR_WIDTH);
-	scrAreaConfigs->setBackgroundColor(gui_textbox_background_color);
+	scrAreaConfigs->setBackgroundColor(gui_background_color);
 	scrAreaConfigs->setForegroundColor(gui_foreground_color);
 	scrAreaConfigs->setBaseColor(gui_base_color);
 	scrAreaConfigs->setSelectionColor(gui_selection_color);

@@ -176,7 +176,7 @@ void InitPanelIO(const config_category& category)
 	cboSampler = new gcn::DropDown(&sampler_list);
 	cboSampler->setSize(350, cboSampler->getHeight());
 	cboSampler->setBaseColor(gui_base_color);
-	cboSampler->setBackgroundColor(gui_textbox_background_color);
+	cboSampler->setBackgroundColor(gui_background_color);
 	cboSampler->setForegroundColor(gui_foreground_color);
 	cboSampler->setSelectionColor(gui_selection_color);
 	cboSampler->setId("cboSampler");
@@ -185,7 +185,7 @@ void InitPanelIO(const config_category& category)
 	chkSamplerStereo = new gcn::CheckBox("Stereo sampler");
 	chkSamplerStereo->setId("chkSamplerStereo");
 	chkSamplerStereo->setBaseColor(gui_base_color);
-	chkSamplerStereo->setBackgroundColor(gui_textbox_background_color);
+	chkSamplerStereo->setBackgroundColor(gui_background_color);
 	chkSamplerStereo->setForegroundColor(gui_foreground_color);
 	chkSamplerStereo->addActionListener(ioActionListener);
 
@@ -205,7 +205,7 @@ void InitPanelIO(const config_category& category)
 	cboSerialPort = new gcn::DropDown(&serial_ports_list);
 	cboSerialPort->setSize(350, cboSerialPort->getHeight());
 	cboSerialPort->setBaseColor(gui_base_color);
-	cboSerialPort->setBackgroundColor(gui_textbox_background_color);
+	cboSerialPort->setBackgroundColor(gui_background_color);
 	cboSerialPort->setForegroundColor(gui_foreground_color);
 	cboSerialPort->setSelectionColor(gui_selection_color);
 	cboSerialPort->setId("cboSerialPort");
@@ -214,35 +214,35 @@ void InitPanelIO(const config_category& category)
 	chkSerialDirect = new gcn::CheckBox("Direct");
 	chkSerialDirect->setId("chkSerialDirect");
 	chkSerialDirect->setBaseColor(gui_base_color);
-	chkSerialDirect->setBackgroundColor(gui_textbox_background_color);
+	chkSerialDirect->setBackgroundColor(gui_background_color);
 	chkSerialDirect->setForegroundColor(gui_foreground_color);
 	chkSerialDirect->addActionListener(ioActionListener);
 
 	chkRTSCTS = new gcn::CheckBox("Host RTS/CTS");
 	chkRTSCTS->setId("chkRTSCTS");
 	chkRTSCTS->setBaseColor(gui_base_color);
-	chkRTSCTS->setBackgroundColor(gui_textbox_background_color);
+	chkRTSCTS->setBackgroundColor(gui_background_color);
 	chkRTSCTS->setForegroundColor(gui_foreground_color);
 	chkRTSCTS->addActionListener(ioActionListener);
 
 	chkUaeSerial = new gcn::CheckBox("uaeserial.device");
 	chkUaeSerial->setId("chkUaeSerial");
 	chkUaeSerial->setBaseColor(gui_base_color);
-	chkUaeSerial->setBackgroundColor(gui_textbox_background_color);
+	chkUaeSerial->setBackgroundColor(gui_background_color);
 	chkUaeSerial->setForegroundColor(gui_foreground_color);
 	chkUaeSerial->addActionListener(ioActionListener);
 
 	chkSerialStatus = new gcn::CheckBox("Serial status (RTS/CTS/DTR/DTE/CD)");
 	chkSerialStatus->setId("chkSerialStatus");
 	chkSerialStatus->setBaseColor(gui_base_color);
-	chkSerialStatus->setBackgroundColor(gui_textbox_background_color);
+	chkSerialStatus->setBackgroundColor(gui_background_color);
 	chkSerialStatus->setForegroundColor(gui_foreground_color);
 	chkSerialStatus->addActionListener(ioActionListener);
 
 	chkSerialStatusRi = new gcn::CheckBox("Serial status: Ring Indicator");
 	chkSerialStatusRi->setId("chkSerialStatusRi");
 	chkSerialStatusRi->setBaseColor(gui_base_color);
-	chkSerialStatusRi->setBackgroundColor(gui_textbox_background_color);
+	chkSerialStatusRi->setBackgroundColor(gui_background_color);
 	chkSerialStatusRi->setForegroundColor(gui_foreground_color);
 	chkSerialStatusRi->addActionListener(ioActionListener);
 
@@ -268,7 +268,7 @@ void InitPanelIO(const config_category& category)
 	cboMidiOut = new gcn::DropDown(&midi_out_ports_list);
 	cboMidiOut->setSize(200, cboMidiOut->getHeight());
 	cboMidiOut->setBaseColor(gui_base_color);
-	cboMidiOut->setBackgroundColor(gui_textbox_background_color);
+	cboMidiOut->setBackgroundColor(gui_background_color);
 	cboMidiOut->setForegroundColor(gui_foreground_color);
 	cboMidiOut->setSelectionColor(gui_selection_color);
 	cboMidiOut->setId("cboMidiOut");
@@ -279,7 +279,7 @@ void InitPanelIO(const config_category& category)
 	cboMidiIn = new gcn::DropDown(&midi_in_ports_list);
 	cboMidiIn->setSize(200, cboMidiIn->getHeight());
 	cboMidiIn->setBaseColor(gui_base_color);
-	cboMidiIn->setBackgroundColor(gui_textbox_background_color);
+	cboMidiIn->setBackgroundColor(gui_background_color);
 	cboMidiIn->setForegroundColor(gui_foreground_color);
 	cboMidiIn->setSelectionColor(gui_selection_color);
 	cboMidiIn->setId("cboMidiIn");
@@ -288,7 +288,7 @@ void InitPanelIO(const config_category& category)
 	chkMidiRoute = new gcn::CheckBox("Route MIDI In to MIDI Out");
 	chkMidiRoute->setId("chkMidiRoute");
 	chkMidiRoute->setBaseColor(gui_base_color);
-	chkMidiRoute->setBackgroundColor(gui_textbox_background_color);
+	chkMidiRoute->setBackgroundColor(gui_background_color);
 	chkMidiRoute->setForegroundColor(gui_foreground_color);
 	chkMidiRoute->addActionListener(ioActionListener);
 
@@ -310,7 +310,7 @@ void InitPanelIO(const config_category& category)
 	cboProtectionDongle = new gcn::DropDown(&dongle_list);
 	cboProtectionDongle->setSize(350, cboProtectionDongle->getHeight());
 	cboProtectionDongle->setBaseColor(gui_base_color);
-	cboProtectionDongle->setBackgroundColor(gui_textbox_background_color);
+	cboProtectionDongle->setBackgroundColor(gui_background_color);
 	cboProtectionDongle->setForegroundColor(gui_foreground_color);
 	cboProtectionDongle->setSelectionColor(gui_selection_color);
 	cboProtectionDongle->setId("cboProtectionDongle");

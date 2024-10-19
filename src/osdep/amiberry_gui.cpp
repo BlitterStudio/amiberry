@@ -1411,7 +1411,7 @@ void load_default_theme()
 	gui_theme.selector_inactive = { 170, 170, 170 };
 	gui_theme.selector_active = { 103, 136, 187 };
 	gui_theme.selection_color = { 195, 217, 217 };
-	gui_theme.textbox_background = { 220, 220, 220 };
+	gui_theme.background_color = { 220, 220, 220 };
 	gui_theme.foreground_color = { 0, 0, 0 };
 }
 
@@ -1433,11 +1433,11 @@ std::string get_system_fonts_path()
 void apply_theme()
 {
 	gui_base_color = gui_theme.base_color;
+	gui_foreground_color = gui_theme.foreground_color;
+	gui_background_color = gui_theme.background_color;
+	gui_selection_color = gui_theme.selection_color;
 	gui_selector_inactive_color = gui_theme.selector_inactive;
 	gui_selector_active_color = gui_theme.selector_active;
-	gui_textbox_background_color = gui_theme.textbox_background;
-	gui_selection_color = gui_theme.selection_color;
-	gui_foreground_color = gui_theme.foreground_color;
 	gui_font_color = gui_theme.font_color;
 
 	if (gui_theme.font_name.empty())
@@ -1501,7 +1501,7 @@ void save_theme(const std::string& theme_filename)
 		file_output << "selector_inactive=" << gui_theme.selector_inactive.r << "," << gui_theme.selector_inactive.g << "," << gui_theme.selector_inactive.b << '\n';
 		file_output << "selector_active=" << gui_theme.selector_active.r << "," << gui_theme.selector_active.g << "," << gui_theme.selector_active.b << '\n';
 		file_output << "selection_color=" << gui_theme.selection_color.r << "," << gui_theme.selection_color.g << "," << gui_theme.selection_color.b << '\n';
-		file_output << "textbox_background=" << gui_theme.textbox_background.r << "," << gui_theme.textbox_background.g << "," << gui_theme.textbox_background.b << '\n';
+		file_output << "background_color=" << gui_theme.background_color.r << "," << gui_theme.background_color.g << "," << gui_theme.background_color.b << '\n';
 		file_output << "foreground_color=" << gui_theme.foreground_color.r << "," << gui_theme.foreground_color.g << "," << gui_theme.foreground_color.b << '\n';
 		file_output.close();
 	}
@@ -1548,10 +1548,10 @@ void load_theme(const std::string& theme_filename)
 				const std::vector<int> rgb = parse_color_string(value);
 				gui_theme.selection_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
 			}
-			else if (key == "textbox_background")
+			else if (key == "background_color")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.textbox_background = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.background_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
 			}
 			else if (key == "foreground_color")
 			{

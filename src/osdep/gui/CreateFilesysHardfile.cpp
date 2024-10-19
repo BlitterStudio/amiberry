@@ -114,12 +114,12 @@ static void InitCreateFilesysHardfile()
 	txtSize = new gcn::TextField();
 	txtSize->setSize(60, TEXTFIELD_HEIGHT);
 	txtSize->setBaseColor(gui_base_color);
-	txtSize->setBackgroundColor(gui_textbox_background_color);
+	txtSize->setBackgroundColor(gui_background_color);
 	txtSize->setForegroundColor(gui_foreground_color);
 
 	chkDynamic = new gcn::CheckBox("Dynamic VHD", true);
 	chkDynamic->setBaseColor(gui_base_color);
-	chkDynamic->setBackgroundColor(gui_textbox_background_color);
+	chkDynamic->setBackgroundColor(gui_background_color);
 	chkDynamic->setForegroundColor(gui_foreground_color);
 	chkDynamic->setId("chkDynamic");
 
@@ -129,7 +129,7 @@ static void InitCreateFilesysHardfile()
 	txtPath->setId("txtCreatePath");
 	txtPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtPath->setBaseColor(gui_base_color);
-	txtPath->setBackgroundColor(gui_textbox_background_color);
+	txtPath->setBackgroundColor(gui_background_color);
 	txtPath->setForegroundColor(gui_foreground_color);
 
 	cmdPath = new gcn::Button("...");

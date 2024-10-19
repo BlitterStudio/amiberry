@@ -148,7 +148,7 @@ void InitPanelPrio(const config_category& category)
 	cboActiveRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboActiveRunAtPrio->setSize(150, cboActiveRunAtPrio->getHeight());
 	cboActiveRunAtPrio->setBaseColor(gui_base_color);
-	cboActiveRunAtPrio->setBackgroundColor(gui_textbox_background_color);
+	cboActiveRunAtPrio->setBackgroundColor(gui_background_color);
 	cboActiveRunAtPrio->setForegroundColor(gui_foreground_color);
 	cboActiveRunAtPrio->setSelectionColor(gui_selection_color);
 	cboActiveRunAtPrio->setId("cboActiveRunAtPrio");
@@ -160,14 +160,14 @@ void InitPanelPrio(const config_category& category)
 	chkActivePauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkActivePauseEmulation->setId("chkActivePauseEmulation");
 	chkActivePauseEmulation->setBaseColor(gui_base_color);
-	chkActivePauseEmulation->setBackgroundColor(gui_textbox_background_color);
+	chkActivePauseEmulation->setBackgroundColor(gui_background_color);
 	chkActivePauseEmulation->setForegroundColor(gui_foreground_color);
 	chkActivePauseEmulation->addActionListener(prioActionListener);
 
 	chkActiveDisableSound = new gcn::CheckBox("Disable sound");
 	chkActiveDisableSound->setId("chkActiveDisableSound");
 	chkActiveDisableSound->setBaseColor(gui_base_color);
-	chkActiveDisableSound->setBackgroundColor(gui_textbox_background_color);
+	chkActiveDisableSound->setBackgroundColor(gui_background_color);
 	chkActiveDisableSound->setForegroundColor(gui_foreground_color);
 	chkActiveDisableSound->addActionListener(prioActionListener);
 
@@ -194,7 +194,7 @@ void InitPanelPrio(const config_category& category)
 	cboInactiveRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboInactiveRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
 	cboInactiveRunAtPrio->setBaseColor(gui_base_color);
-	cboInactiveRunAtPrio->setBackgroundColor(gui_textbox_background_color);
+	cboInactiveRunAtPrio->setBackgroundColor(gui_background_color);
 	cboInactiveRunAtPrio->setForegroundColor(gui_foreground_color);
 	cboInactiveRunAtPrio->setSelectionColor(gui_selection_color);
 	cboInactiveRunAtPrio->setId("cboInactiveRunAtPrio");
@@ -203,21 +203,21 @@ void InitPanelPrio(const config_category& category)
 	chkInactivePauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkInactivePauseEmulation->setId("chkInactivePauseEmulation");
 	chkInactivePauseEmulation->setBaseColor(gui_base_color);
-	chkInactivePauseEmulation->setBackgroundColor(gui_textbox_background_color);
+	chkInactivePauseEmulation->setBackgroundColor(gui_background_color);
 	chkInactivePauseEmulation->setForegroundColor(gui_foreground_color);
 	chkInactivePauseEmulation->addActionListener(prioActionListener);
 
 	chkInactiveDisableSound = new gcn::CheckBox("Disable sound");
 	chkInactiveDisableSound->setId("chkInactiveDisableSound");
 	chkInactiveDisableSound->setBaseColor(gui_base_color);
-	chkInactiveDisableSound->setBackgroundColor(gui_textbox_background_color);
+	chkInactiveDisableSound->setBackgroundColor(gui_background_color);
 	chkInactiveDisableSound->setForegroundColor(gui_foreground_color);
 	chkInactiveDisableSound->addActionListener(prioActionListener);
 
 	chkInactiveDisableControllers = new gcn::CheckBox("Disable input");
 	chkInactiveDisableControllers->setId("chkInactiveDisableControllers");
 	chkInactiveDisableControllers->setBaseColor(gui_base_color);
-	chkInactiveDisableControllers->setBackgroundColor(gui_textbox_background_color);
+	chkInactiveDisableControllers->setBackgroundColor(gui_background_color);
 	chkInactiveDisableControllers->setForegroundColor(gui_foreground_color);
 	chkInactiveDisableControllers->addActionListener(prioActionListener);
 
@@ -241,7 +241,7 @@ void InitPanelPrio(const config_category& category)
 	cboMinimizedRunAtPrio = new gcn::DropDown(&prio_values_list);
 	cboMinimizedRunAtPrio->setSize(150, cboInactiveRunAtPrio->getHeight());
 	cboMinimizedRunAtPrio->setBaseColor(gui_base_color);
-	cboMinimizedRunAtPrio->setBackgroundColor(gui_textbox_background_color);
+	cboMinimizedRunAtPrio->setBackgroundColor(gui_background_color);
 	cboMinimizedRunAtPrio->setForegroundColor(gui_foreground_color);
 	cboMinimizedRunAtPrio->setSelectionColor(gui_selection_color);
 	cboMinimizedRunAtPrio->setId("cboMinimizedRunAtPrio");
@@ -250,21 +250,21 @@ void InitPanelPrio(const config_category& category)
 	chkMinimizedPauseEmulation = new gcn::CheckBox("Pause emulation");
 	chkMinimizedPauseEmulation->setId("chkMinimizedPauseEmulation");
 	chkMinimizedPauseEmulation->setBaseColor(gui_base_color);
-	chkMinimizedPauseEmulation->setBackgroundColor(gui_textbox_background_color);
+	chkMinimizedPauseEmulation->setBackgroundColor(gui_background_color);
 	chkMinimizedPauseEmulation->setForegroundColor(gui_foreground_color);
 	chkMinimizedPauseEmulation->addActionListener(prioActionListener);
 
 	chkMinimizedDisableSound = new gcn::CheckBox("Disable sound");
 	chkMinimizedDisableSound->setId("chkMinimizedDisableSound");
 	chkMinimizedDisableSound->setBaseColor(gui_base_color);
-	chkMinimizedDisableSound->setBackgroundColor(gui_textbox_background_color);
+	chkMinimizedDisableSound->setBackgroundColor(gui_background_color);
 	chkMinimizedDisableSound->setForegroundColor(gui_foreground_color);
 	chkMinimizedDisableSound->addActionListener(prioActionListener);
 
 	chkMinimizedDisableControllers = new gcn::CheckBox("Disable input");
 	chkMinimizedDisableControllers->setId("chkMinimizedDisableControllers");
 	chkMinimizedDisableControllers->setBaseColor(gui_base_color);
-	chkMinimizedDisableControllers->setBackgroundColor(gui_textbox_background_color);
+	chkMinimizedDisableControllers->setBackgroundColor(gui_background_color);
 	chkMinimizedDisableControllers->setForegroundColor(gui_foreground_color);
 	chkMinimizedDisableControllers->addActionListener(prioActionListener);
 

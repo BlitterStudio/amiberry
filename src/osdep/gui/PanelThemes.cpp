@@ -164,13 +164,13 @@ class ThemesActionListener : public gcn::ActionListener
             UpdateColorComponent(gui_theme.selection_color.b, themeSelectionColor.sliderB, themeSelectionColor.valueB);
         }
         else if (source == themeTextBgColor.sliderR) {
-            UpdateColorComponent(gui_theme.textbox_background.r, themeTextBgColor.sliderR, themeTextBgColor.valueR);
+            UpdateColorComponent(gui_theme.background_color.r, themeTextBgColor.sliderR, themeTextBgColor.valueR);
         }
         else if (source == themeTextBgColor.sliderG) {
-            UpdateColorComponent(gui_theme.textbox_background.g, themeTextBgColor.sliderG, themeTextBgColor.valueG);
+            UpdateColorComponent(gui_theme.background_color.g, themeTextBgColor.sliderG, themeTextBgColor.valueG);
         }
         else if (source == themeTextBgColor.sliderB) {
-            UpdateColorComponent(gui_theme.textbox_background.b, themeTextBgColor.sliderB, themeTextBgColor.valueB);
+            UpdateColorComponent(gui_theme.background_color.b, themeTextBgColor.sliderB, themeTextBgColor.valueB);
         }
         else if (source == themeFgColor.sliderR) {
             UpdateColorComponent(gui_theme.foreground_color.r, themeFgColor.sliderR, themeFgColor.valueR);
@@ -195,7 +195,7 @@ gcn::Slider* CreateSlider() {
     auto slider = new gcn::Slider(0, 255);
     slider->setSize(slider_width, SLIDER_HEIGHT);
     slider->setBaseColor(gui_base_color);
-    slider->setBackgroundColor(gui_textbox_background_color);
+    slider->setBackgroundColor(gui_background_color);
     slider->setForegroundColor(gui_foreground_color);
     slider->setMarkerLength(marker_length);
     slider->setStepLength(1);
@@ -218,7 +218,7 @@ gcn::DropDown* CreateDropDown(const std::string& id) {
 	dropDown->setSize(200, dropDown->getHeight());
 	dropDown->setId(id);
 	dropDown->setBaseColor(gui_base_color);
-	dropDown->setBackgroundColor(gui_textbox_background_color);
+	dropDown->setBackgroundColor(gui_background_color);
 	dropDown->setForegroundColor(gui_foreground_color);
 	dropDown->setSelectionColor(gui_selection_color);
 	dropDown->addActionListener(themesActionListener);
@@ -328,7 +328,7 @@ void InitPanelThemes(const config_category& category)
 	txtThemeFont = new gcn::TextField();
 	txtThemeFont->setSize(380, TEXTFIELD_HEIGHT);
 	txtThemeFont->setBaseColor(gui_base_color);
-	txtThemeFont->setBackgroundColor(gui_textbox_background_color);
+	txtThemeFont->setBackgroundColor(gui_background_color);
 	txtThemeFont->setForegroundColor(gui_foreground_color);
 
 	cmdThemeFont = new gcn::Button("...");
@@ -342,7 +342,7 @@ void InitPanelThemes(const config_category& category)
     txtThemeFontSize->setSize(50, TEXTFIELD_HEIGHT);
     txtThemeFontSize->setId("txtThemeFontSize");
     txtThemeFontSize->setBaseColor(gui_base_color);
-    txtThemeFontSize->setBackgroundColor(gui_textbox_background_color);
+    txtThemeFontSize->setBackgroundColor(gui_background_color);
     txtThemeFontSize->setForegroundColor(gui_foreground_color);
 
     InitRGBColorComponents(themeFontColor, "Font color");
@@ -350,7 +350,7 @@ void InitPanelThemes(const config_category& category)
     InitRGBColorComponents(themeSelectorInactiveColor, "Selector inactive color");
     InitRGBColorComponents(themeSelectorActiveColor, "Selector active color");
     InitRGBColorComponents(themeSelectionColor, "Selection color");
-    InitRGBColorComponents(themeTextBgColor, "Text background color");
+    InitRGBColorComponents(themeTextBgColor, "Background color");
     InitRGBColorComponents(themeFgColor, "Foreground color");
 
     cmdThemeSave = CreateButton("Save", "cmdThemeSave");
@@ -436,7 +436,7 @@ void RefreshPanelThemes()
     RefreshRGBColorComponents(themeSelectorInactiveColor, gui_theme.selector_inactive);
     RefreshRGBColorComponents(themeSelectorActiveColor, gui_theme.selector_active);
     RefreshRGBColorComponents(themeSelectionColor, gui_theme.selection_color);
-    RefreshRGBColorComponents(themeTextBgColor, gui_theme.textbox_background);
+    RefreshRGBColorComponents(themeTextBgColor, gui_theme.background_color);
     RefreshRGBColorComponents(themeFgColor, gui_theme.foreground_color);
 }
 

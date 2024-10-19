@@ -195,38 +195,38 @@ void InitPanelCustom(const config_category& category)
 	optPort0 = new gcn::RadioButton("0: Mouse", "radioportgroup");
 	optPort0->setId("0: Mouse");
 	optPort0->setBaseColor(gui_base_color);
-	optPort0->setBackgroundColor(gui_textbox_background_color);
+	optPort0->setBackgroundColor(gui_background_color);
 	optPort0->setForegroundColor(gui_foreground_color);
 	optPort0->addActionListener(grpActionListener);
 	optPort1 = new gcn::RadioButton("1: Joystick", "radioportgroup");
 	optPort1->setId("1: Joystick");
 	optPort1->setBaseColor(gui_base_color);
-	optPort1->setBackgroundColor(gui_textbox_background_color);
+	optPort1->setBackgroundColor(gui_background_color);
 	optPort1->setForegroundColor(gui_foreground_color);
 	optPort1->addActionListener(grpActionListener);
 	optPort2 = new gcn::RadioButton("2: Parallel 1", "radioportgroup");
 	optPort2->setId("2: Parallel 1");
 	optPort2->setBaseColor(gui_base_color);
-	optPort2->setBackgroundColor(gui_textbox_background_color);
+	optPort2->setBackgroundColor(gui_background_color);
 	optPort2->setForegroundColor(gui_foreground_color);
 	optPort2->addActionListener(grpActionListener);
 	optPort3 = new gcn::RadioButton("3: Parallel 2", "radioportgroup");
 	optPort3->setId("3: Parallel 2");
 	optPort3->setBaseColor(gui_base_color);
-	optPort3->setBackgroundColor(gui_textbox_background_color);
+	optPort3->setBackgroundColor(gui_background_color);
 	optPort3->setForegroundColor(gui_foreground_color);
 	optPort3->addActionListener(grpActionListener);
 
 	optMultiNone = new gcn::RadioButton("None", "radiomultigroup");
 	optMultiNone->setId("None");
 	optMultiNone->setBaseColor(gui_base_color);
-	optMultiNone->setBackgroundColor(gui_textbox_background_color);
+	optMultiNone->setBackgroundColor(gui_background_color);
 	optMultiNone->setForegroundColor(gui_foreground_color);
 	optMultiNone->addActionListener(grpActionListener);
 	optMultiSelect = new gcn::RadioButton("HotKey", "radiomultigroup");
 	optMultiSelect->setId("HotKey");
 	optMultiSelect->setBaseColor(gui_base_color);
-	optMultiSelect->setBackgroundColor(gui_textbox_background_color);
+	optMultiSelect->setBackgroundColor(gui_background_color);
 	optMultiSelect->setForegroundColor(gui_foreground_color);
 	optMultiSelect->addActionListener(grpActionListener);
 
@@ -250,7 +250,7 @@ void InitPanelCustom(const config_category& category)
 	txtSetHotkey->setEnabled(false);
 	txtSetHotkey->setSize(120, TEXTFIELD_HEIGHT);
 	txtSetHotkey->setBaseColor(gui_base_color);
-	txtSetHotkey->setBackgroundColor(gui_textbox_background_color);
+	txtSetHotkey->setBackgroundColor(gui_background_color);
 	txtSetHotkey->setForegroundColor(gui_foreground_color);
 	cmdSetHotkey = new gcn::Button("...");
 	cmdSetHotkey->setId("cmdSetHotkey");
@@ -281,7 +281,7 @@ void InitPanelCustom(const config_category& category)
 	txtPortInput = new gcn::TextField();
 	txtPortInput->setEnabled(false);
 	txtPortInput->setBaseColor(gui_base_color);
-	txtPortInput->setBackgroundColor(gui_textbox_background_color);
+	txtPortInput->setBackgroundColor(gui_background_color);
 	txtPortInput->setForegroundColor(gui_foreground_color);
 
 	lblRetroarch = new gcn::Label("[-]");
@@ -306,7 +306,7 @@ void InitPanelCustom(const config_category& category)
 		cboCustomButtonAction[i] = new gcn::DropDown(&CustomEventList);
 		cboCustomButtonAction[i]->setSize(cboCustomButtonAction[i]->getWidth() * 2, cboCustomButtonAction[i]->getHeight());
 		cboCustomButtonAction[i]->setBaseColor(gui_base_color);
-		cboCustomButtonAction[i]->setBackgroundColor(gui_textbox_background_color);
+		cboCustomButtonAction[i]->setBackgroundColor(gui_background_color);
 		cboCustomButtonAction[i]->setForegroundColor(gui_foreground_color);
 		cboCustomButtonAction[i]->setSelectionColor(gui_selection_color);
 
@@ -324,7 +324,7 @@ void InitPanelCustom(const config_category& category)
 		cboCustomAxisAction[i] = new gcn::DropDown(&CustomEventList);
 		cboCustomAxisAction[i]->setSize(cboCustomAxisAction[i]->getWidth() * 2, cboCustomAxisAction[i]->getHeight());
 		cboCustomAxisAction[i]->setBaseColor(gui_base_color);
-		cboCustomAxisAction[i]->setBackgroundColor(gui_textbox_background_color);
+		cboCustomAxisAction[i]->setBackgroundColor(gui_background_color);
 		cboCustomAxisAction[i]->setForegroundColor(gui_foreground_color);
 		cboCustomAxisAction[i]->setSelectionColor(gui_selection_color);
 

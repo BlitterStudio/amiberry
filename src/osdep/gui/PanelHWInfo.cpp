@@ -157,7 +157,7 @@ void InitPanelHWInfo(const config_category& category)
 			listCells[row][col]->setSize(COLUMN_SIZE[col] - 8, TEXTFIELD_HEIGHT);
 			listCells[row][col]->setEnabled(false);
 			listCells[row][col]->setBaseColor(gui_base_color);
-			listCells[row][col]->setBackgroundColor(gui_textbox_background_color);
+			listCells[row][col]->setBackgroundColor(gui_background_color);
 			listCells[row][col]->setForegroundColor(gui_foreground_color);
 		}
 	}

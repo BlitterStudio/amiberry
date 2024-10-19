@@ -197,7 +197,7 @@ static void InitEditFilesysHardDrive()
 	txtHDPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtHDPath->setId("txtHDDPath");
 	txtHDPath->setBaseColor(gui_base_color);
-	txtHDPath->setBackgroundColor(gui_textbox_background_color);
+	txtHDPath->setBackgroundColor(gui_background_color);
 	txtHDPath->setForegroundColor(gui_foreground_color);
 
 	lblHDController = new gcn::Label("Controller:");
@@ -205,7 +205,7 @@ static void InitEditFilesysHardDrive()
 	cboHDController = new gcn::DropDown(&controllerListModel);
 	cboHDController->setSize(200, DROPDOWN_HEIGHT);
 	cboHDController->setBaseColor(gui_base_color);
-	cboHDController->setBackgroundColor(gui_textbox_background_color);
+	cboHDController->setBackgroundColor(gui_background_color);
 	cboHDController->setForegroundColor(gui_foreground_color);
 	cboHDController->setSelectionColor(gui_selection_color);
 	cboHDController->setId("cboHDController");
@@ -214,7 +214,7 @@ static void InitEditFilesysHardDrive()
 	cboHDControllerUnit = new gcn::DropDown(&unitListModel);
 	cboHDControllerUnit->setSize(60, DROPDOWN_HEIGHT);
 	cboHDControllerUnit->setBaseColor(gui_base_color);
-	cboHDControllerUnit->setBackgroundColor(gui_textbox_background_color);
+	cboHDControllerUnit->setBackgroundColor(gui_background_color);
 	cboHDControllerUnit->setForegroundColor(gui_foreground_color);
 	cboHDControllerUnit->setSelectionColor(gui_selection_color);
 	cboHDControllerUnit->setId("cboHDControllerUnit");
@@ -223,7 +223,7 @@ static void InitEditFilesysHardDrive()
 	cboHDControllerType = new gcn::DropDown(&controllerTypeListModel);
 	cboHDControllerType->setSize(60, DROPDOWN_HEIGHT);
 	cboHDControllerType->setBaseColor(gui_base_color);
-	cboHDControllerType->setBackgroundColor(gui_textbox_background_color);
+	cboHDControllerType->setBackgroundColor(gui_background_color);
 	cboHDControllerType->setForegroundColor(gui_foreground_color);
 	cboHDControllerType->setSelectionColor(gui_selection_color);
 	cboHDControllerType->setId("cboHDControllerType");
@@ -232,7 +232,7 @@ static void InitEditFilesysHardDrive()
 	cboHDFeatureLevel = new gcn::DropDown(&hdFeatureLevelListModel);
 	cboHDFeatureLevel->setSize(80, DROPDOWN_HEIGHT);
 	cboHDFeatureLevel->setBaseColor(gui_base_color);
-	cboHDFeatureLevel->setBackgroundColor(gui_textbox_background_color);
+	cboHDFeatureLevel->setBackgroundColor(gui_background_color);
 	cboHDFeatureLevel->setForegroundColor(gui_foreground_color);
 	cboHDFeatureLevel->setSelectionColor(gui_selection_color);
 	cboHDFeatureLevel->setId("cboHDFeatureLevel");

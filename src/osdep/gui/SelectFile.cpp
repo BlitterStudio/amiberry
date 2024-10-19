@@ -242,7 +242,7 @@ static void InitSelectFile(const std::string& title)
 	txtCurrent->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, TEXTFIELD_HEIGHT);
 	txtCurrent->setPosition(DISTANCE_BORDER, 10);
 	txtCurrent->setBaseColor(gui_base_color);
-	txtCurrent->setBackgroundColor(gui_textbox_background_color);
+	txtCurrent->setBackgroundColor(gui_background_color);
 	txtCurrent->setForegroundColor(gui_foreground_color);
 	txtCurrent->setEnabled(true);
 	editFilePathActionListener =  new EditFilePathActionListener();
@@ -254,7 +254,7 @@ static void InitSelectFile(const std::string& title)
 	lstFiles = new gcn::ListBox(fileList);
 	lstFiles->setSize(DIALOG_WIDTH - 45, DIALOG_HEIGHT - 108);
 	lstFiles->setBaseColor(gui_base_color);
-	lstFiles->setBackgroundColor(gui_textbox_background_color);
+	lstFiles->setBackgroundColor(gui_background_color);
 	lstFiles->setForegroundColor(gui_foreground_color);
 	lstFiles->setSelectionColor(gui_selection_color);
 	lstFiles->setWrappingEnabled(true);
@@ -266,7 +266,7 @@ static void InitSelectFile(const std::string& title)
 	scrAreaFiles->setSize(DIALOG_WIDTH - 2 * DISTANCE_BORDER - 4, DIALOG_HEIGHT - 128);
 	scrAreaFiles->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaFiles->setBaseColor(gui_base_color);
-	scrAreaFiles->setBackgroundColor(gui_textbox_background_color);
+	scrAreaFiles->setBackgroundColor(gui_background_color);
 	scrAreaFiles->setForegroundColor(gui_foreground_color);
 	scrAreaFiles->setSelectionColor(gui_selection_color);
 	scrAreaFiles->setHorizontalScrollPolicy(gcn::ScrollArea::ShowAuto);
@@ -283,7 +283,7 @@ static void InitSelectFile(const std::string& title)
 		txtFilename->setSize(350, TEXTFIELD_HEIGHT);
 		txtFilename->setId("Filename");
 		txtFilename->setBaseColor(gui_base_color);
-		txtFilename->setBackgroundColor(gui_textbox_background_color);
+		txtFilename->setBackgroundColor(gui_background_color);
 		txtFilename->setForegroundColor(gui_foreground_color);
 		txtFilename->setPosition(lblFilename->getX() + lblFilename->getWidth() + DISTANCE_NEXT_X, lblFilename->getY());
 

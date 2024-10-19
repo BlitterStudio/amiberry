@@ -382,7 +382,7 @@ void InitPanelHD(const config_category& category)
 		listEntry[row] = new gcn::Container();
 		listEntry[row]->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, SMALL_BUTTON_HEIGHT + 4);
 		listEntry[row]->setBaseColor(gui_base_color);
-		listEntry[row]->setBackgroundColor(gui_textbox_background_color);
+		listEntry[row]->setBackgroundColor(gui_background_color);
 		listEntry[row]->setForegroundColor(gui_foreground_color);
 		listEntry[row]->setFrameSize(0);
 
@@ -408,7 +408,7 @@ void InitPanelHD(const config_category& category)
 			listCells[row][col]->setSize(COLUMN_SIZE[col], SMALL_BUTTON_HEIGHT);
 			listCells[row][col]->setEnabled(false);
 			listCells[row][col]->setBaseColor(gui_base_color);
-			listCells[row][col]->setBackgroundColor(gui_textbox_background_color);
+			listCells[row][col]->setBackgroundColor(gui_background_color);
 			listCells[row][col]->setForegroundColor(gui_foreground_color);
 		}
 	}
@@ -464,14 +464,14 @@ void InitPanelHD(const config_category& category)
 	chkCD = new gcn::CheckBox("CD drive/image");
 	chkCD->setId("chkCD");
 	chkCD->setBaseColor(gui_base_color);
-	chkCD->setBackgroundColor(gui_textbox_background_color);
+	chkCD->setBackgroundColor(gui_background_color);
 	chkCD->setForegroundColor(gui_foreground_color);
 	chkCD->addActionListener(cdCheckActionListener);
 
 	chkCDTurbo = new gcn::CheckBox("CDTV/CDTV-CR/CD32 turbo CD read speed");
 	chkCDTurbo->setId("chkCDTurbo");
 	chkCDTurbo->setBaseColor(gui_base_color);
-	chkCDTurbo->setBackgroundColor(gui_textbox_background_color);
+	chkCDTurbo->setBackgroundColor(gui_background_color);
 	chkCDTurbo->setForegroundColor(gui_foreground_color);
 	chkCDTurbo->addActionListener(cdCheckActionListener);
 
@@ -492,7 +492,7 @@ void InitPanelHD(const config_category& category)
 	cboCDFile = new gcn::DropDown(&cdfileList);
 	cboCDFile->setSize(category.panel->getWidth() - 2 * DISTANCE_BORDER, cboCDFile->getHeight());
 	cboCDFile->setBaseColor(gui_base_color);
-	cboCDFile->setBackgroundColor(gui_textbox_background_color);
+	cboCDFile->setBackgroundColor(gui_background_color);
 	cboCDFile->setForegroundColor(gui_foreground_color);
 	cboCDFile->setSelectionColor(gui_selection_color);
 	cboCDFile->setId("cboCD");

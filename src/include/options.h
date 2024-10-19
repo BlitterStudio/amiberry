@@ -1296,7 +1296,7 @@ struct amiberry_gui_theme
 	gcn::Color base_color;
 	gcn::Color selector_inactive;
 	gcn::Color selector_active;
-	gcn::Color textbox_background;
+	gcn::Color background_color;
 	gcn::Color selection_color;
 	gcn::Color foreground_color;
 	std::string font_name;
