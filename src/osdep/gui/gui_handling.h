@@ -168,6 +168,8 @@ using ConfigCategory = struct config_category
 };
 
 extern bool gui_running;
+extern gcn::Container* selectors;
+extern gcn::ScrollArea* selectorsScrollArea;
 extern ConfigCategory categories[];
 extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;

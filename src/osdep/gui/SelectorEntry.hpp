@@ -27,8 +27,8 @@ namespace gcn
 
 		void draw(Graphics* graphics) override;
 
-		void setInactiveColor(const Color& color);
-		void setActiveColor(const Color& color);
+		void setInactiveColor(Color color);
+		void setActiveColor(Color color);
 		void setActive(bool active);
 		bool getActive() const;
 

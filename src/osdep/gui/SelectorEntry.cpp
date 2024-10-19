@@ -45,14 +45,14 @@ namespace gcn
 			graphics->drawRectangle(Rectangle(2, 2, getWidth() - 4, getHeight() - 4));
 	}
 
-	void SelectorEntry::setInactiveColor(const Color& color)
+	void SelectorEntry::setInactiveColor(Color color)
 	{
 		inactiveColor = color;
 		if (!active)
 			container->setBaseColor(color);
 	}
 
-	void SelectorEntry::setActiveColor(const Color& color)
+	void SelectorEntry::setActiveColor(Color color)
 	{
 		activeColor = color;
 		if (active)

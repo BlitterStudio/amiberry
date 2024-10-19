@@ -1484,6 +1484,31 @@ void apply_theme()
 		abort();
 	}
 	gcn::Widget::setGlobalFont(gui_font);
+	gcn::Widget::setGlobalBaseColor(gui_base_color);
+	gcn::Widget::setGlobalForegroundColor(gui_foreground_color);
+	gcn::Widget::setGlobalBackgroundColor(gui_background_color);
+	gcn::Widget::setGlobalSelectionColor(gui_selection_color);
+
+	if (selectors != nullptr)
+	{
+		selectors->setBaseColor(gui_base_color);
+		selectors->setBackgroundColor(gui_base_color);
+		selectors->setForegroundColor(gui_foreground_color);
+	}
+	if (selectorsScrollArea != nullptr)
+	{
+		selectorsScrollArea->setBaseColor(gui_base_color);
+		selectorsScrollArea->setBackgroundColor(gui_base_color);
+		selectorsScrollArea->setForegroundColor(gui_foreground_color);
+	}
+	for (int i = 0; categories[i].category != nullptr && categories[i].selector != nullptr; ++i)
+	{
+		categories[i].selector->setActiveColor(gui_selector_active_color);
+		categories[i].selector->setInactiveColor(gui_selector_inactive_color);
+
+		categories[i].panel->setBaseColor(gui_base_color);
+		categories[i].panel->setForegroundColor(gui_foreground_color);
+	}
 }
 
 void save_theme(const std::string& theme_filename)

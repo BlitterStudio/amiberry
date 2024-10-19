@@ -684,6 +684,10 @@ namespace gcn
          * @since 0.1.0
          */
         static void setGlobalFont(Font* font);
+        static void setGlobalBaseColor(Color color);
+        static void setGlobalForegroundColor(Color color);
+        static void setGlobalBackgroundColor(Color color);
+        static void setGlobalSelectionColor(Color color);
 
         /**
          * Sets the font for the widget. If NULL is passed, the global font 

@@ -506,6 +506,42 @@ namespace gcn
         }
     }
 
+    void Widget::setGlobalBaseColor(Color color)
+    {
+		std::list<Widget*>::iterator iter;
+		for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
+		{
+			(*iter)->setBaseColor(color);
+		}
+    }
+
+    void Widget::setGlobalForegroundColor(Color color)
+    {
+		std::list<Widget*>::iterator iter;
+        for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
+        {
+            (*iter)->setForegroundColor(color);
+        }
+    }
+
+	void Widget::setGlobalBackgroundColor(Color color)
+	{
+		std::list<Widget*>::iterator iter;
+		for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
+		{
+			(*iter)->setBackgroundColor(color);
+		}
+	}
+
+	void Widget::setGlobalSelectionColor(Color color)
+	{
+		std::list<Widget*>::iterator iter;
+		for (iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
+		{
+			(*iter)->setSelectionColor(color);
+		}
+	}
+
     void Widget::setFont(Font* font)
     {
         mCurrentFont = font;
