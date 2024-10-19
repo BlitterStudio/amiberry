@@ -54,7 +54,7 @@ void InitPanelAbout(const config_category& category)
 		"Dedicated to HeZoR - R.I.P. little brother (1978-2017)\n"
 	);
 	textBox->setEditable(false);
-	textBox->setBackgroundColor(gui_textbox_background_color);
+	textBox->setBackgroundColor(gui_background_color);
 	textBox->setBaseColor(gui_base_color);
 	textBox->setForegroundColor(gui_foreground_color);
 

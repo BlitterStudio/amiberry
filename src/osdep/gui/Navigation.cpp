@@ -44,13 +44,14 @@ static NavigationMap nav_map[] =
 	{"Priority", "cboInactiveRunAtPrio", "cboActiveRunAtPrio", "Miscellaneous", "Savestates" },
 	{"Savestates", "State0", "State0", "Priority", "Virtual Keyboard"},
 	{"Virtual Keyboard", "chkVkEnabled", "chkVkEnabled", "Savestates", "WHDLoad"},
-	{"WHDLoad", "cmdWhdloadEject", "cmdWhdloadEject", "Virtual Keyboard", "Quit"},
-	{"Shutdown", "Start", "Quit", "WHDLoad", "About"},
-	{"Quit", "Shutdown", "Restart", "WHDLoad", "About"},
-	{"Restart", "Quit", "Help", "WHDLoad", "About"},
-	{"Help", "Restart", "Reset", "WHDLoad", "About"},
-	{"Reset", "Help", "Start", "WHDLoad", "About"},
-	{"Start", "Reset", "Shutdown", "WHDLoad", "About"},
+	{"WHDLoad", "cmdWhdloadEject", "cmdWhdloadEject", "Virtual Keyboard", "Themes"},
+	{"Themes", "cmdThemeSaveAs", "cboThemePreset", "WHDLoad", "Quit"},
+	{"Shutdown", "Start", "Quit", "Themes", "About"},
+	{"Quit", "Shutdown", "Restart", "Themes", "About"},
+	{"Restart", "Quit", "Help", "Themes", "About"},
+	{"Help", "Restart", "Reset", "Themes", "About"},
+	{"Reset", "Help", "Start", "Themes", "About"},
+	{"Start", "Reset", "Shutdown", "Themes", "About"},
 
 	// PanelPaths
 	{"scrlPaths", "cmdSystemROMs", "Paths", "", "" },
@@ -592,15 +593,20 @@ static NavigationMap nav_map[] =
 	{ "cmdWhdloadEject", "WHDLoad", "cmdWhdloadSelect", "chkQuitOnExit", "cboWhdload" },
 	{ "cmdWhdloadSelect", "cmdWhdloadEject", "WHDLoad", "chkQuitOnExit", "cboWhdload" },
 	{ "cboWhdload", "WHDLoad", "WHDLoad", "cmdWhdloadSelect", "cboSlaves" },
-
 	{ "cboSlaves", "WHDLoad", "WHDLoad", "cboWhdload", "cmdCustomFields" },
-
 	{ "cmdCustomFields", "WHDLoad", "WHDLoad", "cboSlaves", "chkButtonWait" },
 	{ "chkButtonWait", "WHDLoad", "WHDLoad", "cmdCustomFields", "chkShowSplash" },
 	{ "chkShowSplash", "WHDLoad", "WHDLoad", "chkButtonWait", "chkWriteCache" },
-
 	{ "chkWriteCache", "WHDLoad", "WHDLoad", "chkShowSplash", "chkQuitOnExit" },
 	{ "chkQuitOnExit", "WHDLoad", "WHDLoad", "chkWriteCache", "cmdWhdloadEject" },
+
+	// Themes
+	{ "cboThemePreset", "Themes", "cmdThemeSave", "cmdThemeUse", "cmdThemeFont" },
+	{ "cmdThemeSave", "cboThemePreset", "cmdThemeSaveAs", "cmdThemeUse", "cmdThemeFont" },
+	{ "cmdThemeSaveAs", "cmdThemeSave", "Themes", "cmdThemeUse", "cmdThemeFont" },
+	{ "cmdThemeFont", "Themes", "Themes", "cboThemePreset", "cmdThemeUse" },
+	{ "cmdThemeUse", "Themes", "cmdThemeReset", "cmdThemeFont", "cboThemePreset" },
+	{ "cmdThemeReset", "cmdThemeUse", "Themes", "cmdThemeFont", "cboThemePreset" },
 
 	//  active            move left         move right        move up           move down
 	// EditFilesysVirtual

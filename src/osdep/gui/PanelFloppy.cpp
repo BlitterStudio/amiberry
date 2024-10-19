@@ -408,14 +408,14 @@ void InitPanelFloppy(const config_category& category)
 		chkDFx[i] = new gcn::CheckBox(id_string);
 		chkDFx[i]->setId(id_string);
 		chkDFx[i]->setBaseColor(gui_base_color);
-		chkDFx[i]->setBackgroundColor(gui_textbox_background_color);
+		chkDFx[i]->setBackgroundColor(gui_background_color);
 		chkDFx[i]->setForegroundColor(gui_foreground_color);
 		chkDFx[i]->addActionListener(dfxCheckActionListener);
 
 		cboDFxType[i] = new gcn::DropDown(&driveTypeList);
 		cboDFxType[i]->setSize(150, cboDFxType[i]->getHeight());
 		cboDFxType[i]->setBaseColor(gui_base_color);
-		cboDFxType[i]->setBackgroundColor(gui_textbox_background_color);
+		cboDFxType[i]->setBackgroundColor(gui_background_color);
 		cboDFxType[i]->setForegroundColor(gui_foreground_color);
 		cboDFxType[i]->setSelectionColor(gui_selection_color);
 		id_string = "cboType" + to_string(i);
@@ -426,7 +426,7 @@ void InitPanelFloppy(const config_category& category)
 		id_string = "chkWP" + to_string(i);
 		chkDFxWriteProtect[i]->setId(id_string);
 		chkDFxWriteProtect[i]->setBaseColor(gui_base_color);
-		chkDFxWriteProtect[i]->setBackgroundColor(gui_textbox_background_color);
+		chkDFxWriteProtect[i]->setBackgroundColor(gui_background_color);
 		chkDFxWriteProtect[i]->setForegroundColor(gui_foreground_color);
 		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
 
@@ -459,7 +459,7 @@ void InitPanelFloppy(const config_category& category)
 		cboDFxFile[i]->setId(id_string);
 		cboDFxFile[i]->setSize(textFieldWidth, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_base_color);
-		cboDFxFile[i]->setBackgroundColor(gui_textbox_background_color);
+		cboDFxFile[i]->setBackgroundColor(gui_background_color);
 		cboDFxFile[i]->setForegroundColor(gui_foreground_color);
 		cboDFxFile[i]->setSelectionColor(gui_selection_color);
 		cboDFxFile[i]->addActionListener(diskFileActionListener);
@@ -469,7 +469,7 @@ void InitPanelFloppy(const config_category& category)
 	sldDriveSpeed = new gcn::Slider(0, 4);
 	sldDriveSpeed->setSize(110, SLIDER_HEIGHT);
 	sldDriveSpeed->setBaseColor(gui_base_color);
-	sldDriveSpeed->setBackgroundColor(gui_textbox_background_color);
+	sldDriveSpeed->setBackgroundColor(gui_background_color);
 	sldDriveSpeed->setForegroundColor(gui_foreground_color);
 	sldDriveSpeed->setMarkerLength(20);
 	sldDriveSpeed->setStepLength(1);
@@ -496,7 +496,7 @@ void InitPanelFloppy(const config_category& category)
 	cboDBDriver->setId("cboDBDriver");
 	cboDBDriver->setSize(350, cboDBDriver->getHeight());
 	cboDBDriver->setBaseColor(gui_base_color);
-	cboDBDriver->setBackgroundColor(gui_textbox_background_color);
+	cboDBDriver->setBackgroundColor(gui_background_color);
 	cboDBDriver->setForegroundColor(gui_foreground_color);
 	cboDBDriver->setSelectionColor(gui_selection_color);
 	cboDBDriver->addActionListener(dfxCheckActionListener);
@@ -504,14 +504,14 @@ void InitPanelFloppy(const config_category& category)
 	chkDBSerialAuto = new gcn::CheckBox("DrawBridge: Auto-Detect serial port");
 	chkDBSerialAuto->setId("chkDBSerialAuto");
 	chkDBSerialAuto->setBaseColor(gui_base_color);
-	chkDBSerialAuto->setBackgroundColor(gui_textbox_background_color);
+	chkDBSerialAuto->setBackgroundColor(gui_background_color);
 	chkDBSerialAuto->setForegroundColor(gui_foreground_color);
 	chkDBSerialAuto->addActionListener(dfxCheckActionListener);
 
 	cboDBSerialPort = new gcn::DropDown(&serial_ports_list);
 	cboDBSerialPort->setSize(200, cboDBSerialPort->getHeight());
 	cboDBSerialPort->setBaseColor(gui_base_color);
-	cboDBSerialPort->setBackgroundColor(gui_textbox_background_color);
+	cboDBSerialPort->setBackgroundColor(gui_background_color);
 	cboDBSerialPort->setForegroundColor(gui_foreground_color);
 	cboDBSerialPort->setSelectionColor(gui_selection_color);
 	cboDBSerialPort->setId("cboDBSerialPort");
@@ -520,21 +520,21 @@ void InitPanelFloppy(const config_category& category)
 	chkDBSmartSpeed = new gcn::CheckBox("DrawBridge: Smart Speed (Dynamically switch on Turbo)");
 	chkDBSmartSpeed->setId("chkDBSmartSpeed");
 	chkDBSmartSpeed->setBaseColor(gui_base_color);
-	chkDBSmartSpeed->setBackgroundColor(gui_textbox_background_color);
+	chkDBSmartSpeed->setBackgroundColor(gui_background_color);
 	chkDBSmartSpeed->setForegroundColor(gui_foreground_color);
 	chkDBSmartSpeed->addActionListener(dfxCheckActionListener);
 
 	chkDBAutoCache = new gcn::CheckBox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)");
 	chkDBAutoCache->setId("chkDBAutoCache");
 	chkDBAutoCache->setBaseColor(gui_base_color);
-	chkDBAutoCache->setBackgroundColor(gui_textbox_background_color);
+	chkDBAutoCache->setBackgroundColor(gui_background_color);
 	chkDBAutoCache->setForegroundColor(gui_foreground_color);
 	chkDBAutoCache->addActionListener(dfxCheckActionListener);
 
 	chkDBCableDriveB = new gcn::CheckBox("DrawBridge: Connected as Drive B");
 	chkDBCableDriveB->setId("chkDBCableDriveB");
 	chkDBCableDriveB->setBaseColor(gui_base_color);
-	chkDBCableDriveB->setBackgroundColor(gui_textbox_background_color);
+	chkDBCableDriveB->setBackgroundColor(gui_background_color);
 	chkDBCableDriveB->setForegroundColor(gui_foreground_color);
 	chkDBCableDriveB->addActionListener(dfxCheckActionListener);
 

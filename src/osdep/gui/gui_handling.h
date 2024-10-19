@@ -168,6 +168,8 @@ using ConfigCategory = struct config_category
 };
 
 extern bool gui_running;
+extern gcn::Container* selectors;
+extern gcn::ScrollArea* selectorsScrollArea;
 extern ConfigCategory categories[];
 extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;
@@ -175,7 +177,7 @@ extern gcn::Container* gui_top;
 // GUI Colors
 extern amiberry_gui_theme gui_theme;
 extern gcn::Color gui_base_color;
-extern gcn::Color gui_textbox_background_color;
+extern gcn::Color gui_background_color;
 extern gcn::Color gui_selector_inactive_color;
 extern gcn::Color gui_selector_active_color;
 extern gcn::Color gui_selection_color;
@@ -326,6 +328,11 @@ void ExitPanelWHDLoad();
 void RefreshPanelWHDLoad();
 bool HelpPanelWHDLoad(std::vector<std::string>& helptext);
 
+void InitPanelThemes(const struct config_category& category);
+void ExitPanelThemes();
+void RefreshPanelThemes();
+bool HelpPanelThemes(std::vector<std::string>& helptext);
+
 void refresh_all_panels();
 void focus_bug_workaround(gcn::Window* wnd);
 void disable_resume();
@@ -420,6 +427,12 @@ extern amiberry_hotkey get_hotkey_from_config(std::string config_option);
 extern void save_mapping_to_file(const std::string& mapping);
 extern void clear_whdload_prefs();
 extern void create_startup_sequence();
+
+extern std::vector<int> parse_color_string(const std::string& input);
+extern void save_theme(const std::string& theme_filename);
+extern void load_theme(const std::string& theme_filename);
+extern void load_default_theme();
+extern void apply_theme();
 
 extern void SetLastActiveConfig(const char* filename);
 

@@ -155,7 +155,7 @@ static void InitEditTapeDrive()
 	txtTapeDrivePath->setSize(490, TEXTFIELD_HEIGHT);
 	txtTapeDrivePath->setId("txtTapeDrivePath");
 	txtTapeDrivePath->setBaseColor(gui_base_color);
-	txtTapeDrivePath->setBackgroundColor(gui_textbox_background_color);
+	txtTapeDrivePath->setBackgroundColor(gui_background_color);
 	txtTapeDrivePath->setForegroundColor(gui_foreground_color);
 
 	cmdTapeDriveSelectDir = new gcn::Button("Select Directory");
@@ -177,7 +177,7 @@ static void InitEditTapeDrive()
 	cboTapeDriveController = new gcn::DropDown(&controllerListModel);
 	cboTapeDriveController->setSize(180, DROPDOWN_HEIGHT);
 	cboTapeDriveController->setBaseColor(gui_base_color);
-	cboTapeDriveController->setBackgroundColor(gui_textbox_background_color);
+	cboTapeDriveController->setBackgroundColor(gui_background_color);
 	cboTapeDriveController->setForegroundColor(gui_foreground_color);
 	cboTapeDriveController->setSelectionColor(gui_selection_color);
 	cboTapeDriveController->setId("cboTapeDriveController");
@@ -186,7 +186,7 @@ static void InitEditTapeDrive()
 	cboTapeDriveUnit = new gcn::DropDown(&unitListModel);
 	cboTapeDriveUnit->setSize(60, DROPDOWN_HEIGHT);
 	cboTapeDriveUnit->setBaseColor(gui_base_color);
-	cboTapeDriveUnit->setBackgroundColor(gui_textbox_background_color);
+	cboTapeDriveUnit->setBackgroundColor(gui_background_color);
 	cboTapeDriveUnit->setForegroundColor(gui_foreground_color);
 	cboTapeDriveUnit->setSelectionColor(gui_selection_color);
 	cboTapeDriveUnit->setId("cboTapeDriveUnit");

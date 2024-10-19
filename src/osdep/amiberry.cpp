@@ -212,7 +212,7 @@ amiberry_hotkey get_hotkey_from_config(std::string config_option)
 	return hotkey;
 }
 
-void set_key_configs(struct uae_prefs* p)
+void set_key_configs(const struct uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 		// If we have a value in the config, we use that instead
@@ -310,6 +310,7 @@ std::string screenshot_dir;
 std::string nvram_dir;
 std::string plugins_dir;
 std::string video_dir;
+std::string themes_path;
 std::string amiberry_conf_file;
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
@@ -2380,179 +2381,6 @@ void target_default_options(struct uae_prefs* p, int type)
 		_tcscpy(p->vkbd_style, ""); // This will use the default theme.
 	p->vkbd_transparency = amiberry_options.default_vkbd_transparency;
 	_tcscpy(p->vkbd_toggle, amiberry_options.default_vkbd_toggle);
-
-	//
-	// GUI Theme section
-	//
-	// Font name
-	if (amiberry_options.gui_theme_font_name[0])
-		gui_theme.font_name = std::string(amiberry_options.gui_theme_font_name);
-	else
-		gui_theme.font_name = "AmigaTopaz.ttf";
-
-	// Font size
-	gui_theme.font_size = amiberry_options.gui_theme_font_size > 0 ? amiberry_options.gui_theme_font_size : 15;
-
-	// Base Color
-	if (amiberry_options.gui_theme_base_color[0])
-	{
-		// parse string as comma-separated numbers
-		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_base_color);
-		if (result.size() == 3)
-		{
-			gui_theme.base_color = gcn::Color(result[0], result[1], result[2]);
-		}
-		else if (result.size() == 4)
-		{
-			gui_theme.base_color = gcn::Color(result[0], result[1], result[2], result[3]);
-		}
-		else
-		{
-			gui_theme.base_color = gcn::Color(170, 170, 170);
-		}
-	}
-	else
-	{
-		gui_theme.base_color = gcn::Color(170, 170, 170);
-	}
-
-	// Font color
-	if (amiberry_options.gui_theme_font_color[0])
-	{
-		// parse string as comma-separated numbers
-		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_font_color);
-		if (result.size() == 3)
-		{
-			gui_theme.font_color = gcn::Color(result[0], result[1], result[2]);
-		}
-		else if (result.size() == 4)
-		{
-			gui_theme.font_color = gcn::Color(result[0], result[1], result[2], result[3]);
-		}
-		else
-		{
-			gui_theme.font_color = gcn::Color(0, 0, 0);
-		}
-	}
-	else
-	{
-		gui_theme.font_color = gcn::Color(0, 0, 0);
-	}
-
-	// Selector Inactive
-	if (amiberry_options.gui_theme_selector_inactive[0])
-	{
-		// parse string as comma-separated numbers
-		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_inactive);
-		if (result.size() == 3)
-		{
-			gui_theme.selector_inactive = gcn::Color(result[0], result[1], result[2]);
-		}
-		else if (result.size() == 4)
-		{
-			gui_theme.selector_inactive = gcn::Color(result[0], result[1], result[2], result[3]);
-		}
-		else
-		{
-			gui_theme.selector_inactive = gcn::Color(170, 170, 170);
-		}
-	}
-	else
-	{
-		gui_theme.selector_inactive = gcn::Color(170, 170, 170);
-	}
-
-	// Selector Active
-	if (amiberry_options.gui_theme_selector_active[0])
-	{
-		// parse string as comma-separated numbers
-		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selector_active);
-		if (result.size() == 3)
-		{
-			gui_theme.selector_active = gcn::Color(result[0], result[1], result[2]);
-		}
-		else if (result.size() == 4)
-		{
-			gui_theme.selector_active = gcn::Color(result[0], result[1], result[2], result[3]);
-		}
-		else
-		{
-			gui_theme.selector_active = gcn::Color(103, 136, 187);
-		}
-	}
-	else
-	{
-		gui_theme.selector_active = gcn::Color(103, 136, 187);
-	}
-
-	// Textbox Background
-	if (amiberry_options.gui_theme_textbox_background[0])
-	{
-		// parse string as comma-separated numbers
-		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_textbox_background);
-		if (result.size() == 3)
-		{
-			gui_theme.textbox_background = gcn::Color(result[0], result[1], result[2]);
-		}
-		else if (result.size() == 4)
-		{
-			gui_theme.textbox_background = gcn::Color(result[0], result[1], result[2], result[3]);
-		}
-		else
-		{
-			gui_theme.textbox_background = gcn::Color(220, 220, 220);
-		}
-	}
-	else
-	{
-		gui_theme.textbox_background = gcn::Color(220, 220, 220);
-	}
-
-	// Selection color (e.g. dropdowns)
-	if (amiberry_options.gui_theme_selection_color[0])
-	{
-		// parse string as comma-separated numbers
-		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_selection_color);
-		if (result.size() == 3)
-		{
-			gui_theme.selection_color = gcn::Color(result[0], result[1], result[2]);
-		}
-		else if (result.size() == 4)
-		{
-			gui_theme.selection_color = gcn::Color(result[0], result[1], result[2], result[3]);
-		}
-		else
-		{
-			gui_theme.selection_color = gcn::Color(195, 217, 217);
-		}
-	}
-	else
-	{
-		gui_theme.selection_color = gcn::Color(195, 217, 217);
-	}
-
-	// Foreground color
-	if (amiberry_options.gui_theme_foreground_color[0])
-	{
-		// parse string as comma-separated numbers
-		const std::vector<int> result = parse_color_string(amiberry_options.gui_theme_foreground_color);
-		if (result.size() == 3)
-		{
-			gui_theme.foreground_color = gcn::Color(result[0], result[1], result[2]);
-		}
-		else if (result.size() == 4)
-		{
-			gui_theme.foreground_color = gcn::Color(result[0], result[1], result[2], result[3]);
-		}
-		else
-		{
-			gui_theme.foreground_color = gcn::Color(0, 0, 0);
-		}
-	}
-	else
-	{
-		gui_theme.foreground_color = gcn::Color(0, 0, 0);
-	}
 }
 
 static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"), NULL };
@@ -3040,6 +2868,11 @@ void set_video_path(const std::string& newpath)
 	video_dir = newpath;
 }
 
+void set_themes_path(const std::string& newpath)
+{
+	themes_path = newpath;
+}
+
 void set_screenshot_path(const std::string& newpath)
 {
 	screenshot_dir = newpath;
@@ -3211,6 +3044,11 @@ std::string get_screenshot_path()
 void get_video_path(char* out, int size)
 {
 	_tcsncpy(out, fix_trailing(video_dir).c_str(), size - 1);
+}
+
+std::string get_themes_path()
+{
+	return fix_trailing(themes_path);
 }
 
 void get_floppy_sounds_path(char* out, int size)
@@ -3583,32 +3421,8 @@ void save_amiberry_settings(void)
 	// Default controller button for toggling the Virtual Keyboard
 	write_string_option("default_vkbd_toggle", amiberry_options.default_vkbd_toggle);
 
-	// GUI Theme: Font name
-	write_string_option("gui_theme_font_name", amiberry_options.gui_theme_font_name);
-
-	// GUI Theme: Font size
-	write_int_option("gui_theme_font_size", amiberry_options.gui_theme_font_size);
-
-	// GUI Theme: Font color
-	write_string_option("gui_theme_font_color", amiberry_options.gui_theme_font_color);
-
-	// GUI Theme: Base color
-	write_string_option("gui_theme_base_color", amiberry_options.gui_theme_base_color);
-
-	// GUI Theme: Selector Inactive color
-	write_string_option("gui_theme_selector_inactive", amiberry_options.gui_theme_selector_inactive);
-
-	// GUI Theme: Selector Active color
-	write_string_option("gui_theme_selector_active", amiberry_options.gui_theme_selector_active);
-
-	// GUI Theme: Selection color
-	write_string_option("gui_theme_selection_color", amiberry_options.gui_theme_selection_color);
-
-	// GUI Theme: Foreground color
-	write_string_option("gui_theme_foreground_color", amiberry_options.gui_theme_foreground_color);
-
-	// GUI Theme: Textbox Background color
-	write_string_option("gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background);
+	// GUI Theme
+	write_string_option("gui_theme", amiberry_options.gui_theme);
 
 	// Paths
 	write_string_option("controllers_path", controllers_path);
@@ -3630,6 +3444,7 @@ void save_amiberry_settings(void)
 	write_string_option("nvram_dir", nvram_dir);
 	write_string_option("plugins_dir", plugins_dir);
 	write_string_option("video_dir", video_dir);
+	write_string_option("themes_path", themes_path);
 
 	// The number of ROMs in the last scan
 	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
@@ -3771,6 +3586,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "nvram_dir", nvram_dir);
 		ret |= cfgfile_string(option, value, "plugins_dir", plugins_dir);
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
+		ret |= cfgfile_string(option, value, "themes_path", themes_path);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
@@ -3833,15 +3649,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "default_vkbd_style", amiberry_options.default_vkbd_style, sizeof amiberry_options.default_vkbd_style);
 		ret |= cfgfile_intval(option, value, "default_vkbd_transparency", &amiberry_options.default_vkbd_transparency, 1);
 		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
-		ret |= cfgfile_string(option, value, "gui_theme_font_name", amiberry_options.gui_theme_font_name, sizeof amiberry_options.gui_theme_font_name);
-		ret |= cfgfile_intval(option, value, "gui_theme_font_size", &amiberry_options.gui_theme_font_size, 1);
-		ret |= cfgfile_string(option, value, "gui_theme_font_color", amiberry_options.gui_theme_font_color, sizeof amiberry_options.gui_theme_font_color);
-		ret |= cfgfile_string(option, value, "gui_theme_base_color", amiberry_options.gui_theme_base_color, sizeof amiberry_options.gui_theme_base_color);
-		ret |= cfgfile_string(option, value, "gui_theme_selector_inactive", amiberry_options.gui_theme_selector_inactive, sizeof amiberry_options.gui_theme_selector_inactive);
-		ret |= cfgfile_string(option, value, "gui_theme_selector_active", amiberry_options.gui_theme_selector_active, sizeof amiberry_options.gui_theme_selector_active);
-		ret |= cfgfile_string(option, value, "gui_theme_selection_color", amiberry_options.gui_theme_selection_color, sizeof amiberry_options.gui_theme_selection_color);
-		ret |= cfgfile_string(option, value, "gui_theme_foreground_color", amiberry_options.gui_theme_foreground_color, sizeof amiberry_options.gui_theme_foreground_color);
-		ret |= cfgfile_string(option, value, "gui_theme_textbox_background", amiberry_options.gui_theme_textbox_background, sizeof amiberry_options.gui_theme_textbox_background);
+		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 	}
 	return ret;
 }
@@ -4137,6 +3945,10 @@ std::string get_plugins_directory()
 #endif
 }
 
+extern void save_theme(const std::string& theme_filename);
+extern void load_theme(const std::string& theme_filename);
+extern void load_default_theme();
+
 void create_missing_amiberry_folders()
 {
 #ifdef __MACH__
@@ -4211,22 +4023,32 @@ void create_missing_amiberry_folders()
             system(command.c_str());
         }
     }
-    if (!my_existsdir(rp9_path.c_str()))
-        my_mkdir(rp9_path.c_str());
-    if (!my_existsdir(saveimage_dir.c_str()))
-        my_mkdir(saveimage_dir.c_str());
-    if (!my_existsdir(savestate_dir.c_str()))
-        my_mkdir(savestate_dir.c_str());
-    if (!my_existsdir(ripper_path.c_str()))
-        my_mkdir(ripper_path.c_str());
-    if (!my_existsdir(input_dir.c_str()))
-        my_mkdir(input_dir.c_str());
-    if (!my_existsdir(screenshot_dir.c_str()))
-        my_mkdir(screenshot_dir.c_str());
-    if (!my_existsdir(nvram_dir.c_str()))
-        my_mkdir(nvram_dir.c_str());
-    if (!my_existsdir(video_dir.c_str()))
-        my_mkdir(video_dir.c_str());
+	if (!my_existsdir(rp9_path.c_str()))
+		my_mkdir(rp9_path.c_str());
+	if (!my_existsdir(saveimage_dir.c_str()))
+		my_mkdir(saveimage_dir.c_str());
+	if (!my_existsdir(savestate_dir.c_str()))
+		my_mkdir(savestate_dir.c_str());
+	if (!my_existsdir(ripper_path.c_str()))
+		my_mkdir(ripper_path.c_str());
+	if (!my_existsdir(input_dir.c_str()))
+		my_mkdir(input_dir.c_str());
+	if (!my_existsdir(screenshot_dir.c_str()))
+		my_mkdir(screenshot_dir.c_str());
+	if (!my_existsdir(nvram_dir.c_str()))
+		my_mkdir(nvram_dir.c_str());
+	if (!my_existsdir(video_dir.c_str()))
+		my_mkdir(video_dir.c_str());
+	if (!my_existsdir(themes_path.c_str()))
+	{
+		my_mkdir(themes_path.c_str());
+	}
+	std::string default_theme_file = themes_path + "Default.theme";
+	if (!my_existsfile2(default_theme_file.c_str()))
+	{
+		load_default_theme();
+		save_theme("Default.theme");
+	}
 }
 
 static void init_amiberry_dirs()
@@ -4253,11 +4075,12 @@ static void init_amiberry_dirs()
 
 	// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
 	amiberry_conf_file = xdg_config_home + "/amiberry.conf";
+	themes_path = xdg_config_home;
 
 	// These paths are relative to the XDG_DATA_HOME directory
     controllers_path = whdboot_path = saveimage_dir = savestate_dir =
     ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
-    xdg_data_home;
+	xdg_data_home;
 
 	// These go in $HOME/Amiberry by default
     whdload_arch_path = floppy_path = harddrive_path =
@@ -4281,6 +4104,7 @@ static void init_amiberry_dirs()
     screenshot_dir.append("/Screenshots/");
     nvram_dir.append("/Nvram/");
     video_dir.append("/Videos/");
+	themes_path.append("/Themes/");
 #else
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
@@ -4298,6 +4122,7 @@ static void init_amiberry_dirs()
 	screenshot_dir.append("/screenshots/");
 	nvram_dir.append("/nvram/");
 	video_dir.append("/videos/");
+	themes_path.append("/themes/");
 #endif
 
 	retroarch_file = config_path;

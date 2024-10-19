@@ -171,7 +171,7 @@ static void InitEditFilesysVirtual()
 	txtDevice->setSize(120, TEXTFIELD_HEIGHT);
 	txtDevice->setId("txtVirtDevice");
 	txtDevice->setBaseColor(gui_base_color);
-	txtDevice->setBackgroundColor(gui_textbox_background_color);
+	txtDevice->setBackgroundColor(gui_background_color);
 	txtDevice->setForegroundColor(gui_foreground_color);
 
 	lblVolume = new gcn::Label("Volume Label:");
@@ -180,7 +180,7 @@ static void InitEditFilesysVirtual()
 	txtVolume->setSize(120, TEXTFIELD_HEIGHT);
 	txtVolume->setId("txtVirtVolume");
 	txtVolume->setBaseColor(gui_base_color);
-	txtVolume->setBackgroundColor(gui_textbox_background_color);
+	txtVolume->setBackgroundColor(gui_background_color);
 	txtVolume->setForegroundColor(gui_foreground_color);
 
 	lblPath = new gcn::Label("Path:");
@@ -190,7 +190,7 @@ static void InitEditFilesysVirtual()
 	txtPath->setSize(450, TEXTFIELD_HEIGHT);
 	txtPath->setId("txtVirtPath");
 	txtPath->setBaseColor(gui_base_color);
-	txtPath->setBackgroundColor(gui_textbox_background_color);
+	txtPath->setBackgroundColor(gui_background_color);
 	txtPath->setForegroundColor(gui_foreground_color);
 	
 	cmdVirtSelectDir = new gcn::Button("Select Directory");
@@ -210,13 +210,13 @@ static void InitEditFilesysVirtual()
 	chkReadWrite = new gcn::CheckBox("Read/Write", true);
 	chkReadWrite->setBaseColor(gui_base_color);
 	chkReadWrite->setForegroundColor(gui_foreground_color);
-	chkReadWrite->setBackgroundColor(gui_textbox_background_color);
+	chkReadWrite->setBackgroundColor(gui_background_color);
 	chkReadWrite->setId("chkVirtRW");
 
 	chkVirtBootable = new gcn::CheckBox("Bootable", true);
 	chkVirtBootable->setId("chkVirtBootable");
 	chkVirtBootable->setBaseColor(gui_base_color);
-	chkVirtBootable->setBackgroundColor(gui_textbox_background_color);
+	chkVirtBootable->setBackgroundColor(gui_background_color);
 	chkVirtBootable->setForegroundColor(gui_foreground_color);
 	chkVirtBootable->addActionListener(filesysVirtualActionListener);
 
@@ -225,7 +225,7 @@ static void InitEditFilesysVirtual()
 	txtBootPri = new gcn::TextField();
 	txtBootPri->setSize(45, TEXTFIELD_HEIGHT);
 	txtBootPri->setBaseColor(gui_base_color);
-	txtBootPri->setBackgroundColor(gui_textbox_background_color);
+	txtBootPri->setBackgroundColor(gui_background_color);
 	txtBootPri->setForegroundColor(gui_foreground_color);
 
 	int posY = DISTANCE_BORDER;

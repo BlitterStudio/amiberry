@@ -562,7 +562,7 @@ void InitPanelDisplay(const config_category& category)
 	cboFullscreen = new gcn::DropDown(&fullscreen_resolutions_list);
 	cboFullscreen->setSize(150, cboFullscreen->getHeight());
 	cboFullscreen->setBaseColor(gui_base_color);
-	cboFullscreen->setBackgroundColor(gui_textbox_background_color);
+	cboFullscreen->setBackgroundColor(gui_background_color);
 	cboFullscreen->setForegroundColor(gui_foreground_color);
 	cboFullscreen->setSelectionColor(gui_selection_color);
 	cboFullscreen->setId("cboFullscreen");
@@ -571,7 +571,7 @@ void InitPanelDisplay(const config_category& category)
 	chkManualCrop = new gcn::CheckBox("Manual Crop");
 	chkManualCrop->setId("chkManualCrop");
 	chkManualCrop->setBaseColor(gui_base_color);
-	chkManualCrop->setBackgroundColor(gui_textbox_background_color);
+	chkManualCrop->setBackgroundColor(gui_background_color);
 	chkManualCrop->setForegroundColor(gui_foreground_color);
 	chkManualCrop->addActionListener(amigaScreenActionListener);
 
@@ -580,7 +580,7 @@ void InitPanelDisplay(const config_category& category)
 	sldAmigaWidth = new gcn::Slider(0, AMIGAWIDTH_COUNT - 1);
 	sldAmigaWidth->setSize(180, SLIDER_HEIGHT);
 	sldAmigaWidth->setBaseColor(gui_base_color);
-	sldAmigaWidth->setBackgroundColor(gui_textbox_background_color);
+	sldAmigaWidth->setBackgroundColor(gui_background_color);
 	sldAmigaWidth->setForegroundColor(gui_foreground_color);
 	sldAmigaWidth->setMarkerLength(20);
 	sldAmigaWidth->setStepLength(1);
@@ -590,7 +590,7 @@ void InitPanelDisplay(const config_category& category)
 	txtAmigaWidth = new gcn::TextField();
 	txtAmigaWidth->setSize(35, TEXTFIELD_HEIGHT);
 	txtAmigaWidth->setBaseColor(gui_base_color);
-	txtAmigaWidth->setBackgroundColor(gui_textbox_background_color);
+	txtAmigaWidth->setBackgroundColor(gui_background_color);
 	txtAmigaWidth->setForegroundColor(gui_foreground_color);
 	txtAmigaWidth->addActionListener(amigaScreenActionListener);
 
@@ -599,7 +599,7 @@ void InitPanelDisplay(const config_category& category)
 	sldAmigaHeight = new gcn::Slider(0, AMIGAHEIGHT_COUNT - 1);
 	sldAmigaHeight->setSize(180, SLIDER_HEIGHT);
 	sldAmigaHeight->setBaseColor(gui_base_color);
-	sldAmigaHeight->setBackgroundColor(gui_textbox_background_color);
+	sldAmigaHeight->setBackgroundColor(gui_background_color);
 	sldAmigaHeight->setForegroundColor(gui_foreground_color);
 	sldAmigaHeight->setMarkerLength(20);
 	sldAmigaHeight->setStepLength(1);
@@ -609,21 +609,21 @@ void InitPanelDisplay(const config_category& category)
 	txtAmigaHeight = new gcn::TextField();
 	txtAmigaHeight->setSize(35, TEXTFIELD_HEIGHT);
 	txtAmigaHeight->setBaseColor(gui_base_color);
-	txtAmigaHeight->setBackgroundColor(gui_textbox_background_color);
+	txtAmigaHeight->setBackgroundColor(gui_background_color);
 	txtAmigaHeight->setForegroundColor(gui_foreground_color);
 	txtAmigaHeight->addActionListener(amigaScreenActionListener);
 
 	chkAutoCrop = new gcn::CheckBox("Auto Crop");
 	chkAutoCrop->setId("chkAutoCrop");
 	chkAutoCrop->setBaseColor(gui_base_color);
-	chkAutoCrop->setBackgroundColor(gui_textbox_background_color);
+	chkAutoCrop->setBackgroundColor(gui_background_color);
 	chkAutoCrop->setForegroundColor(gui_foreground_color);
 	chkAutoCrop->addActionListener(amigaScreenActionListener);
 
 	chkBorderless = new gcn::CheckBox("Borderless");
 	chkBorderless->setId("chkBorderless");
 	chkBorderless->setBaseColor(gui_base_color);
-	chkBorderless->setBackgroundColor(gui_textbox_background_color);
+	chkBorderless->setBackgroundColor(gui_background_color);
 	chkBorderless->setForegroundColor(gui_foreground_color);
 	chkBorderless->addActionListener(amigaScreenActionListener);
 
@@ -632,7 +632,7 @@ void InitPanelDisplay(const config_category& category)
 	cboVSyncNative = new gcn::DropDown(&vsync_options_list);
 	cboVSyncNative->setSize(150, cboVSyncNative->getHeight());
 	cboVSyncNative->setBaseColor(gui_base_color);
-	cboVSyncNative->setBackgroundColor(gui_textbox_background_color);
+	cboVSyncNative->setBackgroundColor(gui_background_color);
 	cboVSyncNative->setForegroundColor(gui_foreground_color);
 	cboVSyncNative->setSelectionColor(gui_selection_color);
 	cboVSyncNative->setId("cboVSyncNative");
@@ -643,7 +643,7 @@ void InitPanelDisplay(const config_category& category)
 	cboVSyncRtg = new gcn::DropDown(&vsync_options_list);
 	cboVSyncRtg->setSize(150, cboVSyncRtg->getHeight());
 	cboVSyncRtg->setBaseColor(gui_base_color);
-	cboVSyncRtg->setBackgroundColor(gui_textbox_background_color);
+	cboVSyncRtg->setBackgroundColor(gui_background_color);
 	cboVSyncRtg->setForegroundColor(gui_foreground_color);
 	cboVSyncRtg->setSelectionColor(gui_selection_color);
 	cboVSyncRtg->setId("cboVSyncRtg");
@@ -654,7 +654,7 @@ void InitPanelDisplay(const config_category& category)
 	sldHOffset = new gcn::Slider(-80, 80);
 	sldHOffset->setSize(200, SLIDER_HEIGHT);
 	sldHOffset->setBaseColor(gui_base_color);
-	sldHOffset->setBackgroundColor(gui_textbox_background_color);
+	sldHOffset->setBackgroundColor(gui_background_color);
 	sldHOffset->setForegroundColor(gui_foreground_color);
 	sldHOffset->setMarkerLength(20);
 	sldHOffset->setStepLength(1);
@@ -668,7 +668,7 @@ void InitPanelDisplay(const config_category& category)
 	sldVOffset = new gcn::Slider(-80, 80);
 	sldVOffset->setSize(200, SLIDER_HEIGHT);
 	sldVOffset->setBaseColor(gui_base_color);
-	sldVOffset->setBackgroundColor(gui_textbox_background_color);
+	sldVOffset->setBackgroundColor(gui_background_color);
 	sldVOffset->setForegroundColor(gui_foreground_color);
 	sldVOffset->setMarkerLength(20);
 	sldVOffset->setStepLength(1);
@@ -680,55 +680,55 @@ void InitPanelDisplay(const config_category& category)
 	chkHorizontal = new gcn::CheckBox("Horizontal");
 	chkHorizontal->setId("chkHorizontal");
 	chkHorizontal->setBaseColor(gui_base_color);
-	chkHorizontal->setBackgroundColor(gui_textbox_background_color);
+	chkHorizontal->setBackgroundColor(gui_background_color);
 	chkHorizontal->setForegroundColor(gui_foreground_color);
 	chkHorizontal->addActionListener(amigaScreenActionListener);
 	chkVertical = new gcn::CheckBox("Vertical");
 	chkVertical->setId("chkVertical");
 	chkVertical->setBaseColor(gui_base_color);
-	chkVertical->setBackgroundColor(gui_textbox_background_color);
+	chkVertical->setBackgroundColor(gui_background_color);
 	chkVertical->setForegroundColor(gui_foreground_color);
 	chkVertical->addActionListener(amigaScreenActionListener);
 
 	chkFlickerFixer = new gcn::CheckBox("Remove interlace artifacts");
 	chkFlickerFixer->setId("chkFlickerFixer");
 	chkFlickerFixer->setBaseColor(gui_base_color);
-	chkFlickerFixer->setBackgroundColor(gui_textbox_background_color);
+	chkFlickerFixer->setBackgroundColor(gui_background_color);
 	chkFlickerFixer->setForegroundColor(gui_foreground_color);
 	chkFlickerFixer->addActionListener(amigaScreenActionListener);
 
 	chkFilterLowRes = new gcn::CheckBox("Filtered Low Res");
 	chkFilterLowRes->setId("chkFilterLowRes");
 	chkFilterLowRes->setBaseColor(gui_base_color);
-	chkFilterLowRes->setBackgroundColor(gui_textbox_background_color);
+	chkFilterLowRes->setBackgroundColor(gui_background_color);
 	chkFilterLowRes->setForegroundColor(gui_foreground_color);
 	chkFilterLowRes->addActionListener(amigaScreenActionListener);
 
 	chkBlackerThanBlack = new gcn::CheckBox("Blacker than black");
 	chkBlackerThanBlack->setId("chkBlackerThanBlack");
 	chkBlackerThanBlack->setBaseColor(gui_base_color);
-	chkBlackerThanBlack->setBackgroundColor(gui_textbox_background_color);
+	chkBlackerThanBlack->setBackgroundColor(gui_background_color);
 	chkBlackerThanBlack->setForegroundColor(gui_foreground_color);
 	chkBlackerThanBlack->addActionListener(amigaScreenActionListener);
 	
 	chkAspect = new gcn::CheckBox("Correct Aspect Ratio");
 	chkAspect->setId("chkAspect");
 	chkAspect->setBaseColor(gui_base_color);
-	chkAspect->setBackgroundColor(gui_textbox_background_color);
+	chkAspect->setBackgroundColor(gui_background_color);
 	chkAspect->setForegroundColor(gui_foreground_color);
 	chkAspect->addActionListener(amigaScreenActionListener);
 
 	chkFrameskip = new gcn::CheckBox("Refresh:");
 	chkFrameskip->setId("chkFrameskip");
 	chkFrameskip->setBaseColor(gui_base_color);
-	chkFrameskip->setBackgroundColor(gui_textbox_background_color);
+	chkFrameskip->setBackgroundColor(gui_background_color);
 	chkFrameskip->setForegroundColor(gui_foreground_color);
 	chkFrameskip->addActionListener(amigaScreenActionListener);
 
 	sldRefresh = new gcn::Slider(1, 10);
 	sldRefresh->setSize(100, SLIDER_HEIGHT);
 	sldRefresh->setBaseColor(gui_base_color);
-	sldRefresh->setBackgroundColor(gui_textbox_background_color);
+	sldRefresh->setBackgroundColor(gui_background_color);
 	sldRefresh->setForegroundColor(gui_foreground_color);
 	sldRefresh->setMarkerLength(20);
 	sldRefresh->setStepLength(1);
@@ -740,14 +740,14 @@ void InitPanelDisplay(const config_category& category)
 	chkFpsAdj = new gcn::CheckBox("FPS Adj:");
 	chkFpsAdj->setId("chkFpsAdj");
 	chkFpsAdj->setBaseColor(gui_base_color);
-	chkFpsAdj->setBackgroundColor(gui_textbox_background_color);
+	chkFpsAdj->setBackgroundColor(gui_background_color);
 	chkFpsAdj->setForegroundColor(gui_foreground_color);
 	chkFpsAdj->addActionListener(amigaScreenActionListener);
 
 	cboFpsRate = new gcn::DropDown(&fps_options_list);
 	cboFpsRate->setSize(80, cboFpsRate->getHeight());
 	cboFpsRate->setBaseColor(gui_base_color);
-	cboFpsRate->setBackgroundColor(gui_textbox_background_color);
+	cboFpsRate->setBackgroundColor(gui_background_color);
 	cboFpsRate->setForegroundColor(gui_foreground_color);
 	cboFpsRate->setSelectionColor(gui_selection_color);
 	cboFpsRate->setId("cboFpsRate");
@@ -756,7 +756,7 @@ void InitPanelDisplay(const config_category& category)
 	sldFpsAdj = new gcn::Slider(1, 99);
 	sldFpsAdj->setSize(100, SLIDER_HEIGHT);
 	sldFpsAdj->setBaseColor(gui_base_color);
-	sldFpsAdj->setBackgroundColor(gui_textbox_background_color);
+	sldFpsAdj->setBackgroundColor(gui_background_color);
 	sldFpsAdj->setForegroundColor(gui_foreground_color);
 	sldFpsAdj->setMarkerLength(20);
 	sldFpsAdj->setStepLength(1);
@@ -765,7 +765,7 @@ void InitPanelDisplay(const config_category& category)
 	txtFpsAdj = new gcn::TextField();
 	txtFpsAdj->setSize(80, TEXTFIELD_HEIGHT);
 	txtFpsAdj->setBaseColor(gui_base_color);
-	txtFpsAdj->setBackgroundColor(gui_textbox_background_color);
+	txtFpsAdj->setBackgroundColor(gui_background_color);
 	txtFpsAdj->setForegroundColor(gui_foreground_color);
 	txtFpsAdj->addKeyListener(amigaScreenKeyListener);
 
@@ -774,7 +774,7 @@ void InitPanelDisplay(const config_category& category)
 	sldBrightness = new gcn::Slider(-200, 200);
 	sldBrightness->setSize(100, SLIDER_HEIGHT);
 	sldBrightness->setBaseColor(gui_base_color);
-	sldBrightness->setBackgroundColor(gui_textbox_background_color);
+	sldBrightness->setBackgroundColor(gui_background_color);
 	sldBrightness->setForegroundColor(gui_foreground_color);
 	sldBrightness->setMarkerLength(20);
 	sldBrightness->setStepLength(1);
@@ -788,7 +788,7 @@ void InitPanelDisplay(const config_category& category)
 	cboScreenmode = new gcn::DropDown(&fullscreen_modes_list);
 	cboScreenmode->setSize(150, cboScreenmode->getHeight());
 	cboScreenmode->setBaseColor(gui_base_color);
-	cboScreenmode->setBackgroundColor(gui_textbox_background_color);
+	cboScreenmode->setBackgroundColor(gui_background_color);
 	cboScreenmode->setForegroundColor(gui_foreground_color);
 	cboScreenmode->setSelectionColor(gui_selection_color);
 	cboScreenmode->setId("cboScreenmode");
@@ -799,7 +799,7 @@ void InitPanelDisplay(const config_category& category)
 	cboResolution = new gcn::DropDown(&resolution_list);
 	cboResolution->setSize(150, cboResolution->getHeight());
 	cboResolution->setBaseColor(gui_base_color);
-	cboResolution->setBackgroundColor(gui_textbox_background_color);
+	cboResolution->setBackgroundColor(gui_background_color);
 	cboResolution->setForegroundColor(gui_foreground_color);
 	cboResolution->setSelectionColor(gui_selection_color);
 	cboResolution->setId("cboResolution");
@@ -810,7 +810,7 @@ void InitPanelDisplay(const config_category& category)
 	cboResSwitch = new gcn::DropDown(&res_autoswitch_list);
 	cboResSwitch->setSize(150, cboResSwitch->getHeight());
 	cboResSwitch->setBaseColor(gui_base_color);
-	cboResSwitch->setBackgroundColor(gui_textbox_background_color);
+	cboResSwitch->setBackgroundColor(gui_background_color);
 	cboResSwitch->setForegroundColor(gui_foreground_color);
 	cboResSwitch->setSelectionColor(gui_selection_color);
 	cboResSwitch->setId("cboResSwitch");
@@ -882,7 +882,7 @@ void InitPanelDisplay(const config_category& category)
 	cboScalingMethod = new gcn::DropDown(&scaling_method_list);
 	cboScalingMethod->setSize(150, cboScalingMethod->getHeight());
 	cboScalingMethod->setBaseColor(gui_base_color);
-	cboScalingMethod->setBackgroundColor(gui_textbox_background_color);
+	cboScalingMethod->setBackgroundColor(gui_background_color);
 	cboScalingMethod->setForegroundColor(gui_foreground_color);
 	cboScalingMethod->setSelectionColor(gui_selection_color);
 	cboScalingMethod->setId("cboScalingMethod");
@@ -902,35 +902,35 @@ void InitPanelDisplay(const config_category& category)
 	optSingle = new gcn::RadioButton("Single", "linemodegroup");
 	optSingle->setId("optSingle");
 	optSingle->setBaseColor(gui_base_color);
-	optSingle->setBackgroundColor(gui_textbox_background_color);
+	optSingle->setBackgroundColor(gui_background_color);
 	optSingle->setForegroundColor(gui_foreground_color);
 	optSingle->addActionListener(lineModeActionListener);
 
 	optDouble = new gcn::RadioButton("Double", "linemodegroup");
 	optDouble->setId("optDouble");
 	optDouble->setBaseColor(gui_base_color);
-	optDouble->setBackgroundColor(gui_textbox_background_color);
+	optDouble->setBackgroundColor(gui_background_color);
 	optDouble->setForegroundColor(gui_foreground_color);
 	optDouble->addActionListener(lineModeActionListener);
 
 	optScanlines = new gcn::RadioButton("Scanlines", "linemodegroup");
 	optScanlines->setId("optScanlines");
 	optScanlines->setBaseColor(gui_base_color);
-	optScanlines->setBackgroundColor(gui_textbox_background_color);
+	optScanlines->setBackgroundColor(gui_background_color);
 	optScanlines->setForegroundColor(gui_foreground_color);
 	optScanlines->addActionListener(lineModeActionListener);
 
 	optDouble2 = new gcn::RadioButton("Double, fields", "linemodegroup");
 	optDouble2->setId("optDouble2");
 	optDouble2->setBaseColor(gui_base_color);
-	optDouble2->setBackgroundColor(gui_textbox_background_color);
+	optDouble2->setBackgroundColor(gui_background_color);
 	optDouble2->setForegroundColor(gui_foreground_color);
 	optDouble2->addActionListener(lineModeActionListener);
 
 	optDouble3 = new gcn::RadioButton("Double, fields+", "linemodegroup");
 	optDouble3->setId("optDouble3");
 	optDouble3->setBaseColor(gui_base_color);
-	optDouble3->setBackgroundColor(gui_textbox_background_color);
+	optDouble3->setBackgroundColor(gui_background_color);
 	optDouble3->setForegroundColor(gui_foreground_color);
 	optDouble3->addActionListener(lineModeActionListener);
 	
@@ -951,28 +951,28 @@ void InitPanelDisplay(const config_category& category)
 	optISingle = new gcn::RadioButton("Single", "ilinemodegroup");
 	optISingle->setId("optISingle");
 	optISingle->setBaseColor(gui_base_color);
-	optISingle->setBackgroundColor(gui_textbox_background_color);
+	optISingle->setBackgroundColor(gui_background_color);
 	optISingle->setForegroundColor(gui_foreground_color);
 	optISingle->addActionListener(lineModeActionListener);
 
 	optIDouble = new gcn::RadioButton("Double, frames", "ilinemodegroup");
 	optIDouble->setId("optIDouble");
 	optIDouble->setBaseColor(gui_base_color);
-	optIDouble->setBackgroundColor(gui_textbox_background_color);
+	optIDouble->setBackgroundColor(gui_background_color);
 	optIDouble->setForegroundColor(gui_foreground_color);
 	optIDouble->addActionListener(lineModeActionListener);
 
 	optIDouble2 = new gcn::RadioButton("Double, fields", "ilinemodegroup");
 	optIDouble2->setId("optIDouble2");
 	optIDouble2->setBaseColor(gui_base_color);
-	optIDouble2->setBackgroundColor(gui_textbox_background_color);
+	optIDouble2->setBackgroundColor(gui_background_color);
 	optIDouble2->setForegroundColor(gui_foreground_color);
 	optIDouble2->addActionListener(lineModeActionListener);
 	
 	optIDouble3 = new gcn::RadioButton("Double, fields+", "ilinemodegroup");
 	optIDouble3->setId("optIDouble3");
 	optIDouble3->setBaseColor(gui_base_color);
-	optIDouble3->setBackgroundColor(gui_textbox_background_color);
+	optIDouble3->setBackgroundColor(gui_background_color);
 	optIDouble3->setForegroundColor(gui_foreground_color);
 	optIDouble3->addActionListener(lineModeActionListener);
 

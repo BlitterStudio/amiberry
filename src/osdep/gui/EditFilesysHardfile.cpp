@@ -411,7 +411,7 @@ static void InitEditFilesysHardfile()
 	txtHfPath->setSize(500, TEXTFIELD_HEIGHT);
 	txtHfPath->setId("txtHdfPath");
 	txtHfPath->setBaseColor(gui_base_color);
-	txtHfPath->setBackgroundColor(gui_textbox_background_color);
+	txtHfPath->setBackgroundColor(gui_background_color);
 	txtHfPath->setForegroundColor(gui_foreground_color);
 
 	cmdHfPath = new gcn::Button("...");
@@ -427,7 +427,7 @@ static void InitEditFilesysHardfile()
 	txtHfGeometry->setSize(500, TEXTFIELD_HEIGHT);
 	txtHfGeometry->setId("txtHdfGeometry");
 	txtHfGeometry->setBaseColor(gui_base_color);
-	txtHfGeometry->setBackgroundColor(gui_textbox_background_color);
+	txtHfGeometry->setBackgroundColor(gui_background_color);
 	txtHfGeometry->setForegroundColor(gui_foreground_color);
 
 	cmdHfGeometry = new gcn::Button("...");
@@ -443,7 +443,7 @@ static void InitEditFilesysHardfile()
 	txtHfFilesys->setSize(500, TEXTFIELD_HEIGHT);
 	txtHfFilesys->setId("txtHdfFilesys");
 	txtHfFilesys->setBaseColor(gui_base_color);
-	txtHfFilesys->setBackgroundColor(gui_textbox_background_color);
+	txtHfFilesys->setBackgroundColor(gui_background_color);
 	txtHfFilesys->setForegroundColor(gui_foreground_color);
 
 	cmdHfFilesys = new gcn::Button("...");
@@ -459,7 +459,7 @@ static void InitEditFilesysHardfile()
 	txtDevice->setId("txtHdfDev");
 	txtDevice->setSize(100, TEXTFIELD_HEIGHT);
 	txtDevice->setBaseColor(gui_base_color);
-	txtDevice->setBackgroundColor(gui_textbox_background_color);
+	txtDevice->setBackgroundColor(gui_background_color);
 	txtDevice->setForegroundColor(gui_foreground_color);
 	txtDevice->addFocusListener(filesysHardfileFocusListener);
 
@@ -469,35 +469,35 @@ static void InitEditFilesysHardfile()
 	txtBootPri->setId("txtHdfBootPri");
 	txtBootPri->setSize(40, TEXTFIELD_HEIGHT);
 	txtBootPri->setBaseColor(gui_base_color);
-	txtBootPri->setBackgroundColor(gui_textbox_background_color);
+	txtBootPri->setBackgroundColor(gui_background_color);
 	txtBootPri->setForegroundColor(gui_foreground_color);
 	txtBootPri->addFocusListener(filesysHardfileFocusListener);
 
 	chkReadWrite = new gcn::CheckBox("Read/Write", true);
 	chkReadWrite->setId("chkHdfRW");
 	chkReadWrite->setBaseColor(gui_base_color);
-	chkReadWrite->setBackgroundColor(gui_textbox_background_color);
+	chkReadWrite->setBackgroundColor(gui_background_color);
 	chkReadWrite->setForegroundColor(gui_foreground_color);
 	chkReadWrite->addActionListener(filesysHardfileActionListener);
 
 	chkVirtBootable = new gcn::CheckBox("Bootable", true);
 	chkVirtBootable->setId("hdfAutoboot");
 	chkVirtBootable->setBaseColor(gui_base_color);
-	chkVirtBootable->setBackgroundColor(gui_textbox_background_color);
+	chkVirtBootable->setBackgroundColor(gui_background_color);
 	chkVirtBootable->setForegroundColor(gui_foreground_color);
 	chkVirtBootable->addActionListener(filesysHardfileActionListener);
 
 	chkDoNotMount = new gcn::CheckBox("Do not mount");
 	chkDoNotMount->setId("chkHdfDoNotMount");
 	chkDoNotMount->setBaseColor(gui_base_color);
-	chkDoNotMount->setBackgroundColor(gui_textbox_background_color);
+	chkDoNotMount->setBackgroundColor(gui_background_color);
 	chkDoNotMount->setForegroundColor(gui_foreground_color);
 	chkDoNotMount->addActionListener(filesysHardfileActionListener);
 
 	chkRdbMode = new gcn::CheckBox("Full drive/RDB mode", false);
 	chkRdbMode->setId("chkHdfRDB");
 	chkRdbMode->setBaseColor(gui_base_color);
-	chkRdbMode->setBackgroundColor(gui_textbox_background_color);
+	chkRdbMode->setBackgroundColor(gui_background_color);
 	chkRdbMode->setForegroundColor(gui_foreground_color);
 	chkRdbMode->addActionListener(filesysHardfileActionListener);
 
@@ -506,7 +506,7 @@ static void InitEditFilesysHardfile()
 	cboController = new gcn::DropDown(&controllerListModel);
 	cboController->setSize(250, DROPDOWN_HEIGHT);
 	cboController->setBaseColor(gui_base_color);
-	cboController->setBackgroundColor(gui_textbox_background_color);
+	cboController->setBackgroundColor(gui_background_color);
 	cboController->setForegroundColor(gui_foreground_color);
 	cboController->setSelectionColor(gui_selection_color);
 	cboController->setId("cboHdfController");
@@ -515,7 +515,7 @@ static void InitEditFilesysHardfile()
 	cboUnit = new gcn::DropDown(&unitListModel);
 	cboUnit->setSize(80, DROPDOWN_HEIGHT);
 	cboUnit->setBaseColor(gui_base_color);
-	cboUnit->setBackgroundColor(gui_textbox_background_color);
+	cboUnit->setBackgroundColor(gui_background_color);
 	cboUnit->setForegroundColor(gui_foreground_color);
 	cboUnit->setSelectionColor(gui_selection_color);
 	cboUnit->setId("cboHdfUnit");
@@ -524,7 +524,7 @@ static void InitEditFilesysHardfile()
 	cboHdfControllerType = new gcn::DropDown(&hdfTypeListModel);
 	cboHdfControllerType->setSize(80, DROPDOWN_HEIGHT);
 	cboHdfControllerType->setBaseColor(gui_base_color);
-	cboHdfControllerType->setBackgroundColor(gui_textbox_background_color);
+	cboHdfControllerType->setBackgroundColor(gui_background_color);
 	cboHdfControllerType->setForegroundColor(gui_foreground_color);
 	cboHdfControllerType->setSelectionColor(gui_selection_color);
 	cboHdfControllerType->setId("cboHdfControllerType");
@@ -533,7 +533,7 @@ static void InitEditFilesysHardfile()
 	cboHdfFeatureLevel = new gcn::DropDown(&hdfFeatureLevelListModel);
 	cboHdfFeatureLevel->setSize(168, DROPDOWN_HEIGHT);
 	cboHdfFeatureLevel->setBaseColor(gui_base_color);
-	cboHdfFeatureLevel->setBackgroundColor(gui_textbox_background_color);
+	cboHdfFeatureLevel->setBackgroundColor(gui_background_color);
 	cboHdfFeatureLevel->setForegroundColor(gui_foreground_color);
 	cboHdfFeatureLevel->setSelectionColor(gui_selection_color);
 	cboHdfFeatureLevel->setId("cboHdfFeatureLevel");
@@ -542,14 +542,14 @@ static void InitEditFilesysHardfile()
 	txtHdfLine1 = new gcn::TextField();
 	txtHdfLine1->setSize(DIALOG_WIDTH - DISTANCE_BORDER * 2, TEXTFIELD_HEIGHT);
 	txtHdfLine1->setBaseColor(gui_base_color);
-	txtHdfLine1->setBackgroundColor(gui_textbox_background_color);
+	txtHdfLine1->setBackgroundColor(gui_background_color);
 	txtHdfLine1->setForegroundColor(gui_foreground_color);
 	txtHdfLine1->setEnabled(false);
 
 	txtHdfLine2 = new gcn::TextField();
 	txtHdfLine2->setSize(DIALOG_WIDTH - DISTANCE_BORDER * 2, TEXTFIELD_HEIGHT);
 	txtHdfLine2->setBaseColor(gui_base_color);
-	txtHdfLine2->setBackgroundColor(gui_textbox_background_color);
+	txtHdfLine2->setBackgroundColor(gui_background_color);
 	txtHdfLine2->setForegroundColor(gui_foreground_color);
 	txtHdfLine2->setEnabled(false);
 
@@ -558,7 +558,7 @@ static void InitEditFilesysHardfile()
 	txtSurfaces = new gcn::TextField();
 	txtSurfaces->setSize(60, TEXTFIELD_HEIGHT);
 	txtSurfaces->setBaseColor(gui_base_color);
-	txtSurfaces->setBackgroundColor(gui_textbox_background_color);
+	txtSurfaces->setBackgroundColor(gui_background_color);
 	txtSurfaces->setForegroundColor(gui_foreground_color);
 	txtSurfaces->addFocusListener(filesysHardfileFocusListener);
 
@@ -567,7 +567,7 @@ static void InitEditFilesysHardfile()
 	txtReserved = new gcn::TextField();
 	txtReserved->setSize(60, TEXTFIELD_HEIGHT);
 	txtReserved->setBaseColor(gui_base_color);
-	txtReserved->setBackgroundColor(gui_textbox_background_color);
+	txtReserved->setBackgroundColor(gui_background_color);
 	txtReserved->setForegroundColor(gui_foreground_color);
 	txtReserved->addFocusListener(filesysHardfileFocusListener);
 
@@ -576,7 +576,7 @@ static void InitEditFilesysHardfile()
 	txtSectors = new gcn::TextField();
 	txtSectors->setSize(60, TEXTFIELD_HEIGHT);
 	txtSectors->setBaseColor(gui_base_color);
-	txtSectors->setBackgroundColor(gui_textbox_background_color);
+	txtSectors->setBackgroundColor(gui_background_color);
 	txtSectors->setForegroundColor(gui_foreground_color);
 	txtSectors->addFocusListener(filesysHardfileFocusListener);
 
@@ -585,7 +585,7 @@ static void InitEditFilesysHardfile()
 	txtBlocksize = new gcn::TextField();
 	txtBlocksize->setSize(60, TEXTFIELD_HEIGHT);
 	txtBlocksize->setBaseColor(gui_base_color);
-	txtBlocksize->setBackgroundColor(gui_textbox_background_color);
+	txtBlocksize->setBackgroundColor(gui_background_color);
 	txtBlocksize->setForegroundColor(gui_foreground_color);
 	txtBlocksize->addFocusListener(filesysHardfileFocusListener);
 

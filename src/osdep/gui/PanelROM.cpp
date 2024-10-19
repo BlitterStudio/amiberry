@@ -221,7 +221,7 @@ void InitPanelROM(const config_category& category)
 	cboMainROM = new gcn::DropDown(mainROMList);
 	cboMainROM->setSize(textFieldWidth, cboMainROM->getHeight());
 	cboMainROM->setBaseColor(gui_base_color);
-	cboMainROM->setBackgroundColor(gui_textbox_background_color);
+	cboMainROM->setBackgroundColor(gui_background_color);
 	cboMainROM->setForegroundColor(gui_foreground_color);
 	cboMainROM->setSelectionColor(gui_selection_color);
 	cboMainROM->setId("cboMainROM");
@@ -237,7 +237,7 @@ void InitPanelROM(const config_category& category)
 	cboExtROM = new gcn::DropDown(extROMList);
 	cboExtROM->setSize(textFieldWidth, cboExtROM->getHeight());
 	cboExtROM->setBaseColor(gui_base_color);
-	cboExtROM->setBackgroundColor(gui_textbox_background_color);
+	cboExtROM->setBackgroundColor(gui_background_color);
 	cboExtROM->setForegroundColor(gui_foreground_color);
 	cboExtROM->setSelectionColor(gui_selection_color);
 	cboExtROM->setId("cboExtROM");
@@ -252,14 +252,14 @@ void InitPanelROM(const config_category& category)
 	chkMapRom = new gcn::CheckBox("MapROM emulation");
 	chkMapRom->setId("chkMapRom");
 	chkMapRom->setBaseColor(gui_base_color);
-	chkMapRom->setBackgroundColor(gui_textbox_background_color);
+	chkMapRom->setBackgroundColor(gui_background_color);
 	chkMapRom->setForegroundColor(gui_foreground_color);
 	chkMapRom->addActionListener(romButtonActionListener);
 
 	chkShapeShifter = new gcn::CheckBox("ShapeShifter support");
 	chkShapeShifter->setId("chkShapeShifter");
 	chkShapeShifter->setBaseColor(gui_base_color);
-	chkShapeShifter->setBackgroundColor(gui_textbox_background_color);
+	chkShapeShifter->setBackgroundColor(gui_background_color);
 	chkShapeShifter->setForegroundColor(gui_foreground_color);
 	chkShapeShifter->addActionListener(romButtonActionListener);
 
@@ -267,7 +267,7 @@ void InitPanelROM(const config_category& category)
 	cboCartROM = new gcn::DropDown(cartROMList);
 	cboCartROM->setSize(textFieldWidth, cboCartROM->getHeight());
 	cboCartROM->setBaseColor(gui_base_color);
-	cboCartROM->setBackgroundColor(gui_textbox_background_color);
+	cboCartROM->setBackgroundColor(gui_background_color);
 	cboCartROM->setForegroundColor(gui_foreground_color);
 	cboCartROM->setSelectionColor(gui_selection_color);
 	cboCartROM->setId("cboCartROM");
@@ -283,7 +283,7 @@ void InitPanelROM(const config_category& category)
 	cboUAEROM = new gcn::DropDown(&uaeList);
 	cboUAEROM->setSize(textFieldWidth, cboUAEROM->getHeight());
 	cboUAEROM->setBaseColor(gui_base_color);
-	cboUAEROM->setBackgroundColor(gui_textbox_background_color);\
+	cboUAEROM->setBackgroundColor(gui_background_color);\
 	cboUAEROM->setForegroundColor(gui_foreground_color);
 	cboUAEROM->setSelectionColor(gui_selection_color);
 	cboUAEROM->setId("cboUAEROM");

@@ -269,7 +269,7 @@ void InitPanelDiskSwapper(const config_category& category)
 			diskSwapperListCells[row][column]->setSize(diskswapper_column_size[column], SMALL_BUTTON_HEIGHT);
 			diskSwapperListCells[row][column]->setEnabled(false);
 			diskSwapperListCells[row][column]->setBaseColor(gui_base_color);
-			diskSwapperListCells[row][column]->setBackgroundColor(gui_textbox_background_color);
+			diskSwapperListCells[row][column]->setBackgroundColor(gui_background_color);
 			diskSwapperListCells[row][column]->setForegroundColor(gui_foreground_color);
 			if (column == 0)
 				diskSwapperListCells[row][column]->setText(std::to_string(row + 1));

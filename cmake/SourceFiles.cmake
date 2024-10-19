@@ -349,6 +349,7 @@ set(SOURCE_FILES
         src/osdep/gui/PanelMisc.cpp
         src/osdep/gui/PanelPrio.cpp
         src/osdep/gui/PanelSavestate.cpp
+        src/osdep/gui/PanelThemes.cpp
         src/osdep/gui/PanelVirtualKeyboard.cpp
         src/osdep/gui/PanelWHDLoad.cpp
         src/osdep/gui/main_window.cpp

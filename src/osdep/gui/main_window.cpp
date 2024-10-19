@@ -96,6 +96,8 @@ ConfigCategory categories[] = {
 	},
 	{"WHDLoad", "drive.ico", nullptr, nullptr, InitPanelWHDLoad, ExitPanelWHDLoad, RefreshPanelWHDLoad, HelpPanelWHDLoad},
 
+	{"Themes", "amigainfo.ico", nullptr, nullptr, InitPanelThemes, ExitPanelThemes, RefreshPanelThemes, HelpPanelThemes},
+
 	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
 
@@ -153,7 +155,7 @@ gcn::ScrollArea* selectorsScrollArea;
 
 // GUI Colors
 gcn::Color gui_base_color;
-gcn::Color gui_textbox_background_color;
+gcn::Color gui_background_color;
 gcn::Color gui_selector_inactive_color;
 gcn::Color gui_selector_active_color;
 gcn::Color gui_selection_color;
@@ -395,17 +397,12 @@ void amiberry_gui_init()
 	// Note, any surface will do, it doesn't have to be the screen.
 	gui_graphics->setTarget(gui_screen);
 	gui_input = new gcn::SDLInput();
-	uae_gui = new gcn::Gui();
-	uae_gui->setGraphics(gui_graphics);
-	uae_gui->setInput(gui_input);
 }
 
 void amiberry_gui_halt()
 {
 	AmigaMonitor* mon = &AMonitors[0];
 
-	delete uae_gui;
-	uae_gui = nullptr;
 	delete gui_imageLoader;
 	gui_imageLoader = nullptr;
 	delete gui_input;
@@ -1002,15 +999,19 @@ void gui_widgets_init()
 	int yPos;
 
 	//-------------------------------------------------
-	// Define base colors
+	// Create GUI
 	//-------------------------------------------------
-	gui_base_color = gui_theme.base_color;
-	gui_selector_inactive_color = gui_theme.selector_inactive;
-	gui_selector_active_color = gui_theme.selector_active;
-	gui_textbox_background_color = gui_theme.textbox_background;
-	gui_selection_color = gui_theme.selection_color;
-	gui_foreground_color = gui_theme.foreground_color;
-	gui_font_color = gui_theme.font_color;
+	uae_gui = new gcn::Gui();
+	uae_gui->setGraphics(gui_graphics);
+	uae_gui->setInput(gui_input);
+
+	//-------------------------------------------------
+	// Initialize fonts
+	//-------------------------------------------------
+	TTF_Init();
+
+	load_theme(amiberry_options.gui_theme);
+	apply_theme();
 
 	//-------------------------------------------------
 	// Create container for main page
@@ -1021,45 +1022,6 @@ void gui_widgets_init()
 	gui_top->setBackgroundColor(gui_base_color);
 	gui_top->setForegroundColor(gui_foreground_color);
 	uae_gui->setTop(gui_top);
-
-	//-------------------------------------------------
-	// Initialize fonts
-	//-------------------------------------------------
-	TTF_Init();
-
-	try
-	{
-		// Check if the font_name contains the full path to the file (e.g. in /usr/share/fonts)
-		if (my_existsfile2(gui_theme.font_name.c_str()))
-		{
-			gui_font = new gcn::SDLTrueTypeFont(gui_theme.font_name, gui_theme.font_size);
-		}
-		else
-		{
-			// Try to open it from the data directory
-			std::string font = get_data_path();
-			font.append(gui_theme.font_name);
-			gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
-		}
-		gui_font->setAntiAlias(false);
-		gui_font->setColor(gui_font_color);
-	}
-	catch (gcn::Exception& e)
-	{
-		gui_running = false;
-		std::cout << e.getMessage() << '\n';
-		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", e.getMessage().c_str());
-		abort();
-	}
-	catch (std::exception& ex)
-	{
-		gui_running = false;
-		cout << ex.what() << '\n';
-		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
-		abort();
-	}
-
-	gcn::Widget::setGlobalFont(gui_font);
 
 	//--------------------------------------------------
 	// Create main buttons
@@ -1116,15 +1078,15 @@ void gui_widgets_init()
 	constexpr auto workAreaHeight = GUI_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y;
 	selectors = new gcn::Container();
 	selectors->setFrameSize(0);
-	selectors->setBaseColor(gui_selector_inactive_color);
+	selectors->setBaseColor(gui_base_color);
 	selectors->setBackgroundColor(gui_base_color);
 	selectors->setForegroundColor(gui_foreground_color);
 
 	constexpr auto selectorScrollAreaWidth = SELECTOR_WIDTH + 2;
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
-	selectorsScrollArea->setBaseColor(gui_selector_inactive_color);
-	selectorsScrollArea->setBackgroundColor(gui_selector_inactive_color);
+	selectorsScrollArea->setBaseColor(gui_base_color);
+	selectorsScrollArea->setBackgroundColor(gui_base_color);
 	selectorsScrollArea->setForegroundColor(gui_foreground_color);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setFrameSize(1);
@@ -1224,6 +1186,8 @@ void gui_widgets_halt()
 	gui_font = nullptr;
 	delete gui_top;
 	gui_top = nullptr;
+	delete uae_gui;
+	uae_gui = nullptr;
 }
 
 void refresh_all_panels()

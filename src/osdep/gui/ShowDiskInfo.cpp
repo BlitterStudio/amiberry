@@ -61,7 +61,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	                 DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	lstInfo->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	lstInfo->setBaseColor(gui_base_color);
-	lstInfo->setBackgroundColor(gui_textbox_background_color);
+	lstInfo->setBackgroundColor(gui_background_color);
 	lstInfo->setForegroundColor(gui_foreground_color);
 	lstInfo->setSelectionColor(gui_selection_color);
 	lstInfo->setWrappingEnabled(true);
@@ -73,7 +73,7 @@ static void InitShowDiskInfo(const std::vector<std::string>& infotext)
 	                     DIALOG_HEIGHT - 3 * DISTANCE_BORDER - BUTTON_HEIGHT - DISTANCE_NEXT_Y - 10);
 	scrAreaInfo->setScrollbarWidth(SCROLLBAR_WIDTH);
 	scrAreaInfo->setBaseColor(gui_base_color);
-	scrAreaInfo->setBackgroundColor(gui_textbox_background_color);
+	scrAreaInfo->setBackgroundColor(gui_background_color);
 	scrAreaInfo->setForegroundColor(gui_foreground_color);
 	scrAreaInfo->setSelectionColor(gui_selection_color);
 

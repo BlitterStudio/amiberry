@@ -393,7 +393,7 @@ void InitPanelPaths(const config_category& category)
 	txtSystemROMs = new gcn::TextField();
 	txtSystemROMs->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtSystemROMs->setBaseColor(gui_base_color);
-	txtSystemROMs->setBackgroundColor(gui_textbox_background_color);
+	txtSystemROMs->setBackgroundColor(gui_background_color);
 	txtSystemROMs->setForegroundColor(gui_foreground_color);
 
 	cmdSystemROMs = new gcn::Button("...");
@@ -407,7 +407,7 @@ void InitPanelPaths(const config_category& category)
 	txtConfigPath = new gcn::TextField();
 	txtConfigPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtConfigPath->setBaseColor(gui_base_color);
-	txtConfigPath->setBackgroundColor(gui_textbox_background_color);
+	txtConfigPath->setBackgroundColor(gui_background_color);
 	txtConfigPath->setForegroundColor(gui_foreground_color);
 
 	cmdConfigPath = new gcn::Button("...");
@@ -422,7 +422,7 @@ void InitPanelPaths(const config_category& category)
 	txtNvramFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtNvramFiles->setBaseColor(gui_base_color);
 	txtNvramFiles->setForegroundColor(gui_foreground_color);
-	txtNvramFiles->setBackgroundColor(gui_textbox_background_color);
+	txtNvramFiles->setBackgroundColor(gui_background_color);
 
 	cmdNvramFiles = new gcn::Button("...");
 	cmdNvramFiles->setId("cmdNvramFiles");
@@ -435,7 +435,7 @@ void InitPanelPaths(const config_category& category)
 	txtPluginFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtPluginFiles->setBaseColor(gui_base_color);
 	txtPluginFiles->setForegroundColor(gui_foreground_color);
-	txtPluginFiles->setBackgroundColor(gui_textbox_background_color);
+	txtPluginFiles->setBackgroundColor(gui_background_color);
 
 	cmdPluginFiles = new gcn::Button("...");
 	cmdPluginFiles->setId("cmdPluginFiles");
@@ -448,7 +448,7 @@ void InitPanelPaths(const config_category& category)
 	txtScreenshotFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtScreenshotFiles->setBaseColor(gui_base_color);
 	txtScreenshotFiles->setForegroundColor(gui_foreground_color);
-	txtScreenshotFiles->setBackgroundColor(gui_textbox_background_color);
+	txtScreenshotFiles->setBackgroundColor(gui_background_color);
 
 	cmdScreenshotFiles = new gcn::Button("...");
 	cmdScreenshotFiles->setId("cmdScreenshotFiles");
@@ -461,7 +461,7 @@ void InitPanelPaths(const config_category& category)
 	txtStateFiles->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtStateFiles->setBaseColor(gui_base_color);
 	txtStateFiles->setForegroundColor(gui_foreground_color);
-	txtStateFiles->setBackgroundColor(gui_textbox_background_color);
+	txtStateFiles->setBackgroundColor(gui_background_color);
 
 	cmdStateFiles = new gcn::Button("...");
 	cmdStateFiles->setId("cmdStateFiles");
@@ -474,7 +474,7 @@ void InitPanelPaths(const config_category& category)
 	txtControllersPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtControllersPath->setBaseColor(gui_base_color);
 	txtControllersPath->setForegroundColor(gui_foreground_color);
-	txtControllersPath->setBackgroundColor(gui_textbox_background_color);
+	txtControllersPath->setBackgroundColor(gui_background_color);
 
 	cmdControllersPath = new gcn::Button("...");
 	cmdControllersPath->setId("cmdControllersPath");
@@ -488,7 +488,7 @@ void InitPanelPaths(const config_category& category)
 	txtRetroArchFile->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtRetroArchFile->setBaseColor(gui_base_color);
 	txtRetroArchFile->setForegroundColor(gui_foreground_color);
-	txtRetroArchFile->setBackgroundColor(gui_textbox_background_color);
+	txtRetroArchFile->setBackgroundColor(gui_background_color);
 
 	cmdRetroArchFile = new gcn::Button("...");
 	cmdRetroArchFile->setId("cmdRetroArchFile");
@@ -502,7 +502,7 @@ void InitPanelPaths(const config_category& category)
 	txtWHDBootPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtWHDBootPath->setBaseColor(gui_base_color);
 	txtWHDBootPath->setForegroundColor(gui_foreground_color);
-	txtWHDBootPath->setBackgroundColor(gui_textbox_background_color);
+	txtWHDBootPath->setBackgroundColor(gui_background_color);
 
 	cmdWHDBootPath = new gcn::Button("...");
 	cmdWHDBootPath->setId("cmdWHDBootPath");
@@ -516,7 +516,7 @@ void InitPanelPaths(const config_category& category)
 	txtWHDLoadArchPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtWHDLoadArchPath->setBaseColor(gui_base_color);
 	txtWHDLoadArchPath->setForegroundColor(gui_foreground_color);
-	txtWHDLoadArchPath->setBackgroundColor(gui_textbox_background_color);
+	txtWHDLoadArchPath->setBackgroundColor(gui_background_color);
 
 	cmdWHDLoadArchPath = new gcn::Button("...");
 	cmdWHDLoadArchPath->setId("cmdWHDLoadArchPath");
@@ -530,7 +530,7 @@ void InitPanelPaths(const config_category& category)
 	txtFloppyPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtFloppyPath->setBaseColor(gui_base_color);
 	txtFloppyPath->setForegroundColor(gui_foreground_color);
-	txtFloppyPath->setBackgroundColor(gui_textbox_background_color);
+	txtFloppyPath->setBackgroundColor(gui_background_color);
 
 	cmdFloppyPath = new gcn::Button("...");
 	cmdFloppyPath->setId("cmdFloppyPath");
@@ -544,7 +544,7 @@ void InitPanelPaths(const config_category& category)
 	txtCDPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtCDPath->setBaseColor(gui_base_color);
 	txtCDPath->setForegroundColor(gui_foreground_color);
-	txtCDPath->setBackgroundColor(gui_textbox_background_color);
+	txtCDPath->setBackgroundColor(gui_background_color);
 
 	cmdCDPath = new gcn::Button("...");
 	cmdCDPath->setId("cmdCDPath");
@@ -557,7 +557,7 @@ void InitPanelPaths(const config_category& category)
 	txtHardDrivesPath = new gcn::TextField();
 	txtHardDrivesPath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtHardDrivesPath->setBaseColor(gui_base_color);
-	txtHardDrivesPath->setBackgroundColor(gui_textbox_background_color);
+	txtHardDrivesPath->setBackgroundColor(gui_background_color);
 	txtHardDrivesPath->setForegroundColor(gui_foreground_color);
 
 	cmdHardDrivesPath = new gcn::Button("...");
@@ -571,13 +571,13 @@ void InitPanelPaths(const config_category& category)
 	chkEnableLogging = new gcn::CheckBox("Enable logging", true);
 	chkEnableLogging->setId("chkEnableLogging");
 	chkEnableLogging->setBaseColor(gui_base_color);
-	chkEnableLogging->setBackgroundColor(gui_textbox_background_color);
+	chkEnableLogging->setBackgroundColor(gui_background_color);
 	chkEnableLogging->setForegroundColor(gui_foreground_color);
 	chkEnableLogging->addActionListener(enableLoggingActionListener);
 	chkLogToConsole = new gcn::CheckBox("Log to console", false);
 	chkLogToConsole->setId("chkLogToConsole");
 	chkLogToConsole->setBaseColor(gui_base_color);
-	chkLogToConsole->setBackgroundColor(gui_textbox_background_color);
+	chkLogToConsole->setBackgroundColor(gui_background_color);
 	chkLogToConsole->setForegroundColor(gui_foreground_color);
 	chkLogToConsole->addActionListener(enableLoggingActionListener);
 	
@@ -585,7 +585,7 @@ void InitPanelPaths(const config_category& category)
 	txtLogfilePath = new gcn::TextField();
 	txtLogfilePath->setSize(textFieldWidth, TEXTFIELD_HEIGHT);
 	txtLogfilePath->setBaseColor(gui_base_color);
-	txtLogfilePath->setBackgroundColor(gui_textbox_background_color);
+	txtLogfilePath->setBackgroundColor(gui_background_color);
 	txtLogfilePath->setForegroundColor(gui_foreground_color);
 
 	cmdLogfilePath = new gcn::Button("...");
@@ -598,7 +598,7 @@ void InitPanelPaths(const config_category& category)
 	int yPos = DISTANCE_BORDER;
 	grpPaths->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpPaths->setBaseColor(gui_base_color);
-	grpPaths->setBackgroundColor(gui_textbox_background_color);
+	grpPaths->setBackgroundColor(gui_background_color);
 
 	grpPaths->add(lblSystemROMs, DISTANCE_BORDER, yPos);
 	yPos += lblSystemROMs->getHeight() + DISTANCE_NEXT_Y / 2;
@@ -683,7 +683,7 @@ void InitPanelPaths(const config_category& category)
 	scrlPaths = new gcn::ScrollArea(grpPaths);
 	scrlPaths->setId("scrlPaths");
 	scrlPaths->setBaseColor(gui_base_color);
-	scrlPaths->setBackgroundColor(gui_textbox_background_color);
+	scrlPaths->setBackgroundColor(gui_background_color);
 	scrlPaths->setForegroundColor(gui_foreground_color);
 	scrlPaths->setWidth(category.panel->getWidth() - DISTANCE_BORDER * 2);
 	scrlPaths->setHeight(category.panel->getHeight() - TEXTFIELD_HEIGHT * 6);

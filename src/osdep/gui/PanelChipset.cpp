@@ -179,56 +179,56 @@ void InitPanelChipset(const struct config_category& category)
 	optOCS = new gcn::RadioButton("OCS", "radiochipsetgroup");
 	optOCS->setId("optOCS");
 	optOCS->setBaseColor(gui_base_color);
-	optOCS->setBackgroundColor(gui_textbox_background_color);
+	optOCS->setBackgroundColor(gui_background_color);
 	optOCS->setForegroundColor(gui_foreground_color);
 	optOCS->addActionListener(chipsetActionListener);
 
 	optECSAgnus = new gcn::RadioButton("ECS Agnus", "radiochipsetgroup");
 	optECSAgnus->setId("optECSAgnus");
 	optECSAgnus->setBaseColor(gui_base_color);
-	optECSAgnus->setBackgroundColor(gui_textbox_background_color);
+	optECSAgnus->setBackgroundColor(gui_background_color);
 	optECSAgnus->setForegroundColor(gui_foreground_color);
 	optECSAgnus->addActionListener(chipsetActionListener);
 
 	optECSDenise = new gcn::RadioButton("ECS Denise", "radiochipsetgroup");
 	optECSDenise->setId("optECSDenise");
 	optECSDenise->setBaseColor(gui_base_color);
-	optECSDenise->setBackgroundColor(gui_textbox_background_color);
+	optECSDenise->setBackgroundColor(gui_background_color);
 	optECSDenise->setForegroundColor(gui_foreground_color);
 	optECSDenise->addActionListener(chipsetActionListener);
 	
 	optECS = new gcn::RadioButton("Full ECS", "radiochipsetgroup");
 	optECS->setId("optFullECS");
 	optECS->setBaseColor(gui_base_color);
-	optECS->setBackgroundColor(gui_textbox_background_color);
+	optECS->setBackgroundColor(gui_background_color);
 	optECS->setForegroundColor(gui_foreground_color);
 	optECS->addActionListener(chipsetActionListener);
 
 	optAGA = new gcn::RadioButton("AGA", "radiochipsetgroup");
 	optAGA->setId("optAGA");
 	optAGA->setBaseColor(gui_base_color);
-	optAGA->setBackgroundColor(gui_textbox_background_color);
+	optAGA->setBackgroundColor(gui_background_color);
 	optAGA->setForegroundColor(gui_foreground_color);
 	optAGA->addActionListener(chipsetActionListener);
 
 	chkNTSC = new gcn::CheckBox("NTSC");
 	chkNTSC->setId("chkNTSC");
 	chkNTSC->setBaseColor(gui_base_color);
-	chkNTSC->setBackgroundColor(gui_textbox_background_color);
+	chkNTSC->setBackgroundColor(gui_background_color);
 	chkNTSC->setForegroundColor(gui_foreground_color);
 	chkNTSC->addActionListener(chipsetActionListener);
 
 	chkCycleExact = new gcn::CheckBox("Cycle Exact (Full)");
 	chkCycleExact->setId("chkCycleExact");
 	chkCycleExact->setBaseColor(gui_base_color);
-	chkCycleExact->setBackgroundColor(gui_textbox_background_color);
+	chkCycleExact->setBackgroundColor(gui_background_color);
 	chkCycleExact->setForegroundColor(gui_foreground_color);
 	chkCycleExact->addActionListener(chipsetActionListener);
 
 	chkMemoryCycleExact = new gcn::CheckBox("Cycle Exact (DMA/Memory)");
 	chkMemoryCycleExact->setId("chkMemoryCycleExact");
 	chkMemoryCycleExact->setBaseColor(gui_base_color);
-	chkMemoryCycleExact->setBackgroundColor(gui_textbox_background_color);
+	chkMemoryCycleExact->setBackgroundColor(gui_background_color);
 	chkMemoryCycleExact->setForegroundColor(gui_foreground_color);
 	chkMemoryCycleExact->addActionListener(chipsetActionListener);
 
@@ -237,7 +237,7 @@ void InitPanelChipset(const struct config_category& category)
 	cboChipset = new gcn::DropDown(&chipsetList);
 	cboChipset->setSize(120, cboChipset->getHeight());
 	cboChipset->setBaseColor(gui_base_color);
-	cboChipset->setBackgroundColor(gui_textbox_background_color);
+	cboChipset->setBackgroundColor(gui_background_color);
 	cboChipset->setForegroundColor(gui_foreground_color);
 	cboChipset->setSelectionColor(gui_selection_color);
 	cboChipset->setId("cboChipset");
@@ -267,35 +267,35 @@ void InitPanelChipset(const struct config_category& category)
 	chkKeyboardConnected = new gcn::CheckBox("Keyboard connected");
 	chkKeyboardConnected->setId("chkKeyboardConnected");
 	chkKeyboardConnected->setBaseColor(gui_base_color);
-	chkKeyboardConnected->setBackgroundColor(gui_textbox_background_color);
+	chkKeyboardConnected->setBackgroundColor(gui_background_color);
 	chkKeyboardConnected->setForegroundColor(gui_foreground_color);
 	chkKeyboardConnected->addActionListener(chipsetActionListener);
 
 	chkSubpixelEmu = new gcn::CheckBox("Subpixel Display emulation");
 	chkSubpixelEmu->setId("chkSubpixelEmu");
 	chkSubpixelEmu->setBaseColor(gui_base_color);
-	chkSubpixelEmu->setBackgroundColor(gui_textbox_background_color);
+	chkSubpixelEmu->setBackgroundColor(gui_background_color);
 	chkSubpixelEmu->setForegroundColor(gui_foreground_color);
 	chkSubpixelEmu->addActionListener(chipsetActionListener);
 
 	chkBlitImmed = new gcn::CheckBox("Immediate Blitter");
 	chkBlitImmed->setId("chkBlitImmed");
 	chkBlitImmed->setBaseColor(gui_base_color);
-	chkBlitImmed->setBackgroundColor(gui_textbox_background_color);
+	chkBlitImmed->setBackgroundColor(gui_background_color);
 	chkBlitImmed->setForegroundColor(gui_foreground_color);
 	chkBlitImmed->addActionListener(chipsetActionListener);
 
 	chkBlitWait = new gcn::CheckBox("Wait for Blitter");
 	chkBlitWait->setId("chkBlitWait");
 	chkBlitWait->setBaseColor(gui_base_color);
-	chkBlitWait->setBackgroundColor(gui_textbox_background_color);
+	chkBlitWait->setBackgroundColor(gui_background_color);
 	chkBlitWait->setForegroundColor(gui_foreground_color);
 	chkBlitWait->addActionListener(chipsetActionListener);
 
 	chkMultithreadedDrawing = new gcn::CheckBox("Multithreaded Drawing");
 	chkMultithreadedDrawing->setId("chkMultithreadedDrawing");
 	chkMultithreadedDrawing->setBaseColor(gui_base_color);
-	chkMultithreadedDrawing->setBackgroundColor(gui_textbox_background_color);
+	chkMultithreadedDrawing->setBackgroundColor(gui_background_color);
 	chkMultithreadedDrawing->setForegroundColor(gui_foreground_color);
 	chkMultithreadedDrawing->addActionListener(chipsetActionListener);
 
@@ -304,7 +304,7 @@ void InitPanelChipset(const struct config_category& category)
 	cboSpecialMonitors = new gcn::DropDown(&specialMonitorsList);
 	cboSpecialMonitors->setSize(lblSpecialMonitors->getWidth(), cboSpecialMonitors->getHeight());
 	cboSpecialMonitors->setBaseColor(gui_base_color);
-	cboSpecialMonitors->setBackgroundColor(gui_textbox_background_color);
+	cboSpecialMonitors->setBackgroundColor(gui_background_color);
 	cboSpecialMonitors->setForegroundColor(gui_foreground_color);
 	cboSpecialMonitors->setSelectionColor(gui_selection_color);
 	cboSpecialMonitors->setId("cboSpecialMonitors");
@@ -331,28 +331,28 @@ void InitPanelChipset(const struct config_category& category)
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("optCollNone");
 	optCollNone->setBaseColor(gui_base_color);
-	optCollNone->setBackgroundColor(gui_textbox_background_color);
+	optCollNone->setBackgroundColor(gui_background_color);
 	optCollNone->setForegroundColor(gui_foreground_color);
 	optCollNone->addActionListener(chipsetActionListener);
 
 	optCollSprites = new gcn::RadioButton("Sprites only", "radioccollisiongroup");
 	optCollSprites->setId("optCollSprites");
 	optCollSprites->setBaseColor(gui_base_color);
-	optCollSprites->setBackgroundColor(gui_textbox_background_color);
+	optCollSprites->setBackgroundColor(gui_background_color);
 	optCollSprites->setForegroundColor(gui_foreground_color);
 	optCollSprites->addActionListener(chipsetActionListener);
 
 	optCollPlayfield = new gcn::RadioButton("Sprites and Sprites vs. Playfield", "radioccollisiongroup");
 	optCollPlayfield->setId("optCollPlayfield");
 	optCollPlayfield->setBaseColor(gui_base_color);
-	optCollPlayfield->setBackgroundColor(gui_textbox_background_color);
+	optCollPlayfield->setBackgroundColor(gui_background_color);
 	optCollPlayfield->setForegroundColor(gui_foreground_color);
 	optCollPlayfield->addActionListener(chipsetActionListener);
 
 	optCollFull = new gcn::RadioButton("Full (rarely needed)", "radioccollisiongroup");
 	optCollFull->setId("optCollFull");
 	optCollFull->setBaseColor(gui_base_color);
-	optCollFull->setBackgroundColor(gui_textbox_background_color);
+	optCollFull->setBackgroundColor(gui_background_color);
 	optCollFull->setForegroundColor(gui_foreground_color);
 	optCollFull->addActionListener(chipsetActionListener);
 
