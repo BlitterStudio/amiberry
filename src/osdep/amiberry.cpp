@@ -4043,11 +4043,11 @@ void create_missing_amiberry_folders()
 	{
 		my_mkdir(themes_path.c_str());
 	}
-	std::string default_theme_file = themes_path + "default.cfg";
+	std::string default_theme_file = themes_path + "default.theme";
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
 		load_default_theme();
-		save_theme("default.cfg");
+		save_theme("default.theme");
 	}
 }
 
@@ -4075,11 +4075,12 @@ static void init_amiberry_dirs()
 
 	// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
 	amiberry_conf_file = xdg_config_home + "/amiberry.conf";
+	themes_path = xdg_config_home;
 
 	// These paths are relative to the XDG_DATA_HOME directory
     controllers_path = whdboot_path = saveimage_dir = savestate_dir =
     ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
-	themes_path = xdg_data_home;
+	xdg_data_home;
 
 	// These go in $HOME/Amiberry by default
     whdload_arch_path = floppy_path = harddrive_path =

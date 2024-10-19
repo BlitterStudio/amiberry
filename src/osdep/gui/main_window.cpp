@@ -1010,6 +1010,7 @@ void gui_widgets_init()
 	//-------------------------------------------------
 	TTF_Init();
 
+	load_theme(amiberry_options.gui_theme);
 	apply_theme();
 
 	//-------------------------------------------------

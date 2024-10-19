@@ -1440,6 +1440,10 @@ void apply_theme()
 	gui_foreground_color = gui_theme.foreground_color;
 	gui_font_color = gui_theme.font_color;
 
+	if (gui_theme.font_name.empty())
+	{
+		load_default_theme();
+	}
 	try
 	{
 		// Check if the font_name contains the full path to the file (e.g. in /usr/share/fonts)
