@@ -118,7 +118,7 @@ static void checkfoldername(const std::string& current)
 	txtCurrent->setText(workingDir);
 }
 
-static void checkfilename(std::string current)
+static void checkfilename(const std::string& current)
 {
 	char actfile[MAX_DPATH];
 	extract_filename(current.c_str(), actfile);
@@ -145,7 +145,7 @@ public:
 			{
 				if (txtFilename->getText().empty())
 					return;
-				std::string tmp = workingDir + "/" + fileList->getElementAt(selected_item);
+				std::string tmp = workingDir + "/" + txtFilename->getText();
 
 				if (filefilter != nullptr) {
 					if (tmp.find(filefilter[0]) == std::string::npos)
