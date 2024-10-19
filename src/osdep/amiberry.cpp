@@ -4043,11 +4043,11 @@ void create_missing_amiberry_folders()
 	{
 		my_mkdir(themes_path.c_str());
 	}
-	std::string default_theme_file = themes_path + "default.theme";
+	std::string default_theme_file = themes_path + "Default.theme";
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
 		load_default_theme();
-		save_theme("default.theme");
+		save_theme("Default.theme");
 	}
 }
 
