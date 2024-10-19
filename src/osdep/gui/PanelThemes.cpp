@@ -471,6 +471,8 @@ bool HelpPanelThemes(std::vector<std::string>& helptext)
 	helptext.clear();
 	helptext.emplace_back("The themes panel allows you to customize the look of the GUI.");
 	helptext.emplace_back(" ");
+    helptext.emplace_back("The 'Theme' dropdown allows you to select a theme.");
+    helptext.emplace_back(" ");
 	helptext.emplace_back("Font: The font to use for the GUI.");
 	helptext.emplace_back("Font size: The size of the font.");
 	helptext.emplace_back("Font color: The color of the font.");
@@ -478,7 +480,13 @@ bool HelpPanelThemes(std::vector<std::string>& helptext)
 	helptext.emplace_back("Selector inactive color: The color of the inactive selector.");
 	helptext.emplace_back("Selector active color: The color of the active selector.");
 	helptext.emplace_back("Selection color: The color of the selection.");
-	helptext.emplace_back("Text background color: The color of the text background.");
+	helptext.emplace_back("Background color: The color of the background.");
     helptext.emplace_back("Foreground color: The color of the foreground.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The 'Save' button saves the current theme.");
+	helptext.emplace_back("The 'Save as...' button saves the current theme with a new name.");
+	helptext.emplace_back("The 'Reset' button resets the current theme to the default theme.");
+	helptext.emplace_back("The 'Use' button applies the current theme.");
+	helptext.emplace_back(" ");
 	return true;
 }
