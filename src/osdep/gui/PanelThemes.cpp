@@ -46,6 +46,7 @@ static RGBColorComponents themeFgColor;
 
 // Save, Reset and Load buttons
 static gcn::Button* cmdThemeSave;
+static gcn::Button* cmdThemeSaveAs;
 static gcn::Button* cmdThemeReset;
 static gcn::Button* cmdThemeUse;
 
@@ -89,6 +90,17 @@ class ThemesActionListener : public gcn::ActionListener
         else if (source == cmdThemeSave)
         {
             save_theme(amiberry_options.gui_theme);
+        }
+        else if (source == cmdThemeSaveAs)
+        {
+			const char* filter[] = { ".theme", "\0" };
+			const std::string theme = SelectFile("Save theme", get_themes_path(), filter, true);
+            if (!theme.empty())
+            {
+                std::string filename = extract_filename(theme);
+                save_theme(filename);
+				populate_themes_list();
+            }
         }
         else if (source == cmdThemeUse)
         {
@@ -213,6 +225,16 @@ gcn::Button* CreateButton(const std::string& caption, const std::string& id) {
     return button;
 }
 
+gcn::Button* CreateSmallButton(const std::string& caption, const std::string& id) {
+	auto button = new gcn::Button(caption);
+	button->setId(id);
+	button->setSize(100, SMALL_BUTTON_HEIGHT);
+	button->setBaseColor(gui_base_color);
+	button->setForegroundColor(gui_foreground_color);
+	button->addActionListener(themesActionListener);
+	return button;
+}
+
 gcn::DropDown* CreateDropDown(const std::string& id) {
 	auto dropDown = new gcn::DropDown(&themes_list);
 	dropDown->setSize(200, dropDown->getHeight());
@@ -271,6 +293,10 @@ void PositionComponents(const config_category& category) {
 	category.panel->add(lblThemePreset, pos_x, pos_y);
 	pos_x += lblThemePreset->getWidth() + 8;
 	category.panel->add(cboThemePreset, pos_x, pos_y);
+	pos_x += cboThemePreset->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(cmdThemeSave, pos_x, pos_y);
+	pos_x += cmdThemeSave->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(cmdThemeSaveAs, pos_x, pos_y);
 	pos_y += cboThemePreset->getHeight() + DISTANCE_NEXT_Y;
 
 	pos_x = DISTANCE_BORDER;
@@ -310,11 +336,9 @@ void PositionComponents(const config_category& category) {
     pos_x = DISTANCE_BORDER;
     pos_y = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
 
-    category.panel->add(cmdThemeSave, pos_x, pos_y);
-    pos_x += cmdThemeSave->getWidth() + DISTANCE_NEXT_X;
-    category.panel->add(cmdThemeReset, pos_x, pos_y);
-    pos_x += cmdThemeReset->getWidth() + DISTANCE_NEXT_X;
     category.panel->add(cmdThemeUse, pos_x, pos_y);
+	pos_x += cmdThemeUse->getWidth() + DISTANCE_NEXT_X;
+    category.panel->add(cmdThemeReset, pos_x, pos_y);
 }
 
 void InitPanelThemes(const config_category& category)
@@ -353,7 +377,8 @@ void InitPanelThemes(const config_category& category)
     InitRGBColorComponents(themeTextBgColor, "Background color");
     InitRGBColorComponents(themeFgColor, "Foreground color");
 
-    cmdThemeSave = CreateButton("Save", "cmdThemeSave");
+    cmdThemeSave = CreateSmallButton("Save", "cmdThemeSave");
+	cmdThemeSaveAs = CreateSmallButton("Save as...", "cmdThemeSaveAs");
     cmdThemeReset = CreateButton("Reset", "cmdThemeReset");
     cmdThemeUse = CreateButton("Use", "cmdThemeUse");
 
@@ -396,6 +421,7 @@ void ExitPanelThemes()
     DeleteRGBColorComponents(themeFgColor);
 
     delete cmdThemeSave;
+	delete cmdThemeSaveAs;
     delete cmdThemeReset;
     delete cmdThemeUse;
 
