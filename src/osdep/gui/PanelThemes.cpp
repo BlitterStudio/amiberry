@@ -356,6 +356,7 @@ void InitPanelThemes(const config_category& category)
 	txtThemeFont->setForegroundColor(gui_foreground_color);
 
 	cmdThemeFont = new gcn::Button("...");
+	cmdThemeFont->setId("cmdThemeFont");
 	cmdThemeFont->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 	cmdThemeFont->setBaseColor(gui_base_color);
 	cmdThemeFont->setForegroundColor(gui_foreground_color);
