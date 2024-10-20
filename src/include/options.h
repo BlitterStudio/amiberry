@@ -1350,7 +1350,7 @@ struct amiberry_options
 	bool default_whd_writecache = false;
 	bool default_whd_quit_on_exit = false;
 	bool use_jst_instead_of_whd = false;
-	bool disable_shutdown_button = false;
+	bool disable_shutdown_button = true;
 	bool allow_display_settings_from_xml = true;
 	int default_soundcard = 0;
 	bool default_vkbd_enabled;
