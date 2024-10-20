@@ -1488,7 +1488,11 @@ void apply_theme()
 	gcn::Widget::setGlobalForegroundColor(gui_foreground_color);
 	gcn::Widget::setGlobalBackgroundColor(gui_background_color);
 	gcn::Widget::setGlobalSelectionColor(gui_selection_color);
+}
 
+// Extra theme settings, that should be called separately from the above function
+void apply_theme_extras()
+{
 	if (selectors != nullptr)
 	{
 		selectors->setBaseColor(gui_base_color);

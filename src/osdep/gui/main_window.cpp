@@ -1116,6 +1116,9 @@ void gui_widgets_init()
 
 	selectors->setSize(SELECTOR_WIDTH, selectorsHeight);
 
+	// These need to be called after the selectors have been created
+	apply_theme_extras();
+
 	//--------------------------------------------------
 	// Initialize panels
 	//--------------------------------------------------

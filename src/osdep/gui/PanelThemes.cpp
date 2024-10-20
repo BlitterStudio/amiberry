@@ -108,6 +108,7 @@ class ThemesActionListener : public gcn::ActionListener
         {
 			gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
             apply_theme();
+			apply_theme_extras();
         }
 		else if (source == cboThemePreset)
 		{
@@ -121,6 +122,7 @@ class ThemesActionListener : public gcn::ActionListener
                     std::strcpy(amiberry_options.gui_theme, theme.c_str());
 					load_theme(theme);
                     apply_theme();
+                    apply_theme_extras();
 				}
 			}
 		}

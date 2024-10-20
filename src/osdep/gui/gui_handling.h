@@ -433,6 +433,7 @@ extern void save_theme(const std::string& theme_filename);
 extern void load_theme(const std::string& theme_filename);
 extern void load_default_theme();
 extern void apply_theme();
+extern void apply_theme_extras();
 
 extern void SetLastActiveConfig(const char* filename);
 
