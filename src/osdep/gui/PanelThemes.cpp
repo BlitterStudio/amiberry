@@ -89,10 +89,12 @@ class ThemesActionListener : public gcn::ActionListener
         }
         else if (source == cmdThemeSave)
         {
+            gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
             save_theme(amiberry_options.gui_theme);
         }
         else if (source == cmdThemeSaveAs)
         {
+            gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
 			const char* filter[] = { ".theme", "\0" };
 			const std::string theme = SelectFile("Save theme", get_themes_path(), filter, true);
             if (!theme.empty())
@@ -104,6 +106,7 @@ class ThemesActionListener : public gcn::ActionListener
         }
         else if (source == cmdThemeUse)
         {
+			gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
             apply_theme();
         }
 		else if (source == cboThemePreset)
