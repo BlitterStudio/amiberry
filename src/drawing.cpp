@@ -5163,7 +5163,7 @@ void full_redraw_all(void)
 		}
 	}
 	if (ad->picasso_on) {
-		picasso_refresh(monid);
+		gfxboard_refresh(monid);
 		redraw = true;
 	}
 	if (redraw) {
