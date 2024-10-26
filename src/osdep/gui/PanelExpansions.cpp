@@ -35,7 +35,7 @@ static gcn::StringListModel scsirom_file_list;
 static gcn::StringListModel cpuboard_type_list;
 static gcn::StringListModel cpuboard_subtype_list;
 static gcn::StringListModel cpuboard_romfile_list;
-static gcn::StringListModel cpuboard_romsubselect_list;
+static gcn::StringListModel cpuboard_rom_subselect_list;
 static gcn::StringListModel acceleratorboard_itemselector_list;
 static gcn::StringListModel acceleratorboard_selector_list;
 
@@ -503,7 +503,7 @@ static void init_expansion2(bool init)
 			break;
 		int found = -1;
 		for (int i = 0; expansionroms[i].name; i++) {
-			int romtype = int(expansionroms[i].romtype);
+			int romtype = static_cast<int>(expansionroms[i].romtype);
 			if (romtype & ROMTYPE_CPUBOARD)
 				continue;
 			if (!(expansionroms[i].deviceflags & scsiromselectedmask[scsiromselectedcatnum]))
@@ -557,7 +557,7 @@ static void init_expansion2(bool init)
 
 static void values_to_expansion2dlg_sub()
 {
-	cpuboard_romsubselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
+	cpuboard_rom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
 	cboCpuRomSubSelect->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
 
 	scsirom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
@@ -775,6 +775,9 @@ static void updatecpuboardsubtypes()
 	{
 		cpuboard_subtype_list.add(cpuboards[changed_prefs.cpuboard_type].subtypes[i].name);
 	}
+
+	acceleratorboard_itemselector_list.clear();
+	acceleratorboard_selector_list.clear();
 
 	const expansionboardsettings* cbs = cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype].settings;
 	create_expansionrom_gui(&accelerator_gui_item, cbs, changed_prefs.cpuboard_settings, nullptr,
@@ -1157,7 +1160,7 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardRomFile->setId("cboCpuBoardRomFile");
 	cboCpuBoardRomFile->addActionListener(expansions_action_listener);
 
-	cboCpuRomSubSelect = new gcn::DropDown(&cpuboard_romsubselect_list);
+	cboCpuRomSubSelect = new gcn::DropDown(&cpuboard_rom_subselect_list);
 	cboCpuRomSubSelect->setSize(250, cboCpuRomSubSelect->getHeight());
 	cboCpuRomSubSelect->setBaseColor(gui_base_color);
 	cboCpuRomSubSelect->setBackgroundColor(gui_background_color);
@@ -1180,6 +1183,7 @@ void InitPanelExpansions(const config_category& category)
 	sldCpuBoardMem = new gcn::Slider(0, 256);
 	sldCpuBoardMem->setSize(150, SLIDER_HEIGHT);
 	sldCpuBoardMem->setBaseColor(gui_base_color);
+	sldCpuBoardMem->setBackgroundColor(gui_background_color);
 	sldCpuBoardMem->setForegroundColor(gui_foreground_color);
 	sldCpuBoardMem->setMarkerLength(20);
 	sldCpuBoardMem->setStepLength(1);
@@ -1279,7 +1283,11 @@ void InitPanelExpansions(const config_category& category)
 	grpAcceleratorBoard->add(sldCpuBoardMem, lblCpuBoardMem->getX() + lblCpuBoardMem->getWidth() + DISTANCE_NEXT_X, lblCpuBoardMem->getY());
 	grpAcceleratorBoard->add(lblCpuBoardRam, sldCpuBoardMem->getX() + sldCpuBoardMem->getWidth() + DISTANCE_NEXT_X, lblCpuBoardMem->getY());
 
-	//TODO add items here
+	//grpAcceleratorBoard->add(cboCpuRomSubSelect, posX, cboCpuBoardSubType->getY() + cboCpuBoardSubType->getHeight() + DISTANCE_NEXT_Y);
+	//grpAcceleratorBoard->add(cboAcceleratorBoardSelector, posX, cboAcceleratorBoardItemSelector->getY() + cboAcceleratorBoardItemSelector->getHeight() + DISTANCE_NEXT_Y);
+	grpAcceleratorBoard->add(cboAcceleratorBoardItemSelector, posX, cboCpuBoardSubType->getY() + cboCpuBoardSubType->getHeight() + DISTANCE_NEXT_Y * 2);
+	grpAcceleratorBoard->add(chkAcceleratorBoardCheckbox, cboAcceleratorBoardItemSelector->getX() + cboAcceleratorBoardItemSelector->getWidth() + DISTANCE_NEXT_X, cboAcceleratorBoardItemSelector->getY());
+	
 	grpAcceleratorBoard->setMovable(false);
 	grpAcceleratorBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 200);
 	grpAcceleratorBoard->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -1301,6 +1309,8 @@ void InitPanelExpansions(const config_category& category)
 	grpMiscExpansions->setBaseColor(gui_base_color);
 	grpMiscExpansions->setForegroundColor(gui_foreground_color);
 	category.panel->add(grpMiscExpansions);
+
+	expansion2dlgproc();
 
 	RefreshPanelExpansions();
 }
@@ -1352,8 +1362,6 @@ void ExitPanelExpansions()
 
 void RefreshPanelExpansions()
 {
-	expansion2dlgproc();
-	
 	// values_to_expansion2dlg is covered here
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkScsi->setSelected(changed_prefs.scsi == 1);
@@ -1385,6 +1393,7 @@ void RefreshPanelExpansions()
 	chkScsi->setEnabled(!emulating);
 	chkCD32Fmv->setEnabled(!emulating);
 	chkSana2->setEnabled(!emulating);
+
 	cboCpuBoardRomFile->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMFILE, workprefs.cpuboard_type != 0);
 	btnCpuBoardRomChooser->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMCHOOSER, workprefs.cpuboard_type != 0);
 	sldCpuBoardMem->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDMEM, workprefs.cpuboard_type > 0);
