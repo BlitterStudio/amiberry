@@ -4521,18 +4521,6 @@ bool is_mainthread()
 	return uae_thread_get_id(nullptr) == mainthreadid;
 }
 
-static struct netdriverdata *ndd[MAX_TOTAL_NET_DEVICES + 1];
-static int net_enumerated;
-
-struct netdriverdata **target_ethernet_enumerate(void)
-{
-	if (net_enumerated)
-		return ndd;
-	ethernet_enumerate(ndd, 0);
-	net_enumerated = 1;
-	return ndd;
-}
-
 void clear_whdload_prefs()
 {
 	whdload_prefs.filename.clear();

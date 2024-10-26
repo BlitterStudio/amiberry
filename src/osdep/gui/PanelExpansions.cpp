@@ -12,7 +12,10 @@
 #include "memory.h"
 #include "autoconf.h"
 #include "cpuboard.h"
+#include "ethernet.h"
 #include "rommgr.h"
+#include "sana2.h"
+#include "uae.h"
 
 static gcn::Window* grpExpansionBoard;
 static gcn::Window* grpAcceleratorBoard;
@@ -29,8 +32,8 @@ static gcn::StringListModel scsi_romid_list;
 static gcn::StringListModel scsirom_selectnum_list;
 static gcn::StringListModel scsirom_file_list;
 
-static gcn::StringListModel cpuboards_list;
-static gcn::StringListModel cpuboards_subtype_list;
+static gcn::StringListModel cpuboard_type_list;
+static gcn::StringListModel cpuboard_subtype_list;
 static gcn::StringListModel cpuboard_romfile_list;
 static gcn::StringListModel acceleratorboard_itemselector_list;
 static gcn::StringListModel acceleratorboard_selector_list;
@@ -55,6 +58,7 @@ static gcn::TextBox* txtExpansionBoardStringBox;
 static gcn::DropDown* cboCpuBoardType;
 static gcn::DropDown* cboCpuBoardSubType;
 static gcn::DropDown* cboCpuBoardRomFile;
+static gcn::Button* btnCpuBoardRomChooser;
 
 static gcn::DropDown* cboAcceleratorBoardItemSelector;
 static gcn::DropDown* cboAcceleratorBoardSelector;
@@ -69,29 +73,7 @@ int scsiromselected = 0;
 static int scsiromselectednum = 0;
 static int scsiromselectedcatnum = 0;
 
-static const int scsiromselectedmask[] = {
-	EXPANSIONTYPE_INTERNAL, EXPANSIONTYPE_SCSI, EXPANSIONTYPE_IDE, EXPANSIONTYPE_SASI, EXPANSIONTYPE_CUSTOM,
-	EXPANSIONTYPE_PCI_BRIDGE, EXPANSIONTYPE_X86_BRIDGE, EXPANSIONTYPE_RTG,
-	EXPANSIONTYPE_SOUND, EXPANSIONTYPE_NET, EXPANSIONTYPE_FLOPPY, EXPANSIONTYPE_X86_EXPANSION
-};
-
-struct expansionrom_gui
-{
-	const expansionboardsettings* expansionrom_gui_ebs;
-	int expansionrom_gui_item;
-	gcn::DropDown* expansionrom_gui_itemselector;
-	gcn::DropDown* expansionrom_gui_selector;
-	gcn::CheckBox* expansionrom_gui_checkbox;
-	gcn::TextBox* expansionrom_gui_stringbox;
-	int expansionrom_gui_settingsbits;
-	int expansionrom_gui_settingsshift;
-	int expansionrom_gui_settings;
-	TCHAR expansionrom_gui_string[ROMCONFIG_CONFIGTEXT_LEN];
-};
-static expansionrom_gui expansion_gui_item;
-static expansionrom_gui accelerator_gui_item;
-
-static void gui_add_string(int *table, gcn::StringListModel *item, int id, const TCHAR *str)
+static void gui_add_string(int* table, gcn::StringListModel* item, int id, const TCHAR* str)
 {
 	while (*table >= 0)
 		table++;
@@ -118,6 +100,98 @@ static int gui_get_string_cursor(int* table, gcn::DropDown* item)
 		return -1;
 	return table[posn];
 }
+
+static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
+{
+	auto val = d->getSelected();
+
+	romdata* rd;
+	auto tmp1 = d->getListModel()->getElementAt(val);	//SendDlgItemMessage(d, CB_GETLBTEXT, (WPARAM)val, (LPARAM)tmp1);
+	path[0] = 0;
+	rd = getromdatabyname(tmp1.c_str());
+	if (rd) {
+		romlist* rl = getromlistbyromdata(rd);
+		if (rd->configname)
+			_stprintf(path, _T(":%s"), rd->configname);
+		else if (rl)
+			_tcsncpy(path, rl->path, size);
+	}
+}
+
+static void addromfiles(gcn::DropDown* d, const TCHAR* path, int type1, int type2)
+{
+	//TODO when we implement ROM files
+}
+
+static void setcpuboardmemsize()
+{
+	if (changed_prefs.cpuboardmem1.size > cpuboard_maxmemory(&changed_prefs))
+		changed_prefs.cpuboardmem1.size = cpuboard_maxmemory(&changed_prefs);
+
+	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_Z2) {
+		changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
+	}
+	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_25BITMEM) {
+		changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
+	}
+	if (changed_prefs.cpuboard_type == 0) {
+		changed_prefs.mem25bit.size = 0;
+	}
+
+	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_HIGHMEM)
+		changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+
+	int maxmem = cpuboard_maxmemory(&changed_prefs);
+	if (changed_prefs.cpuboardmem1.size > maxmem) {
+		changed_prefs.cpuboardmem1.size = maxmem;
+	}
+	//if (maxmem <= 8 * 1024 * 1024)
+	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_Z2));
+	//else if (maxmem <= 16 * 1024 * 1024)
+	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_16M));
+	//else if (maxmem <= 32 * 1024 * 1024)
+	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_32M));
+	//else if (maxmem <= 64 * 1024 * 1024)
+	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_64M));
+	//else if (maxmem <= 128 * 1024 * 1024)
+	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_128M));
+	//else
+	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_256M));
+
+	int mem_size = 0;
+	switch (changed_prefs.cpuboardmem1.size) {
+	case 0x00000000: mem_size = 0; break;
+	case 0x00100000: mem_size = 1; break;
+	case 0x00200000: mem_size = 2; break;
+	case 0x00400000: mem_size = 3; break;
+	case 0x00800000: mem_size = 4; break;
+	case 0x01000000: mem_size = 5; break;
+	case 0x02000000: mem_size = 6; break;
+	case 0x04000000: mem_size = 7; break;
+	case 0x08000000: mem_size = 8; break;
+	case 0x10000000: mem_size = 9; break;
+	}
+	//SendDlgItemMessage(hDlg, IDC_CPUBOARDMEM, TBM_SETPOS, TRUE, mem_size);
+	//SetDlgItemText(hDlg, IDC_CPUBOARDRAM, memsize_names[msi_cpuboard[mem_size]]);
+	//SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);
+	//SendDlgItemMessage(hDlg, IDC_CPUBOARD_SUBTYPE, CB_SETCURSEL, changed_prefs.cpuboard_subtype, 0);
+}
+
+struct expansionrom_gui
+{
+	const expansionboardsettings* expansionrom_gui_ebs;
+	int expansionrom_gui_item;
+	gcn::DropDown* expansionrom_gui_itemselector;
+	gcn::DropDown* expansionrom_gui_selector;
+	gcn::CheckBox* expansionrom_gui_checkbox;
+	gcn::TextBox* expansionrom_gui_stringbox;
+	int expansionrom_gui_settingsbits;
+	int expansionrom_gui_settingsshift;
+	int expansionrom_gui_settings;
+	TCHAR expansionrom_gui_string[ROMCONFIG_CONFIGTEXT_LEN];
+};
+static expansionrom_gui expansion_gui_item;
+static expansionrom_gui accelerator_gui_item;
 
 static void reset_expansionrom_gui(expansionrom_gui* eg, gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextBox* stringbox)
 {
@@ -264,7 +338,7 @@ static void get_expansionrom_gui(expansionrom_gui* eg)
 	int settings = eg->expansionrom_gui_settings;
 
 	val = eg->expansionrom_gui_itemselector->getSelected();
-	if (val != eg->expansionrom_gui_item) {
+	if (val != -1 && val != eg->expansionrom_gui_item) {
 		eg->expansionrom_gui_item = val;
 		create_expansionrom_gui(eg, eg->expansionrom_gui_ebs, eg->expansionrom_gui_settings, eg->expansionrom_gui_string,
 			eg->expansionrom_gui_itemselector, eg->expansionrom_gui_selector, eg->expansionrom_gui_checkbox, eg->expansionrom_gui_stringbox);
@@ -295,59 +369,23 @@ static void get_expansionrom_gui(expansionrom_gui* eg)
 	eg->expansionrom_gui_settings = settings;
 }
 
-static void setcpuboardmemsize()
+static struct netdriverdata* ndd[MAX_TOTAL_NET_DEVICES + 1];
+static int net_enumerated;
+
+struct netdriverdata** target_ethernet_enumerate(void)
 {
-	if (changed_prefs.cpuboardmem1.size > cpuboard_maxmemory(&changed_prefs))
-		changed_prefs.cpuboardmem1.size = cpuboard_maxmemory(&changed_prefs);
-
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_Z2) {
-		changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
-	}
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_25BITMEM) {
-		changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
-	}
-	if (changed_prefs.cpuboard_type == 0) {
-		changed_prefs.mem25bit.size = 0;
-	}
-
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_HIGHMEM)
-		changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
-
-	int maxmem = cpuboard_maxmemory(&changed_prefs);
-	if (changed_prefs.cpuboardmem1.size > maxmem) {
-		changed_prefs.cpuboardmem1.size = maxmem;
-	}
-	//if (maxmem <= 8 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_Z2));
-	//else if (maxmem <= 16 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_16M));
-	//else if (maxmem <= 32 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_32M));
-	//else if (maxmem <= 64 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_64M));
-	//else if (maxmem <= 128 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_128M));
-	//else
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_256M));
-
-	int mem_size = 0;
-	switch (changed_prefs.cpuboardmem1.size) {
-	case 0x00000000: mem_size = 0; break;
-	case 0x00100000: mem_size = 1; break;
-	case 0x00200000: mem_size = 2; break;
-	case 0x00400000: mem_size = 3; break;
-	case 0x00800000: mem_size = 4; break;
-	case 0x01000000: mem_size = 5; break;
-	case 0x02000000: mem_size = 6; break;
-	case 0x04000000: mem_size = 7; break;
-	case 0x08000000: mem_size = 8; break;
-	case 0x10000000: mem_size = 9; break;
-	}
-	//SendDlgItemMessage(hDlg, IDC_CPUBOARDMEM, TBM_SETPOS, TRUE, mem_size);
-	//SetDlgItemText(hDlg, IDC_CPUBOARDRAM, memsize_names[msi_cpuboard[mem_size]]);
-	//SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);
-	//SendDlgItemMessage(hDlg, IDC_CPUBOARD_SUBTYPE, CB_SETCURSEL, changed_prefs.cpuboard_subtype, 0);
+	if (net_enumerated)
+		return ndd;
+	ethernet_enumerate(ndd, 0);
+	net_enumerated = 1;
+	return ndd;
 }
+
+static const int scsiromselectedmask[] = {
+	EXPANSIONTYPE_INTERNAL, EXPANSIONTYPE_SCSI, EXPANSIONTYPE_IDE, EXPANSIONTYPE_SASI, EXPANSIONTYPE_CUSTOM,
+	EXPANSIONTYPE_PCI_BRIDGE, EXPANSIONTYPE_X86_BRIDGE, EXPANSIONTYPE_RTG,
+	EXPANSIONTYPE_SOUND, EXPANSIONTYPE_NET, EXPANSIONTYPE_FLOPPY, EXPANSIONTYPE_X86_EXPANSION
+};
 
 static void init_expansion2(bool init)
 {
@@ -378,7 +416,7 @@ static void init_expansion2(bool init)
 				continue;
 			int cnt = 0;
 			for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
-				if (is_board_enabled(&changed_prefs, int(expansionroms[i].romtype), j)) {
+				if (is_board_enabled(&changed_prefs, static_cast<int>(expansionroms[i].romtype), j)) {
 					cnt++;
 				}
 			}
@@ -471,7 +509,7 @@ static void init_expansion2(bool init)
 
 	scsi_romid_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_RESETCONTENT, 0, 0);
 	int index;
-	boardromconfig* brc = get_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+	boardromconfig* brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
 	const expansionromtype* ert = &expansionroms[scsiromselected];
 	if (brc && ert && ert->id_jumper) {
 		for (int i = 0; i < 8; i++) {
@@ -487,22 +525,121 @@ static void init_expansion2(bool init)
 	}
 }
 
-static void updatecpuboardsubtypes()
+static void values_to_expansion2dlg_sub()
 {
-	cpuboards_subtype_list.clear();
-	for (int i = 0; cpuboards[changed_prefs.cpuboard_type].subtypes[i].name; i++)
-	{
-		cpuboards_subtype_list.add(cpuboards[changed_prefs.cpuboard_type].subtypes[i].name);
-	}
+	cpuboard_subtype_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
+	cboCpuBoardSubType->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
 
-	const expansionboardsettings* cbs = cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype].settings;
-	create_expansionrom_gui(&accelerator_gui_item, cbs, changed_prefs.cpuboard_settings, nullptr,
-		cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
+	scsirom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
+	const expansionromtype* er = &expansionroms[scsiromselected];
+	const expansionsubromtype* srt = er->subtypes;
+	int deviceflags = er->deviceflags;
+	cboScsiRomSubSelect->setEnabled(srt != nullptr); //ew(hDlg, IDC_SCSIROMSUBSELECT, srt != NULL);
+	while (srt && srt->name) {
+		scsirom_subselect_list.add(srt->name); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_ADDSTRING, 0, (LPARAM)srt->name);
+		srt++;
+	}
+	int index;
+	boardromconfig* brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+	if (brc && er->subtypes) {
+		cboScsiRomSubSelect->setSelected(brc->roms[index].subtype); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, brc->roms[index].subtype, 0);
+		cboScsiRomId->setSelected(brc->roms[index].device_id); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, brc->roms[index].device_id, 0);
+		deviceflags |= er->subtypes[brc->roms[index].subtype].deviceflags;
+	}
+	else if (srt) {
+		cboScsiRomSubSelect->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, 0, 0);
+		cboScsiRomId->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, 0, 0);
+	}
+	scsirom_selectnum_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_RESETCONTENT, 0, 0);
+	if (deviceflags & EXPANSIONTYPE_CLOCKPORT) {
+		scsirom_selectnum_list.add(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)_T("-"));
+	}
+	for (int i = 0; i < MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS; i++) {
+		TCHAR tmp[10];
+		_stprintf(tmp, _T("%d"), i + 1);
+		scsirom_selectnum_list.add(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)tmp);
+	}
+	cboScsiRomSelectNum->setSelected(scsiromselectednum); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, scsiromselectednum, 0);
+	if ((er->zorro < 2 || er->singleonly) && !(deviceflags & EXPANSIONTYPE_CLOCKPORT)) {
+		scsiromselectednum = 0;
+		cboScsiRomSelectNum->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, 0, 0);
+	}
+	cboScsiRomSelectNum->setEnabled((er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT)); //ew(hDlg, IDC_SCSIROMSELECTNUM, (er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT));
+	chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0); //hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
+	chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0); //ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
 }
 
-static void addromfiles(gcn::DropDown* d, const TCHAR* path, int type1, int type2)
+static void values_from_expansion2dlg()
 {
-	//TODO when we implement ROM files
+	int index;
+	boardromconfig* brc;
+	TCHAR tmp[MAX_DPATH];
+	bool changed = false;
+	bool isnew = false;
+
+	int checked = chkScsiRomSelected->isSelected();
+	getromfile(cboScsiRomSelect, tmp, MAX_DPATH / sizeof(TCHAR));
+	if (tmp[0] || checked) {
+		const expansionromtype* ert = &expansionroms[scsiromselected];
+		if (!get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index))
+			isnew = true;
+		brc = get_device_rom_new(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+		if (checked) {
+			if (!brc->roms[index].romfile[0])
+				changed = true;
+			_tcscpy(brc->roms[index].romfile, _T(":ENABLED"));
+		}
+		else {
+			changed = _tcscmp(tmp, brc->roms[index].romfile) != 0;
+			getromfile(cboScsiRomSelect, brc->roms[index].romfile, MAX_DPATH / sizeof(TCHAR));
+		}
+		brc->roms[index].autoboot_disabled = chkScsiRomFileAutoboot->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEAUTOBOOT);
+		brc->roms[index].inserted = chkScsiRomFilePcmcia->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEPCMCIA);
+		brc->roms[index].dma24bit = chkScsiRom24bitDma->isSelected(); //ischecked(hDlg, IDC_SCSIROM24BITDMA);
+
+		int v = cboScsiRomId->getSelected(); //SendDlgItemMessage(IDC_SCSIROMID, CB_GETCURSEL, 0, 0L);
+		if (!isnew)
+			brc->roms[index].device_id = v;
+
+		const expansionboardsettings* cbs = ert->settings;
+		if (cbs) {
+			brc->roms[index].device_settings = expansion_gui_item.expansionrom_gui_settings;
+			_tcscpy(brc->roms[index].configtext, expansion_gui_item.expansionrom_gui_string);
+		}
+
+		v = cboScsiRomSubSelect->getSelected(); //SendDlgItemMessage(IDC_SCSIROMSUBSELECT, CB_GETCURSEL, 0, 0L);
+		brc->roms[index].subtype = v;
+	}
+	else {
+		brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+		if (brc && brc->roms[index].romfile[0])
+			changed = true;
+		clear_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, true);
+	}
+	if (changed) {
+		// singleonly check and removal
+		if (expansionroms[scsiromselected].singleonly) {
+			if (get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index)) {
+				for (int i = 0; i < MAX_EXPANSION_BOARDS; i++) {
+					if (i != scsiromselectednum) {
+						clear_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), i, true);
+					}
+				}
+			}
+		}
+		init_expansion2(false);
+		values_to_expansion2dlg_sub();
+	}
+
+	changed_prefs.cpuboard_settings = accelerator_gui_item.expansionrom_gui_settings;
+	getromfile(cboCpuBoardType, tmp, sizeof(brc->roms[index].romfile) / sizeof(TCHAR));
+	if (tmp[0]) {
+		brc = get_device_rom_new(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
+		getromfile(cboCpuBoardType, brc->roms[index].romfile, sizeof(brc->roms[index].romfile) / sizeof(TCHAR));
+	}
+	else {
+		clear_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, true);
+	}
 }
 
 static void values_to_expansion2_expansion_roms()
@@ -512,15 +649,15 @@ static void values_to_expansion2_expansion_roms()
 
 	if (scsiromselected) {
 		const expansionromtype* ert = &expansionroms[scsiromselected];
-		int romtype = int(ert->romtype);
-		int romtype_extra = int(ert->romtype_extra);
+		int romtype = static_cast<int>(ert->romtype);
+		int romtype_extra = static_cast<int>(ert->romtype_extra);
 		int deviceflags = ert->deviceflags;
 
 		brc = get_device_rom(&changed_prefs, romtype, scsiromselectednum, &index);
 		if (brc && ert->subtypes) {
 			const expansionsubromtype* esrt = &ert->subtypes[brc->roms[index].subtype];
 			if (esrt->romtype) {
-				romtype = int(esrt->romtype);
+				romtype = static_cast<int>(esrt->romtype);
 				romtype_extra = 0;
 			}
 			deviceflags |= esrt->deviceflags;
@@ -579,7 +716,7 @@ static void values_to_expansion2_expansion_settings()
 	boardromconfig* brc;
 	if (scsiromselected) {
 		const expansionromtype* ert = &expansionroms[scsiromselected];
-		brc = get_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+		brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
 		if (brc) {
 			if (brc->roms[index].romfile[0])
 				chkScsiRomFileAutoboot->setEnabled(ert->autoboot_jumper); //ew(hDlg, IDC_SCSIROMFILEAUTOBOOT, ert->autoboot_jumper);
@@ -601,147 +738,46 @@ static void values_to_expansion2_expansion_settings()
 	}
 }
 
-static void values_to_expansion2dlg_sub()
+
+
+static void updatecpuboardsubtypes()
 {
-	cpuboards_subtype_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
-	cboCpuBoardSubType->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
-
-	scsirom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
-	const expansionromtype* er = &expansionroms[scsiromselected];
-	const expansionsubromtype* srt = er->subtypes;
-	int deviceflags = er->deviceflags;
-	cboScsiRomSubSelect->setEnabled(srt != nullptr); //ew(hDlg, IDC_SCSIROMSUBSELECT, srt != NULL);
-	while (srt && srt->name) {
-		scsirom_subselect_list.add(srt->name); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_ADDSTRING, 0, (LPARAM)srt->name);
-		srt++;
-	}
-	int index;
-	boardromconfig* brc = get_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
-	if (brc && er->subtypes) {
-		cboScsiRomSubSelect->setSelected(brc->roms[index].subtype); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, brc->roms[index].subtype, 0);
-		cboScsiRomId->setSelected(brc->roms[index].device_id); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, brc->roms[index].device_id, 0);
-		deviceflags |= er->subtypes[brc->roms[index].subtype].deviceflags;
-	}
-	else if (srt) {
-		cboScsiRomSubSelect->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, 0, 0);
-		cboScsiRomId->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, 0, 0);
-	}
-	scsirom_selectnum_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_RESETCONTENT, 0, 0);
-	if (deviceflags & EXPANSIONTYPE_CLOCKPORT) {
-		scsirom_selectnum_list.add(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)_T("-"));
-	}
-	for (int i = 0; i < MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS; i++) {
-		TCHAR tmp[10];
-		_stprintf(tmp, _T("%d"), i + 1);
-		scsirom_selectnum_list.add(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)tmp);
-	}
-	cboScsiRomSelectNum->setSelected(scsiromselectednum); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, scsiromselectednum, 0);
-	if ((er->zorro < 2 || er->singleonly) && !(deviceflags & EXPANSIONTYPE_CLOCKPORT)) {
-		scsiromselectednum = 0;
-		cboScsiRomSelectNum->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, 0, 0);
-	}
-	cboScsiRomSelectNum->setEnabled((er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT)); //ew(hDlg, IDC_SCSIROMSELECTNUM, (er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT));
-	chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0); //hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
-	chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0); //ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
-}
-
-static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
-{
-	auto val = d->getSelected();
-
-	romdata* rd;
-	auto tmp1 = d->getListModel()->getElementAt(val);	//SendDlgItemMessage(d, CB_GETLBTEXT, (WPARAM)val, (LPARAM)tmp1);
-	path[0] = 0;
-	rd = getromdatabyname(tmp1.c_str());
-	if (rd) {
-		romlist* rl = getromlistbyromdata(rd);
-		if (rd->configname)
-			_stprintf(path, _T(":%s"), rd->configname);
-		else if (rl)
-			_tcsncpy(path, rl->path, size);
-	}
-}
-
-static void values_from_expansion2dlg()
-{
-	int index;
-	boardromconfig* brc;
-	TCHAR tmp[MAX_DPATH];
-	bool changed = false;
-	bool isnew = false;
-	
-	int checked = chkScsiRomSelected->isSelected();
-	getromfile(cboScsiRomSelect, tmp, MAX_DPATH / sizeof(TCHAR));
-	if (tmp[0] || checked) {
-		const expansionromtype* ert = &expansionroms[scsiromselected];
-		if (!get_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index))
-			isnew = true;
-		brc = get_device_rom_new(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
-		if (checked) {
-			if (!brc->roms[index].romfile[0])
-				changed = true;
-			_tcscpy(brc->roms[index].romfile, _T(":ENABLED"));
-		}
-		else {
-			changed = _tcscmp(tmp, brc->roms[index].romfile) != 0;
-			getromfile(cboScsiRomSelect, brc->roms[index].romfile, MAX_DPATH / sizeof(TCHAR));
-		}
-		brc->roms[index].autoboot_disabled = chkScsiRomFileAutoboot->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEAUTOBOOT);
-		brc->roms[index].inserted = chkScsiRomFilePcmcia->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEPCMCIA);
-		brc->roms[index].dma24bit = chkScsiRom24bitDma->isSelected(); //ischecked(hDlg, IDC_SCSIROM24BITDMA);
-
-		int v = cboScsiRomId->getSelected(); //SendDlgItemMessage(IDC_SCSIROMID, CB_GETCURSEL, 0, 0L);
-		if (!isnew)
-			brc->roms[index].device_id = v;
-
-		const expansionboardsettings* cbs = ert->settings;
-		if (cbs) {
-			brc->roms[index].device_settings = expansion_gui_item.expansionrom_gui_settings;
-			_tcscpy(brc->roms[index].configtext, expansion_gui_item.expansionrom_gui_string);
-		}
-
-		v = cboScsiRomSubSelect->getSelected(); //SendDlgItemMessage(IDC_SCSIROMSUBSELECT, CB_GETCURSEL, 0, 0L);
-		brc->roms[index].subtype = v;
-	}
-	else {
-		brc = get_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
-		if (brc && brc->roms[index].romfile[0])
-			changed = true;
-		clear_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, true);
-	}
-	if (changed) {
-		// singleonly check and removal
-		if (expansionroms[scsiromselected].singleonly) {
-			if (get_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), scsiromselectednum, &index)) {
-				for (int i = 0; i < MAX_EXPANSION_BOARDS; i++) {
-					if (i != scsiromselectednum) {
-						clear_device_rom(&changed_prefs, int(expansionroms[scsiromselected].romtype), i, true);
-					}
-				}
-			}
-		}
-		init_expansion2(false);
-		values_to_expansion2dlg_sub();
+	cpuboard_subtype_list.clear();
+	for (int i = 0; cpuboards[changed_prefs.cpuboard_type].subtypes[i].name; i++)
+	{
+		cpuboard_subtype_list.add(cpuboards[changed_prefs.cpuboard_type].subtypes[i].name);
 	}
 
-	changed_prefs.cpuboard_settings = accelerator_gui_item.expansionrom_gui_settings;
-	getromfile(cboCpuBoardType, tmp, sizeof(brc->roms[index].romfile) / sizeof(TCHAR));
-	if (tmp[0]) {
-		brc = get_device_rom_new(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
-		getromfile(cboCpuBoardType, brc->roms[index].romfile, sizeof(brc->roms[index].romfile) / sizeof(TCHAR));
-	}
-	else {
-		clear_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, true);
-	}
+	const expansionboardsettings* cbs = cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype].settings;
+	create_expansionrom_gui(&accelerator_gui_item, cbs, changed_prefs.cpuboard_settings, nullptr,
+		cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
 }
 
 static void expansion2dlgproc()
 {
+	// Populate Ethernet list
+	if (!net_enumerated) {
+		target_ethernet_enumerate();
+		for (int i = 0; ndd[i]; i++) {
+			struct netdriverdata* n = ndd[i];
+			if (!n->active)
+				continue;
+			if (n->type == UAENET_SLIRP) {
+				n->desc = my_strdup("SLIRP User Mode NAT");
+			}
+			else if (n->type == UAENET_SLIRP_INBOUND) {
+				n->desc = my_strdup("SLIRP + Open ports (21-23,80)");
+			}
+		}
+		ethernet_updateselection();
+		net_enumerated = 1;
+	}
+
 	//Populate CPU boards list
-	cpuboards_list.clear();
+	cpuboard_type_list.clear();
 	for (int i = 0; cpuboards[i].name; i++)
 	{
-		cpuboards_list.add(cpuboards[i].name);
+		cpuboard_type_list.add(cpuboards[i].name);
 	}
 
 	//Populate Expansion Categories
@@ -773,61 +809,93 @@ class ExpansionsActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& action_event) override
 	{
-		if (action_event.getSource() == txtExpansionBoardStringBox
-			|| action_event.getSource() == chkExpansionBoardCheckbox
-			|| action_event.getSource() == cboExpansionBoardItemSelector
-			|| action_event.getSource() == cboExpansionBoardSelector)
+		const auto source = action_event.getSource();
+
+		if (source == btnScsiRomChooser)
+		{
+			const char* filter[] = { ".rom", ".bin", "\0" };
+			std::string full_path = SelectFile("Select ROM", get_rom_path(), filter);
+			if (!full_path.empty())
+			{
+				int val = gui_get_string_cursor(scsiromselect_table, cboScsiRomSelect);
+				if (val != -1) {
+					int index;
+					struct boardromconfig* brc;
+					brc = get_device_rom_new(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+					_tcscpy(brc->roms[index].romfile, full_path.c_str());
+					fullpath(brc->roms[index].romfile, MAX_DPATH);
+				}
+			}
+			RefreshPanelExpansions();
+		}
+		else if (source == btnCpuBoardRomChooser)
+		{
+			const char* filter[] = { ".rom", ".bin", "\0" };
+			std::string full_path = SelectFile("Select ROM", get_rom_path(), filter);
+			if (!full_path.empty())
+			{
+				int index;
+				struct boardromconfig* brc = get_device_rom_new(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
+				_tcscpy(brc->roms[index].romfile, full_path.c_str());
+				fullpath(brc->roms[index].romfile, MAX_DPATH);
+			}
+			RefreshPanelExpansions();
+		}
+		else if (source == txtExpansionBoardStringBox
+			|| source == chkExpansionBoardCheckbox
+			|| source == cboExpansionBoardItemSelector
+			|| source == cboExpansionBoardSelector)
 		{
 			get_expansionrom_gui(&expansion_gui_item);
 			values_from_expansion2dlg();
 		}
-		else if (action_event.getSource() == chkAcceleratorBoardCheckbox
-			|| action_event.getSource() == cboAcceleratorBoardItemSelector
-			|| action_event.getSource() == cboAcceleratorBoardSelector)
+		else if (source == chkAcceleratorBoardCheckbox
+			|| source == cboAcceleratorBoardItemSelector
+			|| source == cboAcceleratorBoardSelector)
 		{
 			get_expansionrom_gui(&accelerator_gui_item);
 			values_from_expansion2dlg();
 		}
-		else if (action_event.getSource() == chkScsiRomFileAutoboot
-			|| action_event.getSource() == chkScsiRomFilePcmcia
-			|| action_event.getSource() == chkScsiRom24bitDma)
+		else if (source == chkScsiRomFileAutoboot
+			|| source == chkScsiRomFilePcmcia
+			|| source == chkScsiRom24bitDma)
 		{
 			values_from_expansion2dlg();
 		}
-		else if (action_event.getSource() == chkBSDSocket)
+		else if (source == chkBSDSocket)
 		{
 			changed_prefs.socket_emu = chkBSDSocket->isSelected();
 		}
-		else if (action_event.getSource() == chkScsi)
+		else if (source == chkScsi)
 		{
 			changed_prefs.scsi = chkScsi->isSelected();
 			RefreshPanelExpansions();
 		}
-		else if (action_event.getSource() == chkSana2)
+		else if (source == chkSana2)
 		{
 			changed_prefs.sana2 = chkSana2->isSelected();
 		}
-		else if (action_event.getSource() == chkCD32Fmv)
+		else if (source == chkCD32Fmv)
 		{
 			changed_prefs.cs_cd32fmv = chkCD32Fmv->isSelected();
 			cfgfile_compatibility_romtype(&changed_prefs);
 		}
-		else if (action_event.getSource() == chkScsiRomSelected
-			|| action_event.getSource() == cboScsiRomFile
-			|| action_event.getSource() == cboScsiRomId
-			|| action_event.getSource() == cboCpuBoardRomFile
-			|| action_event.getSource() == cboCpuBoardSubType)
+		else if (source == chkScsiRomSelected
+			|| source == cboScsiRomFile
+			|| source == cboScsiRomId
+			|| source == cboCpuBoardRomFile
+			|| source == cboCpuBoardSubType)
 		{
 			values_from_expansion2dlg();
 			values_to_expansion2_expansion_settings();
 		}
-		else if (action_event.getSource() == cboScsiRomSubSelect)
+		else if (source == cboScsiRomSubSelect)
 		{
 			values_from_expansion2dlg();
 			values_to_expansion2_expansion_roms();
 			values_to_expansion2_expansion_settings();
 		}
-		else if (action_event.getSource() == cboScsiRomSelectCat)
+		else if (source == cboScsiRomSelectCat)
 		{
 			auto val = cboScsiRomSelectCat->getSelected();
 			if (val != -1 && val != scsiromselectedcatnum)
@@ -840,8 +908,8 @@ public:
 				values_to_expansion2dlg_sub();
 			}
 		}
-		else if (action_event.getSource() == cboScsiRomSelectNum
-			|| action_event.getSource() == cboScsiRomSelect)
+		else if (source == cboScsiRomSelectNum
+			|| source == cboScsiRomSelect)
 		{
 			auto val = cboScsiRomSelectNum->getSelected();
 			if (val != -1)
@@ -855,25 +923,44 @@ public:
 				values_to_expansion2dlg_sub();
 			}
 		}
-		
-		else if (action_event.getSource() == cboCpuBoardType)
+		else if (source == cboCpuBoardType)
 		{
-			changed_prefs.cpuboard_type = cboCpuBoardType->getSelected();
-			changed_prefs.cpuboard_subtype = 0;
-			changed_prefs.cpuboard_settings = 0;
-			updatecpuboardsubtypes();
-			cpuboard_set_cpu(&changed_prefs);
-			setcpuboardmemsize();
-			RefreshPanelExpansions();
+			auto v = cboCpuBoardType->getSelected();
+			if (v != -1 && v != changed_prefs.cpuboard_type)
+			{
+				changed_prefs.cpuboard_type = v;
+				changed_prefs.cpuboard_subtype = 0;
+				changed_prefs.cpuboard_settings = 0;
+				updatecpuboardsubtypes();
+				if (is_ppc_cpu(&changed_prefs)) {
+					changed_prefs.ppc_mode = 2;
+				}
+				else if (changed_prefs.ppc_mode == 2) {
+					changed_prefs.ppc_mode = 0;
+				}
+				cpuboard_set_cpu(&changed_prefs);
+				setcpuboardmemsize();
+				RefreshPanelExpansions();
+			}
 		}
-		else if (action_event.getSource() == cboCpuBoardSubType)
+		else if (source == cboCpuBoardSubType)
 		{
-			changed_prefs.cpuboard_subtype = cboCpuBoardSubType->getSelected();
-			changed_prefs.cpuboard_settings = 0;
-			updatecpuboardsubtypes();
-			cpuboard_set_cpu(&changed_prefs);
-			setcpuboardmemsize();
-			RefreshPanelExpansions();
+			auto v = cboCpuBoardSubType->getSelected();
+			if (v != -1 && v != changed_prefs.cpuboard_subtype)
+			{
+				changed_prefs.cpuboard_subtype = v;
+				changed_prefs.cpuboard_settings = 0;
+				updatecpuboardsubtypes();
+				if (is_ppc_cpu(&changed_prefs)) {
+					changed_prefs.ppc_mode = 2;
+				}
+				else if (changed_prefs.ppc_mode == 2) {
+					changed_prefs.ppc_mode = 0;
+				}
+				cpuboard_set_cpu(&changed_prefs);
+				setcpuboardmemsize();
+				RefreshPanelExpansions();
+			}
 		}	
 	}
 };
@@ -1006,7 +1093,7 @@ void InitPanelExpansions(const config_category& category)
 	txtExpansionBoardStringBox->setBackgroundColor(gui_background_color);
 	txtExpansionBoardStringBox->setForegroundColor(gui_foreground_color);
 	
-	cboCpuBoardType = new gcn::DropDown(&cpuboards_list);
+	cboCpuBoardType = new gcn::DropDown(&cpuboard_type_list);
 	cboCpuBoardType->setSize(250, cboCpuBoardType->getHeight());
 	cboCpuBoardType->setBaseColor(gui_base_color);
 	cboCpuBoardType->setBackgroundColor(gui_background_color);
@@ -1014,9 +1101,8 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardType->setSelectionColor(gui_selection_color);
 	cboCpuBoardType->setId("cboCpuBoardType");
 	cboCpuBoardType->addActionListener(expansions_action_listener);
-	cboCpuBoardType->setEnabled(false); //TODO enable this when implemented
 
-	cboCpuBoardSubType = new gcn::DropDown(&cpuboards_subtype_list);
+	cboCpuBoardSubType = new gcn::DropDown(&cpuboard_subtype_list);
 	cboCpuBoardSubType->setSize(250, cboCpuBoardSubType->getHeight());
 	cboCpuBoardSubType->setBaseColor(gui_base_color);
 	cboCpuBoardSubType->setBackgroundColor(gui_background_color);
@@ -1024,17 +1110,23 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardSubType->setSelectionColor(gui_selection_color);
 	cboCpuBoardSubType->setId("cboCpuBoardSubType");
 	cboCpuBoardSubType->addActionListener(expansions_action_listener);
-	cboCpuBoardSubType->setEnabled(false); //TODO enable this when implemented
 
 	cboCpuBoardRomFile = new gcn::DropDown(&cpuboard_romfile_list);
-	cboCpuBoardRomFile->setSize(250, cboCpuBoardRomFile->getHeight());
+	cboCpuBoardRomFile->setSize(200, cboCpuBoardRomFile->getHeight());
 	cboCpuBoardRomFile->setBaseColor(gui_base_color);
 	cboCpuBoardRomFile->setBackgroundColor(gui_background_color);
 	cboCpuBoardRomFile->setForegroundColor(gui_foreground_color);
 	cboCpuBoardRomFile->setSelectionColor(gui_selection_color);
 	cboCpuBoardRomFile->setId("cboCpuBoardRomFile");
 	cboCpuBoardRomFile->addActionListener(expansions_action_listener);
-	cboCpuBoardRomFile->setEnabled(false); //TODO Enable this when implemented
+
+	btnCpuBoardRomChooser = new gcn::Button("...");
+	btnCpuBoardRomChooser->setBaseColor(gui_base_color);
+	btnCpuBoardRomChooser->setBackgroundColor(gui_background_color);
+	btnCpuBoardRomChooser->setForegroundColor(gui_foreground_color);
+	btnCpuBoardRomChooser->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	btnCpuBoardRomChooser->setId("btnCpuBoardRomChooser");
+	btnCpuBoardRomChooser->addActionListener(expansions_action_listener);
 
 	cboAcceleratorBoardItemSelector = new gcn::DropDown(&acceleratorboard_itemselector_list);
 	cboAcceleratorBoardItemSelector->setSize(250, cboAcceleratorBoardItemSelector->getHeight());
@@ -1122,6 +1214,7 @@ void InitPanelExpansions(const config_category& category)
 	grpAcceleratorBoard->add(cboCpuBoardType, posX, posY);
 	grpAcceleratorBoard->add(cboCpuBoardSubType, posX, posY + cboCpuBoardType->getHeight() + DISTANCE_NEXT_Y);
 	grpAcceleratorBoard->add(cboCpuBoardRomFile, cboCpuBoardType->getX() + cboCpuBoardType->getWidth() + DISTANCE_NEXT_X * 3, cboCpuBoardType->getY());
+	grpAcceleratorBoard->add(btnCpuBoardRomChooser, cboCpuBoardRomFile->getX() + cboCpuBoardRomFile->getWidth() + DISTANCE_NEXT_X, cboCpuBoardRomFile->getY());
 	//TODO add items here
 	grpAcceleratorBoard->setMovable(false);
 	grpAcceleratorBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 200);
@@ -1170,6 +1263,7 @@ void ExitPanelExpansions()
 	delete cboCpuBoardType;
 	delete cboCpuBoardSubType;
 	delete cboCpuBoardRomFile;
+	delete btnCpuBoardRomChooser;
 
 	delete cboAcceleratorBoardItemSelector;
 	delete cboAcceleratorBoardSelector;
@@ -1192,11 +1286,12 @@ void RefreshPanelExpansions()
 	expansion2dlgproc();
 	
 	// values_to_expansion2dlg is covered here
-	chkBSDSocket->setEnabled(!emulating);
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
-	chkScsi->setSelected(changed_prefs.scsi);
+	chkScsi->setSelected(changed_prefs.scsi == 1);
 	chkCD32Fmv->setSelected(changed_prefs.cs_cd32fmv);
 	chkSana2->setSelected(changed_prefs.sana2);
+	// We don't really need Catweasel support in Amiberry, let's disable it
+	changed_prefs.catweasel = 0;
 
 	values_to_expansion2_expansion_roms();
 	values_to_expansion2_expansion_settings();
@@ -1207,9 +1302,8 @@ void RefreshPanelExpansions()
 		const cpuboardsubtype* cst = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
 		brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
 		addromfiles(cboCpuBoardRomFile, brc ? brc->roms[index].romfile : nullptr,
-			int(cst->romtype), cst->romtype_extra);
-	}
-	else {
+			static_cast<int>(cst->romtype), cst->romtype_extra);
+	} else {
 		auto list_model = cboCpuBoardRomFile->getListModel();
 		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
 	}
@@ -1218,11 +1312,16 @@ void RefreshPanelExpansions()
 	values_to_expansion2dlg_sub();
 
 	// enable_for_expansion2dlg is covered here
+	chkBSDSocket->setEnabled(!emulating);
+	chkScsi->setEnabled(!emulating);
+	chkCD32Fmv->setEnabled(!emulating);
+	chkSana2->setEnabled(!emulating);
 	cboCpuBoardRomFile->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMFILE, workprefs.cpuboard_type != 0);
+	//TODO : Enable these
 	//ew(hDlg, IDC_CPUBOARDROMCHOOSER, workprefs.cpuboard_type != 0);
 	//ew(hDlg, IDC_CPUBOARDMEM, workprefs.cpuboard_type > 0);
 	//ew(hDlg, IDC_CPUBOARDRAM, workprefs.cpuboard_type > 0);
-	//ew(hDlg, IDC_CPUBOARD_SUBTYPE, workprefs.cpuboard_type);
+	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type); //ew(hDlg, IDC_CPUBOARD_SUBTYPE, workprefs.cpuboard_type);
 }
 
 bool HelpPanelExpansions(std::vector<std::string>& helptext)
@@ -1230,10 +1329,6 @@ bool HelpPanelExpansions(std::vector<std::string>& helptext)
     helptext.clear();
     helptext.emplace_back("Some of these expansions will be set automatically for you, depending on the model of");
     helptext.emplace_back("Amiga you chose to emulate (ie; the internal IDE for A1200 models).");
-    helptext.emplace_back(" ");
-    helptext.emplace_back("Please note that many of the options here are not yet fully functional, since they are");
-    helptext.emplace_back("currently stripped down in Amiberry. They may be added in future versions, but for now ");
-    helptext.emplace_back("only the most commonly used options are available.");
     helptext.emplace_back(" ");
     helptext.emplace_back("Here you can enable a few expansion options that are commonly used:");
     helptext.emplace_back(" ");
