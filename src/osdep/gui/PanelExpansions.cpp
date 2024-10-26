@@ -60,6 +60,10 @@ static gcn::DropDown* cboCpuBoardSubType;
 static gcn::DropDown* cboCpuBoardRomFile;
 static gcn::Button* btnCpuBoardRomChooser;
 
+static gcn::Label* lblCpuBoardMem;
+static gcn::Slider* sldCpuBoardMem;
+static gcn::Label* lblCpuBoardRam;
+
 static gcn::DropDown* cboAcceleratorBoardItemSelector;
 static gcn::DropDown* cboAcceleratorBoardSelector;
 static gcn::CheckBox* chkAcceleratorBoardCheckbox;
@@ -145,18 +149,41 @@ static void setcpuboardmemsize()
 	if (changed_prefs.cpuboardmem1.size > maxmem) {
 		changed_prefs.cpuboardmem1.size = maxmem;
 	}
-	//if (maxmem <= 8 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_Z2));
-	//else if (maxmem <= 16 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_16M));
-	//else if (maxmem <= 32 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_32M));
-	//else if (maxmem <= 64 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_64M));
-	//else if (maxmem <= 128 * 1024 * 1024)
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_128M));
-	//else
-	//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_256M));
+	if (maxmem <= 8 * 1024 * 1024)
+	{
+		sldCpuBoardMem->setScaleStart(MIN_CB_MEM); //	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_Z2));
+		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_Z2);
+	}
+	else if (maxmem <= 16 * 1024 * 1024)
+	{
+		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_16M));
+		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
+		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_16M);
+	}
+	else if (maxmem <= 32 * 1024 * 1024)
+	{
+		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_32M));
+		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
+		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_32M);
+	}
+	else if (maxmem <= 64 * 1024 * 1024)
+	{
+		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_64M));
+		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
+		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_64M);
+	}
+	else if (maxmem <= 128 * 1024 * 1024)
+	{
+		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_128M));
+		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
+		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_128M);
+	}
+	else
+	{
+		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_256M));
+		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
+		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_256M);
+	}
 
 	int mem_size = 0;
 	switch (changed_prefs.cpuboardmem1.size) {
@@ -171,10 +198,11 @@ static void setcpuboardmemsize()
 	case 0x08000000: mem_size = 8; break;
 	case 0x10000000: mem_size = 9; break;
 	}
-	//SendDlgItemMessage(hDlg, IDC_CPUBOARDMEM, TBM_SETPOS, TRUE, mem_size);
-	//SetDlgItemText(hDlg, IDC_CPUBOARDRAM, memsize_names[msi_cpuboard[mem_size]]);
-	//SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);
-	//SendDlgItemMessage(hDlg, IDC_CPUBOARD_SUBTYPE, CB_SETCURSEL, changed_prefs.cpuboard_subtype, 0);
+	sldCpuBoardMem->setValue(mem_size); //SendDlgItemMessage(hDlg, IDC_CPUBOARDMEM, TBM_SETPOS, TRUE, mem_size);
+	lblCpuBoardRam->setCaption(memsize_names[msi_cpuboard[mem_size]]); //SetDlgItemText(hDlg, IDC_CPUBOARDRAM, memsize_names[msi_cpuboard[mem_size]]);
+	lblCpuBoardRam->adjustSize();
+	cboCpuBoardType->setSelected(changed_prefs.cpuboard_type); //SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);//SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);
+	cboCpuBoardSubType->setSelected(changed_prefs.cpuboard_subtype); //SendDlgItemMessage(hDlg, IDC_CPUBOARD_SUBTYPE, CB_SETCURSEL, changed_prefs.cpuboard_subtype, 0);
 }
 
 struct expansionrom_gui
@@ -738,8 +766,6 @@ static void values_to_expansion2_expansion_settings()
 	}
 }
 
-
-
 static void updatecpuboardsubtypes()
 {
 	cpuboard_subtype_list.clear();
@@ -961,7 +987,12 @@ public:
 				setcpuboardmemsize();
 				RefreshPanelExpansions();
 			}
-		}	
+		}
+		else if (source == sldCpuBoardMem)
+		{
+			changed_prefs.cpuboardmem1.size = memsizes[msi_cpuboard[static_cast<int>(sldCpuBoardMem->getValue())]];
+			setcpuboardmemsize();
+		}
 	}
 };
 
@@ -1128,6 +1159,21 @@ void InitPanelExpansions(const config_category& category)
 	btnCpuBoardRomChooser->setId("btnCpuBoardRomChooser");
 	btnCpuBoardRomChooser->addActionListener(expansions_action_listener);
 
+	lblCpuBoardMem = new gcn::Label("Memory:");
+	lblCpuBoardMem->setBaseColor(gui_base_color);
+	lblCpuBoardMem->setForegroundColor(gui_foreground_color);
+	sldCpuBoardMem = new gcn::Slider(0, 256);
+	sldCpuBoardMem->setSize(150, SLIDER_HEIGHT);
+	sldCpuBoardMem->setBaseColor(gui_base_color);
+	sldCpuBoardMem->setForegroundColor(gui_foreground_color);
+	sldCpuBoardMem->setMarkerLength(20);
+	sldCpuBoardMem->setStepLength(1);
+	sldCpuBoardMem->setId("sldCpuBoardMem");
+	sldCpuBoardMem->addActionListener(expansions_action_listener);
+	lblCpuBoardRam = new gcn::Label("none");
+	lblCpuBoardRam->setBaseColor(gui_base_color);
+	lblCpuBoardRam->setForegroundColor(gui_foreground_color);
+
 	cboAcceleratorBoardItemSelector = new gcn::DropDown(&acceleratorboard_itemselector_list);
 	cboAcceleratorBoardItemSelector->setSize(250, cboAcceleratorBoardItemSelector->getHeight());
 	cboAcceleratorBoardItemSelector->setBaseColor(gui_base_color);
@@ -1202,7 +1248,6 @@ void InitPanelExpansions(const config_category& category)
 	grpExpansionBoard->add(chkExpansionBoardCheckbox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY() + chkScsiRomFileAutoboot->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboExpansionBoardItemSelector, posX, cboScsiRomSubSelect->getY() + cboScsiRomSubSelect->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboExpansionBoardSelector, chkScsiRomSelected->getX(), cboExpansionBoardItemSelector->getY());
-	//TODO add items here
 	grpExpansionBoard->setMovable(false);
 	grpExpansionBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 250);
 	grpExpansionBoard->setTitleBarHeight(TITLEBAR_HEIGHT);
@@ -1215,6 +1260,10 @@ void InitPanelExpansions(const config_category& category)
 	grpAcceleratorBoard->add(cboCpuBoardSubType, posX, posY + cboCpuBoardType->getHeight() + DISTANCE_NEXT_Y);
 	grpAcceleratorBoard->add(cboCpuBoardRomFile, cboCpuBoardType->getX() + cboCpuBoardType->getWidth() + DISTANCE_NEXT_X * 3, cboCpuBoardType->getY());
 	grpAcceleratorBoard->add(btnCpuBoardRomChooser, cboCpuBoardRomFile->getX() + cboCpuBoardRomFile->getWidth() + DISTANCE_NEXT_X, cboCpuBoardRomFile->getY());
+	grpAcceleratorBoard->add(lblCpuBoardMem, cboCpuBoardType->getX() + cboCpuBoardType->getWidth() + DISTANCE_NEXT_X, cboCpuBoardSubType->getY());
+	grpAcceleratorBoard->add(sldCpuBoardMem, lblCpuBoardMem->getX() + lblCpuBoardMem->getWidth() + DISTANCE_NEXT_X, lblCpuBoardMem->getY());
+	grpAcceleratorBoard->add(lblCpuBoardRam, sldCpuBoardMem->getX() + sldCpuBoardMem->getWidth() + DISTANCE_NEXT_X, lblCpuBoardMem->getY());
+
 	//TODO add items here
 	grpAcceleratorBoard->setMovable(false);
 	grpAcceleratorBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 200);
@@ -1264,6 +1313,10 @@ void ExitPanelExpansions()
 	delete cboCpuBoardSubType;
 	delete cboCpuBoardRomFile;
 	delete btnCpuBoardRomChooser;
+
+	delete lblCpuBoardMem;
+	delete sldCpuBoardMem;
+	delete lblCpuBoardRam;
 
 	delete cboAcceleratorBoardItemSelector;
 	delete cboAcceleratorBoardSelector;
@@ -1317,10 +1370,9 @@ void RefreshPanelExpansions()
 	chkCD32Fmv->setEnabled(!emulating);
 	chkSana2->setEnabled(!emulating);
 	cboCpuBoardRomFile->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMFILE, workprefs.cpuboard_type != 0);
-	//TODO : Enable these
-	//ew(hDlg, IDC_CPUBOARDROMCHOOSER, workprefs.cpuboard_type != 0);
-	//ew(hDlg, IDC_CPUBOARDMEM, workprefs.cpuboard_type > 0);
-	//ew(hDlg, IDC_CPUBOARDRAM, workprefs.cpuboard_type > 0);
+	btnCpuBoardRomChooser->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMCHOOSER, workprefs.cpuboard_type != 0);
+	sldCpuBoardMem->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDMEM, workprefs.cpuboard_type > 0);
+	lblCpuBoardRam->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDRAM, workprefs.cpuboard_type > 0);
 	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type); //ew(hDlg, IDC_CPUBOARD_SUBTYPE, workprefs.cpuboard_type);
 }
 
