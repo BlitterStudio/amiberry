@@ -200,6 +200,25 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	return rd;
 }
 
+struct romdata *scan_single_rom (const TCHAR *path)
+{
+	struct zfile *z;
+	TCHAR tmp[MAX_DPATH];
+	struct romdata *rd;
+
+	_tcscpy (tmp, path);
+	rd = scan_arcadia_rom (tmp, 0);
+	if (rd)
+		return rd;
+	rd = getromdatabypath (path);
+	if (rd && rd->crc32 == 0xffffffff)
+		return rd;
+	z = zfile_fopen (path, _T("rb"), ZFD_NORMAL);
+	if (!z)
+		return 0;
+	return scan_single_rom_2 (z);
+}
+
 static int isromext(const std::string& path)
 {
 	if (path.empty())

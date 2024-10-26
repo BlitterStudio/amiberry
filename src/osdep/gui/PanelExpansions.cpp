@@ -44,6 +44,7 @@ static gcn::Button* btnScsiRomChooser;
 static gcn::CheckBox* chkScsiRomFileAutoboot;
 static gcn::CheckBox* chkScsiRomSelected;
 static gcn::CheckBox* chkScsiRomFilePcmcia;
+static gcn::CheckBox* chkScsiRom24bitDma;
 
 static gcn::DropDown* cboExpansionBoardItemSelector;
 static gcn::DropDown* cboExpansionBoardSelector;
@@ -534,7 +535,7 @@ static void values_to_expansion2_expansion_roms()
 		}
 		else {
 			btnScsiRomChooser->setVisible(true); //hide(hDlg, IDC_SCSIROMCHOOSER, 0);
-			cboScsiRomFile->setVisible(false); //hide(hDlg, IDC_SCSIROMFILE, 0);
+			cboScsiRomFile->setVisible(true); //hide(hDlg, IDC_SCSIROMFILE, 0);
 			chkScsiRomSelected->setVisible(false); //hide(hDlg, IDC_SCSIROMSELECTED, 1);
 			chkScsiRomSelected->setSelected(false); //setchecked(hDlg, IDC_SCSIROMSELECTED, false);
 			addromfiles(cboScsiRomFile, brc ? brc->roms[index].romfile : nullptr, romtype, romtype_extra);
@@ -549,9 +550,9 @@ static void values_to_expansion2_expansion_roms()
 			if (brc)
 				brc->roms[index].inserted = false;
 		}
-		//hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
-		//ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
-		//setchecked(hDlg, IDC_SCSIROM24BITDMA, brc && brc->roms[index].dma24bit);
+		chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0); //hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
+		chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0); //ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
+		chkScsiRom24bitDma->setSelected(brc && brc->roms[index].dma24bit); //setchecked(hDlg, IDC_SCSIROM24BITDMA, brc && brc->roms[index].dma24bit);
 	}
 	else {
 		btnScsiRomChooser->setVisible(true); //hide(hDlg, IDC_SCSIROMCHOOSER, 0);
@@ -566,8 +567,8 @@ static void values_to_expansion2_expansion_roms()
 		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_SCSIROMFILE, CB_RESETCONTENT, 0, 0);
 		cboScsiRomFile->setEnabled(false); //ew(hDlg, IDC_SCSIROMFILE, false);
 		btnScsiRomChooser->setEnabled(false); //ew(hDlg, IDC_SCSIROMCHOOSER, false);
-		//ew(hDlg, IDC_SCSIROM24BITDMA, 0);
-		//hide(hDlg, IDC_SCSIROM24BITDMA, 1);
+		chkScsiRom24bitDma->setEnabled(false); //ew(hDlg, IDC_SCSIROM24BITDMA, 0);
+		chkScsiRom24bitDma->setVisible(false); //hide(hDlg, IDC_SCSIROM24BITDMA, 1);
 	}
 }
 
@@ -639,8 +640,8 @@ static void values_to_expansion2dlg_sub()
 		cboScsiRomSelectNum->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, 0, 0);
 	}
 	cboScsiRomSelectNum->setEnabled((er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT)); //ew(hDlg, IDC_SCSIROMSELECTNUM, (er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT));
-	//hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
-	//ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
+	chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0); //hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
+	chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0); //ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
 }
 
 static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
@@ -684,9 +685,9 @@ static void values_from_expansion2dlg()
 			changed = _tcscmp(tmp, brc->roms[index].romfile) != 0;
 			getromfile(cboScsiRomSelect, brc->roms[index].romfile, MAX_DPATH / sizeof(TCHAR));
 		}
-		brc->roms[index].autoboot_disabled = false; //ischecked(hDlg, IDC_SCSIROMFILEAUTOBOOT);
-		brc->roms[index].inserted = false; //ischecked(hDlg, IDC_SCSIROMFILEPCMCIA);
-		brc->roms[index].dma24bit = false; //ischecked(hDlg, IDC_SCSIROM24BITDMA);
+		brc->roms[index].autoboot_disabled = chkScsiRomFileAutoboot->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEAUTOBOOT);
+		brc->roms[index].inserted = chkScsiRomFilePcmcia->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEPCMCIA);
+		brc->roms[index].dma24bit = chkScsiRom24bitDma->isSelected(); //ischecked(hDlg, IDC_SCSIROM24BITDMA);
 
 		int v = cboScsiRomId->getSelected(); //SendDlgItemMessage(IDC_SCSIROMID, CB_GETCURSEL, 0, 0L);
 		if (!isnew)
@@ -787,7 +788,8 @@ public:
 			values_from_expansion2dlg();
 		}
 		else if (action_event.getSource() == chkScsiRomFileAutoboot
-			|| action_event.getSource() == chkScsiRomFilePcmcia)
+			|| action_event.getSource() == chkScsiRomFilePcmcia
+			|| action_event.getSource() == chkScsiRom24bitDma)
 		{
 			values_from_expansion2dlg();
 		}
@@ -963,7 +965,14 @@ void InitPanelExpansions(const config_category& category)
 	chkScsiRomFilePcmcia->setBackgroundColor(gui_background_color);
 	chkScsiRomFilePcmcia->setForegroundColor(gui_foreground_color);
 	chkScsiRomFilePcmcia->addActionListener(expansions_action_listener);
-	
+
+	chkScsiRom24bitDma = new gcn::CheckBox("24-bit DMA");
+	chkScsiRom24bitDma->setId("chkScsiRom24bitDma");
+	chkScsiRom24bitDma->setBaseColor(gui_base_color);
+	chkScsiRom24bitDma->setBackgroundColor(gui_background_color);
+	chkScsiRom24bitDma->setForegroundColor(gui_foreground_color);
+	chkScsiRom24bitDma->addActionListener(expansions_action_listener);
+
 	cboExpansionBoardItemSelector = new gcn::DropDown(&expansionboard_itemselector_list);
 	cboExpansionBoardItemSelector->setSize(250, cboExpansionBoardItemSelector->getHeight());
 	cboExpansionBoardItemSelector->setBaseColor(gui_base_color);
@@ -1090,6 +1099,7 @@ void InitPanelExpansions(const config_category& category)
 	grpExpansionBoard->add(cboScsiRomId, cboScsiRomSelectCat->getX() + cboScsiRomSelectCat->getWidth() + DISTANCE_NEXT_X * 15, cboScsiRomSelectCat->getY());
 	grpExpansionBoard->add(cboScsiRomSelect, posX, posY + cboScsiRomSelectCat->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboScsiRomSelectNum, cboScsiRomSelect->getX() + cboScsiRomSelect->getWidth() + DISTANCE_NEXT_X, cboScsiRomSelect->getY());
+	grpExpansionBoard->add(chkScsiRom24bitDma, cboScsiRomSelectNum->getX() + cboScsiRomSelectNum->getWidth() + DISTANCE_NEXT_X, cboScsiRomSelectCat->getY());
 	grpExpansionBoard->add(chkScsiRomSelected, cboScsiRomSelectNum->getX() + cboScsiRomSelectNum->getWidth() + DISTANCE_NEXT_X, cboScsiRomSelectNum->getY());
 	grpExpansionBoard->add(cboScsiRomFile, chkScsiRomSelected->getX(), chkScsiRomSelected->getY());
 	grpExpansionBoard->add(btnScsiRomChooser, cboScsiRomFile->getX() + cboScsiRomFile->getWidth() + DISTANCE_NEXT_X, cboScsiRomFile->getY());
@@ -1147,6 +1157,7 @@ void ExitPanelExpansions()
 	delete btnScsiRomChooser;
 	delete chkScsiRomFileAutoboot;
 	delete chkScsiRomFilePcmcia;
+	delete chkScsiRom24bitDma;
 	delete cboScsiRomId;
 	delete cboScsiRomSelectNum;
 	delete chkScsiRomSelected;

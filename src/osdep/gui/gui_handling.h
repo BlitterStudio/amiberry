@@ -414,6 +414,7 @@ extern int delay_savestate_frame;
 extern int last_x;
 extern int last_y;
 
+extern struct romdata *scan_single_rom (const TCHAR *path);
 extern void update_gui_screen();
 extern void cap_fps(Uint64 start);
 extern long get_file_size(const std::string& filename);
