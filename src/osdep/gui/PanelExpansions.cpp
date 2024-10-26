@@ -35,6 +35,7 @@ static gcn::StringListModel scsirom_file_list;
 static gcn::StringListModel cpuboard_type_list;
 static gcn::StringListModel cpuboard_subtype_list;
 static gcn::StringListModel cpuboard_romfile_list;
+static gcn::StringListModel cpuboard_romsubselect_list;
 static gcn::StringListModel acceleratorboard_itemselector_list;
 static gcn::StringListModel acceleratorboard_selector_list;
 
@@ -58,6 +59,7 @@ static gcn::TextBox* txtExpansionBoardStringBox;
 static gcn::DropDown* cboCpuBoardType;
 static gcn::DropDown* cboCpuBoardSubType;
 static gcn::DropDown* cboCpuBoardRomFile;
+static gcn::DropDown* cboCpuRomSubSelect;
 static gcn::Button* btnCpuBoardRomChooser;
 
 static gcn::Label* lblCpuBoardMem;
@@ -555,8 +557,8 @@ static void init_expansion2(bool init)
 
 static void values_to_expansion2dlg_sub()
 {
-	cpuboard_subtype_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
-	cboCpuBoardSubType->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
+	cpuboard_romsubselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
+	cboCpuRomSubSelect->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
 
 	scsirom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
 	const expansionromtype* er = &expansionroms[scsiromselected];
@@ -908,9 +910,13 @@ public:
 		}
 		else if (source == chkScsiRomSelected
 			|| source == cboScsiRomFile
-			|| source == cboScsiRomId
-			|| source == cboCpuBoardRomFile
-			|| source == cboCpuBoardSubType)
+			|| source == cboScsiRomId)
+		{
+			values_from_expansion2dlg();
+			values_to_expansion2_expansion_settings();
+		}
+		else if (source == cboCpuBoardRomFile
+			|| source == cboCpuRomSubSelect)
 		{
 			values_from_expansion2dlg();
 			values_to_expansion2_expansion_settings();
@@ -1151,6 +1157,15 @@ void InitPanelExpansions(const config_category& category)
 	cboCpuBoardRomFile->setId("cboCpuBoardRomFile");
 	cboCpuBoardRomFile->addActionListener(expansions_action_listener);
 
+	cboCpuRomSubSelect = new gcn::DropDown(&cpuboard_romsubselect_list);
+	cboCpuRomSubSelect->setSize(250, cboCpuRomSubSelect->getHeight());
+	cboCpuRomSubSelect->setBaseColor(gui_base_color);
+	cboCpuRomSubSelect->setBackgroundColor(gui_background_color);
+	cboCpuRomSubSelect->setForegroundColor(gui_foreground_color);
+	cboCpuRomSubSelect->setSelectionColor(gui_selection_color);
+	cboCpuRomSubSelect->setId("cboCpuRomSubSelect");
+	cboCpuRomSubSelect->addActionListener(expansions_action_listener);
+
 	btnCpuBoardRomChooser = new gcn::Button("...");
 	btnCpuBoardRomChooser->setBaseColor(gui_base_color);
 	btnCpuBoardRomChooser->setBackgroundColor(gui_background_color);
@@ -1312,6 +1327,7 @@ void ExitPanelExpansions()
 	delete cboCpuBoardType;
 	delete cboCpuBoardSubType;
 	delete cboCpuBoardRomFile;
+	delete cboCpuRomSubSelect;
 	delete btnCpuBoardRomChooser;
 
 	delete lblCpuBoardMem;
