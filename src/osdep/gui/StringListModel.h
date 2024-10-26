@@ -27,7 +27,8 @@ namespace gcn {
 			return mStrings.at(i);
 		}
 
-		void add(const std::string &str) {
+		void add(const std::string &str) override
+		{
 			mStrings.push_back(str);
 		}
 

@@ -24,6 +24,7 @@ static gcn::StringListModel scsirom_select_cat_list;
 static gcn::StringListModel scsirom_select_list;
 static gcn::StringListModel scsirom_subselect_list;
 static gcn::StringListModel expansionboard_itemselector_list;
+static gcn::StringListModel expansionboard_selector_list;
 static gcn::StringListModel scsi_romid_list;
 static gcn::StringListModel scsirom_selectnum_list;
 static gcn::StringListModel scsirom_file_list;
@@ -196,13 +197,13 @@ retry:
 		bitcnt += eb->bitshift;
 	}
 	if (reset) {
-		auto list_model = itemselector->getListModel();
+		auto list_model = itemselector->getListModel(); //xSendDlgItemMessage(hDlg, itemselector, CB_RESETCONTENT, 0, 0);
 		list_model->clear_elements();
 		for (int i = 0; ebs[i].name; i++) {
 			eb = &ebs[i];
-			list_model->add(eb->name);
+			list_model->add(eb->name); //xSendDlgItemMessage(hDlg, itemselector, CB_ADDSTRING, 0, (LPARAM)eb->name);
 		}
-		itemselector->setSelected(item);
+		itemselector->setSelected(item); //xSendDlgItemMessage(hDlg, itemselector, CB_SETCURSEL, item, 0);
 	}
 	eb = &ebs[item];
 	bitcnt += eb->bitshift;
@@ -982,8 +983,7 @@ void InitPanelExpansions(const config_category& category)
 	cboExpansionBoardItemSelector->setId("cboExpansionBoardItemSelector");
 	cboExpansionBoardItemSelector->addActionListener(expansions_action_listener);
 
-	//TODO this one is probably not correct
-	cboExpansionBoardSelector = new gcn::DropDown(&expansionboard_itemselector_list);
+	cboExpansionBoardSelector = new gcn::DropDown(&expansionboard_selector_list);
 	cboExpansionBoardSelector->setSize(250, cboExpansionBoardSelector->getHeight());
 	cboExpansionBoardSelector->setBaseColor(gui_base_color);
 	cboExpansionBoardSelector->setBackgroundColor(gui_background_color);
@@ -1109,7 +1109,7 @@ void InitPanelExpansions(const config_category& category)
 	grpExpansionBoard->add(txtExpansionBoardStringBox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY());
 	grpExpansionBoard->add(chkExpansionBoardCheckbox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY() + chkScsiRomFileAutoboot->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboExpansionBoardItemSelector, posX, cboScsiRomSubSelect->getY() + cboScsiRomSubSelect->getHeight() + DISTANCE_NEXT_Y);
-	//grpExpansionBoard->add(cboExpansionBoardSelector, chkScsiRomSelected->getX(), cboExpansionBoardItemSelector->getY());
+	grpExpansionBoard->add(cboExpansionBoardSelector, chkScsiRomSelected->getX(), cboExpansionBoardItemSelector->getY());
 	//TODO add items here
 	grpExpansionBoard->setMovable(false);
 	grpExpansionBoard->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, 250);
