@@ -35,6 +35,9 @@ namespace gcn {
 		void clear() {
 			mStrings.clear();
 		}
+		void clear_elements() override {
+			mStrings.clear();
+		}
 
 		void swap_first(const std::string &str) {
 			mStrings.erase(mStrings.begin());

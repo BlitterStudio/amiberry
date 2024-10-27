@@ -776,9 +776,6 @@ static void updatecpuboardsubtypes()
 		cpuboard_subtype_list.add(cpuboards[changed_prefs.cpuboard_type].subtypes[i].name);
 	}
 
-	acceleratorboard_itemselector_list.clear();
-	acceleratorboard_selector_list.clear();
-
 	const expansionboardsettings* cbs = cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype].settings;
 	create_expansionrom_gui(&accelerator_gui_item, cbs, changed_prefs.cpuboard_settings, nullptr,
 		cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
