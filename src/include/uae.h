@@ -82,6 +82,7 @@ struct bstring {
 
 extern TCHAR *colormodes[];
 extern int saveimageoriginalpath;
+extern std::string get_ini_file_path();
 extern void get_saveimage_path(char* out, int size, int dir);
 extern std::string get_configuration_path();
 extern void get_nvram_path(TCHAR* out, int size);

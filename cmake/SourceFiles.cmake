@@ -225,6 +225,7 @@ set(SOURCE_FILES
         src/osdep/ioport.cpp
         src/osdep/sigsegv_handler.cpp
         src/osdep/socket.cpp
+        src/osdep/registry.cpp
         src/osdep/retroarch.cpp
         src/osdep/vpar.cpp
         src/pcem/386.cpp

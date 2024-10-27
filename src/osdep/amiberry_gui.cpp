@@ -39,6 +39,7 @@
 #include "fsdb.h"
 #include "gayle.h"
 #include "parser.h"
+#include "registry.h"
 #include "scsi.h"
 #include "target.h"
 
@@ -91,7 +92,6 @@ struct gui_msg gui_msglist[] = {
 };
 
 std::vector<ConfigFileInfo*> ConfigFilesList;
-std::vector<AvailableROM*> lstAvailableROMs;
 std::vector<std::string> lstMRUDiskList;
 std::vector<std::string> lstMRUCDList;
 std::vector<std::string> lstMRUWhdloadList;
@@ -117,33 +117,184 @@ void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file
 		vec.pop_back();
 }
 
-void ClearAvailableROMList()
+struct romdataentry
 {
-	for (const auto* rom : lstAvailableROMs)
-	{
-		delete rom;
+	TCHAR* name;
+	int priority;
+};
+
+void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2)
+{
+	int idx;
+	TCHAR tmp[MAX_DPATH];
+	TCHAR tmp2[MAX_DPATH];
+	TCHAR seltmp[MAX_DPATH];
+	struct romdata* rdx = NULL;
+	struct romdataentry* rde = xcalloc(struct romdataentry, MAX_ROMMGR_ROMS);
+	int ridx = 0;
+
+	if (path)
+		rdx = scan_single_rom(path);
+	idx = 0;
+	seltmp[0] = 0;
+	for (; fkey;) {
+		int size = sizeof(tmp) / sizeof(TCHAR);
+		int size2 = sizeof(tmp2) / sizeof(TCHAR);
+		if (!regenumstr(fkey, idx, tmp, &size, tmp2, &size2))
+			break;
+		if (_tcslen(tmp) == 7 || _tcslen(tmp) == 13) {
+			int group = 0;
+			int subitem = 0;
+			int idx2 = _tstol(tmp + 4);
+			if (_tcslen(tmp) == 13) {
+				group = _tstol(tmp + 8);
+				subitem = _tstol(tmp + 11);
+			}
+			if (idx2 >= 0) {
+				struct romdata* rd = getromdatabyidgroup(idx2, group, subitem);
+				for (int i = 0; i < 2; i++) {
+					int type = i ? type2 : type1;
+					if (type) {
+						if (rd && ((((rd->type & ROMTYPE_GROUP_MASK) & (type & ROMTYPE_GROUP_MASK)) && ((rd->type & ROMTYPE_SUB_MASK) == (type & ROMTYPE_SUB_MASK) || !(type & ROMTYPE_SUB_MASK))) ||
+							(rd->type & type) == ROMTYPE_NONE || (rd->type & type) == ROMTYPE_NOT)) {
+							getromname(rd, tmp);
+							int j;
+							for (j = 0; j < ridx; j++) {
+								if (!_tcsicmp(rde[j].name, tmp)) {
+									break;
+								}
+							}
+							if (j >= ridx) {
+								rde[ridx].name = my_strdup(tmp);
+								rde[ridx].priority = rd->sortpriority;
+								ridx++;
+							}
+							if (rd == rdx)
+								_tcscpy(seltmp, tmp);
+							break;
+						}
+					}
+				}
+			}
+		}
+		idx++;
 	}
-	lstAvailableROMs.clear();
+
+	for (int i = 0; i < ridx; i++) {
+		for (int j = i + 1; j < ridx; j++) {
+			int ipri = rde[i].priority;
+			const TCHAR* iname = rde[i].name;
+			int jpri = rde[j].priority;
+			const TCHAR* jname = rde[j].name;
+			if ((ipri > jpri) || (ipri == jpri && _tcsicmp(iname, jname) > 0)) {
+				struct romdataentry rdet;
+				memcpy(&rdet, &rde[i], sizeof(struct romdataentry));
+				memcpy(&rde[i], &rde[j], sizeof(struct romdataentry));
+				memcpy(&rde[j], &rdet, sizeof(struct romdataentry));
+			}
+		}
+	}
+
+	auto listmodel = d->getListModel(); //xSendDlgItemMessage(hDlg, d, CB_RESETCONTENT, 0, 0);
+	listmodel->clear_elements();
+	listmodel->add(""); //xSendDlgItemMessage(hDlg, d, CB_ADDSTRING, 0, (LPARAM)_T(""));
+	for (int i = 0; i < ridx; i++) {
+		struct romdataentry* rdep = &rde[i];
+		listmodel->add(rdep->name); //xSendDlgItemMessage(hDlg, d, CB_ADDSTRING, 0, (LPARAM)rdep->name);
+		xfree(rdep->name);
+	}
+	if (seltmp[0])
+	{
+		//xSendDlgItemMessage(hDlg, d, CB_SELECTSTRING, (WPARAM)-1, (LPARAM)seltmp);
+		for (int i = 0; i < listmodel->getNumberOfElements(); i++) {
+			if (!_tcsicmp(listmodel->getElementAt(i).c_str(), seltmp)) {
+				d->setSelected(i);
+				break;
+			}
+		}
+	}
+	else
+	{
+		//SetDlgItemText(hDlg, d, path);
+		if (path && path[0])
+		{
+			listmodel->add(path);
+			d->setSelected(listmodel->getNumberOfElements() - 1);
+		}
+	}
+
+	xfree(rde);
 }
 
-static int addrom(struct romdata* rd, const char* path)
+static int extpri(const TCHAR* p, int size)
 {
-	char tmpName[MAX_DPATH];
-	auto* const tmp = new AvailableROM();
-	getromname(rd, tmpName);
-	tmp->Name.assign(tmpName);
-	if (path != nullptr)
-		tmp->Path.assign(path);
-	tmp->ROMType = rd->type;
-	lstAvailableROMs.emplace_back(tmp);
-	romlist_add(path, rd);
+	const TCHAR* s = _tcsrchr(p, '.');
+	if (s == NULL)
+		return 80;
+	// if archive: lowest priority
+	if (!my_existsfile(p))
+		return 100;
+	int pri = 10;
+	// prefer matching size
+	struct mystat ms;
+	if (my_stat(p, &ms)) {
+		if (ms.size == size) {
+			pri--;
+		}
+	}
+	return pri;
+}
+
+static int addrom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
+{
+	TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH], tmp3[MAX_DPATH];
+	char pathname[MAX_DPATH];
+
+	_stprintf(tmp1, _T("ROM_%03d"), rd->id);
+	if (rd->group) {
+		TCHAR* p = tmp1 + _tcslen(tmp1);
+		_stprintf(p, _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
+	}
+	getromname(rd, tmp2);
+	pathname[0] = 0;
+
+	if (name) {
+		_tcscpy(pathname, name);
+	}
+	if (rd->crc32 == 0xffffffff) {
+		if (rd->configname)
+			_stprintf(tmp2, _T(":%s"), rd->configname);
+		else
+			_stprintf(tmp2, _T(":ROM_%03d"), rd->id);
+	}
+	int size = sizeof tmp3 / sizeof(TCHAR);
+	if (regquerystr(fkey, tmp1, tmp3, &size)) {
+		TCHAR* s = _tcschr(tmp3, '\"');
+		if (s && _tcslen(s) > 1) {
+			TCHAR* s2 = s + 1;
+			s = _tcschr(s2, '\"');
+			if (s)
+				*s = 0;
+			int pri1 = extpri(s2, rd->size);
+			int pri2 = extpri(pathname, rd->size);
+			if (pri2 >= pri1)
+				return 1;
+		}
+	}
+	fullpath(pathname, sizeof(pathname) / sizeof(TCHAR));
+	if (pathname[0]) {
+		_tcscat(tmp2, _T(" / \""));
+		_tcscat(tmp2, pathname);
+		_tcscat(tmp2, _T("\""));
+	}
+	if (!regsetstr(fkey, tmp1, tmp2))
+		return 0;
 	return 1;
 }
 
-struct romscandata
-{
-	uae_u8* keybuf;
-	int keysize;
+struct romscandata {
+	UAEREG* fkey;
+	int got;
 };
 
 static struct romdata* scan_single_rom_2(struct zfile* f)
@@ -243,26 +394,39 @@ static int isromext(const std::string& path)
 	return 0;
 }
 
-static int scan_rom_2(struct zfile* f, void* dummy)
+static int scan_rom_2(struct zfile* f, void* vrsd)
 {
-	auto* const path = zfile_getname(f);
+	struct romscandata* rsd = (struct romscandata*)vrsd;
+	const TCHAR* path = zfile_getname(f);
+	const TCHAR* romkey = _T("rom.key");
+	struct romdata* rd;
 
 	if (!isromext(path))
 		return 0;
-	auto* const rd = scan_single_rom_2(f);
+	rd = scan_single_rom_2(f);
 	if (rd)
-		addrom(rd, path);
+	{
+		TCHAR name[MAX_DPATH];
+		getromname(rd, name);
+		addrom(rsd->fkey, rd, path);
+		if (rd->type & ROMTYPE_KEY)
+			addkeyfile(path);
+		rsd->got = 1;
+	} else if (_tcslen(path) > _tcslen(romkey) && !_tcsicmp(path + _tcslen(path) - _tcslen(romkey), romkey)) {
+		addkeyfile(path);
+	}
 	return 0;
 }
 
-static void scan_rom(const std::string& path)
+static int scan_rom(const std::string& path, UAEREG* fkey)
 {
+	struct romscandata rsd = { fkey, 0 };
 	struct romdata* rd;
 	int cnt = 0;
 
 	if (!isromext(path)) {
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
-		return;
+		return 0;
 	}
 #ifdef ARCADIA
 	for (;;) {
@@ -270,14 +434,15 @@ static void scan_rom(const std::string& path)
 		_tcscpy(tmp, path.c_str());
 		rd = scan_arcadia_rom(tmp, cnt++);
 		if (rd) {
-			if (!addrom(rd, tmp))
-				return;
+			if (!addrom(fkey, rd, tmp))
+				return 1;
 			continue;
 		}
 		break;
 	}
 #endif
-	zfile_zopen(path, scan_rom_2, nullptr);
+	zfile_zopen(path, scan_rom_2, (void*)&rsd);
+	return rsd.got;
 }
 
 void SymlinkROMs()
@@ -285,15 +450,18 @@ void SymlinkROMs()
 	symlink_roms(&changed_prefs);
 }
 
-void RescanROMs()
+void scan_roms()
 {
+	UAEREG* fkey, * fkey2;
 	std::vector<std::string> dirs;
 	std::vector<std::string> files;
 	char path[MAX_DPATH];
 
 	romlist_clear();
-	ClearAvailableROMList();
 	get_rom_path(path, MAX_DPATH);
+
+	regdeletetree(NULL, _T("DetectedROMs"));
+	fkey = regcreatetree(NULL, _T("DetectedROMs"));
 
 	load_keyring(&changed_prefs, path);
 	read_directory(path, &dirs, &files);
@@ -301,7 +469,7 @@ void RescanROMs()
 	// Root level scan
 	for (const auto& file : files)
 	{
-		scan_rom(std::string(path) + file);
+		scan_rom(std::string(path) + file, fkey);
 	}
 
 	// Recursive scan
@@ -313,24 +481,26 @@ void RescanROMs()
 			read_directory(full_path, nullptr, &files);
 			for (const auto& file : files)
 			{
-				scan_rom(full_path + "/" + file);
+				scan_rom(full_path + "/" + file, fkey);
 			}
 		}
 	}
 
-	for (int id = 1;; ++id)
-	{
-		auto* rd = getromdatabyid(id);
-		if (!rd)
-			break;
-		if (rd->crc32 == 0xffffffff)
-		{
-			if (strncmp(rd->model, "AROS", 4) == 0)
-				addrom(rd, ":AROS");
-			else if (rd->id == 63)
-				addrom(rd, ":HRTMon");
+	fkey2 = regcreatetree(NULL, _T("DetectedROMS"));
+	if (fkey2) {
+		int id = 1;
+		for (;;) {
+			struct romdata* rd = getromdatabyid(id);
+			if (!rd)
+				break;
+			if (rd->crc32 == 0xffffffff)
+				addrom(fkey, rd, NULL);
+			id++;
 		}
+		regclosetree(fkey2);
 	}
+
+	regclosetree(fkey);
 }
 
 static void ClearConfigFileList()
@@ -490,8 +660,8 @@ int gui_init()
 	emulating = 0;
 	auto ret = 0;
 
-	if (lstAvailableROMs.empty())
-		RescanROMs();
+	if (!regexiststree(NULL, _T("DetectedROMs")))
+		scan_roms();
 
 	prefs_to_gui();
 	run_gui();
@@ -515,7 +685,6 @@ void gui_exit()
 	close_sound();
 	save_amiberry_settings();
 	ClearConfigFileList();
-	ClearAvailableROMList();
 }
 
 void gui_purge_events()

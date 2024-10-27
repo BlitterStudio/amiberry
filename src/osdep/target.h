@@ -140,9 +140,8 @@ extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
 extern std::string remove_file_extension(const std::string& filename);
 extern void ReadConfigFileList(void);
-extern void RescanROMs(void);
+extern void scan_roms(void);
 extern void SymlinkROMs(void);
-extern void ClearAvailableROMList(void);
 
 extern bool resumepaused(int priority);
 extern bool setpaused(int priority);
@@ -154,15 +153,6 @@ void init_colors(int monid);
 
 #include <vector>
 #include <string>
-
-typedef struct
-{
-	std::string Name;
-	std::string Path;
-	int ROMType;
-} AvailableROM;
-
-extern std::vector<AvailableROM*> lstAvailableROMs;
 
 #define MAX_MRU_LIST 40
 

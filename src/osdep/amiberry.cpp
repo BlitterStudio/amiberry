@@ -53,6 +53,7 @@
 #ifdef FLOPPYBRIDGE
 #include "floppybridge_lib.h"
 #endif
+#include "registry.h"
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
@@ -93,6 +94,7 @@ int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
 
+static TCHAR* inipath = NULL;
 extern FILE* debugfile;
 SDL_Cursor* normalcursor;
 
@@ -312,6 +314,7 @@ std::string plugins_dir;
 std::string video_dir;
 std::string themes_path;
 std::string amiberry_conf_file;
+std::string amiberry_ini_file;
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -1852,6 +1855,7 @@ void logging_init()
 		first++;
 		write_log("%s Logfile\n\n", get_version_string().c_str());
 		write_log("%s\n", get_sdl2_version_string().c_str());
+		regstatus();
 	}
 }
 
@@ -3041,6 +3045,11 @@ std::string get_screenshot_path()
 	return fix_trailing(screenshot_dir);
 }
 
+std::string get_ini_file_path()
+{
+	return amiberry_ini_file;
+}
+
 void get_video_path(char* out, int size)
 {
 	_tcsncpy(out, fix_trailing(video_dir).c_str(), size - 1);
@@ -3446,18 +3455,6 @@ void save_amiberry_settings(void)
 	write_string_option("video_dir", video_dir);
 	write_string_option("themes_path", themes_path);
 
-	// The number of ROMs in the last scan
-	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
-	fputs(buffer, f);
-
-	// The ROMs found in the last scan
-	for (auto& lstAvailableROM : lstAvailableROMs)
-	{
-		write_string_option("ROMName", lstAvailableROM->Name);
-		write_string_option("ROMPath", lstAvailableROM->Path);
-		write_int_option("ROMType", lstAvailableROM->ROMType);
-	}
-
 	// Recent disk entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
 	fputs(buffer, f);
@@ -3518,24 +3515,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	if (!cfgfile_separate_linea(path, linea, option, value))
 		return 0;
 
-	if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
-		|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
-		|| cfgfile_intval(option, value, "ROMType", &romType, 1))
-	{
-		if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
-		{
-			auto* tmp = new AvailableROM();
-			tmp->Name.assign(romName);
-			tmp->Path.assign(romPath);
-			tmp->ROMType = romType;
-			lstAvailableROMs.emplace_back(tmp);
-			strncpy(romName, "", sizeof romName);
-			strncpy(romPath, "", sizeof romPath);
-			romType = -1;
-			ret = 1;
-		}
-	}
-	else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
+	if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 	{
 		auto* const f = fopen(tmpFile, "rbe");
 		if (f != nullptr)
@@ -3831,7 +3811,7 @@ std::string get_home_directory()
 	return {tmp};
 }
 
-// The location of .uae configurations and the global amiberry.conf file
+// The location of .uae configurations
 std::string get_config_directory()
 {
 #ifdef __MACH__
@@ -4075,6 +4055,7 @@ static void init_amiberry_dirs()
 
 	// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
 	amiberry_conf_file = xdg_config_home + "/amiberry.conf";
+	amiberry_ini_file = xdg_config_home + "/amiberry.ini";
 	themes_path = xdg_config_home;
 
 	// These paths are relative to the XDG_DATA_HOME directory
@@ -4287,6 +4268,23 @@ int main(int argc, char* argv[])
 	}
 
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", fix_trailing(savestate_dir).c_str());
+
+	reginitializeinit(&inipath);
+	if (getregmode() == NULL)
+	{
+		TCHAR* path;
+		std::string ini_file_path = get_ini_file_path();
+		_tcscpy(path, ini_file_path.c_str());
+		auto f = fopen(path, _T("r"));
+		if (!f)
+			f = fopen(path, _T("w"));
+		if (f) {
+			fclose(f);
+			reginitializeinit(&path);
+		}
+		xfree(path);
+	}
+
 	logging_init();
 #if defined (CPU_arm)
 	memset(&action, 0, sizeof action);
@@ -4321,8 +4319,8 @@ int main(int argc, char* argv[])
 		abort();
 	}
 #endif
-	if (lstAvailableROMs.empty())
-		RescanROMs();
+	if (!regexiststree(NULL, _T("DetectedROMs")))
+		scan_roms();
 
 	if (!init_mmtimer())
 		return 0;
@@ -4432,7 +4430,6 @@ int main(int argc, char* argv[])
 	// Unsolved for OS X
 #endif
 
-	ClearAvailableROMList();
 	romlist_clear();
 	free_keyring();
 

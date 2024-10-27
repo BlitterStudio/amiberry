@@ -23,6 +23,7 @@
 #include "xwin.h"
 #include "drawing.h"
 #include "midiemu.h"
+#include "registry.h"
 
 extern void SetLastActiveConfig(const char* filename);
 extern std::string current_dir;
@@ -339,8 +340,8 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	write_log("\nCD Autoload: %s  \n\n", filepath);
 
-	if (lstAvailableROMs.empty())
-		RescanROMs();
+	if (!regexiststree(NULL, _T("DetectedROMs")))
+		scan_roms();
 
 	conf_path = get_configuration_path();
 	whdload_prefs.filename = get_game_filename(filepath);
@@ -1219,8 +1220,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	if (amiberry_options.use_jst_instead_of_whd)
 		write_log("WHDBooter - Using JST instead of WHDLoad\n");
 
-	if (lstAvailableROMs.empty())
-		RescanROMs();
+	if (!regexiststree(NULL, _T("DetectedROMs")))
+		scan_roms();
 
 	conf_path = get_configuration_path();
 	whdbooter_path = get_whdbootpath();

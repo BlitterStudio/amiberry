@@ -16,6 +16,7 @@
 #include "rommgr.h"
 #include "sana2.h"
 #include "uae.h"
+#include "registry.h"
 
 static gcn::Window* grpExpansionBoard;
 static gcn::Window* grpAcceleratorBoard;
@@ -122,11 +123,6 @@ static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 		else if (rl)
 			_tcsncpy(path, rl->path, size);
 	}
-}
-
-static void addromfiles(gcn::DropDown* d, const TCHAR* path, int type1, int type2)
-{
-	//TODO when we implement ROM files
 }
 
 static void setcpuboardmemsize()
@@ -672,11 +668,16 @@ static void values_from_expansion2dlg()
 	}
 }
 
-static void values_to_expansion2_expansion_roms()
+static void values_to_expansion2_expansion_roms(UAEREG* fkey)
 {
 	int index;
+	bool keyallocated = false;
 	boardromconfig* brc;
 
+	if (!fkey) {
+		fkey = regcreatetree(NULL, _T("DetectedROMs"));
+		keyallocated = true;
+	}
 	if (scsiromselected) {
 		const expansionromtype* ert = &expansionroms[scsiromselected];
 		int romtype = static_cast<int>(ert->romtype);
@@ -706,7 +707,7 @@ static void values_to_expansion2_expansion_roms()
 			cboScsiRomFile->setVisible(true); //hide(hDlg, IDC_SCSIROMFILE, 0);
 			chkScsiRomSelected->setVisible(false); //hide(hDlg, IDC_SCSIROMSELECTED, 1);
 			chkScsiRomSelected->setSelected(false); //setchecked(hDlg, IDC_SCSIROMSELECTED, false);
-			addromfiles(cboScsiRomFile, brc ? brc->roms[index].romfile : nullptr, romtype, romtype_extra);
+			addromfiles(fkey, cboScsiRomFile, brc ? brc->roms[index].romfile : nullptr, romtype, romtype_extra);
 			chkScsiRomFileAutoboot->setSelected(brc && brc->roms[index].autoboot_disabled); //setchecked(hDlg, IDC_SCSIROMFILEAUTOBOOT, brc && brc->roms[index].autoboot_disabled);
 		}
 		if (deviceflags & EXPANSIONTYPE_PCMCIA) {
@@ -738,6 +739,8 @@ static void values_to_expansion2_expansion_roms()
 		chkScsiRom24bitDma->setEnabled(false); //ew(hDlg, IDC_SCSIROM24BITDMA, 0);
 		chkScsiRom24bitDma->setVisible(false); //hide(hDlg, IDC_SCSIROM24BITDMA, 1);
 	}
+	if (keyallocated)
+		regclosetree(fkey);
 }
 
 static void values_to_expansion2_expansion_settings()
@@ -924,7 +927,7 @@ public:
 		else if (source == cboScsiRomSubSelect)
 		{
 			values_from_expansion2dlg();
-			values_to_expansion2_expansion_roms();
+			values_to_expansion2_expansion_roms(NULL);
 			values_to_expansion2_expansion_settings();
 		}
 		else if (source == cboScsiRomSelectCat)
@@ -935,7 +938,7 @@ public:
 				scsiromselectedcatnum = val;
 				scsiromselected = 0;
 				init_expansion2(false);
-				values_to_expansion2_expansion_roms();
+				values_to_expansion2_expansion_roms(NULL);
 				values_to_expansion2_expansion_settings();
 				values_to_expansion2dlg_sub();
 			}
@@ -950,7 +953,7 @@ public:
 			if (val != -1)
 			{
 				scsiromselected = val;
-				values_to_expansion2_expansion_roms();
+				values_to_expansion2_expansion_roms(NULL);
 				values_to_expansion2_expansion_settings();
 				values_to_expansion2dlg_sub();
 			}
@@ -1367,7 +1370,10 @@ void RefreshPanelExpansions()
 	// We don't really need Catweasel support in Amiberry, let's disable it
 	changed_prefs.catweasel = 0;
 
-	values_to_expansion2_expansion_roms();
+	UAEREG* fkey = regcreatetree(NULL, _T("DetectedROMs"));
+	load_keyring(&changed_prefs, NULL);
+
+	values_to_expansion2_expansion_roms(fkey);
 	values_to_expansion2_expansion_settings();
 
 	int index;
@@ -1375,7 +1381,7 @@ void RefreshPanelExpansions()
 	if (changed_prefs.cpuboard_type) {
 		const cpuboardsubtype* cst = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
 		brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
-		addromfiles(cboCpuBoardRomFile, brc ? brc->roms[index].romfile : nullptr,
+		addromfiles(fkey, cboCpuBoardRomFile, brc ? brc->roms[index].romfile : nullptr,
 			static_cast<int>(cst->romtype), cst->romtype_extra);
 	} else {
 		auto list_model = cboCpuBoardRomFile->getListModel();
