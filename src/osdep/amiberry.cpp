@@ -96,6 +96,7 @@ int pissoff_value = 15000 * CYCLE_UNIT;
 
 static TCHAR* inipath = NULL;
 extern FILE* debugfile;
+static int forceroms;
 SDL_Cursor* normalcursor;
 
 int paraport_mask;
@@ -4132,6 +4133,84 @@ void load_amiberry_settings(void)
 	}
 }
 
+static void romlist_add2(const TCHAR* path, struct romdata* rd)
+{
+	if (getregmode()) {
+		int ok = 0;
+		TCHAR tmp[MAX_DPATH];
+		if (path[0] == '/' || path[0] == '\\')
+			ok = 1;
+		if (_tcslen(path) > 1 && path[1] == ':')
+			ok = 1;
+		if (!ok) {
+			_tcscpy(tmp, get_rom_path().c_str());
+			_tcscat(tmp, path);
+			romlist_add(tmp, rd);
+			return;
+		}
+	}
+	romlist_add(path, rd);
+}
+
+void read_rom_list(bool initial)
+{
+	TCHAR tmp2[1000];
+	int idx, idx2;
+	UAEREG* fkey;
+	TCHAR tmp[1000];
+	int size, size2, exists;
+
+	romlist_clear();
+	exists = regexiststree(NULL, _T("DetectedROMs"));
+	fkey = regcreatetree(NULL, _T("DetectedROMs"));
+	if (fkey == NULL)
+		return;
+	if (!exists || forceroms) {
+		//if (initial) {
+		//	scaleresource_init(NULL, 0);
+		//}
+		load_keyring(NULL, NULL);
+		scan_roms(forceroms ? 0 : 1);
+	}
+	forceroms = 0;
+	idx = 0;
+	for (;;) {
+		size = sizeof(tmp) / sizeof(TCHAR);
+		size2 = sizeof(tmp2) / sizeof(TCHAR);
+		if (!regenumstr(fkey, idx, tmp, &size, tmp2, &size2))
+			break;
+		if (_tcslen(tmp) == 7 || _tcslen(tmp) == 13) {
+			int group = 0;
+			int subitem = 0;
+			idx2 = _tstol(tmp + 4);
+			if (_tcslen(tmp) == 13) {
+				group = _tstol(tmp + 8);
+				subitem = _tstol(tmp + 11);
+			}
+			if (idx2 >= 0 && _tcslen(tmp2) > 0) {
+				struct romdata* rd = getromdatabyidgroup(idx2, group, subitem);
+				if (rd) {
+					TCHAR* s = _tcschr(tmp2, '\"');
+					if (s && _tcslen(s) > 1) {
+						TCHAR* s2 = my_strdup(s + 1);
+						s = _tcschr(s2, '\"');
+						if (s)
+							*s = 0;
+						romlist_add2(s2, rd);
+						xfree(s2);
+					}
+					else {
+						romlist_add2(tmp2, rd);
+					}
+				}
+			}
+		}
+		idx++;
+	}
+	romlist_add(NULL, NULL);
+	regclosetree(fkey);
+}
+
 void target_getdate(int* y, int* m, int* d)
 {
 	*y = GETBDY(AMIBERRYDATE);
@@ -4319,8 +4398,6 @@ int main(int argc, char* argv[])
 		abort();
 	}
 #endif
-	if (!regexiststree(NULL, _T("DetectedROMs")))
-		scan_roms();
 
 	if (!init_mmtimer())
 		return 0;
@@ -4337,6 +4414,9 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
 #endif
 	(void)atexit(SDL_Quit);
+
+	read_rom_list(true);
+	load_keyring(NULL, NULL);
 	write_log(_T("Enumerating display devices.. \n"));
 	enumeratedisplays();
 	write_log(_T("Sorting devices and modes...\n"));

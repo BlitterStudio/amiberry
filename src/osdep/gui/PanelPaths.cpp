@@ -259,7 +259,7 @@ class RescanROMsButtonActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		scan_roms();
+		scan_roms(true);
 		SymlinkROMs();
 
 		import_joysticks();

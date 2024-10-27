@@ -140,7 +140,8 @@ extern std::string extract_path(const std::string& filename);
 extern void remove_file_extension(char* filename);
 extern std::string remove_file_extension(const std::string& filename);
 extern void ReadConfigFileList(void);
-extern void scan_roms(void);
+extern void read_rom_list(bool);
+extern int scan_roms(int show);
 extern void SymlinkROMs(void);
 
 extern bool resumepaused(int priority);

@@ -53,6 +53,7 @@
 int emulating = 0;
 bool config_loaded = false;
 int gui_active;
+int recursiveromscan = 2;
 
 std::vector<std::string> serial_ports;
 std::vector<std::string> midi_in_ports;
@@ -370,7 +371,7 @@ struct romdata *scan_single_rom (const TCHAR *path)
 	return scan_single_rom_2 (z);
 }
 
-static int isromext(const std::string& path)
+static int isromext(const std::string& path, bool deepscan)
 {
 	if (path.empty())
 		return 0;
@@ -385,13 +386,43 @@ static int isromext(const std::string& path)
 
 	if (ext.size() >= 2 && std::toupper(ext[0]) == 'U' && std::isdigit(ext[1]))
 		return 1;
-
+	if (!deepscan)
+		return 0;
 	for (auto i = 0; uae_archive_extensions[i]; i++)
 	{
 		if (strcasecmp(ext.c_str(), uae_archive_extensions[i]) == 0)
 			return 1;
 	}
 	return 0;
+}
+
+static bool scan_rom_hook(const TCHAR* name, int line)
+{
+	// TODO
+	return true;
+	//MSG msg;
+	//if (cdstate.status)
+	//	return false;
+	//if (!cdstate.active)
+	//	return true;
+	//if (name != NULL) {
+	//	const TCHAR* s = NULL;
+	//	if (line == 2) {
+	//		s = _tcsrchr(name, '/');
+	//		if (!s)
+	//			s = _tcsrchr(name, '\\');
+	//		if (s)
+	//			s++;
+	//	}
+	//	SetWindowText(GetDlgItem(cdstate.hwnd, line == 1 ? IDC_INFOBOX_TEXT1 : (line == 2 ? IDC_INFOBOX_TEXT2 : IDC_INFOBOX_TEXT3)), s ? s : name);
+	//}
+	//while (PeekMessage(&msg, cdstate.hwnd, 0, 0, PM_REMOVE)) {
+	//	if (!IsDialogMessage(cdstate.hwnd, &msg)) {
+	//		TranslateMessage(&msg);
+	//		DispatchMessage(&msg);
+	//	}
+	//}
+	//return cdstate.active;
 }
 
 static int scan_rom_2(struct zfile* f, void* vrsd)
@@ -401,7 +432,7 @@ static int scan_rom_2(struct zfile* f, void* vrsd)
 	const TCHAR* romkey = _T("rom.key");
 	struct romdata* rd;
 
-	if (!isromext(path))
+	if (!isromext(path, true))
 		return 0;
 	rd = scan_single_rom_2(f);
 	if (rd)
@@ -418,13 +449,13 @@ static int scan_rom_2(struct zfile* f, void* vrsd)
 	return 0;
 }
 
-static int scan_rom(const std::string& path, UAEREG* fkey)
+static int scan_rom(const std::string& path, UAEREG* fkey, bool deepscan)
 {
 	struct romscandata rsd = { fkey, 0 };
 	struct romdata* rd;
 	int cnt = 0;
 
-	if (!isromext(path)) {
+	if (!isromext(path, deepscan)) {
 		//write_log("ROMSCAN: skipping file '%s', unknown extension\n", path);
 		return 0;
 	}
@@ -450,45 +481,234 @@ void SymlinkROMs()
 	symlink_roms(&changed_prefs);
 }
 
-void scan_roms()
+static int listrom(const int* roms)
 {
-	UAEREG* fkey, * fkey2;
-	std::vector<std::string> dirs;
-	std::vector<std::string> files;
-	char path[MAX_DPATH];
+	int i;
 
-	romlist_clear();
-	get_rom_path(path, MAX_DPATH);
+	i = 0;
+	while (roms[i] >= 0) {
+		struct romdata* rd = getromdatabyid(roms[i]);
+		if (rd && romlist_get(rd))
+			return 1;
+		i++;
+	}
+	return 0;
+}
+
+static void show_rom_list(void)
+{
+	// TODO
+	//TCHAR* p;
+	//TCHAR* p1, * p2;
+	//const int* rp;
+	//bool first = true;
+	//const int romtable[] = {
+	//	5, 4, -1, -1, // A500 1.2
+	//	6, 32, -1, -1, // A500 1.3
+	//	7, -1, -1, // A500+
+	//	8, 9, 10, -1, -1, // A600
+	//	23, 24, -1, -1, // A1000
+	//	11, 31, 15, -1, -1, // A1200
+	//	59, 71, 61, -1, -1, // A3000
+	//	16, 46, 31, 13, 12, -1, -1, // A4000
+	//	17, -1, -1, // A4000T
+	//	18, -1, 19, -1, -1, // CD32
+	//	20, 21, 22, -1, 6, 32, -1, -1, // CDTV
+	//	9, 10, -1, 107, 108, -1, -1, // CDTV-CR
+	//	49, 50, 75, 51, 76, 77, -1, 5, 4, -1, -2, // ARCADIA
+
+	//	18, -1, 19, -1, 74, 23, -1, -1,  // CD32 FMV
+
+	//	69, 67, 70, 115, -1, -1, // nordic power
+	//	65, 68, -1, -1, // x-power
+	//	62, 60, -1, -1, // action cartridge
+	//	116, -1, -1, // pro access
+	//	52, 25, -1, -1, // ar 1
+	//	26, 27, 28, -1, -1, // ar 2
+	//	29, 30, -1, -1, // ar 3
+	//	47, -1, -1, // action replay 1200
+
+	//	0, 0, 0
+	//};
+
+	//p1 = _T("A500 Boot ROM 1.2\0A500 Boot ROM 1.3\0A500+\0A600\0A1000\0A1200\0A3000\0A4000\0A4000T\0")
+	//	_T("CD32\0CDTV\0CDTV-CR\0Arcadia Multi Select\0")
+	//	_T("CD32 Full Motion Video\0")
+	//	_T("Nordic Power\0X-Power Professional 500\0Action Cartridge Super IV Professional\0")
+	//	_T("Pro Access\0")
+	//	_T("Action Replay MK I\0Action Replay MK II\0Action Replay MK III\0")
+	//	_T("Action Replay 1200\0")
+	//	_T("\0");
+
+	//p = xmalloc(TCHAR, 100000);
+	//if (!p)
+	//	return;
+	//WIN32GUI_LoadUIString(IDS_ROMSCANEND, p, 100);
+	//_tcscat(p, _T("\n\n"));
+
+	//rp = romtable;
+	//while (rp[0]) {
+	//	int ok = 1;
+	//	p2 = p1 + _tcslen(p1) + 1;
+	//	while (*rp >= 0) {
+	//		if (ok) {
+	//			ok = 0;
+	//			if (listrom(rp))
+	//				ok = 1;
+	//		}
+	//		while (*rp++ >= 0);
+	//	}
+	//	if (ok) {
+	//		if (!first)
+	//			_tcscat(p, _T(", "));
+	//		first = false;
+	//		_tcscat(p, p1);
+	//	}
+	//	if (*rp == -2) {
+	//		_tcscat(p, _T("\n\n"));
+	//		first = true;
+	//	}
+	//	rp++;
+	//	p1 = p2;
+	//}
+
+	//pre_gui_message(p);
+	//free(p);
+}
+
+static int scan_roms_2(UAEREG* fkey, const TCHAR* path, bool deepscan, int level)
+{
+	struct dirent* entry;
+	struct stat statbuf;
+	DIR* dp;
+	int ret = 0;
+
+	if (!path)
+		return 0;
+
+	write_log(_T("ROM scan directory '%s'\n"), path);
+
+	dp = opendir(path);
+	if (dp == NULL)
+		return 0;
+
+	scan_rom_hook(path, 1);
+
+	while ((entry = readdir(dp)) != NULL) {
+		TCHAR tmppath[MAX_DPATH];
+		_tcscpy(tmppath, path);
+		_tcscat(tmppath, entry->d_name);
+
+		if (stat(tmppath, &statbuf) == -1)
+			continue;
+
+		if (S_ISREG(statbuf.st_mode) && statbuf.st_size < 10000000) {
+			if (scan_rom(tmppath, fkey, deepscan))
+				ret = 1;
+		}
+		else if (deepscan && S_ISDIR(statbuf.st_mode)) {
+			if (recursiveromscan < 0 || recursiveromscan > level) {
+				if (entry->d_name[0] != '.') {
+					_tcscat(tmppath, _T("/"));
+					scan_roms_2(fkey, tmppath, deepscan, level + 1);
+				}
+			}
+		}
+
+		if (!scan_rom_hook(NULL, 0))
+			break;
+	}
+
+	closedir(dp);
+	return ret;
+}
+
+#define MAX_ROM_PATHS 10
+
+static int scan_roms_3(UAEREG* fkey, TCHAR** paths, const TCHAR* path)
+{
+	int i, ret;
+	TCHAR pathp[MAX_DPATH];
+	bool deepscan = true;
+
+	ret = 0;
+	scan_rom_hook(NULL, 0);
+	pathp[0] = 0;
+	realpath(path, pathp);
+	if (!pathp[0])
+		return ret;
+	if (_tcsicmp(pathp, get_rom_path().c_str()) == 0)
+		deepscan = false; // do not scan root dir archives
+	for (i = 0; i < MAX_ROM_PATHS; i++) {
+		if (paths[i] && !_tcsicmp(paths[i], pathp))
+			return ret;
+	}
+	ret = scan_roms_2(fkey, pathp, deepscan, 0);
+	for (i = 0; i < MAX_ROM_PATHS; i++) {
+		if (!paths[i]) {
+			paths[i] = my_strdup(pathp);
+			break;
+		}
+	}
+	return ret;
+}
+
+int scan_roms(int show)
+{
+	TCHAR path[MAX_DPATH];
+	static int recursive;
+	int id, i, ret, keys, cnt;
+	UAEREG* fkey, * fkey2;
+	TCHAR* paths[MAX_ROM_PATHS];
+
+	if (recursive)
+		return 0;
+	recursive++;
+
+	ret = 0;
 
 	regdeletetree(NULL, _T("DetectedROMs"));
 	fkey = regcreatetree(NULL, _T("DetectedROMs"));
+	if (fkey == NULL)
+		goto end;
 
-	load_keyring(&changed_prefs, path);
-	read_directory(path, &dirs, &files);
-
-	// Root level scan
-	for (const auto& file : files)
-	{
-		scan_rom(std::string(path) + file, fkey);
+	cnt = 0;
+	for (i = 0; i < MAX_ROM_PATHS; i++)
+		paths[i] = NULL;
+	scan_rom_hook(NULL, 0);
+	while (scan_rom_hook(NULL, 0)) {
+		keys = get_keyring();
+		get_rom_path(path, sizeof path / sizeof(TCHAR));
+		cnt += scan_roms_3(fkey, paths, path);
+		// We only have one ROM path, so no need to scan other paths
+		//if (1) {
+		//	static pathtype pt[] = { PATH_TYPE_DEFAULT, PATH_TYPE_WINUAE, PATH_TYPE_NEWWINUAE, PATH_TYPE_NEWAF, PATH_TYPE_AMIGAFOREVERDATA, PATH_TYPE_END };
+		//	for (i = 0; pt[i] != PATH_TYPE_END; i++) {
+		//		ret = get_rom_path(path, pt[i]);
+		//		if (ret < 0)
+		//			break;
+		//		cnt += scan_roms_3(fkey, paths, path);
+		//	}
+		//	if (get_keyring() > keys) { /* more keys detected in previous scan? */
+		//		write_log(_T("ROM scan: more keys found, restarting..\n"));
+		//		for (i = 0; i < MAX_ROM_PATHS; i++) {
+		//			xfree(paths[i]);
+		//			paths[i] = NULL;
+		//		}
+		//		continue;
+		//	}
+		//}
+		break;
 	}
+	if (cnt == 0)
+		scan_roms_3(fkey, paths, changed_prefs.path_rom.path[0]);
 
-	// Recursive scan
-	for (const auto& dir : dirs)
-	{
-		if (dir != "..")
-		{
-			std::string full_path = std::string(path) + dir;
-			read_directory(full_path, nullptr, &files);
-			for (const auto& file : files)
-			{
-				scan_rom(full_path + "/" + file, fkey);
-			}
-		}
-	}
+	for (i = 0; i < MAX_ROM_PATHS; i++)
+		xfree(paths[i]);
 
 	fkey2 = regcreatetree(NULL, _T("DetectedROMS"));
 	if (fkey2) {
-		int id = 1;
+		id = 1;
 		for (;;) {
 			struct romdata* rd = getromdatabyid(id);
 			if (!rd)
@@ -500,7 +720,15 @@ void scan_roms()
 		regclosetree(fkey2);
 	}
 
+end:
+
+	read_rom_list(false);
+	if (show)
+		show_rom_list();
+
 	regclosetree(fkey);
+	recursive--;
+	return ret;
 }
 
 static void ClearConfigFileList()
@@ -660,8 +888,7 @@ int gui_init()
 	emulating = 0;
 	auto ret = 0;
 
-	if (!regexiststree(NULL, _T("DetectedROMs")))
-		scan_roms();
+	read_rom_list(false);
 
 	prefs_to_gui();
 	run_gui();
