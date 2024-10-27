@@ -6,6 +6,7 @@
 #include "amiberry_input.h"
 #include "filesys.h"
 #include "options.h"
+#include "registry.h"
 
 enum
 {
@@ -437,5 +438,7 @@ extern void apply_theme();
 extern void apply_theme_extras();
 
 extern void SetLastActiveConfig(const char* filename);
+
+extern void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2);
 
 #endif // GUI_HANDLING_H

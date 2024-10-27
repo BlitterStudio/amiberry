@@ -94,7 +94,7 @@ namespace gcn
         virtual std::string getElementAt(int i) = 0;
 
     // Add a new element
-    virtual void add(std::string str) { }
+    virtual void add(const std::string& str) { }
 
     // Clear all elements
     virtual void clear_elements() { }

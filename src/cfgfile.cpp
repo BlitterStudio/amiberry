@@ -6629,7 +6629,6 @@ void cfgfile_compatibility_rtg(struct uae_prefs *p)
 			}
 		}
 	}
-#ifndef AMIBERRY // Only 1 RTG board in Amiberry for now
 	int rtgs[MAX_RTG_BOARDS] = { 0 };
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		if (p->rtgboards[i].rtgmem_size && !rtgs[i]) {
@@ -6666,7 +6665,6 @@ void cfgfile_compatibility_rtg(struct uae_prefs *p)
 			}
 		}
 	}
-#endif
 }
 
 void cfgfile_compatibility_romtype(struct uae_prefs *p)

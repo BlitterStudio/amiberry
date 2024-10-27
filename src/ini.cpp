@@ -92,7 +92,7 @@ void ini_addnewstring(struct ini_data *ini, const TCHAR *section, const TCHAR *k
 	if (!il)
 		return;
 	il->section = my_strdup(section);
-	if (!_tcsicmp(section, _T("WinUAE")))
+	if (!_tcsicmp(section, _T("Amiberry")))
 		il->section_order = 1;
 	if (key == NULL) {
 		il->key = my_strdup(_T(""));

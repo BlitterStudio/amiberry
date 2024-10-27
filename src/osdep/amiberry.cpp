@@ -53,6 +53,7 @@
 #ifdef FLOPPYBRIDGE
 #include "floppybridge_lib.h"
 #endif
+#include "registry.h"
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
@@ -93,7 +94,9 @@ int log_vsync, debug_vsync_min_delay, debug_vsync_forced_delay;
 int uaelib_debug;
 int pissoff_value = 15000 * CYCLE_UNIT;
 
+static TCHAR* inipath = NULL;
 extern FILE* debugfile;
+static int forceroms;
 SDL_Cursor* normalcursor;
 
 int paraport_mask;
@@ -312,6 +315,7 @@ std::string plugins_dir;
 std::string video_dir;
 std::string themes_path;
 std::string amiberry_conf_file;
+std::string amiberry_ini_file;
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
 
@@ -1852,6 +1856,7 @@ void logging_init()
 		first++;
 		write_log("%s Logfile\n\n", get_version_string().c_str());
 		write_log("%s\n", get_sdl2_version_string().c_str());
+		regstatus();
 	}
 }
 
@@ -3041,6 +3046,11 @@ std::string get_screenshot_path()
 	return fix_trailing(screenshot_dir);
 }
 
+std::string get_ini_file_path()
+{
+	return amiberry_ini_file;
+}
+
 void get_video_path(char* out, int size)
 {
 	_tcsncpy(out, fix_trailing(video_dir).c_str(), size - 1);
@@ -3446,18 +3456,6 @@ void save_amiberry_settings(void)
 	write_string_option("video_dir", video_dir);
 	write_string_option("themes_path", themes_path);
 
-	// The number of ROMs in the last scan
-	snprintf(buffer, MAX_DPATH, "ROMs=%zu\n", lstAvailableROMs.size());
-	fputs(buffer, f);
-
-	// The ROMs found in the last scan
-	for (auto& lstAvailableROM : lstAvailableROMs)
-	{
-		write_string_option("ROMName", lstAvailableROM->Name);
-		write_string_option("ROMPath", lstAvailableROM->Path);
-		write_int_option("ROMType", lstAvailableROM->ROMType);
-	}
-
 	// Recent disk entries (these are used in the dropdown controls)
 	snprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
 	fputs(buffer, f);
@@ -3518,24 +3516,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	if (!cfgfile_separate_linea(path, linea, option, value))
 		return 0;
 
-	if (cfgfile_string(option, value, "ROMName", romName, sizeof romName)
-		|| cfgfile_string(option, value, "ROMPath", romPath, sizeof romPath)
-		|| cfgfile_intval(option, value, "ROMType", &romType, 1))
-	{
-		if (strlen(romName) > 0 && strlen(romPath) > 0 && romType != -1)
-		{
-			auto* tmp = new AvailableROM();
-			tmp->Name.assign(romName);
-			tmp->Path.assign(romPath);
-			tmp->ROMType = romType;
-			lstAvailableROMs.emplace_back(tmp);
-			strncpy(romName, "", sizeof romName);
-			strncpy(romPath, "", sizeof romPath);
-			romType = -1;
-			ret = 1;
-		}
-	}
-	else if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
+	if (cfgfile_string(option, value, "Diskfile", tmpFile, sizeof tmpFile))
 	{
 		auto* const f = fopen(tmpFile, "rbe");
 		if (f != nullptr)
@@ -3831,7 +3812,7 @@ std::string get_home_directory()
 	return {tmp};
 }
 
-// The location of .uae configurations and the global amiberry.conf file
+// The location of .uae configurations
 std::string get_config_directory()
 {
 #ifdef __MACH__
@@ -4064,17 +4045,32 @@ static void init_amiberry_dirs()
     plugins_dir = get_plugins_directory();
 
 	std::string xdg_data_home = get_xdg_data_home();
+	if (!my_existsdir(xdg_data_home.c_str()))
+	{
+		// Create the XDG_DATA_HOME directory if it doesn't exist
+		const auto user_home_dir = getenv("HOME");
+		if (user_home_dir != nullptr)
+		{
+			std::string destination = std::string(user_home_dir) + "/.local";
+			my_mkdir(destination.c_str());
+			destination += "/share";
+			my_mkdir(destination.c_str());
+		}
+	}
 	xdg_data_home += "/" + amiberry_dir;
 	if (!my_existsdir(xdg_data_home.c_str()))
 		my_mkdir(xdg_data_home.c_str());
 
 	std::string xdg_config_home = get_xdg_config_home();
+	if (!my_existsdir(xdg_config_home.c_str()))
+		my_mkdir(xdg_config_home.c_str());
 	xdg_config_home += "/" + amiberry_dir;
 	if (!my_existsdir(xdg_config_home.c_str()))
 		my_mkdir(xdg_config_home.c_str());
 
 	// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
 	amiberry_conf_file = xdg_config_home + "/amiberry.conf";
+	amiberry_ini_file = xdg_config_home + "/amiberry.ini";
 	themes_path = xdg_config_home;
 
 	// These paths are relative to the XDG_DATA_HOME directory
@@ -4149,6 +4145,84 @@ void load_amiberry_settings(void)
 		}
 		zfile_fclose(fh);
 	}
+}
+
+static void romlist_add2(const TCHAR* path, struct romdata* rd)
+{
+	if (getregmode()) {
+		int ok = 0;
+		TCHAR tmp[MAX_DPATH];
+		if (path[0] == '/' || path[0] == '\\')
+			ok = 1;
+		if (_tcslen(path) > 1 && path[1] == ':')
+			ok = 1;
+		if (!ok) {
+			_tcscpy(tmp, get_rom_path().c_str());
+			_tcscat(tmp, path);
+			romlist_add(tmp, rd);
+			return;
+		}
+	}
+	romlist_add(path, rd);
+}
+
+void read_rom_list(bool initial)
+{
+	TCHAR tmp2[1000];
+	int idx, idx2;
+	UAEREG* fkey;
+	TCHAR tmp[1000];
+	int size, size2, exists;
+
+	romlist_clear();
+	exists = regexiststree(NULL, _T("DetectedROMs"));
+	fkey = regcreatetree(NULL, _T("DetectedROMs"));
+	if (fkey == NULL)
+		return;
+	if (!exists || forceroms) {
+		//if (initial) {
+		//	scaleresource_init(NULL, 0);
+		//}
+		load_keyring(NULL, NULL);
+		scan_roms(forceroms ? 0 : 1);
+	}
+	forceroms = 0;
+	idx = 0;
+	for (;;) {
+		size = sizeof(tmp) / sizeof(TCHAR);
+		size2 = sizeof(tmp2) / sizeof(TCHAR);
+		if (!regenumstr(fkey, idx, tmp, &size, tmp2, &size2))
+			break;
+		if (_tcslen(tmp) == 7 || _tcslen(tmp) == 13) {
+			int group = 0;
+			int subitem = 0;
+			idx2 = _tstol(tmp + 4);
+			if (_tcslen(tmp) == 13) {
+				group = _tstol(tmp + 8);
+				subitem = _tstol(tmp + 11);
+			}
+			if (idx2 >= 0 && _tcslen(tmp2) > 0) {
+				struct romdata* rd = getromdatabyidgroup(idx2, group, subitem);
+				if (rd) {
+					TCHAR* s = _tcschr(tmp2, '\"');
+					if (s && _tcslen(s) > 1) {
+						TCHAR* s2 = my_strdup(s + 1);
+						s = _tcschr(s2, '\"');
+						if (s)
+							*s = 0;
+						romlist_add2(s2, rd);
+						xfree(s2);
+					}
+					else {
+						romlist_add2(tmp2, rd);
+					}
+				}
+			}
+		}
+		idx++;
+	}
+	romlist_add(NULL, NULL);
+	regclosetree(fkey);
 }
 
 void target_getdate(int* y, int* m, int* d)
@@ -4287,6 +4361,23 @@ int main(int argc, char* argv[])
 	}
 
 	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", fix_trailing(savestate_dir).c_str());
+
+	reginitializeinit(&inipath);
+	if (getregmode() == NULL)
+	{
+		TCHAR* path;
+		std::string ini_file_path = get_ini_file_path();
+		_tcscpy(path, ini_file_path.c_str());
+		auto f = fopen(path, _T("r"));
+		if (!f)
+			f = fopen(path, _T("w"));
+		if (f) {
+			fclose(f);
+			reginitializeinit(&path);
+		}
+		xfree(path);
+	}
+
 	logging_init();
 #if defined (CPU_arm)
 	memset(&action, 0, sizeof action);
@@ -4321,8 +4412,6 @@ int main(int argc, char* argv[])
 		abort();
 	}
 #endif
-	if (lstAvailableROMs.empty())
-		RescanROMs();
 
 	if (!init_mmtimer())
 		return 0;
@@ -4339,6 +4428,9 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
 #endif
 	(void)atexit(SDL_Quit);
+
+	read_rom_list(true);
+	load_keyring(NULL, NULL);
 	write_log(_T("Enumerating display devices.. \n"));
 	enumeratedisplays();
 	write_log(_T("Sorting devices and modes...\n"));
@@ -4432,7 +4524,6 @@ int main(int argc, char* argv[])
 	// Unsolved for OS X
 #endif
 
-	ClearAvailableROMList();
 	romlist_clear();
 	free_keyring();
 
@@ -4519,18 +4610,6 @@ void drawbridge_update_profiles(uae_prefs* p)
 bool is_mainthread()
 {
 	return uae_thread_get_id(nullptr) == mainthreadid;
-}
-
-static struct netdriverdata *ndd[MAX_TOTAL_NET_DEVICES + 1];
-static int net_enumerated;
-
-struct netdriverdata **target_ethernet_enumerate(void)
-{
-	if (net_enumerated)
-		return ndd;
-	ethernet_enumerate(ndd, 0);
-	net_enumerated = 1;
-	return ndd;
 }
 
 void clear_whdload_prefs()
