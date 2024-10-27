@@ -4045,11 +4045,25 @@ static void init_amiberry_dirs()
     plugins_dir = get_plugins_directory();
 
 	std::string xdg_data_home = get_xdg_data_home();
+	if (!my_existsdir(xdg_data_home.c_str()))
+	{
+		// Create the XDG_DATA_HOME directory if it doesn't exist
+		const auto user_home_dir = getenv("HOME");
+		if (user_home_dir != nullptr)
+		{
+			std::string destination = std::string(user_home_dir) + "/.local";
+			my_mkdir(destination.c_str());
+			destination += "/share";
+			my_mkdir(destination.c_str());
+		}
+	}
 	xdg_data_home += "/" + amiberry_dir;
 	if (!my_existsdir(xdg_data_home.c_str()))
 		my_mkdir(xdg_data_home.c_str());
 
 	std::string xdg_config_home = get_xdg_config_home();
+	if (!my_existsdir(xdg_config_home.c_str()))
+		my_mkdir(xdg_config_home.c_str());
 	xdg_config_home += "/" + amiberry_dir;
 	if (!my_existsdir(xdg_config_home.c_str()))
 		my_mkdir(xdg_config_home.c_str());
