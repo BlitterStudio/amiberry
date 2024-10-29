@@ -39,7 +39,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
 
 # Linux RPM settings
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
-set(CPACK_RPM_PACKAGE_REQUIRES "glibc, libstdc++, SDL2, SDL2_ttf SDL2_image, flac, mpg123, libpng, libserialport, portmidi, libenet, libmpeg2")
+set(CPACK_RPM_PACKAGE_REQUIRES "glibc, libstdc++, SDL2, SDL2_ttf SDL2_image, flac, mpg123, libpng, libserialport, portmidi, enet, libmpeg2")
 set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     set(CPACK_RPM_PACKAGE_ARCHITECTURE "arm64")
