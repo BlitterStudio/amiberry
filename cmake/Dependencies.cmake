@@ -32,7 +32,7 @@ find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
 find_helper(PORTMIDI portmidi portmidi.h portmidi)
 find_helper(LIBMPEG2_CONVERT libmpeg2convert mpeg2convert.h mpeg2convert)
 find_helper(LIBMPEG2 libmpeg2 mpeg2.h mpeg2)
-find_helper(LIBENET libenet enet.h enet)
+find_helper(LIBENET libenet enet/enet.h enet)
 
 include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR} ${LIBENET_INCLUDE_DIRS})
 
