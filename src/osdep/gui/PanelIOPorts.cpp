@@ -19,6 +19,7 @@ static gcn::DropDown* cboSampler;
 static gcn::CheckBox* chkSamplerStereo;
 
 static gcn::DropDown* cboSerialPort;
+static gcn::CheckBox* chkSerialShared;
 static gcn::CheckBox* chkSerialDirect;
 static gcn::CheckBox* chkRTSCTS;
 static gcn::CheckBox* chkUaeSerial;
@@ -50,7 +51,9 @@ class IOActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == cboSerialPort)
+		auto source = actionEvent.getSource();
+
+		if (source == cboSerialPort)
 		{
 			const auto selected = cboSerialPort->getSelected();
 			if (selected == 0)
@@ -66,7 +69,7 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == cboMidiOut)
+		else if (source == cboMidiOut)
 		{
 			const auto selected = cboMidiOut->getSelected();
 			if (selected == 0)
@@ -81,7 +84,7 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == cboMidiIn)
+		else if (source == cboMidiIn)
 		{
 			const auto selected = cboMidiIn->getSelected();
 			if (selected == 0)
@@ -95,34 +98,36 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == chkMidiRoute)
+		else if (source == chkMidiRoute)
 			changed_prefs.midirouter = chkMidiRoute->isSelected();
 
-		else if (actionEvent.getSource() == chkSerialDirect)
+		else if (source == chkSerialShared)
+			changed_prefs.serial_demand = chkSerialShared->isSelected();
+		else if (source == chkSerialDirect)
 			changed_prefs.serial_direct = chkSerialDirect->isSelected();
 
-		else if (actionEvent.getSource() == chkRTSCTS)
+		else if (source == chkRTSCTS)
 			changed_prefs.serial_hwctsrts = chkRTSCTS->isSelected();
 
-		else if (actionEvent.getSource() == chkUaeSerial)
+		else if (source == chkUaeSerial)
 			changed_prefs.uaeserial = chkUaeSerial->isSelected();
 
-		else if (actionEvent.getSource() == chkSerialStatus)
+		else if (source == chkSerialStatus)
 			changed_prefs.serial_rtsctsdtrdtecd = chkSerialStatus->isSelected();
 
-		else if (actionEvent.getSource() == chkSerialStatusRi)
+		else if (source == chkSerialStatusRi)
 			changed_prefs.serial_ri = chkSerialStatusRi->isSelected();
 
-		else if (actionEvent.getSource() == cboProtectionDongle)
+		else if (source == cboProtectionDongle)
 			changed_prefs.dongle = cboProtectionDongle->getSelected();
-		else if (actionEvent.getSource() == cboSampler)
+		else if (source == cboSampler)
 		{
 			auto item = cboSampler->getSelected();
 			changed_prefs.samplersoundcard = item - 1;
 			if (item > 0)
 				changed_prefs.prtname[0] = 0;
 		}
-		else if (actionEvent.getSource() == chkSamplerStereo)
+		else if (source == chkSamplerStereo)
 			changed_prefs.sampler_stereo = chkSamplerStereo->isSelected();
 
 		RefreshPanelIO();
@@ -211,6 +216,13 @@ void InitPanelIO(const config_category& category)
 	cboSerialPort->setId("cboSerialPort");
 	cboSerialPort->addActionListener(ioActionListener);
 
+	chkSerialShared = new gcn::CheckBox("Shared");
+	chkSerialShared->setId("chkSerialShared");
+	chkSerialShared->setBaseColor(gui_base_color);
+	chkSerialShared->setBackgroundColor(gui_background_color);
+	chkSerialShared->setForegroundColor(gui_foreground_color);
+	chkSerialShared->addActionListener(ioActionListener);
+
 	chkSerialDirect = new gcn::CheckBox("Direct");
 	chkSerialDirect->setId("chkSerialDirect");
 	chkSerialDirect->setBaseColor(gui_base_color);
@@ -250,7 +262,8 @@ void InitPanelIO(const config_category& category)
 	grpSerialPort->setPosition(DISTANCE_BORDER, grpParallelPort->getY() + grpParallelPort->getHeight() + DISTANCE_NEXT_Y);
 	grpSerialPort->add(cboSerialPort, cboSampler->getX(), DISTANCE_BORDER);
 	posY = cboSerialPort->getY() + cboSerialPort->getHeight() + DISTANCE_NEXT_Y;
-	grpSerialPort->add(chkRTSCTS, DISTANCE_BORDER, posY);
+	grpSerialPort->add(chkSerialShared, DISTANCE_BORDER, posY);
+	grpSerialPort->add(chkRTSCTS, chkSerialShared->getX() + chkSerialShared->getWidth() + DISTANCE_NEXT_X, posY);
 	grpSerialPort->add(chkSerialDirect, chkRTSCTS->getWidth() + chkRTSCTS->getX() + DISTANCE_NEXT_X, posY);
 	grpSerialPort->add(chkUaeSerial, chkSerialDirect->getWidth() + chkSerialDirect->getX() + DISTANCE_NEXT_X, posY);
 	posY = chkRTSCTS->getY() + chkRTSCTS->getHeight() + DISTANCE_NEXT_Y;
@@ -338,6 +351,7 @@ void ExitPanelIO()
 	delete chkSamplerStereo;
 
 	delete cboSerialPort;
+	delete chkSerialShared;
 	delete chkRTSCTS;
 	delete chkSerialDirect;
 	delete chkUaeSerial;
@@ -360,6 +374,7 @@ void ExitPanelIO()
 
 void RefreshPanelIO()
 {
+	chkSerialShared->setSelected(changed_prefs.serial_demand);
 	chkRTSCTS->setSelected(changed_prefs.serial_hwctsrts);
 	chkSerialDirect->setSelected(changed_prefs.serial_direct);
 	chkUaeSerial->setSelected(changed_prefs.uaeserial);
@@ -377,6 +392,7 @@ void RefreshPanelIO()
 				break;
 			}
 		}
+		chkSerialShared->setEnabled(true);
 		chkRTSCTS->setEnabled(true);
 		chkSerialDirect->setEnabled(true);
 		chkUaeSerial->setEnabled(true);
@@ -385,6 +401,7 @@ void RefreshPanelIO()
 	}
 	else
 	{
+		chkSerialShared->setEnabled(false);
 		chkRTSCTS->setEnabled(false);
 		chkSerialDirect->setEnabled(false);
 		chkUaeSerial->setEnabled(false);
@@ -453,6 +470,11 @@ bool HelpPanelIO(std::vector<std::string>& helptext)
 	helptext.emplace_back("         this purpose. Only standard 7/8-bit serial protocols are supported, as the");
 	helptext.emplace_back("         9-bit serial protocol is not supported by PC hardware.");
 	helptext.emplace_back(" ");
+	helptext.emplace_back("         You can use the TCP: options to have Amiberry listen on that port and act as a");
+	helptext.emplace_back("         telnet server. Everything written to the serial port will be transmitted to the");
+	helptext.emplace_back("         connected client and vice versa. This is useful for debugging purposes.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Shared: Share the port with the Host operating system");
 	helptext.emplace_back("RTS/CTS: If you require handshake signals, you can enable this checkbox. This is usually");
 	helptext.emplace_back("         required by certain hardware, like modems or other physical devices.");
 	helptext.emplace_back(" ");

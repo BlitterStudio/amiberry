@@ -4504,6 +4504,7 @@ int main(int argc, char* argv[])
 	paraport_mask = paraport_init ();
 #endif
 #ifdef SERIAL_PORT
+	shmem_serial_create();
 	enumserialports();
 #endif
 	enummidiports();
@@ -4523,6 +4524,22 @@ int main(int argc, char* argv[])
 #else
 	// Unsolved for OS X
 #endif
+
+#ifdef SERIAL_PORT
+	shmem_serial_delete();
+#endif
+#ifdef AHI
+	ahi_close_sound();
+#endif
+#ifdef PARALLEL_DIRECT
+	paraport_free();
+	closeprinter();
+#endif
+#ifdef RETROPLATFORM
+	rp_free();
+#endif
+	close_console();
+	regclosetree(NULL);
 
 	romlist_clear();
 	free_keyring();

@@ -43,6 +43,12 @@
 #endif
 
 #include <libserialport.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <cstring>
+#include <cerrno>
+#include <cstdio>
 
 #define SERIALLOGGING 0
 #define SERIALDEBUG 0 /* 0, 1, 2 3 */
@@ -51,14 +57,14 @@
 #define SERIAL_BREAK_DELAY (20 * maxvpos)
 #define SERIAL_BREAK_TRANSMIT_DELAY 4
 
-#ifndef AMIBERRY
+
 #define SERIAL_MAP
-#endif
+
 #ifdef SERIAL_MAP
 #define SERMAP_SIZE 256
 struct sermap_buffer
 {
-	volatile ULONG version;
+	volatile unsigned long version;
 	volatile uae_u32 active_read;
 	volatile uae_u32 active_write;
 	volatile uae_u32 read_offset;
@@ -66,7 +72,7 @@ struct sermap_buffer
 	volatile uae_u32 data[SERMAP_SIZE];
 };
 static struct sermap_buffer* sermap1, * sermap2;
-static HANDLE sermap_handle;
+static void* sermap_handle;
 static uae_u8* sermap_data;
 static bool sermap_master;
 static bool sermap_enabled;
@@ -81,7 +87,7 @@ static uae_u16* receive_buf;
 static bool sticky_receive_interrupt;
 static int receive_buf_size, receive_buf_count;
 
-#define SER_MEMORY_MAPPING _T("WinUAE_Serial")
+#define SER_MEMORY_MAPPING _T("Amiberry_Serial")
 
 static void shmem_serial_send(uae_u32 data)
 {
@@ -144,36 +150,51 @@ void shmem_serial_delete(void)
 {
 	sermap_deactivate();
 	sermap_master = false;
-	if (sermap_data)
-		UnmapViewOfFile(sermap_data);
-	if (sermap_handle)
-		CloseHandle(sermap_handle);
+	if (sermap_data) {
+		munmap(sermap_data, sizeof(struct sermap_buffer) * 2);
+	}
+	if (sermap_handle) {
+		shm_unlink(SER_MEMORY_MAPPING);
+	}
 	sermap_data = NULL;
 	sermap_handle = NULL;
 	sermap1 = sermap2 = NULL;
 }
 
+
 bool shmem_serial_create(void)
 {
 	shmem_serial_delete();
-	sermap_handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SER_MEMORY_MAPPING);
-	if (!sermap_handle) {
-		sermap_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(struct sermap_buffer) * 2, SER_MEMORY_MAPPING);
-		if (!sermap_handle) {
-			write_log(_T("Failed to create shared serial port memory: %d\n"), GetLastError());
+
+	int fd = shm_open(SER_MEMORY_MAPPING, O_RDWR, 0666);
+	if (fd == -1) {
+		fd = shm_open(SER_MEMORY_MAPPING, O_CREAT | O_RDWR, 0666);
+		if (fd == -1) {
+			perror("Failed to create shared serial port memory");
 			return false;
 		}
 		sermap_master = true;
-		write_log(_T("Created internal serial port shared memory\n"));
+		printf("Created internal serial port shared memory\n");
 	}
 	else {
-		write_log(_T("Found already existing serial port shared memory\n"));
+		printf("Found already existing serial port shared memory\n");
 	}
-	sermap_data = (uae_u8*)MapViewOfFile(sermap_handle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(struct sermap_buffer) * 2);
-	if (!sermap_data) {
-		write_log(_T("Shared serial port memory MapViewOfFile() failed: %d\n"), GetLastError());
+
+	if (ftruncate(fd, sizeof(struct sermap_buffer) * 2) == -1) {
+		perror("Failed to set size of shared memory");
+		close(fd);
 		return false;
 	}
+
+	sermap_data = (uae_u8*)mmap(NULL, sizeof(struct sermap_buffer) * 2, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (sermap_data == MAP_FAILED) {
+		perror("Shared serial port memory mmap() failed");
+		close(fd);
+		return false;
+	}
+
+	close(fd);
+
 	if (sermap_master) {
 		sermap1 = (struct sermap_buffer*)sermap_data;
 		sermap2 = (struct sermap_buffer*)(sermap_data + sizeof(struct sermap_buffer));
@@ -184,11 +205,12 @@ bool shmem_serial_create(void)
 		sermap2 = (struct sermap_buffer*)sermap_data;
 		sermap1 = (struct sermap_buffer*)(sermap_data + sizeof(struct sermap_buffer));
 		if (sermap2->version != version || sermap1->version != version) {
-			write_log(_T("Shared serial port memory version mismatch %08x != %08x\n"), sermap1->version, version);
+			printf("Shared serial port memory version mismatch %08x != %08x\n", sermap1->version, version);
 			shmem_serial_delete();
 			return false;
 		}
 	}
+
 	return true;
 }
 
@@ -198,17 +220,6 @@ bool shmem_serial_create(void)
  * the port found. */
 sp_port* port;
 
-static bool serloop_enabled;
-static bool serempty_enabled;
-static bool serxdevice_enabled;
-static uae_u8 serstatus;
-static bool ser_accurate;
-static bool safe_receive;
-static uae_u16* receive_buf;
-static bool sticky_receive_interrupt;
-static int receive_buf_size, receive_buf_count;
-
-static bool sermap_enabled;
 static int data_in_serdat; /* new data written to SERDAT */
 static evt_t data_in_serdat_delay;
 static evt_t serper_tx_evt;
@@ -1459,13 +1470,13 @@ uae_u8 serial_readstatus(uae_u8 v, uae_u8 dir)
 #ifdef SERIAL_MAP
 	} else if (sermap_enabled) {
 		if (sermap_flags & 1) {
-			signal |= SP_SIG_DSR;
+			signal = SP_SIG_DSR;
 		}
 		if (sermap_flags & 2) {
-			signal |= SP_SIG_DCD;
+			signal = SP_SIG_DCD;
 		}
 		if (sermap_flags & 4) {
-			signal |= SP_SIG_CTS;
+			signal = SP_SIG_CTS;
 		}
 #endif
 	} else if (currprefs.use_serial) {

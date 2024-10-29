@@ -371,11 +371,12 @@ static NavigationMap nav_map[] =
 	// active		move left		move right			move up			move down
 	// PanelIO
 	{ "cboSampler", "IO Ports", "IO Ports", "cboProtectionDongle", "cboSerialPort" },
-	{ "cboSerialPort", "IO Ports", "IO Ports", "cboSampler", "chkRTSCTS" },
-	{ "chkRTSCTS", "IO Ports", "chkSerialDirect", "cboSerialPort", "chkSerialStatus" },
+	{ "cboSerialPort", "IO Ports", "IO Ports", "cboSampler", "chkSerialShared" },
+	{ "chkSerialShared", "IO Ports", "chkRTSCTS", "cboSerialPort", "chkSerialStatus" },
+	{ "chkRTSCTS", "chkSerialShared", "chkSerialDirect", "cboSerialPort", "chkSerialStatus" },
 	{ "chkSerialDirect", "chkRTSCTS", "chkUaeSerial", "cboSerialPort", "chkSerialStatus" },
 	{ "chkUaeSerial", "chkSerialDirect", "IO Ports", "cboSerialPort", "chkSerialStatus" },
-	{ "chkSerialStatus", "IO Ports", "chkSerialStatusRi", "chkRTSCTS", "cboMidiOut" },
+	{ "chkSerialStatus", "IO Ports", "chkSerialStatusRi", "chkSerialShared", "cboMidiOut" },
 	{ "chkSerialStatusRi", "chkSerialStatus", "IO Ports", "chkUaeSerial", "cboMidiIn" },
 	{ "cboMidiOut", "IO Ports", "cboMidiIn", "chkSerialStatus", "chkMidiRoute" },
 	{ "cboMidiIn", "cboMidiOut", "chkSerialStatusRi", "chkSerialStatusRi", "chkMidiRoute" },
