@@ -519,6 +519,7 @@ int enumserialports (void)
 	}
 	else
 	{
+		serial_ports.clear();
 		for (int i = 0; port_list[i] != nullptr; i++)
 		{
 			cnt++;
@@ -530,6 +531,16 @@ int enumserialports (void)
 		/* Free the array created by sp_list_ports(). */
 		sp_free_port_list(port_list);
 	}
+
+	serial_ports.emplace_back("Amiberry inter-process serial port");
+	cnt++;
+	serial_ports.emplace_back("Amiberry loopback serial port");
+	cnt++;
+	serial_ports.emplace_back("TCP://0.0.0.0:1234");
+	cnt++;
+	serial_ports.emplace_back("TCP://0.0.0.0:1234/wait");
+	cnt++;
+	write_log(_T("Port enumeration end\n"));
 	return cnt;
 }
 

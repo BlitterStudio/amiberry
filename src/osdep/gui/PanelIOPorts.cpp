@@ -64,7 +64,18 @@ public:
 			else
 			{
 				const auto port_name = serial_ports_list.getElementAt(selected);
-				_sntprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
+				if (port_name == "Amiberry inter-process serial port")
+				{
+					_sntprintf(changed_prefs.sername, 256, "%s", SERIAL_INTERNAL);
+				}
+				else if (port_name == "Amiberry loopback serial port")
+				{
+					_sntprintf(changed_prefs.sername, 256, "%s", SERIAL_LOOPBACK);
+				}
+				else
+				{
+					_sntprintf(changed_prefs.sername, 256, "%s", port_name.c_str());
+				}
 				changed_prefs.use_serial = true;
 			}
 		}
@@ -154,16 +165,30 @@ void InitPanelIO(const config_category& category)
 	serial_ports_list.clear();
 	serial_ports_list.add("none");
 	for(const auto& i : serial_ports) {
-		serial_ports_list.add(i);
+		if (i != "Amiberry inter-process serial port")
+		{
+			std::string tmp = i;
+			if (!shmem_serial_state())
+				shmem_serial_create();
+			switch (shmem_serial_state())
+			{
+			case 1:
+				tmp += " [Master]";
+				break;
+			case 2:
+				tmp += " [Slave]";
+				break;
+			}
+			serial_ports_list.add(tmp);
+		}
+		else
+			serial_ports_list.add(i);
 	}
-	// Add TCP ports also
-	serial_ports_list.add("TCP://0.0.0.0:1234");
-	serial_ports_list.add("TCP://0.0.0.0:1234/wait");
 
 	midi_in_ports_list.clear();
 	midi_in_ports_list.add("none");
 	for(const auto& i : midi_in_ports) {
-		midi_in_ports_list.add(i.c_str());
+		midi_in_ports_list.add(i);
 	}
 
 	midi_out_ports_list.clear();
