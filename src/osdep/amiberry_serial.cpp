@@ -1938,7 +1938,7 @@ int enet_open(TCHAR* name)
 	if (!_tcsnicmp(name, _T("ENET:H"), 6)) {
 		address.host = ENET_HOST_ANY;
 		address.port = 1234;
-		enethost = enet_host_create(&address, 2, 0, 0);
+		enethost = enet_host_create(&address, 2, 0, 0, 0);
 		if (enethost == NULL) {
 			write_log(_T("ENET_SERVER: enet_host_create(server) failed\n"));
 			enet_close();
@@ -1950,7 +1950,7 @@ int enet_open(TCHAR* name)
 	else {
 		enetmode = -1;
 	}
-	enetclient = enet_host_create(NULL, 1, 0, 0);
+	enetclient = enet_host_create(NULL, 1, 0, 0, 0);
 	if (enetclient == NULL) {
 		write_log(_T("ENET_CLIENT: enet_host_create(client) failed\n"));
 		enet_close();
@@ -1959,7 +1959,7 @@ int enet_open(TCHAR* name)
 	write_log(_T("ENET_CLIENT: client created\n"));
 	enet_address_set_host(&address, enetmode > 0 ? "127.0.0.1" : "192.168.0.10");
 	address.port = 1234;
-	enetpeer = enet_host_connect(enetclient, &address, 2);
+	enetpeer = enet_host_connect(enetclient, &address, 2, 0);
 	if (enetpeer == NULL) {
 		write_log(_T("ENET_CLIENT: connection to host %d.%d.%d.%d:%d failed\n"),
 			(address.host >> 0) & 0xff, (address.host >> 8) & 0xff, (address.host >> 16) & 0xff, (address.host >> 24) & 0xff, address.port);

@@ -24,8 +24,6 @@ endif ()
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2_image MODULE REQUIRED)
 find_package(SDL2_ttf MODULE REQUIRED)
-include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
-
 find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
@@ -34,6 +32,9 @@ find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
 find_helper(PORTMIDI portmidi portmidi.h portmidi)
 find_helper(LIBMPEG2_CONVERT libmpeg2convert mpeg2convert.h mpeg2convert)
 find_helper(LIBMPEG2 libmpeg2 mpeg2.h mpeg2)
+find_helper(LIBENET libenet enet.h enet)
+
+include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR} ${LIBENET_INCLUDE_DIRS})
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)

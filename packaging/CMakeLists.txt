@@ -27,7 +27,7 @@ set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/packaging/dmg/AppDMGSet
 
 # Linux DEB settings
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libstdc++6, libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libmpeg2-4") # Adjust dependencies as needed
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libstdc++6, libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g, libserialport0, libportmidi0, libenet7, libmpeg2-4") # Adjust dependencies as needed
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
@@ -39,7 +39,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "otherosfs")
 
 # Linux RPM settings
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
-set(CPACK_RPM_PACKAGE_REQUIRES "glibc, libstdc++, SDL2, SDL2_ttf SDL2_image, flac, mpg123, libpng, libserialport, portmidi, libmpeg2")
+set(CPACK_RPM_PACKAGE_REQUIRES "glibc, libstdc++, SDL2, SDL2_ttf SDL2_image, flac, mpg123, libpng, libserialport, portmidi, libenet, libmpeg2")
 set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
     set(CPACK_RPM_PACKAGE_ARCHITECTURE "arm64")

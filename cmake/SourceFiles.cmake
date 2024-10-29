@@ -444,6 +444,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         ${LIBMPEG2_LIBRARIES}
         ${LIBMPEG2_CONVERT_LIBRARIES}
         ${LIBSERIALPORT_LIBRARIES}
+        ${LIBENET_LIBRARIES}
         z
         pthread
         dl
