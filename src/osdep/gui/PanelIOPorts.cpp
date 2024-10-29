@@ -64,11 +64,12 @@ public:
 			else
 			{
 				const auto port_name = serial_ports_list.getElementAt(selected);
-				if (port_name == "Amiberry inter-process serial port")
+				
+                if (port_name.rfind("Amiberry inter-process serial port", 0) == 0)
 				{
 					_sntprintf(changed_prefs.sername, 256, "%s", SERIAL_INTERNAL);
 				}
-				else if (port_name == "Amiberry loopback serial port")
+				else if (port_name.rfind("Amiberry loopback serial port", 0) == 0)
 				{
 					_sntprintf(changed_prefs.sername, 256, "%s", SERIAL_LOOPBACK);
 				}
@@ -164,8 +165,9 @@ void InitPanelIO(const config_category& category)
 
 	serial_ports_list.clear();
 	serial_ports_list.add("none");
-	for(const auto& i : serial_ports) {
-		if (i != "Amiberry inter-process serial port")
+	for(const auto& i : serial_ports) 
+	{
+		if (i.rfind("Amiberry inter-process serial port", 0) == 0)
 		{
 			std::string tmp = i;
 			if (!shmem_serial_state())
