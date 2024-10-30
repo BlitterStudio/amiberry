@@ -43,12 +43,7 @@
 #endif
 
 #include <libserialport.h>
-#include <fcntl.h>
 #include <sys/mman.h>
-#include <unistd.h>
-#include <cstring>
-#include <cerrno>
-#include <cstdio>
 
 #define SERIALLOGGING 0
 #define SERIALDEBUG 0 /* 0, 1, 2 3 */
@@ -174,10 +169,10 @@ bool shmem_serial_create(void)
 			return false;
 		}
 		sermap_master = true;
-		printf("Created internal serial port shared memory\n");
+		write_log("Created internal serial port shared memory\n");
 	}
 	else {
-		printf("Found already existing serial port shared memory\n");
+		write_log("Found already existing serial port shared memory\n");
 	}
 
 	if (ftruncate(fd, sizeof(struct sermap_buffer) * 2) == -1) {
@@ -205,7 +200,7 @@ bool shmem_serial_create(void)
 		sermap2 = (struct sermap_buffer*)sermap_data;
 		sermap1 = (struct sermap_buffer*)(sermap_data + sizeof(struct sermap_buffer));
 		if (sermap2->version != version || sermap1->version != version) {
-			printf("Shared serial port memory version mismatch %08x != %08x\n", sermap1->version, version);
+			write_log("Shared serial port memory version mismatch %08x != %08x\n", sermap1->version, version);
 			shmem_serial_delete();
 			return false;
 		}
