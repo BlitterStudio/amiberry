@@ -448,6 +448,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         z
         pthread
         dl
+        rt
 )
 
 # Add dependencies to ensure external libraries are built
