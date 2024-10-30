@@ -1151,6 +1151,29 @@ void serial_hsynchandler (void)
 	}
 }
 
+void setserstat(int mask, int onoff)
+{
+	if (mask & SP_FLOWCONTROL_DTRDSR)
+	{
+		if (currprefs.use_serial && port != nullptr)
+		{
+			check(sp_set_flowcontrol(port, onoff ? SP_FLOWCONTROL_DTRDSR : SP_FLOWCONTROL_NONE));
+			check(sp_set_dtr(port, onoff ? SP_DTR_ON : SP_DTR_OFF));
+		}
+	}
+	if (!currprefs.serial_hwctsrts)
+	{
+		if (mask & SP_FLOWCONTROL_RTSCTS)
+		{
+			if (currprefs.use_serial && port != nullptr)
+			{
+				check(sp_set_flowcontrol(port, onoff ? SP_FLOWCONTROL_RTSCTS : SP_FLOWCONTROL_NONE));
+				check(sp_set_rts(port, onoff ? SP_RTS_ON : SP_RTS_OFF));
+			}
+		}
+	}
+}
+
 int setbaud(int baud, int org_baud)
 {
 #ifdef WITH_MIDI
@@ -1401,7 +1424,7 @@ void serial_dtr_on(void)
 #ifdef SERIAL_PORT
 	if (currprefs.serial_demand)
 		serial_open();
-	check(sp_set_flowcontrol(port, SP_FLOWCONTROL_DTRDSR));
+	setserstat(SP_FLOWCONTROL_DTRDSR, dtr);
 #endif
 }
 
@@ -1419,7 +1442,7 @@ void serial_dtr_off(void)
 #ifdef SERIAL_PORT
 	if (currprefs.serial_demand)
 		serial_close();
-	check(sp_set_flowcontrol(port, SP_FLOWCONTROL_NONE));
+	setserstat(SP_FLOWCONTROL_DTRDSR, dtr);
 #endif
 }
 
@@ -1586,12 +1609,12 @@ uae_u8 serial_writestatus(uae_u8 newstate, uae_u8 dir)
 		if (!currprefs.serial_hwctsrts && currprefs.serial_rtsctsdtrdtecd && (dir & 0x40)) {
 			if ((oldserbits ^ newstate) & 0x40) {
 				if (newstate & 0x40) {
-					check(sp_set_flowcontrol(port, SP_FLOWCONTROL_NONE));
+					setserstat(SP_FLOWCONTROL_RTSCTS, 0);
 #if SERIALHSDEBUG > 0
 					write_log(_T("SERIAL: RTS cleared\n"));
 #endif
 				} else {
-					check(sp_set_flowcontrol(port, SP_FLOWCONTROL_RTSCTS));
+					setserstat(SP_FLOWCONTROL_RTSCTS, 1);
 #if SERIALHSDEBUG > 0
 					write_log(_T("SERIAL: RTS set\n"));
 #endif
