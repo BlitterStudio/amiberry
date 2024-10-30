@@ -3965,6 +3965,11 @@ void create_missing_amiberry_folders()
             const std::string command = "cp -r " + default_controller_path + "* " + controllers_path;
             system(command.c_str());
         }
+    	else if (my_existsdir("/usr/share/amiberry/controllers/"))
+    	{
+    		const std::string command = "cp -r /usr/share/amiberry/controllers/* " + controllers_path;
+    		system(command.c_str());
+    	}
     }
     if (!my_existsdir(whdboot_path.c_str()))
     {
@@ -3980,6 +3985,11 @@ void create_missing_amiberry_folders()
             const std::string command = "cp -r " + default_whdboot_path + "* " + whdboot_path;
             system(command.c_str());
         }
+    	else if (my_existsdir("/usr/share/amiberry/whdboot/"))
+		{
+			const std::string command = "cp -r /usr/share/amiberry/whdboot/* " + whdboot_path;
+			system(command.c_str());
+		}
     }
     if (!my_existsdir(whdload_arch_path.c_str()))
         my_mkdir(whdload_arch_path.c_str());
@@ -4003,6 +4013,11 @@ void create_missing_amiberry_folders()
             const std::string command = "cp -r " + default_roms_path + "* " + rom_path;
             system(command.c_str());
         }
+    	else if (my_existsdir("/usr/share/amiberry/roms/"))
+    	{
+    		const std::string command = "cp -r /usr/share/amiberry/roms/* " + rom_path;
+    		system(command.c_str());
+    	}
     }
 	if (!my_existsdir(rp9_path.c_str()))
 		my_mkdir(rp9_path.c_str());
