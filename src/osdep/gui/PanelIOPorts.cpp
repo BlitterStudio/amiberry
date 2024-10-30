@@ -64,14 +64,9 @@ public:
 			else
 			{
 				const auto port_name = serial_ports_list.getElementAt(selected);
-				
-                if (port_name.rfind("Amiberry inter-process serial port", 0) == 0)
+                if (port_name.find(SERIAL_INTERNAL) != std::string::npos)
 				{
 					_sntprintf(changed_prefs.sername, 256, "%s", SERIAL_INTERNAL);
-				}
-				else if (port_name.rfind("Amiberry loopback serial port", 0) == 0)
-				{
-					_sntprintf(changed_prefs.sername, 256, "%s", SERIAL_LOOPBACK);
 				}
 				else
 				{
@@ -157,7 +152,7 @@ void InitPanelIO(const config_category& category)
 		int type = record_devices[card]->type;
 		TCHAR tmp[MAX_DPATH];
 		_stprintf(tmp, _T("%s: %s"),
-			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DSOUND") : (type == SOUND_DEVICE_AL ? _T("OpenAL") : (type == SOUND_DEVICE_PA ? _T("PortAudio") : _T("WASAPI")))),
+			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : type == SOUND_DEVICE_DS ? _T("DSOUND") : type == SOUND_DEVICE_AL ? _T("OpenAL") : type == SOUND_DEVICE_PA ? _T("PortAudio") : _T("WASAPI"),
 			record_devices[card]->name);
 		if (type == SOUND_DEVICE_SDL2)
 			sampler_list.add(tmp);
@@ -167,7 +162,7 @@ void InitPanelIO(const config_category& category)
 	serial_ports_list.add("none");
 	for(const auto& i : serial_ports) 
 	{
-		if (i.rfind("Amiberry inter-process serial port", 0) == 0)
+		if (i.find(SERIAL_INTERNAL) != std::string::npos)
 		{
 			std::string tmp = i;
 			if (!shmem_serial_state())

@@ -532,9 +532,9 @@ int enumserialports (void)
 		sp_free_port_list(port_list);
 	}
 
-	serial_ports.emplace_back("Amiberry inter-process serial port");
+	serial_ports.emplace_back(SERIAL_INTERNAL);
 	cnt++;
-	serial_ports.emplace_back("Amiberry loopback serial port");
+	serial_ports.emplace_back(SERIAL_LOOPBACK);
 	cnt++;
 	serial_ports.emplace_back("TCP://0.0.0.0:1234");
 	cnt++;
