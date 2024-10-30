@@ -343,28 +343,32 @@ static int opentcp (const TCHAR *sername)
 
 int openser (const TCHAR *sername)
 {
-	if (_tcsnicmp(sername, _T("tcp:"), 4) == 0) {
-		return opentcp(sername);
+	if (!_tcsnicmp(sername, _T("TCP://"), 6)) {
+		return opentcp(sername + 6);
+	}
+	if (!_tcsnicmp(sername, _T("TCP:"), 4)) {
+		return opentcp(sername + 4);
 	}
 
-	/* Call sp_get_port_by_name() to find the port. The port
-	* pointer will be updated to refer to the port found. */
-	check(sp_get_port_by_name(sername, &port));
-	int result = check(sp_open(port, SP_MODE_READ_WRITE));
+	if (sp_get_port_by_name(sername, &port) != SP_OK) {
+		write_log("Error finding serial port %s\n", sername);
+		return 0;
+	}
 
-	check(sp_set_baudrate(port, 9600));
-	check(sp_set_bits(port, 8));
-	check(sp_set_parity(port, SP_PARITY_NONE));
-	check(sp_set_stopbits(port, currprefs.serial_stopbits));
-	if (currprefs.serial_hwctsrts)
-	{
-		check(sp_set_flowcontrol(port, SP_FLOWCONTROL_RTSCTS));
+	if (sp_open(port, SP_MODE_READ_WRITE) != SP_OK) {
+		write_log("Error opening serial port %s\n", sername);
+		sp_free_port(port);
+		port = NULL;
+		return 0;
 	}
-	else
-	{
-		check(sp_set_flowcontrol(port, SP_FLOWCONTROL_NONE));
-	}
-	return result;
+
+	sp_set_baudrate(port, 9600);
+	sp_set_bits(port, 8);
+	sp_set_parity(port, SP_PARITY_NONE);
+	sp_set_stopbits(port, 1);
+	sp_set_flowcontrol(port, SP_FLOWCONTROL_NONE);
+
+	return 1;
 }
 
 void closeser ()
@@ -388,10 +392,10 @@ void closeser ()
 		midi_emu_close();
 	}
 #endif
-	if (serdev)
-	{
-		check(sp_close(port));
+	if (port != NULL) {
+		sp_close(port);
 		sp_free_port(port);
+		port = NULL;
 	}
 }
 
@@ -519,17 +523,28 @@ int readser(int* buffer)
 		}
 		dataininput = 0;
 		dataininputcnt = 0;
-		if (serdev) {
-			const int bytes = check(sp_input_waiting(port));
-			if (bytes) {
-				int len = bytes;
+		if (port != nullptr) {
+			int bytes_available = sp_input_waiting(port);
+			if (bytes_available < 0) {
+				write_log("Error checking input buffer: %s\n", sp_last_error_message());
+				return 0;
+			}
+
+			if (bytes_available > 0) {
+				int len = bytes_available;
 				if (len > sizeof(inputbuffer))
 					len = sizeof(inputbuffer);
-				dataininput = check(sp_blocking_read(port, inputbuffer, len, timeout));
-				dataininputcnt = 0;
-				if (!dataininput) {
+
+				int bytes_read = sp_nonblocking_read(port, inputbuffer, len);
+				if (bytes_read < 0) {
+					write_log("Error reading from serial port: %s\n", sp_last_error_message());
 					return 0;
 				}
+
+				dataininput = bytes_read;
+				dataininputcnt = 0;
+				if (bytes_read == 0)
+					return 0;
 				return readser(buffer);
 			}
 		}
@@ -539,8 +554,15 @@ int readser(int* buffer)
 
 void flushser(void)
 {
-	if (serdev) {
-		check(sp_flush(port, SP_BUF_BOTH));
+	if (port) {
+		sp_flush(port, SP_BUF_INPUT);
+	}
+	else {
+		while (readseravail(NULL)) {
+			int data;
+			if (readser(&data) <= 0)
+				break;
+		}
 	}
 }
 
@@ -569,14 +591,17 @@ int readseravail(bool* breakcond)
 			return 0;
 		if (dataininput > dataininputcnt)
 			return 1;
-		if (serdev) {
+		if (port) {
 			if (breakcond && breakpending) {
 				*breakcond = true;
 				breakpending = false;
 			}
-			const int bytes = check(sp_input_waiting(port));
-			if (bytes > 0)
-				return bytes;
+			int bytes_available = sp_input_waiting(port);
+			if (bytes_available < 0) {
+				write_log("Error checking input buffer: %s\n", sp_last_error_message());
+				return 0;
+			}
+			return bytes_available;
 		}
 	}
 	return 0;
@@ -781,7 +806,14 @@ static void outser(void)
 		return;
 
 	memcpy(outputbufferout, outputbuffer, datainoutput);
-	check(sp_nonblocking_write(port, outputbufferout, datainoutput));
+	int bytes_written = sp_blocking_write(port, outputbufferout, datainoutput, 1000);
+	if (bytes_written < 0) {
+		write_log("Failed to write to serial port: %d\n", bytes_written);
+	}
+	else if (bytes_written != datainoutput) {
+		write_log("Only wrote %d of %d bytes!\n", bytes_written, datainoutput);
+	}
+
 	datainoutput = 0;
 }
 
@@ -810,7 +842,7 @@ void writeser(int c)
 		midi_send_byte((uint8_t) c);
 #endif
 	} else {
-		if (!serdev || !currprefs.use_serial)
+		if (!port || !currprefs.use_serial)
 			return;
 		if (datainoutput + 1 < sizeof(outputbuffer)) {
 			outputbuffer[datainoutput++] = c;
@@ -824,7 +856,7 @@ void writeser(int c)
 
 int checkserwrite(int spaceneeded)
 {
-	if (!serdev || !currprefs.use_serial)
+	if (!port || !currprefs.use_serial)
 		return 1;
 #ifdef WITH_MIDI
 	if (midi_ready) {
@@ -1802,7 +1834,7 @@ void serial_uartbreak (int v)
 		shmem_serial_send(0x40000000 | (v ? 0x20000 : 0x10000));
 	}
 #endif
-	if (!serdev || !currprefs.use_serial)
+	if (!port || !currprefs.use_serial)
 		return;
 #ifdef SERIAL_PORT
 	if (v)
