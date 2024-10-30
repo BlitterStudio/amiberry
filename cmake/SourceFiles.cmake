@@ -448,8 +448,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         z
         pthread
         dl
-        rt
 )
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(${PROJECT_NAME} PRIVATE rt)
+endif ()
 
 # Add dependencies to ensure external libraries are built
 add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
