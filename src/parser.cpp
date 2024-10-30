@@ -213,26 +213,49 @@ static void uaeser_initdata (void *vsd, void *user)
 
 int uaeser_query(void* vsd, uae_u16* status, uae_u32* pending)
 {
-	const auto* sd = static_cast<struct uaeserialdata*>(vsd);
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	int bytes_available;
+	enum sp_signal signals;
 	uae_u16 s = 0;
-	sp_signal signal;
 
-	check(sp_get_signals(sd->port, &signal));
-	s |= (signal & SP_SIG_CTS) ? 0 : (1 << 4);
-	s |= (signal & SP_SIG_DSR) ? 0 : (1 << 7);
-	s |= (signal & SP_SIG_RI) ? (1 << 2) : 0;
-	*status = s;
+	if (!sd->port) {
+		return 0;
+	}
 
+	bytes_available = sp_input_waiting(sd->port);
+	if (bytes_available < 0) {
+		write_log("Error checking input buffer: %s\n", sp_last_error_message());
+		return 0;
+	}
+	*pending = bytes_available;
+
+	if (status) {
+		if (sp_get_signals(sd->port, &signals) != SP_OK) {
+			write_log("Error getting serial port signals: %s\n", sp_last_error_message());
+			return 0;
+		}
+		//s |= (signals & SP_SIG_BREAK) ? (1 << 10) : 0;
+		s |= (signals & SP_SIG_CTS) ? 0 : (1 << 4);
+		s |= (signals & SP_SIG_DSR) ? 0 : (1 << 7);
+		s |= (signals & SP_SIG_RI) ? (1 << 2) : 0;
+		*status = s;
+	}
+	return 1;
 	return 1;
 }
 
-int uaeser_break (void *vsd, int brklen)
-{
-	const auto* sd = static_cast<struct uaeserialdata*>(vsd);
-	if (!check(sp_start_break(sd->port)))
+int uaeser_break(void* vsd, int brklen) {
+	struct uaeserialdata* sd = (struct uaeserialdata*)vsd;
+	if (!sd->port) {
 		return 0;
-	Sleep(brklen / 1000);
-	check(sp_end_break(sd->port));
+	}
+
+	if (sp_end_break(sd->port) != SP_OK) {
+		write_log("Error sending break signal: %s\n", sp_last_error_message());
+		return 0;
+	}
+
+	usleep(brklen * 1000); // Convert milliseconds to microseconds
 	return 1;
 }
 
