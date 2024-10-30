@@ -1207,7 +1207,11 @@ int setbaud(int baud, int org_baud)
 #endif
 	if (!currprefs.use_serial)
 		return 1;
-	return check(sp_set_baudrate(port, baud));
+	if (port != nullptr)
+	{
+		check(sp_set_baudrate(port, baud));
+	}
+	return 1;
 }
 
 void SERPER(uae_u16 w)
@@ -1505,7 +1509,8 @@ uae_u8 serial_readstatus(uae_u8 v, uae_u8 dir)
 	} else if (currprefs.use_serial) {
 #ifdef SERIAL_PORT
 		/* Read the current config from the port into that configuration. */
-		check(sp_get_signals(port, &signal));
+		if (port != nullptr)
+			check(sp_get_signals(port, &signal));
 #endif
 	}
 	else {
