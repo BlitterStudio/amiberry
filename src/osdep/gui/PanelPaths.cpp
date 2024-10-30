@@ -84,8 +84,8 @@ public:
 	{
 		char tmp[MAX_DPATH];
 		std::string path;
-
-		if (actionEvent.getSource() == cmdSystemROMs)
+		const auto source = actionEvent.getSource();
+		if (source == cmdSystemROMs)
 		{
 			get_rom_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for System ROMs", std::string(tmp));
@@ -95,7 +95,7 @@ public:
 			}
 			cmdSystemROMs->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdConfigPath)
+		else if (source == cmdConfigPath)
 		{
 			get_configuration_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for configuration files", std::string(tmp));
@@ -105,7 +105,7 @@ public:
 			}
 			cmdConfigPath->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdNvramFiles)
+		else if (source == cmdNvramFiles)
 		{
 			get_nvram_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for NVRAM files", std::string(tmp));
@@ -115,7 +115,7 @@ public:
 			}
 			cmdNvramFiles->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdPluginFiles)
+		else if (source == cmdPluginFiles)
 		{
 			path = SelectFolder("Folder for Plugins", get_plugins_path());
 			if (!path.empty())
@@ -124,7 +124,7 @@ public:
 			}
 			cmdPluginFiles->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdScreenshotFiles)
+		else if (source == cmdScreenshotFiles)
 		{
 			path = SelectFolder("Folder for Screenshot files", get_screenshot_path());
 			if (!path.empty())
@@ -133,7 +133,7 @@ public:
 			}
 			cmdScreenshotFiles->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdStateFiles)
+		else if (source == cmdStateFiles)
 		{
 			get_savestate_path(tmp, MAX_DPATH);
 			path = SelectFolder("Folder for Save state files", std::string(tmp));
@@ -143,7 +143,7 @@ public:
 			}
 			cmdStateFiles->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdControllersPath)
+		else if (source == cmdControllersPath)
 		{
 			path = SelectFolder("Folder for controller files", get_controllers_path());
 			if (!path.empty())
@@ -152,8 +152,7 @@ public:
 			}
 			cmdControllersPath->requestFocus();
 		}
-
-		else if (actionEvent.getSource() == cmdRetroArchFile)
+		else if (source == cmdRetroArchFile)
 		{
 			const char* filter[] = {"retroarch.cfg", "\0"};
 			path = SelectFile("Select RetroArch Config File", get_retroarch_file(), filter);
@@ -163,8 +162,7 @@ public:
 			}
 			cmdRetroArchFile->requestFocus();
 		}
-
-		else if (actionEvent.getSource() == cmdWHDBootPath)
+		else if (source == cmdWHDBootPath)
 		{
 			path = SelectFolder("Folder for WHDBoot files", get_whdbootpath());
 			if (!path.empty())
@@ -173,8 +171,7 @@ public:
 			}
 			cmdWHDBootPath->requestFocus();
 		}
-
-		else if (actionEvent.getSource() == cmdWHDLoadArchPath)
+		else if (source == cmdWHDLoadArchPath)
 		{
 			path = SelectFolder("Folder for WHDLoad Archives", get_whdload_arch_path());
 			if (!path.empty())
@@ -183,8 +180,7 @@ public:
 			}
 			cmdWHDLoadArchPath->requestFocus();
 		}
-
-		else if (actionEvent.getSource() == cmdFloppyPath)
+		else if (source == cmdFloppyPath)
 		{
 			path = SelectFolder("Folder for Floppies", get_floppy_path());
 			if (!path.empty())
@@ -193,8 +189,7 @@ public:
 			}
 			cmdFloppyPath->requestFocus();
 		}
-
-		else if (actionEvent.getSource() == cmdCDPath)
+		else if (source == cmdCDPath)
 		{
 			path = SelectFolder("Folder for CD-ROMs", get_cdrom_path());
 			if (!path.empty())
@@ -203,8 +198,7 @@ public:
 			}
 			cmdCDPath->requestFocus();
 		}
-
-		else if (actionEvent.getSource() == cmdHardDrivesPath)
+		else if (source == cmdHardDrivesPath)
 		{
 			path = SelectFolder("Folder for Hard Drives", get_harddrive_path());
 			if (!path.empty())
@@ -213,8 +207,7 @@ public:
 			}
 			cmdHardDrivesPath->requestFocus();
 		}
-
-		else if (actionEvent.getSource() == cmdLogfilePath)
+		else if (source == cmdLogfilePath)
 		{
 			const char* filter[] = { ".log", "\0" };
 			path = SelectFile("Select Amiberry Log file", get_logfile_path(), filter, true);
