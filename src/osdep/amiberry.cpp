@@ -4666,7 +4666,7 @@ void save_controller_mapping_to_file(const controller_mapping& input, const std:
 {
 	std::ofstream out_file(filename);
 	if (!out_file) {
-		std::cerr << "Unable to open file " << filename << std::endl;
+		std::cerr << "Unable to open file " << filename << '\n';
 		return;
 	}
 
@@ -4716,7 +4716,7 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 {
 	std::ifstream in_file(filename);
 	if (!in_file) {
-		std::cerr << "Unable to open file " << filename << std::endl;
+		std::cerr << "Unable to open file " << filename << '\n';
 		return;
 	}
 
