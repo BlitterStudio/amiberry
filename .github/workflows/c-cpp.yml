@@ -22,7 +22,6 @@ jobs:
       - name: Install dependencies
         run: |
           brew update
-          brew upgrade
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet dylibbundler
 
       - name: make for macOS X64
