@@ -1621,21 +1621,34 @@ void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor* mon)
 
 	const auto is_picasso = mon->screen_is_picasso;
 	Sint32 x, y, xrel, yrel;
-	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+	if (amiberry_options.rotation_angle == 0)
 	{
 		x = event.motion.x;
 		y = event.motion.y;
 		xrel = event.motion.xrel;
 		yrel = event.motion.yrel;
 	}
-	else
+	else if (amiberry_options.rotation_angle == 180)
+	{
+		x = -event.motion.x;
+		y = -event.motion.y;
+		xrel = -event.motion.xrel;
+		yrel = -event.motion.yrel;
+	}
+	else if (amiberry_options.rotation_angle == 90)
 	{
 		x = event.motion.y;
-		y = event.motion.x;
+		y = -event.motion.x;
 		xrel = event.motion.yrel;
+		yrel = -event.motion.xrel;
+	}
+	else // -90
+	{
+		x = -event.motion.y;
+		y = event.motion.x;
+		xrel = -event.motion.yrel;
 		yrel = event.motion.xrel;
 	}
-	
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
