@@ -1620,10 +1620,22 @@ void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor* mon)
 	if (isfocus() <= 0) return;
 
 	const auto is_picasso = mon->screen_is_picasso;
-	const auto x = event.motion.x;
-	const auto y = event.motion.y;
-	const auto xrel = event.motion.xrel;
-	const auto yrel = event.motion.yrel;
+	Sint32 x, y, xrel, yrel;
+	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
+	{
+		x = event.motion.x;
+		y = event.motion.y;
+		xrel = event.motion.xrel;
+		yrel = event.motion.yrel;
+	}
+	else
+	{
+		x = event.motion.y;
+		y = event.motion.x;
+		xrel = event.motion.yrel;
+		yrel = event.motion.xrel;
+	}
+	
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
