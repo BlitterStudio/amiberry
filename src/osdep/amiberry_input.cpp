@@ -906,6 +906,9 @@ void fix_didata(struct didata* did)
 	did->buttons_real = did->buttons = static_cast<uae_s16>(SDL_JoystickNumButtons(did->joystick) + hats);
 	if (did->is_controller)
 	{
+		// assure to map all buttons even if a controller reports less than 15 buttons
+		if (did->buttons < static_cast<uae_s16>(15))
+			did->buttons = static_cast<uae_s16>(15);
 		for (uae_s16 b = 0; b < did->buttons; b++)
 		{
 			did->buttonsort[b] = b;
