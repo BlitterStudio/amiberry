@@ -42,33 +42,26 @@
  */
 
 /*
- * For comments regarding functions please see the header file. 
+ * For comments regarding functions please see the header file.
  */
 
-#include "guisan/sdl/sdltruetypefont.hpp"
+# include "guisan/sdl/sdltruetypefont.hpp"
 
-#include "guisan/exception.hpp"
-#include "guisan/image.hpp"
-#include "guisan/graphics.hpp"
-#include "guisan/sdl/sdlgraphics.hpp"
-#include "guisan/sdl/sdl2graphics.hpp"
+# include "guisan/exception.hpp"
+# include "guisan/graphics.hpp"
+# include "guisan/image.hpp"
+# include "guisan/sdl/sdl2graphics.hpp"
+# include "guisan/sdl/sdlgraphics.hpp"
 
 namespace gcn
 {
-    SDLTrueTypeFont::SDLTrueTypeFont(const std::string& filename, const int size)
+    SDLTrueTypeFont::SDLTrueTypeFont(const std::string& filename, int size) :
+        mFilename(filename),
+        mFont(TTF_OpenFont(filename.c_str(), size))
     {
-        mHeight = 0;
-        mRowSpacing = 0;
-        mGlyphSpacing = 0;
-        mAntiAlias = true;
-        mFilename = filename;
-        mFont = nullptr;
-
-        mFont = TTF_OpenFont(filename.c_str(), size);
-
         if (mFont == nullptr)
         {
-            throw GCN_EXCEPTION("SDLTrueTypeFont::SDLTrueTypeFont. "+std::string(TTF_GetError()));
+            throw GCN_EXCEPTION("SDLTrueTypeFont::SDLTrueTypeFont. " + std::string(TTF_GetError()));
         }
     }
 
@@ -90,8 +83,8 @@ namespace gcn
         return TTF_FontHeight(mFont) + mRowSpacing;
     }
 
-    void SDLTrueTypeFont::drawString(Graphics* graphics, const std::string& text, const int x, const int y,
-                                     const bool enabled)
+    void SDLTrueTypeFont::drawString(
+        Graphics* graphics, const std::string& text, const int x, const int y, bool enabled)
     {
         if (text.empty())
         {
@@ -101,11 +94,10 @@ namespace gcn
         auto sdlGraphics = dynamic_cast<SDLGraphics*>(graphics);
         auto sdl2Graphics = dynamic_cast<SDL2Graphics*>(graphics);
 
-
         if (sdlGraphics == nullptr && sdl2Graphics == nullptr)
         {
-            throw GCN_EXCEPTION("SDLTrueTypeFont::drawString. Graphics object not an SDL graphics object!");
-            return;
+            throw GCN_EXCEPTION(
+                "SDLTrueTypeFont::drawString. Graphics object not an SDL graphics object!");
         }
 
         // This is needed for drawing the Glyph in the middle if we have spacing
@@ -158,7 +150,7 @@ namespace gcn
         SDL_FreeSurface(textSurface);
     }
 
-    void SDLTrueTypeFont::setRowSpacing(const int spacing)
+    void SDLTrueTypeFont::setRowSpacing(int spacing)
     {
         mRowSpacing = spacing;
     }
@@ -168,7 +160,7 @@ namespace gcn
         return mRowSpacing;
     }
 
-    void SDLTrueTypeFont::setGlyphSpacing(const int spacing)
+    void SDLTrueTypeFont::setGlyphSpacing(int spacing)
     {
         mGlyphSpacing = spacing;
     }
@@ -178,7 +170,7 @@ namespace gcn
         return mGlyphSpacing;
     }
 
-    void SDLTrueTypeFont::setAntiAlias(const bool antiAlias)
+    void SDLTrueTypeFont::setAntiAlias(bool antiAlias)
     {
         mAntiAlias = antiAlias;
     }
@@ -192,4 +184,5 @@ namespace gcn
     {
         mColor = color;
     }
-}
+} // namespace gcn
+

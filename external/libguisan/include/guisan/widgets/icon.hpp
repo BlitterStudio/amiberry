@@ -61,6 +61,8 @@
 #include "guisan/platform.hpp"
 #include "guisan/widget.hpp"
 
+#include <memory>
+
 namespace gcn
 {
     /**
@@ -79,27 +81,40 @@ namespace gcn
          *
          * @param filename The filename of the image to display.
          */
-        Icon(const std::string& filename);
+        explicit Icon(const std::string& filename);
 
         /**
          * Constructor.
          *
          * @param image The image to display.
          */
-        Icon(const Image* image);
+        explicit Icon(const Image* image);
+
+        /**
+         * Constructor.
+         *
+         * @param image The image to display.
+         */
+        explicit Icon(std::shared_ptr<const Image> image);
 
         /**
          * Destructor.
          */
-        virtual ~Icon();
+        ~Icon() override = default;
 
         /**
-         * Sets the image to display. Existing image is freed automatically
-         * if it was loaded internally.
+         * Sets the image to display.
          *
-         * @param image The image to display. 
+         * @param image The image to display.
          */
         void setImage(const Image* image);
+
+        /**
+         * Sets the image to display.
+         *
+         * @param image The image to display.
+         */
+        void setImage(std::shared_ptr<const Image> image);
 
         /**
          * Gets the current image.
@@ -108,24 +123,15 @@ namespace gcn
          */
         const Image* getImage() const;
 
-
         // Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
+        void draw(Graphics* graphics) override;
 
     protected:
         /**
          * The image to display.
          */
-        const Image* mImage;
-
-        /**
-         * True if the image has been loaded internally, false otherwise.
-         * An image not loaded internally should not be deleted in the
-         * destructor.
-         */
-        bool mInternalImage;
+        std::shared_ptr<const Image> mImage;
     };
 }
 

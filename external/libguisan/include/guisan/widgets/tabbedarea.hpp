@@ -57,15 +57,16 @@
 #ifndef GCN_TABBEDAREA_HPP
 #define GCN_TABBEDAREA_HPP
 
-#include <map>
-#include <string>
-#include <vector>
-
 #include "guisan/actionlistener.hpp"
-#include "guisan/basiccontainer.hpp"
 #include "guisan/keylistener.hpp"
 #include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
+#include "guisan/widget.hpp"
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace gcn
 {
@@ -78,9 +79,9 @@ namespace gcn
      *
      * @since 0.8.0
      */
-    class GCN_CORE_DECLSPEC TabbedArea:
+    class GCN_CORE_DECLSPEC TabbedArea :
+        public Widget,
         public ActionListener,
-        public BasicContainer,
         public KeyListener,
         public MouseListener
     {
@@ -96,7 +97,7 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~TabbedArea();
+        ~TabbedArea() override;
 
         /**
          * Sets the tabbed area to be opaque or not. If the tabbed area is
@@ -121,6 +122,13 @@ namespace gcn
          * @see setOpaque
          */
         bool isOpaque() const;
+
+        /**
+         * Checks if the tabbed area is active or not.
+         *
+         * @return true if the tabbed area is active, false otherwise.
+         */
+        bool isTabActive() const;
 
         /**
          * Adds a tab to the tabbed area. The newly created tab will be
@@ -157,6 +165,13 @@ namespace gcn
          * @see addTab
          */
         virtual void removeTab(Tab* tab);
+
+        /**
+         * Returns the number of tabs in this tabbed area.
+         *
+         * @since 1.1.0
+         */
+        int getNumberOfTabs() const;
 
         /**
          * Checks if a tab given an index is selected or not.
@@ -207,12 +222,7 @@ namespace gcn
          * @return The selected tab.
          * @see isTabSelected, setSelectedTab
          */
-        Tab* getSelectedTab() const;
-
-
-        // Inherited from Widget
-
-        virtual void draw(Graphics *graphics);
+        Tab* getSelectedTab();
 
         void setWidth(int width);
 
@@ -224,57 +234,58 @@ namespace gcn
 
         void setBaseColor(const Color& color);
 
+        // Inherited from Widget
+
+        void draw(Graphics* graphics) override;
+
         // Inherited from ActionListener
 
-        void action(const ActionEvent& actionEvent);
+        void action(const ActionEvent& actionEvent) override;
 
         // Inherited from DeathListener
 
         virtual void death(const Event& event);
 
-
         // Inherited from KeyListener
 
-        virtual void keyPressed(KeyEvent& keyEvent);
-
+        void keyPressed(KeyEvent& keyEvent) override;
 
         // Inherited from MouseListener
-        
-        virtual void mousePressed(MouseEvent& mouseEvent);
 
-        
+        void mousePressed(MouseEvent& mouseEvent) override;
+
     protected:
         /**
          * Adjusts the size of the tab container and the widget container.
          */
-        void adjustSize() const;
+        void adjustSize();
 
         /**
          * Adjusts the positions of the tabs.
          */
-        void adjustTabPositions() const;
+        void adjustTabPositions();
 
         /**
          * Holds the selected tab.
          */
-        Tab* mSelectedTab;
+        Tab* mSelectedTab = nullptr;
 
         /**
          * Holds the container for the tabs.
          */
-        Container* mTabContainer;
+        std::unique_ptr<Container> mTabContainer;
 
         /**
          * Holds the container for the widgets.
          */
-        Container* mWidgetContainer;
+        std::unique_ptr<Container> mWidgetContainer;
 
         /**
          * Holds a vector of tabs to delete in the destructor.
          * A tab that is to be deleted is a tab that has been
          * internally created by the tabbed area.
          */
-        std::vector<Tab*> mTabsToDelete;
+        std::vector<std::unique_ptr<Tab>> mTabsToDelete;
 
         /**
          * A map between a tab and a widget to display when the
@@ -285,7 +296,12 @@ namespace gcn
         /**
          * True if the tabbed area is opaque, false otherwise.
          */
-        bool mOpaque;
+        bool mOpaque = false;
+
+        /**
+         * True if the tabbed area is active, false otherwise.
+         */
+        bool tabActive = false;
     };
 }
 

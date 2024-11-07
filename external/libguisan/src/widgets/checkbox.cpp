@@ -67,20 +67,13 @@
 
 namespace gcn
 {
-    CheckBox::CheckBox()
+    CheckBox::CheckBox() : CheckBox("", false)
+    {}
+
+    CheckBox::CheckBox(const std::string& caption, bool selected) :
+        mCaption(caption),
+        mSelected(selected)
     {
-        setSelected(false);
-
-        setFocusable(true);
-        addMouseListener(this);
-        addKeyListener(this);
-    }
-
-    CheckBox::CheckBox(const std::string &caption, const bool selected)
-    {
-        setCaption(caption);
-        setSelected(selected);
-
         setFocusable(true);
         addMouseListener(this);
         addKeyListener(this);
@@ -155,7 +148,7 @@ namespace gcn
         return mSelected;
     }
 
-    void CheckBox::setSelected(const bool selected)
+    void CheckBox::setSelected(bool selected)
     {
         mSelected = selected;
     }
@@ -197,7 +190,7 @@ namespace gcn
 
     void CheckBox::adjustSize()
     {
-        const int height = getFont()->getHeight() + 2;
+        const int height = getFont()->getHeight();
 
         setHeight(height);
         setWidth(getFont()->getWidth(mCaption) + height + height / 2);

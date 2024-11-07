@@ -68,26 +68,22 @@
 
 namespace gcn
 {
-    Tab::Tab() : mTabbedArea(NULL), mHasMouse(false)
+    Tab::Tab() : mLabel(std::make_unique<Label>())
     {
-        mLabel = new Label();
-        mLabel->setPosition(4, 4);
-        add(mLabel);
+        mLabel->setPosition(6, 6);
+        add(mLabel.get());
         setFrameSize(1);
 
         addMouseListener(this);
     }
 
-    Tab::~Tab()
-    {
-        delete mLabel;
-    }
+    Tab::~Tab() = default;
 
     void Tab::adjustSize()
     {
-        setSize(mLabel->getWidth() + 8, mLabel->getHeight() + 8);
+        setSize(mLabel->getWidth() + 12, mLabel->getHeight() + 12);
 
-        if (mTabbedArea != NULL)
+        if (mTabbedArea != nullptr)
         {
             mTabbedArea->adjustTabPositions();
         }
@@ -127,7 +123,7 @@ namespace gcn
         Color borderColor;
         Color baseColor;
 
-        if ((mTabbedArea != NULL && mTabbedArea->isTabSelected(this)) || mHasMouse)
+        if ((mTabbedArea != nullptr && mTabbedArea->isTabSelected(this)) || mHasMouse)
         {
             // Draw a border.
             graphics->setColor(highlightColor);
@@ -159,14 +155,16 @@ namespace gcn
         graphics->setColor(baseColor);
         graphics->fillRectangle(Rectangle(0, 0, currentClipArea.width, currentClipArea.height));
 
-        drawChildren(graphics);
-
-        if (mTabbedArea != NULL && mTabbedArea->isFocused() && mTabbedArea->isTabSelected(this))
+        if (mTabbedArea != nullptr && mTabbedArea->isFocused() && mTabbedArea->isTabSelected(this)
+            //            && mHasMouse)
+            && mTabbedArea->isTabActive())
         {
             graphics->setColor(Color(0x000000));
             graphics->drawRectangle(
                 Rectangle(2, 2, currentClipArea.width - 4, currentClipArea.height - 4));
         }
+        mLabel->setAlignment(Graphics::Center);
+        mLabel->_draw(graphics);
         graphics->popClipArea();
     }
 

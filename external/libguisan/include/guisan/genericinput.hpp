@@ -147,18 +147,13 @@ namespace gcn
          */
         void pushMouseMoved(int x, int y);
 
-        
         // Inherited from Input
 
-        virtual bool isKeyQueueEmpty();
-
-        virtual KeyInput dequeueKeyInput();
-
-        virtual bool isMouseQueueEmpty();
-
-        virtual MouseInput dequeueMouseInput();
-
-        virtual void _pollInput();
+        bool isKeyQueueEmpty() override;
+        KeyInput dequeueKeyInput() override;
+        bool isMouseQueueEmpty() override;
+        MouseInput dequeueMouseInput() override;
+        void _pollInput() override;
 
     protected:
         /**

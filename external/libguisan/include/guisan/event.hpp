@@ -99,7 +99,7 @@ namespace gcn
         /**
          * Holds the source widget of the event.
          */
-        Widget* mSource;
+        Widget* mSource = nullptr;
     };
 }
 

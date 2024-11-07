@@ -60,7 +60,6 @@
 
 #include "guisan/gui.hpp"
 
-#include "guisan/basiccontainer.hpp"
 #include "guisan/exception.hpp"
 #include "guisan/focushandler.hpp"
 #include "guisan/graphics.hpp"
@@ -75,24 +74,8 @@
 
 namespace gcn
 {
-    Gui::Gui()
-        : mTop(nullptr),
-          mGraphics(nullptr),
-          mInput(nullptr),
-          mTabbing(true),
-          mShiftPressed(false),
-          mMetaPressed(false),
-          mControlPressed(false),
-          mAltPressed(false),
-          mLastMousePressButton(0),
-          mLastMousePressTimeStamp(0),
-          mLastMouseX(0),
-          mLastMouseY(0),
-          mClickCount(1),
-          mLastMouseDragButton(0)
-    {
-        mFocusHandler = new FocusHandler();
-    }
+    Gui::Gui() : mFocusHandler(new FocusHandler())
+    {}
 
     Gui::~Gui()
     {
@@ -159,9 +142,9 @@ namespace gcn
 
             handleKeyInput();
             handleMouseInput();
-        } // end if
+        }
 
-        mTop->logic();
+        mTop->_logic();
     }
 
     void Gui::draw()
@@ -181,25 +164,7 @@ namespace gcn
         }
 
         mGraphics->_beginDraw();
-
-        // If top has a frame,
-        // draw it before drawing top
-        if (mTop->getFrameSize() > 0)
-        {
-            Rectangle rec = mTop->getDimension();
-            rec.x -= mTop->getFrameSize();
-            rec.y -= mTop->getFrameSize();
-            rec.width += 2 * mTop->getFrameSize();
-            rec.height += 2 * mTop->getFrameSize();
-            mGraphics->pushClipArea(rec);
-            mTop->drawFrame(mGraphics);
-            mGraphics->popClipArea();
-        }
-
-        mGraphics->pushClipArea(mTop->getDimension());
-        mTop->draw(mGraphics);
-        mGraphics->popClipArea();
-
+        mTop->_draw(mGraphics);
         mGraphics->_endDraw();
     }
 
@@ -208,7 +173,7 @@ namespace gcn
         mFocusHandler->focusNone();
     }
 
-    void Gui::setTabbingEnabled(const bool tabbing)
+    void Gui::setTabbingEnabled(bool tabbing)
     {
         mTabbing = tabbing;
     }
@@ -231,37 +196,25 @@ namespace gcn
     void Gui::handleMouseInput()
     {
         while (!mInput->isMouseQueueEmpty())
-         {
-             MouseInput mouseInput = mInput->dequeueMouseInput();
+        {
+            MouseInput mouseInput = mInput->dequeueMouseInput();
 
-             switch (mouseInput.getType())
-             {
-               case MouseInput::Pressed:
-                   handleMousePressed(mouseInput);
-                   break;
-               case MouseInput::Released:
-                   handleMouseReleased(mouseInput);
-                   break;
-               case MouseInput::Moved:
-                   handleMouseMoved(mouseInput);
-                   break;
-               case MouseInput::WheelMovedDown:
-                   handleMouseWheelMovedDown(mouseInput);
-                   break;
-               case MouseInput::WheelMovedUp:
-                   handleMouseWheelMovedUp(mouseInput);
-                   break;
-               default:
-                   throw GCN_EXCEPTION("Unknown mouse input type.");
-                   break;
-             }
+            switch (mouseInput.getType())
+            {
+                case MouseInput::Pressed: handleMousePressed(mouseInput); break;
+                case MouseInput::Released: handleMouseReleased(mouseInput); break;
+                case MouseInput::Moved: handleMouseMoved(mouseInput); break;
+                case MouseInput::WheelMovedDown: handleMouseWheelMovedDown(mouseInput); break;
+                case MouseInput::WheelMovedUp: handleMouseWheelMovedUp(mouseInput); break;
+                default: throw GCN_EXCEPTION("Unknown mouse input type."); break;
+            }
 
-             // Save the current mouse state. It's needed to send
-             // mouse exited events and mouse entered events when
-             // the mouse exits a widget and when a widget releases
-             // modal mouse input focus.
-             mLastMouseX = mouseInput.getX();
-             mLastMouseY = mouseInput.getY();
+            // Save the current mouse state. It's needed to send
+            // mouse exited events and mouse entered events when
+            // the mouse exits a widget and when a widget releases
+            // modal mouse input focus.
+            mLastMouseX = mouseInput.getX();
+            mLastMouseY = mouseInput.getY();
         }
     }
 
@@ -325,6 +278,11 @@ namespace gcn
                 keyEventConsumed = keyEvent.isConsumed();
             }
 
+            if (!keyEventConsumed)
+            {
+                mFocusHandler->checkHotKey(keyInput);
+            }
+
             // If the key event hasn't been consumed and
             // tabbing is enable check for tab press and
             // change focus.
@@ -342,7 +300,7 @@ namespace gcn
                     mFocusHandler->tabNext();
                 }
             }
-        } // end while
+        }
     }
 
     void Gui::handleMouseMoved(const MouseInput& mouseInput)
@@ -355,10 +313,9 @@ namespace gcn
         if (mouseInput.getX() < 0 || mouseInput.getY() < 0
             || !mTop->getDimension().isContaining(mouseInput.getX(), mouseInput.getY()))
         {
-            std::set<Widget*>::const_iterator iter;
-            for (iter = mLastWidgetsWithMouse.begin(); iter != mLastWidgetsWithMouse.end(); ++iter)
+            for (Widget* w : mLastWidgetsWithMouse)
             {
-                distributeMouseEvent((*iter),
+                distributeMouseEvent(w,
                                      MouseEvent::Exited,
                                      mouseInput.getButton(),
                                      mouseInput.getX(),
@@ -390,11 +347,9 @@ namespace gcn
                 mLastWidgetsWithMouse.end(),
                 std::inserter(mWidgetsWithMouseEntered, mWidgetsWithMouseEntered.begin()));
 
-            std::set<Widget*>::const_iterator iter;
-            for (iter = mWidgetsWithMouseExited.begin(); iter != mWidgetsWithMouseExited.end();
-                 ++iter)
+            for (Widget* w : mWidgetsWithMouseExited)
             {
-                distributeMouseEvent((*iter),
+                distributeMouseEvent(w,
                                      MouseEvent::Exited,
                                      mouseInput.getButton(),
                                      mouseInput.getX(),
@@ -408,16 +363,14 @@ namespace gcn
                 mLastMousePressTimeStamp = 0;
             }
 
-            for (iter = mWidgetsWithMouseEntered.begin(); iter != mWidgetsWithMouseEntered.end();
-                 ++iter)
+            for (Widget* widget : mWidgetsWithMouseEntered)
             {
-                Widget* widget = (*iter);
                 // If a widget has modal mouse input focus we
                 // only want to send entered events to that widget
                 // and the widget's parents.
-                if ((mFocusHandler->getModalMouseInputFocused() != NULL
+                if ((mFocusHandler->getModalMouseInputFocused() != nullptr
                      && widget->isModalMouseInputFocused())
-                    || mFocusHandler->getModalMouseInputFocused() == NULL)
+                    || mFocusHandler->getModalMouseInputFocused() == nullptr)
                 {
                     distributeMouseEvent(widget,
                                          MouseEvent::Entered,
@@ -429,73 +382,6 @@ namespace gcn
                 }
             }
         }
-        /*
-        // Check all widgets below the mouse to see if they are
-        // present in the "widget with mouse" queue. If a widget
-        // is not then it should be added and an entered event should
-        // be sent to it.
-        Widget* parent = getMouseEventSource(mouseInput.getX(), mouseInput.getY());
-        Widget* widget = parent;
-
-        // If a widget has modal mouse input focus then it will
-        // always be returned from getMouseEventSource, but we only want to send
-        // mouse entered events if the mouse has actually entered the widget with
-        // modal mouse input focus, hence we need to check if that's the case. If
-        // it's not we should simply ignore to send any mouse entered events.
-        if (mFocusHandler->getModalMouseInputFocused() != nullptr
-            && widget == mFocusHandler->getModalMouseInputFocused()
-            && Widget::widgetExists(widget))
-        {
-            int x, y;
-            widget->getAbsolutePosition(x, y);
-
-            if (x > mouseInput.getX()
-                || y > mouseInput.getY()
-                || x + widget->getWidth() <= mouseInput.getX()
-                || y + widget->getHeight() <= mouseInput.getY())
-            {
-                parent = nullptr;
-            }
-        }
-
-        while (parent != nullptr)
-        {
-            parent = widget->getParent();
-
-            // Check if the widget is present in the "widget with mouse" queue.
-            bool widgetIsPresentInQueue = false;
-            std::deque<Widget*>::iterator iter;
-            for (iter = mWidgetWithMouseQueue.begin();
-                 iter != mWidgetWithMouseQueue.end();
-                 ++iter)
-            {
-                if (*iter == widget)
-                {
-                    widgetIsPresentInQueue = true;
-                    break;
-                }
-            }
-
-            // Widget is not present, send an entered event and add
-            // it to the "widget with mouse" queue.
-            if (!widgetIsPresentInQueue
-                && Widget::widgetExists(widget))
-            {
-                distributeMouseEvent(widget,
-                                     MouseEvent::Entered,
-                                     mouseInput.getButton(),
-                                     mouseInput.getX(),
-                                     mouseInput.getY(),
-                                     true,
-                                     true);
-                mWidgetWithMouseQueue.push_front(widget);
-            }
-
-            Widget* swap = widget;
-            widget = parent;
-            parent = swap->getParent();
-        }
-        */
         if (mFocusHandler->getDraggedWidget() != nullptr)
         {
             distributeMouseEvent(mFocusHandler->getDraggedWidget(),
@@ -642,7 +528,7 @@ namespace gcn
         }
     }
 
-    Widget* Gui::getWidgetAt(const int x, const int y)
+    Widget* Gui::getWidgetAt(int x, int y)
     {
         // If the widget's parent has no child then we have found the widget..
         Widget* parent = mTop;
@@ -660,13 +546,13 @@ namespace gcn
         return parent;
     }
 
-    std::set<Widget*> Gui::getWidgetsAt(const int x, const int y)
+    std::set<Widget*> Gui::getWidgetsAt(int x, int y)
     {
         std::set<Widget*> result;
 
         Widget* widget = mTop;
 
-        while (widget != NULL)
+        while (widget != nullptr)
         {
             result.insert(widget);
             int absoluteX, absoluteY;
@@ -677,7 +563,7 @@ namespace gcn
         return result;
     }
 
-    Widget* Gui::getMouseEventSource(const int x, const int y)
+    Widget* Gui::getMouseEventSource(int x, int y)
     {
         Widget* widget = getWidgetAt(x, y);
 
@@ -695,7 +581,7 @@ namespace gcn
         Widget* widget = mFocusHandler->getFocused();
 
         while (widget->_getInternalFocusHandler() != nullptr
-            && widget->_getInternalFocusHandler()->getFocused() != nullptr)
+               && widget->_getInternalFocusHandler()->getFocused() != nullptr)
         {
             widget = widget->_getInternalFocusHandler()->getFocused();
         }
@@ -704,12 +590,12 @@ namespace gcn
     }
 
     void Gui::distributeMouseEvent(Widget* source,
-                                   const int type,
-                                   const int button,
-                                   const int x,
-                                   const int y,
-                                   const bool force,
-                                   const bool toSourceOnly)
+                                   int type,
+                                   int button,
+                                   int x,
+                                   int y,
+                                   bool force,
+                                   bool toSourceOnly)
     {
         Widget* parent = source;
         Widget* widget = source;
@@ -759,42 +645,26 @@ namespace gcn
                 mouseEvent.mX = x - widgetX;
                 mouseEvent.mY = y - widgetY;
                 mouseEvent.mDistributor = widget;
-                std::list<MouseListener*> mouseListeners = widget->_getMouseListeners();
 
                 // Send the event to all mouse listeners of the widget.
-                for (auto& mouseListener : mouseListeners)
+                for (MouseListener* mouseListener : widget->_getMouseListeners())
                 {
                     switch (mouseEvent.getType())
                     {
-                    case MouseEvent::Entered:
-                        mouseListener->mouseEntered(mouseEvent);
-                        break;
-                    case MouseEvent::Exited:
-                        mouseListener->mouseExited(mouseEvent);
-                        break;
-                    case MouseEvent::Moved:
-                        mouseListener->mouseMoved(mouseEvent);
-                        break;
-                    case MouseEvent::Pressed:
-                        mouseListener->mousePressed(mouseEvent);
-                        break;
-                    case MouseEvent::Released:
-                        mouseListener->mouseReleased(mouseEvent);
-                        break;
-                    case MouseEvent::WheelMovedUp:
-                        mouseListener->mouseWheelMovedUp(mouseEvent);
-                        break;
-                    case MouseEvent::WheelMovedDown:
-                        mouseListener->mouseWheelMovedDown(mouseEvent);
-                        break;
-                    case MouseEvent::Dragged:
-                        mouseListener->mouseDragged(mouseEvent);
-                        break;
-                    case MouseEvent::Clicked:
-                        mouseListener->mouseClicked(mouseEvent);
-                        break;
-                    default:
-                        throw GCN_EXCEPTION("Unknown mouse event type.");
+                        case MouseEvent::Entered: mouseListener->mouseEntered(mouseEvent); break;
+                        case MouseEvent::Exited: mouseListener->mouseExited(mouseEvent); break;
+                        case MouseEvent::Moved: mouseListener->mouseMoved(mouseEvent); break;
+                        case MouseEvent::Pressed: mouseListener->mousePressed(mouseEvent); break;
+                        case MouseEvent::Released: mouseListener->mouseReleased(mouseEvent); break;
+                        case MouseEvent::WheelMovedUp:
+                            mouseListener->mouseWheelMovedUp(mouseEvent);
+                            break;
+                        case MouseEvent::WheelMovedDown:
+                            mouseListener->mouseWheelMovedDown(mouseEvent);
+                            break;
+                        case MouseEvent::Dragged: mouseListener->mouseDragged(mouseEvent); break;
+                        case MouseEvent::Clicked: mouseListener->mouseClicked(mouseEvent); break;
+                        default: throw GCN_EXCEPTION("Unknown mouse event type.");
                     }
                 }
 
@@ -859,21 +729,15 @@ namespace gcn
             if (widget->isEnabled())
             {
                 keyEvent.mDistributor = widget;
-                std::list<KeyListener*> keyListeners = widget->_getKeyListeners();
 
                 // Send the event to all key listeners of the source widget.
-                for (auto& keyListener : keyListeners)
+                for (KeyListener* keyListener : widget->_getKeyListeners())
                 {
                     switch (keyEvent.getType())
                     {
-                    case KeyEvent::Pressed:
-                        keyListener->keyPressed(keyEvent);
-                        break;
-                    case KeyEvent::Released:
-                        keyListener->keyReleased(keyEvent);
-                        break;
-                    default:
-                        throw GCN_EXCEPTION("Unknown key event type.");
+                        case KeyEvent::Pressed: keyListener->keyPressed(keyEvent); break;
+                        case KeyEvent::Released: keyListener->keyReleased(keyEvent); break;
+                        default: throw GCN_EXCEPTION("Unknown key event type.");
                     }
                 }
             }
@@ -894,18 +758,13 @@ namespace gcn
 
     void Gui::distributeKeyEventToGlobalKeyListeners(KeyEvent& keyEvent)
     {
-        for (auto& mKeyListener : mKeyListeners)
+        for (KeyListener* keyListener : mKeyListeners)
         {
             switch (keyEvent.getType())
             {
-            case KeyEvent::Pressed:
-                mKeyListener->keyPressed(keyEvent);
-                break;
-            case KeyEvent::Released:
-                mKeyListener->keyReleased(keyEvent);
-                break;
-            default:
-                throw GCN_EXCEPTION("Unknown key event type.");
+                case KeyEvent::Pressed: keyListener->keyPressed(keyEvent); break;
+                case KeyEvent::Released: keyListener->keyReleased(keyEvent); break;
+                default: throw GCN_EXCEPTION("Unknown key event type.");
             }
 
             if (keyEvent.isConsumed())
@@ -918,37 +777,37 @@ namespace gcn
     void Gui::handleModalMouseInputFocus()
     {
         // Check if modal mouse input focus has been gained by a widget.
-        if ((mFocusHandler->getLastWidgetWithModalMouseInputFocus()
+        if ((mFocusHandler->getLastWidgetWithModalMouseInputFocus() 
                 != mFocusHandler->getModalMouseInputFocused())
-            && (mFocusHandler->getLastWidgetWithModalMouseInputFocus() == nullptr))
+             && (mFocusHandler->getLastWidgetWithModalMouseInputFocus() == nullptr))
         {
             handleModalFocusGained();
             mFocusHandler->setLastWidgetWithModalMouseInputFocus(mFocusHandler->getModalMouseInputFocused());
         }
         // Check if modal mouse input focus has been released.
         else if ((mFocusHandler->getLastWidgetWithModalMouseInputFocus()
-                != mFocusHandler->getModalMouseInputFocused())
-            && (mFocusHandler->getLastWidgetWithModalMouseInputFocus() != nullptr))
+                    != mFocusHandler->getModalMouseInputFocused())
+                    && (mFocusHandler->getLastWidgetWithModalMouseInputFocus() != nullptr))
         {
             handleModalFocusReleased();
             mFocusHandler->setLastWidgetWithModalMouseInputFocus(nullptr);
         }
     }
 
-    void Gui::handleModalFocus()
+     void Gui::handleModalFocus()
     {
         // Check if modal focus has been gained by a widget.
-        if ((mFocusHandler->getLastWidgetWithModalFocus()
+        if ((mFocusHandler->getLastWidgetWithModalFocus() 
                 != mFocusHandler->getModalFocused())
-            && (mFocusHandler->getLastWidgetWithModalFocus() == nullptr))
+             && (mFocusHandler->getLastWidgetWithModalFocus() == nullptr))
         {
             handleModalFocusGained();
             mFocusHandler->setLastWidgetWithModalFocus(mFocusHandler->getModalFocused());
         }
         // Check if modal focus has been released.
         else if ((mFocusHandler->getLastWidgetWithModalFocus()
-                != mFocusHandler->getModalFocused())
-            && (mFocusHandler->getLastWidgetWithModalFocus() != nullptr))
+                    != mFocusHandler->getModalFocused())
+                    && (mFocusHandler->getLastWidgetWithModalFocus() != nullptr))
         {
             handleModalFocusReleased();
             mFocusHandler->setLastWidgetWithModalFocus(nullptr);
@@ -961,17 +820,10 @@ namespace gcn
         // and send them a mouse exited event.
         std::set<Widget*> mWidgetsWithMouse = getWidgetsAt(mLastMouseX, mLastMouseY);
 
-        for (std::set<Widget*>::const_iterator iter = mWidgetsWithMouse.begin();
-             iter != mWidgetsWithMouse.end();
-             ++iter)
+        for (Widget* w : mWidgetsWithMouse)
         {
-            distributeMouseEvent((*iter),
-                                 MouseEvent::Exited,
-                                 mLastMousePressButton,
-                                 mLastMouseX,
-                                 mLastMouseY,
-                                 true,
-                                 true);
+            distributeMouseEvent(
+                w, MouseEvent::Exited, mLastMousePressButton, mLastMouseX, mLastMouseY, true, true);
         }
 
         mFocusHandler->setLastWidgetWithModalMouseInputFocus(mFocusHandler->getModalMouseInputFocused());
@@ -983,11 +835,9 @@ namespace gcn
         // and send them a mouse entered event.
         std::set<Widget*> mWidgetsWithMouse = getWidgetsAt(mLastMouseX, mLastMouseY);
 
-        for (std::set<Widget*>::const_iterator iter = mWidgetsWithMouse.begin();
-             iter != mWidgetsWithMouse.end();
-             ++iter)
+        for (Widget* w : mWidgetsWithMouse)
         {
-            distributeMouseEvent((*iter),
+            distributeMouseEvent(w,
                                  MouseEvent::Entered,
                                  mLastMousePressButton,
                                  mLastMouseX,

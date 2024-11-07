@@ -144,35 +144,29 @@ namespace gcn
          */
         void adjustSize();
 
-
         //Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
+        void draw(Graphics* graphics) override;
+        void hotKeyPressed() override;
+        void hotKeyReleased() override;
 
         // Inherited from FocusListener
 
-        virtual void focusLost(const Event& event);
-
+        void focusLost(const Event& event) override;
 
         // Inherited from MouseListener
 
-        virtual void mousePressed(MouseEvent& mouseEvent);
-
-        virtual void mouseReleased(MouseEvent& mouseEvent);
-
-        virtual void mouseEntered(MouseEvent& mouseEvent);
-
-        virtual void mouseExited(MouseEvent& mouseEvent);
-
-        virtual void mouseDragged(MouseEvent& mouseEvent);
-
+        void mousePressed(MouseEvent& mouseEvent) override;
+        void mouseReleased(MouseEvent& mouseEvent) override;
+        void mouseClicked(MouseEvent& mouseEvent) override;
+        void mouseEntered(MouseEvent& mouseEvent) override;
+        void mouseExited(MouseEvent& mouseEvent) override;
+        void mouseDragged(MouseEvent& mouseEvent) override;
 
         // Inherited from KeyListener
 
-        virtual void keyPressed(KeyEvent& keyEvent);
-
-        virtual void keyReleased(KeyEvent& keyEvent);
+        void keyPressed(KeyEvent& keyEvent) override;
+        void keyReleased(KeyEvent& keyEvent) override;
 
     protected:
         /**
@@ -191,27 +185,29 @@ namespace gcn
         /**
          * True if the mouse is ontop of the button, false otherwise.
          */
-        bool mHasMouse;
+        bool mHasMouse = false;
 
         /**
          * True if a key has been pressed, false otherwise.
          */
-        bool mKeyPressed;
+        bool mKeyPressed = false;
 
         /**
          * True if a mouse has been pressed, false otherwise.
          */
-        bool mMousePressed;
+        bool mMousePressed = false;
+
+        bool mHotKeyPressed = false;
 
         /**
          * Holds the alignment of the caption.
          */
-        Graphics::Alignment mAlignment;
+        Graphics::Alignment mAlignment = Graphics::Alignment::Center;
 
         /**
          * Holds the spacing between the border and the caption.
          */
-        unsigned int mSpacing;
+        unsigned int mSpacing = 4;
     };
 }
 

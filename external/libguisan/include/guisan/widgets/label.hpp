@@ -74,7 +74,7 @@ namespace gcn
         /**
          * Constructor.
          */
-        Label();
+        Label() = default;
 
         /**
          * Constructor. The label will be automatically resized
@@ -125,11 +125,9 @@ namespace gcn
          */
         void adjustSize();
 
-
         // Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
+        void draw(Graphics* graphics) override;
 
     protected:
         /**
@@ -140,7 +138,7 @@ namespace gcn
         /**
          * Holds the alignment of the caption.
          */
-        Graphics::Alignment mAlignment;
+        Graphics::Alignment mAlignment = Graphics::Alignment::Left;
     };
 }
 

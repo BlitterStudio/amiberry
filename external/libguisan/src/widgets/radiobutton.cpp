@@ -69,20 +69,12 @@ namespace gcn
 {
     RadioButton::GroupMap RadioButton::mGroupMap;
 
-    RadioButton::RadioButton()
-    {
-        setSelected(false);
+    RadioButton::RadioButton() : RadioButton("", "", false)
+    {}
 
-        setFocusable(true);
-        addMouseListener(this);
-        addKeyListener(this);
-    }
-
-    RadioButton::RadioButton(const std::string& caption,
-        const std::string& group,
-        const bool selected)
+    RadioButton::RadioButton(const std::string& caption, const std::string& group, bool selected) :
+        mCaption(caption)
     {
-        setCaption(caption);
         setGroup(group);
         setSelected(selected);
 
@@ -199,15 +191,13 @@ namespace gcn
         return mSelected;
     }
 
-    void RadioButton::setSelected(const bool selected)
+    void RadioButton::setSelected(bool selected)
     {
         if (selected && !mGroup.empty())
         {
-            const GroupIterator iterEnd = mGroupMap.upper_bound(mGroup);
+            auto range = mGroupMap.equal_range(mGroup);
 
-            for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
-                iter != iterEnd;
-                ++iter)
+            for (auto iter = range.first; iter != range.second; iter++)
             {
                 if (iter->second->isSelected())
                 {
@@ -260,11 +250,9 @@ namespace gcn
     {
         if (!mGroup.empty())
         {
-            const GroupIterator iterEnd = mGroupMap.upper_bound(mGroup);
+            auto range = mGroupMap.equal_range(mGroup);
 
-            for (GroupIterator iter = mGroupMap.lower_bound(mGroup);
-                iter != iterEnd;
-                ++iter)
+            for (auto iter = range.first; iter != range.second; iter++)
             {
                 if (iter->second == this)
                 {

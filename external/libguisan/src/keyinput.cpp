@@ -62,18 +62,10 @@
 
 namespace gcn
 {
-    KeyInput::KeyInput(const Key& key, const unsigned int type)
-        : mKey(key),
-          mType(type),
-          mShiftPressed(false),
-          mControlPressed(false),
-          mAltPressed(false),
-          mMetaPressed(false),
-          mNumericPad(false)
-    {
-    }
+    KeyInput::KeyInput(const Key& key, unsigned int type) : mKey(key), mType(type)
+    {}
 
-    void KeyInput::setType(const unsigned int type)
+    void KeyInput::setType(unsigned int type)
     {
         mType = type;
     }
@@ -98,7 +90,7 @@ namespace gcn
         return mShiftPressed;
     }
 
-    void KeyInput::setShiftPressed(const bool pressed)
+    void KeyInput::setShiftPressed(bool pressed)
     {
         mShiftPressed = pressed;
     }
@@ -108,7 +100,7 @@ namespace gcn
         return mControlPressed;
     }
 
-    void KeyInput::setControlPressed(const bool pressed)
+    void KeyInput::setControlPressed(bool pressed)
     {
         mControlPressed = pressed;
     }
@@ -118,7 +110,7 @@ namespace gcn
         return mAltPressed;
     }
 
-    void KeyInput::setAltPressed(const bool pressed)
+    void KeyInput::setAltPressed(bool pressed)
     {
         mAltPressed = pressed;
     }
@@ -128,7 +120,7 @@ namespace gcn
         return mMetaPressed;
     }
 
-    void KeyInput::setMetaPressed(const bool pressed)
+    void KeyInput::setMetaPressed(bool pressed)
     {
         mMetaPressed = pressed;
     }
@@ -138,7 +130,7 @@ namespace gcn
         return mNumericPad;
     }
 
-    void KeyInput::setNumericPad(const bool numpad)
+    void KeyInput::setNumericPad(bool numpad)
     {
         mNumericPad = numpad;
     }

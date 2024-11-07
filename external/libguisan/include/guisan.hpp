@@ -115,8 +115,6 @@
 
 #include "guisan/platform.hpp"
 
-class Widget;
-
 extern "C"
 {
     /**

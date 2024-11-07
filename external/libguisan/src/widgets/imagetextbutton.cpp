@@ -67,28 +67,27 @@
 
 namespace gcn
 {
-    ImageTextButton::ImageTextButton(const std::string& filename, const std::string& caption) : ImageButton(filename)
+    ImageTextButton::ImageTextButton(const std::string& filename, const std::string& caption) :
+        ImageButton(filename)
     {
         setCaption(caption);
         setWidth(mImage->getWidth() + mImage->getWidth() / 2);
         setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-        mAlignment = BOTTOM;
     }
 
-    ImageTextButton::ImageTextButton(const Image* image, const std::string& caption) : ImageButton(image)
+    ImageTextButton::ImageTextButton(const Image* image, const std::string& caption) :
+        ImageTextButton({image, [](const auto*) {}}, caption)
+    {}
+
+    ImageTextButton::ImageTextButton(std::shared_ptr<const Image> image,
+                                     const std::string& caption) :
+        ImageButton(std::move(image))
     {
         setCaption(caption);
         setWidth(mImage->getWidth() + mImage->getWidth() / 2);
         setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-        mAlignment = BOTTOM;
     }
 
-    ImageTextButton::~ImageTextButton()
-    {
-        if (mInternalImage)
-            delete mImage;
-    }
-    
     void ImageTextButton::adjustSize()
     {
         switch(getAlignment())
@@ -113,19 +112,6 @@ namespace gcn
             default:
               throw GCN_EXCEPTION("Unknown alignment.");
         }
-    }
-
-    void ImageTextButton::setImage(Image* image)
-    {
-        if (mInternalImage)
-            delete mImage;
-        mImage = image;
-        mInternalImage = false;
-    }
-
-    Image* ImageTextButton::getImage() const
-    {
-        return mImage;
     }
 
     void ImageTextButton::draw(Graphics* graphics)
@@ -202,12 +188,12 @@ namespace gcn
 
         if (isPressed())
         {
-            graphics->drawImage(mImage, imageX + 1, imageY + 1);
+            graphics->drawImage(mImage.get(), imageX + 1, imageY + 1);
             graphics->drawText(mCaption, textX + 1, textY + 1, Graphics::Left, isEnabled());
         }
         else
         {
-            graphics->drawImage(mImage, imageX, imageY);
+            graphics->drawImage(mImage.get(), imageX, imageY);
             graphics->drawText(mCaption, textX, textY, Graphics::Left, isEnabled());
            
             if (isFocused())
@@ -220,7 +206,7 @@ namespace gcn
         }
     }
     
-    void ImageTextButton::setAlignment(const unsigned int alignment)
+    void ImageTextButton::setAlignment(unsigned int alignment)
     {
         mAlignment = alignment;
     }

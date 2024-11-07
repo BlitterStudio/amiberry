@@ -63,10 +63,13 @@
 namespace gcn
 {
     SelectionEvent::SelectionEvent(Widget* source)
-        : Event(source)
+            :Event(source)
     {
+
     }
 
     SelectionEvent::~SelectionEvent()
-    = default;
+    {
+
+    }
 }

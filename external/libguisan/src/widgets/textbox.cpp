@@ -60,7 +60,6 @@
 
 #include "guisan/widgets/textbox.hpp"
 
-#include "guisan/basiccontainer.hpp"
 #include "guisan/font.hpp"
 #include "guisan/graphics.hpp"
 #include "guisan/key.hpp"
@@ -69,10 +68,11 @@
 
 namespace gcn
 {
-    TextBox::TextBox() : mEditable(true), mOpaque(true)
-    {
-        mText = new Text();
+    TextBox::TextBox() : TextBox("")
+    {}
 
+    TextBox::TextBox(const std::string& text) : mText(std::make_unique<Text>(text))
+    {
         setFocusable(true);
 
         addMouseListener(this);
@@ -81,17 +81,7 @@ namespace gcn
         setFrameSize(1);
     }
 
-    TextBox::TextBox(const std::string& text) : mEditable(true), mOpaque(true)
-    {
-        mText = new Text(text);
-
-        setFocusable(true);
-
-        addMouseListener(this);
-        addKeyListener(this);
-        adjustSize();
-        setFrameSize(1);
-    }
+    TextBox::~TextBox() = default;
 
     void TextBox::setText(const std::string& text)
     {
@@ -123,7 +113,7 @@ namespace gcn
         }
     }
 
-    void TextBox::drawCaret(Graphics* graphics, const int x, const int y)
+    void TextBox::drawCaret(Graphics* graphics, int x, int y)
     {
         graphics->setColor(getForegroundColor());
         graphics->drawLine(x, y, x, y + getFont()->getHeight());
@@ -196,7 +186,7 @@ namespace gcn
         {
             Widget* par = getParent();
 
-            if (par != NULL)
+            if (par != nullptr)
             {
                 int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
                 mText->setCaretRow(mText->getCaretRow() - rowsPerPage);
@@ -207,7 +197,7 @@ namespace gcn
         {
             Widget* par = getParent();
 
-            if (par != NULL)
+            if (par != nullptr)
             {
                 int rowsPerPage = par->getChildrenArea().height / getFont()->getHeight();
                 mText->setCaretRow(mText->getCaretRow() + rowsPerPage);
@@ -247,7 +237,7 @@ namespace gcn
         setSize(dim.width, dim.height);
     }
 
-    void TextBox::setCaretPosition(const unsigned int position) const
+    void TextBox::setCaretPosition(unsigned int position)
     {
         mText->setCaretPosition(position);
     }
@@ -257,13 +247,13 @@ namespace gcn
         return mText->getCaretPosition();
     }
 
-    void TextBox::setCaretRowColumn(const int row, const int column) const
+    void TextBox::setCaretRowColumn(int row, int column)
     {
         mText->setCaretRow(row);
         mText->setCaretColumn(column);
     }
 
-    void TextBox::setCaretRow(const int row) const
+    void TextBox::setCaretRow(int row)
     {
         mText->setCaretRow(row);
     }
@@ -273,7 +263,7 @@ namespace gcn
         return mText->getCaretRow();
     }
 
-    void TextBox::setCaretColumn(const int column) const
+    void TextBox::setCaretColumn(int column)
     {
         mText->setCaretColumn(column);
     }
@@ -283,12 +273,12 @@ namespace gcn
         return mText->getCaretColumn();
     }
 
-    std::string TextBox::getTextRow(const int row) const
+    std::string TextBox::getTextRow(int row) const
     {
         return mText->getRow(row);
     }
 
-    void TextBox::setTextRow(const int row, const std::string& text)
+    void TextBox::setTextRow(int row, const std::string& text)
     {
         mText->setRow(row, text);
 
@@ -315,7 +305,7 @@ namespace gcn
         showPart(mText->getCaretDimension(getFont()));
     }
 
-    void TextBox::setEditable(const bool editable)
+    void TextBox::setEditable(bool editable)
     {
         mEditable = editable;
     }
@@ -331,12 +321,12 @@ namespace gcn
         adjustSize();
     }
 
-    bool TextBox::isOpaque() const
+    bool TextBox::isOpaque()
     {
         return mOpaque;
     }
 
-    void TextBox::setOpaque(const bool opaque)
+    void TextBox::setOpaque(bool opaque)
     {
         mOpaque = opaque;
     }

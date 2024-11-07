@@ -63,12 +63,15 @@
 namespace gcn
 {
     Event::Event(Widget* source)
-        : mSource(source)
+            :mSource(source)
     {
+
     }
 
     Event::~Event()
-    = default;
+    {
+
+    }
 
     Widget* Event::getSource() const
     {

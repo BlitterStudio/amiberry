@@ -66,35 +66,29 @@
 namespace gcn
 {
     ImageButton::ImageButton()
-        : mImage(nullptr), 
-          mInternalImage(false)
     {
         setWidth(0);
         setHeight(0);
     }
 
-    ImageButton::ImageButton(const std::string& filename)
-        : mImage(nullptr), 
-          mInternalImage(false)
-    {
-        mImage = Image::load(filename);
-        mInternalImage = true;
-        setWidth(mImage->getWidth() + mImage->getWidth() / 2);
-        setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-    }
+    ImageButton::ImageButton(const std::string& filename) :
+        ImageButton({Image::load(filename), std::default_delete<const Image>{}})
+    {}
 
-    ImageButton::ImageButton(const Image* image)
-        : mImage(image), 
-          mInternalImage(false)
-    {
-        setWidth(mImage->getWidth() + mImage->getWidth() / 2);
-        setHeight(mImage->getHeight() + mImage->getHeight() / 2);
-    }
+    ImageButton::ImageButton(const Image* image) : ImageButton({image, [](const auto*) {}})
+    {}
 
-    ImageButton::~ImageButton()
+    ImageButton::ImageButton(std::shared_ptr<const Image> image) : mImage(std::move(image))
     {
-        if (mInternalImage)
-            delete mImage;
+        if (mImage)
+        {
+            setWidth(mImage->getWidth() + mImage->getWidth() / 2);
+            setHeight(mImage->getHeight() + mImage->getHeight() / 2);
+        }
+        else
+        {
+            setSize(0, 0);
+        }
     }
 
     void ImageButton::adjustSize()
@@ -105,18 +99,17 @@ namespace gcn
 
     void ImageButton::setImage(const Image* image)
     {
-        if (mInternalImage)
-        {
-            delete mImage;
-        }
+        setImage({image, [](const auto*) {}});
+    }
 
-        mImage = image;
-        mInternalImage = false;
+    void ImageButton::setImage(std::shared_ptr<const Image> image)
+    {
+        mImage = std::move(image);
     }
 
     const Image* ImageButton::getImage() const
     {
-        return mImage;
+        return mImage.get();
     }
 
     void ImageButton::draw(Graphics* graphics)
@@ -164,12 +157,16 @@ namespace gcn
         if (isPressed())
         {
             if (mImage)
-                graphics->drawImage(mImage, textX + 1, textY + 1);
+            {
+                graphics->drawImage(mImage.get(), textX + 1, textY + 1);
+            }
         }
         else
         {
             if (mImage)
-                graphics->drawImage(mImage, textX, textY);
+            {
+                graphics->drawImage(mImage.get(), textX, textY);
+            }
 
             if (isFocused())
             {

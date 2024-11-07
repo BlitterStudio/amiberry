@@ -94,6 +94,9 @@ namespace gcn
          */
         virtual void keyReleased(KeyEvent& keyEvent) { }
 
+        virtual void hotKeyPressed(const Key&) {}
+        virtual void hotKeyReleased(const Key&) {}
+
     protected:
         /**
          * Constructor.

@@ -62,20 +62,20 @@
 
 namespace gcn
 {
-    MouseInput::MouseInput(const unsigned int button,
-                           const unsigned int type,
-                           const int x,
-                           const int y,
-                           const int timeStamp)
-        : mType(type),
-          mButton(button),
-          mTimeStamp(timeStamp),
-          mX(x),
-          mY(y)
+    MouseInput::MouseInput(unsigned int button,
+                           unsigned int type,
+                           int x,
+                           int y,
+                           int timeStamp)
+            : mType(type),
+              mButton(button),
+              mTimeStamp(timeStamp),
+              mX(x),
+              mY(y)
     {
     }
 
-    void MouseInput::setType(const unsigned int type)
+    void MouseInput::setType(unsigned int type)
     {
         mType = type;
     }
@@ -85,7 +85,7 @@ namespace gcn
         return mType;
     }
 
-    void MouseInput::setButton(const unsigned int button)
+    void MouseInput::setButton(unsigned int button)
     {
         mButton = button;
     }
@@ -100,12 +100,12 @@ namespace gcn
         return mTimeStamp;
     }
 
-    void MouseInput::setTimeStamp(const int timeStamp)
+    void MouseInput::setTimeStamp(int timeStamp)
     {
         mTimeStamp = timeStamp;
     }
 
-    void MouseInput::setX(const int x)
+    void MouseInput::setX(int x)
     {
         mX = x;
     }
@@ -115,7 +115,7 @@ namespace gcn
         return mX;
     }
 
-    void MouseInput::setY(const int y)
+    void MouseInput::setY(int y)
     {
         mY = y;
     }

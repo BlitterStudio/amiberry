@@ -73,10 +73,9 @@ namespace gcn
     public:
 
         /**
-         * Constructor. The default rectangle is an empty rectangle
-         * at the coordinates (0,0).
+         * Constructor. The default rectangle is an empty rectangle.
          */
-        Rectangle();
+        Rectangle() = default;
 
         /**
          * Constructor.
@@ -176,22 +175,22 @@ namespace gcn
         /**
          * Holds the x coordinate of the rectangle.
          */
-        int x;
+        int x = 0;
 
         /**
          * Holds the x coordinate of the rectangle.
          */
-        int y;
+        int y = 0;
 
         /**
          * Holds the width of the rectangle.
          */
-        int width;
+        int width = 0;
 
         /**
          * Holds the height of the rectangle.
          */
-        int height;
+        int height = 0;
     };
 }
 

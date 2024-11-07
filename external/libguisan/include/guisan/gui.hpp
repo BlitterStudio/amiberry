@@ -77,17 +77,23 @@ namespace gcn
     /**
      * @mainpage
      * @section Introduction
-     * This documentation is mostly intended as a reference to the API. If you want to get started with Guichan, we suggest you check out the programs in the examples directory of the Guichan release.
+     * This documentation is mostly intended as a reference to the API.
+     * If you want to get started with Guisan,
+     * we suggest you check out the programs
+     * in the examples directory of the Guisan release.
      * @n
      * @n
-     * This documentation is, and will always be, work in progress. If you find any errors, typos or inconsistencies, or if you feel something needs to be explained in more detail - don't hesitate to tell us.
+     * This documentation is, and will always be, work in progress.
+     * If you find any errors, typos or inconsistencies,
+     * or if you feel something needs to be explained in more detail,
+     * don't hesitate to tell us.
      */
 
     /**
      * Contains a Guisan GUI. This is the core class of Guisan to which
      * implementations of back ends are passed, to make Guisan work with
      * a specific library, and to where the top widget (root widget of GUI)
-     * is added. If you want to be able to have more then one widget in your 
+     * is added. If you want to be able to have more then one widget in your
      * GUI, the top widget should be a container.
      *
      * A Gui object cannot work properly without passing back end 
@@ -130,7 +136,7 @@ namespace gcn
          * Gets the top widget. The top widget is the root widget
          * of the GUI.
          *
-         * @return The top widget. NULL if no top widget has been set.
+         * @return The top widget. nullptr if no top widget has been set.
          * @since 0.1.0
          */
         virtual Widget* getTop() const;
@@ -147,7 +153,7 @@ namespace gcn
         /**
          * Gets the graphics object used for drawing.
          *
-         *  @return The graphics object used for drawing. NULL if no
+         *  @return The graphics object used for drawing. nullptr if no
          *          graphics object has been set.
          * @see setGraphics, OpenGLGraphics, SDLGraphics
          * @since 0.1.0
@@ -166,7 +172,7 @@ namespace gcn
         /**
          * Gets the input object being used for input handling.
          *
-         *  @return The input object used for handling input. NULL if no
+         *  @return The input object used for handling input. nullptr if no
          *          input object has been set.
          * @see setInput, SDLInput
          * @since 0.1.0
@@ -300,7 +306,7 @@ namespace gcn
         virtual void handleMouseReleased(const MouseInput& mouseInput);
 
         /**
-         * Handles modal focus. Modal focus needs to be checked at 
+         * Handles modal focus. Modal focus needs to be checked at
          * each logic iteration as it might be necessary to distribute
          * mouse entered or mouse exited events.
          *
@@ -309,8 +315,8 @@ namespace gcn
         virtual void handleModalFocus();
 
         /**
-         * Handles modal mouse input focus. Modal mouse input focus needs 
-         * to be checked at each logic iteration as it might be necessary to 
+         * Handles modal mouse input focus. Modal mouse input focus needs
+         * to be checked at each logic iteration as it might be necessary to
          * distribute mouse entered or mouse exited events.
          *
          * @since 0.8.0
@@ -318,7 +324,7 @@ namespace gcn
         virtual void handleModalMouseInputFocus();
 
         /**
-         * Handles modal focus gained. If modal focus has been gaind it might 
+         * Handles modal focus gained. If modal focus has been gained it might
          * be necessary to distribute mouse entered or mouse exited events.
          *
          * @since 0.8.0
@@ -326,7 +332,7 @@ namespace gcn
         virtual void handleModalFocusGained();
 
         /**
-         * Handles modal mouse input focus gained. If modal focus has been gaind 
+         * Handles modal mouse input focus gained. If modal focus has been gained
          * it might be necessary to distribute mouse entered or mouse exited events.
          *
          * @since 0.8.0
@@ -343,7 +349,7 @@ namespace gcn
          * @param fource indicates whether the distribution should be forced or not.
          *               A forced distribution distributes the event even if a widget
          *               is not enabled, not visible, another widget has modal
-         *               focus or another widget has modal mouse input focus. 
+         *               focus or another widget has modal mouse input focus.
          *               Default value is false.
          * @param toSourceOnly indicates whether the distribution should be to the
          *                     source widget only or to it's parent's mouse listeners
@@ -414,27 +420,27 @@ namespace gcn
         /**
          * Holds the top widget.
          */
-        Widget* mTop;
+        Widget* mTop = nullptr;
 
         /**
          * Holds the graphics implementation used.
          */
-        Graphics* mGraphics;
+        Graphics* mGraphics = nullptr;
 
         /**
          * Holds the input implementation used.
          */
-        Input* mInput;
+        Input* mInput = nullptr;
 
         /**
          * Holds the focus handler for the Gui.
          */
-        FocusHandler* mFocusHandler;
+        FocusHandler* mFocusHandler = nullptr;
 
         /**
          * True if tabbing is enabled, false otherwise.
          */
-        bool mTabbing;
+        bool mTabbing = true;
 
         typedef std::list<KeyListener*> KeyListenerList;
         typedef KeyListenerList::iterator KeyListenerListIterator;
@@ -447,55 +453,55 @@ namespace gcn
         /**
          * True if shift is pressed, false otherwise.
          */
-        bool mShiftPressed;
+        bool mShiftPressed = false;
 
         /**
          * True if meta is pressed, false otherwise.
          */
-        bool mMetaPressed;
+        bool mMetaPressed = false;
 
         /**
          * True if control is pressed, false otherwise.
          */
-        bool mControlPressed;
+        bool mControlPressed = false;
 
         /**
          * True if alt is pressed, false otherwise.
          */
-        bool mAltPressed;
+        bool mAltPressed = false;
 
         /**
          * Holds the last mouse button pressed.
          */
-        unsigned int mLastMousePressButton;
+        unsigned int mLastMousePressButton = 0;
 
         /**
          * Holds the last mouse press time stamp.
          */
-        int mLastMousePressTimeStamp;
+        int mLastMousePressTimeStamp = 0;
 
         /**
          * Holds the last mouse x coordinate.
          */
-        int mLastMouseX;
+        int mLastMouseX = 0;
 
         /**
          * Holds the last mouse y coordinate.
          */
-        int mLastMouseY;
+        int mLastMouseY = 0;
 
         /**
          * Holds the current click count. Used to keep track
          * of clicks for a the last pressed button.
          */
-        int mClickCount;
+        int mClickCount = 1;
 
         /**
          * Holds the last button used when a drag of a widget
          * was initiated. Used to be able to release a drag
          * when the same button is released.
          */
-        int mLastMouseDragButton;
+        int mLastMouseDragButton = 0;
     };
 }
 

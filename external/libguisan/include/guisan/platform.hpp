@@ -85,8 +85,4 @@
 #define GCN_EXTENSION_DECLSPEC
 #endif
 
-#ifndef NULL
-#define NULL 0
-#endif
-
 #endif // end GCN_PLATFORM_HPP

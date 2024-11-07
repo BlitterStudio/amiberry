@@ -175,12 +175,12 @@ namespace gcn
          * True if the input event is consumed,
          * false otherwise.
          */
-        bool mIsConsumed;
+        bool mIsConsumed = false;
 
         /**
          * Holds the distributor of the event.
          */
-        Widget* mDistributor;
+        Widget* mDistributor = nullptr;
 
         /**
          * Gui is a friend of this class in order to be able to manipulate

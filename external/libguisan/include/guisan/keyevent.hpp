@@ -107,7 +107,7 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~KeyEvent();
+        ~KeyEvent() override;
 
         /**
          * Gets the type of the event.

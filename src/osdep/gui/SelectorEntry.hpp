@@ -1,6 +1,5 @@
 #pragma once
-
-#include <guisan/basiccontainer.hpp>
+#include <guisan/widget.hpp>
 #include <guisan/platform.hpp>
 #include <guisan/widgetlistener.hpp>
 #include <guisan/image.hpp>

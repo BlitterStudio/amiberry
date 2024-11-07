@@ -55,7 +55,7 @@ namespace gcn
     {}
 
     ContainerEvent::~ContainerEvent()
-    = default;
+    {}
 
     Container* ContainerEvent::getContainer() const
     {

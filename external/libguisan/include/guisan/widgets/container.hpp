@@ -59,10 +59,10 @@
 
 #include <list>
 
-#include "guisan/basiccontainer.hpp"
 #include "guisan/containerlistener.hpp"
 #include "guisan/graphics.hpp"
 #include "guisan/platform.hpp"
+#include "guisan/widget.hpp"
 
 namespace gcn
 {
@@ -74,22 +74,22 @@ namespace gcn
      *
      * @see Gui::setTop
      */
-    class GCN_CORE_DECLSPEC Container: public BasicContainer
+    class GCN_CORE_DECLSPEC Container: public Widget
     {
     public:
 
         /**
-         * Constructor. A container is opauqe as default, if you want a
-         * none opaque container call setQpaque(false).
+         * Constructor. A container is opaque as default, if you want a
+         * non-opaque container call setOpaque(false).
          *
          * @see setOpaque, isOpaque
          */
-        Container();
+        Container() = default;
 
         /**
          * Destructor.
          */
-        virtual ~Container();
+        ~Container() override;
 
         /**
          * Sets the container to be opaque or not. If the container
@@ -154,7 +154,7 @@ namespace gcn
          * Finds a widget given an id.
          *
          * @param id The id to find a widget by.
-         * @return A widget with a corrosponding id, NULL if no widget 
+         * @return A widget with a corrosponding id, nullptr if no widget 
          *         is found.
          * @see Widget::setId
          */
@@ -192,8 +192,8 @@ namespace gcn
 
         // Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
+        void draw(Graphics* graphics) override;
+        Rectangle getChildrenArea() override;
 
     protected:
         /**
@@ -217,7 +217,7 @@ namespace gcn
         /**
          * True if the container is opaque, false otherwise.
          */
-        bool mOpaque;
+        bool mOpaque = true;
 
         typedef std::list<ContainerListener*> ContainerListenerList;
 
