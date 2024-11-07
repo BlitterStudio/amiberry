@@ -5335,14 +5335,19 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 		isaks = true;
 	}
 
+#ifdef DEBUGGER
 	if (isaks) {
 		if (debug_trainer_event(ie->data, state))
+		{
 			return 0;
+		}
 	} else {
 		if (debug_trainer_event(nr, state))
+		{
 			return 0;
+		}
 	}
-
+#endif
 	if (!isaks) {
 		if (input_record && input_record != INPREC_RECORD_PLAYING)
 			inprec_recordevent (nr, state, max, autofire);

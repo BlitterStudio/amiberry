@@ -4405,9 +4405,8 @@ int main(int argc, char* argv[])
 	reginitializeinit(&inipath);
 	if (getregmode() == NULL)
 	{
-		TCHAR* path;
 		std::string ini_file_path = get_ini_file_path();
-		_tcscpy(path, ini_file_path.c_str());
+		TCHAR* path = my_strdup(ini_file_path.c_str());;
 		auto f = fopen(path, _T("r"));
 		if (!f)
 			f = fopen(path, _T("w"));

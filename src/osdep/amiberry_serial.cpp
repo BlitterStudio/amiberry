@@ -1004,9 +1004,11 @@ static void serdatcopy(void)
 	}
 
 	if (serper == 372) {
+#ifdef ENFORCER
 		if (enforcermode & 2) {
 			console_out_f(_T("%c"), docharlog(serdatshift_masked));
 		}
+#endif
 	}
 
 	if (data_in_sershift == 0) {
