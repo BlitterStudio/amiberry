@@ -181,15 +181,13 @@ namespace gcn
         unsigned int getValue() const;
         
         /**
-         * Adjusts the size of the widget. 
+         * Adjusts the size of the widget.
          */
         void adjustSize();
 
-
         // Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
+        void draw(Graphics* graphics) override;
 
     protected:
         /**
@@ -200,11 +198,11 @@ namespace gcn
         /**
          * Holds the alignment of the caption.
          */
-        Graphics::Alignment mAlignment;
-        
-        unsigned int mStart; //! minimum value of the progressbar
-        unsigned int mEnd;   //! maximum value of the progressbar
-        unsigned int mValue; //! current value of the progressbar
+        Graphics::Alignment mAlignment = Graphics::Alignment::Center;
+
+        unsigned int mStart = 0; //! minimum value of the progressbar
+        unsigned int mEnd = 100; //! maximum value of the progressbar
+        unsigned int mValue = 0; //! current value of the progressbar
     };
 }
 

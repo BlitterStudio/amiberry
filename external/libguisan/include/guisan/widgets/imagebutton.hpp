@@ -60,6 +60,8 @@
 #include "guisan/platform.hpp"
 #include "guisan/widgets/button.hpp"
 
+#include <memory>
+
 namespace gcn
 {
     class Image;
@@ -80,19 +82,26 @@ namespace gcn
          *
          * @param filename The filename of the image to display.
          */
-        ImageButton(const std::string& filename);
+        explicit ImageButton(const std::string& filename);
 
         /**
          * Constructor.
          *
          * @param image The image to display.
          */
-        ImageButton(const Image* image);
+        explicit ImageButton(const Image* image);
+
+        /**
+         * Constructor.
+         *
+         * @param image The image to display.
+         */
+        explicit ImageButton(std::shared_ptr<const Image> image);
 
         /**
          * Destructor.
          */
-        virtual ~ImageButton();
+        ~ImageButton() override = default;
 
         /**
          * Adjusts the size of the image button to fit the image.
@@ -100,12 +109,18 @@ namespace gcn
         void adjustSize();
 
         /**
-         * Sets the image to display. Existing Image is freed automatically, 
-         * if it was loaded internally.
+         * Sets the image to display.
          *
          * @param image The image to display.
          */
         void setImage(const Image* image);
+
+        /**
+         * Sets the image to display.
+         *
+         * @param image The image to display.
+         */
+        void setImage(std::shared_ptr<const Image> image);
 
         /**
          * Gets current image.
@@ -116,17 +131,10 @@ namespace gcn
 
         // Inherited from Widget
 
-        void draw(gcn::Graphics* graphics);
+        void draw(gcn::Graphics* graphics) override;
 
     protected:
-        const Image* mImage;
-
-        /**
-         * True if the image has been loaded internally, false otherwise.
-         * An image not loaded internally should not be deleted in the
-         * destructor.
-         */
-        bool mInternalImage;
+        std::shared_ptr<const Image> mImage;
     };
 }
 #endif

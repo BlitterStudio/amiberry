@@ -69,17 +69,9 @@
 
 namespace gcn
 {
-    ToggleButton::ToggleButton()
-        : Button(), mSelected(false)
-    {
-    
-    }
 
-    ToggleButton::ToggleButton(const std::string& caption)
-            : Button(caption), mSelected(false)
-    {
-    
-    }
+    ToggleButton::ToggleButton(const std::string& caption) : Button(caption)
+    {}
 
     void ToggleButton::draw(Graphics* graphics)
     {
@@ -161,25 +153,17 @@ namespace gcn
         return mSelected;
     }
 
-    void ToggleButton::setSelected(const bool selected)
+    void ToggleButton::setSelected(bool selected)
     {
         mSelected = selected;
     }
 
-    void ToggleButton::mouseReleased(MouseEvent& mouseEvent)
+    void ToggleButton::mouseClicked(MouseEvent& mouseEvent)
     {
-        if (mouseEvent.getButton() == MouseEvent::Left
-            && mMousePressed
-            && mHasMouse)
+        if (mouseEvent.getButton() == MouseEvent::Left)
         {
-            mMousePressed = false;
             toggleSelected();
             distributeActionEvent();
-            mouseEvent.consume();
-        }
-        else if (mouseEvent.getButton() == MouseEvent::Left)
-        {
-            mMousePressed = false;
             mouseEvent.consume();
         }
     }

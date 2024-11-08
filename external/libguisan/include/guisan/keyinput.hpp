@@ -76,7 +76,7 @@ namespace gcn
         /**
          * Constructor.
          */
-        KeyInput() { };
+        KeyInput() = default;
 
         /**
          * Constructor.
@@ -239,37 +239,37 @@ namespace gcn
         /**
          * Holds the type of the key input.
          */
-        unsigned int mType;
+        unsigned int mType = 0;
 
         /**
          * True if shift was pressed at the same time as the key,
          * false otherwise.
          */
-        bool mShiftPressed;
+        bool mShiftPressed = false;
 
         /**
          * True if control was pressed at the same time as the key,
          * false otherwise.
          */
-        bool mControlPressed;
+        bool mControlPressed = false;
 
         /**
          * True if alt was pressed at the same time as the key,
          * false otherwise.
          */
-        bool mAltPressed;
+        bool mAltPressed = false;
 
         /**
          * True if meta was pressed at the same time as the key,
          * false otherwise.
          */
-        bool mMetaPressed;
+        bool mMetaPressed = false;
 
         /**
          * True if the numeric pad was used when the key was pressed,
          * false otherwise.
          */
-        bool mNumericPad;
+        bool mNumericPad = false;
     };
 }
 

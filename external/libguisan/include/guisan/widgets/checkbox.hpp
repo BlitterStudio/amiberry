@@ -98,7 +98,7 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~CheckBox() { }
+        ~CheckBox() override {}
 
         /**
          * Checks if the check box is selected.
@@ -139,23 +139,18 @@ namespace gcn
          */
         void adjustSize();
 
-
         // Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
+        void draw(Graphics* graphics) override;
 
         // Inherited from KeyListener
 
-        virtual void keyPressed(KeyEvent& keyEvent);
-
+        void keyPressed(KeyEvent& keyEvent) override;
 
         // Inherited from MouseListener
 
-        virtual void mouseClicked(MouseEvent& mouseEvent);
-
-        virtual void mouseDragged(MouseEvent& mouseEvent);
-
+        void mouseClicked(MouseEvent& mouseEvent) override;
+        void mouseDragged(MouseEvent& mouseEvent) override;
 
     protected:
         /**
@@ -172,14 +167,14 @@ namespace gcn
         virtual void toggleSelected();
 
         /**
-         * True if the check box is selected, false otherwise.
-         */
-        bool mSelected;
-
-        /**
          * Holds the caption of the check box.
          */
         std::string mCaption;
+
+        /**
+         * True if the check box is selected, false otherwise.
+         */
+        bool mSelected = false;
     };
 }
 

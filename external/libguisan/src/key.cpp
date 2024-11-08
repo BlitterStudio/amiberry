@@ -62,8 +62,8 @@
 
 namespace gcn
 {
-    Key::Key(const int value)
-        : mValue(value)
+    Key::Key(int value)
+            :mValue(value)
     {
     }
 
@@ -82,9 +82,9 @@ namespace gcn
     bool Key::isLetter() const
     {
         return (((mValue >= 65 && mValue <= 90)
-                || (mValue >= 97 && mValue <= 122)
-                || (mValue >= 192 && mValue <= 255))
-            && (mValue != 215) && (mValue != 247));
+                 || (mValue >= 97 && mValue <= 122)
+                 || (mValue >= 192 && mValue <= 255))
+                && (mValue != 215) && (mValue != 247));
     }
 
     bool Key::isPrintable() const
@@ -100,7 +100,7 @@ namespace gcn
     char Key::getChar() const
     {
         if (mValue == 9 || mValue == 13 || (mValue <= 122 && mValue >= 32))
-            return static_cast<char>(mValue);
+            return (char) mValue;
 
         return '\0';
     }

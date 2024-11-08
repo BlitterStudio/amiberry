@@ -101,7 +101,7 @@ namespace gcn
         /**
          * Constructor.
          */
-        Exception();
+        Exception() = default;
 
         /**
          * Constructor.
@@ -161,7 +161,7 @@ namespace gcn
          * Holds the name of the function name where the
          * exception occured.
          */
-        std::string mFunction;
+        std::string mFunction = "?";
 
         /**
          * Holds the error message of the exception.
@@ -171,12 +171,12 @@ namespace gcn
         /**
          * Holds the filename where the exception occured.
          */
-        std::string mFilename;
+        std::string mFilename = "?";
 
         /**
          * Holds the line number where the exception occured.
          */
-        unsigned int mLine;
+        unsigned int mLine = 0;
     };
 }
 

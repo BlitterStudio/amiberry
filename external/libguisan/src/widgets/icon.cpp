@@ -67,61 +67,60 @@
 namespace gcn
 {
     Icon::Icon()
-        : mImage(nullptr)
-        , mInternalImage(false)
     {
         setSize(0, 0);
     }
 
-    Icon::Icon(const std::string& filename)
-        : mImage(nullptr),
-          mInternalImage(false)
-    {
-        mImage = Image::load(filename);
-        mInternalImage = true;
-        setSize(mImage->getWidth(), mImage->getHeight());
-    }
+    Icon::Icon(const std::string& filename) :
+        Icon({Image::load(filename), std::default_delete<const Image>{}})
+    {}
 
-    Icon::Icon(const Image* image)
-        : mImage(image),
-          mInternalImage(false)
-    {
-        setSize(mImage->getWidth(), mImage->getHeight());
-    }
+    Icon::Icon(const Image* image) : Icon({image, [](const Image*) {}})
+    {}
 
-    Icon::~Icon()
+    Icon::Icon(std::shared_ptr<const Image> image) : mImage(std::move(image))
     {
-        if (mInternalImage)
+        if (mImage)
         {
-            delete mImage;
+            setSize(mImage->getWidth(), mImage->getHeight());
+        }
+        else
+        {
+            setSize(0, 0);
         }
     }
 
     void Icon::setImage(const Image* image)
     {
-        if (mInternalImage)
-        {
-            delete mImage;
-        }
+        setImage({image, [](const Image*) {}});
+    }
 
-        mImage = image;
-        mInternalImage = false;
-        setSize(mImage->getWidth(), mImage->getHeight());
+    void Icon::setImage(std::shared_ptr<const Image> image)
+    {
+        mImage = std::move(image);
+        if (mImage)
+        {
+            setSize(mImage->getWidth(), mImage->getHeight());
+        }
+        else
+        {
+            setSize(0, 0);
+        }
     }
 
     const Image* Icon::getImage() const
     {
-        return mImage;
+        return mImage.get();
     }
 
     void Icon::draw(Graphics* graphics)
     {
-        if (mImage != NULL)
+        if (mImage != nullptr)
         {
             const int x = (getWidth() - mImage->getWidth()) / 2;
             const int y = (getHeight() - mImage->getHeight()) / 2;
-            graphics->drawImage(mImage, x, y);
+            graphics->drawImage(mImage.get(), x, y);
         }
     }
 
-}
+} // namespace gcn

@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
-project(guisan VERSION 1.0 DESCRIPTION "Guisan")
+project(guisan VERSION 1.1.0 DESCRIPTION "Guisan")
 add_library(guisan STATIC
         src/actionevent.cpp
-        src/basiccontainer.cpp
         src/cliprectangle.cpp
         src/color.cpp
         src/containerevent.cpp

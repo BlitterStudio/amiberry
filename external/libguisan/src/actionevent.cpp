@@ -63,13 +63,16 @@
 namespace gcn
 {
     ActionEvent::ActionEvent(Widget* source, std::string id)
-        : Event(source),
-          mId(std::move(id))
+            :Event(source),
+             mId(std::move(id))
     {
+
     }
 
     ActionEvent::~ActionEvent()
-    = default;
+    {
+
+    }
 
     const std::string& ActionEvent::getId() const
     {

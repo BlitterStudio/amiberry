@@ -66,16 +66,9 @@
 
 namespace gcn
 {
-    Label::Label()
-    {
-        mAlignment = Graphics::Left;
-    }
 
-    Label::Label(const std::string& caption)
+    Label::Label(const std::string& caption) : mCaption(caption)
     {
-        mCaption = caption;
-        mAlignment = Graphics::Left;
-
         setWidth(getFont()->getWidth(caption));
         setHeight(getFont()->getHeight() + 2);
     }
@@ -90,7 +83,7 @@ namespace gcn
         mCaption = caption;
     }
 
-    void Label::setAlignment(const Graphics::Alignment alignment)
+    void Label::setAlignment(Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }

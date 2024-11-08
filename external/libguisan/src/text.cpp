@@ -52,12 +52,12 @@
 
 namespace gcn
 {
-    Text::Text() : mCaretPosition(0), mCaretRow(0), mCaretColumn(0)
+    Text::Text()
     {
         mRows.emplace_back();
     }
 
-    Text::Text(const std::string& content) : mCaretPosition(0), mCaretRow(0), mCaretColumn(0)
+    Text::Text(const std::string& content)
     {
         std::string::size_type pos, lastPos = 0;
         int length;
@@ -77,7 +77,7 @@ namespace gcn
     }
 
     Text::~Text()
-    = default;
+    {}
 
     void Text::setContent(const std::string& content)
     {
@@ -113,7 +113,7 @@ namespace gcn
         return result;
     }
 
-    void Text::setRow(const unsigned int row, const std::string& content)
+    void Text::setRow(unsigned int row, const std::string& content)
     {
         if (row >= mRows.size()) throw GCN_EXCEPTION("Row out of bounds!");
 
@@ -131,14 +131,14 @@ namespace gcn
         mRows.push_back(row);
     }
 
-    std::string Text::getRow(const unsigned int row) const
+    std::string Text::getRow(unsigned int row) const
     {
         if (row >= mRows.size()) throw GCN_EXCEPTION("Row out of bounds!");
 
         return mRows[row];
     }
 
-    void Text::insert(const int character)
+    void Text::insert(int character)
     {
         char c = (char) character;
 
@@ -147,7 +147,7 @@ namespace gcn
             if (c == '\n')
                 mRows.emplace_back("");
             else
-                mRows.emplace_back(1, c);
+                mRows.emplace_back(std::string(1, c));
         }
         else
         {
@@ -229,7 +229,7 @@ namespace gcn
         return mCaretPosition;
     }
 
-    void Text::setCaretPosition(const int position)
+    void Text::setCaretPosition(int position)
     {
         if (mRows.empty() || position < 0)
         {
@@ -264,7 +264,7 @@ namespace gcn
         mCaretColumn = mRows[mCaretRow].size();
     }
 
-    void Text::setCaretPosition(const int x, const int y, Font* font)
+    void Text::setCaretPosition(int x, int y, Font* font)
     {
         if (mRows.empty()) return;
 
@@ -282,7 +282,7 @@ namespace gcn
         return mCaretRow;
     }
 
-    void Text::setCaretColumn(const int column)
+    void Text::setCaretColumn(int column)
     {
         if (mRows.empty() || column < 0)
             mCaretColumn = 0;
@@ -294,7 +294,7 @@ namespace gcn
         calculateCaretPositionFromRowAndColumn();
     }
 
-    void Text::setCaretRow(const int row)
+    void Text::setCaretRow(int row)
     {
         if (mRows.empty() || row < 0)
             mCaretRow = 0;
@@ -321,7 +321,7 @@ namespace gcn
 
     Rectangle Text::getDimension(Font* font) const
     {
-        if (mRows.empty()) return {0, 0, font->getWidth(" "), font->getHeight()};
+        if (mRows.empty()) return Rectangle(0, 0, font->getWidth(" "), font->getHeight());
 
         int width = 0;
         for (unsigned int i = 0; i < mRows.size(); ++i)
@@ -373,7 +373,7 @@ namespace gcn
         return mRows.size();
     }
 
-    unsigned int Text::getNumberOfCharacters(const unsigned int row) const
+    unsigned int Text::getNumberOfCharacters(unsigned int row) const
     {
         if (row >= mRows.size()) return 0;
 

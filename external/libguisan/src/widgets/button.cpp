@@ -69,29 +69,10 @@
 
 namespace gcn
 {
-    Button::Button()
-        : mHasMouse(false),
-          mKeyPressed(false),
-          mMousePressed(false),
-          mAlignment(Graphics::Center),
-          mSpacing(4)
-    {
-        setFocusable(true);
-        adjustSize();
-        setFrameSize(1);
+    Button::Button() : Button("")
+    {}
 
-        addMouseListener(this);
-        addKeyListener(this);
-        addFocusListener(this);
-    }
-
-    Button::Button(std::string caption)
-            : mCaption(std::move(caption)),
-              mHasMouse(false),
-              mKeyPressed(false),
-              mMousePressed(false),
-              mAlignment(Graphics::Center),
-              mSpacing(4)
+    Button::Button(std::string caption) : mCaption(std::move(caption))
     {
         setFocusable(true);
         adjustSize();
@@ -112,7 +93,7 @@ namespace gcn
         return mCaption;
     }
 
-    void Button::setAlignment(const Graphics::Alignment alignment)
+    void Button::setAlignment(Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }
@@ -122,7 +103,7 @@ namespace gcn
         return mAlignment;
     }
 
-    void Button::setSpacing(const unsigned int spacing)
+    void Button::setSpacing(unsigned int spacing)
     {
         mSpacing = spacing;
     }
@@ -209,21 +190,27 @@ namespace gcn
 
     void Button::adjustSize()
     {
-        setWidth(getFont()->getWidth(mCaption) + 2 * static_cast<int>(mSpacing));
-        setHeight(getFont()->getHeight() + 2 * static_cast<int>(mSpacing));
+        setWidth(getFont()->getWidth(mCaption) + 2 * mSpacing);
+        setHeight(getFont()->getHeight() + 2 * mSpacing);
     }
 
     bool Button::isPressed() const
     {
         if (mMousePressed)
         {
-            return true;
+            return mHasMouse;
         }
-        return mKeyPressed;
+        return mKeyPressed || mHotKeyPressed;
     }
 
     void Button::mousePressed(MouseEvent& mouseEvent)
     {
+        mHasMouse = gcn::Rectangle(0, 0, getWidth(), getHeight())
+                        .isContaining(mouseEvent.getX(), mouseEvent.getY());
+        if (mouseEvent.isConsumed())
+        {
+            return;
+        }
         if (mouseEvent.getButton() == MouseEvent::Left)
         {
             mMousePressed = true;
@@ -243,16 +230,18 @@ namespace gcn
 
     void Button::mouseReleased(MouseEvent& mouseEvent)
     {
-        if (mouseEvent.getButton() == MouseEvent::Left
-            && mMousePressed)
+        if (mouseEvent.getButton() == MouseEvent::Left)
         {
             mMousePressed = false;
-            distributeActionEvent();
             mouseEvent.consume();
         }
-        else if (mouseEvent.getButton() == MouseEvent::Left)
+    }
+
+    void Button::mouseClicked(MouseEvent& mouseEvent)
+    {
+        if (mouseEvent.getButton() == MouseEvent::Left)
         {
-            mMousePressed = false;
+            distributeActionEvent();
             mouseEvent.consume();
         }
     }
@@ -272,6 +261,7 @@ namespace gcn
             mKeyPressed = true;
             keyEvent.consume();
         }
+        mHotKeyPressed = false;
     }
 
     void Button::keyReleased(KeyEvent& keyEvent)
@@ -285,6 +275,21 @@ namespace gcn
             mKeyPressed = false;
             distributeActionEvent();
             keyEvent.consume();
+        }
+    }
+
+    void Button::hotKeyPressed()
+    {
+        mHotKeyPressed = true;
+        mMousePressed = false;
+    }
+
+    void Button::hotKeyReleased()
+    {
+        if (mHotKeyPressed)
+        {
+            mHotKeyPressed = false;
+            distributeActionEvent();
         }
     }
 

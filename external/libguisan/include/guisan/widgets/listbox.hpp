@@ -101,7 +101,7 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~ListBox() { }
+        ~ListBox() override {}
 
         /**
          * Gets the selected item as an index in the list model.
@@ -134,7 +134,7 @@ namespace gcn
          * @return the list model used.
          * @see setListModel
          */
-        ListModel *getListModel() const;
+        ListModel *getListModel();
 
         /**
          * Adjusts the size of the list box to fit its list model.
@@ -173,9 +173,6 @@ namespace gcn
          * changes an event will be sent to all selection listeners of the
          * list box.
          *
-         * If you delete your selection listener, be sure to also remove it
-         * using removeSelectionListener().
-         *
          * @param selectionListener The selection listener to add.
          * @since 0.8.0
          */
@@ -200,25 +197,19 @@ namespace gcn
 
         // Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
-        virtual void logic();
-
+        void draw(Graphics* graphics) override;
+        void logic() override;
 
         // Inherited from KeyListener
 
-        virtual void keyPressed(KeyEvent& keyEvent);
-
+        void keyPressed(KeyEvent& keyEvent) override;
 
         // Inherited from MouseListener
 
-        virtual void mousePressed(MouseEvent& mouseEvent);
-
-        virtual void mouseWheelMovedUp(MouseEvent& mouseEvent);
-
-        virtual void mouseWheelMovedDown(MouseEvent& mouseEvent);
-
-        virtual void mouseDragged(MouseEvent& mouseEvent);
+        void mousePressed(MouseEvent& mouseEvent) override;
+        void mouseWheelMovedUp(MouseEvent& mouseEvent) override;
+        void mouseWheelMovedDown(MouseEvent& mouseEvent) override;
+        void mouseDragged(MouseEvent& mouseEvent) override;
 
     protected:
         /**
@@ -232,17 +223,17 @@ namespace gcn
         /**
          * The list model to use.
          */
-        ListModel *mListModel;
+        ListModel *mListModel = nullptr;
 
         /**
          * The selected item as an index in the list model.
          */
-        int mSelected;
+        int mSelected = -1;
 
         /**
          * True if wrapping is enabled, false otherwise.
          */
-        bool mWrappingEnabled;
+        bool mWrappingEnabled = false;
 
         typedef std::list<SelectionListener*> SelectionListenerList;
 

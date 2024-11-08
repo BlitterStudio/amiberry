@@ -62,21 +62,13 @@
 
 #include "guisan/focuslistener.hpp"
 #include "guisan/exception.hpp"
+#include "guisan/keyinput.hpp"
 #include "guisan/widget.hpp"
+
+#include <algorithm>
 
 namespace gcn
 {
-    FocusHandler::FocusHandler()
-        : mFocusedWidget(nullptr),
-          mModalFocusedWidget(nullptr),
-          mModalMouseInputFocusedWidget(nullptr),
-          mDraggedWidget(nullptr),
-          mLastWidgetWithMouse(nullptr),
-          mLastWidgetWithModalFocus(nullptr),
-          mLastWidgetWithModalMouseInputFocus(nullptr),
-          mLastWidgetPressed(nullptr)
-    {
-    }
 
     void FocusHandler::requestFocus(Widget* widget)
     {
@@ -101,7 +93,7 @@ namespace gcn
             throw GCN_EXCEPTION("Trying to focus a non-existing widget.");
         }
 
-        Widget* oldFocused = mFocusedWidget;
+        Widget *oldFocused = mFocusedWidget;
 
         if (oldFocused != widget)
         {
@@ -109,11 +101,10 @@ namespace gcn
 
             if (oldFocused != nullptr)
             {
-                const Event focusEvent(oldFocused);
+                Event focusEvent(oldFocused);
                 distributeFocusLostEvent(focusEvent);
             }
-
-            const Event focusEvent(mWidgets.at(toBeFocusedIndex));
+            Event focusEvent(mWidgets.at(toBeFocusedIndex));
             distributeFocusGainedEvent(focusEvent);
         }
     }
@@ -179,18 +170,18 @@ namespace gcn
     {
         int i;
         int focusedWidget = -1;
-        for (i = 0; i < static_cast<int>(mWidgets.size()); ++i)
+        for (i = 0; i < (int)mWidgets.size(); ++i)
         {
             if (mWidgets[i] == mFocusedWidget)
             {
                 focusedWidget = i;
             }
         }
-        const int focused = focusedWidget;
+        int focused = focusedWidget;
 
         // i is a counter that ensures that the following loop
         // won't get stuck in an infinite loop
-        i = static_cast<int>(mWidgets.size());
+        i = (int)mWidgets.size();
         do
         {
             ++focusedWidget;
@@ -203,7 +194,7 @@ namespace gcn
 
             --i;
 
-            if (focusedWidget >= static_cast<int>(mWidgets.size()))
+            if (focusedWidget >= (int)mWidgets.size())
             {
                 focusedWidget = 0;
             }
@@ -232,7 +223,7 @@ namespace gcn
 
     void FocusHandler::focusPrevious()
     {
-        if (mWidgets.empty())
+        if (mWidgets.size() == 0)
         {
             mFocusedWidget = nullptr;
             return;
@@ -240,7 +231,7 @@ namespace gcn
 
         int i;
         int focusedWidget = -1;
-        for (i = 0; i < static_cast<int>(mWidgets.size()); ++i)
+        for (i = 0; i < (int)mWidgets.size(); ++i)
         {
             if (mWidgets[i] == mFocusedWidget)
             {
@@ -251,7 +242,7 @@ namespace gcn
 
         // i is a counter that ensures that the following loop
         // won't get stuck in an infinite loop
-        i = static_cast<int>(mWidgets.size());
+        i = (int)mWidgets.size();
         do
         {
             --focusedWidget;
@@ -307,13 +298,10 @@ namespace gcn
             mFocusedWidget = nullptr;
         }
 
-        for (auto iter = mWidgets.begin(); iter != mWidgets.end(); ++iter)
+        const auto iter = std::find(mWidgets.begin(), mWidgets.end(), widget);
+        if (iter != mWidgets.end())
         {
-            if (*iter == widget)
-            {
-                mWidgets.erase(iter);
-                break;
-            }
+            mWidgets.erase(iter);
         }
 
         if (mDraggedWidget == widget)
@@ -343,6 +331,7 @@ namespace gcn
         if (mLastWidgetPressed == widget)
         {
             mLastWidgetPressed = nullptr;
+            return;
         }
     }
 
@@ -353,7 +342,7 @@ namespace gcn
             Widget* focused = mFocusedWidget;
             mFocusedWidget = nullptr;
 
-            const Event focusEvent(focused);
+            Event focusEvent(focused);
             distributeFocusLostEvent(focusEvent);
         }
     }
@@ -376,7 +365,7 @@ namespace gcn
 
         int i;
         int focusedWidget = -1;
-        for (i = 0; i < static_cast<int>(mWidgets.size()); ++i)
+        for (i = 0; i < (int)mWidgets.size(); ++i)
         {
             if (mWidgets[i] == mFocusedWidget)
             {
@@ -388,7 +377,7 @@ namespace gcn
 
         // i is a counter that ensures that the following loop
         // won't get stuck in an infinite loop
-        i = static_cast<int>(mWidgets.size());
+        i = (int)mWidgets.size();
         do
         {
             ++focusedWidget;
@@ -401,7 +390,7 @@ namespace gcn
 
             --i;
 
-            if (focusedWidget >= static_cast<int>(mWidgets.size()))
+            if (focusedWidget >= (int)mWidgets.size())
             {
                 focusedWidget = 0;
             }
@@ -453,7 +442,7 @@ namespace gcn
 
         int i;
         int focusedWidget = -1;
-        for (i = 0; i < static_cast<int>(mWidgets.size()); ++i)
+        for (i = 0; i < (int)mWidgets.size(); ++i)
         {
             if (mWidgets[i] == mFocusedWidget)
             {
@@ -465,7 +454,7 @@ namespace gcn
 
         // i is a counter that ensures that the following loop
         // won't get stuck in an infinite loop
-        i = static_cast<int>(mWidgets.size());
+        i = (int)mWidgets.size();
         do
         {
             --focusedWidget;
@@ -516,10 +505,8 @@ namespace gcn
     {
         Widget* sourceWidget = focusEvent.getSource();
 
-        auto focusListeners = sourceWidget->_getFocusListeners();
-
         // Send the event to all focus listeners of the widget.
-        for (auto& focusListener : focusListeners)
+        for (auto* focusListener : sourceWidget->_getFocusListeners())
         {
             focusListener->focusLost(focusEvent);
         }
@@ -529,10 +516,8 @@ namespace gcn
     {
         Widget* sourceWidget = focusEvent.getSource();
 
-        auto focusListeners = sourceWidget->_getFocusListeners();
-
         // Send the event to all focus listeners of the widget.
-        for (auto& focusListener : focusListeners)
+        for (auto* focusListener : sourceWidget->_getFocusListeners())
         {
             focusListener->focusGained(focusEvent);
         }
@@ -586,5 +571,38 @@ namespace gcn
     void FocusHandler::setLastWidgetPressed(Widget* lastWidgetPressed)
     {
         mLastWidgetPressed = lastWidgetPressed;
+    }
+
+    void FocusHandler::checkHotKey(const KeyInput& keyInput)
+    {
+        const int keyin = keyInput.getKey().getValue();
+
+        for (auto widget : mWidgets)
+        {
+            int hotKey = widget->getHotKey();
+
+            if (hotKey == 0)
+            {
+                continue;
+            }
+            hotKey = isascii(hotKey) ? tolower(hotKey) : hotKey;
+
+            if ((isascii(keyin) && tolower(keyin) == hotKey) || keyin == hotKey)
+            {
+                if (keyInput.getType() == KeyInput::Pressed)
+                {
+                    widget->hotKeyPressed();
+                    if (widget->isFocusable())
+                    {
+                        this->requestFocus(widget);
+                    }
+                }
+                else
+                {
+                    widget->hotKeyReleased();
+                }
+                break;
+            }
+        }
     }
 }

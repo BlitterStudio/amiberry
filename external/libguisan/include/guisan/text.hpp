@@ -328,19 +328,19 @@ namespace gcn
          * Holds the position of the caret. This variable should
          * always be valid.
          */
-        unsigned int mCaretPosition;
+        unsigned int mCaretPosition = 0;
 
         /**
          * Holds the row the caret is in. This variable should always
          * be valid.
          */
-        unsigned int mCaretRow;
+        unsigned int mCaretRow = 0;
 
         /**
          * Holds the column the caret is in. This variable should always
          * be valid.
          */
-        unsigned int mCaretColumn;
+        unsigned int mCaretColumn = 0;
     };
 } // namespace gcn
 #endif

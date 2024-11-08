@@ -62,6 +62,7 @@
 #include "guisan/platform.hpp"
 #include "guisan/widget.hpp"
 
+#include <memory>
 #include <string>
 
 namespace gcn
@@ -91,12 +92,17 @@ namespace gcn
         TextField(const std::string& text);
 
         /**
+         * Destructor.
+         */
+        ~TextField() override;
+
+        /**
          * Sets the text of the text field.
          *
          * @param text The text of the text field.
          * @see getText
          */
-        void setText(const std::string& text) const;
+        void setText(const std::string& text);
 
         /**
          * Gets the text of the text field.
@@ -140,7 +146,7 @@ namespace gcn
          * @param position The caret position.
          * @see getCaretPosition
          */
-        void setCaretPosition(unsigned int position) const;
+        void setCaretPosition(unsigned int position);
 
         /**
          * Gets the caret position. As there is only one line of text
@@ -151,23 +157,19 @@ namespace gcn
          */
         unsigned int getCaretPosition() const;
 
-
         // Inherited from Widget
 
-        virtual void fontChanged();
-
-        virtual void draw(Graphics* graphics);
-
+        void draw(Graphics* graphics) override;
+        void fontChanged() override;
 
         // Inherited from MouseListener
 
-        virtual void mousePressed(MouseEvent& mouseEvent);
-
-        virtual void mouseDragged(MouseEvent& mouseEvent);
+        void mousePressed(MouseEvent& mouseEvent) override;
+        void mouseDragged(MouseEvent& mouseEvent) override;
 
         // Inherited from KeyListener
 
-        virtual void keyPressed(KeyEvent& keyEvent);
+        void keyPressed(KeyEvent& keyEvent) override;
 
     protected:
         /**
@@ -189,19 +191,19 @@ namespace gcn
         /**
          * True if the text field is editable, false otherwise.
          */
-        bool mEditable;
+        bool mEditable = true;
 
         /**
          * Holds the text of the text field.
          */
-        Text* mText;
+        std::unique_ptr<Text> mText;
 
         /**
          * Holds the amount scrolled in x. If a user types more characters than
          * the text field can display, due to the text field being to small, the
          * text needs to scroll in order to show the last type character.
          */
-        int mXScroll;
+        int mXScroll = 0;
     };
 }
 

@@ -62,32 +62,15 @@
 
 namespace gcn
 {
-    Color::Color()
-        :
-        r(0),
-        g(0),
-        b(0),
-        a(255)
-    {
-    }
 
-    Color::Color(const int color)
-        :
+    Color::Color(int color) :
         r((color >> 16) & 0xFF),
         g((color >> 8) & 0xFF),
-        b((color >> 8) & 0xFF),
-        a(255)
-    {
-    }
+        b((color >> 0) & 0xFF)
+    {}
 
-    Color::Color(const int ar, const int ag, const int ab, const int aa)
-        :
-        r(ar),
-        g(ag),
-        b(ab),
-        a(aa)
-    {
-    }
+    Color::Color(int r, int g, int b, int a) : r(r), g(g), b(b), a(a)
+    {}
 
     Color Color::operator+(const Color& color) const
     {
@@ -111,9 +94,9 @@ namespace gcn
         return result;
     }
 
-    Color Color::operator*(const float value) const
+    Color Color::operator*(float value) const
     {
-        Color result(r * static_cast<int>(value), g * static_cast<int>(value), b * static_cast<int>(value), a);
+        Color result((int)(r * value), (int)(g * value), (int)(b * value), a);
 
         result.r = result.r > 255 ? 255 : (result.r < 0 ? 0 : result.r);
         result.g = result.g > 255 ? 255 : (result.g < 0 ? 0 : result.g);
