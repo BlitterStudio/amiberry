@@ -84,7 +84,7 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~SelectionEvent();
+        ~SelectionEvent() override;
     };
 }
 

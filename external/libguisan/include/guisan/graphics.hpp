@@ -119,7 +119,7 @@ namespace gcn
         /**
          * Constructor.
          */
-        Graphics();
+        Graphics() = default;
 
         /**
          * Destructor.
@@ -290,7 +290,7 @@ namespace gcn
         /**
          * Holds the current font.
          */
-        Font* mFont;
+        Font* mFont = nullptr;
     };
 }
 

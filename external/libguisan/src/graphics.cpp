@@ -66,12 +66,8 @@
 
 namespace gcn
 {
-    Graphics::Graphics()
-    {
-        mFont = nullptr;
-    }
 
-    bool Graphics::pushClipArea(const Rectangle area)
+    bool Graphics::pushClipArea(Rectangle area)
     {
         // Ignore area with a negative width or height
         // by simple pushing an empty clip area to the stack.
@@ -129,7 +125,7 @@ namespace gcn
         return mClipStack.top();
     }
 
-    void Graphics::drawImage(const Image* image, const int dstX, const int dstY)
+    void Graphics::drawImage(const Image* image, int dstX, int dstY)
     {
         drawImage(image, 0, 0, dstX, dstY, image->getWidth(), image->getHeight());
     }
@@ -139,8 +135,8 @@ namespace gcn
         mFont = font;
     }
 
-    void Graphics::drawText(const std::string& text, const int x, const int y,
-                            const Alignment alignment, const bool enabled)
+    void Graphics::drawText(const std::string& text, int x, int y,
+                            Alignment alignment, bool enabled)
     {
         if (mFont == nullptr)
         {

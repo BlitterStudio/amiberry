@@ -78,7 +78,7 @@ namespace gcn
         /**
          * Constructor.
          */
-        MouseInput() { };
+        MouseInput() = default;
 
         /**
          * Constructor.
@@ -220,28 +220,28 @@ namespace gcn
         /**
          * Holds the type of the mouse input.
          */
-        unsigned int mType;
+        unsigned int mType = 0;
 
         /**
          * Holds the button of the mouse input.
          */
-        unsigned int mButton;
+        unsigned int mButton = 0;
 
-        /** 
+        /**
          * Holds the timestamp of the mouse input. Used to 
          * check for double clicks.
          */
-        int mTimeStamp;
+        int mTimeStamp = 0;
 
-        /** 
+        /**
          * Holds the x coordinate of the mouse input.
          */
-        int mX;
+        int mX = 0;
 
-        /** 
+        /**
          * Holds the y coordinate of the mouse input.
          */
-        int mY;
+        int mY = 0;
     };
 }
 

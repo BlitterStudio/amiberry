@@ -65,8 +65,10 @@
 namespace gcn
 {
     GenericInput::GenericInput()
-    = default;
+    {
 
+    }
+    
     void GenericInput::pushKeyPressed(int unicode)
     {
         // TODO
@@ -77,7 +79,7 @@ namespace gcn
         // TODO
     }
 
-    void GenericInput::pushMouseButtonPressed(const int x, const int y, const int button)
+    void GenericInput::pushMouseButtonPressed(int x, int y, int button)
     {
         MouseInput mouseInput;
         mouseInput.setX(x);
@@ -88,7 +90,7 @@ namespace gcn
         mMouseInputQueue.push(mouseInput);
     }
 
-    void GenericInput::pushMouseButtonReleased(const int x, const int y, const int button)
+    void GenericInput::pushMouseButtonReleased(int x, int y, int button)
     {
         MouseInput mouseInput;
         mouseInput.setX(x);
@@ -99,7 +101,7 @@ namespace gcn
         mMouseInputQueue.push(mouseInput);
     }
 
-    void GenericInput::pushMouseWheelMovedUp(const int x, const int y)
+    void GenericInput::pushMouseWheelMovedUp(int x, int y)
     {
         MouseInput mouseInput;
         mouseInput.setX(x);
@@ -109,7 +111,7 @@ namespace gcn
         mMouseInputQueue.push(mouseInput);
     }
 
-    void GenericInput::pushMouseWheelMovedDown(const int x, const int y)
+    void GenericInput::pushMouseWheelMovedDown(int x, int y)
     {
         MouseInput mouseInput;
         mouseInput.setX(x);
@@ -119,7 +121,7 @@ namespace gcn
         mMouseInputQueue.push(mouseInput);
     }
 
-    void GenericInput::pushMouseMoved(const int x, const int y)
+    void GenericInput::pushMouseMoved(int x, int y)
     {
         MouseInput mouseInput;
         mouseInput.setX(x);

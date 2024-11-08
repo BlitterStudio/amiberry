@@ -63,6 +63,6 @@ extern "C"
 {
     const char* gcnGuisanVersion()
     {
-        return "1.0.0";
+        return "1.1.0";
     }
 }

@@ -101,12 +101,6 @@ namespace gcn
         }
     }
 
-    SDLInput::SDLInput()
-    {
-        mMouseInWindow = true;
-        mMouseDown = false;
-    }
-
     bool SDLInput::isKeyQueueEmpty()
     {
         return mKeyInputQueue.empty();
@@ -147,7 +141,7 @@ namespace gcn
         return mouseInput;
     }
 
-    void SDLInput::pushInput(const SDL_Event event)
+    void SDLInput::pushInput(SDL_Event event)
     {
         KeyInput keyInput;
         MouseInput mouseInput;
@@ -258,7 +252,7 @@ namespace gcn
         } // end switch
     }
 
-    int SDLInput::convertMouseButton(const int button)
+    int SDLInput::convertMouseButton(int button)
     {
         switch (button)
         {
@@ -277,7 +271,7 @@ namespace gcn
         }
     }
 
-    Key SDLInput::convertSDLEventToGuichanKeyValue(const SDL_Event& event)
+    Key SDLInput::convertSDLEventToGuichanKeyValue(SDL_Event event)
     {
         int value = -1;
 

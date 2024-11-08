@@ -64,6 +64,7 @@
 
 namespace gcn
 {
+    class KeyInput;
     class Widget;
 
     /**
@@ -87,7 +88,7 @@ namespace gcn
         /**
          * Constructor.
          */
-        FocusHandler();
+        FocusHandler() = default;
 
         /**
          * Destructor.
@@ -164,14 +165,14 @@ namespace gcn
         /**
          * Gets the widget with focus.
          *
-         * @return The widget with focus. NULL if no widget has focus.
+         * @return The widget with focus. nullptr if no widget has focus.
          */
         virtual Widget* getFocused() const;
 
         /**
          * Gets the widget with modal focus.
          *
-         * @return The widget with modal focus. NULL if no widget has
+         * @return The widget with modal focus. nullptr if no widget has
          *         modal focus.
          */
         virtual Widget* getModalFocused() const;
@@ -179,7 +180,7 @@ namespace gcn
         /**
          * Gets the widget with modal mouse input focus.
          *
-         * @return The widget with modal mouse input focus. NULL if
+         * @return The widget with modal mouse input focus. nullptr if
          *         no widget has modal mouse input focus.
          */
         virtual Widget* getModalMouseInputFocused() const;
@@ -329,6 +330,11 @@ namespace gcn
          */
         virtual void setLastWidgetPressed(Widget* lastWidgetPressed);
 
+        /**
+        * 
+        * @param keyInput
+        */
+        void checkHotKey(const KeyInput& keyInput);
     protected:
         /**
          * Distributes a focus lost event.
@@ -356,47 +362,47 @@ namespace gcn
         WidgetVector mWidgets;
 
         /**
-         * Holds the focused widget. NULL if no widget has focus.
+         * Holds the focused widget. nullptr if no widget has focus.
          */
-        Widget* mFocusedWidget;
+        Widget* mFocusedWidget = nullptr;
 
         /**
-         * Holds the modal focused widget. NULL if no widget has
+         * Holds the modal focused widget. nullptr if no widget has
          * modal focused.
          */
-        Widget* mModalFocusedWidget;
+        Widget* mModalFocusedWidget = nullptr;
 
         /**
-         * Holds the modal mouse input focused widget. NULL if no widget 
+         * Holds the modal mouse input focused widget. nullptr if no widget 
          * is being dragged.
          */
-        Widget* mModalMouseInputFocusedWidget;
+        Widget* mModalMouseInputFocusedWidget = nullptr;
 
         /** 
-         * Holds the dragged widget. NULL if no widget is
+         * Holds the dragged widget. nullptr if no widget is
          * being dragged.
          */
-        Widget* mDraggedWidget;
+        Widget* mDraggedWidget = nullptr;
 
         /**
          * Holds the last widget with the mouse.
          */
-        Widget* mLastWidgetWithMouse;
+        Widget* mLastWidgetWithMouse = nullptr;
 
         /**
          * Holds the last widget with modal focus.
          */
-        Widget* mLastWidgetWithModalFocus;
+        Widget* mLastWidgetWithModalFocus = nullptr;
 
         /**
          * Holds the last widget with modal mouse input focus.
          */
-        Widget* mLastWidgetWithModalMouseInputFocus;
+        Widget* mLastWidgetWithModalMouseInputFocus = nullptr;
 
         /**
          * Holds the last widget pressed.
          */
-        Widget* mLastWidgetPressed;
+        Widget* mLastWidgetPressed = nullptr;
     };
 }
 

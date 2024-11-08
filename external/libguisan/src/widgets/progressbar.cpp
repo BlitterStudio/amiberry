@@ -66,22 +66,12 @@
 
 namespace gcn
 {
-    ProgressBar::ProgressBar() : Label()
-    {
-        mAlignment = Graphics::Center;
-        mStart = 0;
-        mValue = 0;
-        mEnd = 100;
-        
-        setHeight(getFont()->getHeight());
-        setFrameSize(1);
-    }
-    
+    ProgressBar::ProgressBar() : ProgressBar(0, 100, 0)
+    {}
+
     ProgressBar::ProgressBar(const unsigned int start,
         const unsigned int end, const unsigned int value) : Label()
     {
-        mAlignment = Graphics::Center;
-
         if (start > end)
         {
             mStart = end;
@@ -106,11 +96,8 @@ namespace gcn
         setFrameSize(1);
     }
 
-    ProgressBar::ProgressBar(const std::string& caption) : Label(caption)
+    ProgressBar::ProgressBar(const std::string& caption) : Label(caption), mCaption(caption)
     {
-        mCaption = caption;
-        mAlignment = Graphics::Center;
-
         setHeight(getFont()->getHeight());
         setFrameSize(1);
     }
@@ -125,7 +112,7 @@ namespace gcn
         mCaption = caption;
     }
 
-    void ProgressBar::setAlignment(const Graphics::Alignment alignment)
+    void ProgressBar::setAlignment(Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }
@@ -149,7 +136,7 @@ namespace gcn
         {
             // Infinite scrollbar
             progressWidth = getWidth() / 5;
-            int barX = getWidth() * static_cast<int>(mValue) / 100;
+            int barX = getWidth() * mValue / 100;
 
             if (barX + progressWidth > getWidth())
             {
@@ -164,7 +151,7 @@ namespace gcn
         else
         {
             // Standard scrollbar
-            progressWidth = getWidth() * static_cast<int>(mValue) / static_cast<int>(mEnd - mStart);
+            progressWidth = getWidth() * mValue / (mEnd - mStart);
             graphics->fillRectangle(Rectangle(0, 0, progressWidth, getHeight()));
         }
 

@@ -74,14 +74,10 @@
 
 namespace gcn
 {
-    SDL2Graphics::SDL2Graphics(): mTarget(nullptr), mRenderTarget(nullptr), mTexture(nullptr), r(0), g(0), b(0), a(0)
-    {
-        mAlpha = false;
-    }
 
     SDL2Graphics::~SDL2Graphics()
     {
-        if(mRenderTarget != NULL)
+        if(mRenderTarget != nullptr)
         {
             SDL_DestroyTexture(mTexture);
             SDL_FreeSurface(mTarget);
@@ -103,19 +99,19 @@ namespace gcn
         popClipArea();
     }
     
-    void SDL2Graphics::setTarget(SDL_Renderer* renderer, const int width, const int height)
+    void SDL2Graphics::setTarget(SDL_Renderer* renderer, int width, int height)
     {
         mRenderTarget = renderer;
         // An internal surface is still required to be able to handle surfaces and colorkeys
         mTarget = SDL_CreateRGBSurface(0, width, height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-        SDL_FillRect(mTarget, NULL, SDL_MapRGB(mTarget->format, 0xff, 0, 0xff));
+        SDL_FillRect(mTarget, nullptr, SDL_MapRGB(mTarget->format, 0xff, 0, 0xff));
         SDL_SetColorKey(mTarget, SDL_TRUE, SDL_MapRGB(mTarget->format, 0xff, 0, 0xff)); // magenta, Guisan default
         SDL_SetSurfaceBlendMode(mTarget, SDL_BLENDMODE_NONE); // needed to cleanup temp data properly
         mTexture = SDL_CreateTextureFromSurface(mRenderTarget, mTarget);
         SDL_SetTextureBlendMode(mTexture, SDL_BLENDMODE_BLEND);
     }
 
-    bool SDL2Graphics::pushClipArea(const Rectangle area)
+    bool SDL2Graphics::pushClipArea(Rectangle area)
     {
         SDL_Rect rect;
         bool result = Graphics::pushClipArea(area);
@@ -157,9 +153,9 @@ namespace gcn
         return mRenderTarget;
     }
 
-    void SDL2Graphics::drawImage(const Image* image, const int srcX,
-                                 const int srcY, const int dstX, const int dstY,
-                                 const int width, const int height)
+    void SDL2Graphics::drawImage(const Image* image, int srcX,
+                                int srcY, int dstX, int dstY,
+                                int width, int height)
     {
         if (mClipStack.empty()) {
             throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
@@ -185,12 +181,12 @@ namespace gcn
 
         const SDLImage* srcImage = dynamic_cast<const SDLImage*>(image);
 
-        if (srcImage == NULL)
+        if (srcImage == nullptr)
         {
             throw GCN_EXCEPTION("Trying to draw an image of unknown format, must be an SDLImage.");
         }
         
-        if (srcImage->getTexture() == NULL)
+        if (srcImage->getTexture() == nullptr)
         {
             SDL_FillRect(mTarget, &temp, SDL_MapRGBA(mTarget->format, 0xff, 0, 0xff, 0));
             SDL_BlitSurface(srcImage->getSurface(), &src, mTarget, &temp);
@@ -421,7 +417,7 @@ namespace gcn
         return mColor;
     }
 
-    void SDL2Graphics::drawSDLSurface(SDL_Surface* surface, const SDL_Rect source,
+    void SDL2Graphics::drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
                                      SDL_Rect destination)
     {
         if (mClipStack.empty()) {
@@ -446,7 +442,7 @@ namespace gcn
         SDL_RenderCopy(mRenderTarget, mTexture, &temp, &destination);
     }
 
-    void SDL2Graphics::drawSDLTexture(SDL_Texture * texture, const SDL_Rect source, 
+    void SDL2Graphics::drawSDLTexture(SDL_Texture * texture, SDL_Rect source, 
                                       SDL_Rect destination)
     {
         if (mClipStack.empty()) {

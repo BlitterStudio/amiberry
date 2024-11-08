@@ -60,7 +60,6 @@
 
 #include "guisan/widgets/listbox.hpp"
 
-#include "guisan/basiccontainer.hpp"
 #include "guisan/font.hpp"
 #include "guisan/graphics.hpp"
 #include "guisan/key.hpp"
@@ -70,16 +69,10 @@
 
 namespace gcn
 {
-    ListBox::ListBox() : mListModel(NULL), mSelected(-1), mWrappingEnabled(false)
-    {
-        setWidth(100);
-        setFocusable(true);
+    ListBox::ListBox() : ListBox(nullptr)
+    {}
 
-        addMouseListener(this);
-        addKeyListener(this);
-    }
-
-    ListBox::ListBox(ListModel *listModel) : mSelected(-1), mWrappingEnabled(false)
+    ListBox::ListBox(ListModel* listModel)
     {
         setWidth(100);
         setListModel(listModel);
@@ -94,7 +87,7 @@ namespace gcn
         graphics->setColor(getBackgroundColor());
         graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
 
-        if (mListModel == NULL)
+        if (mListModel == nullptr)
         {
             return;
         }
@@ -176,9 +169,9 @@ namespace gcn
         return mSelected;
     }
 
-    void ListBox::setSelected(const int selected)
+    void ListBox::setSelected(int selected)
     {
-        if (mListModel == NULL)
+        if (mListModel == nullptr)
         {
             mSelected = -1;
         }
@@ -311,26 +304,26 @@ namespace gcn
         adjustSize();
     }
 
-    ListModel* ListBox::getListModel() const
+    ListModel* ListBox::getListModel()
     {
         return mListModel;
     }
 
     void ListBox::adjustSize()
     {
-        if (mListModel != NULL)
+        if (mListModel != nullptr)
         {
-            int maxElementLength = getWidth();
+            int maxElementWidth = getWidth();
             for (int i = 0; i < mListModel->getNumberOfElements(); i++)
             {
-                const auto elementLength =  getFont()->getWidth(mListModel->getElementAt(i));
-                if (elementLength > maxElementLength)
+                const auto elementLength = getFont()->getWidth(mListModel->getElementAt(i));
+                if (elementLength > maxElementWidth)
                 {
-                    maxElementLength = elementLength;
+                    maxElementWidth = elementLength;
                 }
             }
-            if (maxElementLength > getWidth())
-                setWidth(maxElementLength + 4);
+            if (maxElementWidth > getWidth())
+                setWidth(maxElementWidth + 4);
             setHeight(getRowHeight() * mListModel->getNumberOfElements());
         }
     }
@@ -340,7 +333,7 @@ namespace gcn
         return mWrappingEnabled;
     }
 
-    void ListBox::setWrappingEnabled(const bool wrappingEnabled)
+    void ListBox::setWrappingEnabled(bool wrappingEnabled)
     {
         mWrappingEnabled = wrappingEnabled;
     }
@@ -357,10 +350,11 @@ namespace gcn
 
     void ListBox::distributeValueChangedEvent()
     {
-        for (auto& mSelectionListener : mSelectionListeners)
+        const SelectionEvent event(this);
+
+        for (SelectionListener* selectionListener : mSelectionListeners)
         {
-            SelectionEvent event(this);
-            mSelectionListener->valueChanged(event);
+            selectionListener->valueChanged(event);
         }
     }
 

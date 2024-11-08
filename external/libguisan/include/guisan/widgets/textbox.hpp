@@ -57,14 +57,14 @@
 #ifndef GCN_TEXTBOX_HPP
 #define GCN_TEXTBOX_HPP
 
-#include <ctime>
-#include <string>
-#include <vector>
-
 #include "guisan/keylistener.hpp"
 #include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
 #include "guisan/widget.hpp"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace gcn
 {
@@ -90,6 +90,11 @@ namespace gcn
          * @param text The default text of the text box.
          */
         TextBox(const std::string& text);
+
+        /**
+         * Destructor.
+         */
+        ~TextBox() override;
 
         /**
          * Sets the text of the text box.
@@ -146,7 +151,7 @@ namespace gcn
          * @param position the positon of the caret.
          * @see getCaretPosition
          */
-        void setCaretPosition(unsigned int position) const;
+        void setCaretPosition(unsigned int position);
 
         /**
          * Gets the row number where the caret is currently located.
@@ -162,7 +167,7 @@ namespace gcn
          * @param The row where the caret should be currently located.
          * @see getCaretRow
          */
-        void setCaretRow(int row) const;
+        void setCaretRow(int row);
 
         /**
          * Gets the column where the caret is currently located.
@@ -178,7 +183,7 @@ namespace gcn
          * @param The column where the caret should be currently located.
          * @see getCaretColumn
          */
-        void setCaretColumn(int column) const;
+        void setCaretColumn(int column);
 
         /**
          * Sets the row and the column where the caret should be currently
@@ -188,7 +193,7 @@ namespace gcn
          * @param column The column where the caret should be currently located.
          * @see getCaretRow, getCaretColumn
          */
-        void setCaretRowColumn(int row, int column) const;
+        void setCaretRowColumn(int row, int column);
 
         /**
          * Scrolls the text to the caret if the text box is in a scroll area.
@@ -227,7 +232,7 @@ namespace gcn
          * @return True if the text box is opaque, false otherwise.
          * @see setOpaque
          */
-        bool isOpaque() const;
+        bool isOpaque();
 
         /**
          * Sets the text box to be opaque or not. An opaque text box will draw
@@ -239,24 +244,19 @@ namespace gcn
          */
         void setOpaque(bool opaque);
 
-
         // Inherited from Widget
 
-        virtual void draw(Graphics* graphics);
-
-        virtual void fontChanged();
-
+        void draw(Graphics* graphics) override;
+        void fontChanged() override;
 
         // Inherited from KeyListener
 
-        virtual void keyPressed(KeyEvent& keyEvent);
-
+        void keyPressed(KeyEvent& keyEvent) override;
 
         // Inherited from MouseListener
 
-        virtual void mousePressed(MouseEvent& mouseEvent);
-
-        virtual void mouseDragged(MouseEvent& mouseEvent);
+        void mousePressed(MouseEvent& mouseEvent) override;
+        void mouseDragged(MouseEvent& mouseEvent) override;
 
     protected:
         /**
@@ -277,17 +277,17 @@ namespace gcn
         /**
          * Holds the text of the text box.
          */
-        Text* mText;
+        std::unique_ptr<Text> mText;
 
         /**
          * True if the text box is editable, false otherwise.
          */
-        bool mEditable;
+        bool mEditable = true;
 
         /**
          * True if the text box is editable, false otherwise.
          */
-        bool mOpaque;
+        bool mOpaque = true;
     };
 }
 

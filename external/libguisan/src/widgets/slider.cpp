@@ -66,43 +66,24 @@
 
 namespace gcn
 {
-    Slider::Slider(const double scaleEnd)
+    Slider::Slider(double scaleEnd) : Slider(0., scaleEnd)
+    {}
+
+    Slider::Slider(double scaleStart, double scaleEnd) :
+        mScaleStart(scaleStart),
+        mScaleEnd(scaleEnd),
+        mValue(scaleStart)
     {
-        mDragged = false;
-
-        mScaleStart = 0;
-        mScaleEnd = scaleEnd;
-
         setFocusable(true);
         setFrameSize(1);
-        setOrientation(Horizontal);
-        setValue(0);
-        setStepLength(scaleEnd / 10);
-        setMarkerLength(10);
 
-        addMouseListener(this);
-        addKeyListener(this);
-    }
-
-    Slider::Slider(const double scaleStart, const double scaleEnd)
-    {
-        mDragged = false;
-
-        mScaleStart = scaleStart;
-        mScaleEnd = scaleEnd;
-
-        setFocusable(true);
-        setFrameSize(1);
-        setOrientation(Horizontal);
-        setValue(scaleStart);
         setStepLength((scaleEnd - scaleStart) / 10);
-        setMarkerLength(10);
 
         addMouseListener(this);
         addKeyListener(this);
     }
 
-    void Slider::setScale(const double scaleStart, const double scaleEnd)
+    void Slider::setScale(double scaleStart, double scaleEnd)
     {
         mScaleStart = scaleStart;
         mScaleEnd = scaleEnd;
@@ -113,7 +94,7 @@ namespace gcn
         return mScaleStart;
     }
 
-    void Slider::setScaleStart(const double scaleStart)
+    void Slider::setScaleStart(double scaleStart)
     {
         mScaleStart = scaleStart;
     }
@@ -123,7 +104,7 @@ namespace gcn
         return mScaleEnd;
     }
 
-    void Slider::setScaleEnd(const double scaleEnd)
+    void Slider::setScaleEnd(double scaleEnd)
     {
         mScaleEnd = scaleEnd;
     }
@@ -237,7 +218,7 @@ namespace gcn
         mouseEvent.consume();
     }
 
-    void Slider::setValue(const double value)
+    void Slider::setValue(double value)
     {
         if (value > getScaleEnd())
         {
@@ -264,7 +245,7 @@ namespace gcn
         return mMarkerLength;
     }
 
-    void Slider::setMarkerLength(const int length)
+    void Slider::setMarkerLength(int length)
     {
         mMarkerLength = length;
     }
@@ -305,7 +286,7 @@ namespace gcn
         }
     }
 
-    void Slider::setOrientation(const Orientation orientation)
+    void Slider::setOrientation(Orientation orientation)
     {
         mOrientation = orientation;
     }
@@ -315,7 +296,7 @@ namespace gcn
         return mOrientation;
     }
 
-    double Slider::markerPositionToValue(const int v) const
+    double Slider::markerPositionToValue(int v) const
     {
         int w;
         if (getOrientation() == Horizontal)
@@ -327,11 +308,11 @@ namespace gcn
             w = getHeight();
         }
 
-        const double pos = v / (static_cast<double>(w) - getMarkerLength());
+        const double pos = v / ((double)w - getMarkerLength());
         return (1.0 - pos) * getScaleStart() + pos * getScaleEnd();
     }
 
-    int Slider::valueToMarkerPosition(const double value) const
+    int Slider::valueToMarkerPosition(double value) const
     {
         int v;
         if (getOrientation() == Horizontal)
@@ -343,7 +324,7 @@ namespace gcn
             v = getHeight();
         }
 
-        const int w = static_cast<int>((v - getMarkerLength())
+        const int w = (int)((v - getMarkerLength())
             * (value - getScaleStart())
             / (getScaleEnd() - getScaleStart()));
 
@@ -360,7 +341,7 @@ namespace gcn
         return w;
     }
 
-    void Slider::setStepLength(const double length)
+    void Slider::setStepLength(double length)
     {
         mStepLength = length;
     }

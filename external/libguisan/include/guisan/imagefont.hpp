@@ -63,6 +63,8 @@
 #include "guisan/platform.hpp"
 #include "guisan/rectangle.hpp"
 
+#include <memory>
+
 namespace gcn
 {
     class Color;
@@ -119,7 +121,19 @@ pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"); @endcode
          * @throws Exception when glyph list is incorrect or the font image is
          *                   is missing.
          */
-        ImageFont(Image* image, const std::string& glyphs);
+        [[deprecated]] ImageFont(Image* image, const std::string& glyphs);
+
+        /**
+         * Constructor. Takes an image containing the font and
+         * a string containing the glyphs. The glyphs in the string should
+         * be in the same order as they appear in the font image.
+         *
+         * @param image The image with font glyphs.
+         * @param glyphs The glyphs found in the image.
+         * @throws Exception when glyph list is incorrect or the font image is
+         *                   is missing.
+         */
+        ImageFont(std::shared_ptr<Image> image, const std::string& glyphs);
 
         /**
          * Constructor. Takes an image file containing the font and
@@ -142,7 +156,7 @@ pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"); @endcode
         /**
          * Destructor.
          */
-        virtual ~ImageFont();
+        ~ImageFont() override = default;
 
         /**
          * Draws a glyph.
@@ -205,14 +219,10 @@ pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"); @endcode
 
         // Inherited from Font
 
-        virtual int getWidth(const std::string& text) const;
-
-        virtual void drawString(Graphics* graphics, const std::string& text,
-                                int x, int y, bool enabled);
-
-        virtual int getHeight() const;
-
-        virtual int getStringIndexAt(const std::string& text, int x) const;
+        int getWidth(const std::string& text) const override;
+        void drawString(Graphics* graphics, const std::string& text, int x, int y, bool enabled) override;
+        int getHeight() const override;
+        int getStringIndexAt(const std::string& text, int x) const override;
 
     protected:
         /**
@@ -232,6 +242,12 @@ pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"); @endcode
          */
         Rectangle scanForGlyph(unsigned char glyph, int x, int y, const Color& separator) const;
 
+    protected:
+        /**
+         * Holds the image with the font data.
+         */
+        std::shared_ptr<Image> mImage;
+
         /**
          * Holds the glyphs areas in the image.
          */
@@ -240,27 +256,17 @@ pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"); @endcode
         /**
          * Holds the height of the image font.
          */
-        int mHeight;
+        int mHeight = 0;
 
         /**
          * Holds the glyph spacing of the image font.
          */
-        int mGlyphSpacing;
+        int mGlyphSpacing = 0;
 
         /**
          * Holds the row spacing of the image font.
          */
-        int mRowSpacing;
-
-        /**
-         * Holds the image with the font data.
-         */
-        Image* mImage;
-
-        /**
-         * Holds the filename of the image with the font data.
-         */
-        std::string mFilename;
+        int mRowSpacing = 0;
     };
 }
 

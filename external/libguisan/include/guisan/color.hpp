@@ -73,7 +73,7 @@ namespace gcn
         /**
          * Constructor. Initializes the color to black.
          */
-        Color();
+        Color() = default;
 
         /**
          * Constructor. Constructs a color from the bytes in an integer. 
@@ -162,23 +162,23 @@ namespace gcn
         /**
          * Holds the red color component (range 0-255).
          */
-        int r;
+        int r = 0;
 
         /**
          *  Holds the green color component (range 0-255).
          */
-        int g;
+        int g = 0;
 
         /**
          *  Holds the blue color component (range 0-255).
          */
-        int b;
+        int b = 0;
 
         /**
          * Holds the alpha color component. A value of 0 means totally
          * transparent while a value of 255 is considered opaque.
          */
-        int a;
+        int a = 255;
     };
 }
 

@@ -65,10 +65,6 @@
 
 namespace gcn
 {
-    Container::Container()
-    {
-        mOpaque = true;
-    }
 
     Container::~Container()
     = default;
@@ -80,11 +76,10 @@ namespace gcn
             graphics->setColor(getBaseColor());
             graphics->fillRectangle(Rectangle(0, 0, getWidth(), getHeight()));
         }
-
-        drawChildren(graphics);
+		drawChildren(graphics);
     }
 
-    void Container::setOpaque(const bool opaque)
+    void Container::setOpaque(bool opaque)
     {
         mOpaque = opaque;
     }
@@ -96,31 +91,31 @@ namespace gcn
 
     void Container::add(Widget* widget)
     {
-        BasicContainer::add(widget);
+        Widget::add(widget);
         distributeWidgetAddedEvent(widget);
     }
 
-    void Container::add(Widget* widget, const int x, const int y)
+    void Container::add(Widget* widget, int x, int y)
     {
         widget->setPosition(x, y);
-        BasicContainer::add(widget);
+        Widget::add(widget);
         distributeWidgetAddedEvent(widget);
     }
 
     void Container::remove(Widget* widget)
     {
-        BasicContainer::remove(widget);
+        Widget::remove(widget);
         distributeWidgetRemovedEvent(widget);
     }
 
     void Container::clear()
     {
-        BasicContainer::clear();
+        Widget::clear();
     }
 
     Widget* Container::findWidgetById(const std::string &id)
     {
-        return BasicContainer::findWidgetById(id);
+        return Widget::findWidgetById(id);
     }
     void Container::addContainerListener(ContainerListener* containerListener)
     {
@@ -134,33 +129,67 @@ namespace gcn
 
     void Container::distributeWidgetAddedEvent(Widget* source)
     {
-        ContainerListenerIterator iter;
+        const ContainerEvent event(source, this);
 
-        for (iter = mContainerListeners.begin(); iter != mContainerListeners.end(); ++iter)
+        for (ContainerListener* containerListener : mContainerListeners)
         {
-            ContainerEvent event(source, this);
-            (*iter)->widgetAdded(event);
+            containerListener->widgetAdded(event);
         }
     }
 
     void Container::distributeWidgetRemovedEvent(Widget* source)
     {
-        ContainerListenerIterator iter;
+        ContainerEvent event(source, this);
 
-        for (iter = mContainerListeners.begin(); iter != mContainerListeners.end(); ++iter)
+        for (ContainerListener* containerListener : mContainerListeners)
         {
-            ContainerEvent event(source, this);
-            (*iter)->widgetRemoved(event);
+            containerListener->widgetRemoved(event);
         }
     }
 
     const std::list<Widget*>& Container::getChildren() const
     {
-        return mWidgets;
+        return Widget::getChildren();
     }
 
     void Container::resizeToContent()
     {
-        BasicContainer::resizeToContent();
+        Widget::resizeToChildren();
+    }
+
+    Rectangle Container::getChildrenArea()
+    {
+        return Rectangle(0, 0, getWidth(), getHeight());
+    }
+
+    void Container::drawChildren(Graphics* graphics)
+    {
+        graphics->pushClipArea(getChildrenArea());
+
+		std::list<Widget*> children = getChildren();
+		std::list<Widget*>::iterator iter;
+		for (iter = children.begin(); iter != children.end(); ++iter)
+		{
+			if ((*iter)->isVisible())
+			{
+				// If the widget has a frame,
+				// draw it before drawing the widget
+				if ((*iter)->getFrameSize() > 0)
+				{
+					Rectangle rec = (*iter)->getDimension();
+					rec.x -= (*iter)->getFrameSize();
+					rec.y -= (*iter)->getFrameSize();
+					rec.width += 2 * (*iter)->getFrameSize();
+					rec.height += 2 * (*iter)->getFrameSize();
+					graphics->pushClipArea(rec);
+					(*iter)->drawFrame(graphics);
+					graphics->popClipArea();
+				}
+				graphics->pushClipArea((*iter)->getDimension());
+				(*iter)->draw(graphics);
+				graphics->popClipArea();
+			}
+		}
+		graphics->popClipArea();
     }
 } // namespace gcn

@@ -67,35 +67,21 @@
 
 namespace gcn
 {
-    Window::Window()
-        :mMoved(false)
-    {
-        setFrameSize(1);
-        setPadding(2);
-        setTitleBarHeight(getFont()->getHeight() + 2);
-        setAlignment(Graphics::Center);
-        addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
-    }
+    Window::Window() : Window("")
+    {}
 
     Window::Window(const std::string& caption)
-        :mMoved(false)
     {
         setCaption(caption);
-        setFrameSize(1);
-        setPadding(2);
         setTitleBarHeight(getFont()->getHeight() + 2);
-        setAlignment(Graphics::Center);
         addMouseListener(this);
-        setMovable(true);
-        setOpaque(true);
     }
 
     Window::~Window()
-    = default;
+    {
+    }
 
-    void Window::setPadding(const unsigned int padding)
+    void Window::setPadding(unsigned int padding)
     {
         mPadding = padding;
     }
@@ -105,12 +91,12 @@ namespace gcn
         return mPadding;
     }
 
-    void Window::setTitleBarHeight(const unsigned int height)
+    void Window::setTitleBarHeight(unsigned int height)
     {
         mTitleBarHeight = height;
     }
 
-    unsigned int Window::getTitleBarHeight() const
+    unsigned int Window::getTitleBarHeight()
     {
         return mTitleBarHeight;
     }
@@ -125,7 +111,7 @@ namespace gcn
         return mCaption;
     }
 
-    void Window::setAlignment(const Graphics::Alignment alignment)
+    void Window::setAlignment(Graphics::Alignment alignment)
     {
         mAlignment = alignment;
     }
@@ -201,11 +187,12 @@ namespace gcn
             d.x + d.width - 1,
             d.y + d.height - 1);
 
-        drawChildren(graphics);
+        //drawChildren(graphics);
 
         int textX;
+        int textY;
 
-        const int textY = (static_cast<int>(getTitleBarHeight()) - getFont()->getHeight()) / 2;
+        textY = ((int)getTitleBarHeight() - getFont()->getHeight()) / 2;
 
         switch (getAlignment())
         {
@@ -224,7 +211,7 @@ namespace gcn
 
         graphics->setColor(getForegroundColor());
         graphics->setFont(getFont());
-        graphics->pushClipArea(Rectangle(0, 0, getWidth(), static_cast<int>(getTitleBarHeight() - 1)));
+        graphics->pushClipArea(Rectangle(0, 0, getWidth(), getTitleBarHeight() - 1));
         graphics->drawText(getCaption(), textX, textY, getAlignment(), isEnabled());
         graphics->popClipArea();
     }
@@ -260,7 +247,7 @@ namespace gcn
             return;
         }
 
-        if (getParent() != NULL)
+        if (getParent() != nullptr)
         {
             getParent()->moveToTop(this);
         }
@@ -294,13 +281,13 @@ namespace gcn
 
     Rectangle Window::getChildrenArea()
     {
-        return Rectangle(static_cast<int>(getPadding()),
-            static_cast<int>(getTitleBarHeight()),
-            static_cast<int>(getWidth() - getPadding() * 2),
-            static_cast<int>(getHeight() - getPadding() - getTitleBarHeight()));
+        return Rectangle(getPadding(),
+            getTitleBarHeight(),
+            getWidth() - getPadding() * 2,
+            getHeight() - getPadding() - getTitleBarHeight());
     }
 
-    void Window::setMovable(const bool movable)
+    void Window::setMovable(bool movable)
     {
         mMovable = movable;
     }
@@ -310,19 +297,19 @@ namespace gcn
         return mMovable;
     }
 
-    void Window::setOpaque(const bool opaque)
+    void Window::setOpaque(bool opaque)
     {
         mOpaque = opaque;
     }
 
-    bool Window::isOpaque() const
+    bool Window::isOpaque()
     {
         return mOpaque;
     }
 
     void Window::resizeToContent()
     {
-        BasicContainer::resizeToContent();
+        Container::resizeToContent();
         setSize(getWidth() + 2 * getPadding(), getHeight() + getPadding() + getTitleBarHeight());
     }
 }

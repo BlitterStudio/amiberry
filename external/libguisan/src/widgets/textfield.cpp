@@ -68,31 +68,29 @@
 
 namespace gcn
 {
-    TextField::TextField() : mEditable(true), mXScroll(0)
+    TextField::TextField() : mText(std::make_unique<Text>())
     {
-        mText = new Text();
-        mXScroll = 0;
-
         setFocusable(true);
 
         addMouseListener(this);
         addKeyListener(this);
+
         adjustHeight();
     }
 
-    TextField::TextField(const std::string& text) : mEditable(true), mXScroll(0)
+    TextField::TextField(const std::string& text) : mText(std::make_unique<Text>(text))
     {
-        mText = new Text(text);
-
-        adjustSize();
-
         setFocusable(true);
 
         addMouseListener(this);
         addKeyListener(this);
+
+        adjustSize();
     }
 
-    void TextField::setText(const std::string& text) const
+    TextField::~TextField() = default;
+
+    void TextField::setText(const std::string& text)
     {
         mText->setRow(0, text);
     }
@@ -143,12 +141,12 @@ namespace gcn
 
         const Rectangle& dim = mText->getCaretDimension(getFont());
         if (mText->getNumberOfRows() != 0) 
-            graphics->drawText(mText->getRow(0), 1 - mXScroll, 2, Graphics::Left, isEnabled());
+            graphics->drawText(mText->getRow(0), 2 - mXScroll, 2, Graphics::Left, isEnabled());
 
         graphics->popClipArea();
     }
 
-    void TextField::drawCaret(Graphics* graphics, const int x)
+    void TextField::drawCaret(Graphics* graphics, int x)
     {
         // Check the current clip area as a clip area with a different
         // size than the widget might have been pushed (which is the
@@ -270,7 +268,7 @@ namespace gcn
         }
     }
 
-    void TextField::setCaretPosition(const unsigned int position) const
+    void TextField::setCaretPosition(unsigned int position)
     {
         mText->setCaretPosition(position);
     }

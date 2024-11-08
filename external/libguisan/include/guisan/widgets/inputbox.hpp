@@ -57,6 +57,7 @@
 #ifndef GCN_INPUTBOX_HPP
 #define GCN_INPUTBOX_HPP
 
+#include <memory>
 #include <string>
 
 #include "guisan/mouselistener.hpp"
@@ -73,25 +74,28 @@ namespace gcn
     /**
      * A non-movable window to get a short string from the user.
      */
-    class GCN_CORE_DECLSPEC InputBox : public Window
+    class GCN_CORE_DECLSPEC InputBox : public Window, public ActionListener
     {
     public:
 
         /**
-         * Constructor. 
+         * Constructor.
          *
          * @param caption the InputBox caption.
          * @param message the message to display in the InputBox
          * @param ok the string corresponding to the "OK" button
          * @param cancel the string corresponding to the "Cancel" button
          */
-        InputBox(const std::string& caption, const std::string& message, const std::string &ok = "OK", const std::string &cancel = "Cancel");
+        InputBox(const std::string& caption,
+                 const std::string& message,
+                 const std::string& ok = "OK",
+                 const std::string& cancel = "Cancel");
 
         /**
          * Destructor.
          */
-        virtual ~InputBox();
-        
+        ~InputBox() override;
+
         /**
          * Add this InputBox to a parent container, centered both horizontally and vertically
          * If instead, you want to place it somewhere else, use Container::add(). 
@@ -99,43 +103,32 @@ namespace gcn
          * @param container parent container
          */
         void addToContainer(Container* container);
-        
+
         /**
          * Get the text that was input by the user
          * Use in conjunction with getClickedButton() to tell an empty string from a cancel operation.
-         * 
+         *
          * @return the text which was typed by the user
          */
         std::string getText() const;
-        
+
         /**
          * Get the number of the button that was clicked
          * @return 0 for OK, 1 for Cancel
          */
         int getClickedButton() const;
 
+        // Inherited from ActionListener
 
-        // Inherited from Widget
-
-        virtual void draw(Graphics* graphics);
-
-
-        // Inherited from MouseListener
-
-        virtual void mousePressed(MouseEvent& mouseEvent);
-
-        virtual void mouseDragged(MouseEvent& mouseEvent);
-
-        virtual void mouseReleased(MouseEvent& mouseEvent);
+        void action(const ActionEvent& actionEvent) override;
 
     protected:
-        std::string mMessage;
-        int mClickedButton;
-        
-        Button *mButtonOK;
-        Button *mButtonCancel;
-        Label *mLabel;
-        TextField *mText;
+        int mClickedButton = -1;
+
+        std::unique_ptr<Button> mButtonOK;
+        std::unique_ptr<Button> mButtonCancel;
+        std::unique_ptr<Label> mLabel;
+        std::unique_ptr<TextField> mText;
     };
 }
 

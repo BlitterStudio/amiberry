@@ -57,12 +57,13 @@
 #ifndef GCN_TAB_HPP
 #define GCN_TAB_HPP
 
-#include <map>
-#include <string>
-
-#include "guisan/basiccontainer.hpp"
 #include "guisan/mouselistener.hpp"
 #include "guisan/platform.hpp"
+#include "guisan/widget.hpp"
+
+#include <map>
+#include <memory>
+#include <string>
 
 namespace gcn
 {
@@ -75,8 +76,8 @@ namespace gcn
      * @see TabbedArea
      * @since 0.8.0
      */
-    class GCN_CORE_DECLSPEC Tab:
-        public BasicContainer,
+    class GCN_CORE_DECLSPEC Tab :
+        public Widget,
         public MouseListener
     {
     public:
@@ -89,7 +90,7 @@ namespace gcn
         /**
          * Destructor.
          */
-        virtual ~Tab();
+        ~Tab() override;
 
         /**
          * Adjusts the size of the tab to fit the caption. If this tab was
@@ -133,30 +134,28 @@ namespace gcn
 
         // Inherited from Widget
 
-        virtual void draw(Graphics *graphics);
-
+        void draw(Graphics* graphics) override;
 
         // Inherited from MouseListener
 
-        virtual void mouseEntered(MouseEvent& mouseEvent);
-
-        virtual void mouseExited(MouseEvent& mouseEvent);
+        void mouseEntered(MouseEvent& mouseEvent) override;
+        void mouseExited(MouseEvent& mouseEvent) override;
 
     protected:
         /**
          * Holds the label of the tab.
          */
-        Label* mLabel;
+        std::unique_ptr<Label> mLabel;
 
         /**
          * Holds the tabbed area the tab is a part of.
          */
-        TabbedArea* mTabbedArea;
+        TabbedArea* mTabbedArea = nullptr;
 
         /**
          * True if the tab has the mouse, false otherwise.
          */
-        bool mHasMouse;
+        bool mHasMouse = false;
     };
 }
 

@@ -147,7 +147,8 @@ namespace gcn
             Space              = ' ',
             Tab                = '\t',
             Enter              = '\n',
-            LeftAlt           = 1000,
+            // Negative values, to avoid conflicts with higher character codes
+            LeftAlt           = -1000,
             RightAlt,
             LeftShift,
             RightShift,

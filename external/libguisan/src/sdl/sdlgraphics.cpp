@@ -74,11 +74,7 @@
 
 namespace gcn
 {
-    SDLGraphics::SDLGraphics()
-    {
-        mAlpha = false;
-    }
-    
+
     SDLGraphics::~SDLGraphics()
     {
 
@@ -104,7 +100,7 @@ namespace gcn
         mTarget = target;
     }
 
-    bool SDLGraphics::pushClipArea(const Rectangle area)
+    bool SDLGraphics::pushClipArea(Rectangle area)
     {
         SDL_Rect rect;
         const bool result = Graphics::pushClipArea(area);
@@ -144,9 +140,9 @@ namespace gcn
         return mTarget;
     }
 
-    void SDLGraphics::drawImage(const Image* image, const int srcX,
-                                const int srcY, const int dstX, const int dstY,
-                                const int width, const int height)
+    void SDLGraphics::drawImage(const Image* image, int srcX,
+                                int srcY, int dstX, int dstY,
+                                int width, int height)
     {
     if (mClipStack.empty()) {
         throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
@@ -165,7 +161,7 @@ namespace gcn
 
         const SDLImage* srcImage = dynamic_cast<const SDLImage*>(image);
 
-        if (srcImage == NULL)
+        if (srcImage == nullptr)
         {
             throw GCN_EXCEPTION("Trying to draw an image of unknown format, must be an SDLImage.");
         }
@@ -290,7 +286,7 @@ namespace gcn
 
         SDL_LockSurface(mTarget);
 
-        Uint8 *p = static_cast<Uint8*>(mTarget->pixels) + y * mTarget->pitch + x1 * bpp;
+        Uint8 *p = (Uint8 *)mTarget->pixels + y * mTarget->pitch + x1 * bpp;
 
         Uint32 pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
 
@@ -305,7 +301,7 @@ namespace gcn
 
           case 2:
           {
-              Uint16* q = reinterpret_cast<Uint16*>(p);
+              Uint16* q = (Uint16*)p;
               for (;x1 <= x2; ++x1)
               {
                   *(q++) = pixel;
@@ -337,7 +333,7 @@ namespace gcn
 
           case 4:
           {
-              Uint32* q = reinterpret_cast<Uint32*>(p);
+              Uint32* q = (Uint32*)p;
               for (;x1 <= x2; ++x1)
               {
                   if (mAlpha)
@@ -401,7 +397,7 @@ namespace gcn
 
         SDL_LockSurface(mTarget);
 
-        Uint8 *p = static_cast<Uint8*>(mTarget->pixels) + y1 * mTarget->pitch + x * bpp;
+        Uint8 *p = (Uint8 *)mTarget->pixels + y1 * mTarget->pitch + x * bpp;
 
         Uint32 pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
 
@@ -419,7 +415,7 @@ namespace gcn
           {
               for (;y1 <= y2; ++y1)
               {
-                  *reinterpret_cast<Uint16*>(p) = pixel;
+                  *(Uint16*)p = pixel;
                   p += mTarget->pitch;
               }
           } break;
@@ -453,11 +449,11 @@ namespace gcn
               {
                   if (mAlpha)
                   {
-                      *reinterpret_cast<Uint32*>(p) = SDLAlpha32(pixel, *reinterpret_cast<Uint32*>(p), mColor.a);
+                      *(Uint32*)p = SDLAlpha32(pixel,*(Uint32*)p,mColor.a);
                   }
                   else
                   {
-                      *reinterpret_cast<Uint32*>(p) = pixel;
+                      *(Uint32*)p = pixel;
                   }
                   p += mTarget->pitch;
               }
@@ -668,7 +664,7 @@ namespace gcn
         return mColor;
     }
 
-    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, const SDL_Rect source,
+    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
                                      SDL_Rect destination)
     {
         if (mClipStack.empty()) {
