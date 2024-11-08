@@ -192,7 +192,8 @@ namespace gcn
     {
         const int height = getFont()->getHeight();
 
-        setHeight(height);
+        // Add two pixels to avoid font clipping
+        setHeight(height + 2);
         setWidth(getFont()->getWidth(mCaption) + height + height / 2);
     }
 
