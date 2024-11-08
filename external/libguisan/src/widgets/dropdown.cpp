@@ -418,7 +418,7 @@ namespace gcn
             }
         }
 
-        mScrollArea->setWidth(getWidth());
+        mScrollArea->setWidth(getWidth() + mScrollArea->getScrollbarWidth());
         // Resize the ListBox to exactly fit the ScrollArea.
         mListBox->setWidth(mScrollArea->getChildrenArea().width);
         mScrollArea->setPosition(0, 0);
