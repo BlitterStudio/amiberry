@@ -141,7 +141,7 @@ namespace gcn
 
         const Rectangle& dim = mText->getCaretDimension(getFont());
         if (mText->getNumberOfRows() != 0) 
-            graphics->drawText(mText->getRow(0), 1 - mXScroll, 2, Graphics::Left, isEnabled());
+            graphics->drawText(mText->getRow(0), 2 - mXScroll, 2, Graphics::Left, isEnabled());
 
         graphics->popClipArea();
     }
