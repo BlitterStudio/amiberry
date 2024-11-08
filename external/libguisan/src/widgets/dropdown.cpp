@@ -414,7 +414,7 @@ namespace gcn
             else
             {
                 setHeight(listBoxHeight + h2 + 2);
-                mScrollArea->setHeight(listBoxHeight);
+                mScrollArea->setHeight(listBoxHeight + mScrollArea->getScrollbarWidth());
             }
         }
 
