@@ -194,7 +194,7 @@ namespace gcn
 
         void draw(Graphics* graphics) override;
         Rectangle getChildrenArea() override;
-		void drawChildren(Graphics* graphics);
+        void drawChildren(Graphics* graphics);
 
     protected:
         /**

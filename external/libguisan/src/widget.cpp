@@ -515,35 +515,35 @@ namespace gcn
 
     void Widget::setGlobalBaseColor(Color color)
     {
-		for (Widget* w : mWidgetInstances)
-		{
-			w->setBaseColor(color);
-		}
+        for (Widget* w : mWidgetInstances)
+        {
+            w->setBaseColor(color);
+        }
     }
 
     void Widget::setGlobalForegroundColor(Color color)
     {
-		for (Widget* w : mWidgetInstances)
-		{
-			w->setForegroundColor(color);
-		}
+        for (Widget* w : mWidgetInstances)
+        {
+            w->setForegroundColor(color);
+        }
     }
 
-	void Widget::setGlobalBackgroundColor(Color color)
-	{
-		for (Widget* w : mWidgetInstances)
-		{
-			w->setBackgroundColor(color);
-		}
-	}
-
-	void Widget::setGlobalSelectionColor(Color color)
-	{
+    void Widget::setGlobalBackgroundColor(Color color)
+    {
         for (Widget* w : mWidgetInstances)
-		{
-			w->setSelectionColor(color);
-		}
-	}
+        {
+            w->setBackgroundColor(color);
+        }
+    }
+
+    void Widget::setGlobalSelectionColor(Color color)
+    {
+        for (Widget* w : mWidgetInstances)
+        {
+            w->setSelectionColor(color);
+        }
+    }
 
     void Widget::setFont(Font* font)
     {
