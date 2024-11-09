@@ -486,10 +486,8 @@ static void init_expansion2(bool init)
 					ididx = i;
 				}
 			}
-			if (ididx > -1) {
-				gui_add_string(scsiromselect_table, &scsirom_select_list, idtab[ididx], nameval);
-				idtab[ididx] = -1;
-			}
+			gui_add_string(scsiromselect_table, &scsirom_select_list, idtab[ididx], nameval);
+			idtab[ididx] = -1;
 			xfree(nameval);
 			xfree(cnameval);
 		}
@@ -604,7 +602,7 @@ static void values_from_expansion2dlg()
 	bool isnew = false;
 
 	int checked = chkScsiRomSelected->isSelected();
-	getromfile(cboScsiRomSelect, tmp, MAX_DPATH / sizeof(TCHAR));
+	getromfile(cboScsiRomFile, tmp, MAX_DPATH / sizeof(TCHAR));
 	if (tmp[0] || checked) {
 		const expansionromtype* ert = &expansionroms[scsiromselected];
 		if (!get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index))
@@ -617,7 +615,7 @@ static void values_from_expansion2dlg()
 		}
 		else {
 			changed = _tcscmp(tmp, brc->roms[index].romfile) != 0;
-			getromfile(cboScsiRomSelect, brc->roms[index].romfile, MAX_DPATH / sizeof(TCHAR));
+			getromfile(cboScsiRomFile, brc->roms[index].romfile, MAX_DPATH / sizeof(TCHAR));
 		}
 		brc->roms[index].autoboot_disabled = chkScsiRomFileAutoboot->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEAUTOBOOT);
 		brc->roms[index].inserted = chkScsiRomFilePcmcia->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEPCMCIA);
@@ -1387,6 +1385,8 @@ void RefreshPanelExpansions()
 		auto list_model = cboCpuBoardRomFile->getListModel();
 		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
 	}
+
+	regclosetree(fkey);
 
 	gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);
 	values_to_expansion2dlg_sub();
