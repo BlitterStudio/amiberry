@@ -1043,9 +1043,24 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
-				savestate_state = STATE_DORESTORE;
-				_tcscpy(savestate_fname, txt);
-				xfree(txt);
+#ifdef AMIBERRY
+				// We have a secondary check in Amiberry for the existence of the file
+				// This allows us to pass the filename without the full path, and it will
+				// check in the defined savesates directory as well for it.
+				if (my_existsfile2(txt))
+				{
+					savestate_state = STATE_DORESTORE;
+					_tcscpy(savestate_fname, txt);
+					xfree(txt);
+				}
+				else
+				{
+					get_savestate_path(savestate_fname, MAX_DPATH - 1);
+					strncat(savestate_fname, txt, MAX_DPATH - 1);
+					savestate_state = STATE_DORESTORE;
+					xfree(txt);
+				}
+#endif
 			}
 			loaded = true;
 		}
