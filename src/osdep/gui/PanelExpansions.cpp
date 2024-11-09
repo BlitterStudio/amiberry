@@ -125,6 +125,20 @@ static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 	}
 }
 
+static void enable_for_expansion2dlg()
+{
+	chkBSDSocket->setEnabled(!emulating);
+	chkScsi->setEnabled(!emulating);
+	chkCD32Fmv->setEnabled(!emulating);
+	chkSana2->setEnabled(!emulating);
+
+	cboCpuBoardRomFile->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMFILE, workprefs.cpuboard_type != 0);
+	btnCpuBoardRomChooser->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMCHOOSER, workprefs.cpuboard_type != 0);
+	sldCpuBoardMem->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDMEM, workprefs.cpuboard_type > 0);
+	lblCpuBoardRam->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDRAM, workprefs.cpuboard_type > 0);
+	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type); //ew(hDlg, IDC_CPUBOARD_SUBTYPE, workprefs.cpuboard_type);
+}
+
 static void setcpuboardmemsize()
 {
 	if (changed_prefs.cpuboardmem1.size > cpuboard_maxmemory(&changed_prefs))
@@ -833,6 +847,41 @@ static void expansion2dlgproc()
 	setcpuboardmemsize();
 }
 
+static void values_to_expansion2dlg()
+{
+	int index;
+	boardromconfig* brc;
+
+	chkBSDSocket->setSelected(changed_prefs.socket_emu);
+	chkScsi->setSelected(changed_prefs.scsi == 1);
+	chkCD32Fmv->setSelected(changed_prefs.cs_cd32fmv);
+	chkSana2->setSelected(changed_prefs.sana2);
+	// We don't really need Catweasel support in Amiberry, let's disable it
+	changed_prefs.catweasel = 0;
+
+	UAEREG* fkey = regcreatetree(NULL, _T("DetectedROMs"));
+	load_keyring(&changed_prefs, NULL);
+
+	values_to_expansion2_expansion_roms(fkey);
+	values_to_expansion2_expansion_settings();
+
+	if (changed_prefs.cpuboard_type) {
+		const cpuboardsubtype* cst = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
+		brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
+		addromfiles(fkey, cboCpuBoardRomFile, brc ? brc->roms[index].romfile : nullptr,
+			static_cast<int>(cst->romtype), cst->romtype_extra);
+	}
+	else {
+		auto list_model = cboCpuBoardRomFile->getListModel();
+		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
+	}
+
+	regclosetree(fkey);
+
+	gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);
+	values_to_expansion2dlg_sub();
+}
+
 class ExpansionsActionListener : public gcn::ActionListener
 {
 public:
@@ -846,7 +895,7 @@ public:
 			std::string full_path = SelectFile("Select ROM", get_rom_path(), filter);
 			if (!full_path.empty())
 			{
-				int val = gui_get_string_cursor(scsiromselect_table, cboScsiRomSelect);
+				int val = gui_get_string_cursor(scsiromselect_table, cboScsiRomFile);
 				if (val != -1) {
 					int index;
 					struct boardromconfig* brc;
@@ -855,7 +904,7 @@ public:
 					fullpath(brc->roms[index].romfile, MAX_DPATH);
 				}
 			}
-			RefreshPanelExpansions();
+			values_to_expansion2dlg();
 		}
 		else if (source == btnCpuBoardRomChooser)
 		{
@@ -868,7 +917,7 @@ public:
 				_tcscpy(brc->roms[index].romfile, full_path.c_str());
 				fullpath(brc->roms[index].romfile, MAX_DPATH);
 			}
-			RefreshPanelExpansions();
+			values_to_expansion2dlg();
 		}
 		else if (source == txtExpansionBoardStringBox
 			|| source == chkExpansionBoardCheckbox
@@ -898,7 +947,7 @@ public:
 		else if (source == chkScsi)
 		{
 			changed_prefs.scsi = chkScsi->isSelected();
-			RefreshPanelExpansions();
+			enable_for_expansion2dlg();
 		}
 		else if (source == chkSana2)
 		{
@@ -973,7 +1022,7 @@ public:
 				}
 				cpuboard_set_cpu(&changed_prefs);
 				setcpuboardmemsize();
-				RefreshPanelExpansions();
+				values_to_expansion2dlg();
 			}
 		}
 		else if (source == cboCpuBoardSubType)
@@ -992,7 +1041,7 @@ public:
 				}
 				cpuboard_set_cpu(&changed_prefs);
 				setcpuboardmemsize();
-				RefreshPanelExpansions();
+				values_to_expansion2dlg();
 			}
 		}
 		else if (source == sldCpuBoardMem)
@@ -1360,48 +1409,10 @@ void ExitPanelExpansions()
 
 void RefreshPanelExpansions()
 {
-	// values_to_expansion2dlg is covered here
-	chkBSDSocket->setSelected(changed_prefs.socket_emu);
-	chkScsi->setSelected(changed_prefs.scsi == 1);
-	chkCD32Fmv->setSelected(changed_prefs.cs_cd32fmv);
-	chkSana2->setSelected(changed_prefs.sana2);
-	// We don't really need Catweasel support in Amiberry, let's disable it
-	changed_prefs.catweasel = 0;
-
-	UAEREG* fkey = regcreatetree(NULL, _T("DetectedROMs"));
-	load_keyring(&changed_prefs, NULL);
-
-	values_to_expansion2_expansion_roms(fkey);
-	values_to_expansion2_expansion_settings();
-
-	int index;
-	boardromconfig* brc;
-	if (changed_prefs.cpuboard_type) {
-		const cpuboardsubtype* cst = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
-		brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
-		addromfiles(fkey, cboCpuBoardRomFile, brc ? brc->roms[index].romfile : nullptr,
-			static_cast<int>(cst->romtype), cst->romtype_extra);
-	} else {
-		auto list_model = cboCpuBoardRomFile->getListModel();
-		list_model->clear_elements(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
-	}
-
-	regclosetree(fkey);
-
-	gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);
-	values_to_expansion2dlg_sub();
-
-	// enable_for_expansion2dlg is covered here
-	chkBSDSocket->setEnabled(!emulating);
-	chkScsi->setEnabled(!emulating);
-	chkCD32Fmv->setEnabled(!emulating);
-	chkSana2->setEnabled(!emulating);
-
-	cboCpuBoardRomFile->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMFILE, workprefs.cpuboard_type != 0);
-	btnCpuBoardRomChooser->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMCHOOSER, workprefs.cpuboard_type != 0);
-	sldCpuBoardMem->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDMEM, workprefs.cpuboard_type > 0);
-	lblCpuBoardRam->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDRAM, workprefs.cpuboard_type > 0);
-	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type); //ew(hDlg, IDC_CPUBOARD_SUBTYPE, workprefs.cpuboard_type);
+	scsiromselectedcatnum = 0;
+	scsiromselected = 0;
+	values_to_expansion2dlg();
+	enable_for_expansion2dlg();
 }
 
 bool HelpPanelExpansions(std::vector<std::string>& helptext)
