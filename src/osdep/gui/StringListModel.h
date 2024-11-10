@@ -32,10 +32,7 @@ namespace gcn {
 			mStrings.push_back(str);
 		}
 
-		void clear() {
-			mStrings.clear();
-		}
-		void clear_elements() override {
+		void clear() override {
 			mStrings.clear();
 		}
 

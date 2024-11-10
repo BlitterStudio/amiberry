@@ -167,26 +167,25 @@ namespace gcn
         graphics->pushClipArea(getChildrenArea());
 
         std::list<Widget*> children = getChildren();
-        std::list<Widget*>::iterator iter;
-        for (iter = children.begin(); iter != children.end(); ++iter)
+        for (const auto& iter : children)
         {
-            if ((*iter)->isVisible())
+            if (iter->isVisible())
             {
                 // If the widget has a frame,
                 // draw it before drawing the widget
-                if ((*iter)->getFrameSize() > 0)
+                if (iter->getFrameSize() > 0)
                 {
-                    Rectangle rec = (*iter)->getDimension();
-                    rec.x -= (*iter)->getFrameSize();
-                    rec.y -= (*iter)->getFrameSize();
-                    rec.width += 2 * (*iter)->getFrameSize();
-                    rec.height += 2 * (*iter)->getFrameSize();
+                    Rectangle rec = iter->getDimension();
+                    rec.x -= static_cast<int>(iter->getFrameSize());
+                    rec.y -= static_cast<int>(iter->getFrameSize());
+                    rec.width += static_cast<int>(2 * iter->getFrameSize());
+                    rec.height += static_cast<int>(2 * iter->getFrameSize());
                     graphics->pushClipArea(rec);
-                    (*iter)->drawFrame(graphics);
+                    iter->drawFrame(graphics);
                     graphics->popClipArea();
                 }
-                graphics->pushClipArea((*iter)->getDimension());
-                (*iter)->draw(graphics);
+                graphics->pushClipArea(iter->getDimension());
+                iter->draw(graphics);
                 graphics->popClipArea();
             }
         }

@@ -197,7 +197,7 @@ void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, i
 	}
 
 	auto listmodel = d->getListModel(); //xSendDlgItemMessage(hDlg, d, CB_RESETCONTENT, 0, 0);
-	listmodel->clear_elements();
+	listmodel->clear();
 	listmodel->add(""); //xSendDlgItemMessage(hDlg, d, CB_ADDSTRING, 0, (LPARAM)_T(""));
 	for (int i = 0; i < ridx; i++) {
 		struct romdataentry* rdep = &rde[i];

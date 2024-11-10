@@ -59,12 +59,12 @@ public:
 		return dirs.size() + files.size();
 	}
 
-	void add(const std::string& elem)
+	void add(const std::string& elem) override
 	{
 		dirs.push_back(elem);
 	}
 
-	void clear() 
+	void clear() override
 	{
 		dirs.clear();
 		files.clear();
