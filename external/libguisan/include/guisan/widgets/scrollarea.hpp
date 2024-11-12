@@ -468,7 +468,7 @@ namespace gcn
         /**
          * Holds the width of the scroll bars.
          */
-        int mScrollbarWidth = 12;
+        int mScrollbarWidth = 14;
 
         /**
          * Holds the horizontal scroll bar policy.
