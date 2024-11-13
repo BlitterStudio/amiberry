@@ -1892,10 +1892,10 @@ void apply_theme()
 		abort();
 	}
 	gcn::Widget::setGlobalFont(gui_font);
-	gcn::Widget::setGlobalBaseColor(gui_base_color);
-	gcn::Widget::setGlobalForegroundColor(gui_foreground_color);
-	gcn::Widget::setGlobalBackgroundColor(gui_background_color);
-	gcn::Widget::setGlobalSelectionColor(gui_selection_color);
+	gcn::Widget::setWidgetsBaseColor(gui_base_color);
+	gcn::Widget::setWidgetsForegroundColor(gui_foreground_color);
+	gcn::Widget::setWidgetsBackgroundColor(gui_background_color);
+	gcn::Widget::setWidgetsSelectionColor(gui_selection_color);
 }
 
 // Extra theme settings, that should be called separately from the above function

@@ -69,16 +69,14 @@
 // For some reason an old version of MSVC did not like std::abs,
 // so we added this macro.
 #ifndef ABS
-#define ABS(x) ((x)<0?-(x):(x))
+# define ABS(x) ((x) < 0 ? -(x) : (x))
 #endif
 
 namespace gcn
 {
 
     SDLGraphics::~SDLGraphics()
-    {
-
-    }
+    {}
 
     void SDLGraphics::_beginDraw()
     {
@@ -140,16 +138,16 @@ namespace gcn
         return mTarget;
     }
 
-    void SDLGraphics::drawImage(const Image* image, int srcX,
-                                int srcY, int dstX, int dstY,
-                                int width, int height)
+    void SDLGraphics::drawImage(
+        const Image* image, int srcX, int srcY, int dstX, int dstY, int width, int height)
     {
-    if (mClipStack.empty()) {
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-            "called a draw function outside of _beginDraw() and _endDraw()?");
-    }
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+                                "called a draw function outside of _beginDraw() and _endDraw()?");
+        }
 
-    const ClipRectangle& top = mClipStack.top();
+        const ClipRectangle& top = mClipStack.top();
         SDL_Rect src;
         SDL_Rect dst;
         src.x = srcX;
@@ -171,10 +169,11 @@ namespace gcn
 
     void SDLGraphics::fillRectangle(const Rectangle& rectangle)
     {
-    if (mClipStack.empty()) {
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-            "called a draw function outside of _beginDraw() and _endDraw()?");
-    }
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+                                "called a draw function outside of _beginDraw() and _endDraw()?");
+        }
 
         const ClipRectangle& top = mClipStack.top();
 
@@ -182,7 +181,7 @@ namespace gcn
         area.x += top.xOffset;
         area.y += top.yOffset;
 
-        if(!area.isIntersecting(top))
+        if (!area.isIntersecting(top))
         {
             return;
         }
@@ -191,8 +190,10 @@ namespace gcn
         {
             const int x1 = area.x > top.x ? area.x : top.x;
             const int y1 = area.y > top.y ? area.y : top.y;
-            const int x2 = area.x + area.width < top.x + top.width ? area.x + area.width : top.x + top.width;
-            const int y2 = area.y + area.height < top.y + top.height ? area.y + area.height : top.y + top.height;
+            const int x2 =
+                area.x + area.width < top.x + top.width ? area.x + area.width : top.x + top.width;
+            const int y2 = area.y + area.height < top.y + top.height ? area.y + area.height
+                                                                     : top.y + top.height;
 
             SDL_LockSurface(mTarget);
             for (int y = y1; y < y2; y++)
@@ -212,25 +213,29 @@ namespace gcn
             rect.w = area.width;
             rect.h = area.height;
 
-            const Uint32 color = SDL_MapRGBA(mTarget->format, mColor.r, mColor.g, mColor.b, mColor.a);
+            const Uint32 color =
+                SDL_MapRGBA(mTarget->format, mColor.r, mColor.g, mColor.b, mColor.a);
             SDL_FillRect(mTarget, &rect, color);
         }
     }
 
     void SDLGraphics::drawPoint(int x, int y)
     {
-    if (mClipStack.empty()) {
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-            "called a draw function outside of _beginDraw() and _endDraw()?");
-    }
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+                                "called a draw function outside of _beginDraw() and _endDraw()?");
+        }
 
         const ClipRectangle& top = mClipStack.top();
 
         x += top.xOffset;
         y += top.yOffset;
 
-        if(!top.isContaining(x,y))
+        if (!top.isContaining(x, y))
+        {
             return;
+        }
 
         if (mAlpha)
         {
@@ -244,10 +249,11 @@ namespace gcn
 
     void SDLGraphics::drawHLine(int x1, int y, int x2)
     {
-    if (mClipStack.empty()) {
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-            "called a draw function outside of _beginDraw() and _endDraw()?");
-    }
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+                                "called a draw function outside of _beginDraw() and _endDraw()?");
+        }
         const ClipRectangle& top = mClipStack.top();
 
         x1 += top.xOffset;
@@ -255,7 +261,9 @@ namespace gcn
         x2 += top.xOffset;
 
         if (y < top.y || y >= top.y + top.height)
+        {
             return;
+        }
 
         if (x1 > x2)
         {
@@ -279,74 +287,77 @@ namespace gcn
             {
                 return;
             }
-            x2 = top.x + top.width -1;
+            x2 = top.x + top.width - 1;
         }
 
         const int bpp = mTarget->format->BytesPerPixel;
 
         SDL_LockSurface(mTarget);
 
-        Uint8 *p = (Uint8 *)mTarget->pixels + y * mTarget->pitch + x1 * bpp;
+        Uint8* p = reinterpret_cast<Uint8*>(mTarget->pixels) + y * mTarget->pitch + x1 * bpp;
 
         Uint32 pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
 
-        switch(bpp) {
-          case 1:
-          {
-              for (;x1 <= x2; ++x1)
-              {
-                  *(p++) = pixel;
-              }
-          } break;
+        switch (bpp)
+        {
+            case 1:
+            {
+                for (; x1 <= x2; ++x1)
+                {
+                    *(p++) = pixel;
+                }
+            }
+            break;
 
-          case 2:
-          {
-              Uint16* q = (Uint16*)p;
-              for (;x1 <= x2; ++x1)
-              {
-                  *(q++) = pixel;
-              }
-          } break;
+            case 2:
+            {
+                Uint16* q = reinterpret_cast<Uint16*>(p);
+                for (; x1 <= x2; ++x1)
+                {
+                    *(q++) = pixel;
+                }
+            }
+            break;
 
-          case 3:
-          {
-              if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
-                  for (;x1 <= x2; ++x1)
-                  {
-                      p[0] = (pixel >> 16) & 0xff;
-                      p[1] = (pixel >> 8) & 0xff;
-                      p[2] = pixel & 0xff;
-                      p += 3;
-                  }
-              }
-              else
-              {
-                  for (;x1 <= x2; ++x1)
-                  {
-                      p[0] = pixel & 0xff;
-                      p[1] = (pixel >> 8) & 0xff;
-                      p[2] = (pixel >> 16) & 0xff;
-                      p += 3;
-                  }
-              }
-          } break;
+            case 3:
+            {
+#if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+                for (; x1 <= x2; ++x1)
+                {
+                    p[0] = (pixel >> 16) & 0xff;
+                    p[1] = (pixel >> 8) & 0xff;
+                    p[2] = pixel & 0xff;
+                    p += 3;
+                }
+#else
+                for (; x1 <= x2; ++x1)
+                {
+                    p[0] = pixel & 0xff;
+                    p[1] = (pixel >> 8) & 0xff;
+                    p[2] = (pixel >> 16) & 0xff;
+                    p += 3;
+                }
+#endif
+            }
+            break;
 
-          case 4:
-          {
-              Uint32* q = (Uint32*)p;
-              for (;x1 <= x2; ++x1)
-              {
-                  if (mAlpha)
-                  {
-                      *q = SDLAlpha32(pixel,*q,mColor.a);
-                      q++;
-                  }
-                  else
-                  {
-                      *(q++) = pixel;
-                  }
-              }
-          } break;
+            case 4:
+            {
+                Uint32* q = reinterpret_cast<Uint32*>(p);
+                for (; x1 <= x2; ++x1)
+                {
+                    if (mAlpha)
+                    {
+                        *q = SDLAlpha32(pixel, *q, mColor.a);
+                        q++;
+                    }
+                    else
+                    {
+                        *(q++) = pixel;
+                    }
+                }
+            }
+            break;
 
         } // end switch
 
@@ -355,10 +366,11 @@ namespace gcn
 
     void SDLGraphics::drawVLine(int x, int y1, int y2)
     {
-    if (mClipStack.empty()) {
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-            "called a draw function outside of _beginDraw() and _endDraw()?");
-    }
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
+                                "called a draw function outside of _beginDraw() and _endDraw()?");
+        }
         const ClipRectangle& top = mClipStack.top();
 
         x += top.xOffset;
@@ -366,7 +378,9 @@ namespace gcn
         y2 += top.yOffset;
 
         if (x < top.x || x >= top.x + top.width)
+        {
             return;
+        }
 
         if (y1 > y2)
         {
@@ -397,67 +411,71 @@ namespace gcn
 
         SDL_LockSurface(mTarget);
 
-        Uint8 *p = (Uint8 *)mTarget->pixels + y1 * mTarget->pitch + x * bpp;
+        Uint8* p = reinterpret_cast<Uint8*>(mTarget->pixels) + y1 * mTarget->pitch + x * bpp;
 
         Uint32 pixel = SDL_MapRGB(mTarget->format, mColor.r, mColor.g, mColor.b);
 
-        switch(bpp) {
-          case 1:
-          {
-              for (;y1 <= y2; ++y1)
-              {
-                  *p = pixel;
-                  p += mTarget->pitch;
-              }
-          } break;
+        switch (bpp)
+        {
+            case 1:
+            {
+                for (; y1 <= y2; ++y1)
+                {
+                    *p = pixel;
+                    p += mTarget->pitch;
+                }
+            }
+            break;
 
-          case 2:
-          {
-              for (;y1 <= y2; ++y1)
-              {
-                  *(Uint16*)p = pixel;
-                  p += mTarget->pitch;
-              }
-          } break;
+            case 2:
+            {
+                for (; y1 <= y2; ++y1)
+                {
+                    *reinterpret_cast<Uint16*>(p) = pixel;
+                    p += mTarget->pitch;
+                }
+            }
+            break;
 
-          case 3:
-          {
-              if(SDL_BYTEORDER == SDL_BIG_ENDIAN) {
-                  for (;y1 <= y2; ++y1)
-                  {
-                      p[0] = (pixel >> 16) & 0xff;
-                      p[1] = (pixel >> 8) & 0xff;
-                      p[2] = pixel & 0xff;
-                      p += mTarget->pitch;
-                  }
-              }
-              else
-              {
-                  for (;y1 <= y2; ++y1)
-                  {
-                      p[0] = pixel & 0xff;
-                      p[1] = (pixel >> 8) & 0xff;
-                      p[2] = (pixel >> 16) & 0xff;
-                      p += mTarget->pitch;
-                  }
-              }
-          } break;
+            case 3:
+            {
+#if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+                for (; y1 <= y2; ++y1)
+                {
+                    p[0] = (pixel >> 16) & 0xff;
+                    p[1] = (pixel >> 8) & 0xff;
+                    p[2] = pixel & 0xff;
+                    p += mTarget->pitch;
+                }
+#else
+                for (; y1 <= y2; ++y1)
+                {
+                    p[0] = pixel & 0xff;
+                    p[1] = (pixel >> 8) & 0xff;
+                    p[2] = (pixel >> 16) & 0xff;
+                    p += mTarget->pitch;
+                }
+#endif
+            }
+            break;
 
-          case 4:
-          {
-              for (;y1 <= y2; ++y1)
-              {
-                  if (mAlpha)
-                  {
-                      *(Uint32*)p = SDLAlpha32(pixel,*(Uint32*)p,mColor.a);
-                  }
-                  else
-                  {
-                      *(Uint32*)p = pixel;
-                  }
-                  p += mTarget->pitch;
-              }
-          } break;
+            case 4:
+            {
+                for (; y1 <= y2; ++y1)
+                {
+                    if (mAlpha)
+                    {
+                        *reinterpret_cast<Uint32*>(p) =
+                            SDLAlpha32(pixel, *reinterpret_cast<Uint32*>(p), mColor.a);
+                    }
+                    else
+                    {
+                        *reinterpret_cast<Uint32*>(p) = pixel;
+                    }
+                    p += mTarget->pitch;
+                }
+            }
+            break;
         } // end switch
 
         SDL_UnlockSurface(mTarget);
@@ -490,10 +508,11 @@ namespace gcn
             return;
         }
 
-    if (mClipStack.empty()) {
-        throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-            "called a draw function outside of _beginDraw() and _endDraw()?");
-    }
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you called a draw function outside "
+                                "of _beginDraw() and _endDraw()?");
+        }
         const ClipRectangle& top = mClipStack.top();
 
         x1 += top.xOffset;
@@ -664,12 +683,12 @@ namespace gcn
         return mColor;
     }
 
-    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, SDL_Rect source,
-                                     SDL_Rect destination)
+    void SDLGraphics::drawSDLSurface(SDL_Surface* surface, SDL_Rect source, SDL_Rect destination)
     {
-        if (mClipStack.empty()) {
-            throw GCN_EXCEPTION("Clip stack is empty, perhaps you"
-                "called a draw function outside of _beginDraw() and _endDraw()?");
+        if (mClipStack.empty())
+        {
+            throw GCN_EXCEPTION("Clip stack is empty, perhaps you called a draw function outside "
+                                "of _beginDraw() and _endDraw()?");
         }
         const ClipRectangle& top = mClipStack.top();
 
@@ -678,4 +697,4 @@ namespace gcn
 
         SDL_BlitSurface(surface, &source, mTarget, &destination);
     }
-}
+} // namespace gcn

@@ -513,7 +513,7 @@ namespace gcn
         }
     }
 
-    void Widget::setGlobalBaseColor(Color color)
+    void Widget::setWidgetsBaseColor(Color color)
     {
         for (Widget* w : mWidgetInstances)
         {
@@ -521,7 +521,7 @@ namespace gcn
         }
     }
 
-    void Widget::setGlobalForegroundColor(Color color)
+    void Widget::setWidgetsForegroundColor(Color color)
     {
         for (Widget* w : mWidgetInstances)
         {
@@ -529,7 +529,7 @@ namespace gcn
         }
     }
 
-    void Widget::setGlobalBackgroundColor(Color color)
+    void Widget::setWidgetsBackgroundColor(Color color)
     {
         for (Widget* w : mWidgetInstances)
         {
@@ -537,7 +537,7 @@ namespace gcn
         }
     }
 
-    void Widget::setGlobalSelectionColor(Color color)
+    void Widget::setWidgetsSelectionColor(Color color)
     {
         for (Widget* w : mWidgetInstances)
         {

@@ -106,10 +106,10 @@ namespace gcn
         SDL_Color sdlCol;
         if (enabled)
         {
-            sdlCol.r = mColor.r;
-            sdlCol.g = mColor.g;
-            sdlCol.b = mColor.b;
-            sdlCol.a = mColor.a;
+            sdlCol.r = static_cast<Uint8>(mColor.r);
+            sdlCol.g = static_cast<Uint8>(mColor.g);
+            sdlCol.b = static_cast<Uint8>(mColor.b);
+            sdlCol.a = static_cast<Uint8>(mColor.a);
         }
         else
         {

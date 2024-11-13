@@ -140,7 +140,7 @@ namespace gcn
         int y = 0;
         for (int i = glyphsFrom; i < glyphsTo + 1; i++)
         {
-            mGlyph[i] = scanForGlyph(i, x, y, separator);
+            mGlyph[i] = scanForGlyph(static_cast<unsigned char>(i), x, y, separator);
             // Update x and y with new coordinates.
             x = mGlyph[i].x + mGlyph[i].width;
             y = mGlyph[i].y;
