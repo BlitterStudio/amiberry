@@ -82,20 +82,6 @@ static void harddisktype(TCHAR* s, struct uaedev_config_info* ci)
 	}
 }
 
-static int GetHDType(const int index)
-{
-	mountedinfo mi{};
-
-	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
-	if (type < 0)
-	{
-		auto* uci = &changed_prefs.mountconfig[index];
-		struct uaedev_config_info* ci = &uci->ci;
-		type = ci->type == UAEDEV_HDF ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
-	}
-	return type;
-}
-
 static gcn::StringListModel cdfileList;
 
 static void RefreshCDListModel()
@@ -135,36 +121,49 @@ class HDEditActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		for (auto i = 0; i < MAX_HD_DEVICES; ++i)
+		for (auto entry = 0; entry < MAX_HD_DEVICES; ++entry)
 		{
-			if (actionEvent.getSource() == listCmdProps[i])
+			if (actionEvent.getSource() == listCmdProps[entry])
 			{
-				if (GetHDType(i) == FILESYS_VIRTUAL)
+				int type;
+				struct uaedev_config_data* uci;
+				struct mountedinfo mi;
+
+				uci = &changed_prefs.mountconfig[entry];
+
+				type = get_filesys_unitconfig(&changed_prefs, entry, &mi);
+				if (type < 0)
 				{
-					if (EditFilesysVirtual(i))
+					type = uci->ci.type == UAEDEV_HDF ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
+				}
+
+				if (uci->ci.type == UAEDEV_CD)
+				{
+					if (EditCDDrive(entry))
 						gui_force_rtarea_hdchange();
 				}
-				else if (GetHDType(i) == FILESYS_HARDFILE || GetHDType(i) == FILESYS_HARDFILE_RDB)
+				else if (uci->ci.type == UAEDEV_TAPE) 
 				{
-					if (EditFilesysHardfile(i))
+					if (EditTapeDrive(entry))
 						gui_force_rtarea_hdchange();
 				}
-				else if (GetHDType(i) == FILESYS_HARDDRIVE)
+				else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
 				{
-					if (EditFilesysHardDrive(i))
+					if (EditFilesysHardfile(entry))
 						gui_force_rtarea_hdchange();
 				}
-				else if (GetHDType(i) == UAEDEV_CD)
+				else if (type == FILESYS_HARDDRIVE) /* harddisk */
 				{
-					if (EditCDDrive(i))
+					if (EditFilesysHardDrive(entry))
 						gui_force_rtarea_hdchange();
 				}
-				else if (GetHDType(i) == UAEDEV_TAPE)
+				else /* Filesystem */
 				{
-					if (EditTapeDrive(i))
+					if (EditFilesysVirtual(entry))
 						gui_force_rtarea_hdchange();
 				}
-				listCmdProps[i]->requestFocus();
+
+				listCmdProps[entry]->requestFocus();
 				break;
 			}
 		}
@@ -184,43 +183,39 @@ public:
 			if (EditFilesysVirtual(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddDirectory->requestFocus();
-			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddHardfile)
 		{
 			if (EditFilesysHardfile(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddHardfile->requestFocus();
-			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddHardDrive)
 		{
 			if (EditFilesysHardDrive(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddHardDrive->requestFocus();
-			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddCDDrive)
 		{
 			if (EditCDDrive(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddCDDrive->requestFocus();
-			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddTapeDrive)
 		{
 			if (EditTapeDrive(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddTapeDrive->requestFocus();
-			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdCreateHardfile)
 		{
 			if (CreateFilesysHardfile())
 				gui_force_rtarea_hdchange();
 			cmdCreateHardfile->requestFocus();
-			RefreshPanelHD();
+			
 		}
+		RefreshPanelHD();
 	}
 };
 

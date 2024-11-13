@@ -52,6 +52,7 @@ public:
 				wndEditCDDrive->setCaption("Path is empty!");
 				return;
 			}
+
 			dialogResult = true;
 			dialogFinished = true;
 		}
@@ -506,6 +507,15 @@ bool EditCDDrive(const int unit_no)
 
 	if (dialogResult)
 	{
+		strncpy(current_cddlg.ci.rootdir, txtCDDrivePath->getText().c_str(), sizeof(current_cddlg.ci.rootdir) - 1);
+
+		auto posn = controller[cboCDDriveController->getSelected()].type;
+		current_cddlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
+		current_cddlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
+		inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, current_cddlg.ci.rootdir[0] != 0);
+
+		current_cddlg.ci.controller_unit = cboCDDriveUnit->getSelected();
+
 		new_cddrive(unit_no);
 	}
 
