@@ -349,6 +349,7 @@ bool Create_Folder(const std::string& path);
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
 bool EditFilesysHardDrive(int unit_no);
+bool EditCDDrive(int unit_no);
 bool EditTapeDrive(int unit_no);
 bool CreateFilesysHardfile();
 void ShowHelp(const char* title, const std::vector<std::string>& text);
@@ -395,6 +396,8 @@ extern std::vector<controller_map> controller;
 extern std::vector<string> controller_unit;
 extern std::vector<string> controller_type;
 extern std::vector<string> controller_feature_level;
+
+extern std::vector<std::string> get_cd_drives();
 
 STATIC_INLINE bool is_hdf_rdb()
 {

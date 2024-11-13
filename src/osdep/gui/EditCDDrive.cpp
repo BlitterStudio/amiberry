@@ -14,229 +14,172 @@
 
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
+#include "rommgr.h"
 #include "StringListModel.h"
 
 enum
 {
 	DIALOG_WIDTH = 600,
-	DIALOG_HEIGHT = 250
+	DIALOG_HEIGHT = 300
 };
 
 static bool dialogResult = false;
 static bool dialogFinished = false;
 
-static gcn::Window* wndEditTapeDrive;
-static gcn::Button* cmdTapeDriveOK;
-static gcn::Button* cmdTapeDriveCancel;
-static gcn::Label* lblTapeDrivePath;
-static gcn::TextField* txtTapeDrivePath;
+static gcn::Window* wndEditCDDrive;
+static gcn::Button* cmdCDDriveOK;
+static gcn::Button* cmdCDDriveCancel;
+static gcn::Label* lblCDDrivePath;
+static gcn::TextField* txtCDDrivePath;
 
-static gcn::Button* cmdTapeDriveSelectDir;
-static gcn::Button* cmdTapeDriveSelectFile;
-
-static gcn::Label* lblTapeDriveController;
-static gcn::DropDown* cboTapeDriveController;
-static gcn::DropDown* cboTapeDriveUnit;
+static gcn::Label* lblCDDriveController;
+static gcn::DropDown* cboCDDriveController;
+static gcn::DropDown* cboCDDriveUnit;
 
 static gcn::StringListModel controllerListModel;
 static gcn::StringListModel unitListModel;
 
-class TapeDriveActionListener : public gcn::ActionListener
+class CDDriveActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		auto source = actionEvent.getSource();
-		if (source == cmdTapeDriveOK)
+		if (source == cmdCDDriveOK)
 		{
-			if (txtTapeDrivePath->getText().empty())
+			if (txtCDDrivePath->getText().empty())
 			{
-				wndEditTapeDrive->setCaption("Path is empty!");
+				wndEditCDDrive->setCaption("Path is empty!");
 				return;
 			}
 			dialogResult = true;
 			dialogFinished = true;
 		}
-		else if (source == cmdTapeDriveCancel)
+		else if (source == cmdCDDriveCancel)
 		{
 			dialogResult = false;
 			dialogFinished = true;
 		}
-		else if (source == cmdTapeDriveSelectDir)
+		else if (source == cboCDDriveController)
 		{
-			wndEditTapeDrive->releaseModalFocus();
-			std::string path;
-			if (txtTapeDrivePath->getText().empty())
-			{
-				path = get_harddrive_path();
-			}
-			else
-			{
-				path = txtTapeDrivePath->getText();
-			}
-			std::string tmp = SelectFolder("Select Directory", path);
-			if (!tmp.empty())
-			{
-				txtTapeDrivePath->setText(tmp);
-				default_tapedlg(&current_tapedlg);
-				strncpy(current_tapedlg.ci.rootdir, tmp.c_str(), sizeof(current_tapedlg.ci.rootdir) - 1);
-			}
-			wndEditTapeDrive->requestModalFocus();
+			auto posn = controller[cboCDDriveController->getSelected()].type;
+			current_cddlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
+			current_cddlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
+			inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, current_cddlg.ci.rootdir[0] != 0);
 		}
-		else if (source == cmdTapeDriveSelectFile)
+		else if (source == cboCDDriveUnit)
 		{
-			wndEditTapeDrive->releaseModalFocus();
-			std::string path;
-			if (txtTapeDrivePath->getText().empty())
-			{
-				path = get_harddrive_path();
-			}
-			else
-			{
-				path = txtTapeDrivePath->getText();
-			}
-			std::string tmp = SelectFile("Select Tape Image", path, harddisk_filter);
-			if (!tmp.empty())
-			{
-				txtTapeDrivePath->setText(tmp);
-				default_tapedlg(&current_tapedlg);
-				strncpy(current_tapedlg.ci.rootdir, tmp.c_str(), sizeof(current_tapedlg.ci.rootdir) - 1);
-			}
-			wndEditTapeDrive->requestModalFocus();
-		}
-		else if (source == cboTapeDriveController)
-		{
-			auto posn = controller[cboTapeDriveController->getSelected()].type;
-			current_tapedlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
-			current_tapedlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
-			inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, current_tapedlg.ci.rootdir[0] != 0);
-		}
-		else if (source == cboTapeDriveUnit)
-		{
-			current_tapedlg.ci.controller_unit = cboTapeDriveUnit->getSelected();
+			current_cddlg.ci.controller_unit = cboCDDriveUnit->getSelected();
 		}
 	}
 };
-static TapeDriveActionListener* tapeDriveActionListener;
+static CDDriveActionListener* cdDriveActionListener;
 
-static void InitEditTapeDrive()
+static void InitEditCDDrive()
 {
-	wndEditTapeDrive = new gcn::Window("Edit Tape Drive");
-	wndEditTapeDrive->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
-	wndEditTapeDrive->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
-	wndEditTapeDrive->setBaseColor(gui_base_color);
-	wndEditTapeDrive->setForegroundColor(gui_foreground_color);
-	wndEditTapeDrive->setCaption("Tape Drive Settings");
-	wndEditTapeDrive->setTitleBarHeight(TITLEBAR_HEIGHT);
-	wndEditTapeDrive->setMovable(false);
+	auto cd_drives = get_cd_drives();
 
-	tapeDriveActionListener = new TapeDriveActionListener();
+	wndEditCDDrive = new gcn::Window("CD Settings");
+	wndEditCDDrive->setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
+	wndEditCDDrive->setPosition((GUI_WIDTH - DIALOG_WIDTH) / 2, (GUI_HEIGHT - DIALOG_HEIGHT) / 2);
+	wndEditCDDrive->setBaseColor(gui_base_color);
+	wndEditCDDrive->setForegroundColor(gui_foreground_color);
+	wndEditCDDrive->setCaption("CD Settings");
+	wndEditCDDrive->setTitleBarHeight(TITLEBAR_HEIGHT);
+	wndEditCDDrive->setMovable(false);
 
-	cmdTapeDriveOK = new gcn::Button("Add Tape Drive");
-	cmdTapeDriveOK->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
-	cmdTapeDriveOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 4 * BUTTON_WIDTH - DISTANCE_NEXT_X,
+	cdDriveActionListener = new CDDriveActionListener();
+
+	cmdCDDriveOK = new gcn::Button("Add CD Drive");
+	cmdCDDriveOK->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdCDDriveOK->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 4 * BUTTON_WIDTH - DISTANCE_NEXT_X,
 		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdTapeDriveOK->setBaseColor(gui_base_color);
-	cmdTapeDriveOK->setForegroundColor(gui_foreground_color);
-	cmdTapeDriveOK->setId("cmdTapeDriveOK");
-	cmdTapeDriveOK->addActionListener(tapeDriveActionListener);
+	cmdCDDriveOK->setBaseColor(gui_base_color);
+	cmdCDDriveOK->setForegroundColor(gui_foreground_color);
+	cmdCDDriveOK->setId("cmdCDDriveOK");
+	cmdCDDriveOK->addActionListener(cdDriveActionListener);
 
-	cmdTapeDriveCancel = new gcn::Button("Cancel");
-	cmdTapeDriveCancel->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
-	cmdTapeDriveCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH,
+	cmdCDDriveCancel = new gcn::Button("Cancel");
+	cmdCDDriveCancel->setSize(BUTTON_WIDTH * 2, BUTTON_HEIGHT);
+	cmdCDDriveCancel->setPosition(DIALOG_WIDTH - DISTANCE_BORDER - 2 * BUTTON_WIDTH,
 		DIALOG_HEIGHT - 2 * DISTANCE_BORDER - BUTTON_HEIGHT - 10);
-	cmdTapeDriveCancel->setBaseColor(gui_base_color);
-	cmdTapeDriveCancel->setForegroundColor(gui_foreground_color);
-	cmdTapeDriveCancel->setId("cmdTapeDriveCancel");
-	cmdTapeDriveCancel->addActionListener(tapeDriveActionListener);
+	cmdCDDriveCancel->setBaseColor(gui_base_color);
+	cmdCDDriveCancel->setForegroundColor(gui_foreground_color);
+	cmdCDDriveCancel->setId("cmdCDDriveCancel");
+	cmdCDDriveCancel->addActionListener(cdDriveActionListener);
 
-	lblTapeDrivePath = new gcn::Label("Path:");
-	lblTapeDrivePath->setAlignment(gcn::Graphics::Right);
-	txtTapeDrivePath = new gcn::TextField();
-	txtTapeDrivePath->setSize(490, TEXTFIELD_HEIGHT);
-	txtTapeDrivePath->setId("txtTapeDrivePath");
-	txtTapeDrivePath->setBaseColor(gui_base_color);
-	txtTapeDrivePath->setBackgroundColor(gui_background_color);
-	txtTapeDrivePath->setForegroundColor(gui_foreground_color);
+	lblCDDrivePath = new gcn::Label("Path:");
+	lblCDDrivePath->setAlignment(gcn::Graphics::Right);
+	txtCDDrivePath = new gcn::TextField();
+	txtCDDrivePath->setSize(490, TEXTFIELD_HEIGHT);
+	txtCDDrivePath->setId("txtCDDrivePath");
+	txtCDDrivePath->setBaseColor(gui_base_color);
+	txtCDDrivePath->setBackgroundColor(gui_background_color);
+	txtCDDrivePath->setForegroundColor(gui_foreground_color);
 
-	cmdTapeDriveSelectDir = new gcn::Button("Select Directory");
-	cmdTapeDriveSelectDir->setSize(BUTTON_WIDTH * 3, BUTTON_HEIGHT);
-	cmdTapeDriveSelectDir->setBaseColor(gui_base_color);
-	cmdTapeDriveSelectDir->setForegroundColor(gui_foreground_color);
-	cmdTapeDriveSelectDir->setId("cmdTapeDriveSelectDir");
-	cmdTapeDriveSelectDir->addActionListener(tapeDriveActionListener);
+	lblCDDriveController = new gcn::Label("Controller:");
+	lblCDDriveController->setAlignment(gcn::Graphics::Right);
+	cboCDDriveController = new gcn::DropDown(&controllerListModel);
+	cboCDDriveController->setSize(180, DROPDOWN_HEIGHT);
+	cboCDDriveController->setBaseColor(gui_base_color);
+	cboCDDriveController->setBackgroundColor(gui_background_color);
+	cboCDDriveController->setForegroundColor(gui_foreground_color);
+	cboCDDriveController->setSelectionColor(gui_selection_color);
+	cboCDDriveController->setId("cboCDDriveController");
+	cboCDDriveController->addActionListener(cdDriveActionListener);
 
-	cmdTapeDriveSelectFile = new gcn::Button("Select File");
-	cmdTapeDriveSelectFile->setSize(BUTTON_WIDTH * 3, BUTTON_HEIGHT);
-	cmdTapeDriveSelectFile->setBaseColor(gui_base_color);
-	cmdTapeDriveSelectFile->setForegroundColor(gui_foreground_color);
-	cmdTapeDriveSelectFile->setId("cmdTapeDriveSelectFile");
-	cmdTapeDriveSelectFile->addActionListener(tapeDriveActionListener);
-
-	lblTapeDriveController = new gcn::Label("Controller:");
-	lblTapeDriveController->setAlignment(gcn::Graphics::Right);
-	cboTapeDriveController = new gcn::DropDown(&controllerListModel);
-	cboTapeDriveController->setSize(180, DROPDOWN_HEIGHT);
-	cboTapeDriveController->setBaseColor(gui_base_color);
-	cboTapeDriveController->setBackgroundColor(gui_background_color);
-	cboTapeDriveController->setForegroundColor(gui_foreground_color);
-	cboTapeDriveController->setSelectionColor(gui_selection_color);
-	cboTapeDriveController->setId("cboTapeDriveController");
-	cboTapeDriveController->addActionListener(tapeDriveActionListener);
-
-	cboTapeDriveUnit = new gcn::DropDown(&unitListModel);
-	cboTapeDriveUnit->setSize(60, DROPDOWN_HEIGHT);
-	cboTapeDriveUnit->setBaseColor(gui_base_color);
-	cboTapeDriveUnit->setBackgroundColor(gui_background_color);
-	cboTapeDriveUnit->setForegroundColor(gui_foreground_color);
-	cboTapeDriveUnit->setSelectionColor(gui_selection_color);
-	cboTapeDriveUnit->setId("cboTapeDriveUnit");
-	cboTapeDriveUnit->addActionListener(tapeDriveActionListener);
+	cboCDDriveUnit = new gcn::DropDown(&unitListModel);
+	cboCDDriveUnit->setSize(60, DROPDOWN_HEIGHT);
+	cboCDDriveUnit->setBaseColor(gui_base_color);
+	cboCDDriveUnit->setBackgroundColor(gui_background_color);
+	cboCDDriveUnit->setForegroundColor(gui_foreground_color);
+	cboCDDriveUnit->setSelectionColor(gui_selection_color);
+	cboCDDriveUnit->setId("cboCDDriveUnit");
+	cboCDDriveUnit->addActionListener(cdDriveActionListener);
 
 	int posY = DISTANCE_BORDER;
 	int posX = DISTANCE_BORDER;
 
-	wndEditTapeDrive->add(lblTapeDrivePath, DISTANCE_BORDER, posY);
-	wndEditTapeDrive->add(txtTapeDrivePath, lblTapeDrivePath->getX() + lblTapeDrivePath->getWidth() + 8, posY);
-	posY = txtTapeDrivePath->getY() + txtTapeDrivePath->getHeight() + DISTANCE_NEXT_Y;
+	wndEditCDDrive->add(lblCDDrivePath, DISTANCE_BORDER, posY);
+	wndEditCDDrive->add(txtCDDrivePath, lblCDDrivePath->getX() + lblCDDrivePath->getWidth() + 8, posY);
+	posY = txtCDDrivePath->getY() + txtCDDrivePath->getHeight() + DISTANCE_NEXT_Y;
 
-	wndEditTapeDrive->add(cmdTapeDriveSelectDir, DISTANCE_BORDER, posY);
-	wndEditTapeDrive->add(cmdTapeDriveSelectFile, cmdTapeDriveSelectDir->getX() + cmdTapeDriveSelectDir->getWidth() + DISTANCE_NEXT_X, posY);
-	posY = cmdTapeDriveSelectDir->getY() + cmdTapeDriveSelectDir->getHeight() + DISTANCE_NEXT_Y;
+	wndEditCDDrive->add(lblCDDriveController, DISTANCE_BORDER, posY);
+	wndEditCDDrive->add(cboCDDriveController, lblCDDriveController->getX() + lblCDDriveController->getWidth() + 8, posY);
+	wndEditCDDrive->add(cboCDDriveUnit, cboCDDriveController->getX() + cboCDDriveController->getWidth() + DISTANCE_NEXT_X, posY);
 
-	wndEditTapeDrive->add(lblTapeDriveController, DISTANCE_BORDER, posY);
-	wndEditTapeDrive->add(cboTapeDriveController, lblTapeDriveController->getX() + lblTapeDriveController->getWidth() + 8, posY);
-	wndEditTapeDrive->add(cboTapeDriveUnit, cboTapeDriveController->getX() + cboTapeDriveController->getWidth() + DISTANCE_NEXT_X, posY);
+	wndEditCDDrive->add(cmdCDDriveOK);
+	wndEditCDDrive->add(cmdCDDriveCancel);
 
-	wndEditTapeDrive->add(cmdTapeDriveOK);
-	wndEditTapeDrive->add(cmdTapeDriveCancel);
+	gui_top->add(wndEditCDDrive);
 
-	gui_top->add(wndEditTapeDrive);
+	wndEditCDDrive->requestModalFocus();
+	focus_bug_workaround(wndEditCDDrive);
 
-	wndEditTapeDrive->requestModalFocus();
-	focus_bug_workaround(wndEditTapeDrive);
-	cmdTapeDriveSelectDir->requestFocus();
+	// If we found CD Drives, auto-select the first one for now
+	if (!cd_drives.empty())
+	{
+		txtCDDrivePath->setText(cd_drives.at(0));
+	}
 }
 
-static void ExitEditTapeDrive()
+static void ExitEditCDDrive()
 {
-	wndEditTapeDrive->releaseModalFocus();
-	gui_top->remove(wndEditTapeDrive);
+	wndEditCDDrive->releaseModalFocus();
+	gui_top->remove(wndEditCDDrive);
 
-	delete cmdTapeDriveOK;
-	delete cmdTapeDriveCancel;
-	delete lblTapeDrivePath;
-	delete txtTapeDrivePath;
-	delete cmdTapeDriveSelectDir;
-	delete cmdTapeDriveSelectFile;
-	delete lblTapeDriveController;
-	delete cboTapeDriveController;
-	delete cboTapeDriveUnit;
-	delete tapeDriveActionListener;
-	delete wndEditTapeDrive;
+	delete cmdCDDriveOK;
+	delete cmdCDDriveCancel;
+	delete lblCDDrivePath;
+	delete txtCDDrivePath;
+	delete lblCDDriveController;
+	delete cboCDDriveController;
+	delete cboCDDriveUnit;
+	delete cdDriveActionListener;
+	delete wndEditCDDrive;
 }
 
-static void EditTapeDriveLoop()
+static void EditCDDriveLoop()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 
@@ -503,7 +446,7 @@ static void EditTapeDriveLoop()
 	}
 }
 
-bool EditTapeDrive(const int unit_no)
+bool EditCDDrive(const int unit_no)
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 
@@ -513,7 +456,11 @@ bool EditTapeDrive(const int unit_no)
 	dialogResult = false;
 	dialogFinished = false;
 
-	inithdcontroller(current_tapedlg.ci.controller_type, current_tapedlg.ci.controller_type_unit, UAEDEV_TAPE, current_tapedlg.ci.rootdir[0] != 0);
+	if (current_cddlg.ci.controller_type == HD_CONTROLLER_TYPE_UAE)
+		current_cddlg.ci.controller_type = (is_board_enabled(&changed_prefs, ROMTYPE_A2091, 0) ||
+			is_board_enabled(&changed_prefs, ROMTYPE_GVPS2, 0) || is_board_enabled(&changed_prefs, ROMTYPE_A4091, 0) ||
+			(changed_prefs.cs_mbdmac & 3)) ? HD_CONTROLLER_TYPE_SCSI_AUTO : HD_CONTROLLER_TYPE_IDE_AUTO;
+	inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, current_cddlg.ci.rootdir[0] != 0);
 
 	controllerListModel.clear();
 	for (const auto& [type, display] : controller) {
@@ -525,21 +472,21 @@ bool EditTapeDrive(const int unit_no)
 		unitListModel.add(controller_unit_item);
 	}
 
-	InitEditTapeDrive();
+	InitEditCDDrive();
 
 	if (unit_no >= 0)
 	{
 		uci = &changed_prefs.mountconfig[unit_no];
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-		memcpy(&current_tapedlg.ci, uci, sizeof(uaedev_config_info));
+		memcpy(&current_cddlg.ci, uci, sizeof(uaedev_config_info));
 
-		txtTapeDrivePath->setText(current_tapedlg.ci.rootdir);
-		cboTapeDriveController->setSelected(current_tapedlg.ci.controller_type);
-		cboTapeDriveUnit->setSelected(current_tapedlg.ci.controller_unit);
+		txtCDDrivePath->setText(current_cddlg.ci.rootdir);
+		cboCDDriveController->setSelected(current_cddlg.ci.controller_type);
+		cboCDDriveUnit->setSelected(current_cddlg.ci.controller_unit);
 	}
 	else
 	{
-		default_tapedlg(&current_tapedlg);
+		//TODO default_cddlg ?
 	}
 
 	// Prepare the screen once
@@ -553,16 +500,16 @@ bool EditTapeDrive(const int unit_no)
 	while (!dialogFinished)
 	{
 		const auto start = SDL_GetPerformanceCounter();
-		EditTapeDriveLoop();
+		EditCDDriveLoop();
 		cap_fps(start);
 	}
 
 	if (dialogResult)
 	{
-		new_tapedrive(unit_no);
+		new_cddrive(unit_no);
 	}
 
-	ExitEditTapeDrive();
+	ExitEditCDDrive();
 
 	return dialogResult;
 }

@@ -1301,6 +1301,24 @@ void CreateDefaultDevicename(char* name)
 	}
 }
 
+std::vector<std::string> get_cd_drives()
+{
+	char path[MAX_DPATH];
+	std::vector<std::string> results{};
+
+	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom'", "r");
+	if (fp == nullptr) {
+		write_log("Failed to run 'lsblk' command, cannot auto-detect CD drives in system\n");
+		return results;
+	}
+
+	while (fgets(path, sizeof(path), fp) != nullptr) {
+		results.emplace_back(path);
+	}
+	pclose(fp);
+	return results;
+}
+
 
 int tweakbootpri(int bp, int ab, int dnm)
 {

@@ -91,7 +91,7 @@ static int GetHDType(const int index)
 	{
 		auto* uci = &changed_prefs.mountconfig[index];
 		struct uaedev_config_info* ci = &uci->ci;
-		type = ci->type == UAEDEV_HDF || ci->type == UAEDEV_CD || ci->type == UAEDEV_TAPE ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
+		type = ci->type == UAEDEV_HDF ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
 	}
 	return type;
 }
@@ -154,13 +154,12 @@ public:
 					if (EditFilesysHardDrive(i))
 						gui_force_rtarea_hdchange();
 				}
-				else if (GetHDType(i) == FILESYS_CD)
+				else if (GetHDType(i) == UAEDEV_CD)
 				{
-					//TODO
-					//if (EditCDDrive(i))
-					//	gui_force_rtarea_hdchange();
+					if (EditCDDrive(i))
+						gui_force_rtarea_hdchange();
 				}
-				else if (GetHDType(i) == FILESYS_TAPE)
+				else if (GetHDType(i) == UAEDEV_TAPE)
 				{
 					if (EditTapeDrive(i))
 						gui_force_rtarea_hdchange();
@@ -203,7 +202,8 @@ public:
 		}
 		else if (actionEvent.getSource() == cmdAddCDDrive)
 		{
-			//TODO
+			if (EditCDDrive(-1))
+				gui_force_rtarea_hdchange();
 			cmdAddCDDrive->requestFocus();
 			RefreshPanelHD();
 		}
@@ -440,8 +440,6 @@ void InitPanelHD(const config_category& category)
 	cmdAddCDDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddCDDrive->setId("cmdAddCDDrive");
 	cmdAddCDDrive->addActionListener(hdAddActionListener);
-	// TODO enable when this is implemented
-	cmdAddCDDrive->setEnabled(false);
 
 	cmdAddTapeDrive = new gcn::Button("Add Tape Drive");
 	cmdAddTapeDrive->setBaseColor(gui_base_color);

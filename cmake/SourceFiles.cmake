@@ -324,6 +324,7 @@ set(SOURCE_FILES
         src/osdep/gui/SelectFolder.cpp
         src/osdep/gui/SelectFile.cpp
         src/osdep/gui/CreateFilesysHardfile.cpp
+        src/osdep/gui/EditCDDrive.cpp
         src/osdep/gui/EditFilesysVirtual.cpp
         src/osdep/gui/EditFilesysHardfile.cpp
         src/osdep/gui/EditFilesysHardDrive.cpp
