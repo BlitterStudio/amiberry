@@ -1314,7 +1314,7 @@ std::vector<std::string> get_cd_drives()
 
 	while (fgets(path, sizeof(path), fp) != nullptr) {
 		path[strcspn(path, "\n")] = 0;
-		results.emplace_back(std::string(path));
+		results.emplace_back(path);
 	}
 	pclose(fp);
 	return results;
