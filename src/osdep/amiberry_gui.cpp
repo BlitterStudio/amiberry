@@ -1306,14 +1306,15 @@ std::vector<std::string> get_cd_drives()
 	char path[MAX_DPATH];
 	std::vector<std::string> results{};
 
-	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom'", "r");
+	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom' | awk '{print \"/dev/\" $1}'", "r");
 	if (fp == nullptr) {
 		write_log("Failed to run 'lsblk' command, cannot auto-detect CD drives in system\n");
 		return results;
 	}
 
 	while (fgets(path, sizeof(path), fp) != nullptr) {
-		results.emplace_back(path);
+		path[strcspn(path, "\n")] = 0;
+		results.emplace_back(std::string(path));
 	}
 	pclose(fp);
 	return results;
