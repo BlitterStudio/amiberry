@@ -11,7 +11,7 @@
 #include "disk.h"
 #include "blkdev.h"
 #include "gui_handling.h"
-#include "uae.h"
+
 
 static gcn::Label* lblModel;
 static gcn::DropDown* cboModel;
@@ -314,15 +314,7 @@ static void RefreshDiskListModel()
 
 static void RefreshCDListModel()
 {
-	auto cd_drives = get_cd_drives();
 	cdfileList.clear();
-	if (!cd_drives.empty())
-	{
-		for (auto& drive : cd_drives)
-		{
-			cdfileList.add(drive);
-		}
-	}
 	for(const auto & i : lstMRUCDList)
 	{
 		const std::string full_path = i;
