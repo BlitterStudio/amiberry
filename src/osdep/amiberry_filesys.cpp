@@ -7,6 +7,7 @@
 #include "filesys.h"
 #include "zfile.h"
 #include <unistd.h>
+#include <algorithm>
 #include <list>
 #include <dirent.h>
 #include <iconv.h>
@@ -49,7 +50,7 @@ void utf8_to_latin1_string(std::string& input, std::string& output)
 	std::string dst;
 
 	auto* iconv_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
-	if (iconv_ == (iconv_t)-1) {
+	if (iconv_ == iconv_t(-1)) {
 		if (!has_logged_iconv_fail) {
 			write_log("iconv_open failed: will be copying directory entries verbatim\n");
 			has_logged_iconv_fail = true;
@@ -61,7 +62,7 @@ void utf8_to_latin1_string(std::string& input, std::string& output)
 		char* dst_ptr = buf.data();
 		size_t dst_size = buf.size();
 		size_t res = ::iconv(iconv_, &src_ptr, &src_size, &dst_ptr, &dst_size);
-		if (res == (size_t)-1) {
+		if (res == size_t(-1)) {
 			if (errno != E2BIG) {
 				// skip character
 				++src_ptr;
@@ -142,7 +143,7 @@ std::string prefix_with_application_directory_path(std::string currentpath)
 }
 
 
-std::string prefix_with_data_path(std::string filename)
+std::string prefix_with_data_path(const std::string& filename)
 {
 #ifdef __MACH__
 	CFBundleRef mainBundle = CFBundleGetMainBundle();
@@ -172,7 +173,7 @@ std::string prefix_with_data_path(std::string filename)
 #endif
 }
 
-std::string prefix_with_whdboot_path(std::string filename)
+std::string prefix_with_whdboot_path(const std::string& filename)
 {
 #ifdef __MACH__
 	CFBundleRef mainBundle = CFBundleGetMainBundle();
@@ -828,8 +829,7 @@ int my_issamevolume(const TCHAR* path1, const TCHAR* path2, TCHAR* path)
 	my_canonicalize_path(path2, p2, sizeof p2 / sizeof(TCHAR));
 
 	unsigned int len = _tcslen(p1);
-	if (len > _tcslen(p2))
-		len = _tcslen(p2);
+	len = std::min<size_t>(len, _tcslen(p2));
 
 	if (_tcsnicmp(p1, p2, len))
 		return 0;
@@ -895,11 +895,13 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 bool copyfile(const char* target, const char* source, const bool replace)
 {
 #ifdef USE_OLDGCC
-	std::experimental::filesystem::copy_options options = {};
-	options = replace ? experimental::filesystem::copy_options::overwrite_existing : experimental::filesystem::copy_options::none;
+	std::experimental::filesystem::copy_options options = replace
+												? experimental::filesystem::copy_options::overwrite_existing
+												: experimental::filesystem::copy_options::none;
 #else
-	std::filesystem::copy_options options = {};
-	options = replace ? filesystem::copy_options::overwrite_existing : filesystem::copy_options::none;
+	std::filesystem::copy_options options = replace
+		                                        ? filesystem::copy_options::overwrite_existing
+		                                        : filesystem::copy_options::none;
 #endif
 	return copy_file(source, target, options);
 }
@@ -909,7 +911,7 @@ void filesys_addexternals(void)
 	if (!currprefs.automount_cddrives)
 		return;
 
-	auto cd_drives = get_cd_drives();
+	const auto cd_drives = get_cd_drives();
 	if (!cd_drives.empty())
 	{
 		int drvnum = 0;
@@ -932,7 +934,7 @@ std::string my_get_sha1_of_file(const char* filepath)
 		return "";
 	}
 
-	int fd = open(filepath, O_RDONLY);
+	const int fd = open(filepath, O_RDONLY);
 	if (fd < 0) {
 		write_log("my_get_sha1_of_file: open on file %s failed\n", filepath);
 		return "";
