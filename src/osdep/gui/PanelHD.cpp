@@ -16,7 +16,6 @@
 #include "gui_handling.h"
 #include "fsdb_host.h"
 #include "rommgr.h"
-#include "uae.h"
 
 enum
 {
@@ -89,15 +88,7 @@ static gcn::StringListModel cdfileList;
 
 static void RefreshCDListModel()
 {
-	auto cd_drives = get_cd_drives();
 	cdfileList.clear();
-	if (!cd_drives.empty())
-	{
-		for (auto& drive : cd_drives)
-		{
-			cdfileList.add(drive);
-		}
-	}
 	for(const auto & i : lstMRUCDList)
 	{
 		const std::string full_path = i;
