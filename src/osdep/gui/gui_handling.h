@@ -397,8 +397,6 @@ extern std::vector<string> controller_unit;
 extern std::vector<string> controller_type;
 extern std::vector<string> controller_feature_level;
 
-extern std::vector<std::string> get_cd_drives();
-
 STATIC_INLINE bool is_hdf_rdb()
 {
 	return current_hfdlg.ci.sectors == 0 && current_hfdlg.ci.surfaces == 0 && current_hfdlg.ci.reserved == 0;

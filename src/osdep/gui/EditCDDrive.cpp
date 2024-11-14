@@ -16,6 +16,7 @@
 #include "amiberry_input.h"
 #include "rommgr.h"
 #include "StringListModel.h"
+#include "uae.h"
 
 enum
 {

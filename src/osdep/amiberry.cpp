@@ -2266,7 +2266,7 @@ void target_default_options(struct uae_prefs* p, int type)
 		p->automount_removable = false;
 		//p->automount_drives = 0;
 		//p->automount_removabledrives = 0;
-		p->automount_cddrives = true;
+		p->automount_cddrives = false;
 		//p->automount_netdrives = 0;
 		p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 		//p->filesystem_mangle_reserved_names = true;
@@ -4825,4 +4825,23 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 	}
 
 	in_file.close();
+}
+
+std::vector<std::string> get_cd_drives()
+{
+	char path[MAX_DPATH];
+	std::vector<std::string> results{};
+
+	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom' | awk '{print \"/dev/\" $1}'", "r");
+	if (fp == nullptr) {
+		write_log("Failed to run 'lsblk' command, cannot auto-detect CD drives in system\n");
+		return results;
+	}
+
+	while (fgets(path, sizeof(path), fp) != nullptr) {
+		path[strcspn(path, "\n")] = 0;
+		results.emplace_back(path);
+	}
+	pclose(fp);
+	return results;
 }

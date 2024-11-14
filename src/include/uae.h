@@ -106,5 +106,9 @@ extern void uaerandomizeseed(void);
 
 int get_guid_target (uae_u8 *out);
 void filesys_addexternals (void);
+#ifdef AMIBERRY
+extern std::vector<std::string> get_cd_drives();
+extern int add_filesys_unit(struct uaedev_config_info* ci, bool custom);
+#endif
 
 #endif /* UAE_UAE_H */

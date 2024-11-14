@@ -16,6 +16,7 @@
 #include "gui_handling.h"
 #include "fsdb_host.h"
 #include "rommgr.h"
+#include "uae.h"
 
 enum
 {
@@ -56,6 +57,8 @@ static gcn::Button* cmdAddHardDrive;
 static gcn::Button* cmdCreateHardfile;
 static gcn::Button* cmdAddCDDrive;
 static gcn::Button* cmdAddTapeDrive;
+
+static gcn::CheckBox* chkAutomountCD;
 
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
@@ -234,7 +237,11 @@ class CDCheckActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == chkCD)
+		if (actionEvent.getSource() == chkAutomountCD)
+		{
+			changed_prefs.automount_cddrives = chkAutomountCD->isSelected();
+		}
+		else if (actionEvent.getSource() == chkCD)
 		{
 			if (changed_prefs.cdslots[0].inuse)
 			{
@@ -462,6 +469,13 @@ void InitPanelHD(const config_category& category)
 	cdButtonActionListener = new CDButtonActionListener();
 	cdFileActionListener = new CDFileActionListener();
 
+	chkAutomountCD = new gcn::CheckBox("CDFS automount CD/DVD drives");
+	chkAutomountCD->setId("chkAutomountCD");
+	chkAutomountCD->setBaseColor(gui_base_color);
+	chkAutomountCD->setBackgroundColor(gui_background_color);
+	chkAutomountCD->setForegroundColor(gui_foreground_color);
+	chkAutomountCD->addActionListener(cdCheckActionListener);
+
 	chkCD = new gcn::CheckBox("CD drive/image");
 	chkCD->setId("chkCD");
 	chkCD->setBaseColor(gui_base_color);
@@ -534,6 +548,8 @@ void InitPanelHD(const config_category& category)
 	category.panel->add(cmdCreateHardfile, cmdAddTapeDrive->getX() + cmdAddTapeDrive->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdCreateHardfile->getHeight() + DISTANCE_NEXT_Y * 2;
 
+	category.panel->add(chkAutomountCD, DISTANCE_BORDER, posY);
+	posY += chkAutomountCD->getHeight() + DISTANCE_NEXT_Y;
 	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
 	category.panel->add(cmdCDEject, category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelectFile, cmdCDEject->getX() - DISTANCE_NEXT_X - cmdCDSelectFile->getWidth(), posY);
@@ -570,6 +586,7 @@ void ExitPanelHD()
 	delete cmdAddTapeDrive;
 	delete cmdCreateHardfile;
 
+	delete chkAutomountCD;
 	delete chkCD;
 	delete cmdCDEject;
 	delete cmdCDSelectFile;
@@ -772,6 +789,7 @@ void RefreshPanelHD()
 		}
 	}
 
+	chkAutomountCD->setSelected(changed_prefs.automount_cddrives);
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelectFile->setEnabled(changed_prefs.cdslots[0].inuse);

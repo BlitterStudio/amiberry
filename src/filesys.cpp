@@ -1158,7 +1158,11 @@ static int set_filesys_unit (int nr, struct uaedev_config_info *ci, bool custom)
 	return ret;
 }
 
-static int add_filesys_unit (struct uaedev_config_info *ci, bool custom)
+// we want to reference this from amiberry_filesys.cpp also
+#ifndef AMIBERRY
+static
+#endif
+int add_filesys_unit (struct uaedev_config_info *ci, bool custom)
 {
 	int nr;
 

@@ -906,7 +906,23 @@ bool copyfile(const char* target, const char* source, const bool replace)
 
 void filesys_addexternals(void)
 {
-	// this would mount system drives on Windows
+	if (!currprefs.automount_cddrives)
+		return;
+
+	auto cd_drives = get_cd_drives();
+	if (!cd_drives.empty())
+	{
+		int drvnum = 0;
+		for (auto& drive : cd_drives)
+		{
+			struct uaedev_config_info ci = { 0 };
+			_tcscpy(ci.rootdir, drive.c_str());
+			ci.readonly = true;
+			ci.bootpri = -20 - drvnum;
+			add_filesys_unit(&ci, true);
+			drvnum++;
+		}
+	}
 }
 
 std::string my_get_sha1_of_file(const char* filepath)

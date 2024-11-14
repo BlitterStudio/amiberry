@@ -11,6 +11,7 @@
 #include "disk.h"
 #include "blkdev.h"
 #include "gui_handling.h"
+#include "uae.h"
 
 static gcn::Label* lblModel;
 static gcn::DropDown* cboModel;
