@@ -151,12 +151,12 @@ static int close_createfile(struct dev_info_ioctl* ciw)
 static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 {
 	if (ciw->fd != -1) {
-		if (fullaccess && ciw->fullaccess == 0) {
+		//if (fullaccess && ciw->fullaccess == 0) {
 			close_createfile(ciw);
-		}
-		else {
-			return 1;
-		}
+		//}
+		// else {
+		// 	return 1;
+		// }
 	}
 	if (log_scsi)
 		write_log(_T("IOCTL: opening IOCTL %s\n"), ciw->devname);
@@ -678,9 +678,8 @@ static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device
     if (!open_createfile(ciw, 0))
         return 0;
     uae_sem_wait(&ciw->cda.sub_sem);
-	int fd = open(ciw->devname, O_RDONLY);
-	int status = ioctl(fd, CDROM_DRIVE_STATUS, CDSL_NONE);
-	close(fd);
+
+	int status = ioctl(ciw->fd, CDROM_DRIVE_STATUS, CDSL_NONE);
 	if (status == -1)
 	{
 		perror("IOCTL: CDROM_DRIVE_STATUS");
