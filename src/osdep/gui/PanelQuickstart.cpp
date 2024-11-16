@@ -940,6 +940,7 @@ void InitPanelQuickstart(const config_category& category)
 	cmdCDEject->setVisible(false);
 	cmdCDSelect->setVisible(false);
 	cboCDFile->setVisible(false);
+	cboCDFile->clearSelected();
 
 	bIgnoreListChange = false;
 

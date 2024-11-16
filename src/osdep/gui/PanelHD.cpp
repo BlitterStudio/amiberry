@@ -573,6 +573,7 @@ void InitPanelHD(const config_category& category)
 
 	category.panel->add(chkCDTurbo, DISTANCE_BORDER, posY);
 
+	cboCDFile->clearSelected();
 	RefreshPanelHD();
 }
 

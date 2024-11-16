@@ -56,8 +56,8 @@
 struct dev_info_ioctl {
 	int fd;
 	uae_u8* tempbuffer;
-	TCHAR drvletter;
-	TCHAR drvlettername[10];
+	TCHAR drvletter[30];
+	TCHAR drvlettername[30];
 	TCHAR devname[30];
 	int type;
 	struct cdrom_tocentry cdromtoc;
@@ -884,7 +884,7 @@ static void update_device_info(int unitnum)
 	di->lun = 0;
 	di->media_inserted = 0;
 	di->bytespersector = 2048;
-	_stprintf(di->mediapath, _T("\\\\.\\%c:"), ciw->drvletter);
+	strncpy(di->mediapath, ciw->drvletter, sizeof(ciw->drvletter) - 1);
 	if (fetch_geometry(ciw, unitnum, di)) { // || ioctl_command_toc (unitnum))
 		di->media_inserted = 1;
 	}
@@ -930,7 +930,7 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 	}
 
 	struct hd_driveid id;
-	if (ioctl(ciw->h, HDIO_GET_IDENTITY, &id) == 0) {
+	if (ioctl(ciw->fd, HDIO_GET_IDENTITY, &id) == 0) {
 		strncpy(ciw->di.vendorid, (const char*)id.model, sizeof(ciw->di.vendorid) - 1);
 		strncpy(ciw->di.productid, (const char*)id.serial_no, sizeof(ciw->di.productid) - 1);
 		strncpy(ciw->di.revision, (const char*)id.fw_rev, sizeof(ciw->di.revision) - 1);
@@ -1044,22 +1044,25 @@ static int open_bus(int flags)
 		return 1;
 	}
 	total_devices = 0;
-	for (int drive = 0; drive <= 9 && total_devices < MAX_TOTAL_SCSI_DEVICES; drive++) {
-		char tmp[10];
-		snprintf(tmp, sizeof(tmp), "/dev/sr%d", drive);
-		int fd = open(tmp, O_RDONLY | O_NONBLOCK);
-		if (fd != -1) {
-			struct stat st;
-			if (fstat(fd, &st) == 0 && S_ISBLK(st.st_mode)) {
-				ciw32[total_devices].drvletter = drive;
-				strcpy(ciw32[total_devices].drvlettername, tmp);
-				ciw32[total_devices].type = st.st_rdev;
-				ciw32[total_devices].di.bytespersector = 2048;
-				strcpy(ciw32[total_devices].devname, tmp);
-				ciw32[total_devices].fd = fd;
-				total_devices++;
+	auto cd_drives = get_cd_drives();
+	if (!cd_drives.empty())
+	{
+		for (const auto& drive: cd_drives)
+		{
+			int fd = open(drive.c_str(), O_RDONLY | O_NONBLOCK);
+			if (fd != -1) {
+				struct stat st;
+				if (fstat(fd, &st) == 0 && S_ISBLK(st.st_mode)) {
+					strncpy(ciw32[total_devices].drvletter, drive.c_str(), sizeof(ciw32[total_devices].drvletter));
+					strcpy(ciw32[total_devices].drvlettername, drive.c_str());
+					ciw32[total_devices].type = st.st_rdev;
+					ciw32[total_devices].di.bytespersector = 2048;
+					strcpy(ciw32[total_devices].devname, drive.c_str());
+					ciw32[total_devices].fd = fd;
+					total_devices++;
+				}
+				close(fd);
 			}
-			close(fd);
 		}
 	}
 	bus_open = 1;
@@ -1092,26 +1095,26 @@ static struct device_info* info_device(int unitnum, struct device_info* di, int 
 	return di;
 }
 
-bool win32_ioctl_media_change(TCHAR driveletter, int insert)
-{
-	for (int i = 0; i < total_devices; i++) {
-		struct dev_info_ioctl* ciw = &ciw32[i];
-		if (ciw->drvletter == driveletter && ciw->di.media_inserted != insert) {
-			write_log(_T("IOCTL: media change %s %d\n"), ciw->drvlettername, insert);
-			ciw->di.media_inserted = insert;
-			ciw->changed = true;
-			int unitnum = getunitnum(ciw);
-			if (unitnum >= 0) {
-				update_device_info(unitnum);
-				scsi_do_disk_change(unitnum, insert, NULL);
-				filesys_do_disk_change(unitnum, insert != 0);
-				blkdev_cd_change(unitnum, ciw->drvlettername);
-				return true;
-			}
-		}
-	}
-	return false;
-}
+// bool win32_ioctl_media_change(TCHAR driveletter, int insert)
+// {
+// 	for (int i = 0; i < total_devices; i++) {
+// 		struct dev_info_ioctl* ciw = &ciw32[i];
+// 		if (ciw->drvletter == driveletter && ciw->di.media_inserted != insert) {
+// 			write_log(_T("IOCTL: media change %s %d\n"), ciw->drvlettername, insert);
+// 			ciw->di.media_inserted = insert;
+// 			ciw->changed = true;
+// 			int unitnum = getunitnum(ciw);
+// 			if (unitnum >= 0) {
+// 				update_device_info(unitnum);
+// 				scsi_do_disk_change(unitnum, insert, NULL);
+// 				filesys_do_disk_change(unitnum, insert != 0);
+// 				blkdev_cd_change(unitnum, ciw->drvlettername);
+// 				return true;
+// 			}
+// 		}
+// 	}
+// 	return false;
+// }
 
 static int ioctl_scsiemu(int unitnum, uae_u8* cmd)
 {
