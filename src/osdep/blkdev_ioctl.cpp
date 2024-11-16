@@ -24,10 +24,20 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#ifdef __linux__
 #include <linux/cdrom.h>
 #include <linux/hdreg.h>
 #include <linux/errno.h>
 #include <scsi/sg.h>
+#elif __MACH__
+#include <errno.h>
+#include <IOKit/storage/IODVDMediaBSDClient.h>
+#include <IOKit/storage/IODVDMedia.h>
+#include <IOKit/storage/IODVDTypes.h>
+#include <IOKit/storage/IOCDMediaBSDClient.h>
+#include <IOKit/storage/IOCDMedia.h>
+#include <IOKit/storage/IOCDTypes.h>
+#endif
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -38,6 +48,8 @@
 #endif
 
 #define IOCTL_DATA_BUFFER 8192
+
+#ifndef __MACH__
 
 struct dev_info_ioctl {
 	int fd;
@@ -1142,3 +1154,5 @@ struct device_functions devicefunc_scsi_ioctl = {
 	ioctl_command_toc, ioctl_command_read, ioctl_command_rawread, ioctl_command_write,
 	0, ioctl_ismedia, ioctl_scsiemu
 };
+
+#endif __MACH__
