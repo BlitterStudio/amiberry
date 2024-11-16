@@ -16,6 +16,7 @@
 #include "gui_handling.h"
 #include "fsdb_host.h"
 #include "rommgr.h"
+#include "uae.h"
 
 enum
 {
@@ -89,6 +90,14 @@ static gcn::StringListModel cdfileList;
 static void RefreshCDListModel()
 {
 	cdfileList.clear();
+	auto cd_drives = get_cd_drives();
+	if (!cd_drives.empty())
+	{
+		for (const auto& drive : cd_drives)
+		{
+			cdfileList.add(drive);
+		}
+	}
 	for(const auto & i : lstMRUCDList)
 	{
 		const std::string full_path = i;
@@ -283,6 +292,8 @@ public:
 			// Eject CD from drive
 			//---------------------------------------
 			changed_prefs.cdslots[0].name[0] = 0;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+			cboCDFile->clearSelected();
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelectFile)
@@ -340,20 +351,31 @@ public:
 			}
 			else
 			{
-				const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
-				if (element != changed_prefs.cdslots[0].name)
+				auto selected = cdfileList.getElementAt(idx);
+				// if selected starts with /dev/sr, it's a CD drive
+				if (selected.find("/dev/") == 0)
 				{
-					strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
-					DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
+					strncpy(changed_prefs.cdslots[0].name, selected.c_str(), MAX_DPATH);
 					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
-					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
-					RefreshCDListModel();
-					bIgnoreListChange = true;
-					cboCDFile->setSelected(0);
-					bIgnoreListChange = false;
-					SetLastActiveConfig(element.c_str());
+					changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
+				}
+				else
+				{
+					const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
+					if (element != changed_prefs.cdslots[0].name)
+					{
+						strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+						DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
+						changed_prefs.cdslots[0].inuse = true;
+						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
+						lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
+						RefreshCDListModel();
+						bIgnoreListChange = true;
+						cboCDFile->setSelected(0);
+						bIgnoreListChange = false;
+						SetLastActiveConfig(element.c_str());
+					}
 				}
 			}
 		}
@@ -596,10 +618,12 @@ void ExitPanelHD()
 static void AdjustDropDownControls()
 {
 	bIgnoreListChange = true;
-	
-	cboCDFile->clearSelected();
-	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
+
+	if (changed_prefs.cdslots[0].inuse
+		&& strlen(changed_prefs.cdslots[0].name) > 0
+		&& changed_prefs.cdslots[0].type == SCSI_UNIT_DEFAULT)
 	{
+		cboCDFile->clearSelected();
 		for (auto i = 0; i < static_cast<int>(lstMRUCDList.size()); ++i)
 		{
 			if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
