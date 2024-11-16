@@ -909,54 +909,31 @@ static void trim(TCHAR* s)
 /* open device level access to cd rom drive */
 static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 {
-	struct sg_io_hdr io_hdr;
-	unsigned char inquiry[36];
-	unsigned char sense_buffer[32];
-	unsigned char cmd[6] = { 0x12, 0, 0, 0, sizeof(inquiry), 0 }; // INQUIRY
-
 	ciw->cda.cdda_volume[0] = 0x7fff;
 	ciw->cda.cdda_volume[1] = 0x7fff;
 	ciw->tempbuffer = (unsigned char*)malloc(IOCTL_DATA_BUFFER);
 	if (!ciw->tempbuffer) {
-		write_log("Failed to allocate buffer\n");
+		write_log("IOCTL: Failed to allocate buffer\n");
 		return 1;
 	}
 
 	memset(ciw->di.vendorid, 0, sizeof(ciw->di.vendorid));
 	memset(ciw->di.productid, 0, sizeof(ciw->di.productid));
 	memset(ciw->di.revision, 0, sizeof(ciw->di.revision));
-	strcpy(ciw->di.vendorid, "UAE");
-	snprintf(ciw->di.productid, sizeof(ciw->di.productid), "SCSI CD%d IMG", unitnum);
-	strcpy(ciw->di.revision, "0.2");
+	_tcscpy(ciw->di.vendorid, _T("UAE"));
+	_stprintf(ciw->di.productid, _T("SCSI CD%d IMG"), unitnum);
+	_tcscpy(ciw->di.revision, _T("0.2"));
 
 	if (!open_createfile(ciw, 0)) {
-		write_log("Failed to open '%s'\n", ciw->devname);
+		write_log("IOCTL: Failed to open '%s'\n", ciw->devname);
 		goto error;
 	}
 
-	
-	memset(&io_hdr, 0, sizeof(struct sg_io_hdr));
-	io_hdr.interface_id = 'S';
-	io_hdr.cmd_len = 6;
-	io_hdr.mx_sb_len = sizeof(sense_buffer);
-	io_hdr.dxfer_direction = SG_DXFER_FROM_DEV;
-	io_hdr.dxfer_len = sizeof(inquiry);
-	io_hdr.dxferp = inquiry;
-	
-	io_hdr.cmdp = cmd;
-	io_hdr.sbp = sense_buffer;
-	io_hdr.timeout = 20000; // 20 seconds
-
-	if (ioctl(ciw->fd, SG_IO, &io_hdr) < 0) {
-		perror("SG_IO");
-		goto error;
-	}
-
-	close_createfile(ciw);
-
-	if (!open_createfile(ciw, 0)) {
-		write_log("Failed to open '%s'\n", ciw->devname);
-		goto error;
+	struct hd_driveid id;
+	if (ioctl(ciw->h, HDIO_GET_IDENTITY, &id) == 0) {
+		strncpy(ciw->di.vendorid, (const char*)id.model, sizeof(ciw->di.vendorid) - 1);
+		strncpy(ciw->di.productid, (const char*)id.serial_no, sizeof(ciw->di.productid) - 1);
+		strncpy(ciw->di.revision, (const char*)id.fw_rev, sizeof(ciw->di.revision) - 1);
 	}
 
 	write_log(_T("IOCTL: device '%s' (%s/%s/%s) opened successfully (unit=%d,media=%d)\n"),
@@ -968,6 +945,8 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 	}
 	uae_sem_init(&ciw->cda.sub_sem, 0, 1);
 	uae_sem_init(&ciw->cda.sub_sem2, 0, 1);
+	ioctl_command_stop(unitnum);
+	update_device_info(unitnum);
 	ciw->open = true;
 	return 0;
 
