@@ -698,35 +698,25 @@ static int ioctl_command_read(int unitnum, uae_u8* data, int sector, int size)
 
 static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device_info* di)
 {
-    struct hd_geometry geom;
-    int cnt = 3;
-
     if (!open_createfile(ciw, 0))
         return 0;
     uae_sem_wait(&ciw->cda.sub_sem);
-    seterrormode(ciw);
-    while (cnt-- > 0) {
-        if (ioctl(ciw->fd, HDIO_GETGEO, &geom) < 0) {
-            int err = errno;
-            ciw->changed = true;
-            if (err == ENOMEDIUM) {
-                if (win32_error(ciw, unitnum, _T("HDIO_GETGEO")) < 0)
-                    continue;
-            }
-            reseterrormode(ciw);
-            uae_sem_post(&ciw->cda.sub_sem);
-            return 0;
-        }
-        break;
-    }
-    reseterrormode(ciw);
+
+	int status = ioctl(ciw->fd, CDROM_DRIVE_STATUS, CDSL_NONE);
+	if (status != CDS_DISC_OK)
+	{
+		ciw->changed = true;
+		uae_sem_post(&ciw->cda.sub_sem);
+		return 0;
+	}
+
     uae_sem_post(&ciw->cda.sub_sem);
-    if (di) {
-        di->cylinders = geom.cylinders;
-        di->sectorspertrack = geom.sectors;
-        di->trackspercylinder = geom.heads;
-        di->bytespersector = 512; // Default sector size
-    }
+    // if (di) {
+    //     di->cylinders = geom.cylinders;
+    //     di->sectorspertrack = geom.sectors;
+    //     di->trackspercylinder = geom.heads;
+    //     di->bytespersector = 2048; // Typical CD-ROM sector size
+    // }
     return 1;
 }
 
