@@ -369,7 +369,7 @@ void *uae_vm_reserve(uae_u32 size, int flags)
 void *uae_vm_reserve_fixed(void *want_addr, uae_u32 size, int flags)
 {
 	void *address = NULL;
-	write_log("VM: Reserve  0x%-8x bytes at %p (fixed)\n", size, want_addr);
+	//write_log("VM: Reserve  0x%-8x bytes at %p (fixed)\n", size, want_addr);
 	address = try_reserve((uintptr_t) want_addr, size, flags);
 	if (address == NULL) {
 		write_log("VM: Reserve  0x%-8x bytes at %p failed!\n", size, want_addr);
@@ -379,15 +379,15 @@ void *uae_vm_reserve_fixed(void *want_addr, uae_u32 size, int flags)
 		do_free(address, size);
 		return NULL;
 	}
-	write_log("VM: Reserve  0x%-8x bytes, got address 0x%llx\n",
-			size, (uae_u64) (uintptr_t) address);
+	// write_log("VM: Reserve  0x%-8x bytes, got address 0x%llx\n",
+	// 		size, (uae_u64) (uintptr_t) address);
 	return address;
 }
 
 void *uae_vm_commit(void *address, uae_u32 size, int protect)
 {
-	write_log("VM: Commit   0x%-8x bytes at %p (%s)\n",
-			size, address, protect_description(protect));
+	// write_log("VM: Commit   0x%-8x bytes at %p (%s)\n",
+	// 		size, address, protect_description(protect));
 #ifdef _WIN32
 	int va_type = MEM_COMMIT ;
 	int va_protect = protect_to_native(protect);
@@ -404,7 +404,7 @@ void *uae_vm_commit(void *address, uae_u32 size, int protect)
 
 bool uae_vm_decommit(void *address, uae_u32 size)
 {
-	write_log("VM: Decommit 0x%-8x bytes at %p\n", size, address);
+	//write_log("VM: Decommit 0x%-8x bytes at %p\n", size, address);
 #ifdef _WIN32
 	return VirtualFree (address, size, MEM_DECOMMIT) != 0;
 #else
