@@ -136,9 +136,7 @@ static struct device_functions *devicetable[] = {
 	NULL,
 	&devicefunc_cdimage,
 #ifdef WITH_SCSI_IOCTL
-#ifndef __MACH__
 	&devicefunc_scsi_ioctl,
-#endif
 #else
         NULL,
 #endif
