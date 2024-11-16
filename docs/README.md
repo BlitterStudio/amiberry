@@ -2,7 +2,7 @@
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X4FHDY4)
 
-<a rel="me" href="https://mastodon.social/@midwan">Follow me Mastodon!</a>
+<a rel="me" href="https://mastodon.social/@midwan">Follow me on Mastodon!</a>
 
 [![C/C++ CI](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml)
 
