@@ -76,16 +76,6 @@ static int unittable[MAX_TOTAL_SCSI_DEVICES];
 static int bus_open;
 static uae_sem_t play_sem;
 
-static void seterrormode(struct dev_info_ioctl* ciw)
-{
-	// No equivalent in Linux/MacOS
-}
-
-static void reseterrormode(struct dev_info_ioctl* ciw)
-{
-	// No equivalent in Linux/MacOS
-}
-
 static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum);
 static void sys_cddev_close(struct dev_info_ioctl* ciw, int unitnum);
 
@@ -255,13 +245,10 @@ static int read2048(struct dev_info_ioctl* ciw, int sector)
 {
 	off_t offset = (off_t)sector * 2048;
 
-	seterrormode(ciw);
 	if (lseek(ciw->fd, offset, SEEK_SET) == (off_t)-1) {
-		reseterrormode(ciw);
 		return 0;
 	}
 	ssize_t dtotal = read(ciw->fd, ciw->tempbuffer, 2048);
-	reseterrormode(ciw);
 	return dtotal == 2048 ? 2048 : 0;
 }
 
@@ -463,13 +450,11 @@ static int ioctl_command_qcode(int unitnum, uae_u8* buf, int sector, bool all)
 		if (!valid && sector >= 0) {
 			unsigned int len;
 			uae_sem_wait(&ciw->cda.sub_sem);
-			seterrormode(ciw);
 			struct cdrom_subchnl subchnl;
 			subchnl.cdsc_format = CDROM_MSF;
 			if (ioctl(ciw->fd, CDROMSUBCHNL, &subchnl) == -1) {
 				perror("CDROMSUBCHNL ioctl failed");
 			}
-			reseterrormode(ciw);
 			uae_u8 subbuf[SUB_CHANNEL_SIZE];
 			sub_deinterleave((uae_u8*)&subchnl, subbuf);
 			uae_sem_post(&ciw->cda.sub_sem);
@@ -569,7 +554,6 @@ static int ioctl_command_rawread(int unitnum, uae_u8* data, int sector, int size
 				int readblocksize = errorfield == 0 ? 2352 : 2352 + 296;
 
 				if (!read_block(ciw, unitnum, NULL, sector, 1, readblocksize)) {
-					reseterrormode(ciw);
 					return ret;
 				}
 				ciw->cda.cd_last_pos = sector;
@@ -629,19 +613,15 @@ static int ioctl_command_readwrite(int unitnum, int sector, int size, int do_wri
 	while (cnt-- > 0) {
 		off_t offset = (off_t)sector * ciw->di.bytespersector;
 		gui_flicker_led(LED_CD, unitnum, LED_CD_ACTIVE);
-		seterrormode(ciw);
 		if (lseek(ciw->fd, offset, SEEK_SET) == (off_t)-1) {
-			reseterrormode(ciw);
 			if (win32_error(ciw, unitnum, _T("SetFilePointer")) < 0)
 				continue;
 			return 0;
 		}
-		reseterrormode(ciw);
 		break;
 	}
 	while (size-- > 0) {
 		gui_flicker_led(LED_CD, unitnum, LED_CD_ACTIVE);
-		seterrormode(ciw);
 		if (do_write) {
 			if (data) {
 				memcpy(p, data, blocksize);
@@ -649,7 +629,6 @@ static int ioctl_command_readwrite(int unitnum, int sector, int size, int do_wri
 			}
 			if (write(ciw->fd, p, blocksize) != blocksize) {
 				int err;
-				reseterrormode(ciw);
 				err = win32_error(ciw, unitnum, _T("write"));
 				if (err < 0)
 					continue;
@@ -661,7 +640,6 @@ static int ioctl_command_readwrite(int unitnum, int sector, int size, int do_wri
 		else {
 			dtotal = read(ciw->fd, p, blocksize);
 			if (dtotal != blocksize) {
-				reseterrormode(ciw);
 				if (win32_error(ciw, unitnum, _T("read")) < 0)
 					continue;
 				return 0;
@@ -679,7 +657,6 @@ static int ioctl_command_readwrite(int unitnum, int sector, int size, int do_wri
 				data += blocksize;
 			}
 		}
-		reseterrormode(ciw);
 		gui_flicker_led(LED_CD, unitnum, LED_CD_ACTIVE);
 	}
 	return 1;
@@ -701,8 +678,13 @@ static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device
     if (!open_createfile(ciw, 0))
         return 0;
     uae_sem_wait(&ciw->cda.sub_sem);
-
-	int status = ioctl(ciw->fd, CDROM_DRIVE_STATUS, CDSL_NONE);
+	int fd = open(ciw->devname, O_RDONLY);
+	int status = ioctl(fd, CDROM_DRIVE_STATUS, CDSL_NONE);
+	close(fd);
+	if (status == -1)
+	{
+		perror("IOCTL: CDROM_DRIVE_STATUS");
+	}
 	if (status != CDS_DISC_OK)
 	{
 		ciw->changed = true;
@@ -737,11 +719,9 @@ static int eject(int unitnum, bool eject)
     if (!open_createfile(ciw, 0))
         return 0;
     int ret = 0;
-    seterrormode(ciw);
     if (ioctl(ciw->fd, eject ? CDROMEJECT : CDROMCLOSETRAY, 0) < 0) {
         ret = 1;
     }
-    reseterrormode(ciw);
     return ret;
 }
 
@@ -766,17 +746,14 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	if (!open_createfile(ciw, 0))
 		return 0;
 	while (cnt-- > 0) {
-		seterrormode(ciw);
 		if (ioctl(ciw->fd, CDROMREADTOCHDR, &tochdr) == -1) {
 			int err = errno;
-			reseterrormode(ciw);
 			if (!hide_errors || (hide_errors && err == ENOMEDIUM)) {
 				if (win32_error(ciw, unitnum, _T("CDROMREADTOCHDR")) < 0)
 					continue;
 			}
 			return 0;
 		}
-		reseterrormode(ciw);
 		break;
 	}
 
@@ -799,7 +776,6 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 		tocentry.cdte_track = i + 1;
 		tocentry.cdte_format = CDROM_MSF;
 		if (ioctl(ciw->fd, CDROMREADTOCENTRY, &tocentry) == -1) {
-			reseterrormode(ciw);
 			return 0;
 		}
 		t->adr = tocentry.cdte_adr;
