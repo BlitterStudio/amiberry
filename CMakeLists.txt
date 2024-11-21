@@ -21,10 +21,10 @@ set(VERSION_PATCH "0")
 
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(PROJECT_NAME "Amiberry")
-else ()
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(PROJECT_NAME "amiberry")
+else ()
+    set(PROJECT_NAME "Amiberry")
 endif ()
 
 project(${PROJECT_NAME}
