@@ -63,6 +63,18 @@ jobs:
         run: |
           codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
 
+      - name: Create a zip to send to the notary service
+        run: |
+          zip -r Amiberry-${{ github.sha }}-macOS-x86_64.zip build/Amiberry.app
+
+      - name: Send the file to be notarized by Apple
+        run: |
+          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-x86_64.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }}
+
+      - name: Staple the notary receipt to the application bundle
+        run: |
+          xcrun stapler staple build/Amiberry.app
+
       - name: Create DMG package
         run: |
           cpack -G DragNDrop --config build/CPackConfig.cmake
@@ -123,6 +135,18 @@ jobs:
       - name: Codesign the app
         run: |
           codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
+
+      - name: Create a zip to send to the notary service
+        run: |
+          zip -r Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip build/Amiberry.app
+
+      - name: Send the file to be notarized by Apple
+        run: |
+          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }}
+
+      - name: Staple the notary receipt to the application bundle
+        run: |
+          xcrun stapler staple build/Amiberry.app
 
       - name: Create DMG package
         run: |
