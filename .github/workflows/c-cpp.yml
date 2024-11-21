@@ -24,6 +24,24 @@ jobs:
           brew update
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet dylibbundler
 
+      - name: Install the Apple certificate
+        env:
+          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
+          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # import certificate from secret
+          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          
+          # create keychain
+          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
+
       - name: make for macOS X64
         run: |
           cmake -B build && cmake --build build -j4
@@ -47,6 +65,24 @@ jobs:
           brew upgrade
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet dylibbundler
 
+      - name: Install the Apple certificate
+        env:
+          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
+          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # import certificate from secret
+          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          
+          # create keychain
+          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
+          
       - name: make for macOS Apple Silicon
         run: |
           cmake -B build && cmake --build build -j4
