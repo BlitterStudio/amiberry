@@ -96,6 +96,18 @@ jobs:
       - name: make for macOS Apple Silicon
         run: |
           cmake -B build && cmake --build build -j4
+          
+          # Codesign the dylibs
+          for file in Amiberry.app/Contents/Frameworks/*.dylib; do
+            if [ -f "$file" ]; then
+              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
+            fi
+          done
+          
+          # Codesign the app
+          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard Amiberry.app
+          
+          # Create the DMG
           cpack -G DragNDrop --config build/CPackConfig.cmake
 
       - name: Upload artifact
