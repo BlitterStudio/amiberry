@@ -69,7 +69,7 @@ jobs:
 
       - name: Send the file to be notarized by Apple
         run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-x86_64.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }}
+          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-x86_64.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Staple the notary receipt to the application bundle
         run: |
@@ -142,7 +142,7 @@ jobs:
 
       - name: Send the file to be notarized by Apple
         run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }}
+          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Staple the notary receipt to the application bundle
         run: |
