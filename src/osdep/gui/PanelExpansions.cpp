@@ -1022,6 +1022,7 @@ public:
 				}
 				cpuboard_set_cpu(&changed_prefs);
 				setcpuboardmemsize();
+				enable_for_expansion2dlg();
 				values_to_expansion2dlg();
 			}
 		}
@@ -1041,6 +1042,7 @@ public:
 				}
 				cpuboard_set_cpu(&changed_prefs);
 				setcpuboardmemsize();
+				enable_for_expansion2dlg();
 				values_to_expansion2dlg();
 			}
 		}
