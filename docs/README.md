@@ -43,8 +43,6 @@ If you're on Arch Linux you'll find Amiberry on the [AUR](https://aur.archlinux.
 
 Amiberry is available as a DMG package for macOS. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
 
-After installing it in your Applications folder, you'll need to open a console and run `xattr -rd com.apple.quarantine Amiberry.app`, to whitelist it and allow it to run. Alternatively, macOS might ask you about allowing it to run, and you'll have to manually do that (the exact steps differ from one macOS version to another).
-
 ### Distro package management
 
 Some distros (like RetroPie, DietPi, Pimiga and others) already include Amiberry either pre-installed, or through their package management systems. Please follow the methods provided in those distros for a smoother experience, and refer to their owners for support during this process.
