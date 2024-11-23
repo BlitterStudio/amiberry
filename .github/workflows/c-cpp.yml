@@ -24,16 +24,66 @@ jobs:
           brew update
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet dylibbundler
 
-      - name: make for macOS X64
+      - name: Install the Apple certificate
+        env:
+          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
+          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # import certificate from secret
+          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          
+          # create keychain
+          security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
+
+      - name: Build for macOS X64
         run: |
           cmake -B build && cmake --build build -j4
+
+      - name: Codesign the dylibs
+        run: |
+          for file in build/Amiberry.app/Contents/Frameworks/*.dylib; do
+            if [ -f "$file" ]; then
+              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
+            fi
+          done
+
+      - name: Codesign the app
+        run: |
+          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
+
+      - name: Create a zip to send to the notary service
+        run: |
+          zip -r Amiberry-${{ github.sha }}-macOS-x86_64.zip build/Amiberry.app
+
+      - name: Send the file to be notarized by Apple
+        run: |
+          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-x86_64.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Staple the notary receipt to the application bundle
+        run: |
+          xcrun stapler staple build/Amiberry.app
+
+      - name: Create DMG package
+        run: |
           cpack -G DragNDrop --config build/CPackConfig.cmake
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
-          path: amiberry-*.dmg
+          path: Amiberry-*.dmg
 
   build-macOS-Apple-Silicon:
     runs-on: macos-latest
@@ -47,16 +97,66 @@ jobs:
           brew upgrade
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet dylibbundler
 
-      - name: make for macOS Apple Silicon
+      - name: Install the Apple certificate
+        env:
+          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
+          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          # create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # import certificate from secret
+          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          
+          # create keychain
+          security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          
+          # import certificate to keychain
+          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
+          security list-keychains -d user -s $KEYCHAIN_PATH
+
+      - name: Build for macOS Apple Silicon
         run: |
           cmake -B build && cmake --build build -j4
+          
+      - name: Codesign the dylibs
+        run: |
+          for file in build/Amiberry.app/Contents/Frameworks/*.dylib; do
+            if [ -f "$file" ]; then
+              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
+            fi
+          done
+
+      - name: Codesign the app
+        run: |
+          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
+
+      - name: Create a zip to send to the notary service
+        run: |
+          zip -r Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip build/Amiberry.app
+
+      - name: Send the file to be notarized by Apple
+        run: |
+          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Staple the notary receipt to the application bundle
+        run: |
+          xcrun stapler staple build/Amiberry.app
+
+      - name: Create DMG package
+        run: |
           cpack -G DragNDrop --config build/CPackConfig.cmake
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-apple-silicon
-          path: amiberry-*.dmg
+          path: Amiberry-*.dmg
 
   build-ubuntu-24-amd64:
     runs-on: ubuntu-24.04

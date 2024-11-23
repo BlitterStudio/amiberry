@@ -891,7 +891,7 @@ public:
 
 		if (source == btnScsiRomChooser)
 		{
-			const char* filter[] = { ".rom", ".bin", "\0" };
+			const char* filter[] = { ".rom", ".bin", ".vbi", "\0" };
 			std::string full_path = SelectFile("Select ROM", get_rom_path(), filter);
 			if (!full_path.empty())
 			{
@@ -908,7 +908,7 @@ public:
 		}
 		else if (source == btnCpuBoardRomChooser)
 		{
-			const char* filter[] = { ".rom", ".bin", "\0" };
+			const char* filter[] = { ".rom", ".bin", ".vbi", "\0" };
 			std::string full_path = SelectFile("Select ROM", get_rom_path(), filter);
 			if (!full_path.empty())
 			{
@@ -1022,6 +1022,7 @@ public:
 				}
 				cpuboard_set_cpu(&changed_prefs);
 				setcpuboardmemsize();
+				enable_for_expansion2dlg();
 				values_to_expansion2dlg();
 			}
 		}
@@ -1041,6 +1042,7 @@ public:
 				}
 				cpuboard_set_cpu(&changed_prefs);
 				setcpuboardmemsize();
+				enable_for_expansion2dlg();
 				values_to_expansion2dlg();
 			}
 		}
