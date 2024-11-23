@@ -29,6 +29,7 @@ project(amiberry
 )
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(PROJECT_NAME "Amiberry")
+    set(CMAKE_PROJECT_NAME "Amiberry")
 endif ()
 set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")  # Reverse domain name notation
