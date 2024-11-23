@@ -21,18 +21,15 @@ set(VERSION_PATCH "0")
 
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(PROJECT_NAME "amiberry")
-else ()
-    set(PROJECT_NAME "Amiberry")
-endif ()
-
-project(${PROJECT_NAME}
+project(amiberry
         VERSION ${VERSION}
         LANGUAGES C CXX
         DESCRIPTION "Optimized Amiga emulator for various platforms"
         HOMEPAGE_URL "https://amiberry.com"
 )
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(PROJECT_NAME "Amiberry")
+endif ()
 set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")  # Reverse domain name notation
 
