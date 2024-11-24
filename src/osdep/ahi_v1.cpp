@@ -127,6 +127,8 @@ void ahi_updatesound(int force)
 	SDL_LockAudioDevice(ahi_dev);
 	pos = SDL_GetQueuedAudioSize(ahi_dev);
 	SDL_UnlockAudioDevice(ahi_dev);
+	// safety check to limit the number of bytes being queued
+	if (pos > 65536) return;
 
 	pos -= ahitweak;
 	if (pos < 0)
@@ -161,10 +163,11 @@ void ahi_updatesound(int force)
 
 	// Copy the audio data to the buffer
 	memcpy(dwData1, ahisndbuffer, dwBytes1);
-	SDL_QueueAudio(ahi_dev, dwData1, dwBytes1);
-
+	
 	sndptrmax = ahisndbuffer + ahisndbufsize;
 	ahisndbufpt = reinterpret_cast<int*>(ahisndbuffer);
+
+	SDL_QueueAudio(ahi_dev, dwData1, dwBytes1);
 
 	oldpos += amigablksize * 4;
 	if (oldpos >= ahisndbufsize)
@@ -301,7 +304,6 @@ static int ahi_init_sound(void)
 	sndptrmax = ahisndbuffer + ahisndbufsize;
 	memset(ahisndbuffer, soundneutral, static_cast<size_t>(amigablksize) * 8);
 	ahi_on = 1;
-
 	return sound_freq_ahi;
 }
 
@@ -405,7 +407,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	case 3:
 		{
 			//Recording
-#ifdef WIN32
+#ifdef _WIN32
 		LPVOID pos1, pos2;
 		DWORD t, cur_pos;
 		uaecptr addr;
