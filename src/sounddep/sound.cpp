@@ -2,13 +2,14 @@
   * Sdl sound.c implementation
   * (c) 2015
   */
-#include <string.h>
+#include <cstring>
 #include <unistd.h>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <math.h>
+#include <cmath>
+#include <algorithm>
 
 #include "options.h"
 #include "audio.h"
@@ -51,6 +52,7 @@ struct sound_dp
 #define ADJUST_VSSIZE 12
 #define EXPVS 1.6
 
+int sound_debug = 0;
 static int have_sound = 0;
 static int statuscnt;
 
@@ -98,6 +100,10 @@ void update_sound(float clk)
 
 extern frame_time_t vsynctimebase_orig;
 
+#ifndef AVIOUTPUT
+static int avioutput_audio;
+#endif
+
 #define ADJUST_LIMIT 6
 #define ADJUST_LIMIT2 1
 
@@ -109,7 +115,13 @@ void sound_setadjust(float v)
 		v = ADJUST_LIMIT;
 
 	const float mult = 1000.0f + v;
+#ifdef AVIOUTPUT
+	if (avioutput_audio && avioutput_enabled && avioutput_nosoundsync)
+		mult = 1000.0f;
+	if (isvsync_chipset() || (avioutput_audio && avioutput_enabled && !currprefs.cachesize)) {
+#else
 	if (isvsync_chipset()) {
+#endif
 		vsynctimebase = vsynctimebase_orig;
 		scaled_sample_evtime = scaled_sample_evtime_orig * mult / 1000.0f;
 	}
@@ -130,8 +142,7 @@ static void docorrection(struct sound_dp* s, int sndbuf, float sync, int granula
 	s->avg_correct += sync;
 	s->cnt_correct++;
 
-	if (granulaty < 10)
-		granulaty = 10;
+	granulaty = std::max(granulaty, 10);
 
 	if (tfprev != timeframes) {
 		const auto avg = s->avg_correct / s->cnt_correct;
@@ -139,6 +150,9 @@ static void docorrection(struct sound_dp* s, int sndbuf, float sync, int granula
 		auto skipmode = sync / 100.0f;
 		const auto avgskipmode = avg / (10000.0f / granulaty);
 
+		if (sound_debug && (tfprev % 10) == 0) {
+			write_log(_T("%+05d S=%7.1f AVG=%7.1f (IMM=%7.1f + AVG=%7.1f = %7.1f)\n"), sndbuf, sync, avg, skipmode, avgskipmode, skipmode + avgskipmode);
+		}
 		gui_data.sndbuf = sndbuf;
 
 		if (skipmode > ADJUST_LIMIT2)
@@ -156,7 +170,7 @@ static float sync_sound(float m)
 	float skipmode;
 	if (isvsync()) {
 
-		skipmode = (float)pow(m < 0 ? -m : m, EXPVS) / 2.0f;
+		skipmode = static_cast<float>(pow(m < 0 ? -m : m, EXPVS)) / 2.0f;
 		if (m < 0)
 			skipmode = -skipmode;
 		if (skipmode < -ADJUST_VSSIZE)
@@ -167,7 +181,7 @@ static float sync_sound(float m)
 	}
 	else {
 
-		skipmode = (float)pow(m < 0 ? -m : m, EXP) / 2.0f;
+		skipmode = static_cast<float>(pow(m < 0 ? -m : m, EXP)) / 2.0f;
 		if (m < 0)
 			skipmode = -skipmode;
 		if (skipmode < -ADJUST_SIZE)
@@ -190,7 +204,7 @@ static void clearbuffer_sdl2(struct sound_data *sd)
 
 static void clearbuffer(struct sound_data* sd)
 {
-	auto* s = sd->data;
+	const auto* s = sd->data;
 	if (sd->devicetype == SOUND_DEVICE_SDL2)
 		clearbuffer_sdl2(sd);
 	if (s->pullbuffer) {
@@ -286,7 +300,8 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 		s->pullbufferlen = 0;
 		gui_data.sndbuf_status = 1;
 	}
-	else gui_data.sndbuf_status = 0;
+	else 
+		gui_data.sndbuf_status = 0;
 	memcpy(s->pullbuffer + s->pullbufferlen, sndbuffer, sd->sndbufsize);
 	s->pullbufferlen += sd->sndbufsize;
 
@@ -301,8 +316,7 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	auto devname = sound_devices[index]->name;
 
 	sd->devicetype = SOUND_DEVICE_SDL2;
-	if (sd->sndbufsize < 0x80)
-		sd->sndbufsize = 0x80;
+	sd->sndbufsize = std::max(sd->sndbufsize, 0x80);
 	s->framesperbuffer = sd->sndbufsize;
 	s->sndbufsize = s->framesperbuffer;
 	sd->sndbufsize = s->sndbufsize * ch * 2;
@@ -397,7 +411,7 @@ static int open_sound()
 	/* Always interpret buffer size as number of samples, not as actual
 	buffer size.  Of course, since 8192 is the default, we'll have to
 	scale that to a sane value (assuming that otherwise 16 bits and
-	stereo would have been enabled and we'd have done the shift by
+	stereo would have been enabled, and we'd have done the shift by
 	two anyway).  */
 	size >>= 2;
 	size &= ~63;
@@ -548,7 +562,7 @@ static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuf
 	sound_dp* s = sd->data;
 	if (sd->mute) {
 		memset(sndbuffer, 0, sd->sndbufsize);
-		s->silence_written++; // In push mode no sound gen means no audio push so this might not incremented frequently
+		s->silence_written++; // In push mode no sound gen means no audio push so this might not be incremented frequently
 	}
 	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
 }
@@ -607,8 +621,7 @@ static void send_sound(struct sound_data* sd, uae_u16* sndbuffer)
 			p[i] = p[i] * sd->softvolume / 32768;
 		}
 	}
-	if (type == SOUND_DEVICE_SDL2)
-		finish_sound_buffer_sdl2(sd, sndbuffer);
+	finish_sound_buffer_sdl2(sd, sndbuffer);
 }
 
 int get_sound_event(void)
@@ -633,7 +646,7 @@ bool audio_is_event_frame_possible(int)
 	if (type == SOUND_DEVICE_SDL2)
 	{
 		sound_dp* s = sdp->data;
-		int bufsize = reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer);
+		int bufsize = static_cast<int>(reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer));
 		bufsize /= sdp->samplesize;
 		const int todo = s->sndbufsize - bufsize;
 		int samplesperframe = sdp->obtainedfreq / static_cast<int>(vblank_hz);
@@ -646,7 +659,8 @@ int audio_is_pull()
 {
 	if (sdp->reset)
 		return 0;
-	if (auto* s = sdp->data; s && s->pullmode) {
+	const auto* s = sdp->data;
+	if (s && s->pullmode) {
 		return sdp->paused || sdp->deactive ? -1 : 1;
 	}
 	return 0;
@@ -657,9 +671,11 @@ int audio_pull_buffer()
 	auto cnt = 0;
 	if (sdp->paused || sdp->deactive || sdp->reset)
 		return 0;
-	if (const auto* s = sdp->data; s->pullbufferlen > 0) {
+	const auto* s = sdp->data;
+	if (s->pullbufferlen > 0) {
 		cnt++;
-		if (const auto size = reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer); size > static_cast<long>(sdp->sndbufsize) * 2 / 3)
+		int size = static_cast<int>(reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer));
+		if (size > sdp->sndbufsize * 2 / 3)
 			cnt++;
 	}
 	return cnt;
@@ -676,8 +692,6 @@ bool audio_finish_pull()
 {
 	const int type = sdp->devicetype;
 	if (sdp->paused || sdp->deactive || sdp->reset)
-		return false;
-	if (type != SOUND_DEVICE_SDL2)
 		return false;
 	if (audio_pull_buffer() && audio_is_pull_event()) {
 		return send_sound_do(sdp);
@@ -724,7 +738,7 @@ static void handle_reset()
 void finish_sound_buffer()
 {
 	static unsigned long tframe;
-	const auto bufsize = reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer);
+	int bufsize = static_cast<int>(reinterpret_cast<uae_u8*>(paula_sndbufpt) - reinterpret_cast<uae_u8*>(paula_sndbuffer));
 
 	if (sdp->reset) {
 		handle_reset();
@@ -747,7 +761,16 @@ void finish_sound_buffer()
 #endif
 	// must be after driveclick_mix
 	paula_sndbufpt = paula_sndbuffer;
-
+#ifdef AVIOUTPUT
+	if (avioutput_audio) {
+		if (AVIOutput_WriteAudio((uae_u8*)paula_sndbuffer, bufsize)) {
+			if (avioutput_nosoundsync)
+				sound_setadjust(0);
+		}
+	}
+	if (avioutput_enabled && (!avioutput_framelimiter || avioutput_nosoundoutput))
+		return;
+#endif
 	if (!have_sound)
 		return;
 
@@ -855,15 +878,11 @@ void sound_volume(int dir)
 {
 	currprefs.sound_volume_master -= dir * 10;
 	currprefs.sound_volume_cd -= dir * 10;
-	if (currprefs.sound_volume_master < 0)
-		currprefs.sound_volume_master = 0;
-	if (currprefs.sound_volume_master > 100)
-		currprefs.sound_volume_master = 100;
+	currprefs.sound_volume_master = std::max(currprefs.sound_volume_master, 0);
+	currprefs.sound_volume_master = std::min(currprefs.sound_volume_master, 100);
 	changed_prefs.sound_volume_master = currprefs.sound_volume_master;
-	if (currprefs.sound_volume_cd < 0)
-		currprefs.sound_volume_cd = 0;
-	if (currprefs.sound_volume_cd > 100)
-		currprefs.sound_volume_cd = 100;
+	currprefs.sound_volume_cd = std::max(currprefs.sound_volume_cd, 0);
+	currprefs.sound_volume_cd = std::min(currprefs.sound_volume_cd, 100);
 	changed_prefs.sound_volume_cd = currprefs.sound_volume_cd;
 	set_volume(currprefs.sound_volume_master, sdp->mute);
 	config_changed = 1;
@@ -878,8 +897,7 @@ void master_sound_volume(int dir)
 	if (dir == 0)
 		mute = mute ? 0 : 1;
 	vol += dir * (65536 / 10);
-	if (vol < 0)
-		vol = 0;
+	vol = std::max(vol, 0);
 	if (vol > SDL_MIX_MAXVOLUME)
 		vol = SDL_MIX_MAXVOLUME;
 	set_master_volume(vol, mute);
