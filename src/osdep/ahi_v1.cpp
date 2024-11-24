@@ -116,12 +116,6 @@ void ahi_updatesound(int force)
 
 		// Start playing audio
 		SDL_PauseAudioDevice(ahi_dev, 0);
-
-		// SDL2 does not have a direct equivalent for buffer restoration, but we can clear the queued audio
-		if (SDL_GetQueuedAudioSize(ahi_dev) == 0) {
-			SDL_ClearQueuedAudio(ahi_dev);
-			SDL_PauseAudioDevice(ahi_dev, 0);
-		}
 	}
 
 	SDL_LockAudioDevice(ahi_dev);
