@@ -1075,8 +1075,12 @@ static void serdatcopy(void)
 
 void serial_hsynchandler (void)
 {
+	// We handle this in ahi_hsync() instead
+#ifndef AMIBERRY
 #ifdef AHI
-	//hsyncstuff();
+	extern void hsyncstuff(void);
+	hsyncstuff();
+#endif
 #endif
 	bool can = canreceive();
 
