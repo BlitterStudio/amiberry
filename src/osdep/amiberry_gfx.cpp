@@ -151,14 +151,16 @@ bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int he
 	return mode->w % width == 0 && mode->h % height == 0;
 }
 
+// Set the scaling method based on the user's preferences
 // Scaling methods available:
 // -1: Auto select between Nearest Neighbor and Linear (default)
 // 0: Nearest Neighbor
 // 1: Linear
-// 2: Integer Scaling (Nearest Neighbor)
+// 2: Integer Scaling (this uses Nearest Neighbor)
 void set_scaling_option(const uae_prefs* p, const int width, const int height)
 {
-	if (p->scaling_method == -1) {
+	if (p->scaling_method == -1)
+	{
 		if (isModeAspectRatioExact(&sdl_mode, width, height))
 		{
 #ifdef USE_OPENGL
@@ -179,8 +181,8 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 			SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
 #endif
 		}
-	} else if (p->scaling_method == 0)
-
+	}
+	else if (p->scaling_method == 0)
 	{
 #ifdef USE_OPENGL
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -191,7 +193,6 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 #endif
 	}
 	else if (p->scaling_method == 1)
-
 	{
 #ifdef USE_OPENGL
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -206,7 +207,6 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_TRUE);
 	}
-
 #ifdef USE_OPENGL
 	glBindTexture(GL_TEXTURE_2D, 0);
 #endif
