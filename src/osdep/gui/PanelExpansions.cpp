@@ -86,14 +86,14 @@ static void gui_add_string(int* table, gcn::StringListModel* item, int id, const
 		table++;
 	*table++ = id;
 	*table = -1;
-	item->add(str); //SendDlgItemMessage(hDlg, item, CB_ADDSTRING, 0, (LPARAM)str);
+	item->add(str);
 }
 static void gui_set_string_cursor(int* table, gcn::DropDown* item, int id)
 {
 	int idx = 0;
 	while (*table >= 0) {
 		if (*table == id) {
-			item->setSelected(idx); //SendDlgItemMessage(item, CB_SETCURSEL, idx, 0);
+			item->setSelected(idx);
 			return;
 		}
 		idx++;
@@ -102,7 +102,7 @@ static void gui_set_string_cursor(int* table, gcn::DropDown* item, int id)
 }
 static int gui_get_string_cursor(int* table, gcn::DropDown* item)
 {
-	int posn = item->getSelected(); //SendDlgItemMessage(item, CB_GETCURSEL, 0, 0);
+	int posn = item->getSelected();
 	if (posn < 0)
 		return -1;
 	return table[posn];
@@ -113,7 +113,7 @@ static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 	auto val = d->getSelected();
 
 	romdata* rd;
-	auto tmp1 = d->getListModel()->getElementAt(val);	//SendDlgItemMessage(d, CB_GETLBTEXT, (WPARAM)val, (LPARAM)tmp1);
+	auto tmp1 = d->getListModel()->getElementAt(val);
 	path[0] = 0;
 	rd = getromdatabyname(tmp1.c_str());
 	if (rd) {
@@ -132,11 +132,11 @@ static void enable_for_expansion2dlg()
 	chkCD32Fmv->setEnabled(!emulating);
 	chkSana2->setEnabled(!emulating);
 
-	cboCpuBoardRomFile->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMFILE, workprefs.cpuboard_type != 0);
-	btnCpuBoardRomChooser->setEnabled(changed_prefs.cpuboard_type != 0); //ew(hDlg, IDC_CPUBOARDROMCHOOSER, workprefs.cpuboard_type != 0);
-	sldCpuBoardMem->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDMEM, workprefs.cpuboard_type > 0);
-	lblCpuBoardRam->setEnabled(changed_prefs.cpuboard_type > 0); //ew(hDlg, IDC_CPUBOARDRAM, workprefs.cpuboard_type > 0);
-	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type); //ew(hDlg, IDC_CPUBOARD_SUBTYPE, workprefs.cpuboard_type);
+	cboCpuBoardRomFile->setEnabled(changed_prefs.cpuboard_type != 0);
+	btnCpuBoardRomChooser->setEnabled(changed_prefs.cpuboard_type != 0);
+	sldCpuBoardMem->setEnabled(changed_prefs.cpuboard_type > 0);
+	lblCpuBoardRam->setEnabled(changed_prefs.cpuboard_type > 0);
+	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type);
 }
 
 static void setcpuboardmemsize()
@@ -158,41 +158,34 @@ static void setcpuboardmemsize()
 		changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
 
 	int maxmem = cpuboard_maxmemory(&changed_prefs);
-	if (changed_prefs.cpuboardmem1.size > maxmem) {
-		changed_prefs.cpuboardmem1.size = maxmem;
-	}
+	changed_prefs.cpuboardmem1.size = std::min<uae_u32>(changed_prefs.cpuboardmem1.size, maxmem);
 	if (maxmem <= 8 * 1024 * 1024)
 	{
-		sldCpuBoardMem->setScaleStart(MIN_CB_MEM); //	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_Z2));
+		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
 		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_Z2);
 	}
 	else if (maxmem <= 16 * 1024 * 1024)
 	{
-		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_16M));
 		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
 		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_16M);
 	}
 	else if (maxmem <= 32 * 1024 * 1024)
 	{
-		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_32M));
 		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
 		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_32M);
 	}
 	else if (maxmem <= 64 * 1024 * 1024)
 	{
-		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_64M));
 		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
 		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_64M);
 	}
 	else if (maxmem <= 128 * 1024 * 1024)
 	{
-		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_128M));
 		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
 		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_128M);
 	}
 	else
 	{
-		//	SendDlgItemMessage(IDC_CPUBOARDMEM, TBM_SETRANGE, TRUE, MAKELONG(MIN_CB_MEM, MAX_CB_MEM_256M));
 		sldCpuBoardMem->setScaleStart(MIN_CB_MEM);
 		sldCpuBoardMem->setScaleEnd(MAX_CB_MEM_256M);
 	}
@@ -210,11 +203,11 @@ static void setcpuboardmemsize()
 	case 0x08000000: mem_size = 8; break;
 	case 0x10000000: mem_size = 9; break;
 	}
-	sldCpuBoardMem->setValue(mem_size); //SendDlgItemMessage(hDlg, IDC_CPUBOARDMEM, TBM_SETPOS, TRUE, mem_size);
-	lblCpuBoardRam->setCaption(memsize_names[msi_cpuboard[mem_size]]); //SetDlgItemText(hDlg, IDC_CPUBOARDRAM, memsize_names[msi_cpuboard[mem_size]]);
+	sldCpuBoardMem->setValue(mem_size);
+	lblCpuBoardRam->setCaption(memsize_names[msi_cpuboard[mem_size]]);
 	lblCpuBoardRam->adjustSize();
-	cboCpuBoardType->setSelected(changed_prefs.cpuboard_type); //SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);//SendDlgItemMessage(hDlg, IDC_CPUBOARD_TYPE, CB_SETCURSEL, changed_prefs.cpuboard_type, 0);
-	cboCpuBoardSubType->setSelected(changed_prefs.cpuboard_subtype); //SendDlgItemMessage(hDlg, IDC_CPUBOARD_SUBTYPE, CB_SETCURSEL, changed_prefs.cpuboard_subtype, 0);
+	cboCpuBoardType->setSelected(changed_prefs.cpuboard_type);
+	cboCpuBoardSubType->setSelected(changed_prefs.cpuboard_subtype);
 }
 
 struct expansionrom_gui
@@ -311,13 +304,13 @@ retry:
 		bitcnt += eb->bitshift;
 	}
 	if (reset) {
-		auto list_model = itemselector->getListModel(); //xSendDlgItemMessage(hDlg, itemselector, CB_RESETCONTENT, 0, 0);
+		auto list_model = itemselector->getListModel();
 		list_model->clear();
 		for (int i = 0; ebs[i].name; i++) {
 			eb = &ebs[i];
-			list_model->add(eb->name); //xSendDlgItemMessage(hDlg, itemselector, CB_ADDSTRING, 0, (LPARAM)eb->name);
+			list_model->add(eb->name);
 		}
-		itemselector->setSelected(item); //xSendDlgItemMessage(hDlg, itemselector, CB_SETCURSEL, item, 0);
+		itemselector->setSelected(item);
 	}
 	eb = &ebs[item];
 	bitcnt += eb->bitshift;
@@ -437,7 +430,7 @@ static void init_expansion2(bool init)
 		bool matched = false;
 		int* idtab;
 		int total = 0;		
-		scsirom_select_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECT, CB_RESETCONTENT, 0, 0);
+		scsirom_select_list.clear();
 		scsiromselect_table[0] = -1;
 		for (int i = 0; expansionroms[i].name; i++)
 		{
@@ -543,9 +536,9 @@ static void init_expansion2(bool init)
 
 	if (scsiromselected > 0)
 		gui_set_string_cursor(scsiromselect_table, cboScsiRomSelect, scsiromselected);
-	cboScsiRomSelectCat->setSelected(scsiromselectedcatnum); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTCAT, CB_SETCURSEL, scsiromselectedcatnum, 0);
+	cboScsiRomSelectCat->setSelected(scsiromselectedcatnum);
 
-	scsi_romid_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_RESETCONTENT, 0, 0);
+	scsi_romid_list.clear();
 	int index;
 	boardromconfig* brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
 	const expansionromtype* ert = &expansionroms[scsiromselected];
@@ -553,58 +546,58 @@ static void init_expansion2(bool init)
 		for (int i = 0; i < 8; i++) {
 			TCHAR tmp[10];
 			_stprintf(tmp, _T("%d"), i);
-			scsi_romid_list.add(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_ADDSTRING, 0, (LPARAM)tmp);
+			scsi_romid_list.add(tmp);
 		}
 	}
 	else {
-		scsi_romid_list.add(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_ADDSTRING, 0, (LPARAM)_T("-"));
-		cboScsiRomId->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, 0, 0);
-		cboScsiRomId->setEnabled(false); //ew(hDlg, IDC_SCSIROMID, 0);
+		scsi_romid_list.add(_T("-"));
+		cboScsiRomId->setSelected(0);
+		cboScsiRomId->setEnabled(false);
 	}
 }
 
 static void values_to_expansion2dlg_sub()
 {
-	cpuboard_rom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMSUBSELECT, CB_RESETCONTENT, 0, 0);
-	cboCpuRomSubSelect->setEnabled(false); //ew(hDlg, IDC_CPUBOARDROMSUBSELECT, false);
+	cpuboard_rom_subselect_list.clear();
+	cboCpuRomSubSelect->setEnabled(false);
 
-	scsirom_subselect_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_RESETCONTENT, 0, 0);
+	scsirom_subselect_list.clear();
 	const expansionromtype* er = &expansionroms[scsiromselected];
 	const expansionsubromtype* srt = er->subtypes;
 	int deviceflags = er->deviceflags;
-	cboScsiRomSubSelect->setEnabled(srt != nullptr); //ew(hDlg, IDC_SCSIROMSUBSELECT, srt != NULL);
+	cboScsiRomSubSelect->setEnabled(srt != nullptr);
 	while (srt && srt->name) {
-		scsirom_subselect_list.add(srt->name); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_ADDSTRING, 0, (LPARAM)srt->name);
+		scsirom_subselect_list.add(srt->name);
 		srt++;
 	}
 	int index;
 	boardromconfig* brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
 	if (brc && er->subtypes) {
-		cboScsiRomSubSelect->setSelected(brc->roms[index].subtype); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, brc->roms[index].subtype, 0);
-		cboScsiRomId->setSelected(brc->roms[index].device_id); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, brc->roms[index].device_id, 0);
+		cboScsiRomSubSelect->setSelected(brc->roms[index].subtype);
+		cboScsiRomId->setSelected(brc->roms[index].device_id);
 		deviceflags |= er->subtypes[brc->roms[index].subtype].deviceflags;
 	}
 	else if (srt) {
-		cboScsiRomSubSelect->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSUBSELECT, CB_SETCURSEL, 0, 0);
-		cboScsiRomId->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMID, CB_SETCURSEL, 0, 0);
+		cboScsiRomSubSelect->setSelected(0);
+		cboScsiRomId->setSelected(0);
 	}
-	scsirom_selectnum_list.clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_RESETCONTENT, 0, 0);
+	scsirom_selectnum_list.clear();
 	if (deviceflags & EXPANSIONTYPE_CLOCKPORT) {
-		scsirom_selectnum_list.add(_T("-")); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)_T("-"));
+		scsirom_selectnum_list.add(_T("-"));
 	}
 	for (int i = 0; i < MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS; i++) {
 		TCHAR tmp[10];
 		_stprintf(tmp, _T("%d"), i + 1);
-		scsirom_selectnum_list.add(tmp); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_ADDSTRING, 0, (LPARAM)tmp);
+		scsirom_selectnum_list.add(tmp);
 	}
-	cboScsiRomSelectNum->setSelected(scsiromselectednum); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, scsiromselectednum, 0);
+	cboScsiRomSelectNum->setSelected(scsiromselectednum);
 	if ((er->zorro < 2 || er->singleonly) && !(deviceflags & EXPANSIONTYPE_CLOCKPORT)) {
 		scsiromselectednum = 0;
-		cboScsiRomSelectNum->setSelected(0); //SendDlgItemMessage(hDlg, IDC_SCSIROMSELECTNUM, CB_SETCURSEL, 0, 0);
+		cboScsiRomSelectNum->setSelected(0);
 	}
-	cboScsiRomSelectNum->setEnabled((er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT)); //ew(hDlg, IDC_SCSIROMSELECTNUM, (er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT));
-	chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0); //hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
-	chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0); //ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
+	cboScsiRomSelectNum->setEnabled((er->zorro >= 2 && !er->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT));
+	chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0);
+	chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0);
 }
 
 static void values_from_expansion2dlg()
@@ -631,11 +624,11 @@ static void values_from_expansion2dlg()
 			changed = _tcscmp(tmp, brc->roms[index].romfile) != 0;
 			getromfile(cboScsiRomFile, brc->roms[index].romfile, MAX_DPATH / sizeof(TCHAR));
 		}
-		brc->roms[index].autoboot_disabled = chkScsiRomFileAutoboot->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEAUTOBOOT);
-		brc->roms[index].inserted = chkScsiRomFilePcmcia->isSelected(); //ischecked(hDlg, IDC_SCSIROMFILEPCMCIA);
-		brc->roms[index].dma24bit = chkScsiRom24bitDma->isSelected(); //ischecked(hDlg, IDC_SCSIROM24BITDMA);
+		brc->roms[index].autoboot_disabled = chkScsiRomFileAutoboot->isSelected();
+		brc->roms[index].inserted = chkScsiRomFilePcmcia->isSelected();
+		brc->roms[index].dma24bit = chkScsiRom24bitDma->isSelected();
 
-		int v = cboScsiRomId->getSelected(); //SendDlgItemMessage(IDC_SCSIROMID, CB_GETCURSEL, 0, 0L);
+		int v = cboScsiRomId->getSelected();
 		if (!isnew)
 			brc->roms[index].device_id = v;
 
@@ -645,7 +638,7 @@ static void values_from_expansion2dlg()
 			_tcscpy(brc->roms[index].configtext, expansion_gui_item.expansionrom_gui_string);
 		}
 
-		v = cboScsiRomSubSelect->getSelected(); //SendDlgItemMessage(IDC_SCSIROMSUBSELECT, CB_GETCURSEL, 0, 0L);
+		v = cboScsiRomSubSelect->getSelected();
 		brc->roms[index].subtype = v;
 	}
 	else {
@@ -705,51 +698,51 @@ static void values_to_expansion2_expansion_roms(UAEREG* fkey)
 			}
 			deviceflags |= esrt->deviceflags;
 		}
-		cboScsiRomFile->setEnabled(true); //ew(hDlg, IDC_SCSIROMFILE, true);
-		btnScsiRomChooser->setEnabled(true); //ew(hDlg, IDC_SCSIROMCHOOSER, true);
-		chkScsiRomFileAutoboot->setVisible(true); //hide(hDlg, IDC_SCSIROMFILEAUTOBOOT, 0);
+		cboScsiRomFile->setEnabled(true);
+		btnScsiRomChooser->setEnabled(true);
+		chkScsiRomFileAutoboot->setVisible(true);
 		if (romtype & ROMTYPE_NOT) {
-			btnScsiRomChooser->setVisible(false); //hide(hDlg, IDC_SCSIROMCHOOSER, 1);
-			cboScsiRomFile->setVisible(false); //hide(hDlg, IDC_SCSIROMFILE, 1);
-			chkScsiRomSelected->setVisible(true); //hide(hDlg, IDC_SCSIROMSELECTED, 0);
-			chkScsiRomSelected->setSelected(brc && brc->roms[index].romfile[0] != 0); //setchecked(hDlg, IDC_SCSIROMSELECTED, brc && brc->roms[index].romfile[0] != 0);
+			btnScsiRomChooser->setVisible(false);
+			cboScsiRomFile->setVisible(false);
+			chkScsiRomSelected->setVisible(true);
+			chkScsiRomSelected->setSelected(brc && brc->roms[index].romfile[0] != 0);
 		}
 		else {
-			btnScsiRomChooser->setVisible(true); //hide(hDlg, IDC_SCSIROMCHOOSER, 0);
-			cboScsiRomFile->setVisible(true); //hide(hDlg, IDC_SCSIROMFILE, 0);
-			chkScsiRomSelected->setVisible(false); //hide(hDlg, IDC_SCSIROMSELECTED, 1);
-			chkScsiRomSelected->setSelected(false); //setchecked(hDlg, IDC_SCSIROMSELECTED, false);
+			btnScsiRomChooser->setVisible(true);
+			cboScsiRomFile->setVisible(true);
+			chkScsiRomSelected->setVisible(false);
+			chkScsiRomSelected->setSelected(false);
 			addromfiles(fkey, cboScsiRomFile, brc ? brc->roms[index].romfile : nullptr, romtype, romtype_extra);
-			chkScsiRomFileAutoboot->setSelected(brc && brc->roms[index].autoboot_disabled); //setchecked(hDlg, IDC_SCSIROMFILEAUTOBOOT, brc && brc->roms[index].autoboot_disabled);
+			chkScsiRomFileAutoboot->setSelected(brc && brc->roms[index].autoboot_disabled);
 		}
 		if (deviceflags & EXPANSIONTYPE_PCMCIA) {
-			chkScsiRomFilePcmcia->setSelected(brc && brc->roms[index].inserted); //setchecked(hDlg, IDC_SCSIROMFILEPCMCIA, brc && brc->roms[index].inserted);
-			chkScsiRomFilePcmcia->setVisible(true); //hide(hDlg, IDC_SCSIROMFILEPCMCIA, 0);
+			chkScsiRomFilePcmcia->setSelected(brc && brc->roms[index].inserted);
+			chkScsiRomFilePcmcia->setVisible(true);
 		}
 		else {
-			chkScsiRomFilePcmcia->setVisible(false); //hide(hDlg, IDC_SCSIROMFILEPCMCIA, 1);
+			chkScsiRomFilePcmcia->setVisible(false);
 			if (brc)
 				brc->roms[index].inserted = false;
 		}
-		chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0); //hide(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) == 0);
-		chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0); //ew(hDlg, IDC_SCSIROM24BITDMA, (deviceflags & EXPANSIONTYPE_DMA24) != 0);
-		chkScsiRom24bitDma->setSelected(brc && brc->roms[index].dma24bit); //setchecked(hDlg, IDC_SCSIROM24BITDMA, brc && brc->roms[index].dma24bit);
+		chkScsiRom24bitDma->setVisible((deviceflags & EXPANSIONTYPE_DMA24) != 0);
+		chkScsiRom24bitDma->setEnabled((deviceflags & EXPANSIONTYPE_DMA24) != 0);
+		chkScsiRom24bitDma->setSelected(brc && brc->roms[index].dma24bit);
 	}
 	else {
-		btnScsiRomChooser->setVisible(true); //hide(hDlg, IDC_SCSIROMCHOOSER, 0);
-		cboScsiRomFile->setVisible(true); //hide(hDlg, IDC_SCSIROMFILE, 0);
-		chkScsiRomSelected->setVisible(false); //hide(hDlg, IDC_SCSIROMSELECTED, 1);
-		chkScsiRomFilePcmcia->setVisible(false); //hide(hDlg, IDC_SCSIROMFILEPCMCIA, 1);
-		chkScsiRomFileAutoboot->setVisible(false); //hide(hDlg, IDC_SCSIROMFILEAUTOBOOT, 1);
-		chkScsiRomSelected->setSelected(false); //setchecked(hDlg, IDC_SCSIROMSELECTED, false);
-		chkScsiRomFileAutoboot->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEAUTOBOOT, false);
-		chkScsiRomFilePcmcia->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEPCMCIA, false);
+		btnScsiRomChooser->setVisible(true);
+		cboScsiRomFile->setVisible(true);
+		chkScsiRomSelected->setVisible(false);
+		chkScsiRomFilePcmcia->setVisible(false);
+		chkScsiRomFileAutoboot->setVisible(false);
+		chkScsiRomSelected->setSelected(false);
+		chkScsiRomFileAutoboot->setSelected(false);
+		chkScsiRomFilePcmcia->setSelected(false);
 		auto list_model = cboScsiRomFile->getListModel();
-		list_model->clear(); //SendDlgItemMessage(hDlg, IDC_SCSIROMFILE, CB_RESETCONTENT, 0, 0);
-		cboScsiRomFile->setEnabled(false); //ew(hDlg, IDC_SCSIROMFILE, false);
-		btnScsiRomChooser->setEnabled(false); //ew(hDlg, IDC_SCSIROMCHOOSER, false);
-		chkScsiRom24bitDma->setEnabled(false); //ew(hDlg, IDC_SCSIROM24BITDMA, 0);
-		chkScsiRom24bitDma->setVisible(false); //hide(hDlg, IDC_SCSIROM24BITDMA, 1);
+		list_model->clear();
+		cboScsiRomFile->setEnabled(false);
+		btnScsiRomChooser->setEnabled(false);
+		chkScsiRom24bitDma->setEnabled(false);
+		chkScsiRom24bitDma->setVisible(false);
 	}
 	if (keyallocated)
 		regclosetree(fkey);
@@ -764,13 +757,13 @@ static void values_to_expansion2_expansion_settings()
 		brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
 		if (brc) {
 			if (brc->roms[index].romfile[0])
-				chkScsiRomFileAutoboot->setEnabled(ert->autoboot_jumper); //ew(hDlg, IDC_SCSIROMFILEAUTOBOOT, ert->autoboot_jumper);
+				chkScsiRomFileAutoboot->setEnabled(ert->autoboot_jumper);
 		}
 		else {
-			chkScsiRomFileAutoboot->setEnabled(false); //ew(hDlg, IDC_SCSIROMFILEAUTOBOOT, FALSE);
-			chkScsiRomFileAutoboot->setSelected(false); //setchecked(hDlg, IDC_SCSIROMFILEAUTOBOOT, false);
+			chkScsiRomFileAutoboot->setEnabled(false);
+			chkScsiRomFileAutoboot->setSelected(false);
 		}
-		cboScsiRomId->setEnabled(ert->id_jumper); //ew(hDlg, IDC_SCSIROMID, ert->id_jumper);
+		cboScsiRomId->setEnabled(ert->id_jumper);
 		const expansionboardsettings* cbs = ert->settings;
 		create_expansionrom_gui(&expansion_gui_item, cbs,
 			brc ? brc->roms[index].device_settings : 0,
@@ -841,7 +834,7 @@ static void expansion2dlgproc()
 	reset_expansionrom_gui(&expansion_gui_item, cboExpansionBoardItemSelector, cboExpansionBoardSelector, chkExpansionBoardCheckbox, txtExpansionBoardStringBox);
 	reset_expansionrom_gui(&accelerator_gui_item, cboAcceleratorBoardItemSelector, cboAcceleratorBoardSelector, chkAcceleratorBoardCheckbox, nullptr);
 
-	chkScsiRomSelected->setVisible(false); //hide(IDC_SCSIROMSELECTED, 1);
+	chkScsiRomSelected->setVisible(false);
 	init_expansion2(true);
 	updatecpuboardsubtypes();
 	setcpuboardmemsize();
@@ -873,7 +866,7 @@ static void values_to_expansion2dlg()
 	}
 	else {
 		auto list_model = cboCpuBoardRomFile->getListModel();
-		list_model->clear(); //SendDlgItemMessage(hDlg, IDC_CPUBOARDROMFILE, CB_RESETCONTENT, 0, 0);
+		list_model->clear();
 	}
 
 	regclosetree(fkey);

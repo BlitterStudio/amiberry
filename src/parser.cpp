@@ -543,7 +543,8 @@ void initparallel (void)
 		vpar_open();
 #endif
 	}
-
+	// We handle this in devices
+#ifndef AMIBERRY
 #ifdef AHI
 	if (uae_boot_rom_type) {
 #ifdef AMIBERRY
@@ -558,6 +559,7 @@ void initparallel (void)
 		init_ahi_v2 ();
 #endif
 	}
+#endif
 #endif
 }
 
@@ -582,7 +584,8 @@ void hsyncstuff (void)
 //check state of lwin rwin
 {
 	static int keycheck = 0;
-
+// We handle this in devices instead
+#ifndef AMIBERRY
 #ifdef AHI
 	{ //begin ahi_sound
 		static int count;
@@ -595,6 +598,7 @@ void hsyncstuff (void)
 			}
 		}
 	} //end ahi_sound
+#endif
 #endif
 #if 0 // Not implemented in Amiberry
 #ifdef PARALLEL_PORT
