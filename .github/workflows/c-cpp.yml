@@ -430,15 +430,4 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
-            amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
-            amiberry-fedora-40-x86_64/amiberry_*.rpm
-            amiberry-ubuntu-24.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-22.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-20.04-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-arm64/amiberry_*.deb
-            amiberry-debian-bookworm-armhf/amiberry_*.deb
-            amiberry-debian-bullseye-amd64/amiberry_*.deb
-            amiberry-debian-bullseye-arm64/amiberry_*.deb
-            amiberry-debian-bullseye-armhf/amiberry_*.deb
+            amiberry-*
