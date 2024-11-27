@@ -201,14 +201,14 @@ jobs:
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}ubuntu-24.04-amd64.zip amiberry_*.deb
+        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-24.04-amd64.zip amiberry_*.deb
 
       - name: Upload artifact for release
         if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-24.04-amd64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-ubuntu-22-amd64:
     runs-on: ubuntu-22.04
@@ -235,14 +235,14 @@ jobs:
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}ubuntu-22.04-amd64.zip amiberry_*.deb
+        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-22.04-amd64.zip amiberry_*.deb
 
       - name: Upload artifact for release
         if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-22.04-amd64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-ubuntu-20-amd64:
     runs-on: ubuntu-20.04
@@ -269,14 +269,14 @@ jobs:
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}ubuntu-20.04-amd64.zip amiberry_*.deb
+        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-20.04-amd64.zip amiberry_*.deb
 
       - name: Upload artifact for release
         if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-20.04-amd64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-fedora-x86_64:
     runs-on: ubuntu-latest
@@ -301,14 +301,14 @@ jobs:
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}fedora-x86_64.zip amiberry_*.rpm
+      run: zip -r amiberry-${{ github.ref_name }}-fedora-x86_64.zip amiberry-*.rpm
 
     - name: Upload artifact for release
       if: github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-fedora-x86_64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-debian-bullseye-amd64:
     runs-on: ubuntu-latest
@@ -333,14 +333,14 @@ jobs:
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}debian-bullseye-amd64.zip amiberry_*.deb
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-amd64.zip amiberry_*.deb
 
     - name: Upload artifact for release
       if: github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-debian-bullseye-amd64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-debian-bookworm-amd64:
     runs-on: ubuntu-latest
@@ -365,14 +365,14 @@ jobs:
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}debian-bookworm-amd64.zip amiberry_*.deb
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-amd64.zip amiberry_*.deb
 
     - name: Upload artifact for release
       if: github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-debian-bookworm-amd64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-debian-bookworm-arm64:
     runs-on: ubuntu-latest
@@ -397,14 +397,14 @@ jobs:
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}debian-bookworm-arm64.zip amiberry_*.deb
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-arm64.zip amiberry_*.deb
 
     - name: Upload artifact for release
       if: github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-debian-bookworm-arm64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-debian-bookworm-armhf:
     runs-on: ubuntu-latest
@@ -429,14 +429,14 @@ jobs:
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}debian-bookworm-armhf.zip amiberry_*.deb
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf.zip amiberry_*.deb
 
     - name: Upload artifact for release
       if: github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf
-        path: amiberry_*.zip
+        path: amiberry-*.zip
 
   build-debian-bullseye-arm64:
     runs-on: ubuntu-latest
@@ -461,14 +461,14 @@ jobs:
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}debian-bullseye-arm64.zip amiberry_*.deb
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-arm64.zip amiberry_*.deb
 
     - name: Upload artifact for release
       if: github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-debian-bullseye-arm64
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   build-debian-bullseye-armhf:
     runs-on: ubuntu-latest
@@ -493,14 +493,14 @@ jobs:
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}debian-bullseye-armhf.zip amiberry_*.deb
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf.zip amiberry_*.deb
 
     - name: Upload artifact for release
       if: github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-debian-bullseye-armhf
-          path: amiberry_*.zip
+          path: amiberry-*.zip
 
   create-release:
     needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
@@ -535,6 +535,7 @@ jobs:
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
             artifacts/amiberry-*.*
+            artifacts/Amiberry-*.*
 
   create-prerelease:
     needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64,build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
@@ -570,3 +571,4 @@ jobs:
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
             artifacts/amiberry-*.*
+            artifacts/Amiberry-*.*
