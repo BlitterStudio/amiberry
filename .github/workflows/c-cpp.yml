@@ -430,4 +430,15 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            amiberry-*
+            amiberry-macOS-64bit-intel/amiberry-*
+            amiberry-macOS-64bit-apple-silicon/amiberry-*
+            amiberry-fedora-40-x86_64/amiberry_*
+            amiberry-ubuntu-24.04-amd64/amiberry_*
+            amiberry-ubuntu-22.04-amd64/amiberry_*
+            amiberry-ubuntu-20.04-amd64/amiberry_*
+            amiberry-debian-bookworm-amd64/amiberry_*
+            amiberry-debian-bookworm-arm64/amiberry_*
+            amiberry-debian-bookworm-armhf/amiberry_*
+            amiberry-debian-bullseye-amd64/amiberry_*
+            amiberry-debian-bullseye-arm64/amiberry_*
+            amiberry-debian-bullseye-armhf/amiberry_*
