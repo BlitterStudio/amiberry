@@ -380,7 +380,13 @@ jobs:
           config_file: .github/tag-changelog-config.js
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
 
       - name: Create Release
         if: github.ref_type == 'tag'
@@ -390,18 +396,7 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
-            amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
-            amiberry-fedora-40-x86_64/amiberry_*.rpm
-            amiberry-ubuntu-24.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-22.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-20.04-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-arm64/amiberry_*.deb
-            amiberry-debian-bookworm-armhf/amiberry_*.deb
-            amiberry-debian-bullseye-amd64/amiberry_*.deb
-            amiberry-debian-bullseye-arm64/amiberry_*.deb
-            amiberry-debian-bullseye-armhf/amiberry_*.deb
+            artifacts/amiberry-*.*
 
   create-prerelease:
     needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-40-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64,build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
