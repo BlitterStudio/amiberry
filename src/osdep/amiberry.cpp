@@ -138,7 +138,10 @@ bool mouse_grabbed = false;
 
 std::string get_version_string()
 {
-	return "Amiberry " + std::string(AMIBERRY_VERSION);
+	const auto pre_release_string = std::string(AMIBERRY_VERSION_PRE_RELEASE);
+	if (pre_release_string.empty())
+		return "Amiberry " + std::string(AMIBERRY_VERSION);
+	return "Amiberry " + std::string(AMIBERRY_VERSION) + "-" + std::string(AMIBERRY_VERSION_PRE_RELEASE);
 }
 
 std::string get_copyright_notice()
