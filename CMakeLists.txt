@@ -18,6 +18,7 @@ option(WITH_LTO "Enable Link Time Optimization" OFF)
 set(VERSION_MAJOR "7")
 set(VERSION_MINOR "0")
 set(VERSION_PATCH "0")
+set(VERSION_PRE_RELEASE "RC1")
 
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 

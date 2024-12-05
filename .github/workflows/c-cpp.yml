@@ -74,16 +74,25 @@ jobs:
       - name: Staple the notary receipt to the application bundle
         run: |
           xcrun stapler staple build/Amiberry.app
+          rm Amiberry-${{ github.sha }}-macOS-x86_64.zip
 
       - name: Create DMG package
         run: |
           cpack -G DragNDrop --config build/CPackConfig.cmake
 
+      - name: ZIP package
+        if: github.ref_type != 'tag'
+        run: zip -r Amiberry-${{ github.sha }}-macOS-x86_64.zip Amiberry-*.dmg
+
+      - name: ZIP package for release
+        if: github.ref_type == 'tag'
+        run: zip -r Amiberry-${{ github.ref_name }}-macOS-x86_64.zip Amiberry-*.dmg
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-intel
-          path: Amiberry-*.dmg
+          path: Amiberry-*.zip
 
   build-macOS-Apple-Silicon:
     runs-on: macos-latest
@@ -147,16 +156,25 @@ jobs:
       - name: Staple the notary receipt to the application bundle
         run: |
           xcrun stapler staple build/Amiberry.app
+          rm Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip
 
       - name: Create DMG package
         run: |
           cpack -G DragNDrop --config build/CPackConfig.cmake
 
+      - name: ZIP package
+        if: github.ref_type != 'tag'
+        run: zip -r Amiberry-${{ github.sha }}-macOS-apple-silicon.zip Amiberry-*.dmg
+
+      - name: ZIP package for release
+        if: github.ref_type == 'tag'
+        run: zip -r Amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip Amiberry-*.dmg
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-macOS-64bit-apple-silicon
-          path: Amiberry-*.dmg
+          path: Amiberry-*.zip
 
   build-ubuntu-24-amd64:
     runs-on: ubuntu-24.04
@@ -175,10 +193,22 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
+        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-24.04-amd64
           path: amiberry_*.deb
+
+      - name: ZIP package for release
+        if: github.ref_type == 'tag'
+        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-24.04-amd64.zip amiberry_*.deb
+
+      - name: Upload artifact for release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-ubuntu-24.04-amd64
+          path: amiberry-*.zip
 
   build-ubuntu-22-amd64:
     runs-on: ubuntu-22.04
@@ -197,10 +227,22 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
+        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-22.04-amd64
           path: amiberry_*.deb
+
+      - name: ZIP package for release
+        if: github.ref_type == 'tag'
+        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-22.04-amd64.zip amiberry_*.deb
+
+      - name: Upload artifact for release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-ubuntu-22.04-amd64
+          path: amiberry-*.zip
 
   build-ubuntu-20-amd64:
     runs-on: ubuntu-20.04
@@ -219,12 +261,24 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
+        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-20.04-amd64
           path: amiberry_*.deb
 
-  build-fedora-40-x86_64:
+      - name: ZIP package for release
+        if: github.ref_type == 'tag'
+        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-20.04-amd64.zip amiberry_*.deb
+
+      - name: Upload artifact for release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-ubuntu-20.04-amd64
+          path: amiberry-*.zip
+
+  build-fedora-x86_64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -239,10 +293,22 @@ jobs:
           cpack -G RPM --config build/CPackConfig.cmake
 
     - name: Upload artifact
+      if: github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
-        name: amiberry-fedora-40-x86_64
+        name: amiberry-fedora-x86_64
         path: amiberry-*.rpm
+
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-fedora-x86_64.zip amiberry-*.rpm
+
+    - name: Upload artifact for release
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+          name: amiberry-fedora-x86_64
+          path: amiberry-*.zip
 
   build-debian-bullseye-amd64:
     runs-on: ubuntu-latest
@@ -259,10 +325,22 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
+      if: github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-amd64
         path: amiberry_*.deb
+
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-amd64.zip amiberry_*.deb
+
+    - name: Upload artifact for release
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+          name: amiberry-debian-bullseye-amd64
+          path: amiberry-*.zip
 
   build-debian-bookworm-amd64:
     runs-on: ubuntu-latest
@@ -279,10 +357,22 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
+      if: github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-amd64
         path: amiberry_*.deb
+
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-amd64.zip amiberry_*.deb
+
+    - name: Upload artifact for release
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+          name: amiberry-debian-bookworm-amd64
+          path: amiberry-*.zip
 
   build-debian-bookworm-arm64:
     runs-on: ubuntu-latest
@@ -299,10 +389,22 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
+      if: github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-arm64
         path: amiberry_*.deb
+
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-arm64.zip amiberry_*.deb
+
+    - name: Upload artifact for release
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+          name: amiberry-debian-bookworm-arm64
+          path: amiberry-*.zip
 
   build-debian-bookworm-armhf:
     runs-on: ubuntu-latest
@@ -319,10 +421,22 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
+      if: github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bookworm-armhf
         path: amiberry_*.deb
+
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf.zip amiberry_*.deb
+
+    - name: Upload artifact for release
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+        name: amiberry-debian-bookworm-armhf
+        path: amiberry-*.zip
 
   build-debian-bullseye-arm64:
     runs-on: ubuntu-latest
@@ -339,10 +453,22 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
+      if: github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-arm64
         path: amiberry_*.deb
+
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-arm64.zip amiberry_*.deb
+
+    - name: Upload artifact for release
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+          name: amiberry-debian-bullseye-arm64
+          path: amiberry-*.zip
 
   build-debian-bullseye-armhf:
     runs-on: ubuntu-latest
@@ -359,13 +485,25 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
+      if: github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-armhf
         path: amiberry_*.deb
 
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf.zip amiberry_*.deb
+
+    - name: Upload artifact for release
+      if: github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+          name: amiberry-debian-bullseye-armhf
+          path: amiberry-*.zip
+
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-40-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
@@ -380,7 +518,13 @@ jobs:
           config_file: .github/tag-changelog-config.js
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
 
       - name: Create Release
         if: github.ref_type == 'tag'
@@ -390,21 +534,11 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
-            amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
-            amiberry-fedora-40-x86_64/amiberry_*.rpm
-            amiberry-ubuntu-24.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-22.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-20.04-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-arm64/amiberry_*.deb
-            amiberry-debian-bookworm-armhf/amiberry_*.deb
-            amiberry-debian-bullseye-amd64/amiberry_*.deb
-            amiberry-debian-bullseye-arm64/amiberry_*.deb
-            amiberry-debian-bullseye-armhf/amiberry_*.deb
+            artifacts/amiberry-*.*
+            artifacts/Amiberry-*.*
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-40-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64,build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-ubuntu-20-amd64,build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     steps:
@@ -419,7 +553,13 @@ jobs:
           config_file: .github/tag-changelog-config.js
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
 
       - name: Create PreRelease
         if: github.ref_type == 'tag'
@@ -430,15 +570,5 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            amiberry-macOS-64bit-intel/amiberry-${{ github.ref_name }}-macOS-x86_64.zip
-            amiberry-macOS-64bit-apple-silicon/amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip
-            amiberry-fedora-40-x86_64/amiberry_*.rpm
-            amiberry-ubuntu-24.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-22.04-amd64/amiberry_*.deb
-            amiberry-ubuntu-20.04-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-amd64/amiberry_*.deb
-            amiberry-debian-bookworm-arm64/amiberry_*.deb
-            amiberry-debian-bookworm-armhf/amiberry_*.deb
-            amiberry-debian-bullseye-amd64/amiberry_*.deb
-            amiberry-debian-bullseye-arm64/amiberry_*.deb
-            amiberry-debian-bullseye-armhf/amiberry_*.deb
+            artifacts/amiberry-*.*
+            artifacts/Amiberry-*.*

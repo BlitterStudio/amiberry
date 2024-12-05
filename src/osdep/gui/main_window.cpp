@@ -362,10 +362,17 @@ void amiberry_gui_init()
 	}
 	DPIHandler::set_render_scale(mon->gui_renderer);
 
-	// make the scaled rendering look smoother (linear scaling).
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	// Disable integer scaling for the GUI
-	SDL_RenderSetIntegerScale(mon->gui_renderer, SDL_FALSE);
+	// Enable Integer scaling for GUI if we are running on a desktop environment
+	if (!kmsdrm_detected)
+	{
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+		SDL_RenderSetIntegerScale(mon->gui_renderer, SDL_TRUE);
+	}
+	else
+	{
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+		SDL_RenderSetIntegerScale(mon->gui_renderer, SDL_FALSE);
+	}
 
 	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
