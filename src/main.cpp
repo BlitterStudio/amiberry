@@ -1143,6 +1143,21 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				whdload_auto_prefs(&currprefs, txt);
 				SetLastActiveConfig(txt);
 			}
+			else if (_tcscmp(txt2.c_str(), ".uss") == 0)
+			{
+				write_log("Statefile... %s\n", txt);
+				if (my_existsfile2(txt))
+				{
+					savestate_state = STATE_DORESTORE;
+					_tcscpy(savestate_fname, txt);
+				}
+				else
+				{
+					get_savestate_path(savestate_fname, MAX_DPATH - 1);
+					strncat(savestate_fname, txt, MAX_DPATH - 1);
+					savestate_state = STATE_DORESTORE;
+				}
+			}
 			else if (_tcscmp(txt2.c_str(), ".cue") == 0
 				|| _tcscmp(txt2.c_str(), ".iso") == 0
 				|| _tcscmp(txt2.c_str(), ".chd") == 0)
