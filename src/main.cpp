@@ -1150,12 +1150,14 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				{
 					savestate_state = STATE_DORESTORE;
 					_tcscpy(savestate_fname, txt);
+					currprefs.start_gui = false;
 				}
 				else
 				{
 					get_savestate_path(savestate_fname, MAX_DPATH - 1);
 					strncat(savestate_fname, txt, MAX_DPATH - 1);
 					savestate_state = STATE_DORESTORE;
+					currprefs.start_gui = false;
 				}
 			}
 			else if (_tcscmp(txt2.c_str(), ".cue") == 0
