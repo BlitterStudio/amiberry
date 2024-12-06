@@ -27,7 +27,7 @@ Terminal = false
 # Describes the categories in which this entry should be shown
 Categories = Game;Emulator;
 
-MimeType=application/x-SPS-virtual-media-image;application/x-DMS-compressed-disk-image;application/x-amiga-disk-image;application/x-cue;application/x-WHDLoad-game-archive;
+MimeType=application/x-SPS-virtual-media-image;application/x-DMS-compressed-disk-image;application/x-amiga-disk-image;application/x-cue;application/x-WHDLoad-game-archive;application/x-UAE-savestate-file;
 
 # Describes the encoding for the desktop entry
 Encoding=UTF-8
