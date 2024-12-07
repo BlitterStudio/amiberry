@@ -220,7 +220,7 @@ void make_rom_symlink(const std::string& kickstart_short_name, const int kicksta
 	if (!std::filesystem::exists(kickstart_long_path))
 	{
 		const int roms[2] = { kickstart_number, -1 };
-		// copy the existing prefs->romfile to a backup variable, so we can restore it afterwards
+		// copy the existing prefs->romfile to a backup variable, so we can restore it afterward
 		const std::string old_romfile = prefs->romfile;
 		if (configure_rom(prefs, roms, 0) == 1)
 		{
