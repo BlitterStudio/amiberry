@@ -380,7 +380,7 @@ static int isromext(const std::string& path, bool deepscan)
 		return 0;
 	const std::string ext = path.substr(ext_pos + 1);
 
-	static const std::vector<std::string> extensions = { "rom", "ROM", "bin", "BIN", "adf", "ADF", "key", "KEY", "a500", "A500", "a1200", "A1200", "a4000", "A4000", "cdtv", "CDTV", "cd32", "CD32" };
+	static const std::vector<std::string> extensions = { "rom", "ROM", "roz", "ROZ", "bin", "BIN",  "a500", "A500", "a1200", "A1200", "a4000", "A4000", "cdtv", "CDTV", "cd32", "CD32" };
 	if (std::find(extensions.begin(), extensions.end(), ext) != extensions.end())
 		return 1;
 
