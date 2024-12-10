@@ -4019,7 +4019,8 @@ void create_missing_amiberry_folders()
 		}
     }
 #endif
-
+	if (!my_existsdir(config_path.c_str()))
+		my_mkdir(config_path.c_str());
 	if (!my_existsdir(controllers_path.c_str()))
 	{
 		my_mkdir(controllers_path.c_str());
