@@ -154,6 +154,8 @@ public:
 					//---------------------------------------
 					// Write-protect changed
 					//---------------------------------------
+					if (strlen(changed_prefs.floppyslots[i].df) <= 0)
+						return;
 					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
 					                     chkDFxWriteProtect[i]->isSelected());
 					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != chkDFxWriteProtect[i]->
@@ -653,17 +655,17 @@ static void AdjustDropDownControls()
 
 void RefreshPanelFloppy()
 {
-	int i;
 	auto prev_available = true;
 
 	RefreshDiskListModel();
 	AdjustDropDownControls();
 
 	changed_prefs.nr_floppies = 0;
-	for (i = 0; i < 4; ++i)
+	for (auto i = 0; i < 4; ++i)
 	{
 		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		const auto disk_in_drive = strlen(changed_prefs.floppyslots[i].df) > 0;
+
 		chkDFx[i]->setSelected(driveEnabled);
 		const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
 		cboDFxType[i]->setSelected(nn + 1);
@@ -682,7 +684,7 @@ void RefreshPanelFloppy()
 			changed_prefs.nr_floppies = i + 1;
 	}
 
-	for (i = 0; i <= 4; ++i)
+	for (auto i = 0; i <= 4; ++i)
 	{
 		if (changed_prefs.floppy_speed == drive_speed_values[i])
 		{
@@ -700,10 +702,10 @@ void RefreshPanelFloppy()
 	chkDBSmartSpeed->setEnabled(false);
 	chkDBCableDriveB->setEnabled(false);
 #ifdef FLOPPYBRIDGE
-	for (i = 0; i < 4; ++i)
+	for (auto & floppyslot : changed_prefs.floppyslots)
 	{
 		// is DrawBridge selected?
-		if (changed_prefs.floppyslots[i].dfxtype == DRV_FB)
+		if (floppyslot.dfxtype == DRV_FB)
 		{
 			lblDBDriver->setEnabled(true);
 			cboDBDriver->setEnabled(true);

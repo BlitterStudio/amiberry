@@ -560,9 +560,6 @@ public:
 					changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
 				else
 					changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
-
-				RefreshPanelFloppy();
-				RefreshPanelQuickstart();
 			}
 			else if (actionEvent.getSource() == chkqsDFxWriteProtect[i])
 			{
@@ -577,6 +574,7 @@ public:
 					isSelected())
 				{
 					// Failed to change write protection -> maybe filesystem doesn't support this
+					chkqsDFxWriteProtect[i]->setSelected(!chkqsDFxWriteProtect[i]->isSelected());
 					ShowMessage("Set/Clear write protect", "Failed to change write permission.",
 						"Maybe underlying filesystem doesn't support this.", "", "Ok", "");
 					chkqsDFxWriteProtect[i]->requestFocus();
@@ -678,9 +676,9 @@ public:
 					}
 				}
 			}
-			RefreshPanelFloppy();
-			RefreshPanelQuickstart();
 		}
+		RefreshPanelFloppy();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -1053,8 +1051,8 @@ void RefreshPanelQuickstart()
 		else
 			chkqsDFx[i]->setEnabled(prev_available);
 
-		cmdqsDFxInfo[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
 		chkqsDFxWriteProtect[i]->setEnabled(drive_enabled && !changed_prefs.floppy_read_only && nn < 5);
+		cmdqsDFxInfo[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
 		cmdqsDFxEject[i]->setEnabled(drive_enabled && nn < 5 && disk_in_drive);
 		cmdqsDFxSelect[i]->setEnabled(drive_enabled && nn < 5);
 		cboqsDFxFile[i]->setEnabled(drive_enabled && nn < 5);
