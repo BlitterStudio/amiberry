@@ -10240,6 +10240,16 @@ int bip_a500(struct uae_prefs* p, int rom)
 	return configure_rom(p, roms, 0);
 }
 
+int bip_a600(struct uae_prefs* p, int rom)
+{
+	return bip_a600(p, 0, 0, 0);
+}
+
+int bip_a1000(struct uae_prefs* p, int rom)
+{
+	return bip_a1000(p, 0, 0, 0);
+}
+
 int bip_a2000(struct uae_prefs* p, int rom)
 {
 	int roms[4];
@@ -10267,5 +10277,10 @@ int bip_a2000(struct uae_prefs* p, int rom)
 	p->nr_floppies = 1;
 	p->floppyslots[1].dfxtype = DRV_NONE;
 	return configure_rom(p, roms, 0);
+}
+
+int bip_a3000(struct uae_prefs* p, int rom)
+{
+	return bip_a3000(p, 0, 0, 0);
 }
 #endif

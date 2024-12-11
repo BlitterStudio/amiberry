@@ -1146,8 +1146,11 @@ extern void copy_inputdevice_prefs(struct uae_prefs *src, struct uae_prefs *dst)
 #ifdef AMIBERRY
 extern int bip_a500(struct uae_prefs* p, int rom);
 extern int bip_a500plus(struct uae_prefs* p, int rom);
+extern int bip_a600(struct uae_prefs* p, int rom);
+extern int bip_a1000(struct uae_prefs* p, int rom);
 extern int bip_a1200(struct uae_prefs* p, int rom);
 extern int bip_a2000(struct uae_prefs* p, int rom);
+extern int bip_a3000(struct uae_prefs* p, int rom);
 extern int bip_a4000(struct uae_prefs* p, int rom);
 extern int bip_cd32(struct uae_prefs* p, int rom);
 extern int bip_cdtv(struct uae_prefs* p, int rom);

@@ -817,7 +817,7 @@ void usage()
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
-	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" <<
+	std::cout << "                            Available options are: A1000, A500, A500P, A600, A2000, A3000, A1200, A4000, CD32 and CDTV.\n" <<
 		'\n';
 	std::cout << " --autoload <file>          Load an .lha WHDLoad game or a CD32 CD image, using the WHDBooter." << '\n';
 	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation." << '\n';
@@ -1018,6 +1018,22 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				else if (_tcscmp(txt, _T("A500P")) == 0)
 				{
 					bip_a500plus(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A600")) == 0)
+				{
+					bip_a600(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A1000")) == 0)
+				{
+					bip_a1000(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A2000")) == 0)
+				{
+					bip_a2000(&currprefs, 130);
+				}
+				else if (_tcscmp(txt, _T("A3000")) == 0)
+				{
+					bip_a3000(&currprefs, -1);
 				}
 				else if (_tcscmp(txt, _T("A1200")) == 0)
 				{
