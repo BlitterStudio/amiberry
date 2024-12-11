@@ -617,7 +617,12 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_fmov_mr_drop,(MEMW mem, FR s))
 	  VSTR64_dRi(s, REG_WORK3, 0);
 	else {
 	  VMOV64_rrd(REG_WORK1, REG_WORK2, s);
+#ifdef ALLOW_UNALIGNED_LDRD
 	  STRD_rRI(REG_WORK1, REG_WORK3, 0);
+#else
+          STR_rRI(REG_WORK1, REG_WORK3, 0);
+          STR_rRI(REG_WORK2, REG_WORK3, 4);
+#endif
 	}
   }
 }
@@ -632,7 +637,12 @@ LOWFUNC(NONE,READ,2,compemu_raw_fmov_rm,(FW d, MEMR mem))
 	if((mem & 0x3) == 0)
 	  VLDR64_dRi(d, REG_WORK3, 0);
 	else {
+#ifdef ALLOW_UNALIGNED_LDRD
 		LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+#else
+                LDR_rRI(REG_WORK1, REG_WORK3, 0);
+                LDR_rRI(REG_WORK2, REG_WORK3, 4);
+#endif
 		VMOV64_drr(d, REG_WORK1, REG_WORK2);
 	}
   }
@@ -752,7 +762,12 @@ LOWFUNC(NONE,READ,2,raw_fmov_d_rm,(FW r, MEMR m))
   if((m & 0x3) == 0)
 	VLDR64_dRi(r, REG_WORK3, 0);
   else {
+#ifdef ALLOW_UNALIGNED_LDRD
 	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+#else
+        LDR_rRI(REG_WORK1, REG_WORK3, 0);
+        LDR_rRI(REG_WORK2, REG_WORK3, 4);
+#endif
 	VMOV64_drr(r, REG_WORK1, REG_WORK2);
   }
 }
@@ -954,7 +969,7 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
   VREV64_8_dd(SCRATCH_F64_1, SCRATCH_F64_1);
   VMOV64_rrd(REG_WORK1, REG_WORK2, SCRATCH_F64_1);
   ORR_rri(REG_WORK1, REG_WORK1, 0x80);  			// insert explicit 1
-#ifdef ARMV6T2
+#ifdef ALLOW_UNALIGNED_LDRD
   STRD_rRI(REG_WORK1, REG_WORK3, 4);
 #else
   STR_rRI(REG_WORK1, REG_WORK3, 4);
@@ -977,7 +992,7 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_exten_mr,(RR4 adr, FR s))
 	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 
   REV_rr(REG_WORK1, REG_WORK1);
-#ifdef ARMV6T2
+#ifdef ALLOW_UNALIGNED_LDRD
   STRD_rR(REG_WORK1, REG_WORK3);
 #else
   STR_rR(REG_WORK1, REG_WORK3);
@@ -994,7 +1009,7 @@ LOWFUNC(NONE,READ,2,raw_fp_to_exten_rm,(FW d, RR4 adr))
 {
 	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 
-#ifdef ARMV6T2
+#ifdef ALLOW_UNALIGNED_LDRD
 	LDRD_rRI(REG_WORK1, REG_WORK3, 4);
 #else
 	LDR_rRI(REG_WORK1, REG_WORK3, 4);
@@ -1050,14 +1065,24 @@ LOWFUNC(NONE,WRITE,2,raw_fp_from_double_mr,(RR4 adr, FR s))
 	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
 	VREV64_8_dd(SCRATCH_F64_1, s);
   VMOV64_rrd(REG_WORK1, REG_WORK2, SCRATCH_F64_1);
+#ifdef ALLOW_UNALIGNED_LDRD
   STRD_rRI(REG_WORK1, REG_WORK3, 0);
+#else
+  STR_rRI(REG_WORK1, REG_WORK3, 0);
+  STR_rRI(REG_WORK2, REG_WORK3, 4);
+#endif
 }
 LENDFUNC(NONE,WRITE,2,raw_fp_from_double_mr,(RR4 adr, FR s))
 
 LOWFUNC(NONE,READ,2,raw_fp_to_double_rm,(FW d, RR4 adr))
 {
 	ADD_rrr(REG_WORK3, adr, R_MEMSTART);
+#ifdef ALLOW_UNALIGNED_LDRD
 	LDRD_rRI(REG_WORK1, REG_WORK3, 0);
+#else
+        LDR_rRI(REG_WORK1, REG_WORK3, 0);
+        LDR_rRI(REG_WORK2, REG_WORK3, 4);
+#endif
 	VMOV64_drr(d, REG_WORK1, REG_WORK2);
   VREV64_8_dd(d, d);
 }
