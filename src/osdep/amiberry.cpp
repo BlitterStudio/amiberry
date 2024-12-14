@@ -4129,9 +4129,12 @@ static void init_amiberry_dirs(const bool portable_mode)
     config_path = get_config_directory(portable_mode);
     plugins_dir = get_plugins_directory(portable_mode);
 
+#ifdef __MACH__
+	if constexpr (true)
+#else
 	if (portable_mode)
+#endif
 	{
-		// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
 		amiberry_conf_file = config_path + "/amiberry.conf";
 		amiberry_ini_file = config_path + "/amiberry.ini";
 		themes_path = config_path;
@@ -4147,16 +4150,6 @@ static void init_amiberry_dirs(const bool portable_mode)
 	}
 	else
 	{
-#ifdef __MACH__
-		// We put everything under $HOME/Amiberry on macOS
-		amiberry_conf_file = config_path + "/amiberry.conf";
-		amiberry_ini_file = config_path + "/amiberry.ini";
-		themes_path = config_path;
-
-		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
-		ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
-		home_dir;
-#else
 		std::string xdg_data_home = get_xdg_data_home();
 		if (!my_existsdir(xdg_data_home.c_str()))
 		{
@@ -4190,7 +4183,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
 		ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
 		xdg_data_home;
-#endif
+
 		// These go in $HOME/Amiberry by default
 		whdload_arch_path = floppy_path = harddrive_path =
 		cdrom_path = logfile_path = rom_path = rp9_path =
