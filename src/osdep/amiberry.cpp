@@ -4117,7 +4117,7 @@ void create_missing_amiberry_folders()
 	}
 }
 
-static void init_amiberry_dirs(bool portable_mode)
+static void init_amiberry_dirs(const bool portable_mode)
 {
 #ifdef __MACH__
 	const std::string amiberry_dir = "Amiberry";
@@ -4147,6 +4147,16 @@ static void init_amiberry_dirs(bool portable_mode)
 	}
 	else
 	{
+#ifdef __MACH__
+		// We put everything under $HOME/Amiberry on macOS
+		amiberry_conf_file = config_path + "/amiberry.conf";
+		amiberry_ini_file = config_path + "/amiberry.ini";
+		themes_path = config_path;
+
+		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
+		ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
+		home_dir;
+#else
 		std::string xdg_data_home = get_xdg_data_home();
 		if (!my_existsdir(xdg_data_home.c_str()))
 		{
@@ -4180,7 +4190,7 @@ static void init_amiberry_dirs(bool portable_mode)
 		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
 		ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
 		xdg_data_home;
-
+#endif
 		// These go in $HOME/Amiberry by default
 		whdload_arch_path = floppy_path = harddrive_path =
 		cdrom_path = logfile_path = rom_path = rp9_path =
@@ -4454,7 +4464,7 @@ int main(int argc, char* argv[])
 	}
 	// Check if a file with the name "amiberry.portable" exists in the current directory
 	// If it does, we will set portable_mode to true
-	bool portable_mode = my_existsfile2("amiberry.portable");
+	const bool portable_mode = my_existsfile2("amiberry.portable");
 	init_amiberry_dirs(portable_mode);
 	load_amiberry_settings();
 	// Parse command line and remove used amiberry specific args
