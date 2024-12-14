@@ -3930,23 +3930,7 @@ std::string get_config_directory(bool portable_mode)
 std::string get_plugins_directory(bool portable_mode)
 {
 #ifdef __MACH__
-	char exepath[MAX_DPATH];
-	uint32_t size = sizeof exepath;
-	std::string directory;
-	if (_NSGetExecutablePath(exepath, &size) == 0)
-	{
-		size_t last_slash_idx = string(exepath).rfind('/');
-		if (std::string::npos != last_slash_idx)
-		{
-			directory = string(exepath).substr(0, last_slash_idx);
-		}
-		last_slash_idx = directory.rfind('/');
-		if (std::string::npos != last_slash_idx)
-		{
-			directory = directory.substr(0, last_slash_idx);
-		}
-	}
-	return directory + "/Frameworks/";
+	return home_dir + "/Plugins/";
 #else
 	if (portable_mode)
 	{
@@ -4021,6 +4005,8 @@ void create_missing_amiberry_folders()
 #endif
 	if (!my_existsdir(config_path.c_str()))
 		my_mkdir(config_path.c_str());
+	if (!my_existsdir(plugins_dir.c_str()))
+        my_mkdir(plugins_dir.c_str());
 	if (!my_existsdir(controllers_path.c_str()))
 	{
 		my_mkdir(controllers_path.c_str());
@@ -4106,10 +4092,8 @@ void create_missing_amiberry_folders()
 	if (!my_existsdir(video_dir.c_str()))
 		my_mkdir(video_dir.c_str());
 	if (!my_existsdir(themes_path.c_str()))
-	{
 		my_mkdir(themes_path.c_str());
-	}
-	std::string default_theme_file = themes_path + "Default.theme";
+    std::string default_theme_file = themes_path + "Default.theme";
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
 		load_default_theme();
