@@ -160,8 +160,10 @@ static void set_fpucw_x87(uae_u32 m68k_cw)
 
 static void native_set_fpucw(uae_u32 m68k_cw)
 {
+#ifndef __MACH__
 #if defined(CPU_i386) || defined(CPU_x86_64)
 	set_fpucw_x87(m68k_cw);
+#endif
 #endif
 }
 
