@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.27)
 project (floppybridge VERSION 1.6.4)
 enable_language(C CXX)
 add_library(floppybridge SHARED
