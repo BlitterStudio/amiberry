@@ -4006,7 +4006,17 @@ void create_missing_amiberry_folders()
 	if (!my_existsdir(config_path.c_str()))
 		my_mkdir(config_path.c_str());
 	if (!my_existsdir(plugins_dir.c_str()))
-        my_mkdir(plugins_dir.c_str());
+	{
+		my_mkdir(plugins_dir.c_str());
+#ifdef __MACH__
+		const std::string bundled_plugins_path = app_directory + "/Resources/plugins/";
+		if (my_existsdir(bundled_plugins_path.c_str()))
+		{
+			const std::string command = "cp -r " + bundled_plugins_path + "* " + plugins_dir;
+			system(command.c_str());
+		}
+#endif
+	}
 	if (!my_existsdir(controllers_path.c_str()))
 	{
 		my_mkdir(controllers_path.c_str());
