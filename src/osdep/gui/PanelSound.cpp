@@ -907,7 +907,8 @@ bool HelpPanelSound(std::vector<std::string>& helptext)
 	helptext.emplace_back("Sound emulation");
 	helptext.emplace_back("Here you can select if Sound will be Disabled, Disabled but emulated or Enabled.");
 	helptext.emplace_back("If the selected sound card could not be initialized during startup, Amiberry will");
-	helptext.emplace_back("automatically disable the sound emulation.");
+	helptext.emplace_back("automatically disable the sound emulation. Autoswitching allows the emulator to switch");
+	helptext.emplace_back("between Enabled/Disabled, depending on whether the audio buffer has something or not.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Volume");
 	helptext.emplace_back("Here you can select the output volume for the various emulated devices.");
