@@ -9,7 +9,7 @@ endif ()
 option(USE_GPIOD "Use GPIOD" OFF)
 # Use DBUS to control the emulator?
 option(USE_DBUS "Use DBus" OFF)
-# Use OpenGL for rendering?
+# Use OpenGL for rendering? NOTE: Not yet implemented
 option(USE_OPENGL "Use OpenGL" OFF)
 # Enable Link Time Optimization?
 option(WITH_LTO "Enable Link Time Optimization" OFF)
@@ -18,7 +18,7 @@ option(WITH_LTO "Enable Link Time Optimization" OFF)
 set(VERSION_MAJOR "7")
 set(VERSION_MINOR "0")
 set(VERSION_PATCH "0")
-set(VERSION_PRE_RELEASE "RC1")
+set(VERSION_PRE_RELEASE "RC2")
 
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
