@@ -3930,7 +3930,23 @@ std::string get_config_directory(bool portable_mode)
 std::string get_plugins_directory(bool portable_mode)
 {
 #ifdef __MACH__
-	return home_dir + "/Plugins/";
+	char exepath[MAX_DPATH];
+	uint32_t size = sizeof exepath;
+	std::string directory;
+	if (_NSGetExecutablePath(exepath, &size) == 0)
+	{
+		size_t last_slash_idx = string(exepath).rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = string(exepath).substr(0, last_slash_idx);
+		}
+		last_slash_idx = directory.rfind('/');
+		if (std::string::npos != last_slash_idx)
+		{
+			directory = directory.substr(0, last_slash_idx);
+		}
+	}
+	return directory + "/Resources/plugins/";
 #else
 	if (portable_mode)
 	{
@@ -4005,18 +4021,6 @@ void create_missing_amiberry_folders()
 #endif
 	if (!my_existsdir(config_path.c_str()))
 		my_mkdir(config_path.c_str());
-	if (!my_existsdir(plugins_dir.c_str()))
-	{
-		my_mkdir(plugins_dir.c_str());
-#ifdef __MACH__
-		const std::string bundled_plugins_path = app_directory + "/Resources/plugins/";
-		if (my_existsdir(bundled_plugins_path.c_str()))
-		{
-			const std::string command = "cp -r " + bundled_plugins_path + "* " + plugins_dir;
-			system(command.c_str());
-		}
-#endif
-	}
 	if (!my_existsdir(controllers_path.c_str()))
 	{
 		my_mkdir(controllers_path.c_str());
