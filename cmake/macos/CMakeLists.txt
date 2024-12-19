@@ -21,11 +21,11 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:capsimage>
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/$<TARGET_FILE_NAME:capsimage>)
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:capsimage>)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:floppybridge>
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/$<TARGET_FILE_NAME:floppybridge>)
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/$<TARGET_FILE_NAME:floppybridge>)
 
 # Gather all dependencies with dylibbundler
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -33,9 +33,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 if (NOT "${CMAKE_GENERATOR}" MATCHES "Xcode")
     install(FILES $<TARGET_FILE:capsimage>
-            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/)
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
     install(FILES $<TARGET_FILE:floppybridge>
-            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Frameworks/)
+            DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/plugins/)
 
     # This one contains the gamecontrollersdb.txt file
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/controllers
