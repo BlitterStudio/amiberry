@@ -595,7 +595,6 @@ struct whdload_slave
 struct whdload_options
 {
 	std::string whdload_filename;
-
 	std::string filename;
 	std::string game_name;
 	std::string sub_path;
