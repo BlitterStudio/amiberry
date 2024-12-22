@@ -3017,16 +3017,22 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 #ifdef AMIBERRY
 	cfg_write(_T("; *** WHDLoad Booter. Options"), f);
 
+	cfgfile_write_str(f, _T("whdload_filename"), whdload_prefs.whdload_filename.c_str());
+	cfgfile_write_str(f, _T("whdload_game_name"), whdload_prefs.game_name.c_str());
+	cfgfile_write_str(f, _T("whdload_uuid"), whdload_prefs.variant_uuid.c_str());
+	cfgfile_write_str(f, _T("whdload_slave_default"), whdload_prefs.slave_default.c_str());
+	cfgfile_write_bool(f, _T("whdload_slave_libraries"), whdload_prefs.slave_libraries);
 	cfgfile_write_str(f, _T("whdload_slave"), whdload_prefs.selected_slave.filename.c_str());
-	cfgfile_write_bool(f, _T("whdload_showsplash"), whdload_prefs.show_splash);
-	cfgfile_write_bool(f, _T("whdload_buttonwait"), whdload_prefs.button_wait);
-	cfgfile_dwrite(f, _T("whdload_configdelay"), _T("%d"), whdload_prefs.config_delay);
+	cfgfile_write_str(f, _T("whdload_slave_data_path"), whdload_prefs.selected_slave.data_path.c_str());
 	cfgfile_write(f, _T("whdload_custom1"), _T("%d"), whdload_prefs.selected_slave.custom1.value);
 	cfgfile_write(f, _T("whdload_custom2"), _T("%d"), whdload_prefs.selected_slave.custom2.value);
 	cfgfile_write(f, _T("whdload_custom3"), _T("%d"), whdload_prefs.selected_slave.custom3.value);
 	cfgfile_write(f, _T("whdload_custom4"), _T("%d"), whdload_prefs.selected_slave.custom4.value);
 	cfgfile_write(f, _T("whdload_custom5"), _T("%d"), whdload_prefs.selected_slave.custom5.value);
 	cfgfile_write_str(f, _T("whdload_custom"), whdload_prefs.custom.c_str());
+	cfgfile_write_bool(f, _T("whdload_buttonwait"), whdload_prefs.button_wait);
+	cfgfile_write_bool(f, _T("whdload_showsplash"), whdload_prefs.show_splash);
+	cfgfile_dwrite(f, _T("whdload_configdelay"), _T("%d"), whdload_prefs.config_delay);
 	cfgfile_write_bool(f, _T("whdload_writecache"), whdload_prefs.write_cache);
 	cfgfile_write_bool(f, _T("whdload_quit_on_exit"), whdload_prefs.quit_on_exit);
 #endif
@@ -4665,7 +4671,13 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 	if (option_string.rfind("whdload_", 0) == 0)
 	{
 		/* Read in WHDLoad Options  */
-		if (cfgfile_string(option, value, _T("whdload_slave"), whdload_prefs.selected_slave.filename)
+		if (cfgfile_string(option, value, _T("whdload_filename"), whdload_prefs.whdload_filename)
+			|| cfgfile_string(option, value, _T("whdload_game_name"), whdload_prefs.game_name)
+			|| cfgfile_string(option, value, _T("whdload_uuid"), whdload_prefs.variant_uuid)
+			|| cfgfile_string(option, value, _T("whdload_slave_default"), whdload_prefs.slave_default)
+			|| cfgfile_yesno(option, value, _T("whdload_slave_libraries"), &whdload_prefs.slave_libraries)
+			|| cfgfile_string(option, value, _T("whdload_slave"), whdload_prefs.selected_slave.filename)
+			|| cfgfile_string(option, value, _T("whdload_slave_data_path"), whdload_prefs.selected_slave.data_path)
 			|| cfgfile_intval(option, value, _T("whdload_custom1"), &whdload_prefs.selected_slave.custom1.value, 1)
 			|| cfgfile_intval(option, value, _T("whdload_custom2"), &whdload_prefs.selected_slave.custom2.value, 1)
 			|| cfgfile_intval(option, value, _T("whdload_custom3"), &whdload_prefs.selected_slave.custom3.value, 1)
