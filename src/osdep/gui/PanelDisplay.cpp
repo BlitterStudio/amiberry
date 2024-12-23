@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <guisan/sdl.hpp>
 #include <sstream>
+#include <cmath> 
 #include "SelectorEntry.hpp"
 #include "StringListModel.h"
 
@@ -133,7 +134,7 @@ public:
 				if (!tmp.empty()) {
 					TCHAR label[16];
 					label[0] = 0;
-					auto label_string = fps_options[cboFpsRate->getSelected()];
+					const auto& label_string = fps_options[cboFpsRate->getSelected()];
 					strncpy(label, label_string.c_str(), sizeof(label) - 1);
 					label[sizeof(label) - 1] = '\0';
 
@@ -153,7 +154,7 @@ public:
 									cr->inuse = true;
 								}
 								else {
-									// deactivate if plain uncustomized PAL or NTSC
+									// deactivate if plain non-customized PAL or NTSC
 									if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
 										cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
 										(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
@@ -268,7 +269,7 @@ public:
 			bool updaterate = false, updateslider = false;
 			TCHAR label[16];
 			label[0] = 0;
-			auto label_string = fps_options[cboFpsRate->getSelected()];
+			const auto& label_string = fps_options[cboFpsRate->getSelected()];
 			strncpy(label, label_string.c_str(), sizeof(label) - 1);
 			label[sizeof(label) - 1] = '\0';
 
@@ -290,7 +291,7 @@ public:
 							cr->inuse = true;
 						}
 						else {
-							// deactivate if plain uncustomized PAL or NTSC
+							// deactivate if plain non-customized PAL or NTSC
 							if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
 								cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
 								(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
@@ -304,8 +305,8 @@ public:
 			if (cr->locked) {
 				if (actionEvent.getSource() == sldFpsAdj) {
 					i = sldFpsAdj->getValue();//xSendDlgItemMessage(hDlg, IDC_FRAMERATE2, TBM_GETPOS, 0, 0);
-					if (i != (int)cr->rate)
-						cr->rate = (float)i;
+					if (i != static_cast<int>(cr->rate))
+						cr->rate = static_cast<float>(i);
 					updaterate = true;
 				}
 			}
@@ -464,7 +465,7 @@ public:
 
 static ScalingMethodActionListener* scalingMethodActionListener;
 
-void disable_idouble_modes()
+static void disable_idouble_modes()
 {
 	optISingle->setEnabled(true);
 	optISingle->setSelected(true);
@@ -475,7 +476,7 @@ void disable_idouble_modes()
 	optIDouble3->setEnabled(false);
 }
 
-void enable_idouble_modes()
+static void enable_idouble_modes()
 {
 	if (optISingle->isSelected())
 	{
@@ -1089,16 +1090,14 @@ void ExitPanelDisplay()
 	delete cboResSwitch;
 }
 
-void refresh_fps_options()
+static void refresh_fps_options()
 {
 	TCHAR buffer[MAX_DPATH];
 	int rates[MAX_CHIPSET_REFRESH_TOTAL];
-	int v;
-	double d;
 
 	fps_options.clear();
-	v = 0;
-	chipset_refresh* selectcr = changed_prefs.ntscmode ? &changed_prefs.cr[CHIPSET_REFRESH_NTSC] : &changed_prefs.cr[CHIPSET_REFRESH_PAL];
+	int v = 0;
+	const chipset_refresh* selectcr = changed_prefs.ntscmode ? &changed_prefs.cr[CHIPSET_REFRESH_NTSC] : &changed_prefs.cr[CHIPSET_REFRESH_PAL];
 	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 		struct chipset_refresh* cr = &changed_prefs.cr[i];
 		if (cr->rate > 0) {
@@ -1107,7 +1106,7 @@ void refresh_fps_options()
 				_stprintf(buffer, _T(":%d"), i);
 			//xSendDlgItemMessage(hDlg, IDC_RATE2BOX, CB_ADDSTRING, 0, (LPARAM)buffer);
 			fps_options.emplace_back(buffer);
-			d = changed_prefs.chipset_refreshrate;
+			double d = changed_prefs.chipset_refreshrate;
 			if (abs(d) < 1)
 				d = currprefs.ntscmode ? 60.0 : 50.0;
 			if (selectcr && selectcr->index == cr->index)
