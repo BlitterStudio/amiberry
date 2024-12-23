@@ -4467,8 +4467,6 @@ int main(int argc, char* argv[])
 		abort();
 	}
 
-	snprintf(savestate_fname, sizeof savestate_fname, "%s/default.ads", fix_trailing(savestate_dir).c_str());
-
 	reginitializeinit(&inipath);
 	if (getregmode() == NULL)
 	{
