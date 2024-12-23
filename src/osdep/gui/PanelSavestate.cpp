@@ -26,7 +26,7 @@ static gcn::Image* imgSavestate = nullptr;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
 
-std::string get_file_timestamp(const std::string& filename)
+static std::string get_file_timestamp(const std::string& filename)
 {
 	struct stat st {};
 	tm tm{};
@@ -210,7 +210,7 @@ void RefreshPanelSavestate()
 		imgSavestate = nullptr;
 	}
 
-	if (current_state_num >= 0 && current_state_num < radioButtons.size()) {
+	if (current_state_num >= 0 && current_state_num < static_cast<int>(radioButtons.size())) {
 		radioButtons[current_state_num]->setSelected(true);
 	}
 
@@ -229,7 +229,7 @@ void RefreshPanelSavestate()
 		}
 	}
 
-	if (screenshot_filename.length() > 0)
+	if (!screenshot_filename.empty())
 	{
 		auto* const f = fopen(screenshot_filename.c_str(), "rbe");
 		if (f)
