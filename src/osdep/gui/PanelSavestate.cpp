@@ -52,7 +52,6 @@ public:
 		{
 			current_state_num = std::distance(radioButtons.begin(), it);
 		}
-
 		else if (actionEvent.getSource() == cmdLoadState)
 		{
 			//------------------------------------------
@@ -70,12 +69,16 @@ public:
 						savestate_state = STATE_DORESTORE;
 						gui_running = false;
 					}
+					else
+					{
+						ShowMessage("Loading savestate", "Statefile doesn't exist.", "", "", "Ok", "");
+					}
 				}
-				if (savestate_state != STATE_DORESTORE)
-					ShowMessage("Loading savestate", "Statefile doesn't exist.", "", "", "Ok", "");
 			}
 			else
+			{
 				ShowMessage("Loading savestate", "Emulation hasn't started yet.", "", "", "Ok", "");
+			}
 
 			cmdLoadState->requestFocus();
 		}
@@ -107,7 +110,9 @@ public:
 					save_thumb(screenshot_filename);
 			}
 			else
+			{
 				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "", "Ok", "");
+			}
 
 			cmdSaveState->requestFocus();
 		}
@@ -222,50 +227,50 @@ void RefreshPanelSavestate()
 		if (f) {
 			fclose(f);
 			lblTimestamp->setCaption(get_file_timestamp(savestate_fname));
+
+			if (!screenshot_filename.empty())
+			{
+				auto* const screenshot_file = fopen(screenshot_filename.c_str(), "rbe");
+				if (screenshot_file)
+				{
+					fclose(screenshot_file);
+					const auto rect = grpScreenshot->getChildrenArea();
+					auto* loaded_image = IMG_Load(screenshot_filename.c_str());
+					if (loaded_image != nullptr)
+					{
+						const SDL_Rect source = { 0, 0, loaded_image->w, loaded_image->h };
+						const SDL_Rect target = { 0, 0, rect.width, rect.height };
+						auto* scaled = SDL_CreateRGBSurface(0, rect.width, rect.height,
+							loaded_image->format->BitsPerPixel,
+							loaded_image->format->Rmask, loaded_image->format->Gmask,
+							loaded_image->format->Bmask, loaded_image->format->Amask);
+						SDL_SoftStretch(loaded_image, &source, scaled, &target);
+						SDL_FreeSurface(loaded_image);
+						imgSavestate = new gcn::SDLImage(scaled, true);
+						icoSavestate = new gcn::Icon(imgSavestate);
+						grpScreenshot->add(icoSavestate);
+					}
+				}
+			}
 		}
 		else
 		{
-			lblTimestamp->setCaption("No savestate found");
+			lblTimestamp->setCaption("No savestate found: " + extract_filename(std::string(savestate_fname)));
 		}
 	}
-
-	if (!screenshot_filename.empty())
+	else
 	{
-		auto* const f = fopen(screenshot_filename.c_str(), "rbe");
-		if (f)
-		{
-			fclose(f);
-			const auto rect = grpScreenshot->getChildrenArea();
-			auto* loadedImage = IMG_Load(screenshot_filename.c_str());
-			if (loadedImage != nullptr)
-			{
-				SDL_Rect source = {0, 0, 0, 0};
-				SDL_Rect target = {0, 0, 0, 0};
-				auto* scaled = SDL_CreateRGBSurface(0, rect.width, rect.height,
-													loadedImage->format->BitsPerPixel,
-													loadedImage->format->Rmask, loadedImage->format->Gmask,
-													loadedImage->format->Bmask, loadedImage->format->Amask);
-				source.w = loadedImage->w;
-				source.h = loadedImage->h;
-				target.w = rect.width;
-				target.h = rect.height;
-				SDL_SoftStretch(loadedImage, &source, scaled, &target);
-				SDL_FreeSurface(loadedImage);
-				loadedImage = nullptr;
-				imgSavestate = new gcn::SDLImage(scaled, true);
-				icoSavestate = new gcn::Icon(imgSavestate);
-				grpScreenshot->add(icoSavestate);
-			}
-		}
+		lblTimestamp->setCaption("No savestate loaded");
 	}
+	lblTimestamp->adjustSize();
 
 	for (const auto& radioButton : radioButtons) {
 		radioButton->setEnabled(true);
 	}
 
 	grpScreenshot->setVisible(true);
-	cmdLoadState->setEnabled(true);
-	cmdSaveState->setEnabled(true);
+	cmdLoadState->setEnabled(strlen(savestate_fname) > 0);
+	cmdSaveState->setEnabled(strlen(savestate_fname) > 0);
 }
 
 bool HelpPanelSavestate(std::vector<std::string>& helptext)
