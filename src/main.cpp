@@ -1076,6 +1076,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					savestate_state = STATE_DORESTORE;
 					xfree(txt);
 				}
+				SetLastActiveConfig(txt);
 #endif
 			}
 			loaded = true;
@@ -1175,6 +1176,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					savestate_state = STATE_DORESTORE;
 					currprefs.start_gui = false;
 				}
+				SetLastActiveConfig(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".cue") == 0
 				|| _tcscmp(txt2.c_str(), ".iso") == 0

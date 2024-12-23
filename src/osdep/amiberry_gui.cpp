@@ -922,10 +922,12 @@ int gui_update()
 		filename = extract_filename(currprefs.floppyslots[0].df);
 	else if (currprefs.cdslots[0].inuse && strlen(currprefs.cdslots[0].name) > 0)
 		filename = extract_filename(currprefs.cdslots[0].name);
+	else if (!whdload_prefs.whdload_filename.empty())
+		filename = extract_filename(whdload_prefs.whdload_filename);
+	else if (strlen(last_loaded_config) > 0)
+		filename = extract_filename(std::string(last_loaded_config));
 	else
-	{
-		last_loaded_config[0] != '\0' ? filename = std::string(last_loaded_config) : filename = "default.uae";
-	}
+		return 0;
 
 	get_savestate_path(savestate_fname, MAX_DPATH - 1);
 	strncat(savestate_fname, filename.c_str(), MAX_DPATH - 1);
