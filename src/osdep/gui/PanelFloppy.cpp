@@ -230,8 +230,7 @@ public:
 				cmdDFxSelect[i]->requestFocus();
 			}
 		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
+		refresh_all_panels();
 	}
 };
 
@@ -279,8 +278,7 @@ public:
 				}
 			}
 		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
+		refresh_all_panels();
 	}
 };
 
