@@ -373,7 +373,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 			int width, height;
 			Uint32 format;
 			SDL_QueryTexture(amiga_texture, &format, nullptr, &width, &height);
-			if (width == -w && height == -h && (depth == 16 && format == SDL_PIXELFORMAT_RGB565) || (depth == 32 && format == SDL_PIXELFORMAT_RGBA32))
+			if (width == -w && height == -h && (depth == 16 && format == SDL_PIXELFORMAT_RGB565) || (depth == 32 && format == SDL_PIXELFORMAT_BGRA32))
 			{
 				set_scaling_option(&currprefs, width, height);
 				return true;
@@ -386,7 +386,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 		SDL_DestroyTexture(amiga_texture);
 
 	AmigaMonitor* mon = &AMonitors[0];
-	amiga_texture = SDL_CreateTexture(mon->amiga_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
+	amiga_texture = SDL_CreateTexture(mon->amiga_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 	return amiga_texture != nullptr;
 #endif
 }
@@ -1965,7 +1965,7 @@ static void open_screen(struct uae_prefs* p)
 		else
 		{
 			display_depth = 32;
-			pixel_format = SDL_PIXELFORMAT_RGBA32;
+			pixel_format = SDL_PIXELFORMAT_BGRA32;
 		}
 		display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
 		display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
@@ -1974,10 +1974,8 @@ static void open_screen(struct uae_prefs* p)
 	{
 		mon->currentmode.native_depth = mon->currentmode.current_depth;
 
-		if (currprefs.gfx_resolution > avidinfo->gfx_resolution_reserved)
-			avidinfo->gfx_resolution_reserved = currprefs.gfx_resolution;
-		if (currprefs.gfx_vresolution > avidinfo->gfx_vresolution_reserved)
-			avidinfo->gfx_vresolution_reserved = currprefs.gfx_vresolution;
+		avidinfo->gfx_resolution_reserved = std::max(currprefs.gfx_resolution, avidinfo->gfx_resolution_reserved);
+		avidinfo->gfx_vresolution_reserved = std::max(currprefs.gfx_vresolution, avidinfo->gfx_vresolution_reserved);
 
 		if (!currprefs.gfx_autoresolution) {
 			mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
@@ -1988,8 +1986,7 @@ static void open_screen(struct uae_prefs* p)
 		}
 		if (avidinfo->gfx_resolution_reserved == RES_SUPERHIRES)
 			mon->currentmode.amiga_height *= 2;
-		if (mon->currentmode.amiga_height > 1280)
-			mon->currentmode.amiga_height = 1280;
+		mon->currentmode.amiga_height = std::min(mon->currentmode.amiga_height, 1280);
 
 		avidinfo->drawbuffer.inwidth = avidinfo->drawbuffer.outwidth = mon->currentmode.amiga_width;
 		avidinfo->drawbuffer.inheight = avidinfo->drawbuffer.outheight = mon->currentmode.amiga_height;
@@ -1997,7 +1994,7 @@ static void open_screen(struct uae_prefs* p)
 		mon->currentmode.pitch = mon->currentmode.amiga_width * mon->currentmode.current_depth >> 3;
 
 		display_depth = 32;
-		pixel_format = SDL_PIXELFORMAT_RGBA32;
+		pixel_format = SDL_PIXELFORMAT_BGRA32;
 
 		display_width = mon->currentmode.amiga_width;
 		display_height = mon->currentmode.amiga_height;

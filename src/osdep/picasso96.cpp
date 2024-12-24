@@ -1162,17 +1162,13 @@ static void setconvert(int monid)
 	} else {
 		vidinfo->picasso_convert[0] = vidinfo->picasso_convert[1] = getconvert(state->RGBFormat, picasso_vidinfo[monid].pixbytes);
 	}
-#if defined(AMIBERRY)
-	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_B5G6R5PC;
-#else
 	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_B8G8R8A8 : RGBFB_B5G6R5PC;
-#endif
 	if (picasso_vidinfo[monid].pixbytes == 4)
-		//alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGRA
-		alloc_colors_rgb(8, 8, 8, 0, 8, 16, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGBA
+		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGRA
+		//alloc_colors_rgb(8, 8, 8, 0, 8, 16, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGBA
 	else
-		//alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGR
-		alloc_colors_rgb(5, 6, 5, 0, 5, 11, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGB
+		alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGR
+		//alloc_colors_rgb(5, 6, 5, 0, 5, 11, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGB
 	gfx_set_picasso_colors(monid, state->RGBFormat);
 	picasso_palette(state->CLUT, vidinfo->clut);
 	if (vidinfo->host_mode != vidinfo->ohost_mode || state->RGBFormat != vidinfo->orgbformat) {
@@ -4920,7 +4916,7 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 #ifdef AMIBERRY
 	// In Amiberry, we only use these two modes, so we can optimize this as much as possible
 	// Use memcpy for copying memory
-	if (convert_mode == RGBFB_R8G8B8A8_32 || convert_mode == RGBFB_R5G6B5PC_16) {
+	if (convert_mode == RGBFB_B8G8R8A8_32 || convert_mode == RGBFB_R5G6B5PC_16) {
 		std::memcpy(dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
 		return;
 	}
