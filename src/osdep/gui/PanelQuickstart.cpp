@@ -405,9 +405,7 @@ public:
 				}
 			}
 		}
-
-		RefreshPanelHD();
-		RefreshPanelQuickstart();
+		refresh_all_panels();
 	}
 };
 
@@ -677,8 +675,7 @@ public:
 				}
 			}
 		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
+		refresh_all_panels();
 	}
 };
 
