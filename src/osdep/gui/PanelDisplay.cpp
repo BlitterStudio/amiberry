@@ -205,13 +205,15 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		AmigaMonitor* mon = &AMonitors[0];
-		if (actionEvent.getSource() == chkManualCrop)
+		auto source = actionEvent.getSource();
+
+		if (source == chkManualCrop)
 		{
 			changed_prefs.gfx_manual_crop = chkManualCrop->isSelected();
 			if (changed_prefs.gfx_auto_crop)
 				changed_prefs.gfx_auto_crop = false;
 		}
-		else if (actionEvent.getSource() == sldAmigaWidth)
+		else if (source == sldAmigaWidth)
 		{
 			const int new_width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
 			const int new_x = ((AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution) - new_width) / 2;
@@ -219,7 +221,7 @@ public:
 			changed_prefs.gfx_manual_crop_width = new_width;
 			changed_prefs.gfx_horizontal_offset = new_x;
 		}
-		else if (actionEvent.getSource() == sldAmigaHeight)
+		else if (source == sldAmigaHeight)
 		{
 			const int new_height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
 			const int new_y = ((AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution) - new_height) / 2;
@@ -228,29 +230,29 @@ public:
 			changed_prefs.gfx_vertical_offset = new_y;
 		}
 
-		else if (actionEvent.getSource() == chkAutoCrop)
+		else if (source == chkAutoCrop)
 		{
 			changed_prefs.gfx_auto_crop = chkAutoCrop->isSelected();
 			if (changed_prefs.gfx_manual_crop)
 				changed_prefs.gfx_manual_crop = false;
 		}
 
-		else if (actionEvent.getSource() == chkBorderless)
+		else if (source == chkBorderless)
 			changed_prefs.borderless = chkBorderless->isSelected();
 
-		else if (actionEvent.getSource() == sldHOffset)
+		else if (source == sldHOffset)
 		{
 			changed_prefs.gfx_horizontal_offset = static_cast<int>(sldHOffset->getValue());
 			lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));
 			lblHOffsetValue->adjustSize();
 		}
-		else if (actionEvent.getSource() == sldVOffset)
+		else if (source == sldVOffset)
 		{
 			changed_prefs.gfx_vertical_offset = static_cast<int>(sldVOffset->getValue());
 			lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
 			lblVOffsetValue->adjustSize();
 		}
-		else if (actionEvent.getSource() == chkFrameskip)
+		else if (source == chkFrameskip)
 		{
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
 			sldRefresh->setEnabled(chkFrameskip->isSelected());
@@ -258,9 +260,9 @@ public:
 			lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
 			lblFrameRate->adjustSize();
 		}
-		else if (actionEvent.getSource() == cboFpsRate
-			|| actionEvent.getSource() == chkFpsAdj
-			|| actionEvent.getSource() == sldFpsAdj)
+		else if (source == cboFpsRate
+			|| source == chkFpsAdj
+			|| source == sldFpsAdj)
 		{
 			sldFpsAdj->setEnabled(chkFpsAdj->isSelected());
 			txtFpsAdj->setEnabled(chkFpsAdj->isSelected());
@@ -335,23 +337,23 @@ public:
 				sldFpsAdj->setValue(cr->rate);
 			}
 		}
-		else if (actionEvent.getSource() == sldBrightness)
+		else if (source == sldBrightness)
 		{
 			changed_prefs.gfx_luminance = static_cast<int>(sldBrightness->getValue());
 			lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
 			lblBrightnessValue->adjustSize();
 		}
 
-		else if (actionEvent.getSource() == sldRefresh)
+		else if (source == sldRefresh)
 			changed_prefs.gfx_framerate = static_cast<int>(sldRefresh->getValue());
 
-		else if (actionEvent.getSource() == chkAspect)
+		else if (source == chkAspect)
 			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
 
-		else if (actionEvent.getSource() == chkBlackerThanBlack)
+		else if (source == chkBlackerThanBlack)
 			changed_prefs.gfx_blackerthanblack = chkBlackerThanBlack->isSelected();
 
-		else if (actionEvent.getSource() == cboScreenmode)
+		else if (source == cboScreenmode)
 		{
 			if (cboScreenmode->getSelected() == 0)
 			{
@@ -370,7 +372,7 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == cboFullscreen)
+		else if (source == cboFullscreen)
 		{
 			const auto idx = cboFullscreen->getSelected();
 			if (idx >= 0 && idx <= fullscreen_resolutions_list.getNumberOfElements())
@@ -381,22 +383,22 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == chkHorizontal)
+		else if (source == chkHorizontal)
 			changed_prefs.gfx_xcenter = chkHorizontal->isSelected() ? 2 : 0;
 
-		else if (actionEvent.getSource() == chkVertical)
+		else if (source == chkVertical)
 			changed_prefs.gfx_ycenter = chkVertical->isSelected() ? 2 : 0;
 
-		else if (actionEvent.getSource() == chkFlickerFixer)
+		else if (source == chkFlickerFixer)
 			changed_prefs.gfx_scandoubler = chkFlickerFixer->isSelected();
 
-		else if (actionEvent.getSource() == cboResolution)
+		else if (source == cboResolution)
 			changed_prefs.gfx_resolution = cboResolution->getSelected();
 
-		else if (actionEvent.getSource() == chkFilterLowRes)
+		else if (source == chkFilterLowRes)
 			changed_prefs.gfx_lores_mode = chkFilterLowRes->isSelected() ? 1 : 0;
 
-		else if (actionEvent.getSource() == cboResSwitch)
+		else if (source == cboResSwitch)
 		{
 			int pos = cboResSwitch->getSelected();
 			if (pos == 0)
@@ -1107,7 +1109,6 @@ static void refresh_fps_options()
 			_tcscpy(buffer, cr->label);
 			if (!buffer[0])
 				_stprintf(buffer, _T(":%d"), i);
-			//xSendDlgItemMessage(hDlg, IDC_RATE2BOX, CB_ADDSTRING, 0, (LPARAM)buffer);
 			fps_options.emplace_back(buffer);
 			double d = changed_prefs.chipset_refreshrate;
 			if (abs(d) < 1)
