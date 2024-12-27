@@ -92,7 +92,7 @@ static void setharddrive()
 {
 	sethardfilegeo();
 	sethd();
-	txtHDPath->setText(current_hfdlg.ci.rootdir);
+	//txtHDPath->setText(current_hfdlg.ci.rootdir);
 	auto selIndex = 0;
 	for (auto i = 0; i < controller.size(); ++i) {
 		if (controller[i].type == current_hfdlg.ci.controller_type)
@@ -258,6 +258,8 @@ static void InitEditFilesysHardDrive()
 	wndEditFilesysHardDrive->requestModalFocus();
 	focus_bug_workaround(wndEditFilesysHardDrive);
 	cmdHDDCancel->requestFocus();
+
+	setharddrive();
 }
 
 static void ExitEditFilesysHardDrive()
