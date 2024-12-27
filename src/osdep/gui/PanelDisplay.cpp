@@ -312,9 +312,11 @@ public:
 			}
 			else if (i == CHIPSET_REFRESH_PAL) {
 				cr->rate = 50.0f;
+				changed_prefs.ntscmode = false;
 			}
 			else if (i == CHIPSET_REFRESH_NTSC) {
 				cr->rate = 60.0f;
+				changed_prefs.ntscmode = true;
 			}
 			if (cr->rate > 0 && cr->rate < 1) {
 				cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
@@ -446,6 +448,7 @@ public:
 		}
 
 		RefreshPanelDisplay();
+		RefreshPanelQuickstart();
 	}
 };
 
