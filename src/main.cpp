@@ -1067,16 +1067,15 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				{
 					savestate_state = STATE_DORESTORE;
 					_tcscpy(savestate_fname, txt);
-					xfree(txt);
 				}
 				else
 				{
 					get_savestate_path(savestate_fname, MAX_DPATH - 1);
 					strncat(savestate_fname, txt, MAX_DPATH - 1);
 					savestate_state = STATE_DORESTORE;
-					xfree(txt);
 				}
 				SetLastActiveConfig(txt);
+				xfree(txt);
 #endif
 			}
 			loaded = true;

@@ -321,11 +321,18 @@ std::string amiberry_conf_file;
 std::string amiberry_ini_file;
 
 char last_loaded_config[MAX_DPATH] = {'\0'};
+char last_active_config[MAX_DPATH] = { '\0' };
 
 int max_uae_width;
 int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
+
+void SetLastActiveConfig(const char* filename)
+{
+	extract_filename(filename, last_active_config);
+	remove_file_extension(last_active_config);
+}
 
 int getdpiforwindow(SDL_Window* hwnd)
 {

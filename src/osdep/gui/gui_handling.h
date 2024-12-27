@@ -196,6 +196,7 @@ extern SDL_Texture* gui_texture;
 
 extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
+extern char last_active_config[MAX_DPATH];
 
 extern int quickstart_model;
 extern int quickstart_conf;

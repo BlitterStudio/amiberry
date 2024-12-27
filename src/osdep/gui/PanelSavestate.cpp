@@ -26,12 +26,12 @@ static gcn::Image* imgSavestate = nullptr;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
 
-static std::string get_file_timestamp(const std::string& filename)
+static std::string get_file_timestamp(const TCHAR* filename)
 {
 	struct stat st {};
 	tm tm{};
 
-	if (stat(filename.c_str(), &st) == -1) {
+	if (stat(filename, &st) == -1) {
 		write_log("Failed to get file timestamp, stat failed: %s\n", strerror(errno));
 		return "ERROR";
 	}

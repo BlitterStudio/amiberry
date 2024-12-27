@@ -924,8 +924,8 @@ int gui_update()
 		filename = extract_filename(currprefs.cdslots[0].name);
 	else if (!whdload_prefs.whdload_filename.empty())
 		filename = extract_filename(whdload_prefs.whdload_filename);
-	else if (strlen(last_loaded_config) > 0)
-		filename = extract_filename(std::string(last_loaded_config));
+	else if (strlen(last_active_config) > 0)
+		filename = std::string(last_active_config) + ".uss";
 	else
 		return 0;
 
@@ -934,9 +934,7 @@ int gui_update()
 	remove_file_extension(savestate_fname);
 	strncat(savestate_fname, (suffix + ".uss").c_str(), MAX_DPATH - 1);
 
-	screenshot_filename = get_screenshot_path();
-	screenshot_filename += filename;
-	screenshot_filename = remove_file_extension(screenshot_filename);
+	screenshot_filename = remove_file_extension(get_screenshot_path() + filename);
 	screenshot_filename.append(suffix + ".png");
 
 	return 0;

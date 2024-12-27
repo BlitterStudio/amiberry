@@ -11,7 +11,6 @@
 #include "uae.h"
 #include "gui_handling.h"
 
-static char last_active_config[MAX_DPATH] = {'\0'};
 static int ensureVisible = -1;
 
 static gcn::Button* cmdLoad;
@@ -23,12 +22,6 @@ static gcn::Label* lblDesc;
 static gcn::TextField* txtDesc;
 static gcn::ListBox* lstConfigs;
 static gcn::ScrollArea* scrAreaConfigs;
-
-void SetLastActiveConfig(const char* filename)
-{
-	extract_filename(filename, last_active_config);
-	remove_file_extension(last_active_config);
-}
 
 static gcn::StringListModel configsList;
 
