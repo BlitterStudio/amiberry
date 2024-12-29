@@ -977,6 +977,8 @@ void gui_display(int shortcut)
 		amiberry_gui_halt();
 	}
 
+	//TODO implement more shortcuts here (e.g. 5 for Save State)
+
 	reset_sound();
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
 	inputdevice_config_change_test();
