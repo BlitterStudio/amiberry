@@ -1207,42 +1207,66 @@ uae_u32 host_shutdown(SB, uae_u32 sd, uae_u32 how)
 
 void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 optval, uae_u32 len)
 {
-	TrapContext *ctx = NULL;
+	TrapContext* ctx = NULL;
 	int s = getsock(ctx, sb, sd + 1);
-	int nativelevel = mapsockoptlevel (level);
+	int nativelevel = mapsockoptlevel(level);
 	int nativeoptname = mapsockoptname(nativelevel, optname);
-	void *buf;
-	
+	void* buf;
+	struct linger sl;
+	struct timeval timeout;
+
 	if (s == INVALID_SOCKET) {
 		sb->resultval = -1;
-		bsdsocklib_seterrno (ctx, sb, 9); /* EBADF */;
+		bsdsocklib_seterrno(ctx, sb, 9); /* EBADF */
 		return;
 	}
 
 	if (optval) {
 		buf = malloc(len);
-		mapsockoptvalue(nativelevel, nativeoptname, optval, buf);
-	} else {
+		if (nativeoptname == SO_LINGER) {
+			sl.l_onoff = get_long(optval);
+			sl.l_linger = get_long(optval + 4);
+		}
+		else if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+			timeout.tv_sec = get_long(optval);
+			timeout.tv_usec = get_long(optval + 4);
+		}
+		else {
+			mapsockoptvalue(nativelevel, nativeoptname, optval, buf);
+		}
+	}
+	else {
 		buf = NULL;
 	}
-	sb->resultval  = setsockopt (s, nativelevel, nativeoptname, buf, len);
+	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+		sb->resultval = setsockopt(s, nativelevel, nativeoptname, &timeout, sizeof(timeout));
+	}
+	else if (nativeoptname == SO_LINGER) {
+		sb->resultval = setsockopt(s, nativelevel, nativeoptname, &sl, sizeof(sl));
+	}
+	else {
+		sb->resultval = setsockopt(s, nativelevel, nativeoptname, buf, len);
+	}
 	if (buf)
 		free(buf);
 	SETERRNO;
 
 	write_log("setsockopt: sock %d, level %d, 'name' %d(%d), len %d -> %d, %d\n",
-		   s, level, optname, nativeoptname, len,
-		   sb->resultval, errno);
+		s, level, optname, nativeoptname, len,
+		sb->resultval, errno);
 }
 
-uae_u32 host_getsockopt(TrapContext *ctx, SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 optval, uae_u32 optlen)
+uae_u32 host_getsockopt(TrapContext* ctx, SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 optval, uae_u32 optlen)
 {
 	socklen_t len = 0;
 	int r;
 	int s;
 	int nativelevel = mapsockoptlevel(level);
 	int nativeoptname = mapsockoptname(nativelevel, optname);
-	void *buf = NULL;
+	void* buf = NULL;
+	struct linger sl;
+	struct timeval timeout;
+
 	s = getsock(ctx, sb, sd + 1);
 
 	if (s == INVALID_SOCKET) {
@@ -1251,26 +1275,43 @@ uae_u32 host_getsockopt(TrapContext *ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 	}
 
 	if (optlen) {
-		len = get_long (optlen);
+		len = get_long(optlen);
 		buf = malloc(len);
 		if (buf == NULL) {
-		   return -1;
+			return -1;
 		}
 	}
 
-	r = getsockopt (s, nativelevel, nativeoptname,
-	optval ? buf : NULL, optlen ? &len : NULL);
+	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+		r = getsockopt(s, nativelevel, nativeoptname, &timeout, &len);
+	}
+	else if (nativeoptname == SO_LINGER) {
+		r = getsockopt(s, nativelevel, nativeoptname, &sl, &len);
+	}
+	else {
+		r = getsockopt(s, nativelevel, nativeoptname, optval ? buf : NULL, optlen ? &len : NULL);
+	}
 
 	if (optlen)
-		put_long (optlen, len);
+		put_long(optlen, len);
 
 	SETERRNO;
 	write_log("getsockopt: sock AmigaSide %d NativeSide %d, level %d, 'name' %x(%d), len %d -> %d, %d\n",
-	sd, s, level, optname, nativeoptname, len, r, errno);
+		sd, s, level, optname, nativeoptname, len, r, errno);
 
 	if (optval) {
 		if (r == 0) {
-			mapsockoptreturn(nativelevel, nativeoptname, optval, buf);
+			if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+				put_long(optval, timeout.tv_sec);
+				put_long(optval + 4, timeout.tv_usec);
+			}
+			else if (nativeoptname == SO_LINGER) {
+				put_long(optval, sl.l_onoff);
+				put_long(optval + 4, sl.l_linger);
+			}
+			else {
+				mapsockoptreturn(nativelevel, nativeoptname, optval, buf);
+			}
 		}
 	}
 
