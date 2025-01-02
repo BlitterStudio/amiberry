@@ -130,7 +130,7 @@ void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, i
 	TCHAR tmp[MAX_DPATH];
 	TCHAR tmp2[MAX_DPATH];
 	TCHAR seltmp[MAX_DPATH];
-	struct romdata* rdx = NULL;
+	struct romdata* rdx = nullptr;
 	struct romdataentry* rde = xcalloc(struct romdataentry, MAX_ROMMGR_ROMS);
 	int ridx = 0;
 
@@ -188,7 +188,7 @@ void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, i
 			int jpri = rde[j].priority;
 			const TCHAR* jname = rde[j].name;
 			if ((ipri > jpri) || (ipri == jpri && _tcsicmp(iname, jname) > 0)) {
-				struct romdataentry rdet;
+				struct romdataentry rdet{};
 				memcpy(&rdet, &rde[i], sizeof(struct romdataentry));
 				memcpy(&rde[i], &rde[j], sizeof(struct romdataentry));
 				memcpy(&rde[j], &rdet, sizeof(struct romdataentry));
@@ -230,14 +230,14 @@ void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, i
 static int extpri(const TCHAR* p, int size)
 {
 	const TCHAR* s = _tcsrchr(p, '.');
-	if (s == NULL)
+	if (s == nullptr)
 		return 80;
 	// if archive: lowest priority
 	if (!my_existsfile(p))
 		return 100;
 	int pri = 10;
 	// prefer matching size
-	struct mystat ms;
+	struct mystat ms{};
 	if (my_stat(p, &ms)) {
 		if (ms.size == size) {
 			pri--;
@@ -251,10 +251,10 @@ static int addrom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
 	TCHAR tmp1[MAX_DPATH], tmp2[MAX_DPATH], tmp3[MAX_DPATH];
 	char pathname[MAX_DPATH];
 
-	_stprintf(tmp1, _T("ROM_%03d"), rd->id);
+	_sntprintf(tmp1, sizeof tmp1, _T("ROM_%03d"), rd->id);
 	if (rd->group) {
 		TCHAR* p = tmp1 + _tcslen(tmp1);
-		_stprintf(p, _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
+		_sntprintf(p, sizeof p, _T("_%02d_%02d"), rd->group >> 16, rd->group & 65535);
 	}
 	getromname(rd, tmp2);
 	pathname[0] = 0;
@@ -264,9 +264,9 @@ static int addrom(UAEREG* fkey, struct romdata* rd, const TCHAR* name)
 	}
 	if (rd->crc32 == 0xffffffff) {
 		if (rd->configname)
-			_stprintf(tmp2, _T(":%s"), rd->configname);
+			_sntprintf(tmp2, sizeof tmp2, _T(":%s"), rd->configname);
 		else
-			_stprintf(tmp2, _T(":ROM_%03d"), rd->id);
+			_sntprintf(tmp2, sizeof tmp2, _T(":ROM_%03d"), rd->id);
 	}
 	int size = sizeof tmp3 / sizeof(TCHAR);
 	if (regquerystr(fkey, tmp1, tmp3, &size)) {
@@ -300,7 +300,7 @@ struct romscandata {
 
 static struct romdata* scan_single_rom_2(struct zfile* f)
 {
-	uae_u8 buffer[20] = {0};
+	uae_u8 buffer[20] = {};
 	auto cl = 0;
 	struct romdata* rd = nullptr;
 
@@ -367,7 +367,7 @@ struct romdata *scan_single_rom (const TCHAR *path)
 		return rd;
 	z = zfile_fopen (path, _T("rb"), ZFD_NORMAL);
 	if (!z)
-		return 0;
+		return nullptr;
 	return scan_single_rom_2 (z);
 }
 
@@ -427,7 +427,7 @@ static bool scan_rom_hook(const TCHAR* name, int line)
 
 static int scan_rom_2(struct zfile* f, void* vrsd)
 {
-	struct romscandata* rsd = (struct romscandata*)vrsd;
+	auto* rsd = static_cast<struct romscandata*>(vrsd);
 	const TCHAR* path = zfile_getname(f);
 	const TCHAR* romkey = _T("rom.key");
 	struct romdata* rd;
@@ -495,7 +495,7 @@ static int listrom(const int* roms)
 	return 0;
 }
 
-static void show_rom_list(void)
+static void show_rom_list()
 {
 	// TODO
 	//TCHAR* p;
@@ -579,7 +579,7 @@ static void show_rom_list(void)
 static int scan_roms_2(UAEREG* fkey, const TCHAR* path, bool deepscan, int level)
 {
 	struct dirent* entry;
-	struct stat statbuf;
+	struct stat statbuf{};
 	DIR* dp;
 	int ret = 0;
 
@@ -589,14 +589,14 @@ static int scan_roms_2(UAEREG* fkey, const TCHAR* path, bool deepscan, int level
 	write_log(_T("ROM scan directory '%s'\n"), path);
 
 	dp = opendir(path);
-	if (dp == NULL)
+	if (dp == nullptr)
 		return 0;
 
 	scan_rom_hook(path, 1);
 
-    while ((entry = readdir(dp)) != NULL) {
+    while ((entry = readdir(dp)) != nullptr) {
         TCHAR tmppath[MAX_DPATH];
-        _stprintf(tmppath, _T("%s/%s"), path, entry->d_name);
+        _sntprintf(tmppath, sizeof tmppath, _T("%s/%s"), path, entry->d_name);
 
         if (stat(tmppath, &statbuf) == -1)
             continue;
@@ -608,7 +608,7 @@ static int scan_roms_2(UAEREG* fkey, const TCHAR* path, bool deepscan, int level
             scan_roms_2(fkey, tmppath, deepscan, level + 1);
         }
 
-        if (!scan_rom_hook(NULL, 0))
+        if (!scan_rom_hook(nullptr, 0))
             break;
     }
 
@@ -625,7 +625,7 @@ static int scan_roms_3(UAEREG* fkey, TCHAR** paths, const TCHAR* path)
 	bool deepscan = true;
 
 	ret = 0;
-	scan_rom_hook(NULL, 0);
+	scan_rom_hook(nullptr, 0);
 	pathp[0] = 0;
 	realpath(path, pathp);
 	if (!pathp[0])
@@ -660,16 +660,16 @@ int scan_roms(int show)
 
 	ret = 0;
 
-	regdeletetree(NULL, _T("DetectedROMs"));
-	fkey = regcreatetree(NULL, _T("DetectedROMs"));
-	if (fkey == NULL)
+	regdeletetree(nullptr, _T("DetectedROMs"));
+	fkey = regcreatetree(nullptr, _T("DetectedROMs"));
+	if (fkey == nullptr)
 		goto end;
 
 	cnt = 0;
 	for (i = 0; i < MAX_ROM_PATHS; i++)
-		paths[i] = NULL;
-	scan_rom_hook(NULL, 0);
-	while (scan_rom_hook(NULL, 0)) {
+		paths[i] = nullptr;
+	scan_rom_hook(nullptr, 0);
+	while (scan_rom_hook(nullptr, 0)) {
 		keys = get_keyring();
 		get_rom_path(path, sizeof path / sizeof(TCHAR));
 		cnt += scan_roms_3(fkey, paths, path);
@@ -699,7 +699,7 @@ int scan_roms(int show)
 	for (i = 0; i < MAX_ROM_PATHS; i++)
 		xfree(paths[i]);
 
-	fkey2 = regcreatetree(NULL, _T("DetectedROMS"));
+	fkey2 = regcreatetree(nullptr, _T("DetectedROMS"));
 	if (fkey2) {
 		id = 1;
 		for (;;) {
@@ -707,7 +707,7 @@ int scan_roms(int show)
 			if (!rd)
 				break;
 			if (rd->crc32 == 0xffffffff)
-				addrom(fkey, rd, NULL);
+				addrom(fkey, rd, nullptr);
 			id++;
 		}
 		regclosetree(fkey2);
@@ -733,7 +733,7 @@ static void ClearConfigFileList()
 	ConfigFilesList.clear();
 }
 
-void ReadConfigFileList(void)
+void ReadConfigFileList()
 {
 	char path[MAX_DPATH];
 	std::vector<std::string> files;
@@ -771,9 +771,9 @@ void ReadConfigFileList(void)
 		// If the user has many (thousands) of configs, this will take a long time
 		if (amiberry_options.read_config_descriptions)
 		{
-			auto p = cfgfile_open(tmp->FullPath, NULL);
+			auto p = cfgfile_open(tmp->FullPath, nullptr);
 			if (p) {
-				cfgfile_get_description(p, NULL, tmp->Description, NULL, NULL, NULL, NULL, NULL);
+				cfgfile_get_description(p, nullptr, tmp->Description, nullptr, nullptr, nullptr, nullptr, nullptr);
 				cfgfile_close(p);
 			}
 		}
@@ -912,10 +912,10 @@ void gui_purge_events()
 	keybuf_init();
 }
 
-int gui_update()
+void gui_update()
 {
 	std::string filename;
-	std::string suffix = (current_state_num >= 1 && current_state_num <= 14) ?
+	const std::string suffix = current_state_num >= 1 && current_state_num <= 14 ?
 		"-" + std::to_string(current_state_num) : "";
 
 	if (strlen(currprefs.floppyslots[0].df) > 0)
@@ -927,7 +927,7 @@ int gui_update()
 	else if (strlen(last_active_config) > 0)
 		filename = std::string(last_active_config) + ".uss";
 	else
-		return 0;
+		return;
 
 	get_savestate_path(savestate_fname, MAX_DPATH - 1);
 	strncat(savestate_fname, filename.c_str(), MAX_DPATH - 1);
@@ -936,8 +936,6 @@ int gui_update()
 
 	screenshot_filename = remove_file_extension(get_screenshot_path() + filename);
 	screenshot_filename.append(suffix + ".png");
-
-	return 0;
 }
 
 /* if drive is -1, show the full GUI, otherwise file-requester for DF[drive] */
@@ -1184,7 +1182,7 @@ void gui_message(const char* format, ...)
 	va_list parms;
 
 	va_start(parms, format);
-	vsprintf(msg, format, parms);
+	_vsntprintf(msg, sizeof(msg), format, parms);
 	va_end(parms);
 
 	ShowMessage("", msg, "", "", "Ok", "");
@@ -1297,7 +1295,7 @@ void CreateDefaultDevicename(char* name)
 
 	while (!foundFree && freeNum < 10)
 	{
-		sprintf(name, "DH%d", freeNum);
+		_sntprintf(name, sizeof name, "DH%d", freeNum);
 		foundFree = !DevicenameExists(name);
 		++freeNum;
 	}
@@ -1458,7 +1456,7 @@ void updatehdfinfo(bool force, bool defaults, bool realdrive)
 void new_filesys(int entry)
 {
 	struct uaedev_config_data* uci;
-	struct uaedev_config_info ci;
+	struct uaedev_config_info ci{};
 	memcpy(&ci, &current_fsvdlg.ci, sizeof(struct uaedev_config_info));
 	uci = add_filesys_config(&changed_prefs, entry, &ci);
 	if (uci) {
@@ -1471,7 +1469,7 @@ void new_filesys(int entry)
 
 void new_cddrive(int entry)
 {
-	struct uaedev_config_info ci = { 0 };
+	struct uaedev_config_info ci{};
 	ci.device_emu_unit = 0;
 	ci.controller_type = current_cddlg.ci.controller_type;
 	ci.controller_unit = current_cddlg.ci.controller_unit;
@@ -1484,7 +1482,7 @@ void new_cddrive(int entry)
 void new_tapedrive(int entry)
 {
 	struct uaedev_config_data* uci;
-	struct uaedev_config_info ci = { 0 };
+	struct uaedev_config_info ci{};
 	ci.controller_type = current_tapedlg.ci.controller_type;
 	ci.controller_unit = current_tapedlg.ci.controller_unit;
 	ci.readonly = current_tapedlg.ci.readonly;
@@ -1500,7 +1498,7 @@ void new_tapedrive(int entry)
 void new_hardfile(int entry)
 {
 	struct uaedev_config_data* uci;
-	struct uaedev_config_info ci;
+	struct uaedev_config_info ci{};
 	memcpy(&ci, &current_hfdlg.ci, sizeof(struct uaedev_config_info));
 	uci = add_filesys_config(&changed_prefs, entry, &ci);
 	if (uci) {
@@ -1541,14 +1539,14 @@ void addhdcontroller(const struct expansionromtype* erc, int firstid, int flags)
 		_tcscat(name, cbt->name);
 		_tcscat(name, _T(")"));
 	}
-	if (get_boardromconfig(&changed_prefs, erc->romtype, NULL) || get_boardromconfig(&changed_prefs, erc->romtype_extra, NULL)) {
-		std::string name_string = std::string(name);
+	if (get_boardromconfig(&changed_prefs, erc->romtype, nullptr) || get_boardromconfig(&changed_prefs, erc->romtype_extra, nullptr)) {
+		auto name_string = std::string(name);
 		controller.push_back({ firstid, name_string });
 		for (int j = 1; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
 			if (is_board_enabled(&changed_prefs, erc->romtype, j)) {
 				TCHAR tmp[MAX_DPATH];
-				_stprintf(tmp, _T("%s [%d]"), name, j + 1);
-				std::string tmp_string = std::string(tmp);
+				_sntprintf(tmp, sizeof tmp, _T("%s [%d]"), name, j + 1);
+				auto tmp_string = std::string(tmp);
 				controller.push_back({ firstid + j * HD_CONTROLLER_NEXT_UNIT, tmp_string });
 			}
 		}
@@ -1590,9 +1588,9 @@ void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
 		int ports = 2 + (ert ? ert->extrahdports : 0);
 		for (int i = 0; i < ports; i += 2) {
 			TCHAR tmp[100];
-			_stprintf(tmp, _T("%d"), i + 0);
+			_sntprintf(tmp, sizeof tmp, _T("%d"), i + 0);
 			controller_unit.push_back({ std::string(tmp) });
-			_stprintf(tmp, _T("%d"), i + 1);
+			_sntprintf(tmp, sizeof tmp, _T("%d"), i + 1);
 			controller_unit.push_back({ std::string(tmp) });
 		}
 		//if (media)
@@ -1625,7 +1623,7 @@ void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
 	else if (ctype == HD_CONTROLLER_TYPE_UAE) {
 		for (int i = 0; i < MAX_FILESYSTEM_UNITS; i++) {
 			TCHAR tmp[100];
-			_stprintf(tmp, _T("%d"), i);
+			_sntprintf(tmp, sizeof tmp, _T("%d"), i);
 			controller_unit.push_back({ std::string(tmp) });
 		}
 		//if (media)
@@ -1656,7 +1654,7 @@ void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media)
 	}
 }
 
-bool isguiactive(void)
+bool isguiactive()
 {
 	return gui_active > 0;
 }
@@ -1749,7 +1747,7 @@ void DisplayDiskInfo(int num)
 	char linebuffer[512];
 
 	DISK_examine_image(&changed_prefs, num, &di, true, nullptr);
-	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, NULL, NULL, NULL);
+	DISK_validate_filename(&changed_prefs, changed_prefs.floppyslots[num].df, num, tmp1, 0, nullptr, nullptr, nullptr);
 	extract_filename(tmp1, nameonly);
 	snprintf(title, MAX_DPATH - 1, "Info for %s", nameonly);
 
@@ -1784,9 +1782,9 @@ void DisplayDiskInfo(int num)
 	for (int i = 0; i < 1024; i += w) {
 		for (int j = 0; j < w; j++) {
 			uae_u8 b = di.bootblock[i + j];
-			sprintf(linebuffer + j * 3, _T("%02X "), b);
+			_sntprintf(linebuffer + j * 3, sizeof(linebuffer) - j * 3, "%02X ", b);
 			if (b >= 32 && b < 127)
-				linebuffer[w * 3 + 1 + j] = (char)b;
+				linebuffer[w * 3 + 1 + j] = static_cast<char>(b);
 			else
 				linebuffer[w * 3 + 1 + j] = '.';
 		}

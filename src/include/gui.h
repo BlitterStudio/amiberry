@@ -12,7 +12,7 @@
 #include "uae/types.h"
 
 extern int gui_init(void);
-extern int gui_update(void);
+extern void gui_update(void);
 extern void gui_exit(void);
 extern void gui_led(int, int, int);
 extern void gui_handle_events(void);
