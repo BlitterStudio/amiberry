@@ -1135,7 +1135,7 @@ namespace gcn
          * @see remove, clear
          * @since 1.1.0
          */
-        void add(Widget* widget);
+        virtual void add(Widget* widget);
 
         /**
          * Removes a child from the widget.
@@ -1186,7 +1186,7 @@ namespace gcn
          * @return A list of the widgets children.
          * @since 1.1.0
          */
-        const std::list<Widget*>& getChildren() const;
+        virtual const std::list<Widget*>& getChildren() const;
 
         /**
          * Holds the mouse listeners of the widget.
