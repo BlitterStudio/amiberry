@@ -20,7 +20,7 @@
 #ifdef _WIN32
 /* Using the real _tcs* functions */
 #else
-#define _istxdigit SDL_isxdigit
+#define _istxdigit isxdigit
 #define _istdigit SDL_isdigit
 #define _istspace SDL_isspace
 #define _istupper SDL_isupper
