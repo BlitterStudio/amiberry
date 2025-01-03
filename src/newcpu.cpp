@@ -208,7 +208,7 @@ void dump_counts (void)
 	fclose (f);
 }
 #else
-void dump_counts (void)
+void dump_counts ()
 {
 }
 #endif
@@ -222,8 +222,8 @@ void dump_counts (void)
 
 static uae_u32 (*x2_prefetch)(int);
 static uae_u32 (*x2_prefetch_long)(int);
-static uae_u32 (*x2_next_iword)(void);
-static uae_u32 (*x2_next_ilong)(void);
+static uae_u32 (*x2_next_iword)();
+static uae_u32 (*x2_next_ilong)();
 static uae_u32 (*x2_get_ilong)(int);
 static uae_u32 (*x2_get_iword)(int);
 static uae_u32 (*x2_get_ibyte)(int);
@@ -238,8 +238,8 @@ static void (*x2_do_cycles_pre)(int);
 static void (*x2_do_cycles_post)(int, uae_u32);
 
 uae_u32 (*x_prefetch)(int);
-uae_u32 (*x_next_iword)(void);
-uae_u32 (*x_next_ilong)(void);
+uae_u32 (*x_next_iword)();
+uae_u32 (*x_next_ilong)();
 uae_u32 (*x_get_ilong)(int);
 uae_u32 (*x_get_iword)(int);
 uae_u32 (*x_get_ibyte)(int);
@@ -250,8 +250,8 @@ void (*x_put_long)(uaecptr,uae_u32);
 void (*x_put_word)(uaecptr,uae_u32);
 void (*x_put_byte)(uaecptr,uae_u32);
 
-uae_u32 (*x_cp_next_iword)(void);
-uae_u32 (*x_cp_next_ilong)(void);
+uae_u32 (*x_cp_next_iword)();
+uae_u32 (*x_cp_next_ilong)();
 uae_u32 (*x_cp_get_long)(uaecptr);
 uae_u32 (*x_cp_get_word)(uaecptr);
 uae_u32 (*x_cp_get_byte)(uaecptr);
@@ -275,7 +275,7 @@ void(*x_phys_put_long)(uaecptr, uae_u32);
 
 bool(*is_super_access)(bool);
 
-static void set_x_cp_funcs(void)
+static void set_x_cp_funcs()
 {
 	x_cp_put_long = x_put_long;
 	x_cp_put_word = x_put_word;
@@ -326,13 +326,13 @@ static void validate_trace (void)
 }
 #endif
 
-static void debug_trace (void)
+static void debug_trace ()
 {
 	if (cputrace.writecounter > 10000 || cputrace.readcounter > 10000)
 		write_log (_T("cputrace.readcounter=%d cputrace.writecounter=%d\n"), cputrace.readcounter, cputrace.writecounter);
 }
 
-STATIC_INLINE void clear_trace (void)
+STATIC_INLINE void clear_trace ()
 {
 #if CPUTRACE_DEBUG
 	validate_trace ();
@@ -396,14 +396,14 @@ static void add_trace (uaecptr addr, uae_u32 val, int accessmode, int size)
 }
 
 
-static void check_trace2 (void)
+static void check_trace2 ()
 {
 	if (cputrace.readcounter || cputrace.writecounter ||
 		cputrace.cyclecounter || cputrace.cyclecounter_pre || cputrace.cyclecounter_post)
 		write_log (_T("CPU tracer invalid state during playback!\n"));
 }
 
-static bool check_trace (void)
+static bool check_trace ()
 {
 	if (!cpu_tracer)
 		return true;
@@ -524,7 +524,7 @@ static uae_u32 cputracefunc2_x_prefetch (int o)
 	return v;
 }
 
-static uae_u32 cputracefunc_x_next_iword (void)
+static uae_u32 cputracefunc_x_next_iword ()
 {
 	uae_u32 pc = m68k_getpc ();
 	set_trace (pc, 2, 2);
@@ -532,7 +532,7 @@ static uae_u32 cputracefunc_x_next_iword (void)
 	add_trace (pc, v, 2, 2);
 	return v;
 }
-static uae_u32 cputracefunc_x_next_ilong (void)
+static uae_u32 cputracefunc_x_next_ilong ()
 {
 	uae_u32 pc = m68k_getpc ();
 	set_trace (pc, 2, 4);
@@ -540,7 +540,7 @@ static uae_u32 cputracefunc_x_next_ilong (void)
 	add_trace (pc, v, 2, 4);
 	return v;
 }
-static uae_u32 cputracefunc2_x_next_iword (void)
+static uae_u32 cputracefunc2_x_next_iword ()
 {
 	uae_u32 v;
 	if (get_trace (m68k_getpc (), 2, 2, &v)) {
@@ -549,7 +549,7 @@ static uae_u32 cputracefunc2_x_next_iword (void)
 	}
 	return v;
 }
-static uae_u32 cputracefunc2_x_next_ilong (void)
+static uae_u32 cputracefunc2_x_next_ilong ()
 {
 	uae_u32 v;
 	if (get_trace (m68k_getpc (), 2, 4, &v)) {
@@ -888,7 +888,7 @@ void(*write_data_030_fc_wput)(uaecptr, uae_u32, uae_u32);
 void(*write_data_030_fc_lput)(uaecptr, uae_u32, uae_u32);
 
  
-static void set_x_ifetches(void)
+static void set_x_ifetches()
 {
 	if (m68k_pc_indirect) {
 		if (currprefs.cachesize) {
@@ -931,7 +931,7 @@ static bool nommu_is_super_access(bool read)
 }
 
 // indirect memory access functions
-static void set_x_funcs (void)
+static void set_x_funcs ()
 {
 	if (currprefs.cpu_model >= 68010) {
 		if (currprefs.mmu_model == 68030) {
@@ -982,14 +982,14 @@ static void set_x_funcs (void)
 				x_prefetch = get_iword_mmu030c_state;
 				x_get_ilong = get_ilong_mmu030c_state;
 				x_get_iword = get_iword_mmu030c_state;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_mmu030c_state;
 				x_next_ilong = next_ilong_mmu030c_state;
 			} else if (currprefs.cpu_compatible) {
 				x_prefetch = get_iword_mmu030c_state;
 				x_get_ilong = get_ilong_mmu030c_state;
 				x_get_iword = get_iword_mmu030c_state;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_mmu030c_state;
 				x_next_ilong = next_ilong_mmu030c_state;
 			} else {
@@ -1028,11 +1028,11 @@ static void set_x_funcs (void)
 		// 68000/010
 		if (currprefs.cpu_cycle_exact) {
 			x_prefetch = get_word_ce000_prefetch;
-			x_get_ilong = NULL;
+			x_get_ilong = nullptr;
 			x_get_iword = get_wordi_ce000;
-			x_get_ibyte = NULL;
-			x_next_iword = NULL;
-			x_next_ilong = NULL;
+			x_get_ibyte = nullptr;
+			x_next_iword = nullptr;
+			x_next_ilong = nullptr;
 			x_put_long = put_long_ce000;
 			x_put_word = put_word_ce000;
 			x_put_byte = put_byte_ce000;
@@ -1045,11 +1045,11 @@ static void set_x_funcs (void)
 		} else if (currprefs.cpu_memory_cycle_exact) {
 			// cpu_memory_cycle_exact + cpu_compatible
 			x_prefetch = get_word_000_prefetch;
-			x_get_ilong = NULL;
+			x_get_ilong = nullptr;
 			x_get_iword = get_iiword;
 			x_get_ibyte = get_iibyte;
-			x_next_iword = NULL;
-			x_next_ilong = NULL;
+			x_next_iword = nullptr;
+			x_next_ilong = nullptr;
 			x_put_long = put_long_ce000;
 			x_put_word = put_word_ce000;
 			x_put_byte = put_byte_ce000;
@@ -1062,11 +1062,11 @@ static void set_x_funcs (void)
 		} else if (currprefs.cpu_compatible) {
 			// cpu_compatible only
 			x_prefetch = get_word_000_prefetch;
-			x_get_ilong = NULL;
+			x_get_ilong = nullptr;
 			x_get_iword = get_iiword;
 			x_get_ibyte = get_iibyte;
-			x_next_iword = NULL;
-			x_next_ilong = NULL;
+			x_next_iword = nullptr;
+			x_next_ilong = nullptr;
 			x_put_long = put_long_compatible;
 			x_put_word = put_word_compatible;
 			x_put_byte = put_byte_compatible;
@@ -1077,7 +1077,7 @@ static void set_x_funcs (void)
 			x_do_cycles_pre = do_cycles;
 			x_do_cycles_post = do_cycles_post;
 		} else {
-			x_prefetch = NULL;
+			x_prefetch = nullptr;
 			x_get_ilong = get_dilong;
 			x_get_iword = get_diword;
 			x_get_ibyte = get_dibyte;
@@ -1101,7 +1101,7 @@ static void set_x_funcs (void)
 				x_prefetch = get_word_020_prefetch;
 				x_get_ilong = get_long_020_prefetch;
 				x_get_iword = get_word_020_prefetch;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_020_prefetch;
 				x_next_ilong = next_ilong_020_prefetch;
 				x_put_long = put_long_ce020;
@@ -1117,7 +1117,7 @@ static void set_x_funcs (void)
 				x_prefetch = get_word_030_prefetch;
 				x_get_ilong = get_long_030_prefetch;
 				x_get_iword = get_word_030_prefetch;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_030_prefetch;
 				x_next_ilong = next_ilong_030_prefetch;
 				x_put_long = put_long_ce030;
@@ -1131,7 +1131,7 @@ static void set_x_funcs (void)
 				x_do_cycles_post = do_cycles_post;
 			} else if (currprefs.cpu_model < 68040) {
 				// JIT or 68030+ does not have real prefetch only emulation
-				x_prefetch = NULL;
+				x_prefetch = nullptr;
 				set_x_ifetches();
 				x_put_long = put_long;
 				x_put_word = put_word;
@@ -1144,10 +1144,10 @@ static void set_x_funcs (void)
 				x_do_cycles_post = do_cycles_post;
 			} else {
 				// 68040+ (same as below)
-				x_prefetch = NULL;
+				x_prefetch = nullptr;
 				x_get_ilong = get_ilong_cache_040;
 				x_get_iword = get_iword_cache_040;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_cache040;
 				x_next_ilong = next_ilong_cache040;
 				if (currprefs.cpu_data_cache) {
@@ -1175,7 +1175,7 @@ static void set_x_funcs (void)
 				x_prefetch = get_word_020_prefetch;
 				x_get_ilong = get_long_020_prefetch;
 				x_get_iword = get_word_020_prefetch;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_020_prefetch;
 				x_next_ilong = next_ilong_020_prefetch;
 				x_put_long = put_long_compatible;
@@ -1191,7 +1191,7 @@ static void set_x_funcs (void)
 				x_prefetch = get_word_030_prefetch;
 				x_get_ilong = get_long_030_prefetch;
 				x_get_iword = get_word_030_prefetch;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_030_prefetch;
 				x_next_ilong = next_ilong_030_prefetch;
 				x_put_long = put_long_030;
@@ -1205,7 +1205,7 @@ static void set_x_funcs (void)
 				x_do_cycles_post = do_cycles_post;
 			} else if (currprefs.cpu_model < 68040) {
 				// JIT or 68030+ does not have real prefetch only emulation
-				x_prefetch = NULL;
+				x_prefetch = nullptr;
 				set_x_ifetches();
 				x_put_long = put_long;
 				x_put_word = put_word;
@@ -1217,10 +1217,10 @@ static void set_x_funcs (void)
 				x_do_cycles_pre = do_cycles;
 				x_do_cycles_post = do_cycles_post;
 			} else {
-				x_prefetch = NULL;
+				x_prefetch = nullptr;
 				x_get_ilong = get_ilong_cache_040;
 				x_get_iword = get_iword_cache_040;
-				x_get_ibyte = NULL;
+				x_get_ibyte = nullptr;
 				x_next_iword = next_iword_cache040;
 				x_next_ilong = next_ilong_cache040;
 				if (currprefs.cpu_data_cache) {
@@ -1243,7 +1243,7 @@ static void set_x_funcs (void)
 				x_do_cycles_post = do_cycles_post;
 			}
 		} else {
-			x_prefetch = NULL;
+			x_prefetch = nullptr;
 			set_x_ifetches();
 			if (currprefs.cachesize) {
 				x_put_long = put_long_jit;
@@ -1269,7 +1269,7 @@ static void set_x_funcs (void)
 		x_prefetch = get_word_ce020_prefetch;
 		x_get_ilong = get_long_ce020_prefetch;
 		x_get_iword = get_word_ce020_prefetch;
-		x_get_ibyte = NULL;
+		x_get_ibyte = nullptr;
 		x_next_iword = next_iword_020ce;
 		x_next_ilong = next_ilong_020ce;
 		x_put_long = put_long_ce020;
@@ -1285,7 +1285,7 @@ static void set_x_funcs (void)
 		x_prefetch = get_word_ce030_prefetch;
 		x_get_ilong = get_long_ce030_prefetch;
 		x_get_iword = get_word_ce030_prefetch;
-		x_get_ibyte = NULL;
+		x_get_ibyte = nullptr;
 		x_next_iword = next_iword_030ce;
 		x_next_ilong = next_ilong_030ce;
 		if (currprefs.cpu_data_cache) {
@@ -1307,10 +1307,10 @@ static void set_x_funcs (void)
 		x_do_cycles_pre = do_cycles_ce020;
 		x_do_cycles_post = do_cycles_ce020_post;
 	} else if (currprefs.cpu_model >= 68040) {
-		x_prefetch = NULL;
+		x_prefetch = nullptr;
 		x_get_ilong = get_ilong_cache_040;
 		x_get_iword = get_iword_cache_040;
-		x_get_ibyte = NULL;
+		x_get_ibyte = nullptr;
 		x_next_iword = next_iword_cache040;
 		x_next_ilong = next_ilong_cache040;
 		if (currprefs.cpu_data_cache) {
@@ -1397,7 +1397,7 @@ static void set_x_funcs (void)
 	dcache_check = dcache_check_nommu;
 
 	icache_fetch = get_longi;
-	icache_fetch_word = NULL;
+	icache_fetch_word = nullptr;
 	if (currprefs.cpu_cycle_exact) {
 		icache_fetch = mem_access_delay_longi_read_ce020;
 	}
@@ -1495,12 +1495,12 @@ static void set_x_funcs (void)
 	}
 }
 
-bool can_cpu_tracer (void)
+bool can_cpu_tracer ()
 {
 	return (currprefs.cpu_model == 68000 || currprefs.cpu_model == 68020) && currprefs.cpu_memory_cycle_exact;
 }
 
-bool is_cpu_tracer (void)
+bool is_cpu_tracer ()
 {
 	return cpu_tracer > 0;
 }
@@ -1525,20 +1525,20 @@ bool set_cpu_tracer (bool state)
 	return is_cpu_tracer ();
 }
 
-static void invalidate_cpu_data_caches(void)
+static void invalidate_cpu_data_caches()
 {
 	if (currprefs.cpu_model == 68030) {
-		for (int i = 0; i < CACHELINES030; i++) {
-			dcaches030[i].valid[0] = 0;
-			dcaches030[i].valid[1] = 0;
-			dcaches030[i].valid[2] = 0;
-			dcaches030[i].valid[3] = 0;
+		for (auto & i : dcaches030) {
+			i.valid[0] = false;
+			i.valid[1] = false;
+			i.valid[2] = false;
+			i.valid[3] = false;
 		}
 	} else if (currprefs.cpu_model >= 68040) {
 		dcachelinecnt = 0;
-		for (int i = 0; i < CACHESETS060; i++) {
-			for (int j = 0; j < CACHELINES040; j++) {
-				dcaches040[i].valid[j] = false;
+		for (auto & i : dcaches040) {
+			for (bool & j : i.valid) {
+				j = false;
 			}
 		}
 	}
@@ -1558,15 +1558,15 @@ void flush_cpu_caches(bool force)
 
 	if (currprefs.cpu_model == 68020) {
 		if ((regs.cacr & 0x08) || force) { // clear instr cache
-			for (int i = 0; i < CACHELINES020; i++)
-				caches020[i].valid = 0;
+			for (auto & i : caches020)
+				i.valid = false;
 			regs.cacr &= ~0x08;
 #ifdef DEBUGGER
 			flush_cpu_cache_debug(0, -1);
 #endif
 		}
 		if (regs.cacr & 0x04) { // clear entry in instr cache
-			caches020[(regs.caar >> 2) & (CACHELINES020 - 1)].valid = 0;
+			caches020[(regs.caar >> 2) & (CACHELINES020 - 1)].valid = false;
 			regs.cacr &= ~0x04;
 #ifdef DEBUGGER
 			flush_cpu_cache_debug(regs.caar, CACHELINES020);
@@ -1575,11 +1575,11 @@ void flush_cpu_caches(bool force)
 	} else if (currprefs.cpu_model == 68030) {
 		if ((regs.cacr & 0x08) || force) { // clear instr cache
 			if (doflush) {
-				for (int i = 0; i < CACHELINES030; i++) {
-					icaches030[i].valid[0] = 0;
-					icaches030[i].valid[1] = 0;
-					icaches030[i].valid[2] = 0;
-					icaches030[i].valid[3] = 0;
+				for (auto & i : icaches030) {
+					i.valid[0] = false;
+					i.valid[1] = false;
+					i.valid[2] = false;
+					i.valid[3] = false;
 				}
 			}
 			regs.cacr &= ~0x08;
@@ -1588,7 +1588,7 @@ void flush_cpu_caches(bool force)
 #endif
 		}
 		if (regs.cacr & 0x04) { // clear entry in instr cache
-			icaches030[(regs.caar >> 4) & (CACHELINES030 - 1)].valid[(regs.caar >> 2) & 3] = 0;
+			icaches030[(regs.caar >> 4) & (CACHELINES030 - 1)].valid[(regs.caar >> 2) & 3] = false;
 			regs.cacr &= ~0x04;
 #ifdef DEBUGGER
 			flush_cpu_cache_debug(regs.caar, CACHELINES030);
@@ -1596,17 +1596,17 @@ void flush_cpu_caches(bool force)
 		}
 		if ((regs.cacr & 0x800) || force) { // clear data cache
 			if (doflush) {
-				for (int i = 0; i < CACHELINES030; i++) {
-					dcaches030[i].valid[0] = 0;
-					dcaches030[i].valid[1] = 0;
-					dcaches030[i].valid[2] = 0;
-					dcaches030[i].valid[3] = 0;
+				for (auto & i : dcaches030) {
+					i.valid[0] = false;
+					i.valid[1] = false;
+					i.valid[2] = false;
+					i.valid[3] = false;
 				}
 			}
 			regs.cacr &= ~0x800;
 		}
 		if (regs.cacr & 0x400) { // clear entry in data cache
-			dcaches030[(regs.caar >> 4) & (CACHELINES030 - 1)].valid[(regs.caar >> 2) & 3] = 0;
+			dcaches030[(regs.caar >> 4) & (CACHELINES030 - 1)].valid[(regs.caar >> 2) & 3] = false;
 			regs.cacr &= ~0x400;
 		}
 	} else if (currprefs.cpu_model >= 68040) {
@@ -1614,9 +1614,9 @@ void flush_cpu_caches(bool force)
 			mmu_flush_cache();
 			icachelinecnt = 0;
 			icachehalfline = 0;
-			for (int i = 0; i < CACHESETS060; i++) {
-				for (int j = 0; j < CACHELINES040; j++) {
-					icaches040[i].valid[j] = false;
+			for (auto & i : icaches040) {
+				for (bool & j : i.valid) {
+					j = false;
 				}
 			}
 #ifdef DEBUGGER
@@ -1777,7 +1777,7 @@ void cpu_invalidate_cache(uaecptr addr, int size)
 		uaecptr end = addr + size;
 		addr &= ~3;
 		while (addr < end) {
-			dcaches030[(addr >> 4) & (CACHELINES030 - 1)].valid[(addr >> 2) & 3] = 0;
+			dcaches030[(addr >> 4) & (CACHELINES030 - 1)].valid[(addr >> 2) & 3] = false;
 			addr += 4;
 		}
 	} else if (currprefs.cpu_model >= 68040) {
@@ -1861,11 +1861,11 @@ void REGPARAM2 op_unimpl_1_noret(uae_u32 opcode)
 static const struct cputbl *cputbls[6][8] =
 {
 	// 68000
-	{ op_smalltbl_5, op_smalltbl_45, op_smalltbl_55, op_smalltbl_12, op_smalltbl_14, NULL, NULL, NULL },
+	{ op_smalltbl_5, op_smalltbl_45, op_smalltbl_55, op_smalltbl_12, op_smalltbl_14, nullptr, nullptr, nullptr},
 	// 68010
-	{ op_smalltbl_4, op_smalltbl_44, op_smalltbl_54, op_smalltbl_11, op_smalltbl_13, NULL, NULL, NULL },
+	{ op_smalltbl_4, op_smalltbl_44, op_smalltbl_54, op_smalltbl_11, op_smalltbl_13, nullptr, nullptr, nullptr},
 	// 68020
-	{ op_smalltbl_3, op_smalltbl_43, op_smalltbl_53, op_smalltbl_20, op_smalltbl_21, NULL, NULL, NULL },
+	{ op_smalltbl_3, op_smalltbl_43, op_smalltbl_53, op_smalltbl_20, op_smalltbl_21, nullptr, nullptr, nullptr},
 	// 68030
 	{ op_smalltbl_2, op_smalltbl_42, op_smalltbl_52, op_smalltbl_22, op_smalltbl_23, op_smalltbl_32, op_smalltbl_34, op_smalltbl_35 },
 	// 68040
@@ -1892,11 +1892,11 @@ const struct cputbl *getjitcputbl(int cpulvl, int direct)
 
 #endif
 
-static void build_cpufunctbl (void)
+static void build_cpufunctbl ()
 {
 	int i, opcnt;
 	uae_u32 opcode;
-	const struct cputbl *tbl = NULL;
+	const struct cputbl *tbl = nullptr;
 	int lvl, mode, jit;
 
 	jit = 0;
@@ -1930,7 +1930,7 @@ static void build_cpufunctbl (void)
 		lvl = 5;
 	tbl = cputbls[lvl][mode];
 
-	if (tbl == NULL) {
+	if (tbl == nullptr) {
 		write_log (_T("no CPU emulation cores available CPU=%d!"), currprefs.cpu_model);
 		abort ();
 	}
@@ -1939,7 +1939,7 @@ static void build_cpufunctbl (void)
 		cpufunctbl[opcode] = op_illg_1;
 		cpufunctbl_noret[opcode] = op_illg_1_noret;
 	}
-	for (i = 0; tbl[i].handler_ff != NULL || tbl[i].handler_ff_noret != NULL; i++) {
+	for (i = 0; tbl[i].handler_ff != nullptr || tbl[i].handler_ff_noret != nullptr; i++) {
 		opcode = tbl[i].opcode;
 		cpufunctbl[opcode] = tbl[i].handler_ff;
 		cpufunctbl_noret[opcode] = tbl[i].handler_ff_noret;
@@ -1952,7 +1952,7 @@ static void build_cpufunctbl (void)
 	/* hack fpu to 68000/68010 mode */
 	if (currprefs.fpu_model && currprefs.cpu_model < 68020) {
 		tbl = op_smalltbl_3;
-		for (i = 0; tbl[i].handler_ff != NULL || tbl[i].handler_ff_noret != NULL; i++) {
+		for (i = 0; tbl[i].handler_ff != nullptr || tbl[i].handler_ff_noret != nullptr; i++) {
 			if ((tbl[i].opcode & 0xfe00) == 0xf200) {
 				cpufunctbl[tbl[i].opcode] = tbl[i].handler_ff;
 				cpufunctbl_noret[tbl[i].opcode] = tbl[i].handler_ff_noret;
@@ -2022,7 +2022,7 @@ static void build_cpufunctbl (void)
 
 	}
 
-	need_opcode_swap = 0;
+	need_opcode_swap = false;
 #ifdef HAVE_GET_WORD_UNSWAPPED
 	if (jit) {
 		cpuop_func **tmp = xmalloc(cpuop_func*, 65536);
@@ -2108,7 +2108,7 @@ static void build_cpufunctbl (void)
 #define CYCLES_DIV 8192
 static uae_u32 cycles_mult;
 
-static void update_68k_cycles (void)
+static void update_68k_cycles ()
 {
 	cycles_mult = 0;
 
@@ -2130,9 +2130,9 @@ static void update_68k_cycles (void)
 
 		if (!currprefs.cpu_cycle_exact) {
 			if (currprefs.m68k_speed_throttle < 0) {
-				cycles_mult = (uae_u32)((cycles_mult * 1000) / (1000 + currprefs.m68k_speed_throttle));
+				cycles_mult = static_cast<uae_u32>((cycles_mult * 1000) / (1000 + currprefs.m68k_speed_throttle));
 			} else if (currprefs.m68k_speed_throttle > 0) {
-				cycles_mult = (uae_u32)((cycles_mult * 1000) / (1000 + currprefs.m68k_speed_throttle));
+				cycles_mult = static_cast<uae_u32>((cycles_mult * 1000) / (1000 + currprefs.m68k_speed_throttle));
 			}
 		}
 	} else if (currprefs.m68k_speed < 0) {
@@ -2140,9 +2140,9 @@ static void update_68k_cycles (void)
 	} else {
 		if (currprefs.m68k_speed >= 0 && !currprefs.cpu_cycle_exact && !currprefs.cpu_compatible) {
 			if (currprefs.m68k_speed_throttle < 0) {
-				cycles_mult = (uae_u32)(CYCLES_DIV * 1000 / (1000 + currprefs.m68k_speed_throttle));
+				cycles_mult = static_cast<uae_u32>((CYCLES_DIV * 1000 / (1000 + currprefs.m68k_speed_throttle)));
 			} else if (currprefs.m68k_speed_throttle > 0) {
-				cycles_mult = (uae_u32)(CYCLES_DIV * 1000 / (1000 + currprefs.m68k_speed_throttle));
+				cycles_mult = static_cast<uae_u32>((CYCLES_DIV * 1000 / (1000 + currprefs.m68k_speed_throttle)));
 			}
 		}
 	}
@@ -2181,11 +2181,11 @@ static void update_68k_cycles (void)
 	if (cpucycleunit < 1)
 		cpucycleunit = 1;
 
-	write_log (_T("CPU cycleunit: %d (%.3f)\n"), cpucycleunit, (float)cpucycleunit / CYCLE_UNIT);
+	write_log (_T("CPU cycleunit: %d (%.3f)\n"), cpucycleunit, static_cast<float>(cpucycleunit) / CYCLE_UNIT);
 	set_config_changed ();
 }
 
-static void prefs_changed_cpu (void)
+static void prefs_changed_cpu ()
 {
 	fixup_cpu (&changed_prefs);
 	check_prefs_changed_comp(false);
@@ -2237,7 +2237,7 @@ static void prefs_changed_cpu (void)
 	mman_set_barriers(false);
 }
 
-static int check_prefs_changed_cpu2(void)
+static int check_prefs_changed_cpu2()
 {
 	int changed = 0;
 
@@ -2270,7 +2270,7 @@ static int check_prefs_changed_cpu2(void)
 	return cpu_prefs_changed_flag;
 }
 
-void check_prefs_changed_cpu(void)
+void check_prefs_changed_cpu()
 {
 	if (!config_changed)
 		return;
@@ -2286,7 +2286,7 @@ void check_prefs_changed_cpu(void)
 	}
 }
 
-void init_m68k (void)
+void init_m68k ()
 {
 	prefs_changed_cpu ();
 	update_68k_cycles ();
@@ -2337,7 +2337,7 @@ STATIC_INLINE int in_rtarea (uaecptr pc)
 	return (munge24 (pc) & 0xFFFF0000) == rtarea_base && (uae_boot_rom_type || currprefs.uaeboard > 0);
 }
 
-STATIC_INLINE void wait_memory_cycles (void)
+STATIC_INLINE void wait_memory_cycles ()
 {
 	if (regs.memory_waitstate_cycles) {
 		x_do_cycles(regs.memory_waitstate_cycles);
@@ -2358,7 +2358,7 @@ STATIC_INLINE int adjust_cycles (int cycles)
 	return cycles + mc;
 }
 
-void m68k_cancel_idle(void)
+void m68k_cancel_idle()
 {
 	cpu_last_stop_vpos = -1;
 }
@@ -2373,7 +2373,7 @@ static void m68k_set_stop(int stoptype)
 	}
 }
 
-static void m68k_unset_stop(void)
+static void m68k_unset_stop()
 {
 	regs.stopped = 0;
 	if (cpu_last_stop_vpos >= 0) {
@@ -2382,21 +2382,21 @@ static void m68k_unset_stop(void)
 	}
 }
 
-static void activate_trace(void)
+static void activate_trace()
 {
 	unset_special (SPCFLAG_TRACE);
 	set_special (SPCFLAG_DOTRACE);
 }
 
 // make sure interrupt is checked immediately after current instruction
-void checkint(void)
+void checkint()
 {
 	doint();
 	if (!m68k_accurate_ipl && !currprefs.cachesize && !(regs.spcflags & SPCFLAG_INT) && (regs.spcflags & SPCFLAG_DOINT))
 		set_special(SPCFLAG_INT);
 }
 
-void REGPARAM2 MakeSR(void)
+void REGPARAM2 MakeSR()
 {
 	regs.sr = ((regs.t1 << 15) | (regs.t0 << 14)
 		| (regs.s << 13) | (regs.m << 12) | (regs.intmask << 8)
@@ -2524,20 +2524,20 @@ static void MakeFromSR_x(int t0trace)
 	}
 }
 
-void REGPARAM2 MakeFromSR_T0(void)
+void REGPARAM2 MakeFromSR_T0()
 {
 	MakeFromSR_x(1);
 }
-void REGPARAM2 MakeFromSR(void)
+void REGPARAM2 MakeFromSR()
 {
 	MakeFromSR_x(0);
 }
-void REGPARAM2 MakeFromSR_STOP(void)
+void REGPARAM2 MakeFromSR_STOP()
 {
 	MakeFromSR_x(-1);
 }
 
-static bool internalexception(int nr)
+static bool internalexception(const int nr)
 {
 	return nr == 5 || nr == 6 || nr == 7 || (nr >= 32 && nr <= 47);
 }
@@ -2725,7 +2725,7 @@ static int iack_cycle(int nr)
 {
 	int vector = nr;
 
-	if (1) {
+	if (true) {
 		// non-autovectored
 		if (currprefs.cpu_model >= 68020) {
 			return vector;
@@ -2950,14 +2950,14 @@ static void Exception_mmu030 (int nr, uaecptr oldpc)
 
 	exception_debug (nr);
 	MakeSR ();
-    
+
 	if (!regs.s) {
 		regs.usp = m68k_areg (regs, 7);
 		m68k_areg(regs, 7) = regs.m ? regs.msp : regs.isp;
 		regs.s = 1;
-		mmu_set_super (1);
+		mmu_set_super (true);
 	}
- 
+
 	newpc = x_get_long (regs.vbr + 4 * vector_nr);
 
 	if (regs.m && interrupt) { /* M + Interrupt */
@@ -2968,7 +2968,7 @@ static void Exception_mmu030 (int nr, uaecptr oldpc)
 		m68k_areg (regs, 7) = regs.isp;
 		Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0x1);
 	} else if (nr == 2) {
-		if (1 && (mmu030_state[1] & MMU030_STATEFLAG1_LASTWRITE)) {
+		if (mmu030_state[1] & MMU030_STATEFLAG1_LASTWRITE) {
 			Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0xA);
 		} else {
 			Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0xB);
@@ -3010,7 +3010,7 @@ static void Exception_mmu (int nr, uaecptr oldpc)
 	// exception vector fetch and exception stack frame
 	// operations don't allocate new cachelines
 	cache_default_data |= CACHE_DISABLE_ALLOCATE;
-	
+
 	exception_debug (nr);
 	MakeSR ();
 
@@ -3022,7 +3022,7 @@ static void Exception_mmu (int nr, uaecptr oldpc)
 			m68k_areg (regs, 7) = regs.isp;
 		}
 		regs.s = 1;
-		mmu_set_super (1);
+		mmu_set_super (true);
 	}
 
 	newpc = x_get_long (regs.vbr + 4 * vector_nr);
@@ -3032,7 +3032,7 @@ static void Exception_mmu (int nr, uaecptr oldpc)
 
 	if (nr == 2) { // bus error
         //write_log (_T("Exception_mmu %08x %08x %08x\n"), currpc, oldpc, regs.mmu_fault_addr);
-        if (currprefs.mmu_model == 68040)
+		if (currprefs.mmu_model == 68040)
 			Exception_build_stack_frame(oldpc, currpc, regs.mmu_ssw, vector_nr, 0x7);
 		else
 			Exception_build_stack_frame(regs.mmu_fault_addr, currpc, regs.mmu_fslw, vector_nr, 0x4);
@@ -3052,7 +3052,7 @@ static void Exception_mmu (int nr, uaecptr oldpc)
 	} else {
 		Exception_build_stack_frame_common(oldpc, currpc, regs.mmu_ssw, nr, vector_nr);
 	}
-    
+
 	if (newpc & 1) {
 		if (nr == 2 || nr == 3)
 			cpu_halt (CPU_HALT_DOUBLE_FAULT);
@@ -3188,7 +3188,7 @@ static void Exception_normal (int nr)
 			return;
 		}
 	}
-	
+
 	bool used_exception_build_stack_frame = false;
 
 	if (currprefs.cpu_model > 68000) {
@@ -3490,7 +3490,7 @@ void REGPARAM2 ExceptionL(int nr, uaecptr address)
 	ExceptionX(nr, address, 0xffffffff);
 }
 
-static void bus_error(void)
+static void bus_error()
 {
 	TRY (prb2) {
 		Exception (2);
@@ -3499,7 +3499,7 @@ static void bus_error(void)
 	} ENDTRY
 }
 
-static int get_ipl(void)
+static int get_ipl()
 {
 	return regs.ipl[0];
 }
@@ -3536,12 +3536,12 @@ static void do_interrupt (int nr)
 	doint ();
 }
 
-void NMI (void)
+void NMI ()
 {
 	do_interrupt (7);
 }
 
-static void maybe_disable_fpu(void)
+static void maybe_disable_fpu()
 {
 	if (currprefs.cpu_model == 68060 && currprefs.cpuboard_type == 0 && (rtarea_base != 0xf00000 || !need_uae_boot_rom(&currprefs))) {
 		// disable FPU at reset if no 68060 accelerator board and no $f0 ROM.
@@ -3552,7 +3552,7 @@ static void maybe_disable_fpu(void)
 	}
 }
 
-static void m68k_reset_sr(void)
+static void m68k_reset_sr()
 {
 	SET_XFLG ((regs.sr >> 4) & 1);
 	SET_NFLG ((regs.sr >> 3) & 1);
@@ -3580,7 +3580,7 @@ static void m68k_reset2(bool hardreset)
 	gui_led(LED_CPU, 0, -1);
 
 	regs.spcflags = 0;
-	m68k_reset_delay = 0;
+	m68k_reset_delay = false;
 	regs.ipl[0] = regs.ipl[1] = regs.ipl_pin = 0;
 	for (int i = 0; i < IRQ_SOURCE_MAX; i++) {
 		uae_interrupts2[i] = 0;
@@ -3590,7 +3590,7 @@ static void m68k_reset2(bool hardreset)
 
 	// Force config changes (CPU speed) into effect on hard reset
 	update_68k_cycles();
-	
+
 #ifdef SAVESTATE
 	if (isrestore()) {
 		m68k_reset_sr();
@@ -3631,7 +3631,7 @@ static void m68k_reset2(bool hardreset)
 	regs.caar = regs.cacr = 0;
 	regs.itt0 = regs.itt1 = regs.dtt0 = regs.dtt1 = 0;
 	regs.tcr = regs.mmusr = regs.urp = regs.srp = regs.buscr = 0;
-	mmu_tt_modified(); 
+	mmu_tt_modified();
 	if (currprefs.cpu_model == 68020) {
 		regs.cacr |= 8;
 		set_cpu_caches (false);
@@ -3678,12 +3678,12 @@ static void m68k_reset2(bool hardreset)
 	fill_prefetch();
 }
 
-void m68k_reset(void)
+void m68k_reset()
 {
 	m68k_reset2(false);
 }
 
-void cpu_change(int newmodel)
+void cpu_change(const int newmodel)
 {
 	if (newmodel == currprefs.cpu_model)
 		return;
@@ -3714,7 +3714,7 @@ void cpu_fallback(int mode)
 	}
 }
 
-static void cpu_do_fallback(void)
+static void cpu_do_fallback()
 {
 	bool fallbackmode = false;
 	if ((fallback_new_cpu_model < 68020 && !(currprefs.chipset_mask & CSMASK_AGA)) || (fallback_new_cpu_model == 68020 && (currprefs.chipset_mask & CSMASK_AGA))) {
@@ -3763,7 +3763,7 @@ static void cpu_do_fallback(void)
 	}
 }
 
-static void m68k_reset_restore(void)
+static void m68k_reset_restore()
 {
 	// hardreset and 68000/68020 fallback mode? Restore original mode.
 	if (fallback_cpu_model) {
@@ -3815,7 +3815,7 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 #endif
 
 	if (cloanto_rom && (opcode & 0xF100) == 0x7100) {
-		m68k_dreg (regs, (opcode >> 9) & 7) = (uae_s8)(opcode & 0xFF);
+		m68k_dreg (regs, (opcode >> 9) & 7) = static_cast<uae_s8>(opcode & 0xFF);
 		m68k_incpc_normal (2);
 		fill_prefetch ();
 		return 4;
@@ -3824,7 +3824,7 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 	if (opcode == 0x4E7B && inrom) {
 		if (get_long (0x10) == 0) {
 			notify_user (NUMSG_KS68020);
-			uae_restart(&currprefs, -1, NULL);
+			uae_restart(&currprefs, -1, nullptr);
 			m68k_setstopped(1);
 			return 4;
 		}
@@ -3908,7 +3908,7 @@ static bool mmu_op30fake_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecpt
 	int rw = (next >> 9) & 1;
 	int fd = (next >> 8) & 1;
 	int unused = (next & 0xff);
-	const TCHAR *reg = NULL;
+	const TCHAR *reg = nullptr;
 	uae_u32 otc = fake_tc_030;
 	int siz;
 
@@ -3936,9 +3936,9 @@ static bool mmu_op30fake_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecpt
 		siz = 8;
 		if (rw) {
 			x_put_long (extra, fake_srp_030 >> 32);
-			x_put_long (extra + 4, (uae_u32)fake_srp_030);
+			x_put_long (extra + 4, static_cast<uae_u32>(fake_srp_030));
 		} else {
-			fake_srp_030 = (uae_u64)x_get_long (extra) << 32;
+			fake_srp_030 = static_cast<uae_u64>(x_get_long(extra)) << 32;
 			fake_srp_030 |= x_get_long (extra + 4);
 		}
 		break;
@@ -3947,9 +3947,9 @@ static bool mmu_op30fake_pmove (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecpt
 		siz = 8;
 		if (rw) {
 			x_put_long (extra, fake_crp_030 >> 32);
-			x_put_long (extra + 4, (uae_u32)fake_crp_030);
+			x_put_long (extra + 4, static_cast<uae_u32>(fake_crp_030));
 		} else {
-			fake_crp_030 = (uae_u64)x_get_long (extra) << 32;
+			fake_crp_030 = static_cast<uae_u64>(x_get_long(extra)) << 32;
 			fake_crp_030 |= x_get_long (extra + 4);
 		}
 		break;
@@ -4034,7 +4034,7 @@ static bool mmu_op30fake_ptest (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecpt
 
 	tmp[0] = 0;
 	if ((next >> 8) & 1)
-		_stprintf (tmp, _T(",A%d"), (next >> 4) & 15);
+		_sntprintf (tmp, _T(",A%d"), (next >> 4) & 15);
 	write_log (_T("PTEST%c %02X,%08X,#%X%s PC=%08X\n"),
 		((next >> 9) & 1) ? 'W' : 'R', (next & 15), extra, (next >> 10) & 7, tmp, pc);
 #endif
@@ -4070,10 +4070,10 @@ static bool mmu_op30fake_pflush (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecp
 	case 0x18:
 		if (mmu_op30_invea(opcode))
 			return true;
-		_stprintf (fname, _T("FC=%x MASK=%x EA=%08x"), fc, mask, 0);
+		_sntprintf (fname, sizeof fname, _T("FC=%x MASK=%x EA=%08x"), fc, mask, 0);
 		break;
 	case 0x10:
-		_stprintf (fname, _T("FC=%x MASK=%x"), fc, mask);
+		_sntprintf (fname, sizeof fname, _T("FC=%x MASK=%x"), fc, mask);
 		break;
 	case 0x04:
 		if (fc_bits)
@@ -4101,13 +4101,13 @@ bool mmu_op30(uaecptr pc, uae_u32 opcode, uae_u16 extra, uaecptr extraa)
 	case 2:
 	case 3:
 		if (currprefs.mmu_model)
-			fline = mmu_op30_pmove(pc, opcode, extra, extraa); 
+			fline = mmu_op30_pmove(pc, opcode, extra, extraa);
 		else
 			fline = mmu_op30fake_pmove(pc, opcode, extra, extraa);
 	break;
 	case 1:
 		if (currprefs.mmu_model)
-			fline = mmu_op30_pflush(pc, opcode, extra, extraa); 
+			fline = mmu_op30_pflush(pc, opcode, extra, extraa);
 		else
 			fline = mmu_op30fake_pflush(pc, opcode, extra, extraa);
 	break;
@@ -4122,7 +4122,7 @@ bool mmu_op30(uaecptr pc, uae_u32 opcode, uae_u16 extra, uaecptr extraa)
 		m68k_setpc(pc);
 		op_illg(opcode);
 	}
-	return fline != 0;	
+	return fline != 0;
 }
 
 /* check if an address matches a ttr */
@@ -4227,7 +4227,7 @@ void mmu_op (uae_u32 opcode, uae_u32 extra)
 
 #endif
 
-static void do_trace(void)
+static void do_trace()
 {
 	if (regs.stopped) {
 		return;
@@ -4410,7 +4410,7 @@ static bool haltloop_do(int vsynctimeline, frame_time_t rpt_end, int lines)
 	return false;
 }
 
-static bool haltloop(void)
+static bool haltloop()
 {
 #ifdef WITH_PPC
 	if (regs.halted < 0) {
@@ -4418,7 +4418,7 @@ static bool haltloop(void)
 		int ovpos = vpos;
 
 		while (regs.halted) {
-			int vsynctimeline = (int)(vsynctimebase / (maxvpos_display + 1));
+			int vsynctimeline = static_cast<int>(vsynctimebase / (maxvpos_display + 1));
 			int lines;
 			frame_time_t rpt_scanline = read_processor_time();
 			frame_time_t rpt_end = rpt_scanline + vsynctimeline;
@@ -4452,7 +4452,7 @@ static bool haltloop(void)
 				check_uae_int_request();
 				uae_ppc_execute_check();
 
-				lines = (int)(read_processor_time() - rpt_scanline) / vsynctimeline + 1;
+				lines = static_cast<int>(read_processor_time() - rpt_scanline) / vsynctimeline + 1;
 
 			} else {
 
@@ -4497,7 +4497,7 @@ static bool haltloop(void)
 }
 
 #ifdef WITH_PPC
-static bool uae_ppc_poll_check_halt(void)
+static bool uae_ppc_poll_check_halt()
 {
 	if (regs.halted) {
 		if (haltloop())
@@ -4509,7 +4509,7 @@ static bool uae_ppc_poll_check_halt(void)
 
 
 // check if interrupt active
-static int time_for_interrupt(void)
+static int time_for_interrupt()
 {
 	int ipl = get_ipl();
 	if (ipl > regs.intmask || ipl == 7) {
@@ -4519,14 +4519,14 @@ static int time_for_interrupt(void)
 }
 
 // ipl check mid next memory cycle
-void ipl_fetch_next_pre(void)
+void ipl_fetch_next_pre()
 {
 	ipl_fetch_next();
 	regs.ipl_evt_pre = get_cycles();
 	regs.ipl_evt_pre_mode = 1;
 }
 
-void ipl_fetch_now_pre(void)
+void ipl_fetch_now_pre()
 {
 	ipl_fetch_now();
 	regs.ipl_evt_pre = get_cycles();
@@ -4534,7 +4534,7 @@ void ipl_fetch_now_pre(void)
 }
 
 // ipl check was early enough, interrupt possible after current instruction
-void ipl_fetch_now(void)
+void ipl_fetch_now()
 {
 	evt_t c = get_cycles();
 
@@ -4546,7 +4546,7 @@ void ipl_fetch_now(void)
 // ipl check max 4 cycles before end of instruction.
 // interrupt starts after current instruction if IPL was changed earlier.
 // if not early enough: interrupt starts after following instruction.
-void ipl_fetch_next(void)
+void ipl_fetch_next()
 {
 	evt_t c = get_cycles();
 
@@ -4563,7 +4563,7 @@ void ipl_fetch_next(void)
 	}
 }
 
-void intlev_load(void)
+void intlev_load()
 {
 	if (m68k_accurate_ipl) {
 		ipl_fetch_now();
@@ -4601,7 +4601,7 @@ static void doint_delayed(uae_u32 v)
 	update_ipl(v);
 }
 
-void doint(void)
+void doint()
 {
 #ifdef WITH_PPC
 	if (ppc_state) {
@@ -4636,14 +4636,14 @@ void doint(void)
 	}
 
 	if (regs.ipl_pin > regs.intmask || currprefs.cachesize) {
-		if (currprefs.cpu_compatible && currprefs.cpu_model < 68020) 
+		if (currprefs.cpu_compatible && currprefs.cpu_model < 68020)
 			set_special(SPCFLAG_INT);
 		else
 			set_special(SPCFLAG_DOINT);
 	}
 }
 
-static void check_debugger(void)
+static void check_debugger()
 {
 	if (regs.spcflags & SPCFLAG_BRK) {
 		unset_special(SPCFLAG_BRK);
@@ -4655,7 +4655,7 @@ static void check_debugger(void)
 	}
 }
 
-static void debug_cpu_stop(void)
+static void debug_cpu_stop()
 {
 #ifdef DEBUGGER
 	record_dma_event(DMA_EVENT_CPUSTOP, current_hpos(), vpos);
@@ -4672,7 +4672,7 @@ static int do_specialties (int cycles)
 
 	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
-	
+
 	if (spcflags & SPCFLAG_CHECK) {
 		if (regs.halted) {
 			if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
@@ -4697,7 +4697,7 @@ static int do_specialties (int cycles)
 				}
 			}
 		}
-		m68k_reset_delay = 0;
+		m68k_reset_delay = false;
 		unset_special(SPCFLAG_CHECK);
 	}
 
@@ -4842,7 +4842,7 @@ static int do_specialties (int cycles)
 }
 
 
-uaecptr m68kpc(void)
+uaecptr m68kpc()
 {
 	return m68k_getpc();
 }
@@ -4877,20 +4877,20 @@ static void out_cd32io (uae_u32 pc)
 	{
 	case 0xe57cc0:
 	case 0xf04c34:
-		_stprintf (out, _T("opendevice"));
+		_sntprintf (out, _T("opendevice"));
 		break;
 	case 0xe57ce6:
 	case 0xf04c56:
-		_stprintf (out, _T("closedevice"));
+		_sntprintf (out, _T("closedevice"));
 		break;
 	case 0xe57e44:
 	case 0xf04f2c:
-		_stprintf (out, _T("beginio"));
+		_sntprintf (out, _T("beginio"));
 		ioreq = 1;
 		break;
 	case 0xe57ef2:
 	case 0xf0500e:
-		_stprintf (out, _T("abortio"));
+		_sntprintf (out, _T("abortio"));
 		ioreq = -1;
 		break;
 	}
@@ -4942,7 +4942,7 @@ static void m68k_run_1 (void)
 /* It's really sad to have two almost identical functions for this, but we
 do it all for performance... :(
 This version emulates 68000's prefetch "cache" */
-static void m68k_run_1 (void)
+static void m68k_run_1 ()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
@@ -5012,7 +5012,7 @@ static void m68k_run_1_ce (void)
 
 /* cycle-exact m68k_run () */
 
-static void m68k_run_1_ce (void)
+static void m68k_run_1_ce ()
 {
 	struct regstruct *r = &regs;
 	bool first = true;
@@ -5190,7 +5190,7 @@ static SDL_threadID cpu_thread_tid;
 
 static bool m68k_cs_initialized;
 
-static int do_specialties_thread(void)
+static int do_specialties_thread()
 {
 	uae_atomic spcflags = regs.spcflags;
 
@@ -5231,7 +5231,7 @@ static int do_specialties_thread(void)
 	return 0;
 }
 
-static void init_cpu_thread(void)
+static void init_cpu_thread()
 {
 	if (!currprefs.cpu_thread)
 		return;
@@ -5313,7 +5313,7 @@ static void run_cpu_thread(int (*f)(void *))
 	uae_sem_init(&cpu_out_sema, 0, 0);
 	uae_sem_init(&cpu_wakeup_sema, 0, 0);
 
-	if (!uae_start_thread(_T("cpu"), f, NULL, &cpu_thread))
+	if (!uae_start_thread(_T("cpu"), f, nullptr, &cpu_thread))
 		return;
 	while (!cpu_thread_active) {
 		sleep_millis(1);
@@ -5545,7 +5545,7 @@ void execute_normal(void)
 		pc_hist[blocklen].location = (uae_u16*)r->pc_p;
 
 		(*cpufunctbl[r->opcode])(r->opcode);
-	
+
 		cpu_cycles = 4 * CYCLE_UNIT;
 
 //		cpu_cycles = adjust_cycles(cpu_cycles);
@@ -5689,7 +5689,7 @@ static void opcodedebug (uae_u32 pc, uae_u16 opcode, bool full)
 		;
 	fault = 0;
 	TRY(prb) {
-		addr = mmu_translate (pc, 0, (regs.mmu_ssw & 4) ? 1 : 0, 0, 0, sz_word);
+		addr = mmu_translate (pc, 0, (regs.mmu_ssw & 4) ? true : false, false, false, sz_word);
 	} CATCH (prb) {
 		fault = 1;
 	} ENDTRY
@@ -5698,21 +5698,21 @@ static void opcodedebug (uae_u32 pc, uae_u16 opcode, bool full)
 		TCHAR buf[100];
 		if (full)
 			write_log (_T("mmufixup=%d %04x %04x\n"), mmufixup[0].reg, regs.wb3_status, regs.mmu_ssw);
-		m68k_disasm_2(buf, sizeof buf / sizeof (TCHAR), addr, NULL, 0, NULL, 1, NULL, NULL, 0xffffffff, 0);
+		m68k_disasm_2(buf, sizeof buf / sizeof (TCHAR), addr, nullptr, 0, nullptr, 1, nullptr, nullptr, 0xffffffff, 0);
 		write_log (_T("%s\n"), buf);
 		if (full)
-			m68k_dumpstate(NULL, 0xffffffff);
+			m68k_dumpstate(nullptr, 0xffffffff);
 #endif
 	}
 }
 
-static void check_halt(void)
+static void check_halt()
 {
 	if (regs.halted)
 		do_specialties (0);
 }
 
-void cpu_inreset(void)
+void cpu_inreset()
 {
 	set_special(SPCFLAG_CPUINRESET);
 	regs.s = 1;
@@ -5752,7 +5752,7 @@ void cpu_halt(int id)
 #ifdef CPUEMU_33
 
 /* MMU 68060  */
-static void m68k_run_mmu060 (void)
+static void m68k_run_mmu060 ()
 {
 	struct flag_struct f;
 	int halt = 0;
@@ -5814,9 +5814,9 @@ static void m68k_run_mmu060 (void)
 #ifdef CPUEMU_31
 
 /* Aranym MMU 68040  */
-static void m68k_run_mmu040 (void)
+static void m68k_run_mmu040 ()
 {
-	struct flag_struct f;
+	struct flag_struct f{};
 	int halt = 0;
 
 	check_halt();
@@ -5906,7 +5906,7 @@ insretry:
 					uaecptr new_addr = mmu030_translate(regs.instruction_pc, regs.s != 0, false, false);
 					if (mmu030_fake_prefetch_addr != new_addr) {
 						regs.opcode = mmu030_fake_prefetch;
-						write_log(_T("MMU030 fake prefetch remap: %04x, %08x -> %08x\n"), mmu030_fake_prefetch, mmu030_fake_prefetch_addr, new_addr); 
+						write_log(_T("MMU030 fake prefetch remap: %04x, %08x -> %08x\n"), mmu030_fake_prefetch, mmu030_fake_prefetch_addr, new_addr);
 					} else {
 						if (mmu030_opcode_stageb < 0) {
 							regs.opcode = x_prefetch (0);
@@ -5944,7 +5944,7 @@ insretry:
 						cpu_cycles = (*cpufunctbl[regs.opcode])(regs.opcode);
 
 					} else {
-						
+
 						(*cpufunctbl_noret[regs.opcode])(regs.opcode);
 
 						wait_memory_cycles();
@@ -6025,7 +6025,7 @@ insretry:
 
 /* "cycle exact" 68040/060 */
 
-static void m68k_run_3ce (void)
+static void m68k_run_3ce ()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
@@ -6076,7 +6076,7 @@ static void m68k_run_3ce (void)
 
 /* "prefetch" 68040/060 */
 
-static void m68k_run_3p(void)
+static void m68k_run_3p()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
@@ -6122,7 +6122,7 @@ static void m68k_run_3p(void)
 
 /* "cycle exact" 68020/030  */
 
-static void m68k_run_2ce (void)
+static void m68k_run_2ce ()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
@@ -6238,7 +6238,7 @@ static void m68k_run_2ce (void)
 #endif
 
 				(*cpufunctbl_noret[r->opcode])(r->opcode);
-		
+
 				wait_memory_cycles();
 				regs.instruction_cnt++;
 				regs.ce020extracycles++;
@@ -6266,7 +6266,7 @@ static void m68k_run_2ce (void)
 #ifdef CPUEMU_20
 
 // full prefetch 020 (more compatible)
-static void m68k_run_2p (void)
+static void m68k_run_2p ()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
@@ -6447,7 +6447,7 @@ static int cpu_thread_run_2(void *v)
 #endif
 
 /* Same thing, but don't use prefetch to get opcode.  */
-static void m68k_run_2_000(void)
+static void m68k_run_2_000()
 {
 	struct regstruct *r = &regs;
 	bool exit = false;
@@ -6485,7 +6485,7 @@ static void m68k_run_2_000(void)
 	}
 }
 
-static void m68k_run_2_020(void)
+static void m68k_run_2_020()
 {
 #ifdef WITH_THREADED_CPU
 	if (currprefs.cpu_thread) {
@@ -6569,16 +6569,16 @@ static void exception2_handle (uaecptr addr, uaecptr fault)
 
 static bool cpu_hardreset, cpu_keyboardreset;
 
-bool is_hardreset(void)
+bool is_hardreset()
 {
 	return cpu_hardreset;
 }
-bool is_keyboardreset(void)
+bool is_keyboardreset()
 {
 	return  cpu_keyboardreset;
 }
 
-static void warpmode_reset(void)
+static void warpmode_reset()
 {
 	if (currprefs.turbo_boot && currprefs.turbo_emulation < 2) {
 		warpmode(1);
@@ -6618,7 +6618,7 @@ void m68k_go (int may_quit)
 		}
 
 		if (currprefs.inprecfile[0] && input_play) {
-			inprec_open (currprefs.inprecfile, NULL);
+			inprec_open (currprefs.inprecfile, nullptr);
 			changed_prefs.inprecfile[0] = currprefs.inprecfile[0] = 0;
 			quit_program = UAE_RESET;
 		}
@@ -6643,7 +6643,7 @@ void m68k_go (int may_quit)
 			}
 			if (savestate_state == STATE_RESTORE) {
 				restore_state (savestate_fname);
-				cpu_hardreset = 1;
+				cpu_hardreset = true;
 			} else if (savestate_state == STATE_REWIND) {
 				savestate_rewind ();
 			}
@@ -6683,7 +6683,7 @@ void m68k_go (int may_quit)
 			}
 #endif
 			if (currprefs.produce_sound == 0)
-				eventtab[ev_audio].active = 0;
+				eventtab[ev_audio].active = false;
 			m68k_setpc_normal (regs.pc);
 			check_prefs_changed_audio ();
 
@@ -6703,7 +6703,7 @@ void m68k_go (int may_quit)
 		}
 
 		if (changed_prefs.inprecfile[0] && input_record)
-			inprec_prepare_record (savestate_fname[0] ? savestate_fname : NULL);
+			inprec_prepare_record (savestate_fname[0] ? savestate_fname : nullptr);
 #ifdef DEBUGGER
 		if (changed_prefs.trainerfile[0])
 			debug_init_trainer(changed_prefs.trainerfile);
@@ -6776,7 +6776,7 @@ void m68k_go (int may_quit)
 			// check that PC points to something that looks like memory.
 			uaecptr pc = m68k_getpc();
 			addrbank *ab = get_mem_bank_real(pc);
-			if (ab == NULL || ab == &dummy_bank || (!currprefs.cpu_compatible && !valid_address(pc, 2)) || (pc & 1)) {
+			if (ab == nullptr || ab == &dummy_bank || (!currprefs.cpu_compatible && !valid_address(pc, 2)) || (pc & 1)) {
 				cpu_halt(CPU_HALT_INVALID_START_ADDRESS);
 			}
 		}
@@ -6839,7 +6839,7 @@ void m68k_disasm_ea (uaecptr addr, uaecptr *nextpc, int cnt, uae_u32 *seaddr, ua
 	if (!buf)
 		return;
 #ifdef DEBUGGER
-	m68k_disasm_2(buf, MAX_LINEWIDTH * pcnt, addr, NULL, 0, nextpc, cnt, seaddr, deaddr, lastpc, 1);
+	m68k_disasm_2(buf, MAX_LINEWIDTH * pcnt, addr, nullptr, 0, nextpc, cnt, seaddr, deaddr, lastpc, 1);
 #endif
 	xfree (buf);
 }
@@ -6854,7 +6854,7 @@ void m68k_disasm (uaecptr addr, uaecptr *nextpc, uaecptr lastpc, int cnt)
 	if (!buf)
 		return;
 #ifdef DEBUGGER
-	m68k_disasm_2(buf, MAX_LINEWIDTH * pcnt, addr, NULL, 0, nextpc, cnt, NULL, NULL, lastpc, 0);
+	m68k_disasm_2(buf, MAX_LINEWIDTH * pcnt, addr, nullptr, 0, nextpc, cnt, nullptr, nullptr, lastpc, 0);
 #endif
 	console_out_f (_T("%s"), buf);
 	xfree (buf);
@@ -7026,9 +7026,9 @@ uae_u8 *restore_cpu (uae_u8 *src)
 	changed_prefs.mmu_model = currprefs.mmu_model = 0;
 	currprefs.cpu_model = changed_prefs.cpu_model = model = restore_u32 ();
 	flags = restore_u32 ();
-	changed_prefs.address_space_24 = 0;
+	changed_prefs.address_space_24 = false;
 	if (flags & CPUTYPE_EC)
-		changed_prefs.address_space_24 = 1;
+		changed_prefs.address_space_24 = true;
 	currprefs.address_space_24 = changed_prefs.address_space_24;
 	currprefs.cpu_compatible = changed_prefs.cpu_compatible;
 	currprefs.cpu_cycle_exact = changed_prefs.cpu_cycle_exact;
@@ -7090,10 +7090,10 @@ uae_u8 *restore_cpu (uae_u8 *src)
 	set_cpu_caches (true);
 	if (flags & 0x40000000) {
 		if (model == 68020) {
-			for (int i = 0; i < CACHELINES020; i++) {
-				caches020[i].data = restore_u32 ();
-				caches020[i].tag = restore_u32 ();
-				caches020[i].valid = restore_u8 () != 0;
+			for (auto & i : caches020) {
+				i.data = restore_u32 ();
+				i.tag = restore_u32 ();
+				i.valid = restore_u8 () != 0;
 			}
 			regs.prefetch020addr = restore_u32 ();
 			regs.cacheholdingaddr020 = restore_u32 ();
@@ -7110,10 +7110,10 @@ uae_u8 *restore_cpu (uae_u8 *src)
 					// old
 					uae_u32 v = restore_u32();
 					regs.prefetch020[0] = v >> 16;
-					regs.prefetch020[1] = (uae_u16)v;
+					regs.prefetch020[1] = static_cast<uae_u16>(v);
 					v = restore_u32();
 					regs.prefetch020[2] = v >> 16;
-					regs.prefetch020[3] = (uae_u16)v;
+					regs.prefetch020[3] = static_cast<uae_u16>(v);
 					restore_u32();
 					restore_u32();
 					regs.prefetch020_valid[0] = true;
@@ -7123,19 +7123,19 @@ uae_u8 *restore_cpu (uae_u8 *src)
 				}
 			}
 		} else if (model == 68030) {
-			for (int i = 0; i < CACHELINES030; i++) {
+			for (auto & i : icaches030) {
 				for (int j = 0; j < 4; j++) {
-					icaches030[i].data[j] = restore_u32 ();
-					icaches030[i].valid[j] = restore_u8 () != 0;
+					i.data[j] = restore_u32 ();
+					i.valid[j] = restore_u8 () != 0;
 				}
-				icaches030[i].tag = restore_u32 ();
+				i.tag = restore_u32 ();
 			}
-			for (int i = 0; i < CACHELINES030; i++) {
+			for (auto & i : dcaches030) {
 				for (int j = 0; j < 4; j++) {
-					dcaches030[i].data[j] = restore_u32 ();
-					dcaches030[i].valid[j] = restore_u8 () != 0;
+					i.data[j] = restore_u32 ();
+					i.valid[j] = restore_u8 () != 0;
 				}
-				dcaches030[i].tag = restore_u32 ();
+				i.tag = restore_u32 ();
 			}
 			regs.prefetch020addr = restore_u32 ();
 			regs.cacheholdingaddr020 = restore_u32 ();
@@ -7168,8 +7168,8 @@ uae_u8 *restore_cpu (uae_u8 *src)
 				regs.prefetch020addr = restore_u32();
 				regs.cacheholdingaddr020 = restore_u32();
 				regs.cacheholdingdata020 = restore_u32();
-				for (int i = 0; i < CPU_PIPELINE_MAX; i++)
-					regs.prefetch040[i] = restore_u32();
+				for (unsigned int & i : regs.prefetch040)
+					i = restore_u32();
 				if (flags & 0x4000000) {
 					for (int i = 0; i < (model == 68060 ? CACHESETS060 : CACHESETS040); i++) {
 						for (int j = 0; j < CACHELINES040; j++) {
@@ -7220,8 +7220,8 @@ uae_u8 *restore_cpu (uae_u8 *src)
 		if (v & 1) {
 			regs.ipl[0] = restore_u8();
 			regs.ipl[1] = restore_u8();
-			regs.ipl_pin = (uae_s32)restore_u8();
-			regs.ipl_pin_p = (uae_s32)restore_u8();
+			regs.ipl_pin = static_cast<uae_s32>(restore_u8());
+			regs.ipl_pin_p = static_cast<uae_s32>(restore_u8());
 			regs.ipl_evt = restore_u64();
 			regs.ipl_evt_pre = restore_u64();
 			regs.ipl_pin_change_evt = restore_u64();
@@ -7237,7 +7237,7 @@ uae_u8 *restore_cpu (uae_u8 *src)
 	return src;
 }
 
-static void fill_prefetch_quick (void)
+static void fill_prefetch_quick ()
 {
 	if (currprefs.cpu_model >= 68020) {
 		fill_prefetch ();
@@ -7268,7 +7268,7 @@ uae_u8 *save_cpu_trace(size_t *len, uae_u8 *dstptr)
 	uae_u8 *dstbak, *dst;
 
 	if (cputrace.state <= 0)
-		return NULL;
+		return nullptr;
 
 	if (dstptr)
 		dstbak = dst = dstptr;
@@ -7304,13 +7304,13 @@ uae_u8 *save_cpu_trace(size_t *len, uae_u8 *dstptr)
 		save_u32 (cputrace.ctm[i].mode);
 		write_log (_T("CPUT%d: %08x %08x %08x %08x\n"), i, cputrace.ctm[i].addr, cputrace.ctm[i].data, cputrace.ctm[i].mode, cputrace.ctm[i].flags);
 	}
-	save_u32 ((uae_u32)cputrace.startcycles);
+	save_u32 (static_cast<uae_u32>(cputrace.startcycles));
 
 	if (currprefs.cpu_model == 68020) {
-		for (int i = 0; i < CACHELINES020; i++) {
-			save_u32 (cputrace.caches020[i].data);
-			save_u32 (cputrace.caches020[i].tag);
-			save_u8 (cputrace.caches020[i].valid ? 1 : 0);
+		for (auto & i : cputrace.caches020) {
+			save_u32 (i.data);
+			save_u32 (i.tag);
+			save_u8 (i.valid ? 1 : 0);
 		}
 		save_u32 (cputrace.prefetch020addr);
 		save_u32 (cputrace.cacheholdingaddr020);
@@ -7394,10 +7394,10 @@ uae_u8 *restore_cpu_trace(uae_u8 *src)
 				// backwards compatibility
 				uae_u32 v2 = restore_u32();
 				cputrace.prefetch020[0] = v2 >> 16;
-				cputrace.prefetch020[1] = (uae_u16)v2;
+				cputrace.prefetch020[1] = static_cast<uae_u16>(v2);
 				v2 = restore_u32();
 				cputrace.prefetch020[2] = v2 >> 16;
-				cputrace.prefetch020[3] = (uae_u16)v2;
+				cputrace.prefetch020[3] = static_cast<uae_u16>(v2);
 				restore_u32();
 				restore_u32();
 				cputrace.prefetch020_valid[0] = true;
@@ -7435,7 +7435,7 @@ uae_u8 *restore_cpu_trace(uae_u8 *src)
 		}
 
 		if (v & 128) {
-			cputrace.startcycles |= ((uae_u64)restore_u32()) << 32;
+			cputrace.startcycles |= static_cast<uae_u64>(restore_u32()) << 32;
 			for (int i = 0; i < cputrace.memoryoffset; i++) {
 				cputrace.ctm[i].flags = restore_u32();
 			}
@@ -7687,7 +7687,7 @@ uae_u8 *save_mmu(size_t *len, uae_u8 *dstptr)
 
 	model = currprefs.mmu_model;
 	if (model != 68030 && model != 68040 && model != 68060)
-		return NULL;
+		return nullptr;
 	if (dstptr)
 		dstbak = dst = dstptr;
 	else
@@ -7744,7 +7744,7 @@ void exception3_notinstruction(uae_u32 opcode, uaecptr addr)
 }
 static void exception3_read_special(uae_u32 opcode, uaecptr addr, int size, int fc)
 {
-	exception3f(opcode, addr, false, 0, false, 0xffffffff, size, fc, 0);
+	exception3f(opcode, addr, false, false, false, 0xffffffff, size, fc, 0);
 }
 
 // 68010 special prefetch handling
@@ -7908,7 +7908,7 @@ static void exception2_fetch_common(uae_u32 opcode, int offset)
 	last_fault_for_exception_3 = m68k_getpc() + offset;
 	// this is not yet fully correct
 	last_addr_for_exception_3 = last_fault_for_exception_3;
-	last_writeaccess_for_exception_3 = 0;
+	last_writeaccess_for_exception_3 = false;
 	last_op_for_exception_3 = opcode;
 	last_fc_for_exception_3 = 2;
 	last_notinstruction_for_exception_3 = exception_in_exception != 0;
@@ -8141,7 +8141,7 @@ void mem_access_delay_word_write (uaecptr addr, uae_u32 v)
 	put_word (addr, v);
 }
 
-static void start_020_cycle(void)
+static void start_020_cycle()
 {
 	regs.ce020startcycle = get_cycles();
 }
@@ -8155,7 +8155,7 @@ static void start_020_cycle_prefetch(bool opcode)
 		regs.ce020startcycle = get_cycles();
 	}
 }
-static void end_020_cycle(void)
+static void end_020_cycle()
 {
 	regs.ce020endcycle = get_cycles();
 }
@@ -8331,7 +8331,7 @@ static uae_u32 get_word_ce020_prefetch_2 (int o, bool opcode)
 		}
 		regs.prefetch020[2] = regs.cacheholdingdata020 >> 16;
 	} else {
-		regs.prefetch020[2] = (uae_u16)regs.cacheholdingdata020;
+		regs.prefetch020[2] = static_cast<uae_u16>(regs.cacheholdingdata020);
 	}
 	regs.db = regs.prefetch020[0];
 	do_cycles_ce020_internal(2);
@@ -8366,7 +8366,7 @@ uae_u32 get_word_020_prefetch (int o)
 		}
 		regs.prefetch020[2] = regs.cacheholdingdata020 >> 16;
 	} else {
-		regs.prefetch020[2] = (uae_u16)regs.cacheholdingdata020;
+		regs.prefetch020[2] = static_cast<uae_u16>(regs.cacheholdingdata020);
 	}
 	regs.db = regs.prefetch020[0];
 	return v;
@@ -9029,8 +9029,8 @@ static uae_u32 read_dcache030_debug(uaecptr addr, uae_u32 size, uae_u32 fc, bool
 		*cached = true;
 	}
 
-	uae_u64 v64 = ((uae_u64)v1 << 32) | v2;
-	out = (uae_u32)(v64 >> (64 - (offset + width)));
+	uae_u64 v64 = (static_cast<uae_u64>(v1) << 32) | v2;
+	out = static_cast<uae_u32>(v64 >> (64 - (offset + width)));
 	out &= mask[size];
 	return out;
 }
@@ -9103,8 +9103,8 @@ static bool read_dcache030_2(uaecptr addr, uae_u32 size, uae_u32 *valp)
 		v2 = c2->data[lws2];
 	}
 
-	uae_u64 v64 = ((uae_u64)v1 << 32) | v2;
-	out = (uae_u32)(v64 >> (64 - (offset + width)));
+	uae_u64 v64 = (static_cast<uae_u64>(v1) << 32) | v2;
+	out = static_cast<uae_u32>(v64 >> (64 - (offset + width)));
 	out &= mask[size];
 
 #if VALIDATE_68030_DATACACHE
@@ -9263,7 +9263,7 @@ static uae_u32 get_word_ce030_prefetch_2 (int o)
 		if ((!MORE_ACCURATE_68020_PIPELINE || regs.pipeline_stop >= 0) && regs.cacheholdingaddr020 != pc) {
 			fill_icache030 (pc);
 		}
-		regs.prefetch020[2] = (uae_u16)regs.cacheholdingdata020;
+		regs.prefetch020[2] = static_cast<uae_u16>(regs.cacheholdingdata020);
 	}
 	regs.db = regs.prefetch020[0];
 	do_cycles_ce020_internal(2);
@@ -9315,7 +9315,7 @@ uae_u32 get_word_030_prefetch (int o)
 		if ((!MORE_ACCURATE_68020_PIPELINE || regs.pipeline_stop >= 0) && regs.cacheholdingaddr020 != pc) {
 			fill_icache030 (pc);
 		}
-		regs.prefetch020[2] = (uae_u16)regs.cacheholdingdata020;
+		regs.prefetch020[2] = static_cast<uae_u16>(regs.cacheholdingdata020);
 	}
 	regs.prefetch020_valid[2] = regs.cacheholdingdata_valid;
 	regs.db = regs.prefetch020[0];
@@ -9681,10 +9681,10 @@ static void dcache040_update(uaecptr addr, struct cache040 *c, int line, uae_u32
 		v <<= 32;
 		v |= c->data[line][slot + 1];
 		v &= ~(mask64[size] << shift);
-		v |= ((uae_u64)val) << shift;
+		v |= static_cast<uae_u64>(val) << shift;
 		c->data[line][slot] = v >> 32;
 		c->dirty[line][slot] = true;
-		c->data[line][slot + 1] = (uae_u32)v;
+		c->data[line][slot + 1] = static_cast<uae_u32>(v);
 		c->dirty[line][slot + 1] = true;
 	}
 	c->gdirty[line] = true;
@@ -9944,13 +9944,13 @@ uae_u32 get_byte_cache_040(uaecptr addr)
 {
 	return read_dcache040(addr, 0, dcache_bget);
 }
-uae_u32 next_iword_cache040(void)
+uae_u32 next_iword_cache040()
 {
 	uae_u32 r = get_word_icache040(m68k_getpci());
 	m68k_incpci(2);
 	return r;
 }
-uae_u32 next_ilong_cache040(void)
+uae_u32 next_ilong_cache040()
 {
 	uae_u32 r = get_long_icache040(m68k_getpci());
 	m68k_incpci(4);
@@ -9991,7 +9991,7 @@ uae_u32 get_long_cache_debug(uaecptr addr, bool *cached)
 }
 #endif
 
-void check_t0_trace(void)
+void check_t0_trace()
 {
 	if (regs.t0 && !regs.t1 && currprefs.cpu_model >= 68020) {
 		unset_special (SPCFLAG_TRACE);
@@ -9999,7 +9999,7 @@ void check_t0_trace(void)
 	}
 }
 
-static void reset_pipeline_state(void)
+static void reset_pipeline_state()
 {
 #if MORE_ACCURATE_68020_PIPELINE
 	regs.pipeline_pos = 0;
@@ -10033,7 +10033,7 @@ static int add_prefetch_030(int idx, uae_u16 w, uaecptr pc)
 	return idx + 1;
 }
 
-void fill_prefetch_030_ntx(void)
+void fill_prefetch_030_ntx()
 {
 	uaecptr pc = m68k_getpc ();
 	uaecptr pc2 = pc;
@@ -10069,7 +10069,7 @@ void fill_prefetch_030_ntx(void)
 		regs.irc = get_word_030_prefetch (0);
 }
 
-void fill_prefetch_030_ntx_continue (void)
+void fill_prefetch_030_ntx_continue ()
 {
 	uaecptr pc = m68k_getpc ();
 	uaecptr pc_orig = pc;
@@ -10168,7 +10168,7 @@ void fill_prefetch_030_ntx_continue (void)
 		regs.irc = get_word_030_prefetch(0);
 }
 
-void fill_prefetch_020_ntx(void)
+void fill_prefetch_020_ntx()
 {
 	uaecptr pc = m68k_getpc ();
 	uaecptr pc2 = pc;
@@ -10201,38 +10201,38 @@ void fill_prefetch_020_ntx(void)
 }
 
 // Not exactly right, requires logic analyzer checks.
-void continue_ce020_prefetch(void)
+void continue_ce020_prefetch()
 {
 	fill_prefetch_020_ntx();
 }
-void continue_020_prefetch(void)
+void continue_020_prefetch()
 {
 	fill_prefetch_020_ntx();
 }
 
-void continue_ce030_prefetch(void)
+void continue_ce030_prefetch()
 {
 	fill_prefetch_030_ntx();
 }
-void continue_030_prefetch(void)
+void continue_030_prefetch()
 {
 	fill_prefetch_030_ntx();
 }
 
-void fill_prefetch_020(void)
+void fill_prefetch_020()
 {
 	fill_prefetch_020_ntx();
 	check_t0_trace();
 }
 
-void fill_prefetch_030(void)
+void fill_prefetch_030()
 {
 	fill_prefetch_030_ntx();
 	check_t0_trace();
 }
 
 
-void fill_prefetch (void)
+void fill_prefetch ()
 {
 	if (currprefs.cachesize)
 		return;

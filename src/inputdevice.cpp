@@ -9142,7 +9142,7 @@ int inputdevice_config_change_test (void)
 	return v;
 }
 
-static void copy_inputdevice_settings(struct uae_input_device *src, struct uae_input_device *dst)
+static void copy_inputdevice_settings(const struct uae_input_device *src, struct uae_input_device *dst)
 {
 	for (int l = 0; l < MAX_INPUT_DEVICE_EVENTS; l++) {
 		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
@@ -9155,7 +9155,7 @@ static void copy_inputdevice_settings(struct uae_input_device *src, struct uae_i
 	}
 }
 
-static void copy_inputdevice_settings_free(struct uae_input_device *src, struct uae_input_device *dst)
+static void copy_inputdevice_settings_free(const struct uae_input_device *src, struct uae_input_device *dst)
 {
 	for (int l = 0; l < MAX_INPUT_DEVICE_EVENTS; l++) {
 		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
