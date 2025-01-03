@@ -77,7 +77,7 @@ static int vkbdStartY;
 static VkbdRect vkbdExitButtonRect;
 
 // This is used as index for the exit button:
-static const int vkbdExitButtonIndex = -1;
+static constexpr int vkbdExitButtonIndex = -1;
 
 // These are other keys from which you can move into the exit button:
 const std::vector<std::pair<int, int>> vkbdExitButtonConnections{
@@ -717,8 +717,6 @@ void vkbd_update_position_from_texture()
 
 void vkbd_update(bool createTextures)
 {
-	AmigaMonitor* mon = &AMonitors[0];
-
 	switch (vkbdLanguage)
 	{
 	case VKBD_LANGUAGE_UK:
@@ -874,12 +872,12 @@ void vkbd_set_keyboard_has_exit_button(bool keyboardHasExitButton)
 	vkbd_update(false);
 }
 
-void vkbd_init(void)
+void vkbd_init()
 {
 	vkbd_update(true);
 }
 
-void vkbd_quit(void)
+void vkbd_quit()
 {
 	if (vkbdTexture != nullptr)
 	{
@@ -944,7 +942,7 @@ static void vkbd_update_current_xy()
 	vkbdCurrentY = std::min(maxY, vkbdCurrentY);
 }
 
-void vkbd_redraw(void)
+void vkbd_redraw()
 {
 	AmigaMonitor* mon = &AMonitors[0];
 
@@ -1001,13 +999,13 @@ void vkbd_redraw(void)
 #endif
 }
 
-void vkbd_toggle(void)
+void vkbd_toggle()
 {
 	vkbdShow = !vkbdShow;
 	vkbdTimeLastRedraw = std::chrono::system_clock::now();
 }
 
-bool vkbd_is_active(void)
+bool vkbd_is_active()
 {
 	return vkbdShow;
 }

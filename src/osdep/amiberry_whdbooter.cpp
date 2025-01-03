@@ -616,7 +616,7 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 		parse_cfg_line(prefs, line_string);
 	}
 
-	// CPU 68000/010 [requires a600 rom)]
+	// CPU 68000/010 (requires a600 rom)
 	else if ((strcmpi(game_detail.cpu.c_str(), "68000") == 0 || strcmpi(game_detail.cpu.c_str(), "68010") == 0) && a600_available)
 	{
 		line_string = "cpu_type=";

@@ -25,7 +25,7 @@
 #define FreeAddrInfoW freeaddrinfo
 #endif
 
-bool uae_socket_init(void)
+bool uae_socket_init()
 {
 	static bool initialized = false;
 	static bool result = true;
@@ -43,7 +43,7 @@ bool uae_socket_init(void)
 	return result;
 }
 
-int uae_socket_error(void)
+int uae_socket_error()
 {
 #ifdef _WIN32
 	return WSAGetLastError();
@@ -54,7 +54,6 @@ int uae_socket_error(void)
 
 uae_socket uae_tcp_listen(const TCHAR *host, const TCHAR *port, int flags)
 {
-	int err;
 	uae_socket s = UAE_SOCKET_INVALID;
 
 	if (!uae_socket_init()) {
@@ -64,12 +63,12 @@ uae_socket uae_tcp_listen(const TCHAR *host, const TCHAR *port, int flags)
 
 	write_log(_T("TCP: Open %s port %s\n"), host, port);
 
-	ADDRINFOW hints;
+	ADDRINFOW hints{};
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	PADDRINFOW socketinfo;
-	err = GetAddrInfoW(host, port, &hints, &socketinfo);
+	int err = GetAddrInfoW(host, port, &hints, &socketinfo);
 	if (err < 0) {
 		write_log(_T("TCP: getaddrinfo failed, %s:%s: %d\n"),
 		          host, port, uae_socket_error());
@@ -85,7 +84,7 @@ uae_socket uae_tcp_listen(const TCHAR *host, const TCHAR *port, int flags)
 	}
 
 	if (flags & UAE_SOCKET_LINGER) {
-		const struct linger l = { 1, 1 };
+		constexpr struct linger l = { 1, 1 };
 		err = setsockopt(s, SOL_SOCKET, SO_LINGER, (char *) &l, sizeof(l));
 		if (err < 0) {
 			write_log(_T("TCP: setsockopt(SO_LINGER) failed, %s:%s: %d\n"),
@@ -94,7 +93,7 @@ uae_socket uae_tcp_listen(const TCHAR *host, const TCHAR *port, int flags)
 		}
 	}
 	if (flags & UAE_SOCKET_REUSEADDR) {
-		const int o = 1;
+		constexpr int o = 1;
 		err = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *) &o, sizeof(o));
 		if (err < 0) {
 			write_log(_T("TCP: setsockopt(SO_REUSEADDR) failed, %s:%s: %d\n"),
@@ -139,7 +138,7 @@ uae_socket uae_tcp_listen_uri(
 	write_log(_T("TCP: Listen %s\n"), uri);
 
 	TCHAR *name = _tcsdup(uri);
-	TCHAR *port = NULL;
+	TCHAR *port = nullptr;
 	const TCHAR *p = _tcschr(uri, ':');
 	if (p) {
 		name[p - uri] = 0;
@@ -151,7 +150,7 @@ uae_socket uae_tcp_listen_uri(
 	}
 	if (port && port[0] == 0) {
 		xfree(port);
-		port = NULL;
+		port = nullptr;
 	}
 	if (!port) {
 		port = _tcsdup(default_port);
@@ -166,24 +165,24 @@ uae_socket uae_socket_accept(uae_socket s)
 {
 	socklen_t sa_len = sizeof(SOCKADDR_INET);
 	char socketaddr[sizeof(SOCKADDR_INET)];
-	uae_socket result = accept(s, (struct sockaddr*) socketaddr, &sa_len);
+	uae_socket result = accept(s, reinterpret_cast<struct sockaddr*>(socketaddr), &sa_len);
 	return result;
 }
 
 int uae_socket_read(uae_socket s, void *buf, int count)
 {
-	return recv(s, (char *) buf, count, 0);
+	return static_cast<int>(recv(s, (char*)buf, count, 0));
 }
 
 int uae_socket_write(uae_socket s, const void *buf, int count)
 {
-	return send(s, (const char *) buf, count, 0);
+	return static_cast<int>(send(s, (const char*)buf, count, 0));
 }
 
 int uae_socket_select(
 		uae_socket s, bool read, bool write, bool except, uae_u64 timeout)
 {
-	struct timeval tv;
+	struct timeval tv{};
 	tv.tv_sec = timeout / 1000000;
 	tv.tv_usec = timeout % 1000000;
 	fd_set readfds, writefds, exceptfds;
@@ -205,8 +204,8 @@ int uae_socket_select(
 #endif
 
 	int num = select(
-			s + 1, read ? &readfds : NULL, write ? &writefds : NULL,
-			except ? &exceptfds : NULL, &tv);
+			s + 1, read ? &readfds : nullptr, write ? &writefds : nullptr,
+			except ? &exceptfds : nullptr, &tv);
 	if (num == 0) {
 		// write_log("TCP: select %d result 0\n", s);
 		return 0;

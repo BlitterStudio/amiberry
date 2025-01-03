@@ -20,7 +20,7 @@
 
 /* Virtual parallel port protocol aka "vpar"
  *
- * Always sends/receives 2 bytes: one control byte, one data byte-
+ * Always sends/receives 2 bytes: one control byte, one data byte
  *
  * Send to UAE the following control byte:
  *     0x01 0 = BUSY line value
@@ -38,7 +38,7 @@
  *     0x02 1 = POUT line set
  *     0x04 2 = SELECT line set
  *     0x08 3 = STROBE was triggered
- *     0x10 4 = is an reply to a read request (otherwise emu change)
+ *     0x10 4 = is a reply to a read request (otherwise emu change)
  *     0x20 5 = n/a
  *     0x40 6 = emulator is starting (first msg of session)
  *     0x80 7 = emulator is shutting down (last msg of session)
@@ -69,7 +69,7 @@ static char buf2[32];
 static int ack_flag;
 static uint64_t ts_req;
 
-static const char *decode_ctl(uae_u8 ctl, const char *txt)
+static const char *decode_ctl(const uae_u8 ctl, const char *txt)
 {
 	int busy = (ctl & 1) == 1;
 	int pout = (ctl & 2) == 2;
@@ -94,7 +94,7 @@ static const char *decode_ctl(uae_u8 ctl, const char *txt)
 		strcpy(ptr, "select ");
 	}
 	ptr+=7;
-	if (txt != NULL) {
+	if (txt[0]) {
 		int ack = (ctl & 8) == 8;
 		if (ack) {
 			strcpy(ptr, txt);
@@ -105,18 +105,18 @@ static const char *decode_ctl(uae_u8 ctl, const char *txt)
 	return buf;
 }
 
-static const char *get_ts(void)
+static const char *get_ts()
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	sprintf(buf2,"%8ld.%06ld",tv.tv_sec,tv.tv_usec);
+	struct timeval tv{};
+	gettimeofday(&tv, nullptr);
+	_sntprintf(buf2, sizeof buf2, "%8ld.%06ld",tv.tv_sec,tv.tv_usec);
 	return buf2;
 }
 
-static uint64_t get_ts_uint64(void)
+static uint64_t get_ts_uint64()
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
+	struct timeval tv{};
+	gettimeofday(&tv, nullptr);
 	return tv.tv_sec * 1000000UL + tv.tv_usec;
 }
 
@@ -125,7 +125,7 @@ static int vpar_low_write(uae_u8 data[2])
 	int rem = 2;
 	int off = 0;
 	while (rem > 0) {
-		int num = write(par_fd, data+off, rem);
+		int num = static_cast<int>(write(par_fd, data + off, rem));
 		if (num < 0) {
 			if (errno != EAGAIN) {
 				if (vpar_debug) {
@@ -159,7 +159,7 @@ static int vpar_low_read(uae_u8 data[2])
 	FD_SET(par_fd, &fds);
 	FD_ZERO(&fde);
 	FD_SET(par_fd, &fde);
-	int num_ready = select (FD_SETSIZE, &fds, NULL, &fde, NULL);
+	int num_ready = select (FD_SETSIZE, &fds, nullptr, &fde, nullptr);
 	if (num_ready > 0) {
 		if (FD_ISSET(par_fd, &fde)) {
 			if (vpar_debug) {
@@ -280,19 +280,19 @@ static int vpar_read_state(const uae_u8 data[2])
 	return ack;
 }
 
-static void vpar_init(void)
+static void vpar_init()
 {
 	/* write initial state with init flag set */
 	vpar_write_state(VPAR_INIT);
 }
 
-static void vpar_exit(void)
+static void vpar_exit()
 {
 	/* write final state with exit flag set */
 	vpar_write_state(VPAR_EXIT);
 }
 
-void vpar_update(void)
+void vpar_update()
 {
 	// report
 	if (ack_flag) {
@@ -337,7 +337,7 @@ static int vpar_thread(void *)
 	return 0;
 }
 
-void vpar_open(void)
+void vpar_open()
 {
 	/* is a printer file given? */
 	char *name = strdup(currprefs.prtname);
@@ -367,7 +367,7 @@ void vpar_open(void)
 			par_mode = PAR_MODE_PRT;
 		}
 		/* enable debug output */
-		vpar_debug = (getenv("VPAR_DEBUG") != NULL);
+		vpar_debug = (getenv("VPAR_DEBUG") != nullptr);
 		/* open parallel control file */
 		if (par_fd == -1) {
 			par_fd = open(file_name, O_RDWR | O_NONBLOCK | O_BINARY | oflag);
@@ -376,7 +376,7 @@ void vpar_open(void)
 		/* start vpar reader thread */
 		if (!vpar_init_done) {
 			uae_sem_init(&vpar_sem, 0, 1);
-			uae_start_thread (_T("parser_ack"), vpar_thread, NULL, NULL);
+			uae_start_thread (_T("parser_ack"), vpar_thread, nullptr, nullptr);
 			vpar_init_done = 1;
 		}
 		/* init vpar */
@@ -392,7 +392,7 @@ void vpar_open(void)
 	free(name);
 }
 
-void vpar_close(void)
+void vpar_close()
 {
 	/* close parallel control file */
 	if (par_fd >= 0) {

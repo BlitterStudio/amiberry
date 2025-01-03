@@ -83,33 +83,33 @@ class ThemesActionListener : public gcn::ActionListener
 				gui_theme.font_name = font;
 			}
 		}
-        else if (source == cmdThemeReset)
-        {
-            load_default_theme();
-        }
-        else if (source == cmdThemeSave)
-        {
-            gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
-            save_theme(amiberry_options.gui_theme);
-        }
-        else if (source == cmdThemeSaveAs)
-        {
-            gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
+		else if (source == cmdThemeReset)
+		{
+			load_default_theme();
+		}
+		else if (source == cmdThemeSave)
+		{
+			gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
+			save_theme(amiberry_options.gui_theme);
+		}
+		else if (source == cmdThemeSaveAs)
+		{
+			gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
 			const char* filter[] = { ".theme", "\0" };
 			const std::string theme = SelectFile("Save theme", get_themes_path(), filter, true);
-            if (!theme.empty())
-            {
-                std::string filename = extract_filename(theme);
-                save_theme(filename);
+			if (!theme.empty())
+			{
+				std::string filename = extract_filename(theme);
+				save_theme(filename);
 				populate_themes_list();
-            }
-        }
-        else if (source == cmdThemeUse)
-        {
+			}
+		}
+		else if (source == cmdThemeUse)
+		{
 			gui_theme.font_size = std::stoi(txtThemeFontSize->getText());
-            apply_theme();
+			apply_theme();
 			apply_theme_extras();
-        }
+		}
 		else if (source == cboThemePreset)
 		{
 			const auto selected_theme = cboThemePreset->getSelected();
@@ -117,19 +117,19 @@ class ThemesActionListener : public gcn::ActionListener
 			{
 				const auto theme = themes_list.getElementAt(selected_theme);
 
-                if (std::strcmp(theme.c_str(), amiberry_options.gui_theme) != 0)
+				if (std::strcmp(theme.c_str(), amiberry_options.gui_theme) != 0)
 				{
-                    std::strcpy(amiberry_options.gui_theme, theme.c_str());
+					std::strcpy(amiberry_options.gui_theme, theme.c_str());
 					load_theme(theme);
-                    apply_theme();
-                    apply_theme_extras();
+					apply_theme();
+					apply_theme_extras();
 				}
 			}
 		}
-        else 
-        {
-            HandleSliderAction(source);
-        }
+		else
+		{
+			HandleSliderAction(source);
+		}
 
 		RefreshPanelThemes();
 	}

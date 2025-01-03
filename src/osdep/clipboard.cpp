@@ -189,12 +189,12 @@ static TCHAR* amigatopc(const char* txt)
 #endif
 		if (c == 0x9b)
 		{
-			i = parsecsi(txt, int(i) + 1, int(len));
+			i = parsecsi(txt, static_cast<int>(i) + 1, static_cast<int>(len));
 			continue;
 		}
 		if (c == 0x1b && i + 1 < len && txt[i + 1] == '[')
 		{
-			i = parsecsi(txt, int(i) + 2, int(len));
+			i = parsecsi(txt, static_cast<int>(i) + 2, static_cast<int>(len));
 			continue;
 		}
 		txt2[j++] = c;
@@ -207,16 +207,12 @@ static TCHAR* amigatopc(const char* txt)
 static void to_iff_text(TrapContext* ctx, const TCHAR* pctxt)
 {
 	uae_u8 b[] = {'F', 'O', 'R', 'M', 0, 0, 0, 0, 'F', 'T', 'X', 'T', 'C', 'H', 'R', 'S', 0, 0, 0, 0};
-	uae_u32 size;
-	int txtlen;
-	uae_char* txt;
-	char* s;
 
-	s = ua(pctxt);
-	txt = pctoamiga(s);
-	txtlen = strlen(txt);
+	auto s = ua(pctxt);
+	uae_char* txt = pctoamiga(s);
+	int txtlen = strlen(txt);
 	xfree(to_amiga);
-	size = txtlen + sizeof b + (txtlen & 1) - 8;
+	uae_u32 size = txtlen + sizeof b + (txtlen & 1) - 8;
 	b[4] = size >> 24;
 	b[5] = size >> 16;
 	b[6] = size >> 8;
@@ -255,7 +251,13 @@ static void from_iff_text(uae_u8* addr, uae_u32 len)
 		{
 			const auto prevsize = txtsize;
 			txtsize += csize;
-			txt = xrealloc(char, txt, txtsize + 1);
+			char* new_txt = xrealloc(char, txt, txtsize + 1);
+			if (!new_txt)
+			{
+				xfree(txt);
+				return;
+			}
+			txt = new_txt;
 			memcpy(txt + prevsize, addr + 8, csize);
 			txt[txtsize] = 0;
 		}
@@ -743,7 +745,7 @@ static void from_iff(TrapContext* ctx, uaecptr data, uae_u32 len)
 	trap_get_bytes(ctx, buf, data, int(len + 3) & ~3);
 
 	if (clipboard_debug)
-		debugwrite(ctx, _T("clipboard_a2p"), data, int(len));
+		debugwrite(ctx, _T("clipboard_a2p"), data, static_cast<int>(len));
 	if (!memcmp("FORM", buf, 4))
 	{
 		if (!memcmp("FTXT", buf + 8, 4))
@@ -873,7 +875,7 @@ static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 #endif
 }
 
-static void clipboard_free_delayed(void)
+static void clipboard_free_delayed()
 {
 	if (clipboard_delayed_data == nullptr)
 		return;
@@ -1103,7 +1105,7 @@ static uae_u32 clipboard_vsync_cb(TrapContext* ctx, void* ud)
 	return 0;
 }
 
-void clipboard_vsync(void)
+void clipboard_vsync()
 {
 	if (!filesys_heartbeat())
 		return;
@@ -1132,7 +1134,7 @@ void clipboard_vsync(void)
 	}
 }
 
-void clipboard_reset(void)
+void clipboard_reset()
 {
 	write_log(_T("clipboard: reset (%08x)\n"), clipboard_data);
 	clipboard_unsafeperiod();
@@ -1152,7 +1154,7 @@ void clipboard_reset(void)
 }
 
 #ifdef AMIBERRY
-void clipboard_init(void)
+void clipboard_init()
 {
 	chwnd = 1; // fake window handle
 	write_log(_T("clipboard_init\n"));
@@ -1170,7 +1172,7 @@ void clipboard_init (HWND hwnd)
 #endif
 }
 
-void target_paste_to_keyboard(void)
+void target_paste_to_keyboard()
 {
 #ifdef AMIBERRY
 	write_log("target_paste_to_keyboard (clipboard)\n");
@@ -1178,8 +1180,8 @@ void target_paste_to_keyboard(void)
 	clipboard_read(nullptr, chwnd, true);
 }
 
-// force 2 second delay before accepting new data
-void clipboard_unsafeperiod(void)
+// force 2-second delay before accepting new data
+void clipboard_unsafeperiod()
 {
 	vdelay2 = 100;
 	if (vdelay < 60)
@@ -1200,7 +1202,7 @@ char* uae_clipboard_get_text()
 	return text;
 }
 
-void uae_clipboard_free_text(char* text)
+void uae_clipboard_free_text(const char* text)
 {
 	if (text)
 	{

@@ -336,7 +336,7 @@ void RefreshPanelThemes();
 bool HelpPanelThemes(std::vector<std::string>& helptext);
 
 void refresh_all_panels();
-void focus_bug_workaround(gcn::Window* wnd);
+void focus_bug_workaround(const gcn::Window* wnd);
 void disable_resume();
 
 bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3,

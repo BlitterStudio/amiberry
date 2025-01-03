@@ -821,10 +821,10 @@ static void cfg_dowrite(struct zfile *f, const TCHAR *option, const TCHAR *optio
 		char *opt = ua(optionp);
 		if (target) {
 			char *tna = ua(TARGET_NAME);
-			sprintf(tmpa, "%s.%s.utf8=%s", tna, opt, tmp2);
+			_sntprintf(tmpa, sizeof tmpa, "%s.%s.utf8=%s", tna, opt, tmp2);
 			xfree(tna);
 		} else {
-			sprintf(tmpa, "%s.utf8=%s", opt, tmp2);
+			_sntprintf(tmpa, sizeof tmpa, "%s.utf8=%s", opt, tmp2);
 		}
 		xfree(opt);
 		zfile_fwrite(tmpa, strlen (tmpa), 1, f);

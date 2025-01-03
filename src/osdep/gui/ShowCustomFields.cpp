@@ -106,7 +106,6 @@ static ShowCustomFieldsActionListener* showCustomFieldsActionListener;
 
 void create_custom_field(custom_widget& widget, const int number, const std::string& caption, const whdload_custom& custom_field, int& pos_y, const int custom_list_index)
 {
-	constexpr int textfield_width = 300;
 	constexpr int pos_x1 = DISTANCE_BORDER;
 
 	for (int i = 0; i < number; i++) {
@@ -149,6 +148,7 @@ void create_custom_field(custom_widget& widget, const int number, const std::str
 			break;
 		}
 		case list_type: {
+			constexpr int textfield_width = 300;
 			label->setCaption(custom_field.caption);
 			label->adjustSize();
 			pos_x2 = textfield_width + 15;

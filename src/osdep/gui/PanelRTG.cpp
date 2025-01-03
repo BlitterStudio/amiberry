@@ -57,7 +57,6 @@ class RTGActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& action_event) override
 	{
-		int v;
 		uae_u32 mask = changed_prefs.picasso96_modeflags;
 		
 		if (action_event.getSource() == cboBoard)
@@ -125,7 +124,7 @@ public:
 
 		mask &= ~RGBFF_CLUT;
 		mask |= RGBFF_CLUT;
-		v = cboRtg16bitModes->getSelected();
+		int v = cboRtg16bitModes->getSelected();
 		mask &= ~(RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC);
 		if (v == 1)
 			mask |= RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC;
@@ -155,7 +154,7 @@ public:
 		if (v == 5)
 			mask |= RGBFF_B8G8R8A8;
 
-		changed_prefs.picasso96_modeflags = int(mask);
+		changed_prefs.picasso96_modeflags = static_cast<int>(mask);
 		
 		RefreshPanelRTG();
 	}

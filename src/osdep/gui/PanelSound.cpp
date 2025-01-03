@@ -63,7 +63,7 @@ static gcn::DropDown* cboSwapChannels;
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
 static int numdevs;
-static const int sndbufsizes[] = { 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1 };
+static constexpr int sndbufsizes[] = { 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1 };
 
 static gcn::StringListModel soundcard_list;
 
@@ -302,7 +302,7 @@ void InitPanelSound(const config_category& category)
 	for (int card = 0; card < numdevs; card++) {
 		TCHAR tmp[MAX_DPATH];
 		int type = sound_devices[card]->type;
-		_stprintf(tmp, _T("%s: %s"),
+		_sntprintf(tmp, sizeof tmp, _T("%s: %s"),
 			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DSOUND") : (type == SOUND_DEVICE_AL ? _T("OpenAL") : (type == SOUND_DEVICE_PA ? _T("PortAudio") : (type == SOUND_DEVICE_WASAPI ? _T("WASAPI") : _T("WASAPI EX"))))),
 			sound_devices[card]->name);
 		soundcard_list.add(tmp);

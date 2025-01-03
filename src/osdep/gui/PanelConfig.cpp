@@ -70,9 +70,9 @@ public:
 			//-----------------------------------------------
 			// Save current configuration
 			//-----------------------------------------------
-			char filename[MAX_DPATH];
 			if (!txtName->getText().empty())
 			{
+				char filename[MAX_DPATH];
 				get_configuration_path(filename, MAX_DPATH);
 				strncat(filename, txtName->getText().c_str(), MAX_DPATH - 1);
 				strncat(filename, ".uae", MAX_DPATH - 1);
@@ -89,10 +89,10 @@ public:
 			//-----------------------------------------------
 			// Delete selected config
 			//-----------------------------------------------
-			char msg[256];
 			i = lstConfigs->getSelected();
 			if (i >= 0 && ConfigFilesList[i]->Name[0] != '\0')
 			{
+				char msg[256];
 				(void)snprintf(msg, 256, "Do you want to delete '%s' ?", ConfigFilesList[i]->Name);
 				if (ShowMessage("Delete Configuration", msg, "", "", "Yes", "No"))
 				{
@@ -326,7 +326,7 @@ bool HelpPanelConfig(std::vector<std::string>& helptext)
 	helptext.emplace_back("immediately using that configuration.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("To create/save a new configuration, set all emulator options as required, then enter");
-	helptext.emplace_back("a new \"Name\", optionally provide a short description, and then click on the \"Save\"");
+	helptext.emplace_back(R"(a new "Name", optionally provide a short description, and then click on the "Save")");
 	helptext.emplace_back("button. When trying to Save a configuration, if the supplied filename already exists,");
 	helptext.emplace_back("it will be automatically renamed to \"configuration.backup\", to keep as a backup.");
 	helptext.emplace_back(" ");
@@ -334,7 +334,7 @@ bool HelpPanelConfig(std::vector<std::string>& helptext)
 	helptext.emplace_back("with floppy disk images and whdload archives. The auto-config logic in Amiberry will");
 	helptext.emplace_back("scan for a configuration file of the same \"Name\" as the disk image or .lha archive");
 	helptext.emplace_back("being loaded. After you load a floppy disk image or whdload archive, and Start the ");
-	helptext.emplace_back("emulation, you can use the \"F12\" key to show the GUI, and in this panel the \"Name\"");
+	helptext.emplace_back(R"(emulation, you can use the "F12" key to show the GUI, and in this panel the "Name")");
 	helptext.emplace_back("field for the configuartion will be filled correctly. Do not change this, as it will");
 	helptext.emplace_back("stop auto-config from working. You may change the description if you desire.");
 	helptext.emplace_back(" ");

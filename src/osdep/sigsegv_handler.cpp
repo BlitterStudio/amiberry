@@ -86,7 +86,7 @@ enum style_type_t {
 static int in_handler = 0;
 static int max_signals = 200;  
 
-void init_max_signals(void)
+void init_max_signals()
 {
 #ifdef WITH_LOGGING
 	max_signals = 20;
@@ -128,9 +128,9 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 	int handled = HANDLE_EXCEPTION_NONE;
 // Mac OS X struct for this is different
 #ifndef __MACH__
-	uintptr fault_pc = uintptr(sigcont->pc);
+	auto fault_pc = static_cast<uintptr>(sigcont->pc);
 #else
-	uintptr fault_pc = uintptr(sigcont->__ss.__pc);
+	auto fault_pc = static_cast<uintptr>(sigcont->__ss.__pc);
 #endif
 
 	if (fault_pc == 0) {
@@ -345,8 +345,8 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 void signal_segv(int signum, siginfo_t* info, void* ptr)
 {
 	int handled = HANDLE_EXCEPTION_NONE;
-		
-	ucontext_t* ucontext = (ucontext_t*)ptr;
+
+	auto ucontext = static_cast<ucontext_t*>(ptr);
 	Dl_info dlinfo;
 
 	output_log(_T("--- New exception ---\n"));
@@ -363,7 +363,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 	unsigned long long* regs = context->__ss.__x;
 #endif
 
-	uintptr addr = (uintptr)info->si_addr;
+	const auto addr = reinterpret_cast<uintptr>(info->si_addr);
 
 	handled = handle_exception(context, addr);
 
@@ -379,7 +379,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 		output_log(_T("info.si_code = %d\n"), info->si_code);
 		output_log(_T("info.si_addr = %08x\n"), info->si_addr);
 		if (signum == 4)
-			output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
+			output_log(_T("       value = 0x%08x\n"), *static_cast<uae_u32*>(info->si_addr));
 
 		for (int i = 0; i < 31; ++i)
 #ifndef __MACH__
@@ -399,7 +399,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 		// I can't find an obvious way to get at the fault address from the OS X side
 		//output_log(_T("Fault Address = 0x%016llx\n"), ucontext->uc_mcontext.fault_address);
 		output_log(_T("pstate  = 0x%016llx\n"), context->__ss.__cpsr);
-		void* getaddr = (void*)context->__ss.__x[30];
+		void* getaddr = reinterpret_cast<void*>(context->__ss.__x[30]);
 #endif
 
 		if (dladdr(getaddr, &dlinfo))
@@ -422,7 +422,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 			if (dladdr(array[i], &dlinfo)) {
 				const char* symname = dlinfo.dli_sname;
 				output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-					(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+					reinterpret_cast<unsigned long>(array[i]) - reinterpret_cast<unsigned long>(dlinfo.dli_saddr), dlinfo.dli_fname);
 			}
 		}
 
@@ -443,7 +443,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 		--max_signals;
 		if (max_signals <= 0) {
 			target_startup_msg(_T("Exception"), _T("Too many access violations. Please turn off JIT."));
-			uae_restart(&currprefs, 1, NULL);
+			uae_restart(&currprefs, 1, nullptr);
 			return;
 		}
 	}
@@ -457,7 +457,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 
 void signal_buserror(int signum, siginfo_t* info, void* ptr)
 {
-	ucontext_t* ucontext = (ucontext_t*)ptr;
+	auto ucontext = static_cast<ucontext_t*>(ptr);
 	Dl_info dlinfo;
 
 	output_log(_T("--- New exception ---\n"));
@@ -474,14 +474,14 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	unsigned long long* regs = context->__ss.__x;
 #endif
 
-	uintptr_t addr = (uintptr_t)info->si_addr;
+	auto addr = reinterpret_cast<uintptr_t>(info->si_addr);
 
 	output_log(_T("info.si_signo = %d\n"), signum);
 	output_log(_T("info.si_errno = %d\n"), info->si_errno);
 	output_log(_T("info.si_code = %d\n"), info->si_code);
 	output_log(_T("info.si_addr = %08x\n"), info->si_addr);
 	if (signum == 4)
-		output_log(_T("       value = 0x%08x\n"), *((uae_u32*)(info->si_addr)));
+		output_log(_T("       value = 0x%08x\n"), *static_cast<uae_u32*>(info->si_addr));
 
 	for (int i = 0; i < 31; ++i)
 #ifndef __MACH__
@@ -500,7 +500,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	//output_log(_T("Fault Address = 0x%016llx\n"), context->uc_mcontext.fault_address);
 	output_log(_T("pstate  = 0x%016llx\n"), context->__ss.__cpsr);
 
-	void* getaddr = (void*)context->__ss.__x[30];
+	void* getaddr = reinterpret_cast<void*>(context->__ss.__x[30]);
 #endif
 
 
@@ -520,15 +520,14 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 		if (dladdr(array[i], &dlinfo)) {
 			const char* symname = dlinfo.dli_sname;
 			output_log(_T("0x%08x <%s + 0x%08x> (%s)\n"), array[i], symname,
-				(unsigned long)array[i] - (unsigned long)dlinfo.dli_saddr, dlinfo.dli_fname);
+				reinterpret_cast<unsigned long>(array[i]) - reinterpret_cast<unsigned long>(dlinfo.dli_saddr), dlinfo.dli_fname);
 		}
 	}
 
 	output_log(_T("Stack trace (non-dedicated):\n"));
-	char** strings;
 	void* bt[100];
-	int sz = backtrace(bt, 100);
-	strings = backtrace_symbols(bt, sz);
+	const int sz = backtrace(bt, 100);
+	char** strings = backtrace_symbols(bt, sz);
 	for (int i = 0; i < sz; ++i)
 		output_log(_T("%s\n"), strings[i]);
 	output_log(_T("End of stack trace.\n"));

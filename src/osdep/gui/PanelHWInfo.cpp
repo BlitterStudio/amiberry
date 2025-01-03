@@ -64,7 +64,7 @@ void RefreshPanelHWInfo()
 		if (!aci && highest_expamem <= Z3BASE_UAE)
 			break;
 		if (aci && aci->zorro >= 1 && aci->zorro <= 3)
-			_stprintf(tmp, _T("Z%d"), aci->zorro);
+			_sntprintf(tmp, sizeof tmp, _T("Z%d"), aci->zorro);
 		else
 			_tcscpy(tmp, _T("-"));
 
@@ -84,25 +84,25 @@ void RefreshPanelHWInfo()
 		if (aci)
 		{
 			if (aci->start != 0xffffffff)
-				_stprintf(tmp, _T("0x%08x"), aci->start);
+				_sntprintf(tmp, sizeof tmp, _T("0x%08x"), aci->start);
 			else
 				_tcscpy(tmp, _T("-"));
 			listCells[row][COL_START]->setText(tmp);
 
 			if (aci->size != 0)
-				_stprintf(tmp, _T("0x%08x"), aci->start + aci->size - 1);
+				_sntprintf(tmp, sizeof tmp, _T("0x%08x"), aci->start + aci->size - 1);
 			else
 				_tcscpy(tmp, _T("-"));
 			listCells[row][COL_END]->setText(tmp);
 
 			if (aci->size != 0)
-				_stprintf(tmp, _T("0x%08x"), aci->size);
+				_sntprintf(tmp, sizeof tmp, _T("0x%08x"), aci->size);
 			else
 				_tcscpy(tmp, _T("-"));
 			listCells[row][COL_SIZE]->setText(tmp);
 
 			if (aci->autoconfig_bytes[0] != 0xff)
-				_stprintf(tmp, _T("0x%04x/0x%02x"),
+				_sntprintf(tmp, sizeof tmp, _T("0x%04x/0x%02x"),
 					(aci->autoconfig_bytes[4] << 8) | aci->autoconfig_bytes[5], aci->autoconfig_bytes[1]);
 			else
 				_tcscpy(tmp, _T("-"));
@@ -110,7 +110,7 @@ void RefreshPanelHWInfo()
 		}
 		else
 		{
-			_stprintf(tmp, _T("0x%08x"), highest_expamem);
+			_sntprintf(tmp, sizeof tmp, _T("0x%08x"), highest_expamem);
 			listCells[row][COL_START]->setText(tmp);
 			listCells[row][COL_END]->setText("");
 			listCells[row][COL_SIZE]->setText("");

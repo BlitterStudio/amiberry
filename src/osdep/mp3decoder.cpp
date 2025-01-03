@@ -1,5 +1,5 @@
-#include <string.h>
-#include <stdlib.h>
+#include <cstring>
+#include <cstdlib>
 
 #include "sysdeps.h"
 
@@ -30,12 +30,10 @@ static int mp3_samplesperframe[] = {
 };
 
 mp3decoder::~mp3decoder()
-{
-}
+= default;
 
 mp3decoder::mp3decoder()
-{
-}
+= default;
 
 uae_u8* mp3decoder::get(struct zfile* zf, uae_u8* outbuf, int maxsize)
 {
@@ -70,7 +68,7 @@ uae_u8* mp3decoder::get(struct zfile* zf, uae_u8* outbuf, int maxsize)
 	if (mpg123_open_feed(mh) == MPG123_OK)
 	{
 		zfile_fseek(zf, 0, SEEK_SET);
-		for (; outoffset < maxsize;)
+		while (outoffset < maxsize)
 		{
 			size_t count = zfile_fread(mp3buf, 1, MP3_BLOCK_SIZE, zf);
 			if (count != MP3_BLOCK_SIZE)
@@ -171,9 +169,9 @@ uae_u32 mp3decoder::getsize(struct zfile* zf)
 					uae_u8* data = p + 10;
 					data[size] = 0;
 					if (data[0] == 0)
-						timelen = atol((char*)(data + 1));
+						timelen = atol(reinterpret_cast<char*>(data + 1));
 					else
-						timelen = _tstol((char*)(data + 1));
+						timelen = _tstol(reinterpret_cast<char*>(data + 1));
 				}
 			}
 			size += 10;

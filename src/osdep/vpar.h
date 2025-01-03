@@ -18,11 +18,11 @@
 
 #define PAR_MODE_OFF     0
 #define PAR_MODE_PRT     1
-#define PAR_MODE_RAW     -1
+#define PAR_MODE_RAW     (-1)
 
-void vpar_open(void);
-void vpar_close(void);
-void vpar_update(void);
+void vpar_open();
+void vpar_close();
+void vpar_update();
 int vpar_direct_write_status(uae_u8 v, uae_u8 dir);
 int vpar_direct_read_status(uae_u8 *vp);
 int vpar_direct_write_data(uae_u8 v, uae_u8 dir);
@@ -31,7 +31,7 @@ int vpar_direct_read_data(uae_u8 *v);
 extern int par_fd;
 extern int par_mode;
 
-static inline bool vpar_enabled(void)
+static inline bool vpar_enabled()
 {
     return par_fd >= 0;
 }

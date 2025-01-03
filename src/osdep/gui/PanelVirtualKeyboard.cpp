@@ -93,7 +93,7 @@ class EnumListModel : public gcn::ListModel
 private:
 	std::vector<std::pair<T,std::string>> m_values{};
 public:
-	explicit EnumListModel(const std::vector<std::pair<T,std::string>> values)
+	explicit EnumListModel(const std::vector<std::pair<T,std::string>>& values)
 		: m_values(values)
 	{
 	}
@@ -103,11 +103,11 @@ public:
 		return m_values.size();
 	}
 
-	void add(const std::string& elem)
+	void add(const std::string& elem) override
 	{
 	}
 
-	void clear()
+	void clear() override
 	{
 	}
 	

@@ -164,7 +164,7 @@ static amigamodels amodels[] = {
 	{-1}
 };
 
-static const int numModels = 13;
+static constexpr int numModels = 13;
 static int numModelConfigs = 0;
 static bool bIgnoreListChange = true;
 
@@ -588,7 +588,7 @@ public:
 				if (dfxtype == DRV_FB)
 				{
 					TCHAR tmp[32];
-					_stprintf(tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
+					_sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
 					_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
 				}
 				else
@@ -683,7 +683,6 @@ static QSDiskActionListener* qs_diskActionListener;
 
 void InitPanelQuickstart(const config_category& category)
 {
-	int posX;
 	int posY = DISTANCE_BORDER;
 
 	amigaModelList.clear();
@@ -884,7 +883,7 @@ void InitPanelQuickstart(const config_category& category)
 
 	for (auto i = 0; i < 2; ++i)
 	{
-		posX = DISTANCE_BORDER;
+		int posX = DISTANCE_BORDER;
 		category.panel->add(chkqsDFx[i], posX, posY);
 		posX += chkqsDFx[i]->getWidth() + DISTANCE_NEXT_X;
 		category.panel->add(cboqsDFxType[i], posX, posY);

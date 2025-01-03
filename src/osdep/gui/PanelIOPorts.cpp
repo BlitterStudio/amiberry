@@ -64,7 +64,7 @@ public:
 			else
 			{
 				const auto port_name = serial_ports_list.getElementAt(selected);
-                if (port_name.find(SERIAL_INTERNAL) != std::string::npos)
+				if (port_name.find(SERIAL_INTERNAL) != std::string::npos)
 				{
 					_sntprintf(changed_prefs.sername, 256, "%s", SERIAL_INTERNAL);
 				}
@@ -151,7 +151,7 @@ void InitPanelIO(const config_category& category)
 	for (int card = 0; card < MAX_SOUND_DEVICES && record_devices[card]; card++) {
 		int type = record_devices[card]->type;
 		TCHAR tmp[MAX_DPATH];
-		_stprintf(tmp, _T("%s: %s"),
+		_sntprintf(tmp, sizeof tmp, _T("%s: %s"),
 			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : type == SOUND_DEVICE_DS ? _T("DSOUND") : type == SOUND_DEVICE_AL ? _T("OpenAL") : type == SOUND_DEVICE_PA ? _T("PortAudio") : _T("WASAPI"),
 			record_devices[card]->name);
 		if (type == SOUND_DEVICE_SDL2)
@@ -175,6 +175,7 @@ void InitPanelIO(const config_category& category)
 			case 2:
 				tmp += " [Slave]";
 				break;
+			default: break;
 			}
 			serial_ports_list.add(tmp);
 		}

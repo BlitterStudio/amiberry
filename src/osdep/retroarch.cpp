@@ -152,7 +152,7 @@ int find_string_in_array(const std::vector<std::string>& arr, const std::string&
 	const auto it = std::find_if(arr.begin(), arr.end(),
 	                             [&key](const std::string& str) { return strcasecmp(str.c_str(), key.c_str()) == 0; });
 
-	return (it != arr.end()) ? std::distance(arr.begin(), it) : -1;
+	return (it != arr.end()) ? static_cast<int>(std::distance(arr.begin(), it)) : -1;
 }
 
 std::string sanitize_retroarch_name(std::string s)
@@ -176,9 +176,9 @@ bool init_kb_from_retroarch(const int index, const std::string& retroarch_file)
 	auto idx = 0;
 	auto valid = false;
 	
-	for (auto i = 0; i < 11; i++)
+	for (const auto & i : retroarch_kb_button_list)
 	{
-		key = find_retroarch_key("input_player", player, retroarch_kb_button_list[i], retroarch_file);
+		key = find_retroarch_key("input_player", player, i, retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, key);
 		if (x == -1 || x == 0) break;
 

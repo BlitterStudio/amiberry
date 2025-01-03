@@ -847,7 +847,7 @@ void sortdisplays()
 	Displays[0].rect.w = bounds.w;
 	Displays[0].rect.h = bounds.h;
 
-	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
+	_sntprintf(tmp, sizeof tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
 	Displays[0].fullname = my_strdup(tmp);
 	Displays[0].monitorname = my_strdup("Display");
 
