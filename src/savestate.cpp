@@ -962,7 +962,7 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	dst = header;
 	save_u32 (0);
 	save_string (_T("UAE"));
-	_stprintf (tmp, _T("%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
+	_sntprintf (tmp, sizeof tmp, _T("%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 	save_string (tmp);
 	save_string (description);
 	save_chunk (f, header, dst-header, _T("ASF "), 0);
@@ -1199,7 +1199,7 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 	for (i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 		dst = save_cd (i, &len);
 		if (dst) {
-			_stprintf (name, _T("CDU%d"), i);
+			_sntprintf (name, sizeof name, _T("CDU%d"), i);
 			save_chunk (f, dst, len, name, 0);
 		}
 	}
@@ -1313,7 +1313,7 @@ void savestate_quick (int slot, int save)
 	}
 	_tcscpy (savestate_fname + i, _T(".uss"));
 	if (slot > 0)
-		_stprintf (savestate_fname + i, _T("_%d.uss"), slot);
+		_sntprintf (savestate_fname + i, sizeof savestate_fname, _T("_%d.uss"), slot);
 	if (save) {
 		write_log (_T("saving '%s'\n"), savestate_fname);
 		savestate_docompress = 1;

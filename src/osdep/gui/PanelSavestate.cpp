@@ -39,7 +39,7 @@ static std::string get_file_timestamp(const TCHAR* filename)
 	localtime_r(&st.st_mtime, &tm);
 	char date_string[256];
 	strftime(date_string, sizeof(date_string), "%c", &tm);
-	return std::string(date_string);
+	return {date_string};
 }
 
 class SavestateActionListener : public gcn::ActionListener
@@ -50,7 +50,7 @@ public:
 		const auto it = std::find(radioButtons.begin(), radioButtons.end(), actionEvent.getSource());
 		if (it != radioButtons.end())
 		{
-			current_state_num = std::distance(radioButtons.begin(), it);
+			current_state_num = static_cast<int>(std::distance(radioButtons.begin(), it));
 		}
 		else if (actionEvent.getSource() == cmdLoadState)
 		{
@@ -102,7 +102,7 @@ public:
 			//------------------------------------------
 			// Save current state
 			//------------------------------------------
-			if (emulating && (!unsafe || unsafe && unsafe_confirmed))
+			if (emulating && (!unsafe || unsafe_confirmed))
 			{
 				savestate_initsave(savestate_fname, 1, true, true);
 				save_state(savestate_fname, "...");

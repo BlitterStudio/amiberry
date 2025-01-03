@@ -58,15 +58,14 @@ static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 		d->setSelected(val);
 	}
 	else {
-		struct romdata* rd;
 		auto listmodel = d->getListModel();
 		std::string tmp1 = listmodel->getElementAt(val);
 		path[0] = 0;
-		rd = getromdatabyname(tmp1.c_str());
+		struct romdata* rd = getromdatabyname(tmp1.c_str());
 		if (rd) {
 			struct romlist* rl = getromlistbyromdata(rd);
 			if (rd->configname)
-				_stprintf(path, _T(":%s"), rd->configname);
+				_sntprintf(path, sizeof path, _T(":%s"), rd->configname);
 			else if (rl)
 				_tcsncpy(path, rl->path, size);
 		}
@@ -267,9 +266,9 @@ void ExitPanelROM()
 
 void RefreshPanelROM()
 {
-	UAEREG* fkey = regcreatetree(NULL, _T("DetectedROMs"));
+	UAEREG* fkey = regcreatetree(nullptr, _T("DetectedROMs"));
 
-	load_keyring(&changed_prefs, NULL);
+	load_keyring(&changed_prefs, nullptr);
 
 	addromfiles(fkey, cboMainROM, changed_prefs.romfile,
 		ROMTYPE_KICK | ROMTYPE_KICKCD32, 0);

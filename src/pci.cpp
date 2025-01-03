@@ -1593,7 +1593,7 @@ static void pci_dump_memio_region(struct pci_bridge *pcib, uaecptr start, uaecpt
 		for (int j = 0; j < MAX_PCI_BARS; j++) {
 			if (pcibs->bar_size[j] && (pcibs->bar_start[j] || pcibs->bar_end[j]) && (pcibs->bar_size[j] & 1) == type) {
 				TCHAR txt[256];
-				_stprintf(txt, _T("        - %08X - %08X: BAR%d %s\n"), pcibs->bar_start[j], pcibs->bar_end[j], j, pcibs->board->label);
+				_sntprintf(txt, sizeof txt, _T("        - %08X - %08X: BAR%d %s\n"), pcibs->bar_start[j], pcibs->bar_end[j], j, pcibs->board->label);
 				pci_dump_out(txt, log);
 			}
 		}
@@ -1623,13 +1623,13 @@ void pci_dump(int log)
 		struct pci_bridge *pcib = bridges[i];
 		if (!pcib)
 			continue;
-		_stprintf(txt, _T("PCI bridge '%s'\n"), pcib->label);
+		_sntprintf(txt, sizeof txt, _T("PCI bridge '%s'\n"), pcib->label);
 		pci_dump_out(txt, log);
 		pci_dump_region(&pci_config_bank, &start, &end);
 		if (start) {
 			struct pci_board_state *oldpcibs = NULL;
 			int previdx = -1;
-			_stprintf(txt, _T("%08X - %08X: Configuration space\n"), start, end - 1);
+			_sntprintf(txt, sizeof txt, _T("%08X - %08X: Configuration space\n"), start, end - 1);
 			pci_dump_out(txt, log);
 			while (start < end) {
 				struct pci_board_state *pcibs = get_pci_board_state_config(pcib, start, false, 0);
@@ -1637,12 +1637,12 @@ void pci_dump(int log)
 					const struct pci_board *pci = pcibs->board;
 					if (pcibs->board) {
 						const struct pci_config *cfg = &pcibs->dynamic_config;
-						_stprintf(txt, _T(" - %08x Card %d/%d: [%04X/%04X] %s IO=%d MEM=%d\n"),
+						_sntprintf(txt, sizeof txt, _T(" - %08x Card %d/%d: [%04X/%04X] %s IO=%d MEM=%d\n"),
 							start, pcibs->slot, pcibs->func, cfg->vendor, cfg->device, pci->label,
 							pcibs->io_map_active, pcibs->memory_map_active);
 					} else {
 						int idx = pcib->get_index(start, false, NULL);
-						_stprintf(txt, _T("        - Slot %d: <none>\n"), idx & 0xff);
+						_sntprintf(txt, sizeof txt, _T("        - Slot %d: <none>\n"), idx & 0xff);
 					}
 					pci_dump_out(txt, log);
 					oldpcibs = pcibs;
@@ -1652,13 +1652,13 @@ void pci_dump(int log)
 		}
 		pci_dump_region(&pci_io_bank, &start, &end);
 		if (start) {
-			_stprintf(txt, _T("%08X - %08X: IO space\n"), start, end - 1);
+			_sntprintf(txt, sizeof txt, _T("%08X - %08X: IO space\n"), start, end - 1);
 			pci_dump_out(txt, log);
 			pci_dump_memio_region(pcib, start, end, 1, log);
 		}
 		pci_dump_region(&pci_mem_bank, &start, &end);
 		if (start) {
-			_stprintf(txt, _T("%08X - %08X: Memory space\n"), start, end - 1);
+			_sntprintf(txt, sizeof txt, _T("%08X - %08X: Memory space\n"), start, end - 1);
 			pci_dump_out(txt, log);
 			pci_dump_memio_region(pcib, start, end, 0, log);
 		}

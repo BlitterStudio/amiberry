@@ -837,21 +837,21 @@ DiagnosticResponse ArduinoInterface::selectTrack(const unsigned char trackIndex,
 		char flags = (int)searchSpeed;
 		if (!ignoreDiskInsertCheck) flags |= 4;
 #ifdef _WIN32		
-		sprintf_s(buf, "%c%02i%c", COMMAND_GOTOTRACK_REPORT, trackIndex, flags);
+		snprintf_s(buf, sizeof buf, "%c%02i%c", COMMAND_GOTOTRACK_REPORT, trackIndex, flags);
 #else
-		sprintf(buf, "%c%02i%c", COMMAND_GOTOTRACK_REPORT, trackIndex, flags);
+		snprintf(buf, sizeof buf, "%c%02i%c", COMMAND_GOTOTRACK_REPORT, trackIndex, flags);
 #endif	
 	}
 	else {
 #ifdef _WIN32			
-		sprintf_s(buf, "%c%02i", COMMAND_GOTOTRACK, trackIndex);
+		snprintf_s(buf, sizeof buf, "%c%02i", COMMAND_GOTOTRACK, trackIndex);
 #else		
-		sprintf(buf, "%c%02i", COMMAND_GOTOTRACK, trackIndex);
+		snprintf(buf, sizeof buf, "%c%02i", COMMAND_GOTOTRACK, trackIndex);
 #endif	
 	}
 
 	// Send track number. 
-	if (!deviceWrite(buf, (unsigned int)strlen(buf))) {
+	if (!deviceWrite(buf, static_cast<unsigned int>(strlen(buf)))) {
 		m_lastError = DiagnosticResponse::drSendFailed;
 		return m_lastError;
 	}

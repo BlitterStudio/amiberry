@@ -2226,7 +2226,7 @@ static int get_acorn_filename(struct iso_directory_record *de, char *retname, st
 		*retname = '!';
 	if (((de->flags[0] & 2) == 0) && (chr[13] == 0xff) && ((chr[12] & 0xf0) == 0xf0)) {
 		retname[retnamlen] = ',';
-		sprintf(retname+retnamlen+1, "%3.3x",
+		_sntprintf(retname+retnamlen+1, sizeof retname, "%3.3x",
 			((chr[12] & 0xf) << 8) | chr[11]);
 		retnamlen += 4;
 	}
@@ -2461,7 +2461,7 @@ bool isofs_mediainfo(void *sbp, struct isofs_info *ii)
 		uae_u32 totalblocks = 0;
 		ii->media = true;
 		di.cylinders = 0;
-		_stprintf (ii->devname, _T("CD%d"), sb->unitnum);
+		_sntprintf (ii->devname, sizeof ii->devname, _T("CD%d"), sb->unitnum);
 		if (sys_command_info (sb->unitnum, &di, true)) {
 			totalblocks = di.cylinders * di.sectorspertrack * di.trackspercylinder;
 			uae_tcslcpy (ii->devname, di.label, sizeof (ii->devname));

@@ -3379,7 +3379,7 @@ static void floppybridge_getsetprofile(int i)
 		if (sub - 1 < bridgeprofiles.size()) {
 			int nsub = sub - 1;
 			TCHAR tmp[32];
-			_stprintf(tmp, _T("%d:%s"), bridgeprofiles.at(nsub).profileID, bridgeprofiles.at(nsub).name);
+			_sntprintf(tmp, sizeof tmp, _T("%d:%s"), bridgeprofiles.at(nsub).profileID, bridgeprofiles.at(nsub).name);
 			currprefs.floppyslots[i].dfxsubtype = changed_prefs.floppyslots[i].dfxsubtype = sub;
 			_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
 			_tcscpy(currprefs.floppyslots[i].dfxsubtypeid, changed_prefs.floppyslots[i].dfxsubtypeid);
@@ -5409,7 +5409,7 @@ static void floppybridge_init2(struct uae_prefs *p)
 						TCHAR *terrorMessage = au(errorMessage);
 						TCHAR *tname = au(name);
 						TCHAR formattedMessage[512];
-						_stprintf(formattedMessage, _T("Floppy Disk Bridge Error\n\nUnable to replace DF%i: using %s\n\n%s.\n\nDrive DF%i: will be disabled and ignored."), dr, tname, terrorMessage, dr);
+						_sntprintf(formattedMessage, sizeof formattedMessage, _T("Floppy Disk Bridge Error\n\nUnable to replace DF%i: using %s\n\n%s.\n\nDrive DF%i: will be disabled and ignored."), dr, tname, terrorMessage, dr);
 						gui_message(formattedMessage);
 						xfree(tname);
 						xfree(terrorMessage);
@@ -5656,12 +5656,12 @@ static void get_floppybridgeinfo(struct uae_prefs *prefs, TCHAR *infotext, int n
 	_tcscat(p, bridgeinfo.about);
 	p += _tcslen(p);
 	if (bridgeinfo.isUpdateAvailable) {
-		_stprintf(p, _T(" v%u.%u (v%u.%u) "), bridgeinfo.majorVersion, bridgeinfo.minorVersion, bridgeinfo.updateMajorVersion, bridgeinfo.updateMinorVersion);
+		_sntprintf(p, sizeof p, _T(" v%u.%u (v%u.%u) "), bridgeinfo.majorVersion, bridgeinfo.minorVersion, bridgeinfo.updateMajorVersion, bridgeinfo.updateMinorVersion);
 	} else {
-		_stprintf(p, _T(" v%u.%u "), bridgeinfo.majorVersion, bridgeinfo.minorVersion);
+		_sntprintf(p, sizeof p, _T(" v%u.%u "), bridgeinfo.majorVersion, bridgeinfo.minorVersion);
 	}
 	p += _tcslen(p);
-	_stprintf(p, _T("(%s)"), bridgeinfo.url);
+	_sntprintf(p, sizeof p, _T("(%s)"), bridgeinfo.url);
 	_tcscat(p, _T("\r\n\r\n"));
 	p += _tcslen(p);
 	if (bridge_driver[num]) {
@@ -5669,7 +5669,7 @@ static void get_floppybridgeinfo(struct uae_prefs *prefs, TCHAR *infotext, int n
 		TCHAR *name = au(bd->name);
 		TCHAR *man = au(bd->manufacturer);
 		TCHAR *url = au(bd->url);
-		_stprintf(p, _T("%s, %s (%s)\r\n"), name, man, url);
+		_sntprintf(p, sizeof p, _T("%s, %s (%s)\r\n"), name, man, url);
 		xfree(url);
 		xfree(man);
 		xfree(name);

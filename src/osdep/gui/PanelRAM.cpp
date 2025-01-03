@@ -92,7 +92,7 @@ static MemorySliderActionListener* memorySliderActionListener;
 void InitPanelRAM(const config_category& category)
 {
 	memorySliderActionListener = new MemorySliderActionListener();
-	const int sld_width = 150;
+	constexpr int sld_width = 150;
 	int marker_length = 20;
 
 	lblChipmem = new gcn::Label("Chip:");

@@ -76,7 +76,7 @@
 #include "keyboard.h"
 
 // Special version string so that AmigaOS can detect it
-static const char __ver[40] = "$VER: Amiberry v6.3.5 (2024-09-20)";
+static constexpr char __ver[40] = "$VER: Amiberry v7.0 (2025-01-02)";
 
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
@@ -96,7 +96,7 @@ static TCHAR optionsfile[MAX_DPATH];
 static uae_u32 randseed;
 
 static uae_u32 xorshiftstate;
-static uae_u32 xorshift32(void)
+static uae_u32 xorshift32()
 {
 	uae_u32 x = xorshiftstate;
 	x ^= x << 13;
@@ -106,7 +106,7 @@ static uae_u32 xorshift32(void)
 	return xorshiftstate;
 }
 
-uae_u32 uaerand(void)
+uae_u32 uaerand()
 {
 	if (xorshiftstate == 0) {
 		xorshiftstate = randseed;
@@ -119,7 +119,7 @@ uae_u32 uaerand(void)
 	return r;
 }
 
-uae_u32 uaerandgetseed(void)
+uae_u32 uaerandgetseed()
 {
 	if (!randseed) {
 		randseed = 1;
@@ -879,7 +879,7 @@ void usage()
 
 static void parse_cmdline_2 (int argc, TCHAR **argv)
 {
-	cfgfile_addcfgparam (0);
+	cfgfile_addcfgparam (nullptr);
 	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
@@ -917,7 +917,7 @@ static void parse_diskswapper (const TCHAR *s)
 		p2 = _tcstok(p1, delim);
 		if (!p2)
 			break;
-		p1 = NULL;
+		p1 = nullptr;
 		if (num >= MAX_SPARE_DRIVES)
 			break;
 		if (!zfile_zopen (p2, diskswapper_cb, &num)) {
@@ -946,7 +946,7 @@ static TCHAR *parsetext (const TCHAR *s)
 static TCHAR *parsetextpath (const TCHAR *s)
 {
 	auto* const s2 = parsetext (s);
-	auto* const s3 = target_expand_environment (s2, NULL, 0);
+	auto* const s3 = target_expand_environment (s2, nullptr, 0);
 	xfree(s2);
 	return s3;
 }
@@ -1201,9 +1201,9 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				std::string filename = p.filename().string();
 
 				std::string config_extension = "uae";
-				const std::size_t pos = filename.find_last_of(".");
+				const std::size_t pos = filename.find_last_of('.');
 				if (pos != std::string::npos) {
-					filename = filename.substr(0, pos) + "." + config_extension;
+					filename = filename.substr(0, pos).append(".").append(config_extension);
 				}
 				else {
 					// No extension found
@@ -1538,7 +1538,7 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef NATMEM_OFFSET
 	if (!init_shm ()) {
 		if (currprefs.start_gui)
-			uae_restart(&currprefs, -1, NULL);
+			uae_restart(&currprefs, -1, nullptr);
 		return 0;
 	}
 #endif

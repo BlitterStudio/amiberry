@@ -163,28 +163,28 @@ static const struct gfxboard boards[] =
 	},
 	{
 		GFXBOARD_ID_PICCOLO_Z2,
-		_T("Piccolo [Zorro II]"), _T("Ingenieurbüro Helfrich"), _T("Piccolo_Z2"),
+		_T("Piccolo [Zorro II]"), _T("IngenieurbÃ¼ro Helfrich"), _T("Piccolo_Z2"),
 		BOARD_MANUFACTURER_PICCOLO, BOARD_MODEL_MEMORY_PICCOLO, BOARD_MODEL_REGISTERS_PICCOLO, 0,
 		0x00000000, 0x00100000, 0x00200000, 0x00200000, CIRRUS_ID_CLGD5426, 2, 6, true, true,
 		0, 0, NULL, &gd5426_swapped_device
 	},
 	{
 		GFXBOARD_ID_PICCOLO_Z3,
-		_T("Piccolo [Zorro III]"), _T("Ingenieurbüro Helfrich"), _T("Piccolo_Z3"),
+		_T("Piccolo [Zorro III]"), _T("IngenieurbÃ¼ro Helfrich"), _T("Piccolo_Z3"),
 		BOARD_MANUFACTURER_PICCOLO, BOARD_MODEL_MEMORY_PICCOLO, BOARD_MODEL_REGISTERS_PICCOLO, 0,
 		0x00000000, 0x00100000, 0x00200000, 0x00200000, CIRRUS_ID_CLGD5426, 3, 6, true, true,
 		0, 0, NULL, &gd5426_swapped_device
 	},
 	{
 		GFXBOARD_ID_SD64_Z2,
-		_T("Piccolo SD64 [Zorro II]"), _T("Ingenieurbüro Helfrich"), _T("PiccoloSD64_Z2"),
+		_T("Piccolo SD64 [Zorro II]"), _T("IngenieurbÃ¼ro Helfrich"), _T("PiccoloSD64_Z2"),
 		BOARD_MANUFACTURER_PICCOLO, BOARD_MODEL_MEMORY_PICCOLO64, BOARD_MODEL_REGISTERS_PICCOLO64, 0,
 		0x00000000, 0x00200000, 0x00400000, 0x00400000, CIRRUS_ID_CLGD5434, 2, 6, true, true,
 		0, 0, NULL, &gd5434_vlb_swapped_device
 	},
 	{
 		GFXBOARD_ID_SD64_Z3,
-		_T("Piccolo SD64 [Zorro III]"), _T("Ingenieurbüro Helfrich"), _T("PiccoloSD64_Z3"),
+		_T("Piccolo SD64 [Zorro III]"), _T("IngenieurbÃ¼ro Helfrich"), _T("PiccoloSD64_Z3"),
 		BOARD_MANUFACTURER_PICCOLO, BOARD_MODEL_MEMORY_PICCOLO64, BOARD_MODEL_REGISTERS_PICCOLO64, 0,
 		0x00000000, 0x00200000, 0x00400000, 0x00400000, CIRRUS_ID_CLGD5434, 3, 6, true, true,
 		0, 0, NULL, &gd5434_vlb_swapped_device
@@ -286,14 +286,14 @@ static const struct gfxboard boards[] =
 	},
 	{
 		GFXBOARD_ID_GRAFFITY_Z2,
-		_T("Graffity [Zorro II]"), _T("Atéo Concepts"), _T("GraffityZ2"),
+		_T("Graffity [Zorro II]"), _T("AtÃ©o Concepts"), _T("GraffityZ2"),
 		2092, 34, 33, 0,
 		0x00000000, 0x00100000, 0x00200000, 0x00200000, CIRRUS_ID_CLGD5428, 2, 2, false, true,
 		0, 0, NULL, &gd5428_device
 	},
 	{
 		GFXBOARD_ID_GRAFFITY_Z3,
-		_T("Graffity [Zorro III]"), _T("Atéo Concepts"), _T("GraffityZ3"),
+		_T("Graffity [Zorro III]"), _T("AtÃ©o Concepts"), _T("GraffityZ3"),
 		2092, 33, 0, 0,
 		0x00000000, 0x00100000, 0x00200000, 0x01000000, CIRRUS_ID_CLGD5428, 3, 2, false, true,
 		0, 0, NULL, &gd5428_device
@@ -314,7 +314,7 @@ static const struct gfxboard boards[] =
 	},
 	{
 		GFXBOARD_ID_RAINBOWIII,
-		_T("Rainbow III [Zorro III]"), _T("Ingenieurbüro Helfrich"), _T("RainbowIII"),
+		_T("Rainbow III [Zorro III]"), _T("IngenieurbÃ¼ro Helfrich"), _T("RainbowIII"),
 		2145, 33, 0, 0,
 		0x00000000, 0x00400000, 0x00400000, 0x02000000, 0, 3, 6, false, false,
 		0, 0, NULL, &inmos_rainbow3_z3_device
@@ -328,7 +328,7 @@ static const struct gfxboard boards[] =
 	},
 	{
 		GFXBOARD_ID_PIXEL64,
-		_T("Pixel64 [AteoBus]"), _T("Atéo Concepts"), _T("Pixel64"),
+		_T("Pixel64 [AteoBus]"), _T("AtÃ©o Concepts"), _T("Pixel64"),
 		2026, 255, 254, 0, // 255: type=$c7 flags=$40, 254: type=$c2 flags=$40 128k, 252: type=$c2 flags=$40, 128k
 		0x00000000, 0x00200000, 0x00200000, 0x00400000, CIRRUS_ID_CLGD5434, 2, 0, false, false,
 		0, 0, NULL, &gd5434_vlb_device
@@ -356,7 +356,7 @@ static const struct gfxboard boards[] =
 	},
 	{
 		GFXBOARD_ID_RAINBOWII,
-		_T("Rainbow II [Zorro II]"), _T("Ingenieurbüro Helfrich"), _T("RainbowII"),
+		_T("Rainbow II [Zorro II]"), _T("IngenieurbÃ¼ro Helfrich"), _T("RainbowII"),
 		2145, 32, 0, 0,
 		0x00000000, 0x00200000, 0x00200000, 0x00200000, 0, 0, 0, false, false,
 		ROMTYPE_RAINBOWII, 0xc6, &rainbowii_func
@@ -408,7 +408,6 @@ static const struct gfxboard boards[] =
 		ROMTYPE_x86_VGA
 	},
 	{
-		NULL
 	}
 };
 
@@ -1119,6 +1118,7 @@ static int GetBytesPerPixel(RGBFTYPE RGBfmt)
 		case RGBFB_B5G6R5PC:
 		case RGBFB_B5G5R5PC:
 		return 2;
+	default: return 0;
 	}
 	return 0;
 }
@@ -4880,11 +4880,11 @@ bool gfxboard_init_memory (struct autoconfig_info *aci)
 		only_gfx_board = gb;
 
 
-	_stprintf(gb->memorybankname, _T("%s VRAM"), gb->board->name);
-	_stprintf(gb->memorybanknamenojit, _T("%s VRAM NOJIT"), gb->board->name);
-	_stprintf(gb->wbsmemorybankname, _T("%s VRAM WORDSWAP"), gb->board->name);
-	_stprintf(gb->lbsmemorybankname, _T("%s VRAM LONGSWAP"), gb->board->name);
-	_stprintf(gb->regbankname, _T("%s REG"), gb->board->name);
+	_sntprintf(gb->memorybankname, sizeof gb->memorybankname, _T("%s VRAM"), gb->board->name);
+	_sntprintf(gb->memorybanknamenojit, sizeof gb->memorybanknamenojit, _T("%s VRAM NOJIT"), gb->board->name);
+	_sntprintf(gb->wbsmemorybankname, sizeof gb->wbsmemorybankname, _T("%s VRAM WORDSWAP"), gb->board->name);
+	_sntprintf(gb->lbsmemorybankname, sizeof gb->lbsmemorybankname, _T("%s VRAM LONGSWAP"), gb->board->name);
+	_sntprintf(gb->regbankname, sizeof gb->regbankname, _T("%s REG"), gb->board->name);
 
 	memcpy(&gb->gfxboard_bank_memory, &tmpl_gfxboard_bank_memory, sizeof (addrbank));
 	memcpy(&gb->gfxboard_bank_wbsmemory, &tmpl_gfxboard_bank_wbsmemory, sizeof(addrbank));

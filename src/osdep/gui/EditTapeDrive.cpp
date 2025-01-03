@@ -193,7 +193,6 @@ static void InitEditTapeDrive()
 	cboTapeDriveUnit->addActionListener(tapeDriveActionListener);
 
 	int posY = DISTANCE_BORDER;
-	int posX = DISTANCE_BORDER;
 
 	wndEditTapeDrive->add(lblTapeDrivePath, DISTANCE_BORDER, posY);
 	wndEditTapeDrive->add(txtTapeDrivePath, lblTapeDrivePath->getX() + lblTapeDrivePath->getWidth() + 8, posY);
@@ -507,7 +506,6 @@ bool EditTapeDrive(const int unit_no)
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	mountedinfo mi{};
-	uaedev_config_data* uci;
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -528,7 +526,7 @@ bool EditTapeDrive(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uci = &changed_prefs.mountconfig[unit_no];
+		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 		memcpy(&current_tapedlg.ci, uci, sizeof(uaedev_config_info));
 

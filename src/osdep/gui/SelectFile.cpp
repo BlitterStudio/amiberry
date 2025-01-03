@@ -56,7 +56,7 @@ public:
 
 	int getNumberOfElements() override
 	{
-		return dirs.size() + files.size();
+		return static_cast<int>(dirs.size() + files.size());
 	}
 
 	void add(const std::string& elem) override
@@ -88,7 +88,7 @@ public:
 			FilterFiles(&files, filefilter);
 	}
 
-	bool isDir(unsigned int i) const
+	[[nodiscard]] bool isDir(unsigned int i) const
 	{
 		return (i < dirs.size());
 	}

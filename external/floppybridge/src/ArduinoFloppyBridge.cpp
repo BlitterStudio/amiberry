@@ -124,9 +124,9 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 			// Must be at least V1.8
 			char buf[20];
 #ifdef _WIN32			
-			sprintf_s(buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
+			snprintf_s(buf, sizeof buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
 #else
-			sprintf(buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
+			snprintf(buf, sizeof buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
 #endif			
 			errorMessage = "DrawBridge aka Arduino Floppy Reader/Writer Firmware is Out Of Date\n\nWinUAE requires V1.8 (and ideally with the modded circuit design).\n\n";
 			errorMessage += "You are currently using V" + std::string(buf) + ".  Please update the firmware.";

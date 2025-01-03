@@ -156,7 +156,7 @@ static void tape_write_filemark(struct scsi_data_tape *tape)
 
 	if (!tape->realdir)
 		return;
-	_stprintf(path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, TAPE_INDEX);
+	_sntprintf(path, sizeof path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, TAPE_INDEX);
 	struct zfile *zf = zfile_fopen(path, _T("a+b"));
 	if (zf) {
 		zfile_fputs(zf, _T("\n"));
@@ -199,7 +199,7 @@ static void erase (struct scsi_data_tape *tape)
 				break;
 			TCHAR *ext = _tcsrchr (filename, '.');
 			if (ext && !_tcsicmp (ext, _T(".tape"))) {
-				_stprintf (path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, filename);
+				_sntprintf (path, sizeof path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, filename);
 				if (my_existsfile (path))
 #ifdef _WIN32
 					my_unlink (path, false);
@@ -226,7 +226,7 @@ static void next_file (struct scsi_data_tape *tape)
 		goto end;
 	if (!tape->index && tape->realdir) {
 		TCHAR tmp[MAX_DPATH];
-		_stprintf(tmp, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, TAPE_INDEX);
+		_sntprintf(tmp, sizeof tmp, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, TAPE_INDEX);
 		tape->index = zfile_fopen(tmp, _T("rb"), ZFD_NORMAL);
 	}
 	if (tape->index) {
@@ -279,7 +279,7 @@ static void next_file (struct scsi_data_tape *tape)
 				goto end;
 			if (_tcsicmp (filename, TAPE_INDEX))
 				continue;
-			_stprintf (path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, filename);
+			_sntprintf (path, sizeof path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, filename);
 			if (!my_existsfile (path))
 				continue;
 			tape->zf = zfile_fopen (path, _T("rb"), 0);
@@ -363,8 +363,8 @@ static int tape_write (struct scsi_data_tape *tape, uae_u8 *scsi_data, int len)
 
 	if (!tape->realdir)
 		return -1;
-	_stprintf (numname, _T("%05d.tape"), tape->file_number);
-	_stprintf (path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, numname);
+	_sntprintf (numname, sizeof numname, _T("%05d.tape"), tape->file_number);
+	_sntprintf (path, sizeof path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, numname);
 	exists = my_existsfile (path);
 	struct zfile *zf = zfile_fopen (path, _T("a+b"));
 	if (!zf)
@@ -377,7 +377,7 @@ static int tape_write (struct scsi_data_tape *tape, uae_u8 *scsi_data, int len)
 			zfile_fclose(tape->index);
 			tape->index = NULL;
 		}
-		_stprintf (path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, TAPE_INDEX);
+		_sntprintf (path, sizeof path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, TAPE_INDEX);
 		zf = zfile_fopen (path, _T("a+b"));
 		if (zf) {
 			zfile_fputs (zf, numname);

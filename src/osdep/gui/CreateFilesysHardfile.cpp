@@ -140,7 +140,6 @@ static void InitCreateFilesysHardfile()
 	cmdPath->addActionListener(createFilesysHardfileActionListener);
 
 	int posY = DISTANCE_BORDER;
-	int posX = DISTANCE_BORDER;
 
 	wndCreateFilesysHardfile->add(lblPath, DISTANCE_BORDER, posY);
 	wndCreateFilesysHardfile->add(txtPath, DISTANCE_BORDER + lblPath->getWidth() + 8, posY);

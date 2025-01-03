@@ -79,7 +79,7 @@ public:
 				if (dfxtype == DRV_FB)
 				{
 					TCHAR tmp[32];
-					_stprintf(tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
+					_sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
 					_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
 				}
 				else
@@ -334,10 +334,10 @@ public:
 		if (actionEvent.getSource() == cmdCreateDDDisk)
 		{
 			// Create 3.5" DD Disk
-			char diskname[MAX_DPATH];
 			tmp = SelectFile("Create 3.5\" DD disk file", current_dir, diskfile_filter, true);
 			if (!tmp.empty())
 			{
+				char diskname[MAX_DPATH];
 				extract_filename(tmp.c_str(), diskname);
 				remove_file_extension(diskname);
 				diskname[31] = '\0';
@@ -352,10 +352,10 @@ public:
 		else if (actionEvent.getSource() == cmdCreateHDDisk)
 		{
 			// Create 3.5" HD Disk
-			char diskname[MAX_DPATH];
 			tmp = SelectFile("Create 3.5\" HD disk file", current_dir, diskfile_filter, true);
 			if (!tmp.empty())
 			{
+				char diskname[MAX_DPATH];
 				extract_filename(tmp.c_str(), diskname);
 				remove_file_extension(diskname);
 				diskname[31] = '\0';

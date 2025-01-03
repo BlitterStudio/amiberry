@@ -1,7 +1,7 @@
-#include <ctype.h>
+#include <cctype>
 #include "sysdeps.h"
 
-#include <string.h>
+#include <cstring>
 
 // Amiberry and fs-uae uses only chars / UTF-8 internally, so TCHAR is typedefed to
 // char (WinUAE uses wchar_t internally).

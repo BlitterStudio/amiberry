@@ -938,7 +938,7 @@ static int checkvaltype(TCHAR **cp, uae_u32 *val, int *size, TCHAR def)
 		}
 		*val = v;
 		// stupid but works!
-		_stprintf(p, _T("%u"), v);
+		_sntprintf(p, sizeof p, _T("%u"), v);
 		p += _tcslen (p);
 		*p = 0;
 		if (peekchar(cp) == '.') {
@@ -1188,14 +1188,14 @@ uaecptr dumpmem2 (uaecptr addr, TCHAR *out, int osize)
 
 	if (osize <= (9 + cols * 5 + 1 + 2 * cols))
 		return addr;
-	_stprintf (out, _T("%08X "), addr);
+	_sntprintf (out, sizeof out, _T("%08X "), addr);
 	for (i = 0; i < cols; i++) {
 		uae_u8 b1, b2;
 		b1 = b2 = 0;
 		if (debug_safe_addr (addr, 1)) {
 			b1 = get_byte_debug (addr + 0);
 			b2 = get_byte_debug (addr + 1);
-			_stprintf (out + 9 + i * 5, _T("%02X%02X "), b1, b2);
+			_sntprintf (out + 9 + i * 5, sizeof out, _T("%02X%02X "), b1, b2);
 			out[9 + cols * 5 + 1 + i * 2 + 0] = b1 >= 32 && b1 < 127 ? b1 : '.';
 			out[9 + cols * 5 + 1 + i * 2 + 1] = b2 >= 32 && b2 < 127 ? b2 : '.';
 		} else {
@@ -1289,9 +1289,9 @@ static void dump_custom_regs(bool aga, bool ext)
 		if (ext) {
 			struct custom_store *cs;
 			cs = &custom_storage[addr1 >> 1];
-			_stprintf(extra1, _T("\t%04X %08X %s"), cs->value, cs->pc & ~1, (cs->pc & 1) ? _T("COP") : _T("CPU"));
+			_sntprintf(extra1, sizeof extra1, _T("\t%04X %08X %s"), cs->value, cs->pc & ~1, (cs->pc & 1) ? _T("COP") : _T("CPU"));
 			cs = &custom_storage[addr2 >> 1];
-			_stprintf(extra2, _T("\t%04X %08X %s"), cs->value, cs->pc & ~1, (cs->pc & 1) ? _T("COP") : _T("CPU"));
+			_sntprintf(extra2, sizeof extra2, _T("\t%04X %08X %s"), cs->value, cs->pc & ~1, (cs->pc & 1) ? _T("COP") : _T("CPU"));
 		}
 		console_out_f (_T("%03X %s\t%04X%s\t%03X %s\t%04X%s\n"),
 			addr1, custd[cnt1].name, v1, extra1,
@@ -1839,7 +1839,7 @@ static void heatmap_stats(TCHAR **c)
 
 			TCHAR tmp[100];
 			double pct = totalcnt / max * 100.0;
-			_stprintf(tmp, _T("%03d: %08x - %08x %08x (%d) %.5f%%\n"), lines + 1,
+			_sntprintf(tmp, sizeof tmp, _T("%03d: %08x - %08x %08x (%d) %.5f%%\n"), lines + 1,
 				firstaddress, lastaddress + HEATMAP_DIV - 1,
 				lastaddress - firstaddress + HEATMAP_DIV - 1,
 				lastaddress - firstaddress + HEATMAP_DIV - 1,
@@ -2477,7 +2477,7 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 		chcnt = br + 1;
 	}
 	if (dr->cf_reg != 0xffff) {
-		_stprintf(srtext, _T("!%03x"), dr->cf_reg);
+		_sntprintf(srtext, sizeof srtext, _T("!%03x"), dr->cf_reg);
 		chcnt = -1;
 		regsize--;
 	} else {
@@ -2496,11 +2496,11 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 		}
 	}
 	if (ipl >= 0) {
-		_stprintf(l1, _T("[%02X %03X %d]"), hpos, dhpos, ipl);
+		_sntprintf(l1, sizeof l1, _T("[%02X %03X %d]"), hpos, dhpos, ipl);
 	} else if (ipl == -2) {
-		_stprintf(l1, _T("[%02X %03X -]"), hpos, dhpos);
+		_sntprintf(l1, sizeof l1, _T("[%02X %03X -]"), hpos, dhpos);
 	} else {
-		_stprintf(l1, _T("[%02X %03X  ]"), hpos, dhpos);
+		_sntprintf(l1, sizeof l1, _T("[%02X %03X  ]"), hpos, dhpos);
 	}
 	if (l4) {
 		_tcscpy(l4, _T("          "));
@@ -2535,34 +2535,34 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 		} else {
 			if (chcnt >= 0) {
 				if (regsize == 3)
-					_stprintf(l2, _T("%3s%d   %03X"), srtext, chcnt, r);
+					_sntprintf(l2, sizeof l2, _T("%3s%d   %03X"), srtext, chcnt, r);
 				else if (regsize == 2)
-					_stprintf(l2, _T("%4s%d   %02X"), srtext, chcnt, r);
+					_sntprintf(l2, sizeof l2, _T("%4s%d   %02X"), srtext, chcnt, r);
 				else
-					_stprintf(l2, _T("%5s%d   %02X"), srtext, chcnt, r);
+					_sntprintf(l2, sizeof l2, _T("%5s%d   %02X"), srtext, chcnt, r);
 			} else {
 				if (regsize == 3)
-					_stprintf(l2, _T("%4s   %03X"), srtext, r);
+					_sntprintf(l2, sizeof l2, _T("%4s   %03X"), srtext, r);
 				else if (regsize == 2)
-					_stprintf(l2, _T("%5s   %02X"), srtext, r);
+					_sntprintf(l2, sizeof l2, _T("%5s   %02X"), srtext, r);
 				else
-					_stprintf(l2, _T("%6s   %02X"), srtext, r);
+					_sntprintf(l2, sizeof l2, _T("%6s   %02X"), srtext, r);
 			}
 		}
 		if (l3 && !noval) {
 			uae_u64 v = dr->dat;
 			if (longsize == 4) {
-				_stprintf(l3, _T("%08X"), (uae_u32)v);
+				_sntprintf(l3, sizeof l3, _T("%08X"), (uae_u32)v);
 			} else if (longsize == 8) {
-				_stprintf(l3, _T("%08X"), (uae_u32)(v >> 32));
+				_sntprintf(l3, sizeof l3, _T("%08X"), (uae_u32)(v >> 32));
 				extra64 = true;
 				extraval = (uae_u32)v;
 			} else {
-				_stprintf(l3, _T("     %04X"), (uae_u32)(v & 0xffff));
+				_sntprintf(l3, sizeof l3, _T("     %04X"), (uae_u32)(v & 0xffff));
 			}
 		}
 		if (l4 && dr->addr != 0xffffffff)
-			_stprintf (l4, _T("%08X"), dr->addr & 0x00ffffff);
+			_sntprintf (l4, sizeof l4, _T("%08X"), dr->addr & 0x00ffffff);
 	}
 	if (l3) {
 		int cl2 = 0;
@@ -2665,7 +2665,7 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 	if (l5) {
 		if (dr->ciaphase) {
 			if (dr->ciamask) {
-				_stprintf(l5, _T("%c%s%X   %04X"), dr->ciarw ? 'W' : 'R',
+				_sntprintf(l5, sizeof l5, _T("%c%s%X   %04X"), dr->ciarw ? 'W' : 'R',
 					dr->ciamask == 1 ? _T("A") : (dr->ciamask == 2 ? _T("B") : _T("X")),
 					dr->ciareg, dr->ciavalue);
 			} else {
@@ -2673,7 +2673,7 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 				if (ph >= 100) {
 					_tcscpy(l5, _T(" - "));
 				} else {
-					_stprintf(l5, _T(" %u "), ph - 1);
+					_sntprintf(l5, sizeof l5, _T(" %u "), ph - 1);
 				}
 			}
 		}
@@ -2686,14 +2686,14 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 			if (ret) {
 				xtra = '+';
 			}
-			_stprintf(l6, _T("%c%03X   %03X"), xtra, ras, cas);
+			_sntprintf(l6, sizeof l6, _T("%c%03X   %03X"), xtra, ras, cas);
 		} else {
 			l6[0] = 0;
 		}
 	}
 	if (extra64) {
 		_tcscpy(l6, l4);
-		_stprintf(l4, _T("%08X"), extraval);
+		_sntprintf(l4, sizeof l4, _T("%08X"), extraval);
 	}
 	return got;
 }
@@ -2751,17 +2751,17 @@ static void decode_dma_record(int hpos, int vpos, int count, int toggle, bool lo
 			get_record_dma_info(dr_start, dr, l1l, l2l, l3l, l4l, l5l, l6l, &split, &ipl);
 
 			TCHAR *p = l1 + _tcslen(l1);
-			_stprintf(p, _T("%11s  "), l1l);
+			_sntprintf(p, sizeof p, _T("%11s  "), l1l);
 			p = l2 + _tcslen(l2);
-			_stprintf(p, _T("%11s  "), l2l);
+			_sntprintf(p, sizeof p, _T("%11s  "), l2l);
 			p = l3 + _tcslen(l3);
-			_stprintf(p, _T("%11s  "), l3l);
+			_sntprintf(p, sizeof p, _T("%11s  "), l3l);
 			p = l4 + _tcslen(l4);
-			_stprintf(p, _T("%11s  "), l4l);
+			_sntprintf(p, sizeof p, _T("%11s  "), l4l);
 			p = l5 + _tcslen(l5);
-			_stprintf(p, _T("%11s  "), l5l);
+			_sntprintf(p, sizeof p, _T("%11s  "), l5l);
 			p = l6 + _tcslen(l6);
-			_stprintf(p, _T("%11s  "), l6l);
+			_sntprintf(p, sizeof p, _T("%11s  "), l6l);
 
 			if (split != 0xffffffff) {
 				if (split < 0x10000) {
@@ -2894,7 +2894,7 @@ static uaecptr decode_copper_insn(FILE *file, uae_u16 mword1, uae_u16 mword2, ua
 	TCHAR record[] = _T("          ");
 
 	if ((cr = find_copper_records(addr))) {
-		_stprintf(record, _T(" [%03x %03x]"), cr->vpos, cr->hpos);
+		_sntprintf(record, sizeof record, _T(" [%03x %03x]"), cr->vpos, cr->hpos);
 		insn = (cr->w1 << 16) | cr->w2;
 	} else {
 		insn = (mword1 << 16) | mword2;
@@ -4299,7 +4299,7 @@ static void memwatch_remap (uaecptr addr)
 		return;
 	if (!newbank) {
 		TCHAR tmp[200];
-		_stprintf (tmp, _T("%s [D]"), bank->name);
+		_sntprintf (tmp, sizeof tmp, _T("%s [D]"), bank->name);
 		ms->addr = bank;
 		ms->banknr = banknr;
 		newbank = &ms->newbank;
@@ -5005,7 +5005,7 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 					size_out /= 1024;
 					size_ext = 'M';
 				}
-				_stprintf (txt, _T("%08X %7d%c/%d = %7d%c %s%s%c %s %s"), (j << 16) | bankoffset, size_out, size_ext,
+				_sntprintf (txt, sizeof txt, _T("%08X %7d%c/%d = %7d%c %s%s%c %s %s"), (j << 16) | bankoffset, size_out, size_ext,
 					mirrored, mirrored ? size_out / mirrored : size_out, size_ext,
 					(a1->flags & ABFLAG_CACHE_ENABLE_INS) ? _T("I") : _T("-"),
 					(a1->flags & ABFLAG_CACHE_ENABLE_DATA) ? _T("D") : _T("-"),
@@ -5019,7 +5019,7 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 					if (a1->check(((j << 16) | bankoffset), (size * 1024) / mirrored))
 						crc = get_crc32 (a1->xlateaddr((j << 16) | bankoffset), (size * 1024) / mirrored);
 					struct romdata *rd = getromdatabycrc (crc);
-					_stprintf (p, _T(" (%08X)"), crc);
+					_sntprintf (p, sizeof p, _T(" (%08X)"), crc);
 					if (rd) {
 						tmp[0] = '=';
 						getromname (rd, tmp + 1);
@@ -5047,8 +5047,8 @@ static void memory_map_dump_3(UaeMemoryMap *map, int log)
 							r->alias = j << 16;
 							r->flags |= UAE_MEMORY_REGION_ALIAS | UAE_MEMORY_REGION_MIRROR;
 						}
-						_stprintf(r->name, _T("%s"), name);
-						_stprintf(r->rom_name, _T("%s"), tmp);
+						_sntprintf(r->name, sizeof r->name, _T("%s"), name);
+						_sntprintf(r->rom_name, sizeof r->rom_name, _T("%s"), tmp);
 						map->num_regions += 1;
 					}
 				}
@@ -6479,7 +6479,7 @@ static void dma_disasm(int frames, int vp, int hp, int frames_end, int vp_end, i
 		TCHAR l1[16], l2[16], l3[16], l4[16];
 		if (get_record_dma_info(drs, dr, l1, l2, l3, l4, NULL, NULL, NULL, NULL)) {
 			TCHAR tmp[256];
-			_stprintf(tmp, _T(" - %02d %02X %s"), dr->ipl, dr->hpos, l2);
+			_sntprintf(tmp, sizeof tmp, _T(" - %02d %02X %s"), dr->ipl, dr->hpos, l2);
 			while (_tcslen(tmp) < 20) {
 				_tcscat(tmp, _T(" "));
 			}
@@ -7012,14 +7012,14 @@ static bool debug_line (TCHAR *input)
 						}
 						TCHAR buf[200];
 						TCHAR *pbuf;
-						_stprintf(buf, _T("0 dff000 200 NONE"));
+						_sntprintf(buf, sizeof buf, _T("0 dff000 200 NONE"));
 						pbuf = buf;
 						memwatch(&pbuf);
-						_stprintf(buf, _T("1 0 %08x NONE"), currprefs.chipmem.size);
+						_sntprintf(buf, sizeof buf, _T("1 0 %08x NONE"), currprefs.chipmem.size);
 						pbuf = buf;
 						memwatch(&pbuf);
 						if (currprefs.bogomem.size) {
-							_stprintf(buf, _T("2 c00000 %08x NONE"), currprefs.bogomem.size);
+							_sntprintf(buf, sizeof buf, _T("2 c00000 %08x NONE"), currprefs.bogomem.size);
 							pbuf = buf;
 							memwatch(&pbuf);
 						}
@@ -7583,7 +7583,7 @@ const TCHAR *debuginfo (int mode)
 {
 	static TCHAR txt[100];
 	uae_u32 pc = M68K_GETPC;
-	_stprintf (txt, _T("PC=%08X INS=%04X %04X %04X"),
+	_sntprintf (txt, sizeof txt, _T("PC=%08X INS=%04X %04X %04X"),
 		pc, get_word_debug (pc), get_word_debug (pc + 2), get_word_debug (pc + 4));
 	return txt;
 }

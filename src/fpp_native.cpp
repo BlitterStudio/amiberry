@@ -577,21 +577,21 @@ static const TCHAR *fp_print(fpdata *fpd, int mode)
 	if (mode < 0) {
 		uae_u32 w1, w2, w3;
 		fp_from_exten(fpd, &w1, &w2, &w3);
-		_stprintf(fsout, _T("%04X-%08X-%08X"), w1 >> 16, w2, w3);
+		_sntprintf(fsout, sizeof fsout, _T("%04X-%08X-%08X"), w1 >> 16, w2, w3);
 		return fsout;
 	}
 
 	n = signbit(fpd->fp) ? 1 : 0;
 
 	if(isinf(fpd->fp)) {
-		_stprintf(fsout, _T("%c%s"), n ? '-' : '+', _T("inf"));
+		_sntprintf(fsout, sizeof fsout, _T("%c%s"), n ? '-' : '+', _T("inf"));
 	} else if(isnan(fpd->fp)) {
-		_stprintf(fsout, _T("%c%s"), n ? '-' : '+', _T("nan"));
+		_sntprintf(fsout, sizeof fsout, _T("%c%s"), n ? '-' : '+', _T("nan"));
 	} else {
 #ifdef USE_LONG_DOUBLE
-		_stprintf(fsout, _T("#%Le"), fpd->fp);
+		_sntprintf(fsout, sizeof fsout, _T("#%Le"), fpd->fp);
 #else
-		_stprintf(fsout, _T("#%e"), fpd->fp);
+		_sntprintf(fsout, sizeof fsout, _T("#%e"), fpd->fp);
 #endif
 	}
 	if (mode == 0 || mode > _tcslen(fsout))
@@ -1101,9 +1101,9 @@ static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 	fp_to_native(&fp, src);
 
 #ifdef USE_LONG_DOUBLE
-	sprintf (str, "%#.17Le", fp);
+	_sntprintf (str, sizeof str, "%#.17Le", fp);
 #else
-	sprintf (str, "%#.17e", fp);
+	_sntprintf (str, sizeof str, "%#.17e", fp);
 #endif
 	
 	// get exponent

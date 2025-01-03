@@ -1936,22 +1936,22 @@ static struct zfile *get_kickstart_filehandle(struct uae_prefs *p)
 		// don't check default paths if romfile is empty
 		if (p->romfile[0] != 0) {
 #endif
-			_stprintf(tmprom2, _T("%s/%s"), home_dir.c_str(), p->romfile);
+			_sntprintf(tmprom2, sizeof tmprom2, _T("%s/%s"), home_dir.c_str(), p->romfile);
 			f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 #ifdef AMIBERRY
 		}
 #endif
 		if (f == NULL) {
-			_stprintf(tmprom2, _T("%s/roms/kick.rom"), home_dir.c_str());
+			_sntprintf(tmprom2, sizeof tmprom2, _T("%s/roms/kick.rom"), home_dir.c_str());
 			f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 			if (f == NULL) {
-				_stprintf(tmprom2, _T("%s/kick.rom"), home_dir.c_str());
+				_sntprintf(tmprom2, sizeof tmprom2, _T("%s/kick.rom"), home_dir.c_str());
 				f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 				if (f == NULL) {
-					_stprintf(tmprom2, _T("%s/../shared/rom/kick.rom"), home_dir.c_str());
+					_sntprintf(tmprom2, sizeof tmprom2, _T("%s/../shared/rom/kick.rom"), home_dir.c_str());
 					f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 					if (f == NULL) {
-						_stprintf(tmprom2, _T("%s/../System/rom/kick.rom"), home_dir.c_str());
+						_sntprintf(tmprom2, sizeof tmprom2, _T("%s/../System/rom/kick.rom"), home_dir.c_str());
 						f = rom_fopen(tmprom2, _T("rb"), ZFD_NORMAL);
 						if (f == NULL) {
 							f = read_rom_name_guess(tmprom, tmprom2);
@@ -3926,7 +3926,7 @@ uae_u8 *save_rom(int first, size_t *len, uae_u8 *dstptr)
 				mem_start += ROM_SIZE_256;
 			}
 			version = get_long(mem_start + 12); /* version+revision */
-			_stprintf (tmpname, _T("Kickstart %d.%d"), get_word(mem_start + 12), get_word(mem_start + 14));
+			_sntprintf (tmpname, sizeof tmpname, _T("Kickstart %d.%d"), get_word(mem_start + 12), get_word(mem_start + 14));
 			break;
 		case 1: /* Extended ROM */
 			if (!extendedkickmem_type)
@@ -3938,7 +3938,7 @@ uae_u8 *save_rom(int first, size_t *len, uae_u8 *dstptr)
 			version = get_long(mem_start + 12); /* version+revision */
 			if (version == 0xffffffff)
 				version = get_long(mem_start + 16);
-			_stprintf (tmpname, _T("Extended"));
+			_sntprintf (tmpname, sizeof tmpname, _T("Extended"));
 			break;
 		default:
 			return 0;

@@ -212,7 +212,7 @@ void gui_restart()
 	gui_running = false;
 }
 
-void focus_bug_workaround(gcn::Window* wnd)
+void focus_bug_workaround(const gcn::Window* wnd)
 {
 	// When modal dialog opens via mouse, the dialog will not
 	// have the focus unless there is a mouse click. We simulate the click...
@@ -247,7 +247,7 @@ void cap_fps(Uint64 start)
 	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
 
 	const int refresh_rate = std::clamp(sdl_mode.refresh_rate, 50, 60);
-	const float frame_time = 1000.0f / refresh_rate;
+	const float frame_time = 1000.0f / static_cast<float>(refresh_rate);
 	const float delay_time = frame_time - elapsed_ms;
 
 	if (delay_time > 0.0f)
@@ -303,8 +303,8 @@ void amiberry_gui_init()
 	{
 		write_log("Creating Amiberry GUI window...\n");
         Uint32 mode;
-        if (!kmsdrm_detected)
-        {
+		if (!kmsdrm_detected)
+		{
 			// Only enable Windowed mode if we're running under x11
 			mode = SDL_WINDOW_RESIZABLE;
 		}
@@ -743,8 +743,8 @@ void check_input()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_PRESSED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -757,8 +757,8 @@ void check_input()
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = SDL_RELEASED;
 
-			touch_event.button.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;
@@ -770,8 +770,8 @@ void check_input()
 			touch_event.motion.which = 0;
 			touch_event.motion.state = 0;
 
-			touch_event.motion.x = gui_graphics->getTarget()->w * int(gui_event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * int(gui_event.tfinger.y);
+			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
+			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
 
 			gui_input->pushInput(touch_event);
 			break;

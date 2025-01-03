@@ -4227,7 +4227,7 @@ static void s3_virge_add_status_info(char *s, int max_len, void *p)
                 status_diff = 1;
 
         svga_add_status_info(s, max_len, &virge->svga);
-        sprintf(temps, "%f Mpixels/sec\n%f ktris/sec\n%f%% CPU\n%f%% CPU (real)\n%d writes %i reads\n\n", (double)virge->pixel_count/1000000.0, (double)virge->tri_count/1000.0, ((double)virge_time * 100.0) / timer_freq, ((double)virge_time * 100.0) / status_diff, reg_writes, reg_reads);
+        _sntprintf(temps, sizeof temps, "%f Mpixels/sec\n%f ktris/sec\n%f%% CPU\n%f%% CPU (real)\n%d writes %i reads\n\n", (double)virge->pixel_count/1000000.0, (double)virge->tri_count/1000.0, ((double)virge_time * 100.0) / timer_freq, ((double)virge_time * 100.0) / status_diff, reg_writes, reg_reads);
         strncat(s, temps, max_len);
 
         virge->pixel_count = virge->tri_count = 0;

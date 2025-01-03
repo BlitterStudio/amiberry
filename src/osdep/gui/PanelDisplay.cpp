@@ -138,7 +138,7 @@ public:
 					strncpy(label, label_string.c_str(), sizeof(label) - 1);
 					label[sizeof(label) - 1] = '\0';
 
-					struct chipset_refresh* cr;
+					struct chipset_refresh* cr = nullptr;
 					for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 						cr = &changed_prefs.cr[i];
 						if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
@@ -177,7 +177,9 @@ public:
 						// Round the rate to 6 decimal places
 						rate = std::round(rate * 1e6) / 1e6;
 
-						cr->rate = static_cast<float>(rate);
+						if (cr != nullptr) {
+							cr->rate = static_cast<float>(rate);
+						}
 					}
 					catch (const std::invalid_argument&) 
 					{
@@ -187,10 +189,13 @@ public:
 						write_log("Out of range FPS argument in text box, ignoring value\n");
 					}
 
-					TCHAR buffer[20];
-					_stprintf(buffer, _T("%.6f"), cr->rate);
-					txtFpsAdj->setText(std::string(buffer));
-					sldFpsAdj->setValue(cr->rate);
+					if (cr != nullptr)
+					{
+						TCHAR buffer[20];
+						_sntprintf(buffer, sizeof buffer, _T("%.6f"), cr->rate);
+						txtFpsAdj->setText(std::string(buffer));
+						sldFpsAdj->setValue(cr->rate);
+					}
 				}
 			}
 		}
@@ -204,7 +209,6 @@ class AmigaScreenActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		AmigaMonitor* mon = &AMonitors[0];
 		auto source = actionEvent.getSource();
 
 		if (source == chkManualCrop)
@@ -275,7 +279,7 @@ public:
 			strncpy(label, label_string.c_str(), sizeof(label) - 1);
 			label[sizeof(label) - 1] = '\0';
 
-			struct chipset_refresh* cr;
+			struct chipset_refresh* cr = nullptr;
 			for (i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 				cr = &changed_prefs.cr[i];
 				if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
@@ -306,7 +310,7 @@ public:
 			}
 			if (cr->locked) {
 				if (actionEvent.getSource() == sldFpsAdj) {
-					i = sldFpsAdj->getValue();//xSendDlgItemMessage(hDlg, IDC_FRAMERATE2, TBM_GETPOS, 0, 0);
+					i = static_cast<int>(sldFpsAdj->getValue());//xSendDlgItemMessage(hDlg, IDC_FRAMERATE2, TBM_GETPOS, 0, 0);
 					if (i != static_cast<int>(cr->rate))
 						cr->rate = static_cast<float>(i);
 					updaterate = true;
@@ -330,7 +334,7 @@ public:
 			}
 			if (updaterate) {
 				TCHAR buffer[20];
-				_stprintf(buffer, _T("%.6f"), cr->rate);
+				_sntprintf(buffer,  sizeof buffer, _T("%.6f"), cr->rate);
 				txtFpsAdj->setText(std::string(buffer));
 			}
 			if (updateslider) {
@@ -1108,12 +1112,12 @@ static void refresh_fps_options()
 		if (cr->rate > 0) {
 			_tcscpy(buffer, cr->label);
 			if (!buffer[0])
-				_stprintf(buffer, _T(":%d"), i);
+				_sntprintf(buffer, sizeof buffer, _T(":%d"), i);
 			fps_options.emplace_back(buffer);
 			double d = changed_prefs.chipset_refreshrate;
 			if (abs(d) < 1)
 				d = currprefs.ntscmode ? 60.0 : 50.0;
-			if (selectcr && selectcr->index == cr->index)
+			if (selectcr->index == cr->index)
 				changed_prefs.cr_selected = i;
 			rates[i] = v;
 			v++;
@@ -1125,7 +1129,7 @@ static void refresh_fps_options()
 	selectcr = &changed_prefs.cr[changed_prefs.cr_selected];
 	cboFpsRate->setSelected(rates[changed_prefs.cr_selected]);
 	sldFpsAdj->setValue(selectcr->rate + 0.5);
-	_stprintf(buffer, _T("%.6f"), selectcr->rate);
+	_sntprintf(buffer, sizeof buffer, _T("%.6f"), selectcr->rate);
 	txtFpsAdj->setText(std::string(buffer));
 	chkFpsAdj->setSelected(selectcr->locked);
 
@@ -1135,8 +1139,6 @@ static void refresh_fps_options()
 
 void RefreshPanelDisplay()
 {
-	AmigaMonitor* mon = &AMonitors[0];
-
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
 	sldRefresh->setEnabled(chkFrameskip->isSelected());
 	sldRefresh->setValue(changed_prefs.gfx_framerate);

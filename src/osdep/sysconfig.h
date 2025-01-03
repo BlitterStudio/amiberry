@@ -147,7 +147,7 @@
 #undef D3D
 #endif
 
-#include <stdint.h>
+#include <cstdint>
 
 #if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)
 #define SIZEOF_VOID_P 8
@@ -268,7 +268,7 @@ typedef int32_t uae_atomic;
 /* #undef STAT_STATFS3_OSF1 */
 
 /* Define if there is no specific function for reading filesystems usage
-   information and you have the <sys/filsys.h> header file.  [SVR2]  */
+   information, and you have the <sys/filsys.h> header file.  [SVR2]  */
 /* #undef STAT_READ_FILSYS */
 
 /* Define if statfs takes 2 args and struct statfs has a field named f_bsize.
@@ -301,7 +301,7 @@ typedef int32_t uae_atomic;
 /* The number of bytes in a char.  */
 #define SIZEOF_CHAR 1
 
-/* The number of bytes in a int.  */
+/* The number of bytes in an int.  */
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */

@@ -89,7 +89,7 @@ public:
 			if (!tmp.empty())
 			{
 				txtPath->setText(tmp);
-				TCHAR* s = filesys_createvolname(NULL, tmp.c_str(), NULL, _T("Harddrive"));
+				TCHAR* s = filesys_createvolname(nullptr, tmp.c_str(), nullptr, _T("Harddrive"));
 				txtVolume->setText(std::string(s));
 				default_fsvdlg(&current_fsvdlg);
 				if (current_fsvdlg.ci.devname[0] == 0)
@@ -564,7 +564,6 @@ bool EditFilesysVirtual(const int unit_no)
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	mountedinfo mi{};
-	uaedev_config_data* uci;
 	std::string strdevname, strvolname;
 	char tmp[32];
 
@@ -575,7 +574,7 @@ bool EditFilesysVirtual(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uci = &changed_prefs.mountconfig[unit_no];
+		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 		memcpy(&current_fsvdlg.ci, uci, sizeof(uaedev_config_info));
 	}

@@ -1389,7 +1389,7 @@ void sb_dsp_add_status_info(char *s, int max_len, sb_dsp_t *dsp)
 
         if ((dsp->sb_8_enable && dsp->sb_8_output) || (dsp->sb_16_enable && dsp->sb_16_output))
         {
-                sprintf(temps, "SB playback frequency : %iHz\n", freq);
+                _sntprintf(temps, sizeof temps, "SB playback frequency : %iHz\n", freq);
                 strncat(s, temps, max_len);
         }
         strncat(s, "\n", max_len);

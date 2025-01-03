@@ -682,7 +682,7 @@ void init_header(char *name, struct stat *v_stat, LzHeader *hdr)
 		hdr->original_size = 0;
 		len = readlink(name, lkname, 256);
 		lkname[len] = (char)'\0';
-		sprintf(hdr->name, "%s|%s", hdr->name, lkname);
+		_sntprintf(hdr->name, sizeof hdr->name, "%s|%s", hdr->name, lkname);
 	}
 #endif
 	if (generic_format)

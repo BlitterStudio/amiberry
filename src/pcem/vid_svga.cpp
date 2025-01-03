@@ -1755,10 +1755,10 @@ void svga_add_status_info(char *s, int max_len, void *p)
         strncat(s, temps, max_len);
 
         if (!svga->video_bpp) strcpy(temps, "SVGA in text mode ");
-        else                  sprintf(temps, "SVGA colour depth : %i bpp ", svga->video_bpp);
+        else                  _sntprintf(temps, sizeof temps, "SVGA colour depth : %i bpp ", svga->video_bpp);
         strncat(s, temps, max_len);
         
-        sprintf(temps, "SVGA resolution : %i x %i\n", svga->video_res_x, svga->video_res_y);
+        _sntprintf(temps, sizeof temps, "SVGA resolution : %i x %i\n", svga->video_res_x, svga->video_res_y);
         strncat(s, temps, max_len);
 #if 0
         sprintf(temps, "SVGA refresh rate : %i Hz\n\n", svga->frames);

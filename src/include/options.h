@@ -1139,8 +1139,8 @@ extern bool is_error_log(void);
 
 extern void default_prefs(struct uae_prefs*, bool, int);
 extern void discard_prefs(struct uae_prefs*, int);
-extern void copy_prefs(struct uae_prefs* src, struct uae_prefs* dst);
-extern void copy_inputdevice_prefs(struct uae_prefs *src, struct uae_prefs *dst);
+extern void copy_prefs(const struct uae_prefs* src, struct uae_prefs* dst);
+extern void copy_inputdevice_prefs(const struct uae_prefs *src, struct uae_prefs *dst);
 
 #ifdef AMIBERRY
 extern int bip_a500(struct uae_prefs* p, int rom);

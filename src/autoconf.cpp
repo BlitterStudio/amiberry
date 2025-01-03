@@ -607,7 +607,7 @@ void rtarea_init(void)
 	rtarea_init_mem ();
 	memset (rtarea_bank.baseaddr, 0, RTAREA_SIZE);
 
-	_stprintf (uaever, _T("uae-%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
+	_sntprintf (uaever, sizeof uaever, _T("uae-%d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 
 	EXPANSION_uaeversion = ds (uaever);
 	EXPANSION_explibname = ds (_T("expansion.library"));

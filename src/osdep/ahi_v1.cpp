@@ -17,12 +17,12 @@
 
 #if defined(AHI)
 
-#include <ctype.h>
-#include <assert.h>
+#include <cctype>
+#include <cassert>
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdarg>
+#include <cstdio>
 
 #include "options.h"
 #include "audio.h"
@@ -75,7 +75,7 @@ struct winuae	//this struct is put in a6 if you call
 };
 static struct winuae uaevar;
 
-void ahi_close_sound(void)
+void ahi_close_sound()
 {
 	if (!ahi_on)
 		return;
@@ -146,7 +146,7 @@ void ahi_updatesound(int force)
 
 	if (currprefs.sound_stereo_swap_ahi) {
 		int i;
-		uae_s16 *p = (uae_s16*)ahisndbuffer;
+		auto p = reinterpret_cast<uae_s16*>(ahisndbuffer);
 		for (i = 0; i < dwBytes1 / 2; i += 2) {
 			uae_s16 tmp;
 			tmp = p[i + 0];
@@ -173,13 +173,13 @@ void ahi_updatesound(int force)
 }
 
 
-void ahi_finish_sound_buffer (void)
+void ahi_finish_sound_buffer ()
 {
 	sound_flushes2++;
 	ahi_updatesound(2);
 }
 
-static int ahi_init_record (void)
+static int ahi_init_record ()
 {
 #ifdef _WIN32
 	HRESULT hr;
@@ -219,9 +219,9 @@ static int ahi_init_record (void)
 	desired.format = AUDIO_S16SYS;
 	desired.channels = sound_channels_ahi;
 	desired.samples = amigablksize * 4 * RECORDBUFFER;
-	desired.callback = NULL; // We'll use SDL_QueueAudio and SDL_DequeueAudio instead of a callback
+	desired.callback = nullptr; // We'll use SDL_QueueAudio and SDL_DequeueAudio instead of a callback
 
-	ahi_dev_rec = SDL_OpenAudioDevice(NULL, 1, &desired, &obtained, 0);
+	ahi_dev_rec = SDL_OpenAudioDevice(nullptr, 1, &desired, &obtained, 0);
 	if (ahi_dev_rec == 0) {
 		write_log(_T("AHI: SDL_OpenAudioDevice() failure: %s\n"), SDL_GetError());
 		record_enabled = -1;
@@ -254,7 +254,7 @@ void setvolume_ahi (int vol)
 #endif
 }
 
-static int ahi_init_sound(void)
+static int ahi_init_sound()
 {
 	if (ahi_dev)
 		return 0;
@@ -301,7 +301,7 @@ static int ahi_init_sound(void)
 	return sound_freq_ahi;
 }
 
-int ahi_open_sound (void)
+int ahi_open_sound ()
 {
 	int rate;
 
@@ -390,10 +390,9 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 	case 2:
 		{
-			int i;
 			uaecptr addr = m68k_areg (regs, 0);
-			for (i = 0; i < amigablksize * 4; i += 4)
-				*ahisndbufpt++ = get_long (addr + i);
+			for (int i = 0; i < amigablksize * 4; i += 4)
+				*ahisndbufpt++ = static_cast<int>(get_long(addr + i));
 			ahi_finish_sound_buffer();
 		}
 		return amigablksize;
@@ -454,9 +453,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		lpDSB2r->Unlock(pos1, byte1, pos2, byte2);
 		return (todo - t) / t;
 #else
-		uaecptr addr;
-		int i, todo;
-		Uint32 byte1, byte2;
+			Uint32 byte1, byte2;
 
 		if (!ahi_on)
 			return -2;
@@ -465,16 +462,16 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		if (record_enabled < 0)
 			return -2;
 
-		todo = SDL_GetQueuedAudioSize(ahi_dev_rec);
+		auto todo = SDL_GetQueuedAudioSize(ahi_dev_rec);
 		if (todo < amigablksize * 4) //if no complete buffer ready exit
 			return -1;
 
-		addr = m68k_areg(regs, 0);
-		uae_u16* sndbufrecpt = (uae_u16*)malloc(todo);
+		uaecptr addr = m68k_areg(regs, 0);
+		auto* sndbufrecpt = static_cast<uae_u16*>(malloc(todo));
 		SDL_DequeueAudio(ahi_dev_rec, sndbufrecpt, todo);
 
 		todo /= 4;
-		for (i = 0; i < todo; i++) {
+		for (int i = 0; i < todo; i++) {
 			uae_u32 s1, s2;
 			if (currprefs.sound_stereo_swap_ahi) {
 				s1 = sndbufrecpt[1];
@@ -496,10 +493,9 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 	case 4:
 		{
-			int i;
 			if (!ahi_on)
 				return -2;
-			i = intcount;
+			int i = intcount;
 			intcount = 0;
 			return i;
 		}
@@ -536,7 +532,7 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 
 	case 12:
 		{
-			TCHAR* s = au((char*)get_real_address(m68k_areg(regs, 0)));
+			TCHAR* s = au(reinterpret_cast<char*>(get_real_address(m68k_areg(regs, 0))));
 			if (SDL_SetClipboardText(s) != 0) {
 				// handle error
 				write_log("Unable to set clipboard text: %s\n", SDL_GetError());
@@ -608,9 +604,9 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	{
 		struct timespec ts {};
 		clock_gettime(CLOCK_MONOTONIC, &ts);
-		const auto time = int64_t(ts.tv_sec) * 1000000000 + ts.tv_nsec;
-		put_long(m68k_areg(regs, 0), uae_u32(time & 0xffffffff));
-		put_long(m68k_areg(regs, 0) + 4, uae_u32(time >> 32));
+		const auto time = static_cast<int64_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
+		put_long(m68k_areg(regs, 0), static_cast<uae_u32>(time & 0xffffffff));
+		put_long(m68k_areg(regs, 0) + 4, static_cast<uae_u32>(time >> 32));
 			}
 	return 1;
 

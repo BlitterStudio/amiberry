@@ -91,12 +91,12 @@ static void* VirtualAlloc(void* lpAddress, size_t dwSize, int flAllocationType,
 		write_log("  WARNING: unknown protection\n");
 	}
 
-	void* address = NULL;
+	void* address = nullptr;
 
-	if (flAllocationType == MEM_COMMIT && lpAddress == NULL) {
+	if (flAllocationType == MEM_COMMIT && lpAddress == nullptr) {
 		write_log("NATMEM: Allocated non-reserved memory size %zu\n", dwSize);
 		void* memory = uae_vm_alloc(dwSize, 0, UAE_VM_READ_WRITE);
-		if (memory == NULL) {
+		if (memory == nullptr) {
 			write_log("memory allocated failed errno %d\n", errno);
 		}
 		return memory;
@@ -143,14 +143,13 @@ static int VirtualProtect(void* lpAddress, int dwSize, int flNewProtect,
 
 static bool VirtualFree(void* lpAddress, size_t dwSize, int dwFreeType)
 {
-	int result = 0;
 	if (dwFreeType == MEM_DECOMMIT) {
 		return uae_vm_decommit(lpAddress, dwSize);
 	}
-	else if (dwFreeType == MEM_RELEASE) {
+	if (dwFreeType == MEM_RELEASE) {
 		return uae_vm_free(lpAddress, dwSize);
 	}
-	return 0;
+	return false;
 }
 
 static int GetLastError()
@@ -158,7 +157,7 @@ static int GetLastError()
 	return errno;
 }
 
-static int my_getpagesize(void)
+static int my_getpagesize()
 {
 	return uae_vm_page_size();
 }
@@ -212,7 +211,7 @@ bool can_have_1gb()
 
 static uae_u8 *virtualallocwithlock (LPVOID addr, SIZE_T size, unsigned int allocationtype, unsigned int protect)
 {
-	uae_u8 *p = (uae_u8*)VirtualAlloc (addr, size, allocationtype, protect);
+	auto p = static_cast<uae_u8*>(VirtualAlloc(addr, size, allocationtype, protect));
 	return p;
 }
 static void virtualfreewithlock (LPVOID addr, SIZE_T size, unsigned int freetype)
@@ -220,7 +219,7 @@ static void virtualfreewithlock (LPVOID addr, SIZE_T size, unsigned int freetype
 	VirtualFree(addr, size, freetype);
 }
 
-static uae_u32 lowmem (void)
+static uae_u32 lowmem ()
 {
 	uae_u32 change = 0;
 	return change;
@@ -228,16 +227,16 @@ static uae_u32 lowmem (void)
 
 static uae_u64 size64;
 
-static void clear_shm (void)
+static void clear_shm ()
 {
-	shm_start = NULL;
-	for (int i = 0; i < MAX_SHMID; i++) {
-		memset (&shmids[i], 0, sizeof(struct uae_shmid_ds));
-		shmids[i].key = -1;
+	shm_start = nullptr;
+	for (auto & shmid : shmids) {
+		memset (&shmid, 0, sizeof(struct uae_shmid_ds));
+		shmid.key = -1;
 	}
 }
 
-bool preinit_shm (void)
+bool preinit_shm ()
 {
 	uae_u64 total64;
 	uae_u64 totalphys64;
@@ -246,16 +245,15 @@ bool preinit_shm (void)
 	GLOBALMEMORYSTATUSEX pGlobalMemoryStatusEx;
 	MEMORYSTATUSEX memstatsex;
 #endif
-	uae_u32 max_allowed_mman;
 
 	if (natmem_reserved)
 		VirtualFree (natmem_reserved, 0, MEM_RELEASE);
 
-	natmem_reserved = NULL;
-	natmem_offset = NULL;
+	natmem_reserved = nullptr;
+	natmem_offset = nullptr;
 
 	GetSystemInfo (&si);
-	max_allowed_mman = 512 + 256;
+	uae_u32 max_allowed_mman = 512 + 256;
 	if (os_64bit) {
 		// Higher than 2G to support G-REX PCI VRAM
 		max_allowed_mman = 2560;
@@ -290,7 +288,7 @@ bool preinit_shm (void)
 	// FIXME: check 64-bit compat
 	mib[1] = HW_MEMSIZE; /* gives a 64 bit int */
 	len = sizeof(totalphys64);
-	sysctl(mib, 2, &totalphys64, &len, NULL, 0);
+	sysctl(mib, 2, &totalphys64, &len, nullptr, 0);
 	total64 = (uae_u64) totalphys64;
 #else
 	totalphys64 = sysconf (_SC_PHYS_PAGES) * (uae_u64)getpagesize();
@@ -315,12 +313,12 @@ bool preinit_shm (void)
 				max_allowed_mman = 256;
 		}
 	} else if (maxmem > 0) {
-		size64 = (uae_u64)maxmem * 1024 * 1024;
+		size64 = static_cast<uae_u64>(maxmem) * 1024 * 1024;
 	}
 	if (size64 < 8 * 1024 * 1024)
 		size64 = 8 * 1024 * 1024;
-	if ((uae_u64)max_allowed_mman * 1024 * 1024 > size64)
-		max_allowed_mman = (uae_u32)(size64 / (1024 * 1024));
+	if (static_cast<uae_u64>(max_allowed_mman) * 1024 * 1024 > size64)
+		max_allowed_mman = static_cast<uae_u32>(size64 / (1024 * 1024));
 
 	uae_u32 natmem_size = (max_allowed_mman + 1) * 1024 * 1024;
 	if (natmem_size < 17 * 1024 * 1024)
@@ -339,7 +337,7 @@ bool preinit_shm (void)
 	write_log(_T("MMAN: Attempting to reserve: %u MB\n"), natmem_size >> 20);
 
 #if 1
-	natmem_reserved = (uae_u8 *) uae_vm_reserve(natmem_size, UAE_VM_32BIT | UAE_VM_WRITE_WATCH);
+	natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, UAE_VM_32BIT | UAE_VM_WRITE_WATCH));
 #else
 	natmem_size = 0x20000000;
 	natmem_reserved = (uae_u8 *) uae_vm_reserve_fixed(
@@ -350,7 +348,7 @@ bool preinit_shm (void)
 		if (natmem_size <= 768 * 1024 * 1024) {
 			uae_u32 p = 0x78000000 - natmem_size;
 			for (;;) {
-				natmem_reserved = (uae_u8*) VirtualAlloc((void*)(intptr_t)p, natmem_size, MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE);
+				natmem_reserved = static_cast<uae_u8*>(VirtualAlloc(reinterpret_cast<void*>(static_cast<intptr_t>(p)), natmem_size, MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE));
 				if (natmem_reserved)
 					break;
 				p -= 128 * 1024 * 1024;
@@ -362,14 +360,14 @@ bool preinit_shm (void)
 	if (!natmem_reserved) {
 		unsigned int vaflags = MEM_RESERVE | MEM_WRITE_WATCH;
 		for (;;) {
-			natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
+			natmem_reserved = static_cast<uae_u8*>(VirtualAlloc(nullptr, natmem_size, vaflags, PAGE_READWRITE));
 			if (natmem_reserved)
 				break;
 			natmem_size -= 64 * 1024 * 1024;
 			if (!natmem_size) {
 				write_log (_T("MMAN: Can't allocate 257M of virtual address space!?\n"));
 				natmem_size = 17 * 1024 * 1024;
-				natmem_reserved = (uae_u8*)VirtualAlloc (NULL, natmem_size, vaflags, PAGE_READWRITE);
+				natmem_reserved = static_cast<uae_u8*>(VirtualAlloc(nullptr, natmem_size, vaflags, PAGE_READWRITE));
 				if (!natmem_size) {
 					write_log (_T("MMAN: Can't allocate 17M of virtual address space!? Something is seriously wrong\n"));
 					notify_user(NUMSG_NOMEMORY);
@@ -393,21 +391,17 @@ bool preinit_shm (void)
 
 	clear_shm ();
 
-	canbang = 1;
+	canbang = true;
 	return true;
 }
 
 static void resetmem (bool decommit)
 {
-	int i;
-
 	if (!shm_start)
 		return;
-	for (i = 0; i < MAX_SHMID; i++) {
-		struct uae_shmid_ds *s = &shmids[i];
+	for (auto & shmid : shmids) {
+		struct uae_shmid_ds *s = &shmid;
 		int size = s->size;
-		uae_u8 *shmaddr;
-		uae_u8 *result;
 
 		if (!s->attached)
 			continue;
@@ -415,13 +409,13 @@ static void resetmem (bool decommit)
 			continue;
 		if (s->fake)
 			continue;
-		if (!decommit && ((uae_u8*)s->attached - (uae_u8*)s->natmembase) >= 0x10000000)
+		if (!decommit && (static_cast<uae_u8*>(s->attached) - static_cast<uae_u8*>(s->natmembase)) >= 0x10000000)
 			continue;
-		shmaddr = natmem_offset + ((uae_u8*)s->attached - (uae_u8*)s->natmembase);
+		uae_u8* shmaddr = natmem_offset + (static_cast<uae_u8*>(s->attached) - static_cast<uae_u8*>(s->natmembase));
 		if (decommit) {
 			VirtualFree (shmaddr, size, MEM_DECOMMIT);
 		} else {
-			result = virtualallocwithlock (shmaddr, size, decommit ? MEM_DECOMMIT : MEM_COMMIT, PAGE_READWRITE);
+			const uae_u8* result = virtualallocwithlock(shmaddr, size, decommit ? MEM_DECOMMIT : MEM_COMMIT, PAGE_READWRITE);
 			if (result != shmaddr)
 				write_log (_T("MMAN: realloc(%p-%p,%d,%d,%s) failed, err=%d\n"), shmaddr, shmaddr + size, size, s->mode, s->name, GetLastError ());
 			else
@@ -432,9 +426,7 @@ static void resetmem (bool decommit)
 
 static uae_u8 *va (uae_u32 offset, uae_u32 len, unsigned int alloc, unsigned int protect)
 {
-	uae_u8 *addr;
-
-	addr = (uae_u8*)VirtualAlloc (natmem_offset + offset, len, alloc, protect);
+	auto* addr = static_cast<uae_u8*>(VirtualAlloc(natmem_offset + offset, len, alloc, protect));
 	if (addr) {
 		write_log (_T("VA(%p - %p, %4uM, %s)\n"),
 			natmem_offset + offset, natmem_offset + offset + len, len >> 20, (alloc & MEM_WRITE_WATCH) ? _T("WATCH") : _T("RESERVED"));
@@ -442,14 +434,11 @@ static uae_u8 *va (uae_u32 offset, uae_u32 len, unsigned int alloc, unsigned int
 	}
 	write_log (_T("VA(%p - %p, %4uM, %s) failed %d\n"),
 		natmem_offset + offset, natmem_offset + offset + len, len >> 20, (alloc & MEM_WRITE_WATCH) ? _T("WATCH") : _T("RESERVED"), GetLastError ());
-	return NULL;
+	return nullptr;
 }
 
-static int doinit_shm (void)
+static int doinit_shm ()
 {
-	uae_u32 totalsize, totalsize_z3;
-	uae_u32 align;
-	uae_u32 z3rtgmem_size;
 	struct rtgboardconfig *rbc = &changed_prefs.rtgboards[0];
 	struct rtgboardconfig *crbc = &currprefs.rtgboards[0];
 	uae_u32 extra = 65536;
@@ -459,18 +448,18 @@ static int doinit_shm (void)
 	set_expamem_z3_hack_mode(0);
 	expansion_scan_autoconfig(&currprefs, true);
 
-	canbang = 1;
+	canbang = true;
 	natmem_offset = natmem_reserved;
 
-	align = 16 * 1024 * 1024 - 1;
-	totalsize = 0x01000000;
+	uae_u32 align = 16 * 1024 * 1024 - 1;
+	uae_u32 totalsize = 0x01000000;
 
-	z3rtgmem_size = gfxboard_get_configtype(rbc) == 3 ? rbc->rtgmem_size : 0;
+	uae_u32 z3rtgmem_size = gfxboard_get_configtype(rbc) == 3 ? rbc->rtgmem_size : 0;
 
 	if (p->cpu_model >= 68020)
 		totalsize = 0x10000000;
 	totalsize += (p->z3chipmem.size + align) & ~align;
-	totalsize_z3 = totalsize;
+	uae_u32 totalsize_z3 = totalsize;
 
 	start_rtg = 0;
 	end_rtg = 0;
@@ -573,8 +562,8 @@ static int doinit_shm (void)
 			break;
 		addrbank *ab = aci->addrbank;
 		// disable JIT direct from Z3 boards that are outside of natmem
-		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
-			if (&z3fastmem_bank[i] == ab) {
+		for (auto & i : z3fastmem_bank) {
+			if (&i == ab) {
 				ab->flags &= ~ABFLAG_ALLOCINDIRECT;
 				ab->jit_read_flag = 0;
 				ab->jit_write_flag = 0;
@@ -594,7 +583,7 @@ static int doinit_shm (void)
 		write_log(_T("MMAN: Our special area: %p-%p (0x%08x %dM)\n"),
 			natmem_offset, (uae_u8*)natmem_offset + totalsize,
 			totalsize, totalsize / (1024 * 1024));
-		canbang = jit_direct_compatible_memory ? 1 : 0;
+		canbang = jit_direct_compatible_memory;
 	}
 
 	return canbang;
@@ -606,7 +595,7 @@ static uae_u32 oz3chipmem_size;
 static uae_u32 ortgmem_size[MAX_RTG_BOARDS];
 static int ortgmem_type[MAX_RTG_BOARDS];
 
-bool init_shm(void)
+bool init_shm()
 {
 	auto changed = false;
 
@@ -649,12 +638,12 @@ bool init_shm(void)
 	return true;
 }
 
-void free_shm (void)
+void free_shm ()
 {
 	resetmem (true);
 	clear_shm ();
-	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
-		ortgmem_type[i] = -1;
+	for (int & i : ortgmem_type) {
+		i = -1;
 	}
 }
 
@@ -664,7 +653,7 @@ void mapped_free (addrbank *ab)
 	bool rtgmem = (ab->flags & ABFLAG_RTG) != 0;
 
 	ab->flags &= ~ABFLAG_MAPPED;
-	if (ab->baseaddr == NULL)
+	if (ab->baseaddr == nullptr)
 		return;
 
 	if (ab->flags & ABFLAG_INDIRECT) {
@@ -674,17 +663,17 @@ void mapped_free (addrbank *ab)
 				shmids[shmid].key = -1;
 				shmids[shmid].name[0] = '\0';
 				shmids[shmid].size = 0;
-				shmids[shmid].attached = 0;
+				shmids[shmid].attached = nullptr;
 				shmids[shmid].mode = 0;
-				shmids[shmid].natmembase = 0;
+				shmids[shmid].natmembase = nullptr;
 				if (!(ab->flags & ABFLAG_NOALLOC)) {
 					xfree(ab->baseaddr);
-					ab->baseaddr = NULL;
+					ab->baseaddr = nullptr;
 				}
 			}
 			x = x->next;
 		}
-		ab->baseaddr = NULL;
+		ab->baseaddr = nullptr;
 		ab->flags &= ~ABFLAG_DIRECTMAP;
 		ab->allocated_size = 0;
 		write_log(_T("mapped_free indirect %s\n"), ab->name);
@@ -695,7 +684,7 @@ void mapped_free (addrbank *ab)
 		if (!(ab->flags & ABFLAG_NOALLOC)) {
 			xfree(ab->baseaddr);
 		}
-		ab->baseaddr = NULL;
+		ab->baseaddr = nullptr;
 		ab->allocated_size = 0;
 		write_log(_T("mapped_free nondirect %s\n"), ab->name);
 		return;
@@ -708,23 +697,22 @@ void mapped_free (addrbank *ab)
 	}
 	x = shm_start;
 	while(x) {
-		struct uae_shmid_ds blah;
+		uae_shmid_ds blah{};
 		if (ab->baseaddr == x->native_address) {
 			if (uae_shmctl (x->id, UAE_IPC_STAT, &blah) == 0)
 				uae_shmctl (x->id, UAE_IPC_RMID, &blah);
 		}
 		x = x->next;
 	}
-	ab->baseaddr = NULL;
+	ab->baseaddr = nullptr;
 	ab->allocated_size = 0;
 	write_log(_T("mapped_free direct %s\n"), ab->name);
 }
 
-static uae_key_t get_next_shmkey (void)
+static uae_key_t get_next_shmkey ()
 {
 	uae_key_t result = -1;
-	int i;
-	for (i = 0; i < MAX_SHMID; i++) {
+	for (int i = 0; i < MAX_SHMID; i++) {
 		if (shmids[i].key == -1) {
 			shmids[i].key = i;
 			result = i;
@@ -746,7 +734,7 @@ STATIC_INLINE uae_key_t find_shmkey (uae_key_t key)
 bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 {
 	auto got = false;
-	bool readonly = false, maprom = false;
+	bool readonly = false;
 	bool directsupport = true;
 	uaecptr start;
 	auto size = ab->reserved_size;
@@ -968,6 +956,7 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 	}
 	if (got)
 	{
+		bool maprom = false;
 		md->start = start;
 		md->size = size;
 		md->readonly = readonly;
@@ -992,10 +981,10 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 
 void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_mman_data *md)
 {
-	void *result = (void *)-1;
-	bool got = false, readonly = false, maprom = false;
+	void *result = reinterpret_cast<void*>(-1);
+	bool readonly = false, maprom = false;
 	int p96special = FALSE;
-	struct uae_mman_data md2;
+	struct uae_mman_data md2{};
 
 #ifdef NATMEM_OFFSET
 
@@ -1011,10 +1000,10 @@ void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_
 		return shmids[shmid].attached;
 	}
 
-	if ((uae_u8*)shmaddr < natmem_offset) {
+	if (static_cast<uae_u8*>(shmaddr) < natmem_offset) {
 		if (!md) {
 			if (!uae_mman_info(ab, &md2))
-				return NULL;
+				return nullptr;
 			md = &md2;
 		}
 		if (!shmaddr) {
@@ -1023,12 +1012,11 @@ void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_
 			readonlysize = md->readonlysize;
 			readonly = md->readonly;
 			maprom = md->maprom;
-			got = true;
 		}
 	}
 
-	uintptr_t natmem_end = (uintptr_t) natmem_reserved + natmem_reserved_size;
-	if (md && md->hasbarrier && (uintptr_t) shmaddr + size > natmem_end && (uintptr_t)shmaddr <= natmem_end) {
+	uintptr_t natmem_end = reinterpret_cast<uintptr_t>(natmem_reserved) + natmem_reserved_size;
+	if (md && md->hasbarrier && reinterpret_cast<uintptr_t>(shmaddr) + size > natmem_end && reinterpret_cast<uintptr_t>(shmaddr) <= natmem_end) {
 		/* We cannot add a barrier beyond the end of the reserved memory. */
 		//assert((uintptr_t) shmaddr + size - natmem_end == BARRIER);
 		write_log(_T("NATMEM: Removing barrier (%d bytes) beyond reserved memory\n"), BARRIER);
@@ -1048,30 +1036,30 @@ void *uae_shmat (addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_
 		if (shmaddr)
 			virtualfreewithlock (shmaddr, size, MEM_DECOMMIT);
 		result = virtualallocwithlock (shmaddr, size, MEM_COMMIT, PAGE_READWRITE);
-		if (result == NULL)
+		if (result == nullptr)
 			virtualfreewithlock (shmaddr, 0, MEM_DECOMMIT);
 		result = virtualallocwithlock (shmaddr, size, MEM_COMMIT, PAGE_READWRITE);
-		if (result == NULL) {
-			result = (void*)-1;
+		if (result == nullptr) {
+			result = reinterpret_cast<void*>(-1);
 			error_log (_T("Memory %s (%s) failed to allocate %p: VA %08X - %08X %x (%dk). Error %d."),
 				shmids[shmid].name, ab ? ab->name : _T("?"), shmaddr,
-				(uae_u8*)shmaddr - natmem_offset, (uae_u8*)shmaddr - natmem_offset + size,
+				static_cast<uae_u8*>(shmaddr) - natmem_offset, static_cast<uae_u8*>(shmaddr) - natmem_offset + size,
 				size, size >> 10, GetLastError ());
 		} else {
 			shmids[shmid].attached = result;
 			write_log (_T("%p: VA %08lX - %08lX %x (%dk) ok (%p)%s\n"),
-				shmaddr, (uae_u8*)shmaddr - natmem_offset, (uae_u8*)shmaddr - natmem_offset + size,
+				shmaddr, static_cast<uae_u8*>(shmaddr) - natmem_offset, static_cast<uae_u8*>(shmaddr) - natmem_offset + size,
 				size, size >> 10, shmaddr, p96special ? _T(" RTG") : _T(""));
 		}
 	}
 	return result;
 }
 
-void unprotect_maprom(void)
+void unprotect_maprom()
 {
 	bool protect = false;
-	for (int i = 0; i < MAX_SHMID; i++) {
-		struct uae_shmid_ds *shm = &shmids[i];
+	for (auto & shmid : shmids) {
+		struct uae_shmid_ds *shm = &shmid;
 		if (shm->mode != PAGE_READONLY)
 			continue;
 		if (!shm->attached || !shm->rosize)
@@ -1082,7 +1070,7 @@ void unprotect_maprom(void)
 		unsigned int old;
 		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
 			write_log (_T("unprotect_maprom VP %08lX - %08lX %x (%dk) failed %d\n"),
-				(uae_u8*)shm->attached - natmem_offset, (uae_u8*)shm->attached - natmem_offset + shm->size,
+				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->size,
 				shm->size, shm->size >> 10, GetLastError ());
 		}
 	}
@@ -1095,8 +1083,8 @@ void protect_roms(bool protect)
 		if (!currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong)
 			return;
 	}
-	for (int i = 0; i < MAX_SHMID; i++) {
-		struct uae_shmid_ds *shm = &shmids[i];
+	for (auto & shmid : shmids) {
+		struct uae_shmid_ds *shm = &shmid;
 		if (shm->mode != PAGE_READONLY)
 			continue;
 		if (!shm->attached || !shm->rosize)
@@ -1106,11 +1094,11 @@ void protect_roms(bool protect)
 		unsigned int old;
 		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
 			write_log (_T("protect_roms VP %08lX - %08lX %x (%dk) failed %d\n"),
-				(uae_u8*)shm->attached - natmem_offset, (uae_u8*)shm->attached - natmem_offset + shm->rosize,
+				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->rosize,
 				shm->rosize, shm->rosize >> 10, GetLastError ());
 		} else {
 			write_log(_T("ROM VP %08lX - %08lX %x (%dk) %s\n"),
-				(uae_u8*)shm->attached - natmem_offset, (uae_u8*)shm->attached - natmem_offset + shm->rosize,
+				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->rosize,
 				shm->rosize, shm->rosize >> 10, protect ? _T("WPROT") : _T("UNPROT"));
 		}
 	}
@@ -1175,7 +1163,7 @@ int uae_shmdt (const void *shmaddr)
 	return 0;
 }
 
-int uae_shmget (uae_key_t key, addrbank *ab, int shmflg)
+int uae_shmget (uae_key_t key, const addrbank *ab, int shmflg)
 {
 	int result = -1;
 
@@ -1207,9 +1195,11 @@ int uae_shmctl (int shmid, int cmd, struct uae_shmid_ds *buf)
 			shmids[shmid].key = -1;
 			shmids[shmid].name[0] = '\0';
 			shmids[shmid].size = 0;
-			shmids[shmid].attached = 0;
+			shmids[shmid].attached = nullptr;
 			shmids[shmid].mode = 0;
 			result = 0;
+			break;
+		default: /* Invalid command */
 			break;
 		}
 	}

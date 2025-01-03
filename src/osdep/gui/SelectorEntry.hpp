@@ -29,7 +29,7 @@ namespace gcn
 		void setInactiveColor(Color color);
 		void setActiveColor(Color color);
 		void setActive(bool active);
-		bool getActive() const;
+		[[nodiscard]] bool getActive() const;
 
 		void widgetResized(const Event& event) override;
 

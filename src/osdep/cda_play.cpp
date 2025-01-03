@@ -50,13 +50,13 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate)
 
 	bufsize = num_sectors * sectorsize;
 	this->sectorsize = sectorsize;
-	for (auto i = 0; i < 2; i++) {
-		buffers[i] = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
+	for (auto & buffer : buffers) {
+		buffer = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
 	}
 	this->num_sectors = num_sectors;
 
 	auto devname = sound_devices[currprefs.soundcard]->name;
-	const Uint8 channels = 2;
+	constexpr Uint8 channels = 2;
 	SDL_AudioSpec cdda_want, cdda_have;
 	SDL_zero(cdda_want);
 	cdda_want.freq = samplerate;

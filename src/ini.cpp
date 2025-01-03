@@ -125,14 +125,14 @@ void ini_addnewstring(struct ini_data *ini, const TCHAR *section, const TCHAR *k
 void ini_addnewval(struct ini_data *ini, const TCHAR *section, const TCHAR *key, uae_u32 v)
 {
 	TCHAR tmp[MAX_DPATH];
-	_stprintf(tmp, _T("%08X ; %u"), v, v);
+	_sntprintf(tmp, sizeof tmp, _T("%08X ; %u"), v, v);
 	ini_addnewstring(ini, section, key, tmp);
 }
 
 void ini_addnewval64(struct ini_data *ini, const TCHAR *section, const TCHAR *key, uae_u64 v)
 {
 	TCHAR tmp[MAX_DPATH];
-	_stprintf(tmp, _T("%016llX ; %llu"), v, v);
+	_sntprintf(tmp, sizeof tmp, _T("%016llX ; %llu"), v, v);
 	ini_addnewstring(ini, section, key, tmp);
 }
 
@@ -148,7 +148,7 @@ void ini_addnewdata(struct ini_data *ini, const TCHAR *section, const TCHAR *key
 			_tcscat(s, _T(" \\\n"));
 		TCHAR *p = s + _tcslen(s);
 		for (int j = 0; j < w && j + i < len; j++) {
-			_stprintf (p, _T("%02X"), data[i + j]);
+			_sntprintf (p, sizeof p, _T("%02X"), data[i + j]);
 			p += 2;
 		}
 		*p = 0;
@@ -203,7 +203,7 @@ struct ini_data *ini_load(const TCHAR *path, bool sort)
 				struct ini_line *il = ini.inidata[c];
 				if (il && !_tcscmp(il->section, section)) {
 					section_id++;
-					_stprintf(section + _tcslen(section), _T("|%d"), section_id);
+					_sntprintf(section + _tcslen(section), sizeof section, _T("|%d"), section_id);
 					break;
 				}
 			}
@@ -317,7 +317,7 @@ bool ini_nextsection(struct ini_data *ini, TCHAR *section)
 	const TCHAR *s = _tcschr(nextsect, '|');
 	if (s) {
 		int sectionid = _tstol(s + 1);
-		_stprintf(nextsect + (s - nextsect) + 1, _T("%d"), sectionid + 1);
+		_sntprintf(nextsect + (s - nextsect) + 1, sizeof nextsect, _T("%d"), sectionid + 1);
 	} else {
 		_tcscpy(nextsect + _tcslen(nextsect), _T("|2"));
 	}

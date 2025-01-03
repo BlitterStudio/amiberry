@@ -720,7 +720,7 @@ static void addmode(struct MultiDisplay* md, SDL_DisplayMode* dm, int rawmode)
 	md->DisplayModes[i].refresh[1] = 0;
 	md->DisplayModes[i].colormodes = ct;
 	md->DisplayModes[i + 1].depth = -1;
-	_stprintf(md->DisplayModes[i].name, _T("%dx%d%s, %d-bit"),
+	_sntprintf(md->DisplayModes[i].name, sizeof md->DisplayModes[i].name, _T("%dx%d%s, %d-bit"),
 		md->DisplayModes[i].res.width, md->DisplayModes[i].res.height,
 		lace ? _T("i") : _T(""),
 		md->DisplayModes[i].depth * 8);
@@ -847,7 +847,7 @@ void sortdisplays()
 	Displays[0].rect.w = bounds.w;
 	Displays[0].rect.h = bounds.h;
 
-	sprintf(tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
+	_sntprintf(tmp, sizeof tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
 	Displays[0].fullname = my_strdup(tmp);
 	Displays[0].monitorname = my_strdup("Display");
 

@@ -2220,7 +2220,7 @@ static struct device_info *info_device (int unitnum, struct device_info *di, int
 		_tcscpy (di->label, _T("IMG:<EMPTY>"));
 	}
 	_tcscpy (di->vendorid, _T("UAE"));
-	_stprintf (di->productid, _T("SCSICD%d"), unitnum);
+	_sntprintf (di->productid, sizeof di->productid, _T("SCSICD%d"), unitnum);
 	_tcscpy (di->revision, _T("1.0"));
 	di->backend = _T("IMAGE");
 	return di;
