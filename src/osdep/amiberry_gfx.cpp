@@ -720,7 +720,7 @@ static void addmode(struct MultiDisplay* md, SDL_DisplayMode* dm, int rawmode)
 	md->DisplayModes[i].refresh[1] = 0;
 	md->DisplayModes[i].colormodes = ct;
 	md->DisplayModes[i + 1].depth = -1;
-	_stprintf(md->DisplayModes[i].name, _T("%dx%d%s, %d-bit"),
+	_sntprintf(md->DisplayModes[i].name, sizeof md->DisplayModes[i].name, _T("%dx%d%s, %d-bit"),
 		md->DisplayModes[i].res.width, md->DisplayModes[i].res.height,
 		lace ? _T("i") : _T(""),
 		md->DisplayModes[i].depth * 8);

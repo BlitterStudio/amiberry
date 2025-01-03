@@ -1453,7 +1453,7 @@ int load_keyring (struct uae_prefs *p, const TCHAR *path)
 			_tcscat (tmp, _T("rom.key"));
 			break;
 		case 5:
-			_stprintf (tmp, _T("%s../shared/rom/rom.key"), home_dir.c_str());
+			_sntprintf (tmp, sizeof tmp, _T("%s../shared/rom/rom.key"), home_dir.c_str());
 			break;
 		case 6:
 			if (p) {
@@ -1760,11 +1760,11 @@ void getromname	(const struct romdata *rd, TCHAR *name)
 		rd--;
 	_tcscat (name, rd->name);
 	if ((rd->subrev || rd->subver) && rd->subver != rd->ver)
-		_stprintf (name + _tcslen (name), _T(" rev %d.%d"), rd->subver, rd->subrev);
+		_sntprintf (name + _tcslen (name), sizeof name, _T(" rev %d.%d"), rd->subver, rd->subrev);
 	if (rd->size > 0)
-		_stprintf (name + _tcslen (name), _T(" (%dk)"), (rd->size + 1023) / 1024);
+		_sntprintf (name + _tcslen (name), sizeof name, _T(" (%dk)"), (rd->size + 1023) / 1024);
 	if (rd->partnumber && rd->partnumber[0] != '\0')
-		_stprintf (name + _tcslen (name), _T(" [%s]"), rd->partnumber);
+		_sntprintf (name + _tcslen (name), sizeof name, _T(" [%s]"), rd->partnumber);
 }
 
 struct romlist *getromlistbyromdata (const struct romdata *rd)
@@ -2430,13 +2430,13 @@ int configure_rom (struct uae_prefs *p, const int *rom, int msg)
 
 	if (rd->type & (ROMTYPE_ARCADIAGAME | ROMTYPE_ALG)) {
 		get_nvram_path(p->flashfile, sizeof(p->flashfile) / sizeof(TCHAR));
-		_stprintf(p->flashfile + _tcslen(p->flashfile), _T("%s.nvr"), rd->name);
+		_sntprintf(p->flashfile + _tcslen(p->flashfile), sizeof p->flashfile, _T("%s.nvr"), rd->name);
 		clean_path(p->flashfile);
 	}
 #ifdef ARCADIA
 	if (rd->type & ROMTYPE_ALG) {
 		get_video_path(p->genlock_video_file, sizeof(p->genlock_video_file) / sizeof(TCHAR));
-		_stprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), _T("%s.avi"), rd->name);
+		_sntprintf(p->genlock_video_file + _tcslen(p->genlock_video_file), sizeof p->genlock_video_file, _T("%s.avi"), rd->name);
 		clean_path(p->genlock_video_file);
 	}
 #endif

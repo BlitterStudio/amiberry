@@ -1221,7 +1221,7 @@ void ncr_add_status_info(char *s, int max_len, void *p)
                 status_diff = 1;
         
         svga_add_status_info(s, max_len, &ncr->svga);
-        sprintf(temps, "%f%% CPU\n%f%% CPU (real)\n\n", ((double)ncr->blitter_time * 100.0) / timer_freq, ((double)ncr->blitter_time * 100.0) / status_diff);
+        _sntprintf(temps, sizeof temps, "%f%% CPU\n%f%% CPU (real)\n\n", ((double)ncr->blitter_time * 100.0) / timer_freq, ((double)ncr->blitter_time * 100.0) / status_diff);
         strncat(s, temps, max_len);
 
         ncr->blitter_time = 0;

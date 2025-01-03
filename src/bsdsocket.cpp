@@ -1799,7 +1799,7 @@ static uae_u32 REGPARAM2 bsdsocklib_init(TrapContext *ctx)
 	SockLibBase = tmp1;
 
 	/* Install error strings in Amiga memory */
-	_stprintf(verStr, _T("UAE %d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
+	_sntprintf(verStr, sizeof verStr, _T("UAE %d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 	tmp1 = 0;
 	for (i = number_sys_error; i--;)
 		tmp1 += uaetcslen (errortexts[i]) + 1;

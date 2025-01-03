@@ -831,7 +831,7 @@ static const TCHAR *dumphead(uae_u8 *d, int len)
 {
 	static TCHAR dumptxt[256];
 	uae_u16 type = (d[2 * ADDR_SIZE] << 8) | d[2 * ADDR_SIZE + 1];
-	_stprintf(dumptxt, _T("DST:%02X.%02X.%02X.%02X.%02X.%02X SRC:%02X.%02X.%02X.%02X.%02X.%02X E=%04X L=%d"),
+	_sntprintf(dumptxt, sizeof dumptxt, _T("DST:%02X.%02X.%02X.%02X.%02X.%02X SRC:%02X.%02X.%02X.%02X.%02X.%02X E=%04X L=%d"),
 		d[0], d[1], d[2], d[3], d[4], d[5],
 		d[6], d[7], d[8], d[9], d[10], d[11],
 		type, len);
@@ -1919,7 +1919,7 @@ void netdev_install (void)
 		write_log (_T("netdev_install(): 0x%x\n"), here ());
 
 	ethernet_enumerate_free ();
-	ethernet_enumerate (td, NULL);
+	ethernet_enumerate (td, 0);
 
 	ROM_netdev_resname = ds (getdevname());
 	ROM_netdev_resid = ds (_T("UAE net.device 0.2"));

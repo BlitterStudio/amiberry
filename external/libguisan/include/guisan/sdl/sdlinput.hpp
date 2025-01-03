@@ -95,7 +95,7 @@ namespace gcn
          * only use SDL and plan sticking with SDL you can safely ignore this
          * function as it in the SDL case does nothing.
          */
-        virtual void _pollInput() { }
+        void _pollInput() override { }
 
 
         // Inherited from Input

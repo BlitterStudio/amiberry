@@ -292,7 +292,7 @@ static TCHAR *stacktostring(struct calcstack *st)
             }
             double v = parsedvaluesd[st->s[0] - 'a'];
             TCHAR tmp[256];
-            _stprintf(tmp, _T("%d"), (int)v);
+            _sntprintf(tmp, sizeof tmp, _T("%d"), (int)v);
             xfree(st->vals);
             st->vals = my_strdup(tmp);
             xfree(st->s);
@@ -302,7 +302,7 @@ static TCHAR *stacktostring(struct calcstack *st)
     }
     if (!st->vals || !st->vals[0]) {
         TCHAR tmp[256];
-        _stprintf(tmp, _T("%d"), (int)st->val);
+        _sntprintf(tmp, sizeof tmp, _T("%d"), (int)st->val);
         xfree(st->vals);
         st->vals = my_strdup(tmp);
     }
@@ -511,7 +511,7 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
         }
                 // Otherwise, the token is an operator  (operator here includes both operators, and functions).
         else if(is_operator(c) || is_function(c))    {
-                        _stprintf(res, _T("_%02d"), rn);
+                        _sntprintf(res, sizeof res, _T("_%02d"), rn);
                         calc_log ((_T("%s = "), res));
                         ++rn;
                         // It is known a priori that the operator takes n arguments.
@@ -587,10 +587,10 @@ static bool execution_order(const TCHAR *input, double *outval, TCHAR *outstring
 				if (outval)
 					*outval = val;
                 if (outstring) {
-                    if (vals && _tcslen(vals) >= maxlen) {
+                    if (vals[0] && _tcslen(vals) >= maxlen) {
                         vals[maxlen] = 0;
                     }
-                    _tcscpy(outstring, vals ? vals : _T(""));
+                    _tcscpy(outstring, vals[0] ? vals : _T(""));
                 }
 				ok = true;
 		}

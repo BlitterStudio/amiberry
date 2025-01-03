@@ -661,7 +661,7 @@ int tcp_emu(struct socket *so, struct mbuf *m)
 						}
 					}
 				}
-				so_rcv->sb_cc = sprintf(so_rcv->sb_data, "%d,%d\r\n", n1, n2);
+				so_rcv->sb_cc = snprintf(so_rcv->sb_data, sizeof so_rcv->sb_data, "%d,%d\r\n", n1, n2);
 				so_rcv->sb_rptr = so_rcv->sb_data;
 				so_rcv->sb_wptr = so_rcv->sb_data + so_rcv->sb_cc;
 			}
@@ -995,7 +995,7 @@ do_prompt:
 			n4 =  (laddr & 0xff);
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += sprintf(bptr,"ORT %d,%d,%d,%d,%d,%d\r\n%s", 
+			m->m_len += snprintf(bptr, sizeof bptr, "ORT %d,%d,%d,%d,%d,%d\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
 			return 1;
 		} else if ((bptr = (char *)strstr(m->m_data, "27 Entering")) != NULL) {
@@ -1026,7 +1026,7 @@ do_prompt:
 			n4 =  (laddr & 0xff);
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += sprintf(bptr,"27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
+			m->m_len += snprintf(bptr, sizeof bptr, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
 			
 			return 1;
@@ -1050,7 +1050,7 @@ do_prompt:
 		}
 		if (m->m_data[m->m_len-1] == '\0' && lport != 0 &&
 		    (so = solisten(0, so->so_laddr.s_addr, htons(lport), SS_FACCEPTONCE)) != NULL)
-			m->m_len = sprintf(m->m_data, "%d", ntohs(so->so_fport))+1;
+			m->m_len = snprintf(m->m_data, sizeof m->m_data, "%d", ntohs(so->so_fport))+1;
 		return 1;
 		
 	 case EMU_IRC:
@@ -1067,7 +1067,7 @@ do_prompt:
 				return 1;
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += sprintf(bptr, "DCC CHAT chat %lu %u%c\n",
+			m->m_len += snprintf(bptr, sizeof bptr, "DCC CHAT chat %lu %u%c\n",
 			     (unsigned long)ntohl(so->so_faddr.s_addr),
 			     ntohs(so->so_fport), 1);
 		} else if (sscanf(bptr, "DCC SEND %256s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
@@ -1075,7 +1075,7 @@ do_prompt:
 				return 1;
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += sprintf(bptr, "DCC SEND %s %lu %u %u%c\n", 
+			m->m_len += snprintf(bptr, sizeof bptr, "DCC SEND %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
 		} else if (sscanf(bptr, "DCC MOVE %256s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
@@ -1083,7 +1083,7 @@ do_prompt:
 				return 1;
 			
 			m->m_len = bptr - m->m_data; /* Adjust length */
-			m->m_len += sprintf(bptr, "DCC MOVE %s %lu %u %u%c\n",
+			m->m_len += snprintf(bptr, sizeof bptr, "DCC MOVE %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
 		}
@@ -1102,7 +1102,7 @@ do_prompt:
 		 * A typical packet for player version 1.0 (release version):
 		 *        
 		 * 0000:50 4E 41 00 05 
-		 * 0000:00 01 00 02 1B D7 00 00 67 E6 6C DC 63 00 12 50 .....×..gælÜc..P
+		 * 0000:00 01 00 02 1B D7 00 00 67 E6 6C DC 63 00 12 50 .....ï¿½..gï¿½lï¿½c..P
 		 * 0010:4E 43 4C 49 45 4E 54 20 31 30 31 20 41 4C 50 48 NCLIENT 101 ALPH
 		 * 0020:41 6C 00 00 52 00 17 72 61 66 69 6C 65 73 2F 76 Al..R..rafiles/v
 		 * 0030:6F 61 2F 65 6E 67 6C 69 73 68 5F 2E 72 61 79 42 oa/english_.rayB
@@ -1114,8 +1114,8 @@ do_prompt:
 		 *
 		 * A typical packet for player version 2.0 (beta):
 		 *        
-		 * 0000:50 4E 41 00 06 00 02 00 00 00 01 00 02 1B C1 00 PNA...........Á.
-		 * 0010:00 67 75 78 F5 63 00 0A 57 69 6E 32 2E 30 2E 30 .guxõc..Win2.0.0
+		 * 0000:50 4E 41 00 06 00 02 00 00 00 01 00 02 1B C1 00 PNA...........ï¿½.
+		 * 0010:00 67 75 78 F5 63 00 0A 57 69 6E 32 2E 30 2E 30 .guxï¿½c..Win2.0.0
 		 * 0020:2E 35 6C 00 00 52 00 1C 72 61 66 69 6C 65 73 2F .5l..R..rafiles/
 		 * 0030:77 65 62 73 69 74 65 2F 32 30 72 65 6C 65 61 73 website/20releas
 		 * 0040:65 2E 72 61 79 53 00 00 06 36 42                e.rayS...6B
@@ -1271,7 +1271,7 @@ int tcp_ctl(struct socket *so)
 		
 		/* FALLTHROUGH */
 	case CTL_ALIAS:
-	  sb->sb_cc = sprintf(sb->sb_wptr,
+	  sb->sb_cc = snprintf(sb->sb_wptr, sizeof sb->sb_wptr,
 			      "Error: No application configured.\r\n");
 	  sb->sb_wptr += sb->sb_cc;
 	  return(0);

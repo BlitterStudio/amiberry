@@ -203,7 +203,7 @@ void tabletlib_install (void)
 	if (!currprefs.tablet_library)
 		return;
 
-	_stprintf (tmp, _T("UAE tablet.library %d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
+	_sntprintf (tmp, sizeof tmp, _T("UAE tablet.library %d.%d.%d"), UAEMAJOR, UAEMINOR, UAESUBREV);
 	lib_name = ds (_T("tablet.library"));
 	lib_id = ds (tmp);
 

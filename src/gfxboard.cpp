@@ -408,7 +408,6 @@ static const struct gfxboard boards[] =
 		ROMTYPE_x86_VGA
 	},
 	{
-		NULL
 	}
 };
 
@@ -1119,6 +1118,7 @@ static int GetBytesPerPixel(RGBFTYPE RGBfmt)
 		case RGBFB_B5G6R5PC:
 		case RGBFB_B5G5R5PC:
 		return 2;
+	default: return 0;
 	}
 	return 0;
 }
@@ -4880,11 +4880,11 @@ bool gfxboard_init_memory (struct autoconfig_info *aci)
 		only_gfx_board = gb;
 
 
-	_stprintf(gb->memorybankname, _T("%s VRAM"), gb->board->name);
-	_stprintf(gb->memorybanknamenojit, _T("%s VRAM NOJIT"), gb->board->name);
-	_stprintf(gb->wbsmemorybankname, _T("%s VRAM WORDSWAP"), gb->board->name);
-	_stprintf(gb->lbsmemorybankname, _T("%s VRAM LONGSWAP"), gb->board->name);
-	_stprintf(gb->regbankname, _T("%s REG"), gb->board->name);
+	_sntprintf(gb->memorybankname, sizeof gb->memorybankname, _T("%s VRAM"), gb->board->name);
+	_sntprintf(gb->memorybanknamenojit, sizeof gb->memorybanknamenojit, _T("%s VRAM NOJIT"), gb->board->name);
+	_sntprintf(gb->wbsmemorybankname, sizeof gb->wbsmemorybankname, _T("%s VRAM WORDSWAP"), gb->board->name);
+	_sntprintf(gb->lbsmemorybankname, sizeof gb->lbsmemorybankname, _T("%s VRAM LONGSWAP"), gb->board->name);
+	_sntprintf(gb->regbankname, sizeof gb->regbankname, _T("%s REG"), gb->board->name);
 
 	memcpy(&gb->gfxboard_bank_memory, &tmpl_gfxboard_bank_memory, sizeof (addrbank));
 	memcpy(&gb->gfxboard_bank_wbsmemory, &tmpl_gfxboard_bank_wbsmemory, sizeof(addrbank));

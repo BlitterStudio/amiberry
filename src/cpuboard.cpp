@@ -2487,18 +2487,18 @@ static void fixserial(struct uae_prefs *p, uae_u8 *rom, int size)
 		else
 			value3 = 'A';
 		seroffset = 19;
-		sprintf(serial, "%04X", serialnum);
+		_sntprintf(serial, sizeof serial, "%04X", serialnum);
 		type = 1;
 	} else if (ISCPUBOARDP(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC)) {
 		value1 = 'D';
 		value2 = 'B';
-		sprintf(serial, "%05X", serialnum);
+		_sntprintf(serial, sizeof serial, "%05X", serialnum);
 		value3 = 0;
 		seroffset = 18;
 		type = 0;
 	} else if (ISCPUBOARDP(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_MK3)) {
 		value1 = 'F';
-		sprintf(serial, "%05X", serialnum);
+		_sntprintf(serial, sizeof serial, "%05X", serialnum);
 		value2 = value3 = 0;
 	} else {
 		return;

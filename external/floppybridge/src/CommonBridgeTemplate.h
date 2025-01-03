@@ -185,11 +185,11 @@ private:
 	// Current disk cache history
 	struct MFMCaches {
 		// Currently being read by WinUAE version of this track
-		MFMCache current;
+		MFMCache current{};
 		// The last buffer we swapped out.  We keep several buffers on the go to combat 'weak transitions' and also help with disk errors
-		MFMCache last;
+		MFMCache last{};
 		// The track we're about to read in
-		MFMCache next;
+		MFMCache next{};
 		// For tracking what the index looks like
 		RotationExtractor::IndexSequenceMarker startBitPatterns;
 	};
@@ -301,11 +301,11 @@ private:
 	void mainThread();
 
 	// Add a command for the thread to process
-	void queueCommand(const QueueCommand command, const bool optionB, const bool shouldAbortStreaming = true);
-	void queueCommand(const QueueCommand command, const int optionI = 0, const bool shouldAbortStreaming = true);
+	void queueCommand(QueueCommand command, bool optionB, bool shouldAbortStreaming = true);
+	void queueCommand(QueueCommand command, int optionI = 0, bool shouldAbortStreaming = true);
 
 	// Push a specific message onto the queue
-	void pushOntoQueue(const QueueInfo& info, const bool shouldAbortStreaming = true, bool insertAtStart = false);
+	void pushOntoQueue(const QueueInfo& info, bool shouldAbortStreaming = true, bool insertAtStart = false);
 
 	// Handle processing the command
 	void processCommand(const QueueInfo& info);
@@ -320,16 +320,16 @@ private:
 	void terminate();
 
 	// Handle disk side change
-	void switchDiskSide(const bool side);
+	void switchDiskSide(bool side);
 
 	// Process the queue.  Return TRUE if the thread should quit
 	bool processQueue();
 
 	// This is called to switch to a different copy of the track so multiple revolutions can ve read
-	void internalSwitchCylinder(const int cylinder, const DiskSurface side);
+	void internalSwitchCylinder(int cylinder, DiskSurface side);
 
 	// Save a new disk side and switch it in if it can be
-	void saveNextBuffer(const int cylinder, const DiskSurface side);
+	void saveNextBuffer(int cylinder, DiskSurface side);
 
 	// Reset and clear out any data we have received thus far
 	void resetWriteBuffer();
@@ -338,7 +338,7 @@ private:
 	void internalCheckDiskDensity(bool newDiskInserted);
 
 	// Scans the MFM data to see if this track should allow smart speed or not based on timing data
-	void checkSmartSpeed(const int cylinder, const DiskSurface side, MFMCache& track);
+	void checkSmartSpeed(int cylinder, DiskSurface side, MFMCache& track);
 
 	// Check if the motor should be turned off
 	void checkMotorOff();
@@ -351,7 +351,7 @@ protected:
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Return the number of milliseconds required for the disk to spin up.  You *may* need to override this
-	virtual const unsigned int getDriveSpinupTime() { return 500; }
+	virtual unsigned int getDriveSpinupTime() { return 500; }
 
 	// Called when a disk is inserted so that you can (re)populate the response to _getDriveTypeID()
 	virtual void checkDiskType() {}
@@ -370,7 +370,7 @@ protected:
 
 	// If the above is TRUE then this is called to get the status of the DiskChange line.  Basically, this is TRUE if there is a disk in the drive.
 	// If force is true you should re-check, if false, then you are allowed to return a cached value from the last disk operation (eg: seek)
-	virtual bool getDiskChangeStatus(const bool forceCheck)  = 0;
+	virtual bool getDiskChangeStatus(bool forceCheck)  = 0;
 
 	// Called when the class is about to shut down
 	virtual void closeInterface()  = 0;
@@ -380,7 +380,7 @@ protected:
 
 	// Called to ask the drive what the current write protect status is - return true if its write protected.  If forceCheck is true you should actually check the drive, 
 	// else use the last status checked which was probably from a SEEK setCurrentCylinder call.  If you can ONLY get this information here then you should always force check
-	virtual bool checkWriteProtectStatus(const bool forceCheck)  = 0;
+	virtual bool checkWriteProtectStatus(bool forceCheck)  = 0;
 
 	// Get the name of the drive
 	virtual const BridgeDriver* _getDriverInfo()  = 0;
@@ -389,13 +389,13 @@ protected:
 	virtual const DriveTypeID _getDriveTypeID()  = 0;
 
 	// Called to switch which head is being used right now.  Returns success or not
-	virtual bool setActiveSurface(const DiskSurface activeSurface)  = 0;
+	virtual bool setActiveSurface(DiskSurface activeSurface)  = 0;
 
 	// Set the status of the motor on the drive. The motor should maintain this status until switched off or reset.  This should *NOT* wait for the motor to spin up
-	virtual bool setMotorStatus(const bool switchedOn)  = 0;
+	virtual bool setMotorStatus(bool switchedOn)  = 0;
 
 	// Trigger a seek to the requested cylinder, this can block until complete
-	virtual bool setCurrentCylinder(const unsigned int cylinder)  = 0;
+	virtual bool setCurrentCylinder(unsigned int cylinder)  = 0;
 
 	// If we're on track 0, this is the emulator trying to seek to track -1.  We catch this as a special case.  
 	// Should perform the same operations as setCurrentCylinder in terms of disk change etc but without changing the current cylinder
@@ -409,8 +409,8 @@ protected:
 	//		indexMarker:   Used by rotationExtractor if you use it, to help be consistent where the INDEX position is read back at
 	//		onRotation: A function you should call for each complete revolution received.  If the function returns FALSE then you should abort reading, else keep sending revolutions
 	// Returns: ReadResponse, explains its self
-	virtual ReadResponse readData(PLL::BridgePLL& pll, const unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
-		std::function<bool(RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits)> onRotation)  = 0;
+	virtual ReadResponse readData(PLL::BridgePLL& pll, unsigned int maxBufferSize, RotationExtractor::MFMSample* buffer, RotationExtractor::IndexSequenceMarker& indexMarker,
+		std::function<bool(RotationExtractor::MFMSample* mfmData, unsigned int dataLengthInBits)> onRotation)  = 0;
 
 	// Called for a direct read. This does not match up a rotation and should be used with the pll initialized with the LinearExtractor
 	//		pll:           required 
@@ -423,7 +423,7 @@ protected:
 	//					writeFromIndex					If an attempt should be made to write this from the INDEX pulse rather than just a random position
 	//					suggestUsingPrecompensation		A suggestion that you might want to use write pre-compensation, optional
 	// Returns TRUE if success, or false if it fails.  Largely doesn't matter as most stuff should verify with a read straight after
-	virtual bool writeData(const unsigned char* rawMFMData, const unsigned int numBits, const bool writeFromIndex, const bool suggestUsingPrecompensation)  = 0;
+	virtual bool writeData(const unsigned char* rawMFMData, unsigned int numBits, bool writeFromIndex, bool suggestUsingPrecompensation)  = 0;
 
 	// A manual way to check for disk change.  This is simulated by issuing a read message and seeing if there's any data.  Returns TRUE if data or an INDEX pulse was detected
 	// It's virtual as the default method issues a read and looks for data.  If you have a better implementation then override this
@@ -436,7 +436,7 @@ public:
 	// 
 	// Flags from WINUAE
 	CommonBridgeTemplate(FloppyBridge::BridgeMode bridgeMode, FloppyBridge::BridgeDensityMode bridgeDensity, bool shouldAutoCache, bool useSmartSpeed);
-	virtual ~CommonBridgeTemplate();
+	~CommonBridgeTemplate() override;
 
 	// Change to a different bridge-mode (in real-time)
 	void changeBridgeMode(FloppyBridge::BridgeMode bridgeMode);
@@ -445,109 +445,109 @@ public:
 	void changeBridgeDensity(FloppyBridge::BridgeDensityMode bridgeDensity);
 
 	// Call to start the system up
-	virtual bool initialise() override final;
+	bool initialise() final;
 
 	// This is called prior to closing down, but should reverse initialise
-	virtual void shutdown() override final;
+	void shutdown() final;
 
 	// Returns the name of interface.  This pointer should remain valid after the class is destroyed
-	virtual const BridgeDriver* getDriverInfo() override final { return _getDriverInfo(); }
+	const BridgeDriver* getDriverInfo() final { return _getDriverInfo(); }
 
 	// Return the type of disk connected
-	virtual DriveTypeID getDriveTypeID() override final { return _getDriveTypeID(); }
+	DriveTypeID getDriveTypeID() final { return _getDriveTypeID(); }
 
 	// Call to get the last error message.  If the string is empty there was no error
-	virtual const char* getLastErrorMessage() override final;
+	const char* getLastErrorMessage() final;
 
 	// Return TRUE if the drive is currently on cylinder 0
-	virtual bool isAtCylinder0() override final { return m_currentTrack == 0; }
+	bool isAtCylinder0() final { return m_currentTrack == 0; }
 
 	// Return the number of cylinders the drive supports.
-	virtual unsigned char getMaxCylinder() override final { return MAX_CYLINDER_BRIDGE; }
+	unsigned char getMaxCylinder() final { return MAX_CYLINDER_BRIDGE; }
 
 	// Return true if the motor is spinning
-	virtual bool isMotorRunning() override final { return m_isMotorRunning; }
+	bool isMotorRunning() final { return m_isMotorRunning; }
 
 	// Returns TRUE when the last command requested has completed
-	virtual bool isReady() override;
+	bool isReady() override;
 
 	// Return TRUE if there is a disk in the drive, else return false.  Some drives don't detect this until the head moves once
-	virtual bool isDiskInDrive() override final { return m_diskInDrive; }
+	bool isDiskInDrive() final { return m_diskInDrive; }
 
 	// Check if the disk has changed.  Basically returns FALSE if there's no disk in the drive
-	virtual bool hasDiskChanged() override final { return !m_diskInDrive; }
+	bool hasDiskChanged() final { return !m_diskInDrive; }
 
 	// Returns the currently selected side
-	virtual bool getCurrentSide() override final { return m_floppySide == DiskSurface::dsUpper; }
+	bool getCurrentSide() final { return m_floppySide == DiskSurface::dsUpper; }
 
 	// Return the current track number we're on
-	virtual unsigned char getCurrentCylinderNumber() override final { return m_currentTrack; }
+	unsigned char getCurrentCylinderNumber() final { return m_currentTrack; }
 
 	// Return TRUE if the currently inserted disk is write protected
-	virtual bool isWriteProtected() override final { return m_writeProtected; }
+	bool isWriteProtected() final { return m_writeProtected; }
 
 	// Get the speed at this position.  1000=100%.  
-	virtual int getMFMSpeed(const int mfmPositionBits) override final;
+	int getMFMSpeed(int mfmPositionBits) final;
 
 	// Returns TRUE if data is ready and available
-	virtual bool isMFMDataAvailable() override final;
+	bool isMFMDataAvailable() final;
 
 	// Requests an entire track of data.  Returns 0 if the track is not available
 	// The return value is the wrap point in bits (last byte is shifted to MSB)
-	virtual int getMFMTrack(bool side, unsigned int track, bool resyncRotation, const int bufferSizeInBytes, void* output) override final;
+	int getMFMTrack(bool side, unsigned int track, bool resyncRotation, int bufferSizeInBytes, void* output) final;
 
 	// write data to the MFM track buffer to be written to disk - poll isWriteComplete to check for completion
-	virtual bool writeMFMTrackToBuffer(bool side, unsigned int track, bool writeFromIndex, int sizeInBytes, void* mfmData) override final;
+	bool writeMFMTrackToBuffer(bool side, unsigned int track, bool writeFromIndex, int sizeInBytes, void* mfmData) final;
 
 	// A special mode that DISABLES FloppyBridge from auto-reading tracks and allows writeMFMTrackToBuffer and getMFMTrack to operate directly.
-	virtual bool setDirectMode(bool directModeEnable) override final;
+	bool setDirectMode(bool directModeEnable) final;
 
 	// While not doing anything else, the library should be continuously streaming the current track if the motor is on.  mfmBufferPosition is in BITS 
-	virtual bool getMFMBit(const int mfmPositionBits) override final;
+	bool getMFMBit(int mfmPositionBits) final;
 
 	// Set the status of the motor. 
-	virtual void setMotorStatus(bool side, bool turnOn) override final;
+	void setMotorStatus(bool side, bool turnOn) final;
 
 	// Return the maximum size of the internal track buffer in BITS
-	virtual int maxMFMBitPosition() override final;
+	int maxMFMBitPosition() final;
 
 	// This is called to switch to a different copy of the track so multiple revolutions can ve read
-	virtual void mfmSwitchBuffer(bool side) override final;
+	void mfmSwitchBuffer(bool side) final;
 
 	// Quick confirmation from UAE that we're actually on the same side
-	virtual void setSurface(bool side) override final;
+	void setSurface(bool side) final;
 
 	// Seek to a specific track
-	virtual void gotoCylinder(int trackNumber, bool side) override final;
+	void gotoCylinder(int trackNumber, bool side) final;
 
 	// Handle the drive stepping to track -1 - this is used to 'no-click' detect the disk
-	virtual void handleNoClickStep(bool side) override final;
+	void handleNoClickStep(bool side) final;
 
 	// Submits a single WORD of data received during a DMA transfer to the disk buffer.  This needs to be saved.  It is usually flushed when commitWriteBuffer is called
 	// You should reset this buffer if side or track changes.  mfmPosition is provided purely for any index sync you may wish to do
-	virtual void writeShortToBuffer(bool side, unsigned int track, unsigned short mfmData, int mfmPosition) override final;
+	void writeShortToBuffer(bool side, unsigned int track, unsigned short mfmData, int mfmPosition) final;
 
 	// Requests that any data received via writeShortToBuffer be saved to disk. The side and track should match against what you have been collected
 	// and the buffer should be reset upon completion.  You should return the new track length (maxMFMBitPosition) with optional padding if needed
-	virtual unsigned int commitWriteBuffer(bool side, unsigned int track) override final;
+	unsigned int commitWriteBuffer(bool side, unsigned int track) final;
 
 	// Returns TRUE if commitWriteBuffer has been called but not written to disk yet
-	virtual bool isWritePending() override final;
+	bool isWritePending() final;
 
 	// Returns TRUE if a write is no longer pending.  This should only return TRUE the first time, and then should reset
-	virtual bool isWriteComplete() override final;
+	bool isWriteComplete() final;
 
 	// Return TRUE if there is data ready to be committed to disk
-	virtual bool isReadyToWrite() override final;
+	bool isReadyToWrite() final;
 
 	// Return TRUE if we're at the INDEX marker
-	virtual bool isMFMPositionAtIndex(int mfmPositionBits) override final;
+	bool isMFMPositionAtIndex(int mfmPositionBits) final;
 
 	// Reset the drive.  This should reset it to the state it would be at power up
-	virtual bool resetDrive(int trackNumber) override final;
+	bool resetDrive(int trackNumber) final;
 
 	// Set to TRUE if turbo writing is allowed (this is a sneaky DMA bypass trick)
-	virtual bool canTurboWrite() { return true; }
+	bool canTurboWrite() override { return true; }
 
 };
 

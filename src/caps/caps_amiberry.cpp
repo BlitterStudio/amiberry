@@ -186,7 +186,7 @@ int caps_loadimage (struct zfile *zf, int drv, int *num_tracks)
 	ret = pCAPSLoadImage(caps_cont[drv], caps_flags);
 	caps_revolution_hack[drv] = type == citCTRaw;
 	cdt = &ci.crdt;
-	_stprintf (s1, _T("%d.%d.%d %d:%d:%d"), cdt->day, cdt->month, cdt->year, cdt->hour, cdt->min, cdt->sec);
+	_sntprintf (s1, sizeof s1, _T("%d.%d.%d %d:%d:%d"), cdt->day, cdt->month, cdt->year, cdt->hour, cdt->min, cdt->sec);
 	write_log (_T("caps: type:%d imagetype:%d date:%s rel:%d rev:%d\n"), ci.type, type, s1, ci.release, ci.revision);
 	return 1;
 }

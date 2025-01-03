@@ -523,7 +523,7 @@ static void ide_identity_buffer(struct ide_hdf *ide)
 		if (ide->atapi)
 			_tcscpy (tmp, _T("UAE-ATAPI"));
 		else
-			_stprintf (tmp, _T("UAE-IDE %s"), ide->hdhfd.hfd.product_id);
+			_sntprintf (tmp, sizeof tmp, _T("UAE-IDE %s"), ide->hdhfd.hfd.product_id);
 		ps(ide, 27, tmp, 40); /* model */
 		pw(ide, 47, ide->max_multiple_mode ? (0x8000 | (ide->max_multiple_mode >> (ide->blocksize / 512 - 1))) : 0); /* max sectors in multiple mode */
 		pw(ide, 48, 1);

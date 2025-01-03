@@ -89,7 +89,7 @@ void pclog(char const *format, ...)
 	va_list parms;
 	va_start(parms, format);
 	char buf[256];
-	vsprintf(buf, format, parms);
+	vsnprintf(buf, sizeof buf, format, parms);
 	write_log("%s", buf);
 	va_end(parms);
 }
@@ -100,7 +100,7 @@ void fatal(char const *format, ...)
 	va_list parms;
 	va_start(parms, format);
 	char buf[256];
-	vsprintf(buf, format, parms);
+	vsnprintf(buf, sizeof buf, format, parms);
 	write_log("PCEMFATAL: %s", buf);
 	va_end(parms);
 	activate_debugger();
