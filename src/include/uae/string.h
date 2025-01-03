@@ -23,7 +23,7 @@
 #define _istxdigit isxdigit
 #define _istdigit SDL_isdigit
 #define _istspace SDL_isspace
-#define _istupper SDL_isupper
+#define _istupper isupper
 #define _sntprintf SDL_snprintf
 #define _stprintf sprintf
 #define _strtoui64 SDL_strtoll
