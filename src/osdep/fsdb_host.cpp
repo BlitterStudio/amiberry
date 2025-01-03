@@ -307,7 +307,13 @@ TCHAR* fsdb_create_unique_nname(a_inode* base, const TCHAR* suggestion)
 }
 
 // Get local time in secs, starting from 01.01.1970
-uae_u32 getlocaltime(void)
+uae_u32 getlocaltime()
 {
-	return time(NULL); // ToDo: convert UTC to local time...
+    time_t rawtime;
+    struct tm* timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    return mktime(timeinfo);
 }
