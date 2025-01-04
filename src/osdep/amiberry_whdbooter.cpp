@@ -25,7 +25,7 @@
 #include "midiemu.h"
 #include "registry.h"
 
-extern void SetLastActiveConfig(const char* filename);
+extern void set_last_active_config(const char* filename);
 extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
 

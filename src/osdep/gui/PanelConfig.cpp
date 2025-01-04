@@ -42,7 +42,7 @@ static void InitConfigsList()
 	}
 }
 
-class ConfigButtonActionListener : public gcn::ActionListener
+class ConfigActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
@@ -113,7 +113,7 @@ public:
 	}
 };
 
-static ConfigButtonActionListener* configButtonActionListener;
+static ConfigActionListener* configActionListener;
 
 static Uint32 last_click_time = 0;
 class ConfigsListActionListener : public gcn::ActionListener
@@ -159,7 +159,7 @@ static ConfigsListActionListener* configsListActionListener;
 
 void InitPanelConfig(const struct config_category& category)
 {
-	configButtonActionListener = new ConfigButtonActionListener();
+	configActionListener = new ConfigActionListener();
 	configsListActionListener = new ConfigsListActionListener();
 
 	lblName = new gcn::Label("Name:");
@@ -185,21 +185,21 @@ void InitPanelConfig(const struct config_category& category)
 	cmdLoad->setBaseColor(gui_base_color);
 	cmdLoad->setForegroundColor(gui_foreground_color);
 	cmdLoad->setId("ConfigLoad");
-	cmdLoad->addActionListener(configButtonActionListener);
+	cmdLoad->addActionListener(configActionListener);
 
 	cmdSave = new gcn::Button("Save");
 	cmdSave->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdSave->setBaseColor(gui_base_color);
 	cmdSave->setForegroundColor(gui_foreground_color);
 	cmdSave->setId("ConfigSave");
-	cmdSave->addActionListener(configButtonActionListener);
+	cmdSave->addActionListener(configActionListener);
 
 	cmdDelete = new gcn::Button("Delete");
 	cmdDelete->setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
 	cmdDelete->setBaseColor(gui_base_color);
 	cmdDelete->setForegroundColor(gui_foreground_color);
 	cmdDelete->setId("CfgDelete");
-	cmdDelete->addActionListener(configButtonActionListener);
+	cmdDelete->addActionListener(configActionListener);
 
 	const int list_width = category.panel->getWidth() - 2 * DISTANCE_BORDER - SCROLLBAR_WIDTH - 2;
 	const int list_height = category.panel->getHeight() - 2 * DISTANCE_BORDER - 2 * lblName->getHeight() - 3 * DISTANCE_NEXT_Y - 2 * BUTTON_HEIGHT;
@@ -259,7 +259,7 @@ void ExitPanelConfig()
 	delete cmdSave;
 	delete cmdDelete;
 
-	delete configButtonActionListener;
+	delete configActionListener;
 
 	delete lblName;
 	delete txtName;
@@ -335,7 +335,7 @@ bool HelpPanelConfig(std::vector<std::string>& helptext)
 	helptext.emplace_back("scan for a configuration file of the same \"Name\" as the disk image or .lha archive");
 	helptext.emplace_back("being loaded. After you load a floppy disk image or whdload archive, and Start the ");
 	helptext.emplace_back(R"(emulation, you can use the "F12" key to show the GUI, and in this panel the "Name")");
-	helptext.emplace_back("field for the configuartion will be filled correctly. Do not change this, as it will");
+	helptext.emplace_back("field for the configuration will be filled correctly. Do not change this, as it will");
 	helptext.emplace_back("stop auto-config from working. You may change the description if you desire.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("To delete the currently selected configuration file from the disk (and the list),");

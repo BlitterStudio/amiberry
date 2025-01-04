@@ -275,7 +275,8 @@ public:
 							RefreshDiskListModel();
 
 							AdjustDropDownControls();
-							SetLastActiveConfig(tmp.c_str());
+							if (!last_loaded_config[0])
+								set_last_active_config(tmp.c_str());
 						}
 					}
 					cmdDFxSelect[i]->requestFocus();
@@ -309,7 +310,8 @@ public:
 								bIgnoreListChange = true;
 								cboDFxFile[i]->setSelected(0);
 								bIgnoreListChange = false;
-								SetLastActiveConfig(element.c_str());
+								if (!last_loaded_config[0])
+									set_last_active_config(element.c_str());
 							}
 						}
 					}

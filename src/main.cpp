@@ -962,7 +962,7 @@ std::string get_filename_extension(const TCHAR* filename)
 	return fName.substr(pos, fName.length());
 }
 
-extern void SetLastActiveConfig(const char* filename);
+extern void set_last_active_config(const char* filename);
 
 static void parse_cmdline (int argc, TCHAR **argv)
 {
@@ -1074,7 +1074,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					strncat(savestate_fname, txt, MAX_DPATH - 1);
 					savestate_state = STATE_DORESTORE;
 				}
-				SetLastActiveConfig(txt);
+				set_last_active_config(txt);
 				xfree(txt);
 #endif
 			}
@@ -1157,7 +1157,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
 				whdload_prefs.whdload_filename = std::string(txt);
 				whdload_auto_prefs(&currprefs, txt);
-				SetLastActiveConfig(txt);
+				set_last_active_config(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".uss") == 0)
 			{
@@ -1175,7 +1175,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 					savestate_state = STATE_DORESTORE;
 					currprefs.start_gui = false;
 				}
-				SetLastActiveConfig(txt);
+				set_last_active_config(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".cue") == 0
 				|| _tcscmp(txt2.c_str(), ".iso") == 0
@@ -1184,7 +1184,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				write_log("CDTV/CD32... %s\n", txt);
 				add_file_to_mru_list(lstMRUCDList, std::string(txt));
 				cd_auto_prefs(&currprefs, txt);
-				SetLastActiveConfig(txt);
+				set_last_active_config(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".adf") == 0
 				|| _tcscmp(txt2.c_str(), ".adz") == 0
@@ -1226,7 +1226,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				{
 					write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
 					disk_insert(0, txt);
-					SetLastActiveConfig(txt);
+					set_last_active_config(txt);
 					currprefs.start_gui = false;
 				}
 			}

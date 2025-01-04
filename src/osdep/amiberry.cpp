@@ -282,7 +282,7 @@ extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
 
-extern void SetLastActiveConfig(const char* filename);
+extern void set_last_active_config(const char* filename);
 
 std::string home_dir;
 std::string current_dir;
@@ -329,7 +329,13 @@ int max_uae_height;
 
 extern "C" int main(int argc, char* argv[]);
 
-void SetLastActiveConfig(const char* filename)
+void set_last_loaded_config(const char* filename)
+{
+	extract_filename(filename, last_loaded_config);
+	remove_file_extension(last_loaded_config);
+}
+
+void set_last_active_config(const char* filename)
 {
 	extract_filename(filename, last_active_config);
 	remove_file_extension(last_active_config);
@@ -3141,8 +3147,8 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, con
 		if (strlen(p->floppyslots[i].df) > 0)
 			add_file_to_mru_list(lstMRUDiskList, std::string(p->floppyslots[i].df));
 	}
-
-	SetLastActiveConfig(filename);
+	set_last_loaded_config(filename);
+	set_last_active_config(filename);
 	return result;
 }
 

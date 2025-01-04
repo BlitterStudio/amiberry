@@ -438,7 +438,8 @@ extern void load_default_theme();
 extern void apply_theme();
 extern void apply_theme_extras();
 
-extern void SetLastActiveConfig(const char* filename);
+extern void SetLastLoadedConfig(const char* filename);
+extern void set_last_active_config(const char* filename);
 
 extern void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2);
 
