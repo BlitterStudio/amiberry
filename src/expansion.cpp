@@ -6059,6 +6059,15 @@ const struct expansionromtype expansionroms[] = {
 
 	},
 #endif
+	{
+		_T("ripple"), _T("RIPPLE"), _T("Matt Harlum"),
+		NULL, ripple_init, NULL, ripple_add_ide_unit, ROMTYPE_RIPPLE | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		NULL, 0,
+		true, EXPANSIONTYPE_IDE,
+		0, 0, 1, false, NULL,
+		false, 2, NULL,
+		{ 0xd2, 0x07, 0x00, 0x00, 0x14, 0x4A, 0x00, 0x00, 0x00, 0x01, 0x00, 0x08 }
+	},
 
 	/* PC Bridgeboards */
 #ifdef WITH_X86
