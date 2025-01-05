@@ -147,6 +147,7 @@ static const char* harddisk_filter[] = {".hdf", ".hdz", ".lha", ".zip", ".vhd", 
 static const char* archive_filter[] = { ".zip", ".7z", ".rar", ".lha", ".lzh", ".lzx", "\0" };
 static const char* cdfile_filter[] = { ".cue", ".ccd", ".iso", ".mds", ".nrg", ".chd", "\0" };
 static const char* whdload_filter[] = { ".lha", "\0" };
+static const char* statefile_filter[] = { ".uss", ".sav", "\0" };
 static string drivebridgeModes[] =
 {
 	"Normal",

@@ -791,23 +791,84 @@ ConfigFileInfo* SearchConfigInList(const char* name)
 	return nullptr;
 }
 
-void disk_selection(const int drive, uae_prefs* prefs)
+void disk_selection(const int shortcut, uae_prefs* prefs)
 {
-	std::string tmp;
-
-	if (strlen(prefs->floppyslots[drive].df) > 0)
-		tmp = std::string(prefs->floppyslots[drive].df);
-	else
-		tmp = current_dir;
-	tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
-	if (!tmp.empty())
+	// Select Floppy Disk Image
+	if (shortcut >= 0 && shortcut < 4)
 	{
-		if (strncmp(prefs->floppyslots[drive].df, tmp.c_str(), MAX_DPATH) != 0)
+		std::string tmp;
+		if (strlen(prefs->floppyslots[shortcut].df) > 0)
+			tmp = std::string(prefs->floppyslots[shortcut].df);
+		else
+			tmp = get_floppy_path();
+		tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
+		if (!tmp.empty())
 		{
-			strncpy(prefs->floppyslots[drive].df, tmp.c_str(), MAX_DPATH);
-			disk_insert(drive, tmp.c_str());
-			add_file_to_mru_list(lstMRUDiskList, tmp);
-			current_dir = extract_path(tmp);
+			if (strncmp(prefs->floppyslots[shortcut].df, tmp.c_str(), MAX_DPATH) != 0)
+			{
+				strncpy(prefs->floppyslots[shortcut].df, tmp.c_str(), MAX_DPATH);
+				disk_insert(shortcut, tmp.c_str());
+				add_file_to_mru_list(lstMRUDiskList, tmp);
+			}
+		}
+	}
+	else if (shortcut == 4)
+	{
+		// Load Save state
+		TCHAR tmp[MAX_DPATH];
+		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
+
+		const std::string selected = SelectFile("Select save state file", tmp, statefile_filter);
+		if (!selected.empty())
+		{
+			_tcscpy(savestate_fname, selected.c_str());
+			savestate_initsave(savestate_fname, 1, true, true);
+			savestate_state = STATE_DORESTORE;
+		}
+		else {
+			savestate_fname[0] = 0;
+		}
+	}
+	else if (shortcut == 5)
+	{
+		// Save state
+		TCHAR tmp[MAX_DPATH];
+		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
+
+		std::string selected = SelectFile("Select save state file", tmp, statefile_filter, true);
+		if (!selected.empty())
+		{
+			// ensure the selected filename ends with .uss
+			if (selected.size() < 4 || selected.substr(selected.size() - 4) != ".uss")
+			{
+				selected += ".uss";
+			}
+
+			_tcscpy(savestate_fname, selected.c_str());
+			_tcscat(tmp, savestate_fname);
+			save_state(savestate_fname, _T("Description!"));
+			if (create_screenshot())
+				save_thumb(screenshot_filename);
+		}
+	}
+	// Select CD Image
+	else if (shortcut == 6)
+	{
+		std::string tmp;
+		if (prefs->cdslots[0].inuse && strlen(prefs->cdslots[0].name) > 0)
+			tmp = std::string(prefs->cdslots[0].name);
+		else
+			tmp = get_cdrom_path();
+		tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
+		if (!tmp.empty())
+		{
+			if (strncmp(prefs->cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
+			{
+				strncpy(prefs->cdslots[0].name, tmp.c_str(), MAX_DPATH);
+				changed_prefs.cdslots[0].inuse = true;
+				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+				add_file_to_mru_list(lstMRUCDList, tmp);
+			}
 		}
 	}
 }
@@ -966,7 +1027,7 @@ void gui_display(int shortcut)
 		gui_purge_events();
 		gui_active--;
 	}
-	else if (shortcut >= 0 && shortcut < 4)
+	else if (shortcut >= 0 && shortcut <= 6)
 	{
 		amiberry_gui_init();
 		gui_widgets_init();
@@ -974,8 +1035,6 @@ void gui_display(int shortcut)
 		gui_widgets_halt();
 		amiberry_gui_halt();
 	}
-
-	//TODO implement more shortcuts here (e.g. 5 for Save State)
 
 	reset_sound();
 	inputdevice_copyconfig(&changed_prefs, &currprefs);
