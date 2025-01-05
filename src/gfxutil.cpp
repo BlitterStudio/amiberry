@@ -344,6 +344,8 @@ void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int r
 #endif
 }
 
+#define BLACKERTHANBLACKADJ 4
+
 void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
 	uae_u32 *rc, uae_u32 *gc, uae_u32 *bc)
 {
@@ -353,7 +355,7 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 		int j;
 
 		if (!gfx_hdr && currprefs.gfx_blackerthanblack) {
-			j = i * 15 / 16 + 15;
+			j = i * (255 - BLACKERTHANBLACKADJ) / 255  + BLACKERTHANBLACKADJ;
 		} else {
 			j = i;
 		}
@@ -396,9 +398,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 		int b = ((i & 0xf) << 4) | (i & 0x0f);
 
 		if (!gfx_hdr && currprefs.gfx_blackerthanblack) {
-			r = (r * (255 - 8) / 255) + 8;
-			g = (g * (255 - 8) / 255) + 8;
-			b = (b * (255 - 8) / 255) + 8;
+			r = (r * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+			g = (g * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+			b = (b * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
 		}
 
 		r = uae_gamma[r + j][0];
@@ -418,6 +420,7 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			xcolors[i] |= xcolors[i] * 0x00010001;
 		}
 	}
+
 	fullblack = 0;
 	if (gfx_hdr) {
 		fullblack = doAlpha(1, aw, as);
@@ -462,9 +465,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			b = gamma[b + 256][2];
 
 			if (currprefs.gfx_blackerthanblack) {
-				r = (r * (255 - 8) / 255) + 8;
-				g = (g * (255 - 8) / 255) + 8;
-				b = (b * (255 - 8) / 255) + 8;
+				r = (r * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+				g = (g * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+				b = (b * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
 			}
 
 			xcolors[i] = doMask(r, 5, 11) | doMask(g, 6, 5) | doMask(b, 5, 0);
