@@ -443,10 +443,8 @@ static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
 
 	mon->windowmouse_max_w = mon->amigawinclip_rect.w / 2 - 50;
 	mon->windowmouse_max_h = mon->amigawinclip_rect.h / 2 - 50;
-	if (mon->windowmouse_max_w < 10)
-		mon->windowmouse_max_w = 10;
-	if (mon->windowmouse_max_h < 10)
-		mon->windowmouse_max_h = 10;
+	mon->windowmouse_max_w = std::max(mon->windowmouse_max_w, 10);
+	mon->windowmouse_max_h = std::max(mon->windowmouse_max_h, 10);
 
 	if ((currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC) && currprefs.input_tablet > 0 && mousehack_alive() && isfullscreen() <= 0) {
 		mon->mouseposx = mon->mouseposy = 0;

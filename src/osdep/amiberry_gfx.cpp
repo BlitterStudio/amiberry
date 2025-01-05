@@ -2522,7 +2522,14 @@ bool target_graphics_buffer_update(int monid, bool force)
 
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
+			if (mon->amigawin_rect.w != 800 && mon->amigawin_rect.h != 600)
+			{
+				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
+			}
+			else
+			{
+				SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
+			}
 		}
 #ifdef USE_OPENGL
 		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
@@ -2561,7 +2568,9 @@ bool target_graphics_buffer_update(int monid, bool force)
 			set_scaling_option(&currprefs, scaled_width, scaled_height);
 		}
 		else
+		{
 			return false;
+		}
 #endif
 	}
 
