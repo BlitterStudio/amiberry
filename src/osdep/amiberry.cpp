@@ -1843,7 +1843,7 @@ bool handle_events()
 		{
 			setpaused(pause_emulation);
 			was_paused = pause_emulation;
-			gui_fps(0, 0, 0);
+			gui_fps(0, 0, 0, 0, 0);
 			gui_led(LED_SND, 0, -1);
 			// we got just paused, report it to caller.
 			return true;

@@ -55,6 +55,7 @@
 #include "scsi.h"
 #include "rtc.h"
 #include "devices.h"
+#include "keyboard_mcu.h"
 
 #define CIAA_DEBUG_R 0
 #define CIAA_DEBUG_W 0
@@ -981,7 +982,7 @@ static void sendrw(void)
 
 int resetwarning_do(int canreset)
 {
-	if (!currprefs.keyboard_connected)
+	if (currprefs.keyboard_mode < 0)
 		return 0;
 	if (resetwarning_phase || regs.halted > 0) {
 		/* just force reset if second reset happens during resetwarning */
@@ -1037,13 +1038,15 @@ void CIA_hsync_prehandler (void)
 {
 }
 
-static void keyreq (void)
+void cia_keyreq(uae_u8 code)
 {
 #if KB_DEBUG
 	write_log(_T("code=%02x (%02x)\n"), kbcode, (uae_u8)(~((kbcode >> 1) | (kbcode << 7))));
 #endif
-	cia[0].sdr = kbcode;
-	kblostsynccnt = 8 * maxvpos * 8; // 8 frames * 8 bits.
+	cia[0].sdr = code;
+	if (currprefs.keyboard_mode == 0) {
+		kblostsynccnt = 8 * maxvpos * 8; // 8 frames * 8 bits.
+	}
 	CIA_sync_interrupt(0, ICR_SP);
 }
 
@@ -1163,6 +1166,9 @@ void keyboard_connected(bool connect)
 {
 	if (connect) {
 		write_log(_T("Keyboard connected\n"));
+		if (currprefs.keyboard_mode > 0) {
+			keymcu_reset();
+		}
 	} else {
 		write_log(_T("Keyboard disconnected\n"));
 	}
@@ -1171,9 +1177,53 @@ void keyboard_connected(bool connect)
 	resetwarning_phase = 0;
 }
 
+static bool keymcu_execute(void)
+{
+	bool handshake = (cia[0].t[0].cr & 0x40) != 0 && (cia[0].sdr_buf & 0x80) == 0;
+
+#if 1
+	extern int blop;
+	if (blop & 1) {
+		handshake = true;
+	}
+#endif
+
+	bool cyclemode = false;
+	if (currprefs.keyboard_mode == KB_A500_6570 ||
+		currprefs.keyboard_mode == KB_A600_6570 ||
+		currprefs.keyboard_mode == KB_A1000_6570 ||
+		currprefs.keyboard_mode == KB_Ax000_6570)
+	{
+		cyclemode = keymcu_run(handshake);
+	}
+	if (currprefs.keyboard_mode == KB_A1200_6805) {
+		cyclemode = keymcu2_run(handshake);
+	}
+	if (currprefs.keyboard_mode == KB_A2000_8039) {
+		cyclemode = keymcu3_run(handshake);
+	}
+	return cyclemode;
+}
+
+static void keymcu_event(uae_u32 v)
+{
+	bool cyclemode = keymcu_execute();
+	if (cyclemode) {
+		// execute few times / scanline, does not need to be accurate
+		// because keyboard MCU has separate not that accurate clock crystal.
+		event2_newevent_x_remove(keymcu_event);
+		event2_newevent_xx(-1, 27 * CYCLE_UNIT, 0, keymcu_event);
+	}
+}
+
+static void keymcu_do(void)
+{
+	keymcu_event(0);
+}
+
 static void check_keyboard(void)
 {
-	if (currprefs.keyboard_connected) {
+	if (currprefs.keyboard_mode >= 0) {
 		if ((keys_available() || kbstate < 3) && !kblostsynccnt ) {
 			switch (kbstate)
 			{
@@ -1193,7 +1243,7 @@ static void check_keyboard(void)
 					kbcode = ~get_next_key();
 					break;
 			}
-			keyreq();
+			cia_keyreq(kbcode);
 		}
 	} else {
 		while (keys_available()) {
@@ -1225,21 +1275,27 @@ void CIA_hsync_posthandler(bool ciahsync, bool dotod)
 		if (currprefs.tod_hack && cia[0].todon) {
 			do_tod_hack(dotod);
 		}
-	} else if (currprefs.keyboard_connected) {
-		// custom hsync
-		if (resetwarning_phase) {
-			resetwarning_check();
-			while (keys_available()) {
-				get_next_key();
-			}
-		} else {
-			if ((hsync_counter & 15) == 0) {
-				check_keyboard();
-			}
-		}
 	} else {
-		while (keys_available()) {
-			get_next_key();
+		if (currprefs.keyboard_mode > 0) {
+			keymcu_do();
+		} else {
+			if (currprefs.keyboard_mode == 0) {
+				// custom hsync
+				if (resetwarning_phase) {
+					resetwarning_check();
+					while (keys_available()) {
+						get_next_key();
+					}
+				} else {
+					if ((hsync_counter & 15) == 0) {
+						check_keyboard();
+					}
+				}
+			} else {
+				while (keys_available()) {
+					get_next_key();
+				}
+			}
 		}
 	}
 
@@ -1247,7 +1303,6 @@ void CIA_hsync_posthandler(bool ciahsync, bool dotod)
 		// Increase CIA-A TOD if delayed from previous line
 		cia_delayed_tod(0);
 	}
-
 }
 
 static void calc_led(int old_led)
@@ -1322,7 +1377,7 @@ void CIA_vsync_prehandler(void)
 		if (kblostsynccnt <= 0) {
 			kblostsynccnt = 0;
 			kbcode = 0;
-			keyreq();
+			cia_keyreq(kbcode);
 #if KB_DEBUG
 			write_log(_T("lostsync\n"));
 #endif
@@ -2019,42 +2074,54 @@ static void WriteCIAA(uae_u16 addr, uae_u8 val, uae_u32 *flags)
 	case 13:
 	case 15:
 		CIA_update();
+		if (currprefs.keyboard_mode > 0 && reg == 12) {
+			keymcu_do();
+		}
 		WriteCIAReg(0, reg, val);
 		CIA_calctimers();
 		break;
 	case 14:
+	{
 		CIA_update();
-		// keyboard handshake handling
-		if (currprefs.cpuboard_type != 0 && (val & 0x40) != (c->t[0].cr & 0x40)) {
-			/* bleh, Phase5 CPU timed early boot key check fix.. */
-			if (m68k_getpc() >= 0xf00000 && m68k_getpc() < 0xf80000)
-				check_keyboard();
-		}
-		if ((val & CR_INMODE1) != 0 && (c->t[0].cr & CR_INMODE1) == 0) {
-			// handshake start
-			if (kblostsynccnt > 0 && currprefs.cs_kbhandshake) {
-				kbhandshakestart = get_cycles();
+		bool handshake = (val & CR_INMODE1) != (c->t[0].cr & CR_INMODE1);
+		if (currprefs.keyboard_mode == 0) {
+			// keyboard handshake handling
+			if (currprefs.cpuboard_type != 0 && handshake) {
+				/* bleh, Phase5 CPU timed early boot key check fix.. */
+				if (m68k_getpc() >= 0xf00000 && m68k_getpc() < 0xf80000)
+					check_keyboard();
 			}
-#if KB_DEBUG
-			write_log(_T("KB_ACK_START %02x->%02x %08x\n"), c->t[0].cr, val, M68K_GETPC);
-#endif
-		} else if ((val & CR_INMODE1) == 0 && (c->t[0].cr & CR_INMODE1) != 0) {
-			// handshake end
-			/* todo: check if low to high or high to low only */
-			if (kblostsynccnt > 0 && currprefs.cs_kbhandshake) {
-				evt_t len = get_cycles() - kbhandshakestart;
-				if (len < currprefs.cs_kbhandshake * CYCLE_UNIT) {
-					write_log(_T("Keyboard handshake pulse length %d < %d (CCKs)\n"), len / CYCLE_UNIT, currprefs.cs_kbhandshake);
+			if ((val & CR_INMODE1) != 0 && (c->t[0].cr & CR_INMODE1) == 0) {
+				// handshake start
+				if (kblostsynccnt > 0 && currprefs.cs_kbhandshake) {
+					kbhandshakestart = get_cycles();
 				}
-			}
-			kblostsynccnt = 0;
 #if KB_DEBUG
-			write_log(_T("KB_ACK_END %02x->%02x %08x\n"), c->t[0].cr, val, M68K_GETPC);
+				write_log(_T("KB_ACK_START %02x->%02x %08x\n"), c->t[0].cr, val, M68K_GETPC);
 #endif
+			}
+			else if ((val & CR_INMODE1) == 0 && (c->t[0].cr & CR_INMODE1) != 0) {
+				// handshake end
+				/* todo: check if low to high or high to low only */
+				if (kblostsynccnt > 0 && currprefs.cs_kbhandshake) {
+					evt_t len = get_cycles() - kbhandshakestart;
+					if (len < currprefs.cs_kbhandshake * CYCLE_UNIT) {
+						write_log(_T("Keyboard handshake pulse length %d < %d (CCKs)\n"), len / CYCLE_UNIT, currprefs.cs_kbhandshake);
+					}
+				}
+				kblostsynccnt = 0;
+#if KB_DEBUG
+				write_log(_T("KB_ACK_END %02x->%02x %08x\n"), c->t[0].cr, val, M68K_GETPC);
+#endif
+			}
 		}
 		WriteCIAReg(0, reg, val);
 		CIA_calctimers();
-		break;
+		if (currprefs.keyboard_mode > 0 && handshake) {
+			keymcu_do();
+		}
+	}
+	break;
 	}
 }
 

@@ -81,7 +81,6 @@ void romlist_add (const TCHAR *path, struct romdata *rd)
 	}
 }
 
-
 struct romdata *getromdatabypath (const TCHAR *path)
 {
 	int i;
@@ -97,7 +96,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 322
+#define NEXT_ROM_ID 324
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -123,8 +122,12 @@ static struct romdata roms[] = {
 	{ _T("Cloanto Amiga Forever 2010 ROM key"), 0, 0, 0, 0, 0, 1544, 73, 0, 1, ROMTYPE_KEY, 0, 0, NULL,
 	0x8c4dd05c, 0x05034f62,0x0b5bb7b2,0x86954ea9,0x164fdb90,0xfb2897a4 },
 
-	{ _T("6500/1 Keyboard MCU ROM"), 0, 0, 0, 0, _T("KBDMCU\0"), 2048, 321, 0, 0, ROMTYPE_KBMCU, 0, 0, NULL,
+	{ _T("6570-036 Keyboard MCU ROM"), 0, 0, 0, 0, _T("KBDMCU\0"), 2048, 321, 0, 0, ROMTYPE_KBMCU, 0, 0, NULL,
 	0x4a3fc332, 0x83b21d0c, 0x8b93fc9b, 0x9b3b287f, 0xde4ec8f3, 0xbadac5a2 },
+	{ _T("68HC05 Keyboard MCU ROM"), 0, 0, 0, 0, _T("KBDMCU\0"), 8192, 322, 0, 0, ROMTYPE_KBMCU, 0, 0, NULL,
+	0x2a77eec4, 0x301ec6a6, 0x9404457d, 0x912c89e3, 0xfc54095e, 0xda9f0e93 },
+	{ _T("D8039HLC Keyboard MCU ROM"), 0, 0, 0, 0, _T("KBDMCU\0"), 2048, 323, 0, 0, ROMTYPE_KBMCU, 0, 0, NULL,
+	0xc23d280e, 0xb5c4b8c3, 0x8b9e4a86, 0x4abc871d, 0x048bd1c3, 0xa02c8432 },
 
 	{ _T("KS ROM v23.93 (Velvet)"), 23, 93, 23, 93, _T("VELVET\0"), 131072, 125, 0, 0, ROMTYPE_KICK, 0, 0, NULL,
 	0xadcb44c9, 0x7c36b2ba,0x298da3da,0xce60d0ba,0x8511d470,0x76a40d5c, NULL, NULL, 4 },

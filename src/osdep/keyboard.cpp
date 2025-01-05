@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "sysdeps.h"
+#include "gui.h"
 #include "options.h"
 #include "inputdevice.h"
 #include "keyboard.h"
@@ -344,6 +345,10 @@ int getcapslock()
 	capstable[5] = host_scrolllockstate;
 	capstable[6] = 0;
 	capslockstate = inputdevice_synccapslock(capslockstate, capstable);
+	if (currprefs.keyboard_mode == 0) {
+		gui_data.capslock = host_capslockstate;
+		gui_led(LED_CAPS, gui_data.capslock, -1);
+	}
 	return capslockstate;
 }
 
@@ -557,15 +562,27 @@ void keyboard_settrans()
 
 int target_checkcapslock(const int scancode, int *state)
 {
-	if (scancode != SDL_SCANCODE_CAPSLOCK && scancode != SDL_SCANCODE_NUMLOCKCLEAR && scancode != SDL_SCANCODE_SCROLLLOCK)
+	if (scancode != SDL_SCANCODE_CAPSLOCK && scancode != SDL_SCANCODE_NUMLOCKCLEAR && scancode != SDL_SCANCODE_SCROLLLOCK) {
 		return 0;
-	if (*state == 0)
+	}
+	if (currprefs.keyboard_mode > 0) {
+		return 1;
+	}
+	if (*state == 0) {
 		return -1;
-	if (scancode == SDL_SCANCODE_CAPSLOCK)
+	}
+	if (scancode == SDL_SCANCODE_CAPSLOCK) {
 		*state = host_capslockstate;
-	if (scancode == SDL_SCANCODE_NUMLOCKCLEAR)
+		if (gui_data.capslock != (host_capslockstate != 0)) {
+			gui_data.capslock = host_capslockstate;
+			gui_led(LED_CAPS, gui_data.capslock, -1);
+		}
+	}
+	if (scancode == SDL_SCANCODE_NUMLOCKCLEAR) {
 		*state = host_numlockstate;
-	if (scancode == SDL_SCANCODE_SCROLLLOCK)
+	}
+	if (scancode == SDL_SCANCODE_SCROLLLOCK) {
 		*state = host_scrolllockstate;
+	}
 	return 1;
 }

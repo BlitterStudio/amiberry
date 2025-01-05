@@ -531,6 +531,16 @@ struct monconfig
 	struct wh gfx_size_fs_xtra[GFX_SIZE_EXTRA_NUM];
 };
 
+#define KB_DISCONNECTED -1
+#define KB_UAE 0
+#define KB_A500_6570 1
+#define KB_A600_6570 2
+#define KB_A1000_6500 3
+#define KB_A1000_6570 4
+#define KB_A1200_6805 5
+#define KB_A2000_8039 6
+#define KB_Ax000_6570 7
+
 #ifdef AMIBERRY
 enum custom_type
 {
@@ -739,7 +749,9 @@ struct uae_prefs
 	float blitter_speed_throttle;
 	unsigned int chipset_mask;
 	bool chipset_hr;
-	bool keyboard_connected;
+	bool display_calibration;
+	int keyboard_mode;
+	bool keyboard_nkro;
 	bool ntscmode;
 	bool genlock;
 	int genlock_image;

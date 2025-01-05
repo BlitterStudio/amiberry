@@ -12276,12 +12276,9 @@ static void fpscounter(bool frameok)
 	if ((timeframes & 7) == 0) {
 		double idle = 1000 - (idle_mavg.mavg == 0 ? 0.0 : (double)idle_mavg.mavg * 1000.0 / vsynctimebase);
 		int fps = fps_mavg.mavg == 0 ? 0 : (int)(syncbase * 10 / fps_mavg.mavg);
-		if (fps > 99999)
-			fps = 99999;
-		if (idle < 0)
-			idle = 0;
-		if (idle > 100 * 10)
-			idle = 100 * 10;
+		fps = std::min(fps, 99999);
+		idle = std::max<double>(idle, 0);
+		idle = std::min<double>(idle, 100 * 10);
 		if (fake_vblank_hz * 10 > fps) {
 			double mult = (double)fake_vblank_hz * 10.0 / fps;
 			idle *= mult;
@@ -12292,7 +12289,7 @@ static void fpscounter(bool frameok)
 		gui_data.idle = (int)idle;
 		gui_data.fps_color = nosignal_status == 1 ? 2 : (nosignal_status == 2 ? 3 : (frameok ? 0 : 1));
 		if ((timeframes & 15) == 0) {
-			gui_fps(fps, (int)idle, gui_data.fps_color);
+			gui_fps(fps, gui_data.lines, gui_data.lace, (int)idle, gui_data.fps_color);
 		}
 	}
 }
@@ -16513,13 +16510,16 @@ void check_prefs_changed_custom(void)
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
 	currprefs.blitter_speed_throttle = changed_prefs.blitter_speed_throttle;
 	currprefs.collision_level = changed_prefs.collision_level;
-	if (!currprefs.keyboard_connected && changed_prefs.keyboard_connected) {
+	currprefs.keyboard_nkro = changed_prefs.keyboard_nkro;
+	if (currprefs.keyboard_mode != changed_prefs.keyboard_mode) {
+		currprefs.keyboard_mode = changed_prefs.keyboard_mode;
 		// send powerup sync
 		keyboard_connected(true);
-	} else if (currprefs.keyboard_connected && !changed_prefs.keyboard_connected) {
+	}
+	else if (currprefs.keyboard_mode >= 0 && changed_prefs.keyboard_mode < 0) {
+		currprefs.keyboard_mode = changed_prefs.keyboard_mode;
 		keyboard_connected(false);
 	}
-	currprefs.keyboard_connected = changed_prefs.keyboard_connected;
 
 	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod;
 	currprefs.cs_rtc = changed_prefs.cs_rtc;

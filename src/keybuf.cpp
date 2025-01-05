@@ -299,7 +299,7 @@ int record_key_direct(int kc, bool direct)
 		if (currprefs.cpuboard_settings & 0x10) {
 			inputdevice_draco_key(kc);
 		}
-		if (!currprefs.keyboard_connected) {
+		if (currprefs.keyboard_mode < 0) {
 			return 1;
 		}
 	}

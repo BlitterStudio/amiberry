@@ -4540,7 +4540,22 @@ void inputdevice_do_keyboard(int code, int state)
 			return;
 		}
 
-		if (key == AK_RESETWARNING) {
+		if (currprefs.keyboard_mode > 0) {
+			if (!currprefs.cs_resetwarning) {
+				if (keyboardresetkeys() || key == AK_RESETWARNING) {
+					int r = keybuf[AK_LALT] | keybuf[AK_RALT];
+					if (r) {
+						keyboard_reset_seq_mode = 2;
+						custom_reset(true, true);
+						cpu_inreset();
+					} else {
+						custom_reset(false, true);
+						cpu_inreset();
+						keyboard_reset_seq_mode = 1;
+					}
+				}
+			}
+		} else if (key == AK_RESETWARNING) {
 			if (resetwarning_do(0)) {
 				keyboard_reset_seq_mode = 3;
 			}
@@ -4584,6 +4599,8 @@ void inputdevice_do_kb_reset(void)
 		} else {
 			keyboard_reset_seq_mode = 4;
 		}
+	} else {
+		uae_reset(0, 1);
 	}
 }
 
@@ -9276,6 +9293,7 @@ void inputdevice_swap_compa_ports (struct uae_prefs *prefs, int portswap)
 	memcpy (&tmp, &prefs->jports[portswap], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap], &prefs->jports[portswap + 1], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap + 1], &tmp, sizeof (struct jport));
+
 	inputdevice_updateconfig(NULL, prefs);
 }
 

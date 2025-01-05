@@ -68,6 +68,7 @@ set(SOURCE_FILES
         src/luascript.cpp
         src/main.cpp
         src/memory.cpp
+        src/mos6502.cpp
         src/midiemu.cpp
         src/native2amiga.cpp
         src/ncr9x_scsi.cpp
@@ -194,6 +195,12 @@ set(SOURCE_FILES
         src/caps/caps_amiberry.cpp
         src/dsp3210/dsp_glue.cpp
         src/dsp3210/DSP3210_emulation.cpp
+        src/kbmcu/8048/co8048.cpp
+        src/kbmcu/keyboard_mcu_6500_1.cpp
+        src/kbmcu/keyboard_mcu_6805.cpp
+        src/kbmcu/keyboard_mcu_d8039hlc.cpp
+        src/kbmcu/m6805/m68_ops.cpp
+        src/kbmcu/m6805/m68emu.cpp
         src/machdep/support.cpp
         src/mame/a2410.cpp
         src/mame/tm34010/tms34010.cpp

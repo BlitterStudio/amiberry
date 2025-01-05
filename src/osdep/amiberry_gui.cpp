@@ -1068,12 +1068,15 @@ void gui_flicker_led(int led, int unitnum, int status)
 	}
 }
 
-void gui_fps(int fps, int idle, int color)
+void gui_fps(int fps, int lines, bool lace, int idle, int color)
 {
 	gui_data.fps = fps;
+	gui_data.lines = lines;
+	gui_data.lace = lace;
 	gui_data.idle = idle;
 	gui_data.fps_color = color;
 	gui_led(LED_FPS, 0, -1);
+	gui_led(LED_LINES, 0, -1);
 	gui_led(LED_CPU, 0, -1);
 	gui_led(LED_SND, (gui_data.sndbuf_status > 1 || gui_data.sndbuf_status < 0) ? 0 : 1, -1);
 }

@@ -1,8 +1,10 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <ctype.h>
-#include <assert.h>
+#include <cctype>
+#include <cassert>
+
+#include <algorithm>
 
 #include "options.h"
 #include "uae.h"
@@ -139,12 +141,8 @@ int statusline_set_multiplier(int monid, int width, int height)
 	struct amigadisplay *ad = &adisplays[monid];
 	int idx = ad->picasso_on ? 1 : 0;
 	int mult = currprefs.leds_on_screen_multiplier[idx];
-	if (mult < 1 * 100) {
-		mult = 1 * 100;
-	}
-	if (mult > 4 * 100) {
-		mult = 4 * 100;
-	}
+	mult = std::max(mult, 1 * 100);
+	mult = std::min(mult, 4 * 100);
 	statusline_mult[idx] = mult;
 	return mult;
 }
@@ -195,7 +193,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			struct floppyslot *fs = &currprefs.floppyslots[pled];
 			struct gui_info_drive *gid = &gui_data.drives[pled];
 			int track = gid->drive_track;
-			pos = 7 + pled;
+			pos = 8 + pled;
 			on_rgb = 0x00cc00;
 			if (!gid->drive_disabled) {
 				num1 = -1;
@@ -203,11 +201,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				num3 = track % 10;
 				on = gid->drive_motor;
 				if (gid->drive_writing) {
-#ifdef _WIN32
 					on_rgb = 0xcc0000;
-#else
-					on_rgb = 0x0000cc;
-#endif
 				}
 				half = gui_data.drive_side ? 1 : -1;
 				if (!gid->floppy_inserted) {
@@ -220,50 +214,36 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			on_rgb &= 0xffffff;
 			off_rgb = rgbmuldiv(on_rgb, 2, 4);
 			on_rgb2 = rgbmuldiv(on_rgb, 2, 3);
+		} else if (led == LED_CAPS) {
+			pos = 4;
+			on_rgb = 0xcc9900;
+			on = gui_data.capslock;
+			off_rgb = (on_rgb & 0xfefefe) >> 1;
 		} else if (led == LED_POWER) {
 			pos = 3;
-#ifdef _WIN32
 			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16;
 			on = 1;
 			off_rgb = 0x330000;
-#else
-			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x000033) << 16;
-			on = 1;
-			off_rgb = 0x000033;
-#endif
 		} else if (led == LED_CD) {
-			pos = 5;
+			pos = 6;
 			if (gui_data.cd >= 0) {
 				on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
-#ifdef _WIN32
 				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : 0x0000cc;
-#else
-				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : 0xcc0000;
-#endif
 				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO)) {
 					on_rgb &= 0xfefefe;
 					on_rgb >>= 1;
 				}
-#ifdef _WIN32
 				off_rgb = 0x000033;
-#else
-				off_rgb = 0x330000;
-#endif
 				num1 = -1;
 				num2 = 10;
 				num3 = 12;
 			}
 		} else if (led == LED_HD) {
-			pos = 4;
+			pos = 5;
 			if (gui_data.hd >= 0) {
 				on = gui_data.hd;
-#ifdef _WIN32
 				on_rgb = on == 2 ? 0xcc0000 : 0x0000cc;
 				off_rgb = 0x000033;
-#else
-				on_rgb = on == 2 ? 0x0000cc : 0xcc0000;
-				off_rgb = 0x330000;
-#endif
 				num1 = -1;
 				num2 = 11;
 				num3 = 12;
@@ -291,8 +271,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 					if (fps > 999) {
 						fps += 50;
 						fps /= 10;
-						if (fps > 999)
-							fps = 999;
+						fps = std::min(fps, 999);
 						num1 = fps / 100;
 						num1 %= 10;
 						num2 = 18;
@@ -311,11 +290,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 		} else if (led == LED_CPU) {
 			int idle = (gui_data.idle + 5) / 10;
 			pos = 1;
-#ifdef _WIN32
 			on_rgb = 0xcc0000;
-#else
-			on_rgb = 0x0000cc;
-#endif
 			off_rgb = 0x111111;
 			if (gui_data.cpu_halted) {
 				idle = 0;
@@ -347,8 +322,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			}
 		} else if (led == LED_SND && gui_data.sndbuf_avail) {
 			int snd = abs(gui_data.sndbuf + 5) / 10;
-			if (snd > 99)
-				snd = 99;
+			snd = std::min(snd, 99);
 			pos = 0;
 			on = gui_data.sndbuf_status;
 			if (on < 3) {
@@ -360,30 +334,18 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			if (on < 0)
 				on_rgb = 0xcccc00; // underflow
 			else if (on == 2)
-#ifdef _WIN32
 				on_rgb = 0xcc0000; // really big overflow
-#else
-				on_rgb = 0x0000cc; // really big overflow
-#endif
 			else if (on == 1)
-#ifdef _WIN32
 				on_rgb = 0x0000cc; // "normal" overflow
-#else
-				on_rgb = 0xcc0000; // "normal" overflow
-#endif
 			off_rgb = 0x111111;
 			am = 3;
 		} else if (led == LED_MD) {
 			// DF3 reused as internal non-volatile ram led (cd32/cdtv)
 			if (gui_data.drives[3].drive_disabled && gui_data.md >= 0) {
-				pos = 7 + 3;
+				pos = 8 + 3;
 				if (gui_data.md >= 0) {
 					on = gui_data.md;
-#ifdef _WIN32
 					on_rgb = on == 2 ? 0xcc0000 : 0x00cc00;
-#else
-					on_rgb = on == 2 ? 0x0000cc : 0x00cc00;
-#endif
 					off_rgb = 0x003300;
 				}
 				num1 = -1;
@@ -393,18 +355,14 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				continue;
 			}
 		} else if (led == LED_NET) {
-			pos = 6;
+			pos = 7;
 			if (gui_data.net >= 0) {
 				on = gui_data.net;
 				on_rgb = 0;
 				if (on & 1)
 					on_rgb |= 0x00cc00;
 				if (on & 2)
-#ifdef _WIN32
 					on_rgb |= 0xcc0000;
-#else
-					on_rgb |= 0x0000cc;
-#endif
 				off_rgb = 0x111111;
 				num1 = -1;
 				num2 = -1;
@@ -512,9 +470,10 @@ void statusline_clear(void)
 {
 	statusline_text_active = NULL;
 	statusline_delay = 0;
-	for (int i = 0; i < MAX_STATUSLINE_QUEUE; i++) {
-		xfree(statusline_data[i].text);
-		statusline_data[i].text = NULL;
+	for (auto& i : statusline_data)
+	{
+		xfree(i.text);
+		i.text = NULL;
 	}
 	statusline_update_notification();
 }
