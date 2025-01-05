@@ -1348,6 +1348,10 @@ void savestate_quick(int slot, int save)
 		savestate_flags |= SAVESTATE_NODIALOGS;
 		savestate_flags |= SAVESTATE_ALWAYSUSEPATH;
 		save_state (savestate_fname, _T(""));
+#ifdef AMIBERRY
+		if (create_screenshot())
+			save_thumb(screenshot_filename);
+#endif
 	} else {
 		if (!zfile_exists (savestate_fname)) {
 			write_log (_T("staterestore, file '%s' not found\n"), savestate_fname);

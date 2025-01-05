@@ -40,6 +40,7 @@ extern int mouseactive;
 extern int minimized;
 extern int monitor_off;
 extern bool joystick_refresh_needed;
+extern std::string screenshot_filename;
 
 extern void logging_init();
 

@@ -410,7 +410,6 @@ extern void new_harddrive(int entry);
 
 extern void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media);
 
-extern std::string screenshot_filename;
 extern int current_state_num;
 extern int delay_savestate_frame;
 extern int last_x;
