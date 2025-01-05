@@ -136,6 +136,7 @@ SDL_Event gui_event;
 SDL_Event touch_event;
 SDL_Texture* gui_texture;
 SDL_Rect gui_renderQuad;
+SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
 
 /*
 * Gui SDL stuff we need
@@ -326,19 +327,19 @@ void amiberry_gui_init()
         if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
         {
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				GUI_WIDTH,
-				GUI_HEIGHT,
+				gui_window_rect.x != 0 ? gui_window_rect.x : SDL_WINDOWPOS_CENTERED,
+				gui_window_rect.y != 0 ? gui_window_rect.y : SDL_WINDOWPOS_CENTERED,
+				gui_window_rect.w,
+				gui_window_rect.h,
 				mode);
         }
         else
         {
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				GUI_HEIGHT,
-				GUI_WIDTH,
+				gui_window_rect.y != 0 ? gui_window_rect.y : SDL_WINDOWPOS_CENTERED,
+				gui_window_rect.x != 0 ? gui_window_rect.x : SDL_WINDOWPOS_CENTERED,
+				gui_window_rect.h,
+				gui_window_rect.w,
 				mode);
         }
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
@@ -362,17 +363,16 @@ void amiberry_gui_init()
 	}
 	DPIHandler::set_render_scale(mon->gui_renderer);
 
-	// Enable Integer scaling for GUI if we are running on a desktop environment
-	if (!kmsdrm_detected)
-	{
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		SDL_RenderSetIntegerScale(mon->gui_renderer, SDL_TRUE);
-	}
-	else
-	{
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		SDL_RenderSetIntegerScale(mon->gui_renderer, SDL_FALSE);
-	}
+	auto render_scale_quality = "linear";
+	bool integer_scale = false;
+
+#ifdef __MACH__
+	render_scale_quality = "nearest";
+	integer_scale = true;
+#endif
+
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, render_scale_quality);
+	SDL_RenderSetIntegerScale(mon->gui_renderer, integer_scale ? SDL_TRUE : SDL_FALSE);
 
 	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
@@ -445,12 +445,32 @@ void check_input()
 
 	auto got_event = 0;
 	didata* did = &di_joystick[0];
-	didata* existing_did = nullptr;
+	didata* existing_did;
 	
 	while (SDL_PollEvent(&gui_event))
 	{
 		switch (gui_event.type)
 		{
+		case SDL_WINDOWEVENT:
+			if (gui_event.window.windowID == SDL_GetWindowID(mon->gui_window))
+			{
+				switch (gui_event.window.event)
+				{
+				case SDL_WINDOWEVENT_MOVED:
+					gui_window_rect.x = gui_event.window.data1;
+					gui_window_rect.y = gui_event.window.data2;
+					break;
+				case SDL_WINDOWEVENT_RESIZED:
+					gui_window_rect.w = gui_event.window.data1;
+					gui_window_rect.h = gui_event.window.data2;
+					break;
+				default: 
+					break;
+				}
+			}
+			got_event = 1;
+			break;
+		
 		case SDL_QUIT:
 			got_event = 1;
 			//-------------------------------------------------
@@ -602,18 +622,18 @@ void check_input()
 						if (handle_navigation(DIRECTION_RIGHT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_RIGHT);
-						break;
 					}
-					if (gui_event.jaxis.value < -joystick_dead_zone && last_x != -1)
+					else if (gui_event.jaxis.value < -joystick_dead_zone && last_x != -1)
 					{
 						last_x = -1;
 						if (handle_navigation(DIRECTION_LEFT))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_LEFT);
-						break;
 					}
-					if (gui_event.jaxis.value > -joystick_dead_zone && gui_event.jaxis.value < joystick_dead_zone)
+					else if (gui_event.jaxis.value > -joystick_dead_zone && gui_event.jaxis.value < joystick_dead_zone)
+					{
 						last_x = 0;
+					}
 				}
 				else if (gui_event.jaxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
 				{
@@ -623,28 +643,45 @@ void check_input()
 						if (handle_navigation(DIRECTION_UP))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_UP);
-						break;
 					}
-					if (gui_event.jaxis.value > joystick_dead_zone && last_y != 1)
+					else if (gui_event.jaxis.value > joystick_dead_zone && last_y != 1)
 					{
 						last_y = 1;
 						if (handle_navigation(DIRECTION_DOWN))
 							continue; // Don't change value when enter Slider -> don't send event to control
 						PushFakeKey(SDLK_DOWN);
-						break;
 					}
-					if (gui_event.jaxis.value > -joystick_dead_zone && gui_event.jaxis.value < joystick_dead_zone)
+					else if (gui_event.jaxis.value > -joystick_dead_zone && gui_event.jaxis.value < joystick_dead_zone)
+					{
 						last_y = 0;
+					}
 				}
 			}
 			break;
 
 		case SDL_KEYDOWN:
 			got_event = 1;
-			if (gui_event.key.keysym.sym == SDLK_RCTRL || gui_event.key.keysym.sym == SDLK_LCTRL) ctrl_state = true;
-			else if (gui_event.key.keysym.sym == SDLK_RSHIFT || gui_event.key.keysym.sym == SDLK_LSHIFT) shift_state = true;
-			else if (gui_event.key.keysym.sym == SDLK_RALT || gui_event.key.keysym.sym == SDLK_LALT) alt_state = true;
-			else if (gui_event.key.keysym.sym == SDLK_RGUI || gui_event.key.keysym.sym == SDLK_LGUI) win_state = true;
+			switch (gui_event.key.keysym.sym)
+			{
+			case SDLK_RCTRL:
+			case SDLK_LCTRL:
+				ctrl_state = true;
+				break;
+			case SDLK_RSHIFT:
+			case SDLK_LSHIFT:
+				shift_state = true;
+				break;
+			case SDLK_RALT:
+			case SDLK_LALT:
+				alt_state = true;
+				break;
+			case SDLK_RGUI:
+			case SDLK_LGUI:
+				win_state = true;
+				break;
+			default:
+				break;
+			}
 
 			if (gui_event.key.keysym.scancode == enter_gui_key.scancode)
 			{
@@ -699,7 +736,6 @@ void check_input()
 					// Simulate press of enter when 'X' pressed
 					//------------------------------------------------
 					gui_event.key.keysym.sym = SDLK_RETURN;
-
 					gui_input->pushInput(gui_event); // Fire key down
 					gui_event.type = SDL_KEYUP; // and the key up
 					break;
@@ -735,44 +771,17 @@ void check_input()
 			}
 			break;
 
-		case SDL_FINGERDOWN:
-			got_event = 1;
-			memcpy(&touch_event, &gui_event, sizeof gui_event);
-			touch_event.type = SDL_MOUSEBUTTONDOWN;
-			touch_event.button.which = 0;
-			touch_event.button.button = SDL_BUTTON_LEFT;
-			touch_event.button.state = SDL_PRESSED;
-
-			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
-
-			gui_input->pushInput(touch_event);
-			break;
-
+	    case SDL_FINGERDOWN:
 		case SDL_FINGERUP:
-			got_event = 1;
-			memcpy(&touch_event, &gui_event, sizeof gui_event);
-			touch_event.type = SDL_MOUSEBUTTONUP;
-			touch_event.button.which = 0;
-			touch_event.button.button = SDL_BUTTON_LEFT;
-			touch_event.button.state = SDL_RELEASED;
-
-			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
-
-			gui_input->pushInput(touch_event);
-			break;
-
 		case SDL_FINGERMOTION:
 			got_event = 1;
 			memcpy(&touch_event, &gui_event, sizeof gui_event);
-			touch_event.type = SDL_MOUSEMOTION;
-			touch_event.motion.which = 0;
-			touch_event.motion.state = 0;
-
-			touch_event.motion.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
-			touch_event.motion.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
-
+			touch_event.type = (gui_event.type == SDL_FINGERDOWN) ? SDL_MOUSEBUTTONDOWN : (gui_event.type == SDL_FINGERUP) ? SDL_MOUSEBUTTONUP : SDL_MOUSEMOTION;
+			touch_event.button.which = 0;
+			touch_event.button.button = SDL_BUTTON_LEFT;
+			touch_event.button.state = (gui_event.type == SDL_FINGERDOWN) ? SDL_PRESSED : (gui_event.type == SDL_FINGERUP) ? SDL_RELEASED : 0;
+			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
+			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
 			gui_input->pushInput(touch_event);
 			break;
 
@@ -796,25 +805,31 @@ void check_input()
 
 		case SDL_KEYUP:
 			got_event = 1;
-			if (gui_event.key.keysym.sym == SDLK_RCTRL || gui_event.key.keysym.sym == SDLK_LCTRL) ctrl_state = false;
-			else if (gui_event.key.keysym.sym == SDLK_RSHIFT || gui_event.key.keysym.sym == SDLK_LSHIFT) shift_state = false;
-			else if (gui_event.key.keysym.sym == SDLK_RALT || gui_event.key.keysym.sym == SDLK_LALT) alt_state = false;
-			else if (gui_event.key.keysym.sym == SDLK_RGUI || gui_event.key.keysym.sym == SDLK_LGUI) win_state = false;
+			switch (gui_event.key.keysym.sym)
+			{
+			case SDLK_RCTRL:
+			case SDLK_LCTRL:
+				ctrl_state = false;
+				break;
+			case SDLK_RSHIFT:
+			case SDLK_LSHIFT:
+				shift_state = false;
+				break;
+			case SDLK_RALT:
+			case SDLK_LALT:
+				alt_state = false;
+				break;
+			case SDLK_RGUI:
+			case SDLK_LGUI:
+				win_state = false;
+				break;
+			default:
+				break;
+			}
 			break;
-		case SDL_JOYBUTTONUP:
-		case SDL_CONTROLLERBUTTONUP:
-		case SDL_MOUSEBUTTONDOWN:
-		case SDL_MOUSEBUTTONUP:
-		case SDL_MOUSEMOTION:
-		case SDL_RENDER_TARGETS_RESET:
-		case SDL_RENDER_DEVICE_RESET:
-		case SDL_WINDOWEVENT:
-		case SDL_DISPLAYEVENT:
-		case SDL_SYSWMEVENT:
-			got_event = 1;
-			break;
-			
+
 		default:
+			got_event = 1;
 			break;
 		}
 
