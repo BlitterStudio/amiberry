@@ -33,6 +33,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#include <algorithm>
 #include <cstdlib>
 
 #include "uae.h"
@@ -603,8 +604,7 @@ static int CopyBitMapStructureA2U(TrapContext *ctx, uaecptr amigamemptr, struct 
 	bm->Depth = md[3].params[0];
 
 	/* ARGH - why is THIS happening? */
-	if(bm->Depth > 8)
-		bm->Depth = 8;
+	bm->Depth = std::min<int>(bm->Depth, 8);
 
 	for (int i = 0; i < bm->Depth; i++) {
 		const uaecptr plane = md[4 + i].params[0];
@@ -828,7 +828,7 @@ static void setupcursor()
 			}
 		}
 
-		auto* p96_formatted_cursor_surface = SDL_ConvertSurfaceFormat(p96_cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
+		auto* p96_formatted_cursor_surface = SDL_ConvertSurfaceFormat(p96_cursor_surface, SDL_PIXELFORMAT_BGRA32, 0);
 		if (p96_formatted_cursor_surface != nullptr) {
 			SDL_FreeSurface(p96_cursor_surface);
 			if (p96_cursor != nullptr) {
@@ -985,8 +985,7 @@ static void rtg_render()
 				picasso_flushpixels(0, gfxmem_banks[uaegfx_index]->start + natmem_offset, static_cast<int>(state->XYOffset - gfxmem_banks[uaegfx_index]->start), true);
 			}
 		} else {
-			if (vidinfo->full_refresh < 0)
-				vidinfo->full_refresh = 0;
+			vidinfo->full_refresh = std::max(vidinfo->full_refresh, 0);
 			if (vidinfo->full_refresh > 0)
 				vidinfo->full_refresh--;
 		}
@@ -1176,10 +1175,8 @@ static void setconvert(int monid)
 	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_B8G8R8A8 : RGBFB_B5G6R5PC;
 	if (picasso_vidinfo[monid].pixbytes == 4)
 		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGRA
-		//alloc_colors_rgb(8, 8, 8, 0, 8, 16, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGBA
 	else
 		alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGR
-		//alloc_colors_rgb(5, 6, 5, 0, 5, 11, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGB
 	gfx_set_picasso_colors(monid, state->RGBFormat);
 	picasso_palette(state->CLUT, vidinfo->clut);
 	if (vidinfo->host_mode != vidinfo->ohost_mode || state->RGBFormat != vidinfo->orgbformat) {
@@ -2038,9 +2035,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 					int bits;
 					int maxbits = w - x;
 
-					if (maxbits > 16 * hiressprite) {
-						maxbits = 16 * hiressprite;
-					}
+					maxbits = std::min(maxbits, 16 * hiressprite);
 					for (bits = 0; bits < maxbits && x < w; bits++) {
 						uae_u8 c = ((d2 & 0x80000000) ? 2 : 0) + ((d1 & 0x80000000) ? 1 : 0);
 						d1 <<= 1;
@@ -2401,8 +2396,7 @@ static uae_u32 setspriteimage(TrapContext *ctx, uaecptr bi)
 			uae_u32 d1 = trap_get_long(ctx, img);
 			uae_u32 d2 = trap_get_long(ctx, img + 2 * hiressprite);
 			int maxbits = w - x;
-			if (maxbits > 16 * hiressprite)
-				maxbits = 16 * hiressprite;
+			maxbits = std::min(maxbits, 16 * hiressprite);
 			for (bits = 0; bits < maxbits && x < w; bits++) {
 				const uae_u8 c = ((d2 & 0x80000000) ? 2 : 0) + ((d1 & 0x80000000) ? 1 : 0);
 				d1 <<= 1;
@@ -2935,28 +2929,20 @@ static void picasso96_alloc2 (TrapContext *ctx)
 		for (depth = 1; depth <= 4; depth++) {
 			switch (depth) {
 			case 1:
-				if (newmodes[i].res.width > chunky.width)
-					chunky.width = newmodes[i].res.width;
-				if (newmodes[i].res.height > chunky.height)
-					chunky.height = newmodes[i].res.height;
+				chunky.width = std::max(newmodes[i].res.width, chunky.width);
+				chunky.height = std::max(newmodes[i].res.height, chunky.height);
 				break;
 			case 2:
-				if (newmodes[i].res.width > hicolour.width)
-					hicolour.width = newmodes[i].res.width;
-				if (newmodes[i].res.height > hicolour.height)
-					hicolour.height = newmodes[i].res.height;
+				hicolour.width = std::max(newmodes[i].res.width, hicolour.width);
+				hicolour.height = std::max(newmodes[i].res.height, hicolour.height);
 				break;
 			case 3:
-				if (newmodes[i].res.width > truecolour.width)
-					truecolour.width = newmodes[i].res.width;
-				if (newmodes[i].res.height > truecolour.height)
-					truecolour.height = newmodes[i].res.height;
+				truecolour.width = std::max(newmodes[i].res.width, truecolour.width);
+				truecolour.height = std::max(newmodes[i].res.height, truecolour.height);
 				break;
 			case 4:
-				if (newmodes[i].res.width > alphacolour.width)
-					alphacolour.width = newmodes[i].res.width;
-				if (newmodes[i].res.height > alphacolour.height)
-					alphacolour.height = newmodes[i].res.height;
+				alphacolour.width = std::max(newmodes[i].res.width, alphacolour.width);
+				alphacolour.height = std::max(newmodes[i].res.height, alphacolour.height);
 				break;
 			default: // never
 				break;
@@ -4064,8 +4050,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 				int max = static_cast<int>(W) - cols;
 				uae_u32 data = d;
 
-				if (max > 16)
-					max = 16;
+				max = std::min(max, 16);
 
 				switch (pattern.DrawMode)
 				{
@@ -4233,8 +4218,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 				uae_u32 byte;
 				int max = W - cols;
 
-				if (max > 8)
-					max = 8;
+				max = std::min(max, 8);
 
 				data <<= 8;
 				data |= *++tmpl_mem;
@@ -4368,8 +4352,7 @@ void init_hz_p96(int monid)
 	}
 	if (p96vblank <= 0)
 		p96vblank = 60;
-	if (p96vblank >= 300)
-		p96vblank = 300;
+	p96vblank = std::min<float>(p96vblank, 300);
 	p96syncrate = static_cast<int>(static_cast<float>(maxvpos_nom) * vblank_hz / p96vblank);
 	write_log(_T("RTGFREQ: %d*%.4f = %.4f / %.1f = %d\n"), maxvpos_nom, vblank_hz, static_cast<float>(maxvpos_nom) * vblank_hz, p96vblank, p96syncrate);
 }
@@ -4906,11 +4889,9 @@ void picasso_statusline(int monid, uae_u8 *dst)
 	int dst_height, dst_width, pitch;
 
 	dst_height = state->Height;
-	if (dst_height > vidinfo->height)
-		dst_height = vidinfo->height;
+	dst_height = std::min(dst_height, vidinfo->height);
 	dst_width = state->Width;
-	if (dst_width > vidinfo->width)
-		dst_width = vidinfo->width;
+	dst_width = std::min(dst_width, vidinfo->width);
 	pitch = vidinfo->rowbytes;
 	statusline_getpos(monid, &slx, &sly, state->Width, dst_height);
 	statusline_render(monid, dst + sly * pitch, vidinfo->pixbytes, pitch, dst_width, dst_height, p96rc, p96gc, p96bc, nullptr);
@@ -5223,18 +5204,12 @@ static uae_u16 yuvtorgb(uae_u8 yx, uae_u8 ux, uae_u8 vx)
 	int r = (298 * y + 409 * v + 128) >> (8 + 3);
 	int g = (298 * y - 100 * u - 208 * v + 128) >> (8 + 3);
 	int b = (298 * y + 516 * u + 128) >> (8 + 3);
-	if (r < 0)
-		r = 0;
-	if (r > 31)
-		r = 31;
-	if (g < 0)
-		g = 0;
-	if (g > 31)
-		g = 31;
-	if (b < 0)
-		b = 0;
-	if (b > 31)
-		b = 31;
+	r = std::max(r, 0);
+	r = std::min(r, 31);
+	g = std::max(g, 0);
+	g = std::min(g, 31);
+	b = std::max(b, 0);
+	b = std::min(b, 31);
 	return (r << 10) | (g << 5) | b;
 }
 
@@ -5831,9 +5806,8 @@ uae_u8 *uaegfx_getrtgbuffer(const int monid, int *widthp, int *heightp, int *pit
 		return nullptr;
 	convert[0] = getconvert (state->RGBFormat, pixbytes);
 	convert[1] = convert[0];
-	//alloc_colors_picasso(8, 8, 8, 16, 8, 0, state->RGBFormat, p96_rgbx16); // BGR
-	alloc_colors_picasso(8, 8, 8, 0, 8, 16, state->RGBFormat, p96_rgbx16); // RGB
-
+	alloc_colors_picasso(8, 8, 8, 16, 8, 0, state->RGBFormat, p96_rgbx16); // BGR
+	
 	copyall (monid, src + off, dst, width, height, state->BytesPerRow, state->BytesPerPixel, width * pixbytes, pixbytes, convert);
 	if (pixbytes == 1) {
 		for (int i = 0; i < 256; i++) {

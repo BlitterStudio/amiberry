@@ -15,7 +15,9 @@
 #include "gfxfilter.h"
 #include "machdep/maccess.h"
 
-#include <math.h>
+#include <cmath>
+
+#include <algorithm>
 
 float getvsyncrate(int monid, float hz, int *mult)
 {
@@ -128,8 +130,7 @@ static float video_gamma (float value, float gamma, float bri, float con)
 	factor = (float)pow(255.0f, 1.0f - gamma);
 	ret = (float)(factor * pow(value, gamma));
 
-	if (ret < 0.0f)
-		ret = 0.0f;
+	ret = std::max(ret, 0.0f);
 
 	return ret;
 }
@@ -181,10 +182,8 @@ static void video_calc_gammatable(int monid)
 				v = video_gamma(val, gams[j], bri, con);
 			}
 
-			if (v < 0.0)
-				v = 0.0;
-			if (v > max)
-				v = max;
+			v = std::max<double>(v, 0.0);
+			v = std::min(v, max);
 
 			uae_gamma[i][j] = (uae_u32)(v + 0.5);
 		}
@@ -197,10 +196,8 @@ static uae_u32 limit256(int monid, float v)
 	if (!gfx_hdr) {
 		v = v * (float)(currprefs.gf[ad->gf_index].gfx_filter_contrast + 1000) / 1000.0f + currprefs.gf[ad->gf_index].gfx_filter_luminance / 10.0f;
 	}
-	if (v < 0)
-		v = 0;
-	if (v > 255)
-		v = 255;
+	v = std::max<float>(v, 0);
+	v = std::min<float>(v, 255);
 	return (uae_u32)v;
 }
 static uae_s32 limit256rb(int monid, float v)
@@ -209,10 +206,8 @@ static uae_s32 limit256rb(int monid, float v)
 	if (!gfx_hdr) {
 		v *= (float)(currprefs.gf[ad->gf_index].gfx_filter_saturation + 1000) / 1000.0f;
 	}
-	if (v < -128)
-		v = -128;
-	if (v > 127)
-		v = 127;
+	v = std::max<float>(v, -128);
+	v = std::min<float>(v, 127);
 	return (uae_s32)v;
 }
 static float get_y(int r, int g, int b)

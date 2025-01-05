@@ -4,8 +4,6 @@
 #include <cctype>
 #include <cassert>
 
-#include <algorithm>
-
 #include "options.h"
 #include "uae.h"
 #include "xwin.h"

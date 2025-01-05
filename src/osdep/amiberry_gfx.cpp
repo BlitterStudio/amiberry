@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
@@ -455,8 +456,7 @@ static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
 		return nullptr;
 	if (display >= max)
 		display = 0;
-	if (display < 0)
-		display = 0;
+	display = std::max(display, 0);
 	return &Displays[display];
 }
 
@@ -800,8 +800,9 @@ static void modesList(struct MultiDisplay* md)
 
 void reenumeratemonitors(void)
 {
-	for (int i = 0; i < MAX_DISPLAYS; i++) {
-		struct MultiDisplay* md = &Displays[i];
+	for (auto& Display : Displays)
+	{
+		struct MultiDisplay* md = &Display;
 		memcpy(&md->workrect, &md->rect, sizeof(SDL_Rect));
 	}
 	enumeratedisplays();
@@ -872,8 +873,7 @@ void sortdisplays()
 			{
 				struct PicassoResolution* pr = &md->DisplayModes[idx2];
 				if (dm.w == w && dm.h == h && SDL_BITSPERPIXEL(dm.format) == b) {
-					if (dm.refresh_rate > deskhz)
-						deskhz = dm.refresh_rate;
+					deskhz = std::max(dm.refresh_rate, deskhz);
 				}
 				if (pr->res.width == dm.w && pr->res.height == dm.h && pr->depth == SDL_BITSPERPIXEL(dm.format) / 8) {
 					for (i = 0; pr->refresh[i]; i++) {
@@ -2228,7 +2228,6 @@ void gfx_set_picasso_state(int monid, int on)
 
 static void updatepicasso96(struct AmigaMonitor* mon)
 {
-#ifdef PICASSO96
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
 	vidinfo->rowbytes = 0;
 	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
@@ -2239,7 +2238,6 @@ static void updatepicasso96(struct AmigaMonitor* mon)
 	vidinfo->depth = amiga_surface->format->BytesPerPixel * 8;
 	vidinfo->offset = 0;
 	vidinfo->splitypos = -1;
-#endif
 }
 
 void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt)
@@ -2437,7 +2435,11 @@ bool target_graphics_buffer_update(int monid, bool force)
 	if (mon->screen_is_picasso) {
 		w = state->Width;
 		h = state->Height;
-		depth = state->RGBFormat == RGBFB_R5G6B5 || state->RGBFormat == RGBFB_R5G6B5PC || state->RGBFormat == RGBFB_CLUT ? 16 : 32;
+		depth = state->RGBFormat == RGBFB_R5G6B5
+			|| state->RGBFormat == RGBFB_R5G6B5PC
+			|| state->RGBFormat == RGBFB_B5G6R5PC
+			|| state->RGBFormat == RGBFB_CLUT
+			? 16 : 32;
 	} else {
 		struct vidbuffer* vb = avidinfo->drawbuffer.tempbufferinuse ? &avidinfo->tempbuffer : &avidinfo->drawbuffer;
 		avidinfo->outbuffer = vb;
