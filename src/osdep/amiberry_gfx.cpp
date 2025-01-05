@@ -937,7 +937,6 @@ float target_adjust_vblank_hz(int monid, float hz)
 void show_screen(int monid, int mode)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
-
 	const amigadisplay* ad = &adisplays[monid];
 	const bool rtg = ad->picasso_on;
 
@@ -959,14 +958,17 @@ void show_screen(int monid, int mode)
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
-	if (amiga_texture == nullptr || amiga_surface == nullptr)
-		return;
-	SDL_RenderClear(mon->amiga_renderer);
-	SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
-	SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
-	if (vkbd_allowed(monid))
-		vkbd_redraw();
-	SDL_RenderPresent(mon->amiga_renderer);
+	if (amiga_texture && amiga_surface)
+	{
+		SDL_RenderClear(mon->amiga_renderer);
+		SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
+		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, &crop_rect, &renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		if (vkbd_allowed(monid))
+		{
+			vkbd_redraw();
+		}
+		SDL_RenderPresent(mon->amiga_renderer);
+	}
 #endif // USE_OPENGL
 
 	last_synctime = read_processor_time();
