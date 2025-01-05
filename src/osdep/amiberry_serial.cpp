@@ -43,6 +43,7 @@
 #endif
 
 #include <libserialport.h>
+#include <netinet/tcp.h>
 #include <sys/mman.h>
 
 #define SERIALLOGGING 0
@@ -287,6 +288,8 @@ static bool tcp_is_connected ()
 			serialconn = uae_socket_accept(serialsocket);
 			if (serialconn != UAE_SOCKET_INVALID) {
 				write_log(_T("TCP: Serial connection accepted\n"));
+				int opt = 1;
+				setsockopt(serialsocket, IPPROTO_TCP, TCP_NODELAY, (char*)&opt, sizeof(int));
 			}
 		}
 	}
