@@ -4895,3 +4895,35 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 
 	in_file.close();
 }
+
+void target_setdefaultstatefilename(const TCHAR* name)
+{
+	TCHAR path[MAX_DPATH];
+	get_savestate_path(path, sizeof(path) / sizeof(TCHAR));
+	if (!name || !name[0]) {
+		_tcscat(path, _T("default.uss"));
+	}
+	else {
+		const TCHAR* p2 = _tcsrchr(name, '\\');
+		const TCHAR* p3 = _tcsrchr(name, '/');
+		const TCHAR* p1 = NULL;
+		if (p2 >= p3) {
+			p1 = p2;
+		}
+		else if (p3 >= p2) {
+			p1 = p3;
+		}
+		if (p1) {
+			_tcscat(path, p1 + 1);
+		}
+		else {
+			_tcscat(path, name);
+		}
+		const TCHAR* p = _tcsrchr(path, '.');
+		if (p) {
+			path[_tcslen(path) - ((path + _tcslen(path)) - p)] = 0;
+			_tcscat(path, _T(".uss"));
+		}
+	}
+	_tcscpy(savestate_fname, path);
+}
