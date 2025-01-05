@@ -274,6 +274,7 @@ extern bool savestate_check(void);
 
 extern int savestate_state;
 extern TCHAR savestate_fname[MAX_DPATH];
+extern TCHAR path_statefile[MAX_DPATH];
 extern struct zfile *savestate_file;
 
 STATIC_INLINE bool isrestore(void)

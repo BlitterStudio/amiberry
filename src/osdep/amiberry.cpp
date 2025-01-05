@@ -3058,6 +3058,10 @@ void get_rp9_path(char* out, const int size)
 
 void get_savestate_path(char* out, const int size)
 {
+	if (path_statefile[0]) {
+		_tcsncpy(out, path_statefile, size);
+		return;
+	}
 	_tcsncpy(out, fix_trailing(savestate_dir).c_str(), size - 1);
 }
 
@@ -3111,8 +3115,11 @@ int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, con
 	int type2;
 	auto result = 0;
 
-	if (type < 0)
-		type = 0;
+	if (isdefault) {
+		path_statefile[0] = 0;
+	}
+
+	type = std::max(type, 0);
 
 	if (type == 0 || type == 1) {
 		discard_prefs(p, 0);
