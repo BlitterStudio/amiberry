@@ -1476,11 +1476,8 @@ int m68k_asm(TCHAR *sline, uae_u16 *out, uaecptr pc)
 	} else if (!_tcscmp(ins, _T("BSR"))) {
 		immrelpc = true;
 	} else if (!_tcscmp(ins, _T("MOVEM"))) {
-		if (dmode >= Aind && _tcschr(dstea, '-') == NULL && _tcschr(dstea, '/') == NULL) {
-			_tcscpy(ins, _T("MVMLE"));
-			if (!m68k_asm_parse_movem(srcea, dmode == Apdi))
-				return -1;
-		} else {
+		_tcscpy(ins, _T("MVMLE"));
+		if (!m68k_asm_parse_movem(srcea, dmode == Apdi)) {
 			TCHAR tmp[256];
 			_tcscpy(ins, _T("MVMEL"));
 			_tcscpy(tmp, srcea);
