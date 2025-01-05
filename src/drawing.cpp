@@ -34,8 +34,9 @@ happening, all ports should restrict window widths to be multiples of 16 pixels.
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <ctype.h>
-#include <assert.h>
+#include <algorithm>
+#include <cctype>
+#include <cassert>
 
 #include "options.h"
 #include "threaddep/thread.h"
@@ -387,8 +388,9 @@ static void clearbuffer (struct vidbuffer *dst)
 
 static void reset_decision_table (void)
 {
-	for (int i = 0; i < sizeof linestate / sizeof *linestate; i++) {
-		linestate[i] = LINE_UNDECIDED;
+	for (unsigned char& i : linestate)
+	{
+		i = LINE_UNDECIDED;
 	}
 }
 
@@ -549,12 +551,8 @@ static void reset_hblanking_limits(void)
 	hblank_left_start = visible_left_start;
 	hblank_right_stop = visible_right_stop;
 
-	if (hblank_left_start < visible_left_border) {
-		hblank_left_start = visible_left_border;
-	}
-	if (hblank_right_stop > visible_right_border) {
-		hblank_right_stop = visible_right_border;
-	}
+	hblank_left_start = std::max(hblank_left_start, visible_left_border);
+	hblank_right_stop = std::min(hblank_right_stop, visible_right_border);
 }
 
 static void get_vblanking_limits(int *vbstrtp, int *vbstopp, bool overscanonly)
@@ -582,12 +580,8 @@ static void get_vblanking_limits(int *vbstrtp, int *vbstopp, bool overscanonly)
 	}
 	vbstrt <<= currprefs.gfx_vresolution;
 	vbstop <<= currprefs.gfx_vresolution;
-	if (vblank_top_start < vbstrt) {
-		vblank_top_start = vbstrt;
-	}
-	if (vblank_bottom_stop > vbstop) {
-		vblank_bottom_stop = vbstop;
-	}
+	vblank_top_start = std::max(vblank_top_start, vbstrt);
+	vblank_bottom_stop = std::min(vblank_bottom_stop, vbstop);
 	*vbstrtp = vbstrt;
 	*vbstopp = vbstop;
 }
@@ -599,12 +593,8 @@ static void set_vblanking_limits(void)
 	vblank_top_start = visible_top_start;
 	vblank_bottom_stop = visible_bottom_stop;
 
-	if (vblank_top_start < visible_top_start) {
-		vblank_top_start = visible_top_start;
-	}
-	if (vblank_bottom_stop > visible_bottom_stop) {
-		vblank_bottom_stop = visible_bottom_stop;
-	}
+	vblank_top_start = std::max(vblank_top_start, visible_top_start);
+	vblank_bottom_stop = std::min(vblank_bottom_stop, visible_bottom_stop);
 
 	if (syncdebug) {
 		return;
@@ -621,12 +611,8 @@ static void set_vblanking_limits(void)
 	if (hardwired) {
 		int vbstrt, vbstop;
 		get_vblanking_limits(&vbstrt, &vbstop, false);
-		if (vblank_top_start < vbstrt) {
-			vblank_top_start = vbstrt;
-		}
-		if (vblank_bottom_stop > vbstop) {
-			vblank_bottom_stop = vbstop;
-		}
+		vblank_top_start = std::max(vblank_top_start, vbstrt);
+		vblank_bottom_stop = std::min(vblank_bottom_stop, vbstop);
 	}
 }
 
@@ -660,9 +646,7 @@ int get_vertical_visible_height(bool useoldsize)
 			if (interlace_seen && lof_display) {
 				hh -= 1 << currprefs.gfx_vresolution;
 			}
-			if (h > hh) {
-				h = hh;
-			}
+			h = std::min(h, hh);
 		}
 	}
 	return h;
@@ -699,12 +683,8 @@ static void set_hblanking_limits(void)
 	}
 
 	// programmed mode with hardwired hblanking
-	if (hblank_left_start_hard < coord_hw_to_window_x_shres(hbstop)) {
-		hblank_left_start_hard = coord_hw_to_window_x_shres(hbstop);
-	}
-	if (hblank_right_stop_hard > coord_hw_to_window_x_shres(hbstrt)) {
-		hblank_right_stop_hard = coord_hw_to_window_x_shres(hbstrt);
-	}
+	hblank_left_start_hard = std::max(hblank_left_start_hard, coord_hw_to_window_x_shres(hbstop));
+	hblank_right_stop_hard = std::min(hblank_right_stop_hard, coord_hw_to_window_x_shres(hbstrt));
 
 	if (hardwired) {
 		doblank = true;
@@ -734,12 +714,8 @@ static void set_hblanking_limits(void)
 			hbstrt &= ~3;
 			hbstop &= ~3;
 		}
-		if (hblank_left_start < coord_hw_to_window_x_shres(hbstop)) {
-			hblank_left_start = coord_hw_to_window_x_shres(hbstop);
-		}
-		if (hblank_right_stop > coord_hw_to_window_x_shres(hbstrt)) {
-			hblank_right_stop = coord_hw_to_window_x_shres(hbstrt);
-		}
+		hblank_left_start = std::max(hblank_left_start, coord_hw_to_window_x_shres(hbstop));
+		hblank_right_stop = std::min(hblank_right_stop, coord_hw_to_window_x_shres(hbstrt));
 	}
 }
 
@@ -752,20 +728,16 @@ void get_custom_raw_limits(int *pw, int *ph, int *pdx, int *pdy)
 		*pdy = stored_top_start;
 	} else {
 		int x = visible_left_border;
-		if (x < visible_left_start)
-			x = visible_left_start;
+		x = std::max(x, visible_left_start);
 		*pdx = x;
 		int x2 = visible_right_border;
-		if (x2 > visible_right_stop)
-			x2 = visible_right_stop;
+		x2 = std::min(x2, visible_right_stop);
 		*pw = x2 - x;
 		int y = min_ypos_for_screen;
-		if (y < visible_top_start)
-			y = visible_top_start;
+		y = std::max(y, visible_top_start);
 		*pdy = y;
 		int y2 = max_ypos_thisframe1;
-		if (y2 > visible_bottom_stop)
-			y2 = visible_bottom_stop;
+		y2 = std::min(y2, visible_bottom_stop);
 		*ph = y2 - y;
 	}
 }
@@ -790,13 +762,11 @@ void check_custom_limits(void)
 		right += (0x38 * 4) >> (RES_MAX - currprefs.gfx_resolution);
 	}
 
-	if (left > visible_left_start)
-		visible_left_start = left;
+	visible_left_start = std::max(left, visible_left_start);
 	if (right > left && right < visible_right_stop)
 		visible_right_stop = right;
 
-	if (top > visible_top_start)
-		visible_top_start = top;
+	visible_top_start = std::max(top, visible_top_start);
 	if (bottom > top && bottom < visible_bottom_stop)
 		visible_bottom_stop = bottom;
 }
@@ -916,19 +886,13 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 	if (doublescan <= 0 && !programmedmode) {
 		int min = coord_diw_lores_to_window_x(92);
 		int max = coord_diw_lores_to_window_x(460);
-		if (diwfirstword_total < min)
-			diwfirstword_total = min;
-		if (diwlastword_total > max)
-			diwlastword_total = max;
-		if (ddffirstword_total < min)
-			ddffirstword_total = min;
-		if (ddflastword_total > max)
-			ddflastword_total = max;
+		diwfirstword_total = std::max(diwfirstword_total, min);
+		diwlastword_total = std::min(diwlastword_total, max);
+		ddffirstword_total = std::max(ddffirstword_total, min);
+		ddflastword_total = std::min(ddflastword_total, max);
 		if (0 && !aga_mode) {
-			if (ddffirstword_total > diwfirstword_total)
-				diwfirstword_total = ddffirstword_total;
-			if (ddflastword_total < diwlastword_total)
-				diwlastword_total = ddflastword_total;
+			diwfirstword_total = std::max(ddffirstword_total, diwfirstword_total);
+			diwlastword_total = std::min(ddflastword_total, diwlastword_total);
 		}
 	}
 
@@ -936,13 +900,10 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 	dx = diwfirstword_total - visible_left_border;
 
 	y2 = plflastline_total;
-	if (y2 > last_planes_vpos)
-		y2 = last_planes_vpos;
+	y2 = std::min(y2, last_planes_vpos);
 	y1 = plffirstline_total;
-	if (first_planes_vpos > y1)
-		y1 = first_planes_vpos;
-	if (minfirstline > y1)
-		y1 = minfirstline;
+	y1 = std::max(first_planes_vpos, y1);
+	y1 = std::max(minfirstline, y1);
 
 	dbl2 = dbl1 = currprefs.gfx_vresolution;
 	if (doublescan > 0 && interlace_seen <= 0) {
@@ -963,8 +924,7 @@ int get_custom_limits (int *pw, int *ph, int *pdx, int *pdy, int *prealh)
 		dx = 58;
 	}
 
-	if (dx < 0)
-		dx = 0;
+	dx = std::max(dx, 0);
 
 	*prealh = -1;
 	if (programmedmode != 1 && first_planes_vpos) {
@@ -1040,13 +1000,10 @@ void get_custom_mouse_limits (int *pw, int *ph, int *pdx, int *pdy, int dbl)
 	dx = diwfirstword_total - visible_left_border;
 
 	y2 = plflastline_total;
-	if (y2 > last_planes_vpos)
-		y2 = last_planes_vpos;
+	y2 = std::min(y2, last_planes_vpos);
 	y1 = plffirstline_total;
-	if (first_planes_vpos > y1)
-		y1 = first_planes_vpos;
-	if (minfirstline > y1)
-		y1 = minfirstline;
+	y1 = std::max(first_planes_vpos, y1);
+	y1 = std::max(minfirstline, y1);
 
 	h = y2 - y1;
 	dy = y1 - minfirstline;
@@ -1078,14 +1035,10 @@ void get_custom_mouse_limits (int *pw, int *ph, int *pdx, int *pdy, int dbl)
 	h = xshift (h, dbl1);
 	dy = xshift (dy, dbl2);
 
-	if (w < 1)
-		w = 1;
-	if (h < 1)
-		h = 1;
-	if (dx < 0)
-		dx = 0;
-	if (dy < 0)
-		dy = 0;
+	w = std::max(w, 1);
+	h = std::max(h, 1);
+	dx = std::max(dx, 0);
+	dy = std::max(dy, 0);
 	*pw = w; *ph = h;
 	*pdx = dx; *pdy = dy;
 }
@@ -1093,15 +1046,8 @@ void get_custom_mouse_limits (int *pw, int *ph, int *pdx, int *pdy, int dbl)
 /* Record DIW of the current line for use by centering code.  */
 void record_diw_line (int plfstrt, int first, int last)
 {
-	if (last > max_diwstop)
-		max_diwstop = last;
-	if (first < min_diwstart) {
-		min_diwstart = first;
-		/*
-		if (plfstrt * 2 > min_diwstart)
-		min_diwstart = plfstrt * 2;
-		*/
-	}
+	max_diwstop = std::max(last, max_diwstop);
+	min_diwstart = std::min(first, min_diwstart);
 }
 
 STATIC_INLINE int get_shdelay_add(void)
@@ -1226,40 +1172,29 @@ static void pfield_init_linetoscr (bool border)
 	// Blerkenwiegel/Scoopex workaround
 	native_ddf_left2 = native_ddf_left;
 
-	if (native_ddf_left < 0)
-		native_ddf_left = 0;
+	native_ddf_left = std::max(native_ddf_left, 0);
 	if (native_ddf_right > MAX_PIXELS_PER_LINE)
 		native_ddf_right = MAX_PIXELS_PER_LINE;
-	if (native_ddf_right < native_ddf_left)
-		native_ddf_right = native_ddf_left;
+	native_ddf_right = std::max(native_ddf_right, native_ddf_left);
 
 	linetoscr_diw_start = dp_for_drawing->diwfirstword;
 	linetoscr_diw_end = dp_for_drawing->diwlastword;
-	if (linetoscr_diw_start < 0) {
-		linetoscr_diw_start = 0;
-	}
+	linetoscr_diw_start = std::max(linetoscr_diw_start, 0);
 	/* Perverse cases happen. */
-	if (linetoscr_diw_end < linetoscr_diw_start)
-		linetoscr_diw_end = linetoscr_diw_start;
+	linetoscr_diw_end = std::max(linetoscr_diw_end, linetoscr_diw_start);
 
 	set_res_shift();
 
 	playfield_start = linetoscr_diw_start;
 	playfield_end = linetoscr_diw_end;
 
-	if (playfield_start < native_ddf_left)
-		playfield_start = native_ddf_left;
-	if (playfield_end > native_ddf_right)
-		playfield_end = native_ddf_right;
+	playfield_start = std::max(playfield_start, native_ddf_left);
+	playfield_end = std::min(playfield_end, native_ddf_right);
 
-	if (playfield_start < visible_left_border)
-		playfield_start = visible_left_border;
-	if (playfield_start > visible_right_border)
-		playfield_start = visible_right_border;
-	if (playfield_end < visible_left_border)
-		playfield_end = visible_left_border;
-	if (playfield_end > visible_right_border)
-		playfield_end = visible_right_border;
+	playfield_start = std::max(playfield_start, visible_left_border);
+	playfield_start = std::min(playfield_start, visible_right_border);
+	playfield_end = std::max(playfield_end, visible_left_border);
+	playfield_end = std::min(playfield_end, visible_right_border);
 
 	real_playfield_start = playfield_start;
 	sprite_playfield_start = playfield_start;
@@ -1302,14 +1237,10 @@ static void pfield_init_linetoscr (bool border)
 			int left = coord_hw_to_window_x_lores(plfleft);
 			int total = left - dp_for_drawing->diwfirstword;
 			if (total > 0 && gap > 0) {
-				if (gap > total) {
-					gap = total;
-				}
+				gap = std::min(gap, total);
 				left -= gap;
 			}
-			if (left < visible_left_border) {
-				left = visible_left_border;
-			}
+			left = std::max(left, visible_left_border);
 			if (left < playfield_start && left >= linetoscr_diw_start) {
 				playfield_start = left;
 			}
@@ -1342,12 +1273,10 @@ static void pfield_init_linetoscr (bool border)
 		for (i = 0; i < dip_for_drawing->nr_sprites; i++) {
 			int x;
 			x = curr_sprite_entries[dip_for_drawing->first_sprite_entry + i].pos;
-			if (x < min)
-				min = x;
+			min = std::min(x, min);
 			// include max extra pixels, sprite may be 2x or 4x size: 4x - 1.
 			x = curr_sprite_entries[dip_for_drawing->first_sprite_entry + i].max + (4 - 1);
-			if (x > max)
-				max = x;
+			max = std::max(x, max);
 		}
 #if 0
 		min = coord_hw_to_window_x(min >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
@@ -1357,10 +1286,8 @@ static void pfield_init_linetoscr (bool border)
 			playfield_start = visible_left_border;
 #endif
 		max = coord_hw_to_window_x_lores(max >> sprite_buffer_res) + (DIW_DDF_OFFSET << lores_shift);
-		if (max > playfield_end)
-			playfield_end = max;
-		if (playfield_end > visible_right_border)
-			playfield_end = visible_right_border;
+		playfield_end = std::max(max, playfield_end);
+		playfield_end = std::min(playfield_end, visible_right_border);
 		sprite_playfield_start = 0;
 		may_require_hard_way = 1;
 		sprite_end = max;
@@ -1387,15 +1314,11 @@ static void pfield_init_linetoscr (bool border)
 	int last_x = sprite_last_x;
 	if (first_x < last_x) {
 		if (dp_for_drawing->bordersprite_seen && !ce_is_borderblank(colors_for_drawing.extra)) {
-			if (first_x > visible_left_border)
-				first_x = visible_left_border;
-			if (last_x < visible_right_border)
-				last_x = visible_right_border;
+			first_x = std::min(first_x, visible_left_border);
+			last_x = std::max(last_x, visible_right_border);
 		}
-		if (first_x < 0)
-			first_x = 0;
-		if (last_x > MAX_PIXELS_PER_LINE - 2)
-			last_x = MAX_PIXELS_PER_LINE - 2;
+		first_x = std::max(first_x, 0);
+		last_x = std::min(last_x, MAX_PIXELS_PER_LINE - 2);
 		if (first_x < last_x)
 			memset (spritepixels + first_x, 0, sizeof (struct spritepixelsbuf) * (last_x - first_x + 1));
 	}
@@ -1405,8 +1328,7 @@ static void pfield_init_linetoscr (bool border)
 
 	/* Now, compute some offsets.  */
 	ddf_left -= DISPLAY_LEFT_SHIFT;
-	if (ddf_left < 0)
-		ddf_left = 0;
+	ddf_left = std::max(ddf_left, 0);
 	ddf_left <<= bplres;
 	pixels_offset = MAX_PIXELS_PER_LINE - ddf_left;
 
@@ -2915,8 +2837,7 @@ STATIC_INLINE void draw_sprites_1(struct sprite_entry *e, int dualpf, int has_at
 
 	spr_pos = epos - ((DISPLAY_LEFT_SHIFT - DIW_DDF_OFFSET) << sprite_buffer_res);
 
-	if (spr_pos < sprite_first_x)
-		sprite_first_x = spr_pos;
+	sprite_first_x = std::min(spr_pos, sprite_first_x);
 
 	for (pos = epos; pos < emax; pos++, spr_pos++) {
 		if (spr_pos >= 0 && spr_pos < MAX_PIXELS_PER_LINE) {
@@ -2930,8 +2851,7 @@ STATIC_INLINE void draw_sprites_1(struct sprite_entry *e, int dualpf, int has_at
 		}
 	}
 
-	if (spr_pos > sprite_last_x)
-		sprite_last_x = spr_pos;
+	sprite_last_x = std::max(spr_pos, sprite_last_x);
 }
 
 /* See comments above.  Do not touch if you don't know what's going on.
@@ -3264,9 +3184,8 @@ static void pfield_doline(int lineno)
 		if (!memcmp(opline, data, wordcount)) {
 			if (refresh_indicator_changed[lineno] != 0xff) {
 				refresh_indicator_changed[lineno]++;
-				if (refresh_indicator_changed[lineno] > refresh_indicator_changed_prev[lineno]) {
-					refresh_indicator_changed_prev[lineno] = refresh_indicator_changed[lineno];
-				}
+				refresh_indicator_changed_prev[lineno] = std::max(refresh_indicator_changed[lineno],
+				                                                  refresh_indicator_changed_prev[lineno]);
 			}
 		} else {
 			memcpy(opline, data, wordcount);
@@ -3275,8 +3194,6 @@ static void pfield_doline(int lineno)
 			refresh_indicator_changed[lineno] = 0;
 		}
 	}
-
-
 }
 
 void init_row_map(void)
@@ -3709,9 +3626,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 		}
 
 		nextpos_in_range = nextpos;
-		if (nextpos_in_range > endpos) {
-			nextpos_in_range = endpos;
-		}
+		nextpos_in_range = std::min(nextpos_in_range, endpos);
 
 		if (vp >= 0) {
 
@@ -3824,9 +3739,7 @@ static void do_color_changes(line_draw_func worker_border, line_draw_func worker
 				if (hblank_debug || vblank_debug || hsync_debug || vsync_debug || hcenter_debug || exthblank || ce_is_borderblank(colors_for_drawing.extra)) {
 					pfield_do_darken_line(lastpos2, nextpos_in_range, vp);
 				}
-				if (nextpos_in_range > lastpos2) {
-					lastpos2 = nextpos_in_range;
-				}
+				lastpos2 = std::max(nextpos_in_range, lastpos2);
 			}
 		}
 
@@ -4181,9 +4094,7 @@ static void center_image (void)
 		if (visible_left_border + w > maxdiw) {
 			visible_left_border += (maxdiw - (visible_left_border + w) - 1) / 2;
 		}
-		if (visible_left_border < (hs << currprefs.gfx_resolution)) {
-			visible_left_border = hs << currprefs.gfx_resolution;
-		}
+		visible_left_border = std::max(visible_left_border, hs << currprefs.gfx_resolution);
 	} else if (ew < -1) {
 		// normal
 		visible_left_border = maxdiw - w;
@@ -4195,10 +4106,8 @@ static void center_image (void)
 		}
 	}
 
-	if (visible_left_border > max_diwlastword - 32)
-		visible_left_border = max_diwlastword - 32;
-	if (visible_left_border < 0)
-		visible_left_border = 0;
+	visible_left_border = std::min(visible_left_border, max_diwlastword - 32);
+	visible_left_border = std::max(visible_left_border, 0);
 	visible_left_border &= ~((xshift (1, lores_shift)) - 1);
 
 	//write_log (_T("%d %d %d %d %d\n"), max_diwlastword, vidinfo->drawbuffer.width, lores_shift, currprefs.gfx_resolution, visible_left_border);
@@ -4207,12 +4116,10 @@ static void center_image (void)
 	linetoscr_x_adjust_pixbytes = linetoscr_x_adjust_pixels * vidinfo->drawbuffer.pixbytes;
 
 	visible_right_border = maxdiw + w + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
-	if (visible_right_border > maxdiw + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution))
-		visible_right_border = maxdiw + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution);
+	visible_right_border = std::min(visible_right_border, maxdiw + ((ew > 0 ? ew : 0) << currprefs.gfx_resolution));
 
 	int max_drawn_amiga_line_tmp = max_drawn_amiga_line;
-	if (max_drawn_amiga_line_tmp > vidinfo->drawbuffer.inheight)
-		max_drawn_amiga_line_tmp = vidinfo->drawbuffer.inheight;
+	max_drawn_amiga_line_tmp = std::min(max_drawn_amiga_line_tmp, vidinfo->drawbuffer.inheight);
 	max_drawn_amiga_line_tmp >>= linedbl;
 
 	thisframe_y_adjust = minfirstline;
@@ -4243,16 +4150,14 @@ static void center_image (void)
 	/* Make sure the value makes sense */
 	if (thisframe_y_adjust + max_drawn_amiga_line_tmp > maxvpos + maxvpos / 2)
 		thisframe_y_adjust = maxvpos + maxvpos / 2 - max_drawn_amiga_line_tmp;
-	if (thisframe_y_adjust < 0)
-		thisframe_y_adjust = 0;
+	thisframe_y_adjust = std::max(thisframe_y_adjust, 0);
 
 	thisframe_y_adjust_real = thisframe_y_adjust << linedbl;
 	max_ypos_thisframe1 = (maxvpos_display - minfirstline + maxvpos_display_vsync) << linedbl;
 
 	if (prev_x_adjust != visible_left_border || prev_y_adjust != thisframe_y_adjust) {
 		int redraw = interlace_seen > 0 && linedbl ? 2 : 1;
-		if (redraw > ad->frame_redraw_necessary)
-			ad->frame_redraw_necessary = redraw;
+		ad->frame_redraw_necessary = std::max(redraw, ad->frame_redraw_necessary);
 	}
 
 	max_diwstop = 0;
@@ -4307,12 +4212,8 @@ static void init_drawing_frame (void)
 			} else {
 				newres = RES_HIRES;
 			}
-			if (newres < RES_HIRES) {
-				newres = RES_HIRES;
-			}
-			if (newres > RES_MAX) {
-				newres = RES_MAX;
-			}
+			newres = std::max(newres, RES_HIRES);
+			newres = std::min(newres, RES_MAX);
 			if (changed_prefs.gfx_resolution != newres) {
 				autoswitch_old_resolution = RES_HIRES;
 				write_log(_T("Programmed mode autores = %d -> %d (%d)\n"), changed_prefs.gfx_resolution, newres, largest_res);
@@ -4339,9 +4240,8 @@ static void init_drawing_frame (void)
 				frame_res_detected = largest_count_res;
 			else
 				frame_res_detected = largest_count_res - 1;
-			if (frame_res_detected < 0)
-				frame_res_detected = 0;
-	#if 0
+			frame_res_detected = std::max(frame_res_detected, 0);
+#if 0
 			static int delay;
 			delay--;
 			if (delay < 0) {
@@ -4366,22 +4266,18 @@ static void init_drawing_frame (void)
 							nl = 1;
 						}
 						if (currprefs.gfx_autoresolution_minh < 0) {
-							if (nr < nl)
-								nr = nl;
+							nr = std::max(nr, nl);
 						} else if (nr < currprefs.gfx_autoresolution_minh) {
 							nr = currprefs.gfx_autoresolution_minh;
 						}
 						if (currprefs.gfx_autoresolution_minv < 0) {
-							if (nl < nr)
-								nl = nr;
+							nl = std::max(nl, nr);
 						} else if (nl < currprefs.gfx_autoresolution_minv) {
 							nl = currprefs.gfx_autoresolution_minv;
 						}
 
-						if (nr > vidinfo->gfx_resolution_reserved)
-							nr = vidinfo->gfx_resolution_reserved;
-						if (nl > vidinfo->gfx_vresolution_reserved)
-							nl = vidinfo->gfx_vresolution_reserved;
+						nr = std::min(nr, vidinfo->gfx_resolution_reserved);
+						nl = std::min(nl, vidinfo->gfx_vresolution_reserved);
 
 						if (changed_prefs.gfx_resolution != nr || changed_prefs.gfx_vresolution != nl) {
 							changed_prefs.gfx_resolution = nr;
@@ -4431,8 +4327,7 @@ static void init_drawing_frame (void)
 
 	if (thisframe_first_drawn_line < 0)
 		thisframe_first_drawn_line = minfirstline;
-	if (thisframe_first_drawn_line > thisframe_last_drawn_line)
-		thisframe_last_drawn_line = thisframe_first_drawn_line;
+	thisframe_last_drawn_line = std::max(thisframe_first_drawn_line, thisframe_last_drawn_line);
 
 	int maxline = ((maxvpos_display + maxvpos_display_vsync + 1) << linedbl) + 2;
 	for (int i = 0; i < maxline; i++) {
@@ -4585,16 +4480,11 @@ static void lightpen_update(struct vidbuffer *vb, int lpnum)
 	bool out = false;
 	int extra = 2;
 
-	if (lightpen_x[lpnum] < -extra)
-		lightpen_x[lpnum] = -extra;
-	if (lightpen_x[lpnum] >= vidinfo->drawbuffer.inwidth + extra)
-		lightpen_x[lpnum] = vidinfo->drawbuffer.inwidth + extra;
-	if (lightpen_y[lpnum] < -extra)
-		lightpen_y[lpnum] = -extra;
-	if (lightpen_y[lpnum] >= vidinfo->drawbuffer.inheight + extra)
-		lightpen_y[lpnum] = vidinfo->drawbuffer.inheight + extra;
-	if (lightpen_y[lpnum] >= max_ypos_thisframe1)
-		lightpen_y[lpnum] = max_ypos_thisframe1;
+	lightpen_x[lpnum] = std::max(lightpen_x[lpnum], -extra);
+	lightpen_x[lpnum] = std::min(lightpen_x[lpnum], vidinfo->drawbuffer.inwidth + extra);
+	lightpen_y[lpnum] = std::max(lightpen_y[lpnum], -extra);
+	lightpen_y[lpnum] = std::min(lightpen_y[lpnum], vidinfo->drawbuffer.inheight + extra);
+	lightpen_y[lpnum] = std::min(lightpen_y[lpnum], max_ypos_thisframe1);
 
 	if (lightpen_x[lpnum] < 0 || lightpen_y[lpnum] < 0) {
 		out = true;
@@ -5426,8 +5316,7 @@ static void gfxbuffer_reset(int monid)
 
 void notice_resolution_seen (int res, bool lace)
 {
-	if (res > frame_res)
-		frame_res = res;
+	frame_res = std::max(res, frame_res);
 	if (res > 0)
 		can_use_lores = 0;
 	if (!frame_res_lace && lace)
