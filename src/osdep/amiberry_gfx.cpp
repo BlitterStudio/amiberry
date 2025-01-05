@@ -400,9 +400,9 @@ static void update_leds(int monid)
 
 	if (!done) {
 		for (int i = 0; i < 256; i++) {
-			rc[i] = i << 0;
+			rc[i] = i << 16;
 			gc[i] = i << 8;
-			bc[i] = i << 16;
+			bc[i] = i << 0;
 			a[i] = i << 24;
 		}
 		done = 1;
