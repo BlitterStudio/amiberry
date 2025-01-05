@@ -893,6 +893,7 @@ struct uae_prefs
 	struct cdslot cdslots[MAX_TOTAL_SCSI_DEVICES];
 	TCHAR quitstatefile[MAX_DPATH];
 	TCHAR statefile[MAX_DPATH];
+	TCHAR statefile_path[MAX_DPATH];
 	TCHAR inprecfile[MAX_DPATH];
 	TCHAR trainerfile[MAX_DPATH];
 	bool inprec_autoplay;
