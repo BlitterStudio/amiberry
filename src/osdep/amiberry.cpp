@@ -2133,8 +2133,6 @@ void target_fixup_options(struct uae_prefs* p)
 	if (p->gfx_api < 2)
 		p->gfx_api = 2;
 
-	// Always use these pixel formats, for optimal performance
-	p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
 
 	if (p->gfx_auto_crop)
 	{
@@ -2280,7 +2278,7 @@ void target_default_options(struct uae_prefs* p, const int type)
 		//p->automount_removabledrives = 0;
 		p->automount_cddrives = true;
 		//p->automount_netdrives = 0;
-		p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_R8G8B8A8;
+		p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_B8G8R8A8;
 		//p->filesystem_mangle_reserved_names = true;
 	}
 
