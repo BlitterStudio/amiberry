@@ -6,6 +6,7 @@
  */
 
 #include <unistd.h>
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <sys/types.h>
@@ -122,9 +123,9 @@ bool host_poweroff = false;
 int relativepaths = 0;
 int saveimageoriginalpath = 0;
 
-struct whdload_options whdload_prefs = {};
+whdload_options whdload_prefs = {};
 struct amiberry_options amiberry_options = {};
-struct amiberry_gui_theme gui_theme = {};
+amiberry_gui_theme gui_theme = {};
 amiberry_hotkey enter_gui_key;
 SDL_GameControllerButton enter_gui_button;
 amiberry_hotkey quit_key;
@@ -173,7 +174,7 @@ std::vector<int> parse_color_string(const std::string& input)
 	return result;
 }
 
-amiberry_hotkey get_hotkey_from_config(std::string config_option)
+static amiberry_hotkey get_hotkey_from_config(std::string config_option)
 {
 	amiberry_hotkey hotkey = {};
 	std::string delimiter = "+";
@@ -219,7 +220,7 @@ amiberry_hotkey get_hotkey_from_config(std::string config_option)
 	return hotkey;
 }
 
-void set_key_configs(const struct uae_prefs* p)
+static void set_key_configs(const uae_prefs* p)
 {
 	if (strncmp(p->open_gui, "", 1) != 0)
 		// If we have a value in the config, we use that instead
@@ -358,8 +359,7 @@ void target_spin(int total)
 {
 	if (!spincount || calculated_scanline)
 		return;
-	if (total > 10)
-		total = 10;
+	total = std::min(total, 10);
 	while (total-- >= 0) {
 		uae_s64 v1 = read_processor_time();
 		v1 += spincount;
@@ -434,7 +434,7 @@ int sleep_millis(const int ms)
 	return sleep_millis2(ms, false);
 }
 
-static void setcursor(struct AmigaMonitor* mon, int oldx, int oldy)
+static void setcursor(AmigaMonitor* mon, int oldx, int oldy)
 {
 	const int dx = (mon->amigawinclip_rect.x - mon->amigawin_rect.x) + ((mon->amigawinclip_rect.x + mon->amigawinclip_rect.w) - mon->amigawinclip_rect.x) / 2;
 	const int dy = (mon->amigawinclip_rect.y - mon->amigawin_rect.y) + ((mon->amigawinclip_rect.y + mon->amigawinclip_rect.h) - mon->amigawinclip_rect.y) / 2;
@@ -495,7 +495,7 @@ void setsoundpaused()
 
 bool resumepaused(const int priority)
 {
-	const struct AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 	if (pause_emulation > priority)
 		return false;
 	if (!pause_emulation)
@@ -517,7 +517,7 @@ bool resumepaused(const int priority)
 
 bool setpaused(const int priority)
 {
-	const struct AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 	if (pause_emulation > priority)
 		return false;
 	pause_emulation = priority;
@@ -579,7 +579,7 @@ void setpriority(const int prio)
 
 static void setcursorshape(const int monid)
 {
-	const struct AmigaMonitor* mon = &AMonitors[monid];
+	const AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
 		if (mon->screen_is_picasso && currprefs.rtg_hardwaresprite)
 			SDL_ShowCursor(SDL_ENABLE);
@@ -614,7 +614,7 @@ void set_showcursor(const BOOL v)
 	}
 }
 
-void releasecapture(const struct AmigaMonitor* mon)
+void releasecapture(const AmigaMonitor* mon)
 {
 	SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
@@ -622,7 +622,7 @@ void releasecapture(const struct AmigaMonitor* mon)
 	mon_cursorclipped = 0;
 }
 
-void updatemouseclip(struct AmigaMonitor* mon)
+void updatemouseclip(AmigaMonitor* mon)
 {
 	if (mon_cursorclipped) {
 		mon->amigawinclip_rect = mon->amigawin_rect;
@@ -643,7 +643,7 @@ void updatemouseclip(struct AmigaMonitor* mon)
 	}
 }
 
-void updatewinrect(struct AmigaMonitor* mon, const bool allowfullscreen)
+void updatewinrect(AmigaMonitor* mon, const bool allowfullscreen)
 {
 	int f = isfullscreen();
 	if (!allowfullscreen && f > 0)
@@ -661,7 +661,7 @@ void updatewinrect(struct AmigaMonitor* mon, const bool allowfullscreen)
 	}
 }
 
-static bool iswindowfocus(const struct AmigaMonitor* mon)
+static bool iswindowfocus(const AmigaMonitor* mon)
 {
 	bool donotfocus = false;
 	const Uint32 flags = SDL_GetWindowFlags(mon->amiga_window);
@@ -683,7 +683,7 @@ bool ismouseactive ()
 //TODO: maybe implement this
 void target_inputdevice_unacquire(const bool full)
 {
-	const struct AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 	//close_tablet(tablet);
 	//tablet = NULL;
 	if (full) {
@@ -693,14 +693,14 @@ void target_inputdevice_unacquire(const bool full)
 }
 void target_inputdevice_acquire()
 {
-	const struct AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 	target_inputdevice_unacquire(false);
 	//tablet = open_tablet(mon->hAmigaWnd);
 	//rawinput_alloc();
 	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 }
 
-static void setmouseactive2(struct AmigaMonitor* mon, int active, const bool allowpause)
+static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause)
 {
 #ifdef RETROPLATFORM
 	bool isrp = rp_isactive() != 0;
@@ -793,7 +793,7 @@ static void setmouseactive2(struct AmigaMonitor* mon, int active, const bool all
 
 void setmouseactive(const int monid, const int active)
 {
-	struct AmigaMonitor* mon = &AMonitors[monid];
+	AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
 	if (active > 1)
 		SDL_RaiseWindow(mon->amiga_window);
@@ -801,13 +801,13 @@ void setmouseactive(const int monid, const int active)
 	setcursorshape(monid);
 }
 
-static void amiberry_active(const struct AmigaMonitor* mon, const int minimized)
+static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 {
 	monitor_off = 0;
 	
 	focus = mon->monitor_id + 1;
 	auto pri = currprefs.inactive_priority;
-	if (!minimized)
+	if (!is_minimized)
 		pri = currprefs.active_capture_priority;
 	setpriority(pri);
 
@@ -837,7 +837,7 @@ static void amiberry_active(const struct AmigaMonitor* mon, const int minimized)
 	clipboard_active(1, 1);
 }
 
-static void amiberry_inactive(const struct AmigaMonitor* mon, const int minimized)
+static void amiberry_inactive(const AmigaMonitor* mon, const int is_minimized)
 {
 	focus = 0;
 	recapture = 0;
@@ -846,7 +846,7 @@ static void amiberry_inactive(const struct AmigaMonitor* mon, const int minimize
 	clipboard_active(1, 0);
 	auto pri = currprefs.inactive_priority;
 	if (!quit_program) {
-		if (minimized) {
+		if (is_minimized) {
 			pri = currprefs.minimized_priority;
 			if (currprefs.minimized_pause) {
 				inputdevice_unacquire();
@@ -904,7 +904,7 @@ static void amiberry_inactive(const struct AmigaMonitor* mon, const int minimize
 
 void minimizewindow(const int monid)
 {
-	const struct AmigaMonitor* mon = &AMonitors[monid];
+	const AmigaMonitor* mon = &AMonitors[monid];
 	if (mon->amiga_window)
 		SDL_MinimizeWindow(mon->amiga_window);
 }
@@ -939,7 +939,7 @@ void disablecapture()
 
 void setmouseactivexy(const int monid, int x, int y, const int dir)
 {
-	const struct AmigaMonitor* mon = &AMonitors[monid];
+	const AmigaMonitor* mon = &AMonitors[monid];
 	constexpr int diff = 8;
 
 	if (isfullscreen() > 0)
@@ -1099,8 +1099,7 @@ static void add_media_insert_queue(const TCHAR* drvname, const int retrycnt)
 {
 	const int idx = is_in_media_queue(drvname);
 	if (idx >= 0) {
-		if (retrycnt > media_insert_queue_type[idx])
-			media_insert_queue_type[idx] = retrycnt;
+		media_insert_queue_type[idx] = std::max(retrycnt, media_insert_queue_type[idx]);
 		write_log(_T("%s already queued for insertion, cnt=%d.\n"), drvname, retrycnt);
 		start_media_insert_timer();
 		return;
@@ -1127,9 +1126,9 @@ struct touch_store
 	int button;
 	int axis;
 };
-static struct touch_store touches[MAX_TOUCHES];
+static touch_store touches[MAX_TOUCHES];
 
-static void touch_release(struct touch_store* ts, const SDL_Rect* rcontrol)
+static void touch_release(touch_store* ts, const SDL_Rect* rcontrol)
 {
 	if (ts->port == 0) {
 		if (ts->button == 0)
@@ -1159,12 +1158,12 @@ static void touch_release(struct touch_store* ts, const SDL_Rect* rcontrol)
 
 static void tablet_touch(unsigned long id, int pressrel, const int x, const int y, const SDL_Rect* rcontrol)
 {
-	struct touch_store* ts = nullptr;
+	touch_store* ts = nullptr;
 	const int buttony = rcontrol->h - (rcontrol->h - rcontrol->y) / 4;
 
 	int new_slot = -1;
 	for (int i = 0; i < MAX_TOUCHES; i++) {
-		struct touch_store* tts = &touches[i];
+		touch_store* tts = &touches[i];
 		if (!tts->inuse && new_slot < 0)
 			new_slot = i;
 		if (tts->inuse && tts->id == id) {
@@ -1792,7 +1791,7 @@ void update_clipboard()
 	}
 }
 
-static int canstretch(const struct AmigaMonitor* mon)
+static int canstretch(const AmigaMonitor* mon)
 {
 	if (isfullscreen() != 0)
 		return 0;
@@ -2004,7 +2003,7 @@ void getfilepart(TCHAR* out, int size, const TCHAR* path)
 		_tcscpy(out, path);
 }
 
-uae_u8* target_load_keyfile(struct uae_prefs* p, const char* path, int* sizep, char* name)
+uae_u8* target_load_keyfile(uae_prefs* p, const char* path, int* sizep, char* name)
 {
 	return nullptr;
 }
@@ -2035,7 +2034,7 @@ void replace(std::string& str, const std::string& from, const std::string& to)
 
 void target_execute(const char* command)
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
+	AmigaMonitor* mon = &AMonitors[0];
 	releasecapture(mon);
 	mouseactive = 0;
 
@@ -2098,7 +2097,7 @@ void target_quit()
 {
 }
 
-void target_fixup_options(struct uae_prefs* p)
+void target_fixup_options(uae_prefs* p)
 {
 	if (p->automount_cddrives && !p->scsi)
 		p->scsi = 1;
@@ -2130,9 +2129,7 @@ void target_fixup_options(struct uae_prefs* p)
 	
 #ifdef AMIBERRY
 	// Some old configs might have lower values there. Ensure they are updated
-	if (p->gfx_api < 2)
-		p->gfx_api = 2;
-
+	p->gfx_api = std::max(p->gfx_api, 2);
 
 	if (p->gfx_auto_crop)
 	{
@@ -2155,7 +2152,7 @@ void target_fixup_options(struct uae_prefs* p)
 		p->rtg_hardwaresprite = false;
 #endif
 
-	const struct MultiDisplay* md = getdisplay(p, 0);
+	const MultiDisplay* md = getdisplay(p, 0);
 	for (auto & j : p->gfx_monitor) {
 		if (j.gfx_size_fs.special == WH_NATIVE) {
 			int i;
@@ -2205,7 +2202,7 @@ void target_fixup_options(struct uae_prefs* p)
 #endif
 }
 
-void target_default_options(struct uae_prefs* p, const int type)
+void target_default_options(uae_prefs* p, const int type)
 {
 	//TCHAR buf[MAX_DPATH];
 	if (type == 2 || type == 0 || type == 3) {
@@ -2438,7 +2435,7 @@ static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"
 
 extern int scsiromselected;
 
-void target_save_options(struct zfile* f, struct uae_prefs* p)
+void target_save_options(zfile* f, uae_prefs* p)
 {
 	//struct midiportinfo *midp;
 
@@ -2593,7 +2590,7 @@ static const TCHAR *obsolete[] = {
 	nullptr
 };
 
-static int target_parse_option_hardware(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
+static int target_parse_option_hardware(uae_prefs *p, const TCHAR *option, const TCHAR *value)
 {
 	TCHAR tmpbuf[CONFIG_BLEN];
 	if (cfgfile_string(option, value, _T("rtg_vblank"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
@@ -2616,7 +2613,7 @@ static int target_parse_option_hardware(struct uae_prefs *p, const TCHAR *option
 	return 0;
 }
 
-static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, const TCHAR *value)
+static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCHAR *value)
 {
 	TCHAR tmpbuf[CONFIG_BLEN];
 	bool tbool;
@@ -2846,7 +2843,7 @@ static int target_parse_option_host(struct uae_prefs *p, const TCHAR *option, co
 	return 0;
 }
 
-int target_parse_option(struct uae_prefs *p, const TCHAR *option, const TCHAR *value, const int type)
+int target_parse_option(uae_prefs *p, const TCHAR *option, const TCHAR *value, const int type)
 {
 	int v = 0;
 	if (type & CONFIG_TYPE_HARDWARE) {
@@ -3106,7 +3103,7 @@ void get_floppy_sounds_path(char* out, const int size)
 	_tcsncpy(out, fix_trailing(floppy_sounds_dir).c_str(), size - 1);
 }
 
-int target_cfgfile_load(struct uae_prefs* p, const char* filename, int type, const int isdefault)
+int target_cfgfile_load(uae_prefs* p, const char* filename, int type, const int isdefault)
 {
 	int type2;
 	auto result = 0;
@@ -4258,7 +4255,7 @@ void load_amiberry_settings()
 	}
 }
 
-static void romlist_add2(const TCHAR* path, struct romdata* rd)
+static void romlist_add2(const TCHAR* path, romdata* rd)
 {
 	if (getregmode()) {
 		int ok = 0;
@@ -4311,7 +4308,7 @@ void read_rom_list(bool initial)
 				subitem = _tstol(tmp + 11);
 			}
 			if (idx2 >= 0 && _tcslen(tmp2) > 0) {
-				struct romdata* rd = getromdatabyidgroup(idx2, group, subitem);
+				romdata* rd = getromdatabyidgroup(idx2, group, subitem);
 				if (rd) {
 					TCHAR* s = _tcschr(tmp2, '\"');
 					if (s && _tcslen(s) > 1) {
@@ -4368,7 +4365,7 @@ uae_u32 emulib_target_getcpurate(const uae_u32 v, uae_u32* low)
 	}
 	if (v == 2)
 	{
-		struct timespec ts{};
+		timespec ts{};
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 		const auto time = static_cast<int64_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 		*low = static_cast<uae_u32>(time & 0xffffffff);
@@ -4392,7 +4389,7 @@ struct winuae	//this struct is put in a6 if you call
 
 void* uaenative_get_uaevar()
 {
-	static struct winuae uaevar;
+	static winuae uaevar;
 #ifdef _WIN32
 	uaevar.amigawnd = mon->hAmigaWnd;
 #endif

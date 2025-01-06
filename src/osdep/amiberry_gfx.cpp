@@ -125,7 +125,7 @@ void gfx_unlock(void)
 }
 
 #ifdef AMIBERRY
-static void SetRect(SDL_Rect* rect, int xLeft, int yTop, int xRight, int yBottom)
+static void SetRect(SDL_Rect* rect, const int xLeft, const int yTop, const int xRight, const int yBottom)
 {
 	rect->x = xLeft;
 	rect->w = xRight;
@@ -133,7 +133,7 @@ static void SetRect(SDL_Rect* rect, int xLeft, int yTop, int xRight, int yBottom
 	rect->h = yBottom;
 }
 
-static void OffsetRect(SDL_Rect* rect, int dx, int dy)
+static void OffsetRect(SDL_Rect* rect, const int dx, const int dy)
 {
 	rect->x += dx;
 	rect->y += dy;
@@ -147,7 +147,7 @@ void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
 
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
-bool isModeAspectRatioExact(SDL_DisplayMode* mode, const int width, const int height)
+bool isModeAspectRatioExact(const SDL_DisplayMode* mode, const int width, const int height)
 {
 	return mode->w % width == 0 && mode->h % height == 0;
 }
@@ -213,7 +213,7 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 #endif
 }
 
-static float SDL2_getrefreshrate(int monid)
+static float SDL2_getrefreshrate(const int monid)
 {
 	SDL_DisplayMode mode;
 	if (SDL_GetDisplayMode(monid, 0, &mode) != 0)
@@ -349,7 +349,7 @@ static void SDL2_init()
 		write_log("SDL2: Set window not to minimize on focus loss\n");
 }
 
-static bool SDL2_alloctexture(int monid, int w, int h, int depth)
+static bool SDL2_alloctexture(int monid, int w, int h, const int depth)
 {
 	if (w == 0 || h == 0)
 		return false;
@@ -392,7 +392,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, int depth)
 #endif
 }
 
-static void update_leds(int monid)
+static void update_leds(const int monid)
 {
 	static uae_u32 rc[256], gc[256], bc[256], a[256];
 	static int done;
@@ -416,7 +416,7 @@ static void update_leds(int monid)
 	}
 }
 
-bool vkbd_allowed(int monid)
+bool vkbd_allowed(const int monid)
 {
 	struct AmigaMonitor *mon = &AMonitors[monid];
 	return currprefs.vkbd_enabled && !mon->screen_is_picasso;
@@ -437,7 +437,7 @@ int isfullscreen()
 
 int default_freq = 60;
 
-static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
+static struct MultiDisplay* getdisplay2(struct uae_prefs* p, const int index)
 {
 	struct AmigaMonitor* mon = &AMonitors[0];
 	static int max;
@@ -460,7 +460,7 @@ static struct MultiDisplay* getdisplay2(struct uae_prefs* p, int index)
 	return &Displays[display];
 }
 
-struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
+struct MultiDisplay* getdisplay(struct uae_prefs* p, const int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (monid > 0 && mon->md)
@@ -468,7 +468,7 @@ struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid)
 	return getdisplay2(p, -1);
 }
 
-void desktop_coords(int monid, int* dw, int* dh, int* ax, int* ay, int* aw, int* ah)
+void desktop_coords(const int monid, int* dw, int* dh, int* ax, int* ay, int* aw, int* ah)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct MultiDisplay* md = getdisplay(&currprefs, monid);
@@ -530,7 +530,7 @@ static int target_get_display_scanline2(int displayindex)
 extern uae_s64 spincount;
 bool calculated_scanline = true;
 
-int target_get_display_scanline(int displayindex)
+int target_get_display_scanline(const int displayindex)
 {
 	if (!scanlinecalibrating && calculated_scanline) {
 		static int lastline;
@@ -621,7 +621,7 @@ void target_cpu_speed()
 	display_vblank_thread(&AMonitors[0]);
 }
 
-const TCHAR* target_get_display_name(int num, bool friendlyname)
+const TCHAR* target_get_display_name(const int num, const bool friendlyname)
 {
 	if (num <= 0)
 		return nullptr;
@@ -649,7 +649,7 @@ void getgfxoffset(int monid, float* dxp, float* dyp, float* mxp, float* myp)
 	*myp = 1.0f / my;
 }
 
-static void addmode(struct MultiDisplay* md, SDL_DisplayMode* dm, int rawmode)
+static void addmode(struct MultiDisplay* md, SDL_DisplayMode* dm, const int rawmode)
 {
 	int ct;
 	int i, j;
@@ -905,7 +905,7 @@ bool render_screen(int monid, int mode, bool immediate)
 	return true;
 }
 
-bool show_screen_maybe(int monid, bool show)
+bool show_screen_maybe(const int monid, const bool show)
 {
 	struct amigadisplay* ad = &adisplays[monid];
 	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
@@ -917,7 +917,7 @@ bool show_screen_maybe(int monid, bool show)
 	return false;
 }
 
-float target_adjust_vblank_hz(int monid, float hz)
+float target_adjust_vblank_hz(const int monid, float hz)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	int maxrate;
@@ -934,7 +934,7 @@ float target_adjust_vblank_hz(int monid, float hz)
 	return hz;
 }
 
-void show_screen(int monid, int mode)
+void show_screen(const int monid, int mode)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
@@ -999,7 +999,7 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 	gfx_unlock();
 }
 
-uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
+uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
@@ -1026,7 +1026,7 @@ uae_u8* gfx_lock_picasso(int monid, bool fullupdate)
 	return p;
 }
 
-void gfx_unlock_picasso(int monid, const bool dorender)
+void gfx_unlock_picasso(const int monid, const bool dorender)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	//if (!mon->rtg_locked)
@@ -1225,7 +1225,7 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 	}
 }
 
-void graphics_reset(bool forced)
+void graphics_reset(const bool forced)
 {
 	if (forced) {
 		display_change_requested = 2;
@@ -1244,7 +1244,7 @@ static void open_screen(struct uae_prefs* p);
 int check_prefs_changed_gfx()
 {
 	int c = 0;
-	bool monitors[MAX_AMIGAMONITORS];
+	bool monitors[MAX_AMIGAMONITORS]{};
 
 	if (!config_changed && !display_change_requested)
 		return 0;
@@ -1862,7 +1862,7 @@ static int red_bits, green_bits, blue_bits, alpha_bits;
 static int red_shift, green_shift, blue_shift, alpha_shift;
 static int alpha;
 
-void init_colors(int monid)
+void init_colors(const int monid)
 {
 	/* Truecolor: */
 	red_bits = bits_in_mask(amiga_surface->format->Rmask);
@@ -2047,7 +2047,7 @@ static void open_screen(struct uae_prefs* p)
 	}
 }
 
-bool vsync_switchmode(int monid, int hz)
+bool vsync_switchmode(const int monid, int hz)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	static struct PicassoResolution* oldmode;
@@ -2215,7 +2215,7 @@ static int modeswitchneeded(struct AmigaMonitor* mon, struct winuae_currentmode*
 	return 0;
 }
 
-void gfx_set_picasso_state(int monid, int on)
+void gfx_set_picasso_state(const int monid, const int on)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	if (mon->screen_is_picasso == on)
@@ -2242,7 +2242,7 @@ static void updatepicasso96(struct AmigaMonitor* mon)
 	vidinfo->splitypos = -1;
 }
 
-void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt)
+void gfx_set_picasso_modeinfo(const int monid, const RGBFTYPE rgbfmt)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
@@ -2261,7 +2261,7 @@ void gfx_set_picasso_modeinfo(int monid, RGBFTYPE rgbfmt)
 	target_graphics_buffer_update(monid, false);
 }
 
-void gfx_set_picasso_colors(int monid, RGBFTYPE rgbfmt)
+void gfx_set_picasso_colors(int monid, const RGBFTYPE rgbfmt)
 {
 	alloc_colors_picasso(red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, rgbfmt, p96_rgbx16);
 }
@@ -2391,7 +2391,7 @@ void close_windows(struct AmigaMonitor* mon)
 		vkbd_quit();
 }
 
-float target_getcurrentvblankrate(int monid)
+float target_getcurrentvblankrate(const int monid)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	float vb;
@@ -2404,7 +2404,7 @@ float target_getcurrentvblankrate(int monid)
 	return SDL2_getrefreshrate(0);
 }
 
-static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf, int flags, int width, int height, int depth)
+static void allocsoftbuffer(const int monid, const TCHAR* name, struct vidbuffer* buf, int flags, const int width, const int height, const int depth)
 {
 	/* Initialize structure for Amiga video modes */
 	buf->monitor_id = monid;
@@ -2426,7 +2426,7 @@ static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf,
 }
 
 static int oldtex_w[MAX_AMIGAMONITORS], oldtex_h[MAX_AMIGAMONITORS], oldtex_rtg[MAX_AMIGAMONITORS];
-bool target_graphics_buffer_update(int monid, bool force)
+bool target_graphics_buffer_update(const int monid, const bool force)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct vidbuf_description* avidinfo = &adisplays[monid].gfxvidinfo;
@@ -2577,13 +2577,13 @@ bool target_graphics_buffer_update(int monid, bool force)
 	return true;
 }
 
-void updatedisplayarea(int monid)
+void updatedisplayarea(const int monid)
 {
 	set_custom_limits(-1, -1, -1, -1, false);
 	show_screen(monid, 0);
 }
 
-void updatewinfsmode(int monid, struct uae_prefs* p)
+void updatewinfsmode(const int monid, struct uae_prefs* p)
 {
 	const struct AmigaMonitor* mon = &AMonitors[monid];
 	auto* const ad = &adisplays[monid];
@@ -2635,7 +2635,7 @@ int rtg_index = -1;
 // 0 = chipset
 // 1..4 = rtg
 // 5 = next
-bool toggle_rtg(int monid, int mode)
+bool toggle_rtg(const int monid, const int mode)
 {
 	struct amigadisplay* ad = &adisplays[monid];
 
@@ -2716,7 +2716,7 @@ bool toggle_rtg(int monid, int mode)
 	return false;
 }
 
-void close_rtg(int monid, bool reset)
+void close_rtg(const int monid, const bool reset)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	close_windows(mon);
@@ -2729,7 +2729,7 @@ void close_rtg(int monid, bool reset)
 	}
 }
 
-void toggle_fullscreen(int monid, int mode)
+void toggle_fullscreen(const int monid, const int mode)
 {
 	auto* const ad = &adisplays[monid];
 	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen : &changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
@@ -2907,7 +2907,7 @@ static int save_png(const SDL_Surface* surface, const std::string& path)
 	const auto w = surface->w;
 	const auto h = surface->h;
 	auto* const pix = static_cast<unsigned char*>(surface->pixels);
-	unsigned char writeBuffer[1920 * 3];
+	unsigned char writeBuffer[1920 * 3]{};
 
 	// Open the file for writing
 	auto* const f = fopen(path.c_str(), "wbe");
