@@ -727,5 +727,8 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(You can also use the "Create 3.5" DD disk" and "Create 3.5" HD disk" buttons, to make)");
 	helptext.emplace_back("a new and empty disk image, for use with the emulator.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The \"Save config for disk\" button will save the current configuration to a file with");
+	helptext.emplace_back("the same name as the disk image file.");
 	return true;
 }
