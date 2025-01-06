@@ -103,7 +103,7 @@ extern uae_u16 serper;
 static void uae_abort (const TCHAR *format,...)
 {
 	static int nomore;
-	va_list parms;
+	va_list parms{};
 	TCHAR buffer[1000];
 
 	va_start (parms, format);
@@ -3531,7 +3531,7 @@ static int process_special_pixel(int delaypos, int fm, uae_u16 cmd)
 	if (cmd & TOSCR_SPC_LORES_START) {
 		toscr_res_pixels_mask_hr = 3 >> toscr_res_pixels_shift_hr;
 	}
-	int shifter[2];
+	int shifter[2]{};
 	shifter[0] = (delay1 & delaymask) << LORES_TO_SHRES_SHIFT;
 	shifter[1] = (delay2 & delaymask) << LORES_TO_SHRES_SHIFT;
 	for (int oddeven = 0; oddeven < 2; oddeven++) {
@@ -3645,7 +3645,7 @@ STATIC_INLINE void do_delays_3_aga_hr(int nbits, int fm)
 				difsize++;
 				toscr_special_skip_ptr++;
 			} else {
-				uae_u64 toda[MAX_PLANES];
+				uae_u64 toda[MAX_PLANES]{};
 				if (cmd & TOSCR_SPC_DUAL) {
 					for (int i = 0; i < toscr_nr_planes_shifter; i++) {
 						toda[i] = todisplay2_aga[i];
@@ -4597,7 +4597,7 @@ STATIC_INLINE void long_fetch_64(int plane, int nwords, int weird_number_of_bits
 #ifdef HAVE_UAE_U128
 	uae_u128 shiftbuffer;
 #else
-	uae_u64 shiftbuffer[2];
+	uae_u64 shiftbuffer[2]{};
 #endif
 	uae_u32 outval = outword[plane];
 	uae_u64 fetchval = fetched_aga[plane];
@@ -7117,8 +7117,9 @@ void compute_framesync(void)
 
 	memset(line_decisions, 0, sizeof(line_decisions));
 	memset(line_drawinfo, 0, sizeof(line_drawinfo));
-	for (int i = 0; i < sizeof(line_decisions) / sizeof(*line_decisions); i++) {
-		line_decisions[i].plfleft = -2;
+	for (auto& line_decision : line_decisions)
+	{
+		line_decision.plfleft = -2;
 	}
 
 	check_nocustom();
@@ -12645,7 +12646,7 @@ static void hsync_scandoubler(int hpos)
 {
 	uae_u16 odmacon = dmacon;
 	int ocop = copper_enabled_thisline;
-	uaecptr bpltmp[MAX_PLANES], bpltmpx[MAX_PLANES];
+	uaecptr bpltmp[MAX_PLANES]{}, bpltmpx[MAX_PLANES]{};
 	int lof = lof_display;
 
 	if (vb_start_line > 2) {
