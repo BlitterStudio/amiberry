@@ -88,7 +88,7 @@ static void gui_add_string(int* table, gcn::StringListModel* item, int id, const
 	*table = -1;
 	item->add(str);
 }
-static void gui_set_string_cursor(int* table, gcn::DropDown* item, int id)
+static void gui_set_string_cursor(const int* table, const gcn::DropDown* item, const int id)
 {
 	int idx = 0;
 	while (*table >= 0) {
@@ -100,7 +100,7 @@ static void gui_set_string_cursor(int* table, gcn::DropDown* item, int id)
 		table++;
 	}
 }
-static int gui_get_string_cursor(int* table, gcn::DropDown* item)
+static int gui_get_string_cursor(const int* table, const gcn::DropDown* item)
 {
 	int posn = item->getSelected();
 	if (posn < 0)
@@ -108,18 +108,17 @@ static int gui_get_string_cursor(int* table, gcn::DropDown* item)
 	return table[posn];
 }
 
-static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
+static void getromfile(gcn::DropDown* d, TCHAR* path, const int size)
 {
-	auto val = d->getSelected();
+	const auto val = d->getSelected();
 
-	romdata* rd;
-	auto tmp1 = d->getListModel()->getElementAt(val);
+	const auto tmp1 = d->getListModel()->getElementAt(val);
 	path[0] = 0;
-	rd = getromdatabyname(tmp1.c_str());
+	const romdata* rd = getromdatabyname(tmp1.c_str());
 	if (rd) {
-		romlist* rl = getromlistbyromdata(rd);
+		const romlist* rl = getromlistbyromdata(rd);
 		if (rd->configname)
-			_stprintf(path, _T(":%s"), rd->configname);
+			_sntprintf(path, sizeof path, _T(":%s"), rd->configname);
 		else if (rl)
 			_tcsncpy(path, rl->path, size);
 	}
@@ -367,10 +366,9 @@ static void get_expansionrom_gui(expansionrom_gui* eg)
 	if (!eg->expansionrom_gui_ebs)
 		return;
 
-	int val;
 	int settings = eg->expansionrom_gui_settings;
 
-	val = eg->expansionrom_gui_itemselector->getSelected();
+	int val = eg->expansionrom_gui_itemselector->getSelected();
 	if (val != -1 && val != eg->expansionrom_gui_item) {
 		eg->expansionrom_gui_item = val;
 		create_expansionrom_gui(eg, eg->expansionrom_gui_ebs, eg->expansionrom_gui_settings, eg->expansionrom_gui_string,
@@ -405,7 +403,7 @@ static void get_expansionrom_gui(expansionrom_gui* eg)
 static struct netdriverdata* ndd[MAX_TOTAL_NET_DEVICES + 1];
 static int net_enumerated;
 
-struct netdriverdata** target_ethernet_enumerate(void)
+struct netdriverdata** target_ethernet_enumerate()
 {
 	if (net_enumerated)
 		return ndd;
@@ -428,7 +426,6 @@ static void init_expansion2(bool init)
 	for (;;)
 	{
 		bool matched = false;
-		int* idtab;
 		int total = 0;		
 		scsirom_select_list.clear();
 		scsiromselect_table[0] = -1;
@@ -436,7 +433,7 @@ static void init_expansion2(bool init)
 		{
 			total++;
 		}
-		idtab = xcalloc(int, total * 2);
+		int* idtab = xcalloc(int, total * 2);
 		int idcnt = 0;
 		for (int i = 0; expansionroms[i].name; i++) {
 			if (expansionroms[i].romtype & ROMTYPE_CPUBOARD)
@@ -477,7 +474,7 @@ static void init_expansion2(bool init)
 				if (cnt == 1)
 					_tcscat(name, _T("* "));
 				else if (cnt > 1)
-					_stprintf(name + _tcslen(name), _T("[%d] "), cnt);
+					_sntprintf(name + _tcslen(name), sizeof name, _T("[%d] "), cnt);
 				_tcscat(name, expansionroms[id].friendlyname);
 				_tcscat(cname, expansionroms[id].friendlyname);
 				if (expansionroms[id].friendlymanufacturer) {
@@ -545,7 +542,7 @@ static void init_expansion2(bool init)
 	if (brc && ert && ert->id_jumper) {
 		for (int i = 0; i < 8; i++) {
 			TCHAR tmp[10];
-			_stprintf(tmp, _T("%d"), i);
+			_sntprintf(tmp, sizeof tmp, _T("%d"), i);
 			scsi_romid_list.add(tmp);
 		}
 	}
@@ -587,7 +584,7 @@ static void values_to_expansion2dlg_sub()
 	}
 	for (int i = 0; i < MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS; i++) {
 		TCHAR tmp[10];
-		_stprintf(tmp, _T("%d"), i + 1);
+		_sntprintf(tmp, sizeof tmp, _T("%d"), i + 1);
 		scsirom_selectnum_list.add(tmp);
 	}
 	cboScsiRomSelectNum->setSelected(scsiromselectednum);
@@ -677,10 +674,9 @@ static void values_to_expansion2_expansion_roms(UAEREG* fkey)
 {
 	int index;
 	bool keyallocated = false;
-	boardromconfig* brc;
 
 	if (!fkey) {
-		fkey = regcreatetree(NULL, _T("DetectedROMs"));
+		fkey = regcreatetree(nullptr, _T("DetectedROMs"));
 		keyallocated = true;
 	}
 	if (scsiromselected) {
@@ -689,7 +685,7 @@ static void values_to_expansion2_expansion_roms(UAEREG* fkey)
 		int romtype_extra = static_cast<int>(ert->romtype_extra);
 		int deviceflags = ert->deviceflags;
 
-		brc = get_device_rom(&changed_prefs, romtype, scsiromselectednum, &index);
+		boardromconfig* brc = get_device_rom(&changed_prefs, romtype, scsiromselectednum, &index);
 		if (brc && ert->subtypes) {
 			const expansionsubromtype* esrt = &ert->subtypes[brc->roms[index].subtype];
 			if (esrt->romtype) {
@@ -751,10 +747,10 @@ static void values_to_expansion2_expansion_roms(UAEREG* fkey)
 static void values_to_expansion2_expansion_settings()
 {
 	int index;
-	boardromconfig* brc;
 	if (scsiromselected) {
 		const expansionromtype* ert = &expansionroms[scsiromselected];
-		brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+		boardromconfig* brc = get_device_rom(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype),
+		                                     scsiromselectednum, &index);
 		if (brc) {
 			if (brc->roms[index].romfile[0])
 				chkScsiRomFileAutoboot->setEnabled(ert->autoboot_jumper);
@@ -843,7 +839,6 @@ static void expansion2dlgproc()
 static void values_to_expansion2dlg()
 {
 	int index;
-	boardromconfig* brc;
 
 	chkBSDSocket->setSelected(changed_prefs.socket_emu);
 	chkScsi->setSelected(changed_prefs.scsi == 1);
@@ -852,15 +847,15 @@ static void values_to_expansion2dlg()
 	// We don't really need Catweasel support in Amiberry, let's disable it
 	changed_prefs.catweasel = 0;
 
-	UAEREG* fkey = regcreatetree(NULL, _T("DetectedROMs"));
-	load_keyring(&changed_prefs, NULL);
+	UAEREG* fkey = regcreatetree(nullptr, _T("DetectedROMs"));
+	load_keyring(&changed_prefs, nullptr);
 
 	values_to_expansion2_expansion_roms(fkey);
 	values_to_expansion2_expansion_settings();
 
 	if (changed_prefs.cpuboard_type) {
 		const cpuboardsubtype* cst = &cpuboards[changed_prefs.cpuboard_type].subtypes[changed_prefs.cpuboard_subtype];
-		brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
+		boardromconfig* brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &index);
 		addromfiles(fkey, cboCpuBoardRomFile, brc ? brc->roms[index].romfile : nullptr,
 			static_cast<int>(cst->romtype), cst->romtype_extra);
 	}
@@ -891,8 +886,9 @@ public:
 				int val = gui_get_string_cursor(scsiromselect_table, cboScsiRomFile);
 				if (val != -1) {
 					int index;
-					struct boardromconfig* brc;
-					brc = get_device_rom_new(&changed_prefs, static_cast<int>(expansionroms[scsiromselected].romtype), scsiromselectednum, &index);
+					struct boardromconfig* brc = get_device_rom_new(&changed_prefs,
+					                                                static_cast<int>(expansionroms[scsiromselected].romtype),
+					                                                scsiromselectednum, &index);
 					_tcscpy(brc->roms[index].romfile, full_path.c_str());
 					fullpath(brc->roms[index].romfile, MAX_DPATH);
 				}
@@ -967,7 +963,7 @@ public:
 		else if (source == cboScsiRomSubSelect)
 		{
 			values_from_expansion2dlg();
-			values_to_expansion2_expansion_roms(NULL);
+			values_to_expansion2_expansion_roms(nullptr);
 			values_to_expansion2_expansion_settings();
 		}
 		else if (source == cboScsiRomSelectCat)
@@ -978,7 +974,7 @@ public:
 				scsiromselectedcatnum = val;
 				scsiromselected = 0;
 				init_expansion2(false);
-				values_to_expansion2_expansion_roms(NULL);
+				values_to_expansion2_expansion_roms(nullptr);
 				values_to_expansion2_expansion_settings();
 				values_to_expansion2dlg_sub();
 			}
@@ -993,7 +989,7 @@ public:
 			if (val != -1)
 			{
 				scsiromselected = val;
-				values_to_expansion2_expansion_roms(NULL);
+				values_to_expansion2_expansion_roms(nullptr);
 				values_to_expansion2_expansion_settings();
 				values_to_expansion2dlg_sub();
 			}

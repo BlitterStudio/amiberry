@@ -63,7 +63,7 @@ static gcn::DropDown* cboSwapChannels;
 static int curr_separation_idx;
 static int curr_stereodelay_idx;
 static int numdevs;
-static const int sndbufsizes[] = { 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1 };
+static constexpr int sndbufsizes[] = { 1024, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 32768, 65536, -1 };
 
 static gcn::StringListModel soundcard_list;
 
@@ -302,7 +302,7 @@ void InitPanelSound(const config_category& category)
 	for (int card = 0; card < numdevs; card++) {
 		TCHAR tmp[MAX_DPATH];
 		int type = sound_devices[card]->type;
-		_stprintf(tmp, _T("%s: %s"),
+		_sntprintf(tmp, sizeof tmp, _T("%s: %s"),
 			type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DSOUND") : (type == SOUND_DEVICE_AL ? _T("OpenAL") : (type == SOUND_DEVICE_PA ? _T("PortAudio") : (type == SOUND_DEVICE_WASAPI ? _T("WASAPI") : _T("WASAPI EX"))))),
 			sound_devices[card]->name);
 		soundcard_list.add(tmp);
@@ -907,7 +907,8 @@ bool HelpPanelSound(std::vector<std::string>& helptext)
 	helptext.emplace_back("Sound emulation");
 	helptext.emplace_back("Here you can select if Sound will be Disabled, Disabled but emulated or Enabled.");
 	helptext.emplace_back("If the selected sound card could not be initialized during startup, Amiberry will");
-	helptext.emplace_back("automatically disable the sound emulation.");
+	helptext.emplace_back("automatically disable the sound emulation. Autoswitching allows the emulator to switch");
+	helptext.emplace_back("between Enabled/Disabled, depending on whether the audio buffer has something or not.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Volume");
 	helptext.emplace_back("Here you can select the output volume for the various emulated devices.");

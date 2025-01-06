@@ -164,17 +164,17 @@ struct color_entry {
 
 #ifdef AGA
 /* convert 24 bit AGA Amiga RGB to native color */
-/* warning: this is still ugly, but now works with either byte order */
 #ifdef WORDS_BIGENDIAN
 # define CONVERT_RGB(c) \
-	( xbluecolors[((uae_u8*)(&c))[3]] | xgreencolors[((uae_u8*)(&c))[2]] | xredcolors[((uae_u8*)(&c))[1]] )
+	( xbluecolors[(c >> 24) & 0xFF] | xgreencolors[(c >> 16) & 0xFF] | xredcolors[(c >> 8) & 0xFF] )
 #else
 # define CONVERT_RGB(c) \
-	( xbluecolors[((uae_u8*)(&c))[0]] | xgreencolors[((uae_u8*)(&c))[1]] | xredcolors[((uae_u8*)(&c))[2]] )
+	( xbluecolors[c & 0xFF] | xgreencolors[(c >> 8) & 0xFF] | xredcolors[(c >> 16) & 0xFF] )
 #endif
 #else
 #define CONVERT_RGB(c) 0
 #endif
+
 
 STATIC_INLINE xcolnr getxcolor(int c)
 {

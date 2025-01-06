@@ -67,6 +67,9 @@ bool dotto_init(struct autoconfig_info *aci);
 void dev_hd_add_ide_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc);
 bool dev_hd_init(struct autoconfig_info* aci);
 
+void ripple_add_ide_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc);
+bool ripple_init(struct autoconfig_info* aci);
+
 uae_u32 REGPARAM3 apollo_ide_lget (uaecptr addr) REGPARAM;
 uae_u32 REGPARAM3 apollo_ide_wget (uaecptr addr) REGPARAM;
 uae_u32 REGPARAM3 apollo_ide_bget (uaecptr addr) REGPARAM;

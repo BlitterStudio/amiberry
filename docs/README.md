@@ -52,3 +52,7 @@ Some distros (like RetroPie, DietPi, Pimiga and others) already include Amiberry
 Alternatively, you can [compile the latest version of Amiberry from source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source).
 
 For more documentation subjects, please check the [Wiki page](https://github.com/BlitterStudio/amiberry/wiki)
+
+### Supported by
+
+[![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)

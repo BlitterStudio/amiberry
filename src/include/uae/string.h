@@ -7,7 +7,7 @@
 #include <SDL.h>
 
 #include "uae/types.h"
-#include <string.h>
+#include <cstring>
 
 #ifdef _WIN32
 /* Make sure the real _tcs* functions are already declared before we
@@ -34,8 +34,7 @@
 #define _tcscspn strcspn
 #define _tcsdup SDL_strdup
 #define _tcsftime strftime
-#define _tcsftime strftime
-#define _tcsicmp strcasecmp
+#define _tcsicmp SDL_strcasecmp
 #define _tcslen SDL_strlen
 #define uaestrlen SDL_strlen
 #define uaetcslen SDL_strlen

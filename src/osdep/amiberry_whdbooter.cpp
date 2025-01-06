@@ -25,7 +25,7 @@
 #include "midiemu.h"
 #include "registry.h"
 
-extern void SetLastActiveConfig(const char* filename);
+extern void set_last_active_config(const char* filename);
 extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
 
@@ -220,7 +220,7 @@ void make_rom_symlink(const std::string& kickstart_short_name, const int kicksta
 	if (!std::filesystem::exists(kickstart_long_path))
 	{
 		const int roms[2] = { kickstart_number, -1 };
-		// copy the existing prefs->romfile to a backup variable, so we can restore it afterwards
+		// copy the existing prefs->romfile to a backup variable, so we can restore it afterward
 		const std::string old_romfile = prefs->romfile;
 		if (configure_rom(prefs, roms, 0) == 1)
 		{
@@ -616,7 +616,7 @@ void set_compatibility_settings(uae_prefs* prefs, const game_hardware_options& g
 		parse_cfg_line(prefs, line_string);
 	}
 
-	// CPU 68000/010 [requires a600 rom)]
+	// CPU 68000/010 (requires a600 rom)
 	else if ((strcmpi(game_detail.cpu.c_str(), "68000") == 0 || strcmpi(game_detail.cpu.c_str(), "68010") == 0) && a600_available)
 	{
 		line_string = "cpu_type=";

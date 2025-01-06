@@ -3012,7 +3012,7 @@ static void banshee_add_status_info(char *s, int max_len, void *p)
                 (voodoo->pixel_count_old[0] + voodoo->pixel_count_old[1] + voodoo->pixel_count_old[2] + voodoo->pixel_count_old[3]);
         texel_count_total = (texel_count_current[0] + texel_count_current[1] + texel_count_current[2] + texel_count_current[3]) -
                 (voodoo->texel_count_old[0] + voodoo->texel_count_old[1] + voodoo->texel_count_old[2] + voodoo->texel_count_old[3]);
-        sprintf(temps, "%f Mpixels/sec (%f)\n%f Mtexels/sec (%f)\n%f ktris/sec\n%f%% CPU (%f%% real)\n%d frames/sec (%i)\n%f%% CPU (%f%% real)\n"/*%d reads/sec\n%d write/sec\n%d tex/sec\n*/,
+        _sntprintf(temps, sizeof temps, "%f Mpixels/sec (%f)\n%f Mtexels/sec (%f)\n%f ktris/sec\n%f%% CPU (%f%% real)\n%d frames/sec (%i)\n%f%% CPU (%f%% real)\n"/*%d reads/sec\n%d write/sec\n%d tex/sec\n*/,
                 (double)pixel_count_total/1000000.0,
                 ((double)pixel_count_total/1000000.0) / ((double)render_time[0] / status_diff),
                 (double)texel_count_total/1000000.0,
@@ -3022,14 +3022,14 @@ static void banshee_add_status_info(char *s, int max_len, void *p)
         if (voodoo->render_threads >= 2)
         {
                 char temps2[512];
-                sprintf(temps2, "%f%% CPU (%f%% real)\n",
+                _sntprintf(temps2, sizeof temps, "%f%% CPU (%f%% real)\n",
                         ((double)voodoo->render_time[1] * 100.0) / timer_freq, ((double)voodoo->render_time[1] * 100.0) / status_diff);
                 strncat(temps, temps2, sizeof(temps)-1);
         }
         if (voodoo->render_threads == 4)
         {
                 char temps2[512];
-                sprintf(temps2, "%f%% CPU (%f%% real)\n%f%% CPU (%f%% real)\n",
+                _sntprintf(temps2, sizeof temps2, "%f%% CPU (%f%% real)\n%f%% CPU (%f%% real)\n",
                         ((double)voodoo->render_time[2] * 100.0) / timer_freq, ((double)voodoo->render_time[2] * 100.0) / status_diff,
                         ((double)voodoo->render_time[3] * 100.0) / timer_freq, ((double)voodoo->render_time[3] * 100.0) / status_diff);
                 strncat(temps, temps2, sizeof(temps)-1);

@@ -11,9 +11,10 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include <ctype.h>
-#include <assert.h>
-#include <math.h>
+#include <algorithm>
+#include <cctype>
+#include <cassert>
+#include <cmath>
 
 #include "options.h"
 #include "uae.h"
@@ -102,7 +103,7 @@ extern uae_u16 serper;
 static void uae_abort (const TCHAR *format,...)
 {
 	static int nomore;
-	va_list parms;
+	va_list parms{};
 	TCHAR buffer[1000];
 
 	va_start (parms, format);
@@ -1421,9 +1422,7 @@ static void record_color_change2(int hpos, int regno, uae_u32 value)
 		addcc(pos, regno, value);
 	}
 
-	if (pos > last_recorded_diw_hpos) {
-		last_recorded_diw_hpos = pos;
-	}
+	last_recorded_diw_hpos = std::max(pos, last_recorded_diw_hpos);
 
 #ifdef DEBUGGER
 	int cchanges = next_color_change - start_color_change;
@@ -2465,9 +2464,7 @@ static void update_toscr_vars(void)
 		toscr_res_pixels_mask_hr = (1 << toscr_res_mult) - 1;
 		if (toscr_res > currprefs.gfx_resolution) {
 			toscr_res_pixels_shift_hr -= toscr_res - currprefs.gfx_resolution;
-			if (toscr_res_pixels_shift_hr < 0) {
-				toscr_res_pixels_shift_hr = 0;
-			}
+			toscr_res_pixels_shift_hr = std::max(toscr_res_pixels_shift_hr, 0);
 		}
 		toscr_res_pixels_hr = 1 << toscr_res_pixels_shift_hr;
 	} else {
@@ -3534,7 +3531,7 @@ static int process_special_pixel(int delaypos, int fm, uae_u16 cmd)
 	if (cmd & TOSCR_SPC_LORES_START) {
 		toscr_res_pixels_mask_hr = 3 >> toscr_res_pixels_shift_hr;
 	}
-	int shifter[2];
+	int shifter[2]{};
 	shifter[0] = (delay1 & delaymask) << LORES_TO_SHRES_SHIFT;
 	shifter[1] = (delay2 & delaymask) << LORES_TO_SHRES_SHIFT;
 	for (int oddeven = 0; oddeven < 2; oddeven++) {
@@ -3648,7 +3645,7 @@ STATIC_INLINE void do_delays_3_aga_hr(int nbits, int fm)
 				difsize++;
 				toscr_special_skip_ptr++;
 			} else {
-				uae_u64 toda[MAX_PLANES];
+				uae_u64 toda[MAX_PLANES]{};
 				if (cmd & TOSCR_SPC_DUAL) {
 					for (int i = 0; i < toscr_nr_planes_shifter; i++) {
 						toda[i] = todisplay2_aga[i];
@@ -4063,8 +4060,7 @@ STATIC_INLINE void toscr_0_hr(int nbits, int fm)
 	nbits <<= toscr_res_mult;
 	while(nbits > 0) {
 		int n = 2 * TOSCR_NBITSHR - out_nbits;
-		if (n > nbits)
-			n = nbits;
+		n = std::min(n, nbits);
 		toscr_1_hr(n, fm);
 		nbits -= n;
 	}
@@ -4353,9 +4349,7 @@ static void beginning_of_plane_block(int hpos)
 #endif
 	todisplay_fetched = 3;
 	plane0_first_done = true;
-	if (hpos > last_bpl1dat_hpos) {
-		last_bpl1dat_hpos = hpos;
-	}
+	last_bpl1dat_hpos = std::max(hpos, last_bpl1dat_hpos);
 	// HBLANK start to HSYNC start?
 	if (!exthblank && ecs_denise && hpos >= 12 && hpos < hsyncstartpos_start_cycles) {
 		last_bpl1dat_hpos_early = true;
@@ -4399,9 +4393,7 @@ static void beginning_of_plane_block(int hpos)
 	hbstrt_bordercheck(hpos, true);
 
 	update_denise(hpos);
-	if (toscr_nr_planes_agnus > thisline_decision.nr_planes) {
-		thisline_decision.nr_planes = toscr_nr_planes_agnus;
-	}
+	thisline_decision.nr_planes = std::max<int>(toscr_nr_planes_agnus, thisline_decision.nr_planes);
 }
 
 
@@ -4605,7 +4597,7 @@ STATIC_INLINE void long_fetch_64(int plane, int nwords, int weird_number_of_bits
 #ifdef HAVE_UAE_U128
 	uae_u128 shiftbuffer;
 #else
-	uae_u64 shiftbuffer[2];
+	uae_u64 shiftbuffer[2]{};
 #endif
 	uae_u32 outval = outword[plane];
 	uae_u64 fetchval = fetched_aga[plane];
@@ -4823,9 +4815,7 @@ static void finish_final_fetch(int hpos)
 	flush_plane_data(fetchmode);
 
 	// This can overflow if display setup is really bad.
-	if (out_offs > MAX_PIXELS_PER_LINE / 32) {
-		out_offs = MAX_PIXELS_PER_LINE / 32;
-	}
+	out_offs = std::min(out_offs, MAX_PIXELS_PER_LINE / 32);
 	thisline_decision.plflinelen = out_offs;
 
 	/* The latter condition might be able to happen in interlaced frames. */
@@ -5124,9 +5114,7 @@ static void update_fetch(int until, int fm)
 			bprun_cycle += count;
 			if (bprun_pipeline_flush_delay > 0) {
 				bprun_pipeline_flush_delay -= count;
-				if (bprun_pipeline_flush_delay < 0) {
-					bprun_pipeline_flush_delay = 0;
-				}
+				bprun_pipeline_flush_delay = std::max(bprun_pipeline_flush_delay, 0);
 			}
 			if (plane0) {
 				last_bpl1dat_hpos = hpos;
@@ -5404,13 +5392,9 @@ static void do_playfield_collisions(int startpos, int endpos)
 
 	collided = 0;
 	minpos = thisline_decision.plfleft - DDF_OFFSET;
-	if (minpos < hw_diwfirst) {
-		minpos = hw_diwfirst;
-	}
+	minpos = std::max(minpos, hw_diwfirst);
 	maxpos = thisline_decision.plfright - DDF_OFFSET;
-	if (maxpos > hw_diwlast) {
-		maxpos = hw_diwlast;
-	}
+	maxpos = std::min(maxpos, hw_diwlast);
 
 	for (i = minpos; i < maxpos && !collided; i += 32) {
 		int offs = ((i << bplres) - ddf_left) >> 3;
@@ -5577,13 +5561,9 @@ static void check_collisions(int hpos)
 		return;
 	}
 	int start = coord_diw_shres_to_window_x(collision_hpos << CCK_SHRES_SHIFT);
-	if (startpos < start) {
-		startpos = start;
-	}
+	startpos = std::max(startpos, start);
 	int end = coord_diw_shres_to_window_x(hpos << CCK_SHRES_SHIFT);
-	if (endpos > end) {
-		endpos = end;
-	}
+	endpos = std::min(endpos, end);
 	if (sprites_enabled_this_line || brdspractive()) {
 		if (currprefs.collision_level > 1) {
 			do_sprite_collisions(startpos, endpos);
@@ -5994,18 +5974,10 @@ static void decide_sprites(int hpos, bool quick, bool halfcycle = false)
 #if AUTOSCALE_SPRITES
 		/* get upper and lower sprite position if brdsprt enabled */
 		if (gotdata) {
-			if (vpos < first_planes_vpos) {
-				first_planes_vpos = vpos;
-			}
-			if (vpos < plffirstline_total) {
-				plffirstline_total = vpos;
-			}
-			if (vpos > last_planes_vpos) {
-				last_planes_vpos = vpos;
-			}
-			if (vpos > plflastline_total) {
-				plflastline_total = vpos;
-			}
+			first_planes_vpos = std::min(vpos, first_planes_vpos);
+			plffirstline_total = std::min(vpos, plffirstline_total);
+			last_planes_vpos = std::max(vpos, last_planes_vpos);
+			plflastline_total = std::max(vpos, plflastline_total);
 		}
 #endif
 	}
@@ -6474,9 +6446,7 @@ static void reset_decisions_hsync_start(void)
 
 	toscr_nr_planes2 = GET_PLANES(bplcon0d);
 	if (isocs7planes()) {
-		if (toscr_nr_planes2 < 6) {
-			toscr_nr_planes2 = 6;
-		}
+		toscr_nr_planes2 = std::max(toscr_nr_planes2, 6);
 	}
 	toscr_nr_planes3 = toscr_nr_planes2;
 	toscr_nr_changed = false;
@@ -6862,9 +6832,7 @@ static void updateextblk(void)
 			denisehtotal = maxhpos_short + hsyncstartpos;
 		}
 		// make sure possible BPL DMA cycles before first refresh slot are processed before hsync
-		if (hsyncstartpos_start < REFRESH_FIRST_HPOS + 1) {
-			hsyncstartpos_start = REFRESH_FIRST_HPOS + 1;
-		}
+		hsyncstartpos_start = std::max(hsyncstartpos_start, REFRESH_FIRST_HPOS + 1);
 
 		hsstrt_v2 = (hsstrt & 0xff) << CCK_SHRES_SHIFT;
 		hsstop_v2 = (hsstop & 0xff) << CCK_SHRES_SHIFT;
@@ -7107,12 +7075,8 @@ void compute_framesync(void)
 		vres2--;
 	}
 
-	if (vres2 < 0) {
-		vres2 = 0;
-	}
-	if (vres2 > VRES_QUAD) {
-		vres2 = VRES_QUAD;
-	}
+	vres2 = std::max(vres2, 0);
+	vres2 = std::min(vres2, VRES_QUAD);
 
 	vidinfo->drawbuffer.inwidth = maxhpos_display << res2;
 	vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.inwidth;
@@ -7133,38 +7097,29 @@ void compute_framesync(void)
 
 	//write_log(_T("Width %d Height %d\n"), vidinfo->drawbuffer.inwidth, vidinfo->drawbuffer.inheight);
 
-	if (vidinfo->drawbuffer.inwidth < 16)
-		vidinfo->drawbuffer.inwidth = 16;
-	if (vidinfo->drawbuffer.inwidth2 < 16)
-		vidinfo->drawbuffer.inwidth2 = 16;
-	if (vidinfo->drawbuffer.inheight < 1)
-		vidinfo->drawbuffer.inheight = 1;
-	if (vidinfo->drawbuffer.inheight2 < 1)
-		vidinfo->drawbuffer.inheight2 = 1;
+	vidinfo->drawbuffer.inwidth = std::max(vidinfo->drawbuffer.inwidth, 16);
+	vidinfo->drawbuffer.inwidth2 = std::max(vidinfo->drawbuffer.inwidth2, 16);
+	vidinfo->drawbuffer.inheight = std::max(vidinfo->drawbuffer.inheight, 1);
+	vidinfo->drawbuffer.inheight2 = std::max(vidinfo->drawbuffer.inheight2, 1);
 
-	if (vidinfo->drawbuffer.inwidth > vidinfo->drawbuffer.width_allocated)
-		vidinfo->drawbuffer.inwidth = vidinfo->drawbuffer.width_allocated;
-	if (vidinfo->drawbuffer.inwidth2 > vidinfo->drawbuffer.width_allocated)
-		vidinfo->drawbuffer.inwidth2 = vidinfo->drawbuffer.width_allocated;
+	vidinfo->drawbuffer.inwidth = std::min(vidinfo->drawbuffer.inwidth, vidinfo->drawbuffer.width_allocated);
+	vidinfo->drawbuffer.inwidth2 = std::min(vidinfo->drawbuffer.inwidth2, vidinfo->drawbuffer.width_allocated);
 
-	if (vidinfo->drawbuffer.inheight > vidinfo->drawbuffer.height_allocated)
-		vidinfo->drawbuffer.inheight = vidinfo->drawbuffer.height_allocated;
-	if (vidinfo->drawbuffer.inheight2 > vidinfo->drawbuffer.height_allocated)
-		vidinfo->drawbuffer.inheight2 = vidinfo->drawbuffer.height_allocated;
+	vidinfo->drawbuffer.inheight = std::min(vidinfo->drawbuffer.inheight, vidinfo->drawbuffer.height_allocated);
+	vidinfo->drawbuffer.inheight2 = std::min(vidinfo->drawbuffer.inheight2, vidinfo->drawbuffer.height_allocated);
 
 	vidinfo->drawbuffer.outwidth = vidinfo->drawbuffer.inwidth;
 	vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.inheight;
 
-	if (vidinfo->drawbuffer.outwidth > vidinfo->drawbuffer.width_allocated)
-		vidinfo->drawbuffer.outwidth = vidinfo->drawbuffer.width_allocated;
+	vidinfo->drawbuffer.outwidth = std::min(vidinfo->drawbuffer.outwidth, vidinfo->drawbuffer.width_allocated);
 
-	if (vidinfo->drawbuffer.outheight > vidinfo->drawbuffer.height_allocated)
-		vidinfo->drawbuffer.outheight = vidinfo->drawbuffer.height_allocated;
+	vidinfo->drawbuffer.outheight = std::min(vidinfo->drawbuffer.outheight, vidinfo->drawbuffer.height_allocated);
 
 	memset(line_decisions, 0, sizeof(line_decisions));
 	memset(line_drawinfo, 0, sizeof(line_drawinfo));
-	for (int i = 0; i < sizeof(line_decisions) / sizeof(*line_decisions); i++) {
-		line_decisions[i].plfleft = -2;
+	for (auto& line_decision : line_decisions)
+	{
+		line_decision.plfleft = -2;
 	}
 
 	check_nocustom();
@@ -7319,12 +7274,8 @@ static void init_beamcon0(bool fakehz)
 					hbstrtx |= (hbstrt & 0x400) ? 1 : 0;
 					hbstopx |= (hbstop & 0x400) ? 1 : 0;
 				}
-				if (hbstrtx > hp2) {
-					hbstrtx = hp2;
-				}
-				if (hbstopx > hp2) {
-					hbstopx = hp2;
-				}
+				hbstrtx = std::min(hbstrtx, hp2);
+				hbstopx = std::min(hbstopx, hp2);
 				if (hbstrtx > hp2 / 2 && hbstopx < hp2 / 2) {
 					hb = (hp2 - hbstrtx) + hbstopx;
 				} else if (hbstopx < hp2 / 2 && hbstrtx < hbstopx) {
@@ -7333,9 +7284,7 @@ static void init_beamcon0(bool fakehz)
 				if (hbstopx > hp2 / 2) {
 					hbstopx = 0;
 				}
-				if (hb < 1) {
-					hb = 1;
-				}
+				hb = std::max(hb, 1);
 
 #if 0
 				// HSYNC adjustment
@@ -7425,12 +7374,8 @@ static void init_beamcon0(bool fakehz)
 		maxhpos_display += currprefs.gfx_extrawidth;
 	}
 
-	if (hsstop_detect < 0) {
-		hsstop_detect = 0;
-	}
-	if (minfirstline < 0) {
-		minfirstline = 0;
-	}
+	hsstop_detect = std::max(hsstop_detect, 0);
+	minfirstline = std::max(minfirstline, 0);
 
 	vblank_extraline = !agnusa1000 && !ecs_denise ? 1 : 0;
 
@@ -7450,9 +7395,7 @@ static void init_beamcon0(bool fakehz)
 	if (fakehz && vpos_count > maxvpos_display_vsync) {
 		// we come here if vpos_count != maxvpos and beamcon0 didn't change
 		// (someone poked VPOSW)
-		if (vpos_count < 10) {
-			vpos_count = 10;
-		}
+		vpos_count = std::max(vpos_count, 10);
 		vblank_hz = (isntsc ? 15734.0f : 15625.0f) / vpos_count;
 		vblank_hz_nom = vblank_hz_shf = vblank_hz_lof = vblank_hz_lace = (float)vblank_hz;
 		maxvpos_nom = vpos_count - (lof_store ? 1 : 0);
@@ -7483,26 +7426,20 @@ static void init_beamcon0(bool fakehz)
 		// if (weird mode where) vblank starts after vsync start+3: minfirstline = vsstrt+3
 		if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME && firstblankedline >= vsstrt + 3 && minfirstline > vsstrt + 3 && firstblankedline < minfirstline) {
 			minfirstline = vsstrt + 3;
-			if (minfirstline_hw > minfirstline) {
-				minfirstline_hw = minfirstline;
-			}
+			minfirstline_hw = std::min(minfirstline_hw, minfirstline);
 		}
 	} else if (beamcon0 & bemcon0_vsync_mask) {
 		firstblankedline = maxvpos + 1;
 	} else if (beamcon0 & BEAMCON0_VARVBEN) {
 		if (minfirstline > vbstop) {
 			minfirstline = vbstop;
-			if (minfirstline < 3) {
-				minfirstline = 3;
-			}
+			minfirstline = std::max(minfirstline, 3);
 		}
 		firstblankedline = vbstrt;
 		// if (weird mode where) vblank starts after vsync start+3: minfirstline = vsstrt+3
 		if (currprefs.gfx_overscanmode >= OVERSCANMODE_EXTREME && firstblankedline >= hardwired_vsstrt + 3 && minfirstline > hardwired_vsstrt + 3 && firstblankedline < minfirstline) {
 			minfirstline = hardwired_vsstrt + 3;
-			if (minfirstline_hw > minfirstline) {
-				minfirstline_hw = minfirstline;
-			}
+			minfirstline_hw = std::min(minfirstline_hw, minfirstline);
 		}
 	} else {
 		firstblankedline = maxvpos + 1;
@@ -7522,13 +7459,9 @@ static void init_beamcon0(bool fakehz)
 		}
 	}
 
-	if (maxvpos_display_vsync <= 0) {
-		maxvpos_display_vsync = 0;
-	}
+	maxvpos_display_vsync = std::max(maxvpos_display_vsync, 0);
 
-	if (minfirstline < vsync_startline) {
-		minfirstline = vsync_startline;
-	}
+	minfirstline = std::max(minfirstline, vsync_startline);
 
 	if (minfirstline >= maxvpos) {
 		minfirstline = maxvpos - 1;
@@ -7538,17 +7471,11 @@ static void init_beamcon0(bool fakehz)
 		firstblankedline = maxvpos + maxvpos_display_vsync + 1;
 	}
 
-	if (minfirstline < minfirstline_hw) {
-		minfirstline = minfirstline_hw;
-	}
+	minfirstline = std::max(minfirstline, minfirstline_hw);
 
 	if (beamcon0 & bemcon0_vsync_mask) {
-		if (maxvpos_display_vsync >= vsstrt + 3) {
-			maxvpos_display_vsync = vsstrt + 3;
-		}
-		if (minfirstline < vsync_startline) {
-			minfirstline = vsync_startline;
-		}
+		maxvpos_display_vsync = std::min(maxvpos_display_vsync, vsstrt + 3);
+		minfirstline = std::max(minfirstline, vsync_startline);
 	}
 
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
@@ -7590,30 +7517,20 @@ static void init_beamcon0(bool fakehz)
 		maxvpos_display_vsync = 1;
 	}
 
-	if (maxvpos_nom >= MAXVPOS) {
-		maxvpos_nom = MAXVPOS;
-	}
-	if (maxvpos_display >= MAXVPOS) {
-		maxvpos_display = MAXVPOS;
-	}
+	maxvpos_nom = std::min(maxvpos_nom, MAXVPOS);
+	maxvpos_display = std::min(maxvpos_display, MAXVPOS);
 	if (currprefs.gfx_scandoubler && doublescan == 0) {
 		doublescan = -1;
 	}
 	/* limit to sane values */
-	if (vblank_hz < 10) {
-		vblank_hz = 10;
-	}
-	if (vblank_hz > 300) {
-		vblank_hz = 300;
-	}
+	vblank_hz = std::max<float>(vblank_hz, 10);
+	vblank_hz = std::min<float>(vblank_hz, 300);
 	maxhpos_short = maxhpos;
 	minfirstline_linear = minfirstline;
 	set_delay_lastcycle();
 	updateextblk();
 	maxvpos_total = ecs_agnus ? (MAXVPOS_LINES_ECS - 1) : (MAXVPOS_LINES_OCS - 1);
-	if (maxvpos_total > MAXVPOS) {
-		maxvpos_total = MAXVPOS;
-	}
+	maxvpos_total = std::min(maxvpos_total, MAXVPOS);
 	set_maxhpos(maxhpos);
 	estimated_fm = 0xffff;
 	maxvsize_display = maxvpos_display + maxvpos_display_vsync - minfirstline;
@@ -7759,9 +7676,7 @@ static void calcdiw(void)
 	diwfirstword = coord_diw_shres_to_window_x(hstrt);
 	diwlastword = coord_diw_shres_to_window_x(hstop);
 	int mindiw = min_diwlastword;
-	if (diwfirstword < mindiw) {
-		diwfirstword = mindiw;
-	}
+	diwfirstword = std::max(diwfirstword, mindiw);
 
 	int hpos = current_hpos();
 
@@ -8447,9 +8362,7 @@ static void REFPTR(int hpos, uae_u16 v)
 	}
 	int slot = diff / 2;
 	if (slot >= 0) {
-		if (slot > 4) {
-			slot = 4;
-		}
+		slot = std::min(slot, 4);
 		update_refptr(-1, slot, true, true);
 	}
 
@@ -8581,9 +8494,7 @@ static void immediate_copper(int num)
 	cop_state.ip = num == 1 ? cop1lc : cop2lc;
 
 	while (pos < (maxvpos << 5)) {
-		if (oldpos > pos) {
-			pos = oldpos;
-		}
+		pos = std::max(oldpos, pos);
 		if (!is_copper_dma(false)) {
 			break;
 		}
@@ -9324,9 +9235,7 @@ static void bplcon0_denise_change_early(int hpos, uae_u16 con0)
 	}
 
 	if (isocs7planes()) {
-		if (toscr_nr_planes_shifter_new < 6) {
-			toscr_nr_planes_shifter_new = 6;
-		}
+		toscr_nr_planes_shifter_new = std::max(toscr_nr_planes_shifter_new, 6);
 	}
 
 	if (np > toscr_nr_planes2) {
@@ -10689,9 +10598,7 @@ static void decide_line(int endhpos)
 					decide_line_decision_fetches(hpos);
 					// Bitplane sequencer activated
 					bprun = -1;
-					if (plfstrt_sprite > hpos + 1) {
-						plfstrt_sprite = hpos + 1;
-					}
+					plfstrt_sprite = std::min(plfstrt_sprite, hpos + 1);
 					bprun_start(hpos);
 					if (ddf_stopping) {
 						bprun_pipeline_flush_delay = maxhpos;
@@ -10795,9 +10702,7 @@ static void decide_line(int endhpos)
 				decide_line_decision_fetches(hpos);
 				// Bitplane sequencer activated
 				bprun = -1;
-				if (plfstrt_sprite > hpos + 0) {
-					plfstrt_sprite = hpos + 0;
-				}
+				plfstrt_sprite = std::min(plfstrt_sprite, hpos + 0);
 				bprun_start(hpos);
 				if (ddf_stopping) {
 					bprun_pipeline_flush_delay = maxhpos;
@@ -12085,9 +11990,7 @@ static bool framewait(void)
 		maybe_process_pull_audio();
 
 		frame_time_t legacy_avg = mavg(&ma_legacy, t, MAVG_VSYNC_SIZE);
-		if (t > legacy_avg) {
-			legacy_avg = t;
-		}
+		legacy_avg = std::max(t, legacy_avg);
 		t = legacy_avg;
 
 #ifdef DEBUGGER
@@ -12100,9 +12003,7 @@ static bool framewait(void)
 #endif
 
 		vsync_time = read_processor_time();
-		if (t > vsynctimebase * 2 / 3) {
-			t = vsynctimebase * 2 / 3;
-		}
+		t = std::min(t, vsynctimebase * 2 / 3);
 
 		if (currprefs.m68k_speed < 0) {
 			vsynctimeperline = (vsynctimebase - t) / (maxvpos_display + 1);
@@ -12110,9 +12011,7 @@ static bool framewait(void)
 			vsynctimeperline = (vsynctimebase - t) / 3;
 		}
 
-		if (vsynctimeperline < 1) {
-			vsynctimeperline = 1;
-		}
+		vsynctimeperline = std::max<frame_time_t>(vsynctimeperline, 1);
 
 #ifdef DEBUGGER
 		if (0 || (log_vsync & 2)) {
@@ -12276,12 +12175,9 @@ static void fpscounter(bool frameok)
 	if ((timeframes & 7) == 0) {
 		double idle = 1000 - (idle_mavg.mavg == 0 ? 0.0 : (double)idle_mavg.mavg * 1000.0 / vsynctimebase);
 		int fps = fps_mavg.mavg == 0 ? 0 : (int)(syncbase * 10 / fps_mavg.mavg);
-		if (fps > 99999)
-			fps = 99999;
-		if (idle < 0)
-			idle = 0;
-		if (idle > 100 * 10)
-			idle = 100 * 10;
+		fps = std::min(fps, 99999);
+		idle = std::max<double>(idle, 0);
+		idle = std::min<double>(idle, 100 * 10);
 		if (fake_vblank_hz * 10 > fps) {
 			double mult = (double)fake_vblank_hz * 10.0 / fps;
 			idle *= mult;
@@ -12292,7 +12188,7 @@ static void fpscounter(bool frameok)
 		gui_data.idle = (int)idle;
 		gui_data.fps_color = nosignal_status == 1 ? 2 : (nosignal_status == 2 ? 3 : (frameok ? 0 : 1));
 		if ((timeframes & 15) == 0) {
-			gui_fps(fps, (int)idle, gui_data.fps_color);
+			gui_fps(fps, gui_data.lines, gui_data.lace, (int)idle, gui_data.fps_color);
 		}
 	}
 }
@@ -12657,9 +12553,7 @@ static void vsync_handler_post(void)
 		bogusframe--;
 	}
 
-	if (nosignal_status < 0) {
-		nosignal_status = 0;
-	}
+	nosignal_status = std::max(nosignal_status, 0);
 	if (nosignal_cnt) {
 		nosignal_cnt--;
 		if (nosignal_cnt == 0) {
@@ -12752,7 +12646,7 @@ static void hsync_scandoubler(int hpos)
 {
 	uae_u16 odmacon = dmacon;
 	int ocop = copper_enabled_thisline;
-	uaecptr bpltmp[MAX_PLANES], bpltmpx[MAX_PLANES];
+	uaecptr bpltmp[MAX_PLANES]{}, bpltmpx[MAX_PLANES]{};
 	int lof = lof_display;
 
 	if (vb_start_line > 2) {
@@ -13090,9 +12984,7 @@ static void hautoscale_check(int vp)
 		if (first_bplcon0 == 0) {
 			first_bplcon0 = bplcon0;
 		}
-		if (vp_end > last_planes_vpos) {
-			last_planes_vpos = vp_end;
-		}
+		last_planes_vpos = std::max(vp_end, last_planes_vpos);
 		if (vp_start >= minfirstline && first_planes_vpos == 0) {
 			first_planes_vpos = vp_start;
 		} else if (vp_end >= current_maxvpos() - 1) {
@@ -13113,15 +13005,11 @@ static void hautoscale_check(int vp)
 			}
 			if (diwlastword_lores > diwlastword_total) {
 				diwlastword_total = diwlastword_lores;
-				if (diwlastword_total > coord_diw_shres_to_window_x(hsyncstartpos)) {
-					diwlastword_total = coord_diw_shres_to_window_x(hsyncstartpos);
-				}
+				diwlastword_total = std::min(diwlastword_total, coord_diw_shres_to_window_x(hsyncstartpos));
 			}
 			if (diwfirstword_lores < diwfirstword_total) {
 				diwfirstword_total = diwfirstword_lores;
-				if (diwfirstword_total < coord_diw_shres_to_window_x(hsyncendpos)) {
-					diwfirstword_total = coord_diw_shres_to_window_x(hsyncendpos);
-				}
+				diwfirstword_total = std::max(diwfirstword_total, coord_diw_shres_to_window_x(hsyncendpos));
 				firstword_bplcon1 = bplcon1;
 			}
 		}
@@ -13228,9 +13116,7 @@ static void hsync_handler_pre(bool onvsync)
 				lightpen_triggered = 1;
 			} else if (lightpen_enabled && !vb_state) {
 				int lpnum = inputdevice_get_lightpen_id();
-				if (lpnum < 0) {
-					lpnum = 0;
-				}
+				lpnum = std::max(lpnum, 0);
 				if (lightpen_cx[lpnum] > 0 && lightpen_cy[lpnum] == vpos) {
 					event2_newevent_xx(-1, lightpen_cx[lpnum] * CYCLE_UNIT, lightpen_cx[lpnum], lightpen_trigger_func);
 				}
@@ -14372,8 +14258,7 @@ static void hsync_handler_post(bool onvsync)
 		static int sleeps_remaining;
 		if (is_last_line ()) {
 			sleeps_remaining = (165 - currprefs.cpu_idle) / 6;
-			if (sleeps_remaining < 0)
-				sleeps_remaining = 0;
+			sleeps_remaining = std::max(sleeps_remaining, 0);
 			/* really last line, just run the cpu emulation until whole vsync time has been used */
 			if (regs.stopped && currprefs.cpu_idle) {
 				// CPU in STOP state: sleep if enough time left.
@@ -16513,13 +16398,16 @@ void check_prefs_changed_custom(void)
 	currprefs.waiting_blits = changed_prefs.waiting_blits;
 	currprefs.blitter_speed_throttle = changed_prefs.blitter_speed_throttle;
 	currprefs.collision_level = changed_prefs.collision_level;
-	if (!currprefs.keyboard_connected && changed_prefs.keyboard_connected) {
+	currprefs.keyboard_nkro = changed_prefs.keyboard_nkro;
+	if (currprefs.keyboard_mode != changed_prefs.keyboard_mode) {
+		currprefs.keyboard_mode = changed_prefs.keyboard_mode;
 		// send powerup sync
 		keyboard_connected(true);
-	} else if (currprefs.keyboard_connected && !changed_prefs.keyboard_connected) {
+	}
+	else if (currprefs.keyboard_mode >= 0 && changed_prefs.keyboard_mode < 0) {
+		currprefs.keyboard_mode = changed_prefs.keyboard_mode;
 		keyboard_connected(false);
 	}
-	currprefs.keyboard_connected = changed_prefs.keyboard_connected;
 
 	currprefs.cs_ciaatod = changed_prefs.cs_ciaatod;
 	currprefs.cs_rtc = changed_prefs.cs_rtc;

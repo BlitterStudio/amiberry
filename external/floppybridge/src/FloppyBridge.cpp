@@ -630,7 +630,16 @@ extern "C" {
 #endif
 
         if (errorMessage)
-            if (strlen(bridgeDriverHandle->lastMessage)) *errorMessage = bridgeDriverHandle->lastMessage; else *errorMessage = NULL;
+        {
+            if (strlen(bridgeDriverHandle->lastMessage))
+            {
+                *errorMessage = bridgeDriverHandle->lastMessage;
+            }
+            else
+            {
+                *errorMessage = NULL;
+            }
+        }
 
         if (!result) {
             // Restore virtual drive

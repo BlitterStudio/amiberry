@@ -58,6 +58,11 @@ jobs:
               codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
             fi
           done
+          for file in build/Amiberry.app/Contents/Resources/plugins/*.dylib; do
+            if [ -f "$file" ]; then
+              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
+            fi
+          done
 
       - name: Codesign the app
         run: |
@@ -136,6 +141,11 @@ jobs:
       - name: Codesign the dylibs
         run: |
           for file in build/Amiberry.app/Contents/Frameworks/*.dylib; do
+            if [ -f "$file" ]; then
+              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
+            fi
+          done
+          for file in build/Amiberry.app/Contents/Resources/plugins/*.dylib; do
             if [ -f "$file" ]; then
               codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
             fi

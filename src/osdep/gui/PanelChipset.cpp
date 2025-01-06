@@ -7,6 +7,7 @@
 #include "options.h"
 #include "custom.h"
 #include "gui_handling.h"
+#include "rommgr.h"
 #include "specialmonitors.h"
 
 static gcn::Window* grpChipset;
@@ -21,13 +22,15 @@ static gcn::CheckBox* chkMemoryCycleExact;
 static gcn::Label* lblChipset;
 static gcn::DropDown* cboChipset;
 static gcn::Window* grpOptions;
-static gcn::CheckBox* chkKeyboardConnected;
 static gcn::CheckBox* chkSubpixelEmu;
 static gcn::CheckBox* chkBlitImmed;
 static gcn::CheckBox* chkBlitWait;
 static gcn::CheckBox* chkMultithreadedDrawing;
 static gcn::Label* lblSpecialMonitors;
 static gcn::DropDown* cboSpecialMonitors;
+static gcn::Window* grpKeyboard;
+static gcn::DropDown* cboKeyboardOptions;
+static gcn::CheckBox* chkKeyboardNKRO;
 static gcn::Window* grpCollisionLevel;
 static gcn::RadioButton* optCollNone;
 static gcn::RadioButton* optCollSprites;
@@ -61,15 +64,28 @@ static chipset chipsets[] = {
 	{-1, ""}
 };
 
+static gcn::StringListModel keyboardModeList;
 static gcn::StringListModel chipsetList;
 static gcn::StringListModel specialMonitorsList;
+
+static void appendkbmcurom(std::string& s, bool hasrom)
+{
+	if (!hasrom) {
+		s += " [ROM not found]";
+	}
+}
 
 class ChipsetActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		changed_prefs.keyboard_connected = chkKeyboardConnected->isSelected();
+		changed_prefs.keyboard_nkro = chkKeyboardNKRO->isSelected();
+		auto nn = cboKeyboardOptions->getSelected();
+		if (nn != -1)
+		{
+			changed_prefs.keyboard_mode = nn - 1;
+		}
 		changed_prefs.chipset_hr = chkSubpixelEmu->isSelected();
 		changed_prefs.immediate_blits = chkBlitImmed->isSelected();
 		changed_prefs.waiting_blits = chkBlitWait->isSelected();
@@ -164,6 +180,46 @@ static ChipsetActionListener* chipsetActionListener;
 
 void InitPanelChipset(const struct config_category& category)
 {
+	int ids1[] = { 321, -1 };
+	int ids2[] = { 322, -1 };
+	int ids3[] = { 323, -1 };
+	struct romlist* has65001 = nullptr;
+	struct romlist* has657036 = getromlistbyids(ids1, nullptr);
+	struct romlist* has6805 = getromlistbyids(ids2, nullptr);
+	struct romlist* has8039 = getromlistbyids(ids3, nullptr);
+
+	keyboardModeList.clear();
+	keyboardModeList.add("Keyboard disconnected");
+	keyboardModeList.add("UAE High level emulation");
+
+	std::string tmp = "A500 / A500 + (6500 - 1 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboardModeList.add(tmp);
+
+	tmp = "A600 (6570 - 036 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboardModeList.add(tmp);
+
+	tmp = "A1000 (6500 - 1 MCU. ROM not yet dumped)";
+	appendkbmcurom(tmp, has65001);
+	keyboardModeList.add(tmp);
+
+	tmp = "A1000 (6570 - 036 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboardModeList.add(tmp);
+
+	tmp = "A1200 (68HC05C MCU)";
+	appendkbmcurom(tmp, has6805);
+	keyboardModeList.add(tmp);
+
+	tmp = "A2000 (Cherry, 8039 MCU)";
+	appendkbmcurom(tmp, has8039);
+	keyboardModeList.add(tmp);
+
+	tmp = "A2000/A3000/A4000 (6570-036 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboardModeList.add(tmp);
+
 	chipsetList.clear();
 	for (int i = 0; chipsets[i].compatible >= 0; ++i)
 		chipsetList.add(chipsets[i].name);
@@ -264,13 +320,6 @@ void InitPanelChipset(const struct config_category& category)
 
 	category.panel->add(grpChipset);
 
-	chkKeyboardConnected = new gcn::CheckBox("Keyboard connected");
-	chkKeyboardConnected->setId("chkKeyboardConnected");
-	chkKeyboardConnected->setBaseColor(gui_base_color);
-	chkKeyboardConnected->setBackgroundColor(gui_background_color);
-	chkKeyboardConnected->setForegroundColor(gui_foreground_color);
-	chkKeyboardConnected->addActionListener(chipsetActionListener);
-
 	chkSubpixelEmu = new gcn::CheckBox("Subpixel Display emulation");
 	chkSubpixelEmu->setId("chkSubpixelEmu");
 	chkSubpixelEmu->setBaseColor(gui_base_color);
@@ -312,13 +361,12 @@ void InitPanelChipset(const struct config_category& category)
 
 	grpOptions = new gcn::Window("Options");
 	grpOptions->setPosition(DISTANCE_BORDER + grpChipset->getWidth() + DISTANCE_BORDER, DISTANCE_BORDER);
-	grpOptions->add(chkKeyboardConnected, 10, 10);
-	grpOptions->add(chkSubpixelEmu, 10, 40);
-	grpOptions->add(chkBlitImmed, 10, 70);
-	grpOptions->add(chkBlitWait, 10, 100);
-	grpOptions->add(chkMultithreadedDrawing, 10, 130);
-	grpOptions->add(lblSpecialMonitors, 10, 170);
-	grpOptions->add(cboSpecialMonitors, 10, 200);
+	grpOptions->add(chkSubpixelEmu, 10, 10);
+	grpOptions->add(chkBlitImmed, 10, 40);
+	grpOptions->add(chkBlitWait, 10, 70);
+	grpOptions->add(chkMultithreadedDrawing, 10, 100);
+	grpOptions->add(lblSpecialMonitors, 10, 130);
+	grpOptions->add(cboSpecialMonitors, 10, 170);
 
 	grpOptions->setMovable(false);
 	grpOptions->setSize(chkSubpixelEmu->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X, TITLEBAR_HEIGHT + cboSpecialMonitors->getY() + cboSpecialMonitors->getHeight() + DISTANCE_NEXT_Y * 6);
@@ -327,6 +375,34 @@ void InitPanelChipset(const struct config_category& category)
 	grpOptions->setForegroundColor(gui_foreground_color);
 
 	category.panel->add(grpOptions);
+
+	cboKeyboardOptions = new gcn::DropDown(&keyboardModeList);
+	cboKeyboardOptions->setSize(250, cboKeyboardOptions->getHeight());
+	cboKeyboardOptions->setBaseColor(gui_base_color);
+	cboKeyboardOptions->setBackgroundColor(gui_background_color);
+	cboKeyboardOptions->setForegroundColor(gui_foreground_color);
+	cboKeyboardOptions->setSelectionColor(gui_selection_color);
+	cboKeyboardOptions->setId("cboKeyboardOptions");
+	cboKeyboardOptions->addActionListener(chipsetActionListener);
+
+	chkKeyboardNKRO = new gcn::CheckBox("Keyboard N-key rollover");
+	chkKeyboardNKRO->setId("chkKeyboardNKRO");
+	chkKeyboardNKRO->setBaseColor(gui_base_color);
+	chkKeyboardNKRO->setBackgroundColor(gui_background_color);
+	chkKeyboardNKRO->setForegroundColor(gui_foreground_color);
+	chkKeyboardNKRO->addActionListener(chipsetActionListener);
+
+	grpKeyboard = new gcn::Window("Keyboard");
+	grpKeyboard->setPosition(DISTANCE_BORDER, grpChipset->getY() + grpChipset->getHeight() + DISTANCE_NEXT_Y);
+	grpKeyboard->add(cboKeyboardOptions, 10, 10);
+	grpKeyboard->add(chkKeyboardNKRO, 10, 40);
+	grpKeyboard->setMovable(false);
+	grpKeyboard->setSize(grpChipset->getWidth(), TITLEBAR_HEIGHT + chkKeyboardNKRO->getY() + chkKeyboardNKRO->getHeight() + DISTANCE_NEXT_Y * 5);
+	grpKeyboard->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpKeyboard->setBaseColor(gui_base_color);
+	grpKeyboard->setForegroundColor(gui_foreground_color);
+
+	category.panel->add(grpKeyboard);
 
 	optCollNone = new gcn::RadioButton("None", "radioccollisiongroup");
 	optCollNone->setId("optCollNone");
@@ -357,13 +433,13 @@ void InitPanelChipset(const struct config_category& category)
 	optCollFull->addActionListener(chipsetActionListener);
 
 	grpCollisionLevel = new gcn::Window("Collision Level");
-	grpCollisionLevel->setPosition(DISTANCE_BORDER, DISTANCE_BORDER + grpChipset->getHeight() + DISTANCE_NEXT_Y);
+	grpCollisionLevel->setPosition(DISTANCE_BORDER, grpKeyboard->getY() + grpKeyboard->getHeight() + DISTANCE_NEXT_Y);
 	grpCollisionLevel->add(optCollNone, 10, 10);
 	grpCollisionLevel->add(optCollSprites, 10, 40);
-	grpCollisionLevel->add(optCollPlayfield, 10, 70);
-	grpCollisionLevel->add(optCollFull, 10, 100);
+	grpCollisionLevel->add(optCollPlayfield, 250, 10);
+	grpCollisionLevel->add(optCollFull, 250, 40);
 	grpCollisionLevel->setMovable(false);
-	grpCollisionLevel->setSize(grpChipset->getWidth(), TITLEBAR_HEIGHT + 100 + optCollFull->getHeight() + DISTANCE_NEXT_Y);
+	grpCollisionLevel->setSize(grpChipset->getWidth() + grpOptions->getWidth(), TITLEBAR_HEIGHT + optCollFull->getY() + optCollFull->getHeight() + DISTANCE_NEXT_Y);
 	grpCollisionLevel->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpCollisionLevel->setBaseColor(gui_base_color);
 	grpCollisionLevel->setForegroundColor(gui_foreground_color);
@@ -388,7 +464,6 @@ void ExitPanelChipset()
 	delete grpChipset;
 	delete chipsetActionListener;
 
-	delete chkKeyboardConnected;
 	delete chkSubpixelEmu;
 	delete chkBlitImmed;
 	delete chkBlitWait;
@@ -397,6 +472,9 @@ void ExitPanelChipset()
 	delete cboSpecialMonitors;
 	delete grpOptions;
 
+	delete cboKeyboardOptions;
+	delete chkKeyboardNKRO;
+	delete grpKeyboard;
 	
 	delete optCollNone;
 	delete optCollSprites;
@@ -425,6 +503,17 @@ void RefreshPanelChipset()
 	chkBlitImmed->setEnabled(!changed_prefs.cpu_cycle_exact);
 	chkMultithreadedDrawing->setEnabled(!emulating);
 
+	if (changed_prefs.keyboard_mode == KB_UAE || changed_prefs.keyboard_mode == KB_A2000_8039) {
+		if (!changed_prefs.keyboard_nkro) {
+			changed_prefs.keyboard_nkro = true;
+		}
+		chkKeyboardNKRO->setEnabled(false);
+	}
+	else {
+		chkKeyboardNKRO->setEnabled(true);
+	}
+
+
 	// Set Values
 	if (changed_prefs.chipset_mask == 0)
 		optOCS->setSelected(true);
@@ -438,7 +527,8 @@ void RefreshPanelChipset()
 		optAGA->setSelected(true);
 
 	chkNTSC->setSelected(changed_prefs.ntscmode);
-	chkKeyboardConnected->setSelected(changed_prefs.keyboard_connected);
+	chkKeyboardNKRO->setSelected(changed_prefs.keyboard_nkro);
+	cboKeyboardOptions->setSelected(changed_prefs.keyboard_mode + 1);
 	chkSubpixelEmu->setSelected(changed_prefs.chipset_hr);
 	chkBlitImmed->setSelected(changed_prefs.immediate_blits);
 	chkBlitWait->setSelected(changed_prefs.waiting_blits);

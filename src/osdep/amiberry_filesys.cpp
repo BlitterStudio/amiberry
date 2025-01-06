@@ -887,7 +887,7 @@ void filesys_host_init()
 int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config_info* ci, bool inserted,
 						   bool fullcheck, int cnt)
 {
-	sprintf(ci->volname, "DH_%c", ci->rootdir[0]);
+	_sntprintf(ci->volname, sizeof ci->volname, "DH_%c", ci->rootdir[0]);
 	return 2;
 }
 

@@ -26,12 +26,12 @@ static gcn::Image* imgSavestate = nullptr;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
 
-std::string get_file_timestamp(const std::string& filename)
+static std::string get_file_timestamp(const TCHAR* filename)
 {
 	struct stat st {};
 	tm tm{};
 
-	if (stat(filename.c_str(), &st) == -1) {
+	if (stat(filename, &st) == -1) {
 		write_log("Failed to get file timestamp, stat failed: %s\n", strerror(errno));
 		return "ERROR";
 	}
@@ -39,7 +39,7 @@ std::string get_file_timestamp(const std::string& filename)
 	localtime_r(&st.st_mtime, &tm);
 	char date_string[256];
 	strftime(date_string, sizeof(date_string), "%c", &tm);
-	return std::string(date_string);
+	return {date_string};
 }
 
 class SavestateActionListener : public gcn::ActionListener
@@ -50,9 +50,8 @@ public:
 		const auto it = std::find(radioButtons.begin(), radioButtons.end(), actionEvent.getSource());
 		if (it != radioButtons.end())
 		{
-			current_state_num = std::distance(radioButtons.begin(), it);
+			current_state_num = static_cast<int>(std::distance(radioButtons.begin(), it));
 		}
-
 		else if (actionEvent.getSource() == cmdLoadState)
 		{
 			//------------------------------------------
@@ -70,12 +69,16 @@ public:
 						savestate_state = STATE_DORESTORE;
 						gui_running = false;
 					}
+					else
+					{
+						ShowMessage("Loading savestate", "Statefile doesn't exist.", "", "", "Ok", "");
+					}
 				}
-				if (savestate_state != STATE_DORESTORE)
-					ShowMessage("Loading savestate", "Statefile doesn't exist.", "", "", "Ok", "");
 			}
 			else
+			{
 				ShowMessage("Loading savestate", "Emulation hasn't started yet.", "", "", "Ok", "");
+			}
 
 			cmdLoadState->requestFocus();
 		}
@@ -99,7 +102,7 @@ public:
 			//------------------------------------------
 			// Save current state
 			//------------------------------------------
-			if (emulating && (!unsafe || unsafe && unsafe_confirmed))
+			if (emulating && (!unsafe || unsafe_confirmed))
 			{
 				savestate_initsave(savestate_fname, 1, true, true);
 				save_state(savestate_fname, "...");
@@ -107,7 +110,9 @@ public:
 					save_thumb(screenshot_filename);
 			}
 			else
+			{
 				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "", "Ok", "");
+			}
 
 			cmdSaveState->requestFocus();
 		}
@@ -210,7 +215,7 @@ void RefreshPanelSavestate()
 		imgSavestate = nullptr;
 	}
 
-	if (current_state_num >= 0 && current_state_num < radioButtons.size()) {
+	if (current_state_num >= 0 && current_state_num < static_cast<int>(radioButtons.size())) {
 		radioButtons[current_state_num]->setSelected(true);
 	}
 
@@ -222,63 +227,65 @@ void RefreshPanelSavestate()
 		if (f) {
 			fclose(f);
 			lblTimestamp->setCaption(get_file_timestamp(savestate_fname));
+
+			if (!screenshot_filename.empty())
+			{
+				auto* const screenshot_file = fopen(screenshot_filename.c_str(), "rbe");
+				if (screenshot_file)
+				{
+					fclose(screenshot_file);
+					const auto rect = grpScreenshot->getChildrenArea();
+					auto* loaded_image = IMG_Load(screenshot_filename.c_str());
+					if (loaded_image != nullptr)
+					{
+						const SDL_Rect source = { 0, 0, loaded_image->w, loaded_image->h };
+						const SDL_Rect target = { 0, 0, rect.width, rect.height };
+						auto* scaled = SDL_CreateRGBSurface(0, rect.width, rect.height,
+							loaded_image->format->BitsPerPixel,
+							loaded_image->format->Rmask, loaded_image->format->Gmask,
+							loaded_image->format->Bmask, loaded_image->format->Amask);
+						SDL_SoftStretch(loaded_image, &source, scaled, &target);
+						SDL_FreeSurface(loaded_image);
+						imgSavestate = new gcn::SDLImage(scaled, true);
+						icoSavestate = new gcn::Icon(imgSavestate);
+						grpScreenshot->add(icoSavestate);
+					}
+				}
+			}
 		}
 		else
 		{
-			lblTimestamp->setCaption("No savestate found");
+			lblTimestamp->setCaption("No savestate found: " + extract_filename(std::string(savestate_fname)));
 		}
 	}
-
-	if (screenshot_filename.length() > 0)
+	else
 	{
-		auto* const f = fopen(screenshot_filename.c_str(), "rbe");
-		if (f)
-		{
-			fclose(f);
-			const auto rect = grpScreenshot->getChildrenArea();
-			auto* loadedImage = IMG_Load(screenshot_filename.c_str());
-			if (loadedImage != nullptr)
-			{
-				SDL_Rect source = {0, 0, 0, 0};
-				SDL_Rect target = {0, 0, 0, 0};
-				auto* scaled = SDL_CreateRGBSurface(0, rect.width, rect.height,
-													loadedImage->format->BitsPerPixel,
-													loadedImage->format->Rmask, loadedImage->format->Gmask,
-													loadedImage->format->Bmask, loadedImage->format->Amask);
-				source.w = loadedImage->w;
-				source.h = loadedImage->h;
-				target.w = rect.width;
-				target.h = rect.height;
-				SDL_SoftStretch(loadedImage, &source, scaled, &target);
-				SDL_FreeSurface(loadedImage);
-				loadedImage = nullptr;
-				imgSavestate = new gcn::SDLImage(scaled, true);
-				icoSavestate = new gcn::Icon(imgSavestate);
-				grpScreenshot->add(icoSavestate);
-			}
-		}
+		lblTimestamp->setCaption("No savestate loaded");
 	}
+	lblTimestamp->adjustSize();
 
 	for (const auto& radioButton : radioButtons) {
 		radioButton->setEnabled(true);
 	}
 
 	grpScreenshot->setVisible(true);
-	cmdLoadState->setEnabled(true);
-	cmdSaveState->setEnabled(true);
+	cmdLoadState->setEnabled(strlen(savestate_fname) > 0);
+	cmdSaveState->setEnabled(strlen(savestate_fname) > 0);
 }
 
 bool HelpPanelSavestate(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Savestates are stored with the name of the disk in drive DF0, or if no");
-	helptext.emplace_back("disk is inserted, the name of the last loaded .uae config.");
+	helptext.emplace_back("Savestates can be used with floppy disk image files, whdload.lha files, and with HDD");
+	helptext.emplace_back("emulation setups.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("When you hold left shoulder button and press 'l' during emulation, ");
-	helptext.emplace_back("the state of the last active number will be loaded. Hold left shoulder ");
-	helptext.emplace_back("button and press 's' to save the current state in the last active slot.");
+	helptext.emplace_back("Note: Savestates will not work when emulating CD32/CDTV machine types, and will likely");
+	helptext.emplace_back("fail when the JIT/PPC/RTG emulation options are enabled.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("Note: Savestates may or may not work with HDDs, JIT or RTG. They were");
-	helptext.emplace_back("designed to work with floppy disk images.");
+	helptext.emplace_back("Savestates are stored in a .uss file, with the name being that of the currently loaded");
+	helptext.emplace_back("floppy disk image or whdload.lha file, or the name of the loaded HDD .uae config.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("For more information about Savestates, please read the related Amiberry Wiki page.");
+	helptext.emplace_back(" ");
 	return true;
 }

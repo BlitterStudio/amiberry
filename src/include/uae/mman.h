@@ -23,7 +23,7 @@ struct uae_shmid_ds {
 
 void *uae_shmat(addrbank *ab, int shmid, void *shmaddr, int shmflg, struct uae_mman_data *md);
 int uae_shmdt(const void *shmaddr);
-int uae_shmget(uae_key_t key, addrbank *ab, int shmflg);
+int uae_shmget(uae_key_t key, const addrbank *ab, int shmflg);
 int uae_shmctl(int shmid, int cmd, struct uae_shmid_ds *buf);
 
 #define UAE_IPC_PRIVATE 0x01

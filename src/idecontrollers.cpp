@@ -62,7 +62,8 @@
 #define TANDEM_IDE (TRIFECTA_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
 #define DOTTO_IDE (TANDEM_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
 #define DEV_IDE (DOTTO_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
-#define TOTAL_IDE (DEV_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
+#define RIPPLE_IDE (DEV_IDE + MAX_DUPLICATE_EXPANSION_BOARDS)
+#define TOTAL_IDE (RIPPLE_IDE + 2 * MAX_DUPLICATE_EXPANSION_BOARDS)
 
 #define ALF_ROM_OFFSET 0x0100
 #define GVP_IDE_ROM_OFFSET 0x8000
@@ -128,6 +129,7 @@ static struct ide_board *trifecta_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 static struct ide_board *tandem_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 static struct ide_board *dotto_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 static struct ide_board *dev_board[MAX_DUPLICATE_EXPANSION_BOARDS];
+static struct ide_board *ripple_board[MAX_DUPLICATE_EXPANSION_BOARDS];
 
 static struct ide_hdf *idecontroller_drive[TOTAL_IDE * 2];
 static struct ide_thread_state idecontroller_its;
@@ -651,6 +653,22 @@ static int get_dev_hd_reg(uaecptr addr, struct ide_board* board)
 	return reg;
 }
 
+static int get_ripple_reg(uaecptr addr, struct ide_board *board, int *portnum)
+{
+	int reg = -1;
+	*portnum = (addr & 0x2000) ? 1 : 0;
+
+	if (addr & 0x3000) {
+		reg = (addr >> 9) & 7;
+
+		if (addr & 0x4000) {
+			reg |= IDE_SECONDARY;
+		}
+	}
+
+	return reg;
+}
+
 static int getidenum(struct ide_board *board, struct ide_board **arr)
 {
 	for (int i = 0; i < MAX_DUPLICATE_EXPANSION_BOARDS; i++) {
@@ -1085,6 +1103,21 @@ static uae_u32 ide_read_byte2(struct ide_board *board, uaecptr addr)
 			}
 
 		}
+	} else if (board->type == RIPPLE_IDE) {
+			if (board->rom && board->userdata == 0) {
+				v = board->rom[(addr & board->rom_mask)];
+				return v;
+			}
+			int portnum = 0;
+			int regnum = get_ripple_reg(addr,board,&portnum);
+			if (!ide_isdrive(board->ide[portnum]) && !ide_isdrive(board->ide[portnum]->pair)) {
+				v = 0xff;
+				return v;
+			}
+			if (regnum >= 0 && board->ide[portnum]) {
+				v = get_ide_reg_multi(board,regnum,portnum,1);
+			}
+
 	}
 
 	return v;
@@ -1409,6 +1442,19 @@ static uae_u32 ide_read_word(struct ide_board *board, uaecptr addr)
 				if (reg == IDE_DATA) {
 					v = get_ide_reg(board, reg);
 				}
+			}
+
+		} else if (board->type == RIPPLE_IDE) {
+			if (board->rom && board->userdata == 0) {
+				v = board->rom[addr & board->rom_mask];
+				v <<= 8;
+				v |= board->rom[(addr + 1) & board->rom_mask];
+				return v;
+			}
+			int portnum = 0;
+			int regnum = get_ripple_reg(addr,board,&portnum);
+			if (regnum == IDE_DATA && board->ide[portnum]) {
+				v = get_ide_reg_multi(board, regnum, portnum, 1);
 			}
 
 		}
@@ -1831,6 +1877,13 @@ static void ide_write_byte(struct ide_board *board, uaecptr addr, uae_u8 v)
 
 			}
 
+		} else if (board->type == RIPPLE_IDE) {
+			if ((addr & 0x3000) && board->userdata == 0) board->userdata = 1;
+			int portnum = 0;
+			int reg = get_ripple_reg(addr,board,&portnum);
+			if (board->ide[portnum] && reg >= 0) {
+				put_ide_reg_multi(board,reg,v,portnum,1);
+			}
 		}
 	}
 }
@@ -2041,6 +2094,15 @@ static void ide_write_word(struct ide_board *board, uaecptr addr, uae_u16 v)
 				put_ide_reg(board, reg, v);
 			}
 
+		} else if (board->type == RIPPLE_IDE) {
+			if ((addr & 0x3000) && board->userdata == 0)
+				board->userdata = 1;
+			if (board->configured) {
+				int portnum = 0;
+				int reg = get_ripple_reg(addr, board, &portnum);
+				if (reg >= 0 && board->ide[portnum])
+					put_ide_reg_multi(board,reg,v,portnum,1);
+			}
 		}
 	}
 }
@@ -3254,6 +3316,54 @@ bool dev_hd_init(struct autoconfig_info *aci)
 void dev_hd_add_ide_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc)
 {
 	add_ide_standard_unit(ch, ci, rc, dev_board, DEV_IDE, false, true, 2);
+}
+
+bool ripple_init(struct autoconfig_info *aci)
+{
+	const struct expansionromtype *ert = get_device_expansion_rom(ROMTYPE_RIPPLE);
+
+	ide_add_reset();
+	if (!aci->doinit) {
+		aci->autoconfigp = ert->autoconfig;
+		return true;
+	}
+
+	struct ide_board *ide = getide(aci);
+	if (!ide)
+		return false;
+
+	ide->configured     = 0;
+	ide->bank           = &ide_bank_generic;
+	ide->type           = RIPPLE_IDE;
+	ide->rom_size       = 131072;
+	ide->userdata       = 0;
+	ide->intena         = false;
+	ide->mask           = 131072 - 1;
+	ide->keepautoconfig = false;
+
+	ide->rom = xcalloc(uae_u8, ide->rom_size);
+	if (ide->rom) {
+		memset(ide->rom, 0xff, ide->rom_size);
+	}
+
+	ide->rom_mask = ide->rom_size - 1;
+
+	for (int i = 0; i < 16; i++) {
+		uae_u8 b = ert->autoconfig[i];
+		if (i == 0 && aci->rc->autoboot_disabled)
+			b &= ~0x10;
+		ew(ide, i * 4, b);
+	}
+
+	load_rom_rc(aci->rc, ROMTYPE_RIPPLE, 65536, 0, ide->rom, 131072, LOADROM_EVENONLY_ODDONE);
+
+	aci->addrbank = ide->bank;
+	return true;
+}
+
+void ripple_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc)
+{
+	add_ide_standard_unit(ch, ci, rc, ripple_board, RIPPLE_IDE, false, false, 4);
 }
 
 #ifdef WITH_X86

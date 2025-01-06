@@ -121,7 +121,8 @@ public:
 						bIgnoreListChange = false;
 					}
 					whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-					SetLastActiveConfig(whdload_prefs.whdload_filename.c_str());
+					if (!last_loaded_config[0])
+						set_last_active_config(whdload_prefs.whdload_filename.c_str());
 				}
 				refresh_all_panels();
 			}

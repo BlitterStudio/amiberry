@@ -76,7 +76,7 @@ static gcn::StringListModel cpu_freq_list(cpu_freq_values);
 static float getcpufreq(int m)
 {
 	const float f = changed_prefs.ntscmode ? 28636360.0f : 28375160.0f;
-	return f * float(m >> 8) / 8.0f;
+	return f * static_cast<float>(m >> 8) / 8.0f;
 }
 
 class CPUActionListener : public gcn::ActionListener
@@ -283,7 +283,7 @@ public:
 			if (changed_prefs.cpu_cycle_exact || changed_prefs.cpu_compatible) {
 				TCHAR txt[20];
 				const auto f = getcpufreq(changed_prefs.cpu_clock_multiplier);
-				_stprintf(txt, _T("%.6f"), f / 1000000.0);
+				_sntprintf(txt, sizeof txt, _T("%.6f"), f / 1000000.0);
 				lblCPUFrequencyMHz->setCaption(txt);
 			}
 			else {
@@ -293,13 +293,13 @@ public:
 		else if (changed_prefs.cpu_cycle_exact) {
 			const auto& txt = lblCPUFrequencyMHz->getCaption();
 			changed_prefs.cpu_clock_multiplier = 0;
-			changed_prefs.cpu_frequency = (int)(_tstof(txt.c_str()) * 1000000.0);
+			changed_prefs.cpu_frequency = static_cast<int>((_tstof(txt.c_str()) * 1000000.0));
 			if (changed_prefs.cpu_frequency < 1 * 1000000)
 				changed_prefs.cpu_frequency = 0;
 			if (changed_prefs.cpu_frequency >= 99 * 1000000)
 				changed_prefs.cpu_frequency = 0;
 			if (!changed_prefs.cpu_frequency) {
-				changed_prefs.cpu_frequency = (int)(getcpufreq(m) * 1000000.0);
+				changed_prefs.cpu_frequency = static_cast<int>(getcpufreq(m) * 1000000.0);
 			}
 		}
 
@@ -776,13 +776,13 @@ void RefreshPanelCPU()
 	cboCPUFrequency->setSelected(idx);
 	if (!changed_prefs.cpu_clock_multiplier) {
 		TCHAR txt[20];
-		_stprintf(txt, _T("%.6f"), changed_prefs.cpu_frequency / 1000000.0);
+		_sntprintf(txt, sizeof txt, _T("%.6f"), changed_prefs.cpu_frequency / 1000000.0);
 		lblCPUFrequencyMHz->setCaption(txt);
 	}
 	else {
 		TCHAR txt[20];
 		double f = getcpufreq(changed_prefs.cpu_clock_multiplier);
-		_stprintf(txt, _T("%.6f"), f / 1000000.0);
+		_sntprintf(txt, sizeof txt, _T("%.6f"), f / 1000000.0);
 		lblCPUFrequencyMHz->setCaption(txt);
 	}
 

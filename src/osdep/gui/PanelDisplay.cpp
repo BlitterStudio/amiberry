@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <guisan/sdl.hpp>
 #include <sstream>
+#include <cmath> 
 #include "SelectorEntry.hpp"
 #include "StringListModel.h"
 
@@ -133,11 +134,11 @@ public:
 				if (!tmp.empty()) {
 					TCHAR label[16];
 					label[0] = 0;
-					auto label_string = fps_options[cboFpsRate->getSelected()];
+					const auto& label_string = fps_options[cboFpsRate->getSelected()];
 					strncpy(label, label_string.c_str(), sizeof(label) - 1);
 					label[sizeof(label) - 1] = '\0';
 
-					struct chipset_refresh* cr;
+					struct chipset_refresh* cr = nullptr;
 					for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 						cr = &changed_prefs.cr[i];
 						if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
@@ -153,7 +154,7 @@ public:
 									cr->inuse = true;
 								}
 								else {
-									// deactivate if plain uncustomized PAL or NTSC
+									// deactivate if plain non-customized PAL or NTSC
 									if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
 										cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
 										(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
@@ -176,7 +177,9 @@ public:
 						// Round the rate to 6 decimal places
 						rate = std::round(rate * 1e6) / 1e6;
 
-						cr->rate = static_cast<float>(rate);
+						if (cr != nullptr) {
+							cr->rate = static_cast<float>(rate);
+						}
 					}
 					catch (const std::invalid_argument&) 
 					{
@@ -186,10 +189,13 @@ public:
 						write_log("Out of range FPS argument in text box, ignoring value\n");
 					}
 
-					TCHAR buffer[20];
-					_stprintf(buffer, _T("%.6f"), cr->rate);
-					txtFpsAdj->setText(std::string(buffer));
-					sldFpsAdj->setValue(cr->rate);
+					if (cr != nullptr)
+					{
+						TCHAR buffer[20];
+						_sntprintf(buffer, sizeof buffer, _T("%.6f"), cr->rate);
+						txtFpsAdj->setText(std::string(buffer));
+						sldFpsAdj->setValue(cr->rate);
+					}
 				}
 			}
 		}
@@ -203,14 +209,15 @@ class AmigaScreenActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		AmigaMonitor* mon = &AMonitors[0];
-		if (actionEvent.getSource() == chkManualCrop)
+		auto source = actionEvent.getSource();
+
+		if (source == chkManualCrop)
 		{
 			changed_prefs.gfx_manual_crop = chkManualCrop->isSelected();
 			if (changed_prefs.gfx_auto_crop)
 				changed_prefs.gfx_auto_crop = false;
 		}
-		else if (actionEvent.getSource() == sldAmigaWidth)
+		else if (source == sldAmigaWidth)
 		{
 			const int new_width = amigawidth_values[static_cast<int>(sldAmigaWidth->getValue())];
 			const int new_x = ((AMIGA_WIDTH_MAX << changed_prefs.gfx_resolution) - new_width) / 2;
@@ -218,7 +225,7 @@ public:
 			changed_prefs.gfx_manual_crop_width = new_width;
 			changed_prefs.gfx_horizontal_offset = new_x;
 		}
-		else if (actionEvent.getSource() == sldAmigaHeight)
+		else if (source == sldAmigaHeight)
 		{
 			const int new_height = amigaheight_values[static_cast<int>(sldAmigaHeight->getValue())];
 			const int new_y = ((AMIGA_HEIGHT_MAX << changed_prefs.gfx_vresolution) - new_height) / 2;
@@ -227,29 +234,29 @@ public:
 			changed_prefs.gfx_vertical_offset = new_y;
 		}
 
-		else if (actionEvent.getSource() == chkAutoCrop)
+		else if (source == chkAutoCrop)
 		{
 			changed_prefs.gfx_auto_crop = chkAutoCrop->isSelected();
 			if (changed_prefs.gfx_manual_crop)
 				changed_prefs.gfx_manual_crop = false;
 		}
 
-		else if (actionEvent.getSource() == chkBorderless)
+		else if (source == chkBorderless)
 			changed_prefs.borderless = chkBorderless->isSelected();
 
-		else if (actionEvent.getSource() == sldHOffset)
+		else if (source == sldHOffset)
 		{
 			changed_prefs.gfx_horizontal_offset = static_cast<int>(sldHOffset->getValue());
 			lblHOffsetValue->setCaption(std::to_string(changed_prefs.gfx_horizontal_offset));
 			lblHOffsetValue->adjustSize();
 		}
-		else if (actionEvent.getSource() == sldVOffset)
+		else if (source == sldVOffset)
 		{
 			changed_prefs.gfx_vertical_offset = static_cast<int>(sldVOffset->getValue());
 			lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
 			lblVOffsetValue->adjustSize();
 		}
-		else if (actionEvent.getSource() == chkFrameskip)
+		else if (source == chkFrameskip)
 		{
 			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
 			sldRefresh->setEnabled(chkFrameskip->isSelected());
@@ -257,9 +264,9 @@ public:
 			lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
 			lblFrameRate->adjustSize();
 		}
-		else if (actionEvent.getSource() == cboFpsRate
-			|| actionEvent.getSource() == chkFpsAdj
-			|| actionEvent.getSource() == sldFpsAdj)
+		else if (source == cboFpsRate
+			|| source == chkFpsAdj
+			|| source == sldFpsAdj)
 		{
 			sldFpsAdj->setEnabled(chkFpsAdj->isSelected());
 			txtFpsAdj->setEnabled(chkFpsAdj->isSelected());
@@ -268,11 +275,11 @@ public:
 			bool updaterate = false, updateslider = false;
 			TCHAR label[16];
 			label[0] = 0;
-			auto label_string = fps_options[cboFpsRate->getSelected()];
+			const auto& label_string = fps_options[cboFpsRate->getSelected()];
 			strncpy(label, label_string.c_str(), sizeof(label) - 1);
 			label[sizeof(label) - 1] = '\0';
 
-			struct chipset_refresh* cr;
+			struct chipset_refresh* cr = nullptr;
 			for (i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 				cr = &changed_prefs.cr[i];
 				if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
@@ -290,7 +297,7 @@ public:
 							cr->inuse = true;
 						}
 						else {
-							// deactivate if plain uncustomized PAL or NTSC
+							// deactivate if plain non-customized PAL or NTSC
 							if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
 								cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
 								(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
@@ -303,17 +310,19 @@ public:
 			}
 			if (cr->locked) {
 				if (actionEvent.getSource() == sldFpsAdj) {
-					i = sldFpsAdj->getValue();//xSendDlgItemMessage(hDlg, IDC_FRAMERATE2, TBM_GETPOS, 0, 0);
-					if (i != (int)cr->rate)
-						cr->rate = (float)i;
+					i = static_cast<int>(sldFpsAdj->getValue());//xSendDlgItemMessage(hDlg, IDC_FRAMERATE2, TBM_GETPOS, 0, 0);
+					if (i != static_cast<int>(cr->rate))
+						cr->rate = static_cast<float>(i);
 					updaterate = true;
 				}
 			}
 			else if (i == CHIPSET_REFRESH_PAL) {
 				cr->rate = 50.0f;
+				changed_prefs.ntscmode = false;
 			}
 			else if (i == CHIPSET_REFRESH_NTSC) {
 				cr->rate = 60.0f;
+				changed_prefs.ntscmode = true;
 			}
 			if (cr->rate > 0 && cr->rate < 1) {
 				cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
@@ -325,30 +334,30 @@ public:
 			}
 			if (updaterate) {
 				TCHAR buffer[20];
-				_stprintf(buffer, _T("%.6f"), cr->rate);
+				_sntprintf(buffer,  sizeof buffer, _T("%.6f"), cr->rate);
 				txtFpsAdj->setText(std::string(buffer));
 			}
 			if (updateslider) {
 				sldFpsAdj->setValue(cr->rate);
 			}
 		}
-		else if (actionEvent.getSource() == sldBrightness)
+		else if (source == sldBrightness)
 		{
 			changed_prefs.gfx_luminance = static_cast<int>(sldBrightness->getValue());
 			lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
 			lblBrightnessValue->adjustSize();
 		}
 
-		else if (actionEvent.getSource() == sldRefresh)
+		else if (source == sldRefresh)
 			changed_prefs.gfx_framerate = static_cast<int>(sldRefresh->getValue());
 
-		else if (actionEvent.getSource() == chkAspect)
+		else if (source == chkAspect)
 			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
 
-		else if (actionEvent.getSource() == chkBlackerThanBlack)
+		else if (source == chkBlackerThanBlack)
 			changed_prefs.gfx_blackerthanblack = chkBlackerThanBlack->isSelected();
 
-		else if (actionEvent.getSource() == cboScreenmode)
+		else if (source == cboScreenmode)
 		{
 			if (cboScreenmode->getSelected() == 0)
 			{
@@ -367,7 +376,7 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == cboFullscreen)
+		else if (source == cboFullscreen)
 		{
 			const auto idx = cboFullscreen->getSelected();
 			if (idx >= 0 && idx <= fullscreen_resolutions_list.getNumberOfElements())
@@ -378,22 +387,22 @@ public:
 			}
 		}
 
-		else if (actionEvent.getSource() == chkHorizontal)
+		else if (source == chkHorizontal)
 			changed_prefs.gfx_xcenter = chkHorizontal->isSelected() ? 2 : 0;
 
-		else if (actionEvent.getSource() == chkVertical)
+		else if (source == chkVertical)
 			changed_prefs.gfx_ycenter = chkVertical->isSelected() ? 2 : 0;
 
-		else if (actionEvent.getSource() == chkFlickerFixer)
+		else if (source == chkFlickerFixer)
 			changed_prefs.gfx_scandoubler = chkFlickerFixer->isSelected();
 
-		else if (actionEvent.getSource() == cboResolution)
+		else if (source == cboResolution)
 			changed_prefs.gfx_resolution = cboResolution->getSelected();
 
-		else if (actionEvent.getSource() == chkFilterLowRes)
+		else if (source == chkFilterLowRes)
 			changed_prefs.gfx_lores_mode = chkFilterLowRes->isSelected() ? 1 : 0;
 
-		else if (actionEvent.getSource() == cboResSwitch)
+		else if (source == cboResSwitch)
 		{
 			int pos = cboResSwitch->getSelected();
 			if (pos == 0)
@@ -445,6 +454,7 @@ public:
 		}
 
 		RefreshPanelDisplay();
+		RefreshPanelQuickstart();
 	}
 };
 
@@ -464,7 +474,7 @@ public:
 
 static ScalingMethodActionListener* scalingMethodActionListener;
 
-void disable_idouble_modes()
+static void disable_idouble_modes()
 {
 	optISingle->setEnabled(true);
 	optISingle->setSelected(true);
@@ -475,7 +485,7 @@ void disable_idouble_modes()
 	optIDouble3->setEnabled(false);
 }
 
-void enable_idouble_modes()
+static void enable_idouble_modes()
 {
 	if (optISingle->isSelected())
 	{
@@ -1089,28 +1099,25 @@ void ExitPanelDisplay()
 	delete cboResSwitch;
 }
 
-void refresh_fps_options()
+static void refresh_fps_options()
 {
 	TCHAR buffer[MAX_DPATH];
 	int rates[MAX_CHIPSET_REFRESH_TOTAL];
-	int v;
-	double d;
 
 	fps_options.clear();
-	v = 0;
-	chipset_refresh* selectcr = changed_prefs.ntscmode ? &changed_prefs.cr[CHIPSET_REFRESH_NTSC] : &changed_prefs.cr[CHIPSET_REFRESH_PAL];
+	int v = 0;
+	const chipset_refresh* selectcr = changed_prefs.ntscmode ? &changed_prefs.cr[CHIPSET_REFRESH_NTSC] : &changed_prefs.cr[CHIPSET_REFRESH_PAL];
 	for (int i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
 		struct chipset_refresh* cr = &changed_prefs.cr[i];
 		if (cr->rate > 0) {
 			_tcscpy(buffer, cr->label);
 			if (!buffer[0])
-				_stprintf(buffer, _T(":%d"), i);
-			//xSendDlgItemMessage(hDlg, IDC_RATE2BOX, CB_ADDSTRING, 0, (LPARAM)buffer);
+				_sntprintf(buffer, sizeof buffer, _T(":%d"), i);
 			fps_options.emplace_back(buffer);
-			d = changed_prefs.chipset_refreshrate;
+			double d = changed_prefs.chipset_refreshrate;
 			if (abs(d) < 1)
 				d = currprefs.ntscmode ? 60.0 : 50.0;
-			if (selectcr && selectcr->index == cr->index)
+			if (selectcr->index == cr->index)
 				changed_prefs.cr_selected = i;
 			rates[i] = v;
 			v++;
@@ -1122,7 +1129,7 @@ void refresh_fps_options()
 	selectcr = &changed_prefs.cr[changed_prefs.cr_selected];
 	cboFpsRate->setSelected(rates[changed_prefs.cr_selected]);
 	sldFpsAdj->setValue(selectcr->rate + 0.5);
-	_stprintf(buffer, _T("%.6f"), selectcr->rate);
+	_sntprintf(buffer, sizeof buffer, _T("%.6f"), selectcr->rate);
 	txtFpsAdj->setText(std::string(buffer));
 	chkFpsAdj->setSelected(selectcr->locked);
 
@@ -1132,8 +1139,6 @@ void refresh_fps_options()
 
 void RefreshPanelDisplay()
 {
-	AmigaMonitor* mon = &AMonitors[0];
-
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
 	sldRefresh->setEnabled(chkFrameskip->isSelected());
 	sldRefresh->setValue(changed_prefs.gfx_framerate);

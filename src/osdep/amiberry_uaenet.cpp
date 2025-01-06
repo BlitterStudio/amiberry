@@ -17,7 +17,7 @@ void ethernet_pause(int pause)
 	ethernet_paused = pause;
 }
 
-void ethernet_reset(void)
+void ethernet_reset()
 {
 	ethernet_paused = 0;
 }

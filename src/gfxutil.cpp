@@ -15,7 +15,9 @@
 #include "gfxfilter.h"
 #include "machdep/maccess.h"
 
-#include <math.h>
+#include <cmath>
+
+#include <algorithm>
 
 float getvsyncrate(int monid, float hz, int *mult)
 {
@@ -128,8 +130,7 @@ static float video_gamma (float value, float gamma, float bri, float con)
 	factor = (float)pow(255.0f, 1.0f - gamma);
 	ret = (float)(factor * pow(value, gamma));
 
-	if (ret < 0.0f)
-		ret = 0.0f;
+	ret = std::max(ret, 0.0f);
 
 	return ret;
 }
@@ -181,10 +182,8 @@ static void video_calc_gammatable(int monid)
 				v = video_gamma(val, gams[j], bri, con);
 			}
 
-			if (v < 0.0)
-				v = 0.0;
-			if (v > max)
-				v = max;
+			v = std::max<double>(v, 0.0);
+			v = std::min(v, max);
 
 			uae_gamma[i][j] = (uae_u32)(v + 0.5);
 		}
@@ -197,10 +196,8 @@ static uae_u32 limit256(int monid, float v)
 	if (!gfx_hdr) {
 		v = v * (float)(currprefs.gf[ad->gf_index].gfx_filter_contrast + 1000) / 1000.0f + currprefs.gf[ad->gf_index].gfx_filter_luminance / 10.0f;
 	}
-	if (v < 0)
-		v = 0;
-	if (v > 255)
-		v = 255;
+	v = std::max<float>(v, 0);
+	v = std::min<float>(v, 255);
 	return (uae_u32)v;
 }
 static uae_s32 limit256rb(int monid, float v)
@@ -209,10 +206,8 @@ static uae_s32 limit256rb(int monid, float v)
 	if (!gfx_hdr) {
 		v *= (float)(currprefs.gf[ad->gf_index].gfx_filter_saturation + 1000) / 1000.0f;
 	}
-	if (v < -128)
-		v = -128;
-	if (v > 127)
-		v = 127;
+	v = std::max<float>(v, -128);
+	v = std::min<float>(v, 127);
 	return (uae_s32)v;
 }
 static float get_y(int r, int g, int b)
@@ -344,6 +339,8 @@ void alloc_colors_picasso (int rw, int gw, int bw, int rs, int gs, int bs, int r
 #endif
 }
 
+#define BLACKERTHANBLACKADJ 4
+
 void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, int as, int alpha, int byte_swap,
 	uae_u32 *rc, uae_u32 *gc, uae_u32 *bc)
 {
@@ -353,7 +350,7 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 		int j;
 
 		if (!gfx_hdr && currprefs.gfx_blackerthanblack) {
-			j = i * 15 / 16 + 15;
+			j = i * (255 - BLACKERTHANBLACKADJ) / 255  + BLACKERTHANBLACKADJ;
 		} else {
 			j = i;
 		}
@@ -396,9 +393,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 		int b = ((i & 0xf) << 4) | (i & 0x0f);
 
 		if (!gfx_hdr && currprefs.gfx_blackerthanblack) {
-			r = (r * (255 - 8) / 255) + 8;
-			g = (g * (255 - 8) / 255) + 8;
-			b = (b * (255 - 8) / 255) + 8;
+			r = (r * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+			g = (g * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+			b = (b * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
 		}
 
 		r = uae_gamma[r + j][0];
@@ -418,6 +415,7 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			xcolors[i] |= xcolors[i] * 0x00010001;
 		}
 	}
+
 	fullblack = 0;
 	if (gfx_hdr) {
 		fullblack = doAlpha(1, aw, as);
@@ -462,9 +460,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			b = gamma[b + 256][2];
 
 			if (currprefs.gfx_blackerthanblack) {
-				r = (r * (255 - 8) / 255) + 8;
-				g = (g * (255 - 8) / 255) + 8;
-				b = (b * (255 - 8) / 255) + 8;
+				r = (r * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+				g = (g * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
+				b = (b * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
 			}
 
 			xcolors[i] = doMask(r, 5, 11) | doMask(g, 6, 5) | doMask(b, 5, 0);

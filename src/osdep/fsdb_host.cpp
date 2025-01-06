@@ -60,7 +60,7 @@ static char* aname_to_nname(const char* aname, const int ascii)
 	if (a == 'N' && b == 'U' && c == 'L') ll = 3; // NUL
 	if (a == 'L' && b == 'P' && c == 'T' && (d >= '0' && d <= '9')) ll = 4; // LPT#
 	if (a == 'C' && b == 'O' && c == 'M' && (d >= '0' && d <= '9')) ll = 4; // COM#
-	// AUX.anything, CON.anything etc.. are also illegal names in Windows
+	// AUX.anything, CON.anything etc... are also illegal names in Windows
 	if (ll && (len == ll || (len > ll && aname[ll] == '.'))) {
 		repl_1 = 2;
 	}
@@ -177,12 +177,12 @@ int fsdb_exists(const TCHAR* nname)
 	return fs_path_exists(nname);
 }
 
-bool my_utime(const char* name, struct mytimeval* tv)
+bool my_utime(const char* name, const struct mytimeval* tv)
 {
 	struct mytimeval mtv {};
 	struct timeval times[2];
 
-	if (tv == NULL) {
+	if (tv == nullptr) {
 		struct timeval time {};
 		struct timezone tz {};
 
@@ -298,7 +298,7 @@ int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
 	return 0;
 }
 
-TCHAR* fsdb_create_unique_nname(a_inode* base, const TCHAR* suggestion)
+TCHAR* fsdb_create_unique_nname(const a_inode* base, const TCHAR* suggestion)
 {
 	char* nname = aname_to_nname(suggestion, 0);
 	TCHAR* p = build_nname(base->nname, nname);
@@ -307,7 +307,13 @@ TCHAR* fsdb_create_unique_nname(a_inode* base, const TCHAR* suggestion)
 }
 
 // Get local time in secs, starting from 01.01.1970
-uae_u32 getlocaltime(void)
+uae_u32 getlocaltime()
 {
-	return time(NULL); // ToDo: convert UTC to local time...
+    time_t rawtime;
+    struct tm* timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    return mktime(timeinfo);
 }

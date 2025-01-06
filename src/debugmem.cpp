@@ -1136,14 +1136,14 @@ static bool loadcodefiledata(struct debugcodefile *cf)
 	struct zfile *zf = zfile_fopen(fpath, _T("rb"));
 	if (!zf) {
 		console_out_f(_T("Couldn't open source file '%s'\n"), fpath);
-		return NULL;
+		return false;
 	}
 	int length;
 	uae_u8 *data2 = zfile_getdata(zf, 0, -1, &length);
 	if (!data2) {
 		zfile_fclose(zf);
 		console_out_f(_T("Couldn't read source file '%s'\n"), fpath);
-		return NULL;
+		return false;
 	}
 	uae_u8 *data = xcalloc(uae_u8, length + 1);
 	memcpy(data, data2, length);
@@ -1291,7 +1291,7 @@ static void parse_stabs(void)
 					// wsl path
 					if (!_tcsnicmp(path, _T("/mnt/"), 5)) {
 						TCHAR path2[MAX_DPATH];
-						_stprintf(path2, _T("%c:/%s"), path[5], path + 7);
+						_sntprintf(path2, sizeof path2, _T("%c:/%s"), path[5], path + 7);
 						f = s->string;
 						p = path2;
 					}
@@ -1299,21 +1299,21 @@ static void parse_stabs(void)
 					// cygwin path
 					if (!_tcsnicmp(path, _T("/cygdrive/"), 10)) {
 						TCHAR path2[MAX_DPATH];
-						_stprintf(path2, _T("%c:/%s"), path[10], path + 12);
+						_sntprintf(path2, sizeof path2, _T("%c:/%s"), path[10], path + 12);
 						f = s->string;
 						p = path2;
 					}
 				} else if (pm == 3) {
 					// pathprefix + path + file
 					if (pathprefix) {
-						_stprintf(path2, _T("%s%s"), pathprefix, path);
+						_sntprintf(path2, sizeof path2, _T("%s%s"), pathprefix, path);
 						f = s->string;
 						p = path2;
 					}
 				} else if (pm == 2) {
 					// pathprefix + file
 					if (pathprefix) {
-						_stprintf(path2, _T("%s%s"), pathprefix, s->string);
+						_sntprintf(path2, sizeof path2, _T("%s%s"), pathprefix, s->string);
 						f = path2;
 					}
 				} else if (pm == 1) {
@@ -1951,19 +1951,19 @@ static void scan_library_list(uaecptr v, int *cntp)
 		for (int i = 0; i < libnamecnt; i++) {
 			struct libname *name = &libnames[i];
 			char n[256];
-			sprintf(n, "%s.library", name->aname);
+			_sntprintf(n, sizeof n, "%s.library", name->aname);
 			if (!strcmp((char*)p, n)) {
 				name->base = v;
 				found = name;
 				break;
 			}
-			sprintf(n, "%s.device", name->aname);
+			_sntprintf(n, sizeof n, "%s.device", name->aname);
 			if (!strcmp((char*)p, n)) {
 				name->base = v;
 				found = name;
 				break;
 			}
-			sprintf(n, "%s.resource", name->aname);
+			_sntprintf(n, sizeof n, "%s.resource", name->aname);
 			if (!strcmp((char*)p, n)) {
 				name->base = v;
 				found = name;
@@ -2002,7 +2002,7 @@ bool debugger_get_library_symbol(uaecptr base, uaecptr addr, TCHAR *out)
 				struct libsymbol *lvo = &libsymbols[j];
 				if (lvo->lib == name) {
 					if (lvo->value == addr) {
-						_stprintf(out, _T("%s/%s"), name->name, lvo->name);
+						_sntprintf(out, sizeof out, _T("%s/%s"), name->name, lvo->name);
 						return true;
 					}
 				}
@@ -3758,7 +3758,7 @@ int debugmem_get_sourceline(uaecptr addr, TCHAR *out, int maxsize)
 				if (last_codefile != cf) {
 					TCHAR txt[256];
 					last_codefile = cf;
-					_stprintf(txt, _T("Source file: %s\n"), cf->name);
+					_sntprintf(txt, sizeof txt, _T("Source file: %s\n"), cf->name);
 					if (maxsize > uaetcslen(txt)) {
 						_tcscat(out, txt);
 						maxsize -= uaetcslen(txt);
@@ -3770,7 +3770,7 @@ int debugmem_get_sourceline(uaecptr addr, TCHAR *out, int maxsize)
 					TCHAR txt[256];
 					TCHAR *s = au((uae_char*)cf->lineptr[j]);
 					if (maxsize > 6 + uaetcslen(s) + 2) {
-						_stprintf(txt, _T("%5d %s\n"), j, s);
+						_sntprintf(txt, sizeof txt, _T("%5d %s\n"), j, s);
 						_tcscat(out, txt);
 						maxsize -= uaetcslen(txt) + 2;
 					}
@@ -3797,9 +3797,9 @@ int debugmem_get_segment(uaecptr addr, bool *exact, bool *ext, TCHAR *out, TCHAR
 		if (exact && alloc->start + 8 + debugmem_bank.start == addr)
 			*exact = true;
 		if (out)
-			_stprintf(out, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
+			_sntprintf(out, sizeof out, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
 		if (name)
-			_stprintf(name, _T("Segment %d: %08x %08x-%08x"),
+			_sntprintf(name, sizeof name, _T("Segment %d: %08x %08x-%08x"),
 				alloc->id, alloc->idtype, alloc->start + debugmem_bank.start, alloc->start + alloc->size - 1 + debugmem_bank.start);
 		if (ext)
 			*ext = false;
@@ -3809,9 +3809,9 @@ int debugmem_get_segment(uaecptr addr, bool *exact, bool *ext, TCHAR *out, TCHAR
 		struct debugsegtracker *seg = findsegment(addr, &alloc);
 		if (seg) {
 			if (out)
-				_stprintf(out, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
+				_sntprintf(out, sizeof out, _T("[%06X]"), ((addr - debugmem_bank.start) - (alloc->start + 8)) & 0xffffff);
 			if (name)
-				_stprintf(name, _T("Segment %d ('%s') %08x %08x-%08x"),
+				_sntprintf(name, sizeof name, _T("Segment %d ('%s') %08x %08x-%08x"),
 					alloc->internalid, seg->name, alloc->idtype, alloc->start, alloc->start + alloc->size - 1);
 			if (ext)
 				*ext = true;

@@ -1,7 +1,7 @@
-
+#pragma once
 class mp3decoder
 {
-    void *g_mp3stream;
+    void *g_mp3stream{};
 public:
     mp3decoder();
     ~mp3decoder();

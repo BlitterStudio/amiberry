@@ -722,7 +722,7 @@ static bool isemptykey(int keyboard, int scancode)
 static void out_config (struct zfile *f, int id, int num, const TCHAR *s1, const TCHAR *s2)
 {
 	TCHAR tmp[MAX_DPATH];
-	_stprintf (tmp, _T("input.%d.%s%d"), id, s1, num);
+	_sntprintf (tmp, sizeof tmp, _T("input.%d.%s%d"), id, s1, num);
 	cfgfile_write_str (f, tmp, s2);
 }
 
@@ -743,7 +743,7 @@ static bool write_config_head (struct zfile *f, int idnum, int devnum, const TCH
 	else if (devnum < idf->get_num ())
 		s = idf->get_friendlyname (devnum);
 	if (s) {
-		_stprintf (tmp2, _T("input.%d.%s.%d.friendlyname"), idnum + 1, name, devnum);
+		_sntprintf (tmp2, sizeof tmp2, _T("input.%d.%s.%d.friendlyname"), idnum + 1, name, devnum);
 		cfgfile_write_str (f, tmp2, s);
 	}
 
@@ -753,27 +753,27 @@ static bool write_config_head (struct zfile *f, int idnum, int devnum, const TCH
 	else if (devnum < idf->get_num ())
 		s = idf->get_uniquename (devnum);
 	if (s) {
-		_stprintf (tmp2, _T("input.%d.%s.%d.name"), idnum + 1, name, devnum);
+		_sntprintf (tmp2, sizeof tmp2, _T("input.%d.%s.%d.name"), idnum + 1, name, devnum);
 		cfgfile_write_str (f, tmp2, s);
 	}
 
 	if (!isdevice (id)) {
-		_stprintf (tmp2, _T("input.%d.%s.%d.empty"), idnum + 1, name, devnum);
+		_sntprintf (tmp2, sizeof tmp2, _T("input.%d.%s.%d.empty"), idnum + 1, name, devnum);
 		cfgfile_write_bool (f, tmp2, true);
 		if (id->enabled) {
-			_stprintf (tmp2, _T("input.%d.%s.%d.disabled"), idnum + 1, name, devnum);
+			_sntprintf (tmp2, sizeof tmp2, _T("input.%d.%s.%d.disabled"), idnum + 1, name, devnum);
 			cfgfile_write_bool (f, tmp2, id->enabled ? false : true);
 		}
 		return false;
 	}
 
 	if (idnum == GAMEPORT_INPUT_SETTINGS) {
-		_stprintf (tmp2, _T("input.%d.%s.%d.custom"), idnum + 1, name, devnum);
+		_sntprintf (tmp2, sizeof tmp2, _T("input.%d.%s.%d.custom"), idnum + 1, name, devnum);
 		cfgfile_write_bool (f, tmp2, true);
 	} else {
-		_stprintf (tmp2, _T("input.%d.%s.%d.empty"), idnum + 1, name, devnum);
+		_sntprintf (tmp2, sizeof tmp2, _T("input.%d.%s.%d.empty"), idnum + 1, name, devnum);
 		cfgfile_write_bool (f, tmp2, false);
-		_stprintf (tmp2, _T("input.%d.%s.%d.disabled"), idnum + 1, name, devnum);
+		_sntprintf (tmp2, sizeof tmp2, _T("input.%d.%s.%d.disabled"), idnum + 1, name, devnum);
 		cfgfile_write_bool (f, tmp2, id->enabled ? false : true);
 	}
 	return true;
@@ -788,10 +788,10 @@ static bool write_slot (TCHAR *p, struct uae_input_device *uid, int i, int j)
 	}
 	uae_u64 flags = uid->flags[i][j];
 	if (uid->custom[i][j] && uid->custom[i][j][0] != '\0') {
-		_stprintf (p, _T("'%s'.%d"), uid->custom[i][j], (int)(flags & ID_FLAG_SAVE_MASK_CONFIG));
+		_sntprintf (p, sizeof p, _T("'%s'.%d"), uid->custom[i][j], (int)(flags & ID_FLAG_SAVE_MASK_CONFIG));
 		ok = true;
 	} else if (uid->eventid[i][j] > 0) {
-		_stprintf (p, _T("%s.%d"), events[uid->eventid[i][j]].confname, (int)(flags & ID_FLAG_SAVE_MASK_CONFIG));
+		_sntprintf (p, sizeof p, _T("%s.%d"), events[uid->eventid[i][j]].confname, (int)(flags & ID_FLAG_SAVE_MASK_CONFIG));
 		ok = true;
 	} else {
 		_tcscpy (p, _T("NULL"));
@@ -802,9 +802,9 @@ static bool write_slot (TCHAR *p, struct uae_input_device *uid, int i, int j)
 		for (int k = 0; k < MAX_INPUT_QUALIFIERS * 2; k++) {
 			if ((ID_FLAG_QUALIFIER1 << k) & flags) {
 				if (k & 1)
-					_stprintf (p2, _T("%c"), 'a' + k / 2);
+					_sntprintf (p2, sizeof p2, _T("%c"), 'a' + k / 2);
 				else
-					_stprintf (p2, _T("%c"), 'A' + k / 2);
+					_sntprintf (p2, sizeof p2, _T("%c"), 'A' + k / 2);
 				p2++;
 			}
 		}
@@ -863,7 +863,7 @@ static void write_config2 (struct zfile *f, int idnum, int i, int offset, const 
 		if (ok) {
 			if (id->port[io][slotorder[j]] > 0 && id->port[io][slotorder[j]] < MAX_JPORTS + 1) {
 				int pnum = id->port[io][slotorder[j]] - 1;
-				_stprintf (p, _T(".%d"), pnum);
+				_sntprintf (p, sizeof p, _T(".%d"), pnum);
 				p += _tcslen (p);
 				if (idnum != GAMEPORT_INPUT_SETTINGS && j == 0 && id->port[io][SPARE_SUB_EVENT] && slotorder == slotorder1) {
 					*p++ = '.';
@@ -874,7 +874,7 @@ static void write_config2 (struct zfile *f, int idnum, int i, int offset, const 
 		}
 	}
 	if (p > tmp2) {
-		_stprintf (tmp3, _T("input.%d.%s%d"), idnum + 1, extra, i);
+		_sntprintf (tmp3, sizeof tmp3, _T("input.%d.%s%d"), idnum + 1, extra, i);
 		cfgfile_write_str (f, tmp3, tmp2);
 	}
 }
@@ -971,7 +971,7 @@ static void write_kbr_config (struct zfile *f, int idnum, int devnum, struct uae
 			if (ok) {
 				// save port number + SPARE SLOT if needed
 				if (kbr->port[i][slotorder[j]] > 0 && (kbr->flags[i][slotorder[j]] & ID_FLAG_GAMEPORTSCUSTOM_MASK)) {
-					_stprintf (p, _T(".%d"), kbr->port[i][slotorder[j]] - 1);
+					_sntprintf (p, sizeof p, _T(".%d"), kbr->port[i][slotorder[j]] - 1);
 					p += _tcslen (p);
 					if (idnum != GAMEPORT_INPUT_SETTINGS && j == 0 && kbr->port[i][SPARE_SUB_EVENT] && !isdefaultspare && slotorder == slotorder1) {
 						*p++ = '.';
@@ -982,10 +982,10 @@ static void write_kbr_config (struct zfile *f, int idnum, int devnum, struct uae
 			}
 		}
 		idf->get_widget_type (devnum, i, tmp5, NULL);
-		_stprintf (tmp3, _T("%d%s%s"), kbr->extra[i], tmp5[0] ? _T(".") : _T(""), tmp5[0] ? tmp5 : _T(""));
+		_sntprintf (tmp3, sizeof tmp3, _T("%d%s%s"), kbr->extra[i], tmp5[0] ? _T(".") : _T(""), tmp5[0] ? tmp5 : _T(""));
 		kbrlabel (tmp3);
-		_stprintf (tmp1, _T("keyboard.%d.button.%s"), devnum, tmp3);
-		_stprintf (tmp4, _T("input.%d.%s"), idnum + 1, tmp1);
+		_sntprintf (tmp1, sizeof tmp1, _T("keyboard.%d.button.%s"), devnum, tmp3);
+		_sntprintf (tmp4, sizeof tmp4, _T("input.%d.%s"), idnum + 1, tmp1);
 		cfgfile_write_str (f, tmp4, tmp2[0] ? tmp2 : _T("NULL"));
 		i++;
 	}
@@ -999,10 +999,10 @@ static void write_config (struct zfile *f, int idnum, int devnum, const TCHAR *n
 	if (!write_config_head (f, idnum, devnum, name, id, idf))
 		return;
 
-	_stprintf (tmp1, _T("%s.%d.axis."), name, devnum);
+	_sntprintf (tmp1, sizeof tmp1, _T("%s.%d.axis."), name, devnum);
 	for (i = 0; i < ID_AXIS_TOTAL; i++)
 		write_config2 (f, idnum, i, ID_AXIS_OFFSET, tmp1, id);
-	_stprintf (tmp1, _T("%s.%d.button.") ,name, devnum);
+	_sntprintf (tmp1, sizeof tmp1, _T("%s.%d.button.") ,name, devnum);
 	for (i = 0; i < ID_BUTTON_TOTAL; i++)
 		write_config2 (f, idnum, i, ID_BUTTON_OFFSET, tmp1, id);
 }
@@ -1961,26 +1961,26 @@ static void generate_jport_custom_item(struct uae_input_device *uid, int num, in
 					if (out[0])
 						*p++= ' ';
 					if (devtype == IDTYPE_KEYBOARD) {
-						_stprintf(p, _T("k.%d.b.%d"), num, uid2->extra[i]);
+						_sntprintf(p, sizeof p, _T("k.%d.b.%d"), num, uid2->extra[i]);
 					} else if (devtype == IDTYPE_JOYSTICK || devtype == IDTYPE_MOUSE) {
 						TCHAR type = devtype == IDTYPE_JOYSTICK ? 'j' : 'm';
 						if (i >= ID_BUTTON_OFFSET && i < ID_BUTTON_OFFSET + ID_BUTTON_TOTAL) {
-							_stprintf(p, _T("%c.%d.b.%d"), type, num, i - ID_BUTTON_OFFSET);
+							_sntprintf(p, sizeof p, _T("%c.%d.b.%d"), type, num, i - ID_BUTTON_OFFSET);
 						} else if (i >= ID_AXIS_OFFSET && i < ID_AXIS_OFFSET + ID_AXIS_TOTAL) {
-							_stprintf(p, _T("%c.%d.a.%d"), type, num, i - ID_AXIS_OFFSET);
+							_sntprintf(p, sizeof p, _T("%c.%d.a.%d"), type, num, i - ID_AXIS_OFFSET);
 						}
 					}
 					TCHAR *p3 = p + _tcslen(p);
-					_stprintf(p3, _T(".%d"), (int)(flags & (ID_FLAG_AUTOFIRE | ID_FLAG_TOGGLE | ID_FLAG_INVERTTOGGLE | ID_FLAG_INVERT)));
+					_sntprintf(p3, sizeof p3, _T(".%d"), (int)(flags & (ID_FLAG_AUTOFIRE | ID_FLAG_TOGGLE | ID_FLAG_INVERTTOGGLE | ID_FLAG_INVERT)));
 					if (flags & ID_FLAG_SAVE_MASK_QUALIFIERS) {
 						TCHAR *p2 = p + _tcslen(p);
 						*p2++ = '.';
 						for (int k = 0; k < MAX_INPUT_QUALIFIERS * 2; k++) {
 							if ((ID_FLAG_QUALIFIER1 << k) & flags) {
 								if (k & 1)
-									_stprintf(p2, _T("%c"), 'a' + k / 2);
+									_sntprintf(p2, sizeof p2, _T("%c"), 'a' + k / 2);
 								else
-									_stprintf(p2, _T("%c"), 'A' + k / 2);
+									_sntprintf(p2, sizeof p2, _T("%c"), 'A' + k / 2);
 								p2++;
 							}
 						}
@@ -4540,7 +4540,22 @@ void inputdevice_do_keyboard(int code, int state)
 			return;
 		}
 
-		if (key == AK_RESETWARNING) {
+		if (currprefs.keyboard_mode > 0) {
+			if (!currprefs.cs_resetwarning) {
+				if (keyboardresetkeys() || key == AK_RESETWARNING) {
+					int r = keybuf[AK_LALT] | keybuf[AK_RALT];
+					if (r) {
+						keyboard_reset_seq_mode = 2;
+						custom_reset(true, true);
+						cpu_inreset();
+					} else {
+						custom_reset(false, true);
+						cpu_inreset();
+						keyboard_reset_seq_mode = 1;
+					}
+				}
+			}
+		} else if (key == AK_RESETWARNING) {
 			if (resetwarning_do(0)) {
 				keyboard_reset_seq_mode = 3;
 			}
@@ -4584,6 +4599,8 @@ void inputdevice_do_kb_reset(void)
 		} else {
 			keyboard_reset_seq_mode = 4;
 		}
+	} else {
+		uae_reset(0, 1);
 	}
 }
 
@@ -6102,7 +6119,7 @@ static int switchdevice (struct uae_input_device *id, int num, bool buttonmode)
 
 			if (newslot >= 0) {
 				TCHAR cust[100];
-				_stprintf(cust, _T("custom%d"), newslot);
+				_sntprintf(cust, sizeof cust, _T("custom%d"), newslot);
 				inputdevice_joyport_config(&changed_prefs, cust, cust, newport, -1, -1, 0, true);
 			} else {
 				inputdevice_joyport_config(&changed_prefs, name, name, newport, -1, -1, 1, true);
@@ -8322,7 +8339,7 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 		bool found = true;
 		if (jportscustom[i] >= 0) {
 			TCHAR tmp[10];
-			_stprintf(tmp, _T("custom%d"), jportscustom[i]);
+			_sntprintf(tmp, sizeof tmp, _T("custom%d"), jportscustom[i]);
 			found = inputdevice_joyport_config(prefs, tmp, NULL, i, jportsmode[i], jportssubmode[i], 0, true) != 0;
 		} else if ((jports_name[i] && jports_name[i][0]) || (jports_configname[i] && jports_configname[i][0])) {
 			if (!inputdevice_joyport_config (prefs, jports_name[i], jports_configname[i], i, jportsmode[i], jportssubmode[i], 1, true)) {
@@ -8333,7 +8350,7 @@ bool inputdevice_devicechange (struct uae_prefs *prefs)
 			}
 		} else if (jportskb[i] >= 0) {
 			TCHAR tmp[10];
-			_stprintf (tmp, _T("kbd%d"), jportskb[i] + 1);
+			_sntprintf (tmp, sizeof tmp, _T("kbd%d"), jportskb[i] + 1);
 			found = inputdevice_joyport_config (prefs, tmp, NULL, i, jportsmode[i], jportssubmode[i], 0, true) != 0;
 			
 		}
@@ -9123,7 +9140,7 @@ int inputdevice_get_widget_type (int devnum, int num, TCHAR *name, bool inccode)
 	if (r && inccode && &idev[IDTYPE_KEYBOARD] == idf) {
 		TCHAR *p = name + _tcslen(name);
 		if (_tcsncmp(name, _T("KEY_"), 4))
-			_stprintf(p, _T(" [0x%02X]"), code);
+			_sntprintf(p, sizeof p, _T(" [0x%02X]"), code);
 	}
 	return r;
 }
@@ -9142,7 +9159,7 @@ int inputdevice_config_change_test (void)
 	return v;
 }
 
-static void copy_inputdevice_settings(struct uae_input_device *src, struct uae_input_device *dst)
+static void copy_inputdevice_settings(const struct uae_input_device *src, struct uae_input_device *dst)
 {
 	for (int l = 0; l < MAX_INPUT_DEVICE_EVENTS; l++) {
 		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
@@ -9155,7 +9172,7 @@ static void copy_inputdevice_settings(struct uae_input_device *src, struct uae_i
 	}
 }
 
-static void copy_inputdevice_settings_free(struct uae_input_device *src, struct uae_input_device *dst)
+static void copy_inputdevice_settings_free(const struct uae_input_device *src, struct uae_input_device *dst)
 {
 	for (int l = 0; l < MAX_INPUT_DEVICE_EVENTS; l++) {
 		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
@@ -9276,6 +9293,7 @@ void inputdevice_swap_compa_ports (struct uae_prefs *prefs, int portswap)
 	memcpy (&tmp, &prefs->jports[portswap], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap], &prefs->jports[portswap + 1], sizeof (struct jport));
 	memcpy (&prefs->jports[portswap + 1], &tmp, sizeof (struct jport));
+
 	inputdevice_updateconfig(NULL, prefs);
 }
 
@@ -10027,9 +10045,9 @@ static bool fixjport(struct jport *port, int add, bool always)
 			_tcsncpy(port->idc.name, inputdevice_get_device_name (IDTYPE_MOUSE, vv - JSEM_MICE), MAX_JPORT_NAME - 1);
 			_tcsncpy(port->idc.configname, inputdevice_get_device_unique_name (IDTYPE_MOUSE, vv - JSEM_MICE), MAX_JPORT_CONFIG - 1);
 		} else if (vv >= JSEM_KBDLAYOUT && vv < JSEM_CUSTOM) {
-			_stprintf(port->idc.shortid, _T("kbd%d"), vv - JSEM_KBDLAYOUT + 1);
+			_sntprintf(port->idc.shortid, sizeof port->idc.shortid, _T("kbd%d"), vv - JSEM_KBDLAYOUT + 1);
 		} else if (vv >= JSEM_CUSTOM && vv < JSEM_JOYS) {
-			_stprintf(port->idc.shortid, _T("custom%d"), vv - JSEM_CUSTOM);
+			_sntprintf(port->idc.shortid, sizeof port->idc.shortid, _T("custom%d"), vv - JSEM_CUSTOM);
 		}
 		port->idc.name[MAX_JPORT_NAME - 1] = 0;
 		port->idc.configname[MAX_JPORT_CONFIG - 1] = 0;
@@ -10378,7 +10396,7 @@ void inputdevice_fix_prefs(struct uae_prefs *p, bool userconfig)
 		struct jport_custom *jpc = &p->jports_custom[i];
 		if (!_tcscmp(jpc->custom, _T("#"))) {
 			TCHAR tmp[16];
-			_stprintf(tmp, _T("custom%d"), i);
+			_sntprintf(tmp, sizeof tmp, _T("custom%d"), i);
 			inputdevice_joyport_config(p, tmp, NULL, i, -1, -1, 0, userconfig);
 			inputdevice_generate_jport_custom(p, i);
 		}

@@ -53,12 +53,12 @@ public:
 		return static_cast<int>(dirs.size());
 	}
 
-	void add(const std::string& elem)
+	void add(const std::string& elem) override
 	{
 		dirs.push_back(elem);
 	}
 
-	void clear()
+	void clear() override
 	{
 		dirs.clear();
 	}
@@ -82,11 +82,11 @@ static SelectDirListModel dirList(".");
 
 static void checkfoldername(const std::string& current)
 {
-	char actualpath [MAX_DPATH];
 	DIR* dir;
 
 	if ((dir = opendir(current.c_str())))
 	{
+		char actualpath [MAX_DPATH];
 		dirList = current;
 		auto* const ptr = realpath(current.c_str(), actualpath);
 		workingDir = std::string(ptr);

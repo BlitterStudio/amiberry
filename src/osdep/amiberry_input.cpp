@@ -39,8 +39,8 @@ struct didata di_joystick[MAX_INPUT_DEVICES];
 
 static int num_mouse = 1, num_keyboard = 1, num_joystick = 0, num_retroarch_kbdjoy = 0;
 static int joystick_inited, retroarch_inited;
-const auto analog_upper_bound = 32767;
-const auto analog_lower_bound = -analog_upper_bound;
+constexpr auto analog_upper_bound = 32767;
+constexpr auto analog_lower_bound = -analog_upper_bound;
 
 static int isrealbutton(const struct didata* did, const int num)
 {
@@ -354,7 +354,7 @@ static int keyboard_german;
 int keyhack (const int scancode, const int pressed, const int num)
 {
 	static unsigned char backslashstate, apostrophstate;
-	const Uint8* state = SDL_GetKeyboardState(NULL);
+	const Uint8* state = SDL_GetKeyboardState(nullptr);
 
 	// release mouse if TAB and ALT is pressed (but only if option is enabled)
 	if (currprefs.alt_tab_release)
@@ -448,7 +448,7 @@ static void di_dev_free(struct didata* did)
 	cleardid(did);
 }
 
-static void di_free(void)
+static void di_free()
 {
 	for (auto i = 0; i < MAX_INPUT_DEVICES; i++) {
 		di_dev_free(&di_joystick[i]);
@@ -457,12 +457,12 @@ static void di_free(void)
 	}
 }
 
-int is_touch_lightpen(void)
+int is_touch_lightpen()
 {
 	return 0;
 }
 
-int is_tablet(void)
+int is_tablet()
 {
 	//return (tablet || os_touch) ? 1 : 0;
 	return 0;
@@ -506,7 +506,6 @@ static int acquire_mouse(const int num, int flags)
 		return 1;
 	}
 
-	struct AmigaMonitor* mon = &AMonitors[0];
 	struct didata* did = &di_mouse[num];
 	did->acquired = 1;
 	return did->acquired > 0 ? 1 : 0;
@@ -519,7 +518,6 @@ static void unacquire_mouse(int num)
 	}
 
 	struct didata* did = &di_mouse[num];
-	struct AmigaMonitor* mon = &AMonitors[0];
 	did->acquired = 0;
 }
 
@@ -739,7 +737,7 @@ static int init_kb()
 	std::string retroarch_file = get_retroarch_file();
 	if (my_existsfile2(retroarch_file.c_str()))
 	{
-		// Add as many keyboards as joysticks that are setup
+		// Add as many keyboards as joysticks that are set up
 		// on arcade machines, you could have a 4 player ipac using all keyboard buttons
 		// so you want to have at least 4 keyboards to choose from!
 		// once one config is missing, simply stop adding them!
@@ -758,7 +756,7 @@ static void close_kb()
 {
 }
 
-void release_keys(void)
+void release_keys()
 {
 	// Special handling in case Alt-Tab was still stuck in pressed state
 	if (currprefs.alt_tab_release && key_altpressed())
@@ -767,14 +765,14 @@ void release_keys(void)
 		my_kbd_handler(0, SDL_SCANCODE_TAB, 0, true);
 	}
 
-	const Uint8* state = SDL_GetKeyboardState(NULL);
+	const Uint8* state = SDL_GetKeyboardState(nullptr);
 	SDL_Event event;
 
 	for (int i = 0; i < SDL_NUM_SCANCODES; ++i) {
 		if (state[i]) {
 			event.type = SDL_KEYUP;
-			event.key.keysym.scancode = (SDL_Scancode)i;
-			event.key.keysym.sym = SDL_GetKeyFromScancode((SDL_Scancode)i);
+			event.key.keysym.scancode = static_cast<SDL_Scancode>(i);
+			event.key.keysym.sym = SDL_GetKeyFromScancode(static_cast<SDL_Scancode>(i));
 			event.key.keysym.mod = 0;
 			event.key.state = SDL_RELEASED;
 			SDL_PushEvent(&event);
@@ -786,7 +784,6 @@ void release_keys(void)
 
 static int acquire_kb(const int num, int flags)
 {
-	struct AmigaMonitor* mon = &AMonitors[0];
 	struct didata* did = &di_keyboard[num];
 	did->acquired = 1;
 	return did->acquired > 0 ? 1 : 0;
@@ -795,7 +792,6 @@ static int acquire_kb(const int num, int flags)
 static void unacquire_kb(const int num)
 {
 	struct didata* did = &di_keyboard[num];
-	struct AmigaMonitor* mon = &AMonitors[0];
 	did->acquired = 0;
 }
 
@@ -803,7 +799,7 @@ static void read_kb()
 {
 }
 
-void wait_keyrelease(void)
+void wait_keyrelease()
 {
 	release_keys();
 }
@@ -1204,25 +1200,25 @@ static int get_joystick_widget_type(const int joy, const int num, TCHAR* name, u
 			switch (num)
 			{
 			case FIRST_JOY_BUTTON:
-				sprintf(name, "Button X/CD32 red");
+				_sntprintf(name, sizeof name, "Button X/CD32 red");
 				break;
 			case FIRST_JOY_BUTTON + 1:
-				sprintf(name, "Button B/CD32 blue");
+				_sntprintf(name, sizeof name, "Button B/CD32 blue");
 				break;
 			case FIRST_JOY_BUTTON + 2:
-				sprintf(name, "Button A/CD32 green");
+				_sntprintf(name, sizeof name, "Button A/CD32 green");
 				break;
 			case FIRST_JOY_BUTTON + 3:
-				sprintf(name, "Button Y/CD32 yellow");
+				_sntprintf(name, sizeof name, "Button Y/CD32 yellow");
 				break;
 			case FIRST_JOY_BUTTON + 4:
-				sprintf(name, "CD32 start");
+				_sntprintf(name, sizeof name, "CD32 start");
 				break;
 			case FIRST_JOY_BUTTON + 5:
-				sprintf(name, "CD32 ffw");
+				_sntprintf(name, sizeof name, "CD32 ffw");
 				break;
 			case FIRST_JOY_BUTTON + 6:
-				sprintf(name, "CD32 rwd");
+				_sntprintf(name, sizeof name, "CD32 rwd");
 				break;
 			default:
 				break;
@@ -1235,11 +1231,11 @@ static int get_joystick_widget_type(const int joy, const int num, TCHAR* name, u
 		if (name)
 		{
 			if (num == 0)
-				sprintf(name, "X Axis");
+				_sntprintf(name, sizeof name, "X Axis");
 			else if (num == 1)
-				sprintf(name, "Y Axis");
+				_sntprintf(name, sizeof name, "Y Axis");
 			else
-				sprintf(name, "Axis %d", num + 1);
+				_sntprintf(name, sizeof name, "Axis %d", num + 1);
 		}
 		return IDEV_WIDGET_AXIS;
 	}
@@ -1453,6 +1449,7 @@ void read_joystick_hat(const int id, int hat, const int value)
 			case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
 				state = value & SDL_HAT_RIGHT;
 				break;
+			default: break;
 			}
 			setjoybuttonstate(id, button, state);
 		}
@@ -1476,7 +1473,7 @@ struct inputdevice_functions inputdevicefunc_joystick = {
 // We use setid to set up custom events
 int input_get_default_joystick(struct uae_input_device* uid, int i, int port, int af, int mode, bool gp, bool joymouseswap, bool default_osk)
 {
-	struct didata* did = NULL;
+	struct didata* did = nullptr;
 	int h, v;
 
 	if (joymouseswap) {

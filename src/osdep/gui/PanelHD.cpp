@@ -66,7 +66,7 @@ static gcn::Button* cmdCDEject;
 static gcn::Button* cmdCDSelectFile;
 static gcn::CheckBox* chkCDTurbo;
 
-static void harddisktype(TCHAR* s, struct uaedev_config_info* ci)
+static void harddisktype(TCHAR* s, const struct uaedev_config_info* ci)
 {
 	switch (ci->type)
 	{
@@ -319,7 +319,8 @@ public:
 
 					RefreshCDListModel();
 					AdjustDropDownControls();
-					SetLastActiveConfig(tmp.c_str());
+					if (!last_loaded_config[0])
+						set_last_active_config(tmp.c_str());
 				}
 			}
 			cmdCDSelectFile->requestFocus();
@@ -389,7 +390,6 @@ void InitPanelHD(const config_category& category)
 {
 	int row, col;
 	auto posY = DISTANCE_BORDER / 2;
-	std::string id_string;
 
 	RefreshCDListModel();
 
@@ -413,7 +413,7 @@ void InitPanelHD(const config_category& category)
 		listCmdProps[row]->setBaseColor(gui_base_color);
 		listCmdProps[row]->setForegroundColor(gui_foreground_color);
 		listCmdProps[row]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
-		id_string = "cmdProp" + to_string(row);
+		std::string id_string = "cmdProp" + to_string(row);
 		listCmdProps[row]->setId(id_string);
 		listCmdProps[row]->addActionListener(hdEditActionListener);
 
@@ -639,26 +639,23 @@ static void AdjustDropDownControls()
 
 void RefreshPanelHD()
 {
-	char tmp[32];
-	TCHAR size_str[32];
-	TCHAR blocksize_str[32];
-	TCHAR devname_str[256];
-	TCHAR volname_str[256];
-	TCHAR bootpri_str[32];
-
 	AdjustDropDownControls();
 
 	for (auto row = 0; row < MAX_HD_DEVICES; ++row)
 	{
 		if (row < changed_prefs.mountitems)
 		{
+			TCHAR bootpri_str[32];
+			TCHAR volname_str[256];
+			TCHAR devname_str[256];
+			TCHAR size_str[32];
+			TCHAR blocksize_str[32];
 			auto* uci = &changed_prefs.mountconfig[row];
 			auto* const ci = &uci->ci;
-			int nosize = 0, type, ctype;
-			struct mountedinfo mi;
-			TCHAR* rootdir, * rootdirp;
+			int nosize = 0;
+			struct mountedinfo mi{};
 
-			type = get_filesys_unitconfig(&changed_prefs, row, &mi);
+			int type = get_filesys_unitconfig(&changed_prefs, row, &mi);
 			if (type < 0)
 			{
 				type = ci->type == UAEDEV_HDF || ci->type == UAEDEV_CD || ci->type == UAEDEV_TAPE ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
@@ -666,8 +663,8 @@ void RefreshPanelHD()
 			}
 			if (mi.size < 0)
 				nosize = 1;
-			rootdir = my_strdup(mi.rootdir);
-			rootdirp = rootdir;
+			TCHAR* rootdir = my_strdup(mi.rootdir);
+			TCHAR* rootdirp = rootdir;
 			if (!_tcsncmp(rootdirp, _T("HD_"), 3))
 				rootdirp += 3;
 			if (rootdirp[0] == ':') {
@@ -680,28 +677,28 @@ void RefreshPanelHD()
 			if (nosize)
 				_tcscpy(size_str, _T("n/a"));
 			else if (mi.size >= 1024 * 1024 * 1024)
-				_stprintf(size_str, _T("%.1fG"), ((double)(uae_u32)(mi.size / (1024 * 1024))) / 1024.0);
+				_sntprintf(size_str, sizeof size_str, _T("%.1fG"), static_cast<double>(static_cast<uae_u32>(mi.size / (1024 * 1024))) / 1024.0);
 			else if (mi.size < 10 * 1024 * 1024)
-				_stprintf(size_str, _T("%lldK"), mi.size / 1024);
+				_sntprintf(size_str, sizeof size_str, _T("%lldK"), mi.size / 1024);
 			else
-				_stprintf(size_str, _T("%.1fM"), ((double)(uae_u32)(mi.size / (1024))) / 1024.0);
+				_sntprintf(size_str, sizeof size_str, _T("%.1fM"), static_cast<double>(static_cast<uae_u32>(mi.size / (1024))) / 1024.0);
 
-			ctype = ci->controller_type;
+			int ctype = ci->controller_type;
 			if (ctype >= HD_CONTROLLER_TYPE_IDE_FIRST && ctype <= HD_CONTROLLER_TYPE_IDE_LAST) {
 				const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
 				const TCHAR* idedevs[] = {
 					_T("IDE:%d"),
 					_T("A600/A1200/A4000:%d"),
 				};
-				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				_sntprintf(blocksize_str, sizeof blocksize_str, _T("%d"), ci->blocksize);
 				if (ert) {
 					if (ci->controller_type_unit == 0)
-						_stprintf(devname_str, _T("%s:%d"), ert->friendlyname, ci->controller_unit);
+						_sntprintf(devname_str, sizeof devname_str, _T("%s:%d"), ert->friendlyname, ci->controller_unit);
 					else
-						_stprintf(devname_str, _T("%s:%d/%d"), ert->friendlyname, ci->controller_unit, ci->controller_type_unit + 1);
+						_sntprintf(devname_str, sizeof devname_str, _T("%s:%d/%d"), ert->friendlyname, ci->controller_unit, ci->controller_type_unit + 1);
 				}
 				else {
-					_stprintf(devname_str, idedevs[ctype - HD_CONTROLLER_TYPE_IDE_FIRST], ci->controller_unit);
+					_sntprintf(devname_str, sizeof devname_str, idedevs[ctype - HD_CONTROLLER_TYPE_IDE_FIRST], ci->controller_unit);
 				}
 				harddisktype(volname_str, ci);
 				_tcscpy(bootpri_str, _T("n/a"));
@@ -720,16 +717,16 @@ void RefreshPanelHD()
 				else if (ci->controller_unit == 8 && ert && !_tcscmp(ert->name, _T("a2090a")))
 					_tcscpy(sid, _T("ST-506"));
 				else
-					_stprintf(sid, _T("%d"), ci->controller_unit);
-				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+					_sntprintf(sid, sizeof sid, _T("%d"), ci->controller_unit);
+				_sntprintf(blocksize_str, sizeof blocksize_str, _T("%d"), ci->blocksize);
 				if (ert) {
 					if (ci->controller_type_unit == 0)
-						_stprintf(devname_str, _T("%s:%s"), ert->friendlyname, sid);
+						_sntprintf(devname_str, sizeof devname_str, _T("%s:%s"), ert->friendlyname, sid);
 					else
-						_stprintf(devname_str, _T("%s:%s/%d"), ert->friendlyname, sid, ci->controller_type_unit + 1);
+						_sntprintf(devname_str, sizeof devname_str, _T("%s:%s/%d"), ert->friendlyname, sid, ci->controller_type_unit + 1);
 				}
 				else {
-					_stprintf(devname_str, scsidevs[ctype - HD_CONTROLLER_TYPE_SCSI_FIRST], sid);
+					_sntprintf(devname_str, sizeof devname_str, scsidevs[ctype - HD_CONTROLLER_TYPE_SCSI_FIRST], sid);
 				}
 				harddisktype(volname_str, ci);
 				_tcscpy(bootpri_str, _T("n/a"));
@@ -737,33 +734,33 @@ void RefreshPanelHD()
 			else if (ctype >= HD_CONTROLLER_TYPE_CUSTOM_FIRST && ctype <= HD_CONTROLLER_TYPE_CUSTOM_LAST) {
 				TCHAR sid[8];
 				const struct expansionromtype* ert = get_unit_expansion_rom(ctype);
-				_stprintf(sid, _T("%d"), ci->controller_unit);
+				_sntprintf(sid, sizeof sid, _T("%d"), ci->controller_unit);
 				if (ert) {
 					if (ci->controller_type_unit == 0)
-						_stprintf(devname_str, _T("%s:%s"), ert->friendlyname, sid);
+						_sntprintf(devname_str, sizeof devname_str, _T("%s:%s"), ert->friendlyname, sid);
 					else
-						_stprintf(devname_str, _T("%s:%s/%d"), ert->friendlyname, sid, ci->controller_type_unit + 1);
+						_sntprintf(devname_str, sizeof devname_str, _T("%s:%s/%d"), ert->friendlyname, sid, ci->controller_type_unit + 1);
 				}
 				else {
-					_stprintf(devname_str, _T("PCMCIA"));
+					_sntprintf(devname_str, sizeof devname_str, _T("PCMCIA"));
 				}
 				harddisktype(volname_str, ci);
 				_tcscpy(bootpri_str, _T("n/a"));
 			}
 			else if (type == FILESYS_HARDFILE) {
-				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				_sntprintf(blocksize_str, sizeof blocksize_str, _T("%d"), ci->blocksize);
 				_tcscpy(devname_str, ci->devname);
 				_tcscpy(volname_str, _T("n/a"));
-				_stprintf(bootpri_str, _T("%d"), ci->bootpri);
+				_sntprintf(bootpri_str, sizeof bootpri_str, _T("%d"), ci->bootpri);
 			}
 			else if (type == FILESYS_HARDFILE_RDB || type == FILESYS_HARDDRIVE || ci->controller_type != HD_CONTROLLER_TYPE_UAE) {
-				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
-				_stprintf(devname_str, _T("UAE:%d"), ci->controller_unit);
+				_sntprintf(blocksize_str, sizeof blocksize_str, _T("%d"), ci->blocksize);
+				_sntprintf(devname_str, sizeof devname_str, _T("UAE:%d"), ci->controller_unit);
 				_tcscpy(volname_str, _T("n/a"));
 				_tcscpy(bootpri_str, _T("n/a"));
 			}
 			else if (type == FILESYS_TAPE) {
-				_stprintf(blocksize_str, _T("%d"), ci->blocksize);
+				_sntprintf(blocksize_str, sizeof blocksize_str, _T("%d"), ci->blocksize);
 				_tcscpy(devname_str, _T("UAE"));
 				harddisktype(volname_str, ci);
 				_tcscpy(bootpri_str, _T("n/a"));
@@ -773,7 +770,7 @@ void RefreshPanelHD()
 				_tcscpy(devname_str, ci->devname);
 				_tcscpy(volname_str, ci->volname);
 				_tcscpy(size_str, _T("n/a"));
-				_stprintf(bootpri_str, _T("%d"), ci->bootpri);
+				_sntprintf(bootpri_str, sizeof bootpri_str, _T("%d"), ci->bootpri);
 			}
 			if (!mi.ismedia) {
 				_tcscpy(blocksize_str, _T("n/a"));
@@ -819,7 +816,7 @@ void RefreshPanelHD()
 	}
 }
 
-int count_HDs(uae_prefs* p)
+int count_HDs(const uae_prefs* p)
 {
 	return p->mountitems;
 }

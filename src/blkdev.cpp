@@ -412,7 +412,7 @@ static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 #endif
 	if (isaudio) {
 		TCHAR vol[100];
-		_stprintf (vol, _T("%c:\\"), isaudio);
+		_sntprintf (vol, sizeof vol, _T("%c:\\"), isaudio);
 		if (sys_command_open_internal (unitnum, vol, csu)) 
 			return unitnum;
 	}

@@ -26,7 +26,7 @@ static gcn::StringListModel rtg_aspectratios_list(rtg_aspectratios);
 static const std::vector<std::string> rtg_16bit_modes = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
 static gcn::StringListModel rtg_16bit_modes_list(rtg_16bit_modes);
 
-static const std::vector<std::string> rtg_32bit_modes = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
+static const std::vector<std::string> rtg_32bit_modes = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8", "B8G8R8A8 (*)" };
 static gcn::StringListModel rtg_32bit_modes_list(rtg_32bit_modes);
 
 
@@ -57,7 +57,6 @@ class RTGActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& action_event) override
 	{
-		int v;
 		uae_u32 mask = changed_prefs.picasso96_modeflags;
 		
 		if (action_event.getSource() == cboBoard)
@@ -125,7 +124,7 @@ public:
 
 		mask &= ~RGBFF_CLUT;
 		mask |= RGBFF_CLUT;
-		v = cboRtg16bitModes->getSelected();
+		int v = cboRtg16bitModes->getSelected();
 		mask &= ~(RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC);
 		if (v == 1)
 			mask |= RGBFF_R5G6B5PC | RGBFF_R5G5B5PC | RGBFF_R5G6B5 | RGBFF_R5G5B5 | RGBFF_B5G6R5PC | RGBFF_B5G5R5PC;
@@ -155,7 +154,7 @@ public:
 		if (v == 5)
 			mask |= RGBFF_B8G8R8A8;
 
-		changed_prefs.picasso96_modeflags = int(mask);
+		changed_prefs.picasso96_modeflags = static_cast<int>(mask);
 		
 		RefreshPanelRTG();
 	}

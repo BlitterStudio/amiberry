@@ -141,7 +141,7 @@ static int load_rom8 (const TCHAR *xpath, uae_u8 *mem, int extra, const TCHAR *e
 
 	extra &= 3;
 	memset (tmp, 0xff, 131072);
-	_stprintf (path, _T("%s%s%s"), xpath, extra == 3 ? _T("-hi") : (extra == 2 ? _T("hi") : (extra == 1 ? _T("h") : _T(""))), bin);
+	_sntprintf (path, sizeof path, _T("%s%s%s"), xpath, extra == 3 ? _T("-hi") : (extra == 2 ? _T("hi") : (extra == 1 ? _T("h") : _T(""))), bin);
 	if (ext)
 		_tcscat(path, ext);
 	if (exts) {
@@ -156,7 +156,7 @@ static int load_rom8 (const TCHAR *xpath, uae_u8 *mem, int extra, const TCHAR *e
 	if (zfile_fread (tmp, 65536, 1, zf) == 0)
 		goto end;
 	zfile_fclose (zf);
-	_stprintf (path, _T("%s%s%s"), xpath, extra == 3 ? _T("-lo") : (extra == 2 ? _T("lo") : (extra == 1 ? _T("l") : _T(""))), bin);
+	_sntprintf (path, sizeof path, _T("%s%s%s"), xpath, extra == 3 ? _T("-lo") : (extra == 2 ? _T("lo") : (extra == 1 ? _T("l") : _T(""))), bin);
 	if (ext)
 		_tcscat(path, ext);
 	if (exts)
@@ -242,10 +242,10 @@ static int load_roms (struct arcadiarom *rom)
 	i = 0;
 	for (;;) {
 		if (rom->extra & 4)
-			_stprintf (path, _T("%s%d"), xpath, i + 1);
+			_sntprintf (path, sizeof path, _T("%s%d"), xpath, i + 1);
 		else
 			_tcscpy (path, xpath);
-		if (!load_rom8 (path, arbmemory + 2 * 65536 * i + offset, rom->extra, rom->ext, rom->exts && rom->exts[0] ? &rom->exts[i * 2] : NULL)) {
+		if (!load_rom8 (path, arbmemory + 2 * 65536 * i + offset, rom->extra, rom->ext, rom->exts[0] ? &rom->exts[i * 2] : NULL)) {
 			if (i == 0)
 				write_log (_T("Arcadia: %s rom load failed ('%s')\n"), rom->type == ARCADIA_BIOS ? _T("bios") : _T("game"), path);
 			break;
@@ -1767,10 +1767,10 @@ int touch_serial_write(void)
 			y = 999 - y;
 
 			*p++ = 0x01;
-			sprintf((char*)p, "%03d", x);
+			_sntprintf((char*)p, sizeof p, "%03d", x);
 			p += 3;
 			*p++ = ',';
-			sprintf((char*)p, "%03d", y);
+			_sntprintf((char*)p, sizeof p, "%03d", y);
 			p += 3;
 			*p++ = 0x0d;
 			touch_write_buf_offset = addrdiff(p, touch_data_w);

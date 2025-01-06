@@ -3030,7 +3030,7 @@ void s3_add_status_info(char *s, int max_len, void *p)
                 status_diff = 1;
         
         svga_add_status_info(s, max_len, &s3->svga);
-        sprintf(temps, "%f%% CPU\n%f%% CPU (real)\n\n", ((double)s3->blitter_time * 100.0) / timer_freq, ((double)s3->blitter_time * 100.0) / status_diff);
+        _sntprintf(temps, sizeof temps, "%f%% CPU\n%f%% CPU (real)\n\n", ((double)s3->blitter_time * 100.0) / timer_freq, ((double)s3->blitter_time * 100.0) / status_diff);
         strncat(s, temps, max_len);
 
         s3->blitter_time = 0;

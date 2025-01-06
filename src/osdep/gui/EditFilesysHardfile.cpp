@@ -74,7 +74,7 @@ static gcn::TextField *txtSectors;
 static gcn::Label *lblBlocksize;
 static gcn::TextField *txtBlocksize;
 
-static void sethd(void)
+static void sethd()
 {
 	const bool rdb = is_hdf_rdb();
 	const bool enablegeo = !rdb;
@@ -99,7 +99,7 @@ static void sethardfiletypes()
 	cboHdfFeatureLevel->setSelected(current_hfdlg.ci.unit_feature_level);
 }
 
-static void sethardfile(void)
+static void sethardfile()
 {
 	std::string rootdir, filesys, strdevname;
 	char tmp[32];
@@ -107,7 +107,7 @@ static void sethardfile(void)
 	auto ide = current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST;
 	bool scsi = current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_SCSI_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_SCSI_LAST;
 	auto rdb = is_hdf_rdb();
-	auto disables = !rdb || (rdb && current_hfdlg.ci.controller_type == HD_CONTROLLER_TYPE_UAE);
+	auto disables = !rdb || current_hfdlg.ci.controller_type == HD_CONTROLLER_TYPE_UAE;
 	bool rdsk = current_hfdlg.rdb;
 
 	sethd();
@@ -1018,7 +1018,6 @@ bool EditFilesysHardfile(const int unit_no)
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	mountedinfo mi{};
-	uaedev_config_data *uci;
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -1049,7 +1048,7 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uci = &changed_prefs.mountconfig[unit_no];
+		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		current_hfdlg.forcedcylinders = uci->ci.highcyl;

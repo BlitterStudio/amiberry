@@ -59,14 +59,14 @@ msg_buffer_t *in_buf;
 
 static msg_buffer_t *buffer_init(int size)
 {
-	msg_buffer_t *buf = (msg_buffer_t *)malloc(sizeof(msg_buffer_t));
-	if(buf == NULL) {
-		return NULL;
+	const auto buf = static_cast<msg_buffer_t*>(malloc(sizeof(msg_buffer_t)));
+	if(buf == nullptr) {
+		return nullptr;
 	}
-	buf->buffer = (PmMessage *)malloc(sizeof(PmMessage) * size);
-	if(buf->buffer == NULL) {
+	buf->buffer = static_cast<PmMessage*>(malloc(sizeof(PmMessage) * size));
+	if(buf->buffer == nullptr) {
 		free(buf);
-		return NULL;
+		return nullptr;
 	}
 	buf->sem = nullptr;
 	uae_sem_init(&buf->sem, 0, 1);
@@ -96,10 +96,10 @@ static int buffer_add_msg(msg_buffer_t *buf, PmMessage msg)
 	return overflow;
 }
 
-static int buffer_has_msg(msg_buffer_t *buf)
+static int buffer_has_msg(const msg_buffer_t *buf)
 {
 	uae_sem_wait(&buf->sem);
-	int res = buf->rd_off != buf->wr_off;
+	const int res = buf->rd_off != buf->wr_off;
 	uae_sem_post(&buf->sem);
 	return res;
 }
@@ -120,12 +120,11 @@ static int buffer_get_msg(msg_buffer_t *buf, PmMessage *msg)
 // timer callback
 static void timer_callback(PtTimestamp timestamp, void *userData)
 {
-	if(timer_active && (in != NULL)) {
+	if(timer_active && (in != nullptr)) {
 		// read incoming midi command
 		if(Pm_Poll(in) == TRUE) {
 			PmEvent ev;
-			int err;
-			err = Pm_Read(in, &ev, 1);
+			const int err = Pm_Read(in, &ev, 1);
 			if(err == 1) {
 				TRACE((_T("<- midi_in:  %08x\n"),ev.message));
 				// add to in queue
@@ -140,7 +139,7 @@ static void timer_callback(PtTimestamp timestamp, void *userData)
 	}
 }
 
-static void parse_config(uae_prefs *cfg)
+static void parse_config(const uae_prefs *cfg)
 {
 	// set defaults
 	in_dev_id = Pm_GetDefaultInputDeviceID();
@@ -169,16 +168,15 @@ static void parse_config(uae_prefs *cfg)
 
 }
 
-static PortMidiStream *open_out_stream(void)
+static PortMidiStream *open_out_stream()
 {
 	PortMidiStream *out;
-	PmError err;
 
 	if(out_dev_id == pmNoDevice) {
 		write_log(_T("MIDI OUT: ERROR: no device found!\n"));
 	} else {
-		err = Pm_OpenOutput(&out, out_dev_id, NULL, OUT_QUEUE_SIZE,
-			NULL, NULL, 0);
+		const PmError err = Pm_OpenOutput(&out, out_dev_id, nullptr, OUT_QUEUE_SIZE,
+		                            nullptr, nullptr, 0);
 		if(err != pmNoError) {
 			write_log(_T("MIDI OUT: ERROR: can't open device #%d! code=%d\n"),
 			 	out_dev_id, err);
@@ -187,19 +185,18 @@ static PortMidiStream *open_out_stream(void)
 			return out;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
-static PortMidiStream *open_in_stream(void)
+static PortMidiStream *open_in_stream()
 {
 	PortMidiStream *in;
-	PmError err;
 
 	if(in_dev_id == pmNoDevice) {
 		write_log(_T("MIDI IN: ERROR: no device found!\n"));
 	} else {
-		err = Pm_OpenInput(&in, in_dev_id, NULL, IN_QUEUE_SIZE,
-			NULL, NULL);
+		const PmError err = Pm_OpenInput(&in, in_dev_id, nullptr, IN_QUEUE_SIZE,
+		                           nullptr, nullptr);
 		if(err != pmNoError) {
 			write_log(_T("MIDI IN: ERROR: can't open device #%d! code=%d\n"),
 			 	in_dev_id, err);
@@ -208,15 +205,15 @@ static PortMidiStream *open_in_stream(void)
 			return in;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
-static int midi_open_with_config(uae_prefs *cfg)
+static int midi_open_with_config(const uae_prefs *cfg)
 {
 	write_log(_T("midi_open()\n"));
 
 	// setup timer
-	PtError err = Pt_Start(1, timer_callback, NULL);
+	PtError err = Pt_Start(1, timer_callback, nullptr);
 	if(err != ptNoError) {
 		write_log(_T("MIDI: ERROR: no timer!\n"));
 		return 0;
@@ -224,7 +221,7 @@ static int midi_open_with_config(uae_prefs *cfg)
 
 	// setup input buffer
 	in_buf = buffer_init(MY_IN_QUEUE_SIZE);
-	if(in_buf == NULL) {
+	if(in_buf == nullptr) {
 		write_log(_T("MIDI: ERROR: no buffer!\n"));
 		return 0;
 	}
@@ -241,7 +238,7 @@ static int midi_open_with_config(uae_prefs *cfg)
 	timer_active = 1;
 
 	// ok if any direction was opened
-	if((out != NULL) || (in != NULL)) {
+	if((out != nullptr) || (in != nullptr)) {
 		write_log(_T("midi_open(): ok\n"));
 		return 1;
 	} else {
@@ -250,12 +247,12 @@ static int midi_open_with_config(uae_prefs *cfg)
 	}
 }
 
-int midi_open(void)
+int midi_open()
 {
 	return midi_open_with_config(&currprefs);
 }
 
-void midi_close(void)
+void midi_close()
 {
 	write_log(_T("midi_close()\n"));
 
@@ -264,21 +261,21 @@ void midi_close(void)
 	Pt_Stop();
 
 	// close output
-	if(out != NULL) {
+	if(out != nullptr) {
 		Pm_Close(out);
-		out = NULL;
+		out = nullptr;
 	}
 	// close input
-	if(in != NULL) {
+	if(in != nullptr) {
 		Pm_Close(in);
-		in = NULL;
+		in = nullptr;
 	}
 
 	Pm_Terminate();
 
 	// free input buffer
 	buffer_free(in_buf);
-	in_buf = NULL;
+	in_buf = nullptr;
 
 	write_log(_T("midi_close(): done\n"));
 }
@@ -323,7 +320,7 @@ static void out_add_sysex_byte(uint8_t data)
 	}
 }
 
-static void out_flush_sysex(void)
+static void out_flush_sysex()
 {
 	if(out_sysex_bits != 0) {
 		write_msg(out_sysex_msg);
@@ -415,7 +412,7 @@ static int in_msg_bits;
 
 static int in_sysex_mode;
 
-int midi_has_byte(void)
+int midi_has_byte()
 {
 	// still have to send parameter bytes
 	if(in_msg_bytes > 0) {
@@ -468,7 +465,7 @@ int midi_recv_byte(uint8_t *ch)
 	int res = 0;
 	// sitll have to send parameter bytes
 	if(in_msg_bytes > 0) {
-		*ch = (uint8_t)(in_msg >> in_msg_bits);
+		*ch = static_cast<uint8_t>(in_msg >> in_msg_bits);
 		in_msg_bits += 8;
 		in_msg_bytes--;
 		res = 1;
@@ -516,17 +513,17 @@ int midi_recv_byte(uint8_t *ch)
 // The Midi_Parse function has not been tested yet, so this might not work
 // correctly.
 
-int Midi_Open(void)
+int Midi_Open()
 {
 	return midi_open();
 }
 
-void Midi_Close(void)
+void Midi_Close()
 {
 	midi_close();
 }
 
-void Midi_Reopen(void)
+void Midi_Reopen()
 {
 	if (midi_ready) {
 		Midi_Close();

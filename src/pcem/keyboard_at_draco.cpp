@@ -37,7 +37,7 @@ void keyboard_at_log(const char *txt, ...)
     char buffer[256];
     va_list parms;
     va_start(parms, txt);
-    vsprintf(buffer, txt, parms);
+    vsnprintf(buffer, sizeof buffer, txt, parms);
     write_log(buffer);
     va_end(parms);
 }

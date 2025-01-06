@@ -830,7 +830,7 @@ TCHAR *filesys_createvolname (const TCHAR *volname, const TCHAR *rootdir, struct
 		return nvol;
 	}
 
-	if ((!volname || uaetcslen (volname) == 0) && path && archivehd >= 0) {
+	if ((!volname || uaetcslen (volname) == 0) && path[0] && archivehd >= 0) {
 		p = my_strdup (path);
 		for (i = uaetcslen (p) - 1; i >= 0; i--) {
 			TCHAR c = p[i];
@@ -1365,7 +1365,7 @@ static void initialize_mountinfo (void)
 		for (int i = 0; i < 32; i++) {
 			if (mask & (1 << i)) {
 				struct uaedev_config_info ci = { 0 };
-				_stprintf (ci.devname, _T("CD%d"), i);
+				_sntprintf (ci.devname, sizeof ci.devname, _T("CD%d"), i);
 				cd_unit_number++;
 				_tcscpy (ci.rootdir, _T("/"));
 				ci.readonly = true;
@@ -1457,10 +1457,10 @@ int sprintf_filesys_unit (TCHAR *buffer, int num)
 	UnitInfo *uip = mountinfo.ui;
 
 	if (uip[num].volname != 0)
-		_stprintf (buffer, _T("(DH%d:) Filesystem, %s: %s %s"), num, uip[num].volname,
+		_sntprintf (buffer, sizeof buffer, _T("(DH%d:) Filesystem, %s: %s %s"), num, uip[num].volname,
 		uip[num].rootdir, uip[num].readonly ? _T("ro") : _T(""));
 	else
-		_stprintf (buffer, _T("(DH%d:) Hardfile, \"%s\", size %d Mbytes"), num,
+		_sntprintf (buffer, sizeof buffer, _T("(DH%d:) Hardfile, \"%s\", size %d Mbytes"), num,
 		uip[num].rootdir, (int)(uip[num].hf.virtsize / (1024 * 1024)));
 	return 0;
 }
@@ -2251,7 +2251,7 @@ int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_conf
 			// inserted >= 2: drag&drop insert, do not replace existing normal drives
 			if (inserted < 2 && ui->rootdir && !memcmp (ui->rootdir, rootdir, uaetcslen (rootdir)) && uaetcslen (rootdir) + 3 >= uaetcslen (ui->rootdir)) {
 				if (filesys_isvolume(u) && inserted) {
-					if (uci)ctx, 
+					if (uci)ctx,
 						filesys_delayed_change (u, 50, rootdir, uci->ci.volname, uci->ci.readonly, 0);
 					return 0;
 				}
@@ -2321,7 +2321,7 @@ int filesys_media_change (const TCHAR *rootdir, int inserted, struct uaedev_conf
 		if (uci)
 			_tcscpy (devname, uci->ci.devname);
 		else
-			_stprintf (devname, _T("RDH%d"), autocreatedunit++);
+			_sntprintf (devname, sizeof devname, _T("RDH%d"), autocreatedunit++);
 		_tcscpy (ci.devname, devname);
 		_tcscpy (ci.volname, volptr);
 		_tcscpy (ci.rootdir, rootdir);
@@ -4998,7 +4998,7 @@ static void inject_icons_to_directory(Unit *unit, a_inode *base)
 		if (len >= 5 && !_tcsicmp(aino->aname + len - 5, _T(".info")))
 			continue;
 		TCHAR tmp[256];
-		_stprintf(tmp, _T("%s.info"), aino->aname);
+		_sntprintf(tmp, sizeof tmp, _T("%s.info"), aino->aname);
 		bool match = false;
 		for (a_inode *aino2 = base->child; aino2; aino2 = aino2->sibling) {
 			if (!_tcsicmp(aino2->aname, tmp))
@@ -8279,7 +8279,7 @@ static const TCHAR *dostypes(TCHAR *dt, uae_u32 dostype)
 			dt[j++] = c;
 		} else {
 			dt[j++] = '\\';
-			_stprintf (&dt[j], _T("%d"), c);
+			_sntprintf (&dt[j], sizeof &dt[j], _T("%d"), c);
 			j += uaetcslen (&dt[j]);
 		}
 	}
@@ -8346,7 +8346,7 @@ static void dumprdbblock(const uae_u8 *buf, int block)
 		TCHAR outbuf[81];
 		for (int j = 0; j < w; j++) {
 			uae_u8 v = buf[i + j];
-			_stprintf(outbuf + 2 * j, _T("%02X"), v);
+			_sntprintf(outbuf + 2 * j, sizeof outbuf, _T("%02X"), v);
 			outbuf[2 * w + 1 + j] = (v >= 32 && v <= 126) ? v : '.';
 		}
 		outbuf[2 * w] = ' ';
@@ -8422,7 +8422,7 @@ static void get_new_device (TrapContext *ctx, int type, uaecptr parmpacket, TCHA
 	if (*devname == 0 || uaetcslen (*devname) == 0) {
 		int un = unit_no;
 		for (;;) {
-			_stprintf (buffer, type == FILESYS_CD ? _T("CD%d") : _T("DH%d"), un++);
+			_sntprintf (buffer, sizeof buffer, type == FILESYS_CD ? _T("CD%d") : _T("DH%d"), un++);
 			if (type == FILESYS_CD)
 				*devname = my_strdup (buffer);
 			if (!device_isdup(ctx, expbase, buffer))
@@ -9555,7 +9555,7 @@ void filesys_install_code (void)
 	TCHAR *s = au(UAEFS_VERSION);
 	int y, m, d;
 	target_getdate(&y, &m, &d);
-	_stprintf(buf, _T("%s (%d.%d.%d)\r\n"), s, d, m, y);
+	_sntprintf(buf, sizeof buf, _T("%s (%d.%d.%d)\r\n"), s, d, m, y);
 	uaecptr idstring = ds(buf);
 	xfree(s);
 
@@ -9718,7 +9718,7 @@ static TCHAR *makenativepath (UnitInfo *ui, TCHAR *apath)
 	TCHAR *pn;
 	/* create native path. FIXME: handle 'illegal' characters */
 	pn = xcalloc (TCHAR, uaetcslen (apath) + 1 + uaetcslen (ui->rootdir) + 1);
-	_stprintf (pn, _T("%s/%s"), ui->rootdir, apath);
+	_sntprintf (pn, sizeof pn, _T("%s/%s"), ui->rootdir, apath);
 	if (FSDB_DIR_SEPARATOR != '/') {
 		for (int i = 0; i < uaetcslen (pn); i++) {
 			if (pn[i] == '/')
@@ -9902,7 +9902,7 @@ static uae_u8 *restore_notify (UnitInfo *ui, Unit *u, uae_u8 *src)
 	n->notifyrequest = restore_u32 ();
 	s = restore_string ();
 	n->fullname = xmalloc (TCHAR, uaetcslen (ui->volname) + 2 + uaetcslen (s) + 1);
-	_stprintf (n->fullname, _T("%s:%s"), ui->volname, s);
+	_sntprintf (n->fullname, sizeof n->fullname, _T("%s:%s"), ui->volname, s);
 	xfree(s);
 	s = _tcsrchr (n->fullname, '/');
 	if (s)
@@ -10395,9 +10395,9 @@ static uae_u32 filesys_shellexecute2_process(int mode, TrapContext *ctx)
 		if (se2->bin) {
 			xfree(se2->file);
 			if (oldks) {
-				sprintf(tmp, "cd \"%s\"\nT:__uae_out_%08X_%08x", se2->currentdir, se2->process, se2->id);
+				_sntprintf(tmp, sizeof tmp, "cd \"%s\"\nT:__uae_out_%08X_%08x", se2->currentdir, se2->process, se2->id);
 			} else {
-				sprintf(tmp, "T:__uae_bin_%08X_%08x", se2->process, se2->id);
+				_sntprintf(tmp, sizeof tmp, "T:__uae_bin_%08X_%08x", se2->process, se2->id);
 			}
 			se2->file = strdup(tmp);
 		}
@@ -10435,7 +10435,7 @@ static uae_u32 filesys_shellexecute2_process(int mode, TrapContext *ctx)
 		trap_put_long(ctx, se2->buffer + 4, dptr);
 		if (se2->bin) {
 			xfree(se2->file);
-			sprintf(tmp, "T:__uae_bin_%08X_%08x", se2->process, se2->id);
+			_sntprintf(tmp, sizeof tmp, "T:__uae_bin_%08X_%08x", se2->process, se2->id);
 			se2->file = strdup(tmp);
 			trap_put_long(ctx, se2->buffer + 52, dptr);
 		}
@@ -10447,7 +10447,7 @@ static uae_u32 filesys_shellexecute2_process(int mode, TrapContext *ctx)
 
 		trap_put_long(ctx, se2->buffer + 16, dptr);
 		if (oldks) {
-			sprintf(tmp, "cd \"%s\"\n%s", se2->currentdir, se2->file);
+			_sntprintf(tmp, sizeof tmp, "cd \"%s\"\n%s", se2->currentdir, se2->file);
 		} else {
 			strcpy(tmp, se2->file);
 		}
@@ -10459,7 +10459,7 @@ static uae_u32 filesys_shellexecute2_process(int mode, TrapContext *ctx)
 
 		if (se2->flags & 2) {
 			trap_put_long(ctx, se2->buffer + 44, dptr);
-			sprintf(tmp, "T:__uae_out_%08X_%08x", se2->process, se2->id);
+			_sntprintf(tmp, sizeof tmp, "T:__uae_out_%08X_%08x", se2->process, se2->id);
 			dptr += trap_put_string(ctx, tmp, dptr, -1) + 1;
 			se2->aoutbuf = dptr;
 			trap_put_long(ctx, se2->buffer + 48, dptr);

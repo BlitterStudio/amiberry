@@ -76,7 +76,7 @@
 #include "keyboard.h"
 
 // Special version string so that AmigaOS can detect it
-static const char __ver[40] = "$VER: Amiberry v6.3.5 (2024-09-20)";
+static constexpr char __ver[40] = "$VER: Amiberry v7.0 (2025-01-02)";
 
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
@@ -96,7 +96,7 @@ static TCHAR optionsfile[MAX_DPATH];
 static uae_u32 randseed;
 
 static uae_u32 xorshiftstate;
-static uae_u32 xorshift32(void)
+static uae_u32 xorshift32()
 {
 	uae_u32 x = xorshiftstate;
 	x ^= x << 13;
@@ -106,7 +106,7 @@ static uae_u32 xorshift32(void)
 	return xorshiftstate;
 }
 
-uae_u32 uaerand(void)
+uae_u32 uaerand()
 {
 	if (xorshiftstate == 0) {
 		xorshiftstate = randseed;
@@ -119,7 +119,7 @@ uae_u32 uaerand(void)
 	return r;
 }
 
-uae_u32 uaerandgetseed(void)
+uae_u32 uaerandgetseed()
 {
 	if (!randseed) {
 		randseed = 1;
@@ -817,7 +817,7 @@ void usage()
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
-	std::cout << "                            Available options are: A500, A500P, A1200, A4000, CD32 and CDTV.\n" <<
+	std::cout << "                            Available options are: A1000, A500, A500P, A600, A2000, A3000, A1200, A4000, CD32 and CDTV.\n" <<
 		'\n';
 	std::cout << " --autoload <file>          Load an .lha WHDLoad game or a CD32 CD image, using the WHDBooter." << '\n';
 	std::cout << " --cdimage <file>           Load the CD image provided when starting emulation." << '\n';
@@ -879,7 +879,7 @@ void usage()
 
 static void parse_cmdline_2 (int argc, TCHAR **argv)
 {
-	cfgfile_addcfgparam (0);
+	cfgfile_addcfgparam (nullptr);
 	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			cfgfile_addcfgparam(argv[i] + 10);
@@ -917,7 +917,7 @@ static void parse_diskswapper (const TCHAR *s)
 		p2 = _tcstok(p1, delim);
 		if (!p2)
 			break;
-		p1 = NULL;
+		p1 = nullptr;
 		if (num >= MAX_SPARE_DRIVES)
 			break;
 		if (!zfile_zopen (p2, diskswapper_cb, &num)) {
@@ -946,7 +946,7 @@ static TCHAR *parsetext (const TCHAR *s)
 static TCHAR *parsetextpath (const TCHAR *s)
 {
 	auto* const s2 = parsetext (s);
-	auto* const s3 = target_expand_environment (s2, NULL, 0);
+	auto* const s3 = target_expand_environment (s2, nullptr, 0);
 	xfree(s2);
 	return s3;
 }
@@ -962,7 +962,7 @@ std::string get_filename_extension(const TCHAR* filename)
 	return fName.substr(pos, fName.length());
 }
 
-extern void SetLastActiveConfig(const char* filename);
+extern void set_last_active_config(const char* filename);
 
 static void parse_cmdline (int argc, TCHAR **argv)
 {
@@ -1019,6 +1019,22 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				{
 					bip_a500plus(&currprefs, -1);
 				}
+				else if (_tcscmp(txt, _T("A600")) == 0)
+				{
+					bip_a600(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A1000")) == 0)
+				{
+					bip_a1000(&currprefs, -1);
+				}
+				else if (_tcscmp(txt, _T("A2000")) == 0)
+				{
+					bip_a2000(&currprefs, 130);
+				}
+				else if (_tcscmp(txt, _T("A3000")) == 0)
+				{
+					bip_a3000(&currprefs, -1);
+				}
 				else if (_tcscmp(txt, _T("A1200")) == 0)
 				{
 					bip_a1200(&currprefs, -1);
@@ -1051,15 +1067,15 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				{
 					savestate_state = STATE_DORESTORE;
 					_tcscpy(savestate_fname, txt);
-					xfree(txt);
 				}
 				else
 				{
 					get_savestate_path(savestate_fname, MAX_DPATH - 1);
 					strncat(savestate_fname, txt, MAX_DPATH - 1);
 					savestate_state = STATE_DORESTORE;
-					xfree(txt);
 				}
+				set_last_active_config(txt);
+				xfree(txt);
 #endif
 			}
 			loaded = true;
@@ -1141,7 +1157,25 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				add_file_to_mru_list(lstMRUWhdloadList, std::string(txt));
 				whdload_prefs.whdload_filename = std::string(txt);
 				whdload_auto_prefs(&currprefs, txt);
-				SetLastActiveConfig(txt);
+				set_last_active_config(txt);
+			}
+			else if (_tcscmp(txt2.c_str(), ".uss") == 0)
+			{
+				write_log("Statefile... %s\n", txt);
+				if (my_existsfile2(txt))
+				{
+					savestate_state = STATE_DORESTORE;
+					_tcscpy(savestate_fname, txt);
+					currprefs.start_gui = false;
+				}
+				else
+				{
+					get_savestate_path(savestate_fname, MAX_DPATH - 1);
+					strncat(savestate_fname, txt, MAX_DPATH - 1);
+					savestate_state = STATE_DORESTORE;
+					currprefs.start_gui = false;
+				}
+				set_last_active_config(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".cue") == 0
 				|| _tcscmp(txt2.c_str(), ".iso") == 0
@@ -1150,7 +1184,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				write_log("CDTV/CD32... %s\n", txt);
 				add_file_to_mru_list(lstMRUCDList, std::string(txt));
 				cd_auto_prefs(&currprefs, txt);
-				SetLastActiveConfig(txt);
+				set_last_active_config(txt);
 			}
 			else if (_tcscmp(txt2.c_str(), ".adf") == 0
 				|| _tcscmp(txt2.c_str(), ".adz") == 0
@@ -1167,9 +1201,9 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				std::string filename = p.filename().string();
 
 				std::string config_extension = "uae";
-				const std::size_t pos = filename.find_last_of(".");
+				const std::size_t pos = filename.find_last_of('.');
 				if (pos != std::string::npos) {
-					filename = filename.substr(0, pos) + "." + config_extension;
+					filename = filename.substr(0, pos).append(".").append(config_extension);
 				}
 				else {
 					// No extension found
@@ -1192,7 +1226,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 				{
 					write_log("No configuration file found for %s, inserting disk in DF0: with default settings\n", txt);
 					disk_insert(0, txt);
-					SetLastActiveConfig(txt);
+					set_last_active_config(txt);
 					currprefs.start_gui = false;
 				}
 			}
@@ -1504,7 +1538,7 @@ static int real_main2 (int argc, TCHAR **argv)
 #ifdef NATMEM_OFFSET
 	if (!init_shm ()) {
 		if (currprefs.start_gui)
-			uae_restart(&currprefs, -1, NULL);
+			uae_restart(&currprefs, -1, nullptr);
 		return 0;
 	}
 #endif

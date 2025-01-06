@@ -141,6 +141,13 @@ extern void restore_p96_finish(void);
 extern uae_u8 *restore_keyboard(uae_u8 *);
 extern uae_u8 *save_keyboard(size_t *,uae_u8*);
 
+extern uae_u8 *restore_kbmcu(uae_u8 *);
+extern uae_u8 *save_kbmcu(size_t *,uae_u8*);
+extern uae_u8 *restore_kbmcu2(uae_u8 *);
+extern uae_u8 *save_kbmcu2(size_t *,uae_u8*);
+extern uae_u8 *restore_kbmcu3(uae_u8 *);
+extern uae_u8 *save_kbmcu3(size_t *,uae_u8*);
+
 extern uae_u8 *restore_akiko(uae_u8 *src);
 extern uae_u8 *save_akiko(size_t *len, uae_u8*);
 extern void restore_akiko_finish(void);
@@ -267,6 +274,7 @@ extern bool savestate_check(void);
 
 extern int savestate_state;
 extern TCHAR savestate_fname[MAX_DPATH];
+extern TCHAR path_statefile[MAX_DPATH];
 extern struct zfile *savestate_file;
 
 STATIC_INLINE bool isrestore(void)

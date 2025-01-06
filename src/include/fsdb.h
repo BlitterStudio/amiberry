@@ -135,7 +135,7 @@ extern int fsdb_fill_file_attrs (a_inode *, a_inode *);
 extern int fsdb_set_file_attrs (a_inode *);
 extern int fsdb_mode_representable_p (const a_inode *, int);
 extern int fsdb_mode_supported (const a_inode *);
-extern TCHAR *fsdb_create_unique_nname (a_inode *base, const TCHAR *);
+extern TCHAR *fsdb_create_unique_nname (const a_inode *base, const TCHAR *);
 
 struct my_opendir_s;
 struct my_openfile_s;
@@ -168,7 +168,7 @@ extern bool my_existsdir (const TCHAR *name);
 extern FILE *my_opentext (const TCHAR*);
 
 extern bool my_stat (const TCHAR *name, struct mystat *ms);
-extern bool my_utime (const TCHAR *name, struct mytimeval *tv);
+extern bool my_utime (const TCHAR *name, const struct mytimeval *tv);
 extern bool my_chmod (const TCHAR *name, uae_u32 mode);
 extern bool my_resolveshortcut(TCHAR *linkfile, int size);
 extern bool my_resolvessymboliclink(TCHAR *linkfile, int size);

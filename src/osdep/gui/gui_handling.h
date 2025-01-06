@@ -147,6 +147,7 @@ static const char* harddisk_filter[] = {".hdf", ".hdz", ".lha", ".zip", ".vhd", 
 static const char* archive_filter[] = { ".zip", ".7z", ".rar", ".lha", ".lzh", ".lzx", "\0" };
 static const char* cdfile_filter[] = { ".cue", ".ccd", ".iso", ".mds", ".nrg", ".chd", "\0" };
 static const char* whdload_filter[] = { ".lha", "\0" };
+static const char* statefile_filter[] = { ".uss", ".sav", "\0" };
 static string drivebridgeModes[] =
 {
 	"Normal",
@@ -196,6 +197,7 @@ extern SDL_Texture* gui_texture;
 
 extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
+extern char last_active_config[MAX_DPATH];
 
 extern int quickstart_model;
 extern int quickstart_conf;
@@ -335,7 +337,7 @@ void RefreshPanelThemes();
 bool HelpPanelThemes(std::vector<std::string>& helptext);
 
 void refresh_all_panels();
-void focus_bug_workaround(gcn::Window* wnd);
+void focus_bug_workaround(const gcn::Window* wnd);
 void disable_resume();
 
 bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3,
@@ -410,7 +412,6 @@ extern void new_harddrive(int entry);
 
 extern void inithdcontroller(int ctype, int ctype_unit, int devtype, bool media);
 
-extern std::string screenshot_filename;
 extern int current_state_num;
 extern int delay_savestate_frame;
 extern int last_x;
@@ -438,7 +439,8 @@ extern void load_default_theme();
 extern void apply_theme();
 extern void apply_theme_extras();
 
-extern void SetLastActiveConfig(const char* filename);
+extern void SetLastLoadedConfig(const char* filename);
+extern void set_last_active_config(const char* filename);
 
 extern void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2);
 

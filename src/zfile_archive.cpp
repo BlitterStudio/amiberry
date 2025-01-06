@@ -1209,7 +1209,7 @@ struct zvolume *archive_directory_plain (struct zfile *z)
 	if (!memcmp (id, exeheader, sizeof id)) {
 		char *an = ua (zai.name);
 		char *data = xmalloc (char, 1 + strlen (an) + 1 + 1 + 1);
-		sprintf (data, "\"%s\"\n", an);
+		_sntprintf (data, sizeof data, "\"%s\"\n", an);
 		zn = addfile (zv, z, _T("s/startup-sequence"), (uae_u8*)data, uaestrlen (data));
 		xfree (data);
 		xfree (an);
@@ -1882,9 +1882,9 @@ struct zvolume *archive_directory_rdb (struct zfile *z)
 			rootblock = 0;
 
 		devname = getBSTR (buf + 36);
-		_stprintf (tmp, _T("%s.hdf"), devname);
+		_sntprintf (tmp, sizeof tmp, _T("%s.hdf"), devname);
 		memset (&zai, 0, sizeof zai);
-		_stprintf (comment, _T("FS=%s LO=%d HI=%d HEADS=%d SPT=%d RES=%d BLOCK=%d ROOT=%d"),
+		_sntprintf (comment, sizeof comment, _T("FS=%s LO=%d HI=%d HEADS=%d SPT=%d RES=%d BLOCK=%d ROOT=%d"),
 			dos, lowcyl, highcyl, surf, spt, reserved, blocksize, rootblock);
 		zai.comment = comment;
 		xfree (dos);

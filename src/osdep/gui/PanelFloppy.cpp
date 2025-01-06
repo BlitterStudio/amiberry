@@ -28,6 +28,7 @@ static gcn::Slider* sldDriveSpeed;
 
 static gcn::Button* cmdCreateDDDisk;
 static gcn::Button* cmdCreateHDDisk;
+static gcn::Button* cmdSaveConfigForDisk;
 static gcn::Window* grpDrawBridge;
 static gcn::Label* lblDBDriver;
 static gcn::DropDown* cboDBDriver;
@@ -79,7 +80,7 @@ public:
 				if (dfxtype == DRV_FB)
 				{
 					TCHAR tmp[32];
-					_stprintf(tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
+					_sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedType - 5, drivebridgeModes[selectedType - 6].data());
 					_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
 				}
 				else
@@ -95,21 +96,87 @@ public:
 
 static DriveTypeActionListener* driveTypeActionListener;
 
-class DFxCheckActionListener : public gcn::ActionListener
+class FloppyActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		const auto action = actionEvent.getSource();
+
+		if (action == cmdCreateDDDisk)
+		{
+			std::string tmp;
+			// Create 3.5" DD Disk
+			tmp = SelectFile("Create 3.5\" DD disk file", current_dir, diskfile_filter, true);
+			if (!tmp.empty())
+			{
+				char diskname[MAX_DPATH];
+				extract_filename(tmp.c_str(), diskname);
+				remove_file_extension(diskname);
+				diskname[31] = '\0';
+				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_DD, -1, diskname, false, false, nullptr);
+				DISK_history_add(tmp.c_str(), -1, HISTORY_FLOPPY, 0);
+				add_file_to_mru_list(lstMRUDiskList, tmp);
+				RefreshDiskListModel();
+				current_dir = extract_path(tmp);
+			}
+			cmdCreateDDDisk->requestFocus();
+		}
+		else if (action == cmdCreateHDDisk)
+		{
+			std::string tmp;
+			// Create 3.5" HD Disk
+			tmp = SelectFile("Create 3.5\" HD disk file", current_dir, diskfile_filter, true);
+			if (!tmp.empty())
+			{
+				char diskname[MAX_DPATH];
+				extract_filename(tmp.c_str(), diskname);
+				remove_file_extension(diskname);
+				diskname[31] = '\0';
+				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_HD, -1, diskname, false, false, nullptr);
+				DISK_history_add(tmp.c_str(), -1, HISTORY_FLOPPY, 0);
+				add_file_to_mru_list(lstMRUDiskList, tmp);
+				RefreshDiskListModel();
+				current_dir = extract_path(tmp);
+			}
+			cmdCreateHDDisk->requestFocus();
+		}
+		else if (action == cmdSaveConfigForDisk)
+		{
+			//---------------------------------------
+			// Save configuration for current disk
+			//---------------------------------------
+			if (strlen(changed_prefs.floppyslots[0].df) > 0)
+			{
+				char filename[MAX_DPATH];
+				char diskname[MAX_DPATH];
+
+				extract_filename(changed_prefs.floppyslots[0].df, diskname);
+				remove_file_extension(diskname);
+
+				get_configuration_path(filename, MAX_DPATH);
+				strncat(filename, diskname, MAX_DPATH - 1);
+				strncat(filename, ".uae", MAX_DPATH - 1);
+
+				_sntprintf(changed_prefs.description, sizeof changed_prefs.description, "Configuration for disk '%s'", diskname);
+				if (cfgfile_save(&changed_prefs, filename, 0))
+					RefreshPanelConfig();
+			}
+		}
+		else if (action == sldDriveSpeed)
+		{
+			changed_prefs.floppy_speed = drive_speed_values[static_cast<int>(sldDriveSpeed->getValue())];
+		}
 #ifdef FLOPPYBRIDGE
-		if (actionEvent.getSource() == cboDBDriver)
+		else if (action == cboDBDriver)
 		{
 			changed_prefs.drawbridge_driver = cboDBDriver->getSelected();
 		}
-		else if (actionEvent.getSource() == chkDBSerialAuto)
+		else if (action == chkDBSerialAuto)
 		{
 			changed_prefs.drawbridge_serial_auto = chkDBSerialAuto->isSelected();
 		}
-		else if (actionEvent.getSource() == cboDBSerialPort)
+		else if (action == cboDBSerialPort)
 		{
 			const auto selected = cboDBSerialPort->getSelected();
 			if (selected == 0)
@@ -122,15 +189,15 @@ public:
 				_sntprintf(changed_prefs.drawbridge_serial_port, 256, "%s", port_name.c_str());
 			}
 		}
-		else if (actionEvent.getSource() == chkDBSmartSpeed)
+		else if (action == chkDBSmartSpeed)
 		{
 			changed_prefs.drawbridge_smartspeed = chkDBSmartSpeed->isSelected();
 		}
-		else if (actionEvent.getSource() == chkDBAutoCache)
+		else if (action == chkDBAutoCache)
 		{
 			changed_prefs.drawbridge_autocache = chkDBAutoCache->isSelected();
 		}
-		else if (actionEvent.getSource() == chkDBCableDriveB)
+		else if (action == chkDBCableDriveB)
 		{
 			changed_prefs.drawbridge_connected_drive_b = chkDBCableDriveB->isSelected();
 		}
@@ -139,7 +206,7 @@ public:
 		{
 			for (auto i = 0; i < 4; ++i)
 			{
-				if (actionEvent.getSource() == chkDFx[i])
+				if (action == chkDFx[i])
 				{
 					//---------------------------------------
 					// Drive enabled/disabled
@@ -149,11 +216,13 @@ public:
 					else
 						changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
 				}
-				else if (actionEvent.getSource() == chkDFxWriteProtect[i])
+				else if (action == chkDFxWriteProtect[i])
 				{
 					//---------------------------------------
 					// Write-protect changed
 					//---------------------------------------
+					if (strlen(changed_prefs.floppyslots[i].df) <= 0)
+						return;
 					disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df,
 					                     chkDFxWriteProtect[i]->isSelected());
 					if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != chkDFxWriteProtect[i]->
@@ -167,217 +236,100 @@ public:
 					}
 					DISK_reinsert(i);
 				}
-			}
-		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
-	}
-};
-
-static DFxCheckActionListener* dfxCheckActionListener;
-
-class DFxButtonActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		for (auto i = 0; i < 4; ++i)
-		{
-			if (actionEvent.getSource() == cmdDFxInfo[i])
-			{
-				//---------------------------------------
-				// Show info about current disk-image
-				//---------------------------------------
-				if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
-					DisplayDiskInfo(i);
-			}
-			else if (actionEvent.getSource() == cmdDFxEject[i])
-			{
-				//---------------------------------------
-				// Eject disk from drive
-				//---------------------------------------
-				disk_eject(i);
-				strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
-				AdjustDropDownControls();
-			}
-			else if (actionEvent.getSource() == cmdDFxSelect[i])
-			{
-				//---------------------------------------
-				// Select disk for drive
-				//---------------------------------------
-				std::string tmp;
-
-				if (strlen(changed_prefs.floppyslots[i].df) > 0)
-					tmp = std::string(changed_prefs.floppyslots[i].df);
-				else
-					tmp = get_floppy_path();
-
-				tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
-				if (!tmp.empty())
+				else if (action == cmdDFxInfo[i])
 				{
-					if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
-					{
-						strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
-						disk_insert(i, tmp.c_str());
-						RefreshDiskListModel();
-
-						AdjustDropDownControls();
-						SetLastActiveConfig(tmp.c_str());
-					}
+					//---------------------------------------
+					// Show info about current disk-image
+					//---------------------------------------
+					if (changed_prefs.floppyslots[i].dfxtype != DRV_NONE && strlen(changed_prefs.floppyslots[i].df) > 0)
+						DisplayDiskInfo(i);
 				}
-				cmdDFxSelect[i]->requestFocus();
-			}
-		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
-	}
-};
-
-static DFxButtonActionListener* dfxButtonActionListener;
-
-class DiskFileActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		for (auto i = 0; i < 4; ++i)
-		{
-			if (actionEvent.getSource() == cboDFxFile[i])
-			{
-				//---------------------------------------
-				// Disk image from list selected
-				//---------------------------------------
-				if (!bIgnoreListChange)
+				else if (action == cmdDFxEject[i])
 				{
-					const auto idx = cboDFxFile[i]->getSelected();
+					//---------------------------------------
+					// Eject disk from drive
+					//---------------------------------------
+					disk_eject(i);
+					strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
+					AdjustDropDownControls();
+				}
+				else if (action == cmdDFxSelect[i])
+				{
+					//---------------------------------------
+					// Select disk for drive
+					//---------------------------------------
+					std::string tmp;
 
-					if (idx < 0)
-					{
-						disk_eject(i);
-						strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
-						AdjustDropDownControls();
-					}
+					if (strlen(changed_prefs.floppyslots[i].df) > 0)
+						tmp = std::string(changed_prefs.floppyslots[i].df);
 					else
+						tmp = get_floppy_path();
+
+					tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
+					if (!tmp.empty())
 					{
-						auto element = get_full_path_from_disk_list(diskfileList.getElementAt(idx));
-						if (element != changed_prefs.floppyslots[i].df)
+						if (strncmp(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH) != 0)
 						{
-							strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
-							DISK_history_add (changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
-							disk_insert(i, changed_prefs.floppyslots[i].df);
-							lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
-							lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
+							strncpy(changed_prefs.floppyslots[i].df, tmp.c_str(), MAX_DPATH);
+							disk_insert(i, tmp.c_str());
 							RefreshDiskListModel();
-							bIgnoreListChange = true;
-							cboDFxFile[i]->setSelected(0);
-							bIgnoreListChange = false;
-							SetLastActiveConfig(element.c_str());
+
+							AdjustDropDownControls();
+							if (!last_loaded_config[0])
+								set_last_active_config(tmp.c_str());
+						}
+					}
+					cmdDFxSelect[i]->requestFocus();
+				}
+				else if (action == cboDFxFile[i])
+				{
+					//---------------------------------------
+					// Disk image from list selected
+					//---------------------------------------
+					if (!bIgnoreListChange)
+					{
+						const auto idx = cboDFxFile[i]->getSelected();
+
+						if (idx < 0)
+						{
+							disk_eject(i);
+							strncpy(changed_prefs.floppyslots[i].df, "", MAX_DPATH);
+							AdjustDropDownControls();
+						}
+						else
+						{
+							auto element = get_full_path_from_disk_list(diskfileList.getElementAt(idx));
+							if (element != changed_prefs.floppyslots[i].df)
+							{
+								strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
+								DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
+								disk_insert(i, changed_prefs.floppyslots[i].df);
+								lstMRUDiskList.erase(lstMRUDiskList.begin() + idx);
+								lstMRUDiskList.insert(lstMRUDiskList.begin(), changed_prefs.floppyslots[i].df);
+								RefreshDiskListModel();
+								bIgnoreListChange = true;
+								cboDFxFile[i]->setSelected(0);
+								bIgnoreListChange = false;
+								if (!last_loaded_config[0])
+									set_last_active_config(element.c_str());
+							}
 						}
 					}
 				}
 			}
 		}
-		RefreshPanelFloppy();
-		RefreshPanelQuickstart();
+		refresh_all_panels();
 	}
 };
 
-static DiskFileActionListener* diskFileActionListener;
-
-class DriveSpeedSliderActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		changed_prefs.floppy_speed = drive_speed_values[static_cast<int>(sldDriveSpeed->getValue())];
-		RefreshPanelFloppy();
-	}
-};
-
-static DriveSpeedSliderActionListener* driveSpeedSliderActionListener;
-
-class SaveForDiskActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		//---------------------------------------
-		// Save configuration for current disk
-		//---------------------------------------
-		if (strlen(changed_prefs.floppyslots[0].df) > 0)
-		{
-			char filename[MAX_DPATH];
-			char diskname[MAX_DPATH];
-
-			extract_filename(changed_prefs.floppyslots[0].df, diskname);
-			remove_file_extension(diskname);
-
-			get_configuration_path(filename, MAX_DPATH);
-			strncat(filename, diskname, MAX_DPATH - 1);
-			strncat(filename, ".uae", MAX_DPATH - 1);
-
-			snprintf(changed_prefs.description, 256, "Configuration for disk '%s'", diskname);
-			if (cfgfile_save(&changed_prefs, filename, 0))
-				RefreshPanelConfig();
-		}
-	}
-};
-
-static SaveForDiskActionListener* saveForDiskActionListener;
-
-class CreateDiskActionListener : public gcn::ActionListener
-{
-public:
-	void action(const gcn::ActionEvent& actionEvent) override
-	{
-		std::string tmp;
-		if (actionEvent.getSource() == cmdCreateDDDisk)
-		{
-			// Create 3.5" DD Disk
-			char diskname[MAX_DPATH];
-			tmp = SelectFile("Create 3.5\" DD disk file", current_dir, diskfile_filter, true);
-			if (!tmp.empty())
-			{
-				extract_filename(tmp.c_str(), diskname);
-				remove_file_extension(diskname);
-				diskname[31] = '\0';
-				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_DD, -1, diskname, false, false, nullptr);
-				DISK_history_add (tmp.c_str(), -1, HISTORY_FLOPPY, 0);
-				add_file_to_mru_list(lstMRUDiskList, tmp);
-				RefreshDiskListModel();
-				current_dir = extract_path(tmp);
-			}
-			cmdCreateDDDisk->requestFocus();
-		}
-		else if (actionEvent.getSource() == cmdCreateHDDisk)
-		{
-			// Create 3.5" HD Disk
-			char diskname[MAX_DPATH];
-			tmp = SelectFile("Create 3.5\" HD disk file", current_dir, diskfile_filter, true);
-			if (!tmp.empty())
-			{
-				extract_filename(tmp.c_str(), diskname);
-				remove_file_extension(diskname);
-				diskname[31] = '\0';
-				disk_creatediskfile(&changed_prefs, tmp.c_str(), 0, DRV_35_HD, -1, diskname, false, false, nullptr);
-				DISK_history_add (tmp.c_str(), -1, HISTORY_FLOPPY, 0);
-				add_file_to_mru_list(lstMRUDiskList, tmp);
-				RefreshDiskListModel();
-				current_dir = extract_path(tmp);
-			}
-			cmdCreateHDDisk->requestFocus();
-		}
-	}
-};
-
-static CreateDiskActionListener* createDiskActionListener;
+static FloppyActionListener* floppyActionListener;
 
 void InitPanelFloppy(const config_category& category)
 {
-	int posX;
-	int posY = DISTANCE_BORDER;
+	int pos_x;
+	int pos_y = DISTANCE_BORDER;
 	int i;
-	const int textFieldWidth = category.panel->getWidth() - 2 * DISTANCE_BORDER;
+	const int text_field_width = category.panel->getWidth() - 2 * DISTANCE_BORDER;
 #ifdef FLOPPYBRIDGE
 	FloppyBridgeAPI::getDriverList(driver_list);
 	driverNameList.clear();
@@ -392,13 +344,8 @@ void InitPanelFloppy(const config_category& category)
 		serial_ports_list.add(port);
 	}
 #endif
-	dfxCheckActionListener = new DFxCheckActionListener();
+	floppyActionListener = new FloppyActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
-	dfxButtonActionListener = new DFxButtonActionListener();
-	diskFileActionListener = new DiskFileActionListener();
-	driveSpeedSliderActionListener = new DriveSpeedSliderActionListener();
-	saveForDiskActionListener = new SaveForDiskActionListener();
-	createDiskActionListener = new CreateDiskActionListener();
 
 	for (i = 0; i < 4; ++i)
 	{
@@ -410,7 +357,7 @@ void InitPanelFloppy(const config_category& category)
 		chkDFx[i]->setBaseColor(gui_base_color);
 		chkDFx[i]->setBackgroundColor(gui_background_color);
 		chkDFx[i]->setForegroundColor(gui_foreground_color);
-		chkDFx[i]->addActionListener(dfxCheckActionListener);
+		chkDFx[i]->addActionListener(floppyActionListener);
 
 		cboDFxType[i] = new gcn::DropDown(&driveTypeList);
 		cboDFxType[i]->setSize(150, cboDFxType[i]->getHeight());
@@ -428,7 +375,7 @@ void InitPanelFloppy(const config_category& category)
 		chkDFxWriteProtect[i]->setBaseColor(gui_base_color);
 		chkDFxWriteProtect[i]->setBackgroundColor(gui_background_color);
 		chkDFxWriteProtect[i]->setForegroundColor(gui_foreground_color);
-		chkDFxWriteProtect[i]->addActionListener(dfxCheckActionListener);
+		chkDFxWriteProtect[i]->addActionListener(floppyActionListener);
 
 		cmdDFxInfo[i] = new gcn::Button("?");
 		id_string = "cmdInfo" + to_string(i);
@@ -436,7 +383,7 @@ void InitPanelFloppy(const config_category& category)
 		cmdDFxInfo[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		cmdDFxInfo[i]->setBaseColor(gui_base_color);
 		cmdDFxInfo[i]->setForegroundColor(gui_foreground_color);
-		cmdDFxInfo[i]->addActionListener(dfxButtonActionListener);
+		cmdDFxInfo[i]->addActionListener(floppyActionListener);
 
 		cmdDFxEject[i] = new gcn::Button("Eject");
 		id_string = "cmdEject" + to_string(i);
@@ -444,7 +391,7 @@ void InitPanelFloppy(const config_category& category)
 		cmdDFxEject[i]->setSize(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT);
 		cmdDFxEject[i]->setBaseColor(gui_base_color);
 		cmdDFxEject[i]->setForegroundColor(gui_foreground_color);
-		cmdDFxEject[i]->addActionListener(dfxButtonActionListener);
+		cmdDFxEject[i]->addActionListener(floppyActionListener);
 
 		cmdDFxSelect[i] = new gcn::Button("...");
 		id_string = "cmdSel" + to_string(i);
@@ -452,17 +399,17 @@ void InitPanelFloppy(const config_category& category)
 		cmdDFxSelect[i]->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
 		cmdDFxSelect[i]->setBaseColor(gui_base_color);
 		cmdDFxSelect[i]->setForegroundColor(gui_foreground_color);
-		cmdDFxSelect[i]->addActionListener(dfxButtonActionListener);
+		cmdDFxSelect[i]->addActionListener(floppyActionListener);
 
 		cboDFxFile[i] = new gcn::DropDown(&diskfileList);
 		id_string = "cboDisk" + to_string(i);
 		cboDFxFile[i]->setId(id_string);
-		cboDFxFile[i]->setSize(textFieldWidth, cboDFxFile[i]->getHeight());
+		cboDFxFile[i]->setSize(text_field_width, cboDFxFile[i]->getHeight());
 		cboDFxFile[i]->setBaseColor(gui_base_color);
 		cboDFxFile[i]->setBackgroundColor(gui_background_color);
 		cboDFxFile[i]->setForegroundColor(gui_foreground_color);
 		cboDFxFile[i]->setSelectionColor(gui_selection_color);
-		cboDFxFile[i]->addActionListener(diskFileActionListener);
+		cboDFxFile[i]->addActionListener(floppyActionListener);
 	}
 
 	lblDriveSpeed = new gcn::Label("Floppy Drive Emulation Speed:");
@@ -474,7 +421,7 @@ void InitPanelFloppy(const config_category& category)
 	sldDriveSpeed->setMarkerLength(20);
 	sldDriveSpeed->setStepLength(1);
 	sldDriveSpeed->setId("sldDriveSpeed");
-	sldDriveSpeed->addActionListener(driveSpeedSliderActionListener);
+	sldDriveSpeed->addActionListener(floppyActionListener);
 	lblDriveSpeedInfo = new gcn::Label(drive_speed_list[1]);
 
 	cmdCreateDDDisk = new gcn::Button("Create 3.5\" DD disk");
@@ -482,14 +429,21 @@ void InitPanelFloppy(const config_category& category)
 	cmdCreateDDDisk->setBaseColor(gui_base_color);
 	cmdCreateDDDisk->setForegroundColor(gui_foreground_color);
 	cmdCreateDDDisk->setId("cmdCreateDDDisk");
-	cmdCreateDDDisk->addActionListener(createDiskActionListener);
+	cmdCreateDDDisk->addActionListener(floppyActionListener);
 
 	cmdCreateHDDisk = new gcn::Button("Create 3.5\" HD disk");
 	cmdCreateHDDisk->setSize(cmdCreateHDDisk->getWidth() + 10, BUTTON_HEIGHT);
 	cmdCreateHDDisk->setBaseColor(gui_base_color);
 	cmdCreateHDDisk->setForegroundColor(gui_foreground_color);
 	cmdCreateHDDisk->setId("cmdCreateHDDisk");
-	cmdCreateHDDisk->addActionListener(createDiskActionListener);
+	cmdCreateHDDisk->addActionListener(floppyActionListener);
+
+	cmdSaveConfigForDisk = new gcn::Button("Save config for disk");
+	cmdSaveConfigForDisk->setSize(cmdSaveConfigForDisk->getWidth() + 10, BUTTON_HEIGHT);
+	cmdSaveConfigForDisk->setBaseColor(gui_base_color);
+	cmdSaveConfigForDisk->setForegroundColor(gui_foreground_color);
+	cmdSaveConfigForDisk->setId("cmdSaveConfigForDisk");
+	cmdSaveConfigForDisk->addActionListener(floppyActionListener);
 
 	lblDBDriver = new gcn::Label("DrawBridge driver:");
 	cboDBDriver = new gcn::DropDown(&driverNameList);
@@ -499,14 +453,14 @@ void InitPanelFloppy(const config_category& category)
 	cboDBDriver->setBackgroundColor(gui_background_color);
 	cboDBDriver->setForegroundColor(gui_foreground_color);
 	cboDBDriver->setSelectionColor(gui_selection_color);
-	cboDBDriver->addActionListener(dfxCheckActionListener);
+	cboDBDriver->addActionListener(floppyActionListener);
 
 	chkDBSerialAuto = new gcn::CheckBox("DrawBridge: Auto-Detect serial port");
 	chkDBSerialAuto->setId("chkDBSerialAuto");
 	chkDBSerialAuto->setBaseColor(gui_base_color);
 	chkDBSerialAuto->setBackgroundColor(gui_background_color);
 	chkDBSerialAuto->setForegroundColor(gui_foreground_color);
-	chkDBSerialAuto->addActionListener(dfxCheckActionListener);
+	chkDBSerialAuto->addActionListener(floppyActionListener);
 
 	cboDBSerialPort = new gcn::DropDown(&serial_ports_list);
 	cboDBSerialPort->setSize(200, cboDBSerialPort->getHeight());
@@ -515,61 +469,61 @@ void InitPanelFloppy(const config_category& category)
 	cboDBSerialPort->setForegroundColor(gui_foreground_color);
 	cboDBSerialPort->setSelectionColor(gui_selection_color);
 	cboDBSerialPort->setId("cboDBSerialPort");
-	cboDBSerialPort->addActionListener(dfxCheckActionListener);
+	cboDBSerialPort->addActionListener(floppyActionListener);
 
 	chkDBSmartSpeed = new gcn::CheckBox("DrawBridge: Smart Speed (Dynamically switch on Turbo)");
 	chkDBSmartSpeed->setId("chkDBSmartSpeed");
 	chkDBSmartSpeed->setBaseColor(gui_base_color);
 	chkDBSmartSpeed->setBackgroundColor(gui_background_color);
 	chkDBSmartSpeed->setForegroundColor(gui_foreground_color);
-	chkDBSmartSpeed->addActionListener(dfxCheckActionListener);
+	chkDBSmartSpeed->addActionListener(floppyActionListener);
 
 	chkDBAutoCache = new gcn::CheckBox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)");
 	chkDBAutoCache->setId("chkDBAutoCache");
 	chkDBAutoCache->setBaseColor(gui_base_color);
 	chkDBAutoCache->setBackgroundColor(gui_background_color);
 	chkDBAutoCache->setForegroundColor(gui_foreground_color);
-	chkDBAutoCache->addActionListener(dfxCheckActionListener);
+	chkDBAutoCache->addActionListener(floppyActionListener);
 
 	chkDBCableDriveB = new gcn::CheckBox("DrawBridge: Connected as Drive B");
 	chkDBCableDriveB->setId("chkDBCableDriveB");
 	chkDBCableDriveB->setBaseColor(gui_base_color);
 	chkDBCableDriveB->setBackgroundColor(gui_background_color);
 	chkDBCableDriveB->setForegroundColor(gui_foreground_color);
-	chkDBCableDriveB->addActionListener(dfxCheckActionListener);
+	chkDBCableDriveB->addActionListener(floppyActionListener);
 
 	for (i = 0; i < 4; ++i)
 	{
-		posX = DISTANCE_BORDER;
-		category.panel->add(chkDFx[i], posX, posY);
-		posX += chkDFx[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cboDFxType[i], posX, posY);
-		posX += cboDFxType[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(chkDFxWriteProtect[i], posX, posY);
-		posX += 3 + chkDFxWriteProtect[i]->getWidth() + 3 * DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxInfo[i], posX, posY);
-		posX += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxEject[i], posX, posY);
-		posX += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
-		category.panel->add(cmdDFxSelect[i], posX, posY);
-		posY += cmdDFxEject[i]->getHeight() + 8;
+		pos_x = DISTANCE_BORDER;
+		category.panel->add(chkDFx[i], pos_x, pos_y);
+		pos_x += chkDFx[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(cboDFxType[i], pos_x, pos_y);
+		pos_x += cboDFxType[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(chkDFxWriteProtect[i], pos_x, pos_y);
+		pos_x += 3 + chkDFxWriteProtect[i]->getWidth() + 3 * DISTANCE_NEXT_X;
+		category.panel->add(cmdDFxInfo[i], pos_x, pos_y);
+		pos_x += cmdDFxInfo[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(cmdDFxEject[i], pos_x, pos_y);
+		pos_x += cmdDFxEject[i]->getWidth() + DISTANCE_NEXT_X;
+		category.panel->add(cmdDFxSelect[i], pos_x, pos_y);
+		pos_y += cmdDFxEject[i]->getHeight() + 8;
 
-		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, posY);
-		posY += cboDFxFile[i]->getHeight() + DISTANCE_NEXT_Y + 4;
+		category.panel->add(cboDFxFile[i], DISTANCE_BORDER, pos_y);
+		pos_y += cboDFxFile[i]->getHeight() + DISTANCE_NEXT_Y + 4;
 	}
 
-	posX = DISTANCE_BORDER;
-	category.panel->add(lblDriveSpeed, posX, posY);
-	posX += lblDriveSpeed->getWidth() + 8;
-	category.panel->add(sldDriveSpeed, posX, posY);
-	posX += sldDriveSpeed->getWidth() + DISTANCE_NEXT_X;
-	category.panel->add(lblDriveSpeedInfo, posX, posY);
-	posY += sldDriveSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
+	pos_x = DISTANCE_BORDER;
+	category.panel->add(lblDriveSpeed, pos_x, pos_y);
+	pos_x += lblDriveSpeed->getWidth() + 8;
+	category.panel->add(sldDriveSpeed, pos_x, pos_y);
+	pos_x += sldDriveSpeed->getWidth() + DISTANCE_NEXT_X;
+	category.panel->add(lblDriveSpeedInfo, pos_x, pos_y);
+	pos_y += sldDriveSpeed->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	posX = DISTANCE_BORDER;
+	pos_x = DISTANCE_BORDER;
 
 	grpDrawBridge = new gcn::Window("DrawBridge");
-	grpDrawBridge->setPosition(posX, posY);
+	grpDrawBridge->setPosition(pos_x, pos_y);
 	grpDrawBridge->add(lblDBDriver, 10, 10);
 	grpDrawBridge->add(cboDBDriver, lblDBDriver->getX() + lblDBDriver->getWidth() + 8, lblDBDriver->getY());
 	grpDrawBridge->add(chkDBSerialAuto, lblDBDriver->getX(), lblDBDriver->getY() + lblDBDriver->getHeight() + DISTANCE_NEXT_Y);
@@ -585,9 +539,10 @@ void InitPanelFloppy(const config_category& category)
 
 	category.panel->add(grpDrawBridge);
 
-	posY = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
-	category.panel->add(cmdCreateDDDisk, DISTANCE_BORDER, posY);
-	category.panel->add(cmdCreateHDDisk, cmdCreateDDDisk->getX() + cmdCreateDDDisk->getWidth() + DISTANCE_NEXT_X, posY);
+	pos_y = category.panel->getHeight() - DISTANCE_BORDER - BUTTON_HEIGHT;
+	category.panel->add(cmdCreateDDDisk, DISTANCE_BORDER, pos_y);
+	category.panel->add(cmdCreateHDDisk, cmdCreateDDDisk->getX() + cmdCreateDDDisk->getWidth() + DISTANCE_NEXT_X, pos_y);
+	category.panel->add(cmdSaveConfigForDisk, cmdCreateHDDisk->getX() + cmdCreateHDDisk->getWidth() + DISTANCE_NEXT_X, pos_y);
 
 	RefreshPanelFloppy();
 }
@@ -609,6 +564,7 @@ void ExitPanelFloppy()
 	delete lblDriveSpeedInfo;
 	delete cmdCreateDDDisk;
 	delete cmdCreateHDDisk;
+	delete cmdSaveConfigForDisk;
 	delete lblDBDriver;
 	delete cboDBDriver;
 	delete chkDBSerialAuto;
@@ -618,13 +574,8 @@ void ExitPanelFloppy()
 	delete chkDBCableDriveB;
 	delete grpDrawBridge;
 
-	delete dfxCheckActionListener;
+	delete floppyActionListener;
 	delete driveTypeActionListener;
-	delete dfxButtonActionListener;
-	delete diskFileActionListener;
-	delete driveSpeedSliderActionListener;
-	delete saveForDiskActionListener;
-	delete createDiskActionListener;
 }
 
 static void AdjustDropDownControls()
@@ -653,17 +604,17 @@ static void AdjustDropDownControls()
 
 void RefreshPanelFloppy()
 {
-	int i;
 	auto prev_available = true;
 
 	RefreshDiskListModel();
 	AdjustDropDownControls();
 
 	changed_prefs.nr_floppies = 0;
-	for (i = 0; i < 4; ++i)
+	for (auto i = 0; i < 4; ++i)
 	{
 		const auto driveEnabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		const auto disk_in_drive = strlen(changed_prefs.floppyslots[i].df) > 0;
+
 		chkDFx[i]->setSelected(driveEnabled);
 		const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
 		cboDFxType[i]->setSelected(nn + 1);
@@ -682,7 +633,7 @@ void RefreshPanelFloppy()
 			changed_prefs.nr_floppies = i + 1;
 	}
 
-	for (i = 0; i <= 4; ++i)
+	for (auto i = 0; i <= 4; ++i)
 	{
 		if (changed_prefs.floppy_speed == drive_speed_values[i])
 		{
@@ -692,6 +643,8 @@ void RefreshPanelFloppy()
 		}
 	}
 
+	cmdSaveConfigForDisk->setEnabled(strlen(changed_prefs.floppyslots[0].df) > 0);
+
 	lblDBDriver->setEnabled(false);
 	cboDBDriver->setEnabled(false);
 	chkDBSerialAuto->setEnabled(false);
@@ -700,10 +653,10 @@ void RefreshPanelFloppy()
 	chkDBSmartSpeed->setEnabled(false);
 	chkDBCableDriveB->setEnabled(false);
 #ifdef FLOPPYBRIDGE
-	for (i = 0; i < 4; ++i)
+	for (const auto & floppyslot : changed_prefs.floppyslots)
 	{
 		// is DrawBridge selected?
-		if (changed_prefs.floppyslots[i].dfxtype == DRV_FB)
+		if (floppyslot.dfxtype == DRV_FB)
 		{
 			lblDBDriver->setEnabled(true);
 			cboDBDriver->setEnabled(true);
@@ -774,5 +727,8 @@ bool HelpPanelFloppy(std::vector<std::string>& helptext)
 	helptext.emplace_back(" ");
 	helptext.emplace_back(R"(You can also use the "Create 3.5" DD disk" and "Create 3.5" HD disk" buttons, to make)");
 	helptext.emplace_back("a new and empty disk image, for use with the emulator.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The \"Save config for disk\" button will save the current configuration to a file with");
+	helptext.emplace_back("the same name as the disk image file.");
 	return true;
 }

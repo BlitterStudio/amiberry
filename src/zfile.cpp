@@ -2936,7 +2936,7 @@ static void zfile_fopen_archive_recurse2 (struct zvolume *zv, struct znode *zn, 
 	struct znode *zndir;
 	TCHAR tmp[MAX_DPATH];
 
-	_stprintf (tmp, _T("%s.DIR"), zn->fullname + _tcslen (zv->root.name) + 1);
+	_sntprintf (tmp, sizeof tmp, _T("%s.DIR"), zn->fullname + _tcslen (zv->root.name) + 1);
 	zndir = get_znode (zv, tmp, TRUE);
 	if (!zndir) {
 		struct zarchive_info zai = { 0 };
@@ -3603,7 +3603,7 @@ int zfile_exists_archive (const TCHAR *path, const TCHAR *rel)
 	struct zvolume *zv;
 	struct znode *zn;
 
-	_stprintf (tmp, _T("%s%c%s"), path, FSDB_DIR_SEPARATOR, rel);
+	_sntprintf (tmp, sizeof tmp, _T("%s%c%s"), path, FSDB_DIR_SEPARATOR, rel);
 	zv = get_zvolume (tmp);
 	zn = get_znode (zv, tmp, TRUE);
 	return zn ? 1 : 0;

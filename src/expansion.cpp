@@ -3136,7 +3136,7 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 			}
 			if (aci->devnum > 0) {
 				TCHAR *s = label + _tcslen(label);
-				_stprintf(s, _T(" [%d]"), aci->devnum + 1);
+				_sntprintf(s, sizeof s, _T(" [%d]"), aci->devnum + 1);
 			}
 
 			if ((aci->zorro == 1 || aci->zorro == 2 || aci->zorro == 3) && aci->addrbank != &expamem_none && (aci->autoconfig_raw[0] != 0xff || aci->autoconfigp)) {
@@ -4979,6 +4979,21 @@ static struct expansionboardsettings ethernet_settings[] = {
 		NULL
 	}
 };
+static const struct expansionboardsettings keyboard_settings[] = {
+	{
+		_T("Options\0") _T("-\0") _T("RAM fault\0") _T("ROM fault\0") _T("Watchdog fault\0"),
+		_T("kbmcuopt\0") _T("-\0") _T("ramf\0") _T("romf\0") _T("wdf\0"),
+		true
+	},
+	{
+		_T("Special feature enable"),
+		_T("sfe")
+	},
+	{
+		NULL
+	}
+};
+
 
 static struct expansionboardsettings *netsettings[] = {
 	ethernet_settings,
@@ -5034,10 +5049,10 @@ void ethernet_updateselection(void)
 			TCHAR mac[20];
 			mac[0] = 0;
 			if (ndd[i]->type == UAENET_SLIRP || ndd[i]->type == UAENET_SLIRP_INBOUND) {
-				_stprintf(mac, _T(" xx:xx:xx:%02X:%02X:%02X"),
+				_sntprintf(mac, sizeof mac, _T(" xx:xx:xx:%02X:%02X:%02X"),
 					ndd[i]->mac[3], ndd[i]->mac[4], ndd[i]->mac[5]);
 			}
-			_stprintf(p1, _T("%s%s"), ndd[i]->desc, mac[0] ? mac : _T(""));
+			_sntprintf(p1, sizeof p1, _T("%s%s"), ndd[i]->desc, mac[0] ? mac : _T(""));
 			p1 += _tcslen(p1) + 1;
 			_tcscpy(p2, ndd[i]->name);
 			p2 += _tcslen(p2) + 1;
@@ -6063,6 +6078,15 @@ const struct expansionromtype expansionroms[] = {
 
 	},
 #endif
+	{
+		_T("ripple"), _T("RIPPLE"), _T("Matt Harlum"),
+		NULL, ripple_init, NULL, ripple_add_ide_unit, ROMTYPE_RIPPLE | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		NULL, 0,
+		true, EXPANSIONTYPE_IDE,
+		0, 0, 1, false, NULL,
+		false, 2, NULL,
+		{ 0xd2, 0x07, 0x00, 0x00, 0x14, 0x4A, 0x00, 0x00, 0x00, 0x01, 0x00, 0x08 }
+	},
 
 	/* PC Bridgeboards */
 #ifdef WITH_X86
@@ -6383,6 +6407,14 @@ const struct expansionromtype expansionroms[] = {
 	// misc
 
 	{
+		_T("keyboard"), _T("Keyboard"), NULL,
+		NULL, NULL, NULL, NULL, ROMTYPE_KBMCU| ROMTYPE_NONE, 0, 0, BOARD_IGNORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_INTERNAL,
+		0, 0, 0, false, NULL,
+		false, 0, keyboard_settings
+	},
+	{
 		_T("pcmciasram"), _T("PCMCIA SRAM"), NULL,
 		NULL, gayle_init_board_common_pcmcia, NULL, NULL, ROMTYPE_PCMCIASRAM | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
 		NULL, 0,
@@ -6526,7 +6558,7 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 		_T("TekMagic"),
 		ROMTYPE_CB_TEKMAGIC, 0, 4,
 		tekmagic_add_scsi_unit, EXPANSIONTYPE_SCSI,
-		BOARD_MEMORY_25BITMEM,
+		BOARD_MEMORY_HIGHMEM,
 		128 * 1024 * 1024
 	},
 #endif

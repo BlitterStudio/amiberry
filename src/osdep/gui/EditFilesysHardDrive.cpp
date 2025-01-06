@@ -92,7 +92,7 @@ static void setharddrive()
 {
 	sethardfilegeo();
 	sethd();
-	txtHDPath->setText(current_hfdlg.ci.rootdir);
+	//txtHDPath->setText(current_hfdlg.ci.rootdir);
 	auto selIndex = 0;
 	for (auto i = 0; i < controller.size(); ++i) {
 		if (controller[i].type == current_hfdlg.ci.controller_type)
@@ -258,6 +258,8 @@ static void InitEditFilesysHardDrive()
 	wndEditFilesysHardDrive->requestModalFocus();
 	focus_bug_workaround(wndEditFilesysHardDrive);
 	cmdHDDCancel->requestFocus();
+
+	setharddrive();
 }
 
 static void ExitEditFilesysHardDrive()
@@ -551,7 +553,6 @@ bool EditFilesysHardDrive(const int unit_no)
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	mountedinfo mi{};
-	uaedev_config_data* uci;
 
 	dialogResult = false;
 	dialogFinished = false;
@@ -582,7 +583,7 @@ bool EditFilesysHardDrive(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uci = &changed_prefs.mountconfig[unit_no];
+		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
 		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
 
 		current_hfdlg.forcedcylinders = uci->ci.highcyl;
