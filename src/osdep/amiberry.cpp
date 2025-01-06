@@ -4907,6 +4907,7 @@ std::vector<std::string> get_cd_drives()
 	pclose(fp);
 	return results;
 }
+
 void target_setdefaultstatefilename(const TCHAR* name)
 {
 	TCHAR path[MAX_DPATH];
