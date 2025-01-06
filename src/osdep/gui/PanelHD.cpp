@@ -352,7 +352,7 @@ public:
 			}
 			else
 			{
-				auto selected = cdfileList.getElementAt(idx);
+				const auto selected = cdfileList.getElementAt(idx);
 				// if selected starts with /dev/sr, it's a CD drive
 				if (selected.find("/dev/") == 0)
 				{
@@ -527,25 +527,25 @@ void InitPanelHD(const config_category& category)
 	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
 
-	int posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
+	int pos_x = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
 	for (col = 0; col < COL_COUNT; ++col)
 	{
-		category.panel->add(lblList[col], posX, posY);
-		posX += COLUMN_SIZE[col];
+		category.panel->add(lblList[col], pos_x, posY);
+		pos_x += COLUMN_SIZE[col];
 	}
 	posY += lblList[0]->getHeight() + 2;
 
 	for (row = 0; row < MAX_HD_DEVICES; ++row)
 	{
-		posX = 1;
-		listEntry[row]->add(listCmdProps[row], posX, 2);
-		posX += listCmdProps[row]->getWidth() + 4;
-		listEntry[row]->add(listCmdDelete[row], posX, 2);
-		posX += listCmdDelete[row]->getWidth() + 8;
+		pos_x = 1;
+		listEntry[row]->add(listCmdProps[row], pos_x, 2);
+		pos_x += listCmdProps[row]->getWidth() + 4;
+		listEntry[row]->add(listCmdDelete[row], pos_x, 2);
+		pos_x += listCmdDelete[row]->getWidth() + 8;
 		for (col = 0; col < COL_COUNT; ++col)
 		{
-			listEntry[row]->add(listCells[row][col], posX, 2);
-			posX += COLUMN_SIZE[col];
+			listEntry[row]->add(listCells[row][col], pos_x, 2);
+			pos_x += COLUMN_SIZE[col];
 		}
 		category.panel->add(listEntry[row], DISTANCE_BORDER, posY);
 		posY += listEntry[row]->getHeight() + DISTANCE_NEXT_Y / 2;

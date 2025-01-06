@@ -45,7 +45,7 @@ class CDDriveActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		auto source = actionEvent.getSource();
+		const auto source = actionEvent.getSource();
 		if (source == cmdCDDriveOK)
 		{
 			if (txtCDDrivePath->getText().empty())
@@ -64,7 +64,7 @@ public:
 		}
 		else if (source == cboCDDriveController)
 		{
-			auto posn = controller[cboCDDriveController->getSelected()].type;
+			const auto posn = controller[cboCDDriveController->getSelected()].type;
 			current_cddlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
 			current_cddlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
 			inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, current_cddlg.ci.rootdir[0] != 0);
@@ -139,16 +139,15 @@ static void InitEditCDDrive()
 	cboCDDriveUnit->setId("cboCDDriveUnit");
 	cboCDDriveUnit->addActionListener(cdDriveActionListener);
 
-	int posY = DISTANCE_BORDER;
-	int posX = DISTANCE_BORDER;
+	int pos_y = DISTANCE_BORDER;
 
-	wndEditCDDrive->add(lblCDDrivePath, DISTANCE_BORDER, posY);
-	wndEditCDDrive->add(txtCDDrivePath, lblCDDrivePath->getX() + lblCDDrivePath->getWidth() + 8, posY);
-	posY = txtCDDrivePath->getY() + txtCDDrivePath->getHeight() + DISTANCE_NEXT_Y;
+	wndEditCDDrive->add(lblCDDrivePath, DISTANCE_BORDER, pos_y);
+	wndEditCDDrive->add(txtCDDrivePath, lblCDDrivePath->getX() + lblCDDrivePath->getWidth() + 8, pos_y);
+	pos_y = txtCDDrivePath->getY() + txtCDDrivePath->getHeight() + DISTANCE_NEXT_Y;
 
-	wndEditCDDrive->add(lblCDDriveController, DISTANCE_BORDER, posY);
-	wndEditCDDrive->add(cboCDDriveController, lblCDDriveController->getX() + lblCDDriveController->getWidth() + 8, posY);
-	wndEditCDDrive->add(cboCDDriveUnit, cboCDDriveController->getX() + cboCDDriveController->getWidth() + DISTANCE_NEXT_X, posY);
+	wndEditCDDrive->add(lblCDDriveController, DISTANCE_BORDER, pos_y);
+	wndEditCDDrive->add(cboCDDriveController, lblCDDriveController->getX() + lblCDDriveController->getWidth() + 8, pos_y);
+	wndEditCDDrive->add(cboCDDriveUnit, cboCDDriveController->getX() + cboCDDriveController->getWidth() + DISTANCE_NEXT_X, pos_y);
 
 	wndEditCDDrive->add(cmdCDDriveOK);
 	wndEditCDDrive->add(cmdCDDriveCancel);

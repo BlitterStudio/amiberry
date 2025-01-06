@@ -400,7 +400,7 @@ public:
 			}
 			else
 			{
-				auto selected = cdfileList.getElementAt(idx);
+				const auto selected = cdfileList.getElementAt(idx);
 				// if selected starts with /dev/sr, it's a CD drive
 				if (selected.find("/dev/") == 0)
 				{
