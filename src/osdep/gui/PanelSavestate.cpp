@@ -102,12 +102,15 @@ public:
 			//------------------------------------------
 			// Save current state
 			//------------------------------------------
-			if (emulating && (!unsafe || unsafe_confirmed))
+			if (emulating)
 			{
-				savestate_initsave(savestate_fname, 1, true, true);
-				save_state(savestate_fname, "...");
-				if (create_screenshot())
-					save_thumb(screenshot_filename);
+				if (!unsafe || unsafe_confirmed)
+				{
+					savestate_initsave(savestate_fname, 1, true, true);
+					save_state(savestate_fname, "...");
+					if (create_screenshot())
+						save_thumb(screenshot_filename);
+				}
 			}
 			else
 			{
