@@ -2273,7 +2273,7 @@ void target_default_options(uae_prefs* p, const int type)
 		p->automount_removable = false;
 		//p->automount_drives = 0;
 		//p->automount_removabledrives = 0;
-		p->automount_cddrives = true;
+		p->automount_cddrives = false;
 		//p->automount_netdrives = 0;
 		p->picasso96_modeflags = RGBFF_CLUT | RGBFF_R5G6B5PC | RGBFF_B8G8R8A8;
 		//p->filesystem_mangle_reserved_names = true;
