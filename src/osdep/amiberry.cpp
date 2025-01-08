@@ -4201,7 +4201,7 @@ static void init_amiberry_dirs(const bool portable_mode)
     logfile_path.append("/Amiberry.log");
     rom_path.append("/Roms/");
     rp9_path.append("/RP9/");
-    saveimage_dir.append("/Savestates/");
+    saveimage_dir.append("/");
     savestate_dir.append("/Savestates/");
     ripper_path.append("/Ripper/");
     input_dir.append("/Inputrecordings/");
@@ -4219,7 +4219,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	logfile_path.append("/amiberry.log");
 	rom_path.append("/roms/");
 	rp9_path.append("/rp9/");
-	saveimage_dir.append("/savestates/");
+	saveimage_dir.append("/");
 	savestate_dir.append("/savestates/");
 	ripper_path.append("/ripper/");
 	input_dir.append("/inputrecordings/");
