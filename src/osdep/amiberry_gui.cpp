@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <strings.h>
 #include <cstring>
@@ -313,8 +314,7 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	if (!memcmp(buffer, "KICK", 4))
 	{
 		zfile_fseek(f, 512, SEEK_SET);
-		if (size > 262144)
-			size = 262144;
+		size = std::min(size, 262144);
 	}
 	else if (!memcmp(buffer, "AMIROMTYPE1", 11))
 	{
@@ -814,7 +814,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 	}
 	else if (shortcut == 4)
 	{
-		// Load Save state
+		// Load a Save state
 		TCHAR tmp[MAX_DPATH];
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
@@ -824,6 +824,12 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 			_tcscpy(savestate_fname, selected.c_str());
 			savestate_initsave(savestate_fname, 1, true, true);
 			savestate_state = STATE_DORESTORE;
+
+			const auto filename = extract_filename(savestate_fname);
+			screenshot_filename = get_screenshot_path();
+			screenshot_filename += filename;
+			screenshot_filename = remove_file_extension(screenshot_filename);
+			screenshot_filename += ".png";
 		}
 		else {
 			savestate_fname[0] = 0;
@@ -831,7 +837,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 	}
 	else if (shortcut == 5)
 	{
-		// Save state
+		// Save a state
 		TCHAR tmp[MAX_DPATH];
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
@@ -848,7 +854,14 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 			_tcscat(tmp, savestate_fname);
 			save_state(savestate_fname, _T("Description!"));
 			if (create_screenshot())
+			{
+				const auto filename = extract_filename(savestate_fname);
+				screenshot_filename = get_screenshot_path();
+				screenshot_filename += filename;
+				screenshot_filename = remove_file_extension(screenshot_filename);
+				screenshot_filename += ".png";
 				save_thumb(screenshot_filename);
+			}
 		}
 	}
 	// Select CD Image
@@ -975,6 +988,8 @@ void gui_purge_events()
 
 void gui_update()
 {
+	if (current_state_num == 99) return;
+
 	std::string filename;
 	const std::string suffix = current_state_num >= 1 && current_state_num <= 14 ?
 		"-" + std::to_string(current_state_num) : "";

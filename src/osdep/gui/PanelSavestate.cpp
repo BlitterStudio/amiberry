@@ -17,7 +17,7 @@
 int current_state_num = 0;
 
 static gcn::Window* grpNumber;
-static std::vector<gcn::RadioButton*> radioButtons(15);
+static std::vector<gcn::RadioButton*> optStateSlot(15);
 static gcn::Label* lblFilename;
 static gcn::Label* lblTimestamp;
 
@@ -27,6 +27,8 @@ static gcn::Image* imgSavestate = nullptr;
 static gcn::Button* cmdLoadStateSlot;
 static gcn::Button* cmdSaveStateSlot;
 static gcn::Button* cmdDeleteStateSlot;
+static gcn::Button* cmdLoadState;
+static gcn::Button* cmdSaveState;
 
 static std::string get_file_timestamp(const TCHAR* filename)
 {
@@ -49,12 +51,18 @@ class SavestateActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		const auto it = std::find(radioButtons.begin(), radioButtons.end(), actionEvent.getSource());
-		if (it != radioButtons.end())
+		const auto action = actionEvent.getSource();
+
+		for (int i = 0; i < 15; ++i)
 		{
-			current_state_num = static_cast<int>(std::distance(radioButtons.begin(), it));
+			if (action == optStateSlot[i])
+			{
+				current_state_num = i;
+				break;
+			}
 		}
-		else if (actionEvent.getSource() == cmdLoadStateSlot)
+
+		if (action == cmdLoadStateSlot)
 		{
 			//------------------------------------------
 			// Load state from selected slot
@@ -84,28 +92,29 @@ public:
 
 			cmdLoadStateSlot->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdSaveStateSlot)
+		else if (action == cmdSaveStateSlot)
 		{
-			bool unsafe = false;
-			bool unsafe_confirmed = false;
-			const AmigaMonitor* mon = &AMonitors[0];
-			// Check if we have RTG, then it might fail saving
-			if (mon->screen_is_picasso)
-			{
-				unsafe = true;
-				unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
-			}
-			// Check if we have JIT enabled
-			if (changed_prefs.cachesize > 0)
-			{
-				unsafe = true;
-				unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
-			}
 			//------------------------------------------
 			// Save current state to selected slot
 			//------------------------------------------
 			if (emulating)
 			{
+				bool unsafe = false;
+				bool unsafe_confirmed = false;
+				const AmigaMonitor* mon = &AMonitors[0];
+				// Check if we have RTG, then it might fail saving
+				if (mon->screen_is_picasso)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+				// Check if we have JIT enabled
+				if (changed_prefs.cachesize > 0)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+
 				if (!unsafe || unsafe_confirmed)
 				{
 					savestate_initsave(savestate_fname, 1, true, true);
@@ -121,7 +130,7 @@ public:
 
 			cmdSaveStateSlot->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdDeleteStateSlot)
+		else if (action == cmdDeleteStateSlot)
 		{
 			//------------------------------------------
 			// Delete state from selected slot
@@ -150,6 +159,42 @@ public:
 			}
 			cmdDeleteStateSlot->requestFocus();
 		}
+		else if (action == cmdLoadState)
+		{
+			// Load state from file
+			disk_selection(4, &changed_prefs);
+			current_state_num = 99; // Set it to something invalid, so no slot is selected
+		}
+		else if (action == cmdSaveState)
+		{
+			// Save current state to file
+			if (emulating)
+			{
+				bool unsafe = false;
+				bool unsafe_confirmed = false;
+				const AmigaMonitor* mon = &AMonitors[0];
+				// Check if we have RTG, then it might fail saving
+				if (mon->screen_is_picasso)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+				// Check if we have JIT enabled
+				if (changed_prefs.cachesize > 0)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+				if (!unsafe || unsafe_confirmed)
+				{
+					disk_selection(5, &changed_prefs);
+				}
+			}
+			else
+			{
+				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "", "Ok", "");
+			}
+		}
 
 		RefreshPanelSavestate();
 	}
@@ -162,12 +207,12 @@ void InitPanelSavestate(const config_category& category)
 	savestateActionListener = new SavestateActionListener();
 
 	for (int i = 0; i < 15; ++i) {
-		radioButtons[i] = new gcn::RadioButton(std::to_string(i), "radiostategroup");
-		radioButtons[i]->setId("State" + std::to_string(i));
-		radioButtons[i]->setBaseColor(gui_base_color);
-		radioButtons[i]->setBackgroundColor(gui_background_color);
-		radioButtons[i]->setForegroundColor(gui_foreground_color);
-		radioButtons[i]->addActionListener(savestateActionListener);
+		optStateSlot[i] = new gcn::RadioButton(std::to_string(i), "radiostategroup");
+		optStateSlot[i]->setId("State" + std::to_string(i));
+		optStateSlot[i]->setBaseColor(gui_base_color);
+		optStateSlot[i]->setBackgroundColor(gui_background_color);
+		optStateSlot[i]->setForegroundColor(gui_foreground_color);
+		optStateSlot[i]->addActionListener(savestateActionListener);
 	}
 
 	lblFilename = new gcn::Label("Filename: ");
@@ -175,7 +220,7 @@ void InitPanelSavestate(const config_category& category)
 
 	grpNumber = new gcn::Window("Slot");
 	int pos_y = 10;
-	for (const auto& radioButton : radioButtons) {
+	for (const auto& radioButton : optStateSlot) {
 		grpNumber->add(radioButton, 10, pos_y);
 		pos_y += radioButton->getHeight() + DISTANCE_NEXT_Y;
 	}
@@ -213,6 +258,20 @@ void InitPanelSavestate(const config_category& category)
 	cmdDeleteStateSlot->setId("cmdDeleteStateSlot");
 	cmdDeleteStateSlot->addActionListener(savestateActionListener);
 
+	cmdLoadState = new gcn::Button("Load state...");
+	cmdLoadState->setSize(BUTTON_WIDTH + 35, BUTTON_HEIGHT);
+	cmdLoadState->setBaseColor(gui_base_color);
+	cmdLoadState->setForegroundColor(gui_foreground_color);
+	cmdLoadState->setId("cmdLoadState");
+	cmdLoadState->addActionListener(savestateActionListener);
+
+	cmdSaveState = new gcn::Button("Save state...");
+	cmdSaveState->setSize(BUTTON_WIDTH + 35, BUTTON_HEIGHT);
+	cmdSaveState->setBaseColor(gui_base_color);
+	cmdSaveState->setForegroundColor(gui_foreground_color);
+	cmdSaveState->setId("cmdSaveState");
+	cmdSaveState->addActionListener(savestateActionListener);
+
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(grpScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
 	category.panel->add(lblFilename, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
@@ -223,12 +282,16 @@ void InitPanelSavestate(const config_category& category)
 	category.panel->add(cmdSaveStateSlot, cmdLoadStateSlot->getX() + cmdLoadStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
 	category.panel->add(cmdDeleteStateSlot, cmdSaveStateSlot->getX() + cmdSaveStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
 
+	pos_y = cmdLoadStateSlot->getY() + cmdLoadStateSlot->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(cmdLoadState, grpScreenshot->getX(), pos_y);
+	category.panel->add(cmdSaveState, cmdLoadState->getX() + cmdLoadState->getWidth() + DISTANCE_NEXT_X, pos_y);
+
 	RefreshPanelSavestate();
 }
 
 void ExitPanelSavestate()
 {
-	for (const auto& radioButton : radioButtons) {
+	for (const auto& radioButton : optStateSlot) {
 		delete radioButton;
 	}
 	delete grpNumber;
@@ -244,6 +307,8 @@ void ExitPanelSavestate()
 	delete cmdLoadStateSlot;
 	delete cmdSaveStateSlot;
 	delete cmdDeleteStateSlot;
+	delete cmdLoadState;
+	delete cmdSaveState;
 
 	delete savestateActionListener;
 }
@@ -262,8 +327,14 @@ void RefreshPanelSavestate()
 		imgSavestate = nullptr;
 	}
 
-	if (current_state_num >= 0 && current_state_num < static_cast<int>(radioButtons.size())) {
-		radioButtons[current_state_num]->setSelected(true);
+	if (current_state_num >= 0 && current_state_num < static_cast<int>(optStateSlot.size())) {
+		optStateSlot[current_state_num]->setSelected(true);
+	}
+	else
+	{
+		for (const auto& radio_button : optStateSlot) {
+			radio_button->setSelected(false);
+		}
 	}
 
 	gui_update();
@@ -314,10 +385,6 @@ void RefreshPanelSavestate()
 	}
 	lblFilename->adjustSize();
 	lblTimestamp->adjustSize();
-
-	for (const auto& radioButton : radioButtons) {
-		radioButton->setEnabled(true);
-	}
 
 	grpScreenshot->setVisible(true);
 	cmdLoadStateSlot->setEnabled(strlen(savestate_fname) > 0);

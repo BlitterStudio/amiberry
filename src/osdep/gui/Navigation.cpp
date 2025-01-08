@@ -579,9 +579,11 @@ static NavigationMap nav_map[] =
 	{ "State12", "Savestates", "Savestates", "State11", "State13" },
 	{ "State13", "Savestates", "Savestates", "State12", "State14" },
 	{ "State14", "Savestates", "Savestates", "State13", "cmdLoadStateSlot" },
-	{ "cmdLoadStateSlot", "Savestates", "cmdSaveStateSlot", "State14", "State0" },
-	{ "cmdSaveStateSlot", "cmdLoadStateSlot", "cmdDeleteStateSlot", "State14", "State0" },
-	{ "cmdDeleteStateSlot", "cmdSaveStateSlot", "Savestates", "State14", "State0" },
+	{ "cmdLoadStateSlot", "Savestates", "cmdSaveStateSlot", "State14", "cmdLoadState" },
+	{ "cmdSaveStateSlot", "cmdLoadStateSlot", "cmdDeleteStateSlot", "State14", "cmdSaveState" },
+	{ "cmdDeleteStateSlot", "cmdSaveStateSlot", "Savestates", "State14", "cmdSaveState" },
+	{ "cmdLoadState", "Savestates", "cmdSaveState", "cmdLoadStateSlot", "State0" },
+	{ "cmdSaveState", "cmdLoadState", "Savestates", "cmdSaveStateSlot", "State0" },
 
 	// Virtual Keyboard
 	{ "chkVkEnabled", "Virtual Keyboard", "Virtual Keyboard", "chkRetroArchVkbd", "chkVkHires"},
