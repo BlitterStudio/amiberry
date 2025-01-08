@@ -4181,13 +4181,13 @@ static void init_amiberry_dirs(const bool portable_mode)
 		themes_path = xdg_config_home;
 
 		// These paths are relative to the XDG_DATA_HOME directory
-		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
-		ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
+		controllers_path = whdboot_path = saveimage_dir = 
+		ripper_path = input_dir = nvram_dir = video_dir =
 		xdg_data_home;
 
 		// These go in $HOME/Amiberry by default
-		whdload_arch_path = floppy_path = harddrive_path =
-		cdrom_path = logfile_path = rom_path = rp9_path =
+		whdload_arch_path = floppy_path = harddrive_path = screenshot_dir =
+		savestate_dir = cdrom_path = logfile_path = rom_path = rp9_path =
 		home_dir;
 	}
 
