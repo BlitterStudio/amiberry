@@ -277,7 +277,6 @@ void RefreshPanelConfig()
 	if (last_active_config[0])
 	{
 		txtName->setText(last_active_config);
-		txtDesc->setText(changed_prefs.description);
 	}
 
 	// Search current entry
@@ -289,6 +288,7 @@ void RefreshPanelConfig()
 			{
 				// Select current entry
 				lstConfigs->setSelected(i);
+				txtDesc->setText(ConfigFilesList[i]->Description);
 				ensureVisible = i;
 				MakeCurrentVisible();
 				break;
