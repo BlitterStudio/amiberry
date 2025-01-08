@@ -62,7 +62,6 @@ public:
 			}
 			
 			target_cfgfile_load(&changed_prefs, ConfigFilesList[i]->FullPath, CONFIG_TYPE_DEFAULT, 0);
-			strncpy(last_active_config, ConfigFilesList[i]->Name, MAX_DPATH);
 			refresh_all_panels();
 		}
 		else if (actionEvent.getSource() == cmdSave)
@@ -238,12 +237,6 @@ void InitPanelConfig(const struct config_category& category)
 	button_x += BUTTON_WIDTH + DISTANCE_NEXT_X;
 	button_x = category.panel->getWidth() - DISTANCE_BORDER - BUTTON_WIDTH;
 	category.panel->add(cmdDelete, button_x, buttonY);
-
-	if (strlen(last_loaded_config) > 0)
-	{
-		strcpy(last_active_config, last_loaded_config);
-		remove_file_extension(last_active_config);
-	}
 
 	ensureVisible = -1;
 	RefreshPanelConfig();
