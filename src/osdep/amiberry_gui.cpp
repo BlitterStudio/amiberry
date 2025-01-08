@@ -818,7 +818,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 		TCHAR tmp[MAX_DPATH];
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
-		const std::string selected = SelectFile("Select save state file", tmp, statefile_filter);
+		const std::string selected = SelectFile("Load a save state file", tmp, statefile_filter);
 		if (!selected.empty())
 		{
 			_tcscpy(savestate_fname, selected.c_str());
@@ -835,7 +835,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 		TCHAR tmp[MAX_DPATH];
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
-		std::string selected = SelectFile("Select save state file", tmp, statefile_filter, true);
+		std::string selected = SelectFile("Save a save state file", tmp, statefile_filter, true);
 		if (!selected.empty())
 		{
 			// ensure the selected filename ends with .uss
