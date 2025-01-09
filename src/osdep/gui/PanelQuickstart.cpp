@@ -445,8 +445,7 @@ public:
 				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
 
 				AdjustDropDownControls();
-				if (!last_loaded_config[0])
-					set_last_active_config(whdload_prefs.whdload_filename.c_str());
+				set_last_active_config(whdload_prefs.whdload_filename.c_str());
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
@@ -474,6 +473,9 @@ public:
 					bIgnoreListChange = false;
 				}
 				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
+
+				AdjustDropDownControls();
+				set_last_active_config(whdload_prefs.whdload_filename.c_str());
 			}
 		}
 		refresh_all_panels();

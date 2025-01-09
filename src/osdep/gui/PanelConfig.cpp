@@ -277,6 +277,7 @@ void RefreshPanelConfig()
 	if (last_active_config[0])
 	{
 		txtName->setText(last_active_config);
+		txtDesc->setText(changed_prefs.description);
 	}
 
 	// Search current entry
