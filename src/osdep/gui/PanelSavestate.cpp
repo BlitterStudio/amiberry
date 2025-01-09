@@ -274,10 +274,10 @@ void InitPanelSavestate(const config_category& category)
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(grpScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	category.panel->add(lblFilename, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
-	category.panel->add(lblTimestamp, grpScreenshot->getX(), lblFilename->getY() + lblFilename->getHeight() + DISTANCE_NEXT_Y);
+	category.panel->add(lblFilename, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y/2);
+	category.panel->add(lblTimestamp, grpScreenshot->getX(), lblFilename->getY() + lblFilename->getHeight() + DISTANCE_NEXT_Y/2);
 
-	pos_y = lblTimestamp->getY() + lblTimestamp->getHeight() + DISTANCE_NEXT_Y;
+	pos_y = lblTimestamp->getY() + lblTimestamp->getHeight() + DISTANCE_NEXT_Y/2;
 	category.panel->add(cmdLoadStateSlot, grpScreenshot->getX(), pos_y);
 	category.panel->add(cmdSaveStateSlot, cmdLoadStateSlot->getX() + cmdLoadStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
 	category.panel->add(cmdDeleteStateSlot, cmdSaveStateSlot->getX() + cmdSaveStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
