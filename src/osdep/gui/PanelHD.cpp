@@ -57,6 +57,7 @@ static gcn::Button* cmdCreateHardfile;
 static gcn::Button* cmdAddCDDrive;
 static gcn::Button* cmdAddTapeDrive;
 
+static gcn::CheckBox* chkCDFSAutomount;
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
@@ -262,6 +263,8 @@ public:
 		}
 		else if (actionEvent.getSource() == chkCDTurbo)
 			changed_prefs.cd_speed = chkCDTurbo->isSelected() ? 0 : 100;
+		else if (actionEvent.getSource() == chkCDFSAutomount)
+			changed_prefs.automount_cddrives = chkCDFSAutomount->isSelected();
 
 		RefreshPanelHD();
 		RefreshPanelQuickstart();
@@ -462,6 +465,13 @@ void InitPanelHD(const config_category& category)
 	cdButtonActionListener = new CDButtonActionListener();
 	cdFileActionListener = new CDFileActionListener();
 
+	chkCDFSAutomount = new gcn::CheckBox("CDFS automount CD/DVD drives");
+	chkCDFSAutomount->setId("chkCDFSAutomount");
+	chkCDFSAutomount->setBaseColor(gui_base_color);
+	chkCDFSAutomount->setBackgroundColor(gui_background_color);
+	chkCDFSAutomount->setForegroundColor(gui_foreground_color);
+	chkCDFSAutomount->addActionListener(cdCheckActionListener);
+
 	chkCD = new gcn::CheckBox("CD drive/image");
 	chkCD->setId("chkCD");
 	chkCD->setBaseColor(gui_base_color);
@@ -534,7 +544,9 @@ void InitPanelHD(const config_category& category)
 	category.panel->add(cmdCreateHardfile, cmdAddTapeDrive->getX() + cmdAddTapeDrive->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdCreateHardfile->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
+	category.panel->add(chkCDFSAutomount, DISTANCE_BORDER, posY + 2);
+	posY = chkCDFSAutomount->getY() + chkCDFSAutomount->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkCD, DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDEject, category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelectFile, cmdCDEject->getX() - DISTANCE_NEXT_X - cmdCDSelectFile->getWidth(), posY);
 	posY += cmdCDSelectFile->getHeight() + DISTANCE_NEXT_Y;
@@ -570,6 +582,7 @@ void ExitPanelHD()
 	delete cmdAddTapeDrive;
 	delete cmdCreateHardfile;
 
+	delete chkCDFSAutomount;
 	delete chkCD;
 	delete cmdCDEject;
 	delete cmdCDSelectFile;
@@ -769,6 +782,7 @@ void RefreshPanelHD()
 		}
 	}
 
+	chkCDFSAutomount->setSelected(changed_prefs.automount_cddrives);
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelectFile->setEnabled(changed_prefs.cdslots[0].inuse);
