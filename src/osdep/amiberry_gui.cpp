@@ -1461,10 +1461,12 @@ void default_rdb_hfdlg(struct hfdlg_vals* f, const TCHAR* filename)
 	hardfile_testrdb(f);
 }
 
-void updatehdfinfo(bool force, bool defaults, bool realdrive)
+void updatehdfinfo(bool force, bool defaults, bool realdrive, std::string& txtHdfInfo, std::string& txtHdfInfo2)
 {
-	uae_u8 id[512] = { 0 };
-	uae_u32 i;
+	uae_u8 id[512] = { };
+	uae_u32 blocks, cyls, i;
+	TCHAR tmp[200], tmp2[200];
+	TCHAR idtmp[17];
 	bool phys = is_hdf_rdb();
 
 	uae_u64 bsize = 0;
@@ -1527,6 +1529,55 @@ void updatehdfinfo(bool force, bool defaults, bool realdrive)
 	if (current_hfdlg.ci.controller_type >= HD_CONTROLLER_TYPE_IDE_FIRST && current_hfdlg.ci.controller_type <= HD_CONTROLLER_TYPE_IDE_LAST) {
 		if (current_hfdlg.ci.unit_feature_level == HD_LEVEL_ATA_1 && bsize >= 4 * static_cast<uae_u64>(0x40000000))
 			current_hfdlg.ci.unit_feature_level = HD_LEVEL_ATA_2;
+	}
+
+	cyls = phys ? current_hfdlg.ci.pcyls : current_hfdlg.forcedcylinders;
+	int heads = phys ? current_hfdlg.ci.pheads : current_hfdlg.ci.surfaces;
+	int secs = phys ? current_hfdlg.ci.psecs : current_hfdlg.ci.sectors;
+	if (!cyls && current_hfdlg.ci.blocksize && secs && heads) {
+		cyls = (uae_u32)(bsize / ((uae_u64)current_hfdlg.ci.blocksize * secs * heads));
+	}
+	blocks = cyls * (secs * heads);
+	if (!blocks && current_hfdlg.ci.blocksize)
+		blocks = (uae_u32)(bsize / current_hfdlg.ci.blocksize);
+	if (current_hfdlg.ci.max_lba)
+		blocks = (uae_u32)current_hfdlg.ci.max_lba;
+
+	for (i = 0; i < sizeof (idtmp) / sizeof (TCHAR) - 1; i++) {
+		TCHAR c = id[i];
+		if (c < 32 || c > 126)
+			c = '.';
+		idtmp[i] = c;
+		idtmp[i + 1] = 0;
+	}
+
+	tmp[0] = 0;
+	if (bsize) {
+		_sntprintf (tmp2, sizeof tmp2, _T(" %s [%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X]"), idtmp,
+			id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7],
+			id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+		if (!blocks) {
+			_sntprintf (tmp, sizeof tmp, _T("%uMB"), (unsigned int)(bsize / (1024 * 1024)));
+		} else if (blocks && !cyls) {
+			_sntprintf (tmp, sizeof tmp, _T("%u blocks, %.1fMB"),
+				blocks,
+				(double)bsize / (1024.0 * 1024.0));
+		} else {
+			_sntprintf (tmp, sizeof tmp, _T("%u/%u/%u, %u/%u blocks, %.1fMB/%.1fMB"),
+				cyls, heads, secs,
+				blocks, (int)(bsize / current_hfdlg.ci.blocksize),
+				(double)blocks * 1.0 * current_hfdlg.ci.blocksize / (1024.0 * 1024.0),
+				(double)bsize / (1024.0 * 1024.0));
+			if ((uae_u64)cyls * heads * secs > bsize / current_hfdlg.ci.blocksize) {
+				_tcscat (tmp2, _T(" [Geometry larger than drive!]"));
+			} else if (cyls > 65535) {
+				_tcscat (tmp2, _T(" [Too many cyls]"));
+			}
+		}
+		if (txtHdfInfo.empty() && txtHdfInfo2.empty()) {
+			txtHdfInfo = std::string(tmp);
+			txtHdfInfo2 = std::string(tmp2);
+		}
 	}
 }
 

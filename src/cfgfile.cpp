@@ -7621,7 +7621,8 @@ static void parse_hardfile_spec (struct uae_prefs *p, const TCHAR *spec)
 	const std::string x2 = parameter.substr(pos + 1, parameter.length());
 #ifdef FILESYS
 	default_hfdlg(&current_hfdlg, false);
-	updatehdfinfo(true, false, false);
+	std::string txt1, txt2;
+	updatehdfinfo(true, false, false, txt1, txt2);
 
 	current_hfdlg.ci.type = UAEDEV_HDF;
 	_tcscpy(current_hfdlg.ci.devname, x1.c_str());

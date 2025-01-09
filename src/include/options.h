@@ -1277,7 +1277,7 @@ extern void hardfile_testrdb(struct hfdlg_vals* hdf);
 extern void default_tapedlg(struct tapedlg_vals* f);
 extern void default_fsvdlg(struct fsvdlg_vals* f);
 extern void default_hfdlg(struct hfdlg_vals* f, bool rdb);
-extern void updatehdfinfo(bool force, bool defaults, bool realdrive);
+extern void updatehdfinfo(bool force, bool defaults, bool realdrive, std::string& txtHdfInfo, std::string& txtHdfInfo2);
 
 #ifdef AMIBERRY
 struct amiberry_customised_layout

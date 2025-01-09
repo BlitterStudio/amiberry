@@ -131,7 +131,8 @@ public:
 			current_hfdlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
 			current_hfdlg.forcedcylinders = 0;
 			current_hfdlg.ci.cyls = current_hfdlg.ci.highcyl = current_hfdlg.ci.sectors = current_hfdlg.ci.surfaces = 0;
-			updatehdfinfo(true, true, true);
+			std::string txt1, txt2;
+			updatehdfinfo(true, true, true, txt1, txt2);
 			inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
 			setharddrive();
 		}
@@ -596,7 +597,8 @@ bool EditFilesysHardDrive(const int unit_no)
 		fileSelected = false;
 	}
 
-	updatehdfinfo(true, false, true);
+	std::string txt1, txt2;
+	updatehdfinfo(true, false, true, txt1, txt2);
 
 	// Prepare the screen once
 	uae_gui->logic();
