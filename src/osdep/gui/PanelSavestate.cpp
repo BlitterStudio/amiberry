@@ -117,7 +117,7 @@ public:
 
 				if (!unsafe || unsafe_confirmed)
 				{
-					savestate_initsave(savestate_fname, 1, true, true);
+					savestate_initsave(savestate_fname, 1, false, true);
 					save_state(savestate_fname, "...");
 					if (create_screenshot())
 						save_thumb(screenshot_filename);
