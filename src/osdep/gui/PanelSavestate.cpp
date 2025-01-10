@@ -395,16 +395,27 @@ void RefreshPanelSavestate()
 bool HelpPanelSavestate(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Savestates can be used with floppy disk image files, whdload.lha files, and with HDD");
-	helptext.emplace_back("emulation setups.");
+	helptext.emplace_back("Savestates");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Savestates allow you to save the current state of the emulation to a file, and to");
+	helptext.emplace_back("restore it later. This can be useful to save your progress in a game, or to quickly");
+	helptext.emplace_back("load a specific configuration. A screenshot of the current state is saved along with");
+	helptext.emplace_back("the statefile.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("To save a state, click the 'Save to Slot' button. To load a state, click the 'Load from");
+	helptext.emplace_back("Slot' button. To delete a state, click the 'Delete Slot' button.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also save and load states to and from files. Click the 'Save state...' button");
+	helptext.emplace_back("to save the current state to a file, and the 'Load state...' button to load a state");
+	helptext.emplace_back("from a file.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Savestates are saved to the 'savestates' directory in the Amiberry data directory.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Note: Savestates will not work when emulating CD32/CDTV machine types, and will likely");
 	helptext.emplace_back("fail when the JIT/PPC/RTG emulation options are enabled.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Savestates are stored in a .uss file, with the name being that of the currently loaded");
 	helptext.emplace_back("floppy disk image or whdload .lha file, or the name of the loaded HDD .uae config.");
-	helptext.emplace_back(" ");
-	helptext.emplace_back("For more information about Savestates, please read the related Amiberry Wiki page.");
 	helptext.emplace_back(" ");
 	return true;
 }
