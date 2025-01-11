@@ -514,9 +514,8 @@ bool HelpPanelRTG(std::vector<std::string>& helptext)
 	helptext.emplace_back("versions, as both as supported.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The color modes dropdowns allow you to choose which pixel format");
-	helptext.emplace_back("will be used. Please note that for performance reasons, the default");
-	helptext.emplace_back("32-bit mode is not the same as in WinUAE (Amiberry uses RGBA, WinUAE");
-	helptext.emplace_back("uses BGRA).");
+	helptext.emplace_back("will be used. For optimized performance, Amiberry uses the same");
+	helptext.emplace_back("pixel format always (RGB565 for 16-bit and BGRA32 for 32-bit modes).");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Some options are not implemented, so they appear as disabled.");
 	helptext.emplace_back(" ");

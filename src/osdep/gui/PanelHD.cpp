@@ -804,19 +804,34 @@ int count_HDs(const uae_prefs* p)
 bool HelpPanelHD(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back(R"(Use "Add Directory" to add a folder or "Add Hardfile" to add a HDF file as)");
-	helptext.emplace_back("a hard disk. To edit the settings of a HDD, click on \"...\" left to the entry in");
-	helptext.emplace_back("the list. With the red cross, you can delete an entry.");
+	helptext.emplace_back("Hard Drives and CD/DVD drives");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("This panel allows you to add and configure virtual hard drives and CD/DVD drives.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back(R"(Use "Add Directory/Archive" to add a folder or Archive as a virtual Amiga drive.)");
+	helptext.emplace_back(R"(Use "Add Hardfile to add an HDD image (hdf) as a hard disk.)");
+	helptext.emplace_back(R"(Use "Add Hard Drive" to add a physical hard drive as a hard disk.)");
+	helptext.emplace_back(R"(Use "Add Tape Drive" to add a tape drive (directory or file only).)");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB.");
 	helptext.emplace_back("For large files, it will take some time to create the new hard disk. You have to");
 	helptext.emplace_back("format the new HDD in the Amiga via the Workbench.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
+	helptext.emplace_back("You can use the \"...\" button to edit the selected drive. You can change the");
+	helptext.emplace_back("name, volume label, path, read/write mode, size and boot priority.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back(R"(Activate "CD drive" to emulate a CD drive. Use "Eject" to remove current CD)");
-	helptext.emplace_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
+	helptext.emplace_back("Use the \"Delete\" button to remove the selected drive.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("In the current version, WAV, MP3 and FLAC files are supported for audio tracks.");
+	helptext.emplace_back("CD/DVD drives:");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Use \"CD drive/image\" to connect a CD drive. You can select an iso/cue file");
+	helptext.emplace_back("or use the \"Eject\" button to remove the CD from the drive.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can enable the \"CDTV/CDTV-CR/CD32 turbo CD read speed\" option to speed up");
+	helptext.emplace_back("the CD read speed.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can enable the \"CDFS automount CD/DVD drives\" option to automatically mount");
+	helptext.emplace_back("CD/DVD drives on Workbench, when a CD/DVD is inserted.");
+	helptext.emplace_back(" ");
 	return true;
 }
