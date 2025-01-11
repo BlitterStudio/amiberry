@@ -1005,7 +1005,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 			loaded = true;
 		}
-		else if (_tcscmp(argv[i], _T("--model")) == 0 || _tcscmp(argv[i], _T("-m")) == 0) {
+		else if (_tcscmp(argv[i], _T("--model")) == 0) {
 			if (i + 1 == argc)
 				write_log(_T("Missing argument for '--model' option.\n"));
 			else
