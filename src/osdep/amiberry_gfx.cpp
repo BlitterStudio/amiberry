@@ -2476,7 +2476,14 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	{
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			SDL_SetWindowSize(mon->amiga_window, w, h);
+			if (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h)
+			{
+				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
+			}
+			else
+			{
+				SDL_SetWindowSize(mon->amiga_window, w, h);
+			}
 		}
 #ifdef USE_OPENGL
 		renderQuad = { dx, dy, w, h };
@@ -2522,7 +2529,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
-			if (mon->amigawin_rect.w != 800 && mon->amigawin_rect.h != 600)
+			if (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600)
 			{
 				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
 			}
