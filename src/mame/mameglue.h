@@ -6,7 +6,9 @@
 #define LSB_FIRST
 
 extern void write_log(const char *, ...);
+#ifdef DEBUGGER
 extern void activate_debugger(void);
+#endif
 
 #define MIN(a, b) ((a) > (b) ? (a) : (b))
 

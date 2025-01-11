@@ -15,7 +15,9 @@
 #include "vid_svga_render.h"
 #include "vid_sdac_ramdac.h"
 
+#ifdef DEBUGGER
 extern void activate_debugger(void);
+#endif
 
 enum
 {

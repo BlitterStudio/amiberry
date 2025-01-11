@@ -1367,8 +1367,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		// SET THE BASE AMIGA (Expanded A1200)
 		write_log("WHDBooter - Host: A1200 ROM selected\n");
 		built_in_prefs(prefs, 4, A1200_CONFIG, 0, 0);
-        // set 8MB Fast RAM
-        prefs->fastmem[0].size = 0x800000;
+		// set 8MB Fast RAM
+		prefs->fastmem[0].size = 0x800000;
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [WHDLoad] [AGA]"));
 	}
 	else

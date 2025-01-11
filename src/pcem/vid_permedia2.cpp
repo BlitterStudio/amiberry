@@ -81,7 +81,9 @@ Not emulated and Someone Else's Problem:
 #define REG_FBSOURCEDELTA		0x0d88
 #define REG_CONFIG				0x0d90
 
+#ifdef DEBUGGER
 extern void activate_debugger(void);
+#endif
 
 typedef struct permedia2_t
 {

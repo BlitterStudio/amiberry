@@ -7,6 +7,7 @@
 /* E = MAX & F # 0 -> NotANumber */
 /* E = biased by 127 (single) ,1023 (double) ,16383 (extended) */
 
+#pragma once
 #define FPSR_BSUN       0x00008000
 #define FPSR_SNAN       0x00004000
 #define FPSR_OPERR      0x00002000

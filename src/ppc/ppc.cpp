@@ -400,7 +400,9 @@ static void map_banks(void)
 
 	PPCMemoryRegion regions[UAE_MEMORY_REGIONS_MAX];
 	UaeMemoryMap map;
+#ifdef DEBUGGER
 	uae_memory_map(&map);
+#endif
 
 	for (int i = 0; i < map.num_regions; i++) {
 		UaeMemoryRegion *r = &map.regions[i];
