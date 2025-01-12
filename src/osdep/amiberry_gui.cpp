@@ -1985,7 +1985,7 @@ void apply_theme()
 		// Check if the font_name contains the full path to the file (e.g. in /usr/share/fonts)
 		if (my_existsfile2(gui_theme.font_name.c_str()))
 		{
-			gui_font = new gcn::SDLTrueTypeFont(gui_theme.font_name, gui_theme.font_size);
+			gui_font = std::make_unique<gcn::SDLTrueTypeFont>(gui_theme.font_name, gui_theme.font_size);
 		}
 		else
 		{
@@ -1993,7 +1993,7 @@ void apply_theme()
 			std::string font = get_data_path();
 			font.append(gui_theme.font_name);
 			if (my_existsfile2(font.c_str()))
-				gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
+				gui_font = std::make_unique<gcn::SDLTrueTypeFont>(font, gui_theme.font_size);
 			else
 			{
 				// If the font file was not found in the data directory, fallback to a system font
@@ -2019,7 +2019,7 @@ void apply_theme()
 		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
 		abort();
 	}
-	gcn::Widget::setGlobalFont(gui_font);
+	gcn::Widget::setGlobalFont(gui_font.get());
 	gcn::Widget::setWidgetsBaseColor(gui_base_color);
 	gcn::Widget::setWidgetsForegroundColor(gui_foreground_color);
 	gcn::Widget::setWidgetsBackgroundColor(gui_background_color);

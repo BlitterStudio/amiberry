@@ -156,19 +156,19 @@ static void InitShowMessage(const std::string& message)
 
 	if (gui_graphics == nullptr)
 	{
-		gui_graphics = new gcn::SDLGraphics();
+		gui_graphics = std::make_unique<gcn::SDLGraphics>();
 		gui_graphics->setTarget(gui_screen);
 	}
 	if (gui_input == nullptr)
 	{
-		gui_input = new gcn::SDLInput();
+		gui_input = std::make_unique<gcn::SDLInput>();
 	}
 	if (uae_gui == nullptr)
 	{
 		halt_gui = true;
-		uae_gui = new gcn::Gui();
-		uae_gui->setGraphics(gui_graphics);
-		uae_gui->setInput(gui_input);
+		uae_gui = std::make_unique<gcn::Gui>();
+		uae_gui->setGraphics(gui_graphics.get());
+		uae_gui->setInput(gui_input.get());
 	}
 	if (gui_top == nullptr)
 	{
@@ -259,14 +259,6 @@ static void ExitShowMessage()
 
 	if (halt_gui)
 	{
-		delete uae_gui;
-		uae_gui = nullptr;
-		delete gui_input;
-		gui_input = nullptr;
-		delete gui_graphics;
-		gui_graphics = nullptr;
-		delete gui_font;
-		gui_font = nullptr;
 		delete gui_top;
 		gui_top = nullptr;
 

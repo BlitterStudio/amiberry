@@ -141,18 +141,18 @@ SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
 /*
 * Gui SDL stuff we need
 */
-gcn::SDLInput* gui_input;
-gcn::SDLGraphics* gui_graphics;
-gcn::SDLImageLoader* gui_imageLoader;
-gcn::SDLTrueTypeFont* gui_font;
+std::unique_ptr<gcn::SDLInput> gui_input;
+std::unique_ptr<gcn::SDLGraphics> gui_graphics;
+std::unique_ptr<gcn::SDLImageLoader> gui_imageLoader;
+std::unique_ptr<gcn::SDLTrueTypeFont> gui_font;
 
 /*
 * Gui stuff we need
 */
-gcn::Gui* uae_gui;
 gcn::Container* gui_top;
 gcn::Container* selectors;
 gcn::ScrollArea* selectorsScrollArea;
+std::unique_ptr<gcn::Gui> uae_gui;
 
 // GUI Colors
 gcn::Color gui_base_color;
@@ -163,8 +163,8 @@ gcn::Color gui_selection_color;
 gcn::Color gui_foreground_color;
 gcn::Color gui_font_color;
 
-gcn::FocusHandler* focusHdl;
-gcn::Widget* activeWidget;
+std::unique_ptr<gcn::FocusHandler> focusHdl;
+std::unique_ptr<gcn::Widget> activeWidget;
 
 // Main buttons
 gcn::Button* cmdQuit;
@@ -392,30 +392,23 @@ void amiberry_gui_init()
 	// Create helpers for GUI framework
 	//-------------------------------------------------
 
-	gui_imageLoader = new gcn::SDLImageLoader();
+	gui_imageLoader = std::make_unique<gcn::SDLImageLoader>();
 	gui_imageLoader->setRenderer(mon->gui_renderer);
 
 	// The ImageLoader in use is static and must be set to be
 	// able to load images
-	gcn::Image::setImageLoader(gui_imageLoader);
-	gui_graphics = new gcn::SDLGraphics();
+	gcn::Image::setImageLoader(gui_imageLoader.get());
+	gui_graphics = std::make_unique<gcn::SDLGraphics>();
 	// Set the target for the graphics object to be the screen.
 	// In other words, we will draw to the screen.
 	// Note, any surface will do, it doesn't have to be the screen.
 	gui_graphics->setTarget(gui_screen);
-	gui_input = new gcn::SDLInput();
+	gui_input = std::make_unique<gcn::SDLInput>();
 }
 
 void amiberry_gui_halt()
 {
 	AmigaMonitor* mon = &AMonitors[0];
-
-	delete gui_imageLoader;
-	gui_imageLoader = nullptr;
-	delete gui_input;
-	gui_input = nullptr;
-	delete gui_graphics;
-	gui_graphics = nullptr;
 
 	if (gui_screen != nullptr)
 	{
@@ -715,9 +708,9 @@ void check_input()
 					//-------------------------------------------------
 					// Quit entire program via Q on keyboard
 					//-------------------------------------------------
-					focusHdl = gui_top->_getFocusHandler();
-					activeWidget = focusHdl->getFocused();
-					if (dynamic_cast<gcn::TextField*>(activeWidget) == nullptr)
+					focusHdl.reset(gui_top->_getFocusHandler());
+					activeWidget.reset(focusHdl->getFocused());
+					if (dynamic_cast<gcn::TextField*>(activeWidget.get()) == nullptr)
 					{
 						// ...but only if we are not in a Textfield...
 						uae_quit();
@@ -1023,9 +1016,9 @@ void gui_widgets_init()
 	//-------------------------------------------------
 	// Create GUI
 	//-------------------------------------------------
-	uae_gui = new gcn::Gui();
-	uae_gui->setGraphics(gui_graphics);
-	uae_gui->setInput(gui_input);
+	uae_gui = std::make_unique<gcn::Gui>();
+	uae_gui->setGraphics(gui_graphics.get());
+	uae_gui->setInput(gui_input.get());
 
 	//-------------------------------------------------
 	// Initialize fonts
@@ -1204,15 +1197,9 @@ void gui_widgets_halt()
 	delete cmdRestart;
 	delete cmdStart;
 	delete cmdHelp;
-
 	delete mainButtonActionListener;
-
-	delete gui_font;
-	gui_font = nullptr;
 	delete gui_top;
 	gui_top = nullptr;
-	delete uae_gui;
-	uae_gui = nullptr;
 }
 
 void refresh_all_panels()
