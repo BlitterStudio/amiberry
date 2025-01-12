@@ -222,7 +222,7 @@ void InitPanelSavestate(const config_category& category)
 	int pos_y = 10;
 	for (const auto& radioButton : optStateSlot) {
 		grpNumber->add(radioButton, 10, pos_y);
-		pos_y += radioButton->getHeight() + DISTANCE_NEXT_Y;
+		pos_y += radioButton->getHeight() + 12;
 	}
 	grpNumber->setMovable(false);
 	grpNumber->setSize(BUTTON_WIDTH - 20, TITLEBAR_HEIGHT + pos_y);
@@ -232,7 +232,9 @@ void InitPanelSavestate(const config_category& category)
 
 	grpScreenshot = new gcn::Window("State screenshot");
 	grpScreenshot->setMovable(false);
-	grpScreenshot->setSize(category.panel->getWidth() - grpNumber->getWidth() - DISTANCE_BORDER * 2 - DISTANCE_NEXT_X, grpNumber->getHeight());
+	const auto screenshot_width = category.panel->getWidth() - grpNumber->getWidth() - DISTANCE_BORDER * 2 - DISTANCE_NEXT_X;
+	const auto screenshot_height = grpNumber->getHeight();
+	grpScreenshot->setSize(screenshot_width, screenshot_height);
 	grpScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScreenshot->setBaseColor(gui_base_color);
 	grpScreenshot->setForegroundColor(gui_foreground_color);
@@ -282,7 +284,7 @@ void InitPanelSavestate(const config_category& category)
 	category.panel->add(cmdSaveStateSlot, cmdLoadStateSlot->getX() + cmdLoadStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
 	category.panel->add(cmdDeleteStateSlot, cmdSaveStateSlot->getX() + cmdSaveStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
 
-	pos_y = cmdLoadStateSlot->getY() + cmdLoadStateSlot->getHeight() + DISTANCE_NEXT_Y;
+	pos_y = cmdLoadStateSlot->getY() + cmdLoadStateSlot->getHeight() + DISTANCE_NEXT_Y/2;
 	category.panel->add(cmdLoadState, grpScreenshot->getX(), pos_y);
 	category.panel->add(cmdSaveState, cmdLoadState->getX() + cmdLoadState->getWidth() + DISTANCE_NEXT_X, pos_y);
 
