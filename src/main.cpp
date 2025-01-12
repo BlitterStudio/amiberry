@@ -6,6 +6,7 @@
 * Copyright 1995 Ed Hanway
 * Copyright 1995, 1996, 1997 Bernd Schmidt
 */
+#include <algorithm>
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
@@ -213,8 +214,7 @@ void fixup_prefs_dimensions (struct uae_prefs *prefs)
 
 	for (int i = 0; i < 2; i++) {
 		struct apmode *ap = &prefs->gfx_apmode[i];
-		if (ap->gfx_backbuffers < 1)
-			ap->gfx_backbuffers = 1;
+		ap->gfx_backbuffers = std::max(ap->gfx_backbuffers, 1);
 		ap->gfx_vflip = 0;
 		ap->gfx_strobo = false;
 		if (ap->gfx_vsync) {
@@ -266,7 +266,7 @@ void fixup_cpu (struct uae_prefs *p)
 
 	if (p->cpu_model >= 68020 && p->cpuboard_type && p->address_space_24 && cpuboard_32bit(p)) {
 		error_log (_T("24-bit address space is not supported with selected accelerator board configuration."));
-		p->address_space_24 = 0;
+		p->address_space_24 = false;
 	}
 	if (p->cpu_model >= 68040 && p->address_space_24) {
 		error_log (_T("24-bit address space is not supported with 68040/060 configurations."));
@@ -313,8 +313,7 @@ void fixup_cpu (struct uae_prefs *p)
 				cpuboard_setboard(p,  BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
 			}
 		}
-		if (p->cpuboardmem1.size < 8 * 1024 * 1024)
-			p->cpuboardmem1.size = 8 * 1024 * 1024;
+		p->cpuboardmem1.size = std::max<uae_u32>(p->cpuboardmem1.size, 8 * 1024 * 1024);
 	}
 #endif
 
@@ -649,8 +648,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		}
 	} else if (p->cs_compatible == 0) {
 		if (p->cs_ide == IDE_A4000) {
-			if (p->cs_fatgaryrev < 0)
-				p->cs_fatgaryrev = 0;
+			p->cs_fatgaryrev = std::max(p->cs_fatgaryrev, 0);
 			if (p->cs_ramseyrev < 0)
 				p->cs_ramseyrev = 0x0f;
 		}
@@ -721,8 +719,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		}
 	}
 #endif
-	if (p->gfx_framerate < 1)
-		p->gfx_framerate = 1;
+	p->gfx_framerate = std::max(p->gfx_framerate, 1);
 	if (p->gfx_display_sections < 1) {
 		p->gfx_display_sections = 1;
 	} else if (p->gfx_display_sections > 99) {
@@ -743,8 +740,7 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		p->cs_ciaatod = p->ntscmode ? 2 : 1;
 
 	// PCem does not support max speed.
-	if (p->x86_speed_throttle < 0)
-		p->x86_speed_throttle = 0;
+	p->x86_speed_throttle = std::max<float>(p->x86_speed_throttle, 0);
 
 	built_in_chipset_prefs (p);
 	blkdev_fix_prefs (p);

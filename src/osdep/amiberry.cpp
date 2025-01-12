@@ -2254,9 +2254,8 @@ void target_default_options(uae_prefs* p, const int type)
 		//p->commandpathstart[0] = 0;
 		//p->commandpathend[0] = 0;
 		//p->statusbar = 1;
-		p->gfx_api = 2;
-		if (p->gfx_api > 1)
-			p->color_mode = 5;
+		p->gfx_api = 4;
+		p->color_mode = 5;
 		if (p->gf[GF_NORMAL].gfx_filter == 0)
 			p->gf[GF_NORMAL].gfx_filter = 1;
 		if (p->gf[GF_RTG].gfx_filter == 0)
