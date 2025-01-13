@@ -6638,8 +6638,7 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext *ctx)
 	int of = static_cast<int>(overlay_format);
 	if (of == RGBFB_Y4U2V2 || of == RGBFB_Y4U1V1)
 		of = RGBFB_R5G5B5PC;
-	//alloc_colors_picasso(8, 8, 8, 16, 8, 0, of, p96_rgbx16_ovl); // BGR
-	alloc_colors_picasso(8, 8, 8, 0, 8, 16, of, p96_rgbx16_ovl); // RGB
+	alloc_colors_picasso(8, 8, 8, 16, 8, 0, of, p96_rgbx16_ovl); // BGR
 #if OVERLAY_DEBUG
 	write_log(_T("picasso_CreateFeature overlay bitmap %08x, vram %08x (%dx%d)\n"),
 		overlay_bitmap, overlay_vram, overlay_src_width, overlay_src_height);
@@ -7128,8 +7127,7 @@ void restore_p96_finish ()
 			overlay_convert = getconvert(static_cast<int>(overlay_format), picasso_vidinfo[0].pixbytes);
 			if (!p96_rgbx16_ovl)
 				p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
-			//alloc_colors_picasso(8, 8, 8, 16, 8, 0, overlay_format, p96_rgbx16_ovl); // BGR
-			alloc_colors_picasso(8, 8, 8, 0, 8, 16, static_cast<int>(overlay_format), p96_rgbx16_ovl); // RGB
+			alloc_colors_picasso(8, 8, 8, 16, 8, 0, overlay_format, p96_rgbx16_ovl); // BGR
 			picasso_palette(overlay_clutc, overlay_clut);
 			overlay_color = overlay_color_unswapped;
 			overlay_pix = GetBytesPerPixel(overlay_format);
