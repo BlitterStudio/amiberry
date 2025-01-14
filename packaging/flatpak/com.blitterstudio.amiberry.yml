@@ -70,6 +70,21 @@ modules:
       - '*.a'
       - '*.la'
 
+  - name: enet
+    buildsystem: autotools
+    sources:
+      - type: git
+        url: https://github.com/lsalzman/enet.git
+        tag: v1.3.18
+        commit: 2662c0de09e36f2a2030ccc2c528a3e4c9e8138a
+        x-checker-data:
+          type: git
+          tag-pattern: ^v([\d.]+)$
+      - type: script
+        dest-filename: autogen.sh
+        commands:
+          - autoreconf -ifv
+
   - name: amiberry
     buildsystem: cmake-ninja
     builddir: true
