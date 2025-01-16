@@ -173,8 +173,8 @@ extern bool gui_running;
 extern gcn::Container* selectors;
 extern gcn::ScrollArea* selectorsScrollArea;
 extern ConfigCategory categories[];
+extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;
-extern std::unique_ptr<gcn::Gui> uae_gui;
 
 // GUI Colors
 extern amiberry_gui_theme gui_theme;
@@ -186,12 +186,12 @@ extern gcn::Color gui_selection_color;
 extern gcn::Color gui_foreground_color;
 extern gcn::Color gui_font_color;
 
-extern std::unique_ptr<gcn::SDLInput> gui_input;
+extern gcn::SDLInput* gui_input;
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
 
-extern std::unique_ptr<gcn::SDLGraphics> gui_graphics;
-extern std::unique_ptr<gcn::SDLTrueTypeFont> gui_font;
+extern gcn::SDLGraphics* gui_graphics;
+extern gcn::SDLTrueTypeFont* gui_font;
 extern SDL_Texture* gui_texture;
 
 
