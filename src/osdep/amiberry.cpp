@@ -138,6 +138,19 @@ bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, r
 bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
+void cap_fps(Uint64 start)
+{
+	const auto end = SDL_GetPerformanceCounter();
+	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
+
+	const int refresh_rate = std::clamp(sdl_mode.refresh_rate, 50, 60);
+	const float frame_time = 1000.0f / static_cast<float>(refresh_rate);
+	const float delay_time = frame_time - elapsed_ms;
+
+	if (delay_time > 0.0f)
+		SDL_Delay(static_cast<Uint32>(delay_time));
+}
+
 std::string get_version_string()
 {
 	const auto pre_release_string = std::string(AMIBERRY_VERSION_PRE_RELEASE);
