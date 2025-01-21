@@ -8768,6 +8768,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->statecapturebuffersize = 100;
 	p->statecapturerate = 5 * 50;
 	p->inprec_autoplay = true;
+	p->statefile_path[0] = 0;
 
 #ifdef UAE_MINI
 	default_prefs_mini (p, 0);
