@@ -1328,7 +1328,7 @@ struct amiberry_options
 	bool rctrl_as_ramiga = false;
 	bool gui_joystick_control = true;
 	bool default_multithreaded_drawing = true;
-	int default_line_mode = 0;
+	int default_line_mode = 1;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
 	char default_open_gui_key[128] = "F12";
