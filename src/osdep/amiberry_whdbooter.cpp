@@ -356,19 +356,18 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 
 	prefs->start_gui = false;
 
-	const auto is_mt32 = _tcsstr(filepath, _T("MT32")) != nullptr || _tcsstr(filepath, _T("mt32")) != nullptr;
-	const auto is_cdtv = _tcsstr(filepath, _T("CDTV")) != nullptr || _tcsstr(filepath, _T("cdtv")) != nullptr;
-	bool is_cd32 = false;
+    const auto is_mt32 = whdload_prefs.filename.find("MT32") != std::string::npos || whdload_prefs.filename.find("mt32") != std::string::npos;
+    const auto is_cdtv = whdload_prefs.filename.find("CDTV") != std::string::npos || whdload_prefs.filename.find("cdtv") != std::string::npos;
+    const auto is_cd32 = whdload_prefs.filename.find("CD32") != std::string::npos || whdload_prefs.filename.find("cd32") != std::string::npos;
 
-	if (is_cdtv)
+	if (is_cdtv && !is_cd32)
 	{
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [CDTV]"));
 		// SET THE BASE AMIGA (CDTV)
 		built_in_prefs(prefs, 9, 0, 0, 0);
 	}
-	else
+	else if (is_cd32)
 	{
-		is_cd32 = true;
 		_tcscpy(prefs->description, _T("AutoBoot Configuration [CD32]"));
 		// SET THE BASE AMIGA (CD32)
 		built_in_prefs(prefs, 8, 3, 0, 0);
