@@ -225,8 +225,6 @@ static void pause_audio_sdl2(struct sound_data* sd)
 	
 	sd->waiting_for_buffer = 0;
 	SDL_PauseAudioDevice(s->dev, 1);
-	if (cdda_dev > 0)
-		SDL_PauseAudioDevice(cdda_dev, 1);
 	clearbuffer(sd);
 }
 static void resume_audio_sdl2(struct sound_data* sd)
@@ -239,8 +237,6 @@ static void resume_audio_sdl2(struct sound_data* sd)
 	s->cnt_correct = 0;
 	SDL_PauseAudioDevice(s->dev, 0);
 	sd->paused = 0;
-	if (cdda_dev > 0)
-		SDL_PauseAudioDevice(cdda_dev, 0);
 }
 
 static void close_audio_sdl2(struct sound_data* sd)
@@ -258,11 +254,6 @@ static void close_audio_sdl2(struct sound_data* sd)
 	SDL_UnlockAudioDevice(s->dev);
 	
 	SDL_CloseAudioDevice(s->dev);
-	if (cdda_dev > 0)
-	{
-		SDL_PauseAudioDevice(cdda_dev, 1);
-		SDL_CloseAudioDevice(cdda_dev);
-	}
 }
 
 extern void setvolume_ahi(int);
