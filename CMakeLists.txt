@@ -17,7 +17,7 @@ option(WITH_LTO "Enable Link Time Optimization" OFF)
 ## Determine proper semantic version
 set(VERSION_MAJOR "7")
 set(VERSION_MINOR "0")
-set(VERSION_PATCH "1")
+set(VERSION_PATCH "2")
 set(VERSION_PRE_RELEASE "")
 
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
