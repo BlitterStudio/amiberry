@@ -1,41 +1,20 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#include "cda_play.h"
-#include "audio.h"
-#include "gui.h"
 #include "options.h"
+#include "audio.h"
+#include "blkdev.h"
+#include "threaddep/thread.h"
+
+#include "gui.h"
+#include "cda_play.h"
 #include "uae.h"
 
-#include "sounddep/sound.h"
-#include "uae/uae.h"
-
-bool pull_mode = false;
-
-void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len);
-SDL_AudioDeviceID cdda_dev;
-static int pull_buffer_len[2];
-static uae_u8* pull_buffer[2];
+#include <sys/time.h>
+#include <algorithm>
 
 cda_audio::~cda_audio()
 {
-	wait(0);
-	wait(1);
-
-	if (cdda_dev > 0)
-	{
-		SDL_PauseAudioDevice(cdda_dev, 1);
-		SDL_LockAudioDevice(cdda_dev);
-
-		if (pull_mode)
-		{
-			for (auto& i : pull_buffer_len)
-				i = 0;
-		}
-
-		SDL_UnlockAudioDevice(cdda_dev);
-	}
-
 	for (auto& buffer : buffers)
 	{
 		xfree(buffer);
@@ -55,42 +34,6 @@ cda_audio::cda_audio(int num_sectors, int sectorsize, int samplerate)
 		buffer = xcalloc(uae_u8, num_sectors * ((bufsize + 4095) & ~4095));
 	}
 	this->num_sectors = num_sectors;
-
-	auto devname = sound_devices[currprefs.soundcard]->name;
-	constexpr Uint8 channels = 2;
-	SDL_AudioSpec cdda_want, cdda_have;
-	SDL_zero(cdda_want);
-	cdda_want.freq = samplerate;
-	cdda_want.format = AUDIO_S16SYS;
-	cdda_want.channels = channels;
-	cdda_want.samples = static_cast<Uint16>(bufsize / 4);
-	if (pull_mode)
-		cdda_want.callback = sdl2_cdaudio_callback;
-
-	if (cdda_dev == 0)
-		cdda_dev = SDL_OpenAudioDevice(currprefs.soundcard_default ? nullptr : devname, 0, &cdda_want, &cdda_have, 0);
-	if (cdda_dev == 0)
-	{
-		write_log("Failed to open selected SDL2 device for CD-audio: %s, retrying with default device\n", SDL_GetError());
-		cdda_dev = SDL_OpenAudioDevice(nullptr, 0, &cdda_want, &cdda_have, 0);
-		if (cdda_dev == 0)
-			write_log("Failed to open default SDL2 device for CD-Audio: %s\n", SDL_GetError());
-	}
-	else
-	{
-		if (pull_mode)
-		{
-			for (auto i = 0; i < 2; i++)
-			{
-				pull_buffer[i] = buffers[i];
-				pull_buffer_len[i] = bufsize;
-			}
-		}
-		
-		SDL_PauseAudioDevice(cdda_dev, 0);		
-		active = true;
-		playing = true;
-	}
 }
 
 void cda_audio::setvolume(int left, int right)
@@ -102,8 +45,7 @@ void cda_audio::setvolume(int left, int right)
 		if (volume[j])
 			volume[j]++;
 		volume[j] = volume[j] * (100 - currprefs.sound_volume_master) / 100;
-		if (volume[j] >= 32768)
-			volume[j] = 32768;
+		volume[j] = std::min(volume[j], 32768);
 	}
 }
 
@@ -123,74 +65,27 @@ static void sub_deinterleave(const uae_u8* s, uae_u8* d)
 	}
 }
 
-bool cda_audio::play(int bufnum)
+static void cdda_closewav(struct cda_play* ciw)
 {
-	if (!active)
-		return false;
-
-	auto* p = reinterpret_cast<uae_s16*>(buffers[bufnum]);
-	if (volume[0] != 32768 || volume[1] != 32768) {
-		for (int i = 0; i < num_sectors * sectorsize / 4; i++) {
-			p[i * 2 + 0] = p[i * 2 + 0] * volume[0] / 32768;
-			p[i * 2 + 1] = p[i * 2 + 1] * volume[1] / 32768;
-		}
-	}
-
-	if (pull_mode)
-	{
-		SDL_LockAudioDevice(cdda_dev);
-		pull_buffer_len[bufnum] += bufsize;
-		SDL_UnlockAudioDevice(cdda_dev);
-		while (pull_buffer_len[bufnum] > 0 && quit_program == 0)
-			Sleep(10);
-	}		
-	else
-	{
-		SDL_QueueAudio(cdda_dev, p, bufsize);
-	}
-	
-	return true;
+	if (ciw->cdda_wavehandle != NULL)
+		SDL_FreeWAV(ciw->cdda_wavehandle);
+	ciw->cdda_wavehandle = NULL;
 }
 
-void cda_audio::wait(int bufnum)
-{
-	if (!active || !playing)
-		return;
+// DAE CDDA based on Larry Osterman's "Playing Audio CDs" blog series
 
-	if (pull_mode)
-	{
-		while (pull_buffer_len[bufnum] > 0 && quit_program == 0)
-			Sleep(10);
-	}
-	else
-	{
-		while (SDL_GetQueuedAudioSize(cdda_dev) > 0 && quit_program == 0)
-			Sleep(10);
-	}
-}
-
-bool cda_audio::isplaying(int bufnum)
+static int cdda_openwav(struct cda_play* ciw)
 {
-	if (!active || !playing)
-		return false;
-	
-	if (pull_mode)
-		return pull_buffer_len[bufnum] > 0;
-	
-	return SDL_GetQueuedAudioSize(cdda_dev) > 0;
-}
+	SDL_AudioSpec wav;
+	Uint32 wavLength;
 
-void sdl2_cdaudio_callback(void* userdata, Uint8* stream, int len)
-{
-	for (auto i = 0; i < 2; ++i)
-	{
-		while (pull_buffer_len[i] > 0)
-		{
-			memcpy(stream, pull_buffer[i], len);
-			stream += len;
-			pull_buffer_len[i] = 0;
-		}
+	auto mmr = SDL_LoadWAV("", &wav, &ciw->cdda_wavehandle, &wavLength);
+	if (mmr == nullptr) {
+		write_log(_T("IOCTL CDDA: wave open failed\n"));
+		cdda_closewav(ciw);
+		return 0;
 	}
+	return 1;
 }
 
 int ciw_cdda_setstate(struct cda_play* ciw, int state, int playpos)
@@ -259,8 +154,10 @@ static bool cdda_play2(struct cda_play* ciw, int* outpos)
 			idleframes = 0;
 			muteframes = 0;
 			bool seensub = false;
-			struct timeval tb1, tb2;
-			gettimeofday(&tb1, NULL);
+
+            // Replace _timeb and _ftime with timeval and gettimeofday
+            struct timeval tb1, tb2;
+            gettimeofday(&tb1, NULL);
 			cdda_pos = ciw->cdda_start;
 			ciw->cd_last_pos = cdda_pos;
 			oldplay = ciw->cdda_play;
@@ -308,13 +205,13 @@ static bool cdda_play2(struct cda_play* ciw, int* outpos)
 
 			if (*outpos < 0) {
 				gettimeofday(&tb2, NULL);
-				int diff = (tb2.tv_sec - tb1.tv_sec) * 1000 + (tb2.tv_usec - tb1.tv_usec) / 1000;				diff -= ciw->cdda_delay;
+				int diff = (int)((tb2.tv_sec * (uae_s64)1000 + tb2.tv_usec / 1000) - (tb1.tv_sec * (uae_s64)1000 + tb1.tv_usec / 1000));
+				diff -= ciw->cdda_delay;
 				if (idleframes >= 0 && diff < 0 && ciw->cdda_play > 0)
 					sleep_millis(-diff);
 				if (diff > 0 && !seensub) {
 					int ch = diff / 7 + 25;
-					if (ch > idleframes)
-						ch = idleframes;
+					ch = std::min(ch, idleframes);
 					idleframes -= ch;
 					cdda_pos += ch;
 				}
@@ -396,8 +293,7 @@ static bool cdda_play2(struct cda_play* ciw, int* outpos)
 
 			if (ciw->cdda_scan) {
 				cdda_pos += ciw->cdda_scan * CDDA_BUFFERS;
-				if (cdda_pos < 0)
-					cdda_pos = 0;
+				cdda_pos = std::max(cdda_pos, 0);
 			}
 			else {
 				if (cdda_pos < 0 && cdda_pos + CDDA_BUFFERS >= 0)
@@ -445,7 +341,7 @@ end:
 	return restart;
 }
 
-int ciw_cdda_play(void* v)
+void ciw_cdda_play(void* v)
 {
 	struct cda_play* ciw = (struct cda_play*)v;
 	int outpos = -1;
@@ -464,7 +360,6 @@ int ciw_cdda_play(void* v)
 		ciw->cdda_play = 1;
 	}
 	ciw->cdda_play = 0;
-	return 0;
 }
 
 void ciw_cdda_stop(struct cda_play* ciw)

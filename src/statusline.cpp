@@ -369,7 +369,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			}
 #ifdef AMIBERRY // Board Temperature, if available
 		} else if (led == LED_TEMP) {
-			pos = 11;
+			pos = 12;
 			int temp = gui_data.temperature;
 			on = 1;
 			off_rgb = 0x000000;

@@ -6,7 +6,9 @@
 #include "DSP3210_emulation.h"
 
 extern void write_log(const char *, ...);
+#ifdef DEBUGGER
 extern void activate_debugger(void);
+#endif
 
 /* Typedefs */
 typedef union 

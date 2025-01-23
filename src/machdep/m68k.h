@@ -55,8 +55,8 @@ struct flag_struct {
 	uint64 cznv;
 	uint64 x;
 #else
-    uint32 cznv;
-    uint32 x;
+	uint32 cznv;
+	uint32 x;
 #endif
 };
 

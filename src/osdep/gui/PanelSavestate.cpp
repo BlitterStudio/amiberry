@@ -17,12 +17,16 @@
 int current_state_num = 0;
 
 static gcn::Window* grpNumber;
-static std::vector<gcn::RadioButton*> radioButtons(15);
+static std::vector<gcn::RadioButton*> optStateSlot(15);
+static gcn::Label* lblFilename;
 static gcn::Label* lblTimestamp;
 
 static gcn::Window* grpScreenshot;
 static gcn::Icon* icoSavestate = nullptr;
 static gcn::Image* imgSavestate = nullptr;
+static gcn::Button* cmdLoadStateSlot;
+static gcn::Button* cmdSaveStateSlot;
+static gcn::Button* cmdDeleteStateSlot;
 static gcn::Button* cmdLoadState;
 static gcn::Button* cmdSaveState;
 
@@ -47,15 +51,21 @@ class SavestateActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		const auto it = std::find(radioButtons.begin(), radioButtons.end(), actionEvent.getSource());
-		if (it != radioButtons.end())
+		const auto action = actionEvent.getSource();
+
+		for (int i = 0; i < 15; ++i)
 		{
-			current_state_num = static_cast<int>(std::distance(radioButtons.begin(), it));
+			if (action == optStateSlot[i])
+			{
+				current_state_num = i;
+				break;
+			}
 		}
-		else if (actionEvent.getSource() == cmdLoadState)
+
+		if (action == cmdLoadStateSlot)
 		{
 			//------------------------------------------
-			// Load state
+			// Load state from selected slot
 			//------------------------------------------
 			if (emulating)
 			{
@@ -80,41 +90,110 @@ public:
 				ShowMessage("Loading savestate", "Emulation hasn't started yet.", "", "", "Ok", "");
 			}
 
-			cmdLoadState->requestFocus();
+			cmdLoadStateSlot->requestFocus();
 		}
-		else if (actionEvent.getSource() == cmdSaveState)
+		else if (action == cmdSaveStateSlot)
 		{
-			bool unsafe = false;
-			bool unsafe_confirmed = false;
-			const AmigaMonitor* mon = &AMonitors[0];
-			// Check if we have RTG, then it might fail saving
-			if (mon->screen_is_picasso)
-			{
-				unsafe = true;
-				unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
-			}
-			// Check if we have JIT enabled
-			if (changed_prefs.cachesize > 0)
-			{
-				unsafe = true;
-				unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
-			}
 			//------------------------------------------
-			// Save current state
+			// Save current state to selected slot
 			//------------------------------------------
-			if (emulating && (!unsafe || unsafe_confirmed))
+			if (emulating)
 			{
-				savestate_initsave(savestate_fname, 1, true, true);
-				save_state(savestate_fname, "...");
-				if (create_screenshot())
-					save_thumb(screenshot_filename);
+				bool unsafe = false;
+				bool unsafe_confirmed = false;
+				const AmigaMonitor* mon = &AMonitors[0];
+				// Check if we have RTG, then it might fail saving
+				if (mon->screen_is_picasso)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+				// Check if we have JIT enabled
+				if (changed_prefs.cachesize > 0)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+
+				if (!unsafe || unsafe_confirmed)
+				{
+					savestate_initsave(savestate_fname, 1, false, true);
+					save_state(savestate_fname, "...");
+					if (create_screenshot())
+						save_thumb(screenshot_filename);
+				}
 			}
 			else
 			{
 				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "", "Ok", "");
 			}
 
-			cmdSaveState->requestFocus();
+			cmdSaveStateSlot->requestFocus();
+		}
+		else if (action == cmdDeleteStateSlot)
+		{
+			//------------------------------------------
+			// Delete state from selected slot
+			//------------------------------------------
+			if (strlen(savestate_fname) > 0)
+			{
+				if (ShowMessage("Delete savestate", "Do you really want to delete the statefile?", "This will also delete the corresponding screenshot.", "", "Yes", "No"))
+				{
+					if (remove(savestate_fname) == 0)
+					{
+						if (!screenshot_filename.empty())
+						{
+							remove(screenshot_filename.c_str());
+						}
+						RefreshPanelSavestate();
+					}
+					else
+					{
+						ShowMessage("Delete savestate", "Failed to delete statefile.", "", "", "Ok", "");
+					}
+				}
+			}
+			else
+			{
+				ShowMessage("Delete savestate", "No statefile selected.", "", "", "Ok", "");
+			}
+			cmdDeleteStateSlot->requestFocus();
+		}
+		else if (action == cmdLoadState)
+		{
+			// Load state from file
+			disk_selection(4, &changed_prefs);
+			current_state_num = 99; // Set it to something invalid, so no slot is selected
+		}
+		else if (action == cmdSaveState)
+		{
+			// Save current state to file
+			if (emulating)
+			{
+				bool unsafe = false;
+				bool unsafe_confirmed = false;
+				const AmigaMonitor* mon = &AMonitors[0];
+				// Check if we have RTG, then it might fail saving
+				if (mon->screen_is_picasso)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: P96 detected", "P96 is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+				// Check if we have JIT enabled
+				if (changed_prefs.cachesize > 0)
+				{
+					unsafe = true;
+					unsafe_confirmed = ShowMessage("Warning: JIT detected", "JIT is enabled. Savestates might be unsafe! Proceed anyway?", "", "", "Proceed", "Cancel");
+				}
+				if (!unsafe || unsafe_confirmed)
+				{
+					disk_selection(5, &changed_prefs);
+				}
+			}
+			else
+			{
+				ShowMessage("Saving state", "Emulation hasn't started yet.", "", "", "Ok", "");
+			}
 		}
 
 		RefreshPanelSavestate();
@@ -128,21 +207,22 @@ void InitPanelSavestate(const config_category& category)
 	savestateActionListener = new SavestateActionListener();
 
 	for (int i = 0; i < 15; ++i) {
-		radioButtons[i] = new gcn::RadioButton(std::to_string(i), "radiostategroup");
-		radioButtons[i]->setId("State" + std::to_string(i));
-		radioButtons[i]->setBaseColor(gui_base_color);
-		radioButtons[i]->setBackgroundColor(gui_background_color);
-		radioButtons[i]->setForegroundColor(gui_foreground_color);
-		radioButtons[i]->addActionListener(savestateActionListener);
+		optStateSlot[i] = new gcn::RadioButton(std::to_string(i), "radiostategroup");
+		optStateSlot[i]->setId("State" + std::to_string(i));
+		optStateSlot[i]->setBaseColor(gui_base_color);
+		optStateSlot[i]->setBackgroundColor(gui_background_color);
+		optStateSlot[i]->setForegroundColor(gui_foreground_color);
+		optStateSlot[i]->addActionListener(savestateActionListener);
 	}
 
+	lblFilename = new gcn::Label("Filename: ");
 	lblTimestamp = new gcn::Label("Thu Aug 23 14:55:02 2001");
 
 	grpNumber = new gcn::Window("Slot");
 	int pos_y = 10;
-	for (const auto& radioButton : radioButtons) {
+	for (const auto& radioButton : optStateSlot) {
 		grpNumber->add(radioButton, 10, pos_y);
-		pos_y += radioButton->getHeight() + DISTANCE_NEXT_Y;
+		pos_y += radioButton->getHeight() + 12;
 	}
 	grpNumber->setMovable(false);
 	grpNumber->setSize(BUTTON_WIDTH - 20, TITLEBAR_HEIGHT + pos_y);
@@ -152,20 +232,43 @@ void InitPanelSavestate(const config_category& category)
 
 	grpScreenshot = new gcn::Window("State screenshot");
 	grpScreenshot->setMovable(false);
-	grpScreenshot->setSize(category.panel->getWidth() - grpNumber->getWidth() - DISTANCE_BORDER * 2 - DISTANCE_NEXT_X, grpNumber->getHeight());
+	const auto screenshot_width = category.panel->getWidth() - grpNumber->getWidth() - DISTANCE_BORDER * 2 - DISTANCE_NEXT_X;
+	const auto screenshot_height = grpNumber->getHeight();
+	grpScreenshot->setSize(screenshot_width, screenshot_height);
 	grpScreenshot->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpScreenshot->setBaseColor(gui_base_color);
 	grpScreenshot->setForegroundColor(gui_foreground_color);
 
-	cmdLoadState = new gcn::Button("Load State");
-	cmdLoadState->setSize(BUTTON_WIDTH + 10, BUTTON_HEIGHT);
+	cmdLoadStateSlot = new gcn::Button("Load from Slot");
+	cmdLoadStateSlot->setSize(BUTTON_WIDTH + 35, BUTTON_HEIGHT);
+	cmdLoadStateSlot->setBaseColor(gui_base_color);
+	cmdLoadStateSlot->setForegroundColor(gui_foreground_color);
+	cmdLoadStateSlot->setId("cmdLoadStateSlot");
+	cmdLoadStateSlot->addActionListener(savestateActionListener);
+
+	cmdSaveStateSlot = new gcn::Button("Save to Slot");
+	cmdSaveStateSlot->setSize(BUTTON_WIDTH + 35, BUTTON_HEIGHT);
+	cmdSaveStateSlot->setBaseColor(gui_base_color);
+	cmdSaveStateSlot->setForegroundColor(gui_foreground_color);
+	cmdSaveStateSlot->setId("cmdSaveStateSlot");
+	cmdSaveStateSlot->addActionListener(savestateActionListener);
+
+	cmdDeleteStateSlot = new gcn::Button("Delete Slot");
+	cmdDeleteStateSlot->setSize(BUTTON_WIDTH + 35, BUTTON_HEIGHT);
+	cmdDeleteStateSlot->setBaseColor(gui_base_color);
+	cmdDeleteStateSlot->setForegroundColor(gui_foreground_color);
+	cmdDeleteStateSlot->setId("cmdDeleteStateSlot");
+	cmdDeleteStateSlot->addActionListener(savestateActionListener);
+
+	cmdLoadState = new gcn::Button("Load state...");
+	cmdLoadState->setSize(BUTTON_WIDTH + 35, BUTTON_HEIGHT);
 	cmdLoadState->setBaseColor(gui_base_color);
 	cmdLoadState->setForegroundColor(gui_foreground_color);
 	cmdLoadState->setId("cmdLoadState");
 	cmdLoadState->addActionListener(savestateActionListener);
 
-	cmdSaveState = new gcn::Button("Save State");
-	cmdSaveState->setSize(BUTTON_WIDTH + 10, BUTTON_HEIGHT);
+	cmdSaveState = new gcn::Button("Save state...");
+	cmdSaveState->setSize(BUTTON_WIDTH + 35, BUTTON_HEIGHT);
 	cmdSaveState->setBaseColor(gui_base_color);
 	cmdSaveState->setForegroundColor(gui_foreground_color);
 	cmdSaveState->setId("cmdSaveState");
@@ -173,8 +276,15 @@ void InitPanelSavestate(const config_category& category)
 
 	category.panel->add(grpNumber, DISTANCE_BORDER, DISTANCE_BORDER);
 	category.panel->add(grpScreenshot, grpNumber->getX() + grpNumber->getWidth() + DISTANCE_NEXT_X, DISTANCE_BORDER);
-	category.panel->add(lblTimestamp, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y);
-	pos_y = lblTimestamp->getY() + lblTimestamp->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(lblFilename, grpScreenshot->getX(), grpScreenshot->getY() + grpScreenshot->getHeight() + DISTANCE_NEXT_Y/2);
+	category.panel->add(lblTimestamp, grpScreenshot->getX(), lblFilename->getY() + lblFilename->getHeight() + DISTANCE_NEXT_Y/2);
+
+	pos_y = lblTimestamp->getY() + lblTimestamp->getHeight() + DISTANCE_NEXT_Y/2;
+	category.panel->add(cmdLoadStateSlot, grpScreenshot->getX(), pos_y);
+	category.panel->add(cmdSaveStateSlot, cmdLoadStateSlot->getX() + cmdLoadStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
+	category.panel->add(cmdDeleteStateSlot, cmdSaveStateSlot->getX() + cmdSaveStateSlot->getWidth() + DISTANCE_NEXT_X, pos_y);
+
+	pos_y = cmdLoadStateSlot->getY() + cmdLoadStateSlot->getHeight() + DISTANCE_NEXT_Y/2;
 	category.panel->add(cmdLoadState, grpScreenshot->getX(), pos_y);
 	category.panel->add(cmdSaveState, cmdLoadState->getX() + cmdLoadState->getWidth() + DISTANCE_NEXT_X, pos_y);
 
@@ -183,10 +293,11 @@ void InitPanelSavestate(const config_category& category)
 
 void ExitPanelSavestate()
 {
-	for (const auto& radioButton : radioButtons) {
+	for (const auto& radioButton : optStateSlot) {
 		delete radioButton;
 	}
 	delete grpNumber;
+	delete lblFilename;
 	delete lblTimestamp;
 
 	delete imgSavestate;
@@ -195,6 +306,9 @@ void ExitPanelSavestate()
 	icoSavestate = nullptr;
 	delete grpScreenshot;
 
+	delete cmdLoadStateSlot;
+	delete cmdSaveStateSlot;
+	delete cmdDeleteStateSlot;
 	delete cmdLoadState;
 	delete cmdSaveState;
 
@@ -215,8 +329,14 @@ void RefreshPanelSavestate()
 		imgSavestate = nullptr;
 	}
 
-	if (current_state_num >= 0 && current_state_num < static_cast<int>(radioButtons.size())) {
-		radioButtons[current_state_num]->setSelected(true);
+	if (current_state_num >= 0 && current_state_num < static_cast<int>(optStateSlot.size())) {
+		optStateSlot[current_state_num]->setSelected(true);
+	}
+	else
+	{
+		for (const auto& radio_button : optStateSlot) {
+			radio_button->setSelected(false);
+		}
 	}
 
 	gui_update();
@@ -226,6 +346,7 @@ void RefreshPanelSavestate()
 		auto* const f = fopen(savestate_fname, "rbe");
 		if (f) {
 			fclose(f);
+			lblFilename->setCaption("Filename: " + extract_filename(std::string(savestate_fname)));
 			lblTimestamp->setCaption(get_file_timestamp(savestate_fname));
 
 			if (!screenshot_filename.empty())
@@ -255,37 +376,48 @@ void RefreshPanelSavestate()
 		}
 		else
 		{
-			lblTimestamp->setCaption("No savestate found: " + extract_filename(std::string(savestate_fname)));
+			lblFilename->setCaption("No savestate found:");
+			lblTimestamp->setCaption(extract_filename(std::string(savestate_fname)));
 		}
 	}
 	else
 	{
-		lblTimestamp->setCaption("No savestate loaded");
+		lblFilename->setCaption("No savestate loaded");
+		lblTimestamp->setCaption("");
 	}
+	lblFilename->adjustSize();
 	lblTimestamp->adjustSize();
 
-	for (const auto& radioButton : radioButtons) {
-		radioButton->setEnabled(true);
-	}
-
 	grpScreenshot->setVisible(true);
-	cmdLoadState->setEnabled(strlen(savestate_fname) > 0);
-	cmdSaveState->setEnabled(strlen(savestate_fname) > 0);
+	cmdLoadStateSlot->setEnabled(strlen(savestate_fname) > 0);
+	cmdSaveStateSlot->setEnabled(strlen(savestate_fname) > 0);
+	cmdDeleteStateSlot->setEnabled(strlen(savestate_fname) > 0);
 }
 
 bool HelpPanelSavestate(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Savestates can be used with floppy disk image files, whdload.lha files, and with HDD");
-	helptext.emplace_back("emulation setups.");
+	helptext.emplace_back("Savestates");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Savestates allow you to save the current state of the emulation to a file, and to");
+	helptext.emplace_back("restore it later. This can be useful to save your progress in a game, or to quickly");
+	helptext.emplace_back("load a specific configuration. A screenshot of the current state is saved along with");
+	helptext.emplace_back("the statefile.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("To save a state, click the 'Save to Slot' button. To load a state, click the 'Load from");
+	helptext.emplace_back("Slot' button. To delete a state, click the 'Delete Slot' button.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can also save and load states to and from files. Click the 'Save state...' button");
+	helptext.emplace_back("to save the current state to a file, and the 'Load state...' button to load a state");
+	helptext.emplace_back("from a file.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Savestates are saved to the 'savestates' directory in the Amiberry data directory.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Note: Savestates will not work when emulating CD32/CDTV machine types, and will likely");
 	helptext.emplace_back("fail when the JIT/PPC/RTG emulation options are enabled.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("Savestates are stored in a .uss file, with the name being that of the currently loaded");
-	helptext.emplace_back("floppy disk image or whdload.lha file, or the name of the loaded HDD .uae config.");
-	helptext.emplace_back(" ");
-	helptext.emplace_back("For more information about Savestates, please read the related Amiberry Wiki page.");
+	helptext.emplace_back("floppy disk image or whdload .lha file, or the name of the loaded HDD .uae config.");
 	helptext.emplace_back(" ");
 	return true;
 }

@@ -4,7 +4,6 @@
 #include "thread.h"
 
 extern volatile bool cd_audio_mode_changed;
-extern SDL_AudioDeviceID cdda_dev;
 
 class cda_audio
 {
@@ -22,9 +21,6 @@ public:
 	cda_audio(int num_sectors, int sectorsize, int samplerate);
 	~cda_audio();
 	void setvolume(int left, int right);
-	bool play(int bufnum);
-	void wait(int bufnum);
-	bool isplaying(int bufnum);
 };
 
 #define CDDA_BUFFERS 14
@@ -35,7 +31,7 @@ struct cda_play
 {
 	int unitnum;
 	int cdda_volume[2];
-	//HWAVEOUT cdda_wavehandle;
+	Uint8* cdda_wavehandle;
 	int cd_last_pos;
 	int cdda_play;
 	int cdda_play_finished;
@@ -57,6 +53,6 @@ struct cda_play
 	cda_play_read_block read_block;
 };
 
-int ciw_cdda_play(void* ciw);
+void ciw_cdda_play(void* ciw);
 void ciw_cdda_stop(struct cda_play* ciw);
 int ciw_cdda_setstate(struct cda_play* ciw, int state, int playpos);

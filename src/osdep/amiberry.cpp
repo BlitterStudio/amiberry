@@ -138,6 +138,19 @@ bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, r
 bool hotkey_pressed = false;
 bool mouse_grabbed = false;
 
+void cap_fps(Uint64 start)
+{
+	const auto end = SDL_GetPerformanceCounter();
+	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
+
+	const int refresh_rate = std::clamp(sdl_mode.refresh_rate, 50, 60);
+	const float frame_time = 1000.0f / static_cast<float>(refresh_rate);
+	const float delay_time = frame_time - elapsed_ms;
+
+	if (delay_time > 0.0f)
+		SDL_Delay(static_cast<Uint32>(delay_time));
+}
+
 std::string get_version_string()
 {
 	const auto pre_release_string = std::string(AMIBERRY_VERSION_PRE_RELEASE);
@@ -1840,7 +1853,7 @@ bool handle_events()
 		{
 			setpaused(pause_emulation);
 			was_paused = pause_emulation;
-			gui_fps(0, 0, 0, 0, 0);
+			gui_fps(0, 0, false, 0, 0);
 			gui_led(LED_SND, 0, -1);
 			// we got just paused, report it to caller.
 			return true;
@@ -1866,7 +1879,8 @@ bool handle_events()
 		sound_closed = 0;
 		was_paused = 0;
 	}
-
+	if (pause_emulation)
+		SDL_Delay(10);
 	return pause_emulation != 0;
 }
 
@@ -2254,9 +2268,8 @@ void target_default_options(uae_prefs* p, const int type)
 		//p->commandpathstart[0] = 0;
 		//p->commandpathend[0] = 0;
 		//p->statusbar = 1;
-		p->gfx_api = 2;
-		if (p->gfx_api > 1)
-			p->color_mode = 5;
+		p->gfx_api = 4;
+		p->color_mode = 5;
 		if (p->gf[GF_NORMAL].gfx_filter == 0)
 			p->gf[GF_NORMAL].gfx_filter = 1;
 		if (p->gf[GF_RTG].gfx_filter == 0)
@@ -4181,13 +4194,13 @@ static void init_amiberry_dirs(const bool portable_mode)
 		themes_path = xdg_config_home;
 
 		// These paths are relative to the XDG_DATA_HOME directory
-		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
-		ripper_path = input_dir = screenshot_dir = nvram_dir = video_dir =
+		controllers_path = whdboot_path = saveimage_dir = 
+		ripper_path = input_dir = nvram_dir = video_dir =
 		xdg_data_home;
 
 		// These go in $HOME/Amiberry by default
-		whdload_arch_path = floppy_path = harddrive_path =
-		cdrom_path = logfile_path = rom_path = rp9_path =
+		whdload_arch_path = floppy_path = harddrive_path = screenshot_dir =
+		savestate_dir = cdrom_path = logfile_path = rom_path = rp9_path =
 		home_dir;
 	}
 
@@ -4201,7 +4214,7 @@ static void init_amiberry_dirs(const bool portable_mode)
     logfile_path.append("/Amiberry.log");
     rom_path.append("/Roms/");
     rp9_path.append("/RP9/");
-    saveimage_dir.append("/Savestates/");
+    saveimage_dir.append("/");
     savestate_dir.append("/Savestates/");
     ripper_path.append("/Ripper/");
     input_dir.append("/Inputrecordings/");
@@ -4219,7 +4232,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	logfile_path.append("/amiberry.log");
 	rom_path.append("/roms/");
 	rp9_path.append("/rp9/");
-	saveimage_dir.append("/savestates/");
+	saveimage_dir.append("/");
 	savestate_dir.append("/savestates/");
 	ripper_path.append("/ripper/");
 	input_dir.append("/inputrecordings/");

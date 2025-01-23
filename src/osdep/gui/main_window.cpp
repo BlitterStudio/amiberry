@@ -242,19 +242,6 @@ static void show_help_requested()
 	}
 }
 
-void cap_fps(Uint64 start)
-{
-	const auto end = SDL_GetPerformanceCounter();
-	const auto elapsed_ms = static_cast<float>(end - start) / static_cast<float>(SDL_GetPerformanceFrequency()) * 1000.0f;
-
-	const int refresh_rate = std::clamp(sdl_mode.refresh_rate, 50, 60);
-	const float frame_time = 1000.0f / static_cast<float>(refresh_rate);
-	const float delay_time = frame_time - elapsed_ms;
-
-	if (delay_time > 0.0f)
-		SDL_Delay(static_cast<Uint32>(delay_time));
-}
-
 void update_gui_screen()
 {
 	const AmigaMonitor* mon = &AMonitors[0];

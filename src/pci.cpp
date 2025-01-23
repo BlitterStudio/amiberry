@@ -1149,7 +1149,7 @@ static void REGPARAM2 pci_bridge_wput(uaecptr addr, uae_u32 b)
 					pcib->memory_start_offset[0] = expamem_board_pointer;
 				} else if (pcib->type == PCI_BRIDGE_PROMETHEUS_FS) {
 					if (validate_banks_z3(&pci_io_bank, (expamem_board_pointer) >> 16, expamem_board_size >> 16)) {
-						map_banks_z3(&pci_io_bank, (expamem_board_pointer + 0x1fe00000) >> 16, 0x100000 >> 16);
+						map_banks_z3(&pci_io_bank, (expamem_board_pointer + 0x1fe00000) >> 16, 0x200000 >> 16);
 						map_banks_z3(&pci_mem_bank, (expamem_board_pointer + 0x00000000) >> 16, (508 * 1024 * 1024) >> 16);
 						map_banks_z3(&pci_config_bank, (expamem_board_pointer + 0x1fc00000) >> 16, 0x100000 >> 16);
 					}

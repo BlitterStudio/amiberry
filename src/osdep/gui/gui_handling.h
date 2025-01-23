@@ -441,6 +441,7 @@ extern void apply_theme_extras();
 
 extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);
+extern void disk_selection(const int shortcut, uae_prefs* prefs);
 
 extern void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2);
 

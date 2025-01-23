@@ -186,20 +186,8 @@ static void InitShowMessage(const std::string& message)
 	{
 		TTF_Init();
 
-		try
-		{
-			gui_font = new gcn::SDLTrueTypeFont(prefix_with_data_path(gui_theme.font_name), gui_theme.font_size);
-			gui_font->setAntiAlias(false);
-			gui_font->setColor(gui_font_color);
-		}
-		catch (exception& ex)
-		{
-			cout << ex.what() << '\n';
-			write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
-			abort();
-		}
-
-		gcn::Widget::setGlobalFont(gui_font);
+		load_theme(amiberry_options.gui_theme);
+		apply_theme();
 	}
 
 	wndShowMessage = new gcn::Window("Message");

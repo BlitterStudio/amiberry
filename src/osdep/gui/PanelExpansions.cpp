@@ -1420,7 +1420,7 @@ bool HelpPanelExpansions(std::vector<std::string>& helptext)
     helptext.emplace_back("Amiga as being connected to the network Amiberry is running on.");
     helptext.emplace_back(" ");
     helptext.emplace_back("\"uaescsi.device\" enables the uaescsi.device, which can be used to connect to hard");
-    helptext.emplace_back("drives inside the emulation.");
+    helptext.emplace_back("drives inside the emulation. This is required for CDFS automounting to work.");
     helptext.emplace_back(" ");
     helptext.emplace_back("\"CD32 Full Motion Video cartridge\" enables the FMV module for the CD32, which is");
     helptext.emplace_back("only useful if you're emulating a CD32 of course.");

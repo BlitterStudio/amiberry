@@ -692,12 +692,16 @@ static void fp_int(fpdata *a, fpdata *b)
     {
         case FPCR_ROUND_NEAR:
             a->fp = fp_round_to_nearest(bb);
+            break;
         case FPCR_ROUND_ZERO:
             a->fp = fp_round_to_zero(bb);
+            break;
         case FPCR_ROUND_MINF:
             a->fp = fp_round_to_minus_infinity(bb);
+            break;
         case FPCR_ROUND_PINF:
             a->fp = fp_round_to_plus_infinity(bb);
+            break;
         default: /* never reached */
 		break;
     }
@@ -1150,10 +1154,8 @@ static void fp_from_pack (fpdata *src, uae_u32 *wrd, int kfactor)
 		ndigits = kfactor;
 	}
 
-	if (ndigits < 0)
-		ndigits = 0;
-	if (ndigits > 16)
-		ndigits = 16;
+	ndigits = std::max(ndigits, 0);
+	ndigits = std::min(ndigits, 16);
 
 	// remove decimal point
 	strp[1] = strp[0];

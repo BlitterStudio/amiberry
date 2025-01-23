@@ -55,7 +55,9 @@ static uae_u32 cycleoffset;
 
 static uae_u32 pcs[16];
 static uae_u64 pcs2[16];
+#ifdef DEBUGGER
 extern void activate_debugger (void);
+#endif
 static int warned;
 
 static void setlasthsync (void)
@@ -689,7 +691,6 @@ void inprec_recorddebug (uae_u32 val)
 void inprec_playdebug (uae_u32 val)
 {
 #if INPUTRECORD_DEBUG > 0
-	extern void activate_debugger (void);
 	static uae_u32 pcs[16];
 	int err = 0;
 	if (inprec_pstart (INPREC_DEBUG)) {

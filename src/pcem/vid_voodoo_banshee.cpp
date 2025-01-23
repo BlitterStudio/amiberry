@@ -147,6 +147,7 @@ enum
         cmdHoleCnt0   = 0x48
 };
 
+#define VGAINIT0_RAMDAC_8BIT (1 << 2)
 #define VGAINIT0_EXTENDED_SHIFT_OUT (1 << 12)
 
 #define VIDPROCCFG_VIDPROC_ENABLE (1 << 0)
@@ -376,7 +377,7 @@ static void banshee_render_16bpp_tiled(svga_t *svga)
         else
                 addr = banshee->desktop_addr + (banshee->desktop_y & 31) * 128 + ((banshee->desktop_y >> 5) * banshee->desktop_stride_tiled);
 
-        for (x = 0; x <= svga->hdisp; x += 64)
+        for (x = 0; x < svga->hdisp; x += 64)
         {
                 if (svga->hwcursor_on || svga->overlay_on)
                         svga->changedvram[addr >> 12] = 2;
@@ -630,6 +631,7 @@ static void banshee_ext_outl(uint16_t addr, uint32_t val, void *p)
                 break;
                 case Init_vgaInit0:
                 banshee->vgaInit0 = val;
+                svga_set_ramdac_type(svga, (val & VGAINIT0_RAMDAC_8BIT ? RAMDAC_8BIT : RAMDAC_6BIT));
                 break;
                 case Init_vgaInit1:
                 banshee->vgaInit1 = val;
@@ -1042,6 +1044,10 @@ static uint32_t banshee_cmd_read(banshee_t *banshee, uint32_t addr)
                 case cmdFifoDepth0:
                 ret = voodoo->cmdfifo_depth_wr - voodoo->cmdfifo_depth_rd;
 //                pclog("Read cmdfifo_depth %08x\n", ret);
+                break;
+
+                case cmdBaseSize0:
+                ret = voodoo->cmdfifo_size;
                 break;
 
                 case 0x108:
@@ -1753,6 +1759,7 @@ void banshee_hwcursor_draw(svga_t *svga, int displine)
 
                                 for (xx = 0; xx < 8; xx++)
                                 {
+                                    if (((x_off + xx + svga->x_add) >= 0) && ((x_off + xx + svga->x_add) <= 2047)) {
                                         if (!(plane0[x >> 3] & (1 << 7)))
                                                 ((uint32_t *)buffer32->line[displine])[x_off + xx] = (plane1[x >> 3] & (1 << 7)) ? col1 : col0;
                                         else if (plane1[x >> 3] & (1 << 7))
@@ -1760,6 +1767,7 @@ void banshee_hwcursor_draw(svga_t *svga, int displine)
 
                                         plane0[x >> 3] <<= 1;
                                         plane1[x >> 3] <<= 1;
+                                    }
                                 }
                         }
 

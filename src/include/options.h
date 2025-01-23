@@ -20,7 +20,7 @@
 
 #define UAEMAJOR 7
 #define UAEMINOR 0
-#define UAESUBREV 0
+#define UAESUBREV 2
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -1277,7 +1277,7 @@ extern void hardfile_testrdb(struct hfdlg_vals* hdf);
 extern void default_tapedlg(struct tapedlg_vals* f);
 extern void default_fsvdlg(struct fsvdlg_vals* f);
 extern void default_hfdlg(struct hfdlg_vals* f, bool rdb);
-extern void updatehdfinfo(bool force, bool defaults, bool realdrive);
+extern void updatehdfinfo(bool force, bool defaults, bool realdrive, std::string& txtHdfInfo, std::string& txtHdfInfo2);
 
 #ifdef AMIBERRY
 struct amiberry_customised_layout
@@ -1328,7 +1328,7 @@ struct amiberry_options
 	bool rctrl_as_ramiga = false;
 	bool gui_joystick_control = true;
 	bool default_multithreaded_drawing = true;
-	int default_line_mode = 0;
+	int default_line_mode = 1;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
 	char default_open_gui_key[128] = "F12";

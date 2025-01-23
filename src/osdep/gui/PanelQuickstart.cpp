@@ -467,8 +467,7 @@ public:
 				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
 
 				AdjustDropDownControls();
-				if (!last_loaded_config[0])
-					set_last_active_config(whdload_prefs.whdload_filename.c_str());
+				set_last_active_config(whdload_prefs.whdload_filename.c_str());
 			}
 			cmdWhdloadSelect->requestFocus();
 		}
@@ -496,6 +495,9 @@ public:
 					bIgnoreListChange = false;
 				}
 				whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
+
+				AdjustDropDownControls();
+				set_last_active_config(whdload_prefs.whdload_filename.c_str());
 			}
 		}
 		refresh_all_panels();
@@ -1019,7 +1021,7 @@ static void AdjustDropDownControls()
 		cboCDFile->clearSelected();
 		for (auto i = 0; i < static_cast<int>(lstMRUCDList.size()); ++i)
 		{
-			if (lstMRUCDList[i].c_str() != changed_prefs.cdslots[0].name)
+			if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
 			{
 				cboCDFile->setSelected(i);
 				break;

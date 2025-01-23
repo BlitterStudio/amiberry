@@ -93,8 +93,9 @@ void pclog(char const *format, ...)
 	write_log("%s", buf);
 	va_end(parms);
 }
-
+#ifdef DEBUGGER
 extern void activate_debugger(void);
+#endif
 void fatal(char const *format, ...)
 {
 	va_list parms;
@@ -103,7 +104,9 @@ void fatal(char const *format, ...)
 	vsnprintf(buf, sizeof buf, format, parms);
 	write_log("PCEMFATAL: %s", buf);
 	va_end(parms);
+#ifdef DEBUGGER
 	activate_debugger();
+#endif
 }
 
 void video_updatetiming(void)

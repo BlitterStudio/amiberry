@@ -16,7 +16,6 @@
 #include "gui_handling.h"
 #include "fsdb_host.h"
 #include "rommgr.h"
-#include "uae.h"
 
 enum
 {
@@ -58,8 +57,7 @@ static gcn::Button* cmdCreateHardfile;
 static gcn::Button* cmdAddCDDrive;
 static gcn::Button* cmdAddTapeDrive;
 
-static gcn::CheckBox* chkAutomountCD;
-
+static gcn::CheckBox* chkCDFSAutomount;
 static gcn::CheckBox* chkCD;
 static gcn::DropDown* cboCDFile;
 static gcn::Button* cmdCDEject;
@@ -85,19 +83,25 @@ static void harddisktype(TCHAR* s, const struct uaedev_config_info* ci)
 	}
 }
 
+static int GetHDType(const int index)
+{
+	mountedinfo mi{};
+
+	auto type = get_filesys_unitconfig(&changed_prefs, index, &mi);
+	if (type < 0)
+	{
+		auto* uci = &changed_prefs.mountconfig[index];
+		struct uaedev_config_info* ci = &uci->ci;
+		type = ci->type == UAEDEV_HDF || ci->type == UAEDEV_CD || ci->type == UAEDEV_TAPE ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
+	}
+	return type;
+}
+
 static gcn::StringListModel cdfileList;
 
 static void RefreshCDListModel()
 {
 	cdfileList.clear();
-	auto cd_drives = get_cd_drives();
-	if (!cd_drives.empty())
-	{
-		for (const auto& drive : cd_drives)
-		{
-			cdfileList.add(drive);
-		}
-	}
 	for(const auto & i : lstMRUCDList)
 	{
 		const std::string full_path = i;
@@ -132,49 +136,37 @@ class HDEditActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		for (auto entry = 0; entry < MAX_HD_DEVICES; ++entry)
+		for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 		{
-			if (actionEvent.getSource() == listCmdProps[entry])
+			if (actionEvent.getSource() == listCmdProps[i])
 			{
-				int type;
-				struct uaedev_config_data* uci;
-				struct mountedinfo mi;
-
-				uci = &changed_prefs.mountconfig[entry];
-
-				type = get_filesys_unitconfig(&changed_prefs, entry, &mi);
-				if (type < 0)
+				if (GetHDType(i) == FILESYS_VIRTUAL)
 				{
-					type = uci->ci.type == UAEDEV_HDF ? FILESYS_HARDFILE : FILESYS_VIRTUAL;
-				}
-
-				if (uci->ci.type == UAEDEV_CD)
-				{
-					if (EditCDDrive(entry))
+					if (EditFilesysVirtual(i))
 						gui_force_rtarea_hdchange();
 				}
-				else if (uci->ci.type == UAEDEV_TAPE) 
+				else if (GetHDType(i) == FILESYS_HARDFILE || GetHDType(i) == FILESYS_HARDFILE_RDB)
 				{
-					if (EditTapeDrive(entry))
+					if (EditFilesysHardfile(i))
 						gui_force_rtarea_hdchange();
 				}
-				else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
+				else if (GetHDType(i) == FILESYS_HARDDRIVE)
 				{
-					if (EditFilesysHardfile(entry))
+					if (EditFilesysHardDrive(i))
 						gui_force_rtarea_hdchange();
 				}
-				else if (type == FILESYS_HARDDRIVE) /* harddisk */
+				else if (GetHDType(i) == FILESYS_CD)
 				{
-					if (EditFilesysHardDrive(entry))
+					//TODO
+					//if (EditCDDrive(i))
+					//	gui_force_rtarea_hdchange();
+				}
+				else if (GetHDType(i) == FILESYS_TAPE)
+				{
+					if (EditTapeDrive(i))
 						gui_force_rtarea_hdchange();
 				}
-				else /* Filesystem */
-				{
-					if (EditFilesysVirtual(entry))
-						gui_force_rtarea_hdchange();
-				}
-
-				listCmdProps[entry]->requestFocus();
+				listCmdProps[i]->requestFocus();
 				break;
 			}
 		}
@@ -194,39 +186,42 @@ public:
 			if (EditFilesysVirtual(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddDirectory->requestFocus();
+			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddHardfile)
 		{
 			if (EditFilesysHardfile(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddHardfile->requestFocus();
+			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddHardDrive)
 		{
 			if (EditFilesysHardDrive(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddHardDrive->requestFocus();
+			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddCDDrive)
 		{
-			if (EditCDDrive(-1))
-				gui_force_rtarea_hdchange();
+			//TODO
 			cmdAddCDDrive->requestFocus();
+			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdAddTapeDrive)
 		{
 			if (EditTapeDrive(-1))
 				gui_force_rtarea_hdchange();
 			cmdAddTapeDrive->requestFocus();
+			RefreshPanelHD();
 		}
 		else if (actionEvent.getSource() == cmdCreateHardfile)
 		{
 			if (CreateFilesysHardfile())
 				gui_force_rtarea_hdchange();
 			cmdCreateHardfile->requestFocus();
-			
+			RefreshPanelHD();
 		}
-		RefreshPanelHD();
 	}
 };
 
@@ -237,11 +232,7 @@ class CDCheckActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == chkAutomountCD)
-		{
-			changed_prefs.automount_cddrives = chkAutomountCD->isSelected();
-		}
-		else if (actionEvent.getSource() == chkCD)
+		if (actionEvent.getSource() == chkCD)
 		{
 			if (changed_prefs.cdslots[0].inuse)
 			{
@@ -272,6 +263,8 @@ public:
 		}
 		else if (actionEvent.getSource() == chkCDTurbo)
 			changed_prefs.cd_speed = chkCDTurbo->isSelected() ? 0 : 100;
+		else if (actionEvent.getSource() == chkCDFSAutomount)
+			changed_prefs.automount_cddrives = chkCDFSAutomount->isSelected();
 
 		RefreshPanelHD();
 		RefreshPanelQuickstart();
@@ -292,8 +285,6 @@ public:
 			// Eject CD from drive
 			//---------------------------------------
 			changed_prefs.cdslots[0].name[0] = 0;
-			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-			cboCDFile->clearSelected();
 			AdjustDropDownControls();
 		}
 		else if (actionEvent.getSource() == cmdCDSelectFile)
@@ -352,32 +343,21 @@ public:
 			}
 			else
 			{
-				const auto selected = cdfileList.getElementAt(idx);
-				// if selected starts with /dev/sr, it's a CD drive
-				if (selected.find("/dev/") == 0)
+				const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
+				if (element != changed_prefs.cdslots[0].name)
 				{
-					strncpy(changed_prefs.cdslots[0].name, selected.c_str(), MAX_DPATH);
+					strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+					DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
 					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
-				}
-				else
-				{
-					const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
-					if (element != changed_prefs.cdslots[0].name)
-					{
-						strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
-						DISK_history_add (changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
-						changed_prefs.cdslots[0].inuse = true;
-						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
-						lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
-						RefreshCDListModel();
-						bIgnoreListChange = true;
-						cboCDFile->setSelected(0);
-						bIgnoreListChange = false;
-						if (!last_loaded_config[0])
-							set_last_active_config(element.c_str());
-					}
+					changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+					lstMRUCDList.erase(lstMRUCDList.begin() + idx);
+					lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
+					RefreshCDListModel();
+					bIgnoreListChange = true;
+					cboCDFile->setSelected(0);
+					bIgnoreListChange = false;
+					if (!last_loaded_config[0])
+						set_last_active_config(element.c_str());
 				}
 			}
 		}
@@ -464,6 +444,8 @@ void InitPanelHD(const config_category& category)
 	cmdAddCDDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddCDDrive->setId("cmdAddCDDrive");
 	cmdAddCDDrive->addActionListener(hdAddActionListener);
+	// TODO enable when this is implemented
+	cmdAddCDDrive->setEnabled(false);
 
 	cmdAddTapeDrive = new gcn::Button("Add Tape Drive");
 	cmdAddTapeDrive->setBaseColor(gui_base_color);
@@ -483,12 +465,12 @@ void InitPanelHD(const config_category& category)
 	cdButtonActionListener = new CDButtonActionListener();
 	cdFileActionListener = new CDFileActionListener();
 
-	chkAutomountCD = new gcn::CheckBox("CDFS automount CD/DVD drives");
-	chkAutomountCD->setId("chkAutomountCD");
-	chkAutomountCD->setBaseColor(gui_base_color);
-	chkAutomountCD->setBackgroundColor(gui_background_color);
-	chkAutomountCD->setForegroundColor(gui_foreground_color);
-	chkAutomountCD->addActionListener(cdCheckActionListener);
+	chkCDFSAutomount = new gcn::CheckBox("CDFS automount CD/DVD drives");
+	chkCDFSAutomount->setId("chkCDFSAutomount");
+	chkCDFSAutomount->setBaseColor(gui_base_color);
+	chkCDFSAutomount->setBackgroundColor(gui_background_color);
+	chkCDFSAutomount->setForegroundColor(gui_foreground_color);
+	chkCDFSAutomount->addActionListener(cdCheckActionListener);
 
 	chkCD = new gcn::CheckBox("CD drive/image");
 	chkCD->setId("chkCD");
@@ -527,25 +509,25 @@ void InitPanelHD(const config_category& category)
 	cboCDFile->setId("cboCD");
 	cboCDFile->addActionListener(cdFileActionListener);
 
-	int pos_x = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
+	int posX = DISTANCE_BORDER + 2 + SMALL_BUTTON_WIDTH + 34;
 	for (col = 0; col < COL_COUNT; ++col)
 	{
-		category.panel->add(lblList[col], pos_x, posY);
-		pos_x += COLUMN_SIZE[col];
+		category.panel->add(lblList[col], posX, posY);
+		posX += COLUMN_SIZE[col];
 	}
 	posY += lblList[0]->getHeight() + 2;
 
 	for (row = 0; row < MAX_HD_DEVICES; ++row)
 	{
-		pos_x = 1;
-		listEntry[row]->add(listCmdProps[row], pos_x, 2);
-		pos_x += listCmdProps[row]->getWidth() + 4;
-		listEntry[row]->add(listCmdDelete[row], pos_x, 2);
-		pos_x += listCmdDelete[row]->getWidth() + 8;
+		posX = 1;
+		listEntry[row]->add(listCmdProps[row], posX, 2);
+		posX += listCmdProps[row]->getWidth() + 4;
+		listEntry[row]->add(listCmdDelete[row], posX, 2);
+		posX += listCmdDelete[row]->getWidth() + 8;
 		for (col = 0; col < COL_COUNT; ++col)
 		{
-			listEntry[row]->add(listCells[row][col], pos_x, 2);
-			pos_x += COLUMN_SIZE[col];
+			listEntry[row]->add(listCells[row][col], posX, 2);
+			posX += COLUMN_SIZE[col];
 		}
 		category.panel->add(listEntry[row], DISTANCE_BORDER, posY);
 		posY += listEntry[row]->getHeight() + DISTANCE_NEXT_Y / 2;
@@ -562,9 +544,9 @@ void InitPanelHD(const config_category& category)
 	category.panel->add(cmdCreateHardfile, cmdAddTapeDrive->getX() + cmdAddTapeDrive->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cmdCreateHardfile->getHeight() + DISTANCE_NEXT_Y * 2;
 
-	category.panel->add(chkAutomountCD, DISTANCE_BORDER, posY);
-	posY += chkAutomountCD->getHeight() + DISTANCE_NEXT_Y;
-	category.panel->add(chkCD, DISTANCE_BORDER, posY + 2);
+	category.panel->add(chkCDFSAutomount, DISTANCE_BORDER, posY + 2);
+	posY = chkCDFSAutomount->getY() + chkCDFSAutomount->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkCD, DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDEject, category.panel->getWidth() - cmdCDEject->getWidth() - DISTANCE_BORDER, posY);
 	category.panel->add(cmdCDSelectFile, cmdCDEject->getX() - DISTANCE_NEXT_X - cmdCDSelectFile->getWidth(), posY);
 	posY += cmdCDSelectFile->getHeight() + DISTANCE_NEXT_Y;
@@ -574,7 +556,6 @@ void InitPanelHD(const config_category& category)
 
 	category.panel->add(chkCDTurbo, DISTANCE_BORDER, posY);
 
-	cboCDFile->clearSelected();
 	RefreshPanelHD();
 }
 
@@ -601,7 +582,7 @@ void ExitPanelHD()
 	delete cmdAddTapeDrive;
 	delete cmdCreateHardfile;
 
-	delete chkAutomountCD;
+	delete chkCDFSAutomount;
 	delete chkCD;
 	delete cmdCDEject;
 	delete cmdCDSelectFile;
@@ -620,12 +601,10 @@ void ExitPanelHD()
 static void AdjustDropDownControls()
 {
 	bIgnoreListChange = true;
-
-	if (changed_prefs.cdslots[0].inuse
-		&& strlen(changed_prefs.cdslots[0].name) > 0
-		&& changed_prefs.cdslots[0].type == SCSI_UNIT_DEFAULT)
+	
+	cboCDFile->clearSelected();
+	if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 	{
-		cboCDFile->clearSelected();
 		for (auto i = 0; i < static_cast<int>(lstMRUCDList.size()); ++i)
 		{
 			if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
@@ -803,7 +782,7 @@ void RefreshPanelHD()
 		}
 	}
 
-	chkAutomountCD->setSelected(changed_prefs.automount_cddrives);
+	chkCDFSAutomount->setSelected(changed_prefs.automount_cddrives);
 	chkCD->setSelected(changed_prefs.cdslots[0].inuse);
 	cmdCDEject->setEnabled(changed_prefs.cdslots[0].inuse);
 	cmdCDSelectFile->setEnabled(changed_prefs.cdslots[0].inuse);
@@ -825,19 +804,34 @@ int count_HDs(const uae_prefs* p)
 bool HelpPanelHD(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back(R"(Use "Add Directory" to add a folder or "Add Hardfile" to add a HDF file as)");
-	helptext.emplace_back("a hard disk. To edit the settings of a HDD, click on \"...\" left to the entry in");
-	helptext.emplace_back("the list. With the red cross, you can delete an entry.");
+	helptext.emplace_back("Hard Drives and CD/DVD drives");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("This panel allows you to add and configure virtual hard drives and CD/DVD drives.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back(R"(Use "Add Directory/Archive" to add a folder or Archive as a virtual Amiga drive.)");
+	helptext.emplace_back(R"(Use "Add Hardfile to add an HDD image (hdf) as a hard disk.)");
+	helptext.emplace_back(R"(Use "Add Hard Drive" to add a physical hard drive as a hard disk.)");
+	helptext.emplace_back(R"(Use "Add Tape Drive" to add a tape drive (directory or file only).)");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("With \"Create Hardfile\", you can create a new formatted HDF file up to 2 GB.");
 	helptext.emplace_back("For large files, it will take some time to create the new hard disk. You have to");
 	helptext.emplace_back("format the new HDD in the Amiga via the Workbench.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("If \"Master harddrive write protection\" is activated, you can't write to any HD.");
+	helptext.emplace_back("You can use the \"...\" button to edit the selected drive. You can change the");
+	helptext.emplace_back("name, volume label, path, read/write mode, size and boot priority.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back(R"(Activate "CD drive" to emulate a CD drive. Use "Eject" to remove current CD)");
-	helptext.emplace_back("and click on \"...\" to open a dialog to select the iso/cue file for CD emulation.");
+	helptext.emplace_back("Use the \"Delete\" button to remove the selected drive.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("In the current version, WAV, MP3 and FLAC files are supported for audio tracks.");
+	helptext.emplace_back("CD/DVD drives:");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("Use \"CD drive/image\" to connect a CD drive. You can select an iso/cue file");
+	helptext.emplace_back("or use the \"Eject\" button to remove the CD from the drive.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can enable the \"CDTV/CDTV-CR/CD32 turbo CD read speed\" option to speed up");
+	helptext.emplace_back("the CD read speed.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("You can enable the \"CDFS automount CD/DVD drives\" option to automatically mount");
+	helptext.emplace_back("CD/DVD drives on Workbench, when a CD/DVD is inserted.");
+	helptext.emplace_back(" ");
 	return true;
 }

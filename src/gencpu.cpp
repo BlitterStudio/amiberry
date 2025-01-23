@@ -9123,7 +9123,7 @@ bccl_not68020:
 			if (curi->dmode == Dreg) {
 				out("uae_u32 tmp = m68k_dreg(regs, dstreg);\n");
 				out("offset &= 0x1f;\n");
-				out("tmp = (tmp << offset) | (tmp >> (32 - offset));\n");
+				out("if (offset) tmp = (tmp << offset) | (tmp >> (32 - offset));\n");
 				out("bdata[0] = tmp & ((1 << (32 - width)) - 1);\n");
 			} else {
 				out("uae_u32 tmp;\n");
@@ -9172,7 +9172,7 @@ bccl_not68020:
 				|| curi->mnemo == i_BFINS) {
 					if (curi->dmode == Dreg) {
 						out("tmp = bdata[0] | (tmp << (32 - width));\n");
-						out("m68k_dreg(regs, dstreg) = (tmp >> offset) | (tmp << (32 - offset));\n");
+						out("m68k_dreg(regs, dstreg) = offset ? ((tmp >> offset) | (tmp << (32 - offset))) : tmp;\n");
 					} else {
 						out("%s(dsta, bdata, tmp, offset, width);\n", putb);
 					}

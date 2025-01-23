@@ -207,7 +207,7 @@ static const TCHAR *epsonprinter[] = { _T("none"), _T("ascii"), _T("epson_matrix
 static const TCHAR *aspects[] = { _T("none"), _T("vga"), _T("tv"), nullptr };
 static const TCHAR *vsyncmodes[] = { _T("false"), _T("true"), _T("autoswitch"), nullptr };
 static const TCHAR *vsyncmodes2[] = { _T("normal"), _T("busywait"), nullptr };
-static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), _T("direct3d11"), nullptr};
+static const TCHAR *filterapi[] = { _T("directdraw"), _T("direct3d"), _T("direct3d11"), _T("direct3d11"), _T("sdl2"), nullptr};
 static const TCHAR *filterapiopts[] = { _T("hardware"), _T("software"), nullptr };
 static const TCHAR *overscanmodes[] = { _T("tv_narrow"), _T("tv_standard"), _T("tv_wide"), _T("overscan"), _T("broadcast"), _T("extreme"), _T("ultra"), _T("ultra_hv"), _T("ultra_csync"), nullptr};
 static const TCHAR *dongles[] =
@@ -2462,7 +2462,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("gfx_overscanmode"), overscanmodes, p->gfx_overscanmode);
 	cfgfile_dwrite(f, _T("gfx_monitorblankdelay"), _T("%d"), p->gfx_monitorblankdelay);
 	cfgfile_dwrite(f, _T("gfx_rotation"), _T("%d"), p->gfx_rotation);
-	cfgfile_dwrite (f, _T("gfx_bordercolor"), _T("%08x"), p->gfx_bordercolor);
+	cfgfile_dwrite(f, _T("gfx_bordercolor"), _T("0x%08x"), p->gfx_bordercolor);
 
 #ifdef GFXFILTER
 	for (int j = 0; j < MAX_FILTERDATA; j++) {
@@ -7621,7 +7621,8 @@ static void parse_hardfile_spec (struct uae_prefs *p, const TCHAR *spec)
 	const std::string x2 = parameter.substr(pos + 1, parameter.length());
 #ifdef FILESYS
 	default_hfdlg(&current_hfdlg, false);
-	updatehdfinfo(true, false, false);
+	std::string txt1, txt2;
+	updatehdfinfo(true, false, false, txt1, txt2);
 
 	current_hfdlg.ci.type = UAEDEV_HDF;
 	_tcscpy(current_hfdlg.ci.devname, x1.c_str());
@@ -8716,7 +8717,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cpu_cycle_exact = false;
 	p->cpu_memory_cycle_exact = false;
 	p->blitter_cycle_exact = false;
-	p->chipset_mask = CSMASK_ECS_AGNUS;
+	p->chipset_mask = 0;
 	p->chipset_hr = false;
 	p->genlock = false;
 	p->genlock_image = 0;
@@ -8767,6 +8768,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->statecapturebuffersize = 100;
 	p->statecapturerate = 5 * 50;
 	p->inprec_autoplay = true;
+	p->statefile_path[0] = 0;
 
 #ifdef UAE_MINI
 	default_prefs_mini (p, 0);

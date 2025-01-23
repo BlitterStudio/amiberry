@@ -940,7 +940,7 @@ void RefreshPanelCPU()
 bool HelpPanelCPU(std::vector<std::string>& helptext)
 {
 	helptext.clear();
-	helptext.emplace_back("Select the required Amiga CPU (68000 - 68040). If you select 68020, you can choose");
+	helptext.emplace_back("Select the required Amiga CPU (68000 - 68060). If you select 68020, you can choose");
 	helptext.emplace_back("between 24-bit (68EC020) or 32-bit (68020) addressing.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The option \"More compatible\" will emulate prefetch (68000) or prefetch and");
@@ -948,17 +948,27 @@ bool HelpPanelCPU(std::vector<std::string>& helptext)
 	helptext.emplace_back("for most games and demos.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("JIT/JIT FPU enables the Just-in-time compiler. This may break compatibility in some games.");
+	helptext.emplace_back("Note: Not available in all platforms currently");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The available FPU models depend on the selected CPU type. The option \"More compatible\"");
 	helptext.emplace_back("activates a more accurate rounding method and compare of two floats.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("With \"CPU Speed\" you can choose the clock rate of the emulated Amiga. Use 7MHz for A500,");
-	helptext.emplace_back("or 14MHz for A1200 speed. Fastest Possible will only give the minimum time to the Chipset,");
-	helptext.emplace_back("and maximum time as possible for the CPU, which may result in dropped frames.\"Cycle exact\"");
-	helptext.emplace_back("emulates 68000/chipset cycles accurately, is very slow and not required in most situations.");
+	helptext.emplace_back("The CPU Speed slider allows you to set the CPU speed. The fastest possible setting");
+	helptext.emplace_back("will run the CPU as fast as possible. The A500/A1200 setting will run the CPU at");
+	helptext.emplace_back("the speed of an A500 or A1200. The slider allows you to set the CPU speed in");
+	helptext.emplace_back("percentages of the maximum speed.");
 	helptext.emplace_back(" ");
-	helptext.emplace_back("You can use the CPU Idle slider to set how much the CPU emulation should sleep when idle.");
-	helptext.emplace_back("This is useful on some small devices, to help keep the system temperature down.");
-
+	helptext.emplace_back("The CPU Idle slider allows you to set how much the CPU should sleep when idle.");
+	helptext.emplace_back("This is useful to keep the system temperature down.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The MMU option allows you to enable the Memory Management Unit. This is only available");
+	helptext.emplace_back("for the 68030, 68040 and 68060 CPUs.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The FPU option allows you to enable the FPU. This is only available for the 68020, 68030,");
+	helptext.emplace_back("68040 and 68060 CPUs.");
+	helptext.emplace_back(" ");
+	helptext.emplace_back("The PPC emulation option allows you to enable the PowerPC emulation. This is only available");
+	helptext.emplace_back("for the 68040 and 68060 CPUs and requires an extra plugin (qemu-uae) to be available.");
+	helptext.emplace_back(" ");
 	return true;
 }

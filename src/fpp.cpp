@@ -13,9 +13,8 @@
 #define FPU_TEST 0
 #define FPU_LOG 0
 
-#include <math.h>
-#include <float.h>
-#include <fenv.h>
+#include <cmath>
+#include <cfloat>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
