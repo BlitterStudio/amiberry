@@ -4902,6 +4902,25 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 	in_file.close();
 }
 
+std::vector<std::string> get_cd_drives()
+{
+	char path[MAX_DPATH];
+	std::vector<std::string> results{};
+
+	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom' | awk '{print \"/dev/\" $1}'", "r");
+	if (fp == nullptr) {
+		write_log("Failed to run 'lsblk' command, cannot auto-detect CD drives in system\n");
+		return results;
+	}
+
+	while (fgets(path, sizeof(path), fp) != nullptr) {
+		path[strcspn(path, "\n")] = 0;
+		results.emplace_back(path);
+	}
+	pclose(fp);
+	return results;
+}
+
 void target_setdefaultstatefilename(const TCHAR* name)
 {
 	TCHAR path[MAX_DPATH];

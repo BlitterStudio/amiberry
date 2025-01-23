@@ -115,7 +115,9 @@
 /* vpar virtual parallel port */
 #define WITH_VPAR 1
 
-/* #define WITH_SCSI_IOCTL */
+#ifndef __MACH__
+#define WITH_SCSI_IOCTL
+#endif
 /* #define WITH_SCSI_SPTI */
 
 // Sound boards support

@@ -341,7 +341,7 @@ end:
 	return restart;
 }
 
-void ciw_cdda_play(void* v)
+int ciw_cdda_play(void* v)
 {
 	struct cda_play* ciw = (struct cda_play*)v;
 	int outpos = -1;
@@ -360,6 +360,7 @@ void ciw_cdda_play(void* v)
 		ciw->cdda_play = 1;
 	}
 	ciw->cdda_play = 0;
+	return 0;
 }
 
 void ciw_cdda_stop(struct cda_play* ciw)

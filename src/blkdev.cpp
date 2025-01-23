@@ -247,7 +247,11 @@ void blkdev_fix_prefs (struct uae_prefs *p)
 			continue;
 		if (p->cdslots[i].inuse || p->cdslots[i].name[0]) {
 			TCHAR *name = p->cdslots[i].name;
+#ifdef _WIN32
 			if (_tcslen (name) == 3 && name[1] == ':' && name[2] == '\\') {
+#else
+			if (name[0] == '/' && name[1] == 'd' && name[2] == 'e' && name[3] == 'v' && name[4] == '/') {
+#endif
 				if (currprefs.scsi && (currprefs.uaescsimode == UAESCSI_SPTI || currprefs.uaescsimode == UAESCSI_SPTISCAN))
 					cdscsidevicetype[i] = SCSI_UNIT_SPTI;
 				else

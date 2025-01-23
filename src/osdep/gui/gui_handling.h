@@ -351,6 +351,7 @@ bool Create_Folder(const std::string& path);
 bool EditFilesysVirtual(int unit_no);
 bool EditFilesysHardfile(int unit_no);
 bool EditFilesysHardDrive(int unit_no);
+bool EditCDDrive(int unit_no);
 bool EditTapeDrive(int unit_no);
 bool CreateFilesysHardfile();
 void ShowHelp(const char* title, const std::vector<std::string>& text);
