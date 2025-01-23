@@ -8717,7 +8717,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->cpu_cycle_exact = false;
 	p->cpu_memory_cycle_exact = false;
 	p->blitter_cycle_exact = false;
-	p->chipset_mask = CSMASK_ECS_AGNUS;
+	p->chipset_mask = 0;
 	p->chipset_hr = false;
 	p->genlock = false;
 	p->genlock_image = 0;
