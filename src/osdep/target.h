@@ -143,7 +143,6 @@ extern std::string remove_file_extension(const std::string& filename);
 extern void ReadConfigFileList();
 extern void read_rom_list(bool);
 extern int scan_roms(int show);
-extern void SymlinkROMs();
 
 extern bool resumepaused(int priority);
 extern bool setpaused(int priority);

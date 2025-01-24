@@ -476,11 +476,6 @@ static int scan_rom(const std::string& path, UAEREG* fkey, bool deepscan)
 	return rsd.got;
 }
 
-void SymlinkROMs()
-{
-	symlink_roms(&changed_prefs);
-}
-
 static int listrom(const int* roms)
 {
 	int i;

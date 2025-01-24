@@ -253,7 +253,7 @@ public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
 		scan_roms(true);
-		SymlinkROMs();
+		symlink_roms(&changed_prefs);
 
 		import_joysticks();
 		RefreshPanelInput();
