@@ -352,10 +352,11 @@ static void debugreport(struct debugmemdata *dm, uaecptr addr, int rwi, int size
 		!(state & (DEBUGMEM_ALLOCATED | DEBUGMEM_INUSE)) ? 'I' : (state & DEBUGMEM_WRITE) ? 'W' : 'R',
 		(state & DEBUGMEM_WRITE) ? '*' : (state & DEBUGMEM_INITIALIZED) ? '+' : '-',
 		dm->unused_start, PAGE_SIZE - dm->unused_end - 1);
-
+#ifdef DEBUGGER
 	if (peekdma_data.mask && (peekdma_data.addr == addr || (size > 2 && peekdma_data.addr + 2 == addr))) {
 		console_out_f(_T("DMA DAT=%04x PTR=%04x\n"), peekdma_data.reg, peekdma_data.ptrreg);
 	}
+#endif
 
 	debugmem_break(1);
 }
@@ -1076,8 +1077,10 @@ void debugmem_trap(uaecptr stack)
 	}
 	console_out_f(_T("\n"));
 	// always return back to faulted instruction
+#ifdef DEBUGGER
 	put_long(stack + 6, regs.instruction_pc_user_exception);
 	debugmem_break_pc(13, regs.instruction_pc_user_exception, 2);
+#endif
 }
 
 static struct debugmemallocs *debugmem_reserve(uaecptr addr, uae_u32 size, uae_u32 parentid)
@@ -1910,10 +1913,10 @@ uaecptr debugmem_reloc(uaecptr exeaddress, uae_u32 len, uaecptr dbgaddress, uae_
 	}
 
 	console_out_f(_T("Executable load complete.\n"));
-
+#ifdef DEBUGGER
 	uaecptr execbase = get_long_debug(4);
 	exec_thistask = get_real_address(execbase + 276);
-
+#endif
 	setchipbank(true);
 	chipmem_setindirect();
 	debugger_scan_libraries();
@@ -1934,6 +1937,7 @@ static uae_char *gethunktext(uae_u8 *p, uae_char *namebuf, int len)
 
 static void scan_library_list(uaecptr v, int *cntp)
 {
+#ifdef DEBUGGER
 	while ((v = get_long_debug(v))) {
 		uae_u32 v2;
 		uae_u8 *p;
@@ -1975,10 +1979,12 @@ static void scan_library_list(uaecptr v, int *cntp)
 			//console_out_f(_T("%08x = '%s'\n"), found->base, found->name);
 		}
 	}
+#endif
 }
 
 void debugger_scan_libraries(void)
 {
+#ifdef DEBUGGER
 	if (!libnamecnt)
 		return;
 	uaecptr v = get_long_debug(4);
@@ -1990,6 +1996,7 @@ void debugger_scan_libraries(void)
 	scan_library_list(v + 350, &cnt);
 	scan_library_list(v + 336, &cnt);
 	console_out_f(_T("%d libraries matched with library symbols.\n"), cnt);
+#endif
 }
 
 
@@ -3607,8 +3614,10 @@ bool debugmem_get_symbol_value(const TCHAR *name, uae_u32 *valp)
 					if (!_tcsicmp(name + lnlen + 1, lvo->name)) {
 						uaecptr addr = libname->base + lvo->value;
 						// JMP xxxxxxxx?
+#ifdef DEBUGGER
 						if (get_word_debug(addr) == 0x4ef9)
 							addr = get_long_debug(addr + 2);
+#endif
 						*valp = addr;
 						return true;
 					}
@@ -3917,8 +3926,10 @@ uae_u32 debugmem_chiphit(uaecptr addr, uae_u32 v, int size)
 		}
 	}
 	if (debugmem_active && debugmem_mapped) {
+#ifdef DEBUGGER
 		if (!dbg)
 			m68k_dumpstate(0, 0xffffffff);
+#endif
 	}
 	recursive--;
 	return 0xdeadf00d;
@@ -3942,8 +3953,10 @@ bool debugmem_extinvalidmem(uaecptr addr, uae_u32 v, int size)
 		console_out_f(_T("%s read from %08x\n"), size == 4 ? _T("Long") : (size == 2 ? _T("Word") : _T("Byte")), addr, v);
 		dbg = debugmem_break(9);
 	}
+#ifdef DEBUGGER
 	if (!dbg)
 		m68k_dumpstate(0, 0xffffffff);
+#endif
 	recursive--;
 	return true;
 }
@@ -3987,7 +4000,9 @@ bool debugmem_list_stackframe(bool super)
 		uae_u32 sregs[16];
 		memcpy(sregs, regs.regs, sizeof(uae_u32) * 16);
 		memcpy(regs.regs, sf->regs, sizeof(uae_u32) * 16);
+#ifdef DEBUGGER
 		m68k_disasm(sf->current_pc, NULL, 0xffffffff, 2);
+#endif
 		memcpy(regs.regs, sregs, sizeof(uae_u32) * 16);
 		console_out_f(_T("\n"));
 	}
