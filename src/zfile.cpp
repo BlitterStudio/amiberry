@@ -1986,6 +1986,26 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 		if (f)
 			return f;
 	}
+#ifdef AMIBERRY
+	// capitalize file extension then try again
+	TCHAR *ext = _tcsrchr(tmp, '.');
+	if (ext) {
+		for (TCHAR *p = ext; *p; ++p) {
+			*p = _totupper(*p);
+		}
+		f = zfile_fopen_x(tmp, mode, mask, index);
+		if (f)
+			return f;
+
+		// try again with lowercase extension
+		for (TCHAR *p = ext; *p; ++p) {
+			*p = _totlower(*p);
+		}
+		f = zfile_fopen_x(tmp, mode, mask, index);
+		if (f)
+			return f;
+	}
+#endif
 #if 0
 	name += 2;
 	if (name[0] == '/' || name[0] == '\\')
