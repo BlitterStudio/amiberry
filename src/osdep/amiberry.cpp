@@ -4907,7 +4907,7 @@ std::vector<std::string> get_cd_drives()
 {
 	char path[MAX_DPATH];
 	std::vector<std::string> results{};
-
+#ifndef __MACH__
 	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom' | awk '{print \"/dev/\" $1}'", "r");
 	if (fp == nullptr) {
 		write_log("Failed to run 'lsblk' command, cannot auto-detect CD drives in system\n");
@@ -4919,6 +4919,7 @@ std::vector<std::string> get_cd_drives()
 		results.emplace_back(path);
 	}
 	pclose(fp);
+#endif
 	return results;
 }
 
