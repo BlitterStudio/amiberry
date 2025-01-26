@@ -3489,6 +3489,7 @@ void save_amiberry_settings()
 	write_string_option("gui_theme", amiberry_options.gui_theme);
 
 	// Paths
+	write_string_option("config_path", config_path);
 	write_string_option("controllers_path", controllers_path);
 	write_string_option("retroarch_config", retroarch_file);
 	write_string_option("whdboot_path", whdboot_path);
@@ -3602,6 +3603,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	}
 	else
 	{
+		ret |= cfgfile_string(option, value, "config_path", config_path);
 		ret |= cfgfile_string(option, value, "controllers_path", controllers_path);
 		ret |= cfgfile_string(option, value, "retroarch_config", retroarch_file);
 		ret |= cfgfile_string(option, value, "whdboot_path", whdboot_path);
@@ -4132,6 +4134,38 @@ void create_missing_amiberry_folders()
 	}
 }
 
+static bool locate_amiberry_conf(const bool portable_mode)
+{
+	config_path = get_config_directory(portable_mode);
+#ifdef __MACH__
+	if constexpr (true)
+#else
+	if (portable_mode)
+#endif
+	{
+		amiberry_conf_file = config_path + "/amiberry.conf";
+		amiberry_ini_file = config_path + "/amiberry.ini";
+	}
+	else
+	{
+#ifdef __MACH__
+		const std::string amiberry_dir = "Amiberry";
+#else
+		const std::string amiberry_dir = "amiberry";
+#endif
+		std::string xdg_config_home = get_xdg_config_home();
+		if (!my_existsdir(xdg_config_home.c_str()))
+			my_mkdir(xdg_config_home.c_str());
+		xdg_config_home += "/" + amiberry_dir;
+		if (!my_existsdir(xdg_config_home.c_str()))
+			my_mkdir(xdg_config_home.c_str());
+
+		amiberry_conf_file = xdg_config_home + "/amiberry.conf";
+		amiberry_ini_file = xdg_config_home + "/amiberry.ini";
+	}
+	return my_existsfile2(amiberry_conf_file.c_str());
+}
+
 static void init_amiberry_dirs(const bool portable_mode)
 {
 #ifdef __MACH__
@@ -4141,7 +4175,6 @@ static void init_amiberry_dirs(const bool portable_mode)
 #endif
 	current_dir = home_dir = get_home_directory(portable_mode);
     data_dir = get_data_directory(portable_mode);
-    config_path = get_config_directory(portable_mode);
     plugins_dir = get_plugins_directory(portable_mode);
 
 #ifdef __MACH__
@@ -4150,8 +4183,6 @@ static void init_amiberry_dirs(const bool portable_mode)
 	if (portable_mode)
 #endif
 	{
-		amiberry_conf_file = config_path + "/amiberry.conf";
-		amiberry_ini_file = config_path + "/amiberry.ini";
 		themes_path = config_path;
 
 		// These paths are relative to the XDG_DATA_HOME directory
@@ -4188,10 +4219,6 @@ static void init_amiberry_dirs(const bool portable_mode)
 		xdg_config_home += "/" + amiberry_dir;
 		if (!my_existsdir(xdg_config_home.c_str()))
 			my_mkdir(xdg_config_home.c_str());
-
-		// The amiberry.conf file is always in the XDG_CONFIG_HOME/amiberry directory
-		amiberry_conf_file = xdg_config_home + "/amiberry.conf";
-		amiberry_ini_file = xdg_config_home + "/amiberry.ini";
 		themes_path = xdg_config_home;
 
 		// These paths are relative to the XDG_DATA_HOME directory
@@ -4248,8 +4275,6 @@ static void init_amiberry_dirs(const bool portable_mode)
 
 	floppy_sounds_dir = data_dir;
 	floppy_sounds_dir.append("floppy_sounds/");
-
-    create_missing_amiberry_folders();
 }
 
 void load_amiberry_settings()
@@ -4471,8 +4496,15 @@ int main(int argc, char* argv[])
 	// Check if a file with the name "amiberry.portable" exists in the current directory
 	// If it does, we will set portable_mode to true
 	const bool portable_mode = my_existsfile2("amiberry.portable");
+	const bool config_found = locate_amiberry_conf(portable_mode);
+
 	init_amiberry_dirs(portable_mode);
-	load_amiberry_settings();
+	if (config_found)
+	{
+		load_amiberry_settings();
+	}
+	create_missing_amiberry_folders();
+
 	// Parse command line and remove used amiberry specific args
 	// and modify both argc & argv accordingly
 	if (!parse_amiberry_cmd_line(&argc, argv, 1))
