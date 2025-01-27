@@ -3912,7 +3912,7 @@ std::string get_config_directory(bool portable_mode)
 	const auto user_home_dir = getenv("HOME");
 
 	// 1: Check if the $AMIBERRY_CONFIG_DIR ENV variable is set
-	if (env_conf_dir != nullptr && my_existsdir(env_conf_dir))
+	if (env_conf_dir != nullptr)
 	{
 		// If the ENV variable is set, use it
 		write_log("Using config directory from AMIBERRY_CONFIG_DIR: %s\n", env_conf_dir);
@@ -3921,17 +3921,6 @@ std::string get_config_directory(bool portable_mode)
 	// 2: Check $HOME/Amiberry/conf
 	if (user_home_dir != nullptr)
 	{
-        if (!directory_exists(user_home_dir, "/Amiberry"))
-        {
-            my_mkdir((std::string(user_home_dir) + "/Amiberry").c_str());
-        }
-		// $HOME/Amiberry exists, use it
-		if (!directory_exists(user_home_dir, "/Amiberry/conf"))
-		{
-			my_mkdir((std::string(user_home_dir) + "/Amiberry/conf").c_str());
-		}
-        // This should be the most used scenario
-		write_log("Using config directory from $HOME/Amiberry/conf\n");
 		auto result = std::string(user_home_dir);
 		return result.append("/Amiberry/conf");
 	}
