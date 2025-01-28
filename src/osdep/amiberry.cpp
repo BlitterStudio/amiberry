@@ -3784,6 +3784,117 @@ bool directory_exists(std::string directory, const std::string& sub_dir)
 	return my_existsdir(directory.c_str());
 }
 
+bool file_exists(const std::string& file)
+{
+#ifdef USE_OLDGCC
+	namespace fs = std::experimental::filesystem;
+#else
+	namespace fs = std::filesystem;
+#endif
+	fs::path f{ file };
+	return (fs::exists(f));
+}
+
+bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
+{
+	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
+#if defined (__MACH__) && defined (__arm64__)	
+	std::string wget_path = "/opt/homebrew/bin/wget";
+	if (!file_exists(wget_path))
+	{
+		write_log("Could not locate wget in /opt/homebrew/ - Please use homebrew to install it!\n");
+		return false;
+	}
+#elif defined(__MACH__)
+	std::string wget_path = "/usr/local/bin/wget";
+	if (!file_exists(wget_path))
+	{
+		write_log("Could not locate wget in /usr/local/bin/ - Please use homebrew to install it!\n");
+		return false;
+	}
+#else
+	std::string wget_path = "wget";
+#endif
+	std::string download_command = wget_path + " -np -nv -O ";
+	auto tmp = destination;
+	tmp = tmp.append(".tmp");
+
+	download_command.append(tmp);
+	download_command.append(" ");
+	download_command.append(source);
+	download_command.append(" 2>&1");
+
+	// Cleanup if the tmp destination already exists
+	if (file_exists(tmp))
+	{
+		write_log("Existing file found, removing %s\n", tmp.c_str());
+		if (std::remove(tmp.c_str()) < 0)
+		{
+			write_log(strerror(errno));
+			write_log("\n");
+		}
+	}
+
+	try
+	{
+		char buffer[MAX_DPATH];
+		const auto output = popen(download_command.c_str(), "r");
+		if (!output)
+		{
+			write_log("Failed while trying to run wget! Make sure it exists in your system...\n");
+			return false;
+		}
+
+		while (fgets(buffer, sizeof buffer, output))
+		{
+			write_log(buffer);
+			write_log("\n");
+		}
+		pclose(output);
+	}
+	catch (...)
+	{
+		write_log("An exception was thrown while trying to execute wget!\n");
+		return false;
+	}
+
+	if (file_exists(tmp))
+	{
+		if (file_exists(destination) && keep_backup)
+		{
+			write_log("Backup requested, renaming destination file %s to .bak\n", destination.c_str());
+			const std::string new_filename = destination.substr(0, destination.find_last_of('.')).append(".bak");
+			if (std::rename(destination.c_str(), new_filename.c_str()) < 0)
+			{
+				write_log(strerror(errno));
+				write_log("\n");
+			}
+		}
+
+		write_log("Renaming downloaded temporary file %s to final destination\n", tmp.c_str());
+		if (std::rename(tmp.c_str(), destination.c_str()) < 0)
+		{
+			write_log(strerror(errno));
+			write_log("\n");
+		}
+		return true;
+	}
+
+	return false;
+}
+
+void download_rtb(const std::string& filename)
+{
+	const std::string destination_filename = "save-data/Kickstarts/" + filename;
+	const std::string destination = get_whdbootpath().append(destination_filename);
+	if (!file_exists(destination))
+	{
+		write_log("Downloading %s ...\n", destination.c_str());
+		const std::string url = "https://github.com/BlitterStudio/amiberry/blob/master/whdboot/save-data/Kickstarts/" + filename + "?raw=true";
+		download_file(url, destination, false);
+	}
+}
+
 // this is where the required assets are stored, like fonts, icons, etc.
 std::string get_data_directory(bool portable_mode)
 {
@@ -4040,12 +4151,12 @@ void create_missing_amiberry_folders()
 		// copy default controller files, if they exist in AMIBERRY_DATADIR/controllers
 		if (my_existsdir(default_controller_path.c_str()))
 		{
-			const std::string command = "cp -r " + default_controller_path + "* " + controllers_path;
+			const std::string command = "cp -R " + default_controller_path + "* " + controllers_path;
 			system(command.c_str());
 		}
 		else if (my_existsdir("/usr/share/amiberry/controllers/"))
 		{
-			const std::string command = "cp -r /usr/share/amiberry/controllers/* " + controllers_path;
+			const std::string command = "cp -R /usr/share/amiberry/controllers/* " + controllers_path;
 			system(command.c_str());
 		}
 	}
@@ -4060,13 +4171,77 @@ void create_missing_amiberry_folders()
 		// copy default whdboot files, if they exist in AMIBERRY_DATADIR/whdboot
 		if (my_existsdir(default_whdboot_path.c_str()))
 		{
-			const std::string command = "cp -r " + default_whdboot_path + "* " + whdboot_path;
+			const std::string command = "cp -R " + default_whdboot_path + "* " + whdboot_path;
 			system(command.c_str());
 		}
 		else if (my_existsdir("/usr/share/amiberry/whdboot/"))
 		{
-			const std::string command = "cp -r /usr/share/amiberry/whdboot/* " + whdboot_path;
+			const std::string command = "cp -R /usr/share/amiberry/whdboot/* " + whdboot_path;
 			system(command.c_str());
+		}
+		else if (my_existsdir("/usr/local/share/amiberry/whdboot/"))
+		{
+			const std::string command = "cp -R /usr/local/share/amiberry/whdboot/* " + whdboot_path;
+			system(command.c_str());
+		}
+		else
+		{
+			write_log("No WHDLoad boot files found in %s, %s, or %s\n", default_whdboot_path.c_str(), "/usr/share/amiberry/whdboot/", "/usr/local/share/amiberry/whdboot/");
+			write_log("Attempting to download them from the internet...\n");
+
+			std::string directory_name = whdboot_path + "save-data";
+			if (!my_existsdir(directory_name.c_str()))
+				my_mkdir(directory_name.c_str());
+
+			directory_name = whdboot_path + "save-data/Autoboots";
+			if (!my_existsdir(directory_name.c_str()))
+				my_mkdir(directory_name.c_str());
+
+			directory_name = whdboot_path + "save-data/Debugs";
+			if (!my_existsdir(directory_name.c_str()))
+				my_mkdir(directory_name.c_str());
+
+			directory_name = whdboot_path + "save-data/Kickstarts";
+			if (!my_existsdir(directory_name.c_str()))
+				my_mkdir(directory_name.c_str());
+
+			directory_name = whdboot_path + "save-data/Savegames";
+			if (!my_existsdir(directory_name.c_str()))
+				my_mkdir(directory_name.c_str());
+
+			directory_name = whdboot_path + "game-data";
+			if (!my_existsdir(directory_name.c_str()))
+				my_mkdir(directory_name.c_str());
+
+			//  download WHDLoad executable
+			std:: string destination = get_whdbootpath().append("WHDLoad");
+			write_log("Downloading %s ...\n", destination.c_str());
+			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
+
+			//  download JST executable
+			destination = get_whdbootpath().append("JST");
+			write_log("Downloading %s ...\n", destination.c_str());
+			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", destination, false);
+
+			//  download AmiQuit executable
+			destination = get_whdbootpath().append("AmiQuit");
+			write_log("Downloading %s ...\n", destination.c_str());
+			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", destination, false);
+
+			//  download boot-data.zip
+			destination = get_whdbootpath().append("boot-data.zip");
+			write_log("Downloading %s ...\n", destination.c_str());
+			download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
+
+			// download kickstart RTB files for maximum compatibility
+			download_rtb("kick33180.A500.RTB");
+			download_rtb("kick34005.A500.RTB");
+			download_rtb("kick40063.A600.RTB");
+			download_rtb("kick40068.A1200.RTB");
+			download_rtb("kick40068.A4000.RTB");
+
+			destination = get_whdbootpath().append("game-data/whdload_db.xml");
+			download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
 		}
 	}
     if (!my_existsdir(whdload_arch_path.c_str()))
@@ -4088,12 +4263,17 @@ void create_missing_amiberry_folders()
 		// copy default kickstart files, if they exist in AMIBERRY_DATADIR/roms
 		if (my_existsdir(default_roms_path.c_str()))
 		{
-			const std::string command = "cp -r " + default_roms_path + "* " + rom_path;
+			const std::string command = "cp -R " + default_roms_path + "* " + rom_path;
 			system(command.c_str());
 		}
 		else if (my_existsdir("/usr/share/amiberry/roms/"))
 		{
-			const std::string command = "cp -r /usr/share/amiberry/roms/* " + rom_path;
+			const std::string command = "cp -R /usr/share/amiberry/roms/* " + rom_path;
+			system(command.c_str());
+		}
+		else if (my_existsdir("/usr/local/share/amiberry/roms/"))
+		{
+			const std::string command = "cp -R /usr/local/share/amiberry/roms/* " + rom_path;
 			system(command.c_str());
 		}
 	}
