@@ -139,6 +139,7 @@ public:
 		// ----------------------------------------------
 		if (current_time - last_click_time <= 500)
 		{
+			last_click_time = current_time;
 			if (emulating)
 			{
 				disable_resume();
