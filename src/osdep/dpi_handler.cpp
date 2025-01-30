@@ -1,3 +1,4 @@
+#include <cmath>
 #include "dpi_handler.hpp"
 
 float DPIHandler::get_scale() {
