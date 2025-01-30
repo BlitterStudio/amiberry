@@ -1973,6 +1973,29 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 		return f;
 	if (_tcslen (name) <= 2)
 		return NULL;
+#ifdef AMIBERRY
+	const auto name_string = std::string(name);
+
+	// capitalize file extension then try again
+	std::string ext = name_string.substr(name_string.find_last_of('.'));
+	if (!ext.empty()) {
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
+		const std::string tmp_upper = name_string.substr(0, name_string.find_last_of('.')) + ext;
+		f = zfile_fopen_x(tmp_upper.c_str(), mode, mask, index);
+		if (f)
+			return f;
+	}
+
+	// lowercase file extension then try again
+	ext = name_string.substr(name_string.find_last_of('.'));
+	if (!ext.empty()) {
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+		const std::string tmp_lower = name_string.substr(0, name_string.find_last_of('.')) + ext;
+		f = zfile_fopen_x(tmp_lower.c_str(), mode, mask, index);
+		if (f)
+			return f;
+	}
+#endif
 	if (name[1] != ':') {
 		_tcscpy (tmp, home_dir.c_str());
 #ifdef AMIBERRY
@@ -1986,26 +2009,7 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 		if (f)
 			return f;
 	}
-#ifdef AMIBERRY
-	// capitalize file extension then try again
-	TCHAR *ext = _tcsrchr(tmp, '.');
-	if (ext) {
-		for (TCHAR *p = ext; *p; ++p) {
-			*p = _totupper(*p);
-		}
-		f = zfile_fopen_x(tmp, mode, mask, index);
-		if (f)
-			return f;
 
-		// try again with lowercase extension
-		for (TCHAR *p = ext; *p; ++p) {
-			*p = _totlower(*p);
-		}
-		f = zfile_fopen_x(tmp, mode, mask, index);
-		if (f)
-			return f;
-	}
-#endif
 #if 0
 	name += 2;
 	if (name[0] == '/' || name[0] == '\\')
