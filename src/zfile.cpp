@@ -1975,25 +1975,27 @@ static struct zfile *zfile_fopenx2 (const TCHAR *name, const TCHAR *mode, int ma
 		return NULL;
 #ifdef AMIBERRY
 	const auto name_string = std::string(name);
+	const auto dot_pos = name_string.find_last_of('.');
+	if (dot_pos != std::string::npos) {
+		// capitalize file extension then try again
+		std::string ext = name_string.substr(dot_pos);
+		if (!ext.empty()) {
+			std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
+			const std::string tmp_upper = name_string.substr(0, name_string.find_last_of('.')) + ext;
+			f = zfile_fopen_x(tmp_upper.c_str(), mode, mask, index);
+			if (f)
+				return f;
+		}
 
-	// capitalize file extension then try again
-	std::string ext = name_string.substr(name_string.find_last_of('.'));
-	if (!ext.empty()) {
-		std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
-		const std::string tmp_upper = name_string.substr(0, name_string.find_last_of('.')) + ext;
-		f = zfile_fopen_x(tmp_upper.c_str(), mode, mask, index);
-		if (f)
-			return f;
-	}
-
-	// lowercase file extension then try again
-	ext = name_string.substr(name_string.find_last_of('.'));
-	if (!ext.empty()) {
-		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-		const std::string tmp_lower = name_string.substr(0, name_string.find_last_of('.')) + ext;
-		f = zfile_fopen_x(tmp_lower.c_str(), mode, mask, index);
-		if (f)
-			return f;
+		// lowercase file extension then try again
+		ext = name_string.substr(dot_pos);
+		if (!ext.empty()) {
+			std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+			const std::string tmp_lower = name_string.substr(0, name_string.find_last_of('.')) + ext;
+			f = zfile_fopen_x(tmp_lower.c_str(), mode, mask, index);
+			if (f)
+				return f;
+		}
 	}
 #endif
 	if (name[1] != ':') {
