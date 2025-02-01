@@ -364,7 +364,7 @@ int keyhack (const int scancode, const int pressed, const int num)
 			return -1;
 		}
 	}
-
+#if 0
 	if (!keyboard_german)
 		return scancode;
 
@@ -420,6 +420,7 @@ int keyhack (const int scancode, const int pressed, const int num)
 			}
 		}
 	}
+#endif
 	return scancode;
 }
 
