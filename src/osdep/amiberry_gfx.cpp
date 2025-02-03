@@ -808,18 +808,49 @@ void reenumeratemonitors(void)
 	enumeratedisplays();
 }
 
+static bool enumeratedisplays2(bool selectall)
+{
+	struct MultiDisplay *md = Displays;
+
+	SDL_Rect bounds;
+	if (SDL_GetDisplayUsableBounds(0, &bounds) != 0)
+	{
+		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
+		return false;
+	}
+
+	md->adaptername = my_strdup_trim ("Display adapter");
+	md->adapterid = my_strdup ("AdapterID");
+	md->adapterkey = my_strdup ("AdapterKey");
+	md->monitorname = my_strdup_trim ("Monitor");
+	md->monitorid = my_strdup ("MonitorID");
+	md->primary = true;
+
+	Displays[0].rect.x = bounds.x;
+	Displays[0].rect.y = bounds.y;
+	Displays[0].rect.w = bounds.w;
+	Displays[0].rect.h = bounds.h;
+
+	if (!md->fullname)
+		md->fullname = my_strdup (md->adapterid);
+
+	return true;
+}
+
 void enumeratedisplays()
 {
 	MultiDisplay* md = Displays;
 	SDL_GetDisplayBounds(0, &md->rect);
 	SDL_GetDisplayBounds(0, &md->workrect);
+
+	if (!enumeratedisplays2 (false))
+		enumeratedisplays2(true);
 }
 
 void sortdisplays()
 {
 	struct MultiDisplay* md;
 	int i, idx;
-	char tmp[200];
 
 	SDL_DisplayMode desktop_dm;
 	if (SDL_GetDesktopDisplayMode(0, &desktop_dm) != 0) {
@@ -833,27 +864,9 @@ void sortdisplays()
 	int hv = h;
 	int b = SDL_BITSPERPIXEL(desktop_dm.format);
 
-	deskhz = desktop_dm.refresh_rate;
-
-	SDL_Rect bounds;
-	if (SDL_GetDisplayUsableBounds(0, &bounds) != 0)
-	{
-		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
-		return;
-	}
-
-	Displays[0].primary = 1;
-	Displays[0].rect.x = bounds.x;
-	Displays[0].rect.y = bounds.y;
-	Displays[0].rect.w = bounds.w;
-	Displays[0].rect.h = bounds.h;
-
-	_sntprintf(tmp, sizeof tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
-	Displays[0].fullname = my_strdup(tmp);
-	Displays[0].monitorname = my_strdup("Display");
+	deskhz = 0;
 
 	md = Displays;
-
 	md->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 	md->DisplayModes[0].depth = -1;
 
