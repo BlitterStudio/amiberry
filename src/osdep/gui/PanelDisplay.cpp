@@ -24,10 +24,11 @@ enum
 	AMIGAHEIGHT_COUNT = 5
 };
 
-const int fullscreen_width_values[] = { 640, 720, 800, 1024, 1280, 1280, 1920 };
-const int fullscreen_height_values[] = { 480, 576, 600, 768, 720, 1024, 1080 };
-static const std::vector<std::string> fullscreen_resolutions = { "640x480", "720x576", "800x600", "1024x768", "1280x720", "1280x1024", "1920x1080" };
+static std::vector<std::string> fullscreen_resolutions = {};
 static gcn::StringListModel fullscreen_resolutions_list(fullscreen_resolutions);
+
+static std::vector<std::string> refresh_rates = {};
+static gcn::StringListModel refresh_rates_list(refresh_rates);
 
 static const std::vector<std::string> fullscreen_modes = { "Windowed", "Fullscreen", "Full-window" };
 static gcn::StringListModel fullscreen_modes_list(fullscreen_modes);
@@ -71,6 +72,7 @@ static gcn::Label* lblScreenmode;
 static gcn::DropDown* cboScreenmode;
 static gcn::Label* lblFullscreen;
 static gcn::DropDown* cboFullscreen;
+static gcn::DropDown* cboRefreshRate;
 
 static gcn::Label* lblVSyncNative;
 static gcn::DropDown* cboVSyncNative;
@@ -120,6 +122,198 @@ static gcn::Label* lblBrightnessValue;
 
 static gcn::Label* lblResSwitch;
 static gcn::DropDown* cboResSwitch;
+
+static const int fakerefreshrates[] = { 50, 60, 100, 120, 0 };
+struct storedrefreshrate
+{
+	int rate, type;
+};
+static struct storedrefreshrate storedrefreshrates[MAX_REFRESH_RATES + 4 + 1];
+
+static void init_frequency_combo(int dmode)
+{
+	int i, j, freq;
+	TCHAR hz[20], hz2[20];
+	int index;
+	MultiDisplay *md = getdisplay(&changed_prefs, 0);
+
+	i = 0; index = 0;
+	while (dmode >= 0 && (freq = md->DisplayModes[dmode].refresh[i]) > 0 && index < MAX_REFRESH_RATES) {
+		storedrefreshrates[index].rate = freq;
+		storedrefreshrates[index++].type = md->DisplayModes[dmode].refreshtype[i];
+		i++;
+	}
+	if (changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0 && changed_prefs.gfx_apmode[0].gfx_vsync) {
+		i = 0;
+		while ((freq = fakerefreshrates[i]) > 0 && index < MAX_REFRESH_RATES) {
+			for (j = 0; j < index; j++) {
+				if (storedrefreshrates[j].rate == freq)
+					break;
+			}
+			if (j == index) {
+				storedrefreshrates[index].rate = -freq;
+				storedrefreshrates[index++].type = 0;
+			}
+			i++;
+		}
+	}
+	storedrefreshrates[index].rate = 0;
+	for (i = 0; i < index; i++) {
+		for (j = i + 1; j < index; j++) {
+			if (abs (storedrefreshrates[i].rate) >= abs (storedrefreshrates[j].rate)) {
+				storedrefreshrate srr{};
+				memcpy (&srr, &storedrefreshrates[i], sizeof (struct storedrefreshrate));
+				memcpy (&storedrefreshrates[i], &storedrefreshrates[j], sizeof (struct storedrefreshrate));
+				memcpy (&storedrefreshrates[j], &srr, sizeof (struct storedrefreshrate));
+			}
+		}
+	}
+
+	hz[0] = hz2[0] = 0;
+	refresh_rates_list.clear();
+	refresh_rates_list.add("Default");
+	for (i = 0; i < index; i++) {
+		bool lace = (storedrefreshrates[i].type & REFRESH_RATE_LACE) != 0;
+		freq = storedrefreshrates[i].rate;
+		if (freq < 0) {
+			freq = -freq;
+			_sntprintf (hz, sizeof hz, _T("(%dHz)"), freq);
+		} else {
+			_sntprintf (hz, sizeof hz, _T("%dHz"), freq);
+		}
+		if (freq == 50 || freq == 100 || (freq * 2 == 50 && lace))
+			_tcscat (hz, _T(" PAL"));
+		if (freq == 60 || freq == 120 || (freq * 2 == 60 && lace))
+			_tcscat (hz, _T(" NTSC"));
+		if (lace) {
+			TCHAR tmp[10];
+			_sntprintf (tmp, sizeof tmp, _T(" (%di)"), freq * 2);
+			_tcscat (hz, tmp);
+		}
+		if (storedrefreshrates[i].type & REFRESH_RATE_RAW)
+			_tcscat (hz, _T(" (*)"));
+		if (abs (changed_prefs.gfx_apmode[0].gfx_refreshrate) == freq)
+			_tcscpy (hz2, hz);
+		refresh_rates_list.add(hz);
+	}
+	index = -1;
+	if (hz2[0] >= 0)
+	{
+		for (int item = 0; item < refresh_rates_list.getNumberOfElements(); item++)
+		{
+			if (refresh_rates_list.getElementAt(item) == hz2)
+			{
+				index = item;
+				cboRefreshRate->setSelected(item);
+				break;
+			}
+		}
+	}
+	if (index == -1) {
+		std::string default_refresh_rate = "Default";
+		for (int item = 0; item < refresh_rates_list.getNumberOfElements(); item++)
+		{
+			if (refresh_rates_list.getElementAt(item) == default_refresh_rate)
+			{
+				cboRefreshRate->setSelected(item);
+				break;
+			}
+		}
+		changed_prefs.gfx_apmode[0].gfx_refreshrate = 0;
+	}
+}
+
+static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
+{
+	int i, j;
+	MultiDisplay *md = getdisplay(&changed_prefs, 0);
+
+	j = 0;
+	for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
+		if (md->DisplayModes[i].res.width == x &&
+			md->DisplayModes[i].res.height == y)
+			break;
+		j++;
+	}
+	if (x == 0 && y == 0) {
+		j = 0;
+		for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
+			if (md->DisplayModes[i].res.width == md->rect.w &&
+				md->DisplayModes[i].res.height == md->rect.h)
+				break;
+			j++;
+		}
+	}
+	if(md->DisplayModes[i].depth < 0)
+		j = -1;
+	return j;
+}
+
+static int gui_display_depths[3];
+static void init_display_mode ()
+{
+	int d, d2, index;
+	int i, cnt;
+	struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
+	struct monconfig *gm = &changed_prefs.gfx_monitor[0];
+
+	switch (changed_prefs.color_mode)
+	{
+	case 2:
+		d = 16;
+		break;
+	case 5:
+	default:
+		d = 32;
+		break;
+	}
+
+	if (changed_prefs.gfx_apmode[0].gfx_fullscreen) {
+		d2 = d;
+		if ((index = gfx_adjust_screenmode(md, &gm->gfx_size_fs.width, &gm->gfx_size_fs.height, &d2)) >= 0) {
+			switch (d2)
+			{
+			case 15:
+			case 16:
+				changed_prefs.color_mode = 2;
+				d = 2;
+				break;
+			case 32:
+			default:
+				changed_prefs.color_mode = 5;
+				d = 4;
+				break;
+			}
+		}
+	}
+	else {
+		d = d / 8;
+	}
+
+	if (gm->gfx_size_fs.special == WH_NATIVE) {
+		int cnt = fullscreen_modes_list.getNumberOfElements();
+		cboFullscreen->setSelected(cnt - 1);
+		index = display_mode_index (gm->gfx_size_fs.width, gm->gfx_size_fs.height, d);
+	} else {
+		index = display_mode_index (gm->gfx_size_fs.width, gm->gfx_size_fs.height, d);
+		if (index >= 0)
+			cboFullscreen->setSelected(md->DisplayModes[index].residx);
+		gm->gfx_size_fs.special = 0;
+	}
+	cnt = 0;
+	gui_display_depths[0] = gui_display_depths[1] = gui_display_depths[2] = -1;
+	if (index >= 0) {
+		for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
+			if (md->DisplayModes[i].depth > 1 && md->DisplayModes[i].residx == md->DisplayModes[index].residx) {
+				gui_display_depths[cnt] = md->DisplayModes[i].depth;
+				cnt++;
+			}
+		}
+	}
+	init_frequency_combo (index);
+
+}
+
 
 class AmigaScreenKeyListener : public gcn::KeyListener
 {
@@ -211,6 +405,251 @@ public:
 	{
 		auto source = actionEvent.getSource();
 
+		changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
+		changed_prefs.gfx_lores_mode = chkFilterLowRes->isSelected() ? 1 : 0;
+		changed_prefs.gfx_scandoubler = chkFlickerFixer->isSelected();
+		changed_prefs.gfx_blackerthanblack = chkBlackerThanBlack->isSelected();
+		//workprefs.gfx_autoresolution_vga = ischecked(hDlg, IDC_AUTORESOLUTIONVGA);
+		//workprefs.gfx_grayscale = ischecked(hDlg, IDC_GRAYSCALE);
+		//workprefs.gfx_monitorblankdelay = ischecked(hDlg, IDC_RESYNCBLANK) ? 1000 : 0;
+
+		//int vres = changed_prefs.gfx_vresolution;
+		//int viscan = changed_prefs.gfx_iscanlines;
+		//int vpscan = changed_prefs.gfx_pscanlines;
+
+		//changed_prefs.gfx_vresolution = (optDouble->isSelected() || optScanlines->isSelected() || optDouble2->isSelected() || optDouble3->isSelected()) ? VRES_DOUBLE : VRES_NONDOUBLE;
+		//changed_prefs.gfx_iscanlines = 0;
+		//changed_prefs.gfx_pscanlines = 0;
+		//if (changed_prefs.gfx_vresolution >= VRES_DOUBLE) {
+		//	if (optIDouble2->isSelected())
+		//		changed_prefs.gfx_iscanlines = 1;
+		//	if (optIDouble3->isSelected())
+		//		changed_prefs.gfx_iscanlines = 2;
+		//	if (optScanlines->isSelected())
+		//		changed_prefs.gfx_pscanlines = 1;
+		//	if (optDouble2->isSelected())
+		//		changed_prefs.gfx_pscanlines = 2;
+		//	if (optDouble3->isSelected())
+		//		changed_prefs.gfx_pscanlines = 3;
+		//}
+		//if (vres != changed_prefs.gfx_vresolution || viscan != changed_prefs.gfx_iscanlines || vpscan != changed_prefs.gfx_pscanlines) {
+		//	CheckRadioButton(hDlg, IDC_LM_NORMAL, IDC_LM_PDOUBLED3, IDC_LM_NORMAL + (changed_prefs.gfx_vresolution ? 1 : 0) + changed_prefs.gfx_pscanlines);
+		//	CheckRadioButton(hDlg, IDC_LM_INORMAL, IDC_LM_IDOUBLED3, IDC_LM_INORMAL + (changed_prefs.gfx_iscanlines ? changed_prefs.gfx_iscanlines + 1 : (changed_prefs.gfx_vresolution ? 1 : 0)));
+		//}
+
+		//changed_prefs.gfx_apmode[0].gfx_backbuffers = xSendDlgItemMessage(hDlg, IDC_DISPLAY_BUFFERCNT, CB_GETCURSEL, 0, 0) + 1;
+
+		if (source == chkFrameskip)
+		{
+			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
+			sldRefresh->setEnabled(chkFrameskip->isSelected());
+			sldRefresh->setValue(changed_prefs.gfx_framerate);
+			lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
+			lblFrameRate->adjustSize();
+		}
+		else if (source == sldRefresh)
+			changed_prefs.gfx_framerate = static_cast<int>(sldRefresh->getValue());
+
+		int i = cboVSyncNative->getSelected();
+		int oldvsmode = changed_prefs.gfx_apmode[0].gfx_vsyncmode;
+		int oldvs = changed_prefs.gfx_apmode[0].gfx_vsync;
+		changed_prefs.gfx_apmode[0].gfx_vsync = 0;
+		changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		if (i == 1) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 1;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+		}
+		else if (i == 2) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+		}
+		else if (i == 3) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 1;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		}
+		else if (i == 4) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		}
+		else if (i == 5) {
+			changed_prefs.gfx_apmode[0].gfx_vsync = -1;
+			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		}
+
+		i = cboVSyncRtg->getSelected();
+		changed_prefs.gfx_apmode[1].gfx_vsync = 0;
+		changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
+		if (i == 1) {
+			changed_prefs.gfx_apmode[1].gfx_vsync = 1;
+			changed_prefs.gfx_apmode[1].gfx_vsyncmode = 1;
+		}
+		else if (i == 2) {
+			changed_prefs.gfx_apmode[1].gfx_vsync = -1;
+			changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
+		}
+
+		sldFpsAdj->setEnabled(chkFpsAdj->isSelected());
+		txtFpsAdj->setEnabled(chkFpsAdj->isSelected());
+
+		bool updaterate = false, updateslider = false;
+		TCHAR label[16];
+		label[0] = 0;
+		const auto& label_string = fps_options[cboFpsRate->getSelected()];
+		strncpy(label, label_string.c_str(), sizeof(label) - 1);
+		label[sizeof(label) - 1] = '\0';
+
+		struct chipset_refresh* cr = nullptr;
+		for (i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
+			cr = &changed_prefs.cr[i];
+			if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
+				if (changed_prefs.cr_selected != i) {
+					changed_prefs.cr_selected = i;
+					updaterate = true;
+					updateslider = true;
+					chkFpsAdj->setSelected(cr->locked);
+					sldFpsAdj->setEnabled(cr->locked);
+					txtFpsAdj->setEnabled(cr->locked);
+				} else {
+					cr->locked = chkFpsAdj->isSelected();
+					if (cr->locked) {
+						cr->inuse = true;
+					} else {
+						// deactivate if plain non-customized PAL or NTSC
+						if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
+							cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
+							(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
+							cr->inuse = false;
+						}
+					}
+				}
+				break;
+			}
+		}
+		if (cr->locked) {
+			if (actionEvent.getSource() == sldFpsAdj) {
+				i = static_cast<int>(sldFpsAdj->getValue());
+				if (i != static_cast<int>(cr->rate))
+					cr->rate = static_cast<float>(i);
+				updaterate = true;
+			}
+		}
+		else if (i == CHIPSET_REFRESH_PAL) {
+			cr->rate = 50.0f;
+			changed_prefs.ntscmode = false;
+		}
+		else if (i == CHIPSET_REFRESH_NTSC) {
+			cr->rate = 60.0f;
+			changed_prefs.ntscmode = true;
+		}
+		if (cr->rate > 0 && cr->rate < 1) {
+			cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
+			updaterate = true;
+		}
+		if (cr->rate > 300) {
+			cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
+			updaterate = true;
+		}
+		if (updaterate) {
+			TCHAR buffer[20];
+			_sntprintf(buffer, sizeof buffer, _T("%.6f"), cr->rate);
+			txtFpsAdj->setText(std::string(buffer));
+		}
+		if (updateslider) {
+			sldFpsAdj->setValue(cr->rate);
+		}
+
+		changed_prefs.gfx_xcenter = chkHorizontal->isSelected() ? 2 : 0;	// Smart centering
+		changed_prefs.gfx_ycenter = chkVertical->isSelected() ? 2 : 0;		// Smart centering
+		//workprefs.gfx_variable_sync = ischecked(hDlg, IDC_DISPLAY_VARSYNC) ? 1 : 0;
+		//workprefs.gfx_windowed_resize = ischecked(hDlg, IDC_DISPLAY_RESIZE);
+
+		int posn1 = cboResSwitch->getSelected();
+		if (posn1 == 0)
+			changed_prefs.gfx_autoresolution = 0;
+		else if (posn1 == 1)
+			changed_prefs.gfx_autoresolution = 1;
+		else if (posn1 == 2)
+			changed_prefs.gfx_autoresolution = 10;
+		else if (posn1 == 3)
+			changed_prefs.gfx_autoresolution = 33;
+		else if (posn1 == 4)
+			changed_prefs.gfx_autoresolution = 66;
+		else
+			changed_prefs.gfx_autoresolution = 100;
+
+		int dmode = -1;
+		bool native = false;
+		struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
+		posn1 = cboFullscreen->getSelected();
+		changed_prefs.gfx_monitor[0].gfx_size_fs.special = 0;
+		for (dmode = 0; md->DisplayModes[dmode].depth >= 0; dmode++) {
+			if (md->DisplayModes[dmode].residx == posn1)
+				break;
+		}
+		if (md->DisplayModes[dmode].depth <= 0) {
+			for (dmode = 0; md->DisplayModes[dmode].depth >= 0; dmode++) {
+				if (md->DisplayModes[dmode].res.width == md->rect.w &&
+					md->DisplayModes[dmode].res.height == md->rect.h)
+				{
+					changed_prefs.gfx_monitor[0].gfx_size_fs.special = WH_NATIVE;
+					break;
+				}
+			}
+			if (md->DisplayModes[dmode].depth <= 0)
+				dmode = -1;
+		} else {
+			int i = dmode;
+			if (md->DisplayModes[dmode].residx != posn1)
+				dmode = i;
+		}
+
+
+		if (oldvsmode != changed_prefs.gfx_apmode[0].gfx_vsyncmode || oldvs != changed_prefs.gfx_apmode[0].gfx_vsync)
+			init_frequency_combo(dmode);
+
+		if (source == cboResolution)
+			changed_prefs.gfx_resolution = cboResolution->getSelected();
+
+		//TODO
+		//else if (source == cboOverscan)
+		//	changed_prefs.gfx_overscanmode = cboOverscan->getSelected();
+
+		else if (source == cboFullscreen)
+		{
+			changed_prefs.gfx_monitor[0].gfx_size_fs.width = md->DisplayModes[dmode].res.width;
+			changed_prefs.gfx_monitor[0].gfx_size_fs.height = md->DisplayModes[dmode].res.height;
+			switch (md->DisplayModes[dmode].depth)
+			{
+			case 2:
+				changed_prefs.color_mode = 2;
+				break;
+			case 3:
+			case 4:
+				changed_prefs.color_mode = 5;
+				break;
+			default:
+				changed_prefs.color_mode = 0;
+				break;
+			}
+			/* Set the Int boxes */
+			//SetDlgItemInt(hDlg, IDC_XSIZE, changed_prefs.gfx_monitor[0].gfx_size_win.width, FALSE);
+			//SetDlgItemInt(hDlg, IDC_YSIZE, changed_prefs.gfx_monitor[0].gfx_size_win.height, FALSE);
+			init_display_mode();
+		}
+		else if (source == cboRefreshRate)
+		{
+			posn1 = cboRefreshRate->getSelected();
+			if (posn1 == 0) {
+				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 0;
+				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = dmode >= 0 && md->DisplayModes[dmode].lace;
+			}
+			else {
+				posn1--;
+				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = storedrefreshrates[posn1].rate;
+				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = (storedrefreshrates[posn1].type & REFRESH_RATE_LACE) != 0;
+			}
+		}
+
 		if (source == chkManualCrop)
 		{
 			changed_prefs.gfx_manual_crop = chkManualCrop->isSelected();
@@ -256,106 +695,13 @@ public:
 			lblVOffsetValue->setCaption(std::to_string(changed_prefs.gfx_vertical_offset));
 			lblVOffsetValue->adjustSize();
 		}
-		else if (source == chkFrameskip)
-		{
-			changed_prefs.gfx_framerate = chkFrameskip->isSelected() ? 2 : 1;
-			sldRefresh->setEnabled(chkFrameskip->isSelected());
-			sldRefresh->setValue(changed_prefs.gfx_framerate);
-			lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
-			lblFrameRate->adjustSize();
-		}
-		else if (source == cboFpsRate
-			|| source == chkFpsAdj
-			|| source == sldFpsAdj)
-		{
-			sldFpsAdj->setEnabled(chkFpsAdj->isSelected());
-			txtFpsAdj->setEnabled(chkFpsAdj->isSelected());
 
-			int i;
-			bool updaterate = false, updateslider = false;
-			TCHAR label[16];
-			label[0] = 0;
-			const auto& label_string = fps_options[cboFpsRate->getSelected()];
-			strncpy(label, label_string.c_str(), sizeof(label) - 1);
-			label[sizeof(label) - 1] = '\0';
-
-			struct chipset_refresh* cr = nullptr;
-			for (i = 0; i < MAX_CHIPSET_REFRESH_TOTAL; i++) {
-				cr = &changed_prefs.cr[i];
-				if (!_tcscmp(label, cr->label) || (cr->label[0] == 0 && label[0] == ':' && _tstol(label + 1) == i)) {
-					if (changed_prefs.cr_selected != i) {
-						changed_prefs.cr_selected = i;
-						updaterate = true;
-						updateslider = true;
-						chkFpsAdj->setSelected(cr->locked);
-						sldFpsAdj->setEnabled(cr->locked);
-						txtFpsAdj->setEnabled(cr->locked);
-					}
-					else {
-						cr->locked = chkFpsAdj->isSelected();
-						if (cr->locked) {
-							cr->inuse = true;
-						}
-						else {
-							// deactivate if plain non-customized PAL or NTSC
-							if (!cr->commands[0] && !cr->filterprofile[0] && cr->resolution == 7 &&
-								cr->horiz < 0 && cr->vert < 0 && cr->lace < 0 && cr->vsync < 0 && cr->framelength < 0 &&
-								(cr == &changed_prefs.cr[CHIPSET_REFRESH_PAL] || cr == &changed_prefs.cr[CHIPSET_REFRESH_NTSC])) {
-								cr->inuse = false;
-							}
-						}
-					}
-					break;
-				}
-			}
-			if (cr->locked) {
-				if (actionEvent.getSource() == sldFpsAdj) {
-					i = static_cast<int>(sldFpsAdj->getValue());//xSendDlgItemMessage(hDlg, IDC_FRAMERATE2, TBM_GETPOS, 0, 0);
-					if (i != static_cast<int>(cr->rate))
-						cr->rate = static_cast<float>(i);
-					updaterate = true;
-				}
-			}
-			else if (i == CHIPSET_REFRESH_PAL) {
-				cr->rate = 50.0f;
-				changed_prefs.ntscmode = false;
-			}
-			else if (i == CHIPSET_REFRESH_NTSC) {
-				cr->rate = 60.0f;
-				changed_prefs.ntscmode = true;
-			}
-			if (cr->rate > 0 && cr->rate < 1) {
-				cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
-				updaterate = true;
-			}
-			if (cr->rate > 300) {
-				cr->rate = currprefs.ntscmode ? 60.0f : 50.0f;
-				updaterate = true;
-			}
-			if (updaterate) {
-				TCHAR buffer[20];
-				_sntprintf(buffer,  sizeof buffer, _T("%.6f"), cr->rate);
-				txtFpsAdj->setText(std::string(buffer));
-			}
-			if (updateslider) {
-				sldFpsAdj->setValue(cr->rate);
-			}
-		}
 		else if (source == sldBrightness)
 		{
 			changed_prefs.gfx_luminance = static_cast<int>(sldBrightness->getValue());
 			lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
 			lblBrightnessValue->adjustSize();
 		}
-
-		else if (source == sldRefresh)
-			changed_prefs.gfx_framerate = static_cast<int>(sldRefresh->getValue());
-
-		else if (source == chkAspect)
-			changed_prefs.gfx_correct_aspect = chkAspect->isSelected();
-
-		else if (source == chkBlackerThanBlack)
-			changed_prefs.gfx_blackerthanblack = chkBlackerThanBlack->isSelected();
 
 		else if (source == cboScreenmode)
 		{
@@ -374,83 +720,6 @@ public:
 				changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
 				changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
 			}
-		}
-
-		else if (source == cboFullscreen)
-		{
-			const auto idx = cboFullscreen->getSelected();
-			if (idx >= 0 && idx <= fullscreen_resolutions_list.getNumberOfElements())
-			{
-				auto* mon = &changed_prefs.gfx_monitor[0];
-				mon->gfx_size_fs.width = fullscreen_width_values[idx];
-				mon->gfx_size_fs.height = fullscreen_height_values[idx];
-			}
-		}
-
-		else if (source == chkHorizontal)
-			changed_prefs.gfx_xcenter = chkHorizontal->isSelected() ? 2 : 0;
-
-		else if (source == chkVertical)
-			changed_prefs.gfx_ycenter = chkVertical->isSelected() ? 2 : 0;
-
-		else if (source == chkFlickerFixer)
-			changed_prefs.gfx_scandoubler = chkFlickerFixer->isSelected();
-
-		else if (source == cboResolution)
-			changed_prefs.gfx_resolution = cboResolution->getSelected();
-
-		else if (source == chkFilterLowRes)
-			changed_prefs.gfx_lores_mode = chkFilterLowRes->isSelected() ? 1 : 0;
-
-		else if (source == cboResSwitch)
-		{
-			int pos = cboResSwitch->getSelected();
-			if (pos == 0)
-				changed_prefs.gfx_autoresolution = 0;
-			else if (pos == 1)
-				changed_prefs.gfx_autoresolution = 1;
-			else if (pos == 2)
-				changed_prefs.gfx_autoresolution = 10;
-			else if (pos == 3)
-				changed_prefs.gfx_autoresolution = 33;
-			else if (pos == 4)
-				changed_prefs.gfx_autoresolution = 66;
-		}
-
-		int i = cboVSyncNative->getSelected();
-		changed_prefs.gfx_apmode[0].gfx_vsync = 0;
-		changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-		if (i == 1) {
-			changed_prefs.gfx_apmode[0].gfx_vsync = 1;
-			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
-		}
-		else if (i == 2) {
-			changed_prefs.gfx_apmode[0].gfx_vsync = 2;
-			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
-		}
-		else if (i == 3) {
-			changed_prefs.gfx_apmode[0].gfx_vsync = 1;
-			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-		}
-		else if (i == 4) {
-			changed_prefs.gfx_apmode[0].gfx_vsync = 2;
-			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-		}
-		else if (i == 5) {
-			changed_prefs.gfx_apmode[0].gfx_vsync = -1;
-			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-		}
-
-		i = cboVSyncRtg->getSelected();
-		changed_prefs.gfx_apmode[1].gfx_vsync = 0;
-		changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
-		if (i == 1) {
-			changed_prefs.gfx_apmode[1].gfx_vsync = 1;
-			changed_prefs.gfx_apmode[1].gfx_vsyncmode = 1;
-		}
-		else if (i == 2) {
-			changed_prefs.gfx_apmode[1].gfx_vsync = -1;
-			changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
 		}
 
 		RefreshPanelDisplay();
@@ -567,6 +836,24 @@ void InitPanelDisplay(const config_category& category)
 	
 	int posY = DISTANCE_BORDER;
 
+	int i, idx;
+	TCHAR tmp[MAX_DPATH];
+	struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
+
+	idx = -1;
+	fullscreen_resolutions_list.clear();
+	for (i = 0; md->DisplayModes[i].depth >= 0; i++)
+	{
+		if (md->DisplayModes[i].depth > 1 && md->DisplayModes[i].residx != idx) {
+			_sntprintf (tmp, sizeof tmp, _T("%dx%d%s"), md->DisplayModes[i].res.width, md->DisplayModes[i].res.height, md->DisplayModes[i].lace ? _T("i") : _T(""));
+			if (md->DisplayModes[i].rawmode)
+				_tcscat (tmp, _T(" (*)"));
+			fullscreen_resolutions_list.add(tmp);
+			idx = md->DisplayModes[i].residx;
+		}
+	}
+	fullscreen_resolutions_list.add("Native");
+
 	lblFullscreen = new gcn::Label("Fullscreen:");
 	lblFullscreen->setAlignment(gcn::Graphics::Left);
 	cboFullscreen = new gcn::DropDown(&fullscreen_resolutions_list);
@@ -577,6 +864,15 @@ void InitPanelDisplay(const config_category& category)
 	cboFullscreen->setSelectionColor(gui_selection_color);
 	cboFullscreen->setId("cboFullscreen");
 	cboFullscreen->addActionListener(amigaScreenActionListener);
+
+	cboRefreshRate = new gcn::DropDown(&refresh_rates_list);
+	cboRefreshRate->setSize(80, cboRefreshRate->getHeight());
+	cboRefreshRate->setBaseColor(gui_base_color);
+	cboRefreshRate->setBackgroundColor(gui_background_color);
+	cboRefreshRate->setForegroundColor(gui_foreground_color);
+	cboRefreshRate->setSelectionColor(gui_selection_color);
+	cboRefreshRate->setId("cboRefreshRate");
+	cboRefreshRate->addActionListener(amigaScreenActionListener);
 
 	chkManualCrop = new gcn::CheckBox("Manual Crop");
 	chkManualCrop->setId("chkManualCrop");
@@ -831,6 +1127,7 @@ void InitPanelDisplay(const config_category& category)
 
 	grpAmigaScreen->add(lblFullscreen, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(cboFullscreen, lblFullscreen->getX() + lblFullscreen->getWidth() + DISTANCE_NEXT_X, posY);
+	grpAmigaScreen->add(cboRefreshRate, cboFullscreen->getX() + cboFullscreen->getWidth() + DISTANCE_NEXT_X, posY);
 	posY += cboFullscreen->getHeight() + DISTANCE_NEXT_Y;
 
 	grpAmigaScreen->add(lblScreenmode, DISTANCE_BORDER, posY);
@@ -869,7 +1166,7 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen->add(lblVOffsetValue, sldVOffset->getX() + sldVOffset->getWidth() + 8, posY + 2);
 
 	grpAmigaScreen->setMovable(false);
-	grpAmigaScreen->setSize(cboVSyncNative->getX() + cboVSyncNative->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X * 4, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
+	grpAmigaScreen->setSize(cboVSyncNative->getX() + cboVSyncNative->getWidth() + DISTANCE_BORDER + DISTANCE_NEXT_X * 6, TITLEBAR_HEIGHT + lblVOffset->getY() + lblVOffset->getHeight() + DISTANCE_NEXT_Y);
 	grpAmigaScreen->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpAmigaScreen->setBaseColor(gui_base_color);
 	grpAmigaScreen->setForegroundColor(gui_foreground_color);
@@ -1068,6 +1365,7 @@ void ExitPanelDisplay()
 	delete cboScreenmode;
 	delete lblFullscreen;
 	delete cboFullscreen;
+	delete cboRefreshRate;
 
 	delete lblVSyncNative;
 	delete lblVSyncRtg;
@@ -1135,17 +1433,21 @@ static void refresh_fps_options()
 
 	txtFpsAdj->setEnabled(selectcr->locked != 0);
 	sldFpsAdj->setEnabled(selectcr->locked != 0);
+
+	v = changed_prefs.cpu_memory_cycle_exact ? 1 : changed_prefs.gfx_framerate;
+	sldRefresh->setValue(v);
 }
 
 void RefreshPanelDisplay()
 {
+	init_display_mode();
+	refresh_fps_options();
+
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
 	sldRefresh->setEnabled(chkFrameskip->isSelected());
-	sldRefresh->setValue(changed_prefs.gfx_framerate);
+
 	lblFrameRate->setCaption(std::to_string(changed_prefs.gfx_framerate));
 	lblFrameRate->adjustSize();
-
-	refresh_fps_options();
 
 	sldBrightness->setValue(changed_prefs.gfx_luminance);
 	lblBrightnessValue->setCaption(std::to_string(changed_prefs.gfx_luminance));
@@ -1200,6 +1502,28 @@ void RefreshPanelDisplay()
 
 	chkBorderless->setSelected(changed_prefs.borderless);
 
+	if (kmsdrm_detected)
+	{
+		changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
+		changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
+		cboScreenmode->setEnabled(false);
+	}
+
+	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
+	{
+		cboScreenmode->setSelected(0);
+		cboFullscreen->setEnabled(false);
+	}
+	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+	{
+		cboScreenmode->setSelected(1);
+		cboFullscreen->setEnabled(true);
+	}
+	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
+	{
+		cboScreenmode->setSelected(2);
+		cboFullscreen->setEnabled(false);
+	}
 	int v = changed_prefs.gfx_apmode[0].gfx_vsync;
 	if (v < 0)
 		v = 5;
@@ -1234,51 +1558,8 @@ void RefreshPanelDisplay()
 	chkAspect->setSelected(changed_prefs.gfx_correct_aspect);
 	chkFilterLowRes->setSelected(changed_prefs.gfx_lores_mode);
 
-	if (kmsdrm_detected)
-	{
-		changed_prefs.gfx_apmode[0].gfx_fullscreen = GFX_FULLWINDOW;
-		changed_prefs.gfx_apmode[1].gfx_fullscreen = GFX_FULLWINDOW;
-		cboScreenmode->setEnabled(false);
-	}
-
-	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
-	{
-		cboScreenmode->setSelected(0);
-		cboFullscreen->setEnabled(false);
-	}
-	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
-	{
-		cboScreenmode->setSelected(1);
-		cboFullscreen->setEnabled(true);
-	}
-	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
-	{
-		cboScreenmode->setSelected(2);
-		cboFullscreen->setEnabled(false);
-	}
-
 	//Disable Borderless checkbox in non-Windowed modes
 	chkBorderless->setEnabled(cboScreenmode->getSelected() == 0);
-
-	if (changed_prefs.gfx_monitor[0].gfx_size_fs.width && changed_prefs.gfx_monitor[0].gfx_size_fs.height)
-	{
-		auto found = false;
-		for (auto idx = 0; idx <= fullscreen_resolutions_list.getNumberOfElements(); idx++)
-		{
-			if (changed_prefs.gfx_monitor[0].gfx_size_fs.width == fullscreen_width_values[idx]
-				&& changed_prefs.gfx_monitor[0].gfx_size_fs.height == fullscreen_height_values[idx])
-			{
-				cboFullscreen->setSelected(idx);
-				found = true;
-			}
-		}
-		if (!found)
-		{
-			cboFullscreen->setSelected(2);
-			changed_prefs.gfx_monitor[0].gfx_size_fs.width = fullscreen_width_values[2];
-			changed_prefs.gfx_monitor[0].gfx_size_fs.height = fullscreen_height_values[2];
-		}
-	}
 
 	cboScalingMethod->setSelected(changed_prefs.scaling_method + 1);
 
@@ -1344,6 +1625,20 @@ void RefreshPanelDisplay()
 	optIDouble2->setEnabled(!changed_prefs.gfx_autoresolution && isdouble);
 	optIDouble3->setEnabled(!changed_prefs.gfx_autoresolution && isdouble);
 	cboResolution->setEnabled(!changed_prefs.gfx_autoresolution);
+
+	//TODO Overscan settings
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_RESETCONTENT, 0, 0);
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("TV (narrow)"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("TV (standard"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("TV (wide)"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("Overscan"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("Overscan+"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("Extreme"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("Ultra extreme debug"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("Ultra extreme debug (HV)"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_ADDSTRING, 0, (LPARAM)_T("Ultra extreme debug (C)"));
+	//xSendDlgItemMessage(hDlg, IDC_OVERSCANMODE, CB_SETCURSEL, workprefs.gfx_overscanmode, 0);
+
 }
 
 bool HelpPanelDisplay(std::vector<std::string>& helptext)

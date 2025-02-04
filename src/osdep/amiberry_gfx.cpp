@@ -263,13 +263,25 @@ static void SDL2_init()
 	{
 		write_log("Creating Amiberry window...\n");
 		Uint32 mode;
+
+		// Only enable Windowed mode if we're running under x11
 		if (!kmsdrm_detected)
 		{
-			// Only enable Windowed mode if we're running under x11
 			if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW)
 				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 			else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLSCREEN)
+			{
 				mode = SDL_WINDOW_FULLSCREEN;
+				SDL_DisplayMode dm = {};
+				dm.format = SDL_PIXELFORMAT_BGRA32;
+				dm.w = currprefs.gfx_monitor[0].gfx_size.width;
+				dm.h = currprefs.gfx_monitor[0].gfx_size.height;
+				dm.refresh_rate = currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate;
+				if (SDL_SetWindowDisplayMode(mon->amiga_window, &dm) != 0) {
+					// Handle error
+					write_log("Failed to set display mode: %s\n", SDL_GetError());
+				}
+			}
 			else
 				mode = SDL_WINDOW_RESIZABLE;
 		}
@@ -808,18 +820,49 @@ void reenumeratemonitors(void)
 	enumeratedisplays();
 }
 
+static bool enumeratedisplays2(bool selectall)
+{
+	struct MultiDisplay *md = Displays;
+
+	SDL_Rect bounds;
+	if (SDL_GetDisplayUsableBounds(0, &bounds) != 0)
+	{
+		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
+		return false;
+	}
+
+	md->adaptername = my_strdup_trim ("Display adapter");
+	md->adapterid = my_strdup ("AdapterID");
+	md->adapterkey = my_strdup ("AdapterKey");
+	md->monitorname = my_strdup_trim ("Monitor");
+	md->monitorid = my_strdup ("MonitorID");
+	md->primary = true;
+
+	Displays[0].rect.x = bounds.x;
+	Displays[0].rect.y = bounds.y;
+	Displays[0].rect.w = bounds.w;
+	Displays[0].rect.h = bounds.h;
+
+	if (!md->fullname)
+		md->fullname = my_strdup (md->adapterid);
+
+	return true;
+}
+
 void enumeratedisplays()
 {
 	MultiDisplay* md = Displays;
 	SDL_GetDisplayBounds(0, &md->rect);
 	SDL_GetDisplayBounds(0, &md->workrect);
+
+	if (!enumeratedisplays2 (false))
+		enumeratedisplays2(true);
 }
 
 void sortdisplays()
 {
 	struct MultiDisplay* md;
 	int i, idx;
-	char tmp[200];
 
 	SDL_DisplayMode desktop_dm;
 	if (SDL_GetDesktopDisplayMode(0, &desktop_dm) != 0) {
@@ -833,27 +876,9 @@ void sortdisplays()
 	int hv = h;
 	int b = SDL_BITSPERPIXEL(desktop_dm.format);
 
-	deskhz = desktop_dm.refresh_rate;
-
-	SDL_Rect bounds;
-	if (SDL_GetDisplayUsableBounds(0, &bounds) != 0)
-	{
-		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
-		return;
-	}
-
-	Displays[0].primary = 1;
-	Displays[0].rect.x = bounds.x;
-	Displays[0].rect.y = bounds.y;
-	Displays[0].rect.w = bounds.w;
-	Displays[0].rect.h = bounds.h;
-
-	_sntprintf(tmp, sizeof tmp, "%s (%d*%d)", "Display", Displays[0].rect.w, Displays[0].rect.h);
-	Displays[0].fullname = my_strdup(tmp);
-	Displays[0].monitorname = my_strdup("Display");
+	deskhz = 0;
 
 	md = Displays;
-
 	md->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 	md->DisplayModes[0].depth = -1;
 
@@ -898,6 +923,78 @@ void sortdisplays()
 		i++;
 	write_log(_T("%d display modes.\n"), i);
 	write_log(_T("Desktop: W=%d H=%d B=%d HZ=%d. CXVS=%d CYVS=%d\n"), w, h, b, deskhz, wv, hv);
+}
+
+int gfx_adjust_screenmode(MultiDisplay *md, int *pwidth, int *pheight, int *ppixbits)
+{
+	struct PicassoResolution* best;
+	uae_u32 selected_mask = (*ppixbits == 8 ? RGBMASK_8BIT
+		: *ppixbits == 15 ? RGBMASK_15BIT
+		: *ppixbits == 16 ? RGBMASK_16BIT
+		: *ppixbits == 24 ? RGBMASK_24BIT
+		: RGBMASK_32BIT);
+	int pass, i = 0, index = 0;
+
+	for (pass = 0; pass < 2; pass++) {
+		struct PicassoResolution* dm;
+		uae_u32 mask = (pass == 0
+			? selected_mask
+			: RGBMASK_8BIT | RGBMASK_15BIT | RGBMASK_16BIT | RGBMASK_24BIT | RGBMASK_32BIT); /* %%% - BERND, were you missing 15-bit here??? */
+		i = 0;
+		index = 0;
+
+		best = &md->DisplayModes[0];
+		dm = &md->DisplayModes[1];
+
+		while (dm->depth >= 0) {
+
+			/* do we already have supported resolution? */
+			if (dm->res.width == *pwidth && dm->res.height == *pheight && dm->depth == (*ppixbits / 8))
+				return i;
+
+			if ((dm->colormodes & mask) != 0) {
+				if (dm->res.width <= best->res.width && dm->res.height <= best->res.height
+					&& dm->res.width >= *pwidth && dm->res.height >= *pheight)
+				{
+					best = dm;
+					index = i;
+				}
+				if (dm->res.width >= best->res.width && dm->res.height >= best->res.height
+					&& dm->res.width <= *pwidth && dm->res.height <= *pheight)
+				{
+					best = dm;
+					index = i;
+				}
+			}
+			dm++;
+			i++;
+		}
+		if (best->res.width == *pwidth && best->res.height == *pheight) {
+			selected_mask = mask; /* %%% - BERND, I added this - does it make sense?  Otherwise, I'd specify a 16-bit display-mode for my
+								  Workbench (using -H 2, but SHOULD have been -H 1), and end up with an 8-bit mode instead*/
+			break;
+		}
+	}
+	*pwidth = best->res.width;
+	*pheight = best->res.height;
+	if (best->colormodes & selected_mask)
+		return index;
+
+	/* Ordering here is done such that 16-bit is preferred, followed by 15-bit, 8-bit, 32-bit and 24-bit */
+	if (best->colormodes & RGBMASK_16BIT)
+		*ppixbits = 16;
+	else if (best->colormodes & RGBMASK_15BIT) /* %%% - BERND, this possibility was missing? */
+		*ppixbits = 15;
+	else if (best->colormodes & RGBMASK_8BIT)
+		*ppixbits = 8;
+	else if (best->colormodes & RGBMASK_32BIT)
+		*ppixbits = 32;
+	else if (best->colormodes & RGBMASK_24BIT)
+		*ppixbits = 24;
+	else
+		index = -1;
+
+	return index;
 }
 
 bool render_screen(int monid, int mode, bool immediate)
@@ -2608,7 +2705,19 @@ void updatewinfsmode(const int monid, struct uae_prefs* p)
 		if (p->gfx_apmode[id].gfx_fullscreen == GFX_FULLSCREEN && !is_fullscreen)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_fs;
-			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
+			SDL_DisplayMode dm = {};
+			dm.format = SDL_PIXELFORMAT_BGRA32;
+			dm.w = p->gfx_monitor[monid].gfx_size.width;
+			dm.h = p->gfx_monitor[monid].gfx_size.height;
+			dm.refresh_rate = p->gfx_apmode[id].gfx_refreshrate;
+			if (SDL_SetWindowDisplayMode(mon->amiga_window, &dm) != 0) {
+				// Handle error
+				write_log("Failed to set display mode: %s\n", SDL_GetError());
+			}
+			if (SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN) != 0) {
+				// Handle error
+				write_log("Failed to set window to fullscreen: %s\n", SDL_GetError());
+			}
 			set_config_changed();
 		}
 		else if (p->gfx_apmode[id].gfx_fullscreen == GFX_FULLWINDOW && !is_fullwindow)
