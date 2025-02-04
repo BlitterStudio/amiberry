@@ -90,8 +90,11 @@ void graphics_subshutdown();
 extern void wait_keyrelease();
 extern void keyboard_settrans();
 
-extern void free_AmigaMem();
-extern void alloc_AmigaMem();
+extern void* open_tablet(SDL_Window* window);
+extern int close_tablet(void*);
+extern void send_tablet(int x, int y, int z, int pres, uae_u32 buttons, int flags, int ax, int ay, int az, int rx, int ry, int rz, SDL_Rect* r);
+extern void send_tablet_proximity(int);
+
 extern bool can_have_1gb();
 
 #ifdef __MACH__

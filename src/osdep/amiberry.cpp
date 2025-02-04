@@ -99,6 +99,7 @@ int pissoff_value = 15000 * CYCLE_UNIT;
 static TCHAR* inipath = nullptr;
 extern FILE* debugfile;
 static int forceroms;
+static void* tablet;
 SDL_Cursor* normalcursor;
 
 int paraport_mask;
@@ -693,12 +694,11 @@ bool ismouseactive ()
 	return mouseactive > 0;
 }
 
-//TODO: maybe implement this
 void target_inputdevice_unacquire(const bool full)
 {
 	const AmigaMonitor* mon = &AMonitors[0];
-	//close_tablet(tablet);
-	//tablet = NULL;
+	close_tablet(tablet);
+	tablet = NULL;
 	if (full) {
 		//rawinput_release();
 		SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
@@ -708,7 +708,7 @@ void target_inputdevice_acquire()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 	target_inputdevice_unacquire(false);
-	//tablet = open_tablet(mon->hAmigaWnd);
+	tablet = open_tablet(mon->amiga_window);
 	//rawinput_alloc();
 	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 }
@@ -1711,6 +1711,34 @@ void handle_mouse_wheel_event(const SDL_Event& event)
 		setmousebuttonstate(0, 6, -1);
 }
 
+void handle_pen_event(const SDL_Event& event)
+{
+	//TODO Implement with SDL3 for Tablet support
+	if (inputdevice_is_tablet() <= 0 && !currprefs.tablet_library && !is_touch_lightpen()) {
+		close_tablet(tablet);
+		tablet = NULL;
+		return;
+	}
+	//if (pWTPacket((HCTX)lParam, (UINT)wParam, &pkt)) {
+	//	AmigaMonitor* mon = &AMonitors[0];
+	//	int x, y, z, pres, proxi;
+	//	DWORD buttons;
+	//	ORIENTATION ori;
+	//	ROTATION rot;
+
+	//	x = pkt.pkX;
+	//	y = pkt.pkY;
+	//	z = pkt.pkZ;
+	//	pres = pkt.pkNormalPressure;
+	//	ori = pkt.pkOrientation;
+	//	rot = pkt.pkRotation;
+	//	buttons = pkt.pkButtons;
+	//	proxi = pkt.pkStatus;
+	//	send_tablet(x, y, z, pres, buttons, proxi, ori.orAzimuth, ori.orAltitude, ori.orTwist, rot.roPitch, rot.roRoll, rot.roYaw, &mon->amigawin_rect);
+
+	//}
+}
+
 void process_event(const SDL_Event& event)
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -1789,6 +1817,19 @@ void process_event(const SDL_Event& event)
 			handle_mouse_wheel_event(event);
 			break;
 
+		//TODO Implement with SDL3 for Tablet support
+			/* Pressure-sensitive pen events */
+			//  SDL_EVENT_PEN_PROXIMITY_IN = 0x1300,  /**< Pressure-sensitive pen has become available */
+			//	SDL_EVENT_PEN_PROXIMITY_OUT,          /**< Pressure-sensitive pen has become unavailable */
+			//	SDL_EVENT_PEN_DOWN,                   /**< Pressure-sensitive pen touched drawing surface */
+			//	SDL_EVENT_PEN_UP,                     /**< Pressure-sensitive pen stopped touching drawing surface */
+			//	SDL_EVENT_PEN_BUTTON_DOWN,            /**< Pressure-sensitive pen button pressed */
+			//	SDL_EVENT_PEN_BUTTON_UP,              /**< Pressure-sensitive pen button released */
+			//	SDL_EVENT_PEN_MOTION,                 /**< Pressure-sensitive pen is moving on the tablet */
+			//	SDL_EVENT_PEN_AXIS,                   /**< Pressure-sensitive pen angle/pressure/etc changed */
+			//
+			// handle_pen_event(event);
+			// break;
 		default:
 			break;
 		}
