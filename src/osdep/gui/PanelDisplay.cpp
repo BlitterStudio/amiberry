@@ -1513,16 +1513,19 @@ void RefreshPanelDisplay()
 	{
 		cboScreenmode->setSelected(0);
 		cboFullscreen->setEnabled(false);
+		cboRefreshRate->setEnabled(false);
 	}
 	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 	{
 		cboScreenmode->setSelected(1);
 		cboFullscreen->setEnabled(true);
+		cboRefreshRate->setEnabled(true);
 	}
 	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
 	{
 		cboScreenmode->setSelected(2);
 		cboFullscreen->setEnabled(false);
+		cboRefreshRate->setEnabled(false);
 	}
 	int v = changed_prefs.gfx_apmode[0].gfx_vsync;
 	if (v < 0)
