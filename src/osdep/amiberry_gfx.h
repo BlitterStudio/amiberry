@@ -130,6 +130,7 @@ extern void enumeratedisplays(void);
 
 void Display_change_requested(int);
 void DX_Invalidate(struct AmigaMonitor*, int x, int y, int width, int height);
+int gfx_adjust_screenmode(MultiDisplay* md, int* pwidth, int* pheight, int* ppixbits);
 
 extern int default_freq;
 

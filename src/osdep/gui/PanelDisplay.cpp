@@ -231,8 +231,7 @@ static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
 	j = 0;
 	for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
 		if (md->DisplayModes[i].res.width == x &&
-			md->DisplayModes[i].res.height == y &&
-			md->DisplayModes[i].depth == d)
+			md->DisplayModes[i].res.height == y)
 			break;
 		j++;
 	}
@@ -240,8 +239,7 @@ static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
 		j = 0;
 		for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
 			if (md->DisplayModes[i].res.width == md->rect.w &&
-				md->DisplayModes[i].res.height == md->rect.h &&
-				md->DisplayModes[i].depth == d)
+				md->DisplayModes[i].res.height == md->rect.h)
 				break;
 			j++;
 		}
@@ -254,10 +252,43 @@ static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
 static int gui_display_depths[3];
 static void init_display_mode ()
 {
-	int d, index;
+	int d, d2, index;
 	int i, cnt;
 	struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
 	struct monconfig *gm = &changed_prefs.gfx_monitor[0];
+
+	switch (changed_prefs.color_mode)
+	{
+	case 2:
+		d = 16;
+		break;
+	case 5:
+	default:
+		d = 32;
+		break;
+	}
+
+	if (changed_prefs.gfx_apmode[0].gfx_fullscreen) {
+		d2 = d;
+		if ((index = gfx_adjust_screenmode(md, &gm->gfx_size_fs.width, &gm->gfx_size_fs.height, &d2)) >= 0) {
+			switch (d2)
+			{
+			case 15:
+			case 16:
+				changed_prefs.color_mode = 2;
+				d = 2;
+				break;
+			case 32:
+			default:
+				changed_prefs.color_mode = 5;
+				d = 4;
+				break;
+			}
+		}
+	}
+	else {
+		d = d / 8;
+	}
 
 	if (gm->gfx_size_fs.special == WH_NATIVE) {
 		int cnt = fullscreen_modes_list.getNumberOfElements();
