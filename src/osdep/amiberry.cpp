@@ -697,8 +697,8 @@ bool ismouseactive ()
 void target_inputdevice_unacquire(const bool full)
 {
 	const AmigaMonitor* mon = &AMonitors[0];
-	close_tablet(tablet);
-	tablet = NULL;
+	//close_tablet(tablet);
+	//tablet = NULL;
 	if (full) {
 		//rawinput_release();
 		SDL_SetWindowGrab(mon->amiga_window, SDL_FALSE);
@@ -708,7 +708,7 @@ void target_inputdevice_acquire()
 {
 	const AmigaMonitor* mon = &AMonitors[0];
 	target_inputdevice_unacquire(false);
-	tablet = open_tablet(mon->amiga_window);
+	//tablet = open_tablet(mon->amiga_window);
 	//rawinput_alloc();
 	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 }
