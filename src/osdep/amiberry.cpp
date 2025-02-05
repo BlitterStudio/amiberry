@@ -1714,11 +1714,11 @@ void handle_mouse_wheel_event(const SDL_Event& event)
 void handle_pen_event(const SDL_Event& event)
 {
 	//TODO Implement with SDL3 for Tablet support
-	if (inputdevice_is_tablet() <= 0 && !currprefs.tablet_library && !is_touch_lightpen()) {
-		close_tablet(tablet);
-		tablet = NULL;
-		return;
-	}
+	//if (inputdevice_is_tablet() <= 0 && !currprefs.tablet_library && !is_touch_lightpen()) {
+	//	close_tablet(tablet);
+	//	tablet = NULL;
+	//	return;
+	//}
 	//if (pWTPacket((HCTX)lParam, (UINT)wParam, &pkt)) {
 	//	AmigaMonitor* mon = &AMonitors[0];
 	//	int x, y, z, pres, proxi;

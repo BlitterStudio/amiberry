@@ -492,12 +492,12 @@ static void tablet_send(void)
 	//	tablet_buttons &= ~2;
 	//	eraser = 0;
 	//}
-	if (tablet_x < 0)
-		return;
+	//if (tablet_x < 0)
+	//	return;
 	//inputdevice_tablet(tablet_x, tablet_y, tablet_z, tablet_pressure, tablet_buttons, tablet_proximity,
 	//	tablet_ax, tablet_ay, tablet_az, dinput_lightpen());
-	tabletlib_tablet(tablet_x, tablet_y, tablet_z, tablet_pressure, maxpres, tablet_buttons, tablet_proximity,
-		tablet_ax, tablet_ay, tablet_az);
+	//tabletlib_tablet(tablet_x, tablet_y, tablet_z, tablet_pressure, maxpres, tablet_buttons, tablet_proximity,
+	//	tablet_ax, tablet_ay, tablet_az);
 }
 
 void send_tablet_proximity(int inproxi)
@@ -515,33 +515,33 @@ void send_tablet_proximity(int inproxi)
 
 void send_tablet(int x, int y, int z, int pres, uae_u32 buttons, int flags, int ax, int ay, int az, int rx, int ry, int rz, SDL_Rect* r)
 {
-	if (tablet_log & 4)
-		write_log(_T("TABLET: B=%08X F=%08X X=%d Y=%d P=%d (%d,%d,%d)\n"), buttons, flags, x, y, pres, ax, ay, az);
-	if (axmax > 0)
-		ax = ax * 255 / axmax;
-	else
-		ax = 0;
-	if (aymax > 0)
-		ay = ay * 255 / aymax;
-	else
-		ay = 0;
-	if (azmax > 0)
-		az = az * 255 / azmax;
-	else
-		az = 0;
-	pres = pres * 255 / maxpres;
+	//if (tablet_log & 4)
+	//	write_log(_T("TABLET: B=%08X F=%08X X=%d Y=%d P=%d (%d,%d,%d)\n"), buttons, flags, x, y, pres, ax, ay, az);
+	//if (axmax > 0)
+	//	ax = ax * 255 / axmax;
+	//else
+	//	ax = 0;
+	//if (aymax > 0)
+	//	ay = ay * 255 / aymax;
+	//else
+	//	ay = 0;
+	//if (azmax > 0)
+	//	az = az * 255 / azmax;
+	//else
+	//	az = 0;
+	//pres = pres * 255 / maxpres;
 
-	tablet_x = (x + tablet_div / 2) / tablet_div;
-	tablet_y = ymax - (y + tablet_div / 2) / tablet_div;
-	tablet_z = z;
-	tablet_pressure = pres;
-	tablet_buttons = buttons;
-	tablet_ax = abs(ax);
-	tablet_ay = abs(ay);
-	tablet_az = abs(az);
-	tablet_flags = flags;
+	//tablet_x = (x + tablet_div / 2) / tablet_div;
+	//tablet_y = ymax - (y + tablet_div / 2) / tablet_div;
+	//tablet_z = z;
+	//tablet_pressure = pres;
+	//tablet_buttons = buttons;
+	//tablet_ax = abs(ax);
+	//tablet_ay = abs(ay);
+	//tablet_az = abs(az);
+	//tablet_flags = flags;
 
-	tablet_send();
+	//tablet_send();
 }
 
 // TODO implement with SDL3
@@ -645,7 +645,8 @@ int is_touch_lightpen()
 
 int is_tablet(void)
 {
-	return (tablet) ? 1 : 0;
+	return 0;
+	//return (tablet) ? 1 : 0;
 }
 
 static int initialize_tablet(void)
