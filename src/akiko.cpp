@@ -494,7 +494,7 @@ static int cdrom_tx_dma_delay, cdrom_rx_dma_delay;
 
 static uae_u8 *sector_buffer_1, *sector_buffer_2;
 static int sector_buffer_sector_1, sector_buffer_sector_2;
-#define	SECTOR_BUFFER_SIZE 64
+#define	SECTOR_BUFFER_SIZE 128
 static uae_u8 *sector_buffer_info_1, *sector_buffer_info_2;
 
 static int unitnum = -1;
@@ -1596,35 +1596,49 @@ static int akiko_thread (void *null)
 			(sector_buffer_sector_1 < 0 || sector < sector_buffer_sector_1 || sector >= sector_buffer_sector_1 + SECTOR_BUFFER_SIZE * 2 / 3 || secnum != SECTOR_BUFFER_SIZE)) {
 			int blocks;
 			memset (sector_buffer_info_2, 0, SECTOR_BUFFER_SIZE);
-#if AKIKO_DEBUG_IO_CMD
-			if (log_cd32 > 0)
-				write_log (_T("CD32: filling buffer sector=%d\n"), sector);
-#endif
 			sector_buffer_sector_2 = sector;
-			if (!is_valid_data_sector(sector + SECTOR_BUFFER_SIZE)) {
-				for (blocks = SECTOR_BUFFER_SIZE; blocks > 0; blocks--) {
+			secnum = 0;
+			if (sector_buffer_sector_1 >= 0 && sector >= sector_buffer_sector_1 && sector < sector_buffer_sector_1 + SECTOR_BUFFER_SIZE) {
+				int secoff = sector - sector_buffer_sector_1;
+				while (secoff < SECTOR_BUFFER_SIZE) {
+					memcpy(sector_buffer_2 + secnum * 2352, sector_buffer_1 + secoff * 2352, 2352);
+					sector_buffer_info_2[secnum] = 3;
+					secnum++;
+					secoff++;
+				}
+			}
+			if (!is_valid_data_sector(sector + SECTOR_BUFFER_SIZE - 1)) {
+				for (blocks = SECTOR_BUFFER_SIZE - 1; blocks > secnum; blocks--) {
 					if (is_valid_data_sector(sector + blocks))
 						break;
 				}
 			} else {
-				blocks = SECTOR_BUFFER_SIZE;
+				blocks = SECTOR_BUFFER_SIZE - secnum;
 			}
+#if AKIKO_DEBUG_IO_CMD
+			if (1)
+				write_log(_T("CD32: filling buffer sector=%d-%d, blocks=%d\n"), sector, sector + blocks - 1, blocks);
+#endif
 			if (blocks) {
+				uae_sem_post(&akiko_sem);
 				int ok = sys_command_cd_rawread (unitnum, sector_buffer_2, sector, blocks, 2352);
 				if (!ok) {
-					int offset = 0;
+					int offset = secnum;
 					while (offset < SECTOR_BUFFER_SIZE) {
 						int readok = 0;
-						if (is_valid_data_sector(sector))
+						if (is_valid_data_sector(sector)) {
 							readok = sys_command_cd_rawread (unitnum, sector_buffer_2 + offset * 2352, sector, 1, 2352);
+						}
 						sector_buffer_info_2[offset] = readok ? 3 : 0;
 						offset++;
 						sector++;
 					}
 				} else {
-					for (int i = 0; i < SECTOR_BUFFER_SIZE; i++)
+					for (int i = 0; i < SECTOR_BUFFER_SIZE; i++) {
 						sector_buffer_info_2[i] = i < blocks ? 3 : 0;
+					}
 				}
+				uae_sem_wait(&akiko_sem);
 				tmp1 = sector_buffer_info_1;
 				sector_buffer_info_1 = sector_buffer_info_2;
 				sector_buffer_info_2 = tmp1;
