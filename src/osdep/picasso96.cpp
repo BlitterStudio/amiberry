@@ -487,13 +487,24 @@ static bool validatecoords2(TrapContext *ctx, const struct RenderInfo *ri, uae_u
 		return false;
 	}
 	if (ri) {
+		int bpr = ri->BytesPerRow;
+		if (bpr < 0) {
+			return false;
+		}
 		const int bpp = GetBytesPerPixel(RGBFmt);
-		if (X * bpp >= ri->BytesPerRow) {
+		// zero is allowed (repeats same line * height)
+		if (!bpr) {
+			if (X) {
+				return false;
+			}
+			bpr = Width * bpp;
+		}
+		if (X * bpp >= bpr) {
 			return false;
 		}
 		uae_u32 X2 = X + Width;
-		if (X2 * bpp > ri->BytesPerRow) {
-			X2 = ri->BytesPerRow / bpp;
+		if (X2 * bpp > bpr) {
+			X2 = bpr / bpp;
 			Width = X2 - X;
 			*Widthp = Width;
 		}
