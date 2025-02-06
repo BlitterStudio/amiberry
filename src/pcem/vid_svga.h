@@ -10,8 +10,12 @@
 #    define FLAG_S3_911_16BIT 256
 #    define FLAG_512K_MASK    512
 
+struct monitor_t;
+
 typedef struct svga_t
 {
+        void *priv;
+
         mem_mapping_t mapping;
         
         uint8_t crtcreg, crtcreg_mask;
@@ -43,7 +47,7 @@ typedef struct svga_t
         uint8_t la, lb, lc, ld;
         
         uint8_t dac_mask, dac_status;
-        int dac_read, dac_write, dac_pos;
+        int dac_pos;
         int dac_r, dac_g, dac_b;
         int dac_addr;
 
@@ -115,7 +119,7 @@ typedef struct svga_t
                 int ena;
                 int x, y;
                 int xoff, yoff;
-                int xsize, ysize;
+                int cur_xsize, cur_ysize;
                 uint32_t addr;
                 uint32_t pitch;
                 int v_acc, h_acc;
@@ -135,10 +139,14 @@ typedef struct svga_t
         void    (*video_out)(uint16_t addr, uint8_t val, void *p);
         uint8_t (*video_in) (uint16_t addr, void *p);
 
+        float (*getclock)(int clock, void *priv);
+        
         void (*hwcursor_draw)(struct svga_t *svga, int displine);
         void (*dac_hwcursor_draw)(struct svga_t *svga, int displine);
 
         void (*overlay_draw)(struct svga_t *svga, int displine);
+
+        void (*vblank_start)(struct svga_t *svga);
         
         void (*adjust_panning)(struct svga_t *svga);
 
@@ -153,7 +161,6 @@ typedef struct svga_t
         /*If set then another device is driving the monitor output and the SVGA
           card should not attempt to display anything */
         int override;
-        void *p;
 
         uint8_t ksc5601_sbyte_mask;
         uint8_t ksc5601_udc_area_msb[2];
@@ -170,6 +177,11 @@ typedef struct svga_t
           addresses are shifted to match*/
         int packed_chain4;
 
+        /*Disable 8bpp blink mode - some cards support it, some don't, it's a weird mode
+          If mode 13h appears in a reddish-brown background (0x88) with dark green text (0x8F),
+          you should set this flag when entering that mode*/
+        int disable_blink;
+
         /*Force CRTC to dword mode, regardless of CR14/CR17. Required for S3 enhanced mode*/
         int force_dword_mode;
 
@@ -179,6 +191,7 @@ typedef struct svga_t
         uint32_t  overscan_color;
         int ati_4color;
         void *ramdac;
+        void *clock_gen;
         uint32_t  adv_flags;
         int hblankstart;
         int hblankend;
@@ -193,11 +206,23 @@ typedef struct svga_t
         int x_add;
         int y_add;
         uint8_t ext_overscan;
+        uint8_t dpms;
+        uint8_t lut_map;
 
-        bool swaprb;
+        int swaprb;
+
+        /* Return a 32 bpp color from a 15/16 bpp color. */
+        uint32_t(*conv_16to32)(struct svga_t *svga, uint16_t color, uint8_t bpp);
+
+        /* Monitor Index */
+        uint8_t monitor_index;
+
+        /* Pointer to monitor */
+        monitor_t *monitor;
+
 } svga_t;
 
-extern int svga_init(svga_t *svga, void *p, int memsize, 
+extern int svga_init(const device_t *info, svga_t *svga, void *p, int memsize, 
                void (*recalctimings_ex)(struct svga_t *svga),
                uint8_t (*video_in) (uint16_t addr, void *p),
                void    (*video_out)(uint16_t addr, uint8_t val, void *p),
@@ -232,9 +257,21 @@ void svga_set_override(svga_t *svga, int val);
 
 #define RAMDAC_6BIT 0
 #define RAMDAC_8BIT 1
+
+uint32_t svga_lookup_lut_ram(svga_t *svga, uint32_t val);
+
 void svga_set_ramdac_type(svga_t *svga, int type);
 
 void svga_doblit(int y1, int y2, int wx, int wy, svga_t *svga);
 
 extern void    sc1502x_ramdac_out(uint16_t addr, uint8_t val, void *priv, svga_t *svga);
 extern uint8_t sc1502x_ramdac_in(uint16_t addr, void *priv, svga_t *svga);
+
+extern void     tvp3026_ramdac_out(uint16_t addr, int rs2, int rs3, uint8_t val, void *priv, svga_t *svga);
+extern uint8_t  tvp3026_ramdac_in(uint16_t addr, int rs2, int rs3, void *priv, svga_t *svga);
+extern uint32_t tvp3026_conv_16to32(svga_t *svga, uint16_t color, uint8_t bpp);
+extern void     tvp3026_recalctimings(void *priv, svga_t *svga);
+extern void     tvp3026_hwcursor_draw(svga_t *svga, int displine);
+extern float    tvp3026_getclock(int clock, void *priv);
+extern void     tvp3026_gpio(uint8_t(*read)(uint8_t cntl, void *priv), void (*write)(uint8_t cntl, uint8_t data, void *priv), void *cb_priv, void *priv);
+extern const device_t tvp3026_ramdac_device;

@@ -1,4 +1,6 @@
+
 #include "ibm.h"
+#include "device.h"
 #include "sound.h"
 #include "sound_speaker.h"
 

@@ -169,14 +169,14 @@ static int gd5429_vga_vsync_enabled(gd5429_t *gd5429)
 static void gd5429_update_irqs(gd5429_t *gd5429)
 {
     if (gd5429->vblank_irq > 0 && gd5429_vga_vsync_enabled(gd5429))
-        pci_set_irq(NULL, PCI_INTA);
+        pci_set_irq(NULL, PCI_INTA, NULL);
     else
-        pci_clear_irq(NULL, PCI_INTA);
+        pci_clear_irq(NULL, PCI_INTA, NULL);
 }
 
 static void gd5429_vblank_start(svga_t *svga)
 {
-    gd5429_t *gd5429 = (gd5429_t*)svga->p;
+    gd5429_t *gd5429 = (gd5429_t*)svga->priv;
     if (gd5429->vblank_irq >= 0) {
         gd5429->vblank_irq = 1;
         gd5429_update_irqs(gd5429);
@@ -405,7 +405,7 @@ static void gd5429_vblank_start(svga_t *svga)
 // 5446 overlay
 static void gd5429_overlay_draw(svga_t *svga, int displine)
 {
-    gd5429_t *gd5429 = (gd5429_t*)svga->p;
+    gd5429_t *gd5429 = (gd5429_t*)svga->priv;
     int shift = gd5429->type >= CL_TYPE_GD5446 ? 2 : 0;
     int h_acc = svga->overlay_latch.h_acc;
     int r[8], g[8], b[8];
@@ -477,7 +477,7 @@ static void gd5429_update_overlay(gd5429_t *gd5429)
     svga_t *svga = &gd5429->svga;
     int bpp = svga->bpp;
 
-    svga->overlay.ysize = gd5429->overlay.wve - gd5429->overlay.wvs + 1;
+    svga->overlay.cur_ysize = gd5429->overlay.wve - gd5429->overlay.wvs + 1;
     gd5429->overlay.region1size = 32 * gd5429->overlay.r1sz / bpp + (gd5429->overlay.r1adjust * 8 / bpp);
     gd5429->overlay.region2size = 32 * gd5429->overlay.r2sz / bpp + (gd5429->overlay.r2adjust * 8 / bpp);
 
@@ -539,16 +539,16 @@ void gd5429_out(uint16_t addr, uint8_t val, void *p)
                                 break;
                                 case 0x12:
                                 svga->hwcursor.ena = val & 1;
-                                svga->hwcursor.ysize = (val & 4) ? 64 : 32;
+                                svga->hwcursor.cur_ysize = (val & 4) ? 64 : 32;
                                 svga->hwcursor.yoff = 0;
-                                if (svga->hwcursor.ysize == 64)
+                                if (svga->hwcursor.cur_ysize == 64)
                                         svga->hwcursor.addr = (0x3fc000 + ((svga->seqregs[0x13] & 0x3c) * 256)) & svga->vram_mask;
                                 else
                                         svga->hwcursor.addr = (0x3fc000 + ((svga->seqregs[0x13] & 0x3f) * 256)) & svga->vram_mask;
 //                                pclog("svga->hwcursor.ena = %i\n", svga->hwcursor.ena);
                                 break;                               
                                 case 0x13:
-                                if (svga->hwcursor.ysize == 64)
+                                if (svga->hwcursor.cur_ysize == 64)
                                         svga->hwcursor.addr = (0x3fc000 + ((val & 0x3c) * 256)) & svga->vram_mask;
                                 else
                                         svga->hwcursor.addr = (0x3fc000 + ((val & 0x3f) * 256)) & svga->vram_mask;
@@ -591,7 +591,7 @@ void gd5429_out(uint16_t addr, uint8_t val, void *p)
                 gd5429->dac_3c6_count = 0;
                 // Hidden CLUT entries 256 - 258
                 if (svga->dac_pos == 2 && (svga->seqregs[0x12] & 2)) {
-                    hidden_dac_index = svga->dac_write;
+                    hidden_dac_index = svga->dac_addr;
                     pal_temp0 = svga->pallook[hidden_dac_index];
                     memcpy(&pal_temp1, &svga->vgapal[hidden_dac_index], sizeof(PALETTE));
                 }
@@ -1157,7 +1157,7 @@ void gd5429_recalc_mapping(gd5429_t *gd5429)
         
 void gd5429_recalctimings(svga_t *svga)
 {
-        gd5429_t *gd5429 = (gd5429_t *)svga->p;
+        gd5429_t *gd5429 = (gd5429_t *)svga->priv;
         int clock = (svga->miscout >> 2) & 3;
         int n, d, p;
         double vclk;
@@ -1253,7 +1253,7 @@ void gd5429_recalctimings(svga_t *svga)
 
 static void gd5429_adjust_panning(svga_t *svga)
 {
-    gd5429_t *gd5429 = (gd5429_t *)svga->p;
+    gd5429_t *gd5429 = (gd5429_t *)svga->priv;
     int ar11 = svga->attrregs[0x13] & 7;
     int src = 0, dst = 8;
     switch (svga->bpp)
@@ -1291,7 +1291,7 @@ static void gd5429_adjust_panning(svga_t *svga)
 
 void gd5429_hwcursor_draw(svga_t *svga, int displine)
 {
-        gd5429_t *gd5429 = (gd5429_t *)svga->p;
+        gd5429_t *gd5429 = (gd5429_t *)svga->priv;
         int x;
         uint8_t dat[2];
         int xx;
@@ -2836,7 +2836,7 @@ static void *cl_init(int type, char *fn, int pci_card, uint32_t force_vram_size)
         if (fn)
                 rom_init(&gd5429->bios_rom, fn, 0xc0000, 0x8000, 0x7fff, 0, MEM_MAPPING_EXTERNAL);
         
-        svga_init(&gd5429->svga, gd5429, (vram_size >= 256) ? (vram_size << 10) : (vram_size << 20),
+        svga_init(NULL, &gd5429->svga, gd5429, (vram_size >= 256) ? (vram_size << 10) : (vram_size << 20),
                    gd5429_recalctimings,
                    gd5429_in, gd5429_out,
                    gd5429_hwcursor_draw,
@@ -2903,39 +2903,39 @@ static void *cl_init(int type, char *fn, int pci_card, uint32_t force_vram_size)
 }
 
 
-static void *avga2_init()
+static void *avga2_init(const device_t *info)
 {
         return cl_init(CL_TYPE_AVGA2, "avga2vram.vbi", -1, 0);
 }
-static void *avga2_cbm_sl386sx_init()
+static void *avga2_cbm_sl386sx_init(const device_t *info)
 {
         return cl_init(CL_TYPE_AVGA2, "cbm_sl386sx25/c000.rom", -1, 0);
 }
-static void *gd5426_ps1_init()
+static void *gd5426_ps1_init(const device_t *info)
 {
         return cl_init(CL_TYPE_GD5426, NULL, -1, 1);
 }
-static void *gd5426_init()
+static void *gd5426_init(const device_t *info)
 {
     return cl_init(CL_TYPE_GD5426, "Picasso II", -1, 0);
 }
-static void *gd5426_swapped_init()
+static void *gd5426_swapped_init(const device_t *info)
 {
     gd5429_t *gd5429 = (gd5429_t*)cl_init(CL_TYPE_GD5426, "Picasso II", -1, 0);
     gd5429->svga.swaprb = 1;
     return gd5429;
 }
-static void *gd5428_init()
+static void *gd5428_init(const device_t *info)
 {
     return cl_init(CL_TYPE_GD5428, "Machspeed_VGA_GUI_2100_VLB.vbi", -1, 0);
 }
-static void *gd5428_swapped_init()
+static void *gd5428_swapped_init(const device_t *info)
 {
     gd5429_t *gd5429 = (gd5429_t *)cl_init(CL_TYPE_GD5428, "Picasso II", -1, 0);
     gd5429->svga.swaprb = 1;
     return gd5429;
 }
-static void *ibm_gd5428_init()
+static void *ibm_gd5428_init(const device_t *info)
 {
         gd5429_t *gd5429;
         svga_t *mb_vga = svga_get_pri();
@@ -2956,37 +2956,37 @@ static void *ibm_gd5428_init()
 
         return gd5429;
 }
-static void *gd5429_init()
+static void *gd5429_init(const device_t *info)
 {
         return cl_init(CL_TYPE_GD5429, "5429.vbi", -1, 0);
 }
-static void *gd5430_init()
+static void *gd5430_init(const device_t *info)
 {
         return cl_init(CL_TYPE_GD5430, "gd5430/pci.bin", -1, 0);
 }
-static void *gd5430_pb570_init()
+static void *gd5430_pb570_init(const device_t *info)
 {
         return cl_init(CL_TYPE_GD5430, "pb570/gd5430.bin", 8, 0);
 }
-static void *gd5434_init()
+static void *gd5434_init(const device_t *info)
 {
         return cl_init(CL_TYPE_GD5434, "gd5434.bin", -1, 0);
 }
-static void *gd5434_vlb_swapped_init()
+static void *gd5434_vlb_swapped_init(const device_t *info)
 {
     gd5429_t *gd5429 = (gd5429_t *)cl_init(CL_TYPE_GD5434, "CL", -1, 0);
     has_vlb = 1;
     gd5429->svga.swaprb = 1;
     return gd5429;
 }
-static void *gd5434_vlb_init()
+static void *gd5434_vlb_init(const device_t *info)
 {
     gd5429_t *gd5429 = (gd5429_t *)cl_init(CL_TYPE_GD5434, "CL", -1, 0);
     has_vlb = 1;
     gd5429->svga.swaprb = 0;
     return gd5429;
 }
-static void *gd5446_init()
+static void *gd5446_init(const device_t *info)
 {
     PCI = 1;
     gd5429_t *gd5429 = (gd5429_t *)cl_init(CL_TYPE_GD5446, "gd5446.bin", -1, 0);
@@ -2994,7 +2994,7 @@ static void *gd5446_init()
     return gd5429;
 }
 
-static void *gd5434_pb520r_init()
+static void *gd5434_pb520r_init(const device_t *info)
 {
         return cl_init(CL_TYPE_GD5434, "pb520r/gd5434.bin", 3, 0);
 }
@@ -3170,209 +3170,202 @@ static device_config_t gd5434_config[] =
 
 device_t avga2_device =
 {
-        "AVGA2 / Cirrus Logic GD5402",
-        0,
+        "AVGA2 / Cirrus Logic GD5402", NULL,
+        0, 0,
         avga2_init,
         gd5429_close,
+        NULL,
         avga2_available,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
         avga2_config
 };
 
 device_t avga2_cbm_sl386sx_device =
 {
-        "AVGA2 (Commodore SL386SX-25)",
-        0,
+        "AVGA2 (Commodore SL386SX-25)", NULL,
+        0, 0,
         avga2_cbm_sl386sx_init,
         gd5429_close,
+        NULL,
         gd5430_available,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
         avga2_config
 };
 
 device_t gd5426_ps1_device =
 {
-        "Cirrus Logic GD5426 (IBM PS/1)",
-        0,
+        "Cirrus Logic GD5426 (IBM PS/1)", NULL,
+        0, 0,
         gd5426_ps1_init,
         gd5429_close,
         NULL,
+        NULL,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
         NULL
 };
 
 device_t gd5426_device =
 {
-        "Cirrus Logic GD5426",
-        0,
+        "Cirrus Logic GD5426", NULL,
+        0, 0,
         gd5426_init,
         gd5429_close,
+        NULL,
         gd5428_available,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
         gd5429_config
 };
 
 device_t gd5426_swapped_device =
 {
-    "Cirrus Logic GD5426",
-    0,
+    "Cirrus Logic GD5426", NULL,
+    0, 0,
     gd5426_swapped_init,
     gd5429_close,
+    NULL,
     gd5428_available,
     gd5429_speed_changed,
     gd5429_force_redraw,
-    gd5429_add_status_info,
     gd5429_config
 };
 
 device_t gd5428_device =
 {
-        "Cirrus Logic GD5428",
-        0,
+        "Cirrus Logic GD5428", NULL,
+        0, 0,
         gd5428_init,
         gd5429_close,
+        NULL,
         gd5428_available,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
         gd5429_config
 };
 
 device_t gd5428_swapped_device =
 {
-    "Cirrus Logic GD5428",
-    0,
+    "Cirrus Logic GD5428", NULL,
+    0, 0,
     gd5428_swapped_init,
     gd5429_close,
+        NULL,
     gd5428_available,
     gd5429_speed_changed,
     gd5429_force_redraw,
-    gd5429_add_status_info,
     gd5429_config
 };
 
 
 device_t ibm_gd5428_device =
 {
-        "IBM 1MB SVGA Adapter/A (Cirrus Logic GD5428)",
-        DEVICE_MCA,
+        "IBM 1MB SVGA Adapter/A (Cirrus Logic GD5428)", NULL,
+        DEVICE_MCA, 0,
         ibm_gd5428_init,
         gd5429_close,
+        NULL,
         ibm_gd5428_available,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
         NULL
 };
 
 device_t gd5429_device =
 {
-        "Cirrus Logic GD5429",
-        0,
+        "Cirrus Logic GD5429", NULL,
+        0, 0,
         gd5429_init,
         gd5429_close,
+        NULL,
         gd5429_available,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
         gd5429_config
 };
 
 device_t gd5430_device =
 {
-        "Cirrus Logic GD5430",
-        0,
+        "Cirrus Logic GD5430", NULL,
+        0, 0,
         gd5430_init,
         gd5429_close,
+        NULL,
         gd5430_available,
         gd5429_speed_changed,
-        gd5429_force_redraw,
-        gd5429_add_status_info,
-        gd5429_config
+        gd5429_force_redraw
 };
 
 device_t gd5430_pb570_device =
 {
-        "Cirrus Logic GD5430 (PB570)",
-        0,
+        "Cirrus Logic GD5430 (PB570)", NULL,
+        0, 0,
         gd5430_pb570_init,
         gd5429_close,
+        NULL,
         gd5430_available,
         gd5429_speed_changed,
-        gd5429_force_redraw,
-        gd5429_add_status_info,
-        gd5429_config
+        gd5429_force_redraw
 };
 
 device_t gd5434_device =
 {
-        "Cirrus Logic GD5434",
-        0,
+        "Cirrus Logic GD5434", NULL,
+        0, 0,
         gd5434_init,
         gd5429_close,
+        NULL,
         gd5434_available,
         gd5429_speed_changed,
-        gd5429_force_redraw,
-        gd5429_add_status_info,
-        gd5434_config
+        gd5429_force_redraw
 };
 
 device_t gd5434_vlb_device =
 {
-    "Cirrus Logic GD5434",
-    0,
+    "Cirrus Logic GD5434", NULL,
+    0, 0,
     gd5434_vlb_init,
     gd5429_close,
+    NULL,
     gd5434_available,
     gd5429_speed_changed,
-    gd5429_force_redraw,
-    gd5429_add_status_info,
-    gd5434_config
+    gd5429_force_redraw
 };
 
 device_t gd5434_vlb_swapped_device =
 {
-    "Cirrus Logic GD5434",
-    0,
+    "Cirrus Logic GD5434", NULL,
+    0, 0,
     gd5434_vlb_swapped_init,
     gd5429_close,
+    NULL,
     gd5434_available,
     gd5429_speed_changed,
-    gd5429_force_redraw,
-    gd5429_add_status_info,
-    gd5434_config
+    gd5429_force_redraw
 };
 
 device_t gd5434_pb520r_device =
 {
-        "Cirrus Logic GD5434 (PB520r)",
-        0,
+        "Cirrus Logic GD5434 (PB520r)", NULL,
+        0, 0,
         gd5434_pb520r_init,
         gd5429_close,
+        NULL,
         gd5434_available,
         gd5429_speed_changed,
         gd5429_force_redraw,
-        gd5429_add_status_info,
-        gd5434_config
 };
 
 device_t gd5446_device =
 {
-    "Cirrus Logic GD5446",
-    0,
+    "Cirrus Logic GD5446", NULL,
+    0, 0,
     gd5446_init,
     gd5429_close,
+    NULL,
     gd5434_available,
     gd5429_speed_changed,
-    gd5429_force_redraw,
-    gd5429_add_status_info,
-    gd5434_config
+    gd5429_force_redraw
 };

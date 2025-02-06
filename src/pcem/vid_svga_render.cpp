@@ -1,9 +1,28 @@
+
+#include <stdlib.h>
 #include "ibm.h"
 #include "mem.h"
+#include "device.h"
 #include "video.h"
 #include "vid_svga.h"
 #include "vid_svga_render.h"
 #include "vid_svga_render_remap.h"
+#include "uae/byteswap.h"
+
+
+uint32_t
+svga_lookup_lut_ram(svga_t *svga, uint32_t val)
+{
+    if (!svga->lut_map)
+        return val;
+
+    uint8_t r = getcolr(svga->pallook[getcolr(val)]);
+    uint8_t g = getcolg(svga->pallook[getcolg(val)]);
+    uint8_t b = getcolb(svga->pallook[getcolb(val)]);
+    return makecol32(r, g, b) | (val & 0xFF000000);
+}
+
+#define lookup_lut(val) svga_lookup_lut_ram(svga, val)
 
 void svga_render_null(svga_t *svga)
 {
@@ -1128,7 +1147,7 @@ void svga_render_32bpp_highres_swaprb(svga_t *svga)
                         for (x = 0; x <= svga->hdisp; x++)
                         {
                                 uint32_t dat = *(uint32_t *)(&svga->vram[(svga->ma + shift + (x << 2)) & svga->vram_display_mask]);
-                                dat = ((dat & 0xff0000) >> 16) | ((dat & 0x0000ff) << 16) | ((dat & 0x00ff00));
+                                dat = uae_bswap_64(dat);
                                 *p++ = dat & 0xffffff;
                         }
                         svga->ma += x * 4;
@@ -1139,7 +1158,7 @@ void svga_render_32bpp_highres_swaprb(svga_t *svga)
                         {
                                 uint32_t addr = svga->remap_func(svga, svga->ma + shift);
                                 uint32_t dat = *(uint32_t *)(&svga->vram[addr & svga->vram_display_mask]);
-                                dat = ((dat & 0xff0000) >> 16) | ((dat & 0x0000ff) << 16) | ((dat & 0x00ff00));
+                                dat = uae_bswap_64(dat);
                                 *p++ = dat & 0xffffff;
                                 svga->ma += 4;
                         }

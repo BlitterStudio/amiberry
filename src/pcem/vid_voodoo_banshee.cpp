@@ -222,15 +222,15 @@ static int banshee_vga_vsync_enabled(banshee_t *banshee)
 static void banshee_update_irqs(banshee_t *banshee)
 {
     if (banshee->vblank_irq > 0 && banshee_vga_vsync_enabled(banshee)) {
-        pci_set_irq(NULL, PCI_INTA);
+        pci_set_irq(NULL, PCI_INTA, NULL);
     } else {
-        pci_clear_irq(NULL, PCI_INTA);
+        pci_clear_irq(NULL, PCI_INTA, NULL);
     }
 }
 
 static void banshee_vblank_start(svga_t* svga)
 {
-    banshee_t *banshee = (banshee_t*)svga->p;
+    banshee_t *banshee = (banshee_t*)svga->priv;
     if (banshee->vblank_irq >= 0) {
         banshee->vblank_irq = 1;
         banshee_update_irqs(banshee);
@@ -365,7 +365,7 @@ static void banshee_updatemapping(banshee_t *banshee)
 
 static void banshee_render_16bpp_tiled(svga_t *svga)
 {
-        banshee_t *banshee = (banshee_t *)svga->p;
+        banshee_t *banshee = (banshee_t *)svga->priv;
         int x;
         int offset = 32;
         uint32_t *p = &((uint32_t *)buffer32->line[svga->displine])[offset];
@@ -408,7 +408,7 @@ static void banshee_render_16bpp_tiled(svga_t *svga)
 
 static void banshee_recalctimings(svga_t *svga)
 {
-        banshee_t *banshee = (banshee_t *)svga->p;
+        banshee_t *banshee = (banshee_t *)svga->priv;
         voodoo_t *voodoo = banshee->voodoo;
         
 /*7 R/W Horizontal Retrace End bit 5. -
@@ -496,12 +496,12 @@ static void banshee_recalctimings(svga_t *svga)
 
                 svga->overlay.x = voodoo->overlay.start_x;
                 svga->overlay.y = voodoo->overlay.start_y;
-                svga->overlay.xsize = voodoo->overlay.size_x;
-                svga->overlay.ysize = voodoo->overlay.size_y;
+                svga->overlay.cur_xsize = voodoo->overlay.size_x;
+                svga->overlay.cur_ysize = voodoo->overlay.size_y;
                 svga->overlay.pitch = (banshee->vidDesktopOverlayStride & VID_STRIDE_OVERLAY_MASK) >> VID_STRIDE_OVERLAY_SHIFT;
                 if (banshee->vidProcCfg & VIDPROCCFG_OVERLAY_TILE)
                         svga->overlay.pitch *= 128*32;
-                if (svga->overlay.xsize <= 0 || svga->overlay.ysize <= 0)
+                if (svga->overlay.cur_xsize <= 0 || svga->overlay.cur_ysize <= 0)
                         svga->overlay.ena = 0;
                 if (svga->overlay.ena)
                 {
@@ -696,8 +696,8 @@ static void banshee_ext_outl(uint16_t addr, uint32_t val, void *p)
                 else
                         svga->hwcursor.yoff = 0;
                 svga->hwcursor.addr = (banshee->hwCurPatAddr & 0xfffff0) + (svga->hwcursor.yoff * 16);
-                svga->hwcursor.xsize = 64;
-                svga->hwcursor.ysize = 64;
+                svga->hwcursor.cur_xsize = 64;
+                svga->hwcursor.cur_ysize = 64;
 //                pclog("hwCurLoc %08x %i\n", val, svga->hwcursor.y);
                 break;
                 case Video_hwCurC0:
@@ -1380,9 +1380,9 @@ static void banshee_reg_writel(uint32_t addr, uint32_t val, void *p)
                         break;
                         
                         case SST_swapPending:
-                        thread_lock_mutex(voodoo->swap_mutex);
+                        thread_wait_mutex(voodoo->swap_mutex);
                         voodoo->swap_count++;
-                        thread_unlock_mutex(voodoo->swap_mutex);
+                        thread_release_mutex(voodoo->swap_mutex);
 //                        voodoo->cmd_written++;
                         break;
                         
@@ -1710,7 +1710,7 @@ static void banshee_write_linear_l(uint32_t addr, uint32_t val, void *p)
 
 void banshee_hwcursor_draw(svga_t *svga, int displine)
 {
-        banshee_t *banshee = (banshee_t *)svga->p;
+        banshee_t *banshee = (banshee_t *)svga->priv;
         int x, c;
         int x_off;
         uint32_t col0 = banshee->hwCurC0;
@@ -2075,7 +2075,7 @@ void voodoo_generate_vb_filters(voodoo_t *voodoo, int fcr, int fcg)
 
 static void banshee_overlay_draw(svga_t *svga, int displine)
 {
-        banshee_t *banshee = (banshee_t *)svga->p;
+        banshee_t *banshee = (banshee_t *)svga->priv;
         voodoo_t *voodoo = banshee->voodoo;
         uint32_t *p;
         int x;
@@ -2133,7 +2133,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                         OVERLAY_SAMPLE(banshee->overlay_buffer[1]);
                         if (banshee->vidProcCfg & VIDPROCCFG_H_SCALE_ENABLE)
                         {
-                                for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                 {
                                         unsigned int x_coeff = (src_x & 0xfffff) >> 4;
                                         unsigned int coeffs[4] = {
@@ -2165,7 +2165,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                         }
                         else
                         {
-                                for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                 {
                                         uint32_t samp0 = banshee->overlay_buffer[0][src_x >> 20];
                                         uint32_t samp1 = banshee->overlay_buffer[1][src_x >> 20];
@@ -2191,7 +2191,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
 
                                 if (banshee->vidProcCfg & VIDPROCCFG_H_SCALE_ENABLE) /* leilei HACK - don't know of real 4x1 hscaled behavior yet, double for now */
                                 {
-                                        for (x=0; x<svga->overlay_latch.xsize;x++)
+                                        for (x=0; x<svga->overlay_latch.cur_xsize;x++)
                                         {
                                                 fil[x*3] 	= ((banshee->overlay_buffer[0][src_x >> 20]));
                                                 fil[x*3+1] 	= ((banshee->overlay_buffer[0][src_x >> 20] >> 8));
@@ -2204,7 +2204,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                                 }
                                 else
                                 {
-                                        for (x=0; x<svga->overlay_latch.xsize;x++)
+                                        for (x=0; x<svga->overlay_latch.cur_xsize;x++)
                                         {
                                                 fil[x*3] 	= ((banshee->overlay_buffer[0][x]));
                                                 fil[x*3+1] 	= ((banshee->overlay_buffer[0][x] >> 8));
@@ -2216,7 +2216,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                                 }
                                 if (y % 2 == 0)
                                 {
-                                        for (x=0; x<svga->overlay_latch.xsize;x++)
+                                        for (x=0; x<svga->overlay_latch.cur_xsize;x++)
                                         {
                                                 fil[x*3] = banshee->voodoo->purpleline[fil[x*3+0]][0];
                                                 fil[x*3+1] = banshee->voodoo->purpleline[fil[x*3+1]][1];
@@ -2224,25 +2224,25 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                                         }
                                 }
 
-                                for (x=1; x<svga->overlay_latch.xsize;x++)
+                                for (x=1; x<svga->overlay_latch.cur_xsize;x++)
                                 {
                                         fil3[(x)*3]   = vb_filter_v1_rb [fil[x*3]]  [fil[(x-1) *3]];
                                         fil3[(x)*3+1] = vb_filter_v1_g  [fil[x*3+1]][fil[(x-1) *3+1]];
                                         fil3[(x)*3+2] = vb_filter_v1_rb [fil[x*3+2]] [fil[(x-1) *3+2]];
                                 }
-                                for (x=1; x<svga->overlay_latch.xsize;x++)
+                                for (x=1; x<svga->overlay_latch.cur_xsize;x++)
                                 {
                                         fil[(x)*3]   = vb_filter_v1_rb [fil[x*3]]  [fil3[(x-1) *3]];
                                         fil[(x)*3+1] = vb_filter_v1_g  [fil[x*3+1]][fil3[(x-1) *3+1]];
                                         fil[(x)*3+2] = vb_filter_v1_rb [fil[x*3+2]] [fil3[(x-1) *3+2]];
                                 }
-                                for (x=1; x<svga->overlay_latch.xsize;x++)
+                                for (x=1; x<svga->overlay_latch.cur_xsize;x++)
                                 {
                                         fil3[(x)*3]   = vb_filter_v1_rb [fil[x*3]]  [fil[(x-1) *3]];
                                         fil3[(x)*3+1] = vb_filter_v1_g  [fil[x*3+1]][fil[(x-1) *3+1]];
                                         fil3[(x)*3+2] = vb_filter_v1_rb [fil[x*3+2]] [fil[(x-1) *3+2]];
                                 }
-                                for (x=0; x<svga->overlay_latch.xsize;x++)
+                                for (x=0; x<svga->overlay_latch.cur_xsize;x++)
                                 {
                                         fil[(x)*3]   = vb_filter_v1_rb [fil[x*3]]  [fil3[(x+1) *3]];
                                         fil[(x)*3+1] = vb_filter_v1_g  [fil[x*3+1]][fil3[(x+1) *3+1]];
@@ -2254,7 +2254,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                         {
                                 if (banshee->vidProcCfg & VIDPROCCFG_H_SCALE_ENABLE)
                                 {
-                                        for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                        for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                         {
                                                 p[x] = banshee->overlay_buffer[0][src_x >> 20];
                                                 src_x += voodoo->overlay.vidOverlayDudx;
@@ -2262,7 +2262,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                                 }
                                 else
                                 {
-                                        for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                        for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                                 p[x] = banshee->overlay_buffer[0][x];
                                 }
                         }
@@ -2290,7 +2290,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
 
                                 src = &svga->vram[src_addr2 & svga->vram_mask];
                                 OVERLAY_SAMPLE(banshee->overlay_buffer[1]);
-                                for (x=0; x<svga->overlay_latch.xsize;x++)
+                                for (x=0; x<svga->overlay_latch.cur_xsize;x++)
                                 {
                                         samp1[x*3] 	= ((banshee->overlay_buffer[0][x]));
                                         samp1[x*3+1] 	= ((banshee->overlay_buffer[0][x] >> 8));
@@ -2327,7 +2327,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
 
                                 if (banshee->vidProcCfg & VIDPROCCFG_H_SCALE_ENABLE)  /* 2x2 on a scaled low res */
                                 {
-                                        for (x=0; x<svga->overlay_latch.xsize;x++)
+                                        for (x=0; x<svga->overlay_latch.cur_xsize;x++)
                                         {
                                                 p[x] = (fil[(src_x >> 20)*3+2] << 16) | (fil[(src_x >> 20)*3+1] << 8) | fil[(src_x >> 20)*3];
                                                 src_x += voodoo->overlay.vidOverlayDudx;
@@ -2335,7 +2335,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                                 }
                                 else
                                 {
-                                        for (x=0; x<svga->overlay_latch.xsize;x++)
+                                        for (x=0; x<svga->overlay_latch.cur_xsize;x++)
                                         {
                                                 p[x] = (fil[x*3+2] << 16) | (fil[x*3+1] << 8) | fil[x*3];
                                         }
@@ -2345,7 +2345,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                         {
                                 if (banshee->vidProcCfg & VIDPROCCFG_H_SCALE_ENABLE)
                                 {
-                                        for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                        for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                         {
                                                 p[x] = banshee->overlay_buffer[0][src_x >> 20];
 
@@ -2354,7 +2354,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                                 }
                                 else
                                 {
-                                        for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                        for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                                 p[x] = banshee->overlay_buffer[0][x];
                                 }
  		        }
@@ -2364,7 +2364,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                         default:
                         if (banshee->vidProcCfg & VIDPROCCFG_H_SCALE_ENABLE)
                         {
-                                for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                 {
                                         p[x] = banshee->overlay_buffer[0][src_x >> 20];
 
@@ -2373,7 +2373,7 @@ static void banshee_overlay_draw(svga_t *svga, int displine)
                         }
                         else
                         {
-                                for (x = 0; x < svga->overlay_latch.xsize; x++)
+                                for (x = 0; x < svga->overlay_latch.cur_xsize; x++)
                                         p[x] = banshee->overlay_buffer[0][x];
                         }
                         break;
@@ -2398,17 +2398,17 @@ void banshee_set_overlay_addr(void *p, uint32_t addr)
 
 static void banshee_vsync_callback(svga_t *svga)
 {
-        banshee_t *banshee = (banshee_t *)svga->p;
+        banshee_t *banshee = (banshee_t *)svga->priv;
         voodoo_t *voodoo = banshee->voodoo;
 
         voodoo->retrace_count++;
-        thread_lock_mutex(voodoo->swap_mutex);
+        thread_wait_mutex(voodoo->swap_mutex);
         if (voodoo->swap_pending && (voodoo->retrace_count > voodoo->swap_interval))
         {
                 if (voodoo->swap_count > 0)
                         voodoo->swap_count--;
                 voodoo->swap_pending = 0;
-                thread_unlock_mutex(voodoo->swap_mutex);
+                thread_release_mutex(voodoo->swap_mutex);
 
                 memset(voodoo->dirty_line, 1, sizeof(voodoo->dirty_line));
                 voodoo->retrace_count = 0;
@@ -2417,7 +2417,7 @@ static void banshee_vsync_callback(svga_t *svga)
                 voodoo->frame_count++;
         }
         else
-                thread_unlock_mutex(voodoo->swap_mutex);
+                thread_release_mutex(voodoo->swap_mutex);
 
         voodoo->overlay.src_y = 0;
         banshee->desktop_addr = banshee->vidDesktopStartAddr;
@@ -2826,7 +2826,7 @@ static void *banshee_init_common(char *fn, int has_sgram, int type, int voodoo_t
         else
                 mem_size = 16; /*SDRAM Banshee only supports 16 MB*/
 
-        svga_init(&banshee->svga, banshee, mem_size << 20,
+        svga_init(NULL, &banshee->svga, banshee, mem_size << 20,
                    banshee_recalctimings,
                    banshee_in, banshee_out,
                    banshee_hwcursor_draw,
@@ -2931,19 +2931,19 @@ static void *banshee_init_common(char *fn, int has_sgram, int type, int voodoo_t
         return banshee;
 }
 
-static void *banshee_init()
+static void *banshee_init(const device_t *info)
 {
         return banshee_init_common("pci_sg.rom", 1, TYPE_BANSHEE, VOODOO_BANSHEE);
 }
-static void *creative_banshee_init()
+static void *creative_banshee_init(const device_t *info)
 {
         return banshee_init_common("blasterpci.rom", 0, TYPE_BANSHEE, VOODOO_BANSHEE);
 }
-static void *v3_2000_init()
+static void *v3_2000_init(const device_t *info)
 {
         return banshee_init_common("voodoo3_2000/2k11sd.rom", 0, TYPE_V3_2000, VOODOO_3);
 }
-static void *v3_3000_init()
+static void *v3_3000_init(const device_t *info)
 {
         return banshee_init_common("voodoo3_3000/3k12sd.rom", 0, TYPE_V3_3000, VOODOO_3);
 }
@@ -3081,52 +3081,48 @@ static void banshee_add_status_info(char *s, int max_len, void *p)
 
 device_t voodoo_banshee_device =
 {
-        "Voodoo Banshee PCI (reference)",
-        DEVICE_PCI,
+        "Voodoo Banshee PCI (reference)", NULL,
+        DEVICE_PCI, 0,
         banshee_init,
         banshee_close,
+        NULL,
         banshee_available,
         banshee_speed_changed,
-        banshee_force_redraw,
-        banshee_add_status_info,
-        banshee_sgram_config
+        banshee_force_redraw
 };
 
 device_t creative_voodoo_banshee_device =
 {
-        "Creative Labs 3D Blaster Banshee PCI",
-        DEVICE_PCI,
+        "Creative Labs 3D Blaster Banshee PCI", NULL,
+        DEVICE_PCI, 0,
         creative_banshee_init,
         banshee_close,
+        NULL,
         creative_banshee_available,
         banshee_speed_changed,
-        banshee_force_redraw,
-        banshee_add_status_info,
-        banshee_sdram_config
+        banshee_force_redraw
 };
 
 device_t voodoo_3_2000_device =
 {
-        "Voodoo 3 2000 PCI",
-        DEVICE_PCI,
+        "Voodoo 3 2000 PCI", NULL,
+        DEVICE_PCI, 0,
         v3_2000_init,
         banshee_close,
+        NULL,
         v3_2000_available,
         banshee_speed_changed,
-        banshee_force_redraw,
-        banshee_add_status_info,
-        banshee_sdram_config
+        banshee_force_redraw
 };
 
 device_t voodoo_3_3000_device =
 {
-        "Voodoo 3 3000 PCI",
-        DEVICE_PCI,
+        "Voodoo 3 3000 PCI", NULL,
+        DEVICE_PCI, 0,
         v3_3000_init,
         banshee_close,
+        NULL,
         v3_3000_available,
         banshee_speed_changed,
-        banshee_force_redraw,
-        banshee_add_status_info,
-        banshee_sdram_config
+        banshee_force_redraw
 };

@@ -1,4 +1,6 @@
+
 #include "ibm.h"
+#include "device.h"
 #include "io.h"
 #include "pic.h"
 #include "pit.h"

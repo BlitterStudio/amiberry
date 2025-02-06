@@ -11,6 +11,7 @@
 
 #include "config.h"
 #include "mem.h"
+#include "device.h"
 #include "video.h"
 #include "x86.h"
 #include "cpu.h"

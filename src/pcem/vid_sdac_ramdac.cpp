@@ -1,6 +1,7 @@
 /*87C716 'SDAC' true colour RAMDAC emulation*/
 #include "ibm.h"
 #include "mem.h"
+#include "device.h"
 #include "video.h"
 #include "vid_svga.h"
 #include "vid_sdac_ramdac.h"

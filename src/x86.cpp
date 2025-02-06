@@ -50,6 +50,7 @@
 #include "audio.h"
 
 #include "pcem/ibm.h"
+#include "pcem/device.h"
 #include "pcem/pic.h"
 #include "pcem/pit.h"
 #include "pcem/timer.h"
@@ -3556,7 +3557,7 @@ void *sb_2_init();
 void *sb_pro_v1_init();
 void *sb_pro_v2_init();
 void *sb_16_init();
-void *cms_init();
+void *cms_init(const device_t*);
 
 static int x86_global_settings;
 
@@ -3631,15 +3632,15 @@ static void set_sb_emu(struct x86_bridge *xb)
 	switch (model)
 	{
 	case 0:
-		c = cms_init();
+		c = cms_init(NULL);
 		p = sb_1_init();
 		break;
 	case 1:
-		c = cms_init();
+		c = cms_init(NULL);
 		p = sb_15_init();
 		break;
 	case 2:
-		c = cms_init();
+		c = cms_init(NULL);
 		p = sb_2_init();
 		break;
 	case 3:
@@ -4006,7 +4007,7 @@ bool x86_bridge_init(struct autoconfig_info *aci, uae_u32 romtype, int type)
 
 	if (xb->type >= TYPE_2286) {
 		AT = 1;
-		nvr_device.init();
+		nvr_device.init(&nvr_device);
 		TCHAR path[MAX_DPATH];
 		cfgfile_resolve_path_out_load(currprefs.flashfile, path, MAX_DPATH, PATH_ROM);
 		xb->cmossize = xb->type == TYPE_2386 ? 192 : 64;

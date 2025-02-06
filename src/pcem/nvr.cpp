@@ -490,7 +490,7 @@ void savenvr()
 }
 #endif
 
-static void *nvr_init()
+static void *nvr_init(const device_t *info)
 {
         nvr_t *nvr = (nvr_t *)malloc(sizeof(nvr_t));
         memset(nvr, 0, sizeof(nvr_t));
@@ -512,13 +512,13 @@ static void nvr_close(void *p)
 
 device_t nvr_device =
 {
-        "Motorola MC146818 RTC",
-        0,
+        "Motorola MC146818 RTC", NULL,
+        0, 0,
         nvr_init,
         nvr_close,
         NULL,
-        nvr_speed_changed,
         NULL,
+        nvr_speed_changed,
         NULL,
         NULL
 };

@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "ibm.h"
+#include "device.h"
 #include "io.h"
 #include "sound.h"
 #include "sound_opl.h"

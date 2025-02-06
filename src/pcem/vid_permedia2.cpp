@@ -191,15 +191,15 @@ static void permedia2_update_irqs(permedia2_t *permedia2)
 {
     if (permedia2->vblank_irq > 0 && permedia2_vsync_enabled(permedia2)) {
         permedia2->intreq |= 0x10;
-        pci_set_irq(NULL, PCI_INTA);
+        pci_set_irq(NULL, PCI_INTA, NULL);
     } else {
-        pci_clear_irq(NULL, PCI_INTA);
+        pci_clear_irq(NULL, PCI_INTA, NULL);
     }
 }
 
 static void permedia2_vblank_start(svga_t *svga)
 {
-    permedia2_t *permedia2 = (permedia2_t *)svga->p;
+    permedia2_t *permedia2 = (permedia2_t *)svga->priv;
     if (permedia2->vblank_irq >= 0) {
         permedia2->vblank_irq = 1;
         permedia2_update_irqs(permedia2);
@@ -317,7 +317,7 @@ uint8_t permedia2_in(uint16_t addr, void *p)
 
 void permedia2_recalctimings(svga_t *svga)
 {
-        permedia2_t *permedia2 = (permedia2_t*)svga->p;
+        permedia2_t *permedia2 = (permedia2_t*)svga->priv;
         bool svga_mode = (svga->seqregs[0x05] & 0x08) != 0;
         int bpp = 8;
 
@@ -420,7 +420,7 @@ void permedia2_recalctimings(svga_t *svga)
 
 static void permedia2_hwcursor_draw(svga_t *svga, int displine)
 {
-    permedia2_t *permedia2 = (permedia2_t*)svga->p;
+    permedia2_t *permedia2 = (permedia2_t*)svga->priv;
     int addr = svga->hwcursor_latch.addr;
     int addradd = 0;
     uint8_t dat[2];
@@ -430,11 +430,11 @@ static void permedia2_hwcursor_draw(svga_t *svga, int displine)
 
     offset <<= svga->horizontal_linedbl;
 
-    if (svga->hwcursor.xsize == 32) {
+    if (svga->hwcursor.cur_xsize == 32) {
         addradd = ((control >> 4) & 3) * (32 * 32 / 8);
     }
 
-    for (int x = 0; x < svga->hwcursor.xsize; x += 8)
+    for (int x = 0; x < svga->hwcursor.cur_xsize; x += 8)
     {
         dat[0] = permedia2->ramdac_cram[addr + addradd];
         dat[1] = permedia2->ramdac_cram[addr + 0x200 + addradd];
@@ -469,7 +469,7 @@ static void permedia2_hwcursor_draw(svga_t *svga, int displine)
         }
         addr++;
     }
-    svga->hwcursor_latch.addr += svga->hwcursor.xsize / 8;
+    svga->hwcursor_latch.addr += svga->hwcursor.cur_xsize / 8;
 
 }
 
@@ -611,7 +611,7 @@ static void permedia2_ramdac_write(int reg, uint8_t v, void *p)
         {
             case 0x06: // cursorcontrol
             svga->hwcursor.ena = (v & 3) != 0;
-            svga->hwcursor.ysize = svga->hwcursor.xsize = (v & 0x40) ? 64 : 32;
+            svga->hwcursor.cur_ysize = svga->hwcursor.cur_xsize = (v & 0x40) ? 64 : 32;
             permedia2->ramdac_cramaddr &= 0x00ff;
             permedia2->ramdac_cramaddr |= ((v >> 2) & 3) << 8;
             break;
@@ -1537,7 +1537,7 @@ static uint8_t permedia2_mmio_read(uint32_t addr, void *p)
 static uint8_t permedia2_read_linear1(uint32_t addr, void *p)
 {
     svga_t *svga = (svga_t*)p;
-    permedia2_t *permedia2 = (permedia2_t*)svga->p;
+    permedia2_t *permedia2 = (permedia2_t*)svga->priv;
 
     uint8_t *fbp = (uint8_t*)(&svga->vram[addr & svga->vram_mask]);
     uint8_t v = *fbp;
@@ -1546,7 +1546,7 @@ static uint8_t permedia2_read_linear1(uint32_t addr, void *p)
 static uint16_t permedia2_readw_linear1(uint32_t addr, void *p)
 {
     svga_t *svga = (svga_t*)p;
-    permedia2_t *permedia2 = (permedia2_t*)svga->p;
+    permedia2_t *permedia2 = (permedia2_t*)svga->priv;
 
     uint16_t *fbp = (uint16_t*)(&svga->vram[addr & svga->vram_mask]);
     uint16_t v = *fbp;
@@ -1560,7 +1560,7 @@ static uint16_t permedia2_readw_linear1(uint32_t addr, void *p)
 static uint32_t permedia2_readl_linear1(uint32_t addr, void *p)
 {
     svga_t *svga = (svga_t*)p;
-    permedia2_t *permedia2 = (permedia2_t*)svga->p;
+    permedia2_t *permedia2 = (permedia2_t*)svga->priv;
 
     uint32_t *fbp = (uint32_t*)(&svga->vram[addr & svga->vram_mask]);
     uint32_t v = *fbp;
@@ -1578,7 +1578,7 @@ static uint32_t permedia2_readl_linear1(uint32_t addr, void *p)
 static uint8_t permedia2_read_linear2(uint32_t addr, void *p)
 {
     svga_t *svga = (svga_t *)p;
-    permedia2_t *permedia2 = (permedia2_t *)svga->p;
+    permedia2_t *permedia2 = (permedia2_t *)svga->priv;
 
     uint8_t *fbp = (uint8_t *)(&svga->vram[addr & svga->vram_mask]);
     uint8_t v = *fbp;
@@ -1587,7 +1587,7 @@ static uint8_t permedia2_read_linear2(uint32_t addr, void *p)
 static uint16_t permedia2_readw_linear2(uint32_t addr, void *p)
 {
     svga_t *svga = (svga_t *)p;
-    permedia2_t *permedia2 = (permedia2_t *)svga->p;
+    permedia2_t *permedia2 = (permedia2_t *)svga->priv;
 
     uint16_t *fbp = (uint16_t *)(&svga->vram[addr & svga->vram_mask]);
     uint16_t v = *fbp;
@@ -1601,7 +1601,7 @@ static uint16_t permedia2_readw_linear2(uint32_t addr, void *p)
 static uint32_t permedia2_readl_linear2(uint32_t addr, void *p)
 {
     svga_t *svga = (svga_t *)p;
-    permedia2_t *permedia2 = (permedia2_t *)svga->p;
+    permedia2_t *permedia2 = (permedia2_t *)svga->priv;
 
     uint32_t *fbp = (uint32_t *)(&svga->vram[addr & svga->vram_mask]);
     uint32_t v = *fbp;
@@ -1619,7 +1619,7 @@ static uint32_t permedia2_readl_linear2(uint32_t addr, void *p)
 static void permedia2_write_linear1(uint32_t addr, uint8_t val, void *p)
 {
     svga_t *svga = (svga_t*)p;
-    permedia2_t *permedia2 = (permedia2_t*)svga->p;
+    permedia2_t *permedia2 = (permedia2_t*)svga->priv;
 
     addr &= svga->vram_mask;
     uint8_t *fbp = (uint8_t*)(&svga->vram[addr]);
@@ -1629,7 +1629,7 @@ static void permedia2_write_linear1(uint32_t addr, uint8_t val, void *p)
 static void permedia2_writew_linear1(uint32_t addr, uint16_t val, void *p)
 {
     svga_t *svga = (svga_t*)p;
-    permedia2_t *permedia2 = (permedia2_t*)svga->p;
+    permedia2_t *permedia2 = (permedia2_t*)svga->priv;
 
     if (permedia2->linear_byte_control[0] == 2) {
         val = (val >> 8) | (val << 8);
@@ -1643,7 +1643,7 @@ static void permedia2_writew_linear1(uint32_t addr, uint16_t val, void *p)
 static void permedia2_writel_linear1(uint32_t addr, uint32_t val, void *p)
 {
     svga_t *svga = (svga_t*)p;
-    permedia2_t *permedia2 = (permedia2_t*)svga->p;
+    permedia2_t *permedia2 = (permedia2_t*)svga->priv;
 
     if (permedia2->linear_byte_control[0] == 2) {
         val = (val >> 16) | (val << 16);
@@ -1661,7 +1661,7 @@ static void permedia2_writel_linear1(uint32_t addr, uint32_t val, void *p)
 static void permedia2_write_linear2(uint32_t addr, uint8_t val, void *p)
 {
     svga_t *svga = (svga_t *)p;
-    permedia2_t *permedia2 = (permedia2_t *)svga->p;
+    permedia2_t *permedia2 = (permedia2_t *)svga->priv;
 
     addr &= svga->vram_mask;
     uint8_t *fbp = (uint8_t *)(&svga->vram[addr]);
@@ -1671,7 +1671,7 @@ static void permedia2_write_linear2(uint32_t addr, uint8_t val, void *p)
 static void permedia2_writew_linear2(uint32_t addr, uint16_t val, void *p)
 {
     svga_t *svga = (svga_t *)p;
-    permedia2_t *permedia2 = (permedia2_t *)svga->p;
+    permedia2_t *permedia2 = (permedia2_t *)svga->priv;
 
     if (permedia2->linear_byte_control[1] == 2) {
         val = (val >> 8) | (val << 8);
@@ -1685,7 +1685,7 @@ static void permedia2_writew_linear2(uint32_t addr, uint16_t val, void *p)
 static void permedia2_writel_linear2(uint32_t addr, uint32_t val, void *p)
 {
     svga_t *svga = (svga_t *)p;
-    permedia2_t *permedia2 = (permedia2_t *)svga->p;
+    permedia2_t *permedia2 = (permedia2_t *)svga->priv;
 
     if (permedia2->linear_byte_control[1] == 2) {
         val = (val >> 16) | (val << 16);
@@ -1909,7 +1909,7 @@ static void *permedia2_init(char *bios_fn, int chip)
 
         rom_init(&permedia2->bios_rom, bios_fn, 0xc0000, 0x8000, 0x7fff, 0, MEM_MAPPING_EXTERNAL);
 
-        svga_init(&permedia2->svga, permedia2, vram_size,
+        svga_init(NULL, &permedia2->svga, permedia2, vram_size,
             permedia2_recalctimings,
             permedia2_in, permedia2_out,
             permedia2_hwcursor_draw,
@@ -1948,7 +1948,7 @@ static void *permedia2_init(char *bios_fn, int chip)
         return permedia2;
 }
 
-void *permedia2_init()
+void *permedia2_init(const device_t *info)
 {
     permedia2_t *permedia2 = (permedia2_t *)permedia2_init("permedia2.bin", 0);
 
@@ -1997,13 +1997,13 @@ void permedia2_add_status_info(char *s, int max_len, void *p)
 
 device_t permedia2_device =
 {
-    "Permedia 2",
-    0,
+    "Permedia 2", NULL,
+    0, 0,
     permedia2_init,
     permedia2_close,
     NULL,
+    NULL,
     permedia2_speed_changed,
     permedia2_force_redraw,
-    permedia2_add_status_info,
     NULL
 };

@@ -21,6 +21,7 @@
 #include <memory>
 #include "ibm.h"
 #include "mem.h"
+#include "device.h"
 #include "video.h"
 #include "vid_svga.h"
 #include "vid_sdac_ramdac.h"

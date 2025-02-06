@@ -1,6 +1,7 @@
 #include "ibm.h"
 #include "io.h"
 #include "mem.h"
+#include "device.h"
 #include "pic.h"
 #include "pit.h"
 #include "sound.h"

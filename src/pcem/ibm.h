@@ -502,7 +502,7 @@ void speedchanged();
 void saveconfig(char *fn);
 void saveconfig_global_only();
 
-#define UNUSED(x) (void)x
+#define UNUSED(x) x
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

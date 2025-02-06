@@ -190,9 +190,9 @@ static void s3_update_irqs(s3_t *s3)
 {
         int enabled = s3_vga_vsync_enabled(s3);
         if (((s3->subsys_cntl & s3->subsys_stat & INT_MASK) && (s3->svga.crtc[0x32] & 0x10)) || (enabled && (s3->subsys_stat & INT_VSY)))
-                pci_set_irq(s3->card, PCI_INTA);
+                pci_set_irq(s3->card, PCI_INTA, NULL);
         else
-                pci_clear_irq(s3->card, PCI_INTA);
+                pci_clear_irq(s3->card, PCI_INTA, NULL);
 
         if ((s3->subsys_stat & INT_VSY) && !(s3->subsys_cntl & INT_VSY) && !enabled) {
             s3->subsys_stat &= ~INT_VSY;
@@ -202,7 +202,7 @@ static void s3_update_irqs(s3_t *s3)
 static void s3_update_irqs_thread(s3_t* s3, int mask)
 {
     if ((s3->subsys_cntl & s3->subsys_stat & mask) && (s3->svga.crtc[0x32] & 0x10))
-        pci_set_irq(s3->card, PCI_INTA);
+        pci_set_irq(s3->card, PCI_INTA, NULL);
 }
 
 void s3_accel_start(int count, int cpu_input, uint32_t mix_dat, uint32_t cpu_dat, s3_t *s3);
@@ -944,7 +944,7 @@ static int fifo_thread(void *param)
 
 static void s3_vblank_start(svga_t *svga)
 {
-        s3_t *s3 = (s3_t *)svga->p;
+        s3_t *s3 = (s3_t *)svga->priv;
         if (s3->vblank_irq >= 0) {
             s3->vblank_irq = 1;
         }
@@ -1239,7 +1239,7 @@ uint8_t s3_in(uint16_t addr, void *p)
 
 void s3_recalctimings(svga_t *svga)
 {
-        s3_t *s3 = (s3_t *)svga->p;
+        s3_t *s3 = (s3_t *)svga->priv;
         svga->hdisp = svga->hdisp_old;
         int clk_sel = (svga->miscout >> 2) & 3;
 
@@ -2549,7 +2549,7 @@ void s3_accel_start(int count, int cpu_input, uint32_t mix_dat, uint32_t cpu_dat
 
 void s3_hwcursor_draw(svga_t *svga, int displine)
 {
-        s3_t *s3 = (s3_t *)svga->p;
+        s3_t *s3 = (s3_t *)svga->priv;
         int x;
         uint16_t dat[2];
         int xx;
@@ -2811,7 +2811,7 @@ static void *s3_init(char *bios_fn, int chip)
         mem_mapping_addx(&s3->mmio_mapping,   0xa0000, 0x10000, s3_accel_read, NULL, NULL, s3_accel_write, s3_accel_write_w, s3_accel_write_l, NULL, MEM_MAPPING_EXTERNAL, s3);
         mem_mapping_disablex(&s3->mmio_mapping);
 
-        svga_init(&s3->svga, s3, vram_size, /*4mb - 864 supports 8mb but buggy VESA driver reports 0mb*/
+        svga_init(NULL, &s3->svga, s3, vram_size, /*4mb - 864 supports 8mb but buggy VESA driver reports 0mb*/
                    s3_recalctimings,
                    s3_in, s3_out,
                    s3_hwcursor_draw,
@@ -2954,7 +2954,7 @@ int s3_phoenix_trio64_available()
 
 #endif
 
-void *s3_trio64_init()
+void *s3_trio64_init(const device_t *info)
 {
     s3_t *s3 = (s3_t*)s3_init("86c764x1.bin", S3_TRIO64);
 
@@ -2970,7 +2970,7 @@ void *s3_trio64_init()
 }
 
 
-void *s3_cybervision_init()
+void *s3_cybervision_init(const device_t *info)
 {
     s3_t *s3 = (s3_t*)s3_init("86c764x1.bin", S3_TRIO64);
 
@@ -3162,7 +3162,7 @@ static device_config_t s3_phoenix_trio64_config[] =
 device_t s3_bahamas64_device =
 {
         "Paradise Bahamas 64 (S3 Vision864)",
-        0,
+        0, 0,
         s3_bahamas64_init,
         s3_close,
         s3_bahamas64_available,
@@ -3175,7 +3175,7 @@ device_t s3_bahamas64_device =
 device_t s3_9fx_device =
 {
         "Number 9 9FX (S3 Trio64)",
-        0,
+        0, 0,
         s3_9fx_init,
         s3_close,
         s3_9fx_available,
@@ -3188,7 +3188,7 @@ device_t s3_9fx_device =
 device_t s3_phoenix_trio32_device =
 {
         "Phoenix S3 Trio32",
-        0,
+        0, 0,
         s3_phoenix_trio32_init,
         s3_close,
         s3_phoenix_trio32_available,
@@ -3201,7 +3201,7 @@ device_t s3_phoenix_trio32_device =
 device_t s3_phoenix_trio64_device =
 {
         "Phoenix S3 Trio64",
-        0,
+        0, 0,
         s3_phoenix_trio64_init,
         s3_close,
         s3_phoenix_trio64_available,
@@ -3215,27 +3215,27 @@ device_t s3_phoenix_trio64_device =
 
 device_t s3_cybervision_trio64_device =
 {
-    "CyberVision64",
-    0,
+    "CyberVision64", NULL,
+    0, 0,
     s3_cybervision_init,
     s3_close,
     NULL,
+    NULL,
     s3_speed_changed,
     s3_force_redraw,
-    s3_add_status_info,
     NULL
 };
 
 device_t s3_trio64_device =
 {
-    "S3Trio64",
-    0,
+    "S3Trio64", NULL,
+    0, 0,
     s3_trio64_init,
     s3_close,
     NULL,
+    NULL,
     s3_speed_changed,
     s3_force_redraw,
-    s3_add_status_info,
     NULL
 };
 

@@ -56,10 +56,10 @@ void voodoo_reg_writel(uint32_t addr, uint32_t val, void *p)
                         if (!(val & 1))
                         {
                                 banshee_set_overlay_addr(voodoo->p, voodoo->leftOverlayBuf);
-                                thread_lock_mutex(voodoo->swap_mutex);
+                                thread_wait_mutex(voodoo->swap_mutex);
                                 if (voodoo->swap_count > 0)
                                         voodoo->swap_count--;
-                                thread_unlock_mutex(voodoo->swap_mutex);
+                                thread_release_mutex(voodoo->swap_mutex);
                                 voodoo->frame_count++;
                         }
                         else if (TRIPLE_BUFFER)
@@ -104,10 +104,10 @@ void voodoo_reg_writel(uint32_t addr, uint32_t val, void *p)
                 {
                         memset(voodoo->dirty_line, 1, sizeof(voodoo->dirty_line));
                         voodoo->front_offset = voodoo->params.front_offset;
-                        thread_lock_mutex(voodoo->swap_mutex);
+                        thread_wait_mutex(voodoo->swap_mutex);
                         if (voodoo->swap_count > 0)
                                 voodoo->swap_count--;
-                        thread_unlock_mutex(voodoo->swap_mutex);
+                        thread_release_mutex(voodoo->swap_mutex);
                 }
                 else if (TRIPLE_BUFFER)
                 {

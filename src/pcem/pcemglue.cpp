@@ -6,6 +6,7 @@
 #include "pit.h"
 #include "pic.h"
 #include "cpu.h"
+#include "device.h"
 #include "model.h"
 #include "x86.h"
 #include "x86_ops.h"
@@ -406,6 +407,7 @@ uint8_t fontdat8x12[256][16];	/* MDSI Genius font */
 uint8_t fontdat12x18[256][36];	/* IM1024 font */
 uint8_t fontdatksc5601[16384][32]; /* Korean KSC-5601 font */
 uint8_t fontdatksc5601_user[192][32]; /* Korean KSC-5601 user defined font */
+uint32_t *video_6to8;
 
 int PCI;
 int readflash;
@@ -422,6 +424,8 @@ uint64_t timer_freq;
 uint8_t edatlookup[4][4];
 uint8_t rotatevga[8][256];
 uint32_t *video_15to32, *video_16to32;
+monitor_t monitors[MONITORS_NUM];
+bitmap_t target_bitmap;
 
 static void *gfxboard_priv;
 
@@ -526,6 +530,19 @@ static void timer_remove_headx(void)
 		timer->enabled = 0;
 	}
 }
+void timer_advance_u64x(pc_timer_t *timer, uint64_t delay)
+{
+	uint32_t int_delay = delay >> 32;
+	uint32_t frac_delay = delay & 0xffffffff;
+
+	if ((frac_delay + timer->ts_frac) < frac_delay)
+		timer->ts_integer++;
+	timer->ts_frac += frac_delay;
+	timer->ts_integer += int_delay;
+
+	timer_enablex(timer);
+}
+
 
 void pcemglue_hsync(void)
 {
@@ -549,6 +566,23 @@ void pcemvideorbswap(bool swapped)
 			video_16to32[c] = ((c & 31) << 3) | (((c >> 5) & 63) << 10) | (((c >> 11) & 31) << 19);
 		}
 	}
+}
+
+static int calc_6to8(int c)
+{
+	int    ic;
+	int    i8;
+	double d8;
+
+	ic = c;
+	if (ic == 64)
+		ic = 63;
+	else
+		ic &= 0x3f;
+	d8 = (ic / 63.0) * 255.0;
+	i8 = (int)d8;
+
+	return (i8 & 0xff);
 }
 
 void initpcemvideo(void *p, bool swapped)
@@ -606,10 +640,19 @@ void initpcemvideo(void *p, bool swapped)
 		buffer32 = (PCBITMAP *)calloc(sizeof(PCBITMAP) + sizeof(uint8_t *) * 4096, 1);
 		buffer32->w = 2048;
 		buffer32->h = 4096;
+		target_bitmap.w = buffer32->w;
+		target_bitmap.h = buffer32->h;
 		buffer32->dat = xcalloc(uae_u8, buffer32->w * buffer32->h * 4);
+		target_bitmap.dat = (uae_u32*)buffer32->dat;
 		for (int i = 0; i < buffer32->h; i++) {
 			buffer32->line[i] = buffer32->dat + buffer32->w * 4 * i;
+			target_bitmap.line[i] = (uae_u32*)buffer32->line[i];
 		}
+	}
+
+	video_6to8 = (uint32_t*)malloc(4 * 256);
+	for (uint16_t c = 0; c < 256; c++) {
+		video_6to8[c] = calc_6to8(c);
 	}
 
 	pcem_linear_read_b = dummy_bread;
@@ -621,6 +664,9 @@ void initpcemvideo(void *p, bool swapped)
 	pcem_mapping_linear = NULL;
 	pcem_mapping_linear_offset = 0;
 	timer_head = NULL;
+
+	monitors[0].mon_changeframecount = 2;
+	monitors[0].target_buffer = &target_bitmap;
 }
 
 extern void *svga_get_object(void);
@@ -669,6 +715,11 @@ uae_u8 *getpcembuffer32(int x, int y, int yy)
 	return buffer32->line[y + yy] + x * 4;
 }
 
+void video_inform_monitor(int type, const video_timings_t *ptr, int monitor_index)
+{
+}
+
+int monitor_index_global;
 
 void video_wait_for_buffer(void)
 {
@@ -678,6 +729,37 @@ void updatewindowsize(int x, int mx, int y, int my)
 {
 	x *= mx;
 	gfxboard_resize(x, y, mx, my, gfxboard_priv);
+}
+
+#define MAX_ADDED_DEVICES 8
+
+struct addeddevice {
+	const device_t *dev;
+	void *priv;
+};
+
+static addeddevice added_devices[MAX_ADDED_DEVICES];
+
+void *device_add(const device_t *d)
+{
+	for (int i = 0; i < MAX_ADDED_DEVICES; i++) {
+		if (!added_devices[i].dev) {
+			added_devices[i].dev = d;
+			added_devices[i].priv = d->init(d);
+			return added_devices[i].priv;
+		}
+	}
+	return NULL;
+}
+
+void pcemfreeaddeddevices(void)
+{
+	for (int i = 0; i < MAX_ADDED_DEVICES; i++) {
+		if (added_devices[i].dev) {
+			added_devices[i].dev->close(added_devices[i].priv);
+			added_devices[i].dev = NULL;
+		}
+	}
 }
 
 static void (*pci_card_write)(int func, int addr, uint8_t val, void *priv);
@@ -699,6 +781,14 @@ uae_u8 get_pci_pcem(uaecptr addr)
 	return v;
 }
 
+void pci_add_card(uint8_t add_type, uint8_t(*read)(int func, int addr, void *priv),
+	void (*write)(int func, int addr, uint8_t val, void *priv), void *priv, uint8_t *slot)
+{
+	pci_card_read = read;
+	pci_card_write = write;
+	pci_card_priv = priv;
+}
+
 int pci_add(uint8_t(*read)(int func, int addr, void *priv), void (*write)(int func, int addr, uint8_t val, void *priv), void *priv)
 {
 	pci_card_read = read;
@@ -711,12 +801,12 @@ void pci_set_irq_routing(int card, int irq)
 {
 	//write_log(_T("pci_set_irq_routing %d %d\n"), card, irq);
 }
-void pci_set_irq(int card, int pci_int)
+void pci_set_irq(int card, int pci_int, uint8_t *state)
 {
 	//write_log(_T("pci_set_irq %d %d\n"), card, pci_int);
 	gfxboard_intreq(gfxboard_priv, 1, true);
 }
-void pci_clear_irq(int card, int pci_int)
+void pci_clear_irq(int card, int pci_int, uint8_t *state)
 {
 	//write_log(_T("pci_clear_irq %d %d\n"), card, pci_int);
 	gfxboard_intreq(gfxboard_priv, 0, true);
@@ -746,6 +836,14 @@ event_t *thread_create_event(void)
 	uae_sem_t sem = { 0 };
 	uae_sem_init(&sem, 1, 0);
 	return sem;
+}
+int thread_wait(thread_t *arg)
+{
+	if (!arg) {
+		return 0;
+	}
+	uae_sem_wait((uae_sem_t*)&arg);
+	return 1;
 }
 void thread_set_event(event_t *event)
 {
@@ -779,7 +877,7 @@ typedef struct win_mutex_t
 
 mutex_t* thread_create_mutex(void)
 {
-	win_mutex_t* mutex = xcalloc(win_mutex_t, 1);
+	win_mutex_t *mutex = xcalloc(win_mutex_t,1);
 #ifdef _WIN32
 	mutex->handle = CreateSemaphore(NULL, 1, 1, NULL);
 #else
@@ -788,29 +886,37 @@ mutex_t* thread_create_mutex(void)
 	return mutex;
 }
 
-void thread_lock_mutex(mutex_t* _mutex)
+int thread_wait_mutex(mutex_t *_mutex)
 {
-	win_mutex_t* mutex = (win_mutex_t*)_mutex;
+	if (!_mutex) {
+		return 0;
+	}
+	win_mutex_t *mutex = (win_mutex_t*)_mutex;
 #ifdef _WIN32
 	WaitForSingleObject(mutex->handle, INFINITE);
 #else
 	SDL_LockMutex(mutex->handle);
 #endif
+	return 1;
 }
 
-void thread_unlock_mutex(mutex_t* _mutex)
+int thread_release_mutex(mutex_t *_mutex)
 {
-	win_mutex_t* mutex = (win_mutex_t*)_mutex;
+	if (!_mutex) {
+		return 0;
+	}
+	win_mutex_t *mutex = (win_mutex_t*)_mutex;
 #ifdef _WIN32
 	ReleaseSemaphore(mutex->handle, 1, NULL);
 #else
 	SDL_UnlockMutex(mutex->handle);
 #endif
+	return 1;
 }
 
-void thread_destroy_mutex(mutex_t* _mutex)
+void thread_close_mutex(mutex_t *_mutex)
 {
-	win_mutex_t* mutex = (win_mutex_t*)_mutex;
+	win_mutex_t *mutex = (win_mutex_t*)_mutex;
 #ifdef _WIN32
 	CloseHandle(mutex->handle);
 #else
@@ -818,6 +924,26 @@ void thread_destroy_mutex(mutex_t* _mutex)
 #endif
 	xfree(mutex);
 }
+
+int thread_test_mutex(mutex_t *_mutex)
+{
+	if (!_mutex) {
+		return 0;
+	}
+	win_mutex_t *mutex = (win_mutex_t *)_mutex;
+#ifdef _WIN32
+	DWORD ret = WaitForSingleObject(mutex->handle, 0);
+	if (ret == WAIT_OBJECT_0)
+		return 1;
+#else
+	if (SDL_TryLockMutex(mutex->handle) == 0) {
+		SDL_UnlockMutex(mutex->handle);
+		return 1;
+	}
+#endif
+	return 0;
+}
+
 
 
 static mem_mapping_t *getmm(uaecptr *addrp)
@@ -1137,5 +1263,65 @@ char *model_get_config_string(const char *s)
 	return NULL;
 }
 void upc_set_mouse(void (*mouse_write)(uint8_t, void*), void *p)
+{
+}
+
+
+/* DMA Bus Master Page Read/Write */
+void
+dma_bm_read(uint32_t PhysAddress, uint8_t *DataRead, uint32_t TotalSize, int TransferSize)
+{
+#if 0
+	uint32_t n;
+	uint32_t n2;
+	uint8_t  bytes[4] = { 0, 0, 0, 0 };
+
+	n = TotalSize & ~(TransferSize - 1);
+	n2 = TotalSize - n;
+
+	/* Do the divisible block, if there is one. */
+	if (n) {
+		for (uint32_t i = 0; i < n; i += TransferSize)
+			mem_read_phys((void *)&(DataRead[i]), PhysAddress + i, TransferSize);
+	}
+
+	/* Do the non-divisible block, if there is one. */
+	if (n2) {
+		mem_read_phys((void *)bytes, PhysAddress + n, TransferSize);
+		memcpy((void *)&(DataRead[n]), bytes, n2);
+	}
+#endif
+}
+
+void
+dma_bm_write(uint32_t PhysAddress, const uint8_t *DataWrite, uint32_t TotalSize, int TransferSize)
+{
+#if 0
+	uint32_t n;
+	uint32_t n2;
+	uint8_t  bytes[4] = { 0, 0, 0, 0 };
+
+	n = TotalSize & ~(TransferSize - 1);
+	n2 = TotalSize - n;
+
+	/* Do the divisible block, if there is one. */
+	if (n) {
+		for (uint32_t i = 0; i < n; i += TransferSize)
+			mem_write_phys((void *)&(DataWrite[i]), PhysAddress + i, TransferSize);
+	}
+
+	/* Do the non-divisible block, if there is one. */
+	if (n2) {
+		mem_read_phys((void *)bytes, PhysAddress + n, TransferSize);
+		memcpy(bytes, (void *)&(DataWrite[n]), n2);
+		mem_write_phys((void *)bytes, PhysAddress + n, TransferSize);
+	}
+
+	if (dma_at)
+		mem_invalidate_range(PhysAddress, PhysAddress + TotalSize - 1);
+#endif
+}
+
+void video_force_resize_set_monitor(uint8_t res, int monitor_index)
 {
 }

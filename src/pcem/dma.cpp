@@ -1,5 +1,6 @@
 #include "ibm.h"
 
+#include "device.h"
 #include "dma.h"
 #include "fdc.h"
 #include "io.h"

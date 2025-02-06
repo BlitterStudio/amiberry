@@ -531,7 +531,7 @@ skip_draw:
                         {
                                 voodoo_t *voodoo_1 = voodoo->set->voodoos[1];
 
-                                thread_lock_mutex(voodoo->swap_mutex);
+                                thread_wait_mutex(voodoo->swap_mutex);
                                 /*Only swap if both Voodoos are waiting for buffer swap*/
                                 if (voodoo->swap_pending && (voodoo->retrace_count > voodoo->swap_interval) &&
                                     voodoo_1->swap_pending && (voodoo_1->retrace_count > voodoo_1->swap_interval))
@@ -549,7 +549,7 @@ skip_draw:
                                         if (voodoo_1->swap_count > 0)
                                                 voodoo_1->swap_count--;
                                         voodoo_1->swap_pending = 0;
-                                        thread_unlock_mutex(voodoo->swap_mutex);
+                                        thread_release_mutex(voodoo->swap_mutex);
 
                                         thread_set_event(voodoo->wake_fifo_thread);
                                         thread_set_event(voodoo_1->wake_fifo_thread);
@@ -558,19 +558,19 @@ skip_draw:
                                         voodoo_1->frame_count++;
                                 }
                                 else
-                                        thread_unlock_mutex(voodoo->swap_mutex);
+                                        thread_release_mutex(voodoo->swap_mutex);
                         }
                 }
                 else
                 {
-                        thread_lock_mutex(voodoo->swap_mutex);
+                        thread_wait_mutex(voodoo->swap_mutex);
                         if (voodoo->swap_pending && (voodoo->retrace_count > voodoo->swap_interval))
                         {
                                 voodoo->front_offset = voodoo->swap_offset;
                                 if (voodoo->swap_count > 0)
                                         voodoo->swap_count--;
                                 voodoo->swap_pending = 0;
-                                thread_unlock_mutex(voodoo->swap_mutex);
+                                thread_release_mutex(voodoo->swap_mutex);
 
                                 memset(voodoo->dirty_line, 1, 1024);
                                 voodoo->retrace_count = 0;
@@ -578,7 +578,7 @@ skip_draw:
                                 voodoo->frame_count++;
                         }
                         else
-                                thread_unlock_mutex(voodoo->swap_mutex);
+                                thread_release_mutex(voodoo->swap_mutex);
                 }
                 voodoo->v_retrace = 1;
         }

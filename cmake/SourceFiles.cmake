@@ -269,6 +269,7 @@ set(SOURCE_FILES
         src/pcem/vid_et4000.cpp
         src/pcem/vid_et4000w32.cpp
         src/pcem/vid_inmos.cpp
+        src/pcem/vid_mga.cpp
         src/pcem/vid_ncr.cpp
         src/pcem/vid_permedia2.cpp
         src/pcem/vid_s3.cpp
@@ -277,6 +278,7 @@ set(SOURCE_FILES
         src/pcem/vid_sdac_ramdac.cpp
         src/pcem/vid_svga.cpp
         src/pcem/vid_svga_render.cpp
+        src/pcem/vid_tvp3026_ramdac.cpp
         src/pcem/vid_voodoo.cpp
         src/pcem/vid_voodoo_banshee.cpp
         src/pcem/vid_voodoo_banshee_blitter.cpp

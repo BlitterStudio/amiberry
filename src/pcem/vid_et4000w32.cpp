@@ -162,14 +162,14 @@ static int et4000_vga_vsync_enabled(et4000w32p_t *et4000)
 static void et4000_update_irqs(et4000w32p_t *et4000)
 {
     if (et4000->vblank_irq > 0 && et4000_vga_vsync_enabled(et4000))
-        pci_set_irq(NULL, PCI_INTA);
+        pci_set_irq(NULL, PCI_INTA, NULL);
     else
-        pci_clear_irq(NULL, PCI_INTA);
+        pci_clear_irq(NULL, PCI_INTA, NULL);
 }
 
 static void et4000_vblank_start(svga_t *svga)
 {
-    et4000w32p_t *et4000 = (et4000w32p_t*)svga->p;
+    et4000w32p_t *et4000 = (et4000w32p_t*)svga->priv;
     if (et4000->vblank_irq >= 0) {
         et4000->vblank_irq = 1;
         et4000_update_irqs(et4000);
@@ -325,15 +325,15 @@ et4000w32p_out(uint16_t addr, uint8_t val, void *priv)
             svga->hwcursor.ena                                  = !!(et4000->regs[0xF7] & 0x80);
             svga->hwcursor.xoff                                 = et4000->regs[0xE2];
             svga->hwcursor.yoff                                 = et4000->regs[0xE6];
-            svga->hwcursor.xsize = svga->hwcursor.ysize = ((et4000->regs[0xEF] & 4) || ((et4000->type == ET4000W32) && (et4000->regs[0xe2] >= 0x1f) && (et4000->regs[0xe6] >= 0x1f))) ? 128 : 64;
+            svga->hwcursor.cur_xsize = svga->hwcursor.cur_ysize = ((et4000->regs[0xEF] & 4) || ((et4000->type == ET4000W32) && (et4000->regs[0xe2] >= 0x1f) && (et4000->regs[0xe6] >= 0x1f))) ? 128 : 64;
 
             if (et4000->type == ET4000W32) {
                 if ((svga->bpp == 15) || (svga->bpp == 16)) {
-                    svga->hwcursor.xsize = svga->hwcursor.ysize = 128;
+                    svga->hwcursor.cur_xsize = svga->hwcursor.cur_ysize = 128;
                 }
             }
 
-            if ((et4000->type == ET4000W32) && (svga->hwcursor.xsize == 128)) {
+            if ((et4000->type == ET4000W32) && (svga->hwcursor.cur_xsize == 128)) {
                 switch (svga->bpp) {
                     case 8:
                         svga->hwcursor.xoff += 32;
@@ -344,7 +344,7 @@ et4000w32p_out(uint16_t addr, uint8_t val, void *priv)
                 }
             }
 
-            if (svga->hwcursor.xsize == 128) {
+            if (svga->hwcursor.cur_xsize == 128) {
                 svga->hwcursor.xoff &= 0x7f;
                 svga->hwcursor.yoff &= 0x7f;
                 if (et4000->type > ET4000W32P_REVC) {
@@ -363,7 +363,7 @@ et4000w32p_out(uint16_t addr, uint8_t val, void *priv)
             }
             svga->hwcursor.addr = (et4000->regs[0xe8] | (et4000->regs[0xe9] << 8) | ((et4000->regs[0xea] & 7) << 16)) << 2;
 
-            add2addr = svga->hwcursor.yoff * ((svga->hwcursor.xsize == 128) ? 32 : 16);
+            add2addr = svga->hwcursor.yoff * ((svga->hwcursor.cur_xsize == 128) ? 32 : 16);
             svga->hwcursor.addr += add2addr;
             return;
 
@@ -488,7 +488,7 @@ et4000w32p_in(uint16_t addr, void *priv)
 void
 et4000w32p_recalctimings(svga_t *svga)
 {
-    et4000w32p_t *et4000 = (et4000w32p_t *) svga->p;
+    et4000w32p_t *et4000 = (et4000w32p_t *) svga->priv;
 
     svga->ma_latch |= (svga->crtc[0x33] & 0x7) << 16;
 
@@ -2809,13 +2809,13 @@ et4000w32p_blit(int count, uint32_t mix, uint32_t sdat, int cpu_input, et4000w32
 void
 et4000w32p_hwcursor_draw(svga_t *svga, int displine)
 {
-    const et4000w32p_t *et4000 = (et4000w32p_t *) svga->p;
+    const et4000w32p_t *et4000 = (et4000w32p_t *) svga->priv;
     int                 offset;
     int                 xx;
     int                 xx2;
     int                 shift       = (et4000->adjust_cursor + 1);
-    int                 width       = (svga->hwcursor_latch.xsize - svga->hwcursor_latch.xoff);
-    int                 pitch       = (svga->hwcursor_latch.xsize == 128) ? 32 : 16;
+    int                 width       = (svga->hwcursor_latch.cur_xsize - svga->hwcursor_latch.xoff);
+    int                 pitch       = (svga->hwcursor_latch.cur_xsize == 128) ? 32 : 16;
     int                 x_acc       = 4;
     int                 minus_width = 0;
     uint8_t             dat;
@@ -3103,7 +3103,7 @@ et4000w32p_init(const device_t *info)
 
     et4000->type = ET4000W32I;
 
-    svga_init(&et4000->svga, et4000, vram_size << 20,
+    svga_init(info, &et4000->svga, et4000, vram_size << 20,
               et4000w32p_recalctimings,
               et4000w32p_in, et4000w32p_out,
               et4000w32p_hwcursor_draw,
@@ -3572,7 +3572,7 @@ const device_t et4000w32p_pci_device = {
 };
 #endif
 
-void *et4000w32_merlin_z3_init()
+void *et4000w32_merlin_z3_init(const device_t *info)
 {
     void *p = et4000w32p_init(NULL);
     et4000w32p_t *et4000w32p = (et4000w32p_t *)p;
@@ -3584,7 +3584,7 @@ void *et4000w32_merlin_z3_init()
 
     return p;
 }
-void *et4000w32_merlin_z2_init()
+void *et4000w32_merlin_z2_init(const device_t *info)
 {
     void *p = et4000w32p_init(NULL);
     et4000w32p_t *et4000w32p = (et4000w32p_t *)p;
@@ -3596,7 +3596,7 @@ void *et4000w32_merlin_z2_init()
 
     return p;
 }
-void *et4000w32_omnibus_z2_init()
+void *et4000w32_omnibus_z2_init(const device_t *info)
 {
     void *p = et4000w32p_init(NULL);
     et4000w32p_t *et4000w32p = (et4000w32p_t *)p;
@@ -3609,40 +3609,40 @@ void *et4000w32_omnibus_z2_init()
 
 device_t et4000w32_omnibus_device =
 {
-    "oMniBus",
-    0,
+    "oMniBus", NULL,
+    0, 0,
     et4000w32_omnibus_z2_init,
     et4000w32p_close_sc,
     NULL,
+    NULL,
     et4000w32p_speed_changed,
     et4000w32p_force_redraw,
-    NULL,
     NULL
 };
 
 device_t et4000w32_merlin_z2_device =
 {
-    "Merlin Z2",
-    0,
+    "Merlin Z2", NULL,
+    0, 0,
     et4000w32_merlin_z2_init,
     et4000w32p_close_bt,
     NULL,
+    NULL,
     et4000w32p_speed_changed,
     et4000w32p_force_redraw,
-    NULL,
     NULL
 };
 
 device_t et4000w32_merlin_z3_device =
 {
-    "Merlin Z3",
-    0,
+    "Merlin Z3", NULL,
+    0, 0,
     et4000w32_merlin_z3_init,
     et4000w32p_close_bt,
     NULL,
+    NULL,
     et4000w32p_speed_changed,
     et4000w32p_force_redraw,
-    NULL,
     NULL
 };
 

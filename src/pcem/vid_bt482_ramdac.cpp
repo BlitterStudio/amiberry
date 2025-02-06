@@ -4,6 +4,7 @@
 #include <memory>
 #include "ibm.h"
 #include "mem.h"
+#include "device.h"
 #include "video.h"
 #include "vid_svga.h"
 #include "vid_sdac_ramdac.h"
@@ -55,7 +56,6 @@ bt482_ramdac_out(uint16_t addr, int rs2, uint8_t val, void *priv, svga_t *svga)
             svga->dac_pos    = 0;
             svga->dac_status = addr & 0x03;
             svga->dac_addr   = val;
-            svga->dac_write = val;
             if (svga->dac_status)
                 svga->dac_addr = (svga->dac_addr + 1) & da_mask;
             break;
@@ -72,25 +72,25 @@ bt482_ramdac_out(uint16_t addr, int rs2, uint8_t val, void *priv, svga_t *svga)
                         break;
                     case 3: // cursor
                         ramdac->cursor_r = val;
-                        svga->dac_hwcursor.xsize = 32;
-                        svga->dac_hwcursor.ysize = 32;
+                        svga->dac_hwcursor.cur_xsize = 32;
+                        svga->dac_hwcursor.cur_ysize = 32;
                         svga->dac_hwcursor.ena = (val & 0x03) != 0;
                         break;
                     case 4: // cursor x low
                         ramdac->hwc_x = (ramdac->hwc_x & 0x0f00) | val;
-                        svga->dac_hwcursor.x = ramdac->hwc_x - svga->dac_hwcursor.xsize;
+                        svga->dac_hwcursor.x = ramdac->hwc_x - svga->dac_hwcursor.cur_xsize;
                         break;
                     case 5: // cursor x high
                         ramdac->hwc_x = (ramdac->hwc_x & 0x00ff) | ((val & 0x0f) << 8);
-                        svga->dac_hwcursor.x = ramdac->hwc_x - svga->dac_hwcursor.xsize;
+                        svga->dac_hwcursor.x = ramdac->hwc_x - svga->dac_hwcursor.cur_xsize;
                         break;
                     case 6: // cursor y low
                         ramdac->hwc_y = (ramdac->hwc_y & 0x0f00) | val;
-                        svga->dac_hwcursor.y = ramdac->hwc_y - svga->dac_hwcursor.ysize;
+                        svga->dac_hwcursor.y = ramdac->hwc_y - svga->dac_hwcursor.cur_ysize;
                         break;
                     case 7: // cursor y high
                         ramdac->hwc_y = (ramdac->hwc_y & 0x00ff) | ((val & 0x0f) << 8);
-                        svga->dac_hwcursor.y = ramdac->hwc_y - svga->dac_hwcursor.ysize;
+                        svga->dac_hwcursor.y = ramdac->hwc_y - svga->dac_hwcursor.cur_ysize;
                         break;
                 }
             } else {
@@ -208,9 +208,9 @@ bt482_hwcursor_draw(svga_t *svga, int displine)
 
     /* The planes come in two parts, and each plane is 1bpp,
        32x32 cursor has 4 bytes per line */
-    pitch = (svga->dac_hwcursor_latch.xsize >> 3); /* Bytes per line. */
+    pitch = (svga->dac_hwcursor_latch.cur_xsize >> 3); /* Bytes per line. */
     /* A 32x32 cursor has 128 bytes per line */
-    bppl = (pitch * svga->dac_hwcursor_latch.ysize); /* Bytes per plane. */
+    bppl = (pitch * svga->dac_hwcursor_latch.cur_ysize); /* Bytes per plane. */
 
     if (svga->interlace && svga->dac_hwcursor_oddeven)
         svga->dac_hwcursor_latch.addr += pitch;
@@ -218,7 +218,7 @@ bt482_hwcursor_draw(svga_t *svga, int displine)
     cd = (uint8_t *) ramdac->cursor32_data;
     mode = ramdac->cursor_r & 3;
 
-    for (int x = 0; x < svga->dac_hwcursor_latch.xsize; x += 16) {
+    for (int x = 0; x < svga->dac_hwcursor_latch.cur_xsize; x += 16) {
         dat[0] = (cd[svga->dac_hwcursor_latch.addr] << 8) | cd[svga->dac_hwcursor_latch.addr + 1];
         dat[1] = (cd[svga->dac_hwcursor_latch.addr + bppl] << 8) | cd[svga->dac_hwcursor_latch.addr + bppl + 1];
 

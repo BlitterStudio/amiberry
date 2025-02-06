@@ -1,6 +1,7 @@
 
 extern void pcem_close(void);
 extern void pcemglue_hsync(void);
+extern void pcemfreeaddeddevices(void);
 
 uint8_t keyboard_at_read(uint16_t port, void *priv);
 uint8_t mem_read_romext(uint32_t addr, void *priv);

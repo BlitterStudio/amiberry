@@ -144,6 +144,7 @@ void timer_addx(pc_timer_t* timer, void (*callback)(void* p), void* p, int start
 void timer_enablex(pc_timer_t *timer);
 void timer_disablex(pc_timer_t *timer);
 void timer_set_delay_u64x(pc_timer_t *timer, uint64_t delay);
+void timer_advance_u64x(pc_timer_t *timer, uint64_t delay);
 #endif
 
 

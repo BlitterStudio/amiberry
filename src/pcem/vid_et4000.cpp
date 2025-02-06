@@ -657,7 +657,7 @@ get_et4000_addr(uint32_t addr, void *priv)
 static void
 et4000_recalctimings(svga_t *svga)
 {
-    const et4000_t *dev = (et4000_t *) svga->p;
+    const et4000_t *dev = (et4000_t *) svga->priv;
 
     svga->ma_latch |= (svga->crtc[0x33] & 3) << 16;
 
@@ -820,7 +820,7 @@ et4000_init(const device_t *info)
         case ET4000_TYPE_ISA: /* ISA ET4000AX */
             dev->vram_size = device_get_config_int("memory") << 20;
             //video_inform(VIDEO_FLAG_TYPE_SPECIAL, &timing_et4000_isa);
-            svga_init(&dev->svga, dev, dev->vram_size,
+            svga_init(info, &dev->svga, dev, dev->vram_size,
                       et4000_recalctimings, et4000_in, et4000_out,
                       NULL, NULL);
             io_sethandlerx(0x03c0, 32,
@@ -1180,7 +1180,7 @@ const device_t et4000_kasan_isa_device = {
 };
 #endif
 
-void *et4000_domino_init()
+void *et4000_domino_init(const device_t *info)
 {
     void *p = et4000_init(NULL);
     et4000_t *et4000 = (et4000_t *)p;
@@ -1191,7 +1191,7 @@ void *et4000_domino_init()
     return p;
 }
 
-void *et4000_omnibus_init()
+void *et4000_omnibus_init(const device_t *info)
 {
     void *p = et4000_init(NULL);
     et4000_t *et4000 = (et4000_t *)p;
@@ -1203,26 +1203,26 @@ void *et4000_omnibus_init()
 }
 device_t et4000_domino_device =
 {
-    "Domino",
-    0,
+    "Domino", NULL,
+    0, 0,
     et4000_domino_init,
     et4000_close,
     NULL,
+    NULL,
     et4000_speed_changed,
     et4000_force_redraw,
-    NULL,
     NULL
 };
 
 device_t et4000_omnibus_device =
 {
-    "oMniBus",
-    0,
+    "oMniBus", NULL,
+    0, 0,
     et4000_omnibus_init,
     et4000_close,
     NULL,
+    NULL,
     et4000_speed_changed,
     et4000_force_redraw,
-    NULL,
     NULL
 };
