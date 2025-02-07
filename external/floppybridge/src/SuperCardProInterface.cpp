@@ -498,7 +498,7 @@ SCPErr SCPInterface::writeCurrentTrackPrecomp(const unsigned char* mfmData, cons
 
 	writeheader header;
 	header.ramOffset = 0;
-	header.transferLength = htonl((u_long)outputBuffer.size() * 2UL);
+	header.transferLength = htonl((unsigned long)outputBuffer.size() * 2UL);
 
 	// Write the above to the RAM on the SCP
 	SCPResponse response;
@@ -519,7 +519,7 @@ SCPErr SCPInterface::writeCurrentTrackPrecomp(const unsigned char* mfmData, cons
 	selectDrive(true);
 
 	unsigned char buffer[5];
-	header.transferLength = htonl((u_long)outputBuffer.size());
+	header.transferLength = htonl((unsigned long)outputBuffer.size());
 	memcpy(buffer, &header.transferLength, 4);
 	buffer[4] = FLAGS_BITSIZE_16BIT | (writeFromIndexPulse ? BIT_READ_FROM_INDEX : 0);
 

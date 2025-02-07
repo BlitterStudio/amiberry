@@ -14,6 +14,15 @@ option(USE_OPENGL "Use OpenGL" OFF)
 # Enable Link Time Optimization?
 option(WITH_LTO "Enable Link Time Optimization" OFF)
 
+# Use LibSerialPort for serial port emulation?
+option(USE_LIBSERIALPORT "Use LibSerialPort" ON)
+# Use LibENET for network emulation?
+option(USE_LIBENET "Use LibENET" ON)
+# Use PortMidi for MIDI emulation?
+option(USE_PORTMIDI "Use PortMidi" ON)
+# Use LibMPEG2 for MPEG2 decoding (CD32 FMV)?
+option(USE_LIBMPEG2 "Use LibMPEG2" ON)
+
 ## Determine proper semantic version
 set(VERSION_MAJOR "7")
 set(VERSION_MINOR "0")
@@ -38,7 +47,7 @@ set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")  # Reverse domain name notati
 include(GNUInstallDirs)
 
 include(cmake/StandardProjectSettings.cmake)
-include(cmake/Dependencies.cmake)
 include(cmake/SourceFiles.cmake)
+include(cmake/Dependencies.cmake)
 
 add_subdirectory(packaging)

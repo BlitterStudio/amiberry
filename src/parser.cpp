@@ -9,6 +9,9 @@
 
 #include "sysconfig.h"
 
+#include <cstring>
+#include <cstdio>
+
 #undef SERIAL_ENET
 
 #include "config.h"
@@ -51,6 +54,10 @@
 #endif
 
 #include "uae/socket.h"
+
+#ifdef USE_LIBSERIALPORT
+#include <libserialport.h>
+#endif
 
 #if !defined B300 || !defined B1200 || !defined B2400 || !defined B4800 || !defined B9600
 #undef POSIX_SERIAL
@@ -190,7 +197,9 @@ void doprinter (uae_u8 val)
 
 struct uaeserialdata
 {
+#ifdef USE_LIBSERIALPORT
 	sp_port* port;
+#endif
 	int writeactive;
 
 	pthread_t thread;
@@ -208,12 +217,15 @@ static void uaeser_initdata (void *vsd, void *user)
 {
 	auto* sd = static_cast<struct uaeserialdata*>(vsd);
 	memset(sd, 0, sizeof(uaeserialdata));
+#ifdef USE_LIBSERIALPORT
 	sd->port = NULL;
+#endif
 	sd->user = user;
 }
 
 int uaeser_query(void* vsd, uae_u16* status, uae_u32* pending)
 {
+#ifdef USE_LIBSERIALPORT
 	struct uaeserialdata* sd = static_cast<struct uaeserialdata*>(vsd);
 	int bytes_available;
 	enum sp_signal signals;
@@ -242,10 +254,13 @@ int uaeser_query(void* vsd, uae_u16* status, uae_u32* pending)
 		*status = s;
 	}
 	return 1;
-	return 1;
+#else
+	return 0;
+#endif
 }
 
 int uaeser_break(void* vsd, int brklen) {
+#ifdef USE_LIBSERIALPORT
 	struct uaeserialdata* sd = static_cast<struct uaeserialdata*>(vsd);
 	if (!sd->port) {
 		return 0;
@@ -257,14 +272,14 @@ int uaeser_break(void* vsd, int brklen) {
 	}
 	Sleep(brklen / 1000);
 	return 1;
+#else
+	return 0;
+#endif
 }
-
-#include <libserialport.h>
-#include <cstring>
-#include <cstdio>
 
 int uaeser_setparams(void* vsd, int baud, int rbuffer, int bits, int sbits, int rtscts, int parity, uae_u32 xonxoff)
 {
+#ifdef USE_LIBSERIALPORT
 	struct sp_port* port = static_cast<struct sp_port*>(vsd);
 	struct sp_port_config* config;
 	sp_return result;
@@ -356,17 +371,21 @@ int uaeser_setparams(void* vsd, int baud, int rbuffer, int bits, int sbits, int 
 	}
 
 	sp_free_config(config);
+#endif
 	return 0;
 }
 
 static void startwce(struct uaeserialdata* sd, struct sp_event_set* evtset)
 {
+#ifdef USE_LIBSERIALPORT
 	uae_sem_post(&sd->evtwce);
 	sp_wait(evtset, 0);
+#endif
 }
 
 static int uaeser_trap_thread (void *arg)
 {
+#ifdef USE_LIBSERIALPORT
 	struct uaeserialdata* sd = static_cast<struct uaeserialdata*>(arg);
 	struct sp_event_set* event_set;
 	enum sp_event evtmask = static_cast<enum sp_event>(SP_EVENT_RX_READY | SP_EVENT_TX_READY);
@@ -412,17 +431,21 @@ static int uaeser_trap_thread (void *arg)
 
 	sd->threadactive = 0;
 	uae_sem_post(&sd->sync_sem);
+#endif
 	return 0;
 }
 
 void uaeser_trigger (void *vsd)
 {
+#ifdef USE_LIBSERIALPORT
 	const auto* sd = static_cast<struct uaeserialdata*>(vsd);
 	uae_sem_post (&sd->evtt);
+#endif
 }
 
 int uaeser_write(void* vsd, uae_u8* data, uae_u32 len)
 {
+#ifdef USE_LIBSERIALPORT
 	struct uaeserialdata* sd = static_cast<struct uaeserialdata*>(vsd);
 	int ret = 1;
 	enum sp_return result = sp_blocking_write(sd->port, data, len, 0);
@@ -436,10 +459,14 @@ int uaeser_write(void* vsd, uae_u8* data, uae_u32 len)
 	}
 	uae_sem_post(&sd->evtt);
 	return ret;
+#else
+	return 1;
+#endif
 }
 
 int uaeser_read(void* vsd, uae_u8* data, uae_u32 len)
 {
+#ifdef USE_LIBSERIALPORT
 	struct uaeserialdata* sd = static_cast<struct uaeserialdata*>(vsd);
 	int ret = 1;
 	int bytes_read = sp_blocking_read(sd->port, data, len, 0);
@@ -456,16 +483,22 @@ int uaeser_read(void* vsd, uae_u8* data, uae_u32 len)
 
 	uae_sem_post(&sd->evtt);
 	return ret;
+#else
+	return 1;
+#endif
 }
 
 void uaeser_clearbuffers (void *vsd)
 {
+#ifdef USE_LIBSERIALPORT
 	const auto* sd = static_cast<struct uaeserialdata*>(vsd);
 	sp_flush(sd->port, SP_BUF_BOTH);
+#endif
 }
 
 int uaeser_open (void *vsd, void *user, int unit)
 {
+#ifdef USE_LIBSERIALPORT
 	auto* sd = static_cast<struct uaeserialdata*>(vsd);
 	char port_name[256];
 
@@ -503,12 +536,13 @@ int uaeser_open (void *vsd, void *user, int unit)
 	uae_sem_init (&sd->evtt, 0, 0);
 	uae_start_thread (_T("uaeserial_amiberry"), uaeser_trap_thread, sd, NULL);
 	uae_sem_wait (&sd->sync_sem);
-
+#endif
 	return 1;
 }
 
 void uaeser_close(void* vsd)
 {
+#ifdef USE_LIBSERIALPORT
 	auto* sd = static_cast<struct uaeserialdata*>(vsd);
 
 	if (sd->threadactive) {
@@ -529,6 +563,7 @@ void uaeser_close(void* vsd)
 	uae_sem_destroy(&sd->change_sem);
 
 	uaeser_initdata(sd, sd->user);
+#endif
 }
 
 void initparallel (void)
@@ -633,6 +668,7 @@ void hsyncstuff (void)
 
 int enumserialports (void)
 {
+#ifdef USE_LIBSERIALPORT
 	int cnt = 0;
 	/* A pointer to a null-terminated array of pointers to
 	* struct sp_port, which will contain the serial ports found.*/
@@ -672,6 +708,9 @@ int enumserialports (void)
 	cnt++;
 	write_log(_T("Port enumeration end\n"));
 	return cnt;
+#else
+	return 0;
+#endif
 }
 
 int enummidiports (void)

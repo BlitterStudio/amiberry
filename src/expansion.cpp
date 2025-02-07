@@ -1011,10 +1011,12 @@ static void REGPARAM2 expamemz3_lput (uaecptr addr, uae_u32 value)
 
 static bool expamem_init_cd32fmv (struct autoconfig_info *aci)
 {
+#ifdef USE_LIBMPEG2
 	expamem_init_clear ();
 	load_rom_rc(aci->rc, ROMTYPE_CD32CART, 262144, 0, expamem, 128, 0);
 	memcpy(aci->autoconfig_raw, expamem, sizeof aci->autoconfig_raw);
 	expamem_map = cd32_fmv_init;
+#endif
 	return true;
 }
 

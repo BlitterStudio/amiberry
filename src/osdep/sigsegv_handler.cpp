@@ -43,7 +43,14 @@
 #endif
 #include <csignal>
 #include <dlfcn.h>
+
+#ifdef __GLIBC__
+#define HAVE_EXECINFO
+#endif
+
+#ifdef HAVE_EXECINFO
 #include <execinfo.h>
+#endif
 #include <SDL.h>
 
 #ifdef JIT
@@ -409,7 +416,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 	}
 #endif
 
-#if SHOW_DETAILS > 1
+#if SHOW_DETAILS > 1 && defined(HAVE_EXECINFO)
 	if (handled != HANDLE_EXCEPTION_A4000RAM) {
 		output_log(_T("Stack trace:\n"));
 
@@ -509,6 +516,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	else
 		output_log(_T("LR - 0x%08X: symbol not found\n"), getaddr);
 
+#if defined(HAVE_EXECINFO)
 	output_log(_T("Stack trace:\n"));
 
 #define MAX_BACKTRACE 20
@@ -531,7 +539,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	for (int i = 0; i < sz; ++i)
 		output_log(_T("%s\n"), strings[i]);
 	output_log(_T("End of stack trace.\n"));
-
+#endif /* HAVE_EXECINFO */
 	output_log(_T("--- end exception ---\n"));
 
 	SDL_Quit();
@@ -807,7 +815,7 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 	}
 #endif
 
-#if SHOW_DETAILS > 1
+#if SHOW_DETAILS > 1 && defined(HAVE_EXECINFO)
 	if (handled != HANDLE_EXCEPTION_A4000RAM) {
 		output_log(_T("Stack trace:\n"));
 
@@ -925,6 +933,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 
 	output_log(_T("Stack trace:\n"));
 
+#if defined(HAVE_EXECINFO)
 #define MAX_BACKTRACE 20
 
 	void* array[MAX_BACKTRACE];
@@ -963,6 +972,7 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 	for (int i = 0; i < sz; ++i)
 		output_log(_T("%s\n"), strings[i]);
 	output_log(_T("End of stack trace.\n"));
+#endif /* HAVE_EXECINFO */
 
 #endif
 	output_log(_T("--- end exception ---\n"));
