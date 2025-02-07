@@ -64,7 +64,7 @@ void x86abort(const char *format, ...)
     char buf[256];
     va_list ap;
     va_start(ap, format);
-    vsprintf(buf, format, ap);
+    vsnprintf(buf, sizeof buf, format, ap);
     va_end(ap);
     fatal(buf);
 }
@@ -181,7 +181,7 @@ void x86gpf(const char *s, uint16_t error)
 void x86gpf_expected(const char *s, uint16_t error)
 {
 //        pclog("GPF_v86 %04X %04x(%08x):%08x\n", error, CS,cs,cpu_state.pc);
-        cpu_state.abrt = ABRT_GPF | ABRT_EXPECTED;
+        cpu_state.abrt = int8_t(ABRT_GPF) | ABRT_EXPECTED;
         abrt_error = error;
 }
 void x86ss(char *s, uint16_t error)

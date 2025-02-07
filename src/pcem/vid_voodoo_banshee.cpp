@@ -222,9 +222,9 @@ static int banshee_vga_vsync_enabled(banshee_t *banshee)
 static void banshee_update_irqs(banshee_t *banshee)
 {
     if (banshee->vblank_irq > 0 && banshee_vga_vsync_enabled(banshee)) {
-        pci_set_irq(NULL, PCI_INTA, NULL);
+        pci_set_irq(0, PCI_INTA, nullptr);
     } else {
-        pci_clear_irq(NULL, PCI_INTA, NULL);
+        pci_clear_irq(0, PCI_INTA, nullptr);
     }
 }
 
@@ -943,9 +943,9 @@ static uint32_t banshee_ext_inl(uint16_t addr, void *p)
 
                 case Video_vidSerialParallelPort:
                 ret = banshee->vidSerialParallelPort & ~(VIDSERIAL_DDC_DCK_R | VIDSERIAL_DDC_DDA_R);
-                if ((banshee->vidSerialParallelPort & VIDSERIAL_DDC_DCK_W) && 0) //ddc_read_clock())
+                if ((banshee->vidSerialParallelPort & VIDSERIAL_DDC_DCK_W) && false) //ddc_read_clock())
                         ret |= VIDSERIAL_DDC_DCK_R;
-                if ((banshee->vidSerialParallelPort & VIDSERIAL_DDC_DDA_W) && 0) //ddc_read_data())
+                if ((banshee->vidSerialParallelPort & VIDSERIAL_DDC_DDA_W) && false) //ddc_read_data())
                         ret |= VIDSERIAL_DDC_DDA_R;
                 ret = ret & ~(VIDSERIAL_I2C_SCK_R | VIDSERIAL_I2C_SDA_R);
                 if (banshee->vidSerialParallelPort & VIDSERIAL_I2C_SCK_W)

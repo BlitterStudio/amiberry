@@ -86,9 +86,9 @@ static int ncr_vga_vsync_enabled(ncr_t *ncr)
 static void ncr_update_irqs(ncr_t *ncr)
 {
     if (ncr->vblank_irq > 0 && ncr_vga_vsync_enabled(ncr))
-        pci_set_irq(NULL, PCI_INTA, NULL);
+        pci_set_irq(0, PCI_INTA, nullptr);
     else
-        pci_clear_irq(NULL, PCI_INTA, NULL);
+        pci_clear_irq(0, PCI_INTA, nullptr);
 }
 
 static void ncr_vblank_start(svga_t *svga)

@@ -64,8 +64,8 @@ static void inmos_update_irqs(inmos_t *inmos)
 {
     if (inmos->vblank_irq) {
         inmos->vblank_irq = 0;
-        pci_set_irq(NULL, PCI_INTA, NULL);
-        pci_clear_irq(NULL, PCI_INTA, NULL);
+        pci_set_irq(0, PCI_INTA, nullptr);
+        pci_clear_irq(0, PCI_INTA, nullptr);
     }
 }
 

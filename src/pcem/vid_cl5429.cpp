@@ -169,9 +169,9 @@ static int gd5429_vga_vsync_enabled(gd5429_t *gd5429)
 static void gd5429_update_irqs(gd5429_t *gd5429)
 {
     if (gd5429->vblank_irq > 0 && gd5429_vga_vsync_enabled(gd5429))
-        pci_set_irq(NULL, PCI_INTA, NULL);
+        pci_set_irq(0, PCI_INTA, nullptr);
     else
-        pci_clear_irq(NULL, PCI_INTA, NULL);
+        pci_clear_irq(0, PCI_INTA, nullptr);
 }
 
 static void gd5429_vblank_start(svga_t *svga)

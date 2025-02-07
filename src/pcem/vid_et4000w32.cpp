@@ -162,9 +162,9 @@ static int et4000_vga_vsync_enabled(et4000w32p_t *et4000)
 static void et4000_update_irqs(et4000w32p_t *et4000)
 {
     if (et4000->vblank_irq > 0 && et4000_vga_vsync_enabled(et4000))
-        pci_set_irq(NULL, PCI_INTA, NULL);
+        pci_set_irq(0, PCI_INTA, nullptr);
     else
-        pci_clear_irq(NULL, PCI_INTA, NULL);
+        pci_clear_irq(0, PCI_INTA, nullptr);
 }
 
 static void et4000_vblank_start(svga_t *svga)

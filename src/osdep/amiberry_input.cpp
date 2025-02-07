@@ -623,6 +623,7 @@ void* open_tablet(SDL_Window* window)
 	//tabletlib_tablet_info(xmax, ymax, zmax, axmax, aymax, azmax, xres, yres);
 	//initialized = 1;
 	//return pWTOpenW(hwnd, &lc, TRUE);
+	return nullptr;
 }
 
 int close_tablet(void* ctx)

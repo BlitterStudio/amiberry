@@ -191,9 +191,9 @@ static void permedia2_update_irqs(permedia2_t *permedia2)
 {
     if (permedia2->vblank_irq > 0 && permedia2_vsync_enabled(permedia2)) {
         permedia2->intreq |= 0x10;
-        pci_set_irq(NULL, PCI_INTA, NULL);
+        pci_set_irq(0, PCI_INTA, nullptr);
     } else {
-        pci_clear_irq(NULL, PCI_INTA, NULL);
+        pci_clear_irq(0, PCI_INTA, nullptr);
     }
 }
 
