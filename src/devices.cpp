@@ -342,7 +342,9 @@ void devices_update_sound(float clk, float syncadjust)
 void devices_update_sync(float svpos, float syncadjust)
 {
 #ifdef CD32
+#ifdef USE_LIBMPEG2
 	cd32_fmv_set_sync(svpos, syncadjust);
+#endif
 #endif
 }
 

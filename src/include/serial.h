@@ -13,8 +13,10 @@
 #include "uae/types.h"
 
 #ifdef AMIBERRY
+#ifdef USE_LIBSERIALPORT
 #include <libserialport.h>
 extern int check(sp_return result);
+#endif
 #endif
 
 extern void serial_init (void);

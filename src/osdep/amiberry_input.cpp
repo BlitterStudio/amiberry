@@ -644,7 +644,7 @@ int is_touch_lightpen()
 	return 0;
 }
 
-int is_tablet(void)
+int is_tablet()
 {
 	return 0;
 	//return (tablet) ? 1 : 0;

@@ -26,6 +26,8 @@
 
 #include "cda_play.h"
 #include "archivers/mp2/kjmp2.h"
+
+#ifdef USE_LIBMPEG2
 #if (!defined _WIN32 && !defined ANDROID)
 extern "C" {
 #include "mpeg2dec/mpeg2.h"
@@ -1597,3 +1599,4 @@ addrbank *cd32_fmv_init (struct autoconfig_info *aci)
 
 	return &fmv_rom_bank;
 }
+#endif

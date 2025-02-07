@@ -3887,7 +3887,7 @@ static uae_u32 REGPARAM2 picasso_BlitRect (TrapContext *ctx)
 	if (NOBLITTER_BLIT)
 		return 0;
 	P96TRACE((_T("BlitRect(%d, %d, %d, %d, %d, %d, 0x%02x)\n"), srcx, srcy, dstx, dsty, width, height, Mask));
-	result = BlitRect(ctx, renderinfo, (uaecptr)NULL, srcx, srcy, dstx, dsty, width, height, Mask, RGBFmt, BLIT_SRC);
+	result = BlitRect(ctx, renderinfo, 0, srcx, srcy, dstx, dsty, width, height, Mask, RGBFmt, BLIT_SRC);
 	return result;
 }
 

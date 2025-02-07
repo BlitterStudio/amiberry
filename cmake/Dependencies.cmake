@@ -28,13 +28,34 @@ find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
-find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
-find_helper(PORTMIDI portmidi portmidi.h portmidi)
-find_helper(LIBMPEG2_CONVERT libmpeg2convert mpeg2convert.h mpeg2convert)
-find_helper(LIBMPEG2 libmpeg2 mpeg2.h mpeg2)
-find_helper(LIBENET libenet enet/enet.h enet)
 
-include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR} ${LIBENET_INCLUDE_DIRS})
+if (USE_LIBSERIALPORT)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE SERIAL_PORT)
+    find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBSERIALPORT_LIBRARIES})
+endif ()
+
+if (USE_PORTMIDI)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PORTMIDI)
+    find_helper(PORTMIDI portmidi portmidi.h portmidi)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${PORTMIDI_LIBRARIES})
+endif ()
+
+if (USE_LIBMPEG2)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBMPEG2)
+    find_helper(LIBMPEG2_CONVERT libmpeg2convert mpeg2convert.h mpeg2convert)
+    find_helper(LIBMPEG2 libmpeg2 mpeg2.h mpeg2)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBMPEG2_LIBRARIES} ${LIBMPEG2_CONVERT_LIBRARIES})
+endif ()
+
+if (USE_LIBENET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBENET)
+    find_helper(LIBENET libenet enet/enet.h enet)
+    include_directories(${LIBENET_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBENET_LIBRARIES})
+endif ()
+
+include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
@@ -42,3 +63,23 @@ add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 add_subdirectory(external/libguisan)
 
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        SDL2
+        SDL2_image
+        SDL2_ttf
+        guisan
+        mt32emu
+        FLAC
+        png
+        MPG123::libmpg123
+        z
+        pthread
+        dl
+)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(${PROJECT_NAME} PRIVATE rt)
+endif ()
+
+# Add dependencies to ensure external libraries are built
+add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
