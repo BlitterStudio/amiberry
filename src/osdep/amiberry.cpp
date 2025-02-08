@@ -4316,8 +4316,8 @@ void create_missing_amiberry_folders()
 			system(command.c_str());
 		}
 	}
-	if (!my_existsdir(rp9_path.c_str()))
-		my_mkdir(rp9_path.c_str());
+	//if (!my_existsdir(rp9_path.c_str()))
+	//	my_mkdir(rp9_path.c_str());
 	if (!my_existsdir(saveimage_dir.c_str()))
 		my_mkdir(saveimage_dir.c_str());
 	if (!my_existsdir(savestate_dir.c_str()))
