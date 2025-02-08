@@ -258,7 +258,7 @@ int regsetdata(UAEREG* root, const TCHAR* name, const void* str, int size)
 		const auto in = (uae_u8*)str;
 		TCHAR* tmp = xmalloc(TCHAR, size * 2 + 1);
 		for (int i = 0; i < size; i++)
-			_sntprintf(tmp + i * 2, sizeof tmp, _T("%02X"), in[i]);
+			_sntprintf(tmp + i * 2, sizeof tmp + i * 2, _T("%02X"), in[i]);
 		const int ret = ini_addstring(inidata, gs(root), name, tmp);
 		xfree(tmp);
 		return ret;

@@ -49,9 +49,8 @@ void handleROMSelection(const gcn::ActionEvent& actionEvent, char* prefs)
 
 static void getromfile(gcn::DropDown* d, TCHAR* path, int size)
 {
-	auto val = d->getSelected(); //LRESULT val = xSendDlgItemMessage(hDlg, d, CB_GETCURSEL, 0, 0L);
+	auto val = d->getSelected();
 	if (val == -1) {
-		//xSendDlgItemMessage(hDlg, d, WM_GETTEXT, (WPARAM)size, (LPARAM)path);
 		auto listmodel = d->getListModel();
 		listmodel->add(path);
 		val = listmodel->getNumberOfElements() - 1;

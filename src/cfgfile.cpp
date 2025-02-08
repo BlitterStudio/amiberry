@@ -1274,7 +1274,7 @@ static void write_filesys_config (struct uae_prefs *p, struct zfile *f)
 			}
 		}
 		if (ci->controller_type_unit > 0)
-			_sntprintf(hdcs + _tcslen(hdcs), sizeof hdcs, _T("-%d"), ci->controller_type_unit + 1);
+			_sntprintf(hdcs + _tcslen(hdcs), sizeof hdcs + _tcslen(hdcs), _T("-%d"), ci->controller_type_unit + 1);
 
 		auto* str1b = cfgfile_escape (str1, _T(":,"), true, false);
 		auto* str1c = cfgfile_escape_min(str1);
@@ -2603,7 +2603,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				if (tmp[0]) {
 					_tcscat(tmp, _T(","));
 				}
-				_sntprintf(tmp + _tcslen(tmp), sizeof tmp, _T("%d"), i);
+				_sntprintf(tmp + _tcslen(tmp), sizeof tmp + _tcslen(tmp), _T("%d"), i);
 			}
 		}
 		for (int i = 0; i < 8; i++) {
@@ -2611,7 +2611,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 				if (tmp[0]) {
 					_tcscat(tmp, _T(","));
 				}
-				_sntprintf(tmp + _tcslen(tmp), sizeof tmp, _T("p%d"), i);
+				_sntprintf(tmp + _tcslen(tmp), sizeof tmp + _tcslen(tmp), _T("p%d"), i);
 			}
 		}
 		cfgfile_dwrite_str(f, _T("genlock_effects"), tmp);
@@ -2889,7 +2889,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 			if (rbc->monitor_id) {
 				if (tmp2[0])
 					_tcscat(tmp2, _T(","));
-				_sntprintf(tmp2 + _tcslen(tmp2), sizeof tmp2, _T("monitor=%d"), rbc->monitor_id);
+				_sntprintf(tmp2 + _tcslen(tmp2), sizeof tmp2 + _tcslen(tmp2), _T("monitor=%d"), rbc->monitor_id);
 			}
 			if (tmp2[0]) {
 				if (i > 0)

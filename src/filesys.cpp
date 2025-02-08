@@ -8346,7 +8346,7 @@ static void dumprdbblock(const uae_u8 *buf, int block)
 		TCHAR outbuf[81];
 		for (int j = 0; j < w; j++) {
 			uae_u8 v = buf[i + j];
-			_sntprintf(outbuf + 2 * j, sizeof outbuf, _T("%02X"), v);
+			_sntprintf(outbuf + 2 * j, sizeof outbuf + 2 * j, _T("%02X"), v);
 			outbuf[2 * w + 1 + j] = (v >= 32 && v <= 126) ? v : '.';
 		}
 		outbuf[2 * w] = ' ';

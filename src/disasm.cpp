@@ -295,7 +295,7 @@ skip:
 	for (int i = 0; i < size; i++) {
 		TCHAR name[256];
 		if (debugmem_get_symbol(addr + i, name, sizeof(name) / sizeof(TCHAR))) {
-			_sntprintf(buffer + _tcslen(buffer), sizeof buffer, _T(" %s"), name);
+			_sntprintf(buffer + _tcslen(buffer), sizeof buffer + _tcslen(buffer), _T(" %s"), name);
 		}
 	}
 }

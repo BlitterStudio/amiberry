@@ -1339,7 +1339,7 @@ void savestate_quick(int slot, int save)
 	}
 	_tcscpy (savestate_fname + i, _T(".uss"));
 	if (slot > 0) {
-		_sntprintf (savestate_fname + i, sizeof savestate_fname, _T("_%d.uss"), slot);
+		_sntprintf (savestate_fname + i, sizeof savestate_fname + i, _T("_%d.uss"), slot);
 	}
 	savestate_flags = 0;
 	if (save) {

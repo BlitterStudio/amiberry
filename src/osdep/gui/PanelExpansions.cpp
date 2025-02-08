@@ -474,7 +474,7 @@ static void init_expansion2(bool init)
 				if (cnt == 1)
 					_tcscat(name, _T("* "));
 				else if (cnt > 1)
-					_sntprintf(name + _tcslen(name), sizeof name, _T("[%d] "), cnt);
+					_sntprintf(name + _tcslen(name), sizeof name + _tcslen(name), _T("[%d] "), cnt);
 				_tcscat(name, expansionroms[id].friendlyname);
 				_tcscat(cname, expansionroms[id].friendlyname);
 				if (expansionroms[id].friendlymanufacturer) {

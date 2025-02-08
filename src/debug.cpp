@@ -1195,7 +1195,7 @@ uaecptr dumpmem2 (uaecptr addr, TCHAR *out, int osize)
 		if (debug_safe_addr (addr, 1)) {
 			b1 = get_byte_debug (addr + 0);
 			b2 = get_byte_debug (addr + 1);
-			_sntprintf (out + 9 + i * 5, sizeof out, _T("%02X%02X "), b1, b2);
+			_sntprintf (out + 9 + i * 5, sizeof out + 9 + i * 5, _T("%02X%02X "), b1, b2);
 			out[9 + cols * 5 + 1 + i * 2 + 0] = b1 >= 32 && b1 < 127 ? b1 : '.';
 			out[9 + cols * 5 + 1 + i * 2 + 1] = b2 >= 32 && b2 < 127 ? b2 : '.';
 		} else {

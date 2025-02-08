@@ -197,17 +197,16 @@ void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, i
 		}
 	}
 
-	auto listmodel = d->getListModel(); //xSendDlgItemMessage(hDlg, d, CB_RESETCONTENT, 0, 0);
+	auto listmodel = d->getListModel();
 	listmodel->clear();
-	listmodel->add(""); //xSendDlgItemMessage(hDlg, d, CB_ADDSTRING, 0, (LPARAM)_T(""));
+	listmodel->add("");
 	for (int i = 0; i < ridx; i++) {
 		struct romdataentry* rdep = &rde[i];
-		listmodel->add(rdep->name); //xSendDlgItemMessage(hDlg, d, CB_ADDSTRING, 0, (LPARAM)rdep->name);
+		listmodel->add(rdep->name);
 		xfree(rdep->name);
 	}
 	if (seltmp[0])
 	{
-		//xSendDlgItemMessage(hDlg, d, CB_SELECTSTRING, (WPARAM)-1, (LPARAM)seltmp);
 		for (int i = 0; i < listmodel->getNumberOfElements(); i++) {
 			if (!_tcsicmp(listmodel->getElementAt(i).c_str(), seltmp)) {
 				d->setSelected(i);
@@ -217,7 +216,6 @@ void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, i
 	}
 	else
 	{
-		//SetDlgItemText(hDlg, d, path);
 		if (path && path[0])
 		{
 			listmodel->add(path);
