@@ -64,9 +64,6 @@ add_subdirectory(external/capsimage)
 add_subdirectory(external/libguisan)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        SDL2
-        SDL2_image
-        SDL2_ttf
         guisan
         mt32emu
         FLAC

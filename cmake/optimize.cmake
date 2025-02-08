@@ -17,6 +17,6 @@ endif()
 # Run gcc to get the compilation details and remove unwanted flags after -dumpbase
 execute_process(
         COMMAND sh -c "gcc -### -E - -march=native -mtune=native -mcpu=native 2>&1 | sed -r '/cc1/!d; s/\"//g; s/^.* - //g; s/ -dumpbase.*//'"
-        OUTPUT_VARIABLE CMAKE_C_FLAGS
+        OUTPUT_VARIABLE OPTIMIZED_C_FLAGS
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
