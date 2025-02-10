@@ -273,7 +273,7 @@ static void SDL2_init()
 			{
 				mode = SDL_WINDOW_FULLSCREEN;
 				SDL_DisplayMode dm = {};
-				dm.format = SDL_PIXELFORMAT_BGRA32;
+				dm.format = 0;
 				dm.w = currprefs.gfx_monitor[0].gfx_size.width;
 				dm.h = currprefs.gfx_monitor[0].gfx_size.height;
 				dm.refresh_rate = currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate;
@@ -2706,7 +2706,7 @@ void updatewinfsmode(const int monid, struct uae_prefs* p)
 		{
 			p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_fs;
 			SDL_DisplayMode dm = {};
-			dm.format = SDL_PIXELFORMAT_BGRA32;
+			dm.format = 0;
 			dm.w = p->gfx_monitor[monid].gfx_size.width;
 			dm.h = p->gfx_monitor[monid].gfx_size.height;
 			dm.refresh_rate = p->gfx_apmode[id].gfx_refreshrate;
