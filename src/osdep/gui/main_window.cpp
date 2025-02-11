@@ -310,6 +310,7 @@ void amiberry_gui_init()
             mode |= SDL_WINDOW_SHOWN;
 		// Set Window allow high DPI by default
 		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+		mode |= SDL_WINDOW_OPENGL;
 
         if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
         {
