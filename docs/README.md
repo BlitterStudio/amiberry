@@ -23,7 +23,7 @@ There are currently two Amiberry editions available: **Amiberry and Amiberry-Lit
 
 Amiberry is available as DEB and RPM packages for ARM32, ARM64 (aarch64) and x86_64 Linux platform distributions. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
 
-A Flatpak version of Amiberry is also availble available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry), for Linux systems where that is preferred, for example the SteamDeck.
+A Flatpak version of Amiberry is also available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry), for Linux systems where that is preferred, for example the SteamDeck.
 
 For DEB packages:
 
