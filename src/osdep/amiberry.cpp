@@ -4781,6 +4781,7 @@ int main(int argc, char* argv[])
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
 		abort();
 	}
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal,opengl,opengles2,opengles");
 #ifdef USE_OPENGL
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);

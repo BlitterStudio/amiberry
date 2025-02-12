@@ -301,8 +301,11 @@ static void SDL2_init()
 			mode |= SDL_WINDOW_SHOWN;
 		// Set Window allow high DPI by default
 		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+#if defined (__MACH__)
+		mode |= SDL_WINDOW_METAL;
+#else
 		mode |= SDL_WINDOW_OPENGL;
-
+#endif
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		{
 			mon->amiga_window = SDL_CreateWindow("Amiberry",
