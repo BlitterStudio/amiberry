@@ -4,7 +4,7 @@
 #include "uae/types.h"
 #include "traps.h"
 
-#define MAX_DISPLAYS 1
+#define MAX_DISPLAYS 10
 
 #define RTG_MODE_SCALE 1
 #define RTG_MODE_CENTER 2
@@ -25,8 +25,8 @@ struct ScreenResolution
 	uae_u32 height; /* in pixels */
 };
 
-#define MAX_PICASSO_MODES 100
-#define MAX_REFRESH_RATES 10
+#define MAX_PICASSO_MODES 300
+#define MAX_REFRESH_RATES 100
 
 #define REFRESH_RATE_RAW 1
 #define REFRESH_RATE_LACE 2
@@ -47,6 +47,7 @@ struct PicassoResolution
 
 struct MultiDisplay {
 	int primary;
+	int monitor;
 	TCHAR* adaptername, *adapterid, *adapterkey;
 	TCHAR* monitorname, *monitorid;
 	TCHAR* fullname;
@@ -55,7 +56,7 @@ struct MultiDisplay {
 	SDL_Rect workrect;
 	bool HasAdapterData;
 };
-extern struct MultiDisplay Displays[MAX_DISPLAYS];
+extern struct MultiDisplay Displays[MAX_DISPLAYS + 1];
 
 struct winuae_currentmode {
 	unsigned int flags;
@@ -68,7 +69,7 @@ struct winuae_currentmode {
 	int freq;
 };
 
-#define MAX_AMIGAMONITORS 1
+#define MAX_AMIGAMONITORS 4
 struct AmigaMonitor {
 	int monitor_id;
 	SDL_Window* amiga_window;
@@ -122,15 +123,15 @@ extern SDL_Rect crop_rect;
 
 extern SDL_Surface* amiga_surface;
 extern const char* sdl_video_driver;
-extern SDL_Rect renderQuad;
+extern SDL_Rect render_quad;
 extern SDL_Cursor* normalcursor;
 
 extern void sortdisplays();
-extern void enumeratedisplays(void);
+extern void enumeratedisplays();
 
-void Display_change_requested(int);
+void gfx_DisplayChangeRequested(int);
 void DX_Invalidate(struct AmigaMonitor*, int x, int y, int width, int height);
-int gfx_adjust_screenmode(MultiDisplay* md, int* pwidth, int* pheight, int* ppixbits);
+int gfx_adjust_screenmode(const MultiDisplay* md, int* pwidth, int* pheight, int* ppixbits);
 
 extern int default_freq;
 
@@ -143,7 +144,7 @@ extern void gfx_unlock(void);
 
 extern void destroy_crtemu();
 
-struct MultiDisplay* getdisplay(struct uae_prefs* p, int monid);
+struct MultiDisplay* getdisplay(const struct uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);

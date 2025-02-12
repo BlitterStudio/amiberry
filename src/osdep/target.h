@@ -83,7 +83,7 @@ void wait_for_vsync();
 unsigned long target_lastsynctime();
 
 void save_amiberry_settings();
-void update_display(struct uae_prefs*);
+
 void clearscreen();
 void graphics_subshutdown();
 
