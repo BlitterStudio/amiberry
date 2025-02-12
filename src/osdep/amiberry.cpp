@@ -547,15 +547,14 @@ void setminimized(const int monid)
 {
 	if (!minimized)
 		minimized = 1;
-	set_inhibit_frame(monid, IHF_WINDOWHIDDEN);
 }
 
 void unsetminimized(const int monid)
 {
-	if (minimized > 0)
+	if (minimized < 0)
+		gfx_DisplayChangeRequested(2);
+	else if (minimized > 0)
 		full_redraw_all();
-	minimized = 0;
-	clear_inhibit_frame(monid, IHF_WINDOWHIDDEN);
 }
 
 void refreshtitle()
