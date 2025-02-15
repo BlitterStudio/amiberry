@@ -10,7 +10,7 @@ option(USE_GPIOD "Use GPIOD" OFF)
 # Use DBUS to control the emulator?
 option(USE_DBUS "Use DBus" OFF)
 # Use OpenGL for rendering? NOTE: Not yet implemented
-option(USE_OPENGL "Use OpenGL" OFF)
+option(USE_OPENGL "Use OpenGL (currently BROKEN)" OFF)
 # Enable Link Time Optimization?
 option(WITH_LTO "Enable Link Time Optimization" OFF)
 
