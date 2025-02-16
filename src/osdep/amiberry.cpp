@@ -354,13 +354,13 @@ void set_last_active_config(const char* filename)
 	remove_file_extension(last_active_config);
 }
 
-int getdpiforwindow(SDL_Window* hwnd)
+int getdpiforwindow(const int monid)
 {
 	float diagDPI = -1;
 	float horiDPI = -1;
 	float vertDPI = -1;
 
-	SDL_GetDisplayDPI(0, &diagDPI, &horiDPI, &vertDPI);
+	SDL_GetDisplayDPI(monid, &diagDPI, &horiDPI, &vertDPI);
 	return static_cast<int>(vertDPI);
 }
 

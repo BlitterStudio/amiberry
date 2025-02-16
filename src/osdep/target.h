@@ -72,7 +72,7 @@ extern void setmouseactive(int monid, int active);
 extern void minimizewindow(int monid);
 extern void updatemouseclip(struct AmigaMonitor*);
 extern void updatewinrect(struct AmigaMonitor*, bool);
-int getdpiforwindow(SDL_Window* hwnd);
+int getdpiforwindow(int monid);
 void amiberry_gui_init();
 void gui_widgets_init();
 void run_gui();

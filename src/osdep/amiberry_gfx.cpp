@@ -71,8 +71,6 @@
 
 #ifdef AMIBERRY
 static bool force_auto_crop = false;
-
-/* SDL Surface for output of emulation */
 SDL_DisplayMode sdl_mode;
 SDL_Surface* amiga_surface = nullptr;
 
@@ -320,9 +318,8 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
-	const bool rtg = ad->picasso_on;
 	// RTG status line is handled in P96 code, this is for native modes only
-	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !rtg)
+	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on)
 	{
 		update_leds(monid);
 	}
@@ -391,7 +388,7 @@ static bool doInit(AmigaMonitor*);
 
 int default_freq = 60;
 
-static uae_u8* scrlinebuf;
+//static uae_u8* scrlinebuf;
 
 
 static struct MultiDisplay* getdisplay2(const struct uae_prefs* p, const int index)
@@ -654,8 +651,8 @@ static bool get_display_vblank_params(int displayindex, int* activeheightp, int*
 		*activeheightp = usable_bounds.h;
 	if (totalheightp)
 		*totalheightp = bounds.h;
-	auto vblank = static_cast<float>(dm.refresh_rate);
-	auto hblank = static_cast<float>(31000); // faking hblank, since SDL2 doesn't provide a way to get the real one
+	const float vblank = static_cast<float>(dm.refresh_rate);
+	const float hblank = static_cast<float>(31000); // faking hblank, since SDL2 doesn't provide a way to get the real one
 	if (vblankp)
 		*vblankp = vblank;
 	if (hblankp)
@@ -694,7 +691,7 @@ extern void target_calibrate_spin();
 static void display_param_init(struct AmigaMonitor* mon)
 {
 	const struct amigadisplay* ad = &adisplays[mon->monitor_id];
-	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
+	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
 
 	vsync_activeheight = mon->currentmode.current_height;
 	vsync_totalheight = vsync_activeheight * 1125 / 1080;
@@ -734,7 +731,7 @@ const TCHAR* target_get_display_name(const int num, const bool friendlyname)
 
 void centerdstrect(struct AmigaMonitor* mon, SDL_Rect* dr)
 {
-	struct uae_filter* usedfilter = mon->usedfilter;
+	const struct uae_filter* usedfilter = mon->usedfilter;
 	if (!(mon->currentmode.flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)))
 		OffsetRect(dr, mon->amigawin_rect.x, mon->amigawin_rect.y);
 	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
@@ -756,7 +753,7 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	const struct amigadisplay* ad = &adisplays[monid];
-	struct uae_filter* usedfilter = mon->usedfilter;
+	const struct uae_filter* usedfilter = mon->usedfilter;
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 
 	if (currprefs.gfx_auto_crop)
@@ -772,9 +769,7 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	}
 
 	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-		for (;;) {
-			if (mon->scalepicasso && mon->screen_is_picasso)
-				break;
+		while (!(mon->scalepicasso && mon->screen_is_picasso)) {
 			if (usedfilter && !mon->screen_is_picasso)
 				break;
 			if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
@@ -895,8 +890,8 @@ static void addmode(const struct MultiDisplay* md, const SDL_DisplayMode* dm, co
 
 static int resolution_compare(const void* a, const void* b)
 {
-	auto* ma = (struct PicassoResolution*)a;
-	auto* mb = (struct PicassoResolution*)b;
+	const PicassoResolution* ma = (struct PicassoResolution*)a;
+	const PicassoResolution* mb = (struct PicassoResolution*)b;
 	if (ma->res.width < mb->res.width)
 		return -1;
 	if (ma->res.width > mb->res.width)
@@ -1007,7 +1002,7 @@ static bool enumeratedisplays2(bool selectall)
 		if (num_modes < 1)
 			continue;
 
-		md->DisplayModes = (struct PicassoResolution *)malloc((num_modes + 1) * sizeof(struct PicassoResolution));
+		md->DisplayModes = static_cast<PicassoResolution*>(malloc((num_modes + 1) * sizeof(PicassoResolution)));
 		if (!md->DisplayModes)
 			continue;
 
@@ -1548,7 +1543,7 @@ static void close_hwnds(struct AmigaMonitor* mon)
 #ifdef RETROPLATFORM
 		rp_set_hwnd(NULL);
 #endif
-		closeblankwindows();
+		//closeblankwindows();
 		//rawinput_release();
 	}
 	if (mon->monitor_id > 0 && mon->amiga_window)
@@ -2583,7 +2578,7 @@ int picasso_palette(struct MyCLUTEntry *CLUT, uae_u32 *clut)
 
 void DX_Invalidate(struct AmigaMonitor* mon, int x, int y, int width, int height)
 {
-	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
+	const struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
 	int last, lastx;
 
 	if (width == 0 || height == 0)
@@ -2869,7 +2864,7 @@ void gfx_set_picasso_state(const int monid, const int on)
 		if (_tcscmp(newf->gfx_filtermask[i], oldf->gfx_filtermask[i]))
 			mode = -1;
 	}
-	bool differentmonitor = getdisplay(&currprefs, newmode->gfx_display) != getdisplay(&currprefs, oldmode->gfx_display);
+	const bool differentmonitor = getdisplay(&currprefs, newmode->gfx_display) != getdisplay(&currprefs, oldmode->gfx_display);
 	// if screen parameter changes, need to reopen window
 	if (newmode->gfx_fullscreen != oldmode->gfx_fullscreen ||
 		(newmode->gfx_fullscreen && (
@@ -2973,7 +2968,7 @@ int machdep_init()
 		ad->picasso_requested_on = false;
 		ad->picasso_on = false;
 		mon->screen_is_picasso = 0;
-		memset(&mon->currentmode, 0, sizeof(*&mon->currentmode));
+		memset(&mon->currentmode, 0, sizeof(mon->currentmode));
 	}
 #ifdef LOGITECHLCD
 	lcd_open();
@@ -3242,6 +3237,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	{
 		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
 		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
+		fullwindow = 1;
 	}
 #endif
 
@@ -3282,7 +3278,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		GetWindowRect(mon->amiga_window, &r);
 
 		int sbheight = 0;// currprefs.statusbar && !currprefs.borderless ? getstatuswindowheight(mon->monitor_id, mon->hAmigaWnd) : 0;
-		int dpi = getdpiforwindow(mon->amiga_window);
+		int dpi = getdpiforwindow(mon->monitor_id);
 
 		x = r.x;
 		y = r.y;
@@ -3538,7 +3534,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		movecursor(x + w / 2, y + h / 2);
 	//addnotifications(mon->amiga_window, FALSE, FALSE);
 	mon->window_extra_height_bar = sbheight;
-	mon->dpi = getdpiforwindow(mon->amiga_window);
+	mon->dpi = getdpiforwindow(mon->monitor_id);
 	//createstatusline(mon->hMainWnd, mon->monitor_id);
 
 	if (mon->monitor_id) {
@@ -4180,7 +4176,7 @@ void close_rtg(const int monid, const bool reset)
 
 void toggle_fullscreen(const int monid, const int mode)
 {
-	auto* const ad = &adisplays[monid];
+	const amigadisplay* ad = &adisplays[monid];
 	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen : &changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
 	int* wfw = &wasfs[ad->picasso_on ? 1 : 0];
 	auto v = *p;
