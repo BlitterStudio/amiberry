@@ -69,7 +69,7 @@
 #include "drawing.h"
 #include "inputdevice.h"
 #include "debug.h"
-//#include "registry.h"
+#include "registry.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -2090,25 +2090,6 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	//cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
-	//if (!cursor_surface)
-	//	goto end;
-
-	//isdata = false;
-	//for (int y = 0; y < h; y++) {
-	//	uae_u8 *s = image + y * w;
-	//	for (int x = 0; x < w; x++) {
-	//		int c = *s++;
-	//		putmousepixel(cursor_surface, x, y, c, ct);
-	//		if (c > 0) {
-	//			isdata = true;
-	//		}
-	//	}
-	//}
-	//ret = 1;
-
-	//formatted_cursor_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
-
 end:
 	if (isdata) {
 		p96_cursor = SDL_CreateColorCursor(formatted_cursor_surface, 0, 0);
@@ -2862,8 +2843,8 @@ static void picasso96_alloc2 (TrapContext *ctx)
 	if (p96depth (32))
 		depths++;
 
-	for (const auto & Display : Displays) {
-		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (int mon = 0; Displays[mon].monitorname; mon++) {
+		struct PicassoResolution *DisplayModes = Displays[mon].DisplayModes;
 		i = 0;
 		while (DisplayModes[i].depth >= 0) {
 			for (j = 0; missmodes[j * 2] >= 0; j++) {
@@ -2877,8 +2858,8 @@ static void picasso96_alloc2 (TrapContext *ctx)
 	}
 
 	cnt = 0;
-	for (const auto & Display : Displays) {
-		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (int mon = 0; Displays[mon].monitorname; mon++) {
+		struct PicassoResolution *DisplayModes = Displays[mon].DisplayModes;
 		i = 0;
 		while (DisplayModes[i].depth >= 0) {
 			if (DisplayModes[i].rawmode) {
@@ -5818,7 +5799,7 @@ uae_u8 *uaegfx_getrtgbuffer(const int monid, int *widthp, int *heightp, int *pit
 	convert[0] = getconvert (state->RGBFormat, pixbytes);
 	convert[1] = convert[0];
 	alloc_colors_picasso(8, 8, 8, 16, 8, 0, state->RGBFormat, p96_rgbx16); // BGR
-	
+
 	copyall (monid, src + off, dst, width, height, state->BytesPerRow, state->BytesPerPixel, width * pixbytes, pixbytes, convert);
 	if (pixbytes == 1) {
 		for (int i = 0; i < 256; i++) {
@@ -5972,8 +5953,8 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 
 			if (!split && vidinfo->rtg_clear_flag) {
 				uae_u8 *p2 = dst;
-				for (int h = 0; h < vidinfo->height; h++) {
-					memset(p2, 0, vidinfo->width * vidinfo->pixbytes);
+				for (int h = 0; h < vidinfo->maxheight; h++) {
+					memset(p2, 0, vidinfo->maxwidth * vidinfo->pixbytes);
 					p2 += vidinfo->rowbytes;
 				}
 				vidinfo->rtg_clear_flag--;

@@ -966,25 +966,6 @@ static void modesList(struct MultiDisplay* md)
 	}
 }
 
-static void update_display_info(const int displayIndex, const SDL_Rect& rect, const char* name)
-{
-	MultiDisplay* md = &Displays[displayIndex];
-	md->rect = rect;
-	md->workrect = rect; // SDL does not provide work area, so use the same rect
-
-	char tmp[1000];
-	if (md->rect.x == 0 && md->rect.y == 0) {
-		snprintf(tmp, sizeof(tmp), "%s (%d*%d)", name, md->rect.w, md->rect.h);
-	}
-	else {
-		snprintf(tmp, sizeof(tmp), "%s (%d*%d) [%d*%d]", name, md->rect.w, md->rect.h, md->rect.x, md->rect.y);
-	}
-	if (md->primary) {
-		strcat(tmp, " *");
-	}
-	md->fullname = strdup(tmp);
-}
-
 void reenumeratemonitors()
 {
 	for (int i = 0; i < MAX_DISPLAYS; i++) {
@@ -997,36 +978,53 @@ void reenumeratemonitors()
 static bool enumeratedisplays2(bool selectall)
 {
 	struct MultiDisplay *md = Displays;
-
 	const int num_displays = SDL_GetNumVideoDisplays();
 	if (num_displays < 1) {
 		write_log("No video displays found\n");
 		return false;
 	}
 
-	for (int i = 0; i < num_displays && i < MAX_DISPLAYS; ++i) 
+	for (int i = 0; i < num_displays; i++)
 	{
-		Displays[i].primary = i == 0; // Assuming the first display is the primary one
-		Displays[i].monitor = i;
-		// Get display name
-		const char* display_name = SDL_GetDisplayName(i);
-		if (display_name) {
-			Displays[i].adaptername = my_strdup_trim(display_name);
-			Displays[i].adapterid = my_strdup_trim(display_name);
-			Displays[i].monitorname = my_strdup_trim(display_name);
-			Displays[i].monitorid = my_strdup_trim(display_name);
-		}
-		else {
-			Displays[i].adaptername = my_strdup_trim("Unknown");
-			Displays[i].monitorname = my_strdup_trim("Unknown");
-		}
-
-		// Get display bounds
-		if (SDL_GetDisplayBounds(i, &md->rect) != 0) {
-			write_log("SDL_GetDisplayBounds failed: %s\n", SDL_GetError());
+		if (md - Displays >= MAX_DISPLAYS)
+			break;
+		const char *display_name = SDL_GetDisplayName(i);
+		if (!display_name)
 			continue;
+
+		SDL_Rect display_bounds;
+		if (SDL_GetDisplayBounds(i, &display_bounds) != 0)
+			continue;
+
+		md->adaptername = my_strdup_trim(display_name);
+		md->adapterid = my_strdup(display_name);
+		md->adapterkey = my_strdup(display_name);
+		md->monitorname = my_strdup_trim(display_name);
+		md->monitorid = my_strdup(display_name);
+		md->primary = i == 0; // Assuming the first display is the primary display
+
+		int num_modes = SDL_GetNumDisplayModes(i);
+		if (num_modes < 1)
+			continue;
+
+		md->DisplayModes = (struct PicassoResolution *)malloc((num_modes + 1) * sizeof(struct PicassoResolution));
+		if (!md->DisplayModes)
+			continue;
+
+		for (int j = 0; j < num_modes; j++) {
+			SDL_DisplayMode mode;
+			if (SDL_GetDisplayMode(i, j, &mode) != 0)
+				continue;
+
+			md->DisplayModes[j].res.width = mode.w;
+			md->DisplayModes[j].res.height = mode.h;
+			md->DisplayModes[j].depth = SDL_BITSPERPIXEL(mode.format) / 8;
+			md->DisplayModes[j].refresh[0] = mode.refresh_rate;
+			md->DisplayModes[j].refresh[1] = 0;
 		}
-		update_display_info(i, md->rect, display_name);
+		md->DisplayModes[num_modes].depth = -1;
+
+		md++;
 	}
 
 	if (md == Displays)
