@@ -243,142 +243,6 @@ static float SDL2_getrefreshrate(const int monid)
 	return static_cast<float>(mode.refresh_rate);
 }
 
-static void SDL2_init()
-{
-	struct AmigaMonitor* mon = &AMonitors[0];
-	write_log("Getting Current Video Driver...\n");
-	sdl_video_driver = SDL_GetCurrentVideoDriver();
-	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
-	{
-		kmsdrm_detected = true;
-		if (!mon->amiga_window && mon->gui_window)
-		{
-			mon->amiga_window = mon->gui_window;
-		}
-		if (!mon->amiga_renderer && mon->gui_renderer)
-		{
-			mon->amiga_renderer = mon->gui_renderer;
-		}
-	}
-
-	if (SDL_GetCurrentDisplayMode(0, &sdl_mode) == 0)
-	{
-		write_log("Current Display mode: bpp %i\t%s\t%i x %i\t%iHz\n", SDL_BITSPERPIXEL(sdl_mode.format), SDL_GetPixelFormatName(sdl_mode.format), sdl_mode.w, sdl_mode.h, sdl_mode.refresh_rate);
-		vsync_vblank = static_cast<float>(sdl_mode.refresh_rate);
-
-		mon->currentmode.native_depth = SDL_BITSPERPIXEL(sdl_mode.format);
-		mon->currentmode.freq = sdl_mode.refresh_rate;
-	}
-
-	// If KMSDRM is detected, force Full-Window mode
-	if (kmsdrm_detected)
-	{
-		currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen = GFX_FULLWINDOW;
-		currprefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen = GFX_FULLWINDOW;
-	}
-
-	if (!mon->amiga_window)
-	{
-		write_log("Creating Amiberry window...\n");
-		Uint32 mode;
-
-		// Only enable Windowed mode if we're running under x11
-		if (!kmsdrm_detected)
-		{
-			if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLWINDOW)
-				mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-			else if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen == GFX_FULLSCREEN)
-			{
-				mode = SDL_WINDOW_FULLSCREEN;
-				SDL_DisplayMode dm = {};
-				dm.format = 0;
-				dm.w = currprefs.gfx_monitor[0].gfx_size.width;
-				dm.h = currprefs.gfx_monitor[0].gfx_size.height;
-				dm.refresh_rate = currprefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate;
-				if (SDL_SetWindowDisplayMode(mon->amiga_window, &dm) != 0) {
-					// Handle error
-					write_log("Failed to set display mode: %s\n", SDL_GetError());
-				}
-			}
-			else
-				mode = SDL_WINDOW_RESIZABLE;
-		}
-		else
-		{
-			// otherwise go for Full-window
-			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-		}
-		
-		if (currprefs.borderless)
-			mode |= SDL_WINDOW_BORDERLESS;
-		if (currprefs.main_alwaysontop)
-			mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-		if (currprefs.start_minimized)
-			mode |= SDL_WINDOW_HIDDEN;
-		else
-			mode |= SDL_WINDOW_SHOWN;
-		// Set Window allow high DPI by default
-		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
-#ifdef USE_OPENGL
-		mode |= SDL_WINDOW_OPENGL;
-#endif
-
-		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		{
-			mon->amiga_window = SDL_CreateWindow("Amiberry",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				800,
-				600,
-				mode);
-		}
-		else
-		{
-			mon->amiga_window = SDL_CreateWindow("Amiberry",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				600,
-				800,
-				mode);
-		}
-		check_error_sdl(mon->amiga_window == nullptr, "Unable to create window:");
-
-		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
-		if (icon_surface != nullptr)
-		{
-			SDL_SetWindowIcon(mon->amiga_window, icon_surface);
-			SDL_FreeSurface(icon_surface);
-		}
-	}
-
-#ifdef USE_OPENGL
-	if (gl_context == nullptr)
-		gl_context = SDL_GL_CreateContext(mon->amiga_window);
-
-	glewInit();
-
-	// Enable vsync
-	if (SDL_GL_SetSwapInterval(1) < 0)
-	{
-		write_log("Warning: Failed to enable V-Sync in the current GL context!\n");
-	}
-#else
-	if (mon->amiga_renderer == nullptr)
-	{
-		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
-		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
-	}
-	DPIHandler::set_render_scale(mon->amiga_renderer);
-#endif
-
-	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
-		write_log("SDL2: could not grab the keyboard!\n");
-
-	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
-		write_log("SDL2: Set window not to minimize on focus loss\n");
-}
-
 static bool SDL2_alloctexture(int monid, int w, int h, const int depth)
 {
 	if (w == 0 || h == 0)
@@ -589,8 +453,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 		if (!_tcscmp(md->monitorid, name)) {
 			if (found < 0) {
 				found = i + 1;
-			}
-			else {
+			} else {
 				found2 = found;
 				found = -1;
 				break;
@@ -610,8 +473,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 		if (!_tcscmp(md->adapterid, name)) {
 			if (found < 0) {
 				found = i + 1;
-			}
-			else {
+			} else {
 				if (found2 < 0)
 					found2 = found;
 				found = -1;
@@ -631,8 +493,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 		if (!_tcscmp(md->adaptername, name)) {
 			if (found < 0) {
 				found = i + 1;
-			}
-			else {
+			} else {
 				if (found2 < 0)
 					found2 = found;
 				found = -1;
@@ -652,8 +513,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 		if (!_tcscmp(md->monitorname, name)) {
 			if (found < 0) {
 				found = i + 1;
-			}
-			else {
+			} else {
 				if (found2 < 0)
 					found2 = found;
 				found = -1;
@@ -1552,8 +1412,7 @@ void getrtgfilterrect2(int monid, SDL_Rect* sr, SDL_Rect* dr, SDL_Rect* zr, int*
 		outwidth = srcwidth;
 		outheight = srcheight;
 		*mode = 1;
-	}
-	else if (mon->scalepicasso == RTG_MODE_CENTER) {
+	} else if (mon->scalepicasso == RTG_MODE_CENTER) {
 		int xx = (mon->currentmode.native_width - srcwidth) / 2;
 		int yy = (mon->currentmode.native_height - srcheight) / 2;
 		picasso_offset_x = -xx;
@@ -1563,18 +1422,15 @@ void getrtgfilterrect2(int monid, SDL_Rect* sr, SDL_Rect* dr, SDL_Rect* zr, int*
 		outwidth = dr->w;
 		outheight = dr->h;
 		mx = my = 1.0;
-	}
-	else {
+	} else {
 		if (currprefs.rtgscaleaspectratio < 0) {
 			// automatic
 			srcratio = srcwidth * ASPECTMULT / srcheight;
 			dstratio = mon->currentmode.native_width * ASPECTMULT / mon->currentmode.native_height;
-		}
-		else if (currprefs.rtgscaleaspectratio == 0) {
+		} else if (currprefs.rtgscaleaspectratio == 0) {
 			// none
 			srcratio = dstratio = 0;
-		}
-		else {
+		} else {
 			// manual
 			dstratio = (currprefs.rtgscaleaspectratio / ASPECTMULT) * ASPECTMULT / (currprefs.rtgscaleaspectratio & (ASPECTMULT - 1));
 			srcratio = srcwidth * ASPECTMULT / srcheight;
@@ -1582,13 +1438,11 @@ void getrtgfilterrect2(int monid, SDL_Rect* sr, SDL_Rect* dr, SDL_Rect* zr, int*
 
 		if (srcratio == dstratio) {
 			SetRect(dr, 0, 0, srcwidth, srcheight);
-		}
-		else if (srcratio > dstratio) {
+		} else if (srcratio > dstratio) {
 			int yy = srcheight * srcratio / dstratio;
 			SetRect(dr, 0, 0, srcwidth, yy);
 			picasso_offset_y = (state->Height - yy) / 2;
-		}
-		else {
+		} else {
 			int xx = srcwidth * dstratio / srcratio;
 			SetRect(dr, 0, 0, xx, srcheight);
 			picasso_offset_x = (state->Width - xx) / 2;
@@ -1979,14 +1833,12 @@ static int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 	if (startactive) {
 		setpriority(currprefs.active_capture_priority);
 		upd = 2;
-	}
-	else if (startminimized) {
+	} else if (startminimized) {
 		setpriority(currprefs.minimized_priority);
 		setminimized(mon->monitor_id);
 		input = currprefs.inactive_input;
 		upd = 1;
-	}
-	else {
+	} else {
 		setpriority(currprefs.inactive_priority);
 		input = currprefs.inactive_input;
 		upd = 2;
@@ -2209,6 +2061,8 @@ int check_prefs_changed_gfx()
 	c |= currprefs.genlock_mix != changed_prefs.genlock_mix ? (1 | 256) : 0;
 	c |= currprefs.genlock_aspect != changed_prefs.genlock_aspect ? (1 | 256) : 0;
 	c |= currprefs.genlock_scale != changed_prefs.genlock_scale ? (1 | 256) : 0;
+	c |= currprefs.genlock_offset_x != changed_prefs.genlock_offset_x ? (1 | 256) : 0;
+	c |= currprefs.genlock_offset_y != changed_prefs.genlock_offset_y ? (1 | 256) : 0;
 	c |= _tcsicmp(currprefs.genlock_image_file, changed_prefs.genlock_image_file) ? (2 | 8) : 0;
 	c |= _tcsicmp(currprefs.genlock_video_file, changed_prefs.genlock_video_file) ? (2 | 8) : 0;
 
@@ -2417,8 +2271,7 @@ int check_prefs_changed_gfx()
 			if ((c & 16) || ((c & 8) && keepfsmode)) {
 				if (reopen(mon, c & 2, unacquired == false)) {
 					c |= 2;
-				}
-				else {
+				} else {
 					unacquired = true;
 				}
 			}
@@ -2500,6 +2353,7 @@ int check_prefs_changed_gfx()
 		return 1;
 	}
 
+	//currprefs.win32_norecyclebin = changed_prefs.win32_norecyclebin;
 	currprefs.filesys_limit = changed_prefs.filesys_limit;
 	currprefs.harddrive_read_only = changed_prefs.harddrive_read_only;
 
@@ -2572,6 +2426,7 @@ int check_prefs_changed_gfx()
 		currprefs.keyboard_leds_in_use = changed_prefs.keyboard_leds_in_use = (currprefs.keyboard_leds[0] | currprefs.keyboard_leds[1] | currprefs.keyboard_leds[2]) != 0;
 		pause_sound();
 		resume_sound();
+		//refreshtitle();
 		inputdevice_acquire(TRUE);
 #ifndef	_DEBUG
 		setpriority(currprefs.active_capture_priority);
@@ -3039,8 +2894,7 @@ void gfx_set_picasso_state(const int monid, const int on)
 	}
 	if (mode < 0) {
 		open_windows(mon, true, true);
-	}
-	else {
+	} else {
 		open_screen(mon); // reopen everything
 	}
 
@@ -3076,8 +2930,7 @@ void gfx_set_picasso_modeinfo(const int monid, const RGBFTYPE rgbfmt)
 	updatemodes(mon);
 	if (need > 0) {
 		open_screen(mon);
-	}
-	else if (need < 0) {
+	} else if (need < 0) {
 		open_windows(mon, true, true);
 	}
 	state->ModeChanged = false;
@@ -3122,7 +2975,7 @@ int machdep_init()
 		ad->picasso_requested_on = false;
 		ad->picasso_on = false;
 		mon->screen_is_picasso = 0;
-		memset(&mon->currentmode, 0, sizeof(mon->currentmode));
+		memset(&mon->currentmode, 0, sizeof(*&mon->currentmode));
 	}
 #ifdef LOGITECHLCD
 	lcd_open();
@@ -3140,14 +2993,6 @@ void machdep_free(void)
 int graphics_init(bool mousecapture)
 {
 	gfxmode_reset(0);
-	//SDL2_init();
-
-	//if (amiga_surface == nullptr)
-	//{
-	//	open_screen(&currprefs);
-	//	if (amiga_surface == nullptr)
-	//		write_log("Unable to set video mode: %s\n", SDL_GetError());
-	//}
 
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
 		if (currprefs.monitoremu_mon > 0 && currprefs.monitoremu) {
@@ -3234,8 +3079,7 @@ static int getbestmode(struct AmigaMonitor* mon, int nextbest)
 				break;
 			while (md->DisplayModes[i].res.width == mon->currentmode.native_width && md->DisplayModes[i].res.height == mon->currentmode.native_height)
 				i++;
-		}
-		else {
+		} else {
 			i = 0;
 		}
 		// first iterate only modes that have similar aspect ratio
@@ -3357,8 +3201,7 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 	if (got) {
 		r->x = x;
 		r->y = y;
-	}
-	else {
+	} else {
 		r->x = r1.w - ((r2.x - r1.x) + (r1.w - r2.w));
 		r->y = r1.y;
 	}
@@ -3369,9 +3212,8 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 static int create_windows(struct AmigaMonitor* mon)
 {
 	static bool firstwindow = true;
-	Uint32 dxfs = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
-	Uint32 d3dfs = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
-	Uint32 fsw = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
+	Uint32 fullscreen = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
+	Uint32 fullwindow = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 	//DWORD exstyle = (currprefs.notaskbarbutton ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW) | 0;
 	Uint32 flags = 0;
 	int borderless = currprefs.borderless;
@@ -3406,7 +3248,7 @@ static int create_windows(struct AmigaMonitor* mon)
 #endif
 
 	md = getdisplay(&currprefs, mon->monitor_id);
-	if (mon->monitor_id && fsw) {
+	if (mon->monitor_id && fullwindow) {
 		struct MultiDisplay* md2 = nullptr;
 		int idx = 0;
 		for (;;) {
@@ -3454,20 +3296,18 @@ static int create_windows(struct AmigaMonitor* mon)
 		if (mon->screen_is_picasso) {
 			nw = mon->currentmode.current_width;
 			nh = mon->currentmode.current_height;
-		}
-		else {
+		} else {
 			nw = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.width;
 			nh = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.height;
 		}
 
-		if (fsw || dxfs) {
+		if (fullwindow || fullscreen) {
 			SDL_Rect rc = md->rect;
 			nx = rc.x;
 			ny = rc.y;
 			nw = rc.w;
 			nh = rc.h;
-		}
-		else if (d3dfs) {
+		} else if (fullwindow) {
 			SDL_Rect rc = md->rect;
 			nw = mon->currentmode.native_width;
 			nh = mon->currentmode.native_height;
@@ -3487,12 +3327,11 @@ static int create_windows(struct AmigaMonitor* mon)
 			x = nx;
 			y = ny;
 			mon->in_sizemove++;
-			if (mon->amiga_window && !fsw && !dxfs && !d3dfs) {
+			if (mon->amiga_window && !fullwindow && !fullscreen && !fullwindow) {
 				if (dpi != mon->dpi) {
 					mon->window_extra_height -= mon->window_extra_height_bar;
 					mon->window_extra_height += sbheight;
-				}
-				else {
+				} else {
 					mon->window_extra_height += (sbheight - mon->window_extra_height_bar);
 				}
 
@@ -3509,8 +3348,7 @@ static int create_windows(struct AmigaMonitor* mon)
 			SDL_SetWindowSize(mon->amiga_window, w, h);
 			mon->in_sizemove--;
 			mon->dpi = dpi;
-		}
-		else {
+		} else {
 			w = nw;
 			h = nh;
 			x = nx;
@@ -3520,7 +3358,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		//createstatusline(mon->amiga_window, mon->monitor_id);
 		updatewinrect(mon, false);
 		GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
-		if (d3dfs || dxfs)
+		if (fullwindow || fullscreen)
 			movecursor(x + w / 2, y + h / 2);
 		write_log(_T("window already open (%dx%d %dx%d)\n"),
 			mon->amigawin_rect.x, mon->amigawin_rect.y, mon->amigawin_rect.w, mon->amigawin_rect.h);
@@ -3545,7 +3383,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	int sbheight = 0;// currprefs.statusbar && !currprefs.borderless ? getstatuswindowheight(mon->monitor_id, NULL) : 0;
 
 	// Windowed mode
-	if (!kmsdrm_detected && !dxfs && !d3dfs) {
+	if (!kmsdrm_detected && !fullscreen && !fullwindow) {
 		SDL_Rect rc;
 		int stored_x = 1, stored_y = sbheight + cyborder;
 		int oldx, oldy;
@@ -3592,11 +3430,11 @@ static int create_windows(struct AmigaMonitor* mon)
 			mon->win_x_diff = rc.x - oldx;
 			mon->win_y_diff = rc.y - oldy;
 
-			if (SDL_GetDisplayBounds(0, &rc) != 0) {
-				write_log(_T("window coordinates are not visible on any monitor, reseting..\n"));
-				stored_x = stored_y = 0;
-				continue;
-			}
+			//if (SDL_GetDisplayBounds(0, &rc) != 0) {
+			//	write_log(_T("window coordinates are not visible on any monitor, reseting..\n"));
+			//	stored_x = stored_y = 0;
+			//	continue;
+			//}
 
 			if (mon->monitor_id > 0) {
 				getextramonitorpos(mon, &rc);
@@ -3604,7 +3442,7 @@ static int create_windows(struct AmigaMonitor* mon)
 			break;
 		}
 
-		if (fsw) {
+		if (fullwindow) {
 			rc = md->rect;
 			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALLOW_HIGHDPI;
 			mon->currentmode.native_width = rc.w;
@@ -3649,8 +3487,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		w = mon->currentmode.native_width;
 		h = mon->currentmode.native_height;
 
-	}
-	else {
+	} else {
 		flags = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI;
 
 		SDL_Rect rc;
@@ -3667,24 +3504,6 @@ static int create_windows(struct AmigaMonitor* mon)
 		else
 			y = rc.y + (rc.h - h);
 	}
-#ifdef RETROPLATFORM
-	if (rp_isactive() && !dxfs && !d3dfs && !fsw) {
-		HWND parent = rp_getparent();
-		mon->amiga_window = CreateWindowEx(dxfs || d3dfs ? WS_EX_ACCEPTFILES | WS_EX_TOPMOST : WS_EX_ACCEPTFILES | WS_EX_TOOLWINDOW | (currprefs.win32_main_alwaysontop ? WS_EX_TOPMOST : 0),
-			_T("AmigaPowah"), _T("WinUAE"),
-			WS_POPUP,
-			0, 0, w, h,
-			parent, NULL, hInst, NULL);
-	}
-	else {
-#endif
-		mon->amiga_window = SDL_CreateWindow(
-			_T("WinUAE"),
-			x, y, w, h,
-			flags);
-#ifdef RETROPLATFORM
-	}
-#endif
 	if (!mon->amiga_window) {
 		write_log(_T("creation of amiga window failed\n"));
 		close_hwnds(mon);
@@ -3700,8 +3519,8 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	if (mon->amiga_renderer == nullptr)
 	{
-		Uint32 flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, flags);
+		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, renderer_flags);
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 	DPIHandler::set_render_scale(mon->amiga_renderer);
@@ -3717,7 +3536,7 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	updatewinrect(mon, true);
 	GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
-	if (dxfs || d3dfs)
+	if (fullscreen || fullwindow)
 		movecursor(x + w / 2, y + h / 2);
 	//addnotifications(mon->amiga_window, FALSE, FALSE);
 	mon->window_extra_height_bar = sbheight;
@@ -3731,14 +3550,15 @@ static int create_windows(struct AmigaMonitor* mon)
 		//UpdateWindow(mon->amiga_window);
 	}
 	else {
-		createblankwindows();
+		//createblankwindows();
 		//if (mon->hMainWnd != mon->amiga_window) {
 		//	if (!currprefs.headless)
 		//		SDL_ShowWindow(mon->amiga_window, firstwindow ? (currprefs.start_minimized ? SW_SHOWMINIMIZED : SW_SHOWDEFAULT) : SW_SHOWNORMAL);
 		//	UpdateWindow(mon->hMainWnd);
 		//}
 		//if (!currprefs.headless && !rp_isactive())
-		//	SDL_ShowWindow(mon->amiga_window);
+		if (!currprefs.headless)
+			SDL_ShowWindow(mon->amiga_window);
 		//UpdateWindow(mon->amiga_window);
 		firstwindow = false;
 		//setDwmEnableMMCSS(true);
@@ -3769,15 +3589,18 @@ static int create_windows(struct AmigaMonitor* mon)
 
 static void allocsoftbuffer(const int monid, const TCHAR* name, struct vidbuffer* buf, int flags, const int width, const int height, const int depth)
 {
-	/* Initialize structure for Amiga video modes */
 	buf->monitor_id = monid;
 	buf->pixbytes = amiga_surface->format->BytesPerPixel;
 	buf->width_allocated = (width + 7) & ~7;
 	buf->height_allocated = height;
 
+	int w = buf->width_allocated;
+	int h = buf->height_allocated;
+	int size = (w * 2) * (h * 2) * buf->pixbytes;
 	buf->rowbytes = amiga_surface->pitch;
 	buf->realbufmem = static_cast<uae_u8*>(amiga_surface->pixels);
 	buf->bufmem_allocated = buf->bufmem = buf->realbufmem;
+	buf->bufmemend = buf->realbufmem + size - buf->rowbytes;
 	buf->bufmem_lockable = true;
 
 	if (amiga_surface->format->BytesPerPixel == 2)
@@ -3814,7 +3637,7 @@ retry:
 		mon->currentmode.native_depth = 0;
 
 		if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-			SDL_Rect rc = getdisplay(&currprefs, mon->monitor_id)->rect;
+			const SDL_Rect rc = getdisplay(&currprefs, mon->monitor_id)->rect;
 			mon->currentmode.native_width = rc.w;
 			mon->currentmode.native_height = rc.h;
 		}
@@ -3837,8 +3660,7 @@ retry:
 			display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
 			display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
 			break;
-		}
-		else {
+		} else {
 #endif
 			//struct uae_filter* usedfilter = mon->usedfilter;
 			mon->currentmode.native_depth = mon->currentmode.current_depth;
@@ -3849,8 +3671,7 @@ retry:
 			if (!currprefs.gfx_autoresolution) {
 				mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
 				mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution;
-			}
-			else {
+			} else {
 				mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << avidinfo->gfx_resolution_reserved;
 				mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << avidinfo->gfx_vresolution_reserved;
 			}
@@ -4041,7 +3862,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 {
 	const struct AmigaMonitor* mon = &AMonitors[monid];
 	struct vidbuf_description* avidinfo = &adisplays[monid].gfxvidinfo;
-	struct picasso96_state_struct* state = &picasso96_state[monid];
+	const struct picasso96_state_struct* state = &picasso96_state[monid];
 
 	int w, h, depth;
 
@@ -4224,8 +4045,7 @@ void updatewinfsmode(const int monid, struct uae_prefs* p)
 	int fs = isfullscreen_2(p);
 	if (fs != 0) {
 		p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_fs;
-	}
-	else {
+	} else {
 		p->gfx_monitor[monid].gfx_size = p->gfx_monitor[monid].gfx_size_win;
 	}
 
@@ -4376,46 +4196,39 @@ void toggle_fullscreen(const int monid, const int mode)
 			prevmode = v;
 			*wfw = -1;
 			v = GFX_WINDOW;
-		}
-		else if (v == GFX_WINDOW) {
+		} else if (v == GFX_WINDOW) {
 			if (*wfw >= 0) {
 				v = GFX_FULLSCREEN;
-			}
-			else {
+			} else {
 				v = GFX_FULLWINDOW;
 			}
-		}
-		else if (v == GFX_FULLSCREEN) {
+		} else if (v == GFX_FULLSCREEN) {
 			prevmode = v;
 			*wfw = 1;
 			v = GFX_WINDOW;
 		}
-	}
-	else if (mode == 0) {
+	} else if (mode == 0) {
 		prevmode = v;
 		// fullscreen <> window
 		if (v == GFX_FULLSCREEN)
 			v = GFX_WINDOW;
 		else
 			v = GFX_FULLSCREEN;
-	}
-	else if (mode == 1) {
+	} else if (mode == 1) {
 		prevmode = v;
 		// fullscreen <> fullwindow
 		if (v == GFX_FULLSCREEN)
 			v = GFX_FULLWINDOW;
 		else
 			v = GFX_FULLSCREEN;
-	}
-	else if (mode == 2) {
+	} else if (mode == 2) {
 		prevmode = v;
 		// window <> fullwindow
 		if (v == GFX_FULLWINDOW)
 			v = GFX_WINDOW;
 		else
 			v = GFX_FULLWINDOW;
-	}
-	else if (mode == 10) {
+	} else if (mode == 10) {
 		v = GFX_WINDOW;
 	}
 	*p = v;
