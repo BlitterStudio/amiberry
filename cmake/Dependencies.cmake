@@ -30,7 +30,7 @@ find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 
 if (USE_LIBSERIALPORT)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE SERIAL_PORT)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBSERIALPORT)
     find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBSERIALPORT_LIBRARIES})
 endif ()
