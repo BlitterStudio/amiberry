@@ -1615,11 +1615,11 @@ static int akiko_thread (void *null)
 			} else {
 				blocks = SECTOR_BUFFER_SIZE - secnum;
 			}
-#if AKIKO_DEBUG_IO_CMD
-			if (1)
-				write_log(_T("CD32: filling buffer sector=%d-%d, blocks=%d\n"), sector, sector + blocks - 1, blocks);
-#endif
 			if (blocks) {
+#if AKIKO_DEBUG_IO_CMD
+				if (1)
+					write_log(_T("CD32: filling buffer sector=%d-%d, blocks=%d\n"), sector, sector + blocks - 1, blocks);
+#endif
 				uae_sem_post(&akiko_sem);
 				int ok = sys_command_cd_rawread (unitnum, sector_buffer_2, sector, blocks, 2352);
 				if (!ok) {
@@ -1639,6 +1639,9 @@ static int akiko_thread (void *null)
 					}
 				}
 				uae_sem_wait(&akiko_sem);
+			}
+			if (blocks || secnum) {
+				uae_sem_post(&akiko_sem);
 				tmp1 = sector_buffer_info_1;
 				sector_buffer_info_1 = sector_buffer_info_2;
 				sector_buffer_info_2 = tmp1;
@@ -1648,6 +1651,7 @@ static int akiko_thread (void *null)
 				tmp3 = sector_buffer_sector_1;
 				sector_buffer_sector_1 = sector_buffer_sector_2;
 				sector_buffer_sector_2 = tmp3;
+				uae_sem_wait(&akiko_sem);
 			}
 		}
 		uae_sem_post (&akiko_sem);
