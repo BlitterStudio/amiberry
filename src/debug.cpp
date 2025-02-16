@@ -113,6 +113,7 @@ void deactivate_debugger (void)
 	debugmem_enable();
 	debug_pc = 0xffffffff;
 	keybuf_ignore_next_release();
+	deactivate_console();
 }
 
 void activate_debugger (void)

@@ -358,6 +358,7 @@ extern void close_console (void);
 extern void open_console(void);
 extern void reopen_console(void);
 extern void activate_console (void);
+extern void deactivate_console(void);
 extern void console_out (const TCHAR *);
 extern void console_out_f (const TCHAR *, ...);
 extern void console_flush (void);

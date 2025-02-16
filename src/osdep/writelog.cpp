@@ -38,6 +38,7 @@ extern int lof_store;
 static int console_input_linemode = -1;
 int always_flush_log = 1;
 TCHAR* conlogfile = nullptr;
+static HWND previousactivewindow;
 
 #define WRITE_LOG_BUF_SIZE 4096
 
@@ -74,10 +75,20 @@ static void getconsole()
 	}
 }
 
+void deactivate_console(void)
+{
+	if (previousactivewindow) {
+		SDL_RaiseWindow(previousactivewindow);
+		previousactivewindow = NULL;
+	}
+}
+
 void activate_console()
 {
+	previousactivewindow = NULL;
 	if (!consoleopen)
 		return;
+	previousactivewindow = SDL_GetWindowFromID(SDL_GetWindowID(SDL_GetKeyboardFocus()));
 	//SetForegroundWindow(GetConsoleWindow());
 }
 
