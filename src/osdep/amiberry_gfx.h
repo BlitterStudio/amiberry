@@ -69,7 +69,7 @@ struct winuae_currentmode {
 	int freq;
 };
 
-#define MAX_AMIGAMONITORS 4
+#define MAX_AMIGAMONITORS 1
 struct AmigaMonitor {
 	int monitor_id;
 	SDL_Window* amiga_window;
