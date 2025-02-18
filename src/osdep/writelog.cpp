@@ -85,15 +85,19 @@ void deactivate_console(void)
 
 void activate_console()
 {
-	previousactivewindow = NULL;
-	if (!consoleopen)
+	if (!consoleopen) {
+		previousactivewindow = NULL;
 		return;
+	}
 	previousactivewindow = SDL_GetWindowFromID(SDL_GetWindowID(SDL_GetKeyboardFocus()));
 	//SetForegroundWindow(GetConsoleWindow());
 }
 
 static void open_console_window()
 {
+	if (!consoleopen) {
+		previousactivewindow = SDL_GetWindowFromID(SDL_GetWindowID(SDL_GetKeyboardFocus()));
+	}
 	//AllocConsole();
 	getconsole();
 	consoleopen = -1;

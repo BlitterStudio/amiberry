@@ -7573,6 +7573,7 @@ void debug (void)
 	uae_ppc_pause(0);
 #endif
 	setmouseactive(0, wasactive ? 2 : 0);
+	target_inputdevice_acquire();
 
 	last_cycles1 = get_cycles();
 	last_vpos1 = vpos;
