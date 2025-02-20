@@ -4,7 +4,7 @@
 #include "uae/types.h"
 #include "traps.h"
 
-#define MAX_DISPLAYS 10
+#define MAX_DISPLAYS 1
 
 #define RTG_MODE_SCALE 1
 #define RTG_MODE_CENTER 2
@@ -56,7 +56,7 @@ struct MultiDisplay {
 	SDL_Rect workrect;
 	bool HasAdapterData;
 };
-extern struct MultiDisplay Displays[MAX_DISPLAYS + 1];
+extern struct MultiDisplay Displays[MAX_DISPLAYS];
 
 struct winuae_currentmode {
 	unsigned int flags;

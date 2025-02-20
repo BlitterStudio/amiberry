@@ -104,7 +104,7 @@ int delay_savestate_frame = 0;
 
 static int deskhz;
 
-struct MultiDisplay Displays[MAX_DISPLAYS + 1];
+struct MultiDisplay Displays[MAX_DISPLAYS];
 struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
 
 static int display_change_requested;
@@ -426,8 +426,8 @@ void desktop_coords(const int monid, int* dw, int* dh, int* ax, int* ay, int* aw
 	const struct AmigaMonitor* mon = &AMonitors[monid];
 	const struct MultiDisplay* md = getdisplay(&currprefs, monid);
 
-	*dw = md->rect.w - md->rect.x;
-	*dh = md->rect.h - md->rect.y;
+	*dw = md->rect.w;
+	*dh = md->rect.h;
 	*ax = mon->amigawin_rect.x;
 	*ay = mon->amigawin_rect.y;
 	*aw = mon->amigawin_rect.w;
@@ -986,9 +986,9 @@ static bool enumeratedisplays2(bool selectall)
 		if (!display_name)
 			continue;
 
-		SDL_Rect display_bounds;
-		if (SDL_GetDisplayBounds(i, &display_bounds) != 0)
+		if (SDL_GetDisplayBounds(i, &md->rect) != 0)
 			continue;
+		SDL_GetDisplayBounds(i, &md->workrect);
 
 		md->adaptername = my_strdup_trim(display_name);
 		md->adapterid = my_strdup(display_name);
@@ -1292,6 +1292,9 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 	//
 	//int pitch;
 	//SDL_LockTexture(texture, nullptr, reinterpret_cast<void**>(&vb->bufmem), &pitch);
+
+	// instead of checking for first, we compare the pixel buffer pointer to the old one
+	// tests have shown that this is more efficient, as the first flag is set multiple times
 	if (amiga_surface->pixels != old_pixels) {
 	//if (first) {
 		init_row_map();
@@ -1304,6 +1307,8 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 {
 	//gfx_lock();
+
+	// Not using SDL2_UnlockTexture due to performance reasons, see lockscr for details
 	//SDL_UnlockTexture(texture);
 	gfx_unlock();
 }
@@ -1462,7 +1467,7 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 	if (mon->rtg_locked) {
 		return p;
 	}
-	//gfx_lock();
+	gfx_lock();
 	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 	vidinfo->rowbytes = amiga_surface->pitch;
 	vidinfo->maxwidth = amiga_surface->w;
@@ -1470,7 +1475,7 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 	p = static_cast<uae_u8*>(amiga_surface->pixels);
 	if (!p)
 	{
-		//gfx_unlock();
+		gfx_unlock();
 	}
 	else
 	{
@@ -1482,18 +1487,18 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 void gfx_unlock_picasso(const int monid, const bool dorender)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	//if (!mon->rtg_locked)
-		//gfx_lock();
+	if (!mon->rtg_locked)
+		gfx_lock();
 	mon->rtg_locked = false;
 	if (dorender)
 	{
 		if (SDL2_renderframe(monid, true, false)) {
-			//gfx_unlock();
+			gfx_unlock();
 			mon->render_ok = true;
 			show_screen_maybe(monid, true);
 		}
 	}
-	//gfx_unlock();
+	gfx_unlock();
 }
 
 static void close_hwnds(struct AmigaMonitor* mon)
@@ -3331,7 +3336,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		movecursor(x + w / 2, y + h / 2);
 
 	mon->window_extra_height_bar = 0;
-	mon->dpi = getdpiforwindow(mon->monitor_id);
+	//mon->dpi = getdpiforwindow(mon->monitor_id);
 
 	if (SDL_SetHint(SDL_HINT_GRAB_KEYBOARD, "1") != SDL_TRUE)
 		write_log("SDL2: could not grab the keyboard!\n");
