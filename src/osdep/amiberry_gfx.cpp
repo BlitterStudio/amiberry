@@ -1502,27 +1502,16 @@ static void close_hwnds(struct AmigaMonitor* mon)
 		releasecapture(mon);
 	mon->screen_is_initialized = 0;
 	if (!mon->monitor_id) {
-		//display_vblank_thread_kill();
 #ifdef AVIOUTPUT
 		AVIOutput_Restart(true);
 #endif
 #ifdef RETROPLATFORM
 		rp_set_hwnd(NULL);
 #endif
-		//closeblankwindows();
-		//rawinput_release();
 	}
 	if (mon->monitor_id > 0 && mon->amiga_window)
 		setmouseactive(mon->monitor_id, 0);
-	//deletestatusline(mon->monitor_id);
-	//if (mon->hStatusWnd) {
-	//	ShowWindow(mon->hStatusWnd, SW_HIDE);
-	//	DestroyWindow(mon->hStatusWnd);
-	//	mon->hStatusWnd = 0;
-	//	if (mon->hStatusBkgB)
-	//		DeleteObject(mon->hStatusBkgB);
-	//	mon->hStatusBkgB = NULL;
-	//}
+
 #ifdef USE_OPENGL
 	destroy_crtemu();
 #else
@@ -1833,26 +1822,6 @@ static void reopen_gfx(struct AmigaMonitor* mon)
 {
 	open_windows(mon, false, true);
 	render_screen(mon->monitor_id, 1, true);
-}
-
-static int getstatuswindowheight(int monid, HWND hwnd)
-{
-	//if (monid > 0)
-	//	return 0;
-	//int def = GetSystemMetrics(SM_CYMENU) + 3;
-	//WINDOWINFO wi;
-	//HWND h = CreateWindowEx(
-	//	0, STATUSCLASSNAME, (LPCTSTR)NULL, SBARS_TOOLTIPS | WS_CHILD,
-	//	0, 0, 0, 0, hwnd ? hwnd : hHiddenWnd, (HMENU)1, hInst, NULL);
-	//if (!h)
-	//	return def;
-	//wi.cbSize = sizeof wi;
-	//if (GetWindowInfo(h, &wi)) {
-	//	def = wi.rcWindow.bottom - wi.rcWindow.top;
-	//}
-	//DestroyWindow(h);
-	//return def;
-	return 0;
 }
 
 void graphics_reset(const bool forced)
@@ -2942,7 +2911,7 @@ int machdep_init()
 	return 1;
 }
 
-void machdep_free(void)
+void machdep_free()
 {
 #ifdef LOGITECHLCD
 	lcd_close();
@@ -3009,11 +2978,6 @@ void close_windows(struct AmigaMonitor* mon)
 	avidinfo->drawbuffer.bufmem_allocated = nullptr;
 	avidinfo->drawbuffer.bufmem_lockable = false;
 	close_hwnds(mon);
-}
-
-static void createstatuswindow(struct AmigaMonitor* mon)
-{
-	//NO-OP
 }
 
 static int getbestmode(struct AmigaMonitor* mon, int nextbest)
