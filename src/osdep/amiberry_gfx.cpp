@@ -760,12 +760,12 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 		dx -= static_cast<float>(crop_rect.x);
 		dy -= static_cast<float>(crop_rect.y);
 	}
-	if (ad->picasso_on) {
-		dx = picasso_offset_x * picasso_offset_mx;
-		dy = picasso_offset_y * picasso_offset_my;
-		mx = picasso_offset_mx;
-		my = picasso_offset_my;
-	}
+	//if (ad->picasso_on) {
+	//	dx = picasso_offset_x * picasso_offset_mx;
+	//	dy = picasso_offset_y * picasso_offset_my;
+	//	mx = picasso_offset_mx;
+	//	my = picasso_offset_my;
+	//}
 
 	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
 		while (!(mon->scalepicasso && mon->screen_is_picasso)) {
@@ -1051,11 +1051,11 @@ void sortdisplays()
 		return;
 	}
 
-	int w = desktop_dm.w;
-	int h = desktop_dm.h;
-	int wv = w;
-	int hv = h;
-	int b = SDL_BITSPERPIXEL(desktop_dm.format);
+	const int w = desktop_dm.w;
+	const int h = desktop_dm.h;
+	const int wv = w;
+	const int hv = h;
+	const int b = SDL_BITSPERPIXEL(desktop_dm.format);
 
 	deskhz = 0;
 
@@ -1343,118 +1343,6 @@ float filterrectmult(int v1, float v2, int dmode)
 		return 0.5f;
 	}
 	return static_cast<float>(static_cast<int>(v + 0.5f));
-}
-
-void getrtgfilterrect2(int monid, SDL_Rect* sr, SDL_Rect* dr, SDL_Rect* zr, int* mode, int dst_width, int dst_height)
-{
-	const struct AmigaMonitor* mon = &AMonitors[monid];
-	const struct amigadisplay* ad = &adisplays[monid];
-	const struct picasso96_state_struct* state = &picasso96_state[monid];
-
-	SetRect(sr, 0, 0, mon->currentmode.native_width, mon->currentmode.native_height);
-	SetRect(dr, 0, 0, state->Width, state->Height);
-	SetRect(zr, 0, 0, 0, 0);
-
-	picasso_offset_x = 0;
-	picasso_offset_y = 0;
-	picasso_offset_mx = 1.0;
-	picasso_offset_my = 1.0;
-
-	*mode = 0;
-
-	if (!ad->picasso_on)
-		return;
-
-	if (currprefs.gf[GF_RTG].gfx_filter_horiz_zoom_mult > 0) {
-		picasso_offset_mx *= currprefs.gf[GF_RTG].gfx_filter_horiz_zoom_mult;
-	}
-	if (currprefs.gf[GF_RTG].gfx_filter_vert_zoom_mult > 0) {
-		picasso_offset_my *= currprefs.gf[GF_RTG].gfx_filter_vert_zoom_mult;
-	}
-
-	if (!mon->scalepicasso)
-		return;
-
-	int srcratio, dstratio;
-	int srcwidth, srcheight;
-	srcwidth = state->Width;
-	srcheight = state->Height;
-	if (!srcwidth || !srcheight)
-		return;
-
-	float mx = (float)mon->currentmode.native_width / srcwidth;
-	float my = (float)mon->currentmode.native_height / srcheight;
-	int outwidth;
-	int outheight;
-
-	if (mon->scalepicasso == RTG_MODE_INTEGER_SCALE) {
-		int divx = mon->currentmode.native_width / srcwidth;
-		int divy = mon->currentmode.native_height / srcheight;
-		float mul = (float)(!divx || !divy ? 1 : (divx > divy ? divy : divx));
-		if (!divx || !divy) {
-			if ((float)mon->currentmode.native_width / srcwidth <= 0.95f || ((float)mon->currentmode.native_height / srcheight <= 0.95f)) {
-				mul = 0.5f;
-			}
-			if ((float)mon->currentmode.native_width / srcwidth <= 0.45f || ((float)mon->currentmode.native_height / srcheight <= 0.45f)) {
-				mul = 0.25f;
-			}
-		}
-		SetRect(dr, 0, 0, (int)(mon->currentmode.native_width / mul), (int)(mon->currentmode.native_height / mul));
-		int xx = (int)((mon->currentmode.native_width / mul - srcwidth) / 2);
-		int yy = (int)((mon->currentmode.native_height / mul - srcheight) / 2);
-		picasso_offset_x = -xx;
-		picasso_offset_y = -yy;
-		mx = mul;
-		my = mul;
-		outwidth = srcwidth;
-		outheight = srcheight;
-		*mode = 1;
-	} else if (mon->scalepicasso == RTG_MODE_CENTER) {
-		int xx = (mon->currentmode.native_width - srcwidth) / 2;
-		int yy = (mon->currentmode.native_height - srcheight) / 2;
-		picasso_offset_x = -xx;
-		picasso_offset_y = -yy;
-		SetRect(sr, 0, 0, mon->currentmode.native_width, mon->currentmode.native_height);
-		SetRect(dr, 0, 0, mon->currentmode.native_width, mon->currentmode.native_height);
-		outwidth = dr->w;
-		outheight = dr->h;
-		mx = my = 1.0;
-	} else {
-		if (currprefs.rtgscaleaspectratio < 0) {
-			// automatic
-			srcratio = srcwidth * ASPECTMULT / srcheight;
-			dstratio = mon->currentmode.native_width * ASPECTMULT / mon->currentmode.native_height;
-		} else if (currprefs.rtgscaleaspectratio == 0) {
-			// none
-			srcratio = dstratio = 0;
-		} else {
-			// manual
-			dstratio = (currprefs.rtgscaleaspectratio / ASPECTMULT) * ASPECTMULT / (currprefs.rtgscaleaspectratio & (ASPECTMULT - 1));
-			srcratio = srcwidth * ASPECTMULT / srcheight;
-		}
-
-		if (srcratio == dstratio) {
-			SetRect(dr, 0, 0, srcwidth, srcheight);
-		} else if (srcratio > dstratio) {
-			int yy = srcheight * srcratio / dstratio;
-			SetRect(dr, 0, 0, srcwidth, yy);
-			picasso_offset_y = (state->Height - yy) / 2;
-		} else {
-			int xx = srcwidth * dstratio / srcratio;
-			SetRect(dr, 0, 0, xx, srcheight);
-			picasso_offset_x = (state->Width - xx) / 2;
-		}
-		outwidth = dr->w;
-		outheight = dr->h;
-	}
-
-	OffsetRect(zr, picasso_offset_x, picasso_offset_y);
-
-	picasso_offset_x /= state->HLineDBL;
-	picasso_offset_y /= state->VLineDBL;
-
-	picasso_offset_mx = srcwidth * mx * state->HLineDBL / outwidth;
-	picasso_offset_my = srcheight * my * state->VLineDBL / outheight;
 }
 
 uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
@@ -2817,7 +2705,7 @@ void gfx_set_picasso_state(const int monid, const int on)
 		mode = 1;
 	}
 	if (mode <= 0) {
-		int m = modeswitchneeded(mon, &wc);
+		const int m = modeswitchneeded(mon, &wc);
 		if (m > 0)
 			mode = m;
 		if (m < 0 && !mode)
@@ -2854,11 +2742,10 @@ void gfx_set_picasso_modeinfo(const int monid, const RGBFTYPE rgbfmt)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
-	int need;
 	if (!mon->screen_is_picasso)
 		return;
 	gfx_set_picasso_colors(monid, rgbfmt);
-	need = modeswitchneeded(mon, &mon->currentmode);
+	const int need = modeswitchneeded(mon, &mon->currentmode);
 	update_gfxparams(mon);
 	updatemodes(mon);
 	if (need > 0) {
@@ -3089,8 +2976,8 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 	if (got) {
 		SDL_Rect displayBounds;
 		if (SDL_GetDisplayBounds(0, &displayBounds) == 0) {
-			if (x < displayBounds.x || x > displayBounds.x + displayBounds.w ||
-				y < displayBounds.y || y > displayBounds.y + displayBounds.h) {
+			if (x < displayBounds.x || x > displayBounds.w ||
+				y < displayBounds.y || y > displayBounds.h) {
 				got = false;
 			}
 		}
@@ -3103,9 +2990,7 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 	int rightmon = -1;
 	int rightedge = 0;
 	HWND hwnd = NULL;
-	for (;;) {
-		if (monid < 1)
-			break;
+	while (monid >= 1) {
 		monid--;
 		hwnd = AMonitors[monid].amiga_window;
 		if (!hwnd)
@@ -3123,8 +3008,8 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 	r2 = r1;
 
 	//getextendedframebounds(hwnd, &r2);
-	int width = r->w;
-	int height = r->h;
+	const int width = r->w;
+	const int height = r->h;
 
 	if (got) {
 		r->x = x;
@@ -3142,7 +3027,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	Uint32 fullscreen = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
 	Uint32 fullwindow = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 	Uint32 flags = 0;
-	int borderless = currprefs.borderless;
+	const int borderless = currprefs.borderless;
 	int x, y, w, h;
 	struct MultiDisplay* md;
 
@@ -3353,9 +3238,9 @@ static void allocsoftbuffer(const int monid, const TCHAR* name, struct vidbuffer
 	buf->width_allocated = (width + 7) & ~7;
 	buf->height_allocated = height;
 
-	int w = buf->width_allocated;
-	int h = buf->height_allocated;
-	int size = (w * 2) * (h * 2) * buf->pixbytes;
+	const int w = buf->width_allocated;
+	const int h = buf->height_allocated;
+	const int size = (w * 2) * (h * 2) * buf->pixbytes;
 	buf->rowbytes = amiga_surface->pitch;
 	buf->realbufmem = static_cast<uae_u8*>(amiga_surface->pixels);
 	buf->bufmem_allocated = buf->bufmem = buf->realbufmem;
@@ -3377,7 +3262,6 @@ static bool doInit(AmigaMonitor* mon)
 	int ret = 0;
 	bool modechanged;
 
-retry:
 	struct vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 	struct amigadisplay* ad = &adisplays[mon->monitor_id];
 
@@ -3401,7 +3285,10 @@ retry:
 			mon->currentmode.native_height = rc.h;
 		}
 		if (!create_windows(mon))
-			goto oops;
+		{
+			close_hwnds(mon);
+			return ret;
+		}
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
 			if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5
@@ -3453,8 +3340,8 @@ retry:
 			mon->currentmode.pitch = mon->currentmode.amiga_width * mon->currentmode.current_depth >> 3;
 
 			avidinfo->drawbuffer.pixbytes = mon->currentmode.current_depth >> 3;
-			avidinfo->drawbuffer.bufmem = NULL;
-			avidinfo->drawbuffer.linemem = NULL;
+			avidinfo->drawbuffer.bufmem = nullptr;
+			avidinfo->drawbuffer.linemem = nullptr;
 			avidinfo->drawbuffer.rowbytes = mon->currentmode.pitch;
 
 			display_depth = 32;
@@ -3464,7 +3351,7 @@ retry:
 			display_height = mon->currentmode.amiga_height;
 
 			// Force recalculation of row maps - if we're locking
-			old_pixels = (void*)-1;
+			old_pixels = reinterpret_cast<void*>(-1);
 
 			break;
 #ifdef PICASSO96
@@ -3538,11 +3425,6 @@ retry:
 	}
 
 	return true;
-
-oops:
-	//osk_setup(mon->monitor_id, 0);
-	close_hwnds(mon);
-	return ret;
 }
 
 bool target_graphics_buffer_update(const int monid, const bool force)
