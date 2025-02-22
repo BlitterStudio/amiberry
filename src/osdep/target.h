@@ -85,7 +85,6 @@ unsigned long target_lastsynctime();
 void save_amiberry_settings();
 
 void clearscreen();
-void graphics_subshutdown();
 
 extern void wait_keyrelease();
 extern void keyboard_settrans();

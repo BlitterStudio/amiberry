@@ -2843,8 +2843,8 @@ static void picasso96_alloc2 (TrapContext *ctx)
 	if (p96depth (32))
 		depths++;
 
-	for (const auto& Display : Displays) {
-		struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (const auto & Display : Displays) {
+		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
 		i = 0;
 		while (DisplayModes[i].depth >= 0) {
 			for (j = 0; missmodes[j * 2] >= 0; j++) {
@@ -2858,8 +2858,8 @@ static void picasso96_alloc2 (TrapContext *ctx)
 	}
 
 	cnt = 0;
-	for (const auto& Display : Displays) {
-		struct PicassoResolution *DisplayModes = Display.DisplayModes;
+	for (const auto & Display : Displays) {
+		const struct PicassoResolution *DisplayModes = Display.DisplayModes;
 		i = 0;
 		while (DisplayModes[i].depth >= 0) {
 			if (DisplayModes[i].rawmode) {

@@ -2720,7 +2720,7 @@ int vsync_isdone(frame_time_t* dt)
 
 #ifdef PICASSO96
 
-static int modeswitchneeded(const struct AmigaMonitor* mon, struct winuae_currentmode* wc)
+static int modeswitchneeded(const struct AmigaMonitor* mon, const struct winuae_currentmode* wc)
 {
 	struct vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 	struct picasso96_state_struct* state = &picasso96_state[mon->monitor_id];
@@ -3851,7 +3851,7 @@ bool toggle_rtg(const int monid, const int mode)
 			return false;
 		}
 	}
-	return false;
+	//return false;
 }
 
 void close_rtg(const int monid, const bool reset)
@@ -3873,14 +3873,14 @@ void toggle_fullscreen(const int monid, const int mode)
 	auto* p = ad->picasso_on ? &changed_prefs.gfx_apmode[APMODE_RTG].gfx_fullscreen : &changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_fullscreen;
 	int* wfw = &wasfs[ad->picasso_on ? 1 : 0];
 	auto v = *p;
-	static int prevmode = -1;
+	//static int prevmode = -1;
 
 	if (mode < 0) {
 		// fullwindow->window->fullwindow.
 		// fullscreen->window->fullscreen.
 		// window->fullscreen->window.
 		if (v == GFX_FULLWINDOW) {
-			prevmode = v;
+			//prevmode = v;
 			*wfw = -1;
 			v = GFX_WINDOW;
 		} else if (v == GFX_WINDOW) {
@@ -3890,26 +3890,26 @@ void toggle_fullscreen(const int monid, const int mode)
 				v = GFX_FULLWINDOW;
 			}
 		} else if (v == GFX_FULLSCREEN) {
-			prevmode = v;
+			//prevmode = v;
 			*wfw = 1;
 			v = GFX_WINDOW;
 		}
 	} else if (mode == 0) {
-		prevmode = v;
+		//prevmode = v;
 		// fullscreen <> window
 		if (v == GFX_FULLSCREEN)
 			v = GFX_WINDOW;
 		else
 			v = GFX_FULLSCREEN;
 	} else if (mode == 1) {
-		prevmode = v;
+		//prevmode = v;
 		// fullscreen <> fullwindow
 		if (v == GFX_FULLSCREEN)
 			v = GFX_FULLWINDOW;
 		else
 			v = GFX_FULLSCREEN;
 	} else if (mode == 2) {
-		prevmode = v;
+		//prevmode = v;
 		// window <> fullwindow
 		if (v == GFX_FULLWINDOW)
 			v = GFX_WINDOW;
@@ -3930,30 +3930,6 @@ void destroy_crtemu()
 	{
 		crtemu_destroy(crtemu_tv);
 		crtemu_tv = nullptr;
-	}
-#endif
-}
-
-void graphics_subshutdown()
-{
-	reset_sound();
-
-	SDL_FreeSurface(amiga_surface);
-	amiga_surface = nullptr;
-
-	auto* avidinfo = &adisplays[0].gfxvidinfo;
-	avidinfo->drawbuffer.realbufmem = nullptr;
-	avidinfo->drawbuffer.bufmem = nullptr;
-	avidinfo->drawbuffer.bufmem_allocated = nullptr;
-	avidinfo->drawbuffer.bufmem_lockable = false;
-
-#ifdef USE_OPENGL
-	destroy_crtemu();
-#else
-	if (amiga_texture != nullptr)
-	{
-		SDL_DestroyTexture(amiga_texture);
-		amiga_texture = nullptr;
 	}
 #endif
 }

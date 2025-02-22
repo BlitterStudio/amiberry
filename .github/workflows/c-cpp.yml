@@ -518,7 +518,7 @@ jobs:
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Create Changelog
         if: github.ref_type == 'tag'
         id: changelog
