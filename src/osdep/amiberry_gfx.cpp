@@ -161,6 +161,21 @@ void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
 	SDL_GetWindowSize(window, &rect->w, &rect->h);
 }
 
+bool MonitorFromPoint(const SDL_Point pt)
+{
+	SDL_Rect display_bounds;
+	bool point_in_display = false;
+	for (int i = 0; i < SDL_GetNumVideoDisplays(); ++i) {
+		if (SDL_GetDisplayBounds(i, &display_bounds) == 0) {
+			if (SDL_PointInRect(&pt, &display_bounds)) {
+				point_in_display = true;
+				break;
+			}
+		}
+	}
+	return point_in_display;
+}
+
 // Check if the requested Amiga resolution can be displayed with the current Screen mode as a direct multiple
 // Based on this we make the decision to use Linear (smooth) or Nearest Neighbor (pixelated) scaling
 static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int height)
@@ -1024,11 +1039,13 @@ static bool enumeratedisplays2(bool selectall)
 	if (md == Displays)
 		return false;
 
-	md = Displays;
-	while (md->monitorname) {
-		if (!md->fullname)
-			md->fullname = my_strdup(md->adapterid);
-		md++;
+	for (auto& display : Displays) {
+		if (display.monitorname == nullptr) {
+			break;
+		}
+		if (display.fullname == nullptr) {
+			display.fullname = my_strdup(display.adapterid);
+		}
 	}
 
 	return true;
@@ -1444,8 +1461,9 @@ static bool canmatchdepth(void)
 {
 	if (!currprefs.rtgmatchdepth)
 		return false;
-	if (currprefs.gfx_api >= 2)
-		return false;
+	// We can always match depth in Amiberry
+	//if (currprefs.gfx_api >= 2)
+	//	return false;
 	return true;
 }
 
@@ -2974,14 +2992,10 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 		got = false;
 	}
 	if (got) {
-		SDL_Rect displayBounds;
-		if (SDL_GetDisplayBounds(0, &displayBounds) == 0) {
-			if (x < displayBounds.x || x > displayBounds.w ||
-				y < displayBounds.y || y > displayBounds.h) {
-				got = false;
-			}
-		}
-		else {
+		SDL_Point pt;
+		pt.x = x;
+		pt.y = y;
+		if (!MonitorFromPoint(pt)) {
 			got = false;
 		}
 	}

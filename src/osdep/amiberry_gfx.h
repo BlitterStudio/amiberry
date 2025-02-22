@@ -128,23 +128,25 @@ extern SDL_Cursor* normalcursor;
 
 extern void sortdisplays();
 extern void enumeratedisplays();
+extern void reenumeratemonitors();
 
+extern bool MonitorFromPoint(SDL_Point pt);
 void gfx_DisplayChangeRequested(int);
-void DX_Invalidate(struct AmigaMonitor*, int x, int y, int width, int height);
+void DX_Invalidate(AmigaMonitor*, int x, int y, int width, int height);
 int gfx_adjust_screenmode(const MultiDisplay* md, int* pwidth, int* pheight, int* ppixbits);
 
 extern int default_freq;
 
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
-extern void close_windows(struct AmigaMonitor*);
-extern void updatewinfsmode(int monid, struct uae_prefs* p);
-extern void gfx_lock(void);
-extern void gfx_unlock(void);
+extern void close_windows(AmigaMonitor*);
+extern void updatewinfsmode(int monid, uae_prefs* p);
+extern void gfx_lock();
+extern void gfx_unlock();
 
 extern void destroy_crtemu();
 
-struct MultiDisplay* getdisplay(const struct uae_prefs* p, int monid);
+struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);
