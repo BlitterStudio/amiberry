@@ -280,7 +280,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, const int depth)
 			int width, height;
 			Uint32 format;
 			SDL_QueryTexture(amiga_texture, &format, nullptr, &width, &height);
-			if (width == -w && height == -h && (depth == 16 && format == SDL_PIXELFORMAT_RGB565) || (depth == 32 && format == SDL_PIXELFORMAT_BGRA32))
+			if (width == -w && height == -h)
 			{
 				set_scaling_option(&currprefs, width, height);
 				return true;
@@ -293,7 +293,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, const int depth)
 		SDL_DestroyTexture(amiga_texture);
 
 	AmigaMonitor* mon = &AMonitors[0];
-	amiga_texture = SDL_CreateTexture(mon->amiga_renderer, depth == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, w, h);
+	amiga_texture = SDL_CreateTexture(mon->amiga_renderer, SDL_PIXELFORMAT_BGRA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 	return amiga_texture != nullptr;
 #endif
 }
@@ -3300,20 +3300,10 @@ static bool doInit(AmigaMonitor* mon)
 			close_hwnds(mon);
 			return ret;
 		}
+		display_depth = 32;
+		pixel_format = SDL_PIXELFORMAT_BGRA32;
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
-			if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5
-				|| picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC
-				|| picasso96_state[0].RGBFormat == RGBFB_CLUT)
-			{
-				display_depth = 16;
-				pixel_format = SDL_PIXELFORMAT_RGB565;
-			}
-			else
-			{
-				display_depth = 32;
-				pixel_format = SDL_PIXELFORMAT_BGRA32;
-			}
 			display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
 			display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
 			break;
@@ -3354,9 +3344,6 @@ static bool doInit(AmigaMonitor* mon)
 			avidinfo->drawbuffer.bufmem = nullptr;
 			avidinfo->drawbuffer.linemem = nullptr;
 			avidinfo->drawbuffer.rowbytes = mon->currentmode.pitch;
-
-			display_depth = 32;
-			pixel_format = SDL_PIXELFORMAT_BGRA32;
 
 			display_width = mon->currentmode.amiga_width;
 			display_height = mon->currentmode.amiga_height;
