@@ -3038,7 +3038,7 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 
 static int create_windows(struct AmigaMonitor* mon)
 {
-	Uint32 fullscreen = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
+	const Uint32 fullscreen = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
 	Uint32 fullwindow = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 	Uint32 flags = 0;
 	const int borderless = currprefs.borderless;
@@ -3144,8 +3144,8 @@ static int create_windows(struct AmigaMonitor* mon)
 	else
 		rc.y = stored_y;
 
-	rc.w = rc.x + mon->currentmode.current_width;
-	rc.h = rc.y + mon->currentmode.current_height ;
+	rc.w = mon->currentmode.current_width;
+	rc.h = mon->currentmode.current_height;
 
 	oldx = rc.x;
 	oldy = rc.y;
@@ -3186,10 +3186,8 @@ static int create_windows(struct AmigaMonitor* mon)
 	}
 	if (borderless)
 		flags |= SDL_WINDOW_BORDERLESS;
-	if (currprefs.start_minimized)
+	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
-	else if (!currprefs.headless)
-		flags |= SDL_WINDOW_SHOWN;
 
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,

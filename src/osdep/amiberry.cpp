@@ -100,6 +100,9 @@ static int forceroms;
 static void* tablet;
 SDL_Cursor* normalcursor;
 
+TCHAR VersionStr[256];
+TCHAR BetaStr[64];
+
 int paraport_mask;
 
 int pause_emulation;
@@ -352,6 +355,18 @@ void set_last_active_config(const char* filename)
 {
 	extract_filename(filename, last_active_config);
 	remove_file_extension(last_active_config);
+}
+
+int getdpiformonitor(int displayIndex)
+{
+	float ddpi, hdpi, vdpi;
+	if (SDL_GetDisplayDPI(displayIndex, &ddpi, &hdpi, &vdpi) == 0) {
+		return static_cast<int>(vdpi);
+	}
+	else {
+		// Fallback to a default DPI value if SDL_GetDisplayDPI fails
+		return 96; // Common default DPI value
+	}
 }
 
 int getdpiforwindow(const int monid)
@@ -1385,6 +1400,99 @@ static void touch_event(const unsigned long id, const int pressrel, const int x,
 	}
 }
 
+static bool hasresizelimit(struct AmigaMonitor* mon)
+{
+	if (!mon->ratio_sizing || !mon->ratio_width || !mon->ratio_height)
+		return false;
+	return true;
+}
+
+static int canstretch(const AmigaMonitor* mon)
+{
+	if (isfullscreen() != 0)
+		return 0;
+	if (!mon->screen_is_picasso) {
+		if (!currprefs.gfx_windowed_resize)
+			return 0;
+		if (currprefs.gf[GF_NORMAL].gfx_filter_autoscale == AUTOSCALE_RESIZE)
+			return 0;
+		return 1;
+	}
+	else {
+		if (currprefs.rtgallowscaling || currprefs.gf[GF_RTG].gfx_filter_autoscale)
+			return 1;
+	}
+	return 0;
+}
+
+static void getsizemove(AmigaMonitor* mon)
+{
+	mon->ratio_width = mon->amigawin_rect.w;
+	mon->ratio_height = mon->amigawin_rect.h;
+	mon->ratio_adjust_x = mon->ratio_width - mon->mainwin_rect.w;
+	mon->ratio_adjust_y = mon->ratio_height - mon->mainwin_rect.h;
+	const Uint8* state = SDL_GetKeyboardState(nullptr);
+	mon->ratio_sizing = state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
+}
+
+static int setsizemove(AmigaMonitor* mon, HWND hWnd)
+{
+	if (isfullscreen() > 0)
+		return 0;
+	if (mon->in_sizemove > 0)
+		return 0;
+	int iconic = (SDL_GetWindowFlags(hWnd) & SDL_WINDOW_MINIMIZED) != 0;
+	if (mon->amiga_window && !iconic) {
+		//write_log (_T("WM_WINDOWPOSCHANGED MAIN\n"));
+		GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
+		updatewinrect(mon, false);
+		updatemouseclip(mon);
+		if (minimized) {
+			unsetminimized(mon->monitor_id);
+			amiberry_active(mon, minimized);
+		}
+		if (isfullscreen() == 0) {
+			static int store_xy;
+			SDL_Rect rc2;
+			GetWindowRect(mon->amiga_window, &rc2);
+			int left = rc2.x - mon->win_x_diff;
+			int top = rc2.y - mon->win_y_diff;
+			int width = rc2.w;
+			int height = rc2.h;
+			if (store_xy++) {
+				if (!mon->monitor_id) {
+					regsetint(nullptr, _T("MainPosX"), left);
+					regsetint(nullptr, _T("MainPosY"), top);
+				}
+				else {
+					TCHAR buf[100];
+					_stprintf(buf, _T("MainPosX_%d"), mon->monitor_id);
+					regsetint(nullptr, buf, left);
+					_stprintf(buf, _T("MainPosY_%d"), mon->monitor_id);
+					regsetint(nullptr, buf, top);
+				}
+			}
+			changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.x = left;
+			changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.y = top;
+			if (canstretch(mon)) {
+				int w = mon->mainwin_rect.w;
+				int h = mon->mainwin_rect.h;
+				if (w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width + mon->window_extra_width ||
+					h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height + mon->window_extra_height) {
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = w - mon->window_extra_width;
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = h - mon->window_extra_height;
+					set_config_changed();
+				}
+				//if (mon->hStatusWnd)
+				//	SendMessage(mon->hStatusWnd, WM_SIZE, SIZE_RESTORED, MAKELONG(w, h));
+			}
+
+			return 0;
+		}
+	}
+	return 1;
+}
+
 static void handle_focus_gained_event(const AmigaMonitor* mon)
 {
 	amiberry_active(mon, minimized);
@@ -1409,11 +1517,7 @@ static void handle_restored_event(const AmigaMonitor* mon)
 
 static void handle_moved_event(AmigaMonitor* mon)
 {
-	if (isfullscreen() <= 0)
-	{
-		updatewinrect(mon, false);
-		updatemouseclip(mon);
-	}
+	setsizemove(mon, mon->amiga_window);
 }
 
 static void handle_enter_event()
@@ -1912,99 +2016,6 @@ void update_clipboard()
 		SDL_SetClipboardText(clipboard_uae);
 		uae_clipboard_free_text(clipboard_uae);
 	}
-}
-
-static bool hasresizelimit(struct AmigaMonitor* mon)
-{
-	if (!mon->ratio_sizing || !mon->ratio_width || !mon->ratio_height)
-		return false;
-	return true;
-}
-
-static int canstretch(const AmigaMonitor* mon)
-{
-	if (isfullscreen() != 0)
-		return 0;
-	if (!mon->screen_is_picasso) {
-		if (!currprefs.gfx_windowed_resize)
-			return 0;
-		if (currprefs.gf[GF_NORMAL].gfx_filter_autoscale == AUTOSCALE_RESIZE)
-			return 0;
-		return 1;
-	}
-	else {
-		if (currprefs.rtgallowscaling || currprefs.gf[GF_RTG].gfx_filter_autoscale)
-			return 1;
-	}
-	return 0;
-}
-
-static void getsizemove(AmigaMonitor* mon)
-{
-	mon->ratio_width = mon->amigawin_rect.w;
-	mon->ratio_height = mon->amigawin_rect.h;
-	mon->ratio_adjust_x = mon->ratio_width - mon->mainwin_rect.w;
-	mon->ratio_adjust_y = mon->ratio_height - mon->mainwin_rect.h;
-	const Uint8* state = SDL_GetKeyboardState(nullptr);
-	mon->ratio_sizing = state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
-}
-
-static int setsizemove(AmigaMonitor* mon, HWND hWnd)
-{
-	if (isfullscreen() > 0)
-		return 0;
-	if (mon->in_sizemove > 0)
-		return 0;
-	int iconic = (SDL_GetWindowFlags(hWnd) & SDL_WINDOW_MINIMIZED) != 0;
-	if (mon->amiga_window && !iconic) {
-		//write_log (_T("WM_WINDOWPOSCHANGED MAIN\n"));
-		GetWindowRect(mon->amiga_window, &mon->mainwin_rect);
-		updatewinrect(mon, false);
-		updatemouseclip(mon);
-		if (minimized) {
-			unsetminimized(mon->monitor_id);
-			amiberry_active(mon, minimized);
-		}
-		if (isfullscreen() == 0) {
-			static int store_xy;
-			SDL_Rect rc2;
-			GetWindowRect(mon->amiga_window, &rc2);
-			int left = rc2.x - mon->win_x_diff;
-			int top = rc2.y - mon->win_y_diff;
-			int width = rc2.w;
-			int height = rc2.h;
-			if (store_xy++) {
-				if (!mon->monitor_id) {
-					regsetint(NULL, _T("MainPosX"), left);
-					regsetint(NULL, _T("MainPosY"), top);
-				}
-				else {
-					TCHAR buf[100];
-					_stprintf(buf, _T("MainPosX_%d"), mon->monitor_id);
-					regsetint(NULL, buf, left);
-					_stprintf(buf, _T("MainPosY_%d"), mon->monitor_id);
-					regsetint(NULL, buf, top);
-				}
-			}
-			changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.x = left;
-			changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.y = top;
-			if (canstretch(mon)) {
-				int w = mon->mainwin_rect.w;
-				int h = mon->mainwin_rect.h;
-				if (w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width + mon->window_extra_width ||
-					h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height + mon->window_extra_height) {
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = w - mon->window_extra_width;
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = h - mon->window_extra_height;
-					set_config_changed();
-				}
-				//if (mon->hStatusWnd)
-				//	SendMessage(mon->hStatusWnd, WM_SIZE, SIZE_RESTORED, MAKELONG(w, h));
-			}
-			
-			return 0;
-		}
-	}
-	return 1;
 }
 
 int handle_msgpump(bool vblank)
@@ -4813,6 +4824,109 @@ const TCHAR** uaenative_get_library_dirs()
 	return nats;
 }
 
+static int parseversion(TCHAR** vs)
+{
+	TCHAR tmp[10];
+	int i;
+
+	i = 0;
+	while (**vs >= '0' && **vs <= '9') {
+		if (i >= sizeof(tmp) / sizeof(TCHAR))
+			return 0;
+		tmp[i++] = **vs;
+		(*vs)++;
+	}
+	if (**vs == '.')
+		(*vs)++;
+	tmp[i] = 0;
+	return _tstol(tmp);
+}
+
+static int checkversion(TCHAR* vs, int* verp)
+{
+	int ver;
+	if (_tcslen(vs) < 10)
+		return 0;
+	if (_tcsncmp(vs, _T("Amiberry "), 7))
+		return 0;
+	vs += 7;
+	ver = parseversion(&vs) << 16;
+	ver |= parseversion(&vs) << 8;
+	ver |= parseversion(&vs);
+	if (verp)
+		*verp = ver;
+	if (ver >= ((UAEMAJOR << 16) | (UAEMINOR << 8) | UAESUBREV))
+		return 0;
+	return 1;
+}
+
+static void initialize_ini()
+{
+	int size;
+	TCHAR version_char[100];
+
+	size = sizeof(version_char) / sizeof(TCHAR);
+	if (regquerystr(NULL, _T("Version"), version_char, &size)) {
+		int ver = 0;
+		if (checkversion(version_char, &ver)) {
+			regsetstr(nullptr, _T("Version"), VersionStr);
+		}
+	}
+	else {
+		regsetstr(nullptr, _T("Version"), VersionStr);
+	}
+
+	if (!regexists(nullptr, _T("MainPosX")) || !regexists(nullptr, _T("GUIPosX"))) {
+		SDL_DisplayMode dm;
+		SDL_GetCurrentDisplayMode(0, &dm);
+		int x = dm.w;
+		int y = dm.h;
+		int dpi = getdpiformonitor(0);
+		x = (x - (GUI_WIDTH * dpi / 96)) / 2;
+		y = (y - (GUI_HEIGHT * dpi / 96)) / 2;
+		x = std::max(x, 10);
+		y = std::max(y, 10);
+		/* Create and initialize all our sub-keys to the default values */
+		regsetint(nullptr, _T("MainPosX"), x);
+		regsetint(nullptr, _T("MainPosY"), y);
+		regsetint(nullptr, _T("GUIPosX"), x);
+		regsetint(nullptr, _T("GUIPosY"), y);
+	}
+
+	read_rom_list(true);
+	load_keyring(nullptr, nullptr);
+}
+
+static void makeverstr(TCHAR* s)
+{
+	if (_tcslen(AMIBERRYBETA) > 0) {
+		if (AMIBERRYPUBLICBETA == 2) {
+			_stprintf(BetaStr, _T(" (DevAlpha %s, %d.%02d.%02d)"), AMIBERRYBETA,
+				GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
+		}
+		else {
+			_stprintf(BetaStr, _T(" (%sBeta %s, %d.%02d.%02d)"), AMIBERRYPUBLICBETA > 0 ? _T("Public ") : _T(""), AMIBERRYBETA,
+				GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
+		}
+#ifdef _WIN64
+		_tcscat(BetaStr, _T(" 64-bit"));
+#endif
+		_stprintf(s, _T("Amiberry %d.%d.%d%s%s"),
+			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, BetaStr);
+	}
+	else {
+		_stprintf(s, _T("Amiberry %d.%d.%d%s (%d.%02d.%02d)"),
+			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
+#ifdef _WIN64
+		_tcscat(s, _T(" 64-bit"));
+#endif
+	}
+	if (_tcslen(AMIBERRYEXTRA) > 0) {
+		_tcscat(s, _T(" "));
+		_tcscat(s, AMIBERRYEXTRA);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	for (auto i = 1; i < argc; i++) {
@@ -4859,6 +4973,7 @@ int main(int argc, char* argv[])
 	}
 	create_missing_amiberry_folders();
 
+	makeverstr(VersionStr);
 	// Parse command line and remove used amiberry specific args
 	// and modify both argc & argv accordingly
 	if (!parse_amiberry_cmd_line(&argc, argv, 1))
@@ -4934,8 +5049,7 @@ int main(int argc, char* argv[])
 #endif
 	(void)atexit(SDL_Quit);
 
-	read_rom_list(true);
-	load_keyring(nullptr, nullptr);
+	initialize_ini();
 	write_log(_T("Enumerating display devices.. \n"));
 	enumeratedisplays();
 	write_log(_T("Sorting devices and modes...\n"));
@@ -5319,7 +5433,7 @@ void target_setdefaultstatefilename(const TCHAR* name)
 	else {
 		const TCHAR* p2 = _tcsrchr(name, '\\');
 		const TCHAR* p3 = _tcsrchr(name, '/');
-		const TCHAR* p1 = NULL;
+		const TCHAR* p1 = nullptr;
 		if (p2 >= p3) {
 			p1 = p2;
 		}
