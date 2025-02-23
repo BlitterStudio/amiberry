@@ -1461,9 +1461,8 @@ static bool canmatchdepth(void)
 {
 	if (!currprefs.rtgmatchdepth)
 		return false;
-	// We can always match depth in Amiberry
-	//if (currprefs.gfx_api >= 2)
-	//	return false;
+	if (currprefs.gfx_api >= 2)
+		return false;
 	return true;
 }
 
