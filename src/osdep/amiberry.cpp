@@ -2025,7 +2025,7 @@ int handle_msgpump(bool vblank)
 
 bool handle_events()
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	const AmigaMonitor* mon = &AMonitors[0];
 	static auto was_paused = 0;
 
 #ifdef USE_DBUS
