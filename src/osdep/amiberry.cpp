@@ -155,10 +155,7 @@ void cap_fps(Uint64 start)
 
 std::string get_version_string()
 {
-	const auto pre_release_string = std::string(AMIBERRY_VERSION_PRE_RELEASE);
-	if (pre_release_string.empty())
-		return "Amiberry " + std::string(AMIBERRY_VERSION);
-	return "Amiberry " + std::string(AMIBERRY_VERSION) + "-" + std::string(AMIBERRY_VERSION_PRE_RELEASE);
+	return VersionStr;
 }
 
 std::string get_copyright_notice()
@@ -2103,7 +2100,7 @@ void logging_init()
 
 		logging_started = 1;
 		first++;
-		write_log("%s Logfile\n\n", get_version_string().c_str());
+		write_log("%s Logfile\n\n", VersionStr);
 		write_log("%s\n", get_sdl2_version_string().c_str());
 		regstatus();
 	}
@@ -4866,7 +4863,7 @@ static void initialize_ini()
 	TCHAR version_char[100];
 
 	size = sizeof(version_char) / sizeof(TCHAR);
-	if (regquerystr(NULL, _T("Version"), version_char, &size)) {
+	if (regquerystr(nullptr, _T("Version"), version_char, &size)) {
 		int ver = 0;
 		if (checkversion(version_char, &ver)) {
 			regsetstr(nullptr, _T("Version"), VersionStr);
@@ -4881,7 +4878,7 @@ static void initialize_ini()
 		SDL_GetCurrentDisplayMode(0, &dm);
 		int x = dm.w;
 		int y = dm.h;
-		int dpi = getdpiformonitor(0);
+		const int dpi = getdpiformonitor(0);
 		x = (x - (GUI_WIDTH * dpi / 96)) / 2;
 		y = (y - (GUI_HEIGHT * dpi / 96)) / 2;
 		x = std::max(x, 10);
