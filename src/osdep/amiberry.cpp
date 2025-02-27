@@ -4156,6 +4156,7 @@ std::string get_plugins_directory(bool portable_mode)
 extern void save_theme(const std::string& theme_filename);
 extern void load_theme(const std::string& theme_filename);
 extern void load_default_theme();
+extern void load_default_dark_theme();
 
 void create_missing_amiberry_folders()
 {
@@ -4339,6 +4340,13 @@ void create_missing_amiberry_folders()
 	{
 		load_default_theme();
 		save_theme("Default.theme");
+	}
+
+	default_theme_file = themes_path + "Dark.theme";
+	if (!my_existsfile2(default_theme_file.c_str()))
+	{
+		load_default_dark_theme();
+		save_theme("Dark.theme");
 	}
 }
 

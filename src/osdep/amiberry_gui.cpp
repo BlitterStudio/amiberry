@@ -1946,6 +1946,19 @@ void load_default_theme()
 	gui_theme.foreground_color = { 0, 0, 0 };
 }
 
+void load_default_dark_theme()
+{
+	gui_theme.font_name = "AmigaTopaz.ttf";
+	gui_theme.font_size = 15;
+	gui_theme.font_color = { 200, 200, 200 };
+	gui_theme.base_color = { 32, 32, 37 };
+	gui_theme.selector_inactive = { 32, 32, 37 };
+	gui_theme.selector_active = { 50, 100, 200 };
+	gui_theme.selection_color = { 50, 100, 200 };
+	gui_theme.background_color = { 45, 45, 47 };
+	gui_theme.foreground_color = { 200, 200, 200 };
+}
+
 // Get the path to the system fonts
 std::string get_system_fonts_path()
 {
