@@ -173,37 +173,6 @@ std::string prefix_with_data_path(const std::string& filename)
 #endif
 }
 
-std::string prefix_with_whdboot_path(const std::string& filename)
-{
-#ifdef __MACH__
-	CFBundleRef mainBundle = CFBundleGetMainBundle();
-	if (mainBundle == NULL)
-	{
-		printf("Can't fetch main bundle\n");
-		return filename;
-	}
-
-	std::string filePath = "Whdboot/" + filename;
-	CFURLRef whdbootUrl = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL, filePath.c_str(), kCFStringEncodingASCII), NULL, NULL);
-	if (whdbootUrl == NULL)
-	{
-		printf("Can't fetch WhdbootUrl (CFBundleCopyResourceURL returned NULL)\n");
-		return filename;
-	}
-	CFStringRef path;
-	if (!CFURLCopyResourcePropertyForKey(whdbootUrl, kCFURLPathKey, &path, NULL))
-	{
-		printf("Can't find file path (CFURLCopyResourcePropertyForKey failed)\n");
-		return filename;
-	}
-	filePath = CFStringCopyUTF8String(path);
-	return filePath;
-#else
-	auto result = get_whdbootpath();
-	return result.append(filename);
-#endif
-}
-
 int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
 {
 	const auto ret = 0;

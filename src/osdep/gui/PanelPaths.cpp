@@ -305,22 +305,22 @@ public:
 	{
 		std::string destination;
 		//  download WHDLoad executable
-		destination = prefix_with_whdboot_path("WHDLoad");
+		destination = get_whdbootpath().append("WHDLoad");
 		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
 
 		//  download JST executable
-		destination = prefix_with_whdboot_path("JST");
+		destination = get_whdbootpath().append("JST");
 		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", destination, false);
 
 		//  download AmiQuit executable
-		destination = prefix_with_whdboot_path("AmiQuit");
+		destination = get_whdbootpath().append("AmiQuit");
 		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", destination, false);
 
 		//  download boot-data.zip
-		destination = prefix_with_whdboot_path("boot-data.zip");
+		destination = get_whdbootpath().append("boot-data.zip");
 		write_log("Downloading %s ...\n", destination.c_str());
 		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
 
@@ -331,7 +331,7 @@ public:
 		download_rtb("kick40068.A1200.RTB");
 		download_rtb("kick40068.A4000.RTB");
 
-		destination = prefix_with_whdboot_path("game-data/whdload_db.xml");
+		destination = get_whdbootpath().append("game-data/whdload_db.xml");
 		const auto old_timestamp = get_xml_timestamp(destination);
 		write_log("Downloading %s ...\n", destination.c_str());
 		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
