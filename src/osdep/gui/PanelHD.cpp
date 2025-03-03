@@ -33,7 +33,7 @@ static const char* column_caption[] =
 {
 	"Device", "Volume", "Path", "R/W", "Size", "Bootpri"
 };
-static const int COLUMN_SIZE[] =
+static const int column_size[] =
 {
 	55, // Device
 	65, // Volume
@@ -426,7 +426,7 @@ void InitPanelHD(const config_category& category)
 		for (col = 0; col < COL_COUNT; ++col)
 		{
 			listCells[row][col] = new gcn::TextField();
-			listCells[row][col]->setSize(COLUMN_SIZE[col], SMALL_BUTTON_HEIGHT);
+			listCells[row][col]->setSize(column_size[col], SMALL_BUTTON_HEIGHT);
 			listCells[row][col]->setEnabled(false);
 			listCells[row][col]->setBaseColor(gui_base_color);
 			listCells[row][col]->setBackgroundColor(gui_background_color);
@@ -530,7 +530,7 @@ void InitPanelHD(const config_category& category)
 	for (col = 0; col < COL_COUNT; ++col)
 	{
 		category.panel->add(lblList[col], posX, posY);
-		posX += COLUMN_SIZE[col];
+		posX += column_size[col];
 	}
 	posY += lblList[0]->getHeight() + 2;
 
@@ -544,7 +544,7 @@ void InitPanelHD(const config_category& category)
 		for (col = 0; col < COL_COUNT; ++col)
 		{
 			listEntry[row]->add(listCells[row][col], posX, 2);
-			posX += COLUMN_SIZE[col];
+			posX += column_size[col];
 		}
 		category.panel->add(listEntry[row], DISTANCE_BORDER, posY);
 		posY += listEntry[row]->getHeight() + DISTANCE_NEXT_Y / 2;
