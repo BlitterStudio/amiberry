@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
 #include "SelectorEntry.hpp"
@@ -5,6 +6,7 @@
 #include "options.h"
 #include "memory.h"
 #include "gui_handling.h"
+#include "StringListModel.h"
 #include "target.h"
 
 static gcn::Window* grpRAM;
@@ -30,56 +32,67 @@ static gcn::Label* lblMbResHighmem;
 static gcn::Label* lblMbResHighsize;
 static gcn::Slider* sldMbResHighmem;
 
+static gcn::Window* grpAdvancedRAM;
+static gcn::Label* lblZ3Mapping;
+static gcn::DropDown* cboZ3Mapping;
+
+static gcn::StringListModel z3_mapping_mode;
+
 class MemorySliderActionListener : public gcn::ActionListener
 {
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
-		if (actionEvent.getSource() == sldChipmem)
+		auto source = actionEvent.getSource();
+
+		if (source == sldChipmem)
 		{
 			changed_prefs.chipmem.size = memsizes[msi_chip[static_cast<int>(sldChipmem->getValue())]];
 			if (changed_prefs.chipmem.size > 0x200000 && changed_prefs.fastmem[0].size > 0)
 				changed_prefs.fastmem[0].size = 0;
 		}
 
-		else if (actionEvent.getSource() == sldSlowmem)
+		else if (source == sldSlowmem)
 		{
 			changed_prefs.bogomem.size = memsizes[msi_bogo[static_cast<int>(sldSlowmem->getValue())]];
 		}
 
-		else if (actionEvent.getSource() == sldFastmem)
+		else if (source == sldFastmem)
 		{
 			changed_prefs.fastmem[0].size = memsizes[msi_fast[static_cast<int>(sldFastmem->getValue())]];
 			if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem.size > 0x200000)
 				changed_prefs.chipmem.size = 0x200000;
 		}
 
-		else if (actionEvent.getSource() == sldZ3mem)
+		else if (source == sldZ3mem)
 		{
 			changed_prefs.z3fastmem[0].size = memsizes[msi_z3fast[static_cast<int>(sldZ3mem->getValue())]];
-			if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
-				changed_prefs.z3fastmem[0].size = max_z3fastmem;
+			changed_prefs.z3fastmem[0].size = std::min(changed_prefs.z3fastmem[0].size, max_z3fastmem);
 		}
 
-		else if (actionEvent.getSource() == sldZ3chip)
+		else if (source == sldZ3chip)
 		{
 			changed_prefs.z3chipmem.size = memsizes[msi_z3chip[static_cast<int>(sldZ3chip->getValue())]];
-			if (changed_prefs.z3chipmem.size > max_z3fastmem)
-				changed_prefs.z3chipmem.size = max_z3fastmem;
+			changed_prefs.z3chipmem.size = std::min(changed_prefs.z3chipmem.size, max_z3fastmem);
 		}
 
-		else if (actionEvent.getSource() == sldMbResLowmem)
+		else if (source == sldMbResLowmem)
 		{
 			changed_prefs.mbresmem_low.size = memsizes[msi_mb[static_cast<int>(sldMbResLowmem->getValue())]];
 			if (currprefs.mbresmem_low.size != changed_prefs.mbresmem_low.size)
 				disable_resume();
 		}
 
-		else if (actionEvent.getSource() == sldMbResHighmem)
+		else if (source == sldMbResHighmem)
 		{
 			changed_prefs.mbresmem_high.size = memsizes[msi_mb[static_cast<int>(sldMbResHighmem->getValue())]];
 			if (currprefs.mbresmem_high.size != changed_prefs.mbresmem_high.size)
 				disable_resume();
+		}
+
+		else if (source == cboZ3Mapping)
+		{
+			changed_prefs.z3_mapping_mode = cboZ3Mapping->getSelected();
 		}
 
 		RefreshPanelRAM();
@@ -88,10 +101,15 @@ public:
 
 static MemorySliderActionListener* memorySliderActionListener;
 
-
 void InitPanelRAM(const config_category& category)
 {
 	memorySliderActionListener = new MemorySliderActionListener();
+
+	z3_mapping_mode.clear();
+	z3_mapping_mode.add("Automatic (*)");
+	z3_mapping_mode.add("UAE (0x10000000)");
+	z3_mapping_mode.add("Real (0x40000000)");
+
 	constexpr int sld_width = 150;
 	int marker_length = 20;
 
@@ -233,9 +251,31 @@ void InitPanelRAM(const config_category& category)
 
 	category.panel->add(grpRAM);
 
+	lblZ3Mapping = new gcn::Label("Z3 Mapping Mode:");
+	lblZ3Mapping->setSize(200, LABEL_HEIGHT);
+
+	cboZ3Mapping = new gcn::DropDown(&z3_mapping_mode);
+	cboZ3Mapping->setSize(200, cboZ3Mapping->getHeight());
+	cboZ3Mapping->setBaseColor(gui_base_color);
+	cboZ3Mapping->setBackgroundColor(gui_background_color);
+	cboZ3Mapping->setForegroundColor(gui_foreground_color);
+	cboZ3Mapping->setSelectionColor(gui_selection_color);
+	cboZ3Mapping->addActionListener(memorySliderActionListener);
+
+	grpAdvancedRAM = new gcn::Window("Advanced Memory Settings");
+	grpAdvancedRAM->setPosition(DISTANCE_BORDER, grpRAM->getY() + grpRAM->getHeight() + DISTANCE_NEXT_Y);
+	grpAdvancedRAM->add(lblZ3Mapping, 10, 10);
+	grpAdvancedRAM->add(cboZ3Mapping, lblZ3Mapping->getX(), lblZ3Mapping->getY() + lblZ3Mapping->getHeight() + 8);
+	grpAdvancedRAM->setSize(grpRAM->getWidth(), (category.panel->getHeight() / 2) - DISTANCE_NEXT_Y * 2);
+	grpAdvancedRAM->setMovable(false);
+	grpAdvancedRAM->setTitleBarHeight(TITLEBAR_HEIGHT);
+	grpAdvancedRAM->setBaseColor(gui_base_color);
+	grpAdvancedRAM->setForegroundColor(gui_foreground_color);
+
+	category.panel->add(grpAdvancedRAM);
+
 	RefreshPanelRAM();
 }
-
 
 void ExitPanelRAM()
 {
@@ -261,6 +301,9 @@ void ExitPanelRAM()
 	delete sldMbResHighmem;
 	delete lblMbResHighsize;
 	delete grpRAM;
+	delete lblZ3Mapping;
+	delete cboZ3Mapping;
+	delete grpAdvancedRAM;
 	delete memorySliderActionListener;
 }
 
@@ -377,8 +420,9 @@ void RefreshPanelRAM()
 			break;
 		}
 	}
-}
 
+	cboZ3Mapping->setSelected(changed_prefs.z3_mapping_mode);
+}
 
 bool HelpPanelRAM(std::vector<std::string>& helptext)
 {

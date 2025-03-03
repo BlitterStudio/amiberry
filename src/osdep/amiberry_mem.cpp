@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 
@@ -164,8 +165,6 @@ static int my_getpagesize()
 
 #define getpagesize my_getpagesize
 
-
-static uae_u32 natmem_size;
 uae_u32 max_z3fastmem;
 uae_u32 max_physmem;
 
@@ -258,8 +257,7 @@ bool preinit_shm ()
 		// Higher than 2G to support G-REX PCI VRAM
 		max_allowed_mman = 2560;
 	}
-	if (maxmem > max_allowed_mman)
-		max_allowed_mman = maxmem;
+	max_allowed_mman = std::max<uae_u32>(maxmem, max_allowed_mman);
 
 #ifdef _WIN32
 	memstats.dwLength = sizeof(memstats);
@@ -309,31 +307,26 @@ bool preinit_shm ()
 		if (!os_64bit) {
 			if (totalphys64 < 1536 * 1024 * 1024)
 				max_allowed_mman = 256;
-			if (max_allowed_mman < 256)
-				max_allowed_mman = 256;
+			max_allowed_mman = std::max<uae_u32>(max_allowed_mman, 256);
 		}
 	} else if (maxmem > 0) {
 		size64 = static_cast<uae_u64>(maxmem) * 1024 * 1024;
 	}
-	if (size64 < 8 * 1024 * 1024)
-		size64 = 8 * 1024 * 1024;
+	size64 = std::max<uae_u64>(size64, 8 * 1024 * 1024);
 	if (static_cast<uae_u64>(max_allowed_mman) * 1024 * 1024 > size64)
 		max_allowed_mman = static_cast<uae_u32>(size64 / (1024 * 1024));
 
 	uae_u32 natmem_size = (max_allowed_mman + 1) * 1024 * 1024;
-	if (natmem_size < 17 * 1024 * 1024)
-		natmem_size = 17 * 1024 * 1024;
+	natmem_size = std::max<uae_u32>(natmem_size, 17 * 1024 * 1024);
 
 #if WIN32_NATMEM_TEST
 	natmem_size = WIN32_NATMEM_TEST * 1024 * 1024;
 #endif
 
-	if (natmem_size > 0xc0000000) {
-		natmem_size = 0xc0000000;
-	}
+	natmem_size = std::min(natmem_size, 0xc0000000);
 
 	write_log (_T("MMAN: Total physical RAM %llu MB, all RAM %llu MB\n"),
-				  totalphys64 >> 20, total64 >> 20);
+	           totalphys64 >> 20, total64 >> 20);
 	write_log(_T("MMAN: Attempting to reserve: %u MB\n"), natmem_size >> 20);
 
 #if 1
@@ -386,7 +379,7 @@ bool preinit_shm ()
 	}
 	max_physmem = natmem_size;
 	write_log (_T("MMAN: Reserved %p-%p (0x%08x %dM)\n"),
-			   natmem_reserved, (uae_u8 *) natmem_reserved + natmem_reserved_size,
+			   natmem_reserved, natmem_reserved + natmem_reserved_size,
 			   natmem_reserved_size, natmem_reserved_size / (1024 * 1024));
 
 	clear_shm ();
@@ -473,16 +466,14 @@ static int doinit_shm ()
 		// Real highram > 0x80000000 && UAE highram <= 0x80000000 && Automatic
 		(expamem_z3_highram_real > 0x80000000 && expamem_z3_highram_uae <= 0x80000000 && p->z3_mapping_mode == Z3MAPPING_AUTO) ||
 		// Wanted UAE || Blizzard RAM
-		p->z3_mapping_mode == Z3MAPPING_UAE || //cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_BLIZZARD_12xx ||
+		p->z3_mapping_mode == Z3MAPPING_UAE || cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_BLIZZARD_12xx ||
 		// JIT && Automatic && Real does not fit in NATMEM && UAE fits in NATMEM
 		(expamem_z3_highram_real + extra >= natmem_reserved_size && expamem_z3_highram_uae + extra <= natmem_reserved_size && p->z3_mapping_mode == Z3MAPPING_AUTO && jit_direct_compatible_memory)) {
 		changed_prefs.z3autoconfig_start = currprefs.z3autoconfig_start = Z3BASE_UAE;
 		if (p->z3_mapping_mode == Z3MAPPING_AUTO)
 			write_log(_T("MMAN: Selected UAE Z3 mapping mode\n"));
 		set_expamem_z3_hack_mode(Z3MAPPING_UAE);
-		if (expamem_z3_highram_uae > totalsize_z3) {
-			totalsize_z3 = expamem_z3_highram_uae;
-		}
+		totalsize_z3 = std::max(expamem_z3_highram_uae, totalsize_z3);
 	} else {
 		if (p->z3_mapping_mode == Z3MAPPING_AUTO)
 			write_log(_T("MMAN: Selected REAL Z3 mapping mode\n"));
@@ -498,8 +489,7 @@ static int doinit_shm ()
 	}
 	write_log(_T("Total %uM Z3 Total %uM, HM %uM\n"), totalsize >> 20, totalsize_z3 >> 20, expamem_highmem_pointer >> 20);
 
-	if (totalsize_z3 < expamem_highmem_pointer)
-		totalsize_z3 = expamem_highmem_pointer;
+	totalsize_z3 = std::max(totalsize_z3, expamem_highmem_pointer);
 
 	expansion_scan_autoconfig(&currprefs, true);
 
@@ -581,7 +571,7 @@ static int doinit_shm ()
 		write_log (_T("MMAN: No special area could be allocated! err=%d\n"), GetLastError ());
 	} else {
 		write_log(_T("MMAN: Our special area: %p-%p (0x%08x %dM)\n"),
-			natmem_offset, (uae_u8*)natmem_offset + totalsize,
+			natmem_offset, natmem_offset + totalsize,
 			totalsize, totalsize / (1024 * 1024));
 		canbang = jit_direct_compatible_memory;
 	}
