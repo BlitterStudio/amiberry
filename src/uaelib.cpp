@@ -28,7 +28,7 @@
 #include "picasso96.h"
 #include "filesys.h"
 #include "target.h"
-
+#include "parser.h" // for midi ports
 /*
 * Returns UAE Version
 */
@@ -390,8 +390,130 @@ static uae_u32 emulib_host_session(TrapContext* ctx, uaecptr name, uae_u32 out, 
 #endif
 #endif //AMIBERRY
 
+enum midops {
+	MIDI_OP_GET_NUM_OUT,
+	MIDI_OP_GET_NUM_IN,
+	MIDI_OP_GET_OUT_INDEX,
+	MIDI_OP_GET_IN_INDEX,
+	MIDI_OP_GET_OUT,
+	MIDI_OP_GET_IN,	
+	MIDI_OP_SET_OUT,
+	MIDI_OP_SET_IN
+};
+
+
+static uae_u32 uaelib_midi(TrapContext *ctx, uae_u32 op, uae_u32 index, uaecptr name)
+{
+	uae_u32 result = -1;
+	switch (op)
+	{
+		case MIDI_OP_GET_NUM_OUT:
+		{
+			result = midi_out_ports.size();
+			break;
+		}
+		case MIDI_OP_GET_NUM_IN:
+		{
+			result = midi_in_ports.size();
+			break;
+		}
+		case MIDI_OP_GET_OUT_INDEX:
+		{
+			if(index < midi_out_ports.size())
+			{
+				char *n = ua(midi_out_ports[index].c_str());
+				if(n)
+				{
+					trap_put_string(ctx, (uae_u8*)n, name, 256);
+					result = strlen(n);
+					xfree(n);
+				}
+				
+			}
+			break;
+		}
+		case MIDI_OP_GET_IN_INDEX:
+		{
+			if(index < midi_in_ports.size())
+			{
+				char *n = ua(midi_in_ports[index].c_str());
+				if(n)
+				{
+					trap_put_string(ctx, (uae_u8*)n, name, 256);
+					result = strlen(n);
+					xfree(n);
+				}
+				
+			}
+			break;
+		}
+		case MIDI_OP_GET_OUT:
+		{
+			char *n = ua(currprefs.midioutdev);
+			if(n)
+			{
+				trap_put_string(ctx, (uae_u8*)n, name, 256);
+				result = strlen(n);
+				xfree(n);
+			}
+			break;
+		}
+		case MIDI_OP_GET_IN:
+		{
+			char *n = ua(currprefs.midiindev);
+			if(n)
+			{
+				trap_put_string(ctx, (uae_u8*)n, name, 256);
+				result = strlen(n);
+				xfree(n);
+			}
+			break;
+		}
+		case MIDI_OP_SET_OUT:
+		{
+			char midi_name[256];
+			
+			if (trap_get_string(ctx, midi_name, name, sizeof(midi_name)) < sizeof(midi_name))
+			{
+				TCHAR *s;
+				if((s = au (midi_name)))
+				{
+					_sntprintf(changed_prefs.midioutdev, 256, "%s", s);
+					xfree(s);
+					result = 0;
+					set_config_changed();
+				}
+			}
+			break;
+		}
+		case MIDI_OP_SET_IN:
+		{
+			char midi_name[256];
+			
+			if (trap_get_string(ctx, midi_name, name, sizeof(midi_name)) < sizeof(midi_name))
+			{
+				TCHAR *s;
+				if((s = au (midi_name)))
+				{
+					_sntprintf(changed_prefs.midiindev, 256, "%s", s);
+					xfree(s);
+					result = 0;
+					set_config_changed();
+				}
+			}
+			break;
+		}
+		default:
+			break;
+	}
+	
+	return result;
+}
+
 static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3, uae_u32 ARG4, uae_u32 ARG5)
 {
+	write_log("%ld\n",ARG0);
+	
 	switch (ARG0) {
 		case 0: return emulib_GetVersion();
 		case 1: return emulib_GetUaeConfig(ctx, ARG1);
@@ -452,6 +574,11 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 			return emulib_execute_on_host(ctx, ARG1);
 		return 0;
 		//case 89: return emulib_host_session(ctx, ARG1, ARG2, ARG3);
+
+		case 100:
+		{
+			return uaelib_midi(ctx, ARG1, ARG2, ARG3);
+		}
 #endif
 	}
 	return 0;

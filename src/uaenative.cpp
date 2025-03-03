@@ -117,6 +117,11 @@ static const char * UNICALL uni_uae_version(void)
     return PACKAGE_STRING;
 }
 
+static void * UNICALL uni_get_context(struct uni *uni)
+{
+	return uni->ctx;
+}
+
 static void free_library_data(struct library_data *library_data) {
     if (library_data->empty_count) {
         uae_sem_destroy(&library_data->empty_count);
@@ -224,6 +229,22 @@ static void set_library_globals(void *dl)
 
     address = dl_symbol(dl, "uni_uae_version");
     if (address) *((uni_uae_version_function *) address) = &uni_uae_version;
+    
+    address = dl_symbol(dl, "uni_get_context");
+    if (address) *((uni_get_context_function *) address) = &uni_get_context;
+    
+    address = dl_symbol(dl, "trap_call_add_dreg");
+    if (address) *((trap_call_add_dreg_function *) address) = (trap_call_add_dreg_function) &trap_call_add_dreg;
+    
+    address = dl_symbol(dl, "trap_call_add_areg");
+    if (address) *((trap_call_add_areg_function *) address) = (trap_call_add_dreg_function) &trap_call_add_areg;
+    
+    address = dl_symbol(dl, "trap_call_lib");
+    if (address) *((trap_call_lib_function *) address) = (trap_call_lib_function )&trap_call_lib;
+    
+    address = dl_symbol(dl, "write_log");
+    if (address) *((write_log_function *) address) = &write_log;
+    
 }
 
 static uae_u32 open_library (const char *name, uae_u32 min_version)
@@ -426,7 +447,7 @@ static uae_u32 do_call_function_compat_asm (struct uni *uni)
 
 static void do_call_function (struct uni *uni)
 {
-    printf("uni: calling native function %p\n", uni->native_function);
+//    printf("uni: calling native function %p\n", uni->native_function);
 
     frame_time_t start_time;
     const int flags = uni->flags;
@@ -489,7 +510,9 @@ uae_u32 uaenative_call_function (TrapContext *ctx, int flags)
         return UNI_ERROR_NOT_ENABLED;
     }
 
-    struct uni uni;
+    struct uni uni = {0};
+
+    uni.ctx = ctx;
     uni.function = trap_get_areg(ctx, 0);
     if (flags & UNI_FLAG_COMPAT) {
         uni.library = 0;
@@ -837,7 +860,9 @@ static uae_library_trap_def uaenative_functions[] = {
     { lib_call_function_async, TRAPFLAG_EXTRA_STACK },
     { lib_call_function_by_name },
     { lib_call_function_by_name_async, TRAPFLAG_EXTRA_STACK },
-    { NULL },
+    { lib_call_function, TRAPFLAG_EXTRA_STACK },
+    { lib_call_function_by_name, TRAPFLAG_EXTRA_STACK },
+    {nullptr },
 };
 
 static struct uae_library uaenative_library = {
