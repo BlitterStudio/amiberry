@@ -1,3 +1,13 @@
+/*
+ * UAE - The Un*x Amiga Emulator
+ *
+ * Amiberry: Amiga Emulator
+ * Filesystem functions
+ *
+ * Copyright 2025 Dimitris Panokostas
+ *
+ */
+
 #include "config.h"
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -15,8 +25,10 @@
 
 #ifdef USE_OLDGCC
 #include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 #else
 #include <filesystem>
+namespace fs = std::filesystem;
 #endif
 
 #include <set>
@@ -41,58 +53,108 @@ struct my_openfile_s {
 
 #ifdef AMIBERRY
 static bool has_logged_iconv_fail = false;
-void utf8_to_latin1_string(std::string& input, std::string& output)
+[[nodiscard]] bool utf8_to_latin1_string(const std::string_view input, std::string& output)
 {
-	std::vector<char> in_buf(input.begin(), input.end());
-	char* src_ptr = in_buf.data();
-	size_t src_size = input.size();
-	std::vector<char> buf(1024);
-	std::string dst;
+	if (input.empty()) {
+		output.clear();
+		return true;
+	}
 
-	auto* iconv_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
+	// Pre-allocate output buffer - Latin1 will never be larger than UTF-8 input
+	output.clear();
+	output.reserve(input.length());
+
+	// Create RAII wrapper for iconv handle
+	class IconvWrapper {
+		iconv_t handle_;
+	public:
+		IconvWrapper(const char* tocode, const char* fromcode)
+			: handle_(iconv_open(tocode, fromcode)) {
+		}
+		~IconvWrapper() { if (handle_ != iconv_t(-1)) iconv_close(handle_); }
+		operator iconv_t() const { return handle_; }
+	};
+
+	// Open conversion descriptor
+	static const IconvWrapper iconv_("ISO-8859-1//TRANSLIT", "UTF-8");
 	if (iconv_ == iconv_t(-1)) {
 		if (!has_logged_iconv_fail) {
 			write_log("iconv_open failed: will be copying directory entries verbatim\n");
 			has_logged_iconv_fail = true;
 		}
 		output = input;
-		return;
+		return false;
 	}
+
+	// Set up conversion buffers
+	std::vector<char> in_buf(input.begin(), input.end());
+	std::array<char, 1024> buf;
+	char* src_ptr = in_buf.data();
+	size_t src_size = input.size();
+
+	// Perform conversion in chunks
 	while (src_size > 0) {
 		char* dst_ptr = buf.data();
 		size_t dst_size = buf.size();
-		size_t res = ::iconv(iconv_, &src_ptr, &src_size, &dst_ptr, &dst_size);
+
+		// Reset conversion state for each chunk
+		iconv(iconv_, nullptr, nullptr, nullptr, nullptr);
+
+		size_t res = iconv(iconv_, &src_ptr, &src_size, &dst_ptr, &dst_size);
+
 		if (res == size_t(-1)) {
-			if (errno != E2BIG) {
-				// skip character
+			if (errno == E2BIG) {
+				// Buffer full - append what we have and continue
+				output.append(buf.data(), buf.size() - dst_size);
+				continue;
+			}
+			else {
+				// Invalid/incomplete sequence - skip character
 				++src_ptr;
 				--src_size;
 			}
 		}
-		dst.append(buf.data(), buf.size() - dst_size);
+
+		// Append converted chunk
+		if (buf.size() > dst_size) {
+			output.append(buf.data(), buf.size() - dst_size);
+		}
 	}
-	output = std::move(dst);
-	iconv_close(iconv_);
+
+	return true;
 }
 
-std::string iso_8859_1_to_utf8(const std::string& str)
+[[nodiscard]] std::string iso_8859_1_to_utf8(std::string_view str) noexcept
 {
-	std::string str_out;
-	str_out.reserve(str.size() * 2); // Reserve space to avoid reallocations
+	if (str.empty()) {
+		return {};
+	}
 
-	for (const auto& ch : str)
+	// Calculate exact size needed to avoid reallocations
+	const auto utf8_size = std::count_if(str.begin(), str.end(),
+		[](unsigned char c) { return c >= 0x80; }) + str.size();
+
+	std::string str_out;
+	str_out.reserve(utf8_size);
+
+	// Convert each character
+	for (const auto ch : str)
 	{
-		uint8_t byte = static_cast<uint8_t>(ch);
+		const auto byte = static_cast<uint8_t>(ch);
 		if (byte < 0x80) {
-			str_out.push_back(byte);
+			// ASCII characters (0-127) are copied as-is
+			str_out += byte;
 		}
 		else {
-			str_out.push_back(0xc0 | byte >> 6);
-			str_out.push_back(0x80 | (byte & 0x3f));
+			// Convert ISO-8859-1 to UTF-8 (two bytes)
+			str_out += static_cast<char>(0xC0 | (byte >> 6));     // First byte: 110xxxxx
+			str_out += static_cast<char>(0x80 | (byte & 0x3F));   // Second byte: 10xxxxxx
 		}
 	}
+
 	return str_out;
 }
+
 #endif
 
 // Helper function to copy UTF 8 string to C string
@@ -117,31 +179,85 @@ std::string CFStringCopyUTF8String(CFStringRef aString) {
 }
 #endif
 
-std::string prefix_with_application_directory_path(std::string currentpath)
+[[nodiscard]] std::string prefix_with_application_directory_path(std::string_view currentpath)
 {
+	if (currentpath.empty()) {
+		write_log("prefix_with_application_directory_path: Empty path provided\n");
+		return {};
+	}
+
 #ifdef __MACH__
-// On OS X we return the path of the bundle
-	// Build full path to Resources directory where the data folder is located
-	CFURLRef appUrlRef;
-	// Get full path to current bundle + filename being fetched
-	appUrlRef = CFBundleCopyResourceURL(CFBundleGetMainBundle(), CFStringCreateWithCString(NULL,currentpath.c_str(),kCFStringEncodingASCII), NULL, NULL);
-	CFStringRef path;
-	if( !CFURLCopyResourcePropertyForKey(appUrlRef, kCFURLPathKey, &path, NULL))
-	{
-		printf("Unable to fetch App bundle file path\n");
+	try {
+		// Get the main bundle
+		CFBundleRef mainBundle = CFBundleGetMainBundle();
+		if (!mainBundle) {
+			write_log("prefix_with_application_directory_path: Cannot fetch main bundle\n");
+			return std::string(currentpath);
+		}
+
+		// Create URL for resource
+		CFStringRef cfPath = CFStringCreateWithCString(nullptr,
+			currentpath.data(),
+			kCFStringEncodingUTF8);
+		if (!cfPath) {
+			write_log("prefix_with_application_directory_path: Failed to create CFString\n");
+			return std::string(currentpath);
+		}
+
+		// Use RAII for CFString cleanup
+		struct CFStringReleaser {
+			CFStringRef ref;
+			~CFStringReleaser() { if (ref) CFRelease(ref); }
+		} pathGuard{ cfPath };
+
+		CFURLRef appUrlRef = CFBundleCopyResourceURL(mainBundle, cfPath, nullptr, nullptr);
+		if (!appUrlRef) {
+			write_log("prefix_with_application_directory_path: Failed to get resource URL\n");
+			return std::string(currentpath);
+		}
+
+		// Use RAII for CFURL cleanup
+		struct CFURLReleaser {
+			CFURLRef ref;
+			~CFURLReleaser() { if (ref) CFRelease(ref); }
+		} urlGuard{ appUrlRef };
+
+		CFStringRef pathRef = nullptr;
+		if (!CFURLCopyResourcePropertyForKey(appUrlRef, kCFURLPathKey, &pathRef, nullptr) || !pathRef) {
+			write_log("prefix_with_application_directory_path: Unable to fetch App bundle file path\n");
+			return std::string(currentpath);
+		}
+
+		// Use RAII for path cleanup
+		struct CFPathReleaser {
+			CFStringRef ref;
+			~CFPathReleaser() { if (ref) CFRelease(ref); }
+		} resultGuard{ pathRef };
+
+		return CFStringCopyUTF8String(pathRef);
 	}
-	std::string filePath = CFStringCopyUTF8String(path);
-	// Return correct filepath to application
-	return filePath;
+	catch (const std::exception& e) {
+		write_log("prefix_with_application_directory_path: Exception: %s\n", e.what());
+		return std::string(currentpath);
+	}
 #else
-	if (const auto env_dir = getenv("EXTERNAL_FILES_DIR"); env_dir != nullptr)
-	{
-		return getenv("EXTERNAL_FILES_DIR") + ("/" + currentpath);
+	try {
+		if (const auto env_dir = std::getenv("EXTERNAL_FILES_DIR")) {
+			std::string result;
+			result.reserve(std::strlen(env_dir) + currentpath.length() + 1);
+			result = env_dir;
+			result += '/';
+			result += currentpath;
+			return result;
+		}
+		return std::string(currentpath);
 	}
-	return currentpath;
+	catch (const std::exception& e) {
+		write_log("prefix_with_application_directory_path: Exception: %s\n", e.what());
+		return std::string(currentpath);
+	}
 #endif
 }
-
 
 std::string prefix_with_data_path(const std::string& filename)
 {
@@ -173,109 +289,163 @@ std::string prefix_with_data_path(const std::string& filename)
 #endif
 }
 
-int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
+[[nodiscard]] int my_setcurrentdir(const TCHAR* curdir, TCHAR* oldcur)
 {
-	const auto ret = 0;
-	if (oldcur)
-		getcwd(oldcur, MAX_DPATH);
-	if (curdir)
-		chdir(curdir);
-	return ret;
+	try {
+		// Store current directory if requested
+		if (oldcur != nullptr) {
+			if (!getcwd(oldcur, MAX_DPATH)) {
+				write_log("my_setcurrentdir: Failed to get current directory: %s\n", strerror(errno));
+				return -1;
+			}
+		}
+
+		// Change directory if requested
+		if (curdir != nullptr) {
+			if (chdir(curdir) != 0) {
+				write_log("my_setcurrentdir: Failed to change directory to '%s': %s\n",
+					curdir, strerror(errno));
+				return -1;
+			}
+		}
+
+		return 0;
+	}
+	catch (const std::exception& e) {
+		write_log("my_setcurrentdir: Exception occurred: %s\n", e.what());
+		return -1;
+	}
 }
 
-bool my_chmod(const TCHAR* name, uae_u32 mode)
+[[nodiscard]] bool my_chmod(const TCHAR* name, uae_u32 mode) noexcept
 {
-	// Note: only used to set or clear write protect on disk file
-
-	// Convert input to UTF-8
-	auto output = iso_8859_1_to_utf8(string(name));
-
-	// Get current state
-	struct stat st {};
-	if (stat(output.c_str(), &st) == -1) {
-		write_log("my_chmod: stat on file %s failed\n", output.c_str());
+	// Input validation
+	if (!name) {
+		write_log("my_chmod: null filename provided\n");
 		return false;
 	}
 
-	// Prepare new mode
-	auto newmode = st.st_mode;
-	if (mode & FILEFLAG_WRITE)
-		newmode |= S_IWUSR;  // set write permission
-	else
-		newmode &= ~S_IWUSR; // clear write permission
+	try {
+		// Use std::filesystem for path handling
+		const auto output = iso_8859_1_to_utf8(std::string_view(name));
+		fs::path filepath(output);
 
-	// Change mode
-	if (chmod(output.c_str(), newmode) == -1) {
-		write_log("my_chmod: chmod on file %s failed\n", output.c_str());
+		// Get current file status
+		std::error_code ec;
+		auto perms = fs::status(filepath, ec).permissions();
+		if (ec) {
+			write_log("my_chmod: stat on file %s failed: %s\n",
+				output.c_str(), ec.message().c_str());
+			return false;
+		}
+
+		// Calculate new permissions
+		// Clear write permission bits first
+		perms &= ~(fs::perms::owner_write |
+			fs::perms::group_write |
+			fs::perms::others_write);
+
+		// Set new write permissions if requested
+		if (mode & FILEFLAG_WRITE) {
+			perms |= fs::perms::owner_write;
+		}
+
+		// Apply new permissions
+		fs::permissions(filepath, perms, ec);
+		if (ec) {
+			write_log("my_chmod: chmod on file %s failed: %s\n",
+				output.c_str(), ec.message().c_str());
+			return false;
+		}
+
+		return true;
+	}
+	catch (const std::exception& e) {
+		write_log("my_chmod: Exception while processing %s: %s\n",
+			name, e.what());
 		return false;
 	}
-
-	return true;
 }
 
-bool my_stat(const TCHAR* name, struct mystat* statbuf)
+[[nodiscard]] bool my_stat(const TCHAR* name, struct mystat* statbuf) noexcept
 {
-	if (!name || !statbuf) {
-		write_log("my_stat: null arguments provided\n");
+	try {
+		// Input validation
+		if (!name || !statbuf) {
+			write_log("my_stat: null argument(s) provided\n");
+			return false;
+		}
+
+		// Use filesystem for better path handling
+		const auto output = iso_8859_1_to_utf8(std::string_view(name));
+		fs::path filepath(output);
+
+		// Get file status using std::filesystem
+		std::error_code ec;
+		auto file_status = fs::status(filepath, ec);
+		if (ec) {
+			write_log("my_stat: status check failed for %s: %s\n",
+				output.c_str(), ec.message().c_str());
+			return false;
+		}
+
+		// Get detailed file information
+		struct stat st {};
+		if (stat(output.c_str(), &st) == -1) {
+			write_log("my_stat: stat failed for %s: %s\n",
+				output.c_str(), strerror(errno));
+			return false;
+		}
+
+		// Fill in the stat buffer
+		statbuf->size = st.st_size;
+		statbuf->mode = ((file_status.permissions() & fs::perms::owner_read) != fs::perms::none ? FILEFLAG_READ : 0) |
+			((file_status.permissions() & fs::perms::owner_write) != fs::perms::none ? FILEFLAG_WRITE : 0);
+		statbuf->mtime.tv_sec = st.st_mtime;
+		statbuf->mtime.tv_usec = 0;
+
+		return true;
+	}
+	catch (const std::exception& e) {
+		write_log("my_stat: Exception while processing %s: %s\n",
+			name, e.what());
 		return false;
 	}
-
-	struct stat st {};
-	auto output = iso_8859_1_to_utf8(string(name));
-
-	if (stat(output.c_str(), &st) == -1) {
-		write_log("my_stat: stat on file %s failed\n", output.c_str());
-		return false;
-	}
-
-	statbuf->size = st.st_size;
-	statbuf->mode = ((st.st_mode & S_IRUSR) ? FILEFLAG_READ : 0) |
-		((st.st_mode & S_IWUSR) ? FILEFLAG_WRITE : 0);
-	statbuf->mtime.tv_sec = st.st_mtime;
-	statbuf->mtime.tv_usec = 0;
-
-	return true;
 }
 
 bool compare_nocase(const std::string& first, const std::string& second)
 {
-	const auto len = std::min(first.length(), second.length());
-
-	for (unsigned int i = 0; i < len; ++i)
-	{
-		const auto first_ch = std::tolower(first[i]);
-		const auto second_ch = std::tolower(second[i]);
-
-		if (first_ch != second_ch)
-			return first_ch < second_ch;
-	}
-
-	return first.length() < second.length();
+	return std::lexicographical_compare(
+		first.begin(), first.end(),
+		second.begin(), second.end(),
+		[](const unsigned char a, const unsigned char b) {
+			return std::tolower(a) < std::tolower(b);
+		}
+	);
 }
 
 struct my_opendir_s* my_opendir(const TCHAR* name, const TCHAR* mask)
 {
 	if (!name) {
 		write_log("my_opendir: null directory name provided\n");
-		return NULL;
+		return nullptr;
 	}
 
-	auto* mod = new my_opendir_s;
+	auto mod = std::make_unique<my_opendir_s>();
 	if (!mod) {
 		write_log("my_opendir: memory allocation failed\n");
-		return NULL;
+		return nullptr;
 	}
 
-	auto output = iso_8859_1_to_utf8(string(name));
+	const auto output = iso_8859_1_to_utf8(std::string(name));
 	mod->dir = opendir(output.c_str());
 
 	if (!mod->dir) {
 		write_log("my_opendir: opendir on directory %s failed\n", name);
-		delete mod;
-		return NULL;
+		return nullptr;
 	}
 
-	return mod;
+	return mod.release();
 }
 
 struct my_opendir_s* my_opendir(const TCHAR* name) {
@@ -284,38 +454,47 @@ struct my_opendir_s* my_opendir(const TCHAR* name) {
 
 void my_closedir(struct my_opendir_s* mod)
 {
-	if (mod) {
-		closedir(mod->dir);
-		delete mod;
+	if (!mod) {
+		return;
 	}
+
+	if (mod->dir && closedir(mod->dir) != 0) {
+		write_log("my_closedir: closedir on directory failed: %s\n", strerror(errno));
+	}
+
+	delete mod;
 }
 
 int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 {
-	if (!mod || !name)
+	if (!mod || !name) {
+		write_log("my_readdir: null argument(s) provided\n");
 		return 0;
+	}
 
-	const set<std::string> ignoreList = { "_UAEFSDB.___", "Thumbs.db", ".DS_Store", "UAEFS.ini" };
+	static const std::set<std::string> ignoreList = { "_UAEFSDB.___", "Thumbs.db", ".DS_Store", "UAEFS.ini" };
 
-	while (true)
-	{
+	while (true) {
 		auto* entry = readdir(mod->dir);
-		if (entry == NULL)
+		if (!entry) {
 			return 0;
+		}
 
-		auto* result = entry->d_name;
-		const int len = strlen(result);
+		const std::string result(entry->d_name);
+		const int len = result.length();
 
 		if (ignoreList.find(result) != ignoreList.end() ||
-			(len > 5 && strncmp(result + len - 5, ".uaem", 5) == 0)) {
+			(len > 5 && result.compare(len - 5, 5, ".uaem") == 0)) {
 			continue;
 		}
 
-		auto string_input = string(result);
-		string string_output;
-		utf8_to_latin1_string(string_input, string_output);
-		_tcscpy(name, string_output.c_str());
+		std::string string_output;
+		if (!utf8_to_latin1_string(result, string_output)) {
+			write_log("my_readdir: utf8_to_latin1_string conversion failed for %s\n", result.c_str());
+			return 0;
+		}
 
+		_tcscpy(name, string_output.c_str());
 		return 1;
 	}
 }
@@ -327,9 +506,9 @@ bool my_existslink(const char* name)
 		return false;
 	}
 
-	struct stat st {};
-	if (lstat(name, &st) == -1) {
-		write_log("my_existslink: lstat on file %s failed\n", name);
+	struct stat st;
+	if (lstat(name, &st) != 0) {
+		write_log("my_existslink: lstat on file %s failed: %s\n", name, strerror(errno));
 		return false;
 	}
 
@@ -338,61 +517,59 @@ bool my_existslink(const char* name)
 
 bool my_existsfile2(const char* name)
 {
-	struct stat st {};
-	return stat(name, &st) != -1 && S_ISREG(st.st_mode);
+	if (!name) return false;
+	return fs::exists(name) && fs::is_regular_file(name);
 }
 
 bool my_existsfile(const char* name)
 {
-	struct stat st {};
-	auto output = iso_8859_1_to_utf8(string(name));
-	return stat(output.c_str(), &st) != -1 && S_ISREG(st.st_mode);
+	if (!name) return false;
+	const auto output = iso_8859_1_to_utf8(string(name));
+	return fs::exists(output) && fs::is_regular_file(output);
 }
 
 bool my_existsdir(const char* name)
 {
-	struct stat st {};
-	auto output = iso_8859_1_to_utf8(string(name));
-	return stat(output.c_str(), &st) != -1 && S_ISDIR(st.st_mode);
+	if (!name) return false;
+	const auto output = iso_8859_1_to_utf8(string(name));
+	return fs::exists(output) && fs::is_directory(output);
 }
 
 uae_s64 my_fsize(struct my_openfile_s* mos)
 {
-	if (mos == nullptr) {
+	if (!mos) {
 		write_log("my_fsize: null pointer provided\n");
 		return -1;
 	}
 
-	struct stat st {};
-	if (fstat(mos->fd, &st) == -1) {
-		write_log("my_fsize: fstat on file %s failed\n", mos->path);
+	struct stat st;
+	if (fstat(mos->fd, &st) != 0) {
+		write_log("my_fsize: fstat on file %s failed: %s\n", mos->path, strerror(errno));
 		return -1;
 	}
-	return st.st_size;
+
+	return static_cast<uae_s64>(st.st_size);
 }
 
 int my_getvolumeinfo(const char* root)
 {
-	if (root == nullptr) {
+	if (!root) {
 		write_log("my_getvolumeinfo: null pointer provided\n");
 		return -1;
 	}
 
-	struct stat st {};
-	auto ret = 0;
-
-	if (lstat(root, &st) == -1) {
-		write_log("my_getvolumeinfo: lstat on file %s failed\n", root);
+	struct stat st;
+	if (lstat(root, &st) != 0) {
+		write_log("my_getvolumeinfo: lstat on file %s failed: %s\n", root, strerror(errno));
 		return -1;
 	}
+
 	if (!S_ISDIR(st.st_mode)) {
 		write_log("my_getvolumeinfo: %s is not a directory\n", root);
 		return -2;
 	}
 
-	ret |= MYVOLUMEINFO_STREAMS;
-
-	return ret;
+	return MYVOLUMEINFO_STREAMS;
 }
 
 bool fs_path_exists(const std::string& s)
@@ -402,300 +579,696 @@ bool fs_path_exists(const std::string& s)
 		return false;
 	}
 
-	struct stat buffer {};
-	auto output = iso_8859_1_to_utf8(s);
+	const auto output = iso_8859_1_to_utf8(s);
+	struct stat buffer;
 	return stat(output.c_str(), &buffer) == 0;
 }
 
 struct my_openfile_s* my_open(const TCHAR* name, int flags)
 {
-	if (name == nullptr) {
+	if (!name) {
 		write_log("my_open: null pointer provided\n");
-		return NULL;
+		return nullptr;
 	}
 
-	auto* mos = xmalloc(struct my_openfile_s, 1);
+	auto mos = std::make_unique<my_openfile_s>();
 	if (!mos) {
 		write_log("my_open: memory allocation failed\n");
-		return NULL;
+		return nullptr;
 	}
 
-	auto output = iso_8859_1_to_utf8(string(name));
-	if (flags & O_CREAT) {
-		mos->fd = open(output.c_str(), flags, 0660);
-	}
-	else {
-		mos->fd = open(output.c_str(), flags);
-	}
+	const auto output = iso_8859_1_to_utf8(std::string(name));
+	mos->fd = (flags & O_CREAT) ? open(output.c_str(), flags, 0660) : open(output.c_str(), flags);
 
 	if (mos->fd == -1) {
-		write_log("my_open: open on file %s failed\n", name);
-		xfree(mos);
-		return NULL;
+		write_log("my_open: open on file %s failed: %s\n", name, strerror(errno));
+		return nullptr;
 	}
 
-	return mos;
+	mos->path = strdup(name);
+	return mos.release();
 }
 
 void my_close(struct my_openfile_s* mos)
 {
-	if (mos)
-		close(mos->fd);
-	xfree(mos);
+	if (!mos) {
+		return;
+	}
+
+	if (close(mos->fd) != 0) {
+		write_log("my_close: close on file %s failed: %s\n", mos->path, strerror(errno));
+	}
+
+	free(mos->path);
+	delete mos;
 }
 
 unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 {
-	if (mos == nullptr) {
+	if (!mos) {
 		write_log("my_read: null file pointer provided\n");
 		return 0;
 	}
 
-	if (b == nullptr) {
+	if (!b) {
 		write_log("my_read: null buffer pointer provided\n");
 		return 0;
 	}
 
-	const auto bytes_read = read(mos->fd, b, size);
+	ssize_t bytes_read = read(mos->fd, b, size);
 	if (bytes_read == -1) {
 		write_log("my_read: read on file %s failed with error %s\n", mos->path, strerror(errno));
 		return 0;
 	}
-	else if (bytes_read < size) {
+
+	if (bytes_read < size) {
 		write_log("my_read: read on file %s returned less bytes than requested\n", mos->path);
 	}
 
 	return static_cast<unsigned int>(bytes_read);
 }
 
-unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
+[[nodiscard]] unsigned int my_write(struct my_openfile_s* mos, void* b, unsigned int size)
 {
-	if (mos == nullptr) {
-		write_log("my_write: null file pointer provided\n");
+	// Early validation with combined null check message
+	if (mos == nullptr || b == nullptr) {
+		write_log("my_write: %s\n",
+			mos == nullptr ? "null file pointer provided" : "null buffer pointer provided");
 		return 0;
 	}
 
-	if (b == nullptr) {
-		write_log("my_write: null buffer pointer provided\n");
-		return 0;
+	const char* buffer = static_cast<const char*>(b);
+	unsigned int total_written = 0;
+
+	// Handle partial writes with retry logic
+	while (total_written < size) {
+		const ssize_t bytes_written = write(mos->fd,
+			buffer + total_written,
+			size - total_written);
+
+		if (bytes_written == -1) {
+			// Check for interruption and retry
+			if (errno == EINTR) {
+				continue;
+			}
+
+			write_log("my_write: write on file %s failed with error %s after %u bytes\n",
+				mos->path, strerror(errno), total_written);
+			return total_written; // Return partial progress on error
+		}
+
+		if (bytes_written == 0) {
+			// No more data can be written
+			write_log("my_write: write on file %s stopped after %u of %u bytes\n",
+				mos->path, total_written, size);
+			break;
+		}
+
+		total_written += static_cast<unsigned int>(bytes_written);
 	}
 
-	const auto bytes_written = write(mos->fd, b, size);
-	if (bytes_written == -1) {
-		write_log("my_write: write on file %s failed with error %s\n", mos->path, strerror(errno));
-		return 0;
-	}
-	else if (bytes_written < size) {
-		write_log("my_write: write on file %s wrote less bytes than requested\n", mos->path);
+	// Only log if we didn't write everything but didn't hit an error
+	if (total_written < size) {
+		write_log("my_write: write on file %s wrote %u of %u bytes requested\n",
+			mos->path, total_written, size);
 	}
 
-	return static_cast<unsigned int>(bytes_written);
+	return total_written;
 }
 
-int my_mkdir(const TCHAR* path)
+[[nodiscard]] int my_mkdir(const TCHAR* path)
 {
 	if (path == nullptr) {
-		write_log("my_mkdir: null pointer provided\n");
+		write_log("my_mkdir: null path provided\n");
 		return -1;
 	}
 
-	auto output = iso_8859_1_to_utf8(string(path));
-	int error = mkdir(output.c_str(), 0755);
-	if (error) {
-		write_log("my_mkdir: mkdir on path %s failed with error %s\n", path, strerror(errno));
+	try {
+		// Convert input path to UTF-8 for filesystem operations
+		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+
+		// Check if directory already exists to provide better error reporting
+		std::error_code ec;
+		if (fs::exists(utf8_path, ec)) {
+			if (fs::is_directory(utf8_path, ec)) {
+				write_log("my_mkdir: directory %s already exists\n", path);
+				return -1;
+			}
+			write_log("my_mkdir: path %s exists but is not a directory\n", path);
+			return -1;
+		}
+
+		// Create all parent directories if they don't exist
+		fs::path parent = fs::path(utf8_path).parent_path();
+		if (!parent.empty() && !fs::exists(parent, ec)) {
+			if (!fs::create_directories(parent, ec)) {
+				write_log("my_mkdir: failed to create parent directories for %s: %s\n",
+					path, ec.message().c_str());
+				return -1;
+			}
+		}
+
+		// Create the actual directory with proper permissions
+		if (mkdir(utf8_path.c_str(), 0755) != 0) {
+			write_log("my_mkdir: mkdir on path %s failed: %s\n",
+				path, strerror(errno));
+			return -1;
+		}
+
+		return 0;
+	}
+	catch (const std::exception& e) {
+		write_log("my_mkdir: exception while creating directory %s: %s\n",
+			path, e.what());
 		return -1;
 	}
-	return 0;
 }
 
-int my_truncate(const TCHAR* name, uae_u64 len)
+[[nodiscard]] int my_truncate(const TCHAR* name, uae_u64 len)
 {
 	if (name == nullptr) {
-		write_log("my_truncate: null pointer provided\n");
+		write_log("my_truncate: null path provided\n");
 		return -1;
 	}
 
-	struct my_openfile_s* mos = my_open(name, O_WRONLY);
-	if (mos == NULL) {
-		write_log("my_truncate: opening file %s for truncation failed\n", name);
-		return -1;
-}
+	try {
+		// Convert path to UTF-8 for filesystem operations
+		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(name));
 
-	int result;
+		// Check if file exists and is writable
+		std::error_code ec;
+		if (!fs::exists(utf8_path, ec)) {
+			write_log("my_truncate: file %s does not exist\n", name);
+			return -1;
+		}
+
+		if (!fs::is_regular_file(utf8_path, ec)) {
+			write_log("my_truncate: %s is not a regular file\n", name);
+			return -1;
+		}
+
+		// Use RAII to ensure file handle is properly closed
+		std::unique_ptr<my_openfile_s, decltype(&my_close)> mos(
+			my_open(name, O_WRONLY),
+			my_close
+		);
+
+		if (!mos) {
+			write_log("my_truncate: failed to open file %s for truncation\n", name);
+			return -1;
+		}
+
 #ifdef WINDOWS
-	if (len > INT_MAX) {
-		write_log("my_truncate: length %llu is too large for _chsize\n", len);
-		result = -1;
-	}
-	else {
-		result = _chsize(mos->fd, static_cast<int>(len));
-	}
+		if (len > static_cast<uae_u64>(INT_MAX)) {
+			write_log("my_truncate: length %llu exceeds maximum file size on Windows\n", len);
+			return -1;
+		}
+		const int result = _chsize(mos->fd, static_cast<int>(len));
 #else
-	result = ftruncate(mos->fd, len);
+		const int result = ftruncate(mos->fd, static_cast<off_t>(len));
 #endif
 
-	if (result == -1) {
-		write_log("my_truncate: truncating file %s failed with error %s\n", name, strerror(errno));
+		if (result == -1) {
+			write_log("my_truncate: truncating file %s to size %llu failed: %s\n",
+				name, len, strerror(errno));
+			return -1;
+		}
+
+		return 0;
 	}
-
-	my_close(mos);
-	return result;
+	catch (const std::exception& e) {
+		write_log("my_truncate: exception while truncating %s: %s\n",
+			name, e.what());
+		return -1;
+	}
 }
 
-static void remove_extra_file(const char* path, const char* name)
+[[nodiscard]] static bool remove_extra_file(const char* path, const char* name) noexcept
 {
-	std::string p(path);
-	p = fix_trailing(p);
-	p += name;
-	unlink(p.c_str());
-}
-
-bool my_isfilehidden(const char* path)
-{
-	if (path == nullptr)
-	{
+	if (!path || !name) {
+		write_log("remove_extra_file: null argument(s) provided\n");
 		return false;
 	}
 
-	std::string filename(path);
-	return filename[0] == '.';
+	try {
+		// Create filesystem path and handle path concatenation properly
+		fs::path filepath = fs::path(path);
+		if (filepath.empty()) {
+			write_log("remove_extra_file: empty path provided\n");
+			return false;
+		}
+
+		// Make sure path ends with exactly one separator
+		if (!filepath.string().empty() && filepath.string().back() != '/') {
+			filepath /= "";  // This adds a proper path separator
+		}
+
+		// Append filename using proper path concatenation
+		filepath /= name;
+
+		// Check if file exists before attempting removal
+		std::error_code ec;
+		if (!fs::exists(filepath, ec)) {
+			// Not considering it an error if file doesn't exist
+			return true;
+		}
+
+		if (!fs::is_regular_file(filepath, ec)) {
+			write_log("remove_extra_file: %s is not a regular file\n", filepath.c_str());
+			return false;
+		}
+
+		// Attempt to remove the file
+		if (!fs::remove(filepath, ec)) {
+			write_log("remove_extra_file: failed to remove %s: %s\n",
+				filepath.c_str(), ec.message().c_str());
+			return false;
+		}
+
+		return true;
+	}
+	catch (const std::exception& e) {
+		write_log("remove_extra_file: exception while removing %s/%s: %s\n",
+			path, name, e.what());
+		return false;
+	}
 }
 
-void my_setfilehidden(const TCHAR* path, bool hidden)
+[[nodiscard]] bool my_isfilehidden(const char* path) noexcept
 {
-	if (path == nullptr)
-	{
-		return;
+	if (!path) {
+		write_log("my_isfilehidden: null path provided\n");
+		return false;
 	}
 
-	std::string filename(path);
+	try {
+		const fs::path filepath(path);
+
+		if (filepath.empty()) {
+			write_log("my_isfilehidden: empty path provided\n");
+			return false;
+		}
 
 #ifdef _WIN32
-	DWORD attrs = GetFileAttributes(path);
-
-	if (hidden)
-	{
-		attrs |= FILE_ATTRIBUTE_HIDDEN;
-	}
-	else
-	{
-		attrs &= ~FILE_ATTRIBUTE_HIDDEN;
-	}
-
-	SetFileAttributes(path, attrs);
+		// On Windows, check the file attributes
+		std::error_code ec;
+		const auto attrs = fs::status(filepath, ec).permissions();
+		if (ec) {
+			write_log("my_isfilehidden: failed to get attributes for %s: %s\n",
+				path, ec.message().c_str());
+			return false;
+		}
+		return (attrs & fs::perms::hidden) != fs::perms::none;
 #else
-	std::string newname;
-
-	if (hidden)
-	{
-		if (filename[0] != '.')
-		{
-			newname = "." + filename;
-			rename(filename.c_str(), newname.c_str());
-		}
-	}
-	else
-	{
-		if (filename[0] == '.')
-		{
-			newname = filename.substr(1);
-			rename(filename.c_str(), newname.c_str());
-		}
-	}
+		// On Unix-like systems, check if filename starts with '.'
+		const std::string filename = filepath.filename().string();
+		return !filename.empty() && filename[0] == '.';
 #endif
+	}
+	catch (const std::exception& e) {
+		write_log("my_isfilehidden: exception while checking %s: %s\n",
+			path, e.what());
+		return false;
+	}
 }
 
-int my_rmdir(const TCHAR* path)
+[[nodiscard]] bool my_setfilehidden(const TCHAR* path, bool hidden) noexcept
 {
-	if (path == nullptr) {
+	if (!path) {
+		write_log("my_setfilehidden: null path provided\n");
+		return false;
+	}
+
+	try {
+		// Convert to filesystem path and validate
+		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+		fs::path filepath(utf8_path);
+
+		if (filepath.empty()) {
+			write_log("my_setfilehidden: empty path provided\n");
+			return false;
+		}
+
+		std::error_code ec;
+		if (!fs::exists(filepath, ec)) {
+			write_log("my_setfilehidden: file %s does not exist\n", path);
+			return false;
+		}
+
+#ifdef _WIN32
+		// Windows implementation using file attributes
+		const DWORD attrs = GetFileAttributes(path);
+		if (attrs == INVALID_FILE_ATTRIBUTES) {
+			write_log("my_setfilehidden: GetFileAttributes failed for %s\n", path);
+			return false;
+		}
+
+		const DWORD new_attrs = hidden ?
+			(attrs | FILE_ATTRIBUTE_HIDDEN) :
+			(attrs & ~FILE_ATTRIBUTE_HIDDEN);
+
+		if (!SetFileAttributes(path, new_attrs)) {
+			write_log("my_setfilehidden: SetFileAttributes failed for %s\n", path);
+			return false;
+		}
+#else
+		// Unix implementation using dot prefix
+		const fs::path filename = filepath.filename();
+		const std::string name = filename.string();
+
+		if (name.empty() || name == "." || name == "..") {
+			write_log("my_setfilehidden: invalid filename %s\n", path);
+			return false;
+		}
+
+		const bool is_currently_hidden = !name.empty() && name[0] == '.';
+		if (is_currently_hidden == hidden) {
+			// Already in desired state
+			return true;
+		}
+
+		fs::path new_path = filepath.parent_path();
+		if (hidden && !is_currently_hidden) {
+			new_path /= "." + name;
+		}
+		else if (!hidden && is_currently_hidden) {
+			new_path /= name.substr(1);
+		}
+
+		fs::rename(filepath, new_path, ec);
+		if (ec) {
+			write_log("my_setfilehidden: rename failed for %s: %s\n",
+				path, ec.message().c_str());
+			return false;
+		}
+#endif
+		return true;
+	}
+	catch (const std::exception& e) {
+		write_log("my_setfilehidden: exception while processing %s: %s\n",
+			path, e.what());
+		return false;
+	}
+}
+
+[[nodiscard]] int my_rmdir(const TCHAR* path) noexcept
+{
+	if (!path) {
 		write_log("my_rmdir: null directory path provided\n");
 		return -1;
 	}
 
-	remove_extra_file(path, "Thumbs.db");
-	remove_extra_file(path, ".DS_Store");
+	try {
+		// Convert path to UTF-8 and create filesystem path
+		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+		fs::path dirpath(utf8_path);
 
-	errno = 0;
-	auto output = iso_8859_1_to_utf8(string(path));
-	int result = rmdir(output.c_str());
+		// Validate path
+		std::error_code ec;
+		if (!fs::exists(dirpath, ec)) {
+			write_log("my_rmdir: directory %s does not exist\n", path);
+			return -1;
+		}
 
-	if (result != 0) {
-		write_log("my_rmdir: rmdir on directory %s failed with error %d\n", path, errno);
+		if (!fs::is_directory(dirpath, ec)) {
+			write_log("my_rmdir: path %s is not a directory\n", path);
+			return -1;
+		}
+
+		// First try to remove common system files that might prevent directory deletion
+		const std::array<const char*, 2> extra_files = { "Thumbs.db", ".DS_Store" };
+		for (const auto& file : extra_files) {
+			remove_extra_file(path, file);
+		}
+
+		// Check if directory is empty (excluding . and ..)
+		bool is_empty = true;
+		for (const auto& entry : fs::directory_iterator(dirpath, ec)) {
+			is_empty = false;
+			break;
+		}
+
+		if (!is_empty) {
+			write_log("my_rmdir: directory %s is not empty\n", path);
+			return -1;
+		}
+
+		// Remove the directory
+		errno = 0;
+		int result = rmdir(utf8_path.c_str());
+
+		if (result != 0) {
+			write_log("my_rmdir: rmdir on directory %s failed: %s\n",
+				path, strerror(errno));
+			return -1;
+		}
+
+		return 0;
 	}
-
-	return result;
+	catch (const std::exception& e) {
+		write_log("my_rmdir: exception while removing directory %s: %s\n",
+			path, e.what());
+		return -1;
+	}
 }
 
-int my_unlink(const TCHAR* path)
+[[nodiscard]] int my_unlink(const TCHAR* path) noexcept
 {
-	if (path == nullptr) {
+	if (!path) {
 		write_log("my_unlink: null file path provided\n");
 		return -1;
 	}
 
-	errno = 0;
-	auto output = iso_8859_1_to_utf8(string(path));
-	int result = unlink(output.c_str());
+	try {
+		// Convert to filesystem path and validate
+		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
+		fs::path filepath(utf8_path);
 
-	if (result != 0) {
-		write_log("my_unlink: unlink on file %s failed with error %d\n", path, errno);
+		if (filepath.empty()) {
+			write_log("my_unlink: empty path provided\n");
+			return -1;
+		}
+
+		// Check file existence and type
+		std::error_code ec;
+		if (!fs::exists(filepath, ec)) {
+			write_log("my_unlink: file %s does not exist\n", path);
+			return -1;
+		}
+
+		if (!fs::is_regular_file(filepath, ec)) {
+			write_log("my_unlink: %s is not a regular file\n", path);
+			return -1;
+		}
+
+		// Ensure we have write permission to delete
+		if (!fs::is_regular_file(filepath) || (fs::status(filepath, ec).permissions() & fs::perms::owner_all) == fs::perms::none) {
+			write_log("my_unlink: insufficient permissions to remove %s\n", path);
+			return -1;
+		}
+
+		// Attempt to remove the file
+		errno = 0;
+		if (!fs::remove(filepath, ec)) {
+			write_log("my_unlink: remove failed for %s: %s\n",
+				path, ec.message().c_str());
+			return -1;
+		}
+
+		return 0;
 	}
-
-	return result;
+	catch (const std::exception& e) {
+		write_log("my_unlink: exception while removing %s: %s\n",
+			path, e.what());
+		return -1;
+	}
 }
 
-int my_rename(const TCHAR* oldname, const TCHAR* newname)
+[[nodiscard]] int my_rename(const TCHAR* oldname, const TCHAR* newname) noexcept
 {
+	// Input validation with descriptive error message
 	if (oldname == nullptr || newname == nullptr) {
-		write_log("my_rename: null file name provided\n");
+		write_log("my_rename: invalid arguments - %s\n",
+			oldname == nullptr ? "old filename is null" : "new filename is null");
 		return -1;
 	}
 
-	errno = 0;
-	auto old_output = iso_8859_1_to_utf8(string(oldname));
-	auto new_output = iso_8859_1_to_utf8(string(newname));
-
-	int result = rename(old_output.c_str(), new_output.c_str());
-
-	if (result != 0) {
-		write_log("my_rename: rename from %s to %s failed with error %d\n", oldname, newname, errno);
+	if (*oldname == '\0' || *newname == '\0') {
+		write_log("my_rename: empty filename provided\n");
+		return -1;
 	}
 
-	return result;
+	try {
+		// Convert paths to UTF-8 format
+		const auto old_output = iso_8859_1_to_utf8(std::string_view(oldname));
+		const auto new_output = iso_8859_1_to_utf8(std::string_view(newname));
+
+		// Check if paths are valid after conversion
+		if (old_output.empty() || new_output.empty()) {
+			write_log("my_rename: path conversion failed\n");
+			return -1;
+		}
+
+		// Reset errno before operation
+		errno = 0;
+
+		// Perform rename operation
+		const int result = rename(old_output.c_str(), new_output.c_str());
+
+		// Enhanced error reporting with specific error codes
+		if (result != 0) {
+			const char* error_msg;
+			switch (errno) {
+			case EACCES:
+				error_msg = "Permission denied";
+				break;
+			case ENOENT:
+				error_msg = "Source file doesn't exist";
+				break;
+			case EEXIST:
+				error_msg = "Destination file already exists";
+				break;
+			case EINVAL:
+				error_msg = "Invalid argument";
+				break;
+			default:
+				error_msg = strerror(errno);
+			}
+			write_log("my_rename: rename from '%s' to '%s' failed: %s (errno=%d)\n",
+				oldname, newname, error_msg, errno);
+		}
+
+		return result;
+	}
+	catch (const std::exception& e) {
+		write_log("my_rename: unexpected error while renaming '%s' to '%s': %s\n",
+			oldname, newname, e.what());
+		return -1;
+	}
 }
 
-uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence)
+[[nodiscard]] uae_s64 my_lseek(struct my_openfile_s* mos, uae_s64 offset, int whence) noexcept
 {
+	// Input validation with detailed error reporting
 	if (mos == nullptr) {
 		write_log("my_lseek: null file descriptor provided\n");
 		return -1;
 	}
 
-	errno = 0;
-	auto result = lseek(mos->fd, offset, whence);
+	if (mos->fd < 0 || mos->path == nullptr) {
+		write_log("my_lseek: invalid file descriptor state (fd=%d, path=%s)\n",
+			mos->fd, mos->path ? mos->path : "null");
+		return -1;
+	}
 
+	// Validate whence parameter
+	if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END) {
+		write_log("my_lseek: invalid whence parameter %d for file %s\n",
+			whence, mos->path);
+		return -1;
+	}
+
+	// Reset errno before operation
+	errno = 0;
+
+	// Perform seek operation with proper type casting
+	const auto result = static_cast<uae_s64>(
+		lseek(mos->fd, static_cast<off_t>(offset), whence)
+		);
+
+	// Enhanced error reporting with specific error conditions
 	if (result == -1) {
-		write_log("my_lseek: lseek on file %s failed with error %d\n", mos->path, errno);
+		const char* whence_str = whence == SEEK_SET ? "SEEK_SET" :
+			whence == SEEK_CUR ? "SEEK_CUR" :
+			whence == SEEK_END ? "SEEK_END" : "unknown";
+
+		const char* error_msg;
+		switch (errno) {
+		case EINVAL:
+			error_msg = "Invalid offset or whence parameter";
+			break;
+		case EBADF:
+			error_msg = "Bad file descriptor";
+			break;
+		case ESPIPE:
+			error_msg = "Resource is a pipe or FIFO";
+			break;
+		case ENXIO:
+			error_msg = "Device does not support seek";
+			break;
+		default:
+			error_msg = strerror(errno);
+		}
+
+		write_log("my_lseek: seek failed on file %s (offset=%lld, whence=%s): %s\n",
+			mos->path, static_cast<long long>(offset), whence_str, error_msg);
 	}
 
 	return result;
 }
 
-FILE* my_opentext(const TCHAR* name)
+[[nodiscard]] FILE* my_opentext(const TCHAR* name) noexcept
 {
-	if (name == nullptr) {
-		write_log("my_opentext: null file name provided\n");
+	// Input validation with descriptive error message
+	if (name == nullptr || *name == '\0') {
+		write_log("my_opentext: %s\n",
+			name == nullptr ? "null filename provided" : "empty filename provided");
 		return nullptr;
 	}
 
-	auto output = iso_8859_1_to_utf8(string(name));
-	FILE* file = fopen(output.c_str(), "rb");
+	try {
+		// Convert path to UTF-8 using string_view for efficiency
+		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(name));
+		if (utf8_path.empty()) {
+			write_log("my_opentext: path conversion failed for '%s'\n", name);
+			return nullptr;
+		}
 
-	if (file == nullptr) {
-		write_log("my_opentext: fopen on file %s failed\n", name);
+		// Check if file exists and is readable before attempting to open
+		std::error_code ec;
+		if (!fs::exists(utf8_path, ec)) {
+			write_log("my_opentext: file '%s' does not exist\n", name);
+			return nullptr;
+		}
+
+		if (!fs::is_regular_file(utf8_path, ec)) {
+			write_log("my_opentext: '%s' is not a regular file\n", name);
+			return nullptr;
+		}
+
+		// Reset errno before operation
+		errno = 0;
+
+		// Open file with binary mode and read-only access
+		FILE* file = fopen(utf8_path.c_str(), "rb");
+
+		// Enhanced error reporting
+		if (file == nullptr) {
+			const char* error_msg;
+			switch (errno) {
+			case EACCES:
+				error_msg = "Permission denied";
+				break;
+			case EMFILE:
+				error_msg = "Too many open files";
+				break;
+			case ENOMEM:
+				error_msg = "Out of memory";
+				break;
+			default:
+				error_msg = strerror(errno);
+			}
+			write_log("my_opentext: failed to open '%s': %s (errno=%d)\n",
+				name, error_msg, errno);
+		}
+
+		return file;
 	}
-
-	return file;
+	catch (const std::exception& e) {
+		write_log("my_opentext: exception while opening '%s': %s\n",
+			name, e.what());
+		return nullptr;
+	}
 }
 
 bool my_createshortcut(const char* source, const char* target, const char* description)
@@ -703,22 +1276,105 @@ bool my_createshortcut(const char* source, const char* target, const char* descr
 	return false;
 }
 
-bool my_resolvesoftlink(TCHAR* linkfile, int size, bool linkonly)
+[[nodiscard]] bool my_resolvesoftlink(TCHAR* linkfile, int size, bool linkonly) noexcept
 {
-	return false;
+	// Input validation
+	if (linkfile == nullptr || size <= 0) {
+		write_log("my_resolvesoftlink: invalid arguments (linkfile=%p, size=%d)\n",
+			static_cast<void*>(linkfile), size);
+		return false;
+	}
+
+	try {
+		// Convert path to UTF-8 using string_view for efficiency
+		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(linkfile));
+		if (utf8_path.empty()) {
+			write_log("my_resolvesoftlink: path conversion failed for '%s'\n", linkfile);
+			return false;
+		}
+
+		// Create filesystem path
+		fs::path link_path(utf8_path);
+
+		// Check if path exists and is a symlink
+		std::error_code ec;
+		if (!fs::exists(link_path, ec)) {
+			write_log("my_resolvesoftlink: '%s' does not exist\n", linkfile);
+			return false;
+		}
+
+		if (!fs::is_symlink(link_path, ec)) {
+			if (linkonly) {
+				write_log("my_resolvesoftlink: '%s' is not a symbolic link\n", linkfile);
+				return false;
+			}
+			// Not a symlink but linkonly=false, so return success without modification
+			return true;
+		}
+
+		// Read the symlink target
+		fs::path target_path = fs::read_symlink(link_path, ec);
+		if (ec) {
+			write_log("my_resolvesoftlink: failed to read symlink '%s': %s\n",
+				linkfile, ec.message().c_str());
+			return false;
+		}
+
+		// Convert target path to absolute if it's relative
+		if (target_path.is_relative()) {
+			target_path = fs::absolute(link_path.parent_path() / target_path, ec);
+			if (ec) {
+				write_log("my_resolvesoftlink: failed to resolve absolute path for '%s': %s\n",
+					linkfile, ec.message().c_str());
+				return false;
+			}
+		}
+
+		// Convert target path back to Latin1
+		std::string target_latin1;
+		if (!utf8_to_latin1_string(target_path.string(), target_latin1)) {
+			write_log("my_resolvesoftlink: character conversion failed for target path\n");
+			return false;
+		}
+
+		// Check buffer size
+		if (static_cast<int>(target_latin1.length()) >= size) {
+			write_log("my_resolvesoftlink: target path too long for buffer (need %zu, have %d)\n",
+				target_latin1.length() + 1, size);
+			return false;
+		}
+
+		// Copy resolved path to output buffer
+		_tcsncpy(linkfile, target_latin1.c_str(), size - 1);
+		linkfile[size - 1] = '\0';
+
+		return true;
+	}
+	catch (const std::exception& e) {
+		write_log("my_resolvesoftlink: exception while resolving '%s': %s\n",
+			linkfile, e.what());
+		return false;
+	}
 }
 
-const TCHAR* my_getfilepart(const TCHAR* filename)
+[[nodiscard]] const TCHAR* my_getfilepart(const TCHAR* filename) noexcept
 {
-	const TCHAR* p;
+	if (!filename) {
+		return nullptr;
+	}
 
-	p = _tcsrchr(filename, '\\');
-	if (p)
-		return p + 1;
-	p = _tcsrchr(filename, '/');
-	if (p)
-		return p + 1;
-	return filename;
+	const TCHAR* last_separator = nullptr;
+	const TCHAR* p = filename;
+
+	// Single pass through the string to find the last separator
+	while (*p) {
+		if (*p == '/' || *p == '\\') {
+			last_separator = p;
+		}
+		++p;
+	}
+
+	return last_separator ? last_separator + 1 : filename;
 }
 
 int host_errno_to_dos_errno(int err)
@@ -763,14 +1419,21 @@ int host_errno_to_dos_errno(int err)
 	}
 }
 
-void my_canonicalize_path(const TCHAR* path, TCHAR* out, int size)
-{
-	if (path == nullptr || out == nullptr) {
+void my_canonicalize_path(const char* path, char* out, int size) {
+	if (!path || !out) {
 		write_log("my_canonicalize_path: null arguments provided\n");
 		return;
 	}
 
+	if (size <= 0) {
+		write_log("my_canonicalize_path: invalid size provided\n");
+		return;
+	}
+
+	// Ensure the path is not longer than the destination buffer
 	_tcsncpy(out, path, size - 1);
+
+	// Always ensure the output is null-terminated
 	out[size - 1] = '\0';
 }
 
@@ -791,29 +1454,30 @@ int my_issamevolume(const TCHAR* path1, const TCHAR* path2, TCHAR* path)
 		return 0;
 	}
 
-	TCHAR p1[MAX_DPATH];
-	TCHAR p2[MAX_DPATH];
+	std::string p1(path1);
+	std::string p2(path2);
 
-	my_canonicalize_path(path1, p1, sizeof p1 / sizeof(TCHAR));
-	my_canonicalize_path(path2, p2, sizeof p2 / sizeof(TCHAR));
+	my_canonicalize_path(p1.c_str(), p1.data(), p1.size());
+	my_canonicalize_path(p2.c_str(), p2.data(), p2.size());
 
-	unsigned int len = _tcslen(p1);
-	len = std::min<size_t>(len, _tcslen(p2));
+	const auto len = std::min(p1.size(), p2.size());
 
-	if (_tcsnicmp(p1, p2, len))
+	if (!std::equal(p1.begin(), p1.begin() + len, p2.begin(), p2.begin() + len,
+		[](const char a, const char b) { return std::tolower(a) == std::tolower(b); })) {
 		return 0;
+	}
 
-	_tcscpy(path, p2 + len);
+	_tcscpy(path, (p2.c_str() + len));
 
 	unsigned int cnt = 0;
-	for (unsigned int i = 0; i < _tcslen(path); i++) {
+	for (unsigned int i = 0; i < std::strlen(path); i++) {
 		if (path[i] == '\\' || path[i] == '/') {
 			path[i] = '/';
 			cnt++;
 		}
 	}
 
-	write_log(_T("'%s' (%s) matched with '%s' (%s), extra = '%s'\n"), path1, p1, path2, p2, path);
+	write_log("'%s' (%s) matched with '%s' (%s), extra = '%s'\n", path1, p1.c_str(), path2, p2.c_str(), path);
 	return cnt;
 }
 
@@ -863,15 +1527,9 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 // If replace is false, copyfile will fail if file already exists
 bool copyfile(const char* target, const char* source, const bool replace)
 {
-#ifdef USE_OLDGCC
-	std::experimental::filesystem::copy_options options = replace
-												? experimental::filesystem::copy_options::overwrite_existing
-												: experimental::filesystem::copy_options::none;
-#else
-	std::filesystem::copy_options options = replace
-		                                        ? filesystem::copy_options::overwrite_existing
-		                                        : filesystem::copy_options::none;
-#endif
+	const fs::copy_options options = replace
+                            ? fs::copy_options::overwrite_existing
+                            : fs::copy_options::none;
 	return copy_file(source, target, options);
 }
 
@@ -886,7 +1544,7 @@ void filesys_addexternals(void)
 		int drvnum = 0;
 		for (auto& drive : cd_drives)
 		{
-			struct uaedev_config_info ci = { 0 };
+			struct uaedev_config_info ci = {};
 			_tcscpy(ci.rootdir, drive.c_str());
 			ci.readonly = true;
 			ci.bootpri = -20 - drvnum;

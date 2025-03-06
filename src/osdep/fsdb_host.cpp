@@ -7,10 +7,13 @@
  * Copyright 1997 Mathias Ortmann
  * Copyright 1999 Bernd Schmidt
  * Copyright 2012 Frode Solheim
+ * Copyright 2025 Dimitris Panokostas
  */
 
 #include <cstring>
 #include <climits>
+#include <memory>
+#include <chrono>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef WINDOWS
@@ -156,6 +159,9 @@ static int fsdb_name_invalid_2(a_inode* aino, const TCHAR* name, int isDirectory
 
 int fsdb_name_invalid(a_inode* aino, const TCHAR* n)
 {
+	if (!aino || !n) {
+		return -1;
+	}
 	const int v = fsdb_name_invalid_2(aino, n, 0);
 	if (v <= 0)
 		return v;
@@ -179,32 +185,43 @@ int fsdb_exists(const TCHAR* nname)
 
 bool my_utime(const char* name, const struct mytimeval* tv)
 {
+	if (!name) {
+		return false;
+	}
+
 	struct mytimeval mtv {};
 	struct timeval times[2];
 
-	if (tv == nullptr) {
-		struct timeval time {};
-		struct timezone tz {};
+	try {
+		if (tv == nullptr) {
+			time_t rawtime;
+			time(&rawtime);
 
-		if (gettimeofday(&time, &tz) == -1)
-			return false;
+			struct tm* local_tm = localtime(&rawtime);
+			if (!local_tm) {
+				return false;
+			}
 
-		mtv.tv_sec = time.tv_sec + tz.tz_minuteswest;
-		mtv.tv_usec = time.tv_usec;
+			time_t local_time = mktime(local_tm);
+			if (local_time == -1) {
+				return false;
+			}
+
+			struct timeval current_time {};
+			mtv.tv_sec = local_time;
+			mtv.tv_usec = (gettimeofday(&current_time, nullptr) != -1)
+				? current_time.tv_usec : 0;
+		}
+		else {
+			mtv = *tv;
+		}
+
+		times[0] = times[1] = { mtv.tv_sec, mtv.tv_usec };
+		return utimes(name, times) == 0;
 	}
-	else {
-		mtv.tv_sec = tv->tv_sec;
-		mtv.tv_usec = tv->tv_usec;
+	catch (...) {
+		return false;
 	}
-
-	times[0].tv_sec = mtv.tv_sec;
-	times[0].tv_usec = mtv.tv_usec;
-	times[1].tv_sec = mtv.tv_sec;
-	times[1].tv_usec = mtv.tv_usec;
-	if (utimes(name, times) == 0)
-		return true;
-
-	return false;
 }
 
 /* return supported combination */
@@ -231,7 +248,6 @@ int fsdb_fill_file_attrs(a_inode* base, a_inode* aino)
 
 #if defined(AMIBERRY)
 	// Always give execute & read permission
-	// Temporary do this for raspberry...
 	aino->amigaos_mode &= ~A_FIBF_EXECUTE;
 	aino->amigaos_mode &= ~A_FIBF_READ;
 #endif
@@ -268,6 +284,7 @@ int same_aname(const char* an1, const char* an2)
 	// FIXME: compare with latin1 table in charset/filesys_host/fsdb_host
 	return strcasecmp(an1, an2) == 0;
 }
+
 /* Return nonzero if we can represent the amigaos_mode of AINO within the
  * native FS.  Return zero if that is not possible.  */
 int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
@@ -300,20 +317,15 @@ int fsdb_mode_representable_p(const a_inode* aino, int amigaos_mode)
 
 TCHAR* fsdb_create_unique_nname(const a_inode* base, const TCHAR* suggestion)
 {
-	char* nname = aname_to_nname(suggestion, 0);
-	TCHAR* p = build_nname(base->nname, nname);
-	free(nname);
+	unique_ptr<char, decltype(&free)> nname(aname_to_nname(suggestion, 0), free);
+	TCHAR* p = build_nname(base->nname, nname.get());
 	return p;
 }
 
 // Get local time in secs, starting from 01.01.1970
 uae_u32 getlocaltime()
 {
-    time_t rawtime;
-    struct tm* timeinfo;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-
-    return mktime(timeinfo);
+	using namespace std::chrono;
+	const auto now = system_clock::now();
+	return static_cast<uae_u32>(duration_cast<seconds>(now.time_since_epoch()).count());
 }
