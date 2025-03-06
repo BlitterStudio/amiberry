@@ -660,7 +660,7 @@ int audio_is_pull()
 int audio_pull_buffer()
 {
 	auto cnt = 0;
-	if (sdp->paused || sdp->deactive || sdp->reset)
+	if (sdp->paused || sdp->deactive || sdp->reset || !sdp->data)
 		return 0;
 	const auto* s = sdp->data;
 	if (s->pullbufferlen > 0) {
