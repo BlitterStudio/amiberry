@@ -2416,6 +2416,9 @@ void target_default_options(uae_prefs* p, const int type)
 	if (amiberry_options.default_sound_buffer > 0 && amiberry_options.default_sound_buffer <= 65536)
 		p->sound_maxbsiz = amiberry_options.default_sound_buffer;
 
+	if (amiberry_options.default_sound_frequency > 0 && amiberry_options.default_sound_frequency <= 48000)
+		p->sound_freq = amiberry_options.default_sound_frequency;
+
 	if (amiberry_options.default_joystick_deadzone >= 0
 		&& amiberry_options.default_joystick_deadzone <= 100
 		&& amiberry_options.default_joystick_deadzone != 33)
@@ -3437,6 +3440,9 @@ void save_amiberry_settings()
 	// Default Stereo Separation
 	write_int_option("default_stereo_separation", amiberry_options.default_stereo_separation);
 
+	// Default Sound Frequency
+	write_int_option("default_sound_frequency", amiberry_options.default_sound_frequency);
+
 	// Default Sound buffer size
 	write_int_option("default_sound_buffer", amiberry_options.default_sound_buffer);
 
@@ -3697,6 +3703,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_fullscreen_mode", &amiberry_options.default_fullscreen_mode, 1);
 		ret |= cfgfile_intval(option, value, "default_stereo_separation", &amiberry_options.default_stereo_separation, 1);
 		ret |= cfgfile_intval(option, value, "default_sound_buffer", &amiberry_options.default_sound_buffer, 1);
+		ret |= cfgfile_intval(option, value, "default_sound_frequency", &amiberry_options.default_sound_frequency, 1);
 		ret |= cfgfile_yesno(option, value, "default_sound_pull", &amiberry_options.default_sound_pull);
 		ret |= cfgfile_intval(option, value, "default_joystick_deadzone", &amiberry_options.default_joystick_deadzone, 1);
 		ret |= cfgfile_yesno(option, value, "default_retroarch_quit", &amiberry_options.default_retroarch_quit);
