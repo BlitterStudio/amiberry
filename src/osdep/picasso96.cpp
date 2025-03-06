@@ -2090,25 +2090,6 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	//cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
-	//if (!cursor_surface)
-	//	goto end;
-
-	//isdata = false;
-	//for (int y = 0; y < h; y++) {
-	//	uae_u8 *s = image + y * w;
-	//	for (int x = 0; x < w; x++) {
-	//		int c = *s++;
-	//		putmousepixel(cursor_surface, x, y, c, ct);
-	//		if (c > 0) {
-	//			isdata = true;
-	//		}
-	//	}
-	//}
-	//ret = 1;
-
-	//formatted_cursor_surface = SDL_ConvertSurfaceFormat(cursor_surface, SDL_PIXELFORMAT_RGBA32, 0);
-
 end:
 	if (isdata) {
 		p96_cursor = SDL_CreateColorCursor(formatted_cursor_surface, 0, 0);

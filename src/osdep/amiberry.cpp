@@ -960,11 +960,11 @@ void setmouseactivexy(const int monid, int x, int y, const int dir)
 	if (dir & 1)
 		x = mon->amigawin_rect.x - diff;
 	if (dir & 2)
-		x = mon->amigawin_rect.x + mon->amigawin_rect.w + diff;
+		x = mon->amigawin_rect.w + diff;
 	if (dir & 4)
 		y = mon->amigawin_rect.y - diff;
 	if (dir & 8)
-		y = mon->amigawin_rect.y + mon->amigawin_rect.h + diff;
+		y = mon->amigawin_rect.h + diff;
 	if (!dir) {
 		x += mon->amigawin_rect.w / 2;
 		y += mon->amigawin_rect.h / 2;
@@ -972,7 +972,7 @@ void setmouseactivexy(const int monid, int x, int y, const int dir)
 
 	if (mouseactive) {
 		disablecapture();
-		SDL_WarpMouseGlobal(x, y);
+		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
 		if (dir) {
 			recapture = 1;
 		}
