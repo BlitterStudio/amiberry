@@ -5406,11 +5406,7 @@ static void updatedirtime (a_inode *a1, int now)
 
 	if (!a1->parent)
 		return;
-#ifdef AMIBERRY
-	if (!a1->parent->parent) {
-		return;
-	}
-#endif
+
 	if (!now) {
 		if (!my_stat (a1->nname, &statbuf))
 			return;
