@@ -1419,7 +1419,8 @@ int host_errno_to_dos_errno(int err)
 	}
 }
 
-void my_canonicalize_path(const char* path, char* out, int size) {
+void my_canonicalize_path(const char* path, char* out, int size)
+{
 	if (!path || !out) {
 		write_log("my_canonicalize_path: null arguments provided\n");
 		return;
@@ -1527,10 +1528,67 @@ int target_get_volume_name(struct uaedev_mount_info* mtinf, struct uaedev_config
 // If replace is false, copyfile will fail if file already exists
 bool copyfile(const char* target, const char* source, const bool replace)
 {
-	const fs::copy_options options = replace
-                            ? fs::copy_options::overwrite_existing
-                            : fs::copy_options::none;
-	return copy_file(source, target, options);
+    // Input validation
+    if (!target || !source) {
+        write_log("copyfile: null path provided\n");
+        return false;
+    }
+
+    try {
+        // Convert paths to UTF-8 for filesystem operations
+        const auto source_path = iso_8859_1_to_utf8(std::string_view(source));
+        const auto target_path = iso_8859_1_to_utf8(std::string_view(target));
+
+        fs::path src_fs(source_path);
+        fs::path dst_fs(target_path);
+
+        // Check if source file exists
+        std::error_code ec;
+        if (!fs::exists(src_fs, ec)) {
+            write_log("copyfile: source file '%s' does not exist\n", source);
+            return false;
+        }
+
+        // Check if source is a regular file
+        if (!fs::is_regular_file(src_fs, ec)) {
+            write_log("copyfile: source '%s' is not a regular file\n", source);
+            return false;
+        }
+
+        // Avoid unnecessary copy if source and destination are the same file
+        if (fs::equivalent(src_fs, dst_fs, ec)) {
+            return true;
+        }
+
+        // Ensure target directory exists
+        fs::path parent = dst_fs.parent_path();
+        if (!parent.empty() && !fs::exists(parent, ec)) {
+            if (!fs::create_directories(parent, ec)) {
+                write_log("copyfile: failed to create parent directory for '%s': %s\n",
+                         target, ec.message().c_str());
+                return false;
+            }
+        }
+
+        // Set copy options
+        const fs::copy_options options = replace
+            ? fs::copy_options::overwrite_existing
+            : fs::copy_options::none;
+
+        // Copy file with proper error reporting
+        if (!fs::copy_file(src_fs, dst_fs, options, ec)) {
+            write_log("copyfile: failed to copy from '%s' to '%s': %s\n",
+                     source, target, ec.message().c_str());
+            return false;
+        }
+
+        return true;
+    }
+    catch (const std::exception& e) {
+        write_log("copyfile: exception while copying from '%s' to '%s': %s\n",
+                 source, target, e.what());
+        return false;
+    }
 }
 
 void filesys_addexternals(void)
@@ -1556,35 +1614,86 @@ void filesys_addexternals(void)
 
 std::string my_get_sha1_of_file(const char* filepath)
 {
-	if (filepath == nullptr) {
-		write_log("my_get_sha1_of_file: null file path provided\n");
-		return "";
-	}
+    // Input validation
+    if (!filepath) {
+        write_log("my_get_sha1_of_file: null file path provided\n");
+        return "";
+    }
 
-	const int fd = open(filepath, O_RDONLY);
-	if (fd < 0) {
-		write_log("my_get_sha1_of_file: open on file %s failed\n", filepath);
-		return "";
-	}
+    try {
+        // Convert path to UTF-8 for filesystem operations
+        const auto utf8_path = iso_8859_1_to_utf8(std::string_view(filepath));
 
-	struct stat sb;
-	if (fstat(fd, &sb) < 0) {
-		write_log("my_get_sha1_of_file: fstat on file %s failed\n", filepath);
-		close(fd);
-		return "";
-	}
+        // Check file existence before attempting operations
+        std::error_code ec;
+        fs::path file_path(utf8_path);
+        if (!fs::exists(file_path, ec) || !fs::is_regular_file(file_path, ec)) {
+            write_log("my_get_sha1_of_file: '%s' does not exist or is not a regular file\n", filepath);
+            return "";
+        }
 
-	void* mem = mmap(nullptr, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (mem == MAP_FAILED) {
-		write_log("my_get_sha1_of_file: mmap on file %s failed\n", filepath);
-		close(fd);
-		return "";
-	}
+        // Use RAII for file descriptor
+        struct FileDescriptor {
+            int fd = -1;
+            FileDescriptor(const char* path) : fd(open(path, O_RDONLY)) {}
+            ~FileDescriptor() { if (fd >= 0) close(fd); }
+            bool valid() const { return fd >= 0; }
+        } file(utf8_path.c_str());
 
-	const TCHAR* sha1 = get_sha1_txt(mem, sb.st_size);
+        if (!file.valid()) {
+            write_log("my_get_sha1_of_file: open on file '%s' failed: %s\n",
+                     filepath, strerror(errno));
+            return "";
+        }
 
-	munmap(mem, sb.st_size);
-	close(fd);
+        // Get file size
+        struct stat sb;
+        if (fstat(file.fd, &sb) < 0) {
+            write_log("my_get_sha1_of_file: fstat on file '%s' failed: %s\n",
+                     filepath, strerror(errno));
+            return "";
+        }
 
-	return string(sha1);
+        // Handle empty files specially
+        if (sb.st_size == 0) {
+            write_log("my_get_sha1_of_file: '%s' is an empty file\n", filepath);
+            return get_sha1_txt(nullptr, 0);
+        }
+
+        // Use RAII for memory mapping
+        struct MappedMemory {
+            void* mem = MAP_FAILED;
+            size_t size = 0;
+
+            MappedMemory(int fd, size_t sz) : size(sz) {
+                mem = mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
+            }
+
+            ~MappedMemory() {
+                if (mem != MAP_FAILED) munmap(mem, size);
+            }
+
+            bool valid() const { return mem != MAP_FAILED; }
+        } mapping(file.fd, static_cast<size_t>(sb.st_size));
+
+        if (!mapping.valid()) {
+            write_log("my_get_sha1_of_file: mmap on file '%s' failed: %s\n",
+                     filepath, strerror(errno));
+            return "";
+        }
+
+        // Calculate SHA1
+        const TCHAR* sha1 = get_sha1_txt(mapping.mem, sb.st_size);
+        if (!sha1) {
+            write_log("my_get_sha1_of_file: SHA1 calculation failed for '%s'\n", filepath);
+            return "";
+        }
+
+        return std::string(sha1);
+    }
+    catch (const std::exception& e) {
+        write_log("my_get_sha1_of_file: exception processing '%s': %s\n",
+                 filepath, e.what());
+        return "";
+    }
 }
