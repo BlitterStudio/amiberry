@@ -250,7 +250,7 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 		return false;
 	}
 
-	struct mytimeval mtv {};
+	struct mytimeval mtv;
 	struct timeval times[2];
 
 	try {
