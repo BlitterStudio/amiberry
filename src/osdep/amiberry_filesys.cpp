@@ -55,73 +55,131 @@ struct my_openfile_s {
 static bool has_logged_iconv_fail = false;
 [[nodiscard]] bool utf8_to_latin1_string(const std::string_view input, std::string& output)
 {
-	if (input.empty()) {
-		output.clear();
-		return true;
-	}
+    // Fast path for empty input
+    if (input.empty()) {
+        output.clear();
+        return true;
+    }
 
-	// Pre-allocate output buffer - Latin1 will never be larger than UTF-8 input
-	output.clear();
-	output.reserve(input.length());
+    // Pre-allocate output buffer - maximum size needed is the input length
+    output.clear();
+    output.reserve(input.length());
 
-	// Create RAII wrapper for iconv handle
-	class IconvWrapper {
-		iconv_t handle_;
-	public:
-		IconvWrapper(const char* tocode, const char* fromcode)
-			: handle_(iconv_open(tocode, fromcode)) {
-		}
-		~IconvWrapper() { if (handle_ != iconv_t(-1)) iconv_close(handle_); }
-		operator iconv_t() const { return handle_; }
-	};
+    // Fast path for ASCII-only content (bytes < 128)
+    bool ascii_only = true;
+    for (unsigned char c : input) {
+        if (c >= 128) {
+            ascii_only = false;
+            break;
+        }
+    }
 
-	// Open conversion descriptor
-	static const IconvWrapper iconv_("ISO-8859-1//TRANSLIT", "UTF-8");
-	if (iconv_ == iconv_t(-1)) {
-		if (!has_logged_iconv_fail) {
-			write_log("iconv_open failed: will be copying directory entries verbatim\n");
-			has_logged_iconv_fail = true;
-		}
-		output = input;
-		return false;
-	}
+    // If ASCII only, we can just copy directly without conversion
+    if (ascii_only) {
+        output.assign(input);
+        return true;
+    }
 
-	// Set up conversion buffers
-	std::vector<char> in_buf(input.begin(), input.end());
-	std::array<char, 1024> buf;
-	char* src_ptr = in_buf.data();
-	size_t src_size = input.size();
+    // Thread-local RAII wrapper for iconv to ensure thread safety
+    static thread_local class IconvWrapper {
+        iconv_t handle_;
+        std::once_flag init_flag_;
+        bool valid_ = false;
 
-	// Perform conversion in chunks
-	while (src_size > 0) {
-		char* dst_ptr = buf.data();
-		size_t dst_size = buf.size();
+    public:
+        IconvWrapper() : handle_(iconv_t(-1)) {}
 
-		// Reset conversion state for each chunk
-		iconv(iconv_, nullptr, nullptr, nullptr, nullptr);
+        ~IconvWrapper() {
+            if (handle_ != iconv_t(-1))
+                iconv_close(handle_);
+        }
 
-		size_t res = iconv(iconv_, &src_ptr, &src_size, &dst_ptr, &dst_size);
+        iconv_t get() {
+            std::call_once(init_flag_, [this]() {
+                handle_ = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8");
+                valid_ = (handle_ != iconv_t(-1));
+            });
+            return handle_;
+        }
 
-		if (res == size_t(-1)) {
-			if (errno == E2BIG) {
-				// Buffer full - append what we have and continue
-				output.append(buf.data(), buf.size() - dst_size);
-				continue;
-			}
-			else {
-				// Invalid/incomplete sequence - skip character
-				++src_ptr;
-				--src_size;
-			}
-		}
+        bool is_valid() const { return valid_; }
 
-		// Append converted chunk
-		if (buf.size() > dst_size) {
-			output.append(buf.data(), buf.size() - dst_size);
-		}
-	}
+        void reset() {
+            if (valid_)
+                iconv(handle_, nullptr, nullptr, nullptr, nullptr);
+        }
+    } iconv_wrapper;
 
-	return true;
+    const iconv_t iconv_handle = iconv_wrapper.get();
+    if (iconv_handle == iconv_t(-1)) {
+        if (!has_logged_iconv_fail) {
+            write_log(_T("utf8_to_latin1_string: iconv_open failed: %s\n"), strerror(errno));
+            has_logged_iconv_fail = true;
+        }
+        output = input;
+        return false;
+    }
+
+    // Use a single allocation for input buffer
+    std::vector<char> in_buf(input.begin(), input.end());
+
+    // Fixed buffer for output with reasonable size
+    std::array<char, 2048> buf{};
+    char* src_ptr = in_buf.data();
+    size_t src_size = input.size();
+    size_t invalid_chars = 0;
+
+    // Reset conversion state before starting
+    iconv_wrapper.reset();
+
+    // Perform conversion in chunks
+    while (src_size > 0) {
+        char* dst_ptr = buf.data();
+        size_t dst_size = buf.size();
+
+        size_t res = iconv(iconv_handle, &src_ptr, &src_size, &dst_ptr, &dst_size);
+
+        if (res == size_t(-1)) {
+            switch (errno) {
+                case E2BIG:
+                    // Buffer full - append what we have and continue
+                    output.append(buf.data(), buf.size() - dst_size);
+                    continue;
+
+                case EILSEQ:
+                    // Invalid sequence - skip byte and continue
+                    ++src_ptr;
+                    --src_size;
+                    ++invalid_chars;
+                    break;
+
+                case EINVAL:
+                    // Incomplete sequence at end - skip remaining bytes
+                    src_size = 0;
+                    ++invalid_chars;
+                    break;
+
+                default:
+                    // Unexpected error
+                    write_log(_T("utf8_to_latin1_string: conversion error: %s\n"), strerror(errno));
+                    src_size = 0;
+                    ++invalid_chars;
+            }
+        }
+
+        // Append successfully converted data
+        if (buf.size() > dst_size) {
+            output.append(buf.data(), buf.size() - dst_size);
+        }
+    }
+
+    // Log if significant number of characters were invalid
+    if (invalid_chars > 0 && invalid_chars > input.size() / 10) {
+        write_log(_T("utf8_to_latin1_string: %zu invalid characters found in string of length %zu\n"),
+                 invalid_chars, input.size());
+    }
+
+    return invalid_chars == 0;
 }
 
 [[nodiscard]] std::string iso_8859_1_to_utf8(std::string_view str) noexcept
@@ -506,7 +564,7 @@ bool my_existslink(const char* name)
 		return false;
 	}
 
-	struct stat st;
+	struct stat st{};
 	if (lstat(name, &st) != 0) {
 		write_log("my_existslink: lstat on file %s failed: %s\n", name, strerror(errno));
 		return false;
@@ -542,7 +600,7 @@ uae_s64 my_fsize(struct my_openfile_s* mos)
 		return -1;
 	}
 
-	struct stat st;
+	struct stat st{};
 	if (fstat(mos->fd, &st) != 0) {
 		write_log("my_fsize: fstat on file %s failed: %s\n", mos->path, strerror(errno));
 		return -1;
@@ -558,7 +616,7 @@ int my_getvolumeinfo(const char* root)
 		return -1;
 	}
 
-	struct stat st;
+	struct stat st{};
 	if (lstat(root, &st) != 0) {
 		write_log("my_getvolumeinfo: lstat on file %s failed: %s\n", root, strerror(errno));
 		return -1;
@@ -580,7 +638,7 @@ bool fs_path_exists(const std::string& s)
 	}
 
 	const auto output = iso_8859_1_to_utf8(s);
-	struct stat buffer;
+	struct stat buffer{};
 	return stat(output.c_str(), &buffer) == 0;
 }
 

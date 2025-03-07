@@ -70,23 +70,23 @@ struct virtualfilesysobject
 
 /* AmigaOS "keys" */
 typedef struct a_inode_struct {
-  /* Circular list of recycleable a_inodes.  */
-  struct a_inode_struct *next, *prev;
-  /* This a_inode's relatives in the directory structure.  */
-  struct a_inode_struct *parent;
-  struct a_inode_struct *child, *sibling;
-  /* AmigaOS name, and host OS name.  The host OS name is a full path, the
-   * AmigaOS name is relative to the parent.  */
-  TCHAR *aname;
-  TCHAR *nname;
-  /* AmigaOS file comment, or NULL if file has none.  */
-  TCHAR *comment;
-  /* AmigaOS protection bits.  */
-  int amigaos_mode;
-  /* Unique number for identification.  */
-  uae_u32 uniq;
-  /* For a directory that is being ExNext()ed, the number of child ainos
-	 which must be kept locked in core.  */
+	/* Circular list of recycleable a_inodes.  */
+	struct a_inode_struct *next, *prev;
+	/* This a_inode's relatives in the directory structure.  */
+	struct a_inode_struct *parent;
+	struct a_inode_struct *child, *sibling;
+	/* AmigaOS name, and host OS name.  The host OS name is a full path, the
+	 * AmigaOS name is relative to the parent.  */
+	TCHAR *aname;
+	TCHAR *nname;
+	/* AmigaOS file comment, or NULL if file has none.  */
+	TCHAR *comment;
+	/* AmigaOS protection bits.  */
+	int amigaos_mode;
+	/* Unique number for identification.  */
+	uae_u32 uniq;
+	/* For a directory that is being ExNext()ed, the number of child ainos
+	   which must be kept locked in core.  */
 	unsigned int locked_children;
 	/* How many ExNext()s are going on in this directory?  */
 	unsigned int exnext_count;
