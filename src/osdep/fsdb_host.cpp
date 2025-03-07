@@ -10,6 +10,7 @@
  * Copyright 2025 Dimitris Panokostas
  */
 
+#include <algorithm>
 #include <cstring>
 #include <climits>
 #include <memory>
@@ -36,7 +37,7 @@ enum
 	NUM_EVILCHARS = 9
 };
 
-static TCHAR evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<', '>' };
+static char evilchars[NUM_EVILCHARS] = { '%', '\\', '*', '?', '\"', '/', '|', '<', '>' };
 static char hex_chars[] = "0123456789abcdef";
 #define UAEFSDB_BEGINS _T("__uae___")
 

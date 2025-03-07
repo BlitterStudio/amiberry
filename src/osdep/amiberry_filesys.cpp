@@ -22,6 +22,7 @@
 #include <dirent.h>
 #include <iconv.h>
 #include <iostream>
+#include <mutex>
 
 #ifdef USE_OLDGCC
 #include <experimental/filesystem>
