@@ -199,7 +199,11 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 				num3 = track % 10;
 				on = gid->drive_motor;
 				if (gid->drive_writing) {
+#ifdef _WIN32
 					on_rgb = 0xcc0000;
+#else
+					on_rgb = 0x0000cc;
+#endif
 				}
 				half = gui_data.drive_side ? 1 : -1;
 				if (!gid->floppy_inserted) {
@@ -219,19 +223,33 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			off_rgb = (on_rgb & 0xfefefe) >> 1;
 		} else if (led == LED_POWER) {
 			pos = 3;
+#ifdef _WIN32
 			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x33) << 16;
 			on = 1;
 			off_rgb = 0x330000;
+#else
+			on_rgb = ((gui_data.powerled_brightness * 10 / 16) + 0x000033) << 16;
+			on = 1;
+			off_rgb = 0x000033;
+#endif
 		} else if (led == LED_CD) {
 			pos = 6;
 			if (gui_data.cd >= 0) {
 				on = gui_data.cd & (LED_CD_AUDIO | LED_CD_ACTIVE);
+#ifdef _WIN32
 				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : 0x0000cc;
+#else
+				on_rgb = (on & LED_CD_AUDIO) ? 0x00cc00 : 0xcc0000;
+#endif
 				if ((gui_data.cd & LED_CD_ACTIVE2) && !(gui_data.cd & LED_CD_AUDIO)) {
 					on_rgb &= 0xfefefe;
 					on_rgb >>= 1;
 				}
+#ifdef _WIN32
 				off_rgb = 0x000033;
+#else
+				off_rgb = 0x330000;
+#endif
 				num1 = -1;
 				num2 = 10;
 				num3 = 12;
@@ -240,8 +258,13 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			pos = 5;
 			if (gui_data.hd >= 0) {
 				on = gui_data.hd;
+#ifdef _WIN32
 				on_rgb = on == 2 ? 0xcc0000 : 0x0000cc;
 				off_rgb = 0x000033;
+#else
+				on_rgb = on == 2 ? 0x0000cc : 0xcc0000;
+				off_rgb = 0x330000;
+#endif
 				num1 = -1;
 				num2 = 11;
 				num3 = 12;
