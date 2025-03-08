@@ -1144,7 +1144,10 @@ void fix_didata(struct didata* did)
 	did->buttons_real = did->buttons = static_cast<uae_s16>(SDL_JoystickNumButtons(did->joystick) + hats);
 	if (did->is_controller)
 	{
-		for (uae_s16 b = 0; b < did->buttons; b++)
+		auto did_button_max = did->buttons;
+		if (did->axles == 0 && hats == 0 && did_button_max < 15)
+			did_button_max = 15;
+		for (uae_s16 b = 0; b < did_button_max; b++)
 		{
 			did->buttonsort[b] = b;
 			did->buttonmappings[b] = b;
@@ -1612,7 +1615,8 @@ void read_joystick_buttons(const int id)
 		}
 
 		// Check all Joystick buttons, including axes acting as buttons
-		for (int did_button = 0; did_button < did->buttons; did_button++)
+		auto did_button_max = did->buttons < 15 && did->axles == 0 ? 15 : did->buttons;
+		for (int did_button = 0; did_button < did_button_max; did_button++)
 		{
 			if (did->mapping.button[did_button] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
