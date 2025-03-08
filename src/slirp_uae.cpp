@@ -140,38 +140,47 @@ extern uae_sem_t slirp_sem2;
 static int slirp_receive_func(void *arg)
 {
 	slirp_thread_active = 1;
-	while (slirp_thread_active) {
-		// Wait for packets to arrive
+	while (slirp_thread_active == 1) {
 		fd_set rfds, wfds, xfds;
 		int nfds;
 		int ret, timeout;
 
-		// ... in the output queue
 		nfds = -1;
 		FD_ZERO(&rfds);
 		FD_ZERO(&wfds);
 		FD_ZERO(&xfds);
-		uae_sem_wait (&slirp_sem2);
+
+		// Add timeout protection for semaphore acquisition
+		if (uae_sem_trywait_delay(&slirp_sem2, 500)) {
+			// Couldn't acquire semaphore within timeout
+			continue;
+		}
+
 		timeout = slirp_select_fill(&nfds, &rfds, &wfds, &xfds);
-		uae_sem_post (&slirp_sem2);
+		uae_sem_post(&slirp_sem2);
+
 		if (nfds < 0) {
-			/* Windows does not honour the timeout if there is not
-			   descriptor to wait for */
-			sleep_millis (timeout / 1000);
+			sleep_millis(timeout / 1000);
 			ret = 0;
 		} else {
 			struct timeval tv;
 			tv.tv_sec = 0;
 			tv.tv_usec = timeout;
-			ret = select(0, &rfds, &wfds, &xfds, &tv);
+			ret = select(nfds + 1, &rfds, &wfds, &xfds, &tv);
 			if (ret == -1) {
 				write_log(_T("SLIRP socket ERR=%d\n"), WSAGetLastError());
+				// Add a small delay to prevent CPU spinning on errors
+				sleep_millis(10);
+				continue;
 			}
 		}
+
 		if (ret >= 0) {
-			uae_sem_wait (&slirp_sem2);
+			if (uae_sem_trywait_delay(&slirp_sem2, 500)) {
+				continue;
+			}
 			slirp_select_poll(&rfds, &wfds, &xfds);
-			uae_sem_post (&slirp_sem2);
+			uae_sem_post(&slirp_sem2);
 		}
 	}
 	slirp_thread_active = -1;
@@ -204,7 +213,7 @@ bool uae_slirp_start (void)
 	return false;
 }
 
-void uae_slirp_end (void)
+void uae_slirp_end(void)
 {
 #ifdef WITH_QEMU_SLIRP
 	if (impl == QEMU_IMPLEMENTATION) {
@@ -216,10 +225,19 @@ void uae_slirp_end (void)
 	if (impl == BUILTIN_IMPLEMENTATION) {
 		if (slirp_thread_active > 0) {
 			slirp_thread_active = 0;
-			while (slirp_thread_active == 0) {
-				sleep_millis (10);
+			// Use a proper timeout instead of infinite waiting
+			int wait_count = 0;
+			while (slirp_thread_active == 0 && wait_count < 100) {
+				sleep_millis(10);
+				wait_count++;
 			}
-			uae_end_thread (&slirp_tid);
+
+			// Force thread termination if it didn't exit cleanly
+			if (slirp_thread_active == 0) {
+				write_log(_T("SLIRP thread did not terminate properly, forcing exit\n"));
+			}
+
+			uae_end_thread(&slirp_tid);
 		}
 		slirp_thread_active = 0;
 		return;
