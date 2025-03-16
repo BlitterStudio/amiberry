@@ -36,7 +36,8 @@ static gcn::CheckBox* chkDBSerialAuto;
 static gcn::DropDown* cboDBSerialPort;
 static gcn::CheckBox* chkDBSmartSpeed;
 static gcn::CheckBox* chkDBAutoCache;
-static gcn::CheckBox* chkDBCableDriveB;
+static gcn::Label* lblDDriveCable;
+static gcn::DropDown* cboDBDriveCable;
 
 #ifdef FLOPPYBRIDGE
 static std::vector<FloppyBridgeAPI::DriverInformation> driver_list{};
@@ -51,6 +52,7 @@ static gcn::StringListModel driveTypeList(floppy_drive_types);
 static gcn::StringListModel driverNameList;
 static gcn::StringListModel diskfileList;
 static gcn::StringListModel serial_ports_list;
+static gcn::StringListModel drive_selection_list;
 
 static void RefreshDiskListModel()
 {
@@ -197,9 +199,9 @@ public:
 		{
 			changed_prefs.drawbridge_autocache = chkDBAutoCache->isSelected();
 		}
-		else if (action == chkDBCableDriveB)
+		else if (action == cboDBDriveCable)
 		{
-			changed_prefs.drawbridge_connected_drive_b = chkDBCableDriveB->isSelected();
+			changed_prefs.drawbridge_drive_cable = cboDBDriveCable->getSelected();
 		}
 		else
 #endif
@@ -343,6 +345,14 @@ void InitPanelFloppy(const config_category& category)
 	for(const auto& port : serial_ports) {
 		serial_ports_list.add(port);
 	}
+
+	drive_selection_list.clear();
+	drive_selection_list.add("Drive A (IBM PC)");
+	drive_selection_list.add("Drive B (IBM PC)");
+	drive_selection_list.add("Drive 0 (SHUGART)");
+	drive_selection_list.add("Drive 1 (SHUGART)");
+	drive_selection_list.add("Drive 2 (SHUGART)");
+	drive_selection_list.add("Drive 3 (SHUGART)");
 #endif
 	floppyActionListener = new FloppyActionListener();
 	driveTypeActionListener = new DriveTypeActionListener();
@@ -485,12 +495,15 @@ void InitPanelFloppy(const config_category& category)
 	chkDBAutoCache->setForegroundColor(gui_foreground_color);
 	chkDBAutoCache->addActionListener(floppyActionListener);
 
-	chkDBCableDriveB = new gcn::CheckBox("DrawBridge: Connected as Drive B");
-	chkDBCableDriveB->setId("chkDBCableDriveB");
-	chkDBCableDriveB->setBaseColor(gui_base_color);
-	chkDBCableDriveB->setBackgroundColor(gui_background_color);
-	chkDBCableDriveB->setForegroundColor(gui_foreground_color);
-	chkDBCableDriveB->addActionListener(floppyActionListener);
+	lblDDriveCable = new gcn::Label("DrawBridge: Drive cable:");
+	cboDBDriveCable = new gcn::DropDown(&drive_selection_list);
+	cboDBDriveCable->setId("cboDBDriveCable");
+	cboDBDriveCable->setSize(200, cboDBDriveCable->getHeight());
+	cboDBDriveCable->setBaseColor(gui_base_color);
+	cboDBDriveCable->setBackgroundColor(gui_background_color);
+	cboDBDriveCable->setForegroundColor(gui_foreground_color);
+	cboDBDriveCable->setSelectionColor(gui_selection_color);
+	cboDBDriveCable->addActionListener(floppyActionListener);
 
 	for (i = 0; i < 4; ++i)
 	{
@@ -530,9 +543,10 @@ void InitPanelFloppy(const config_category& category)
 	grpDrawBridge->add(cboDBSerialPort, chkDBSerialAuto->getX() + chkDBSerialAuto->getWidth() + DISTANCE_NEXT_X, chkDBSerialAuto->getY());
 	grpDrawBridge->add(chkDBSmartSpeed, lblDBDriver->getX(), chkDBSerialAuto->getY() + chkDBSerialAuto->getHeight() + DISTANCE_NEXT_Y);
 	grpDrawBridge->add(chkDBAutoCache, lblDBDriver->getX(), chkDBSmartSpeed->getY() + chkDBSmartSpeed->getHeight() + DISTANCE_NEXT_Y);
-	grpDrawBridge->add(chkDBCableDriveB, lblDBDriver->getX(), chkDBAutoCache->getY() + chkDBAutoCache->getHeight() + DISTANCE_NEXT_Y);
+	grpDrawBridge->add(lblDDriveCable, lblDBDriver->getX(), chkDBAutoCache->getY() + chkDBAutoCache->getHeight() + DISTANCE_NEXT_Y);
+	grpDrawBridge->add(cboDBDriveCable, lblDDriveCable->getX() + lblDDriveCable->getWidth() + DISTANCE_NEXT_X, lblDDriveCable->getY());
 	grpDrawBridge->setMovable(false);
-	grpDrawBridge->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + chkDBCableDriveB->getY() + chkDBCableDriveB->getHeight() + DISTANCE_NEXT_Y);
+	grpDrawBridge->setSize(category.panel->getWidth() - DISTANCE_BORDER * 2, TITLEBAR_HEIGHT + cboDBDriveCable->getY() + cboDBDriveCable->getHeight() + DISTANCE_NEXT_Y * 7);
 	grpDrawBridge->setTitleBarHeight(TITLEBAR_HEIGHT);
 	grpDrawBridge->setBaseColor(gui_base_color);
 	grpDrawBridge->setForegroundColor(gui_foreground_color);
@@ -571,7 +585,8 @@ void ExitPanelFloppy()
 	delete cboDBSerialPort;
 	delete chkDBSmartSpeed;
 	delete chkDBAutoCache;
-	delete chkDBCableDriveB;
+	delete lblDDriveCable;
+	delete cboDBDriveCable;
 	delete grpDrawBridge;
 
 	delete floppyActionListener;
@@ -651,7 +666,7 @@ void RefreshPanelFloppy()
 	cboDBSerialPort->setEnabled(false);
 	chkDBAutoCache->setEnabled(false);
 	chkDBSmartSpeed->setEnabled(false);
-	chkDBCableDriveB->setEnabled(false);
+	cboDBDriveCable->setEnabled(false);
 #ifdef FLOPPYBRIDGE
 	for (const auto & floppyslot : changed_prefs.floppyslots)
 	{
@@ -664,7 +679,7 @@ void RefreshPanelFloppy()
 			chkDBSerialAuto->setSelected(changed_prefs.drawbridge_serial_auto);
 			chkDBAutoCache->setSelected(changed_prefs.drawbridge_autocache);
 			chkDBSmartSpeed->setSelected(changed_prefs.drawbridge_smartspeed);
-			chkDBCableDriveB->setSelected(changed_prefs.drawbridge_connected_drive_b);
+			cboDBDriveCable->setSelected(changed_prefs.drawbridge_drive_cable);
 
 			if (!driver_list.empty())
 			{
@@ -679,7 +694,7 @@ void RefreshPanelFloppy()
 				if (config_options & FloppyBridgeAPI::ConfigOption_SmartSpeed)
 					chkDBSmartSpeed->setEnabled(true);
 				if (config_options & FloppyBridgeAPI::ConfigOption_DriveABCable)
-					chkDBCableDriveB->setEnabled(true);
+					cboDBDriveCable->setEnabled(true);
 
 				cboDBSerialPort->setSelected(0);
 				if (changed_prefs.drawbridge_serial_port[0])

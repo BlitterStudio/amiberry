@@ -1102,7 +1102,7 @@ struct uae_prefs
 	int drawbridge_driver;
 	bool drawbridge_serial_auto;
 	TCHAR drawbridge_serial_port[256];
-	bool drawbridge_connected_drive_b;
+	int drawbridge_drive_cable;
 	bool drawbridge_smartspeed;
 	bool drawbridge_autocache;
 	bool alt_tab_release;

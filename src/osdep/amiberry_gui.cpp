@@ -920,14 +920,14 @@ static void gui_to_prefs(void)
 		_tcsicmp(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port) != 0 ||
 		currprefs.drawbridge_smartspeed != changed_prefs.drawbridge_smartspeed ||
 		currprefs.drawbridge_autocache != changed_prefs.drawbridge_autocache ||
-		currprefs.drawbridge_connected_drive_b != changed_prefs.drawbridge_connected_drive_b)
+		currprefs.drawbridge_drive_cable != changed_prefs.drawbridge_drive_cable)
 	{
 		currprefs.drawbridge_driver = changed_prefs.drawbridge_driver;
 		currprefs.drawbridge_serial_auto = changed_prefs.drawbridge_serial_auto;
 		_tcscpy(currprefs.drawbridge_serial_port, changed_prefs.drawbridge_serial_port);
 		currprefs.drawbridge_smartspeed = changed_prefs.drawbridge_smartspeed;
 		currprefs.drawbridge_autocache = changed_prefs.drawbridge_autocache;
-		currprefs.drawbridge_connected_drive_b = changed_prefs.drawbridge_connected_drive_b;
+		currprefs.drawbridge_drive_cable = changed_prefs.drawbridge_drive_cable;
 		if (quit_program != UAE_QUIT)
 			drawbridge_update_profiles(&currprefs);
 	}

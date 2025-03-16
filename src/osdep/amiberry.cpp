@@ -2435,7 +2435,7 @@ void target_default_options(uae_prefs* p, const int type)
 	p->drawbridge_serial_auto = true;
 	p->drawbridge_smartspeed = false;
 	p->drawbridge_autocache = false;
-	p->drawbridge_connected_drive_b = false;
+	p->drawbridge_drive_cable = 0;
 	p->drawbridge_driver = 0;
 
 	drawbridge_update_profiles(p);
@@ -2597,7 +2597,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 		cfgfile_target_write_str(f, _T("drawbridge_serial_port"), p->drawbridge_serial_port);
 		cfgfile_target_dwrite_bool(f, _T("drawbridge_smartspeed"), p->drawbridge_smartspeed);
 		cfgfile_target_dwrite_bool(f, _T("drawbridge_autocache"), p->drawbridge_autocache);
-		cfgfile_target_dwrite_bool(f, _T("drawbridge_connected_drive_b"), p->drawbridge_connected_drive_b);
+		cfgfile_target_dwrite(f, _T("drawbridge_drive_cable"), _T("%d"), p->drawbridge_drive_cable);
 	}
 
 	cfgfile_target_dwrite_bool(f, _T("alt_tab_release"), p->alt_tab_release);
@@ -2705,7 +2705,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, _T("drawbridge_serial_port"), p->drawbridge_serial_port, sizeof p->drawbridge_serial_port)
 		|| cfgfile_yesno(option, value, _T("drawbridge_smartspeed"), &p->drawbridge_smartspeed)
 		|| cfgfile_yesno(option, value, _T("drawbridge_autocache"), &p->drawbridge_autocache)
-		|| cfgfile_yesno(option, value, _T("drawbridge_connected_drive_b"), &p->drawbridge_connected_drive_b)
+		|| cfgfile_intval(option, value, _T("drawbridge_drive_cable"), &p->drawbridge_drive_cable, 1)
 		|| cfgfile_yesno(option, value, _T("alt_tab_release"), &p->alt_tab_release)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_quit"), &p->use_retroarch_quit)
 		|| cfgfile_yesno(option, value, _T("use_retroarch_menu"), &p->use_retroarch_menu)
@@ -4960,10 +4960,15 @@ bool get_plugin_path(TCHAR* out, const int len, const TCHAR* path)
 	return TRUE;
 }
 
+// The serialization logic here is taken from FloppyBridge.cpp -> void BridgeConfig::toString(char** serialisedOptions)
 void drawbridge_update_profiles(uae_prefs* p)
 {
 #ifdef FLOPPYBRIDGE
-	const unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_connected_drive_b & 1) << 1 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
+	// sanity check
+	if (p->drawbridge_drive_cable < 0 || p->drawbridge_drive_cable > 5)
+		p->drawbridge_drive_cable = 0;
+
+	const unsigned int flags = (p->drawbridge_autocache ? 1 : 0) | (p->drawbridge_drive_cable & 1) << 1 | (p->drawbridge_drive_cable & 6) << 3 | (p->drawbridge_serial_auto ? 4 : 0) | (p->drawbridge_smartspeed ? 8 : 0);
 
 	const std::string profile_name_normal = "Normal";
 	const std::string profile_name_comp = "Compatible";

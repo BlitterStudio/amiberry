@@ -20,7 +20,7 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYDATE MAKEBD(2025, 3, 6)
+#define AMIBERRYDATE MAKEBD(2025, 3, 16)
 #define COPYRIGHT _T("Copyright (C) 2016-2025 Dimitris Panokostas")
 
 #define IHF_WINDOWHIDDEN 6
