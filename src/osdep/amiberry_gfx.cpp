@@ -2739,7 +2739,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 				render_quad = { -(w - h) / 2, (w - h) / 2, w, h };
 				crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
 			}
-			set_scaling_option(&currprefs, w, h);
+			set_scaling_option(monid, &currprefs, w, h);
 		}
 		else
 			return false;
@@ -2809,7 +2809,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 					crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
 				}
 			}
-			set_scaling_option(&currprefs, scaled_width, scaled_height);
+			set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
 		}
 		else
 		{
