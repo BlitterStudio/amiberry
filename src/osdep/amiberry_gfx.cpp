@@ -2635,7 +2635,7 @@ float target_getcurrentvblankrate(const int monid)
 	float vb;
 	if (currprefs.gfx_variable_sync)
 		return static_cast<float>(mon->currentmode.freq);
-	if (get_display_vblank_params(-1, nullptr, nullptr, &vb, nullptr)) {
+	if (get_display_vblank_params(0, nullptr, nullptr, &vb, nullptr)) {
 		return vb;
 	}
 
