@@ -3057,8 +3057,11 @@ void graphics_subshutdown()
 {
 	reset_sound();
 
-	SDL_FreeSurface(amiga_surface);
-	amiga_surface = nullptr;
+	if (amiga_surface)
+	{
+		SDL_FreeSurface(amiga_surface);
+		amiga_surface = nullptr;
+	}
 
 	auto* avidinfo = &adisplays[0].gfxvidinfo;
 	avidinfo->drawbuffer.realbufmem = nullptr;
