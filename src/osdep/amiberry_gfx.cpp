@@ -165,7 +165,7 @@ bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int height)
 // 0: Nearest Neighbor
 // 1: Linear
 // 2: Integer Scaling (this uses Nearest Neighbor)
-void set_scaling_option(const uae_prefs* p, const int width, const int height)
+void set_scaling_option(const int monid, const uae_prefs* p, const int width, const int height)
 {
 	if (p->scaling_method == -1)
 	{
@@ -176,7 +176,7 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-			SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
+			SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_FALSE);
 #endif
 		}
 		else
@@ -186,7 +186,7 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #else
 			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-			SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
+			SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_FALSE);
 #endif
 		}
 	}
@@ -207,13 +207,13 @@ void set_scaling_option(const uae_prefs* p, const int width, const int height)
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #else
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_FALSE);
+		SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_FALSE);
 #endif
 	}
 	else if (p->scaling_method == 2)
 	{
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		SDL_RenderSetIntegerScale(AMonitors[0].amiga_renderer, SDL_TRUE);
+		SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_TRUE);
 	}
 #ifdef USE_OPENGL
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -395,7 +395,7 @@ static bool SDL2_alloctexture(int monid, int w, int h, const int depth)
 			SDL_QueryTexture(amiga_texture, &format, nullptr, &width, &height);
 			if (width == -w && height == -h && (depth == 16 && format == SDL_PIXELFORMAT_RGB565) || (depth == 32 && format == SDL_PIXELFORMAT_BGRA32))
 			{
-				set_scaling_option(&currprefs, width, height);
+				set_scaling_option(monid, &currprefs, width, height);
 				return true;
 			}
 		}
