@@ -164,8 +164,10 @@ struct addrbank_sub
 	uae_u32 maskval;
 };
 
+#ifdef AMIBERRY
 /* GCC does not like addrbank *addrbank in struct autoconfig_info. */
 typedef addrbank addrbank_t;
+#endif
 
 struct autoconfig_info
 {

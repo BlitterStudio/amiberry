@@ -62,6 +62,7 @@ typedef uint16_t uni_ushort;
 typedef int (UNICALL *uni_version_function)();
 typedef void * (UNICALL *uni_resolve_function)(uni_ulong ptr);
 typedef const char * (UNICALL *uni_uae_version_function)(void);
+#ifdef AMIBERRY
 typedef void * (UNICALL *uni_get_context_function)(struct uni *uni);
 
 typedef void (UNICALL *trap_call_add_dreg_function)(void *ctx, int reg, uae_u32 v);
@@ -69,6 +70,7 @@ typedef void (UNICALL *trap_call_add_areg_function)(void *ctx, int reg, uae_u32 
 typedef uae_u32 (UNICALL *trap_call_lib_function)(void *ctx, uaecptr base, uae_s16 offset);
 
 typedef void (*write_log_function)(const char *fmt, ...);
+#endif
 
 struct uni {
     uni_long d1;
@@ -98,7 +100,9 @@ struct uni {
     void *uaevar_compat;
     int flags;
     uaecptr task;
+#ifdef AMIBERRY
     TrapContext *ctx;
+#endif
 #endif
 };
 

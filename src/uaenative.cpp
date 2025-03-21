@@ -117,10 +117,12 @@ static const char * UNICALL uni_uae_version(void)
     return PACKAGE_STRING;
 }
 
+#ifdef AMIBERRY
 static void * UNICALL uni_get_context(struct uni *uni)
 {
 	return uni->ctx;
 }
+#endif
 
 static void free_library_data(struct library_data *library_data) {
     if (library_data->empty_count) {
@@ -229,7 +231,8 @@ static void set_library_globals(void *dl)
 
     address = dl_symbol(dl, "uni_uae_version");
     if (address) *((uni_uae_version_function *) address) = &uni_uae_version;
-    
+
+#ifdef AMIBERRY
     address = dl_symbol(dl, "uni_get_context");
     if (address) *((uni_get_context_function *) address) = &uni_get_context;
     
@@ -244,7 +247,7 @@ static void set_library_globals(void *dl)
     
     address = dl_symbol(dl, "write_log");
     if (address) *((write_log_function *) address) = &write_log;
-    
+#endif
 }
 
 static uae_u32 open_library (const char *name, uae_u32 min_version)
@@ -511,8 +514,9 @@ uae_u32 uaenative_call_function (TrapContext *ctx, int flags)
     }
 
     struct uni uni = {0};
-
+#ifdef AMIBERRY
     uni.ctx = ctx;
+#endif
     uni.function = trap_get_areg(ctx, 0);
     if (flags & UNI_FLAG_COMPAT) {
         uni.library = 0;
@@ -860,8 +864,10 @@ static uae_library_trap_def uaenative_functions[] = {
     { lib_call_function_async, TRAPFLAG_EXTRA_STACK },
     { lib_call_function_by_name },
     { lib_call_function_by_name_async, TRAPFLAG_EXTRA_STACK },
+#ifdef AMIBERRY
     { lib_call_function, TRAPFLAG_EXTRA_STACK },
     { lib_call_function_by_name, TRAPFLAG_EXTRA_STACK },
+#endif
     {nullptr },
 };
 

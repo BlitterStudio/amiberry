@@ -84,7 +84,9 @@ struct gui_info
 	int sndbuf, sndbuf_status;
 	bool sndbuf_avail;
 	struct gui_info_drive drives[4];
+#ifdef AMIBERRY
 	int temperature;
+#endif
 };
 #define NUM_LEDS (LED_MAX)
 #define VISIBLE_LEDS (LED_MAX - 1)
