@@ -86,7 +86,7 @@ struct gpiod_line* lineYellow; // Yellow LED
 #include "amiberry_dbus.h"
 #endif
 
-SDL_threadID mainthreadid;
+static SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
 int log_net;
@@ -99,6 +99,9 @@ extern FILE* debugfile;
 static int forceroms;
 static void* tablet;
 SDL_Cursor* normalcursor;
+
+TCHAR VersionStr[256];
+TCHAR BetaStr[64];
 
 int paraport_mask;
 
@@ -152,10 +155,7 @@ void cap_fps(Uint64 start)
 
 std::string get_version_string()
 {
-	const auto pre_release_string = std::string(AMIBERRY_VERSION_PRE_RELEASE);
-	if (pre_release_string.empty())
-		return "Amiberry " + std::string(AMIBERRY_VERSION);
-	return "Amiberry " + std::string(AMIBERRY_VERSION) + "-" + std::string(AMIBERRY_VERSION_PRE_RELEASE);
+	return VersionStr;
 }
 
 std::string get_copyright_notice()
@@ -354,13 +354,25 @@ void set_last_active_config(const char* filename)
 	remove_file_extension(last_active_config);
 }
 
-int getdpiforwindow(SDL_Window* hwnd)
+int getdpiformonitor(int displayIndex)
+{
+	float ddpi, hdpi, vdpi;
+	if (SDL_GetDisplayDPI(displayIndex, &ddpi, &hdpi, &vdpi) == 0) {
+		return static_cast<int>(vdpi);
+	}
+	else {
+		// Fallback to a default DPI value if SDL_GetDisplayDPI fails
+		return 96; // Common default DPI value
+	}
+}
+
+int getdpiforwindow(const int monid)
 {
 	float diagDPI = -1;
 	float horiDPI = -1;
 	float vertDPI = -1;
 
-	SDL_GetDisplayDPI(0, &diagDPI, &horiDPI, &vertDPI);
+	SDL_GetDisplayDPI(monid, &diagDPI, &horiDPI, &vertDPI);
 	return static_cast<int>(vertDPI);
 }
 
@@ -644,13 +656,6 @@ void updatemouseclip(AmigaMonitor* mon)
 			// Too small or invalid?
 			if (mon->amigawinclip_rect.w <= mon->amigawinclip_rect.x + 7 || mon->amigawinclip_rect.h <= mon->amigawinclip_rect.y + 7)
 				mon->amigawinclip_rect = mon->amigawin_rect;
-		}
-		if (mon_cursorclipped == mon->monitor_id + 1) {
-#if MOUSECLIP_LOG
-			write_log(_T("CLIP mon=%d %dx%d %dx%d %d\n"), mon->monitor_id, mon->amigawin_rect.left, mon->amigawin_rect.top, mon->amigawin_rect.right, mon->amigawin_rect.bottom, isfullscreen());
-#endif
-			//SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
-			//SDL_WarpMouseInWindow(mon->amiga_window, mon->amigawinclip_rect.w / 2, mon->amigawinclip_rect.h / 2);
 		}
 	}
 }
@@ -1946,7 +1951,7 @@ void logging_init()
 
 		logging_started = 1;
 		first++;
-		write_log("%s Logfile\n\n", get_version_string().c_str());
+		write_log("%s Logfile\n\n", VersionStr);
 		write_log("%s\n", get_sdl2_version_string().c_str());
 		regstatus();
 	}
@@ -4682,6 +4687,110 @@ const TCHAR** uaenative_get_library_dirs()
 	return nats;
 }
 
+static int parseversion(TCHAR** vs)
+{
+	TCHAR tmp[10];
+	int i;
+
+	i = 0;
+	while (**vs >= '0' && **vs <= '9') {
+		if (i >= sizeof(tmp) / sizeof(TCHAR))
+			return 0;
+		tmp[i++] = **vs;
+		(*vs)++;
+	}
+	if (**vs == '.')
+		(*vs)++;
+	tmp[i] = 0;
+	return _tstol(tmp);
+}
+
+static int checkversion(TCHAR* vs, int* verp)
+{
+	int ver;
+	if (_tcslen(vs) < 10)
+		return 0;
+	if (_tcsncmp(vs, _T("Amiberry "), 7))
+		return 0;
+	vs += 7;
+	ver = parseversion(&vs) << 16;
+	ver |= parseversion(&vs) << 8;
+	ver |= parseversion(&vs);
+	if (verp)
+		*verp = ver;
+	if (ver >= ((UAEMAJOR << 16) | (UAEMINOR << 8) | UAESUBREV))
+		return 0;
+	return 1;
+}
+
+static void initialize_ini()
+{
+	int size;
+	TCHAR version_char[100];
+
+	size = sizeof(version_char) / sizeof(TCHAR);
+	if (regquerystr(nullptr, _T("Version"), version_char, &size)) {
+		int ver = 0;
+		if (checkversion(version_char, &ver)) {
+			regsetstr(nullptr, _T("Version"), VersionStr);
+		}
+	}
+	else {
+		regsetstr(nullptr, _T("Version"), VersionStr);
+	}
+
+	if (!regexists(nullptr, _T("MainPosX")) || !regexists(nullptr, _T("GUIPosX"))) {
+		SDL_DisplayMode dm;
+		SDL_GetCurrentDisplayMode(0, &dm);
+		int x = dm.w;
+		int y = dm.h;
+		const int dpi = getdpiformonitor(0);
+		x = (x - (GUI_WIDTH * dpi / 96)) / 2;
+		y = (y - (GUI_HEIGHT * dpi / 96)) / 2;
+		x = std::max(x, 10);
+		y = std::max(y, 10);
+		/* Create and initialize all our sub-keys to the default values */
+		regsetint(nullptr, _T("MainPosX"), x);
+		regsetint(nullptr, _T("MainPosY"), y);
+		regsetint(nullptr, _T("GUIPosX"), x);
+		regsetint(nullptr, _T("GUIPosY"), y);
+	}
+
+	read_rom_list(true);
+	load_keyring(nullptr, nullptr);
+}
+
+static void makeverstr(TCHAR* s)
+{
+	if (_tcslen(AMIBERRYBETA) > 0) {
+		if (AMIBERRYPUBLICBETA == 2) {
+			_stprintf(BetaStr, _T(" (DevAlpha %s, %d.%02d.%02d)"), AMIBERRYBETA,
+				GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
+		}
+		else {
+			_stprintf(BetaStr, _T(" (%sBeta %s, %d.%02d.%02d)"), AMIBERRYPUBLICBETA > 0 ? _T("Public ") : _T(""), AMIBERRYBETA,
+				GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
+		}
+#ifdef _WIN64
+		_tcscat(BetaStr, _T(" 64-bit"));
+#endif
+		_stprintf(s, _T("Amiberry %d.%d.%d%s%s"),
+			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, BetaStr);
+	}
+	else {
+		_stprintf(s, _T("Amiberry %d.%d.%d%s (%d.%02d.%02d)"),
+			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
+#ifdef _WIN64
+		_tcscat(s, _T(" 64-bit"));
+#endif
+	}
+	if (_tcslen(AMIBERRYEXTRA) > 0) {
+		_tcscat(s, _T(" "));
+		_tcscat(s, AMIBERRYEXTRA);
+	}
+}
+
+
 int main(int argc, char* argv[])
 {
 	for (auto i = 1; i < argc; i++) {
@@ -4728,6 +4837,7 @@ int main(int argc, char* argv[])
 	}
 	create_missing_amiberry_folders();
 
+	makeverstr(VersionStr);
 	// Parse command line and remove used amiberry specific args
 	// and modify both argc & argv accordingly
 	if (!parse_amiberry_cmd_line(&argc, argv, 1))
@@ -4803,8 +4913,7 @@ int main(int argc, char* argv[])
 #endif
 	(void)atexit(SDL_Quit);
 
-	read_rom_list(true);
-	load_keyring(nullptr, nullptr);
+	initialize_ini();
 	write_log(_T("Enumerating display devices.. \n"));
 	enumeratedisplays();
 	write_log(_T("Sorting devices and modes...\n"));

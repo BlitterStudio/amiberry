@@ -20,8 +20,23 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYDATE MAKEBD(2025, 3, 16)
-#define COPYRIGHT _T("Copyright (C) 2016-2025 Dimitris Panokostas")
+#define AMIBERRYPUBLICBETA 0
+
+#if AMIBERRYPUBLICBETA
+#define AMIBERRYBETA _T("1")
+#else
+#define AMIBERRYBETA _T("")
+#endif
+
+#define AMIBERRYDATE MAKEBD(2025, 3, 21)
+#define COPYRIGHT _T("Copyright (C) 2025 Dimitris Panokostas")
+
+#ifndef AMIBERRYEXTRA
+#define AMIBERRYEXTRA _T("")
+#endif
+#ifndef AMIBERRYREV
+#define AMIBERRYREV _T("")
+#endif
 
 #define IHF_WINDOWHIDDEN 6
 
@@ -72,7 +87,7 @@ extern void setmouseactive(int monid, int active);
 extern void minimizewindow(int monid);
 extern void updatemouseclip(struct AmigaMonitor*);
 extern void updatewinrect(struct AmigaMonitor*, bool);
-int getdpiforwindow(SDL_Window* hwnd);
+int getdpiforwindow(int monid);
 void amiberry_gui_init();
 void gui_widgets_init();
 void run_gui();
