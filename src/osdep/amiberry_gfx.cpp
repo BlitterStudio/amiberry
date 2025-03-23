@@ -1079,9 +1079,9 @@ bool render_screen(const int monid, const int mode, const bool immediate)
 			return mon->render_ok;
 		}
 	}
-	gfx_lock();
+	//gfx_lock();
 	mon->render_ok = SDL2_renderframe(monid, mode, immediate);
-	gfx_unlock();
+	//gfx_unlock();
 	return mon->render_ok;
 }
 
@@ -1120,7 +1120,7 @@ void show_screen(const int monid, int mode)
 	const amigadisplay* ad = &adisplays[monid];
 	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
 
-	gfx_lock();
+	//gfx_lock();
 	//if (mode == 2 || mode == 3 || mode == 4) {
 	//	if ((mon->currentmode.flags & DM_D3D) && D3D_showframe_special && ap->gfx_strobo) {
 	//		if (mode == 4) {
@@ -1137,7 +1137,7 @@ void show_screen(const int monid, int mode)
 	//	return;
 	//}
 	if (mode >= 0 && !mon->render_ok) {
-		gfx_unlock();
+		//gfx_unlock();
 		return;
 	}
 #ifdef USE_OPENGL
@@ -1152,7 +1152,7 @@ void show_screen(const int monid, int mode)
 #else
 	SDL2_showframe(monid);
 #endif // USE_OPENGL
-	gfx_unlock();
+	//gfx_unlock();
 	mon->render_ok = false;
 }
 
@@ -1163,7 +1163,7 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 	if (!mon->amiga_window)
 		return 0;
 
-	gfx_lock();
+	//gfx_lock();
 	//
 	// Benchmarks have shown that Locking and Unlocking the Texture is slower than just calling UpdateTexture
 	// Therefore, this is disabled in Amiberry.
@@ -1178,7 +1178,7 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool first, bool skip)
 		init_row_map();
 		old_pixels = amiga_surface->pixels;
 	}
-	gfx_unlock();
+	//gfx_unlock();
 	return 1;
 }
 
@@ -1188,7 +1188,7 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 
 	// Not using SDL2_UnlockTexture due to performance reasons, see lockscr for details
 	//SDL_UnlockTexture(texture);
-	gfx_unlock();
+	//gfx_unlock();
 }
 
 uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
@@ -1201,7 +1201,7 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 	if (mon->rtg_locked) {
 		return p;
 	}
-	gfx_lock();
+	//gfx_lock();
 	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 	vidinfo->rowbytes = amiga_surface->pitch;
 	vidinfo->maxwidth = amiga_surface->w;
@@ -1209,7 +1209,7 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 	p = static_cast<uae_u8*>(amiga_surface->pixels);
 	if (!p)
 	{
-		gfx_unlock();
+		//gfx_unlock();
 	}
 	else
 	{
@@ -1221,18 +1221,18 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 void gfx_unlock_picasso(const int monid, const bool dorender)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	if (!mon->rtg_locked)
-		gfx_lock();
+	//if (!mon->rtg_locked)
+		//gfx_lock();
 	mon->rtg_locked = false;
 	if (dorender)
 	{
 		if (SDL2_renderframe(monid, true, false)) {
-			gfx_unlock();
+			//gfx_unlock();
 			mon->render_ok = true;
 			show_screen_maybe(monid, true);
 		}
 	}
-	gfx_unlock();
+	//gfx_unlock();
 }
 
 static bool canmatchdepth(void)
