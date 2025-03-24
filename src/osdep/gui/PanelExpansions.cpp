@@ -56,7 +56,7 @@ static gcn::CheckBox* chkScsiRom24bitDma;
 static gcn::DropDown* cboExpansionBoardItemSelector;
 static gcn::DropDown* cboExpansionBoardSelector;
 static gcn::CheckBox* chkExpansionBoardCheckbox;
-static gcn::TextBox* txtExpansionBoardStringBox;
+static gcn::TextField* txtExpansionBoardStringBox;
 
 static gcn::DropDown* cboCpuBoardType;
 static gcn::DropDown* cboCpuBoardSubType;
@@ -217,7 +217,7 @@ struct expansionrom_gui
 	gcn::DropDown* expansionrom_gui_itemselector;
 	gcn::DropDown* expansionrom_gui_selector;
 	gcn::CheckBox* expansionrom_gui_checkbox;
-	gcn::TextBox* expansionrom_gui_stringbox;
+	gcn::TextField* expansionrom_gui_stringbox;
 	int expansionrom_gui_settingsbits;
 	int expansionrom_gui_settingsshift;
 	int expansionrom_gui_settings;
@@ -226,7 +226,7 @@ struct expansionrom_gui
 static expansionrom_gui expansion_gui_item;
 static expansionrom_gui accelerator_gui_item;
 
-static void reset_expansionrom_gui(expansionrom_gui* eg, gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextBox* stringbox)
+static void reset_expansionrom_gui(expansionrom_gui* eg, gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextField* stringbox)
 {
 	eg->expansionrom_gui_settings = 0;
 	eg->expansionrom_gui_ebs = nullptr;
@@ -239,7 +239,7 @@ static void reset_expansionrom_gui(expansionrom_gui* eg, gcn::DropDown* itemsele
 
 static void create_expansionrom_gui(expansionrom_gui* eg, const expansionboardsettings* ebs,
 	int settings, const TCHAR* settingsstring,
-	gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextBox* stringbox)
+	gcn::DropDown* itemselector, gcn::DropDown* selector, gcn::CheckBox* checkbox, gcn::TextField* stringbox)
 {
 	bool reset = false;
 	static int recursive;
@@ -1179,7 +1179,7 @@ void InitPanelExpansions(const config_category& category)
 	chkExpansionBoardCheckbox->setForegroundColor(gui_foreground_color);
 	chkExpansionBoardCheckbox->addActionListener(expansions_action_listener);
 
-	txtExpansionBoardStringBox = new gcn::TextBox();
+	txtExpansionBoardStringBox = new gcn::TextField();
 	txtExpansionBoardStringBox->setSize(200, txtExpansionBoardStringBox->getHeight());
 	txtExpansionBoardStringBox->setId("txtExpansionBoardStringBox");
 	txtExpansionBoardStringBox->setBaseColor(gui_base_color);
@@ -1316,7 +1316,7 @@ void InitPanelExpansions(const config_category& category)
 	grpExpansionBoard->add(cboScsiRomSubSelect, posX, cboScsiRomSelect->getY() + cboScsiRomSelect->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(chkScsiRomFileAutoboot, chkScsiRomSelected->getX(), cboScsiRomSubSelect->getY());
 	grpExpansionBoard->add(chkScsiRomFilePcmcia, chkScsiRomFileAutoboot->getX() + chkScsiRomFileAutoboot->getWidth(), chkScsiRomFileAutoboot->getY());
-	grpExpansionBoard->add(txtExpansionBoardStringBox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY());
+	grpExpansionBoard->add(txtExpansionBoardStringBox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY() + chkScsiRomFileAutoboot->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(chkExpansionBoardCheckbox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY() + chkScsiRomFileAutoboot->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboExpansionBoardItemSelector, posX, cboScsiRomSubSelect->getY() + cboScsiRomSubSelect->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboExpansionBoardSelector, chkScsiRomSelected->getX(), cboExpansionBoardItemSelector->getY());
