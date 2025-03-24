@@ -822,7 +822,7 @@ static void setupcursor()
 	if (rbc->rtgmem_type >= GFXBOARD_HARDWARE)
 		return;
 
-	gfx_lock ();
+	//gfx_lock ();
 	setupcursor_needed = 1;
 	if (cursordata && cursorwidth && cursorheight) {
 		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_BGRA32);
@@ -856,7 +856,7 @@ static void setupcursor()
 	} else {
 		P96TRACE_SPR((_T("cursorsurfaced3d LockRect() failed %08x\n"), hr));
 	}
-	gfx_unlock ();
+	//gfx_unlock ();
 #else
 	uae_u8 *dptr;
 	int bpp = 4;
@@ -2689,7 +2689,6 @@ static void CopyLibResolutionStructureU2A(TrapContext *ctx, const struct LibReso
 	trap_put_long(ctx, amigamemptr + 10, amigamemptr + PSSO_LibResolution_P96ID);
 	trap_put_long(ctx, amigamemptr + PSSO_LibResolution_BoardInfo, libres->BoardInfo);
 }
-
 
 void picasso_allocatewritewatch (int index, int gfxmemsize)
 {
