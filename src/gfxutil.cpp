@@ -363,7 +363,7 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 			if (bpp <= 16) {
 				rc[i] = do_byteswap_16(rc[i]);
 				gc[i] = do_byteswap_16(gc[i]);
-				bc[i] = do_byteswap_16 (bc[i]);
+				bc[i] = do_byteswap_16(bc[i]);
 			} else {
 				rc[i] = do_byteswap_32(rc[i]);
 				gc[i] = do_byteswap_32(gc[i]);

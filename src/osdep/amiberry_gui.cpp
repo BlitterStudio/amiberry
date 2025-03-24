@@ -1115,7 +1115,7 @@ static void gui_flicker_led2(int led, int unitnum, int status)
 	}
 #endif
 	*p = status;
-	resetcounter[led] = 4;
+	resetcounter[led] = 15;
 	if (old != *p)
 		gui_led(led, *p, -1);
 }
