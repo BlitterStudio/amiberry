@@ -50,53 +50,53 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 }
 
 ConfigCategory categories[] = {
-	{"About", "amigainfo.ico", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
+	{"About", "amigainfo.png", nullptr, nullptr, InitPanelAbout, ExitPanelAbout, RefreshPanelAbout,
 		HelpPanelAbout
 	},
-	{"Paths", "paths.ico", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths, HelpPanelPaths},
-	{"Quickstart", "quickstart.ico", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
+	{"Paths", "paths.png", nullptr, nullptr, InitPanelPaths, ExitPanelPaths, RefreshPanelPaths, HelpPanelPaths},
+	{"Quickstart", "quickstart.png", nullptr, nullptr, InitPanelQuickstart, ExitPanelQuickstart,
 		RefreshPanelQuickstart, HelpPanelQuickstart
 	},
-	{"Configurations", "file.ico", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
+	{"Configurations", "file.png", nullptr, nullptr, InitPanelConfig, ExitPanelConfig, RefreshPanelConfig,
 		HelpPanelConfig
 	},
-	{"CPU and FPU", "cpu.ico", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU, HelpPanelCPU},
-	{"Chipset", "cpu.ico", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
+	{"CPU and FPU", "cpu.png", nullptr, nullptr, InitPanelCPU, ExitPanelCPU, RefreshPanelCPU, HelpPanelCPU},
+	{"Chipset", "cpu.png", nullptr, nullptr, InitPanelChipset, ExitPanelChipset, RefreshPanelChipset,
 		HelpPanelChipset
 	},
-	{"ROM", "chip.ico", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM, HelpPanelROM},
-	{"RAM", "chip.ico", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM, HelpPanelRAM},
-	{"Floppy drives", "35floppy.ico", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
+	{"ROM", "chip.png", nullptr, nullptr, InitPanelROM, ExitPanelROM, RefreshPanelROM, HelpPanelROM},
+	{"RAM", "chip.png", nullptr, nullptr, InitPanelRAM, ExitPanelRAM, RefreshPanelRAM, HelpPanelRAM},
+	{"Floppy drives", "35floppy.png", nullptr, nullptr, InitPanelFloppy, ExitPanelFloppy, RefreshPanelFloppy,
 		HelpPanelFloppy
 	},
-	{"Hard drives/CD", "drive.ico", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
-	{"Expansions", "expansion.ico", nullptr, nullptr, InitPanelExpansions, ExitPanelExpansions,
+	{"Hard drives/CD", "drive.png", nullptr, nullptr, InitPanelHD, ExitPanelHD, RefreshPanelHD, HelpPanelHD},
+	{"Expansions", "expansion.png", nullptr, nullptr, InitPanelExpansions, ExitPanelExpansions,
 		RefreshPanelExpansions, HelpPanelExpansions},
-	{"RTG board", "expansion.ico", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
+	{"RTG board", "expansion.png", nullptr, nullptr, InitPanelRTG, ExitPanelRTG,
 		RefreshPanelRTG, HelpPanelRTG
 	},
-	{"Hardware info", "expansion.ico", nullptr, nullptr, InitPanelHWInfo, ExitPanelHWInfo, RefreshPanelHWInfo, HelpPanelHWInfo},
-	{"Display", "screen.ico", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
+	{"Hardware info", "expansion.png", nullptr, nullptr, InitPanelHWInfo, ExitPanelHWInfo, RefreshPanelHWInfo, HelpPanelHWInfo},
+	{"Display", "screen.png", nullptr, nullptr, InitPanelDisplay, ExitPanelDisplay, RefreshPanelDisplay,
 		HelpPanelDisplay
 	},
-	{"Sound", "sound.ico", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
-	{"Input", "joystick.ico", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
-	{"IO Ports", "port.ico", nullptr, nullptr, InitPanelIO, ExitPanelIO, RefreshPanelIO, HelpPanelIO},
+	{"Sound", "sound.png", nullptr, nullptr, InitPanelSound, ExitPanelSound, RefreshPanelSound, HelpPanelSound},
+	{"Input", "joystick.png", nullptr, nullptr, InitPanelInput, ExitPanelInput, RefreshPanelInput, HelpPanelInput},
+	{"IO Ports", "port.png", nullptr, nullptr, InitPanelIO, ExitPanelIO, RefreshPanelIO, HelpPanelIO},
 	{"Custom controls", "controller.png", nullptr, nullptr, InitPanelCustom, ExitPanelCustom,
 		RefreshPanelCustom, HelpPanelCustom
 	},
-	{"Disk swapper", "35floppy.ico", nullptr, nullptr, InitPanelDiskSwapper, ExitPanelDiskSwapper, RefreshPanelDiskSwapper, HelpPanelDiskSwapper},
-	{"Miscellaneous", "misc.ico", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
-	{ "Priority", "misc.ico", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
+	{"Disk swapper", "35floppy.png", nullptr, nullptr, InitPanelDiskSwapper, ExitPanelDiskSwapper, RefreshPanelDiskSwapper, HelpPanelDiskSwapper},
+	{"Miscellaneous", "misc.png", nullptr, nullptr, InitPanelMisc, ExitPanelMisc, RefreshPanelMisc, HelpPanelMisc},
+	{ "Priority", "misc.png", nullptr, nullptr, InitPanelPrio, ExitPanelPrio, RefreshPanelPrio, HelpPanelPrio},
 	{"Savestates", "savestate.png", nullptr, nullptr, InitPanelSavestate, ExitPanelSavestate,
 		RefreshPanelSavestate, HelpPanelSavestate
 	},
 	{"Virtual Keyboard", "keyboard.png", nullptr, nullptr, InitPanelVirtualKeyboard, 
 		ExitPanelVirtualKeyboard, RefreshPanelVirtualKeyboard, HelpPanelVirtualKeyboard
 	},
-	{"WHDLoad", "drive.ico", nullptr, nullptr, InitPanelWHDLoad, ExitPanelWHDLoad, RefreshPanelWHDLoad, HelpPanelWHDLoad},
+	{"WHDLoad", "drive.png", nullptr, nullptr, InitPanelWHDLoad, ExitPanelWHDLoad, RefreshPanelWHDLoad, HelpPanelWHDLoad},
 
-	{"Themes", "amigainfo.ico", nullptr, nullptr, InitPanelThemes, ExitPanelThemes, RefreshPanelThemes, HelpPanelThemes},
+	{"Themes", "amigainfo.png", nullptr, nullptr, InitPanelThemes, ExitPanelThemes, RefreshPanelThemes, HelpPanelThemes},
 
 	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
