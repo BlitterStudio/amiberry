@@ -49,11 +49,11 @@
   </screenshots>
   <releases>
 	<release version="v7.0.6" date="2025-03-21"/>
-    <release version="v7.0.5" date="2025-02-22"/>
+  <release version="v7.0.5" date="2025-02-22"/>
 	<release version="v7.0.4" date="2025-02-08"/>
 	<release version="v7.0.3" date="2025-02-06"/>
 	<release version="v7.0.2" date="2025-02-02"/>	  
-    <release version="v7.0.1" date="2025-01-16"/>
+  <release version="v7.0.1" date="2025-01-16"/>
 	<release version="v7.0.0" date="2025-01-14"/>
 	<release version="v6.3.4" date="2024-09-01"/>
 	<release version="v6.3.3" date="2024-06-19"/>
