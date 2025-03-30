@@ -2231,7 +2231,7 @@ void target_fixup_options(uae_prefs* p)
 		}
 	}
 	/* switch from 32 to 16 or vice versa if mode does not exist */
-	//if (1 || isfullscreen() > 0) {
+	if (md->DisplayModes != nullptr) {
 		int depth = p->color_mode == 5 ? 4 : 2;
 		for (int i = 0; md->DisplayModes[i].depth >= 0; i++) {
 			if (md->DisplayModes[i].depth == depth) {
@@ -2242,7 +2242,7 @@ void target_fixup_options(uae_prefs* p)
 		if (depth) {
 			p->color_mode = p->color_mode == 5 ? 2 : 5;
 		}
-	//}
+	}
 
 	if ((p->gfx_apmode[0].gfx_vsyncmode || p->gfx_apmode[1].gfx_vsyncmode)) {
 		if (p->produce_sound && sound_devices[p->soundcard]->type == SOUND_DEVICE_SDL2) {

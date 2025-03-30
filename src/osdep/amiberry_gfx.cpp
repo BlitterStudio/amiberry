@@ -541,7 +541,7 @@ struct MultiDisplay* getdisplay(const struct uae_prefs* p, const int monid)
 	const struct AmigaMonitor* mon = &AMonitors[monid];
 	if (monid > 0 && mon->md)
 		return mon->md;
-	return getdisplay2(p, -1);
+	return getdisplay2(p, 0);
 }
 
 void desktop_coords(const int monid, int* dw, int* dh, int* ax, int* ay, int* aw, int* ah)
@@ -701,7 +701,7 @@ const TCHAR* target_get_display_name(const int num, const bool friendlyname)
 {
 	if (num <= 0)
 		return nullptr;
-	const struct MultiDisplay* md = getdisplay2(nullptr, num - 1);
+	const struct MultiDisplay* md = getdisplay2(nullptr, 0);
 	if (!md)
 		return nullptr;
 	if (friendlyname)
