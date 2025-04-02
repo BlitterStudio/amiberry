@@ -4049,14 +4049,14 @@ static void action_read_link(TrapContext *ctx, Unit *unit, dpacket *packet)
 			}
 		}
 	}
-	if (!a->softlink)
-		err = ERROR_OBJECT_WRONG_TYPE;
 	if (err != 0) {
 		xfree(extrapath);
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, err);
 		return;
 	}
+	if (!a->softlink)
+		err = ERROR_OBJECT_WRONG_TYPE;
 	_tcscpy (tmp, a->nname);
 	write_log (_T("Resolving softlink '%s'\n"), tmp);
 	if (!my_resolvesoftlink (tmp, sizeof tmp / sizeof (TCHAR), false)) {
