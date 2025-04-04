@@ -4764,21 +4764,21 @@ static void makeverstr(TCHAR* s)
 {
 	if (_tcslen(AMIBERRYBETA) > 0) {
 		if (AMIBERRYPUBLICBETA == 2) {
-			_stprintf(BetaStr, _T(" (DevAlpha %s, %d.%02d.%02d)"), AMIBERRYBETA,
+			_sntprintf(BetaStr, sizeof BetaStr, _T(" (DevAlpha %s, %d.%02d.%02d)"), AMIBERRYBETA,
 				GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
 		}
 		else {
-			_stprintf(BetaStr, _T(" (%sBeta %s, %d.%02d.%02d)"), AMIBERRYPUBLICBETA > 0 ? _T("Public ") : _T(""), AMIBERRYBETA,
+			_sntprintf(BetaStr, sizeof BetaStr, _T(" (%sBeta %s, %d.%02d.%02d)"), AMIBERRYPUBLICBETA > 0 ? _T("Public ") : _T(""), AMIBERRYBETA,
 				GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
 		}
 #ifdef _WIN64
 		_tcscat(BetaStr, _T(" 64-bit"));
 #endif
-		_stprintf(s, _T("Amiberry %d.%d.%d%s%s"),
+		_sntprintf(s, sizeof s, _T("Amiberry %d.%d.%d%s%s"),
 			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, BetaStr);
 	}
 	else {
-		_stprintf(s, _T("Amiberry %d.%d.%d%s (%d.%02d.%02d)"),
+		_sntprintf(s, sizeof s, _T("Amiberry %d.%d.%d%s (%d.%02d.%02d)"),
 			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
 #ifdef _WIN64
 		_tcscat(s, _T(" 64-bit"));
@@ -4793,6 +4793,8 @@ static void makeverstr(TCHAR* s)
 
 int main(int argc, char* argv[])
 {
+	makeverstr(VersionStr);
+
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
 			usage();
@@ -4837,7 +4839,6 @@ int main(int argc, char* argv[])
 	}
 	create_missing_amiberry_folders();
 
-	makeverstr(VersionStr);
 	// Parse command line and remove used amiberry specific args
 	// and modify both argc & argv accordingly
 	if (!parse_amiberry_cmd_line(&argc, argv, 1))
