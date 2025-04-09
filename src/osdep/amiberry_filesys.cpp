@@ -550,7 +550,7 @@ int my_readdir(struct my_opendir_s* mod, TCHAR* name)
 		std::string string_output;
 		if (!utf8_to_latin1_string(result, string_output)) {
 			write_log("my_readdir: utf8_to_latin1_string conversion failed for %s\n", result.c_str());
-			return 0;
+			continue;
 		}
 
 		_tcscpy(name, string_output.c_str());
