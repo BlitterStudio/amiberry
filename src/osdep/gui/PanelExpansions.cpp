@@ -1314,8 +1314,8 @@ void InitPanelExpansions(const config_category& category)
 	grpExpansionBoard->add(cboScsiRomFile, chkScsiRomSelected->getX(), chkScsiRomSelected->getY());
 	grpExpansionBoard->add(btnScsiRomChooser, cboScsiRomFile->getX() + cboScsiRomFile->getWidth() + DISTANCE_NEXT_X, cboScsiRomFile->getY());
 	grpExpansionBoard->add(cboScsiRomSubSelect, posX, cboScsiRomSelect->getY() + cboScsiRomSelect->getHeight() + DISTANCE_NEXT_Y);
-	grpExpansionBoard->add(chkScsiRomFileAutoboot, chkScsiRomSelected->getX(), cboScsiRomSubSelect->getY());
-	grpExpansionBoard->add(chkScsiRomFilePcmcia, chkScsiRomFileAutoboot->getX() + chkScsiRomFileAutoboot->getWidth(), chkScsiRomFileAutoboot->getY());
+	grpExpansionBoard->add(chkScsiRomFileAutoboot, cboScsiRomSelectNum->getX(), cboScsiRomSelectNum->getY() + cboScsiRomSelectNum->getHeight() + DISTANCE_NEXT_Y);
+	grpExpansionBoard->add(chkScsiRomFilePcmcia, chkScsiRomFileAutoboot->getX() + chkScsiRomFileAutoboot->getWidth() + 2, chkScsiRomFileAutoboot->getY());
 	grpExpansionBoard->add(txtExpansionBoardStringBox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY() + chkScsiRomFileAutoboot->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(chkExpansionBoardCheckbox, chkScsiRomFileAutoboot->getX(), chkScsiRomFileAutoboot->getY() + chkScsiRomFileAutoboot->getHeight() + DISTANCE_NEXT_Y);
 	grpExpansionBoard->add(cboExpansionBoardItemSelector, posX, cboScsiRomSubSelect->getY() + cboScsiRomSubSelect->getHeight() + DISTANCE_NEXT_Y);
