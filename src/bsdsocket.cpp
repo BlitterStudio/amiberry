@@ -208,8 +208,8 @@ bool checksd(TrapContext *ctx, SB, int sd)
 
 void setsd(TrapContext *ctx, SB, int sd, SOCKET_TYPE s)
 {
-	callfdcallback(ctx, sb, sd - 1, FDCB_ALLOC);
-	sb->dtable[sd - 1] = s;
+	uae_u32 v = callfdcallback(ctx, sb, sd - 1, FDCB_ALLOC);
+	sb->dtable[sd - 1] = (v == 0 ? s : INVALID_SOCKET);
 }
 
 /* Socket descriptor/opaque socket handle management */
@@ -227,7 +227,7 @@ int getsd (TrapContext *ctx, SB, SOCKET_TYPE s)
 	/* create new table entry */
 	fdcb = 0;
 	for (i = 0; i < sb->dtablesize; i++) {
-		if (dt[i] == -1) {
+		if (dt[i] == INVALID_SOCKET) {
 			if (callfdcallback(ctx, sb, i, FDCB_CHECK)) {
 				/* fd was allocated by link lib */
 				dt[i] = -2;
@@ -301,7 +301,7 @@ SOCKET_TYPE getsock (TrapContext *ctx, SB, int sd)
 void releasesock (TrapContext *ctx, SB, int sd)
 {
 	if ((unsigned int) (sd - 1) < (unsigned int) sb->dtablesize) {
-		sb->dtable[sd - 1] = -1;
+		sb->dtable[sd - 1] = INVALID_SOCKET;
 		callfdcallback(ctx, sb, sd - 1, FDCB_FREE);
 	}
 }
@@ -788,15 +788,16 @@ static uae_u32 REGPARAM2 bsdsocklib_ObtainSocket (TrapContext *ctx)
 	}
 	s = sockdata->sockpoolsocks[i];
 
-	sd = getsd(ctx, sb, s);
+	sd = getsd(ctx, sb, s); /* FBCD_CHECK */
 
 	BSDTRACE ((_T(" -> Socket=%d\n"), sd));
 
 	if (sd != -1) {
-		sb->ftable[sd - 1] = sockdata->sockpoolflags[i];
-		callfdcallback(ctx, sb, sd - 1, FDCB_ALLOC);
-		sockdata->sockpoolids[i] = UNIQUE_ID;
-		return sd - 1;
+		if (!callfdcallback(ctx, sb, sd - 1, FDCB_ALLOC)) { /* can fail */
+			sb->ftable[sd - 1] = sockdata->sockpoolflags[i];
+			sockdata->sockpoolids[i] = UNIQUE_ID;
+			return sd - 1;
+		}
 	}
 
 	return -1;

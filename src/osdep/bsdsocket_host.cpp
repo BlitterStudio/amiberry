@@ -1537,7 +1537,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 					bsd_amigaside_FD_ZERO(a_set);
 					for (i = 0; i < sb->nfds; i++) {
 						a_s = getsock(ctx, sb, i + 1);
-						if (a_s != -1) {
+						if (!(a_s < 0)) {
 							if (FD_ISSET(a_s, &sets[set])) {
 								write_log("WaitSelect: NativeSide %d set. AmigaSide %d.\n", a_s, i);
 
