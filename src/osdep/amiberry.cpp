@@ -1561,6 +1561,15 @@ void handle_key_event(const SDL_Event& event)
 	int scancode = event.key.keysym.scancode;
 	const auto pressed = event.key.state;
 
+	if (key_swap_hack == 1) {
+		if (scancode == SDL_SCANCODE_F11) {
+			scancode = SDL_SCANCODE_EQUALS;
+		}
+		else if (scancode == SDL_SCANCODE_EQUALS) {
+			scancode = SDL_SCANCODE_F11;
+		}
+	}
+
 	if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key) && scancode == SDL_SCANCODE_RCTRL)
 	{
 		scancode = SDL_SCANCODE_RGUI;
@@ -4755,6 +4764,8 @@ static void initialize_ini()
 		regsetint(nullptr, _T("GUIPosX"), x);
 		regsetint(nullptr, _T("GUIPosY"), y);
 	}
+
+	regqueryint(NULL, _T("KeySwapBackslashF11"), &key_swap_hack);
 
 	read_rom_list(true);
 	load_keyring(nullptr, nullptr);

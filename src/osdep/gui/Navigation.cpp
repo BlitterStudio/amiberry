@@ -345,7 +345,7 @@ static NavigationMap nav_map[] =
 
 	//  active            move left           move right          move up           move down
 	// PanelInput
-	{ "cboPort0", "Input", "Input", "optBoth", "cboPort0Autofire" },
+	{ "cboPort0", "Input", "Input", "chkSwapBackslashF11", "cboPort0Autofire" },
 	{ "cboPort0Autofire", "Input", "cboPort0mode", "cboPort0", "cboPort1" },
 	{ "cboPort0mode", "cboPort0Autofire", "cmdRemap0", "cboPort0", "cboPort1" },
 	{ "cmdRemap0", "cboPort0mode", "Input", "cboPort0", "cboPort1" },
@@ -367,9 +367,10 @@ static NavigationMap nav_map[] =
 	{ "sldMouseSpeed", "", "", "sldAnalogJoyMouseSpeed", "chkMagicMouseUntrap" },
 	{ "chkMagicMouseUntrap", "chkMouseHack", "", "sldMouseSpeed", "optHost" },
 	{ "chkMouseHack", "Input", "chkMagicMouseUntrap", "cboAutofireRate", "optBoth" },
-	{ "optBoth", "Input", "optNative", "chkMouseHack", "cboPort0" },
-	{ "optNative", "optBoth", "optHost", "chkMouseHack", "cboPort0" },
-	{ "optHost", "optNative", "", "chkMouseHack", "cboPort0" },
+	{ "optBoth", "Input", "optNative", "chkMouseHack", "chkSwapBackslashF11" },
+	{ "optNative", "optBoth", "optHost", "chkMouseHack", "chkSwapBackslashF11" },
+	{ "optHost", "optNative", "", "chkMouseHack", "chkSwapBackslashF11" },
+	{ "chkSwapBackslashF11", "Input", "Input", "optBoth", "cboPort0" },
 
 	// active		move left		move right			move up			move down
 	// PanelIO

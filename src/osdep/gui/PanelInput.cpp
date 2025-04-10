@@ -78,6 +78,8 @@ static gcn::DropDown* joysmm[] = { cboPort0mousemode, cboPort1mousemode, nullptr
 static gcn::Button* cmdRemap0;
 static gcn::Button* cmdRemap1;
 
+static gcn::CheckBox* chkSwapBackslashF11;
+
 static gcn::StringListModel ctrlPortList;
 static int portListIDs[MAX_INPUT_DEVICES + JSEM_LASTKBD + 1];
 
@@ -316,6 +318,12 @@ public:
 				save_mapping_to_file(mapping);
 			}
 		}
+
+		else if (actionEvent.getSource() == chkSwapBackslashF11)
+		{
+			key_swap_hack = chkSwapBackslashF11->isSelected();
+			regsetint(NULL, _T("KeySwapBackslashF11"), key_swap_hack);
+		}
 		
 		RefreshPanelInput();
 		RefreshPanelRTG(); // needed to enable the Hardware RTG sprite
@@ -530,6 +538,13 @@ void InitPanelInput(const config_category& category)
 	chkInputAutoswitch->setForegroundColor(gui_foreground_color);
 	chkInputAutoswitch->addActionListener(inputActionListener);
 
+	chkSwapBackslashF11 = new gcn::CheckBox("Swap Backslash/F11");
+	chkSwapBackslashF11->setId("chkSwapBackslashF11");
+	chkSwapBackslashF11->setBaseColor(gui_base_color);
+	chkSwapBackslashF11->setBackgroundColor(gui_background_color);
+	chkSwapBackslashF11->setForegroundColor(gui_foreground_color);
+	chkSwapBackslashF11->addActionListener(inputActionListener);
+
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
 	category.panel->add(joys[0], DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
@@ -601,6 +616,9 @@ void InitPanelInput(const config_category& category)
 	category.panel->add(optBoth, DISTANCE_BORDER, posY);
 	category.panel->add(optNative, optBoth->getX() + optBoth->getWidth() + 8, posY);
 	category.panel->add(optHost, optNative->getX() + optNative->getWidth() + 8, posY);
+	posY += optBoth->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(chkSwapBackslashF11, DISTANCE_BORDER, posY);
 	
 	for (auto& portsubmode : portsubmodes)
 	{
@@ -664,6 +682,7 @@ void ExitPanelInput()
 
 	delete cmdRemap0;
 	delete cmdRemap1;
+	delete chkSwapBackslashF11;
 }
 
 void RefreshPanelInput()
@@ -782,6 +801,7 @@ void RefreshPanelInput()
 		default:
 			break;
 	}
+	chkSwapBackslashF11->setSelected(key_swap_hack);
 }
 
 bool HelpPanelInput(std::vector<std::string>& helptext)
