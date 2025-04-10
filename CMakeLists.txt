@@ -26,7 +26,7 @@ option(USE_LIBMPEG2 "Use LibMPEG2" ON)
 ## Determine proper semantic version
 set(VERSION_MAJOR "7")
 set(VERSION_MINOR "0")
-set(VERSION_PATCH "7")
+set(VERSION_PATCH "8")
 set(VERSION_PRE_RELEASE "")
 
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
