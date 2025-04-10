@@ -4774,11 +4774,11 @@ static void makeverstr(TCHAR* s)
 #ifdef _WIN64
 		_tcscat(BetaStr, _T(" 64-bit"));
 #endif
-		_sntprintf(s, sizeof s, _T("Amiberry %d.%d.%d%s%s"),
+		_sntprintf(s, sizeof VersionStr, _T("Amiberry %d.%d.%d%s%s"),
 			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, BetaStr);
 	}
 	else {
-		_sntprintf(s, sizeof s, _T("Amiberry %d.%d.%d%s (%d.%02d.%02d)"),
+		_sntprintf(s, sizeof VersionStr, _T("Amiberry %d.%d.%d%s (%d.%02d.%02d)"),
 			UAEMAJOR, UAEMINOR, UAESUBREV, AMIBERRYREV, GETBDY(AMIBERRYDATE), GETBDM(AMIBERRYDATE), GETBDD(AMIBERRYDATE));
 #ifdef _WIN64
 		_tcscat(s, _T(" 64-bit"));
