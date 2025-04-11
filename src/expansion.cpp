@@ -6069,7 +6069,7 @@ const struct expansionromtype expansionroms[] = {
 
 	},
 #endif
-#ifndef NDEBUG
+#ifndef AMIBERRY
 	{
 		_T("dev_ide"), _T("DEV IDE"), NULL,
 		NULL, dev_hd_init, NULL, dev_hd_add_ide_unit, ROMTYPE_DEVHD | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, true,
