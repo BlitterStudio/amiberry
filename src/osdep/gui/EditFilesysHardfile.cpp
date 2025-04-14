@@ -173,9 +173,9 @@ static void sethardfile()
 	chkDoNotMount->setSelected(!ISAUTOMOUNT(&current_hfdlg.ci));
 	chkVirtBootable->setEnabled(disables);
 	chkDoNotMount->setEnabled(disables);
-	chkVirtBootable->setVisible(!disables);
-	chkDoNotMount->setVisible(!disables);
-	txtBootPri->setVisible(!disables);
+	chkVirtBootable->setVisible(disables);
+	chkDoNotMount->setVisible(disables);
+	txtBootPri->setVisible(disables);
 	chkManualGeometry->setVisible(!rdb);
 	if (rdb)
 	{
