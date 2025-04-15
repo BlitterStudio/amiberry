@@ -2619,11 +2619,6 @@ void close_windows(struct AmigaMonitor* mon)
 		mon->amiga_renderer = nullptr;
 	}
 #endif
-	if (mon->amiga_window && !kmsdrm_detected)
-	{
-		SDL_DestroyWindow(mon->amiga_window);
-		mon->amiga_window = nullptr;
-	}
 
 	if (currprefs.vkbd_enabled)
 		vkbd_quit();
