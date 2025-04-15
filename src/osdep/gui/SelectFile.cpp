@@ -380,10 +380,14 @@ static void SelectFileLoop()
 	bool nav_left, nav_right;
 	while (SDL_PollEvent(&event))
 	{
+		const auto* focus_hdl = gui_top->_getFocusHandler();
+		const auto* active_widget = focus_hdl->getFocused();
 		nav_left = nav_right = false;
 		switch (event.type)
 		{
 		case SDL_KEYDOWN:
+			if (active_widget == txtCurrent || active_widget == txtFilename)
+				break;
 			got_event = handle_keydown(event, dialogFinished, nav_left, nav_right);
 			break;
 
