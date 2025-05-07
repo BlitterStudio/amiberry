@@ -6,6 +6,10 @@
 #include "zfile.h"
 #include "uae.h"
 
+#ifdef __MACH__
+#include <sys/stat.h>
+#include <sys/disk.h>
+#endif
 
 struct hardfilehandle
 {
@@ -211,11 +215,44 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	_tcscpy(hfd->vendor_id, _T("UAE"));
 	_tcscpy(hfd->product_rev, _T("0.4"));
 	if (h != nullptr) {
-		uae_s64 pos = _ftelli64(h);
-		_fseeki64(h, 0, SEEK_END);
-		uae_s64 size = _ftelli64(h);
-		_fseeki64(h, pos, SEEK_SET);
-
+		uae_s64 size;
+#ifdef __MACH__
+		// check type of file
+		struct stat st{};
+		int ret = stat(name,&st);
+		if(ret) {
+			write_log ("osx: can't stat '%s'\n", name);
+			goto end;
+		}
+		// block devices need special handling on osx
+		if(S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode)) {
+			uint32_t block_size;
+			uint64_t block_count;
+			int fh = fileno(h);
+			// get number of blocks
+			ret = ioctl(fh, DKIOCGETBLOCKCOUNT, &block_count);
+			if(ret) {
+				write_log ("osx: can't get block count of '%s'(%d)\n", name, fh);
+				goto end;
+			}
+			// get block size
+			ret = ioctl(fh, DKIOCGETBLOCKSIZE, &block_size);
+			if(ret) {
+				write_log ("osx: can't get block size of '%s'(%d)\n", name, fh);
+				goto end;
+			}
+			write_log("osx: found raw device: block_size=%u block_count=%lu\n",
+					  block_size, block_count);
+			size = block_size * block_count;
+		} else {
+#endif
+			uae_s64 pos = _ftelli64(h);
+			_fseeki64(h, 0, SEEK_END);
+			size = _ftelli64(h);
+			_fseeki64(h, pos, SEEK_SET);
+#ifdef __MACH__
+		}
+#endif
 		size &= ~(hfd->ci.blocksize - 1);
 		hfd->physsize = hfd->virtsize = size;
 		if (hfd->physsize < hfd->ci.blocksize || hfd->physsize == 0) {
