@@ -49,6 +49,12 @@
 
 #include <csignal>
 #include <arpa/inet.h>
+#include <cstring>
+#if defined(__linux__)
+#include <pthread.h>
+#elif defined(__APPLE__)
+#include <mutex>
+#endif
 
 #define WAITSIGNAL  waitsig (ctx, sb)
 
@@ -755,6 +761,10 @@ static int bsdlib_threadfunc(void* arg)
 
 	write_log("THREAD_START\n");
 
+#if defined(__APPLE__)
+	static std::mutex hostent_mutex;
+#endif
+
 	while (1) {
 		uae_sem_wait(&sb->sem);
 
@@ -784,15 +794,35 @@ static int bsdlib_threadfunc(void* arg)
 			break;
 
 		case 4: {     /* Gethostbyname */
+#if defined(__linux__)
+			struct hostent hent, *tmphostent = nullptr;
+			char buf[1024];
+			int herr, ret;
+			ret = gethostbyname_r((char*)get_real_address(sb->name), &hent, buf, sizeof(buf), &tmphostent, &herr);
+			if (ret == 0 && tmphostent) {
+				copyHostent(ctx, tmphostent, sb);
+				bsdsocklib_setherrno(ctx, sb, 0);
+			} else {
+				bsdsocklib_setherrno(ctx, sb, herr);
+			}
+#elif defined(__APPLE__)
+			std::lock_guard<std::mutex> lock(hostent_mutex);
 			struct hostent* tmphostent = gethostbyname((char*)get_real_address(sb->name));
-
 			if (tmphostent) {
 				copyHostent(ctx, tmphostent, sb);
 				bsdsocklib_setherrno(ctx, sb, 0);
-			}
-			else
+			} else {
 				SETHERRNO;
-
+			}
+#else
+			struct hostent* tmphostent = gethostbyname((char*)get_real_address(sb->name));
+			if (tmphostent) {
+				copyHostent(ctx, tmphostent, sb);
+				bsdsocklib_setherrno(ctx, sb, 0);
+			} else {
+				SETHERRNO;
+			}
+#endif
 			break;
 		}
 
@@ -805,15 +835,35 @@ static int bsdlib_threadfunc(void* arg)
 			break;
 
 		case 7: {
+#if defined(__linux__)
+			struct hostent hent, *tmphostent = nullptr;
+			char buf[1024];
+			int herr, ret;
+			ret = gethostbyaddr_r((char*)get_real_address(sb->name), sb->a_addrlen, sb->flags, &hent, buf, sizeof(buf), &tmphostent, &herr);
+			if (ret == 0 && tmphostent) {
+				copyHostent(ctx, tmphostent, sb);
+				bsdsocklib_setherrno(ctx, sb, 0);
+			} else {
+				bsdsocklib_setherrno(ctx, sb, herr);
+			}
+#elif defined(__APPLE__)
+			std::lock_guard<std::mutex> lock(hostent_mutex);
 			struct hostent* tmphostent = gethostbyaddr(get_real_address(sb->name), sb->a_addrlen, sb->flags);
-
 			if (tmphostent) {
 				copyHostent(ctx, tmphostent, sb);
 				bsdsocklib_setherrno(ctx, sb, 0);
-			}
-			else
+			} else {
 				SETHERRNO;
-
+			}
+#else
+			struct hostent* tmphostent = gethostbyaddr(get_real_address(sb->name), sb->a_addrlen, sb->flags);
+			if (tmphostent) {
+				copyHostent(ctx, tmphostent, sb);
+				bsdsocklib_setherrno(ctx, sb, 0);
+			} else {
+				SETHERRNO;
+			}
+#endif
 			break;
 		}
 		}
