@@ -1055,7 +1055,12 @@ uae_u32 host_bind(TrapContext *ctx, SB, uae_u32 sd, uae_u32 name, uae_u32 namele
 	printSockAddr (&addr);
 	if ((success = ::bind (s, (struct sockaddr *)&addr, len)) != (uae_u32)0) {
 		SETERRNO;
-		write_log("failed (%d)\n",sb->sb_errno);
+		// Improved error logging
+		write_log("failed (%d: %s)\n", sb->sb_errno, strerror(errno));
+		// Special message for privileged ports
+		if (errno == EACCES && ntohs(addr.sin_port) < 1024) {
+			write_log("bind() failed: Port %d is privileged (<1024), requires root privileges.\n", ntohs(addr.sin_port));
+		}
 	} else {
 		write_log("OK\n");
 	}
