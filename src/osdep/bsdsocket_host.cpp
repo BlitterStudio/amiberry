@@ -54,6 +54,10 @@
 #include <pthread.h>
 #elif defined(__APPLE__)
 #include <mutex>
+static std::mutex bsdsock_mutex;
+#else
+#include <mutex>
+static std::mutex bsdsock_mutex;
 #endif
 
 #define WAITSIGNAL  waitsig (ctx, sb)
@@ -761,10 +765,6 @@ static int bsdlib_threadfunc(void* arg)
 
 	write_log("THREAD_START\n");
 
-#if defined(__APPLE__)
-	static std::mutex hostent_mutex;
-#endif
-
 	while (1) {
 		uae_sem_wait(&sb->sem);
 
@@ -804,23 +804,17 @@ static int bsdlib_threadfunc(void* arg)
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				bsdsocklib_setherrno(ctx, sb, herr);
-			}
-#elif defined(__APPLE__)
-			std::lock_guard<std::mutex> lock(hostent_mutex);
-			struct hostent* tmphostent = gethostbyname((char*)get_real_address(sb->name));
-			if (tmphostent) {
-				copyHostent(ctx, tmphostent, sb);
-				bsdsocklib_setherrno(ctx, sb, 0);
-			} else {
-				SETHERRNO;
+				SETERRNO;
 			}
 #else
+			std::lock_guard<std::mutex> lock(bsdsock_mutex);
 			struct hostent* tmphostent = gethostbyname((char*)get_real_address(sb->name));
 			if (tmphostent) {
 				copyHostent(ctx, tmphostent, sb);
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				SETHERRNO;
+				SETERRNO;
 			}
 #endif
 			break;
@@ -845,29 +839,22 @@ static int bsdlib_threadfunc(void* arg)
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				bsdsocklib_setherrno(ctx, sb, herr);
-			}
-#elif defined(__APPLE__)
-			std::lock_guard<std::mutex> lock(hostent_mutex);
-			struct hostent* tmphostent = gethostbyaddr(get_real_address(sb->name), sb->a_addrlen, sb->flags);
-			if (tmphostent) {
-				copyHostent(ctx, tmphostent, sb);
-				bsdsocklib_setherrno(ctx, sb, 0);
-			} else {
-				SETHERRNO;
+				SETERRNO;
 			}
 #else
+			std::lock_guard<std::mutex> lock(bsdsock_mutex);
 			struct hostent* tmphostent = gethostbyaddr(get_real_address(sb->name), sb->a_addrlen, sb->flags);
 			if (tmphostent) {
 				copyHostent(ctx, tmphostent, sb);
 				bsdsocklib_setherrno(ctx, sb, 0);
 			} else {
 				SETHERRNO;
+				SETERRNO;
 			}
 #endif
 			break;
 		}
 		}
-		SETERRNO;
 		SETSIGNAL;
 	}
 	return 0;        /* Just to keep GCC happy.. */
@@ -1261,7 +1248,7 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 	int s = getsock(ctx, sb, sd + 1);
 	int nativelevel = mapsockoptlevel(level);
 	int nativeoptname = mapsockoptname(nativelevel, optname);
-	void* buf;
+	void* buf = NULL;
 	struct linger sl;
 	struct timeval timeout;
 
@@ -1271,8 +1258,22 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		return;
 	}
 
+	// Prevent invalid setsockopt calls
+	if (nativeoptname == -1) {
+		write_log("host_setsockopt: Invalid option 0x%x for level %d (native level %d), not calling setsockopt.\n", optname, level, nativelevel);
+		sb->resultval = -1;
+		errno = EINVAL;
+		SETERRNO;
+		return;
+	}
+
 	if (optval) {
 		buf = malloc(len);
+		if (buf == NULL) {
+			sb->resultval = -1;
+			bsdsocklib_seterrno(ctx, sb, 12); // ENOMEM
+			return;
+		}
 		if (nativeoptname == SO_LINGER) {
 			sl.l_onoff = get_long(optval);
 			sl.l_linger = get_long(optval + 4);
@@ -1284,9 +1285,6 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		else {
 			mapsockoptvalue(nativelevel, nativeoptname, optval, buf);
 		}
-	}
-	else {
-		buf = NULL;
 	}
 	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
 		sb->resultval = setsockopt(s, nativelevel, nativeoptname, &timeout, sizeof(timeout));
@@ -1729,66 +1727,67 @@ uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
 	return addr;
 }
 
-// FIXME: MOVE get threads ?
-
-void host_gethostbynameaddr (TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen, long addrtype)
-{
-	sb->name      = name;
-	sb->a_addrlen = namelen;
-	sb->flags     = addrtype;
-	if (addrtype == -1)
-		sb->action  = 4;
-	else
-		sb->action = 7;
-
-	uae_sem_post (&sb->sem);
-
-	WAITSIGNAL;
-}
+// --- Wrap getservbyname, getservbyport, getprotobyname, getprotobynumber with mutex ---
 
 void host_getprotobyname (TrapContext *ctx, SB, uae_u32 name)
 {
+#if defined(__linux__)
 	struct protoent *p = getprotobyname ((char *)get_real_address (name));
-
+#else
+	// Thread safety: protect non-reentrant getprotobyname
+	std::lock_guard<std::mutex> lock(bsdsock_mutex);
+	struct protoent *p = getprotobyname ((char *)get_real_address (name));
+#endif
 	write_log("Getprotobyname(%s) = %p\n", get_real_address (name), p);
-
 	if (p == NULL) {
+		SETHERRNO;
 		SETERRNO;
 		return;
 	}
-
 	copyProtoent(ctx, sb, p);
 }
 
 void host_getprotobynumber(TrapContext *ctx, SB, uae_u32 number)
 {
+#if defined(__linux__)
 	struct protoent *p = getprotobynumber(number);
+#else
+	// Thread safety: protect non-reentrant getprotobynumber
+	std::lock_guard<std::mutex> lock(bsdsock_mutex);
+	struct protoent *p = getprotobynumber(number);
+#endif
 	write_log("getprotobynumber(%d) = %p\n", number, p);
-
 	if (p == NULL) {
+		SETHERRNO;
 		SETERRNO;
 		return;
 	}
-
 	copyProtoent(ctx, sb, p);
 }
 
 void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 proto, uae_u32 type)
 {
-	struct servent *s = (type) ?
-	getservbyport (nameport, (char *)get_real_address (proto)) :
-	getservbyname ((char *)get_real_address (nameport), (char *)get_real_address (proto));
+	struct servent *s;
+#if defined(__linux__)
+	s = (type) ?
+		getservbyport (nameport, (char *)get_real_address (proto)) :
+		getservbyname ((char *)get_real_address (nameport), (char *)get_real_address (proto));
+#else
+	// Thread safety: protect non-reentrant getservby* functions
+	std::lock_guard<std::mutex> lock(bsdsock_mutex);
+	s = (type) ?
+		getservbyport (nameport, (char *)get_real_address (proto)) :
+		getservbyname ((char *)get_real_address (nameport), (char *)get_real_address (proto));
+#endif
 	int size;
 	int numaliases = 0;
 	uae_u32 aptr;
 	int i;
-
 	if (type) {
 		write_log("Getservbyport(%d, %s) = %p\n", nameport, get_real_address (proto), s);
 	} else {
 		write_log("Getservbyname(%s, %s) = %p\n", get_real_address (nameport), get_real_address (proto), s);
 	}
-
 	if (s != NULL) {
 		// compute total size of servent
 		size = 20;
@@ -1798,8 +1797,8 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 			size += strlen (s->s_proto) + 1;
 
 		if (s->s_aliases != NULL)
-		while (s->s_aliases[numaliases])
-			size += strlen (s->s_aliases[numaliases++]) + 5;
+			while (s->s_aliases[numaliases])
+				size += strlen (s->s_aliases[numaliases++]) + 5;
 
 		if (sb->servent) {
 			uae_FreeMem(ctx, sb->servent, sb->serventsize, sb->sysbase);
@@ -1831,9 +1830,25 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 
 		bsdsocklib_seterrno (ctx, sb,0);
 	} else {
+		SETHERRNO;
 		SETERRNO;
 		return;
 	}
+}
+
+void host_gethostbynameaddr (TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen, long addrtype)
+{
+	sb->name      = name;
+	sb->a_addrlen = namelen;
+	sb->flags     = addrtype;
+	if (addrtype == -1)
+		sb->action  = 4;
+	else
+		sb->action = 7;
+
+	uae_sem_post (&sb->sem);
+
+	WAITSIGNAL;
 }
 
 uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
