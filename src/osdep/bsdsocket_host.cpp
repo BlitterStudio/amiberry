@@ -1447,7 +1447,10 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		return -1;
 	}
 
-	write_log("Ioctl code is %x, flags are %ld\n", request, flags);
+	// Only log non-FIONREAD ioctls, or errors for FIONREAD
+	if (request != 0x4004667F) {
+		write_log("Ioctl code is %x, flags are %ld\n", request, flags);
+	}
 
 	switch (request) {
 	case 0x4004667B: /* FIOGETOWN */
@@ -1482,6 +1485,8 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		r = ioctl (sock, FIONREAD, &flags);
 		if (r >= 0) {
 			trap_put_long(ctx, arg, flags);
+		} else {
+			write_log("Ioctl FIONREAD failed: %d\n", errno);
 		}
 		return r;
 
