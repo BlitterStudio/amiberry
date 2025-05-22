@@ -23,6 +23,13 @@ finish-args:
   - --filesystem=host
 
 modules:
+  - name: libpcap
+    buildsystem: autotools
+    sources:
+    - type: archive
+      url: https://www.tcpdump.org/release/libpcap-1.10.4.tar.gz
+      sha256: ed19a0383fad72e3ad435fd239d7cd80d7bddbcc2159598e4ede171c775a15a1
+
   - name: libmpeg2
     config-opts:
       - --disable-static
