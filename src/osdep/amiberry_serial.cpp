@@ -164,7 +164,7 @@ bool shmem_serial_create()
 	if (fd == -1) {
 		fd = shm_open(SER_MEMORY_MAPPING, O_CREAT | O_RDWR, 0666);
 		if (fd == -1) {
-			perror("Failed to create shared serial port memory");
+			write_log("Failed to create shared serial port memory");
 			return false;
 		}
 		sermap_master = true;
@@ -175,14 +175,14 @@ bool shmem_serial_create()
 	}
 
 	if (ftruncate(fd, sizeof(sermap_buffer) * 2) == -1) {
-		perror("Failed to set size of shared memory");
+		write_log("Failed to set size of shared memory");
 		close(fd);
 		return false;
 	}
 
 	sermap_data = static_cast<uae_u8*>(mmap(nullptr, sizeof(sermap_buffer) * 2, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
 	if (sermap_data == MAP_FAILED) {
-		perror("Shared serial port memory mmap() failed");
+		write_log("Shared serial port memory mmap() failed");
 		close(fd);
 		return false;
 	}
