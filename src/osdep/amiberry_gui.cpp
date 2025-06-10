@@ -334,6 +334,10 @@ static struct romdata* scan_single_rom_2(struct zfile* f)
 	}
 	if (!cl)
 	{
+		if (size < 4) {
+			free(rombuf);
+			return nullptr;
+		}
 		rd = getromdatabydata(rombuf, size);
 		if (!rd && (size & 65535) == 0)
 		{
