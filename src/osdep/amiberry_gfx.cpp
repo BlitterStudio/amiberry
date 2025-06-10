@@ -519,9 +519,9 @@ static struct MultiDisplay* getdisplay2(const struct uae_prefs* p, const int ind
 	static int max;
 	int display = index < 0 ? p->gfx_apmode[mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE].gfx_display - 1 : index;
 
-	if (!max || (max > 0 && Displays[max].monitorname != nullptr)) {
+	if (!max || (max < MAX_DISPLAYS && max > 0 && Displays[max].monitorname != nullptr)) {
 		max = 0;
-		while (Displays[max].monitorname)
+		while (max < MAX_DISPLAYS && Displays[max].monitorname)
 			max++;
 		if (max == 0) {
 			gui_message(_T("no display adapters! Exiting"));
@@ -898,7 +898,7 @@ static bool enumeratedisplays2(bool selectall)
 	md->adaptername = my_strdup_trim ("Display adapter");
 	md->adapterid = my_strdup ("AdapterID");
 	md->adapterkey = my_strdup ("AdapterKey");
-	md->monitorname = my_strdup_trim ("Monitor");
+	md->monitorname = my_strdup ("Monitor");
 	md->monitorid = my_strdup ("MonitorID");
 	md->primary = true;
 
