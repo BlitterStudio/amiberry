@@ -181,13 +181,13 @@ static void uaenet_close_driver_internal(struct uaenet_data *ud)
     }
 }
 
+static struct netdriverdata nd[MAX_TOTAL_NET_DEVICES + 1];
+
 // Enumerate network devices
 struct netdriverdata *uaenet_enumerate(const TCHAR *name)
 {
     pcap_if_t *alldevs;
     char errbuf[PCAP_ERRBUF_SIZE];
-    static struct netdriverdata nd[MAX_TOTAL_NET_DEVICES + 1];
-    
     memset(nd, 0, sizeof(nd));
     
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
@@ -211,6 +211,7 @@ struct netdriverdata *uaenet_enumerate(const TCHAR *name)
         nd[j].name = n2;
         nd[j].type = UAENET_PCAP;
         nd[j].active = 1;
+        nd[j].driverdata = nullptr; // Initialize driverdata to nullptr
         j++;
         
         if (name != NULL)
@@ -225,8 +226,11 @@ struct netdriverdata *uaenet_enumerate(const TCHAR *name)
 // Version that matches the signature in ethernet.cpp
 void uaenet_close_driver(struct netdriverdata *ndd)
 {
-    // This function is called to release resources associated with a network driver
     write_log(_T("UAENET: close_driver called for %s\n"), ndd->name);
+    if (ndd && ndd->driverdata) {
+        uaenet_close_driver_internal((struct uaenet_data*)ndd->driverdata);
+        ndd->driverdata = nullptr;
+    }
 }
 
 // Open a network device
@@ -270,6 +274,9 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
         return 0;
     }
     
+    // Store the pointer to uaenet_data in the netdriverdata for later cleanup
+    ndd->driverdata = ud;
+
     ud->gotfunc = gotfunc;
     ud->getfunc = getfunc;
     ud->userdata = userdata;
@@ -379,9 +386,24 @@ void uaenet_trigger(void *vsd)
 }
 
 // Free memory allocated during enumeration
-void uaenet_enumerate_free(void)
+void uaenet_enumerate_free()
 {
+#if defined(WITH_UAENET_PCAP)
+    extern struct netdriverdata *uaenet_enumerate(const TCHAR *name);
+    // The static array is only accessible in uaenet_enumerate, so we must duplicate the static definition here
+    extern struct netdriverdata nd[MAX_TOTAL_NET_DEVICES + 1];
+    for (int i = 0; i < MAX_TOTAL_NET_DEVICES + 1; ++i) {
+        if (nd[i].name) {
+            xfree((void*)nd[i].name);
+            nd[i].name = nullptr;
+        }
+        if (nd[i].desc) {
+            xfree((void*)nd[i].desc);
+            nd[i].desc = nullptr;
+        }
+    }
     enumerated = 0;
+#endif
 }
 
 // Return the size of the uaenet_data structure

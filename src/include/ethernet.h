@@ -17,6 +17,7 @@ struct netdriverdata
 	uae_u8 mac[6];
 	uae_u8 originalmac[6];
 	int active;
+	void *driverdata; // Pointer to backend-specific driver data (e.g., uaenet_data)
 };
 
 
