@@ -3,8 +3,7 @@
 *
 * Amiberry uaenet emulation (libpcap-based, Linux/macOS)
 *
-* Copyright 2007 Toni Wilen
-* Copyright 2024 Amiberry Team
+* Copyright 2025 Dimitris Panokostas
 */
 
 #include "sysconfig.h"
