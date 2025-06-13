@@ -630,7 +630,7 @@ static void chip_init2(void)
 	ethernet_close(td, sysdata);
 	if (td != NULL) {
 		if (!sysdata)
-			sysdata = xcalloc(uae_u8, ethernet_getdatalenght(td));
+			sysdata = xcalloc(uae_u8, ethernet_getdatalength(td));
 		if (!ethernet_open(td, sysdata, NULL, gotfunc, getfunc, prom || fakeprom, fakemac)) {
 			write_log(_T("7990: failed to initialize winpcap driver\n"));
 		}

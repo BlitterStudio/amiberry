@@ -445,7 +445,7 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 
 	if (dev->opencnt == 0) {
 		dev->unit = unit;
-		dev->sysdata = xcalloc (uae_u8, ethernet_getdatalenght (pdev->td));
+		dev->sysdata = xcalloc (uae_u8, ethernet_getdatalength (pdev->td));
 		if (!ethernet_open (pdev->td, dev->sysdata, dev, uaenet_gotdata, uaenet_getdata, pdev->promiscuous, NULL)) {
 			xfree (dev->sysdata);
 			dev->sysdata = NULL;
