@@ -105,7 +105,7 @@
 #define WITH_SLIRP
 #define WITH_BUILTIN_SLIRP
 #define WITH_TABLETLIBRARY
-/* #define WITH_UAENET_PCAP */
+/* #define WITH_UAENET_PCAP */ // defined externally in Amiberry
 #define WITH_PPC
 #define WITH_QEMU_CPU
 #define WITH_TOCCATA

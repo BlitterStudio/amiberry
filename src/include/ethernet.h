@@ -17,6 +17,7 @@ struct netdriverdata
 	uae_u8 mac[6];
 	uae_u8 originalmac[6];
 	int active;
+	void *driverdata; // Pointer to backend-specific driver data (e.g., uaenet_data)
 };
 
 
@@ -27,7 +28,7 @@ extern bool ethernet_enumerate (struct netdriverdata **, int romtype);
 extern void ethernet_enumerate_free (void);
 extern void ethernet_close_driver (struct netdriverdata *ndd);
 
-extern int ethernet_getdatalenght (struct netdriverdata *ndd);
+extern int ethernet_getdatalength (struct netdriverdata *ndd);
 extern int ethernet_open (struct netdriverdata *ndd, void*, void*, ethernet_gotfunc*, ethernet_getfunc*, int, const uae_u8 *mac);
 extern void ethernet_close (struct netdriverdata *ndd, void*);
 extern void ethernet_trigger (struct netdriverdata *ndd, void*);
