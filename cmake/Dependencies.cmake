@@ -56,7 +56,7 @@ if (USE_LIBENET)
 endif ()
 
 # Add libpcap for uaenet (Linux/macOS)
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+if (USE_UAENET_PCAP)
     find_path(PCAP_INCLUDE_DIR pcap.h)
     find_library(PCAP_LIBRARY pcap)
     if (PCAP_INCLUDE_DIR AND PCAP_LIBRARY)
