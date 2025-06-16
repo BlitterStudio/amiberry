@@ -28,6 +28,7 @@ find_package(FLAC REQUIRED)
 find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(zstd REQUIRED)
 
 if (USE_LIBSERIALPORT)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBSERIALPORT)
@@ -84,6 +85,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         png
         MPG123::libmpg123
         z
+	zstd
         pthread
         dl
 )

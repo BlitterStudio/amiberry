@@ -1122,7 +1122,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			else
 			{
 				auto* const txt = parsetextpath(argv[++i]);
-				auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 5);
+				auto* const txt2 = xmalloc(TCHAR, _tcslen(txt) + 7);
 				_tcscpy(txt2, txt);
 				if (_tcsrchr(txt2, ',') == nullptr)
 					_tcscat(txt2, _T(",image"));
