@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap dylibbundler
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
 
       - name: Install the Apple certificate
         env:
@@ -109,7 +109,7 @@ jobs:
         run: |
           brew update
           brew upgrade
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap dylibbundler
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
 
       - name: Install the Apple certificate
         env:
@@ -195,7 +195,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev
+          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
 
       - name: make for Ubuntu 24.04 AMD64
         run: |
@@ -229,7 +229,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev
+          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
 
       - name: make for Ubuntu 22.04 AMD64
         run: |
