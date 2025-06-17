@@ -27,8 +27,8 @@ option(USE_UAENET_PCAP "Use libpcap for uaenet (Linux/macOS)" ON)
 
 ## Determine proper semantic version
 set(VERSION_MAJOR "7")
-set(VERSION_MINOR "0")
-set(VERSION_PATCH "9")
+set(VERSION_MINOR "1")
+set(VERSION_PATCH "0")
 set(VERSION_PRE_RELEASE "")
 
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
