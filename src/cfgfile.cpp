@@ -2278,12 +2278,17 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 		std::string mode;
 		std::string buffer;
 
-		const auto host_joy_id = jp->id - JSEM_JOYS;
-		// skip non-joystick ports
-		if (host_joy_id < 0 || host_joy_id > MAX_INPUT_DEVICES)
+		// Check if configname contains JOY0, JOY1, JOY2, or JOY3
+		int joy_index = -1;
+		if (jp->idc.configname[0] && strncmp(jp->idc.configname, "JOY", 3) == 0 &&
+			jp->idc.configname[4] == '\0' &&
+			jp->idc.configname[3] >= '0' && jp->idc.configname[3] <= '3') {
+			joy_index = jp->idc.configname[3] - '0';
+			}
+		if (joy_index == -1)
 			continue;
 
-		didata* did = &di_joystick[host_joy_id];
+		didata* did = &di_joystick[joy_index];
 
 		for (int m = 0; m < 2; ++m)
 		{
@@ -4689,7 +4694,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 
 #ifdef AMIBERRY
 	auto option_string = string(option);
-
 	if (load_custom_options(p, option_string, value))
 		return 1;
 

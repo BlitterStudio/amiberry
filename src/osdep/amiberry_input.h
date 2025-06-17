@@ -126,4 +126,4 @@ extern void read_controller_axis(int id, int axis, int value);
 extern void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename);
 extern void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename);
 
-extern bool load_custom_options(const uae_prefs* p, const std::string& option, const TCHAR* value);
+extern bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value);

@@ -1322,7 +1322,7 @@ static int init_joystick()
 	return 1;
 }
 
-bool load_custom_options(const uae_prefs* p, const std::string& option, const TCHAR* value)
+bool load_custom_options(uae_prefs* p, const std::string& option, const TCHAR* value)
 {
 	// Only do this loop if the option starts with "joyport"
 	if (option.rfind("joyport", 0) == 0)
@@ -1331,12 +1331,19 @@ bool load_custom_options(const uae_prefs* p, const std::string& option, const TC
 
 		for (int i = 0; i < MAX_JPORTS; ++i)
 		{
-			const auto host_joy_id = p->jports[i].id - JSEM_JOYS;
-			// skip non-joystick ports
-			if (host_joy_id < 0 || host_joy_id > MAX_INPUT_DEVICES)
+			const jport *jp = &p->jports[i];
+
+			// Check if configname contains JOY0, JOY1, JOY2, or JOY3
+			int joy_index = -1;
+			if (jp->idc.configname[0] && strncmp(jp->idc.configname, "JOY", 3) == 0 &&
+				jp->idc.configname[4] == '\0' &&
+				jp->idc.configname[3] >= '0' && jp->idc.configname[3] <= '3') {
+				joy_index = jp->idc.configname[3] - '0';
+				}
+			if (joy_index == -1)
 				continue;
 
-			didata* did = &di_joystick[host_joy_id];
+			didata* did = &di_joystick[joy_index];
 
 			for (int m = 0; m < 2; ++m)
 			{
