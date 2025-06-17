@@ -29,6 +29,10 @@ find_package(mpg123 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(ZLIB REQUIRED)
 
+find_helper(ZSTD libzstd zstd.h zstd)
+include_directories(${ZSTD_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
+
 if (USE_LIBSERIALPORT)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBSERIALPORT)
     find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
