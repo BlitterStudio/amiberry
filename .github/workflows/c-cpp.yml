@@ -295,7 +295,7 @@ jobs:
         uses: addnab/docker-run-action@v3
         with:
           image: midwan/amiberry-fedora-arm64:latest
-          options: -v ${{ github.workspace }}:/build
+          options: --platform linux/arm64 -v ${{ github.workspace }}:/build
           run: |
             cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
             cpack -G RPM --config build/CPackConfig.cmake
