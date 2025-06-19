@@ -305,38 +305,6 @@ jobs:
           name: amiberry-fedora-x86_64
           path: amiberry-*.zip
 
-  build-fedora-arm64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-fedora-arm64:latest
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-            cpack -G RPM --config build/CPackConfig.cmake
-
-      - name: Upload artifact
-        if: always() && github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-fedora-arm64
-          path: amiberry-*.rpm
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-fedora-arm64.zip amiberry-*.rpm
-
-      - name: Upload artifact for release
-        if: always() && github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-fedora-arm64
-          path: amiberry-*.zip
-
   build-debian-amd64:
     runs-on: ubuntu-latest
     strategy:
@@ -443,7 +411,7 @@ jobs:
           path: amiberry-*.zip
 
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
@@ -478,7 +446,7 @@ jobs:
             artifacts/Amiberry-*.zip
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     steps:
