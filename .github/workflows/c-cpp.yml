@@ -6,23 +6,30 @@ on:
   pull_request:
 
 jobs:
-
   build-macOS-x86_64:
     runs-on: macos-13
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
 
+      - name: Cache Homebrew
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/Homebrew
+          key: ${{ runner.os }}-brew-${{ hashFiles('Brewfile') }}
+          restore-keys: |
+            ${{ runner.os }}-brew-
+
       - name: Fix homebrew in Github Runner
         run: |
           for f in $(find /usr/local/bin -type l -print); do \
             (readlink $f | grep -q -s "/Library") && echo Removing "$f" && rm -f "$f"; \
           done || exit 0
-          
-      - name: Install dependencies
+
+      - name: Install dependencies (Homebrew)
         run: |
-          brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
+          brew update && \
+          if [ -f Brewfile ]; then brew bundle; else brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler; fi
 
       - name: Install the Apple certificate
         env:
@@ -30,18 +37,16 @@ jobs:
           APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
           APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
         run: |
+          set +x  # Mask output for security
           # create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          
           # import certificate from secret
           echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          
           # create keychain
           security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          
           # import certificate to keychain
           security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
@@ -105,10 +110,9 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies (Homebrew)
         run: |
           brew update
-          brew upgrade
           brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
 
       - name: Install the Apple certificate
@@ -192,6 +196,14 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -203,7 +215,7 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
-        if: github.ref_type != 'tag'
+        if: always() && github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-24.04-amd64
@@ -214,7 +226,7 @@ jobs:
         run: zip -r amiberry-${{ github.ref_name }}-ubuntu-24.04-amd64.zip amiberry_*.deb
 
       - name: Upload artifact for release
-        if: github.ref_type == 'tag'
+        if: always() && github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-24.04-amd64
@@ -226,6 +238,13 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -237,7 +256,7 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
-        if: github.ref_type != 'tag'
+        if: always() && github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-22.04-amd64
@@ -248,7 +267,7 @@ jobs:
         run: zip -r amiberry-${{ github.ref_name }}-ubuntu-22.04-amd64.zip amiberry_*.deb
 
       - name: Upload artifact for release
-        if: github.ref_type == 'tag'
+        if: always() && github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-ubuntu-22.04-amd64
@@ -269,7 +288,7 @@ jobs:
           cpack -G RPM --config build/CPackConfig.cmake
 
     - name: Upload artifact
-      if: github.ref_type != 'tag'
+      if: always() && github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-fedora-x86_64
@@ -280,7 +299,7 @@ jobs:
       run: zip -r amiberry-${{ github.ref_name }}-fedora-x86_64.zip amiberry-*.rpm
 
     - name: Upload artifact for release
-      if: github.ref_type == 'tag'
+      if: always() && github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-fedora-x86_64
@@ -290,7 +309,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -306,7 +325,7 @@ jobs:
             cpack -G RPM --config build/CPackConfig.cmake
 
       - name: Upload artifact
-        if: github.ref_type != 'tag'
+        if: always() && github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-fedora-arm64
@@ -317,141 +336,54 @@ jobs:
         run: zip -r amiberry-${{ github.ref_name }}-fedora-arm64.zip amiberry-*.rpm
 
       - name: Upload artifact for release
-        if: github.ref_type == 'tag'
+        if: always() && github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: amiberry-fedora-arm64
           path: amiberry-*.zip
 
-  build-debian-bullseye-amd64:
+  build-debian-amd64:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: bullseye
+            image: midwan/amiberry-debian-x86_64:bullseye
+            artifact_name: amiberry-debian-bullseye-amd64
+          - name: bookworm
+            image: midwan/amiberry-debian-x86_64:bookworm
+            artifact_name: amiberry-debian-bookworm-amd64
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-x86_64:bullseye
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
+      - name: Run the build process with Docker
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ${{ matrix.image }}
+          options: -v ${{ github.workspace }}:/build
+          run: |
+            cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
+            cpack -G DEB --config build/CPackConfig.cmake
 
-    - name: Upload artifact
-      if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bullseye-amd64
-        path: amiberry_*.deb
+      - name: Upload artifact
+        if: always() && github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: "amiberry_*.deb"
 
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-amd64.zip amiberry_*.deb
+      - name: ZIP package for release
+        if: github.ref_type == 'tag'
+        run: zip -r "amiberry-${{ github.ref_name }}-${{ matrix.artifact_name }}.zip" amiberry_*.deb
 
-    - name: Upload artifact for release
-      if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-debian-bullseye-amd64
-          path: amiberry-*.zip
+      - name: Upload artifact for release
+        if: always() && github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: "amiberry-*.zip"
 
-  build-debian-bookworm-amd64:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-x86_64:bookworm
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bookworm-amd64
-        path: amiberry_*.deb
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-amd64.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-debian-bookworm-amd64
-          path: amiberry-*.zip
-
-  build-debian-bookworm-arm64:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-aarch64:bookworm
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bookworm-arm64
-        path: amiberry_*.deb
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-arm64.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-debian-bookworm-arm64
-          path: amiberry-*.zip
-
-  build-debian-bookworm-armhf:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-armhf:bookworm
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bookworm-armhf
-        path: amiberry_*.deb
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-bookworm-armhf.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-bookworm-armhf
-        path: amiberry-*.zip
-
-  build-debian-bullseye-arm64:
+  build-debian-arm64:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -466,7 +398,7 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
-      if: github.ref_type != 'tag'
+      if: always() && github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-arm64
@@ -477,13 +409,13 @@ jobs:
       run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-arm64.zip amiberry_*.deb
 
     - name: Upload artifact for release
-      if: github.ref_type == 'tag'
+      if: always() && github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-debian-bullseye-arm64
           path: amiberry-*.zip
 
-  build-debian-bullseye-armhf:
+  build-debian-armhf:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -498,7 +430,7 @@ jobs:
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
-      if: github.ref_type != 'tag'
+      if: always() && github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
         name: amiberry-debian-bullseye-armhf
@@ -509,14 +441,14 @@ jobs:
       run: zip -r amiberry-${{ github.ref_name }}-debian-bullseye-armhf.zip amiberry_*.deb
 
     - name: Upload artifact for release
-      if: github.ref_type == 'tag'
+      if: always() && github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
           name: amiberry-debian-bullseye-armhf
           path: amiberry-*.zip
 
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
@@ -547,11 +479,11 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            artifacts/amiberry-*.*
-            artifacts/Amiberry-*.*
+            artifacts/amiberry-*.zip
+            artifacts/Amiberry-*.zip
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-bookworm-amd64, build-debian-bookworm-arm64, build-debian-bookworm-armhf, build-debian-bullseye-amd64, build-debian-bullseye-arm64, build-debian-bullseye-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     steps:
@@ -583,5 +515,5 @@ jobs:
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}
           artifacts: |
-            artifacts/amiberry-*.*
-            artifacts/Amiberry-*.*
+            artifacts/amiberry-*.zip
+            artifacts/Amiberry-*.zip
