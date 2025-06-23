@@ -193,7 +193,7 @@ bool jit_direct_compatible_memory;
 
 bool can_have_1gb()
 {
-	#ifndef __MACH__
+	#if defined(__linux__)
 	struct sysinfo mem_info{};
 	sysinfo(&mem_info);
 	long long total_phys_mem = mem_info.totalram;

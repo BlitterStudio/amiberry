@@ -28,7 +28,7 @@ Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 #if defined(STAT_STATVFS) && !defined(__ANDROID__)
 #include <sys/statvfs.h>
 // For osx, sigurbjornl
-#elif defined (__MACH__)
+#elif defined (__MACH__) || defined(__FreeBSD__)
 #include <sys/mount.h>
 #else
 #include <sys/vfs.h>
@@ -109,8 +109,12 @@ int statfs ();
 # include <sys/mount.h>
 #endif
 
-#if HAVE_SYS_VFS_H and !defined(__MACH__)
-# include <sys/vfs.h>
+#if defined(__linux__)
+#include <sys/vfs.h>
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+#include <sys/mount.h>
+#else
+#error "Filesystem header not supported on this platform"
 #endif
 
 #if HAVE_SYS_FS_S5PARAM_H	/* Fujitsu UXP/V */
@@ -125,8 +129,12 @@ int statfs ();
 # include <fcntl.h>
 #endif
 
-#if HAVE_SYS_STATFS_H and !defined(__MACH__)
-# include <sys/statfs.h>
+#if defined(__linux__)
+#include <sys/statfs.h>
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+#include <sys/mount.h>
+#else
+#error "Platform not supported for filesystem stats"
 #endif
 
 #if HAVE_DUSTAT_H		/* AIX PS/2 */

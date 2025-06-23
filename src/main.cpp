@@ -67,7 +67,7 @@
 #endif
 
 #include <iostream>
-#ifndef __MACH__
+#if defined(__linux__)
 #include <linux/kd.h>
 #endif
 #include <sys/ioctl.h>

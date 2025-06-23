@@ -14,7 +14,7 @@
 #define PACKAGE_STRING "Amiberry"
 
 #if defined(__x86_64__) || defined(_M_AMD64)
-#ifndef __MACH__ // not for macOS
+#if defined(__linux__) // not for macOS
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
@@ -628,7 +628,7 @@ typedef char TCHAR;
 #define _timezone           timezone
 #define _daylight           daylight
 // Ftello and fseeko on OSX are alerady 64bit
-#if defined ANDROID || defined __MACH__
+#if defined ANDROID || defined __MACH__ || defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
 #define _ftelli64(x)        ftello(x)
 #define _fseeki64(x,y,z)    fseeko(x,y,z)
 #else

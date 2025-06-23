@@ -40,7 +40,16 @@ struct zvolume *archive_directory_lha (struct zfile *zf)
 		zai.size = hdr.original_size;
 		zai.flags = hdr.attribute;
 		if (hdr.extend_type != 0) {
+		#if defined(__linux__)
 			zai.tv.tv_sec = hdr.unix_last_modified_stamp -= _timezone;
+		#else
+			time_t sec = (time_t)hdr.unix_last_modified_stamp;
+			struct tm *lt = localtime(&sec);
+			if (lt)
+				zai.tv.tv_sec = hdr.unix_last_modified_stamp - lt->tm_gmtoff;
+			else
+				zai.tv.tv_sec = hdr.unix_last_modified_stamp;
+		#endif
 		} else {
 			struct tm t;
 			uae_u32 v = hdr.last_modified_stamp;
@@ -51,7 +60,16 @@ struct zvolume *archive_directory_lha (struct zfile *zf)
 			t.tm_mday = (v >> 16) & 0x1f;
 			t.tm_mon = ((v >> 21) & 0xf) - 1;
 			t.tm_year = ((v >> 25) & 0x7f) + 80;
+			#if defined(__linux__)
 			zai.tv.tv_sec = mktime (&t) - _timezone;
+			#else
+			time_t local = mktime(&t);
+			struct tm *lt = localtime(&local);
+			if (lt)
+				zai.tv.tv_sec = local - lt->tm_gmtoff;
+			else
+				zai.tv.tv_sec = local;
+			#endif
 		}
 		if (hdr.name[strlen(hdr.name) + 1] != 0)
 			zai.comment = au (&hdr.name[strlen(hdr.name) + 1]);

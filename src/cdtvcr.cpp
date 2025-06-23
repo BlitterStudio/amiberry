@@ -727,7 +727,17 @@ static uae_u8 cdtvcr_bget2 (uaecptr addr)
 		struct timeval tv;
 		struct mytimeval mtv;
 		gettimeofday (&tv, NULL);
-		tv.tv_sec -= _timezone;
+		#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+		// On BSD/macOS use tm_gmtoff
+		struct tm *lt = localtime(&tv.tv_sec);
+		tv.tv_sec -= lt->tm_gmtoff;
+		#elif defined(__linux__)
+		// On Linux use timezone variable
+		extern long timezone;
+		tv.tv_sec -= timezone;
+		#else
+		// fallback or no adjustment
+		#endif
 		mtv.tv_sec = tv.tv_sec;
 		mtv.tv_usec = tv.tv_usec;
 		timeval_to_amiga(&mtv, &days, &mins, &ticks, tickcount);
