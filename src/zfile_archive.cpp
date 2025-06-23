@@ -45,7 +45,14 @@ static time_t fromdostime (uae_u32 dd)
 	tm.tm_mon  = ((dd >> 21) & 0x0f) - 1;
 	tm.tm_mday = (dd >> 16) & 0x1f;
 	t = mktime (&tm);
-	t -= _timezone;
+	#if defined(__linux__)
+    		t -= timezone;
+    	if (daylight)
+        	t -= 3600;
+	#else
+    	struct tm *lt = localtime(&t);
+    	t -= lt->tm_gmtoff;
+	#endif
 	return t;
 }
 
@@ -333,9 +340,16 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 			zai.name = au (name);
 			zai.size = size;
 			zai.tv.tv_sec = _strtoui64 ((char*)block + 136, NULL, 8);
-			zai.tv.tv_sec += _timezone;
-			if (_daylight)
-				zai.tv.tv_sec -= 1 * 60 * 60;
+		#if defined(__linux__)
+    			zai.tv.tv_sec += timezone;
+    			if (daylight)
+        			zai.tv.tv_sec -= 3600;
+		#else
+    			time_t sec = (time_t)zai.tv.tv_sec;
+			struct tm *lt = localtime(&sec);
+    		if (lt)
+        		zai.tv.tv_sec -= lt->tm_gmtoff;
+		#endif
 			if (zai.name[_tcslen (zai.name) - 1] == '/') {
 				zn = zvolume_adddir_abs (zv, &zai);
 			} else {
@@ -759,10 +773,18 @@ struct zvolume *archive_directory_7z (struct zfile *z)
 		if (SzBitWithVals_Check(&ctx->db.MTime, i)) {
 			uae_u64 t = (((uae_u64)&ctx->db.MTime.Vals[i].High) << 32) | ctx->db.MTime.Vals[i].Low;
 			if (t >= EPOCH_DIFF) {
-				zai.tv.tv_sec = (t - EPOCH_DIFF) / RATE_DIFF;
-				zai.tv.tv_sec -= _timezone;
-				if (_daylight)
-					zai.tv.tv_sec += 1 * 60 * 60;
+    			zai.tv.tv_sec = (t - EPOCH_DIFF) / RATE_DIFF;
+
+			#if defined(__linux__)
+    			zai.tv.tv_sec -= timezone;
+    			if (daylight)
+        			zai.tv.tv_sec += 3600;
+			#else
+    			time_t sec = (time_t)zai.tv.tv_sec;
+			struct tm *lt = localtime(&sec);
+    			if (lt)
+        			zai.tv.tv_sec -= lt->tm_gmtoff;
+			#endif
 			}
 		}
 		if (!SzArEx_IsDir(&ctx->db, i)) {
@@ -774,7 +796,6 @@ struct zvolume *archive_directory_7z (struct zfile *z)
 	zv->method = ArchiveFormat7Zip;
 	return zv;
 }
-
 static struct zfile *archive_access_7z (struct znode *zn)
 {
 	SRes res;

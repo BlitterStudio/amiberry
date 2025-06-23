@@ -40,7 +40,7 @@ DEFINE_GUID(GUID_DEVINTERFACE_COMPORT,0x86e0d1e0, 0x8089, 0x11d0, 0x9c, 0xe4, 0x
 #endif
 
 // OS X, sigurbjornl, 20220208
-#elif defined __MACH__
+#elif defined __MACH__ || defined(__FreeBSD__)
 
 #include <sys/stat.h>
 #include <dirent.h>
@@ -50,15 +50,17 @@ DEFINE_GUID(GUID_DEVINTERFACE_COMPORT,0x86e0d1e0, 0x8089, 0x11d0, 0x9c, 0xe4, 0x
 #include <cerrno>
 #include <cstring>
 #include <term.h>
-#include <sys/termios.h>
-#include <sys/ioctl.h>
-#include <IOKit/serial/ioss.h>
-#ifndef TIOCINQ
-#ifdef FIONREAD
-#define TIOCINQ FIONREAD
-#else
-#define TIOCINQ 0x541B
+#include <termios.h>
+#ifdef __MACH__
+#include <IOKit/serial/ioss.h> // Only available on macOS
 #endif
+
+#ifndef TIOCINQ
+  #ifdef FIONREAD
+    #define TIOCINQ FIONREAD
+  #else
+    #define TIOCINQ 0x541B  // Linux fallback, possibly valid on FreeBSD
+  #endif
 #endif
 
 #else
@@ -342,7 +344,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 	}
 
 #else
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__FreeBSD__)
 	DIR* dir = opendir("/dev");
 #else
 	DIR* dir = opendir("/sys/class/tty");
@@ -352,7 +354,7 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 	struct stat statbuf{};
 
 	while ((entry = readdir(dir))) {
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__FreeBSD__)
 		std::string tmp = entry->d_name;
 		if (tmp.substr(0,7) != "tty.usb") continue;
 		std::string name = "/dev/" + std::string(entry->d_name);
@@ -500,7 +502,7 @@ SerialIO::Response SerialIO::openPort(const std::wstring& portName) {
 #else
 	std::string apath;
 	quickw2a(portName, apath);
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__FreeBSD__)
 	m_portHandle = open(apath.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
 #else
 	m_portHandle = open(apath.c_str(), O_RDWR | O_NOCTTY);
@@ -663,7 +665,26 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 	// Now try to set the baud rate
 	int baud = configuration.baudRate;
 #ifdef __APPLE__
-	if (ioctl(m_portHandle, IOSSIOSPEED, &baud) == -1) return Response::rUnknownError;
+
+    // macOS code using IOSSIOSPEED ioctl
+    if (ioctl(m_portHandle, IOSSIOSPEED, &baud) == -1)
+        return Response::rUnknownError;
+
+#elif defined(__FreeBSD__)
+
+    // FreeBSD uses termios functions to set baud rate
+    struct termios options;
+    if (tcgetattr(m_portHandle, &options) == -1)
+        return Response::rUnknownError;
+
+    speed_t speed = baud; // Make sure 'baud' is a valid speed_t constant like B9600
+
+    if (cfsetspeed(&options, speed) == -1)
+        return Response::rUnknownError;
+
+    if (tcsetattr(m_portHandle, TCSANOW, &options) == -1)
+        return Response::rUnknownError;
+
 #else
 	if (baud == 9600) {
 		term.c_cflag &= ~CBAUD;
@@ -691,8 +712,10 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 	serial.flags |= ASYNC_LOW_LATENCY;
 	ioctl(m_portHandle, TIOCSSERIAL, &serial);
 #endif
-#ifdef __APPLE__
-	if (ioctl(m_portHandle, IOSSIOSPEED, &baud) == -1) return Response::rUnknownError;
+#if defined(__APPLE__) || defined(__FreeBSD__)
+    // FreeBSD does not support IOSSIOSPEED, use termios instead
+    if (cfsetispeed(&term, baud) != 0 || cfsetospeed(&term, baud) != 0)
+        return Response::rUnknownError;
 #endif
 	setDTR(true);
 	setRTS(true);
