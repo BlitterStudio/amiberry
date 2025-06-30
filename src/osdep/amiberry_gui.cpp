@@ -45,7 +45,7 @@
 #include "target.h"
 
 #ifdef AMIBERRY
-#ifndef __MACH__
+#if defined(__linux__)
 #include <linux/kd.h>
 #endif
 #include <sys/ioctl.h>
@@ -1165,7 +1165,7 @@ void gui_led(int led, int on, int brightness)
 	if (currprefs.kbd_led_scr != changed_prefs.kbd_led_scr) currprefs.kbd_led_scr = changed_prefs.kbd_led_scr;
 	if (currprefs.kbd_led_cap != changed_prefs.kbd_led_cap) currprefs.kbd_led_cap = changed_prefs.kbd_led_cap;
 
-#ifndef __MACH__
+#if defined(__linux__)
 	// Temperature sensor initialization
 	if (want_temp > 0 && temp_fd < 0) {
 		temp_fd = open(TEMPERATURE, O_RDONLY);

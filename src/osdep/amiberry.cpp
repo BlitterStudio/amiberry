@@ -300,9 +300,10 @@ extern void set_last_active_config(const char* filename);
 std::string home_dir;
 std::string current_dir;
 
-#ifndef __MACH__
+#if defined(__linux__)
 #include <linux/kd.h>
-#else
+#endif
+#ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 #include <sys/ioctl.h>
@@ -4945,7 +4946,7 @@ int main(int argc, char* argv[])
 	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	clipboard_init();
 
-#ifndef __MACH__
+#if defined( __linux__)
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
 	ioctl(0, KDGETLED, &kbd_led_status);
@@ -5013,7 +5014,7 @@ int main(int argc, char* argv[])
 
 	gpiod_chip_close(chip);
 #endif
-#ifndef __MACH__
+#if defined(__linux__)
 	// restore keyboard LEDs to normal state
 	ioctl(0, KDSETLED, 0xFF);
 #else
