@@ -20,7 +20,9 @@
 #include "7z/LzmaEnc.h"
 
 #include <zlib.h>
+#ifdef USE_ZSTD
 #include <zstd.h>
+#endif
 
 #include <new>
 
@@ -102,44 +104,44 @@ namespace {
 		chd_zlib_allocator      m_allocator;
 	};
 
+#ifdef USE_ZSTD
+	// ======================> chd_zstd_compressor
 
-// ======================> chd_zstd_compressor
+	// Zstandard compressor
+	class chd_zstd_compressor : public chd_compressor
+	{
+	public:
+		// construction/destruction
+		chd_zstd_compressor(chd_file& chd, uint32_t hunkbytes, bool lossy);
+		~chd_zstd_compressor();
 
-// Zstandard compressor
-class chd_zstd_compressor : public chd_compressor
-{
-public:
-	// construction/destruction
-	chd_zstd_compressor(chd_file &chd, uint32_t hunkbytes, bool lossy);
-	~chd_zstd_compressor();
+		// core functionality
+		virtual uint32_t compress(const uint8_t* src, uint32_t srclen, uint8_t* dest) override;
 
-	// core functionality
-	virtual uint32_t compress(const uint8_t *src, uint32_t srclen, uint8_t *dest) override;
-
-private:
-	// internal state
-	ZSTD_CStream *          m_stream;
-};
+	private:
+		// internal state
+		ZSTD_CStream* m_stream;
+	};
 
 
-// ======================> chd_zstd_decompressor
+	// ======================> chd_zstd_decompressor
 
-// Zstandard decompressor
-class chd_zstd_decompressor : public chd_decompressor
-{
-public:
-	// construction/destruction
-	chd_zstd_decompressor(chd_file &chd, uint32_t hunkbytes, bool lossy);
-	~chd_zstd_decompressor();
+	// Zstandard decompressor
+	class chd_zstd_decompressor : public chd_decompressor
+	{
+	public:
+		// construction/destruction
+		chd_zstd_decompressor(chd_file& chd, uint32_t hunkbytes, bool lossy);
+		~chd_zstd_decompressor();
 
-	// core functionality
-	virtual void decompress(const uint8_t *src, uint32_t complen, uint8_t *dest, uint32_t destlen) override;
+		// core functionality
+		virtual void decompress(const uint8_t* src, uint32_t complen, uint8_t* dest, uint32_t destlen) override;
 
-private:
-	// internal state
-	ZSTD_DStream *          m_stream;
-};
-
+	private:
+		// internal state
+		ZSTD_DStream* m_stream;
+	};
+#endif // USE_ZSTD
 
 	// ======================> chd_lzma_allocator
 
@@ -532,14 +534,18 @@ private:
 	const codec_entry f_codec_list[] =
 	{
 		// general codecs
+#ifdef USE_ZSTD
 		{ CHD_CODEC_ZSTD,       false,  "Zstd",                 &codec_entry::construct_compressor<chd_zstd_compressor>,     &codec_entry::construct_decompressor<chd_zstd_decompressor> },
+#endif
 		{ CHD_CODEC_ZLIB,       false,  "Deflate",              &codec_entry::construct_compressor<chd_zlib_compressor>,     &codec_entry::construct_decompressor<chd_zlib_decompressor> },
 		{ CHD_CODEC_LZMA,       false,  "LZMA",                 &codec_entry::construct_compressor<chd_lzma_compressor>,     &codec_entry::construct_decompressor<chd_lzma_decompressor> },
 		{ CHD_CODEC_HUFFMAN,    false,  "Huffman",              &codec_entry::construct_compressor<chd_huffman_compressor>,  &codec_entry::construct_decompressor<chd_huffman_decompressor> },
 		{ CHD_CODEC_FLAC,       false,  "FLAC",                 &codec_entry::construct_compressor<chd_flac_compressor>,     &codec_entry::construct_decompressor<chd_flac_decompressor> },
 
 		// general codecs with CD frontend
+#ifdef USE_ZSTD
 		{ CHD_CODEC_CD_ZSTD,    false,  "CD Zstd",              &codec_entry::construct_compressor<chd_cd_compressor<chd_zstd_compressor, chd_zstd_compressor> >,        &codec_entry::construct_decompressor<chd_cd_decompressor<chd_zstd_decompressor, chd_zstd_decompressor> > },
+#endif
 		{ CHD_CODEC_CD_ZLIB,    false,  "CD Deflate",           &codec_entry::construct_compressor<chd_cd_compressor<chd_zlib_compressor, chd_zlib_compressor> >,        &codec_entry::construct_decompressor<chd_cd_decompressor<chd_zlib_decompressor, chd_zlib_decompressor> > },
 		{ CHD_CODEC_CD_LZMA,    false,  "CD LZMA",              &codec_entry::construct_compressor<chd_cd_compressor<chd_lzma_compressor, chd_zlib_compressor> >,        &codec_entry::construct_decompressor<chd_cd_decompressor<chd_lzma_decompressor, chd_zlib_decompressor> > },
 		{ CHD_CODEC_CD_FLAC,    false,  "CD FLAC",              &codec_entry::construct_compressor<chd_cd_flac_compressor>,                                              &codec_entry::construct_decompressor<chd_cd_flac_decompressor> },
@@ -1024,7 +1030,7 @@ void chd_zlib_decompressor::decompress(const uint8_t* src, uint32_t complen, uin
 }
 
 
-
+#ifdef USE_ZSTD
 //**************************************************************************
 //  ZSTANDARD COMPRESSOR
 //**************************************************************************
@@ -1147,7 +1153,7 @@ void chd_zstd_decompressor::decompress(const uint8_t *src, uint32_t complen, uin
 	if (output.pos != output.size)
 		throw std::error_condition(chd_file::error::DECOMPRESSION_ERROR);
 }
-
+#endif // USE_ZSTD
 
 
 //**************************************************************************
