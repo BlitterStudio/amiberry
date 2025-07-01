@@ -377,7 +377,7 @@ jobs:
       if: always() && github.ref_type != 'tag'
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.image }}
+        name: ${{ matrix.artifact_name }}
         path: "amiberry_*.deb"
 
     - name: ZIP package for release
