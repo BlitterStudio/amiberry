@@ -27,8 +27,8 @@ modules:
     buildsystem: autotools
     sources:
     - type: archive
-      url: https://www.tcpdump.org/release/libpcap-1.10.4.tar.gz
-      sha256: ed19a0383fad72e3ad435fd239d7cd80d7bddbcc2159598e4ede171c775a15a1
+      url: https://www.tcpdump.org/release/libpcap-1.10.5.tar.gz
+      sha256: 37ced90a19a302a7f32e458224a00c365c117905c2cd35ac544b6880a81488f0
 
   - name: libmpeg2
     config-opts:
