@@ -1994,30 +1994,32 @@ void apply_theme()
 	}
 	try
 	{
-		// Check if the font_name contains the full path to the file (e.g. in /usr/share/fonts)
-		if (my_existsfile2(gui_theme.font_name.c_str()))
-		{
-			gui_font = new gcn::SDLTrueTypeFont(gui_theme.font_name, gui_theme.font_size);
-		}
-		else
-		{
-			// If only a font name was given, try to open it from the data directory
-			std::string font = get_data_path();
-			font.append(gui_theme.font_name);
-			if (my_existsfile2(font.c_str()))
-				gui_font = new gcn::SDLTrueTypeFont(font, gui_theme.font_size);
-			else
-			{
-				// If the font file was not found in the data directory, fallback to a system font
-				// TODO This needs a separate implementation for macOS!
-				font = get_system_fonts_path();
-				font.append("freefont/FreeSans.ttf");
-			}
-		}
-		gui_font->setAntiAlias(true);
-		gui_font->setColor(gui_font_color);
-	}
-	catch (gcn::Exception& e)
+    std::string font_path;
+
+    if (my_existsfile2(gui_theme.font_name.c_str()))
+    {
+        font_path = gui_theme.font_name;
+    }
+    else
+    {
+        // Try data directory
+        font_path = get_data_path() + gui_theme.font_name;
+        if (!my_existsfile2(font_path.c_str()))
+        {
+            // Try fallback system font
+            font_path = get_system_fonts_path() + "freefont/FreeSans.ttf";
+            if (!my_existsfile2(font_path.c_str()))
+            {
+                throw std::runtime_error("No usable font found in theme, data, or system paths.");
+            }
+        }
+    }
+
+    gui_font = new gcn::SDLTrueTypeFont(font_path, gui_theme.font_size);
+    gui_font->setAntiAlias(true);
+    gui_font->setColor(gui_font_color);
+}
+catch (gcn::Exception& e)
 	{
 		gui_running = false;
 		std::cout << e.getMessage() << '\n';
