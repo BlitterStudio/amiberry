@@ -1891,7 +1891,7 @@ void permedia2_pci_write(int func, int addr, uint8_t val, void *p)
 }
 
 
-static void *permedia2_init(char *bios_fn, int chip)
+static void *permedia2_init(const char *bios_fn, int chip)
 {
         permedia2_t *permedia2 = (permedia2_t*)calloc(sizeof(permedia2_t), 1);
         svga_t *svga = &permedia2->svga;

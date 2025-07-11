@@ -27,7 +27,7 @@ typedef enum {
 
 
 typedef struct M68_OPTABLE_ENT {
-	char *			mnem;		/* instruction mnemonic */
+	const char *		mnem;		/* instruction mnemonic */
 	M68_AMODE		amode;		/* addressing mode */
 	uint8_t			cycles;		/* number of cycles to execute */
 	bool			write_only;	/* is write-only?  only supported for direct, extended and indexed */
