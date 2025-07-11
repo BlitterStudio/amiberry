@@ -310,7 +310,7 @@ static TCHAR *stacktostring(struct calcstack *st)
 }
 
 
-static TCHAR *docalcxs(unsigned char op, TCHAR *v1, TCHAR *v2, double *voutp)
+static TCHAR *docalcxs(unsigned char op, const TCHAR *v1, const TCHAR *v2, double *voutp)
 {
     TCHAR tmp[MAX_DPATH];
     tmp[0] = 0;
