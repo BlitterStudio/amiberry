@@ -2787,7 +2787,7 @@ static int vram_sizes[] =
         3 /*8 MB*/
 };
 
-static void *s3_init(char *bios_fn, int chip)
+static void *s3_init(const char *bios_fn, int chip)
 {
         s3_t *s3 = (s3_t*)malloc(sizeof(s3_t));
         svga_t *svga = &s3->svga;

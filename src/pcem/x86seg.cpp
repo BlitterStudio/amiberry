@@ -184,7 +184,7 @@ void x86gpf_expected(const char *s, uint16_t error)
         cpu_state.abrt = int8_t(ABRT_GPF) | ABRT_EXPECTED;
         abrt_error = error;
 }
-void x86ss(char *s, uint16_t error)
+void x86ss(const char *s, uint16_t error)
 {
 //        pclog("SS %04X\n", error);
         cpu_state.abrt = ABRT_SS;

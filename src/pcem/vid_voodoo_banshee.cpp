@@ -2809,7 +2809,7 @@ void voodoo_update_vram(void *p)
     banshee->voodoo->tex_mem_w[1] = (uint16_t*)banshee->svga.vram;
 }
 
-static void *banshee_init_common(char *fn, int has_sgram, int type, int voodoo_type)
+static void *banshee_init_common(const char *fn, int has_sgram, int type, int voodoo_type)
 {
         int mem_size;
         banshee_t *banshee = (banshee_t*)malloc(sizeof(banshee_t));
