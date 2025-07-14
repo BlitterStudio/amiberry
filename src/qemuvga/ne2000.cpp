@@ -1226,7 +1226,8 @@ static uae_u32 REGPARAM2 ne2000_lget(struct pci_board_state *pcibs, uaecptr addr
 static void ne2000_reset(struct pci_board_state *pcibs)
 {
 	ne2000_reset2(&ne2000state);
-	receive_buffer_read = receive_buffer_write = 0;
+	receive_buffer_read = 0;
+	receive_buffer_write = 0;
 }
 
 static void ne2000_free(struct pci_board_state *pcibs)
