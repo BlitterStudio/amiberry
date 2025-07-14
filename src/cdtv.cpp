@@ -122,7 +122,8 @@ static void subreset (void)
 {
 	uae_sem_wait (&sub_sem);
 	memset (subcodebufferinuse, 0, sizeof subcodebufferinuse);
-	subcodebufferoffsetw = subcodebufferoffset = 0;
+	subcodebufferoffsetw = 0;
+	subcodebufferoffset = 0;
 	subcodeoffset = -1;
 	sbcp = 0;
 	scor = 0;
@@ -239,7 +240,8 @@ static void subfunc (uae_u8 *data, int cnt)
 #endif
 	if (subcodebufferinuse[subcodebufferoffsetw]) {
 		memset (subcodebufferinuse, 0, sizeof subcodebufferinuse);
-		subcodebufferoffsetw = subcodebufferoffset = 0;
+		subcodebufferoffsetw = 0;
+		subcodebufferoffset = 0;
 		subcodeoffset = -1;
 		uae_sem_post (&sub_sem);
 #ifdef CDTV_SUB_DEBUG
@@ -1254,7 +1256,8 @@ static void cdtv_reset_int (void)
 {
 	write_log (_T("CDTV: reset\n"));
 	cdaudiostop ();
-	cd_playing = cd_paused = 0;
+	cd_playing = 0;
+	cd_paused = 0;
 	cd_motor = 0;
 	cd_media = 0;
 	cd_error = 0;
@@ -1733,7 +1736,10 @@ bool cdtv_init(struct autoconfig_info *aci)
 	write_comm_pipe_u32 (&requests, 0x0104, 1);
 
 	cdrom_command_cnt_out = -1;
-	cmd = enable = xaen = dten = 0;
+	cmd = 0;
+	enable = 0;
+	xaen = 0;
+	dten = 0;
 
 	/* KS autoconfig handles the rest */
 	if (!savestate_state) {

@@ -486,7 +486,8 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 		sleep_millis(10);
 	oldplay = -1;
 
-	cdu->cda_bufon[0] = cdu->cda_bufon[1] = 0;
+	cdu->cda_bufon[0] = 0;
+	cdu->cda_bufon[1] = 0;
 	bufnum = 0;
 
 	cdu->cda = new cda_audio (CDDA_BUFFERS, 2352, 44100);
