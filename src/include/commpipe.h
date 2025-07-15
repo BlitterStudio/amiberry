@@ -40,7 +40,8 @@ STATIC_INLINE void init_comm_pipe (smp_comm_pipe *p, int size, int chunks)
 	p->data = (uae_pt *)malloc (size*sizeof (uae_pt));
 	p->size = size;
 	p->chunks = chunks;
-	p->rdp = p->wrp = 0;
+	p->rdp = 0;
+	p->wrp = 0;
 	p->reader_waiting = 0;
 	p->writer_waiting = 0;
 	uae_sem_init (&p->lock, 0, 1);

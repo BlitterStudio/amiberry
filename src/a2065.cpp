@@ -1044,7 +1044,9 @@ static void a2065_reset(int hardreset)
 	for (int i = 0; i < RAP_SIZE; i++)
 		csr[i] = 0;
 	csr[0] = CSR0_STOP;
-	csr[1] = csr[2] = csr[3] = 0;
+	csr[1] = 0;
+	csr[2] = 0;
+	csr[3] = 0;
 	csr[4] = 0x0115;
 	dbyteswap = 0;
 	rap = 0;

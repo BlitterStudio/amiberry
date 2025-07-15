@@ -572,7 +572,8 @@ static void subfunc (uae_u8 *data, int cnt)
 #endif
 	if (subcodebufferinuse[subcodebufferoffsetw]) {
 		memset (subcodebufferinuse, 0,sizeof (subcodebufferinuse));
-		subcodebufferoffsetw = subcodebufferoffset = 0;
+		subcodebufferoffsetw = 0;
+		subcodebufferoffset = 0;
 		uae_sem_post (&sub_sem);
 		//write_log (_T("CD32: subcode buffer overflow 1\n"));
 		return;
@@ -1981,7 +1982,8 @@ static void akiko_bput2 (uaecptr addr, uae_u32 v, int msg)
 		if ((cdrom_flags & CDFLAG_SUBCODE) && !(tmp & CDFLAG_SUBCODE)) {
 			uae_sem_wait (&sub_sem);
 			memset (subcodebufferinuse, 0, sizeof subcodebufferinuse);
-			subcodebufferoffset = subcodebufferoffsetw = 0;
+			subcodebufferoffset = 0;
+			subcodebufferoffsetw = 0;
 			uae_sem_post (&sub_sem);
 		}
 		cdrom_flags &= 0xff800000;

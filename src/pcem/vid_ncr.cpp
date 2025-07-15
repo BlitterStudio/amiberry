@@ -1094,7 +1094,7 @@ static void ncr_io_set(ncr_t *ncr)
         io_sethandlerx(0x03c0, 0x0020, ncr_in, NULL, NULL, ncr_out, NULL, NULL, ncr);
 }
 
-static void *ncr_init(char *bios_fn, int chip)
+static void *ncr_init(const char *bios_fn, int chip)
 {
         ncr_t *ncr = (ncr_t*)calloc(sizeof(ncr_t), 1);
         svga_t *svga = &ncr->svga;

@@ -2815,7 +2815,7 @@ static void cl_pci_write(int func, int addr, uint8_t val, void *p)
         }
 }
 
-static void *cl_init(int type, char *fn, int pci_card, uint32_t force_vram_size)
+static void *cl_init(int type, const char *fn, int pci_card, uint32_t force_vram_size)
 {
         gd5429_t *gd5429 = (gd5429_t*)malloc(sizeof(gd5429_t));
         svga_t *svga = &gd5429->svga;

@@ -130,7 +130,8 @@ static bool cdda_play2(struct cda_play* ciw, int* outpos)
 		sleep_millis(10);
 	oldplay = -1;
 
-	ciw->cda_bufon[0] = ciw->cda_bufon[1] = 0;
+	ciw->cda_bufon[0] = 0;
+	ciw->cda_bufon[1] = 0;
 	bufnum = 0;
 	buffered = 0;
 
