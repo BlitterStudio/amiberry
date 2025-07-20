@@ -2,6 +2,7 @@
 #define UAE_GFXBOARD_H
 
 #include "picasso96.h"
+#include "rtgmodes.h"
 
 extern bool gfxboard_init_memory (struct autoconfig_info*);
 extern bool gfxboard_init_memory_p4_z2(struct autoconfig_info*);
@@ -58,6 +59,8 @@ void gfxboard_free_vram(int index);
 int gfxboard_get_devnum(struct uae_prefs *p, int index);
 
 int pcem_getvramsize(void);
+
+void gfxboard_intreq(void *p, int act, bool safe);
 
 #define GFXBOARD_UAE_Z2 0
 #define GFXBOARD_UAE_Z3 1

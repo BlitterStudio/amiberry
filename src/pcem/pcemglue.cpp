@@ -183,7 +183,7 @@ void outl(uint16_t port, uint32_t val)
 }
 
 
-void model_init(void)
+static void model_init(void)
 {
 
 }
@@ -796,7 +796,7 @@ int pci_add(uint8_t(*read)(int func, int addr, void *priv), void (*write)(int fu
 	pci_card_priv = priv;
 	return 0;
 }
-extern void gfxboard_intreq(void *, int, bool);
+
 void pci_set_irq_routing(int card, int irq)
 {
 	//write_log(_T("pci_set_irq_routing %d %d\n"), card, irq);

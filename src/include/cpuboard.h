@@ -38,6 +38,8 @@ void cyberstorm_mk3_ppc_irq_setonly(int id, int level);
 void blizzardppc_irq_setonly(int id, int level);
 void cpuboard_gvpmaprom(int);
 
+bool cpuboard_fc_check(uaecptr addr, uae_u32 *v, int size, bool write);
+
 #define BOARD_MEMORY_Z2 1
 #define BOARD_MEMORY_Z3 2
 #define BOARD_MEMORY_HIGHMEM 3

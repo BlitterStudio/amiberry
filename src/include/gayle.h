@@ -23,4 +23,6 @@ extern int gary_timeout; // non-existing memory access = delay
 
 void gayle_dataflyer_enable(bool);
 
+bool isideint(void);
+
 #endif /* UAE_GAYLE_H */
