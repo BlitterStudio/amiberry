@@ -862,6 +862,8 @@ bool HelpPanelPaths(std::vector<std::string>& helptext)
         helptext.emplace_back("the relevant options. A logfile is useful when trying to troubleshoot something,");
         helptext.emplace_back("but otherwise this option should be off, as it will incur some extra overhead.");
 		helptext.emplace_back("You can also redirect the log output to console, by enabling that logging option.");
+		helptext.emplace_back("You can alternatively enable log output to console if you pass the --log option");
+		helptext.emplace_back("to Amiberry on startup.");
         helptext.emplace_back(" ");
         helptext.emplace_back("The \"Rescan Paths\" button will rescan the paths specified above and refresh the");
         helptext.emplace_back("local cache. This should be done if you added kickstart ROMs for example, in order");
