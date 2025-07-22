@@ -5018,7 +5018,7 @@ bool gfxboard_init_memory (struct autoconfig_info *aci)
 	_sntprintf(gb->lbsmemorybankname, sizeof gb->lbsmemorybankname, _T("%s VRAM LONGSWAP"), gb->board->name);
 	_sntprintf(gb->regbankname, sizeof gb->regbankname, _T("%s REG"), gb->board->name);
 
-	memcpy(&gb->gfxboard_bank_memory, &tmpl_gfxboard_bank_memory, sizeof (addrbank));
+	memcpy(&gb->gfxboard_bank_memory, &tmpl_gfxboard_bank_memory, sizeof(addrbank));
 	memcpy(&gb->gfxboard_bank_wbsmemory, &tmpl_gfxboard_bank_wbsmemory, sizeof(addrbank));
 	memcpy(&gb->gfxboard_bank_lbsmemory, &tmpl_gfxboard_bank_lbsmemory, sizeof(addrbank));
 	memcpy(&gb->gfxboard_bank_nbsmemory, &tmpl_gfxboard_bank_nbsmemory, sizeof(addrbank));
@@ -5189,7 +5189,7 @@ bool gfxboard_init_memory_p4_z2 (struct autoconfig_info *aci)
 	return true;
 }
 
-bool gfxboard_init_registersx(struct autoconfig_info *aci, int regnum)
+static bool gfxboard_init_registersx(struct autoconfig_info *aci, int regnum)
 {
 	struct rtggfxboard *gb = &rtggfxboards[aci->devnum];
 	int size;

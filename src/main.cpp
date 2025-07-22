@@ -810,6 +810,7 @@ void usage()
 	std::cout << "Usage:" << '\n';
 	std::cout << " -h                         Show this help." << '\n';
 	std::cout << " --help                     \n" << '\n';
+	std::cout << " --log                      Show log output to console." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';

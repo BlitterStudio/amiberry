@@ -24,6 +24,7 @@
 #include "sysdeps.h"
 
 #include "calc.h"
+#include "debug.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -31,14 +32,6 @@
 #define STACK_SIZE 32
 #define MAX_VALUES 32
 #define IOBUFFERS 256
-
-#ifdef DEBUGGER
-uae_u32 get_byte_debug(uaecptr addr);
-uae_u32 get_word_debug(uaecptr addr);
-uae_u32 get_long_debug(uaecptr addr);
-int getregidx(TCHAR **c);
-uae_u32 returnregx(int regid);
-#endif
 
 static double parsedvaluesd[MAX_VALUES];
 static TCHAR *parsedvaluess[MAX_VALUES];

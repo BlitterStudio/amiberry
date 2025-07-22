@@ -1393,7 +1393,7 @@ static void fmv_next_cd_audio_buffer_callback(int bufnum, void *param)
 	uae_sem_post(&play_sem);
 }
 
-void cd32_fmv_vsync_handler(void)
+static void cd32_fmv_vsync_handler(void)
 {
 }
 

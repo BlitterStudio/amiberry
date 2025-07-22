@@ -19,6 +19,9 @@
 #define bug write_log
 #endif
 
+int getregidx(TCHAR **c);
+uae_u32 returnregx(int regid);
+
 #ifdef DEBUGGER
 
 #define	MAX_HIST 500

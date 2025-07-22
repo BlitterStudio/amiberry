@@ -33,6 +33,7 @@
 #include "flashrom.h"
 #include "savestate.h"
 #include "devices.h"
+#include "specialmonitors.h"
 
 #define CUBO_DEBUG 1
 
@@ -890,7 +891,7 @@ static void sony_serial_read(uae_u16 w)
 		break;
 	case 0x2b: // FWD Step
 		ld_address++;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 		getsetpositionvideograb(ld_address);
 #endif
 		ld_mode = LD_MODE_STILL;
@@ -903,7 +904,7 @@ static void sony_serial_read(uae_u16 w)
 		if (ld_address) {
 			ld_address--;
 		}
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 		getsetpositionvideograb(ld_address);
 #endif
 		ld_mode = LD_MODE_STILL;
@@ -934,7 +935,7 @@ static void sony_serial_read(uae_u16 w)
 		ld_mode = LD_MODE_PLAY;
 		ld_direction = 0;
 		ld_repcnt = -1;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 		pausevideograb(0);
 #endif
 	}
@@ -950,7 +951,7 @@ static void sony_serial_read(uae_u16 w)
 		write_log(_T("LD: FAST FORWARD PLAY\n"));
 	break;
 	case 0x3f: // STOP '?'
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ld_direction = 0;
@@ -983,7 +984,7 @@ static void sony_serial_read(uae_u16 w)
 			}
 			ld_mode_value = 0;
 			ld_mode = LD_MODE_PLAY;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 			pausevideograb(0);
 #endif
 			ack();
@@ -991,14 +992,12 @@ static void sony_serial_read(uae_u16 w)
 				write_log(_T("LD: REPEAT CNT=%d, %d TO %d\n"), ld_repcnt, ld_startaddress, ld_endaddress);
 			}
 		} else if (ld_mode_value == LD_MODE_SEARCH) {
-#ifdef AVIOUTPUT
-			uae_s32 endpos = (uae_s32)getdurationvideograb();
-#endif
 		ld_address = ld_value;
 		ack();
 		// delay seek status response by 2 frames (Platoon requires this)
 		ld_wait_seek = arcadia_hsync_cnt + 2 * maxvpos;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
+		uae_s32 endpos = (uae_s32)getdurationvideograb();
 		if (ld_address > endpos) {
 			ld_address = endpos;
 			getsetpositionvideograb(ld_address);
@@ -1023,7 +1022,7 @@ static void sony_serial_read(uae_u16 w)
 		break;
 	case 0x4a: // R-PLAY 'J'
 	ld_mode = LD_MODE_PLAY;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ld_direction = -1;
@@ -1033,7 +1032,7 @@ static void sony_serial_read(uae_u16 w)
 	break;
 	case 0x4b: // Fast reverse play 'K'
 	ld_mode = LD_MODE_PLAY;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ld_direction = -2;
@@ -1044,7 +1043,7 @@ static void sony_serial_read(uae_u16 w)
 	case 0x4f: // STILL 'O'
 	ld_mode = LD_MODE_STILL;
 	ld_direction = 0;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ack();
@@ -1056,7 +1055,7 @@ static void sony_serial_read(uae_u16 w)
 	ld_mode = LD_MODE_STILL;
 	ld_mode_value = LD_MODE_SEARCH;
 	ld_direction = 0;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ld_value = 0;
@@ -1067,7 +1066,7 @@ static void sony_serial_read(uae_u16 w)
 	ack();
 	ld_mode_value = LD_MODE_REPEAT;
 	ld_direction = 0;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ld_value = 0;
@@ -1077,7 +1076,7 @@ static void sony_serial_read(uae_u16 w)
 	case 0x46: // CH-1 ON 'F'
 	ack();
 	ld_audio |= 1;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	setchflagsvideograb(ld_audio, false);
 #endif
 	if (log_ld)
@@ -1086,7 +1085,7 @@ static void sony_serial_read(uae_u16 w)
 	case 0x48: // CH-2 ON 'H'
 	ack();
 	ld_audio |= 2;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	setchflagsvideograb(ld_audio, false);
 #endif
 	if (log_ld)
@@ -1095,7 +1094,7 @@ static void sony_serial_read(uae_u16 w)
 	case 0x47: // CH-1 OFF 'G'
 	ack();
 	ld_audio &= ~1;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	setchflagsvideograb(ld_audio, false);
 #endif
 	if (log_ld)
@@ -1104,7 +1103,7 @@ static void sony_serial_read(uae_u16 w)
 	case 0x49: // CH-2 OFF 'I'
 	ack();
 	ld_audio &= ~2;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	setchflagsvideograb(ld_audio, false);
 #endif
 	if (log_ld)
@@ -1133,7 +1132,7 @@ static void sony_serial_read(uae_u16 w)
 	ld_direction = 0;
 	ld_video = true;
 	ld_value = 0;
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 	ack();
@@ -1142,7 +1141,7 @@ static void sony_serial_read(uae_u16 w)
 	break;
 	case 0x60: // ADDR INQ '`'
 	{
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 		if (!ld_save_restore && isvideograb() && ld_direction == 0) {
 			ld_address = (uae_u32)getsetpositionvideograb(-1);
 		}
@@ -1207,7 +1206,7 @@ static void alg_vsync(void)
 {
 	ld_vsync++;
 	if (ld_save_restore) {
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 		if (ld_address == 0 || getsetpositionvideograb(ld_address) > 0) {
 			ld_save_restore = false;
 			setchflagsvideograb(ld_audio, false);
@@ -1219,7 +1218,7 @@ static void alg_vsync(void)
 	}
 
 	if (ld_mode == LD_MODE_PLAY) {
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 		if (log_ld && (ld_vsync & 63) == 0) {
 			uae_s64 pos = getsetpositionvideograb(-1);
 			write_log(_T("LD: frame %lld\n"), pos);
@@ -1230,7 +1229,7 @@ static void alg_vsync(void)
 			if (ld_address > 0) {
 				ld_address -= (-ld_direction);
 				if ((ld_vsync & 15) == 0) {
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 					if (isvideograb()) {
 						getsetpositionvideograb(ld_address);
 					}
@@ -1241,7 +1240,7 @@ static void alg_vsync(void)
 			ld_address += 1 + ld_direction;
 			if (ld_direction > 0) {
 				if ((ld_vsync & 15) == 0) {
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 					if (isvideograb()) {
 						getsetpositionvideograb(ld_address);
 					}
@@ -1249,7 +1248,7 @@ static void alg_vsync(void)
 				}
 			}
 		}
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 		if (ld_repcnt >= 0 || ld_mark >= 0) {
 			uae_s64 f = getsetpositionvideograb(-1);
 			if (ld_repcnt >= 0) {
@@ -1585,7 +1584,7 @@ void alg_map_banks(void)
 	if (alg_picmatic_nova == 1) {
 		map_banks(&alg_ram_bank, 0xf6, 1, 0);
 	}
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	pausevideograb(1);
 #endif
 
@@ -1678,7 +1677,7 @@ uae_u8 *save_alg(size_t *len)
 
 	dstbak = dst = xmalloc(uae_u8, 1000);
 	save_u32(1);
-#ifdef AVIOUTPUT
+#ifdef VIDEOGRAB
 	uae_u32 addr = (uae_u32)getsetpositionvideograb(-1);
 #else
 	uae_u32 addr = 0;
@@ -1978,10 +1977,10 @@ static void cubo_write_pic(uae_u8 v)
 			int offset = cubo_pic_bit_cnt / 8;
 			if (offset < sizeof(cubo_pic_key)) {
 				cubo_pic_key[offset] = cubo_pic_byte;
-				write_log(_T("Cubo PIC received %02x (%d/%d)\n"), cubo_pic_byte, offset, sizeof(cubo_pic_key));
+				write_log(_T("Cubo PIC received %02x (%d/%zu)\n"), cubo_pic_byte, offset, sizeof(cubo_pic_key));
 			}
 			if (offset == sizeof(cubo_pic_key) - 1) {
-				write_log(_T("Cubo PIC key in: "), cubo_key);
+				write_log(_T("Cubo PIC key in: "));
 				for (int i = 0; i < 8; i++) {
 					write_log(_T("%02x "), cubo_pic_key[i + 2]);
 				}

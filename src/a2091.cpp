@@ -1398,7 +1398,7 @@ static void wd_cmd_reset (struct wd_chip_state *wd, bool irq, bool fast)
 	wd->wd_selected = false;
 	wd->scsi = NULL;
 	for (int j = 0; j < WD_STATUS_QUEUE; j++) {
-		memset(&wd->status[j], 0, sizeof (status_data));
+		memset(&wd->status[j], 0, sizeof(status_data));
 	}
 	wd->queue_index = 0;
 	wd->auxstatus = 0;
@@ -1461,7 +1461,7 @@ static void wd_check_interrupt(struct wd_state *wds, bool checkonly)
 		wd->wd_busy = false;
 		if (wd->queue_index == 2) {
 			wd->status[0].irq = 1;
-			memcpy(&wd->status[0], &wd->status[1], sizeof (status_data));
+			memcpy(&wd->status[0], &wd->status[1], sizeof(status_data));
 			wd->queue_index = 1;
 		} else {
 			wd->queue_index = 0;
@@ -1711,7 +1711,7 @@ uae_u8 wdscsi_get (struct wd_chip_state *wd, struct wd_state *wds)
 	return v;
 }
 
-uae_u8 wdscsi_get_data(struct wd_chip_state *wd, struct wd_state *wds)
+static uae_u8 wdscsi_get_data(struct wd_chip_state *wd, struct wd_state *wds)
 {
 	uae_u8 sasr = wd->sasr;
 	wd->sasr = WD_DATA;
@@ -2588,8 +2588,6 @@ static void REGPARAM2 dmac_a2091_wput(struct wd_state *wd, uaecptr addr, uae_u32
 	dmac_a2091_write_word(wd, addr, w);
 }
 
-extern const addrbank dmaca2091_bank;
-
 static void REGPARAM2 dmac_a2091_bput(struct wd_state *wd, uaecptr addr, uae_u32 b)
 {
 	b &= 0xff;
@@ -2714,7 +2712,7 @@ static void REGPARAM2 dmac_a2091_lput (uaecptr addr, uae_u32 b)
 		dmac_a2091_lput(wd, addr, b);
 }
 
-const addrbank dmaca2091_bank = {
+static const addrbank dmaca2091_bank = {
 	dmac_a2091_lget, dmac_a2091_wget, dmac_a2091_bget,
 	dmac_a2091_lput, dmac_a2091_wput, dmac_a2091_bput,
 	dmac_a2091_xlate, dmac_a2091_check, NULL, _T("*"), _T("A2090/A2091/A590"),
@@ -2931,8 +2929,6 @@ static void REGPARAM2 comspec_wput(struct wd_state *wd, uaecptr addr, uae_u32 w)
 	comspec_write_word(wd, addr, w);
 }
 
-extern const addrbank dmaca2091_bank;
-
 static void REGPARAM2 comspec_bput(struct wd_state *wd, uaecptr addr, uae_u32 b)
 {
 	b &= 0xff;
@@ -3057,8 +3053,6 @@ static const addrbank comspec_bank = {
 
 
 /* GVP Series I and II */
-
-extern const addrbank gvp_bank;
 
 static uae_u32 dmac_gvp_read_byte(struct wd_state *wd, uaecptr addr)
 {
@@ -3558,7 +3552,7 @@ static uae_u8 *REGPARAM2 dmac_gvp_xlate(uaecptr addr)
 	return wd->rom + addr;
 }
 
-const addrbank gvp_bank = {
+static const addrbank gvp_bank = {
 	dmac_gvp_lget, dmac_gvp_wget, dmac_gvp_bget,
 	dmac_gvp_lput, dmac_gvp_wput, dmac_gvp_bput,
 	dmac_gvp_xlate, dmac_gvp_check, NULL, _T("*"), _T("GVP"),
@@ -4130,7 +4124,7 @@ bool a2091_init (struct autoconfig_info *aci)
 	wd->configured = 0;
 	wd->autoconfig = true;
 	wd->board_mask = 65535;
-	memcpy(&wd->bank, &dmaca2091_bank, sizeof (addrbank));
+	memcpy(&wd->bank, &dmaca2091_bank, sizeof(addrbank));
 	memcpy(wd->dmacmemory, aci->autoconfig_raw, sizeof wd->dmacmemory);
 
 	alloc_expansion_bank(&wd->bank, aci);
@@ -4217,7 +4211,7 @@ static bool a2090x_init (struct autoconfig_info *aci, bool combitec)
 	wd->configured = 0;
 	wd->autoconfig = true;
 	wd->board_mask = 65535;
-	memcpy(&wd->bank, &dmaca2091_bank, sizeof (addrbank));
+	memcpy(&wd->bank, &dmaca2091_bank, sizeof(addrbank));
 	memcpy(wd->dmacmemory, aci->autoconfig_raw, sizeof wd->dmacmemory);
 
 	alloc_expansion_bank(&wd->bank, aci);
@@ -4260,7 +4254,7 @@ bool a2090b_preinit (struct autoconfig_info *aci)
 	struct wd_state *wd = getscsi(aci->rc);
 	if (!wd)
 		return false;
-	memcpy(&wd->bank2, &combitec_bank, sizeof (addrbank));
+	memcpy(&wd->bank2, &combitec_bank, sizeof(addrbank));
 	wd->bank2.start = 0xf10000;
 	wd->bank2.reserved_size = 0x10000;
 	wd->bank2.mask = 0xffff;
@@ -4368,7 +4362,7 @@ static bool gvp_init(struct autoconfig_info *aci, bool series2, bool accel, uae_
 	init_wd_scsi(wd, aci->rc->dma24bit);
 	wd->configured = 0;
 	wd->threaded = true;
-	memcpy(&wd->bank, &gvp_bank, sizeof (addrbank));
+	memcpy(&wd->bank, &gvp_bank, sizeof(addrbank));
 	wd->autoconfig = true;
 	wd->rombankswitcher = 0;
 	memset(wd->dmacmemory, 0xff, sizeof wd->dmacmemory);
@@ -4551,7 +4545,7 @@ bool comspec_preinit (struct autoconfig_info *aci)
 	wd->autoconfig = true;
 	wd->board_mask = 65535;
 	wd->wc.resetnodelay = true;
-	memcpy(&wd->bank, &comspec_bank, sizeof (addrbank));
+	memcpy(&wd->bank, &comspec_bank, sizeof(addrbank));
 	memcpy(wd->dmacmemory, aci->autoconfig_raw, sizeof wd->dmacmemory);
 
 	alloc_expansion_bank(&wd->bank, aci);

@@ -100,7 +100,9 @@ extern cpuop_func *loop_mode_table[];
 
 extern uae_u32 REGPARAM3 op_illg(uae_u32) REGPARAM;
 extern void REGPARAM3 op_illg_noret(uae_u32) REGPARAM;
+void REGPARAM3 op_illg_1_noret(uae_u32 opcode) REGPARAM;
 extern void REGPARAM3 op_unimpl(uae_u32) REGPARAM;
+void REGPARAM3 op_unimpl_1_noret(uae_u32 opcode) REGPARAM;
 
 typedef uae_u8 flagtype;
 
@@ -918,5 +920,8 @@ extern bool can_cpu_tracer (void);
 
 uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size);
 void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size);
+
+const struct cputbl *uaegetjitcputbl(void);
+const struct cputbl *getjitcputbl(int cpulvl, int direct);
 
 #endif /* UAE_NEWCPU_H */

@@ -111,7 +111,7 @@ enum
 #define ABFLAG_CACHE_ENABLE_BOTH (ABFLAG_CACHE_ENABLE_DATA | ABFLAG_CACHE_ENABLE_INS)
 #define ABFLAG_CACHE_ENABLE_ALL (ABFLAG_CACHE_ENABLE_BOTH | ABFLAG_CACHE_ENABLE_INS_BURST | ABFLAG_CACHE_ENABLE_DATA_BURST)
 
-typedef struct {
+typedef struct addrbank {
 	/* These ones should be self-explanatory...
 	 * Do not move. JIT depends on it
 	 */
@@ -186,7 +186,7 @@ struct autoconfig_info
 	// never direct maps RAM
 	bool indirect;
 	const TCHAR *label;
-	addrbank_t *addrbank;
+	struct addrbank *addrbank;
 	uaecptr write_bank_address;
 	struct romconfig *rc;
 	uae_u32 last_high_ram;
