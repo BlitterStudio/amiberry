@@ -134,6 +134,7 @@ amiberry_hotkey quit_key;
 amiberry_hotkey action_replay_key;
 amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
+amiberry_hotkey right_amiga_key;
 SDL_GameControllerButton vkbd_button;
 
 bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, rshift_pressed, lgui_pressed, rgui_pressed;
@@ -186,47 +187,61 @@ std::vector<int> parse_color_string(const std::string& input)
 	return result;
 }
 
-static amiberry_hotkey get_hotkey_from_config(std::string config_option)
+static amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 {
 	amiberry_hotkey hotkey = {};
-	std::string delimiter = "+";
-	std::string lctrl = "LCtrl";
-	std::string rctrl = "RCtrl";
-	std::string lalt = "LAlt";
-	std::string ralt = "RAlt";
-	std::string lshift = "LShift";
-	std::string rshift = "RShift";
-	std::string lgui = "LGUI";
-	std::string rgui = "RGUI";
-	
+
 	if (config_option.empty()) return hotkey;
 
-	size_t pos = 0;
-	std::string token;
-	while ((pos = config_option.find(delimiter)) != std::string::npos)
-	{
-		token = config_option.substr(0, pos);
-		if (token == lctrl)
-			hotkey.modifiers.lctrl = true;
-		if (token == rctrl)
-			hotkey.modifiers.rctrl = true;
-		if (token == lalt)
-			hotkey.modifiers.lalt = true;
-		if (token == ralt)
-			hotkey.modifiers.ralt = true;
-		if (token == lshift)
-			hotkey.modifiers.lshift = true;
-		if (token == rshift)
-			hotkey.modifiers.rshift = true;
-		if (token == lgui)
-			hotkey.modifiers.lgui = true;
-		if (token == rgui)
-			hotkey.modifiers.rgui = true;
+	// Use static lookup tables to avoid repeated string allocations and comparisons
+	static const std::unordered_map<std::string, std::function<void(hotkey_modifiers&)>> modifier_map = {
+		{"LCtrl", [](hotkey_modifiers& m) { m.lctrl = true; }},
+		{"RCtrl", [](hotkey_modifiers& m) { m.rctrl = true; }},
+		{"LAlt", [](hotkey_modifiers& m) { m.lalt = true; }},
+		{"RAlt", [](hotkey_modifiers& m) { m.ralt = true; }},
+		{"LShift", [](hotkey_modifiers& m) { m.lshift = true; }},
+		{"RShift", [](hotkey_modifiers& m) { m.rshift = true; }},
+		{"LGUI", [](hotkey_modifiers& m) { m.lgui = true; }},
+		{"RGUI", [](hotkey_modifiers& m) { m.rgui = true; }}
+	};
 
-		config_option.erase(0, pos + delimiter.length());
+	static const std::unordered_map<std::string, const char*> sdl2_name_map = {
+		{"LCtrl", "Left Ctrl"},
+		{"RCtrl", "Right Ctrl"},
+		{"LAlt", "Left Alt"},
+		{"RAlt", "Right Alt"},
+		{"LShift", "Left Shift"},
+		{"RShift", "Right Shift"},
+		{"LGUI", "Left GUI"},
+		{"RGUI", "Right GUI"}
+	};
+
+	// Parse tokens more efficiently without modifying the original string
+	size_t start = 0;
+	size_t pos = 0;
+	constexpr char delimiter = '+';
+
+	while ((pos = config_option.find(delimiter, start)) != std::string::npos)
+	{
+		const std::string token = config_option.substr(start, pos - start);
+
+		// Use lookup table for O(1) modifier detection
+		const auto it = modifier_map.find(token);
+		if (it != modifier_map.end()) {
+			it->second(hotkey.modifiers);
+		}
+
+		start = pos + 1;
 	}
-	hotkey.key_name = config_option;
-	hotkey.scancode = SDL_GetScancodeFromName(hotkey.key_name.c_str());
+
+	// The remaining part is the key name
+	hotkey.key_name = config_option.substr(start);
+
+	// Use lookup table for SDL2 name mapping
+	const auto sdl2_it = sdl2_name_map.find(hotkey.key_name);
+	const char* sdl2_key_name = (sdl2_it != sdl2_name_map.end()) ? sdl2_it->second : hotkey.key_name.c_str();
+
+	hotkey.scancode = SDL_GetScancodeFromName(sdl2_key_name);
 	hotkey.button = SDL_GameControllerGetButtonFromString(hotkey.key_name.c_str());
 	
 	return hotkey;
@@ -276,6 +291,9 @@ static void set_key_configs(const uae_prefs* p)
 
 	if (strncmp(p->minimize, "", 1) != 0)
 		minimize_key = get_hotkey_from_config(p->minimize);
+
+	if (strncmp(p->right_amiga, "", 1) != 0)
+		right_amiga_key = get_hotkey_from_config(p->right_amiga);
 
 	vkbd_button = SDL_GameControllerGetButtonFromString(p->vkbd_toggle);
 	if (vkbd_button == SDL_CONTROLLER_BUTTON_INVALID)
@@ -1575,6 +1593,10 @@ void handle_key_event(const SDL_Event& event)
 	{
 		scancode = SDL_SCANCODE_RGUI;
 	}
+	if (right_amiga_key.scancode && scancode == right_amiga_key.scancode)
+	{
+		scancode = SDL_SCANCODE_RGUI;
+	}
 
 	scancode = keyhack(scancode, pressed, 0);
 	if (scancode >= 0)
@@ -2604,6 +2626,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
+	cfgfile_target_dwrite_str(f, _T("right_amiga"), p->right_amiga);
 
 	if (p->drawbridge_driver > 0)
 	{
@@ -2745,6 +2768,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay)
 		|| cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
 		|| cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
+		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
 
