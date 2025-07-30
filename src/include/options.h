@@ -1058,6 +1058,7 @@ struct uae_prefs
 	TCHAR action_replay[256];
 	TCHAR fullscreen_toggle[256];
 	TCHAR minimize[256];
+	TCHAR right_amiga[256];
 
 	/* input */
 

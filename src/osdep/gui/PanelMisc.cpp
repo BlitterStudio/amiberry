@@ -71,8 +71,23 @@ static gcn::TextField* txtKeyMinimize;
 static gcn::Button* cmdKeyMinimize;
 static gcn::ImageButton* cmdKeyMinimizeClear;
 
+static gcn::Label* lblKeyRAmiga;
+static gcn::TextField* txtKeyRAmiga;
+static gcn::Button* cmdKeyRAmiga;
+static gcn::ImageButton* cmdKeyRAmigaClear;
+
 static const std::vector<std::string> listValues = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
 static gcn::StringListModel KBDLedList(listValues);
+
+void setHotkeyFieldAndPrefs(const amiberry_hotkey& key, gcn::TextField* field, char* changed_pref, char* curr_pref) {
+	// Only set hotkey if we actually got a valid key (not cancelled)
+	if (!key.modifiers_string.empty())
+	{
+		field->setText(key.modifiers_string);
+		strcpy(changed_pref, key.modifiers_string.c_str());
+		strcpy(curr_pref, key.modifiers_string.c_str());
+	}
+}
 
 class MiscActionListener : public gcn::ActionListener
 {
@@ -194,13 +209,7 @@ public:
 		else if (actionEvent.getSource() == cmdKeyOpenGUI)
 		{
 			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Open the GUI, or ESC to cancel...", "Cancel");
-			if (!key.key_name.empty())
-			{
-				std::string hotkey = key.modifiers_string + key.key_name;
-				txtOpenGUI->setText(hotkey);
-				strcpy(changed_prefs.open_gui, hotkey.c_str());
-				strcpy(currprefs.open_gui, hotkey.c_str());
-			}
+			setHotkeyFieldAndPrefs(key, txtOpenGUI, changed_prefs.open_gui, currprefs.open_gui);
 		}
 		else if (actionEvent.getSource() == cmdKeyOpenGUIClear)
 		{
@@ -213,13 +222,7 @@ public:
 		else if (actionEvent.getSource() == cmdKeyForQuit)
 		{
 			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Quit the emulator, or ESC to cancel...", "Cancel");
-			if (!key.key_name.empty())
-			{
-				std::string hotkey = key.modifiers_string + key.key_name;
-				txtKeyForQuit->setText(hotkey);
-				strcpy(changed_prefs.quit_amiberry, hotkey.c_str());
-				strcpy(currprefs.quit_amiberry, hotkey.c_str());
-			}
+			setHotkeyFieldAndPrefs(key, txtKeyForQuit, changed_prefs.quit_amiberry, currprefs.quit_amiberry);
 		}
 		else if (actionEvent.getSource() == cmdKeyForQuitClear)
 		{
@@ -232,13 +235,7 @@ public:
 		else if (actionEvent.getSource() == cmdKeyActionReplay)
 		{
 			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Action Replay, or ESC to cancel...", "Cancel");
-			if (!key.key_name.empty())
-			{
-				std::string hotkey = key.modifiers_string + key.key_name;
-				txtKeyActionReplay->setText(hotkey);
-				strcpy(changed_prefs.action_replay, hotkey.c_str());
-				strcpy(currprefs.action_replay, hotkey.c_str());
-			}
+			setHotkeyFieldAndPrefs(key, txtKeyActionReplay, changed_prefs.action_replay, currprefs.action_replay);
 		}
 		else if (actionEvent.getSource() == cmdKeyActionReplayClear)
 		{
@@ -251,13 +248,7 @@ public:
 		else if (actionEvent.getSource() == cmdKeyFullScreen)
 		{
 			const auto key = ShowMessageForInput("Press a key", "Press a key to map to toggle FullScreen, or ESC to cancel...", "Cancel");
-			if (!key.key_name.empty())
-			{
-				std::string hotkey = key.modifiers_string + key.key_name;
-				txtKeyFullScreen->setText(hotkey);
-				strcpy(changed_prefs.fullscreen_toggle, hotkey.c_str());
-				strcpy(currprefs.fullscreen_toggle, hotkey.c_str());
-			}
+			setHotkeyFieldAndPrefs(key, txtKeyFullScreen, changed_prefs.fullscreen_toggle, currprefs.fullscreen_toggle);
 		}
 		else if (actionEvent.getSource() == cmdKeyFullScreenClear)
 		{
@@ -270,19 +261,26 @@ public:
 		else if (actionEvent.getSource() == cmdKeyMinimize)
 		{
 			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Minimize or ESC to cancel...", "Cancel");
-			if (!key.key_name.empty())
-			{
-				std::string hotkey = key.modifiers_string + key.key_name;
-				txtKeyMinimize->setText(hotkey);
-				strcpy(changed_prefs.minimize, hotkey.c_str());
-				strcpy(currprefs.minimize, hotkey.c_str());
-			}
+			setHotkeyFieldAndPrefs(key, txtKeyMinimize, changed_prefs.minimize, currprefs.minimize);
 		}
 		else if (actionEvent.getSource() == cmdKeyMinimizeClear)
 		{
 			std::string hotkey;
 			strcpy(changed_prefs.minimize, hotkey.c_str());
 			strcpy(currprefs.minimize, hotkey.c_str());
+			RefreshPanelMisc();
+		}
+
+		else if (actionEvent.getSource() == cmdKeyRAmiga)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Right Amiga or ESC to cancel...", "Cancel");
+			setHotkeyFieldAndPrefs(key, txtKeyRAmiga, changed_prefs.right_amiga, currprefs.right_amiga);
+		}
+		else if (actionEvent.getSource() == cmdKeyRAmigaClear)
+		{
+			std::string hotkey;
+			strcpy(changed_prefs.right_amiga, hotkey.c_str());
+			strcpy(currprefs.right_amiga, hotkey.c_str());
 			RefreshPanelMisc();
 		}
 	}
@@ -600,6 +598,27 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyMinimizeClear->setId("cmdKeyMinimizeClear");
 	cmdKeyMinimizeClear->addActionListener(miscActionListener);
 
+	lblKeyRAmiga = new gcn::Label("Right Amiga:");
+	lblKeyRAmiga->setAlignment(gcn::Graphics::Right);
+	txtKeyRAmiga = new gcn::TextField();
+	txtKeyRAmiga->setEnabled(false);
+	txtKeyRAmiga->setSize(120, TEXTFIELD_HEIGHT);
+	txtKeyRAmiga->setBaseColor(gui_base_color);
+	txtKeyRAmiga->setBackgroundColor(gui_background_color);
+	txtKeyRAmiga->setForegroundColor(gui_foreground_color);
+	cmdKeyRAmiga = new gcn::Button("...");
+	cmdKeyRAmiga->setId("cmdKeyRAmiga");
+	cmdKeyRAmiga->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyRAmiga->setBaseColor(gui_base_color);
+	cmdKeyRAmiga->setForegroundColor(gui_foreground_color);
+	cmdKeyRAmiga->addActionListener(miscActionListener);
+	cmdKeyRAmigaClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
+	cmdKeyRAmigaClear->setBaseColor(gui_base_color);
+	cmdKeyRAmigaClear->setForegroundColor(gui_foreground_color);
+	cmdKeyRAmigaClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyRAmigaClear->setId("cmdKeyRAmigaClear");
+	cmdKeyRAmigaClear->addActionListener(miscActionListener);
+
 	int posY = DISTANCE_BORDER;
 	grpMiscOptions->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 	grpMiscOptions->setBaseColor(gui_base_color);
@@ -716,6 +735,13 @@ void InitPanelMisc(const config_category& category)
 	category.panel->add(cmdKeyMinimizeClear, cmdKeyMinimize->getX() + cmdKeyMinimize->getWidth() + 8, posY);
 	posY += cmdKeyMinimizeClear->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(lblKeyRAmiga, column2_x, posY);
+	posY += lblKeyRAmiga->getHeight() + 8;
+	category.panel->add(txtKeyRAmiga, lblKeyRAmiga->getX(), posY);
+	category.panel->add(cmdKeyRAmiga, txtKeyRAmiga->getX() + txtKeyRAmiga->getWidth() + 8, posY);
+	category.panel->add(cmdKeyRAmigaClear, cmdKeyRAmiga->getX() + cmdKeyRAmiga->getWidth() + 8, posY);
+	posY += cmdKeyRAmiga->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(lblNumLock, column2_x, posY);
 	category.panel->add(cboKBDLed_num, lblNumLock->getX() + lblScrLock->getWidth() + 8, posY);
 	posY += cboKBDLed_num->getHeight() + DISTANCE_NEXT_Y;
@@ -789,6 +815,11 @@ void ExitPanelMisc()
 	delete cmdKeyMinimize;
 	delete cmdKeyMinimizeClear;
 
+	delete lblKeyRAmiga;
+	delete txtKeyRAmiga;
+	delete cmdKeyRAmiga;
+	delete cmdKeyRAmigaClear;
+
 	delete miscActionListener;
 
 	delete grpMiscOptions;
@@ -840,6 +871,9 @@ void RefreshPanelMisc()
 		: "Click to map");
 	txtKeyMinimize->setText(strncmp(changed_prefs.minimize, "", 1) != 0
 		? changed_prefs.minimize
+		: "Click to map");
+	txtKeyRAmiga->setText(strncmp(changed_prefs.right_amiga, "", 1) != 0
+		? changed_prefs.right_amiga
 		: "Click to map");
 }
 

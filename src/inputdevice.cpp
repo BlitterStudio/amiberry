@@ -9207,6 +9207,7 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	strcpy(dst->action_replay, src->action_replay);
 	strcpy(dst->fullscreen_toggle, src->fullscreen_toggle);
 	strcpy(dst->minimize, src->minimize);
+	strcpy(dst->right_amiga, src->right_amiga);
 	dst->use_retroarch_quit = src->use_retroarch_quit;
 	dst->use_retroarch_menu = src->use_retroarch_menu;
 	dst->use_retroarch_reset = src->use_retroarch_reset;
