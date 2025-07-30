@@ -3459,7 +3459,7 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 		}
 
 		// blank left and right edge
-		for (x = 0; x < (xoffset + 2); x++) {
+		for (x = 1; x < (xoffset + 2); x++) {
 			uae_u8 *d = dstline + ((x << 1) >> hdbl_shift) * dst->pixbytes;
 			uae_u8 *d2 = d + dst->rowbytes;
 			PUT_PRGB(d, d2, dst, 0, 0, 0, 0, doublelines, true);

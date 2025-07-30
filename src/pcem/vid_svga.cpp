@@ -25,7 +25,7 @@ static svga_t *svga_pri;
 bool svga_on(void *p)
 {
     svga_t *svga = (svga_t*)p;
-    return svga->scrblank == 0 && svga->hdisp >= 80 && (svga->crtc[0x17] & 0x80);
+    return svga->scrblank == 0 && svga->hdisp >= 80 && (svga->crtc[0x17] & 0x80) && !svga->dpms;
 }
 
 int svga_get_vtotal(void *p)
@@ -635,8 +635,13 @@ int svga_poll(void *p)
                         if (svga->hwcursor_on || svga->dac_hwcursor_on || svga->overlay_on)
                                 svga->changedvram[svga->ma >> 12] = svga->changedvram[(svga->ma >> 12) + 1] = svga->interlace ? 3 : 2;
                       
-                        if (!svga->override)
+                        if (!svga->override) {
+                            if (svga->dpms) {
+                                svga_render_blank(svga);
+                            } else {
                                 svga->render(svga);
+                            }
+                        }
                         
                         if (svga->overlay_on)
                         {

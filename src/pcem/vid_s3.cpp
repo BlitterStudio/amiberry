@@ -976,6 +976,8 @@ static void s3_queue(s3_t *s3, uint32_t addr, uint32_t val, uint32_t type)
                 wake_fifo_thread(s3);
 }
 
+static void s3_io_set(s3_t*s3);
+
 void s3_out(uint16_t addr, uint8_t val, void *p)
 {
         s3_t *s3 = (s3_t *)p;
@@ -1004,6 +1006,24 @@ void s3_out(uint16_t addr, uint8_t val, void *p)
                 {
                         if (val & 8) svga->write_bank = svga->read_bank = s3->bank << 16;
                         else         svga->write_bank = svga->read_bank = s3->bank << 14;
+                }
+                else if (svga->seqaddr == 9) {
+                    svga->seqregs[9] = val & 0x80;
+                    s3_io_set(s3);
+                    return;
+                } else if (svga->seqaddr == 0xa) {
+                    svga->seqregs[0xa] = val & 0x80;
+                    return;
+                } else if (s3->chip >= S3_TRIO32) {
+                    if (svga->seqaddr == 8) {
+                        svga->seqregs[8] = val & 0x0f;
+                        return;
+                    } else if ((svga->seqaddr == 0xd) && (svga->seqregs[8] == 0x06)) {
+                        svga->seqregs[0xd] = val;
+                        svga->dpms = (svga->crtc[0x56] & ((s3->chip >= S3_TRIO32) ? 0x06 : 0x20));
+                        svga_recalctimings(svga);
+                        return;
+                    }
                 }
                 break;
                 
@@ -1149,6 +1169,11 @@ void s3_out(uint16_t addr, uint8_t val, void *p)
                         s3_updatemapping(s3);
                         break;
                         
+                        case 0x56:
+                            svga->dpms = (svga->crtc[0x56] & ((s3->chip >= S3_TRIO32) ? 0x06 : 0x20));
+                            old = ~val; /* force recalc */
+                        break;
+
                         case 0x67:
                         if (s3->chip == S3_TRIO32 || s3->chip == S3_TRIO64)
                         {

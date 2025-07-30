@@ -212,6 +212,11 @@ void devices_reset(int hardreset)
 	// must be first
 	init_eventtab();
 	init_shm();
+
+#ifdef GFXBOARD
+	// must be before memory_reset()
+	gfxboard_reset();
+#endif
 	memory_reset();
 #ifdef AUTOCONFIG
 	rtarea_reset();
@@ -230,9 +235,6 @@ void devices_reset(int hardreset)
 	scsi_reset();
 	scsidev_reset();
 	scsidev_start_threads();
-#endif
-#ifdef GFXBOARD
-	gfxboard_reset ();
 #endif
 #ifdef DRIVESOUND
 	driveclick_reset();
