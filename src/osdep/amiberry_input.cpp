@@ -34,6 +34,7 @@ enum
 
 int tablet_log = 0;
 int key_swap_hack = 0;
+int key_swap_end_pgup = 0;
 
 static struct didata di_mouse[MAX_INPUT_DEVICES];
 static struct didata di_keyboard[MAX_INPUT_DEVICES];

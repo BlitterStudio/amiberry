@@ -4542,12 +4542,7 @@ void inputdevice_add_inputcode (int code, int state, const TCHAR *s)
 			if (!inputdevice_handle_inputcode_immediate(code, state)) {
 				inputcode_pending[i].code = code;
 				inputcode_pending[i].state = state;
-#ifdef AMIBERRY
-				if (s == NULL)
-					inputcode_pending[i].s = NULL;
-				else
-#endif
-					inputcode_pending[i].s = my_strdup(s);
+				inputcode_pending[i].s = s ? my_strdup(s) : NULL;
 			}
 			return;
 		}
@@ -5295,19 +5290,19 @@ void inputdevice_handle_inputcode(void)
 	for (int i = 0; i < MAX_PENDING_EVENTS; i++) {
 		int code = inputcode_pending[i].code;
 		int state = inputcode_pending[i].state;
-		const TCHAR *s = inputcode_pending[i].s;
+		TCHAR *s = inputcode_pending[i].s;
 		if (code) {
 #ifdef AMIBERRY
 			if (pause_emulation && state == 0)
 			{
 				got = false;
-				xfree(inputcode_pending[i].s);
+				xfree(s);
 				inputcode_pending[i].code = 0;
 				continue;
 			}
 #endif
 			if (!inputdevice_handle_inputcode2(monid, code, state, s)) {
-				xfree(inputcode_pending[i].s);
+				xfree(s);
 				inputcode_pending[i].code = 0;
 			}
 			got = true;
@@ -9273,6 +9268,7 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	strcpy(dst->action_replay, src->action_replay);
 	strcpy(dst->fullscreen_toggle, src->fullscreen_toggle);
 	strcpy(dst->minimize, src->minimize);
+	strcpy(dst->right_amiga, src->right_amiga);
 	dst->use_retroarch_quit = src->use_retroarch_quit;
 	dst->use_retroarch_menu = src->use_retroarch_menu;
 	dst->use_retroarch_reset = src->use_retroarch_reset;

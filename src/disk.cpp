@@ -1417,7 +1417,9 @@ static int drive_insert (drive *drv, struct uae_prefs *p, int dnum, const TCHAR 
 		_tcsncpy (changed_prefs.floppyslots[dnum].df, fname_in, 255);
 		changed_prefs.floppyslots[dnum].df[255] = 0;
 		changed_prefs.floppyslots[dnum].forcedwriteprotect = forcedwriteprotect;
-		_tcscpy (drv->newname, fname_in);
+		if (drv->newname != fname_in) {
+			_tcscpy(drv->newname, fname_in);
+		}
 		drv->newnamewriteprotected = forcedwriteprotect;
 		gui_filename (dnum, outname);
 	}

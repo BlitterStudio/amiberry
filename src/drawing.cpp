@@ -177,6 +177,7 @@ static void read_denise_line_queue(void)
 		nolock = true;
 	} else if (q->type == 5) {
 		draw_denise_vsync(q->erase);
+		nolock = true;
 	} else if (q->type == 6) {
 		denise_update_reg(q->reg, q->val, q->linecnt);
 		nolock = true;
@@ -5354,7 +5355,6 @@ static void get_line(int gfx_ypos, enum nln_how how)
 	struct vidbuffer *vb = vidinfo->inbuffer;
 	int eraselines = 0;
 	int yadjust = currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA ? minfirstline_linear << currprefs.gfx_vresolution : 0;
-	uae_u8 *xstart, *xend;
 	int xshift = 0;
 
 	xlinebuffer = NULL;

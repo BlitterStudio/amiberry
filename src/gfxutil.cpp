@@ -135,7 +135,7 @@ static float video_gamma (float value, float gamma, float bri, float con)
 	return ret;
 }
 
-static uae_u32 uae_gamma[256 * 3][3];
+static uae_u32 gamma_table[256 * 3][3];
 static int lf, hf;
 
 static void video_calc_gammatable(int monid)
@@ -185,7 +185,7 @@ static void video_calc_gammatable(int monid)
 			v = std::max<double>(v, 0.0);
 			v = std::min(v, max);
 
-			uae_gamma[i][j] = (uae_u32)(v + 0.5);
+			gamma_table[i][j] = (uae_u32)(v + 0.5);
 		}
 	}
 }
@@ -309,9 +309,10 @@ void alloc_colors_rgb (int rw, int gw, int bw, int rs, int gs, int bs, int aw, i
 		}
 		j += 256;
 
-		rc[i] = doColor(uae_gamma[j][0], rw, rs) | doAlpha(alpha, aw, as);
-		gc[i] = doColor(uae_gamma[j][1], gw, gs) | doAlpha(alpha, aw, as);
-		bc[i] = doColor(uae_gamma[j][2], bw, bs) | doAlpha(alpha, aw, as);
+		rc[i] = doColor(gamma_table[j][0], rw, rs) | doAlpha(alpha, aw, as);
+		gc[i] = doColor(gamma_table[j][1], gw, gs) | doAlpha(alpha, aw, as);
+		bc[i] = doColor(gamma_table[j][2], bw, bs) | doAlpha(alpha, aw, as);
+
 		if (byte_swap) {
 			if (bpp <= 16) {
 				rc[i] = do_byteswap_16(rc[i]);
@@ -350,10 +351,9 @@ void alloc_colors64k(int monid, int rw, int gw, int bw, int rs, int gs, int bs, 
 			g = (g * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
 			b = (b * (255 - BLACKERTHANBLACKADJ) / 255) + BLACKERTHANBLACKADJ;
 		}
-
-		r = uae_gamma[r + j][0];
-		g = uae_gamma[g + j][1];
-		b = uae_gamma[b + j][2];
+		r = gamma_table[r + j][0];
+		g = gamma_table[g + j][1];
+		b = gamma_table[b + j][2];
 		xcolors[i] = doMask(r, rw, rs) | doMask(g, gw, gs) | doMask(b, bw, bs) | doAlpha(alpha, aw, as);
 		if (byte_swap) {
 			if (bpp <= 16) {

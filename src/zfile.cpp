@@ -138,7 +138,7 @@ static void zcache_close (void)
 	while (zc) {
 		struct zcache *n = zc->next;
 		zcache_free_data (zc);
-		xfree (n);
+		xfree(zc);
 		zc = n;
 	}
 }

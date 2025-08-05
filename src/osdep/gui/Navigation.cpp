@@ -344,7 +344,7 @@ static NavigationMap nav_map[] =
 
 	//  active            move left           move right          move up           move down
 	// PanelInput
-	{ "cboPort0", "Input", "Input", "chkSwapBackslashF11", "cboPort0Autofire" },
+	{ "cboPort0", "Input", "Input", "chkSwapEndPgUp", "cboPort0Autofire" },
 	{ "cboPort0Autofire", "Input", "cboPort0mode", "cboPort0", "cboPort1" },
 	{ "cboPort0mode", "cboPort0Autofire", "cmdRemap0", "cboPort0", "cboPort1" },
 	{ "cmdRemap0", "cboPort0mode", "Input", "cboPort0", "cboPort1" },
@@ -369,7 +369,8 @@ static NavigationMap nav_map[] =
 	{ "optBoth", "Input", "optNative", "chkMouseHack", "chkSwapBackslashF11" },
 	{ "optNative", "optBoth", "optHost", "chkMouseHack", "chkSwapBackslashF11" },
 	{ "optHost", "optNative", "", "chkMouseHack", "chkSwapBackslashF11" },
-	{ "chkSwapBackslashF11", "Input", "Input", "optBoth", "cboPort0" },
+	{ "chkSwapBackslashF11", "Input", "Input", "optBoth", "chkSwapEndPgUp" },
+	{ "chkSwapEndPgUp", "Input", "Input", "chkSwapBackslashF11", "cboPort0" },
 
 	// active		move left		move right			move up			move down
 	// PanelIO

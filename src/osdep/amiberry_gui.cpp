@@ -515,23 +515,23 @@ static int scan_roms_2(UAEREG* fkey, const TCHAR* path, bool deepscan, int level
 
 	scan_rom_hook(path, 1);
 
-    while ((entry = readdir(dp)) != nullptr) {
-        TCHAR tmppath[MAX_DPATH];
-        _sntprintf(tmppath, sizeof tmppath, _T("%s/%s"), path, entry->d_name);
+	while ((entry = readdir(dp)) != nullptr) {
+		TCHAR tmppath[MAX_DPATH];
+		_sntprintf(tmppath, sizeof tmppath, _T("%s/%s"), path, entry->d_name);
 
-        if (stat(tmppath, &statbuf) == -1)
-            continue;
+		if (stat(tmppath, &statbuf) == -1)
+			continue;
 
-        if (S_ISREG(statbuf.st_mode) && statbuf.st_size < 10000000) {
-            if (scan_rom(tmppath, fkey, deepscan))
-                ret = 1;
-        } else if (deepscan && S_ISDIR(statbuf.st_mode) && entry->d_name[0] != '.' && (recursiveromscan < 0 || recursiveromscan > level)) {
-            scan_roms_2(fkey, tmppath, deepscan, level + 1);
-        }
+		if (S_ISREG(statbuf.st_mode) && statbuf.st_size < 10000000) {
+			if (scan_rom(tmppath, fkey, deepscan))
+				ret = 1;
+		} else if (deepscan && S_ISDIR(statbuf.st_mode) && entry->d_name[0] != '.' && (recursiveromscan < 0 || recursiveromscan > level)) {
+			scan_roms_2(fkey, tmppath, deepscan, level + 1);
+		}
 
-        if (!scan_rom_hook(nullptr, 0))
-            break;
-    }
+		if (!scan_rom_hook(nullptr, 0))
+			break;
+	}
 
 	closedir(dp);
 	return ret;

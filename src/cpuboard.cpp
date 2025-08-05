@@ -2708,10 +2708,10 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 				romtype = ROMTYPE_CB_TEKMAGIC;
 				break;
 			case BOARD_GVP_SUB_QUIKPAK:
-				romtype = romtype = ROMTYPE_CB_QUIKPAK;
+				romtype = ROMTYPE_CB_QUIKPAK;
 				break;
 			case BOARD_GVP_SUB_A1230SI:
-				romtype = romtype = ROMTYPE_CB_A1230S1;
+				romtype = ROMTYPE_CB_A1230S1;
 				break;
 		}
 		break;

@@ -472,17 +472,22 @@ uaecptr ShowEA_disp(uaecptr *pcp, uaecptr base, TCHAR *buffer, const TCHAR *name
 		_sntprintf(regstr, sizeof regstr, _T(",%c%d.%c"), dp & 0x8000 ? disasm_areg : disasm_dreg, (int)r, dp & 0x800 ? disasm_long : disasm_word);
 		addr = base + (uae_s32)((uae_s8)disp8) + dispreg;
 		if (buffer) {
+			TCHAR offtxt[16];
+			if (disp8 < 0)
+				_sntprintf(offtxt, sizeof offtxt, disasm_lc_hex(_T("-$%02X")), -disp8);
+			else
+				_sntprintf(offtxt, sizeof offtxt, disasm_lc_hex(_T("$%02X")), disp8);
 			if (pcrel) {
 				if (disasm_flags & (DISASM_FLAG_VAL_FORCE | DISASM_FLAG_VAL)) {
-					_sntprintf(buffer, sizeof buffer, _T("(%s%s%s,$%02x=$%08x) == $%08x"), name, regstr, mult, (uae_u8)disp8, (*pcp) += disp8, addr);
+					_sntprintf(buffer, sizeof buffer, _T("(%s,%s%s%s=%08x) == $%08x"), offtxt, name, regstr, mult, (*pcp) += disp8, addr);
 				} else {
-					_sntprintf(buffer, sizeof buffer, _T("(%s%s%s,$%02x=$%08x)"), name, regstr, mult, (uae_u8)disp8, (*pcp) += disp8);
+					_sntprintf(buffer, sizeof buffer, _T("(%s,%s%s%s=$%08x)"), offtxt, name, regstr, mult, (*pcp) += disp8);
 				}
 			} else {
 				if (disasm_flags & (DISASM_FLAG_VAL_FORCE | DISASM_FLAG_VAL)) {
-					_sntprintf(buffer, sizeof buffer, _T("(%s%s%s,$%02x) == $%08x"), name, regstr, mult, (uae_u8)disp8, addr);
+					_sntprintf(buffer, sizeof buffer, _T("(%s,%s%s%s) == $%08x"), offtxt, name, regstr, mult, addr);
 				} else {
-					_sntprintf(buffer, sizeof buffer, _T("(%s%s%s,$%02x)"), name, regstr, mult, (uae_u8)disp8);
+					_sntprintf(buffer, sizeof buffer, _T("(%s,%s%s%s)"), offtxt, name, regstr, mult);
 				}
 			}
 			if (((dp & 0x0100) || m != 1) && currprefs.cpu_model < 68020) {
@@ -554,7 +559,7 @@ uaecptr ShowEA(void *f, uaecptr pc, uae_u16 opcode, int reg, amodes mode, wordsi
 			else
 				_sntprintf (offtxt, sizeof offtxt, disasm_lc_hex(_T("$%04X")), disp16);
 			addr = m68k_areg (regs, reg) + disp16;
-			_sntprintf(buffer, sizeof buffer, _T("(%c%d,%s)"), disasm_areg, reg, offtxt);
+			_sntprintf(buffer, sizeof buffer, _T("(%s,%c%d)"), offtxt, disasm_areg, reg);
 			if (disasm_flags & (DISASM_FLAG_VAL_FORCE | DISASM_FLAG_VAL)) {
 				_sntprintf(buffer + _tcslen(buffer), sizeof buffer, disasm_lc_hex(_T(" == $%08X")), addr);
 			}
@@ -570,14 +575,20 @@ uaecptr ShowEA(void *f, uaecptr pc, uae_u16 opcode, int reg, amodes mode, wordsi
 		}
 		break;
 	case PC16:
-		disp16 = get_iword_debug (pc); pc += 2;
-		addr += (uae_s16)disp16;
-		_sntprintf(buffer, sizeof buffer, _T("(%s"), disasm_pcreg);
-		_sntprintf(buffer + _tcslen(buffer), sizeof buffer, disasm_lc_hex(_T(",$%04X)")), disp16 & 0xffff);
-		if (disasm_flags & (DISASM_FLAG_VAL_FORCE | DISASM_FLAG_VAL)) {
-			_sntprintf(buffer + _tcslen(buffer), sizeof buffer, disasm_lc_hex(_T(" == $%08X")), addr);
+		{
+			TCHAR offtxt[32];
+			disp16 = get_iword_debug (pc); pc += 2;
+			if (disp16 < 0)
+				_sntprintf(offtxt, sizeof offtxt, disasm_lc_hex(_T("-$%04X")), -disp16);
+			else
+				_sntprintf(offtxt, sizeof offtxt, disasm_lc_hex(_T("$%04X")), disp16);
+			addr += disp16;
+			_stprintf(buffer, _T("(%s,%s)"), offtxt, disasm_pcreg);
+			if (disasm_flags & (DISASM_FLAG_VAL_FORCE | DISASM_FLAG_VAL)) {
+				_stprintf(buffer + _tcslen(buffer), disasm_lc_hex(_T(" == $%08X")), addr);
+			}
+			showea_val(buffer, opcode, addr, size);
 		}
-		showea_val(buffer, opcode, addr, size);
 		break;
 	case PC8r:
 		{
@@ -2083,16 +2094,29 @@ uae_u32 m68k_disasm_2(TCHAR *buf, int bufsize, uaecptr pc, uae_u16 *bufpc, int b
 			if (movemout(instrname, mask, dp->dmode, 0, false))
 				_tcscat(instrname, _T(","));
 			pc = ShowEA(NULL, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, &deaddr2, &actualea_dst, safemode);
-		} else if (lookup->mnemo == i_DIVL || lookup->mnemo == i_MULL) {
-			TCHAR *p;
+		} else if (lookup->mnemo == i_MULL) {
 			extra = get_disasm_word(pc, bufpc, bufpcsize, 0);
 			add_disasm_word(&pc, &bufpc, &bufpcsize, 2);
 			if (extra & 0x0800) // signed/unsigned
 				instrname[3] = 'S';
 			else
 				instrname[3] = 'U';
-			if (lookup->mnemo == i_DIVL && !(extra & 0x0400)) {
-				// DIVSL.L/DIVUL.L
+			disasm_lc_mnemo(instrname);
+			pc = ShowEA(NULL, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, &seaddr2, &actualea_src, safemode);
+			TCHAR *p = instrname + _tcslen(instrname);
+			if (extra & 0x0400)
+				_stprintf(p, _T(",%c%d:%c%d"), disasm_dreg, extra & 7, disasm_dreg, (extra >> 12) & 7);
+			else
+				_stprintf(p, _T(",%c%d"), disasm_dreg, (extra >> 12) & 7);
+		} else if (lookup->mnemo == i_DIVL) {
+			extra = get_disasm_word(pc, bufpc, bufpcsize, 0);
+			add_disasm_word(&pc, &bufpc, &bufpcsize, 2);
+			if (extra & 0x0800) // signed/unsigned
+				instrname[3] = 'S';
+			else
+				instrname[3] = 'U';
+			if (!(extra & 0x0400)) {
+				// DIVS.L/DIVU.L->DIVSL.L/DIVUL.L
 				instrname[8] = 0;
 				instrname[7] = ' ';
 				instrname[6] = instrname[5];
@@ -2101,11 +2125,8 @@ uae_u32 m68k_disasm_2(TCHAR *buf, int bufsize, uaecptr pc, uae_u16 *bufpc, int b
 			}
 			disasm_lc_mnemo(instrname);
 			pc = ShowEA(NULL, pc, opcode, dp->dreg, dp->dmode, dp->size, instrname, &seaddr2, &actualea_src, safemode);
-			p = instrname + _tcslen(instrname);
-			if (extra & 0x0400)
-				_sntprintf(p, sizeof p, _T(",%c%d:%c%d"), disasm_dreg, extra & 7, disasm_dreg, (extra >> 12) & 7);
-			else
-				_sntprintf(p, sizeof p, _T(",%c%d"), disasm_dreg, (extra >> 12) & 7);
+			TCHAR* p = instrname + _tcslen(instrname);
+			_sntprintf(p, sizeof p, _T(",%c%d:%c%d"), disasm_dreg, extra & 7, disasm_dreg, (extra >> 12) & 7);
 		} else if (lookup->mnemo == i_MOVES) {
 			TCHAR *p;
 			add_disasm_word(&pc, &bufpc, &bufpcsize, 2);
