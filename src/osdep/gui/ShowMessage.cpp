@@ -29,6 +29,7 @@ static bool dialogResult = false;
 static bool dialogFinished = false;
 static amiberry_hotkey hotkey = {};
 static bool halt_gui = false;
+static bool modifier_only_pressed = false;
 
 static gcn::Window* wndShowMessage;
 static gcn::Button* cmdOK;
@@ -287,14 +288,96 @@ static void ExitShowMessage()
 	}
 }
 
+static std::string BuildCurrentHotkeyDisplay()
+{
+	std::string display;
+
+	// Add modifiers in a consistent order
+	if (hotkey.modifiers.lctrl) display += "LCtrl+";
+	if (hotkey.modifiers.rctrl) display += "RCtrl+";
+	if (hotkey.modifiers.lalt) display += "LAlt+";
+	if (hotkey.modifiers.ralt) display += "RAlt+";
+	if (hotkey.modifiers.lshift) display += "LShift+";
+	if (hotkey.modifiers.rshift) display += "RShift+";
+	if (hotkey.modifiers.lgui) display += "LGUI+";
+	if (hotkey.modifiers.rgui) display += "RGUI+";
+
+	// Add the main key if present
+	if (!hotkey.key_name.empty()) {
+		display += hotkey.key_name;
+	} else if (!display.empty() && display.back() == '+') {
+		// Remove trailing + if only modifiers
+		display.pop_back();
+	}
+
+	return display;
+}
+
+static void ResetHotkey()
+{
+	hotkey.modifiers.lctrl = hotkey.modifiers.rctrl =
+		hotkey.modifiers.lalt = hotkey.modifiers.ralt =
+		hotkey.modifiers.lshift = hotkey.modifiers.rshift =
+		hotkey.modifiers.lgui = hotkey.modifiers.rgui = false;
+	hotkey.scancode = 0;
+	hotkey.button = -1;
+	hotkey.key_name.clear();
+	hotkey.modifiers_string.clear();
+}
+
+static bool HandleModifierKey(SDL_Keycode keycode, bool pressed)
+{
+	bool is_modifier = true;
+
+	switch (keycode)
+	{
+	case SDLK_LCTRL:
+		hotkey.modifiers.lctrl = pressed;
+		break;
+	case SDLK_RCTRL:
+		hotkey.modifiers.rctrl = pressed;
+		break;
+	case SDLK_LALT:
+		hotkey.modifiers.lalt = pressed;
+		break;
+	case SDLK_RALT:
+		hotkey.modifiers.ralt = pressed;
+		break;
+	case SDLK_LSHIFT:
+		hotkey.modifiers.lshift = pressed;
+		break;
+	case SDLK_RSHIFT:
+		hotkey.modifiers.rshift = pressed;
+		break;
+	case SDLK_LGUI:
+		hotkey.modifiers.lgui = pressed;
+		break;
+	case SDLK_RGUI:
+		hotkey.modifiers.rgui = pressed;
+		break;
+	default:
+		is_modifier = false;
+		break;
+	}
+
+	return is_modifier;
+}
+
+static void UpdateHotkeyDisplay()
+{
+	std::string display = BuildCurrentHotkeyDisplay();
+	if (display.empty()) {
+		lblText1->setCaption("Press a key combination...");
+	} else {
+		lblText1->setCaption(display);
+	}
+}
+
 static void ShowMessageWaitInputLoop()
 {
 	AmigaMonitor* mon = &AMonitors[0];
 
 	auto got_event = 0;
-	std::string caption;
-	std::string delimiter;
-	size_t pos;
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
@@ -304,156 +387,95 @@ static void ShowMessageWaitInputLoop()
 			if (event.key.repeat == 0)
 			{
 				got_event = 1;
-				switch (event.key.keysym.sym)
+
+				// Handle escape key to cancel
+				if (event.key.keysym.sym == VK_ESCAPE)
 				{
-				case VK_ESCAPE:
 					dialogFinished = true;
 					break;
+				}
 
-				case SDLK_LCTRL:
-					hotkey.modifiers.lctrl = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-				case SDLK_RCTRL:
-					hotkey.modifiers.rctrl = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-				case SDLK_LALT:
-					hotkey.modifiers.lalt = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-				case SDLK_RALT:
-					hotkey.modifiers.ralt = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-				case SDLK_LSHIFT:
-					hotkey.modifiers.lshift = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-				case SDLK_RSHIFT:
-					hotkey.modifiers.rshift = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-				case SDLK_LGUI:
-					hotkey.modifiers.lgui = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-				case SDLK_RGUI:
-					hotkey.modifiers.rgui = true;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
-					break;
-
-				default:
-					hotkey.scancode = event.key.keysym.scancode;
-					hotkey.key_name = delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					lblText1->setCaption(caption.append(" ").append(delimiter));
+				// Handle backspace to clear current hotkey
+				if (event.key.keysym.sym == SDLK_BACKSPACE)
+				{
+					ResetHotkey();
+					UpdateHotkeyDisplay();
 					break;
 				}
-			}
-			break;
 
-		case SDL_CONTROLLERBUTTONDOWN:
-			//case SDL_JOYBUTTONDOWN:
-			got_event = 1;
-			hotkey.button = event.cbutton.button;
-			hotkey.key_name = SDL_GameControllerGetStringForButton(
-				static_cast<SDL_GameControllerButton>(event.cbutton.button));
-			dialogFinished = true;
+				bool is_modifier = HandleModifierKey(event.key.keysym.sym, true);
+
+				if (!is_modifier)
+				{
+					// Regular key pressed - complete the hotkey
+					hotkey.scancode = event.key.keysym.scancode;
+					hotkey.key_name = SDL_GetKeyName(event.key.keysym.sym);
+					// Build the complete hotkey string now
+					hotkey.modifiers_string = BuildCurrentHotkeyDisplay();
+					UpdateHotkeyDisplay();
+					dialogFinished = true;
+				}
+				else
+				{
+					// Modifier key pressed - update display but don't finish
+					modifier_only_pressed = true;
+					UpdateHotkeyDisplay();
+				}
+			}
 			break;
 
 		case SDL_KEYUP:
 			if (event.key.repeat == 0)
 			{
 				got_event = 1;
+
+				// Check if this is a modifier key before clearing it
+				bool is_modifier = false;
 				switch (event.key.keysym.sym)
 				{
 				case SDLK_LCTRL:
-					hotkey.modifiers.lctrl = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
-					break;
 				case SDLK_RCTRL:
-					hotkey.modifiers.rctrl = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
-					break;
 				case SDLK_LALT:
-					hotkey.modifiers.lalt = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
-					break;
 				case SDLK_RALT:
-					hotkey.modifiers.ralt = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
-					break;
 				case SDLK_LSHIFT:
-					hotkey.modifiers.lshift = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
-					break;
 				case SDLK_RSHIFT:
-					hotkey.modifiers.rshift = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
-					break;
 				case SDLK_LGUI:
-					hotkey.modifiers.lgui = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
-					break;
 				case SDLK_RGUI:
-					hotkey.modifiers.rgui = false;
-					delimiter = SDL_GetKeyName(event.key.keysym.sym);
-					caption = lblText1->getCaption();
-					if ((pos = caption.find(delimiter)) != std::string::npos)
-						caption.erase(0, pos + delimiter.length());
-					lblText1->setCaption(caption);
+					is_modifier = true;
 					break;
 				default:
-					dialogFinished = true;
+					is_modifier = false;
 					break;
+				}
+
+				if (is_modifier && modifier_only_pressed)
+				{
+					// Only modifier(s) were pressed and released - complete the hotkey
+					// Build the string BEFORE clearing the modifiers
+					hotkey.modifiers_string = BuildCurrentHotkeyDisplay();
+					UpdateHotkeyDisplay();
+					dialogFinished = true;
+				}
+
+				// Now clear the modifier flag
+				HandleModifierKey(event.key.keysym.sym, false);
+
+				if (!is_modifier)
+				{
+					modifier_only_pressed = false;
 				}
 			}
 			break;
+
+		case SDL_CONTROLLERBUTTONDOWN:
+			got_event = 1;
+			hotkey.button = event.cbutton.button;
+			hotkey.key_name = SDL_GameControllerGetStringForButton(
+				static_cast<SDL_GameControllerButton>(event.cbutton.button));
+			UpdateHotkeyDisplay();
+			dialogFinished = true;
+			break;
+
 		case SDL_JOYBUTTONUP:
 		case SDL_CONTROLLERBUTTONUP:
 		case SDL_MOUSEBUTTONDOWN:
@@ -486,7 +508,7 @@ static void ShowMessageWaitInputLoop()
 
 		// Now we let the Gui object draw itself.
 		uae_gui->draw();
-		// Finally we update the screen.
+		// Finally, we update the screen.
 		update_gui_screen();
 	}
 }
@@ -627,6 +649,11 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	cmdOK->setVisible(false);
 	cmdCancel->setCaption(button1);
 
+	// Initialize hotkey and display
+	ResetHotkey();
+	lblText1->setCaption("Press a key combination...");
+	lblText2->setCaption("(Backspace to clear, Escape to cancel)");
+
 	// Prepare the screen once
 	uae_gui->logic();
 
@@ -634,11 +661,6 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 
 	uae_gui->draw();
 	update_gui_screen();
-
-	hotkey.modifiers.lctrl = hotkey.modifiers.rctrl =
-		hotkey.modifiers.lalt = hotkey.modifiers.ralt =
-		hotkey.modifiers.lshift = hotkey.modifiers.rshift =
-		hotkey.modifiers.lgui = hotkey.modifiers.rgui = false;
 
 	while (!dialogFinished)
 	{
@@ -648,24 +670,6 @@ amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const 
 	}
 
 	ExitShowMessage();
-
-	hotkey.modifiers_string = "";
-	if (hotkey.modifiers.lctrl)
-		hotkey.modifiers_string = "LCtrl+";
-	if (hotkey.modifiers.rctrl)
-		hotkey.modifiers_string = "RCtrl+";
-	if (hotkey.modifiers.lalt)
-		hotkey.modifiers_string = hotkey.modifiers_string + "LAlt+";
-	if (hotkey.modifiers.ralt)
-		hotkey.modifiers_string = hotkey.modifiers_string + "RAlt+";
-	if (hotkey.modifiers.lshift)
-		hotkey.modifiers_string = hotkey.modifiers_string + "LShift+";
-	if (hotkey.modifiers.rshift)
-		hotkey.modifiers_string = hotkey.modifiers_string + "RShift+";
-	if (hotkey.modifiers.lgui)
-		hotkey.modifiers_string = hotkey.modifiers_string + "LGUI+";
-	if (hotkey.modifiers.rgui)
-		hotkey.modifiers_string = hotkey.modifiers_string + "RGUI+";
-
+	
 	return hotkey;
 }

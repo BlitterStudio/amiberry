@@ -167,6 +167,28 @@ typedef void *CONTEXT_T;
 #define CONTEXT_RSI(context) (((ucontext_t *) context)->uc_mcontext->__ss.__esi)
 #define CONTEXT_RDI(context) (((ucontext_t *) context)->uc_mcontext->__ss.__edi)
 
+#elif defined (AMIBERRY) && defined(CPU_x86_64) && defined(__FreeBSD__)
+
+typedef void *CONTEXT_T;
+#define HAVE_CONTEXT_T 1
+#define CONTEXT_RIP(context) ((( ucontext_t *) context)->uc_mcontext.mc_rip)
+#define CONTEXT_RAX(context) ((( ucontext_t *) context)->uc_mcontext.mc_rax)
+#define CONTEXT_RCX(context) ((( ucontext_t *) context)->uc_mcontext.mc_rcx)
+#define CONTEXT_RDX(context) ((( ucontext_t *) context)->uc_mcontext.mc_rdx)
+#define CONTEXT_RBX(context) ((( ucontext_t *) context)->uc_mcontext.mc_rbx)
+#define CONTEXT_RSP(context) ((( ucontext_t *) context)->uc_mcontext.mc_rsp)
+#define CONTEXT_RBP(context) ((( ucontext_t *) context)->uc_mcontext.mc_rbp)
+#define CONTEXT_RSI(context) ((( ucontext_t *) context)->uc_mcontext.mc_rsi)
+#define CONTEXT_RDI(context) ((( ucontext_t *) context)->uc_mcontext.mc_rdi)
+#define CONTEXT_R8(context)  ((( ucontext_t *) context)->uc_mcontext.mc_r8)
+#define CONTEXT_R9(context)  ((( ucontext_t *) context)->uc_mcontext.mc_r9)
+#define CONTEXT_R10(context) ((( ucontext_t *) context)->uc_mcontext.mc_r10)
+#define CONTEXT_R11(context) ((( ucontext_t *) context)->uc_mcontext.mc_r11)
+#define CONTEXT_R12(context) ((( ucontext_t *) context)->uc_mcontext.mc_r12)
+#define CONTEXT_R13(context) ((( ucontext_t *) context)->uc_mcontext.mc_r13)
+#define CONTEXT_R14(context) ((( ucontext_t *) context)->uc_mcontext.mc_r14)
+#define CONTEXT_R15(context) ((( ucontext_t *) context)->uc_mcontext.mc_r15)
+
 #elif defined (AMIBERRY) && defined(CPU_x86_64)
 
 typedef void *CONTEXT_T;
