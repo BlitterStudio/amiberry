@@ -866,9 +866,10 @@ static void amiberry_active(const AmigaMonitor* mon, const int is_minimized)
 	}
 	getcapslock();
 	wait_keyrelease();
-	inputdevice_acquire(TRUE);
-	if (isfullscreen() > 0 || currprefs.capture_always)
+	if (isfullscreen() > 0 || currprefs.capture_always) {
 		setmouseactive(mon->monitor_id, 1);
+		inputdevice_acquire(TRUE);
+	}
 	clipboard_active(1, 1);
 }
 
