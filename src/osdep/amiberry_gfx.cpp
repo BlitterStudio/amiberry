@@ -2251,7 +2251,8 @@ static void open_screen(struct uae_prefs* p)
 	init_colors(mon->monitor_id);
 	target_graphics_buffer_update(mon->monitor_id, false);
 	picasso_refresh(mon->monitor_id);
-	setmouseactive(mon->monitor_id, -1);
+	if (isfullscreen() > 0 || currprefs.capture_always)
+		setmouseactive(mon->monitor_id, -1);
 
 	if (vkbd_allowed(0))
 	{
@@ -2537,7 +2538,8 @@ int graphics_init(bool mousecapture)
 	inputdevice_unacquire();
 	graphics_subinit();
 
-	inputdevice_acquire(TRUE);
+	if (isfullscreen() > 0 || currprefs.capture_always)
+		inputdevice_acquire(TRUE);
 	return 1;
 }
 
