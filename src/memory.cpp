@@ -3420,7 +3420,8 @@ void memory_init (void)
 	extendedkickmem2b_bank.reserved_size = 0;
 	extendedkickmem_type = 0;
 	chipmem_bank.baseaddr = 0;
-	mem25bit_bank.reserved_size = mem25bit_bank.reserved_size = 0;
+	mem25bit_bank.reserved_size = 0;
+	mem25bit_bank.baseaddr = NULL;
 	a3000lmem_bank.reserved_size = a3000hmem_bank.reserved_size = 0;
 	a3000lmem_bank.baseaddr = a3000hmem_bank.baseaddr = NULL;
 	bogomem_bank.baseaddr = NULL;
