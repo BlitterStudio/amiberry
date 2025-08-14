@@ -74,7 +74,9 @@ struct cputbl {
 	uae_s8 length;
 	uae_s8 disp020[2];
 	uae_s8 branch;
+#ifdef JIT
 	uae_u16 specific;
+#endif
 };
 
 #ifdef JIT
