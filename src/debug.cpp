@@ -1060,7 +1060,7 @@ static size_t next_string (TCHAR **c, TCHAR *out, int max, int forceupper)
 			ignore_ws (c);
 			break;
 		}
-		*p = next_char (c);
+		*p = next_char2(c);
 		if (forceupper)
 			*p = _totupper(*p);
 		*++p = 0;
@@ -5992,20 +5992,12 @@ static void saveloadmem (TCHAR **cc, bool save)
 	uae_u8 b;
 	uae_u32 src, src2;
 	int len, len2;
-	TCHAR *name;
+	TCHAR name[MAX_PATH];
 	FILE *fp;
 
 	if (!more_params (cc))
 		goto S_argh;
-
-	name = *cc;
-	while (**cc != '\0' && !isspace (**cc))
-		(*cc)++;
-	if (!isspace (**cc))
-		goto S_argh;
-
-	**cc = '\0';
-	(*cc)++;
+	next_string(cc, name, sizeof(name) / sizeof(TCHAR), 0);
 	if (!more_params (cc))
 		goto S_argh;
 	src2 = src = readhex(cc, NULL);
