@@ -2151,6 +2151,11 @@ static int load_kickstart (void)
 				}
 				if (filesize >= ROM_SIZE_512 * 2) {
 					struct romdata *rd = getromdatabyzfile(f);
+					// CD32 with swapper upper and lower 512k?
+					if (rd && (rd->type & ROMTYPE_KICKCD32) && rd->size == ROM_SIZE_512) {
+						kspos = 0;
+						extpos = ROM_SIZE_512;
+					}
 					zfile_fseek(f, kspos, SEEK_SET);
 				}
 				if (filesize >= ROM_SIZE_512 * 4) {
