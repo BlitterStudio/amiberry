@@ -5992,7 +5992,7 @@ static void saveloadmem (TCHAR **cc, bool save)
 	uae_u8 b;
 	uae_u32 src, src2;
 	int len, len2;
-	TCHAR name[MAX_PATH];
+	TCHAR name[MAX_DPATH];
 	FILE *fp;
 
 	if (!more_params (cc))
