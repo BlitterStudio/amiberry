@@ -3481,7 +3481,7 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 }
 
 
-static uae_u32 picasso_SetSplitPosition(TrapContext *ctx)
+static uae_u32 REGPARAM2 picasso_SetSplitPosition(TrapContext *ctx)
 {
 	lockrtg();
 	const int monid = currprefs.rtgboards[0].monitor_id;
