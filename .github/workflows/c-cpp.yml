@@ -318,6 +318,10 @@ jobs:
             image: midwan/amiberry-debian-x86_64:bookworm
             artifact_name: amiberry-debian-bookworm-amd64
             release_name: debian-bookworm-amd64
+          - name: trixie
+            image: midwan/amiberry-debian-x86_64:trixie
+            artifact_name: amiberry-debian-trixie-amd64
+            release_name: debian-trixie-amd64
     steps:
       - uses: actions/checkout@v4
 
@@ -361,6 +365,10 @@ jobs:
             image: midwan/amiberry-debian-aarch64:bookworm
             artifact_name: amiberry-debian-bookworm-arm64
             release_name: debian-bookworm-arm64
+          - name: trixie
+            image: midwan/amiberry-debian-aarch64:trixie
+            artifact_name: amiberry-debian-trixie-arm64
+            release_name: debian-trixie-arm64
     steps:
     - uses: actions/checkout@v4
 
@@ -404,6 +412,10 @@ jobs:
             image: midwan/amiberry-debian-armhf:bookworm
             artifact_name: amiberry-debian-bookworm-armhf
             release_name: debian-bookworm-armhf
+          - name: trixie
+            image: midwan/amiberry-debian-armhf:trixie
+            artifact_name: amiberry-debian-trixie-armhf
+            release_name: debian-trixie-armhf
     steps:
     - uses: actions/checkout@v4
 
