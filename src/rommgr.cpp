@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 332
+#define NEXT_ROM_ID 333
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -626,9 +626,9 @@ static struct romdata roms[] = {
 	0x3befa0c0, 0x4414673c, 0xa52f78a0, 0xae656824, 0xfd08b54f, 0xa1de237c, NULL, NULL },
 	ALTROMPN(166, 1, 1, 32768, ROMTYPE_ODD  | ROMTYPE_8BIT, NULL, 0xb64e3bbf, 0xd6f4fc81, 0x38325a78, 0x74ff1c15, 0x7c93f1a2, 0x444904ae)
 	ALTROMPN(166, 1, 2, 32768, ROMTYPE_EVEN | ROMTYPE_8BIT, NULL, 0x541b5988, 0x3546517b, 0x57cecd2f, 0x9fbfcd0c, 0xf26fdbbf, 0xfb009e3e)
-	{ _T("QuikPak 4060 XP v2.1"), 2, 1, 2, 1, _T("QUIKPAK\0"), 32768, 239, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
+	{ _T("QuikPak 4060 XP v2.1"), 2, 1, 2, 1, _T("QUIKPAK\0"), 32768, 239, 0, 0, ROMTYPE_CB_QUIKPAKXP, 0, 0, NULL,
 	0x3a8eb518, 0x902dd0ba, 0x56c2afd0, 0xbb425bf5, 0x264fbc62, 0x90ad2c4e, NULL, NULL },
-	{ _T("QuikPak 4060 XP v2.2"), 2, 2, 2, 2, _T("QUIKPAK\0"), 65536, 319, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
+	{ _T("QuikPak 4060 XP v2.2"), 2, 2, 2, 2, _T("QUIKPAK\0"), 65536, 319, 0, 0, ROMTYPE_CB_QUIKPAKXP, 0, 0, NULL,
 	0x47009144, 0x547fd232, 0xd774e872, 0x37a83d30, 0xeb06e3d6, 0xb88456c2, NULL, NULL },
 	{ _T("QuikPak 4060"), 0, 0, 0, 0, _T("QUIKPAK\0"), 32768, 320, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
 	0x2b12aa6d, 0x023cd8a5, 0x7f24a992, 0x12d64c93, 0x69da614a, 0x3f6d0932, NULL, NULL },
@@ -794,8 +794,10 @@ static struct romdata roms[] = {
 	0x086e2716b, 0x075b50cb,0x166e00ac,0x4016ef7f,0x02532e86,0xe73b7711, NULL, NULL },
 	{ _T("Pacific Peripherals Overdrive v2.0"), 2, 0, 2, 0, _T("OVERDRIVE\0"), 8192, 247, 0, 0, ROMTYPE_OVERDRIVE, 0, 0, NULL,
 	0xebe42aa6, 0xdff761c2,0x429d0d26,0x2151d831,0x12746f83,0x3b8d36f0, NULL, NULL },
-	{ _T("Archos Overdrive HD"), 0, 0, 0, 0, _T("ARCHOSHD\0"), 32768, 250, 0, 0, ROMTYPE_ARCHOSHD, 0, 0, NULL,
+	{ _T("Archos Overdrive HD v5.0"), 5, 0, 5, 0, _T("ARCHOSHD\0"), 32768, 250, 0, 0, ROMTYPE_ARCHOSHD, 0, 0, NULL,
 	0x30c0e3f9, 0x90014e97,0x700333a7,0x931b382f,0xe672b6e4,0x4b7b8acc, NULL, NULL },
+	{ _T("Archos Overdrive HD v3.0"), 3, 0, 3, 0, _T("ARCHOSHD\0"), 32768, 332, 0, 0, ROMTYPE_ARCHOSHD, 0, 0, NULL,
+	0x68c6dc4b, 0x67a5df20,0xf6d893a3,0x0ff130b4,0xe4b9aaab,0xf4be5e90, NULL, NULL },
 	{ _T("Trumpcard 500AT v1.1"), 1, 1, 1, 1, _T("TRUMPCARDAT\0"), 16384, 251, 0, 0, ROMTYPE_IVST500AT, 0, 0, NULL,
 	0xb6467cb8, 0xbc1cd85f,0x16011691,0x32a2a8d6, 0x2ee38666,0x520d5cf1, NULL, NULL },
 	{ _T("Trumpcard 500AT v1.2"), 1, 2, 1, 2, _T("TRUMPCARDAT\0"), 16384, 252, 0, 0, ROMTYPE_IVST500AT, 0, 0, NULL,

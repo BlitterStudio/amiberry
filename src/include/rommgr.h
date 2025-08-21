@@ -50,7 +50,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_FALCON40	0x0004001b
 #define ROMTYPE_CB_A1230S2	0x0004001c
 #define ROMTYPE_CB_TYPHOON2	0x0004001d
-#define ROMTYPE_CB_QUIKPAK	0x0004001e
+#define ROMTYPE_CB_QUIKPAKXP	0x0004001e
 #define ROMTYPE_CB_12GAUGE	0x0004001f
 #define ROMTYPE_CB_HARMS3KP	0x00040020
 #define ROMTYPE_CB_A1230S1	0x00040021
@@ -58,6 +58,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_CASAB	0x00040023
 #define ROMTYPE_CB_APOLLO_630 0x00040024
 #define ROMTYPE_CB_TREXII	0x00040025
+#define ROMTYPE_CB_QUIKPAK	0x00040026
 
 #define ROMTYPE_FREEZER		0x00080000
 #define ROMTYPE_AR			0x00080001

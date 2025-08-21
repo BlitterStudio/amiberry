@@ -6612,11 +6612,19 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 		gvpa1230s2_settings, NULL,
 		2017, 9, 0, false
 	},
+	{
+		_T("QuikPak"),
+		_T("quikpak"),
+		ROMTYPE_CB_QUIKPAK, 0, 6,
+		NULL, 0,
+		BOARD_MEMORY_HIGHMEM,
+		128 * 1024 * 1024,
+	},
 #ifdef NCR
 	{
 		_T("QuikPak XP"),
 		_T("quikpakxp"),
-		ROMTYPE_CB_QUIKPAK, 0, 6,
+		ROMTYPE_CB_QUIKPAKXP, 0, 6,
 		quikpak_add_scsi_unit, EXPANSIONTYPE_SCSI,
 		BOARD_MEMORY_HIGHMEM,
 		128 * 1024 * 1024,

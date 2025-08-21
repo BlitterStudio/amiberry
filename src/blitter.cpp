@@ -2588,7 +2588,6 @@ uae_u8 *restore_blitter_new(uae_u8 *src)
 		shifter_d_armed = (tmp & 128) != 0;
 		tmp = restore_u8();
 		shifter_d_aga = tmp & 7;
-		tmp = restore_u32();
 		blt_info.finishcycle_dmacon = restore_u64();
 		blt_info.finishcycle_copper = restore_u64();
 		blt_info.blt_mod_cycles[0] = restore_u64();

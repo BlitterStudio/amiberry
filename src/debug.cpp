@@ -1054,19 +1054,24 @@ static size_t next_string (TCHAR **c, TCHAR *out, int max, int forceupper)
 	}
 	*p = 0;
 	while (**c != 0) {
-		if (**c == '\"' && startmarker)
+		if (**c == '\"' && startmarker) {
+			(*c)++;
+			ignore_ws(c);
 			break;
+		}
 		if (**c == 32 && !startmarker) {
 			ignore_ws (c);
 			break;
 		}
 		*p = next_char2(c);
-		if (forceupper)
+		if (forceupper) {
 			*p = _totupper(*p);
+		}
 		*++p = 0;
 		max--;
-		if (max <= 1)
+		if (max <= 1) {
 			break;
+		}
 	}
 	return _tcslen (out);
 }
