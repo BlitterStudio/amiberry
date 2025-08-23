@@ -7233,13 +7233,13 @@ static bool waitqueue_nolock(void)
 	}
 	return true;
 }
-static bool waitqueue(void)
+static bool waitqueue(int id)
 {
 	if (quit_program) {
 		return false;
 	}
 	if (!thread_debug_lock) {
-		write_log("Denise queue without lock!\n");
+		write_log("Denise queue without lock! id=%d\n", id);
 		return false;
 	}
 	waitqueue_nolock();
@@ -7256,7 +7256,7 @@ void draw_denise_border_line_fast_queue(int gfx_ypos, enum nln_how how, struct l
 {
 	if (MULTITHREADED_DENISE) {
 		
-		if (!waitqueue()) {
+		if (!waitqueue(2)) {
 			return;
 		}
 
@@ -7282,7 +7282,7 @@ void draw_denise_bitplane_line_fast_queue(int gfx_ypos, enum nln_how how, struct
 {
 	if (MULTITHREADED_DENISE) {
 		
-		if (!waitqueue()) {
+		if (!waitqueue(1)) {
 			return;
 		}
 
@@ -7308,7 +7308,7 @@ void quick_denise_rga_queue(uae_u32 linecnt, int startpos, int endpos)
 {
 	if (MULTITHREADED_DENISE) {
 
-		if (!waitqueue()) {
+		if (!waitqueue(3)) {
 			return;
 		}
 
@@ -7361,7 +7361,7 @@ void draw_denise_line_queue(int gfx_ypos, nln_how how, uae_u32 linecnt, int star
 {
 	if (MULTITHREADED_DENISE) {
 
-		if (!waitqueue()) {
+		if (!waitqueue(0)) {
 			return;
 		}
 
@@ -7453,7 +7453,7 @@ void denise_store_restore_registers_queue(bool store, uae_u32 linecnt)
 {
 	if (MULTITHREADED_DENISE) {
 
-		if (!waitqueue()) {
+		if (!waitqueue(7)) {
 			return;
 		}
 		struct denise_rga_queue *q = &rga_queue[rga_queue_write & DENISE_RGA_SLOT_CHUNKS_MASK];
