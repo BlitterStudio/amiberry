@@ -1464,7 +1464,6 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 
 	updatewinfsmode(mon->monitor_id, &currprefs);
 #ifdef PICASSO96
-	mon->currentmode.vsync = 0;
 	if (mon->screen_is_picasso) {
 		float mx = 1.0;
 		float my = 1.0;
@@ -1487,14 +1486,10 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 		} else {
 			currprefs.gfx_apmode[APMODE_RTG].gfx_refreshrate = currprefs.rtgvblankrate;
 		}
-		if (currprefs.gfx_apmode[APMODE_RTG].gfx_vsync)
-			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[APMODE_RTG].gfx_vsyncmode;
 	} else {
 #endif
 		mon->currentmode.current_width = currprefs.gfx_monitor[mon->monitor_id].gfx_size.width;
 		mon->currentmode.current_height = currprefs.gfx_monitor[mon->monitor_id].gfx_size.height;
-		if (currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync)
-			mon->currentmode.vsync = 1 + currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsyncmode;
 #ifdef PICASSO96
 	}
 #endif
