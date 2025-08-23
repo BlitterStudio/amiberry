@@ -55,7 +55,9 @@ static void esp_raise_ext_irq(ESPState * s)
 	if (s->irq_raised)
 		return;
 	s->irq_raised = 1;
+#ifdef NCR9X
 	esp_irq_raise(s->irq);
+#endif
 }
 
 static void esp_lower_ext_irq(ESPState * s)
@@ -63,7 +65,9 @@ static void esp_lower_ext_irq(ESPState * s)
 	if (!s->irq_raised)
 		return;
 	s->irq_raised = 0;
+#ifdef NCR9X
 	esp_irq_lower(s->irq);
+#endif
 }
 
 
@@ -160,7 +164,9 @@ void esp_request_cancelled(SCSIRequest *req)
 	ESPState *s = (ESPState*)req->hba_private;
 
     if (req == s->current_req) {
+#ifdef NCR9X
 		scsiesp_req_unref(s->current_req);
+#endif
         s->current_req = NULL;
         s->current_dev = NULL;
     }
@@ -189,12 +195,17 @@ static uint32_t get_cmd(ESPState *s, uint8_t *buf)
 
     if (s->current_req) {
         /* Started a new command before the old one finished.  Cancel it.  */
+#ifdef NCR9X
 		scsiesp_req_cancel(s->current_req);
+#endif
         s->async_len = 0;
     }
 
+#ifdef NCR9X
 	s->current_dev = scsiesp_device_find(&s->bus, 0, target, 0);
-    if (!s->current_dev) {
+    if (!s->current_dev)
+#endif
+    {
         // No such drive
         s->rregs[ESP_RSTAT] = 0;
         s->rregs[ESP_RINTR] = INTR_DC;
@@ -207,6 +218,7 @@ static uint32_t get_cmd(ESPState *s, uint8_t *buf)
 
 static void do_busid_cmd(ESPState *s, uint8_t *buf, uint8_t busid)
 {
+#ifdef NCR9X
     int32_t datalen;
     int lun;
     SCSIDevice *current_lun;
@@ -241,6 +253,7 @@ static void do_busid_cmd(ESPState *s, uint8_t *buf, uint8_t busid)
     s->rregs[ESP_RINTR] = INTR_BS | INTR_FC;
     s->rregs[ESP_RSEQ] = SEQ_CD;
     esp_raise_irq(s);
+#endif
 }
 
 static void do_cmd(ESPState *s, uint8_t *buf)
@@ -418,7 +431,9 @@ static int esp_do_dma(ESPState *s)
     else
         s->ti_size -= len;
     if (s->async_len == 0) {
+#ifdef NCR9X
 		scsiesp_req_continue(s->current_req);
+#endif
         /* If there is still data to be read from the device then
            complete the DMA operation immediately.  Otherwise defer
            until the scsi layer has completed.  */
@@ -466,7 +481,9 @@ void esp_fake_dma_done(void *opaque)
 	else
 		s->ti_size -= len;
 	if (s->async_len == 0) {
+#ifdef NCR9X
 		scsiesp_req_continue(s->current_req);
+#endif
 	} else {
 		esp_do_dma(s);
 	}
@@ -493,7 +510,9 @@ void esp_command_complete(SCSIRequest *req, uint32_t status,
 	if (dma && s->dma_len < s->dma_counter)
 		s->rregs[ESP_RSTAT] &= ~STAT_TC;
     if (s->current_req) {
+#ifdef NCR9X
 		scsiesp_req_unref(s->current_req);
+#endif
         s->current_req = NULL;
         s->current_dev = NULL;
     }
@@ -504,7 +523,9 @@ void esp_transfer_data(SCSIRequest *req, uint32_t len)
 	ESPState *s = (ESPState*)req->hba_private;
 
     s->async_len = len;
+#ifdef NCR9X
 	s->async_buf = scsiesp_req_get_buf(req);
+#endif
     if (s->dma_left) {
         esp_do_dma(s);
     } else if (s->dma_counter != 0 && s->ti_size == 0) {
@@ -620,7 +641,9 @@ uint64_t fas408_read_fifo(void *opaque)
 				s->fas408_buffer_size = s->ti_size;
 				s->ti_size = 0;
 				if (s->current_req) {
+#ifdef NCR9X
 					scsiesp_req_continue(s->current_req);
+#endif
 				}
 				s->ti_rptr = 0;
 				s->ti_wptr = 0;
@@ -674,7 +697,9 @@ static uint64_t esp_reg_read2(void *opaque, uint32_t saddr)
 					}
 					if (s->ti_size <= 1 && s->current_req) {
 						// last byte is now going to FIFO, transfer ends.
+#ifdef NCR9X
 						scsiesp_req_continue(s->current_req);
+#endif
 						// set ti_size back to 1, last byte is now in FIFO.
 						s->ti_size = 1;
 						s->fifo_on = 1;
@@ -879,7 +904,9 @@ void esp_reg_write(void *opaque, uint32_t saddr, uint64_t val64)
             s->rregs[ESP_RINTR] = INTR_FC;
             s->rregs[ESP_RSEQ] = 0;
 			if (s->current_req) {
+#ifdef NCR9X
 				scsiesp_req_continue(s->current_req);
+#endif
 			}
 			break;
         case CMD_SATN:

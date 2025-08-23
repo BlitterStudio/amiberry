@@ -575,20 +575,24 @@ static void lsi_do_dma(LSIState *s, int out)
     s->csbc += count;
     s->dnad += count;
     s->dbc -= count;
-     if (s->current->dma_buf == NULL) {
+#ifdef NCR
+    if (s->current->dma_buf == NULL) {
         s->current->dma_buf = scsi_req_get_buf(s->current->req);
     }
+#endif
     /* ??? Set SFBR to first data byte.  */
     if (out) {
         pci_dma_read(pci_dev, addr, s->current->dma_buf, count);
-    } else {
+    }
+    else {
         pci_dma_write(pci_dev, addr, s->current->dma_buf, count);
     }
     s->current->dma_len -= count;
     if (s->current->dma_len == 0) {
         s->current->dma_buf = NULL;
         scsi_req_continue(s->current->req);
-    } else {
+    }
+    else {
         s->current->dma_buf += count;
         lsi_resume_script(s);
     }
@@ -783,11 +787,16 @@ static void lsi_do_command(LSIState *s)
     s->command_complete = 0;
 
     id = (s->select_tag >> 8) & 0xf;
+#ifdef NCR
     dev = scsi_device_find(&s->bus, 0, id, s->current_lun);
     if (!dev) {
         lsi_bad_selection(s, id);
         return;
     }
+#else
+    lsi_bad_selection(s, id);
+    return;
+#endif
 
     assert(s->current == NULL);
     s->current = (lsi_request*)calloc(sizeof(lsi_request), 1);
@@ -1223,10 +1232,15 @@ again:
                 }
                 s->sstat0 |= LSI_SSTAT0_WOA;
                 s->scntl1 &= ~LSI_SCNTL1_IARB;
+#ifdef NCR
                 if (!scsi_device_find(&s->bus, 0, id, 0)) {
                     lsi_bad_selection(s, id);
                     break;
                 }
+#else
+                lsi_bad_selection(s, id);
+                break;
+#endif
                 DPRINTF("Selected target %d%s\n",
                         id, insn & (1 << 3) ? " ATN" : "");
                 /* ??? Linux drivers compain when this is set.  Maybe

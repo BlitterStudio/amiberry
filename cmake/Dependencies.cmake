@@ -62,6 +62,10 @@ if (USE_LIBENET)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBENET_LIBRARIES})
 endif ()
 
+if (USE_PCEM)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PCEM)
+endif ()
+
 # Add libpcap for uaenet (Linux/macOS)
 if (USE_UAENET_PCAP)
     find_path(PCAP_INCLUDE_DIR pcap.h)

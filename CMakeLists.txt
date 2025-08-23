@@ -16,6 +16,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # Feature options
+option(USE_PCEM          "Use PCem for hardware emulation (no support for RISC-V)" ON)
 option(USE_LIBSERIALPORT "Use LibSerialPort for serial port emulation" ON)
 option(USE_LIBENET       "Use LibENET for network emulation" ON)
 option(USE_PORTMIDI      "Use PortMidi for MIDI emulation" ON)

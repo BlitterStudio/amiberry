@@ -325,11 +325,19 @@ typedef unsigned long dma_addr_t;
 #define PCI_DEVICE(s) ((void*)(s->bus.privdata))
 #define DMA_ADDR_FMT "%08x"
 
+#ifdef NCR
 void pci710_set_irq(PCIDevice *pci_dev, int level);
+#else
+static inline void pci710_set_irq(PCIDevice* pci_dev, int level) {}
+#endif
 void lsi710_scsi_init(DeviceState *dev);
 void lsi710_scsi_reset(DeviceState *dev, void*);
 
+#ifdef NCR
 void pci_set_irq(PCIDevice *pci_dev, int level);
+#else
+static inline void pci_set_irq(PCIDevice* pci_dev, int level) {}
+#endif
 void lsi_scsi_init(DeviceState *dev);
 void lsi_scsi_reset(DeviceState *dev, void*);
 
@@ -360,7 +368,14 @@ typedef enum {
     DMA_DIRECTION_FROM_DEVICE = 1,
 } DMADirection;
 
+#ifdef NCR
 int pci710_dma_rw(PCIDevice *dev, dma_addr_t addr, void *buf, dma_addr_t len, DMADirection dir);
+#else
+static inline int pci710_dma_rw(PCIDevice *dev, dma_addr_t addr, void *buf, dma_addr_t len, DMADirection dir)
+{
+    return -1;
+}
+#endif
 
 static inline int pci710_dma_read(PCIDevice *dev, dma_addr_t addr,
                                void *buf, dma_addr_t len)
@@ -373,7 +388,14 @@ static inline int pci710_dma_write(PCIDevice *dev, dma_addr_t addr,
     return pci710_dma_rw(dev, addr, (void *) buf, len, DMA_DIRECTION_FROM_DEVICE);
 }
 
+#ifdef NCR
 int pci_dma_rw(PCIDevice *dev, dma_addr_t addr, void *buf, dma_addr_t len, DMADirection dir);
+#else
+static inline int pci_dma_rw(PCIDevice *dev, dma_addr_t addr, void *buf, dma_addr_t len, DMADirection dir)
+{
+    return -1;
+}
+#endif
 
 static inline int pci_dma_read(PCIDevice *dev, dma_addr_t addr,
 	void *buf, dma_addr_t len)

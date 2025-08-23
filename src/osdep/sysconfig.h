@@ -94,8 +94,6 @@
 #define A2091 /* A590/A2091 SCSI */
 #define A2065 /* A2065 Ethernet card */
 #define GFXBOARD /* Hardware graphics board */
-#define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
-#define NCR9X /* 53C9X SCSI */
 #define SANA2 /* SANA2 network driver */
 #define AMAX /* A-Max ROM adapter emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
@@ -107,16 +105,23 @@
 #define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */ // defined externally in Amiberry
 #define WITH_PPC
-#define WITH_QEMU_CPU
 #define WITH_TOCCATA
 #define WITH_PCI
+
+// PCem support and any dependent features
+#ifdef USE_PCEM
+#define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
+#define NCR9X /* 53C9X SCSI */
 #define WITH_X86
+#define WITH_QEMU_CPU
+#define WITH_DRACO
+#endif
+
 #define WITH_THREADED_CPU
 /* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU
 #define WITH_DSP
-#define WITH_DRACO
 
 // We define this externally in Amiberry
 // Use portmidi library for MIDI devices

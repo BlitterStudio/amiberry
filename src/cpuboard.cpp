@@ -791,34 +791,51 @@ static uae_u32 REGPARAM2 blizzardea_bget(uaecptr addr)
 
 	addr &= blizzardea_bank.mask;
 	if (is_tekmagic(&currprefs) || is_trexii(&currprefs)) {
+#ifdef NCR
 		cpuboard_non_byte_ea = true;
 		v = cpuboard_ncr710_io_bget(addr);
+#endif
 	} else if (is_quikpak(&currprefs)) {
+#ifdef NCR
 		cpuboard_non_byte_ea = true;
 		v = cpuboard_ncr720_io_bget(addr);
+#endif
 	} else if (is_blizzard2060(&currprefs) && addr >= BLIZZARD_2060_SCSI_OFFSET) {
+#ifdef NCR9X
 		v = cpuboard_ncr9x_scsi_get(addr);
+#endif
 	} else if (is_blizzard1230mk2(&currprefs) && addr >= 0x10000 && (currprefs.cpuboard_settings & 2)) {
+#ifdef NCR9X
 		v = cpuboard_ncr9x_scsi_get(addr);
+#endif
 	} else if (is_blizzard(&currprefs)) {
+#ifdef NCR9X
 		if (addr & BLIZZARD_SCSI_KIT4_SCSI_OFFSET)
 			v = cpuboard_ncr9x_scsi_get(addr);
 		else
+#endif
 			v = blizzardea_bank.baseaddr[addr];
 	} else if (is_blizzard1230mk3(&currprefs)) {
+#ifdef NCR9X
 		if (addr & BLIZZARD_SCSI_KIT3_SCSI_OFFSET)
 			v = cpuboard_ncr9x_scsi_get(addr);
 		else
+#endif
 			v = blizzardea_bank.baseaddr[addr];
 	} else if (is_csmk1(&currprefs)) {
+#ifdef NCR9X
 		if (addr >= CYBERSTORM_MK1_SCSI_OFFSET)
 			v = cpuboard_ncr9x_scsi_get(addr);
 		else
+#endif
 			v = blizzardea_bank.baseaddr[addr];
 	} else if (is_csmk2(&currprefs)) {
+#ifdef NCR9X
 		if (addr >= CYBERSTORM_MK2_SCSI_OFFSET) {
 			v = cpuboard_ncr9x_scsi_get(addr);
-		} else if (flash_active(flashrom, addr)) {
+		} else 
+#endif
+			if (flash_active(flashrom, addr)) {
 			v = flash_read(flashrom, addr);
 		} else {
 			v = blizzardea_bank.baseaddr[addr];
@@ -850,25 +867,41 @@ static void REGPARAM2 blizzardea_bput(uaecptr addr, uae_u32 b)
 	addr &= blizzardea_bank.mask;
 	if (is_tekmagic(&currprefs) || is_trexii(&currprefs)) {
 		cpuboard_non_byte_ea = true;
+#ifdef NCR
 		cpuboard_ncr710_io_bput(addr, b);
+#endif
 	} else if (is_quikpak(&currprefs)) {
 		cpuboard_non_byte_ea = true;
+#ifdef NCR
 		cpuboard_ncr720_io_bput(addr, b);
+#endif
 	} else if (is_blizzard1230mk2(&currprefs) && addr >= 0x10000 && (currprefs.cpuboard_settings & 2)) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if (is_blizzard2060(&currprefs) && addr >= BLIZZARD_2060_SCSI_OFFSET) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if ((is_blizzard(&currprefs)) && addr >= BLIZZARD_SCSI_KIT4_SCSI_OFFSET) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if ((is_blizzard1230mk3(&currprefs)) && addr >= BLIZZARD_SCSI_KIT3_SCSI_OFFSET) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if (is_csmk1(&currprefs)) {
 		if (addr >= CYBERSTORM_MK1_SCSI_OFFSET) {
+#ifdef NCR9X
 			cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 		}
 	} else if (is_csmk2(&currprefs)) {
 		if (addr >= CYBERSTORM_MK2_SCSI_OFFSET) {
+#ifdef NCR9X
 			cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 		}  else {
 			addr &= 65535;
 			addr &= ~3;
@@ -1421,9 +1454,13 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 							write_log(_T("CS: SCSI reset cleared\n"));
 						map_banks(&blizzardf0_bank, 0xf00000 >> 16, 0x40000 >> 16, 0);
 						if (is_blizzardppc(&currprefs) || flash_size(flashrom) >= 262144) {
+#ifdef NCR
 							map_banks(&ncr_bank_generic, 0xf40000 >> 16, 0x10000 >> 16, 0);
+#endif
 						} else {
+#ifdef NCR
 							map_banks(&ncr_bank_cyberstorm, 0xf40000 >> 16, 0x10000 >> 16, 0);
+#endif
 							map_banks(&blizzardio_bank, 0xf50000 >> 16, 0x10000 >> 16, 0);
 						}
 					} else {

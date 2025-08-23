@@ -2544,8 +2544,10 @@ static void cirrus_update_memory_access(CirrusVGAState *s)
 {
     unsigned mode;
 
+#ifdef WITH_X86
 	if (s->x86vga)
 		x86_map_lfb(s->vga.sr[7] >> 4);
+#endif
 
 	memory_region_transaction_begin();
     if ((s->vga.sr[0x17] & 0x44) == 0x44) {
