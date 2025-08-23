@@ -10234,6 +10234,7 @@ static void process_dmal(uae_u32 v)
 	dmalt <<= (3 * 2);
 	dmalt |= disk_dmal();
 	dmal = dmalt;
+	inputdevice_hsync_strobe();
 }
 
 static void start_dmal(void)

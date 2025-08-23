@@ -469,8 +469,7 @@ static int digital_port[NORMAL_JPORTS][2];
 static int lightpen_port[NORMAL_JPORTS];
 int cubo_enabled;
 uae_u32 cubo_flag;
-#define POTDAT_DELAY_PAL 8
-#define POTDAT_DELAY_NTSC 7
+#define POTDAT_DELAY 8
 
 static int use_joysticks[MAX_INPUT_DEVICES];
 static int use_mice[MAX_INPUT_DEVICES];
@@ -3779,10 +3778,8 @@ static void charge_cap (int joy, int idx, int charge)
 
 static void cap_check(bool hsync)
 {
-	int joy, i;
-
-	for (joy = 0; joy < 2; joy++) {
-		for (i = 0; i < 2; i++) {
+	for (int joy = 0; joy < 2; joy++) {
+		for (int i = 0; i < 2; i++) {
 			bool cancharge = true;
 			int charge = 0, dong, joypot;
 			uae_u16 pdir = 0x0200 << (joy * 4 + i * 2); /* output enable */
@@ -3821,9 +3818,9 @@ static void cap_check(bool hsync)
 				if (pot_dat_act[joy][i] && hsync) {
 					pot_dat[joy][i]++;
 				}
-				/* first 7 or 8 lines after potgo has been started = discharge cap */
+				/* first 8 lines after potgo has been started = discharge cap */
 				if (pot_dat_act[joy][i] == 1) {
-					if (pot_dat[joy][i] < (currprefs.ntscmode ? POTDAT_DELAY_NTSC : POTDAT_DELAY_PAL)) {
+					if (pot_dat[joy][i] < POTDAT_DELAY) {
 						charge = -2; /* fast discharge delay */
 						cancharge = hsync;
 					} else {
@@ -4286,9 +4283,14 @@ void inputdevice_playevents(void)
 		handle_input_event(nr, state, max, (autofire ? HANDLE_IE_FLAG_AUTOFIRE : 0) | HANDLE_IE_FLAG_PLAYBACKEVENT);
 }
 
-void inputdevice_hsync (bool forceread)
+// strobe slot is clock for pot counters
+void inputdevice_hsync_strobe(void)
 {
 	cap_check(true);
+}
+
+void inputdevice_hsync(bool forceread)
+{
 
 #ifdef CATWEASEL
 	catweasel_hsync ();
