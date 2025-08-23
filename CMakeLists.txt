@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(amiberry
-    VERSION 7.1.0
+    VERSION 7.1.1
     LANGUAGES C CXX
     DESCRIPTION "Optimized Amiga emulator for various platforms"
     HOMEPAGE_URL "https://amiberry.com"
@@ -30,7 +30,7 @@ option(WITH_LTO          "Enable Link Time Optimization" OFF)
 # Versioning
 set(VERSION_MAJOR "7" CACHE STRING "Major version")
 set(VERSION_MINOR "1" CACHE STRING "Minor version")
-set(VERSION_PATCH "0" CACHE STRING "Patch version")
+set(VERSION_PATCH "1" CACHE STRING "Patch version")
 set(VERSION_PRE_RELEASE "" CACHE STRING "Pre-release version")
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
@@ -45,11 +45,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	pkg_check_modules(PNG REQUIRED libpng)
 
 	include_directories(
-    		${SDL2_INCLUDE_DIRS}
-    		${SDL2_TTF_INCLUDE_DIRS}
-    		${SDL2_IMAGE_INCLUDE_DIRS}
-    		${FLAC_INCLUDE_DIRS}
-    		${PNG_INCLUDE_DIRS}
+    	${SDL2_INCLUDE_DIRS}
+    	${SDL2_TTF_INCLUDE_DIRS}
+    	${SDL2_IMAGE_INCLUDE_DIRS}
+    	${FLAC_INCLUDE_DIRS}
+    	${PNG_INCLUDE_DIRS}
 	)
 
 	link_libraries(
