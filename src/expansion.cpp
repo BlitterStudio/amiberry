@@ -5463,13 +5463,13 @@ const struct expansionromtype expansionroms[] = {
 	},
 #ifdef NCR9X
 	{
-		_T("blizzardscsikitiii"), _T("SCSI Kit III"), _T("Phase 5"),
+		_T("blizzardscsikitiii"), _T("Blizzard SCSI Kit III"), _T("Phase 5"),
 		NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT3, 0, 0, 0, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI
 	},
 	{
-		_T("blizzardscsikitiv"), _T("SCSI Kit IV"), _T("Phase 5"),
+		_T("blizzardscsikitiv"), _T("Blizzard SCSI Kit IV"), _T("Phase 5"),
 		NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT4, 0, 0, 0, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI
