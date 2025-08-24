@@ -1022,7 +1022,7 @@ void ncr_updatebanking(ncr_t *ncr)
     bool rwsep = false;
 	uint32_t bankprimary, banksecondary;
 
-    svga->banked_mask = (svga->seqregs[0x20] & 1) ? 0x1ffff : 0xffff;
+    svga->banked_mask = (svga->seqregs[0x20] & 1) ? 0xffff : 0x7fff;
     if (svga->seqregs[0x1e] & 0x10) {
         bankprimary = (svga->seqregs[0x18] << 8) | svga->seqregs[0x19];
         bankprimary <<= 6;
