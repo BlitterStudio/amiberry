@@ -27,6 +27,8 @@
 #include "options.h"
 #include "keyboard.h"
 #include "inputdevice.h"
+
+#include <algorithm>
 #include "inputrecord.h"
 #include "keybuf.h"
 #include "custom.h"
@@ -209,6 +211,42 @@ static int gp_swappeddevices[MAX_INPUT_DEVICES][IDTYPE_MAX];
 extern int draco_keyboard_get_rate(void);
 static int draco_keybord_repeat_cnt, draco_keybord_repeat_code;
 #endif
+
+static void osk_control(int x, int y, int button, int buttonstate)
+{
+	if (vkbd_allowed(0) && vkbd_is_active())
+	{
+		int vkbd_state = 0;
+		if (button && buttonstate)
+		{
+			vkbd_state |= VKBD_BUTTON;
+		}
+		x = std::min(x, 1);
+		x = std::max(x, -1);
+		y = std::min(y, 1);
+		y = std::max(y, -1);
+		if (x < 0) {
+			vkbd_state |= VKBD_LEFT;
+		}
+		if (x > 0) {
+			vkbd_state |= VKBD_RIGHT;
+		}
+		if (y < 0) {
+			vkbd_state |= VKBD_UP;
+		}
+		if (y > 0) {
+			vkbd_state |= VKBD_DOWN;
+		}
+
+		int code;
+		int pressed;
+		if (vkbd_process(vkbd_state, &code, &pressed))
+		{
+			inputdevice_do_keyboard(code, pressed);
+		}
+		vkbd_process(0, &code, &pressed);
+	}
+}
 
 static int isdevice (struct uae_input_device *id)
 {
@@ -5267,64 +5305,6 @@ static uae_u64 isqual (int evt)
 	return ID_FLAG_QUALIFIER1 << (num * 2);
 }
 
-#ifdef AMIBERRY
-// Pass the joystick state (joybutton and joydir) to vkbd subsystem and clear them for the emulator.
-static void handle_vkbd()
-{
-	if (!vkbd_is_active()) return;
-
-	int vkbd_state = 0;
-	for (int joy = 0; joy < 2; ++joy)
-	{
-		oleft[joy] = 0;
-		oright[joy] = 0;
-		otop[joy] = 0;
-		obot[joy] = 0;
-		horizclear[joy] = 0;
-		vertclear[joy] = 0;
-
-		int mask_button;
-		if (cd32_pad_enabled[joy])
-			mask_button = 1 << JOYBUTTON_CD32_RED;
-		else
-			mask_button = 1 << JOYBUTTON_1;
-
-		if (joybutton[joy] & mask_button)
-		{
-			vkbd_state |= VKBD_BUTTON;
-			joybutton[joy] &= ~mask_button;
-		}
-		if (joydir[joy] & DIR_LEFT)
-		{
-			vkbd_state |= VKBD_LEFT;
-			joydir[joy] &= ~DIR_LEFT;
-		}
-		if (joydir[joy] & DIR_RIGHT)
-		{
-			vkbd_state |= VKBD_RIGHT;
-			joydir[joy] &= ~DIR_RIGHT;
-		}
-		if (joydir[joy] & DIR_UP)
-		{
-			vkbd_state |= VKBD_UP;
-			joydir[joy] &= ~DIR_UP;
-		}
-		if (joydir[joy] & DIR_DOWN)
-		{
-			vkbd_state |= VKBD_DOWN;
-			joydir[joy] &= ~DIR_DOWN;
-		}
-	}
-
-	int code;
-	int pressed;
-	if (vkbd_process(vkbd_state, &code, &pressed))
-	{
-		inputdevice_do_keyboard(code, pressed);
-	}
-}
-#endif
-
 static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 {
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
@@ -5489,21 +5469,26 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	case 4: /* ->Parallel port joystick adapter port #2 */
 		joy = ie->unit - 1;
 		if (ie->type & 4) {
-			int old = joybutton[joy] & (1 << ie->data);
-
-			if (state) {
-				joybutton[joy] |= 1 << ie->data;
-				//gui_gameport_button_change (joy, ie->data, 1);
-			} else {
-				joybutton[joy] &= ~(1 << ie->data);
-				//gui_gameport_button_change (joy, ie->data, 0);
+			if (vkbd_allowed(0) && vkbd_is_active()) {
+				osk_control(0, 0, 1 << ie->data, state);
 			}
+			else {
+				int old = joybutton[joy] & (1 << ie->data);
+				if (state) {
+					joybutton[joy] |= 1 << ie->data;
+					//gui_gameport_button_change(joy, ie->data, 1);
+				}
+				else {
+					joybutton[joy] &= ~(1 << ie->data);
+					//gui_gameport_button_change(joy, ie->data, 0);
+				}
 
-			if (ie->data == 0 && old != (joybutton[joy] & (1 << ie->data)) && currprefs.cpu_cycle_exact) {
-				if (!input_record && !input_play && currprefs.input_contact_bounce) {
-					// emulate contact bounce, 1st button only, others have capacitors
-					bouncy = 1;
-					bouncy_cycles = get_cycles () + CYCLE_UNIT * currprefs.input_contact_bounce;
+				if (ie->data == 0 && old != (joybutton[joy] & (1 << ie->data)) && currprefs.cpu_cycle_exact) {
+					if (!input_record && !input_play && currprefs.input_contact_bounce) {
+						// emulate contact bounce, 1st button only, others have capacitors
+						bouncy = 1;
+						bouncy_cycles = get_cycles() + CYCLE_UNIT * currprefs.input_contact_bounce;
+					}
 				}
 			}
 
@@ -5735,48 +5720,61 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 			}
 			mouse_deltanoreset[joy][0] = 1;
 			mouse_deltanoreset[joy][1] = 1;
-			joydir[joy] = 0;
-			if (left) {
-				if (!allowoppositestick) {
-					joydir[joy] &= ~DIR_RIGHT;
+			if (vkbd_allowed(0) && vkbd_is_active()) {
+				if (left) {
+					osk_control(-1, 0, 0, 0);
 				}
-				joydir[joy] |= DIR_LEFT;
-			}
-			if (right) {
-				if (!allowoppositestick) {
-					joydir[joy] &= ~DIR_LEFT;
+				if (right) {
+					osk_control(1, 0, 0, 0);
 				}
-				joydir[joy] |= DIR_RIGHT;
-			}
-			if (top) {
-				if (!allowoppositestick) {
-					joydir[joy] &= ~DIR_DOWN;
+				if (top) {
+					osk_control(0, -1, 0, 0);
 				}
-				joydir[joy] |= DIR_UP;
-			}
-			if (bot) {
-				if (!allowoppositestick) {
-					joydir[joy] &= ~DIR_UP;
+				if (bot) {
+					osk_control(0, 1, 0, 0);
 				}
-				joydir[joy] |= DIR_DOWN;
 			}
-			if (joy == 0 || joy == 1)
-				joymousecounter (joy); 
+			else {
+				joydir[joy] = 0;
+				if (left) {
+					if (!allowoppositestick) {
+						joydir[joy] &= ~DIR_RIGHT;
+					}
+					joydir[joy] |= DIR_LEFT;
+				}
+				if (right) {
+					if (!allowoppositestick) {
+						joydir[joy] &= ~DIR_LEFT;
+					}
+					joydir[joy] |= DIR_RIGHT;
+				}
+				if (top) {
+					if (!allowoppositestick) {
+						joydir[joy] &= ~DIR_DOWN;
+					}
+					joydir[joy] |= DIR_UP;
+				}
+				if (bot) {
+					if (!allowoppositestick) {
+						joydir[joy] &= ~DIR_UP;
+					}
+					joydir[joy] |= DIR_DOWN;
+				}
+				if (joy == 0 || joy == 1)
+					joymousecounter(joy);
 
-			//gui_gameport_axis_change (joy, DIR_LEFT_BIT, left, 0);
-			//gui_gameport_axis_change (joy, DIR_RIGHT_BIT, right, 0);
-			//gui_gameport_axis_change (joy, DIR_UP_BIT, top, 0);
-			//gui_gameport_axis_change (joy, DIR_DOWN_BIT, bot, 0);
+				//gui_gameport_axis_change(joy, DIR_LEFT_BIT, left, 0);
+				//gui_gameport_axis_change(joy, DIR_RIGHT_BIT, right, 0);
+				//gui_gameport_axis_change(joy, DIR_UP_BIT, top, 0);
+				//gui_gameport_axis_change(joy, DIR_DOWN_BIT, bot, 0);
+			}
 		}
 		break;
 	case 0: /* ->KEY */
 		inputdevice_do_keyboard (ie->data, state);
 		break;
 	}
-#ifdef AMIBERRY
-	if (vkbd_allowed(0) && vkbd_is_active())
-		handle_vkbd();
-#endif
+
 	return 1;
 }
 
