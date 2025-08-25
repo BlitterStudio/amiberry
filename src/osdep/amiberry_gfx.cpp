@@ -2761,6 +2761,9 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 //				scaled_width /= 2;
 		}
 
+		if (currprefs.ntscmode)
+			scaled_height = scaled_height * 6 / 5;
+
 		if (mon->amiga_window && isfullscreen() == 0)
 		{
 			if (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600)
