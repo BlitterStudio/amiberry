@@ -4175,7 +4175,14 @@ std::string get_plugins_directory(bool portable_mode)
 		write_log("Using plugins directory from " AMIBERRY_LIBDIR "\n");
 		return AMIBERRY_LIBDIR;
 	}
-	// 3: Check for ~/Amiberry/plugins
+	// 3: Check for $AMIBERRY_HOME_DIR/plugins
+	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+	if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+	{
+		write_log("Using plugins directory from AMIBERRY_HOME_DIR/plugins\n");
+		return { std::string(env_home_dir) + "/plugins" };
+	}
+	// 4: Check for ~/Amiberry/plugins
 	const auto user_home_dir = getenv("HOME");
 	if (user_home_dir != nullptr)
 	{
