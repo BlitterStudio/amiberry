@@ -28,6 +28,16 @@ option(USE_DBUS          "Use DBus to control the emulator" OFF)
 option(USE_OPENGL        "Use OpenGL for rendering (currently BROKEN)" OFF)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 
+# Automatically disable PCem on RISC-V targets
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv")
+    if(USE_PCEM)
+        message(STATUS "Detected RISC-V architecture (${CMAKE_SYSTEM_PROCESSOR}). Disabling USE_PCEM.")
+    else()
+        message(STATUS "Detected RISC-V architecture (${CMAKE_SYSTEM_PROCESSOR}). USE_PCEM already disabled.")
+    endif()
+    set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
+endif()
+
 # Versioning
 set(VERSION_MAJOR "7" CACHE STRING "Major version")
 set(VERSION_MINOR "1" CACHE STRING "Minor version")
