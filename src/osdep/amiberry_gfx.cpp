@@ -3110,6 +3110,10 @@ void auto_crop_image()
 			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
 				height *= 2;
 		}
+
+		if (currprefs.ntscmode)
+			height = height * 6 / 5;
+
 		if (currprefs.gfx_correct_aspect == 0)
 		{
 			width = sdl_mode.w;
