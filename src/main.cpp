@@ -551,7 +551,6 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 			error_log(_T("You can't use Zorro II RTG and more than 2MB chip at the same time."));
 			p->chipmem.size = 0x200000;
 		}
-#ifndef AMIBERRY // custom gfx boards not implemented yet
 		if (rbc->rtgmem_type >= GFXBOARD_HARDWARE) {
 			if (gfxboard_get_vram_min(rbc) > 0 && rbc->rtgmem_size < gfxboard_get_vram_min (rbc)) {
 				error_log(_T("Graphics card memory size %d (0x%x) smaller than minimum hardware supported %d (0x%x)."),
@@ -569,7 +568,6 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 				rbc->rtgmem_size = gfxboard_get_vram_max(rbc);
 			}
 		}
-#endif
 		if (p->address_space_24 && rbc->rtgmem_size && rbc->rtgmem_type == GFXBOARD_UAE_Z3) {
 			error_log (_T("Z3 RTG and 24bit address space are not compatible."));
 			rbc->rtgmem_type = GFXBOARD_UAE_Z2;
