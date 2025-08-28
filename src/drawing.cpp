@@ -575,15 +575,21 @@ int coord_native_to_amiga_x(int x)
 int coord_native_to_amiga_y(int y)
 {
 #ifdef AMIBERRY
-	if (!native2amiga_line_map || y < 0)
-		return -1;
-	if (y >= native2amiga_line_map_height) 
-		return native2amiga_line_map[native2amiga_line_map_height] + thisframe_y_adjust - minfirstline;
-	return native2amiga_line_map[y] + thisframe_y_adjust - minfirstline;
+	if (!native2amiga_line_map || y < 0) {
+		return 0;
+	}
+	if (y >= native2amiga_line_map_height) {
+		y = native2amiga_line_map_height + thisframe_y_adjust - 1;
+	}
+	return native2amiga_line_map[y] - minfirstline;
 #else
-	if (!native2amiga_line_map || y < 0 || y >= native2amiga_line_map_height)
-		return -1;
-	return native2amiga_line_map[y] + thisframe_y_adjust - minfirstline;
+	if (!native2amiga_line_map || y < 0) {
+		return 0;
+	}
+	if (y >= native2amiga_line_map_height) {
+		y = native2amiga_line_map_height - 1;
+	}
+	return native2amiga_line_map[y] - minfirstline;
 #endif
 }
 
