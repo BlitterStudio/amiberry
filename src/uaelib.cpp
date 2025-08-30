@@ -17,9 +17,7 @@
 #include "options.h"
 #include "uae.h"
 #include "memory.h"
-#include "custom.h"
 #include "newcpu.h"
-#include "xwin.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "disk.h"
@@ -27,8 +25,10 @@
 #include "gensound.h"
 #include "picasso96.h"
 #include "filesys.h"
+#ifdef AMIBERRY
 #include "target.h"
 #include "parser.h" // for midi ports
+#endif
 /*
 * Returns UAE Version
 */

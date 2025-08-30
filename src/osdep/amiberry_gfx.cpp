@@ -17,13 +17,9 @@
 
 #include "sysdeps.h"
 #include "options.h"
-#include "audio.h"
 #include "uae.h"
-#include "memory.h"
 #include "custom.h"
 #include "events.h"
-#include "newcpu.h"
-#include "traps.h"
 #include "xwin.h"
 #include "keyboard.h"
 #include "drawing.h"

@@ -34,7 +34,6 @@
 #endif
 #include "uae.h"
 #include "savestate.h"
-#include "scsi.h"
 #include "devices.h"
 #include "rommgr.h"
 

@@ -53,7 +53,6 @@ static bool memlogw = true;
 #include "rommgr.h"
 #include "zfile.h"
 #include "gfxboard.h"
-#include "rommgr.h"
 #include "xwin.h"
 #include "devices.h"
 #include "gfxfilter.h"

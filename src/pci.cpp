@@ -18,7 +18,6 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "custom.h"
 #include "memory.h"
 #include "debug.h"
 #include "pci_hw.h"
@@ -28,7 +27,6 @@
 #include "uae.h"
 #include "rommgr.h"
 #include "cpuboard.h"
-#include "autoconf.h"
 #include "devices.h"
 
 #include "qemuvga/qemuuaeglue.h"

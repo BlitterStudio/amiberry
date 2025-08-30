@@ -33,8 +33,6 @@ int disk_debug_track = -1;
 #include "gui.h"
 #include "zfile.h"
 #include "newcpu.h"
-#include "osemu.h"
-#include "execlib.h"
 #include "savestate.h"
 #include "cia.h"
 #include "debug.h"

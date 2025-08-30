@@ -39,7 +39,6 @@
 #include "luascript.h"
 #endif
 #include "ethernet.h"
-#include "native2amiga_api.h"
 #include "ini.h"
 #ifdef WITH_SPECIALMONITORS
 #include "specialmonitors.h"

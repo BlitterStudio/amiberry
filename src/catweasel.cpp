@@ -7,7 +7,6 @@
 #ifdef CATWEASEL
 
 #include "options.h"
-#include "memory.h"
 #include "ioport.h"
 #include "catweasel.h"
 #include "uae.h"

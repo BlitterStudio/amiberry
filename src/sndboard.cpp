@@ -12,11 +12,9 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "debug.h"
-#include "custom.h"
 #include "sndboard.h"
 #include "audio.h"
 #include "autoconf.h"

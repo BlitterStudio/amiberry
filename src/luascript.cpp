@@ -13,8 +13,6 @@
 #endif
 
 #include "options.h"
-#include "savestate.h"
-#include "memory.h"
 #include "debug.h"
 #include "identify.h"
 #include "luascript.h"

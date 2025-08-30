@@ -5,7 +5,6 @@
 #include "options.h"
 #include "zfile.h"
 #include "amax.h"
-#include "custom.h"
 #include "memory.h"
 #include "newcpu.h"
 #include "rommgr.h"

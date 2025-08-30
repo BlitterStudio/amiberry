@@ -18,10 +18,8 @@
 #include "uae.h"
 #include "memory.h"
 #include "rommgr.h"
-#include "ersatz.h"
 #include "zfile.h"
 #include "custom.h"
-#include "events.h"
 #include "newcpu.h"
 #include "autoconf.h"
 #include "savestate.h"
@@ -36,17 +34,14 @@
 #ifdef ENFORCER
 #include "enforcer.h"
 #endif
-#include "threaddep/thread.h"
 #include "gayle.h"
 #include "debug.h"
 #include "debugmem.h"
-#include "gfxboard.h"
 #include "cpuboard.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
 #endif
 #include "devices.h"
-#include "inputdevice.h"
 #ifdef WITH_DRACO
 #include "draco.h"
 #endif

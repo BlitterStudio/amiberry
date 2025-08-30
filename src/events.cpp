@@ -13,17 +13,11 @@
 
 #include "options.h"
 #include "events.h"
-#include "memory.h"
-#include "newcpu.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
 #endif
 #include "xwin.h"
-#ifdef WITH_X86
-#include "x86.h"
-#endif
 #include "audio.h"
-#include "cia.h"
 #include "custom.h"
 
 extern uae_u8 agnus_hpos;

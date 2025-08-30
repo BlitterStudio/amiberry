@@ -18,10 +18,8 @@
 
 #include "options.h"
 #include "keybuf.h"
-#include "keyboard.h"
 #include "inputdevice.h"
 #include "custom.h"
-#include "savestate.h"
 
 int key_swap_hack2 = false;
 

@@ -21,7 +21,6 @@
 #include "zfile.h"
 #include "custom.h"
 #include "savestate.h"
-#include "cia.h"
 #include "events.h"
 #include "uae.h"
 #include "disk.h"

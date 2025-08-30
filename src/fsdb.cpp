@@ -11,15 +11,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
-#include "traps.h"
 #include "memory.h"
-#include "custom.h"
-#include "newcpu.h"
-#include "filesys.h"
-#include "autoconf.h"
-#include "fsusage.h"
-#include "scsidev.h"
 #include "fsdb.h"
 //#include "uae/io.h"
 

@@ -17,13 +17,11 @@
 #include "uae.h"
 #include "memory.h"
 #include "rommgr.h"
-#include "custom.h"
 #include "newcpu.h"
 #include "ncr9x_scsi.h"
 #include "scsi.h"
 #include "filesys.h"
 #include "zfile.h"
-#include "blkdev.h"
 #include "cpuboard.h"
 #include "flashrom.h"
 #include "autoconf.h"
@@ -33,7 +31,6 @@
 #include "qemuvga/scsi/scsi.h"
 #include "qemuvga/scsi/esp.h"
 #endif
-#include "gui.h"
 #include "devices.h"
 
 #define FASTLANE_BOARD_SIZE (2 * 16777216)

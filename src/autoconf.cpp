@@ -13,16 +13,12 @@
 #define NEW_TRAP_DEBUG 0
 
 #include "options.h"
-#include "uae.h"
 #include "memory.h"
-#include "custom.h"
-#include "events.h"
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "debug.h"
 #include "threaddep/thread.h"
-#include "native2amiga.h"
 #include "inputdevice.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"

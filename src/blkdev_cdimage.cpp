@@ -20,19 +20,16 @@
 #include <sys/wait.h>
 
 #include "options.h"
-#include "traps.h"
 #include "blkdev.h"
 #include "zfile.h"
 #include "gui.h"
 #include "fsdb.h"
 #include "threaddep/thread.h"
-#include "scsidev.h"
 #include "mp3decoder.h"
 #include "cda_play.h"
 #include "memory.h"
 #include "audio.h"
 #include "uae.h"
-#include "uae/cdrom.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif

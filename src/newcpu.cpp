@@ -26,7 +26,6 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "disasm.h"
 #include "cpummu.h"
 #include "cpummu030.h"
 #include "cputbl.h"
@@ -39,8 +38,6 @@
 #include "savestate.h"
 #include "blitter.h"
 #include "ar.h"
-#include "gayle.h"
-#include "cia.h"
 #include "inputrecord.h"
 #include "inputdevice.h"
 #include "audio.h"
@@ -54,7 +51,6 @@
 #ifdef WITH_X86
 #include "x86.h"
 #endif
-#include "bsdsocket.h"
 #include "devices.h"
 #ifdef WITH_DRACO
 #include "draco.h"

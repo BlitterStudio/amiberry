@@ -20,9 +20,7 @@
 
 #include "options.h"
 #include "uae.h"
-#include "gensound.h"
 #include "audio.h"
-#include "sounddep/sound.h"
 #include "events.h"
 #include "memory.h"
 #include "custom.h"
@@ -51,7 +49,6 @@
 #ifdef WITH_LUA
 #include "luascript.h"
 #endif
-#include "crc32.h"
 #include "devices.h"
 #include "rommgr.h"
 #ifdef WITH_SPECIALMONITORS

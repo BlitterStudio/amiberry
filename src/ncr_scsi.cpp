@@ -14,24 +14,19 @@
 #define NCR_DEBUG 0
 
 #include "options.h"
-#include "uae.h"
 #include "memory.h"
 #include "rommgr.h"
-#include "custom.h"
 #include "newcpu.h"
 #include "ncr_scsi.h"
 #include "scsi.h"
 #include "filesys.h"
 #include "zfile.h"
-#include "blkdev.h"
 #include "cpuboard.h"
 #ifdef WITH_QEMU_CPU
 #include "qemuvga/qemuuaeglue.h"
 #include "qemuvga/queue.h"
 #include "qemuvga/scsi/scsi.h"
 #endif
-#include "autoconf.h"
-#include "gui.h"
 #include "devices.h"
 
 #define BOARD_SIZE 16777216

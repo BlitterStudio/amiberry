@@ -39,7 +39,6 @@ static void generate_func(void)
     printf("#include \"sysconfig.h\"\n");
     printf("#include \"sysdeps.h\"\n");
     printf("#include \"options.h\"\n");
-    printf("#include \"custom.h\"\n");
     printf("#include \"memory.h\"\n");
     printf("#include \"blitter.h\"\n");
     printf("#include \"blitfunc.h\"\n\n");

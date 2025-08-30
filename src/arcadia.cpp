@@ -15,7 +15,6 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
 #include "memory.h"
 #include "rommgr.h"
 #include "custom.h"
@@ -27,13 +26,10 @@
 #include "videograb.h"
 #endif
 #include "xwin.h"
-#include "drawing.h"
 #include "statusline.h"
-#include "rommgr.h"
 #include "flashrom.h"
 #include "savestate.h"
 #include "devices.h"
-#include "specialmonitors.h"
 
 #define CUBO_DEBUG 1
 

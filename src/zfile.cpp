@@ -16,7 +16,6 @@
 #include "options.h"
 #include "zfile.h"
 #include "disk.h"
-#include "gui.h"
 #include "crc32.h"
 #include "fsdb.h"
 #include "fsusage.h"

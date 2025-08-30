@@ -70,8 +70,6 @@
 #ifdef AHI
 #include "ahi_v1.h"
 #endif
-#include "rommgr.h"
-#include "newcpu.h"
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
 #endif

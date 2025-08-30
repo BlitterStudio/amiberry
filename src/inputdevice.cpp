@@ -44,13 +44,11 @@
 #include "ar.h"
 #include "gui.h"
 #include "disk.h"
-#include "audio.h"
 #include "sounddep/sound.h"
 #include "savestate.h"
 #ifdef ARCADIA
 #include "arcadia.h"
 #endif
-#include "zfile.h"
 #include "cia.h"
 #include "autoconf.h"
 #ifdef WITH_X86

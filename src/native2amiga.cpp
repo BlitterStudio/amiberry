@@ -15,8 +15,6 @@
 #include "threaddep/thread.h"
 #include "options.h"
 #include "memory.h"
-#include "custom.h"
-#include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "native2amiga.h"

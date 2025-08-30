@@ -23,7 +23,6 @@
 #include "serial.h"
 #endif
 #include "disk.h"
-#include "xwin.h"
 #include "keybuf.h"
 #include "gui.h"
 #include "savestate.h"
@@ -41,7 +40,6 @@
 #endif
 #include "audio.h"
 #include "keyboard.h"
-#include "uae.h"
 #ifdef AMAX
 #include "amax.h"
 #endif

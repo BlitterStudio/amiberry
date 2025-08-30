@@ -33,8 +33,6 @@
 #include "uae/ppc.h"
 #endif
 #include "uae/vm.h"
-#include "idecontrollers.h"
-#include "scsi.h"
 #include "cpummu030.h"
 #include "devices.h"
 #include "a2091.h"

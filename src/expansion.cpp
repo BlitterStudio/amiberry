@@ -13,11 +13,8 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
-#include "traps.h"
 #include "memory.h"
 #include "rommgr.h"
-#include "custom.h"
 #include "newcpu.h"
 #include "savestate.h"
 #include "zfile.h"
@@ -58,7 +55,6 @@
 #ifdef WITH_SPECIALMONITORS
 #include "specialmonitors.h"
 #endif
-#include "inputdevice.h"
 #ifdef WITH_PCI
 #include "pci.h"
 #endif

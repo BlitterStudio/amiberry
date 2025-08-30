@@ -19,7 +19,6 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "autoconf.h"
 #include "gensound.h"
 #include "audio.h"
 #include "sounddep/sound.h"
@@ -31,7 +30,6 @@
 #include "zfile.h"
 #include "uae.h"
 #include "gui.h"
-#include "xwin.h"
 #include "debug.h"
 #ifdef WITH_SNDBOARD
 #include "sndboard.h"
@@ -40,13 +38,11 @@
 #include "avioutput.h"
 #endif
 #ifdef AHI
-#include "traps.h"
 #include "ahi_v1.h"
 #ifdef AHI_v2
 #include "ahi_v2.h"
 #endif
 #endif
-#include "threaddep/thread.h"
 
 #include <math.h>
 
