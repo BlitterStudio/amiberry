@@ -527,10 +527,6 @@ bool EditTapeDrive(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
-		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-		memcpy(&current_tapedlg.ci, uci, sizeof(uaedev_config_info));
-
 		txtTapeDrivePath->setText(current_tapedlg.ci.rootdir);
 		cboTapeDriveController->setSelected(current_tapedlg.ci.controller_type);
 		cboTapeDriveUnit->setSelected(current_tapedlg.ci.controller_unit);
@@ -553,11 +549,6 @@ bool EditTapeDrive(const int unit_no)
 		const auto start = SDL_GetPerformanceCounter();
 		EditTapeDriveLoop();
 		cap_fps(start);
-	}
-
-	if (dialogResult)
-	{
-		new_tapedrive(unit_no);
 	}
 
 	ExitEditTapeDrive();

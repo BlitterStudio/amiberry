@@ -574,9 +574,7 @@ bool EditFilesysVirtual(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
-		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-		memcpy(&current_fsvdlg.ci, uci, sizeof(uaedev_config_info));
+
 	}
 	else
 	{
@@ -617,8 +615,6 @@ bool EditFilesysVirtual(const int unit_no)
 		strncpy(current_fsvdlg.ci.volname, txtVolume->getText().c_str(), MAX_DPATH - 1);
 		current_fsvdlg.ci.readonly = !chkReadWrite->isSelected();
 		current_fsvdlg.ci.bootpri = tweakbootpri(atoi(txtBootPri->getText().c_str()), chkVirtBootable->isSelected() ? 1 : 0, 0);
-
-		new_filesys(unit_no);
 	}
 
 	ExitEditFilesysVirtual();

@@ -131,13 +131,16 @@ class HDEditActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		int type;
+		struct uaedev_config_data* uci;
+		struct mountedinfo mi;
+
 		for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 		{
 			if (actionEvent.getSource() == listCmdProps[i])
 			{
-				int type;
-				struct uaedev_config_data* uci;
-				struct mountedinfo mi;
+				if (i >= changed_prefs.mountitems)
+					return;
 
 				uci = &changed_prefs.mountconfig[i];
 
@@ -149,28 +152,49 @@ public:
 
 				if (uci->ci.type == UAEDEV_CD)
 				{
+					memcpy(&current_cddlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditCDDrive(i))
+					{
+						new_cddrive(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else if (uci->ci.type == UAEDEV_TAPE)
 				{
+					memcpy(&current_tapedlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditTapeDrive(i))
+					{
+						new_tapedrive(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
 				{
+					current_hfdlg.forcedcylinders = uci->ci.highcyl;
+					memcpy(&current_hfdlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditFilesysHardfile(i))
+					{
+						new_hardfile(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else if (type == FILESYS_HARDDRIVE)
 				{
+					memcpy(&current_hfdlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditFilesysHardDrive(i))
+					{
+						new_harddrive(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else /* Filesystem */
 				{
+					memcpy(&current_fsvdlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditFilesysVirtual(i))
+					{
+						new_filesys(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				
 				listCmdProps[i]->requestFocus();
@@ -191,31 +215,46 @@ public:
 		if (actionEvent.getSource() == cmdAddDirectory)
 		{
 			if (EditFilesysVirtual(-1))
+			{
+				new_filesys(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddDirectory->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddHardfile)
 		{
 			if (EditFilesysHardfile(-1))
+			{
+				new_hardfile(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddHardfile->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddHardDrive)
 		{
 			if (EditFilesysHardDrive(-1))
+			{
+				new_harddrive(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddHardDrive->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddCDDrive)
 		{
 			if (EditCDDrive(-1))
+			{
+				new_cddrive(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddCDDrive->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddTapeDrive)
 		{
 			if (EditTapeDrive(-1))
+			{
+				new_tapedrive(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddTapeDrive->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdCreateHardfile)
@@ -243,25 +282,11 @@ public:
 				changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
 				changed_prefs.cdslots[0].name[0] = 0;
 				AdjustDropDownControls();
-
-				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
-					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
-					&& changed_prefs.scsi)
-				{
-					changed_prefs.scsi = 0;
-				}
 			}
 			else
 			{
 				changed_prefs.cdslots[0].inuse = true;
 				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-
-				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
-					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
-					&& !changed_prefs.scsi)
-				{
-					changed_prefs.scsi = 1;
-				}
 			}
 		}
 		else if (actionEvent.getSource() == chkCDTurbo)
@@ -461,8 +486,7 @@ void InitPanelHD(const config_category& category)
 	cmdAddCDDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddCDDrive->setId("cmdAddCDDrive");
 	cmdAddCDDrive->addActionListener(hdAddActionListener);
-	// TODO enable when this is implemented
-	cmdAddCDDrive->setEnabled(false);
+	cmdAddCDDrive->setEnabled(true);
 
 	cmdAddTapeDrive = new gcn::Button("Add Tape Drive");
 	cmdAddTapeDrive->setBaseColor(gui_base_color);

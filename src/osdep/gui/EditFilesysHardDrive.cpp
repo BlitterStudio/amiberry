@@ -584,11 +584,6 @@ bool EditFilesysHardDrive(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
-		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-
-		current_hfdlg.forcedcylinders = uci->ci.highcyl;
-		memcpy(&current_hfdlg.ci, uci, sizeof(uaedev_config_info));
 		fileSelected = true;
 	}
 	else
@@ -618,7 +613,6 @@ bool EditFilesysHardDrive(const int unit_no)
 	if (dialogResult)
 	{
 		current_dir = extract_path(txtHDPath->getText());
-		new_harddrive(unit_no);
 	}
 
 	ExitEditFilesysHardDrive();
