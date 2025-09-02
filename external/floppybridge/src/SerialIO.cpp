@@ -712,7 +712,9 @@ SerialIO::Response SerialIO::configurePort(const Configuration& configuration) {
 	serial.flags |= ASYNC_LOW_LATENCY;
 	ioctl(m_portHandle, TIOCSSERIAL, &serial);
 #endif
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__)
+    if (ioctl(m_portHandle, IOSSIOSPEED, &baud) == -1) return Response::rUnknownError;
+#elif defined(__FreeBSD__)
     // FreeBSD does not support IOSSIOSPEED, use termios instead
     if (cfsetispeed(&term, baud) != 0 || cfsetospeed(&term, baud) != 0)
         return Response::rUnknownError;
