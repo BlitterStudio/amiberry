@@ -8738,9 +8738,9 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->m68k_speed = 0;
 	p->cpu_compatible = true;
 	p->address_space_24 = true;
-	p->cpu_cycle_exact = false;
-	p->cpu_memory_cycle_exact = false;
-	p->blitter_cycle_exact = false;
+	p->cpu_cycle_exact = true;
+	p->cpu_memory_cycle_exact = true;
+	p->blitter_cycle_exact = true;
 	p->chipset_mask = CSMASK_ECS_AGNUS;
 	p->chipset_hr = false;
 	p->display_calibration = false;
@@ -8901,9 +8901,9 @@ static void buildin_default_prefs (struct uae_prefs *p)
 	p->m68k_speed = 0;
 	p->cpu_compatible = true;
 	p->address_space_24 = true;
-	p->cpu_cycle_exact = true;
-	p->cpu_memory_cycle_exact = true;
-	p->blitter_cycle_exact = true;
+	p->cpu_cycle_exact = false;
+	p->cpu_memory_cycle_exact = false;
+	p->blitter_cycle_exact = false;
 	p->chipset_mask = CSMASK_ECS_AGNUS;
 	p->immediate_blits = false;
 	p->waiting_blits = 0;
@@ -9094,10 +9094,8 @@ static int bip_a3000 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->mmu_model = 68030;
 	} else {
 #ifdef JIT
-		p->mmu_model = 0;
 		p->cachesize = MAX_JIT_CACHE;
 #else
-		p->mmu_model = 0;
 		p->cachesize = 0;
 #endif
 	}
@@ -9152,7 +9150,7 @@ static int bip_a4000 (struct uae_prefs *p, int config, int compa, int romcheck)
 		p->ppc_mode = 1;
 		cpuboard_setboard(p, BOARD_CYBERSTORM, BOARD_CYBERSTORM_SUB_PPC);
 		p->cpuboardmem1.size = 128 * 1024 * 1024;
-		int roms_ppc[] = { 98, -1 };
+		int roms_ppc[] = { 98, 326, 327, -1 };
 		configure_rom(p, roms_ppc, romcheck);
 #endif
 		break;
@@ -9409,6 +9407,8 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 #endif
 	roms_bliz[0] = -1;
 	roms_bliz[1] = -1;
+	roms_bliz[2] = -1;
+	roms_bliz[3] = -1;
 	p->cs_rtc = 0;
 	p->mmu_model = 0;
 	p->cs_compatible = CP_A1200;
@@ -9457,8 +9457,10 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
             roms[0] = 15;
             roms[1] = 11;
             roms[2] = -1;
-            roms_bliz[0] = 100;
-            configure_rom(p, roms_bliz, romcheck);
+	    roms_bliz[0] = 100;
+            roms_bliz[1] = 329;
+	    roms_bliz[2] = 330;
+	    configure_rom(p, roms_bliz, romcheck);
             break;
 #endif
 #else
