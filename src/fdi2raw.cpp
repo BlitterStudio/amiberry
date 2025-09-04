@@ -49,6 +49,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include <assert.h>
 
+#define FDI_RAND_MASK 0x7fff
+
 #ifdef DEBUG
 static TCHAR *datalog (uae_u8 *src, int len)
 {
@@ -1623,24 +1625,24 @@ static void fdi2_decode (FDI *fdi, unsigned long totalavg, uae_u32 *avgp, uae_u3
 					max_pulse = avg_pulse + (avgp[nexti] - minp[nexti]);
 				if (min_pulse < ref_pulse)
 					min_pulse = ref_pulse;
-				randval = uaerand();
-				if (randval < (UAE_RAND_MAX / 2)) {
-					if (randval > (UAE_RAND_MAX / 4)) {
-						if (randval <= (3 * (UAE_RAND_MAX / 8)))
-							randval = (2 * randval) - (UAE_RAND_MAX  /4);
+				randval = uaerand() & FDI_RAND_MASK;
+				if (randval < (FDI_RAND_MASK / 2)) {
+					if (randval > (FDI_RAND_MASK / 4)) {
+						if (randval <= (3 * (FDI_RAND_MASK / 8)))
+							randval = (2 * randval) - (FDI_RAND_MASK /4);
 						else
-							randval = (4 * randval) - UAE_RAND_MAX;
+							randval = (4 * randval) - FDI_RAND_MASK;
 					}
-					jitter = 0 - (randval * (avg_pulse - min_pulse)) / UAE_RAND_MAX;
+					jitter = 0 - (randval * (avg_pulse - min_pulse)) / FDI_RAND_MASK;
 				} else {
-					randval -= UAE_RAND_MAX / 2;
-					if (randval > (UAE_RAND_MAX / 4)) {
-						if (randval <= (3 * (UAE_RAND_MAX / 8)))
-							randval = (2 * randval) - (UAE_RAND_MAX /4);
+					randval -= FDI_RAND_MASK / 2;
+					if (randval > (FDI_RAND_MASK / 4)) {
+						if (randval <= (3 * (FDI_RAND_MASK / 8)))
+							randval = (2 * randval) - (FDI_RAND_MASK /4);
 						else
-							randval = (4 * randval) - UAE_RAND_MAX;
+							randval = (4 * randval) - FDI_RAND_MASK;
 					}
-					jitter = (randval * (max_pulse - avg_pulse)) / UAE_RAND_MAX;
+					jitter = (randval * (max_pulse - avg_pulse)) / FDI_RAND_MASK;
 				}
 				avg_pulse += jitter;
 				if ((avg_pulse < min_pulse) || (avg_pulse > max_pulse)) {
@@ -1654,28 +1656,28 @@ static void fdi2_decode (FDI *fdi, unsigned long totalavg, uae_u32 *avgp, uae_u3
 				ref_pulse = 0;
 				if (i == eodat)
 					outstep++;
-			} else if (uaerand() <= ((idx[i] * UAE_RAND_MAX) / maxidx)) {
+			} else if ((uaerand() & FDI_RAND_MASK) <= ((idx[i] * FDI_RAND_MASK) / maxidx)) {
 				avg_pulse = avgp[i];
 				min_pulse = minp[i];
 				max_pulse = maxp[i];
-				randval = uaerand();
-				if (randval < (UAE_RAND_MAX / 2)) {
-					if (randval > (UAE_RAND_MAX / 4)) {
-						if (randval <= (3 * (UAE_RAND_MAX / 8)))
-							randval = (2 * randval) - (UAE_RAND_MAX /4);
+				randval = uaerand() & FDI_RAND_MASK;
+				if (randval < (FDI_RAND_MASK / 2)) {
+					if (randval > (FDI_RAND_MASK / 4)) {
+						if (randval <= (3 * (FDI_RAND_MASK / 8)))
+							randval = (2 * randval) - (FDI_RAND_MASK /4);
 						else
-							randval = (4 * randval) - UAE_RAND_MAX;
+							randval = (4 * randval) - FDI_RAND_MASK;
 					}
-					avg_pulse -= (randval * (avg_pulse - min_pulse)) / UAE_RAND_MAX;
+					avg_pulse -= (randval * (avg_pulse - min_pulse)) / FDI_RAND_MASK;
 				} else {
-					randval -= UAE_RAND_MAX / 2;
-					if (randval > (UAE_RAND_MAX / 4)) {
-						if (randval <= (3 * (UAE_RAND_MAX / 8)))
-							randval = (2 * randval) - (UAE_RAND_MAX /4);
+					randval -= FDI_RAND_MASK / 2;
+					if (randval > (FDI_RAND_MASK / 4)) {
+						if (randval <= (3 * (FDI_RAND_MASK / 8)))
+							randval = (2 * randval) - (FDI_RAND_MASK /4);
 						else
-							randval = (4 * randval) - UAE_RAND_MAX;
+							randval = (4 * randval) - FDI_RAND_MASK;
 					}
-					avg_pulse += (randval * (max_pulse - avg_pulse)) / UAE_RAND_MAX;
+					avg_pulse += (randval * (max_pulse - avg_pulse)) / FDI_RAND_MASK;
 				}
 				if ((avg_pulse > ref_pulse) && (avg_pulse < (avgp[nexti] - jitter))) {
 					pulse += avg_pulse - ref_pulse;

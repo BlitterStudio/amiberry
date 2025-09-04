@@ -24,8 +24,10 @@
 
 #include <zlib.h>
 
+#ifdef AMIBERRY
 #include "fsdb_host.h"
 #include "7z/7zBuf.h"
+#endif
 
 #define unpack_log write_log
 #undef unpack_log
@@ -45,14 +47,14 @@ static time_t fromdostime (uae_u32 dd)
 	tm.tm_mon  = ((dd >> 21) & 0x0f) - 1;
 	tm.tm_mday = (dd >> 16) & 0x1f;
 	t = mktime (&tm);
-	#if defined(__linux__)
-    		t -= timezone;
-    	if (daylight)
-        	t -= 3600;
-	#else
-    	struct tm *lt = localtime(&t);
-    	t -= lt->tm_gmtoff;
-	#endif
+#if defined(__linux__)
+	t -= timezone;
+	if (daylight)
+		t -= 3600;
+#else
+	struct tm *lt = localtime(&t);
+	t -= lt->tm_gmtoff;
+#endif
 	return t;
 }
 
@@ -340,16 +342,16 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 			zai.name = au (name);
 			zai.size = size;
 			zai.tv.tv_sec = _strtoui64 ((char*)block + 136, NULL, 8);
-		#if defined(__linux__)
-    			zai.tv.tv_sec += timezone;
-    			if (daylight)
-        			zai.tv.tv_sec -= 3600;
-		#else
-    			time_t sec = (time_t)zai.tv.tv_sec;
+#if defined(__linux__)
+			zai.tv.tv_sec += timezone;
+			if (daylight)
+				zai.tv.tv_sec -= 3600;
+#else
+			auto sec = static_cast<time_t>(zai.tv.tv_sec);
 			struct tm *lt = localtime(&sec);
-    		if (lt)
-        		zai.tv.tv_sec -= lt->tm_gmtoff;
-		#endif
+			if (lt)
+				zai.tv.tv_sec -= lt->tm_gmtoff;
+#endif
 			if (zai.name[_tcslen (zai.name) - 1] == '/') {
 				zn = zvolume_adddir_abs (zv, &zai);
 			} else {

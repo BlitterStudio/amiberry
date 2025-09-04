@@ -73,7 +73,7 @@ static const char *numbers_default = { /* ugly  0123456789CHD%+-PNKV */
 static const char *statusline_numbers = numbers_default;
 
 
-STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *a)
+static uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *a)
 {
 	uae_u32 v = rc[(c >> 16) & 0xff] | gc[(c >> 8) & 0xff] | bc[(c >> 0) & 0xff];
 	if (a)
@@ -81,7 +81,7 @@ STATIC_INLINE uae_u32 ledcolor(uae_u32 c, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc,
 	return v;
 }
 
-static void write_tdnumber(uae_u8 *buf, int bpp, int x, int y, int num, uae_u32 c1, uae_u32 c2, int mult)
+static void write_tdnumber(uae_u8 *buf, int x, int y, int num, uae_u32 c1, uae_u32 c2, int mult)
 {
 	int j;
 	const char *numptr;
@@ -90,9 +90,9 @@ static void write_tdnumber(uae_u8 *buf, int bpp, int x, int y, int num, uae_u32 
 	for (j = 0; j < td_numbers_width; j++) {
 		for (int k = 0; k < mult; k++) {
 			if (*numptr == 'x')
-				putpixel(buf, NULL, bpp, x + j * mult + k, c1);
+				putpixel(buf, NULL, x + j * mult + k, c1);
 			else if (*numptr == '+')
-				putpixel(buf, NULL, bpp, x + j * mult + k, c2);
+				putpixel(buf, NULL, x + j * mult + k, c2);
 		}
 		numptr++;
 	}
@@ -154,7 +154,7 @@ int statusline_get_multiplier(int monid)
 	return statusline_mult[idx];
 }
 
-void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
+void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
 	struct amigadisplay *ad = &adisplays[monid];
 	int x_start, j, led, border;
@@ -162,7 +162,7 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 	int mult = td_custom ? 1 : statusline_mult[ad->picasso_on ? 1 : 0] / 100;
 
 	if (!mult)
-		return;
+		mult = 1;
 
 	y /= mult;
 
@@ -410,13 +410,13 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 		x = x_start + pos * td_width * mult;
 		for (int xx = 0; xx < mult; xx++) {
 			if (!border) {
-				putpixel(buf, NULL, bpp, x - mult + xx, cb);
+				putpixel(buf, NULL, x - mult + xx, cb);
 			}
 			for (j = 0; j < td_led_width * mult; j += mult) {
-				putpixel(buf, NULL, bpp, x + j + xx, c);
+				putpixel(buf, NULL, x + j + xx, c);
 			}
 			if (!border) {
-				putpixel(buf, NULL, bpp, x + j + xx, cb);
+				putpixel(buf, NULL, x + j + xx, cb);
 			}
 		}
 
@@ -424,19 +424,19 @@ void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwi
 			if (num3 >= 0) {
 				x += (td_led_width - am * td_numbers_width) * mult / 2;
 				if (num1 > 0) {
-					write_tdnumber(buf, bpp, x, y - td_numbers_pady, num1, pen_rgb, c2, mult);
+					write_tdnumber(buf, x, y - td_numbers_pady, num1, pen_rgb, c2, mult);
 					x += td_numbers_width * mult;
 				}
 				if (num2 >= 0) {
-					write_tdnumber(buf, bpp, x, y - td_numbers_pady, num2, pen_rgb, c2, mult);
+					write_tdnumber(buf, x, y - td_numbers_pady, num2, pen_rgb, c2, mult);
 					x += td_numbers_width * mult;
 				} else if (num2 < -1) {
 					x += td_numbers_width * mult;
 				}
-				write_tdnumber(buf, bpp, x, y - td_numbers_pady, num3, pen_rgb, c2, mult);
+				write_tdnumber(buf, x, y - td_numbers_pady, num3, pen_rgb, c2, mult);
 				x += td_numbers_width * mult;
 				if (num4 > 0)
-					write_tdnumber(buf, bpp, x, y - td_numbers_pady, num4, pen_rgb, c2, mult);
+					write_tdnumber(buf, x, y - td_numbers_pady, num4, pen_rgb, c2, mult);
 			}
 		}
 	}
@@ -570,9 +570,9 @@ void statusline_vsync(void)
 	statusline_update_notification();
 }
 
-void statusline_single_erase(int monid, uae_u8 *buf, int bpp, int y, int totalwidth)
+void statusline_single_erase(int monid, uae_u8 *buf, int y, int totalwidth)
 {
-	memset(buf, 0, bpp * totalwidth);
+	memset(buf, 0, 4 * totalwidth);
 }
 
 #ifdef AMIBERRY // no-op for now
@@ -581,7 +581,7 @@ void statusline_updated(int monid)
 
 }
 
-void statusline_render(int monid, uae_u8 *buf, int bpp, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
+void statusline_render(int monid, uae_u8 *buf, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha)
 {
 
 }

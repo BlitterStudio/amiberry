@@ -25,22 +25,20 @@ struct ScreenResolution
 	uae_u32 height; /* in pixels */
 };
 
-#define MAX_PICASSO_MODES 100
-#define MAX_REFRESH_RATES 10
+#define MAX_PICASSO_MODES 300
+#define MAX_REFRESH_RATES 100
 
 #define REFRESH_RATE_RAW 1
 #define REFRESH_RATE_LACE 2
 
 struct PicassoResolution
 {
+	bool inuse;
 	struct ScreenResolution res;
-	int depth;   /* depth in bytes-per-pixel */
 	int residx;
 	int refresh[MAX_REFRESH_RATES]; /* refresh-rates in Hz */
 	int refreshtype[MAX_REFRESH_RATES]; /* 0=normal,1=raw,2=lace */
 	TCHAR name[25];
-	/* Bit mask of RGBFF_xxx values.  */
-	uae_u32 colormodes;
 	int rawmode;
 	bool lace; // all modes lace
 };
@@ -60,12 +58,11 @@ extern struct MultiDisplay Displays[MAX_DISPLAYS];
 
 struct winuae_currentmode {
 	unsigned int flags;
-	int native_width, native_height, native_depth, pitch;
-	int current_width, current_height, current_depth;
+	int native_width, native_height;
+	int current_width, current_height;
 	int amiga_width, amiga_height;
 	int initdone;
 	int fullfill;
-	int vsync;
 	int freq;
 };
 
@@ -128,23 +125,25 @@ extern SDL_Cursor* normalcursor;
 
 extern void sortdisplays();
 extern void enumeratedisplays();
+extern void reenumeratemonitors();
 
-void Display_change_requested(int);
-void DX_Invalidate(struct AmigaMonitor*, int x, int y, int width, int height);
-int gfx_adjust_screenmode(const MultiDisplay* md, int* pwidth, int* pheight, int* ppixbits);
+extern bool MonitorFromPoint(SDL_Point pt);
+void gfx_DisplayChangeRequested(int);
+void DX_Invalidate(AmigaMonitor*, int x, int y, int width, int height);
+int gfx_adjust_screenmode(const MultiDisplay* md, int* pwidth, int* pheight);
 
 extern int default_freq;
 
 extern void check_error_sdl(bool check, const char* message);
 extern void toggle_fullscreen();
-extern void close_windows(struct AmigaMonitor*);
-extern void updatewinfsmode(int monid, struct uae_prefs* p);
-extern void gfx_lock(void);
-extern void gfx_unlock(void);
+extern void close_windows(AmigaMonitor*);
+extern void updatewinfsmode(int monid, uae_prefs* p);
+extern void gfx_lock();
+extern void gfx_unlock();
 
 extern void destroy_crtemu();
 
-struct MultiDisplay* getdisplay(const struct uae_prefs* p, int monid);
+struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);
 void SDL2_guimode(int monid, int guion);
 void SDL2_toggle_vsync(bool vsync);

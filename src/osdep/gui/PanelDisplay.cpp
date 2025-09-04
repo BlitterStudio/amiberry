@@ -229,7 +229,7 @@ static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
 	MultiDisplay *md = getdisplay(&changed_prefs, 0);
 
 	j = 0;
-	for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
+	for (i = 0; md->DisplayModes[i].inuse; i++) {
 		if (md->DisplayModes[i].res.width == x &&
 			md->DisplayModes[i].res.height == y)
 			break;
@@ -237,14 +237,14 @@ static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
 	}
 	if (x == 0 && y == 0) {
 		j = 0;
-		for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
+		for (i = 0; md->DisplayModes[i].inuse; i++) {
 			if (md->DisplayModes[i].res.width == md->rect.w &&
 				md->DisplayModes[i].res.height == md->rect.h)
 				break;
 			j++;
 		}
 	}
-	if(md->DisplayModes[i].depth < 0)
+	if(!md->DisplayModes[i].inuse)
 		j = -1;
 	return j;
 }
@@ -252,66 +252,21 @@ static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
 static int gui_display_depths[3];
 static void init_display_mode ()
 {
-	int d, d2, index;
-	int i, cnt;
+	int index;
 	struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
 	struct monconfig *gm = &changed_prefs.gfx_monitor[0];
-
-	switch (changed_prefs.color_mode)
-	{
-	case 2:
-		d = 16;
-		break;
-	case 5:
-	default:
-		d = 32;
-		break;
-	}
-
-	if (changed_prefs.gfx_apmode[0].gfx_fullscreen) {
-		d2 = d;
-		if ((index = gfx_adjust_screenmode(md, &gm->gfx_size_fs.width, &gm->gfx_size_fs.height, &d2)) >= 0) {
-			switch (d2)
-			{
-			case 15:
-			case 16:
-				changed_prefs.color_mode = 2;
-				d = 2;
-				break;
-			case 32:
-			default:
-				changed_prefs.color_mode = 5;
-				d = 4;
-				break;
-			}
-		}
-	}
-	else {
-		d = d / 8;
-	}
 
 	if (gm->gfx_size_fs.special == WH_NATIVE) {
 		int cnt = fullscreen_modes_list.getNumberOfElements();
 		cboFullscreen->setSelected(cnt - 1);
-		index = display_mode_index (gm->gfx_size_fs.width, gm->gfx_size_fs.height, d);
+		index = display_mode_index(gm->gfx_size_fs.width, gm->gfx_size_fs.height, 4);
 	} else {
-		index = display_mode_index (gm->gfx_size_fs.width, gm->gfx_size_fs.height, d);
+		index = display_mode_index(gm->gfx_size_fs.width, gm->gfx_size_fs.height, 4);
 		if (index >= 0)
 			cboFullscreen->setSelected(md->DisplayModes[index].residx);
 		gm->gfx_size_fs.special = 0;
 	}
-	cnt = 0;
-	gui_display_depths[0] = gui_display_depths[1] = gui_display_depths[2] = -1;
-	if (index >= 0) {
-		for (i = 0; md->DisplayModes[i].depth >= 0; i++) {
-			if (md->DisplayModes[i].depth > 1 && md->DisplayModes[i].residx == md->DisplayModes[index].residx) {
-				gui_display_depths[cnt] = md->DisplayModes[i].depth;
-				cnt++;
-			}
-		}
-	}
 	init_frequency_combo (index);
-
 }
 
 
@@ -582,12 +537,12 @@ public:
 		struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
 		posn1 = cboFullscreen->getSelected();
 		changed_prefs.gfx_monitor[0].gfx_size_fs.special = 0;
-		for (dmode = 0; md->DisplayModes[dmode].depth >= 0; dmode++) {
+		for (dmode = 0; md->DisplayModes[dmode].inuse; dmode++) {
 			if (md->DisplayModes[dmode].residx == posn1)
 				break;
 		}
-		if (md->DisplayModes[dmode].depth <= 0) {
-			for (dmode = 0; md->DisplayModes[dmode].depth >= 0; dmode++) {
+		if (!md->DisplayModes[dmode].inuse) {
+			for (dmode = 0; md->DisplayModes[dmode].inuse; dmode++) {
 				if (md->DisplayModes[dmode].res.width == md->rect.w &&
 					md->DisplayModes[dmode].res.height == md->rect.h)
 				{
@@ -595,7 +550,7 @@ public:
 					break;
 				}
 			}
-			if (md->DisplayModes[dmode].depth <= 0)
+			if (!md->DisplayModes[dmode].inuse)
 				dmode = -1;
 		} else {
 			int i = dmode;
@@ -618,19 +573,6 @@ public:
 		{
 			changed_prefs.gfx_monitor[0].gfx_size_fs.width = md->DisplayModes[dmode].res.width;
 			changed_prefs.gfx_monitor[0].gfx_size_fs.height = md->DisplayModes[dmode].res.height;
-			switch (md->DisplayModes[dmode].depth)
-			{
-			case 2:
-				changed_prefs.color_mode = 2;
-				break;
-			case 3:
-			case 4:
-				changed_prefs.color_mode = 5;
-				break;
-			default:
-				changed_prefs.color_mode = 0;
-				break;
-			}
 			/* Set the Int boxes */
 			//SetDlgItemInt(hDlg, IDC_XSIZE, changed_prefs.gfx_monitor[0].gfx_size_win.width, FALSE);
 			//SetDlgItemInt(hDlg, IDC_YSIZE, changed_prefs.gfx_monitor[0].gfx_size_win.height, FALSE);
@@ -842,9 +784,9 @@ void InitPanelDisplay(const config_category& category)
 
 	idx = -1;
 	fullscreen_resolutions_list.clear();
-	for (i = 0; md->DisplayModes[i].depth >= 0; i++)
+	for (i = 0; md->DisplayModes[i].inuse; i++)
 	{
-		if (md->DisplayModes[i].depth > 1 && md->DisplayModes[i].residx != idx) {
+		if (md->DisplayModes[i].residx != idx) {
 			_sntprintf (tmp, sizeof tmp, _T("%dx%d%s"), md->DisplayModes[i].res.width, md->DisplayModes[i].res.height, md->DisplayModes[i].lace ? _T("i") : _T(""));
 			if (md->DisplayModes[i].rawmode)
 				_tcscat (tmp, _T(" (*)"));

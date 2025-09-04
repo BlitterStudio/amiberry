@@ -290,6 +290,9 @@ void amiberry_gui_init()
 	if (!mon->gui_window)
 	{
 		write_log("Creating Amiberry GUI window...\n");
+		regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
+		regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
+
         Uint32 mode;
 		if (!kmsdrm_detected)
 		{
@@ -314,8 +317,8 @@ void amiberry_gui_init()
         if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
         {
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				gui_window_rect.x != 0 ? gui_window_rect.x : SDL_WINDOWPOS_CENTERED,
-				gui_window_rect.y != 0 ? gui_window_rect.y : SDL_WINDOWPOS_CENTERED,
+				gui_window_rect.x,
+				gui_window_rect.y,
 				gui_window_rect.w,
 				gui_window_rect.h,
 				mode);
@@ -323,8 +326,8 @@ void amiberry_gui_init()
         else
         {
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				gui_window_rect.y != 0 ? gui_window_rect.y : SDL_WINDOWPOS_CENTERED,
-				gui_window_rect.x != 0 ? gui_window_rect.x : SDL_WINDOWPOS_CENTERED,
+				gui_window_rect.y,
+				gui_window_rect.x,
 				gui_window_rect.h,
 				gui_window_rect.w,
 				mode);
@@ -421,6 +424,8 @@ void amiberry_gui_halt()
 	}
 
 	if (mon->gui_window && !kmsdrm_detected) {
+		regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
+		regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
 	}

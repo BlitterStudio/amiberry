@@ -9989,8 +9989,9 @@ static void generate_func (const char *extra)
 		out("#endif\n\n");
 	}
 
-	if (generate_stbl)
-		fprintf(stblfile, "{ 0, 0 }};\n");
+	if (generate_stbl) {
+		fprintf(stblfile, "{ 0 }};\n");
+	}
 }
 
 #if CPU_TESTER

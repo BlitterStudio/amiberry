@@ -16,6 +16,7 @@
 #include "events.h"
 #include "uae.h"
 #include "debug.h"
+#include "inputdevice.h"
 
 #define ROBOCOP3 1
 #define LEADERBOARD 2
@@ -157,8 +158,9 @@ void dongle_cia_write (int cia, int reg, uae_u8 extra, uae_u8 val)
 		}
 		break;
 	case ROBOCOP3:
-		if (cia == 0 && reg == 0 && (val & 0x80))
-			dflag ^= 1;
+		if (cia == 0 && reg == 0 && (val & 0x80) && !(oldcia[cia][reg] & 0x80)) {
+			pulse_joydat(1, 1, 1);
+		}
 		break;
 	case BAT2:
 		if (cia == 1 && reg == 0 && !(val & 0x80)) {
@@ -190,8 +192,9 @@ uae_u16 dongle_joydat (int port, uae_u16 val)
 	switch (currprefs.dongle)
 	{
 	case ROBOCOP3:
-		if (port == 1 && dflag)
-			val += 0x100;
+		if (port == 1) {
+			val &= 0x0101;
+		}
 		break;
 	case LEADERBOARD:
 		if (port == 1) {

@@ -31,7 +31,6 @@
 #include "uae.h"
 #include "memory.h"
 #include "custom.h"
-#include "events.h"
 #include "newcpu.h"
 #include "filesys.h"
 #include "autoconf.h"
@@ -44,15 +43,7 @@
 #include "zarchive.h"
 #include "gui.h"
 #include "gayle.h"
-#include "idecontrollers.h"
 #include "savestate.h"
-#ifdef A2091
-#include "a2091.h"
-#endif
-#ifdef NCR
-#include "ncr_scsi.h"
-#endif
-#include "cdtv.h"
 #include "sana2.h"
 #include "bsdsocket.h"
 #include "uaeresource.h"
@@ -67,9 +58,7 @@
 #endif
 #include "tabletlibrary.h"
 #include "cia.h"
-#include "newcpu.h"
 #include "picasso96.h"
-#include "cpuboard.h"
 #include "rommgr.h"
 #include "debug.h"
 #include "debugmem.h"
@@ -4049,14 +4038,14 @@ static void action_read_link(TrapContext *ctx, Unit *unit, dpacket *packet)
 			}
 		}
 	}
+	if (!a->softlink)
+		err = ERROR_OBJECT_WRONG_TYPE;
 	if (err != 0) {
 		xfree(extrapath);
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, err);
 		return;
 	}
-	if (!a->softlink)
-		err = ERROR_OBJECT_WRONG_TYPE;
 	_tcscpy (tmp, a->nname);
 	write_log (_T("Resolving softlink '%s'\n"), tmp);
 	if (!my_resolvesoftlink (tmp, sizeof tmp / sizeof (TCHAR), false)) {
@@ -5406,7 +5395,6 @@ static void updatedirtime (a_inode *a1, int now)
 
 	if (!a1->parent)
 		return;
-
 	if (!now) {
 		if (!my_stat (a1->nname, &statbuf))
 			return;

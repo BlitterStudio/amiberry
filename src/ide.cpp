@@ -443,6 +443,8 @@ static void ide_fail_err (struct ide_hdf *ide, uae_u8 err)
 		ide->pair->regs.ide_status |= IDE_STATUS_ERR;
 	}
 	ide->regs.ide_status |= IDE_STATUS_ERR;
+	ide->intdrq = false;
+	ide->data_multi = 0;
 	ide_interrupt (ide);
 }
 

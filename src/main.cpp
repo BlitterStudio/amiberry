@@ -41,18 +41,14 @@
 #include "gui.h"
 #include "zfile.h"
 #include "autoconf.h"
-#include "picasso96.h"
 #include "native2amiga.h"
 #include "savestate.h"
-#include "filesys.h"
 #include "blkdev.h"
 #include "consolehook.h"
 #include "gfxboard.h"
 #ifdef WITH_LUA
 #include "luascript.h"
 #endif
-#include "uaenative.h"
-#include "tabletlibrary.h"
 #include "cpuboard.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
@@ -77,7 +73,7 @@
 #include "keyboard.h"
 
 // Special version string so that AmigaOS can detect it
-static constexpr char __ver[40] = "$VER: Amiberry v7.1.1 (2025-08-23)";
+static constexpr char __ver[40] = "$VER: Amiberry v8.0.0 (2025-08-30)";
 
 long int version = 256 * 65536L * UAEMAJOR + 65536L * UAEMINOR + UAESUBREV;
 
@@ -324,7 +320,7 @@ void fixup_cpu (struct uae_prefs *p)
 		p->cachesize = 0;
 		error_log (_T("JIT requires 68020 or better CPU."));
 	}
-	if (p->fpu_model == 0 && p->compfpu) {
+	if ((p->fpu_model == 0 || !p->cachesize) && p->compfpu) {
 		p->compfpu = false;
 	}
 

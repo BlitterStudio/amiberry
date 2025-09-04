@@ -3,7 +3,7 @@
 *
 * SanaII emulation
 *
-* partially based on code from 3c589 PCMCIA driver by Neil Cafferke
+* partially based on code from 3c589 PCMCIA driver by Neil Cafferkey
 *
 * Copyright 2007 Toni Wilen
 *
@@ -16,14 +16,10 @@
 #include "options.h"
 #include "memory.h"
 #include "custom.h"
-#include "events.h"
-#include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "execlib.h"
 #include "native2amiga.h"
-#include "blkdev.h"
-#include "uae.h"
 #include "sana2.h"
 #if defined(_WIN32) && defined(WITH_UAENET_PCAP)
 #include "win32_uaenet.h"

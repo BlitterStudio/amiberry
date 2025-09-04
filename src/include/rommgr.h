@@ -50,7 +50,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_FALCON40	0x0004001b
 #define ROMTYPE_CB_A1230S2	0x0004001c
 #define ROMTYPE_CB_TYPHOON2	0x0004001d
-#define ROMTYPE_CB_QUIKPAK	0x0004001e
+#define ROMTYPE_CB_QUIKPAKXP	0x0004001e
 #define ROMTYPE_CB_12GAUGE	0x0004001f
 #define ROMTYPE_CB_HARMS3KP	0x00040020
 #define ROMTYPE_CB_A1230S1	0x00040021
@@ -58,6 +58,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_CB_CASAB	0x00040023
 #define ROMTYPE_CB_APOLLO_630 0x00040024
 #define ROMTYPE_CB_TREXII	0x00040025
+#define ROMTYPE_CB_QUIKPAK	0x00040026
 
 #define ROMTYPE_FREEZER		0x00080000
 #define ROMTYPE_AR			0x00080001
@@ -217,6 +218,7 @@ extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 #define ROMTYPE_MERLIN		0x00100093
 #define ROMTYPE_KBMCU		0x00100094
 #define ROMTYPE_RIPPLE		0x00100095
+#define ROMTYPE_512KWOM		0x00100096
 
 #define ROMTYPE_NOT			0x00800000
 #define ROMTYPE_QUAD		0x01000000
@@ -287,6 +289,8 @@ extern void romlist_clear (void);
 extern struct zfile *read_rom(struct romdata *rd, bool rw = false);
 extern struct zfile *read_rom_name(const TCHAR *filename, bool rw = false);
 extern struct zfile *read_device_from_romconfig(struct romconfig *rc, uae_u32 romtype, bool rw = false);
+extern struct romdata *scan_single_rom_file(struct zfile *f);
+extern struct romdata *scan_single_rom(const TCHAR *path);
 
 extern int load_keyring (struct uae_prefs *p, const TCHAR *path);
 extern uae_u8 *target_load_keyfile (struct uae_prefs *p, const TCHAR *path, int *size, TCHAR *name);

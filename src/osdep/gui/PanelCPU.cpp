@@ -240,6 +240,7 @@ public:
 		}
 		if (!changed_prefs.cachesize) {
 			chkFPUJIT->setSelected(false);
+			changed_prefs.compfpu = false;
 		}
 		if (changed_prefs.cachesize && changed_prefs.compfpu && changed_prefs.fpu_mode > 0) {
 			changed_prefs.fpu_mode = 0;

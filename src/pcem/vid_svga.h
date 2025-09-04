@@ -55,7 +55,7 @@ typedef struct svga_t
         
         uint8_t plane_mask;
         
-        int fb_only;
+        int fb_only, fb_auto;
         
         int fast;
         uint8_t colourcompare, colournocare;

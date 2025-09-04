@@ -23,7 +23,7 @@ static unsigned char blttbl[]= {
 static void generate_include(void)
 {
     int minterm;
-    printf("STATIC_INLINE uae_u32 blit_func(uae_u32 srca, uae_u32 srcb, uae_u32 srcc, uae_u8 mt)\n{\nswitch(mt){\n");
+    printf("static uae_u32 blit_func(uae_u32 srca, uae_u32 srcb, uae_u32 srcc, uae_u8 mt)\n{\nswitch(mt){\n");
     for (minterm = 0; minterm < 256; minterm++) {
 	printf("case 0x%x:\n", minterm);
 	printf("\treturn %s;\n", blitops[minterm].s);
@@ -39,7 +39,6 @@ static void generate_func(void)
     printf("#include \"sysconfig.h\"\n");
     printf("#include \"sysdeps.h\"\n");
     printf("#include \"options.h\"\n");
-    printf("#include \"custom.h\"\n");
     printf("#include \"memory.h\"\n");
     printf("#include \"blitter.h\"\n");
     printf("#include \"blitfunc.h\"\n\n");
@@ -53,8 +52,8 @@ static void generate_func(void)
 		printf("uae_u32 totald = 0;\n");
 		if (b_is_on) printf("uae_u32 srcb = b->bltbhold;\n");
 		if (c_is_on) printf("uae_u32 srcc = b->bltcdat;\n");
-		printf("uae_u16 ashift = bltcon0 >> 12;\n");
-		printf("uae_u16 bshift = bltcon1 >> 12;\n");
+		printf("uae_u16 ashift = blt_info.bltcon0 >> 12;\n");
+		printf("uae_u16 bshift = blt_info.bltcon1 >> 12;\n");
 		printf("uae_u32 dstd=0;\n");
 		printf("uaecptr dstp = 0;\n");
 		printf("for (j = 0; j < b->vblitsize; j++) {\n");
@@ -92,8 +91,8 @@ static void generate_func(void)
 		printf("int i,j;\n");
 		if (b_is_on) printf("uae_u32 srcb = b->bltbhold;\n");
 		if (c_is_on) printf("uae_u32 srcc = b->bltcdat;\n");
-		printf("uae_u16 ashift = 16 - (bltcon0 >> 12);\n");
-		printf("uae_u16 bshift = 16 - (bltcon1 >> 12);\n");
+		printf("uae_u16 ashift = 16 - (blt_info.bltcon0 >> 12);\n");
+		printf("uae_u16 bshift = 16 - (blt_info.bltcon1 >> 12);\n");
 		printf("uae_u32 dstd = 0;\n");
 		printf("uaecptr dstp = 0;\n");
 		printf("for (j = 0; j < b->vblitsize; j++) {\n");

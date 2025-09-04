@@ -16,8 +16,6 @@
 #include "audio.h"
 #include "sounddep/sound.h"
 #include "zfile.h"
-#include "fsdb.h"
-#include "events.h"
 #include "driveclick.h"
 
 static struct drvsample drvs[4][DS_END];

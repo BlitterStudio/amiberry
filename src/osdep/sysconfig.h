@@ -159,8 +159,6 @@
 #define A_DMS
 #define A_WRP
 
-#define UAE_RAND_MAX RAND_MAX
-
 #ifndef GFXFILTER
 #undef OPENGL
 #undef D3D
@@ -208,9 +206,6 @@ typedef int32_t uae_atomic;
 /* Define if your struct stat has st_blocks.  */
 /* #undef HAVE_ST_BLOCKS */
 
-/* Define if utime(file, NULL) sets file's timestamp to the present.  */
-#define HAVE_UTIME_NULL 1
-
 /* Define as __inline if that's what the C compiler calls it.  */
 /* #undef inline */
 
@@ -223,14 +218,8 @@ typedef int32_t uae_atomic;
 /* Define to `int' if <sys/types.h> doesn't define.  */
 /* #undef pid_t */
 
-/* Define if you need to in order for stat and other things to work.  */
-/* #undef _POSIX_SOURCE */
-
 /* Define as the return type of signal handlers (int or void).  */
 #define RETSIGTYPE void
-
-/* Define if you have the ANSI C header files.  */
-#define STDC_HEADERS 1
 
 /* Define if you can safely include both <sys/time.h> and <time.h>.  */
 #define TIME_WITH_SYS_TIME 1

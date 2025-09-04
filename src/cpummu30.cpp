@@ -36,7 +36,6 @@
 #include "newcpu.h"
 #include "debug.h"
 #include "cpummu030.h"
-#include "cputbl.h"
 #include "savestate.h"
 
 // Prefetch mode and prefetch bus error: always flush and refill prefetch pipeline

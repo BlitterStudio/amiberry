@@ -717,7 +717,7 @@ extern int p96refresh_active;
 #define CARD_IRQPTR (CARD_IRQFLAG + 4)
 #define CARD_IRQEXECBASE (CARD_IRQPTR + 4)
 #define CARD_IRQCODE (CARD_IRQEXECBASE + 4)
-#define CARD_END (CARD_IRQCODE + 11 * 2)
+#define CARD_END (CARD_IRQCODE + 2 * 11 * 2)
 #define CARD_SIZEOF CARD_END
 
 #endif

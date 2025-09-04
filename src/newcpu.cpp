@@ -26,7 +26,6 @@
 #include "memory.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "disasm.h"
 #include "cpummu.h"
 #include "cpummu030.h"
 #include "cputbl.h"
@@ -39,8 +38,6 @@
 #include "savestate.h"
 #include "blitter.h"
 #include "ar.h"
-#include "gayle.h"
-#include "cia.h"
 #include "inputrecord.h"
 #include "inputdevice.h"
 #include "audio.h"
@@ -54,7 +51,6 @@
 #ifdef WITH_X86
 #include "x86.h"
 #endif
-#include "bsdsocket.h"
 #include "devices.h"
 #ifdef WITH_DRACO
 #include "draco.h"
@@ -3420,7 +3416,7 @@ static void ExceptionX (int nr, uaecptr address, uaecptr oldpc)
 
 #ifdef DEBUGGER
 	if (debug_dma) {
-		record_dma_event_data(DMA_EVENT_CPUINS, current_hpos(), vpos, 0x20000);
+		record_dma_event_data(DMA_EVENT_CPUINS, 0x20000);
 	}
 #endif
 	if (cpu_tracer) {
@@ -3508,7 +3504,7 @@ static void do_interrupt (int nr)
 {
 #ifdef DEBUGGER
 	if (debug_dma)
-		record_dma_event(DMA_EVENT_CPUIRQ, current_hpos (), vpos);
+		record_dma_event(DMA_EVENT_CPUIRQ);
 #endif
 	if (inputrecord_debug & 2) {
 		if (input_record > 0)
@@ -3539,6 +3535,15 @@ static void do_interrupt (int nr)
 void NMI ()
 {
 	do_interrupt (7);
+}
+
+static void cpu_halt_clear(void)
+{
+	regs.halted = 0;
+	if (gui_data.cpu_halted) {
+		gui_data.cpu_halted = 0;
+		gui_led(LED_CPU, 0, -1);
+	}
 }
 
 static void maybe_disable_fpu()
@@ -3575,9 +3580,7 @@ static void m68k_reset2(bool hardreset)
 {
 	uae_u32 v;
 
-	regs.halted = 0;
-	gui_data.cpu_halted = 0;
-	gui_led(LED_CPU, 0, -1);
+	cpu_halt_clear();
 
 	regs.spcflags = 0;
 	m68k_reset_delay = false;
@@ -4379,8 +4382,6 @@ static bool haltloop_do(int vsynctimeline, frame_time_t rpt_end, int lines)
 			ppc_interrupt(intlev());
 			uae_ppc_execute_check();
 #endif
-			if (regs.spcflags & SPCFLAG_COPPER)
-				do_copper();
 			if (regs.spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
 				if (regs.spcflags & SPCFLAG_BRK) {
 					unset_special(SPCFLAG_BRK);
@@ -4437,8 +4438,6 @@ static bool haltloop()
 
 				event_wait = false;
 				for (i = 0; i < ev_max; i++) {
-					if (i == ev_hsync)
-						continue;
 					if (i == ev_audio)
 						continue;
 					if (!eventtab[i].active)
@@ -4480,9 +4479,6 @@ static bool haltloop()
 			if (vpos)
 				prevvpos = 1;
 			x_do_cycles(8 * CYCLE_UNIT);
-
-			if (regs.spcflags & SPCFLAG_COPPER)
-				do_copper();
 
 			if (regs.spcflags) {
 				if ((regs.spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)))
@@ -4591,7 +4587,7 @@ static void update_ipl(int ipl)
 	}
 #ifdef DEBUGGER
 	if (debug_dma) {
-		record_dma_ipl(current_hpos(), vpos);
+		record_dma_ipl();
 	}
 #endif
 }
@@ -4658,9 +4654,9 @@ static void check_debugger()
 static void debug_cpu_stop()
 {
 #ifdef DEBUGGER
-	record_dma_event(DMA_EVENT_CPUSTOP, current_hpos(), vpos);
+	record_dma_event(DMA_EVENT_CPUSTOP);
 	if (time_for_interrupt()) {
-		record_dma_event(DMA_EVENT_CPUSTOPIPL, current_hpos(), vpos);
+		record_dma_event(DMA_EVENT_CPUSTOPIPL);
 	}
 #endif
 }
@@ -4672,6 +4668,15 @@ static int do_specialties (int cycles)
 
 	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
+	
+	while (spcflags & SPCFLAG_CPUINRESET) {
+		cpu_halt_clear();
+		x_do_cycles(4 * CYCLE_UNIT);
+		spcflags = regs.spcflags;
+		if (!(spcflags & SPCFLAG_CPUINRESET) || (spcflags & SPCFLAG_BRK) || (spcflags & SPCFLAG_MODE_CHANGE)) {
+			break;
+		}
+	}
 
 	if (spcflags & SPCFLAG_CHECK) {
 		if (regs.halted) {
@@ -4688,9 +4693,6 @@ static int do_specialties (int cycles)
 			while (vsynccnt > 0 && !quit_program) {
 				x_do_cycles(8 * CYCLE_UNIT);
 				spcflags = regs.spcflags;
-				if (spcflags & SPCFLAG_COPPER) {
-					do_copper();
-				}
 				if (vsync_counter != vsyncstate) {
 					vsyncstate = vsync_counter;
 					vsynccnt--;
@@ -4734,26 +4736,11 @@ static int do_specialties (int cycles)
 	}
 #endif
 
-	if (spcflags & SPCFLAG_COPPER) {
-		do_copper();
-	}
-
 #ifdef JIT
 	if (spcflags & SPCFLAG_END_COMPILE) {
 		unset_special(SPCFLAG_END_COMPILE);
 	}
 #endif
-
-	while (spcflags & SPCFLAG_CPUINRESET) {
-		x_do_cycles(4 * CYCLE_UNIT);
-		spcflags = regs.spcflags;
-		if (spcflags & SPCFLAG_COPPER) {
-			do_copper();
-		}
-		if (!(spcflags & SPCFLAG_CPUINRESET) || (spcflags & SPCFLAG_BRK) || (spcflags & SPCFLAG_MODE_CHANGE)) {
-			break;
-		}
-	}
 
 	while ((spcflags & SPCFLAG_BLTNASTY) && dmaen (DMA_BLITTER) && cycles > 0 && ((currprefs.waiting_blits && currprefs.cpu_model >= 68020) || !currprefs.blitter_cycle_exact)) {
 		int c = blitnasty();
@@ -4768,8 +4755,6 @@ static int do_specialties (int cycles)
 		}
 		x_do_cycles(c * CYCLE_UNIT);
 		spcflags = regs.spcflags;
-		if (spcflags & SPCFLAG_COPPER)
-			do_copper();
 #ifdef WITH_PPC
 		if (ppc_state)  {
 			if (uae_ppc_poll_check_halt())
@@ -4871,20 +4856,20 @@ static void out_cd32io (uae_u32 pc)
 	{
 	case 0xe57cc0:
 	case 0xf04c34:
-		_sntprintf (out, _T("opendevice"));
+		_stprintf (out, _T("opendevice"));
 		break;
 	case 0xe57ce6:
 	case 0xf04c56:
-		_sntprintf (out, _T("closedevice"));
+		_stprintf (out, _T("closedevice"));
 		break;
 	case 0xe57e44:
 	case 0xf04f2c:
-		_sntprintf (out, _T("beginio"));
+		_stprintf (out, _T("beginio"));
 		ioreq = 1;
 		break;
 	case 0xe57ef2:
 	case 0xf0500e:
-		_sntprintf (out, _T("abortio"));
+		_stprintf (out, _T("abortio"));
 		ioreq = -1;
 		break;
 	}
@@ -5090,7 +5075,7 @@ static void m68k_run_1_ce ()
 				r->instruction_pc = m68k_getpc ();
 #ifdef DEBUGGER
 				if (debug_dma) {
-					record_dma_event_data(DMA_EVENT_CPUINS, current_hpos(), vpos, r->opcode);
+					record_dma_event_data(DMA_EVENT_CPUINS, r->opcode);
 				}
 #endif
 
@@ -5397,10 +5382,6 @@ static void run_cpu_thread(int (*f)(void *))
 
 			do_cycles((maxhpos / 2) * CYCLE_UNIT);
 
-			if (regs.spcflags & SPCFLAG_COPPER) {
-				do_copper();
-			}
-
 			check_uae_int_request();
 			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
 				int intr = intlev();
@@ -5438,7 +5419,7 @@ static void run_cpu_thread(int (*f)(void *))
 static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
 #ifdef WITH_THREADED_CPU
-	if (cpu_thread_tid != uae_thread_get_id(nullptr)) {
+	if (cpu_thread_tid != uae_thread_get_id(cpu_thread)) {
 		custom_reset(hardreset, keyboardreset);
 		return;
 	}
@@ -5608,6 +5589,12 @@ static void m68k_run_jit(void)
 		return;
 	}
 #endif
+
+	if (regs.spcflags) {
+		if (do_specialties(0)) {
+			return;
+		}
+	}
 
 	for (;;) {
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
@@ -6607,7 +6594,7 @@ void m68k_go (int may_quit)
 		cputrace.state = -1;
 
 		if (regs.halted == CPU_HALT_ACCELERATOR_CPU_FALLBACK) {
-			regs.halted = 0;
+			cpu_halt_clear();
 			cpu_do_fallback();
 		}
 
@@ -6718,6 +6705,7 @@ void m68k_go (int may_quit)
 				m68k_setpc_normal(pc);
 				fill_prefetch();
 				update_68k_cycles();
+				init_custom();
 			}
 			if (cpu_prefs_changed_flag & 2) {
 				fixup_cpu(&changed_prefs);
@@ -6808,6 +6796,8 @@ void m68k_go (int may_quit)
 		}
 #endif
 		run_func();
+
+		custom_end_drawing();
 
 		if (quit_program < 0) {
 			quit_program = -quit_program;
@@ -7212,10 +7202,10 @@ uae_u8 *restore_cpu (uae_u8 *src)
 		regs.read_buffer = restore_u16();
 		regs.write_buffer = restore_u16();
 		if (v & 1) {
-			regs.ipl[0] = restore_u8();
-			regs.ipl[1] = restore_u8();
-			regs.ipl_pin = static_cast<uae_s32>(restore_u8());
-			regs.ipl_pin_p = static_cast<uae_s32>(restore_u8());
+			regs.ipl[0] = restore_s8();
+			regs.ipl[1] = restore_s8();
+			regs.ipl_pin = restore_s8();
+			regs.ipl_pin_p = restore_s8();
 			regs.ipl_evt = restore_u64();
 			regs.ipl_evt_pre = restore_u64();
 			regs.ipl_pin_change_evt = restore_u64();
@@ -7661,10 +7651,10 @@ uae_u8 *save_cpu(size_t *len, uae_u8 *dstptr)
 		save_u16(regs.ird);
 		save_u16(regs.read_buffer);
 		save_u16(regs.write_buffer);
-		save_u8(regs.ipl[0]);
-		save_u8(regs.ipl[1]);
-		save_u8(regs.ipl_pin);
-		save_u8(regs.ipl_pin_p);
+		save_s8(regs.ipl[0]);
+		save_s8(regs.ipl[1]);
+		save_s8(regs.ipl_pin);
+		save_s8(regs.ipl_pin_p);
 		save_u64(regs.ipl_evt);
 		save_u64(regs.ipl_evt_pre);
 		save_u64(regs.ipl_pin_change_evt);
@@ -7956,7 +7946,7 @@ bool cpureset (void)
 		m68k_reset();
 		return true;
 	}
-	if ((currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) && currprefs.cpu_model <= 68020) {
+	if (currprefs.cpu_compatible || currprefs.cpu_memory_cycle_exact) {
 		custom_reset_cpu(false, false);
 		return false;
 	}

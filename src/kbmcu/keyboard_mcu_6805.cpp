@@ -192,7 +192,7 @@ static uae_u8 mcu_io_read(int addr)
 			v |= 0x80 | 0x40 | 0x20 | 0x10 | 0x08 | 0x04;
 
 			// row is PORTA + PORTC
-			int row = mcu_io[0] | ((mcu_io[2] & 0x3f) << 8) | ((mcu_io[2] & 0x80) << 7);
+			int row = mcu_io[0] | ((mcu_io[2] & 0x7f) << 8);
 
 			if (!currprefs.keyboard_nkro) {
 				// matrix without diodes

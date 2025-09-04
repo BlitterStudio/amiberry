@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(amiberry
-    VERSION 7.1.1
+    VERSION 8.0.0
     LANGUAGES C CXX
     DESCRIPTION "Optimized Amiga emulator for various platforms"
     HOMEPAGE_URL "https://amiberry.com"
@@ -39,9 +39,9 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES
 endif()
 
 # Versioning
-set(VERSION_MAJOR "7" CACHE STRING "Major version")
-set(VERSION_MINOR "1" CACHE STRING "Minor version")
-set(VERSION_PATCH "1" CACHE STRING "Patch version")
+set(VERSION_MAJOR "8" CACHE STRING "Major version")
+set(VERSION_MINOR "0" CACHE STRING "Minor version")
+set(VERSION_PATCH "0" CACHE STRING "Patch version")
 set(VERSION_PRE_RELEASE "" CACHE STRING "Pre-release version")
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 

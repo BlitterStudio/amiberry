@@ -22,7 +22,6 @@
 #include <cstring>
 #include "co8048.h"
 
-
 ATCoProc8048::ATCoProc8048() {
 }
 

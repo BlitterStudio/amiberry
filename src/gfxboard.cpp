@@ -55,7 +55,6 @@ static bool memlogw = true;
 #include "rommgr.h"
 #include "zfile.h"
 #include "gfxboard.h"
-#include "rommgr.h"
 #include "xwin.h"
 #include "devices.h"
 #include "gfxfilter.h"
@@ -70,6 +69,7 @@ static bool memlogw = true;
 #ifdef WITH_DRACO
 #include "draco.h"
 #endif
+#include "autoconf.h"
 
 #ifdef USE_PCEM
 extern void put_io_pcem(uaecptr, uae_u32, int);
@@ -163,7 +163,7 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_A2410,
 		_T("A2410 [Zorro II]"), _T("Commodore"), _T("A2410"),
 		1030, 0, 0, 0,
-		0x00000000, 0x00200000, 0x00200000, 0x10000, 0, 0, 2, false, false,
+		0x00000000, 0x00200000, 0x00200000, 0x10000, 0, 2, 2, false, false,
 		0, 0xc1, &a2410_func
 	},
 #ifdef USE_PCEM
@@ -234,7 +234,7 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_PERMEDIA2_PCI,
 		_T("BlizzardVision/CyberVision PPC (Permedia2) [PCI]"), _T("3DLabs"), _T("PERMEDIA2_PCI"),
 		0, 0, 0, 0,
-		0x00000000, 0x00800000, 0x00800000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00800000, 0x00800000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &permedia2_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 	{
@@ -285,7 +285,7 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_ALTAIS_Z3,
 		_T("Altais [DracoBus]"), _T("MacroSystem"), _T("Altais"),
 		18260, 19, 0, 0,
-		0x00000000, 0x00400000, 0x00400000, 0x00400000, 0, 4, 3, false, false,
+		0x00000000, 0x00400000, 0x00400000, 0x00400000, 0, BOARD_NONAUTOCONFIG_BEFORE, 3, false, false,
 		0, 0, NULL, &ncr_retina_z3_device, 0, GFXBOARD_BUSTYPE_DRACO
 	},
 	{
@@ -322,7 +322,7 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_EGS_110_24,
 		_T("EGS 110/24 [GVP local bus]"), _T("GVP"), _T("EGS_110_24"),
 		2193, 0, 0, 0,
-		0x00000000, 0x00400000, 0x00800000, 0x00800000, 0, 4, 2, false, false,
+		0x00000000, 0x00400000, 0x00800000, 0x00800000, 0, BOARD_NONAUTOCONFIG_BEFORE, 2, false, false,
 		0, 0, NULL, &inmos_egs_110_24_device
 	},
 	{
@@ -393,7 +393,7 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_VOODOO3_PCI,
 		_T("Voodoo 3 3000 [PCI]"), _T("3dfx"), _T("V3_3000"),
 		0, 0, 0, 0,
-		0x00000000, 0x01000000, 0x01000000, 0x01000000, 0, 0, -1, false, false,
+		0x00000000, 0x01000000, 0x01000000, 0x01000000, 0, BOARD_PCI, -1, false, false,
 		ROMTYPE_VOODOO3,
 		0, NULL, &voodoo_3_3000_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
@@ -401,42 +401,42 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_S3VIRGE_PCI,
 		_T("Virge [PCI]"), _T("S3"), _T("S3VIRGE_PCI"),
 		0, 0, 0, 0,
-		0x00000000, 0x00400000, 0x00400000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00400000, 0x00400000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &s3_virge_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 	{
 		GFXBOARD_ID_S3TRIO64_PCI,
 		_T("Trio64 [PCI]"), _T("S3"), _T("S3TRIO64_PCI"),
 		0, 0, 0, 0,
-		0x00000000, 0x00200000, 0x00400000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00200000, 0x00400000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &s3_trio64_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 	{
 		GFXBOARD_ID_MATROX_MILLENNIUM_PCI,
 		_T("Matrox Millennium [PCI]"), _T("Matrox"), _T("Matrox_Millennium"),
 		0, 0, 0, 0,
-		0x00000000, 0x00200000, 0x00400000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00200000, 0x00400000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &millennium_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 	{
 		GFXBOARD_ID_MATROX_MILLENNIUM_II_PCI,
 		_T("Matrox Millennium II [PCI]"), _T("Matrox"), _T("Matrox_Millennium_II"),
 		0, 0, 0, 0,
-		0x00000000, 0x00200000, 0x01000000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00200000, 0x01000000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &millennium_ii_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 	{
 		GFXBOARD_ID_MATROX_MYSTIQUE_PCI,
 		_T("Matrox Mystique [PCI]"), _T("Matrox"), _T("Matrox_Mystique"),
 		0, 0, 0, 0,
-		0x00000000, 0x00200000, 0x00800000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00200000, 0x00800000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &mystique_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 	{
 		GFXBOARD_ID_MATROX_MYSTIQUE220_PCI,
 		_T("Matrox Mystique 220 [PCI]"), _T("Matrox"), _T("Matrox_Mystique220"),
 		0, 0, 0, 0,
-		0x00000000, 0x00200000, 0x00800000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00200000, 0x00800000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &mystique_220_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 #endif
@@ -445,7 +445,7 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_GD5446_PCI,
 		_T("GD5446 [PCI]"), _T("Cirrus Logic"), _T("GD5446_PCI"),
 		0, 0, 0, 0,
-		0x00000000, 0x00400000, 0x00400000, 0x10000000, 0, 0, -1, false, false,
+		0x00000000, 0x00400000, 0x00400000, 0x10000000, 0, BOARD_PCI, -1, false, false,
 		0, 0, NULL, &gd5446_device, 0, GFXBOARD_BUSTYPE_PCI
 	},
 #endif
@@ -1786,7 +1786,7 @@ void gfxboard_vsync_handler(bool full_redraw_required, bool redraw_required)
 					}
 				}
 #endif
-				if (!gb->board->hasswitcher && gb->vram) {
+				if ((!gb->board->hasswitcher && gb->rbc->autoswitch) && gb->vram) {
 					bool svga_on(void *p);
 					bool on = svga_on(gb->pcemobject2);
 					set_monswitch(gb, on);
@@ -4820,6 +4820,15 @@ int gfxboard_get_configtype(struct rtgboardconfig *rbc)
 	return gb->board->configtype;
 }
 
+bool gfxboard_get_switcher(struct rtgboardconfig *rbc)
+{
+	int type = rbc->rtgmem_type;
+	if (type < GFXBOARD_HARDWARE)
+		return true;
+	const struct gfxboard *b = find_board(type);
+	return b->hasswitcher;
+}
+
 bool gfxboard_need_byteswap (struct rtgboardconfig *rbc)
 {
 	int type = rbc->rtgmem_type;
@@ -6201,7 +6210,8 @@ static uae_u8 get_io_merlin(struct rtggfxboard *gb, uae_u32 addr)
 				uae_u8 aa = a >> 3;
 				uae_u8 d = 0xff;
 				if ((a & 7) == 3) {
-					uae_u8 ser[4] = { uae_u8(gb->extradata[0] >> 24), uae_u8(gb->extradata[0] >> 16), uae_u8(gb->extradata[0] >> 8), uae_u8(gb->extradata[0] >> 0) };					if (aa == 0x7c) {
+					uae_u8 ser[4] = { uae_u8(gb->extradata[0] >> 24), uae_u8(gb->extradata[0] >> 16), uae_u8(gb->extradata[0] >> 8), uae_u8(gb->extradata[0] >> 0) };
+					if (aa == 0x7c) {
 						d = ser[0];
 					} else if (aa == 0x7d) {
 						d = ser[1];

@@ -479,11 +479,11 @@ bool keymcu_run(bool handshake)
 		}
 		evt_t c = get_cycles();
 		int m = CYCLE_UNIT * (currprefs.ntscmode ? 3579545 : 3546895) / 1500000;
-		int cycles = (c - lastcycle) / m;
+		evt_t cycles = (c - lastcycle) / m;
 		if (cycles > 0) {
 			uint64_t cycleCount = 0;
 			if (mcu) {
-				mcu->Run(cycles, cycleCount, mos6502::CYCLE_COUNT);
+				mcu->Run((int)cycles, cycleCount, mos6502::CYCLE_COUNT);
 			}
 			lastcycle += cycles * m;
 		}

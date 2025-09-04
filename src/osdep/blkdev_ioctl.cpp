@@ -12,13 +12,10 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "traps.h"
-#include "uae.h"
 #include "threaddep/thread.h"
 #include "blkdev.h"
 #include "scsidev.h"
 #include "gui.h"
-#include "audio.h"
 
 #include <fcntl.h>
 #include <unistd.h>

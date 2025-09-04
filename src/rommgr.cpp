@@ -18,6 +18,7 @@
 #include "fsdb.h"
 #include "autoconf.h"
 #include "filesys.h"
+#include "arcadia.h"
 
 #define SAVE_ROM 0
 
@@ -96,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 329
+#define NEXT_ROM_ID 333
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -325,10 +326,10 @@ static struct romdata roms[] = {
 	0x87746be2, 0x5BEF3D62,0x8CE59CC0,0x2A66E6E4,0xAE0DA48F,0x60E78F7F, NULL, NULL, 1 },
 
 	/* plain CD32 rom */
-	{ _T("CD32 ROM (KS + extended)"), 3, 1, 40, 60, _T("CD32\0"), 2 * 524288, 64, 1, 0, ROMTYPE_KICKCD32 | ROMTYPE_EXTCD32 | ROMTYPE_CD32, 0, 0, NULL,
+	{ _T("CD32 ROM (KS + extended)"), 3, 1, 40, 60, _T("CD32\0"), 2 * 524288, 64, 1, 0, ROMTYPE_CD32 | ROMTYPE_KICKCD32 | ROMTYPE_EXTCD32, 0, 0, NULL,
 	0xf5d4f3c8, 0x9fa14825,0xc40a2475,0xa2eba5cf,0x325bd483,0xc447e7c1, NULL, NULL, 1 },
 	/* real CD32 rom dump 391640-03 */
-	ALTROMPN(64, 1, 1, 2 * 524288, ROMTYPE_CD32, _T("391640-03"), 0xa4fbc94a, 0x816ce6c5,0x07787585,0x0c7d4345,0x2230a9ba,0x3a2902db )
+	ALTROMPN(64, 1, 1, 2 * 524288, ROMTYPE_CD32 | ROMTYPE_KICKCD32 | ROMTYPE_EXTCD32, _T("391640-03"), 0xa4fbc94a, 0x816ce6c5,0x07787585,0x0c7d4345,0x2230a9ba,0x3a2902db )
 
 	{ _T("CD32 Full Motion Video Cartridge ROM"), 3, 1, 40, 30, _T("CD32FMV\0"), 262144, 23, 1, 0, ROMTYPE_CD32CART, 0, 0, NULL,
 	0xc35c37bf, 0x03ca81c7,0xa7b259cf,0x64bc9582,0x863eca0f,0x6529f435, NULL, NULL, 3 },
@@ -625,9 +626,9 @@ static struct romdata roms[] = {
 	0x3befa0c0, 0x4414673c, 0xa52f78a0, 0xae656824, 0xfd08b54f, 0xa1de237c, NULL, NULL },
 	ALTROMPN(166, 1, 1, 32768, ROMTYPE_ODD  | ROMTYPE_8BIT, NULL, 0xb64e3bbf, 0xd6f4fc81, 0x38325a78, 0x74ff1c15, 0x7c93f1a2, 0x444904ae)
 	ALTROMPN(166, 1, 2, 32768, ROMTYPE_EVEN | ROMTYPE_8BIT, NULL, 0x541b5988, 0x3546517b, 0x57cecd2f, 0x9fbfcd0c, 0xf26fdbbf, 0xfb009e3e)
-	{ _T("QuikPak 4060 XP v2.1"), 2, 1, 2, 1, _T("QUIKPAK\0"), 32768, 239, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
+	{ _T("QuikPak 4060 XP v2.1"), 2, 1, 2, 1, _T("QUIKPAK\0"), 32768, 239, 0, 0, ROMTYPE_CB_QUIKPAKXP, 0, 0, NULL,
 	0x3a8eb518, 0x902dd0ba, 0x56c2afd0, 0xbb425bf5, 0x264fbc62, 0x90ad2c4e, NULL, NULL },
-	{ _T("QuikPak 4060 XP v2.2"), 2, 2, 2, 2, _T("QUIKPAK\0"), 65536, 319, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
+	{ _T("QuikPak 4060 XP v2.2"), 2, 2, 2, 2, _T("QUIKPAK\0"), 65536, 319, 0, 0, ROMTYPE_CB_QUIKPAKXP, 0, 0, NULL,
 	0x47009144, 0x547fd232, 0xd774e872, 0x37a83d30, 0xeb06e3d6, 0xb88456c2, NULL, NULL },
 	{ _T("QuikPak 4060"), 0, 0, 0, 0, _T("QUIKPAK\0"), 32768, 320, 0, 0, ROMTYPE_CB_QUIKPAK, 0, 0, NULL,
 	0x2b12aa6d, 0x023cd8a5, 0x7f24a992, 0x12d64c93, 0x69da614a, 0x3f6d0932, NULL, NULL },
@@ -793,8 +794,10 @@ static struct romdata roms[] = {
 	0x086e2716b, 0x075b50cb,0x166e00ac,0x4016ef7f,0x02532e86,0xe73b7711, NULL, NULL },
 	{ _T("Pacific Peripherals Overdrive v2.0"), 2, 0, 2, 0, _T("OVERDRIVE\0"), 8192, 247, 0, 0, ROMTYPE_OVERDRIVE, 0, 0, NULL,
 	0xebe42aa6, 0xdff761c2,0x429d0d26,0x2151d831,0x12746f83,0x3b8d36f0, NULL, NULL },
-	{ _T("Archos Overdrive HD"), 0, 0, 0, 0, _T("ARCHOSHD\0"), 32768, 250, 0, 0, ROMTYPE_ARCHOSHD, 0, 0, NULL,
+	{ _T("Archos Overdrive HD v5.0"), 5, 0, 5, 0, _T("ARCHOSHD\0"), 32768, 250, 0, 0, ROMTYPE_ARCHOSHD, 0, 0, NULL,
 	0x30c0e3f9, 0x90014e97,0x700333a7,0x931b382f,0xe672b6e4,0x4b7b8acc, NULL, NULL },
+	{ _T("Archos Overdrive HD v3.0"), 3, 0, 3, 0, _T("ARCHOSHD\0"), 32768, 332, 0, 0, ROMTYPE_ARCHOSHD, 0, 0, NULL,
+	0x68c6dc4b, 0x67a5df20,0xf6d893a3,0x0ff130b4,0xe4b9aaab,0xf4be5e90, NULL, NULL },
 	{ _T("Trumpcard 500AT v1.1"), 1, 1, 1, 1, _T("TRUMPCARDAT\0"), 16384, 251, 0, 0, ROMTYPE_IVST500AT, 0, 0, NULL,
 	0xb6467cb8, 0xbc1cd85f,0x16011691,0x32a2a8d6, 0x2ee38666,0x520d5cf1, NULL, NULL },
 	{ _T("Trumpcard 500AT v1.2"), 1, 2, 1, 2, _T("TRUMPCARDAT\0"), 16384, 252, 0, 0, ROMTYPE_IVST500AT, 0, 0, NULL,
@@ -822,14 +825,32 @@ static struct romdata roms[] = {
 	0x4e71ec63, 0x8e95bc8d,0xa06050fc,0xb596b5b4,0xc8cf9102,0x1ff4aeb3, NULL, NULL },
 	{ _T("CyberStorm MK II"), 0, 0, 0, 0, _T("CSMKII\0"), 131072, 96, 0, 0, ROMTYPE_CB_CSMK2, 0, 0, NULL,
 	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormmk2.rom") },
-	{ _T("CyberStorm MK III"), 0, 0, 0, 0, _T("CSMKIII\0"), 131072, 97, 0, 0, ROMTYPE_CB_CSMK3, 0, 0, NULL,
-	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormmk3.rom") },
-	{ _T("CyberStorm PPC"), 0, 0, 0, 0, _T("CSPPC\0"), 131072, 98, 0, 0, ROMTYPE_CB_CSPPC, 0, 0, NULL,
-	  0, 0, 0, 0, 0, 0, NULL, _T("cyberstormppc.rom") },
-	{ _T("Blizzard PPC 68040"), 0, 0, 0, 0, _T("BPPC\0"), 524288, 99, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
-	  0, 0, 0, 0, 0, 0, NULL, _T("blizzardppc_040.rom") },
-	{ _T("Blizzard PPC 68060"), 0, 0, 0, 0, _T("BPPC\0"), 524288, 100, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
-	  0, 0, 0, 0, 0, 0, NULL, _T("blizzardppc_060.rom") },
+
+	{ _T("CyberStorm MK III v44.67"), 44, 67, 0, 0, _T("CSMKIII\0"), 131072, 97, 0, 0, ROMTYPE_CB_CSMK3, 0, 0, NULL,
+	  0, 0x4673baad,0xee2bfca3,0x151fbe15,0x3bc48308,0x8d932118, NULL, _T("cyberstormmk3.rom") },
+	{ _T("CyberStorm MK III v44.69"), 44, 69, 0, 0, _T("CSMKIII\0"), 131072, 324, 0, 0, ROMTYPE_CB_CSMK3, 0, 0, NULL,
+	  0, 0xfa033a77,0x1c9174f4,0xf91a595c,0xbcc46416,0xfbba84af, NULL, NULL },
+	{ _T("CyberStorm MK III v44.71"), 44, 71, 0, 0, _T("CSMKIII\0"), 131072, 325, 0, 0, ROMTYPE_CB_CSMK3, 0, 0, NULL,
+	  0, 0x8f902c86,0x2cb1792f,0x789b2cf8,0xec1016d9,0x62e029c5, NULL, NULL },
+	{ _T("CyberStorm PPC v44.67"), 44, 67, 0, 0, _T("CSPPC\0"), 131072, 98, 0, 0, ROMTYPE_CB_CSPPC, 0, 0, NULL,
+	  0, 0x7223763d,0x90316bdb,0x4d5001a9,0xa877cce4,0x00d68283, NULL, _T("cyberstormppc.rom") },
+	{ _T("CyberStorm PPC v44.69"), 44, 69, 0, 0, _T("CSPPC\0"), 131072, 326, 0, 0, ROMTYPE_CB_CSPPC, 0, 0, NULL,
+	  0, 0x34807066,0xe2b7694e,0x856a3031,0x387f40f2,0xbe75aad9, NULL, NULL },
+	{ _T("CyberStorm PPC v44.71"), 44, 71, 0, 0, _T("CSPPC\0"), 131072, 327, 0, 0, ROMTYPE_CB_CSPPC, 0, 0, NULL,
+	  0, 0xc7cb3c4f,0xa66e260f,0x43bff704,0x4049a264,0xa729e590, NULL, NULL },
+	{ _T("Blizzard PPC 68040 v44.67"), 44, 67, 0, 0, _T("BPPC\0"), 524288, 99, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
+	  0, 0x96564e51,0x5df30654,0x05d223ab,0xc958fe76,0xc5223fb5, NULL, _T("blizzardppc_040.rom") },
+	{ _T("Blizzard PPC 68060 v44.67"), 44, 67, 0, 0, _T("BPPC\0"), 524288, 100, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
+	  0, 0xf7533d16,0x9fcfc720,0x192fbc32,0x92b75f99,0x8c36f8ce, NULL, _T("blizzardppc_060.rom") },
+	{ _T("Blizzard PPC 68040 v44.69"), 44, 67, 0, 0, _T("BPPC\0"), 524288, 328, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
+	  0, 0xc8a63707,0xbe89c549,0x25f99e6b,0x6c1b8ca4,0x605b2e57, NULL, NULL },
+	{ _T("Blizzard PPC 68060 v44.69"), 44, 67, 0, 0, _T("BPPC\0"), 524288, 329, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
+	  0, 0xacc30e57,0xed900be3,0x87f466d0,0x57600791,0x316b0af5, NULL, NULL },
+	{ _T("Blizzard PPC 68040 v44.71"), 44, 67, 0, 0, _T("BPPC\0"), 524288, 330, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
+	  0, 0x9d0e3e2c,0xd5ca81b0,0x322f265c,0x83198aee,0xc81ee336, NULL, NULL },
+	{ _T("Blizzard PPC 68060 v44.71"), 44, 67, 0, 0, _T("BPPC\0"), 524288, 331, 0, 0, ROMTYPE_CB_BLIZPPC, 0, 0, NULL,
+	  0, 0x33fd6090,0xc54114bf,0xdb73618a,0xaf19cc43,0x7ebdee3f, NULL, NULL },
+
 	{ _T("ACA 500"), 0, 0, 0, 0, _T("ACA500\0"), 524288, 137, 0, 0, ROMTYPE_CB_ACA500, 0, 0, NULL,
 	  0, 0, 0, 0, 0, 0, NULL, _T("menu500.aca") },
 
@@ -1613,7 +1634,7 @@ static struct romdata *checkromdata (const uae_u8 *sha1, int size, uae_u32 mask)
 {
 	int i = 0;
 	while (roms[i].name) {
-		if (!notcrc32(roms[i].crc32) && roms[i].size >= size) {
+		if (roms[i].crc32 != 0xffffffff && roms[i].size >= size) {
 			if (roms[i].type & mask) {
 				if (!cmpsha1 (sha1, &roms[i]))
 					return &roms[i];
@@ -1738,8 +1759,23 @@ struct romdata *getromdatabydata (uae_u8 *rom, int size)
 			get_sha1 (rom, size, sha1);
 			ret = checkromdata (sha1, size, ROMTYPE_AR2);
 			memcpy (rom, tmp, 4);
+			// BlizzardPPC/CyberStormMK3/PPC images have config data
+			if (!ret && (size == 131072 || size == 524288)) {
+				uae_u8 *rt = xmalloc(uae_u8, 524288);
+				if (rt) {
+					memcpy(rt, rom, size);
+					memset(rt + 0x10, 0, 0x20);
+					get_sha1(rt, 0x1c000, sha1);
+					ret = checkromdata(sha1, size, -1);
+					if (!ret && size == 524288) {
+						get_sha1(rt, 0x50000, sha1);
+						ret = checkromdata(sha1, size, -1);
+					}
+					xfree(rt);
+				}
+			}
 		}
-	}//9 
+	}
 	xfree (tmpbuf);
 	return ret;
 }
@@ -1918,13 +1954,22 @@ void romwarning (const int *ids)
 }
 
 
-static void byteswap (uae_u8 *buf, int size)
+static void byteswap(uae_u8* buf, int size)
 {
 	int i;
 	for (i = 0; i < size; i += 2) {
 		uae_u8 t = buf[i];
 		buf[i] = buf[i + 1];
 		buf[i + 1] = t;
+	}
+}
+static void halfswap(uae_u8* buf, int size)
+{
+	for (int i = 0; i < size / 2; i++) {
+		int j = size / 2 + i;
+		uae_u8 t = buf[i];
+		buf[i] = buf[j];
+		buf[j] = t;
 	}
 }
 static void wordbyteswap (uae_u8 *buf, int size)
@@ -2178,7 +2223,7 @@ struct zfile *read_rom(struct romdata *prd, bool rw)
 				tmp[0] = buf[0];
 				tmp[1] = buf[1];
 				buf[0] = buf[1] = 0;
-				if (get_crc32 (buf, size) == crc32)
+				if (get_crc32(buf, size) == crc32)
 					ok = 1;
 				buf[0] = tmp[0];
 				buf[1] = tmp[1];
@@ -2186,10 +2231,21 @@ struct zfile *read_rom(struct romdata *prd, bool rw)
 			if (!ok) {
 				/* perhaps it is byteswapped without byteswap entry? */
 				byteswap (buf, size);
-				if (get_crc32 (buf, size) == crc32)
+				if (get_crc32(buf, size) == crc32) {
 					ok = 1;
-				if (!ok)
+				}
+				if (!ok) {
 					byteswap(buf, size);
+					// CD32 ROM with lower and upper 512k swapped?
+					if (size == 2 * 512 * 1024) {
+						halfswap(buf, size);
+						if (get_crc32(buf, size) == crc32) {
+							ok = 1;
+						} else {
+							halfswap(buf, size);
+						}
+					}
+				}
 			}
 			if (ok) {
 				alg_descramble(rd, buf, size);
@@ -2898,4 +2954,95 @@ struct zfile *flashromfile_open(const TCHAR *name)
 		write_log(_T("Flash file '%s' loaded, %s.\n"), name, rw ? _T("RW") : _T("RO"));
 	}
 	return f;
+}
+
+struct romdata *scan_single_rom_file(struct zfile *f)
+{
+	uae_u8 buffer[20] = { 0 };
+	uae_u8 *rombuf;
+	int cl = 0, size;
+	struct romdata *rd = 0;
+
+	zfile_fseek(f, 0, SEEK_END);
+	size = zfile_ftell32(f);
+	zfile_fseek(f, 0, SEEK_SET);
+	if (size > 524288 * 2) {/* don't skip KICK disks or 1M ROMs */
+		write_log(_T("'%s': too big %d, ignored\n"), zfile_getname(f), size);
+		return 0;
+	}
+	zfile_fread(buffer, 1, 11, f);
+	if (!memcmp(buffer, "KICK", 4)) {
+		zfile_fseek(f, 512, SEEK_SET);
+		if (size > 262144)
+			size = 262144;
+	} else if (!memcmp(buffer, "AMIROMTYPE1", 11)) {
+		cl = 1;
+		size -= 11;
+	} else {
+		zfile_fseek(f, 0, SEEK_SET);
+	}
+
+	rombuf = xcalloc(uae_u8, size);
+	if (!rombuf)
+		return 0;
+	zfile_fread(rombuf, 1, size, f);
+	if (cl > 0) {
+		decode_cloanto_rom_do(rombuf, size, size);
+		cl = 0;
+	}
+	if (!cl) {
+		rd = getromdatabydata(rombuf, size);
+		if (!rd && (size & 65535) == 0) {
+			/* check byteswap */
+			int i;
+			for (i = 0; i < size; i += 2) {
+				uae_u8 b = rombuf[i];
+				rombuf[i] = rombuf[i + 1];
+				rombuf[i + 1] = b;
+			}
+			rd = getromdatabydata(rombuf, size);
+		}
+		if (size == 2 * 512 * 1024 && (!rd || rd->size < 2 * 512 * 1024)) {
+			halfswap(rombuf, size);
+			struct romdata* rd2 = getromdatabydata(rombuf, size);
+			halfswap(rombuf, size);
+			if (rd2 && rd2->size == 2 * 512 * 1024) {
+				rd = rd2;
+			}
+		}
+	}
+	if (!rd) {
+		const TCHAR *name = my_getfilepart(zfile_getname(f));
+		rd = getfrombydefaultname(name, size);
+	}
+	if (!rd) {
+		write_log(_T("!: Name='%s':%d\nCRC32=%08X SHA1=%s\n"),
+			zfile_getname(f), size, get_crc32(rombuf, size), get_sha1_txt(rombuf, size));
+	} else {
+		TCHAR tmp[MAX_DPATH];
+		getromname(rd, tmp);
+		write_log(_T("*: %s:%d = %s\nCRC32=%08X SHA1=%s\n"),
+			zfile_getname(f), size, tmp, get_crc32(rombuf, size), get_sha1_txt(rombuf, size));
+	}
+	xfree(rombuf);
+	return rd;
+}
+
+struct romdata *scan_single_rom(const TCHAR *path)
+{
+	struct zfile *z;
+	TCHAR tmp[MAX_DPATH];
+	struct romdata *rd;
+
+	_tcscpy(tmp, path);
+	rd = scan_arcadia_rom(tmp, 0);
+	if (rd)
+		return rd;
+	rd = getromdatabypath(path);
+	if (rd && rd->crc32 == 0xffffffff)
+		return rd;
+	z = zfile_fopen(path, _T("rb"), ZFD_NORMAL);
+	if (!z)
+		return 0;
+	return scan_single_rom_file(z);
 }

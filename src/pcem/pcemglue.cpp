@@ -796,6 +796,7 @@ int pci_add(uint8_t(*read)(int func, int addr, void *priv), void (*write)(int fu
 	pci_card_priv = priv;
 	return 0;
 }
+
 extern void gfxboard_intreq(void *, int, bool);
 void pci_set_irq_routing(int card, int irq)
 {

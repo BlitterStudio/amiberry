@@ -172,7 +172,7 @@ int fork_exec(struct socket *so, char *ex, int do_pty)
 
 int slirp_openpty(int *amaster, int *aslave)
 {
-    int master, slave;
+	int master, slave;
 #ifdef HAVE_GRANTPT
 	char *ptr;
 	

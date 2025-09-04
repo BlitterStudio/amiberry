@@ -20,19 +20,16 @@
 #include <sys/wait.h>
 
 #include "options.h"
-#include "traps.h"
 #include "blkdev.h"
 #include "zfile.h"
 #include "gui.h"
 #include "fsdb.h"
 #include "threaddep/thread.h"
-#include "scsidev.h"
 #include "mp3decoder.h"
 #include "cda_play.h"
 #include "memory.h"
 #include "audio.h"
 #include "uae.h"
-#include "uae/cdrom.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -952,6 +949,20 @@ static int command_rawread (int unitnum, uae_u8 *data, int sector, int size, int
 					memcpy(data - SUBQ_SIZE, subs + SUBQ_SIZE, SUBQ_SIZE);
 }
 			}
+		} else if (sectorsize == 2340 && t->size == 2336) {
+			// 2336 -> 2340
+			while (size-- > 0) {
+				int address = asector + 150;
+				data[0] = tobcd((uae_u8)(address / (60 * 75)));
+				data[1] = tobcd((uae_u8)((address / 75) % 60));
+				data[2] = tobcd((uae_u8)(address % 75));
+				data[3] = 2; /* MODE2 */
+				do_read(cdu, t, data + 4, sector, 0, t->size, false);
+				sector++;
+				asector++;
+				data += sectorsize;
+				ret += sectorsize;
+			}
 		} else if ((sectorsize == 2352 || sectorsize == 2368 || sectorsize == 2448) && t->size == 2048) {
 			// 2048 -> 2352
 			while (size-- > 0) {
@@ -972,12 +983,42 @@ static int command_rawread (int unitnum, uae_u8 *data, int sector, int size, int
 					memcpy(data - SUBQ_SIZE, subs + SUBQ_SIZE, SUBQ_SIZE);
 				}
 			}
+		} else if (sectorsize == 2052 && t->size == 2048) {
+			// 2048 -> 2052
+			while (size-- > 0) {
+				int address = asector + 150;
+				data[0] = tobcd((uae_u8)(address / (60 * 75)));
+				data[1] = tobcd((uae_u8)((address / 75) % 60));
+				data[2] = tobcd((uae_u8)(address % 75));
+				data[3] = 0; /* MODE1 */
+				do_read(cdu, t, data + 4, sector, 0, sectorsize - 4, false);
+				sector++;
+				asector++;
+				data += sectorsize;
+				ret += sectorsize;
+			}
 		} else if (sectorsize == 2048 && t->size == 2352) {
 			// 2352 -> 2048
 			while (size-- > 0) {
 				uae_u8 b = 0;
-				do_read (cdu, t, &b, sector, 15, 1, false);
-				do_read (cdu, t, data, sector, b == 2 ? 24 : 16, sectorsize, false);
+				do_read(cdu, t, &b, sector, 15, 1, false);
+				do_read(cdu, t, data, sector, b == 2 ? 24 : 16, sectorsize, false);
+				sector++;
+				asector++;
+				data += sectorsize;
+				ret += sectorsize;
+			}
+		} else if (sectorsize == 2052 && t->size == 2352) {
+			// 2352 -> 2052
+			while (size-- > 0) {
+				uae_u8 b = 0;
+				do_read(cdu, t, &b, sector, 15, 1, false);
+				int address = asector + 150;
+				data[0] = tobcd((uae_u8)(address / (60 * 75)));
+				data[1] = tobcd((uae_u8)((address / 75) % 60));
+				data[2] = tobcd((uae_u8)(address % 75));
+				data[3] = b;
+				do_read(cdu, t, data + 4, sector, b == 2 ? 24 : 16, sectorsize - 4, false);
 				sector++;
 				asector++;
 				data += sectorsize;
@@ -987,10 +1028,28 @@ static int command_rawread (int unitnum, uae_u8 *data, int sector, int size, int
 			// 2352 -> 2336
 			while (size-- > 0) {
 				uae_u8 b = 0;
-				do_read (cdu, t, &b, sector, 15, 1, false);
+				do_read(cdu, t, &b, sector, 15, 1, false);
 				if (b != 2 && b != 0) // MODE0 or MODE2 only allowed
 					return 0;
-				do_read (cdu, t, data, sector, 16, sectorsize, false);
+				do_read(cdu, t, data, sector, 16, sectorsize, false);
+				sector++;
+				asector++;
+				data += sectorsize;
+				ret += sectorsize;
+			}
+		} else if (sectorsize == 2340 && t->size == 2352) {
+			// 2352 -> 2340
+			while (size-- > 0) {
+				uae_u8 b = 0;
+				do_read(cdu, t, &b, sector, 15, 1, false);
+				if (b != 2 && b != 0) // MODE0 or MODE2 only allowed
+					return 0;
+				int address = asector + 150;
+				data[0] = tobcd((uae_u8)(address / (60 * 75)));
+				data[1] = tobcd((uae_u8)((address / 75) % 60));
+				data[2] = tobcd((uae_u8)(address % 75));
+				data[3] = b;
+				do_read(cdu, t, data + 4, sector, 16, sectorsize - 4, false);
 				sector++;
 				asector++;
 				data += sectorsize;
