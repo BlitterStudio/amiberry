@@ -5,7 +5,7 @@
 #include "ethernet.h"
 #ifdef _WIN32
 #include "win32_uaenet.h"
-#else
+#elif defined (AMIBERRY)
 #include "amiberry_uaenet.h"
 #endif
 #include "threaddep/thread.h"

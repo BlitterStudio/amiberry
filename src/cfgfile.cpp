@@ -9392,7 +9392,7 @@ static int bip_cd32 (struct uae_prefs *p, int config, int compa, int romcheck)
 static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 {
 	int roms[8];
-	int roms_bliz[2];
+	int roms_bliz[4];
 
 	buildin_default_prefs_68020 (p);
 	roms[0] = 11;

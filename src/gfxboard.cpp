@@ -1793,6 +1793,7 @@ void gfxboard_vsync_handler(bool full_redraw_required, bool redraw_required)
 				}
 #endif
 			}
+
 			gfxboard_unlock(gb);
 
 			if (gb->monswitch_keep_trying) {
@@ -3559,7 +3560,6 @@ static void gfxboard_free_board(struct rtggfxboard *gb)
 #endif
 			gb->pcemobject = NULL;
 			gb->pcemobject2 = NULL;
-
 		}
 	}
 	if (gb->vram && gb->gfxmem_bank->baseaddr) {

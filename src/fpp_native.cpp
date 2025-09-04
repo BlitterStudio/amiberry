@@ -19,7 +19,7 @@
 
 #define USE_HOST_ROUNDING 1
 #ifndef AMIBERRY
-#define SOFTFLOAT_CONVERSIONS 0
+#define SOFTFLOAT_CONVERSIONS 1
 #endif
 
 #include "options.h"
@@ -402,8 +402,7 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 			f = 0x7ff0000000000000 | (f & 0x8000000000000000);
 		}
 		fp_to_double(fpd, f >> 32, (uae_u32)f);
-	}
-	else {
+	} else {
 		double frac;
 		if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
 			fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;

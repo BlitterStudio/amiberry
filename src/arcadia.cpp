@@ -30,7 +30,6 @@
 #include "flashrom.h"
 #include "savestate.h"
 #include "devices.h"
-#include "specialmonitors.h"
 
 #define CUBO_DEBUG 1
 
@@ -1015,7 +1014,7 @@ static void sony_serial_read(uae_u16 w)
 		ld_value = 0;
 		ack();
 		if (log_ld)
-			write_log(_T("LD: CLEAR ENTRY\n"), ld_value);
+			write_log(_T("LD: CLEAR ENTRY\n"));
 		break;
 	case 0x4a: // R-PLAY 'J'
 	ld_mode = LD_MODE_PLAY;

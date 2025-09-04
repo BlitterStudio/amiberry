@@ -367,7 +367,7 @@ void virtualdevice_free(void)
 	sampler_free();
 	inputdevice_close();
 	DISK_free();
-	//dump_counts();
+	dump_counts();
 #ifdef SERIAL_PORT
 	serial_exit();
 #endif
@@ -406,8 +406,12 @@ void do_leave_program (void)
 	close_sound();
 	if (! no_gui)
 		gui_exit();
-
-	//machdep_free();
+#ifndef AMIBERRY // We don't use these here
+#ifdef USE_SDL
+	SDL_Quit();
+#endif
+	machdep_free();
+#endif
 }
 
 void virtualdevice_init (void)

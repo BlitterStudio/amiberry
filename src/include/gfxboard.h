@@ -17,6 +17,7 @@ extern int gfxboard_get_vram_min (struct rtgboardconfig*);
 extern int gfxboard_get_vram_max (struct rtgboardconfig*);
 extern bool gfxboard_need_byteswap (struct rtgboardconfig*);
 extern int gfxboard_get_autoconfig_size(struct rtgboardconfig*);
+extern bool gfxboard_get_switcher(struct rtgboardconfig *rbc);
 extern double gfxboard_get_vsync (void);
 extern void gfxboard_refresh (int monid);
 extern int gfxboard_toggle (int monid, int mode, int msg);

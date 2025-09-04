@@ -797,7 +797,7 @@ static uae_u32 REGPARAM2 blizzardea_bget(uaecptr addr)
 		cpuboard_non_byte_ea = true;
 		v = cpuboard_ncr710_io_bget(addr);
 #endif
-	} else if (is_quikpak(&currprefs)) {
+	} else if (is_quikpakxp(&currprefs)) {
 #ifdef NCR
 		cpuboard_non_byte_ea = true;
 		v = cpuboard_ncr720_io_bget(addr);
@@ -872,7 +872,7 @@ static void REGPARAM2 blizzardea_bput(uaecptr addr, uae_u32 b)
 #ifdef NCR
 		cpuboard_ncr710_io_bput(addr, b);
 #endif
-	} else if (is_quikpak(&currprefs)) {
+	} else if (is_quikpakxp(&currprefs)) {
 		cpuboard_non_byte_ea = true;
 #ifdef NCR
 		cpuboard_ncr720_io_bput(addr, b);

@@ -811,7 +811,7 @@ static void cputracefunc2_x_do_cycles_post (int cycles, uae_u32 v)
 
 static void do_cycles_post (int cycles, uae_u32 v)
 {
-	do_cycles (cycles);
+	do_cycles(cycles);
 }
 static void do_cycles_ce_post (int cycles, uae_u32 v)
 {
@@ -1532,9 +1532,9 @@ static void invalidate_cpu_data_caches()
 		}
 	} else if (currprefs.cpu_model >= 68040) {
 		dcachelinecnt = 0;
-		for (auto & i : dcaches040) {
-			for (bool & j : i.valid) {
-				j = false;
+		for (int i = 0; i < CACHESETS060; i++) {
+			for (int j = 0; j < CACHELINES040; j++) {
+				dcaches040[i].valid[j] = false;
 			}
 		}
 	}
@@ -1610,9 +1610,9 @@ void flush_cpu_caches(bool force)
 			mmu_flush_cache();
 			icachelinecnt = 0;
 			icachehalfline = 0;
-			for (auto & i : icaches040) {
-				for (bool & j : i.valid) {
-					j = false;
+			for (int i = 0; i < CACHESETS060; i++) {
+				for (int j = 0; j < CACHELINES040; j++) {
+					icaches040[i].valid[j] = false;
 				}
 			}
 #ifdef DEBUGGER
@@ -4037,7 +4037,7 @@ static bool mmu_op30fake_ptest (uaecptr pc, uae_u32 opcode, uae_u16 next, uaecpt
 
 	tmp[0] = 0;
 	if ((next >> 8) & 1)
-		_sntprintf (tmp, _T(",A%d"), (next >> 4) & 15);
+		_stprintf (tmp, _T(",A%d"), (next >> 4) & 15);
 	write_log (_T("PTEST%c %02X,%08X,#%X%s PC=%08X\n"),
 		((next >> 9) & 1) ? 'W' : 'R', (next & 15), extra, (next >> 10) & 7, tmp, pc);
 #endif
@@ -7152,8 +7152,8 @@ uae_u8 *restore_cpu (uae_u8 *src)
 				regs.prefetch020addr = restore_u32();
 				regs.cacheholdingaddr020 = restore_u32();
 				regs.cacheholdingdata020 = restore_u32();
-				for (unsigned int & i : regs.prefetch040)
-					i = restore_u32();
+				for (int i = 0; i < CPU_PIPELINE_MAX; i++)
+					regs.prefetch040[i] = restore_u32();
 				if (flags & 0x4000000) {
 					for (int i = 0; i < (model == 68060 ? CACHESETS060 : CACHESETS040); i++) {
 						for (int j = 0; j < CACHELINES040; j++) {

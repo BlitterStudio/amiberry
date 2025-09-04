@@ -12,7 +12,6 @@
 #include "custom.h"
 #include "rtgmodes.h"
 #include "xwin.h"
-#include "gfxfilter.h"
 #include "machdep/maccess.h"
 
 #include <cmath>

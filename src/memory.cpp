@@ -1863,9 +1863,7 @@ static bool load_extendedkickstart (const TCHAR *romextfile, int type)
 	return ret;
 }
 
-#ifdef AMIBERRY
-
-#else
+#ifndef AMIBERRY
 extern unsigned char arosrom[];
 extern unsigned int arosrom_len;
 #endif
@@ -2102,34 +2100,34 @@ static int load_kickstart (void)
 
 		maxsize = ROM_SIZE_512;
 
-		//if ((tmp[0] == 0x00 && tmp[1] == 0x00 && tmp[2] == 0x03 && tmp[3] == 0xf3 &&
-		//	tmp[4] == 0x00 && tmp[5] == 0x00 && tmp[6] == 0x00 && tmp[7] == 0x00) ||
-		//	(tmp[0] == 0x7f && tmp[1] == 'E' && tmp[2] == 'L' && tmp[3] == 'F')) {
-		//	struct zfile *zf = read_executable_rom(f, ROM_SIZE_512, 3);
-		//	if (zf) {
-		//		int size = zfile_size32(zf);
-		//		zfile_fclose(f);
-		//		f = zf;
-		//		if (size > ROM_SIZE_512) {
-		//			maxsize = zfile_size32(zf);
-		//			singlebigrom = true;
-		//			extendedkickmem2a_bank.reserved_size = 524288;
-		//			extendedkickmem2a_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
-		//			extendedkickmem2a_bank.start = size > 2 * ROM_SIZE_512 ? 0xa00000 : 0xa80000;
-		//			mapped_malloc(&extendedkickmem2a_bank);
-		//			extendedkickmem2b_bank.reserved_size = 524288;
-		//			extendedkickmem2b_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
-		//			extendedkickmem2a_bank.start = extendedkickmem2a_bank.start + 524288;
-		//			mapped_malloc(&extendedkickmem2a_bank);
-		//			read_kickstart(f, extendedkickmem2a_bank.baseaddr, 524288, 0, 1);
-		//			read_kickstart(f, extendedkickmem2b_bank.baseaddr, 524288, 0, 1);
-		//			memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
-		//			memcpy(kickmem_bank.baseaddr, extendedkickmem2a_bank.baseaddr, 0xd0);
-		//			memcpy(kickmem_bank.baseaddr + ROM_SIZE_512 - 20, romend, sizeof(romend));
-		//			kickstart_fix_checksum(kickmem_bank.baseaddr, ROM_SIZE_512);
-		//		}
-		//	}
-		//}
+		if ((tmp[0] == 0x00 && tmp[1] == 0x00 && tmp[2] == 0x03 && tmp[3] == 0xf3 &&
+			tmp[4] == 0x00 && tmp[5] == 0x00 && tmp[6] == 0x00 && tmp[7] == 0x00) ||
+			(tmp[0] == 0x7f && tmp[1] == 'E' && tmp[2] == 'L' && tmp[3] == 'F')) {
+			struct zfile *zf = read_executable_rom(f, ROM_SIZE_512, 3);
+			if (zf) {
+				int size = zfile_size32(zf);
+				zfile_fclose(f);
+				f = zf;
+				if (size > ROM_SIZE_512) {
+					maxsize = zfile_size32(zf);
+					singlebigrom = true;
+					extendedkickmem2a_bank.reserved_size = 524288;
+					extendedkickmem2a_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
+					extendedkickmem2a_bank.start = size > 2 * ROM_SIZE_512 ? 0xa00000 : 0xa80000;
+					mapped_malloc(&extendedkickmem2a_bank);
+					extendedkickmem2b_bank.reserved_size = 524288;
+					extendedkickmem2b_bank.mask = extendedkickmem2a_bank.allocated_size - 1;
+					extendedkickmem2b_bank.start = extendedkickmem2a_bank.start + 524288;
+					mapped_malloc(&extendedkickmem2b_bank);
+					read_kickstart(f, extendedkickmem2a_bank.baseaddr, 524288, 0, 1);
+					read_kickstart(f, extendedkickmem2b_bank.baseaddr, 524288, 0, 1);
+					memset(kickmem_bank.baseaddr, 0, ROM_SIZE_512);
+					memcpy(kickmem_bank.baseaddr, extendedkickmem2a_bank.baseaddr, 0xd0);
+					memcpy(kickmem_bank.baseaddr + ROM_SIZE_512 - 20, romend, sizeof(romend));
+					kickstart_fix_checksum(kickmem_bank.baseaddr, ROM_SIZE_512);
+				}
+			}
+		}
 
 		if (!singlebigrom) {
 			zfile_fseek(f, 0, SEEK_END);

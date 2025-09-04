@@ -450,7 +450,7 @@ static uae_u32 do_call_function_compat_asm (struct uni *uni)
 
 static void do_call_function (struct uni *uni)
 {
-//    printf("uni: calling native function %p\n", uni->native_function);
+    write_log("uni: calling native function %p\n", uni->native_function);
 
     frame_time_t start_time;
     const int flags = uni->flags;
