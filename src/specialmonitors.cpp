@@ -2052,7 +2052,8 @@ static bool a2024(struct vidbuffer *src, struct vidbuffer *dst)
 	doff = ((dxoff << RES_MAX) / avidinfo->xchange) * src->pixbytes;
 	found = false;
 
-	for (idline = 21; idline <= 29; idline += 8) {
+	int idlinestart = 21;
+	for (idline = idlinestart; idline <= idlinestart + 8; idline += 8) {
 		if (src->yoffset > (idline << VRES_MAX))
 			continue;
 		int x = (210 << RES_MAX) - src->xoffset;
@@ -3663,10 +3664,6 @@ static bool emulate_specialmonitors2(struct vidbuffer *src, struct vidbuffer *ds
 
 bool emulate_specialmonitors(struct vidbuffer *src, struct vidbuffer *dst)
 {
-	// compatibility fix for new chipset emulation
-	uae_u8 *bf = src->bufmem;
-	src->bufmem -= src->rowbytes;
-	
 	bool ret = true;
 	if (!emulate_specialmonitors2(src, dst, -1)) {
 		if (monitor) {
@@ -3676,8 +3673,6 @@ bool emulate_specialmonitors(struct vidbuffer *src, struct vidbuffer *dst)
 		}
 		ret = false;
 	}
-
-	src->bufmem = bf;
 	return ret;
 }
 
