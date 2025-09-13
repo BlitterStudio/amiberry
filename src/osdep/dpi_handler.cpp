@@ -1,5 +1,6 @@
 #include <cmath>
 #include "dpi_handler.hpp"
+#include <SDL_ttf.h>
 
 float DPIHandler::get_scale() {
     constexpr int display_index{0};

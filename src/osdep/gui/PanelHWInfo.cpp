@@ -13,11 +13,6 @@
 #include "blkdev.h"
 #include "gui_handling.h"
 
-enum
-{
-	MAX_INFOS = 18
-};
-
 enum { COL_TYPE, COL_NAME, COL_START, COL_END, COL_SIZE, COL_ID, COL_COUNT };
 
 static const char* column_caption[] =

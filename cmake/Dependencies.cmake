@@ -80,16 +80,20 @@ if (USE_UAENET_PCAP)
     endif()
 endif()
 
+if (USE_IMGUI)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
+else()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GUISAN)
+endif()
+
 include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
-add_subdirectory(external/libguisan)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        guisan
         mt32emu
         FLAC
         png
@@ -97,11 +101,27 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         z
         pthread
         dl
+        SDL2_ttf
+        SDL2_image
 )
+
+if (USE_IMGUI)
+    add_subdirectory(external/imgui)
+    target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
+else()
+    add_subdirectory(external/libguisan)
+    target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
+endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
 endif ()
 
 # Add dependencies to ensure external libraries are built
-add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
+add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage)
+if (USE_IMGUI)
+    add_dependencies(${PROJECT_NAME} imgui)
+else()
+    add_dependencies(${PROJECT_NAME} guisan)
+endif()
+

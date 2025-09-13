@@ -267,6 +267,37 @@ set(SOURCE_FILES
         src/slirp/udp.cpp
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
+        src/osdep/gui/main_window.cpp
+        src/osdep/vkbd/vkbd.cpp
+        src/newcpu.cpp
+        src/newcpu_common.cpp
+        src/readcpu.cpp
+        src/cpudefs.cpp
+        src/cpustbl.cpp
+        src/cpummu.cpp
+        src/cpummu30.cpp
+        src/cpuemu_0.cpp
+        src/cpuemu_11.cpp
+        src/cpuemu_13.cpp
+        src/cpuemu_20.cpp
+        src/cpuemu_21.cpp
+        src/cpuemu_22.cpp
+        src/cpuemu_23.cpp
+        src/cpuemu_24.cpp
+        src/cpuemu_31.cpp
+        src/cpuemu_32.cpp
+        src/cpuemu_33.cpp
+        src/cpuemu_34.cpp
+        src/cpuemu_35.cpp
+        src/cpuemu_40.cpp
+        src/cpuemu_50.cpp
+        src/jit/compemu.cpp
+        src/jit/compstbl.cpp
+        src/jit/compemu_fpp.cpp
+        src/jit/compemu_support.cpp
+)
+
+set (GUISAN_GUI_FILES
         src/osdep/gui/ControllerMap.cpp
         src/osdep/gui/CreateFolder.cpp
         src/osdep/gui/SelectorEntry.cpp
@@ -307,35 +338,7 @@ set(SOURCE_FILES
         src/osdep/gui/PanelThemes.cpp
         src/osdep/gui/PanelVirtualKeyboard.cpp
         src/osdep/gui/PanelWHDLoad.cpp
-        src/osdep/gui/main_window.cpp
         src/osdep/gui/Navigation.cpp
-        src/osdep/vkbd/vkbd.cpp
-        src/newcpu.cpp
-        src/newcpu_common.cpp
-        src/readcpu.cpp
-        src/cpudefs.cpp
-        src/cpustbl.cpp
-        src/cpummu.cpp
-        src/cpummu30.cpp
-        src/cpuemu_0.cpp
-        src/cpuemu_11.cpp
-        src/cpuemu_13.cpp
-        src/cpuemu_20.cpp
-        src/cpuemu_21.cpp
-        src/cpuemu_22.cpp
-        src/cpuemu_23.cpp
-        src/cpuemu_24.cpp
-        src/cpuemu_31.cpp
-        src/cpuemu_32.cpp
-        src/cpuemu_33.cpp
-        src/cpuemu_34.cpp
-        src/cpuemu_35.cpp
-        src/cpuemu_40.cpp
-        src/cpuemu_50.cpp
-        src/jit/compemu.cpp
-        src/jit/compstbl.cpp
-        src/jit/compemu_fpp.cpp
-        src/jit/compemu_support.cpp
 )
 
 set(PCEM_SOURCE_FILES
@@ -398,6 +401,13 @@ set(PCEM_SOURCE_FILES
         src/pcem/x87_timings.cpp
 )
 
+if (USE_IMGUI)
+    message("Using ImGui for GUI")
+else ()
+    message("Using libguisan for GUI")
+    list(APPEND SOURCE_FILES ${GUISAN_GUI_FILES})
+endif ()
+
 if (USE_PCEM)
     message(STATUS "PCem support enabled")
     list(APPEND SOURCE_FILES ${PCEM_SOURCE_FILES})
@@ -447,10 +457,15 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/threaddep
         src/archivers
         src/ppc/pearpc
-        external/libguisan/include
         external/mt32emu/src
         external/floppybridge/src
 )
+
+if (USE_IMGUI)
+    target_include_directories(${PROJECT_NAME} PRIVATE external/imgui)
+else()
+    target_include_directories(${PROJECT_NAME} PRIVATE external/libguisan/include)
+endif()
 
 # Install the executable
 install(TARGETS ${PROJECT_NAME}

@@ -126,6 +126,8 @@ int quickstart_conf = 0;
 bool host_poweroff = false;
 int relativepaths = 0;
 int saveimageoriginalpath = 0;
+int net_enumerated;
+struct netdriverdata* ndd[MAX_TOTAL_NET_DEVICES + 1];
 
 whdload_options whdload_prefs = {};
 struct amiberry_options amiberry_options = {};
@@ -2600,7 +2602,9 @@ static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"
 //	return NULL;
 //}
 
-extern int scsiromselected;
+int scsiromselected = 0;
+int scsiromselectednum = 0;
+int scsiromselectedcatnum = 0;
 
 void target_save_options(zfile* f, uae_prefs* p)
 {
@@ -5440,4 +5444,15 @@ void target_setdefaultstatefilename(const TCHAR* name)
 		}
 	}
 	_tcscpy(savestate_fname, path);
+}
+
+
+
+struct netdriverdata** target_ethernet_enumerate()
+{
+	if (net_enumerated)
+		return ndd;
+	ethernet_enumerate(ndd, 0);
+	net_enumerated = 1;
+	return ndd;
 }
