@@ -16,7 +16,9 @@
 #include "uae/types.h"
 
 #include "traps.h"
+#ifdef USE_GUISAN
 #include "guisan/color.hpp"
+#endif
 
 #define UAEMAJOR 8
 #define UAEMINOR 0
@@ -1282,15 +1284,19 @@ struct amiberry_hotkey
 
 struct amiberry_gui_theme
 {
+#ifdef USE_GUISAN
 	gcn::Color base_color;
 	gcn::Color selector_inactive;
 	gcn::Color selector_active;
 	gcn::Color background_color;
 	gcn::Color selection_color;
 	gcn::Color foreground_color;
+#endif
 	std::string font_name;
 	int font_size;
+#ifdef USE_GUISAN
 	gcn::Color font_color;
+#endif
 };
 
 struct amiberry_options

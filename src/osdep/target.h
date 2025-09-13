@@ -8,6 +8,7 @@
 #include <SDL.h>
 
 #include "options.h"
+#include "sana2.h"
 
 #define TARGET_NAME _T("amiberry")
 
@@ -97,6 +98,11 @@ void amiberry_gui_halt();
 void init_max_signals();
 void wait_for_vsync();
 unsigned long target_lastsynctime();
+extern struct netdriverdata* ndd[MAX_TOTAL_NET_DEVICES + 1];
+extern int net_enumerated;
+extern struct netdriverdata** target_ethernet_enumerate();
+extern void target_startup_msg(const TCHAR* title, const TCHAR* msg);
+extern int multithread_enabled;
 
 void save_amiberry_settings();
 void update_display(struct uae_prefs*);

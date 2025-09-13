@@ -40,25 +40,12 @@ static gcn::Label* lblRetroarch;
 
 static gcn::Button* cmdSaveMapping;
 
-static int SelectedPort = 1;
-static int SelectedFunction = 0;
-
 static gcn::StringListModel CustomEventList;
 static gcn::StringListModel CustomEventList_HotKey;
 static gcn::StringListModel CustomEventList_Menu;
 static gcn::StringListModel CustomEventList_Quit;
 static gcn::StringListModel CustomEventList_Reset;
 static gcn::StringListModel CustomEventList_Vkbd;
-
-const string label_button_list[] = {
-	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
-	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:",
-	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:"
-};
-
-const string label_axis_list[] = {
-	"Left X:", "Left Y:", "Right X:", "Right Y:", "L.Trigger:", "R.Trigger:"
-};
 
 class GroupActionListener : public gcn::ActionListener
 {

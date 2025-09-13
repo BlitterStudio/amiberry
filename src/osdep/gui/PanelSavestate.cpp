@@ -14,8 +14,6 @@
 #include "savestate.h"
 #include "gui_handling.h"
 
-int current_state_num = 0;
-
 static gcn::Window* grpNumber;
 static std::vector<gcn::RadioButton*> optStateSlot(15);
 static gcn::Label* lblFilename;

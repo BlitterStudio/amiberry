@@ -1,12 +1,14 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
-
+#ifdef USE_GUISAN
 #include <guisan/sdl/sdlinput.hpp>
+#endif
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "filesys.h"
 #include "options.h"
 #include "registry.h"
+#include "autoconf.h"
 
 enum
 {
@@ -31,6 +33,12 @@ static const std::vector<std::string> floppy_drive_types = {
 	"Disabled", "3.5\" DD", "3.5\" HD", "5.25\" (40)",
 	"5.25\" (80)", "3.5\" ESCOM", "FB: Normal", "FB: Compatible",
 	"FB: Turbo", "FB: Stalling"
+};
+
+static const int scsiromselectedmask[] = {
+	EXPANSIONTYPE_INTERNAL, EXPANSIONTYPE_SCSI, EXPANSIONTYPE_IDE, EXPANSIONTYPE_SASI, EXPANSIONTYPE_CUSTOM,
+	EXPANSIONTYPE_PCI_BRIDGE, EXPANSIONTYPE_X86_BRIDGE, EXPANSIONTYPE_RTG,
+	EXPANSIONTYPE_SOUND, EXPANSIONTYPE_NET, EXPANSIONTYPE_FLOPPY, EXPANSIONTYPE_X86_EXPANSION
 };
 
 static const TCHAR* memsize_names[] = {
@@ -139,6 +147,11 @@ enum
 	MAX_SOUND_MEM = 10
 };
 
+enum
+{
+	MAX_INFOS = 18
+};
+
 static const char* diskfile_filter[] = {
 	".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp",
 	".7z", ".lha", ".lzh", ".lzx", "\0"
@@ -156,10 +169,24 @@ static string drivebridgeModes[] =
 	"Stalling"
 };
 
+const string label_button_list[] = {
+	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
+	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:",
+	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:"
+};
+
+const string label_axis_list[] = {
+	"Left X:", "Left Y:", "Right X:", "Right Y:", "L.Trigger:", "R.Trigger:"
+};
+
+static int SelectedPort = 1;
+static int SelectedFunction = 0;
+
 using ConfigCategory = struct config_category
 {
 	const char* category;
 	const char* imagepath;
+#ifdef USE_GUISAN
 	gcn::SelectorEntry* selector;
 	gcn::Container* panel;
 
@@ -167,17 +194,21 @@ using ConfigCategory = struct config_category
 	void (*ExitFunc)();
 	void (*RefreshFunc)();
 	bool (*HelpFunc)(std::vector<std::string>&);
+#endif
 };
 
 extern bool gui_running;
+#ifdef USE_GUISAN
 extern gcn::Container* selectors;
 extern gcn::ScrollArea* selectorsScrollArea;
-extern ConfigCategory categories[];
 extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;
+#endif
+extern ConfigCategory categories[];
 
 // GUI Colors
 extern amiberry_gui_theme gui_theme;
+#ifdef USE_GUISAN
 extern gcn::Color gui_base_color;
 extern gcn::Color gui_background_color;
 extern gcn::Color gui_selector_inactive_color;
@@ -185,15 +216,21 @@ extern gcn::Color gui_selector_active_color;
 extern gcn::Color gui_selection_color;
 extern gcn::Color gui_foreground_color;
 extern gcn::Color gui_font_color;
-
+#endif
+#ifdef USE_GUISAN
 extern gcn::SDLInput* gui_input;
+#endif
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
-
+#ifdef USE_GUISAN
 extern gcn::SDLGraphics* gui_graphics;
 extern gcn::SDLTrueTypeFont* gui_font;
+#endif
 extern SDL_Texture* gui_texture;
 
+extern int scsiromselected;
+extern int scsiromselectednum;
+extern int scsiromselectedcatnum;
 
 extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
@@ -337,7 +374,9 @@ void RefreshPanelThemes();
 bool HelpPanelThemes(std::vector<std::string>& helptext);
 
 void refresh_all_panels();
+#ifdef USE_GUISAN
 void focus_bug_workaround(const gcn::Window* wnd);
+#endif
 void disable_resume();
 
 bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3,
@@ -443,7 +482,11 @@ extern void apply_theme_extras();
 extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);
 extern void disk_selection(const int shortcut, uae_prefs* prefs);
+extern int disk_swap(int entry, int mode);
+extern int disk_in_drive(int entry);
 
+#ifdef USE_GUISAN
 extern void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2);
+#endif
 
 #endif // GUI_HANDLING_H

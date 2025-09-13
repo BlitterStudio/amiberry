@@ -77,10 +77,6 @@ static gcn::CheckBox* chkScsi;
 static gcn::CheckBox* chkCD32Fmv;
 static gcn::CheckBox* chkSana2;
 
-int scsiromselected = 0;
-static int scsiromselectednum = 0;
-static int scsiromselectedcatnum = 0;
-
 static void gui_add_string(int* table, gcn::StringListModel* item, int id, const TCHAR* str)
 {
 	while (*table >= 0)
@@ -400,24 +396,6 @@ static void get_expansionrom_gui(expansionrom_gui* eg)
 	}
 	eg->expansionrom_gui_settings = settings;
 }
-
-static struct netdriverdata* ndd[MAX_TOTAL_NET_DEVICES + 1];
-static int net_enumerated;
-
-struct netdriverdata** target_ethernet_enumerate()
-{
-	if (net_enumerated)
-		return ndd;
-	ethernet_enumerate(ndd, 0);
-	net_enumerated = 1;
-	return ndd;
-}
-
-static const int scsiromselectedmask[] = {
-	EXPANSIONTYPE_INTERNAL, EXPANSIONTYPE_SCSI, EXPANSIONTYPE_IDE, EXPANSIONTYPE_SASI, EXPANSIONTYPE_CUSTOM,
-	EXPANSIONTYPE_PCI_BRIDGE, EXPANSIONTYPE_X86_BRIDGE, EXPANSIONTYPE_RTG,
-	EXPANSIONTYPE_SOUND, EXPANSIONTYPE_NET, EXPANSIONTYPE_FLOPPY, EXPANSIONTYPE_X86_EXPANSION
-};
 
 static void init_expansion_scsi_id()
 {

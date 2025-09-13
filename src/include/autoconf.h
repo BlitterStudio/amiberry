@@ -10,6 +10,7 @@
 #define UAE_AUTOCONF_H
 
 #include "uae/types.h"
+#include "memory.h"
 
 #define AFTERDOS_INIT_PRI ((-121) & 0xff)
 #define AFTERDOS_PRI ((-122) & 0xff)
