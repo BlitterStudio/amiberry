@@ -10,8 +10,6 @@
 #include "rommgr.h"
 #include "specialmonitors.h"
 
-extern int multithread_enabled;
-
 static gcn::Window* grpChipset;
 static gcn::RadioButton* optOCS;
 static gcn::RadioButton* optECSAgnus;

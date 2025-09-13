@@ -32,60 +32,6 @@ static gcn::Button* cmdDiskSwapperListAdd[MAX_SPARE_DRIVES];
 static gcn::ImageButton* cmdDiskSwapperListDelete[MAX_SPARE_DRIVES];
 static gcn::Button* cmdDiskSwapperRemoveAll;
 
-static int disk_in_drive(int entry)
-{
-	for (int i = 0; i < 4; i++) {
-		if (_tcslen(changed_prefs.dfxlist[entry]) > 0 && !_tcscmp(changed_prefs.dfxlist[entry], changed_prefs.floppyslots[i].df))
-			return i;
-	}
-	return -1;
-}
-
-static int disk_swap(int entry, int mode)
-{
-	int drv, i, drvs[4] = { -1, -1, -1, -1 };
-
-	for (i = 0; i < MAX_SPARE_DRIVES; i++) {
-		drv = disk_in_drive(i);
-		if (drv >= 0)
-			drvs[drv] = i;
-	}
-	if ((drv = disk_in_drive(entry)) >= 0) {
-		if (mode < 0) {
-			changed_prefs.floppyslots[drv].df[0] = 0;
-			return 1;
-		}
-
-		if (_tcscmp(changed_prefs.floppyslots[drv].df, currprefs.floppyslots[drv].df)) {
-			_tcscpy(changed_prefs.floppyslots[drv].df, currprefs.floppyslots[drv].df);
-			disk_insert(drv, changed_prefs.floppyslots[drv].df);
-		}
-		else {
-			changed_prefs.floppyslots[drv].df[0] = 0;
-		}
-		if (drvs[0] < 0 || drvs[1] < 0 || drvs[2] < 0 || drvs[3] < 0) {
-			drv++;
-			while (drv < 4 && drvs[drv] >= 0)
-				drv++;
-			if (drv < 4 && changed_prefs.floppyslots[drv].dfxtype >= 0) {
-				_tcscpy(changed_prefs.floppyslots[drv].df, changed_prefs.dfxlist[entry]);
-				disk_insert(drv, changed_prefs.floppyslots[drv].df);
-			}
-		}
-		return 1;
-	}
-	for (i = 0; i < 4; i++) {
-		if (drvs[i] < 0 && changed_prefs.floppyslots[i].dfxtype >= 0) {
-			_tcscpy(changed_prefs.floppyslots[i].df, changed_prefs.dfxlist[entry]);
-			disk_insert(i, changed_prefs.floppyslots[i].df);
-			return 1;
-		}
-	}
-	_tcscpy(changed_prefs.floppyslots[0].df, changed_prefs.dfxlist[entry]);
-	disk_insert(0, changed_prefs.floppyslots[0].df);
-	return 1;
-}
-
 static void diskswapper_addfile2(struct uae_prefs *prefs, const TCHAR *file, int slot)
 {
 	while (slot < MAX_SPARE_DRIVES) {
