@@ -751,41 +751,27 @@ static void do_fillrect_frame_buffer(const struct RenderInfo *ri, int X, int Y, 
 	}
 	break;
 	case 3:
-	{
-		const uae_u16 Pen1 = Pen & 0xffff;
-		const uae_u16 Pen2 = (Pen << 8) | ((Pen >> 16) & 0xff);
-		const uae_u16 Pen3 = Pen >> 8;
-		const bool same = (Pen & 0xff) == ((Pen >> 8) & 0xff) && (Pen & 0xff) == ((Pen >> 16) & 0xff);
-		for (int lines = 0; lines < Height; lines++, dst += bpr) {
-			auto *p = reinterpret_cast<uae_u16*>(dst);
-			if (same) {
-				memset(p, static_cast<int>(Pen) & 0xff, Width * 3);
-			} else {
-				for (cols = 0; cols < (Width & ~7); cols += 8) {
-					*p++ = Pen1;
-					*p++ = Pen2;
-					*p++ = Pen3;
-					*p++ = Pen1;
-					*p++ = Pen2;
-					*p++ = Pen3;
-					*p++ = Pen1;
-					*p++ = Pen2;
-					*p++ = Pen3;
-					*p++ = Pen1;
-					*p++ = Pen2;
-					*p++ = Pen3;
+		{
+			const uae_u8 r = Pen >> 0;
+			const uae_u8 g = Pen >> 8;
+			const uae_u8 b = Pen >> 16;
+			if (r == g && r == b) {
+				for (int lines = 0; lines < Height; lines++, dst += bpr) {
+					memset(dst, r, Width * 3);
 				}
-				auto p8 = reinterpret_cast<uae_u8*>(p);
-				while (cols < Width) {
-					*p8++ = Pen >> 0;
-					*p8++ = Pen >> 8;
-					*p8++ = Pen >> 16;
-					cols++;
+			}
+			else {
+				for (int lines = 0; lines < Height; lines++, dst += bpr) {
+					auto p8 = dst;
+					for (cols = 0; cols < Width; cols++) {
+						*p8++ = r;
+						*p8++ = g;
+						*p8++ = b;
+					}
 				}
 			}
 		}
-	}
-	break;
+		break;
 	case 4:
 	{
 		for (int lines = 0; lines < Height; lines++, dst += bpr) {
