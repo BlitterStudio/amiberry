@@ -90,6 +90,7 @@ public:
 		changed_prefs.immediate_blits = chkBlitImmed->isSelected();
 		changed_prefs.waiting_blits = chkBlitWait->isSelected();
 		changed_prefs.monitoremu = cboSpecialMonitors->getSelected();
+		changed_prefs.monitoremu_mon = 0;
 
 		auto n2 = chkMemoryCycleExact->isSelected();
 		auto n1 = chkCycleExact->isSelected();

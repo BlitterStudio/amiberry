@@ -461,14 +461,35 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 		}
 	}
 
-	for (auto& rtgboard : p->rtgboards) {
-		auto* const rbc = &rtgboard;
+	if (p->monitoremu && p->monitoremu_mon > 0) {
+		if (isfullscreen() != 0) {
+			p->monitoremu_mon = 0;
+			error_log(_T("Multi virtual monitor support requires windowed mode."));
+		}
+	}
+
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+		struct rtgboardconfig *rbc = &p->rtgboards[i];
+		if (rbc->monitor_id > 0 && p->monitoremu_mon == rbc->monitor_id) {
+			error_log(_T("Video port monitor %d was allocated for graphics card %d."), rbc->monitor_id + 1, i + 1);
+			p->monitoremu_mon = 0;
+		}
+		if (rbc->monitor_id > 0) {
+			if (!p->gfx_api) {
+				rbc->monitor_id = 0;
+				error_log(_T("Multi virtual monitor support requires SDL2 mode."));
+			}
+			if (isfullscreen() > 0) {
+				rbc->monitor_id = 0;
+				error_log(_T("Multi virtual monitor support is not available in fullscreen mode."));
+			}
+		}
 		if (rbc->rtgmem_size > max_z3fastmem && rbc->rtgmem_type == GFXBOARD_UAE_Z3)
 		{
 			error_log(
 				_T("Graphics card memory size %d (0x%x) larger than maximum reserved %d (0x%x)."), rbc->rtgmem_size,
-				rbc->rtgmem_size, 0x1000000, 0x1000000);
-			rbc->rtgmem_size = 0x1000000;
+				rbc->rtgmem_size, max_z3fastmem, max_z3fastmem);
+			rbc->rtgmem_size = max_z3fastmem;
 		}
 
 		if ((rbc->rtgmem_size & rbc->rtgmem_size - 1) != 0 || (rbc->rtgmem_size != 0 && rbc->rtgmem_size < 0x100000))
@@ -478,6 +499,15 @@ void fixup_prefs (struct uae_prefs *p, bool userconfig)
 				rbc->rtgmem_size = max_z3fastmem;
 			else
 				rbc->rtgmem_size = 0;
+		}
+		for (int j = 0; j < MAX_RTG_BOARDS; j++) {
+			struct rtgboardconfig *rbc2 = &p->rtgboards[j];
+			if (j == i)
+				continue;
+			if (rbc->monitor_id > 0 && rbc2->monitor_id == rbc->monitor_id) {
+				rbc2->monitor_id = 0;
+				error_log(_T("Graphics card %d and %d can't use same monitor %d."), i + 1, j + 1);
+			}
 		}
 	}
 

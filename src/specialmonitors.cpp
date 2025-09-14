@@ -518,7 +518,7 @@ static bool dctv(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines,
 	int signature_cnt = 0;
 	bool dctv_enabled = false;
 	int ycnt = 0;
-	memset(dctv_luma, 64, sizeof DCTV_BUFFER_SIZE);
+	memset(dctv_luma, 64, sizeof(dctv_luma));
 
 	for (y = ystart; y < yend; y++) {
 		int yoff = (((y * 2 + oddlines) - src->yoffset) / vdbl);
@@ -2623,7 +2623,7 @@ skip:
 		for (x = 0; x < src->inwidth; x++) {
 			uae_u8 *s2 = s + src->rowbytes;
 			uae_u8 *d2 = d + dst->rowbytes;
-			if (*s_genlock == 0xffff) {
+			if (*s_genlock == 0xff) {
 				PUT_PRGBA(d, d2, dst, 0, 0, 0, 0, 0, doublelines, false);
 			} else if ((!zclken && is_transparent(*s_genlock)) || (zclken && ztoggle)) {
 				a = amix2;
@@ -3367,10 +3367,10 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 #if 0
 				static bool xxx;
 				if (y == opal->control_y + 1) {
-					write_log("%02x ", val);
+					write_log(_T("%02x "), val);
 					xxx = true;
 				} else if (xxx) {
-					write_log("\n");
+					write_log(_T("\n"));
 					xxx = false;
 				}
 #endif
