@@ -806,7 +806,6 @@ static void setupcursor()
 	if (rbc->rtgmem_type >= GFXBOARD_HARDWARE)
 		return;
 
-	//gfx_lock ();
 	setupcursor_needed = 1;
 	if (cursordata && cursorwidth && cursorheight) {
 		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_BGRA32);
@@ -823,22 +822,19 @@ static void setupcursor()
 			}
 		}
 
-		auto* p96_formatted_cursor_surface = SDL_ConvertSurfaceFormat(p96_cursor_surface, SDL_PIXELFORMAT_BGRA32, 0);
-		if (p96_formatted_cursor_surface != nullptr) {
-			SDL_FreeSurface(p96_cursor_surface);
-			if (p96_cursor != nullptr) {
-				SDL_FreeCursor(p96_cursor);
-				p96_cursor = nullptr;
-			}
-			p96_cursor = SDL_CreateColorCursor(p96_formatted_cursor_surface, 0, 0);
-			SDL_FreeSurface(p96_formatted_cursor_surface);
-
-			SDL_SetCursor(p96_cursor);
-			setupcursor_needed = 0;
-			P96TRACE_SPR((_T("cursorsurface3d updated\n")));
+		if (p96_cursor != nullptr) {
+			SDL_FreeCursor(p96_cursor);
+			p96_cursor = nullptr;
 		}
-	} else {
-		P96TRACE_SPR((_T("cursorsurfaced3d LockRect() failed %08x\n"), hr));
+		p96_cursor = SDL_CreateColorCursor(p96_cursor_surface, 0, 0);
+		SDL_FreeSurface(p96_cursor_surface);
+
+		SDL_SetCursor(p96_cursor);
+		setupcursor_needed = 0;
+		P96TRACE_SPR((_T("cursorsurface3d updated\n")));
+	}
+	else {
+		P96TRACE_SPR((_T("cursorsurface3d LockRect() failed\n")));
 	}
 	//gfx_unlock ();
 #else
@@ -1870,17 +1866,11 @@ static void updatesprcolors (int bpp)
 #ifdef AMIBERRY
 static void putmousepixel(const SDL_Surface* cursor_surface, const int x, const int y, const int c, const uae_u32 *ct)
 {
+	auto* const target_pixel = reinterpret_cast<Uint32*>(static_cast<Uint8*>(cursor_surface->pixels) + y * cursor_surface->pitch + x * cursor_surface->format->BytesPerPixel);
 	if (c == 0) {
-		auto* const target_pixel = reinterpret_cast<Uint32*>(static_cast<Uint8*>(cursor_surface->pixels) + y * cursor_surface->pitch + x * cursor_surface->
-			format->BytesPerPixel);
 		*target_pixel = 0;
 	} else {
-		const uae_u32 val = ct[c];
-		auto* pixels = static_cast<unsigned char*>(cursor_surface->pixels);
-		pixels[4 * (y * cursor_surface->pitch + x) + 0] = (val >> 16); //Red
-		pixels[4 * (y * cursor_surface->pitch + x) + 1] = (val >> 8); //Green
-		pixels[4 * (y * cursor_surface->pitch + x) + 2] = val; //Blue
-		pixels[4 * (y * cursor_surface->pitch + x) + 3] = 255; //Alpha
+		*target_pixel = ct[c];
 	}
 }
 #else
@@ -1910,7 +1900,6 @@ static int createwindowscursor(int monid, int set, int chipset)
 {
 #ifdef AMIBERRY
 	SDL_Surface* cursor_surface = nullptr;
-	SDL_Surface* formatted_cursor_surface = nullptr;
 	int ret = 0;
 	bool isdata = false;
 	SDL_Cursor* old_cursor = p96_cursor;
@@ -1977,7 +1966,8 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 		ct = sprite_0_colors;
 		image = tmp_sprite;
-	} else {
+	}
+	else {
 		w = cursorwidth;
 		h = cursorheight;
 		ct = cursorrgbn;
@@ -1987,7 +1977,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 	datasize = h * ((w + 15) / 16) * 16;
 
 	if (p96_cursor) {
-		if (w == tmp_sprite_w && h == tmp_sprite_h && !memcmp(tmp_sprite_data, image, datasize) && !memcmp(tmp_sprite_colors, ct, sizeof (uae_u32)*4)) {
+		if (w == tmp_sprite_w && h == tmp_sprite_h && !memcmp(tmp_sprite_data, image, datasize) && !memcmp(tmp_sprite_colors, ct, sizeof(uae_u32) * 4)) {
 			if (SDL_GetCursor() == p96_cursor) {
 				wincursor_shown = 1;
 				return 1;
@@ -2001,13 +1991,30 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
+	cursor_surface = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
+	if (!cursor_surface)
+		goto end;
+
+	isdata = false;
+	for (int y = 0; y < h; y++) {
+		uae_u8* s = image + y * w;
+		for (int x = 0; x < w; x++) {
+			int c = *s++;
+			putmousepixel(cursor_surface, x, y, c, ct);
+			if (c > 0) {
+				isdata = true;
+			}
+		}
+	}
+	ret = 1;
+
 end:
 	if (isdata) {
-		p96_cursor = SDL_CreateColorCursor(formatted_cursor_surface, 0, 0);
+		p96_cursor = SDL_CreateColorCursor(cursor_surface, 0, 0);
 		tmp_sprite_w = w;
 		tmp_sprite_h = h;
 		memcpy(tmp_sprite_data, image, datasize);
-		memcpy(tmp_sprite_colors, ct, sizeof (uae_u32) * 4);
+		memcpy(tmp_sprite_colors, ct, sizeof(uae_u32) * 4);
 	}
 
 	if (cursor_surface != nullptr)
@@ -2016,19 +2023,13 @@ end:
 		cursor_surface = nullptr;
 	}
 
-	if (formatted_cursor_surface != nullptr)
-	{
-		SDL_FreeSurface(formatted_cursor_surface);
-		formatted_cursor_surface = nullptr;
-	}
-
 	if (p96_cursor) {
 		SDL_SetCursor(p96_cursor);
 		wincursor_shown = 1;
 	}
 
 	if (!ret) {
-		write_log(_T("RTG Windows color cursor creation failed\n"));
+		write_log(_T("RTG SDL color cursor creation failed\n"));
 	}
 
 	if (old_cursor) {
