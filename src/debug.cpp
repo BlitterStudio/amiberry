@@ -5047,7 +5047,7 @@ static void writeintomem (TCHAR **c)
 	}
 end:
 	if (eaddr != 0xffffffff)
-		console_out_f(_T("Wrote data to %08x - %08x\n"), addrc, addr);
+		console_out_f(_T("Wrote data to %08x - %08x\n"), addrc, addr - 1);
 }
 
 static uae_u8 *dump_xlate (uae_u32 addr)
