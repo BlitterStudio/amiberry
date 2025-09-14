@@ -1293,7 +1293,7 @@ void init_row_map(void)
 	struct vidbuffer *vb = vidinfo->inbuffer;
 	static uae_u8 *oldbufmem;
 	static struct vidbuffer *oldvb;
-	static int oldheight, oldpitch;
+	static int oldheight_alloc, oldheight, oldpitch;
 	static bool oldgenlock, oldburst;
 	int i, j;
 
@@ -1308,7 +1308,8 @@ void init_row_map(void)
 
 	if (oldbufmem && oldbufmem == vb->bufmem &&
 		oldvb == vb &&
-		oldheight == vb->height_allocated &&
+		oldheight_alloc == vb->height_allocated &&
+		oldheight == vb->outheight &&
 		oldpitch == vb->rowbytes &&
 		oldgenlock == init_genlock_data &&
 		oldburst == (row_map_color_burst_buffer ? 1 : 0)) {
@@ -1343,7 +1344,8 @@ void init_row_map(void)
 	}
 	oldvb = vb;
 	oldbufmem = vb->bufmem;
-	oldheight = vb->height_allocated;
+	oldheight_alloc = vb->height_allocated;
+	oldheight = vb->outheight;
 	oldpitch = vb->rowbytes;
 	oldgenlock = init_genlock_data;
 	oldburst = row_map_color_burst_buffer ? 1 : 0;
@@ -1520,6 +1522,12 @@ static void center_image (void)
 
 	vidinfo->inbuffer->xoffset = visible_left_border << (RES_MAX - currprefs.gfx_resolution);
 	vidinfo->inbuffer->yoffset = thisframe_y_adjust << VRES_MAX;
+
+	int linedbl = currprefs.gfx_vresolution;
+	if (doublescan > 0 && interlace_seen <= 0) {
+		linedbl = 0;
+	}
+	min_ypos_for_screen = minfirstline << linedbl;
 
 	if (center_reset > 0) {
 		center_reset--;
@@ -1980,7 +1988,10 @@ static void vbcopy(struct vidbuffer *vbout, struct vidbuffer *vbin)
 {
 	if (vbout->locked) {
 		for (int h = 0; h < vbout->height_allocated && h < vbin->height_allocated; h++) {
-			memcpy(vbout->bufmem + h * vbout->rowbytes, vbin->bufmem + h * vbin->rowbytes, (vbin->width_allocated > vbout->width_allocated ? vbout->width_allocated : vbin->width_allocated) * vbout->pixbytes);
+			uae_u8 *dst = vbout->bufmem + h * vbout->rowbytes;
+			uae_u8 *src = vbin->bufmem + h * vbin->rowbytes;
+			int len = vbin->width_allocated > vbout->width_allocated ? vbout->width_allocated : vbin->width_allocated;
+			memcpy(dst, src, len * vbout->pixbytes);
 		}
 	}
 }
