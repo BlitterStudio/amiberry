@@ -114,6 +114,10 @@ ConfigCategory categories[] = {
 	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
 #elif USE_IMGUI
+static bool show_message_box = false;
+static char message_box_title[128] = "";
+static char message_box_message[2048] = "";
+
 ConfigCategory categories[] = {
   {"About", "amigainfo.png"},
   {"Paths", "paths.png"},
@@ -1233,7 +1237,7 @@ void gui_widgets_init()
 	selectorsScrollArea = new gcn::ScrollArea();
 	selectorsScrollArea->setContent(selectors);
 	selectorsScrollArea->setBaseColor(gui_base_color);
-	selectorsScrollArea->setBackgroundColor(gui_base_color);
+	selectorsScrollArea->setBackgroundColor(gui_background_color);
 	selectorsScrollArea->setForegroundColor(gui_foreground_color);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setFrameSize(1);
@@ -1421,6 +1425,13 @@ void run_gui()
 	init_max_signals();
 }
 #elif USE_IMGUI
+void ShowMessageBox(const char* title, const char* message)
+{
+	strncpy(message_box_title, title, sizeof(message_box_title) - 1);
+	strncpy(message_box_message, message, sizeof(message_box_message) - 1);
+	show_message_box = true;
+}
+
 void run_gui()
 {
 	gui_running = true;
@@ -1477,23 +1488,51 @@ void run_gui()
 		}
 		else if (last_active_panel == PANEL_PATHS)
 		{
-			// --- 5) Temporary stub to avoid TCHAR[8][4096] to char* mismatch and unknown symbols ---
-			// Re-enable gradually. When editing arrays like refs.path_rom.path, index them: path[i]
-			// not the whole 2D array.
-			ImGui::Text("Paths panel (ImGui) is WIP.");
-			ImGui::Separator();
-			ImGui::TextWrapped("Tip: edit multi-path arrays by indexing, e.g. refs.path_rom.path[i], "
-							   "not refs.path_rom.path. Use MAX_DPATH for element size.");
-			if (ImGui::Button("Rescan Paths"))
-				scan_roms(true);
-			if (ImGui::Button("Update WHDBooter files"))
+			char tmp[MAX_DPATH];
+			ImGui::Text("System ROMs:");
+			get_rom_path(tmp, sizeof tmp);
+			ImGui::InputText("##SystemROMs", tmp, MAX_DPATH);
+			ImGui::SameLine();
+			if (ImGui::Button("...##SystemROMs"))
 			{
-				//download_whdbooter_files();
+				//std::string path = SelectFolder("Folder for System ROMs", changed_prefs.path_rom.path[0]);
+				//if (!path.empty())
+				//	set_rom_path(path);
 			}
-			if (ImGui::Button("Update Controllers DB"))
+			ImGui::Text("Configuration files:");
+			get_configuration_path(tmp, sizeof tmp);
+			ImGui::InputText("##ConfigPath", tmp, MAX_DPATH);
+			ImGui::SameLine();
+			if (ImGui::Button("...##ConfigPath"))
 			{
-				//download_controllers_db();
+				//std::string path = SelectFolder("Folder for configuration files", tmp);
+				//if (!path.empty())
+				//	set_configuration_path(path);
 			}
+		}
+		else if (last_active_panel == PANEL_QUICKSTART)
+		{
+			const char* models[] = { "Amiga 500", "Amiga 500+", "Amiga 600", "Amiga 1000", "Amiga 1200", "Amiga 3000", "Amiga 4000", "Amiga 4000T", "CD32", "CDTV", "American Laser Games / Picmatic", "Arcadia Multi Select system", "Macrosystem" };
+			ImGui::Combo("Amiga model", &quickstart_model, models, IM_ARRAYSIZE(models));
+
+			const char* configs[] = { "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM", "1.3 ROM, ECS Agnus, 1 MB Chip RAM", "1.3 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM" };
+			ImGui::Combo("Config", &quickstart_conf, configs, IM_ARRAYSIZE(configs));
+
+			ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
+
+			for (int i = 0; i < 2; ++i)
+			{
+				char label[10];
+				snprintf(label, 10, "DF%d:", i);
+				ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
+				ImGui::SameLine();
+				ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
+			}
+
+			ImGui::Checkbox("CD drive", &changed_prefs.cdslots[0].inuse);
+
+			if (ImGui::Button("Set configuration"))
+				built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 		}
 		else if (last_active_panel == PANEL_CONFIGURATIONS)
 		{
@@ -1545,30 +1584,6 @@ void run_gui()
 					selected = -1;
 				}
 			}
-		}
-		else if (last_active_panel == PANEL_QUICKSTART)
-		{
-			const char* models[] = { "Amiga 500", "Amiga 500+", "Amiga 600", "Amiga 1000", "Amiga 1200", "Amiga 3000", "Amiga 4000", "Amiga 4000T", "CD32", "CDTV", "American Laser Games / Picmatic", "Arcadia Multi Select system", "Macrosystem" };
-			ImGui::Combo("Amiga model", &quickstart_model, models, IM_ARRAYSIZE(models));
-
-			const char* configs[] = { "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM", "1.3 ROM, ECS Agnus, 1 MB Chip RAM", "1.3 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM" };
-			ImGui::Combo("Config", &quickstart_conf, configs, IM_ARRAYSIZE(configs));
-
-			ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
-
-			for (int i = 0; i < 2; ++i)
-			{
-				char label[10];
-				sprintf(label, "DF%d:", i);
-				ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
-				ImGui::SameLine();
-				ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
-			}
-
-			ImGui::Checkbox("CD drive", &changed_prefs.cdslots[0].inuse);
-
-			if (ImGui::Button("Set configuration"))
-				built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 		}
 		else if (last_active_panel == PANEL_CPU)
 		{
@@ -1690,7 +1705,7 @@ void run_gui()
 			for (int i = 0; i < 4; ++i)
 			{
 				char label[10];
-				sprintf(label, "DF%d:", i);
+				snprintf(label, 10, "DF%d:", i);
 				ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
 				ImGui::SameLine();
 				ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
@@ -2186,10 +2201,70 @@ void run_gui()
 		if (ImGui::Button("Restart"))
 			uae_reset(1, 1);
 		ImGui::SameLine();
+		if (ImGui::Button("Help"))
+		{
+			std::string help_str;
+			switch(last_active_panel)
+			{
+				case PANEL_ABOUT:
+				{
+					help_str = "This panel contains information about the version of Amiberry, when it was changed,\nwhich version of SDL2 it was compiled against and currently using.\n \nFurthermore, you can also find the GPLv3 license notice here, and if you scroll down\nall the credits to the people behind the development of this emulator as well.\n \nAt the bottom of the screen, there are a few buttons available regardless of which\npanel you have selected. Those are: \n \n\"Shutdown\": allows you to shutdown the whole system Amiberry is running on. This\n option can be disabled if you wish, by setting \'disable_shutdown_button=yes\' in\n in your amiberry.conf file.\n \n\"Quit\": This quits Amiberry, as you'd expect.\n \n\"Restart\": This button will stop emulation (if running), reload Amiberry and reset\n the currently loaded configuration. This has a similar effect as if you Quit and start\n Amiberry again.\n It can be useful if you want to change a setting that cannot be changed on-the-fly,\n and you don't want to quit and start the Amiberry again to do that.\n \n\"Help\": This will display some on-screen help/documentation, relating to the Panel\n you are currently in.\n \n\"Reset\": This button will trigger a hard reset of the emulation, which will reboot\n with the current settings. \n \n\"Start\": This button starts the emulation, using the current settings you have set.\n ";
+				}
+				break;
+				case PANEL_PATHS:
+				{
+					help_str = "Here you can configure the various paths for Amiberry resources. In normal usage,\nthe default paths should work fine, however if you wish to change any path, you\ncan use the \"...\" button, to select the folder/path of your choosing. Details\nfor each path resource appear below.\n \nYou can enable/disable logging and specify the location of the logfile by using\nthe relevant options. A logfile is useful when trying to troubleshoot something,\nbut otherwise this option should be off, as it will incur some extra overhead.\nYou can also redirect the log output to console, by enabling that logging option.\nYou can alternatively enable log output to console if you pass the --log option\nto Amiberry on startup.\n \nThe \"Rescan Paths\" button will rescan the paths specified above and refresh the\nlocal cache. This should be done if you added kickstart ROMs for example, in order\nfor Amiberry to pick them up. This button will regenerate the amiberry.conf file\nif it's missing, and will be populated with the default values.\n \nThe \"Update WHDBooter files\" button will attempt to download the latest XML used for\nthe WHDLoad-booter functionality of Amiberry, along with all related files in the\n\"whdboot\" directory. It requires an internet connection and write permissions in the\ndestination directory. The downloaded XML file will be stored in the default location\n(whdboot/game-data/whdload_db.xml). Once the file is successfully downloaded, you\nwill also get a dialog box informing you about the details. A backup copy of the\nexisting whdload_db.xml is made (whdboot/game-data/whdload_db.bak), to preserve any\ncustom edits that may have been made. The rest of the files will be updated with the\nlatest version from the repository.\n \nThe \"Update Controllers DB\" button will attempt to download the latest version of\nthe bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.\nThe file contains the \"official\" mappings for recognized controllers by SDL2 itself.\nPlease note that this is separate from the user-configurable gamecontrollerdb_user.txt\nfile, which is contained in the Controllers path. That file is never overwritten, and\nit will be loaded after the official one, so any entries contained there will take a \nhigher priority. Once the file is successfully downloaded, you will also get a dialog\nbox informing you about the details. A backup copy of the existing gamecontrollerdb.txt\n(conf/gamecontrollerdb.bak) is created, to preserve any custom edits it may contain.\n \nThe paths for Amiberry resources include;\n \n- System ROMs: The Amiga Kickstart files are by default located under 'roms'.\n  After changing the location of the Kickstart ROMs, or adding any additional ROMs, \n  click on the \"Rescan\" button to refresh the list of the available ROMs. Please\n  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory\n  at this location, if you wish to use the MT-32 MIDI emulation feature in Amiberry.\n \n- Configuration files: These are located under \"conf\" by default. This is where your\n  configurations will be stored, but also where Amiberry keeps the special amiberry.conf\n  file, which contains the default settings the emulator uses when it starts up. This\n  is also where the bundled gamecontrollersdb.txt file is located, which contains the\n  community-maintained mappings for various controllers that SDL2 recognizes.\n \n- NVRAM files: the location where CDTV/CD32 modes will store their NVRAM files.\n \n- Plugins path: the location where external plugins (such as the CAPSimg or the\n  floppybridge plugin) are stored.\n \n- Screenshots: any screenshots you take will be saved by default in this location.\n \n- Save state files: if you use them, they will be saved in the specified location.\n \n- Controller files: any custom (user-generated) controller mapping files will be saved\n  in this location. This location is also used in RetroArch environments (ie; such as\n  RetroPie) to point to the directory containing the controller mappings.\n \n- RetroArch configuration file (retroarch.cfg): only useful if you are using RetroArch\n  (ie; in RetroPie). Amiberry can pick-up the configuration file from the path specified\n  here, and load it automatically, applying any mappings it contains. You can ignore this\n  path if you're not using RetroArch.\n \n- WHDboot files: This directory contains the files required by the whd-booter process\n  to launch WHDLoad game archives. In normal usage you should not need to change this.\n \n- Below that are 4 additional paths, that can be used to better organize your various\n  Amiga files, and streamline GUI operations when it comes to selecting the different\n  types of Amiga media. The file selector buttons in Amiberry associated with each of\n  the media types, will open these path locations. The defaults are shown, but these\n  can be changed to better suit your requirements.\n \nThese settings are saved automatically when you click Rescan, or exit the emulator.\n ";
+				}
+				break;
+				case PANEL_QUICKSTART:
+				{
+					help_str = "Simplified start of emulation by just selecting the Amiga model and the disk/CD\nyou want to use.\n \nAfter selecting the Amiga model, you can choose from a small list of standard\nconfigurations for this model to start with. Depending on the model selected,\nthe floppy or CD drive options will be enabled for you, which you can use to\ninsert any floppy disk or CD images, accordingly.\nIf you need more advanced control over the hardware you want to emulate, you\ncan always use the rest of the GUI for that.\n \nYou can reset the current configuration to your selected model, by clicking the\nSet Configuration button.\n \nWhen you activate \"Start in Quickstart mode\", the next time you run the emulator,\nit  will start with the QuickStart panel. Otherwise you start in the configurations panel.\n \nYou can optionally select a WHDLoad LHA title, and have Amiberry auto-configure\nall settings, based on the WHDLoad XML (assuming the title is found there).\nThen you can just click on Start to begin!";
+				}
+				break;
+				case PANEL_CONFIGURATIONS:
+				{
+					help_str = "In this panel, you can see a list of all your previously saved configurations. The\nConfiguration file (.uae) contains all the emulator settings available in it. Loading\nsuch a file, will apply those settings to Amiberry immediately. Accordingly, you can\nSave your current settings in a file here, for future use.\n \nPlease note the \"default\" config name is special for Amiberry, since if it exists,\nit will be loaded automatically on startup. This will override the emulator options\nAmiberry sets internally at startup, and this may impact on compatibility when using\nthe Quickstart panel.\n \nTo load a configuration, select the entry in the list, and then click on the \"Load\"\nbutton. Note that if you double-click on an entry in the list, the emulation starts\nimmediately using that configuration.\n \nTo create/save a new configuration, set all emulator options as required, then enter\na new \"Name\", optionally provide a short description, and then click on the \"Save\"\nbutton. When trying to Save a configuration, if the supplied filename already exists,\nit will be automatically renamed to \"configuration.backup\", to keep as a backup.\n \nPlease note a special case exists when creating/saving a configuration file for use \nwith floppy disk images and whdload archives. The auto-config logic in Amiberry will\nscan for a configuration file of the same \"Name\" as the disk image or .lha archive\nbeing loaded. After you load a floppy disk image or whdload archive, and Start the \nemulation, you can use the \"F12\" key to show the GUI, and in this panel the \"Name\"\nfield for the configuration will be filled correctly. Do not change this, as it will\nstop auto-config from working. You may change the description if you desire.\n \nTo delete the currently selected configuration file from the disk (and the list),\nclick on the \"Delete\" button.";
+				}
+				break;
+				case PANEL_CPU:
+				{
+					help_str = "Select the required Amiga CPU (68000 - 68060). If you select 68020, you can choose\nbetween 24-bit (68EC020) or 32-bit (68020) addressing.\n \nThe option \"More compatible\" will emulate prefetch (68000) or prefetch and\ninstruction cache. It's more compatible but slower, but not required\nfor most games and demos.\n \nJIT/JIT FPU enables the Just-in-time compiler. This may break compatibility in some games.\nNote: Not available in all platforms currently\n \nThe available FPU models depend on the selected CPU type. The option \"More compatible\"\nactivates a more accurate rounding method and compare of two floats.\n \nThe CPU Speed slider allows you to set the CPU speed. The fastest possible setting\nwill run the CPU as fast as possible. The A500/A1200 setting will run the CPU at\nthe speed of an A500 or A1200. The slider allows you to set the CPU speed in\npercentages of the maximum speed.\n \nThe CPU Idle slider allows you to set how much the CPU should sleep when idle.\nThis is useful to keep the system temperature down.\n \nThe MMU option allows you to enable the Memory Management Unit. This is only available\nfor the 68030, 68040 and 68060 CPUs.\n \nThe FPU option allows you to enable the FPU. This is only available for the 68020, 68030,\n68040 and 68060 CPUs.\n \nThe PPC emulation option allows you to enable the PowerPC emulation. This is only available\nfor the 68040 and 68060 CPUs and requires an extra plugin (qemu-uae) to be available.";
+				}
+				break;
+				case PANEL_CHIPSET:
+				{
+					help_str = "If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games,\nselect \"Full ECS\" instead. Some older Amiga games require \"OCS\" or \"ECS Agnus\".\nYou have to play with these options if a game won't work as expected. By selecting\nan entry in \"Extra\", all internal Chipset settings will change to the required values\nfor the specified Amiga model. For some games, you have to switch to \"NTSC\"\n(60 Hz instead of 50 Hz) for correct timing.\n \nThe \"Multithreaded drawing\" option, will enable some Amiberry optimizations\nthat will help the performance when drawing lines on native screen modes.\nIn some cases, this might cause screen tearing artifacts, so you can choose to\ndisable this option when needed. Note that it cannot be changed once emulation has\nstarted.\n \nIf you see graphic issues in a game, try the \"Immediate\" or \"Wait for blitter\"\nBlitter options.\n \nFor \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine\nfor nearly all games.";
+				}
+				break;
+				case PANEL_ROM:
+				{
+					help_str = "Select the required Kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".\n \nIn \"Extended ROM File\", you can only select the required ROM for CD32 emulation.\n \nYou can use the ShapeShifter support checkbox to patch the system ROM for ShapeShifter\ncompatibility. You do not need to run PrepareEmul on startup with this enabled.\n \nIn \"Cartridge ROM File\", you can select the CD32 FMV module to activate video\nplayback in CD32. There are also some Action Replay and Freezer cards and the built-in\nHRTMon available.\n \nThe Advanced UAE Expansion/Boot ROM option allows you to set the following:\nRom Disabled: All UAE expansions are disabled. Only needed if you want to force it.\nOriginal UAE: Autoconfig board + F0 ROM.\nNew UAE: 64k + F0 ROM - not very useful (per Toni Wilen).";
+				}
+				break;
+			}
+
+			if (!help_str.empty())
+				ShowMessageBox("Help", help_str.c_str());
+		}
+		ImGui::SameLine();
 		if (ImGui::Button("Start"))
 			gui_running = false;
 		ImGui::EndChild();
 
+		if (show_message_box)
+		{
+			ImGui::OpenPopup(message_box_title);
+			if (ImGui::BeginPopupModal(message_box_title, &show_message_box, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::TextWrapped("%s", message_box_message);
+				if (ImGui::Button("OK", ImVec2(120, 0))) {
+					show_message_box = false;
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+		}
+		
 		ImGui::End();
 
 		// Rendering

@@ -1208,6 +1208,8 @@ void gui_message(const char* format, ...)
 	va_end(parms);
 #ifdef USE_GUISAN
 	ShowMessage("", msg, "", "", "Ok", "");
+#elif USE_IMGUI
+	ShowMessageBox("Message", msg);
 #endif
 }
 

@@ -248,6 +248,7 @@ typedef struct {
 
 extern vector<ConfigFileInfo*> ConfigFilesList;
 
+#ifdef USE_GUISAN
 void InitPanelAbout(const struct config_category& category);
 void ExitPanelAbout();
 void RefreshPanelAbout();
@@ -374,11 +375,13 @@ void RefreshPanelThemes();
 bool HelpPanelThemes(std::vector<std::string>& helptext);
 
 void refresh_all_panels();
-#ifdef USE_GUISAN
 void focus_bug_workaround(const gcn::Window* wnd);
-#endif
 void disable_resume();
+#endif
 
+#ifdef USE_IMGUI
+void ShowMessageBox(const char* title, const char* message);
+#endif
 bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3,
                  const std::string& button1, const std::string& button2);
 amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1);
