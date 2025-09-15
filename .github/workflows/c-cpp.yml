@@ -26,6 +26,9 @@ jobs:
             (readlink $f | grep -q -s "/Library") && echo Removing "$f" && rm -f "$f"; \
           done || exit 0
 
+      - name: Pre-install gobject-introspection from source
+        run: brew install --build-from-source gobject-introspection
+
       - name: Install dependencies (Homebrew)
         run: |
           brew update && \
@@ -109,6 +112,9 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+
+      - name: Pre-install gobject-introspection from source
+        run: brew install --build-from-source gobject-introspection
 
       - name: Install dependencies (Homebrew)
         run: |
