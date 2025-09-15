@@ -113,9 +113,6 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - name: Pre-install gobject-introspection from source
-        run: brew install --build-from-source gobject-introspection
-
       - name: Install dependencies (Homebrew)
         run: |
           brew update
