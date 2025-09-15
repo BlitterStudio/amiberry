@@ -41,21 +41,19 @@
 #include "picasso96.h"
 #include "uaenative.h"
 
-static long samples, playchannel, intcount;
+static long intcount;
 static int record_enabled;
 int ahi_on;
-static uae_u8 *sndptrmax;
 static uae_u8 soundneutral;
 
 //static LPSTR lpData,sndptrout;
 extern uae_u32 chipmem_mask;
-static uae_u8 *ahisndbuffer, *sndrecbuffer;
-static int ahisndbufsize, *ahisndbufpt, ahitweak;;
+static uae_u8 *ahisndbuffer;
+static int ahisndbufsize, ahitweak;
 int ahi_pollrate = 40;
 
 int sound_freq_ahi, sound_channels_ahi, sound_bits_ahi;
 
-static int vin, devicenum;
 static int amigablksize;
 
 static uae_u32 sound_flushes2 = 0;
@@ -64,7 +62,7 @@ SDL_AudioDeviceID ahi_dev;
 SDL_AudioDeviceID ahi_dev_rec;
 SDL_AudioSpec ahi_want, ahi_have;
 
-Uint32 ahi_buffer_byte_pos = 0;
+static int ahi_write_pos;
 
 struct winuae	//this struct is put in a6 if you call
 	//execute native function
@@ -81,7 +79,7 @@ void ahi_close_sound()
 		return;
 	ahi_on = 0;
 	record_enabled = 0;
-	ahisndbufpt = reinterpret_cast<int*>(ahisndbuffer);
+	ahi_write_pos = 0;
 
 	if (ahi_dev) {
 		SDL_PauseAudioDevice(ahi_dev, 1);
@@ -111,6 +109,7 @@ void ahi_updatesound(int force)
 
 	if (sound_flushes2 == 1) {
 		oldpos = 0;
+		ahi_write_pos = 0;
 		intcount = 1;
 		INTREQ(0x8000 | 0x2000);
 
@@ -141,12 +140,15 @@ void ahi_updatesound(int force)
 		}
 	}
 
+	if (oldpos == ahi_write_pos)
+		return; // buffer is empty
+
 	dwBytes1 = amigablksize * 4;
 	dwData1 = ahisndbuffer + oldpos;
 
 	if (currprefs.sound_stereo_swap_ahi) {
 		int i;
-		auto p = reinterpret_cast<uae_s16*>(ahisndbuffer);
+		auto p = reinterpret_cast<uae_s16*>(dwData1);
 		for (i = 0; i < dwBytes1 / 2; i += 2) {
 			uae_s16 tmp;
 			tmp = p[i + 0];
@@ -155,17 +157,12 @@ void ahi_updatesound(int force)
 		}
 	}
 
-	// Copy the audio data to the buffer
-	memcpy(dwData1, ahisndbuffer, dwBytes1);
-	
-	sndptrmax = ahisndbuffer + ahisndbufsize;
-	ahisndbufpt = reinterpret_cast<int*>(ahisndbuffer);
-
 	SDL_QueueAudio(ahi_dev, dwData1, dwBytes1);
 
 	oldpos += amigablksize * 4;
 	if (oldpos >= ahisndbufsize)
-		oldpos -= ahisndbufsize;
+		oldpos = 0;
+
 	if (oldpos != pos) {
 		intcount = 1;
 		INTREQ(0x8000 | 0x2000);
@@ -294,8 +291,7 @@ static int ahi_init_sound()
 
 	setvolume_ahi(0);
 
-	ahisndbufpt = reinterpret_cast<int*>(ahisndbuffer);
-	sndptrmax = ahisndbuffer + ahisndbufsize;
+	ahi_write_pos = 0;
 	memset(ahisndbuffer, soundneutral, static_cast<size_t>(amigablksize) * 8);
 	ahi_on = 1;
 	return sound_freq_ahi;
@@ -391,8 +387,14 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 	case 2:
 		{
 			uaecptr addr = m68k_areg (regs, 0);
+			auto* ahisndbufpt = reinterpret_cast<int*>(ahisndbuffer + ahi_write_pos);
 			for (int i = 0; i < amigablksize * 4; i += 4)
 				*ahisndbufpt++ = static_cast<int>(get_long(addr + i));
+
+			ahi_write_pos += amigablksize * 4;
+			if (ahi_write_pos >= ahisndbufsize)
+				ahi_write_pos = 0;
+
 			ahi_finish_sound_buffer();
 		}
 		return amigablksize;
@@ -453,41 +455,43 @@ uae_u32 REGPARAM2 ahi_demux (TrapContext *context)
 		lpDSB2r->Unlock(pos1, byte1, pos2, byte2);
 		return (todo - t) / t;
 #else
-			Uint32 byte1, byte2;
+			if (!ahi_on)
+				return -2;
+			if (record_enabled == 0)
+				ahi_init_record();
+			if (record_enabled < 0)
+				return -2;
 
-		if (!ahi_on)
-			return -2;
-		if (record_enabled == 0)
-			ahi_init_record();
-		if (record_enabled < 0)
-			return -2;
+			const auto queued_bytes = SDL_GetQueuedAudioSize(ahi_dev_rec);
+			if (queued_bytes < static_cast<Uint32>(amigablksize * 4)) //if no complete buffer ready exit
+				return -1;
 
-		auto todo = SDL_GetQueuedAudioSize(ahi_dev_rec);
-		if (todo < amigablksize * 4) //if no complete buffer ready exit
-			return -1;
-
-		uaecptr addr = m68k_areg(regs, 0);
-		auto* sndbufrecpt = static_cast<uae_u16*>(malloc(todo));
-		SDL_DequeueAudio(ahi_dev_rec, sndbufrecpt, todo);
-
-		todo /= 4;
-		for (int i = 0; i < todo; i++) {
-			uae_u32 s1, s2;
-			if (currprefs.sound_stereo_swap_ahi) {
-				s1 = sndbufrecpt[1];
-				s2 = sndbufrecpt[0];
+			uaecptr addr = m68k_areg(regs, 0);
+			const int bytes_to_read = amigablksize * 4;
+			auto* sndbufrecpt = static_cast<uae_u16*>(malloc(bytes_to_read));
+			if (!sndbufrecpt) {
+				write_log(_T("AHI: malloc failed in recording path\n"));
+				return -1;
 			}
-			else {
-				s1 = sndbufrecpt[0];
-				s2 = sndbufrecpt[1];
+			SDL_DequeueAudio(ahi_dev_rec, sndbufrecpt, bytes_to_read);
+
+			auto* sptr = sndbufrecpt;
+			for (int i = 0; i < amigablksize; i++) {
+				uae_u32 s1, s2;
+				if (currprefs.sound_stereo_swap_ahi) {
+					s1 = sptr[1];
+					s2 = sptr[0];
+				}
+				else {
+					s1 = sptr[0];
+					s2 = sptr[1];
+				}
+				sptr += 2;
+				put_long(addr, (s1 << 16) | s2);
+				addr += 4;
 			}
-			sndbufrecpt += 2;
-			put_long(addr, (s1 << 16) | s2);
-			addr += 4;
-		}
-		todo *= 4;
-		free(sndbufrecpt);
-		return (SDL_GetQueuedAudioSize(ahi_dev_rec) - todo) / todo;
+			free(sndbufrecpt);
+			return (SDL_GetQueuedAudioSize(ahi_dev_rec)) / (amigablksize * 4);
 #endif
 		}
 
