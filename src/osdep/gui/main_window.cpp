@@ -117,6 +117,7 @@ ConfigCategory categories[] = {
 static bool show_message_box = false;
 static char message_box_title[128] = "";
 static char message_box_message[2048] = "";
+static float gui_scale = 1.0f;
 
 ConfigCategory categories[] = {
   {"About", "amigainfo.png"},
@@ -466,12 +467,18 @@ void amiberry_gui_init()
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	ImGuiIO& io = ImGui::GetIO();
+
+	// Get DPI scale factor
+	gui_scale = DPIHandler::get_scale();
+
+	// Scale font size
+	io.FontGlobalScale = gui_scale;
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.ScaleAllSizes(gui_scale);
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
@@ -1458,12 +1465,15 @@ void run_gui()
 		ImGui_ImplSDLRenderer2_NewFrame();
 		ImGui::NewFrame();
 
+		const auto sidebar_width = 150.0f * gui_scale;
+		const auto button_bar_height = 50.0f * gui_scale;
+
 		ImGui::SetNextWindowPos(ImVec2(0, 0));
 		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 		ImGui::Begin("Amiberry", &gui_running, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
 
 		// Sidebar
-		ImGui::BeginChild("Sidebar", ImVec2(150, 0), true);
+		ImGui::BeginChild("Sidebar", ImVec2(sidebar_width, 0), true);
 		for (int i = 0; categories[i].category != nullptr; ++i) {
 			if (ImGui::Selectable(categories[i].category, last_active_panel == i)) {
 				last_active_panel = i;
@@ -1474,7 +1484,7 @@ void run_gui()
 		ImGui::SameLine();
 
 		// Content
-		ImGui::BeginChild("Content", ImVec2(0, -50));
+		ImGui::BeginChild("Content", ImVec2(0, -button_bar_height));
 
 		if (last_active_panel == PANEL_ABOUT)
 		{
