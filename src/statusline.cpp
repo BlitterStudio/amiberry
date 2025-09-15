@@ -292,16 +292,17 @@ void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_
 			pos = 1;
 			on_rgb = 0xcc0000;
 			off_rgb = 0x111111;
-			if (gui_data.cpu_halted) {
+			if (gui_data.cpu_halted || gui_data.cpu_stopped) {
 				idle = 0;
-				on = 1;
 				if (gui_data.cpu_halted < 0) {
+					on = 1;
 					on_rgb = 0x111111;
 					num1 = 16; // PPC
 					num2 = 16;
 					num3 = 10;
 					am = 3;
-				} else {
+				} else if (gui_data.cpu_halted > 0) {
+					on = 1;
 					on_rgb = 0xcccc00;
 					num1 = gui_data.cpu_halted >= 10 ? 11 : -1;
 					num2 = gui_data.cpu_halted >= 10 ? (gui_data.cpu_halted / 10) % 10 : 11;

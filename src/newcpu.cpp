@@ -2361,9 +2361,14 @@ void m68k_cancel_idle()
 
 static void m68k_set_stop(int stoptype)
 {
-	if (regs.stopped)
+	if (regs.stopped) {
 		return;
+	}
 	regs.stopped = stoptype;
+	if (regs.intmask == 7) {
+		gui_data.cpu_stopped = 1;
+		gui_led(LED_CPU, 0, -1);
+	}
 	if (cpu_last_stop_vpos >= 0) {
 		cpu_last_stop_vpos = vpos;
 	}
@@ -2372,6 +2377,10 @@ static void m68k_set_stop(int stoptype)
 static void m68k_unset_stop()
 {
 	regs.stopped = 0;
+	if (gui_data.cpu_stopped) {
+		gui_data.cpu_stopped = 0;
+		gui_led(LED_CPU, 0, -1);
+	}
 	if (cpu_last_stop_vpos >= 0) {
 		cpu_stopped_lines += vpos - cpu_last_stop_vpos;
 		cpu_last_stop_vpos = vpos;
@@ -3540,8 +3549,9 @@ void NMI ()
 static void cpu_halt_clear(void)
 {
 	regs.halted = 0;
-	if (gui_data.cpu_halted) {
+	if (gui_data.cpu_halted || gui_data.cpu_stopped) {
 		gui_data.cpu_halted = 0;
+		gui_data.cpu_stopped = 0;
 		gui_led(LED_CPU, 0, -1);
 	}
 }

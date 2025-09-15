@@ -79,6 +79,7 @@ struct gui_info
 	uae_s8 md;					/* CD32 or CDTV internal storage */
 	uae_s8 net;					/* network */
 	int cpu_halted;
+	int cpu_stopped;
 	int fps, lines, lace, idle;
 	int fps_color;
 	int sndbuf, sndbuf_status;
