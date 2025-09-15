@@ -1686,7 +1686,7 @@ static void render_panel_floppy()
 		ImGui::SameLine();
 		ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
 		ImGui::SameLine();
-		ImGui::InputText("", changed_prefs.floppyslots[i].df, MAX_DPATH);
+		ImGui::InputText("", changed_prefs.floppyslots[i].df, MAX_DPATH); //FIXME This triggers a crash
 	}
 	ImGui::SliderInt("Floppy Drive Emulation Speed", &changed_prefs.floppy_speed, 0, 800);
 	if (ImGui::Button("Create 3.5\" DD disk"))
@@ -2027,7 +2027,7 @@ static void render_panel_custom()
 	{
 		ImGui::Text("%s", label_button_list[i].c_str());
 		const char* items[] = { "None" };
-		ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items));
+		ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items)); //FIXME This triggers a crash
 	}
 
 	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
@@ -2055,7 +2055,7 @@ static void render_panel_diskswapper()
 	for (int i = 0; i < MAX_SPARE_DRIVES; ++i)
 	{
 		ImGui::Text("%d", i + 1); ImGui::NextColumn();
-		ImGui::InputText("", changed_prefs.dfxlist[i], MAX_DPATH);
+		ImGui::InputText("", changed_prefs.dfxlist[i], MAX_DPATH); //FIXME this triggers a crash
 		ImGui::SameLine();
 		if (ImGui::Button("..."))
 		{
@@ -2179,6 +2179,202 @@ static void render_panel_savestates()
 	{
 		// Save current state to file
 	}
+}
+
+static void render_panel_virtual_keyboard()
+{
+    ImGui::Checkbox("Virtual Keyboard enabled", &changed_prefs.vkbd_enabled);
+
+    if (!changed_prefs.vkbd_enabled)
+        ImGui::BeginDisabled();
+
+    ImGui::Checkbox("High-Resolution", &changed_prefs.vkbd_hires);
+    ImGui::Checkbox("Quit button on keyboard", &changed_prefs.vkbd_exit);
+
+    ImGui::Text("Transparency:");
+    ImGui::SameLine();
+    ImGui::SliderInt("##VkTransparency", &changed_prefs.vkbd_transparency, 0, 100, "%d%%");
+
+    const char* languages[] = { "US", "FR", "UK", "DE" };
+    int current_lang = 0;
+    if (strcmp(changed_prefs.vkbd_language, "FR") == 0) current_lang = 1;
+    else if (strcmp(changed_prefs.vkbd_language, "UK") == 0) current_lang = 2;
+    else if (strcmp(changed_prefs.vkbd_language, "DE") == 0) current_lang = 3;
+
+    if (ImGui::Combo("Keyboard Layout", &current_lang, languages, IM_ARRAYSIZE(languages))) {
+        strcpy(changed_prefs.vkbd_language, languages[current_lang]);
+    }
+
+    const char* styles[] = { "Original", "Warm", "Cool", "Dark" };
+    int current_style = 0;
+    if (strcmp(changed_prefs.vkbd_style, "Warm") == 0) current_style = 1;
+    else if (strcmp(changed_prefs.vkbd_style, "Cool") == 0) current_style = 2;
+    else if (strcmp(changed_prefs.vkbd_style, "Dark") == 0) current_style = 3;
+
+    if (ImGui::Combo("Style", &current_style, styles, IM_ARRAYSIZE(styles))) {
+        strcpy(changed_prefs.vkbd_style, styles[current_style]);
+    }
+
+    ImGui::Checkbox("Use RetroArch Vkbd button", &changed_prefs.use_retroarch_vkbd);
+
+    if (changed_prefs.use_retroarch_vkbd)
+        ImGui::BeginDisabled();
+
+    ImGui::Text("Toggle button:");
+    ImGui::SameLine();
+    ImGui::InputText("##VkSetHotkey", changed_prefs.vkbd_toggle, sizeof(changed_prefs.vkbd_toggle), ImGuiInputTextFlags_ReadOnly);
+    ImGui::SameLine();
+    if (ImGui::Button("...##VkSetHotkey"))
+    {
+        // TODO: Implement input selection dialog
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("X##VkSetHotkeyClear"))
+    {
+        changed_prefs.vkbd_toggle[0] = 0;
+        for (int port = 0; port < 2; port++)
+        {
+            const auto host_joy_id = changed_prefs.jports[port].id - JSEM_JOYS;
+            if (host_joy_id >= 0 && host_joy_id < MAX_INPUT_DEVICES)
+            {
+                didata* did = &di_joystick[host_joy_id];
+                did->mapping.vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
+            }
+        }
+    }
+
+    if (changed_prefs.use_retroarch_vkbd)
+        ImGui::EndDisabled();
+
+    if (!changed_prefs.vkbd_enabled)
+        ImGui::EndDisabled();
+}
+
+static void render_panel_whdload()
+{
+    ImGui::Text("WHDLoad auto-config:");
+    ImGui::SameLine(ImGui::GetWindowWidth() - 180);
+    if (ImGui::Button("Eject")) {
+        whdload_prefs.whdload_filename = "";
+        clear_whdload_prefs();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Select file")) {
+        // TODO: Implement file selector.
+    }
+
+    // WHDLoad file dropdown
+    std::vector<const char*> whdload_display_items;
+    std::vector<std::string> whdload_filenames;
+    for (const auto& full_path : lstMRUWhdloadList) {
+        whdload_filenames.push_back(full_path.substr(full_path.find_last_of("/\\") + 1));
+    }
+    for (const auto& filename : whdload_filenames) {
+        whdload_display_items.push_back(filename.c_str());
+    }
+
+    int current_whd = -1;
+    if (!whdload_prefs.whdload_filename.empty()) {
+        for (size_t i = 0; i < lstMRUWhdloadList.size(); ++i) {
+            if (lstMRUWhdloadList[i] == whdload_prefs.whdload_filename) {
+                current_whd = i;
+                break;
+            }
+        }
+    }
+
+    ImGui::PushItemWidth(-1);
+    if (ImGui::Combo("##WHDLoadFile", &current_whd, whdload_display_items.data(), whdload_display_items.size())) {
+        if (current_whd >= 0) {
+            const auto& selected_path = lstMRUWhdloadList[current_whd];
+            if (selected_path != whdload_prefs.whdload_filename) {
+                whdload_prefs.whdload_filename = selected_path;
+                add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
+                whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
+                if (!last_loaded_config[0])
+                    set_last_active_config(whdload_prefs.whdload_filename.c_str());
+            }
+        }
+    }
+    ImGui::PopItemWidth();
+
+    ImGui::Separator();
+
+    // WHDLoad game options
+    ImGui::InputText("Game Name", whdload_prefs.game_name.data(), sizeof(whdload_prefs.game_name), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("UUID", whdload_prefs.variant_uuid.data(), sizeof(whdload_prefs.variant_uuid), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("Slave Default", whdload_prefs.slave_default.data(), sizeof(whdload_prefs.slave_default), ImGuiInputTextFlags_ReadOnly);
+
+    ImGui::Checkbox("Slave Libraries", &whdload_prefs.slave_libraries);
+
+    // Slaves dropdown
+    std::vector<const char*> slave_items;
+    for (const auto& slave : whdload_prefs.slaves) {
+        slave_items.push_back(slave.filename.c_str());
+    }
+    int current_slave = -1;
+    if (!whdload_prefs.selected_slave.filename.empty()) {
+        for (size_t i = 0; i < whdload_prefs.slaves.size(); ++i) {
+            if (whdload_prefs.slaves[i].filename == whdload_prefs.selected_slave.filename) {
+                current_slave = i;
+                break;
+            }
+        }
+    }
+
+    if (ImGui::Combo("Slaves", &current_slave, slave_items.data(), slave_items.size())) {
+        if (current_slave >= 0) {
+            whdload_prefs.selected_slave = whdload_prefs.slaves[current_slave];
+            create_startup_sequence();
+        }
+    }
+
+    char data_path_buf[1024];
+    strncpy(data_path_buf, whdload_prefs.selected_slave.data_path.c_str(), sizeof(data_path_buf));
+    data_path_buf[sizeof(data_path_buf) - 1] = 0;
+    ImGui::InputText("Slave Data path", data_path_buf, sizeof(data_path_buf), ImGuiInputTextFlags_ReadOnly);
+
+    if (ImGui::InputText("Custom", whdload_prefs.custom.data(), sizeof(whdload_prefs.custom))) {
+        create_startup_sequence();
+    }
+
+    if (whdload_prefs.whdload_filename.empty()) {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button("Custom Fields"))
+    {
+        // TODO: Implement custom fields dialog
+    }
+    if (whdload_prefs.whdload_filename.empty()) {
+        ImGui::EndDisabled();
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Global options");
+
+    if (ImGui::Checkbox("Button Wait", &whdload_prefs.button_wait)) {
+        create_startup_sequence();
+    }
+    if (ImGui::Checkbox("Show Splash", &whdload_prefs.show_splash)) {
+        create_startup_sequence();
+    }
+
+    if (ImGui::InputInt("Config Delay", &whdload_prefs.config_delay)) {
+        create_startup_sequence();
+    }
+
+    if (ImGui::Checkbox("Write Cache", &whdload_prefs.write_cache)) {
+        create_startup_sequence();
+    }
+    if (ImGui::Checkbox("Quit on Exit", &whdload_prefs.quit_on_exit)) {
+        create_startup_sequence();
+    }
+}
+
+static void render_panel_themes()
+{
+
 }
 
 void run_gui()
@@ -2317,6 +2513,18 @@ void run_gui()
 		else if (last_active_panel == PANEL_SAVESTATES)
 		{
 			render_panel_savestates();
+		}
+		else if (last_active_panel == PANEL_VIRTUAL_KEYBOARD)
+		{
+			render_panel_virtual_keyboard();
+		}
+		else if (last_active_panel == PANEL_WHDLOAD)
+		{
+			render_panel_whdload();
+		}
+		else if (last_active_panel == PANEL_THEMES)
+		{
+			render_panel_themes();
 		}
 		ImGui::EndChild();
 
