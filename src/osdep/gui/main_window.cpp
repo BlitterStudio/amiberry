@@ -387,6 +387,11 @@ void amiberry_gui_init()
 	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
+#ifdef USE_IMGUI
+	// For ImGui, let's use a portion of the screen, not a fixed size
+	gui_window_rect.w = sdl_mode.w * 4 / 5;
+	gui_window_rect.h = sdl_mode.h * 4 / 5;
+#endif
 #ifdef USE_GUISAN
 	//-------------------------------------------------
 	// Create new screen for GUI
@@ -488,12 +493,12 @@ void amiberry_gui_init()
 	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
-#endif
 
 	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
 		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	else
 		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
+#endif
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
@@ -1453,8 +1458,9 @@ void run_gui()
 		ImGui_ImplSDLRenderer2_NewFrame();
 		ImGui::NewFrame();
 
-		const auto sidebar_width = 150.0f * gui_scale;
-		const auto button_bar_height = 50.0f * gui_scale;
+		ImGuiStyle& style = ImGui::GetStyle();
+		const auto sidebar_width = ImGui::GetIO().DisplaySize.x / 5.0f;
+		const auto button_bar_height = ImGui::GetFrameHeight() + style.WindowPadding.y * 2.0f;
 
 		ImGui::SetNextWindowPos(ImVec2(0, 0));
 		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
@@ -1471,6 +1477,7 @@ void run_gui()
 
 		ImGui::SameLine();
 
+		ImGui::BeginGroup();
 		// Content
 		ImGui::BeginChild("Content", ImVec2(0, -button_bar_height));
 
@@ -2248,6 +2255,7 @@ void run_gui()
 		if (ImGui::Button("Start"))
 			gui_running = false;
 		ImGui::EndChild();
+		ImGui::EndGroup();
 
 		if (show_message_box)
 		{
