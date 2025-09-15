@@ -1432,6 +1432,743 @@ void ShowMessageBox(const char* title, const char* message)
 	show_message_box = true;
 }
 
+static void render_panel_about()
+{
+	ImGui::Text("Amiberry - The Amiga Emulator for ARM-based devices");
+	ImGui::Text("Version: %s", get_version_string().c_str());
+	ImGui::Separator();
+	ImGui::Text("Ported from WinUAE, which was made by Toni Wilen and contributors.");
+	ImGui::Text("WinUAE is a port of the original UAE, which was made by Bernd Schmidt.");
+	ImGui::Text("Guisan GUI library by Olof Naessen.");
+	ImGui::Text("ImGui GUI library by Omar Cornut.");
+}
+
+static void render_panel_paths()
+{
+	char tmp[MAX_DPATH];
+	ImGui::Text("System ROMs:");
+	get_rom_path(tmp, sizeof tmp);
+	ImGui::InputText("##SystemROMs", tmp, MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##SystemROMs"))
+	{
+		//std::string path = SelectFolder("Folder for System ROMs", changed_prefs.path_rom.path[0]);
+		//if (!path.empty())
+		//	set_rom_path(path);
+	}
+	ImGui::Text("Configuration files:");
+	get_configuration_path(tmp, sizeof tmp);
+	ImGui::InputText("##ConfigPath", tmp, MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##ConfigPath"))
+	{
+		//std::string path = SelectFolder("Folder for configuration files", tmp);
+		//if (!path.empty())
+		//	set_configuration_path(path);
+	}
+}
+
+static void render_panel_quickstart()
+{
+	const char* models[] = { "Amiga 500", "Amiga 500+", "Amiga 600", "Amiga 1000", "Amiga 1200", "Amiga 3000", "Amiga 4000", "Amiga 4000T", "CD32", "CDTV", "American Laser Games / Picmatic", "Arcadia Multi Select system", "Macrosystem" };
+	ImGui::Combo("Amiga model", &quickstart_model, models, IM_ARRAYSIZE(models));
+
+	const char* configs[] = { "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM", "1.3 ROM, ECS Agnus, 1 MB Chip RAM", "1.3 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM" };
+	ImGui::Combo("Config", &quickstart_conf, configs, IM_ARRAYSIZE(configs));
+
+	ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
+
+	for (int i = 0; i < 2; ++i)
+	{
+		char label[10];
+		snprintf(label, 10, "DF%d:", i);
+		ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
+		ImGui::SameLine();
+		ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
+	}
+
+	ImGui::Checkbox("CD drive", &changed_prefs.cdslots[0].inuse);
+
+	if (ImGui::Button("Set configuration"))
+		built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
+}
+
+static void render_panel_configurations()
+{
+	static int selected = -1;
+	ImGui::BeginChild("ConfigList", ImVec2(0, -100), true);
+	for (int i = 0; i < ConfigFilesList.size(); ++i)
+	{
+		if (ImGui::Selectable(ConfigFilesList[i]->Name, selected == i))
+			selected = i;
+	}
+	ImGui::EndChild();
+
+	static char name[MAX_DPATH] = "";
+	static char desc[MAX_DPATH] = "";
+	if (selected != -1)
+	{
+		strncpy(name, ConfigFilesList[selected]->Name, MAX_DPATH);
+		strncpy(desc, ConfigFilesList[selected]->Description, MAX_DPATH);
+	}
+	ImGui::InputText("Name", name, MAX_DPATH);
+	ImGui::InputText("Description", desc, MAX_DPATH);
+
+	if (ImGui::Button("Load"))
+	{
+		if (selected != -1)
+			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Save"))
+	{
+		char filename[MAX_DPATH];
+		get_configuration_path(filename, MAX_DPATH);
+		strncat(filename, name, MAX_DPATH - 1);
+		strncat(filename, ".uae", MAX_DPATH - 1);
+		strncpy(changed_prefs.description, desc, 256);
+		if (cfgfile_save(&changed_prefs, filename, 0))
+		{
+			strncpy(last_active_config, name, MAX_DPATH);
+			ReadConfigFileList();
+		}
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Delete"))
+	{
+		if (selected != -1)
+		{
+			remove(ConfigFilesList[selected]->FullPath);
+			ReadConfigFileList();
+			selected = -1;
+		}
+	}
+}
+
+static void render_panel_cpu()
+{
+	ImGui::RadioButton("68000", &changed_prefs.cpu_model, 68000);
+	ImGui::RadioButton("68010", &changed_prefs.cpu_model, 68010);
+	ImGui::RadioButton("68020", &changed_prefs.cpu_model, 68020);
+	ImGui::RadioButton("68030", &changed_prefs.cpu_model, 68030);
+	ImGui::RadioButton("68040", &changed_prefs.cpu_model, 68040);
+	ImGui::RadioButton("68060", &changed_prefs.cpu_model, 68060);
+	ImGui::Checkbox("24-bit addressing", &changed_prefs.address_space_24);
+	ImGui::Checkbox("More compatible", &changed_prefs.cpu_compatible);
+	ImGui::Checkbox("Data cache", &changed_prefs.cpu_data_cache);
+	ImGui::Checkbox("JIT", (bool*)&changed_prefs.cachesize);
+
+	ImGui::Separator();
+	ImGui::Text("MMU");
+	ImGui::RadioButton("None##MMU", &changed_prefs.mmu_model, 0);
+	ImGui::RadioButton("MMU", &changed_prefs.mmu_model, changed_prefs.cpu_model);
+	ImGui::Checkbox("EC", &changed_prefs.mmu_ec);
+
+	ImGui::Separator();
+	ImGui::Text("FPU");
+	ImGui::RadioButton("None##FPU", &changed_prefs.fpu_model, 0);
+	ImGui::RadioButton("68881", &changed_prefs.fpu_model, 68881);
+	ImGui::RadioButton("68882", &changed_prefs.fpu_model, 68882);
+	ImGui::RadioButton("CPU internal", &changed_prefs.fpu_model, changed_prefs.cpu_model);
+	ImGui::Checkbox("More compatible##FPU", &changed_prefs.fpu_strict);
+
+	ImGui::Separator();
+	ImGui::Text("CPU Speed");
+	ImGui::RadioButton("Fastest Possible", &changed_prefs.m68k_speed, -1);
+	ImGui::RadioButton("A500/A1200 or cycle exact", &changed_prefs.m68k_speed, 0);
+	ImGui::SliderInt("CPU Speed", (int*)&changed_prefs.m68k_speed_throttle, 0, 5000);
+	ImGui::SliderInt("CPU Idle", &changed_prefs.cpu_idle, 0, 120);
+
+	ImGui::Separator();
+	ImGui::Text("Cycle-Exact CPU Emulation Speed");
+	const char* freq_items[] = { "1x", "2x (A500)", "4x (A1200)", "8x", "16x" };
+	ImGui::Combo("CPU Frequency", &changed_prefs.cpu_clock_multiplier, freq_items, IM_ARRAYSIZE(freq_items));
+	ImGui::Checkbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
+
+	ImGui::Separator();
+	ImGui::Text("PowerPC CPU Options");
+	ImGui::Checkbox("PPC emulation", (bool*)&changed_prefs.ppc_mode);
+	ImGui::SliderInt("Stopped M68K CPU Idle", &changed_prefs.ppc_cpu_idle, 0, 10);
+
+	ImGui::Separator();
+	ImGui::Text("Advanced JIT Settings");
+	ImGui::SliderInt("Cache size", &changed_prefs.cachesize, 0, 8192);
+	ImGui::Checkbox("FPU Support##JIT", &changed_prefs.compfpu);
+	ImGui::Checkbox("Constant jump", &changed_prefs.comp_constjump);
+	ImGui::Checkbox("Hard flush", &changed_prefs.comp_hardflush);
+	ImGui::RadioButton("Direct##memaccess", &changed_prefs.comptrustbyte, 0);
+	ImGui::RadioButton("Indirect##memaccess", &changed_prefs.comptrustbyte, 1);
+	ImGui::Checkbox("No flags", &changed_prefs.compnf);
+	ImGui::Checkbox("Catch unexpected exceptions", &changed_prefs.comp_catchfault);
+}
+
+static void render_panel_chipset()
+{
+	ImGui::RadioButton("OCS", (int*)&changed_prefs.chipset_mask, 0);
+	ImGui::RadioButton("ECS Agnus", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS);
+	ImGui::RadioButton("ECS Denise", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_DENISE);
+	ImGui::RadioButton("Full ECS", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE);
+	ImGui::RadioButton("AGA", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA);
+	ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
+	ImGui::Checkbox("Cycle Exact (Full)", &changed_prefs.cpu_cycle_exact);
+	ImGui::Checkbox("Cycle Exact (DMA/Memory)", &changed_prefs.cpu_memory_cycle_exact);
+	const char* chipset_items[] = { "Generic", "CDTV", "CDTV-CR", "CD32", "A500", "A500+", "A600", "A1000", "A1200", "A2000", "A3000", "A3000T", "A4000", "A4000T", "Velvet", "Casablanca", "DraCo" };
+	ImGui::Combo("Chipset Extra", &changed_prefs.cs_compatible, chipset_items, IM_ARRAYSIZE(chipset_items));
+
+	ImGui::Separator();
+	ImGui::Text("Options");
+	ImGui::Checkbox("Immediate Blitter", &changed_prefs.immediate_blits);
+	ImGui::Checkbox("Wait for Blitter", (bool*)&changed_prefs.waiting_blits);
+	ImGui::Checkbox("Multithreaded Drawing", (bool*)&multithread_enabled);
+	const char* monitor_items[] = { "-", "Autodetect" };
+	ImGui::Combo("Video port display hardware", &changed_prefs.monitoremu, monitor_items, IM_ARRAYSIZE(monitor_items));
+
+	ImGui::Separator();
+	ImGui::Text("Keyboard");
+	const char* keyboard_items[] = { "Keyboard disconnected", "UAE High level emulation", "A500 / A500 + (6500 - 1 MCU)", "A600 (6570 - 036 MCU)", "A1000 (6500 - 1 MCU. ROM not yet dumped)", "A1000 (6570 - 036 MCU)", "A1200 (68HC05C MCU)", "A2000 (Cherry, 8039 MCU)", "A2000/A3000/A4000 (6570-036 MCU)" };
+	ImGui::Combo("Keyboard Layout", &changed_prefs.keyboard_mode, keyboard_items, IM_ARRAYSIZE(keyboard_items));
+	ImGui::Checkbox("Keyboard N-key rollover", &changed_prefs.keyboard_nkro);
+
+	ImGui::Separator();
+	ImGui::Text("Collision Level");
+	ImGui::RadioButton("None##Collision", &changed_prefs.collision_level, 0);
+	ImGui::RadioButton("Sprites only", &changed_prefs.collision_level, 1);
+	ImGui::RadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
+	ImGui::RadioButton("Full (rarely needed)", &changed_prefs.collision_level, 3);
+}
+
+static void render_panel_rom()
+{
+	ImGui::Text("Main ROM File:");
+	ImGui::InputText("##MainROM", changed_prefs.romfile, MAX_DPATH);
+	ImGui::Text("Extended ROM File:");
+	ImGui::InputText("##ExtROM", changed_prefs.romextfile, MAX_DPATH);
+	ImGui::Text("Cartridge ROM File:");
+	ImGui::InputText("##CartROM", changed_prefs.cartfile, MAX_DPATH);
+	ImGui::Checkbox("MapROM emulation", (bool*)&changed_prefs.maprom);
+	ImGui::Checkbox("ShapeShifter support", &changed_prefs.kickshifter);
+	const char* uae_items[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
+	ImGui::Combo("Advanced UAE expansion board/Boot ROM", &changed_prefs.uaeboard, uae_items, IM_ARRAYSIZE(uae_items));
+}
+
+static void render_panel_ram()
+{
+	ImGui::SliderInt("Chip", (int*)&changed_prefs.chipmem.size, 0, 0x800000);
+	ImGui::SliderInt("Slow", (int*)&changed_prefs.bogomem.size, 0, 0x180000);
+	ImGui::SliderInt("Z2 Fast", (int*)&changed_prefs.fastmem[0].size, 0, 0x800000);
+	ImGui::SliderInt("Z3 Fast", (int*)&changed_prefs.z3fastmem[0].size, 0, 0x40000000);
+	ImGui::SliderInt("32-bit Chip RAM", (int*)&changed_prefs.z3chipmem.size, 0, 0x40000000);
+	ImGui::SliderInt("Motherboard Fast RAM", (int*)&changed_prefs.mbresmem_low.size, 0, 0x8000000);
+	ImGui::SliderInt("Processor slot Fast RAM", (int*)&changed_prefs.mbresmem_high.size, 0, 0x8000000);
+	const char* z3_mapping_items[] = { "Automatic (*)", "UAE (0x10000000)", "Real (0x40000000)" };
+	ImGui::Combo("Z3 Mapping Mode", &changed_prefs.z3_mapping_mode, z3_mapping_items, IM_ARRAYSIZE(z3_mapping_items));
+}
+
+static void render_panel_floppy()
+{
+	for (int i = 0; i < 4; ++i)
+	{
+		char label[10];
+		snprintf(label, 10, "DF%d:", i);
+		ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
+		ImGui::SameLine();
+		ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
+		ImGui::SameLine();
+		ImGui::InputText("", changed_prefs.floppyslots[i].df, MAX_DPATH);
+	}
+	ImGui::SliderInt("Floppy Drive Emulation Speed", &changed_prefs.floppy_speed, 0, 800);
+	if (ImGui::Button("Create 3.5\" DD disk"))
+	{
+		// Create 3.5" DD Disk
+	}
+	if (ImGui::Button("Create 3.5\" HD disk"))
+	{
+		// Create 3.5" HD Disk
+	}
+	if (ImGui::Button("Save config for disk"))
+	{
+		// Save configuration for current disk
+	}
+}
+
+static void render_panel_hd()
+{
+	for (int i = 0; i < changed_prefs.mountitems; ++i)
+	{
+		ImGui::Text("Device: %s, Volume: %s, Path: %s", changed_prefs.mountconfig[i].ci.devname, changed_prefs.mountconfig[i].ci.volname, changed_prefs.mountconfig[i].ci.rootdir);
+	}
+	if (ImGui::Button("Add Directory/Archive"))
+	{
+		// Add Directory/Archive
+	}
+	if (ImGui::Button("Add Hardfile"))
+	{
+		// Add Hardfile
+	}
+	if (ImGui::Button("Add Hard Drive"))
+	{
+		// Add Hard Drive
+	}
+	if (ImGui::Button("Add CD Drive"))
+	{
+		// Add CD Drive
+	}
+	if (ImGui::Button("Add Tape Drive"))
+	{
+		// Add Tape Drive
+	}
+	if (ImGui::Button("Create Hardfile"))
+	{
+		// Create Hardfile
+	}
+	ImGui::Checkbox("CDFS automount CD/DVD drives", &changed_prefs.automount_cddrives);
+	ImGui::Checkbox("CD drive/image", &changed_prefs.cdslots[0].inuse);
+	ImGui::InputText("##CDFile", changed_prefs.cdslots[0].name, MAX_DPATH);
+	if (ImGui::Button("Eject"))
+	{
+		// Eject CD
+	}
+	if (ImGui::Button("Select image file"))
+	{
+		// Select CD image file
+	}
+	ImGui::Checkbox("CDTV/CDTV-CR/CD32 turbo CD read speed", (bool*)&changed_prefs.cd_speed);
+}
+
+void render_panel_expansions()
+{
+	ImGui::Text("Expansion Board Settings");
+	// TODO: Implement Expansion Board Settings
+
+	ImGui::Separator();
+	ImGui::Text("Accelerator Board Settings");
+	// TODO: Implement Accelerator Board Settings
+
+	ImGui::Separator();
+	ImGui::Text("Miscellaneous Expansions");
+	ImGui::Checkbox("bsdsocket.library", &changed_prefs.socket_emu);
+	ImGui::Checkbox("uaescsi.device", (bool*)&changed_prefs.scsi);
+	ImGui::Checkbox("CD32 Full Motion Video cartridge", &changed_prefs.cs_cd32fmv);
+	ImGui::Checkbox("uaenet.device", &changed_prefs.sana2);
+}
+
+void render_panel_rtg()
+{
+	const char* rtg_boards[] = { "-", "UAE Zorro II", "UAE Zorro III", "PCI bridgeboard" };
+	ImGui::Combo("RTG Graphics Board", &changed_prefs.rtgboards[0].rtgmem_type, rtg_boards, IM_ARRAYSIZE(rtg_boards));
+	ImGui::SliderInt("VRAM size", (int*)&changed_prefs.rtgboards[0].rtgmem_size, 0, 0x10000000);
+	ImGui::Checkbox("Scale if smaller than display size setting", (bool*)&changed_prefs.gf[1].gfx_filter_autoscale);
+	ImGui::Checkbox("Always scale in windowed mode", &changed_prefs.rtgallowscaling);
+	ImGui::Checkbox("Always center", (bool*)&changed_prefs.gf[1].gfx_filter_autoscale);
+	ImGui::Checkbox("Hardware vertical blank interrupt", &changed_prefs.rtg_hardwareinterrupt);
+	ImGui::Checkbox("Hardware sprite emulation", &changed_prefs.rtg_hardwaresprite);
+	ImGui::Checkbox("Multithreaded", &changed_prefs.rtg_multithread);
+	const char* rtg_refreshrates[] = { "Chipset", "Default", "50", "60", "70", "75" };
+	ImGui::Combo("Refresh rate", &changed_prefs.rtgvblankrate, rtg_refreshrates, IM_ARRAYSIZE(rtg_refreshrates));
+	const char* rtg_buffermodes[] = { "Double buffering", "Triple buffering" };
+	ImGui::Combo("Buffer mode", &changed_prefs.gfx_apmode[1].gfx_backbuffers, rtg_buffermodes, IM_ARRAYSIZE(rtg_buffermodes));
+	const char* rtg_aspectratios[] = { "Disabled", "Automatic" };
+	ImGui::Combo("Aspect Ratio", &changed_prefs.rtgscaleaspectratio, rtg_aspectratios, IM_ARRAYSIZE(rtg_aspectratios));
+	const char* rtg_16bit_modes[] = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
+	ImGui::Combo("16-bit modes", (int*)&changed_prefs.picasso96_modeflags, rtg_16bit_modes, IM_ARRAYSIZE(rtg_16bit_modes));
+	const char* rtg_32bit_modes[] = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
+	ImGui::Combo("32-bit modes", (int*)&changed_prefs.picasso96_modeflags, rtg_32bit_modes, IM_ARRAYSIZE(rtg_32bit_modes));
+}
+
+static void render_panel_hwinfo()
+{
+	ImGui::BeginChild("HWInfoList", ImVec2(0, -50), true);
+	ImGui::Columns(6, "HWInfoColumns");
+	ImGui::Separator();
+	ImGui::Text("Type"); ImGui::NextColumn();
+	ImGui::Text("Name"); ImGui::NextColumn();
+	ImGui::Text("Start"); ImGui::NextColumn();
+	ImGui::Text("End"); ImGui::NextColumn();
+	ImGui::Text("Size"); ImGui::NextColumn();
+	ImGui::Text("ID"); ImGui::NextColumn();
+	ImGui::Separator();
+	for (int i = 0; i < MAX_INFOS; ++i)
+	{
+		struct autoconfig_info* aci = expansion_get_autoconfig_data(&changed_prefs, i);
+		if (aci)
+		{
+			ImGui::Text("%s", aci->zorro >= 1 && aci->zorro <= 3 ? std::to_string(aci->zorro).c_str() : "-"); ImGui::NextColumn();
+			ImGui::Text("%s", aci->name); ImGui::NextColumn();
+			ImGui::Text("0x%08x", aci->start); ImGui::NextColumn();
+			ImGui::Text("0x%08x", aci->start + aci->size - 1); ImGui::NextColumn();
+			ImGui::Text("0x%08x", aci->size); ImGui::NextColumn();
+			ImGui::Text("0x%04x/0x%02x", (aci->autoconfig_bytes[4] << 8) | aci->autoconfig_bytes[5], aci->autoconfig_bytes[1]); ImGui::NextColumn();
+		}
+	}
+	ImGui::Columns(1);
+	ImGui::EndChild();
+
+	ImGui::Checkbox("Custom board order", &changed_prefs.autoconfig_custom_sort);
+	if (ImGui::Button("Move up"))
+	{
+		// Move up
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Move down"))
+	{
+		// Move down
+	}
+}
+
+static void render_panel_display()
+{
+	ImGui::Text("Amiga Screen");
+	const char* screenmode_items[] = { "Windowed", "Fullscreen", "Full-window" };
+	ImGui::Combo("Screen mode", &changed_prefs.gfx_apmode[0].gfx_fullscreen, screenmode_items, IM_ARRAYSIZE(screenmode_items));
+	ImGui::Checkbox("Manual Crop", &changed_prefs.gfx_manual_crop);
+	ImGui::SliderInt("Width", &changed_prefs.gfx_manual_crop_width, 0, 800);
+	ImGui::SliderInt("Height", &changed_prefs.gfx_manual_crop_height, 0, 600);
+	ImGui::Checkbox("Auto Crop", &changed_prefs.gfx_auto_crop);
+	ImGui::Checkbox("Borderless", &changed_prefs.borderless);
+	const char* vsync_items[] = { "-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz" };
+	ImGui::Combo("VSync Native", &changed_prefs.gfx_apmode[0].gfx_vsync, vsync_items, IM_ARRAYSIZE(vsync_items));
+	ImGui::Combo("VSync RTG", &changed_prefs.gfx_apmode[1].gfx_vsync, vsync_items, IM_ARRAYSIZE(vsync_items));
+	ImGui::SliderInt("H. Offset", &changed_prefs.gfx_horizontal_offset, -80, 80);
+	ImGui::SliderInt("V. Offset", &changed_prefs.gfx_vertical_offset, -80, 80);
+
+	ImGui::Separator();
+	ImGui::Text("Centering");
+	ImGui::Checkbox("Horizontal", (bool*)&changed_prefs.gfx_xcenter);
+	ImGui::Checkbox("Vertical", (bool*)&changed_prefs.gfx_ycenter);
+
+	ImGui::Separator();
+	ImGui::Text("Line mode");
+	ImGui::RadioButton("Single", &changed_prefs.gfx_vresolution, 0);
+	ImGui::RadioButton("Double", &changed_prefs.gfx_vresolution, 1);
+	ImGui::RadioButton("Scanlines", &changed_prefs.gfx_pscanlines, 1);
+	ImGui::RadioButton("Double, fields", &changed_prefs.gfx_pscanlines, 2);
+	ImGui::RadioButton("Double, fields+", &changed_prefs.gfx_pscanlines, 3);
+
+	ImGui::Separator();
+	ImGui::Text("Interlaced line mode");
+	ImGui::RadioButton("Single##Interlaced", &changed_prefs.gfx_iscanlines, 0);
+	ImGui::RadioButton("Double, frames", &changed_prefs.gfx_iscanlines, 0);
+	ImGui::RadioButton("Double, fields##Interlaced", &changed_prefs.gfx_iscanlines, 1);
+	ImGui::RadioButton("Double, fields+##Interlaced", &changed_prefs.gfx_iscanlines, 2);
+
+	ImGui::Separator();
+	const char* scaling_items[] = { "Auto", "Pixelated", "Smooth", "Integer" };
+	ImGui::Combo("Scaling method", &changed_prefs.scaling_method, scaling_items, IM_ARRAYSIZE(scaling_items));
+	const char* resolution_items[] = { "LowRes", "HighRes (normal)", "SuperHighRes" };
+	ImGui::Combo("Resolution", &changed_prefs.gfx_resolution, resolution_items, IM_ARRAYSIZE(resolution_items));
+	ImGui::Checkbox("Filtered Low Res", (bool*)&changed_prefs.gfx_lores_mode);
+	const char* res_autoswitch_items[] = { "Disabled", "Always On", "10%", "33%", "66%" };
+	ImGui::Combo("Res. autoswitch", &changed_prefs.gfx_autoresolution, res_autoswitch_items, IM_ARRAYSIZE(res_autoswitch_items));
+	ImGui::Checkbox("Frameskip", (bool*)&changed_prefs.gfx_framerate);
+	ImGui::SliderInt("Refresh", &changed_prefs.gfx_framerate, 1, 10);
+	ImGui::Checkbox("FPS Adj:", (bool*)&changed_prefs.cr[changed_prefs.cr_selected].locked);
+	ImGui::SliderFloat("##FPSAdj", &changed_prefs.cr[changed_prefs.cr_selected].rate, 1, 100);
+	ImGui::Checkbox("Correct Aspect Ratio", (bool*)&changed_prefs.gfx_correct_aspect);
+	ImGui::Checkbox("Blacker than black", &changed_prefs.gfx_blackerthanblack);
+	ImGui::Checkbox("Remove interlace artifacts", &changed_prefs.gfx_scandoubler);
+	ImGui::SliderInt("Brightness", &changed_prefs.gfx_luminance, -200, 200);
+}
+
+static void render_panel_sound()
+{
+	ImGui::Text("Sound Emulation");
+	ImGui::RadioButton("Disabled", &changed_prefs.produce_sound, 0);
+	ImGui::RadioButton("Disabled, but emulated", &changed_prefs.produce_sound, 1);
+	ImGui::RadioButton("Enabled", &changed_prefs.produce_sound, 2);
+	ImGui::Checkbox("Automatic switching", &changed_prefs.sound_auto);
+
+	ImGui::Separator();
+	ImGui::Text("Volume");
+	ImGui::SliderInt("Paula Volume", &changed_prefs.sound_volume_paula, 0, 100);
+	ImGui::SliderInt("CD Volume", &changed_prefs.sound_volume_cd, 0, 100);
+	ImGui::SliderInt("AHI Volume", &changed_prefs.sound_volume_board, 0, 100);
+	ImGui::SliderInt("MIDI Volume", &changed_prefs.sound_volume_midi, 0, 100);
+
+	ImGui::Separator();
+	ImGui::Text("Floppy Drive Sound Emulation");
+	ImGui::Checkbox("Enable floppy drive sound", (bool*)&changed_prefs.floppyslots[0].dfxclick);
+	ImGui::SliderInt("Empty drive", &changed_prefs.dfxclickvolume_empty[0], 0, 100);
+	ImGui::SliderInt("Disk in drive", &changed_prefs.dfxclickvolume_disk[0], 0, 100);
+
+	ImGui::Separator();
+	ImGui::Text("Sound Buffer Size");
+	ImGui::SliderInt("##SoundBufferSize", &changed_prefs.sound_maxbsiz, 0, 65536);
+	ImGui::RadioButton("Pull audio", &changed_prefs.sound_pullmode, 1);
+	ImGui::RadioButton("Push audio", &changed_prefs.sound_pullmode, 0);
+
+	ImGui::Separator();
+	ImGui::Text("Options");
+	const char* soundcard_items[] = { "-" };
+	ImGui::Combo("Device", &changed_prefs.soundcard, soundcard_items, IM_ARRAYSIZE(soundcard_items));
+	ImGui::Checkbox("System default", &changed_prefs.soundcard_default);
+	const char* channel_mode_items[] = { "Mono", "Stereo", "Cloned stereo (4 channels)", "4 Channels", "Cloned stereo (5.1)", "5.1 Channels", "Cloned stereo (7.1)", "7.1 channels" };
+	ImGui::Combo("Channel mode", &changed_prefs.sound_stereo, channel_mode_items, IM_ARRAYSIZE(channel_mode_items));
+	const char* frequency_items[] = { "11025", "22050", "32000", "44100", "48000" };
+	ImGui::Combo("Frequency", &changed_prefs.sound_freq, frequency_items, IM_ARRAYSIZE(frequency_items));
+	const char* interpolation_items[] = { "Disabled", "Anti", "Sinc", "RH", "Crux" };
+	ImGui::Combo("Interpolation", &changed_prefs.sound_interpol, interpolation_items, IM_ARRAYSIZE(interpolation_items));
+	const char* filter_items[] = { "Always off", "Emulated (A500)", "Emulated (A1200)", "Always on (A500)", "Always on (A1200)", "Always on (Fixed only)" };
+	ImGui::Combo("Filter", (int*)&changed_prefs.sound_filter, filter_items, IM_ARRAYSIZE(filter_items));
+	const char* separation_items[] = { "100%", "90%", "80%", "70%", "60%", "50%", "40%", "30%", "20%", "10%", "0%" };
+	ImGui::Combo("Stereo separation", &changed_prefs.sound_stereo_separation, separation_items, IM_ARRAYSIZE(separation_items));
+	const char* stereo_delay_items[] = { "-", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" };
+	ImGui::Combo("Stereo delay", &changed_prefs.sound_mixed_stereo_delay, stereo_delay_items, IM_ARRAYSIZE(stereo_delay_items));
+	const char* swap_channels_items[] = { "-", "Paula only", "AHI only", "Both" };
+	ImGui::Combo("Swap channels", (int*)&changed_prefs.sound_stereo_swap_paula, swap_channels_items, IM_ARRAYSIZE(swap_channels_items));
+}
+
+static void render_panel_input()
+{
+	ImGui::Text("Port 0:");
+	ImGui::Combo("##Port0", &changed_prefs.jports[0].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
+	ImGui::Combo("##Port0Mode", &changed_prefs.jports[0].mode, "Default\0Wheel Mouse\0Mouse\0Joystick\0Gamepad\0Analog Joystick\0CDTV remote mouse\0CD32 pad\0");
+	ImGui::Combo("##Port0Autofire", &changed_prefs.jports[0].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
+	ImGui::Combo("##Port0MouseMode", &changed_prefs.jports[0].mousemap, "None\0LStick\0");
+	ImGui::Button("Remap");
+
+	ImGui::Text("Port 1:");
+	ImGui::Combo("##Port1", &changed_prefs.jports[1].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
+	ImGui::Combo("##Port1Mode", &changed_prefs.jports[1].mode, "Default\0Wheel Mouse\0Mouse\0Joystick\0Gamepad\0Analog Joystick\0CDTV remote mouse\0CD32 pad\0");
+	ImGui::Combo("##Port1Autofire", &changed_prefs.jports[1].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
+	ImGui::Combo("##Port1MouseMode", &changed_prefs.jports[1].mousemap, "None\0LStick\0");
+	ImGui::Button("Remap");
+
+	ImGui::Button("Swap ports");
+	ImGui::Checkbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
+
+	ImGui::Text("Emulated Parallel Port joystick adapter");
+	ImGui::Text("Port 2:");
+	ImGui::Combo("##Port2", &changed_prefs.jports[2].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
+	ImGui::Combo("##Port2Autofire", &changed_prefs.jports[2].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
+
+	ImGui::Text("Port 3:");
+	ImGui::Combo("##Port3", &changed_prefs.jports[3].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
+	ImGui::Combo("##Port3Autofire", &changed_prefs.jports[3].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
+
+	const char* autofire_rate_items[] = { "Off", "Slow", "Medium", "Fast" };
+	ImGui::Combo("Autofire Rate", &changed_prefs.input_autofire_linecnt, autofire_rate_items, IM_ARRAYSIZE(autofire_rate_items));
+
+	ImGui::SliderInt("Digital joy-mouse speed", &changed_prefs.input_joymouse_speed, 2, 20);
+	ImGui::SliderInt("Analog joy-mouse speed", &changed_prefs.input_joymouse_multiplier, 5, 150);
+	ImGui::SliderInt("Mouse speed", &changed_prefs.input_mouse_speed, 5, 150);
+
+	ImGui::Checkbox("Virtual mouse driver", (bool*)&changed_prefs.input_tablet);
+	ImGui::Checkbox("Magic Mouse untrap", (bool*)&changed_prefs.input_mouse_untrap);
+
+	ImGui::RadioButton("Both", &changed_prefs.input_magic_mouse_cursor, 0);
+	ImGui::RadioButton("Native only", &changed_prefs.input_magic_mouse_cursor, 1);
+	ImGui::RadioButton("Host only", &changed_prefs.input_magic_mouse_cursor, 2);
+
+	ImGui::Checkbox("Swap Backslash/F11", (bool*)&key_swap_hack);
+	ImGui::Checkbox("Page Up = End", (bool*)&key_swap_end_pgup);
+}
+
+static void render_panel_io()
+{
+	ImGui::Text("Parallel Port");
+	const char* sampler_items[] = { "none" };
+	ImGui::Combo("Sampler", &changed_prefs.samplersoundcard, sampler_items, IM_ARRAYSIZE(sampler_items));
+	ImGui::Checkbox("Stereo sampler", &changed_prefs.sampler_stereo);
+
+	ImGui::Separator();
+	ImGui::Text("Serial Port");
+	const char* serial_port_items[] = { "none" };
+	ImGui::Combo("##SerialPort", (int*)(void*)changed_prefs.sername, serial_port_items, IM_ARRAYSIZE(serial_port_items));
+	ImGui::Checkbox("Shared", &changed_prefs.serial_demand);
+	ImGui::Checkbox("Direct", &changed_prefs.serial_direct);
+	ImGui::Checkbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts);
+	ImGui::Checkbox("uaeserial.device", &changed_prefs.uaeserial);
+	ImGui::Checkbox("Serial status (RTS/CTS/DTR/DTE/CD)", &changed_prefs.serial_rtsctsdtrdtecd);
+	ImGui::Checkbox("Serial status: Ring Indicator", &changed_prefs.serial_ri);
+
+	ImGui::Separator();
+	ImGui::Text("MIDI");
+	const char* midi_out_items[] = { "none" };
+	ImGui::Combo("Out", (int*)(void*)changed_prefs.midioutdev, midi_out_items, IM_ARRAYSIZE(midi_out_items));
+	const char* midi_in_items[] = { "none" };
+	ImGui::Combo("In", (int*)(void*)changed_prefs.midiindev, midi_in_items, IM_ARRAYSIZE(midi_in_items));
+	ImGui::Checkbox("Route MIDI In to MIDI Out", &changed_prefs.midirouter);
+
+	ImGui::Separator();
+	ImGui::Text("Protection Dongle");
+	const char* dongle_items[] = { "none", "RoboCop 3", "Leader Board", "B.A.T. II", "Italy '90 Soccer", "Dames Grand-Maitre", "Rugby Coach", "Cricket Captain", "Leviathan", "Music Master", "Logistics/SuperBase", "Scala MM (Red)", "Scala MM (Green)", "Striker Manager", "Multi-player Soccer Manager", "Football Director 2" };
+	ImGui::Combo("##ProtectionDongle", &changed_prefs.dongle, dongle_items, IM_ARRAYSIZE(dongle_items));
+}
+
+static void render_panel_custom()
+{
+	ImGui::RadioButton("Port 0: Mouse", &SelectedPort, 0);
+	ImGui::RadioButton("Port 1: Joystick", &SelectedPort, 1);
+	ImGui::RadioButton("Port 2: Parallel 1", &SelectedPort, 2);
+	ImGui::RadioButton("Port 3: Parallel 2", &SelectedPort, 3);
+
+	ImGui::RadioButton("None", &SelectedFunction, 0);
+	ImGui::RadioButton("HotKey", &SelectedFunction, 1);
+
+	ImGui::InputText("##SetHotkey", "", 120);
+	ImGui::Button("...");
+	ImGui::Button("X");
+
+	ImGui::InputText("Input Device", "", 256);
+
+	for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
+	{
+		ImGui::Text("%s", label_button_list[i].c_str());
+		const char* items[] = { "None" };
+		ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items));
+	}
+
+	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
+	{
+		ImGui::Text("%s", label_axis_list[i].c_str());
+		const char* items[] = { "None" };
+		ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items));
+	}
+
+	if (ImGui::Button("Save as default mapping"))
+	{
+		// Save mapping
+	}
+}
+
+static void render_panel_diskswapper()
+{
+	ImGui::BeginChild("DiskSwapperList", ImVec2(0, -50), true);
+	ImGui::Columns(3, "DiskSwapperColumns");
+	ImGui::Separator();
+	ImGui::Text("#"); ImGui::NextColumn();
+	ImGui::Text("Disk Image"); ImGui::NextColumn();
+	ImGui::Text("Drive"); ImGui::NextColumn();
+	ImGui::Separator();
+	for (int i = 0; i < MAX_SPARE_DRIVES; ++i)
+	{
+		ImGui::Text("%d", i + 1); ImGui::NextColumn();
+		ImGui::InputText("", changed_prefs.dfxlist[i], MAX_DPATH);
+		ImGui::SameLine();
+		if (ImGui::Button("..."))
+		{
+			// Select file
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("X"))
+		{
+			changed_prefs.dfxlist[i][0] = 0;
+		}
+		ImGui::NextColumn();
+		int drive = disk_in_drive(i);
+		if (ImGui::Button(drive == -1 ? "-" : std::to_string(drive).c_str()))
+		{
+			disk_swap(i, 1);
+		}
+		ImGui::NextColumn();
+	}
+	ImGui::Columns(1);
+	ImGui::EndChild();
+
+	if (ImGui::Button("Remove All"))
+	{
+		for (auto& row : changed_prefs.dfxlist)
+			row[0] = 0;
+	}
+}
+
+static void render_panel_misc()
+{
+	ImGui::Checkbox("Status Line native", (bool*)&changed_prefs.leds_on_screen);
+	ImGui::Checkbox("Status Line RTG", (bool*)&changed_prefs.leds_on_screen);
+	ImGui::Checkbox("Show GUI on startup", &changed_prefs.start_gui);
+	ImGui::Checkbox("Untrap = middle button", (bool*)&changed_prefs.input_mouse_untrap);
+	ImGui::Checkbox("Alt-Tab releases control", &changed_prefs.alt_tab_release);
+	ImGui::Checkbox("Use RetroArch Quit Button", &changed_prefs.use_retroarch_quit);
+	ImGui::Checkbox("Use RetroArch Menu Button", &changed_prefs.use_retroarch_menu);
+	ImGui::Checkbox("Use RetroArch Reset Button", &changed_prefs.use_retroarch_reset);
+	ImGui::Checkbox("Master floppy write protection", &changed_prefs.floppy_read_only);
+	ImGui::Checkbox("Master harddrive write protection", &changed_prefs.harddrive_read_only);
+	ImGui::Checkbox("Clipboard sharing", &changed_prefs.clipboard_sharing);
+	ImGui::Checkbox("RCtrl = RAmiga", &changed_prefs.right_control_is_right_win_key);
+	ImGui::Checkbox("Always on top", &changed_prefs.main_alwaysontop);
+	ImGui::Checkbox("GUI Always on top", &changed_prefs.gui_alwaysontop);
+	ImGui::Checkbox("Synchronize clock", &changed_prefs.tod_hack);
+	ImGui::Checkbox("One second reboot pause", &changed_prefs.reset_delay);
+	ImGui::Checkbox("Faster RTG", &changed_prefs.picasso96_nocustom);
+	ImGui::Checkbox("Allow native code", &changed_prefs.native_code);
+	ImGui::Checkbox("Log illegal memory accesses", &changed_prefs.illegal_mem);
+	ImGui::Checkbox("Minimize when focus is lost", &changed_prefs.minimize_inactive);
+	ImGui::Checkbox("Capture mouse when window is activated", &changed_prefs.capture_always);
+	ImGui::Checkbox("Hide all UAE autoconfig boards", &changed_prefs.uae_hide_autoconfig);
+	ImGui::Checkbox("A600/A1200/A4000 IDE scsi.device disable", &changed_prefs.scsidevicedisable);
+	ImGui::Checkbox("Warp mode reset", &changed_prefs.turbo_boot);
+
+	const char* led_items[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
+	ImGui::Combo("NumLock", &changed_prefs.kbd_led_num, led_items, IM_ARRAYSIZE(led_items));
+	ImGui::Combo("ScrollLock", &changed_prefs.kbd_led_scr, led_items, IM_ARRAYSIZE(led_items));
+	ImGui::Combo("CapsLock", &changed_prefs.kbd_led_cap, led_items, IM_ARRAYSIZE(led_items));
+
+	ImGui::InputText("Open GUI", changed_prefs.open_gui, 256);
+	ImGui::InputText("Quit Key", changed_prefs.quit_amiberry, 256);
+	ImGui::InputText("Action Replay", changed_prefs.action_replay, 256);
+	ImGui::InputText("FullScreen", changed_prefs.fullscreen_toggle, 256);
+	ImGui::InputText("Minimize", changed_prefs.minimize, 256);
+	ImGui::InputText("Right Amiga", changed_prefs.right_amiga, 256);
+}
+
+static void render_panel_prio()
+{
+	ImGui::Text("When Active");
+	const char* prio_items[] = { "Low", "Normal", "High" };
+	ImGui::Combo("Run at priority##Active", &changed_prefs.active_capture_priority, prio_items, IM_ARRAYSIZE(prio_items));
+	ImGui::Checkbox("Pause emulation##Active", &changed_prefs.active_nocapture_pause);
+	ImGui::Checkbox("Disable sound##Active", &changed_prefs.active_nocapture_nosound);
+
+	ImGui::Separator();
+	ImGui::Text("When Inactive");
+	ImGui::Combo("Run at priority##Inactive", &changed_prefs.inactive_priority, prio_items, IM_ARRAYSIZE(prio_items));
+	ImGui::Checkbox("Pause emulation##Inactive", &changed_prefs.inactive_pause);
+	ImGui::Checkbox("Disable sound##Inactive", &changed_prefs.inactive_nosound);
+	ImGui::Checkbox("Disable input##Inactive", (bool*)&changed_prefs.inactive_input);
+
+	ImGui::Separator();
+	ImGui::Text("When Minimized");
+	ImGui::Combo("Run at priority##Minimized", &changed_prefs.minimized_priority, prio_items, IM_ARRAYSIZE(prio_items));
+	ImGui::Checkbox("Pause emulation##Minimized", &changed_prefs.minimized_pause);
+	ImGui::Checkbox("Disable sound##Minimized", &changed_prefs.minimized_nosound);
+	ImGui::Checkbox("Disable input##Minimized", (bool*)&changed_prefs.minimized_input);
+}
+
+static void render_panel_savestates()
+{
+	for (int i = 0; i < 15; ++i)
+	{
+		ImGui::RadioButton(std::to_string(i).c_str(), &current_state_num, i);
+	}
+	ImGui::Separator();
+	ImGui::Text("Filename: %s", savestate_fname);
+	ImGui::Text("Timestamp: %s", "");
+	if (ImGui::Button("Load from Slot"))
+	{
+		// Load state from selected slot
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Save to Slot"))
+	{
+		// Save current state to selected slot
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Delete Slot"))
+	{
+		// Delete state from selected slot
+	}
+	if (ImGui::Button("Load state..."))
+	{
+		// Load state from file
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Save state..."))
+	{
+		// Save current state to file
+	}
+}
+
 void run_gui()
 {
 	gui_running = true;
@@ -1483,718 +2220,91 @@ void run_gui()
 
 		if (last_active_panel == PANEL_ABOUT)
 		{
-			ImGui::Text("Amiberry - The Amiga Emulator for ARM-based devices");
-			ImGui::Text("Version: %s", get_version_string().c_str());
-			ImGui::Separator();
-			ImGui::Text("Ported from WinUAE, which was made by Toni Wilen and contributors.");
-			ImGui::Text("WinUAE is a port of the original UAE, which was made by Bernd Schmidt.");
-			ImGui::Text("Guisan GUI library by Olof Naessen.");
-			ImGui::Text("ImGui GUI library by Omar Cornut.");
+			render_panel_about();
 		}
 		else if (last_active_panel == PANEL_PATHS)
 		{
-			char tmp[MAX_DPATH];
-			ImGui::Text("System ROMs:");
-			get_rom_path(tmp, sizeof tmp);
-			ImGui::InputText("##SystemROMs", tmp, MAX_DPATH);
-			ImGui::SameLine();
-			if (ImGui::Button("...##SystemROMs"))
-			{
-				//std::string path = SelectFolder("Folder for System ROMs", changed_prefs.path_rom.path[0]);
-				//if (!path.empty())
-				//	set_rom_path(path);
-			}
-			ImGui::Text("Configuration files:");
-			get_configuration_path(tmp, sizeof tmp);
-			ImGui::InputText("##ConfigPath", tmp, MAX_DPATH);
-			ImGui::SameLine();
-			if (ImGui::Button("...##ConfigPath"))
-			{
-				//std::string path = SelectFolder("Folder for configuration files", tmp);
-				//if (!path.empty())
-				//	set_configuration_path(path);
-			}
+			render_panel_paths();
 		}
 		else if (last_active_panel == PANEL_QUICKSTART)
 		{
-			const char* models[] = { "Amiga 500", "Amiga 500+", "Amiga 600", "Amiga 1000", "Amiga 1200", "Amiga 3000", "Amiga 4000", "Amiga 4000T", "CD32", "CDTV", "American Laser Games / Picmatic", "Arcadia Multi Select system", "Macrosystem" };
-			ImGui::Combo("Amiga model", &quickstart_model, models, IM_ARRAYSIZE(models));
-
-			const char* configs[] = { "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM", "1.3 ROM, ECS Agnus, 1 MB Chip RAM", "1.3 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM" };
-			ImGui::Combo("Config", &quickstart_conf, configs, IM_ARRAYSIZE(configs));
-
-			ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
-
-			for (int i = 0; i < 2; ++i)
-			{
-				char label[10];
-				snprintf(label, 10, "DF%d:", i);
-				ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
-				ImGui::SameLine();
-				ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
-			}
-
-			ImGui::Checkbox("CD drive", &changed_prefs.cdslots[0].inuse);
-
-			if (ImGui::Button("Set configuration"))
-				built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
+			render_panel_quickstart();
 		}
 		else if (last_active_panel == PANEL_CONFIGURATIONS)
 		{
-			static int selected = -1;
-			ImGui::BeginChild("ConfigList", ImVec2(0, -100), true);
-			for (int i = 0; i < ConfigFilesList.size(); ++i)
-			{
-				if (ImGui::Selectable(ConfigFilesList[i]->Name, selected == i))
-					selected = i;
-			}
-			ImGui::EndChild();
-
-			static char name[MAX_DPATH] = "";
-			static char desc[MAX_DPATH] = "";
-			if (selected != -1)
-			{
-				strncpy(name, ConfigFilesList[selected]->Name, MAX_DPATH);
-				strncpy(desc, ConfigFilesList[selected]->Description, MAX_DPATH);
-			}
-			ImGui::InputText("Name", name, MAX_DPATH);
-			ImGui::InputText("Description", desc, MAX_DPATH);
-
-			if (ImGui::Button("Load"))
-			{
-				if (selected != -1)
-					target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Save"))
-			{
-				char filename[MAX_DPATH];
-				get_configuration_path(filename, MAX_DPATH);
-				strncat(filename, name, MAX_DPATH - 1);
-				strncat(filename, ".uae", MAX_DPATH - 1);
-				strncpy(changed_prefs.description, desc, 256);
-				if (cfgfile_save(&changed_prefs, filename, 0))
-				{
-					strncpy(last_active_config, name, MAX_DPATH);
-					ReadConfigFileList();
-				}
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Delete"))
-			{
-				if (selected != -1)
-				{
-					remove(ConfigFilesList[selected]->FullPath);
-					ReadConfigFileList();
-					selected = -1;
-				}
-			}
+			render_panel_configurations();
 		}
 		else if (last_active_panel == PANEL_CPU)
 		{
-			ImGui::RadioButton("68000", &changed_prefs.cpu_model, 68000);
-			ImGui::RadioButton("68010", &changed_prefs.cpu_model, 68010);
-			ImGui::RadioButton("68020", &changed_prefs.cpu_model, 68020);
-			ImGui::RadioButton("68030", &changed_prefs.cpu_model, 68030);
-			ImGui::RadioButton("68040", &changed_prefs.cpu_model, 68040);
-			ImGui::RadioButton("68060", &changed_prefs.cpu_model, 68060);
-			ImGui::Checkbox("24-bit addressing", &changed_prefs.address_space_24);
-			ImGui::Checkbox("More compatible", &changed_prefs.cpu_compatible);
-			ImGui::Checkbox("Data cache", &changed_prefs.cpu_data_cache);
-			ImGui::Checkbox("JIT", (bool*)&changed_prefs.cachesize);
-
-			ImGui::Separator();
-			ImGui::Text("MMU");
-			ImGui::RadioButton("None##MMU", &changed_prefs.mmu_model, 0);
-			ImGui::RadioButton("MMU", &changed_prefs.mmu_model, changed_prefs.cpu_model);
-			ImGui::Checkbox("EC", &changed_prefs.mmu_ec);
-
-			ImGui::Separator();
-			ImGui::Text("FPU");
-			ImGui::RadioButton("None##FPU", &changed_prefs.fpu_model, 0);
-			ImGui::RadioButton("68881", &changed_prefs.fpu_model, 68881);
-			ImGui::RadioButton("68882", &changed_prefs.fpu_model, 68882);
-			ImGui::RadioButton("CPU internal", &changed_prefs.fpu_model, changed_prefs.cpu_model);
-			ImGui::Checkbox("More compatible##FPU", &changed_prefs.fpu_strict);
-
-			ImGui::Separator();
-			ImGui::Text("CPU Speed");
-			ImGui::RadioButton("Fastest Possible", &changed_prefs.m68k_speed, -1);
-			ImGui::RadioButton("A500/A1200 or cycle exact", &changed_prefs.m68k_speed, 0);
-			ImGui::SliderInt("CPU Speed", (int*)&changed_prefs.m68k_speed_throttle, 0, 5000);
-			ImGui::SliderInt("CPU Idle", &changed_prefs.cpu_idle, 0, 120);
-
-			ImGui::Separator();
-			ImGui::Text("Cycle-Exact CPU Emulation Speed");
-			const char* freq_items[] = { "1x", "2x (A500)", "4x (A1200)", "8x", "16x" };
-			ImGui::Combo("CPU Frequency", &changed_prefs.cpu_clock_multiplier, freq_items, IM_ARRAYSIZE(freq_items));
-			ImGui::Checkbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
-
-			ImGui::Separator();
-			ImGui::Text("PowerPC CPU Options");
-			ImGui::Checkbox("PPC emulation", (bool*)&changed_prefs.ppc_mode);
-			ImGui::SliderInt("Stopped M68K CPU Idle", &changed_prefs.ppc_cpu_idle, 0, 10);
-
-			ImGui::Separator();
-			ImGui::Text("Advanced JIT Settings");
-			ImGui::SliderInt("Cache size", &changed_prefs.cachesize, 0, 8192);
-			ImGui::Checkbox("FPU Support##JIT", &changed_prefs.compfpu);
-			ImGui::Checkbox("Constant jump", &changed_prefs.comp_constjump);
-			ImGui::Checkbox("Hard flush", &changed_prefs.comp_hardflush);
-			ImGui::RadioButton("Direct##memaccess", &changed_prefs.comptrustbyte, 0);
-			ImGui::RadioButton("Indirect##memaccess", &changed_prefs.comptrustbyte, 1);
-			ImGui::Checkbox("No flags", &changed_prefs.compnf);
-			ImGui::Checkbox("Catch unexpected exceptions", &changed_prefs.comp_catchfault);
+			render_panel_cpu();
 		}
 		else if (last_active_panel == PANEL_CHIPSET)
 		{
-			ImGui::RadioButton("OCS", (int*)&changed_prefs.chipset_mask, 0);
-			ImGui::RadioButton("ECS Agnus", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS);
-			ImGui::RadioButton("ECS Denise", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_DENISE);
-			ImGui::RadioButton("Full ECS", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE);
-			ImGui::RadioButton("AGA", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA);
-			ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
-			ImGui::Checkbox("Cycle Exact (Full)", &changed_prefs.cpu_cycle_exact);
-			ImGui::Checkbox("Cycle Exact (DMA/Memory)", &changed_prefs.cpu_memory_cycle_exact);
-			const char* chipset_items[] = { "Generic", "CDTV", "CDTV-CR", "CD32", "A500", "A500+", "A600", "A1000", "A1200", "A2000", "A3000", "A3000T", "A4000", "A4000T", "Velvet", "Casablanca", "DraCo" };
-			ImGui::Combo("Chipset Extra", &changed_prefs.cs_compatible, chipset_items, IM_ARRAYSIZE(chipset_items));
-
-			ImGui::Separator();
-			ImGui::Text("Options");
-			ImGui::Checkbox("Immediate Blitter", &changed_prefs.immediate_blits);
-			ImGui::Checkbox("Wait for Blitter", (bool*)&changed_prefs.waiting_blits);
-			ImGui::Checkbox("Multithreaded Drawing", (bool*)&multithread_enabled);
-			const char* monitor_items[] = { "-", "Autodetect" };
-			ImGui::Combo("Video port display hardware", &changed_prefs.monitoremu, monitor_items, IM_ARRAYSIZE(monitor_items));
-
-			ImGui::Separator();
-			ImGui::Text("Keyboard");
-			const char* keyboard_items[] = { "Keyboard disconnected", "UAE High level emulation", "A500 / A500 + (6500 - 1 MCU)", "A600 (6570 - 036 MCU)", "A1000 (6500 - 1 MCU. ROM not yet dumped)", "A1000 (6570 - 036 MCU)", "A1200 (68HC05C MCU)", "A2000 (Cherry, 8039 MCU)", "A2000/A3000/A4000 (6570-036 MCU)" };
-			ImGui::Combo("Keyboard Layout", &changed_prefs.keyboard_mode, keyboard_items, IM_ARRAYSIZE(keyboard_items));
-			ImGui::Checkbox("Keyboard N-key rollover", &changed_prefs.keyboard_nkro);
-
-			ImGui::Separator();
-			ImGui::Text("Collision Level");
-			ImGui::RadioButton("None##Collision", &changed_prefs.collision_level, 0);
-			ImGui::RadioButton("Sprites only", &changed_prefs.collision_level, 1);
-			ImGui::RadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
-			ImGui::RadioButton("Full (rarely needed)", &changed_prefs.collision_level, 3);
+			render_panel_chipset();
 		}
 		else if (last_active_panel == PANEL_ROM)
 		{
-			ImGui::Text("Main ROM File:");
-			ImGui::InputText("##MainROM", changed_prefs.romfile, MAX_DPATH);
-			ImGui::Text("Extended ROM File:");
-			ImGui::InputText("##ExtROM", changed_prefs.romextfile, MAX_DPATH);
-			ImGui::Text("Cartridge ROM File:");
-			ImGui::InputText("##CartROM", changed_prefs.cartfile, MAX_DPATH);
-			ImGui::Checkbox("MapROM emulation", (bool*)&changed_prefs.maprom);
-			ImGui::Checkbox("ShapeShifter support", &changed_prefs.kickshifter);
-			const char* uae_items[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
-			ImGui::Combo("Advanced UAE expansion board/Boot ROM", &changed_prefs.uaeboard, uae_items, IM_ARRAYSIZE(uae_items));
+			render_panel_rom();
 		}
 		else if (last_active_panel == PANEL_RAM)
 		{
-			ImGui::SliderInt("Chip", (int*)&changed_prefs.chipmem.size, 0, 0x800000);
-			ImGui::SliderInt("Slow", (int*)&changed_prefs.bogomem.size, 0, 0x180000);
-			ImGui::SliderInt("Z2 Fast", (int*)&changed_prefs.fastmem[0].size, 0, 0x800000);
-			ImGui::SliderInt("Z3 Fast", (int*)&changed_prefs.z3fastmem[0].size, 0, 0x40000000);
-			ImGui::SliderInt("32-bit Chip RAM", (int*)&changed_prefs.z3chipmem.size, 0, 0x40000000);
-			ImGui::SliderInt("Motherboard Fast RAM", (int*)&changed_prefs.mbresmem_low.size, 0, 0x8000000);
-			ImGui::SliderInt("Processor slot Fast RAM", (int*)&changed_prefs.mbresmem_high.size, 0, 0x8000000);
-			const char* z3_mapping_items[] = { "Automatic (*)", "UAE (0x10000000)", "Real (0x40000000)" };
-			ImGui::Combo("Z3 Mapping Mode", &changed_prefs.z3_mapping_mode, z3_mapping_items, IM_ARRAYSIZE(z3_mapping_items));
+			render_panel_ram();
 		}
 		else if (last_active_panel == PANEL_FLOPPY)
 		{
-			for (int i = 0; i < 4; ++i)
-			{
-				char label[10];
-				snprintf(label, 10, "DF%d:", i);
-				ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
-				ImGui::SameLine();
-				ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
-				ImGui::SameLine();
-				ImGui::InputText("", changed_prefs.floppyslots[i].df, MAX_DPATH);
-			}
-			ImGui::SliderInt("Floppy Drive Emulation Speed", &changed_prefs.floppy_speed, 0, 800);
-			if (ImGui::Button("Create 3.5\" DD disk"))
-			{
-				// Create 3.5" DD Disk
-			}
-			if (ImGui::Button("Create 3.5\" HD disk"))
-			{
-				// Create 3.5" HD Disk
-			}
-			if (ImGui::Button("Save config for disk"))
-			{
-				// Save configuration for current disk
-			}
+			render_panel_floppy();
 		}
 		else if (last_active_panel == PANEL_HD)
 		{
-			for (int i = 0; i < changed_prefs.mountitems; ++i)
-			{
-				ImGui::Text("Device: %s, Volume: %s, Path: %s", changed_prefs.mountconfig[i].ci.devname, changed_prefs.mountconfig[i].ci.volname, changed_prefs.mountconfig[i].ci.rootdir);
-			}
-			if (ImGui::Button("Add Directory/Archive"))
-			{
-				// Add Directory/Archive
-			}
-			if (ImGui::Button("Add Hardfile"))
-			{
-				// Add Hardfile
-			}
-			if (ImGui::Button("Add Hard Drive"))
-			{
-				// Add Hard Drive
-			}
-			if (ImGui::Button("Add CD Drive"))
-			{
-				// Add CD Drive
-			}
-			if (ImGui::Button("Add Tape Drive"))
-			{
-				// Add Tape Drive
-			}
-			if (ImGui::Button("Create Hardfile"))
-			{
-				// Create Hardfile
-			}
-			ImGui::Checkbox("CDFS automount CD/DVD drives", &changed_prefs.automount_cddrives);
-			ImGui::Checkbox("CD drive/image", &changed_prefs.cdslots[0].inuse);
-			ImGui::InputText("##CDFile", changed_prefs.cdslots[0].name, MAX_DPATH);
-			if (ImGui::Button("Eject"))
-			{
-				// Eject CD
-			}
-			if (ImGui::Button("Select image file"))
-			{
-				// Select CD image file
-			}
-			ImGui::Checkbox("CDTV/CDTV-CR/CD32 turbo CD read speed", (bool*)&changed_prefs.cd_speed);
+			render_panel_hd();
 		}
 		else if (last_active_panel == PANEL_EXPANSIONS)
 		{
-			ImGui::Text("Expansion Board Settings");
-			// TODO: Implement Expansion Board Settings
-
-			ImGui::Separator();
-			ImGui::Text("Accelerator Board Settings");
-			// TODO: Implement Accelerator Board Settings
-
-			ImGui::Separator();
-			ImGui::Text("Miscellaneous Expansions");
-			ImGui::Checkbox("bsdsocket.library", &changed_prefs.socket_emu);
-			ImGui::Checkbox("uaescsi.device", (bool*)&changed_prefs.scsi);
-			ImGui::Checkbox("CD32 Full Motion Video cartridge", &changed_prefs.cs_cd32fmv);
-			ImGui::Checkbox("uaenet.device", &changed_prefs.sana2);
+			render_panel_expansions();
 		}
 		else if (last_active_panel == PANEL_RTG)
 		{
-			const char* rtg_boards[] = { "-", "UAE Zorro II", "UAE Zorro III", "PCI bridgeboard" };
-			ImGui::Combo("RTG Graphics Board", &changed_prefs.rtgboards[0].rtgmem_type, rtg_boards, IM_ARRAYSIZE(rtg_boards));
-			ImGui::SliderInt("VRAM size", (int*)&changed_prefs.rtgboards[0].rtgmem_size, 0, 0x10000000);
-			ImGui::Checkbox("Scale if smaller than display size setting", (bool*)&changed_prefs.gf[1].gfx_filter_autoscale);
-			ImGui::Checkbox("Always scale in windowed mode", &changed_prefs.rtgallowscaling);
-			ImGui::Checkbox("Always center", (bool*)&changed_prefs.gf[1].gfx_filter_autoscale);
-			ImGui::Checkbox("Hardware vertical blank interrupt", &changed_prefs.rtg_hardwareinterrupt);
-			ImGui::Checkbox("Hardware sprite emulation", &changed_prefs.rtg_hardwaresprite);
-			ImGui::Checkbox("Multithreaded", &changed_prefs.rtg_multithread);
-			const char* rtg_refreshrates[] = { "Chipset", "Default", "50", "60", "70", "75" };
-			ImGui::Combo("Refresh rate", &changed_prefs.rtgvblankrate, rtg_refreshrates, IM_ARRAYSIZE(rtg_refreshrates));
-			const char* rtg_buffermodes[] = { "Double buffering", "Triple buffering" };
-			ImGui::Combo("Buffer mode", &changed_prefs.gfx_apmode[1].gfx_backbuffers, rtg_buffermodes, IM_ARRAYSIZE(rtg_buffermodes));
-			const char* rtg_aspectratios[] = { "Disabled", "Automatic" };
-			ImGui::Combo("Aspect Ratio", &changed_prefs.rtgscaleaspectratio, rtg_aspectratios, IM_ARRAYSIZE(rtg_aspectratios));
-			const char* rtg_16bit_modes[] = { "(15/16bit)", "All", "R5G6B5PC (*)", "R5G5B5PC", "R5G6B5", "R5G5B5", "B5G6R5PC", "B5G5R5PC" };
-			ImGui::Combo("16-bit modes", (int*)&changed_prefs.picasso96_modeflags, rtg_16bit_modes, IM_ARRAYSIZE(rtg_16bit_modes));
-			const char* rtg_32bit_modes[] = { "(32bit)", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8" };
-			ImGui::Combo("32-bit modes", (int*)&changed_prefs.picasso96_modeflags, rtg_32bit_modes, IM_ARRAYSIZE(rtg_32bit_modes));
+			render_panel_rtg();
 		}
 		else if (last_active_panel == PANEL_HWINFO)
 		{
-			ImGui::BeginChild("HWInfoList", ImVec2(0, -50), true);
-			ImGui::Columns(6, "HWInfoColumns");
-			ImGui::Separator();
-			ImGui::Text("Type"); ImGui::NextColumn();
-			ImGui::Text("Name"); ImGui::NextColumn();
-			ImGui::Text("Start"); ImGui::NextColumn();
-			ImGui::Text("End"); ImGui::NextColumn();
-			ImGui::Text("Size"); ImGui::NextColumn();
-			ImGui::Text("ID"); ImGui::NextColumn();
-			ImGui::Separator();
-			for (int i = 0; i < MAX_INFOS; ++i)
-			{
-				struct autoconfig_info* aci = expansion_get_autoconfig_data(&changed_prefs, i);
-				if (aci)
-				{
-					ImGui::Text("%s", aci->zorro >= 1 && aci->zorro <= 3 ? std::to_string(aci->zorro).c_str() : "-"); ImGui::NextColumn();
-					ImGui::Text("%s", aci->name); ImGui::NextColumn();
-					ImGui::Text("0x%08x", aci->start); ImGui::NextColumn();
-					ImGui::Text("0x%08x", aci->start + aci->size - 1); ImGui::NextColumn();
-					ImGui::Text("0x%08x", aci->size); ImGui::NextColumn();
-					ImGui::Text("0x%04x/0x%02x", (aci->autoconfig_bytes[4] << 8) | aci->autoconfig_bytes[5], aci->autoconfig_bytes[1]); ImGui::NextColumn();
-				}
-			}
-			ImGui::Columns(1);
-			ImGui::EndChild();
-
-			ImGui::Checkbox("Custom board order", &changed_prefs.autoconfig_custom_sort);
-			if (ImGui::Button("Move up"))
-			{
-				// Move up
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Move down"))
-			{
-				// Move down
-			}
+			render_panel_hwinfo();
 		}
 		else if (last_active_panel == PANEL_DISPLAY)
 		{
-			ImGui::Text("Amiga Screen");
-			const char* screenmode_items[] = { "Windowed", "Fullscreen", "Full-window" };
-			ImGui::Combo("Screen mode", &changed_prefs.gfx_apmode[0].gfx_fullscreen, screenmode_items, IM_ARRAYSIZE(screenmode_items));
-			ImGui::Checkbox("Manual Crop", &changed_prefs.gfx_manual_crop);
-			ImGui::SliderInt("Width", &changed_prefs.gfx_manual_crop_width, 0, 800);
-			ImGui::SliderInt("Height", &changed_prefs.gfx_manual_crop_height, 0, 600);
-			ImGui::Checkbox("Auto Crop", &changed_prefs.gfx_auto_crop);
-			ImGui::Checkbox("Borderless", &changed_prefs.borderless);
-			const char* vsync_items[] = { "-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz" };
-			ImGui::Combo("VSync Native", &changed_prefs.gfx_apmode[0].gfx_vsync, vsync_items, IM_ARRAYSIZE(vsync_items));
-			ImGui::Combo("VSync RTG", &changed_prefs.gfx_apmode[1].gfx_vsync, vsync_items, IM_ARRAYSIZE(vsync_items));
-			ImGui::SliderInt("H. Offset", &changed_prefs.gfx_horizontal_offset, -80, 80);
-			ImGui::SliderInt("V. Offset", &changed_prefs.gfx_vertical_offset, -80, 80);
-
-			ImGui::Separator();
-			ImGui::Text("Centering");
-			ImGui::Checkbox("Horizontal", (bool*)&changed_prefs.gfx_xcenter);
-			ImGui::Checkbox("Vertical", (bool*)&changed_prefs.gfx_ycenter);
-
-			ImGui::Separator();
-			ImGui::Text("Line mode");
-			ImGui::RadioButton("Single", &changed_prefs.gfx_vresolution, 0);
-			ImGui::RadioButton("Double", &changed_prefs.gfx_vresolution, 1);
-			ImGui::RadioButton("Scanlines", &changed_prefs.gfx_pscanlines, 1);
-			ImGui::RadioButton("Double, fields", &changed_prefs.gfx_pscanlines, 2);
-			ImGui::RadioButton("Double, fields+", &changed_prefs.gfx_pscanlines, 3);
-
-			ImGui::Separator();
-			ImGui::Text("Interlaced line mode");
-			ImGui::RadioButton("Single##Interlaced", &changed_prefs.gfx_iscanlines, 0);
-			ImGui::RadioButton("Double, frames", &changed_prefs.gfx_iscanlines, 0);
-			ImGui::RadioButton("Double, fields##Interlaced", &changed_prefs.gfx_iscanlines, 1);
-			ImGui::RadioButton("Double, fields+##Interlaced", &changed_prefs.gfx_iscanlines, 2);
-
-			ImGui::Separator();
-			const char* scaling_items[] = { "Auto", "Pixelated", "Smooth", "Integer" };
-			ImGui::Combo("Scaling method", &changed_prefs.scaling_method, scaling_items, IM_ARRAYSIZE(scaling_items));
-			const char* resolution_items[] = { "LowRes", "HighRes (normal)", "SuperHighRes" };
-			ImGui::Combo("Resolution", &changed_prefs.gfx_resolution, resolution_items, IM_ARRAYSIZE(resolution_items));
-			ImGui::Checkbox("Filtered Low Res", (bool*)&changed_prefs.gfx_lores_mode);
-			const char* res_autoswitch_items[] = { "Disabled", "Always On", "10%", "33%", "66%" };
-			ImGui::Combo("Res. autoswitch", &changed_prefs.gfx_autoresolution, res_autoswitch_items, IM_ARRAYSIZE(res_autoswitch_items));
-			ImGui::Checkbox("Frameskip", (bool*)&changed_prefs.gfx_framerate);
-			ImGui::SliderInt("Refresh", &changed_prefs.gfx_framerate, 1, 10);
-			ImGui::Checkbox("FPS Adj:", (bool*)&changed_prefs.cr[changed_prefs.cr_selected].locked);
-			ImGui::SliderFloat("##FPSAdj", &changed_prefs.cr[changed_prefs.cr_selected].rate, 1, 100);
-			ImGui::Checkbox("Correct Aspect Ratio", (bool*)&changed_prefs.gfx_correct_aspect);
-			ImGui::Checkbox("Blacker than black", &changed_prefs.gfx_blackerthanblack);
-			ImGui::Checkbox("Remove interlace artifacts", &changed_prefs.gfx_scandoubler);
-			ImGui::SliderInt("Brightness", &changed_prefs.gfx_luminance, -200, 200);
+			render_panel_display();
 		}
 		else if (last_active_panel == PANEL_SOUND)
 		{
-			ImGui::Text("Sound Emulation");
-			ImGui::RadioButton("Disabled", &changed_prefs.produce_sound, 0);
-			ImGui::RadioButton("Disabled, but emulated", &changed_prefs.produce_sound, 1);
-			ImGui::RadioButton("Enabled", &changed_prefs.produce_sound, 2);
-			ImGui::Checkbox("Automatic switching", &changed_prefs.sound_auto);
-
-			ImGui::Separator();
-			ImGui::Text("Volume");
-			ImGui::SliderInt("Paula Volume", &changed_prefs.sound_volume_paula, 0, 100);
-			ImGui::SliderInt("CD Volume", &changed_prefs.sound_volume_cd, 0, 100);
-			ImGui::SliderInt("AHI Volume", &changed_prefs.sound_volume_board, 0, 100);
-			ImGui::SliderInt("MIDI Volume", &changed_prefs.sound_volume_midi, 0, 100);
-
-			ImGui::Separator();
-			ImGui::Text("Floppy Drive Sound Emulation");
-			ImGui::Checkbox("Enable floppy drive sound", (bool*)&changed_prefs.floppyslots[0].dfxclick);
-			ImGui::SliderInt("Empty drive", &changed_prefs.dfxclickvolume_empty[0], 0, 100);
-			ImGui::SliderInt("Disk in drive", &changed_prefs.dfxclickvolume_disk[0], 0, 100);
-
-			ImGui::Separator();
-			ImGui::Text("Sound Buffer Size");
-			ImGui::SliderInt("##SoundBufferSize", &changed_prefs.sound_maxbsiz, 0, 65536);
-			ImGui::RadioButton("Pull audio", &changed_prefs.sound_pullmode, 1);
-			ImGui::RadioButton("Push audio", &changed_prefs.sound_pullmode, 0);
-
-			ImGui::Separator();
-			ImGui::Text("Options");
-			const char* soundcard_items[] = { "-" };
-			ImGui::Combo("Device", &changed_prefs.soundcard, soundcard_items, IM_ARRAYSIZE(soundcard_items));
-			ImGui::Checkbox("System default", &changed_prefs.soundcard_default);
-			const char* channel_mode_items[] = { "Mono", "Stereo", "Cloned stereo (4 channels)", "4 Channels", "Cloned stereo (5.1)", "5.1 Channels", "Cloned stereo (7.1)", "7.1 channels" };
-			ImGui::Combo("Channel mode", &changed_prefs.sound_stereo, channel_mode_items, IM_ARRAYSIZE(channel_mode_items));
-			const char* frequency_items[] = { "11025", "22050", "32000", "44100", "48000" };
-			ImGui::Combo("Frequency", &changed_prefs.sound_freq, frequency_items, IM_ARRAYSIZE(frequency_items));
-			const char* interpolation_items[] = { "Disabled", "Anti", "Sinc", "RH", "Crux" };
-			ImGui::Combo("Interpolation", &changed_prefs.sound_interpol, interpolation_items, IM_ARRAYSIZE(interpolation_items));
-			const char* filter_items[] = { "Always off", "Emulated (A500)", "Emulated (A1200)", "Always on (A500)", "Always on (A1200)", "Always on (Fixed only)" };
-			ImGui::Combo("Filter", (int*)&changed_prefs.sound_filter, filter_items, IM_ARRAYSIZE(filter_items));
-			const char* separation_items[] = { "100%", "90%", "80%", "70%", "60%", "50%", "40%", "30%", "20%", "10%", "0%" };
-			ImGui::Combo("Stereo separation", &changed_prefs.sound_stereo_separation, separation_items, IM_ARRAYSIZE(separation_items));
-			const char* stereo_delay_items[] = { "-", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" };
-			ImGui::Combo("Stereo delay", &changed_prefs.sound_mixed_stereo_delay, stereo_delay_items, IM_ARRAYSIZE(stereo_delay_items));
-			const char* swap_channels_items[] = { "-", "Paula only", "AHI only", "Both" };
-			ImGui::Combo("Swap channels", (int*)&changed_prefs.sound_stereo_swap_paula, swap_channels_items, IM_ARRAYSIZE(swap_channels_items));
+			render_panel_sound();
 		}
 		else if (last_active_panel == PANEL_INPUT)
 		{
-			ImGui::Text("Port 0:");
-			ImGui::Combo("##Port0", &changed_prefs.jports[0].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
-			ImGui::Combo("##Port0Mode", &changed_prefs.jports[0].mode, "Default\0Wheel Mouse\0Mouse\0Joystick\0Gamepad\0Analog Joystick\0CDTV remote mouse\0CD32 pad\0");
-			ImGui::Combo("##Port0Autofire", &changed_prefs.jports[0].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
-			ImGui::Combo("##Port0MouseMode", &changed_prefs.jports[0].mousemap, "None\0LStick\0");
-			ImGui::Button("Remap");
-
-			ImGui::Text("Port 1:");
-			ImGui::Combo("##Port1", &changed_prefs.jports[1].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
-			ImGui::Combo("##Port1Mode", &changed_prefs.jports[1].mode, "Default\0Wheel Mouse\0Mouse\0Joystick\0Gamepad\0Analog Joystick\0CDTV remote mouse\0CD32 pad\0");
-			ImGui::Combo("##Port1Autofire", &changed_prefs.jports[1].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
-			ImGui::Combo("##Port1MouseMode", &changed_prefs.jports[1].mousemap, "None\0LStick\0");
-			ImGui::Button("Remap");
-
-			ImGui::Button("Swap ports");
-			ImGui::Checkbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
-
-			ImGui::Text("Emulated Parallel Port joystick adapter");
-			ImGui::Text("Port 2:");
-			ImGui::Combo("##Port2", &changed_prefs.jports[2].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
-			ImGui::Combo("##Port2Autofire", &changed_prefs.jports[2].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
-
-			ImGui::Text("Port 3:");
-			ImGui::Combo("##Port3", &changed_prefs.jports[3].id, "<none>\0Keyboard Layout A\0Keyboard Layout B\0Keyboard Layout C\0Keyrah Layout\0Retroarch KBD as Joystick Player1\0Retroarch KBD as Joystick Player2\0Retroarch KBD as Joystick Player3\0Retroarch KBD as Joystick Player4\0");
-			ImGui::Combo("##Port3Autofire", &changed_prefs.jports[3].autofire, "No autofire (normal)\0Autofire\0Autofire (toggle)\0Autofire (always)\0No autofire (toggle)\0");
-
-			const char* autofire_rate_items[] = { "Off", "Slow", "Medium", "Fast" };
-			ImGui::Combo("Autofire Rate", &changed_prefs.input_autofire_linecnt, autofire_rate_items, IM_ARRAYSIZE(autofire_rate_items));
-
-			ImGui::SliderInt("Digital joy-mouse speed", &changed_prefs.input_joymouse_speed, 2, 20);
-			ImGui::SliderInt("Analog joy-mouse speed", &changed_prefs.input_joymouse_multiplier, 5, 150);
-			ImGui::SliderInt("Mouse speed", &changed_prefs.input_mouse_speed, 5, 150);
-
-			ImGui::Checkbox("Virtual mouse driver", (bool*)&changed_prefs.input_tablet);
-			ImGui::Checkbox("Magic Mouse untrap", (bool*)&changed_prefs.input_mouse_untrap);
-
-			ImGui::RadioButton("Both", &changed_prefs.input_magic_mouse_cursor, 0);
-			ImGui::RadioButton("Native only", &changed_prefs.input_magic_mouse_cursor, 1);
-			ImGui::RadioButton("Host only", &changed_prefs.input_magic_mouse_cursor, 2);
-
-			ImGui::Checkbox("Swap Backslash/F11", (bool*)&key_swap_hack);
-			ImGui::Checkbox("Page Up = End", (bool*)&key_swap_end_pgup);
+			render_panel_input();
 		}
 		else if (last_active_panel == PANEL_IO)
 		{
-			ImGui::Text("Parallel Port");
-			const char* sampler_items[] = { "none" };
-			ImGui::Combo("Sampler", &changed_prefs.samplersoundcard, sampler_items, IM_ARRAYSIZE(sampler_items));
-			ImGui::Checkbox("Stereo sampler", &changed_prefs.sampler_stereo);
-
-			ImGui::Separator();
-			ImGui::Text("Serial Port");
-			const char* serial_port_items[] = { "none" };
-			ImGui::Combo("##SerialPort", (int*)(void*)changed_prefs.sername, serial_port_items, IM_ARRAYSIZE(serial_port_items));
-			ImGui::Checkbox("Shared", &changed_prefs.serial_demand);
-			ImGui::Checkbox("Direct", &changed_prefs.serial_direct);
-			ImGui::Checkbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts);
-			ImGui::Checkbox("uaeserial.device", &changed_prefs.uaeserial);
-			ImGui::Checkbox("Serial status (RTS/CTS/DTR/DTE/CD)", &changed_prefs.serial_rtsctsdtrdtecd);
-			ImGui::Checkbox("Serial status: Ring Indicator", &changed_prefs.serial_ri);
-
-			ImGui::Separator();
-			ImGui::Text("MIDI");
-			const char* midi_out_items[] = { "none" };
-			ImGui::Combo("Out", (int*)(void*)changed_prefs.midioutdev, midi_out_items, IM_ARRAYSIZE(midi_out_items));
-			const char* midi_in_items[] = { "none" };
-			ImGui::Combo("In", (int*)(void*)changed_prefs.midiindev, midi_in_items, IM_ARRAYSIZE(midi_in_items));
-			ImGui::Checkbox("Route MIDI In to MIDI Out", &changed_prefs.midirouter);
-
-			ImGui::Separator();
-			ImGui::Text("Protection Dongle");
-			const char* dongle_items[] = { "none", "RoboCop 3", "Leader Board", "B.A.T. II", "Italy '90 Soccer", "Dames Grand-Maitre", "Rugby Coach", "Cricket Captain", "Leviathan", "Music Master", "Logistics/SuperBase", "Scala MM (Red)", "Scala MM (Green)", "Striker Manager", "Multi-player Soccer Manager", "Football Director 2" };
-			ImGui::Combo("##ProtectionDongle", &changed_prefs.dongle, dongle_items, IM_ARRAYSIZE(dongle_items));
+			render_panel_io();
 		}
 		else if (last_active_panel == PANEL_CUSTOM)
 		{
-			ImGui::RadioButton("Port 0: Mouse", &SelectedPort, 0);
-			ImGui::RadioButton("Port 1: Joystick", &SelectedPort, 1);
-			ImGui::RadioButton("Port 2: Parallel 1", &SelectedPort, 2);
-			ImGui::RadioButton("Port 3: Parallel 2", &SelectedPort, 3);
-
-			ImGui::RadioButton("None", &SelectedFunction, 0);
-			ImGui::RadioButton("HotKey", &SelectedFunction, 1);
-
-			ImGui::InputText("##SetHotkey", "", 120);
-			ImGui::Button("...");
-			ImGui::Button("X");
-
-			ImGui::InputText("Input Device", "", 256);
-
-			for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
-			{
-				ImGui::Text("%s", label_button_list[i].c_str());
-				const char* items[] = { "None" };
-				ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items));
-			}
-
-			for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
-			{
-				ImGui::Text("%s", label_axis_list[i].c_str());
-				const char* items[] = { "None" };
-				ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items));
-			}
-
-			if (ImGui::Button("Save as default mapping"))
-			{
-				// Save mapping
-			}
+			render_panel_custom();
 		}
 		else if (last_active_panel == PANEL_DISK_SWAPPER)
 		{
-			ImGui::BeginChild("DiskSwapperList", ImVec2(0, -50), true);
-			ImGui::Columns(3, "DiskSwapperColumns");
-			ImGui::Separator();
-			ImGui::Text("#"); ImGui::NextColumn();
-			ImGui::Text("Disk Image"); ImGui::NextColumn();
-			ImGui::Text("Drive"); ImGui::NextColumn();
-			ImGui::Separator();
-			for (int i = 0; i < MAX_SPARE_DRIVES; ++i)
-			{
-				ImGui::Text("%d", i + 1); ImGui::NextColumn();
-				ImGui::InputText("", changed_prefs.dfxlist[i], MAX_DPATH);
-				ImGui::SameLine();
-				if (ImGui::Button("..."))
-				{
-					// Select file
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("X"))
-				{
-					changed_prefs.dfxlist[i][0] = 0;
-				}
-				ImGui::NextColumn();
-				int drive = disk_in_drive(i);
-				if (ImGui::Button(drive == -1 ? "-" : std::to_string(drive).c_str()))
-				{
-					disk_swap(i, 1);
-				}
-				ImGui::NextColumn();
-			}
-			ImGui::Columns(1);
-			ImGui::EndChild();
-
-			if (ImGui::Button("Remove All"))
-			{
-				for (auto& row : changed_prefs.dfxlist)
-					row[0] = 0;
-			}
+			render_panel_diskswapper();
 		}
 		else if (last_active_panel == PANEL_MISC)
 		{
-			ImGui::Checkbox("Status Line native", (bool*)&changed_prefs.leds_on_screen);
-			ImGui::Checkbox("Status Line RTG", (bool*)&changed_prefs.leds_on_screen);
-			ImGui::Checkbox("Show GUI on startup", &changed_prefs.start_gui);
-			ImGui::Checkbox("Untrap = middle button", (bool*)&changed_prefs.input_mouse_untrap);
-			ImGui::Checkbox("Alt-Tab releases control", &changed_prefs.alt_tab_release);
-			ImGui::Checkbox("Use RetroArch Quit Button", &changed_prefs.use_retroarch_quit);
-			ImGui::Checkbox("Use RetroArch Menu Button", &changed_prefs.use_retroarch_menu);
-			ImGui::Checkbox("Use RetroArch Reset Button", &changed_prefs.use_retroarch_reset);
-			ImGui::Checkbox("Master floppy write protection", &changed_prefs.floppy_read_only);
-			ImGui::Checkbox("Master harddrive write protection", &changed_prefs.harddrive_read_only);
-			ImGui::Checkbox("Clipboard sharing", &changed_prefs.clipboard_sharing);
-			ImGui::Checkbox("RCtrl = RAmiga", &changed_prefs.right_control_is_right_win_key);
-			ImGui::Checkbox("Always on top", &changed_prefs.main_alwaysontop);
-			ImGui::Checkbox("GUI Always on top", &changed_prefs.gui_alwaysontop);
-			ImGui::Checkbox("Synchronize clock", &changed_prefs.tod_hack);
-			ImGui::Checkbox("One second reboot pause", &changed_prefs.reset_delay);
-			ImGui::Checkbox("Faster RTG", &changed_prefs.picasso96_nocustom);
-			ImGui::Checkbox("Allow native code", &changed_prefs.native_code);
-			ImGui::Checkbox("Log illegal memory accesses", &changed_prefs.illegal_mem);
-			ImGui::Checkbox("Minimize when focus is lost", &changed_prefs.minimize_inactive);
-			ImGui::Checkbox("Capture mouse when window is activated", &changed_prefs.capture_always);
-			ImGui::Checkbox("Hide all UAE autoconfig boards", &changed_prefs.uae_hide_autoconfig);
-			ImGui::Checkbox("A600/A1200/A4000 IDE scsi.device disable", &changed_prefs.scsidevicedisable);
-			ImGui::Checkbox("Warp mode reset", &changed_prefs.turbo_boot);
-
-			const char* led_items[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
-			ImGui::Combo("NumLock", &changed_prefs.kbd_led_num, led_items, IM_ARRAYSIZE(led_items));
-			ImGui::Combo("ScrollLock", &changed_prefs.kbd_led_scr, led_items, IM_ARRAYSIZE(led_items));
-			ImGui::Combo("CapsLock", &changed_prefs.kbd_led_cap, led_items, IM_ARRAYSIZE(led_items));
-
-			ImGui::InputText("Open GUI", changed_prefs.open_gui, 256);
-			ImGui::InputText("Quit Key", changed_prefs.quit_amiberry, 256);
-			ImGui::InputText("Action Replay", changed_prefs.action_replay, 256);
-			ImGui::InputText("FullScreen", changed_prefs.fullscreen_toggle, 256);
-			ImGui::InputText("Minimize", changed_prefs.minimize, 256);
-			ImGui::InputText("Right Amiga", changed_prefs.right_amiga, 256);
+			render_panel_misc();
 		}
 		else if (last_active_panel == PANEL_PRIO)
 		{
-			ImGui::Text("When Active");
-			const char* prio_items[] = { "Low", "Normal", "High" };
-			ImGui::Combo("Run at priority##Active", &changed_prefs.active_capture_priority, prio_items, IM_ARRAYSIZE(prio_items));
-			ImGui::Checkbox("Pause emulation##Active", &changed_prefs.active_nocapture_pause);
-			ImGui::Checkbox("Disable sound##Active", &changed_prefs.active_nocapture_nosound);
-
-			ImGui::Separator();
-			ImGui::Text("When Inactive");
-			ImGui::Combo("Run at priority##Inactive", &changed_prefs.inactive_priority, prio_items, IM_ARRAYSIZE(prio_items));
-			ImGui::Checkbox("Pause emulation##Inactive", &changed_prefs.inactive_pause);
-			ImGui::Checkbox("Disable sound##Inactive", &changed_prefs.inactive_nosound);
-			ImGui::Checkbox("Disable input##Inactive", (bool*)&changed_prefs.inactive_input);
-
-			ImGui::Separator();
-			ImGui::Text("When Minimized");
-			ImGui::Combo("Run at priority##Minimized", &changed_prefs.minimized_priority, prio_items, IM_ARRAYSIZE(prio_items));
-			ImGui::Checkbox("Pause emulation##Minimized", &changed_prefs.minimized_pause);
-			ImGui::Checkbox("Disable sound##Minimized", &changed_prefs.minimized_nosound);
-			ImGui::Checkbox("Disable input##Minimized", (bool*)&changed_prefs.minimized_input);
+			render_panel_prio();
 		}
 		else if (last_active_panel == PANEL_SAVESTATES)
 		{
-			for (int i = 0; i < 15; ++i)
-			{
-				ImGui::RadioButton(std::to_string(i).c_str(), &current_state_num, i);
-			}
-			ImGui::Separator();
-			ImGui::Text("Filename: %s", savestate_fname);
-			ImGui::Text("Timestamp: %s", "");
-			if (ImGui::Button("Load from Slot"))
-			{
-				// Load state from selected slot
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Save to Slot"))
-			{
-				// Save current state to selected slot
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Delete Slot"))
-			{
-				// Delete state from selected slot
-			}
-			if (ImGui::Button("Load state..."))
-			{
-				// Load state from file
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Save state..."))
-			{
-				// Save current state to file
-			}
+			render_panel_savestates();
 		}
 		ImGui::EndChild();
 
@@ -2218,7 +2328,7 @@ void run_gui()
 				break;
 				case PANEL_PATHS:
 				{
-					help_str = "Here you can configure the various paths for Amiberry resources. In normal usage,\nthe default paths should work fine, however if you wish to change any path, you\ncan use the \"...\" button, to select the folder/path of your choosing. Details\nfor each path resource appear below.\n \nYou can enable/disable logging and specify the location of the logfile by using\nthe relevant options. A logfile is useful when trying to troubleshoot something,\nbut otherwise this option should be off, as it will incur some extra overhead.\nYou can also redirect the log output to console, by enabling that logging option.\nYou can alternatively enable log output to console if you pass the --log option\nto Amiberry on startup.\n \nThe \"Rescan Paths\" button will rescan the paths specified above and refresh the\nlocal cache. This should be done if you added kickstart ROMs for example, in order\nfor Amiberry to pick them up. This button will regenerate the amiberry.conf file\nif it's missing, and will be populated with the default values.\n \nThe \"Update WHDBooter files\" button will attempt to download the latest XML used for\nthe WHDLoad-booter functionality of Amiberry, along with all related files in the\n\"whdboot\" directory. It requires an internet connection and write permissions in the\ndestination directory. The downloaded XML file will be stored in the default location\n(whdboot/game-data/whdload_db.xml). Once the file is successfully downloaded, you\nwill also get a dialog box informing you about the details. A backup copy of the\nexisting whdload_db.xml is made (whdboot/game-data/whdload_db.bak), to preserve any\ncustom edits that may have been made. The rest of the files will be updated with the\nlatest version from the repository.\n \nThe \"Update Controllers DB\" button will attempt to download the latest version of\nthe bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.\nThe file contains the \"official\" mappings for recognized controllers by SDL2 itself.\nPlease note that this is separate from the user-configurable gamecontrollerdb_user.txt\nfile, which is contained in the Controllers path. That file is never overwritten, and\nit will be loaded after the official one, so any entries contained there will take a \nhigher priority. Once the file is successfully downloaded, you will also get a dialog\nbox informing you about the details. A backup copy of the existing gamecontrollerdb.txt\n(conf/gamecontrollerdb.bak) is created, to preserve any custom edits it may contain.\n \nThe paths for Amiberry resources include;\n \n- System ROMs: The Amiga Kickstart files are by default located under 'roms'.\n  After changing the location of the Kickstart ROMs, or adding any additional ROMs, \n  click on the \"Rescan\" button to refresh the list of the available ROMs. Please\n  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory\n  at this location, if you wish to use the MT-32 MIDI emulation feature in Amiberry.\n \n- Configuration files: These are located under \"conf\" by default. This is where your\n  configurations will be stored, but also where Amiberry keeps the special amiberry.conf\n  file, which contains the default settings the emulator uses when it starts up. This\n  is also where the bundled gamecontrollersdb.txt file is located, which contains the\n  community-maintained mappings for various controllers that SDL2 recognizes.\n \n- NVRAM files: the location where CDTV/CD32 modes will store their NVRAM files.\n \n- Plugins path: the location where external plugins (such as the CAPSimg or the\n  floppybridge plugin) are stored.\n \n- Screenshots: any screenshots you take will be saved by default in this location.\n \n- Save state files: if you use them, they will be saved in the specified location.\n \n- Controller files: any custom (user-generated) controller mapping files will be saved\n  in this location. This location is also used in RetroArch environments (ie; such as\n  RetroPie) to point to the directory containing the controller mappings.\n \n- RetroArch configuration file (retroarch.cfg): only useful if you are using RetroArch\n  (ie; in RetroPie). Amiberry can pick-up the configuration file from the path specified\n  here, and load it automatically, applying any mappings it contains. You can ignore this\n  path if you're not using RetroArch.\n \n- WHDboot files: This directory contains the files required by the whd-booter process\n  to launch WHDLoad game archives. In normal usage you should not need to change this.\n \n- Below that are 4 additional paths, that can be used to better organize your various\n  Amiga files, and streamline GUI operations when it comes to selecting the different\n  types of Amiga media. The file selector buttons in Amiberry associated with each of\n  the media types, will open these path locations. The defaults are shown, but these\n  can be changed to better suit your requirements.\n \nThese settings are saved automatically when you click Rescan, or exit the emulator.\n ";
+					help_str = "Here you can configure the various paths for Amiberry resources. In normal usage,\nthe default paths should work fine, however if you wish to change any path, you\ncan use the \"...\" button, to select the folder/path of your choosing. Details\nfor each path resource appear below.\n \nYou can enable/disable logging and specify the location of the logfile by using\nthe relevant options. A logfile is useful when trying to troubleshoot something,\nbut otherwise this option should be off, as it will incur some extra overhead.\nYou can also redirect the log output to console, by enabling that logging option.\nYou can alternatively enable log output to console if you pass the --log option\nto Amiberry on startup.\n \nThe \"Rescan Paths\" button will rescan the paths specified above and refresh the\nlocal cache. This should be done if you added kickstart ROMs for example, in order\nfor Amiberry to pick them up. This button will regenerate the amiberry.conf file\nif it's missing, and will be populated with the default values.\n \nThe \"Update WHDBooter files\" button will attempt to download the latest XML used for\nthe WHDLoad-booter functionality of Amiberry, along with all related files in the\n\"whdboot\" directory. It requires an internet connection and write permissions in the\ndestination directory. The downloaded XML file will be stored in the default location\n(whdboot/game-data/whdload_db.xml). Once the file is successfully downloaded, you\nwill also get a dialog box informing you about the details. A backup copy of the\nexisting whdload_db.xml is made (whdboot/game-data/whdload_db.bak), to preserve any\ncustom edits that may have been made. The rest of the files will be updated with the\nlatest version from the repository.\n \nThe \"Update Controllers DB\" button will attempt to download the latest version of\nthe bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.\nThe file contains the \"official\" mappings for recognized controllers by SDL2 itself.\nPlease note that this is separate from the user-configurable gamecontrollerdb_user.txt\nfile, which is contained in the Controllers path. That file is never overwritten, and\nit will be loaded after the official one, so any entries contained there will take a \nhigher priority. Once the file is successfully downloaded, you will also get a dialog\nbox informing you about the details. A backup copy of the existing gamecontrollerdb.txt\n(conf/gamecontrollerdb.bak) is created, to preserve any custom edits it may contain.\n \nThe paths for Amiberry resources include;\n \n- System ROMs: The Amiga Kickstart files are by default located under 'roms'.\n  After changing the location of the Kickstart ROMs, or adding any additional ROMs, \n  click on the \"Rescan\" button to refresh the list of the available ROMs. Please\n  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory\n  at this location, if you wish to use the MT-32 MIDI emulation feature in Amiberry.\n \n- Configuration files: These are located under \"conf\" by default. This is where your\n  configurations will be stored, but also where Amiberry keeps the special amiberry.conf\n  file, which contains the default settings the emulator uses when it starts up. This\n  is also where the bundled gamecontrollersdb.txt file is located, which contains the\n  community-maintained mappings for various controllers that SDL2 recognizes.\n \n- NVRAM files: the location where CDTV/CD2 modes will store their NVRAM files.\n \n- Plugins path: the location where external plugins (such as the CAPSimg or the\n  floppybridge plugin) are stored.\n \n- Screenshots: any screenshots you take will be saved by default in this location.\n \n- Save state files: if you use them, they will be saved in the specified location.\n \n- Controller files: any custom (user-generated) controller mapping files will be saved\n  in this location. This location is also used in RetroArch environments (ie; such as\n  RetroPie) to point to the directory containing the controller mappings.\n \n- RetroArch configuration file (retroarch.cfg): only useful if you are using RetroArch\n  (ie; in RetroPie). Amiberry can pick-up the configuration file from the path specified\n  here, and load it automatically, applying any mappings it contains. You can ignore this\n  path if you're not using RetroArch.\n \n- WHDboot files: This directory contains the files required by the whd-booter process\n  to launch WHDLoad game archives. In normal usage you should not need to change this.\n \n- Below that are 4 additional paths, that can be used to better organize your various\n  Amiga files, and streamline GUI operations when it comes to selecting the different\n  types of Amiga media. The file selector buttons in Amiberry associated with each of\n  the media types, will open these path locations. The defaults are shown, but these\n  can be changed to better suit your requirements.\n \nThese settings are saved automatically when you click Rescan, or exit the emulator.\n ";
 				}
 				break;
 				case PANEL_QUICKSTART:
