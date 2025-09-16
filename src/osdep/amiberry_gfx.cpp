@@ -2882,8 +2882,10 @@ float target_getcurrentvblankrate(const int monid)
 
 static void movecursor(const int x, const int y)
 {
-	write_log(_T("SetCursorPos %dx%d\n"), x, y);
-	SDL_WarpMouseGlobal(x, y);
+	const AmigaMonitor* mon = &AMonitors[0];
+	if (mon->amiga_window) {
+		SDL_WarpMouseInWindow(mon->amiga_window, x, y);
+	}
 }
 
 static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
