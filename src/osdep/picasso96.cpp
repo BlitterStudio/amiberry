@@ -2648,16 +2648,13 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 	gwwpagemask[index] = gwwpagesize[index] - 1;
 	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
 #else
-	const int page_size = 4096;
+	constexpr int page_size = 4096;
+	xfree (gwwbuf[index]);
+
 	gwwpagesize[index] = page_size;
+	gwwbufsize[index] = gfxmemsize / gwwpagesize[index] + 1;
 	gwwpagemask[index] = gwwpagesize[index] - 1;
-	dirty_page_map_size[index] = gfxmemsize / gwwpagesize[index] + 1;
-	xfree(dirty_page_map[index]);
-	dirty_page_map[index] = xcalloc(bool, dirty_page_map_size[index]);
-	// Also need to allocate gwwbuf
-	gwwbufsize[index] = dirty_page_map_size[index];
-	xfree(gwwbuf[index]);
-	gwwbuf[index] = xmalloc(void*, gwwbufsize[index]);
+	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
 #endif
 }
 
@@ -2708,7 +2705,6 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	if (startp) {
 		*startp = const_cast<uae_u8*>(base);
 	}
-
 	return count;
 #endif
 }
@@ -5539,29 +5535,17 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	bool overlay_updated = false;
 
-#ifdef _WIN32
 	src_start[0] = src + (off & ~gwwpagemask[index]);
 	src_end[0] = src + ((off + state->BytesPerRow * pheight + gwwpagesize[index] - 1) & ~gwwpagemask[index]);
 	if (vidinfo->splitypos >= 0) {
 		src_end[0] = src + ((off + state->BytesPerRow * vidinfo->splitypos + gwwpagesize[index] - 1) & ~gwwpagemask[index]);
 		src_start[1] = src;
 		src_end[1] = src + ((state->BytesPerRow * (pheight - vidinfo->splitypos) + gwwpagesize[index] - 1) & ~gwwpagemask[index]);
-#else
-	src_start[0] = src + off;
-	src_end[0] = src + (off + state->BytesPerRow * pheight);
-	if (vidinfo->splitypos >= 0) {
-		src_end[0] = src + (off + state->BytesPerRow * vidinfo->splitypos);
-		src_start[1] = src;
-		src_end[1] = src + state->BytesPerRow * (pheight - vidinfo->splitypos);
-#endif
 	} else {
 		src_start[1] = src_end[1] = nullptr;
 	}
-#ifdef _WIN32
+
 	if (!vidinfo->extra_mem || !gwwbuf[index] || (src_start[0] >= src_end[0] && src_start[1] >= src_end[1])) {
-#else
-	if (!vidinfo->extra_mem || (src_start[0] >= src_end[0] && src_start[1] >= src_end[1])) {
-#endif
 		return;
 	}
 
@@ -5575,9 +5559,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 	for (;;) {
 		uae_u8 *dst = nullptr;
 		bool dofull;
-#ifdef _WIN32
 		gwwcnt = 0;
-#endif
 		if (doskip() && p96skipmode == 1) {
 			break;
 		}
@@ -5599,14 +5581,11 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			}
 
 			if (vidinfo->full_refresh < 0 || overlay_updated) {
-#ifdef _WIN32
 				gwwcnt = regionsize / gwwpagesize[index] + 1;
-#endif
 				vidinfo->full_refresh = 1;
-#ifdef _WIN32
+
 				for (int i = 0; i < gwwcnt; i++)
 					gwwbuf[index][i] = src_start[split] + i * gwwpagesize[index];
-#endif
 			} else {
 #ifdef _WIN32
 				ULONG ps;
@@ -5617,19 +5596,13 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 				gwwcnt = picasso_getwritewatch(index, off, (uae_u8***)&gwwbuf[index], &src_start[split]);
 #endif
 			}
-#ifdef _WIN32
+
 			matchcount += (int)gwwcnt;
 
 			if (gwwcnt == 0) {
 				continue;
 			}
 			dofull = gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
-#else
-			matchcount += gwwcnt;
-			if (gwwcnt == 0)
-				continue;
-			dofull = gwwcnt >= (regionsize / gwwpagesize[index]) * 80 / 100;
-#endif
 
 			if (!dstp) {
 				dstp = gfx_lock_picasso(monid, dofull);
@@ -5685,50 +5658,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (split) {
 				off = 0;
 			}
-// --- START OF CHANGES ---
-#ifndef _WIN32
-			if (gwwcnt > 0) {
-				bool* lines_to_flush = xcalloc(bool, pheight);
-				if (lines_to_flush) {
-					for (int i = 0; i < gwwcnt; i++) {
-						uae_u8* p = (uae_u8*)gwwbuf[index][i];
-						if (p >= src_start[split] && p < src_end[split]) {
-							int realoffset = (int)(p - (src + off));
-							if (realoffset < 0) realoffset = 0;
 
-							int start_y = realoffset / state->BytesPerRow;
-							int end_y = (realoffset + gwwpagesize[index] - 1) / state->BytesPerRow;
-
-							if (split) {
-								start_y += vidinfo->splitypos;
-								end_y += vidinfo->splitypos;
-							}
-
-							for (int y = start_y; y <= end_y; y++) {
-								if (y >= 0 && y < pheight) {
-									lines_to_flush[y] = true;
-								}
-							}
-						}
-					}
-
-					for (int y = 0; y < pheight; y++) {
-						if (lines_to_flush[y]) {
-							copyrow(monid, src + off, dst, 0, y, pwidth,
-								state->BytesPerRow, state->BytesPerPixel,
-								0, y, vidinfo->rowbytes, vidinfo->pixbytes,
-								vidinfo->picasso_convert, p96_rgbx16);
-							if (y < miny) miny = y;
-							if (y > maxy) maxy = y;
-							flushlines++;
-						}
-					}
-					xfree(lines_to_flush);
-				}
-			}
-#endif
-
-#ifdef _WIN32
 			for (int i = 0; i < gwwcnt; i++) {
 				uae_u8 *p = (uae_u8 *)gwwbuf[index][i];
 
@@ -5774,12 +5704,8 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 							maxy = y;
 						}
 					}
-
 				}
-
 			}
-#endif
-// --- END OF CHANGES ---
 		}
 		break;
 	}
@@ -5826,11 +5752,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 		gfx_unlock_picasso(monid, render);
 	}
 
-#ifdef _WIN32
 	if (dstp && gwwcnt) {
-#else
-	if (dstp && (vidinfo->full_refresh || flushlines > 0)) {
-#endif
 		vidinfo->full_refresh = 0;
 	}
 }
