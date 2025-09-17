@@ -176,56 +176,39 @@ static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int 
 // 2: Integer Scaling (this uses Nearest Neighbor)
 void set_scaling_option(const int monid, const uae_prefs* p, const int width, const int height)
 {
-	if (p->scaling_method == -1)
-	{
-		if (ar_is_exact(&sdl_mode, width, height))
-		{
-#ifdef USE_OPENGL
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-#else
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-			SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_FALSE);
-#endif
+	auto scale_quality = "nearest";
+	SDL_bool integer_scale = SDL_FALSE;
+
+	switch (p->scaling_method) {
+	case -1: // Auto
+		if (!ar_is_exact(&sdl_mode, width, height)) {
+			scale_quality = "linear";
 		}
-		else
-		{
-#ifdef USE_OPENGL
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#else
-			SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-			SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_FALSE);
-#endif
-		}
+		break;
+	case 0: // Nearest
+		scale_quality = "nearest";
+		break;
+	case 1: // Linear
+		scale_quality = "linear";
+		break;
+	case 2: // Integer
+		scale_quality = "nearest";
+		integer_scale = SDL_TRUE;
+		break;
+	default:
+		scale_quality = "linear";
+		break;
 	}
-	else if (p->scaling_method == 0)
-	{
+
 #ifdef USE_OPENGL
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-#else
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_FALSE);
-#endif
-	}
-	else if (p->scaling_method == 1)
-	{
-#ifdef USE_OPENGL
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#else
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-		SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_FALSE);
-#endif
-	}
-	else if (p->scaling_method == 2)
-	{
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
-		SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, SDL_TRUE);
-	}
-#ifdef USE_OPENGL
+	const GLfloat filter = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+	// NOTE: OpenGL integer scaling would need to be handled in the shader or viewport calculations.
 	glBindTexture(GL_TEXTURE_2D, 0);
+#else
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scale_quality);
+	SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, integer_scale);
 #endif
 }
 
