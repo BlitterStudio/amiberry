@@ -2126,9 +2126,9 @@ static void update_68k_cycles ()
 
 		if (!currprefs.cpu_cycle_exact) {
 			if (currprefs.m68k_speed_throttle < 0) {
-				cycles_mult = static_cast<uae_u32>((cycles_mult * 1000) / (1000 + currprefs.m68k_speed_throttle));
+				cycles_mult = static_cast<uae_u32>((static_cast<double>(cycles_mult) * 1000.0) / (1000.0 + currprefs.m68k_speed_throttle));
 			} else if (currprefs.m68k_speed_throttle > 0) {
-				cycles_mult = static_cast<uae_u32>((cycles_mult * 1000) / (1000 + currprefs.m68k_speed_throttle));
+				cycles_mult = static_cast<uae_u32>((static_cast<double>(cycles_mult) * 1000.0) / (1000.0 + currprefs.m68k_speed_throttle));
 			}
 		}
 	} else if (currprefs.m68k_speed < 0) {
@@ -2136,9 +2136,9 @@ static void update_68k_cycles ()
 	} else {
 		if (currprefs.m68k_speed >= 0 && !currprefs.cpu_cycle_exact && !currprefs.cpu_compatible) {
 			if (currprefs.m68k_speed_throttle < 0) {
-				cycles_mult = static_cast<uae_u32>((CYCLES_DIV * 1000 / (1000 + currprefs.m68k_speed_throttle)));
+				cycles_mult = static_cast<uae_u32>((CYCLES_DIV * 1000.0 / (1000.0 + currprefs.m68k_speed_throttle)));
 			} else if (currprefs.m68k_speed_throttle > 0) {
-				cycles_mult = static_cast<uae_u32>((CYCLES_DIV * 1000 / (1000 + currprefs.m68k_speed_throttle)));
+				cycles_mult = static_cast<uae_u32>((CYCLES_DIV * 1000.0 / (1000.0 + currprefs.m68k_speed_throttle)));
 			}
 		}
 	}
