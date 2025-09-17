@@ -2,7 +2,7 @@
 #include <SDL.h>
 #include "rtgmodes.h"
 #include "uae/types.h"
-#include "traps.h"
+#include <vector>
 
 #define MAX_DISPLAYS 1
 
@@ -101,6 +101,8 @@ struct AmigaMonitor {
 	int p96_double_buffer_first, p96_double_buffer_last;
 	int p96_double_buffer_needs_flushing;
 
+	std::vector<SDL_Rect> dirty_rects;
+	bool full_render_needed;
 	struct winuae_currentmode currentmode;
 	struct uae_filter* usedfilter;
 };

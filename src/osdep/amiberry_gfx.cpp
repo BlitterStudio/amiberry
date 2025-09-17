@@ -325,7 +325,22 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	if (amiga_texture && amiga_surface)
 	{
 		SDL_RenderClear(mon->amiga_renderer);
-		SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
+		AmigaMonitor* mutable_mon = &AMonitors[monid];
+
+		// If a full render is needed or there are no specific dirty rects, update the whole texture.
+		if (mutable_mon->full_render_needed || mutable_mon->dirty_rects.empty()) {
+			SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
+		} else {
+			// Otherwise, update only the collected dirty rectangles.
+			for (const auto& rect : mutable_mon->dirty_rects) {
+				SDL_UpdateTexture(amiga_texture, &rect, static_cast<const uae_u8*>(amiga_surface->pixels) + rect.y * amiga_surface->pitch + rect.x * amiga_surface->format->BytesPerPixel, amiga_surface->pitch);
+			}
+		}
+
+		// Clear the dirty rects list for the next frame.
+		mutable_mon->dirty_rects.clear();
+		mutable_mon->full_render_needed = false;
+
 		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, &crop_rect, &render_quad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
 		if (vkbd_allowed(monid))
 		{
@@ -340,6 +355,13 @@ static void SDL2_showframe(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	SDL_RenderPresent(mon->amiga_renderer);
+}
+
+void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
+{
+	AmigaMonitor* mon = &AMonitors[vb->monitor_id];
+	// A call to flush_screen implies a full refresh is needed.
+	mon->full_render_needed = true;
 }
 
 static void SDL2_refresh(const int monid)
@@ -1258,6 +1280,34 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	return ret;
 }
 
+static void add_dirty_rect(struct AmigaMonitor* mon, const SDL_Rect& new_rect)
+{
+	// If the whole screen is already marked for update, do nothing.
+	if (mon->full_render_needed) {
+		return;
+	}
+
+	// Attempt to merge with the last rectangle if they are contiguous.
+	if (!mon->dirty_rects.empty()) {
+		SDL_Rect& last_rect = mon->dirty_rects.back();
+		// Check if new_rect starts exactly where last_rect ends and they have the same width.
+		if (last_rect.x == new_rect.x && last_rect.w == new_rect.w && (last_rect.y + last_rect.h) == new_rect.y) {
+			// Merge by extending the height of the last rectangle.
+			last_rect.h += new_rect.h;
+			return;
+		}
+	}
+
+	// If we have too many separate rectangles, it's more efficient to just do a full update.
+	if (mon->dirty_rects.size() > 32) {
+		mon->full_render_needed = true;
+		mon->dirty_rects.clear();
+		return;
+	}
+
+	mon->dirty_rects.push_back(new_rect);
+}
+
 void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 {
 	vb->locked = false;
@@ -1265,6 +1315,18 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 		vb->bufmem = nullptr;
 		// Not using SDL2_UnlockTexture due to performance reasons, see lockscr for details
 		//SDL_UnlockTexture(amiga_texture);
+
+		// Record the dirty rectangle if y_start and y_end are valid.
+		if (y_start >= 0 && y_end >= y_start) {
+			AmigaMonitor* mon = &AMonitors[vb->monitor_id];
+			SDL_Rect dirty_rect;
+			dirty_rect.x = 0;
+			dirty_rect.y = y_start;
+			dirty_rect.w = vb->width_allocated;
+			dirty_rect.h = y_end - y_start + 1;
+
+			add_dirty_rect(mon, dirty_rect);
+		}
 	}
 }
 

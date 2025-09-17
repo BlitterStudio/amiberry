@@ -2014,6 +2014,12 @@ static void finish_drawing_frame(bool drawlines)
 
 	draw_frame_extras(vbin, -1, -1);
 
+#ifdef AMIBERRY
+	// If a full redraw was necessary, call flush_screen to invalidate the whole texture.
+	if (ad->custom_frame_redraw_necessary) {
+		flush_screen(vbout, 0, 0);
+	}
+#endif
 #ifdef WITH_SPECIALMONITORS
 	// video port adapters
 	if (currprefs.monitoremu) {
