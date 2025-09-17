@@ -430,9 +430,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-            CPU_AARCH64
-    )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CPU_AARCH64)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
     target_compile_definitions(${PROJECT_NAME} PRIVATE
             CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV

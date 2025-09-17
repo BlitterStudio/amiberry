@@ -1346,8 +1346,7 @@ void picasso_handle_vsync()
 	if (vsync < 0) {
 		p96hsync = 0;
 		picasso_handle_vsync2(mon);
-	}
-	else if (currprefs.rtgvblankrate == 0) {
+	} else if (currprefs.rtgvblankrate == 0) {
 		picasso_handle_vsync2(mon);
 	}
 }
@@ -1998,8 +1997,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 		}
 		ct = sprite_0_colors;
 		image = tmp_sprite;
-	}
-	else {
+	} else {
 		w = cursorwidth;
 		h = cursorheight;
 		ct = cursorrgbn;
