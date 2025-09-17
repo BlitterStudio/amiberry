@@ -80,6 +80,8 @@ uae_u8 mmu030_cache_state;
 struct mmu030_access mmu030_ad[MAX_MMU030_ACCESS + 1];
 bool ismoves030, islrmw030;
 
+static struct mmu_debug_data *mddm;
+
 static void mmu030_ptest_atc_search(uaecptr logical_addr, uae_u32 fc, bool write);
 static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int level);
 static TT_info mmu030_decode_tt(uae_u32 TT);
@@ -1366,7 +1368,9 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
                 /* Set the updated bit */
                 if (!level && !(descr[0]&DESCR_U) && !super_violation) {
                     descr[0] |= DESCR_U;
-                    desc_put_long(descr_addr[descr_num], descr[0]);
+                    if (!mmu_debugger) {
+	                    desc_put_long(descr_addr[descr_num], descr[0]);
+                     }
                 }
                 
                 /* Update status bits */
@@ -1515,7 +1519,9 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
                 }
                 /* write modified descriptor if necessary */
                 if (descr_modified) {
-                    desc_put_long(descr_addr[descr_num], descr[0]);
+                    if (!mmu_debugger) {
+						desc_put_long(descr_addr[descr_num], descr[0]);
+                    }
                 }
             }
             
@@ -1587,9 +1593,23 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
         mmu030.status |= (MMUSR_BUS_ERROR|MMUSR_INVALID);
         write_log(_T("MMU: Bus error while %s descriptor!\n"),
                   bBusErrorReadWrite?_T("reading"):_T("writing"));
+
+		if (mmu_debugger) {
+            mddm->desc_fault = true;
+        }
+
     } ENDTRY;
 
-    // Restore original supervisor state
+    if (mmu_debugger) {
+        for (int i = 1; i <= descr_num; i++) {
+            mddm->descriptor[i - 1] = descr_addr[i];
+        }
+        if (descr_size > 4) {
+            mddm->descriptor8 = true;
+        }
+    }
+
+	// Restore original supervisor state
     regs.s = old_s;
 
     /* check if we have to handle ptest */
@@ -1818,18 +1838,26 @@ void mmu030_page_fault(uaecptr addr, bool read, int flags, uae_u32 fc)
 		regs.mmu_ssw = MMU030_SSW_DF | (MMU030_SSW_DF << 1);
 		if (!(mmu030_state[1] & MMU030_STATEFLAG1_LASTWRITE)) {
 			regs.wb2_status = mmu030fixupreg(0);
-			mmu030fixupmod(regs.wb2_status, 0, 0);
+			if (!mmu_debugger) {
+				mmu030fixupmod(regs.wb2_status, 0, 0);
+			}
 			regs.wb3_status = mmu030fixupreg(1);
-			mmu030fixupmod(regs.wb3_status, 0, 1);
+			if (!mmu_debugger) {
+				mmu030fixupmod(regs.wb3_status, 0, 1);
+			}
 		}
 	} else {
 		// only used by data fault but word sounds nice
 		flags = MMU030_SSW_SIZE_W;
 		if (currprefs.cpu_compatible) {
 			regs.wb2_status = mmu030fixupreg(0);
-			mmu030fixupmod(regs.wb2_status, 0, 0);
+			if (!mmu_debugger) {
+				mmu030fixupmod(regs.wb2_status, 0, 0);
+			}
 			regs.wb3_status = mmu030fixupreg(1);
-			mmu030fixupmod(regs.wb3_status, 0, 1);
+			if (!mmu_debugger) {
+				mmu030fixupmod(regs.wb3_status, 0, 1);
+			}
 			regs.mmu_ssw = MMU030_SSW_FB | MMU030_SSW_RB;
 		} else {
 			regs.mmu_ssw = MMU030_SSW_FB | MMU030_SSW_RB;
@@ -2615,6 +2643,43 @@ static uaecptr mmu030_get_addr_atc(uaecptr addr, int l, uae_u32 fc, bool write) 
 
     return physical_addr;
 }
+
+void debug_mmu030_translate_end(void)
+{
+	mmu_debugger = false;
+	mddm = NULL;
+}
+
+uaecptr debug_mmu030_translate(uaecptr addr, int fc, bool write, struct mmu_debug_data *mdd)
+{
+	memset(mdd, 0, sizeof(struct mmu_debug_data));
+	mddm = mdd;
+	for (int i = 0; i < MAX_MMU_DEBUG_DESCRIPTOR_LEVEL; i++) {
+		mdd->descriptor[i] = 0xffffffff;
+	}
+	mmu_debugger = true;
+	mmu030_flush_atc_all();
+	if ((fc == 7) || (mmu030_match_ttr(addr, fc, write) & TT_OK_MATCH) || (!mmu030.enabled)) {
+		if (mmu030_do_match_ttr(tt0_030, mmu030.transparent.tt0, addr, fc, write) & TT_OK_MATCH) {
+			mdd->ttdata = tt0_030;
+			mdd->tt = 1;
+		}
+		if (mmu030_do_match_ttr(tt1_030, mmu030.transparent.tt1, addr, fc, write) & TT_OK_MATCH) {
+			mdd->ttdata = tt1_030;
+			mdd->tt = 2;
+		}
+		return addr;
+	}
+	int atc_line_num = mmu030_logical_is_in_atc(addr, fc, write);
+
+	if (atc_line_num >= 0) {
+		return mmu030_get_addr_atc(addr, atc_line_num, fc, write);
+	} else {
+		mmu030_table_search(addr, fc, false, 0);
+		return mmu030_get_addr_atc(addr, mmu030_logical_is_in_atc(addr, fc, write), fc, write);
+	}
+}
+
 uaecptr mmu030_translate(uaecptr addr, bool super, bool data, bool write)
 {
 	int fc = (super ? 4 : 0) | (data ? 1 : 2);

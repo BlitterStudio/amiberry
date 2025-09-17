@@ -6535,6 +6535,73 @@ static void find_ea (TCHAR **inptr)
 	}
 }
 
+static void debug_do_mmu_translate(uaecptr addrl)
+{
+	struct mmu_debug_data mdd, mdd2;
+	uaecptr addrp;
+
+	console_out_f(_T("%08x translates to:\n"), addrl);
+	for (int fc = 0; fc < 7; fc++) {
+		bool super = (fc & 4) != 0;
+		bool data = (fc & 1) != 0;
+		bool ins = (fc & 2) != 0;
+		if (currprefs.mmu_model >= 68040 && fc != 5 && fc != 6 && fc != 1 && fc != 2) {
+			continue;
+		}
+		console_out_f(_T("FC%d %s: "), fc, fc == 6 ? _T("SI") : (fc == 5 ? _T("SD") : (fc == 2 ? _T("UI") : (fc == 1 ? _T("UD") : _T("--")))));
+		TRY(prb) {
+			if (currprefs.mmu_model >= 68040) {
+				addrp = debug_mmu_translate(addrl, 0, super, data, false, sz_long, &mdd);
+			} else {
+				addrp = debug_mmu030_translate(addrl, fc, false, &mdd);
+			}
+			console_out_f(_T("PHYS: %08x"), addrp);
+			TRY(prb2) {
+				if (currprefs.mmu_model >= 68040) {
+					addrp = debug_mmu_translate(addrl, 0, super, data, true, sz_long, &mdd2);
+				} else {
+					addrp = debug_mmu030_translate(addrl, fc, true, &mdd2);
+				}
+				console_out_f(_T(" RW"));
+			} CATCH(prb2) {
+				console_out_f(_T(" RO"));
+			} ENDTRY;
+		} CATCH(prb) {
+			console_out_f(_T("PHYS: ********"));
+		} ENDTRY;
+		if (mdd.tt) {
+			console_out_f(_T(" TT%d: %08x"), mdd.tt - 1, mdd.ttdata);
+		} else if (mdd.descriptor[0] != 0xffffffff) {
+			console_out_f(_T(" DESCR:"));
+			for (int i = 0; i < MAX_MMU_DEBUG_DESCRIPTOR_LEVEL; i++) {
+				uaecptr desc = mdd.descriptor[i];
+				if (desc == 0xffffffff) {
+					break;
+				}
+				if (mdd.descriptor8) {
+					uae_u32 descdata1 = get_long_debug(desc);
+					uae_u32 descdata2 = get_long_debug(desc + 4);
+					console_out_f(_T(" %08x (%08x.%08x)"), desc, descdata1, descdata2);
+				} else {
+					uae_u32 descdata = get_long_debug(desc);
+					console_out_f(_T(" %08x (%08x)"), desc, descdata);
+				}
+			}
+		} else {
+			console_out_f(_T(" DESCR: ********"));
+		}
+		if (mdd.desc_fault) {
+			console_out_f(_T(" FAULT"));
+		}
+		console_out_f(_T("\n"));
+		if (currprefs.mmu_model >= 68040) {
+			debug_mmu_translate_end();
+		} else {
+			debug_mmu030_translate_end();
+		}
+	}
+}
+
 static void m68k_modify (TCHAR **inptr)
 {
 	uae_u32 v;
@@ -7294,35 +7361,8 @@ static bool debug_line (TCHAR *input)
 			break;
 		case 'U':
 			if (currprefs.mmu_model && more_params (&inptr)) {
-				int i;
 				uaecptr addrl = readhex(&inptr, NULL);
-				uaecptr addrp;
-				console_out_f (_T("%08X translates to:\n"), addrl);
-				for (i = 0; i < 4; i++) {
-					bool super = (i & 2) != 0;
-					bool data = (i & 1) != 0;
-					console_out_f (_T("S%dD%d="), super, data);
-					TRY(prb) {
-						if (currprefs.mmu_model >= 68040)
-							addrp = mmu_translate (addrl, 0, super, data, false, sz_long);
-						else
-							addrp = mmu030_translate (addrl, super, data, false);
-						console_out_f (_T("%08X"), addrp);
-						TRY(prb2) {
-							if (currprefs.mmu_model >= 68040)
-								addrp = mmu_translate (addrl, 0, super, data, true, sz_long);
-							else
-								addrp = mmu030_translate (addrl, super, data, true);
-							console_out_f (_T(" RW"));
-						} CATCH(prb2) {
-							console_out_f (_T(" RO"));
-						} ENDTRY
-					} CATCH(prb) {
-						console_out_f (_T("***********"));
-					} ENDTRY
-					console_out_f (_T(" "));
-				}
-				console_out_f (_T("\n"));
+				debug_do_mmu_translate(addrl);
 			}
 			break;
 		case 'h':

@@ -234,6 +234,9 @@ static ALWAYS_INLINE uaecptr mmu_get_real_address(uaecptr addr, struct mmu_atc_l
 extern void mmu_get_move16(uaecptr addr, uae_u32 *v, bool data, int size);
 extern void mmu_put_move16(uaecptr addr, uae_u32 *val, bool data, int size);
 
+extern uaecptr debug_mmu_translate(uaecptr addr, uae_u32 val, bool super, bool data, bool write, int size, struct mmu_debug_data *mdd);
+extern void debug_mmu_translate_end(void);
+
 #if MMU_IPAGECACHE
 extern uae_u32 atc_last_ins_laddr, atc_last_ins_paddr;
 extern uae_u8 atc_last_ins_cache;

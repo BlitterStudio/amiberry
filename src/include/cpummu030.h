@@ -97,6 +97,9 @@ extern uae_u32 REGPARAM3 mmu030_get_lrmw_long_unaligned(uaecptr addr, uae_u32 fc
 extern void REGPARAM3 mmu030_put_word_unaligned(uaecptr addr, uae_u16 val, uae_u32 fc, int flags) REGPARAM;
 extern void REGPARAM3 mmu030_put_long_unaligned(uaecptr addr, uae_u32 val, uae_u32 fc, int flags) REGPARAM;
 
+extern uaecptr debug_mmu030_translate(uaecptr addr, int fc, bool write, struct mmu_debug_data *mdd);
+extern void debug_mmu030_translate_end(void);
+
 static ALWAYS_INLINE uae_u32 uae_mmu030_get_fc_code(void)
 {
 	return (regs.s ? 4 : 0) | 2;
