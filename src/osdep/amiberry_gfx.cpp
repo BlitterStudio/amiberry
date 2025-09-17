@@ -118,16 +118,11 @@ bool gfx_hdr;
 
 int reopen(struct AmigaMonitor*, int, bool);
 
-//static SDL_mutex* screen_cs = nullptr;
-//static bool screen_cs_allocated;
-
 void gfx_lock()
 {
-	//SDL_LockMutex(screen_cs);
 }
 void gfx_unlock()
 {
-	//SDL_UnlockMutex(screen_cs);
 }
 
 #ifdef AMIBERRY
@@ -1180,9 +1175,7 @@ bool render_screen(const int monid, const int mode, const bool immediate)
 			return mon->render_ok;
 		}
 	}
-	//gfx_lock();
 	mon->render_ok = SDL2_renderframe(monid, mode, immediate);
-	//gfx_unlock();
 	return mon->render_ok;
 }
 
@@ -1221,7 +1214,6 @@ void show_screen(const int monid, int mode)
 	const amigadisplay* ad = &adisplays[monid];
 	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
 
-	//gfx_lock();
 	//if (mode == 2 || mode == 3 || mode == 4) {
 	//	if ((mon->currentmode.flags & DM_D3D) && D3D_showframe_special && ap->gfx_strobo) {
 	//		if (mode == 4) {
@@ -1233,11 +1225,9 @@ void show_screen(const int monid, int mode)
 	//			D3D_showframe_special(0, mode == 3 ? 2 : 1);
 	//		}
 	//	}
-	//	gfx_unlock();
 	//	return;
 	//}
 	if (mode >= 0 && !mon->render_ok) {
-		//gfx_unlock();
 		return;
 	}
 #ifdef USE_OPENGL
@@ -1252,7 +1242,6 @@ void show_screen(const int monid, int mode)
 #else
 	SDL2_showframe(monid);
 #endif
-	//gfx_unlock();
 	mon->render_ok = false;
 }
 
@@ -1264,7 +1253,6 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	if (!mon->amiga_window || !amiga_surface)
 		return ret;
 
-	//gfx_lock();
 	if (vb->vram_buffer) {
 		// Benchmarks have shown that Locking and Unlocking the Texture is slower than just calling UpdateTexture
 		// Therefore, this is disabled in Amiberry.
@@ -1284,20 +1272,17 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	if (ret) {
 		vb->locked = true;
 	}
-	//gfx_unlock();
 	return ret;
 }
 
 void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 {
-	//gfx_lock();
 	vb->locked = false;
 	if (vb->vram_buffer) {
 		vb->bufmem = nullptr;
 		// Not using SDL2_UnlockTexture due to performance reasons, see lockscr for details
 		//SDL_UnlockTexture(amiga_texture);
 	}
-	//gfx_unlock();
 }
 
 void flush_clear_screen(struct vidbuffer* vb)
@@ -1368,11 +1353,8 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 	if (mon->rtg_locked) {
 		return p;
 	}
-	//gfx_lock();
 	p = gfx_lock_picasso2(monid, fullupdate);
-	if (!p) {
-		//gfx_unlock();
-	} else {
+	if (p) {
 		mon->rtg_locked = true;
 	}
 	return p;
@@ -1381,8 +1363,7 @@ uae_u8* gfx_lock_picasso(const int monid, bool fullupdate)
 void gfx_unlock_picasso(const int monid, const bool dorender)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
-	//if (!mon->rtg_locked)
-	//	gfx_lock();
+
 	mon->rtg_locked = false;
 	if (dorender) {
 		if (mon->p96_double_buffer_needs_flushing) {
@@ -1393,14 +1374,9 @@ void gfx_unlock_picasso(const int monid, const bool dorender)
 	//SDL_UnlockTexture(amiga_texture);
 	if (dorender) {
 		if (SDL2_renderframe(monid, true, false)) {
-			//gfx_unlock();
 			mon->render_ok = true;
 			show_screen_maybe(monid, true);
-		} else {
-			//gfx_unlock();
 		}
-	} else {
-		//gfx_unlock();
 	}
 }
 
@@ -3321,8 +3297,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	const struct picasso96_state_struct* state = &picasso96_state[monid];
 	struct vidbuffer *vb = NULL, *vbout = NULL;
 
-	//gfx_lock();
-
 	int w, h;
 
 	if (mon->screen_is_picasso) {
@@ -3332,7 +3306,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		vb = avidinfo->inbuffer;
 		vbout = avidinfo->outbuffer;
 		if (!vb) {
-			//gfx_unlock();
 			return false;
 		}
 		w = vb->outwidth;
@@ -3347,7 +3320,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 				vbout->width_allocated = w;
 				vbout->height_allocated = h;
 			}
-			//gfx_unlock();
 			return false;
 		}
 	}
@@ -3356,12 +3328,10 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		oldtex_w[monid] = w;
 		oldtex_h[monid] = h;
 		oldtex_rtg[monid] = mon->screen_is_picasso;
-		//gfx_unlock();
 		return false;
 	}
 
 	if (!SDL2_alloctexture(mon->monitor_id, w, h)) {
-		//gfx_unlock();
 		return false;
 	}
 
@@ -3495,8 +3465,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		}
 #endif
 	}
-
-	//gfx_unlock();
 
 	return true;
 }
