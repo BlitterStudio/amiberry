@@ -1299,14 +1299,13 @@ void flush_clear_screen(struct vidbuffer* vb)
 		const size_t bytes_per_row = vb->width_allocated * vb->pixbytes;
 		const size_t total_bytes = bytes_per_row * vb->height_allocated;
 
-		// For small buffers, use single memset for better cache performance
-		if (total_bytes <= 65536 && vb->rowbytes == bytes_per_row) {
+		if (vb->rowbytes == bytes_per_row) {
+			// Buffer is contiguous, clear it all at once.
 			memset(vb->bufmem, 0, total_bytes);
 		} else {
-			// For larger buffers or non-contiguous memory, clear row by row
-			for (int y = 0; y < vb->height_allocated; y++) {
-				memset(vb->bufmem + y * vb->rowbytes, 0, bytes_per_row);
-			}
+			// Buffer is not contiguous, clear row by row.
+			for (int y = 0; y < vb->height_allocated; y++)
+				memset(static_cast<uae_u8*>(vb->bufmem) + y * vb->rowbytes, 0, bytes_per_row);
 		}
 		unlockscr(vb, -1, -1);
 	}
