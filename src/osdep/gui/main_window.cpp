@@ -353,17 +353,6 @@ void amiberry_gui_init()
 	}
 	DPIHandler::set_render_scale(mon->gui_renderer);
 
-	auto render_scale_quality = "linear";
-	bool integer_scale = false;
-
-#ifdef __MACH__
-	render_scale_quality = "nearest";
-	integer_scale = true;
-#endif
-
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, render_scale_quality);
-	SDL_RenderSetIntegerScale(mon->gui_renderer, integer_scale ? SDL_TRUE : SDL_FALSE);
-
 	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
 									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");

@@ -137,8 +137,6 @@ static void InitShowMessage(const std::string& message)
 		}
 	}
 
-	// make the scaled rendering look smoother (linear scaling).
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 
 	if (gui_texture == nullptr)
 	{
