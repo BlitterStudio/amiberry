@@ -16,6 +16,7 @@
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
+#include "dpi_handler.hpp"
 #include "fsdb_host.h"
 #include "xwin.h"
 
@@ -137,6 +138,7 @@ static void InitShowMessage(const std::string& message)
 		}
 	}
 
+	DPIHandler::set_render_scale(mon->gui_renderer);
 
 	if (gui_texture == nullptr)
 	{
