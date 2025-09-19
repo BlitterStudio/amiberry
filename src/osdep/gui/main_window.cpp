@@ -488,11 +488,6 @@ void amiberry_gui_init()
 	// Setup Platform/Renderer backends
 	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
 	ImGui_ImplSDL2_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
-
-	// Get DPI scale factor
-	gui_scale = DPIHandler::get_scale();
-	// Scale font size
-	io.FontGlobalScale = gui_scale;
 #endif
 #ifdef USE_GUISAN
 	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
