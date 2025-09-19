@@ -45,6 +45,49 @@ bool gui_running = false;
 static int last_active_panel = 3;
 bool joystick_refresh_needed = false;
 
+// Helper: get usable bounds for a display index (fallback to full bounds)
+static SDL_Rect get_display_usable_bounds(int display_index)
+{
+	SDL_Rect bounds{0,0,0,0};
+	if (display_index < 0 || display_index >= SDL_GetNumVideoDisplays()) {
+		display_index = 0;
+	}
+	if (SDL_GetDisplayUsableBounds(display_index, &bounds) != 0) {
+		// Fallback if usable bounds fail
+		SDL_GetDisplayBounds(display_index, &bounds);
+	}
+	return bounds;
+}
+
+// Helper: find the display index that contains the rect (by its topleft); fallback to primary
+static int find_display_for_rect(const SDL_Rect& rect)
+{
+	const int nd = SDL_GetNumVideoDisplays();
+	for (int i = 0; i < nd; ++i) {
+		SDL_Rect b = get_display_usable_bounds(i);
+		if (rect.x >= b.x && rect.x < b.x + b.w && rect.y >= b.y && rect.y < b.y + b.h)
+			return i;
+	}
+	return 0;
+}
+
+// Helper: clamp rect position (and optionally size) into display usable bounds; returns true if changed
+static bool clamp_rect_to_bounds(SDL_Rect& rect, const SDL_Rect& bounds, bool clamp_size)
+{
+	bool changed = false;
+	SDL_Rect r = rect;
+	if (clamp_size) {
+		if (r.w > bounds.w) { r.w = bounds.w; changed = true; }
+		if (r.h > bounds.h) { r.h = bounds.h; changed = true; }
+	}
+	if (r.x < bounds.x) { r.x = bounds.x; changed = true; }
+	if (r.y < bounds.y) { r.y = bounds.y; changed = true; }
+	if (r.x + r.w > bounds.x + bounds.w) { r.x = bounds.x + bounds.w - r.w; changed = true; }
+	if (r.y + r.h > bounds.y + bounds.h) { r.y = bounds.y + bounds.h - r.h; changed = true; }
+	if (changed) rect = r;
+	return changed;
+}
+
 enum
 {
 	MAX_STARTUP_TITLE = 64,
@@ -216,6 +259,7 @@ SDL_Event touch_event;
 SDL_Texture* gui_texture;
 SDL_Rect gui_renderQuad;
 SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
+static bool gui_window_moved = false; // track if user moved the GUI window
 
 #ifdef USE_GUISAN
 /*
@@ -433,8 +477,21 @@ void amiberry_gui_init()
 	if (!mon->gui_window)
 	{
 		write_log("Creating Amiberry GUI window...\n");
-		regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
-		regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
+		int has_x = regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
+		int has_y = regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
+		if (!has_x || !has_y) {
+			// Default to centered if we don't have stored position
+			gui_window_rect.x = SDL_WINDOWPOS_CENTERED;
+			gui_window_rect.y = SDL_WINDOWPOS_CENTERED;
+		} else {
+			// Clamp stored position/size to some display's usable bounds
+			const int target_display = find_display_for_rect(gui_window_rect);
+			SDL_Rect usable = get_display_usable_bounds(target_display);
+			if (clamp_rect_to_bounds(gui_window_rect, usable, true)) {
+				// Mark as adjusted so we persist corrected values
+				gui_window_moved = true;
+			}
+		}
 
         Uint32 mode;
 		if (!kmsdrm_detected)
@@ -477,6 +534,29 @@ void amiberry_gui_init()
         }
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
+		// Sync rect to actual window metrics (handles SDL_WINDOWPOS_CENTERED)
+		int wx, wy, ww, wh;
+		SDL_GetWindowPosition(mon->gui_window, &wx, &wy);
+		SDL_GetWindowSize(mon->gui_window, &ww, &wh);
+		gui_window_rect.x = wx;
+		gui_window_rect.y = wy;
+		gui_window_rect.w = ww;
+		gui_window_rect.h = wh;
+
+		// After creation, ensure window is fully visible; clamp to its current display
+		int disp = SDL_GetWindowDisplayIndex(mon->gui_window);
+		SDL_Rect usable = get_display_usable_bounds(disp);
+		SDL_Rect clamped = gui_window_rect;
+		bool adjusted = clamp_rect_to_bounds(clamped, usable, true);
+		if (adjusted) {
+			if (clamped.w != gui_window_rect.w || clamped.h != gui_window_rect.h)
+				SDL_SetWindowSize(mon->gui_window, clamped.w, clamped.h);
+			if (clamped.x != gui_window_rect.x || clamped.y != gui_window_rect.y)
+				SDL_SetWindowPosition(mon->gui_window, clamped.x, clamped.y);
+			gui_window_rect = clamped;
+			gui_window_moved = true; // ensure we persist corrected values
+		}
+
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{
@@ -505,9 +585,6 @@ void amiberry_gui_init()
 
 	// Get DPI scale factor
 	gui_scale = DPIHandler::get_scale();
-
-	// Scale font size
-	io.FontGlobalScale = gui_scale;
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsClassic();
@@ -594,8 +671,10 @@ void amiberry_gui_halt()
 	}
 
 	if (mon->gui_window && !kmsdrm_detected) {
-		regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
-		regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
+		if (gui_window_moved) {
+			regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
+			regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
+		}
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
 	}
@@ -622,6 +701,15 @@ void check_input()
 				case SDL_WINDOWEVENT_MOVED:
 					gui_window_rect.x = gui_event.window.data1;
 					gui_window_rect.y = gui_event.window.data2;
+					// Clamp move to current display usable bounds
+					{
+						int disp = SDL_GetWindowDisplayIndex(mon->gui_window);
+						SDL_Rect usable = get_display_usable_bounds(disp);
+						if (clamp_rect_to_bounds(gui_window_rect, usable, false)) {
+							SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
+						}
+					}
+					gui_window_moved = true;
 					break;
 				case SDL_WINDOWEVENT_RESIZED:
 					gui_window_rect.w = gui_event.window.data1;
@@ -2522,8 +2610,33 @@ void run_gui()
 
 			if (gui_event.type == SDL_QUIT)
 				gui_running = false;
-			if (gui_event.type == SDL_WINDOWEVENT && gui_event.window.event == SDL_WINDOWEVENT_CLOSE && gui_event.window.windowID == SDL_GetWindowID(mon->gui_window))
-				gui_running = false;
+			if (gui_event.type == SDL_WINDOWEVENT) {
+				if (gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
+					switch (gui_event.window.event) {
+					case SDL_WINDOWEVENT_MOVED:
+						gui_window_rect.x = gui_event.window.data1;
+						gui_window_rect.y = gui_event.window.data2;
+						// Clamp move to current display usable bounds
+						{
+							int disp = SDL_GetWindowDisplayIndex(mon->gui_window);
+							SDL_Rect usable = get_display_usable_bounds(disp);
+							if (clamp_rect_to_bounds(gui_window_rect, usable, false)) {
+								SDL_SetWindowPosition(mon->gui_window, gui_window_rect.x, gui_window_rect.y);
+							}
+						}
+						gui_window_moved = true;
+						break;
+					case SDL_WINDOWEVENT_RESIZED:
+						gui_window_rect.w = gui_event.window.data1;
+						gui_window_rect.h = gui_event.window.data2;
+						break;
+					default:
+						break;
+					}
+				}
+				if (gui_event.window.event == SDL_WINDOWEVENT_CLOSE && gui_event.window.windowID == SDL_GetWindowID(mon->gui_window))
+					gui_running = false;
+			}
 		}
 
 		// Start the Dear ImGui frame
