@@ -488,7 +488,6 @@ void amiberry_gui_init()
 	// Setup Platform/Renderer backends
 	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
 	ImGui_ImplSDL2_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
-#endif
 
 	// Get DPI scale factor
 	gui_scale = DPIHandler::get_scale();
