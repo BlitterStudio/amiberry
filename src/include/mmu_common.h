@@ -158,7 +158,7 @@ extern void(*x_phys_put_long)(uaecptr, uae_u32);
 struct mmu_debug_data
 {
     uaecptr descriptor[MAX_MMU_DEBUG_DESCRIPTOR_LEVEL];
-    bool descriptor8;
+    int descriptor_type[MAX_MMU_DEBUG_DESCRIPTOR_LEVEL];
     bool desc_fault;
     int tt;
     uae_u32 ttdata;

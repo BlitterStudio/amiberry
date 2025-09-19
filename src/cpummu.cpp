@@ -66,7 +66,7 @@ int mmu040_movem;
 uaecptr mmu040_movem_ea;
 uae_u32 mmu040_move16[4];
 
-static struct mmu_debug_data *mddm;
+static struct mmu_debug_data mddm;
 
 #if MMU_ICACHE
 struct mmu_icache mmu_icache_data[MMU_ICACHE_SZ];
@@ -656,7 +656,6 @@ static void desc_put_long(uaecptr addr, uae_u32 v)
 static uae_u32 mmu_fill_atc(uaecptr addr, bool super, uae_u32 tag, bool write, struct mmu_atc_line *l, uae_u32 *status060)
 {
     uae_u32 desc, desc_addr, wp;
-    uae_u32 desca = 0, descb = 0, descc = 0;
     uae_u32 status = 0;
     int i;
 	int old_s;
@@ -674,8 +673,8 @@ static uae_u32 mmu_fill_atc(uaecptr addr, bool super, uae_u32 tag, bool write, s
     
     SAVE_EXCEPTION;
     TRY(prb) {
-        desca = desc_addr;
-        desc = desc_get_long(desc_addr);
+		mddm.descriptor[0] = desc_addr;
+		desc = desc_get_long(desc_addr);
         if ((desc & 2) == 0) {
 #if MMUDEBUG > 1
             write_log(_T("MMU: invalid root descriptor %s for %x desc at %x desc=%x\n"), super ? _T("srp"):_T("urp"),
@@ -693,7 +692,7 @@ static uae_u32 mmu_fill_atc(uaecptr addr, bool super, uae_u32 tag, bool write, s
         /* fetch pointer table descriptor */
         i = (addr >> 16) & 0x1fc;
         desc_addr = (desc & MMU_ROOT_PTR_ADDR_MASK) | i;
-        descb = desc_addr;
+        mddm.descriptor[1] = desc_addr;
         desc = desc_get_long(desc_addr);
         if ((desc & 2) == 0) {
 #if MMUDEBUG > 1
@@ -704,8 +703,10 @@ static uae_u32 mmu_fill_atc(uaecptr addr, bool super, uae_u32 tag, bool write, s
             goto fail;
         }
         wp |= desc;
-        if ((desc & MMU_DES_USED) == 0 && !mmu_debugger) {
-            desc_put_long(desc_addr, desc | MMU_DES_USED);
+        if ((desc & MMU_DES_USED) == 0) {
+			if (!mmu_debugger) {
+				desc_put_long(desc_addr, desc | MMU_DES_USED);
+			}
         }
         
         /* fetch page table descriptor */
@@ -717,20 +718,23 @@ static uae_u32 mmu_fill_atc(uaecptr addr, bool super, uae_u32 tag, bool write, s
             desc_addr = (desc & MMU_PTR_PAGE_ADDR_MASK_4) + i;
         }
         
-        desc = desc_get_long(desc_addr);
-        descc = desc_addr;
-        if ((desc & 3) == 2) {
+		mddm.descriptor[2] = desc_addr;
+		desc = desc_get_long(desc_addr);
+		if ((desc & 3) == 2) {
             /* indirect */
             desc_addr = desc & MMU_PAGE_INDIRECT_MASK;
-            desc = desc_get_long(desc_addr);
-        }
-        if ((desc & 1) == 1) {
+			mddm.descriptor[3] = desc_addr;
+			desc = desc_get_long(desc_addr);
+		}
+		if ((desc & 1) == 1) {
             wp |= desc;
             if (write) {
                 if ((wp & MMU_DES_WP) || ((desc & MMU_DES_SUPER) && !super)) {
-                    if ((desc & MMU_DES_USED) == 0 && !mmu_debugger) {
-                        desc |= MMU_DES_USED;
-                        desc_put_long(desc_addr, desc);
+                    if ((desc & MMU_DES_USED) == 0) {
+						desc |= MMU_DES_USED;
+						if (!mmu_debugger) {
+	                        desc_put_long(desc_addr, desc);
+						}
                     }
                 } else if ((desc & (MMU_DES_USED|MMU_DES_MODIFIED)) !=
                            (MMU_DES_USED|MMU_DES_MODIFIED)) {
@@ -781,12 +785,6 @@ fail:
 			status = l->phys | l->status;
 		}
 
-		if (mmu_debugger) {
-			mddm->descriptor[0] = desca;
-			mddm->descriptor[1] = descb;
-			mddm->descriptor[2] = descc;
-		}
-
 		RESTORE_EXCEPTION;
     } CATCH(prb) {
         RESTORE_EXCEPTION;
@@ -801,9 +799,7 @@ fail:
         status = MMU_MMUSR_B;
 		*status060 |= MMU_FSLW_LK | MMU_FSLW_TWE;
 
-		if (mmu_debugger) {
-			mddm->desc_fault = true;
-		}
+		mddm.desc_fault = true;
 
 #if MMUDEBUG > 0
         write_log(_T("MMU: bus error during table search.\n"));
@@ -854,39 +850,39 @@ static void mmu_add_cache(uaecptr addr, uaecptr phys, bool super, bool data, boo
 	}
 }
 
-uaecptr debug_mmu_translate(uaecptr addr, uae_u32 val, bool super, bool data, bool write, int size, struct mmu_debug_data *mdd)
+uaecptr debug_mmu_translate(uaecptr addr, uae_u32 val, bool super, bool data, bool write, int size, struct mmu_debug_data **mdd)
 {
-	memset(mdd, 0, sizeof(struct mmu_debug_data));
-	mddm = mdd;
+	memset(&mddm, 0, sizeof(struct mmu_debug_data));
+	*mdd = &mddm;
 	for (int i = 0; i < MAX_MMU_DEBUG_DESCRIPTOR_LEVEL; i++) {
-		mdd->descriptor[i] = 0xffffffff;
+		mddm.descriptor[i] = 0xffffffff;
 	}
 	mmu_debugger = true;
 	mmu_flush_atc_all(true);
 	if (!data) {
 		int res = mmu_do_match_ttr(regs.itt0, addr, super);
 		if (res == TTR_OK_MATCH) {
-			mdd->tt = 1;
-			mdd->ttdata = regs.itt0;
+			mddm.tt = 1;
+			mddm.ttdata = regs.itt0;
 			return addr;
 		}
 		res = mmu_do_match_ttr(regs.itt1, addr, super);
 		if (res == TTR_OK_MATCH) {
-			mdd->tt = 2;
-			mdd->ttdata = regs.itt1;
+			mddm.tt = 2;
+			mddm.ttdata = regs.itt1;
 			return addr;
 		}
 	} else {
 		int res = mmu_do_match_ttr(regs.dtt0, addr, super);
 		if (res == TTR_OK_MATCH) {
-			mdd->tt = 1;
-			mdd->ttdata = regs.dtt0;
+			mddm.tt = 1;
+			mddm.ttdata = regs.dtt0;
 			return addr;
 		}
 		res = mmu_do_match_ttr(regs.dtt1, addr, super);
 		if (res == TTR_OK_MATCH) {
-			mdd->tt = 2;
-			mdd->ttdata = regs.dtt1;
+			mddm.tt = 2;
+			mddm.ttdata = regs.dtt1;
 			return addr;
 		}
 	}
@@ -897,7 +893,6 @@ uaecptr debug_mmu_translate(uaecptr addr, uae_u32 val, bool super, bool data, bo
 void debug_mmu_translate_end(void)
 {
 	mmu_debugger = false;
-	mddm = NULL;
 }
 
 uaecptr mmu_translate(uaecptr addr, uae_u32 val, bool super, bool data, bool write, int size)

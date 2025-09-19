@@ -80,7 +80,7 @@ uae_u8 mmu030_cache_state;
 struct mmu030_access mmu030_ad[MAX_MMU030_ACCESS + 1];
 bool ismoves030, islrmw030;
 
-static struct mmu_debug_data *mddm;
+static struct mmu_debug_data mddm;
 
 static void mmu030_ptest_atc_search(uaecptr logical_addr, uae_u32 fc, bool write);
 static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int level);
@@ -1063,22 +1063,6 @@ static void desc_get_quad(uaecptr addr, uae_u32 *descr)
 	descr[1] = x_phys_get_long(addr + 4);
 }
 
-/* Descriptors */
-
-#define DESCR_TYPE_MASK         0x00000003
-
-#define DESCR_TYPE_INVALID      0 /* all tables */
-
-#define DESCR_TYPE_EARLY_TERM   1 /* all but lowest level table */
-#define DESCR_TYPE_PAGE         1 /* only lowest level table */
-#define DESCR_TYPE_VALID4       2 /* all but lowest level table */
-#define DESCR_TYPE_INDIRECT4    2 /* only lowest level table */
-#define DESCR_TYPE_VALID8       3 /* all but lowest level table */
-#define DESCR_TYPE_INDIRECT8    3 /* only lowest level table */
-
-#define DESCR_TYPE_VALID_MASK       0x2 /* all but lowest level table */
-#define DESCR_TYPE_INDIRECT_MASK    0x2 /* only lowest level table */
-
 
 /* Short format (4 byte):
  *
@@ -1228,8 +1212,9 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
      * tables A, B, C and D and one indirect descriptor */
     uae_u32 descr[2];
     uae_u32 descr_type;
-    uaecptr descr_addr[7];
-    uaecptr table_addr = 0;
+	uaecptr descr_addr[7];
+	uaecptr descr_types[7];
+	uaecptr table_addr = 0;
     uaecptr page_addr = 0;
     uaecptr indirect_addr = 0;
     uae_u32 table_index = 0;
@@ -1284,7 +1269,8 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
         
         /* Check descriptor type of root pointer */
         descr_type = descr[0]&DESCR_TYPE_MASK;
-        switch (descr_type) {
+		descr_types[descr_num] = descr_type;
+		switch (descr_type) {
             case DESCR_TYPE_INVALID:
                 write_log(_T("Fatal error: Root pointer is invalid descriptor!\n"));
                 mmu030.status |= MMUSR_INVALID;
@@ -1305,13 +1291,15 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
          * index for top level table, limit check not required */
         
         if (tc_030&TC_ENABLE_FCL) {
-            write_log(_T("Function code lookup enabled, FC = %i\n"), fc);
-            
+#if MMU030_REG_DBG_MSG
+			write_log(_T("Function code lookup enabled, FC = %i\n"), fc);
+#endif
             addr_position = (descr_size==4) ? 0 : 1;
             table_addr = descr[addr_position]&DESCR_TD_ADDR_MASK;
             table_index = fc; /* table index is function code */
-            write_log(_T("Table FCL at %08X: index = %i, "),table_addr,table_index);
-            
+#if MMU030_REG_DBG_MSG
+			write_log(_T("Table FCL at %08X: index = %i, "),table_addr,table_index);
+#endif
             /* Fetch next descriptor */
             descr_num++;
             descr_addr[descr_num] = table_addr+(table_index*next_size);
@@ -1332,6 +1320,7 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
             
             /* Check descriptor type */
             descr_type = descr[0]&DESCR_TYPE_MASK;
+			descr_types[descr_num] = descr_type;
             switch (descr_type) {
                 case DESCR_TYPE_INVALID:
                     write_log(_T("Invalid descriptor!\n"));
@@ -1430,7 +1419,8 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
             
             /* Check descriptor type */
             descr_type = descr[0]&DESCR_TYPE_MASK;
-            switch (descr_type) {
+			descr_types[descr_num] = descr_type;
+			switch (descr_type) {
                 case DESCR_TYPE_INVALID:
 #if MMU030_REG_DBG_MSG
                     write_log(_T("Invalid descriptor!\n"));
@@ -1473,7 +1463,7 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
         /* Fetch indirect descriptor */
         descr_num++;
         descr_addr[descr_num] = indirect_addr;
-        
+
         if (next_size==4) {
             descr[0] = desc_get_long(descr_addr[descr_num]);
 #if MMU030_REG_DBG_MSG > 2
@@ -1490,7 +1480,8 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
         
         /* Check descriptor type, only page descriptor is valid */
         descr_type = descr[0]&DESCR_TYPE_MASK;
-        if (descr_type!=DESCR_TYPE_PAGE) {
+		descr_types[descr_num] = descr_type;
+		if (descr_type!=DESCR_TYPE_PAGE) {
             mmu030.status |= MMUSR_INVALID;
             goto stop_search;
         }
@@ -1591,22 +1582,19 @@ static uae_u32 mmu030_table_search(uaecptr addr, uae_u32 fc, bool write, int lev
             descr_num--;
         }
         mmu030.status |= (MMUSR_BUS_ERROR|MMUSR_INVALID);
-        write_log(_T("MMU: Bus error while %s descriptor!\n"),
+        mddm.desc_fault = true;
+#if MMU030_REG_DBG_MSG
+		write_log(_T("MMU: Bus error while %s descriptor!\n"),
                   bBusErrorReadWrite?_T("reading"):_T("writing"));
-
-		if (mmu_debugger) {
-            mddm->desc_fault = true;
-        }
+#endif
 
     } ENDTRY;
 
     if (mmu_debugger) {
         for (int i = 1; i <= descr_num; i++) {
-            mddm->descriptor[i - 1] = descr_addr[i];
-        }
-        if (descr_size > 4) {
-            mddm->descriptor8 = true;
-        }
+			mddm.descriptor[i - 1] = descr_addr[i];
+			mddm.descriptor_type[i - 1] = descr_types[i];
+		}
     }
 
 	// Restore original supervisor state
@@ -2647,37 +2635,30 @@ static uaecptr mmu030_get_addr_atc(uaecptr addr, int l, uae_u32 fc, bool write) 
 void debug_mmu030_translate_end(void)
 {
 	mmu_debugger = false;
-	mddm = NULL;
 }
 
-uaecptr debug_mmu030_translate(uaecptr addr, int fc, bool write, struct mmu_debug_data *mdd)
+uaecptr debug_mmu030_translate(uaecptr addr, int fc, bool write, struct mmu_debug_data **mdd)
 {
-	memset(mdd, 0, sizeof(struct mmu_debug_data));
-	mddm = mdd;
+	memset(&mddm, 0, sizeof(struct mmu_debug_data));
+	*mdd = &mddm;
 	for (int i = 0; i < MAX_MMU_DEBUG_DESCRIPTOR_LEVEL; i++) {
-		mdd->descriptor[i] = 0xffffffff;
+		mddm.descriptor[i] = 0xffffffff;
 	}
 	mmu_debugger = true;
 	mmu030_flush_atc_all();
 	if ((fc == 7) || (mmu030_match_ttr(addr, fc, write) & TT_OK_MATCH) || (!mmu030.enabled)) {
 		if (mmu030_do_match_ttr(tt0_030, mmu030.transparent.tt0, addr, fc, write) & TT_OK_MATCH) {
-			mdd->ttdata = tt0_030;
-			mdd->tt = 1;
+			mddm.ttdata = tt0_030;
+			mddm.tt = 1;
 		}
 		if (mmu030_do_match_ttr(tt1_030, mmu030.transparent.tt1, addr, fc, write) & TT_OK_MATCH) {
-			mdd->ttdata = tt1_030;
-			mdd->tt = 2;
+			mddm.ttdata = tt1_030;
+			mddm.tt = 2;
 		}
 		return addr;
 	}
-	int atc_line_num = mmu030_logical_is_in_atc(addr, fc, write);
-
-	if (atc_line_num >= 0) {
-		return mmu030_get_addr_atc(addr, atc_line_num, fc, write);
-	} else {
-		mmu030_table_search(addr, fc, false, 0);
-		return mmu030_get_addr_atc(addr, mmu030_logical_is_in_atc(addr, fc, write), fc, write);
-	}
+	mmu030_table_search(addr, fc, false, 0);
+	return mmu030_get_addr_atc(addr, mmu030_logical_is_in_atc(addr, fc, write), fc, write);
 }
 
 uaecptr mmu030_translate(uaecptr addr, bool super, bool data, bool write)
@@ -3625,4 +3606,70 @@ void m68k_do_rte_mmu030c (uaecptr a7)
 			fill_prefetch_030_ntx();
 		}
 	}
+}
+
+void mmu030_dump_tables(int fc)
+{
+	uaecptr addr = 0, phys_c = 0;
+	uaecptr addr_prev = addr;
+	uaecptr phys_prev = addr;
+	uae_u32 desc_prev = 0xffffffff;
+	uae_u16 status = 0, status_prev = 0;
+
+	console_out_f(_T("FC=%d\n"), fc);
+	for (;;) {
+		struct mmu_debug_data *mdd;
+
+		uae_u32 desc = 0xffffffff;
+		uaecptr phys = 0xffffffff;
+		TRY(prb) {
+			phys = debug_mmu030_translate(addr, fc, false, &mdd);
+		} CATCH(prb) {
+		} ENDTRY;
+		for (int i = 0; i < MAX_MMU_DEBUG_DESCRIPTOR_LEVEL; i++) {
+			if (mdd->descriptor[i] == 0xffffffff) {
+				break;
+			}
+			desc = get_long(mdd->descriptor[i]);
+		}
+		status = mmu030.status;
+
+		if (addr == 0) {
+			desc_prev = desc;
+			addr_prev = addr;
+			phys_prev = phys;
+			phys_c = phys;
+			status_prev = status;
+		}
+
+		if (((desc_prev & (DESCR_WP | DESCR_CI | DESCR_TYPE_MASK)) != (desc & (DESCR_WP | DESCR_CI | DESCR_TYPE_MASK))) ||
+			((status & (MMUSR_SUPER_VIOLATION | MMUSR_WRITE_PROTECTED)) != (status_prev & (MMUSR_SUPER_VIOLATION | MMUSR_WRITE_PROTECTED))) ||
+			(phys_prev != phys && phys_c != phys) || addr + regs.mmu_page_size == 0) {
+			uaecptr addr_end = addr;
+			if (addr_end + regs.mmu_page_size == 0) {
+				addr_end += regs.mmu_page_size;
+			}
+			console_out_f(_T("%08x - %08x (%08x) S=%d,WP=%d - CI=%d,WP=%d,DT=%d\n"),
+				addr_prev, addr_end - 1, desc_prev,
+				(status_prev & MMUSR_SUPER_VIOLATION) ? 1 : 0,
+				(status_prev & MMUSR_WRITE_PROTECTED) ? 1 : 0,
+				(desc_prev >> 6) & 1,
+				(desc_prev >> 2) & 1,
+				(desc_prev >> 0) & 3
+				);
+			desc_prev = desc;
+			addr_prev = addr;
+			phys_prev = phys;
+			phys_c = phys;
+			status_prev = status;
+		}
+
+		addr += regs.mmu_page_size;
+		phys_c += regs.mmu_page_size;
+		if (addr == 0) {
+			break;
+		}
+	}
+
+
 }
