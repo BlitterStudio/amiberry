@@ -18,6 +18,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#include <array>
 #endif
 
 #include "sysdeps.h"
@@ -29,8 +30,6 @@
 #include "amiberry_gfx.h"
 #include "fsdb_host.h"
 #include "autoconf.h"
-#include "amiberry_input.h"
-#include "fsdb.h"
 #include "inputdevice.h"
 #include "xwin.h"
 #include "custom.h"
@@ -118,6 +117,34 @@ static bool show_message_box = false;
 static char message_box_title[128] = "";
 static char message_box_message[2048] = "";
 static float gui_scale = 1.0f;
+
+// About panel resources (ImGui backend)
+static SDL_Texture* about_logo_texture = nullptr;
+static int about_logo_tex_w = 0;
+static int about_logo_tex_h = 0;
+
+static void ensure_about_logo_texture()
+{
+	if (about_logo_texture)
+		return;
+
+	AmigaMonitor* mon = &AMonitors[0];
+	const auto path = prefix_with_data_path("amiberry-logo.png");
+	SDL_Surface* surf = IMG_Load(path.c_str());
+	if (!surf)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to load %s: %s", path.c_str(), SDL_GetError());
+		return;
+	}
+	about_logo_tex_w = surf->w;
+	about_logo_tex_h = surf->h;
+	about_logo_texture = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
+	SDL_FreeSurface(surf);
+	if (!about_logo_texture)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to create texture: %s", SDL_GetError());
+	}
+}
 
 ConfigCategory categories[] = {
   {"About", "amigainfo.png"},
@@ -473,6 +500,8 @@ void amiberry_gui_init()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
 	// Get DPI scale factor
 	gui_scale = DPIHandler::get_scale();
@@ -481,7 +510,7 @@ void amiberry_gui_init()
 	io.FontGlobalScale = gui_scale;
 
 	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
+	ImGui::StyleColorsClassic();
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.ScaleAllSizes(gui_scale);
 
@@ -537,6 +566,11 @@ void amiberry_gui_halt()
 	delete gui_graphics;
 	gui_graphics = nullptr;
 #elif USE_IMGUI
+	// Release any About panel resources
+	if (about_logo_texture) {
+		SDL_DestroyTexture(about_logo_texture);
+		about_logo_texture = nullptr;
+	}
 	// Properly shutdown ImGui backends/context
 	ImGui_ImplSDLRenderer2_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
@@ -1434,13 +1468,68 @@ void ShowMessageBox(const char* title, const char* message)
 
 static void render_panel_about()
 {
-	ImGui::Text("Amiberry - The Amiga Emulator for ARM-based devices");
-	ImGui::Text("Version: %s", get_version_string().c_str());
+	// Ensure logo texture is available
+	ensure_about_logo_texture();
+
+	// Draw centered logo banner, scaled to content width
+	if (about_logo_texture)
+	{
+		const float region_w = ImGui::GetContentRegionAvail().x;
+		auto draw_w = static_cast<float>(about_logo_tex_w);
+		auto draw_h = static_cast<float>(about_logo_tex_h);
+		if (draw_w > region_w * 0.9f)
+		{
+			const float scale = (region_w * 0.9f) / draw_w;
+			draw_w *= scale;
+			draw_h *= scale;
+		}
+		// center horizontally
+		const float pos_x = (ImGui::GetContentRegionAvail().x - draw_w) * 0.5f;
+		if (pos_x > 0.0f)
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pos_x);
+		ImGui::Image((ImTextureID)about_logo_texture, ImVec2(draw_w, draw_h));
+	}
+
+	ImGui::Spacing();
+
+	// Version and environment info
+	ImGui::TextUnformatted(get_version_string().c_str());
+	ImGui::TextUnformatted(get_copyright_notice().c_str());
+	ImGui::TextUnformatted(get_sdl2_version_string().c_str());
+	ImGui::Text("SDL2 video driver: %s", sdl_video_driver ? sdl_video_driver : "unknown");
+
 	ImGui::Separator();
-	ImGui::Text("Ported from WinUAE, which was made by Toni Wilen and contributors.");
-	ImGui::Text("WinUAE is a port of the original UAE, which was made by Bernd Schmidt.");
-	ImGui::Text("Guisan GUI library by Olof Naessen.");
-	ImGui::Text("ImGui GUI library by Omar Cornut.");
+
+	// License and credits text inside a bordered, scrollable region
+	static auto about_long_text =
+		"This program is free software: you can redistribute it and/or modify\n"
+		"it under the terms of the GNU General Public License as published by\n"
+		"the Free Software Foundation, either version 3 of the License, or\n"
+		"any later version.\n\n"
+		"This program is distributed in the hope that it will be useful,\n"
+		"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+		"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the\n"
+		"GNU General Public License for more details.\n\n"
+		"You should have received a copy of the GNU General Public License\n"
+		"along with this program. If not, see https://www.gnu.org/licenses\n\n"
+		"Credits:\n"
+		"Dimitris Panokostas (MiDWaN) - Amiberry author\n"
+		"Toni Wilen - WinUAE author\n"
+		"TomB - Original ARM port of UAE, JIT ARM updates\n"
+		"Rob Smith, Drawbridge floppy controller\n"
+		"Gareth Fare - Original Serial port implementation\n"
+		"Dom Cresswell (Horace & The Spider) - Controller and WHDBooter updates\n"
+		"Christer Solskogen - Makefile and testing\n"
+		"Gunnar Kristjansson - Amibian and inspiration\n"
+		"Thomas Navarro Garcia - Original Amiberry logo\n"
+		"Chips - Original RPI port\n"
+		"Vasiliki Soufi - Amiberry name\n\n"
+		"Dedicated to HeZoR - R.I.P. little brother (1978-2017)\n";
+
+	// Use a child region with border to mimic a textbox look
+	ImGui::BeginChild("AboutScroll", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::TextUnformatted(about_long_text);
+	ImGui::EndChild();
 }
 
 static void render_panel_paths()
@@ -1525,7 +1614,7 @@ static void render_panel_configurations()
 		char filename[MAX_DPATH];
 		get_configuration_path(filename, MAX_DPATH);
 		strncat(filename, name, MAX_DPATH - 1);
-		strncat(filename, ".uae", MAX_DPATH - 1);
+		strncat(filename, ".uae", MAX_DPATH - 10);
 		strncpy(changed_prefs.description, desc, 256);
 		if (cfgfile_save(&changed_prefs, filename, 0))
 		{
@@ -1653,42 +1742,64 @@ static void render_panel_rom()
 
 static void render_panel_ram()
 {
-	ImGui::SliderInt("Chip", (int*)&changed_prefs.chipmem.size, 0, 0x800000);
-	ImGui::SliderInt("Slow", (int*)&changed_prefs.bogomem.size, 0, 0x180000);
-	ImGui::SliderInt("Z2 Fast", (int*)&changed_prefs.fastmem[0].size, 0, 0x800000);
-	ImGui::SliderInt("Z3 Fast", (int*)&changed_prefs.z3fastmem[0].size, 0, 0x40000000);
-	ImGui::SliderInt("32-bit Chip RAM", (int*)&changed_prefs.z3chipmem.size, 0, 0x40000000);
-	ImGui::SliderInt("Motherboard Fast RAM", (int*)&changed_prefs.mbresmem_low.size, 0, 0x8000000);
-	ImGui::SliderInt("Processor slot Fast RAM", (int*)&changed_prefs.mbresmem_high.size, 0, 0x8000000);
-	const char* z3_mapping_items[] = { "Automatic (*)", "UAE (0x10000000)", "Real (0x40000000)" };
-	ImGui::Combo("Z3 Mapping Mode", &changed_prefs.z3_mapping_mode, z3_mapping_items, IM_ARRAYSIZE(z3_mapping_items));
+    // Use temporary ints to avoid aliasing issues with ImGui writing into uae_u32 fields
+    int chip = static_cast<int>(changed_prefs.chipmem.size);
+    int slow = static_cast<int>(changed_prefs.bogomem.size);
+    int z2fast0 = static_cast<int>(changed_prefs.fastmem[0].size);
+    int z3fast0 = static_cast<int>(changed_prefs.z3fastmem[0].size);
+    int z3chip = static_cast<int>(changed_prefs.z3chipmem.size);
+    int mb_low = static_cast<int>(changed_prefs.mbresmem_low.size);
+    int mb_high = static_cast<int>(changed_prefs.mbresmem_high.size);
+
+    if (ImGui::SliderInt("Chip", &chip, 0, 0x800000))
+        changed_prefs.chipmem.size = static_cast<uae_u32>(chip);
+    if (ImGui::SliderInt("Slow", &slow, 0, 0x180000))
+        changed_prefs.bogomem.size = static_cast<uae_u32>(slow);
+    if (ImGui::SliderInt("Z2 Fast", &z2fast0, 0, 0x800000))
+        changed_prefs.fastmem[0].size = static_cast<uae_u32>(z2fast0);
+    if (ImGui::SliderInt("Z3 Fast", &z3fast0, 0, 0x40000000))
+        changed_prefs.z3fastmem[0].size = static_cast<uae_u32>(z3fast0);
+    if (ImGui::SliderInt("32-bit Chip RAM", &z3chip, 0, 0x40000000))
+        changed_prefs.z3chipmem.size = static_cast<uae_u32>(z3chip);
+    if (ImGui::SliderInt("Motherboard Fast RAM", &mb_low, 0, 0x8000000))
+        changed_prefs.mbresmem_low.size = static_cast<uae_u32>(mb_low);
+    if (ImGui::SliderInt("Processor slot Fast RAM", &mb_high, 0, 0x8000000))
+        changed_prefs.mbresmem_high.size = static_cast<uae_u32>(mb_high);
+
+    const char* z3_mapping_items[] = { "Automatic (*)", "UAE (0x10000000)", "Real (0x40000000)" };
+    ImGui::Combo("Z3 Mapping Mode", &changed_prefs.z3_mapping_mode, z3_mapping_items, IM_ARRAYSIZE(z3_mapping_items));
 }
 
 static void render_panel_floppy()
 {
-	for (int i = 0; i < 4; ++i)
-	{
-		char label[10];
-		snprintf(label, 10, "DF%d:", i);
-		ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
-		ImGui::SameLine();
-		ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
-		ImGui::SameLine();
-		ImGui::InputText("", changed_prefs.floppyslots[i].df, MAX_DPATH); //FIXME This triggers a crash
-	}
-	ImGui::SliderInt("Floppy Drive Emulation Speed", &changed_prefs.floppy_speed, 0, 800);
-	if (ImGui::Button("Create 3.5\" DD disk"))
-	{
-		// Create 3.5" DD Disk
-	}
-	if (ImGui::Button("Create 3.5\" HD disk"))
-	{
-		// Create 3.5" HD Disk
-	}
-	if (ImGui::Button("Save config for disk"))
-	{
-		// Save configuration for current disk
-	}
+    for (int i = 0; i < 4; ++i)
+    {
+        ImGui::PushID(i);
+        char label[16];
+        snprintf(label, sizeof(label), "DF%d:", i);
+        ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
+        ImGui::SameLine();
+        ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
+        ImGui::SameLine();
+        // Use a unique ID for each input to avoid ImGui ID collisions
+        if (ImGui::InputText("##FloppyPath", changed_prefs.floppyslots[i].df, MAX_DPATH)) {
+            // Optionally sanitize path here if needed
+        }
+        ImGui::PopID();
+    }
+    ImGui::SliderInt("Floppy Drive Emulation Speed", &changed_prefs.floppy_speed, 0, 800);
+    if (ImGui::Button("Create 3.5\" DD disk"))
+    {
+        // Create 3.5" DD Disk
+    }
+    if (ImGui::Button("Create 3.5\" HD disk"))
+    {
+        // Create 3.5" HD Disk
+    }
+    if (ImGui::Button("Save config for disk"))
+    {
+        // Save configuration for current disk
+    }
 }
 
 static void render_panel_hd()
@@ -1756,7 +1867,10 @@ void render_panel_rtg()
 {
 	const char* rtg_boards[] = { "-", "UAE Zorro II", "UAE Zorro III", "PCI bridgeboard" };
 	ImGui::Combo("RTG Graphics Board", &changed_prefs.rtgboards[0].rtgmem_type, rtg_boards, IM_ARRAYSIZE(rtg_boards));
-	ImGui::SliderInt("VRAM size", (int*)&changed_prefs.rtgboards[0].rtgmem_size, 0, 0x10000000);
+
+    int vram = static_cast<int>(changed_prefs.rtgboards[0].rtgmem_size);
+	if (ImGui::SliderInt("VRAM size", &vram, 0, 0x10000000))
+        changed_prefs.rtgboards[0].rtgmem_size = static_cast<uae_u32>(vram);
 	ImGui::Checkbox("Scale if smaller than display size setting", (bool*)&changed_prefs.gf[1].gfx_filter_autoscale);
 	ImGui::Checkbox("Always scale in windowed mode", &changed_prefs.rtgallowscaling);
 	ImGui::Checkbox("Always center", (bool*)&changed_prefs.gf[1].gfx_filter_autoscale);
@@ -1997,79 +2111,107 @@ static void render_panel_io()
 
 static void render_panel_custom()
 {
-	ImGui::RadioButton("Port 0: Mouse", &SelectedPort, 0);
-	ImGui::RadioButton("Port 1: Joystick", &SelectedPort, 1);
-	ImGui::RadioButton("Port 2: Parallel 1", &SelectedPort, 2);
-	ImGui::RadioButton("Port 3: Parallel 2", &SelectedPort, 3);
+    // Ensure SelectedPort stays within valid range to avoid OOB on jports
+    if (SelectedPort < 0) SelectedPort = 0;
+    if (SelectedPort > 3) SelectedPort = 3;
 
-	ImGui::RadioButton("None", &SelectedFunction, 0);
-	ImGui::RadioButton("HotKey", &SelectedFunction, 1);
+    // Persistent temporary buffers for safe text input (avoid using string literals)
+    static char set_hotkey_buf[64] = {0};
+    static char input_device_buf[256] = {0};
 
-	ImGui::InputText("##SetHotkey", "", 120);
-	ImGui::Button("...");
-	ImGui::Button("X");
+    ImGui::RadioButton("Port 0: Mouse", &SelectedPort, 0);
+    ImGui::RadioButton("Port 1: Joystick", &SelectedPort, 1);
+    ImGui::RadioButton("Port 2: Parallel 1", &SelectedPort, 2);
+    ImGui::RadioButton("Port 3: Parallel 2", &SelectedPort, 3);
 
-	ImGui::InputText("Input Device", "", 256);
+    ImGui::RadioButton("None", &SelectedFunction, 0);
+    ImGui::RadioButton("HotKey", &SelectedFunction, 1);
 
-	for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i)
-	{
-		ImGui::Text("%s", label_button_list[i].c_str());
-		const char* items[] = { "None" };
-		ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items)); //FIXME This triggers a crash
-	}
+    // Use writable buffers instead of string literals
+    ImGui::InputText("##SetHotkey", set_hotkey_buf, sizeof(set_hotkey_buf));
+    ImGui::SameLine();
+    ImGui::Button("...");
+    ImGui::SameLine();
+    ImGui::Button("X");
 
-	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; ++i)
-	{
-		ImGui::Text("%s", label_axis_list[i].c_str());
-		const char* items[] = { "None" };
-		ImGui::Combo("", &changed_prefs.jports[SelectedPort].autofire, items, IM_ARRAYSIZE(items));
-	}
+    ImGui::InputText("Input Device", input_device_buf, sizeof(input_device_buf));
 
-	if (ImGui::Button("Save as default mapping"))
-	{
-		// Save mapping
-	}
+    const char* items[] = { "None" };
+
+    // Buttons mapping list
+    int bindex = 0;
+    for (const auto& label : label_button_list) {
+        ImGui::PushID(bindex);
+        ImGui::Text("%s", label.c_str());
+        ImGui::SameLine();
+        ImGui::Combo("##btnmap", &changed_prefs.jports[SelectedPort].autofire, items, 1);
+        ImGui::PopID();
+        ++bindex;
+    }
+
+    // Axes mapping list
+    int aindex = 0;
+    for (const auto& label : label_axis_list) {
+        ImGui::PushID(1000 + aindex);
+        ImGui::Text("%s", label.c_str());
+        ImGui::SameLine();
+        ImGui::Combo("##axmap", &changed_prefs.jports[SelectedPort].autofire, items, 1);
+        ImGui::PopID();
+        ++aindex;
+    }
+
+    if (ImGui::Button("Save as default mapping")) {
+        // TODO: Save mapping defaults
+    }
 }
 
 static void render_panel_diskswapper()
 {
-	ImGui::BeginChild("DiskSwapperList", ImVec2(0, -50), true);
-	ImGui::Columns(3, "DiskSwapperColumns");
-	ImGui::Separator();
-	ImGui::Text("#"); ImGui::NextColumn();
-	ImGui::Text("Disk Image"); ImGui::NextColumn();
-	ImGui::Text("Drive"); ImGui::NextColumn();
-	ImGui::Separator();
-	for (int i = 0; i < MAX_SPARE_DRIVES; ++i)
-	{
-		ImGui::Text("%d", i + 1); ImGui::NextColumn();
-		ImGui::InputText("", changed_prefs.dfxlist[i], MAX_DPATH); //FIXME this triggers a crash
-		ImGui::SameLine();
-		if (ImGui::Button("..."))
-		{
-			// Select file
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("X"))
-		{
-			changed_prefs.dfxlist[i][0] = 0;
-		}
-		ImGui::NextColumn();
-		int drive = disk_in_drive(i);
-		if (ImGui::Button(drive == -1 ? "-" : std::to_string(drive).c_str()))
-		{
-			disk_swap(i, 1);
-		}
-		ImGui::NextColumn();
-	}
-	ImGui::Columns(1);
-	ImGui::EndChild();
+    ImGui::BeginChild("DiskSwapperList", ImVec2(0, -50), true);
+    ImGui::Columns(3, "DiskSwapperColumns");
+    ImGui::Separator();
+    ImGui::Text("#"); ImGui::NextColumn();
+    ImGui::Text("Disk Image"); ImGui::NextColumn();
+    ImGui::Text("Drive"); ImGui::NextColumn();
+    ImGui::Separator();
+    for (int i = 0; i < MAX_SPARE_DRIVES; ++i)
+    {
+        ImGui::PushID(i);
+        ImGui::Text("%d", i + 1); ImGui::NextColumn();
+        // Unique IDs per row to avoid collisions and potential crashes
+        bool edited = ImGui::InputText("##DiskPath", changed_prefs.dfxlist[i], MAX_DPATH);
+        ImGui::SameLine();
+        if (ImGui::Button("...##Browse"))
+        {
+            // Select file (TODO)
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("X##Clear"))
+        {
+            changed_prefs.dfxlist[i][0] = 0;
+        }
+        ImGui::NextColumn();
+        const int drive = disk_in_drive(i);
+        char drive_btn[16];
+        if (drive < 0)
+            snprintf(drive_btn, sizeof(drive_btn), "-##%d", i);
+        else
+            snprintf(drive_btn, sizeof(drive_btn), "%d##%d", drive, i);
+        if (ImGui::Button(drive_btn))
+        {
+            disk_swap(i, 1);
+        }
+        ImGui::NextColumn();
+        ImGui::PopID();
+    }
+    ImGui::Columns(1);
+    ImGui::EndChild();
 
-	if (ImGui::Button("Remove All"))
-	{
-		for (auto& row : changed_prefs.dfxlist)
-			row[0] = 0;
-	}
+    if (ImGui::Button("Remove All"))
+    {
+        for (int row = 0; row < MAX_SPARE_DRIVES; ++row)
+            changed_prefs.dfxlist[row][0] = 0;
+    }
 }
 
 static void render_panel_misc()
@@ -2266,16 +2408,15 @@ static void render_panel_whdload()
     if (!whdload_prefs.whdload_filename.empty()) {
         for (size_t i = 0; i < lstMRUWhdloadList.size(); ++i) {
             if (lstMRUWhdloadList[i] == whdload_prefs.whdload_filename) {
-                current_whd = i;
+                current_whd = static_cast<int>(i);
                 break;
             }
         }
     }
-
     ImGui::PushItemWidth(-1);
-    if (ImGui::Combo("##WHDLoadFile", &current_whd, whdload_display_items.data(), whdload_display_items.size())) {
+    if (ImGui::Combo("##WHDLoadFile", &current_whd, whdload_display_items.data(), static_cast<int>(whdload_display_items.size()))) {
         if (current_whd >= 0) {
-            const auto& selected_path = lstMRUWhdloadList[current_whd];
+            const auto& selected_path = lstMRUWhdloadList[static_cast<size_t>(current_whd)];
             if (selected_path != whdload_prefs.whdload_filename) {
                 whdload_prefs.whdload_filename = selected_path;
                 add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
@@ -2290,9 +2431,9 @@ static void render_panel_whdload()
     ImGui::Separator();
 
     // WHDLoad game options
-    ImGui::InputText("Game Name", whdload_prefs.game_name.data(), sizeof(whdload_prefs.game_name), ImGuiInputTextFlags_ReadOnly);
-    ImGui::InputText("UUID", whdload_prefs.variant_uuid.data(), sizeof(whdload_prefs.variant_uuid), ImGuiInputTextFlags_ReadOnly);
-    ImGui::InputText("Slave Default", whdload_prefs.slave_default.data(), sizeof(whdload_prefs.slave_default), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("Game Name", whdload_prefs.game_name.data(), whdload_prefs.game_name.size(), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("UUID", whdload_prefs.variant_uuid.data(), whdload_prefs.variant_uuid.size(), ImGuiInputTextFlags_ReadOnly);
+    ImGui::InputText("Slave Default", whdload_prefs.slave_default.data(), whdload_prefs.slave_default.size(), ImGuiInputTextFlags_ReadOnly);
 
     ImGui::Checkbox("Slave Libraries", &whdload_prefs.slave_libraries);
 
@@ -2305,15 +2446,14 @@ static void render_panel_whdload()
     if (!whdload_prefs.selected_slave.filename.empty()) {
         for (size_t i = 0; i < whdload_prefs.slaves.size(); ++i) {
             if (whdload_prefs.slaves[i].filename == whdload_prefs.selected_slave.filename) {
-                current_slave = i;
+                current_slave = static_cast<int>(i);
                 break;
             }
         }
     }
-
-    if (ImGui::Combo("Slaves", &current_slave, slave_items.data(), slave_items.size())) {
+    if (ImGui::Combo("Slaves", &current_slave, slave_items.data(), static_cast<int>(slave_items.size()))) {
         if (current_slave >= 0) {
-            whdload_prefs.selected_slave = whdload_prefs.slaves[current_slave];
+            whdload_prefs.selected_slave = whdload_prefs.slaves[static_cast<size_t>(current_slave)];
             create_startup_sequence();
         }
     }
@@ -2323,7 +2463,7 @@ static void render_panel_whdload()
     data_path_buf[sizeof(data_path_buf) - 1] = 0;
     ImGui::InputText("Slave Data path", data_path_buf, sizeof(data_path_buf), ImGuiInputTextFlags_ReadOnly);
 
-    if (ImGui::InputText("Custom", whdload_prefs.custom.data(), sizeof(whdload_prefs.custom))) {
+    if (ImGui::InputText("Custom", whdload_prefs.custom.data(), whdload_prefs.custom.size())) {
         create_startup_sequence();
     }
 
@@ -2519,10 +2659,16 @@ void run_gui()
 		// Button bar
 		ImGui::BeginChild("ButtonBar", ImVec2(0, 0), true);
 		if (ImGui::Button("Quit"))
+		{
 			uae_quit();
+			gui_running = false;
+		}
 		ImGui::SameLine();
 		if (ImGui::Button("Restart"))
+		{
 			uae_reset(1, 1);
+			gui_running = false;
+		}
 		ImGui::SameLine();
 		if (ImGui::Button("Help"))
 		{
@@ -2601,5 +2747,8 @@ void run_gui()
 	}
 
 	amiberry_gui_halt();
+
+	// Reset counter for access violations
+	init_max_signals();
 }
 #endif
