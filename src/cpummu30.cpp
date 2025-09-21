@@ -3649,8 +3649,8 @@ void mmu030_dump_tables(int fc)
 			if (addr_end + regs.mmu_page_size == 0) {
 				addr_end += regs.mmu_page_size;
 			}
-			console_out_f(_T("%08x - %08x (%08x) S=%d,WP=%d - CI=%d,WP=%d,DT=%d\n"),
-				addr_prev, addr_end - 1, desc_prev,
+			console_out_f(_T("%08x - %08x %08x (%08x) S=%d,WP=%d - CI=%d,WP=%d,DT=%d\n"),
+				addr_prev, addr_end - 1,phys_prev, desc_prev,
 				(status_prev & MMUSR_SUPER_VIOLATION) ? 1 : 0,
 				(status_prev & MMUSR_WRITE_PROTECTED) ? 1 : 0,
 				(desc_prev >> 6) & 1,
