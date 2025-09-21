@@ -864,11 +864,9 @@ static void setupcursor()
 		SDL_SetCursor(p96_cursor);
 		setupcursor_needed = 0;
 		P96TRACE_SPR((_T("cursorsurface3d updated\n")));
-	}
-	else {
+	} else {
 		P96TRACE_SPR((_T("cursorsurface3d LockRect() failed\n")));
 	}
-	//gfx_unlock ();
 #else
 	uae_u8 *dptr;
 	int bpp = 4;
