@@ -6969,12 +6969,12 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 		delay2 += delayoffset;
 		delay2 &= delaymask;
 		delay2 <<= 2;
-		byteshift = r_shift(delay2, RES_MAX - res);
-		cp2 -= byteshift;
+		int byteshift2 = r_shift(delay2, RES_MAX - res);
+		cp2 -= byteshift2;
 		// different bitplane delay in DPF? Merge them.
 		if (cp != cp2) {
 			uae_u8 *dpout = (uae_u8*)(dpf_chunky_out + 1024);
-			for (int i = 0; i < len * 8; i++) {
+			for (int i = 0; i < len * 8 + 7; i++) {
 				uae_u32 pix0 = ((uae_u32*)cp)[i];
 				uae_u32 pix1 = ((uae_u32*)cp2)[i];
 				uae_u32 c = (pix0 & 0x55555555) | (pix1 & 0xaaaaaaaa);
