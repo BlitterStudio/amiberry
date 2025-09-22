@@ -459,9 +459,20 @@ void amiberry_gui_init()
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
 #ifdef USE_IMGUI
-	// For ImGui, let's use a portion of the screen, not a fixed size
-	gui_window_rect.w = sdl_mode.w * 4 / 5;
-	gui_window_rect.h = sdl_mode.h * 4 / 5;
+	// For ImGui, pick a smaller, responsive SDL window size based on usable display area
+	{
+		SDL_Rect usable0 = get_display_usable_bounds(0);
+		const int min_w = 900;
+		const int min_h = 560;
+		const int max_w_cap = std::min(usable0.w, 1200);
+		const int max_h_cap = std::min(usable0.h, 900);
+		float desired_w = std::min(usable0.w * 0.50f, static_cast<float>(max_w_cap));
+		float desired_h = std::min(usable0.h * 0.85f, static_cast<float>(max_h_cap));
+		int final_w = static_cast<int>(std::clamp(desired_w, static_cast<float>(std::min(min_w, usable0.w)), static_cast<float>(max_w_cap)) + 0.5f);
+		int final_h = static_cast<int>(std::clamp(desired_h, static_cast<float>(static_cast<float>(std::min(min_h, usable0.h))), static_cast<float>(max_h_cap)) + 0.5f);
+		gui_window_rect.w = final_w;
+		gui_window_rect.h = final_h;
+	}
 #endif
 #ifdef USE_GUISAN
 	//-------------------------------------------------
@@ -557,6 +568,16 @@ void amiberry_gui_init()
 			gui_window_moved = true; // ensure we persist corrected values
 		}
 
+		// Center SDL window within the usable display area (respects taskbar)
+		{
+			int ww, wh; SDL_GetWindowSize(mon->gui_window, &ww, &wh);
+			int cx = usable.x + (usable.w - ww) / 2;
+			int cy = usable.y + (usable.h - wh) / 2;
+			SDL_SetWindowPosition(mon->gui_window, cx, cy);
+			gui_window_rect.x = cx;
+			gui_window_rect.y = cy;
+		}
+
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 		if (icon_surface != nullptr)
 		{
@@ -585,11 +606,17 @@ void amiberry_gui_init()
 
 	// Get DPI scale factor
 	gui_scale = DPIHandler::get_scale();
+	// Guard against invalid/zero scale values that would break style sizes
+	if (!(gui_scale > 0.0f))
+		gui_scale = 1.0f;
 
 	// Setup Dear ImGui style
-	ImGui::StyleColorsClassic();
+	ImGui::StyleColorsDark();
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.ScaleAllSizes(gui_scale);
+	// Ensure WindowMinSize is valid after scaling (avoid ImGui assert)
+	if (style.WindowMinSize.x < 1.0f || style.WindowMinSize.y < 1.0f)
+		style.WindowMinSize = ImVec2(32.0f, 36.0f);
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
@@ -1870,9 +1897,7 @@ static void render_panel_floppy()
         ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
         ImGui::SameLine();
         // Use a unique ID for each input to avoid ImGui ID collisions
-        if (ImGui::InputText("##FloppyPath", changed_prefs.floppyslots[i].df, MAX_DPATH)) {
-            // Optionally sanitize path here if needed
-        }
+        ImGui::InputText("##FloppyPath", changed_prefs.floppyslots[i].df, MAX_DPATH);
         ImGui::PopID();
     }
     ImGui::SliderInt("Floppy Drive Emulation Speed", &changed_prefs.floppy_speed, 0, 800);
@@ -2267,7 +2292,7 @@ static void render_panel_diskswapper()
         ImGui::PushID(i);
         ImGui::Text("%d", i + 1); ImGui::NextColumn();
         // Unique IDs per row to avoid collisions and potential crashes
-        bool edited = ImGui::InputText("##DiskPath", changed_prefs.dfxlist[i], MAX_DPATH);
+        ImGui::InputText("##DiskPath", changed_prefs.dfxlist[i], MAX_DPATH);
         ImGui::SameLine();
         if (ImGui::Button("...##Browse"))
         {
@@ -2645,12 +2670,25 @@ void run_gui()
 		ImGui::NewFrame();
 
 		ImGuiStyle& style = ImGui::GetStyle();
-		const auto sidebar_width = ImGui::GetIO().DisplaySize.x / 5.0f;
+		// Compute button bar height from style
 		const auto button_bar_height = ImGui::GetFrameHeight() + style.WindowPadding.y * 2.0f;
 
-		ImGui::SetNextWindowPos(ImVec2(0, 0));
-		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-		ImGui::Begin("Amiberry", &gui_running, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
+		// Make the main window occupy the full SDL window (no smaller inner window)
+		const ImGuiViewport* vp = ImGui::GetMainViewport();
+		ImVec2 work_pos = vp ? vp->WorkPos : ImVec2(0, 0);
+		ImVec2 work_size = vp ? vp->WorkSize : ImGui::GetIO().DisplaySize;
+		ImGui::SetNextWindowPos(work_pos, ImGuiCond_Always);
+		ImGui::SetNextWindowSize(work_size, ImGuiCond_Always);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGuiWindowFlags hostFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
+		ImGui::Begin("Amiberry", &gui_running, hostFlags);
+		ImGui::PopStyleVar(2);
+
+		// Determine sidebar width based on current window content width, with sane clamps
+		const float content_width = ImGui::GetContentRegionAvail().x;
+		const float sidebar_width = std::clamp(content_width * 0.22f, 220.0f, 420.0f); // ~22% of content width
 
 		// Sidebar
 		ImGui::BeginChild("Sidebar", ImVec2(sidebar_width, 0), true);
@@ -2853,7 +2891,7 @@ void run_gui()
 		// Rendering
 		ImGui::Render();
 		SDL_SetRenderDrawColor(mon->gui_renderer, (Uint8)(0.45f * 255), (Uint8)(0.55f * 255),
-							   (Uint8)(0.60f * 255), (Uint8)(1.00f * 255));
+						   (Uint8)(0.60f * 255), (Uint8)(1.00f * 255));
 		SDL_RenderClear(mon->gui_renderer);
 		ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
 		SDL_RenderPresent(mon->gui_renderer);
