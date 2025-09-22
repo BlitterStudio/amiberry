@@ -663,6 +663,25 @@ void amiberry_gui_init()
 	if (style.WindowMinSize.x < 1.0f || style.WindowMinSize.y < 1.0f)
 		style.WindowMinSize = ImVec2(32.0f, 36.0f);
 
+	// Load GUI theme (for font selection)
+	load_theme(amiberry_options.gui_theme);
+
+	// Load custom font from data/ (default to AmigaTopaz.ttf), scale by DPI
+	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
+	const std::string font_path = prefix_with_data_path(font_file.c_str());
+	const float font_px = (gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f) * gui_scale;
+
+	ImFont* loaded_font = nullptr;
+	if (!font_path.empty()) {
+		loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_px);
+	}
+	if (!loaded_font) {
+		// Fallback to default font if loading failed
+		loaded_font = io.Fonts->AddFontDefault();
+		SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "ImGui: failed to load font '%s', falling back to default", font_path.c_str());
+	}
+	io.FontDefault = loaded_font;
+
 	// Setup Platform/Renderer backends
 	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
 	ImGui_ImplSDL2_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
