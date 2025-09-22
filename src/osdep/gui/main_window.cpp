@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>
+#include <string>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <dpi_handler.hpp>
@@ -20,6 +21,114 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <array>
+#include <fstream>
+#include <sstream>
+// Forward declarations used in this early block
+static void apply_imgui_theme_from_theme_file(const std::string& theme_file);
+extern std::string get_themes_path();
+extern void load_theme(const std::string& theme_filename);
+
+// Helpers for theme color mapping
+static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a); }
+static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4(std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w); }
+static ImVec4 darken(const ImVec4& c, float f) { return ImVec4(std::max(c.x - f, 0.0f), std::max(c.y - f, 0.0f), std::max(c.z - f, 0.0f), c.w); }
+static bool parse_rgb_csv(const std::string& s, int& r, int& g, int& b) {
+	std::stringstream ss(s); std::string tok;
+	try {
+		if (!std::getline(ss, tok, ',')) return false; r = std::stoi(tok);
+		if (!std::getline(ss, tok, ',')) return false; g = std::stoi(tok);
+		if (!std::getline(ss, tok, ',')) return false; b = std::stoi(tok);
+	} catch (...) { return false; }
+	auto clamp = [](int v){ return std::max(0, std::min(255, v)); };
+	r = clamp(r); g = clamp(g); b = clamp(b);
+	return true;
+}
+
+static void apply_imgui_theme_from_theme_file(const std::string& theme_file)
+{
+	// Build full theme file path
+	std::string path = get_themes_path();
+	path += theme_file;
+	std::ifstream in(path);
+	if (!in.is_open())
+		return; // keep current ImGui style if theme not found
+
+	// Defaults if keys are missing
+	ImVec4 col_base = ImVec4(0.25f,0.25f,0.25f,1.0f);
+	ImVec4 col_bg   = ImVec4(0.16f,0.16f,0.17f,1.0f);
+	ImVec4 col_fg   = ImVec4(0.86f,0.86f,0.86f,1.0f);
+	ImVec4 col_sel  = ImVec4(0.20f,0.45f,0.78f,1.0f);
+	ImVec4 col_act  = col_sel;
+	ImVec4 col_inact= col_base;
+	ImVec4 col_text = col_fg;
+
+	std::string line;
+	while (std::getline(in, line)) {
+		const auto eq = line.find('=');
+		if (eq == std::string::npos) continue;
+		std::string key = line.substr(0, eq);
+		std::string val = line.substr(eq + 1);
+		int r=0,g=0,b=0;
+		if (key == "base_color" && parse_rgb_csv(val, r, g, b)) col_base = rgb_to_vec4(r,g,b);
+		else if (key == "background_color" && parse_rgb_csv(val, r, g, b)) col_bg = rgb_to_vec4(r,g,b);
+		else if (key == "foreground_color" && parse_rgb_csv(val, r, g, b)) col_fg = rgb_to_vec4(r,g,b);
+		else if (key == "selection_color" && parse_rgb_csv(val, r, g, b)) col_sel = rgb_to_vec4(r,g,b);
+		else if (key == "selector_active" && parse_rgb_csv(val, r, g, b)) col_act = rgb_to_vec4(r,g,b);
+		else if (key == "selector_inactive" && parse_rgb_csv(val, r, g, b)) col_inact = rgb_to_vec4(r,g,b);
+		else if (key == "font_color" && parse_rgb_csv(val, r, g, b)) col_text = rgb_to_vec4(r,g,b);
+	}
+	in.close();
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	ImVec4* colors = style.Colors;
+	colors[ImGuiCol_Text]                 = col_text;
+	colors[ImGuiCol_TextDisabled]         = darken(col_text, 0.40f);
+	colors[ImGuiCol_WindowBg]             = col_bg;
+	colors[ImGuiCol_ChildBg]              = darken(col_bg, 0.02f);
+	colors[ImGuiCol_PopupBg]              = darken(col_bg, 0.05f);
+	colors[ImGuiCol_Border]               = darken(col_base, 0.35f);
+	colors[ImGuiCol_BorderShadow]         = darken(col_base, 0.50f);
+	colors[ImGuiCol_FrameBg]              = col_base;
+	colors[ImGuiCol_FrameBgHovered]       = lighten(col_base, 0.06f);
+	colors[ImGuiCol_FrameBgActive]        = lighten(col_base, 0.10f);
+	colors[ImGuiCol_TitleBg]              = darken(col_bg, 0.05f);
+	colors[ImGuiCol_TitleBgActive]        = darken(col_bg, 0.10f);
+	colors[ImGuiCol_TitleBgCollapsed]     = darken(col_bg, 0.08f);
+	colors[ImGuiCol_MenuBarBg]            = darken(col_bg, 0.02f);
+	colors[ImGuiCol_ScrollbarBg]          = darken(col_bg, 0.03f);
+	colors[ImGuiCol_ScrollbarGrab]        = col_base;
+	colors[ImGuiCol_ScrollbarGrabHovered] = lighten(col_base, 0.08f);
+	colors[ImGuiCol_ScrollbarGrabActive]  = lighten(col_base, 0.12f);
+	colors[ImGuiCol_CheckMark]            = col_sel;
+	colors[ImGuiCol_SliderGrab]           = col_sel;
+	colors[ImGuiCol_SliderGrabActive]     = lighten(col_sel, 0.10f);
+	colors[ImGuiCol_Button]               = col_base;
+	colors[ImGuiCol_ButtonHovered]        = lighten(col_base, 0.07f);
+	colors[ImGuiCol_ButtonActive]         = lighten(col_base, 0.12f);
+	colors[ImGuiCol_Header]               = col_sel;
+	colors[ImGuiCol_HeaderHovered]        = lighten(col_sel, 0.10f);
+	colors[ImGuiCol_HeaderActive]         = lighten(col_sel, 0.15f);
+	colors[ImGuiCol_Separator]            = darken(col_base, 0.30f);
+	colors[ImGuiCol_SeparatorHovered]     = lighten(col_base, 0.10f);
+	colors[ImGuiCol_SeparatorActive]      = lighten(col_base, 0.15f);
+	colors[ImGuiCol_ResizeGrip]           = col_inact;
+	colors[ImGuiCol_ResizeGripHovered]    = lighten(col_inact, 0.10f);
+	colors[ImGuiCol_ResizeGripActive]     = lighten(col_inact, 0.15f);
+	colors[ImGuiCol_Tab]                  = darken(col_bg, 0.02f);
+	colors[ImGuiCol_TabHovered]           = lighten(col_sel, 0.15f);
+	colors[ImGuiCol_TabActive]            = lighten(col_sel, 0.10f);
+	colors[ImGuiCol_TabUnfocused]         = darken(col_bg, 0.02f);
+	colors[ImGuiCol_TabUnfocusedActive]   = darken(col_bg, 0.01f);
+	colors[ImGuiCol_PlotLines]            = col_act;
+	colors[ImGuiCol_PlotLinesHovered]     = lighten(col_act, 0.10f);
+	colors[ImGuiCol_PlotHistogram]        = col_sel;
+	colors[ImGuiCol_PlotHistogramHovered] = lighten(col_sel, 0.10f);
+	colors[ImGuiCol_TextSelectedBg]       = ImVec4(col_sel.x, col_sel.y, col_sel.z, 0.35f);
+	colors[ImGuiCol_NavHighlight]         = col_sel;
+	colors[ImGuiCol_NavWindowingHighlight]= ImVec4(1,1,1,0.70f);
+	colors[ImGuiCol_NavWindowingDimBg]    = ImVec4(0,0,0,0.20f);
+	colors[ImGuiCol_ModalWindowDimBg]     = ImVec4(0,0,0,0.35f);
+}
 #endif
 
 #include "sysdeps.h"
@@ -665,6 +774,8 @@ void amiberry_gui_init()
 
 	// Load GUI theme (for font selection)
 	load_theme(amiberry_options.gui_theme);
+	// Apply theme colors to ImGui (map GUISAN theme fields)
+	apply_imgui_theme_from_theme_file(amiberry_options.gui_theme);
 
 	// Load custom font from data/ (default to AmigaTopaz.ttf), scale by DPI
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
@@ -781,7 +892,7 @@ void check_input()
 	auto got_event = 0;
 	didata* did = &di_joystick[0];
 	didata* existing_did;
-	
+
 	while (SDL_PollEvent(&gui_event))
 	{
 		switch (gui_event.type)
@@ -808,13 +919,13 @@ void check_input()
 					gui_window_rect.w = gui_event.window.data1;
 					gui_window_rect.h = gui_event.window.data2;
 					break;
-				default: 
+				default:
 					break;
 				}
 			}
 			got_event = 1;
 			break;
-		
+
 		case SDL_QUIT:
 			got_event = 1;
 			//-------------------------------------------------
@@ -851,7 +962,7 @@ void check_input()
 			{
 				got_event = 1;
 				const int hat = SDL_JoystickGetHat(gui_joystick, 0);
-				
+
 				if (gui_event.jbutton.button == static_cast<Uint8>(enter_gui_button) || (
 					SDL_JoystickGetButton(gui_joystick, did->mapping.menu_button) &&
 					SDL_JoystickGetButton(gui_joystick, did->mapping.hotkey_button)))
@@ -1182,7 +1293,7 @@ void check_input()
 		//-------------------------------------------------
 		gui_input->pushInput(gui_event);
 	}
-	
+
 	if (got_event)
 	{
 		// Now we let the Gui object perform its logic.
@@ -1224,7 +1335,7 @@ void amiberry_gui_run()
 
 	uae_gui->draw();
 	update_gui_screen();
-	
+
 	//-------------------------------------------------
 	// The main loop
 	//-------------------------------------------------
@@ -1456,7 +1567,7 @@ void gui_widgets_init()
 	selectorsScrollArea->setForegroundColor(gui_foreground_color);
 	selectorsScrollArea->setSize(selectorScrollAreaWidth, workAreaHeight);
 	selectorsScrollArea->setFrameSize(1);
-	
+
 	const auto panelStartX = DISTANCE_BORDER + selectorsScrollArea->getWidth() + DISTANCE_BORDER;
 
 	int selectorsHeight = 0;
@@ -1476,7 +1587,7 @@ void gui_widgets_init()
 		categories[i].panel->setForegroundColor(gui_foreground_color);
 		categories[i].panel->setFrameSize(1);
 		categories[i].panel->setVisible(false);
-			
+
 		selectorsHeight += categories[i].selector->getHeight();
 	}
 
@@ -1541,7 +1652,7 @@ void gui_widgets_halt()
 	delete panelFocusListener;
 	delete selectors;
 	delete selectorsScrollArea;
-	
+
 	delete cmdQuit;
 	delete cmdShutdown;
 	delete cmdReset;
@@ -2945,7 +3056,7 @@ void run_gui()
 				break;
 				case PANEL_PATHS:
 				{
-					help_str = "Here you can configure the various paths for Amiberry resources. In normal usage,\nthe default paths should work fine, however if you wish to change any path, you\ncan use the \"...\" button, to select the folder/path of your choosing. Details\nfor each path resource appear below.\n \nYou can enable/disable logging and specify the location of the logfile by using\nthe relevant options. A logfile is useful when trying to troubleshoot something,\nbut otherwise this option should be off, as it will incur some extra overhead.\nYou can also redirect the log output to console, by enabling that logging option.\nYou can alternatively enable log output to console if you pass the --log option\nto Amiberry on startup.\n \nThe \"Rescan Paths\" button will rescan the paths specified above and refresh the\nlocal cache. This should be done if you added kickstart ROMs for example, in order\nfor Amiberry to pick them up. This button will regenerate the amiberry.conf file\nif it's missing, and will be populated with the default values.\n \nThe \"Update WHDBooter files\" button will attempt to download the latest XML used for\nthe WHDLoad-booter functionality of Amiberry, along with all related files in the\n\"whdboot\" directory. It requires an internet connection and write permissions in the\ndestination directory. The downloaded XML file will be stored in the default location\n(whdboot/game-data/whdload_db.xml). Once the file is successfully downloaded, you\nwill also get a dialog box informing you about the details. A backup copy of the\nexisting whdload_db.xml is made (whdboot/game-data/whdload_db.bak), to preserve any\ncustom edits that may have been made. The rest of the files will be updated with the\nlatest version from the repository.\n \nThe \"Update Controllers DB\" button will attempt to download the latest version of\nthe bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.\nThe file contains the \"official\" mappings for recognized controllers by SDL2 itself.\nPlease note that this is separate from the user-configurable gamecontrollerdb_user.txt\nfile, which is contained in the Controllers path. That file is never overwritten, and\nit will be loaded after the official one, so any entries contained there will take a \nhigher priority. Once the file is successfully downloaded, you will also get a dialog\nbox informing you about the details. A backup copy of the existing gamecontrollerdb.txt\n(conf/gamecontrollerdb.bak) is created, to preserve any custom edits it may contain.\n \nThe paths for Amiberry resources include;\n \n- System ROMs: The Amiga Kickstart files are by default located under 'roms'.\n  After changing the location of the Kickstart ROMs, or adding any additional ROMs, \n  click on the \"Rescan\" button to refresh the list of the available ROMs. Please\n  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory\n  at this location, if you wish to use the MT-32 MIDI emulation feature in Amiberry.\n \n- Configuration files: These are located under \"conf\" by default. This is where your\n  configurations will be stored, but also where Amiberry keeps the special amiberry.conf\n  file, which contains the default settings the emulator uses when it starts up. This\n  is also where the bundled gamecontrollersdb.txt file is located, which contains the\n  community-maintained mappings for various controllers that SDL2 recognizes.\n \n- NVRAM files: the location where CDTV/CD2 modes will store their NVRAM files.\n \n- Plugins path: the location where external plugins (such as the CAPSimg or the\n  floppybridge plugin) are stored.\n \n- Screenshots: any screenshots you take will be saved by default in this location.\n \n- Save state files: if you use them, they will be saved in the specified location.\n \n- Controller files: any custom (user-generated) controller mapping files will be saved\n  in this location. This location is also used in RetroArch environments (ie; such as\n  RetroPie) to point to the directory containing the controller mappings.\n \n- RetroArch configuration file (retroarch.cfg): only useful if you are using RetroArch\n  (ie; in RetroPie). Amiberry can pick-up the configuration file from the path specified\n  here, and load it automatically, applying any mappings it contains. You can ignore this\n  path if you're not using RetroArch.\n \n- WHDboot files: This directory contains the files required by the whd-booter process\n  to launch WHDLoad game archives. In normal usage you should not need to change this.\n \n- Below that are 4 additional paths, that can be used to better organize your various\n  Amiga files, and streamline GUI operations when it comes to selecting the different\n  types of Amiga media. The file selector buttons in Amiberry associated with each of\n  the media types, will open these path locations. The defaults are shown, but these\n  can be changed to better suit your requirements.\n \nThese settings are saved automatically when you click Rescan, or exit the emulator.\n ";
+					help_str = "Here you can configure the various paths for Amiberry resources. In normal usage,\nthe default paths should work fine, however if you wish to change any path, you\ncan use the \"...\" button, to select the folder/path of your choosing. Details\nfor each path resource appear below.\n \nYou can enable/disable logging and specify the location of the logfile by using\nthe relevant options. A logfile is useful when trying to troubleshoot something,\nbut otherwise this option should be off, as it will incur some extra overhead.\nYou can also redirect the log output to console, by enabling that logging option.\nYou can alternatively enable log output to console if you pass the --log option\nto Amiberry on startup.\n \nThe \"Rescan Paths\" button will rescan the paths specified above and refresh the\nlocal cache. This should be done if you added kickstart ROMs for example, in order\nfor Amiberry to pick them up. This button will regenerate the amiberry.conf file\nif it's missing, and will be populated with the default values.\n \nThe \"Update WHDBooter files\" button will attempt to download the latest XML used for\nthe WHDLoad-booter functionality of Amiberry, along with all related files in the\n\"whdboot\" directory. It requires an internet connection and write permissions in the\ndestination directory. The downloaded XML file will be stored in the default location\n(whdboot/game-data/whdload_db.xml). Once the file is successfully downloaded, you\nwill also get a dialog box informing you about the details. A backup copy of the\nexisting whdload_db.xml is made (whdboot/game-data/whdload_db.bak), to preserve any\ncustom edits that may have been made. The rest of the files will be updated with the\nlatest version from the repository.\n \nThe \"Update Controllers DB\" button will attempt to download the latest version of\nthe bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.\nThe file contains the \"official\" mappings for recognized controllers by SDL2 itself.\nPlease note that this is separate from the user-configurable gamecontrollerdb_user.txt\nfile, which is contained in the Controllers path. That file is never overwritten, and\nit will be loaded after the official one, so any entries contained there will take a \nhigher priority. Once the file is successfully downloaded, you will also get a dialog\nbox informing you about the details. A backup copy of the existing gamecontrollerdb.txt\n(conf/gamecontrollerdb.bak) is created, to preserve any custom edits it may contain.\n \nThe paths for Amiberry resources include;\n \n- System ROMs: The Amiga Kickstart files are by default located under 'roms'.\n  After changing the location of the Kickstart ROMs, or adding any additional ROMs, \n  click on the \"Rescan\" button to refresh the list of the available ROMs. Please\n  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory\n  at this location, if you wish to use the MT-32 MIDI emulation feature in Amiberry.\n \n- Configuration files: These are located under \"conf\" by default. This is where your\n  configurations will be stored, but also where Amiberry keeps the special amiberry.conf\n  file, which contains the default settings the emulator uses when it starts up. This\n  is also where the bundled gamecontrollersdb.txt file is located, which contains the\n  community-maintained mappings for various controllers that SDL2 recognizes.\n \n- NVRAM files: the location where CDTV/CD2 modes will store their NVRAM files.\n \n- Plugins path: the location where external plugins (such as the CAPSimg or the\n  floppybridge plugin) are stored.\n \n- Screenshots: any screenshots you take will be saved by default in this location.\n \n- Save state files: if you use them, they will be saved in the specified location.\n \n- Controller files: any custom (user-generated) controller mapping files will be saved\n  in this location. This location is also used in RetroArch environments (ie; such as\n  RetroPie) to point to the directory containing the controller mappings.\n \n- RetroArch configuration file (retroarch.cfg): only useful if you are using RetroArch\n  (ie; in RetroPie). Amiberry can pick-up the configuration file from the path specified here, and load it automatically, applying any mappings it contains. You can ignore this\n  path if you're not using RetroArch.\n \n- WHDboot files: This directory contains the files required by the whd-booter process\n  to launch WHDLoad game archives. In normal usage you should not need to change this.\n \n- Below that are 4 additional paths, that can be used to better organize your various\n  Amiga files, and streamline GUI operations when it comes to selecting the different\n  types of Amiga media. The file selector buttons in Amiberry associated with each of\n  the media types, will open these path locations. The defaults are shown, but these\n  can be changed to better suit your requirements.\n \nThese settings are saved automatically when you click Rescan, or exit the emulator.\n ";
 				}
 				break;
 				case PANEL_QUICKSTART:
