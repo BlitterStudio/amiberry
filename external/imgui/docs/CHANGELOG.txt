@@ -45,9 +45,15 @@ Other Changes:
 
 - IO: added ImGuiPlatformIO::ClearPlatformHandlers(), ClearRendererHandlers()
   helpers to null all handlers. (#8945, #2769)
+- Misc: Debuggers: added type formatters for the LLDB debuggers (e.g. Xcode,
+  Android Studio & more) to provide nicer display for ImVec2, ImVec4, ImVector etc.
+  See misc/debuggers/ for details. (#8950) [@mentlerd]
+- CI: Updates Windows CI scripts to generate/use VulkanSDK. (#8925, #8778) [@yaz0r]
 - Backends: all backends call ImGuiPlatformIO::ClearPlatformHandlers() and
   ClearRendererHandlers() on shutdown, so as not to leave function pointers
   which may be dangling when using backend in e.g. DLL. (#8945, #2769)
+- Backends: OpenGL3: fixed GL loader to work on Haiku OS which does not support
+  `RTLD_NOLOAD`. (#8952) [@Xottab-DUTY]
 
 
 -----------------------------------------------------------------------
