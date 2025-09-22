@@ -6,6 +6,7 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <dpi_handler.hpp>
+#include <unordered_map>
 
 #ifdef USE_GUISAN
 #include <guisan.hpp>
@@ -165,6 +166,50 @@ static float gui_scale = 1.0f;
 static SDL_Texture* about_logo_texture = nullptr;
 static int about_logo_tex_w = 0;
 static int about_logo_tex_h = 0;
+
+// Sidebar icons (ImGui backend)
+struct IconTex { SDL_Texture* tex{nullptr}; int w{0}; int h{0}; };
+static std::unordered_map<std::string, IconTex> g_sidebar_icons;
+
+static void release_sidebar_icons()
+{
+	for (auto& kv : g_sidebar_icons) {
+		if (kv.second.tex) {
+			SDL_DestroyTexture(kv.second.tex);
+			kv.second.tex = nullptr;
+		}
+	}
+	g_sidebar_icons.clear();
+}
+
+static void ensure_sidebar_icons_loaded()
+{
+	// Load any missing textures for category icons
+	for (int i = 0; categories[i].category != nullptr; ++i) {
+		if (!categories[i].imagepath) continue;
+		std::string key = categories[i].imagepath;
+		if (g_sidebar_icons.find(key) != g_sidebar_icons.end())
+			continue;
+		const auto path = prefix_with_data_path(categories[i].imagepath);
+		SDL_Surface* surf = IMG_Load(path.c_str());
+		if (!surf) {
+			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Sidebar: failed to load %s: %s", path.c_str(), SDL_GetError());
+			g_sidebar_icons.emplace(key, IconTex{});
+			continue;
+		}
+		AmigaMonitor* mon = &AMonitors[0];
+		SDL_Texture* tex = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
+		IconTex it{};
+		it.tex = tex;
+		it.w = surf->w;
+		it.h = surf->h;
+		SDL_FreeSurface(surf);
+		if (!tex) {
+			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Sidebar: failed to create texture for %s: %s", path.c_str(), SDL_GetError());
+		}
+		g_sidebar_icons.emplace(std::move(key), it);
+	}
+}
 
 static void ensure_about_logo_texture()
 {
@@ -675,6 +720,8 @@ void amiberry_gui_halt()
 		SDL_DestroyTexture(about_logo_texture);
 		about_logo_texture = nullptr;
 	}
+	// Release sidebar icon textures
+	release_sidebar_icons();
 	// Properly shutdown ImGui backends/context
 	ImGui_ImplSDLRenderer2_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
@@ -2692,10 +2739,56 @@ void run_gui()
 
 		// Sidebar
 		ImGui::BeginChild("Sidebar", ImVec2(sidebar_width, 0), true);
+		// Ensure icons are ready
+		ensure_sidebar_icons_loaded();
+
+ 		ImGuiStyle& s = ImGui::GetStyle();
+		const float base_text_h = ImGui::GetTextLineHeight();
+		const float base_row_h = ImGui::GetTextLineHeightWithSpacing();
+		// Make icons larger than text height using gui_scale
+		const float icon_scale = 1.15f + 0.15f * std::max(0.0f, gui_scale - 1.0f); // 1.15x at 100% DPI, grows slightly with DPI
+		const float icon_h_target = base_text_h * icon_scale;
+		const float row_h = std::max(base_row_h, icon_h_target + 2.0f * s.FramePadding.y);
 		for (int i = 0; categories[i].category != nullptr; ++i) {
-			if (ImGui::Selectable(categories[i].category, last_active_panel == i)) {
+			const bool selected = (last_active_panel == i);
+			// Full-width selectable row with custom height
+			if (ImGui::Selectable( (std::string("##cat_") + std::to_string(i)).c_str(), selected, 0, ImVec2(ImGui::GetContentRegionAvail().x, row_h))) {
 				last_active_panel = i;
 			}
+			// Draw icon + text inside the selectable rect
+			ImVec2 rmin = ImGui::GetItemRectMin();
+			ImVec2 rmax = ImGui::GetItemRectMax();
+			ImVec2 pos = rmin;
+			float pad_y = s.FramePadding.y;
+			float pad_x = s.FramePadding.x;
+			float avail_h = (rmax.y - rmin.y) - 2.0f * pad_y;
+			float icon_h = std::min(icon_h_target, avail_h > 0.0f ? avail_h : (row_h - 2.0f * pad_y));
+			float icon_w = icon_h; // default square
+			SDL_Texture* icon_tex = nullptr;
+			int tex_w = 0, tex_h = 0;
+			if (categories[i].imagepath) {
+				auto it = g_sidebar_icons.find(categories[i].imagepath);
+				if (it != g_sidebar_icons.end() && it->second.tex) {
+					icon_tex = it->second.tex; tex_w = it->second.w; tex_h = it->second.h;
+					if (tex_w > 0 && tex_h > 0) {
+						float aspect = (float)tex_w / (float)tex_h;
+						icon_w = icon_h * aspect;
+					}
+				}
+			}
+			ImVec2 icon_p0 = ImVec2(pos.x + pad_x, pos.y + pad_y);
+			ImVec2 icon_p1 = ImVec2(icon_p0.x + icon_w, icon_p0.y + icon_h);
+			ImDrawList* dl = ImGui::GetWindowDrawList();
+			if (icon_tex) {
+				dl->AddImage((ImTextureID)icon_tex, icon_p0, icon_p1);
+			} else {
+				// Fallback: small filled square as placeholder
+				dl->AddRectFilled(icon_p0, icon_p1, ImGui::GetColorU32(ImGuiCol_TextDisabled), 3.0f);
+			}
+			// Text baseline: vertically center with the row
+			float text_x = icon_p1.x + pad_x;
+			float text_y = pos.y + ((rmax.y - rmin.y) - ImGui::GetTextLineHeight()) * 0.5f;
+			dl->AddText(ImVec2(text_x, text_y), ImGui::GetColorU32(ImGuiCol_Text), categories[i].category);
 		}
 		ImGui::EndChild();
 
