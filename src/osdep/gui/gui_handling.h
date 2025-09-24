@@ -195,6 +195,11 @@ using ConfigCategory = struct config_category
 	void (*RefreshFunc)();
 	bool (*HelpFunc)(std::vector<std::string>&);
 #endif
+#ifdef USE_IMGUI
+	// ImGui-specific: direct render function and optional static help text
+	void (*RenderFunc)();
+	const char* HelpText; // nullptr if no help available yet
+#endif
 };
 
 extern bool gui_running;
@@ -216,8 +221,7 @@ extern gcn::Color gui_selector_active_color;
 extern gcn::Color gui_selection_color;
 extern gcn::Color gui_foreground_color;
 extern gcn::Color gui_font_color;
-#endif
-#ifdef USE_GUISAN
+
 extern gcn::SDLInput* gui_input;
 #endif
 extern SDL_Surface* gui_screen;
@@ -377,6 +381,34 @@ bool HelpPanelThemes(std::vector<std::string>& helptext);
 void refresh_all_panels();
 void focus_bug_workaround(const gcn::Window* wnd);
 void disable_resume();
+#elif USE_IMGUI
+#define IMGUI_PANEL_LIST \
+PANEL(about,              "About",              "amigainfo.png") \
+PANEL(paths,              "Paths",              "paths.png") \
+PANEL(quickstart,         "Quickstart",         "quickstart.png") \
+PANEL(configurations,     "Configurations",     "file.png") \
+PANEL(cpu,                "CPU and FPU",        "cpu.png") \
+PANEL(chipset,            "Chipset",            "cpu.png") \
+PANEL(rom,                "ROM",                "chip.png") \
+PANEL(ram,                "RAM",                "chip.png") \
+PANEL(floppy,             "Floppy drives",      "35floppy.png") \
+PANEL(hd,                 "Hard drives/CD",     "drive.png") \
+PANEL(expansions,         "Expansions",         "expansion.png") \
+PANEL(rtg,                "RTG board",          "expansion.png") \
+PANEL(hwinfo,             "Hardware info",      "expansion.png") \
+PANEL(display,            "Display",            "screen.png") \
+PANEL(sound,              "Sound",              "sound.png") \
+PANEL(input,              "Input",              "joystick.png") \
+PANEL(io,                 "IO Ports",           "port.png") \
+PANEL(custom,             "Custom controls",    "controller.png") \
+PANEL(diskswapper,        "Disk swapper",       "35floppy.png") \
+PANEL(misc,               "Miscellaneous",      "misc.png") \
+PANEL(prio,               "Priority",           "misc.png") \
+PANEL(savestates,         "Savestates",         "savestate.png") \
+PANEL(virtual_keyboard,   "Virtual Keyboard",   "keyboard.png") \
+PANEL(whdload,            "WHDLoad",            "drive.png") \
+PANEL(themes,             "Themes",             "amigainfo.png")
+
 #endif
 
 #ifdef USE_IMGUI
@@ -403,6 +435,12 @@ void ShowCustomFields();
 std::string show_controller_map(int device, bool map_touchpad);
 extern void read_directory(const std::string& path, vector<string>* dirs, vector<string>* files);
 extern void FilterFiles(vector<string>* files, const char* filter[]);
+
+enum
+{
+	MAX_STARTUP_TITLE = 64,
+	MAX_STARTUP_MESSAGE = 256
+};
 
 enum
 {

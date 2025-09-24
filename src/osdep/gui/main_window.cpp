@@ -8,6 +8,23 @@
 #include <SDL_ttf.h>
 #include <dpi_handler.hpp>
 #include <unordered_map>
+#include <cmath>
+
+#include "sysdeps.h"
+#include "config.h"
+#include "options.h"
+#include "memory.h"
+#include "uae.h"
+#include "gui_handling.h"
+#include "amiberry_gfx.h"
+#include "fsdb_host.h"
+#include "autoconf.h"
+#include "inputdevice.h"
+#include "xwin.h"
+#include "custom.h"
+#include "disk.h"
+#include "savestate.h"
+#include "target.h"
 
 #ifdef USE_GUISAN
 #include <guisan.hpp>
@@ -23,15 +40,31 @@
 #include <array>
 #include <fstream>
 #include <sstream>
+
+bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
+int last_x = 0;
+int last_y = 0;
+
+bool gui_running = false;
+static int last_active_panel = 3;
+bool joystick_refresh_needed = false;
+
+static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
+static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
+
+void target_startup_msg(const TCHAR* title, const TCHAR* msg)
+{
+	_tcsncpy(startup_title, title, MAX_STARTUP_TITLE);
+	_tcsncpy(startup_message, msg, MAX_STARTUP_MESSAGE);
+}
+
 // Forward declarations used in this early block
 static void apply_imgui_theme_from_theme_file(const std::string& theme_file);
 extern std::string get_themes_path();
 extern void load_theme(const std::string& theme_filename);
-
-// Helpers for theme color mapping
-static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a); }
-static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4(std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w); }
-static ImVec4 darken(const ImVec4& c, float f) { return ImVec4(std::max(c.x - f, 0.0f), std::max(c.y - f, 0.0f), std::max(c.z - f, 0.0f), c.w); }
+static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
+static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
+static ImVec4 darken(const ImVec4& c, float f) { return ImVec4{ std::max(c.x - f, 0.0f), std::max(c.y - f, 0.0f), std::max(c.z - f, 0.0f), c.w }; }
 static bool parse_rgb_csv(const std::string& s, int& r, int& g, int& b) {
 	std::stringstream ss(s); std::string tok;
 	try {
@@ -131,30 +164,6 @@ static void apply_imgui_theme_from_theme_file(const std::string& theme_file)
 }
 #endif
 
-#include "sysdeps.h"
-#include "config.h"
-#include "options.h"
-#include "memory.h"
-#include "uae.h"
-#include "gui_handling.h"
-#include "amiberry_gfx.h"
-#include "fsdb_host.h"
-#include "autoconf.h"
-#include "inputdevice.h"
-#include "xwin.h"
-#include "custom.h"
-#include "disk.h"
-#include "savestate.h"
-#include "target.h"
-
-bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
-int last_x = 0;
-int last_y = 0;
-
-bool gui_running = false;
-static int last_active_panel = 3;
-bool joystick_refresh_needed = false;
-
 // Helper: get usable bounds for a display index (fallback to full bounds)
 static SDL_Rect get_display_usable_bounds(int display_index)
 {
@@ -196,21 +205,6 @@ static bool clamp_rect_to_bounds(SDL_Rect& rect, const SDL_Rect& bounds, bool cl
 	if (r.y + r.h > bounds.y + bounds.h) { r.y = bounds.y + bounds.h - r.h; changed = true; }
 	if (changed) rect = r;
 	return changed;
-}
-
-enum
-{
-	MAX_STARTUP_TITLE = 64,
-	MAX_STARTUP_MESSAGE = 256
-};
-
-static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
-static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
-
-void target_startup_msg(const TCHAR* title, const TCHAR* msg)
-{
-	_tcsncpy(startup_title, title, MAX_STARTUP_TITLE);
-	_tcsncpy(startup_message, msg, MAX_STARTUP_MESSAGE);
 }
 
 #ifdef USE_GUISAN
@@ -265,157 +259,7 @@ ConfigCategory categories[] = {
 
 	{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 };
-#elif USE_IMGUI
-static bool show_message_box = false;
-static char message_box_title[128] = "";
-static char message_box_message[2048] = "";
-static float gui_scale = 1.0f;
 
-// About panel resources (ImGui backend)
-static SDL_Texture* about_logo_texture = nullptr;
-static int about_logo_tex_w = 0;
-static int about_logo_tex_h = 0;
-
-// Sidebar icons (ImGui backend)
-struct IconTex { SDL_Texture* tex{nullptr}; int w{0}; int h{0}; };
-static std::unordered_map<std::string, IconTex> g_sidebar_icons;
-
-static void release_sidebar_icons()
-{
-	for (auto& kv : g_sidebar_icons) {
-		if (kv.second.tex) {
-			SDL_DestroyTexture(kv.second.tex);
-			kv.second.tex = nullptr;
-		}
-	}
-	g_sidebar_icons.clear();
-}
-
-static void ensure_sidebar_icons_loaded()
-{
-	// Load any missing textures for category icons
-	for (int i = 0; categories[i].category != nullptr; ++i) {
-		if (!categories[i].imagepath) continue;
-		std::string key = categories[i].imagepath;
-		if (g_sidebar_icons.find(key) != g_sidebar_icons.end())
-			continue;
-		const auto path = prefix_with_data_path(categories[i].imagepath);
-		SDL_Surface* surf = IMG_Load(path.c_str());
-		if (!surf) {
-			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Sidebar: failed to load %s: %s", path.c_str(), SDL_GetError());
-			g_sidebar_icons.emplace(key, IconTex{});
-			continue;
-		}
-		AmigaMonitor* mon = &AMonitors[0];
-		SDL_Texture* tex = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
-		IconTex it{};
-		it.tex = tex;
-		it.w = surf->w;
-		it.h = surf->h;
-		SDL_FreeSurface(surf);
-		if (!tex) {
-			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Sidebar: failed to create texture for %s: %s", path.c_str(), SDL_GetError());
-		}
-		g_sidebar_icons.emplace(std::move(key), it);
-	}
-}
-
-static void ensure_about_logo_texture()
-{
-	if (about_logo_texture)
-		return;
-
-	AmigaMonitor* mon = &AMonitors[0];
-	const auto path = prefix_with_data_path("amiberry-logo.png");
-	SDL_Surface* surf = IMG_Load(path.c_str());
-	if (!surf)
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to load %s: %s", path.c_str(), SDL_GetError());
-		return;
-	}
-	about_logo_tex_w = surf->w;
-	about_logo_tex_h = surf->h;
-	about_logo_texture = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
-	SDL_FreeSurface(surf);
-	if (!about_logo_texture)
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to create texture: %s", SDL_GetError());
-	}
-}
-
-ConfigCategory categories[] = {
-  {"About", "amigainfo.png"},
-  {"Paths", "paths.png"},
-  {"Quickstart", "quickstart.png"},
-  {"Configurations", "file.png"},
-  {"CPU and FPU", "cpu.png"},
-  {"Chipset", "cpu.png"},
-  {"ROM", "chip.png"},
-  {"RAM", "chip.png"},
-  {"Floppy drives", "35floppy.png"},
-  {"Hard drives/CD", "drive.png"},
-  {"Expansions", "expansion.png"},
-  {"RTG board", "expansion.png"},
-  {"Hardware info", "expansion.png"},
-  {"Display", "screen.png"},
-  {"Sound", "sound.png"},
-  {"Input", "joystick.png"},
-  {"IO Ports", "port.png"},
-  {"Custom controls", "controller.png"},
-  {"Disk swapper", "35floppy.png"},
-  {"Miscellaneous", "misc.png"},
-  {"Priority", "misc.png"},
-  {"Savestates", "savestate.png"},
-  {"Virtual Keyboard", "keyboard.png"},
-  {"WHDLoad", "drive.png"},
-  {"Themes", "amigainfo.png"},
-  {nullptr, nullptr}
-};
-#endif
-
-enum
-{
-	PANEL_ABOUT,
-	PANEL_PATHS,
-	PANEL_QUICKSTART,
-	PANEL_CONFIGURATIONS,
-	PANEL_CPU,
-	PANEL_CHIPSET,
-	PANEL_ROM,
-	PANEL_RAM,
-	PANEL_FLOPPY,
-	PANEL_HD,
-	PANEL_EXPANSIONS,
-	PANEL_RTG,
-	PANEL_HWINFO,
-	PANEL_DISPLAY,
-	PANEL_SOUND,
-	PANEL_INPUT,
-	PANEL_IO,
-	PANEL_CUSTOM,
-	PANEL_DISK_SWAPPER,
-	PANEL_MISC,
-	PANEL_PRIO,
-	PANEL_SAVESTATES,
-	PANEL_VIRTUAL_KEYBOARD,
-	PANEL_WHDLOAD,
-	PANEL_THEMES,
-	NUM_PANELS
-};
-
-/*
-* SDL Stuff we need
-*/
-SDL_Joystick* gui_joystick;
-SDL_Surface* gui_screen;
-SDL_Event gui_event;
-SDL_Event touch_event;
-SDL_Texture* gui_texture;
-SDL_Rect gui_renderQuad;
-SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
-static bool gui_window_moved = false; // track if user moved the GUI window
-
-#ifdef USE_GUISAN
 /*
 * Gui SDL stuff we need
 */
@@ -451,7 +295,19 @@ gcn::Button* cmdRestart;
 gcn::Button* cmdStart;
 gcn::Button* cmdHelp;
 gcn::Button* cmdShutdown;
+
 #endif
+/*
+* SDL Stuff we need
+*/
+SDL_Joystick* gui_joystick;
+SDL_Surface* gui_screen;
+SDL_Event gui_event;
+SDL_Event touch_event;
+SDL_Texture* gui_texture;
+SDL_Rect gui_renderQuad;
+SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
+static bool gui_window_moved = false; // track if user moved the GUI window
 
 /* Flag for changes in rtarea:
   Bit 0: any HD in config?
@@ -593,6 +449,74 @@ void update_gui_screen()
 }
 #endif
 
+#ifdef USE_IMGUI
+// IMGUI runtime state and helpers
+static float gui_scale = 1.0f;
+static bool show_message_box = false;
+static char message_box_title[128] = {0};
+static char message_box_message[1024] = {0};
+
+// About panel logo texture (loaded on demand)
+static SDL_Texture* about_logo_texture = nullptr;
+static int about_logo_tex_w = 0, about_logo_tex_h = 0;
+static void ensure_about_logo_texture()
+{
+	if (about_logo_texture)
+		return;
+	AmigaMonitor* mon = &AMonitors[0];
+	const auto path = prefix_with_data_path("amiberry-logo.png");
+	SDL_Surface* surf = IMG_Load(path.c_str());
+	if (!surf) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to load %s: %s", path.c_str(), SDL_GetError());
+		return;
+	}
+	about_logo_tex_w = surf->w;
+	about_logo_tex_h = surf->h;
+	about_logo_texture = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
+	SDL_FreeSurface(surf);
+	if (!about_logo_texture) {
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to create texture: %s", SDL_GetError());
+	}
+}
+
+// Sidebar icons cache
+struct IconTex { SDL_Texture* tex; int w; int h; };
+static std::unordered_map<std::string, IconTex> g_sidebar_icons;
+
+static void release_sidebar_icons()
+{
+	for (auto& kv : g_sidebar_icons) {
+		if (kv.second.tex) {
+			SDL_DestroyTexture(kv.second.tex);
+			kv.second.tex = nullptr;
+		}
+	}
+	g_sidebar_icons.clear();
+}
+
+static void ensure_sidebar_icons_loaded()
+{
+	AmigaMonitor* mon = &AMonitors[0];
+	for (int i = 0; categories[i].category != nullptr; ++i) {
+		if (!categories[i].imagepath) continue;
+		std::string key = categories[i].imagepath;
+		if (g_sidebar_icons.find(key) != g_sidebar_icons.end())
+			continue;
+		const auto full = prefix_with_data_path(categories[i].imagepath);
+		SDL_Surface* surf = IMG_Load(full.c_str());
+		if (!surf) {
+			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Sidebar icon load failed: %s: %s", full.c_str(), SDL_GetError());
+			g_sidebar_icons.emplace(key, IconTex{nullptr, 0, 0});
+			continue;
+		}
+		SDL_Texture* tex = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
+		IconTex it{ tex, surf->w, surf->h };
+		SDL_FreeSurface(surf);
+		g_sidebar_icons.emplace(std::move(key), it);
+	}
+}
+#endif
+
 void amiberry_gui_init()
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -620,10 +544,12 @@ void amiberry_gui_init()
 		const int min_h = 560;
 		const int max_w_cap = std::min(usable0.w, 1200);
 		const int max_h_cap = std::min(usable0.h, 900);
-		float desired_w = std::min(usable0.w * 0.50f, static_cast<float>(max_w_cap));
-		float desired_h = std::min(usable0.h * 0.85f, static_cast<float>(max_h_cap));
-		int final_w = static_cast<int>(std::clamp(desired_w, static_cast<float>(std::min(min_w, usable0.w)), static_cast<float>(max_w_cap)) + 0.5f);
-		int final_h = static_cast<int>(std::clamp(desired_h, static_cast<float>(static_cast<float>(std::min(min_h, usable0.h))), static_cast<float>(max_h_cap)) + 0.5f);
+		float desired_w = std::min(static_cast<float>(usable0.w) * 0.50f, static_cast<float>(max_w_cap));
+		float desired_h = std::min(static_cast<float>(usable0.h) * 0.85f, static_cast<float>(max_h_cap));
+		float clamped_w = std::clamp(desired_w, static_cast<float>(std::min(min_w, usable0.w)), static_cast<float>(max_w_cap));
+		float clamped_h = std::clamp(desired_h, static_cast<float>(std::min(min_h, usable0.h)), static_cast<float>(max_h_cap));
+		int final_w = static_cast<int>(std::lround(clamped_w));
+		int final_h = static_cast<int>(std::lround(clamped_h));
 		gui_window_rect.w = final_w;
 		gui_window_rect.h = final_h;
 	}
@@ -724,9 +650,9 @@ void amiberry_gui_init()
 
 		// Center SDL window within the usable display area (respects taskbar)
 		{
-			int ww, wh; SDL_GetWindowSize(mon->gui_window, &ww, &wh);
-			int cx = usable.x + (usable.w - ww) / 2;
-			int cy = usable.y + (usable.h - wh) / 2;
+			int win_w, win_h; SDL_GetWindowSize(mon->gui_window, &win_w, &win_h);
+			int cx = usable.x + (usable.w - win_w) / 2;
+			int cy = usable.y + (usable.h - win_h) / 2;
 			SDL_SetWindowPosition(mon->gui_window, cx, cy);
 			gui_window_rect.x = cx;
 			gui_window_rect.y = cy;
@@ -2245,12 +2171,6 @@ static void render_panel_display()
 	ImGui::RadioButton("Single", &changed_prefs.gfx_vresolution, 0);
 	ImGui::RadioButton("Double", &changed_prefs.gfx_vresolution, 1);
 	ImGui::RadioButton("Scanlines", &changed_prefs.gfx_pscanlines, 1);
-	ImGui::RadioButton("Double, fields", &changed_prefs.gfx_pscanlines, 2);
-	ImGui::RadioButton("Double, fields+", &changed_prefs.gfx_pscanlines, 3);
-
-	ImGui::Separator();
-	ImGui::Text("Interlaced line mode");
-	ImGui::RadioButton("Single##Interlaced", &changed_prefs.gfx_iscanlines, 0);
 	ImGui::RadioButton("Double, frames", &changed_prefs.gfx_iscanlines, 0);
 	ImGui::RadioButton("Double, fields##Interlaced", &changed_prefs.gfx_iscanlines, 1);
 	ImGui::RadioButton("Double, fields+##Interlaced", &changed_prefs.gfx_iscanlines, 2);
@@ -2371,13 +2291,20 @@ static void render_panel_io()
 {
 	ImGui::Text("Parallel Port");
 	const char* sampler_items[] = { "none" };
-	ImGui::Combo("Sampler", &changed_prefs.samplersoundcard, sampler_items, IM_ARRAYSIZE(sampler_items));
+	// Future: populate sampler_items dynamically from detected devices
+	static int sampler_idx = 0;
+	ImGui::Combo("Sampler", &sampler_idx, sampler_items, IM_ARRAYSIZE(sampler_items));
 	ImGui::Checkbox("Stereo sampler", &changed_prefs.sampler_stereo);
 
 	ImGui::Separator();
 	ImGui::Text("Serial Port");
+	// CRITICAL FIX: previously used ImGui::Combo with (int*)(void*)changed_prefs.sername (unsafe cast).
+	// We only have a single placeholder option right now; present it read-only until real enumeration exists.
 	const char* serial_port_items[] = { "none" };
-	ImGui::Combo("##SerialPort", (int*)(void*)changed_prefs.sername, serial_port_items, IM_ARRAYSIZE(serial_port_items));
+	static int serial_port_idx = 0; // always 0 with current placeholder list
+	ImGui::BeginDisabled();
+	ImGui::Combo("##SerialPort", &serial_port_idx, serial_port_items, IM_ARRAYSIZE(serial_port_items));
+	ImGui::EndDisabled();
 	ImGui::Checkbox("Shared", &changed_prefs.serial_demand);
 	ImGui::Checkbox("Direct", &changed_prefs.serial_direct);
 	ImGui::Checkbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts);
@@ -2387,10 +2314,15 @@ static void render_panel_io()
 
 	ImGui::Separator();
 	ImGui::Text("MIDI");
+	// CRITICAL FIX: remove unsafe casts for midioutdev/midiindev; use indices instead.
 	const char* midi_out_items[] = { "none" };
-	ImGui::Combo("Out", (int*)(void*)changed_prefs.midioutdev, midi_out_items, IM_ARRAYSIZE(midi_out_items));
 	const char* midi_in_items[] = { "none" };
-	ImGui::Combo("In", (int*)(void*)changed_prefs.midiindev, midi_in_items, IM_ARRAYSIZE(midi_in_items));
+	static int midi_out_idx = 0;
+	static int midi_in_idx = 0;
+	ImGui::BeginDisabled();
+	ImGui::Combo("Out", &midi_out_idx, midi_out_items, IM_ARRAYSIZE(midi_out_items));
+	ImGui::Combo("In", &midi_in_idx, midi_in_items, IM_ARRAYSIZE(midi_in_items));
+	ImGui::EndDisabled();
 	ImGui::Checkbox("Route MIDI In to MIDI Out", &changed_prefs.midirouter);
 
 	ImGui::Separator();
@@ -2795,6 +2727,14 @@ static void render_panel_themes()
 
 }
 
+// Provide IMGUI categories using centralized panel list
+ConfigCategory categories[] = {
+#define PANEL(id, label, icon) { label, icon, render_panel_##id, nullptr },
+	IMGUI_PANEL_LIST
+#undef PANEL
+	{ nullptr, nullptr, nullptr, nullptr }
+};
+
 void run_gui()
 {
 	gui_running = true;
@@ -2928,105 +2868,10 @@ void run_gui()
 		// Content
 		ImGui::BeginChild("Content", ImVec2(0, -button_bar_height));
 
-		if (last_active_panel == PANEL_ABOUT)
-		{
-			render_panel_about();
-		}
-		else if (last_active_panel == PANEL_PATHS)
-		{
-			render_panel_paths();
-		}
-		else if (last_active_panel == PANEL_QUICKSTART)
-		{
-			render_panel_quickstart();
-		}
-		else if (last_active_panel == PANEL_CONFIGURATIONS)
-		{
-			render_panel_configurations();
-		}
-		else if (last_active_panel == PANEL_CPU)
-		{
-			render_panel_cpu();
-		}
-		else if (last_active_panel == PANEL_CHIPSET)
-		{
-			render_panel_chipset();
-		}
-		else if (last_active_panel == PANEL_ROM)
-		{
-			render_panel_rom();
-		}
-		else if (last_active_panel == PANEL_RAM)
-		{
-			render_panel_ram();
-		}
-		else if (last_active_panel == PANEL_FLOPPY)
-		{
-			render_panel_floppy();
-		}
-		else if (last_active_panel == PANEL_HD)
-		{
-			render_panel_hd();
-		}
-		else if (last_active_panel == PANEL_EXPANSIONS)
-		{
-			render_panel_expansions();
-		}
-		else if (last_active_panel == PANEL_RTG)
-		{
-			render_panel_rtg();
-		}
-		else if (last_active_panel == PANEL_HWINFO)
-		{
-			render_panel_hwinfo();
-		}
-		else if (last_active_panel == PANEL_DISPLAY)
-		{
-			render_panel_display();
-		}
-		else if (last_active_panel == PANEL_SOUND)
-		{
-			render_panel_sound();
-		}
-		else if (last_active_panel == PANEL_INPUT)
-		{
-			render_panel_input();
-		}
-		else if (last_active_panel == PANEL_IO)
-		{
-			render_panel_io();
-		}
-		else if (last_active_panel == PANEL_CUSTOM)
-		{
-			render_panel_custom();
-		}
-		else if (last_active_panel == PANEL_DISK_SWAPPER)
-		{
-			render_panel_diskswapper();
-		}
-		else if (last_active_panel == PANEL_MISC)
-		{
-			render_panel_misc();
-		}
-		else if (last_active_panel == PANEL_PRIO)
-		{
-			render_panel_prio();
-		}
-		else if (last_active_panel == PANEL_SAVESTATES)
-		{
-			render_panel_savestates();
-		}
-		else if (last_active_panel == PANEL_VIRTUAL_KEYBOARD)
-		{
-			render_panel_virtual_keyboard();
-		}
-		else if (last_active_panel == PANEL_WHDLOAD)
-		{
-			render_panel_whdload();
-		}
-		else if (last_active_panel == PANEL_THEMES)
-		{
-			render_panel_themes();
+		// Render the currently active panel
+		if (last_active_panel >= 0 && categories[last_active_panel].category != nullptr) {
+			if (categories[last_active_panel].RenderFunc)
+				categories[last_active_panel].RenderFunc();
 		}
 		ImGui::EndChild();
 
@@ -3046,48 +2891,11 @@ void run_gui()
 		ImGui::SameLine();
 		if (ImGui::Button("Help"))
 		{
-			std::string help_str;
-			switch(last_active_panel)
-			{
-				case PANEL_ABOUT:
-				{
-					help_str = "This panel contains information about the version of Amiberry, when it was changed,\nwhich version of SDL2 it was compiled against and currently using.\n \nFurthermore, you can also find the GPLv3 license notice here, and if you scroll down\nall the credits to the people behind the development of this emulator as well.\n \nAt the bottom of the screen, there are a few buttons available regardless of which\npanel you have selected. Those are: \n \n\"Shutdown\": allows you to shutdown the whole system Amiberry is running on. This\n option can be disabled if you wish, by setting \'disable_shutdown_button=yes\' in\n in your amiberry.conf file.\n \n\"Quit\": This quits Amiberry, as you'd expect.\n \n\"Restart\": This button will stop emulation (if running), reload Amiberry and reset\n the currently loaded configuration. This has a similar effect as if you Quit and start\n Amiberry again.\n It can be useful if you want to change a setting that cannot be changed on-the-fly,\n and you don't want to quit and start the Amiberry again to do that.\n \n\"Help\": This will display some on-screen help/documentation, relating to the Panel\n you are currently in.\n \n\"Reset\": This button will trigger a hard reset of the emulation, which will reboot\n with the current settings. \n \n\"Start\": This button starts the emulation, using the current settings you have set.\n ";
-				}
-				break;
-				case PANEL_PATHS:
-				{
-					help_str = "Here you can configure the various paths for Amiberry resources. In normal usage,\nthe default paths should work fine, however if you wish to change any path, you\ncan use the \"...\" button, to select the folder/path of your choosing. Details\nfor each path resource appear below.\n \nYou can enable/disable logging and specify the location of the logfile by using\nthe relevant options. A logfile is useful when trying to troubleshoot something,\nbut otherwise this option should be off, as it will incur some extra overhead.\nYou can also redirect the log output to console, by enabling that logging option.\nYou can alternatively enable log output to console if you pass the --log option\nto Amiberry on startup.\n \nThe \"Rescan Paths\" button will rescan the paths specified above and refresh the\nlocal cache. This should be done if you added kickstart ROMs for example, in order\nfor Amiberry to pick them up. This button will regenerate the amiberry.conf file\nif it's missing, and will be populated with the default values.\n \nThe \"Update WHDBooter files\" button will attempt to download the latest XML used for\nthe WHDLoad-booter functionality of Amiberry, along with all related files in the\n\"whdboot\" directory. It requires an internet connection and write permissions in the\ndestination directory. The downloaded XML file will be stored in the default location\n(whdboot/game-data/whdload_db.xml). Once the file is successfully downloaded, you\nwill also get a dialog box informing you about the details. A backup copy of the\nexisting whdload_db.xml is made (whdboot/game-data/whdload_db.bak), to preserve any\ncustom edits that may have been made. The rest of the files will be updated with the\nlatest version from the repository.\n \nThe \"Update Controllers DB\" button will attempt to download the latest version of\nthe bundled gamecontrollerdb.txt file, to be stored in the Controllers files path.\nThe file contains the \"official\" mappings for recognized controllers by SDL2 itself.\nPlease note that this is separate from the user-configurable gamecontrollerdb_user.txt\nfile, which is contained in the Controllers path. That file is never overwritten, and\nit will be loaded after the official one, so any entries contained there will take a \nhigher priority. Once the file is successfully downloaded, you will also get a dialog\nbox informing you about the details. A backup copy of the existing gamecontrollerdb.txt\n(conf/gamecontrollerdb.bak) is created, to preserve any custom edits it may contain.\n \nThe paths for Amiberry resources include;\n \n- System ROMs: The Amiga Kickstart files are by default located under 'roms'.\n  After changing the location of the Kickstart ROMs, or adding any additional ROMs, \n  click on the \"Rescan\" button to refresh the list of the available ROMs. Please\n  note that MT-32 ROM files may also reside here, or in a \"mt32-roms\" directory\n  at this location, if you wish to use the MT-32 MIDI emulation feature in Amiberry.\n \n- Configuration files: These are located under \"conf\" by default. This is where your\n  configurations will be stored, but also where Amiberry keeps the special amiberry.conf\n  file, which contains the default settings the emulator uses when it starts up. This\n  is also where the bundled gamecontrollersdb.txt file is located, which contains the\n  community-maintained mappings for various controllers that SDL2 recognizes.\n \n- NVRAM files: the location where CDTV/CD2 modes will store their NVRAM files.\n \n- Plugins path: the location where external plugins (such as the CAPSimg or the\n  floppybridge plugin) are stored.\n \n- Screenshots: any screenshots you take will be saved by default in this location.\n \n- Save state files: if you use them, they will be saved in the specified location.\n \n- Controller files: any custom (user-generated) controller mapping files will be saved\n  in this location. This location is also used in RetroArch environments (ie; such as\n  RetroPie) to point to the directory containing the controller mappings.\n \n- RetroArch configuration file (retroarch.cfg): only useful if you are using RetroArch\n  (ie; in RetroPie). Amiberry can pick-up the configuration file from the path specified here, and load it automatically, applying any mappings it contains. You can ignore this\n  path if you're not using RetroArch.\n \n- WHDboot files: This directory contains the files required by the whd-booter process\n  to launch WHDLoad game archives. In normal usage you should not need to change this.\n \n- Below that are 4 additional paths, that can be used to better organize your various\n  Amiga files, and streamline GUI operations when it comes to selecting the different\n  types of Amiga media. The file selector buttons in Amiberry associated with each of\n  the media types, will open these path locations. The defaults are shown, but these\n  can be changed to better suit your requirements.\n \nThese settings are saved automatically when you click Rescan, or exit the emulator.\n ";
-				}
-				break;
-				case PANEL_QUICKSTART:
-				{
-					help_str = "Simplified start of emulation by just selecting the Amiga model and the disk/CD\nyou want to use.\n \nAfter selecting the Amiga model, you can choose from a small list of standard\nconfigurations for this model to start with. Depending on the model selected,\nthe floppy or CD drive options will be enabled for you, which you can use to\ninsert any floppy disk or CD images, accordingly.\nIf you need more advanced control over the hardware you want to emulate, you\ncan always use the rest of the GUI for that.\n \nYou can reset the current configuration to your selected model, by clicking the\nSet Configuration button.\n \nWhen you activate \"Start in Quickstart mode\", the next time you run the emulator,\nit  will start with the QuickStart panel. Otherwise you start in the configurations panel.\n \nYou can optionally select a WHDLoad LHA title, and have Amiberry auto-configure\nall settings, based on the WHDLoad XML (assuming the title is found there).\nThen you can just click on Start to begin!";
-				}
-				break;
-				case PANEL_CONFIGURATIONS:
-				{
-					help_str = "In this panel, you can see a list of all your previously saved configurations. The\nConfiguration file (.uae) contains all the emulator settings available in it. Loading\nsuch a file, will apply those settings to Amiberry immediately. Accordingly, you can\nSave your current settings in a file here, for future use.\n \nPlease note the \"default\" config name is special for Amiberry, since if it exists,\nit will be loaded automatically on startup. This will override the emulator options\nAmiberry sets internally at startup, and this may impact on compatibility when using\nthe Quickstart panel.\n \nTo load a configuration, select the entry in the list, and then click on the \"Load\"\nbutton. Note that if you double-click on an entry in the list, the emulation starts\nimmediately using that configuration.\n \nTo create/save a new configuration, set all emulator options as required, then enter\na new \"Name\", optionally provide a short description, and then click on the \"Save\"\nbutton. When trying to Save a configuration, if the supplied filename already exists,\nit will be automatically renamed to \"configuration.backup\", to keep as a backup.\n \nPlease note a special case exists when creating/saving a configuration file for use \nwith floppy disk images and whdload archives. The auto-config logic in Amiberry will\nscan for a configuration file of the same \"Name\" as the disk image or .lha archive\nbeing loaded. After you load a floppy disk image or whdload archive, and Start the \nemulation, you can use the \"F12\" key to show the GUI, and in this panel the \"Name\"\nfield for the configuration will be filled correctly. Do not change this, as it will\nstop auto-config from working. You may change the description if you desire.\n \nTo delete the currently selected configuration file from the disk (and the list),\nclick on the \"Delete\" button.";
-				}
-				break;
-				case PANEL_CPU:
-				{
-					help_str = "Select the required Amiga CPU (68000 - 68060). If you select 68020, you can choose\nbetween 24-bit (68EC020) or 32-bit (68020) addressing.\n \nThe option \"More compatible\" will emulate prefetch (68000) or prefetch and\ninstruction cache. It's more compatible but slower, but not required\nfor most games and demos.\n \nJIT/JIT FPU enables the Just-in-time compiler. This may break compatibility in some games.\nNote: Not available in all platforms currently\n \nThe available FPU models depend on the selected CPU type. The option \"More compatible\"\nactivates a more accurate rounding method and compare of two floats.\n \nThe CPU Speed slider allows you to set the CPU speed. The fastest possible setting\nwill run the CPU as fast as possible. The A500/A1200 setting will run the CPU at\nthe speed of an A500 or A1200. The slider allows you to set the CPU speed in\npercentages of the maximum speed.\n \nThe CPU Idle slider allows you to set how much the CPU should sleep when idle.\nThis is useful to keep the system temperature down.\n \nThe MMU option allows you to enable the Memory Management Unit. This is only available\nfor the 68030, 68040 and 68060 CPUs.\n \nThe FPU option allows you to enable the FPU. This is only available for the 68020, 68030,\n68040 and 68060 CPUs.\n \nThe PPC emulation option allows you to enable the PowerPC emulation. This is only available\nfor the 68040 and 68060 CPUs and requires an extra plugin (qemu-uae) to be available.";
-				}
-				break;
-				case PANEL_CHIPSET:
-				{
-					help_str = "If you want to emulate an Amiga 1200, select AGA. For most Amiga 500 games,\nselect \"Full ECS\" instead. Some older Amiga games require \"OCS\" or \"ECS Agnus\".\nYou have to play with these options if a game won't work as expected. By selecting\nan entry in \"Extra\", all internal Chipset settings will change to the required values\nfor the specified Amiga model. For some games, you have to switch to \"NTSC\"\n(60 Hz instead of 50 Hz) for correct timing.\n \nThe \"Multithreaded drawing\" option, will enable some Amiberry optimizations\nthat will help the performance when drawing lines on native screen modes.\nIn some cases, this might cause screen tearing artifacts, so you can choose to\ndisable this option when needed. Note that it cannot be changed once emulation has\nstarted.\n \nIf you see graphic issues in a game, try the \"Immediate\" or \"Wait for blitter\"\nBlitter options.\n \nFor \"Collision Level\", select \"Sprites and Sprites vs. Playfield\" which is fine\nfor nearly all games.";
-				}
-				break;
-				case PANEL_ROM:
-				{
-					help_str = "Select the required Kickstart ROM for the Amiga you want to emulate in \"Main ROM File\".\n \nIn \"Extended ROM File\", you can only select the required ROM for CD32 emulation.\n \nYou can use the ShapeShifter support checkbox to patch the system ROM for ShapeShifter\ncompatibility. You do not need to run PrepareEmul on startup with this enabled.\n \nIn \"Cartridge ROM File\", you can select the CD32 FMV module to activate video\nplayback in CD32. There are also some Action Replay and Freezer cards and the built-in\nHRTMon available.\n \nThe Advanced UAE Expansion/Boot ROM option allows you to set the following:\nRom Disabled: All UAE expansions are disabled. Only needed if you want to force it.\nOriginal UAE: Autoconfig board + F0 ROM.\nNew UAE: 64k + F0 ROM - not very useful (per Toni Wilen).";
-				}
-				break;
-			}
-
-			if (!help_str.empty())
-				ShowMessageBox("Help", help_str.c_str());
+			const char* help_ptr = nullptr;
+			if (last_active_panel >= 0 && categories[last_active_panel].category != nullptr)
+				help_ptr = categories[last_active_panel].HelpText;
+			if (help_ptr && *help_ptr)
+				ShowMessageBox("Help", help_ptr);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Start"))
