@@ -451,7 +451,6 @@ void update_gui_screen()
 
 #ifdef USE_IMGUI
 // IMGUI runtime state and helpers
-static float gui_scale = 1.0f;
 static bool show_message_box = false;
 static char message_box_title[128] = {0};
 static char message_box_message[1024] = {0};
@@ -684,16 +683,9 @@ void amiberry_gui_init()
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-	// Get DPI scale factor
-	gui_scale = DPIHandler::get_scale();
-	// Guard against invalid/zero scale values that would break style sizes
-	if (!(gui_scale > 0.0f))
-		gui_scale = 1.0f;
-
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
 	ImGuiStyle& style = ImGui::GetStyle();
-	style.ScaleAllSizes(gui_scale);
 	// Ensure WindowMinSize is valid after scaling (avoid ImGui assert)
 	if (style.WindowMinSize.x < 1.0f || style.WindowMinSize.y < 1.0f)
 		style.WindowMinSize = ImVec2(32.0f, 36.0f);
@@ -705,8 +697,8 @@ void amiberry_gui_init()
 
 	// Load custom font from data/ (default to AmigaTopaz.ttf), scale by DPI
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
-	const std::string font_path = prefix_with_data_path(font_file.c_str());
-	const float font_px = (gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f) * gui_scale;
+	const std::string font_path = prefix_with_data_path(font_file);
+	const float font_px = gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f;
 
 	ImFont* loaded_font = nullptr;
 	if (!font_path.empty()) {
@@ -2816,8 +2808,7 @@ void run_gui()
 		const float base_text_h = ImGui::GetTextLineHeight();
 		const float base_row_h = ImGui::GetTextLineHeightWithSpacing();
 		// Make icons larger than text height using gui_scale
-		const float icon_scale = 1.15f + 0.15f * std::max(0.0f, gui_scale - 1.0f); // 1.15x at 100% DPI, grows slightly with DPI
-		const float icon_h_target = base_text_h * icon_scale;
+		const float icon_h_target = base_text_h;
 		const float row_h = std::max(base_row_h, icon_h_target + 2.0f * s.FramePadding.y);
 		for (int i = 0; categories[i].category != nullptr; ++i) {
 			const bool selected = (last_active_panel == i);
