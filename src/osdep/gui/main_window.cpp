@@ -2743,7 +2743,10 @@ void run_gui()
 			ImGui_ImplSDL2_ProcessEvent(&gui_event);
 
 			if (gui_event.type == SDL_QUIT)
+			{
+				uae_quit();
 				gui_running = false;
+			}
 			if (gui_event.type == SDL_WINDOWEVENT) {
 				if (gui_event.window.windowID == SDL_GetWindowID(mon->gui_window)) {
 					switch (gui_event.window.event) {
