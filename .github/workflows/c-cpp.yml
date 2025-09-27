@@ -313,10 +313,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: bullseye
-            image: midwan/amiberry-debian-x86_64:bullseye
-            artifact_name: amiberry-debian-bullseye-amd64
-            release_name: debian-bullseye-amd64
           - name: bookworm
             image: midwan/amiberry-debian-x86_64:bookworm
             artifact_name: amiberry-debian-bookworm-amd64
@@ -360,10 +356,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: bullseye
-            image: midwan/amiberry-debian-aarch64:bullseye
-            artifact_name: amiberry-debian-bullseye-arm64
-            release_name: debian-bullseye-arm64
           - name: bookworm
             image: midwan/amiberry-debian-aarch64:bookworm
             artifact_name: amiberry-debian-bookworm-arm64
@@ -407,10 +399,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: bullseye
-            image: midwan/amiberry-debian-armhf:bullseye
-            artifact_name: amiberry-debian-bullseye-armhf
-            release_name: debian-bullseye-armhf
           - name: bookworm
             image: midwan/amiberry-debian-armhf:bookworm
             artifact_name: amiberry-debian-bookworm-armhf
