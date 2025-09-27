@@ -37,6 +37,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#include "ImGuiFileDialog.h"
 #include <array>
 #include <fstream>
 #include <sstream>
@@ -60,8 +61,6 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 
 // Forward declarations used in this early block
 static void apply_imgui_theme_from_theme_file(const std::string& theme_file);
-extern std::string get_themes_path();
-extern void load_theme(const std::string& theme_filename);
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
 static ImVec4 darken(const ImVec4& c, float f) { return ImVec4{ std::max(c.x - f, 0.0f), std::max(c.y - f, 0.0f), std::max(c.z - f, 0.0f), c.w }; }
@@ -539,9 +538,9 @@ void amiberry_gui_init()
 	// For ImGui, pick a smaller, responsive SDL window size based on usable display area
 	{
 		SDL_Rect usable0 = get_display_usable_bounds(0);
-		const int min_w = 900;
+		const int min_w = GUI_WIDTH;
 		const int min_h = 560;
-		const int max_w_cap = std::min(usable0.w, 1200);
+		const int max_w_cap = std::min(usable0.w, 900);
 		const int max_h_cap = std::min(usable0.h, 800);
 		float desired_w = std::min(static_cast<float>(usable0.w) * 0.50f, static_cast<float>(max_w_cap));
 		float desired_h = std::min(static_cast<float>(usable0.h) * 0.85f, static_cast<float>(max_h_cap));
@@ -674,7 +673,9 @@ void amiberry_gui_init()
 		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
 	}
+#ifdef USE_GUISAN
 	DPIHandler::set_render_scale(mon->gui_renderer);
+#endif
 #ifdef USE_IMGUI
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -1604,9 +1605,7 @@ void disable_resume()
 		cmdStart->setEnabled(false);
 	}
 }
-#endif
 
-#ifdef USE_GUISAN
 void run_gui()
 {
 	gui_running = true;
@@ -1751,10 +1750,25 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##SystemROMs"))
 	{
-		//std::string path = SelectFolder("Folder for System ROMs", changed_prefs.path_rom.path[0]);
-		//if (!path.empty())
-		//	set_rom_path(path);
+		IGFD::FileDialogConfig config;
+		config.path = get_rom_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
 	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+			std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			// action
+			set_rom_path(filePath.c_str());
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
 	ImGui::Text("Configuration files:");
 	get_configuration_path(tmp, sizeof tmp);
 	ImGui::InputText("##ConfigPath", tmp, MAX_DPATH);

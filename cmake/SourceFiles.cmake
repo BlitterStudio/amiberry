@@ -403,6 +403,7 @@ set(PCEM_SOURCE_FILES
 
 if (USE_IMGUI)
     message("Using ImGui for GUI")
+    list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
 else ()
     message("Using libguisan for GUI")
     list(APPEND SOURCE_FILES ${GUISAN_GUI_FILES})
@@ -462,7 +463,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 if (USE_IMGUI)
-    target_include_directories(${PROJECT_NAME} PRIVATE external/imgui)
+    target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
 else()
     target_include_directories(${PROJECT_NAME} PRIVATE external/libguisan/include)
 endif()
