@@ -1788,7 +1788,7 @@ static void render_panel_quickstart()
 
 	ImGui::Checkbox("CD drive", &changed_prefs.cdslots[0].inuse);
 
-	if (ImGui::Button("Set configuration"))
+	if (ImGui::Button("Set configuration", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 }
 
@@ -1813,13 +1813,13 @@ static void render_panel_configurations()
 	ImGui::InputText("Name", name, MAX_DPATH);
 	ImGui::InputText("Description", desc, MAX_DPATH);
 
-	if (ImGui::Button("Load"))
+	if (ImGui::Button("Load", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (selected != -1)
 			target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Save"))
+	if (ImGui::Button("Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		char filename[MAX_DPATH];
 		get_configuration_path(filename, MAX_DPATH);
@@ -1833,7 +1833,7 @@ static void render_panel_configurations()
 		}
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Delete"))
+	if (ImGui::Button("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (selected != -1)
 		{
@@ -2016,27 +2016,27 @@ static void render_panel_hd()
 	{
 		ImGui::Text("Device: %s, Volume: %s, Path: %s", changed_prefs.mountconfig[i].ci.devname, changed_prefs.mountconfig[i].ci.volname, changed_prefs.mountconfig[i].ci.rootdir);
 	}
-	if (ImGui::Button("Add Directory/Archive"))
+	if (ImGui::Button("Add Directory/Archive", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Add Directory/Archive
 	}
-	if (ImGui::Button("Add Hardfile"))
+	if (ImGui::Button("Add Hardfile", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Add Hardfile
 	}
-	if (ImGui::Button("Add Hard Drive"))
+	if (ImGui::Button("Add Hard Drive", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Add Hard Drive
 	}
-	if (ImGui::Button("Add CD Drive"))
+	if (ImGui::Button("Add CD Drive", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Add CD Drive
 	}
-	if (ImGui::Button("Add Tape Drive"))
+	if (ImGui::Button("Add Tape Drive", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Add Tape Drive
 	}
-	if (ImGui::Button("Create Hardfile"))
+	if (ImGui::Button("Create Hardfile", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Create Hardfile
 	}
@@ -2505,21 +2505,21 @@ static void render_panel_savestates()
 		// Load state from selected slot
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Save to Slot"))
+	if (ImGui::Button("Save to Slot", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Save current state to selected slot
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Delete Slot"))
+	if (ImGui::Button("Delete Slot", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Delete state from selected slot
 	}
-	if (ImGui::Button("Load state..."))
+	if (ImGui::Button("Load state...", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Load state from file
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Save state..."))
+	if (ImGui::Button("Save state...", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		// Save current state to file
 	}
@@ -2684,7 +2684,7 @@ static void render_panel_whdload()
     if (whdload_prefs.whdload_filename.empty()) {
         ImGui::BeginDisabled();
     }
-    if (ImGui::Button("Custom Fields"))
+    if (ImGui::Button("Custom Fields", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
     {
         // TODO: Implement custom fields dialog
     }
@@ -2870,20 +2870,20 @@ void run_gui()
 		ImGui::EndChild();
 
 		// Button bar
-		ImGui::BeginChild("ButtonBar", ImVec2(0, 0), true);
-		if (ImGui::Button("Quit"))
+		ImGui::BeginChild("ButtonBar", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY);
+		if (ImGui::Button("Quit", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			uae_quit();
 			gui_running = false;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Restart"))
+		if (ImGui::Button("Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			uae_reset(1, 1);
 			gui_running = false;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Help"))
+		if (ImGui::Button("Help", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			const char* help_ptr = nullptr;
 			if (last_active_panel >= 0 && categories[last_active_panel].category != nullptr)
@@ -2892,7 +2892,7 @@ void run_gui()
 				ShowMessageBox("Help", help_ptr);
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Start"))
+		if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 			gui_running = false;
 		ImGui::EndChild();
 		ImGui::EndGroup();
@@ -2903,7 +2903,7 @@ void run_gui()
 			if (ImGui::BeginPopupModal(message_box_title, &show_message_box, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				ImGui::TextWrapped("%s", message_box_message);
-				if (ImGui::Button("OK", ImVec2(120, 0))) {
+				if (ImGui::Button("OK", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 					show_message_box = false;
 					ImGui::CloseCurrentPopup();
 				}
