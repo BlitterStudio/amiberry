@@ -542,7 +542,7 @@ void amiberry_gui_init()
 		const int min_w = 900;
 		const int min_h = 560;
 		const int max_w_cap = std::min(usable0.w, 1200);
-		const int max_h_cap = std::min(usable0.h, 900);
+		const int max_h_cap = std::min(usable0.h, 800);
 		float desired_w = std::min(static_cast<float>(usable0.w) * 0.50f, static_cast<float>(max_w_cap));
 		float desired_h = std::min(static_cast<float>(usable0.h) * 0.85f, static_cast<float>(max_h_cap));
 		float clamped_w = std::clamp(desired_w, static_cast<float>(std::min(min_w, usable0.w)), static_cast<float>(max_w_cap));
