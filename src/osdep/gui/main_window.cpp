@@ -1990,7 +1990,7 @@ static void render_panel_paths()
 	{
 		std::string filePath;
 		if (ConsumeDirDialogResult(filePath))
-			set_floppy_path(filePath);
+		 set_floppy_path(filePath);
 	}
 
 	ImGui::Spacing();
@@ -2123,26 +2123,76 @@ static void render_panel_paths()
 
 static void render_panel_quickstart()
 {
-	const char* models[] = { "Amiga 500", "Amiga 500+", "Amiga 600", "Amiga 1000", "Amiga 1200", "Amiga 3000", "Amiga 4000", "Amiga 4000T", "CD32", "CDTV", "American Laser Games / Picmatic", "Arcadia Multi Select system", "Macrosystem" };
-	ImGui::Combo("Amiga model", &quickstart_model, models, IM_ARRAYSIZE(models));
-
-	const char* configs[] = { "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM", "1.3 ROM, ECS Agnus, 1 MB Chip RAM", "1.3 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM" };
-	ImGui::Combo("Config", &quickstart_conf, configs, IM_ARRAYSIZE(configs));
-
-	ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
-
-	for (int i = 0; i < 2; ++i)
+	// Two-column layout: left = label, right = control(s)
+	if (ImGui::BeginTable("QuickstartTable", 2, ImGuiTableFlags_SizingStretchProp))
 	{
-		char label[10];
-		snprintf(label, 10, "DF%d:", i);
-		ImGui::Checkbox(label, (bool*)&changed_prefs.floppyslots[i].dfxtype);
+		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+		ImGui::TableSetupColumn("Control", ImGuiTableColumnFlags_WidthStretch);
+
+		// Model row
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Model:");
+		ImGui::TableSetColumnIndex(1);
+		ImGui::Combo("##QuickstartModel", &quickstart_model, qs_models, IM_ARRAYSIZE(qs_models));
 		ImGui::SameLine();
-		ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
+		ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
+
+		// Configuration row
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Configuration:");
+		ImGui::TableSetColumnIndex(1);
+		ImGui::Combo("##QuickstartConf", &quickstart_conf, qs_configs, IM_ARRAYSIZE(qs_configs));
+
+		ImGui::EndTable();
 	}
 
-	ImGui::Checkbox("CD drive", &changed_prefs.cdslots[0].inuse);
+	ImGui::Spacing();
+	ImGui::Spacing();
+	ImGui::Spacing();
 
-	if (ImGui::Button("Set configuration", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	// Floppy rows
+	for (int i = 0; i < 2; ++i)
+	{
+		std::string label = "DF" + std::to_string(i) + ":##QSFloppyDrive" + std::to_string(i);
+		ImGui::Checkbox(label.data(), (bool*)&changed_prefs.floppyslots[i].dfxtype);
+
+		ImGui::SameLine();
+		label = "Select Image file##QSSelectFloppyImage" + std::to_string(i);
+		ImGui::Button(label.data(), ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT));
+
+		ImGui::SameLine();
+		const int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
+		auto selectedFloppyType = nn + 1;
+		label = "##QSFloppyType" + std::to_string(i);
+		// Limit combo width so it doesn't consume the whole row
+		ImGui::SetNextItemWidth(150.0f);
+		ImGui::Combo(label.data(), &selectedFloppyType, floppy_drive_types, IM_ARRAYSIZE(floppy_drive_types));
+
+		ImGui::SameLine();
+		label = "Write-protected##QSFloppyWriteProtected" + std::to_string(i);
+		ImGui::Checkbox(label.data(), &changed_prefs.floppy_read_only); // TODO See if this should be separate per drive
+
+		ImGui::SameLine();
+		label = "?##QSFloppyInfo" + std::to_string(i);
+		ImGui::Button(label.data(), ImVec2(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT));
+
+		ImGui::SameLine();
+		label = "Eject##QSFloppyEject" + std::to_string(i);
+		ImGui::Button(label.data(), ImVec2(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT));
+
+		label = "##QSFloppyImagePath" + std::to_string(i);
+		//ImGui::Combo(label, &changed_prefs.floppyslots[i].df, lstMRUDiskList, 0);
+	}
+
+	// CD drive row
+	ImGui::Checkbox("CD Drive##QSCDDrive", &changed_prefs.cdslots[0].inuse);
+
+	ImGui::Spacing();
+	if (ImGui::Button("Set configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 		built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 }
 
@@ -2345,7 +2395,7 @@ static void render_panel_floppy()
         ImGui::SameLine();
         ImGui::Checkbox("Write-protected", &changed_prefs.floppy_read_only);
         ImGui::SameLine();
-        // Use a unique ID for each input to avoid ImGui ID collisions
+        // Use a unique ID for each input to avoid collisions and potential crashes
         ImGui::InputText("##FloppyPath", changed_prefs.floppyslots[i].df, MAX_DPATH);
         ImGui::PopID();
     }

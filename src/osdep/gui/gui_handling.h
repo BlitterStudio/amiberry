@@ -29,7 +29,133 @@ enum
 	SCROLLBAR_WIDTH = 20
 };
 
-static const std::vector<std::string> floppy_drive_types = {
+struct amigamodels
+{
+	int compalevels;
+	char name[32];
+	char configs[8][128];
+};
+
+static amigamodels amodels[] = {
+	{
+		4, "Amiga 500", {
+			"1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)",
+			"1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
+			"1.3 ROM, ECS Agnus, 1 MB Chip RAM",
+			"1.3 ROM, OCS Agnus, 512 KB Chip RAM",
+			"1.2 ROM, OCS Agnus, 512 KB Chip RAM",
+			"1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
+			"\0"
+		}
+	},
+	{
+		4, "Amiga 500+", {
+			"Basic non-expanded configuration",
+			"2 MB Chip RAM expanded configuration",
+			"4 MB Fast RAM expanded configuration",
+			"\0"
+		}
+	},
+	{
+		4, "Amiga 600", {
+			"Basic non-expanded configuration",
+			"2 MB Chip RAM expanded configuration",
+			"4 MB Fast RAM expanded configuration",
+			"8 MB Fast RAM expanded configuration"
+			"\0"
+		}
+	},
+	{
+		4, "Amiga 1000", {
+			"512 KB Chip RAM",
+			"ICS Denise without EHB support",
+			"256 KB Chip RAM",
+			"A1000 Velvet prototype",
+			"\0"
+		}
+	},
+	{
+		5, "Amiga 1200", {
+			"Basic non-expanded configuration",
+			"4 MB Fast RAM expanded configuration",
+#ifdef WITH_CPUBOARD
+			"Blizzard 1230 IV",
+			"Blizzard 1240",
+			"Blizzard 1260",
+#ifdef WITH_PPC
+			"Blizzard PPC",
+#endif
+#else
+			"8 MB Fast RAM expanded configuration"
+#endif
+			"\0"
+		}
+	},
+	{
+		2, "Amiga 3000", {
+			"1.4 ROM, 2MB Chip + 8MB Fast",
+			"2.04 ROM, 2MB Chip + 8MB Fast",
+			"3.1 ROM, 2MB Chip + 8MB Fast",
+			"\0"
+		}
+	},
+	{
+		1, "Amiga 4000", {
+			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+#ifdef WITH_PPC
+			"CyberStorm PPC",
+#endif
+			"\0"
+		}
+	},
+	{
+		1, "Amiga 4000T", {
+			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"\0"
+		}
+	},
+	{
+		4, "CD32", {
+			"CD32",
+			"CD32 with Full Motion Video cartridge",
+			"Cubo CD32",
+			"CD32, 8MB Fast"
+			"\0"
+		}
+	},
+	{
+		4, "CDTV", {
+			"CDTV",
+			"Floppy drive and 64KB SRAM card expanded",
+			"CDTV-CR",
+			"\0"
+		}
+	},
+	{4, "American Laser Games / Picmatic", {
+			"\0"
+		}
+	},
+	{
+		4, "Arcadia Multi Select system", {
+			"\0"
+		}
+	},
+	{
+		1, "Macrosystem", {
+			"DraCo",
+			"Casablanca",
+			"\0"
+		}
+	},
+	{-1}
+};
+
+inline const char* qs_models[] = { "Amiga 500", "Amiga 500+", "Amiga 600", "Amiga 1000", "Amiga 1200", "Amiga 3000", "Amiga 4000", "Amiga 4000T", "CD32", "CDTV", "American Laser Games / Picmatic", "Arcadia Multi Select system", "Macrosystem" };
+inline const char* qs_configs[] = { "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM", "1.3 ROM, ECS Agnus, 1 MB Chip RAM", "1.3 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM" };
+
+inline const char* floppy_drive_types[] = {
 	"Disabled", "3.5\" DD", "3.5\" HD", "5.25\" (40)",
 	"5.25\" (80)", "3.5\" ESCOM", "FB: Normal", "FB: Compatible",
 	"FB: Turbo", "FB: Stalling"
