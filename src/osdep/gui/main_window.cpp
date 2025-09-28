@@ -1743,7 +1743,7 @@ static void render_panel_about()
 	ImGui::Text("SDL2 video driver: %s", sdl_video_driver ? sdl_video_driver : "unknown");
 
 	ImGui::Spacing();
-	
+
 	// License and credits text inside a bordered, scrollable region
 	static auto about_long_text =
 		"This program is free software: you can redistribute it and/or modify\n"
@@ -2130,8 +2130,9 @@ static void render_panel_paths()
 	{
 		scan_roms(true);
 		symlink_roms(&changed_prefs);
-
 		import_joysticks();
+
+		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
