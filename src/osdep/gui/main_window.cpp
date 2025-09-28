@@ -1778,7 +1778,12 @@ static void render_panel_paths()
 {
 	char tmp[MAX_DPATH];
 
-	ImGui::BeginChild("PathsScroll", ImVec2(0, 0), true, ImGuiChildFlags_AutoResizeY);
+	// Estimate reserved height for bottom controls (logfile widgets + 1 line spacing + 1 line for buttons)
+	const float line_h = ImGui::GetFrameHeightWithSpacing();
+	const float reserved_height = line_h * 3.5f; // 1.5 lines for logfile widgets, 1 for spacing, 1 for buttons
+
+	// Begin scrollable area for path entries, only fills available space above bottom controls
+	ImGui::BeginChild("PathsScroll", ImVec2(0, -reserved_height), true, ImGuiChildFlags_AutoResizeY);
 	get_rom_path(tmp, sizeof tmp);
 	ImGui::Text("System ROMs:");
 	ImGui::InputText("##SystemROMs", tmp, MAX_DPATH);
@@ -2082,7 +2087,6 @@ static void render_panel_paths()
 	}
 	ImGui::EndChild();
 
-	ImGui::BeginChild("PathsButtonBar", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY);
 	auto logging_enabled = get_logfile_enabled();
 	if (ImGui::Checkbox("Enable logging", &logging_enabled))
 	{
@@ -2187,7 +2191,6 @@ static void render_panel_paths()
 		else
 			ShowMessageBox("Game Controllers DB", "Failed to download file!\n\nPlease check the log for more information");
 	}
-	ImGui::EndChild();
 }
 
 static void render_panel_quickstart()
