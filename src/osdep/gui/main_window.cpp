@@ -25,6 +25,7 @@
 #include "disk.h"
 #include "savestate.h"
 #include "target.h"
+#include "tinyxml2.h"
 
 #ifdef USE_GUISAN
 #include <guisan.hpp>
@@ -334,6 +335,37 @@ static int gui_create_rtarea_flag(uae_prefs* p)
 #endif
 
 	return flag;
+}
+
+std::string get_xml_timestamp(const std::string& xml_filename)
+{
+	std::string result;
+	tinyxml2::XMLDocument doc;
+	auto error = false;
+
+	auto* f = fopen(xml_filename.c_str(), _T("rb"));
+	if (f)
+	{
+		auto err = doc.LoadFile(f);
+		if (err != tinyxml2::XML_SUCCESS)
+		{
+			write_log(_T("Failed to parse '%s':  %d\n"), xml_filename.c_str(), err);
+			error = true;
+		}
+		fclose(f);
+	}
+	else
+	{
+		error = true;
+	}
+	if (!error)
+	{
+		auto* whdbooter = doc.FirstChildElement("whdbooter");
+		result = whdbooter->Attribute("timestamp");
+	}
+	if (!result.empty())
+		return result;
+	return "";
 }
 
 void gui_force_rtarea_hdchange()
@@ -1696,7 +1728,7 @@ static void render_panel_about()
 		const float pos_x = (ImGui::GetContentRegionAvail().x - draw_w) * 0.5f;
 		if (pos_x > 0.0f)
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + pos_x);
-		ImGui::Image((ImTextureID)about_logo_texture, ImVec2(draw_w, draw_h));
+		ImGui::Image(about_logo_texture, ImVec2(draw_w, draw_h));
 	}
 
 	ImGui::Spacing();
@@ -1741,17 +1773,20 @@ static void render_panel_about()
 	ImGui::EndChild();
 }
 
+extern int console_logging;
 static void render_panel_paths()
 {
 	char tmp[MAX_DPATH];
-	ImGui::Text("System ROMs:");
+
+	ImGui::BeginChild("PathsScroll", ImVec2(0, 0), true, ImGuiChildFlags_AutoResizeY);
 	get_rom_path(tmp, sizeof tmp);
+	ImGui::Text("System ROMs:");
 	ImGui::InputText("##SystemROMs", tmp, MAX_DPATH);
 	ImGui::SameLine();
 	if (ImGui::Button("...##SystemROMs"))
 	{
 		IGFD::FileDialogConfig config;
-		config.path = get_rom_path();
+		config.path = std::string(tmp);
 		config.countSelectionMax = 1;
 		config.flags = ImGuiFileDialogFlags_Modal;
 		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
@@ -1759,26 +1794,400 @@ static void render_panel_paths()
 	// display
 	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
 		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-			std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
-			// action
-			set_rom_path(filePath.c_str());
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_rom_path(filePath);
 		}
 
 		// close
 		ImGuiFileDialog::Instance()->Close();
 	}
 
-	ImGui::Text("Configuration files:");
+	ImGui::Spacing();
 	get_configuration_path(tmp, sizeof tmp);
+	ImGui::Text("Configuration files:");
 	ImGui::InputText("##ConfigPath", tmp, MAX_DPATH);
 	ImGui::SameLine();
 	if (ImGui::Button("...##ConfigPath"))
 	{
-		//std::string path = SelectFolder("Folder for configuration files", tmp);
-		//if (!path.empty())
-		//	set_configuration_path(path);
+		IGFD::FileDialogConfig config;
+		config.path = std::string(tmp);
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
 	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_configuration_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	get_nvram_path(tmp, sizeof tmp);
+	ImGui::Text("NVRAM files:");
+	ImGui::InputText("##NVRAMPath", tmp, MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##NVRAMPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = std::string(tmp);
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_nvram_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Plugin files:");
+	ImGui::InputText("##PluginsPath", get_plugins_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##PluginsPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_plugins_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_plugins_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Screenshots:");
+	ImGui::InputText("##ScreenshotsPath", get_screenshot_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##ScreenshotsPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_plugins_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_screenshot_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	get_savestate_path(tmp, MAX_DPATH);
+	ImGui::Text("State files:");
+	ImGui::InputText("##SaveStatesPath", tmp, MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##SaveStatesPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = std::string(tmp);
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_savestate_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Controller files:");
+	ImGui::InputText("##ControllersPath", get_controllers_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##ControllersPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_controllers_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_controllers_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("RetroArch config file:");
+	ImGui::InputText("##RetroArchConfigPath", get_retroarch_file().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##RetroArchConfigPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_retroarch_file();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose Retroarch .cfg file", ".cfg", config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_retroarch_file(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("WHDBoot files:");
+	ImGui::InputText("##WHDBootPath", get_whdbootpath().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##WHDBootPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_whdbootpath();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_whdbootpath(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("WHDLoad Archives (LHA):");
+	ImGui::InputText("##WHDLoadPath", get_whdload_arch_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##WHDLoadPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_whdload_arch_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_whdload_arch_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Floppies path:");
+	ImGui::InputText("##FloppiesPath", get_floppy_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##FloppiesPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_floppy_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_floppy_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("CD-ROMs path:");
+	ImGui::InputText("##CDROMPath", get_cdrom_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##CDROMPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_cdrom_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_cdrom_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	ImGui::Text("Hard drives path:");
+	ImGui::InputText("##HDDPath", get_harddrive_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##HDDPath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_harddrive_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_harddrive_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+	ImGui::EndChild();
+
+	ImGui::BeginChild("PathsButtonBar", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY);
+	auto logging_enabled = get_logfile_enabled();
+	if (ImGui::Checkbox("Enable logging", &logging_enabled))
+	{
+		set_logfile_enabled(logging_enabled);
+		logging_init();
+	}
+	ImGui::SameLine();
+	auto log_to_console = console_logging > 0;
+	if (ImGui::Checkbox("Log to console", &log_to_console))
+	{
+		console_logging = log_to_console ? 1 : 0;
+	}
+	ImGui::Text("Logfile path:");
+	ImGui::SameLine();
+	ImGui::InputText("##LogFilePath", get_logfile_path().data(), MAX_DPATH);
+	ImGui::SameLine();
+	if (ImGui::Button("...##LogFilePath"))
+	{
+		IGFD::FileDialogConfig config;
+		config.path = get_logfile_path();
+		config.countSelectionMax = 1;
+		config.flags = ImGuiFileDialogFlags_Modal;
+		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".log", config);
+	}
+	// display
+	if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
+		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
+			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			set_logfile_path(filePath);
+		}
+
+		// close
+		ImGuiFileDialog::Instance()->Close();
+	}
+
+	ImGui::Spacing();
+	if (ImGui::Button("Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	{
+		scan_roms(true);
+		symlink_roms(&changed_prefs);
+
+		import_joysticks();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	{
+		std::string destination;
+		//  download WHDLoad executable
+		destination = get_whdbootpath().append("WHDLoad");
+		write_log("Downloading %s ...\n", destination.c_str());
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/WHDLoad?raw=true", destination, false);
+
+		//  download JST executable
+		destination = get_whdbootpath().append("JST");
+		write_log("Downloading %s ...\n", destination.c_str());
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/JST?raw=true", destination, false);
+
+		//  download AmiQuit executable
+		destination = get_whdbootpath().append("AmiQuit");
+		write_log("Downloading %s ...\n", destination.c_str());
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/AmiQuit?raw=true", destination, false);
+
+		//  download boot-data.zip
+		destination = get_whdbootpath().append("boot-data.zip");
+		write_log("Downloading %s ...\n", destination.c_str());
+		download_file("https://github.com/BlitterStudio/amiberry/blob/master/whdboot/boot-data.zip?raw=true", destination, false);
+
+		// download kickstart RTB files for maximum compatibility
+		download_rtb("kick33180.A500.RTB");
+		download_rtb("kick34005.A500.RTB");
+		download_rtb("kick40063.A600.RTB");
+		download_rtb("kick40068.A1200.RTB");
+		download_rtb("kick40068.A4000.RTB");
+
+		destination = get_whdbootpath().append("game-data/whdload_db.xml");
+		const auto old_timestamp = get_xml_timestamp(destination);
+		write_log("Downloading %s ...\n", destination.c_str());
+		const auto result = download_file("https://github.com/HoraceAndTheSpider/Amiberry-XML-Builder/blob/master/whdload_db.xml?raw=true", destination, true);
+
+		if (result)
+		{
+			const auto new_timestamp = get_xml_timestamp(destination);
+			//ShowMessageBox("XML Downloader", "Updated XML downloaded.\n\nPrevious timestamp: " + old_timestamp + "\nNew timestamp: " + new_timestamp);
+		}
+		else
+			ShowMessageBox("XML Downloader", "Failed to download files!\n\nPlease check the log for more details.");
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	{
+		std::string destination = get_controllers_path();
+		destination += "gamecontrollerdb.txt";
+		write_log("Downloading % ...\n", destination.c_str());
+		const auto* const url = "https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt";
+		const auto result = download_file(url, destination, true);
+
+		if (result)
+		{
+			import_joysticks();
+			ShowMessageBox("Game Controllers DB", "Latest version of Game Controllers DB downloaded.");
+		}
+		else
+			ShowMessageBox("Game Controllers DB", "Failed to download file!\n\nPlease check the log for more information");
+	}
+	ImGui::EndChild();
 }
 
 static void render_panel_quickstart()
