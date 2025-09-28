@@ -1702,9 +1702,12 @@ void run_gui()
 #elif USE_IMGUI
 void ShowMessageBox(const char* title, const char* message)
 {
-	strncpy(message_box_title, title, sizeof(message_box_title) - 1);
-	strncpy(message_box_message, message, sizeof(message_box_message) - 1);
-	show_message_box = true;
+    // Safely copy and ensure null-termination
+    strncpy(message_box_title, title ? title : "Message", sizeof(message_box_title) - 1);
+    message_box_title[sizeof(message_box_title) - 1] = '\0';
+    strncpy(message_box_message, message ? message : "", sizeof(message_box_message) - 1);
+    message_box_message[sizeof(message_box_message) - 1] = '\0';
+    show_message_box = true;
 }
 
 static void render_panel_about()
@@ -1739,8 +1742,8 @@ static void render_panel_about()
 	ImGui::TextUnformatted(get_sdl2_version_string().c_str());
 	ImGui::Text("SDL2 video driver: %s", sdl_video_driver ? sdl_video_driver : "unknown");
 
-	ImGui::Separator();
-
+	ImGui::Spacing();
+	
 	// License and credits text inside a bordered, scrollable region
 	static auto about_long_text =
 		"This program is free software: you can redistribute it and/or modify\n"
@@ -2169,7 +2172,8 @@ static void render_panel_paths()
 		if (result)
 		{
 			const auto new_timestamp = get_xml_timestamp(destination);
-			//ShowMessageBox("XML Downloader", "Updated XML downloaded.\n\nPrevious timestamp: " + old_timestamp + "\nNew timestamp: " + new_timestamp);
+			std::string message = "Updated XML downloaded.\n\nPrevious timestamp: " + old_timestamp + "\nNew timestamp: " + new_timestamp;
+			ShowMessageBox("XML Downloader", message.c_str());
 		}
 		else
 			ShowMessageBox("XML Downloader", "Failed to download files!\n\nPlease check the log for more details.");
@@ -3325,18 +3329,46 @@ void run_gui()
 
 		if (show_message_box)
 		{
-			ImGui::OpenPopup(message_box_title);
-			if (ImGui::BeginPopupModal(message_box_title, &show_message_box, ImGuiWindowFlags_AlwaysAutoResize))
-			{
-				ImGui::TextWrapped("%s", message_box_message);
-				if (ImGui::Button("OK", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
-					show_message_box = false;
-					ImGui::CloseCurrentPopup();
-				}
-				ImGui::EndPopup();
-			}
-		}
-		
+            // Center the dialog on appear and enforce a consistent width
+            const ImGuiViewport* vp = ImGui::GetMainViewport();
+            const float vw = vp ? vp->Size.x : ImGui::GetIO().DisplaySize.x;
+            const float vh = vp ? vp->Size.y : ImGui::GetIO().DisplaySize.y;
+            const float desired_w = std::clamp(vw * 0.56f, 520.0f, 760.0f); // ~56% of viewport, clamped
+            ImGui::SetNextWindowPos(vp ? vp->GetCenter() : ImVec2(vw * 0.5f, vh * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowSize(ImVec2(desired_w, 0.0f), ImGuiCond_Appearing);
+            // Lock width to desired_w; allow height to grow up to 85% viewport
+            ImGui::SetNextWindowSizeConstraints(ImVec2(desired_w, 0.0f), ImVec2(desired_w, vh * 0.85f));
+
+            ImGui::OpenPopup(message_box_title);
+            if (ImGui::BeginPopupModal(message_box_title, &show_message_box, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
+            {
+                // Scrollable message area with reasonable max height
+                const float line_h = ImGui::GetTextLineHeightWithSpacing();
+                const float max_child_h = std::clamp(line_h * 10.0f, 140.0f, vh * 0.5f);
+                ImGui::BeginChild("MessageScroll", ImVec2(0, max_child_h), true, ImGuiWindowFlags_HorizontalScrollbar);
+                ImGui::TextWrapped("%s", message_box_message);
+                ImGui::EndChild();
+
+                ImGui::Spacing();
+                ImGui::Separator();
+
+                // Align OK button to the right
+                const float btn_w = BUTTON_WIDTH;
+                const float btn_h = BUTTON_HEIGHT;
+                float avail = ImGui::GetContentRegionAvail().x;
+                if (avail > btn_w)
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - btn_w));
+                if (ImGui::Button("OK", ImVec2(btn_w, btn_h)) || ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                    show_message_box = false;
+                    ImGui::CloseCurrentPopup();
+                }
+                if (ImGui::IsWindowAppearing())
+                    ImGui::SetItemDefaultFocus();
+
+                ImGui::EndPopup();
+            }
+        }
+
 		ImGui::End();
 
 		// Rendering
