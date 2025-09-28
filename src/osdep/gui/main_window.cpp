@@ -162,6 +162,55 @@ static void apply_imgui_theme_from_theme_file(const std::string& theme_file)
 	colors[ImGuiCol_NavWindowingDimBg]    = ImVec4(0,0,0,0.20f);
 	colors[ImGuiCol_ModalWindowDimBg]     = ImVec4(0,0,0,0.35f);
 }
+
+static void OpenDirDialog(const std::string &initialPath)
+{
+	IGFD::FileDialogConfig config;
+	config.path = initialPath;
+	config.countSelectionMax = 1;
+	config.flags = ImGuiFileDialogFlags_Modal;
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+}
+static bool ConsumeDirDialogResult(std::string &outPath)
+{
+	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey"))
+	{
+		bool ok = false;
+		if (ImGuiFileDialog::Instance()->IsOk())
+		{
+			outPath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			ok = true;
+		}
+		ImGuiFileDialog::Instance()->Close();
+		return ok;
+	}
+	return false;
+}
+
+static void OpenFileDialog(const char *title, const char *filters, const std::string &initialPath)
+{
+	IGFD::FileDialogConfig config;
+	config.path = initialPath;
+	config.countSelectionMax = 1;
+	config.flags = ImGuiFileDialogFlags_Modal;
+	ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", title, filters, config);
+}
+
+static bool ConsumeFileDialogResult(std::string &outPath)
+{
+	if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey"))
+	{
+		bool ok = false;
+		if (ImGuiFileDialog::Instance()->IsOk())
+		{
+			outPath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			ok = true;
+		}
+		ImGuiFileDialog::Instance()->Close();
+		return ok;
+	}
+	return false;
+}
 #endif
 
 // Helper: get usable bounds for a display index (fallback to full bounds)
@@ -1793,21 +1842,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##SystemROMs"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = std::string(tmp);
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(std::string(tmp));
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_rom_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1817,21 +1857,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##ConfigPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = std::string(tmp);
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(std::string(tmp));
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_configuration_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1841,21 +1872,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##NVRAMPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = std::string(tmp);
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(std::string(tmp));
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_nvram_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1864,21 +1886,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##PluginsPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_plugins_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_plugins_path());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_plugins_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1887,21 +1900,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##ScreenshotsPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_plugins_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_screenshot_path()); // fixed: was get_plugins_path()
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_screenshot_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1911,21 +1915,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##SaveStatesPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = std::string(tmp);
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(std::string(tmp));
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_savestate_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1934,21 +1929,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##ControllersPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_controllers_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_controllers_path());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_controllers_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1957,21 +1943,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##RetroArchConfigPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_retroarch_file();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose Retroarch .cfg file", ".cfg", config);
+		OpenFileDialog("Choose Retroarch .cfg file", ".cfg", get_retroarch_file());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeFileDialogResult(filePath))
 			set_retroarch_file(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -1980,21 +1957,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##WHDBootPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_whdbootpath();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_whdbootpath());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_whdbootpath(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -2003,21 +1971,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##WHDLoadPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_whdload_arch_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_whdload_arch_path());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_whdload_arch_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -2026,21 +1985,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##FloppiesPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_floppy_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_floppy_path());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_floppy_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -2049,21 +1999,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##CDROMPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_cdrom_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_cdrom_path());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_cdrom_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
@@ -2072,21 +2013,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##HDDPath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_harddrive_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+		OpenDirDialog(get_harddrive_path());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeDirDialogResult(filePath))
 			set_harddrive_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 	ImGui::EndChild();
 
@@ -2108,21 +2040,12 @@ static void render_panel_paths()
 	ImGui::SameLine();
 	if (ImGui::Button("...##LogFilePath"))
 	{
-		IGFD::FileDialogConfig config;
-		config.path = get_logfile_path();
-		config.countSelectionMax = 1;
-		config.flags = ImGuiFileDialogFlags_Modal;
-		ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".log", config);
+		OpenFileDialog("Choose File", ".log", get_logfile_path());
 	}
-	// display
-	if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey")) {
-		if (ImGuiFileDialog::Instance()->IsOk()) { // action if OK
-			const std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+	{
+		std::string filePath;
+		if (ConsumeFileDialogResult(filePath))
 			set_logfile_path(filePath);
-		}
-
-		// close
-		ImGuiFileDialog::Instance()->Close();
 	}
 
 	ImGui::Spacing();
