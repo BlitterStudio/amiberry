@@ -10738,6 +10738,7 @@ static bool draw_border_fast(struct linestate *l, int ldv)
 	if (l->hbstrt_offset < 0 || l->hbstop_offset < 0) {
 		return false;
 	}
+	start_draw_denise();
 	bool brdblank = (bplcon0 & 1) && (bplcon3 & 0x20);
 	l->color0 = aga_mode ? agnus_colors.color_regs_aga[0] : agnus_colors.color_regs_ecs[0];
 	l->brdblank = brdblank;
@@ -10782,6 +10783,7 @@ static bool draw_line_fast(struct linestate *l, int ldv, uaecptr bplptp[8], bool
 		}
 		l->bplpt[i] = get_real_address(pt);
 	}
+	start_draw_denise();
 	if (color_table_changed) {
 		draw_denise_line_queue_flush();
 		color_table_index++;
