@@ -6993,7 +6993,7 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 	// negative checks are needed to handle always-on HDIW
 	int hstop_offset_adjusted = ls->hstop_offset;
 	if (ls->bpl1dat_trigger_offset >= 0) {
-		int bpl_end = ls->bpl1dat_trigger_offset + (1 << RES_MAX) + ((ls->bpllen * 32 + byteshift * 4) >> denise_res);
+		int bpl_end = ls->bpl1dat_trigger_offset + (1 << RES_MAX) + (ls->bpllen * 32 + byteshift * 4);
 		if (hstop_offset_adjusted < 0 || hstop_offset_adjusted > bpl_end) {
 			hstop_offset_adjusted = bpl_end;
 		}
