@@ -12767,12 +12767,19 @@ bool isvga(void)
 bool ispal(int *lines)
 {
 	if (lines) {
-		*lines = current_linear_vpos_visible;
+		if (current_linear_vpos_visible) {
+			*lines = current_linear_vpos_visible;
+		} else {
+			*lines = currprefs.ntscmode ? (MAXVPOS_NTSC + 1) - (VBLANK_ENDLINE_NTSC - 1) : (MAXVPOS_PAL + 1) - (VBLANK_ENDLINE_PAL - 1);
+		}
 	}
 	if (programmedmode == 1) {
 		return currprefs.ntscmode == 0;
 	}
-	return current_linear_vpos_nom >= MAXVPOS_NTSC + (MAXVPOS_PAL - MAXVPOS_NTSC) / 2;
+	if (current_linear_vpos_nom) {
+		return current_linear_vpos_nom >= MAXVPOS_NTSC + (MAXVPOS_PAL - MAXVPOS_NTSC) / 2;
+	}
+	return currprefs.ntscmode == 0;
 }
 
 void custom_end_drawing(void)
