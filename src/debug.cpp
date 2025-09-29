@@ -213,6 +213,9 @@ static const TCHAR help[] = {
 	_T("  ob <addr>             Copper breakpoint.\n")
 	_T("  H[H] <cnt>            Show PC history (HH=full CPU info) <cnt> instructions.\n")
 	_T("  C <value>             Search for values like energy or lifes in games.\n")
+	_T("  mmu <fc>              Set current MMU translation function code for all debugging instructions.\n")
+	_T("  mmud                  Dump MMU tables.\n")
+	_T("  U <address>           Translate logical address to physical using current MMU tables.\n")
 	_T("  Cl                    List currently found trainer addresses.\n")
 	_T("  D[idxzs <[max diff]>] Deep trainer. i=new value must be larger, d=smaller,\n")
 	_T("                        x = must be same, z = must be different, s = restart.\n")
@@ -6537,7 +6540,7 @@ static void find_ea (TCHAR **inptr)
 
 static void debug_do_mmu_translate(uaecptr addrl)
 {
-	struct mmu_debug_data mdd, mdd2;
+	struct mmu_debug_data *mdd, *mdd2;
 	uaecptr addrp;
 
 	console_out_f(_T("%08x translates to:\n"), addrl);
@@ -6548,7 +6551,7 @@ static void debug_do_mmu_translate(uaecptr addrl)
 		if (currprefs.mmu_model >= 68040 && fc != 5 && fc != 6 && fc != 1 && fc != 2) {
 			continue;
 		}
-		console_out_f(_T("FC%d %s: "), fc, fc == 6 ? _T("SI") : (fc == 5 ? _T("SD") : (fc == 2 ? _T("UI") : (fc == 1 ? _T("UD") : _T("--")))));
+		console_out_f(_T("FC%d %s: "), fc, fc == 6 ? _T("SC") : (fc == 5 ? _T("SD") : (fc == 2 ? _T("UC") : (fc == 1 ? _T("UD") : _T("--")))));
 		TRY(prb) {
 			if (currprefs.mmu_model >= 68040) {
 				addrp = debug_mmu_translate(addrl, 0, super, data, false, sz_long, &mdd);
@@ -6569,31 +6572,91 @@ static void debug_do_mmu_translate(uaecptr addrl)
 		} CATCH(prb) {
 			console_out_f(_T("PHYS: ********"));
 		} ENDTRY;
-		if (mdd.tt) {
-			console_out_f(_T(" TT%d: %08x"), mdd.tt - 1, mdd.ttdata);
-		} else if (mdd.descriptor[0] != 0xffffffff) {
-			console_out_f(_T(" DESCR:"));
-			for (int i = 0; i < MAX_MMU_DEBUG_DESCRIPTOR_LEVEL; i++) {
-				uaecptr desc = mdd.descriptor[i];
-				if (desc == 0xffffffff) {
-					break;
-				}
-				if (mdd.descriptor8) {
-					uae_u32 descdata1 = get_long_debug(desc);
-					uae_u32 descdata2 = get_long_debug(desc + 4);
-					console_out_f(_T(" %08x (%08x.%08x)"), desc, descdata1, descdata2);
-				} else {
+		if (mdd->tt) {
+			console_out_f(_T(" TT%d: %08x"), mdd->tt - 1, mdd->ttdata);
+		} else if (mdd->descriptor[0] != 0xffffffff) {
+			console_out_f(_T("\n"));
+			if (currprefs.mmu_model < 68040) {
+				uaecptr desc = mdd->descriptor[0];
+				int type = mdd->descriptor_type[0];
+				for (int i = 0; i < MAX_MMU_DEBUG_DESCRIPTOR_LEVEL; i++) {
+					uaecptr desc = mdd->descriptor[i];
+					int type = mdd->descriptor_type[i];
+					if (desc == 0xffffffff) {
+						break;
+					}
 					uae_u32 descdata = get_long_debug(desc);
-					console_out_f(_T(" %08x (%08x)"), desc, descdata);
+					if (type == DESCR_TYPE_PAGE) {
+						console_out_f(_T(" - PAGE  %08x (%08x = %08x,CI=%d,M=%d,U=%d,WP=%d,DT=%d)\n"),
+							desc, descdata, descdata >> 8,
+							(descdata >> 6) & 1,
+							(descdata >> 4) & 1,
+							(descdata >> 3) & 1,
+							(descdata >> 2) & 1,
+							(descdata >> 0) & 3);
+					} else if (type == DESCR_TYPE_VALID4) {
+						console_out_f(_T(" - TABLE %08x (%08x = %08x,U=%d,WP=%d,DT=%d)\n"),
+							desc, descdata, descdata >> 4,
+							(descdata >> 3) & 1,
+							(descdata >> 2) & 1,
+							(descdata >> 0) & 3);
+					} else if (type == DESCR_TYPE_INVALID) {
+						console_out_f(_T(" - INV   %08x (%08x = %08x,DT=%d)\n"),
+							desc, descdata, descdata >> 2,
+							(descdata >> 0) & 3);
+					}
+				}
+			} else {
+				uaecptr desc = mdd->descriptor[0];
+				uae_u32 descdata = get_long_debug(desc);
+				console_out_f(_T(" - ROOT %08x (%08x = %08x,U=%d,W=%d,UDT=%d)\n"),
+					desc, descdata, descdata & 0xfffffe00,
+					(descdata >> 3) & 1,
+					(descdata >> 2) & 1,
+					(descdata >> 0) & 3);
+				desc = mdd->descriptor[1];
+				if (desc != 0xffffffff) {
+					descdata = get_long_debug(desc);
+					console_out_f(_T(" - PTR  %08x (%08x = %08x,U=%d,W=%d,UDT=%d)\n"),
+						desc, descdata, descdata >> (regs.mmu_page_size == 4096 ? 8 : 7),
+						(descdata >> 3) & 1,
+						(descdata >> 2) & 1,
+						(descdata >> 0) & 3);
+					int pageidx = 2;
+					desc = mdd->descriptor[pageidx];
+					if (desc != 0xffffffff) {
+						descdata = get_long_debug(desc);
+						if ((descdata & 3) ==  2) {
+							console_out_f(_T(" - IND  %08x (%08x = %08x,PDT=%d)\n"),
+								desc, descdata & ~3, descdata & 3);
+							pageidx++;
+						}
+						desc = mdd->descriptor[pageidx];
+						descdata = get_long_debug(desc);
+						if (desc != 0xffffffff) {
+							console_out_f(_T(" - PAGE %08x (%08x = %08x,UR=%d,G=%d,U1=%d,U0=%d,S=%d,CM=%d,M=%d,U=%d,W=%d,PDT=%d)\n"),
+								desc, descdata, descdata >> (regs.mmu_page_size == 4096 ? 12 : 13),
+								(descdata >> 12) & (regs.mmu_page_size == 4096 ? 1 : 3),
+								(descdata >> 10) & 1,
+								(descdata >> 9) & 1,
+								(descdata >> 8) & 1,
+								(descdata >> 7) & 1,
+								(descdata >> 5) & 3,
+								(descdata >> 4) & 1,
+								(descdata >> 3) & 1,
+								(descdata >> 2) & 1,
+								(descdata >> 0) & 3);
+						}
+					}
+				}
+				if (mdd->desc_fault) {
+					console_out_f(_T(" - DESCRIPTOR FAULT\n"));
 				}
 			}
 		} else {
 			console_out_f(_T(" DESCR: ********"));
+			console_out_f(_T("\n"));
 		}
-		if (mdd.desc_fault) {
-			console_out_f(_T(" FAULT"));
-		}
-		console_out_f(_T("\n"));
 		if (currprefs.mmu_model >= 68040) {
 			debug_mmu_translate_end();
 		} else {
@@ -7184,8 +7247,18 @@ static bool debug_line (TCHAR *input)
 				if (*inptr == 'm' && inptr[1] == 'u') {
 					inptr += 2;
 					if (inptr[0] == 'd') {
-						if (currprefs.mmu_model >= 68040)
+						if (currprefs.mmu_model >= 68040) {
 							mmu_dump_tables();
+						} else {
+							int fc = debug_mmu_mode;
+							if (more_params(&inptr)) {
+								fc = readint(&inptr, NULL);
+							}
+							if (fc <= 0 || fc > 7) {
+								fc = 2;
+							}
+							mmu030_dump_tables(fc);
+						}
 					} else {
 						if (currprefs.mmu_model) {
 							if (more_params (&inptr))

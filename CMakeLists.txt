@@ -72,6 +72,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     	${PNG_LIBRARIES}
 	)
 endif()
+
 # macOS-specific identifier (optional cosmetic)
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(PROJECT_NAME "Amiberry")

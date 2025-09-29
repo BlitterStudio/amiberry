@@ -416,11 +416,15 @@ int uaenet_getdatalenght(void)
 // Pause ethernet operations
 void ethernet_pause(int pause)
 {
+#ifdef WITH_UAENET_PCAP
     ethernet_paused = pause;
+#endif
 }
 
 // Reset ethernet subsystem
 void ethernet_reset(void)
 {
+#ifdef WITH_UAENET_PCAP
     ethernet_paused = 0;
+#endif
 }
