@@ -8447,11 +8447,16 @@ static int pt_babe(TrapContext *ctx, uae_u8 *bufrdb, UnitInfo *uip, int unit_no,
 
 	bad = rl(bufrdb + 4);
 	if (bad) {
-		if (bad * hfd->ci.blocksize > FILESYS_MAX_BLOCKSIZE)
-			return 0;
-		hdf_read_rdb(hfd, bufrdb2, bad * hfd->ci.blocksize, hfd->ci.blocksize);
-		if (bufrdb2[0] != 0xBA || bufrdb2[1] != 0xD1)
-			return 0;
+		if (bufrdb[0] == 0xba && bufrdb[1] == 0xbe) {
+			if (bad * hfd->ci.blocksize > FILESYS_MAX_BLOCKSIZE)
+				return 0;
+			hdf_read_rdb(hfd, bufrdb2, bad * hfd->ci.blocksize, hfd->ci.blocksize);
+			if (bufrdb2[0] != 0xBA || bufrdb2[1] != 0xD1)
+				return 0;
+		} else {
+			// Only A2090 supports bad blocks. Fireball does not.
+			bad = 0;
+		}
 	}
 
 	if (partnum > 0)
@@ -8753,8 +8758,10 @@ static int rdb_mount (TrapContext *ctx, UnitInfo *uip, int unit_no, int partnum,
 
 	for (rdblock = 0; rdblock < lastblock; rdblock++) {
 		hdf_read_rdb (hfd, bufrdb, rdblock * hfd->ci.blocksize, hfd->ci.blocksize);
-		if (rdblock == 0 && bufrdb[0] == 0xBA && bufrdb[1] == 0xBE) {
-				// A2090 "BABE" partition table?
+		if (rdblock == 0 && (
+			(bufrdb[0] == 0xBA && bufrdb[1] == 0xBE && bufrdb[2] == 0x00 && bufrdb[3] == 0x00) || // A2090
+			(bufrdb[0] == 0x44 && bufrdb[1] == 0x4f && bufrdb[2] == 0x53 && bufrdb[3] == 0x00 && bufrdb[4] == 0xBA && bufrdb[5] == 0xBE))) { // MAST
+				// A2090 or Mast FireBall "BABE" partition table?
 				int v = pt_babe(ctx, bufrdb, uip, unit_no, partnum, parmpacket);
 				if (v)
 					return v;
