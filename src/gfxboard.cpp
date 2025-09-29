@@ -1452,6 +1452,19 @@ bool gfxboard_set(int monid, bool rtg)
 	return r;
 }
 
+int gfxboard_monitor_visible(int monid)
+{
+	if (gfxboard_isgfxboardscreen(monid)) {
+		return 1;
+	}
+	if (currprefs.monitoremu && currprefs.monitoremu_mon == monid) {
+		if (rtg_visible[monid] > 0) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
 void gfxboard_rtg_disable(int monid, int index)
 {
 	if (monid > 0)

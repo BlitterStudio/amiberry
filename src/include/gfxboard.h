@@ -30,6 +30,7 @@ extern struct gfxboard_func *gfxboard_get_func(struct rtgboardconfig *rbc);
 extern int gfxboard_get_index_from_id(int);
 extern int gfxboard_get_id_from_index(int);
 extern bool gfxboard_switch_away(int monid);
+extern int gfxboard_monitor_visible(int monid);
 
 extern bool gfxboard_allocate_slot(int, int);
 extern void gfxboard_free_slot(int);
