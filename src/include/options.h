@@ -282,6 +282,9 @@ enum { CP_GENERIC = 1, CP_CDTV, CP_CDTVCR, CP_CD32, CP_A500, CP_A500P, CP_A600,
 #define AUTOSCALE_SEPARATOR 10
 #define AUTOSCALE_OVERSCAN_BLANK 11
 
+#define MANUAL_SCALE_MIN_RANGE -1999
+#define MANUAL_SCALE_MAX_RANGE 1999
+
 #define MONITOREMU_NONE 0
 #define MONITOREMU_AUTO 1
 #define MONITOREMU_A2024 2
@@ -713,7 +716,7 @@ struct uae_prefs {
 	int gfx_overscanmode;
 	int gfx_monitorblankdelay;
 	int gfx_rotation;
-	int gfx_ntscpixels;
+	bool gfx_ntscpixels;
 	uae_u32 gfx_bordercolor;
 
 	struct gfx_filterdata gf[3];

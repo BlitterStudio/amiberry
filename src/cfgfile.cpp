@@ -2474,6 +2474,7 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite(f, _T("gfx_monitorblankdelay"), _T("%d"), p->gfx_monitorblankdelay);
 	cfgfile_dwrite(f, _T("gfx_rotation"), _T("%d"), p->gfx_rotation);
 	cfgfile_dwrite(f, _T("gfx_bordercolor"), _T("0x%08x"), p->gfx_bordercolor);
+	cfgfile_dwrite_bool(f, _T("gfx_ntscpixels"), p->gfx_ntscpixels);
 
 #ifdef GFXFILTER
 	for (int j = 0; j < MAX_FILTERDATA; j++) {
@@ -2556,8 +2557,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite (f, _T("gfx_gamma_g"), _T("%d"), p->gfx_gamma_ch[1]);
 	cfgfile_dwrite (f, _T("gfx_gamma_b"), _T("%d"), p->gfx_gamma_ch[2]);
 
-	cfgfile_dwrite (f, _T("gfx_center_horizontal_position"), _T("%d"), p->gfx_xcenter_pos);
-	cfgfile_dwrite (f, _T("gfx_center_vertical_position"), _T("%d"), p->gfx_ycenter_pos);
+	cfgfile_dwrite (f, _T("gfx_center_horizontal_position"), _T("%d"), p->gfx_xcenter_pos < MANUAL_SCALE_MIN_RANGE ? -1 : (p->gfx_xcenter_pos < 0 ? p->gfx_xcenter_pos - 1 : p->gfx_xcenter_pos));
+	cfgfile_dwrite (f, _T("gfx_center_vertical_position"), _T("%d"), p->gfx_ycenter_pos < MANUAL_SCALE_MIN_RANGE ? -1 : (p->gfx_ycenter_pos < 0 ? p->gfx_ycenter_pos - 1 : p->gfx_ycenter_pos));
 	cfgfile_dwrite (f, _T("gfx_center_horizontal_size"), _T("%d"), p->gfx_xcenter_size);
 	cfgfile_dwrite (f, _T("gfx_center_vertical_size"), _T("%d"), p->gfx_ycenter_size);
 
@@ -3713,8 +3714,6 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_yesno(option, value, _T("gfx_resize_windowed"), &p->gfx_windowed_resize)
 		|| cfgfile_intval(option, value, _T("gfx_black_frame_insertion_ratio"), &p->lightboost_strobo_ratio, 1)
 
-		|| cfgfile_intval (option, value, _T("gfx_center_horizontal_position"), &p->gfx_xcenter_pos, 1)
-		|| cfgfile_intval (option, value, _T("gfx_center_vertical_position"), &p->gfx_ycenter_pos, 1)
 		|| cfgfile_intval (option, value, _T("gfx_center_horizontal_size"), &p->gfx_xcenter_size, 1)
 		|| cfgfile_intval (option, value, _T("gfx_center_vertical_size"), &p->gfx_ycenter_size, 1)
 
@@ -3738,6 +3737,7 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_intval(option, value, _T("gfx_vertical_extra"), &p->gfx_extraheight, 1)
 		|| cfgfile_intval(option, value, _T("gfx_monitorblankdelay"), &p->gfx_monitorblankdelay, 1)
 		|| cfgfile_intval(option, value, _T("gfx_bordercolor"), &p->gfx_bordercolor, 1)
+		|| cfgfile_yesno(option, value, _T("gfx_ntscpixels"), &p->gfx_ntscpixels)
 
 		|| cfgfile_intval (option, value, _T("floppy0sound"), &p->floppyslots[0].dfxclick, 1)
 		|| cfgfile_intval (option, value, _T("floppy1sound"), &p->floppyslots[1].dfxclick, 1)
@@ -3821,6 +3821,25 @@ static int cfgfile_parse_host (struct uae_prefs *p, TCHAR *option, TCHAR *value)
 		|| cfgfile_strval(option, value, _T("magic_mousecursor"), &p->input_magic_mouse_cursor, magiccursors, 0)
 		|| cfgfile_strval (option, value, _T("absolute_mouse"), &p->input_tablet, abspointers, 0))
 		return 1;
+
+	if (cfgfile_intval(option, value, _T("gfx_center_horizontal_position"), &p->gfx_xcenter_pos, 1)) {
+		// -1 = old "null" position.
+		if (p->gfx_xcenter_pos == -1) {
+			p->gfx_xcenter_pos = MANUAL_SCALE_MIN_RANGE - 1;
+		} else if (p->gfx_xcenter_pos < 0 && p->gfx_xcenter_pos >= MANUAL_SCALE_MIN_RANGE) {
+			p->gfx_xcenter_pos++;
+		}
+		return 1;
+	}
+	if (cfgfile_intval(option, value, _T("gfx_center_vertical_position"), &p->gfx_ycenter_pos, 1)) {
+		if (p->gfx_ycenter_pos == -1) {
+			p->gfx_ycenter_pos = MANUAL_SCALE_MIN_RANGE - 1;
+		} else if (p->gfx_ycenter_pos < 0 && p->gfx_ycenter_pos >= MANUAL_SCALE_MIN_RANGE) {
+			p->gfx_ycenter_pos++;
+		}
+		return 1;
+	}
+
 
 	if (cfgfile_string(option, value, _T("gfx_colour_mode"), tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 		return 1;
@@ -8592,8 +8611,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->gfx_apmode[0].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_apmode[1].gfx_fullscreen = GFX_WINDOW;
 	p->gfx_xcenter = 0; p->gfx_ycenter = 0;
-	p->gfx_xcenter_pos = -1;
-	p->gfx_ycenter_pos = -1;
+	p->gfx_xcenter_pos = MANUAL_SCALE_MIN_RANGE - 1;
+	p->gfx_ycenter_pos = MANUAL_SCALE_MIN_RANGE - 1;
 	p->gfx_xcenter_size = -1;
 	p->gfx_ycenter_size = -1;
 	p->gfx_max_horizontal = RES_HIRES;
@@ -8693,6 +8712,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 		f->enable = true;
 	}
 	p->gf[2].enable = false;
+	p->gfx_ntscpixels = 1;
 
 	p->rtg_horiz_zoom_mult = 1.0;
 	p->rtg_vert_zoom_mult = 1.0;

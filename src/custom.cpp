@@ -10738,6 +10738,7 @@ static bool draw_border_fast(struct linestate *l, int ldv)
 	if (l->hbstrt_offset < 0 || l->hbstop_offset < 0) {
 		return false;
 	}
+	start_draw_denise();
 	bool brdblank = (bplcon0 & 1) && (bplcon3 & 0x20);
 	l->color0 = aga_mode ? agnus_colors.color_regs_aga[0] : agnus_colors.color_regs_ecs[0];
 	l->brdblank = brdblank;
@@ -10782,6 +10783,7 @@ static bool draw_line_fast(struct linestate *l, int ldv, uaecptr bplptp[8], bool
 		}
 		l->bplpt[i] = get_real_address(pt);
 	}
+	start_draw_denise();
 	if (color_table_changed) {
 		draw_denise_line_queue_flush();
 		color_table_index++;
@@ -12479,6 +12481,11 @@ static void sync_cycles(void)
 	if (extra) {
 		extra = CYCLE_UNIT - extra;
 		x_do_cycles(extra);
+		// 68000/010 CE requires CYCLE_UNIT aligned cycle counter
+		// (it might be unaligned if on the fly switching CPU modes)
+		if (currprefs.cpu_model <= 68010) {
+			set_cycles(c + extra);
+		}
 	}
 }
 
@@ -12765,12 +12772,19 @@ bool isvga(void)
 bool ispal(int *lines)
 {
 	if (lines) {
-		*lines = current_linear_vpos_visible;
+		if (current_linear_vpos_visible) {
+			*lines = current_linear_vpos_visible;
+		} else {
+			*lines = currprefs.ntscmode ? (MAXVPOS_NTSC + 1) - (VBLANK_ENDLINE_NTSC - 1) : (MAXVPOS_PAL + 1) - (VBLANK_ENDLINE_PAL - 1);
+		}
 	}
 	if (programmedmode == 1) {
 		return currprefs.ntscmode == 0;
 	}
-	return current_linear_vpos_nom >= MAXVPOS_NTSC + (MAXVPOS_PAL - MAXVPOS_NTSC) / 2;
+	if (current_linear_vpos_nom) {
+		return current_linear_vpos_nom >= MAXVPOS_NTSC + (MAXVPOS_PAL - MAXVPOS_NTSC) / 2;
+	}
+	return currprefs.ntscmode == 0;
 }
 
 void custom_end_drawing(void)

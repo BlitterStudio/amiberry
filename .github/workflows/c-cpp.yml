@@ -5,9 +5,16 @@ on:
   push:
   pull_request:
 
+# Set least-privilege defaults for all jobs
+permissions:
+  contents: read
+
 jobs:
   build-macOS-x86_64:
     runs-on: macos-13
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -109,6 +116,9 @@ jobs:
 
   build-macOS-Apple-Silicon:
     runs-on: macos-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -195,6 +205,9 @@ jobs:
 
   build-ubuntu-24-amd64:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -237,6 +250,9 @@ jobs:
 
   build-ubuntu-22-amd64:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -278,6 +294,9 @@ jobs:
 
   build-fedora-x86_64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
     - uses: actions/checkout@v4
 
@@ -310,6 +329,9 @@ jobs:
 
   build-debian-amd64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     strategy:
       matrix:
         include:
@@ -353,6 +375,9 @@ jobs:
 
   build-debian-arm64:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     strategy:
       matrix:
         include:
@@ -396,6 +421,9 @@ jobs:
 
   build-debian-armhf:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     strategy:
       matrix:
         include:
@@ -441,6 +469,12 @@ jobs:
     needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    # Elevated permissions only where needed for creating a release
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+      issues: read
     steps:
       - uses: actions/checkout@v4
       
@@ -476,6 +510,12 @@ jobs:
     needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
+    # Elevated permissions only where needed for creating a prerelease
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+      issues: read
     steps:
       - uses: actions/checkout@v4
 
