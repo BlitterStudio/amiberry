@@ -3756,11 +3756,6 @@ static void BPL2MOD(uae_u16 v)
 	bpl2mod = v;
 }
 
-static void BPLxDAT(int num, uae_u16 data)
-{
-	write_drga(0x110 + num * 2, 0xffffffff, data);
-}
-
 static void DIWSTRT(uae_u16 v)
 {
 	diwhigh_saved &= ~0x8000;
@@ -7473,17 +7468,6 @@ static int custom_wput_agnus(int addr, uae_u32 value, int noget)
 
 	case 0x108: BPL1MOD(value); break;
 	case 0x10A: BPL2MOD(value); break;
-
-#if 0
-	case 0x110: BPLxDAT(0, value); break;
-	case 0x112: BPLxDAT(1, value); break;
-	case 0x114: BPLxDAT(2, value); break;
-	case 0x116: BPLxDAT(3, value); break;
-	case 0x118: BPLxDAT(4, value); break;
-	case 0x11A: BPLxDAT(5, value); break;
-	case 0x11C: BPLxDAT(6, value); break;
-	case 0x11E: BPLxDAT(7, value); break;
-#endif
 
 	case 0x180: case 0x182: case 0x184: case 0x186: case 0x188: case 0x18A:
 	case 0x18C: case 0x18E: case 0x190: case 0x192: case 0x194: case 0x196:

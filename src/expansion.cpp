@@ -5523,14 +5523,14 @@ const struct expansionromtype expansionroms[] = {
 #endif
 	{
 		_T("alfapower"), _T("AlfaPower/AT-Bus 2008"), _T("BSC/Alfa Data"),
-		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFA, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFA | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 		NULL, 0,
 		false, EXPANSIONTYPE_IDE,
 		2092, 8, 0
 	},
 	{
 		_T("alfapowerplus"), _T("AlfaPower Plus"), _T("BSC/Alfa Data"),
-		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFAPLUS, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFAPLUS | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 		NULL, 0,
 		false, EXPANSIONTYPE_IDE,
 		2092, 8, 0

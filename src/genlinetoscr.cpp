@@ -994,8 +994,8 @@ static bool gen_fasthead(void)
 		}
 	}
 
-	outf("static void %s(int draw_start, int draw_end, int draw_startoffset, int hbstrt_offset, int hbstop_offset, int hstrt_offset, int hstop_offset,"
-		"int bpl1dat_trigger_offset, int planes, uae_u32 bgcolor, uae_u8 *cp, uae_u8 *cp2, int cpadd, int *cpadds, int bufadd, struct linestate *ls)", funcname);
+	outf("static void %s(int cnt, int draw_end, int hbstrt_offset, int hbstop_offset, int hstrt_offset, int hstop_offset,"
+		"int bpl1dat_trigger_offset, int planes, uae_u32 bgcolor, uae_u8 **cpp, uae_u8 **cp2p, int cpaddv, int *cpadds, int bufaddv, struct linestate *ls)", funcname);
 	outf("{");
 
 	// shres on lores is useless
@@ -1157,6 +1157,9 @@ static void gen_fastdraw(void)
 {
 	int doubling = outres - res;
 
+	outf("uae_u8 *cp = *cpp;");
+	outf("uae_u8 *cp2 = *cp2p;");
+
 	outf("uae_u32 *acolors = (uae_u32*)ls->linecolorstate;");
 	if (aga) {
 		outf("uae_u32 *colors_aga = (uae_u32*)(ls->linecolorstate + 256 * sizeof(uae_u32));");
@@ -1166,32 +1169,13 @@ static void gen_fastdraw(void)
 	if (aga) {
 		outf("uae_u8 bxor = ls->bplcon4 >> 8;");
 	}
-	outf("int bufaddv = 1 << bufadd;");
-	outf("int cpaddv = 1 << cpadd;");
 	if (genlock) {
 		outf("uae_u8 gpix = get_genlock_transparency_border_fast(ls->bplcon3);");
 	}
 
-	outf("int end = draw_end;");
-	outf("if (end > hbstrt_offset) {");
-	outf("	end = hbstrt_offset;");
-	outf("}");
-
-	outf("int cnt = draw_end;");
-	outf("if (cnt > draw_startoffset) {");
-	outf("	cnt = draw_startoffset;");
-	outf("}");
-	outf("if (cnt > hbstop_offset) {");
-	outf("	cnt = hbstop_offset;");
-	outf("}");
-	outf("if (cnt > bpl1dat_trigger_offset) {");
-	outf("	cnt = bpl1dat_trigger_offset;");
-	outf("}");
-
-	outf("while (cnt < end) {");
+	outf("while (cnt < draw_end) {");
 	outf("	bool bpl = false;");
 	outf("	if (cnt < bpl1dat_trigger_offset || cnt < hbstop_offset || cnt < hstrt_offset || cnt >= hstop_offset) {");
-	outf("		if (cnt >= draw_startoffset) {");
 	outf("		if (cnt < hbstop_offset) {");
 	if (doubling <= 0) {
 		outf("buf1++;");
@@ -1256,7 +1240,6 @@ static void gen_fastdraw(void)
 			outf("*gbuf++ = gpix;");
 		}
 	}
-	outf("}");
 	outf("	}");
 	outf("} else {");
 	outf("bpl = true;");
@@ -1281,6 +1264,9 @@ static void gen_fastdraw(void)
 	outf("}");
 	outf("cnt += bufaddv;");
 	outf("}");
+
+	outf("*cpp = cp;");
+	outf("*cp2p = cp2;");
 }
 
 static void gen_null(void)

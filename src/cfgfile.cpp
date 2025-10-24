@@ -2894,6 +2894,16 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 					_tcscat(tmp2, _T(","));
 				_sntprintf(tmp2 + _tcslen(tmp2), sizeof tmp2 + _tcslen(tmp2), _T("monitor=%d"), rbc->monitor_id);
 			}
+			if (!rbc->autoswitch) {
+				if (tmp2[0])
+					_tcscat(tmp2, _T(","));
+				_tcscat(tmp2 + _tcslen(tmp2), _T("noautoswitch"));
+			}
+			if (rbc->initial_active) {
+				if (tmp2[0])
+					_tcscat(tmp2, _T(","));
+				_tcscat(tmp2 + _tcslen(tmp2), _T("initial"));
+			}
 			if (tmp2[0]) {
 				if (i > 0)
 					_sntprintf(tmp, sizeof tmp, _T("gfxcard%d_options"), i + 1);
@@ -6322,12 +6332,18 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 				rbc->monitor_id = _tstol(s);
 				xfree(s);
 			}
+			rbc->autoswitch = !cfgfile_option_find(value, _T("noautoswitch"));
+			rbc->initial_active = cfgfile_option_find(value, _T("initial"));
+			if (cfgfile_option_find(value, _T("autoswitch"))) {
+				rbc->autoswitch = true;
+			}
 			return 1;
 		}
-		if (i > 0)
+		if (i > 0) {
 			_sntprintf(tmp, sizeof tmp, _T("gfxcard%d_type"), i + 1);
-		else
+		} else {
 			_tcscpy(tmp, _T("gfxcard_type"));
+		}
 		if (cfgfile_string(option, value, tmp, tmpbuf, sizeof tmpbuf / sizeof(TCHAR))) {
 			rbc->rtgmem_type = 0;
 			rbc->rtg_index = i;
@@ -8781,6 +8797,7 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	p->bogomem.chipramtiming = true;
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		p->rtgboards[i].rtg_index = i;
+		p->rtgboards[i].autoswitch = true;
 	}
 	p->rtgboards[0].rtgmem_size = 0x00000000;
 	p->rtgboards[0].rtgmem_type = GFXBOARD_UAE_Z3;

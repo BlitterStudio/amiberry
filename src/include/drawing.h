@@ -169,6 +169,7 @@ struct linestate
 	bool blankedline;
 	bool vb;
 	bool strlong_seen;
+	int lol_shift_prev;
 	int fetchmode_size, fetchstart_mask;
 	uae_u16 strobe;
 	int strobe_pos;
