@@ -1,7 +1,7 @@
 #ifndef UAE_ROMMGR_H
 #define UAE_ROMMGR_H
 
-#define MAX_ROMMGR_ROMS 340
+#define MAX_ROMMGR_ROMS 344
 
 extern int decode_cloanto_rom_do(uae_u8 *mem, int size, int real_size);
 

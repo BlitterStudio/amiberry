@@ -450,6 +450,7 @@ struct rtgboardconfig
 	int device_order;
 	int monitor_id;
 	bool autoswitch;
+	bool initial_active;
 };
 struct boardloadfile
 {

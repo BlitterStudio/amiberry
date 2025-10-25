@@ -285,7 +285,7 @@ static const struct gfxboard boards[] =
 		GFXBOARD_ID_ALTAIS_Z3,
 		_T("Altais [DracoBus]"), _T("MacroSystem"), _T("Altais"),
 		18260, 19, 0, 0,
-		0x00000000, 0x00400000, 0x00400000, 0x00400000, 0, BOARD_NONAUTOCONFIG_BEFORE, 3, false, false,
+		0x00000000, 0x00400000, 0x00400000, 0x00400000, 0, BOARD_NONAUTOCONFIG_BEFORE, 3, false, true,
 		0, 0, NULL, &ncr_retina_z3_device, 0, GFXBOARD_BUSTYPE_DRACO
 	},
 	{
@@ -591,6 +591,7 @@ static struct rtggfxboard rtggfxboards[MAX_RTG_BOARDS];
 static struct rtggfxboard *only_gfx_board;
 static int rtg_visible[MAX_AMIGADISPLAYS];
 static int rtg_initial[MAX_AMIGADISPLAYS];
+static int initial_done;
 static int total_active_gfx_boards;
 static int vram_ram_a8;
 static DisplaySurface fakesurface;
@@ -1030,6 +1031,21 @@ static void gfxboard_hsync_handler(void)
 #ifdef USE_PCEM
 	pcemglue_hsync();
 #endif
+}
+
+static void init_initial(struct rtggfxboard *gb)
+{
+	if (initial_done) {
+		return;
+	}
+	if (gb->vram && gb->rbc->initial_active && rtg_visible[gb->monitor_id] < 0 && rtg_initial[gb->monitor_id] >= 0) {
+		int init = rtg_initial[gb->monitor_id];
+		if (gfxboard_toggle(gb->monitor_id, 0, 0) >= 0) {
+			initial_done = 1;
+		} else {
+			rtg_initial[gb->monitor_id] = init;
+		}
+	}
 }
 
 static void reinit_vram(struct rtggfxboard *gb, uaecptr vram, bool direct)
@@ -1751,6 +1767,8 @@ void gfxboard_vsync_handler(bool full_redraw_required, bool redraw_required)
 		struct amigadisplay *ad = &adisplays[gb->monitor_id];
 		struct picasso96_state_struct *state = &picasso96_state[gb->monitor_id];
 
+		init_initial(gb);
+
 		if (gb->func) {
 
 			if (gb->userdata) {
@@ -1799,7 +1817,7 @@ void gfxboard_vsync_handler(bool full_redraw_required, bool redraw_required)
 					}
 				}
 #endif
-				if ((!gb->board->hasswitcher && gb->rbc->autoswitch) && gb->vram) {
+				if (((!gb->board->hasswitcher && gb->rbc->autoswitch) || gb->board->id == GFXBOARD_ID_ALTAIS_Z3) && gb->vram) {
 					bool svga_on(void *p);
 					bool on = svga_on(gb->pcemobject2);
 					set_monswitch(gb, on);
@@ -3640,6 +3658,23 @@ void gfxboard_reset (void)
 	for (int i = 0; i < MAX_AMIGADISPLAYS; i++) {
 		rtg_visible[i] = -1;
 		rtg_initial[i] = -1;
+	}
+}
+
+void gfxboard_reset_init(void)
+{
+	initial_done = 1;
+	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
+		struct rtgboardconfig *rbc = &currprefs.rtgboards[i];
+		if (rbc->initial_active) {
+			rtg_initial[rbc->monitor_id] = i;
+			if (rbc->monitor_id == 0) {
+				struct amigadisplay *ad = &adisplays[0];
+				ad->picasso_on = 1;
+				ad->picasso_requested_on = 1;
+				initial_done = 0;
+			}
+		}
 	}
 }
 
