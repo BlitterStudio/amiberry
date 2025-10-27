@@ -171,20 +171,38 @@ static void OpenDirDialog(const std::string &initialPath)
 	config.flags = ImGuiFileDialogFlags_Modal;
 	ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
 }
+
 static bool ConsumeDirDialogResult(std::string &outPath)
 {
-	if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey"))
-	{
-		bool ok = false;
-		if (ImGuiFileDialog::Instance()->IsOk())
-		{
-			outPath = ImGuiFileDialog::Instance()->GetCurrentPath();
-			ok = true;
-		}
-		ImGuiFileDialog::Instance()->Close();
-		return ok;
-	}
-	return false;
+    // Ensure a reasonable initial and minimum size on first open
+    // Apply only on first use so user-resized dimensions persist thereafter
+    {
+        const ImGuiViewport* vp = ImGui::GetMainViewport();
+        const float vw = vp ? vp->Size.x : ImGui::GetIO().DisplaySize.x;
+        const float vh = vp ? vp->Size.y : ImGui::GetIO().DisplaySize.y;
+        const float maxW = std::max(320.0f, vw * 0.95f);
+        const float maxH = std::max(240.0f, vh * 0.90f);
+        const float minW = std::min(720.0f, maxW);
+        const float minH = std::min(480.0f, maxH);
+        const float defW = std::clamp(vw * 0.60f, minW, maxW);
+        const float defH = std::clamp(vh * 0.60f, minH, maxH);
+        if (vp)
+            ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(defW, defH), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(minW, minH), ImVec2(maxW, maxH));
+    }
+    if (ImGuiFileDialog::Instance()->Display("ChooseDirDlgKey"))
+    {
+        bool ok = false;
+        if (ImGuiFileDialog::Instance()->IsOk())
+        {
+            outPath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            ok = true;
+        }
+        ImGuiFileDialog::Instance()->Close();
+        return ok;
+    }
+    return false;
 }
 
 static void OpenFileDialog(const char *title, const char *filters, const std::string &initialPath)
@@ -198,18 +216,35 @@ static void OpenFileDialog(const char *title, const char *filters, const std::st
 
 static bool ConsumeFileDialogResult(std::string &outPath)
 {
-	if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey"))
-	{
-		bool ok = false;
-		if (ImGuiFileDialog::Instance()->IsOk())
-		{
-			outPath = ImGuiFileDialog::Instance()->GetCurrentPath();
-			ok = true;
-		}
-		ImGuiFileDialog::Instance()->Close();
-		return ok;
-	}
-	return false;
+    // Ensure a reasonable initial and minimum size on first open
+    // Apply only on first use so user-resized dimensions persist thereafter
+    {
+        const ImGuiViewport* vp = ImGui::GetMainViewport();
+        const float vw = vp ? vp->Size.x : ImGui::GetIO().DisplaySize.x;
+        const float vh = vp ? vp->Size.y : ImGui::GetIO().DisplaySize.y;
+        const float maxW = std::max(320.0f, vw * 0.95f);
+        const float maxH = std::max(240.0f, vh * 0.90f);
+        const float minW = std::min(720.0f, maxW);
+        const float minH = std::min(480.0f, maxH);
+        const float defW = std::clamp(vw * 0.60f, minW, maxW);
+        const float defH = std::clamp(vh * 0.60f, minH, maxH);
+        if (vp)
+            ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(defW, defH), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(minW, minH), ImVec2(maxW, maxH));
+    }
+    if (ImGuiFileDialog::Instance()->Display("ChooseFileDlgKey"))
+    {
+        bool ok = false;
+        if (ImGuiFileDialog::Instance()->IsOk())
+        {
+            outPath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            ok = true;
+        }
+        ImGuiFileDialog::Instance()->Close();
+        return ok;
+    }
+    return false;
 }
 #endif
 
@@ -2972,7 +3007,7 @@ static void render_panel_virtual_keyboard()
     ImGui::SameLine();
     ImGui::InputText("##VkSetHotkey", changed_prefs.vkbd_toggle, sizeof(changed_prefs.vkbd_toggle), ImGuiInputTextFlags_ReadOnly);
     ImGui::SameLine();
-    if (ImGui::Button("...##VkSetHotkey"))
+    if (ImGui::Button("..."))
     {
         // TODO: Implement input selection dialog
     }
