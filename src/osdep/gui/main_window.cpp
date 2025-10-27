@@ -19,6 +19,7 @@
 #include "amiberry_gfx.h"
 #include "fsdb_host.h"
 #include "autoconf.h"
+#include "blkdev.h"
 #include "inputdevice.h"
 #include "xwin.h"
 #include "custom.h"
@@ -53,6 +54,9 @@ bool joystick_refresh_needed = false;
 
 static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
+
+std::vector<const char*> qs_models;
+std::vector<const char*> qs_configs;
 
 void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 {
@@ -866,6 +870,16 @@ void amiberry_gui_init()
 	gui_graphics->setTarget(gui_screen);
 	gui_input = new gcn::SDLInput();
 #endif
+
+	// Quickstart models and configs initialization
+	qs_models.clear();
+	for (int i = 0; i < IM_ARRAYSIZE(amodels); ++i) {
+		qs_models.push_back(amodels[i].name);
+	}
+	qs_configs.clear();
+	for (int i = 0; i < IM_ARRAYSIZE(amodels[0].configs); ++i) {
+		qs_configs.push_back(amodels[0].configs[i]);
+	}
 }
 
 void amiberry_gui_halt()
@@ -2156,10 +2170,65 @@ static void render_panel_paths()
 	}
 }
 
+static void adjust_prefs() {
+	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
+	switch (quickstart_model)
+	{
+		case 0: // A500
+		case 1: // A500+
+		case 2: // A600
+		case 3: // A1000
+		case 4: // A1200
+		case 5: // A3000
+			// df0 always active
+			changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
+			changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
+
+			// No CD available
+			changed_prefs.cdslots[0].inuse = false;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+
+			// Set joystick port to Default
+			changed_prefs.jports[1].mode = 0;
+			break;
+		case 6: // A4000
+		case 7: // A4000T
+		case 12: // Macrosystem
+			// df0 always active
+			changed_prefs.floppyslots[0].dfxtype = DRV_35_HD;
+			changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
+
+			// No CD available
+			changed_prefs.cdslots[0].inuse = false;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
+
+			// Set joystick port to Default
+			changed_prefs.jports[1].mode = 0;
+			break;
+
+		case 8: // CD32
+		case 9: // CDTV
+		case 10:// American Laser Games / Picmatic
+		case 11:// Arcadia Multi Select system
+			// No floppy drive available, CD available
+			changed_prefs.floppyslots[0].dfxtype = DRV_NONE;
+			changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
+			changed_prefs.cdslots[0].inuse = true;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+			changed_prefs.gfx_monitor[0].gfx_size.width = 720;
+			changed_prefs.gfx_monitor[0].gfx_size.height = 568;
+			// Set joystick port to CD32 mode
+			changed_prefs.jports[1].mode = 7;
+			break;
+		default:
+			break;
+	}
+}
+
 static void render_panel_quickstart()
 {
 	// Two-column layout: left = label, right = control(s)
-	if (ImGui::BeginTable("QuickstartTable", 2, ImGuiTableFlags_SizingStretchProp))
+	if (ImGui::BeginTable("QuickstartModelTable", 2, ImGuiTableFlags_SizingStretchProp))
 	{
 		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 120.0f);
 		ImGui::TableSetupColumn("Control", ImGuiTableColumnFlags_WidthStretch);
@@ -2170,7 +2239,16 @@ static void render_panel_quickstart()
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("Model:");
 		ImGui::TableSetColumnIndex(1);
-		ImGui::Combo("##QuickstartModel", &quickstart_model, qs_models, IM_ARRAYSIZE(qs_models));
+		if (ImGui::Combo("##QuickstartModel", &quickstart_model, qs_models.data(), qs_models.size())) {
+			qs_configs.clear();
+			for (auto& config : amodels[quickstart_model].configs) {
+				if (config[0] == '\0')
+					break;
+				qs_configs.push_back(config);
+			}
+
+			adjust_prefs();
+		}
 		ImGui::SameLine();
 		ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
 
@@ -2180,7 +2258,10 @@ static void render_panel_quickstart()
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("Configuration:");
 		ImGui::TableSetColumnIndex(1);
-		ImGui::Combo("##QuickstartConf", &quickstart_conf, qs_configs, IM_ARRAYSIZE(qs_configs));
+
+		if (ImGui::Combo("##QuickstartConf", &quickstart_conf, qs_configs.data(), qs_configs.size())) {
+			adjust_prefs();
+		}
 
 		ImGui::EndTable();
 	}
@@ -2220,7 +2301,12 @@ static void render_panel_quickstart()
 		ImGui::Button(label.data(), ImVec2(SMALL_BUTTON_WIDTH * 2, SMALL_BUTTON_HEIGHT));
 
 		label = "##QSFloppyImagePath" + std::to_string(i);
-		//ImGui::Combo(label, &changed_prefs.floppyslots[i].df, lstMRUDiskList, 0);
+		int selectedFloppyslot;
+		ImGui::Combo(label.data(), &selectedFloppyslot, changed_prefs.floppyslots[i].df, lstMRUDiskList.size());
+
+		ImGui::Spacing();
+		ImGui::Spacing();
+		ImGui::Spacing();
 	}
 
 	// CD drive row

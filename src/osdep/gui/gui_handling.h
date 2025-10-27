@@ -152,9 +152,6 @@ static amigamodels amodels[] = {
 	{-1}
 };
 
-inline const char* qs_models[] = { "Amiga 500", "Amiga 500+", "Amiga 600", "Amiga 1000", "Amiga 1200", "Amiga 3000", "Amiga 4000", "Amiga 4000T", "CD32", "CDTV", "American Laser Games / Picmatic", "Arcadia Multi Select system", "Macrosystem" };
-inline const char* qs_configs[] = { "1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)", "1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM", "1.3 ROM, ECS Agnus, 1 MB Chip RAM", "1.3 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM", "1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM" };
-
 inline const char* floppy_drive_types[] = {
 	"Disabled", "3.5\" DD", "3.5\" HD", "5.25\" (40)",
 	"5.25\" (80)", "3.5\" ESCOM", "FB: Normal", "FB: Compatible",
