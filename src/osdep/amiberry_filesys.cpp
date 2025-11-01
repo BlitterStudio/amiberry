@@ -327,7 +327,7 @@ std::string prefix_with_data_path(const std::string& filename)
 		printf("Can't fetch main bundle\n");
 		return filename;
 	}
-	std::string filePath = "Data/" + filename;
+	std::string filePath = "data/" + filename;
 	CFURLRef dataFileURL = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL, filePath.c_str(), kCFStringEncodingASCII), NULL, NULL);
 	if (dataFileURL == NULL)
 	{
