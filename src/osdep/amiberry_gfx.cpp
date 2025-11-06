@@ -181,6 +181,15 @@ bool set_opengl_attributes();
 bool init_opengl_context(SDL_Window* window);
 bool load_render_assets();
 
+#ifdef USE_OPENGL
+void check_gl_error(const char* checkpoint) {
+    GLenum err;
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        write_log("OpenGL Error at %s: %s (%d)\n", checkpoint, glewGetErrorString(err), err);
+    }
+}
+#endif
+
 void gfx_lock()
 {
 }
@@ -291,18 +300,54 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
-	struct AmigaMonitor* mon = &AMonitors[monid];
+	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
 
-	//crt_frame( (CRTEMU_U32*)amiga_surface->pixels ); // bezel - however, seems hardcoded to internal 1024x1024 size
+	// Handle special case where w/h are negative, which is a check not a create
+	if (w < 0 || h < 0) {
+		if (g_amiga_texture != 0) {
+			int width, height;
+			glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			if (width == -w && height == -h) {
+				write_log(" -> Texture check OK.\n");
+				set_scaling_option(monid, &currprefs, width, height);
+				return true;
+			}
+		}
+		return false;
+	}
 
-	//TODO Check for option (which CRT filter to use: Lite/PC/TV)
-	if (crtemu_tv)
-		destroy_crtemu();
-	if (crtemu_tv == nullptr)
-		crtemu_tv = crtemu_create(CRTEMU_TYPE_TV, nullptr);
-	if (crtemu_tv)
-		crtemu_frame(crtemu_tv, (CRTEMU_U32*)amiga_surface->pixels, w, h);
-	return crtemu_tv != nullptr;
+	if (g_amiga_texture != 0)
+	{
+		int old_w, old_h;
+		glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &old_w);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &old_h);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		if (w == old_w && h == old_h) {
+			write_log(" -> Texture size matches, reusing existing texture %u.\n", g_amiga_texture);
+			return true;
+		}
+		write_log(" -> Deleting old texture %u with size %dx%d.\n", g_amiga_texture, old_w, old_h);
+		glDeleteTextures(1, &g_amiga_texture);
+		check_gl_error("glDeleteTextures");
+	}
+
+	glGenTextures(1, &g_amiga_texture);
+	check_gl_error("glGenTextures");
+	glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
+	check_gl_error("glBindTexture");
+	// Use GL_RGBA8 as internal format for better compatibility
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	check_gl_error("glTexImage2D");
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	write_log(" -> Created new texture %u with size %dx%d.\n", g_amiga_texture, w, h);
+
+	return g_amiga_texture != 0;
 #else
 	if (w < 0 || h < 0)
 	{
@@ -1303,15 +1348,33 @@ void show_screen(const int monid, int mode)
 		return;
 	}
 #ifdef USE_OPENGL
-	auto time = SDL_GetTicks();
-	SDL_GetWindowSize(mon->amiga_window, &render_quad.w, &render_quad.h);
-	glViewport(0, 0, render_quad.w, render_quad.h);
-	if (crtemu_tv) {
-		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
-			crop_rect.w, crop_rect.h, 0xffffffff, 0x000000);
+	check_gl_error("show_screen start");
+	
+	int winWidth, winHeight;
+	SDL_GetWindowSize(mon->amiga_window, &winWidth, &winHeight);
+	glViewport(0, 0, winWidth, winHeight);
+
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	if (amiga_surface && g_amiga_texture && shaderProgram && VAO) {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, amiga_surface->w, amiga_surface->h, GL_RGBA, GL_UNSIGNED_BYTE, amiga_surface->pixels);
+        
+		glUseProgram(shaderProgram);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
+		glUniform1i(g_loc_amigaTexture, 0);
+        glUniform1f(g_loc_amigaTextureHeight, (float)amiga_surface->h);
+        glUniform1f(g_loc_scanlineIntensity, 0.9f);
+
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
 	}
 
 	SDL_GL_SwapWindow(mon->amiga_window);
+	check_gl_error("show_screen end");
 #else
 	SDL2_showframe(monid);
 #endif
@@ -3338,7 +3401,7 @@ static bool doInit(AmigaMonitor* mon)
 			write_log("OpenGL context init failed. Aborting doInit.\n");
 			return false; // <-- This is critical
 		}
-		// load_render_assets();
+		load_render_assets();
 #endif
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
@@ -3468,6 +3531,21 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if (!SDL2_alloctexture(mon->monitor_id, w, h)) {
 		return false;
 	}
+
+#ifdef USE_OPENGL
+    // Ensure amiga_surface is in sync with the texture size
+    if (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h) {
+        if (amiga_surface) {
+            SDL_FreeSurface(amiga_surface);
+        }
+        write_log("Re-creating amiga_surface with size %dx%d to match texture.\n", w, h);
+        amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, pixel_format);
+        if (amiga_surface == nullptr) {
+            write_log("!!! Failed to create amiga_surface.\n");
+            return false;
+        }
+    }
+#endif
 
 	if (vbout) {
 		vbout->width_allocated = w;
@@ -4055,32 +4133,44 @@ bool set_opengl_attributes()
 // Call this AFTER SDL_CreateWindow
 bool init_opengl_context(SDL_Window* window)
 {
+	write_log("DEBUG: Initializing OpenGL Context...\n");
 	gl_context = SDL_GL_CreateContext(window);
 	if (gl_context == nullptr) {
-		write_log("OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
+		write_log("!!! OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
 		return false;
 	}
+	check_gl_error("SDL_GL_CreateContext");
 
 	if (SDL_GL_MakeCurrent(window, gl_context) < 0) {
-		write_log("SDL_GL_MakeCurrent failed! SDL_Error: %s\n", SDL_GetError());
+		write_log("!!! SDL_GL_MakeCurrent failed! SDL_Error: %s\n", SDL_GetError());
 		return false;
 	}
+	check_gl_error("SDL_GL_MakeCurrent");
 
 	glewExperimental = GL_TRUE;
 	GLenum glewError = glewInit();
 	if (glewError != GLEW_OK) {
-		write_log("Error initializing GLEW: %s\n", glewGetErrorString(glewError));
+		write_log("!!! Error initializing GLEW: %s\n", glewGetErrorString(glewError));
 		return false;
 	}
+    write_log(" -> GLEW Initialized. Using GLEW %s\n", glewGetString(GLEW_VERSION));
+    write_log(" -> OpenGL Vendor: %s\n", glGetString(GL_VENDOR));
+    write_log(" -> OpenGL Renderer: %s\n", glGetString(GL_RENDERER));
+    write_log(" -> OpenGL Version: %s\n", glGetString(GL_VERSION));
+    write_log(" -> GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+	check_gl_error("glewInit");
 
 	// This clears a benign error GLEW can cause
 	glGetError();
 
+	write_log("--- OpenGL Context Initialized Successfully ---\n");
 	return true;
 }
 
 bool load_render_assets()
 {
+    write_log("DEBUG: Loading render assets...\n");
+    // --- 1. Compile and Link Shaders ---
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -4090,8 +4180,8 @@ bool load_render_assets()
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        write_log("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s\n", infoLog);
-        glDeleteShader(vertexShader); // Clean up
+        write_log("!!! ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s\n", infoLog);
+        glDeleteShader(vertexShader);
         return false;
     }
 
@@ -4102,13 +4192,11 @@ bool load_render_assets()
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        write_log("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s\n", infoLog);
-        glDeleteShader(vertexShader); // Clean up
-        glDeleteShader(fragmentShader); // Clean up
+        write_log("!!! ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s\n", infoLog);
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
         return false;
     }
-
-    // --- 2. Link Shader Program ---
 
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
@@ -4117,31 +4205,25 @@ bool load_render_assets()
 
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
-        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        write_log("ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
-        // Clean up all the things
+        write_log("!!! ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
         glDeleteShader(vertexShader);
         glDeleteShader(fragmentShader);
         glDeleteProgram(shaderProgram);
         return false;
     }
+    write_log(" -> Shaders compiled and linked successfully. Program ID: %u\n", shaderProgram);
 
-    // Shaders are linked, we don't need the originals anymore
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-
-    // --- 3. Get Uniform Locations ---
-    // We do this once at init time, not every frame
+    // --- 2. Get Uniform Locations ---
     g_loc_amigaTexture = glGetUniformLocation(shaderProgram, "amigaTexture");
     g_loc_amigaTextureHeight = glGetUniformLocation(shaderProgram, "amigaTextureHeight");
     g_loc_scanlineIntensity = glGetUniformLocation(shaderProgram, "scanlineIntensity");
+    write_log(" -> Uniform locations: amigaTexture=%d, amigaTextureHeight=%d, scanlineIntensity=%d\n", g_loc_amigaTexture, g_loc_amigaTextureHeight, g_loc_scanlineIntensity);
 
-
-    // --- 4. Create Geometry (VBO/VAO) ---
-
-    // THIS IS THE FULL-SCREEN QUAD
+    // --- 3. Create Geometry (VBO/VAO) for a full-screen quad ---
     float vertices[] = {
        // positions      // texCoords
        -1.0f, -1.0f,     0.0f, 1.0f, // bottom left
@@ -4160,46 +4242,16 @@ bool load_render_assets()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    // Attribute 0: Position (vec2)
-    // Stride is 4 floats (pos + texcoord)
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(0);
 
-    // Attribute 1: TexCoord (vec2)
-    // Offset is 2 floats (to skip over pos)
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-
-
-    // --- 5. Create Amiga Texture Object ---
-
-    // We must use pre-defined maximums.
-    // Find the real constants for these in the Amiberry codebase!
-    const int MAX_TEX_WIDTH = 1280;  // Placeholder!
-    const int MAX_TEX_HEIGHT = 512;  // Placeholder! (Or maybe 568?)
-
-    glGenTextures(1, &g_amiga_texture);
-    glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
-
-    // **ADJUST GL_RGB/GL_UNSIGNED_BYTE** to match amiga_surface->format!
-    GLenum pixelFormat = GL_BGRA; // GUESSING! Check amiga_surface->format
-    GLenum pixelType = GL_UNSIGNED_INT_8_8_8_8_REV; // GUESSING!
-
-    // Create the texture "storage". We fill it with NULL for now.
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-              MAX_TEX_WIDTH, MAX_TEX_HEIGHT, // Use our max constants
-              0, pixelFormat, pixelType, NULL); // Pass NULL as the data
-
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-    glBindTexture(GL_TEXTURE_2D, 0); // Unbind
+    write_log(" -> VAO (%u) and VBO (%u) created successfully.\n", VAO, VBO);
+    check_gl_error("load_render_assets end");
 
     return true;
 }
