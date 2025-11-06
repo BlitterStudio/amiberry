@@ -75,6 +75,65 @@ SDL_GLContext gl_context;
 //crtemu_t* crtemu_lite = nullptr;
 //crtemu_t* crtemu_pc = nullptr;
 crtemu_t* crtemu_tv = nullptr;
+
+GLuint shaderProgram;
+GLuint VAO;
+GLuint VBO;
+GLuint g_amiga_texture; // <-- NEW: To hold our texture ID
+
+// NEW: To hold uniform locations for performance
+GLint g_loc_amigaTexture;
+GLint g_loc_amigaTextureHeight;
+GLint g_loc_scanlineIntensity;
+
+const char* vertexShaderSource = R"(
+#version 410 core
+
+// Input vertex data
+layout (location = 0) in vec2 aPos;       // (x, y)
+layout (location = 1) in vec2 aTexCoords; // (u, v)
+
+// Output to fragment shader
+out vec2 TexCoords;
+
+void main()
+{
+    // Pass the texture coordinates through
+    TexCoords = aTexCoords;
+
+    // Set the final vertex position (already in clip space)
+    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
+}
+)";
+
+const char* fragmentShaderSource = R"(
+#version 410 core
+
+// Final output color
+out vec4 FragColor;
+
+// Input from vertex shader
+in vec2 TexCoords;
+
+// Uniforms (values we send from our C++ code)
+uniform sampler2D amigaTexture;      // <-- Uses g_loc_amigaTexture
+uniform float amigaTextureHeight;    // <-- Uses g_loc_amigaTextureHeight
+uniform float scanlineIntensity;   // <-- Uses g_loc_scanlineIntensity
+
+void main()
+{
+    // Sample the color from the Amiga texture
+    vec4 texColor = texture(amigaTexture, TexCoords);
+
+    // Calculate scanline
+    float scanLine = mod(TexCoords.y * amigaTextureHeight, 2.0);
+    float brightness = mix(scanlineIntensity, 1.0, step(1.0, scanLine));
+
+    // Apply the brightness to the color
+    FragColor = vec4(texColor.rgb * brightness, texColor.a);
+}
+)";
+
 #else
 SDL_Texture* amiga_texture;
 #endif
@@ -117,6 +176,10 @@ bool beamracer_debug;
 bool gfx_hdr;
 
 int reopen(struct AmigaMonitor*, int, bool);
+
+bool set_opengl_attributes();
+bool init_opengl_context(SDL_Window* window);
+bool load_render_assets();
 
 void gfx_lock()
 {
@@ -321,7 +384,9 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	{
 		update_leds(monid);
 	}
-
+#ifdef USE_OPENGL
+	return amiga_surface != nullptr;
+#else
 	if (amiga_texture && amiga_surface)
 	{
 		SDL_RenderClear(mon->amiga_renderer);
@@ -348,6 +413,8 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		}
 		return true;
 	}
+#endif
+
 	return false;
 }
 
@@ -1237,6 +1304,7 @@ void show_screen(const int monid, int mode)
 	}
 #ifdef USE_OPENGL
 	auto time = SDL_GetTicks();
+	SDL_GetWindowSize(mon->amiga_window, &render_quad.w, &render_quad.h);
 	glViewport(0, 0, render_quad.w, render_quad.h);
 	if (crtemu_tv) {
 		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
@@ -3121,6 +3189,11 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
 
+#ifdef USE_OPENGL
+	flags |= SDL_WINDOW_OPENGL;
+#endif
+
+
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
 		rc.w, rc.h,
@@ -3151,6 +3224,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		SDL_FreeSurface(icon_surface);
 	}
 
+#ifndef USE_OPENGL
 	if (mon->amiga_renderer == nullptr)
 	{
 		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
@@ -3158,6 +3232,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 	DPIHandler::set_render_scale(mon->amiga_renderer);
+#endif
 
 
     // Cache current display mode for scaling heuristics
@@ -3247,11 +3322,24 @@ static bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_width = rc.w;
 			mon->currentmode.native_height = rc.h;
 		}
+#ifdef USE_OPENGL
+		set_opengl_attributes();
+#endif
+
 		if (!create_windows(mon))
 		{
 			close_hwnds(mon);
 			return ret;
 		}
+
+#ifdef USE_OPENGL
+		if (!init_opengl_context(mon->amiga_window))
+		{
+			write_log("OpenGL context init failed. Aborting doInit.\n");
+			return false; // <-- This is critical
+		}
+		// load_render_assets();
+#endif
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
 			display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
@@ -3414,7 +3502,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 			}
 		}
 #ifdef USE_OPENGL
-		renderQuad = { dx, dy, w, h };
+		render_quad = { dx, dy, w, h };
 		crop_rect = { dx, dy, w, h };
 		set_scaling_option(mon->monitor_id, &currprefs, w, h);
 #else
@@ -3788,7 +3876,7 @@ void auto_crop_image()
 			height = sdl_mode.h;
 		}
 #ifdef USE_OPENGL
-		renderQuad = { dx, dy, width, height };
+		render_quad = { dx, dy, width, height };
 		crop_rect = { cx, cy, cw, ch };
 #else
 
@@ -3946,4 +4034,172 @@ void screenshot(int monid, int mode, int doprepare)
 	screenshot_filename += ".png";
 
 	save_thumb(screenshot_filename);
+}
+
+// Call this BEFORE SDL_CreateWindow
+bool set_opengl_attributes()
+{
+	// Request OpenGL 4.1 Core Profile
+	// (This is the highest version macOS supports)
+	if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4) != 0) return false;
+	if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) != 0) return false;
+	if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) != 0) return false;
+
+	// Standard attributes
+	if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) != 0) return false;
+	if (SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24) != 0) return false;
+
+	return true;
+}
+
+// Call this AFTER SDL_CreateWindow
+bool init_opengl_context(SDL_Window* window)
+{
+	gl_context = SDL_GL_CreateContext(window);
+	if (gl_context == nullptr) {
+		write_log("OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
+		return false;
+	}
+
+	if (SDL_GL_MakeCurrent(window, gl_context) < 0) {
+		write_log("SDL_GL_MakeCurrent failed! SDL_Error: %s\n", SDL_GetError());
+		return false;
+	}
+
+	glewExperimental = GL_TRUE;
+	GLenum glewError = glewInit();
+	if (glewError != GLEW_OK) {
+		write_log("Error initializing GLEW: %s\n", glewGetErrorString(glewError));
+		return false;
+	}
+
+	// This clears a benign error GLEW can cause
+	glGetError();
+
+	return true;
+}
+
+bool load_render_assets()
+{
+    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    int success;
+    char infoLog[512];
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        write_log("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n%s\n", infoLog);
+        glDeleteShader(vertexShader); // Clean up
+        return false;
+    }
+
+    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        write_log("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n%s\n", infoLog);
+        glDeleteShader(vertexShader); // Clean up
+        glDeleteShader(fragmentShader); // Clean up
+        return false;
+    }
+
+    // --- 2. Link Shader Program ---
+
+    shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        write_log("ERROR::SHADER::PROGRAM::LINKING_FAILED\n%s\n", infoLog);
+        // Clean up all the things
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        glDeleteProgram(shaderProgram);
+        return false;
+    }
+
+    // Shaders are linked, we don't need the originals anymore
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+
+    // --- 3. Get Uniform Locations ---
+    // We do this once at init time, not every frame
+    g_loc_amigaTexture = glGetUniformLocation(shaderProgram, "amigaTexture");
+    g_loc_amigaTextureHeight = glGetUniformLocation(shaderProgram, "amigaTextureHeight");
+    g_loc_scanlineIntensity = glGetUniformLocation(shaderProgram, "scanlineIntensity");
+
+
+    // --- 4. Create Geometry (VBO/VAO) ---
+
+    // THIS IS THE FULL-SCREEN QUAD
+    float vertices[] = {
+       // positions      // texCoords
+       -1.0f, -1.0f,     0.0f, 1.0f, // bottom left
+        1.0f, -1.0f,     1.0f, 1.0f, // bottom right
+        1.0f,  1.0f,     1.0f, 0.0f, // top right
+
+        1.0f,  1.0f,     1.0f, 0.0f, // top right
+       -1.0f,  1.0f,     0.0f, 0.0f, // top left
+       -1.0f, -1.0f,     0.0f, 1.0f  // bottom left
+    };
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    // Attribute 0: Position (vec2)
+    // Stride is 4 floats (pos + texcoord)
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+    // Attribute 1: TexCoord (vec2)
+    // Offset is 2 floats (to skip over pos)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+
+    // --- 5. Create Amiga Texture Object ---
+
+    // We must use pre-defined maximums.
+    // Find the real constants for these in the Amiberry codebase!
+    const int MAX_TEX_WIDTH = 1280;  // Placeholder!
+    const int MAX_TEX_HEIGHT = 512;  // Placeholder! (Or maybe 568?)
+
+    glGenTextures(1, &g_amiga_texture);
+    glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
+
+    // **ADJUST GL_RGB/GL_UNSIGNED_BYTE** to match amiga_surface->format!
+    GLenum pixelFormat = GL_BGRA; // GUESSING! Check amiga_surface->format
+    GLenum pixelType = GL_UNSIGNED_INT_8_8_8_8_REV; // GUESSING!
+
+    // Create the texture "storage". We fill it with NULL for now.
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+              MAX_TEX_WIDTH, MAX_TEX_HEIGHT, // Use our max constants
+              0, pixelFormat, pixelType, NULL); // Pass NULL as the data
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+    glBindTexture(GL_TEXTURE_2D, 0); // Unbind
+
+    return true;
 }
