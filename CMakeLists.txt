@@ -25,7 +25,7 @@ option(USE_UAENET_PCAP   "Use libpcap for uaenet (Linux/macOS)" ON)
 option(USE_ZSTD 	     "Use Zstandard for CHD compressed disk images" ON)
 option(USE_GPIOD         "Use GPIOD to control GPIO LEDs" OFF)
 option(USE_DBUS          "Use DBus to control the emulator" OFF)
-option(USE_OPENGL        "Use OpenGL for rendering (currently BROKEN)" OFF)
+option(USE_OPENGL        "Use OpenGL for rendering (currently BROKEN)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 
 # Automatically disable PCem on RISC-V targets
