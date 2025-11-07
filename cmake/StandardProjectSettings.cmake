@@ -26,8 +26,29 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif (NOT CMAKE_BUILD_TYPE)
 
+if (WITH_OPTIMIZE)
+    include(${CMAKE_SOURCE_DIR}/cmake/optimize.cmake)
+endif()
+
 if (WITH_LTO)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
+    if(lto_supported)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        
+        # Parallel LTO compilation based on compiler
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            # GCC: Use auto to detect CPU cores
+            set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto=auto")
+            set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto=auto")
+        elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            # Clang: Use thin LTO for better parallelization
+            set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -flto=thin")
+            set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto=thin")
+        endif()
+    else()
+        message(WARNING "LTO is not supported: ${lto_error}")
+    endif()
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
