@@ -1350,9 +1350,9 @@ void show_screen(const int monid, int mode)
 #ifdef USE_OPENGL
 	check_gl_error("show_screen start");
 	
-	int winWidth, winHeight;
-	SDL_GetWindowSize(mon->amiga_window, &winWidth, &winHeight);
-	glViewport(0, 0, winWidth, winHeight);
+	int drawableWidth, drawableHeight;
+	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
+	glViewport(0, 0, drawableWidth, drawableHeight);
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
