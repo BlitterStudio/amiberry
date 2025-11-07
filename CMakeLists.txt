@@ -27,6 +27,7 @@ option(USE_GPIOD         "Use GPIOD to control GPIO LEDs" OFF)
 option(USE_DBUS          "Use DBus to control the emulator" OFF)
 option(USE_OPENGL        "Use OpenGL for rendering (currently BROKEN)" OFF)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
+option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
 
 # Automatically disable PCem on RISC-V targets
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv")
