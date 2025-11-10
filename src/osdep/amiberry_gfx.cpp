@@ -79,59 +79,6 @@ GLuint VAO;
 GLuint VBO;
 GLuint g_amiga_texture; // <-- NEW: To hold our texture ID
 
-// NEW: To hold uniform locations for performance
-GLint g_loc_amigaTexture;
-GLint g_loc_amigaTextureHeight;
-GLint g_loc_scanlineIntensity;
-
-const char* vertexShaderSource = R"(
-#version 410 core
-
-// Input vertex data
-layout (location = 0) in vec2 aPos;       // (x, y)
-layout (location = 1) in vec2 aTexCoords; // (u, v)
-
-// Output to fragment shader
-out vec2 TexCoords;
-
-void main()
-{
-    // Pass the texture coordinates through
-    TexCoords = aTexCoords;
-
-    // Set the final vertex position (already in clip space)
-    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
-}
-)";
-
-const char* fragmentShaderSource = R"(
-#version 410 core
-
-// Final output color
-out vec4 FragColor;
-
-// Input from vertex shader
-in vec2 TexCoords;
-
-// Uniforms (values we send from our C++ code)
-uniform sampler2D amigaTexture;      // <-- Uses g_loc_amigaTexture
-uniform float amigaTextureHeight;    // <-- Uses g_loc_amigaTextureHeight
-uniform float scanlineIntensity;   // <-- Uses g_loc_scanlineIntensity
-
-void main()
-{
-    // Sample the color from the Amiga texture
-    vec4 texColor = texture(amigaTexture, TexCoords);
-
-    // Calculate scanline
-    float scanLine = mod(TexCoords.y * amigaTextureHeight, 2.0);
-    float brightness = mix(scanlineIntensity, 1.0, step(1.0, scanLine));
-
-    // Apply the brightness to the color
-    FragColor = vec4(texColor.rgb * brightness, texColor.a);
-}
-)";
-
 bool set_opengl_attributes();
 bool init_opengl_context(SDL_Window* window);
 #else
@@ -296,48 +243,6 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (crtemu_tv)
 		crtemu_frame(crtemu_tv, (CRTEMU_U32*)amiga_surface->pixels, w, h);
 	return crtemu_tv != nullptr;
-	// Handle special case where w/h are negative, which is a check not a create
-	if (w < 0 || h < 0) {
-		if (g_amiga_texture != 0) {
-			int width, height;
-			glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			if (width == -w && height == -h) {
-				write_log(" -> Texture check OK.\n");
-				set_scaling_option(monid, &currprefs, width, height);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	if (g_amiga_texture != 0)
-	{
-		int old_w, old_h;
-		glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &old_w);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &old_h);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		if (w == old_w && h == old_h) {
-			write_log(" -> Texture size matches, reusing existing texture %u.\n", g_amiga_texture);
-			return true;
-		}
-		write_log(" -> Deleting old texture %u with size %dx%d.\n", g_amiga_texture, old_w, old_h);
-		glDeleteTextures(1, &g_amiga_texture);
-	}
-
-	glGenTextures(1, &g_amiga_texture);
-	glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
-	// Use GL_RGBA8 as internal format for better compatibility
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	write_log(" -> Created new texture %u with size %dx%d.\n", g_amiga_texture, w, h);
-
-	return g_amiga_texture != 0;
 #else
 	if (w < 0 || h < 0)
 	{
@@ -1347,29 +1252,6 @@ void show_screen(const int monid, int mode)
 		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
 			crop_rect.w, crop_rect.h, 0xffffffff, 0x000000);
 	}
-
-	// int drawableWidth, drawableHeight;
-	// SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
-	// glViewport(0, 0, drawableWidth, drawableHeight);
-
-	// glClear(GL_COLOR_BUFFER_BIT);
-
-	// if (amiga_surface && g_amiga_texture && shaderProgram && VAO) {
-		// glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		// glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
-		// glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, amiga_surface->w, amiga_surface->h, GL_RGBA, GL_UNSIGNED_BYTE, amiga_surface->pixels);
-
-		// glUseProgram(shaderProgram);
-		// glActiveTexture(GL_TEXTURE0);
-		// glBindTexture(GL_TEXTURE_2D, g_amiga_texture);
-		// glUniform1i(g_loc_amigaTexture, 0);
-		// glUniform1f(g_loc_amigaTextureHeight, (float)amiga_surface->h);
-		// glUniform1f(g_loc_scanlineIntensity, 0.9f);
-
-		// glBindVertexArray(VAO);
-		// glDrawArrays(GL_TRIANGLES, 0, 6);
-		// glBindVertexArray(0);
-	// }
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
