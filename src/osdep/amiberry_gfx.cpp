@@ -3127,9 +3127,15 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags |= SDL_WINDOW_HIDDEN;
 
 #ifdef USE_OPENGL
-	flags |= SDL_WINDOW_OPENGL;
+	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
+	const char* drv = SDL_GetCurrentVideoDriver();
+	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
+	if (!likely_gles_only) {
+		flags |= SDL_WINDOW_OPENGL;
+	} else {
+		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
+	}
 #endif
-
 
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
@@ -4009,32 +4015,38 @@ void screenshot(int monid, int mode, int doprepare)
 {
 	bool success = true;
 
-	if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) != 0)
-	{
-		write_log("Failed to set GL context major version: %s\n", SDL_GetError());
-		success = false;
-	}
-	if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) != 0)
-	{
-		write_log("Failed to set GL context minor version: %s\n", SDL_GetError());
-		success = false;
-	}
+	// Request a desktop OpenGL 2.1 compatibility context for GLSL 1.20 shaders.
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) == 0);
 
-	if (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) != 0)
-	{
-		write_log("Failed to set GL double buffer attribute: %s\n", SDL_GetError());
-		success = false;
-	}
-	if (SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24) != 0)
-	{
-		write_log("Failed to set GL depth size attribute: %s\n", SDL_GetError());
-		success = false;
-	}
+	// Sensible defaults.
+	success &= (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0) == 0);
+
+	// Optional: request RGBA8
+	success &= (SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8) == 0);
+
+	const char* drv = SDL_GetCurrentVideoDriver();
+	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
+	write_log(_T("Requested OpenGL context: 2.1 compatibility\n"));
 
 	return success;
 }
 
 #ifdef USE_OPENGL
+
+static bool is_gles_context()
+{
+	const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+	return ver && (strstr(ver, "OpenGL ES") != nullptr || strstr(ver, "OpenGL ES-CM") != nullptr);
+}
+
 /**
  * @brief Creates the OpenGL context and initializes the GLEW extension loader.
  *
@@ -4059,34 +4071,53 @@ void screenshot(int monid, int mode, int doprepare)
 [[nodiscard]] bool init_opengl_context(SDL_Window* window)
 {
 	write_log("DEBUG: Initializing OpenGL Context...\n");
+
 	gl_context = SDL_GL_CreateContext(window);
-	if (gl_context == nullptr)
-	{
-		write_log("!!! OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
+	if (!gl_context) {
+		write_log(_T("!!! SDL_GL_CreateContext failed: %hs\n"), SDL_GetError());
 		return false;
 	}
 
-	if (SDL_GL_MakeCurrent(window, gl_context) < 0)
-	{
-		write_log("!!! SDL_GL_MakeCurrent failed! SDL_Error: %s\n", SDL_GetError());
+	if (SDL_GL_MakeCurrent(window, gl_context) != 0) {
+		write_log(_T("!!! SDL_GL_MakeCurrent failed: %hs\n"), SDL_GetError());
+		SDL_GL_DeleteContext(gl_context);
+		gl_context = nullptr;
 		return false;
 	}
 
+	// GLEW: enable modern/core entry points before init, then clear benign error.
 	glewExperimental = GL_TRUE;
-	GLenum glewError = glewInit();
+	const GLenum glew_err = glewInit();
+	(void)glGetError(); // clear spurious GL_INVALID_ENUM produced by glewInit on core profiles
 
-	if (glewError != GLEW_OK)
-	{
-		write_log("!!! Error initializing GLEW: %s\n", glewGetErrorString(glewError));
+	if (glew_err != GLEW_OK) {
+		write_log(_T("!!! Error initializing GLEW: %hs\n"), glewGetErrorString(glew_err));
+		// If GLEW reports an error but GL is valid, continue; otherwise fail.
+		const GLubyte* ver = glGetString(GL_VERSION);
+		if (!ver) {
+			write_log(_T("!!! glGetString(GL_VERSION) is null; failing OpenGL init.\n"));
+			SDL_GL_DeleteContext(gl_context);
+			gl_context = nullptr;
+			return false;
+		}
+	}
+
+	// Reject GLES contexts (desktop GLEW does not support GLES reliably).
+	if (is_gles_context()) {
+		const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+		write_log(_T("!!! OpenGL ES context detected (%hs); desktop GLEW not supported.\n"), ver ? ver : "unknown");
+		SDL_GL_DeleteContext(gl_context);
+		gl_context = nullptr;
 		return false;
 	}
-    write_log(" -> GLEW Initialized. Using GLEW %s\n", glewGetString(GLEW_VERSION));
-    write_log(" -> OpenGL Vendor: %s\n", glGetString(GL_VENDOR));
-    write_log(" -> OpenGL Renderer: %s\n", glGetString(GL_RENDERER));
-    write_log(" -> OpenGL Version: %s\n", glGetString(GL_VERSION));
-    write_log(" -> GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-	write_log("--- OpenGL Context Initialized Successfully ---\n");
+	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+	const char* sl_ver   = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+	write_log(_T("OpenGL Renderer: %hs\n"), renderer ? renderer : "unknown");
+	write_log(_T("OpenGL Version:  %hs\n"), version ? version : "unknown");
+	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");
+
 	return true;
 }
 #endif
