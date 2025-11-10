@@ -74,11 +74,6 @@ SDL_Surface* amiga_surface = nullptr;
 SDL_GLContext gl_context;
 crtemu_t* crtemu_tv = nullptr;
 
-GLuint shaderProgram;
-GLuint VAO;
-GLuint VBO;
-GLuint g_amiga_texture; // <-- NEW: To hold our texture ID
-
 bool set_opengl_attributes();
 bool init_opengl_context(SDL_Window* window);
 #else
