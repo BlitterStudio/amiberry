@@ -1361,6 +1361,7 @@ struct amiberry_options
 	int default_vkbd_transparency;
 	char default_vkbd_toggle[128] = "guide";
 	char gui_theme[128] = "Default.theme";
+	char shader[128] = "pc";
 };
 
 extern struct amiberry_options amiberry_options;
