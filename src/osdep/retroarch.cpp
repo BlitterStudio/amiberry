@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <cctype>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -45,6 +46,12 @@ const std::string controller_axis_list[] = {
 int find_retroarch(const std::string& find_setting, const std::string& retroarch_file)
 {
 	std::ifstream read_file(retroarch_file);
+	if (!read_file.is_open())
+	{
+		write_log("Controller Detection: Could not open config file: %s\n", retroarch_file.c_str());
+		return -1; // File not found / not readable
+	}
+
 	std::string line;
 	std::string delimiter = " = ";
 	int button = -1;
@@ -57,23 +64,67 @@ int find_retroarch(const std::string& find_setting, const std::string& retroarch
 		auto delimiter_pos = line.find(delimiter);
 		auto option = line.substr(0, delimiter_pos);
 
+		// If delimiter not found or not the setting we want, skip early
 		if (option == line || option != find_setting)
 			continue;
 
-		auto param = line.substr(delimiter_pos + delimiter.length());
-		param.erase(std::remove(param.begin(), param.end(), '"'), param.end());
+		// Safe extraction of parameter portion
+		std::string param;
+		if (delimiter_pos != std::string::npos)
+			param = line.substr(delimiter_pos + delimiter.length());
+		else
+			continue; // Should not happen due to earlier continue, but guard anyway
 
+		// Remove quotes
+		param.erase(std::remove(param.begin(), param.end(), '"'), param.end());
+		// Trim whitespace
+		param.erase(0, param.find_first_not_of(" \t\r\n"));
+		if (!param.empty())
+		{
+			const auto last_non_ws = param.find_last_not_of(" \t\r\n");
+			if (last_non_ws != std::string::npos && last_non_ws + 1 < param.size())
+				param.erase(last_non_ws + 1);
+		}
+
+		if (param.empty())
+		{
+			write_log("Controller Detection: %s has empty value, skipping\n", find_setting.c_str());
+			continue; // Keep searching; maybe another occurrence exists (unlikely but safe)
+		}
+
+		// Special handling for hats: value starting with 'h'
 		if (find_setting == "count_hats" && param[0] == 'h')
 		{
 			button = 1;
 			break;
 		}
 
-		if (param[0] != 'h') // check it isn't some kind of hat starting 'h' (so if D-pad uses buttons)
+		// Ignore hat-style entries for non-hat settings
+		if (param[0] == 'h')
 		{
-			button = abs(std::stoi(param));
+			write_log("Controller Detection: %s value '%s' looks like hat descriptor, ignoring numeric parse\n", find_setting.c_str(), param.c_str());
+			continue;
 		}
 
+		// Validate first character for integer parsing
+		if (!(std::isdigit(static_cast<unsigned char>(param[0])) || param[0] == '-' || param[0] == '+'))
+		{
+			write_log("Controller Detection: %s value '%s' not numeric, skipping\n", find_setting.c_str(), param.c_str());
+			continue;
+		}
+
+		try
+		{
+			int value = std::stoi(param); // May throw
+			button = std::abs(value);
+		}
+		catch (const std::exception& e)
+		{
+			write_log("Controller Detection: %s invalid integer '%s' (%s)\n", find_setting.c_str(), param.c_str(), e.what());
+			// Leave button as -1 and continue searching (though typically only one entry exists)
+		}
+
+		// If we successfully matched the setting, we can break
 		if (option == find_setting)
 			break;
 	}
@@ -85,6 +136,8 @@ int find_retroarch(const std::string& find_setting, const std::string& retroarch
 bool find_retroarch_polarity(const std::string& find_setting, const std::string& retroarch_file)
 {
 	std::ifstream read_file(retroarch_file);
+	if (!read_file.is_open())
+		return false;
 	std::string line;
 	std::string delimiter = " = ";
 	bool button = false;
@@ -100,8 +153,16 @@ bool find_retroarch_polarity(const std::string& find_setting, const std::string&
 		if (option == line || option != find_setting)
 			continue;
 
-		auto param = line.substr(delimiter_pos + delimiter.length());
+		std::string param;
+		if (delimiter_pos != std::string::npos)
+			param = line.substr(delimiter_pos + delimiter.length());
+		else
+			continue;
+
 		param.erase(std::remove(param.begin(), param.end(), '"'), param.end());
+		param.erase(0, param.find_first_not_of(" \t\r\n"));
+		if (param.empty())
+			continue;
 
 		if (param[0] == '-')
 		{
@@ -116,32 +177,51 @@ bool find_retroarch_polarity(const std::string& find_setting, const std::string&
 std::string find_retroarch_key(const std::string& find_setting_prefix, int player, const std::string& suffix, const std::string& retroarch_file)
 {
 	std::ifstream read_file(retroarch_file);
+	if (!read_file.is_open())
+		return "nul"; // Fail fast if file can't be opened
+
 	std::string line;
-	std::string delimiter = " = ";
+	const std::string delimiter = " = ";
 	std::string output = "nul";
 
 	std::string find_setting = find_setting_prefix;
 	if (!suffix.empty())
-	{
 		find_setting += std::to_string(player) + "_" + suffix;
-	}
 
 	while (std::getline(read_file, line))
 	{
 		if (line.length() <= 1)
 			continue;
 
-		auto delimiter_pos = line.find(delimiter);
-		auto option = line.substr(0, delimiter_pos);
+		const auto delimiter_pos = line.find(delimiter);
+		if (delimiter_pos == std::string::npos)
+			continue; // No delimiter, skip
 
-		if (option == line || option != find_setting)
+		const auto option = line.substr(0, delimiter_pos);
+		if (option != find_setting)
 			continue;
 
-		auto param = line.substr(delimiter_pos + delimiter.length());
+		// Extract parameter safely
+		std::string param = line.substr(delimiter_pos + delimiter.length());
+		// Remove quotes
 		param.erase(std::remove(param.begin(), param.end(), '"'), param.end());
+		// Trim leading/trailing whitespace
+		param.erase(0, param.find_first_not_of(" \t\r\n"));
+		if (!param.empty())
+		{
+			const auto last_non_ws = param.find_last_not_of(" \t\r\n");
+			if (last_non_ws != std::string::npos && last_non_ws + 1 < param.size())
+				param.erase(last_non_ws + 1);
+		}
+
+		if (param.empty())
+		{
+			write_log("Controller Detection: %s present but empty in config\n", find_setting.c_str());
+			break; // We found the setting but it's empty; stop searching
+		}
 
 		output = param;
-		break;
+		break; // Found it
 	}
 
 	return output;
@@ -167,6 +247,11 @@ std::string sanitize_retroarch_name(std::string s)
 
 bool init_kb_from_retroarch(const int index, const std::string& retroarch_file)
 {
+	if (index < 0 || index > 3)
+	{
+		write_log("Controller init_kb_from_retroarch: invalid index %d\n", index);
+		return false;
+	}
 	const auto player = index + 1;
 	std::string key;
 	int x;
@@ -180,24 +265,32 @@ bool init_kb_from_retroarch(const int index, const std::string& retroarch_file)
 	{
 		key = find_retroarch_key("input_player", player, i, retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, key);
-		if (x == -1 || x == 0) break;
+		if (x <= 0 || x >= static_cast<int>(remap_key_map_list_strings.size()))
+			break;
 
 		valid = true;
 		if (idx < 9)
 		{
-			kbs[index][idx] = remap_key_map_list[x];
-			kbs_3[index][idx] = remap_key_map_list[x];
-			kbs_cd32[index][idx] = remap_key_map_list[x];
+			if (x < static_cast<int>(remap_key_map_list_strings.size()))
+			{
+				kbs[index][idx] = remap_key_map_list[x];
+				kbs_3[index][idx] = remap_key_map_list[x];
+				kbs_cd32[index][idx] = remap_key_map_list[x];
+			}
 		}
 		else if (idx == 9 || idx == 11)
 		{
-			kbs[index][idx] = remap_key_map_list[x];
-			kbs_3[index][idx + 1] = remap_key_map_list[x];
-			kbs_cd32[index][idx + 1] = remap_key_map_list[x];
+			if (x < static_cast<int>(remap_key_map_list_strings.size()))
+			{
+				kbs[index][idx] = remap_key_map_list[x];
+				kbs_3[index][idx + 1] = remap_key_map_list[x];
+				kbs_cd32[index][idx + 1] = remap_key_map_list[x];
+			}
 		}
 		else if (idx >= 13 && idx <= 23)
 		{
-			kbs_cd32[index][idx + 1] = remap_key_map_list[x];
+			if (x < static_cast<int>(remap_key_map_list_strings.size()))
+				kbs_cd32[index][idx + 1] = remap_key_map_list[x];
 		}
 		if (idx < 23) idx++;
 	}
@@ -207,14 +300,27 @@ bool init_kb_from_retroarch(const int index, const std::string& retroarch_file)
 	{
 		key = find_retroarch_key("input_enable_hotkey", player, "", retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, key);
+		if (x > 0 && x < static_cast<int>(remap_key_map_list_strings.size()))
+		{
+			// Store hotkey enabling key if needed later (currently not assigned to a global)
+			write_log("Controller Detection: hotkey key '%s' index %d\n", key.c_str(), x);
+		}
+		else if (!key.empty() && key != "nul")
+			write_log("Controller Detection: invalid hotkey key '%s'\n", key.c_str());
 
 		key = find_retroarch_key("input_exit_emulator", player, "", retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, key);
-		quit_key.scancode = remap_key_map_list[x];
+		if (x > 0 && x < static_cast<int>(remap_key_map_list_strings.size()))
+			quit_key.scancode = remap_key_map_list[x];
+		else
+			write_log("Controller Detection: exit emulator key '%s' not mapped (index %d)\n", key.c_str(), x);
 
 		key = find_retroarch_key("input_menu_toggle", player, "", retroarch_file);
 		x = find_string_in_array(remap_key_map_list_strings, key);
-		enter_gui_key.scancode = remap_key_map_list[x];
+		if (x > 0 && x < static_cast<int>(remap_key_map_list_strings.size()))
+			enter_gui_key.scancode = remap_key_map_list[x];
+		else
+			write_log("Controller Detection: menu toggle key '%s' not mapped (index %d)\n", key.c_str(), x);
 	}
 
 	write_log("Controller init_kb_from_retroarch(%i): %s \n", index, valid ? "Found" : "Not found");
@@ -247,12 +353,14 @@ void map_from_retroarch(controller_mapping& mapping, const std::string& control_
 	// RetroArch supports 15 buttons
 	for (int b = 0; b < 15; ++b)
 	{
+		if (retroarch_button_list[b].empty()) { mapping.button[b] = -1; continue; }
 		mapping.button[b] = find_retroarch(ra_player_input(retroarch_button_list[b], player), control_config);
 	}
 
 	// RetroArch supports 6 axes
 	for (int a = 0; a < 6; ++a)
 	{
+		if (retroarch_axis_list[a].empty()) { mapping.axis[a] = -1; continue; }
 		mapping.axis[a] = find_retroarch(ra_player_input(retroarch_axis_list[a], player), control_config);
 	}
 
