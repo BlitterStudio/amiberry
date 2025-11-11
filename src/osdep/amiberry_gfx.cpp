@@ -72,9 +72,10 @@ SDL_Surface* amiga_surface = nullptr;
 
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
-//crtemu_t* crtemu_lite = nullptr;
-//crtemu_t* crtemu_pc = nullptr;
 crtemu_t* crtemu_tv = nullptr;
+
+bool set_opengl_attributes();
+bool init_opengl_context(SDL_Window* window);
 #else
 SDL_Texture* amiga_texture;
 #endif
@@ -228,11 +229,8 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
-	struct AmigaMonitor* mon = &AMonitors[monid];
-
-	//crt_frame( (CRTEMU_U32*)amiga_surface->pixels ); // bezel - however, seems hardcoded to internal 1024x1024 size
-
-	//TODO Check for option (which CRT filter to use: Lite/PC/TV)
+	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
+	// TODO Check for option (which CRT filter to use: Lite/PC/TV)
 	if (crtemu_tv)
 		destroy_crtemu();
 	if (crtemu_tv == nullptr)
@@ -321,7 +319,9 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	{
 		update_leds(monid);
 	}
-
+#ifdef USE_OPENGL
+	return amiga_surface != nullptr;
+#else
 	if (amiga_texture && amiga_surface)
 	{
 		SDL_RenderClear(mon->amiga_renderer);
@@ -348,6 +348,8 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		}
 		return true;
 	}
+#endif
+
 	return false;
 }
 
@@ -1237,7 +1239,10 @@ void show_screen(const int monid, int mode)
 	}
 #ifdef USE_OPENGL
 	auto time = SDL_GetTicks();
-	glViewport(0, 0, render_quad.w, render_quad.h);
+
+	int drawableWidth, drawableHeight;
+	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
+	glViewport(0, 0, drawableWidth, drawableHeight);
 	if (crtemu_tv) {
 		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
 			crop_rect.w, crop_rect.h, 0xffffffff, 0x000000);
@@ -3121,6 +3126,17 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
 
+#ifdef USE_OPENGL
+	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
+	const char* drv = SDL_GetCurrentVideoDriver();
+	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
+	if (!likely_gles_only) {
+		flags |= SDL_WINDOW_OPENGL;
+	} else {
+		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
+	}
+#endif
+
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
 		rc.w, rc.h,
@@ -3151,6 +3167,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		SDL_FreeSurface(icon_surface);
 	}
 
+#ifndef USE_OPENGL
 	if (mon->amiga_renderer == nullptr)
 	{
 		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
@@ -3158,6 +3175,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 	DPIHandler::set_render_scale(mon->amiga_renderer);
+#endif
 
 
     // Cache current display mode for scaling heuristics
@@ -3223,7 +3241,6 @@ static int oldtex_w[MAX_AMIGAMONITORS], oldtex_h[MAX_AMIGAMONITORS], oldtex_rtg[
 
 static bool doInit(AmigaMonitor* mon)
 {
-	int ret = 0;
 	bool modechanged;
 
 	struct vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
@@ -3247,11 +3264,26 @@ static bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_width = rc.w;
 			mon->currentmode.native_height = rc.h;
 		}
+#ifdef USE_OPENGL
+		if (!set_opengl_attributes())
+		{
+			return false;
+		}
+#endif
+
 		if (!create_windows(mon))
 		{
 			close_hwnds(mon);
-			return ret;
+			return false;
 		}
+
+#ifdef USE_OPENGL
+		if (!init_opengl_context(mon->amiga_window))
+		{
+			write_log("OpenGL context init failed. Aborting doInit.\n");
+			return false;
+		}
+#endif
 #ifdef PICASSO96
 		if (mon->screen_is_picasso) {
 			display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
@@ -3381,6 +3413,21 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		return false;
 	}
 
+#ifdef USE_OPENGL
+    // Ensure amiga_surface is in sync with the texture size
+    if (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h) {
+        if (amiga_surface) {
+            SDL_FreeSurface(amiga_surface);
+        }
+        write_log("Re-creating amiga_surface with size %dx%d to match texture.\n", w, h);
+        amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, pixel_format);
+        if (amiga_surface == nullptr) {
+            write_log("!!! Failed to create amiga_surface.\n");
+            return false;
+        }
+    }
+#endif
+
 	if (vbout) {
 		vbout->width_allocated = w;
 		vbout->height_allocated = h;
@@ -3414,7 +3461,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 			}
 		}
 #ifdef USE_OPENGL
-		renderQuad = { dx, dy, w, h };
+		render_quad = { dx, dy, w, h };
 		crop_rect = { dx, dy, w, h };
 		set_scaling_option(mon->monitor_id, &currprefs, w, h);
 #else
@@ -3788,7 +3835,7 @@ void auto_crop_image()
 			height = sdl_mode.h;
 		}
 #ifdef USE_OPENGL
-		renderQuad = { dx, dy, width, height };
+		render_quad = { dx, dy, width, height };
 		crop_rect = { cx, cy, cw, ch };
 #else
 
@@ -3947,3 +3994,130 @@ void screenshot(int monid, int mode, int doprepare)
 
 	save_thumb(screenshot_filename);
 }
+
+/**
+ * @brief Sets the required SDL GL attributes before window creation.
+ *
+ * This function configures the OpenGL context version and other attributes.
+ * It requests an OpenGL 2.1 context, which corresponds to GLSL version 120.
+ * This specific version is chosen to ensure maximum compatibility across
+ * various platforms (macOS, Linux, Raspberry Pi) and to support the legacy
+ * shaders used in the CRT emulation filter (see `crtemu.h`).
+ *
+ * By requesting OpenGL 2.1 without a CORE_PROFILE mask, we allow SDL to
+ * create a compatibility profile. This is essential for running the GLSL 1.20
+ * shaders, as a core profile would reject them. This approach provides a
+ * stable and widely supported rendering backend.
+ *
+ * @return true if all attributes were set successfully, false otherwise.
+ */
+[[nodiscard]] bool set_opengl_attributes()
+{
+	bool success = true;
+
+	// Request a desktop OpenGL 2.1 compatibility context for GLSL 1.20 shaders.
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) == 0);
+
+	// Sensible defaults.
+	success &= (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0) == 0);
+
+	// Optional: request RGBA8
+	success &= (SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8) == 0);
+	success &= (SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8) == 0);
+
+	const char* drv = SDL_GetCurrentVideoDriver();
+	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
+	write_log(_T("Requested OpenGL context: 2.1 compatibility\n"));
+
+	return success;
+}
+
+#ifdef USE_OPENGL
+
+static bool is_gles_context()
+{
+	const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+	return ver && (strstr(ver, "OpenGL ES") != nullptr || strstr(ver, "OpenGL ES-CM") != nullptr);
+}
+
+/**
+ * @brief Creates the OpenGL context and initializes the GLEW extension loader.
+ *
+ * This function must be called after an SDL window has been successfully
+ * created. It performs the final steps required to prepare for OpenGL
+ * rendering:
+ * 1. Creates an OpenGL context and associates it with the given window.
+ * 2. Binds the newly created context to the current thread.
+ * 3. Initializes the GLEW library, which dynamically loads the function
+ *    pointers for all available OpenGL extensions. This is essential for
+ *    accessing any functionality beyond the OpenGL 1.1 core.
+ *
+ * The function includes error checking after each step and will log detailed
+ * error messages if any part of the process fails. It also logs the vendor,
+ * renderer, and version strings for debugging purposes.
+ *
+ * @param window A pointer to the SDL_Window that the OpenGL context will be
+ *               created for.
+ * @return true if the context was created and GLEW was initialized
+ *         successfully, false otherwise.
+ */
+[[nodiscard]] bool init_opengl_context(SDL_Window* window)
+{
+	write_log("DEBUG: Initializing OpenGL Context...\n");
+
+	gl_context = SDL_GL_CreateContext(window);
+	if (!gl_context) {
+		write_log(_T("!!! SDL_GL_CreateContext failed: %hs\n"), SDL_GetError());
+		return false;
+	}
+
+	if (SDL_GL_MakeCurrent(window, gl_context) != 0) {
+		write_log(_T("!!! SDL_GL_MakeCurrent failed: %hs\n"), SDL_GetError());
+		SDL_GL_DeleteContext(gl_context);
+		gl_context = nullptr;
+		return false;
+	}
+
+	// GLEW: enable modern/core entry points before init, then clear benign error.
+	glewExperimental = GL_TRUE;
+	const GLenum glew_err = glewInit();
+	(void)glGetError(); // clear spurious GL_INVALID_ENUM produced by glewInit on core profiles
+
+	if (glew_err != GLEW_OK) {
+		write_log(_T("!!! Error initializing GLEW: %hs\n"), glewGetErrorString(glew_err));
+		// If GLEW reports an error but GL is valid, continue; otherwise fail.
+		const GLubyte* ver = glGetString(GL_VERSION);
+		if (!ver) {
+			write_log(_T("!!! glGetString(GL_VERSION) is null; failing OpenGL init.\n"));
+			SDL_GL_DeleteContext(gl_context);
+			gl_context = nullptr;
+			return false;
+		}
+	}
+
+	// Reject GLES contexts (desktop GLEW does not support GLES reliably).
+	if (is_gles_context()) {
+		const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+		write_log(_T("!!! OpenGL ES context detected (%hs); desktop GLEW not supported.\n"), ver ? ver : "unknown");
+		SDL_GL_DeleteContext(gl_context);
+		gl_context = nullptr;
+		return false;
+	}
+
+	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+	const char* sl_ver   = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+	write_log(_T("OpenGL Renderer: %hs\n"), renderer ? renderer : "unknown");
+	write_log(_T("OpenGL Version:  %hs\n"), version ? version : "unknown");
+	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");
+
+	return true;
+}
+#endif
