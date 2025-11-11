@@ -76,6 +76,16 @@ crtemu_t* crtemu_tv = nullptr;
 
 bool set_opengl_attributes();
 bool init_opengl_context(SDL_Window* window);
+
+static int get_crtemu_type(const char* shader)
+{
+	if (!shader) return CRTEMU_TYPE_TV;
+	// Simple case handling without extra deps
+	if (!std::strcmp(shader, "tv") || !std::strcmp(shader, "TV"))       return CRTEMU_TYPE_TV;
+	if (!std::strcmp(shader, "pc") || !std::strcmp(shader, "PC"))       return CRTEMU_TYPE_PC;
+	if (!std::strcmp(shader, "lite") || !std::strcmp(shader, "LITE"))   return CRTEMU_TYPE_LITE;
+	return CRTEMU_TYPE_TV;
+}
 #else
 SDL_Texture* amiga_texture;
 #endif
@@ -230,11 +240,12 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 		return false;
 #ifdef USE_OPENGL
 	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
-	// TODO Check for option (which CRT filter to use: Lite/PC/TV)
 	if (crtemu_tv)
 		destroy_crtemu();
-	if (crtemu_tv == nullptr)
-		crtemu_tv = crtemu_create(CRTEMU_TYPE_TV, nullptr);
+	if (crtemu_tv == nullptr) {
+		const int crt_type = get_crtemu_type(amiberry_options.shader);
+		crtemu_tv = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
+	}
 	if (crtemu_tv)
 		crtemu_frame(crtemu_tv, (CRTEMU_U32*)amiga_surface->pixels, w, h);
 	return crtemu_tv != nullptr;
