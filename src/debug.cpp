@@ -923,6 +923,7 @@ static int readsize (int val, TCHAR **c)
 static int checkvaltype(TCHAR **cp, uae_u32 *val, int *size, TCHAR def)
 {
 	TCHAR form[256], *p;
+	int remaining_bufsize;
 	bool gotop = false;
 	bool copyrest = false;
 	double out;
@@ -940,8 +941,9 @@ static int checkvaltype(TCHAR **cp, uae_u32 *val, int *size, TCHAR def)
 			return 0;
 		}
 		*val = v;
+		remaining_bufsize = sizeof(form) - (p - &form[0])*sizeof(TCHAR);
 		// stupid but works!
-		_sntprintf(p, sizeof p, _T("%u"), v);
+		_sntprintf(p, remaining_bufsize, _T("%u"), v);
 		p += _tcslen (p);
 		*p = 0;
 		if (peekchar(cp) == '.') {
@@ -1196,14 +1198,14 @@ uaecptr dumpmem2 (uaecptr addr, TCHAR *out, int osize)
 
 	if (osize <= (9 + cols * 5 + 1 + 2 * cols))
 		return addr;
-	_sntprintf (out, sizeof out, _T("%08X "), addr);
+	_sntprintf (out, osize*sizeof(TCHAR), _T("%08X "), addr);
 	for (i = 0; i < cols; i++) {
 		uae_u8 b1, b2;
 		b1 = b2 = 0;
 		if (debug_safe_addr (addr, 1)) {
 			b1 = get_byte_debug (addr + 0);
 			b2 = get_byte_debug (addr + 1);
-			_sntprintf (out + 9 + i * 5, sizeof out + 9 + i * 5, _T("%02X%02X "), b1, b2);
+			_sntprintf (out + 9 + i * 5, (osize - (9 + i * 5))*sizeof(TCHAR), _T("%02X%02X "), b1, b2);
 			out[9 + cols * 5 + 1 + i * 2 + 0] = b1 >= 32 && b1 < 127 ? b1 : '.';
 			out[9 + cols * 5 + 1 + i * 2 + 1] = b2 >= 32 && b2 < 127 ? b2 : '.';
 		} else {
