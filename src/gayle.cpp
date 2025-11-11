@@ -22,17 +22,10 @@
 #include "gayle.h"
 #include "savestate.h"
 #include "uae.h"
-#include "gui.h"
-#include "threaddep/thread.h"
-#ifdef A2091
-#include "a2091.h"
-#endif
 #include "ncr_scsi.h"
 #include "ncr9x_scsi.h"
-#include "blkdev.h"
 #include "scsi.h"
 #include "ide.h"
-#include "idecontrollers.h"
 #ifdef WITH_PCI
 #include "pci_hw.h"
 #endif

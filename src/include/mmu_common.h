@@ -44,6 +44,8 @@ typedef int m68k_exception;
 
 #endif
 
+extern bool mmu_debugger;
+
 /* special status word (access error stack frame) */
 /* 68060 */
 #define MMU_FSLW_MA		0x08000000
@@ -151,5 +153,15 @@ extern uae_u32(*x_phys_get_long)(uaecptr);
 extern void(*x_phys_put_byte)(uaecptr, uae_u32);
 extern void(*x_phys_put_word)(uaecptr, uae_u32);
 extern void(*x_phys_put_long)(uaecptr, uae_u32);
+
+#define MAX_MMU_DEBUG_DESCRIPTOR_LEVEL 8
+struct mmu_debug_data
+{
+    uaecptr descriptor[MAX_MMU_DEBUG_DESCRIPTOR_LEVEL];
+    int descriptor_type[MAX_MMU_DEBUG_DESCRIPTOR_LEVEL];
+    bool desc_fault;
+    int tt;
+    uae_u32 ttdata;
+};
 
 #endif /* UAE_MMU_COMMON_H */

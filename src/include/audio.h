@@ -24,7 +24,8 @@ void AUDxLEN (int nr, uae_u16 value);
 
 uae_u16 audio_dmal (void);
 void audio_state_machine (void);
-uaecptr audio_getpt (int nr, bool reset);
+uaecptr *audio_getpt(int nr);
+uaecptr audio_getloadpt(int nr);
 int init_audio (void);
 void audio_reset (void);
 void update_audio (void);
@@ -97,11 +98,11 @@ static inline int get_audio_stereomode (int channels)
 	case 2:
 		return SND_STEREO;
 	case 4:
-		return SND_4CH;
+		return SND_4CH_CLONEDSTEREO;
 	case 6:
-		return SND_6CH;
+		return SND_6CH_CLONEDSTEREO;
 	case 8:
-		return SND_8CH;
+		return SND_8CH_CLONEDSTEREO;
 	}
 	return SND_STEREO;
 }

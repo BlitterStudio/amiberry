@@ -1,5 +1,6 @@
 #include <cstring>
 #include <cstdio>
+#include <algorithm>
 
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
@@ -131,13 +132,16 @@ class HDEditActionListener : public gcn::ActionListener
 public:
 	void action(const gcn::ActionEvent& actionEvent) override
 	{
+		int type;
+		struct uaedev_config_data* uci;
+		struct mountedinfo mi{};
+
 		for (auto i = 0; i < MAX_HD_DEVICES; ++i)
 		{
 			if (actionEvent.getSource() == listCmdProps[i])
 			{
-				int type;
-				struct uaedev_config_data* uci;
-				struct mountedinfo mi;
+				if (i >= changed_prefs.mountitems)
+					return;
 
 				uci = &changed_prefs.mountconfig[i];
 
@@ -149,28 +153,49 @@ public:
 
 				if (uci->ci.type == UAEDEV_CD)
 				{
+					memcpy(&current_cddlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditCDDrive(i))
+					{
+						new_cddrive(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else if (uci->ci.type == UAEDEV_TAPE)
 				{
+					memcpy(&current_tapedlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditTapeDrive(i))
+					{
+						new_tapedrive(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else if (type == FILESYS_HARDFILE || type == FILESYS_HARDFILE_RDB)
 				{
+					current_hfdlg.forcedcylinders = uci->ci.highcyl;
+					memcpy(&current_hfdlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditFilesysHardfile(i))
+					{
+						new_hardfile(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else if (type == FILESYS_HARDDRIVE)
 				{
+					memcpy(&current_hfdlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditFilesysHardDrive(i))
+					{
+						new_harddrive(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				else /* Filesystem */
 				{
+					memcpy(&current_fsvdlg.ci, uci, sizeof(struct uaedev_config_info));
 					if (EditFilesysVirtual(i))
+					{
+						new_filesys(i);
 						gui_force_rtarea_hdchange();
+					}
 				}
 				
 				listCmdProps[i]->requestFocus();
@@ -191,31 +216,46 @@ public:
 		if (actionEvent.getSource() == cmdAddDirectory)
 		{
 			if (EditFilesysVirtual(-1))
+			{
+				new_filesys(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddDirectory->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddHardfile)
 		{
 			if (EditFilesysHardfile(-1))
+			{
+				new_hardfile(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddHardfile->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddHardDrive)
 		{
 			if (EditFilesysHardDrive(-1))
+			{
+				new_harddrive(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddHardDrive->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddCDDrive)
 		{
 			if (EditCDDrive(-1))
+			{
+				new_cddrive(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddCDDrive->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdAddTapeDrive)
 		{
 			if (EditTapeDrive(-1))
+			{
+				new_tapedrive(-1);
 				gui_force_rtarea_hdchange();
+			}
 			cmdAddTapeDrive->requestFocus();
 		}
 		else if (actionEvent.getSource() == cmdCreateHardfile)
@@ -243,25 +283,11 @@ public:
 				changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
 				changed_prefs.cdslots[0].name[0] = 0;
 				AdjustDropDownControls();
-
-				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
-					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
-					&& changed_prefs.scsi)
-				{
-					changed_prefs.scsi = 0;
-				}
 			}
 			else
 			{
 				changed_prefs.cdslots[0].inuse = true;
 				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-
-				if (!changed_prefs.cs_cd32cd && !changed_prefs.cs_cd32nvram
-					&& (!changed_prefs.cs_cdtvcd && !changed_prefs.cs_cdtvram)
-					&& !changed_prefs.scsi)
-				{
-					changed_prefs.scsi = 1;
-				}
 			}
 		}
 		else if (actionEvent.getSource() == chkCDTurbo)
@@ -339,41 +365,71 @@ public:
 		//---------------------------------------
 		if (!bIgnoreListChange)
 		{
-			const auto idx = cboCDFile->getSelected();
+			// Validate selection index against current list size
+			const int idx = cboCDFile ? cboCDFile->getSelected() : -1;
+			const int elements = cdfileList.getNumberOfElements();
 
-			if (idx < 0)
+			if (idx < 0 || idx >= elements)
 			{
+				// Nothing valid selected, clear state safely
 				changed_prefs.cdslots[0].name[0] = 0;
 				AdjustDropDownControls();
 			}
 			else
 			{
-				const auto selected = cdfileList.getElementAt(idx);
-				// if selected starts with /dev/sr, it's a CD drive
-				// TODO: Check this on MacOS, it might be different there
-				if (selected.find("/dev/") == 0)
+				const std::string selected = cdfileList.getElementAt(idx);
+				if (selected.empty())
 				{
-					strncpy(changed_prefs.cdslots[0].name, selected.c_str(), MAX_DPATH);
-					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
+					changed_prefs.cdslots[0].name[0] = 0;
+					AdjustDropDownControls();
 				}
 				else
 				{
-					const auto element = get_full_path_from_disk_list(cdfileList.getElementAt(idx));
-					if (element != changed_prefs.cdslots[0].name)
+					// If selected starts with /dev/, treat as physical CD drive
+					// TODO: Check this on MacOS, it might be different there
+					if (selected.find("/dev/") == 0)
 					{
-						strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
-						DISK_history_add(changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
+						// Safe copy with guaranteed null-termination
+						strncpy(changed_prefs.cdslots[0].name, selected.c_str(), MAX_DPATH);
+						changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
 						changed_prefs.cdslots[0].inuse = true;
-						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-						lstMRUCDList.erase(lstMRUCDList.begin() + idx);
-						lstMRUCDList.insert(lstMRUCDList.begin(), changed_prefs.cdslots[0].name);
-						RefreshCDListModel();
-						bIgnoreListChange = true;
-						cboCDFile->setSelected(0);
-						bIgnoreListChange = false;
-						if (!last_loaded_config[0])
-							set_last_active_config(element.c_str());
+						changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
+					}
+					else
+					{
+						const std::string element = get_full_path_from_disk_list(selected);
+						if (element != changed_prefs.cdslots[0].name)
+						{
+							// Safe copy with guaranteed null-termination
+							strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+							changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
+							DISK_history_add(changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
+							changed_prefs.cdslots[0].inuse = true;
+							changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+
+							// Update MRU list robustly: find by path, then move to front
+							auto it = std::find(lstMRUCDList.begin(), lstMRUCDList.end(), element);
+							if (it != lstMRUCDList.end())
+								lstMRUCDList.erase(it);
+							lstMRUCDList.insert(lstMRUCDList.begin(), element);
+
+							// Rebuild list model and select the just-used MRU entry
+							RefreshCDListModel();
+							bIgnoreListChange = true;
+							// After refresh, the MRU entries follow any detected CD drives
+							const int cdDriveCount = static_cast<int>(get_cd_drives().size());
+							const int newIndex = cdDriveCount; // moved to front of MRU section
+							if (cboCDFile)
+							{
+								if (newIndex >= 0 && newIndex < cdfileList.getNumberOfElements())
+									cboCDFile->setSelected(newIndex);
+								else
+									cboCDFile->clearSelected();
+							}
+							bIgnoreListChange = false;
+							if (!last_loaded_config[0])
+								set_last_active_config(element.c_str());
+						}
 					}
 				}
 			}
@@ -461,8 +517,7 @@ void InitPanelHD(const config_category& category)
 	cmdAddCDDrive->setSize(cmdAddDirectory->getWidth(), BUTTON_HEIGHT);
 	cmdAddCDDrive->setId("cmdAddCDDrive");
 	cmdAddCDDrive->addActionListener(hdAddActionListener);
-	// TODO enable when this is implemented
-	cmdAddCDDrive->setEnabled(false);
+	cmdAddCDDrive->setEnabled(true);
 
 	cmdAddTapeDrive = new gcn::Button("Add Tape Drive");
 	cmdAddTapeDrive->setBaseColor(gui_base_color);
@@ -624,14 +679,18 @@ static void AdjustDropDownControls()
 		&& strlen(changed_prefs.cdslots[0].name) > 0
 		&& changed_prefs.cdslots[0].type == SCSI_UNIT_DEFAULT)
 	{
-		cboCDFile->clearSelected();
+		if (cboCDFile)
+			cboCDFile->clearSelected();
 		if (changed_prefs.cdslots[0].inuse && strlen(changed_prefs.cdslots[0].name) > 0)
 		{
+			const int cdDriveCount = static_cast<int>(get_cd_drives().size());
 			for (auto i = 0; i < static_cast<int>(lstMRUCDList.size()); ++i)
 			{
 				if (strcmp(lstMRUCDList[i].c_str(), changed_prefs.cdslots[0].name) == 0)
 				{
-					cboCDFile->setSelected(i);
+					const int target = cdDriveCount + i;
+					if (cboCDFile && target >= 0 && target < cdfileList.getNumberOfElements())
+						cboCDFile->setSelected(target);
 					break;
 				}
 			}

@@ -16,6 +16,7 @@
 #include "inputdevice.h"
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
+#include "dpi_handler.hpp"
 #include "fsdb_host.h"
 #include "xwin.h"
 
@@ -137,8 +138,7 @@ static void InitShowMessage(const std::string& message)
 		}
 	}
 
-	// make the scaled rendering look smoother (linear scaling).
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+	DPIHandler::set_render_scale(mon->gui_renderer);
 
 	if (gui_texture == nullptr)
 	{

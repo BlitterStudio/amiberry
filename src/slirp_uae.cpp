@@ -158,7 +158,6 @@ static int slirp_receive_func(void *arg)
 
 		timeout = slirp_select_fill(&nfds, &rfds, &wfds, &xfds);
 		uae_sem_post(&slirp_sem2);
-
 		if (nfds < 0) {
 			sleep_millis(timeout / 1000);
 			ret = 0;
@@ -174,7 +173,6 @@ static int slirp_receive_func(void *arg)
 				continue;
 			}
 		}
-
 		if (ret >= 0) {
 			if (uae_sem_trywait_delay(&slirp_sem2, 500)) {
 				continue;
@@ -236,7 +234,6 @@ void uae_slirp_end(void)
 			if (slirp_thread_active == 0) {
 				write_log(_T("SLIRP thread did not terminate properly, forcing exit\n"));
 			}
-
 			uae_end_thread(&slirp_tid);
 		}
 		slirp_thread_active = 0;

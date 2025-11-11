@@ -74,7 +74,9 @@ struct cputbl {
 	uae_s8 length;
 	uae_s8 disp020[2];
 	uae_s8 branch;
+#ifdef JIT
 	uae_u16 specific;
+#endif
 };
 
 #ifdef JIT
@@ -352,7 +354,6 @@ extern bool m68k_interrupt_delay;
 extern void safe_interrupt_set(int, int, bool);
 
 #define SPCFLAG_CPUINRESET 2
-#define SPCFLAG_COPPER 4
 #define SPCFLAG_INT 8
 #define SPCFLAG_BRK 16
 #define SPCFLAG_UAEINT 32
@@ -761,7 +762,6 @@ extern void init_m68k (void);
 extern void m68k_go (int);
 extern void m68k_dumpstate(uaecptr *, uaecptr);
 extern void m68k_dumpcache(bool);
-extern bool m68k_readcache(uaecptr memaddr, bool dc, uae_u32* valp);
 extern int getMulu68kCycles(uae_u16 src);
 extern int getMuls68kCycles(uae_u16 src);
 extern int getDivu68kCycles (uae_u32 dividend, uae_u16 divisor);

@@ -70,47 +70,53 @@ struct virtualfilesysobject
 
 /* AmigaOS "keys" */
 typedef struct a_inode_struct {
-	/* Circular list of recycleable a_inodes.  */
-	struct a_inode_struct *next, *prev;
-	/* This a_inode's relatives in the directory structure.  */
-	struct a_inode_struct *parent;
-	struct a_inode_struct *child, *sibling;
-	/* AmigaOS name, and host OS name.  The host OS name is a full path, the
-	 * AmigaOS name is relative to the parent.  */
-	TCHAR *aname;
-	TCHAR *nname;
-	/* AmigaOS file comment, or NULL if file has none.  */
-	TCHAR *comment;
-	/* AmigaOS protection bits.  */
-	int amigaos_mode;
-	/* Unique number for identification.  */
-	uae_u32 uniq;
-	/* For a directory that is being ExNext()ed, the number of child ainos
-	   which must be kept locked in core.  */
-	unsigned int locked_children;
-	/* How many ExNext()s are going on in this directory?  */
-	unsigned int exnext_count;
-	/* AmigaOS locking bits.  */
-	int shlock;
-	long db_offset;
-	unsigned int dir:1;
-	unsigned int softlink:2;
-	unsigned int elock:1;
-	/* Nonzero if this came from an entry in our database.  */
-	unsigned int has_dbentry:1;
-	/* Nonzero if this will need an entry in our database.  */
-	unsigned int needs_dbentry:1;
-	/* This a_inode possibly needs writing back to the database.  */
-	unsigned int dirty:1;
-	/* If nonzero, this represents a deleted file; the corresponding
-	 * entry in the database must be cleared.  */
-	unsigned int deleted:1;
-	/* target volume flag */
-	unsigned int volflags;
-	/* not equaling unit.mountcount -> not in this volume */
-	unsigned int mountcount;
+#ifdef AINO_DEBUG
+    uae_u32 checksum1;
+#endif
+    /* Circular list of recycleable a_inodes.  */
+    struct a_inode_struct *next, *prev;
+    /* This a_inode's relatives in the directory structure.  */
+    struct a_inode_struct *parent;
+    struct a_inode_struct *child, *sibling;
+    /* AmigaOS name, and host OS name.  The host OS name is a full path, the
+     * AmigaOS name is relative to the parent.  */
+    TCHAR *aname;
+    TCHAR *nname;
+    /* AmigaOS file comment, or NULL if file has none.  */
+    TCHAR *comment;
+    /* AmigaOS protection bits.  */
+    int amigaos_mode;
+    /* Unique number for identification.  */
+    uae_u32 uniq;
+    /* For a directory that is being ExNext()ed, the number of child ainos
+       which must be kept locked in core.  */
+    unsigned int locked_children;
+    /* How many ExNext()s are going on in this directory?  */
+    unsigned int exnext_count;
+    /* AmigaOS locking bits.  */
+    int shlock;
+    long db_offset;
+    unsigned int dir:1;
+    unsigned int softlink:2;
+    unsigned int elock:1;
+    /* Nonzero if this came from an entry in our database.  */
+    unsigned int has_dbentry:1;
+    /* Nonzero if this will need an entry in our database.  */
+    unsigned int needs_dbentry:1;
+    /* This a_inode possibly needs writing back to the database.  */
+    unsigned int dirty:1;
+    /* If nonzero, this represents a deleted file; the corresponding
+     * entry in the database must be cleared.  */
+    unsigned int deleted:1;
+    /* target volume flag */
+    unsigned int volflags;
+    /* not equaling unit.mountcount -> not in this volume */
+    unsigned int mountcount;
 	uae_u64 uniq_external;
 	struct virtualfilesysobject *vfso;
+#ifdef AINO_DEBUG
+    uae_u32 checksum2;
+#endif
 } a_inode;
 
 extern TCHAR *nname_begin (TCHAR *);

@@ -13,11 +13,8 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "uae.h"
-#include "traps.h"
 #include "memory.h"
 #include "rommgr.h"
-#include "custom.h"
 #include "newcpu.h"
 #include "savestate.h"
 #include "zfile.h"
@@ -58,7 +55,6 @@
 #ifdef WITH_SPECIALMONITORS
 #include "specialmonitors.h"
 #endif
-#include "inputdevice.h"
 #ifdef WITH_PCI
 #include "pci.h"
 #endif
@@ -80,16 +76,6 @@
 #define CARD_FLAG_CAN_Z3 1
 #define CARD_FLAG_CHILD 8
 #define CARD_FLAG_UAEROM 16
-
-// More information in first revision HRM Appendix_G
-#define BOARD_PROTOAUTOCONFIG 1
-
-#define BOARD_AUTOCONFIG_Z2 2
-#define BOARD_AUTOCONFIG_Z3 3
-#define BOARD_NONAUTOCONFIG_BEFORE 4
-#define BOARD_NONAUTOCONFIG_AFTER_Z2 5
-#define BOARD_NONAUTOCONFIG_AFTER_Z3 6
-#define BOARD_IGNORE 7
 
 #define KS12_BOOT_HACK 1
 
@@ -239,7 +225,8 @@ static bool isnonautoconfig(int v)
 {
 	return v == BOARD_NONAUTOCONFIG_AFTER_Z2 ||
 		v == BOARD_NONAUTOCONFIG_AFTER_Z3 ||
-		v == BOARD_NONAUTOCONFIG_BEFORE;
+		v == BOARD_NONAUTOCONFIG_BEFORE ||
+		v == BOARD_PCI;
 }
 
 static bool ks12orolder(void)
@@ -496,8 +483,10 @@ static void call_card_init(int index)
 	memset(aci->autoconfig_raw, 0xff, sizeof aci->autoconfig_raw);
 	if (cd->initnum) {
 		ok = cd->initnum(aci);
-	} else {
+	} else if (cd->initrc) {
 		ok = cd->initrc(aci);
+	} else {
+		ok = true;
 	}
 	if (ok) {
 		ab = NULL;
@@ -1489,6 +1478,7 @@ static bool expamem_init_uaeboard(struct autoconfig_info *aci)
 	aci->set_params = set_params_filesys;
 
 	expamem_init_clear();
+	// ks12 / !rom / uaeboard_nodiag = map boot rom but don't execute it.
 	expamem_write(0x00, (p->uaeboard > 1 ? Z2_MEM_128KB : Z2_MEM_64KB) | zorroII | (ks12 || !rom || p->uaeboard_nodiag ? 0 : rom_card));
 
 	expamem_write(0x08, no_shutup);
@@ -2974,7 +2964,11 @@ static void expansion_init_cards(struct uae_prefs *p)
 			ok = cd->initnum(aci);
 		} else {
 			aci->rc = cd->rc;
-			ok = cd->initrc(aci);
+			if (cd->initrc) {
+				ok = cd->initrc(aci);
+			} else {
+				ok = true;
+			}
 		}
 		if (cd->flags & CARD_FLAG_CHILD)
 			aci->parent_of_previous = true;
@@ -3011,19 +3005,22 @@ static void set_order(struct uae_prefs *p, struct card_data *cd, int order)
 		return;
 	}
 	int devnum = (cd->flags >> 16) & 255;
-	if (!_tcsicmp(cd->name, _T("Z2Fast"))) {
-		p->fastmem[devnum].device_order = order;
-		return;
+	if (devnum < MAX_RAM_BOARDS) {
+		if (!_tcsicmp(cd->name, _T("Z2Fast"))) {
+			p->fastmem[devnum].device_order = order;
+			return;
+		}
+		if (!_tcsicmp(cd->name, _T("Z3Fast"))) {
+			p->z3fastmem[devnum].device_order = order;
+			return;
+		}
 	}
-	if (!_tcsicmp(cd->name, _T("Z3Fast"))) {
-		p->z3fastmem[devnum].device_order = order;
-		return;
+	if (devnum < MAX_RTG_BOARDS) {
+		if (!_tcsicmp(cd->name, _T("Z3RTG")) || !_tcsicmp(cd->name, _T("Z2RTG"))) {
+			p->rtgboards[devnum].device_order = order;
+			return;
+		}
 	}
-	if (!_tcsicmp(cd->name, _T("Z3RTG")) || !_tcsicmp(cd->name, _T("Z2RTG"))) {
-		p->rtgboards[devnum].device_order = order;
-		return;
-	}
-
 }
 
 static int get_order(struct uae_prefs *p, struct card_data *cd)
@@ -3041,17 +3038,23 @@ static int get_order(struct uae_prefs *p, struct card_data *cd)
 	}
 	if (cd->zorro <= 0)
 		return -1;
-	if (cd->zorro >= 4)
+	if (cd->zorro == BOARD_PCI)
+		return EXPANSION_ORDER_MAX - 1;
+	if (cd->zorro >= BOARD_NONAUTOCONFIG_BEFORE)
 		return -2;
 	if (cd->rc && cd->rc->back)
 		return cd->rc->back->device_order;
 	int devnum = (cd->flags >> 16) & 255;
-	if (!_tcsicmp(cd->name, _T("Z2Fast")))
-		return p->fastmem[devnum].device_order;
-	if (!_tcsicmp(cd->name, _T("Z3Fast")))
-		return p->z3fastmem[devnum].device_order;
-	if (!_tcsicmp(cd->name, _T("Z3RTG")) || !_tcsicmp(cd->name, _T("Z2RTG")))
-		return p->rtgboards[devnum].device_order;
+	if (devnum < MAX_RAM_BOARDS) {
+		if (!_tcsicmp(cd->name, _T("Z2Fast")))
+			return p->fastmem[devnum].device_order;
+		if (!_tcsicmp(cd->name, _T("Z3Fast")))
+			return p->z3fastmem[devnum].device_order;
+	}
+	if (devnum < MAX_RTG_BOARDS) {
+		if (!_tcsicmp(cd->name, _T("Z3RTG")) || !_tcsicmp(cd->name, _T("Z2RTG")))
+			return p->rtgboards[devnum].device_order;
+	}
 	if (!_tcsicmp(cd->name, _T("MegaChipRAM")))
 		return -1;
 	return EXPANSION_ORDER_MAX - 1;
@@ -3093,7 +3096,11 @@ static void expansion_parse_cards(struct uae_prefs *p, bool log)
 			ok = cd->initnum(aci);
 		} else {
 			aci->rc = cd->rc;
-			ok = cd->initrc(aci);
+			if (cd->initrc) {
+				ok = cd->initrc(aci);
+			} else {
+				ok = true;
+			}
 		}
 		if (aci->last_high_ram > expamem_highmem_pointer) {
 			expamem_highmem_pointer = aci->last_high_ram;
@@ -3336,19 +3343,22 @@ static void check_card_child(int index, bool *inuse, int *new_cardnop)
 			inuse[i] = true;
 		}
 	}
-	// romtype parent?
-	for (int i = 0; i < cardno; i++) {
-		struct card_data *cdc = &cards_set[i];
-		if (inuse[i])
-			continue;
-		const int *parent = cdc->aci.parent_romtype;
-		if (!parent)
-			continue;
-		for (int j = 0; parent[j]; j++) {
-			if (cd->rc && parent[j] == (cd->rc->back->device_type & ROMTYPE_MASK)) {
-				cards[new_cardno++] = cdc;
-				cdc->aci.parent_of_previous = true;
-				inuse[i] = true;
+	// romtype parent? search backwards, find closest previous.
+	for (int r = 0; r < 2; r++) {
+		int start = r == 0 ? index : cardno;
+		for (int i = start - 1; i >= 0; i--) {
+			struct card_data *cdc = &cards_set[i];
+			if (inuse[i])
+				continue;
+			const int *parent = cdc->aci.parent_romtype;
+			if (!parent)
+				continue;
+			for (int j = 0; parent[j]; j++) {
+				if (cd->rc && parent[j] == (cd->rc->back->device_type & ROMTYPE_MASK)) {
+					cards[new_cardno++] = cdc;
+					cdc->aci.parent_of_previous = true;
+					inuse[i] = true;
+				}
 			}
 		}
 	}
@@ -3397,7 +3407,7 @@ static bool add_card_sort(int index, bool *inuse, int *new_cardnop)
 
 static void expansion_autoconfig_sort(struct uae_prefs *p)
 {
-	const int zs[] = { BOARD_NONAUTOCONFIG_BEFORE, 0, BOARD_PROTOAUTOCONFIG, BOARD_AUTOCONFIG_Z2, BOARD_NONAUTOCONFIG_AFTER_Z2, BOARD_AUTOCONFIG_Z3, BOARD_NONAUTOCONFIG_AFTER_Z3, -1 };
+	const int zs[] = { BOARD_NONAUTOCONFIG_BEFORE, BOARD_PCI, 0, BOARD_PROTOAUTOCONFIG, BOARD_AUTOCONFIG_Z2, BOARD_NONAUTOCONFIG_AFTER_Z2, BOARD_AUTOCONFIG_Z3, BOARD_NONAUTOCONFIG_AFTER_Z3, -1 };
 	bool inuse[MAX_EXPANSION_BOARD_SPACE];
 	struct card_data *tcards[MAX_EXPANSION_BOARD_SPACE];
 	int new_cardno = 0;
@@ -3649,10 +3659,10 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		struct rtgboardconfig *rbc = &p->rtgboards[i];
 		int type = gfxboard_get_configtype(rbc);
-		if (rbc->rtgmem_size && rbc->rtgmem_type >= GFXBOARD_HARDWARE && type == BOARD_NONAUTOCONFIG_BEFORE) {
+		if (rbc->rtgmem_size && rbc->rtgmem_type >= GFXBOARD_HARDWARE && (type == BOARD_NONAUTOCONFIG_BEFORE || type == BOARD_PCI)) {
 			cards_set[cardno].flags = 4 | (i << 16);
 			cards_set[cardno].name = _T("MainBoardRTG");
-			cards_set[cardno].zorro = BOARD_NONAUTOCONFIG_BEFORE;
+			cards_set[cardno].zorro = type;
 			cards_set[cardno++].initnum = gfxboard_init_memory;
 		}
 	}
@@ -3661,6 +3671,7 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 	// add possible non-autoconfig boards
 	add_cpu_expansions(p, BOARD_NONAUTOCONFIG_BEFORE, NULL);
 	add_expansions(p, BOARD_NONAUTOCONFIG_BEFORE, NULL, 0);
+	add_expansions(p, BOARD_PCI, NULL, 0);
 
 	fastmem_num = 0;
 	add_expansions(p, BOARD_PROTOAUTOCONFIG, &fastmem_num, 0);
@@ -3703,7 +3714,6 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 		cards_set[cardno].zorro = BOARD_NONAUTOCONFIG_BEFORE;
 		cards_set[cardno].initnum = expamem_rtarea_init;
 		cards_set[cardno++].map = NULL;
-
 	}
 #endif
 #ifdef PICASSO96
@@ -4125,11 +4135,10 @@ uae_u8 *save_expansion_boards(size_t *len, uae_u8 *dstptr, int cardnum)
 
 uae_u8 *restore_expansion_boards(uae_u8 *src)
 {
+	static bool uaeboardrestorefirst;
 	if (!src) {
 		restore_cardno = 0;
-#if 0
-		currprefs.uaeboard = changed_prefs.uaeboard = -1;
-#endif
+		uaeboardrestorefirst = true;
 		return NULL;
 	}
 	TCHAR *s;
@@ -4150,14 +4159,14 @@ uae_u8 *restore_expansion_boards(uae_u8 *src)
 	for (int j = 0; j < 16; j++) {
 		ec->aci.autoconfig_bytes[j] = restore_u8();
 	}
-#if 0
 	if (ec->flags & CARD_FLAG_UAEROM) {
 		if (ec->base >= 0xe90000 && ec->base < 0xf00000) {
 			if (ec->size > 65536) {
 				currprefs.uaeboard = changed_prefs.uaeboard = 2;
 			} else {
-				if (currprefs.uaeboard < 0) {
+				if (uaeboardrestorefirst) {
 					currprefs.uaeboard = changed_prefs.uaeboard = 0;
+					uaeboardrestorefirst = false;
 				} else {
 					currprefs.uaeboard = changed_prefs.uaeboard = 1;
 				}
@@ -4166,7 +4175,6 @@ uae_u8 *restore_expansion_boards(uae_u8 *src)
 			currprefs.uaeboard = changed_prefs.uaeboard = 0;
 		}
 	}
-#endif
 	uae_u32 dev_num = 0;
 	uae_u32 romtype = restore_u32();
 	if (romtype != 0xffffffff) {
@@ -5311,6 +5319,16 @@ static const struct expansionboardsettings cdtvsram_settings[] = {
 	}
 };
 
+static const struct expansionboardsettings apollo500_settings[] = {
+	{
+		_T("SCSI module installed"),
+		_T("scsi")
+	},
+	{
+		NULL
+	}
+};
+
 
 const struct expansionromtype expansionroms[] = {
 	{
@@ -5388,6 +5406,12 @@ const struct expansionromtype expansionroms[] = {
 		false, EXPANSIONTYPE_INTERNAL
 	},
 #endif
+	{
+		_T("a1000wom512k"), _T("A1000 512k WOM"), _T("Jörg Huth"),
+		NULL, NULL, NULL, NULL, ROMTYPE_512KWOM | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, 0,
+		false, EXPANSIONTYPE_INTERNAL
+	},
 
 	/* PCI Bridgeboards */
 #ifdef WITH_PCI
@@ -5437,8 +5461,8 @@ const struct expansionromtype expansionroms[] = {
 		NULL, apollo_init_hd, NULL, apollo_add_scsi_unit, ROMTYPE_APOLLOHD, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI | EXPANSIONTYPE_IDE,
-		8738, 0, 0
-	},
+		8738, 0, 0, false, NULL,
+		false, 0, apollo500_settings },
 	{
 		_T("add500"), _T("ADD-500"), _T("Archos"),
 		NULL, add500_init, NULL, add500_add_scsi_unit, ROMTYPE_ADD500, 0, 0, BOARD_AUTOCONFIG_Z2, false,
@@ -5463,13 +5487,13 @@ const struct expansionromtype expansionroms[] = {
 	},
 #ifdef NCR9X
 	{
-		_T("blizzardscsikitiii"), _T("SCSI Kit III"), _T("Phase 5"),
+		_T("blizzardscsikitiii"), _T("Blizzard SCSI Kit III"), _T("Phase 5"),
 		NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT3, 0, 0, 0, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI
 	},
 	{
-		_T("blizzardscsikitiv"), _T("SCSI Kit IV"), _T("Phase 5"),
+		_T("blizzardscsikitiv"), _T("Blizzard SCSI Kit IV"), _T("Phase 5"),
 		NULL, NULL, NULL, cpuboard_ncr9x_add_scsi_unit, ROMTYPE_BLIZKIT4, 0, 0, 0, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SCSI
@@ -5499,14 +5523,14 @@ const struct expansionromtype expansionroms[] = {
 #endif
 	{
 		_T("alfapower"), _T("AlfaPower/AT-Bus 2008"), _T("BSC/Alfa Data"),
-		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFA, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFA | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 		NULL, 0,
 		false, EXPANSIONTYPE_IDE,
 		2092, 8, 0
 	},
 	{
 		_T("alfapowerplus"), _T("AlfaPower Plus"), _T("BSC/Alfa Data"),
-		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFAPLUS, 0, 0, BOARD_AUTOCONFIG_Z2, false,
+		NULL, alf_init, NULL, alf_add_ide_unit, ROMTYPE_ALFAPLUS | ROMTYPE_NONE, 0, 0, BOARD_AUTOCONFIG_Z2, false,
 		NULL, 0,
 		false, EXPANSIONTYPE_IDE,
 		2092, 8, 0
@@ -6237,13 +6261,13 @@ const struct expansionromtype expansionroms[] = {
 #ifdef WITH_PCI
 	{
 		_T("es1370"), _T("ES1370 PCI"), _T("Ensoniq"),
-		NULL, pci_expansion_init, NULL, NULL, ROMTYPE_ES1370 | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, pci_expansion_init, NULL, NULL, ROMTYPE_ES1370 | ROMTYPE_NOT, 0, 0, BOARD_PCI, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SOUND
 	},
 	{
 		_T("fm801"), _T("FM801 PCI"), _T("Fortemedia"),
-		NULL, pci_expansion_init, NULL, NULL, ROMTYPE_FM801 | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, pci_expansion_init, NULL, NULL, ROMTYPE_FM801 | ROMTYPE_NOT, 0, 0, BOARD_PCI, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_SOUND
 	},
@@ -6378,7 +6402,7 @@ const struct expansionromtype expansionroms[] = {
 #ifdef WITH_PCI
 	{
 		_T("ne2000_pci"), _T("RTL8029 PCI (NE2000 compatible)"), NULL,
-		NULL, pci_expansion_init, NULL, NULL, ROMTYPE_NE2KPCI | ROMTYPE_NOT, 0, 0, BOARD_NONAUTOCONFIG_BEFORE, true,
+		NULL, pci_expansion_init, NULL, NULL, ROMTYPE_NE2KPCI | ROMTYPE_NOT, 0, 0, BOARD_PCI, true,
 		NULL, 0,
 		false, EXPANSIONTYPE_NET,
 		0, 0, 0, false, NULL,
@@ -6584,11 +6608,19 @@ static const struct cpuboardsubtype gvpboard_sub[] = {
 		gvpa1230s2_settings, NULL,
 		2017, 9, 0, false
 	},
+	{
+		_T("QuikPak"),
+		_T("quikpak"),
+		ROMTYPE_CB_QUIKPAK, 0, 6,
+		NULL, 0,
+		BOARD_MEMORY_HIGHMEM,
+		128 * 1024 * 1024,
+	},
 #ifdef NCR
 	{
 		_T("QuikPak XP"),
 		_T("quikpakxp"),
-		ROMTYPE_CB_QUIKPAK, 0, 6,
+		ROMTYPE_CB_QUIKPAKXP, 0, 6,
 		quikpak_add_scsi_unit, EXPANSIONTYPE_SCSI,
 		BOARD_MEMORY_HIGHMEM,
 		128 * 1024 * 1024,
@@ -7265,11 +7297,11 @@ const struct memoryboardtype memoryboards[]
 	},
 	{
 		_T("Supra"), _T("SupraRAM 500RX"),
-		2, 0, 1056, 10
+		2, 0, 1056, 9
 	},
 	{
 		_T("Supra"), _T("SupraRAM 2000"),
-		2, 0, 1056, 9
+		2, 0, 1056, 10
 	},
 	// z3
 	{

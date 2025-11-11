@@ -13,16 +13,12 @@
 #define NEW_TRAP_DEBUG 0
 
 #include "options.h"
-#include "uae.h"
 #include "memory.h"
-#include "custom.h"
-#include "events.h"
 #include "newcpu.h"
 #include "autoconf.h"
 #include "traps.h"
 #include "debug.h"
 #include "threaddep/thread.h"
-#include "native2amiga.h"
 #include "inputdevice.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
@@ -162,6 +158,9 @@ static uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
 	if (addr & 1) {
 		return 0;
 	}
+	if (currprefs.uaeboard_nodiag) {
+		return (rtarea_bank.baseaddr[addr] << 8) + rtarea_bank.baseaddr[addr + 1];
+	}
 
 	uaecptr addr2 = addr - RTAREA_TRAP_STATUS;
 
@@ -183,6 +182,10 @@ static uae_u32 REGPARAM2 rtarea_wget (uaecptr addr)
 static uae_u32 REGPARAM2 rtarea_bget (uaecptr addr)
 {
 	addr &= 0xFFFF;
+
+	if (currprefs.uaeboard_nodiag) {
+		return rtarea_bank.baseaddr[addr];
+	}
 
 	hwtrap_check_int();
 	if (rtarea_trap_status(addr)) {
@@ -235,6 +238,9 @@ static void REGPARAM2 rtarea_bput (uaecptr addr, uae_u32 value)
 	if (addr == RTAREA_INTREQ + 3) {
 		mousehack_wakeup();
 	}
+	if (currprefs.uaeboard_nodiag) {
+		return;
+	}
 	if (!rtarea_trap_status(addr)) {
 		return;
 	}
@@ -274,6 +280,11 @@ static void REGPARAM2 rtarea_wput (uaecptr addr, uae_u32 value)
 		return;
 	}
 	if (!rtarea_write(addr)) {
+		return;
+	}
+	if (currprefs.uaeboard_nodiag) {
+		rtarea_bank.baseaddr[addr + 0] = value >> 8;
+		rtarea_bank.baseaddr[addr + 1] = (uae_u8)value;
 		return;
 	}
 
@@ -330,7 +341,7 @@ static void REGPARAM2 rtarea_lput (uaecptr addr, uae_u32 value)
 	rtarea_bank.baseaddr[addr + 2] = value >> 8;
 	rtarea_bank.baseaddr[addr + 3] = value >> 0;
 
-	if (rtarea_trap_status(addr)) {
+	if (!currprefs.uaeboard_nodiag && rtarea_trap_status(addr)) {
 		addr -= RTAREA_TRAP_STATUS;
 		int trap_offset = addr & (RTAREA_TRAP_STATUS_SIZE - 1);
 		int trap_slot = addr / RTAREA_TRAP_STATUS_SIZE;

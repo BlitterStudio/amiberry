@@ -15,11 +15,8 @@
 #include "rommgr.h"
 #include "custom.h"
 #include "newcpu.h"
-#include "zfile.h"
 #include "cd32_fmv.h"
-#include "uae.h"
 #include "debug.h"
-#include "custom.h"
 #include "audio.h"
 #include "devices.h"
 #include "threaddep/thread.h"
@@ -848,7 +845,7 @@ static void cl450_parse_frame(void)
 			}
 			break;
 			case STATE_SEQUENCE:
-				cl450_frame_pixbytes = currprefs.color_mode != 5 ? 2 : 4;
+				cl450_frame_pixbytes = 4;
 				mpeg2_convert(mpeg_decoder, cl450_frame_pixbytes == 2 ? mpeg2convert_rgb16 : mpeg2convert_rgb32, NULL);
 				cl450_set_status(CL_INT_SEQ_V);
 				cl450_frame_rate = mpeg_info->sequence->frame_period ? 27000000 / mpeg_info->sequence->frame_period : 0;

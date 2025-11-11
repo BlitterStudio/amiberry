@@ -34,7 +34,7 @@ int console_logging = 0;
 static int debugger_type = -1;
 //extern BOOL debuggerinitializing;
 BOOL debuggerinitializing = false;
-extern int lof_store;
+extern bool lof_store;
 static int console_input_linemode = -1;
 int always_flush_log = 1;
 TCHAR* conlogfile = nullptr;

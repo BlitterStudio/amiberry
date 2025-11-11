@@ -40,8 +40,8 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
 install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 # Install icon
-install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.svg
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
 
 install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})

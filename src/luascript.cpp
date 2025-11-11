@@ -13,8 +13,6 @@
 #endif
 
 #include "options.h"
-#include "savestate.h"
-#include "memory.h"
 #include "debug.h"
 #include "identify.h"
 #include "luascript.h"
@@ -161,7 +159,7 @@ void uae_lua_load(const TCHAR *filename)
 		}
 	}
 	if (err)
-		write_log (_T("'%s' initialization failed: %d\n"), err);
+		write_log (_T("'%s' initialization failed: %d\n"), filename, err);
 	xfree (fn);
 }
 

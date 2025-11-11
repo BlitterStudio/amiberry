@@ -296,10 +296,13 @@ extern uae_u16 JOY0DAT (void);
 extern uae_u16 JOY1DAT (void);
 extern void JOYSET (int num, uae_u16 v);
 extern uae_u16 JOYGET (int num);
+extern void pulse_joydat(int joy, int xy, int dir);
 
-extern void inputdevice_vsync (void);
-extern void inputdevice_hsync (bool);
-extern void inputdevice_reset (void);
+
+extern void inputdevice_vsync(void);
+extern void inputdevice_hsync(bool);
+extern void inputdevice_hsync_strobe(void);
+extern void inputdevice_reset(void);
 
 extern void write_inputdevice_config (struct uae_prefs *p, struct zfile *f);
 extern void read_inputdevice_config (struct uae_prefs *p, const TCHAR *option, TCHAR *value);
@@ -381,10 +384,10 @@ extern int handle_custom_event (const TCHAR *custom, int append);
 extern int inputdevice_geteventid(const TCHAR *s);
 extern void inputdevice_playevents(void);
 
-extern int inputdevice_testread (int*, int*, int*, bool);
-extern int inputdevice_istest (void);
-extern void inputdevice_settest (int);
-extern int inputdevice_testread_count (void);
+extern int inputdevice_testread(int*, int*, int*, bool);
+extern int inputdevice_istest(void);
+extern void inputdevice_settest(bool, bool);
+extern int inputdevice_testread_count(void);
 
 bool target_can_autoswitchdevice(void);
 void target_inputdevice_acquire(void);
@@ -398,6 +401,6 @@ bool key_winpressed(void);
 
 void inputdevice_draco_key(int kc);
 
-extern int key_swap_hack, key_swap_hack2;
+extern int key_swap_hack, key_swap_hack2, key_swap_end_pgup;
 
 #endif /* UAE_INPUTDEVICE_H */

@@ -94,8 +94,6 @@
 #define A2091 /* A590/A2091 SCSI */
 #define A2065 /* A2065 Ethernet card */
 #define GFXBOARD /* Hardware graphics board */
-#define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
-#define NCR9X /* 53C9X SCSI */
 #define SANA2 /* SANA2 network driver */
 #define AMAX /* A-Max ROM adapter emulation */
 /* #define RETROPLATFORM */ /* Cloanto RetroPlayer support */
@@ -107,16 +105,23 @@
 #define WITH_TABLETLIBRARY
 /* #define WITH_UAENET_PCAP */ // defined externally in Amiberry
 #define WITH_PPC
-#define WITH_QEMU_CPU
 #define WITH_TOCCATA
 #define WITH_PCI
+
+// PCem support and any dependent features
+#ifdef USE_PCEM
+#define NCR /* A4000T/A4091, 53C710/53C770 SCSI */
+#define NCR9X /* 53C9X SCSI */
 #define WITH_X86
+#define WITH_QEMU_CPU
+#define WITH_DRACO
+#endif
+
 #define WITH_THREADED_CPU
 /* #define WITH_SOFTFLOAT */
 #define FLOPPYBRIDGE
 #define WITH_MIDIEMU
 #define WITH_DSP
-#define WITH_DRACO
 
 // We define this externally in Amiberry
 // Use portmidi library for MIDI devices
@@ -153,8 +158,6 @@
 #define A_LZX
 #define A_DMS
 #define A_WRP
-
-#define UAE_RAND_MAX RAND_MAX
 
 #ifndef GFXFILTER
 #undef OPENGL
@@ -203,9 +206,6 @@ typedef int32_t uae_atomic;
 /* Define if your struct stat has st_blocks.  */
 /* #undef HAVE_ST_BLOCKS */
 
-/* Define if utime(file, NULL) sets file's timestamp to the present.  */
-#define HAVE_UTIME_NULL 1
-
 /* Define as __inline if that's what the C compiler calls it.  */
 /* #undef inline */
 
@@ -218,14 +218,8 @@ typedef int32_t uae_atomic;
 /* Define to `int' if <sys/types.h> doesn't define.  */
 /* #undef pid_t */
 
-/* Define if you need to in order for stat and other things to work.  */
-/* #undef _POSIX_SOURCE */
-
 /* Define as the return type of signal handlers (int or void).  */
 #define RETSIGTYPE void
-
-/* Define if you have the ANSI C header files.  */
-#define STDC_HEADERS 1
 
 /* Define if you can safely include both <sys/time.h> and <time.h>.  */
 #define TIME_WITH_SYS_TIME 1

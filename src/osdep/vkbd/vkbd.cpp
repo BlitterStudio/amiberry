@@ -946,7 +946,7 @@ void vkbd_redraw()
 {
 	AmigaMonitor* mon = &AMonitors[0];
 
-	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)
+	if (!vkbdShow || (vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY))
 	{
 		return;
 	}

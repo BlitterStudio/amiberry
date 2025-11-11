@@ -34,6 +34,6 @@ static inline frame_time_t read_processor_time(void)
     return ((ts.tv_sec * 1000000LL) + (ts.tv_nsec / 1000)) - g_uae_epoch;
 }
 
-extern frame_time_t syncbase;
+extern frame_time_t syncbase, cputimebase;
 
 #endif /* UAE_TIME_H */

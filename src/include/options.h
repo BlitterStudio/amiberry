@@ -18,8 +18,8 @@
 #include "traps.h"
 #include "guisan/color.hpp"
 
-#define UAEMAJOR 7
-#define UAEMINOR 1
+#define UAEMAJOR 8
+#define UAEMINOR 0
 #define UAESUBREV 0
 
 #define MAX_AMIGADISPLAYS 1
@@ -30,9 +30,8 @@ extern long int version;
 
 #define MAX_PATHS 8
 
-struct multipath
-{
-	TCHAR path[MAX_PATHS][MAX_DPATH];
+struct multipath {
+	TCHAR path[MAX_PATHS][PATH_MAX];
 };
 
 #define PATH_NONE -1
@@ -47,17 +46,16 @@ struct multipath
 #define PATH_GEO 8
 #define PATH_ROM 9
 
-struct strlist
-{
-	struct strlist* next;
-	TCHAR* option, * value;
+struct strlist {
+	struct strlist *next;
+	TCHAR *option, *value;
 	int unknown;
 };
 
 #define MAX_TOTAL_SCSI_DEVICES 8
 
 /* maximum number native input devices supported (single type) */
-#define MAX_INPUT_DEVICES 8
+#define MAX_INPUT_DEVICES 20
 /* maximum number of native input device's buttons and axles supported */
 #define MAX_INPUT_DEVICE_EVENTS 256
 /* 4 different customization settings */
@@ -70,12 +68,11 @@ struct strlist
 
 #define INTERNALEVENT_COUNT 1
 
-struct uae_input_device
-{
-	TCHAR* name;
-	TCHAR* configname;
+struct uae_input_device {
+	TCHAR *name;
+	TCHAR *configname;
 	uae_s16 eventid[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
-	TCHAR* custom[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
+	TCHAR *custom[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
 	uae_u64 flags[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
 	uae_s8 port[MAX_INPUT_DEVICE_EVENTS][MAX_INPUT_SUB_EVENT_ALL];
 	uae_s16 extra[MAX_INPUT_DEVICE_EVENTS];
@@ -87,21 +84,15 @@ struct uae_input_device
 #define NORMAL_JPORTS 2
 #define MAX_JPORT_NAME 128
 #define MAX_JPORT_CONFIG 256
-
-struct jport_custom
-{
+struct jport_custom {
 	TCHAR custom[MAX_DPATH];
 };
-
-struct inputdevconfig
-{
+struct inputdevconfig {
 	TCHAR name[MAX_JPORT_NAME];
 	TCHAR configname[MAX_JPORT_CONFIG];
 	TCHAR shortid[16];
 };
-
-struct jport
-{
+struct jport {
 	int id{};
 	int mode{}; // 0=default,1=wheel mouse,2=mouse,3=joystick,4=gamepad,5=analog joystick,6=cdtv,7=cd32
 	int submode;
@@ -164,7 +155,6 @@ struct cdslot
 	bool temporary;
 	int type;
 };
-
 struct floppyslot
 {
 	TCHAR df[MAX_DPATH];
@@ -179,9 +169,7 @@ struct floppyslot
 
 #define ASPECTMULT 1024
 #define WH_NATIVE 1
-
-struct wh
-{
+struct wh {
 	int x, y;
 	int width, height;
 	int special;
@@ -209,15 +197,12 @@ struct wh
 #define ISAUTOBOOT(ci) ((ci)->bootpri > BOOTPRI_NOAUTOBOOT)
 #define ISAUTOMOUNT(ci) ((ci)->bootpri > BOOTPRI_NOAUTOMOUNT)
 #define MAX_UAEDEV_BADBLOCKS 8
-
 struct uaedev_badblock
 {
 	uae_u32 first;
 	uae_u32 last;
 };
-
-struct uaedev_config_info
-{
+struct uaedev_config_info {
 	int type;
 	TCHAR devname[MAX_DPATH];
 	TCHAR volname[MAX_DPATH];
@@ -271,26 +256,9 @@ struct uaedev_config_data
 	int unitnum; // scsi unit number (if tape currently)
 };
 
-enum
-{
-	CP_GENERIC = 1,
-	CP_CDTV,
-	CP_CDTVCR,
-	CP_CD32,
-	CP_A500,
-	CP_A500P,
-	CP_A600,
-	CP_A1000,
-	CP_A1200,
-	CP_A2000,
-	CP_A3000,
-	CP_A3000T,
-	CP_A4000,
-	CP_A4000T,
-	CP_VELVET,
-	CP_CASABLANCA,
-	CP_DRACO
-};
+enum { CP_GENERIC = 1, CP_CDTV, CP_CDTVCR, CP_CD32, CP_A500, CP_A500P, CP_A600,
+	CP_A1000, CP_A1200, CP_A2000, CP_A3000, CP_A3000T, CP_A4000, CP_A4000T,
+	CP_VELVET, CP_CASABLANCA, CP_DRACO };
 
 #define IDE_A600A1200 1
 #define IDE_A4000 2
@@ -311,6 +279,9 @@ enum
 #define AUTOSCALE_INTEGER_AUTOSCALE 9
 #define AUTOSCALE_SEPARATOR 10
 #define AUTOSCALE_OVERSCAN_BLANK 11
+
+#define MANUAL_SCALE_MIN_RANGE -1999
+#define MANUAL_SCALE_MAX_RANGE 1999
 
 #define MONITOREMU_NONE 0
 #define MONITOREMU_AUTO 1
@@ -476,6 +447,8 @@ struct rtgboardconfig
 	uae_u32 rtgmem_size;
 	int device_order;
 	int monitor_id;
+	bool autoswitch;
+	bool initial_active;
 };
 struct boardloadfile
 {
@@ -540,6 +513,10 @@ struct monconfig
 #define KB_A1200_6805 5
 #define KB_A2000_8039 6
 #define KB_Ax000_6570 7
+
+#define DISPLAY_OPTIMIZATIONS_FULL 0
+#define DISPLAY_OPTIMIZATIONS_PARTIAL 1
+#define DISPLAY_OPTIMIZATIONS_NONE 2
 
 #ifdef AMIBERRY
 enum custom_type
@@ -623,8 +600,8 @@ struct whdload_options
 };
 #endif
 
-struct uae_prefs
-{
+struct uae_prefs {
+
 	struct strlist *all_lines;
 
 	TCHAR description[256];
@@ -637,6 +614,7 @@ struct uae_prefs
 	TCHAR config_all_path[MAX_DPATH];
 	TCHAR config_path[MAX_DPATH];
 	TCHAR config_window_title[256];
+	int got_fs2_hdf2;
 
 	bool illegal_mem;
 	bool debug_mem;
@@ -724,7 +702,6 @@ struct uae_prefs
 	int gfx_threebitcolors;
 	int gfx_api;
 	int gfx_api_options;
-	int color_mode;
 	int gfx_extrawidth;
 	int gfx_extraheight;
 	bool lightboost_strobo;
@@ -738,6 +715,7 @@ struct uae_prefs
 	int gfx_overscanmode;
 	int gfx_monitorblankdelay;
 	int gfx_rotation;
+	bool gfx_ntscpixels;
 	uae_u32 gfx_bordercolor;
 
 	struct gfx_filterdata gf[3];
@@ -774,9 +752,6 @@ struct uae_prefs
 	int cr_selected;
 	int collision_level;
 	int leds_on_screen;
-#ifdef AMIBERRY
-	int multithreaded_drawing;
-#endif
 	int leds_on_screen_mask[2];
 	int leds_on_screen_multiplier[2];
 	int power_led_dim;
@@ -869,6 +844,7 @@ struct uae_prefs
 	bool cs_ipldelay;
 	bool cs_floppydatapullup;
 	uae_u32 seed;
+	int cs_optimizations;
 
 	struct boardromconfig expansionboard[MAX_EXPANSION_BOARDS];
 
@@ -923,6 +899,7 @@ struct uae_prefs
 	bool cpu_data_cache;
 	bool picasso96_nocustom;
 	int picasso96_modeflags;
+	bool picasso96_noautomodes;
 	int cpu_model_fallback;
 
 	uae_u32 z3autoconfig_start;
@@ -1025,7 +1002,6 @@ struct uae_prefs
 	bool minimized_nosound;
 	int minimized_input;
 
-	bool rtgmatchdepth;
 	bool rtgallowscaling;
 	int rtgscaleaspectratio;
 	int rtgvblankrate;
@@ -1379,6 +1355,7 @@ struct amiberry_options
 	int default_vkbd_transparency;
 	char default_vkbd_toggle[128] = "guide";
 	char gui_theme[128] = "Default.theme";
+	char shader[128] = "pc";
 };
 
 extern struct amiberry_options amiberry_options;

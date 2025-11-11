@@ -287,5 +287,14 @@ struct memoryboardtype
 };
 extern const struct memoryboardtype memoryboards[];
 
+// More information in first revision HRM Appendix_G
+#define BOARD_PROTOAUTOCONFIG 1
+#define BOARD_AUTOCONFIG_Z2 2
+#define BOARD_AUTOCONFIG_Z3 3
+#define BOARD_NONAUTOCONFIG_BEFORE 4
+#define BOARD_NONAUTOCONFIG_AFTER_Z2 5
+#define BOARD_NONAUTOCONFIG_AFTER_Z3 6
+#define BOARD_PCI 7
+#define BOARD_IGNORE 8
 
 #endif /* UAE_AUTOCONF_H */

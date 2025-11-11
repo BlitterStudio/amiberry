@@ -142,7 +142,7 @@ static int safetycheck(FILE* h, const char* name, uae_u64 offset, uae_u8* buf, i
 			return -8;
 		}
 		if (mounted < 0) {
-			write_log("hd ignored, NTFS partitions\n");
+			write_log("NTFS partitions\n");
 			return 0;
 		}
 		if (harddrive_dangerous == 0x1234dead)

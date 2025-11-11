@@ -327,7 +327,7 @@ std::string prefix_with_data_path(const std::string& filename)
 		printf("Can't fetch main bundle\n");
 		return filename;
 	}
-	std::string filePath = "Data/" + filename;
+	std::string filePath = "data/" + filename;
 	CFURLRef dataFileURL = CFBundleCopyResourceURL(mainBundle, CFStringCreateWithCString(NULL, filePath.c_str(), kCFStringEncodingASCII), NULL, NULL);
 	if (dataFileURL == NULL)
 	{
@@ -426,6 +426,16 @@ std::string prefix_with_data_path(const std::string& filename)
 	}
 }
 
+[[nodiscard]] static time_t get_local_time_offset(time_t t)
+{
+	struct tm lt{};
+	localtime_r(&t, &lt);
+	struct tm gt{};
+	gmtime_r(&t, &gt);
+	gt.tm_isdst = lt.tm_isdst;
+	return t - mktime(&gt);
+}
+
 [[nodiscard]] bool my_stat(const TCHAR* name, struct mystat* statbuf) noexcept
 {
 	try {
@@ -460,7 +470,7 @@ std::string prefix_with_data_path(const std::string& filename)
 		statbuf->size = st.st_size;
 		statbuf->mode = ((file_status.permissions() & fs::perms::owner_read) != fs::perms::none ? FILEFLAG_READ : 0) |
 			((file_status.permissions() & fs::perms::owner_write) != fs::perms::none ? FILEFLAG_WRITE : 0);
-		statbuf->mtime.tv_sec = st.st_mtime;
+		statbuf->mtime.tv_sec = st.st_mtime + get_local_time_offset(st.st_mtime);
 		statbuf->mtime.tv_usec = 0;
 
 		return true;

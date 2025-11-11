@@ -214,23 +214,39 @@ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
 int32_t scsi_req_enqueue(SCSIRequest *req);
 void scsi_req_free(SCSIRequest *req);
 SCSIRequest *scsi_req_ref(SCSIRequest *req);
+#ifdef NCR
 void scsi_req_unref(SCSIRequest *req);
+#else
+static inline void scsi_req_unref(SCSIRequest* req) {}
+#endif
 
 void scsi_req_build_sense(SCSIRequest *req, SCSISense sense);
 void scsi_req_print(SCSIRequest *req);
+#ifdef NCR
 void scsi_req_continue(SCSIRequest *req);
+#else
+static inline void scsi_req_continue(SCSIRequest* req) {}
+#endif
+
 void scsi_req_data(SCSIRequest *req, int len);
 void scsi_req_complete(SCSIRequest *req, int status);
 uint8_t *scsi_req_get_buf(SCSIRequest *req);
 int scsi_req_get_sense(SCSIRequest *req, uint8_t *buf, int len);
 void scsi_req_abort(SCSIRequest *req, int status);
+#ifdef NCR
 void scsi_req_cancel(SCSIRequest *req);
+#else
+static inline void scsi_req_cancel(SCSIRequest* req) {}
+#endif
+
 void scsi_req_retry(SCSIRequest *req);
 void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense);
 void scsi_device_set_ua(SCSIDevice *sdev, SCSISense sense);
 void scsi_device_report_change(SCSIDevice *dev, SCSISense sense);
 int scsi_device_get_sense(SCSIDevice *dev, uint8_t *buf, int len, bool fixed);
+#ifdef NCR
 SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int target, int lun);
+#endif
 
 /* scsi-generic.c. */
 extern const SCSIReqOps scsi710_generic_req_ops;
@@ -253,23 +269,38 @@ SCSIRequest *scsi710_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
 int32_t scsi710_req_enqueue(SCSIRequest *req);
 void scsi710_req_free(SCSIRequest *req);
 SCSIRequest *scsi710_req_ref(SCSIRequest *req);
+#ifdef NCR
 void scsi710_req_unref(SCSIRequest *req);
+#else
+static inline void scsi710_req_unref(SCSIRequest* req) {}
+#endif
 
 void scsi710_req_build_sense(SCSIRequest *req, SCSISense sense);
 void scsi710_req_print(SCSIRequest *req);
+#ifdef NCR
 void scsi710_req_continue(SCSIRequest *req);
+#else
+static inline void scsi710_req_continue(SCSIRequest* req) {}
+#endif
 void scsi710_req_data(SCSIRequest *req, int len);
 void scsi710_req_complete(SCSIRequest *req, int status);
 uint8_t *scsi710_req_get_buf(SCSIRequest *req);
 int scsi710_req_get_sense(SCSIRequest *req, uint8_t *buf, int len);
 void scs710i_req_abort(SCSIRequest *req, int status);
+#ifdef NCR
 void scsi710_req_cancel(SCSIRequest *req);
+#else
+static inline void scsi710_req_cancel(SCSIRequest* req) {}
+#endif
+
 void scsi710_req_retry(SCSIRequest *req);
 void scsi710_device_purge_requests(SCSIDevice *sdev, SCSISense sense);
 void scsi710_device_set_ua(SCSIDevice *sdev, SCSISense sense);
 void scsi710_device_report_change(SCSIDevice *dev, SCSISense sense);
 int scsi710_device_get_sense(SCSIDevice *dev, uint8_t *buf, int len, bool fixed);
+#ifdef NCR
 SCSIDevice *scsi710_device_find(SCSIBus *bus, int channel, int target, int lun);
+#endif
 
 /* scsi-generic.c. */
 extern const SCSIReqOps scsi710_generic_req_ops;

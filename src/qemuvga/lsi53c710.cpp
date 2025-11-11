@@ -521,20 +521,24 @@ static void lsi_do_dma(LSIState710 *s, int out)
     DPRINTF("DMA addr=0x" DMA_ADDR_FMT " len=%d\n", addr, count);
     s->dnad += count;
     s->dbc -= count;
-     if (s->current->dma_buf == NULL) {
-		 s->current->dma_buf = scsi710_req_get_buf(s->current->req);
+#ifdef NCR
+    if (s->current->dma_buf == NULL) {
+        s->current->dma_buf = scsi710_req_get_buf(s->current->req);
     }
+#endif
     /* ??? Set SFBR to first data byte.  */
     if (out) {
-		pci710_dma_read(pci_dev, addr, s->current->dma_buf, count);
-    } else {
-		pci710_dma_write(pci_dev, addr, s->current->dma_buf, count);
+        pci710_dma_read(pci_dev, addr, s->current->dma_buf, count);
+    }
+    else {
+        pci710_dma_write(pci_dev, addr, s->current->dma_buf, count);
     }
     s->current->dma_len -= count;
     if (s->current->dma_len == 0) {
         s->current->dma_buf = NULL;
-		scsi710_req_continue(s->current->req);
-    } else {
+        scsi710_req_continue(s->current->req);
+    }
+    else {
         s->current->dma_buf += count;
         lsi_resume_script(s);
     }
@@ -743,11 +747,16 @@ static void lsi_do_command(LSIState710 *s)
 
     id = (s->select_tag >> 8) & 0xff;
 	s->lcrc = id; //1 << (id & 0x7);
+#ifdef NCR
 	dev = scsi710_device_find(&s->bus, 0, idbitstonum(id), s->current_lun);
     if (!dev) {
         lsi_bad_selection(s, id);
         return;
     }
+#else
+    lsi_bad_selection(s, id);
+    return;
+#endif
 
     assert(s->current == NULL);
     s->current = (lsi_request*)calloc(sizeof(lsi_request), 1);
@@ -1177,10 +1186,15 @@ again:
                 }
                 s->sstat1 |= LSI_SSTAT1_WOA;
 //                s->scntl1 &= ~LSI_SCNTL1_IARB;
+#ifdef NCR
 				if (!scsi710_device_find(&s->bus, 0, idbitstonum(id), 0)) {
                     lsi_bad_selection(s, id);
                     break;
                 }
+#else
+                lsi_bad_selection(s, id);
+                break;
+#endif
                 DPRINTF("Selected target %d%s\n",
                         id, insn & (1 << 24) ? " ATN" : "");
                 /* ??? Linux drivers compain when this is set.  Maybe

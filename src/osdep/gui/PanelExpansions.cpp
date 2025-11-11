@@ -714,7 +714,7 @@ static void values_to_expansion2_expansion_roms(UAEREG* fkey)
 		}
 		cboScsiRomFile->setEnabled(true);
 		btnScsiRomChooser->setEnabled(true);
-		chkScsiRomFileAutoboot->setVisible(true);
+		chkScsiRomFileAutoboot->setVisible(!ert->autoboot_jumper);
 		if (romtype & ROMTYPE_NOT) {
 			btnScsiRomChooser->setVisible(false);
 			cboScsiRomFile->setVisible(false);

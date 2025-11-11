@@ -214,8 +214,6 @@
 #include "ar.h"
 #include "savestate.h"
 #include "crc32.h"
-#include "akiko.h"
-#include "xwin.h"
 #include "gfxboard.h"
 
 static const TCHAR *cart_memnames[] = { NULL, _T("hrtmon"), _T("arhrtmon"), _T("superiv") };
@@ -1820,7 +1818,7 @@ int hrtmon_load (void)
 			cart_type = CART_AR1200;
 			armodel = 1200;
 			hrtmem_start = 0x800000;
-		} else if (!memcmp (header, "HRT!", 4)) {
+		} else if (!memcmp (header, "HRT!", 4) || !memcmp(header + 1, "HRT!", 4)) {
 			cart_type = CART_HRTMON;
 		} else {
 			zfile_fclose (f);

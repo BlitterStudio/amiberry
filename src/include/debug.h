@@ -32,7 +32,7 @@ extern int memwatch_enabled;
 extern int exception_debugging;
 extern int debug_copper;
 extern int debug_dma, debug_heatmap;
-extern int debug_sprite_mask;
+extern uae_u32 debug_sprite_mask;
 extern int debug_bpl_mask, debug_bpl_mask_one;
 extern int debugger_active;
 extern int debug_illegal;
@@ -188,10 +188,10 @@ extern struct memwatch_node mwnodes[MEMWATCH_TOTAL];
 
 extern void memwatch_dump2 (TCHAR *buf, int bufsize, int num);
 
-void debug_getpeekdma_chipram(uaecptr addr, uae_u32 mask, int reg, int ptrreg);
+void debug_getpeekdma_chipram(uaecptr addr, uae_u32 mask, int reg);
 void debug_getpeekdma_value(uae_u32);
 void debug_getpeekdma_value_long(uae_u32, int);
-uae_u32 debug_putpeekdma_chipram(uaecptr addr, uae_u32 v, uae_u32 mask, int reg, int ptrreg);
+uae_u32 debug_putpeekdma_chipram(uaecptr addr, uae_u32 v, uae_u32 mask, int reg);
 uae_u32 debug_putpeekdma_chipset(uaecptr addr, uae_u32 v, uae_u32 mask, int reg);
 void debug_lgetpeek(uaecptr addr, uae_u32 v);
 void debug_wgetpeek(uaecptr addr, uae_u32 v);
@@ -209,8 +209,6 @@ uae_u32 get_iword_debug (uaecptr addr);
 uae_u32 get_byte_cache_debug(uaecptr addr, bool *cached);
 uae_u32 get_word_cache_debug(uaecptr addr, bool *cached);
 uae_u32 get_long_cache_debug(uaecptr addr, bool *cached);
-uae_u32 get_iword_cache_debug(uaecptr addr, bool *cached);
-uae_u32 get_ilong_cache_debug(uaecptr addr, bool *cached);
 
 enum debugtest_item { DEBUGTEST_BLITTER, DEBUGTEST_KEYBOARD, DEBUGTEST_FLOPPY, DEBUGTEST_MAX };
 void debugtest (enum debugtest_item, const TCHAR *, ...);
@@ -228,13 +226,17 @@ extern struct peekdma peekdma_data;
 
 struct dma_rec
 {
-	int hpos, vpos;
-	int dhpos;
+	int hpos, vpos[2];
+	int frame;
+	uae_u32 tick;
+	int dhpos[2];
     uae_u16 reg;
     uae_u64 dat;
 	uae_u16 size;
     uae_u32 addr;
-    uae_u32 evt, evt2;
+    uae_u32 evt;
+	uae_u32 agnus_evt, agnus_evt_changed;
+	uae_u32 denise_evt[2], denise_evt_changed[2];
 	uae_u32 evtdata;
 	bool evtdataset;
     uae_s16 type;
@@ -246,10 +248,37 @@ struct dma_rec
 	bool ciarw;
 	int ciaphase;
 	uae_u16 ciavalue;
+	uaecptr miscaddr;
+	uae_u32 miscval;
+	int miscsize;
 	bool end;
+	bool cs, hs, vs;
 };
 
 extern struct dma_rec *last_dma_rec;
+
+#define DENISE_EVENT_VB 1
+#define DENISE_EVENT_HB 2
+#define DENISE_EVENT_BURST 4
+#define DENISE_EVENT_HDIW 8
+#define DENISE_EVENT_BPL1DAT_HDIW 16
+#define DENISE_EVENT_COPIED 0x40000000
+#define DENISE_EVENT_UNKNOWN 0x80000000
+
+#define AGNUS_EVENT_HW_HS 1
+#define AGNUS_EVENT_HW_VS 2
+#define AGNUS_EVENT_HW_CS 4
+#define AGNUS_EVENT_HW_VB 8
+#define AGNUS_EVENT_PRG_HS 16
+#define AGNUS_EVENT_PRG_VS 32
+#define AGNUS_EVENT_PRG_CS 64
+#define AGNUS_EVENT_PRG_VB 128
+#define AGNUS_EVENT_VDIW 256
+#define AGNUS_EVENT_BPRUN 512
+#define AGNUS_EVENT_VE 1024
+#define AGNUS_EVENT_P_VE 2048
+#define AGNUS_EVENT_HB 4096
+#define AGNUS_EVENT_BPRUN2 8192
 
 #define DMA_EVENT_BLITIRQ 1
 #define DMA_EVENT_BLITFINALD 2
@@ -259,7 +288,7 @@ extern struct dma_rec *last_dma_rec;
 #define DMA_EVENT_CPUIRQ 32
 #define DMA_EVENT_INTREQ 64
 #define DMA_EVENT_COPPERWANTED 128
-#define DMA_EVENT_NOONEGETS 256
+#define DMA_EVENT_COPPERWAKE2 256
 #define DMA_EVENT_CPUBLITTERSTEAL 512
 #define DMA_EVENT_CPUBLITTERSTOLEN 1024
 #define DMA_EVENT_COPPERSKIP 2048
@@ -267,25 +296,18 @@ extern struct dma_rec *last_dma_rec;
 #define DMA_EVENT_DDFSTOP 8192
 #define DMA_EVENT_DDFSTOP2 16384
 #define DMA_EVENT_SPECIAL 32768
-#define DMA_EVENT_VB		0x00010000
-#define DMA_EVENT_VS		0x00020000
-#define DMA_EVENT_LOF		0x00040000
-#define DMA_EVENT_LOL		0x00080000
-#define DMA_EVENT_HBS		0x00100000
-#define DMA_EVENT_HBE		0x00200000
-#define DMA_EVENT_HDIWS		0x00400000
-#define DMA_EVENT_HDIWE		0x00800000
-#define DMA_EVENT_VDIW		0x01000000
-#define DMA_EVENT_HSS		0x02000000
-#define DMA_EVENT_HSE		0x04000000
-#define DMA_EVENT_CIAA_IRQ	0x08000000
-#define DMA_EVENT_CIAB_IRQ	0x10000000
-#define DMA_EVENT_CPUSTOP	0x20000000
-#define DMA_EVENT_CPUSTOPIPL 0x40000000
-#define DMA_EVENT_CPUINS	0x80000000
-#define DMA_EVENT2_IPL		0x00000001
-#define DMA_EVENT2_IPLSAMPLE 0x00000002
-#define DMA_EVENT2_COPPERUSE 0x00000004
+#define DMA_EVENT_IPL			0x00010000
+#define DMA_EVENT_IPLSAMPLE		0x00020000
+#define DMA_EVENT_COPPERUSE		0x00040000
+#define DMA_EVENT_MODADD		0x00080000
+#define DMA_EVENT_LOF			0x00100000
+#define DMA_EVENT_LOL			0x00200000
+
+#define DMA_EVENT_CIAA_IRQ		0x08000000
+#define DMA_EVENT_CIAB_IRQ		0x10000000
+#define DMA_EVENT_CPUSTOP		0x20000000
+#define DMA_EVENT_CPUSTOPIPL	0x40000000
+#define DMA_EVENT_CPUINS		0x80000000
 
 #define DMARECORD_REFRESH 1
 #define DMARECORD_CPU 2
@@ -295,30 +317,31 @@ extern struct dma_rec *last_dma_rec;
 #define DMARECORD_BITPLANE 6
 #define DMARECORD_SPRITE 7
 #define DMARECORD_DISK 8
-#define DMARECORD_CONFLICT 9
-#define DMARECORD_MAX 10
+#define DMARECORD_UHRESBPL 9
+#define DMARECORD_UHRESSPR 10
+#define DMARECORD_CONFLICT 11
+#define DMARECORD_MAX 12
 
-extern void record_dma_read(uae_u16 reg, uae_u32 addr, int hpos, int vpos, int type, int extra);
-extern void record_dma_write(uae_u16 reg, uae_u32 v, uae_u32 addr, int hpos, int vpos, int type, int extra);
+extern void record_dma_read(uae_u16 reg, uae_u32 addr, int type, int extra);
+extern void record_dma_write(uae_u16 reg, uae_u32 v, uae_u32 addr, int type, int extra);
 extern void record_dma_read_value(uae_u32 v);
-extern void record_dma_read_value_pos(uae_u32 v, int hpos, int vpos);
+extern void record_dma_read_value_pos(uae_u32 v);
 extern void record_dma_read_value_wide(uae_u64 v, bool quad);
-extern void record_dma_replace(int hpos, int vpos, int type, int extra);
+extern void record_dma_replace( int type, int extra);
 extern void record_dma_reset(int);
-extern void record_dma_event(uae_u32 evt, int hpos, int vpos);
-extern void record_dma_event2(uae_u32 evt, int hpos, int vpos);
-extern void record_dma_event_data(uae_u32 evt, int hpos, int vpos, uae_u32 data);
-extern void record_dma_clear(int hpos, int vpos);
-extern bool record_dma_check(int hpos, int vpos);
-extern void record_dma_hsync(int);
-extern void record_dma_vsync(int);
-extern void record_dma_reoffset(int, int, int);
-extern void record_cia_access(int r, int mask, uae_u16 value, bool rw, int hpos, int vpos, int phase);
-extern void record_dma_ipl(int hpos, int vpos);
-extern void record_dma_ipl_sample(int hpos, int vpos);
-extern void record_dma_denise(int pos, int dhpos);
+extern void record_dma_event_agnus(uae_u32 evt, bool onoff);
+extern void record_dma_event_denise(struct dma_rec *rd, int h, uae_u32 evt, bool onoff);
+extern void record_dma_event(uae_u32 evt);
+extern void record_dma_event_data(uae_u32 evt, uae_u32 data);
+extern void record_dma_clear(void);
+extern bool record_dma_check(void);
+extern void record_cia_access(int r, int mask, uae_u16 value, bool rw, int phase);
+extern void record_rom_access(uaecptr, uae_u32 value, int size, bool rw);
+extern void record_dma_ipl(void);
+extern void record_dma_ipl_sample(void);
 extern void debug_mark_refreshed(uaecptr);
-extern void debug_draw(uae_u8 *buf, int bpp, int line, int width, int height, uae_u32 *xredcolors, uae_u32 *xgreencolors, uae_u32 *xbluescolors);
+extern void debug_draw(uae_u8 *buf, uae_u8 *genlock, int line, int width, int height, uae_u32 *xredcolors, uae_u32 *xgreencolors, uae_u32 *xbluescolors);
+extern struct dma_rec *record_dma_next_cycle(int hpos, int vpos, int vvpos);
 
 #define TRACE_SKIP_INS 1
 #define TRACE_MATCH_PC 2
@@ -329,42 +352,6 @@ extern void debug_draw(uae_u8 *buf, int bpp, int line, int width, int height, ua
 #define TRACE_CHECKONLY 10
 
 #else
-
-#define MAX_LINEWIDTH 10000
-
-#define MW_MASK_CPU_I			0x00000001
-#define MW_MASK_CPU_D_R			0x00000002
-#define MW_MASK_CPU_D_W			0x00000004
-#define MW_MASK_BLITTER_A		0x00000008
-#define MW_MASK_BLITTER_B		0x00000010
-#define MW_MASK_BLITTER_C		0x00000020
-#define MW_MASK_BLITTER_D_N		0x00000040
-#define MW_MASK_BLITTER_D_L		0x00000080
-#define MW_MASK_BLITTER_D_F		0x00000100
-#define MW_MASK_COPPER			0x00000200
-#define MW_MASK_DISK			0x00000400
-#define MW_MASK_AUDIO_0			0x00000800
-#define MW_MASK_AUDIO_1			0x00001000
-#define MW_MASK_AUDIO_2			0x00002000
-#define MW_MASK_AUDIO_3			0x00004000
-#define MW_MASK_BPL_0			0x00008000
-#define MW_MASK_BPL_1			0x00010000
-#define MW_MASK_BPL_2			0x00020000
-#define MW_MASK_BPL_3			0x00040000
-#define MW_MASK_BPL_4			0x00080000
-#define MW_MASK_BPL_5			0x00100000
-#define MW_MASK_BPL_6			0x00200000
-#define MW_MASK_BPL_7			0x00400000
-#define MW_MASK_SPR_0			0x00800000
-#define MW_MASK_SPR_1			0x01000000
-#define MW_MASK_SPR_2			0x02000000
-#define MW_MASK_SPR_3			0x04000000
-#define MW_MASK_SPR_4			0x08000000
-#define MW_MASK_SPR_5			0x10000000
-#define MW_MASK_SPR_6			0x20000000
-#define MW_MASK_SPR_7			0x40000000
-#define MW_MASK_NONE			0x80000000
-#define MW_MASK_ALL				(MW_MASK_NONE - 1)
 
 STATIC_INLINE void activate_debugger (void) { };
 

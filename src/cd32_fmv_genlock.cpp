@@ -11,8 +11,6 @@
 #include "sysdeps.h"
 
 #include "options.h"
-#include "memory.h"
-#include "cd32_fmv.h"
 #include "xwin.h"
 
 static uae_u8 *mpeg_out_buffer;

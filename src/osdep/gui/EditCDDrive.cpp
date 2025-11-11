@@ -30,6 +30,9 @@ static bool dialogFinished = false;
 static gcn::Window* wndEditCDDrive;
 static gcn::Button* cmdCDDriveOK;
 static gcn::Button* cmdCDDriveCancel;
+
+static gcn::Label* lblCDDriveUnit;
+static gcn::TextField* txtCDDriveUnit;
 static gcn::Label* lblCDDrivePath;
 static gcn::TextField* txtCDDrivePath;
 
@@ -48,12 +51,6 @@ public:
 		const auto source = actionEvent.getSource();
 		if (source == cmdCDDriveOK)
 		{
-			if (txtCDDrivePath->getText().empty())
-			{
-				wndEditCDDrive->setCaption("Path is empty!");
-				return;
-			}
-
 			dialogResult = true;
 			dialogFinished = true;
 		}
@@ -110,10 +107,20 @@ static void InitEditCDDrive()
 	cmdCDDriveCancel->setId("cmdCDDriveCancel");
 	cmdCDDriveCancel->addActionListener(cdDriveActionListener);
 
+	lblCDDriveUnit = new gcn::Label("Device:");
+	lblCDDriveUnit->setAlignment(gcn::Graphics::Right);
+	txtCDDriveUnit = new gcn::TextField();
+	txtCDDriveUnit->setSize(25, TEXTFIELD_HEIGHT);
+	txtCDDriveUnit->setId("txtCDDriveUnit");
+	txtCDDriveUnit->setBaseColor(gui_base_color);
+	txtCDDriveUnit->setBackgroundColor(gui_background_color);
+	txtCDDriveUnit->setForegroundColor(gui_foreground_color);
+	txtCDDriveUnit->setText("0");
+
 	lblCDDrivePath = new gcn::Label("Path:");
 	lblCDDrivePath->setAlignment(gcn::Graphics::Right);
 	txtCDDrivePath = new gcn::TextField();
-	txtCDDrivePath->setSize(490, TEXTFIELD_HEIGHT);
+	txtCDDrivePath->setSize(400, TEXTFIELD_HEIGHT);
 	txtCDDrivePath->setId("txtCDDrivePath");
 	txtCDDrivePath->setBaseColor(gui_base_color);
 	txtCDDrivePath->setBackgroundColor(gui_background_color);
@@ -141,7 +148,9 @@ static void InitEditCDDrive()
 
 	int pos_y = DISTANCE_BORDER;
 
-	wndEditCDDrive->add(lblCDDrivePath, DISTANCE_BORDER, pos_y);
+	wndEditCDDrive->add(lblCDDriveUnit, DISTANCE_BORDER, pos_y);
+	wndEditCDDrive->add(txtCDDriveUnit, lblCDDriveUnit->getX() + lblCDDriveUnit->getWidth() + 8, pos_y);
+	wndEditCDDrive->add(lblCDDrivePath, txtCDDriveUnit->getX() + txtCDDriveUnit->getWidth() + DISTANCE_NEXT_X, pos_y);
 	wndEditCDDrive->add(txtCDDrivePath, lblCDDrivePath->getX() + lblCDDrivePath->getWidth() + 8, pos_y);
 	pos_y = txtCDDrivePath->getY() + txtCDDrivePath->getHeight() + DISTANCE_NEXT_Y;
 
@@ -171,6 +180,8 @@ static void ExitEditCDDrive()
 
 	delete cmdCDDriveOK;
 	delete cmdCDDriveCancel;
+	delete lblCDDriveUnit;
+	delete txtCDDriveUnit;
 	delete lblCDDrivePath;
 	delete txtCDDrivePath;
 	delete lblCDDriveController;
@@ -477,17 +488,9 @@ bool EditCDDrive(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uci = &changed_prefs.mountconfig[unit_no];
-		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-		memcpy(&current_cddlg.ci, uci, sizeof(uaedev_config_info));
-
 		txtCDDrivePath->setText(current_cddlg.ci.rootdir);
 		cboCDDriveController->setSelected(current_cddlg.ci.controller_type);
 		cboCDDriveUnit->setSelected(current_cddlg.ci.controller_unit);
-	}
-	else
-	{
-		//TODO default_cddlg ?
 	}
 
 	// Prepare the screen once
@@ -507,7 +510,8 @@ bool EditCDDrive(const int unit_no)
 
 	if (dialogResult)
 	{
-		strncpy(current_cddlg.ci.rootdir, txtCDDrivePath->getText().c_str(), sizeof(current_cddlg.ci.rootdir) - 1);
+		if (!txtCDDrivePath->getText().empty())
+			strncpy(current_cddlg.ci.rootdir, txtCDDrivePath->getText().c_str(), sizeof(current_cddlg.ci.rootdir) - 1);
 
 		auto posn = controller[cboCDDriveController->getSelected()].type;
 		current_cddlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
@@ -515,8 +519,6 @@ bool EditCDDrive(const int unit_no)
 		inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, current_cddlg.ci.rootdir[0] != 0);
 
 		current_cddlg.ci.controller_unit = cboCDDriveUnit->getSelected();
-
-		new_cddrive(unit_no);
 	}
 
 	ExitEditCDDrive();

@@ -1146,11 +1146,6 @@ bool EditFilesysHardfile(const int unit_no)
 
 	if (unit_no >= 0)
 	{
-		uaedev_config_data* uci = &changed_prefs.mountconfig[unit_no];
-		get_filesys_unitconfig(&changed_prefs, unit_no, &mi);
-
-		current_hfdlg.forcedcylinders = uci->ci.highcyl;
-		memcpy(&current_hfdlg.ci, uci, sizeof(uaedev_config_info));
 		fileSelected = true;
 	}
 	else
@@ -1178,11 +1173,6 @@ bool EditFilesysHardfile(const int unit_no)
 		const auto start = SDL_GetPerformanceCounter();
 		EditFilesysHardfileLoop();
 		cap_fps(start);
-	}
-
-	if (dialogResult)
-	{
-		new_hardfile(unit_no);
 	}
 
 	ExitEditFilesysHardfile();

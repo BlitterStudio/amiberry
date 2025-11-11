@@ -663,7 +663,13 @@ void gd5429_out(uint16_t addr, uint8_t val, void *p)
                                 gd5429->overlay.colorkeycomparemask = val;
                                 gd5429_update_overlay(gd5429);
                                 break;
-
+                                case 0x0e:
+                                if (gd5429->type >= CL_TYPE_GD5426) {
+                                    svga->dpms = (val & 0x06) && ((svga->miscout & ((val & 0x06) << 5)) != 0xc0);
+                                    svga_recalctimings(svga);
+                                }
+                                break;
+        
                                 case 0x10:
                                 gd5429_mmio_write(0xb8001, val, gd5429);
                                 break;
@@ -2897,7 +2903,8 @@ static void *cl_init(int type, const char *fn, int pci_card, uint32_t force_vram
                 gd5429->pci_regs[0x33] = 0x00;
         }
 
-        gd5429->svga.fb_only = 0;
+        gd5429->svga.fb_only = -1;
+        gd5429->svga.fb_auto = 1;
         
         return gd5429;
 }

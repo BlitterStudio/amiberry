@@ -1,6 +1,7 @@
 #ifndef UAE_X86_H
 #define UAE_X86_H
 
+#ifdef WITH_X86
 bool a1060_init(struct autoconfig_info *aci);
 bool a2088xt_init(struct autoconfig_info *aci);
 bool a2088t_init(struct autoconfig_info *aci);
@@ -25,4 +26,5 @@ void x86_initfloppy(X86_INTERRUPT_CALLBACK);
 void x86_floppy_run(void);
 uae_u16 floppy_get_raw_data(int*);
 
+#endif
 #endif /* UAE_X86_H */

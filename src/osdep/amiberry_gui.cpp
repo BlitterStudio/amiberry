@@ -297,82 +297,6 @@ struct romscandata {
 	int got;
 };
 
-static struct romdata* scan_single_rom_2(struct zfile* f)
-{
-	uae_u8 buffer[20] = {};
-	auto cl = 0;
-	struct romdata* rd = nullptr;
-
-	zfile_fseek(f, 0, SEEK_END);
-	int size = zfile_ftell32(f);
-	zfile_fseek(f, 0, SEEK_SET);
-	if (size > 524288 * 2) /* don't skip KICK disks or 1M ROMs */
-		return nullptr;
-	zfile_fread(buffer, 1, 11, f);
-	if (!memcmp(buffer, "KICK", 4))
-	{
-		zfile_fseek(f, 512, SEEK_SET);
-		size = std::min(size, 262144);
-	}
-	else if (!memcmp(buffer, "AMIROMTYPE1", 11))
-	{
-		cl = 1;
-		size -= 11;
-	}
-	else
-	{
-		zfile_fseek(f, 0, SEEK_SET);
-	}
-	auto* rombuf = xcalloc(uae_u8, size);
-	if (!rombuf)
-		return nullptr;
-	zfile_fread(rombuf, 1, size, f);
-	if (cl > 0)
-	{
-		decode_cloanto_rom_do(rombuf, size, size);
-		cl = 0;
-	}
-	if (!cl)
-	{
-		if (size < 4) {
-			free(rombuf);
-			return nullptr;
-		}
-		rd = getromdatabydata(rombuf, size);
-		if (!rd && (size & 65535) == 0)
-		{
-			for (auto i = 0; i < size; i += 2)
-			{
-				uae_u8 b = rombuf[i];
-				rombuf[i] = rombuf[i + 1];
-				rombuf[i + 1] = b;
-			}
-			rd = getromdatabydata(rombuf, size);
-		}
-	}
-	free(rombuf);
-	return rd;
-}
-
-struct romdata *scan_single_rom (const TCHAR *path)
-{
-	struct zfile *z;
-	TCHAR tmp[MAX_DPATH];
-	struct romdata *rd;
-
-	_tcscpy (tmp, path);
-	rd = scan_arcadia_rom (tmp, 0);
-	if (rd)
-		return rd;
-	rd = getromdatabypath (path);
-	if (rd && rd->crc32 == 0xffffffff)
-		return rd;
-	z = zfile_fopen (path, _T("rb"), ZFD_NORMAL);
-	if (!z)
-		return nullptr;
-	return scan_single_rom_2 (z);
-}
-
 static int isromext(const std::string& path, bool deepscan)
 {
 	if (path.empty())
@@ -382,7 +306,7 @@ static int isromext(const std::string& path, bool deepscan)
 		return 0;
 	const std::string ext = path.substr(ext_pos + 1);
 
-	static const std::vector<std::string> extensions = { "rom", "ROM", "roz", "ROZ", "bin", "BIN",  "a500", "A500", "a1200", "A1200", "a4000", "A4000", "cdtv", "CDTV", "cd32", "CD32" };
+	static const std::vector<std::string> extensions = { "rom", "ROM", "roz", "ROZ", "bin", "BIN",  "a500", "A500", "a600", "A600", "a1200", "A1200", "a3000", "A3000", "a4000", "A4000", "cdtv", "CDTV", "cd32", "CD32" };
 	if (std::find(extensions.begin(), extensions.end(), ext) != extensions.end())
 		return 1;
 
@@ -436,7 +360,7 @@ static int scan_rom_2(struct zfile* f, void* vrsd)
 
 	if (!isromext(path, true))
 		return 0;
-	rd = scan_single_rom_2(f);
+	rd = scan_single_rom_file(f);
 	if (rd)
 	{
 		TCHAR name[MAX_DPATH];
@@ -485,7 +409,7 @@ static int listrom(const int* roms)
 	i = 0;
 	while (roms[i] >= 0) {
 		struct romdata* rd = getromdatabyid(roms[i]);
-		if (rd && romlist_get(rd))
+		if (rd && rd->crc32 != 0xffffffff && romlist_get(rd))
 			return 1;
 		i++;
 	}
@@ -591,23 +515,23 @@ static int scan_roms_2(UAEREG* fkey, const TCHAR* path, bool deepscan, int level
 
 	scan_rom_hook(path, 1);
 
-    while ((entry = readdir(dp)) != nullptr) {
-        TCHAR tmppath[MAX_DPATH];
-        _sntprintf(tmppath, sizeof tmppath, _T("%s/%s"), path, entry->d_name);
+	while ((entry = readdir(dp)) != nullptr) {
+		TCHAR tmppath[MAX_DPATH];
+		_sntprintf(tmppath, sizeof tmppath, _T("%s/%s"), path, entry->d_name);
 
-        if (stat(tmppath, &statbuf) == -1)
-            continue;
+		if (stat(tmppath, &statbuf) == -1)
+			continue;
 
-        if (S_ISREG(statbuf.st_mode) && statbuf.st_size < 10000000) {
-            if (scan_rom(tmppath, fkey, deepscan))
-                ret = 1;
-        } else if (deepscan && S_ISDIR(statbuf.st_mode) && entry->d_name[0] != '.' && (recursiveromscan < 0 || recursiveromscan > level)) {
-            scan_roms_2(fkey, tmppath, deepscan, level + 1);
-        }
+		if (S_ISREG(statbuf.st_mode) && statbuf.st_size < 10000000) {
+			if (scan_rom(tmppath, fkey, deepscan))
+				ret = 1;
+		} else if (deepscan && S_ISDIR(statbuf.st_mode) && entry->d_name[0] != '.' && (recursiveromscan < 0 || recursiveromscan > level)) {
+			scan_roms_2(fkey, tmppath, deepscan, level + 1);
+		}
 
-        if (!scan_rom_hook(nullptr, 0))
-            break;
-    }
+		if (!scan_rom_hook(nullptr, 0))
+			break;
+	}
 
 	closedir(dp);
 	return ret;

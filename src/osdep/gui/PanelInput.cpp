@@ -79,6 +79,7 @@ static gcn::Button* cmdRemap0;
 static gcn::Button* cmdRemap1;
 
 static gcn::CheckBox* chkSwapBackslashF11;
+static gcn::CheckBox* chkSwapEndPgUp;
 
 static gcn::StringListModel ctrlPortList;
 static int portListIDs[MAX_INPUT_DEVICES + JSEM_LASTKBD + 1];
@@ -324,6 +325,12 @@ public:
 			key_swap_hack = chkSwapBackslashF11->isSelected();
 			regsetint(NULL, _T("KeySwapBackslashF11"), key_swap_hack);
 		}
+
+		else if (actionEvent.getSource() == chkSwapEndPgUp)
+		{
+			key_swap_end_pgup = chkSwapEndPgUp->isSelected();
+			regsetint(NULL, _T("KeyEndPageUp"), key_swap_end_pgup);
+		}
 		
 		RefreshPanelInput();
 		RefreshPanelRTG(); // needed to enable the Hardware RTG sprite
@@ -545,6 +552,13 @@ void InitPanelInput(const config_category& category)
 	chkSwapBackslashF11->setForegroundColor(gui_foreground_color);
 	chkSwapBackslashF11->addActionListener(inputActionListener);
 
+	chkSwapEndPgUp = new gcn::CheckBox("Page Up = End");
+	chkSwapEndPgUp->setId("chkSwapEndPgUp");
+	chkSwapEndPgUp->setBaseColor(gui_base_color);
+	chkSwapEndPgUp->setBackgroundColor(gui_background_color);
+	chkSwapEndPgUp->setForegroundColor(gui_foreground_color);
+	chkSwapEndPgUp->addActionListener(inputActionListener);
+
 	int posY = DISTANCE_BORDER;
 	category.panel->add(lblPort0, DISTANCE_BORDER, posY);
 	category.panel->add(joys[0], DISTANCE_BORDER + lblPort0->getWidth() + 8, posY);
@@ -619,6 +633,8 @@ void InitPanelInput(const config_category& category)
 	posY += optBoth->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkSwapBackslashF11, DISTANCE_BORDER, posY);
+	posY += chkSwapBackslashF11->getHeight() + DISTANCE_NEXT_Y;
+	category.panel->add(chkSwapEndPgUp, chkSwapBackslashF11->getX(), posY);
 	
 	for (auto& portsubmode : portsubmodes)
 	{
@@ -683,6 +699,7 @@ void ExitPanelInput()
 	delete cmdRemap0;
 	delete cmdRemap1;
 	delete chkSwapBackslashF11;
+	delete chkSwapEndPgUp;
 }
 
 void RefreshPanelInput()
@@ -802,6 +819,7 @@ void RefreshPanelInput()
 			break;
 	}
 	chkSwapBackslashF11->setSelected(key_swap_hack);
+	chkSwapEndPgUp->setSelected(key_swap_end_pgup);
 }
 
 bool HelpPanelInput(std::vector<std::string>& helptext)

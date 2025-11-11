@@ -32,8 +32,8 @@ extern int td_width;
 #define STATUSLINE_RTG 2
 #define STATUSLINE_TARGET 0x80
 
-void draw_status_line_single(int monid, uae_u8 *buf, int bpp, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
-void statusline_single_erase(int monid, uae_u8 *buf, int bpp, int y, int totalwidth);
+void draw_status_line_single(int monid, uae_u8 *buf, int y, int totalwidth, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
+void statusline_single_erase(int monid, uae_u8 *buf, int y, int totalwidth);
 void statusline_getpos(int monid, int *x, int *y, int width, int height);
 
 #define STATUSTYPE_FLOPPY 1
@@ -44,7 +44,7 @@ void statusline_getpos(int monid, int *x, int *y, int width, int height);
 
 bool createstatusline(int);
 void deletestatusline(int);
-void statusline_render(int, uae_u8 *buf, int bpp, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
+void statusline_render(int, uae_u8 *buf, int pitch, int width, int height, uae_u32 *rc, uae_u32 *gc, uae_u32 *bc, uae_u32 *alpha);
 void statusline_add_message(int statustype, const TCHAR *format, ...);
 void statusline_clear(void);
 void statusline_vsync(void);

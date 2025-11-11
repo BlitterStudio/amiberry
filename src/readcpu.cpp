@@ -81,7 +81,7 @@ struct mnemolookup lookuptab[] = {
 	{ i_DIVS, _T("DIVS"), NULL, 1 },
 	{ i_MULU, _T("MULU"), NULL, 1 },
 	{ i_MULS, _T("MULS"), NULL, 1 },
-	{ i_ASR, _T("ASR"), NULL,  },
+	{ i_ASR, _T("ASR"), NULL, 0 },
 	{ i_ASL, _T("ASL"), NULL, 0 },
 	{ i_LSR, _T("LSR"), NULL, 0 },
 	{ i_LSL, _T("LSL"), NULL, 0 },

@@ -151,7 +151,6 @@
 
 #include "options.h"
 #include "memory.h"
-#include "events.h"
 #include "savestate.h"
 #include "blkdev.h"
 #include "zfile.h"

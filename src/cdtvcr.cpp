@@ -27,7 +27,6 @@
 #include "threaddep/thread.h"
 #include "uae.h"
 #include "custom.h"
-#include "rommgr.h"
 #include "devices.h"
 
 #if CDTVCR_4510_EMULATION

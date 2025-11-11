@@ -13,15 +13,11 @@
 
 #include "memory.h"
 #include "newcpu.h"
-#include "uae.h"
-#include "gui.h"
 #include "filesys.h"
-#include "threaddep/thread.h"
 #include "debug.h"
 #include "ide.h"
 #include "idecontrollers.h"
 #include "zfile.h"
-#include "custom.h"
 #include "rommgr.h"
 #include "cpuboard.h"
 #include "scsi.h"
@@ -2436,6 +2432,10 @@ static bool apollo_init(struct autoconfig_info *aci, int cpuboard_model)
 		ide->userdata = currprefs.cpuboard_settings & 1;
 	} else {
 		ide->userdata = aci->rc->autoboot_disabled ? 2 : 0;
+		ide->userdata |= 1;
+		if (aci->rc->device_settings & 1) {
+			ide->userdata &= ~1;
+		}
 	}
 
 	ide->configured = 0;

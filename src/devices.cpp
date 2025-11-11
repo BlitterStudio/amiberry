@@ -70,8 +70,6 @@
 #ifdef AHI
 #include "ahi_v1.h"
 #endif
-#include "rommgr.h"
-#include "newcpu.h"
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
 #endif
@@ -212,12 +210,17 @@ void devices_reset(int hardreset)
 	// must be first
 	init_eventtab();
 	init_shm();
+
+#ifdef GFXBOARD
+	// must be before memory_reset()
+	gfxboard_reset();
+#endif
 	memory_reset();
 #ifdef AUTOCONFIG
 	rtarea_reset();
 #endif
 	DISK_reset();
-	CIA_reset();
+	CIA_reset(hardreset);
 	a1000_reset();
 #ifdef JIT
 	compemu_reset();
@@ -230,9 +233,6 @@ void devices_reset(int hardreset)
 	scsi_reset();
 	scsidev_reset();
 	scsidev_start_threads();
-#endif
-#ifdef GFXBOARD
-	gfxboard_reset ();
 #endif
 #ifdef DRIVESOUND
 	driveclick_reset();
@@ -295,7 +295,6 @@ void devices_hsync(void)
 {
 	DISK_hsync();
 	audio_hsync();
-	CIA_hsync_prehandler();
 
 	decide_blitter(-1);
 #ifdef AHI
@@ -368,7 +367,7 @@ void virtualdevice_free(void)
 	sampler_free();
 	inputdevice_close();
 	DISK_free();
-	//dump_counts();
+	dump_counts();
 #ifdef SERIAL_PORT
 	serial_exit();
 #endif
@@ -407,8 +406,12 @@ void do_leave_program (void)
 	close_sound();
 	if (! no_gui)
 		gui_exit();
-
-	//machdep_free();
+#ifndef AMIBERRY // We don't use these here
+#ifdef USE_SDL
+	SDL_Quit();
+#endif
+	machdep_free();
+#endif
 }
 
 void virtualdevice_init (void)
@@ -466,7 +469,6 @@ void devices_restore_start(void)
 	restore_audio_start();
 	restore_cia_start();
 	restore_blkdev_start();
-	restore_blitter_start();
 	restore_custom_start();
 	changed_prefs.bogomem.size = 0;
 	changed_prefs.chipmem.size = 0;

@@ -354,17 +354,27 @@ static void s3_virge_out(uint16_t addr, uint8_t val, void *p)
         switch (addr)
         {
                 case 0x3c5:
-                if (svga->seqaddr >= 0x10)
-                {
-                        svga->seqregs[svga->seqaddr & 0x1f]=val;
+                    if (svga->seqaddr >= 0x10) {
+                        svga->seqregs[svga->seqaddr] = val;
                         svga_recalctimings(svga);
                         return;
-                }
-                if (svga->seqaddr == 4) /*Chain-4 - update banking*/
-                {
-                        if (val & 8) svga->write_bank = svga->read_bank = virge->bank << 16;
-                        else         svga->write_bank = svga->read_bank = virge->bank << 14;
-                }
+                    }
+                    if (svga->seqaddr == 4) { /*Chain-4 - update banking*/
+                        if (val & 8)
+                            svga->write_bank = svga->read_bank = virge->bank << 16;
+                        else
+                            svga->write_bank = svga->read_bank = virge->bank << 14;
+                    }
+                    else if (svga->seqaddr == 0x08) {
+                        svga->seqregs[svga->seqaddr] = val & 0x0f;
+                        return;
+                    }
+                    else if ((svga->seqaddr == 0x0d) && (svga->seqregs[0x08] == 0x06)) {
+                        svga->seqregs[svga->seqaddr] = val;
+                        svga->dpms = (svga->seqregs[0x0d] & 0x50) || (svga->crtc[0x56] & 0x06);
+                        svga_recalctimings(svga);
+                        return;
+                    }
                 break;
                 
                 //case 0x3C6: case 0x3C7: case 0x3C8: case 0x3C9:
@@ -498,6 +508,11 @@ static void s3_virge_out(uint16_t addr, uint8_t val, void *p)
                         s3_virge_updatemapping(virge);
                         break;
                         
+                        case 0x56:
+                            svga->dpms = (svga->seqregs[0x0d] & 0x50) || (svga->crtc[0x56] & 0x06);
+                            old = ~val; /* force recalc */
+                        break;
+
                         case 0x67:
                         switch (val >> 4)
                         {

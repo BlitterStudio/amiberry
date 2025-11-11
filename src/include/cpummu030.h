@@ -28,6 +28,22 @@ extern uae_u32 mmu030_fmovem_store[2];
 extern uae_u8 mmu030_cache_state, mmu030_cache_state_default;
 extern bool ismoves030, islrmw030;
 
+/* Descriptors */
+
+#define DESCR_TYPE_MASK         0x00000003
+
+#define DESCR_TYPE_INVALID      0 /* all tables */
+
+#define DESCR_TYPE_EARLY_TERM   1 /* all but lowest level table */
+#define DESCR_TYPE_PAGE         1 /* only lowest level table */
+#define DESCR_TYPE_VALID4       2 /* all but lowest level table */
+#define DESCR_TYPE_INDIRECT4    2 /* only lowest level table */
+#define DESCR_TYPE_VALID8       3 /* all but lowest level table */
+#define DESCR_TYPE_INDIRECT8    3 /* only lowest level table */
+
+#define DESCR_TYPE_VALID_MASK       0x2 /* all but lowest level table */
+#define DESCR_TYPE_INDIRECT_MASK    0x2 /* only lowest level table */
+
 #define MMU030_STATEFLAG1_FMOVEM 0x2000
 #define MMU030_STATEFLAG1_MOVEM1 0x4000
 #define MMU030_STATEFLAG1_MOVEM2 0x8000
@@ -96,6 +112,10 @@ extern uae_u16 REGPARAM3 mmu030_get_lrmw_word_unaligned(uaecptr addr, uae_u32 fc
 extern uae_u32 REGPARAM3 mmu030_get_lrmw_long_unaligned(uaecptr addr, uae_u32 fc, int flags) REGPARAM;
 extern void REGPARAM3 mmu030_put_word_unaligned(uaecptr addr, uae_u16 val, uae_u32 fc, int flags) REGPARAM;
 extern void REGPARAM3 mmu030_put_long_unaligned(uaecptr addr, uae_u32 val, uae_u32 fc, int flags) REGPARAM;
+
+extern uaecptr debug_mmu030_translate(uaecptr addr, int fc, bool write, struct mmu_debug_data **mdd);
+extern void debug_mmu030_translate_end(void);
+extern void mmu030_dump_tables(int fc);
 
 static ALWAYS_INLINE uae_u32 uae_mmu030_get_fc_code(void)
 {

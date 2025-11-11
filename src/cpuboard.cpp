@@ -33,8 +33,6 @@
 #include "uae/ppc.h"
 #endif
 #include "uae/vm.h"
-#include "idecontrollers.h"
-#include "scsi.h"
 #include "cpummu030.h"
 #include "devices.h"
 #include "a2091.h"
@@ -380,6 +378,10 @@ static bool is_a1230s2(struct uae_prefs *p)
 static bool is_quikpak(struct uae_prefs *p)
 {
 	return ISCPUBOARDP(p, BOARD_GVP, BOARD_GVP_SUB_QUIKPAK);
+}
+static bool is_quikpakxp(struct uae_prefs *p)
+{
+	return ISCPUBOARDP(p, BOARD_GVP, BOARD_GVP_SUB_QUIKPAKXP);
 }
 
 static bool is_aca500(struct uae_prefs *p)
@@ -791,34 +793,51 @@ static uae_u32 REGPARAM2 blizzardea_bget(uaecptr addr)
 
 	addr &= blizzardea_bank.mask;
 	if (is_tekmagic(&currprefs) || is_trexii(&currprefs)) {
+#ifdef NCR
 		cpuboard_non_byte_ea = true;
 		v = cpuboard_ncr710_io_bget(addr);
-	} else if (is_quikpak(&currprefs)) {
+#endif
+	} else if (is_quikpakxp(&currprefs)) {
+#ifdef NCR
 		cpuboard_non_byte_ea = true;
 		v = cpuboard_ncr720_io_bget(addr);
+#endif
 	} else if (is_blizzard2060(&currprefs) && addr >= BLIZZARD_2060_SCSI_OFFSET) {
+#ifdef NCR9X
 		v = cpuboard_ncr9x_scsi_get(addr);
+#endif
 	} else if (is_blizzard1230mk2(&currprefs) && addr >= 0x10000 && (currprefs.cpuboard_settings & 2)) {
+#ifdef NCR9X
 		v = cpuboard_ncr9x_scsi_get(addr);
+#endif
 	} else if (is_blizzard(&currprefs)) {
+#ifdef NCR9X
 		if (addr & BLIZZARD_SCSI_KIT4_SCSI_OFFSET)
 			v = cpuboard_ncr9x_scsi_get(addr);
 		else
+#endif
 			v = blizzardea_bank.baseaddr[addr];
 	} else if (is_blizzard1230mk3(&currprefs)) {
+#ifdef NCR9X
 		if (addr & BLIZZARD_SCSI_KIT3_SCSI_OFFSET)
 			v = cpuboard_ncr9x_scsi_get(addr);
 		else
+#endif
 			v = blizzardea_bank.baseaddr[addr];
 	} else if (is_csmk1(&currprefs)) {
+#ifdef NCR9X
 		if (addr >= CYBERSTORM_MK1_SCSI_OFFSET)
 			v = cpuboard_ncr9x_scsi_get(addr);
 		else
+#endif
 			v = blizzardea_bank.baseaddr[addr];
 	} else if (is_csmk2(&currprefs)) {
+#ifdef NCR9X
 		if (addr >= CYBERSTORM_MK2_SCSI_OFFSET) {
 			v = cpuboard_ncr9x_scsi_get(addr);
-		} else if (flash_active(flashrom, addr)) {
+		} else 
+#endif
+			if (flash_active(flashrom, addr)) {
 			v = flash_read(flashrom, addr);
 		} else {
 			v = blizzardea_bank.baseaddr[addr];
@@ -850,25 +869,41 @@ static void REGPARAM2 blizzardea_bput(uaecptr addr, uae_u32 b)
 	addr &= blizzardea_bank.mask;
 	if (is_tekmagic(&currprefs) || is_trexii(&currprefs)) {
 		cpuboard_non_byte_ea = true;
+#ifdef NCR
 		cpuboard_ncr710_io_bput(addr, b);
-	} else if (is_quikpak(&currprefs)) {
+#endif
+	} else if (is_quikpakxp(&currprefs)) {
 		cpuboard_non_byte_ea = true;
+#ifdef NCR
 		cpuboard_ncr720_io_bput(addr, b);
+#endif
 	} else if (is_blizzard1230mk2(&currprefs) && addr >= 0x10000 && (currprefs.cpuboard_settings & 2)) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if (is_blizzard2060(&currprefs) && addr >= BLIZZARD_2060_SCSI_OFFSET) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if ((is_blizzard(&currprefs)) && addr >= BLIZZARD_SCSI_KIT4_SCSI_OFFSET) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if ((is_blizzard1230mk3(&currprefs)) && addr >= BLIZZARD_SCSI_KIT3_SCSI_OFFSET) {
+#ifdef NCR9X
 		cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 	} else if (is_csmk1(&currprefs)) {
 		if (addr >= CYBERSTORM_MK1_SCSI_OFFSET) {
+#ifdef NCR9X
 			cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 		}
 	} else if (is_csmk2(&currprefs)) {
 		if (addr >= CYBERSTORM_MK2_SCSI_OFFSET) {
+#ifdef NCR9X
 			cpuboard_ncr9x_scsi_put(addr, b);
+#endif
 		}  else {
 			addr &= 65535;
 			addr &= ~3;
@@ -1421,9 +1456,13 @@ static void REGPARAM2 blizzardio_bput(uaecptr addr, uae_u32 v)
 							write_log(_T("CS: SCSI reset cleared\n"));
 						map_banks(&blizzardf0_bank, 0xf00000 >> 16, 0x40000 >> 16, 0);
 						if (is_blizzardppc(&currprefs) || flash_size(flashrom) >= 262144) {
+#ifdef NCR
 							map_banks(&ncr_bank_generic, 0xf40000 >> 16, 0x10000 >> 16, 0);
+#endif
 						} else {
+#ifdef NCR
 							map_banks(&ncr_bank_cyberstorm, 0xf40000 >> 16, 0x10000 >> 16, 0);
+#endif
 							map_banks(&blizzardio_bank, 0xf50000 >> 16, 0x10000 >> 16, 0);
 						}
 					} else {
@@ -1671,9 +1710,12 @@ void cpuboard_map(void)
 			map_banks(&dummy_bank, 0xf00000 >> 16, 0x80000 >> 16, 0);
 		}
 	}
-	if (is_quikpak(&currprefs) || is_trexii(&currprefs)) {
+	if (is_quikpakxp(&currprefs) || is_trexii(&currprefs)) {
 		map_banks(&blizzardf0_bank, 0xf00000 >> 16, 131072 >> 16, 0);
 		map_banks(&blizzardea_bank, 0xf40000 >> 16, 65536 >> 16, 0);
+	}
+	if (is_quikpak(&currprefs)) {
+		map_banks(&blizzardf0_bank, 0xf00000 >> 16, 131072 >> 16, 0);
 	}
 	if (is_fusionforty(&currprefs)) {
 		map_banks(&blizzardf0_bank, 0x00f40000 >> 16, 131072 >> 16, 0);
@@ -2043,7 +2085,7 @@ static void cpuboard_init_2(void)
 		cpuboardmem1_bank.mask = cpuboardmem1_bank.reserved_size - 1;
 		mapped_malloc(&cpuboardmem1_bank);
 
-	} else if (is_quikpak(&currprefs) || is_trexii(&currprefs)) {
+	} else if (is_quikpakxp(&currprefs) || is_trexii(&currprefs)) {
 
 		blizzardf0_bank.start = 0x00f00000;
 		blizzardf0_bank.reserved_size = 131072;
@@ -2053,6 +2095,13 @@ static void cpuboard_init_2(void)
 		blizzardea_bank.reserved_size = 65536;
 		blizzardea_bank.mask = blizzardea_bank.reserved_size - 1;
 		mapped_malloc(&blizzardea_bank);
+
+	} else if (is_quikpak(&currprefs)) {
+
+		blizzardf0_bank.start = 0x00f00000;
+		blizzardf0_bank.reserved_size = 131072;
+		blizzardf0_bank.mask = blizzardf0_bank.reserved_size - 1;
+		mapped_malloc(&blizzardf0_bank);
 
 	} else if (is_blizzard1230mk2(&currprefs)) {
 
@@ -2707,11 +2756,14 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 			case BOARD_GVP_SUB_TEKMAGIC:
 				romtype = ROMTYPE_CB_TEKMAGIC;
 				break;
+			case BOARD_GVP_SUB_QUIKPAKXP:
+				romtype = ROMTYPE_CB_QUIKPAKXP;
+				break;
 			case BOARD_GVP_SUB_QUIKPAK:
-				romtype = romtype = ROMTYPE_CB_QUIKPAK;
+				romtype = ROMTYPE_CB_QUIKPAK;
 				break;
 			case BOARD_GVP_SUB_A1230SI:
-				romtype = romtype = ROMTYPE_CB_A1230S1;
+				romtype = ROMTYPE_CB_A1230S1;
 				break;
 		}
 		break;
@@ -2974,6 +3026,12 @@ bool cpuboard_autoconfig_init(struct autoconfig_info *aci)
 		aci->start = 0xf00000;
 		aci->size = f0rom_size;
 	} else if (is_quikpak(p)) {
+		f0rom_size = 65536;
+		zfile_fread(blizzardf0_bank.baseaddr, 1, f0rom_size, autoconfig_rom);
+		autoconf = false;
+		aci->start = 0xf00000;
+		aci->size = f0rom_size;
+	} else if (is_quikpakxp(p)) {
 		earom_size = 65536;
 		f0rom_size = 131072;
 		zfile_fread(blizzardf0_bank.baseaddr, 1, f0rom_size, autoconfig_rom);

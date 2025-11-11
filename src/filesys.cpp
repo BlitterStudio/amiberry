@@ -31,7 +31,6 @@
 #include "uae.h"
 #include "memory.h"
 #include "custom.h"
-#include "events.h"
 #include "newcpu.h"
 #include "filesys.h"
 #include "autoconf.h"
@@ -44,15 +43,7 @@
 #include "zarchive.h"
 #include "gui.h"
 #include "gayle.h"
-#include "idecontrollers.h"
 #include "savestate.h"
-#ifdef A2091
-#include "a2091.h"
-#endif
-#ifdef NCR
-#include "ncr_scsi.h"
-#endif
-#include "cdtv.h"
 #include "sana2.h"
 #include "bsdsocket.h"
 #include "uaeresource.h"
@@ -67,9 +58,7 @@
 #endif
 #include "tabletlibrary.h"
 #include "cia.h"
-#include "newcpu.h"
 #include "picasso96.h"
-#include "cpuboard.h"
 #include "rommgr.h"
 #include "debug.h"
 #include "debugmem.h"
@@ -4049,14 +4038,14 @@ static void action_read_link(TrapContext *ctx, Unit *unit, dpacket *packet)
 			}
 		}
 	}
+	if (!a->softlink)
+		err = ERROR_OBJECT_WRONG_TYPE;
 	if (err != 0) {
 		xfree(extrapath);
 		PUT_PCK_RES1 (packet, DOS_FALSE);
 		PUT_PCK_RES2 (packet, err);
 		return;
 	}
-	if (!a->softlink)
-		err = ERROR_OBJECT_WRONG_TYPE;
 	_tcscpy (tmp, a->nname);
 	write_log (_T("Resolving softlink '%s'\n"), tmp);
 	if (!my_resolvesoftlink (tmp, sizeof tmp / sizeof (TCHAR), false)) {
@@ -5406,7 +5395,6 @@ static void updatedirtime (a_inode *a1, int now)
 
 	if (!a1->parent)
 		return;
-
 	if (!now) {
 		if (!my_stat (a1->nname, &statbuf))
 			return;
@@ -8459,11 +8447,16 @@ static int pt_babe(TrapContext *ctx, uae_u8 *bufrdb, UnitInfo *uip, int unit_no,
 
 	bad = rl(bufrdb + 4);
 	if (bad) {
-		if (bad * hfd->ci.blocksize > FILESYS_MAX_BLOCKSIZE)
-			return 0;
-		hdf_read_rdb(hfd, bufrdb2, bad * hfd->ci.blocksize, hfd->ci.blocksize);
-		if (bufrdb2[0] != 0xBA || bufrdb2[1] != 0xD1)
-			return 0;
+		if (bufrdb[0] == 0xba && bufrdb[1] == 0xbe) {
+			if (bad * hfd->ci.blocksize > FILESYS_MAX_BLOCKSIZE)
+				return 0;
+			hdf_read_rdb(hfd, bufrdb2, bad * hfd->ci.blocksize, hfd->ci.blocksize);
+			if (bufrdb2[0] != 0xBA || bufrdb2[1] != 0xD1)
+				return 0;
+		} else {
+			// Only A2090 supports bad blocks. Fireball does not.
+			bad = 0;
+		}
 	}
 
 	if (partnum > 0)
@@ -8765,8 +8758,10 @@ static int rdb_mount (TrapContext *ctx, UnitInfo *uip, int unit_no, int partnum,
 
 	for (rdblock = 0; rdblock < lastblock; rdblock++) {
 		hdf_read_rdb (hfd, bufrdb, rdblock * hfd->ci.blocksize, hfd->ci.blocksize);
-		if (rdblock == 0 && bufrdb[0] == 0xBA && bufrdb[1] == 0xBE) {
-				// A2090 "BABE" partition table?
+		if (rdblock == 0 && (
+			(bufrdb[0] == 0xBA && bufrdb[1] == 0xBE && bufrdb[2] == 0x00 && bufrdb[3] == 0x00) || // A2090
+			(bufrdb[0] == 0x44 && bufrdb[1] == 0x4f && bufrdb[2] == 0x53 && bufrdb[3] == 0x00 && bufrdb[4] == 0xBA && bufrdb[5] == 0xBE))) { // MAST
+				// A2090 or Mast FireBall "BABE" partition table?
 				int v = pt_babe(ctx, bufrdb, uip, unit_no, partnum, parmpacket);
 				if (v)
 					return v;

@@ -1,6 +1,8 @@
 #ifndef UAE_A2091_H
 #define UAE_A2091_H
 
+#include "commpipe.h"
+
 #ifdef A2091
 
 #define WD_STATUS_QUEUE 2

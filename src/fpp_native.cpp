@@ -19,7 +19,7 @@
 
 #define USE_HOST_ROUNDING 1
 #ifndef AMIBERRY
-#define SOFTFLOAT_CONVERSIONS 0
+#define SOFTFLOAT_CONVERSIONS 1
 #endif
 
 #include "options.h"
@@ -391,47 +391,97 @@ static void fp_to_exten(fpdata *fpd, uae_u32 wrd1, uae_u32 wrd2, uae_u32 wrd3)
 #endif
 {
 #if SOFTFLOAT_CONVERSIONS
-	floatx80 fx80;
-	fx80.high = wrd1 >> 16;
-	fx80.low = (((uae_u64)wrd2) << 32) | wrd3;
-	fs.float_exception_flags = 0;
-	float64 f = floatx80_to_float64(fx80, &fs);
-	// overflow -> infinity
-	if (fs.float_exception_flags & float_flag_overflow)
-		f = 0x7ff0000000000000 | (f & 0x8000000000000000);
-	fp_to_double(fpd, f >> 32, (uae_u32)f);
+	if (!currprefs.cachesize || !currprefs.compfpu) {
+		floatx80 fx80;
+		fx80.high = wrd1 >> 16;
+		fx80.low = (((uae_u64)wrd2) << 32) | wrd3;
+		fs.float_exception_flags = 0;
+		float64 f = floatx80_to_float64(fx80, &fs);
+		// overflow -> infinity
+		if (fs.float_exception_flags & float_flag_overflow) {
+			f = 0x7ff0000000000000 | (f & 0x8000000000000000);
+		}
+		fp_to_double(fpd, f >> 32, (uae_u32)f);
+	} else {
+		double frac;
+		if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
+			fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
+			return;
+		}
+		frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
+		if (wrd1 & 0x80000000) {
+			frac = -frac;
+		}
+		fpd->fp = ldexp(frac, ((wrd1 >> 16) & 0x7fff) - 16383);
+	}
 #else
-    double frac;
-    if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
-        fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
-        return;
-    }
-    frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
-    if (wrd1 & 0x80000000)
-        frac = -frac;
-    fpd->fp = ldexp (frac, ((wrd1 >> 16) & 0x7fff) - 16383);
+		double frac;
+		if ((wrd1 & 0x7fff0000) == 0 && wrd2 == 0 && wrd3 == 0) {
+			fpd->fp = (wrd1 & 0x80000000) ? -0.0 : +0.0;
+			return;
+		}
+		frac = ((double)wrd2 + ((double)wrd3 / twoto32)) / 2147483648.0;
+		if (wrd1 & 0x80000000) {
+			frac = -frac;
+		}
+		fpd->fp = ldexp (frac, ((wrd1 >> 16) & 0x7fff) - 16383);
 #endif
 }
 static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wrd3)
 {
 #if SOFTFLOAT_CONVERSIONS
-	uae_u32 w1, w2;
-	fp_from_double(fpd, &w1, &w2);
-	floatx80 f = float64_to_floatx80(((uae_u64)w1 << 32) | w2, &fs);
-	*wrd1 = f.high << 16;
-	*wrd2 = f.low >> 32;
-	*wrd3 = (uae_u32)f.low;
-#else
-    int expon;
-    double frac;
-    fptype v;
+	if (!currprefs.cachesize || !currprefs.compfpu) {
+		uae_u32 w1, w2;
+		fp_from_double(fpd, &w1, &w2);
+		floatx80 f = float64_to_floatx80(((uae_u64)w1 << 32) | w2, &fs);
+		*wrd1 = f.high << 16;
+		*wrd2 = f.low >> 32;
+		*wrd3 = (uae_u32)f.low;
+	} else {
+		int expon;
+		double frac;
+		fptype v;
     
-    if (fp_is_zero(fpd)) {
-        *wrd1 = signbit(fpd->fp) ? 0x80000000 : 0;
-        *wrd2 = 0;
-        *wrd3 = 0;
-        return;
-	} else if (fp_is_nan(fpd)) {
+		if (fp_is_zero(fpd)) {
+			*wrd1 = signbit(fpd->fp) ? 0x80000000 : 0;
+			*wrd2 = 0;
+			*wrd3 = 0;
+			return;
+		} else if (fp_is_nan(fpd)) {
+			*wrd1 = 0x7fff0000;
+			*wrd2 = 0xffffffff;
+			*wrd3 = 0xffffffff;
+			return;
+		}
+		v = fpd->fp;
+		if (v < 0) {
+			*wrd1 = 0x80000000;
+			v = -v;
+		} else {
+			*wrd1 = 0;
+		}
+		frac = frexp (v, &expon);
+		frac += 0.5 / (twoto32 * twoto32);
+		if (frac >= 1.0) {
+			frac /= 2.0;
+			expon++;
+		}
+		*wrd1 |= (((expon + 16383 - 1) & 0x7fff) << 16);
+		*wrd2 = (uae_u32) (frac * twoto32);
+		*wrd3 = (uae_u32) ((frac * twoto32 - *wrd2) * twoto32);
+	}
+#else
+	int expon;
+	double frac;
+	fptype v;
+
+	if (fp_is_zero(fpd)) {
+		*wrd1 = signbit(fpd->fp) ? 0x80000000 : 0;
+		*wrd2 = 0;
+		*wrd3 = 0;
+		return;
+	}
+	else if (fp_is_nan(fpd)) {
 		*wrd1 = 0x7fff0000;
 		*wrd2 = 0xffffffff;
 		*wrd3 = 0xffffffff;
@@ -439,20 +489,21 @@ static void fp_from_exten(fpdata *fpd, uae_u32 *wrd1, uae_u32 *wrd2, uae_u32 *wr
 	}
 	v = fpd->fp;
 	if (v < 0) {
-        *wrd1 = 0x80000000;
-        v = -v;
-    } else {
-        *wrd1 = 0;
-    }
-    frac = frexp (v, &expon);
-    frac += 0.5 / (twoto32 * twoto32);
-    if (frac >= 1.0) {
-        frac /= 2.0;
-        expon++;
-    }
-    *wrd1 |= (((expon + 16383 - 1) & 0x7fff) << 16);
-    *wrd2 = (uae_u32) (frac * twoto32);
-    *wrd3 = (uae_u32) ((frac * twoto32 - *wrd2) * twoto32);
+		*wrd1 = 0x80000000;
+		v = -v;
+	}
+	else {
+		*wrd1 = 0;
+	}
+	frac = frexp(v, &expon);
+	frac += 0.5 / (twoto32 * twoto32);
+	if (frac >= 1.0) {
+		frac /= 2.0;
+		expon++;
+	}
+	*wrd1 |= (((expon + 16383 - 1) & 0x7fff) << 16);
+	*wrd2 = (uae_u32)(frac * twoto32);
+	*wrd3 = (uae_u32)((frac * twoto32 - *wrd2) * twoto32);
 #endif
 }
 #endif // !USE_LONG_DOUBLE

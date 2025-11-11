@@ -52,7 +52,6 @@
 #include "options.h"
 #include "memory.h"
 #include "zfile.h"
-#include "ar.h"
 #include "autoconf.h"
 #include "custom.h"
 #include "newcpu.h"
@@ -63,8 +62,6 @@
 #include "filesys.h"
 #include "inputrecord.h"
 #include "disk.h"
-#include "threaddep/thread.h"
-#include "a2091.h"
 #include "devices.h"
 #include "fsdb.h"
 #include "gfxboard.h"
@@ -703,8 +700,10 @@ void restore_state (const TCHAR *filename)
 			end = restore_custom_sprite (5, chunk);
 		else if (!_tcscmp (name, _T("SPR6")))
 			end = restore_custom_sprite (6, chunk);
-		else if (!_tcscmp (name, _T("SPR7")))
-			end = restore_custom_sprite (7, chunk);
+		else if (!_tcscmp(name, _T("SPR7")))
+			end = restore_custom_sprite(7, chunk);
+		else if (!_tcscmp(name, _T("BPLX")))
+			end = restore_custom_bpl(chunk);
 		else if (!_tcscmp (name, _T("CIAA")))
 			end = restore_cia (0, chunk);
 		else if (!_tcscmp (name, _T("CIAB")))
@@ -899,7 +898,7 @@ bool savestate_restore_finish(void)
 	restore_debug_memwatch_finish();
 #endif
 	savestate_state = 0;
-	init_hz_normal();
+	init_hz();
 	audio_activate();
 	return true;
 }
@@ -1062,6 +1061,11 @@ static int save_state_internal (struct zfile *f, const TCHAR *description, int c
 		xfree(dst);
 	}
 
+	dst = save_custom_bpl(&len, NULL);
+	if (dst) {
+		save_chunk(f, dst, len, _T("BPLX"), 0);
+		xfree(dst);
+	}
 	_tcscpy (name, _T("SPRx"));
 	for (i = 0; i < 8; i++) {
 		dst = save_custom_sprite (i, &len, 0);
