@@ -1255,11 +1255,40 @@ void show_screen(const int monid, int mode)
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
 	glViewport(0, 0, drawableWidth, drawableHeight);
 
-	SDL_Rect corrected_crop_rect;
-	auto packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
-	crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
-	  corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
-	free(packed_pixel_buffer);
+	// SDL_Rect corrected_crop_rect;
+	// auto packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
+	// crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
+	  // corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
+	// free(packed_pixel_buffer);
+
+	// Check if any cropping is actually being applied.
+	// If crop_rect covers the entire surface, we can take a much faster path.
+	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+	                         crop_rect.w != amiga_surface->w ||
+	                         crop_rect.h != amiga_surface->h);
+
+	if (is_cropped)
+	{
+		// SLOW PATH: Cropping is active.
+		// We must create a temporary packed buffer for the cropped region.
+		SDL_Rect corrected_crop_rect;
+		uae_u8* packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
+
+		if (packed_pixel_buffer)
+		{
+			crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
+			corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
+
+			delete[] packed_pixel_buffer;
+		}
+	}
+	else
+	{
+		// FAST PATH: No cropping.
+		// Render the full surface directly without any expensive memory allocation or copying.
+		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
+		amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
+	}
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
@@ -4134,6 +4163,32 @@ static bool is_gles_context()
 	return true;
 }
 
+/**
+   * @brief Creates a new tightly-packed pixel buffer from a specified cropped region of an SDL_Surface.
+   *
+   * This function is essential for preparing pixel data for rendering systems like `crtemu_present`
+   * that require pixel buffers to be tightly packed (without any additional padding bytes, i.e., pitch / stride.
+   *
+   * SDL_Surfaces, especially when representing a sub-region or when their `pitch` (bytes per row)
+   * is greater than `(width * bytes_per_pixel)`, do not always guarantee tightly-packed data.
+   * This function addresses that by:
+   * 1. Calculating the effective crop region, clamped to the source surface's boundaries.
+   * 2. Allocating a new memory buffer precisely sized for the cropped, tightly-packed data.
+   * 3. Copying the pixel data row by row from the source surface into the new buffer,
+   *    ensuring contiguity and removing any pitch discrepancies.
+   *
+   * The caller is responsible for deallocating the returned buffer using `delete[]`.
+   *
+   * @param src A pointer to the source SDL_Surface from which to extract pixels. Must not be null.
+   * @param crop The SDL_Rect defining the desired region to crop from the source surface.
+   * @param out_buffer_rect An output parameter. On successful return, this SDL_Rect will contain
+   *   the actual dimensions (x, y, w, h) of the data within the returned `uae_u8*` buffer.
+   *   The x and y components will typically be 0, and w/h will represent the width and height
+   *   of the copied pixel data.
+   * @return A pointer to a newly allocated `uae_u8` array containing the tightly-packed pixel data
+   *   of the cropped region. Returns `nullptr` if `src` is null, the effective crop region is
+   *   invalid/empty, or memory allocation fails.
+   */
 static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src,
 	const SDL_Rect& crop, SDL_Rect& out_buffer_rect)
 {
