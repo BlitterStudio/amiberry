@@ -76,7 +76,7 @@ crtemu_t* crtemu_tv = nullptr;
 
 bool set_opengl_attributes();
 bool init_opengl_context(SDL_Window* window);
-
+static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src, const SDL_Rect& crop, SDL_Rect& out_buffer_rect);
 static int get_crtemu_type(const char* shader)
 {
 	if (!shader) return CRTEMU_TYPE_TV;
@@ -1254,9 +1254,34 @@ void show_screen(const int monid, int mode)
 	int drawableWidth, drawableHeight;
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
 	glViewport(0, 0, drawableWidth, drawableHeight);
-	if (crtemu_tv) {
+
+	// Check if any cropping is actually being applied.
+	// If crop_rect covers the entire surface, we can take a much faster path.
+	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+	                         crop_rect.w != amiga_surface->w ||
+	                         crop_rect.h != amiga_surface->h);
+
+	if (is_cropped)
+	{
+		// SLOW PATH: Cropping is active.
+		// We must create a temporary packed buffer for the cropped region.
+		SDL_Rect corrected_crop_rect;
+		uae_u8* packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
+
+		if (packed_pixel_buffer)
+		{
+			crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
+			corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
+
+			delete[] packed_pixel_buffer;
+		}
+	}
+	else
+	{
+		// FAST PATH: No cropping.
+		// Render the full surface directly without any expensive memory allocation or copying.
 		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
-			crop_rect.w, crop_rect.h, 0xffffffff, 0x000000);
+		amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
 	}
 
 	SDL_GL_SwapWindow(mon->amiga_window);
@@ -4130,5 +4155,75 @@ static bool is_gles_context()
 	write_log(_T("GLSL Version:    %hs\n"), sl_ver ? sl_ver : "unknown");
 
 	return true;
+}
+
+/**
+   * @brief Creates a new tightly-packed pixel buffer from a specified cropped region of an SDL_Surface.
+   *
+   * This function is essential for preparing pixel data for rendering systems like `crtemu_present`
+   * that require pixel buffers to be tightly packed (without any additional padding bytes, i.e., pitch / stride.
+   *
+   * SDL_Surfaces, especially when representing a sub-region or when their `pitch` (bytes per row)
+   * is greater than `(width * bytes_per_pixel)`, do not always guarantee tightly-packed data.
+   * This function addresses that by:
+   * 1. Calculating the effective crop region, clamped to the source surface's boundaries.
+   * 2. Allocating a new memory buffer precisely sized for the cropped, tightly-packed data.
+   * 3. Copying the pixel data row by row from the source surface into the new buffer,
+   *    ensuring contiguity and removing any pitch discrepancies.
+   *
+   * The caller is responsible for deallocating the returned buffer using `delete[]`.
+   *
+   * @param src A pointer to the source SDL_Surface from which to extract pixels. Must not be null.
+   * @param crop The SDL_Rect defining the desired region to crop from the source surface.
+   * @param out_buffer_rect An output parameter. On successful return, this SDL_Rect will contain
+   *   the actual dimensions (x, y, w, h) of the data within the returned `uae_u8*` buffer.
+   *   The x and y components will typically be 0, and w/h will represent the width and height
+   *   of the copied pixel data.
+   * @return A pointer to a newly allocated `uae_u8` array containing the tightly-packed pixel data
+   *   of the cropped region. Returns `nullptr` if `src` is null, the effective crop region is
+   *   invalid/empty, or memory allocation fails.
+   */
+static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src,
+	const SDL_Rect& crop, SDL_Rect& out_buffer_rect)
+{
+	if (!src)
+	{
+		out_buffer_rect = { 0, 0, 0, 0 };
+		return nullptr;
+	}
+
+	const SDL_Rect src_bounds = { 0, 0, src->w, src->h };
+	SDL_Rect final_crop;
+	if (!SDL_IntersectRect(&crop, &src_bounds, &final_crop))
+	{
+		out_buffer_rect = { 0, 0, 0, 0 };
+		return nullptr;
+	}
+
+	const int bytes_per_pixel = src->format->BytesPerPixel;
+	const int buffer_row_bytes = final_crop.w * bytes_per_pixel;
+	const size_t buffer_size = buffer_row_bytes * final_crop.h;
+
+	if (buffer_size == 0)
+	{
+		out_buffer_rect = { 0, 0, 0, 0 };
+		return nullptr;
+	}
+	uae_u8* packed_buffer = new uae_u8[buffer_size];
+
+	const uae_u8* src_row_start = static_cast<const uae_u8*>(src->pixels)
+							  + final_crop.y * src->pitch
+							  + final_crop.x * bytes_per_pixel;
+	uae_u8* dst_row_start = packed_buffer;
+
+	for (int y = 0; y < final_crop.h; ++y)
+	{
+		memcpy(dst_row_start, src_row_start, buffer_row_bytes);
+		src_row_start += src->pitch;
+		dst_row_start += buffer_row_bytes;
+	}
+
+	out_buffer_rect = final_crop;
+	return packed_buffer;
 }
 #endif
