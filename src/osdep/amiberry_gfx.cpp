@@ -1255,12 +1255,6 @@ void show_screen(const int monid, int mode)
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
 	glViewport(0, 0, drawableWidth, drawableHeight);
 
-	// SDL_Rect corrected_crop_rect;
-	// auto packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
-	// crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
-	  // corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
-	// free(packed_pixel_buffer);
-
 	// Check if any cropping is actually being applied.
 	// If crop_rect covers the entire surface, we can take a much faster path.
 	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
