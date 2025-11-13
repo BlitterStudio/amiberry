@@ -32,8 +32,12 @@ find_package(ZLIB REQUIRED)
 if (USE_ZSTD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_ZSTD)
     find_helper(ZSTD libzstd zstd.h zstd)
-    include_directories(${ZSTD_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
+    if(NOT ZSTD_FOUND)
+        message(WARNING "ZSTD library not found - CHD compressed disk images will not be supported")
+    else()
+        target_include_directories(${PROJECT_NAME} PRIVATE ${ZSTD_INCLUDE_DIRS})
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
+    endif()
 endif ()
 
 if (USE_LIBSERIALPORT)
@@ -58,8 +62,12 @@ endif ()
 if (USE_LIBENET)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBENET)
     find_helper(LIBENET libenet enet/enet.h enet)
-    include_directories(${LIBENET_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBENET_LIBRARIES})
+    if(NOT LIBENET_FOUND)
+        message(WARNING "LibENET library not found - network emulation will not be supported")
+    else()
+        target_include_directories(${PROJECT_NAME} PRIVATE ${LIBENET_INCLUDE_DIRS})
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBENET_LIBRARIES})
+    endif()
 endif ()
 
 if (USE_PCEM)
@@ -80,7 +88,8 @@ if (USE_UAENET_PCAP)
     endif()
 endif()
 
-include_directories(${SDL2_INCLUDE_DIR} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+get_target_property(SDL2_INCLUDE_DIRS SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
@@ -88,7 +97,13 @@ add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 add_subdirectory(external/libguisan)
 
+# Provide SDL headers to libguisan
+target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
+        SDL2::SDL2
+        ${SDL2_IMAGE_LIBRARIES}
+        ${SDL2_TTF_LIBRARIES}
         guisan
         mt32emu
         FLAC

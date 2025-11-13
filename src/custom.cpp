@@ -12776,3 +12776,10 @@ void custom_end_drawing(void)
 	draw_denise_line_queue_flush();
 	end_draw_denise();
 }
+// Simple definitions for missing symbols
+int busywait = 0;
+int target_sleep_nanos(int nanos) {
+	if (nanos < 0) return 1000; // minimum sleep time
+	usleep(nanos / 1000); // convert to microseconds
+	return 0;
+}

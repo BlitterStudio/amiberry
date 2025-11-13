@@ -3968,12 +3968,12 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		return false;
 	}
 #elif defined(__MACH__)
-	std::string wget_path = "/usr/local/bin/wget";
-	if (!file_exists(wget_path))
+	if (system("which wget > /dev/null 2>&1") != 0)
 	{
-		write_log("Could not locate wget in /usr/local/bin/ - Please use homebrew to install it!\n");
+		write_log("Could not locate wget - Please install it!\n");
 		return false;
 	}
+	std::string wget_path = "wget";
 #else
 	std::string wget_path = "wget";
 #endif
@@ -4344,19 +4344,14 @@ void create_missing_amiberry_folders()
 			const std::string command = "cp -R " + default_whdboot_path + "* " + whdboot_path;
 			system(command.c_str());
 		}
-		else if (my_existsdir("/usr/share/amiberry/whdboot/"))
+		else if (my_existsdir(AMIBERRY_DATADIR "/whdboot/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/whdboot/* " + whdboot_path;
-			system(command.c_str());
-		}
-		else if (my_existsdir("/usr/local/share/amiberry/whdboot/"))
-		{
-			const std::string command = "cp -R /usr/local/share/amiberry/whdboot/* " + whdboot_path;
+			const std::string command = "cp -R " AMIBERRY_DATADIR "/whdboot/* " + whdboot_path;
 			system(command.c_str());
 		}
 		else
 		{
-			write_log("No WHDLoad boot files found in %s, %s, or %s\n", default_whdboot_path.c_str(), "/usr/share/amiberry/whdboot/", "/usr/local/share/amiberry/whdboot/");
+			write_log("No WHDLoad boot files found in %s or %s\n", default_whdboot_path.c_str(), AMIBERRY_DATADIR "/whdboot/");
 			write_log("Attempting to download them from the internet...\n");
 
 			std::string directory_name = whdboot_path + "save-data";
@@ -4436,14 +4431,9 @@ void create_missing_amiberry_folders()
 			const std::string command = "cp -R " + default_roms_path + "* " + rom_path;
 			system(command.c_str());
 		}
-		else if (my_existsdir("/usr/share/amiberry/roms/"))
+		else if (my_existsdir(AMIBERRY_DATADIR "/roms/"))
 		{
-			const std::string command = "cp -R /usr/share/amiberry/roms/* " + rom_path;
-			system(command.c_str());
-		}
-		else if (my_existsdir("/usr/local/share/amiberry/roms/"))
-		{
-			const std::string command = "cp -R /usr/local/share/amiberry/roms/* " + rom_path;
+			const std::string command = "cp -R " AMIBERRY_DATADIR "/roms/* " + rom_path;
 			system(command.c_str());
 		}
 	}

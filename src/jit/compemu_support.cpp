@@ -7,3 +7,15 @@
 #elif defined(__x86_64__) || defined(_M_AMD64)
 #include "x86/compemu_support_x86.cpp"
 #endif
+// Simple stub for missing emu8k function
+#define MAXSOUNDBUFLEN 8192
+typedef struct emu8k_t emu8k_t; // Forward declaration
+void emu8k_update(emu8k_t* emu8k) {
+    // Stub implementation
+}
+
+// Define prop array for non-JIT builds
+#ifndef JIT
+#include "compemu.h"
+op_properties prop[65536] = {{0}};
+#endif

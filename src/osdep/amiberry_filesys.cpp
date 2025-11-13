@@ -1067,7 +1067,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		// First try to remove common system files that might prevent directory deletion
 		const std::array<const char*, 2> extra_files = { "Thumbs.db", ".DS_Store" };
 		for (const auto& file : extra_files) {
-			remove_extra_file(path, file);
+			(void)remove_extra_file(path, file);
 		}
 
 		// Check if directory is empty (excluding . and ..)

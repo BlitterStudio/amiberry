@@ -8454,7 +8454,7 @@ static void copy_inputdevice_settings(const struct uae_input_device *src, struct
 {
 	for (int l = 0; l < MAX_INPUT_DEVICE_EVENTS; l++) {
 		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
-			if (src->custom[l][i]) {
+			if (src->custom[l][i] && (uintptr_t)src->custom[l][i] < 0x100000000ULL) {
 				dst->custom[l][i] = my_strdup(src->custom[l][i]);
 			} else {
 				dst->custom[l][i] = nullptr;
@@ -8473,10 +8473,10 @@ static void copy_inputdevice_settings_free(const struct uae_input_device *src, s
 			if (dst->custom[l][i] == src->custom[l][i]) {
 				dst->custom[l][i] = nullptr;
 			} else {
-				if (dst->custom[l][i]) {
+				if (dst->custom[l][i] && (uintptr_t)dst->custom[l][i] < 0x100000000ULL) {
 					xfree(dst->custom[l][i]);
-					dst->custom[l][i] = nullptr;
 				}
+				dst->custom[l][i] = nullptr;
 			}
 		}
 	}
@@ -8531,8 +8531,8 @@ void default_prefs (struct uae_prefs *p, bool reset, int type)
 	int roms[] = { 6, 7, 8, 9, 10, 14, 5, 4, 3, 2, 1, -1 };
 	TCHAR zero = 0;
 
-	reset_inputdevice_config (p, reset);
 	memset (p, 0, sizeof (struct uae_prefs));
+	reset_inputdevice_config (p, reset);
 	_tcscpy (p->description, _T("UAE default configuration"));
 	p->config_hardware_path[0] = 0;
 	p->config_host_path[0] = 0;

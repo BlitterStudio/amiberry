@@ -1163,10 +1163,10 @@ static void reset_inputdevice_settings (struct uae_input_device *uid)
 		for (int i = 0; i < MAX_INPUT_SUB_EVENT_ALL; i++) {
 			uid->eventid[l][i] = 0;
 			uid->flags[l][i] = 0;
-			if (uid->custom[l][i]) {
+			if (uid->custom[l][i] && (uintptr_t)uid->custom[l][i] < 0x100000000ULL) {
 				xfree (uid->custom[l][i]);
-				uid->custom[l][i] = NULL;
 			}
+			uid->custom[l][i] = NULL;
 		}
 	}
 }
@@ -1243,7 +1243,6 @@ static void set_kbr_default_event (struct uae_input_device *kbr, struct uae_inpu
 
 static void clear_id (struct uae_input_device *id)
 {
-#ifndef	_DEBUG
 	int i, j;
 	for (i = 0; i < MAX_INPUT_DEVICE_EVENTS; i++) {
 		for (j = 0; j < MAX_INPUT_SUB_EVENT_ALL; j++) {
@@ -1251,7 +1250,6 @@ static void clear_id (struct uae_input_device *id)
 			id->custom[i][j] = NULL;
 		}
 	}
-#endif
 	TCHAR *cn = id->configname;
 	TCHAR *n = id->name;
 	memset (id, 0, sizeof (struct uae_input_device));

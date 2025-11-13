@@ -14,6 +14,7 @@
 #include "machdep/m68k.h"
 #include "events.h"
 #include "thread.h"
+#include "memory.h"
 
 #ifdef WITH_SOFTFLOAT
 #include <softfloat/softfloat.h>
