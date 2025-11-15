@@ -429,7 +429,19 @@ int keyhack (const int scancode, const int pressed, const int num)
 
 static void cleardid(struct didata* did)
 {
-	memset(did, 0, sizeof(*did));
+	did->type = 0;
+	did->acquired = 0;
+	did->name.clear();
+	did->controller_name.clear();
+	did->joystick_name.clear();
+	did->guid.clear();
+	did->is_controller = false;
+	did->controller = nullptr;
+	did->joystick = nullptr;
+	did->joystick_id = 0;
+	did->axles = 0;
+	did->buttons = 0;
+	did->buttons_real = 0;
 	for (int i = 0; i < MAX_MAPPINGS; i++) {
 		did->axismappings[i] = -1;
 		did->buttonmappings[i] = -1;

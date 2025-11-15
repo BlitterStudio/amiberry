@@ -936,16 +936,7 @@ private:
 
 	static void restart_emulator()
 	{
-		char tmp[MAX_DPATH];
-		get_configuration_path(tmp, sizeof tmp);
-		if (strlen(last_loaded_config) > 0)
-			strncat(tmp, last_loaded_config, MAX_DPATH - 1);
-		else
-		{
-			strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
-			strncat(tmp, ".uae", MAX_DPATH - 10);
-		}
-		uae_restart(&changed_prefs, -1, tmp);
+		uae_restart(&changed_prefs, -1, nullptr);
 		gui_running = false;
 	}
 
