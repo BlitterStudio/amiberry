@@ -938,10 +938,11 @@ private:
 	{
 		char tmp[MAX_DPATH];
 		get_configuration_path(tmp, sizeof tmp);
-		if (strlen(last_loaded_config) > 0)
+		if (strlen(last_loaded_config) > 0) {
 			strncat(tmp, last_loaded_config, MAX_DPATH - 1);
-		else
-		{
+			strncat(tmp, ".uae", MAX_DPATH - 10);
+		}
+		else {
 			strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
 			strncat(tmp, ".uae", MAX_DPATH - 10);
 		}
