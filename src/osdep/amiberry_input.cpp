@@ -429,7 +429,7 @@ int keyhack (const int scancode, const int pressed, const int num)
 
 static void cleardid(struct didata* did)
 {
-	memset(did, 0, sizeof(*did));
+	*did = didata{};
 	for (int i = 0; i < MAX_MAPPINGS; i++) {
 		did->axismappings[i] = -1;
 		did->buttonmappings[i] = -1;

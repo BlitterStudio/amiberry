@@ -432,6 +432,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_COPYRIGHT "(c) 2025 Dimitris Panokostas"
 )
 
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         _FILE_OFFSET_BITS=64
         -DAMIBERRY_VERSION="${PROJECT_VERSION}"

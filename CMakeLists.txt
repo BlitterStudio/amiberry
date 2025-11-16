@@ -85,7 +85,7 @@ set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
 
 # Global definitions
-add_definitions(-DLIBICONV_PLUG)
+#add_definitions(-DLIBICONV_PLUG)
 
 # FreeBSD-specific linking and paths
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
