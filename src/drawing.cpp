@@ -519,6 +519,7 @@ static int internal_pixel_cnt, internal_pixel_start_cnt;
 static bool no_denise_lol, denise_strlong_seen;
 #define STRLONG_SEEN_DELAY 2
 static int denise_strlong_seen_delay;
+static bool denise_vsync_bpl_detect;
 
 void set_inhibit_frame(int monid, int bit)
 {
@@ -2338,6 +2339,21 @@ void freevidbuffer(int monid, struct vidbuffer *buf)
 	}
 }
 
+void denise_clearbuffers(void)
+{
+	int monid = 0;
+	struct amigadisplay *ad = &adisplays[monid];
+	struct vidbuf_description *vidinfo = &ad->gfxvidinfo;
+	if (vidinfo->outbuffer && vidinfo->outbuffer->locked) {
+		struct vidbuffer *dst = vidinfo->outbuffer;
+		uae_u8 *p = dst->bufmem;
+		for (int y = 0; y < dst->height_allocated; y++) {
+			memset (p, 0, dst->width_allocated * dst->pixbytes);
+			p += dst->rowbytes;
+		}
+	}
+}
+
 void reset_drawing(void)
 {
 	custom_end_drawing();
@@ -3756,6 +3772,7 @@ static void expand_drga_early(struct denise_rga *rd)
 				aga_unalign1 += 2;
 			}
 		}
+		denise_vsync_bpl_detect = false;
 		break;
 	}
 
@@ -5525,6 +5542,7 @@ static void draw_denise_vsync(int erase)
 		center_y_erase = false;
 		resetfulllinestate();
 	}
+	denise_vsync_bpl_detect = true;
 }
 
 static void denise_draw_update(void)
@@ -5552,10 +5570,10 @@ static void edgeblanking(int hbstrt_offset, int hbstop_offset, int internal_pixe
 	int rshift = hresolution_inv;
 	int hbstrt_offset2 = (hbstrt_offset - internal_pixel_start_cnt) >> rshift;
 	int hbstop_offset2 = (hbstop_offset - internal_pixel_start_cnt) >> rshift;
-	uae_u32 *hbstrt_ptr1 = hbstrt_offset2 >= 0 ? buf1t + hbstrt_offset2 : NULL;
-	uae_u32 *hbstop_ptr1 = hbstop_offset2 >= 0 ? buf1t + hbstop_offset2 : NULL;
-	uae_u32 *hbstrt_ptr2 = buf2 && hbstrt_offset2 >= 0 ? buf2t + hbstrt_offset2 : NULL;
-	uae_u32 *hbstop_ptr2 = buf2 && hbstop_offset2 >= 0 ? buf2t + hbstop_offset2 : NULL;
+	uae_u32 *hbstrt_ptr1 = buf1t && hbstrt_offset2 >= 0 ? buf1t + hbstrt_offset2 : NULL;
+	uae_u32 *hbstop_ptr1 = buf1t && hbstop_offset2 >= 0 ? buf1t + hbstop_offset2 : NULL;
+	uae_u32 *hbstrt_ptr2 = buf2t && hbstrt_offset2 >= 0 ? buf2t + hbstrt_offset2 : NULL;
+	uae_u32 *hbstop_ptr2 = buf2t && hbstop_offset2 >= 0 ? buf2t + hbstop_offset2 : NULL;
 	// blank last pixel row if normal overscan mode, it might have NTSC artifacts
 	if (strlong_seen && hbstrt_ptr1) {
 		int add = 1 << hresolution;
@@ -5730,15 +5748,23 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 	bool blankedline = (this_line->linear_vpos >= denise_vblank_extra_bottom || this_line->linear_vpos < denise_vblank_extra_top) && currprefs.gfx_overscanmode < OVERSCANMODE_EXTREME && !programmedmode;
 	bool line_is_blanked = false;
 
-	if (denise_pixtotal_max == -0x7fffffff || blankedline || blanked) {
+	if ((denise_pixtotal_max == -0x7fffffff && denise_vsync_bpl_detect) || blankedline || blanked) {
 
 		// don't draw vertical blanking if not ultra extreme overscan
 		internal_pixel_cnt = -1;
 		line_is_blanked = true;
 		while (denise_cck < denise_endcycle) {
+			// start drawing normally if BPLDAT1 gets written to, even if line is blanked
+			if (!denise_vsync_bpl_detect) {
+				while (denise_cck < denise_endcycle) {
+					lts();
+					lts_changed = false;
+				}
+				break;
+			}
 			while (denise_cck < denise_endcycle) {
 				do_denise_cck(denise_linecnt, denise_startpos, denise_cck);
-				if (lts_changed) {
+				if (lts_changed || !denise_vsync_bpl_detect) {
 					break;
 				}
 				if (aga_mode) {
@@ -5771,6 +5797,7 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 						*debug_dma_dhpos_odd = denise_hcounter;
 #endif
 						denise_hcounter_cmp++;
+						denise_hcounter &= 511;
 						denise_hcounter++;
 						denise_hcounter &= 511;
 						denise_hcounter_next++;

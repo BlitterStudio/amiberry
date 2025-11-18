@@ -54,4 +54,6 @@ extern void driveclick_fdrawcmd_motor (int, int);
 extern void driveclick_fdrawcmd_vsync (void);
 extern int driveclick_pcdrivemask, driveclick_pcdrivenum;
 
+extern bool driveclick_wave_initialized;
+
 #endif /* UAE_DRIVECLICK_H */

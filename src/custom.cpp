@@ -260,6 +260,21 @@ static void write_drga_flag(uae_u32 flags, uae_u32 mask)
 }
 
 static uae_u32 dummyrgaaddr;
+
+static void write_rga_update(struct rgabuf *r, uae_u32 *p)
+{
+	if (p && r->p) {
+		// DMA address pointer conflict causes both old and new address to becomes old OR new.
+		r->conflict = r->p;
+		*r->p |= *p;
+		*p = *r->p;
+		r->pv |= *p;
+	} else if (p) {
+		r->p = p;
+		r->pv = *p;
+	}
+}
+
 struct rgabuf *write_rga(int slot, int type, uae_u16 v, uae_u32 *p)
 {
 	struct rgabuf *r = &rga_pipe[(slot + rga_slot_first_offset) & 3];
@@ -277,16 +292,7 @@ struct rgabuf *write_rga(int slot, int type, uae_u16 v, uae_u32 *p)
 	r->reg &= v;
 	r->type |= type;
 	r->alloc = 1;
-	if (p && r->p) {
-		// DMA address pointer conflict causes both old and new address to becomes old OR new.
-		r->conflict = r->p;
-		*r->p |= *p;
-		*p = *r->p;
-		r->pv |= *p;
-	} else if (p) {
-		r->p = p;
-		r->pv = *p;
-	}
+	write_rga_update(r, p);
 	return r;
 }
 
@@ -781,7 +787,6 @@ static evt_t display_last_hsync, display_last_vsync;
 static bool ddf_limit, ddfstrt_match, hwi_old;
 static int ddf_stopping, ddf_enable_on;
 static int bprun;
-static evt_t bprun_end;
 static int bprun_cycle;
 static bool harddis_v, harddis_h;
 
@@ -2379,9 +2384,18 @@ STATIC_INLINE int issyncstopped(uae_u16 con0)
 	return (con0 & 2) && (!currprefs.genlock || currprefs.genlock_effects);
 }
 
+static void setsyncstoppos(void)
+{
+	agnus_hpos = 0;
+	hhpos = 0;
+	linear_hpos = 0;
+	dmal_shifter = 0; // fast CPU fix
+}
+
 static void setsyncstopped(void)
 {
 	syncs_stopped = true;
+	setsyncstoppos();
 	resetfulllinestate();
 }
 
@@ -6808,7 +6822,7 @@ void custom_reset(bool hardreset, bool keyboardreset)
 			sprhstrt = 0xffff;
 
 			for (int i = 0; i < 32; i++) {
-				uae_u16 c;
+				uae_u16 c = 0;
 				if (i == 0) {
 					c = ((ecs_denise && !aga_mode) || denisea1000) ? 0xfff : 0x000;
 				} else {
@@ -9707,14 +9721,18 @@ static void bitplane_rga_ptmod(void)
 					mod = (bpl & 1) ? bpl2mod : bpl1mod;
 				}
 			}
-			r->p = &bplpt[bpl];
-			r->pv = *r->p;
+			write_rga_update(r, &bplpt[bpl]);
 			r->bplmod = mod;
 		} else if (r->type == CYCLE_SPRITE) {
 			int num = r->sprdat & 7;
 			struct sprite *s = &spr[num];
-			r->p = &s->pt;
-			r->pv = *r->p;
+			write_rga_update(r, &s->pt);
+		} else if (r->type == (CYCLE_BITPLANE | CYCLE_SPRITE)) {
+			int num = r->sprdat & 7;
+			struct sprite *s = &spr[num];
+			int bpl = r->bpldat & 7;
+			write_rga_update(r, &s->pt);
+			write_rga_update(r, &bplpt[bpl]);
 		}
 	}
 }
@@ -9757,7 +9775,6 @@ static void bpl_dma_normal_stop(int hpos)
 #endif
 	ddf_stopping = 0;
 	bprun = 0;
-	bprun_end = get_cycles();
 	plfstrt_sprite = 0x100;
 	if (!ecs_agnus) {
 		ddf_limit = true;
@@ -9828,7 +9845,7 @@ static void decide_bpl(int hpos)
 	if (ecs_agnus) {
 		// ECS/AGA
 
-
+		// BPRUN latched: on
 		if (bprun < 0 && (hpos & 1)) {
 			bprun = 1;
 			bprun_cycle = 0;
@@ -9839,7 +9856,6 @@ static void decide_bpl(int hpos)
 #endif
 		}
 
-#if 0
 		// BPRUN latched: off
 		if (bprun == 3) {
 			if (ddf_stopping == 1) {
@@ -9849,21 +9865,7 @@ static void decide_bpl(int hpos)
 				}
 			}
 			bprun = 0;
-			bprun_end = hpos;
-		}
-#endif
-
-		// DDFSTRT == DDFSTOP: BPRUN gets enabled and DDF passed state in next cycle.
-		if (ddf_enable_on < 0) {
-			ddf_enable_on = 0;
-			if (bprun && !ddf_stopping) {
-				ddf_stopping = 1;
-#ifdef DEBUGGER
-				if (debug_dma) {
-					record_dma_event_agnus(AGNUS_EVENT_BPRUN2, true);
-				}
-#endif
-			}
+			plfstrt_sprite = 0x100;
 		}
 
 		// Hard start limit
@@ -9871,20 +9873,12 @@ static void decide_bpl(int hpos)
 			ddf_limit = false;
 		}
 
-		// DDFSTRT
-		if (hpos == ddfstrt) {
-			ddf_enable_on = 1;
-			if (currprefs.gfx_scandoubler && linear_vpos < MAX_SCANDOUBLED_LINES) {
-				update_bpl_scandoubler();
-			}
-		}
-
 		// Hard stop limit
 		if (hpos == (0xd7 + 0)) {
 			// Triggers DDFSTOP condition if hard limits are not disabled.
-			ddf_limit = true;
-			if (bprun && !ddf_stopping) {
-				if (!harddis_h) {
+			if (!harddis_h) {
+				ddf_limit = true;
+				if (bprun && !ddf_stopping) {
 					ddf_stopping = 1;
 #ifdef DEBUGGER
 					if (debug_dma) {
@@ -9895,30 +9889,54 @@ static void decide_bpl(int hpos)
 			}
 		}
 
-		// DDFSTOP
-		// Triggers DDFSTOP condition.
-		// Clears DDF allowed flag.
-		if (hpos == (ddfstop | 0)) {
-			if (bprun && !ddf_stopping) {
+		if (hpos == ddfstrt && hpos == ddfstop) {
+
+			// DDFSTRT == DDFSTOP
+			if (bprun && ddf_enable_on) {
 				ddf_stopping = 1;
+				if (currprefs.gfx_scandoubler && linear_vpos < MAX_SCANDOUBLED_LINES) {
+					update_bpl_scandoubler();
+				}
 #ifdef DEBUGGER
 				if (debug_dma) {
 					record_dma_event_agnus(AGNUS_EVENT_BPRUN2, true);
 				}
 #endif
 			}
-			if (ddfstop != ddfstrt) {
-				if (ddf_enable_on) {
-					ddf_enable_on = -1;
-				} else {
-					ddf_enable_on = 0;
+			ddf_enable_on = 1;
+			if (!bprun) {
+				hwi_old = 0;
+			}
+
+		} else {
+
+			// DDFSTRT
+			if (hpos == ddfstrt) {
+				ddf_enable_on = 1;
+				if (currprefs.gfx_scandoubler && linear_vpos < MAX_SCANDOUBLED_LINES) {
+					update_bpl_scandoubler();
+				}
+			}
+
+			// DDFSTOP
+			// Triggers DDFSTOP condition.
+			// Clears DDF allowed flag.
+			if (hpos == ddfstop) {
+				ddf_enable_on = 0;
+				if (bprun && !ddf_stopping) {
+					ddf_stopping = 1;
+#ifdef DEBUGGER
+					if (debug_dma) {
+						record_dma_event_agnus(AGNUS_EVENT_BPRUN2, true);
+					}
+#endif
 				}
 			}
 		}
 
 		// BPRUN can only start if DMA, DIW or DDF state has changed since last time
 		if (!(hpos & 1)) {
-			bool hwi = dma && diw && ddf_enable_on > 0 && (!ddf_limit || harddis_h);
+			bool hwi = dma && diw && ddf_enable_on && (!ddf_limit || harddis_h);
 			if (!bprun && dma && diw && hwi && !hwi_old) {
 				// Bitplane sequencer activated
 				bprun = -1;
@@ -9936,7 +9954,7 @@ static void decide_bpl(int hpos)
 		}
 
 		if (bprun == 2) {
-			bprun = 0;
+			bprun = 3;
 			// If DDF has passed, jumps to last step.
 			// (For example Scoopex Crash landing crack intro)
 			if (ddf_stopping == 1) {
@@ -10000,14 +10018,6 @@ static void decide_bpl(int hpos)
 			}
 #endif
 		}
-#if 0
-		// BPRUN latched: off
-		if (bprun == 3) {
-			bprun = 0;
-			bprun_end = hpos;
-			plfstrt_sprite = 0x100;
-		}
-#endif
 
 		// Hard start limit
 		if (hpos == 0x18) {
@@ -10143,7 +10153,16 @@ static void generate_sprites(int num, int slot)
 		if (dmaen(DMA_SPRITE) && s->dmacycle) {
 			bool dodma = false;
 
-			if (hp <= plfstrt_sprite) {
+			// if bitplane DMA ends and last BPL1DAT slot is also sprite slot and sprite DMA is active: sprite DMA conflicts with bitplane DMA
+			bool bplconflict = false;
+			if (bprun && ddf_stopping == 2) {
+				bool last = islastbplseq();
+				if (last) {
+					bplconflict = true;
+				}
+			}
+
+			if (hp <= plfstrt_sprite || bplconflict) {
 				dodma = true;
 #ifdef AGA
 				if (dodma && s->dblscan && (fmode & 0x8000) && (vpos & 1) != (s->vstart & 1) && s->dmastate) {
@@ -10153,14 +10172,13 @@ static void generate_sprites(int num, int slot)
 				if (dodma) {
 					uae_u32 dat = CYCLE_PIPE_SPRITE | (s->dmastate ? 0x10 : 0x00) | (s->dmacycle == 1 ? 0 : 8) | num;
 					int reg = 0x140 + slot + num * 8 + (s->dmastate ? 4 : 0);
-					struct rgabuf *rga = write_rga(RGA_SLOT_BPL, CYCLE_SPRITE, reg, &s->pt);
-					if (get_cycles() == sprite_dma_change_cycle_on) {
+					struct rgabuf *rga = write_rga(RGA_SLOT_BPL, CYCLE_SPRITE, reg, NULL);
+					evt_t c = get_cycles();
+					if (c == sprite_dma_change_cycle_on) {
 						// If sprite DMA is switched on just when sprite DMA is decided, channel is still decided but it is not allocated!
 						// Blitter can use this cycle, causing a conflict.
 						rga->alloc = 0;
 						rga->conflict = &s->pt;
-					} else if (get_cycles() == bprun_end) {
-						// last bitplane cycle is available for sprites (if bitplane ends before all sprites)
 					}
 					rga->sprdat = dat;
 				}
@@ -11259,6 +11277,9 @@ static void start_sync_imm_handler(void)
 
 static void vsync_nosync(void)
 {
+	if (!nosignal_trigger) {
+		denise_clearbuffers();
+	}
 	nosignal_trigger = true;
 	linear_vpos = 0;
 	vsync_handler_post();
@@ -11268,6 +11289,9 @@ static void vsync_nosync(void)
 	vsync_display_rendered = false;
 	virtual_vsync_check();
 	uae_quit_check();
+	if (savestate_check()) {
+		uae_reset(0, 0);
+	}
 }
 
 static void custom_trigger_start_nosync(void)
@@ -11537,10 +11561,7 @@ static void inc_cck(void)
 		}
 	}
 	if (syncs_stopped) {
-		agnus_hpos = 0;
-		hhpos = 0;
-		linear_hpos = 0;
-		dmal_shifter = 0; // fast CPU fix
+		setsyncstoppos();
 		set_fakehsync_handler();
 	} else {
 		rga_denise_cycle++;
@@ -12065,11 +12086,11 @@ static void handle_rga_out(void)
 			regs.chipset_latch_rw = sdat;
 			s->pt = r->pv;
 			done = true;
-		} else if (r->type & CYCLE_SPRITE) {
+		} else if (r->type == CYCLE_SPRITE) {
 			int num = r->sprdat & 7;
 			struct sprite *s = &spr[num];
-			*r->p += sprite_width / 8;
-			s->pt = *r->p;
+			r->pv += sprite_width / 8;
+			s->pt = r->pv;
 		}
 
 		// BPL
@@ -12113,10 +12134,23 @@ static void handle_rga_out(void)
 			}
 			bplpt[num] = r->pv;
 			done = true;
+
+			if (r->type & CYCLE_SPRITE) {
+				int num = r->sprdat & 7;
+				struct sprite *s = &spr[num];
+				s->pt = r->pv;
+			}
+
 		} else if (r->type & CYCLE_BITPLANE) {
 			int num = r->bpldat & 7;
 			r->pv += fetchmode_bytes + r->bplmod;
 			bplpt[num] = r->pv;
+
+			if (r->type & CYCLE_SPRITE) {
+				int num = r->sprdat & 7;
+				struct sprite *s = &spr[num];
+				s->pt = r->pv;
+			}
 		}
 
 		if (r->type & CYCLE_BLITTER) {

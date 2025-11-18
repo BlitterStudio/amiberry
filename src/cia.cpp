@@ -1184,7 +1184,7 @@ static bool keymcu_execute(void)
 {
 	bool handshake = (cia[0].t[0].cr & 0x40) != 0 && (cia[0].sdr_buf & 0x80) == 0;
 
-#if 1
+#if 0
 	extern int blop;
 	if (blop & 1) {
 		handshake = true;
@@ -1693,7 +1693,7 @@ static void CIA_cr_write(int num, int tnum, uae_u8 val)
 	}
 
 	// clear serial port state when switching TX<>RX
-	if (num == 0 && (t->cr & 0x40) != (val & 0x040)) {
+	if (tnum == 0 && (t->cr & 0x40) != (val & 0x040)) {
 		c->sdr_cnt = 0;
 		c->sdr_load = 0;
 		c->sdr_buf = 0;

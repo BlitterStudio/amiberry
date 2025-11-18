@@ -1401,11 +1401,13 @@ static int nr_cop_records[2], curr_cop_set, selected_cop_set;
 static struct dma_rec *dma_record_data;
 static int dma_record_cycle;
 static int dma_record_vpos_type;
-static struct dma_rec **dma_record_lines;
+static struct dma_rec **dma_record_lines1, **dma_record_lines2;
 struct dma_rec *last_dma_rec;
 
 struct dma_rec *record_dma_next_cycle(int hpos, int vpos, int vvpos)
 {
+	static int xvpos_last = -1;
+
 	if (!dma_record_data) {
 		return NULL;
 	}
@@ -1417,12 +1419,36 @@ struct dma_rec *record_dma_next_cycle(int hpos, int vpos, int vvpos)
 	dr->vpos[1] = vvpos;
 	dr->frame = vsync_counter;
 	dr->tick = currcycle_cck;
+	if (dma_record_vpos_type) {
+		if (hpos == 0 && vvpos < NR_DMA_REC_LINES_MAX - 1) {
+			dma_record_lines1[vvpos + 1] = dr;
+			xvpos_last = vvpos;
+		}
+		if (vvpos < xvpos_last) {
+			dma_record_lines1[0] = dma_record_lines1[xvpos_last + 1];
+			dma_record_lines1[xvpos_last + 1] = NULL;
+			xvpos_last = vvpos;
+			struct dma_rec **tmp = dma_record_lines1;
+			dma_record_lines1 = dma_record_lines2;
+			dma_record_lines2 = tmp;
+		}
+	} else {
+		if (hpos == 0 && vpos < NR_DMA_REC_LINES_MAX - 1) {
+			dma_record_lines1[vpos + 1] = dr;
+			xvpos_last = vpos;
+		}
+		if (vpos < xvpos_last) {
+			dma_record_lines1[0] = dma_record_lines1[xvpos_last + 1];
+			dma_record_lines1[xvpos_last + 1] = NULL;
+			xvpos_last = vpos;
+			struct dma_rec **tmp = dma_record_lines1;
+			dma_record_lines1 = dma_record_lines2;
+			dma_record_lines2 = tmp;
+		}
+	}
 	dma_record_cycle++;
 	if (dma_record_cycle >= NR_DMA_REC_MAX) {
 		dma_record_cycle = 0;
-	}
-	if (hpos == 0 && vvpos < NR_DMA_REC_LINES_MAX) {
-		dma_record_lines[vvpos] = dr;
 	}
 	dr = &dma_record_data[dma_record_cycle];
 	memset(dr, 0, sizeof(struct dma_rec));
@@ -1439,7 +1465,8 @@ static void dma_record_init(void)
 {
 	if (!dma_record_data) {
 		dma_record_data = xcalloc(struct dma_rec, NR_DMA_REC_MAX + 2);
-		dma_record_lines = xcalloc(struct dma_rec*, NR_DMA_REC_LINES_MAX);
+		dma_record_lines1 = xcalloc(struct dma_rec*, NR_DMA_REC_LINES_MAX);
+		dma_record_lines2 = xcalloc(struct dma_rec*, NR_DMA_REC_LINES_MAX);
 		for (int i = 0;i < NR_DMA_REC_MAX; i++) {
 			struct dma_rec *dr = &dma_record_data[i];
 			dr->reg = 0xffff;
@@ -1521,11 +1548,11 @@ static void set_debug_colors(void)
 	set_dbg_color(0,						0, 0x22, 0x22, 0x22, 1, _T("-"));
 	set_dbg_color(DMARECORD_REFRESH,		0, 0x44, 0x44, 0x44, 4, _T("Refresh"));
 	set_dbg_color(DMARECORD_CPU,			0, 0xa2, 0x53, 0x42, 2, _T("CPU")); // code
-	set_dbg_color(DMARECORD_COPPER,		0, 0xee, 0xee, 0x00, 3, _T("Copper"));
+	set_dbg_color(DMARECORD_COPPER,			0, 0xee, 0xee, 0x00, 3, _T("Copper"));
 	set_dbg_color(DMARECORD_AUDIO,			0, 0xff, 0x00, 0x00, 4, _T("Audio"));
 	set_dbg_color(DMARECORD_BLITTER,		0, 0x00, 0x88, 0x88, 2, _T("Blitter")); // blit A
 	set_dbg_color(DMARECORD_BITPLANE,		0, 0x00, 0x00, 0xff, 8, _T("Bitplane"));
-	set_dbg_color(DMARECORD_SPRITE,		0, 0xff, 0x00, 0xff, 8, _T("Sprite"));
+	set_dbg_color(DMARECORD_SPRITE,			0, 0xff, 0x00, 0xff, 8, _T("Sprite"));
 	set_dbg_color(DMARECORD_DISK,			0, 0xff, 0xff, 0xff, 3, _T("Disk"));
 	set_dbg_color(DMARECORD_CONFLICT,		0, 0xff, 0xb8, 0x40, 0, _T("Conflict"));
 
@@ -1536,8 +1563,8 @@ static void set_debug_colors(void)
 	}
 
 	set_dbg_color(DMARECORD_CPU,		1, 0xad, 0x98, 0xd6, 0, NULL); // data
-	set_dbg_color(DMARECORD_COPPER,	1, 0xaa, 0xaa, 0x22, 0, NULL); // wait
-	set_dbg_color(DMARECORD_COPPER,	2, 0x66, 0x66, 0x44, 0, NULL); // special
+	set_dbg_color(DMARECORD_COPPER,		1, 0xaa, 0xaa, 0x22, 0, NULL); // wait
+	set_dbg_color(DMARECORD_COPPER,		2, 0x66, 0x66, 0x44, 0, NULL); // special
 	set_dbg_color(DMARECORD_BLITTER,	1, 0x00, 0x88, 0x88, 0, NULL); // blit B
 	set_dbg_color(DMARECORD_BLITTER,	2, 0x00, 0x88, 0x88, 0, NULL); // blit C
 	set_dbg_color(DMARECORD_BLITTER,	3, 0x00, 0xaa, 0x88, 0, NULL); // blit D (write)
@@ -1551,6 +1578,7 @@ static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width,
 {
 	int y, x, xx, dx, xplus, yplus;
 	struct dma_rec *dr;
+	static bool endline;
 
 	if (debug_dma >= 4)
 		yplus = 2;
@@ -1567,19 +1595,31 @@ static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width,
 	if (yplus < 2)
 		y -= 8;
 
-	if (y < 0)
+	if (y == 0) {
+		endline = false;
+	}
+	if (y < 0) {
 		return;
-	if (y >= NR_DMA_REC_LINES_MAX)
+	}
+	if (y >= NR_DMA_REC_LINES_MAX) {
 		return;
-	if (y >= height)
+	}
+	if (y >= height) {
 		return;
+	}
+	if (endline) {
+		return;
+	}
 
-	dr = dma_record_lines[y];
-	if (!dr)
+	dr = dma_record_lines2[y];
+	if (!dr) {
+		endline = true;
 		return;
+	}
 	dx = width - xplus * ((maxhpos + 1) & ~1) - 16;
 
 	bool ended = false;
+	uae_u32 tick = dr->tick;
 	uae_s8 intlev = 0;
 	for (x = 0; x < NR_DMA_REC_COLS_MAX; x++) {
 		uae_u32 c = debug_colors[0].l[0];
@@ -1588,7 +1628,7 @@ static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width,
 		if (dr->end) {
 			ended = true;
 		}
-		if (ended) {
+		if (ended || dr->tick != tick) {
 			c = 0;
 		} else {
 			if (dr->reg != 0xffff && debug_colors[dr->type].enabled) {
@@ -1616,6 +1656,10 @@ static void debug_draw_cycles(uae_u8 *buf, uae_u8 *genlock, int line, int width,
 			putpixel(buf, genlock, xx + 4 + 2, c);
 
 		dr++;
+		if (dr - dma_record_data >= NR_DMA_REC_MAX) {
+			dr = dma_record_data;
+		}
+		tick++;
 		if (dr->hpos == 0) {
 			break;
 		}

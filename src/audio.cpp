@@ -777,6 +777,9 @@ static void check_sound_buffers(void)
 	int len;
 #endif
 
+#ifdef DRIVESOUND
+	uae_s16 *bufp = (uae_s16*)paula_sndbufpt - 2;
+#endif
 	if (active_sound_stereo == SND_4CH_CLONEDSTEREO) {
 		((uae_u16*)paula_sndbufpt)[0] = ((uae_u16*)paula_sndbufpt)[-2];
 		((uae_u16*)paula_sndbufpt)[1] = ((uae_u16*)paula_sndbufpt)[-1];
@@ -802,6 +805,12 @@ static void check_sound_buffers(void)
 		p[1] = sum / 8;
 		paula_sndbufpt = (uae_u16*)(((uae_u8*)paula_sndbufpt) + 6 * 2);
 	}
+#ifdef DRIVESOUND
+	if (driveclick_wave_initialized) {
+		driveclick_mix(bufp, active_sound_stereo, currprefs.dfxclickchannelmask);
+	}
+#endif
+
 #if SOUNDSTUFF > 1
 	if (outputsample == 0)
 		return;
@@ -2593,7 +2602,7 @@ void AUDxDAT(int nr, uae_u16 v, uaecptr addr)
 	if (!currprefs.cachesize && (cdp->per < PERIOD_LOW * CYCLE_UNIT || currprefs.cpu_compatible)) {
 		int cyc = 0;
 		if (chan_ena) {
-			// AUDxLEN is processed after 1 CCK delay
+			// AUDxDAT is processed after 1 CCK delay
 			cyc = 1 * CYCLE_UNIT;
 			if ((cdp->state & 15) == 2 || (cdp->state & 15) == 3) {
 				// But INTREQ2 is set immediately
