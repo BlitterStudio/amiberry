@@ -95,6 +95,13 @@ Other Changes:
     most typically achieved when resizing programmatically or via a docking layout
     reacting to a platform window resize). (#3237, #9007) [@anton-kl, @ocornut]
 - Nav:
+  - Reworked PageUp/PageDown to pick same-page top/bottom page based
+    on inner rectangle rather than clipping rectangle, ensuring consistent
+    (but occasionally less practical) navigation result when a window is
+    partially out of screen. (#787)
+  - Improved/clarified behavior when requesting PageUp/PageDown from a
+    focused item which is outside of visible boundaries: now ends up one
+    page away from focused item. (#9079)
   - Clipper: fixed an issue when using up/down from an item outside of
     visible bound and using the clipper. (#9079)
 - Fonts:
@@ -112,9 +119,12 @@ Other Changes:
   Note that IsItemDeactivatedAfterEdit() was not affected, only IsItemEdited).
 - Misc: standardized casing of keyboard mods in comments and demo, showing
   as e.g. "Ctrl" instead of "CTRL".
+- CI: Added Dear ImGui Test Suite to CI builds. [@rokups]
 - Drag and Drop:
   - Added ImGuiDragDropFlags_AcceptDrawAsHovered to make accepting item render
     as hovered, which can allow using e.g. Button() as drop target. (#8632)
+  - Pressing Escape while carrying a payload automatically cancel the
+    active drag and drop. (#9071)
   - Style: added ImGuiCol_DragDropTargetBg, style.DragDropTargetRounding,
     style.DragDropTargetBorderSize and style.DragDropTargetPadding to configure
     the drop target highlight. (#9056) [@aaronkirkham]
@@ -165,6 +175,7 @@ Other Changes:
     during surface resize. (#8381)
   - SDL2+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
   - SDL3+WebGPU: added new example (Emscripten + native Dawn/WGPU). (#8381) [@brutpitt]
+  - Win32+OpenGL3: enable DPI awareness. (#9083)
 
 
 -----------------------------------------------------------------------
