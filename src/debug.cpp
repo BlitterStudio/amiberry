@@ -6077,7 +6077,7 @@ static void saveloadmem (TCHAR **cc, bool save)
 		}
 		if (len == 0)
 			console_out_f (_T("Wrote %08X - %08X (%d bytes) to '%s'.\n"),
-				src2, src2 + len2, len2, name);
+				src2, src2 + len2 - 1, len2, name);
 	} else {
 		len2 = 0;
 		while (len != 0) {
@@ -6095,7 +6095,7 @@ static void saveloadmem (TCHAR **cc, bool save)
 		}
 		if (len == 0)
 			console_out_f (_T("Read %08X - %08X (%d bytes) to '%s'.\n"),
-				src2, src2 + len2, len2, name);
+				src2, src2 + len2 - 1, len2, name);
 	}
 	fclose (fp);
 	return;
@@ -7658,7 +7658,6 @@ void debug (void)
 	if (savestate_state || quit_program)
 		return;
 
-	bogusframe = 1;
 	disasm_init();
 	addhistory ();
 
@@ -7893,6 +7892,7 @@ void debug (void)
 	last_vpos1 = vpos;
 	last_hpos1 = current_hpos();
 	last_frame = timeframes;
+	bogusframe = 1;
 }
 
 const TCHAR *debuginfo (int mode)

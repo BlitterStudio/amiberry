@@ -5647,6 +5647,9 @@ static void m68k_run_jit(void)
 			// Without this it would have crashed in any case..
 			uaecptr pc = M68K_GETPC;
 			write_log(_T("Unhandled JIT exception! PC=%08x\n"), pc);
+#ifdef DEBUGGER
+			memory_map_dump();
+#endif
 			if (pc & 1)
 				Exception(3);
 			else

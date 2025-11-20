@@ -1812,6 +1812,10 @@ static bool audio_state_channel2 (int nr, bool perfin)
 			if (cdp->wlen > 2)
 				cdp->ptx_tofetch = true;
 			cdp->dsr = true;
+			if (cdp->intreq2) {
+				setirq(nr, 0);
+				cdp->intreq2 = false;
+			}
 #if TEST_AUDIO > 0
 			cdp->have_dat = false;
 #endif
@@ -1822,7 +1826,7 @@ static bool audio_state_channel2 (int nr, bool perfin)
 #endif
 		} else if (cdp->dat_written && !isirq (nr)) {
 			cdp->state = 2;
-			setirq(nr, 0);
+			setirq(nr, 1);
 			loaddat(nr);
 			if (usehacks() && cdp->per < 10 * CYCLE_UNIT) {
 				static int warned = 100;
@@ -1885,7 +1889,6 @@ static bool audio_state_channel2 (int nr, bool perfin)
 		cdp->state = 2;
 		loadper(nr);
 		cdp->pbufldl = true;
-		cdp->intreq2 = false;
 		cdp->volcnt = 0;
 		audio_state_channel2(nr, false);
 		break;
