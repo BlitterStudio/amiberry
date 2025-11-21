@@ -102,6 +102,8 @@ add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 
+target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
         mt32emu
         FLAC

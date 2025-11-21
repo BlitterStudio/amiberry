@@ -23,7 +23,8 @@ static int freq = 44100;
 
 static int drv_starting[4], drv_spinning[4], drv_has_spun[4], drv_has_disk[4];
 
-static int click_initialized, wave_initialized;
+static int click_initialized;
+bool driveclick_wave_initialized;
 #define DS_SHIFT 10
 static int sample_step;
 static uae_s16 *clickbuffer;
@@ -148,7 +149,7 @@ static void driveclick_close(void)
 	}
 	memset (drvs, 0, sizeof (drvs));
 	click_initialized = 0;
-	wave_initialized = 0;
+	driveclick_wave_initialized = 0;
 	driveclick_reset ();
 }
 
@@ -181,7 +182,7 @@ void driveclick_init (void)
 						v = 3;
 					for (int j = 0; j < CLICK_TRACKS; j++)
 						drvs[i][DS_CLICK].lengths[j] = drvs[i][DS_CLICK].len;
-					wave_initialized = 1;
+					driveclick_wave_initialized = 1;
 					break;
 				default:
 					if (driveclick_fdrawcmd_open (fs->dfxclick - 2))
@@ -190,7 +191,7 @@ void driveclick_init (void)
 				}
 			} else if (fs->dfxclick == -1) {
 				TCHAR path2[MAX_DPATH];
-				wave_initialized = 1;
+				driveclick_wave_initialized = 1;
 				for (int j = 0; j < CLICK_TRACKS; j++)
 					drvs[i][DS_CLICK].lengths[j] = drvs[i][DS_CLICK].len;
 				get_plugin_path (path2, sizeof path2 / sizeof (TCHAR), _T("floppysounds"));
@@ -244,7 +245,7 @@ void driveclick_reset (void)
 		if (currprefs.floppyslots[i].df[0])
 			driveclick_insert(i, 0);
 	}
-	if (!wave_initialized)
+	if (!driveclick_wave_initialized)
 		return;
 	clickbuffer = xcalloc (uae_s16, paula_sndbufsize / 2);
 	sample_step = (freq << DS_SHIFT) / currprefs.sound_freq;
@@ -321,15 +322,7 @@ static uae_s16 getsample (void)
 	return total_sample / total_div;
 }
 
-static void mix (void)
-{
-	size_t total = ((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer) / (get_audio_nativechannels (currprefs.sound_stereo) * 2);
-	while (clickcnt < total) {
-		clickbuffer[clickcnt++] = getsample ();
-	}
-}
-
-STATIC_INLINE uae_s16 limit (uae_s32 v)
+STATIC_INLINE uae_s16 limit(uae_s32 v)
 {
 	if (v < -32768)
 		v = -32768;
@@ -338,89 +331,109 @@ STATIC_INLINE uae_s16 limit (uae_s32 v)
 	return v;
 }
 
-void driveclick_mix (uae_s16 *sndbuffer, int size, int channelmask)
+void driveclick_mix(uae_s16 *sndbuffer, int ss, int channelmask)
 {
-	if (!wave_initialized)
+	if (!driveclick_wave_initialized)
 		return;
-	mix ();
-	clickcnt = 0;
-	switch (get_audio_nativechannels (currprefs.sound_stereo))
+	uae_s16 s = getsample();
+	switch (ss)
 	{
-	case 6:
-		for (int i = 0; i < size / 6; i++) {
-			uae_s16 s = clickbuffer[i];
-			if (channelmask & 1)
-				sndbuffer[0] = limit (((sndbuffer[0] + s) * 2) / 3);
-			else
-				sndbuffer[0] = sndbuffer[0] * 2 / 3;
-			if (channelmask & 2)
-				sndbuffer[1] = limit (((sndbuffer[1] + s) * 2) / 3);
-			else
-				sndbuffer[1] = sndbuffer[1] * 2 / 3;
-			if (channelmask & 4)
-				sndbuffer[2] = limit (((sndbuffer[2] + s) * 2) / 3);
-			else
-				sndbuffer[2] = sndbuffer[2] * 2 / 3;
-			if (channelmask & 8)
-				sndbuffer[3] = limit (((sndbuffer[3] + s) * 2) / 3);
-			else
-				sndbuffer[3] = sndbuffer[3] * 2 / 3;
-			if (channelmask & 16)
-				sndbuffer[4] = limit (((sndbuffer[4] + s) * 2) / 3);
-			else
-				sndbuffer[4] = sndbuffer[4] * 2 / 3;
-			if (channelmask & 32)
-				sndbuffer[5] = limit (((sndbuffer[5] + s) * 2) / 3);
-			else
-				sndbuffer[5] = sndbuffer[5] * 2 / 3;
-			sndbuffer += 6;
-		}
+	case SND_8CH:
+	case SND_8CH_CLONEDSTEREO:
+		if (channelmask & 1)
+			sndbuffer[0] = limit(((sndbuffer[0] + s) * 2) / 3);
+		else
+			sndbuffer[0] = sndbuffer[0] * 2 / 3;
+		if (channelmask & 2)
+			sndbuffer[1] = limit(((sndbuffer[1] + s) * 2) / 3);
+		else
+			sndbuffer[1] = sndbuffer[1] * 2 / 3;
+		if (channelmask & 4)
+			sndbuffer[2] = limit(((sndbuffer[2] + s) * 2) / 3);
+		else
+			sndbuffer[2] = sndbuffer[2] * 2 / 3;
+		if (channelmask & 8)
+			sndbuffer[3] = limit(((sndbuffer[3] + s) * 2) / 3);
+		else
+			sndbuffer[3] = sndbuffer[3] * 2 / 3;
+		if (channelmask & 16)
+			sndbuffer[4] = limit(((sndbuffer[4] + s) * 2) / 3);
+		else
+			sndbuffer[4] = sndbuffer[4] * 2 / 3;
+		if (channelmask & 32)
+			sndbuffer[5] = limit(((sndbuffer[5] + s) * 2) / 3);
+		else
+			sndbuffer[5] = sndbuffer[5] * 2 / 3;
+		if (channelmask & 64)
+			sndbuffer[6] = limit(((sndbuffer[6] + s) * 2) / 3);
+		else
+			sndbuffer[6] = sndbuffer[6] * 2 / 3;
+		if (channelmask & 128)
+			sndbuffer[7] = limit(((sndbuffer[7] + s) * 2) / 3);
+		else
+			sndbuffer[7] = sndbuffer[7] * 2 / 3;
 		break;
-	case 4:
-		for (int i = 0; i < size / 4; i++) {
-			uae_s16 s = clickbuffer[i];
-			if (channelmask & 1)
-				sndbuffer[0] = limit (((sndbuffer[0] + s) * 2) / 3);
-			else
-				sndbuffer[0] = sndbuffer[0] * 2 / 3;
-			if (channelmask & 2)
-				sndbuffer[1] = limit (((sndbuffer[1] + s) * 2) / 3);
-			else
-				sndbuffer[1] = sndbuffer[1] * 2 / 3;
-			if (channelmask & 4)
-				sndbuffer[2] = limit (((sndbuffer[2] + s) * 2) / 3);
-			else
-				sndbuffer[2] = sndbuffer[2] * 2 / 3;
-			if (channelmask & 8)
-				sndbuffer[3] = limit (((sndbuffer[3] + s) * 2) / 3);
-			else
-				sndbuffer[3] = sndbuffer[3] * 2 / 3;
-			sndbuffer += 4;
-		}
+	case SND_6CH:
+	case SND_6CH_CLONEDSTEREO:
+		if (channelmask & 1)
+			sndbuffer[0] = limit(((sndbuffer[0] + s) * 2) / 3);
+		else
+			sndbuffer[0] = sndbuffer[0] * 2 / 3;
+		if (channelmask & 2)
+			sndbuffer[1] = limit(((sndbuffer[1] + s) * 2) / 3);
+		else
+			sndbuffer[1] = sndbuffer[1] * 2 / 3;
+		if (channelmask & 4)
+			sndbuffer[2] = limit(((sndbuffer[2] + s) * 2) / 3);
+		else
+			sndbuffer[2] = sndbuffer[2] * 2 / 3;
+		if (channelmask & 8)
+			sndbuffer[3] = limit(((sndbuffer[3] + s) * 2) / 3);
+		else
+			sndbuffer[3] = sndbuffer[3] * 2 / 3;
+		if (channelmask & 16)
+			sndbuffer[4] = limit(((sndbuffer[4] + s) * 2) / 3);
+		else
+			sndbuffer[4] = sndbuffer[4] * 2 / 3;
+		if (channelmask & 32)
+			sndbuffer[5] = limit(((sndbuffer[5] + s) * 2) / 3);
+		else
+			sndbuffer[5] = sndbuffer[5] * 2 / 3;
 		break;
-	case 2:
-		for (int i = 0; i < size / 2; i++) {
-			uae_s16 s = clickbuffer[i];
-			if (channelmask & 1)
-				sndbuffer[0] = limit (((sndbuffer[0] + s) * 2) / 3);
-			else
-				sndbuffer[0] = sndbuffer[0] * 2 / 3;
-			if (channelmask & 2)
-				sndbuffer[1] = limit (((sndbuffer[1] + s) * 2) / 3);
-			else
-				sndbuffer[1] = sndbuffer[1] * 2 / 3;
-			sndbuffer += 2;
-		}
+	case SND_4CH:
+	case SND_4CH_CLONEDSTEREO:
+		if (channelmask & 1)
+			sndbuffer[0] = limit(((sndbuffer[0] + s) * 2) / 3);
+		else
+			sndbuffer[0] = sndbuffer[0] * 2 / 3;
+		if (channelmask & 2)
+			sndbuffer[1] = limit(((sndbuffer[1] + s) * 2) / 3);
+		else
+			sndbuffer[1] = sndbuffer[1] * 2 / 3;
+		if (channelmask & 4)
+			sndbuffer[2] = limit(((sndbuffer[2] + s) * 2) / 3);
+		else
+			sndbuffer[2] = sndbuffer[2] * 2 / 3;
+		if (channelmask & 8)
+			sndbuffer[3] = limit(((sndbuffer[3] + s) * 2) / 3);
+		else
+			sndbuffer[3] = sndbuffer[3] * 2 / 3;
 		break;
-	case 1:
-		for (int i = 0; i < size; i++) {
-			uae_s16 s = clickbuffer[i];
-			if (channelmask & 1)
-				sndbuffer[0] = limit (((sndbuffer[0] + s) * 2) / 3);
-			else
-				sndbuffer[0] = sndbuffer[0] * 2 / 3;
-			sndbuffer++;
-		}
+	case SND_STEREO:
+		if (channelmask & 1)
+			sndbuffer[0] = limit(((sndbuffer[0] + s) * 2) / 3);
+		else
+			sndbuffer[0] = sndbuffer[0] * 2 / 3;
+		if (channelmask & 2)
+			sndbuffer[1] = limit(((sndbuffer[1] + s) * 2) / 3);
+		else
+			sndbuffer[1] = sndbuffer[1] * 2 / 3;
+		break;
+	case SND_MONO:
+		if (channelmask & 1)
+			sndbuffer[0] = limit(((sndbuffer[0] + s) * 2) / 3);
+		else
+			sndbuffer[0] = sndbuffer[0] * 2 / 3;
 		break;
 	}
 }
@@ -443,11 +456,10 @@ void driveclick_click (int drive, int cyl)
 		return;
 	dr_audio_activate ();
 	prevcyl[drive] = cyl;
-	if (!wave_initialized) {
+	if (!driveclick_wave_initialized) {
 		driveclick_fdrawcmd_seek (currprefs.floppyslots[drive].dfxclick - 2, cyl);
 		return;
 	}
-	mix ();
 	drvs[drive][DS_CLICK].pos = drvs[drive][DS_CLICK].indexes[cyl] << DS_SHIFT;
 	drvs[drive][DS_CLICK].len = (drvs[drive][DS_CLICK].indexes[cyl] + (drvs[drive][DS_CLICK].lengths[cyl] / 2)) << DS_SHIFT;
 }
@@ -458,11 +470,10 @@ void driveclick_motor (int drive, int running)
 		return;
 	if (!currprefs.floppyslots[drive].dfxclick)
 		return;
-	if (!wave_initialized) {
+	if (!driveclick_wave_initialized) {
 		driveclick_fdrawcmd_motor (currprefs.floppyslots[drive].dfxclick - 2, running);
 		return;
 	}
-	mix ();
 	if (running == 0) {
 		drv_starting[drive] = 0;
 		drv_spinning[drive] = 0;
@@ -484,7 +495,7 @@ void driveclick_insert (int drive, int eject)
 {
 	if (!click_initialized)
 		return;
-	if (!wave_initialized)
+	if (!driveclick_wave_initialized)
 		return;
 	if (!currprefs.floppyslots[drive].dfxclick)
 		return;

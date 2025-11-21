@@ -138,6 +138,7 @@ amiberry_hotkey quit_key;
 amiberry_hotkey action_replay_key;
 amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
+amiberry_hotkey left_amiga_key;
 amiberry_hotkey right_amiga_key;
 SDL_GameControllerButton vkbd_button;
 
@@ -295,6 +296,9 @@ static void set_key_configs(const uae_prefs* p)
 
 	if (strncmp(p->minimize, "", 1) != 0)
 		minimize_key = get_hotkey_from_config(p->minimize);
+
+	if (strncmp(p->left_amiga, "", 1) != 0)
+		left_amiga_key = get_hotkey_from_config(p->left_amiga);
 
 	if (strncmp(p->right_amiga, "", 1) != 0)
 		right_amiga_key = get_hotkey_from_config(p->right_amiga);
@@ -1700,6 +1704,9 @@ static void handle_key_event(const SDL_Event& event)
 			scancode = SDL_SCANCODE_END;
 		}
 	}
+	if (left_amiga_key.scancode && scancode == left_amiga_key.scancode) {
+		scancode = SDL_SCANCODE_LGUI;
+	}
 	if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key) && scancode == SDL_SCANCODE_RCTRL)
 	{
 		scancode = SDL_SCANCODE_RGUI;
@@ -2703,6 +2710,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
+	cfgfile_target_dwrite_str(f, _T("left_amiga"), p->left_amiga);
 	cfgfile_target_dwrite_str(f, _T("right_amiga"), p->right_amiga);
 
 	if (p->drawbridge_driver > 0)
@@ -2845,6 +2853,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay)
 		|| cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
 		|| cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
+		|| cfgfile_string(option, value, "left_amiga", p->left_amiga, sizeof p->left_amiga)
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
