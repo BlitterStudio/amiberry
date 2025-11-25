@@ -72,10 +72,12 @@ static uae_u8 *xlinebuffer_genlock_start, *xlinebuffer_genlock_end;
 
 static int *amiga2aspect_line_map, *native2amiga_line_map;
 static int native2amiga_line_map_height;
+static uae_u8 **row_map;
 static uae_u8 *row_map_genlock_buffer;
 static uae_u8 row_tmp8[MAX_PIXELS_PER_LINE * 32 / 8];
 static uae_u8 row_tmp8g[MAX_PIXELS_PER_LINE * 32 / 8];
 static int max_drawn_amiga_line;
+uae_u8 **row_map_genlock;
 uae_u8 *row_map_color_burst_buffer;
 
 static uae_sem_t write_sem, read_sem;
@@ -205,6 +207,18 @@ static void read_denise_line_queue(void)
 			write_log("read_denise_line_queue: queue lock was released during draw!\n");
 		}
 	}
+
+#if 0
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
+	struct vidbuffer *vb = vidinfo->inbuffer;
+	if (!vb->locked || !vb->bufmem || row_map[0] == NULL) {
+		write_log("read_denise_line_queue: buffer cleared!\n");
+	}
+	for (int i = 0; i < vb->inheight; i++) {
+		uae_u8 *p = row_map[i];
+		*p = 0x12;
+	}
+#endif
 
 	atomic_inc(&rga_queue_read);
 
@@ -416,7 +430,7 @@ static uae_u16 fmode_denise, denise_bplfmode, denise_sprfmode;
 static bool denise_sprfmode64, denise_bplfmode64;
 static int bpldat_fmode;
 static int fetchmode_size_denise, fetchmode_mask_denise;
-static int delayed_vblank_ecs, delayed_pvblank_aga;
+static int delayed_vblank_ecs;
 static bool denise_hdiw, denise_hblank, denise_phblank, denise_vblank, denise_pvblank;
 static bool denise_blank_active, denise_blank_active2, denise_hblank_active, denise_vblank_active;
 static bool debug_special_csync, debug_special_hvsync;
@@ -428,7 +442,6 @@ struct color_entry denise_colors;
 static bool bpl1dat_trigger, bpl1dat_copy;
 static uae_u32 bordercolor, bordercolor_ecs_shres;
 static int sprites_hidden, sprites_hidden2, sprite_hidden_mask;
-static uae_u32 sprite_pixdata;
 static bool bordersprite, borderblank, bordertrans;
 static bool bpldat_copy[2];
 static int denise_planes, denise_max_planes;
@@ -1281,15 +1294,23 @@ void init_row_map(void)
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	struct vidbuffer *vb = vidinfo->inbuffer;
 	static uae_u8 *oldbufmem;
+	static struct vidbuffer *oldvb;
 	static int oldheight_alloc, oldheight, oldpitch;
 	static bool oldgenlock, oldburst;
+	int i, j;
 
 	if (vb->height_allocated > max_uae_height) {
 		write_log(_T("Resolution too high, aborting\n"));
 		abort();
 	}
+	if (!row_map) {
+		row_map = xmalloc(uae_u8 *, max_uae_height + 1);
+		row_map_genlock = xmalloc(uae_u8 *, max_uae_height + 1);
+	}
 
-	if (oldheight_alloc == vb->height_allocated &&
+	if (oldbufmem && oldbufmem == vb->bufmem &&
+		oldvb == vb &&
+		oldheight_alloc == vb->height_allocated &&
 		oldheight == vb->outheight &&
 		oldpitch == vb->rowbytes &&
 		oldgenlock == init_genlock_data &&
@@ -1306,6 +1327,25 @@ void init_row_map(void)
 	if (currprefs.cs_color_burst) {
 		row_map_color_burst_buffer = xcalloc(uae_u8, vb->height_allocated + 2);
 	}
+	for (i = 0, j = 0; i < vb->height_allocated; i++, j += vb->rowbytes) {
+		if (i < vb->outheight) {
+			row_map[i] = vb->bufmem + j;
+		} else {
+			row_map[i] = row_tmp8;
+		}
+		if (init_genlock_data) {
+			row_map_genlock[i] = row_map_genlock_buffer + vb->width_allocated * (i + 1);
+		} else {
+			row_map_genlock[i] = NULL;
+		}
+	}
+	while (i < max_uae_height + 1) {
+		row_map[i] = row_tmp8;
+		row_map_genlock[i] = row_tmp8g;
+		i++;
+	}
+	oldvb = vb;
+	oldbufmem = vb->bufmem;
 	oldheight_alloc = vb->height_allocated;
 	oldheight = vb->outheight;
 	oldpitch = vb->rowbytes;
@@ -1701,60 +1741,25 @@ void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int x, xcolnr c8)
 	*p = c8;
 }
 
-static uae_u8 *get_row(int monid, int line)
-{
-	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
-	// Surface allocation may be still pending due to resolution change, make sure current size is large enough
-	if (!vidinfo->inbuffer || line < 0 || line >= vidinfo->inbuffer->height_allocated) {
-		return row_tmp8;
-	}
-	if (vidinfo->inbuffer->outwidth > vidinfo->inbuffer->width_allocated) {
-		return row_tmp8;
-	}
-	if (vidinfo->inbuffer->outheight > vidinfo->inbuffer->height_allocated) {
-		return row_tmp8;
-	}
-	uae_u8 *p = vidinfo->inbuffer->bufmem + line * vidinfo->inbuffer->rowbytes;
-	return p;
-}
-uae_u8 *get_row_genlock(int monid, int line)
-{
-	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
-
-	if (!row_map_genlock_buffer) {
-		return NULL;
-	}
-	if (!vidinfo->inbuffer || line < 0 || line >= vidinfo->inbuffer->height_allocated) {
-		return row_tmp8g;
-	}
-	if (vidinfo->inbuffer->outwidth > vidinfo->inbuffer->width_allocated) {
-		return row_tmp8g;
-	}
-	if (vidinfo->inbuffer->outheight > vidinfo->inbuffer->height_allocated) {
-		return row_tmp8g;
-	}
-	return row_map_genlock_buffer + vidinfo->inbuffer->width_allocated * (line + 1);
-}
-
 static void setxlinebuffer(int monid, int line)
 {
 	struct vidbuf_description* vidinfo = &adisplays[monid].gfxvidinfo;
 
 	line += thisframe_y_adjust_real;
 	if (line < 0 || line >= max_uae_height) {
-		xlinebuffer = get_row(monid, -1);
+		xlinebuffer = row_map[max_uae_height - 1];
 		xlinebuffer_genlock = NULL;
 
 		xlinebuffer_start = xlinebuffer;
 		xlinebuffer_end = xlinebuffer + (vidinfo->inbuffer->outwidth * sizeof(uae_u32));
 
 	} else {
-		xlinebuffer = get_row(monid, line);
+		xlinebuffer = row_map[line];
 
 		xlinebuffer_start = xlinebuffer;
 		xlinebuffer_end = xlinebuffer + (vidinfo->inbuffer->outwidth * sizeof(uae_u32));
 
-		xlinebuffer_genlock = get_row_genlock(monid, line);
+		xlinebuffer_genlock = row_map_genlock[line];
 		if (xlinebuffer_genlock) {
 			xlinebuffer_genlock_start = xlinebuffer_genlock;
 			xlinebuffer_genlock_end = xlinebuffer_genlock + (vidinfo->inbuffer->outwidth);
@@ -1769,8 +1774,8 @@ static uae_u8 *status_line_ptr(int monid, int line)
 	int y;
 
 	y = line - (vidinfo->inbuffer->outheight - TD_TOTAL_HEIGHT);
-	xlinebuffer = get_row(monid, line);
-	xlinebuffer_genlock = get_row_genlock(monid, line);
+	xlinebuffer = row_map[line];
+	xlinebuffer_genlock = row_map_genlock[line];
 	return xlinebuffer;
 }
 
@@ -1789,8 +1794,8 @@ static void draw_status_line(int monid, int line, int statusy)
 static void draw_debug_status_line(int monid, int line)
 {
 	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
-	xlinebuffer = get_row(monid, line);
-	xlinebuffer_genlock = get_row_genlock(monid, line);
+	xlinebuffer = row_map[line];
+	xlinebuffer_genlock = row_map_genlock[line];
 #ifdef DEBUGGER
 	debug_draw(xlinebuffer, xlinebuffer_genlock, line, vidinfo->inbuffer->outwidth, vidinfo->inbuffer->outheight, xredcolors, xgreencolors, xbluecolors);
 #endif
@@ -3333,7 +3338,7 @@ static void expand_colmask(void)
 			uae_u8 m = i & clxcon_bpl_enable;
 			uae_u8 odd = m & 0x55;
 			uae_u8 even = m & 0xaa;
-			if (m == (clxcon_bpl_enable2 & clxcon_bpl_match2) || bplalwayson) {
+			if (((odd && even) && m == (clxcon_bpl_enable2 & clxcon_bpl_match2)) || bplalwayson) {
 				bplcoltable[i] = 0x0001;
 			} else {
 				bplcoltable[i] = 0x0000;
@@ -3458,7 +3463,6 @@ void denise_reset(bool hard)
 	debug_special_csync = currprefs.gfx_overscanmode == OVERSCANMODE_ULTRA + 2;
 	denise_csync_blanken = false;
 	aga_delayed_color_idx = -1;
-	sprite_pixdata = 0;
 	for (int i = 0; i < 256; i++) {
 		uae_u16 v = 0;
 		if (i & (0x01 | 0x02)) { // 0/1
@@ -3793,18 +3797,10 @@ static void expand_drga_blanken(struct denise_rga *rd)
 
 bool denise_is_vb(void)
 {
-	if (exthblankon_aga) {
-		if (delayed_pvblank_aga > 0) {
-			return true;
-		} else if (delayed_pvblank_aga < 0) {
-			return false;
-		}
-	} else {
-		if (delayed_vblank_ecs > 0) {
-			return true;
-		} else if (delayed_vblank_ecs < 0) {
-			return false;
-		}
+	if (delayed_vblank_ecs > 0) {
+		return true;
+	} else if (delayed_vblank_ecs < 0) {
+		return false;
 	}
 	return denise_vblank;
 }
@@ -3815,11 +3811,9 @@ static void handle_strobes(struct denise_rga *rd)
 
 		if (rd->rga == 0x03c && previous_strobe != 0x03c) {
 			delayed_vblank_ecs = -1;
-			delayed_pvblank_aga = -1;
 			delayed_sprite_vblank_ecs = -1;
 		} else if (rd->rga != 0x03c && previous_strobe == 0x03c) {
 			delayed_vblank_ecs = 1;
-			delayed_pvblank_aga = 1;
 			delayed_sprite_vblank_ecs = 1;
 		}
 
@@ -4259,7 +4253,7 @@ static uae_u32 decode_pixel(uint8_t pix)
 	}
 }
 
-static void denise_collide_sprites(uae_u8 apixel, uae_u32 vs)
+static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
 {
 	uae_u8 c = vs >> 16;
 	uae_u16 v = (uae_u16)vs;
@@ -4284,15 +4278,6 @@ static void denise_collide_sprites(uae_u8 apixel, uae_u32 vs)
 				}
 			}
 		}
-	}
-}
-
-static uae_u8 denise_render_sprites2(uae_u8 apixel, uae_u32 vs)
-{
-	uae_u8 c = vs >> 16;
-	uae_u16 v = (uae_u16)vs;
-	if (currprefs.collision_level) {
-		denise_collide_sprites(apixel, vs);
 	}
 	int *shift_lookup = bpldualpf ? (bpldualpfpri ? dblpf_ms2 : dblpf_ms1) : dblpf_ms;
 	int maskshift, plfmask;
@@ -4594,9 +4579,9 @@ static void do_phbstrt_aga(int cnt)
 	denise_phblank = true;
 	if (exthblankon_aga) {
 		hbstrt_offset = internal_pixel_cnt;
-		if (delayed_pvblank_aga > 0) {
+		if (delayed_vblank_ecs > 0) {
 			denise_pvblank = true;
-			delayed_pvblank_aga = 0;
+			delayed_vblank_ecs = 0;
 			denise_vblank_active = denise_pvblank;
 			denise_blank_active2 = denise_hblank_active || denise_vblank_active;
 			denise_blank_active = denise_blank_enabled ? denise_blank_active2 : false;
@@ -4613,9 +4598,9 @@ static void do_phbstop_aga(int cnt)
 	denise_phblank = false;
 	if (exthblankon_aga) {
 		hbstop_offset = internal_pixel_cnt;
-		if (delayed_pvblank_aga < 0) {
+		if (delayed_vblank_ecs < 0) {
 			denise_pvblank = false;
-			delayed_pvblank_aga = 0;
+			delayed_vblank_ecs = 0;
 			denise_vblank_active = denise_pvblank;
 			denise_blank_active2 = denise_hblank_active || denise_vblank_active;
 			denise_blank_active = denise_blank_enabled ? denise_blank_active2 : false;
@@ -4650,7 +4635,7 @@ static void do_phbstop_ecs(int cnt)
 	if (exthblankon_ecs) {
 		hbstop_offset = internal_pixel_cnt;
 		if (delayed_vblank_ecs < 0) {
-			denise_vblank = false;
+			denise_pvblank = false;
 			delayed_vblank_ecs = 0;
 			denise_vblank_active = denise_pvblank;
 			denise_blank_active2 = denise_hblank_active || denise_vblank_active;
@@ -4703,10 +4688,6 @@ static void do_hstrt_ecs(int cnt)
 		sprites_hidden = sprites_hidden2;
 		last_bpl_pix = 0;
 		setlasthamcolor();
-		if (sprite_pixdata) {
-			// sprite can collide with zero bitplane under the border. OCS/ECS only.
-			denise_collide_sprites(0, sprite_pixdata);
-		}
 	}
 	hstrt_offset = internal_pixel_cnt;
 	denise_hdiw = true;
@@ -4754,16 +4735,16 @@ static void check_fast_hb(void)
 		denise_hblank = true;
 		do_hb();
 	} else {
-		if (delayed_pvblank_aga > 0) {
+		if (delayed_vblank_ecs > 0) {
 			denise_pvblank = true;
-			delayed_pvblank_aga = 0;
+			delayed_vblank_ecs = 0;
 			denise_vblank_active = denise_pvblank;
 			denise_blank_active2 = denise_hblank_active || denise_vblank_active;
 			denise_blank_active = denise_blank_enabled ? denise_blank_active2 : false;
 		}
-		if (delayed_pvblank_aga < 0) {
+		if (delayed_vblank_ecs < 0) {
 			denise_pvblank = false;
-			delayed_pvblank_aga = 0;
+			delayed_vblank_ecs = 0;
 			denise_vblank_active = denise_pvblank;
 			denise_blank_active2 = denise_hblank_active || denise_vblank_active;
 			denise_blank_active = denise_blank_enabled ? denise_blank_active2 : false;
@@ -5418,9 +5399,9 @@ static void lts_null(void)
 	}
 }
 
-static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_prev)
+static void get_line(int gfx_ypos, enum nln_how how, int lol_shift_prev)
 {
-	struct vidbuf_description *vidinfo = &adisplays[monid].gfxvidinfo;
+	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
 	struct vidbuffer *vb = vidinfo->inbuffer;
 	int eraselines = 0;
 	int yadjust = currprefs.gfx_overscanmode < OVERSCANMODE_ULTRA ? minfirstline_linear << currprefs.gfx_vresolution : 0;
@@ -5443,7 +5424,7 @@ static void get_line(int monid, int gfx_ypos, enum nln_how how, int lol_shift_pr
 		struct vidbuf_description* vidinfo = &adisplays[0].gfxvidinfo;
 		int l = 0;
 		while (l < vb->inheight) {
-			uae_u8* b = get_row(monid, l);
+			uae_u8* b = row_map[l];
 			memset(b, 0, vb->inwidth * vb->pixbytes);
 			l++;
 		}
@@ -5740,8 +5721,12 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 		buf2 = debug_buf;
 	}
 
+	if (!row_map) {
+		return;
+	}
+
 	if (startcycle == 0) {
-		get_line(0, gfx_ypos, how, denise_lol_shift_prev);
+		get_line(gfx_ypos, how, denise_lol_shift_prev);
 
 		//write_log("# %d %d\n", gfx_ypos, vpos);
 
@@ -6500,14 +6485,10 @@ static void lts_unaligned_ecs(int cnt, int cnt_next, int h)
 
 		// sprite rendering
 		uae_u32 sv = 0;
-		sprite_pixdata = 0;
 		if (denise_spr_nr_armeds) {
 			uae_u32 svt = denise_render_sprites();
-			if (!denise_blank_active) {
-				sprite_pixdata = svt;
-				if (!sprites_hidden) {
-					sv = sprite_pixdata;
-				}
+			if (!denise_blank_active && !sprites_hidden) {
+				sv = svt;
 			}
 		}
 
@@ -6815,7 +6796,7 @@ void draw_denise_border_line_fast(int gfx_ypos, enum nln_how how, struct linesta
 		set_strlong();
 	}
 
-	get_line(0, gfx_ypos, how, ls->lol_shift_prev);
+	get_line(gfx_ypos, how, ls->lol_shift_prev);
 
 	if (!buf1 && !ls->blankedline && denise_planes > 0) {
 		resolution_count[denise_res]++;
@@ -6914,7 +6895,7 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 		set_strlong();
 	}
 
-	get_line(0, gfx_ypos, how, ls->lol_shift_prev);
+	get_line(gfx_ypos, how, ls->lol_shift_prev);
 	
 	//write_log("* %d %d\n", gfx_ypos, vpos);
 

@@ -3630,6 +3630,7 @@ static void varsync(int reg, bool resync, int oldval)
 	// TOTAL
 	if ((reg == 0x1c0 || reg == 0x1c8) && (beamcon0 & BEAMCON0_VARBEAMEN)) {
 		varsync_changed = 1;
+		nosignal_trigger = true;
 	}
 	// VB
 	if ((reg == 0x1cc || reg == 0x1ce) && (beamcon0 & BEAMCON0_VARVBEN)) {
@@ -3638,6 +3639,7 @@ static void varsync(int reg, bool resync, int oldval)
 	// VS
 	if ((reg == 0x1e0 || reg == 0x1ca) && (beamcon0 & bemcon0_vsync_mask)) {
 		varsync_changed = 1;
+		nosignal_trigger = true;
 	}
 	// HS
 	if ((reg == 0x1de || reg == 0x1c2) && (beamcon0 & bemcon0_hsync_mask)) {
@@ -5288,7 +5290,7 @@ static void check_no_signal(void)
 		nosignal_trigger = true;
 	}
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
-		if (htotal < 50 || htotal >= 255) {
+		if (htotal < 50 || htotal > 250) {
 			nosignal_trigger = true;
 		}
 		if (vtotal < 100 || vtotal > 1000) {
