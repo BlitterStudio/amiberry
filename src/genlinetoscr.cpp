@@ -13,9 +13,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+static bool FMODE64_HACK = false;
+
 static FILE *outfile;
 static int outfile_indent = 0;
 static int aga, outres, res, planes, modes, bplfmode, sprres, oddeven, ecsshres, genlock, ntsc, filtered, modetype;
+static int bplfmode64;
 static int isbuf2 = 0;
 static int maxplanes = 8;
 static char funcnames[500000], funcnamesf[500000];
@@ -250,7 +253,7 @@ static void gen_getbpl(int num, int maxplanes)
 	}
 
 	int p = planes < maxplanes ? planes : maxplanes;
-	if (bplfmode == 2) {
+	if (bplfmode == 2 || bplfmode64) {
 		outf("loaded_pix = getbpl%d_64();", p);
 	} else if (bplfmode == 1) {
 		outf("loaded_pix = getbpl%d_32(); ", p);
@@ -268,7 +271,7 @@ static void gen_shiftbpl(int maxplanes)
 	}
 
 	int p = planes < maxplanes ? planes : maxplanes;
-	if (bplfmode == 2) {
+	if (bplfmode == 2 || bplfmode64) {
 		outf("shiftbpl%d_64();", p);
 	} else {
 		outf("shiftbpl%d();", p);
@@ -289,7 +292,7 @@ static void gen_shiftbpl_hr(int maxplanes)
 		add = 4;
 	}
 	if (add == 4) {
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("shiftbpl%d_64();", p);
 		} else {
 			outf("shiftbpl%d();", p);
@@ -298,7 +301,7 @@ static void gen_shiftbpl_hr(int maxplanes)
 		outf("bplshiftcnt[0] += %d;", add);
 		outf("if (bplshiftcnt[0] >= 4) {");
 		outf("bplshiftcnt[0] = 0;");
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("shiftbpl%de_64();", p);
 		} else {
 			outf("shiftbpl%de();", p);
@@ -308,7 +311,7 @@ static void gen_shiftbpl_hr(int maxplanes)
 		outf("bplshiftcnt[1] += %d;", add);
 		outf("if (bplshiftcnt[1] >= 4) {");
 		outf("bplshiftcnt[1] = 0;");
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("shiftbpl%do_64();", p);
 		} else {
 			outf("shiftbpl%do();", p);
@@ -319,7 +322,7 @@ static void gen_shiftbpl_hr(int maxplanes)
 		outf("bplshiftcnt[0] += %d;", add);
 		outf("if (bplshiftcnt[0] >= 4) {");
 		outf("bplshiftcnt[0] = 0;");
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("shiftbpl%d_64();", p);
 		} else {
 			outf("shiftbpl%d();", p);
@@ -352,24 +355,47 @@ static void gen_ecsshresspr(void)
 	outf("}");
 }
 
-static void gen_sprpix(int i)
+static void gen_sprpix_ecs(int i)
+{
+	// sprite pixel
+	outf("uae_u32 sv%d = 0;", i);
+	outf("sprite_pixdata = 0;");
+	outf("if (denise_spr_nr_armeds) {");
+	outf("	uae_u32 svt;");
+	if (ecsshres) {
+		outf("		svt = denise_render_sprites_ecs_shres();");
+	} else {
+		outf("		svt = denise_render_sprites_lores();");
+	}
+	outf("	if (!denise_sprite_blank_active) {");
+	outf("       sprite_pixdata = svt;");
+	outf("       if (!sprites_hidden) {");
+	outf("	         sv%d = svt;", i);
+	outf("	     }");
+	outf("	}");
+	outf("}");
+}
+
+static void gen_sprpix_aga(int i)
 {
 	// sprite pixel
 	outf("uae_u32 sv%d = 0;", i);
 	outf("if (denise_spr_nr_armeds) {");
 	outf("	uae_u32 svt;");
-	if (aga) {
-		// outres > sprres ? 1 << (2 - (outres - sprres)) : 4
-		outf("		svt = denise_render_sprites_aga(denise_spr_add);");
-	} else if (ecsshres) {
-		outf("		svt = denise_render_sprites_ecs_shres();");
-	} else {
-		outf("		svt = denise_render_sprites_lores();");
-	}
+	outf("		svt = denise_render_sprites_aga(denise_spr_add);");
 	outf("	if (!denise_sprite_blank_active && !sprites_hidden) {");
 	outf("	sv%d = svt;", i);
 	outf("	}");
 	outf("}");
+}
+
+static void gen_sprpix(int i)
+{
+	if (aga) {
+		gen_sprpix_aga(i);
+	} else {
+		gen_sprpix_ecs(i);
+	}
 }
 
 static void gen_storepix(int off, int off2)
@@ -402,7 +428,7 @@ static void gen_copybpl_lines(int oddeven)
 	for (int i = 1; i <= 8; i++) {
 		if (planes >= i) {
 			if (oddeven == 0 || (oddeven == 1 && (i & 1)) || (oddeven == 2 && !(i & 1))) {
-				if (bplfmode == 2) {
+				if (bplfmode == 2 || bplfmode64) {
 					outf("bplxdat3_64[%d] = bplxdat2_64[%d];", i - 1, i - 1);
 				} else {
 					outf("bplxdat3[%d] = bplxdat2[%d];", i - 1, i - 1);
@@ -427,14 +453,14 @@ static void gen_copybpl(void)
 	if (oddeven) {
 		// bitplane shifter shifting
 		outf("if (bpldat_copy[0] && (denise_hcounter_cmp & %d) == bplcon1_shift[0]) { ", ((16 << bplfmode) >> res) - 1);
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("copybpl%de_64();", planes);
 		} else {
 			outf("copybpl%de();", planes);
 		}
 		outf("}");
 		outf("if (bpldat_copy[1] && (denise_hcounter_cmp & %d) == bplcon1_shift[1]) {", ((16 << bplfmode) >> res) - 1);
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("copybpl%do_64();", planes);
 		} else {
 			outf("copybpl%do();", planes);
@@ -443,7 +469,7 @@ static void gen_copybpl(void)
 	} else {
 		// bitplane shifter shifting
 		outf("if (bpldat_copy[0] && (denise_hcounter_cmp & %d) == bplcon1_shift[0]) { ", ((16 << bplfmode) >> res) - 1);
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("copybpl%d_64();", planes);
 		} else {
 			outf("copybpl%d();", planes);
@@ -467,7 +493,7 @@ static void gen_copybpl_hr(int add)
 	if (oddeven) {
 		// bitplane shifter shifting
 		outf("if (bpldat_copy[0] && ((cmp | %d) & %d) == bplcon1_shift_full_masked[0]) { ", add, (((16 << bplfmode) >> res) << 2) - 1);
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("copybpl%de_64();", planes);
 		} else {
 			outf("copybpl%de();", planes);
@@ -478,7 +504,7 @@ static void gen_copybpl_hr(int add)
 		}
 		outf("}");
 		outf("if (bpldat_copy[1] && ((cmp | %d) & %d) == bplcon1_shift_full_masked[1]) {", add, (((16 << bplfmode) >> res) << 2) - 1);
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("copybpl%do_64();", planes);
 		} else {
 			outf("copybpl%do();", planes);
@@ -491,7 +517,7 @@ static void gen_copybpl_hr(int add)
 	} else {
 		// bitplane shifter shifting
 		outf("if (bpldat_copy[0] && ((cmp | %d) & %d) == bplcon1_shift_full_masked[0]) { ", add, (((16 << bplfmode) >> res) << 2) - 1);
-		if (bplfmode == 2) {
+		if (bplfmode == 2 || bplfmode64) {
 			outf("copybpl%d_64();", planes);
 		} else {
 			outf("copybpl%d();", planes);
@@ -887,9 +913,10 @@ static int gen_head(void)
 {
 	char funcname[200];
 
-	sprintf(funcname, "lts_%s_%s_%s%d_p%d_i%s_d%s%s%s%s%s",
+	sprintf(funcname, "lts_%s_%s%s_%s%d_p%d_i%s_d%s%s%s%s%s",
 		aga ? "aga" : "ecs",
 		bplfmode == 0 ? "fm0" : (bplfmode == 1 ? "fm1" : "fm2"),
+		bplfmode64 ? "_64" : "",
 		modes == 0 ? "n" : (modes == 1 ? "dpf" : (modes == 2 ? "ehb" : (modes == 4 ? "kehb" : "ham"))),
 		oddeven ? 1 : 0,
 		planes,
@@ -1461,51 +1488,63 @@ int main (int argc, char *argv[])
 	ntsc = -1;
 	modetype = 0;
 
-	for (bplfmode = 0; bplfmode < 3; bplfmode++) {
+	for (bplfmode64 = 0; bplfmode64 < 2; bplfmode64++) {
 
-		char tmp[100];
-		sprintf(tmp, "../../linetoscr_aga_fm%d.cpp", bplfmode);
-		set_outfile(tmp);
+		for (bplfmode = 0; bplfmode < 3; bplfmode++) {
 
-		for (outres = 0; outres < 3; outres++) {
-			for (res = 0; res < 3; res++) {
-				for (int spr = 0; spr < 2; spr++) {
-					sprres = spr == 0 ? -1 : 0;
-					for (planes = 2; planes <= 8; planes += 2) {
-						for (modes = 0; modes < 5; modes++) {
-							for (oddeven = 0; oddeven < 2; oddeven++) {
-								modetype = gen_head();
-								if (modetype) {
-									gen_start();
-									gen_init();
-									gen_pix_aga();
-									gen_end();
-								} else {
-									gen_null();
+			if (bplfmode64 && bplfmode >= 2) {
+				continue;
+			}
+			if (bplfmode64 && !FMODE64_HACK) {
+				continue;
+			}
+
+			char tmp[100];
+			sprintf(tmp, "../../linetoscr_aga_fm%d%s.cpp", bplfmode, bplfmode64 ? "_64" : "");
+			set_outfile(tmp);
+
+			for (outres = 0; outres < 3; outres++) {
+				for (res = 0; res < 3; res++) {
+					for (int spr = 0; spr < 2; spr++) {
+						sprres = spr == 0 ? -1 : 0;
+						for (planes = 2; planes <= 8; planes += 2) {
+							for (modes = 0; modes < 5; modes++) {
+								for (oddeven = 0; oddeven < 2; oddeven++) {
+									modetype = gen_head();
+									if (modetype) {
+										gen_start();
+										gen_init();
+										gen_pix_aga();
+										gen_end();
+									} else {
+										gen_null();
+									}
+									gen_tail();
+									filtered = 1;
+									modetype = gen_head();
+									if (modetype) {
+										gen_start();
+										gen_init();
+										gen_pix_aga();
+										gen_end();
+									} else {
+										gen_null();
+									}
+									gen_tail();
+									filtered = 0;
 								}
-								gen_tail();
-								filtered = 1;
-								modetype = gen_head();
-								if (modetype) {
-									gen_start();
-									gen_init();
-									gen_pix_aga();
-									gen_end();
-								} else {
-									gen_null();
-								}
-								gen_tail();
-								filtered = 0;
 							}
 						}
 					}
 				}
 			}
+
 		}
 	}
 
 	write_funcs("linetoscr_aga_funcs");
 
+	bplfmode64 = 0;
 	genlock = 1;
 
 	for (bplfmode = 0; bplfmode < 3; bplfmode++) {

@@ -35,7 +35,7 @@
 #define FOOTBALLDIRECTOR2 15
 
 static int dflag;
-static frame_time_t cycles;
+static evt_t cycles;
 
 /*
 RoboCop 3
@@ -118,6 +118,7 @@ static uae_u8 oldcia[2][16];
 
 void dongle_reset (void)
 {
+	cycles = 0;
 	dflag = 0;
 	memset (oldcia, 0, sizeof oldcia);
 }

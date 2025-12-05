@@ -825,9 +825,15 @@ static void check_sound_buffers(void)
 		paula_sndbufpt = paula_sndbufpt_start;
 	}
 #endif
+#if SOUND_MODE_NG
+	if ((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer >= paula_sndbufsize * 2) {
+		paula_sndbufpt = paula_sndbuffer;
+	}
+#else
 	if ((uae_u8*)paula_sndbufpt - (uae_u8*)paula_sndbuffer >= paula_sndbufsize) {
 		finish_sound_buffer();
 	}
+#endif
 #if SOUNDSTUFF > 1
 	while (doublesample-- > 0) {
 		memcpy(paula_sndbufpt, paula_sndbufpt_start, len * 2);

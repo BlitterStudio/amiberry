@@ -94,6 +94,7 @@ int hardware_bus_error;
 static int baseclock;
 int m68k_pc_indirect;
 bool m68k_interrupt_delay;
+int slow_cpu_access;
 static bool m68k_accurate_ipl;
 static bool m68k_reset_delay;
 static bool ismoves_nommu;
@@ -4772,6 +4773,16 @@ static int do_specialties (int cycles)
 			uae_ppc_execute_check();
 		}
 #endif
+	}
+
+	if (spcflags & SPCFLAG_CPU_SLOW) {
+		evt_t c = get_cck_cycles();
+		int cnt = 0;
+		while(regs.spcflags == SPCFLAG_CPU_SLOW && c == get_cck_cycles()) {
+			x_do_cycles(4 * CYCLE_UNIT);
+			cnt++;
+		}
+		unset_special(SPCFLAG_CPU_SLOW);
 	}
 
 	if (spcflags & SPCFLAG_MMURESTART) {

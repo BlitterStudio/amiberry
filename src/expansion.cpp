@@ -6786,7 +6786,7 @@ static const struct cpuboardsubtype macrosystem_sub[] = {
 	{
 		_T("Warp Engine A4000"),
 		_T("WarpEngineA4000"),
-		ROMTYPE_CB_WENGINE, 0, 4,
+		ROMTYPE_CB_WENGINE | ROMTYPE_NONE, 0, 4,
 		warpengine_add_scsi_unit, EXPANSIONTYPE_SCSI,
 		BOARD_MEMORY_HIGHMEM,
 		128 * 1024 * 1024,

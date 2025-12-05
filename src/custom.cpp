@@ -436,6 +436,7 @@ static int plffirstline, plflastline;
 * worth the trouble..
 */
 static int vpos_lpen, hpos_lpen, hhpos_lpen, lightpen_triggered;
+static uae_u32 vhposr_prev;
 int lightpen_x[2], lightpen_y[2];
 int lightpen_cx[2], lightpen_cy[2], lightpen_active, lightpen_enabled, lightpen_enabled2;
 
@@ -1384,6 +1385,9 @@ void compute_vsynctime(void)
 	}
 	vsynctimebase_orig = vsynctimebase;
 	cputimebase = syncbase / ((uae_u32)(svpos * shpos));
+	if (cputimebase == 0) {
+		cputimebase = 1;
+	}
 
 	if (linetoggle) {
 		shpos += 0.5f;
@@ -2545,6 +2549,7 @@ static uae_u16 VPOSR(void)
 	if (1 || (M68K_GETPC < 0x00f00000 || M68K_GETPC >= 0x10000000))
 		write_log (_T("VPOSR %04x at %08x\n"), vp, M68K_GETPC);
 #endif
+
 	return vp;
 }
 
@@ -2637,6 +2642,16 @@ static uae_u16 VHPOSR(void)
 	if (0 || M68K_GETPC < 0x00f00000 || M68K_GETPC >= 0x10000000)
 		write_log (_T("VHPOSR %04x at %08x %04x\n"), vp, M68K_GETPC, bplcon0);
 #endif
+
+	if (slow_cpu_access & 2) {
+		if (vp == vhposr_prev) {
+			if (currprefs.cachesize || currprefs.m68k_speed < 0) {
+				set_special(SPCFLAG_CPU_SLOW);
+			}
+		}
+		vhposr_prev = vp;
+	}
+
 	return vp;
 }
 
@@ -3630,7 +3645,6 @@ static void varsync(int reg, bool resync, int oldval)
 	// TOTAL
 	if ((reg == 0x1c0 || reg == 0x1c8) && (beamcon0 & BEAMCON0_VARBEAMEN)) {
 		varsync_changed = 1;
-		nosignal_trigger = true;
 	}
 	// VB
 	if ((reg == 0x1cc || reg == 0x1ce) && (beamcon0 & BEAMCON0_VARVBEN)) {
@@ -3639,7 +3653,6 @@ static void varsync(int reg, bool resync, int oldval)
 	// VS
 	if ((reg == 0x1e0 || reg == 0x1ca) && (beamcon0 & bemcon0_vsync_mask)) {
 		varsync_changed = 1;
-		nosignal_trigger = true;
 	}
 	// HS
 	if ((reg == 0x1de || reg == 0x1c2) && (beamcon0 & bemcon0_hsync_mask)) {
@@ -4901,6 +4914,9 @@ static bool framewait(void)
 			while (rpt_vsync(clockadjust) < 0) {
 				rtg_vsynccheck();
 #if 0
+				audio_is_pull_event();
+#endif
+#if 0
 				if (audio_is_pull_event()) {
 					maybe_process_pull_audio();
 					break;
@@ -5290,7 +5306,7 @@ static void check_no_signal(void)
 		nosignal_trigger = true;
 	}
 	if (beamcon0 & BEAMCON0_VARBEAMEN) {
-		if (htotal < 50 || htotal > 250) {
+		if (htotal < 50 || htotal >= 255) {
 			nosignal_trigger = true;
 		}
 		if (vtotal < 100 || vtotal > 1000) {
@@ -5321,6 +5337,7 @@ static void handle_nosignal(void)
 		struct amigadisplay *ad = &adisplays[0];
 		nosignal_trigger = false;
 		resetfulllinestate();
+		denise_clearbuffers();
 		if (!ad->specialmonitoron) {
 			if (currprefs.gfx_monitorblankdelay > 0) {
 				nosignal_status = 1;
@@ -5399,6 +5416,8 @@ static void vsync_handler_post(void)
 	vsync_handle_check();
 
 	vsync_cycles = get_cycles();
+	vhposr_prev = 0xffffffff;
+	lineoptimizations_draw_always = drawing_can_lineoptimizations() == false;
 }
 
 static void copper_check(int n)
@@ -5569,10 +5588,6 @@ static void hautoscale_check(void)
 static void hsync_handler_pre(bool onvsync)
 {
 	if (!custom_disabled) {
-
-		// make sure decisions are done to end of scanline
-		//finish_partial_decision(maxhpos);
-		//clear_bitplane_pipeline(0);
 
 		/* reset light pen latch */
 		if (agnus_vb_active_end_line) {
@@ -10267,6 +10282,7 @@ static void shift_dmal(void)
 {
 	dmal_shifter <<= 1;
 }
+
 static void handle_dmal(void)
 {
 	if (!dmal_shifter) {
@@ -10758,6 +10774,18 @@ static int checkprevfieldlinestateequalbpl(struct linestate *l)
 	return 0;
 }
 
+// draw blanking line quickly (only if blanking can have overlay data, like lightpen crosshair)
+static bool draw_blank_fast(struct linestate *l, int ldv)
+{
+	if (l->hbstrt_offset < 0 || l->hbstop_offset < 0) {
+		return false;
+	}
+	start_draw_denise();
+	int dvp = calculate_linetype(ldv);
+	draw_denise_border_line_fast_queue(dvp, true, nextline_how, l);
+	return true;
+}
+
 // draw border line quickly (no copper, no sprites, no weird things, normal mode)
 static bool draw_border_fast(struct linestate *l, int ldv)
 {
@@ -10769,7 +10797,7 @@ static bool draw_border_fast(struct linestate *l, int ldv)
 	l->color0 = aga_mode ? agnus_colors.color_regs_aga[0] : agnus_colors.color_regs_ecs[0];
 	l->brdblank = brdblank;
 	int dvp = calculate_linetype(ldv);
-	draw_denise_border_line_fast_queue(dvp, nextline_how, l);
+	draw_denise_border_line_fast_queue(dvp, false, nextline_how, l);
 	return true;
 }
 
@@ -10846,15 +10874,15 @@ static bool draw_line_fast(struct linestate *l, int ldv, uaecptr bplptp[8], bool
 	return true;
 }
 
-static bool draw_always(void)
+static int draw_always(void)
 {
 	if (nextline_how == nln_lower_black_always || nextline_how == nln_upper_black_always) {
-		return true;
+		return -1;
 	}
 	if (lineoptimizations_draw_always) {
-		return true;
+		return 1;
 	}
-	return false;
+	return 0;
 }
 
 static void resetlinestate(void)
@@ -10921,15 +10949,16 @@ static bool checkprevfieldlinestateequal(void)
 		return false;
 	}
 	bool ret = false;
-	bool always = draw_always();
+	int always = draw_always();
 	struct linestate *l = &lines[lvpos][lof_display];
 
 	int type = getlinetype();
 	if (type && type == l->type && displayresetcnt == l->cnt) {
 		if (type == LINETYPE_BLANK) {
-			if (1) {
-				ret = true;
+			if (always > 0) {
+				draw_blank_fast(l, linear_display_vpos + 1);
 			}
+			ret = true;
 		} else if (type == LINETYPE_BORDER) {
 			if (1) {
 				bool brdblank = (bplcon0 & 1) && (bplcon3 & 0x20);
@@ -11301,9 +11330,7 @@ static void start_sync_imm_handler(void)
 
 static void vsync_nosync(void)
 {
-	if (!nosignal_trigger) {
-		denise_clearbuffers();
-	}
+	denise_clearbuffers();
 	nosignal_trigger = true;
 	linear_vpos = 0;
 	vsync_handler_post();
