@@ -3445,24 +3445,22 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		return false;
 	}
 
+	// Ensure amiga_surface is in sync with the texture size
+	if (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h) {
+		if (amiga_surface) {
+			SDL_FreeSurface(amiga_surface);
+		}
+		write_log("Re-creating amiga_surface with size %dx%d to match texture.\n", w, h);
+		amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, pixel_format);
+		if (amiga_surface == nullptr) {
+			write_log("!!! Failed to create amiga_surface.\n");
+			return false;
+		}
+	}
+
 	if (!SDL2_alloctexture(mon->monitor_id, w, h)) {
 		return false;
 	}
-
-#ifdef USE_OPENGL
-    // Ensure amiga_surface is in sync with the texture size
-    if (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h) {
-        if (amiga_surface) {
-            SDL_FreeSurface(amiga_surface);
-        }
-        write_log("Re-creating amiga_surface with size %dx%d to match texture.\n", w, h);
-        amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, pixel_format);
-        if (amiga_surface == nullptr) {
-            write_log("!!! Failed to create amiga_surface.\n");
-            return false;
-        }
-    }
-#endif
 
 	if (vbout) {
 		vbout->width_allocated = w;
