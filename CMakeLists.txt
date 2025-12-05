@@ -43,7 +43,7 @@ endif()
 set(VERSION_MAJOR "8" CACHE STRING "Major version")
 set(VERSION_MINOR "0" CACHE STRING "Minor version")
 set(VERSION_PATCH "0" CACHE STRING "Patch version")
-set(VERSION_PRE_RELEASE "" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "7" CACHE STRING "Pre-release version")
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 # Use PkgConfig only on FreeBSD

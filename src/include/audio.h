@@ -47,6 +47,7 @@ int audio_pull_buffer(void);
 bool audio_finish_pull(void);
 bool audio_is_pull_event(void);
 bool audio_is_event_frame_possible(int);
+void audio_got_pull_event(void);
 
 extern int sampleripper_enabled;
 

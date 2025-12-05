@@ -20,15 +20,15 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYPUBLICBETA 0
+#define AMIBERRYPUBLICBETA 1
 
 #if AMIBERRYPUBLICBETA
-#define AMIBERRYBETA _T("1")
+#define AMIBERRYBETA _T("7")
 #else
 #define AMIBERRYBETA _T("")
 #endif
 
-#define AMIBERRYDATE MAKEBD(2025, 9, 5)
+#define AMIBERRYDATE MAKEBD(2025, 12, 5)
 #define COPYRIGHT _T("Copyright (C) 2025 Dimitris Panokostas")
 
 #ifndef AMIBERRYEXTRA
