@@ -2638,9 +2638,9 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 		if (l3 && !noval) {
 			uae_u64 v = dr->dat;
 			if (longsize == 4) {
-				_sntprintf(l3, sizeof l3, _T("%08X"), (uae_u32)v);
+				_sntprintf(l3, sizeof l3, _T("     %08X"), (uae_u32)v);
 			} else if (longsize == 8) {
-				_sntprintf(l3, sizeof l3, _T("%08X"), (uae_u32)(v >> 32));
+				_sntprintf(l3, sizeof l3, _T("     %08X"), (uae_u32)(v >> 32));
 				extra64 = true;
 				extraval = (uae_u32)v;
 			} else {

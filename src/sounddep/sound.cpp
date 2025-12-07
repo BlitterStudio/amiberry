@@ -37,6 +37,7 @@ struct sound_dp
 	uae_u8* pullbuffer;
 	unsigned int pullbufferlen;
 	int pullbuffermaxlen;
+	bool gotpullevent;
 	float avg_correct;
 	float cnt_correct;
 	int stream_initialised;
@@ -58,7 +59,11 @@ static int statuscnt;
 #define SND_MAX_BUFFER2 524288
 #define SND_MAX_BUFFER 65536
 
+#if SOUND_MODE_NG
+uae_u16 paula_sndbuffer[SND_MAX_BUFFER * 2 + 8];
+#else
 uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
+#endif
 uae_u16* paula_sndbufpt;
 int paula_sndbufsize;
 int active_sound_stereo;

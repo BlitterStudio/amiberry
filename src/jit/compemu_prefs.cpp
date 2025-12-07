@@ -54,7 +54,13 @@ bool check_prefs_changed_comp (bool checkonly)
 
 	// Turn off illegal-mem logging when using JIT...
 	if(currprefs.cachesize)
+	{
 		currprefs.illegal_mem = changed_prefs.illegal_mem;// = 0;
+#ifdef AMIBERRY
+		// Enable JIT FPU as well, when JIT is enabled
+		currprefs.compfpu = changed_prefs.compfpu = true;
+#endif
+	}
 
 	if ((!canbang || !currprefs.cachesize) && currprefs.comptrustbyte != 1) {
 		// Set all of these to indirect when canbang == 0

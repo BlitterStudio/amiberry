@@ -119,6 +119,8 @@ if (USE_IMGUI)
     target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 else()
     add_subdirectory(external/libguisan)
+    target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+
     target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
 endif()
 
