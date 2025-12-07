@@ -518,6 +518,10 @@ void render_panel_quickstart()
 	}
 	ImGui::PopItemWidth();
 
+	// Only change the current prefs if we're not already emulating
+	if (!emulating && !config_loaded)
+		adjust_prefs();
+
 	{
 		std::string filePath;
 		if (ConsumeFileDialogResult(filePath))
