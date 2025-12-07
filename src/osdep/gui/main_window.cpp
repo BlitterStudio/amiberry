@@ -733,24 +733,6 @@ void amiberry_gui_init()
 	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
-#ifdef USE_IMGUI
-	// For ImGui, pick a smaller, responsive SDL window size based on usable display area
-	{
-		SDL_Rect usable0 = get_display_usable_bounds(0);
-		const int min_w = GUI_WIDTH;
-		const int min_h = 560;
-		const int max_w_cap = std::min(usable0.w, 900);
-		const int max_h_cap = std::min(usable0.h, 800);
-		float desired_w = std::min(static_cast<float>(usable0.w) * 0.50f, static_cast<float>(max_w_cap));
-		float desired_h = std::min(static_cast<float>(usable0.h) * 0.85f, static_cast<float>(max_h_cap));
-		float clamped_w = std::clamp(desired_w, static_cast<float>(std::min(min_w, usable0.w)), static_cast<float>(max_w_cap));
-		float clamped_h = std::clamp(desired_h, static_cast<float>(std::min(min_h, usable0.h)), static_cast<float>(max_h_cap));
-		int final_w = static_cast<int>(std::lround(clamped_w));
-		int final_h = static_cast<int>(std::lround(clamped_h));
-		gui_window_rect.w = final_w;
-		gui_window_rect.h = final_h;
-	}
-#endif
 #ifdef USE_GUISAN
 	//-------------------------------------------------
 	// Create new screen for GUI
@@ -872,9 +854,9 @@ void amiberry_gui_init()
 		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
 	}
-#ifdef USE_GUISAN
+
 	DPIHandler::set_render_scale(mon->gui_renderer);
-#endif
+
 #ifdef USE_IMGUI
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
