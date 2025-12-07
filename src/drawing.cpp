@@ -41,6 +41,7 @@
 #include "gfxboard.h"
 
 #define ENABLE_MULTITHREADED_DENISE 1
+
 #define FMODE64_HACK 0
 
 extern int multithread_enabled;
@@ -289,6 +290,7 @@ static int resolution_count[RES_MAX + 1], lines_count;
 static int center_reset;
 static bool init_genlock_data;
 bool need_genlock_data;
+int video_recording_active;
 
 /* Lookup tables for dual playfields.  The dblpf_*1 versions are for the case
 that playfield 1 has the priority, dbplpf_*2 are used if playfield 2 has
@@ -493,6 +495,7 @@ struct denise_spr
 static struct denise_spr dspr[MAX_SPRITES];
 static struct denise_spr *dprspt[MAX_SPRITES + 1], *dprspts[MAX_SPRITES + 1];
 static int denise_spr_nr_armed, denise_spr_nr_armeds;
+static int sprite_lts_selected;
 static uae_u16 bplcoltable[256];
 static uae_u16 sprcoltable[256];
 static uae_u16 sprbplcoltable[256];
@@ -1934,11 +1937,14 @@ static void refresh_indicator_init(void)
 
 bool drawing_can_lineoptimizations(void)
 {
-	if (currprefs.monitoremu || currprefs.cs_cd32fmv || ((currprefs.genlock || currprefs.genlock_effects) && currprefs.genlock_image) ||
+	if (currprefs.cs_cd32fmv || ((currprefs.genlock || currprefs.genlock_effects) && currprefs.genlock_image) ||
 		currprefs.cs_color_burst || currprefs.gfx_grayscale || currprefs.monitoremu) {
 		return false;
 	}
 	if ((lightpen_active && currprefs.lightpen_crosshair) || debug_dma >= 2 || debug_heatmap >= 2) {
+		return false;
+	}
+	if (video_recording_active) {
 		return false;
 	}
 	return true;
@@ -1964,6 +1970,9 @@ static void draw_frame_extras(struct vidbuffer *vb, int y_start, int y_end)
 		if (inputdevice_get_lightpen_id() >= 0 && (lightpen_active & 2)) {
 			lightpen_update(vb, 1);
 		}
+	}
+	if (video_recording_active) {
+		denise_lock();
 	}
 }
 
@@ -2598,7 +2607,7 @@ static void spr_arm(struct denise_spr *s, int state)
 				}
 			}
 			denise_spr_nr_armed++;
-			if (denise_spr_nr_armed == 1) {
+			if (denise_spr_nr_armed == 1 && !sprite_lts_selected) {
 				select_lts();
 			}
 			s->armed = 1;
@@ -2620,7 +2629,7 @@ static void spr_arm(struct denise_spr *s, int state)
 		}
 		if (s->armed) {
 			denise_spr_nr_armed--;
-			if (denise_spr_nr_armed == 0) {
+			if (denise_spr_nr_armed == 0 && denise_spr_nr_armeds == 0 && sprite_lts_selected) {
 				select_lts();
 			}
 			s->armed = 0;
@@ -2669,6 +2678,9 @@ static void spr_arms(struct denise_spr *s, int state)
 		if (s->armeds) {
 			denise_spr_nr_armeds--;
 			s->armeds = 0;
+			if (denise_spr_nr_armeds == 0 && sprite_lts_selected) {
+				select_lts();
+			}
 		}
 	}
 }
@@ -3714,9 +3726,12 @@ static void do_exthblankon_aga(void)
 // BPL1DAT allows sprites 1 lores pixel before bitplanes
 static void bpl1dat_enable_sprites(void)
 {
-	sprites_hidden2 &= ~2;
-	if (denise_hdiw) {
-		sprites_hidden2 &= ~1;
+	// A1000/OCS Denise: BPL1DAT won't enable sprites if BURST is active
+	if (ecs_denise || !denise_burst) {
+		sprites_hidden2 &= ~2;
+		if (denise_hdiw) {
+			sprites_hidden2 &= ~1;
+		}
 	}
 }
 static void bpl1dat_enable_bpls(void)
@@ -5834,6 +5849,10 @@ static void draw_denise_line(int gfx_ypos, enum nln_how how, uae_u32 linecnt, in
 		denise_linecnt = linecnt;
 		denise_hdelay = hdelay;
 		denise_startpos = startpos;
+
+		if (denise_spr_nr_armed == 0 && denise_spr_nr_armeds == 0 && sprite_lts_selected) {
+			select_lts();
+		}
 	}
 
 	denise_cck = startcycle;
@@ -6134,9 +6153,10 @@ static void select_lts(void)
 	if (aga_mode) {
 
 		int spr = 0;
-		if (denise_spr_nr_armed || samecycle) {
+		if (denise_spr_nr_armed || denise_spr_nr_armeds || samecycle) {
 			spr = 1;
 		}
+		sprite_lts_selected = spr;
 		if (need_genlock_data) {
 			int planes = denise_max_planes > 4 ? 1 : 0;
 			int oddeven = denise_max_odd_even ? 1 : 0;
@@ -6170,6 +6190,7 @@ static void select_lts(void)
 
 	} else if (ecs_denise && denise_res == RES_SUPERHIRES) {
 
+		sprite_lts_selected = 1;
 		if (hresolution == RES_LORES) {
 			lts = lts_null;
 		} else {
@@ -6192,9 +6213,10 @@ static void select_lts(void)
 	} else {
 
 		int spr = 0;
-		if (denise_spr_nr_armed || samecycle) {
+		if (denise_spr_nr_armed || denise_spr_nr_armeds || samecycle) {
 			spr = 1;
 		}
+		sprite_lts_selected = spr;
 		if (need_genlock_data) {
 			int oddeven = denise_max_odd_even;
 			int idx = (oddeven) + (bm * 2) + (spr * 2 * 4) + (denise_res * 2 * 4 * 2) + (hresolution * 2 * 4 * 2 * 2);

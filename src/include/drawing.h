@@ -24,6 +24,7 @@ extern int visible_left_border, visible_right_border;
 extern int detected_screen_resolution;
 extern int hsync_end_left_border, hdisplay_left_border, denisehtotal;
 extern int vsync_startline;
+extern int video_recording_active;
 
 #define AMIGA_WIDTH_MAX (754 / 2)
 #define AMIGA_HEIGHT_MAX_PAL (576 / 2)

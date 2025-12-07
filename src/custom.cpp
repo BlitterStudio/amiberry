@@ -1124,6 +1124,15 @@ static void setup_fmodes(uae_u16 con0)
 	fmode_inuse = fmode;
 }
 
+static void check_lineoptimizations(void)
+{
+	bool t = drawing_can_lineoptimizations() == false;
+	if (t != lineoptimizations_draw_always) {
+		lineoptimizations_draw_always = t;
+		write_log("Temp buffer mode = %d\n", t);
+	}
+}
+
 static void set_chipset_mode(bool imm)
 {
 	fmode = fmode_saved;
@@ -1233,7 +1242,7 @@ static void update_mirrors(void)
 	ddf_mask = ecs_agnus ? 0xfe : 0xfc;
 	set_chipset_mode(true);
 	struct vidbuf_description *vidinfo = &adisplays[0].gfxvidinfo;
-	lineoptimizations_draw_always = drawing_can_lineoptimizations() == false;
+	check_lineoptimizations();
 	color_table_changed = true;
 }
 
@@ -1384,7 +1393,10 @@ void compute_vsynctime(void)
 		vsynctimebase = (frame_time_t)(syncbase / fake_vblank_hz);
 	}
 	vsynctimebase_orig = vsynctimebase;
-	cputimebase = syncbase / ((uae_u32)(svpos * shpos));
+	cputimebase = 0;
+	if (svpos > 0 && shpos > 0) {
+		cputimebase = syncbase / ((uae_u32)(svpos * shpos));
+	}
 	if (cputimebase == 0) {
 		cputimebase = 1;
 	}
@@ -5417,7 +5429,7 @@ static void vsync_handler_post(void)
 
 	vsync_cycles = get_cycles();
 	vhposr_prev = 0xffffffff;
-	lineoptimizations_draw_always = drawing_can_lineoptimizations() == false;
+	check_lineoptimizations();
 }
 
 static void copper_check(int n)
@@ -10290,7 +10302,7 @@ static void handle_dmal(void)
 	}
 
 	if (agnus_hpos & 1) {
-		if (!custom_disabled && !agnus_vb_active && !agnus_bsvb && (dmal_shifter & (DMAL_SPR0A | DMAL_SPR1A | DMAL_SPR2A | DMAL_SPR3A | DMAL_SPR4A | DMAL_SPR5A | DMAL_SPR6A | DMAL_SPR7A |
+		if (!custom_disabled && !agnus_vb_active && (dmal_shifter & (DMAL_SPR0A | DMAL_SPR1A | DMAL_SPR2A | DMAL_SPR3A | DMAL_SPR4A | DMAL_SPR5A | DMAL_SPR6A | DMAL_SPR7A |
 			DMAL_SPR0B | DMAL_SPR1B | DMAL_SPR2B | DMAL_SPR3B | DMAL_SPR4B | DMAL_SPR5B | DMAL_SPR6B | DMAL_SPR7B))) {
 			for (int nr = 0; nr < 8; nr++) {
 				if (dmal_shifter & (DMAL_SPR0A << (nr * 2))) {
@@ -11245,10 +11257,18 @@ static int can_fast_custom(void)
 	if (!display_hstart_fastmode) {
 		return 0;
 	}
-	if (dmaen(DMA_SPRITE)) {
-		if (agnus_vb_active_end_line) {
+	if (agnus_vb_active_end_line) {
+		if (dmaen(DMA_SPRITE)) {
 			return 0;
 		}
+		for (int i = 0; i < MAX_SPRITES; i++) {
+			struct sprite *s = &spr[i];
+			if (s->dmastate) {
+				return 0;
+			}
+		}
+	}
+	if (dmaen(DMA_SPRITE)) {
 		int type = getlinetype();
 		if (type != LINETYPE_BLANK) {
 			for (int i = 0; i < MAX_SPRITES; i++) {
