@@ -1,0 +1,44 @@
+#pragma once
+
+#include <vector>
+#include <string>
+
+// Forward declaration to avoid pulling in SDL headers in every includer
+struct SDL_Texture;
+
+// Shared globals moved into the ImGui implementation files
+extern std::vector<const char*> qs_models;
+extern std::vector<const char*> qs_configs;
+extern SDL_Texture* about_logo_texture;
+
+// File dialog helpers used across imgui panels (defined in main_window.cpp)
+void OpenFileDialog(const char* title, const char* filters, const std::string& initialPath);
+bool ConsumeFileDialogResult(std::string& outPath);
+void OpenDirDialog(const std::string& initialPath);
+bool ConsumeDirDialogResult(std::string& outPath);
+
+void render_panel_about();
+void render_panel_paths();
+void render_panel_quickstart();
+void render_panel_configurations();
+void render_panel_cpu();
+void render_panel_chipset();
+void render_panel_rom();
+void render_panel_ram();
+void render_panel_floppy();
+void render_panel_hd();
+void render_panel_expansions();
+void render_panel_rtg();
+void render_panel_hwinfo();
+void render_panel_display();
+void render_panel_sound();
+void render_panel_input();
+void render_panel_io();
+void render_panel_custom();
+void render_panel_diskswapper();
+void render_panel_misc();
+void render_panel_prio();
+void render_panel_savestates();
+void render_panel_virtual_keyboard();
+void render_panel_whdload();
+void render_panel_themes();

@@ -341,6 +341,34 @@ set (GUISAN_GUI_FILES
         src/osdep/gui/Navigation.cpp
 )
 
+set(IMGUI_GUI_FILES
+		src/osdep/imgui/about.cpp
+		src/osdep/imgui/chipset.cpp
+		src/osdep/imgui/configurations.cpp
+		src/osdep/imgui/cpu.cpp
+		src/osdep/imgui/custom.cpp
+		src/osdep/imgui/diskswapper.cpp
+		src/osdep/imgui/display.cpp
+		src/osdep/imgui/expansions.cpp
+		src/osdep/imgui/floppy.cpp
+		src/osdep/imgui/hd.cpp
+		src/osdep/imgui/hwinfo.cpp
+		src/osdep/imgui/input.cpp
+		src/osdep/imgui/io.cpp
+		src/osdep/imgui/misc.cpp
+		src/osdep/imgui/paths.cpp
+		src/osdep/imgui/prio.cpp
+		src/osdep/imgui/quickstart.cpp
+		src/osdep/imgui/ram.cpp
+		src/osdep/imgui/rom.cpp
+		src/osdep/imgui/rtg.cpp
+		src/osdep/imgui/savestates.cpp
+		src/osdep/imgui/sound.cpp
+		src/osdep/imgui/themes.cpp
+		src/osdep/imgui/virtualkeyboard.cpp
+		src/osdep/imgui/whdload.cpp
+)
+
 set(PCEM_SOURCE_FILES
         src/pcem/386.cpp
         src/pcem/386_common.cpp
@@ -404,6 +432,7 @@ set(PCEM_SOURCE_FILES
 if (USE_IMGUI)
     message("Using ImGui for GUI")
     list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
+    list(APPEND SOURCE_FILES ${IMGUI_GUI_FILES})
 else ()
     message("Using libguisan for GUI")
     list(APPEND SOURCE_FILES ${GUISAN_GUI_FILES})
