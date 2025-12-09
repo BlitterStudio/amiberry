@@ -451,18 +451,6 @@ void render_panel_quickstart()
 	}
 
 	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 2));
-
-	bool qs_mode = amiberry_options.quickstart_start;
-	if (ImGui::Checkbox("Start in Quickstart mode", &qs_mode))
-		amiberry_options.quickstart_start = qs_mode;
-
-	ImGui::SameLine();
-	if (ImGui::Button("Set configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
-	{
-		adjust_prefs();
-	}
-
-	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 2));
 	ImGui::Separator();
 	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 0.5f));
 
@@ -517,6 +505,12 @@ void render_panel_quickstart()
 		}
 	}
 	ImGui::PopItemWidth();
+
+	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 4));
+
+	bool qs_mode = amiberry_options.quickstart_start;
+	if (ImGui::Checkbox("Start in Quickstart mode", &qs_mode))
+		amiberry_options.quickstart_start = qs_mode;
 
 	// Only change the current prefs if we're not already emulating
 	if (!emulating && !config_loaded)
