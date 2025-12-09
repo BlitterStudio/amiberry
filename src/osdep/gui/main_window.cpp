@@ -1782,6 +1782,10 @@ void run_gui()
 
 	amiberry_gui_init();
 
+	if (!emulating && amiberry_options.quickstart_start)
+		last_active_panel = 2;
+
+
 	// Main loop
 	while (gui_running)
 	{
