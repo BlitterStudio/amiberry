@@ -1856,7 +1856,7 @@ void run_gui()
 		const float sidebar_width = std::clamp(content_width * 0.18f, 180.0f, 380.0f);
 
 		// Sidebar
-		ImGui::BeginChild("Sidebar", ImVec2(sidebar_width, 0), true);
+		ImGui::BeginChild("Sidebar", ImVec2(sidebar_width, -button_bar_height), true);
 		// Ensure icons are ready
 		ensure_sidebar_icons_loaded();
 
@@ -1911,7 +1911,6 @@ void run_gui()
 
 		ImGui::SameLine();
 
-		ImGui::BeginGroup();
 		// Content
 		ImGui::BeginChild("Content", ImVec2(0, -button_bar_height));
 
@@ -1924,17 +1923,37 @@ void run_gui()
 
 		// Button bar
 		ImGui::BeginChild("ButtonBar", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY);
+		
+		// Left-aligned buttons
+		if (ImGui::Button("Reset", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+			uae_reset(1, 1);
+			gui_running = false;
+		}
+		ImGui::SameLine();
 		if (ImGui::Button("Quit", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			uae_quit();
 			gui_running = false;
 		}
+		
+		// Right-aligned buttons
+		// Calculate width needed for 3 buttons + 2 spacings
+		float right_buttons_width = (BUTTON_WIDTH * 3) + (style.ItemSpacing.x * 2);
 		ImGui::SameLine();
+		// Push cursor to the right
+		float cursor_x = ImGui::GetWindowWidth() - right_buttons_width - style.WindowPadding.x;
+		if (cursor_x < ImGui::GetCursorPosX()) 
+			cursor_x = ImGui::GetCursorPosX(); // Prevent overlap if window is too small
+		ImGui::SetCursorPosX(cursor_x);
+
 		if (ImGui::Button("Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			uae_reset(1, 1);
 			gui_running = false;
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+			gui_running = false;
 		ImGui::SameLine();
 		if (ImGui::Button("Help", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
@@ -1944,11 +1963,7 @@ void run_gui()
 			if (help_ptr && *help_ptr)
 				ShowMessageBox("Help", help_ptr);
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-			gui_running = false;
 		ImGui::EndChild();
-		ImGui::EndGroup();
 
 		if (show_message_box)
 		{
