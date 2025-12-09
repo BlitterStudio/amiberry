@@ -1935,10 +1935,16 @@ void run_gui()
 			uae_quit();
 			gui_running = false;
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		{
+			uae_reset(1, 1);
+			gui_running = false;
+		}
 		
 		// Right-aligned buttons
 		// Calculate width needed for 3 buttons + 2 spacings
-		float right_buttons_width = (BUTTON_WIDTH * 3) + (style.ItemSpacing.x * 2);
+		float right_buttons_width = (BUTTON_WIDTH * 2) + style.ItemSpacing.x;
 		ImGui::SameLine();
 		// Push cursor to the right
 		float cursor_x = ImGui::GetWindowWidth() - right_buttons_width - style.WindowPadding.x;
@@ -1946,12 +1952,6 @@ void run_gui()
 			cursor_x = ImGui::GetCursorPosX(); // Prevent overlap if window is too small
 		ImGui::SetCursorPosX(cursor_x);
 
-		if (ImGui::Button("Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-		{
-			uae_reset(1, 1);
-			gui_running = false;
-		}
-		ImGui::SameLine();
 		if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 			gui_running = false;
 		ImGui::SameLine();
