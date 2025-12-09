@@ -10,6 +10,7 @@ void render_panel_configurations()
 	static int selected = -1;
 	static char name[MAX_DPATH] = "";
 	static char desc[MAX_DPATH] = "";
+	static char search_text[256] = "";
 	static bool init_done = false;
 
 	if (!init_done)
@@ -31,9 +32,12 @@ void render_panel_configurations()
 		init_done = true;
 	}
 
-	ImGui::BeginChild("ConfigList", ImVec2(0, -120), true);
+	ImGui::BeginChild("ConfigList", ImVec2(0, -150), true);
 	for (int i = 0; i < ConfigFilesList.size(); ++i)
 	{
+		if (search_text[0] != '\0' && strcasestr(ConfigFilesList[i]->Name, search_text) == nullptr)
+			continue;
+
 		char label[MAX_DPATH * 2];
 		if (strlen(ConfigFilesList[i]->Description) > 0)
 			snprintf(label, sizeof(label), "%s (%s)", ConfigFilesList[i]->Name, ConfigFilesList[i]->Description);
@@ -56,6 +60,11 @@ void render_panel_configurations()
 		}
 	}
 	ImGui::EndChild();
+
+	ImGui::InputText("Search", search_text, sizeof(search_text));
+	ImGui::SameLine();
+	if (ImGui::Button("X"))
+		search_text[0] = '\0';
 
 	ImGui::InputText("Name", name, MAX_DPATH);
 	ImGui::InputText("Description", desc, MAX_DPATH);
