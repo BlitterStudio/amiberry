@@ -573,6 +573,89 @@ static bool show_message_box = false;
 static char message_box_title[128] = {0};
 static char message_box_message[1024] = {0};
 
+void BeginGroupBox(const char* name)
+{
+    ImGui::BeginGroup();
+    ImGui::PushID(name);
+    
+    // Reserve space for the title and the top border part
+    // The title will sit on the border line. We need space above the content.
+    ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f)); 
+    ImGui::Indent(10.0f); // Add internal padding
+}
+
+void EndGroupBox(const char* name)
+{
+    ImGui::Unindent(10.0f);
+    ImGui::PopID();
+    ImGui::EndGroup(); // The group contains the content + dummy top space
+    
+    // Now draw the border and title
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec2 item_min = ImGui::GetItemRectMin();
+    ImVec2 item_max = ImGui::GetItemRectMax();
+    
+    const float text_height = ImGui::GetTextLineHeight();
+    const float border_y = item_min.y + text_height * 0.5f; // The border line y-coordinate
+    
+    ImU32 border_col = ImGui::GetColorU32(ImGuiCol_Border);
+    ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
+    
+    ImVec2 text_size = ImGui::CalcTextSize(name);
+    // Position text slightly indented from the left
+    float text_start_x = item_min.x + 8.0f;
+    float text_padding = 8.0f; // Gap around text
+
+    // Expand the box slightly to wrap content comfortably
+    const float box_padding = 4.0f;
+    item_min.x -= box_padding; 
+    // item_min.y is controlled by border_y
+
+    // Ensure the right line doesn't fall outside the visible area
+    // Use GetWindowContentRegionMax to find the rightmost edge of the content area
+    ImVec2 content_max = ImGui::GetWindowContentRegionMax();
+    ImVec2 window_pos = ImGui::GetWindowPos();
+    float max_x = window_pos.x + content_max.x - 1.0f;
+
+    if (item_max.x + box_padding > max_x)
+        item_max.x = max_x;
+    else
+        item_max.x += box_padding;
+
+    item_max.y += box_padding;
+
+    // Draw Top-Left Line
+    draw_list->AddLine(
+        ImVec2(item_min.x, border_y), 
+        ImVec2(text_start_x - text_padding, border_y), 
+        border_col
+    );
+    
+    // Draw Top-Right Line
+    draw_list->AddLine(
+        ImVec2(text_start_x + text_size.x + text_padding, border_y), 
+        ImVec2(item_max.x, border_y), 
+        border_col
+    );
+    
+    // Draw Right Line
+    draw_list->AddLine(ImVec2(item_max.x, border_y), ImVec2(item_max.x, item_max.y), border_col);
+    
+    // Draw Bottom Line
+    draw_list->AddLine(ImVec2(item_max.x, item_max.y), ImVec2(item_min.x, item_max.y), border_col);
+    
+    // Draw Left Line
+    draw_list->AddLine(ImVec2(item_min.x, item_max.y), ImVec2(item_min.x, border_y), border_col);
+    
+    // Draw Title
+    // Adjust y to center text vertically on the line (standard text rendering is top-left)
+    float text_y = item_min.y; // Should match the dummy space we reserved approx
+    draw_list->AddText(ImVec2(text_start_x, text_y), text_col, name);
+
+    // Add spacing after the box so the next one doesn't touch it
+    ImGui::Dummy(ImVec2(0.0f, 10.0f)); 
+}
+
 // Sidebar icons cache
 struct IconTex { SDL_Texture* tex; int w; int h; };
 static std::unordered_map<std::string, IconTex> g_sidebar_icons;

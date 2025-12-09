@@ -164,7 +164,11 @@ void render_panel_quickstart()
 	bool df0_editable = true;
 	qs_set_control_state(quickstart_model, df1_visible, cd_visible, df0_editable);
 
-	if (ImGui::BeginTable("QuickstartModelTable", 2, ImGuiTableFlags_SizingStretchProp))
+	ImGui::Dummy(ImVec2(0.0f, 5.0f));
+	ImGui::Indent(5.0f);
+
+	BeginGroupBox("Emulated Hardware");
+	if (ImGui::BeginTable("QuickstartModelTable", 2, ImGuiTableFlags_SizingStretchProp, ImVec2(ImGui::GetContentRegionAvail().x - 15.0f, 0.0f)))
 	{
 		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 120.0f);
 		ImGui::TableSetupColumn("Control", ImGuiTableColumnFlags_WidthStretch);
@@ -211,12 +215,13 @@ void render_panel_quickstart()
 				adjust_prefs();
 			}
 		}
-
 		ImGui::EndTable();
 	}
+	EndGroupBox("Emulated Hardware");
 
-	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 2));
+	ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
+	BeginGroupBox("Emulated Drives");
 	auto render_floppy_drive = [&](int i, bool is_editable)
 	{
 		ImGui::PushID(i);
@@ -226,6 +231,7 @@ void render_panel_quickstart()
 		bool drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
 		bool disk_present = std::strlen(changed_prefs.floppyslots[i].df) > 0;
 
+		// 1. Checkbox DFx:
 		if (!is_editable) ImGui::BeginDisabled();
 		if (ImGui::Checkbox(label, &drive_enabled))
 		{
@@ -240,11 +246,30 @@ void render_panel_quickstart()
 			}
 		}
 		if (!is_editable) ImGui::EndDisabled();
+
 		ImGui::SameLine();
 
+		// 2. Select file Button
+		const float button_width = 120.0f; // Wider button for "Select file"
+		if (!drive_enabled) ImGui::BeginDisabled();
+		if (ImGui::Button("Select file", ImVec2(button_width, 0)))
+		{
+			std::string tmp;
+			if (disk_present)
+				tmp = changed_prefs.floppyslots[i].df;
+			else
+				tmp = get_floppy_path();
+			OpenFileDialog("Select disk image file", ".adf,.adz,.ipf,.dms,.fdi,.hdf,.img,.*", tmp);
+			qs_pending_floppy_drive = i;
+		}
+		if (!drive_enabled) ImGui::EndDisabled();
+
+		ImGui::SameLine();
+
+		// 3. Drive Type Combo
 		int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
 		int selectedFloppyType = nn + 1;
-		ImGui::SetNextItemWidth(120.0f);
+		ImGui::SetNextItemWidth(100.0f); // Narrower combo
 		snprintf(label, sizeof(label), "##QSFloppyType%d", i);
 		if (!drive_enabled) ImGui::BeginDisabled();
 		if (ImGui::Combo(label, &selectedFloppyType, floppy_drive_types, IM_ARRAYSIZE(floppy_drive_types)))
@@ -268,9 +293,11 @@ void render_panel_quickstart()
 
 		ImGui::SameLine();
 
+		// 4. Write-protected
 		bool wp_enabled = drive_enabled && !changed_prefs.floppy_read_only && disk_present;
 		if (!wp_enabled) ImGui::BeginDisabled();
 		bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != 0;
+		// Use shorter label or just "RO" if space is tight? WinUAE uses "Write-protected".
 		snprintf(label, sizeof(label), "Write-protected##QSFloppyWriteProtected%d", i);
 		if (ImGui::Checkbox(label, &wp))
 		{
@@ -286,6 +313,7 @@ void render_panel_quickstart()
 
 		ImGui::SameLine();
 
+		// 5. ? Button
 		bool info_enabled = drive_enabled && disk_present;
 		if (!info_enabled) ImGui::BeginDisabled();
 		snprintf(label, sizeof(label), "?##QSFloppyInfo%d", i);
@@ -295,35 +323,23 @@ void render_panel_quickstart()
 		}
 		if (!info_enabled) ImGui::EndDisabled();
 
-		const float button_width = BUTTON_WIDTH;
-		const float buttons_total_width = button_width * 2 + ImGui::GetStyle().ItemSpacing.x;
-		float offset = ImGui::GetWindowContentRegionMax().x - buttons_total_width;
-		ImGui::SameLine(offset);
+		// 6. Eject Button (Right Aligned)
+		const float eject_button_width = BUTTON_WIDTH;
+		float offset = ImGui::GetContentRegionAvail().x - eject_button_width;
+		// Ensure we don't overlap if resizing really small, though GroupBox has min width usually.
+		if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 15.0f); // -15 for padding (10 internal + extra)
+		else ImGui::SameLine();
 
 		bool eject_enabled = drive_enabled && disk_present;
 		if (!eject_enabled) ImGui::BeginDisabled();
-		if (ImGui::Button("Eject", ImVec2(button_width, 0)))
+		if (ImGui::Button("Eject", ImVec2(eject_button_width, 0)))
 		{
 			disk_eject(i);
 			changed_prefs.floppyslots[i].df[0] = 0;
 		}
 		if (!eject_enabled) ImGui::EndDisabled();
 
-		ImGui::SameLine();
-
-		if (!drive_enabled) ImGui::BeginDisabled();
-		if (ImGui::Button("Select file", ImVec2(button_width, 0)))
-		{
-			std::string tmp;
-			if (disk_present)
-				tmp = changed_prefs.floppyslots[i].df;
-			else
-				tmp = get_floppy_path();
-			OpenFileDialog("Select disk image file", ".adf,.adz,.ipf,.dms,.fdi,.hdf,.img,.*", tmp);
-			qs_pending_floppy_drive = i;
-		}
-		if (!drive_enabled) ImGui::EndDisabled();
-
+		// 7. File Path Combo (Next Line)
 		int selected_index = -1;
 		if (disk_present)
 			selected_index = qs_find_in_mru(lstMRUDiskList, changed_prefs.floppyslots[i].df);
@@ -336,7 +352,7 @@ void render_panel_quickstart()
 
 		int combo_index = selected_index + 1;
 		snprintf(label, sizeof(label), "##QSFloppyImagePath%d", i);
-		ImGui::PushItemWidth(-1);
+		ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
 		if (ImGui::Combo(label, &combo_index, items.data(), static_cast<int>(items.size())))
 		{
 			if (combo_index == 0)
@@ -376,20 +392,10 @@ void render_panel_quickstart()
 		ImGui::BeginDisabled();
 		ImGui::Checkbox("CD Drive", &cd_inuse);
 		ImGui::EndDisabled();
-
-		const float button_width = BUTTON_WIDTH;
-		const float buttons_total_width = button_width * 2 + ImGui::GetStyle().ItemSpacing.x;
-		float offset = ImGui::GetWindowContentRegionMax().x - buttons_total_width;
-		ImGui::SameLine(offset);
-
-		bool cd_controls_enabled = changed_prefs.cdslots[0].inuse;
-		if (!cd_controls_enabled) ImGui::BeginDisabled();
-		if (ImGui::Button("Eject", ImVec2(button_width, 0)))
-		{
-			changed_prefs.cdslots[0].name[0] = 0;
-			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-		}
+		
 		ImGui::SameLine();
+
+		const float button_width = 120.0f;
 		if (ImGui::Button("Select file", ImVec2(button_width, 0)))
 		{
 			std::string tmp;
@@ -400,6 +406,20 @@ void render_panel_quickstart()
 
 			OpenFileDialog("Select CD image file", ".cue,.bin,.iso,.ccd,.mds,.chd,.*", tmp);
 			qs_pending_cd = true;
+		}
+
+		// Align Eject to right
+		const float eject_button_width = BUTTON_WIDTH;
+		float offset = ImGui::GetContentRegionAvail().x - eject_button_width;
+		if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 15.0f);
+		else ImGui::SameLine();
+		
+		bool cd_controls_enabled = changed_prefs.cdslots[0].inuse;
+		if (!cd_controls_enabled) ImGui::BeginDisabled();
+		if (ImGui::Button("Eject", ImVec2(eject_button_width, 0)))
+		{
+			changed_prefs.cdslots[0].name[0] = 0;
+			changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
 		}
 		if (!cd_controls_enabled) ImGui::EndDisabled();
 
@@ -414,7 +434,7 @@ void render_panel_quickstart()
 			cd_items.push_back(s.c_str());
 
 		int combo_index = cd_index + 1;
-		ImGui::PushItemWidth(-1);
+		ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
 		if (ImGui::Combo("##QSCDFile", &combo_index, cd_items.data(), static_cast<int>(cd_items.size())))
 		{
 			if (combo_index == 0)
@@ -449,24 +469,12 @@ void render_panel_quickstart()
 		ImGui::PopItemWidth();
 		ImGui::PopID();
 	}
+	EndGroupBox("Emulated Drives");
 
-	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 2));
-	ImGui::Separator();
-	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 0.5f));
+	ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
-	ImGui::TextUnformatted("WHDLoad auto-config:");
-
-	const float whd_button_width = BUTTON_WIDTH;
-	const float whd_buttons_total_width = whd_button_width * 2 + ImGui::GetStyle().ItemSpacing.x;
-	float whd_offset = ImGui::GetWindowContentRegionMax().x - whd_buttons_total_width;
-	ImGui::SameLine(whd_offset);
-
-	if (ImGui::Button("Eject##QSWHD", ImVec2(whd_button_width, 0)))
-	{
-		whdload_prefs.whdload_filename.clear();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Select file##QSWHD", ImVec2(whd_button_width, 0)))
+	BeginGroupBox("WHDLoad auto-config:");
+	if (ImGui::Button("Select file##QSWHD", ImVec2(120.0f, 0)))
 	{
 		std::string tmp;
 		if (!whdload_prefs.whdload_filename.empty())
@@ -476,6 +484,17 @@ void render_panel_quickstart()
 		OpenFileDialog("Select WHDLoad LHA file", ".lha,.lzh,.*", tmp);
 		qs_pending_whd = true;
 	}
+	
+	// Eject Right Aligned
+	float offset = ImGui::GetContentRegionAvail().x - BUTTON_WIDTH;
+	if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 15.0f);
+	else ImGui::SameLine();
+
+	if (ImGui::Button("Eject##QSWHD", ImVec2(BUTTON_WIDTH, 0)))
+	{
+		whdload_prefs.whdload_filename.clear();
+	}
+
 	std::vector<const char*> whd_items;
 	whd_items.push_back("<empty>");
 	whd_items.reserve(qs_whd_display.size() + 1);
@@ -487,7 +506,7 @@ void render_panel_quickstart()
 		whd_index = qs_find_in_mru(lstMRUWhdloadList, whdload_prefs.whdload_filename.c_str());
 
 	int combo_whd_index = whd_index + 1;
-	ImGui::PushItemWidth(-1);
+	ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
 	if (ImGui::Combo("##QSWHDList", &combo_whd_index, whd_items.data(), static_cast<int>(whd_items.size()))) {
 		if (combo_whd_index == 0)
 		{
@@ -505,12 +524,15 @@ void render_panel_quickstart()
 		}
 	}
 	ImGui::PopItemWidth();
+	EndGroupBox("WHDLoad auto-config:");
 
-	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 4));
+	ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
+	BeginGroupBox("Mode");
 	bool qs_mode = amiberry_options.quickstart_start;
 	if (ImGui::Checkbox("Start in Quickstart mode", &qs_mode))
 		amiberry_options.quickstart_start = qs_mode;
+	EndGroupBox("Mode");
 
 	// Only change the current prefs if we're not already emulating
 	if (!emulating && !config_loaded)
@@ -566,4 +588,5 @@ void render_panel_quickstart()
 			qs_pending_whd = false;
 		}
 	}
+	ImGui::Unindent(5.0f);
 }

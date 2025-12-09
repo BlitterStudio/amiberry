@@ -17,6 +17,9 @@ bool ConsumeFileDialogResult(std::string& outPath);
 void OpenDirDialog(const std::string& initialPath);
 bool ConsumeDirDialogResult(std::string& outPath);
 
+void BeginGroupBox(const char* name);
+void EndGroupBox(const char* name);
+
 void render_panel_about();
 void render_panel_paths();
 void render_panel_quickstart();
