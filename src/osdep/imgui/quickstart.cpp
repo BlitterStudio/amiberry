@@ -327,7 +327,7 @@ void render_panel_quickstart()
 		const float eject_button_width = BUTTON_WIDTH;
 		float offset = ImGui::GetContentRegionAvail().x - eject_button_width;
 		// Ensure we don't overlap if resizing really small, though GroupBox has min width usually.
-		if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 15.0f); // -15 for padding (10 internal + extra)
+		if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 20.0f);
 		else ImGui::SameLine();
 
 		bool eject_enabled = drive_enabled && disk_present;
@@ -411,7 +411,7 @@ void render_panel_quickstart()
 		// Align Eject to right
 		const float eject_button_width = BUTTON_WIDTH;
 		float offset = ImGui::GetContentRegionAvail().x - eject_button_width;
-		if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 15.0f);
+		if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 20.0f);
 		else ImGui::SameLine();
 		
 		bool cd_controls_enabled = changed_prefs.cdslots[0].inuse;
@@ -487,7 +487,7 @@ void render_panel_quickstart()
 	
 	// Eject Right Aligned
 	float offset = ImGui::GetContentRegionAvail().x - BUTTON_WIDTH;
-	if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 15.0f);
+	if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 20.0f);
 	else ImGui::SameLine();
 
 	if (ImGui::Button("Eject##QSWHD", ImVec2(BUTTON_WIDTH, 0)))
