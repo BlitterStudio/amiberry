@@ -1922,8 +1922,6 @@ void run_gui()
 		ImGui::EndChild();
 
 		// Button bar
-		ImGui::BeginChild("ButtonBar", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY);
-		
 		// Left-aligned buttons
 		if (ImGui::Button("Reset", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			uae_reset(1, 1);
@@ -1943,13 +1941,12 @@ void run_gui()
 		}
 		
 		// Right-aligned buttons
-		// Calculate width needed for 3 buttons + 2 spacings
 		float right_buttons_width = (BUTTON_WIDTH * 2) + style.ItemSpacing.x;
 		ImGui::SameLine();
 		// Push cursor to the right
 		float cursor_x = ImGui::GetWindowWidth() - right_buttons_width - style.WindowPadding.x;
 		if (cursor_x < ImGui::GetCursorPosX()) 
-			cursor_x = ImGui::GetCursorPosX(); // Prevent overlap if window is too small
+			cursor_x = ImGui::GetCursorPosX(); // Prevent overlap
 		ImGui::SetCursorPosX(cursor_x);
 
 		if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
@@ -1963,7 +1960,6 @@ void run_gui()
 			if (help_ptr && *help_ptr)
 				ShowMessageBox("Help", help_ptr);
 		}
-		ImGui::EndChild();
 
 		if (show_message_box)
 		{
