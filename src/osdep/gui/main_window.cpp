@@ -412,7 +412,7 @@ static int gui_create_rtarea_flag(uae_prefs* p)
 {
 	auto flag = 0;
 
-	if (count_HDs(p) > 0)
+	if (p->mountitems > 0)
 		flag |= 1;
 
 	// We allow on-the-fly switching of this in Amiberry
@@ -572,6 +572,7 @@ void update_gui_screen()
 static bool show_message_box = false;
 static char message_box_title[128] = {0};
 static char message_box_message[1024] = {0};
+static bool start_disabled = false; // Added for disable_resume logic
 
 void BeginGroupBox(const char* name)
 {
@@ -1858,12 +1859,21 @@ ConfigCategory categories[] = {
 	{ nullptr, nullptr, nullptr, nullptr }
 };
 
+void disable_resume()
+{
+	if (emulating)
+	{
+		start_disabled = true;
+	}
+}
+
 void run_gui()
 {
 	gui_running = true;
 	AmigaMonitor* mon = &AMonitors[0];
 
 	amiberry_gui_init();
+	start_disabled = false;
 
 	if (!emulating && amiberry_options.quickstart_start)
 		last_active_panel = 2;
@@ -2032,8 +2042,12 @@ void run_gui()
 			cursor_x = ImGui::GetCursorPosX(); // Prevent overlap
 		ImGui::SetCursorPosX(cursor_x);
 
+		if (start_disabled)
+			ImGui::BeginDisabled();
 		if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 			gui_running = false;
+		if (start_disabled)
+			ImGui::EndDisabled();
 		ImGui::SameLine();
 		if (ImGui::Button("Help", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
@@ -2085,6 +2099,10 @@ void run_gui()
                 ImGui::EndPopup();
             }
         }
+
+		// Check for config changes that require a reset
+		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
+			disable_resume();
 
 		ImGui::End();
 

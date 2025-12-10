@@ -505,6 +505,8 @@ void refresh_all_panels();
 void focus_bug_workaround(const gcn::Window* wnd);
 void disable_resume();
 #elif USE_IMGUI
+// Forward declaration shared with ImGui backend as well
+void disable_resume();
 #define IMGUI_PANEL_LIST \
 PANEL(about,              "About",              "amigainfo.png") \
 PANEL(paths,              "Paths",              "paths.png") \
