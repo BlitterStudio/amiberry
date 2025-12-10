@@ -2044,8 +2044,13 @@ void run_gui()
 
 		if (start_disabled)
 			ImGui::BeginDisabled();
-		if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
-			gui_running = false;
+		if (emulating) {
+			if (ImGui::Button("Resume", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+				gui_running = false;
+		} else {
+			if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+				gui_running = false;
+		}
 		if (start_disabled)
 			ImGui::EndDisabled();
 		ImGui::SameLine();
