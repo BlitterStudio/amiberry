@@ -4136,7 +4136,8 @@ static void sprstartstop(struct sprite *s)
 	if (vpos == s->vstart) {
 		s->dmastate = 1;
 	}
-	if (vpos == s->vstop) {
+	// DMA can't get enabled during last line of VB (sprite reset line)
+	if (vpos == s->vstop || agnus_vb_active_end_line) {
 		s->dmastate = 0;
 		s->dmacycle = 0;
 	}
@@ -4171,20 +4172,7 @@ static void SPRxCTL(uae_u16 v, int num)
 	SPRxCTLPOS(num);
 	sprstartstop(s);
 }
-static void SPRxCTL_DMA(uae_u16 v, int num)
-{
-	struct sprite *s = &spr[num];
 
-	s->ctl = v;
-	sprstartstop(s);
-	SPRxCTLPOS(num);
-	// This is needed to disarm previous field's sprite.
-	// It can be seen on OCS Agnus + ECS Denise combination where
-	// this cycle is disabled due to weird DDFTSTR=$18 copper list
-	// which causes corrupted sprite to "wrap around" the display.
-	s->dmastate = 0;
-	sprstartstop(s);
-}
 static void SPRxPOS(uae_u16 v, int num)
 {
 	struct sprite *s = &spr[num];
@@ -12156,7 +12144,7 @@ static void handle_rga_out(void)
 
 			if (!dmastate) {
 				if (slot) {
-					SPRxCTL_DMA(sdat, num);
+					SPRxCTL(sdat, num);
 				} else {
 					SPRxPOS(sdat, num);
 				}
@@ -12405,6 +12393,17 @@ static void do_cck(bool docycles)
 
 }
 
+static uae_u16 quick_strobe(void)
+{
+	uae_u16 str = get_strobe_reg(0);
+	write_drga_strobe(str);
+	if (prev_strobe == 0x3c && str != 0x3c) {
+		INTREQ_INT(5, 0);
+	}
+	prev_strobe = str;
+	return str;
+}
+
 // horizontal sync callback when line not changed + fast cpu
 static void sync_equalline_handler(void)
 {
@@ -12420,12 +12419,7 @@ static void sync_equalline_handler(void)
 	rga_denise_cycle += rdc_offset;
 	rga_denise_cycle &= DENISE_RGA_SLOT_MASK;
 
-	uae_u16 str = get_strobe_reg(0);
-	write_drga_strobe(str);
-	if (prev_strobe == 0x3c && str != 0x3c) {
-		INTREQ_INT(5, 0);
-	}
-	prev_strobe = str;
+	uae_u16 str = quick_strobe();
 
 	int diff = display_hstart_fastmode - hpos_delta;
 	linear_hpos += diff;
@@ -12473,6 +12467,8 @@ static void sync_equalline_handler(void)
 	} else {
 		custom_fastmode = -1;
 		custom_fastmode_exit = 1;
+		str = quick_strobe();
+		denise_handle_quick_strobe_queue(str, display_hstart_fastmode, rga_denise_cycle);
 	}
 }
 

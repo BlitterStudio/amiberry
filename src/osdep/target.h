@@ -23,7 +23,7 @@
 #define AMIBERRYPUBLICBETA 1
 
 #if AMIBERRYPUBLICBETA
-#define AMIBERRYBETA _T("8")
+#define AMIBERRYBETA _T("9")
 #else
 #define AMIBERRYBETA _T("")
 #endif
