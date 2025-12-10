@@ -436,7 +436,7 @@ void render_panel_cpu() {
             else
                 changed_prefs.cachesize =
                         1024 << (jit_slider_val - 1); // 1->1024, 2->2048... 5->16384
-            
+
             bool jitex = changed_prefs.cachesize > 0;
             if (!jitex) {
                 changed_prefs.compfpu = false;
