@@ -9,6 +9,9 @@
 #include "cpuboard.h"
 #include "memory.h"
 
+#ifndef MAX_JIT_CACHE
+#define MAX_JIT_CACHE 16384
+#endif
 
 static float getcpufreq(int m) {
     const float f = changed_prefs.ntscmode ? 28636360.0f : 28375160.0f;
