@@ -273,6 +273,7 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
         EndGroupBox("MMU");
 
+
         BeginGroupBox("FPU");
         int current_fpu_sel = 0;
         if (changed_prefs.fpu_model == 68881)
@@ -299,6 +300,24 @@ void render_panel_cpu() {
 
         ImGui::BeginDisabled(!enable_chk_fpustrict);
         ImGui::Checkbox("More compatible##FPU", &changed_prefs.fpu_strict);
+        
+        // FPU Mode Combo
+        const char* fpu_mode_items[] = { "Host (64-bit)", "Host (80-bit)", "Softfloat (80-bit)" };
+        int fpu_mode_idx = changed_prefs.fpu_mode < 0 ? 1 : (changed_prefs.fpu_mode > 0 ? 2 : 0);
+        ImGui::SetNextItemWidth(slider_width);
+        if (ImGui::Combo("##FPUMode", &fpu_mode_idx, fpu_mode_items, IM_ARRAYSIZE(fpu_mode_items))) {
+            if (fpu_mode_idx == 0) changed_prefs.fpu_mode = 0;
+            else if (fpu_mode_idx == 1) changed_prefs.fpu_mode = -1;
+            else if (fpu_mode_idx == 2) changed_prefs.fpu_mode = 1;
+        }
+        ImGui::EndDisabled();
+
+        bool unimplemented_fpu = !changed_prefs.fpu_no_unimplemented;
+        bool enable_unimplemented = (changed_prefs.fpu_model > 0) && (changed_prefs.cachesize == 0);
+        ImGui::BeginDisabled(!enable_unimplemented);
+        if (ImGui::Checkbox("Unimplemented FPU emu", &unimplemented_fpu)) {
+            changed_prefs.fpu_no_unimplemented = !unimplemented_fpu;
+        }
         ImGui::EndDisabled();
         EndGroupBox("FPU");
     }
@@ -311,13 +330,15 @@ void render_panel_cpu() {
     ImGui::BeginGroup(); // Right Column
     {
         BeginGroupBox("CPU Speed");
-        if (ImGui::RadioButton("Fastest Possible", &changed_prefs.m68k_speed, -1)) {
-            if (changed_prefs.m68k_speed == -1)
-                changed_prefs.m68k_speed_throttle = 0;
+        // Logic: WinUAE sets m68k_speed to -1 for "Fastest Possible", 0 for "Cycle Exact/Approx"
+        // Also updates throttle.
+        int speed_mode = changed_prefs.m68k_speed < 0 ? -1 : 0;
+        if (ImGui::RadioButton("Fastest Possible", &speed_mode, -1)) {
+            changed_prefs.m68k_speed = -1;
+            changed_prefs.m68k_speed_throttle = 0;
         }
-        if (ImGui::RadioButton("A500/A1200 or cycle-exact",
-                               &changed_prefs.m68k_speed, 0)) {
-            // No specific side effect needed strictly, but good to note
+        if (ImGui::RadioButton("A500/A1200 or cycle-exact", &speed_mode, 0)) {
+            changed_prefs.m68k_speed = 0;
         }
 
         ImGui::AlignTextToFramePadding();
@@ -398,6 +419,9 @@ void render_panel_cpu() {
             if (ppc_bool) {
                 if (changed_prefs.ppc_mode == 0)
                     changed_prefs.ppc_mode = 1;
+                // WinUAE: if mode==1 and cpu<68040, mode=0.
+                if (changed_prefs.ppc_mode == 1 && changed_prefs.cpu_model < 68040)
+                    changed_prefs.ppc_mode = 0;
             } else {
                 changed_prefs.ppc_mode = 0;
             }
