@@ -121,6 +121,9 @@ static void draw_denise_vsync(int);
 static void denise_update_reg(uae_u16 reg, uae_u16 v, uae_u32 linecnt);
 static void draw_denise_line(int gfx_ypos, nln_how how, uae_u32 linecnt, int startpos, int startcycle, int endcycle, int skip, int skip2, int dtotal, int calib_start, int calib_len, bool lol, int hdelay, bool blanked, bool finalseg, struct linestate *ls);
 
+static void sprwrite(int reg, uae_u32 v);
+static int spr_unalign_reg, spr_unalign_val;
+
 static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
 {
 	int pos = startpos;
@@ -130,6 +133,9 @@ static void quick_denise_rga(uae_u32 linecnt, int startpos, int endpos)
 		struct denise_rga *rd = &rga_denise[pos];
 		if (rd->line == linecnt && rd->rga != 0x1fe && (rd->rga < 0x38 || rd->rga >= 0x40)) {
 			denise_update_reg(rd->rga, rd->v, linecnt);
+			if (spr_unalign_reg) {
+				sprwrite(spr_unalign_reg - 0x140, spr_unalign_val);
+			}
 		}
 		pos++;
 		pos &= DENISE_RGA_SLOT_MASK;
@@ -315,6 +321,7 @@ static int sprite_offs[256];
 /* OCS/ECS color lookup table. */
 xcolnr xcolors[4096];
 
+static int chunky_out_prev_len;
 static uae_u32 chunky_out[4096], dpf_chunky_out[4096];
 
 #ifdef AGA
@@ -460,7 +467,6 @@ static uae_u16 clxcon_bpl_match_55, clxcon_bpl_match_aa;
 static int aga_delayed_color_idx;
 static uae_u16 aga_delayed_color_val, aga_delayed_color_con2, aga_delayed_color_con3;
 static int aga_unalign0, aga_unalign1, bpl1dat_unalign, reswitch_unalign;
-static int spr_unalign_reg, spr_unalign_val;
 #if 0
 static int bplcon0_res_unalign, bplcon0_res_unalign_res;
 #endif
@@ -1699,8 +1705,6 @@ static void init_drawing_frame(void)
 	thisframe_last_drawn_line = -1;
 }
 
-static int lightpen_y1[2], lightpen_y2[2];
-
 void putpixel(uae_u8 *buf, uae_u8 *genlockbuf, int x, xcolnr c8)
 {
 	if (x <= 0)
@@ -1816,12 +1820,12 @@ static const char *lightpen_cursor = {
 	"------.....------"
 	"------.xxx.------"
 	"------.xxx.------"
-	"------.xxx.------"
-	".......xxx......."
-	".xxxxxxxxxxxxxxx."
-	".xxxxxxxxxxxxxxx."
-	".......xxx......."
-	"------.xxx.------"
+	"-------.x.-------"
+	"......-----......"
+	".xxxx-------xxxx."
+	".xxxx-------xxxx."
+	"......-----......"
+	"-------.x.-------"
 	"------.xxx.------"
 	"------.xxx.------"
 	"------.....------"
@@ -1882,8 +1886,8 @@ static void lightpen_update(struct vidbuffer *vb, int lpnum)
 	cy >>= linedbl;
 	cy += minfirstline;
 
-	cx += currprefs.lightpen_offset[0];
-	cy += currprefs.lightpen_offset[1];
+	cx += currprefs.lightpen_offset[0][0];
+	cy += currprefs.lightpen_offset[0][1];
 
 	if (cx <= 0x18 - 1) {
 		cx = 0x18 - 1;
@@ -1901,21 +1905,20 @@ static void lightpen_update(struct vidbuffer *vb, int lpnum)
 	if (currprefs.lightpen_crosshair && lightpen_active) {
 		if (denise_lock()) {
 			for (int i = 0; i < LIGHTPEN_HEIGHT; i++) {
-				int line = lightpen_y[lpnum] + i - LIGHTPEN_HEIGHT / 2;
+				int line = lightpen_y[lpnum] + i - LIGHTPEN_HEIGHT / 2 + currprefs.lightpen_offset[1][1];
 				if (line >= 0 && line < max_ypos_thisframe1) {
 					if (lightpen_active & (1 << lpnum)) {
-						draw_lightpen_cursor(vb->monitor_id, lightpen_x[lpnum], i, line, cx > 0, lpnum);
+						draw_lightpen_cursor(vb->monitor_id, lightpen_x[lpnum] + currprefs.lightpen_offset[1][0], i, line, cx > 0, lpnum);
 					}
 				}
 			}
 		}
 	}
 
-	lightpen_y1[lpnum] = lightpen_y[lpnum] - LIGHTPEN_HEIGHT / 2 - 1 + (thisframe_y_adjust_real >> linedbl);
-	lightpen_y2[lpnum] = lightpen_y1[lpnum] + LIGHTPEN_HEIGHT + 1 + (thisframe_y_adjust_real >> linedbl);
-
 	lightpen_cx[lpnum] = out ? -1 : cx;
 	lightpen_cy[lpnum] = out ? -1 : cy;
+
+	//write_log("%03d*%03d\n", cx, cy);
 }
 
 static void refresh_indicator_init(void)
@@ -2389,8 +2392,6 @@ void reset_drawing(void)
 	init_drawing_frame();
 
 	frame_res_cnt = currprefs.gfx_autoresolution_delay;
-	lightpen_y1[0] = lightpen_y2[0] = -1;
-	lightpen_y1[1] = lightpen_y2[1] = -1;
 
 	reset_custom_limits();
 
@@ -3835,6 +3836,7 @@ static void expand_drga_early(struct denise_rga *rd)
 
 	switch (rd->rga)
 	{
+		// SPRxPOS/SPRxCTL
 		case 0x140: case 0x142:
 		case 0x148: case 0x14a:
 		case 0x150: case 0x152:
@@ -3847,6 +3849,7 @@ static void expand_drga_early(struct denise_rga *rd)
 			spr_unalign_val = rd->v;
 			break;
 
+		// SPRxDATA/SPRxDATB
 		case 0x144: case 0x146:
 		case 0x14c: case 0x14e:
 		case 0x154: case 0x156:
@@ -5098,10 +5101,6 @@ static bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
 	lts_unaligned_aga(cnt, cnt_next, h);
 	return true;
 #endif
-	if (h && spr_unalign_reg) {
-		lts_unaligned_aga(cnt, cnt_next, h);
-		return true;
-	}
 	if (aga_unalign0 > 0 && !h) {
 		aga_unalign0--;
 		lts_unaligned_aga(cnt, cnt_next, h);
@@ -5163,6 +5162,10 @@ static bool checkhorizontal1_aga(int cnt, int cnt_next, int h)
 			lts_unaligned_aga(cnt, cnt_next, h);
 			return true;
 		}
+	}
+	if (h && spr_unalign_reg) {
+		lts_unaligned_aga(cnt, cnt_next, h);
+		return true;
 	}
 	return false;
 }
@@ -6936,12 +6939,12 @@ static int l_shift(int v, int shift)
 static void draw_blank_start(int len)
 {
 	if (len > 0 && buf1 < (uae_u32*)xlinebuffer_start) {
-		int d = (uae_u32*)xlinebuffer_start - buf1;
+		int d = addrdiff((uae_u32*)xlinebuffer_start, buf1);
 		buf1 += d;
 		len -= d;
 	}
 	if (buf1 + len > (uae_u32*)xlinebuffer_end) {
-		len = (uae_u32*)xlinebuffer_end - buf1;
+		len = addrdiff((uae_u32*)xlinebuffer_end, buf1);
 	}
 	if (len > 0) {
 		memset(buf1, 0, len * sizeof(uae_u32));
@@ -6956,7 +6959,7 @@ static void draw_blank_end(void)
 		buf1 = (uae_u32*)xlinebuffer_start;
 	}
 	if (buf1 < (uae_u32*)xlinebuffer_end) {
-		int len = (uae_u32*)xlinebuffer_end - buf1;
+		int len = addrdiff((uae_u32*)xlinebuffer_end, buf1);
 		if (len > 0) {
 			memset(buf1, 0, len * sizeof(uae_u32));
 			if (buf2) {
@@ -7206,7 +7209,13 @@ void draw_denise_bitplane_line_fast(int gfx_ypos, enum nln_how how, struct lines
 
 	uae_u32 *cstart = chunky_out + 1024;
 	int len = (ls->bpllen + 3) / 4;
+	int byteoutlen = len * 8 * 4;
 	pfield_doline_8(planecnt, len, (uae_u8*)cstart, ls);
+	// if previous line was longer: clear the unused part
+	if (chunky_out_prev_len > byteoutlen) {
+		memset((uae_u8*)cstart + byteoutlen, 0, chunky_out_prev_len - byteoutlen);
+	}
+	chunky_out_prev_len = byteoutlen;
 
 	bool ecsena = ecs_denise && (ls->bplcon0 & 1) != 0;
 	bool brdblank = (ls->bplcon3 & 0x20) && ecsena;

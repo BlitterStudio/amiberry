@@ -2617,7 +2617,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_strarr(f, _T("monitoremu"), specialmonitorconfignames, p->monitoremu);
 #endif
 	cfgfile_dwrite(f, _T("monitoremu_monitor"), _T("%d"), p->monitoremu_mon);
-	cfgfile_dwrite_coords(f, _T("lightpen_offset"), p->lightpen_offset[0], p->lightpen_offset[1]);
+	cfgfile_dwrite_coords(f, _T("lightpen_offset"), p->lightpen_offset[0][0], p->lightpen_offset[0][1]);
+	cfgfile_dwrite_coords(f, _T("lightpen_offset_gfx"), p->lightpen_offset[1][0], p->lightpen_offset[1][1]);
 	cfgfile_dwrite_bool(f, _T("lightpen_crosshair"), p->lightpen_crosshair);
 
 	cfgfile_dwrite_bool (f, _T("show_leds"), !!(p->leds_on_screen & STATUSLINE_CHIPSET));
@@ -6018,7 +6019,8 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 		|| cfgfile_yesno(option, value, _T("gfxcard_dacswitch"), &p->rtg_dacswitch)
 		|| cfgfile_yesno(option, value, _T("gfxcard_multithread"), &p->rtg_multithread)
 		|| cfgfile_yesno(option, value, _T("synchronize_clock"), &p->tod_hack)
-		|| cfgfile_coords(option, value, _T("lightpen_offset"), &p->lightpen_offset[0], &p->lightpen_offset[1])
+		|| cfgfile_coords(option, value, _T("lightpen_offset"), &p->lightpen_offset[0][0], &p->lightpen_offset[0][1])
+		|| cfgfile_coords(option, value, _T("lightpen_offset_gfx"), &p->lightpen_offset[1][0], &p->lightpen_offset[1][1])
 		|| cfgfile_yesno(option, value, _T("lightpen_crosshair"), &p->lightpen_crosshair)
 
 		|| cfgfile_yesno(option, value, _T("kickshifter"), &p->kickshifter)
