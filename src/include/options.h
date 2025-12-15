@@ -282,6 +282,7 @@ enum { CP_GENERIC = 1, CP_CDTV, CP_CDTVCR, CP_CD32, CP_A500, CP_A500P, CP_A600,
 
 #define MANUAL_SCALE_MIN_RANGE -1999
 #define MANUAL_SCALE_MAX_RANGE 1999
+#define MANUAL_FILTER_MAX_RANGE 9999
 
 #define MONITOREMU_NONE 0
 #define MONITOREMU_AUTO 1
@@ -708,7 +709,7 @@ struct uae_prefs {
 	int lightboost_strobo_ratio;
 	bool gfx_grayscale;
 	bool lightpen_crosshair;
-	int lightpen_offset[2];
+	int lightpen_offset[2][2];
 	int gfx_display_sections;
 	int gfx_variable_sync;
 	bool gfx_windowed_resize;

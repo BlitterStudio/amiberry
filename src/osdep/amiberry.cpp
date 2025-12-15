@@ -569,6 +569,9 @@ bool setpaused(const int priority)
 	const AmigaMonitor* mon = &AMonitors[0];
 	if (pause_emulation > priority)
 		return false;
+	if (!pause_emulation) {
+		wait_keyrelease();
+	}
 	pause_emulation = priority;
 	devices_pause();
 	setsoundpaused();
