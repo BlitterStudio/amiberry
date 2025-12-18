@@ -1763,12 +1763,14 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 		}
 
 		sb->resultval = 0;
+		/*
 		if (readfds)
 			fd_zero(ctx, readfds, nfds);
 		if (writefds)
 			fd_zero(ctx, writefds, nfds);
 		if (exceptfds)
 			fd_zero(ctx, exceptfds, nfds);
+		*/
 
 		bsdsocklib_seterrno (ctx, sb, 0);
 	} else if (sigs & sb->eintrsigs) {
