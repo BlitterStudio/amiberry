@@ -848,15 +848,24 @@ static int bsdlib_threadfunc(void* arg)
 
 		case 1:       /* Connect */
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Connect_2, sb);
+			if ((int)sb->resultval < 0) {
+				SETERRNO;
+			}
 			break;
 
 			/* @@@ Should check (from|to)len so it's 16.. */
 		case 2:       /* Send[to] */
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Send_2, sb);
+			if ((int)sb->resultval < 0) {
+				SETERRNO;
+			}
 			break;
 
 		case 3:       /* Recv[from] */
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Recv_2, sb);
+			if ((int)sb->resultval < 0) {
+				SETERRNO;
+			}
 			break;
 
 		case 4: {     /* Gethostbyname */
@@ -892,6 +901,9 @@ static int bsdlib_threadfunc(void* arg)
 
 		case 6:       /* Accept */
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Accept_2, sb);
+			if ((int)sb->resultval < 0) {
+				SETERRNO;
+			}
 			break;
 
 		case 7: {
