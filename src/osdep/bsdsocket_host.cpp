@@ -41,6 +41,7 @@
 #ifdef HAVE_SYS_FILIO_H
 # include <sys/filio.h>
 #endif
+#include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <cstddef>
@@ -1332,8 +1333,6 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 {
 	TrapContext* ctx = NULL;
 	int s = getsock(ctx, sb, sd + 1);
-	int nativelevel = mapsockoptlevel(level);
-	int nativeoptname = mapsockoptname(nativelevel, optname);
 	void* buf = NULL;
 	struct linger sl;
 	struct timeval timeout;
@@ -1343,6 +1342,25 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		bsdsocklib_seterrno(ctx, sb, 9); /* EBADF */
 		return;
 	}
+
+	// Handle SO_EVENTMASK (0x2001) - Amiga-specific async event notification
+	// Must be checked BEFORE mapsockoptname validation since it's not in the mapping table
+	// Level 0xFFFF is Amiga's SOL_SOCKET value
+	if (level == 0xFFFF && optname == 0x2001) {
+		uae_u32 eventflags = 0;
+		if (optval && len >= 4) {
+			eventflags = get_long(optval);
+		}
+		// Store event mask in ftable (using upper bits)
+		sb->ftable[sd] = (sb->ftable[sd] & ~REP_ALL) | (eventflags & REP_ALL);
+		// On Linux we don't have WSAAsyncSelect, so we just succeed
+		sb->resultval = 0;
+		return;
+	}
+
+	// Now map the level and option name
+	int nativelevel = mapsockoptlevel(level);
+	int nativeoptname = mapsockoptname(nativelevel, optname);
 
 	// Prevent invalid setsockopt calls
 	if (nativeoptname == -1) {
@@ -1570,6 +1588,60 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 			write_log("Ioctl FIONREAD failed: %d\n", errno);
 		}
 		return r;
+
+	// Interface discovery IOCTLs - purely additive, won't affect existing code
+	case 0x80106921: /* SIOCGIFADDR */
+	case 0x80106923: /* SIOCGIFDSTADDR */
+	case 0x80106925: /* SIOCGIFBRDADDR */
+	case 0x80106927: /* SIOCGIFNETMASK */
+	case 0xc0206911: /* SIOCGIFFLAGS */
+	{
+		struct ifreq ifr;
+		memset(&ifr, 0, sizeof(ifr));
+		// Read interface name from Amiga memory
+		for (int i = 0; i < IFNAMSIZ - 1; i++) {
+			ifr.ifr_name[i] = trap_get_byte(ctx, arg + i);
+			if (ifr.ifr_name[i] == 0) break;
+		}
+		ifr.ifr_name[IFNAMSIZ - 1] = 0;
+		r = ioctl(sock, request, &ifr);
+		if (r >= 0) {
+			// Write result back
+			if (request == 0xc0206911) { // SIOCGIFFLAGS
+				trap_put_word(ctx, arg + IFNAMSIZ, ifr.ifr_flags);
+			} else { // Address IOCTLs
+				copysockaddr_n2a(arg + IFNAMSIZ, (struct sockaddr_in*)&ifr.ifr_addr, 16);
+			}
+		}
+		return r;
+	}
+
+	case 0xc0086924: /* SIOCGIFCONF */
+	{
+		struct ifconf ifc;
+		char buf[1024];
+		ifc.ifc_len = sizeof(buf);
+		ifc.ifc_buf = buf;
+		r = ioctl(sock, SIOCGIFCONF, &ifc);
+		if (r >= 0) {
+			// Write back the interface list
+			trap_put_long(ctx, arg, ifc.ifc_len);
+			uae_u32 bufptr = trap_get_long(ctx, arg + 4);
+			if (bufptr) {
+				for (int i = 0; i < ifc.ifc_len && i < (int)sizeof(buf);) {
+					struct ifreq *ifr = (struct ifreq*)(buf + i);
+					// Write interface name
+					for (int j = 0; j < IFNAMSIZ; j++) {
+						trap_put_byte(ctx, bufptr + i + j, ifr->ifr_name[j]);
+					}
+					// Write address
+					copysockaddr_n2a(bufptr + i + IFNAMSIZ, (struct sockaddr_in*)&ifr->ifr_addr, 16);
+					i += sizeof(struct ifreq);
+				}
+			}
+		}
+		return r;
+	}
 
 	} /* end switch */
 
