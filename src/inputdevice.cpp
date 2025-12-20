@@ -2616,7 +2616,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 
 	getgfxoffset(monid, &fdx, &fdy, &fmx, &fmy);
 
-	//write_log("%.2f*%.2f %.2f*%.2f\n", fdx, fdy, fmx, fmy);
+	//write_log("%d %d, %.2f*%.2f %.2f*%.2f\n", x, y, fdx, fdy, fmx, fmy);
 
 #ifdef PICASSO96
 	if (ad->picasso_on) {
@@ -3316,8 +3316,6 @@ end:
 		if (!ad->picasso_on) {
 			int aw = 0, ah = 0, dx, dy;
 			get_custom_mouse_limits(&aw, &ah, &dx, &dy, dimensioninfo_dbl);
-			x += dx;
-			y += dy;
 			float dx2, dy2, mx2, my2;
 			getgfxoffset(monid, &dx2, &dy2, &mx2, &my2);
 			if (mx2) {
@@ -3326,6 +3324,8 @@ end:
 			if (my2) {
 				y = (int)(y / my2);
 			}
+			x += dx;
+			y += dy;
 			x += (int)dx2;
 			y += (int)dy2;
 		} else {
