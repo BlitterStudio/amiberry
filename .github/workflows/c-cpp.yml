@@ -115,7 +115,7 @@ jobs:
           path: Amiberry-*.zip
 
   build-macOS-Apple-Silicon:
-    runs-on: macos-latest
+    runs-on: macos-15
     permissions:
       contents: read
       actions: write
