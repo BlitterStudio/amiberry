@@ -307,7 +307,7 @@ void releasesock (TrapContext *ctx, SB, int sd)
 /* Signal queue */
 /* @@@ TODO: ensure proper interlocking */
 #if 1
-struct socketbase *sbsigqueue;
+struct socketbase * volatile sbsigqueue;
 volatile int bsd_int_requested;
 #endif
 
@@ -315,12 +315,20 @@ void addtosigqueue (SB, int events)
 {
 	locksigqueue ();
 
+#ifdef AMIBERRY
+	if (events && sb->eventsigs)
+#else
 	if (events)
+#endif
 		sb->sigstosend |= sb->eventsigs;
 	else
 		sb->sigstosend |= ((uae_u32) 1) << sb->signal;
 
+#ifdef AMIBERRY
+	if (!sb->dosignal || sbsigqueue == NULL) {
+#else
 	if (!sb->dosignal) {
+#endif
 		sb->nextsig = sbsigqueue;
 		sbsigqueue = sb;
 	}
@@ -487,11 +495,21 @@ static void free_socketbase (TrapContext *ctx)
 
 #if 1
 		if (sb == sbsigqueue)
+#ifdef AMIBERRY
+			sbsigqueue = sb->nextsig;
+#else
 			sbsigqueue = sb->next;
+#endif
 		else {
+#ifdef AMIBERRY
+			for (nsb = sbsigqueue; nsb; nsb = nsb->nextsig) {
+				if (sb == nsb->nextsig) {
+					nsb->nextsig = sb->nextsig;
+#else
 			for (nsb = sbsigqueue; nsb; nsb = nsb->next) {
 				if (sb == nsb->next) {
 					nsb->next = sb->next;
+#endif
 					break;
 				}
 			}
@@ -1719,8 +1737,12 @@ done:
 
 static uae_u32 REGPARAM2 bsdsocklib_GetSocketEvents(TrapContext *ctx)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
 	struct socketbase *sb = get_socketbase(ctx);
+#else
+	// Amiberry: Get socketbase generically
+	struct socketbase *sb = get_socketbase(ctx);
+#endif
 	int i;
 	int flags;
 	uae_u32 ptr = trap_get_areg(ctx, 0);
@@ -1731,7 +1753,13 @@ static uae_u32 REGPARAM2 bsdsocklib_GetSocketEvents(TrapContext *ctx)
 		if (sb->eventindex >= sb->dtablesize)
 			sb->eventindex = 0;
 
-		if (sb->mtable[sb->eventindex]) {
+#ifdef _WIN32
+		if (sb->mtable[sb->eventindex]) 
+#else
+		// Amiberry: No mtable check needed, ftable is sufficient
+		if (1)
+#endif
+		{
 			flags = sb->ftable[sb->eventindex] & SET_ALL;
 			if (flags) {
 				sb->ftable[sb->eventindex] &= ~SET_ALL;
@@ -1741,7 +1769,6 @@ static uae_u32 REGPARAM2 bsdsocklib_GetSocketEvents(TrapContext *ctx)
 			}
 		}
 	}
-#endif
 	BSDTRACE ((_T("-1\n")));
 	return -1;
 }
