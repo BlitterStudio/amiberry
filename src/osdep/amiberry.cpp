@@ -57,6 +57,7 @@
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
+#include "gui/gui_handling.h"
 
 #ifdef __MACH__
 #include <string>
@@ -1918,7 +1919,8 @@ static void handle_drop_file_event(const SDL_Event& event)
 	if (strcasecmp(ext.c_str(), ".uae") == 0)
 	{
 		// Load configuration file
-		uae_restart(&currprefs, -1, dropped_file);
+		uae_restart(&currprefs, 1, dropped_file);
+		gui_running = false;
 	}
 	else if (strcasecmp(ext.c_str(), ".adf") == 0 || strcasecmp(ext.c_str(), ".adz") == 0 || strcasecmp(ext.c_str(), ".dms") == 0 || strcasecmp(ext.c_str(), ".ipf") == 0 || strcasecmp(ext.c_str(), ".zip") == 0)
 	{
@@ -1929,13 +1931,15 @@ static void handle_drop_file_event(const SDL_Event& event)
 	{
 		// WHDLoad archive
 		whdload_auto_prefs(&currprefs, dropped_file);
-		uae_restart(&currprefs, -1, nullptr);
+		uae_restart(&currprefs, 0, nullptr);
+		gui_running = false;
 	}
 	else if (strcasecmp(ext.c_str(), ".cue") == 0 || strcasecmp(ext.c_str(), ".iso") == 0 || strcasecmp(ext.c_str(), ".chd") == 0)
 	{
 		// CD image
 		cd_auto_prefs(&currprefs, dropped_file);
-		uae_restart(&currprefs, -1, nullptr);
+		uae_restart(&currprefs, 0, nullptr);
+		gui_running = false;
 	}
 	SDL_free(dropped_file);
 }

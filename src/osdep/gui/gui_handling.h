@@ -1,12 +1,15 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
 
+#include <guisan.hpp>
+#include <guisan/sdl.hpp>
 #include <guisan/sdl/sdlinput.hpp>
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "filesys.h"
 #include "options.h"
 #include "registry.h"
+#include "SelectorEntry.hpp"
 
 enum
 {
@@ -427,7 +430,7 @@ extern int fromdfxtype(int num, int dfx, int subtype);
 extern int todfxtype(int num, int dfx, int* subtype);
 extern void DisplayDiskInfo(int num);
 extern std::string get_full_path_from_disk_list(std::string element);
-extern amiberry_hotkey get_hotkey_from_config(std::string config_option);
+extern amiberry_hotkey get_hotkey_from_config(std::string& config_option);
 extern void save_mapping_to_file(const std::string& mapping);
 extern void clear_whdload_prefs();
 extern void create_startup_sequence();
