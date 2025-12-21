@@ -289,6 +289,28 @@ void set_volume(int volume, int mute)
 	config_changed = 1;
 }
 
+static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuffer)
+{
+	sound_dp* s = sd->data;
+	if (sd->mute) {
+		memset(sndbuffer, 0, sd->sndbufsize);
+		s->silence_written++; // In push mode no sound gen means no audio push so this might not be incremented frequently
+	}
+	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
+
+	// Sync
+	const auto queued = SDL_GetQueuedAudioSize(s->dev);
+	const auto target = sd->sndbufsize; // Target 1 buffer latency?
+	const auto diff = static_cast<int>(queued) - target;
+	const auto val = static_cast<float>(diff) / static_cast<float>(sd->samplesize);
+	
+	int vis = 0;
+	if (target > 0)
+		vis = queued * 500 / target; // 500 = 50% (nominal)
+	
+	docorrection(s, vis, val, 100);
+}
+
 static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 {
 	auto* s = sd->data;
@@ -304,10 +326,19 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 	memcpy(s->pullbuffer + s->pullbufferlen, sndbuffer, sd->sndbufsize);
 	s->pullbufferlen += sd->sndbufsize;
 	
-	if (s->pullbuffermaxlen > 0)
-		gui_data.sndbuf = (1000.0f * s->pullbufferlen) / s->pullbuffermaxlen;
-
+	// Calc sync inside lock to get consistent len
+	const auto len = s->pullbufferlen;
+	const auto maxlen = s->pullbuffermaxlen;
 	SDL_UnlockAudioDevice(s->dev);
+
+	if (maxlen > 0)
+	{
+		const auto target = maxlen / 2;
+		const auto diff = len - target;
+		const auto val = static_cast<float>(diff) / static_cast<float>(sd->samplesize);
+		const auto vis = len * 1000 / maxlen;
+		docorrection(s, vis, val, 100);
+	}
 }
 
 static int open_audio_sdl2(struct sound_data* sd, int index)
@@ -559,15 +590,7 @@ void restart_sound_buffer()
 	//restart_sound_buffer2(sdp);
 }
 
-static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuffer)
-{
-	sound_dp* s = sd->data;
-	if (sd->mute) {
-		memset(sndbuffer, 0, sd->sndbufsize);
-		s->silence_written++; // In push mode no sound gen means no audio push so this might not be incremented frequently
-	}
-	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
-}
+
 
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 {
