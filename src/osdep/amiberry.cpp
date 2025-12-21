@@ -1745,10 +1745,11 @@ static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor
 	const auto state = event.button.state == SDL_PRESSED;
 	const auto clicks = event.button.clicks;
 
+	mouseinside = true;
+
 	if (button == SDL_BUTTON_LEFT && !mouseactive && (!mousehack_alive() || currprefs.input_tablet != TABLET_MOUSEHACK ||
 		(currprefs.input_tablet == TABLET_MOUSEHACK && !(currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))))
 	{
-		mouseinside = true;
 		if (!pause_emulation || currprefs.active_nocapture_pause)
 			setmouseactive(mon->monitor_id, (clicks == 1 || isfullscreen() > 0) ? 2 : 1);
 	}
