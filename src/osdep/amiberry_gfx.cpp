@@ -2378,7 +2378,20 @@ int check_prefs_changed_gfx()
 	}
 #endif
 
+	if (changed_prefs.rtgboards[0].rtgmem_type != currprefs.rtgboards[0].rtgmem_type)
+	{
+		return 1;
+	}
+
 	return 0;
+}
+
+static void update_pixel_format()
+{
+	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
+		pixel_format = SDL_PIXELFORMAT_ARGB8888; // BGRA for custom boards
+	else
+		pixel_format = SDL_PIXELFORMAT_ABGR8888; // RGBA for UAE elements
 }
 
 /* Color management */
@@ -2393,7 +2406,25 @@ void init_colors(const int monid)
 	/* init colors */
 
 	red_bits = green_bits = blue_bits = 8;
-	red_shift = 0; green_shift = 8; blue_shift = 16;
+	red_bits = green_bits = blue_bits = 8;
+	
+	SDL_PixelFormat *pf = SDL_AllocFormat(pixel_format);
+	if (pf) {
+		red_shift = pf->Rshift;
+		green_shift = pf->Gshift;
+		blue_shift = pf->Bshift;
+		alpha_shift = pf->Ashift;
+		SDL_FreeFormat(pf);
+	} else {
+		// Fallback defaults if allocation fails
+		if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+			// BGRA
+			red_shift = 16; green_shift = 8; blue_shift = 0; alpha_shift = 24;
+		} else {
+			// RGBA
+			red_shift = 0; green_shift = 8; blue_shift = 16; alpha_shift = 24;
+		}
+	}
 
 	alloc_colors64k(monid, red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, alpha_bits, alpha_shift, alpha, 0);
 	notice_new_xcolors();
@@ -2807,6 +2838,7 @@ void machdep_free()
 
 int graphics_init(bool mousecapture)
 {
+	update_pixel_format();
 	gfxmode_reset(0);
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
 		if (currprefs.monitoremu_mon > 0 && currprefs.monitoremu) {

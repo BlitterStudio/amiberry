@@ -840,7 +840,7 @@ static void setupcursor()
 
 	setupcursor_needed = 1;
 	if (cursordata && cursorwidth && cursorheight) {
-		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_BGRA32);
+		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
 
 		for (int y = 0; y < cursorheight; y++) {
 			uae_u8 *p1 = cursordata + cursorwidth * y;
@@ -1883,6 +1883,13 @@ static void updatesprcolors (int bpp)
 				v |= 0xff000000;
 			else
 				v &= 0x00ffffff;
+			
+			// If we are using UAE RTG, we use RGBA surface, so we need to swap R and B
+			// (Since v comes in 0x..RRGGBB -> LE BBGGRR.. which matches BGRA surface order)
+			if (currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE) {
+				v = (v & 0xFF00FF00) | ((v & 0x00FF0000) >> 16) | ((v & 0x000000FF) << 16);
+			}
+
 			cursorrgbn[i] = v;
 			break;
 		default: // 1
@@ -2019,7 +2026,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	cursor_surface = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
+	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
 	if (!cursor_surface)
 		goto end;
 
