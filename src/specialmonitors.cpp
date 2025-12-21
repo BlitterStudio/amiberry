@@ -117,7 +117,11 @@ STATIC_INLINE bool is_transparent(uae_u16 v)
 
 STATIC_INLINE uae_u8 FVR(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return dataline[0];
+#else
 	return dataline[2];
+#endif
 }
 STATIC_INLINE uae_u8 FVG(struct vidbuffer *src, uae_u8 *dataline)
 {
@@ -125,12 +129,20 @@ STATIC_INLINE uae_u8 FVG(struct vidbuffer *src, uae_u8 *dataline)
 }
 STATIC_INLINE uae_u8 FVB(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return dataline[2];
+#else
 	return dataline[0];
+#endif
 }
 
 STATIC_INLINE bool FR(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return (dataline[0] & 0x80) != 0;
+#else
 	return (dataline[2] & 0x80) != 0;
+#endif
 }
 STATIC_INLINE bool FG(struct vidbuffer *src, uae_u8 *dataline)
 {
@@ -138,11 +150,19 @@ STATIC_INLINE bool FG(struct vidbuffer *src, uae_u8 *dataline)
 }
 STATIC_INLINE bool FB(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return (dataline[2] & 0x80) != 0;
+#else
 	return (dataline[0] & 0x80) != 0;
+#endif
 }
 STATIC_INLINE bool FI(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return (dataline[2] & 0x10) != 0;
+#else
 	return (dataline[0] & 0x10) != 0;
+#endif
 }
 
 STATIC_INLINE uae_u8 FIRGB(struct vidbuffer *src, uae_u8 *dataline)
@@ -186,17 +206,30 @@ STATIC_INLINE uae_u8 DCTV_FIRBG(struct vidbuffer *src, uae_u8 *dataline)
 
 STATIC_INLINE void PRGB(struct vidbuffer *dst, uae_u8 *dataline, uae_u8 r, uae_u8 g, uae_u8 b)
 {
+#ifdef AMIBERRY
+	dataline[0] = r;
+	dataline[1] = g;
+	dataline[2] = b;
+#else
 	dataline[0] = b;
 	dataline[1] = g;
 	dataline[2] = r;
+#endif
 }
 
 STATIC_INLINE void PRGBA(struct vidbuffer *dst, uae_u8 *dataline, uae_u8 r, uae_u8 g, uae_u8 b, uae_u8 a)
 {
+#ifdef AMIBERRY
+	dataline[0] = r;
+	dataline[1] = g;
+	dataline[2] = b;
+	dataline[3] = a;
+#else
 	dataline[0] = b;
 	dataline[1] = g;
 	dataline[2] = r;
 	dataline[3] = a;
+#endif
 }
 
 
