@@ -1908,6 +1908,38 @@ static void handle_pen_event(const SDL_Event& event)
 	//}
 }
 
+std::string get_filename_extension(const TCHAR* filename);
+
+static void handle_drop_file_event(const SDL_Event& event)
+{
+	char* dropped_file = event.drop.file;
+	const auto ext = get_filename_extension(dropped_file);
+
+	if (strcasecmp(ext.c_str(), ".uae") == 0)
+	{
+		// Load configuration file
+		uae_restart(&currprefs, -1, dropped_file);
+	}
+	else if (strcasecmp(ext.c_str(), ".adf") == 0 || strcasecmp(ext.c_str(), ".adz") == 0 || strcasecmp(ext.c_str(), ".dms") == 0 || strcasecmp(ext.c_str(), ".ipf") == 0 || strcasecmp(ext.c_str(), ".zip") == 0)
+	{
+		// Insert floppy image
+		disk_insert(0, dropped_file);
+	}
+	else if (strcasecmp(ext.c_str(), ".lha") == 0)
+	{
+		// WHDLoad archive
+		whdload_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, -1, nullptr);
+	}
+	else if (strcasecmp(ext.c_str(), ".cue") == 0 || strcasecmp(ext.c_str(), ".iso") == 0 || strcasecmp(ext.c_str(), ".chd") == 0)
+	{
+		// CD image
+		cd_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, -1, nullptr);
+	}
+	SDL_free(dropped_file);
+}
+
 static void process_event(const SDL_Event& event)
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -1984,6 +2016,10 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_MOUSEWHEEL:
 			handle_mouse_wheel_event(event);
+			break;
+
+		case SDL_DROPFILE:
+			handle_drop_file_event(event);
 			break;
 
 		//TODO Implement with SDL3 for Tablet support
