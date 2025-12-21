@@ -469,7 +469,21 @@ static int sleep_millis2(int ms, const bool main)
 	return 0;
 }
 
-void sleep_micros (const int ms)
+int busywait;
+
+int target_sleep_nanos(int us)
+{
+	if (us < 0)
+		return 800; // Microseconds threshold
+
+	struct timespec req;
+	req.tv_sec = us / 1000000;
+	req.tv_nsec = (us % 1000000) * 1000;
+	nanosleep(&req, nullptr);
+	return 0;
+}
+
+void sleep_micros(const int ms)
 {
 	usleep(ms);
 }

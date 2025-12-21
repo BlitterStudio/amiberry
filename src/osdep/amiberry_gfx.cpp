@@ -102,6 +102,12 @@ Uint32 pixel_format = SDL_PIXELFORMAT_ABGR8888;
 
 static frame_time_t last_synctime;
 
+static volatile int waitvblankthread_mode;
+static frame_time_t wait_vblank_timestamp;
+static struct MultiDisplay* wait_vblank_display;
+static volatile bool vsync_active;
+static bool scanlinecalibrating;
+
 static SDL_Surface* current_screenshot = nullptr;
 std::string screenshot_filename;
 FILE* screenshot_file = nullptr;
@@ -368,6 +374,7 @@ static void SDL2_showframe(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	SDL_RenderPresent(mon->amiga_renderer);
+	wait_vblank_timestamp = read_processor_time();
 }
 
 void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
@@ -575,11 +582,6 @@ int target_get_display(const TCHAR* name)
 	return -1;
 }
 
-static volatile int waitvblankthread_mode;
-static frame_time_t wait_vblank_timestamp;
-static MultiDisplay* wait_vblank_display;
-static volatile bool vsync_active;
-static bool scanlinecalibrating;
 
 static int target_get_display_scanline2(int displayindex)
 {
@@ -700,9 +702,8 @@ static void display_vblank_thread(struct AmigaMonitor* mon)
 	//	unsigned int th;
 	//	_beginthreadex(NULL, 0, waitvblankthread, 0, 0, &th);
 	//}
-	//else {
-		calculated_scanline = false;
-	//}
+	// it is used when D3DKMTGetScanLine() is not available or not working.
+	// calculated_scanline = false;
 }
 
 void target_cpu_speed()
