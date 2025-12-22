@@ -26,6 +26,10 @@ int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_th
 	}
 	if (tid) {
 		*tid = thread;
+	} else if (thread) {
+		// If the caller didn't ask for the thread ID, we can't wait for it later.
+		// This will cause a memory leak in SDL2, unless we detach the thread.
+		SDL_DetachThread(thread);
 	}
 	return result;
 }
