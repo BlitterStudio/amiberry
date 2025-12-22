@@ -24,6 +24,7 @@
 #include "keyboard.h"
 #include "drawing.h"
 #include "picasso96.h"
+#include "gui.h"
 #include "amiberry_gfx.h"
 #include "sounddep/sound.h"
 #include "inputdevice.h"
@@ -370,10 +371,93 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	return false;
 }
 
+extern frame_time_t syncbase;
+extern float vblank_hz;
+extern frame_time_t vsynctimebase;
+
 static void SDL2_showframe(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
+	Uint64 start_render_tick = SDL_GetPerformanceCounter();
 	SDL_RenderPresent(mon->amiga_renderer);
+	Uint64 end_render_tick = SDL_GetPerformanceCounter();
+	
+	static Uint64 freq = 0;
+	if (freq == 0) freq = SDL_GetPerformanceFrequency();
+
+	if (syncbase > 0)
+	{
+		double target_fps;
+		if (vblank_hz > 45 && vblank_hz < 65) target_fps = (double)vblank_hz;
+		else if (currprefs.ntscmode) target_fps = 60.0;
+		else target_fps = 50.0;
+		
+		static double accumulated_error = 0.0; 
+		double target_frame_dist_sec = 1.0 / target_fps;
+
+		// Custom Adaptive Sync using SDL Counters (PI Controller)
+		if (gui_data.sndbuf_avail) {
+			int buffer_error = gui_data.sndbuf - 750; // Target 75% (1.5 fragments) for stability
+			
+			// Integral term (accumulate error to find natural clock skew)
+			accumulated_error += buffer_error;
+			
+			// Anti-windup: Clamp accumulated error
+			if (accumulated_error > 80000.0) accumulated_error = 80000.0;
+			if (accumulated_error < -80000.0) accumulated_error = -80000.0;
+
+			// PI Gains
+			// Kp: Immediate reaction to spikes. 0.00005.
+			// Ki: Slow adaptation. 0.0000005.
+			double P = (double)buffer_error * 0.00005; 
+			double I = accumulated_error * 0.0000005;
+			
+			double adjustment_factor = 1.0 + P + I; 
+			
+			// Safety Clamp +/- 8%
+			if (adjustment_factor > 1.08) adjustment_factor = 1.08;
+			if (adjustment_factor < 0.92) adjustment_factor = 0.92;
+
+			target_frame_dist_sec *= adjustment_factor;
+		}
+		
+		Uint64 target_ticks = (Uint64)(target_frame_dist_sec * freq);
+		
+		static Uint64 next_frame_tick = 0;
+		Uint64 current_tick = SDL_GetPerformanceCounter();
+
+		if (next_frame_tick == 0)
+		{
+			next_frame_tick = current_tick + target_ticks;
+		}
+		else
+		{
+			next_frame_tick += target_ticks;
+			// Lag reset: if we are more than 100ms behind, reset
+			if (current_tick > next_frame_tick + (freq / 10)) {
+				next_frame_tick = current_tick + target_ticks;
+			}
+		}
+		
+		Sint64 ticks_left = next_frame_tick - current_tick;
+		
+		// Sleep wait (2ms threshold)
+		while (ticks_left > (Sint64)(freq / 500)) // > 2ms
+		{
+			struct timespec req = { 0, 500000 };
+			nanosleep(&req, nullptr);
+			current_tick = SDL_GetPerformanceCounter();
+			ticks_left = next_frame_tick - current_tick;
+		}
+
+		// Spin wait
+		while (SDL_GetPerformanceCounter() < next_frame_tick)
+		{
+			// busy wait
+		}
+	}
+	
+	// Sync legacy variable for other systems
 	wait_vblank_timestamp = read_processor_time();
 }
 
@@ -3239,13 +3323,19 @@ static int create_windows(struct AmigaMonitor* mon)
 #ifndef USE_OPENGL
 	if (mon->amiga_renderer == nullptr)
 	{
-		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
+		const auto* ad = &adisplays[mon->monitor_id];
+		const auto* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
+		// Force disable VSync for the renderer to prevent blocking in SDL_RenderPresent.
+		// We handle frame timing manually in SDL2_showframe with high precision.
+		// if (ap->gfx_vsync > 0)
+		//	renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
+
 		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, renderer_flags);
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 	DPIHandler::set_render_scale(mon->amiga_renderer);
 #endif
-
 
     // Cache current display mode for scaling heuristics
     if (SDL_GetWindowDisplayMode(mon->amiga_window, &sdl_mode) != 0) {
