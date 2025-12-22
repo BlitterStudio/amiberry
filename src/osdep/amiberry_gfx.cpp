@@ -1249,65 +1249,45 @@ void show_screen(const int monid, int mode)
 	if (mode >= 0 && !mon->render_ok) {
 		return;
 	}
-
-	AmigaMonitor* mutable_mon = &AMonitors[monid];
-	if (ap->gfx_vsyncmode == 0 && mutable_mon->amiga_window) {
-		SDL_DisplayMode dm;
-		if (SDL_GetWindowDisplayMode(mutable_mon->amiga_window, &dm) == 0 && dm.refresh_rate > 0) {
-			if (dm.refresh_rate != mutable_mon->last_monitor_hz || currprefs.ntscmode != mutable_mon->last_ntscmode) {
-				const float target_hz = currprefs.ntscmode ? 60.0f : 50.0f;
-				mutable_mon->vblanks_to_wait = static_cast<int>(round(static_cast<float>(dm.refresh_rate) / target_hz));
-				if (mutable_mon->vblanks_to_wait < 1) mutable_mon->vblanks_to_wait = 1;
-				mutable_mon->last_monitor_hz = dm.refresh_rate;
-				mutable_mon->last_ntscmode = currprefs.ntscmode;
-				write_log(_T("VSync: Optimizing for %dHz monitor, target %.0fHz. vblanks_to_wait=%d\n"), 
-					dm.refresh_rate, target_hz, mutable_mon->vblanks_to_wait);
-			}
-		}
-	} else {
-		mutable_mon->vblanks_to_wait = 1;
-	}
-
 #ifdef USE_OPENGL
 	auto time = SDL_GetTicks();
+
 	int drawableWidth, drawableHeight;
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
 	glViewport(0, 0, drawableWidth, drawableHeight);
 
+	// Check if any cropping is actually being applied.
+	// If crop_rect covers the entire surface, we can take a much faster path.
 	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		crop_rect.w != amiga_surface->w ||
-		crop_rect.h != amiga_surface->h);
+	                         crop_rect.w != amiga_surface->w ||
+	                         crop_rect.h != amiga_surface->h);
 
-	uae_u8* packed_pixel_buffer = nullptr;
-	SDL_Rect corrected_crop_rect;
+	if (is_cropped)
+	{
+		// SLOW PATH: Cropping is active.
+		// We must create a temporary packed buffer for the cropped region.
+		SDL_Rect corrected_crop_rect;
+		uae_u8* packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
 
-	if (is_cropped) {
-		packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
-	}
+		if (packed_pixel_buffer)
+		{
+			crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
+			corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
 
-	for (int i = 0; i < mutable_mon->vblanks_to_wait; i++) {
-		if (is_cropped) {
-			if (packed_pixel_buffer) {
-				crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
-					corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
-			}
-		} else {
-			crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
-				amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
+			delete[] packed_pixel_buffer;
 		}
-		SDL_GL_SwapWindow(mon->amiga_window);
+	}
+	else
+	{
+		// FAST PATH: No cropping.
+		// Render the full surface directly without any expensive memory allocation or copying.
+		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
+		amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
 	}
 
-	if (packed_pixel_buffer) {
-		delete[] packed_pixel_buffer;
-	}
+	SDL_GL_SwapWindow(mon->amiga_window);
 #else
-	for (int i = 0; i < mutable_mon->vblanks_to_wait; i++) {
-		if (i > 0) {
-			SDL2_renderframe(monid, mode, 0);
-		}
-		SDL2_showframe(monid);
-	}
+	SDL2_showframe(monid);
 #endif
 	mon->render_ok = false;
 }

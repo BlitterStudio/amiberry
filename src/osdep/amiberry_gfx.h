@@ -105,10 +105,6 @@ struct AmigaMonitor {
 	bool full_render_needed;
 	struct winuae_currentmode currentmode;
 	struct uae_filter* usedfilter;
-
-	int vblanks_to_wait = 1;
-	int last_monitor_hz = 0;
-	bool last_ntscmode = false;
 };
 extern struct AmigaMonitor* amon;
 extern struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
