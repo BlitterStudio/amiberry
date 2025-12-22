@@ -489,7 +489,7 @@ jobs:
       issues: read
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Create Changelog
         if: github.ref_type == 'tag'
         id: changelog

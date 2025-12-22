@@ -6603,6 +6603,10 @@ static void picasso_free()
 		render_pipe = nullptr;
 		uae_sem_destroy(&render_cs);
 		render_cs = nullptr;
+		if (render_tid) {
+			uae_wait_thread(&render_tid);
+			render_tid = nullptr;
+		}
 #endif
 		render_thread_state = 0;
 	}

@@ -36,7 +36,7 @@ int uae_start_thread(const char* name, uae_thread_function fn, void* arg, uae_th
 
 int uae_wait_thread(uae_thread_id* thread)
 {
-	if (thread)
+	if (thread && *thread)
 	{
 		SDL_WaitThread(*thread, nullptr);
 		*thread = nullptr;
