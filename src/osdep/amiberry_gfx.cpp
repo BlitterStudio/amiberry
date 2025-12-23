@@ -2492,7 +2492,7 @@ void init_colors(const int monid)
 
 	red_bits = green_bits = blue_bits = 8;
 	red_bits = green_bits = blue_bits = 8;
-	
+
 	SDL_PixelFormat *pf = SDL_AllocFormat(pixel_format);
 	if (pf) {
 		red_shift = pf->Rshift;
@@ -2937,14 +2937,6 @@ int graphics_init(bool mousecapture)
 
 int graphics_setup()
 {
-	//if (!screen_cs_allocated) {
-	//	screen_cs = SDL_CreateMutex();
-	//	if (screen_cs == nullptr) {
-	//		write_log(_T("Couldn't create screen_cs: %s\n"), SDL_GetError());
-	//		return 0;
-	//	}
-	//	screen_cs_allocated = true;
-	//}
 #ifdef PICASSO96
 	InitPicasso96(0);
 #endif
