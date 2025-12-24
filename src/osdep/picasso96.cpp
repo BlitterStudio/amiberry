@@ -5743,9 +5743,7 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			maxy = vidinfo->height;
 			if (miny > vidinfo->height - TD_TOTAL_HEIGHT)
 				miny = vidinfo->height - TD_TOTAL_HEIGHT;
-#ifdef AMIBERRY
-			picasso_statusline(monid, dstp);
-#endif
+			// picasso_statusline(monid, dstp); // Offloaded to GPU in amiberry_gfx.cpp
 		}
 	}
 	if (maxy >= 0) {
