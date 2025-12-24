@@ -438,17 +438,11 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	return false;
 }
 
-extern frame_time_t syncbase;
-extern float vblank_hz;
-extern frame_time_t vsynctimebase;
-
 static void SDL2_showframe(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
-	Uint64 start_render_tick = SDL_GetPerformanceCounter();
 	SDL_RenderPresent(mon->amiga_renderer);
-	Uint64 end_render_tick = SDL_GetPerformanceCounter();
-	
+
 	static Uint64 freq = 0;
 	if (freq == 0) freq = SDL_GetPerformanceFrequency();
 
@@ -470,8 +464,8 @@ static void SDL2_showframe(const int monid)
 			accumulated_error += buffer_error;
 			
 			// Anti-windup: Clamp accumulated error
-			if (accumulated_error > 80000.0) accumulated_error = 80000.0;
-			if (accumulated_error < -80000.0) accumulated_error = -80000.0;
+			accumulated_error = std::min(accumulated_error, 80000.0);
+			accumulated_error = std::max(accumulated_error, -80000.0);
 
 			// PI Gains
 			// Kp: Immediate reaction to spikes. 0.00005.
@@ -482,8 +476,8 @@ static void SDL2_showframe(const int monid)
 			double adjustment_factor = 1.0 + P + I; 
 			
 			// Safety Clamp +/- 8%
-			if (adjustment_factor > 1.08) adjustment_factor = 1.08;
-			if (adjustment_factor < 0.92) adjustment_factor = 0.92;
+			adjustment_factor = std::min(adjustment_factor, 1.08);
+			adjustment_factor = std::max(adjustment_factor, 0.92);
 
 			target_frame_dist_sec *= adjustment_factor;
 		}
@@ -3042,10 +3036,6 @@ void graphics_leave()
 	{
 		close_windows(&AMonitors[i]);
 	}
-
-	//SDL_DestroyMutex(screen_cs);
-	//screen_cs = nullptr;
-	//screen_cs_allocated = false;
 }
 
 void close_windows(struct AmigaMonitor* mon)
@@ -3053,9 +3043,7 @@ void close_windows(struct AmigaMonitor* mon)
 	vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 
 	reset_sound();
-#if 0
-	S2X_free(mon->monitor_id);
-#endif
+
 #ifdef AMIBERRY
 	SDL_FreeSurface(amiga_surface);
 	amiga_surface = nullptr;
