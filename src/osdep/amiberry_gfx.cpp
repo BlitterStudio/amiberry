@@ -413,14 +413,10 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		if ((((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
 			 ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on)) && mon->statusline_texture)
 		{
-			int slx, sly;
-			int dst_w, dst_h;
-			if (ad->picasso_on) {
-				dst_w = mon->currentmode.native_width;
-				dst_h = mon->currentmode.native_height;
-			} else {
-				dst_w = crop_rect.w;
-				dst_h = crop_rect.h;
+			int slx, sly, dst_w, dst_h;
+			SDL_RenderGetLogicalSize(mon->amiga_renderer, &dst_w, &dst_h);
+			if (dst_w == 0 || dst_h == 0) {
+				SDL_GetRendererOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
 			}
 			statusline_getpos(monid, &slx, &sly, dst_w, dst_h);
 			SDL_Rect dst_osd = { slx, sly, mon->statusline_surface->w, mon->statusline_surface->h };
