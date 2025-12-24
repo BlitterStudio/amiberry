@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <cstdio>
 #include <cmath>
 #include <iostream>
@@ -43,6 +45,7 @@
 #include "vkbd/vkbd.h"
 #include "fsdb_host.h"
 #include "savestate.h"
+#include "uae/types.h"
 
 #include <png.h>
 #include <SDL_image.h>
@@ -342,8 +345,17 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 #else
 	if (amiga_texture && amiga_surface)
 	{
-		SDL_RenderClear(mon->amiga_renderer);
 		AmigaMonitor* mutable_mon = &AMonitors[monid];
+
+		// Performance Optimization: Avoid SDL_RenderClear if the render_quad covers the whole screen.
+		// We check if the quad matches the logical size or if it covers the 0,0 - w,h area.
+		int lw, lh;
+		SDL_RenderGetLogicalSize(mon->amiga_renderer, &lw, &lh);
+		bool covers_full = (render_quad.x <= 0 && render_quad.y <= 0 && render_quad.w >= lw && render_quad.h >= lh);
+		
+		if (!covers_full) {
+			SDL_RenderClear(mon->amiga_renderer);
+		}
 
 		// If a full render is needed or there are no specific dirty rects, update the whole texture.
 		if (mutable_mon->full_render_needed || mutable_mon->dirty_rects.empty()) {
@@ -441,11 +453,26 @@ static void SDL2_showframe(const int monid)
 		
 		Sint64 ticks_left = next_frame_tick - current_tick;
 		
-		// Sleep wait (2ms threshold)
+		// Performance Optimization: Use SDL_Delay for the majority of the wait time
+		// to reduce CPU wakeups and context switches.
+		if (ticks_left > (Sint64)(freq / 200)) // > 5ms
+		{
+			Uint32 delay_ms = (Uint32)((ticks_left - (freq / 500)) * 1000 / freq);
+			if (delay_ms > 0)
+				SDL_Delay(delay_ms);
+			current_tick = SDL_GetPerformanceCounter();
+			ticks_left = next_frame_tick - current_tick;
+		}
+
+		// Fine-grained Sleep wait (0.5ms intervals, up to 2ms threshold)
 		while (ticks_left > (Sint64)(freq / 500)) // > 2ms
 		{
+#ifndef _WIN32
 			struct timespec req = { 0, 500000 };
 			nanosleep(&req, nullptr);
+#else
+			SDL_Delay(1);
+#endif
 			current_tick = SDL_GetPerformanceCounter();
 			ticks_left = next_frame_tick - current_tick;
 		}
@@ -2557,6 +2584,16 @@ void DX_Invalidate(struct AmigaMonitor* mon, int x, int y, int width, int height
 		x = 0;
 		width = vidinfo->width;
 	}
+
+	// Performance Optimization: Bridge Picasso96 invalidation to the SDL dirty rect system.
+	// This allows the renderer to only upload the modified portion of the RTG screen.
+	SDL_Rect dirty_rect;
+	dirty_rect.x = x;
+	dirty_rect.y = y;
+	dirty_rect.w = width;
+	dirty_rect.h = height;
+	add_dirty_rect(mon, dirty_rect);
+
 	last = y + height - 1;
 	lastx = x + width - 1;
 	mon->p96_double_buffer_first = y;
@@ -2923,6 +2960,7 @@ void machdep_free()
 
 int graphics_init(bool mousecapture)
 {
+	wait_vblank_timestamp = read_processor_time();
 	update_pixel_format();
 	gfxmode_reset(0);
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
