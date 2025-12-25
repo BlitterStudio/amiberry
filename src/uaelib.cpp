@@ -362,34 +362,6 @@ static uae_u32 emulib_execute_on_host(TrapContext* ctx, uaecptr name)
 	return 1;
 }
 
-// Open a shell session on the Host OS (TODO: not fully implemented yet)
-#if 0
-static uae_u32 emulib_host_session(TrapContext* ctx, uaecptr name, uae_u32 out, uae_u32 outsize)
-{
-	char real_name[MAX_DPATH];
-	if (trap_get_string(ctx, real_name, name, sizeof real_name) >= sizeof real_name)
-		return 0; /* ENAMETOOLONG */
-
-	char buffer[128];
-	std::string result = "";
-	auto* pipe = popen(real_name, "r");
-	if (!pipe) throw std::runtime_error("popen() failed!");
-	try
-	{
-		while (fgets(buffer, sizeof buffer, pipe) != nullptr)
-			result += buffer;
-	}
-	catch (...)
-	{
-		pclose(pipe);
-	}
-	pclose(pipe);
-	trap_put_string(ctx, result.c_str(), out, outsize - 1);
-	return 0;
-}
-#endif
-#endif //AMIBERRY
-
 enum midops {
 	MIDI_OP_GET_NUM_OUT,
 	MIDI_OP_GET_NUM_IN,
@@ -445,12 +417,17 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 	if (pid == 0) {
 		// Child process
 		setenv("TERM", "xterm", 1);
+
+		const char* shell = getenv("SHELL");
+		if (!shell) shell = "/bin/sh";
+		const char* shell_name = strrchr(shell, '/');
+		if (shell_name) shell_name++; else shell_name = shell;
 		
 		// Execute command
 		if (strlen(cmd) > 0)
-			execl("/bin/sh", "sh", "-c", cmd, (char*)NULL);
+			execl(shell, shell_name, "-c", cmd, (char*)NULL);
 		else
-			execl("/bin/sh", "sh", (char*)NULL); // Interactive shell
+			execl(shell, shell_name, (char*)NULL); // Interactive shell
 
 		perror("execl");
 		_exit(127);
@@ -526,6 +503,32 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 	waitpid(session.pid, NULL, 0);
 	
 	shell_sessions.erase(handle);
+	return 1;
+}
+
+static std::string quote_path(const char* path) {
+	std::string res = "'";
+	for (const char* p = path; *p; ++p) {
+		if (*p == '\'') res += "'\\''";
+		else res += *p;
+	}
+	res += "'";
+	return res;
+}
+
+static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
+	char file[MAX_DPATH];
+	if (trap_get_string(ctx, file, filename, sizeof file) >= sizeof file)
+		return 0;
+
+#if defined(__APPLE__)
+	std::string cmd = "open ";
+#else
+	std::string cmd = "xdg-open ";
+#endif
+	cmd += quote_path(file);
+	
+	target_execute(cmd.c_str());
 	return 1;
 }
 
@@ -637,6 +640,8 @@ static uae_u32 uaelib_midi(TrapContext *ctx, uae_u32 op, uae_u32 index, uaecptr 
 	return result;
 }
 
+#endif //AMIBERRY
+
 static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1, uae_u32 ARG2, uae_u32 ARG3, uae_u32 ARG4, uae_u32 ARG5)
 {
 	write_log("%ld\n",ARG0);
@@ -700,7 +705,7 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 		if (currprefs.native_code)
 			return emulib_execute_on_host(ctx, ARG1);
 		return 0;
-		//case 89: return emulib_host_session(ctx, ARG1, ARG2, ARG3);
+		case 89: return uaelib_host_view(ctx, ARG1);
 		
 		case 90: return uaelib_host_open(ctx, ARG1);
 		case 91: return uaelib_host_read(ctx, ARG1, ARG2, ARG3);
