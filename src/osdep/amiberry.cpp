@@ -2254,22 +2254,6 @@ uae_u8* target_load_keyfile(uae_prefs* p, const char* path, int* sizep, char* na
 	return nullptr;
 }
 
-std::vector<std::string> split_command(const std::string& command)
-{
-	std::vector<std::string> word_vector;
-	std::size_t prev = 0, pos;
-	while ((pos = command.find_first_of(' ', prev)) != std::string::npos)
-	{
-		if (pos > prev)
-			word_vector.push_back(command.substr(prev, pos - prev));
-		prev = pos + 1;
-	}
-	if (prev < command.length())
-		word_vector.push_back(command.substr(prev, std::string::npos));
-
-	return word_vector;
-}
-
 void replace(std::string& str, const std::string& from, const std::string& to)
 {
 	const auto start_pos = str.find(from);
@@ -2285,45 +2269,13 @@ void target_execute(const char* command)
 	mouseactive = 0;
 
 	write_log("Target_execute received: %s\n", command);
-	const std::string command_string = command;
-	auto command_parts = split_command(command_string);
-
-	for (size_t i = 0; i < command_parts.size(); ++i)
-	{
-		if (i > 0)
-		{
-			const auto delimiter_position = command_parts[i].find(':');
-			if (delimiter_position != std::string::npos)
-			{
-				auto volume_or_device_name = command_parts[i].substr(0, delimiter_position);
-				for (auto mount = 0; mount < currprefs.mountitems; mount++)
-				{
-					if (currprefs.mountconfig[mount].ci.type == UAEDEV_DIR)
-					{
-						if (_tcsicmp(currprefs.mountconfig[mount].ci.volname, volume_or_device_name.c_str()) == 0
-							|| _tcsicmp(currprefs.mountconfig[mount].ci.devname, volume_or_device_name.c_str()) == 0)
-						{
-							std::string root_directory = currprefs.mountconfig[mount].ci.rootdir;
-							volume_or_device_name += ':';
-							replace(command_parts[i], volume_or_device_name, root_directory);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	std::ostringstream command_stream;
-	for (const auto& part : command_parts)
-	{
-		command_stream << part << " ";
-	}
-	// Ensure this runs in the background, otherwise we'll block the emulator until it returns
-	command_stream << "&";
+	
+	std::string final_command = command;
+	// Ensure this runs in the background
+	final_command += " &";
 
 	try
 	{
-		std::string final_command = command_stream.str();
 		write_log("Executing: %s\n", final_command.c_str());
 		system(final_command.c_str());
 	}
