@@ -111,6 +111,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_library(UTIL_LIBRARY util)
+    if(UTIL_LIBRARY)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${UTIL_LIBRARY})
+    endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
 endif ()
 
