@@ -402,6 +402,137 @@ enum midops {
 };
 
 
+
+// Structure to hold session details
+struct ShellSession {
+	int pid;
+	int infd;  // Write to this (connected to child's stdin)
+	int outfd; // Read from this (connected to child's stdout)
+	FILE* pipe_in;
+	FILE* pipe_out;
+};
+
+#include <vector>
+#include <map>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <signal.h>
+
+static std::map<uae_u32, ShellSession> shell_sessions;
+static uae_u32 next_session_handle = 1;
+
+static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
+{
+	char cmd[MAX_DPATH];
+	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
+		return 0;
+
+	int pipe_in[2], pipe_out[2];
+	if (pipe(pipe_in) < 0 || pipe(pipe_out) < 0) {
+		return 0;
+	}
+
+	pid_t pid = fork();
+	if (pid == 0) {
+		// Child process
+		// Close unused pipe ends
+		close(pipe_in[1]);
+		close(pipe_out[0]);
+
+		// Redirect stdin/stdout/stderr
+		dup2(pipe_in[0], STDIN_FILENO);
+		dup2(pipe_out[1], STDOUT_FILENO);
+		dup2(pipe_out[1], STDERR_FILENO); // Merge stderr to stdout?
+
+		close(pipe_in[0]);
+		close(pipe_out[1]);
+
+		// Execute command
+		if (strlen(cmd) > 0)
+			execl("/bin/sh", "sh", "-c", cmd, (char*)NULL);
+		else
+			execl("/bin/sh", "sh", (char*)NULL); // Interactive shell
+
+		perror("execl");
+		_exit(127);
+	} else if (pid > 0) {
+		// Parent process
+		close(pipe_in[0]);
+		close(pipe_out[1]);
+
+		// Set non-blocking read on output pipe
+		int flags = fcntl(pipe_out[0], F_GETFL, 0);
+		fcntl(pipe_out[0], F_SETFL, flags | O_NONBLOCK);
+
+		ShellSession session;
+		session.pid = pid;
+		session.infd = pipe_in[1];
+		session.outfd = pipe_out[0];
+		
+		uae_u32 handle = next_session_handle++;
+		shell_sessions[handle] = session;
+		return handle;
+	}
+
+	return 0;
+}
+
+static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
+{
+	if (shell_sessions.find(handle) == shell_sessions.end())
+		return -1;
+
+	ShellSession& session = shell_sessions[handle];
+	std::vector<char> buf(size);
+	
+	ssize_t bytes_read = read(session.outfd, buf.data(), size);
+	
+	if (bytes_read > 0) {
+		trap_put_bytes(ctx, buf.data(), buffer, bytes_read);
+		return bytes_read;
+	} else if (bytes_read == 0) {
+		// EOF? Check if process is dead
+		int status;
+		if (waitpid(session.pid, &status, WNOHANG) != 0) {
+			return -1; // Process exited
+		}
+		return 0; 
+	} else {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return 0;
+		return -1;
+	}
+}
+
+static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
+{
+	if (shell_sessions.find(handle) == shell_sessions.end())
+		return -1;
+
+	ShellSession& session = shell_sessions[handle];
+	std::vector<char> buf(size);
+	trap_get_bytes(ctx, buffer, buf.data(), size);
+
+	ssize_t bytes_written = write(session.infd, buf.data(), size);
+	return bytes_written;
+}
+
+static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
+{
+	if (shell_sessions.find(handle) == shell_sessions.end())
+		return 0;
+
+	ShellSession& session = shell_sessions[handle];
+	close(session.infd);
+	close(session.outfd);
+	kill(session.pid, SIGTERM);
+	waitpid(session.pid, NULL, 0);
+	
+	shell_sessions.erase(handle);
+	return 1;
+}
+
 static uae_u32 uaelib_midi(TrapContext *ctx, uae_u32 op, uae_u32 index, uaecptr name)
 {
 	uae_u32 result = -1;
@@ -574,6 +705,11 @@ static uae_u32 uaelib_demux_common(TrapContext *ctx, uae_u32 ARG0, uae_u32 ARG1,
 			return emulib_execute_on_host(ctx, ARG1);
 		return 0;
 		//case 89: return emulib_host_session(ctx, ARG1, ARG2, ARG3);
+		
+		case 90: return uaelib_host_open(ctx, ARG1);
+		case 91: return uaelib_host_read(ctx, ARG1, ARG2, ARG3);
+		case 92: return uaelib_host_write(ctx, ARG1, ARG2, ARG3);
+		case 93: return uaelib_host_close(ctx, ARG1);
 
 		case 100:
 		{
