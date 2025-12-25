@@ -489,7 +489,7 @@ static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer
 	ssize_t bytes_read = read(session.outfd, buf.data(), size);
 	
 	if (bytes_read > 0) {
-		trap_put_bytes(ctx, buf.data(), buffer, bytes_read);
+		trap_put_bytes(ctx, (uae_u8*)buf.data(), buffer, bytes_read);
 		return bytes_read;
 	} else if (bytes_read == 0) {
 		// EOF? Check if process is dead
@@ -512,7 +512,7 @@ static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffe
 
 	ShellSession& session = shell_sessions[handle];
 	std::vector<char> buf(size);
-	trap_get_bytes(ctx, buffer, buf.data(), size);
+	trap_get_bytes(ctx, (uae_u8*)buf.data(), buffer, size);
 
 	ssize_t bytes_written = write(session.infd, buf.data(), size);
 	return bytes_written;
