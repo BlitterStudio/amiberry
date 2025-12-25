@@ -406,8 +406,8 @@ enum midops {
 // Structure to hold session details
 struct ShellSession {
 	int pid;
-	int infd;  // Write to this (connected to child's stdin)
-	int outfd; // Read from this (connected to child's stdout)
+	int infd;  // Master PTY fd (read/write)
+	int outfd; // Master PTY fd (read/write)
 	FILE* pipe_in;
 	FILE* pipe_out;
 };
@@ -418,6 +418,13 @@ struct ShellSession {
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <signal.h>
+#if !defined(_WIN32)
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <util.h>
+#else
+#include <pty.h>
+#endif
+#endif
 
 static std::map<uae_u32, ShellSession> shell_sessions;
 static uae_u32 next_session_handle = 1;
@@ -428,26 +435,17 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 	if (trap_get_string(ctx, cmd, command, sizeof cmd) >= sizeof cmd)
 		return 0;
 
-	int pipe_in[2], pipe_out[2];
-	if (pipe(pipe_in) < 0 || pipe(pipe_out) < 0) {
-		return 0;
-	}
+#if defined(_WIN32)
+	// Not supported on Windows yet
+	return 0;
+#else
+	int master;
+	pid_t pid = forkpty(&master, NULL, NULL, NULL);
 
-	pid_t pid = fork();
 	if (pid == 0) {
 		// Child process
-		// Close unused pipe ends
-		close(pipe_in[1]);
-		close(pipe_out[0]);
-
-		// Redirect stdin/stdout/stderr
-		dup2(pipe_in[0], STDIN_FILENO);
-		dup2(pipe_out[1], STDOUT_FILENO);
-		dup2(pipe_out[1], STDERR_FILENO); // Merge stderr to stdout?
-
-		close(pipe_in[0]);
-		close(pipe_out[1]);
-
+		setenv("TERM", "xterm", 1);
+		
 		// Execute command
 		if (strlen(cmd) > 0)
 			execl("/bin/sh", "sh", "-c", cmd, (char*)NULL);
@@ -458,17 +456,14 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 		_exit(127);
 	} else if (pid > 0) {
 		// Parent process
-		close(pipe_in[0]);
-		close(pipe_out[1]);
-
-		// Set non-blocking read on output pipe
-		int flags = fcntl(pipe_out[0], F_GETFL, 0);
-		fcntl(pipe_out[0], F_SETFL, flags | O_NONBLOCK);
+		// Set non-blocking read on master PTY
+		int flags = fcntl(master, F_GETFL, 0);
+		fcntl(master, F_SETFL, flags | O_NONBLOCK);
 
 		ShellSession session;
 		session.pid = pid;
-		session.infd = pipe_in[1];
-		session.outfd = pipe_out[0];
+		session.infd = master;
+		session.outfd = master;
 		
 		uae_u32 handle = next_session_handle++;
 		shell_sessions[handle] = session;
@@ -476,6 +471,7 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 	}
 
 	return 0;
+#endif
 }
 
 static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
