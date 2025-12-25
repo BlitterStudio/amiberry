@@ -23,12 +23,12 @@
 #define AMIBERRYPUBLICBETA 1
 
 #if AMIBERRYPUBLICBETA
-#define AMIBERRYBETA _T("11")
+#define AMIBERRYBETA _T("12")
 #else
 #define AMIBERRYBETA _T("")
 #endif
 
-#define AMIBERRYDATE MAKEBD(2025, 12, 21)
+#define AMIBERRYDATE MAKEBD(2025, 12, 26)
 #define COPYRIGHT _T("Copyright (C) 2025 Dimitris Panokostas")
 
 #ifndef AMIBERRYEXTRA
