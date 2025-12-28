@@ -624,3 +624,16 @@ int hdf_getnumharddrives()
 {
 	return num_drives;
 }
+
+TCHAR *hdf_getnameharddrive (int index, int flags, int *sectorsize, int *dangerousdrive, uae_u32 *outflags)
+{
+	if (index >= num_drives || index < 0)
+		return NULL;
+	if (dangerousdrive)
+		*dangerousdrive = 0;
+	if (sectorsize)
+		*sectorsize = 512;
+	if (outflags)
+		*outflags = 0;
+	return my_strdup(uae_drives[index].device_name);
+}
