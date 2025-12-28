@@ -9452,64 +9452,64 @@ static int bip_a1200 (struct uae_prefs *p, int config, int compa, int romcheck)
 	p->mmu_model = 0;
 	p->cs_compatible = CP_A1200;
 	built_in_chipset_prefs (p);
-    switch (config)
-    {
-        case 1:
-            p->fastmem[0].size = 0x400000;
-            p->cs_rtc = 1;
-            break;
+	switch (config)
+	{
+		case 1:
+		p->fastmem[0].size = 0x400000;
+		p->cs_rtc = 1;
+		break;
 #ifdef WITH_CPUBOARD
-        case 2:
-            cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1230IV);
-            p->cpuboardmem1.size = 32 * 1024 * 1024;
-            p->cpu_model = 68030;
-            p->cs_rtc = 1;
-            roms_bliz[0] = 89;
-            configure_rom(p, roms_bliz, romcheck);
-            break;
-        case 3:
-            cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
-            p->cpuboardmem1.size = 32 * 1024 * 1024;
-            p->cpu_model = 68040;
-            p->fpu_model = 68040;
-            p->cs_rtc = 1;
-            roms_bliz[0] = 90;
-            configure_rom(p, roms_bliz, romcheck);
-            break;
-        case 4:
-            cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
-            p->cpuboardmem1.size = 32 * 1024 * 1024;
-            p->cpu_model = 68060;
-            p->fpu_model = 68060;
-            p->cs_rtc = 1;
-            roms_bliz[0] = 90;
-            configure_rom(p, roms_bliz, romcheck);
-            break;
+		case 2:
+		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1230IV);
+		p->cpuboardmem1.size = 32 * 1024 * 1024;
+		p->cpu_model = 68030;
+		p->cs_rtc = 1;
+		roms_bliz[0] = 89;
+		configure_rom(p, roms_bliz, romcheck);
+		break;
+		case 3:
+		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
+		p->cpuboardmem1.size = 32 * 1024 * 1024;
+		p->cpu_model = 68040;
+		p->fpu_model = 68040;
+		p->cs_rtc = 1;
+		roms_bliz[0] = 90;
+		configure_rom(p, roms_bliz, romcheck);
+		break;
+		case 4:
+		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_1260);
+		p->cpuboardmem1.size = 32 * 1024 * 1024;
+		p->cpu_model = 68060;
+		p->fpu_model = 68060;
+		p->cs_rtc = 1;
+		roms_bliz[0] = 90;
+		configure_rom(p, roms_bliz, romcheck);
+		break;
 #ifdef WITH_PPC
-        case 5:
-            cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
-            p->cpuboardmem1.size = 256 * 1024 * 1024;
-            p->cpu_model = 68060;
-            p->fpu_model = 68060;
-            p->ppc_mode = 1;
-            p->cs_rtc = 1;
-            roms[0] = 15;
-            roms[1] = 11;
-            roms[2] = -1;
-	    roms_bliz[0] = 100;
-            roms_bliz[1] = 329;
-	    roms_bliz[2] = 330;
-	    configure_rom(p, roms_bliz, romcheck);
-            break;
+		case 5:
+		cpuboard_setboard(p, BOARD_BLIZZARD, BOARD_BLIZZARD_SUB_PPC);
+		p->cpuboardmem1.size = 256 * 1024 * 1024;
+		p->cpu_model = 68060;
+		p->fpu_model = 68060;
+		p->ppc_mode = 1;
+		p->cs_rtc = 1;
+		roms[0] = 15;
+		roms[1] = 11;
+		roms[2] = -1;
+		roms_bliz[0] = 100;
+		roms_bliz[1] = 329;
+		roms_bliz[2] = 330;
+		configure_rom(p, roms_bliz, romcheck);
+		break;
 #endif
 #else
-        case 2:
-            p->fastmem[0].size = 0x800000;
-            p->cs_rtc = 1;
-            break;
+		case 2:
+		p->fastmem[0].size = 0x800000;
+		p->cs_rtc = 1;
+		break;
 #endif
-	default: break;
-    }
+		default: break;
+	}
 	set_68020_compa (p, compa, 0);
 	return configure_rom (p, roms, romcheck);
 }

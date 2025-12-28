@@ -115,7 +115,7 @@ jobs:
           path: Amiberry-*.zip
 
   build-macOS-Apple-Silicon:
-    runs-on: macos-latest
+    runs-on: macos-15
     permissions:
       contents: read
       actions: write
@@ -477,7 +477,7 @@ jobs:
       issues: read
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Create Changelog
         if: github.ref_type == 'tag'
         id: changelog

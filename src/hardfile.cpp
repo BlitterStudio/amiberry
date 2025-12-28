@@ -73,8 +73,8 @@ struct hardfileprivdata {
 	int d_request_type[MAX_ASYNC_REQUESTS];
 	uae_u32 d_request_data[MAX_ASYNC_REQUESTS];
 	smp_comm_pipe requests;
-	int thread_running;
-	uae_sem_t sync_sem;
+	volatile int thread_running;
+	bool all_closed;
 	uaecptr base;
 	int changenum;
 	uaecptr changeint;
@@ -2461,19 +2461,28 @@ static void abort_async (struct hardfileprivdata *hfpd, uaecptr request, int err
 }
 
 static int hardfile_thread (void *devs);
-static int start_thread (TrapContext *ctx, int unit)
+static void start_thread (TrapContext *ctx, int unit)
 {
 	struct hardfileprivdata *hfpd = &hardfpd[unit];
 
 	if (hfpd->thread_running)
-		return 1;
+		return;
+	write_log("hardfile thread starting, unit %d\n", unit);
 	memset (hfpd, 0, sizeof (struct hardfileprivdata));
 	hfpd->base = trap_get_areg(ctx, 6);
 	init_comm_pipe (&hfpd->requests, 300, 3);
-	uae_sem_init (&hfpd->sync_sem, 0, 0);
 	uae_start_thread (_T("hardfile"), hardfile_thread, hfpd, NULL);
-	uae_sem_wait (&hfpd->sync_sem);
-	return hfpd->thread_running;
+	while (hfpd->thread_running == 0) {
+		sleep_millis(1);
+	}
+}
+static void end_thread(TrapContext *ctx, int unit)
+{
+	struct hardfileprivdata *hfpd = &hardfpd[unit];
+	destroy_comm_pipe(&hfpd->requests);
+	memset(hfpd, 0, sizeof(struct hardfileprivdata));
+	hfpd->thread_running = 0;
+	write_log("hardfile thread ended, unit %d\n", unit);
 }
 
 static int mangleunit (int unit)
@@ -2503,20 +2512,22 @@ static uae_u32 REGPARAM2 hardfile_open (TrapContext *ctx)
 		struct hardfiledata *hfd = get_hardfile_data_controller(unit);
 		if (hfd) {
 			if (hfd->ci.type == UAEDEV_DIR) {
-				if (start_thread(ctx, unit)) {
-					hfpd->directorydrive = true;
-					trap_put_word(ctx, hfpd->base + 32, trap_get_word(ctx, hfpd->base + 32) + 1);
-					trap_put_long(ctx, ioreq + 24, unit); /* io_Unit */
-					trap_put_byte(ctx, ioreq + 31, 0); /* io_Error */
-					trap_put_byte(ctx, ioreq + 8, 7); /* ln_type = NT_REPLYMSG */
-					if (!hfpd->sd)
-						hfpd->sd = scsi_alloc_generic(hfd, UAEDEV_DIR, unit);
-					hf_log(_T("virtual hardfile_open, unit %d (%d), OK\n"), unit, trap_get_dreg(ctx, 0));
-					return 0;
-				}
+				start_thread(ctx, unit);
+				hfpd->directorydrive = true;
+				hfpd->all_closed = false;
+				trap_put_word(ctx, hfpd->base + 32, trap_get_word(ctx, hfpd->base + 32) + 1);
+				trap_put_long(ctx, ioreq + 24, unit); /* io_Unit */
+				trap_put_byte(ctx, ioreq + 31, 0); /* io_Error */
+				trap_put_byte(ctx, ioreq + 8, 7); /* ln_type = NT_REPLYMSG */
+				if (!hfpd->sd)
+					hfpd->sd = scsi_alloc_generic(hfd, UAEDEV_DIR, unit);
+				hf_log(_T("virtual hardfile_open, unit %d (%d), OK\n"), unit, trap_get_dreg(ctx, 0));
+				return 0;
 			} else {
-				if ((hfd->handle_valid || hfd->drive_empty) && start_thread(ctx, unit)) {
+				if ((hfd->handle_valid || hfd->drive_empty)) {
+					start_thread(ctx, unit);
 					hfpd->directorydrive = false;
+					hfpd->all_closed = false;
 					trap_put_word(ctx, hfpd->base + 32, trap_get_word(ctx, hfpd->base + 32) + 1);
 					trap_put_long(ctx, ioreq + 24, unit); /* io_Unit */
 					trap_put_byte(ctx, ioreq + 31, 0); /* io_Error */
@@ -2546,15 +2557,11 @@ static uae_u32 REGPARAM2 hardfile_close (TrapContext *ctx)
 	}
 	struct hardfileprivdata *hfpd = &hardfpd[unit];
 
-	if (!hfpd)
+	if (!hfpd || hfpd->all_closed)
 		return 0;
 	trap_put_word(ctx, hfpd->base + 32, trap_get_word(ctx, hfpd->base + 32) - 1);
 	if (trap_get_word(ctx, hfpd->base + 32) == 0) {
-		scsi_free(hfpd->sd);
-		hfpd->sd = NULL;
-		write_comm_pipe_pvoid(&hfpd->requests, NULL, 0);
-		write_comm_pipe_pvoid(&hfpd->requests, NULL, 0);
-		write_comm_pipe_u32(&hfpd->requests, 0, 1);
+		hfpd->all_closed = true;
 	}
 	return 0;
 }
@@ -2843,14 +2850,18 @@ static uae_u32 hardfile_do_io (TrapContext *ctx, struct hardfiledata *hfd, struc
 
 #if HDF_SUPPORT_DS
 	case HD_SCSICMD: /* SCSI */
-		if (vdisk(hfpd)) {
-			error = handle_scsi(ctx, iobuf, request, hfd, hfpd->sd, true);
-		} else if (HDF_SUPPORT_DS_PARTITION || enable_ds_partition_hdf || (!hfd->ci.sectors && !hfd->ci.surfaces && !hfd->ci.reserved)) {
-			error = handle_scsi(ctx, iobuf, request, hfd, hfpd->sd, false);
-		} else { /* we don't want users trashing their "partition" hardfiles with hdtoolbox */
-			error = handle_scsi(ctx, iobuf, request, hfd, hfpd->sd, true);
+		if (hfpd->sd) {
+			if (vdisk(hfpd)) {
+				error = handle_scsi(ctx, iobuf, request, hfd, hfpd->sd, true);
+			} else if (HDF_SUPPORT_DS_PARTITION || enable_ds_partition_hdf || (!hfd->ci.sectors && !hfd->ci.surfaces && !hfd->ci.reserved)) {
+				error = handle_scsi(ctx, iobuf, request, hfd, hfpd->sd, false);
+			} else { /* we don't want users trashing their "partition" hardfiles with hdtoolbox */
+				error = handle_scsi(ctx, iobuf, request, hfd, hfpd->sd, true);
+			}
+			actual = 30; // sizeof(struct SCSICmd)
+		} else {
+			error = IOERR_NOCMD;
 		}
-		actual = 30; // sizeof(struct SCSICmd)
 		break;
 #endif
 
@@ -3011,21 +3022,21 @@ static uae_u32 REGPARAM2 hardfile_beginio (TrapContext *ctx)
 static int hardfile_thread (void *devs)
 {
 	struct hardfileprivdata *hfpd = (struct hardfileprivdata*)devs;
+	int nr = (int)(hfpd - &hardfpd[0]);
 
 	uae_set_thread_priority (NULL, 1);
 	hfpd->thread_running = 1;
-	uae_sem_post (&hfpd->sync_sem);
 	for (;;) {
 		TrapContext *ctx = (TrapContext*)read_comm_pipe_pvoid_blocking(&hfpd->requests);
 		uae_u8  *iobuf = (uae_u8*)read_comm_pipe_pvoid_blocking(&hfpd->requests);
 		uaecptr request = (uaecptr)read_comm_pipe_u32_blocking (&hfpd->requests);
 		uae_sem_wait (&change_sem);
 		if (!request) {
-			hfpd->thread_running = 0;
-			uae_sem_post (&hfpd->sync_sem);
-			uae_sem_post (&change_sem);
+			end_thread(ctx, nr);
+			trap_background_set_complete(ctx);
+			uae_sem_post(&change_sem);
 			return 0;
-		} else if (hardfile_do_io(ctx, get_hardfile_data_controller((int)(hfpd - &hardfpd[0])), hfpd, iobuf, request) == 0) {
+		} else if (hardfile_do_io(ctx, get_hardfile_data_controller(nr), hfpd, iobuf, request) == 0) {
 			put_byte_host(iobuf + 30, get_byte_host(iobuf + 30) & ~1);
 			trap_put_bytes(ctx, iobuf + 8, request + 8, 48 - 8);
 			release_async_request(hfpd, request);
@@ -3051,6 +3062,14 @@ void hardfile_reset (void)
 				uaecptr request;
 				if ((request = hfpd->d_request[j]))
 					abort_async (hfpd, request, 0, 0);
+			}
+		}
+		if (hfpd->thread_running) {
+			write_comm_pipe_pvoid(&hfpd->requests, NULL, 0);
+			write_comm_pipe_pvoid(&hfpd->requests, NULL, 0);
+			write_comm_pipe_u32(&hfpd->requests, 0, 1);
+			while (hfpd->thread_running) {
+				sleep_millis(1);
 			}
 		}
 		memset (hfpd, 0, sizeof (struct hardfileprivdata));

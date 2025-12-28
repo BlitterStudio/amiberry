@@ -768,8 +768,8 @@ void amiberry_gui_init()
         if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
         {
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				gui_window_rect.x,
-				gui_window_rect.y,
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
 				gui_window_rect.w,
 				gui_window_rect.h,
 				mode);
@@ -777,8 +777,8 @@ void amiberry_gui_init()
         else
         {
 			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				gui_window_rect.y,
-				gui_window_rect.x,
+				SDL_WINDOWPOS_CENTERED,
+				SDL_WINDOWPOS_CENTERED,
 				gui_window_rect.h,
 				gui_window_rect.w,
 				mode);
@@ -1374,6 +1374,10 @@ void check_input()
 			}
 			break;
 
+		case SDL_DROPFILE:
+			handle_drop_file_event(gui_event);
+			break;
+
 		default:
 			got_event = 1;
 			break;
@@ -1506,8 +1510,7 @@ private:
 		if (strlen(last_loaded_config) > 0) {
 			strncat(tmp, last_loaded_config, MAX_DPATH - 1);
 			strncat(tmp, ".uae", MAX_DPATH - 10);
-		}
-		else {
+		} else {
 			strncat(tmp, OPTIONSFILENAME, MAX_DPATH - 1);
 			strncat(tmp, ".uae", MAX_DPATH - 10);
 		}

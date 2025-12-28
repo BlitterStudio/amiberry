@@ -57,6 +57,7 @@
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
+#include "gui/gui_handling.h"
 
 #ifdef __MACH__
 #include <string>
@@ -471,7 +472,21 @@ static int sleep_millis2(int ms, const bool main)
 	return 0;
 }
 
-void sleep_micros (const int ms)
+int busywait;
+
+int target_sleep_nanos(int us)
+{
+	if (us < 0)
+		return 800; // Microseconds threshold
+
+	struct timespec req;
+	req.tv_sec = us / 1000000;
+	req.tv_nsec = (us % 1000000) * 1000;
+	nanosleep(&req, nullptr);
+	return 0;
+}
+
+void sleep_micros(const int ms)
 {
 	usleep(ms);
 }
@@ -1895,6 +1910,41 @@ static void handle_pen_event(const SDL_Event& event)
 	//}
 }
 
+std::string get_filename_extension(const TCHAR* filename);
+
+static void handle_drop_file_event(const SDL_Event& event)
+{
+	char* dropped_file = event.drop.file;
+	const auto ext = get_filename_extension(dropped_file);
+
+	if (strcasecmp(ext.c_str(), ".uae") == 0)
+	{
+		// Load configuration file
+		uae_restart(&currprefs, 1, dropped_file);
+		gui_running = false;
+	}
+	else if (strcasecmp(ext.c_str(), ".adf") == 0 || strcasecmp(ext.c_str(), ".adz") == 0 || strcasecmp(ext.c_str(), ".dms") == 0 || strcasecmp(ext.c_str(), ".ipf") == 0 || strcasecmp(ext.c_str(), ".zip") == 0)
+	{
+		// Insert floppy image
+		disk_insert(0, dropped_file);
+	}
+	else if (strcasecmp(ext.c_str(), ".lha") == 0)
+	{
+		// WHDLoad archive
+		whdload_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, 0, nullptr);
+		gui_running = false;
+	}
+	else if (strcasecmp(ext.c_str(), ".cue") == 0 || strcasecmp(ext.c_str(), ".iso") == 0 || strcasecmp(ext.c_str(), ".chd") == 0)
+	{
+		// CD image
+		cd_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, 0, nullptr);
+		gui_running = false;
+	}
+	SDL_free(dropped_file);
+}
+
 static void process_event(const SDL_Event& event)
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -1971,6 +2021,10 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_MOUSEWHEEL:
 			handle_mouse_wheel_event(event);
+			break;
+
+		case SDL_DROPFILE:
+			handle_drop_file_event(event);
 			break;
 
 		//TODO Implement with SDL3 for Tablet support
@@ -2202,22 +2256,6 @@ uae_u8* target_load_keyfile(uae_prefs* p, const char* path, int* sizep, char* na
 	return nullptr;
 }
 
-std::vector<std::string> split_command(const std::string& command)
-{
-	std::vector<std::string> word_vector;
-	std::size_t prev = 0, pos;
-	while ((pos = command.find_first_of(' ', prev)) != std::string::npos)
-	{
-		if (pos > prev)
-			word_vector.push_back(command.substr(prev, pos - prev));
-		prev = pos + 1;
-	}
-	if (prev < command.length())
-		word_vector.push_back(command.substr(prev, std::string::npos));
-
-	return word_vector;
-}
-
 void replace(std::string& str, const std::string& from, const std::string& to)
 {
 	const auto start_pos = str.find(from);
@@ -2233,45 +2271,13 @@ void target_execute(const char* command)
 	mouseactive = 0;
 
 	write_log("Target_execute received: %s\n", command);
-	const std::string command_string = command;
-	auto command_parts = split_command(command_string);
-
-	for (size_t i = 0; i < command_parts.size(); ++i)
-	{
-		if (i > 0)
-		{
-			const auto delimiter_position = command_parts[i].find(':');
-			if (delimiter_position != std::string::npos)
-			{
-				auto volume_or_device_name = command_parts[i].substr(0, delimiter_position);
-				for (auto mount = 0; mount < currprefs.mountitems; mount++)
-				{
-					if (currprefs.mountconfig[mount].ci.type == UAEDEV_DIR)
-					{
-						if (_tcsicmp(currprefs.mountconfig[mount].ci.volname, volume_or_device_name.c_str()) == 0
-							|| _tcsicmp(currprefs.mountconfig[mount].ci.devname, volume_or_device_name.c_str()) == 0)
-						{
-							std::string root_directory = currprefs.mountconfig[mount].ci.rootdir;
-							volume_or_device_name += ':';
-							replace(command_parts[i], volume_or_device_name, root_directory);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	std::ostringstream command_stream;
-	for (const auto& part : command_parts)
-	{
-		command_stream << part << " ";
-	}
-	// Ensure this runs in the background, otherwise we'll block the emulator until it returns
-	command_stream << "&";
+	
+	std::string final_command = command;
+	// Ensure this runs in the background
+	final_command += " &";
 
 	try
 	{
-		std::string final_command = command_stream.str();
 		write_log("Executing: %s\n", final_command.c_str());
 		system(final_command.c_str());
 	}

@@ -15,7 +15,6 @@
 #include "audio.h"
 #include "events.h"
 #include "custom.h"
-#include "threaddep/thread.h"
 #include "gui.h"
 #include "savestate.h"
 #ifdef DRIVESOUND
@@ -24,8 +23,6 @@
 #include "gensound.h"
 #include "xwin.h"
 #include "sounddep/sound.h"
-
-#include "cda_play.h"
 
 struct sound_dp
 {
@@ -212,7 +209,11 @@ static void clearbuffer(struct sound_data* sd)
 	if (sd->devicetype == SOUND_DEVICE_SDL2)
 		clearbuffer_sdl2(sd);
 	if (s->pullbuffer) {
+		if (sd->devicetype == SOUND_DEVICE_SDL2)
+			SDL_LockAudioDevice(s->dev);
 		memset(s->pullbuffer, 0, s->pullbuffermaxlen);
+		if (sd->devicetype == SOUND_DEVICE_SDL2)
+			SDL_UnlockAudioDevice(s->dev);
 	}
 }
 
@@ -270,12 +271,14 @@ void set_volume_sound_device(struct sound_data* sd, int volume, int mute)
 	}
 	if (sd->devicetype == SOUND_DEVICE_SDL2)
 	{
-		if (volume < 100 && !mute)
-			volume = 100 - volume;
-		else if (mute || volume >= 100)
-			volume = 0;
-		//TODO switch to using SDL_mixer to implement volume control properly
-		//SDL_MixAudioFormat(reinterpret_cast<uae_u8*>(s->sndbuf), reinterpret_cast<uae_u8*>(s->sndbuf), AUDIO_S16, sd->sndbufsize, volume);
+		sd->softvolume = -1;
+		if (volume < 100 && !mute) {
+			sd->softvolume = (int)((100.0f - volume) * 32768.0f / 100.0f);
+			if (sd->softvolume >= 32768)
+				sd->softvolume = -1;
+		}
+		if (mute || volume >= 100)
+			sd->softvolume = 0;
 	}
 }
 
@@ -286,10 +289,33 @@ void set_volume(int volume, int mute)
 	config_changed = 1;
 }
 
+static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuffer)
+{
+	sound_dp* s = sd->data;
+	if (sd->mute) {
+		memset(sndbuffer, 0, sd->sndbufsize);
+		s->silence_written++; // In push mode no sound gen means no audio push so this might not be incremented frequently
+	}
+	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
+
+	// Sync
+	const auto queued = SDL_GetQueuedAudioSize(s->dev);
+	const auto target = sd->sndbufsize; // Target 1 buffer latency?
+	const auto diff = static_cast<int>(queued) - target;
+	const auto val = static_cast<float>(diff) / static_cast<float>(sd->samplesize);
+	
+	int vis = 0;
+	if (target > 0)
+		vis = queued * 500 / target; // 500 = 50% (nominal)
+	
+	docorrection(s, vis, val, 100);
+}
+
 static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 {
 	auto* s = sd->data;
 
+	SDL_LockAudioDevice(s->dev);
 	if (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
 		write_log(_T("pull overflow! %d %d %d\n"), s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen);
 		s->pullbufferlen = 0;
@@ -299,8 +325,20 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 		gui_data.sndbuf_status = 0;
 	memcpy(s->pullbuffer + s->pullbufferlen, sndbuffer, sd->sndbufsize);
 	s->pullbufferlen += sd->sndbufsize;
+	
+	// Calc sync inside lock to get consistent len
+	const auto len = s->pullbufferlen;
+	const auto maxlen = s->pullbuffermaxlen;
+	SDL_UnlockAudioDevice(s->dev);
 
-	gui_data.sndbuf = (1000.0f * s->pullbufferlen) / s->pullbuffermaxlen;
+	if (maxlen > 0)
+	{
+		const auto target = maxlen / 2;
+		const auto diff = len - target;
+		const auto val = static_cast<float>(diff) / static_cast<float>(sd->samplesize);
+		const auto vis = len * 1000 / maxlen;
+		docorrection(s, vis, val, 100);
+	}
 }
 
 static int open_audio_sdl2(struct sound_data* sd, int index)
@@ -552,15 +590,7 @@ void restart_sound_buffer()
 	//restart_sound_buffer2(sdp);
 }
 
-static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuffer)
-{
-	sound_dp* s = sd->data;
-	if (sd->mute) {
-		memset(sndbuffer, 0, sd->sndbufsize);
-		s->silence_written++; // In push mode no sound gen means no audio push so this might not be incremented frequently
-	}
-	SDL_QueueAudio(s->dev, sndbuffer, sd->sndbufsize);
-}
+
 
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 {
@@ -752,7 +782,7 @@ void finish_sound_buffer()
 			channelswap6(reinterpret_cast<uae_s16*>(paula_sndbuffer), bufsize / 2);
 	}
 
-	// must be after driveclick_mix
+	// driveclick_mix is called in audio.cpp, same as in WinUAE.
 	paula_sndbufpt = paula_sndbuffer;
 	
 #ifdef AVIOUTPUT

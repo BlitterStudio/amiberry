@@ -3833,11 +3833,10 @@ static void expansion_add_autoconfig(struct uae_prefs *p)
 
 static void expansion_init_cards(struct uae_prefs *p, bool log)
 {
-	if (savestate_state != STATE_RESTORE || restore_cardno == 0) {
-		expansion_add_autoconfig(p);
-		expansion_init_cards(p);
-		expansion_autoconfig_sort(p);
-	}
+	expansion_add_autoconfig(p);
+	expansion_init_cards(p);
+	expansion_autoconfig_sort(p);
+
 	expansion_parse_cards(p, log);
 }
 
@@ -4118,12 +4117,13 @@ uae_u8 *save_expansion_boards(size_t *len, uae_u8 *dstptr, int cardnum)
 	save_u32(ec->size);
 	save_u32(ec->flags);
 	save_string(ec->name);
-	//write_log(_T("%d %08x %08x %08x %s\n"), cardnum, ec->base, ec->size, ec->flags, ec->name);
+	write_log(_T("%d %08x %08x %08x %s\n"), cardnum, ec->base, ec->size, ec->flags, ec->name ? ec->name : _T("<none>"));
 	for (int j = 0; j < 16; j++) {
 		save_u8(ec->aci.autoconfig_bytes[j]);
 	}
 	struct romconfig *rc = ec->rc;
 	if (rc && rc->back) {
+		write_log(_T(" - %08x %08x\n"), rc->back->device_type, rc->back->device_num);
 		save_u32(rc->back->device_type);
 		save_u32(rc->back->device_num);
 		save_string(rc->romfile);
@@ -4181,7 +4181,7 @@ uae_u8 *restore_expansion_boards(uae_u8 *src)
 		}
 	}
 	uae_u32 romtype = restore_u32();
-	//write_log(_T("%d %08x %08x %08x %08x %s\n"), cardnum, ec->base, ec->size, ec->flags, romtype, ec->name);
+	write_log(_T("%d %08x %08x %08x %08x %s\n"), cardnum, ec->base, ec->size, ec->flags, romtype, ec->name ? ec->name : _T("<none>"));
 	if (romtype != 0xffffffff) {
 		uae_u32 dev_num = restore_u32();
 		ec->aci.devnum = dev_num;

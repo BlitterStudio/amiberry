@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <cstdio>
 #include <cmath>
 #include <iostream>
@@ -24,6 +26,7 @@
 #include "keyboard.h"
 #include "drawing.h"
 #include "picasso96.h"
+#include "gui.h"
 #include "amiberry_gfx.h"
 #include "sounddep/sound.h"
 #include "inputdevice.h"
@@ -42,6 +45,7 @@
 #include "vkbd/vkbd.h"
 #include "fsdb_host.h"
 #include "savestate.h"
+#include "uae/types.h"
 
 #include <png.h>
 #include <SDL_image.h>
@@ -101,6 +105,12 @@ static int display_height;
 Uint32 pixel_format = SDL_PIXELFORMAT_ABGR8888;
 
 static frame_time_t last_synctime;
+
+static volatile int waitvblankthread_mode;
+static frame_time_t wait_vblank_timestamp;
+static struct MultiDisplay* wait_vblank_display;
+static volatile bool vsync_active;
+static bool scanlinecalibrating;
 
 static SDL_Surface* current_screenshot = nullptr;
 std::string screenshot_filename;
@@ -277,41 +287,60 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 
 static void update_leds(const int monid)
 {
-	if (!amiga_surface)
+	AmigaMonitor* mon = &AMonitors[monid];
+
+	if (!mon->amiga_renderer)
 		return;
 
 	// Use static variables to avoid recalculating color tables every frame
 	static uae_u32 rc[256], gc[256], bc[256], a[256];
 	static bool color_tables_initialized = false;
-	int osdx, osdy;
 
 	// Only initialize color tables once for better performance
 	if (!color_tables_initialized) {
 		for (int i = 0; i < 256; i++) {
-#ifdef AMIBERRY
-			// RGBA
+			// Using RGBA32 for the internal OSD surface
 			rc[i] = i << 0;
 			gc[i] = i << 8;
 			bc[i] = i << 16;
-#else
-			// BGRA
-			rc[i] = i << 16;
-			gc[i] = i << 8;
-			bc[i] = i << 0;
-#endif
 			a[i] = i << 24;
 		}
 		color_tables_initialized = true;
 	}
 
-	statusline_getpos(monid, &osdx, &osdy, crop_rect.w, crop_rect.h);
+	const amigadisplay* ad = &adisplays[monid];
 	const int m = statusline_get_multiplier(monid) / 100;
 	const int led_height = TD_TOTAL_HEIGHT * m;
+	const int led_width = ad->picasso_on ? mon->currentmode.native_width : crop_rect.w;
 
-	// Optimize the LED drawing loop
-	for (int y = 0; y < led_height; y++) {
-		uae_u8* buf = static_cast<uae_u8*>(amiga_surface->pixels) + (y + osdy) * amiga_surface->pitch;
-		draw_status_line_single(monid, buf, y, crop_rect.w, rc, gc, bc, a);
+	// (Re)allocate OSD surface and texture if dimensions changed
+	if (!mon->statusline_surface || mon->statusline_surface->w != led_width || mon->statusline_surface->h != led_height) {
+		if (mon->statusline_surface) SDL_FreeSurface(mon->statusline_surface);
+		mon->statusline_surface = SDL_CreateRGBSurfaceWithFormat(0, led_width, led_height, 32, SDL_PIXELFORMAT_RGBA32);
+		
+		if (mon->statusline_texture) {
+			SDL_DestroyTexture(mon->statusline_texture);
+			mon->statusline_texture = nullptr;
+		}
+	}
+
+	if (!mon->statusline_texture) {
+		mon->statusline_texture = SDL_CreateTexture(mon->amiga_renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, led_width, led_height);
+		SDL_SetTextureBlendMode(mon->statusline_texture, SDL_BLENDMODE_BLEND);
+	}
+
+	if (mon->statusline_surface && mon->statusline_texture) {
+		// Clear with transparent color
+		SDL_FillRect(mon->statusline_surface, nullptr, 0x00000000);
+		
+		// Draw the LEDs into the off-screen surface
+		for (int y = 0; y < led_height; y++) {
+			uae_u8* buf = static_cast<uae_u8*>(mon->statusline_surface->pixels) + y * mon->statusline_surface->pitch;
+			draw_status_line_single(monid, buf, y, led_width, rc, gc, bc, a);
+		}
+		
+		// Map the surface to the texture
+		SDL_UpdateTexture(mon->statusline_texture, nullptr, mon->statusline_surface->pixels, mon->statusline_surface->pitch);
 	}
 }
 
@@ -325,8 +354,9 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
-	// RTG status line is handled in P96 code, this is for native modes only
-	if ((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on)
+	// Unified OSD update: handle both native (CHIPSET) and RTG modes
+	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
+		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
 	{
 		update_leds(monid);
 	}
@@ -335,8 +365,17 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 #else
 	if (amiga_texture && amiga_surface)
 	{
-		SDL_RenderClear(mon->amiga_renderer);
 		AmigaMonitor* mutable_mon = &AMonitors[monid];
+
+		// Performance Optimization: Avoid SDL_RenderClear if the render_quad covers the whole screen.
+		// We check if the quad matches the logical size or if it covers the 0,0 - w,h area.
+		int lw, lh;
+		SDL_RenderGetLogicalSize(mon->amiga_renderer, &lw, &lh);
+		bool covers_full = (render_quad.x <= 0 && render_quad.y <= 0 && render_quad.w >= lw && render_quad.h >= lh);
+		
+		if (!covers_full) {
+			SDL_RenderClear(mon->amiga_renderer);
+		}
 
 		// If a full render is needed or there are no specific dirty rects, update the whole texture.
 		if (mutable_mon->full_render_needed || mutable_mon->dirty_rects.empty()) {
@@ -352,7 +391,38 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		mutable_mon->dirty_rects.clear();
 		mutable_mon->full_render_needed = false;
 
-		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, &crop_rect, &render_quad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		const SDL_Rect* p_crop = &crop_rect;
+		const SDL_Rect* p_quad = &render_quad;
+		SDL_Rect rtg_rect;
+
+		if (ad->picasso_on) {
+			rtg_rect = { 0, 0, mon->currentmode.native_width, mon->currentmode.native_height };
+			p_crop = &rtg_rect;
+			p_quad = &rtg_rect;
+
+			int lw, lh;
+			SDL_RenderGetLogicalSize(mon->amiga_renderer, &lw, &lh);
+			if (lw != rtg_rect.w || lh != rtg_rect.h) {
+				SDL_RenderSetLogicalSize(mon->amiga_renderer, rtg_rect.w, rtg_rect.h);
+			}
+		}
+
+		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, p_crop, p_quad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+
+		// GPU-composited Status Line (OSD) for both native and RTG
+		if ((((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
+			 ((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on)) && mon->statusline_texture)
+		{
+			int slx, sly, dst_w, dst_h;
+			SDL_RenderGetLogicalSize(mon->amiga_renderer, &dst_w, &dst_h);
+			if (dst_w == 0 || dst_h == 0) {
+				SDL_GetRendererOutputSize(mon->amiga_renderer, &dst_w, &dst_h);
+			}
+			statusline_getpos(monid, &slx, &sly, dst_w, dst_h);
+			SDL_Rect dst_osd = { slx, sly, mon->statusline_surface->w, mon->statusline_surface->h };
+			SDL_RenderCopy(mon->amiga_renderer, mon->statusline_texture, nullptr, &dst_osd);
+		}
+
 		if (vkbd_allowed(monid))
 		{
 			vkbd_redraw();
@@ -368,6 +438,99 @@ static void SDL2_showframe(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	SDL_RenderPresent(mon->amiga_renderer);
+
+	static Uint64 freq = 0;
+	if (freq == 0) freq = SDL_GetPerformanceFrequency();
+
+	if (syncbase > 0)
+	{
+		double target_fps;
+		if (vblank_hz > 45 && vblank_hz < 65) target_fps = (double)vblank_hz;
+		else if (currprefs.ntscmode) target_fps = 60.0;
+		else target_fps = 50.0;
+		
+		static double accumulated_error = 0.0; 
+		double target_frame_dist_sec = 1.0 / target_fps;
+
+		// Custom Adaptive Sync using SDL Counters (PI Controller)
+		if (gui_data.sndbuf_avail) {
+			int buffer_error = gui_data.sndbuf - 750; // Target 75% (1.5 fragments) for stability
+			
+			// Integral term (accumulate error to find natural clock skew)
+			accumulated_error += buffer_error;
+			
+			// Anti-windup: Clamp accumulated error
+			accumulated_error = std::min(accumulated_error, 80000.0);
+			accumulated_error = std::max(accumulated_error, -80000.0);
+
+			// PI Gains
+			// Kp: Immediate reaction to spikes. 0.00005.
+			// Ki: Slow adaptation. 0.0000005.
+			double P = (double)buffer_error * 0.00005; 
+			double I = accumulated_error * 0.0000005;
+			
+			double adjustment_factor = 1.0 + P + I; 
+			
+			// Safety Clamp +/- 8%
+			adjustment_factor = std::min(adjustment_factor, 1.08);
+			adjustment_factor = std::max(adjustment_factor, 0.92);
+
+			target_frame_dist_sec *= adjustment_factor;
+		}
+		
+		Uint64 target_ticks = (Uint64)(target_frame_dist_sec * freq);
+		
+		static Uint64 next_frame_tick = 0;
+		Uint64 current_tick = SDL_GetPerformanceCounter();
+
+		if (next_frame_tick == 0)
+		{
+			next_frame_tick = current_tick + target_ticks;
+		}
+		else
+		{
+			next_frame_tick += target_ticks;
+			// Lag reset: if we are more than 100ms behind, reset
+			if (current_tick > next_frame_tick + (freq / 10)) {
+				next_frame_tick = current_tick + target_ticks;
+			}
+		}
+		
+		Sint64 ticks_left = next_frame_tick - current_tick;
+		
+		// Performance Optimization: Use SDL_Delay for the majority of the wait time
+		// to reduce CPU wakeups and context switches.
+		if (ticks_left > (Sint64)(freq / 200)) // > 5ms
+		{
+			Uint32 delay_ms = (Uint32)((ticks_left - (freq / 500)) * 1000 / freq);
+			if (delay_ms > 0)
+				SDL_Delay(delay_ms);
+			current_tick = SDL_GetPerformanceCounter();
+			ticks_left = next_frame_tick - current_tick;
+		}
+
+		// Fine-grained Sleep wait (0.5ms intervals, up to 2ms threshold)
+		while (ticks_left > (Sint64)(freq / 500)) // > 2ms
+		{
+#ifndef _WIN32
+			struct timespec req = { 0, 500000 };
+			nanosleep(&req, nullptr);
+#else
+			SDL_Delay(1);
+#endif
+			current_tick = SDL_GetPerformanceCounter();
+			ticks_left = next_frame_tick - current_tick;
+		}
+
+		// Spin wait
+		while (SDL_GetPerformanceCounter() < next_frame_tick)
+		{
+			// busy wait
+		}
+	}
+	
+	// Sync legacy variable for other systems
+	wait_vblank_timestamp = read_processor_time();
 }
 
 void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
@@ -575,11 +738,6 @@ int target_get_display(const TCHAR* name)
 	return -1;
 }
 
-static volatile int waitvblankthread_mode;
-static frame_time_t wait_vblank_timestamp;
-static MultiDisplay* wait_vblank_display;
-static volatile bool vsync_active;
-static bool scanlinecalibrating;
 
 static int target_get_display_scanline2(int displayindex)
 {
@@ -700,9 +858,8 @@ static void display_vblank_thread(struct AmigaMonitor* mon)
 	//	unsigned int th;
 	//	_beginthreadex(NULL, 0, waitvblankthread, 0, 0, &th);
 	//}
-	//else {
-		calculated_scanline = false;
-	//}
+	// it is used when D3DKMTGetScanLine() is not available or not working.
+	// calculated_scanline = false;
 }
 
 void target_cpu_speed()
@@ -2378,7 +2535,20 @@ int check_prefs_changed_gfx()
 	}
 #endif
 
+	if (changed_prefs.rtgboards[0].rtgmem_type != currprefs.rtgboards[0].rtgmem_type)
+	{
+		return 1;
+	}
+
 	return 0;
+}
+
+static void update_pixel_format()
+{
+	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
+		pixel_format = SDL_PIXELFORMAT_ARGB8888; // BGRA for custom boards
+	else
+		pixel_format = SDL_PIXELFORMAT_ABGR8888; // RGBA for UAE elements
 }
 
 /* Color management */
@@ -2393,7 +2563,25 @@ void init_colors(const int monid)
 	/* init colors */
 
 	red_bits = green_bits = blue_bits = 8;
-	red_shift = 0; green_shift = 8; blue_shift = 16;
+	red_bits = green_bits = blue_bits = 8;
+
+	SDL_PixelFormat *pf = SDL_AllocFormat(pixel_format);
+	if (pf) {
+		red_shift = pf->Rshift;
+		green_shift = pf->Gshift;
+		blue_shift = pf->Bshift;
+		alpha_shift = pf->Ashift;
+		SDL_FreeFormat(pf);
+	} else {
+		// Fallback defaults if allocation fails
+		if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+			// BGRA
+			red_shift = 16; green_shift = 8; blue_shift = 0; alpha_shift = 24;
+		} else {
+			// RGBA
+			red_shift = 0; green_shift = 8; blue_shift = 16; alpha_shift = 24;
+		}
+	}
 
 	alloc_colors64k(monid, red_bits, green_bits, blue_bits, red_shift, green_shift, blue_shift, alpha_bits, alpha_shift, alpha, 0);
 	notice_new_xcolors();
@@ -2441,6 +2629,16 @@ void DX_Invalidate(struct AmigaMonitor* mon, int x, int y, int width, int height
 		x = 0;
 		width = vidinfo->width;
 	}
+
+	// Performance Optimization: Bridge Picasso96 invalidation to the SDL dirty rect system.
+	// This allows the renderer to only upload the modified portion of the RTG screen.
+	SDL_Rect dirty_rect;
+	dirty_rect.x = x;
+	dirty_rect.y = y;
+	dirty_rect.w = width;
+	dirty_rect.h = height;
+	add_dirty_rect(mon, dirty_rect);
+
 	last = y + height - 1;
 	lastx = x + width - 1;
 	mon->p96_double_buffer_first = y;
@@ -2807,6 +3005,8 @@ void machdep_free()
 
 int graphics_init(bool mousecapture)
 {
+	wait_vblank_timestamp = read_processor_time();
+	update_pixel_format();
 	gfxmode_reset(0);
 	if (open_windows(&AMonitors[0], mousecapture, false)) {
 		if (currprefs.monitoremu_mon > 0 && currprefs.monitoremu) {
@@ -2820,14 +3020,6 @@ int graphics_init(bool mousecapture)
 
 int graphics_setup()
 {
-	//if (!screen_cs_allocated) {
-	//	screen_cs = SDL_CreateMutex();
-	//	if (screen_cs == nullptr) {
-	//		write_log(_T("Couldn't create screen_cs: %s\n"), SDL_GetError());
-	//		return 0;
-	//	}
-	//	screen_cs_allocated = true;
-	//}
 #ifdef PICASSO96
 	InitPicasso96(0);
 #endif
@@ -2840,10 +3032,6 @@ void graphics_leave()
 	{
 		close_windows(&AMonitors[i]);
 	}
-
-	//SDL_DestroyMutex(screen_cs);
-	//screen_cs = nullptr;
-	//screen_cs_allocated = false;
 }
 
 void close_windows(struct AmigaMonitor* mon)
@@ -2851,13 +3039,20 @@ void close_windows(struct AmigaMonitor* mon)
 	vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 
 	reset_sound();
-#if 0
-	S2X_free(mon->monitor_id);
-#endif
+
 #ifdef AMIBERRY
 	SDL_FreeSurface(amiga_surface);
 	amiga_surface = nullptr;
 #endif
+	if (mon->statusline_surface) {
+		SDL_FreeSurface(mon->statusline_surface);
+		mon->statusline_surface = nullptr;
+	}
+	if (mon->statusline_texture) {
+		SDL_DestroyTexture(mon->statusline_texture);
+		mon->statusline_texture = nullptr;
+	}
+
 	freevidbuffer(mon->monitor_id, &avidinfo->drawbuffer);
 	freevidbuffer(mon->monitor_id, &avidinfo->tempbuffer);
 	close_hwnds(mon);
@@ -3206,13 +3401,19 @@ static int create_windows(struct AmigaMonitor* mon)
 #ifndef USE_OPENGL
 	if (mon->amiga_renderer == nullptr)
 	{
-		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
+		const auto* ad = &adisplays[mon->monitor_id];
+		const auto* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
+		// Force disable VSync for the renderer to prevent blocking in SDL_RenderPresent.
+		// We handle frame timing manually in SDL2_showframe with high precision.
+		// if (ap->gfx_vsync > 0)
+		//	renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
+
 		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, renderer_flags);
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
 	}
 	DPIHandler::set_render_scale(mon->amiga_renderer);
 #endif
-
 
     // Cache current display mode for scaling heuristics
     if (SDL_GetWindowDisplayMode(mon->amiga_window, &sdl_mode) != 0) {

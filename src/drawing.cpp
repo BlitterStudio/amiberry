@@ -587,7 +587,7 @@ int coord_native_to_amiga_y(int y)
 	if (y >= native2amiga_line_map_height) {
 		y = native2amiga_line_map_height + thisframe_y_adjust - 1;
 	}
-	return native2amiga_line_map[y] - minfirstline;
+	return native2amiga_line_map[y];
 #else
 	if (!native2amiga_line_map || y < 0) {
 		return 0;
@@ -595,7 +595,7 @@ int coord_native_to_amiga_y(int y)
 	if (y >= native2amiga_line_map_height) {
 		y = native2amiga_line_map_height - 1;
 	}
-	return native2amiga_line_map[y] - minfirstline;
+	return native2amiga_line_map[y];
 #endif
 }
 
@@ -1082,7 +1082,7 @@ void get_custom_mouse_limits (int *pw, int *ph, int *pdx, int *pdy, int dbl)
 	w = diwlastword_total - diwfirstword_total;
 	dx = diwfirstword_total - visible_left_border;
 
-	y2 = plflastline_total;
+	y2 = plflastline_total + 1;
 	y1 = plffirstline_total;
 	if (minfirstline > y1)
 		y1 = minfirstline;
@@ -7064,9 +7064,12 @@ void draw_denise_border_line_fast(int gfx_ypos, bool blank, enum nln_how how, st
 	buf2 = buf2p;
 
 	if (blank)  {
-		memset(buf1, 0, xlinebuffer_end - (uae_u8*)buf1);
-		if (buf2) {
-			memset(buf2, 0, xlinebuffer_end - (uae_u8 *)buf1);
+		int len = addrdiff(xlinebuffer_end, (uae_u8*)buf1);
+		if (len > 0) {
+			memset(buf1, 0, len);
+			if (buf2) {
+				memset(buf2, 0, len);
+			}
 		}
 	} else {
 		if (full_line_draw) {
@@ -7092,8 +7095,7 @@ void draw_denise_border_line_fast(int gfx_ypos, bool blank, enum nln_how how, st
 			draw_blank_end();
 		}
 
-		total = end - start;
-		if (need_genlock_data && gbuf && total) {
+		if (need_genlock_data && gbuf && total > 0) {
 			int max = addrdiff(xlinebuffer_genlock_end, gbufp);
 			total += GENLOCK_EXTRA_CLEAR;
 			if (total > max) {

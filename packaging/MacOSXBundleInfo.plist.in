@@ -20,10 +20,6 @@
         <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
         <key>CFBundlePackageType</key>
         <string>APPL</string>
-        <key>NSMainStoryboardFile</key>
-        <string>Main</string>
-        <key>NSPrincipalClass</key>
-        <string>NSApplication</string>
         <key>NSHighResolutionCapable</key>
         <true/>
         <key>CFBundleShortVersionString</key>
@@ -37,6 +33,8 @@
 		<key>CFBundleDocumentTypes</key>
 		<array>
 			<dict>
+				<key>CFBundleTypeName</key>
+				<string>Amiberry Supported File</string>
 				<key>CFBundleTypeExtensions</key>
 				<array>
 					<string>uae</string>
@@ -44,11 +42,13 @@
 					<string>lha</string>
 					<string>ipf</string>
 					<string>dms</string>
+					<string>cue</string>
+					<string>uss</string>
 				</array>
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
 				<key>LSHandlerRank</key>
-				<string>Default</string>
+				<string>Owner</string>
 			</dict>
 		</array>
 	</dict>
