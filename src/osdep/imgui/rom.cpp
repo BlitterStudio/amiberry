@@ -7,6 +7,7 @@
 #include "rommgr.h"
 #include "registry.h"
 #include "uae.h"
+#include "memory.h"
 
 struct RomListEntry {
 	std::string name;
@@ -19,18 +20,22 @@ static std::vector<RomListEntry> cart_rom_list;
 static bool roms_initialized = false;
 static int customromselectnum = 0;
 
+enum class RomPickType {
+	None,
+	Main,
+	Extended,
+	Cartridge,
+	Flash,
+	RTC,
+	Custom
+};
+
+static RomPickType current_pick_type = RomPickType::None;
+
 static void update_rom_list(std::vector<RomListEntry>& list, int romtype_mask) {
 	list.clear();
 	list.push_back({ "Select ROM...", "" });
 
-	// Simulate "DetectedROMs" reading by iterating romlist
-	// Amiberry doesn't always populate registry completely like WinUAE,
-	// but romlist_getit() contains scanned ROMs.
-	
-	// Create a temporary key to use existing logic if needed, OR just iterate internal list.
-	// WinUAE uses "addromfiles" which scans registry. Amiberry's "scan_roms" populates "rl".
-	// We can iterate "rl".
-	
 	int count = romlist_count();
 	struct romlist* rl = romlist_getit();
 	for (int i = 0; i < count; i++) {
@@ -52,14 +57,12 @@ static void InitializeROMLists() {
 	roms_initialized = true;
 }
 
-static void RomCombo(const char* label, char* current_path, int max_len, std::vector<RomListEntry>& list) {
+static bool RomCombo(const char* label, char* current_path, int max_len, std::vector<RomListEntry>& list) {
 	std::string preview_value = "Select ROM...";
 	bool match_found = false;
+	bool value_changed = false;
 	
-	// Check if current path matches any entry
 	for (const auto& entry : list) {
-		// WinUAE sometimes has complex paths or ":Name" format.
-		// Simple string compare for now.
 		if (entry.path == current_path) {
 			preview_value = entry.name;
 			match_found = true;
@@ -67,7 +70,7 @@ static void RomCombo(const char* label, char* current_path, int max_len, std::ve
 		}
 	}
 	if (!match_found && current_path[0]) {
-		preview_value = current_path; // Show raw path if valid but not in list
+		preview_value = current_path;
 	}
 
 	if (ImGui::BeginCombo(label, preview_value.c_str())) {
@@ -75,11 +78,13 @@ static void RomCombo(const char* label, char* current_path, int max_len, std::ve
 			bool is_selected = (entry.path == current_path);
 			if (ImGui::Selectable(entry.name.c_str(), is_selected)) {
 				strncpy(current_path, entry.path.c_str(), max_len);
+				value_changed = true;
 			}
 			if (is_selected) ImGui::SetItemDefaultFocus();
 		}
 		ImGui::EndCombo();
 	}
+	return value_changed;
 }
 
 void render_panel_rom()
@@ -90,39 +95,14 @@ void render_panel_rom()
 	BeginGroupBox("System ROM Settings");
 	// Main ROM
 	ImGui::Text("Main ROM File:");
-	RomCombo("##MainRomCombo", changed_prefs.romfile, MAX_DPATH, main_rom_list);
-	ImGui::SameLine();
-	// Also allow manual edit if needed? WinUAE allows typing.
-	// But RomCombo replaces it. Let's keep InputText as well or just RomCombo?
-	// WinUAE has a ComboBox that is editable. ImGui Combo is not editable by default.
-	// We'll show the path in a truncated way or tooltip?
-	// Better: Combo selects predefined, "..." picks file. InputText shows current path.
-	// Let's try: InputText (Editable) + "..." + PopUp/Combo for Quick Select?
-	// Or standard Amiberry style: Text Label, InputText underneath, "..." button.
-	// We can add a "Quick Select" Combo above or beside.
-	// Current Amiberry style (from rom.cpp original): InputText + Button.
-	// Let's replace InputText with RomCombo AND verify if we can edit it? No.
-	// Let's render: [ Combo (Select predefined) ] [ InputText (Current Path) ] [ ... ]
-	// Or just [ Combo (Shows Name or Path) ] [ ... ]
-	// If custom file picked via "...", Combo might show "Custom" or Path.
-	
-	// Let's stick to: Combo (populated with list). If user picks "...", it updates current_path.
-	// If current_path is not in list, Combo shows it as preview.
-	
-	// To allow manual Typing: InputTextWithHint?
-	// Let's use InputText + "..." + Combo(small arrow) logic if possible?
-	// Simpler: InputText for path. "..." for file. "Arrow" Button for quick list?
-	// Or just `RomCombo` that updates the buffer. User can see path in tooltip or if we strictly use path in Preview.
-	// But `preview_value` shows Name.
-	
-	// Let's follow WinUAE roughly: It has a Dropdown that shows "Name (vX.Y)".
-	// We will use RomCombo.
-	// Problem: If user wants to see the actual filename?
-	// We can add a tooltip.
+	if (RomCombo("##MainRomCombo", changed_prefs.romfile, MAX_DPATH, main_rom_list)) {
+		read_kickstart_version(&changed_prefs);
+	}
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romfile);
 	ImGui::SameLine();
 	if (ImGui::Button("...##MainRomFileButton"))
 	{
+		current_pick_type = RomPickType::Main;
 		OpenFileDialog("Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.romfile);
 	}
 
@@ -133,12 +113,16 @@ void render_panel_rom()
 	ImGui::SameLine();
 	if (ImGui::Button("...##ExtRomFileButton"))
 	{
-		OpenFileDialog("Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.romextfile);
+		current_pick_type = RomPickType::Extended;
+		OpenFileDialog("Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.romextfile);
 	}
 
     bool maprom_disabled = (changed_prefs.cpuboard_type != 0);
     ImGui::BeginDisabled(maprom_disabled);
-	ImGui::Checkbox("MapROM emulation", (bool*)&changed_prefs.maprom);
+	if (ImGui::Checkbox("MapROM emulation", (bool*)&changed_prefs.maprom)) {
+		if (changed_prefs.maprom)
+			changed_prefs.maprom = 0x0f000000;
+	}
     ImGui::EndDisabled();
     
 	ImGui::SameLine();
@@ -164,9 +148,8 @@ void render_panel_rom()
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(80);
 	if (ImGui::InputText("##AddressRangeFrom", addr_from, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
-		rb->start_address = strtoul(addr_from, NULL, 16);
+		rb->start_address = strtoul(addr_from, nullptr, 16);
 		rb->start_address &= ~65535; // Logic from values_from_kickstartdlg2
-	    // recalculate size? WinUAE does it.
 	}
 
 	// Address To
@@ -179,20 +162,15 @@ void render_panel_rom()
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(80);
 	if (ImGui::InputText("##AddressRangeTo", addr_to, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
-		rb->end_address = strtoul(addr_to, NULL, 16);
+		rb->end_address = strtoul(addr_to, nullptr, 16);
 		// Logic from values_from_kickstartdlg2
-		// rb->end_address = ((rb->end_address - 1) & ~65535) | 0xffff;
-		// Wait, WinUAE code:
-		// rb->end_address = ((rb->end_address - 1) & ~65535) | 0xffff;
-		// rb->size = 0;
-		// if (rb->end_address > rb->start_address) ...
-		// We should probably replicate this logic if input changes.
-		// For now simple update.
+		rb->end_address = ((rb->end_address - 1) & ~65535) | 0xffff;
 	}
 
 	ImGui::InputText("##CustomRomFilename", rb->lf.loadfile, MAX_DPATH);
 	ImGui::SameLine();
     if (ImGui::Button("...##CustomRomFileButton")) {
+    	current_pick_type = RomPickType::Custom;
 	    OpenFileDialog("Select Custom ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
     }
 	EndGroupBox("Advanced Custom ROM Settings");
@@ -203,6 +181,7 @@ void render_panel_rom()
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.cartfile);
 	ImGui::SameLine();
 	if (ImGui::Button("...##CartRomFileButton")) {
+		current_pick_type = RomPickType::Cartridge;
 		OpenFileDialog("Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.cartfile);
 	}
 
@@ -210,6 +189,7 @@ void render_panel_rom()
 	ImGui::InputText("##FlashROM", changed_prefs.flashfile, MAX_DPATH);
 	ImGui::SameLine();
 	if (ImGui::Button("...##FlashRomFileButton")) {
+		current_pick_type = RomPickType::Flash;
 		OpenFileDialog("Select Flash ROM File", ".*", changed_prefs.flashfile);
 	}
 
@@ -217,6 +197,7 @@ void render_panel_rom()
 	ImGui::InputText("##RTC", changed_prefs.rtcfile, MAX_DPATH);
 	ImGui::SameLine();
 	if (ImGui::Button("...##RTCFileButton")) {
+		current_pick_type = RomPickType::RTC;
 		OpenFileDialog("Select RTC File", ".*", changed_prefs.rtcfile);
 	}
 	EndGroupBox("Miscellaneous");
@@ -224,7 +205,6 @@ void render_panel_rom()
 	BeginGroupBox("Advanced UAE expansion board/Boot ROM Settings");
 	const char* uae_items[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
 	
-	// Value Mapping logic
 	int current_uaeboard_idx = 0;
 	if (changed_prefs.boot_rom == 1) {
 		current_uaeboard_idx = 0; // Disabled
@@ -232,15 +212,7 @@ void render_panel_rom()
 		current_uaeboard_idx = changed_prefs.uaeboard + 1;
 	}
 	
-	// Only enabled if not emulating? WinUAE: ew (hDlg, IDC_UAEBOARD_TYPE, full_property_sheet);
-	// In Amiberry, we often disable critical hardware changes during emulation.
-	bool uae_enabled = !emulating; 
-	// But `emulating` might not be visible? `gui_handling.h` or `UAECore`?
-	// `sysdeps.h` or `uae.h` usually declares `emulating`? 
-	// PanelROM.cpp used `!emulating`.
-	// rom.cpp has `emulating`? Let's assume yes from `uae.h` (included via options.h/sysdeps.h usually).
-	// Actually `options.h` does not declare `emulating`.
-	// `uae.h` is needed probably.
+	bool uae_enabled = !emulating;
 	
 	ImGui::BeginDisabled(!uae_enabled);
 	if (ImGui::Combo("Board type", &current_uaeboard_idx, uae_items, IM_ARRAYSIZE(uae_items))) {
@@ -256,4 +228,33 @@ void render_panel_rom()
 	EndGroupBox("Advanced UAE expansion board/Boot ROM Settings");
 
 	ImGui::Unindent(5.0f);
+
+	// Handle File Dialog Result
+	std::string file_dialog_result;
+	if (ConsumeFileDialogResult(file_dialog_result)) {
+		switch(current_pick_type) {
+			case RomPickType::Main:
+				strncpy(changed_prefs.romfile, file_dialog_result.c_str(), MAX_DPATH);
+				read_kickstart_version(&changed_prefs);
+				break;
+			case RomPickType::Extended:
+				strncpy(changed_prefs.romextfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::Cartridge:
+				strncpy(changed_prefs.cartfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::Flash:
+				strncpy(changed_prefs.flashfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::RTC:
+				strncpy(changed_prefs.rtcfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::Custom:
+				if (rb) strncpy(rb->lf.loadfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			default:
+				break;
+		}
+		current_pick_type = RomPickType::None;
+	}
 }
