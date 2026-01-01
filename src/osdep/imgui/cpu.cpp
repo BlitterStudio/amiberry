@@ -8,6 +8,7 @@
 #include "options.h"
 #include "cpuboard.h"
 #include "memory.h"
+#include "x86.h"
 
 #ifndef MAX_JIT_CACHE
 #define MAX_JIT_CACHE 16384
@@ -79,6 +80,10 @@ void render_panel_cpu() {
     bool enable_24bit =
             changed_prefs.cpu_model <= 68030 && changed_prefs.cachesize == 0;
     bool enable_cpu_idle_slider = changed_prefs.m68k_speed != 0;
+    
+    bool enable_x86_group = is_x86_cpu(&changed_prefs);
+
+    bool enable_cpu_unimplemented = changed_prefs.cpu_model == 68060 && changed_prefs.cachesize == 0;
 
     // Calculate JIT Slider Index for display
     int jit_slider_val = 0;
@@ -141,6 +146,12 @@ void render_panel_cpu() {
             settings_changed = true;
         if (ImGui::RadioButton("68060", &changed_prefs.cpu_model, 68060))
             settings_changed = true;
+        
+        // 1. Make the width of the CPU group larger
+        // 2. Make the width of the MMU group identical to the CPU group
+        // 3. Make the width of the FPU group identical to the CPU one
+        float left_group_min_width = 180.0f;
+        ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
 
         if (settings_changed && old_cpu_model != changed_prefs.cpu_model) {
             // CPU Model Change Logic from PanelCPU.cpp
@@ -231,8 +242,15 @@ void render_panel_cpu() {
         }
         ImGui::EndDisabled();
 
+        bool unimplemented_cpu = !changed_prefs.int_no_unimplemented;
+        ImGui::BeginDisabled(!enable_cpu_unimplemented);
+        if (ImGui::Checkbox("Unimplemented CPU emu", &unimplemented_cpu)) {
+            changed_prefs.int_no_unimplemented = !unimplemented_cpu;
+        }
+        ImGui::EndDisabled();
+
         ImGui::BeginDisabled(!enable_datacache);
-        ImGui::Checkbox("Data cache", &changed_prefs.cpu_data_cache);
+        ImGui::Checkbox("Data cache emulation", &changed_prefs.cpu_data_cache);
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_jit);
@@ -274,6 +292,8 @@ void render_panel_cpu() {
                 changed_prefs.mmu_model = changed_prefs.cpu_model;
         }
         ImGui::EndDisabled();
+
+        ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
         EndGroupBox("MMU");
 
 
@@ -322,6 +342,7 @@ void render_panel_cpu() {
             changed_prefs.fpu_no_unimplemented = !unimplemented_fpu;
         }
         ImGui::EndDisabled();
+        ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
         EndGroupBox("FPU");
     }
     ImGui::EndGroup();
@@ -340,43 +361,58 @@ void render_panel_cpu() {
             changed_prefs.m68k_speed = -1;
             changed_prefs.m68k_speed_throttle = 0;
         }
-        if (ImGui::RadioButton("A500/A1200 or cycle-exact", &speed_mode, 0)) {
+        if (ImGui::RadioButton("Approximate A500/A1200 or cycle-exact", &speed_mode, 0)) {
             changed_prefs.m68k_speed = 0;
         }
 
+        ImGui::Spacing();
+
+        ImGui::BeginDisabled(!enable_cpu_speed_slider);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("CPU Speed");
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(slider_width);
+        const float button_width = 60.0f;
+        
+        // 6. the CPU Speed slider should not be a slider, but a text field (Value First)
+        ImGui::SetNextItemWidth(button_width);
+        char speed_label[16];
+        snprintf(speed_label, sizeof(speed_label), "%+d%%", static_cast<int>(changed_prefs.m68k_speed_throttle / 10));
+        ImGui::InputText("##CPUSpeedBox", speed_label, sizeof(speed_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
 
-        ImGui::BeginDisabled(!enable_cpu_speed_slider);
-        if (ImGui::SliderInt("##CPU Speed", &speed_slider_val, -9, 50, "%d")) {
-            // Update throttle
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(slider_width - button_width - 10.0f); // Adjust width for button
+        if (ImGui::SliderInt("##CPU Speed", &speed_slider_val, -9, 50, "")) {
+             // Update throttle
             changed_prefs.m68k_speed_throttle =
                     static_cast<float>(speed_slider_val * 100);
             if (changed_prefs.m68k_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
                 changed_prefs.m68k_speed_throttle = 0;
         }
-        ImGui::EndDisabled();
-        // Show percentage info
-        ImGui::SameLine();
-        ImGui::Text("%d%%",
-                    static_cast<int>(changed_prefs.m68k_speed_throttle / 10));
 
+        ImGui::EndDisabled();
+
+        ImGui::BeginDisabled(!enable_cpu_idle_slider);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("CPU Idle ");
         ImGui::SameLine();
-        ImGui::BeginDisabled(!enable_cpu_idle_slider);
-        ImGui::SetNextItemWidth(slider_width);
-        if (ImGui::SliderInt("##CPU Idle", &idle_slider_val, 0, 10)) {
-            if (idle_slider_val == 0)
+        ImGui::SetNextItemWidth(slider_width - button_width - 10.0f);
+        if (ImGui::SliderInt("##CPU Idle", &idle_slider_val, 0, 10, "")) {
+             if (idle_slider_val == 0)
                 changed_prefs.cpu_idle = 0;
             else
                 changed_prefs.cpu_idle = (12 - idle_slider_val) * 15;
         }
-        ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::Text("%d%%", (idle_slider_val * 10));
+        ImGui::SetNextItemWidth(button_width);
+        char idle_label[16];
+        snprintf(idle_label, sizeof(idle_label), "%d%%", (idle_slider_val * 10));
+        ImGui::InputText("##CPUIdleBox", idle_label, sizeof(idle_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
+        
+        ImGui::EndDisabled();
+        // 4. make the CPU Speed group wider, so that it has the same width as the Cycle-exact CPU emulation speed group.
+        // We do this by adding a dummy that matches the expected width of the Cycle-exact group or PPC group (which is likely the widest).
+        float right_group_min_width = 450.0f;
+        ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("CPU Speed");
 
         BeginGroupBox("Cycle-Exact CPU Emulation Speed");
@@ -399,26 +435,35 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
         ImGui::SameLine();
         // Display Frequency MHz text if applicable
+        float freq_mhz = 0.0f;
         if (changed_prefs.cpu_cycle_exact || changed_prefs.cpu_compatible) {
-            float freq_mhz = 0.0f;
             if (changed_prefs.cpu_clock_multiplier)
                 freq_mhz = getcpufreq(changed_prefs.cpu_clock_multiplier);
             else if (changed_prefs.cpu_frequency)
                 freq_mhz = (float) changed_prefs.cpu_frequency;
-
-            ImGui::Text("%.6f MHz", freq_mhz / 1000000.0f);
         }
+        // WinUAE style readout
+        char freq_label[32];
+        snprintf(freq_label, sizeof(freq_label), "%.6f", freq_mhz / 1000000.0f);
+        ImGui::SetNextItemWidth(80.0f); // Reduced from 100.0f
+        ImGui::InputText("##FreqReadout", freq_label, sizeof(freq_label), ImGuiInputTextFlags_ReadOnly);
 
+        /*
         ImGui::BeginDisabled(true); // Always disabled in Guisan currently
         // ("Disabled until fixed upstream")
         ImGui::Checkbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
         ImGui::EndDisabled();
+        */
+        
+        // 5. reduce the width of the field next to the CPU frequency dropdown
+        // And ensure group width matching
+        ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("Cycle-Exact CPU Emulation Speed");
 
         BeginGroupBox("PowerPC CPU Options");
         ImGui::BeginDisabled(!enable_ppc);
         bool ppc_bool = changed_prefs.ppc_mode != 0;
-        if (ImGui::Checkbox("PPC emulation", &ppc_bool)) {
+        if (ImGui::Checkbox("PPC CPU emulation (Blizzard PPC / CyberStorm PPC)", &ppc_bool)) {
             if (ppc_bool) {
                 if (changed_prefs.ppc_mode == 0)
                     changed_prefs.ppc_mode = 1;
@@ -446,7 +491,34 @@ void render_panel_cpu() {
         else
             ImGui::Text("%d", changed_prefs.ppc_cpu_idle);
 
+        ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("PowerPC CPU Options");
+
+        BeginGroupBox("x86 Bridgeboard CPU options");
+        ImGui::BeginDisabled(!enable_x86_group);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("CPU Speed");
+        ImGui::SameLine();
+        
+        int x86_speed_slider_val = static_cast<int>(changed_prefs.x86_speed_throttle / 100);
+        
+        ImGui::SetNextItemWidth(slider_width - 60.0f - 10.0f);
+        if (ImGui::SliderInt("##x86Speed", &x86_speed_slider_val, -9, 50, "")) {
+             changed_prefs.x86_speed_throttle = static_cast<float>(x86_speed_slider_val * 100);
+             if (changed_prefs.x86_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
+                changed_prefs.x86_speed_throttle = 0; // Mirroring safety logic? Maybe not needed for x86 but safe.
+        }
+
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60.0f);
+        char x86_speed_label[16];
+        snprintf(x86_speed_label, sizeof(x86_speed_label), "%+d%%", static_cast<int>(changed_prefs.x86_speed_throttle / 10));
+        ImGui::InputText("##x86SpeedBox", x86_speed_label, sizeof(x86_speed_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
+
+        ImGui::EndDisabled();
+        // 7. make the width of the x86 bridgeboard group identical to the width of the powerpc CPU options
+        ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
+        EndGroupBox("x86 Bridgeboard CPU options");
 
         BeginGroupBox("Advanced JIT Settings");
 
