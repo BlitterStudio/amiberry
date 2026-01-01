@@ -3981,32 +3981,11 @@ bool file_exists(const std::string& file)
 
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
-	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
-#if defined (__MACH__) && defined (__arm64__)	
-	std::string wget_path = "/opt/homebrew/bin/wget";
-	if (!file_exists(wget_path))
-	{
-		write_log("Could not locate wget in /opt/homebrew/ - Please use homebrew to install it!\n");
-		return false;
-	}
-#elif defined(__MACH__)
-	std::string wget_path = "/usr/local/bin/wget";
-	if (!file_exists(wget_path))
-	{
-		write_log("Could not locate wget in /usr/local/bin/ - Please use homebrew to install it!\n");
-		return false;
-	}
-#else
-	std::string wget_path = "wget";
-#endif
-	std::string download_command = wget_path + " -np -nv -O ";
+	const std::string curl_cmd = "curl -L -s -o ";
+	const std::string wget_cmd = "wget -np -nv -O ";
+	
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
-
-	download_command.append(tmp);
-	download_command.append(" ");
-	download_command.append(source);
-	download_command.append(" 2>&1");
 
 	// Cleanup if the tmp destination already exists
 	if (file_exists(tmp))
@@ -4019,30 +3998,69 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		}
 	}
 
+	bool download_success = false;
+
+	// Try curl first
 	try
 	{
+		std::string download_command = curl_cmd + tmp + " " + source + " 2>&1";
 		char buffer[MAX_DPATH];
 		const auto output = popen(download_command.c_str(), "r");
-		if (!output)
+		if (output)
 		{
-			write_log("Failed while trying to run wget! Make sure it exists in your system...\n");
-			return false;
+			while (fgets(buffer, sizeof buffer, output))
+			{
+				write_log(buffer);
+				write_log("\n");
+			}
+			int exit_code = pclose(output);
+			if (exit_code == 0) {
+				download_success = true;
+			} else {
+				write_log("curl failed with exit code %d\n", exit_code);
+			}
+		} else {
+			write_log("Failed to execute curl command.\n");
 		}
-
-		while (fgets(buffer, sizeof buffer, output))
-		{
-			write_log(buffer);
-			write_log("\n");
-		}
-		pclose(output);
 	}
 	catch (...)
 	{
-		write_log("An exception was thrown while trying to execute wget!\n");
-		return false;
+		write_log("Exception while running curl.\n");
 	}
 
-	if (file_exists(tmp))
+	// Fallback to wget if curl failed
+	if (!download_success)
+	{
+		write_log("curl download failed or missing, trying wget...\n");
+		try
+		{
+			std::string download_command = wget_cmd + tmp + " " + source + " 2>&1";
+			char buffer[MAX_DPATH];
+			const auto output = popen(download_command.c_str(), "r");
+			if (output)
+			{
+				while (fgets(buffer, sizeof buffer, output))
+				{
+					write_log(buffer);
+					write_log("\n");
+				}
+				int exit_code = pclose(output);
+				if (exit_code == 0) {
+					download_success = true;
+				} else {
+					write_log("wget failed with exit code %d\n", exit_code);
+				}
+			} else {
+				write_log("Failed to execute wget command.\n");
+			}
+		}
+		catch (...)
+		{
+			write_log("Exception while running wget.\n");
+		}
+	}
+
+	if (download_success && file_exists(tmp))
 	{
 		if (file_exists(destination) && keep_backup)
 		{
