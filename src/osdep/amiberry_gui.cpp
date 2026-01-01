@@ -1870,9 +1870,7 @@ void DisplayDiskInfo(int num)
 		linebuffer[w * 3 + 1 + w] = 0;
 		infotext.emplace_back(linebuffer);
 	}
-#ifdef USE_GUISAN
 	ShowDiskInfo(title, infotext);
-#endif
 }
 
 void save_mapping_to_file(const std::string& mapping)

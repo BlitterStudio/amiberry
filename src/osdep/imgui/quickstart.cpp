@@ -1,15 +1,11 @@
 #include "sysdeps.h"
 #include "blkdev.h"
 #include "imgui.h"
-#include "config.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "disk.h"
 #include "imgui_panels.h"
 #include "uae.h"
-
-extern void ShowMessageBox(const char* title, const char* message);
-extern void DisplayDiskInfo(int drv);
 
 std::vector<const char*> qs_models;
 std::vector<const char*> qs_configs;
@@ -259,7 +255,7 @@ void render_panel_quickstart()
 				tmp = changed_prefs.floppyslots[i].df;
 			else
 				tmp = get_floppy_path();
-			OpenFileDialog("Select disk image file", ".adf,.adz,.ipf,.dms,.fdi,.hdf,.img,.*", tmp);
+			OpenFileDialog("Select disk image file", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}", tmp);
 			qs_pending_floppy_drive = i;
 		}
 		if (!drive_enabled) ImGui::EndDisabled();
@@ -297,7 +293,6 @@ void render_panel_quickstart()
 		bool wp_enabled = drive_enabled && !changed_prefs.floppy_read_only && disk_present;
 		if (!wp_enabled) ImGui::BeginDisabled();
 		bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != 0;
-		// Use shorter label or just "RO" if space is tight? WinUAE uses "Write-protected".
 		snprintf(label, sizeof(label), "Write-protected##QSFloppyWriteProtected%d", i);
 		if (ImGui::Checkbox(label, &wp))
 		{
@@ -534,9 +529,11 @@ void render_panel_quickstart()
 		amiberry_options.quickstart_start = qs_mode;
 	EndGroupBox("Mode");
 
-	// Only change the current prefs if we're not already emulating
-	if (!emulating && !config_loaded)
+	ImGui::Spacing();
+	if (ImGui::Button("Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	{
 		adjust_prefs();
+	}
 
 	{
 		std::string filePath;

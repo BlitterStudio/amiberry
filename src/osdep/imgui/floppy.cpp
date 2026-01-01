@@ -150,7 +150,7 @@ static void RenderDriveSlot(int i)
              current_floppy_dialog_mode = static_cast<FloppyDialogMode>(static_cast<int>(FloppyDialogMode::SelectDF0) + i);
              std::string startPath = changed_prefs.floppyslots[i].df;
              if (startPath.empty()) startPath = get_floppy_path(); 
-             OpenFileDialog("Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z){.adf,.adz,.dms,.ipf,.zip,.7z},All Files (*){.*}", startPath);
+             OpenFileDialog("Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}", startPath);
         }
         
         ImGui::EndDisabled();

@@ -1844,6 +1844,12 @@ void run_gui()
 	init_max_signals();
 }
 #elif USE_IMGUI
+// IMGUI runtime state and helpers
+
+static bool show_disk_info = false;
+static char disk_info_title[128] = {0};
+static std::vector<std::string> disk_info_text;
+
 void ShowMessageBox(const char* title, const char* message)
 {
     // Safely copy and ensure null-termination
@@ -1852,6 +1858,14 @@ void ShowMessageBox(const char* title, const char* message)
     strncpy(message_box_message, message ? message : "", sizeof(message_box_message) - 1);
     message_box_message[sizeof(message_box_message) - 1] = '\0';
     show_message_box = true;
+}
+
+void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
+{
+    strncpy(disk_info_title, title ? title : "Disk Info", sizeof(disk_info_title) - 1);
+    disk_info_title[sizeof(disk_info_title) - 1] = '\0';
+    disk_info_text = text;
+    show_disk_info = true;
 }
 
 // Provide IMGUI categories using centralized panel list
@@ -2104,6 +2118,47 @@ void run_gui()
                 if (ImGui::IsWindowAppearing())
                     ImGui::SetItemDefaultFocus();
 
+                ImGui::EndPopup();
+            }
+        }
+
+		if (show_disk_info)
+		{
+            const ImGuiViewport* vp = ImGui::GetMainViewport();
+            const float vw = vp ? vp->Size.x : ImGui::GetIO().DisplaySize.x;
+            const float vh = vp ? vp->Size.y : ImGui::GetIO().DisplaySize.y;
+            const float desired_w = std::clamp(vw * 0.7f, 600.0f, 900.0f);
+            
+            ImGui::SetNextWindowPos(vp ? vp->GetCenter() : ImVec2(vw * 0.5f, vh * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowSize(ImVec2(desired_w, vh * 0.8f), ImGuiCond_Appearing);
+
+            ImGui::OpenPopup(disk_info_title);
+            if (ImGui::BeginPopupModal(disk_info_title, &show_disk_info, ImGuiWindowFlags_NoSavedSettings))
+            {
+                // Child region for text
+                const float footer_h = ImGui::GetFrameHeightWithSpacing() + 10.0f;
+                ImGui::BeginChild("DiskInfoText", ImVec2(0, -footer_h), true);
+                
+                for (const auto& line : disk_info_text) {
+                    ImGui::TextUnformatted(line.c_str());
+                }
+                
+                ImGui::EndChild();
+                
+                ImGui::Spacing();
+                ImGui::Separator();
+
+                // Button alignment logic
+                const float btn_w = 120.0f;
+                float avail = ImGui::GetContentRegionAvail().x;
+                if (avail > btn_w)
+                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - btn_w));
+                
+                if (ImGui::Button("Close", ImVec2(btn_w, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                    show_disk_info = false;
+                    ImGui::CloseCurrentPopup();
+                }
+                
                 ImGui::EndPopup();
             }
         }
