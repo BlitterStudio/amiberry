@@ -27,6 +27,7 @@ void Quickstart_ApplyDefaults(); // Helper to apply quickstart model defaults
 void render_panel_configurations();
 void render_panel_cpu();
 void render_panel_chipset();
+void render_panel_adv_chipset();
 void render_panel_rom();
 void render_panel_ram();
 void render_panel_floppy();

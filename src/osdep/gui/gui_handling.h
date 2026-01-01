@@ -514,6 +514,7 @@ PANEL(quickstart,         "Quickstart",         "quickstart.png") \
 PANEL(configurations,     "Configurations",     "file.png") \
 PANEL(cpu,                "CPU and FPU",        "cpu.png") \
 PANEL(chipset,            "Chipset",            "cpu.png") \
+PANEL(adv_chipset,        "Adv. Chipset",       "cpu.png") \
 PANEL(rom,                "ROM",                "chip.png") \
 PANEL(ram,                "RAM",                "chip.png") \
 PANEL(floppy,             "Floppy drives",      "35floppy.png") \
