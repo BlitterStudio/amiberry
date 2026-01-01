@@ -208,7 +208,7 @@ void render_panel_ram()
              // Manufacturer & Product on same line
              ImGui::AlignTextToFramePadding();
              ImGui::Text("Manufacturer");
-             ImGui::SameLine(100);
+             ImGui::SameLine(130);
              char manuf_buf[8];
              sprintf(manuf_buf, "%04X", rb->manufacturer);
              ImGui::SetNextItemWidth(50); 
@@ -229,14 +229,14 @@ void render_panel_ram()
              // Autoconfig Data (Full width label?)
              ImGui::AlignTextToFramePadding();
              ImGui::Text("Autoconfig data");
-             ImGui::SameLine(100);
+             ImGui::SameLine(130);
              ImGui::SetNextItemWidth(250); // Wider to match WinUAE visual
              ImGui::InputText("##Autoconfig", (char*)"00.00.00...", 64, ImGuiInputTextFlags_ReadOnly);
 
              // Memory Board Dropdown (Placeholder)
              ImGui::AlignTextToFramePadding();
              ImGui::Text("Memory board");
-             ImGui::SameLine(100);
+             ImGui::SameLine(130);
              ImGui::SetNextItemWidth(250);
              ImGui::BeginDisabled();
              if (ImGui::BeginCombo("##MemBoardPlaceholder", "")) ImGui::EndCombo();
@@ -249,7 +249,7 @@ void render_panel_ram()
              ImGui::BeginDisabled(!manual_active);
              ImGui::AlignTextToFramePadding();
              ImGui::Text("Address range");
-             ImGui::SameLine(100);
+             ImGui::SameLine(130);
              char addr_buf[16];
              sprintf(addr_buf, "%08X", rb->start_address);
              ImGui::SetNextItemWidth(80);
