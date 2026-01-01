@@ -1,35 +1,140 @@
 #include "imgui.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "custom.h"
 #include "options.h"
 #include "imgui_panels.h"
-#include "gui/gui_handling.h"
+#include "rommgr.h"
+#include "specialmonitors.h"
+
+#include <vector>
+#include <string>
+
+static bool initialized = false;
+static std::vector<std::string> keyboard_items_strs;
+static std::vector<const char*> keyboard_items_ptr;
+static std::vector<std::string> special_monitor_strs;
+static std::vector<const char*> special_monitor_ptr;
+
+static void appendkbmcurom(std::string& s, bool hasrom)
+{
+	if (!hasrom) {
+		s += " [ROM not found]";
+	}
+}
+
+static void init_lists()
+{
+	keyboard_items_strs.clear();
+	keyboard_items_strs.emplace_back("Keyboard disconnected");
+	keyboard_items_strs.emplace_back("UAE High level emulation");
+
+	int ids1[] = { 321, -1 };
+	int ids2[] = { 322, -1 };
+	int ids3[] = { 323, -1 };
+	struct romlist* has65001 = nullptr;
+	struct romlist* has657036 = getromlistbyids(ids1, nullptr);
+	struct romlist* has6805 = getromlistbyids(ids2, nullptr);
+	struct romlist* has8039 = getromlistbyids(ids3, nullptr);
+
+	std::string tmp = "A500 / A500 + (6500 - 1 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboard_items_strs.push_back(tmp);
+
+	tmp = "A600 (6570 - 036 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboard_items_strs.push_back(tmp);
+
+	tmp = "A1000 (6500 - 1 MCU. ROM not yet dumped)";
+	appendkbmcurom(tmp, has65001);
+	keyboard_items_strs.push_back(tmp);
+
+	tmp = "A1000 (6570 - 036 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboard_items_strs.push_back(tmp);
+
+	tmp = "A1200 (68HC05C MCU)";
+	appendkbmcurom(tmp, has6805);
+	keyboard_items_strs.push_back(tmp);
+
+	tmp = "A2000 (Cherry, 8039 MCU)";
+	appendkbmcurom(tmp, has8039);
+	keyboard_items_strs.push_back(tmp);
+
+	tmp = "A2000/A3000/A4000 (6570-036 MCU)";
+	appendkbmcurom(tmp, has657036);
+	keyboard_items_strs.push_back(tmp);
+
+	keyboard_items_ptr.clear();
+	for (const auto& s : keyboard_items_strs)
+		keyboard_items_ptr.push_back(s.c_str());
+
+	special_monitor_strs.clear();
+	special_monitor_strs.emplace_back("-");
+	special_monitor_strs.emplace_back("Autodetect");
+	
+	for (int i = 0; specialmonitorfriendlynames[i]; ++i)
+		special_monitor_strs.emplace_back(specialmonitorfriendlynames[i]);
+
+	special_monitor_ptr.clear();
+	for (const auto& s : special_monitor_strs)
+		special_monitor_ptr.push_back(s.c_str());
+}
 
 void render_panel_chipset()
 {
+	if (!initialized) init_lists();
+
+	// Determine Chipset Selection Index (Logic from WinUAE values_to_chipsetdlg)
+	int chipset_selection = 0; // Default to OCS
+	switch (changed_prefs.chipset_mask)
+	{
+	case CSMASK_A1000_NOEHB:
+		chipset_selection = 6;
+		break;
+	case CSMASK_A1000:
+		chipset_selection = 5;
+		break;
+	case CSMASK_OCS:
+		chipset_selection = 0;
+		break;
+	case CSMASK_ECS_AGNUS:
+		chipset_selection = 1;
+		break;
+	case CSMASK_ECS_DENISE:
+		chipset_selection = 2;
+		break;
+	case CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE:
+		chipset_selection = 3;
+		break;
+	case CSMASK_AGA:
+	case CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA:
+		chipset_selection = 4;
+		break;
+	}
+
 	ImGui::Indent(5.0f);
 
 	ImGui::Columns(2, "chipset_columns", false); // 2 columns, no border
 	ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() * 0.60f);
 
-	// LEFt COLUMN
+	// LEFT COLUMN
 	BeginGroupBox("Chipset");
 	{
 		// Chipset radios
 		ImGui::BeginGroup();
-		ImGui::RadioButton("A1000 (No EHB)", (int*)&changed_prefs.chipset_mask, CSMASK_A1000_NOEHB);
-		ImGui::RadioButton("OCS + OCS Denise", (int*)&changed_prefs.chipset_mask, 0);
-		ImGui::RadioButton("ECS + OCS Denise", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS);
-		ImGui::RadioButton("AGA", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA);
+		if (ImGui::RadioButton("A1000 (No EHB)", &chipset_selection, 6)) changed_prefs.chipset_mask = CSMASK_A1000_NOEHB;
+		if (ImGui::RadioButton("OCS + OCS Denise", &chipset_selection, 0)) changed_prefs.chipset_mask = CSMASK_OCS;
+		if (ImGui::RadioButton("ECS + OCS Denise", &chipset_selection, 1)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
+		if (ImGui::RadioButton("AGA", &chipset_selection, 4)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
 		ImGui::EndGroup();
 
 		ImGui::SameLine();
 
 		ImGui::BeginGroup();
-		ImGui::RadioButton("A1000", (int*)&changed_prefs.chipset_mask, CSMASK_A1000);
-		ImGui::RadioButton("OCS + ECS Denise", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_DENISE);
-		ImGui::RadioButton("Full ECS", (int*)&changed_prefs.chipset_mask, CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE);
+		if (ImGui::RadioButton("A1000", &chipset_selection, 5)) changed_prefs.chipset_mask = CSMASK_A1000;
+		if (ImGui::RadioButton("OCS + ECS Denise", &chipset_selection, 2)) changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
+		if (ImGui::RadioButton("Full ECS", &chipset_selection, 3)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+		
 		ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
 		ImGui::EndGroup();
 
@@ -63,6 +168,7 @@ void render_panel_chipset()
 			changed_prefs.blitter_cycle_exact = memory_exact;
 			if (memory_exact)
 			{
+				// WinUAE logic: If Memory Exact enabled and CPU < 68020, force Full Exact
 				if (changed_prefs.cpu_model < 68020) {
 					changed_prefs.cpu_cycle_exact = true;
 				}
@@ -77,6 +183,7 @@ void render_panel_chipset()
 			}
 			else
 			{
+				// WinUAE logic: If Memory Exact disabled, force Full Exact disabled
 				changed_prefs.cpu_cycle_exact = false;
 			}
 		}
@@ -86,20 +193,13 @@ void render_panel_chipset()
 
 	BeginGroupBox("Keyboard");
 	{
-		const char* keyboard_items[] = { "Keyboard disconnected", "UAE High level emulation", "A500 / A500 + (6500 - 1 MCU)", "A600 (6570 - 036 MCU)", "A1000 (6500 - 1 MCU. ROM not yet dumped)", "A1000 (6570 - 036 MCU)", "A1200 (68HC05C MCU)", "A2000 (Cherry, 8039 MCU)", "A2000/A3000/A4000 (6570-036 MCU)" };
 		ImGui::SetNextItemWidth(300.0f);
 		int kb_mode = changed_prefs.keyboard_mode + 1;
-		if (ImGui::Combo("##Keyboard Layout", &kb_mode, keyboard_items, IM_ARRAYSIZE(keyboard_items)))
+		if (ImGui::Combo("##Keyboard Layout", &kb_mode, keyboard_items_ptr.data(), keyboard_items_ptr.size()))
 		{
 			changed_prefs.keyboard_mode = kb_mode - 1;
 		}
 		
-		// Logic: if mode is UAE (0) or A2000_8039 (7 implies index 7 in array which is item 8 in 0-indexed CPP but WinUAE uses constants), 
-		// WinUAE constant KB_UAE = 0, KB_A2000_8039 = 6 (based on header view or standard defines).
-		// Wait, looking at options.h: KB_UAE=0, KB_A2000_8039=6.
-		// items array index matches these values? 
-		// Items: 0=Disc, 1=UAE, 2=A500, 3=A600, 4=A1000, 5=A1000_6570, 6=A1200, 7=A2000_8039, 8=A2000_6570
-		// So KB_UAE maps to index 1 in combo (value 0). KB_A2000_8039 maps to index 7 in combo (value 6).
 		bool disable_nkro = (changed_prefs.keyboard_mode == KB_UAE || changed_prefs.keyboard_mode == KB_A2000_8039);
 		if (disable_nkro) changed_prefs.keyboard_nkro = true;
 		
@@ -130,17 +230,32 @@ void render_panel_chipset()
 		}
 		ImGui::EndDisabled();
 		
-		ImGui::Checkbox("Multithreaded Denise", (bool*)&multithread_enabled);
+		
+		bool mt = multithread_enabled != 0;
+		if (ImGui::Checkbox("Multithreaded Denise", &mt)) {
+			multithread_enabled = mt ? 1 : 0;
+		}
 		
 		ImGui::Spacing();
 		const char* optimization_items[] = { "Full", "Partial", "None" };
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
 		ImGui::Combo("Optimizations", &changed_prefs.cs_optimizations, optimization_items, IM_ARRAYSIZE(optimization_items));
 
-		const char* chipset_items[] = { "Generic", "CDTV", "CDTV-CR", "CD32", "A500", "A500+", "A600", "A1000", "A1200", "A2000", "A3000", "A3000T", "A4000", "A4000T", "Velvet", "Casablanca", "DraCo" };
+		const char* chipset_items[] = { "Custom", "Generic", "CDTV", "CDTV-CR", "CD32", "A500", "A500+", "A600", "A1000", "A1200", "A2000", "A3000", "A3000T", "A4000", "A4000T", "Velvet", "Casablanca", "DraCo" };
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-		if (ImGui::Combo("Chipset Extra", &changed_prefs.cs_compatible, chipset_items, IM_ARRAYSIZE(chipset_items)))
+		
+		// Map cs_compatible value to index
+		int cs_compatible_idx = changed_prefs.cs_compatible; 
+		// Note: Since Chipset Extra list has "Custom" at 0, "Generic" at 1... and CP_GENERIC=1, 
+		// the index maps 1:1 to the enum value for all valid items.
+		// If value is invalid, we might default to 0?
+		if (cs_compatible_idx < 0 || cs_compatible_idx >= IM_ARRAYSIZE(chipset_items)) {
+			cs_compatible_idx = 0; // Default to Custom
+		}
+
+		if (ImGui::Combo("Chipset Extra", &cs_compatible_idx, chipset_items, IM_ARRAYSIZE(chipset_items)))
 		{
+			changed_prefs.cs_compatible = cs_compatible_idx;
 			built_in_chipset_prefs(&changed_prefs);
 		}
 
@@ -148,9 +263,8 @@ void render_panel_chipset()
 		const char* sync_items[] = { "Combined", "CSync", "H/VSync" };
 		ImGui::Combo("##SyncSource", &changed_prefs.cs_hvcsync, sync_items, IM_ARRAYSIZE(sync_items));
 
-		const char* monitor_items[] = { "-", "Autodetect" };
 		ImGui::Text("Video port display hardware");
-		ImGui::Combo("##VideoPort", &changed_prefs.monitoremu, monitor_items, IM_ARRAYSIZE(monitor_items));
+		ImGui::Combo("##VideoPort", &changed_prefs.monitoremu, special_monitor_ptr.data(), special_monitor_ptr.size());
 	}
 	EndGroupBox("Options");
 
@@ -170,7 +284,7 @@ void render_panel_chipset()
 	}
 	EndGroupBox("Collision Level");
 
-	// Genlock section placeholder if needed, matching WinUAE
+	// Genlock section
 	BeginGroupBox("Genlock");
 	{
 		ImGui::Checkbox("Genlock connected", &changed_prefs.genlock);
@@ -207,6 +321,26 @@ void render_panel_chipset()
 		bool genlock_aspect = changed_prefs.genlock_aspect > 0;
 		if (ImGui::Checkbox("Keep aspect ratio", &genlock_aspect)) {
 			changed_prefs.genlock_aspect = genlock_aspect ? 1 : 0;
+		}
+
+		if (changed_prefs.genlock_image == 3 || changed_prefs.genlock_image == 4 || changed_prefs.genlock_image >= 6) // Image, Video or LaserDisc
+		{
+			// Show File selector
+			// Index 3 is Image, 4 and >= 6 are Video
+			char* filename_ptr = (changed_prefs.genlock_image == 3) ? changed_prefs.genlock_image_file : changed_prefs.genlock_video_file;
+			ImGui::InputText("Genlock File", filename_ptr, MAX_DPATH);
+			ImGui::SameLine();
+			if (ImGui::Button("...##GenlockFile"))
+			{
+				const char* filter = (changed_prefs.genlock_image == 3) ? ".png,.jpg,.jpeg,.bmp" : ".avi,.mp4,.mkv";
+				std::string title = (changed_prefs.genlock_image == 3) ? "Select Genlock Image" : "Select Genlock Video";
+				OpenFileDialog(title.c_str(), filter, filename_ptr);
+			}
+
+			std::string filePath;
+			if (ConsumeFileDialogResult(filePath)) {
+				strncpy(filename_ptr, filePath.c_str(), MAX_DPATH);
+			}
 		}
 		
 		ImGui::EndDisabled();

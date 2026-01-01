@@ -88,7 +88,7 @@ static void qs_set_control_state(int model, bool &df1_visible, bool &cd_visible,
 	}
 }
 
-static void adjust_prefs() {
+void Quickstart_ApplyDefaults() {
 	built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
 	switch (quickstart_model)
 	{
@@ -185,7 +185,7 @@ void render_panel_quickstart()
 				qs_configs.push_back(config);
 			}
 			quickstart_conf = 0;
-			adjust_prefs();
+			Quickstart_ApplyDefaults();
 		}
 		ImGui::SameLine();
 		bool ntsc = changed_prefs.ntscmode != 0;
@@ -208,7 +208,7 @@ void render_panel_quickstart()
 				quickstart_conf = 0;
 			if (ImGui::Combo("##QuickstartConf", &quickstart_conf, qs_configs.data(), static_cast<int>(qs_configs.size())))
 			{
-				adjust_prefs();
+				Quickstart_ApplyDefaults();
 			}
 		}
 		ImGui::EndTable();
@@ -532,7 +532,7 @@ void render_panel_quickstart()
 	ImGui::Spacing();
 	if (ImGui::Button("Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
-		adjust_prefs();
+		Quickstart_ApplyDefaults();
 	}
 
 	{

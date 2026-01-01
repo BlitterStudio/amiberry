@@ -23,6 +23,7 @@ void EndGroupBox(const char* name);
 void render_panel_about();
 void render_panel_paths();
 void render_panel_quickstart();
+void Quickstart_ApplyDefaults(); // Helper to apply quickstart model defaults
 void render_panel_configurations();
 void render_panel_cpu();
 void render_panel_chipset();
