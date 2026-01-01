@@ -1,4 +1,5 @@
 #include "imgui.h"
+#include <functional>
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
@@ -6,6 +7,7 @@
 #include "gui/gui_handling.h"
 #include "uae.h"
 #include "imgui_panels.h"
+#include "fsdb.h"
 #include <string>
 
 extern int console_logging;
@@ -15,198 +17,114 @@ void render_panel_paths()
 {
 	char tmp[MAX_DPATH];
 
+	// Helper lambda for rendering path rows
+	auto RenderPathRow = [&](const char* label, const char* id, std::string path, const std::function<void(const std::string&)>& setter, bool is_file = false, const char* filter_name = nullptr, const char* filter_ext = nullptr) {
+		ImGui::PushID(id);
+		ImGui::Text("%s", label);
+
+		const float button_width = 40.0f; // Fixed width for "..." button
+		const float spacing = ImGui::GetStyle().ItemSpacing.x;
+		const float input_width = ImGui::GetContentRegionAvail().x - button_width - spacing;
+
+		ImGui::SetNextItemWidth(input_width);
+
+		// Validation check
+		bool exists = false;
+		if (path.empty()) {
+			exists = true; // Treat empty path as valid (or at least not error) to avoid clutter
+		} else {
+			if (is_file) {
+				exists = my_existsfile(path.c_str());
+			} else {
+				exists = my_existsdir(path.c_str());
+			}
+		}
+
+		if (!exists) {
+			ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+		}
+
+		// Use a local buffer for InputText to avoid constness/temporary issues
+		char buffer[MAX_DPATH];
+		strncpy(buffer, path.c_str(), MAX_DPATH);
+		buffer[MAX_DPATH - 1] = '\0';
+		
+		if (ImGui::InputText("##Input", buffer, MAX_DPATH)) {
+			// User edited text, update immediately
+			setter(buffer);
+		}
+		
+		if (!exists) {
+			ImGui::PopStyleColor();
+			if (ImGui::IsItemHovered()) {
+				ImGui::SetTooltip(is_file ? "File not found" : "Directory not found");
+			}
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("...", ImVec2(button_width, 0)))
+		{
+			if (is_file) {
+				OpenFileDialog(filter_name ? filter_name : "Choose File", filter_ext ? filter_ext : ".*", path);
+			} else {
+				OpenDirDialog(path);
+			}
+		}
+
+		std::string filePath;
+		if (is_file) {
+			if (ConsumeFileDialogResult(filePath)) {
+				setter(filePath);
+			}
+		} else {
+			if (ConsumeDirDialogResult(filePath)) {
+				setter(filePath);
+			}
+		}
+		ImGui::PopID();
+		// ImGui::Spacing(); // Removed extra spacing to match compact look
+	};
+
 	// Estimate reserved height for bottom controls (logfile widgets + 1 line spacing + 1 line for buttons)
 	const float line_h = ImGui::GetFrameHeightWithSpacing();
-	const float reserved_height = line_h * 3.5f; // 1.5 lines for logfile widgets, 1 for spacing, 1 for buttons
+	const float reserved_height = line_h * 4.5f; // 2.5 lines for logfile widgets, 1 for spacing, 1 for buttons
 
-	// Begin scrollable area for path entries, only fills available space above bottom controls
+	// Begin scrollable area for path entries
 	ImGui::BeginChild("PathsScroll", ImVec2(0, -reserved_height), true, ImGuiChildFlags_AutoResizeY);
+
 	get_rom_path(tmp, sizeof tmp);
-	ImGui::Text("System ROMs:");
-	ImGui::InputText("##SystemROMs", tmp, MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##SystemROMs"))
-	{
-		OpenDirDialog(std::string(tmp));
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_rom_path(filePath);
-	}
+	RenderPathRow("System ROMs:", "SystemROMs", tmp, [](const std::string& p) { set_rom_path(p); });
 
-	ImGui::Spacing();
 	get_configuration_path(tmp, sizeof tmp);
-	ImGui::Text("Configuration files:");
-	ImGui::InputText("##ConfigPath", tmp, MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##ConfigPath"))
-	{
-		OpenDirDialog(std::string(tmp));
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_configuration_path(filePath);
-	}
+	RenderPathRow("Configuration files:", "ConfigPath", tmp, [](const std::string& p) { set_configuration_path(p); });
 
-	ImGui::Spacing();
 	get_nvram_path(tmp, sizeof tmp);
-	ImGui::Text("NVRAM files:");
-	ImGui::InputText("##NVRAMPath", tmp, MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##NVRAMPath"))
-	{
-		OpenDirDialog(std::string(tmp));
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_nvram_path(filePath);
-	}
+	RenderPathRow("NVRAM files:", "NVRAMPath", tmp, [](const std::string& p) { set_nvram_path(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("Plugin files:");
-	ImGui::InputText("##PluginsPath", get_plugins_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##PluginsPath"))
-	{
-		OpenDirDialog(get_plugins_path());
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_plugins_path(filePath);
-	}
+	RenderPathRow("Plugin files:", "PluginsPath", get_plugins_path(), [](const std::string& p) { set_plugins_path(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("Screenshots:");
-	ImGui::InputText("##ScreenshotsPath", get_screenshot_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##ScreenshotsPath"))
-	{
-		OpenDirDialog(get_screenshot_path()); // fixed: was get_plugins_path()
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_screenshot_path(filePath);
-	}
+	RenderPathRow("Screenshots:", "ScreenshotsPath", get_screenshot_path(), [](const std::string& p) { set_screenshot_path(p); });
 
-	ImGui::Spacing();
 	get_savestate_path(tmp, MAX_DPATH);
-	ImGui::Text("State files:");
-	ImGui::InputText("##SaveStatesPath", tmp, MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##SaveStatesPath"))
-	{
-		OpenDirDialog(std::string(tmp));
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_savestate_path(filePath);
-	}
+	RenderPathRow("State files:", "SaveStatesPath", tmp, [](const std::string& p) { set_savestate_path(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("Controller files:");
-	ImGui::InputText("##ControllersPath", get_controllers_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##ControllersPath"))
-	{
-		OpenDirDialog(get_controllers_path());
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_controllers_path(filePath);
-	}
+	RenderPathRow("Controller files:", "ControllersPath", get_controllers_path(), [](const std::string& p) { set_controllers_path(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("RetroArch config file:");
-	ImGui::InputText("##RetroArchConfigPath", get_retroarch_file().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##RetroArchConfigPath"))
-	{
-		OpenFileDialog("Choose Retroarch .cfg file", ".cfg", get_retroarch_file());
-	}
-	{
-		std::string filePath;
-		if (ConsumeFileDialogResult(filePath))
-			set_retroarch_file(filePath);
-	}
+	RenderPathRow("RetroArch config file:", "RetroArchConfigPath", get_retroarch_file(), [](const std::string& p) { set_retroarch_file(p); }, true, "Choose Retroarch .cfg file", ".cfg");
 
-	ImGui::Spacing();
-	ImGui::Text("WHDBoot files:");
-	ImGui::InputText("##WHDBootPath", get_whdbootpath().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##WHDBootPath"))
-	{
-		OpenDirDialog(get_whdbootpath());
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_whdbootpath(filePath);
-	}
+	RenderPathRow("WHDBoot files:", "WHDBootPath", get_whdbootpath(), [](const std::string& p) { set_whdbootpath(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("WHDLoad Archives (LHA):");
-	ImGui::InputText("##WHDLoadPath", get_whdload_arch_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##WHDLoadPath"))
-	{
-		OpenDirDialog(get_whdload_arch_path());
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_whdload_arch_path(filePath);
-	}
+	RenderPathRow("WHDLoad Archives (LHA):", "WHDLoadPath", get_whdload_arch_path(), [](const std::string& p) { set_whdload_arch_path(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("Floppies path:");
-	ImGui::InputText("##FloppiesPath", get_floppy_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##FloppiesPath"))
-	{
-		OpenDirDialog(get_floppy_path());
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_floppy_path(filePath);
-	}
+	RenderPathRow("Floppies path:", "FloppiesPath", get_floppy_path(), [](const std::string& p) { set_floppy_path(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("CD-ROMs path:");
-	ImGui::InputText("##CDROMPath", get_cdrom_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##CDROMPath"))
-	{
-		OpenDirDialog(get_cdrom_path());
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_cdrom_path(filePath);
-	}
+	RenderPathRow("CD-ROMs path:", "CDROMPath", get_cdrom_path(), [](const std::string& p) { set_cdrom_path(p); });
 
-	ImGui::Spacing();
-	ImGui::Text("Hard drives path:");
-	ImGui::InputText("##HDDPath", get_harddrive_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##HDDPath"))
-	{
-		OpenDirDialog(get_harddrive_path());
-	}
-	{
-		std::string filePath;
-		if (ConsumeDirDialogResult(filePath))
-			set_harddrive_path(filePath);
-	}
+	RenderPathRow("Hard drives path:", "HDDPath", get_harddrive_path(), [](const std::string& p) { set_harddrive_path(p); });
+
 	ImGui::EndChild();
 
+	// Logging Options
 	auto logging_enabled = get_logfile_enabled();
 	if (ImGui::Checkbox("Enable logging", &logging_enabled))
 	{
@@ -219,19 +137,8 @@ void render_panel_paths()
 	{
 		console_logging = log_to_console ? 1 : 0;
 	}
-	ImGui::Text("Logfile path:");
-	ImGui::SameLine();
-	ImGui::InputText("##LogFilePath", get_logfile_path().data(), MAX_DPATH);
-	ImGui::SameLine();
-	if (ImGui::Button("...##LogFilePath"))
-	{
-		OpenFileDialog("Choose File", ".log", get_logfile_path());
-	}
-	{
-		std::string filePath;
-		if (ConsumeFileDialogResult(filePath))
-			set_logfile_path(filePath);
-	}
+
+	RenderPathRow("Logfile path:", "LogFilePath", get_logfile_path(), [](const std::string& p) { set_logfile_path(p); }, true, "Choose File", ".log");
 
 	ImGui::Spacing();
 	if (ImGui::Button("Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
