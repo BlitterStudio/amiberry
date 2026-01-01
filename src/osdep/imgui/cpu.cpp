@@ -1,6 +1,4 @@
 #include "sysdeps.h"
-#include "config.h"
-#include "custom.h"
 #include "gui/gui_handling.h"
 #include "imgui.h"
 #include "imgui_panels.h"
@@ -147,9 +145,6 @@ void render_panel_cpu() {
         if (ImGui::RadioButton("68060", &changed_prefs.cpu_model, 68060))
             settings_changed = true;
         
-        // 1. Make the width of the CPU group larger
-        // 2. Make the width of the MMU group identical to the CPU group
-        // 3. Make the width of the FPU group identical to the CPU one
         float left_group_min_width = 180.0f;
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
 
@@ -348,7 +343,7 @@ void render_panel_cpu() {
     ImGui::EndGroup();
 
     ImGui::SameLine();
-    ImGui::Dummy(ImVec2(10.0f, 0.0f)); // Spacing between columns
+    ImGui::Dummy(ImVec2(5.0f, 0.0f)); // Spacing between columns
     ImGui::SameLine();
 
     ImGui::BeginGroup(); // Right Column
@@ -373,7 +368,6 @@ void render_panel_cpu() {
         ImGui::SameLine();
         const float button_width = 60.0f;
         
-        // 6. the CPU Speed slider should not be a slider, but a text field (Value First)
         ImGui::SetNextItemWidth(button_width);
         char speed_label[16];
         snprintf(speed_label, sizeof(speed_label), "%+d%%", static_cast<int>(changed_prefs.m68k_speed_throttle / 10));
@@ -381,7 +375,8 @@ void render_panel_cpu() {
 
         ImGui::SameLine();
         ImGui::SetNextItemWidth(slider_width - button_width - 10.0f); // Adjust width for button
-        if (ImGui::SliderInt("##CPU Speed", &speed_slider_val, -9, 50, "")) {
+        int max_speed_val = (changed_prefs.m68k_speed < 0 || (changed_prefs.cpu_memory_cycle_exact && !changed_prefs.cpu_cycle_exact)) ? 0 : 50;
+        if (ImGui::SliderInt("##CPU Speed", &speed_slider_val, -9, max_speed_val, "")) {
              // Update throttle
             changed_prefs.m68k_speed_throttle =
                     static_cast<float>(speed_slider_val * 100);
@@ -409,8 +404,7 @@ void render_panel_cpu() {
         ImGui::InputText("##CPUIdleBox", idle_label, sizeof(idle_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
         
         ImGui::EndDisabled();
-        // 4. make the CPU Speed group wider, so that it has the same width as the Cycle-exact CPU emulation speed group.
-        // We do this by adding a dummy that matches the expected width of the Cycle-exact group or PPC group (which is likely the widest).
+
         float right_group_min_width = 450.0f;
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("CPU Speed");
@@ -448,22 +442,18 @@ void render_panel_cpu() {
         ImGui::SetNextItemWidth(80.0f); // Reduced from 100.0f
         ImGui::InputText("##FreqReadout", freq_label, sizeof(freq_label), ImGuiInputTextFlags_ReadOnly);
 
-        /*
-        ImGui::BeginDisabled(true); // Always disabled in Guisan currently
+        ImGui::BeginDisabled(true);
         // ("Disabled until fixed upstream")
         ImGui::Checkbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
         ImGui::EndDisabled();
-        */
         
-        // 5. reduce the width of the field next to the CPU frequency dropdown
-        // And ensure group width matching
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("Cycle-Exact CPU Emulation Speed");
 
         BeginGroupBox("PowerPC CPU Options");
         ImGui::BeginDisabled(!enable_ppc);
         bool ppc_bool = changed_prefs.ppc_mode != 0;
-        if (ImGui::Checkbox("PPC CPU emulation (Blizzard PPC / CyberStorm PPC)", &ppc_bool)) {
+        if (ImGui::Checkbox("PPC CPU emulation", &ppc_bool)) {
             if (ppc_bool) {
                 if (changed_prefs.ppc_mode == 0)
                     changed_prefs.ppc_mode = 1;
@@ -503,7 +493,7 @@ void render_panel_cpu() {
         int x86_speed_slider_val = static_cast<int>(changed_prefs.x86_speed_throttle / 100);
         
         ImGui::SetNextItemWidth(slider_width - 60.0f - 10.0f);
-        if (ImGui::SliderInt("##x86Speed", &x86_speed_slider_val, -9, 50, "")) {
+        if (ImGui::SliderInt("##x86Speed", &x86_speed_slider_val, 0, 1000, "")) {
              changed_prefs.x86_speed_throttle = static_cast<float>(x86_speed_slider_val * 100);
              if (changed_prefs.x86_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
                 changed_prefs.x86_speed_throttle = 0; // Mirroring safety logic? Maybe not needed for x86 but safe.
@@ -516,7 +506,7 @@ void render_panel_cpu() {
         ImGui::InputText("##x86SpeedBox", x86_speed_label, sizeof(x86_speed_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
 
         ImGui::EndDisabled();
-        // 7. make the width of the x86 bridgeboard group identical to the width of the powerpc CPU options
+
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("x86 Bridgeboard CPU options");
 
