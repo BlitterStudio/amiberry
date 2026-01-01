@@ -11,11 +11,14 @@ void render_panel_configurations()
 	static char name[MAX_DPATH] = "";
 	static char desc[MAX_DPATH] = "";
 	static char search_text[256] = "";
-	static bool init_done = false;
+	static char last_seen_config[MAX_DPATH] = "";
 
-	if (!init_done)
+	// Check if the current config has changed (e.g. via Quickstart or loading a file)
+	// If so, update the fields to match.
+	if (strncmp(last_active_config, last_seen_config, MAX_DPATH) != 0)
 	{
 		ReadConfigFileList();
+		bool found = false;
 		if (last_active_config[0])
 		{
 			for (int i = 0; i < ConfigFilesList.size(); ++i)
@@ -25,11 +28,29 @@ void render_panel_configurations()
 					selected = i;
 					strncpy(name, ConfigFilesList[i]->Name, MAX_DPATH);
 					strncpy(desc, ConfigFilesList[i]->Description, MAX_DPATH);
+					found = true;
 					break;
 				}
 			}
+			
+			if (!found)
+			{
+				// Not in the list (e.g. from Quickstart autofill), use the values directly
+				strncpy(name, last_active_config, MAX_DPATH);
+				strncpy(desc, changed_prefs.description, MAX_DPATH);
+				selected = -1; // Ensure nothing is selected
+			}
 		}
-		init_done = true;
+		else
+		{
+			// Reset fields if no active config
+			name[0] = '\0';
+			desc[0] = '\0';
+			selected = -1;
+		}
+		
+		// Update tracker
+		strncpy(last_seen_config, last_active_config, MAX_DPATH);
 	}
 
 	ImGui::BeginChild("ConfigList", ImVec2(0, -150), true);
@@ -61,13 +82,30 @@ void render_panel_configurations()
 	}
 	ImGui::EndChild();
 
-	ImGui::InputText("Search", search_text, sizeof(search_text));
+	// Define a fixed width for labels to align input fields
+	const float label_width = 100.0f;
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("Search:");
+	ImGui::SameLine(label_width);
+	ImGui::InputText("##Search", search_text, sizeof(search_text));
 	ImGui::SameLine();
 	if (ImGui::Button("X"))
 		search_text[0] = '\0';
 
-	ImGui::InputText("Name", name, MAX_DPATH);
-	ImGui::InputText("Description", desc, MAX_DPATH);
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("Name:");
+	ImGui::SameLine(label_width);
+	ImGui::InputText("##Name", name, MAX_DPATH);
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("Description:");
+	ImGui::SameLine(label_width);
+	ImGui::InputText("##Description", desc, MAX_DPATH);
+
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
 
 	if (ImGui::Button("Load", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
