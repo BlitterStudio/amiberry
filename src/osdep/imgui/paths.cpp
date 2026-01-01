@@ -1,9 +1,7 @@
 #include "imgui.h"
 #include <functional>
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
-#include "filesys.h"
 #include "gui/gui_handling.h"
 #include "uae.h"
 #include "imgui_panels.h"
@@ -82,7 +80,7 @@ void render_panel_paths()
 			}
 		}
 		ImGui::PopID();
-		// ImGui::Spacing(); // Removed extra spacing to match compact look
+		ImGui::Spacing();
 	};
 
 	// Estimate reserved height for bottom controls (logfile widgets + 1 line spacing + 1 line for buttons)
