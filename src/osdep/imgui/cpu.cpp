@@ -17,8 +17,22 @@ static float getcpufreq(int m) {
     return f * static_cast<float>(m >> 8) / 8.0f;
 }
 
+static void ShowHelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 void render_panel_cpu() {
     const float slider_width = 150.0f;
+    const float slider_label_width = 140.0f; // Fixed aligned width for labels
     bool settings_changed = false;
 
     // Global padding for the whole panel
@@ -134,16 +148,27 @@ void render_panel_cpu() {
         int old_cpu_model = changed_prefs.cpu_model;
         if (ImGui::RadioButton("68000", &changed_prefs.cpu_model, 68000))
             settings_changed = true;
+        ImGui::SameLine(); ShowHelpMarker("Original Amiga 500/1000/2000 CPU.");
+        
         if (ImGui::RadioButton("68010", &changed_prefs.cpu_model, 68010))
             settings_changed = true;
+        ImGui::SameLine(); ShowHelpMarker("Slightly faster version of 68000, used in some accelerators.");
+
         if (ImGui::RadioButton("68020", &changed_prefs.cpu_model, 68020))
             settings_changed = true;
+        ImGui::SameLine(); ShowHelpMarker("Amiga 1200 CPU. 32-bit.");
+
         if (ImGui::RadioButton("68030", &changed_prefs.cpu_model, 68030))
             settings_changed = true;
+        ImGui::SameLine(); ShowHelpMarker("Amiga 3000/4000 CPU. Includes MMU.");
+
         if (ImGui::RadioButton("68040", &changed_prefs.cpu_model, 68040))
             settings_changed = true;
+        ImGui::SameLine(); ShowHelpMarker("Faster 32-bit CPU with integrated FPU and MMU.");
+
         if (ImGui::RadioButton("68060", &changed_prefs.cpu_model, 68060))
             settings_changed = true;
+        ImGui::SameLine(); ShowHelpMarker("Fastest Amiga CPU.");
         
         float left_group_min_width = 180.0f;
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
@@ -221,6 +246,7 @@ void render_panel_cpu() {
 
         ImGui::BeginDisabled(!enable_24bit);
         ImGui::Checkbox("24-bit addressing", &changed_prefs.address_space_24);
+        ImGui::SameLine(); ShowHelpMarker("Essential for A500/A1200 compatibility. Disable for Z3 RAM usage.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_compatible);
@@ -235,6 +261,7 @@ void render_panel_cpu() {
                     changed_prefs.fpu_model = 0;
             }
         }
+        ImGui::SameLine(); ShowHelpMarker("Approximates prefetch pipeline of 68000/010. Required for some timing sensitive games.");
         ImGui::EndDisabled();
 
         bool unimplemented_cpu = !changed_prefs.int_no_unimplemented;
@@ -270,6 +297,7 @@ void render_panel_cpu() {
                 changed_prefs.compfpu = false;
             }
         }
+        ImGui::SameLine(); ShowHelpMarker("Just-In-Time compilation. Greatly speeds up CPU emulation but reduces compatibility.");
         ImGui::EndDisabled();
         EndGroupBox("CPU");
 
@@ -365,44 +393,30 @@ void render_panel_cpu() {
         ImGui::BeginDisabled(!enable_cpu_speed_slider);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("CPU Speed");
-        ImGui::SameLine();
-        const float button_width = 60.0f;
+        ImGui::SameLine(slider_label_width);
         
-        ImGui::SetNextItemWidth(button_width);
-        char speed_label[16];
-        snprintf(speed_label, sizeof(speed_label), "%+d%%", static_cast<int>(changed_prefs.m68k_speed_throttle / 10));
-        ImGui::InputText("##CPUSpeedBox", speed_label, sizeof(speed_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
-
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(slider_width - button_width - 10.0f); // Adjust width for button
+        ImGui::SetNextItemWidth(slider_width);
         int max_speed_val = (changed_prefs.m68k_speed < 0 || (changed_prefs.cpu_memory_cycle_exact && !changed_prefs.cpu_cycle_exact)) ? 0 : 50;
-        if (ImGui::SliderInt("##CPU Speed", &speed_slider_val, -9, max_speed_val, "")) {
+        if (ImGui::SliderInt("##CPU Speed", &speed_slider_val, -9, max_speed_val, "%+d0%%")) {
              // Update throttle
             changed_prefs.m68k_speed_throttle =
                     static_cast<float>(speed_slider_val * 100);
             if (changed_prefs.m68k_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
                 changed_prefs.m68k_speed_throttle = 0;
         }
-
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_cpu_idle_slider);
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("CPU Idle ");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(slider_width - button_width - 10.0f);
-        if (ImGui::SliderInt("##CPU Idle", &idle_slider_val, 0, 10, "")) {
+        ImGui::Text("CPU Idle");
+        ImGui::SameLine(slider_label_width);
+        ImGui::SetNextItemWidth(slider_width);
+        if (ImGui::SliderInt("##CPU Idle", &idle_slider_val, 0, 10, "%d0%%")) {
              if (idle_slider_val == 0)
                 changed_prefs.cpu_idle = 0;
             else
                 changed_prefs.cpu_idle = (12 - idle_slider_val) * 15;
         }
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(button_width);
-        char idle_label[16];
-        snprintf(idle_label, sizeof(idle_label), "%d%%", (idle_slider_val * 10));
-        ImGui::InputText("##CPUIdleBox", idle_label, sizeof(idle_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
-        
         ImGui::EndDisabled();
 
         float right_group_min_width = 450.0f;
@@ -473,13 +487,6 @@ void render_panel_cpu() {
         ImGui::BeginDisabled(!enable_ppc_idle);
         ImGui::SliderInt("##PPC Idle", &changed_prefs.ppc_cpu_idle, 0, 10);
         ImGui::EndDisabled();
-        ImGui::SameLine();
-        if (changed_prefs.ppc_cpu_idle == 0)
-            ImGui::Text("disabled");
-        else if (changed_prefs.ppc_cpu_idle == 10)
-            ImGui::Text("max");
-        else
-            ImGui::Text("%d", changed_prefs.ppc_cpu_idle);
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("PowerPC CPU Options");
@@ -488,33 +495,31 @@ void render_panel_cpu() {
         ImGui::BeginDisabled(!enable_x86_group);
         ImGui::AlignTextToFramePadding();
         ImGui::Text("CPU Speed");
-        ImGui::SameLine();
+        ImGui::SameLine(slider_label_width);
         
         int x86_speed_slider_val = static_cast<int>(changed_prefs.x86_speed_throttle / 100);
         
-        ImGui::SetNextItemWidth(slider_width - 60.0f - 10.0f);
-        if (ImGui::SliderInt("##x86Speed", &x86_speed_slider_val, 0, 1000, "")) {
+        ImGui::SetNextItemWidth(slider_width);
+        if (ImGui::SliderInt("##x86Speed", &x86_speed_slider_val, 0, 1000, "%+d0%%")) {
              changed_prefs.x86_speed_throttle = static_cast<float>(x86_speed_slider_val * 100);
              if (changed_prefs.x86_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
                 changed_prefs.x86_speed_throttle = 0; // Mirroring safety logic? Maybe not needed for x86 but safe.
         }
-
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(60.0f);
-        char x86_speed_label[16];
-        snprintf(x86_speed_label, sizeof(x86_speed_label), "%+d%%", static_cast<int>(changed_prefs.x86_speed_throttle / 10));
-        ImGui::InputText("##x86SpeedBox", x86_speed_label, sizeof(x86_speed_label), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
 
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("x86 Bridgeboard CPU options");
 
-        BeginGroupBox("Advanced JIT Settings");
 
+        
+        // Re-organized JIT settings
+        BeginGroupBox("Advanced JIT Settings");
+        
+        ImGui::AlignTextToFramePadding();
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Cache size");
-        ImGui::SameLine();
+        ImGui::SameLine(slider_label_width);
         ImGui::SetNextItemWidth(slider_width);
 
         ImGui::BeginDisabled(!enable_jit_cache_slider);
@@ -541,45 +546,58 @@ void render_panel_cpu() {
         ImGui::SameLine();
         ImGui::Text("%d MB", changed_prefs.cachesize / 1024);
 
+        ImGui::Spacing();
+        
+        // Use columns for better organization
+        ImGui::Columns(2, "JITColumns", false);
+        
         ImGui::BeginDisabled(!enable_chk_fpujit);
         ImGui::Checkbox("FPU Support##JIT", &changed_prefs.compfpu);
+        ImGui::SameLine(); ShowHelpMarker("Enable JIT compilation for FPU instructions.");
         ImGui::EndDisabled();
 
-        ImGui::SameLine();
         ImGui::BeginDisabled(!enable_chk_constjump);
         ImGui::Checkbox("Constant jump", &changed_prefs.comp_constjump);
+        ImGui::SameLine(); ShowHelpMarker("JIT compilation optimization.");
         ImGui::EndDisabled();
 
-        ImGui::SameLine();
         ImGui::BeginDisabled(!enable_chk_hardflush);
         ImGui::Checkbox("Hard flush", &changed_prefs.comp_hardflush);
+        ImGui::SameLine(); ShowHelpMarker("Flush JIT cache on every resize/reset.");
         ImGui::EndDisabled();
+        
+        ImGui::NextColumn();
+
+        ImGui::BeginDisabled(!enable_chk_noflags);
+        ImGui::Checkbox("No flags", &changed_prefs.compnf);
+        ImGui::SameLine(); ShowHelpMarker("Don't update status flags (faster but less compatible).");
+        ImGui::EndDisabled();
+        
+        ImGui::BeginDisabled(!enable_chk_catch);
+        ImGui::Checkbox("Catch unexpect. exc.", &changed_prefs.comp_catchfault);
+        ImGui::SameLine(); ShowHelpMarker("Catch memory access faults in compiled code.");
+        ImGui::EndDisabled();
+        
+        ImGui::Columns(1);
+        ImGui::Spacing();
 
         ImGui::BeginDisabled(!enable_opt_direct);
-        if (ImGui::RadioButton("Direct##memaccess", &changed_prefs.comptrustbyte,
-                               0)) {
+        ImGui::Text("Memory Access:");
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Direct##memaccess", &changed_prefs.comptrustbyte, 0)) {
             changed_prefs.comptrustword = 0;
             changed_prefs.comptrustlong = 0;
             changed_prefs.comptrustnaddr = 0;
         }
         ImGui::SameLine();
-        if (ImGui::RadioButton("Indirect##memaccess", &changed_prefs.comptrustbyte,
-                               1)) {
+        if (ImGui::RadioButton("Indirect##memaccess", &changed_prefs.comptrustbyte, 1)) {
             changed_prefs.comptrustword = 1;
             changed_prefs.comptrustlong = 1;
             changed_prefs.comptrustnaddr = 1;
         }
         ImGui::EndDisabled();
 
-        ImGui::SameLine();
-        ImGui::BeginDisabled(!enable_chk_noflags);
-        ImGui::Checkbox("No flags", &changed_prefs.compnf);
-        ImGui::EndDisabled();
-
-        ImGui::BeginDisabled(!enable_chk_catch);
-        ImGui::Checkbox("Catch unexpected exceptions",
-                        &changed_prefs.comp_catchfault);
-        ImGui::EndDisabled();
+        ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("Advanced JIT Settings");
     }
     ImGui::EndGroup();
