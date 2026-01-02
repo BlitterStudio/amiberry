@@ -1179,7 +1179,7 @@ static bool enumeratedisplays2(bool selectall)
 		if (num_modes < 1)
 			continue;
 
-		md->DisplayModes = static_cast<PicassoResolution*>(malloc((num_modes + 1) * sizeof(PicassoResolution)));
+		md->DisplayModes = xcalloc(struct PicassoResolution, num_modes + 1);
 		if (!md->DisplayModes)
 			continue;
 
@@ -1239,7 +1239,7 @@ void sortdisplays()
 
 	md = Displays;
 	while (md->monitorname) {
-		md->DisplayModes = xmalloc(struct PicassoResolution, MAX_PICASSO_MODES);
+		md->DisplayModes = xcalloc(struct PicassoResolution, MAX_PICASSO_MODES);
 
 		write_log(_T("%s '%s' [%s]\n"), md->adaptername, md->adapterid, md->adapterkey);
 		write_log(_T("-: %s [%s]\n"), md->fullname, md->monitorid);
