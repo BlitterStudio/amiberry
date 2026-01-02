@@ -1,12 +1,9 @@
 #include "sysdeps.h"
 #include "imgui.h"
 #include "amiberry_gfx.h"
-#include "gui/gui_handling.h"
 #include "imgui_panels.h"
-
-#include <SDL_image.h>
-
 #include "fsdb_host.h"
+#include <SDL_image.h>
 
 // About panel logo texture (loaded on demand)
 SDL_Texture* about_logo_texture = nullptr;

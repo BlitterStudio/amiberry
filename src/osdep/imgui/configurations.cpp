@@ -13,11 +13,13 @@ void render_panel_configurations()
 	static char search_text[256] = "";
 	static char last_seen_config[MAX_DPATH] = "";
 
+	static bool initialized = false;
 	// Check if the current config has changed (e.g. via Quickstart or loading a file)
 	// If so, update the fields to match.
-	if (strncmp(last_active_config, last_seen_config, MAX_DPATH) != 0)
+	if (!initialized || strncmp(last_active_config, last_seen_config, MAX_DPATH) != 0)
 	{
 		ReadConfigFileList();
+		initialized = true;
 		bool found = false;
 		if (last_active_config[0])
 		{
@@ -75,7 +77,7 @@ void render_panel_configurations()
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 				strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
-				uae_reset(1, 1);
+				uae_restart(NULL, 0, ConfigFilesList[selected]->FullPath);
 				gui_running = false;
 			}
 		}

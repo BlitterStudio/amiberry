@@ -1,6 +1,5 @@
 #include "sysdeps.h"
 #include "options.h"
-#include "config.h"
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "gui/gui_handling.h"
@@ -9,7 +8,6 @@
 #include "autoconf.h"
 #include "blkdev.h"
 #include "rommgr.h"
-#include "uae.h"
 
 extern void new_cddrive(int entry);
 extern void new_tapedrive(int entry);

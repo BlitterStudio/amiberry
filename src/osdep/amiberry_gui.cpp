@@ -844,6 +844,8 @@ static void prefs_to_gui()
 		load_theme(amiberry_options.gui_theme);
 	else
 		load_default_theme();
+	
+	copy_prefs(&currprefs, &changed_prefs);
 
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
