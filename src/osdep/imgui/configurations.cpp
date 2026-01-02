@@ -92,8 +92,10 @@ void render_panel_configurations()
 	ImGui::SameLine(label_width);
 	ImGui::InputText("##Search", search_text, sizeof(search_text));
 	ImGui::SameLine();
+	if (search_text[0] == '\0') ImGui::BeginDisabled();
 	if (ImGui::Button("X"))
 		search_text[0] = '\0';
+	if (search_text[0] == '\0') ImGui::EndDisabled();
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Name:");
@@ -118,6 +120,7 @@ void render_panel_configurations()
 		}
 	}
 	ImGui::SameLine();
+	if (strlen(name) == 0) ImGui::BeginDisabled();
 	if (ImGui::Button("Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		char filename[MAX_DPATH];
@@ -138,19 +141,22 @@ void render_panel_configurations()
 			}
 		}
 	}
+	if (strlen(name) == 0) ImGui::EndDisabled();
 	ImGui::SameLine();
+	if (selected == -1) ImGui::BeginDisabled();
 	if (ImGui::Button("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (selected != -1)
 			ImGui::OpenPopup("Delete Configuration");
 	}
+	if (selected == -1) ImGui::EndDisabled();
 
 	if (ImGui::BeginPopupModal("Delete Configuration", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::Text("Do you want to delete '%s'?", ConfigFilesList[selected]->Name);
 		ImGui::Separator();
 
-		if (ImGui::Button("Yes", ImVec2(120, 0)))
+		if (ImGui::Button("Yes", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			remove(ConfigFilesList[selected]->FullPath);
 			ReadConfigFileList();
@@ -161,7 +167,7 @@ void render_panel_configurations()
 		}
 		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
-		if (ImGui::Button("No", ImVec2(120, 0)))
+		if (ImGui::Button("No", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			ImGui::CloseCurrentPopup();
 		}
