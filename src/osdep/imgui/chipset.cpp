@@ -80,6 +80,19 @@ static void init_lists()
 		special_monitor_ptr.push_back(s.c_str());
 }
 
+static void ShowHelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 void render_panel_chipset()
 {
 	if (!initialized) init_lists();
@@ -112,10 +125,8 @@ void render_panel_chipset()
 		break;
 	}
 
-	ImGui::Indent(5.0f);
-
 	ImGui::Columns(2, "chipset_columns", false); // 2 columns, no border
-	ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() * 0.60f);
+	ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() * 0.56f);
 
 	// LEFT COLUMN
 	BeginGroupBox("Chipset");
@@ -136,6 +147,7 @@ void render_panel_chipset()
 		if (ImGui::RadioButton("Full ECS", &chipset_selection, 3)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 		
 		ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
+		ImGui::SameLine(); ShowHelpMarker("Enable NTSC mode (60Hz)");
 		ImGui::EndGroup();
 
 		ImGui::Spacing();
@@ -143,6 +155,7 @@ void render_panel_chipset()
 		bool cycle_exact = changed_prefs.cpu_cycle_exact;
 		if (ImGui::Checkbox("Cycle Exact (Full)", &cycle_exact))
 		{
+            ImGui::SameLine(); ShowHelpMarker("Bit-perfect emulation. Requires fast CPU.");
 			changed_prefs.cpu_cycle_exact = cycle_exact;
 			if (cycle_exact)
 			{
@@ -193,7 +206,7 @@ void render_panel_chipset()
 
 	BeginGroupBox("Keyboard");
 	{
-		ImGui::SetNextItemWidth(300.0f);
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		int kb_mode = changed_prefs.keyboard_mode + 1;
 		if (ImGui::Combo("##Keyboard Layout", &kb_mode, keyboard_items_ptr.data(), keyboard_items_ptr.size()))
 		{
@@ -237,12 +250,25 @@ void render_panel_chipset()
 		}
 		
 		ImGui::Spacing();
-		const char* optimization_items[] = { "Full", "Partial", "None" };
-		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-		ImGui::Combo("Optimizations", &changed_prefs.cs_optimizations, optimization_items, IM_ARRAYSIZE(optimization_items));
+        const char* optimization_items[] = { "Full", "Partial", "None" };
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Optimizations");
+		ImGui::SameLine();
+		ShowHelpMarker("Keep at 'Full' for best compatibility.");
+		ImGui::SameLine(140.0f);
+		
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		ImGui::Combo("##Optimizations", &changed_prefs.cs_optimizations, optimization_items, IM_ARRAYSIZE(optimization_items));
 
 		const char* chipset_items[] = { "Custom", "Generic", "CDTV", "CDTV-CR", "CD32", "A500", "A500+", "A600", "A1000", "A1200", "A2000", "A3000", "A3000T", "A4000", "A4000T", "Velvet", "Casablanca", "DraCo" };
-		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+		
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Chipset Extra");
+		ImGui::SameLine();
+		ShowHelpMarker("Select specialized chipset behavior.");
+		ImGui::SameLine(140.0f);
+		
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		
 		// Map cs_compatible value to index
 		int cs_compatible_idx = changed_prefs.cs_compatible; 
@@ -253,22 +279,30 @@ void render_panel_chipset()
 			cs_compatible_idx = 0; // Default to Custom
 		}
 
-		if (ImGui::Combo("Chipset Extra", &cs_compatible_idx, chipset_items, IM_ARRAYSIZE(chipset_items)))
+		if (ImGui::Combo("##Chipset Extra", &cs_compatible_idx, chipset_items, IM_ARRAYSIZE(chipset_items)))
 		{
 			changed_prefs.cs_compatible = cs_compatible_idx;
 			built_in_chipset_prefs(&changed_prefs);
 		}
 
+		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Monitor sync source:");
+		// ImGui::SameLine(180.0f);
 		const char* sync_items[] = { "Combined", "CSync", "H/VSync" };
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		ImGui::Combo("##SyncSource", &changed_prefs.cs_hvcsync, sync_items, IM_ARRAYSIZE(sync_items));
 
+		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Video port display hardware");
+		// ImGui::SameLine(180.0f);
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		ImGui::Combo("##VideoPort", &changed_prefs.monitoremu, special_monitor_ptr.data(), special_monitor_ptr.size());
 	}
 	EndGroupBox("Options");
 
 	ImGui::Columns(1);
+    
+    ImGui::Indent(4.0f);
 
 	BeginGroupBox("Collision Level");
 	{
@@ -346,5 +380,5 @@ void render_panel_chipset()
 		ImGui::EndDisabled();
 	}
 	EndGroupBox("Genlock");
-	ImGui::Unindent(5.0f);
+	// ImGui::Unindent(5.0f);
 }
