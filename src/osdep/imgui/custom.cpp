@@ -159,9 +159,9 @@ void render_panel_custom()
 	
 	char device_info[256];
 	if (did->mapping.is_retroarch) {
-		snprintf(device_info, sizeof(device_info), "%s [R]", did->joystick_name);
+		snprintf(device_info, sizeof(device_info), "%s [R]", did->joystick_name.c_str());
 	} else {
-		snprintf(device_info, sizeof(device_info), "%s [N]", did->name);
+		snprintf(device_info, sizeof(device_info), "%s [N]", did->name.c_str());
 	}
 	
 	ImGui::BeginDisabled();
