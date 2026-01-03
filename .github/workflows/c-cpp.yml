@@ -203,101 +203,32 @@ jobs:
           name: amiberry-macOS-64bit-apple-silicon
           path: Amiberry-*.zip
 
-  build-ubuntu-24-amd64:
-    runs-on: ubuntu-24.04
+  build-ubuntu:
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     permissions:
       contents: read
       actions: write
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Cache apt packages
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
-
-      - name: make for Ubuntu 24.04 AMD64
-        run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-      - name: Upload artifact
-        if: always() && github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-ubuntu-24.04-amd64
-          path: amiberry_*.deb
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-24.04-amd64.zip amiberry_*.deb
-
-      - name: Upload artifact for release
-        if: always() && github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-ubuntu-24.04-amd64
-          path: amiberry-*.zip
-
-  build-ubuntu-22-amd64:
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Cache apt packages
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
-
-      - name: make for Ubuntu 22.04 AMD64
-        run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-      - name: Upload artifact
-        if: always() && github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-ubuntu-22.04-amd64
-          path: amiberry_*.deb
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-22.04-amd64.zip amiberry_*.deb
-
-      - name: Upload artifact for release
-        if: always() && github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-ubuntu-22.04-amd64
-          path: amiberry-*.zip
-
-  build-ubuntu-25-amd64:
-    runs-on: ubuntu-latest
-    container: ubuntu:25.10
-    permissions:
-      contents: read
-      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 22.04-amd64
+            runner: ubuntu-latest
+            container: ubuntu:22.04
+            artifact_name: amiberry-ubuntu-22.04-amd64
+          - name: 24.04-amd64
+            runner: ubuntu-latest
+            container: ubuntu:24.04
+            artifact_name: amiberry-ubuntu-24.04-amd64
+          - name: 25.10-amd64
+            runner: ubuntu-latest
+            container: ubuntu:25.10
+            artifact_name: amiberry-ubuntu-25.10-amd64
+          - name: 25.10-arm64
+            runner: ubuntu-24.04-arm
+            container: ubuntu:25.10
+            artifact_name: amiberry-ubuntu-25.10-arm64
     steps:
       - name: Install prerequisites
         run: |
@@ -307,91 +238,54 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.name }}-ccache-
+
       - name: Cache apt packages
         uses: actions/cache@v4
         with:
           path: /var/cache/apt/archives
-          key: ${{ runner.os }}-ubuntu-25.10-apt-${{ hashFiles('**/CMakeLists.txt') }}
+          key: ${{ runner.os }}-${{ matrix.name }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: |
-            ${{ runner.os }}-ubuntu-25.10-apt-
+            ${{ runner.os }}-${{ matrix.name }}-apt-
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
 
-      - name: make for Ubuntu 25.10 AMD64
+      - name: make for Ubuntu ${{ matrix.name }}
+        env:
+          CCACHE_DIR: ~/.ccache
         run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
+          export PATH="/usr/lib/ccache:$PATH"
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j4
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: amiberry-ubuntu-25.10-amd64
+          name: ${{ matrix.artifact_name }}
           path: amiberry_*.deb
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-25.10-amd64.zip amiberry_*.deb
+        run: zip -r ${{ matrix.artifact_name }}.zip amiberry_*.deb
 
       - name: Upload artifact for release
         if: always() && github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: amiberry-ubuntu-25.10-amd64
-          path: amiberry-*.zip
-
-  build-ubuntu-25-arm64:
-    runs-on: ubuntu-24.04-arm
-    container: ubuntu:25.10
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Install prerequisites
-        run: |
-          apt-get update
-          apt-get install -y sudo git
-
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Cache apt packages
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-ubuntu-25.10-arm64-apt-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-ubuntu-25.10-arm64-apt-
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
-
-      - name: make for Ubuntu 25.10 ARM64
-        run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-      - name: Upload artifact
-        if: always() && github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-ubuntu-25.10-arm64
-          path: amiberry_*.deb
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r amiberry-${{ github.ref_name }}-ubuntu-25.10-arm64.zip amiberry_*.deb
-
-      - name: Upload artifact for release
-        if: always() && github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-ubuntu-25.10-arm64
+          name: ${{ matrix.artifact_name }}
           path: amiberry-*.zip
 
   build-fedora-x86_64:
@@ -615,7 +509,7 @@ jobs:
           path: "amiberry-*.zip"
 
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-aarch64, build-ubuntu-25-amd64, build-ubuntu-25-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-aarch64, build-ubuntu, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     # Elevated permissions only where needed for creating a release
@@ -656,7 +550,7 @@ jobs:
             artifacts/Amiberry-*.zip
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-aarch64, build-ubuntu-25-amd64, build-ubuntu-25-arm64, build-ubuntu-24-amd64, build-ubuntu-22-amd64, build-debian-amd64, build-debian-arm64, build-debian-armhf]
+    needs: [build-macOS-x86_64, build-macOS-Apple-Silicon, build-fedora-x86_64, build-fedora-aarch64, build-ubuntu, build-debian-amd64, build-debian-arm64, build-debian-armhf]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     # Elevated permissions only where needed for creating a prerelease
