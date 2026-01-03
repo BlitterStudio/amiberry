@@ -367,15 +367,9 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	{
 		AmigaMonitor* mutable_mon = &AMonitors[monid];
 
-		// Performance Optimization: Avoid SDL_RenderClear if the render_quad covers the whole screen.
-		// We check if the quad matches the logical size or if it covers the 0,0 - w,h area.
-		int lw, lh;
-		SDL_RenderGetLogicalSize(mon->amiga_renderer, &lw, &lh);
-		bool covers_full = (render_quad.x <= 0 && render_quad.y <= 0 && render_quad.w >= lw && render_quad.h >= lh);
-		
-		if (!covers_full) {
-			SDL_RenderClear(mon->amiga_renderer);
-		}
+		// Ensure the draw color is black for clearing
+		SDL_SetRenderDrawColor(mon->amiga_renderer, 0, 0, 0, 255);
+		SDL_RenderClear(mon->amiga_renderer);
 
 		// If a full render is needed or there are no specific dirty rects, update the whole texture.
 		if (mutable_mon->full_render_needed || mutable_mon->dirty_rects.empty()) {
