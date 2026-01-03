@@ -341,7 +341,7 @@ jobs:
         image: midwan/amiberry-fedora-arm64:latest
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCPACK_RPM_PACKAGE_ARCHITECTURE=aarch64 -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
           cpack -G RPM --config build/CPackConfig.cmake
 
     - name: Upload artifact
