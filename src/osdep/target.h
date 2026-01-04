@@ -28,8 +28,8 @@
 #define AMIBERRYBETA _T("")
 #endif
 
-#define AMIBERRYDATE MAKEBD(2025, 12, 26)
-#define COPYRIGHT _T("Copyright (C) 2025 Dimitris Panokostas")
+#define AMIBERRYDATE MAKEBD(2026, 1, 4)
+#define COPYRIGHT _T("Copyright (C) 2026 Dimitris Panokostas")
 
 #ifndef AMIBERRYEXTRA
 #define AMIBERRYEXTRA _T("")
