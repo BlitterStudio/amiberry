@@ -5823,9 +5823,6 @@ static void	action_change_mode(TrapContext *ctx, Unit *unit, dpacket *packet)
 	int type = GET_PCK_ARG1 (packet);
 	/* either a file-handle or lock */
 	uaecptr object = GET_PCK_ARG2 (packet) << 2;
-	/* will be EXCLUSIVE_LOCK/SHARED_LOCK if CHANGE_LOCK,
-	* or MODE_OLDFILE/MODE_NEWFILE/MODE_READWRITE if CHANGE_FH *
-	* Above is wrong, it is always *_LOCK. TW. */
 	int mode = GET_PCK_ARG3 (packet);
 	unsigned long uniq;
 	a_inode *a = NULL, *olda = NULL;
@@ -5854,16 +5851,22 @@ static void	action_change_mode(TrapContext *ctx, Unit *unit, dpacket *packet)
 	if (! a) {
 		err = ERROR_INVALID_LOCK;
 	} else {
+		// EXCLUSIVE_LOCK == -1
 		if (mode == -1) {
-			if (a->shlock > 1) {
-				err = ERROR_OBJECT_IN_USE;
-			} else {
-				a->shlock = 0;
-				a->elock = 1;
+			if (!a->elock) {
+				if (a->shlock > 1) {
+					err = ERROR_OBJECT_IN_USE;
+				} else {
+					a->shlock = 0;
+					a->elock = 1;
+				}
 			}
-		} else { /* Must be SHARED_LOCK == -2 */
-			a->elock = 0;
-			a->shlock++;
+		} else {
+			// SHARED_LOCK == -2 (any other than -1)
+			if (a->elock) {
+				a->elock = 0;
+				a->shlock = 1;
+			}
 		}
 	}
 
