@@ -1311,6 +1311,7 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 #endif
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
+	crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, 1, 1, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, NULL );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
 
@@ -1396,7 +1397,7 @@ void crtemu_destroy( crtemu_t* crtemu ) {
 
 void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, int frame_height ) {
 	if( crtemu->type != CRTEMU_TYPE_LITE ) {
-		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE3 );
+		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
 		crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, frame_width, frame_height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, frame_abgr );
 		if( frame_abgr ) {
@@ -1687,7 +1688,7 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
 #endif
 
-	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE3 );
+	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
 	if( crtemu->type == CRTEMU_TYPE_LITE ) {
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_NEAREST );
@@ -1708,8 +1709,11 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
-	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 1 );
-	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 2 );
+	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
+	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
+	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
+	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
+	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 }
 
