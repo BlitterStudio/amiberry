@@ -5131,7 +5131,33 @@ int main(int argc, char* argv[])
 	enumserialports();
 #endif
 	enummidiports();
+
+#ifdef __APPLE__
+    // On macOS, if the user double-clicked a file associated with the app, we need to catch the SDL_DROPFILE event
+    // and pass it as a command line argument to the main function.
+    SDL_PumpEvents();
+    SDL_Event event;
+    if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
+    {
+        write_log("Intercepted SDL_DROPFILE event: %s\n", event.drop.file);
+        char** new_argv = new char*[argc + 2];
+        for (int i = 0; i < argc; ++i)
+        {
+            new_argv[i] = argv[i];
+        }
+        new_argv[argc] = event.drop.file;
+        new_argv[argc + 1] = nullptr;
+        real_main(argc + 1, new_argv);
+        SDL_free(event.drop.file);
+        delete[] new_argv;
+    }
+    else
+    {
+        real_main(argc, argv);
+    }
+#else
 	real_main(argc, argv);
+#endif
 
 #ifdef USE_GPIOD
 	// Release lines and chip
