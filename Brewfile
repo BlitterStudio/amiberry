@@ -1,4 +1,5 @@
 # Brewfile for Amiberry macOS CI
+brew "cmake"
 brew "sdl2"
 brew "mpg123"
 brew "sdl2_ttf"
@@ -11,4 +12,5 @@ brew "enet"
 brew "libpcap"
 brew "zstd"
 brew "dylibbundler"
+brew "glew"
 

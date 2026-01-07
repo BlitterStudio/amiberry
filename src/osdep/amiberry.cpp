@@ -3977,32 +3977,59 @@ bool file_exists(const std::string& file)
 
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
-	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
-#if defined (__MACH__) && defined (__arm64__)	
-	std::string wget_path = "/opt/homebrew/bin/wget";
-	if (!file_exists(wget_path))
-	{
-		write_log("Could not locate wget in /opt/homebrew/ - Please use homebrew to install it!\n");
-		return false;
-	}
-#elif defined(__MACH__)
-	std::string wget_path = "/usr/local/bin/wget";
-	if (!file_exists(wget_path))
-	{
-		write_log("Could not locate wget in /usr/local/bin/ - Please use homebrew to install it!\n");
-		return false;
-	}
+	std::string tool_path = "";
+	std::string download_command = "";
+	bool use_curl = false;
+
+	// Check for curl first
+#if defined (__MACH__) && defined (__arm64__)
+	if (file_exists("/opt/homebrew/bin/curl"))
+		tool_path = "/opt/homebrew/bin/curl";
+	else if (file_exists("/usr/bin/curl"))
+		tool_path = "/usr/bin/curl";
 #else
-	std::string wget_path = "wget";
+	if (file_exists("/usr/bin/curl"))
+		tool_path = "/usr/bin/curl";
+	else if (file_exists("/usr/local/bin/curl"))
+		tool_path = "/usr/local/bin/curl";
 #endif
-	std::string download_command = wget_path + " -np -nv -O ";
+
+	if (!tool_path.empty())
+	{
+		use_curl = true;
+		download_command = tool_path + " -L -s -o ";
+	}
+	else
+	{
+		// Fallback to wget
+#if defined (__MACH__) && defined (__arm64__)	
+		std::string wget_path = "/opt/homebrew/bin/wget";
+		if (file_exists(wget_path))
+			tool_path = wget_path;
+#elif defined(__MACH__)
+		std::string wget_path = "/usr/local/bin/wget";
+		if (file_exists(wget_path))
+			tool_path = wget_path;
+#else
+		tool_path = "wget";
+#endif
+
+		if (tool_path.empty() || (tool_path != "wget" && !file_exists(tool_path)))
+		{
+			write_log("Could not locate curl or wget! Please install one of them to support downloads.\n");
+			return false;
+		}
+		download_command = tool_path + " -np -nv -O ";
+	}
+
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
 	download_command.append(tmp);
 	download_command.append(" ");
 	download_command.append(source);
-	download_command.append(" 2>&1");
+	if (!use_curl)
+		download_command.append(" 2>&1"); // wget needs this to capture output to pipe properly
 
 	// Cleanup if the tmp destination already exists
 	if (file_exists(tmp))
@@ -4021,7 +4048,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		const auto output = popen(download_command.c_str(), "r");
 		if (!output)
 		{
-			write_log("Failed while trying to run wget! Make sure it exists in your system...\n");
+			write_log("Failed while trying to run download command! Make sure it exists in your system...\n");
 			return false;
 		}
 
@@ -4034,7 +4061,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	}
 	catch (...)
 	{
-		write_log("An exception was thrown while trying to execute wget!\n");
+		write_log("An exception was thrown while trying to execute download command!\n");
 		return false;
 	}
 
