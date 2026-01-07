@@ -3667,8 +3667,11 @@ void save_amiberry_settings()
 	// GUI Theme
 	write_string_option("gui_theme", amiberry_options.gui_theme);
 
-	// Shader to use (if any)
+	// Shader to use for Native modes (if any)
 	write_string_option("shader", amiberry_options.shader);
+
+	// Shader to use for RTG modes (if any)
+	write_string_option("shader_rtg", amiberry_options.shader_rtg);
 
 	// Paths
 	write_string_option("config_path", config_path);
@@ -3871,6 +3874,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
+		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
 	}
 	return ret;
 }
@@ -3981,11 +3985,59 @@ bool file_exists(const std::string& file)
 
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
-	const std::string curl_cmd = "curl -L -s -o ";
-	const std::string wget_cmd = "wget -np -nv -O ";
-	
+	std::string tool_path = "";
+	std::string download_command = "";
+	bool use_curl = false;
+
+	// Check for curl first
+#if defined (__MACH__) && defined (__arm64__)
+	if (file_exists("/opt/homebrew/bin/curl"))
+		tool_path = "/opt/homebrew/bin/curl";
+	else if (file_exists("/usr/bin/curl"))
+		tool_path = "/usr/bin/curl";
+#else
+	if (file_exists("/usr/bin/curl"))
+		tool_path = "/usr/bin/curl";
+	else if (file_exists("/usr/local/bin/curl"))
+		tool_path = "/usr/local/bin/curl";
+#endif
+
+	if (!tool_path.empty())
+	{
+		use_curl = true;
+		download_command = tool_path + " -L -s -o ";
+	}
+	else
+	{
+		// Fallback to wget
+#if defined (__MACH__) && defined (__arm64__)	
+		std::string wget_path = "/opt/homebrew/bin/wget";
+		if (file_exists(wget_path))
+			tool_path = wget_path;
+#elif defined(__MACH__)
+		std::string wget_path = "/usr/local/bin/wget";
+		if (file_exists(wget_path))
+			tool_path = wget_path;
+#else
+		tool_path = "wget";
+#endif
+
+		if (tool_path.empty() || (tool_path != "wget" && !file_exists(tool_path)))
+		{
+			write_log("Could not locate curl or wget! Please install one of them to support downloads.\n");
+			return false;
+		}
+		download_command = tool_path + " -np -nv -O ";
+	}
+
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
+
+	download_command.append(tmp);
+	download_command.append(" ");
+	download_command.append(source);
+	if (!use_curl)
+		download_command.append(" 2>&1"); // wget needs this to capture output to pipe properly
 
 	// Cleanup if the tmp destination already exists
 	if (file_exists(tmp))
@@ -3998,69 +4050,30 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		}
 	}
 
-	bool download_success = false;
-
-	// Try curl first
 	try
 	{
-		std::string download_command = curl_cmd + tmp + " " + source + " 2>&1";
 		char buffer[MAX_DPATH];
 		const auto output = popen(download_command.c_str(), "r");
-		if (output)
+		if (!output)
 		{
-			while (fgets(buffer, sizeof buffer, output))
-			{
-				write_log(buffer);
-				write_log("\n");
-			}
-			int exit_code = pclose(output);
-			if (exit_code == 0) {
-				download_success = true;
-			} else {
-				write_log("curl failed with exit code %d\n", exit_code);
-			}
-		} else {
-			write_log("Failed to execute curl command.\n");
+			write_log("Failed while trying to run download command! Make sure it exists in your system...\n");
+			return false;
 		}
+
+		while (fgets(buffer, sizeof buffer, output))
+		{
+			write_log(buffer);
+			write_log("\n");
+		}
+		pclose(output);
 	}
 	catch (...)
 	{
-		write_log("Exception while running curl.\n");
+		write_log("An exception was thrown while trying to execute download command!\n");
+		return false;
 	}
 
-	// Fallback to wget if curl failed
-	if (!download_success)
-	{
-		write_log("curl download failed or missing, trying wget...\n");
-		try
-		{
-			std::string download_command = wget_cmd + tmp + " " + source + " 2>&1";
-			char buffer[MAX_DPATH];
-			const auto output = popen(download_command.c_str(), "r");
-			if (output)
-			{
-				while (fgets(buffer, sizeof buffer, output))
-				{
-					write_log(buffer);
-					write_log("\n");
-				}
-				int exit_code = pclose(output);
-				if (exit_code == 0) {
-					download_success = true;
-				} else {
-					write_log("wget failed with exit code %d\n", exit_code);
-				}
-			} else {
-				write_log("Failed to execute wget command.\n");
-			}
-		}
-		catch (...)
-		{
-			write_log("Exception while running wget.\n");
-		}
-	}
-
-	if (download_success && file_exists(tmp))
+	if (file_exists(tmp))
 	{
 		if (file_exists(destination) && keep_backup)
 		{
@@ -5153,7 +5166,33 @@ int main(int argc, char* argv[])
 	enumserialports();
 #endif
 	enummidiports();
+
+#ifdef __APPLE__
+    // On macOS, if the user double-clicked a file associated with the app, we need to catch the SDL_DROPFILE event
+    // and pass it as a command line argument to the main function.
+    SDL_PumpEvents();
+    SDL_Event event;
+    if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
+    {
+        write_log("Intercepted SDL_DROPFILE event: %s\n", event.drop.file);
+        char** new_argv = new char*[argc + 2];
+        for (int i = 0; i < argc; ++i)
+        {
+            new_argv[i] = argv[i];
+        }
+        new_argv[argc] = event.drop.file;
+        new_argv[argc + 1] = nullptr;
+        real_main(argc + 1, new_argv);
+        SDL_free(event.drop.file);
+        delete[] new_argv;
+    }
+    else
+    {
+        real_main(argc, argv);
+    }
+#else
 	real_main(argc, argv);
+#endif
 
 #ifdef USE_GPIOD
 	// Release lines and chip

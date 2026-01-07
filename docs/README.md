@@ -1,66 +1,105 @@
-# Optimized Amiga emulator for multiple platforms
+<div align="center">
+  <img src="https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1" alt="Amiberry Logo" width="400"/>
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X4FHDY4)
+  # Amiberry
+  **Optimized Amiga Emulator for macOS and Linux**
 
-<a rel="me" href="https://mastodon.social/@midwan">Follow me on Mastodon!</a>
+  [![C/C++ CI](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml)
+  [![Development Builds](https://img.shields.io/badge/Development%20Builds-nightly.link-orange)](https://nightly.link/BlitterStudio/amiberry/workflows/c-cpp.yml/master)
+  [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/wWndKTGpGV)
+  [![Mastodon](https://img.shields.io/badge/Mastodon-Follow-6364FF?logo=mastodon&logoColor=white)](https://mastodon.social/@midwan)
+  [![Ko-Fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/X8X4FHDY4)
+</div>
 
-[![C/C++ CI](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml)
+---
 
-[![Discord](https://img.shields.io/badge/My-Discord-%235865F2.svg)](https://discord.gg/wWndKTGpGV)
+## 📖 Introduction
 
-![Amiberry logo](https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1)
+**Amiberry** is an optimized Amiga emulator designed for ARM (32/64-bit), x86_64, and RISC-V platforms. It natively runs on **Linux** and **macOS**, providing a high-performance emulation experience suitable for everything from low-power SBCs (like Raspberry Pi) to powerful desktop workstations.
 
-Amiberry is an optimized Amiga emulator for Intel/AMD, ARM (32bit and 64bit) and RISC-V platforms. It runs on both Linux and macOS. Windows users should use [WinUAE](https://www.winuae.net), even if Amiberry can run on WSL (Windows Subsystem for Linux).
+Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-standard compatibility to non-Windows platforms while adding unique features tailored for modern setups.
 
-The core emulation comes from [WinUAE](https://www.winuae.net), and even the main GUI is designed to look similar to that.
-It includes JIT support to get high-performance results on CPU-intensive emulated environments, like desktop applications. On top of that, there are some unique features developed specifically for Amiberry, such as the WHDLoad booter, support for RetroArch controller mapping, and several more.
+## ✨ Features
 
-There are currently two Amiberry editions available: **Amiberry and Amiberry-Lite** - [see here](https://github.com/BlitterStudio/amiberry/wiki/First-Installation) to see which is the best pick for your needs.
+-   **High Performance JIT**: Custom Just-In-Time compiler for extreme speed on supported devices.
+-   **WHDLoad BOOTER**: Native support for launching WHDLoad titles directly, handling all configuration automatically.
+-   **RetroArch Integration**: Seamless mapping for RetroArch controllers.
+-   **Host Tools Integration**: Launch host applications directly from the emulation.
+-   **Dynamic File Handling**: Drag-and-drop support for floppies, hardfiles, and config files.
+-   **Native GUI**: A responsive, feature-rich interface designed for both mouse and controller navigation.
 
-## Getting Amiberry
+## 🚀 Installation
 
-### Linux
+### Linux 🐧
 
-Amiberry is available as DEB and RPM packages for ARM32, ARM64 (aarch64) and x86_64 Linux platform distributions. You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
+Amiberry is available as a `.deb` (Debian/Ubuntu/Raspberry Pi OS) and `.rpm` (Fedora/RHEL) package.
 
-A Flatpak version of Amiberry is also available on [Flathub](https://flathub.org/apps/com.blitterstudio.amiberry), for Linux systems where that is preferred, for example the SteamDeck.
+**Debian / Ubuntu / Raspberry Pi OS:**
+```bash
+# Download the latest .deb from Releases or Development Builds
+sudo apt update
+sudo apt install ./amiberry_*.deb
+```
 
-For DEB packages:
+**Fedora:**
+```bash
+# Download the latest .rpm from Releases or Development Builds
+sudo dnf install ./amiberry-*.rpm
+```
 
-      sudo apt update && sudo apt install ./amiberry_7.0.0_arm64.deb
+**Flatpak (Flathub):**
+```bash
+flatpak install flathub com.blitterstudio.amiberry
+```
 
-Or the RPM package:
+**Arch Linux (AUR):**
+```bash
+yay -S amiberry
+```
 
-      sudo dnf install ./amiberry-7.0.0-1.x86_64.rpm
+### macOS 🍎
 
-Or just use the graphical front-end your distro provides (double-clicking on the DEB/RPM package should do that)
+Amiberry supports both Intel (x86_64) and Apple Silicon (M1/M2/M3).
 
-If you're on Arch Linux, you'll find Amiberry on the [AUR](https://aur.archlinux.org/packages/amiberry) or if you use an AUR helper like [yay](https://github.com/Jguer/yay), you can build and run:
+**Via Homebrew:**
+```bash
+brew install --cask amiberry
+```
 
-      yay -S amiberry
+**Via DMG:**
+1.  Download the latest `.dmg` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+2.  Open the disk image.
+3.  Drag `Amiberry.app` to your `Applications` folder.
 
-### macOS
+> **Note**: For development builds, file associations for `.uae`, `.adf`, and `.lha` are set up automatically.
 
-Amiberry is available as a DMG and Homebrew package for macOS. 
+## 📚 Documentation
 
-For DMG package:
+For detailed configuration guides, tutorials, and compatibility lists, please visit the **[Official Wiki](https://github.com/BlitterStudio/amiberry/wiki)**.
 
-You can download the latest version from the [Releases](https://github.com/BlitterStudio/amiberry/releases) area.
+-   [First Installation Guide](https://github.com/BlitterStudio/amiberry/wiki/First-Installation)
+-   [Compile from Source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source)
 
-Or the Homebrew package:
+## 🤝 Contributing
 
-      brew install --cask amiberry
+Contributions are welcome! Whether it's reporting bugs, suggesting features, or submitting Pull Requests, your help makes Amiberry better.
 
-### Distro package management
+1.  Fork the repository.
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/AmazingFeature`).
+5.  Open a Pull Request.
 
-Some distros (like RetroPie, DietPi, Pimiga, and others) already include Amiberry either pre-installed or through their package management systems. Please follow the methods provided in those distros for a smoother experience and refer to their owners for support during this process.
+## 📄 License
 
-## Compile from source
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**.  
+See the [LICENSE](LICENSE) file for details.
 
-Alternatively, you can [compile the latest version of Amiberry from source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source).
+---
 
-For more documentation subjects, please check the [Wiki page](https://github.com/BlitterStudio/amiberry/wiki)
-
-### Supported by
-
-[![JetBrains logo.](https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
+<div align="center">
+  <sub>Supported by</sub><br/>
+  <a href="https://jb.gg/OpenSourceSupport">
+    <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" alt="JetBrains" width="100"/>
+  </a>
+</div>
