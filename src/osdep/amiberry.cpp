@@ -3663,8 +3663,11 @@ void save_amiberry_settings()
 	// GUI Theme
 	write_string_option("gui_theme", amiberry_options.gui_theme);
 
-	// Shader to use (if any)
+	// Shader to use for Native modes (if any)
 	write_string_option("shader", amiberry_options.shader);
+
+	// Shader to use for RTG modes (if any)
+	write_string_option("shader_rtg", amiberry_options.shader_rtg);
 
 	// Paths
 	write_string_option("config_path", config_path);
@@ -3867,6 +3870,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
+		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
 	}
 	return ret;
 }

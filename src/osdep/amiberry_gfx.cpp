@@ -88,6 +88,7 @@ static int get_crtemu_type(const char* shader)
 	if (!std::strcmp(shader, "tv") || !std::strcmp(shader, "TV"))       return CRTEMU_TYPE_TV;
 	if (!std::strcmp(shader, "pc") || !std::strcmp(shader, "PC"))       return CRTEMU_TYPE_PC;
 	if (!std::strcmp(shader, "lite") || !std::strcmp(shader, "LITE"))   return CRTEMU_TYPE_LITE;
+	if (!std::strcmp(shader, "none") || !std::strcmp(shader, "NONE"))   return CRTEMU_TYPE_NONE;
 	return CRTEMU_TYPE_TV;
 }
 #else
@@ -244,16 +245,26 @@ static float SDL2_getrefreshrate(const int monid)
 	return static_cast<float>(mode.refresh_rate);
 }
 
+static GLuint osd_texture = 0;
 static bool SDL2_alloctexture(int monid, int w, int h)
 {
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
 	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
-	if (crtemu_tv)
+	if (crtemu_tv) {
 		destroy_crtemu();
+		osd_texture = 0;
+	}
 	if (crtemu_tv == nullptr) {
-		const int crt_type = get_crtemu_type(amiberry_options.shader);
+		const auto mon = &AMonitors[monid];
+		const char* shader_name;
+		if (mon->screen_is_picasso)
+			shader_name = amiberry_options.shader_rtg;
+		else
+			shader_name = amiberry_options.shader;
+		
+		const int crt_type = get_crtemu_type(shader_name);
 		crtemu_tv = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
 	}
 	if (crtemu_tv)
@@ -289,8 +300,10 @@ static void update_leds(const int monid)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 
+#ifndef USE_OPENGL
 	if (!mon->amiga_renderer)
 		return;
+#endif
 
 	// Use static variables to avoid recalculating color tables every frame
 	static uae_u32 rc[256], gc[256], bc[256], a[256];
@@ -318,18 +331,22 @@ static void update_leds(const int monid)
 		if (mon->statusline_surface) SDL_FreeSurface(mon->statusline_surface);
 		mon->statusline_surface = SDL_CreateRGBSurfaceWithFormat(0, led_width, led_height, 32, SDL_PIXELFORMAT_RGBA32);
 		
+#ifndef USE_OPENGL
 		if (mon->statusline_texture) {
 			SDL_DestroyTexture(mon->statusline_texture);
 			mon->statusline_texture = nullptr;
 		}
+#endif
 	}
 
+#ifndef USE_OPENGL
 	if (!mon->statusline_texture) {
 		mon->statusline_texture = SDL_CreateTexture(mon->amiga_renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, led_width, led_height);
 		SDL_SetTextureBlendMode(mon->statusline_texture, SDL_BLENDMODE_BLEND);
 	}
+#endif
 
-	if (mon->statusline_surface && mon->statusline_texture) {
+	if (mon->statusline_surface) {
 		// Clear with transparent color
 		SDL_FillRect(mon->statusline_surface, nullptr, 0x00000000);
 		
@@ -339,8 +356,11 @@ static void update_leds(const int monid)
 			draw_status_line_single(monid, buf, y, led_width, rc, gc, bc, a);
 		}
 		
+#ifndef USE_OPENGL
 		// Map the surface to the texture
-		SDL_UpdateTexture(mon->statusline_texture, nullptr, mon->statusline_surface->pixels, mon->statusline_surface->pitch);
+		if (mon->statusline_texture)
+			SDL_UpdateTexture(mon->statusline_texture, nullptr, mon->statusline_surface->pixels, mon->statusline_surface->pitch);
+#endif
 	}
 }
 
@@ -428,11 +448,8 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	return false;
 }
 
-static void SDL2_showframe(const int monid)
+static void wait_frame_timing()
 {
-	const AmigaMonitor* mon = &AMonitors[monid];
-	SDL_RenderPresent(mon->amiga_renderer);
-
 	static Uint64 freq = 0;
 	if (freq == 0) freq = SDL_GetPerformanceFrequency();
 
@@ -525,6 +542,13 @@ static void SDL2_showframe(const int monid)
 	
 	// Sync legacy variable for other systems
 	wait_vblank_timestamp = read_processor_time();
+}
+
+static void SDL2_showframe(const int monid)
+{
+	const AmigaMonitor* mon = &AMonitors[monid];
+	SDL_RenderPresent(mon->amiga_renderer);
+	wait_frame_timing();
 }
 
 void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
@@ -1404,7 +1428,35 @@ void show_screen(const int monid, int mode)
 
 	int drawableWidth, drawableHeight;
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
-	glViewport(0, 0, drawableWidth, drawableHeight);
+	if (crtemu_tv->type == CRTEMU_TYPE_NONE) {
+		float desired_aspect;
+		if (mon->screen_is_picasso && amiga_surface) {
+			desired_aspect = (float)amiga_surface->w / (float)amiga_surface->h;
+		} else {
+			if (currprefs.gfx_correct_aspect)
+				desired_aspect = 4.0f / 3.0f;
+			else if (amiga_surface)
+				desired_aspect = (float)amiga_surface->w / (float)amiga_surface->h;
+			else
+				desired_aspect = 4.0f / 3.0f;
+		}
+		
+		int destW = drawableWidth;
+		int destH = (int)(drawableWidth / desired_aspect);
+
+		if (destH > drawableHeight) {
+			destH = drawableHeight;
+			destW = (int)(drawableHeight * desired_aspect);
+		}
+
+		int destX = (drawableWidth - destW) / 2;
+		int destY = (drawableHeight - destH) / 2;
+		
+		glClear(GL_COLOR_BUFFER_BIT);
+		glViewport(destX, destY, destW, destH);
+	} else {
+		glViewport(0, 0, drawableWidth, drawableHeight);
+	}
 
 	// Check if any cropping is actually being applied.
 	// If crop_rect covers the entire surface, we can take a much faster path.
@@ -1421,7 +1473,7 @@ void show_screen(const int monid, int mode)
 
 		if (packed_pixel_buffer)
 		{
-			crtemu_present(crtemu_tv, time, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
+			crtemu_present(crtemu_tv, time * 1000, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
 			corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
 
 			delete[] packed_pixel_buffer;
@@ -1431,11 +1483,73 @@ void show_screen(const int monid, int mode)
 	{
 		// FAST PATH: No cropping.
 		// Render the full surface directly without any expensive memory allocation or copying.
-		crtemu_present(crtemu_tv, time, (CRTEMU_U32 const*)amiga_surface->pixels,
+		crtemu_present(crtemu_tv, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
 		amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
 	}
 
+	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
+		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
+	{
+		update_leds(monid);
+		if (mon->statusline_surface) {
+			if (osd_texture != 0 && !glIsTexture(osd_texture)) {
+				osd_texture = 0;
+			}
+			if (osd_texture == 0) {
+				glGenTextures(1, &osd_texture);
+				glBindTexture(GL_TEXTURE_2D, osd_texture);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			}
+			
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, osd_texture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mon->statusline_surface->w, mon->statusline_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+			
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glViewport(0, 0, drawableWidth, drawableHeight);
+			
+			crtemu_tv->UseProgram(crtemu_tv->copy_shader);
+			crtemu_tv->Uniform1i(crtemu_tv->GetUniformLocation(crtemu_tv->copy_shader, "tex0"), 0);
+
+			float osd_w = (float)mon->statusline_surface->w;
+			float osd_h = (float)mon->statusline_surface->h;
+			float win_w = (float)drawableWidth;
+			float win_h = (float)drawableHeight;
+			
+			// Force full width (stretch to fit window)
+			float scale_x = win_w / osd_w;
+			
+			// Scale height to match width scaling (preserve aspect of LEDs)
+			float scaled_h = osd_h * scale_x;
+			
+			// Convert to NDC dimensions
+			float ndc_h = (scaled_h / win_h) * 2.0f;
+			
+			float x0 = -1.0f; 
+			float x1 = 1.0f;
+			float y0 = -1.0f;         
+			float y1 = y0 + ndc_h;
+			
+			CRTEMU_GLfloat vertices[] = {
+				x0, y0, 0.0f, 1.0f,
+				x1, y0, 1.0f, 1.0f,
+				x1, y1, 1.0f, 0.0f,
+				x0, y1, 0.0f, 0.0f,
+			};
+
+			crtemu_tv->BindBuffer(CRTEMU_GL_ARRAY_BUFFER, crtemu_tv->vertexbuffer);
+			crtemu_tv->BufferData(CRTEMU_GL_ARRAY_BUFFER, sizeof(vertices), vertices, CRTEMU_GL_STATIC_DRAW);
+			crtemu_tv->VertexAttribPointer(0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof(CRTEMU_GLfloat), 0);
+			crtemu_tv->DrawArrays(CRTEMU_GL_TRIANGLE_FAN, 0, 4);
+			
+			glDisable(GL_BLEND);
+		}
+	}
+
 	SDL_GL_SwapWindow(mon->amiga_window);
+	wait_frame_timing();
 #else
 	SDL2_showframe(monid);
 #endif
