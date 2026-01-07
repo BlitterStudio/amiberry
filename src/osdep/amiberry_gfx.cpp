@@ -412,7 +412,7 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		SDL_Rect rtg_rect;
 
 		if (ad->picasso_on) {
-			rtg_rect = { 0, 0, mon->currentmode.native_width, mon->currentmode.native_height };
+			rtg_rect = { 0, 0, amiga_surface->w, amiga_surface->h };
 			p_crop = &rtg_rect;
 			p_quad = &rtg_rect;
 
