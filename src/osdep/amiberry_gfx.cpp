@@ -245,7 +245,9 @@ static float SDL2_getrefreshrate(const int monid)
 	return static_cast<float>(mode.refresh_rate);
 }
 
+#ifdef USE_OPENGL
 static GLuint osd_texture = 0;
+#endif
 static bool SDL2_alloctexture(int monid, int w, int h)
 {
 	if (w == 0 || h == 0)

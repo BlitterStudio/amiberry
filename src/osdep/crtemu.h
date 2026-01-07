@@ -1955,6 +1955,10 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			*x = (int) ( xp );
 			*y = (int) ( yp );
 		} break;
+		case CRTEMU_TYPE_NONE: {
+			*x = (int) ( (float) *x * width );
+			*y = (int) ( (float) *y * height );
+		} break;
 	}
 }
 
