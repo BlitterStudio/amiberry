@@ -934,8 +934,10 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 	auto* sd = static_cast<sound_data*>(userdata);
 	auto* s = sd->data;
 
+	// Always clear the buffer to silence first, to avoid playing garbage on underrun
+	std::memset(stream, 0, len);
+
 	if (!s->stream_initialised || sd->mute) {
-		std::fill_n(stream, len, 0);
 		if (sd->mute) s->silence_written++;
 		s->stream_initialised = 1;
 		return;
@@ -949,7 +951,7 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 		return;
 	}
 
-	const auto bytes_to_copy = std::min(static_cast<unsigned int>(s->framesperbuffer * sd->samplesize), s->pullbufferlen);
+	const auto bytes_to_copy = std::min(static_cast<unsigned int>(s->framesperbuffer * sd->samplesize), static_cast<unsigned int>(s->pullbufferlen));
 	if (sd->mute == 0 && bytes_to_copy > 0) {
 		std::copy(s->pullbuffer, s->pullbuffer + bytes_to_copy, stream);
 	}
