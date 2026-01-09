@@ -957,10 +957,8 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 	auto* sd = static_cast<sound_data*>(userdata);
 	auto* s = sd->data;
 
-	// Always clear the buffer to silence first, to avoid playing garbage on underrun
-	std::memset(stream, 0, len);
-
 	if (!s->stream_initialised || sd->mute) {
+		std::memset(stream, 0, len);
 		if (sd->mute) s->silence_written++;
 		s->stream_initialised = 1;
 		return;
