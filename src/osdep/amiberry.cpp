@@ -4962,6 +4962,7 @@ static void makeverstr(TCHAR* s)
 
 int main(int argc, char* argv[])
 {
+	uae_time_init();
 	makeverstr(VersionStr);
 
 	for (auto i = 1; i < argc; i++) {
