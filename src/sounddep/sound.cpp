@@ -105,8 +105,8 @@ extern frame_time_t vsynctimebase_orig;
 static int avioutput_audio;
 #endif
 
-#define ADJUST_LIMIT 6
-#define ADJUST_LIMIT2 1
+#define ADJUST_LIMIT 10
+#define ADJUST_LIMIT2 10
 
 void sound_setadjust(float v)
 {
@@ -301,7 +301,7 @@ static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuf
 
 	// Sync
 	const auto queued = SDL_GetQueuedAudioSize(s->dev);
-	const auto target = sd->sndbufsize; // Target 1 buffer latency?
+	const auto target = sd->sndbufsize * 3; // Target 3 buffers latency to prevent underruns
 	const auto diff = static_cast<int>(queued) - target;
 	const auto val = static_cast<float>(diff) / static_cast<float>(sd->samplesize);
 	
