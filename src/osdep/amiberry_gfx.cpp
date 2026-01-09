@@ -647,7 +647,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 
 	found = -1;
 	found2 = -1;
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->monitorid[0] == '\\')
 			continue;
@@ -667,7 +667,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 		return found;
 
 	found = -1;
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->adapterid[0] == '\\')
 			continue;
@@ -687,7 +687,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 	if (found >= 0)
 		return found;
 
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->adaptername[0] == '\\')
 			continue;
@@ -707,7 +707,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 	if (found >= 0)
 		return found;
 
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->monitorname[0] == '\\')
 			continue;
