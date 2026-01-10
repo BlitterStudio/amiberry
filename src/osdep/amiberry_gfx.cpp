@@ -511,34 +511,23 @@ static void wait_frame_timing()
 		
 		Sint64 ticks_left = next_frame_tick - current_tick;
 		
-		// Performance Optimization: Use SDL_Delay for the majority of the wait time
-		// to reduce CPU wakeups and context switches.
-		if (ticks_left > (Sint64)(freq / 200)) // > 5ms
+		// Sleep wait (reduced to 1ms threshold for better precision on non-Windows systems)
+		while (ticks_left > (Sint64)(freq / 1000)) // > 1ms
 		{
-			Uint32 delay_ms = (Uint32)((ticks_left - (freq / 500)) * 1000 / freq);
-			if (delay_ms > 0)
-				SDL_Delay(delay_ms);
-			current_tick = SDL_GetPerformanceCounter();
-			ticks_left = next_frame_tick - current_tick;
-		}
-
-		// Fine-grained Sleep wait (0.5ms intervals, up to 2ms threshold)
-		while (ticks_left > (Sint64)(freq / 500)) // > 2ms
-		{
-#ifndef _WIN32
 			struct timespec req = { 0, 500000 };
 			nanosleep(&req, nullptr);
-#else
-			SDL_Delay(1);
-#endif
 			current_tick = SDL_GetPerformanceCounter();
 			ticks_left = next_frame_tick - current_tick;
 		}
 
-		// Spin wait
+		// Spin wait with CPU relaxation
 		while (SDL_GetPerformanceCounter() < next_frame_tick)
 		{
-			// busy wait
+#if defined(__x86_64__) || defined(__i386__)
+			__builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+			asm volatile("yield");
+#endif
 		}
 	}
 	
