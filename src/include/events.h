@@ -27,6 +27,7 @@ extern void reset_frame_rate_hack(void);
 extern evt_t vsync_cycles;
 extern evt_t start_cycles;
 extern bool event_wait;
+extern int slow_cpu_access;
 
 extern void event_init(void);
 extern void compute_vsynctime(void);

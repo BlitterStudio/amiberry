@@ -1069,7 +1069,6 @@ static int fifo_thread(void *param)
 {
         virge_t *virge = (virge_t *)param;
         
-        virge->fifo_thread_state = 1;
         while (virge->fifo_thread_state > 0)
         {
                 thread_set_event(virge->fifo_not_full_event);
@@ -3476,7 +3475,6 @@ static int render_thread(void *param)
 {
         virge_t *virge = (virge_t *)param;
         
-        virge->render_thread_state = 1;
         while (virge->render_thread_state > 0)
         {
                 thread_wait_event(virge->wake_render_thread, -1);
@@ -4052,10 +4050,12 @@ static void *s3_virge_init(const device_t *info)
         virge->wake_render_thread = thread_create_event();
         virge->wake_main_thread = thread_create_event();
         virge->not_full_event = thread_create_event();
+        virge->render_thread_state = 1;
         virge->render_thread = thread_create(render_thread, virge);
 
         virge->wake_fifo_thread = thread_create_event();
         virge->fifo_not_full_event = thread_create_event();
+        virge->fifo_thread_state = 1;
         virge->fifo_thread = thread_create(fifo_thread, virge);
  
         //ddc_init();
@@ -4153,10 +4153,12 @@ static void *s3_virge_375_init()
         virge->wake_render_thread = thread_create_event();
         virge->wake_main_thread = thread_create_event();
         virge->not_full_event = thread_create_event();
+        virge->render_thread_state = 1;
         virge->render_thread = thread_create(render_thread, virge);
 
         virge->wake_fifo_thread = thread_create_event();
         virge->fifo_not_full_event = thread_create_event();
+        virge->fifo_thread_state = 1;
         virge->fifo_thread = thread_create(fifo_thread, virge);
 
         //ddc_init();

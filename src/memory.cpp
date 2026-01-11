@@ -2489,8 +2489,9 @@ bool mapped_malloc (addrbank *ab)
 static void init_mem_banks (void)
 {
 	// unsigned so i << 16 won't overflow to negative when i >= 32768
-	for (unsigned int i = 0; i < MEMORY_BANKS; i++)
+	for (unsigned int i = 0; i < MEMORY_BANKS; i++) {
 		put_mem_bank (i << 16, &dummy_bank, 0);
+	}
 #ifdef NATMEM_OFFSET
 	delete_shmmaps (0, 0xFFFF0000);
 #endif
@@ -3290,15 +3291,17 @@ void memory_reset (void)
 			map_banks_set(&kickmem_bank, addr, 8, 0);
 	}
 
-	if (a1000_bootrom)
+	if (a1000_bootrom) {
 		a1000_handle_kickstart (1);
+	}
 
 #ifdef AUTOCONFIG
 	expansion_map();
 #endif
 
-	if (a3000_f0)
+	if (a3000_f0) {
 		map_banks_set(&extendedkickmem_bank, 0xf0, 1, 0);
+	}
 
 	/* Map the chipmem into all of the lower 8MB */
 	map_overlay (1);
@@ -3326,8 +3329,9 @@ void memory_reset (void)
 	}
 
 #ifdef AUTOCONFIG
-	if ((need_uae_boot_rom (&currprefs) && currprefs.uaeboard == 0) || currprefs.uaeboard == 1)
+	if ((need_uae_boot_rom (&currprefs) && currprefs.uaeboard == 0) || currprefs.uaeboard == 1) {
 		map_banks_set(&rtarea_bank, rtarea_base >> 16, 1, 0);
+	}
 #endif
 
 	if ((cloanto_rom || currprefs.cs_ksmirror_e0) && (currprefs.maprom != 0xe00000) && !extendedkickmem_type) {
@@ -3388,6 +3392,18 @@ void memory_reset (void)
 				for (int j = currprefs.custom_memory_addrs[i]; j & currprefs.custom_memory_mask[i]; j += currprefs.custom_memory_sizes[i]) {
 					map_banks(i == 0 ? &custmem1_bank : &custmem2_bank, j >> 16, currprefs.custom_memory_sizes[i] >> 16, 0);
 				}
+			}
+		}
+	}
+
+	// Map Z2/Z3 autoconfig RAM boards immediately because JIT does not like memory disappearing under it.
+	if (currprefs.cachesize) {
+		for (int i = 0; i < MAX_RAM_BOARDS; i++) {
+			if (fastmem_bank[i].start && fastmem_bank[i].allocated_size) {
+				map_banks_z2(&fastmem_bank[i], fastmem_bank[i].start >> 16, fastmem_bank[i].allocated_size >> 16);
+			}
+			if (z3fastmem_bank[i].start && z3fastmem_bank[i].allocated_size) {
+				map_banks_z3(&z3fastmem_bank[i], z3fastmem_bank[i].start >> 16, z3fastmem_bank[i].allocated_size >> 16);
 			}
 		}
 	}

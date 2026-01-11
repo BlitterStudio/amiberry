@@ -50,8 +50,6 @@
 #define USE_VGASCREENSPLIT 1
 #define USE_DACSWITCH 1
 
-#define P96_PARTIAL_UPDATE_DEBUG 0 // 0 = off, 1 = log counts
-
 #define P96TRACING_ENABLED 0
 #define P96TRACING_LEVEL 0
 #define P96TRACING_SETUP_ENABLED 0
@@ -840,7 +838,7 @@ static void setupcursor()
 
 	setupcursor_needed = 1;
 	if (cursordata && cursorwidth && cursorheight) {
-		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_BGRA32);
+		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
 
 		for (int y = 0; y < cursorheight; y++) {
 			uae_u8 *p1 = cursordata + cursorwidth * y;
@@ -1310,14 +1308,14 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	if (thisisvsync) {
 		if (uaegfx) {
 			rtg_render();
-		}
-		else {
+		} else {
 			gfxboard_vsync_handler(false, true);
 		}
 #ifdef AVIOUTPUT
 		frame_drawn(monid);
 #endif
 	}
+
 
 #if 0
 	if (vsync < 0) {
@@ -1883,6 +1881,13 @@ static void updatesprcolors (int bpp)
 				v |= 0xff000000;
 			else
 				v &= 0x00ffffff;
+#ifdef AMIBERRY			
+			// If we are using UAE RTG, we use RGBA surface, so we need to swap R and B
+			// (Since v comes in 0x..RRGGBB -> LE BBGGRR.. which matches BGRA surface order)
+			if (currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE) {
+				v = (v & 0xFF00FF00) | ((v & 0x00FF0000) >> 16) | ((v & 0x000000FF) << 16);
+			}
+#endif
 			cursorrgbn[i] = v;
 			break;
 		default: // 1
@@ -2019,7 +2024,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	cursor_surface = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0);
+	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
 	if (!cursor_surface)
 		goto end;
 
@@ -2579,11 +2584,16 @@ static const struct modeids mi[] =
 	5120,1440, 180,
 	5120,2160, 181,
 	1280, 600, 182,
-#ifdef AMIBERRY
-	1024, 600, 183,
-	3840,1080, 184,
-#else
 	3840,1080, 183,
+	2560,1080, 184,
+	4096,2160, 185,
+	5120,2880, 186,
+	1176, 664, 187,
+	1440,1080, 188,
+	1600,1000, 189,
+	1600,1024, 190,
+#ifdef AMIBERRY
+	1024, 600, 191,
 #endif
 	-1,-1,0
 };
@@ -3221,7 +3231,6 @@ static uae_u32 REGPARAM2 picasso_SetSwitch (TrapContext *ctx)
 		write_log(_T("SetSwitch() - %s - %s. Monitor=%d, old=%d\n"), flag ? p96text : _T("amiga"), delayed_set_switch ? _T("delayed") : _T("immediate"), monid, oldstate);
 	}
 
-	/* Put old switch-state in D0 */
 	unlockrtg();
 	return oldstate;
 }
@@ -3644,7 +3653,7 @@ static uae_u32 REGPARAM2 picasso_InvertRect (TrapContext *ctx)
 
 	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri)) {
 		P96TRACE((_T("InvertRect %dbpp 0x%02x\n"), Bpp, mask));
-#ifndef _WIN32
+#ifdef AMIBERRY
 		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, Height * ri.BytesPerRow);
 #endif
 		if (!validatecoords(ctx, &ri, ri.RGBFormat, &X, &Y, &Width, &Height))
@@ -3705,7 +3714,7 @@ static uae_u32 REGPARAM2 picasso_FillRect(TrapContext *ctx)
 	if (CopyRenderInfoStructureA2U(ctx, renderinfo, &ri)) {
 		if (!validatecoords(ctx, &ri, RGBFmt, &X, &Y, &Width, &Height))
 			return 1;
-#ifndef _WIN32
+#ifdef AMIBERRY
 		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, Height * ri.BytesPerRow);
 #endif
 
@@ -3813,7 +3822,7 @@ static int BlitRectHelper(TrapContext *ctx)
 		dstri = ri;
 	}
 	/* Do our virtual frame-buffer memory first */
-#ifndef _WIN32
+#ifdef AMIBERRY
 	mark_dirty(rtg_index, dstri->Memory + dsty * dstri->BytesPerRow + dstx * GetBytesPerPixel(RGBFmt), height * dstri->BytesPerRow);
 #endif
 	do_blitrect_frame_buffer(ri, dstri, srcx, srcy, dstx, dsty, width, height, mask, RGBFmt, opcode);
@@ -3996,7 +4005,7 @@ static uae_u32 REGPARAM2 picasso_BlitPattern(TrapContext *ctx)
 	if(CopyRenderInfoStructureA2U(ctx, rinf, &ri) && CopyPatternStructureA2U(ctx, pinf, &pattern)) {
 		if (!validatecoords(ctx, &ri, RGBFmt, &X, &Y, &W, &H))
 			return 1;
-#ifndef _WIN32
+#ifdef AMIBERRY
 		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, H * ri.BytesPerRow);
 #endif
 		if (pattern.Size > 16) {
@@ -4173,7 +4182,7 @@ static uae_u32 REGPARAM2 picasso_BlitTemplate(TrapContext *ctx)
 	if (CopyRenderInfoStructureA2U(ctx, rinf, &ri) && CopyTemplateStructureA2U(ctx, tmpl, &tmp)) {
 		if (!validatecoords(ctx, &ri, RGBFmt, &X, &Y, &W, &H))
 			return 1;
-#ifndef _WIN32
+#ifdef AMIBERRY
 		mark_dirty(rtg_index, ri.Memory + Y * ri.BytesPerRow + X * Bpp, H * ri.BytesPerRow);
 #endif
 		rgbmask = rgbfmasks[RGBFmt];
@@ -4625,7 +4634,7 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Chunky (TrapContext *ctx)
 		P96TRACE((_T("P2C - BitMap has %d BPR, %d rows\n"), local_bm.BytesPerRow, local_bm.Rows));
 		PlanarToChunky(ctx, &local_ri, &local_bm, srcx, srcy, dstx, dsty, width, height, minterm, mask);
 		result = 1;
-#ifndef _WIN32
+#ifdef AMIBERRY
 		mark_dirty(rtg_index, local_ri.Memory + dsty * local_ri.BytesPerRow + dstx * GetBytesPerPixel(local_ri.RGBFormat), height * local_ri.BytesPerRow);
 #endif
 	}
@@ -4884,7 +4893,7 @@ static uae_u32 REGPARAM2 picasso_BlitPlanar2Direct(TrapContext *ctx)
 		P96TRACE((_T("BlitPlanar2Direct(%d, %d, %d, %d, %d, %d) Minterm 0x%x, Mask 0x%x, Depth %d\n"),
 			srcx, srcy, dstx, dsty, width, height, minterm, Mask, local_bm.Depth));
 		PlanarToDirect(ctx, &local_ri, &local_bm, srcx, srcy, dstx, dsty, width, height, minterm, Mask, cim);
-#ifndef _WIN32
+#ifdef AMIBERRY
 		mark_dirty(rtg_index, local_ri.Memory + dsty * local_ri.BytesPerRow + dstx * GetBytesPerPixel(local_ri.RGBFormat), height * local_ri.BytesPerRow);
 #endif
 		result = 1;
@@ -5715,13 +5724,9 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 		}
 	}
 
-#if P96_PARTIAL_UPDATE_DEBUG >= 1
-	if (flushlines > 0 && flushlines != -1) {
-		write_log(_T("P96-DEBUG: Flushed %d of %d lines.\n"), flushlines, pheight);
-	} else if (flushlines == -1) {
-		write_log(_T("P96-DEBUG: Flushed all %d lines (full refresh).\n"), pheight);
+	if (0 && flushlines) {
+		write_log (_T("%d:%d\n"), flushlines, matchcount);
 	}
-#endif
 
 	if (currprefs.leds_on_screen & STATUSLINE_RTG) {
 		if (dstp == nullptr) {
@@ -5731,9 +5736,6 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			maxy = vidinfo->height;
 			if (miny > vidinfo->height - TD_TOTAL_HEIGHT)
 				miny = vidinfo->height - TD_TOTAL_HEIGHT;
-#ifdef AMIBERRY
-			picasso_statusline(monid, dstp);
-#endif
 		}
 	}
 	if (maxy >= 0) {
@@ -6591,6 +6593,10 @@ static void picasso_free()
 		render_pipe = nullptr;
 		uae_sem_destroy(&render_cs);
 		render_cs = nullptr;
+		if (render_tid) {
+			uae_wait_thread(&render_tid);
+			render_tid = nullptr;
+		}
 #endif
 		render_thread_state = 0;
 	}

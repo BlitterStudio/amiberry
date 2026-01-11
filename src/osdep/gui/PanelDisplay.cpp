@@ -45,6 +45,9 @@ static gcn::StringListModel res_autoswitch_list(res_autoswitch);
 static const std::vector<std::string> vsync_options = { "-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz" };
 static gcn::StringListModel vsync_options_list(vsync_options);
 
+static const std::vector<std::string> vsync_options_rtg = { "-", "Lagless" };
+static gcn::StringListModel vsync_options_rtg_list(vsync_options_rtg);
+
 static std::vector<std::string> fps_options = { "PAL", "NTSC"};
 static gcn::StringListModel fps_options_list(fps_options);
 
@@ -888,7 +891,7 @@ void InitPanelDisplay(const config_category& category)
 
 	lblVSyncRtg = new gcn::Label("VSync RTG:");
 	lblVSyncRtg->setAlignment(gcn::Graphics::Left);
-	cboVSyncRtg = new gcn::DropDown(&vsync_options_list);
+	cboVSyncRtg = new gcn::DropDown(&vsync_options_rtg_list);
 	cboVSyncRtg->setSize(150, cboVSyncRtg->getHeight());
 	cboVSyncRtg->setBaseColor(gui_base_color);
 	cboVSyncRtg->setBackgroundColor(gui_background_color);
@@ -1479,7 +1482,7 @@ void RefreshPanelDisplay()
 
 	v = changed_prefs.gfx_apmode[1].gfx_vsync;
 	if (v < 0)
-		v = 2;
+		v = 0;
 	else if (v > 0)
 		v = 1;
 	cboVSyncRtg->setSelected(v);

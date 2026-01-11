@@ -71,6 +71,11 @@ static gcn::TextField* txtKeyMinimize;
 static gcn::Button* cmdKeyMinimize;
 static gcn::ImageButton* cmdKeyMinimizeClear;
 
+static gcn::Label* lblKeyLAmiga;
+static gcn::TextField* txtKeyLAmiga;
+static gcn::Button* cmdKeyLAmiga;
+static gcn::ImageButton* cmdKeyLAmigaClear;
+
 static gcn::Label* lblKeyRAmiga;
 static gcn::TextField* txtKeyRAmiga;
 static gcn::Button* cmdKeyRAmiga;
@@ -270,7 +275,18 @@ public:
 			strcpy(currprefs.minimize, hotkey.c_str());
 			RefreshPanelMisc();
 		}
-
+		else if (actionEvent.getSource() == cmdKeyLAmiga)
+		{
+			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Left Amiga or ESC to cancel...", "Cancel");
+			setHotkeyFieldAndPrefs(key, txtKeyLAmiga, changed_prefs.left_amiga, currprefs.left_amiga);
+		}
+		else if (actionEvent.getSource() == cmdKeyLAmigaClear)
+		{
+			std::string hotkey;
+			strcpy(changed_prefs.left_amiga, hotkey.c_str());
+			strcpy(currprefs.left_amiga, hotkey.c_str());
+			RefreshPanelMisc();
+		}
 		else if (actionEvent.getSource() == cmdKeyRAmiga)
 		{
 			const auto key = ShowMessageForInput("Press a key", "Press a key to map to Right Amiga or ESC to cancel...", "Cancel");
@@ -598,6 +614,27 @@ void InitPanelMisc(const config_category& category)
 	cmdKeyMinimizeClear->setId("cmdKeyMinimizeClear");
 	cmdKeyMinimizeClear->addActionListener(miscActionListener);
 
+	lblKeyLAmiga = new gcn::Label("Left Amiga:");
+	lblKeyLAmiga->setAlignment(gcn::Graphics::Right);
+	txtKeyLAmiga = new gcn::TextField();
+	txtKeyLAmiga->setEnabled(false);
+	txtKeyLAmiga->setSize(120, TEXTFIELD_HEIGHT);
+	txtKeyLAmiga->setBaseColor(gui_base_color);
+	txtKeyLAmiga->setBackgroundColor(gui_background_color);
+	txtKeyLAmiga->setForegroundColor(gui_foreground_color);
+	cmdKeyLAmiga = new gcn::Button("...");
+	cmdKeyLAmiga->setId("cmdKeyLAmiga");
+	cmdKeyLAmiga->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyLAmiga->setBaseColor(gui_base_color);
+	cmdKeyLAmiga->setForegroundColor(gui_foreground_color);
+	cmdKeyLAmiga->addActionListener(miscActionListener);
+	cmdKeyLAmigaClear = new gcn::ImageButton(prefix_with_data_path("delete.png"));
+	cmdKeyLAmigaClear->setBaseColor(gui_base_color);
+	cmdKeyLAmigaClear->setForegroundColor(gui_foreground_color);
+	cmdKeyLAmigaClear->setSize(SMALL_BUTTON_WIDTH, SMALL_BUTTON_HEIGHT);
+	cmdKeyLAmigaClear->setId("cmdKeyLAmigaClear");
+	cmdKeyLAmigaClear->addActionListener(miscActionListener);
+
 	lblKeyRAmiga = new gcn::Label("Right Amiga:");
 	lblKeyRAmiga->setAlignment(gcn::Graphics::Right);
 	txtKeyRAmiga = new gcn::TextField();
@@ -735,6 +772,13 @@ void InitPanelMisc(const config_category& category)
 	category.panel->add(cmdKeyMinimizeClear, cmdKeyMinimize->getX() + cmdKeyMinimize->getWidth() + 8, posY);
 	posY += cmdKeyMinimizeClear->getHeight() + DISTANCE_NEXT_Y;
 
+	category.panel->add(lblKeyLAmiga, column2_x, posY);
+	posY += lblKeyLAmiga->getHeight() + 8;
+	category.panel->add(txtKeyLAmiga, lblKeyLAmiga->getX(), posY);
+	category.panel->add(cmdKeyLAmiga, txtKeyLAmiga->getX() + txtKeyLAmiga->getWidth() + 8, posY);
+	category.panel->add(cmdKeyLAmigaClear, cmdKeyLAmiga->getX() + cmdKeyLAmiga->getWidth() + 8, posY);
+	posY += cmdKeyLAmiga->getHeight() + DISTANCE_NEXT_Y;
+
 	category.panel->add(lblKeyRAmiga, column2_x, posY);
 	posY += lblKeyRAmiga->getHeight() + 8;
 	category.panel->add(txtKeyRAmiga, lblKeyRAmiga->getX(), posY);
@@ -815,6 +859,11 @@ void ExitPanelMisc()
 	delete cmdKeyMinimize;
 	delete cmdKeyMinimizeClear;
 
+	delete lblKeyLAmiga;
+	delete txtKeyLAmiga;
+	delete cmdKeyLAmiga;
+	delete cmdKeyLAmigaClear;
+
 	delete lblKeyRAmiga;
 	delete txtKeyRAmiga;
 	delete cmdKeyRAmiga;
@@ -871,6 +920,9 @@ void RefreshPanelMisc()
 		: "Click to map");
 	txtKeyMinimize->setText(strncmp(changed_prefs.minimize, "", 1) != 0
 		? changed_prefs.minimize
+		: "Click to map");
+	txtKeyLAmiga->setText(strncmp(changed_prefs.left_amiga, "", 1) != 0
+		? changed_prefs.left_amiga
 		: "Click to map");
 	txtKeyRAmiga->setText(strncmp(changed_prefs.right_amiga, "", 1) != 0
 		? changed_prefs.right_amiga

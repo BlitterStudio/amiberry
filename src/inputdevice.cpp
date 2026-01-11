@@ -2616,7 +2616,7 @@ static bool get_mouse_position(int *xp, int *yp, int inx, int iny)
 
 	getgfxoffset(monid, &fdx, &fdy, &fmx, &fmy);
 
-	//write_log("%.2f*%.2f %.2f*%.2f\n", fdx, fdy, fmx, fmy);
+	//write_log("%d %d, %.2f*%.2f %.2f*%.2f\n", x, y, fdx, fdy, fmx, fmy);
 
 #ifdef PICASSO96
 	if (ad->picasso_on) {
@@ -3316,8 +3316,6 @@ end:
 		if (!ad->picasso_on) {
 			int aw = 0, ah = 0, dx, dy;
 			get_custom_mouse_limits(&aw, &ah, &dx, &dy, dimensioninfo_dbl);
-			x += dx;
-			y += dy;
 			float dx2, dy2, mx2, my2;
 			getgfxoffset(monid, &dx2, &dy2, &mx2, &my2);
 			if (mx2) {
@@ -3326,6 +3324,8 @@ end:
 			if (my2) {
 				y = (int)(y / my2);
 			}
+			x += dx;
+			y += dy;
 			x += (int)dx2;
 			y += (int)dy2;
 		} else {
@@ -5266,8 +5266,8 @@ static bool inputdevice_handle_inputcode2(int monid, int code, int state, const 
 		{
 			currprefs.cpu_compatible = changed_prefs.cpu_compatible = false;
 			currprefs.cachesize = changed_prefs.cachesize = MAX_JIT_CACHE;
-			currprefs.cachesize = changed_prefs.compfpu = true;
-			currprefs.compfpu = changed_prefs.cpu_cycle_exact = false;
+			currprefs.compfpu = changed_prefs.compfpu = true;
+			currprefs.cpu_cycle_exact = changed_prefs.cpu_cycle_exact = false;
 			currprefs.cpu_memory_cycle_exact = changed_prefs.cpu_memory_cycle_exact = false;
 			currprefs.address_space_24 = changed_prefs.address_space_24 = false;
 		}
@@ -9273,6 +9273,7 @@ void inputdevice_copyconfig (struct uae_prefs *src, struct uae_prefs *dst)
 	strcpy(dst->action_replay, src->action_replay);
 	strcpy(dst->fullscreen_toggle, src->fullscreen_toggle);
 	strcpy(dst->minimize, src->minimize);
+	strcpy(dst->left_amiga, src->left_amiga);
 	strcpy(dst->right_amiga, src->right_amiga);
 	dst->use_retroarch_quit = src->use_retroarch_quit;
 	dst->use_retroarch_menu = src->use_retroarch_menu;

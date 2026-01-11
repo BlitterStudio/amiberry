@@ -57,6 +57,7 @@
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
+#include "gui/gui_handling.h"
 
 #ifdef __MACH__
 #include <string>
@@ -136,6 +137,7 @@ amiberry_hotkey quit_key;
 amiberry_hotkey action_replay_key;
 amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
+amiberry_hotkey left_amiga_key;
 amiberry_hotkey right_amiga_key;
 SDL_GameControllerButton vkbd_button;
 
@@ -293,6 +295,9 @@ static void set_key_configs(const uae_prefs* p)
 
 	if (strncmp(p->minimize, "", 1) != 0)
 		minimize_key = get_hotkey_from_config(p->minimize);
+
+	if (strncmp(p->left_amiga, "", 1) != 0)
+		left_amiga_key = get_hotkey_from_config(p->left_amiga);
 
 	if (strncmp(p->right_amiga, "", 1) != 0)
 		right_amiga_key = get_hotkey_from_config(p->right_amiga);
@@ -465,7 +470,21 @@ static int sleep_millis2(int ms, const bool main)
 	return 0;
 }
 
-void sleep_micros (const int ms)
+int busywait;
+
+int target_sleep_nanos(int us)
+{
+	if (us < 0)
+		return 800; // Microseconds threshold
+
+	struct timespec req;
+	req.tv_sec = us / 1000000;
+	req.tv_nsec = (us % 1000000) * 1000;
+	nanosleep(&req, nullptr);
+	return 0;
+}
+
+void sleep_micros(const int ms)
 {
 	usleep(ms);
 }
@@ -565,6 +584,9 @@ bool setpaused(const int priority)
 	const AmigaMonitor* mon = &AMonitors[0];
 	if (pause_emulation > priority)
 		return false;
+	if (!pause_emulation) {
+		wait_keyrelease();
+	}
 	pause_emulation = priority;
 	devices_pause();
 	setsoundpaused();
@@ -1698,6 +1720,9 @@ static void handle_key_event(const SDL_Event& event)
 			scancode = SDL_SCANCODE_END;
 		}
 	}
+	if (left_amiga_key.scancode && scancode == left_amiga_key.scancode) {
+		scancode = SDL_SCANCODE_LGUI;
+	}
 	if ((amiberry_options.rctrl_as_ramiga || currprefs.right_control_is_right_win_key) && scancode == SDL_SCANCODE_RCTRL)
 	{
 		scancode = SDL_SCANCODE_RGUI;
@@ -1883,6 +1908,41 @@ static void handle_pen_event(const SDL_Event& event)
 	//}
 }
 
+std::string get_filename_extension(const TCHAR* filename);
+
+static void handle_drop_file_event(const SDL_Event& event)
+{
+	char* dropped_file = event.drop.file;
+	const auto ext = get_filename_extension(dropped_file);
+
+	if (strcasecmp(ext.c_str(), ".uae") == 0)
+	{
+		// Load configuration file
+		uae_restart(&currprefs, 1, dropped_file);
+		gui_running = false;
+	}
+	else if (strcasecmp(ext.c_str(), ".adf") == 0 || strcasecmp(ext.c_str(), ".adz") == 0 || strcasecmp(ext.c_str(), ".dms") == 0 || strcasecmp(ext.c_str(), ".ipf") == 0 || strcasecmp(ext.c_str(), ".zip") == 0)
+	{
+		// Insert floppy image
+		disk_insert(0, dropped_file);
+	}
+	else if (strcasecmp(ext.c_str(), ".lha") == 0)
+	{
+		// WHDLoad archive
+		whdload_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, 0, nullptr);
+		gui_running = false;
+	}
+	else if (strcasecmp(ext.c_str(), ".cue") == 0 || strcasecmp(ext.c_str(), ".iso") == 0 || strcasecmp(ext.c_str(), ".chd") == 0)
+	{
+		// CD image
+		cd_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, 0, nullptr);
+		gui_running = false;
+	}
+	SDL_free(dropped_file);
+}
+
 static void process_event(const SDL_Event& event)
 {
 	AmigaMonitor* mon = &AMonitors[0];
@@ -1959,6 +2019,10 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_MOUSEWHEEL:
 			handle_mouse_wheel_event(event);
+			break;
+
+		case SDL_DROPFILE:
+			handle_drop_file_event(event);
 			break;
 
 		//TODO Implement with SDL3 for Tablet support
@@ -2190,22 +2254,6 @@ uae_u8* target_load_keyfile(uae_prefs* p, const char* path, int* sizep, char* na
 	return nullptr;
 }
 
-std::vector<std::string> split_command(const std::string& command)
-{
-	std::vector<std::string> word_vector;
-	std::size_t prev = 0, pos;
-	while ((pos = command.find_first_of(' ', prev)) != std::string::npos)
-	{
-		if (pos > prev)
-			word_vector.push_back(command.substr(prev, pos - prev));
-		prev = pos + 1;
-	}
-	if (prev < command.length())
-		word_vector.push_back(command.substr(prev, std::string::npos));
-
-	return word_vector;
-}
-
 void replace(std::string& str, const std::string& from, const std::string& to)
 {
 	const auto start_pos = str.find(from);
@@ -2221,45 +2269,13 @@ void target_execute(const char* command)
 	mouseactive = 0;
 
 	write_log("Target_execute received: %s\n", command);
-	const std::string command_string = command;
-	auto command_parts = split_command(command_string);
-
-	for (size_t i = 0; i < command_parts.size(); ++i)
-	{
-		if (i > 0)
-		{
-			const auto delimiter_position = command_parts[i].find(':');
-			if (delimiter_position != std::string::npos)
-			{
-				auto volume_or_device_name = command_parts[i].substr(0, delimiter_position);
-				for (auto mount = 0; mount < currprefs.mountitems; mount++)
-				{
-					if (currprefs.mountconfig[mount].ci.type == UAEDEV_DIR)
-					{
-						if (_tcsicmp(currprefs.mountconfig[mount].ci.volname, volume_or_device_name.c_str()) == 0
-							|| _tcsicmp(currprefs.mountconfig[mount].ci.devname, volume_or_device_name.c_str()) == 0)
-						{
-							std::string root_directory = currprefs.mountconfig[mount].ci.rootdir;
-							volume_or_device_name += ':';
-							replace(command_parts[i], volume_or_device_name, root_directory);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	std::ostringstream command_stream;
-	for (const auto& part : command_parts)
-	{
-		command_stream << part << " ";
-	}
-	// Ensure this runs in the background, otherwise we'll block the emulator until it returns
-	command_stream << "&";
+	
+	std::string final_command = command;
+	// Ensure this runs in the background
+	final_command += " &";
 
 	try
 	{
-		std::string final_command = command_stream.str();
 		write_log("Executing: %s\n", final_command.c_str());
 		system(final_command.c_str());
 	}
@@ -2699,6 +2715,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	cfgfile_target_dwrite_str(f, _T("action_replay"), p->action_replay);
 	cfgfile_target_dwrite_str(f, _T("fullscreen_toggle"), p->fullscreen_toggle);
 	cfgfile_target_dwrite_str(f, _T("minimize"), p->minimize);
+	cfgfile_target_dwrite_str(f, _T("left_amiga"), p->left_amiga);
 	cfgfile_target_dwrite_str(f, _T("right_amiga"), p->right_amiga);
 
 	if (p->drawbridge_driver > 0)
@@ -2841,6 +2858,7 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "action_replay", p->action_replay, sizeof p->action_replay)
 		|| cfgfile_string(option, value, "fullscreen_toggle", p->fullscreen_toggle, sizeof p->fullscreen_toggle)
 		|| cfgfile_string(option, value, "minimize", p->minimize, sizeof p->minimize)
+		|| cfgfile_string(option, value, "left_amiga", p->left_amiga, sizeof p->left_amiga)
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
 		return 1;
@@ -3645,8 +3663,11 @@ void save_amiberry_settings()
 	// GUI Theme
 	write_string_option("gui_theme", amiberry_options.gui_theme);
 
-	// Shader to use (if any)
+	// Shader to use for Native modes (if any)
 	write_string_option("shader", amiberry_options.shader);
+
+	// Shader to use for RTG modes (if any)
+	write_string_option("shader_rtg", amiberry_options.shader_rtg);
 
 	// Paths
 	write_string_option("config_path", config_path);
@@ -3849,6 +3870,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "default_vkbd_toggle", amiberry_options.default_vkbd_toggle, sizeof amiberry_options.default_vkbd_toggle);
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
+		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
 	}
 	return ret;
 }
@@ -3959,32 +3981,59 @@ bool file_exists(const std::string& file)
 
 bool download_file(const std::string& source, const std::string& destination, bool keep_backup)
 {
-	// homebrew installs in different locations on OSX Intel vs OSX Apple Silicon
-#if defined (__MACH__) && defined (__arm64__)	
-	std::string wget_path = "/opt/homebrew/bin/wget";
-	if (!file_exists(wget_path))
-	{
-		write_log("Could not locate wget in /opt/homebrew/ - Please use homebrew to install it!\n");
-		return false;
-	}
-#elif defined(__MACH__)
-	std::string wget_path = "/usr/local/bin/wget";
-	if (!file_exists(wget_path))
-	{
-		write_log("Could not locate wget in /usr/local/bin/ - Please use homebrew to install it!\n");
-		return false;
-	}
+	std::string tool_path = "";
+	std::string download_command = "";
+	bool use_curl = false;
+
+	// Check for curl first
+#if defined (__MACH__) && defined (__arm64__)
+	if (file_exists("/opt/homebrew/bin/curl"))
+		tool_path = "/opt/homebrew/bin/curl";
+	else if (file_exists("/usr/bin/curl"))
+		tool_path = "/usr/bin/curl";
 #else
-	std::string wget_path = "wget";
+	if (file_exists("/usr/bin/curl"))
+		tool_path = "/usr/bin/curl";
+	else if (file_exists("/usr/local/bin/curl"))
+		tool_path = "/usr/local/bin/curl";
 #endif
-	std::string download_command = wget_path + " -np -nv -O ";
+
+	if (!tool_path.empty())
+	{
+		use_curl = true;
+		download_command = tool_path + " -L -s -o ";
+	}
+	else
+	{
+		// Fallback to wget
+#if defined (__MACH__) && defined (__arm64__)	
+		std::string wget_path = "/opt/homebrew/bin/wget";
+		if (file_exists(wget_path))
+			tool_path = wget_path;
+#elif defined(__MACH__)
+		std::string wget_path = "/usr/local/bin/wget";
+		if (file_exists(wget_path))
+			tool_path = wget_path;
+#else
+		tool_path = "wget";
+#endif
+
+		if (tool_path.empty() || (tool_path != "wget" && !file_exists(tool_path)))
+		{
+			write_log("Could not locate curl or wget! Please install one of them to support downloads.\n");
+			return false;
+		}
+		download_command = tool_path + " -np -nv -O ";
+	}
+
 	auto tmp = destination;
 	tmp = tmp.append(".tmp");
 
 	download_command.append(tmp);
 	download_command.append(" ");
 	download_command.append(source);
-	download_command.append(" 2>&1");
+	if (!use_curl)
+		download_command.append(" 2>&1"); // wget needs this to capture output to pipe properly
 
 	// Cleanup if the tmp destination already exists
 	if (file_exists(tmp))
@@ -4003,7 +4052,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 		const auto output = popen(download_command.c_str(), "r");
 		if (!output)
 		{
-			write_log("Failed while trying to run wget! Make sure it exists in your system...\n");
+			write_log("Failed while trying to run download command! Make sure it exists in your system...\n");
 			return false;
 		}
 
@@ -4016,7 +4065,7 @@ bool download_file(const std::string& source, const std::string& destination, bo
 	}
 	catch (...)
 	{
-		write_log("An exception was thrown while trying to execute wget!\n");
+		write_log("An exception was thrown while trying to execute download command!\n");
 		return false;
 	}
 
@@ -4913,6 +4962,7 @@ static void makeverstr(TCHAR* s)
 
 int main(int argc, char* argv[])
 {
+	uae_time_init();
 	makeverstr(VersionStr);
 
 	for (auto i = 1; i < argc; i++) {
@@ -5113,7 +5163,33 @@ int main(int argc, char* argv[])
 	enumserialports();
 #endif
 	enummidiports();
+
+#ifdef __APPLE__
+    // On macOS, if the user double-clicked a file associated with the app, we need to catch the SDL_DROPFILE event
+    // and pass it as a command line argument to the main function.
+    SDL_PumpEvents();
+    SDL_Event event;
+    if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
+    {
+        write_log("Intercepted SDL_DROPFILE event: %s\n", event.drop.file);
+        char** new_argv = new char*[argc + 2];
+        for (int i = 0; i < argc; ++i)
+        {
+            new_argv[i] = argv[i];
+        }
+        new_argv[argc] = event.drop.file;
+        new_argv[argc + 1] = nullptr;
+        real_main(argc + 1, new_argv);
+        SDL_free(event.drop.file);
+        delete[] new_argv;
+    }
+    else
+    {
+        real_main(argc, argv);
+    }
+#else
 	real_main(argc, argv);
+#endif
 
 #ifdef USE_GPIOD
 	// Release lines and chip

@@ -20,16 +20,16 @@
 #define GETBDM(x) (((x) - (((x) / 10000) * 10000)) / 100)
 #define GETBDD(x) ((x) % 100)
 
-#define AMIBERRYPUBLICBETA 0
+#define AMIBERRYPUBLICBETA 1
 
 #if AMIBERRYPUBLICBETA
-#define AMIBERRYBETA _T("1")
+#define AMIBERRYBETA _T("14")
 #else
 #define AMIBERRYBETA _T("")
 #endif
 
-#define AMIBERRYDATE MAKEBD(2025, 9, 5)
-#define COPYRIGHT _T("Copyright (C) 2025 Dimitris Panokostas")
+#define AMIBERRYDATE MAKEBD(2026, 1, 10)
+#define COPYRIGHT _T("Copyright (C) 2026 Dimitris Panokostas")
 
 #ifndef AMIBERRYEXTRA
 #define AMIBERRYEXTRA _T("")
@@ -76,6 +76,7 @@ extern amiberry_hotkey quit_key;
 extern amiberry_hotkey action_replay_key;
 extern amiberry_hotkey fullscreen_key;
 extern amiberry_hotkey minimize_key;
+extern amiberry_hotkey left_amiga_key;
 extern amiberry_hotkey right_amiga_key;
 
 extern int emulating;

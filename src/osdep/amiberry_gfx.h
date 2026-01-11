@@ -103,6 +103,8 @@ struct AmigaMonitor {
 
 	std::vector<SDL_Rect> dirty_rects;
 	bool full_render_needed;
+	SDL_Surface* statusline_surface;
+	SDL_Texture* statusline_texture;
 	struct winuae_currentmode currentmode;
 	struct uae_filter* usedfilter;
 };

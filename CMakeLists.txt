@@ -43,7 +43,7 @@ endif()
 set(VERSION_MAJOR "8" CACHE STRING "Major version")
 set(VERSION_MINOR "0" CACHE STRING "Minor version")
 set(VERSION_PATCH "0" CACHE STRING "Patch version")
-set(VERSION_PRE_RELEASE "" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "14" CACHE STRING "Pre-release version")
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 # Use PkgConfig only on FreeBSD
@@ -84,7 +84,7 @@ set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
 
 # Global definitions
-add_definitions(-DLIBICONV_PLUG)
+#add_definitions(-DLIBICONV_PLUG)
 
 # FreeBSD-specific linking and paths
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")

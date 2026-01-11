@@ -2504,6 +2504,8 @@ uae_u8 *restore_blitter_new(uae_u8 *src)
 	if (blt_statefile_type < 2) {
 		tmp = 0;
 		//blt_info.blit_finald = 0;
+		restore_u8();
+		restore_u8();
 	} else {
 		shifter[0] = (tmp & 1) != 0;
 		shifter[1] = (tmp & 2) != 0;

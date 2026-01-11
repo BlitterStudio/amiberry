@@ -77,7 +77,6 @@ static bool automatic;
 static int monitor;
 
 extern uae_u16 bplcon0;
-extern uae_u8 **row_map_genlock;
 
 static uae_u8 graffiti_palette[256 * 4];
 
@@ -118,7 +117,11 @@ STATIC_INLINE bool is_transparent(uae_u16 v)
 
 STATIC_INLINE uae_u8 FVR(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return dataline[0];
+#else
 	return dataline[2];
+#endif
 }
 STATIC_INLINE uae_u8 FVG(struct vidbuffer *src, uae_u8 *dataline)
 {
@@ -126,12 +129,20 @@ STATIC_INLINE uae_u8 FVG(struct vidbuffer *src, uae_u8 *dataline)
 }
 STATIC_INLINE uae_u8 FVB(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return dataline[2];
+#else
 	return dataline[0];
+#endif
 }
 
 STATIC_INLINE bool FR(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return (dataline[0] & 0x80) != 0;
+#else
 	return (dataline[2] & 0x80) != 0;
+#endif
 }
 STATIC_INLINE bool FG(struct vidbuffer *src, uae_u8 *dataline)
 {
@@ -139,11 +150,19 @@ STATIC_INLINE bool FG(struct vidbuffer *src, uae_u8 *dataline)
 }
 STATIC_INLINE bool FB(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return (dataline[2] & 0x80) != 0;
+#else
 	return (dataline[0] & 0x80) != 0;
+#endif
 }
 STATIC_INLINE bool FI(struct vidbuffer *src, uae_u8 *dataline)
 {
+#ifdef AMIBERRY
+	return (dataline[2] & 0x10) != 0;
+#else
 	return (dataline[0] & 0x10) != 0;
+#endif
 }
 
 STATIC_INLINE uae_u8 FIRGB(struct vidbuffer *src, uae_u8 *dataline)
@@ -187,17 +206,30 @@ STATIC_INLINE uae_u8 DCTV_FIRBG(struct vidbuffer *src, uae_u8 *dataline)
 
 STATIC_INLINE void PRGB(struct vidbuffer *dst, uae_u8 *dataline, uae_u8 r, uae_u8 g, uae_u8 b)
 {
+#ifdef AMIBERRY
+	dataline[0] = r;
+	dataline[1] = g;
+	dataline[2] = b;
+#else
 	dataline[0] = b;
 	dataline[1] = g;
 	dataline[2] = r;
+#endif
 }
 
 STATIC_INLINE void PRGBA(struct vidbuffer *dst, uae_u8 *dataline, uae_u8 r, uae_u8 g, uae_u8 b, uae_u8 a)
 {
+#ifdef AMIBERRY
+	dataline[0] = r;
+	dataline[1] = g;
+	dataline[2] = b;
+	dataline[3] = a;
+#else
 	dataline[0] = b;
 	dataline[1] = g;
 	dataline[2] = r;
 	dataline[3] = a;
+#endif
 }
 
 
@@ -814,7 +846,7 @@ static bool firecracker24(struct vidbuffer *src, struct vidbuffer *dst, bool dou
 		if (yoff >= src->inheight)
 			continue;
 		uae_u8 *line = src->bufmem + yoff * src->rowbytes;
-		uae_u8 *line_genlock = row_map_genlock[yoff];
+		uae_u8 *line_genlock = get_row_genlock(0, yoff);
 		uae_u8 *dstline = dst->bufmem + (((y * 2 + oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
 		uae_u8 *vramline = sm_frame_buffer + (fc24_y + oddlines) * SM_VRAM_WIDTH * SM_VRAM_BYTES + bufferoffset;
 		fc24_x = 0;
@@ -1685,7 +1717,7 @@ static bool ham_e(struct vidbuffer *src, struct vidbuffer *dst, bool doublelines
 		if (yoff >= src->inheight)
 			continue;
 		uae_u8 *line = src->bufmem + yoff * src->rowbytes;
-		uae_u8 *line_genlock = row_map_genlock[yoff];
+		uae_u8 *line_genlock = get_row_genlock(0, yoff);
 		uae_u8 *dstline = dst->bufmem + (((y * 2 + oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
 
 		bool getpalette = false;
@@ -2604,7 +2636,7 @@ skip:
 		bool ztoggle = false;
 		uae_u8 *line = src->bufmem + yoff * src->rowbytes;
 		uae_u8 *dstline = dst->bufmem + (((y * 2 + oddlines) - dst->yoffset) >> vdbl) * dst->rowbytes;
-		uae_u8 *line_genlock = row_map_genlock[yoff];
+		uae_u8 *line_genlock = get_row_genlock(0, yoff);
 		int gy = (((y * 2 + oddlines) - src->yoffset + offsety - gen_yoffset) >> vdbl) * deltay / 65536;
 		if (genlock_image_upsidedown)
 			gy = (genlock_image_height - 1) - gy;
@@ -2623,7 +2655,7 @@ skip:
 		for (x = 0; x < src->inwidth; x++) {
 			uae_u8 *s2 = s + src->rowbytes;
 			uae_u8 *d2 = d + dst->rowbytes;
-			if (*s_genlock == 0xff) {
+			if (*s_genlock == 0xffff) {
 				PUT_PRGBA(d, d2, dst, 0, 0, 0, 0, 0, doublelines, false);
 			} else if ((!zclken && is_transparent(*s_genlock)) || (zclken && ztoggle)) {
 				a = amix2;
@@ -3021,7 +3053,7 @@ static bool opalvision(struct vidbuffer *src, struct vidbuffer *dst, bool double
 		int yoff = (((y * 2 - oddlines) - src->yoffset) / vdbl);
 		if (yoff >= 0 && yoff < src->inheight) {
 			line = src->bufmem + yoff * src->rowbytes;
-			line_genlock = row_map_genlock ? row_map_genlock[yoff] : NULL;
+			line_genlock = get_row_genlock(0, yoff);
 			dstline = dst->bufmem + (((y * 2 - oddlines) - dst->yoffset) / vdbl) * dst->rowbytes;
 			if (y >= yimgstart) {
 				ydisp = y - yimgstart;

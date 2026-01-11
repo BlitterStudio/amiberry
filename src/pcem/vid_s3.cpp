@@ -890,7 +890,6 @@ static int fifo_thread(void *param)
 {
         s3_t *s3 = (s3_t *)param;
         
-        s3->fifo_thread_state = 1;
         while (s3->fifo_thread_state > 0)
         {
                 thread_set_event(s3->fifo_not_full_event);
@@ -2889,6 +2888,7 @@ static void *s3_init(const char *bios_fn, int chip)
 
         s3->wake_fifo_thread = thread_create_event();
         s3->fifo_not_full_event = thread_create_event();
+        s3->fifo_thread_state = 1;
         s3->fifo_thread = thread_create(fifo_thread, s3);
         
         s3->int_line = 0;

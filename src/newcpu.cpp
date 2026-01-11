@@ -94,6 +94,7 @@ int hardware_bus_error;
 static int baseclock;
 int m68k_pc_indirect;
 bool m68k_interrupt_delay;
+int slow_cpu_access;
 static bool m68k_accurate_ipl;
 static bool m68k_reset_delay;
 static bool ismoves_nommu;
@@ -4774,6 +4775,16 @@ static int do_specialties (int cycles)
 #endif
 	}
 
+	if (spcflags & SPCFLAG_CPU_SLOW) {
+		evt_t c = get_cck_cycles();
+		int cnt = 0;
+		while(regs.spcflags == SPCFLAG_CPU_SLOW && c == get_cck_cycles()) {
+			x_do_cycles(4 * CYCLE_UNIT);
+			cnt++;
+		}
+		unset_special(SPCFLAG_CPU_SLOW);
+	}
+
 	if (spcflags & SPCFLAG_MMURESTART) {
 		// can't have interrupt when 040/060 CPU reruns faulted instruction
 		unset_special(SPCFLAG_MMURESTART);
@@ -5647,6 +5658,9 @@ static void m68k_run_jit(void)
 			// Without this it would have crashed in any case..
 			uaecptr pc = M68K_GETPC;
 			write_log(_T("Unhandled JIT exception! PC=%08x\n"), pc);
+#ifdef DEBUGGER
+			memory_map_dump();
+#endif
 			if (pc & 1)
 				Exception(3);
 			else

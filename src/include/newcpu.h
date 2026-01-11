@@ -354,6 +354,7 @@ extern bool m68k_interrupt_delay;
 extern void safe_interrupt_set(int, int, bool);
 
 #define SPCFLAG_CPUINRESET 2
+#define SPCFLAG_CPU_SLOW 4
 #define SPCFLAG_INT 8
 #define SPCFLAG_BRK 16
 #define SPCFLAG_UAEINT 32
