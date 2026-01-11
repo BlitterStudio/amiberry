@@ -205,14 +205,13 @@ static void clearbuffer_sdl2(struct sound_data *sd)
 
 static void clearbuffer(struct sound_data* sd)
 {
-	auto* s = sd->data;
+	const auto* s = sd->data;
 	if (sd->devicetype == SOUND_DEVICE_SDL2)
 		clearbuffer_sdl2(sd);
 	if (s->pullbuffer) {
 		if (sd->devicetype == SOUND_DEVICE_SDL2)
 			SDL_LockAudioDevice(s->dev);
 		memset(s->pullbuffer, 0, s->pullbuffermaxlen);
-		s->pullbufferlen = 0;
 		if (sd->devicetype == SOUND_DEVICE_SDL2)
 			SDL_UnlockAudioDevice(s->dev);
 	}
@@ -317,28 +316,16 @@ static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 	auto* s = sd->data;
 
 	SDL_LockAudioDevice(s->dev);
-	int stuck_count = 5000;
-	while (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
-		// If we are stuck or sound is paused/deactivated, break
-		if (stuck_count-- == 0 || sdp->paused || sdp->deactive) {
-			write_log(_T("pull overflow or stuck! %d %d %d\n"), s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen);
-			s->pullbufferlen = 0;
-			gui_data.sndbuf_status = 1;
-			break;
-		}
-
-		SDL_UnlockAudioDevice(s->dev);
-		SDL_Delay(1);
-		SDL_LockAudioDevice(s->dev);
+	if (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
+		write_log(_T("pull overflow! %d %d %d\n"), s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen);
+		s->pullbufferlen = 0;
+		gui_data.sndbuf_status = 1;
 	}
-
-	if (s->pullbufferlen + sd->sndbufsize <= s->pullbuffermaxlen)
-	{
+	else 
 		gui_data.sndbuf_status = 0;
-		memcpy(s->pullbuffer + s->pullbufferlen, sndbuffer, sd->sndbufsize);
-		s->pullbufferlen += sd->sndbufsize;
-	}
-
+	memcpy(s->pullbuffer + s->pullbufferlen, sndbuffer, sd->sndbufsize);
+	s->pullbufferlen += sd->sndbufsize;
+	
 	// Calc sync inside lock to get consistent len
 	const auto len = s->pullbufferlen;
 	const auto maxlen = s->pullbuffermaxlen;
@@ -396,19 +383,9 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		}
 	}
 
-	if (s->dev > 0)
-	{
-		s->framesperbuffer = have.samples;
-		s->sndbufsize = s->framesperbuffer;
-		sd->sndbufsize = s->sndbufsize * ch * 2;
-	}
-
 	if (s->pullmode)
 	{
-		s->pullbuffermaxlen = sd->sndbufsize * 4;
-		if (s->framesperbuffer * sd->samplesize * 2 > s->pullbuffermaxlen)
-			s->pullbuffermaxlen = s->framesperbuffer * sd->samplesize * 2;
-		
+		s->pullbuffermaxlen = sd->sndbufsize * 2;
 		s->pullbuffer = xcalloc(uae_u8, s->pullbuffermaxlen);
 		s->pullbufferlen = 0;
 	}
@@ -967,14 +944,12 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 	if (!s->framesperbuffer || sdp->deactive)
 		return;
 
-	SDL_LockAudioDevice(s->dev); // Ensure we hold the lock!
 	if (s->pullbufferlen <= 0) {
 		gui_data.sndbuf_status = -1;
-		SDL_UnlockAudioDevice(s->dev);
 		return;
 	}
 
-	const auto bytes_to_copy = std::min(static_cast<unsigned int>(len), static_cast<unsigned int>(s->pullbufferlen));
+	const auto bytes_to_copy = std::min(static_cast<unsigned int>(s->framesperbuffer * sd->samplesize), static_cast<unsigned int>(s->pullbufferlen));
 	if (sd->mute == 0 && bytes_to_copy > 0) {
 		std::copy(s->pullbuffer, s->pullbuffer + bytes_to_copy, stream);
 	}
@@ -983,7 +958,6 @@ void sdl2_audio_callback(void* userdata, Uint8* stream, int len)
 		std::memmove(s->pullbuffer, s->pullbuffer + bytes_to_copy, s->pullbufferlen - bytes_to_copy);
 	}
 	s->pullbufferlen -= bytes_to_copy;
-	SDL_UnlockAudioDevice(s->dev);
 }
 
 int sound_get_silence()
