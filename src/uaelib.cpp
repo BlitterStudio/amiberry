@@ -390,13 +390,15 @@ struct ShellSession {
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <signal.h>
-#if !defined(_WIN32)
-#if defined(__APPLE__) || defined(__FreeBSD__)
-#include <util.h>
-#else
-#include <pty.h>
-#endif
-#endif
+#if !defined(_WIN32)                                                                                                       
+  #if defined(__APPLE__)                                                                                                   
+    #include <util.h>                                                                                                      
+  #elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__) || defined(__OpenBSD__)                      
+    #include <libutil.h>                                                                                                   
+  #else                                                                                                                    
+    #include <pty.h>                                                                                                       
+  #endif                                                                                                                   
+#endif             
 
 static std::map<uae_u32, ShellSession> shell_sessions;
 static uae_u32 next_session_handle = 1;
