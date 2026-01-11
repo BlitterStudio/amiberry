@@ -45,15 +45,22 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
             "-Wl,-O1"
             "-Wl,-z,relro"
             "-Wl,-z,now"
-            "-Wl,--sort-common=descending"
-            "-Wl,--hash-style=gnu"
         )
+
+        # GNU ld-only flags (do not work on FreeBSD)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            add_link_options(
+                "-Wl,--sort-common=descending"
+                "-Wl,--hash-style=gnu"
+            )
+        endif()
     endif()
 else()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_link_options("-Wl,-dead_strip")
     endif()
 endif()
+
 
 # Set build type to "Release" if user did not specify any build type yet
 # Other possible values: Debug and None. 

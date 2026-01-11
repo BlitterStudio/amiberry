@@ -105,5 +105,13 @@ add_subdirectory(packaging)
 
 # Link libraries (FreeBSD needs correct order)
 if(TARGET amiberry AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    # forkpty() lives in libutil on FreeBSD
+    target_link_libraries(amiberry PRIVATE util)
+
+    # libiconv_* symbols come from ports/converters/libiconv
+    find_library(LIBICONV_LIBRARY NAMES iconv PATHS /usr/local/lib REQUIRED)
+    target_link_libraries(amiberry PRIVATE ${LIBICONV_LIBRARY})
+
+    # existing libs
     target_link_libraries(amiberry PRIVATE ${LIBUSB_LIBRARY} serialport ${EXTRA_LIBS})
 endif()
