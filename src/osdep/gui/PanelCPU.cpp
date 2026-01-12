@@ -930,9 +930,7 @@ void RefreshPanelCPU()
 	}
 
 	bool no_thread = (changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
-	// Disabled until this is fixed upstream (WinUAE) - it doesn't work as expected yet (black screen)
-	chkCPUMultiThread->setEnabled(false);
-	//chkCPUMultiThread->setEnabled(!no_thread && !emulating);
+	chkCPUMultiThread->setEnabled(!no_thread && !emulating);
 	chkCPUMultiThread->setSelected(changed_prefs.cpu_thread);
 
 	chkPPCEnabled->setSelected(changed_prefs.ppc_mode || is_ppc_cpu(&changed_prefs));

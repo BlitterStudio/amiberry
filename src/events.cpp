@@ -12,6 +12,7 @@
 #include "sysdeps.h"
 
 #include "options.h"
+#include "uae.h"
 #include "events.h"
 #ifdef WITH_PPC
 #include "uae/ppc.h"
@@ -285,6 +286,8 @@ static int cycles_to_add_remain;
 
 void do_cycles_slow(int cycles_to_add)
 {
+	if (currprefs.cpu_thread && !is_mainthread())
+		return;
 #ifdef WITH_X86
 #if 0
 	if (x86_turbo_on) {
@@ -315,8 +318,6 @@ void do_cycles_slow(int cycles_to_add)
 		}
 		cycles_to_add = -pissoff;
 		pissoff = 0;
-	} else {
-		pissoff = 0x40000000;
 	}
 
 	while (cycles_to_add >= CYCLE_UNIT) {

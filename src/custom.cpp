@@ -12499,6 +12499,9 @@ static void sync_imm_evhandler(void)
 
 int do_cycles_cck(int cycles)
 {
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		return (cycles / CYCLE_UNIT) * CYCLE_UNIT;
+	}
 	int c = 0;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -12803,6 +12806,8 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 
 void do_cycles_ce(int cycles)
 {
+	if (currprefs.cpu_thread && !is_mainthread())
+		return;
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -12813,6 +12818,8 @@ void do_cycles_ce(int cycles)
 
 void do_cycles_ce020(int cycles)
 {
+	if (currprefs.cpu_thread && !is_mainthread())
+		return;
 	evt_t cc;
 	static int extra;
 

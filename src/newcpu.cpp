@@ -5197,35 +5197,49 @@ static int do_specialties_thread()
 	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
 
+	// Only handle CPU specific stuff if we are in the CPU thread
+	if (cpu_thread_tid == uae_thread_get_id(nullptr)) {
 #ifdef JIT
-	if (currprefs.cachesize) {
-		unset_special(SPCFLAG_END_COMPILE);
-	}
+		if (currprefs.cachesize) {
+			unset_special(SPCFLAG_END_COMPILE);
+		}
 #endif
 
-	if (spcflags & SPCFLAG_DOTRACE)
-		Exception(9);
+		if (spcflags & SPCFLAG_MMURESTART) {
+			unset_special(SPCFLAG_MMURESTART);
+			if (spcflags & SPCFLAG_TRACE) {
+				do_trace();
+			}
+		} else {
+			if (spcflags & SPCFLAG_DOTRACE)
+				Exception(9);
 
-	if (spcflags & SPCFLAG_TRAP) {
-		unset_special(SPCFLAG_TRAP);
-		Exception(3);
-	}
+			if (spcflags & SPCFLAG_TRAP) {
+				unset_special(SPCFLAG_TRAP);
+				Exception(3);
+			}
 
-	if (spcflags & SPCFLAG_TRACE)
-		do_trace();
+			if (spcflags & SPCFLAG_TRACE)
+				do_trace();
 
-	for (;;) {
+			if (spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+				int intr = cpu_thread_ilvl;
+				if (intr > regs.intmask || (intr == 7 && intr > regs.lastipl)) {
+					do_interrupt(intr);
+				}
+				regs.lastipl = intr;
+				unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
+			}
+		}
 
 		if (spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
 			return 1;
 		}
-
-		int ilvl = cpu_thread_ilvl;
-		if (ilvl > 0 && (ilvl > regs.intmask || ilvl == 7)) {
-			do_interrupt(ilvl);
+	} else {
+		// In main thread, only check for exit signals
+		if (spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
+			return 1;
 		}
-
-		break;
 	}
 
 	return 0;
@@ -5309,6 +5323,7 @@ static void run_cpu_thread(int (*f)(void *))
 	int intlev_prev = 0;
 
 	cpu_thread_active = 0;
+	cpu_thread_indirect_mode = 0xff; // Initialize to "no request" state
 	uae_sem_init(&cpu_in_sema, 0, 0);
 	uae_sem_init(&cpu_out_sema, 0, 0);
 	uae_sem_init(&cpu_wakeup_sema, 0, 0);
@@ -5320,21 +5335,31 @@ static void run_cpu_thread(int (*f)(void *))
 	}
 
 	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
-		int maxperloop = 10;
+		bool processed_any = false;
 
-		while (!uae_sem_trywait(&cpu_out_sema)) {
-			uae_u32 addr, data, size, mode;
+		for (int i = 0; i < 32; i++) {
+			int maxperloop = 100;
+			while (!uae_sem_trywait(&cpu_out_sema)) {
+				uae_u32 addr, data, size, mode;
 
-			addr = cpu_thread_indirect_addr;
-			data = cpu_thread_indirect_val;
-			size = cpu_thread_indirect_size;
-			mode = cpu_thread_indirect_mode;
+				// Read mode first to ensure we have a valid request
+				mode = cpu_thread_indirect_mode;
 
-			switch(mode)
-			{
+				// If mode is 0 or 0xff/0xfe, it means no valid request yet or request completed
+				// This can happen due to race conditions, so skip processing
+				if (mode == 0 || mode == 0xff || mode == 0xfe) {
+					break;
+				}
+
+				addr = cpu_thread_indirect_addr;
+				data = cpu_thread_indirect_val;
+				size = cpu_thread_indirect_size;
+
+				switch (mode)
+				{
 				case 1:
 				{
-					addrbank *ab = thread_mem_banks[bankindex(addr)];
+					addrbank* ab = thread_mem_banks[bankindex(addr)];
 					switch (size)
 					{
 					case 0:
@@ -5348,11 +5373,12 @@ static void run_cpu_thread(int (*f)(void *))
 						break;
 					}
 					uae_sem_post(&cpu_in_sema);
+					processed_any = true;
 					break;
 				}
 				case 2:
 				{
-					addrbank *ab = thread_mem_banks[bankindex(addr)];
+					addrbank* ab = thread_mem_banks[bankindex(addr)];
 					switch (size)
 					{
 					case 0:
@@ -5367,27 +5393,29 @@ static void run_cpu_thread(int (*f)(void *))
 					}
 					cpu_thread_indirect_val = data;
 					uae_sem_post(&cpu_in_sema);
+					processed_any = true;
 					break;
 				}
 				default:
 					write_log(_T("cpu_thread_indirect_mode=%08x!\n"), mode);
 					break;
+				}
+
+				if (maxperloop-- < 0)
+					break;
 			}
 
-			if (maxperloop-- < 0)
-				break;
-		}
+			if (cpu_thread_reset) {
+				bool hardreset = cpu_thread_reset & 2;
+				bool keyboardreset = cpu_thread_reset & 4;
+				custom_reset(hardreset, keyboardreset);
+				cpu_thread_reset = 0;
+				uae_sem_post(&cpu_in_sema);
+				processed_any = true;
+			}
 
-		if (framecnt != vsync_counter) {
-			framecnt = vsync_counter;
-		}
-
-		if (cpu_thread_reset) {
-			bool hardreset = cpu_thread_reset & 2;
-			bool keyboardreset = cpu_thread_reset & 4;
-			custom_reset(hardreset, keyboardreset);
-			cpu_thread_reset = 0;
-			uae_sem_post(&cpu_in_sema);
+			// Advance cycles in small increments to maintain responsiveness
+			do_cycles(CYCLE_UNIT * 16);
 		}
 
 		if (regs.spcflags & SPCFLAG_BRK) {
@@ -5399,31 +5427,34 @@ static void run_cpu_thread(int (*f)(void *))
 #endif
 		}
 
-		if (vp == vpos) {
-
-			do_cycles((maxhpos / 2) * CYCLE_UNIT);
-
+		if (regs.spcflags & SPCFLAG_UAEINT) {
 			check_uae_int_request();
-			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
-				int intr = intlev();
-				unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
-				if (intr > 0) {
-					cpu_thread_ilvl = intr;
-					cycles_do_special();
-					uae_sem_post(&cpu_wakeup_sema);
-				} else {
-					cpu_thread_ilvl = 0;
-				}
-			}
-			continue;
+			unset_special(SPCFLAG_UAEINT);
+		} else {
+			check_uae_int_request();
 		}
 
-		frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
-		frame_time_t c = read_processor_time();
-		if (next - c > 0 && next - c < vsyncmaxtime * 2)
-			continue;
+		if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+			int intr = intlev();
+			cpu_thread_ilvl = intr;
+			if (intr > 0) {
+				cycles_do_special();
+				uae_sem_post(&cpu_wakeup_sema);
+			}
+		} else {
+			cpu_thread_ilvl = 0;
+		}
 
-		vp = vpos;
+		if (vp != vpos) {
+			vp = vpos;
+			frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
+			frame_time_t c = read_processor_time();
+			if (next - c > 0 && next - c < vsyncmaxtime * 2) {
+				if (!processed_any) {
+					sleep_millis(0);
+				}
+			}
+		}
 
 	}
 
@@ -5440,13 +5471,13 @@ static void run_cpu_thread(int (*f)(void *))
 static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
 #ifdef WITH_THREADED_CPU
-	if (cpu_thread_tid != uae_thread_get_id(cpu_thread)) {
+	if (cpu_thread_tid == uae_thread_get_id(nullptr)) {
+		cpu_thread_reset = 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0);
+		uae_sem_post(&cpu_wakeup_sema);
+		uae_sem_wait(&cpu_in_sema);
+	} else {
 		custom_reset(hardreset, keyboardreset);
-		return;
 	}
-	cpu_thread_reset = 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0);
-	uae_sem_post(&cpu_wakeup_sema);
-	uae_sem_wait(&cpu_in_sema);
 #else
 	custom_reset(hardreset, keyboardreset);
 #endif
@@ -5571,7 +5602,7 @@ typedef void compiled_handler (void);
 #ifdef WITH_THREADED_CPU
 static int cpu_thread_run_jit(void *v)
 {
-	cpu_thread_tid = uae_thread_get_id(cpu_thread);
+	cpu_thread_tid = uae_thread_get_id(nullptr);
 	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
@@ -5584,6 +5615,9 @@ static int cpu_thread_run_jit(void *v)
 				if (do_specialties_thread()) {
 					break;
 				}
+			}
+			if (regs.stopped) {
+				uae_sem_wait(&cpu_wakeup_sema);
 			}
 		}
 	}
@@ -6418,24 +6452,37 @@ static int cpu_thread_run_2(void *v)
 	bool exit = false;
 	struct regstruct *r = &regs;
 
-	cpu_thread_tid = uae_thread_get_id(cpu_thread);
-
+	cpu_thread_tid = uae_thread_get_id(nullptr);
 	cpu_thread_active = 1;
 	while (!exit) {
+		check_debugger();
 		TRY(prb)
 		{
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
 				r->opcode = x_get_iword(0);
+				count_instr(r->opcode);
 
-				(*cpufunctbl[r->opcode])(r->opcode);
+#ifdef DEBUGGER
+				if (debug_opcode_watch) {
+					debug_trainer_match();
+				}
+#endif
+
+				cpu_cycles = (*cpufunctbl[r->opcode])(r->opcode) >> 16;
+				cpu_cycles = adjust_cycles(cpu_cycles);
+				// Note: In threaded mode, cycles are advanced by the main thread in run_cpu_thread()
+				// We don't call x_do_cycles() here because it accesses chipset state that's not thread-safe
 
 				if (regs.spcflags || cpu_thread_ilvl > 0) {
 					if (do_specialties_thread())
 						exit = true;
 				}
 
+				if (regs.stopped) {
+					uae_sem_wait(&cpu_wakeup_sema);
+				}
 			}
 		} CATCH(prb)
 		{
