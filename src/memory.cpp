@@ -3665,9 +3665,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			set_memory_cacheable(bnr, bank);
 #ifdef WITH_THREADED_CPU
 			if (currprefs.cpu_thread) {
-				if (orig_bank)
-					put_mem_bank(bnr << 16, orig_bank, realstart << 16);
-				thread_mem_banks[bnr] = orig_bank;
+				thread_mem_banks[bnr] = orig_bank ? orig_bank : bank;
 			}
 #endif
 			real_left--;
@@ -3699,9 +3697,7 @@ static void map_banks2 (addrbank *bank, int start, int size, int realsize, int q
 			set_memory_cacheable(bnr + hioffs, bank);
 #ifdef WITH_THREADED_CPU
 			if (currprefs.cpu_thread) {
-				if (orig_bank)
-					put_mem_bank((bnr + hioffs) << 16, bank, realstart << 16);
-				thread_mem_banks[bnr + hioffs] = orig_bank;
+				thread_mem_banks[bnr + hioffs] = orig_bank ? orig_bank : bank;
 			}
 #endif
 			real_left--;
