@@ -5180,7 +5180,7 @@ static volatile int cpu_thread_active;
 static uae_sem_t cpu_in_sema, cpu_out_sema, cpu_wakeup_sema;
 
 static volatile int cpu_thread_ilvl;
-static volatile uae_u32 cpu_thread_indirect_mode;
+static volatile uae_atomic cpu_thread_indirect_mode;
 static volatile uae_u32 cpu_thread_indirect_addr;
 static volatile uae_u32 cpu_thread_indirect_val;
 static volatile uae_u32 cpu_thread_indirect_size;
@@ -5280,12 +5280,22 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 		return data;
 	}
 
-	cpu_thread_indirect_mode = 2;
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
+	atomic_set((volatile uae_atomic*)&cpu_thread_indirect_mode, 2);
 	uae_sem_post(&cpu_out_sema);
+
+	for (int i = 0; i < 1000; i++) {
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) == 0xfe) {
+			if (uae_sem_trywait(&cpu_in_sema) == 0)
+				return cpu_thread_indirect_val;
+		}
+#if defined(CPU_arm)
+		__asm__ __volatile__ ("yield");
+#endif
+	}
+
 	uae_sem_wait(&cpu_in_sema);
-	cpu_thread_indirect_mode = 0xfe;
 	return cpu_thread_indirect_val;
 }
 
@@ -5307,13 +5317,23 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 		}
 		return;
 	}
-	cpu_thread_indirect_mode = 1;
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
 	cpu_thread_indirect_val = data;
+	atomic_set((volatile uae_atomic*)&cpu_thread_indirect_mode, 1);
 	uae_sem_post(&cpu_out_sema);
+
+	for (int i = 0; i < 1000; i++) {
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) == 0xff) {
+			if (uae_sem_trywait(&cpu_in_sema) == 0)
+				return;
+		}
+#if defined(CPU_arm)
+		__asm__ __volatile__ ("yield");
+#endif
+	}
+
 	uae_sem_wait(&cpu_in_sema);
-	cpu_thread_indirect_mode = 0xff;
 }
 
 static void run_cpu_thread(int (*f)(void *))
@@ -5334,22 +5354,17 @@ static void run_cpu_thread(int (*f)(void *))
 		sleep_millis(1);
 	}
 
+	int cck_cnt = 0;
+	bool processed_any = false;
 	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
-		bool processed_any = false;
+		// Check for CPU requests
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) <= 2) {
+			while (uae_sem_trywait(&cpu_out_sema) == 0) {
+				uaecptr addr;
+				uae_u32 data, size, mode;
 
-		for (int i = 0; i < 32; i++) {
-			int maxperloop = 100;
-			while (!uae_sem_trywait(&cpu_out_sema)) {
-				uae_u32 addr, data, size, mode;
-
-				// Read mode first to ensure we have a valid request
 				mode = cpu_thread_indirect_mode;
-
-				// If mode is 0 or 0xff/0xfe, it means no valid request yet or request completed
-				// This can happen due to race conditions, so skip processing
-				if (mode == 0 || mode == 0xff || mode == 0xfe) {
-					break;
-				}
+				if (mode == 0 || mode == 0xff || mode == 0xfe) break;
 
 				addr = cpu_thread_indirect_addr;
 				data = cpu_thread_indirect_val;
@@ -5357,65 +5372,68 @@ static void run_cpu_thread(int (*f)(void *))
 
 				switch (mode)
 				{
-				case 1:
+				case 1: // Write
 				{
 					addrbank* ab = thread_mem_banks[bankindex(addr)];
 					switch (size)
 					{
-					case 0:
-						ab->bput(addr, data & 0xff);
-						break;
-					case 1:
-						ab->wput(addr, data & 0xffff);
-						break;
-					case 2:
-						ab->lput(addr, data);
-						break;
+					case 0: ab->bput(addr, data & 0xff); break;
+					case 1: ab->wput(addr, data & 0xffff); break;
+					case 2: ab->lput(addr, data); break;
 					}
+					atomic_set((volatile uae_atomic*)&cpu_thread_indirect_mode, 0xff);
 					uae_sem_post(&cpu_in_sema);
 					processed_any = true;
 					break;
 				}
-				case 2:
+				case 2: // Read
 				{
 					addrbank* ab = thread_mem_banks[bankindex(addr)];
 					switch (size)
 					{
-					case 0:
-						data = ab->bget(addr) & 0xff;
-						break;
-					case 1:
-						data = ab->wget(addr) & 0xffff;
-						break;
-					case 2:
-						data = ab->lget(addr);
-						break;
+					case 0: data = ab->bget(addr) & 0xff; break;
+					case 1: data = ab->wget(addr) & 0xffff; break;
+					case 2: data = ab->lget(addr); break;
 					}
 					cpu_thread_indirect_val = data;
+					atomic_set((volatile uae_atomic*)&cpu_thread_indirect_mode, 0xfe);
 					uae_sem_post(&cpu_in_sema);
 					processed_any = true;
 					break;
 				}
-				default:
-					write_log(_T("cpu_thread_indirect_mode=%08x!\n"), mode);
-					break;
 				}
-
-				if (maxperloop-- < 0)
-					break;
 			}
+		}
 
-			if (cpu_thread_reset) {
-				bool hardreset = cpu_thread_reset & 2;
-				bool keyboardreset = cpu_thread_reset & 4;
-				custom_reset(hardreset, keyboardreset);
-				cpu_thread_reset = 0;
-				uae_sem_post(&cpu_in_sema);
-				processed_any = true;
+		if (cpu_thread_reset) {
+			bool hardreset = cpu_thread_reset & 2;
+			bool keyboardreset = cpu_thread_reset & 4;
+			custom_reset(hardreset, keyboardreset);
+			cpu_thread_reset = 0;
+			uae_sem_post(&cpu_in_sema);
+			processed_any = true;
+		}
+
+		// Advance by ONE Amiga CCK
+		do_cycles(CYCLE_UNIT);
+
+		// Check for interrupts frequently (every 16 CCKs ~ 4.5us)
+		if (++cck_cnt >= 227) {
+			cck_cnt = 0;
+			processed_any = false;
+		}
+
+		if ((cck_cnt & 7) == 0) {
+			check_uae_int_request();
+			int intr = intlev();
+			cpu_thread_ilvl = intr;
+			if (intr > 0) {
+				cycles_do_special();
+				uae_sem_post(&cpu_wakeup_sema);
+			} else if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+				// If flags are set but intr is 0, we might need to clear them or handle them
+				// do_specialties_thread will handle clearing them.
 			}
-
-			// Advance cycles in small increments to maintain responsiveness
-			do_cycles(CYCLE_UNIT * 16);
 		}
 
 		if (regs.spcflags & SPCFLAG_BRK) {
@@ -5430,27 +5448,15 @@ static void run_cpu_thread(int (*f)(void *))
 		if (regs.spcflags & SPCFLAG_UAEINT) {
 			check_uae_int_request();
 			unset_special(SPCFLAG_UAEINT);
-		} else {
-			check_uae_int_request();
 		}
 
-		if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
-			int intr = intlev();
-			cpu_thread_ilvl = intr;
-			if (intr > 0) {
-				cycles_do_special();
-				uae_sem_post(&cpu_wakeup_sema);
-			}
-		} else {
-			cpu_thread_ilvl = 0;
-		}
-
+		// Horizontal position sync and frame rate limiter
 		if (vp != vpos) {
 			vp = vpos;
 			frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
 			frame_time_t c = read_processor_time();
 			if (next - c > 0 && next - c < vsyncmaxtime * 2) {
-				if (!processed_any) {
+				if (!processed_any && (next - c) > 1000) {
 					sleep_millis(0);
 				}
 			}
