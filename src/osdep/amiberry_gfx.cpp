@@ -527,6 +527,8 @@ static void wait_frame_timing()
 			__builtin_ia32_pause();
 #elif defined(__aarch64__) || defined(__arm__)
 			asm volatile("yield");
+#elif defined(__riscv)
+			asm volatile("pause");
 #endif
 		}
 	}

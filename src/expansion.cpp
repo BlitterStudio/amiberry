@@ -1218,7 +1218,7 @@ addrbank filesys_bank = {
 	filesys_lput, filesys_wput, filesys_bput,
 	filesys_xlate, filesys_check, NULL, _T("*"), _T("Filesystem autoconfig"),
 	filesys_lget, filesys_wget,
-	ABFLAG_IO | ABFLAG_SAFE | ABFLAG_PPCIOSPACE, S_READ, S_WRITE
+	ABFLAG_IO | ABFLAG_SAFE | ABFLAG_PPCIOSPACE | ABFLAG_THREADSAFE, S_READ, S_WRITE
 };
 
 static bool filesys_write(uaecptr addr)
@@ -1313,7 +1313,7 @@ addrbank uaeboard_bank = {
 	uaeboard_lput, uaeboard_wput, uaeboard_bput,
 	uaeboard_xlate, uaeboard_check, NULL, _T("*"), _T("UAE Board"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_IO | ABFLAG_SAFE | ABFLAG_PPCIOSPACE, S_READ, S_WRITE
+	ABFLAG_IO | ABFLAG_SAFE | ABFLAG_PPCIOSPACE | ABFLAG_THREADSAFE, S_READ, S_WRITE
 };
 
 uae_u32 uaeboard_base; /* Determined by the OS */
