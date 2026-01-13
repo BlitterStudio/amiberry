@@ -4904,8 +4904,10 @@ struct uaedev_config_data *add_filesys_config (struct uae_prefs *p, int index, s
 		}
 		if (ci->type == UAEDEV_CD) {
 			for (i = 0; i < p->mountitems; i++) {
-				if (p->mountconfig[i].ci.type == ci->type)
-					return nullptr;
+				// duplicate check
+				if (p->mountconfig[i].ci.type == ci->type && p->mountconfig[i].ci.device_emu_unit == ci->device_emu_unit) {
+					return NULL;
+				}
 			}
 		}
 		uci = getuci (p);

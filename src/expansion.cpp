@@ -5085,6 +5085,12 @@ void ethernet_updateselection(void)
 	}
 }
 
+static bool xsurf_init_common(struct autoconfig_info *aci)
+{
+	xsurf_init_ide(aci);
+	return xsurf_init(aci);
+}
+
 static void fastlane_memory_callback(struct romconfig *rc, uae_u8 *ac, int size)
 {
 	struct zfile *z = read_device_from_romconfig(rc, 0);
@@ -6371,11 +6377,11 @@ const struct expansionromtype expansionroms[] = {
 	},
 	{
 		_T("xsurf"), _T("X-Surf"), _T("Individual Computers"),
-		NULL, xsurf_init, NULL, NULL, ROMTYPE_XSURF | ROMTYPE_NOT, 0, 0, BOARD_AUTOCONFIG_Z2, true,
+		NULL, xsurf_init_common, NULL, xsurf_add_ide_unit, ROMTYPE_XSURF | ROMTYPE_NOT, 0, 0, BOARD_AUTOCONFIG_Z2, true,
 		NULL, 0,
-		false, EXPANSIONTYPE_NET,
+		false, EXPANSIONTYPE_NET | EXPANSIONTYPE_IDE,
 		0, 0, 0, false, NULL,
-		false, 0, ethernet_settings,
+		false, 2, ethernet_settings,
 		{ 0xc1, 0x17, 0x00, 0x00, 4626 >> 8, 4626 & 255, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 	},
 	{
