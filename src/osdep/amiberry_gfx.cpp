@@ -1597,6 +1597,7 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 
 				add_dirty_rect(mon, dirty_rect);
 			}
+		}
 	}
 }
 
