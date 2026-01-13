@@ -539,6 +539,8 @@ static void SDL2_showframe(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	SDL_RenderPresent(mon->amiga_renderer);
+	if (waitvblankthread_mode <= 0)
+		wait_vblank_timestamp = read_processor_time();
 	wait_frame_timing();
 }
 
@@ -750,53 +752,22 @@ int target_get_display(const TCHAR* name)
 
 static int target_get_display_scanline2(int displayindex)
 {
-	//if (pD3DKMTGetScanLine) {
-	//	D3DKMT_GETSCANLINE sl = { 0 };
-	//	struct MultiDisplay* md = displayindex < 0 ? getdisplay(&currprefs, 0) : &Displays[displayindex];
-	//	if (!md->HasAdapterData)
-	//		return -11;
-	//	sl.VidPnSourceId = md->VidPnSourceId;
-	//	sl.hAdapter = md->AdapterHandle;
-	//	NTSTATUS status = pD3DKMTGetScanLine(&sl);
-	//	if (status == STATUS_SUCCESS) {
-	//		if (sl.InVerticalBlank)
-	//			return -1;
-	//		return sl.ScanLine;
-	//	}
-	//	else {
-	//		if ((int)status > 0)
-	//			return -(int)status;
-	//		return status;
-	//	}
-	//	return -12;
-	//}
-	//else if (D3D_getscanline) {
-	//	int scanline;
-	//	bool invblank;
-	//	if (D3D_getscanline(&scanline, &invblank)) {
-	//		if (invblank)
-	//			return -1;
-	//		return scanline;
-	//	}
-	//	return -14;
-	//}
-	return -13;
+	float diff = static_cast<float>(read_processor_time() - wait_vblank_timestamp);
+	if (diff < 0)
+		return -1;
+	int sl = static_cast<int>(diff * (vsync_activeheight + (vsync_totalheight - vsync_activeheight) / 10) * vsync_vblank / syncbase);
+	if (sl < 0)
+		sl = -1;
+	return sl;
 }
 
 extern uae_s64 spincount;
-bool calculated_scanline = true;
+bool calculated_scanline = false;
 
 int target_get_display_scanline(const int displayindex)
 {
 	if (!scanlinecalibrating && calculated_scanline) {
-		static int lastline;
-		float diff = static_cast<float>(read_processor_time() - wait_vblank_timestamp);
-		if (diff < 0)
-			return -1;
-		int sl = static_cast<int>(diff * (vsync_activeheight + (vsync_totalheight - vsync_activeheight) / 10) * vsync_vblank / syncbase);
-		if (sl < 0)
-			sl = -1;
-		return sl;
+		return target_get_display_scanline2(displayindex);
 	} else {
 		static uae_s64 lastrdtsc;
 		static int lastvpos;
@@ -805,11 +776,11 @@ int target_get_display_scanline(const int displayindex)
 			lastvpos = target_get_display_scanline2(displayindex);
 			return lastvpos;
 		}
-		const uae_s64 v = read_processor_time();
+		const uae_s64 v = read_processor_time_rdtsc();
 		if (lastrdtsc > v)
 			return lastvpos;
 		lastvpos = target_get_display_scanline2(displayindex);
-		lastrdtsc = read_processor_time() + spincount * 4;
+		lastrdtsc = read_processor_time_rdtsc() + spincount * 4;
 		return lastvpos;
 	}
 }
@@ -818,31 +789,23 @@ static bool get_display_vblank_params(int displayindex, int* activeheightp, int*
 {
 	bool ret = false;
 	SDL_DisplayMode dm;
-	SDL_Rect usable_bounds;
-	SDL_Rect bounds;
 
 	if (SDL_GetDesktopDisplayMode(displayindex, &dm) != 0)
 	{
 		write_log("SDL_GetDesktopDisplayMode failed: %s\n", SDL_GetError());
 		return ret;
 	}
-	if (SDL_GetDisplayUsableBounds(displayindex, &usable_bounds) != 0)
-	{
-		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
-		return ret;
-	}
-	if (SDL_GetDisplayBounds(displayindex, &bounds) != 0)
-	{
-		write_log("SDL_GetDisplayBounds failed: %s\n", SDL_GetError());
-		return ret;
-	}
+
+	int active = dm.h;
+	int total = active * 1125 / 1080; // Standard 1080p timing heuristic
 
 	if (activeheightp)
-		*activeheightp = usable_bounds.h;
+		*activeheightp = active;
 	if (totalheightp)
-		*totalheightp = bounds.h;
+		*totalheightp = total;
 	const auto vblank = static_cast<float>(dm.refresh_rate);
-	const auto hblank = static_cast<float>(31000); // faking hblank, since SDL2 doesn't provide a way to get the real one
+	// standard horizontal frequency is ~31.4 kHz for 60Hz 1080p
+	const auto hblank = static_cast<float>(vblank * total);
 	if (vblankp)
 		*vblankp = vblank;
 	if (hblankp)
