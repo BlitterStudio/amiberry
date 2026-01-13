@@ -6033,7 +6033,7 @@ addrbank gfxmem_bank = {
 	gfxmem_lput, gfxmem_wput, gfxmem_bput,
 	gfxmem_xlate, gfxmem_check, nullptr, nullptr, _T("RTG RAM"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
 };
 extern addrbank gfxmem2_bank;
 MEMORY_FUNCTIONS(gfxmem2);
@@ -6042,7 +6042,7 @@ addrbank gfxmem2_bank = {
 	gfxmem2_lput, gfxmem2_wput, gfxmem2_bput,
 	gfxmem2_xlate, gfxmem2_check, nullptr, nullptr, _T("RTG RAM #2"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
 };
 extern addrbank gfxmem3_bank;
 MEMORY_FUNCTIONS(gfxmem3);
@@ -6051,7 +6051,7 @@ addrbank gfxmem3_bank = {
 	gfxmem3_lput, gfxmem3_wput, gfxmem3_bput,
 	gfxmem3_xlate, gfxmem3_check, nullptr, nullptr, _T("RTG RAM #3"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
 };
 extern addrbank gfxmem4_bank;
 MEMORY_FUNCTIONS(gfxmem4);
@@ -6060,7 +6060,7 @@ addrbank gfxmem4_bank = {
 	gfxmem4_lput, gfxmem4_wput, gfxmem4_bput,
 	gfxmem4_xlate, gfxmem4_check, nullptr, nullptr, _T("RTG RAM #4"),
 	dummy_lgeti, dummy_wgeti,
-	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
+	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS | ABFLAG_THREADSAFE, 0, 0
 };
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
 

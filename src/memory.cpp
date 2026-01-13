@@ -1523,7 +1523,7 @@ addrbank kickram_bank = {
 	kickmem2_lput, kickmem2_wput, kickmem2_bput,
 	kickmem_xlate, kickmem_check, NULL, NULL, _T("Kickstart Shadow RAM"),
 	kickmem_lget, kickmem_wget,
-	ABFLAG_UNK | ABFLAG_SAFE | ABFLAG_CACHE_ENABLE_ALL, 0, S_WRITE
+	ABFLAG_UNK | ABFLAG_SAFE | ABFLAG_CACHE_ENABLE_ALL | ABFLAG_THREADSAFE, 0, S_WRITE
 };
 
 addrbank extendedkickmem_bank = {
@@ -3570,7 +3570,7 @@ static uae_u32 REGPARAM2 threadcpu_bget(uaecptr addr)
 
 static addrbank *get_bank_cpu_thread(addrbank *bank)
 {
-	if ((bank->flags & ABFLAG_THREADSAFE) && !(bank->flags & ABFLAG_IO))
+	if (bank->flags & ABFLAG_THREADSAFE)
 		return bank;
 	if (bank == &dummy_bank)
 		return bank;
