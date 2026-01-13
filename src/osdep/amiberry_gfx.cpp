@@ -1579,14 +1579,24 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 		// Record the dirty rectangle if y_start and y_end are valid.
 		if (y_start >= 0 && y_end >= y_start) {
 			AmigaMonitor* mon = &AMonitors[vb->monitor_id];
-			SDL_Rect dirty_rect;
-			dirty_rect.x = 0;
-			dirty_rect.y = y_start;
-			dirty_rect.w = vb->width_allocated;
-			dirty_rect.h = y_end - y_start + 1;
+			
+			// Clamp y_end to surface bounds to prevent out-of-bounds dirty rects
+			// The drawing code may report y_end beyond the actual surface height
+			int clamped_y_end = y_end;
+			if (amiga_surface && clamped_y_end >= amiga_surface->h) {
+				clamped_y_end = amiga_surface->h - 1;
+			}
+			
+			// Only add dirty rect if we still have valid bounds after clamping
+			if (clamped_y_end >= y_start) {
+				SDL_Rect dirty_rect;
+				dirty_rect.x = 0;
+				dirty_rect.y = y_start;
+				dirty_rect.w = vb->width_allocated;
+				dirty_rect.h = clamped_y_end - y_start + 1;
 
-			add_dirty_rect(mon, dirty_rect);
-		}
+				add_dirty_rect(mon, dirty_rect);
+			}
 	}
 }
 
