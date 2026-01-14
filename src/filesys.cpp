@@ -673,6 +673,7 @@ int get_filesys_unitconfig (struct uae_prefs *p, int index, struct mountedinfo *
 			struct device_info di;
 			ui->hf.ci.readonly = true;
 			ui->hf.ci.blocksize = uci->ci.blocksize;
+			ui->hf.ci.device_emu_unit = uci->ci.device_emu_unit;
 			mi->size = -1;
 			mi->ismounted = true;
 			if (blkdev_get_info (p, ui->hf.ci.device_emu_unit, &di)) {

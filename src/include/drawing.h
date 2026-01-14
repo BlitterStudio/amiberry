@@ -200,5 +200,6 @@ void denise_update_reg_queue(uae_u16 reg, uae_u16 v, uae_u32 linecnt);
 void denise_store_restore_registers_queue(bool store, uae_u32 linecnt);
 void denise_clearbuffers(void);
 uae_u8 *get_row_genlock(int monid, int line);
+void drawing_free(void);
 
 #endif /* UAE_DRAWING_H */
