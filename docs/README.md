@@ -1,14 +1,16 @@
 <div align="center">
-  <img src="https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1" alt="Amiberry Logo" width="400"/>
 
-  # Amiberry
-  **Optimized Amiga Emulator for macOS and Linux**
+<img src="https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1" alt="Amiberry Logo" width="400"/>
 
-  [![C/C++ CI](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml)
-  [![Development Builds](https://img.shields.io/badge/Development%20Builds-nightly.link-orange)](https://nightly.link/BlitterStudio/amiberry/workflows/c-cpp.yml/master)
-  [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/wWndKTGpGV)
-  [![Mastodon](https://img.shields.io/badge/Mastodon-Follow-6364FF?logo=mastodon&logoColor=white)](https://mastodon.social/@midwan)
-  [![Ko-Fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/X8X4FHDY4)
+# Amiberry
+**Optimized Amiga Emulator for macOS and Linux**
+
+[![C/C++ CI](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml)
+[![Development Builds](https://img.shields.io/badge/Development%20Builds-nightly.link-orange)](https://nightly.link/BlitterStudio/amiberry/workflows/c-cpp.yml/master)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/wWndKTGpGV)
+[![Mastodon](https://img.shields.io/badge/Mastodon-Follow-6364FF?logo=mastodon&logoColor=white)](https://mastodon.social/@midwan)
+[![Ko-Fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/X8X4FHDY4)
+
 </div>
 
 ---
@@ -98,8 +100,10 @@ See the [LICENSE](LICENSE) file for details.
 ---
 
 <div align="center">
-  <sub>Supported by</sub><br/>
-  <a href="https://jb.gg/OpenSourceSupport">
-    <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" alt="JetBrains" width="100"/>
-  </a>
+
+<sub>Supported by</sub><br/>
+<a href="https://jb.gg/OpenSourceSupport">
+  <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" alt="JetBrains" width="100"/>
+</a>
+
 </div>
