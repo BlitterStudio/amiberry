@@ -7648,7 +7648,7 @@ static void addtowritequeue(void)
 
 static bool multithread_denise_active(void)
 {
-	return MULTITHREADED_DENISE && denise_thread_state == 1;
+	return MULTITHREADED_DENISE && denise_thread_state == 1 && !currprefs.headless;
 }
 
 void draw_denise_border_line_fast_queue(int gfx_ypos, bool blank, enum nln_how how, struct linestate *ls)

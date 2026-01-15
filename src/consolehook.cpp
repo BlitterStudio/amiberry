@@ -85,14 +85,12 @@ void consolehook_config (struct uae_prefs *p, const TCHAR *custom_path)
 	int roms[8];
 	roms[0] = 11;
 	roms[1] = 15;
-#ifdef AMIBERRY
 	roms[2] = 276;
 	roms[3] = 281;
 	roms[4] = 286;
 	roms[5] = 291;
 	roms[6] = 304;
 	roms[7] = -1;
-#endif
 
 	consoleopen = 0;
 	default_prefs (p, true, 0);
