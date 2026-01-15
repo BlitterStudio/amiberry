@@ -1637,17 +1637,18 @@ void sync_m68k_pc(void)
  * Support functions exposed to newcpu                              *
  ********************************************************************/
 
+static bool compiler_initialized = false;
+
 void compiler_init(void)
 {
-    static bool initialized = false;
-    if (initialized)
+    if (compiler_initialized)
         return;
 
     flush_icache = flush_icache_none;
 
     flush_icache = lazy_flush ? flush_icache_lazy : flush_icache_hard;
 
-    initialized = true;
+    compiler_initialized = true;
 
 #ifdef PROFILE_UNTRANSLATED_INSNS
     jit_log("<JIT compiler> : gather statistics on untranslated insns count");
@@ -1665,8 +1666,6 @@ void compiler_exit(void)
     emul_end_time = clock();
 #endif
 
-#ifdef UAE
-#else
 #if DEBUG
 #if defined(USE_DATA_BUFFER)
     jit_log("data_wasted = %ld bytes", data_wasted);
@@ -1684,7 +1683,9 @@ void compiler_exit(void)
         vm_release(popallspace, POPALLSPACE_SIZE);
         popallspace = 0;
     }
-#endif
+
+    // Reset initialization flag to allow re-initialization
+    compiler_initialized = false;
 
 #ifdef PROFILE_COMPILE_TIME
     jit_log("### Compile Block statistics");
@@ -2378,6 +2379,12 @@ STATIC_INLINE void match_states(blockinfo* bi)
 STATIC_INLINE void create_popalls(void)
 {
     int i, r;
+
+    // Free old popallspace if it exists (similar to alloc_cache cleanup)
+    if (popallspace) {
+        vm_release(popallspace, POPALLSPACE_SIZE);
+        popallspace = NULL;
+    }
 
     if (popallspace == NULL) {
         if ((popallspace = alloc_code(POPALLSPACE_SIZE)) == NULL) {
