@@ -1518,6 +1518,9 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	if (!mon->amiga_window || !amiga_surface)
 		return ret;
 
+	// Ensure blanking limits are open and synchronized at the start of frame locking
+	set_custom_limits(-1, -1, -1, -1, false);
+
 	if (vb->vram_buffer) {
 		// Benchmarks have shown that Locking and Unlocking the Texture is slower than just calling UpdateTexture
 		// Therefore, this is disabled in Amiberry.
