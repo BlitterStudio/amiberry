@@ -20,6 +20,7 @@
 #include "xwin.h"
 #include "audio.h"
 #include "custom.h"
+#include "cpu_thread.h"
 
 extern uae_u8 agnus_hpos;
 int custom_fastmode;
@@ -286,8 +287,23 @@ static int cycles_to_add_remain;
 
 void do_cycles_slow(int cycles_to_add)
 {
-	if (currprefs.cpu_thread && !is_mainthread())
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		/* Track stalls when CPU thread can't access chipset */
+		if (cpu_thread_diag.enable_diagnostics) {
+			cpu_thread_diag_log_stall(cycles_to_add);
+		}
 		return;
+	}
+
+	/* Phase 3: Periodic sync point - flush register batch */
+	static evt_t last_sync_cycle = 0;
+	evt_t current_cycle = get_cycles();
+	if (current_cycle - last_sync_cycle >= 1000) {
+		cpu_thread_flush_register_batch();
+		cpu_thread_sync_point(1);
+		last_sync_cycle = current_cycle;
+	}
+
 #ifdef WITH_X86
 #if 0
 	if (x86_turbo_on) {
