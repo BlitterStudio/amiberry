@@ -1101,7 +1101,6 @@ void protect_roms(bool protect)
 // allowing JIT direct to think it is directly accessible VRAM.
 void mman_set_barriers(bool disable)
 {
-#ifndef AMIBERRY
 #ifdef JIT
 	addrbank* abprev = NULL;
 	int maxbank = currprefs.address_space_24 ? MEMORY_BANKS_24 : MEMORY_BANKS;
@@ -1146,7 +1145,6 @@ void mman_set_barriers(bool disable)
 			}
 		}
 	}
-#endif
 #endif
 }
 
