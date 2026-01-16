@@ -1414,21 +1414,16 @@ static int real_main2 (int argc, TCHAR **argv)
 #endif
 #endif
 
+	if (!graphics_setup()) {
+		abort();
+	}
+
 	event_init();
 
 	if (restart_config[0]) {
 		parse_cmdline_and_init_file(argc, argv);
-	}
-	else
+	} else {
 		copy_prefs(&changed_prefs, &currprefs);
-
-	if (console_emulation) {
-		consolehook_config (&currprefs, console_path[0] ? console_path : NULL);
-		fixup_prefs (&currprefs, true);
-	}
-
-	if (!graphics_setup()) {
-		abort();
 	}
 
 	if (!machdep_init()) {
@@ -1436,6 +1431,10 @@ static int real_main2 (int argc, TCHAR **argv)
 		return -1;
 	}
 
+	if (console_emulation) {
+		consolehook_config (&currprefs, console_path[0] ? console_path : NULL);
+		fixup_prefs (&currprefs, true);
+	}
 
 	if (! setup_sound ()) {
 		write_log (_T("Sound driver unavailable: Sound output disabled\n"));
@@ -1522,7 +1521,7 @@ static int real_main2 (int argc, TCHAR **argv)
 	init_m68k (); /* must come after reset_frame_rate_hack (); */
 
 	if (graphics_init (true)) {
-	// This never gets triggered anyway
+	// This never gets triggered anyway, debuggable always returns 0 in WinUAE
 //#ifdef DEBUGGER
 //		setup_brkhandler ();
 //		if (currprefs.start_debugger && debuggable ())
