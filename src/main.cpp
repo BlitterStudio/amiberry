@@ -1399,20 +1399,11 @@ void check_error_sdl(const bool check, const char* message)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
-	keyboard_settrans();
 	set_config_changed();
 	if (restart_config[0]) {
 		default_prefs (&currprefs, true, 0);
 		fixup_prefs (&currprefs, true);
 	}
-
-#ifdef NATMEM_OFFSET
-#ifdef AMIBERRY
-	preinit_shm ();
-#else
-	//preinit_shm ();
-#endif
-#endif
 
 	if (!graphics_setup()) {
 		abort();

@@ -3937,7 +3937,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	return ret;
 }
 
-static int parse_amiberry_cmd_line(int *argc, char* argv[], const int remove_used_args)
+static int parse_amiberry_cmd_line(int *argc, char* argv[], const bool remove_used_args)
 {
 	char arg_copy[CONFIG_BLEN];
 
@@ -5024,8 +5024,8 @@ static void makeverstr(TCHAR* s)
 
 int main(int argc, char* argv[])
 {
-	uae_time_init();
-	makeverstr(VersionStr);
+	max_uae_width = 8192;
+	max_uae_height = 8192;
 
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
@@ -5048,17 +5048,15 @@ int main(int argc, char* argv[])
 	DBusSetup();
 #endif
 
-	max_uae_width = 8192;
-	max_uae_height = 8192;
-
-	// Parse command line to possibly set amiberry_config.
+	// Parse the command line to possibly set amiberry_config.
 	// Do not remove used args yet.
-	if (!parse_amiberry_cmd_line(&argc, argv, 0))
+	if (!parse_amiberry_cmd_line(&argc, argv, false))
 	{
 		printf("Error in Amiberry command line option parsing.\n");
 		usage();
 		abort();
 	}
+
 	// Check if a file with the name "amiberry.portable" exists in the current directory
 	// If it does, we will set portable_mode to true
 	const bool portable_mode = my_existsfile2("amiberry.portable");
@@ -5072,9 +5070,11 @@ int main(int argc, char* argv[])
 	create_missing_amiberry_folders();
 
 	makeverstr(VersionStr);
-	// Parse command line and remove used amiberry specific args
+	uae_time_init();
+
+	// Parse the command line, remove used amiberry specific args
 	// and modify both argc & argv accordingly
-	if (!parse_amiberry_cmd_line(&argc, argv, 1))
+	if (!parse_amiberry_cmd_line(&argc, argv, true))
 	{
 		printf("Error in Amiberry command line option parsing.\n");
 		usage();
@@ -5131,6 +5131,8 @@ int main(int argc, char* argv[])
 	}
 #endif
 
+	preinit_shm ();
+
 	if (!init_mmtimer())
 		return 0;
 	uae_time_calibrate();
@@ -5162,10 +5164,11 @@ int main(int argc, char* argv[])
 		const int type = record_devices[i]->type;
 		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
 	}
-	write_log(_T("done\n"));
+	write_log(_T("Enumeration done\n"));
 
 	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	clipboard_init();
+	keyboard_settrans();
 
 #if defined( __linux__)
 	// set capslock state based upon current "real" state
