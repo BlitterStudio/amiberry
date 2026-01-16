@@ -70,6 +70,11 @@ bool dev_hd_init(struct autoconfig_info* aci);
 void ripple_add_ide_unit(int ch, struct uaedev_config_info* ci, struct romconfig* rc);
 bool ripple_init(struct autoconfig_info* aci);
 
+void xsurf_add_ide_unit(int ch, struct uaedev_config_info *ci, struct romconfig *rc);
+bool xsurf_init_ide(struct autoconfig_info *aci);
+uae_u32 xsurf_ide_read(uaecptr addr, int size);
+void xsurf_ide_write(uaecptr addr, int size, uae_u32 val);
+
 uae_u32 REGPARAM3 apollo_ide_lget (uaecptr addr) REGPARAM;
 uae_u32 REGPARAM3 apollo_ide_wget (uaecptr addr) REGPARAM;
 uae_u32 REGPARAM3 apollo_ide_bget (uaecptr addr) REGPARAM;

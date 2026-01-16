@@ -198,6 +198,11 @@ static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int 
 // 2: Integer Scaling (this uses Nearest Neighbor)
 void set_scaling_option(const int monid, const uae_prefs* p, const int width, const int height)
 {
+	// Skip scaling setup if headless
+	if (currprefs.headless) {
+		return;
+	}
+
 	auto scale_quality = "nearest";
 	SDL_bool integer_scale = SDL_FALSE;
 
@@ -250,6 +255,11 @@ static GLuint osd_texture = 0;
 #endif
 static bool SDL2_alloctexture(int monid, int w, int h)
 {
+	// Skip texture allocation if headless
+	if (currprefs.headless) {
+		return true;
+	}
+
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
@@ -301,6 +311,11 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 static void update_leds(const int monid)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
+
+	// Skip LED rendering if headless
+	if (currprefs.headless) {
+		return;
+	}
 
 #ifndef USE_OPENGL
 	if (!mon->amiga_renderer)
@@ -374,6 +389,11 @@ bool vkbd_allowed(const int monid)
 
 static bool SDL2_renderframe(const int monid, int mode, int immediate)
 {
+	// Skip all rendering if in headless mode
+	if (currprefs.headless) {
+		return amiga_surface != nullptr;
+	}
+
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
 	// Unified OSD update: handle both native (CHIPSET) and RTG modes
@@ -539,8 +559,16 @@ static void wait_frame_timing()
 
 static void SDL2_showframe(const int monid)
 {
+	// Skip presentation if headless mode
+	if (currprefs.headless) {
+		wait_frame_timing();
+		return;
+	}
+
 	const AmigaMonitor* mon = &AMonitors[monid];
 	SDL_RenderPresent(mon->amiga_renderer);
+	if (waitvblankthread_mode <= 0)
+		wait_vblank_timestamp = read_processor_time();
 	wait_frame_timing();
 }
 
@@ -752,53 +780,22 @@ int target_get_display(const TCHAR* name)
 
 static int target_get_display_scanline2(int displayindex)
 {
-	//if (pD3DKMTGetScanLine) {
-	//	D3DKMT_GETSCANLINE sl = { 0 };
-	//	struct MultiDisplay* md = displayindex < 0 ? getdisplay(&currprefs, 0) : &Displays[displayindex];
-	//	if (!md->HasAdapterData)
-	//		return -11;
-	//	sl.VidPnSourceId = md->VidPnSourceId;
-	//	sl.hAdapter = md->AdapterHandle;
-	//	NTSTATUS status = pD3DKMTGetScanLine(&sl);
-	//	if (status == STATUS_SUCCESS) {
-	//		if (sl.InVerticalBlank)
-	//			return -1;
-	//		return sl.ScanLine;
-	//	}
-	//	else {
-	//		if ((int)status > 0)
-	//			return -(int)status;
-	//		return status;
-	//	}
-	//	return -12;
-	//}
-	//else if (D3D_getscanline) {
-	//	int scanline;
-	//	bool invblank;
-	//	if (D3D_getscanline(&scanline, &invblank)) {
-	//		if (invblank)
-	//			return -1;
-	//		return scanline;
-	//	}
-	//	return -14;
-	//}
-	return -13;
+	float diff = static_cast<float>(read_processor_time() - wait_vblank_timestamp);
+	if (diff < 0)
+		return -1;
+	int sl = static_cast<int>(diff * (vsync_activeheight + (vsync_totalheight - vsync_activeheight) / 10) * vsync_vblank / syncbase);
+	if (sl < 0)
+		sl = -1;
+	return sl;
 }
 
 extern uae_s64 spincount;
-bool calculated_scanline = true;
+bool calculated_scanline = false;
 
 int target_get_display_scanline(const int displayindex)
 {
 	if (!scanlinecalibrating && calculated_scanline) {
-		static int lastline;
-		float diff = static_cast<float>(read_processor_time() - wait_vblank_timestamp);
-		if (diff < 0)
-			return -1;
-		int sl = static_cast<int>(diff * (vsync_activeheight + (vsync_totalheight - vsync_activeheight) / 10) * vsync_vblank / syncbase);
-		if (sl < 0)
-			sl = -1;
-		return sl;
+		return target_get_display_scanline2(displayindex);
 	} else {
 		static uae_s64 lastrdtsc;
 		static int lastvpos;
@@ -807,11 +804,11 @@ int target_get_display_scanline(const int displayindex)
 			lastvpos = target_get_display_scanline2(displayindex);
 			return lastvpos;
 		}
-		const uae_s64 v = read_processor_time();
+		const uae_s64 v = read_processor_time_rdtsc();
 		if (lastrdtsc > v)
 			return lastvpos;
 		lastvpos = target_get_display_scanline2(displayindex);
-		lastrdtsc = read_processor_time() + spincount * 4;
+		lastrdtsc = read_processor_time_rdtsc() + spincount * 4;
 		return lastvpos;
 	}
 }
@@ -820,31 +817,23 @@ static bool get_display_vblank_params(int displayindex, int* activeheightp, int*
 {
 	bool ret = false;
 	SDL_DisplayMode dm;
-	SDL_Rect usable_bounds;
-	SDL_Rect bounds;
 
 	if (SDL_GetDesktopDisplayMode(displayindex, &dm) != 0)
 	{
 		write_log("SDL_GetDesktopDisplayMode failed: %s\n", SDL_GetError());
 		return ret;
 	}
-	if (SDL_GetDisplayUsableBounds(displayindex, &usable_bounds) != 0)
-	{
-		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
-		return ret;
-	}
-	if (SDL_GetDisplayBounds(displayindex, &bounds) != 0)
-	{
-		write_log("SDL_GetDisplayBounds failed: %s\n", SDL_GetError());
-		return ret;
-	}
+
+	int active = dm.h;
+	int total = active * 1125 / 1080; // Standard 1080p timing heuristic
 
 	if (activeheightp)
-		*activeheightp = usable_bounds.h;
+		*activeheightp = active;
 	if (totalheightp)
-		*totalheightp = bounds.h;
+		*totalheightp = total;
 	const auto vblank = static_cast<float>(dm.refresh_rate);
-	const auto hblank = static_cast<float>(31000); // faking hblank, since SDL2 doesn't provide a way to get the real one
+	// standard horizontal frequency is ~31.4 kHz for 60Hz 1080p
+	const auto hblank = static_cast<float>(vblank * total);
 	if (vblankp)
 		*vblankp = vblank;
 	if (hblankp)
@@ -1345,6 +1334,11 @@ int gfx_adjust_screenmode(const MultiDisplay *md, int *pwidth, int *pheight)
 
 bool render_screen(const int monid, const int mode, const bool immediate)
 {
+	// Skip if headless mode
+	if (currprefs.headless) {
+		return true;
+	}
+
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	const struct amigadisplay* ad = &adisplays[monid];
 	int cnt;
@@ -1396,6 +1390,12 @@ float target_adjust_vblank_hz(const int monid, float hz)
 
 void show_screen(const int monid, int mode)
 {
+	// Skip all rendering if headless mode
+	if (currprefs.headless) {
+		wait_frame_timing();
+		return;
+	}
+
 	AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
 	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
@@ -1557,6 +1557,9 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	if (!mon->amiga_window || !amiga_surface)
 		return ret;
 
+	// Ensure blanking limits are open and synchronized at the start of frame locking
+	set_custom_limits(-1, -1, -1, -1, false);
+
 	if (vb->vram_buffer) {
 		// Benchmarks have shown that Locking and Unlocking the Texture is slower than just calling UpdateTexture
 		// Therefore, this is disabled in Amiberry.
@@ -1618,13 +1621,24 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 		// Record the dirty rectangle if y_start and y_end are valid.
 		if (y_start >= 0 && y_end >= y_start) {
 			AmigaMonitor* mon = &AMonitors[vb->monitor_id];
-			SDL_Rect dirty_rect;
-			dirty_rect.x = 0;
-			dirty_rect.y = y_start;
-			dirty_rect.w = vb->width_allocated;
-			dirty_rect.h = y_end - y_start + 1;
+			
+			// Clamp y_end to surface bounds to prevent out-of-bounds dirty rects
+			// The drawing code may report y_end beyond the actual surface height
+			int clamped_y_end = y_end;
+			if (amiga_surface && clamped_y_end >= amiga_surface->h) {
+				clamped_y_end = amiga_surface->h - 1;
+			}
+			
+			// Only add dirty rect if we still have valid bounds after clamping
+			if (clamped_y_end >= y_start) {
+				SDL_Rect dirty_rect;
+				dirty_rect.x = 0;
+				dirty_rect.y = y_start;
+				dirty_rect.w = vb->width_allocated;
+				dirty_rect.h = clamped_y_end - y_start + 1;
 
-			add_dirty_rect(mon, dirty_rect);
+				add_dirty_rect(mon, dirty_rect);
+			}
 		}
 	}
 }
@@ -1914,6 +1928,15 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 
 static int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 {
+	// Skip window creation entirely if headless mode is enabled
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping window creation for monitor %d.\n", mon->monitor_id);
+		mon->screen_is_initialized = 1;
+		mon->amiga_window = nullptr;
+		mon->amiga_renderer = nullptr;
+		return 1;
+	}
+
 	bool recapture = false;
 	int ret;
 
@@ -3106,6 +3129,17 @@ void machdep_free()
 
 int graphics_init(bool mousecapture)
 {
+	// Skip all graphics initialization if running in headless mode
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping graphics initialization.\n");
+		wait_vblank_timestamp = read_processor_time();
+		update_pixel_format();
+		if (amiga_surface == nullptr) {
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, 32, pixel_format);
+		}
+		return amiga_surface != nullptr;
+	}
+
 	wait_vblank_timestamp = read_processor_time();
 	update_pixel_format();
 	gfxmode_reset(0);
@@ -3137,6 +3171,16 @@ void graphics_leave()
 
 void close_windows(struct AmigaMonitor* mon)
 {
+	// Skip SDL resource cleanup if headless mode
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping SDL resource cleanup for monitor %d.\n", mon->monitor_id);
+		if (amiga_surface) {
+			SDL_FreeSurface(amiga_surface);
+			amiga_surface = nullptr;
+		}
+		return;
+	}
+
 	vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 
 	reset_sound();
@@ -3309,6 +3353,15 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 
 static int create_windows(struct AmigaMonitor* mon)
 {
+	// Skip window creation entirely if headless mode
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping window creation for monitor %d.\n", mon->monitor_id);
+		mon->amiga_window = nullptr;
+		mon->amiga_renderer = nullptr;
+		mon->screen_is_initialized = 1;
+		return 1;
+	}
+
 	const Uint32 fullscreen = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
 	Uint32 fullwindow = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 	Uint32 flags = 0;
@@ -3586,6 +3639,38 @@ static bool doInit(AmigaMonitor* mon)
 	avidinfo->gfx_resolution_reserved = RES_MAX;
 	avidinfo->gfx_vresolution_reserved = VRES_MAX;
 
+	// If headless mode, skip all window/renderer setup
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping doInit window setup for monitor %d.\n", mon->monitor_id);
+
+		// Still need to set up display dimensions for emulation
+		display_width = 1920;
+		display_height = 1080;
+
+		if (!mon->screen_is_picasso) {
+
+			allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
+				1920, 1280);
+
+			allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
+				mon->currentmode.amiga_width > 2048 ? mon->currentmode.amiga_width : 2048,
+				mon->currentmode.amiga_height > 2048 ? mon->currentmode.amiga_height : 2048);
+		}
+
+		avidinfo->outbuffer = &avidinfo->drawbuffer;
+		avidinfo->inbuffer = &avidinfo->tempbuffer;
+
+		// Create internal surface if needed
+		if (amiga_surface == nullptr) {
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+		}
+
+		mon->screen_is_initialized = 1;
+		init_colors(mon->monitor_id);
+		target_graphics_buffer_update(mon->monitor_id, false);
+		return true;
+	}
+
 	modechanged = true;
 	if (wasfs[0] == 0)
 		regqueryint(NULL, wasfsname[0], &wasfs[0]);
@@ -3770,10 +3855,12 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 
 	if (avidinfo->inbuffer != avidinfo->outbuffer) {
-		avidinfo->outbuffer->inwidth = w;
-		avidinfo->outbuffer->inheight = h;
-		avidinfo->outbuffer->width_allocated = w;
-		avidinfo->outbuffer->height_allocated = h;
+		if (avidinfo->outbuffer) {
+			avidinfo->outbuffer->inwidth = w;
+			avidinfo->outbuffer->inheight = h;
+			avidinfo->outbuffer->width_allocated = w;
+			avidinfo->outbuffer->height_allocated = h;
+		}
 	}
 
 	oldtex_w[monid] = w;

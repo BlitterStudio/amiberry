@@ -411,9 +411,9 @@ void target_spin(int total)
 		return;
 	total = std::min(total, 10);
 	while (total-- >= 0) {
-		uae_s64 v1 = read_processor_time();
+		uae_s64 v1 = read_processor_time_rdtsc();
 		v1 += spincount;
-		while (v1 > read_processor_time());
+		while (v1 > read_processor_time_rdtsc());
 	}
 }
 
@@ -421,6 +421,68 @@ extern int vsync_activeheight;
 
 void target_calibrate_spin()
 {
+	struct amigadisplay* ad = &adisplays[0];
+	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
+	int vp;
+	const int cntlines = 1;
+	uae_u64 sc;
+
+	spincount = 0;
+	if (!ap->gfx_vsyncmode)
+		return;
+	extern bool calculated_scanline;
+	if (calculated_scanline) {
+		write_log(_T("target_calibrate_spin() skipped (%d)\n"), calculated_scanline);
+		return;
+	}
+	write_log(_T("target_calibrate_spin() start (%d)\n"), calculated_scanline);
+	sc = 0x800000000000LL;
+	for (int i = 0; i < 50; i++) {
+		for (;;) {
+			vp = target_get_display_scanline(-1);
+			if (vp <= -10)
+				goto fail;
+			if (vp >= 1 && vp < vsync_activeheight - 10)
+				break;
+		}
+		uae_u64 v1;
+		int vp2;
+		for (;;) {
+			v1 = read_processor_time_rdtsc();
+			vp2 = target_get_display_scanline(-1);
+			if (vp2 <= -10)
+				goto fail;
+			if (vp2 == vp + cntlines)
+				break;
+			if (vp2 < vp || vp2 > vp + cntlines)
+				goto trynext;
+		}
+		for (;;) {
+			int vp2 = target_get_display_scanline(-1);
+			if (vp2 <= -10)
+				goto fail;
+			if (vp2 == vp + cntlines * 2) {
+				uae_u64 scd = (read_processor_time_rdtsc() - v1) / cntlines;
+				if (sc > scd)
+					sc = scd;
+			}
+			if (vp2 < vp)
+				break;
+			if (vp2 > vp + cntlines * 2)
+				break;
+		}
+trynext:;
+	}
+	if (sc == 0x800000000000LL) {
+		write_log(_T("Spincount calculation error, spinloop not used.\n"));
+		spincount = 0;
+	} else {
+		spincount = sc;
+		write_log(_T("Spincount = %llu\n"), sc);
+	}
+	return;
+fail:
+	write_log(_T("Scanline read failed: %d!\n"), vp);
 	spincount = 0;
 }
 

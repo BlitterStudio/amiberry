@@ -6666,6 +6666,31 @@ static void warpmode_reset()
 	}
 }
 
+void m68k_run(void)
+{
+	void (*run_func)(void);
+
+	run_func = currprefs.cpu_cycle_exact && currprefs.cpu_model <= 68010 ? m68k_run_1_ce :
+		currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
+#ifdef JIT
+		currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
+#endif
+		currprefs.cpu_model == 68030 && currprefs.mmu_model ? m68k_run_mmu030 :
+		currprefs.cpu_model == 68040 && currprefs.mmu_model ? m68k_run_mmu040 :
+		currprefs.cpu_model == 68060 && currprefs.mmu_model ? m68k_run_mmu060 :
+
+		currprefs.cpu_model >= 68040 && currprefs.cpu_cycle_exact ? m68k_run_3ce :
+		currprefs.cpu_model >= 68020 && currprefs.cpu_cycle_exact ? m68k_run_2ce :
+
+		currprefs.cpu_model <= 68020 && currprefs.cpu_compatible ? m68k_run_2p :
+		currprefs.cpu_model == 68030 && currprefs.cpu_compatible ? m68k_run_2p :
+		currprefs.cpu_model >= 68040 && currprefs.cpu_compatible ? m68k_run_3p :
+
+		currprefs.cpu_model < 68020 ? m68k_run_2_000 : m68k_run_2_020;
+
+	run_func();
+}
+
 void m68k_go (int may_quit)
 {
 	int hardboot = 1;
@@ -6869,32 +6894,7 @@ void m68k_go (int may_quit)
 			}
 		}
 
-#if 0
-		if (mmu_enabled && !currprefs.cachesize) {
-			run_func = m68k_run_mmu;
-		} else {
-#endif
-			run_func = currprefs.cpu_cycle_exact && currprefs.cpu_model <= 68010 ? m68k_run_1_ce :
-				currprefs.cpu_compatible && currprefs.cpu_model <= 68010 ? m68k_run_1 :
-#ifdef JIT
-				currprefs.cpu_model >= 68020 && currprefs.cachesize ? m68k_run_jit :
-#endif
-				currprefs.cpu_model == 68030 && currprefs.mmu_model ? m68k_run_mmu030 :
-				currprefs.cpu_model == 68040 && currprefs.mmu_model ? m68k_run_mmu040 :
-				currprefs.cpu_model == 68060 && currprefs.mmu_model ? m68k_run_mmu060 :
-
-				currprefs.cpu_model >= 68040 && currprefs.cpu_cycle_exact ? m68k_run_3ce :
-				currprefs.cpu_model >= 68020 && currprefs.cpu_cycle_exact ? m68k_run_2ce :
-
-				currprefs.cpu_model <= 68020 && currprefs.cpu_compatible ? m68k_run_2p :
-				currprefs.cpu_model == 68030 && currprefs.cpu_compatible ? m68k_run_2p :
-				currprefs.cpu_model >= 68040 && currprefs.cpu_compatible ? m68k_run_3p :
-
-				currprefs.cpu_model < 68020 ? m68k_run_2_000 : m68k_run_2_020;
-#if 0
-		}
-#endif
-		run_func();
+		m68k_run();
 
 		custom_end_drawing();
 

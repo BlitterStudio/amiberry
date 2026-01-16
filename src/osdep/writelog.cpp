@@ -11,15 +11,18 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <poll.h>
+#include <clocale>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
-
 #include "options.h"
 #include "custom.h"
 #include "events.h"
 #include "debug.h"
 #include "uae.h"
+#include "registry.h"
+#include "threaddep/thread.h"
 
 #define SHOW_CONSOLE 0
 
@@ -32,7 +35,6 @@ static int bootlogmode;
 FILE* debugfile = nullptr;
 int console_logging = 0;
 static int debugger_type = -1;
-//extern BOOL debuggerinitializing;
 BOOL debuggerinitializing = false;
 extern bool lof_store;
 static int console_input_linemode = -1;
@@ -42,11 +44,37 @@ static HWND previousactivewindow;
 
 #define WRITE_LOG_BUF_SIZE 4096
 
+static uae_sem_t log_sem;
+static int log_sem_init;
+
 /* console functions for debugger */
+
 
 bool is_console_open()
 {
 	return consoleopen;
+}
+
+static void restore_console_settings()
+{
+	set_console_input_mode(1);
+}
+
+void set_console_input_mode(int line)
+{
+	if (console_input_linemode < 0)
+		return;
+	if (line == console_input_linemode)
+		return;
+	struct termios term;
+	if (tcgetattr(STDIN_FILENO, &term) == 0) {
+		if (line)
+			term.c_lflag |= (ICANON | ECHO);
+		else
+			term.c_lflag &= ~(ICANON | ECHO);
+		tcsetattr(STDIN_FILENO, TCSANOW, &term);
+		console_input_linemode = line;
+	}
 }
 
 static void getconsole()
@@ -55,23 +83,21 @@ static void getconsole()
 	struct winsize ws{};
 
 	// Get the terminal attributes
-	tcgetattr(STDIN_FILENO, &term);
-
-	// Set the terminal attributes for line input and echo
-	term.c_lflag |= (ICANON | ECHO);
-	tcsetattr(STDIN_FILENO, TCSANOW, &term);
+	if (tcgetattr(STDIN_FILENO, &term) == 0) {
+		// Set the terminal attributes for line input and echo
+		term.c_lflag |= (ICANON | ECHO);
+		tcsetattr(STDIN_FILENO, TCSANOW, &term);
+		console_input_linemode = 1;
+		std::atexit(restore_console_settings);
+	}
 
 	// Set the console input/output code page to UTF-8
 	setlocale(LC_ALL, "en_US.UTF-8");
 
 	// Get the console window size
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
-
-	// Set the console window size to a maximum of 5000 lines
-	if (ws.ws_row < 5000)
-	{
-		ws.ws_row = 5000;
-		ioctl(STDOUT_FILENO, TIOCSWINSZ, &ws);
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) {
+		// No direct way to set terminal buffer size on Linux like Windows,
+		// but we can log that we are initializing.
 	}
 }
 
@@ -89,16 +115,14 @@ void activate_console()
 		previousactivewindow = NULL;
 		return;
 	}
-	previousactivewindow = SDL_GetWindowFromID(SDL_GetWindowID(SDL_GetKeyboardFocus()));
-	//SetForegroundWindow(GetConsoleWindow());
+	previousactivewindow = SDL_GetKeyboardFocus();
 }
 
 static void open_console_window()
 {
 	if (!consoleopen) {
-		previousactivewindow = SDL_GetWindowFromID(SDL_GetWindowID(SDL_GetKeyboardFocus()));
+		previousactivewindow = SDL_GetKeyboardFocus();
 	}
-	//AllocConsole();
 	getconsole();
 	consoleopen = -1;
 	reopen_console();
@@ -108,10 +132,8 @@ static void openconsole ()
 {
 	if (realconsole) {
 		if (debugger_type == 2) {
-			//open_debug_window ();
 			consoleopen = 1;
 		} else {
-			//close_debug_window ();
 			consoleopen = -1;
 		}
 		return;
@@ -120,20 +142,13 @@ static void openconsole ()
 		if (consoleopen > 0 || debuggerinitializing)
 			return;
 		if (debugger_type < 0) {
-#ifdef AMIBERRY
-#else
 			regqueryint (NULL, _T("DebuggerType"), &debugger_type);
-#endif
 			if (debugger_type <= 0)
 				debugger_type = 1;
 			openconsole();
 			return;
 		}
 		close_console ();
-		//if (open_debug_window ()) {
-		//	consoleopen = 1;
-		//	return;
-		//}
 		open_console_window ();
 	} else {
 		if (consoleopen < 0)
@@ -151,11 +166,7 @@ void debugger_change (int mode)
 		debugger_type = mode;
 	if (debugger_type != 1 && debugger_type != 2)
 		debugger_type = 2;
-#ifdef AMIBERRY
-	// Not using the registry
-#else
 	regsetint (NULL, _T("DebuggerType"), debugger_type);
-#endif
 	openconsole ();
 }
 
@@ -166,10 +177,15 @@ void update_debug_info() {
 
 void open_console()
 {
+	if (!log_sem_init) {
+		uae_sem_init(&log_sem, 0, 1);
+		log_sem_init = 1;
+	}
 	if (!consoleopen) {
 		openconsole();
 	}
 }
+
 
 void reopen_console ()
 {
@@ -184,9 +200,6 @@ void reopen_console ()
 	if (hwnd) {
 		int newpos = 1;
 		int x, y, w, h;
-#ifdef FSUAE
-		newpos = 0;
-#else
 		if (!regqueryint (NULL, _T("LoggerPosX"), &x))
 			newpos = 0;
 		if (!regqueryint (NULL, _T("LoggerPosY"), &y))
@@ -195,7 +208,6 @@ void reopen_console ()
 			newpos = 0;
 		if (!regqueryint (NULL, _T("LoggerPosH"), &h))
 			newpos = 0;
-#endif
 		if (newpos) {
 			RECT rc;
 			rc.left = x;
@@ -218,7 +230,7 @@ void close_console ()
 		return;
 #ifdef _WIN32
 	if (consoleopen > 0) {
-		close_debug_window ();
+		//close_debug_window ();
 	} else if (consoleopen < 0) {
 		HWND hwnd = myGetConsoleWindow ();
 		if (hwnd && !IsIconic (hwnd)) {
@@ -226,24 +238,19 @@ void close_console ()
 			if (GetWindowRect (hwnd, &r)) {
 				r.bottom -= r.top;
 				r.right -= r.left;
-				int dpi = getdpiforwindow(hwnd);
+				int dpi = 96; // Fallback for window positioning
 				r.left = r.left * 96 / dpi;
 				r.right = r.right * 96 / dpi;
 				r.top = r.top * 96 / dpi;
 				r.bottom = r.bottom * 96 / dpi;
-#ifdef FSUAE
-#else
 				regsetint (NULL, _T("LoggerPosX"), r.left);
 				regsetint (NULL, _T("LoggerPosY"), r.top);
 				regsetint (NULL, _T("LoggerPosW"), r.right);
 				regsetint (NULL, _T("LoggerPosH"), r.bottom);
-#endif
 			}
 		}
 		FreeConsole ();
 	}
-#else
-
 #endif
 	consoleopen = 0;
 }
@@ -252,9 +259,14 @@ int read_log()
 {
 	if (consoleopen >= 0)
 		return -1;
-	//TODO needs implementation
+	if (console_isch()) {
+		unsigned char ch;
+		if (read(STDIN_FILENO, &ch, 1) == 1)
+			return ch;
+	}
 	return -1;
 }
+
 
 static void writeconsole_2 (const TCHAR *buffer)
 {
@@ -294,7 +306,7 @@ static void writeconsole (const TCHAR *buffer)
 
 static void flushconsole()
 {
-	if (consoleopen > 0) {
+	if (consoleopen != 0) {
 		fflush(stdout);
 	}
 	else if (realconsole) {
@@ -359,9 +371,15 @@ bool console_isch ()
 	}
 	return false;
 #else
-	return false;
+	if (console_buffer)
+		return false;
+	struct pollfd fds;
+	fds.fd = STDIN_FILENO;
+	fds.events = POLLIN;
+	return poll(&fds, 1, 0) == 1;
 #endif
 }
+
 
 TCHAR console_getch()
 {
@@ -376,10 +394,11 @@ TCHAR console_getch()
 	}
 	if (consoleopen < 0)
 	{
-		char out[2];
-		out[0] = getchar();
-		out[1] = '\0';
-		return out[0];
+		set_console_input_mode(0);
+		char ch;
+		if (read(STDIN_FILENO, &ch, 1) == 1) {
+			return ch;
+		}
 	}
 	return 0;
 }
@@ -426,6 +445,7 @@ int console_get (TCHAR *out, int maxlen)
 	}
 	return 0;
 #else
+	set_console_input_mode(1);
 	TCHAR *res = fgets(out, maxlen, stdin);
 	if (res == nullptr) {
 		return -1;
@@ -437,6 +457,34 @@ int console_get (TCHAR *out, int maxlen)
 	}
 	return len;
 #endif
+}
+
+
+FILE *log_open (const TCHAR *name, int append, int bootlog, TCHAR *outpath)
+{
+	FILE *f = nullptr;
+
+	if (!log_sem_init) {
+		uae_sem_init(&log_sem, 0, 1);
+		log_sem_init = 1;
+	}
+
+	if (name != nullptr) {
+		if (bootlog >= 0) {
+			_tcscpy (outpath, name);
+			f = fopen(name, append ? _T("a") : _T("w"));
+			if (!f && bootlog) {
+				TCHAR tmp[MAX_DPATH];
+				_tcscpy(tmp, _T("/tmp/amiberry_log.txt"));
+				_tcscpy (outpath, tmp);
+				f = fopen(tmp, append ? _T("a") : _T("w"));
+			}
+		}
+	} else {
+		// Check for console flag? In Amiberry we usually just check console_logging
+	}
+	bootlogmode = bootlog;
+	return f;
 }
 
 void console_flush (void)
@@ -475,18 +523,19 @@ TCHAR* write_log_get_ts(void)
 	}
 	strftime(p, sizeof(out) - (p - out), "%S-", t);
 	p += strlen(p);
-	_sntprintf(p, sizeof p, "%03d", milliseconds);
+	_sntprintf(p, 10, "%03d", milliseconds);
 	p += strlen(p);
 	if (vsync_counter != 0xffffffff)
-		_sntprintf(p, sizeof p, " [%d %03d%s%03d]", vsync_counter, current_hpos_safe(), lof_store ? "-" : "=", vpos);
+		_sntprintf(p, 50, " [%u %03d%s%03d/%03d]", vsync_counter, current_hpos_safe(), lof_store ? "-" : "=", vpos, linear_vpos);
 	strcat(p, ": ");
 	return out;
 }
 
+
 void write_log(const char* format, ...)
 {
 	int count;
-	TCHAR buffer[WRITE_LOG_BUF_SIZE], *ts;
+	TCHAR buffer[WRITE_LOG_BUF_SIZE], * ts;
 	int bufsize = WRITE_LOG_BUF_SIZE;
 	TCHAR* bufp;
 	va_list parms;
@@ -494,8 +543,7 @@ void write_log(const char* format, ...)
 	if (!amiberry_options.write_logfile && !console_logging && !debugfile)
 		return;
 
-	if (!_tcsicmp(format, _T("*")))
-		count = 0;
+	if (log_sem_init) uae_sem_wait(&log_sem);
 
 	va_start(parms, format);
 	bufp = buffer;
@@ -523,8 +571,8 @@ void write_log(const char* format, ...)
 	}
 	if (debugfile) {
 		if (lfdetected && ts)
-			fprintf(debugfile, _T("%s"), ts);
-		fprintf(debugfile, _T("%s"), bufp);
+			fprintf(debugfile, "%s", ts);
+		fprintf(debugfile, "%s", bufp);
 	}
 	lfdetected = 0;
 	if (bufp[0] != '\0' && bufp[_tcslen(bufp) - 1] == '\n')
@@ -534,7 +582,30 @@ void write_log(const char* format, ...)
 		xfree(bufp);
 	if (always_flush_log)
 		flush_log();
+
+	if (log_sem_init) uae_sem_post(&log_sem);
 }
+
+void write_dlog(const TCHAR* format, ...)
+{
+	va_list parms;
+	va_start(parms, format);
+	TCHAR buffer[WRITE_LOG_BUF_SIZE];
+	_vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+	write_log("%s", buffer);
+	va_end(parms);
+}
+
+void write_logx(const TCHAR* format, ...)
+{
+	va_list parms;
+	va_start(parms, format);
+	TCHAR buffer[WRITE_LOG_BUF_SIZE];
+	_vsntprintf(buffer, WRITE_LOG_BUF_SIZE - 1, format, parms);
+	write_log("%s", buffer);
+	va_end(parms);
+}
+
 
 void flush_log()
 {

@@ -104,7 +104,7 @@ static void* VirtualAlloc(void* lpAddress, size_t dwSize, int flAllocationType,
 	}
 
 	if (flAllocationType & MEM_RESERVE) {
-		address = uae_vm_reserve(dwSize, 0);
+		address = uae_vm_reserve(dwSize, UAE_VM_32BIT);
 	}
 	else {
 		address = lpAddress;
