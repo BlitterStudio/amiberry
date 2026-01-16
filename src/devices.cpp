@@ -7,6 +7,7 @@
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "audio.h"
+#include "cpu_thread.h"
 #ifdef GFXBOARD
 #include "gfxboard.h"
 #endif
@@ -402,6 +403,11 @@ void virtualdevice_free(void)
 
 void do_leave_program (void)
 {
+	// Print CPU thread diagnostics before cleanup
+	if (currprefs.cpu_thread && cpu_thread_diag.enable_diagnostics) {
+		cpu_thread_diag_print_stats();
+	}
+
 	virtualdevice_free();
 	graphics_leave();
 	close_sound();

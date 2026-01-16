@@ -46,6 +46,7 @@
 #include "enforcer.h"
 #endif
 #include "threaddep/thread.h"
+#include "cpu_thread.h"
 #ifdef WITH_LUA
 #include "luascript.h"
 #endif
@@ -7148,6 +7149,9 @@ int custom_init(void)
 	}
 #endif
 
+	/* Initialize CPU threading diagnostics */
+	cpu_thread_diag_init();
+
 	build_blitfilltable();
 
 	drawing_init();
@@ -12500,6 +12504,13 @@ static void sync_imm_evhandler(void)
 int do_cycles_cck(int cycles)
 {
 	if (currprefs.cpu_thread && !is_mainthread()) {
+		/* CPU thread is skipping cycle accounting */
+		/* Phase 2: Flush any batched register operations before returning */
+		cpu_thread_flush_register_batch();
+
+		if (cpu_thread_diag.enable_diagnostics) {
+			cpu_thread_diag_log_stall(cycles);
+		}
 		return (cycles / CYCLE_UNIT) * CYCLE_UNIT;
 	}
 	int c = 0;
@@ -12806,8 +12817,12 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 
 void do_cycles_ce(int cycles)
 {
-	if (currprefs.cpu_thread && !is_mainthread())
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		if (cpu_thread_diag.enable_diagnostics) {
+			cpu_thread_diag_log_stall(cycles);
+		}
 		return;
+	}
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -12818,8 +12833,12 @@ void do_cycles_ce(int cycles)
 
 void do_cycles_ce020(int cycles)
 {
-	if (currprefs.cpu_thread && !is_mainthread())
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		if (cpu_thread_diag.enable_diagnostics) {
+			cpu_thread_diag_log_stall(cycles);
+		}
 		return;
+	}
 	evt_t cc;
 	static int extra;
 
