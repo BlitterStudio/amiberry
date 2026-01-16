@@ -88,6 +88,7 @@ static int get_crtemu_type(const char* shader)
 	if (!std::strcmp(shader, "tv") || !std::strcmp(shader, "TV"))       return CRTEMU_TYPE_TV;
 	if (!std::strcmp(shader, "pc") || !std::strcmp(shader, "PC"))       return CRTEMU_TYPE_PC;
 	if (!std::strcmp(shader, "lite") || !std::strcmp(shader, "LITE"))   return CRTEMU_TYPE_LITE;
+	if (!std::strcmp(shader, "1084"))                                   return CRTEMU_TYPE_1084;
 	if (!std::strcmp(shader, "none") || !std::strcmp(shader, "NONE"))   return CRTEMU_TYPE_NONE;
 	return CRTEMU_TYPE_TV;
 }
