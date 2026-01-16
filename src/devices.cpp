@@ -83,13 +83,6 @@
 #include "dsp3210/dsp_glue.h"
 #endif
 #include "keyboard_mcu.h"
-#ifdef JIT
-#if defined(CPU_AARCH64) || defined(CPU_arm)
-#include "jit/arm/compemu_arm.h"
-#else
-#include "jit/x86/compemu_x86.h"
-#endif
-#endif
 
 #define MAX_DEVICE_ITEMS 64
 
@@ -356,10 +349,6 @@ void devices_update_sync(float svpos, float syncadjust)
 
 void virtualdevice_free(void)
 {
-#ifdef JIT
-	// Free JIT compiler resources before other cleanup
-	compiler_exit();
-#endif
 #ifdef WITH_PPC
 	// must be first
 	uae_ppc_free();
