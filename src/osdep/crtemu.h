@@ -277,6 +277,7 @@ struct crtemu_t {
 	void (CRTEMU_GLCALLTYPE* Uniform3f) (CRTEMU_GLint location, CRTEMU_GLfloat v0, CRTEMU_GLfloat v1, CRTEMU_GLfloat v2);
 	CRTEMU_GLint (CRTEMU_GLCALLTYPE* GetUniformLocation) (CRTEMU_GLuint program, CRTEMU_GLchar const* name);
 	void (CRTEMU_GLCALLTYPE* TexImage2D) (CRTEMU_GLenum target, CRTEMU_GLint level, CRTEMU_GLint internalformat, CRTEMU_GLsizei width, CRTEMU_GLsizei height, CRTEMU_GLint border, CRTEMU_GLenum format, CRTEMU_GLenum type, void const* pixels);
+	void (CRTEMU_GLCALLTYPE* TexSubImage2D) (CRTEMU_GLenum target, CRTEMU_GLint level, CRTEMU_GLint xoffset, CRTEMU_GLint yoffset, CRTEMU_GLsizei width, CRTEMU_GLsizei height, CRTEMU_GLenum format, CRTEMU_GLenum type, void const* pixels);
 	void (CRTEMU_GLCALLTYPE* ClearColor) (CRTEMU_GLfloat red, CRTEMU_GLfloat green, CRTEMU_GLfloat blue, CRTEMU_GLfloat alpha);
 	void (CRTEMU_GLCALLTYPE* Clear) (CRTEMU_GLbitfield mask);
 	void (CRTEMU_GLCALLTYPE* DrawArrays) (CRTEMU_GLenum mode, CRTEMU_GLint first, CRTEMU_GLsizei count);
@@ -404,8 +405,7 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			#endif
 			"vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )\n"
 			"    {\n"
-			"    vec3 s = pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) );\n"
-			"    return s*vec3(1.25);\n"
+			"    return pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) ) * vec3(1.25);\n"
 			"    }"
 			"\n"
 			"vec3 filmic( vec3 LinearColor )\n"
@@ -1205,7 +1205,7 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    col = col * vec3(s);\n"
 			"\n"
 			"    /* Vertical lines (shadow mask) */\n"
-			"    col*=1.0-0.15*(clamp((mod(gl_FragCoord.xy.x, 2.0))/1.0,0.0,1.0));\n"
+			"    col*=1.0-0.15*(clamp((mod(gl_FragCoord.x, 2.0)),0.0,1.0));\n"
 			"\n"
 			"    /* Tone map */\n"
 			"    col = filmic( col );\n"
@@ -1438,6 +1438,7 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
         crtemu->Uniform3f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glUniform3f" );
         crtemu->GetUniformLocation = ( CRTEMU_GLint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetUniformLocation" );
         crtemu->TexImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexImage2D" );
+        crtemu->TexSubImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glTexSubImage2D" );
         crtemu->ClearColor = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glClearColor" );
         crtemu->Clear = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLbitfield) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glClear" );
         crtemu->DrawArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLsizei) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDrawArrays" );
@@ -1483,6 +1484,7 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
         if( !crtemu->Uniform3f ) crtemu->Uniform3f = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glUniform3f" );
         if( !crtemu->GetUniformLocation ) crtemu->GetUniformLocation = ( CRTEMU_GLint (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLchar const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetUniformLocation" );
         if( !crtemu->TexImage2D ) crtemu->TexImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLint, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexImage2D" );
+        if( !crtemu->TexSubImage2D ) crtemu->TexSubImage2D = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei, CRTEMU_GLenum, CRTEMU_GLenum, void const*) ) (uintptr_t) crtemu->wglGetProcAddress( "glTexSubImage2D" );
         if( !crtemu->ClearColor ) crtemu->ClearColor = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat, CRTEMU_GLfloat) ) (uintptr_t) crtemu->wglGetProcAddress( "glClearColor" );
         if( !crtemu->Clear ) crtemu->Clear = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLbitfield) ) (uintptr_t) crtemu->wglGetProcAddress( "glClear" );
         if( !crtemu->DrawArrays ) crtemu->DrawArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLenum, CRTEMU_GLint, CRTEMU_GLsizei) ) (uintptr_t) crtemu->wglGetProcAddress( "glDrawArrays" );
@@ -1535,6 +1537,7 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->Viewport = glViewport;
 	crtemu->DeleteShader = glDeleteShader;
 	crtemu->DeleteProgram = glDeleteProgram;
+	crtemu->TexSubImage2D = glTexSubImage2D;
 #ifdef CRTEMU_REPORT_SHADER_ERRORS
 	crtemu->GetShaderInfoLog = glGetShaderInfoLog;
 #endif
@@ -1582,6 +1585,7 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	if( !crtemu->Viewport ) goto failed;
 	if( !crtemu->DeleteShader ) goto failed;
 	if( !crtemu->DeleteProgram ) goto failed;
+	if( !crtemu->TexSubImage2D ) goto failed;
 #ifdef CRTEMU_REPORT_SHADER_ERRORS
 	if( !crtemu->GetShaderInfoLog ) goto failed;
 #endif
@@ -1815,7 +1819,11 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	if( pixels_xbgr ) {
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
-		crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+		if (width != crtemu->last_present_width || height != crtemu->last_present_height) {
+			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+		} else {
+			crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+		}
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 	} else {
 		if( width != crtemu->last_present_width || height != crtemu->last_present_height ) {

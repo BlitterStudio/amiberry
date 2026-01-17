@@ -1591,7 +1591,18 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+	static int last_w = 0, last_h = 0;
+	static GLuint last_texture = 0;
+	if (width != last_w || height != last_h || texture != last_texture) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		last_w = width;
+		last_h = height;
+		last_texture = texture;
+	} else {
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	}
+	
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Reset for other textures
 	
 	// Use the shader
@@ -1805,6 +1816,14 @@ void show_screen(const int monid, int mode)
 	}
 
 	const auto time = SDL_GetTicks();
+
+	// Ensure we are not capping FPS unnecessarily if VSync is not explicitly requested.
+	// Some drivers might force VSync in full-window mode.
+	static bool swap_interval_checked = false;
+	if (!swap_interval_checked) {
+		SDL_GL_SetSwapInterval(0); // Default to no VSync for performance testing/flexibility
+		swap_interval_checked = true;
+	}
 
 	int drawableWidth, drawableHeight;
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
