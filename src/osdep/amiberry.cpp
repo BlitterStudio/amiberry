@@ -357,6 +357,7 @@ std::string nvram_dir;
 std::string plugins_dir;
 std::string video_dir;
 std::string themes_path;
+std::string shaders_path;
 std::string amiberry_conf_file;
 std::string amiberry_ini_file;
 
@@ -3159,6 +3160,11 @@ void set_themes_path(const std::string& newpath)
 	themes_path = newpath;
 }
 
+void set_shaders_path(const std::string& newpath)
+{
+	shaders_path = newpath;
+}
+
 void set_screenshot_path(const std::string& newpath)
 {
 	screenshot_dir = newpath;
@@ -3344,6 +3350,11 @@ void get_video_path(char* out, const int size)
 std::string get_themes_path()
 {
 	return fix_trailing(themes_path);
+}
+
+std::string get_shaders_path()
+{
+	return fix_trailing(shaders_path);
 }
 
 void get_floppy_sounds_path(char* out, const int size)
@@ -3753,6 +3764,7 @@ void save_amiberry_settings()
 	write_string_option("plugins_dir", plugins_dir);
 	write_string_option("video_dir", video_dir);
 	write_string_option("themes_path", themes_path);
+	write_string_option("shaders_path", shaders_path);
 
 	// Recent disk entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
@@ -3867,6 +3879,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "plugins_dir", plugins_dir);
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		ret |= cfgfile_string(option, value, "themes_path", themes_path);
+		ret |= cfgfile_string(option, value, "shaders_path", shaders_path);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
@@ -4576,6 +4589,8 @@ void create_missing_amiberry_folders()
 		my_mkdir(video_dir.c_str());
 	if (!my_existsdir(themes_path.c_str()))
 		my_mkdir(themes_path.c_str());
+	if (!my_existsdir(shaders_path.c_str()))
+		my_mkdir(shaders_path.c_str());
 	std::string default_theme_file = themes_path + "Default.theme";
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
@@ -4640,7 +4655,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	if (portable_mode)
 #endif
 	{
-		themes_path = config_path;
+		themes_path = shaders_path= config_path;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
@@ -4676,7 +4691,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 		xdg_config_home += "/" + amiberry_dir;
 		if (!my_existsdir(xdg_config_home.c_str()))
 			my_mkdir(xdg_config_home.c_str());
-		themes_path = xdg_config_home;
+		themes_path = shaders_path = xdg_config_home;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = 
@@ -4707,6 +4722,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	nvram_dir.append("/Nvram/");
 	video_dir.append("/Videos/");
 	themes_path.append("/Themes/");
+	shaders_path.append("/Shaders/");
 #else
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
@@ -4725,6 +4741,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	nvram_dir.append("/nvram/");
 	video_dir.append("/videos/");
 	themes_path.append("/themes/");
+	shaders_path.append("/shaders/");
 #endif
 
 	retroarch_file = config_path;
