@@ -277,6 +277,11 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 		else
 			shader_name = amiberry_options.shader;
 		
+		// Ensure GL context is current before creating shaders
+		if (gl_context && mon->amiga_window) {
+			SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
+		}
+
 		const int crt_type = get_crtemu_type(shader_name);
 		crtemu_tv = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
 	}
@@ -1418,6 +1423,12 @@ void show_screen(const int monid, int mode)
 		return;
 	}
 #ifdef USE_OPENGL
+	// Safety check: if crtemu_tv is null (e.g., during reset), skip rendering
+	if (!crtemu_tv) {
+		wait_frame_timing();
+		return;
+	}
+
 	auto time = SDL_GetTicks();
 
 	int drawableWidth, drawableHeight;
@@ -1485,7 +1496,7 @@ void show_screen(const int monid, int mode)
 		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
 	{
 		update_leds(monid);
-		if (mon->statusline_surface) {
+		if (mon->statusline_surface && crtemu_tv && crtemu_tv->copy_shader) {
 			if (osd_texture != 0 && !glIsTexture(osd_texture)) {
 				osd_texture = 0;
 			}
