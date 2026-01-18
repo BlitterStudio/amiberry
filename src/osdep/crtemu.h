@@ -1164,8 +1164,8 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    {\n"
 			"    uv = (uv - 0.5) * 2.0;\n"
 			"    uv *= 1.1;  \n"
-			"    uv.x *= 1.0 + pow((abs(uv.y) / 4.5), 2.0);\n"
-			"    uv.y *= 1.0 + pow((abs(uv.x) / 3.5), 2.0);\n"
+			"    uv.x *= 1.0 + pow((abs(uv.y) / 6.0), 2.0);\n"
+			"    uv.y *= 1.0 + pow((abs(uv.x) / 5.0), 2.0);\n"
 			"    uv  = (uv / 2.0) + 0.5;\n"
 			"    uv =  uv *0.92 + 0.04;\n"
 			"    return uv;\n"
@@ -1179,7 +1179,7 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"void main(void)\n"
 			"   {\n"
 			"    /* Curve */\n"
-			"    vec2 curved_uv = mix( curve( uv ), uv, 0.5 );\n"
+			"    vec2 curved_uv = mix( curve( uv ), uv, 0.65 );\n"
 			"    float scale = 0.04;\n"
 			"    vec2 scuv = curved_uv;\n"
 			"\n"
@@ -2286,16 +2286,16 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			float yc = ( yp - 0.5f ) * 2.0f;
 			xc *= 1.1f;
 			yc *= 1.1f;
-			float yt = ( yc >= 0.0f ? yc : -yc ) / 4.5f;
-			float xt = ( xc >= 0.0f ? xc : -xc ) / 3.5f;
+			float yt = ( yc >= 0.0f ? yc : -yc ) / 6.0f;
+			float xt = ( xc >= 0.0f ? xc : -xc ) / 5.0f;
 			xc *= 1.0f + ( yt * yt );
 			yc *= 1.0f + ( xt * xt );
 			xc = ( xc / 2.0f ) + 0.5f;
 			yc = ( yc / 2.0f ) + 0.5f;
 			xc = xc * 0.92f + 0.04f;
 			yc = yc * 0.92f + 0.04f;
-			xp = xc * 0.5f + xp * 0.5f;
-			yp = yc * 0.5f + yp * 0.5f;
+			xp = xc * 0.35f + xp * 0.65f;
+			yp = yc * 0.35f + yp * 0.65f;
 
 			xp *= width;
 			yp *= height;
