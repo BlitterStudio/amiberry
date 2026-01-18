@@ -1873,10 +1873,10 @@ void show_screen(const int monid, int mode)
 		
 		// Check if cropping is active
 		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		                         crop_rect.w != amiga_surface->w ||
-		                         crop_rect.h != amiga_surface->h);
+		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0));
 		
-		if (is_cropped) {
+		if (is_cropped && amiga_surface) {
 			// SLOW PATH: Cropping is active
 			SDL_Rect corrected_crop_rect;
 			uae_u8* packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
@@ -1886,7 +1886,7 @@ void show_screen(const int monid, int mode)
 					corrected_crop_rect.w, corrected_crop_rect.h, corrected_crop_rect.w * 4, destW, destH);
 				delete[] packed_pixel_buffer;
 			}
-		} else {
+		} else if (amiga_surface) {
 			// FAST PATH: No cropping
 			render_with_external_shader(external_shader, monid, 
 				static_cast<const uae_u8*>(amiga_surface->pixels),
