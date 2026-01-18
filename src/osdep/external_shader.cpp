@@ -1,3 +1,4 @@
+#ifdef USE_OPENGL
 #include "external_shader.h"
 #include "sysdeps.h"
 #include "uae.h"
@@ -411,3 +412,4 @@ void destroy_external_shader(ExternalShader* shader)
 {
 	delete shader;
 }
+#endif
