@@ -44,7 +44,7 @@ endif()
 set(VERSION_MAJOR "8" CACHE STRING "Major version")
 set(VERSION_MINOR "0" CACHE STRING "Minor version")
 set(VERSION_PATCH "0" CACHE STRING "Patch version")
-set(VERSION_PRE_RELEASE "13" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "16" CACHE STRING "Pre-release version")
 set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 # Use PkgConfig only on FreeBSD
@@ -106,5 +106,13 @@ add_subdirectory(packaging)
 
 # Link libraries (FreeBSD needs correct order)
 if(TARGET amiberry AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    # forkpty() lives in libutil on FreeBSD
+    target_link_libraries(amiberry PRIVATE util)
+
+    # libiconv_* symbols come from ports/converters/libiconv
+    find_library(LIBICONV_LIBRARY NAMES iconv PATHS /usr/local/lib REQUIRED)
+    target_link_libraries(amiberry PRIVATE ${LIBICONV_LIBRARY})
+
+    # existing libs
     target_link_libraries(amiberry PRIVATE ${LIBUSB_LIBRARY} serialport ${EXTRA_LIBS})
 endif()

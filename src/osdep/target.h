@@ -24,12 +24,12 @@
 #define AMIBERRYPUBLICBETA 1
 
 #if AMIBERRYPUBLICBETA
-#define AMIBERRYBETA _T("13")
+#define AMIBERRYBETA _T("16")
 #else
 #define AMIBERRYBETA _T("")
 #endif
 
-#define AMIBERRYDATE MAKEBD(2026, 1, 7)
+#define AMIBERRYDATE MAKEBD(2026, 1, 18)
 #define COPYRIGHT _T("Copyright (C) 2026 Dimitris Panokostas")
 
 #ifndef AMIBERRYEXTRA
@@ -150,6 +150,7 @@ extern void set_harddrive_path(const std::string& newpath);
 extern std::string get_cdrom_path();
 extern void set_cdrom_path(const std::string& newpath);
 extern std::string get_themes_path();
+extern std::string get_shaders_path();
 
 extern bool get_logfile_enabled();
 extern void set_logfile_enabled(bool enabled);

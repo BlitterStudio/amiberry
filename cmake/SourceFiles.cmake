@@ -224,6 +224,7 @@ set(SOURCE_FILES
         src/osdep/amiberry_filesys.cpp
         src/osdep/amiberry_input.cpp
         src/osdep/amiberry_gfx.cpp
+        src/osdep/external_shader.cpp
         src/osdep/amiberry_gui.cpp
         src/osdep/amiberry_mem.cpp
         src/osdep/amiberry_serial.cpp

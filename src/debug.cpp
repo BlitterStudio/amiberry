@@ -176,90 +176,94 @@ struct cpuhistory {
 };
 static struct cpuhistory history[MAX_HIST];
 
-static const TCHAR help[] = {
-	_T("          HELP for UAE Debugger\n")
-	_T("         -----------------------\n\n")
-	_T("  g [<address>]         Start execution at the current address or <address>.\n")
-	_T("  c                     Dump state of the CIA, disk drives and custom registers.\n")
-	_T("  r                     Dump state of the CPU.\n")
-	_T("  r <reg> <value>       Modify CPU registers (Dx,Ax,USP,ISP,VBR,...).\n")
-	_T("  rc[d]                 Show CPU instruction or data cache contents.\n")
-	_T("  m <address> [<lines>] Memory dump starting at <address>.\n")
-	_T("  a <address>           Assembler.\n")
-	_T("  d <address> [<lines>] Disassembly starting at <address>.\n")
-	_T("  t [instructions]      Step one or more instructions.\n")
-	_T("  tx                    Break when any exception.\n")
-	_T("  z                     Step through one instruction - useful for JSR, DBRA etc.\n")
-	_T("  f                     Step forward until PC in RAM (\"boot block finder\").\n")
-	_T("  f <address> [Nx]      Add/remove breakpoint.\n")
-	_T("  fa <address> [<start>] [<end>]\n")
-	_T("                        Find effective address <address>.\n")
-	_T("  fi                    Step forward until PC points to RTS, RTD or RTE.\n")
-	_T("  fi <opcode> [<w2>] [<w3>] Step forward until PC points to <opcode>.\n")
-	_T("  fp \"<name>\"/<addr>    Step forward until process <name> or <addr> is active.\n")
-	_T("  fl                    List breakpoints.\n")
-	_T("  fd                    Remove all breakpoints.\n")
-	_T("  fs <lines to wait> | <vpos> <hpos> Wait n scanlines/position.\n")
-	_T("  fc <CCKs to wait>     Wait n color clocks.\n")
-	_T("  fo <num> <reg> <oper> <val> [<mask> <val2>] Conditional register breakpoint [Nx] [Hx].\n")
-	_T("   reg=Dx,Ax,PC,USP,ISP,VBR,SR. oper:!=,==,<,>,>=,<=,-,!- (-=val to val2 range).\n")
-	_T("  f <addr1> <addr2>     Step forward until <addr1> <= PC <= <addr2>.\n")
-	_T("  e[x]                  Dump contents of all custom registers, ea = AGA colors.\n")
-	_T("  i [<addr>]            Dump contents of interrupt and trap vectors.\n")
-	_T("  il [<mask>]           Exception breakpoint.\n")
-	_T("  o <0-2|addr> [<lines>]View memory as Copper instructions.\n")
-	_T("  od                    Enable/disable Copper vpos/hpos tracing.\n")
-	_T("  ot                    Copper single step trace.\n")
-	_T("  ob <addr>             Copper breakpoint.\n")
-	_T("  H[H] <cnt>            Show PC history (HH=full CPU info) <cnt> instructions.\n")
-	_T("  C <value>             Search for values like energy or lifes in games.\n")
-	_T("  mmu <fc>              Set current MMU translation function code for all debugging instructions.\n")
-	_T("  mmud                  Dump MMU tables.\n")
-	_T("  U <address>           Translate logical address to physical using current MMU tables.\n")
-	_T("  Cl                    List currently found trainer addresses.\n")
-	_T("  D[idxzs <[max diff]>] Deep trainer. i=new value must be larger, d=smaller,\n")
-	_T("                        x = must be same, z = must be different, s = restart.\n")
-	_T("  W <addr> <values[.x] separated by space> Write into Amiga memory.\n")
-	_T("  W <addr> 'string'     Write into Amiga memory.\n")
-	_T("  Wf <addr> <endaddr> <bytes or string like above>, fill memory.\n")
-	_T("  Wc <addr> <endaddr> <destaddr>, copy memory.\n")
-	_T("  w <num> <address> <length> <R/W/I> <F/C/L/N> [V<value>[.x]] (read/write/opcode) (freeze/mustchange/logonly/nobreak).\n")
-	_T("                        Add/remove memory watchpoints.\n")
-	_T("  wd [<0-1>]            Enable illegal access logger. 1 = enable break.\n")
-	_T("  L <file> <addr> [<n>] Load a block of Amiga memory.\n")
-	_T("  S <file> <addr> <n>   Save a block of Amiga memory.\n")
-	_T("  s \"<string>\"/<values> [<addr>] [<length>]\n")
-	_T("                        Search for string/bytes.\n")
-	_T("  T or Tt               Show exec tasks and their PCs.\n")
-	_T("  Td,Tl,Tr,Tp,Ts,TS,Ti,TO,TM,Tf Show devs, libs, resources, ports, semaphores,\n")
-	_T("                        residents, interrupts, doslist, memorylist, fsres.\n")
-	_T("  b                     Step to previous state capture position.\n")
-	_T("  M<a/b/s> <val>        Enable or disable audio channels, bitplanes or sprites.\n")
-	_T("  sp <addr> [<addr2][<size>] Dump sprite information.\n")
-	_T("  di <mode> [<track>]   Break on disk access. R=DMA read,W=write,RW=both,P=PIO.\n")
-	_T("                        Also enables level 1 disk logging.\n")
-	_T("  did <log level>       Enable disk logging.\n")
-	_T("  dj [<level bitmask>]  Enable joystick/mouse input debugging.\n")
-	_T("  smc [<0-1>]           Enable self-modifying code detector. 1 = enable break.\n")
-	_T("  dm                    Dump current address space map.\n")
-	_T("  v <vpos> [<hpos>] [<lines>]\n")
-	_T("                        Show DMA data (accurate only in cycle-exact mode).\n")
-	_T("                        v [-1 to -4] = enable visual DMA debugger.\n")
-	_T("  vh [<ratio> <lines>]  \"Heat map\"\n")
-	_T("  I <custom event>      Send custom event string\n")
-	_T("  ?<value>              Hex ($ and 0x)/Bin (%)/Dec (!) converter and calculator.\n")
+static const TCHAR *help[] = {
+	_T("          HELP for UAE Debugger\n"),
+	_T("         -----------------------\n\n"),
+	_T("  g [<address>]         Start execution at the current address or <address>.\n"),
+	_T("  c                     Dump state of the CIA, disk drives and custom registers.\n"),
+	_T("  r                     Dump state of the CPU.\n"),
+	_T("  r <reg> <value>       Modify CPU registers (Dx,Ax,USP,ISP,VBR,...).\n"),
+	_T("  rc[d]                 Show CPU instruction or data cache contents.\n"),
+	_T("  m <address> [<lines>] Memory dump starting at <address>.\n"),
+	_T("  a <address>           Assembler.\n"),
+	_T("  d <address> [<lines>] Disassembly starting at <address>.\n"),
+	_T("  t [instructions]      Step one or more instructions.\n"),
+	_T("  tx                    Break when any exception.\n"),
+	_T("  z                     Step through one instruction - useful for JSR, DBRA etc.\n"),
+	_T("  f                     Step forward until PC in RAM (\"boot block finder\").\n"),
+	_T("  f <address> [Nx]      Add/remove breakpoint.\n"),
+	_T("  fa <address> [<start>] [<end>]\n"),
+	_T("                        Find effective address <address>.\n"),
+	_T("  fi                    Step forward until PC points to RTS, RTD or RTE.\n"),
+	_T("  fi <opcode> [<w2>] [<w3>] Step forward until PC points to <opcode>.\n"),
+	_T("  fp \"<name>\"/<addr>    Step forward until process <name> or <addr> is active.\n"),
+	_T("  fl                    List breakpoints.\n"),
+	_T("  fd                    Remove all breakpoints.\n"),
+	_T("  fs <lines to wait> | <vpos> <hpos> Wait n scanlines/position.\n"),
+	_T("  fc <CCKs to wait>     Wait n color clocks.\n"),
+	_T("  fo <num> <reg> <oper> <val> [<mask> <val2>] Conditional register breakpoint [Nx] [Hx].\n"),
+	_T("   reg=Dx,Ax,PC,USP,ISP,VBR,SR. oper:!=,==,<,>,>=,<=,-,!- (-=val to val2 range).\n"),
+	_T("  f <addr1> <addr2>     Step forward until <addr1> <= PC <= <addr2>.\n"),
+	_T("  e[x]                  Dump contents of all custom registers, ea = AGA colors.\n"),
+	_T("  i [<addr>]            Dump contents of interrupt and trap vectors.\n"),
+	_T("  il [<mask>]           Exception breakpoint.\n"),
+	_T("  o <0-2|addr> [<lines>]View memory as Copper instructions.\n"),
+	_T("  od                    Enable/disable Copper vpos/hpos tracing.\n"),
+	_T("  ot                    Copper single step trace.\n"),
+	_T("  ob <addr>             Copper breakpoint.\n"),
+	_T("  H[H] <cnt>            Show PC history (HH=full CPU info) <cnt> instructions.\n"),
+	_T("  C <value>             Search for values like energy or lifes in games.\n"),
+	_T("  mmu <fc>              Set current MMU translation function code for all debugging instructions.\n"),
+	_T("  mmud                  Dump MMU tables.\n"),
+	_T("  U <address>           Translate logical address to physical using current MMU tables.\n"),
+	_T("  Cl                    List currently found trainer addresses.\n"),
+	_T("  D[idxzs <[max diff]>] Deep trainer. i=new value must be larger, d=smaller,\n"),
+	_T("                        x = must be same, z = must be different, s = restart.\n"),
+	_T("  W <addr> <values[.x] separated by space> Write into Amiga memory.\n"),
+	_T("  W <addr> 'string'     Write into Amiga memory.\n"),
+	_T("  Wf <addr> <endaddr> <bytes or string like above>, fill memory.\n"),
+	_T("  Wc <addr> <endaddr> <destaddr>, copy memory.\n"),
+	_T("  w <num> <address> <length> <R/W/I> <F/C/L/N> [V<value>[.x]] (read/write/opcode) (freeze/mustchange/logonly/nobreak).\n"),
+	_T("                        Add/remove memory watchpoints.\n"),
+	_T("  wd [<0-1>]            Enable illegal access logger. 1 = enable break.\n"),
+	_T("  L <file> <addr> [<n>] Load a block of Amiga memory.\n"),
+	_T("  S <file> <addr> <n>   Save a block of Amiga memory.\n"),
+	_T("  s \"<string>\"/<values> [<addr>] [<length>]\n"),
+	_T("                        Search for string/bytes.\n"),
+	_T("  T or Tt               Show exec tasks and their PCs.\n"),
+	_T("  Td,Tl,Tr,Tp,Ts,TS,Ti,TO,TM,Tf Show devs, libs, resources, ports, semaphores,\n"),
+	_T("                        residents, interrupts, doslist, memorylist, fsres.\n"),
+	_T("  b                     Step to previous state capture position.\n"),
+	_T("  M<a/b/s> <val>        Enable or disable audio channels, bitplanes or sprites.\n"),
+	_T("  sp <addr> [<addr2][<size>] Dump sprite information.\n"),
+	_T("  di <mode> [<track>]   Break on disk access. R=DMA read,W=write,RW=both,P=PIO.\n"),
+	_T("                        Also enables level 1 disk logging.\n"),
+	_T("  did <log level>       Enable disk logging.\n"),
+	_T("  dj [<level bitmask>]  Enable joystick/mouse input debugging.\n"),
+	_T("  smc [<0-1>]           Enable self-modifying code detector. 1 = enable break.\n"),
+	_T("  dm                    Dump current address space map.\n"),
+	_T("  v <vpos> [<hpos>] [<lines>]\n"),
+	_T("                        Show DMA data (accurate only in cycle-exact mode).\n"),
+	_T("                        v [-1 to -4] = enable visual DMA debugger.\n"),
+	_T("  vh [<ratio> <lines>]  \"Heat map\"\n"),
+	_T("  I <custom event>      Send custom event string\n"),
+	_T("  ?<value>              Hex ($ and 0x)/Bin (%)/Dec (!) converter and calculator.\n"),
 #ifdef _WIN32
-	_T("  x                     Close debugger.\n")
-	_T("  xx                    Switch between console and GUI debugger.\n")
-	_T("  mg <address>          Memory dump starting at <address> in GUI.\n")
-	_T("  dg <address>          Disassembly starting at <address> in GUI.\n")
+	_T("  x                     Close debugger.\n"),
+	_T("  xx                    Switch between console and GUI debugger.\n"),
+	_T("  mg <address>          Memory dump starting at <address> in GUI.\n"),
+	_T("  dg <address>          Disassembly starting at <address> in GUI.\n"),
 #endif
-	_T("  q                     Quit the emulator. You don't want to use this command.\n\n")
+	_T("  q                     Quit the emulator. You don't want to use this command.\n\n"),
+	_T("")
 };
 
 void debug_help (void)
 {
-	console_out (help);
+	// We need to output this line by line to get correct formatting
+	for (int i = 0; _tcslen(help[i]) > 0; ++i) {
+		console_out (help[i]);
+	}
 }
 
 

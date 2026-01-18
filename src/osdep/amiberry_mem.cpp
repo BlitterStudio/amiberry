@@ -724,7 +724,7 @@ STATIC_INLINE uae_key_t find_shmkey (uae_key_t key)
 bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 {
 	auto got = false;
-	bool readonly = false;
+	bool readonly = false, maprom = false;
 	bool directsupport = true;
 	uaecptr start;
 	auto size = ab->reserved_size;
@@ -763,18 +763,21 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 		got = true;
 		barrier = true;
 		readonly = true;
+		maprom = true;
 	}
 	else if (!_tcscmp(ab->label, _T("rom_a8")))
 	{
 		start = 0xa80000;
 		got = true;
 		readonly = true;
+		maprom = true;
 	}
 	else if (!_tcscmp(ab->label, _T("rom_e0")))
 	{
 		start = 0xe00000;
 		got = true;
 		readonly = true;
+		maprom = true;
 	}
 	else if (!_tcscmp(ab->label, _T("rom_f0")))
 	{
@@ -946,7 +949,6 @@ bool uae_mman_info(addrbank* ab, struct uae_mman_data* md)
 	}
 	if (got)
 	{
-		bool maprom = false;
 		md->start = start;
 		md->size = size;
 		md->readonly = readonly;
@@ -1099,7 +1101,6 @@ void protect_roms(bool protect)
 // allowing JIT direct to think it is directly accessible VRAM.
 void mman_set_barriers(bool disable)
 {
-#ifndef AMIBERRY
 #ifdef JIT
 	addrbank* abprev = NULL;
 	int maxbank = currprefs.address_space_24 ? MEMORY_BANKS_24 : MEMORY_BANKS;
@@ -1144,7 +1145,6 @@ void mman_set_barriers(bool disable)
 			}
 		}
 	}
-#endif
 #endif
 }
 

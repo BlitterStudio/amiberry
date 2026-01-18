@@ -337,10 +337,7 @@ static int hdf_seek(const struct hardfiledata *hfd, uae_u64 offset)
 		abort();
 	}
 	if (hfd->physsize) {
-		if (offset >= hfd->physsize - hfd->virtual_size)
-		{
-			if (hfd->virtual_rdb)
-				return -1;
+		if (offset >= hfd->physsize) {
 			write_log(_T("hd: tried to seek out of bounds! (%I64X >= %I64X - %I64X)\n"), offset, hfd->physsize, hfd->virtual_size);
 			gui_message(_T("hd: tried to seek out of bounds!"));
 			abort();
@@ -438,8 +435,9 @@ static int hdf_read_2(struct hardfiledata *hfd, void *buffer, uae_u64 offset, in
 		return len;
 	}
 	hfd->cache_offset = offset;
-	if (offset + CACHE_SIZE > hfd->offset + (hfd->physsize - hfd->virtual_size))
-		hfd->cache_offset = hfd->offset + (hfd->physsize - hfd->virtual_size) - CACHE_SIZE;
+	if (offset + CACHE_SIZE > hfd->offset + hfd->physsize) {
+		hfd->cache_offset = hfd->offset + hfd->physsize - CACHE_SIZE;
+	}
 	if (hdf_seek(hfd, hfd->cache_offset))
 		return 0;
 	poscheck(hfd, CACHE_SIZE);

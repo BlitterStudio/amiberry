@@ -1,14 +1,28 @@
 <div align="center">
-  <img src="https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1" alt="Amiberry Logo" width="400"/>
 
-  # Amiberry
-  **Optimized Amiga Emulator for macOS and Linux**
+<img src="https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1" alt="Amiberry Logo" width="400"/>
 
-  [![C/C++ CI](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml)
-  [![Development Builds](https://img.shields.io/badge/Development%20Builds-nightly.link-orange)](https://nightly.link/BlitterStudio/amiberry/workflows/c-cpp.yml/master)
-  [![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/wWndKTGpGV)
-  [![Mastodon](https://img.shields.io/badge/Mastodon-Follow-6364FF?logo=mastodon&logoColor=white)](https://mastodon.social/@midwan)
-  [![Ko-Fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/X8X4FHDY4)
+<h1>Amiberry</h1>
+<strong>Optimized Amiga Emulator for macOS and Linux</strong>
+
+<p>
+  <a href="https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml">
+    <img src="https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml/badge.svg" alt="C/C++ CI"/>
+  </a>
+  <a href="https://nightly.link/BlitterStudio/amiberry/workflows/c-cpp.yml/master">
+    <img src="https://img.shields.io/badge/Development%20Builds-nightly.link-orange" alt="Development Builds"/>
+  </a>
+  <a href="https://discord.gg/wWndKTGpGV">
+    <img src="https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white" alt="Discord"/>
+  </a>
+  <a href="https://mastodon.social/@midwan">
+    <img src="https://img.shields.io/badge/Mastodon-Follow-6364FF?logo=mastodon&logoColor=white" alt="Mastodon"/>
+  </a>
+  <a href="https://ko-fi.com/X8X4FHDY4">
+    <img src="https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white" alt="Ko-Fi"/>
+  </a>
+</p>
+
 </div>
 
 ---
@@ -98,8 +112,10 @@ See the [LICENSE](LICENSE) file for details.
 ---
 
 <div align="center">
-  <sub>Supported by</sub><br/>
-  <a href="https://jb.gg/OpenSourceSupport">
-    <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" alt="JetBrains" width="100"/>
-  </a>
+
+<p><sub>Supported by</sub></p>
+<a href="https://jb.gg/OpenSourceSupport">
+  <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jetbrains.svg" alt="JetBrains" width="100"/>
+</a>
+
 </div>

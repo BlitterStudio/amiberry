@@ -60,6 +60,8 @@
 #define CRT_FRAME_IMPLEMENTATION
 #include "crt_frame.h"
 
+#include "external_shader.h"
+
 #endif
 
 #ifdef WITH_MIDIEMU
@@ -76,18 +78,37 @@ SDL_Surface* amiga_surface = nullptr;
 
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
-crtemu_t* crtemu_tv = nullptr;
+crtemu_t* crtemu_shader = nullptr;
+ExternalShader* external_shader = nullptr;
+static std::string external_shader_name;
 
 bool set_opengl_attributes();
 bool init_opengl_context(SDL_Window* window);
 static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src, const SDL_Rect& crop, SDL_Rect& out_buffer_rect);
+
+// Check if shader name refers to an external .glsl file
+static bool is_external_shader(const char* shader)
+{
+	if (!shader) return false;
+	const char* ext = strrchr(shader, '.');
+	return ext && !strcasecmp(ext, ".glsl");
+}
+
 static int get_crtemu_type(const char* shader)
 {
 	if (!shader) return CRTEMU_TYPE_TV;
-	// Simple case handling without extra deps
+	
+	// Check if it's an external shader file
+	if (is_external_shader(shader)) {
+		external_shader_name = shader;
+		return CRTEMU_TYPE_NONE; // Use NONE to skip crtemu initialization
+	}
+	
+	// Built-in shaders
 	if (!std::strcmp(shader, "tv") || !std::strcmp(shader, "TV"))       return CRTEMU_TYPE_TV;
 	if (!std::strcmp(shader, "pc") || !std::strcmp(shader, "PC"))       return CRTEMU_TYPE_PC;
 	if (!std::strcmp(shader, "lite") || !std::strcmp(shader, "LITE"))   return CRTEMU_TYPE_LITE;
+	if (!std::strcmp(shader, "1084"))                                   return CRTEMU_TYPE_1084;
 	if (!std::strcmp(shader, "none") || !std::strcmp(shader, "NONE"))   return CRTEMU_TYPE_NONE;
 	return CRTEMU_TYPE_TV;
 }
@@ -198,6 +219,11 @@ static bool ar_is_exact(const SDL_DisplayMode* mode, const int width, const int 
 // 2: Integer Scaling (this uses Nearest Neighbor)
 void set_scaling_option(const int monid, const uae_prefs* p, const int width, const int height)
 {
+	// Skip scaling setup if headless
+	if (currprefs.headless) {
+		return;
+	}
+
 	auto scale_quality = "nearest";
 	SDL_bool integer_scale = SDL_FALSE;
 
@@ -223,10 +249,6 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 	}
 
 #ifdef USE_OPENGL
-	const GLfloat filter = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-	// NOTE: OpenGL integer scaling would need to be handled in the shader or viewport calculations.
 	glBindTexture(GL_TEXTURE_2D, 0);
 #else
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scale_quality);
@@ -247,31 +269,137 @@ static float SDL2_getrefreshrate(const int monid)
 
 #ifdef USE_OPENGL
 static GLuint osd_texture = 0;
+static GLuint osd_program = 0;
+static GLint osd_tex_loc = -1;
+static GLuint osd_vbo = 0;
+static GLuint vbo_uploaded = 0;
+
+static const char* osd_vs_source =
+	"#version 120\n"
+	"attribute vec4 pos;\n"
+	"varying vec2 uv;\n"
+	"void main() {\n"
+	"  gl_Position = vec4(pos.xy, 0.0, 1.0);\n"
+	"  uv = pos.zw;\n"
+	"}\n";
+
+static const char* osd_fs_source =
+	"#version 120\n"
+	"varying vec2 uv;\n"
+	"uniform sampler2D tex0;\n"
+	"void main() {\n"
+	"  gl_FragColor = texture2D(tex0, uv);\n"
+	"}\n";
+
+static bool init_osd_shader()
+{
+	if (osd_program != 0 && glIsProgram(osd_program)) return true;
+
+	osd_program = 0;
+	osd_vbo = 0;
+
+	GLuint vsh = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vsh, 1, &osd_vs_source, nullptr);
+	glCompileShader(vsh);
+
+	GLint compiled;
+	glGetShaderiv(vsh, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
+		char infoLog[512];
+		glGetShaderInfoLog(vsh, 512, nullptr, infoLog);
+		write_log("OSD Vertex Shader compile error: %s\n", infoLog);
+		return false;
+	}
+
+	GLuint fsh = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fsh, 1, &osd_fs_source, nullptr);
+	glCompileShader(fsh);
+	glGetShaderiv(fsh, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
+		char infoLog[512];
+		glGetShaderInfoLog(fsh, 512, nullptr, infoLog);
+		write_log("OSD Fragment Shader compile error: %s\n", infoLog);
+		glDeleteShader(vsh);
+		return false;
+	}
+
+	osd_program = glCreateProgram();
+	glAttachShader(osd_program, vsh);
+	glAttachShader(osd_program, fsh);
+	glBindAttribLocation(osd_program, 0, "pos");
+	glLinkProgram(osd_program);
+
+	GLint linked;
+	glGetProgramiv(osd_program, GL_LINK_STATUS, &linked);
+	if (!linked) {
+		char infoLog[512];
+		glGetProgramInfoLog(osd_program, 512, nullptr, infoLog);
+		write_log("OSD Shader link error: %s\n", infoLog);
+		glDeleteShader(vsh);
+		glDeleteShader(fsh);
+		glDeleteProgram(osd_program);
+		osd_program = 0;
+		return false;
+	}
+
+	glDeleteShader(vsh);
+	glDeleteShader(fsh);
+
+	osd_tex_loc = glGetUniformLocation(osd_program, "tex0");
+
+	glGenBuffers(1, &osd_vbo);
+
+	return true;
+}
 #endif
 static bool SDL2_alloctexture(int monid, int w, int h)
 {
+	// Skip texture allocation if headless
+	if (currprefs.headless) {
+		return true;
+	}
+
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
 	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
-	if (crtemu_tv) {
-		destroy_crtemu();
-		osd_texture = 0;
+	
+	// Clean up existing shaders
+	destroy_shaders();
+	
+	const auto mon = &AMonitors[monid];
+	const char* shader_name;
+	if (mon->screen_is_picasso)
+		shader_name = amiberry_options.shader_rtg;
+	else
+		shader_name = amiberry_options.shader;
+	
+	// Ensure GL context is current before creating shaders
+	if (gl_context && mon->amiga_window) {
+		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
 	}
-	if (crtemu_tv == nullptr) {
-		const auto mon = &AMonitors[monid];
-		const char* shader_name;
-		if (mon->screen_is_picasso)
-			shader_name = amiberry_options.shader_rtg;
-		else
-			shader_name = amiberry_options.shader;
+
+	// Check if we should use an external shader
+	if (is_external_shader(shader_name)) {
+		write_log("Loading external shader: %s\n", shader_name);
+		external_shader = create_external_shader(shader_name);
 		
-		const int crt_type = get_crtemu_type(shader_name);
-		crtemu_tv = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
+		if (!external_shader) {
+			write_log("Failed to load external shader, falling back to built-in shaders\n");
+			// Fall back to built-in shaders
+			shader_name = "none";
+		} else {
+			write_log("External shader loaded successfully\n");
+			return true;
+		}
 	}
-	if (crtemu_tv)
-		crtemu_frame(crtemu_tv, (CRTEMU_U32*)amiga_surface->pixels, w, h);
-	return crtemu_tv != nullptr;
+	
+	// Use built-in crtemu shaders
+	if (crtemu_shader == nullptr) {
+		const int crt_type = get_crtemu_type(shader_name);
+		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
+	}
+	return crtemu_shader != nullptr || external_shader != nullptr;
 #else
 	if (w < 0 || h < 0)
 	{
@@ -302,6 +430,11 @@ static void update_leds(const int monid)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 
+	// Skip LED rendering if headless
+	if (currprefs.headless) {
+		return;
+	}
+
 #ifndef USE_OPENGL
 	if (!mon->amiga_renderer)
 		return;
@@ -326,7 +459,9 @@ static void update_leds(const int monid)
 	const amigadisplay* ad = &adisplays[monid];
 	const int m = statusline_get_multiplier(monid) / 100;
 	const int led_height = TD_TOTAL_HEIGHT * m;
-	const int led_width = ad->picasso_on ? mon->currentmode.native_width : crop_rect.w;
+	int led_width = ad->picasso_on ? mon->currentmode.native_width : 640;
+	if (led_width <= 0)
+		led_width = 640;
 
 	// (Re)allocate OSD surface and texture if dimensions changed
 	if (!mon->statusline_surface || mon->statusline_surface->w != led_width || mon->statusline_surface->h != led_height) {
@@ -374,38 +509,44 @@ bool vkbd_allowed(const int monid)
 
 static bool SDL2_renderframe(const int monid, int mode, int immediate)
 {
-	const AmigaMonitor* mon = &AMonitors[monid];
+	// Skip all rendering if in headless mode
+	if (currprefs.headless) {
+		return amiga_surface != nullptr;
+	}
+
 	const amigadisplay* ad = &adisplays[monid];
+
 	// Unified OSD update: handle both native (CHIPSET) and RTG modes
 	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
 		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
 	{
 		update_leds(monid);
 	}
+
 #ifdef USE_OPENGL
 	return amiga_surface != nullptr;
 #else
 	if (amiga_texture && amiga_surface)
 	{
-		AmigaMonitor* mutable_mon = &AMonitors[monid];
+		AmigaMonitor* mon = &AMonitors[monid];
 
 		// Ensure the draw color is black for clearing
 		SDL_SetRenderDrawColor(mon->amiga_renderer, 0, 0, 0, 255);
 		SDL_RenderClear(mon->amiga_renderer);
 
 		// If a full render is needed or there are no specific dirty rects, update the whole texture.
-		if (mutable_mon->full_render_needed || mutable_mon->dirty_rects.empty()) {
+		if (mon->full_render_needed || mon->dirty_rects.empty()) {
 			SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
 		} else {
 			// Otherwise, update only the collected dirty rectangles.
-			for (const auto& rect : mutable_mon->dirty_rects) {
+			for (const auto& rect : mon->dirty_rects) {
 				SDL_UpdateTexture(amiga_texture, &rect, static_cast<const uae_u8*>(amiga_surface->pixels) + rect.y * amiga_surface->pitch + rect.x * amiga_surface->format->BytesPerPixel, amiga_surface->pitch);
 			}
 		}
 
 		// Clear the dirty rects list for the next frame.
-		mutable_mon->dirty_rects.clear();
-		mutable_mon->full_render_needed = false;
+		mon->dirty_rects.clear();
+		mon->full_render_needed = false;
 
 		const SDL_Rect* p_crop = &crop_rect;
 		const SDL_Rect* p_quad = &render_quad;
@@ -511,34 +652,25 @@ static void wait_frame_timing()
 		
 		Sint64 ticks_left = next_frame_tick - current_tick;
 		
-		// Performance Optimization: Use SDL_Delay for the majority of the wait time
-		// to reduce CPU wakeups and context switches.
-		if (ticks_left > (Sint64)(freq / 200)) // > 5ms
+		// Sleep wait (reduced to 1ms threshold for better precision on non-Windows systems)
+		while (ticks_left > (Sint64)(freq / 1000)) // > 1ms
 		{
-			Uint32 delay_ms = (Uint32)((ticks_left - (freq / 500)) * 1000 / freq);
-			if (delay_ms > 0)
-				SDL_Delay(delay_ms);
-			current_tick = SDL_GetPerformanceCounter();
-			ticks_left = next_frame_tick - current_tick;
-		}
-
-		// Fine-grained Sleep wait (0.5ms intervals, up to 2ms threshold)
-		while (ticks_left > (Sint64)(freq / 500)) // > 2ms
-		{
-#ifndef _WIN32
 			struct timespec req = { 0, 500000 };
 			nanosleep(&req, nullptr);
-#else
-			SDL_Delay(1);
-#endif
 			current_tick = SDL_GetPerformanceCounter();
 			ticks_left = next_frame_tick - current_tick;
 		}
 
-		// Spin wait
+		// Spin wait with CPU relaxation
 		while (SDL_GetPerformanceCounter() < next_frame_tick)
 		{
-			// busy wait
+#if defined(__x86_64__) || defined(__i386__)
+			__builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+			asm volatile("yield");
+#elif defined(__riscv)
+			asm volatile("pause");
+#endif
 		}
 	}
 	
@@ -548,8 +680,16 @@ static void wait_frame_timing()
 
 static void SDL2_showframe(const int monid)
 {
+	// Skip presentation if headless mode
+	if (currprefs.headless) {
+		wait_frame_timing();
+		return;
+	}
+
 	const AmigaMonitor* mon = &AMonitors[monid];
 	SDL_RenderPresent(mon->amiga_renderer);
+	if (waitvblankthread_mode <= 0)
+		wait_vblank_timestamp = read_processor_time();
 	wait_frame_timing();
 }
 
@@ -647,7 +787,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 
 	found = -1;
 	found2 = -1;
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->monitorid[0] == '\\')
 			continue;
@@ -667,7 +807,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 		return found;
 
 	found = -1;
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->adapterid[0] == '\\')
 			continue;
@@ -687,7 +827,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 	if (found >= 0)
 		return found;
 
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->adaptername[0] == '\\')
 			continue;
@@ -707,7 +847,7 @@ static int target_get_display2(const TCHAR* name, const int mode)
 	if (found >= 0)
 		return found;
 
-	for (int i = 0; Displays[i].monitorname; i++) {
+	for (int i = 0; i < MAX_DISPLAYS && Displays[i].monitorname; i++) {
 		const struct MultiDisplay* md = &Displays[i];
 		if (mode == 1 && md->monitorname[0] == '\\')
 			continue;
@@ -761,53 +901,22 @@ int target_get_display(const TCHAR* name)
 
 static int target_get_display_scanline2(int displayindex)
 {
-	//if (pD3DKMTGetScanLine) {
-	//	D3DKMT_GETSCANLINE sl = { 0 };
-	//	struct MultiDisplay* md = displayindex < 0 ? getdisplay(&currprefs, 0) : &Displays[displayindex];
-	//	if (!md->HasAdapterData)
-	//		return -11;
-	//	sl.VidPnSourceId = md->VidPnSourceId;
-	//	sl.hAdapter = md->AdapterHandle;
-	//	NTSTATUS status = pD3DKMTGetScanLine(&sl);
-	//	if (status == STATUS_SUCCESS) {
-	//		if (sl.InVerticalBlank)
-	//			return -1;
-	//		return sl.ScanLine;
-	//	}
-	//	else {
-	//		if ((int)status > 0)
-	//			return -(int)status;
-	//		return status;
-	//	}
-	//	return -12;
-	//}
-	//else if (D3D_getscanline) {
-	//	int scanline;
-	//	bool invblank;
-	//	if (D3D_getscanline(&scanline, &invblank)) {
-	//		if (invblank)
-	//			return -1;
-	//		return scanline;
-	//	}
-	//	return -14;
-	//}
-	return -13;
+	float diff = static_cast<float>(read_processor_time() - wait_vblank_timestamp);
+	if (diff < 0)
+		return -1;
+	int sl = static_cast<int>(diff * (vsync_activeheight + (vsync_totalheight - vsync_activeheight) / 10) * vsync_vblank / syncbase);
+	if (sl < 0)
+		sl = -1;
+	return sl;
 }
 
 extern uae_s64 spincount;
-bool calculated_scanline = true;
+bool calculated_scanline = false;
 
 int target_get_display_scanline(const int displayindex)
 {
 	if (!scanlinecalibrating && calculated_scanline) {
-		static int lastline;
-		float diff = static_cast<float>(read_processor_time() - wait_vblank_timestamp);
-		if (diff < 0)
-			return -1;
-		int sl = static_cast<int>(diff * (vsync_activeheight + (vsync_totalheight - vsync_activeheight) / 10) * vsync_vblank / syncbase);
-		if (sl < 0)
-			sl = -1;
-		return sl;
+		return target_get_display_scanline2(displayindex);
 	} else {
 		static uae_s64 lastrdtsc;
 		static int lastvpos;
@@ -816,11 +925,11 @@ int target_get_display_scanline(const int displayindex)
 			lastvpos = target_get_display_scanline2(displayindex);
 			return lastvpos;
 		}
-		const uae_s64 v = read_processor_time();
+		const uae_s64 v = read_processor_time_rdtsc();
 		if (lastrdtsc > v)
 			return lastvpos;
 		lastvpos = target_get_display_scanline2(displayindex);
-		lastrdtsc = read_processor_time() + spincount * 4;
+		lastrdtsc = read_processor_time_rdtsc() + spincount * 4;
 		return lastvpos;
 	}
 }
@@ -829,31 +938,23 @@ static bool get_display_vblank_params(int displayindex, int* activeheightp, int*
 {
 	bool ret = false;
 	SDL_DisplayMode dm;
-	SDL_Rect usable_bounds;
-	SDL_Rect bounds;
 
 	if (SDL_GetDesktopDisplayMode(displayindex, &dm) != 0)
 	{
 		write_log("SDL_GetDesktopDisplayMode failed: %s\n", SDL_GetError());
 		return ret;
 	}
-	if (SDL_GetDisplayUsableBounds(displayindex, &usable_bounds) != 0)
-	{
-		write_log("SDL_GetDisplayUsableBounds failed: %s\n", SDL_GetError());
-		return ret;
-	}
-	if (SDL_GetDisplayBounds(displayindex, &bounds) != 0)
-	{
-		write_log("SDL_GetDisplayBounds failed: %s\n", SDL_GetError());
-		return ret;
-	}
+
+	int active = dm.h;
+	int total = active * 1125 / 1080; // Standard 1080p timing heuristic
 
 	if (activeheightp)
-		*activeheightp = usable_bounds.h;
+		*activeheightp = active;
 	if (totalheightp)
-		*totalheightp = bounds.h;
+		*totalheightp = total;
 	const auto vblank = static_cast<float>(dm.refresh_rate);
-	const auto hblank = static_cast<float>(31000); // faking hblank, since SDL2 doesn't provide a way to get the real one
+	// standard horizontal frequency is ~31.4 kHz for 60Hz 1080p
+	const auto hblank = static_cast<float>(vblank * total);
 	if (vblankp)
 		*vblankp = vblank;
 	if (hblankp)
@@ -1354,6 +1455,11 @@ int gfx_adjust_screenmode(const MultiDisplay *md, int *pwidth, int *pheight)
 
 bool render_screen(const int monid, const int mode, const bool immediate)
 {
+	// Skip if headless mode
+	if (currprefs.headless) {
+		return true;
+	}
+
 	struct AmigaMonitor* mon = &AMonitors[monid];
 	const struct amigadisplay* ad = &adisplays[monid];
 	int cnt;
@@ -1403,46 +1509,343 @@ float target_adjust_vblank_hz(const int monid, float hz)
 	return hz;
 }
 
+#ifdef USE_OPENGL
+// Render using external shader (single-pass)
+static void render_with_external_shader(ExternalShader* shader, const int monid, 
+	const uae_u8* pixels, int width, int height, int pitch, int viewport_width, int viewport_height)
+{
+	if (!shader || !shader->is_valid()) {
+		write_log("render_with_external_shader: shader is null or invalid\n");
+		return;
+	}
+	
+	if (!pixels) {
+		write_log("render_with_external_shader: pixels is NULL!\n");
+		return;
+	}
+	
+	// Clear any existing GL errors
+	(void)glGetError();
+	
+	if (!shader->is_valid() || !glIsProgram(shader->get_program())) {
+		write_log("render_with_external_shader: shader program is invalid or lost. Attempting to reload...\n");
+		// We can't easily reload here without the filepath, but we can at least detect it.
+		// In a real scenario, we should probably signal a re-init.
+		return;
+	}
+	
+	GLuint texture = shader->get_input_texture();
+	GLuint vbo = shader->get_input_vbo();
+	static int frame_count = 0;
+	
+	// Verify resources are still valid for this context
+	if (texture != 0 && !glIsTexture(texture)) {
+		write_log("render_with_external_shader: texture lost, resetting\n");
+		texture = 0;
+		shader->set_input_texture(0);
+	}
+	if (vbo != 0 && !glIsBuffer(vbo)) {
+		write_log("render_with_external_shader: VBO lost, resetting\n");
+		vbo = 0;
+		shader->set_input_vbo(0);
+	}
+	
+	// Create texture if needed
+	if (texture == 0) {
+		glGenTextures(1, &texture);
+		if (texture == 0) {
+			write_log("ERROR: Failed to create texture!\n");
+			return;
+		}
+		shader->set_input_texture(texture);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
+	
+	// Create VBO if needed
+	if (vbo == 0) {
+		glGenBuffers(1, &vbo);
+		if (vbo == 0) {
+			write_log("ERROR: Failed to create VBO!\n");
+			return;
+		}
+		shader->set_input_vbo(vbo);
+		// Bind the VBO immediately after creation
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	}
+	
+	// Ensure we're rendering to the default framebuffer (screen)
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	
+	// Set up GL state for 2D rendering
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_BLEND); // Disable blending by default for performance and to avoid issues with zero alpha
+	glDisable(GL_SCISSOR_TEST);
+
+	// Upload texture data
+	// amiga_surface uses SDL_PIXELFORMAT_ABGR8888
+	// On little-endian, ABGR in memory = RGBA when read as bytes
+	// crtemu uses GL_RGBA + GL_UNSIGNED_BYTE, so we do the same
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
+
+	static int last_w = 0, last_h = 0;
+	static GLuint last_texture = 0;
+	if (width != last_w || height != last_h || texture != last_texture) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		last_w = width;
+		last_h = height;
+		last_texture = texture;
+	} else {
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	}
+	
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Reset for other textures
+	
+	// Use the shader
+	shader->use();
+	
+	// Set uniforms
+	shader->set_texture_size(static_cast<float>(width), static_cast<float>(height));
+	shader->set_input_size(static_cast<float>(width), static_cast<float>(height));
+	shader->set_output_size(static_cast<float>(viewport_width), static_cast<float>(viewport_height));
+	shader->set_frame_count(frame_count++);
+	
+	// Set MVP matrix (orthographic projection for fullscreen quad)
+	float mvp[16] = {
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	shader->set_mvp_matrix(mvp);
+	
+	// Bind texture
+	shader->bind_texture(texture, 0);
+	
+	// Set up vertex data for fullscreen quad
+	// The shader expects: attribute vec4 VertexCoord (position as vec2 in xy)
+	//                     attribute vec2 TexCoord
+	// We'll use interleaved format: x, y, u, v
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	if (vbo_uploaded == 0) {
+		float vertices[] = {
+			-1.0f, -1.0f, 0.0f, 1.0f,  // Bottom-left
+			 1.0f, -1.0f, 1.0f, 1.0f,  // Bottom-right
+			 1.0f,  1.0f, 1.0f, 0.0f,  // Top-right
+			-1.0f,  1.0f, 0.0f, 0.0f   // Top-left
+		};
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		vbo_uploaded = vbo;
+	}
+	
+	// Set up vertex attributes to match shader bindings
+	// Explicitly disable any previously enabled arrays to avoid state leakage
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+
+	// Attribute 0: VertexCoord (vec4, but we only use xy for position)
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+	
+	// Attribute 1: Color (vec4) - Set to white by default
+	// Many RetroArch shaders multiply the sampled color by this attribute.
+	glVertexAttrib4f(1, 1.0f, 1.0f, 1.0f, 1.0f);
+
+	// Attribute 2: TexCoord (vec2)
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	
+	// Draw fullscreen quad
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	
+	// Cleanup
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+#endif
+
+#ifdef USE_OPENGL
+static void render_osd(const int monid, int drawableWidth, int drawableHeight)
+{
+	const AmigaMonitor* mon = &AMonitors[monid];
+	const amigadisplay* ad = &adisplays[monid];
+	static int last_osd_w = 0;
+	static int last_osd_h = 0;
+
+	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
+		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
+	{
+		if (mon->statusline_surface) {
+			if (osd_texture != 0 && !glIsTexture(osd_texture)) {
+				osd_texture = 0;
+			}
+			if (osd_texture == 0) {
+				glGenTextures(1, &osd_texture);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, osd_texture);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				last_osd_w = 0;
+				last_osd_h = 0;
+			}
+
+			if (!init_osd_shader()) return;
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, osd_texture);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, mon->statusline_surface->pitch / 4);
+			if (mon->statusline_surface->w != last_osd_w || mon->statusline_surface->h != last_osd_h) {
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mon->statusline_surface->w, mon->statusline_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+				last_osd_w = mon->statusline_surface->w;
+				last_osd_h = mon->statusline_surface->h;
+			}
+			else {
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mon->statusline_surface->w, mon->statusline_surface->h, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+			}
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glDisable(GL_SCISSOR_TEST);
+			glViewport(0, 0, drawableWidth, drawableHeight);
+
+			glUseProgram(osd_program);
+			if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
+
+			// Ensure only attribute 0 is enabled for OSD
+			glEnableVertexAttribArray(0);
+			glDisableVertexAttribArray(1);
+			glDisableVertexAttribArray(2);
+
+			float osd_w = (float)mon->statusline_surface->w;
+			float osd_h = (float)mon->statusline_surface->h;
+			float win_w = (float)drawableWidth;
+			float win_h = (float)drawableHeight;
+
+			// Force full width (stretch to fit window)
+			float scale_x = win_w / osd_w;
+
+			// Scale height to match width scaling (preserve aspect of LEDs)
+			float scaled_h = osd_h * scale_x;
+
+			// Convert to NDC dimensions
+			float ndc_h = (scaled_h / win_h) * 2.0f;
+
+			float x0 = -1.0f;
+			float x1 = 1.0f;
+			float y0 = -1.0f;
+			float y1 = y0 + ndc_h;
+
+			GLfloat vertices[] = {
+				x0, y0, 0.0f, 1.0f,
+				x1, y0, 1.0f, 1.0f,
+				x1, y1, 1.0f, 0.0f,
+				x0, y1, 0.0f, 0.0f,
+			};
+
+			glBindBuffer(GL_ARRAY_BUFFER, osd_vbo);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+			glDisableVertexAttribArray(0);
+			glDisableVertexAttribArray(1);
+			glDisableVertexAttribArray(2);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glDisable(GL_BLEND);
+			glUseProgram(0);
+		}
+	}
+}
+#endif
+
+static float calculate_desired_aspect(const AmigaMonitor* mon)
+{
+	if (mon->screen_is_picasso && amiga_surface) {
+		return (float)amiga_surface->w / (float)amiga_surface->h;
+	}
+
+	if (currprefs.gfx_correct_aspect) {
+		return 4.0f / 3.0f;
+	}
+
+	if (amiga_surface) {
+		return (float)amiga_surface->w / (float)amiga_surface->h;
+	}
+
+	return 4.0f / 3.0f;
+}
+
 void show_screen(const int monid, int mode)
 {
-	AmigaMonitor* mon = &AMonitors[monid];
-	const amigadisplay* ad = &adisplays[monid];
-	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
+	// Skip all rendering if headless mode
+	if (currprefs.headless) {
+		wait_frame_timing();
+		return;
+	}
 
-	//if (mode == 2 || mode == 3 || mode == 4) {
-	//	if ((mon->currentmode.flags & DM_D3D) && D3D_showframe_special && ap->gfx_strobo) {
-	//		if (mode == 4) {
-	//			// erase + render
-	//			D3D_showframe_special(0, 2);
-	//			D3D_showframe_special(0, 1);
-	//		} else {
-	//			// erase or render
-	//			D3D_showframe_special(0, mode == 3 ? 2 : 1);
-	//		}
-	//	}
-	//	return;
-	//}
+	AmigaMonitor* mon = &AMonitors[monid];
+	if (!mon->amiga_window) {
+		return;
+	}
+
 	if (mode >= 0 && !mon->render_ok) {
 		return;
 	}
 #ifdef USE_OPENGL
-	auto time = SDL_GetTicks();
+	// Safety check: if neither crtemu_shader nor external_shader is available, skip rendering
+	if (!crtemu_shader && !external_shader) {
+		wait_frame_timing();
+		return;
+	}
+
+	const auto time = SDL_GetTicks();
+
+	// Ensure we are not capping FPS unnecessarily if VSync is not explicitly requested.
+	// Some drivers might force VSync in full-window mode.
+	static bool swap_interval_checked = false;
+	if (!swap_interval_checked) {
+		SDL_GL_SetSwapInterval(0); // Default to no VSync for performance testing/flexibility
+		swap_interval_checked = true;
+	}
 
 	int drawableWidth, drawableHeight;
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
-	if (crtemu_tv->type == CRTEMU_TYPE_NONE) {
-		float desired_aspect;
-		if (mon->screen_is_picasso && amiga_surface) {
-			desired_aspect = (float)amiga_surface->w / (float)amiga_surface->h;
-		} else {
-			if (currprefs.gfx_correct_aspect)
-				desired_aspect = 4.0f / 3.0f;
-			else if (amiga_surface)
-				desired_aspect = (float)amiga_surface->w / (float)amiga_surface->h;
-			else
-				desired_aspect = 4.0f / 3.0f;
+
+	// Ensure GL context is current for this window
+	if (gl_context && mon->amiga_window) {
+		if (SDL_GL_MakeCurrent(mon->amiga_window, gl_context) != 0) {
+			write_log("SDL_GL_MakeCurrent failed: %s\n", SDL_GetError());
 		}
-		
+	}
+
+	// Reset GL state to a known baseline
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
+	
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	float desired_aspect = calculate_desired_aspect(mon);
+	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
+	
+	// Handle external shader rendering (simplified single-pass)
+	if (external_shader && external_shader->is_valid()) {
 		int destW = drawableWidth;
 		int destH = (int)(drawableWidth / desired_aspect);
 
@@ -1450,104 +1853,99 @@ void show_screen(const int monid, int mode)
 			destH = drawableHeight;
 			destW = (int)(drawableHeight * desired_aspect);
 		}
+		
+		if (destW <= 0) destW = 1;
+		if (destH <= 0) destH = 1;
 
 		int destX = (drawableWidth - destW) / 2;
 		int destY = (drawableHeight - destH) / 2;
-		
-		glClear(GL_COLOR_BUFFER_BIT);
+
 		glViewport(destX, destY, destW, destH);
-	} else {
-		glViewport(0, 0, drawableWidth, drawableHeight);
-	}
 
-	// Check if any cropping is actually being applied.
-	// If crop_rect covers the entire surface, we can take a much faster path.
-	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-	                         crop_rect.w != amiga_surface->w ||
-	                         crop_rect.h != amiga_surface->h);
+		// Explicitly disable attributes to avoid leakage from previous passes
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+		
+		// Check if cropping is active
+		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+		                         (crop_rect.w > 0 && crop_rect.h > 0);
+		
+		if (is_cropped && amiga_surface) {
+			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
+			const int bpp = 4;
+			int x = std::max(0, crop_rect.x);
+			int y = std::max(0, crop_rect.y);
+			int w = std::min(crop_rect.w, amiga_surface->w - x);
+			int h = std::min(crop_rect.h, amiga_surface->h - y);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
 
-	if (is_cropped)
-	{
-		// SLOW PATH: Cropping is active.
-		// We must create a temporary packed buffer for the cropped region.
-		SDL_Rect corrected_crop_rect;
-		uae_u8* packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
-
-		if (packed_pixel_buffer)
-		{
-			crtemu_present(crtemu_tv, time * 1000, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
-			corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
-
-			delete[] packed_pixel_buffer;
+			render_with_external_shader(external_shader, monid, crop_ptr,
+				w, h, amiga_surface->pitch, destW, destH);
+		} else if (amiga_surface) {
+			// FAST PATH: No cropping
+			render_with_external_shader(external_shader, monid, 
+				static_cast<const uae_u8*>(amiga_surface->pixels),
+				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, destW, destH);
 		}
-	}
-	else
-	{
-		// FAST PATH: No cropping.
-		// Render the full surface directly without any expensive memory allocation or copying.
-		crtemu_present(crtemu_tv, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-		amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
-	}
 
-	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
-		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
-	{
-		update_leds(monid);
-		if (mon->statusline_surface) {
-			if (osd_texture != 0 && !glIsTexture(osd_texture)) {
-				osd_texture = 0;
+		render_osd(monid, drawableWidth, drawableHeight);
+	} else if (crtemu_shader) {
+		// Original crtemu rendering path
+		if (crtemu_shader->type == CRTEMU_TYPE_NONE) {
+			int destW = drawableWidth;
+			int destH = (int)(drawableWidth / desired_aspect);
+
+			if (destH > drawableHeight) {
+				destH = drawableHeight;
+				destW = (int)(drawableHeight * desired_aspect);
 			}
-			if (osd_texture == 0) {
-				glGenTextures(1, &osd_texture);
-				glBindTexture(GL_TEXTURE_2D, osd_texture);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-			
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, osd_texture);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mon->statusline_surface->w, mon->statusline_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
-			
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			int destX = (drawableWidth - destW) / 2;
+			int destY = (drawableHeight - destH) / 2;
+
+			glViewport(destX, destY, destW, destH);
+		} else {
 			glViewport(0, 0, drawableWidth, drawableHeight);
-			
-			crtemu_tv->UseProgram(crtemu_tv->copy_shader);
-			crtemu_tv->Uniform1i(crtemu_tv->GetUniformLocation(crtemu_tv->copy_shader, "tex0"), 0);
-
-			float osd_w = (float)mon->statusline_surface->w;
-			float osd_h = (float)mon->statusline_surface->h;
-			float win_w = (float)drawableWidth;
-			float win_h = (float)drawableHeight;
-			
-			// Force full width (stretch to fit window)
-			float scale_x = win_w / osd_w;
-			
-			// Scale height to match width scaling (preserve aspect of LEDs)
-			float scaled_h = osd_h * scale_x;
-			
-			// Convert to NDC dimensions
-			float ndc_h = (scaled_h / win_h) * 2.0f;
-			
-			float x0 = -1.0f; 
-			float x1 = 1.0f;
-			float y0 = -1.0f;         
-			float y1 = y0 + ndc_h;
-			
-			CRTEMU_GLfloat vertices[] = {
-				x0, y0, 0.0f, 1.0f,
-				x1, y0, 1.0f, 1.0f,
-				x1, y1, 1.0f, 0.0f,
-				x0, y1, 0.0f, 0.0f,
-			};
-
-			crtemu_tv->BindBuffer(CRTEMU_GL_ARRAY_BUFFER, crtemu_tv->vertexbuffer);
-			crtemu_tv->BufferData(CRTEMU_GL_ARRAY_BUFFER, sizeof(vertices), vertices, CRTEMU_GL_STATIC_DRAW);
-			crtemu_tv->VertexAttribPointer(0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof(CRTEMU_GLfloat), 0);
-			crtemu_tv->DrawArrays(CRTEMU_GL_TRIANGLE_FAN, 0, 4);
-			
-			glDisable(GL_BLEND);
 		}
+
+		// crtemu_present expects attribute 0 to be enabled.
+		glEnableVertexAttribArray(0);
+		// Disable other attributes that might have been enabled by OSD or other passes
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+
+		// Check if any cropping is actually being applied.
+		// If crop_rect covers the entire surface, we can take a much faster path.
+		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+		                         (crop_rect.w > 0 && crop_rect.h > 0);
+
+		if (is_cropped && amiga_surface)
+		{
+			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
+			const int bpp = 4;
+			int x = std::max(0, crop_rect.x);
+			int y = std::max(0, crop_rect.y);
+			int w = std::min(crop_rect.w, amiga_surface->w - x);
+			int h = std::min(crop_rect.h, amiga_surface->h - y);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+			
+			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
+				w, h, amiga_surface->pitch, 0xffffffff, 0x000000);
+		}
+		else
+		{
+			// FAST PATH: No cropping.
+			// Render the full surface directly without any expensive memory allocation or copying.
+			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
+			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000);
+		}
+
+		render_osd(monid, drawableWidth, drawableHeight);
 	}
 
 	SDL_GL_SwapWindow(mon->amiga_window);
@@ -1565,6 +1963,9 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 
 	if (!mon->amiga_window || !amiga_surface)
 		return ret;
+
+	// Ensure blanking limits are open and synchronized at the start of frame locking
+	set_custom_limits(-1, -1, -1, -1, false);
 
 	if (vb->vram_buffer) {
 		// Benchmarks have shown that Locking and Unlocking the Texture is slower than just calling UpdateTexture
@@ -1627,13 +2028,24 @@ void unlockscr(struct vidbuffer* vb, int y_start, int y_end)
 		// Record the dirty rectangle if y_start and y_end are valid.
 		if (y_start >= 0 && y_end >= y_start) {
 			AmigaMonitor* mon = &AMonitors[vb->monitor_id];
-			SDL_Rect dirty_rect;
-			dirty_rect.x = 0;
-			dirty_rect.y = y_start;
-			dirty_rect.w = vb->width_allocated;
-			dirty_rect.h = y_end - y_start + 1;
+			
+			// Clamp y_end to surface bounds to prevent out-of-bounds dirty rects
+			// The drawing code may report y_end beyond the actual surface height
+			int clamped_y_end = y_end;
+			if (amiga_surface && clamped_y_end >= amiga_surface->h) {
+				clamped_y_end = amiga_surface->h - 1;
+			}
+			
+			// Only add dirty rect if we still have valid bounds after clamping
+			if (clamped_y_end >= y_start) {
+				SDL_Rect dirty_rect;
+				dirty_rect.x = 0;
+				dirty_rect.y = y_start;
+				dirty_rect.w = vb->width_allocated;
+				dirty_rect.h = clamped_y_end - y_start + 1;
 
-			add_dirty_rect(mon, dirty_rect);
+				add_dirty_rect(mon, dirty_rect);
+			}
 		}
 	}
 }
@@ -1749,7 +2161,7 @@ static void close_hwnds(struct AmigaMonitor* mon)
 		setmouseactive(mon->monitor_id, 0);
 
 #ifdef USE_OPENGL
-	destroy_crtemu();
+	destroy_shaders();
 #else
 	if (amiga_texture)
 	{
@@ -1923,6 +2335,15 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 
 static int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 {
+	// Skip window creation entirely if headless mode is enabled
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping window creation for monitor %d.\n", mon->monitor_id);
+		mon->screen_is_initialized = 1;
+		mon->amiga_window = nullptr;
+		mon->amiga_renderer = nullptr;
+		return 1;
+	}
+
 	bool recapture = false;
 	int ret;
 
@@ -3115,6 +3536,17 @@ void machdep_free()
 
 int graphics_init(bool mousecapture)
 {
+	// Skip all graphics initialization if running in headless mode
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping graphics initialization.\n");
+		wait_vblank_timestamp = read_processor_time();
+		update_pixel_format();
+		if (amiga_surface == nullptr) {
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, 1920, 1080, 32, pixel_format);
+		}
+		return amiga_surface != nullptr;
+	}
+
 	wait_vblank_timestamp = read_processor_time();
 	update_pixel_format();
 	gfxmode_reset(0);
@@ -3146,6 +3578,16 @@ void graphics_leave()
 
 void close_windows(struct AmigaMonitor* mon)
 {
+	// Skip SDL resource cleanup if headless mode
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping SDL resource cleanup for monitor %d.\n", mon->monitor_id);
+		if (amiga_surface) {
+			SDL_FreeSurface(amiga_surface);
+			amiga_surface = nullptr;
+		}
+		return;
+	}
+
 	vidbuf_description* avidinfo = &adisplays[mon->monitor_id].gfxvidinfo;
 
 	reset_sound();
@@ -3318,6 +3760,15 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 
 static int create_windows(struct AmigaMonitor* mon)
 {
+	// Skip window creation entirely if headless mode
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping window creation for monitor %d.\n", mon->monitor_id);
+		mon->amiga_window = nullptr;
+		mon->amiga_renderer = nullptr;
+		mon->screen_is_initialized = 1;
+		return 1;
+	}
+
 	const Uint32 fullscreen = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN;
 	Uint32 fullwindow = mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP;
 	Uint32 flags = 0;
@@ -3595,6 +4046,38 @@ static bool doInit(AmigaMonitor* mon)
 	avidinfo->gfx_resolution_reserved = RES_MAX;
 	avidinfo->gfx_vresolution_reserved = VRES_MAX;
 
+	// If headless mode, skip all window/renderer setup
+	if (currprefs.headless) {
+		write_log("Headless mode: Skipping doInit window setup for monitor %d.\n", mon->monitor_id);
+
+		// Still need to set up display dimensions for emulation
+		display_width = 1920;
+		display_height = 1080;
+
+		if (!mon->screen_is_picasso) {
+
+			allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
+				1920, 1280);
+
+			allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
+				mon->currentmode.amiga_width > 2048 ? mon->currentmode.amiga_width : 2048,
+				mon->currentmode.amiga_height > 2048 ? mon->currentmode.amiga_height : 2048);
+		}
+
+		avidinfo->outbuffer = &avidinfo->drawbuffer;
+		avidinfo->inbuffer = &avidinfo->tempbuffer;
+
+		// Create internal surface if needed
+		if (amiga_surface == nullptr) {
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+		}
+
+		mon->screen_is_initialized = 1;
+		init_colors(mon->monitor_id);
+		target_graphics_buffer_update(mon->monitor_id, false);
+		return true;
+	}
+
 	modechanged = true;
 	if (wasfs[0] == 0)
 		regqueryint(NULL, wasfsname[0], &wasfs[0]);
@@ -3779,10 +4262,12 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 
 	if (avidinfo->inbuffer != avidinfo->outbuffer) {
-		avidinfo->outbuffer->inwidth = w;
-		avidinfo->outbuffer->inheight = h;
-		avidinfo->outbuffer->width_allocated = w;
-		avidinfo->outbuffer->height_allocated = h;
+		if (avidinfo->outbuffer) {
+			avidinfo->outbuffer->inwidth = w;
+			avidinfo->outbuffer->inheight = h;
+			avidinfo->outbuffer->width_allocated = w;
+			avidinfo->outbuffer->height_allocated = h;
+		}
 	}
 
 	oldtex_w[monid] = w;
@@ -3870,6 +4355,8 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		{
 			render_quad = { dx, dy, scaled_width, scaled_height };
 			crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
+			if (crop_rect.w <= 0) crop_rect.w = w;
+			if (crop_rect.h <= 0) crop_rect.h = h;
 		}
 		set_scaling_option(mon->monitor_id, &currprefs, scaled_width, scaled_height);
 #else
@@ -3885,6 +4372,8 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 				{
 					render_quad = { dx, dy, scaled_width, scaled_height };
 					crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
+					if (crop_rect.w <= 0) crop_rect.w = w;
+					if (crop_rect.h <= 0) crop_rect.h = h;
 				}
 			}
 			else
@@ -4127,16 +4616,36 @@ void toggle_fullscreen(const int monid, const int mode)
 	updatewinfsmode(monid, &changed_prefs);
 }
 
-void destroy_crtemu()
-{
 #ifdef USE_OPENGL
-	if (crtemu_tv != nullptr)
+void destroy_shaders()
+{
+	if (crtemu_shader != nullptr)
 	{
-		crtemu_destroy(crtemu_tv);
-		crtemu_tv = nullptr;
+		crtemu_destroy(crtemu_shader);
+		crtemu_shader = nullptr;
 	}
-#endif
+	if (external_shader != nullptr)
+	{
+		destroy_external_shader(external_shader);
+		external_shader = nullptr;
+	}
+	if (osd_program != 0 && glIsProgram(osd_program))
+	{
+		glDeleteProgram(osd_program);
+		osd_program = 0;
+	}
+	if (osd_vbo != 0 && glIsBuffer(osd_vbo))
+	{
+		glDeleteBuffers(1, &osd_vbo);
+		osd_vbo = 0;
+	}
+	if (osd_texture != 0 && glIsTexture(osd_texture))
+	{
+		glDeleteTextures(1, &osd_texture);
+		osd_texture = 0;
+	}
 }
+#endif
 
 #ifdef AMIBERRY
 void auto_crop_image()
@@ -4182,6 +4691,8 @@ void auto_crop_image()
 #ifdef USE_OPENGL
 		render_quad = { dx, dy, width, height };
 		crop_rect = { cx, cy, cw, ch };
+		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
+		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 #else
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
@@ -4189,6 +4700,8 @@ void auto_crop_image()
 			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
 			render_quad = { dx, dy, width, height };
 			crop_rect = { cx, cy, cw, ch };
+			if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
+			if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 		}
 		else
 		{

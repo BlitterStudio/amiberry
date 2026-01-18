@@ -359,6 +359,7 @@ std::string nvram_dir;
 std::string plugins_dir;
 std::string video_dir;
 std::string themes_path;
+std::string shaders_path;
 std::string amiberry_conf_file;
 std::string amiberry_ini_file;
 
@@ -413,9 +414,9 @@ void target_spin(int total)
 		return;
 	total = std::min(total, 10);
 	while (total-- >= 0) {
-		uae_s64 v1 = read_processor_time();
+		uae_s64 v1 = read_processor_time_rdtsc();
 		v1 += spincount;
-		while (v1 > read_processor_time());
+		while (v1 > read_processor_time_rdtsc());
 	}
 }
 
@@ -423,6 +424,68 @@ extern int vsync_activeheight;
 
 void target_calibrate_spin()
 {
+	struct amigadisplay* ad = &adisplays[0];
+	struct apmode* ap = ad->picasso_on ? &currprefs.gfx_apmode[APMODE_RTG] : &currprefs.gfx_apmode[APMODE_NATIVE];
+	int vp;
+	const int cntlines = 1;
+	uae_u64 sc;
+
+	spincount = 0;
+	if (!ap->gfx_vsyncmode)
+		return;
+	extern bool calculated_scanline;
+	if (calculated_scanline) {
+		write_log(_T("target_calibrate_spin() skipped (%d)\n"), calculated_scanline);
+		return;
+	}
+	write_log(_T("target_calibrate_spin() start (%d)\n"), calculated_scanline);
+	sc = 0x800000000000LL;
+	for (int i = 0; i < 50; i++) {
+		for (;;) {
+			vp = target_get_display_scanline(-1);
+			if (vp <= -10)
+				goto fail;
+			if (vp >= 1 && vp < vsync_activeheight - 10)
+				break;
+		}
+		uae_u64 v1;
+		int vp2;
+		for (;;) {
+			v1 = read_processor_time_rdtsc();
+			vp2 = target_get_display_scanline(-1);
+			if (vp2 <= -10)
+				goto fail;
+			if (vp2 == vp + cntlines)
+				break;
+			if (vp2 < vp || vp2 > vp + cntlines)
+				goto trynext;
+		}
+		for (;;) {
+			int vp2 = target_get_display_scanline(-1);
+			if (vp2 <= -10)
+				goto fail;
+			if (vp2 == vp + cntlines * 2) {
+				uae_u64 scd = (read_processor_time_rdtsc() - v1) / cntlines;
+				if (sc > scd)
+					sc = scd;
+			}
+			if (vp2 < vp)
+				break;
+			if (vp2 > vp + cntlines * 2)
+				break;
+		}
+trynext:;
+	}
+	if (sc == 0x800000000000LL) {
+		write_log(_T("Spincount calculation error, spinloop not used.\n"));
+		spincount = 0;
+	} else {
+		spincount = sc;
+		write_log(_T("Spincount = %llu\n"), sc);
+	}
+	return;
+fail:
+	write_log(_T("Scanline read failed: %d!\n"), vp);
 	spincount = 0;
 }
 
@@ -3101,6 +3164,11 @@ void set_themes_path(const std::string& newpath)
 	themes_path = newpath;
 }
 
+void set_shaders_path(const std::string& newpath)
+{
+	shaders_path = newpath;
+}
+
 void set_screenshot_path(const std::string& newpath)
 {
 	screenshot_dir = newpath;
@@ -3286,6 +3354,11 @@ void get_video_path(char* out, const int size)
 std::string get_themes_path()
 {
 	return fix_trailing(themes_path);
+}
+
+std::string get_shaders_path()
+{
+	return fix_trailing(shaders_path);
 }
 
 void get_floppy_sounds_path(char* out, const int size)
@@ -3695,6 +3768,7 @@ void save_amiberry_settings()
 	write_string_option("plugins_dir", plugins_dir);
 	write_string_option("video_dir", video_dir);
 	write_string_option("themes_path", themes_path);
+	write_string_option("shaders_path", shaders_path);
 
 	// Recent disk entries (these are used in the dropdown controls)
 	_sntprintf(buffer, MAX_DPATH, "MRUDiskList=%zu\n", lstMRUDiskList.size());
@@ -3809,6 +3883,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "plugins_dir", plugins_dir);
 		ret |= cfgfile_string(option, value, "video_dir", video_dir);
 		ret |= cfgfile_string(option, value, "themes_path", themes_path);
+		ret |= cfgfile_string(option, value, "shaders_path", shaders_path);
 		// NOTE: amiberry_config is a "read only", i.e. it's not written in
 		// save_amiberry_settings(). It's purpose is to provide -o amiberry_config=path
 		// command line option.
@@ -3879,7 +3954,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 	return ret;
 }
 
-static int parse_amiberry_cmd_line(int *argc, char* argv[], const int remove_used_args)
+static int parse_amiberry_cmd_line(int *argc, char* argv[], const bool remove_used_args)
 {
 	char arg_copy[CONFIG_BLEN];
 
@@ -4518,6 +4593,8 @@ void create_missing_amiberry_folders()
 		my_mkdir(video_dir.c_str());
 	if (!my_existsdir(themes_path.c_str()))
 		my_mkdir(themes_path.c_str());
+	if (!my_existsdir(shaders_path.c_str()))
+		my_mkdir(shaders_path.c_str());
 	std::string default_theme_file = themes_path + "Default.theme";
 	if (!my_existsfile2(default_theme_file.c_str()))
 	{
@@ -4582,7 +4659,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	if (portable_mode)
 #endif
 	{
-		themes_path = config_path;
+		themes_path = shaders_path= config_path;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = savestate_dir =
@@ -4618,7 +4695,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 		xdg_config_home += "/" + amiberry_dir;
 		if (!my_existsdir(xdg_config_home.c_str()))
 			my_mkdir(xdg_config_home.c_str());
-		themes_path = xdg_config_home;
+		themes_path = shaders_path = xdg_config_home;
 
 		// These paths are relative to the XDG_DATA_HOME directory
 		controllers_path = whdboot_path = saveimage_dir = 
@@ -4649,6 +4726,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	nvram_dir.append("/Nvram/");
 	video_dir.append("/Videos/");
 	themes_path.append("/Themes/");
+	shaders_path.append("/Shaders/");
 #else
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
@@ -4667,6 +4745,7 @@ static void init_amiberry_dirs(const bool portable_mode)
 	nvram_dir.append("/nvram/");
 	video_dir.append("/videos/");
 	themes_path.append("/themes/");
+	shaders_path.append("/shaders/");
 #endif
 
 	retroarch_file = config_path;
@@ -4966,7 +5045,8 @@ static void makeverstr(TCHAR* s)
 
 int main(int argc, char* argv[])
 {
-	makeverstr(VersionStr);
+	max_uae_width = 8192;
+	max_uae_height = 8192;
 
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
@@ -4989,17 +5069,15 @@ int main(int argc, char* argv[])
 	DBusSetup();
 #endif
 
-	max_uae_width = 8192;
-	max_uae_height = 8192;
-
-	// Parse command line to possibly set amiberry_config.
+	// Parse the command line to possibly set amiberry_config.
 	// Do not remove used args yet.
-	if (!parse_amiberry_cmd_line(&argc, argv, 0))
+	if (!parse_amiberry_cmd_line(&argc, argv, false))
 	{
 		printf("Error in Amiberry command line option parsing.\n");
 		usage();
 		abort();
 	}
+
 	// Check if a file with the name "amiberry.portable" exists in the current directory
 	// If it does, we will set portable_mode to true
 	const bool portable_mode = my_existsfile2("amiberry.portable");
@@ -5013,9 +5091,11 @@ int main(int argc, char* argv[])
 	create_missing_amiberry_folders();
 
 	makeverstr(VersionStr);
-	// Parse command line and remove used amiberry specific args
+	uae_time_init();
+
+	// Parse the command line, remove used amiberry specific args
 	// and modify both argc & argv accordingly
-	if (!parse_amiberry_cmd_line(&argc, argv, 1))
+	if (!parse_amiberry_cmd_line(&argc, argv, true))
 	{
 		printf("Error in Amiberry command line option parsing.\n");
 		usage();
@@ -5072,6 +5152,8 @@ int main(int argc, char* argv[])
 	}
 #endif
 
+	preinit_shm ();
+
 	if (!init_mmtimer())
 		return 0;
 	uae_time_calibrate();
@@ -5103,10 +5185,11 @@ int main(int argc, char* argv[])
 		const int type = record_devices[i]->type;
 		write_log(_T("%d:%s: %s\n"), i, type == SOUND_DEVICE_SDL2 ? _T("SDL2") : (type == SOUND_DEVICE_DS ? _T("DS") : (type == SOUND_DEVICE_AL ? _T("AL") : (type == SOUND_DEVICE_WASAPI ? _T("WA") : (type == SOUND_DEVICE_WASAPI_EXCLUSIVE ? _T("WX") : _T("PA"))))), record_devices[i]->name);
 	}
-	write_log(_T("done\n"));
+	write_log(_T("Enumeration done\n"));
 
 	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	clipboard_init();
+	keyboard_settrans();
 
 #if defined( __linux__)
 	// set capslock state based upon current "real" state
