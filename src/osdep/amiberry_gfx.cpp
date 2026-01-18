@@ -524,25 +524,25 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 #else
 	if (amiga_texture && amiga_surface)
 	{
-		AmigaMonitor* mutable_mon = &AMonitors[monid];
+		AmigaMonitor* mon = &AMonitors[monid];
 
 		// Ensure the draw color is black for clearing
-		SDL_SetRenderDrawColor(mutable_mon->amiga_renderer, 0, 0, 0, 255);
-		SDL_RenderClear(mutable_mon->amiga_renderer);
+		SDL_SetRenderDrawColor(mon->amiga_renderer, 0, 0, 0, 255);
+		SDL_RenderClear(mon->amiga_renderer);
 
 		// If a full render is needed or there are no specific dirty rects, update the whole texture.
-		if (mutable_mon->full_render_needed || mutable_mon->dirty_rects.empty()) {
+		if (mon->full_render_needed || mon->dirty_rects.empty()) {
 			SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
 		} else {
 			// Otherwise, update only the collected dirty rectangles.
-			for (const auto& rect : mutable_mon->dirty_rects) {
+			for (const auto& rect : mon->dirty_rects) {
 				SDL_UpdateTexture(amiga_texture, &rect, static_cast<const uae_u8*>(amiga_surface->pixels) + rect.y * amiga_surface->pitch + rect.x * amiga_surface->format->BytesPerPixel, amiga_surface->pitch);
 			}
 		}
 
 		// Clear the dirty rects list for the next frame.
-		mutable_mon->dirty_rects.clear();
-		mutable_mon->full_render_needed = false;
+		mon->dirty_rects.clear();
+		mon->full_render_needed = false;
 
 		const SDL_Rect* p_crop = &crop_rect;
 		const SDL_Rect* p_quad = &render_quad;
