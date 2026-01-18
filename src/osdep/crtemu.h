@@ -2254,6 +2254,55 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			*x = (int) ( xp );
 			*y = (int) ( yp );
 		} break;
+		case CRTEMU_TYPE_1084: {
+			CRTEMU_GLint viewport[ 4 ];
+			crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
+
+			int window_width = viewport[ 2 ] - viewport[ 0 ];
+			int window_height = viewport[ 3 ] - viewport[ 1 ];
+
+			int aspect_width = (int)( ( window_height * 4 ) / 3 );
+			int aspect_height= (int)( ( window_width * 3 ) / 4 );
+			int target_width, target_height;
+			if( aspect_height <= window_height ) {
+				target_width = window_width;
+				target_height = aspect_height;
+			} else {
+				target_width = aspect_width;
+				target_height = window_height;
+			}
+
+			float hscale = target_width / (float) width;
+			float vscale = target_height / (float) height;
+
+			float hborder = ( window_width - hscale * width ) / 2.0f;
+			float vborder = ( window_height - vscale * height ) / 2.0f;
+
+			float xp = ( ( *x - hborder ) / hscale ) / (float) width;
+			float yp = ( ( *y - vborder ) / vscale ) / (float) height;
+
+			/* TODO: Common params for shader and this */
+			float xc = ( xp - 0.5f ) * 2.0f;
+			float yc = ( yp - 0.5f ) * 2.0f;
+			xc *= 1.1f;
+			yc *= 1.1f;
+			float yt = ( yc >= 0.0f ? yc : -yc ) / 4.5f;
+			float xt = ( xc >= 0.0f ? xc : -xc ) / 3.5f;
+			xc *= 1.0f + ( yt * yt );
+			yc *= 1.0f + ( xt * xt );
+			xc = ( xc / 2.0f ) + 0.5f;
+			yc = ( yc / 2.0f ) + 0.5f;
+			xc = xc * 0.92f + 0.04f;
+			yc = yc * 0.92f + 0.04f;
+			xp = xc * 0.5f + xp * 0.5f;
+			yp = yc * 0.5f + yp * 0.5f;
+
+			xp *= width;
+			yp *= height;
+
+			*x = (int) ( xp );
+			*y = (int) ( yp );
+		} break;
 		case CRTEMU_TYPE_LITE: {
 			CRTEMU_GLint viewport[ 4 ];
 			crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
