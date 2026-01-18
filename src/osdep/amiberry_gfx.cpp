@@ -459,9 +459,7 @@ static void update_leds(const int monid)
 	const amigadisplay* ad = &adisplays[monid];
 	const int m = statusline_get_multiplier(monid) / 100;
 	const int led_height = TD_TOTAL_HEIGHT * m;
-	int led_width = ad->picasso_on ? mon->currentmode.native_width : crop_rect.w;
-	if (led_width <= 0 && amiga_surface)
-		led_width = amiga_surface->w;
+	int led_width = ad->picasso_on ? mon->currentmode.native_width : 640;
 	if (led_width <= 0)
 		led_width = 640;
 
