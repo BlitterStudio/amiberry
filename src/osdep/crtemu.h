@@ -1216,7 +1216,7 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    col = clamp(col*1.3 + 0.75*col*col + 1.25*col*col*col*col*col,vec3(0.0),vec3(10.0));\n"
 			"\n"
 			"    /* Vignette */\n"
-			"    float vig = (0.0 + 1.0*16.0*curved_uv.x*curved_uv.y*(1.0-curved_uv.x)*(1.0-curved_uv.y));\n"
+			"    float vig = (0.2 + 1.0*16.0*curved_uv.x*curved_uv.y*(1.0-curved_uv.x)*(1.0-curved_uv.y));\n"
 			"    vig = 1.3*pow(vig,0.5);\n"
 			"    col *= vig;\n"
 			"\n"
