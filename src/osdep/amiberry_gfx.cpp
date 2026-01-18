@@ -1691,14 +1691,15 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 		if (mon->statusline_surface) {
 			if (osd_texture != 0 && !glIsTexture(osd_texture)) {
 				osd_texture = 0;
-				last_osd_w = 0;
-				last_osd_h = 0;
 			}
 			if (osd_texture == 0) {
 				glGenTextures(1, &osd_texture);
+				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, osd_texture);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				last_osd_w = 0;
+				last_osd_h = 0;
 			}
 
 			if (!init_osd_shader()) return;
