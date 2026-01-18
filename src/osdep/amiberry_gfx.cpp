@@ -270,7 +270,9 @@ static float SDL2_getrefreshrate(const int monid)
 #ifdef USE_OPENGL
 static GLuint osd_texture = 0;
 static GLuint osd_program = 0;
+static GLint osd_tex_loc = -1;
 static GLuint osd_vbo = 0;
+static GLuint vbo_uploaded = 0;
 
 static const char* osd_vs_source =
 	"#version 120\n"
@@ -343,6 +345,8 @@ static bool init_osd_shader()
 	glDeleteShader(vsh);
 	glDeleteShader(fsh);
 
+	osd_tex_loc = glGetUniformLocation(osd_program, "tex0");
+
 	glGenBuffers(1, &osd_vbo);
 
 	return true;
@@ -395,8 +399,6 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 		const int crt_type = get_crtemu_type(shader_name);
 		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
 	}
-	if (crtemu_shader)
-		crtemu_frame(crtemu_shader, (CRTEMU_U32*)amiga_surface->pixels, w, h);
 	return crtemu_shader != nullptr || external_shader != nullptr;
 #else
 	if (w < 0 || h < 0)
@@ -457,7 +459,11 @@ static void update_leds(const int monid)
 	const amigadisplay* ad = &adisplays[monid];
 	const int m = statusline_get_multiplier(monid) / 100;
 	const int led_height = TD_TOTAL_HEIGHT * m;
-	const int led_width = ad->picasso_on ? mon->currentmode.native_width : crop_rect.w;
+	int led_width = ad->picasso_on ? mon->currentmode.native_width : crop_rect.w;
+	if (led_width <= 0 && amiga_surface)
+		led_width = amiga_surface->w;
+	if (led_width <= 0)
+		led_width = 640;
 
 	// (Re)allocate OSD surface and texture if dimensions changed
 	if (!mon->statusline_surface || mon->statusline_surface->w != led_width || mon->statusline_surface->h != led_height) {
@@ -1608,15 +1614,6 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	// Use the shader
 	shader->use();
 	
-	// Verify shader is active
-	GLint current_program = 0;
-	glGetIntegerv(GL_CURRENT_PROGRAM, &current_program);
-	
-	if (current_program == 0) {
-		write_log("ERROR: No shader program is active!\n");
-		return;
-	}
-	
 	// Set uniforms
 	shader->set_texture_size(static_cast<float>(width), static_cast<float>(height));
 	shader->set_input_size(static_cast<float>(width), static_cast<float>(height));
@@ -1639,19 +1636,16 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	// The shader expects: attribute vec4 VertexCoord (position as vec2 in xy)
 	//                     attribute vec2 TexCoord
 	// We'll use interleaved format: x, y, u, v
-	float vertices[] = {
-		-1.0f, -1.0f, 0.0f, 1.0f,  // Bottom-left
-		 1.0f, -1.0f, 1.0f, 1.0f,  // Bottom-right
-		 1.0f,  1.0f, 1.0f, 0.0f,  // Top-right
-		-1.0f,  1.0f, 0.0f, 0.0f   // Top-left
-	};
-	
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	
-	GLenum err = glGetError();
-	if (err != GL_NO_ERROR) {
-		write_log("GL error after buffer data: 0x%x\n", err);
+	if (vbo_uploaded == 0) {
+		float vertices[] = {
+			-1.0f, -1.0f, 0.0f, 1.0f,  // Bottom-left
+			 1.0f, -1.0f, 1.0f, 1.0f,  // Bottom-right
+			 1.0f,  1.0f, 1.0f, 0.0f,  // Top-right
+			-1.0f,  1.0f, 0.0f, 0.0f   // Top-left
+		};
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		vbo_uploaded = vbo;
 	}
 	
 	// Set up vertex attributes to match shader bindings
@@ -1675,12 +1669,6 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	// Draw fullscreen quad
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	
-	// Check for GL errors
-	err = glGetError();
-	if (err != GL_NO_ERROR) {
-		write_log("OpenGL error after draw: 0x%x\n", err);
-	}
-	
 	// Cleanup
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(2);
@@ -1694,6 +1682,8 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
+	static int last_osd_w = 0;
+	static int last_osd_h = 0;
 
 	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
 		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
@@ -1702,6 +1692,8 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 		if (mon->statusline_surface) {
 			if (osd_texture != 0 && !glIsTexture(osd_texture)) {
 				osd_texture = 0;
+				last_osd_w = 0;
+				last_osd_h = 0;
 			}
 			if (osd_texture == 0) {
 				glGenTextures(1, &osd_texture);
@@ -1715,7 +1707,14 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, osd_texture);
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, mon->statusline_surface->pitch / 4);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mon->statusline_surface->w, mon->statusline_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+			if (mon->statusline_surface->w != last_osd_w || mon->statusline_surface->h != last_osd_h) {
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mon->statusline_surface->w, mon->statusline_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+				last_osd_w = mon->statusline_surface->w;
+				last_osd_h = mon->statusline_surface->h;
+			}
+			else {
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, mon->statusline_surface->w, mon->statusline_surface->h, GL_RGBA, GL_UNSIGNED_BYTE, mon->statusline_surface->pixels);
+			}
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
 			glEnable(GL_BLEND);
@@ -1724,8 +1723,7 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 			glViewport(0, 0, drawableWidth, drawableHeight);
 
 			glUseProgram(osd_program);
-			GLint tex_loc = glGetUniformLocation(osd_program, "tex0");
-			if (tex_loc != -1) glUniform1i(tex_loc, 0);
+			if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
 
 			// Ensure only attribute 0 is enabled for OSD
 			glEnableVertexAttribArray(0);
@@ -1874,18 +1872,20 @@ void show_screen(const int monid, int mode)
 		// Check if cropping is active
 		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
 		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0));
+		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+		                         (crop_rect.w > 0 && crop_rect.h > 0);
 		
 		if (is_cropped && amiga_surface) {
-			// SLOW PATH: Cropping is active
-			SDL_Rect corrected_crop_rect;
-			uae_u8* packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
-			
-			if (packed_pixel_buffer) {
-				render_with_external_shader(external_shader, monid, packed_pixel_buffer,
-					corrected_crop_rect.w, corrected_crop_rect.h, corrected_crop_rect.w * 4, destW, destH);
-				delete[] packed_pixel_buffer;
-			}
+			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
+			const int bpp = 4;
+			int x = std::max(0, crop_rect.x);
+			int y = std::max(0, crop_rect.y);
+			int w = std::min(crop_rect.w, amiga_surface->w - x);
+			int h = std::min(crop_rect.h, amiga_surface->h - y);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+
+			render_with_external_shader(external_shader, monid, crop_ptr,
+				w, h, amiga_surface->pitch, destW, destH);
 		} else if (amiga_surface) {
 			// FAST PATH: No cropping
 			render_with_external_shader(external_shader, monid, 
@@ -1922,30 +1922,29 @@ void show_screen(const int monid, int mode)
 		// Check if any cropping is actually being applied.
 		// If crop_rect covers the entire surface, we can take a much faster path.
 		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		                         crop_rect.w != amiga_surface->w ||
-		                         crop_rect.h != amiga_surface->h);
+		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+		                         (crop_rect.w > 0 && crop_rect.h > 0);
 
-		if (is_cropped)
+		if (is_cropped && amiga_surface)
 		{
-			// SLOW PATH: Cropping is active.
-			// We must create a temporary packed buffer for the cropped region.
-			SDL_Rect corrected_crop_rect;
-			uae_u8* packed_pixel_buffer = create_packed_pixel_buffer(amiga_surface, crop_rect, corrected_crop_rect);
-
-			if (packed_pixel_buffer)
-			{
-				crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(packed_pixel_buffer),
-				corrected_crop_rect.w, corrected_crop_rect.h, 0xffffffff, 0x000000);
-
-				delete[] packed_pixel_buffer;
-			}
+			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
+			const int bpp = 4;
+			int x = std::max(0, crop_rect.x);
+			int y = std::max(0, crop_rect.y);
+			int w = std::min(crop_rect.w, amiga_surface->w - x);
+			int h = std::min(crop_rect.h, amiga_surface->h - y);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+			
+			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
+				w, h, amiga_surface->pitch, 0xffffffff, 0x000000);
 		}
 		else
 		{
 			// FAST PATH: No cropping.
 			// Render the full surface directly without any expensive memory allocation or copying.
 			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-			amiga_surface->w, amiga_surface->h, 0xffffffff, 0x000000);
+			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000);
 		}
 
 		render_osd(monid, drawableWidth, drawableHeight);
@@ -4358,6 +4357,8 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		{
 			render_quad = { dx, dy, scaled_width, scaled_height };
 			crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
+			if (crop_rect.w <= 0) crop_rect.w = w;
+			if (crop_rect.h <= 0) crop_rect.h = h;
 		}
 		set_scaling_option(mon->monitor_id, &currprefs, scaled_width, scaled_height);
 #else
@@ -4373,6 +4374,8 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 				{
 					render_quad = { dx, dy, scaled_width, scaled_height };
 					crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
+					if (crop_rect.w <= 0) crop_rect.w = w;
+					if (crop_rect.h <= 0) crop_rect.h = h;
 				}
 			}
 			else
@@ -4690,6 +4693,8 @@ void auto_crop_image()
 #ifdef USE_OPENGL
 		render_quad = { dx, dy, width, height };
 		crop_rect = { cx, cy, cw, ch };
+		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
+		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 #else
 
 		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
@@ -4697,6 +4702,8 @@ void auto_crop_image()
 			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
 			render_quad = { dx, dy, width, height };
 			crop_rect = { cx, cy, cw, ch };
+			if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
+			if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 		}
 		else
 		{
