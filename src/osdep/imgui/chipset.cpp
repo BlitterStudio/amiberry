@@ -279,10 +279,21 @@ void render_panel_chipset()
 			cs_compatible_idx = 0; // Default to Custom
 		}
 
-		if (ImGui::Combo("##Chipset Extra", &cs_compatible_idx, chipset_items, IM_ARRAYSIZE(chipset_items)))
-		{
-			changed_prefs.cs_compatible = cs_compatible_idx;
-			built_in_chipset_prefs(&changed_prefs);
+		if (ImGui::BeginCombo("##Chipset Extra", (cs_compatible_idx >= 0 && cs_compatible_idx < IM_ARRAYSIZE(chipset_items)) ? chipset_items[cs_compatible_idx] : "Unknown")) {
+			for (int n = 0; n < IM_ARRAYSIZE(chipset_items); n++) {
+				const bool is_selected = (cs_compatible_idx == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(chipset_items[n], is_selected)) {
+					changed_prefs.cs_compatible = n;
+					built_in_chipset_prefs(&changed_prefs);
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
 		}
 
 		ImGui::AlignTextToFramePadding();
@@ -290,13 +301,41 @@ void render_panel_chipset()
 		// ImGui::SameLine(180.0f);
 		const char* sync_items[] = { "Combined", "CSync", "H/VSync" };
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		ImGui::Combo("##SyncSource", &changed_prefs.cs_hvcsync, sync_items, IM_ARRAYSIZE(sync_items));
+		if (ImGui::BeginCombo("##SyncSource", sync_items[changed_prefs.cs_hvcsync])) {
+			for (int n = 0; n < IM_ARRAYSIZE(sync_items); n++) {
+				const bool is_selected = (changed_prefs.cs_hvcsync == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(sync_items[n], is_selected)) {
+					changed_prefs.cs_hvcsync = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Video port display hardware");
 		// ImGui::SameLine(180.0f);
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		ImGui::Combo("##VideoPort", &changed_prefs.monitoremu, special_monitor_ptr.data(), special_monitor_ptr.size());
+		if (ImGui::BeginCombo("##VideoPort", special_monitor_ptr[changed_prefs.monitoremu])) {
+			for (int n = 0; n < static_cast<int>(special_monitor_ptr.size()); n++) {
+				const bool is_selected = (changed_prefs.monitoremu == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(special_monitor_ptr[n], is_selected)) {
+					changed_prefs.monitoremu = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
 	}
 	EndGroupBox("Options");
 

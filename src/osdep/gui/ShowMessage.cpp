@@ -175,9 +175,9 @@ static void InitShowMessage(const std::string& message)
 	{
 		gui_top = new gcn::Container();
 		gui_top->setDimension(gcn::Rectangle(0, 0, GUI_WIDTH, GUI_HEIGHT));
-		gui_base_color = gui_theme.base_color;
-		gui_foreground_color = gui_theme.foreground_color;
-		gui_font_color = gui_theme.font_color;
+ 		gui_base_color = gcn::Color(gui_theme.base_color.r, gui_theme.base_color.g, gui_theme.base_color.b);
+ 		gui_foreground_color = gcn::Color(gui_theme.foreground_color.r, gui_theme.foreground_color.g, gui_theme.foreground_color.b);
+ 		gui_font_color = gcn::Color(gui_theme.font_color.r, gui_theme.font_color.g, gui_theme.font_color.b);
 		gui_top->setBaseColor(gui_base_color);
 		gui_top->setBackgroundColor(gui_base_color);
 		gui_top->setForegroundColor(gui_foreground_color);

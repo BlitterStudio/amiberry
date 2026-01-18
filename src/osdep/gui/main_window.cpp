@@ -64,7 +64,7 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 }
 
 // Forward declarations used in this early block
-static void apply_imgui_theme_from_theme_file(const std::string& theme_file);
+static void apply_imgui_theme();
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
 static ImVec4 darken(const ImVec4& c, float f) { return ImVec4{ std::max(c.x - f, 0.0f), std::max(c.y - f, 0.0f), std::max(c.z - f, 0.0f), c.w }; }
@@ -80,90 +80,67 @@ static bool parse_rgb_csv(const std::string& s, int& r, int& g, int& b) {
 	return true;
 }
 
-static void apply_imgui_theme_from_theme_file(const std::string& theme_file)
+static void apply_imgui_theme()
 {
-	// Build full theme file path
-	std::string path = get_themes_path();
-	path += theme_file;
-	std::ifstream in(path);
-	if (!in.is_open())
-		return; // keep current ImGui style if theme not found
-
-	// Defaults if keys are missing
-	ImVec4 col_base = ImVec4(0.25f,0.25f,0.25f,1.0f);
-	ImVec4 col_bg   = ImVec4(0.16f,0.16f,0.17f,1.0f);
-	ImVec4 col_fg   = ImVec4(0.86f,0.86f,0.86f,1.0f);
-	ImVec4 col_sel  = ImVec4(0.20f,0.45f,0.78f,1.0f);
-	ImVec4 col_act  = col_sel;
-	ImVec4 col_inact= col_base;
-	ImVec4 col_text = col_fg;
-
-	std::string line;
-	while (std::getline(in, line)) {
-		const auto eq = line.find('=');
-		if (eq == std::string::npos) continue;
-		std::string key = line.substr(0, eq);
-		std::string val = line.substr(eq + 1);
-		int r=0,g=0,b=0;
-		if (key == "base_color" && parse_rgb_csv(val, r, g, b)) col_base = rgb_to_vec4(r,g,b);
-		else if (key == "background_color" && parse_rgb_csv(val, r, g, b)) col_bg = rgb_to_vec4(r,g,b);
-		else if (key == "foreground_color" && parse_rgb_csv(val, r, g, b)) col_fg = rgb_to_vec4(r,g,b);
-		else if (key == "selection_color" && parse_rgb_csv(val, r, g, b)) col_sel = rgb_to_vec4(r,g,b);
-		else if (key == "selector_active" && parse_rgb_csv(val, r, g, b)) col_act = rgb_to_vec4(r,g,b);
-		else if (key == "selector_inactive" && parse_rgb_csv(val, r, g, b)) col_inact = rgb_to_vec4(r,g,b);
-		else if (key == "font_color" && parse_rgb_csv(val, r, g, b)) col_text = rgb_to_vec4(r,g,b);
-	}
-	in.close();
+	ImVec4 col_base = rgb_to_vec4(gui_theme.base_color.r, gui_theme.base_color.g, gui_theme.base_color.b);
+	ImVec4 col_bg   = rgb_to_vec4(gui_theme.background_color.r, gui_theme.background_color.g, gui_theme.background_color.b);
+	ImVec4 col_fg   = rgb_to_vec4(gui_theme.foreground_color.r, gui_theme.foreground_color.g, gui_theme.foreground_color.b);
+	ImVec4 col_sel  = rgb_to_vec4(gui_theme.selection_color.r, gui_theme.selection_color.g, gui_theme.selection_color.b);
+	ImVec4 col_act  = rgb_to_vec4(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
+	ImVec4 col_inact= rgb_to_vec4(gui_theme.selector_inactive.r, gui_theme.selector_inactive.g, gui_theme.selector_inactive.b);
+	ImVec4 col_text = rgb_to_vec4(gui_theme.font_color.r, gui_theme.font_color.g, gui_theme.font_color.b);
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImVec4* colors = style.Colors;
 	colors[ImGuiCol_Text]                 = col_text;
 	colors[ImGuiCol_TextDisabled]         = darken(col_text, 0.40f);
-	colors[ImGuiCol_WindowBg]             = col_bg;
-	colors[ImGuiCol_ChildBg]              = darken(col_bg, 0.02f);
-	colors[ImGuiCol_PopupBg]              = darken(col_bg, 0.05f);
-	colors[ImGuiCol_Border]               = darken(col_base, 0.35f);
-	colors[ImGuiCol_BorderShadow]         = darken(col_base, 0.50f);
-	colors[ImGuiCol_FrameBg]              = col_base;
-	colors[ImGuiCol_FrameBgHovered]       = lighten(col_base, 0.06f);
+	colors[ImGuiCol_WindowBg]             = col_base;
+	colors[ImGuiCol_ChildBg]              = col_base;
+	colors[ImGuiCol_PopupBg]              = col_base;
+	colors[ImGuiCol_Border]               = darken(col_base, 0.45f);
+	colors[ImGuiCol_BorderShadow]         = lighten(col_base, 0.45f);
+	colors[ImGuiCol_FrameBg]              = darken(col_base, 0.1f);
+	colors[ImGuiCol_FrameBgHovered]       = lighten(col_base, 0.05f);
 	colors[ImGuiCol_FrameBgActive]        = lighten(col_base, 0.10f);
-	colors[ImGuiCol_TitleBg]              = darken(col_bg, 0.05f);
-	colors[ImGuiCol_TitleBgActive]        = darken(col_bg, 0.10f);
-	colors[ImGuiCol_TitleBgCollapsed]     = darken(col_bg, 0.08f);
-	colors[ImGuiCol_MenuBarBg]            = darken(col_bg, 0.02f);
-	colors[ImGuiCol_ScrollbarBg]          = darken(col_bg, 0.03f);
+	colors[ImGuiCol_TitleBg]              = col_base;
+	colors[ImGuiCol_TitleBgActive]        = col_act;
+	colors[ImGuiCol_TitleBgCollapsed]     = col_base;
+	colors[ImGuiCol_MenuBarBg]            = col_base;
+	colors[ImGuiCol_ScrollbarBg]          = darken(col_base, 0.15f);
 	colors[ImGuiCol_ScrollbarGrab]        = col_base;
-	colors[ImGuiCol_ScrollbarGrabHovered] = lighten(col_base, 0.08f);
-	colors[ImGuiCol_ScrollbarGrabActive]  = lighten(col_base, 0.12f);
-	colors[ImGuiCol_CheckMark]            = col_sel;
-	colors[ImGuiCol_SliderGrab]           = col_sel;
-	colors[ImGuiCol_SliderGrabActive]     = lighten(col_sel, 0.10f);
+	colors[ImGuiCol_ScrollbarGrabHovered] = lighten(col_base, 0.05f);
+	colors[ImGuiCol_ScrollbarGrabActive]  = col_act;
+	colors[ImGuiCol_CheckMark]            = col_act;
+	colors[ImGuiCol_SliderGrab]           = lighten(col_base, 0.15f);
+	colors[ImGuiCol_SliderGrabActive]     = lighten(col_act, 0.15f);
 	colors[ImGuiCol_Button]               = col_base;
-	colors[ImGuiCol_ButtonHovered]        = lighten(col_base, 0.07f);
-	colors[ImGuiCol_ButtonActive]         = lighten(col_base, 0.12f);
-	colors[ImGuiCol_Header]               = col_sel;
-	colors[ImGuiCol_HeaderHovered]        = lighten(col_sel, 0.10f);
-	colors[ImGuiCol_HeaderActive]         = lighten(col_sel, 0.15f);
-	colors[ImGuiCol_Separator]            = darken(col_base, 0.30f);
-	colors[ImGuiCol_SeparatorHovered]     = lighten(col_base, 0.10f);
-	colors[ImGuiCol_SeparatorActive]      = lighten(col_base, 0.15f);
-	colors[ImGuiCol_ResizeGrip]           = col_inact;
-	colors[ImGuiCol_ResizeGripHovered]    = lighten(col_inact, 0.10f);
-	colors[ImGuiCol_ResizeGripActive]     = lighten(col_inact, 0.15f);
-	colors[ImGuiCol_Tab]                  = darken(col_bg, 0.02f);
-	colors[ImGuiCol_TabHovered]           = lighten(col_sel, 0.15f);
-	colors[ImGuiCol_TabActive]            = lighten(col_sel, 0.10f);
-	colors[ImGuiCol_TabUnfocused]         = darken(col_bg, 0.02f);
-	colors[ImGuiCol_TabUnfocusedActive]   = darken(col_bg, 0.01f);
-	colors[ImGuiCol_PlotLines]            = col_act;
-	colors[ImGuiCol_PlotLinesHovered]     = lighten(col_act, 0.10f);
-	colors[ImGuiCol_PlotHistogram]        = col_sel;
-	colors[ImGuiCol_PlotHistogramHovered] = lighten(col_sel, 0.10f);
-	colors[ImGuiCol_TextSelectedBg]       = ImVec4(col_sel.x, col_sel.y, col_sel.z, 0.35f);
-	colors[ImGuiCol_NavHighlight]         = col_sel;
-	colors[ImGuiCol_NavWindowingHighlight]= ImVec4(1,1,1,0.70f);
-	colors[ImGuiCol_NavWindowingDimBg]    = ImVec4(0,0,0,0.20f);
-	colors[ImGuiCol_ModalWindowDimBg]     = ImVec4(0,0,0,0.35f);
+	colors[ImGuiCol_ButtonHovered]        = lighten(col_base, 0.05f);
+	colors[ImGuiCol_ButtonActive]         = col_act;
+	colors[ImGuiCol_Header]               = col_base;
+	colors[ImGuiCol_HeaderHovered]        = lighten(col_base, 0.05f);
+	colors[ImGuiCol_HeaderActive]         = col_act;
+	colors[ImGuiCol_TextSelectedBg]       = col_sel;
+
+	style.FrameBorderSize = 1.0f;
+	style.WindowBorderSize = 0.0f;
+	style.PopupBorderSize = 1.0f;
+	style.ChildBorderSize = 1.0f;
+	style.ItemSpacing = ImVec2(8.0f, 4.0f);
+	style.SelectableTextAlign = ImVec2(0.0f, 0.5f);
+
+	style.WindowRounding = 0.0f;
+	style.FrameRounding = 0.0f;
+	style.PopupRounding = 0.0f;
+	style.ChildRounding = 0.0f;
+	style.ScrollbarRounding = 0.0f;
+	style.ScrollbarSize = 16.0f;
+	style.GrabRounding = 0.0f;
+	style.GrabMinSize = 10.0f;
+	style.TabRounding = 0.0f;
+
+	// Add a bit more padding inside windows/child areas
+	style.WindowPadding = ImVec2(10.0f, 10.0f);
+	style.FramePadding = ImVec2(5.0f, 4.0f);
 }
 
 void OpenDirDialog(const std::string &initialPath)
@@ -600,6 +577,7 @@ void EndGroupBox(const char* name)
     const float border_y = item_min.y + text_height * 0.5f; // The border line y-coordinate
     
     ImU32 border_col = ImGui::GetColorU32(ImGuiCol_Border);
+    ImU32 shadow_col = ImGui::GetColorU32(ImGuiCol_BorderShadow);
     ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
     
     ImVec2 text_size = ImGui::CalcTextSize(name);
@@ -625,29 +603,42 @@ void EndGroupBox(const char* name)
 
     item_max.y += box_padding;
 
-    // Draw Top-Left Line
+    // Draw 3D-ish border
+    // AmigaOS 3.1 "etched" look for groups: 
+    // Top and Left lines are Shadow (dark)
+    // Bottom and Right lines are Shine (light)
+    
+    // Top-Left Line (Shadow)
     draw_list->AddLine(
         ImVec2(item_min.x, border_y), 
         ImVec2(text_start_x - text_padding, border_y), 
         border_col
     );
-    
-    // Draw Top-Right Line
     draw_list->AddLine(
-        ImVec2(text_start_x + text_size.x + text_padding, border_y), 
-        ImVec2(item_max.x, border_y), 
+        ImVec2(item_min.x, border_y), 
+        ImVec2(item_min.x, item_max.y), 
         border_col
     );
-    
-    // Draw Right Line
-    draw_list->AddLine(ImVec2(item_max.x, border_y), ImVec2(item_max.x, item_max.y), border_col);
-    
-    // Draw Bottom Line
-    draw_list->AddLine(ImVec2(item_max.x, item_max.y), ImVec2(item_min.x, item_max.y), border_col);
-    
-    // Draw Left Line
-    draw_list->AddLine(ImVec2(item_min.x, item_max.y), ImVec2(item_min.x, border_y), border_col);
-    
+
+    // Top-Right Line (Shadow)
+    draw_list->AddLine(
+        ImVec2(text_start_x + text_size.x + text_padding, border_y), 
+        ImVec2(item_max.x - 1.0f, border_y), 
+        border_col
+    );
+
+    // Bottom-Right Lines (Shine)
+    draw_list->AddLine(
+        ImVec2(item_max.x, border_y), 
+        ImVec2(item_max.x, item_max.y), 
+        shadow_col
+    );
+    draw_list->AddLine(
+        ImVec2(item_min.x, item_max.y), 
+        ImVec2(item_max.x, item_max.y), 
+        shadow_col
+    );
+
     // Draw Title
     // Adjust y to center text vertically on the line (standard text rendering is top-left)
     float text_y = item_min.y; // Should match the dummy space we reserved approx
@@ -856,7 +847,7 @@ void amiberry_gui_init()
 	// Load GUI theme (for font selection)
 	load_theme(amiberry_options.gui_theme);
 	// Apply theme colors to ImGui (map GUISAN theme fields)
-	apply_imgui_theme_from_theme_file(amiberry_options.gui_theme);
+	apply_imgui_theme();
 
 	// Load custom font from data/ (default to AmigaTopaz.ttf), scale by DPI
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
@@ -1981,11 +1972,20 @@ void run_gui()
 		// Make icons larger than text height using gui_scale
 		const float icon_h_target = base_text_h;
 		const float row_h = std::max(base_row_h, icon_h_target + 2.0f * s.FramePadding.y);
+		const ImVec4 col_act = rgb_to_vec4(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
 		for (int i = 0; categories[i].category != nullptr; ++i) {
 			const bool selected = (last_active_panel == i);
 			// Full-width selectable row with custom height
+			if (selected) {
+				ImGui::PushStyleColor(ImGuiCol_Header, col_act);
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, lighten(col_act, 0.05f));
+				ImGui::PushStyleColor(ImGuiCol_HeaderActive, lighten(col_act, 0.10f));
+			}
 			if (ImGui::Selectable( (std::string("##cat_") + std::to_string(i)).c_str(), selected, 0, ImVec2(ImGui::GetContentRegionAvail().x, row_h))) {
 				last_active_panel = i;
+			}
+			if (selected) {
+				ImGui::PopStyleColor(3);
 			}
 			// Draw icon + text inside the selectable rect
 			ImVec2 rmin = ImGui::GetItemRectMin();
@@ -2066,6 +2066,10 @@ void run_gui()
 
 		if (start_disabled)
 			ImGui::BeginDisabled();
+		
+		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive]);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.05f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.10f));
 		if (emulating) {
 			if (ImGui::Button("Resume", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 				gui_running = false;
@@ -2073,6 +2077,8 @@ void run_gui()
 			if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 				gui_running = false;
 		}
+		ImGui::PopStyleColor(3);
+
 		if (start_disabled)
 			ImGui::EndDisabled();
 		ImGui::SameLine();

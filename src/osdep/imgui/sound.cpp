@@ -2,6 +2,7 @@
 #include "sysdeps.h"
 #include "config.h"
 #include "options.h"
+#include "imgui_panels.h"
 #include "gui/gui_handling.h"
 #include "sounddep/sound.h"
 #include <vector>
@@ -51,7 +52,21 @@ void render_panel_sound()
 	// Logic: Disabled if Default checked OR Sound Disabled OR No devices
 	bool disable_device = changed_prefs.soundcard_default || changed_prefs.produce_sound == 0 || sound_device_names.size() <= 1;
 	ImGui::BeginDisabled(disable_device);
-	ImGui::Combo("##AudioDevice", &changed_prefs.soundcard, sound_device_items.data(), sound_device_items.size());
+	if (ImGui::BeginCombo("##AudioDevice", (changed_prefs.soundcard >= 0 && changed_prefs.soundcard < static_cast<int>(sound_device_items.size())) ? sound_device_items[changed_prefs.soundcard] : "Unknown")) {
+		for (int n = 0; n < static_cast<int>(sound_device_items.size()); n++) {
+			const bool is_selected = (changed_prefs.soundcard == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(sound_device_items[n], is_selected)) {
+				changed_prefs.soundcard = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	ImGui::EndDisabled();
 	
 	ImGui::SameLine();
@@ -106,7 +121,21 @@ void render_panel_sound()
 	// Row 2: Type Dropdown + Slider
 	const char* vol_types[] = { "Paula", "CD", "AHI", "MIDI" };
 	ImGui::SetNextItemWidth(60);
-	ImGui::Combo("##VolType", &selected_volume_type, vol_types, IM_ARRAYSIZE(vol_types));
+	if (ImGui::BeginCombo("##VolType", vol_types[selected_volume_type])) {
+		for (int n = 0; n < IM_ARRAYSIZE(vol_types); n++) {
+			const bool is_selected = (selected_volume_type == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(vol_types[n], is_selected)) {
+				selected_volume_type = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	ImGui::SameLine();
 	
 	int* current_vol_ptr = &changed_prefs.sound_volume_paula;
@@ -139,7 +168,21 @@ void render_panel_sound()
 	ImGui::Text("Channel mode:");
 	const char* channel_mode_items[] = { "Mono", "Stereo", "Cloned stereo (4 ch)", "4 Channels", "Cloned stereo (5.1)", "5.1 Channels", "Cloned stereo (7.1)", "7.1 channels" };
 	ImGui::SetNextItemWidth(-1);
-	ImGui::Combo("##ChanMode", &changed_prefs.sound_stereo, channel_mode_items, IM_ARRAYSIZE(channel_mode_items));
+	if (ImGui::BeginCombo("##ChanMode", channel_mode_items[changed_prefs.sound_stereo])) {
+		for (int n = 0; n < IM_ARRAYSIZE(channel_mode_items); n++) {
+			const bool is_selected = (changed_prefs.sound_stereo == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(channel_mode_items[n], is_selected)) {
+				changed_prefs.sound_stereo = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	
 	ImGui::NextColumn();
 	ImGui::Text("Stereo separation:");
@@ -149,8 +192,21 @@ void render_panel_sound()
 	
 	// Logic: Disable if Mono
 	ImGui::BeginDisabled(changed_prefs.sound_stereo == 0);
-	if (ImGui::Combo("##Sep", &sep_idx, separation_items, IM_ARRAYSIZE(separation_items))) {
-		changed_prefs.sound_stereo_separation = 10 - sep_idx;
+	if (ImGui::BeginCombo("##Sep", separation_items[sep_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(separation_items); n++) {
+			const bool is_selected = (sep_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(separation_items[n], is_selected)) {
+				sep_idx = n;
+				changed_prefs.sound_stereo_separation = 10 - sep_idx;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	ImGui::EndDisabled();
 	
@@ -158,7 +214,21 @@ void render_panel_sound()
 	ImGui::Text("Interpolation:");
 	const char* interpolation_items[] = { "Disabled", "Anti", "Sinc", "RH", "Crux" };
 	ImGui::SetNextItemWidth(-1);
-	ImGui::Combo("##Interp", &changed_prefs.sound_interpol, interpolation_items, IM_ARRAYSIZE(interpolation_items));
+	if (ImGui::BeginCombo("##Interp", interpolation_items[changed_prefs.sound_interpol])) {
+		for (int n = 0; n < IM_ARRAYSIZE(interpolation_items); n++) {
+			const bool is_selected = (changed_prefs.sound_interpol == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(interpolation_items[n], is_selected)) {
+				changed_prefs.sound_interpol = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	
 	ImGui::Columns(1); ImGui::Spacing();
 	
@@ -172,9 +242,21 @@ void render_panel_sound()
 	else if (changed_prefs.sound_freq == 44100) freq_idx = 3;
 	else if (changed_prefs.sound_freq == 48000) freq_idx = 4;
 	ImGui::SetNextItemWidth(-1);
-	if (ImGui::Combo("##Freq", &freq_idx, frequency_items, IM_ARRAYSIZE(frequency_items))) {
-		const int freqs[] = { 11025, 22050, 32000, 44100, 48000 };
-		changed_prefs.sound_freq = freqs[freq_idx];
+	if (ImGui::BeginCombo("##Freq", frequency_items[freq_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(frequency_items); n++) {
+			const bool is_selected = (freq_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(frequency_items[n], is_selected)) {
+				const int freqs[] = { 11025, 22050, 32000, 44100, 48000 };
+				changed_prefs.sound_freq = freqs[n];
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	
 	ImGui::NextColumn();
@@ -185,9 +267,21 @@ void render_panel_sound()
 	else if (changed_prefs.sound_stereo_swap_ahi) swap_idx = 2;
 	else if (changed_prefs.sound_stereo_swap_paula) swap_idx = 1;
 	ImGui::SetNextItemWidth(-1);
-	if (ImGui::Combo("##Swap", &swap_idx, swap_channels_items, IM_ARRAYSIZE(swap_channels_items))) {
-		changed_prefs.sound_stereo_swap_paula = (swap_idx == 1 || swap_idx == 3);
-		changed_prefs.sound_stereo_swap_ahi = (swap_idx == 2 || swap_idx == 3);
+	if (ImGui::BeginCombo("##Swap", swap_channels_items[swap_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(swap_channels_items); n++) {
+			const bool is_selected = (swap_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(swap_channels_items[n], is_selected)) {
+				changed_prefs.sound_stereo_swap_paula = (n == 1 || n == 3);
+				changed_prefs.sound_stereo_swap_ahi = (n == 2 || n == 3);
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	
 	ImGui::NextColumn();
@@ -198,8 +292,20 @@ void render_panel_sound()
 	
 	// Logic: Disable if Mono
 	ImGui::BeginDisabled(changed_prefs.sound_stereo == 0);
-	if (ImGui::Combo("##Delay", &delay_idx, stereo_delay_items, IM_ARRAYSIZE(stereo_delay_items))) {
-		changed_prefs.sound_mixed_stereo_delay = delay_idx == 0 ? -1 : delay_idx;
+	if (ImGui::BeginCombo("##Delay", stereo_delay_items[delay_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(stereo_delay_items); n++) {
+			const bool is_selected = (delay_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(stereo_delay_items[n], is_selected)) {
+				changed_prefs.sound_mixed_stereo_delay = n == 0 ? -1 : n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	ImGui::EndDisabled();
 	
@@ -215,13 +321,25 @@ void render_panel_sound()
 		else filter_idx = 3;
 	}
 	ImGui::SetNextItemWidth(-1);
-	if (ImGui::Combo("##Filter", &filter_idx, filter_items, IM_ARRAYSIZE(filter_items))) {
-		if (filter_idx == 0) changed_prefs.sound_filter = FILTER_SOUND_OFF;
-		else if (filter_idx == 1) { changed_prefs.sound_filter = FILTER_SOUND_EMUL; changed_prefs.sound_filter_type = 0; }
-		else if (filter_idx == 2) { changed_prefs.sound_filter = FILTER_SOUND_EMUL; changed_prefs.sound_filter_type = 1; }
-		else if (filter_idx == 3) { changed_prefs.sound_filter = FILTER_SOUND_ON; changed_prefs.sound_filter_type = 0; }
-		else if (filter_idx == 4) { changed_prefs.sound_filter = FILTER_SOUND_ON; changed_prefs.sound_filter_type = 1; }
-		else if (filter_idx == 5) { changed_prefs.sound_filter = FILTER_SOUND_ON; changed_prefs.sound_filter_type = 2; }
+	if (ImGui::BeginCombo("##Filter", filter_items[filter_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(filter_items); n++) {
+			const bool is_selected = (filter_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(filter_items[n], is_selected)) {
+				if (n == 0) changed_prefs.sound_filter = FILTER_SOUND_OFF;
+				else if (n == 1) { changed_prefs.sound_filter = FILTER_SOUND_EMUL; changed_prefs.sound_filter_type = 0; }
+				else if (n == 2) { changed_prefs.sound_filter = FILTER_SOUND_EMUL; changed_prefs.sound_filter_type = 1; }
+				else if (n == 3) { changed_prefs.sound_filter = FILTER_SOUND_ON; changed_prefs.sound_filter_type = 0; }
+				else if (n == 4) { changed_prefs.sound_filter = FILTER_SOUND_ON; changed_prefs.sound_filter_type = 1; }
+				else if (n == 5) { changed_prefs.sound_filter = FILTER_SOUND_ON; changed_prefs.sound_filter_type = 2; }
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	
 	ImGui::Columns(1);
@@ -263,14 +381,40 @@ void render_panel_sound()
 	int sound_type = changed_prefs.floppyslots[selected_floppy_drive].dfxclick;
 	if (sound_type > 1) sound_type = 1; // Clamp if unknown
 	ImGui::SetNextItemWidth(120);
-	if (ImGui::Combo("##SoundType", &sound_type, sound_types, IM_ARRAYSIZE(sound_types))) {
-		changed_prefs.floppyslots[selected_floppy_drive].dfxclick = sound_type;
+	if (ImGui::BeginCombo("##SoundType", sound_types[sound_type])) {
+		for (int n = 0; n < IM_ARRAYSIZE(sound_types); n++) {
+			const bool is_selected = (sound_type == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(sound_types[n], is_selected)) {
+				changed_prefs.floppyslots[selected_floppy_drive].dfxclick = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 
 	ImGui::SameLine();
 	const char* drive_items[] = { "DF0:", "DF1:", "DF2:", "DF3:" };
 	ImGui::SetNextItemWidth(80);
-	ImGui::Combo("##FloppyDrive", &selected_floppy_drive, drive_items, IM_ARRAYSIZE(drive_items));
+	if (ImGui::BeginCombo("##FloppyDrive", drive_items[selected_floppy_drive])) {
+		for (int n = 0; n < IM_ARRAYSIZE(drive_items); n++) {
+			const bool is_selected = (selected_floppy_drive == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(drive_items[n], is_selected)) {
+				selected_floppy_drive = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	
 	ImGui::EndChild();
 	ImGui::EndGroup();

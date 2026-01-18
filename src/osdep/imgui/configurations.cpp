@@ -67,7 +67,13 @@ void render_panel_configurations()
 		else
 			snprintf(label, sizeof(label), "%s", ConfigFilesList[i]->Name);
 
-		if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_AllowDoubleClick))
+		bool is_selected = (selected == i);
+		if (is_selected)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+		}
+
+		if (ImGui::Selectable(label, is_selected, ImGuiSelectableFlags_AllowDoubleClick))
 		{
 			selected = i;
 			strncpy(name, ConfigFilesList[i]->Name, MAX_DPATH);
@@ -80,6 +86,11 @@ void render_panel_configurations()
 				uae_restart(NULL, 0, ConfigFilesList[selected]->FullPath);
 				gui_running = false;
 			}
+		}
+
+		if (is_selected)
+		{
+			ImGui::PopStyleColor(1);
 		}
 	}
 	ImGui::EndChild();

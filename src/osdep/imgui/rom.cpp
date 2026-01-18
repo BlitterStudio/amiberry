@@ -76,11 +76,21 @@ static bool RomCombo(const char* label, char* current_path, int max_len, std::ve
 	if (ImGui::BeginCombo(label, preview_value.c_str())) {
 		for (const auto& entry : list) {
 			bool is_selected = (entry.path == current_path);
+			if (is_selected)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			}
+
 			if (ImGui::Selectable(entry.name.c_str(), is_selected)) {
 				strncpy(current_path, entry.path.c_str(), max_len);
 				value_changed = true;
 			}
-			if (is_selected) ImGui::SetItemDefaultFocus();
+
+			if (is_selected)
+			{
+				ImGui::PopStyleColor(1);
+				ImGui::SetItemDefaultFocus();
+			}
 		}
 		ImGui::EndCombo();
 	}

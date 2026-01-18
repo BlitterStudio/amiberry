@@ -175,17 +175,33 @@ void render_panel_quickstart()
 		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted("Model:");
 		ImGui::TableSetColumnIndex(1);
-		if (ImGui::Combo("##QuickstartModel", &quickstart_model, qs_models.data(), static_cast<int>(qs_models.size())))
+		if (ImGui::BeginCombo("##QuickstartModel", qs_models[quickstart_model]))
 		{
-			qs_configs.clear();
-			for (auto &config : amodels[quickstart_model].configs)
+			for (int i = 0; i < static_cast<int>(qs_models.size()); i++)
 			{
-				if (config[0] == '\0')
-					break;
-				qs_configs.push_back(config);
+				const bool is_selected = (quickstart_model == i);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(qs_models[i], is_selected))
+				{
+					quickstart_model = i;
+					qs_configs.clear();
+					for (auto &config : amodels[quickstart_model].configs)
+					{
+						if (config[0] == '\0')
+							break;
+						qs_configs.push_back(config);
+					}
+					quickstart_conf = 0;
+					Quickstart_ApplyDefaults();
+				}
+				if (is_selected)
+				{
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
 			}
-			quickstart_conf = 0;
-			Quickstart_ApplyDefaults();
+			ImGui::EndCombo();
 		}
 		ImGui::SameLine();
 		bool ntsc = changed_prefs.ntscmode != 0;
@@ -206,9 +222,25 @@ void render_panel_quickstart()
 		{
 			if (quickstart_conf < 0 || quickstart_conf >= static_cast<int>(qs_configs.size()))
 				quickstart_conf = 0;
-			if (ImGui::Combo("##QuickstartConf", &quickstart_conf, qs_configs.data(), static_cast<int>(qs_configs.size())))
+			if (ImGui::BeginCombo("##QuickstartConf", qs_configs[quickstart_conf]))
 			{
-				Quickstart_ApplyDefaults();
+				for (int i = 0; i < static_cast<int>(qs_configs.size()); i++)
+				{
+					const bool is_selected = (quickstart_conf == i);
+					if (is_selected)
+						ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+					if (ImGui::Selectable(qs_configs[i], is_selected))
+					{
+						quickstart_conf = i;
+						Quickstart_ApplyDefaults();
+					}
+					if (is_selected)
+					{
+						ImGui::PopStyleColor();
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
 			}
 		}
 		ImGui::EndTable();
@@ -268,22 +300,38 @@ void render_panel_quickstart()
 		ImGui::SetNextItemWidth(100.0f); // Narrower combo
 		snprintf(label, sizeof(label), "##QSFloppyType%d", i);
 		if (!drive_enabled) ImGui::BeginDisabled();
-		if (ImGui::Combo(label, &selectedFloppyType, floppy_drive_types, IM_ARRAYSIZE(floppy_drive_types)))
+		if (ImGui::BeginCombo(label, floppy_drive_types[selectedFloppyType]))
 		{
-			int sub = 0;
-			int dfxtype = todfxtype(i, selectedFloppyType - 1, &sub);
-			changed_prefs.floppyslots[i].dfxtype = dfxtype;
-			changed_prefs.floppyslots[i].dfxsubtype = sub;
-			if (dfxtype == DRV_FB)
+			for (int n = 0; n < IM_ARRAYSIZE(floppy_drive_types); n++)
 			{
-				TCHAR tmp[32];
-				_sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedFloppyType - 5, drivebridgeModes[selectedFloppyType - 6].data());
-				_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
+				const bool is_selected = (selectedFloppyType == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(floppy_drive_types[n], is_selected))
+				{
+					selectedFloppyType = n;
+					int sub = 0;
+					int dfxtype = todfxtype(i, selectedFloppyType - 1, &sub);
+					changed_prefs.floppyslots[i].dfxtype = dfxtype;
+					changed_prefs.floppyslots[i].dfxsubtype = sub;
+					if (dfxtype == DRV_FB)
+					{
+						TCHAR tmp[32];
+						_sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedFloppyType - 5, drivebridgeModes[selectedFloppyType - 6].data());
+						_tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
+					}
+					else
+					{
+						changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+					}
+				}
+				if (is_selected)
+				{
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
 			}
-			else
-			{
-				changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
-			}
+			ImGui::EndCombo();
 		}
 		if (!drive_enabled) ImGui::EndDisabled();
 
@@ -348,25 +396,41 @@ void render_panel_quickstart()
 		int combo_index = selected_index + 1;
 		snprintf(label, sizeof(label), "##QSFloppyImagePath%d", i);
 		ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
-		if (ImGui::Combo(label, &combo_index, items.data(), static_cast<int>(items.size())))
+		if (ImGui::BeginCombo(label, items[combo_index]))
 		{
-			if (combo_index == 0)
+			for (int n = 0; n < static_cast<int>(items.size()); n++)
 			{
-				disk_eject(i);
-				changed_prefs.floppyslots[i].df[0] = 0;
-			}
-			else if (!qs_ignore_list_change && combo_index > 0 && combo_index <= static_cast<int>(lstMRUDiskList.size()))
-			{
-				std::string element = get_full_path_from_disk_list(qs_disk_display[combo_index - 1]);
-				if (element != changed_prefs.floppyslots[i].df)
+				const bool is_selected = (combo_index == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(items[n], is_selected))
 				{
-					std::strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
-					DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
-					disk_insert(i, changed_prefs.floppyslots[i].df);
-					if (!last_loaded_config[0])
-						set_last_active_config(element.c_str());
+					combo_index = n;
+					if (combo_index == 0)
+					{
+						disk_eject(i);
+						changed_prefs.floppyslots[i].df[0] = 0;
+					}
+					else if (!qs_ignore_list_change && combo_index > 0 && combo_index <= static_cast<int>(lstMRUDiskList.size()))
+					{
+						std::string element = get_full_path_from_disk_list(qs_disk_display[combo_index - 1]);
+						if (element != changed_prefs.floppyslots[i].df)
+						{
+							std::strncpy(changed_prefs.floppyslots[i].df, element.c_str(), MAX_DPATH);
+							DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
+							disk_insert(i, changed_prefs.floppyslots[i].df);
+							if (!last_loaded_config[0])
+								set_last_active_config(element.c_str());
+						}
+					}
+				}
+				if (is_selected)
+				{
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
 				}
 			}
+			ImGui::EndCombo();
 		}
 		ImGui::PopItemWidth();
 		ImGui::PopID();
@@ -430,36 +494,52 @@ void render_panel_quickstart()
 
 		int combo_index = cd_index + 1;
 		ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
-		if (ImGui::Combo("##QSCDFile", &combo_index, cd_items.data(), static_cast<int>(cd_items.size())))
+		if (ImGui::BeginCombo("##QSCDFile", cd_items[combo_index]))
 		{
-			if (combo_index == 0)
+			for (int n = 0; n < static_cast<int>(cd_items.size()); n++)
 			{
-				changed_prefs.cdslots[0].name[0] = 0;
-				changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-			}
-			else if (!qs_ignore_list_change && combo_index > 0 && combo_index <= static_cast<int>(qs_cd_display.size()))
-			{
-				const std::string &selected = qs_cd_display[combo_index - 1];
-				if (selected.rfind("/dev/", 0) == 0)
+				const bool is_selected = (combo_index == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(cd_items[n], is_selected))
 				{
-					std::strncpy(changed_prefs.cdslots[0].name, selected.c_str(), MAX_DPATH);
-					changed_prefs.cdslots[0].inuse = true;
-					changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
-				}
-				else
-				{
-					std::string element = get_full_path_from_disk_list(selected);
-					if (element != changed_prefs.cdslots[0].name)
+					combo_index = n;
+					if (combo_index == 0)
 					{
-						std::strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
-						DISK_history_add(changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
-						changed_prefs.cdslots[0].inuse = true;
+						changed_prefs.cdslots[0].name[0] = 0;
 						changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-						if (!last_loaded_config[0])
-							set_last_active_config(element.c_str());
+					}
+					else if (!qs_ignore_list_change && combo_index > 0 && combo_index <= static_cast<int>(qs_cd_display.size()))
+					{
+						const std::string &selected = qs_cd_display[combo_index - 1];
+						if (selected.rfind("/dev/", 0) == 0)
+						{
+							std::strncpy(changed_prefs.cdslots[0].name, selected.c_str(), MAX_DPATH);
+							changed_prefs.cdslots[0].inuse = true;
+							changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
+						}
+						else
+						{
+							std::string element = get_full_path_from_disk_list(selected);
+							if (element != changed_prefs.cdslots[0].name)
+							{
+								std::strncpy(changed_prefs.cdslots[0].name, element.c_str(), MAX_DPATH);
+								DISK_history_add(changed_prefs.cdslots[0].name, -1, HISTORY_CD, 0);
+								changed_prefs.cdslots[0].inuse = true;
+								changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+								if (!last_loaded_config[0])
+									set_last_active_config(element.c_str());
+							}
+						}
 					}
 				}
+				if (is_selected)
+				{
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
 			}
+			ImGui::EndCombo();
 		}
 		ImGui::PopItemWidth();
 		ImGui::PopID();
@@ -502,21 +582,39 @@ void render_panel_quickstart()
 
 	int combo_whd_index = whd_index + 1;
 	ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
-	if (ImGui::Combo("##QSWHDList", &combo_whd_index, whd_items.data(), static_cast<int>(whd_items.size()))) {
-		if (combo_whd_index == 0)
+	if (ImGui::BeginCombo("##QSWHDList", whd_items[combo_whd_index]))
+	{
+		for (int n = 0; n < static_cast<int>(whd_items.size()); n++)
 		{
-			whdload_prefs.whdload_filename.clear();
-		}
-		else if (!qs_ignore_list_change && combo_whd_index > 0 && combo_whd_index <= static_cast<int>(qs_whd_display.size())) {
-			std::string element = get_full_path_from_disk_list(qs_whd_display[combo_whd_index - 1]);
-			if (element != whdload_prefs.whdload_filename)
+			const bool is_selected = (combo_whd_index == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(whd_items[n], is_selected))
 			{
-				whdload_prefs.whdload_filename = element;
-				add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
+				combo_whd_index = n;
+				if (combo_whd_index == 0)
+				{
+					whdload_prefs.whdload_filename.clear();
+				}
+				else if (!qs_ignore_list_change && combo_whd_index > 0 && combo_whd_index <= static_cast<int>(qs_whd_display.size()))
+				{
+					std::string element = get_full_path_from_disk_list(qs_whd_display[combo_whd_index - 1]);
+					if (element != whdload_prefs.whdload_filename)
+					{
+						whdload_prefs.whdload_filename = element;
+						add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);
+					}
+					whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
+					set_last_active_config(whdload_prefs.whdload_filename.c_str());
+				}
 			}
-			whdload_auto_prefs(&changed_prefs, whdload_prefs.whdload_filename.c_str());
-			set_last_active_config(whdload_prefs.whdload_filename.c_str());
+			if (is_selected)
+			{
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
 		}
+		ImGui::EndCombo();
 	}
 	ImGui::PopItemWidth();
 	EndGroupBox("WHDLoad auto-config:");

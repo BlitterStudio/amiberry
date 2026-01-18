@@ -1288,21 +1288,22 @@ struct amiberry_hotkey
 	hotkey_modifiers modifiers;
 };
 
+struct amiberry_gui_color
+{
+	uint8_t r, g, b;
+};
+
 struct amiberry_gui_theme
 {
-#ifdef USE_GUISAN
-	gcn::Color base_color;
-	gcn::Color selector_inactive;
-	gcn::Color selector_active;
-	gcn::Color background_color;
-	gcn::Color selection_color;
-	gcn::Color foreground_color;
-#endif
+	amiberry_gui_color base_color;
+	amiberry_gui_color selector_inactive;
+	amiberry_gui_color selector_active;
+	amiberry_gui_color background_color;
+	amiberry_gui_color selection_color;
+	amiberry_gui_color foreground_color;
 	std::string font_name;
 	int font_size;
-#ifdef USE_GUISAN
-	gcn::Color font_color;
-#endif
+	amiberry_gui_color font_color;
 };
 
 struct amiberry_options

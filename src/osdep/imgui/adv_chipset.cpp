@@ -169,7 +169,21 @@ void render_panel_adv_chipset()
 		ImGui::Text("Unmapped address space:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(120);
-		ImGui::Combo("##Unmapped", &changed_prefs.cs_unmapped_space, unmapped_items, IM_ARRAYSIZE(unmapped_items));
+		if (ImGui::BeginCombo("##Unmapped", unmapped_items[changed_prefs.cs_unmapped_space])) {
+			for (int n = 0; n < IM_ARRAYSIZE(unmapped_items); n++) {
+				const bool is_selected = (changed_prefs.cs_unmapped_space == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(unmapped_items[n], is_selected)) {
+					changed_prefs.cs_unmapped_space = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
 
 		ImGui::SameLine(0, 20); // Keep reasonable spacing between separate control groups
 		
@@ -178,7 +192,21 @@ void render_panel_adv_chipset()
 		ImGui::Text("CIA E-Clock Sync:");
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(120);
-		ImGui::Combo("##CiaSync", &changed_prefs.cs_eclocksync, ciasync_items, IM_ARRAYSIZE(ciasync_items));
+		if (ImGui::BeginCombo("##CiaSync", ciasync_items[changed_prefs.cs_eclocksync])) {
+			for (int n = 0; n < IM_ARRAYSIZE(ciasync_items); n++) {
+				const bool is_selected = (changed_prefs.cs_eclocksync == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(ciasync_items[n], is_selected)) {
+					changed_prefs.cs_eclocksync = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
 
 		EndDisableableGroup(controls_disabled);
 	}
@@ -260,12 +288,40 @@ void render_panel_adv_chipset()
 				ImGui::SameLine(0, 5);
 				const char* agnus_models[] = { "Auto", "Velvet", "A1000" };
 				ImGui::SetNextItemWidth(60);
-				ImGui::Combo("##AgnusModel", &changed_prefs.cs_agnusmodel, agnus_models, IM_ARRAYSIZE(agnus_models));
+				if (ImGui::BeginCombo("##AgnusModel", agnus_models[changed_prefs.cs_agnusmodel])) {
+					for (int n = 0; n < IM_ARRAYSIZE(agnus_models); n++) {
+						const bool is_selected = (changed_prefs.cs_agnusmodel == n);
+						if (is_selected)
+							ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+						if (ImGui::Selectable(agnus_models[n], is_selected)) {
+							changed_prefs.cs_agnusmodel = n;
+						}
+						if (is_selected) {
+							ImGui::PopStyleColor();
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
 				
 				ImGui::SameLine(0, 5);
 				const char* agnus_sizes[] = { "Auto", "512k", "1M", "2M" };
 				ImGui::SetNextItemWidth(60);
-				ImGui::Combo("##AgnusSize", &changed_prefs.cs_agnussize, agnus_sizes, IM_ARRAYSIZE(agnus_sizes));
+				if (ImGui::BeginCombo("##AgnusSize", agnus_sizes[changed_prefs.cs_agnussize])) {
+					for (int n = 0; n < IM_ARRAYSIZE(agnus_sizes); n++) {
+						const bool is_selected = (changed_prefs.cs_agnussize == n);
+						if (is_selected)
+							ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+						if (ImGui::Selectable(agnus_sizes[n], is_selected)) {
+							changed_prefs.cs_agnussize = n;
+						}
+						if (is_selected) {
+							ImGui::PopStyleColor();
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
 			}
 
 			// Denise
@@ -282,7 +338,21 @@ void render_panel_adv_chipset()
 				ImGui::SameLine(0, 5);
 				const char* denise_models[] = { "Auto", "Velvet", "A1000 No-EHB", "A1000" };
 				ImGui::SetNextItemWidth(100);
-				ImGui::Combo("##DeniseModel", &changed_prefs.cs_denisemodel, denise_models, IM_ARRAYSIZE(denise_models));
+				if (ImGui::BeginCombo("##DeniseModel", denise_models[changed_prefs.cs_denisemodel])) {
+					for (int n = 0; n < IM_ARRAYSIZE(denise_models); n++) {
+						const bool is_selected = (changed_prefs.cs_denisemodel == n);
+						if (is_selected)
+							ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+						if (ImGui::Selectable(denise_models[n], is_selected)) {
+							changed_prefs.cs_denisemodel = n;
+						}
+						if (is_selected) {
+							ImGui::PopStyleColor();
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
 			}
 
 			ImGui::EndTable();

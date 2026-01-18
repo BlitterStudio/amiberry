@@ -92,18 +92,65 @@ void render_panel_input()
 		
 		int dev_idx = get_device_index(changed_prefs.jports[port_idx].id);
 		ImGui::SetNextItemWidth(-1);
-		if (ImGui::Combo(std::string("##Dev").append(std::to_string(port_idx)).c_str(), &dev_idx, input_device_items.data(), input_device_items.size())) {
-			changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
-			inputdevice_validate_jports(&changed_prefs, port_idx, nullptr); // Validate change
+		if (ImGui::BeginCombo(std::string("##Dev").append(std::to_string(port_idx)).c_str(), input_device_items[dev_idx])) {
+			for (int n = 0; n < static_cast<int>(input_device_items.size()); n++) {
+				const bool is_selected = (dev_idx == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(input_device_items[n], is_selected)) {
+					dev_idx = n;
+					changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
+					inputdevice_validate_jports(&changed_prefs, port_idx, nullptr); // Validate change
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
 		}
 		
 		float avail_w = ImGui::GetContentRegionAvail().x;
 		float item_w = (avail_w - 120) / 2;
 		ImGui::SetNextItemWidth(item_w);
-		ImGui::Combo(std::string("##Autofire").append(std::to_string(port_idx)).c_str(), &changed_prefs.jports[port_idx].autofire, autofire_items);
+		
+		const char* autofire_names[] = { "No autofire (normal)", "Autofire", "Autofire (toggle)", "Autofire (always)", "No autofire (toggle)" };
+		if (ImGui::BeginCombo(std::string("##Autofire").append(std::to_string(port_idx)).c_str(), autofire_names[changed_prefs.jports[port_idx].autofire])) {
+			for (int n = 0; n < IM_ARRAYSIZE(autofire_names); n++) {
+				const bool is_selected = (changed_prefs.jports[port_idx].autofire == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(autofire_names[n], is_selected)) {
+					changed_prefs.jports[port_idx].autofire = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(item_w);
-		ImGui::Combo(std::string("##Mode").append(std::to_string(port_idx)).c_str(), &changed_prefs.jports[port_idx].mode, mode_items);
+		
+		const char* mode_names[] = { "Default", "Wheel Mouse", "Mouse", "Joystick", "Gamepad", "Analog Joystick", "CDTV remote mouse", "CD32 pad" };
+		if (ImGui::BeginCombo(std::string("##Mode").append(std::to_string(port_idx)).c_str(), mode_names[changed_prefs.jports[port_idx].mode])) {
+			for (int n = 0; n < IM_ARRAYSIZE(mode_names); n++) {
+				const bool is_selected = (changed_prefs.jports[port_idx].mode == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(mode_names[n], is_selected)) {
+					changed_prefs.jports[port_idx].mode = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
 		ImGui::SameLine();
 		ImGui::Button(std::string("Remap / Test##").append(std::to_string(port_idx)).c_str());
 		
@@ -113,7 +160,22 @@ void render_panel_input()
 		ImGui::SetNextItemWidth(item_w);
 		
 		ImGui::BeginDisabled(changed_prefs.jports[port_idx].mode == 0);
-		ImGui::Combo(std::string("##MouseMap").append(std::to_string(port_idx)).c_str(), &changed_prefs.jports[port_idx].mousemap, "None\0LStick\0");
+		const char* mouse_map_names[] = { "None", "LStick" };
+		if (ImGui::BeginCombo(std::string("##MouseMap").append(std::to_string(port_idx)).c_str(), mouse_map_names[changed_prefs.jports[port_idx].mousemap])) {
+			for (int n = 0; n < IM_ARRAYSIZE(mouse_map_names); n++) {
+				const bool is_selected = (changed_prefs.jports[port_idx].mousemap == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(mouse_map_names[n], is_selected)) {
+					changed_prefs.jports[port_idx].mousemap = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
 		ImGui::EndDisabled();
 
 		ImGui::NextColumn();
@@ -150,8 +212,21 @@ void render_panel_input()
 		
 		int dev_idx = get_device_index(changed_prefs.jports[port_idx].id);
 		ImGui::SetNextItemWidth(-1);
-		if (ImGui::Combo(std::string("##ParDev").append(std::to_string(port_idx)).c_str(), &dev_idx, input_device_items.data(), input_device_items.size())) {
-			changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
+		if (ImGui::BeginCombo(std::string("##ParDev").append(std::to_string(port_idx)).c_str(), input_device_items[dev_idx])) {
+			for (int n = 0; n < static_cast<int>(input_device_items.size()); n++) {
+				const bool is_selected = (dev_idx == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(input_device_items[n], is_selected)) {
+					dev_idx = n;
+					changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
 		}
 		
 		// Row 2: Autofire | Remap
@@ -160,7 +235,22 @@ void render_panel_input()
 		float item_w = (avail_w - 120) / 2; 
 		
 		ImGui::SetNextItemWidth(item_w);
-		ImGui::Combo(std::string("##ParAutofire").append(std::to_string(port_idx)).c_str(), &changed_prefs.jports[port_idx].autofire, autofire_items);
+		const char* autofire_names[] = { "No autofire (normal)", "Autofire", "Autofire (toggle)", "Autofire (always)", "No autofire (toggle)" };
+		if (ImGui::BeginCombo(std::string("##ParAutofire").append(std::to_string(port_idx)).c_str(), autofire_names[changed_prefs.jports[port_idx].autofire])) {
+			for (int n = 0; n < IM_ARRAYSIZE(autofire_names); n++) {
+				const bool is_selected = (changed_prefs.jports[port_idx].autofire == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(autofire_names[n], is_selected)) {
+					changed_prefs.jports[port_idx].autofire = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
 		ImGui::SameLine();
 		ImGui::Button(std::string("Remap / Test##Par").append(std::to_string(port_idx)).c_str());
 		
@@ -206,11 +296,25 @@ void render_panel_input()
 	
 	ImGui::SetCursorPosX(ImGui::GetColumnOffset() + 190);
 	ImGui::SetNextItemWidth(100);
-	if (ImGui::Combo("##AutofireRate", &af_rate_idx, "Off\0Slow\0Medium\0Fast\0")) {
-		if (af_rate_idx == 0) changed_prefs.input_autofire_linecnt = 0;
-		else if (af_rate_idx == 1) changed_prefs.input_autofire_linecnt = 12 * 312;
-		else if (af_rate_idx == 2) changed_prefs.input_autofire_linecnt = 8 * 312;
-		else changed_prefs.input_autofire_linecnt = 4 * 312;
+	const char* af_rate_names[] = { "Off", "Slow", "Medium", "Fast" };
+	if (ImGui::BeginCombo("##AutofireRate", af_rate_names[af_rate_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(af_rate_names); n++) {
+			const bool is_selected = (af_rate_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(af_rate_names[n], is_selected)) {
+				af_rate_idx = n;
+				if (af_rate_idx == 0) changed_prefs.input_autofire_linecnt = 0;
+				else if (af_rate_idx == 1) changed_prefs.input_autofire_linecnt = 12 * 312;
+				else if (af_rate_idx == 2) changed_prefs.input_autofire_linecnt = 8 * 312;
+				else changed_prefs.input_autofire_linecnt = 4 * 312;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	ImGui::NextColumn();
 
@@ -281,12 +385,25 @@ void render_panel_input()
 	else if (untrap_val & MOUSEUNTRAP_MIDDLEBUTTON) untrap_idx = 1;
 	
 	ImGui::SetNextItemWidth(-1);
-	if (ImGui::Combo("##UntrapMode", &untrap_idx, untrap_items, IM_ARRAYSIZE(untrap_items))) {
-		int new_val = 0;
-		if (untrap_idx == 1) new_val = MOUSEUNTRAP_MIDDLEBUTTON;
-		else if (untrap_idx == 2) new_val = MOUSEUNTRAP_MAGIC;
-		else if (untrap_idx == 3) new_val = MOUSEUNTRAP_MIDDLEBUTTON | MOUSEUNTRAP_MAGIC;
-		changed_prefs.input_mouse_untrap = new_val;
+	if (ImGui::BeginCombo("##UntrapMode", untrap_items[untrap_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(untrap_items); n++) {
+			const bool is_selected = (untrap_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(untrap_items[n], is_selected)) {
+				untrap_idx = n;
+				int new_val = 0;
+				if (untrap_idx == 1) new_val = MOUSEUNTRAP_MIDDLEBUTTON;
+				else if (untrap_idx == 2) new_val = MOUSEUNTRAP_MAGIC;
+				else if (untrap_idx == 3) new_val = MOUSEUNTRAP_MIDDLEBUTTON | MOUSEUNTRAP_MAGIC;
+				changed_prefs.input_mouse_untrap = new_val;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	ImGui::NextColumn();
 
@@ -305,7 +422,21 @@ void render_panel_input()
 	ImGui::SetNextItemWidth(-1);
 	
 	ImGui::BeginDisabled(changed_prefs.input_tablet == 0);
-	ImGui::Combo("##MagicMouse", &changed_prefs.input_magic_mouse_cursor, magic_items, IM_ARRAYSIZE(magic_items));
+	if (ImGui::BeginCombo("##MagicMouse", magic_items[changed_prefs.input_magic_mouse_cursor])) {
+		for (int n = 0; n < IM_ARRAYSIZE(magic_items); n++) {
+			const bool is_selected = (changed_prefs.input_magic_mouse_cursor == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(magic_items[n], is_selected)) {
+				changed_prefs.input_magic_mouse_cursor = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	ImGui::EndDisabled();
 	ImGui::NextColumn();
 

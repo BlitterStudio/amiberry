@@ -81,16 +81,21 @@ static bool VectorCombo(const char* label, int* current_item, const std::vector<
 	bool changed = false;
 	if (ImGui::BeginCombo(label, items[*current_item].c_str()))
 	{
-		for (int n = 0; n < items.size(); n++)
+		for (int n = 0; n < static_cast<int>(items.size()); n++)
 		{
 			const bool is_selected = (*current_item == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
 			if (ImGui::Selectable(items[n].c_str(), is_selected))
 			{
 				*current_item = n;
 				changed = true;
 			}
 			if (is_selected)
+			{
+				ImGui::PopStyleColor();
 				ImGui::SetItemDefaultFocus();
+			}
 		}
 		ImGui::EndCombo();
 	}
@@ -257,7 +262,21 @@ void render_panel_io()
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Protection Dongle"); ImGui::EndMenuBar(); }
 
 	ImGui::SetNextItemWidth(-1);
-	ImGui::Combo("##Dongle", &changed_prefs.dongle, dongle_items, IM_ARRAYSIZE(dongle_items));
+	if (ImGui::BeginCombo("##Dongle", dongle_items[changed_prefs.dongle])) {
+		for (int n = 0; n < IM_ARRAYSIZE(dongle_items); n++) {
+			const bool is_selected = (changed_prefs.dongle == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(dongle_items[n], is_selected)) {
+				changed_prefs.dongle = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 
 	ImGui::EndChild();
 	ImGui::EndGroup();

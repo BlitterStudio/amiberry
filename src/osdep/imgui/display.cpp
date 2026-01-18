@@ -103,6 +103,8 @@ void render_panel_display()
 	if (ImGui::BeginCombo("##Fullscreen", fullscreen_resolutions[current_fs_res_idx].c_str())) {
 		for (int n = 0; n < (int)fullscreen_resolutions.size(); n++) {
 			const bool is_selected = (current_fs_res_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
 			if (ImGui::Selectable(fullscreen_resolutions[n].c_str(), is_selected)) {
 				// Apply selection
 				if (n == (int)fullscreen_resolutions.size() - 1) {
@@ -113,7 +115,10 @@ void render_panel_display()
 					changed_prefs.gfx_monitor[0].gfx_size_fs.height = fullscreen_resolution_values[n].second;
 				}
 			}
-			if (is_selected) ImGui::SetItemDefaultFocus();
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
 		}
 		ImGui::EndCombo();
 	}
@@ -123,7 +128,21 @@ void render_panel_display()
 	const char* refresh_items[] = { "Default refresh rate", "50Hz", "60Hz" }; 
 	static int current_refresh = 0;
 	ImGui::SetNextItemWidth(160);
-	ImGui::Combo("##RefreshRate", &current_refresh, refresh_items, IM_ARRAYSIZE(refresh_items));
+	if (ImGui::BeginCombo("##RefreshRate", refresh_items[current_refresh])) {
+		for (int n = 0; n < IM_ARRAYSIZE(refresh_items); n++) {
+			const bool is_selected = (current_refresh == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(refresh_items[n], is_selected)) {
+				current_refresh = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 
 	// Windowed & Buffering
 	// WinUAE: Label "Windowed:" -> W Input -> H Input -> Resize Checkbox -> Triple Buffering (Right)
@@ -143,8 +162,21 @@ void render_panel_display()
 	if (buffer_idx < 0) buffer_idx = 0;
 	if (buffer_idx > 2) buffer_idx = 2;
 	ImGui::SetNextItemWidth(160);
-	if (ImGui::Combo("##Buffering", &buffer_idx, buffer_items, IM_ARRAYSIZE(buffer_items))) {
-		changed_prefs.gfx_apmode[0].gfx_backbuffers = buffer_idx + 1; 
+	if (ImGui::BeginCombo("##Buffering", buffer_items[buffer_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(buffer_items); n++) {
+			const bool is_selected = (buffer_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(buffer_items[n], is_selected)) {
+				buffer_idx = n;
+				changed_prefs.gfx_apmode[0].gfx_backbuffers = buffer_idx + 1;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	ImGui::EndChild();
 
@@ -180,8 +212,21 @@ void render_panel_display()
 	if (scaling_idx < 0) scaling_idx = 0;
 	if (scaling_idx > 3) scaling_idx = 3;
 	ImGui::SetNextItemWidth(150);
-	if (ImGui::Combo("##ScalingMethod", &scaling_idx, scaling_items, IM_ARRAYSIZE(scaling_items))) {
-		changed_prefs.scaling_method = scaling_idx - 1;
+	if (ImGui::BeginCombo("##ScalingMethod", scaling_items[scaling_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(scaling_items); n++) {
+			const bool is_selected = (scaling_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(scaling_items[n], is_selected)) {
+				scaling_idx = n;
+				changed_prefs.scaling_method = scaling_idx - 1;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 
 	// Borderless (Enable only if Windowed)
@@ -220,7 +265,21 @@ void render_panel_display()
 	ImGui::Text("Native:"); ImGui::NextColumn();
 	const char* screenmode_items[] = { "Windowed", "Fullscreen", "Full-window" };
 	ImGui::SetNextItemWidth(120);
-	ImGui::Combo("##NativeMode", &changed_prefs.gfx_apmode[0].gfx_fullscreen, screenmode_items, IM_ARRAYSIZE(screenmode_items));
+	if (ImGui::BeginCombo("##NativeMode", screenmode_items[changed_prefs.gfx_apmode[0].gfx_fullscreen])) {
+		for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
+			const bool is_selected = (changed_prefs.gfx_apmode[0].gfx_fullscreen == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(screenmode_items[n], is_selected)) {
+				changed_prefs.gfx_apmode[0].gfx_fullscreen = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	ImGui::NextColumn(); ImGui::NextColumn(); // Skip col 2
 	
 	// VSync Mapping
@@ -233,14 +292,27 @@ void render_panel_display()
 	else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0) vsync_idx = 4;
 	
 	ImGui::SetNextItemWidth(150);
-	if (ImGui::Combo("##NativeVSync", &vsync_idx, vsync_items, IM_ARRAYSIZE(vsync_items))) {
-		switch (vsync_idx) {
-			case 0: changed_prefs.gfx_apmode[0].gfx_vsync = 0; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0; break;
-			case 1: changed_prefs.gfx_apmode[0].gfx_vsync = 1; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1; break;
-			case 2: changed_prefs.gfx_apmode[0].gfx_vsync = 2; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1; break;
-			case 3: changed_prefs.gfx_apmode[0].gfx_vsync = 1; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0; break;
-			case 4: changed_prefs.gfx_apmode[0].gfx_vsync = 2; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0; break;
+	if (ImGui::BeginCombo("##NativeVSync", vsync_items[vsync_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(vsync_items); n++) {
+			const bool is_selected = (vsync_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(vsync_items[n], is_selected)) {
+				vsync_idx = n;
+				switch (vsync_idx) {
+					case 0: changed_prefs.gfx_apmode[0].gfx_vsync = 0; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0; break;
+					case 1: changed_prefs.gfx_apmode[0].gfx_vsync = 1; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1; break;
+					case 2: changed_prefs.gfx_apmode[0].gfx_vsync = 2; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1; break;
+					case 3: changed_prefs.gfx_apmode[0].gfx_vsync = 1; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0; break;
+					case 4: changed_prefs.gfx_apmode[0].gfx_vsync = 2; changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0; break;
+				}
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
 		}
+		ImGui::EndCombo();
 	}
 	ImGui::NextColumn();
 
@@ -248,11 +320,39 @@ void render_panel_display()
 	if (!rtg_enabled) ImGui::BeginDisabled();
 	ImGui::Text("RTG:"); ImGui::NextColumn();
 	ImGui::SetNextItemWidth(120);
-	ImGui::Combo("##RTGMode", &changed_prefs.gfx_apmode[1].gfx_fullscreen, screenmode_items, IM_ARRAYSIZE(screenmode_items));
+	if (ImGui::BeginCombo("##RTGMode", screenmode_items[changed_prefs.gfx_apmode[1].gfx_fullscreen])) {
+		for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
+			const bool is_selected = (changed_prefs.gfx_apmode[1].gfx_fullscreen == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(screenmode_items[n], is_selected)) {
+				changed_prefs.gfx_apmode[1].gfx_fullscreen = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	ImGui::NextColumn(); ImGui::NextColumn();
 	const char* vsync_rtg_items[] = { "-", "Lagless" };
 	ImGui::SetNextItemWidth(150);
-	ImGui::Combo("##RTGVSync", &changed_prefs.gfx_apmode[1].gfx_vsync, vsync_rtg_items, IM_ARRAYSIZE(vsync_rtg_items));
+	if (ImGui::BeginCombo("##RTGVSync", vsync_rtg_items[changed_prefs.gfx_apmode[1].gfx_vsync])) {
+		for (int n = 0; n < IM_ARRAYSIZE(vsync_rtg_items); n++) {
+			const bool is_selected = (changed_prefs.gfx_apmode[1].gfx_vsync == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(vsync_rtg_items[n], is_selected)) {
+				changed_prefs.gfx_apmode[1].gfx_vsync = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	if (!rtg_enabled) ImGui::EndDisabled();
 	
 	ImGui::Columns(1);
@@ -288,14 +388,42 @@ void render_panel_display()
 	const char* resolution_items[] = { "LowRes", "HighRes (normal)", "SuperHighRes" };
 	ImGui::SetNextItemWidth(130);
 	if (!resolution_enabled) ImGui::BeginDisabled();
-	ImGui::Combo("##Resolution", &changed_prefs.gfx_resolution, resolution_items, IM_ARRAYSIZE(resolution_items));
+	if (ImGui::BeginCombo("##Resolution", resolution_items[changed_prefs.gfx_resolution])) {
+		for (int n = 0; n < IM_ARRAYSIZE(resolution_items); n++) {
+			const bool is_selected = (changed_prefs.gfx_resolution == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(resolution_items[n], is_selected)) {
+				changed_prefs.gfx_resolution = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	if (!resolution_enabled) ImGui::EndDisabled();
 	ImGui::NextColumn();
 	
 	ImGui::Text("Overscan:"); ImGui::NextColumn();
 	const char* overscan_items[] = { "Standard", "Overscan", "Broadcast", "Extreme", "Ultra" }; 
 	ImGui::SetNextItemWidth(130);
-	ImGui::Combo("##Overscan", &changed_prefs.gfx_overscanmode, overscan_items, IM_ARRAYSIZE(overscan_items));
+	if (ImGui::BeginCombo("##Overscan", overscan_items[changed_prefs.gfx_overscanmode])) {
+		for (int n = 0; n < IM_ARRAYSIZE(overscan_items); n++) {
+			const bool is_selected = (changed_prefs.gfx_overscanmode == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(overscan_items[n], is_selected)) {
+				changed_prefs.gfx_overscanmode = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	ImGui::Columns(1);
 
 	// Autoswitch
@@ -310,14 +438,27 @@ void render_panel_display()
 	else if (changed_prefs.gfx_autoresolution > 10 && changed_prefs.gfx_autoresolution <= 33) autoswitch_idx = 3;
 	else if (changed_prefs.gfx_autoresolution > 33) autoswitch_idx = 4;
 	
-	if (ImGui::Combo("##ResAutoswitch", &autoswitch_idx, res_autoswitch_items, IM_ARRAYSIZE(res_autoswitch_items))) {
-		switch (autoswitch_idx) {
-			case 0: changed_prefs.gfx_autoresolution = 0; break;
-			case 1: changed_prefs.gfx_autoresolution = 1; break;
-			case 2: changed_prefs.gfx_autoresolution = 10; break;
-			case 3: changed_prefs.gfx_autoresolution = 33; break;
-			case 4: changed_prefs.gfx_autoresolution = 66; break;
+	if (ImGui::BeginCombo("##ResAutoswitch", res_autoswitch_items[autoswitch_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(res_autoswitch_items); n++) {
+			const bool is_selected = (autoswitch_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(res_autoswitch_items[n], is_selected)) {
+				autoswitch_idx = n;
+				switch (autoswitch_idx) {
+					case 0: changed_prefs.gfx_autoresolution = 0; break;
+					case 1: changed_prefs.gfx_autoresolution = 1; break;
+					case 2: changed_prefs.gfx_autoresolution = 10; break;
+					case 3: changed_prefs.gfx_autoresolution = 33; break;
+					case 4: changed_prefs.gfx_autoresolution = 66; break;
+				}
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
 		}
+		ImGui::EndCombo();
 	}
 	
 	ImGui::Separator();
@@ -338,13 +479,26 @@ void render_panel_display()
 	const char* video_standards[] = { "PAL", "NTSC" };
 	int current_vid_Standard = changed_prefs.ntscmode ? 1 : 0;
 	ImGui::SetNextItemWidth(80);
-	if (ImGui::Combo("##VideoStandard", &current_vid_Standard, video_standards, IM_ARRAYSIZE(video_standards))) {
-		changed_prefs.ntscmode = (current_vid_Standard == 1);
-		if (changed_prefs.ntscmode) {
-             changed_prefs.chipset_refreshrate = 60;
-        } else {
-             changed_prefs.chipset_refreshrate = 50;
-        }
+	if (ImGui::BeginCombo("##VideoStandard", video_standards[current_vid_Standard])) {
+		for (int n = 0; n < IM_ARRAYSIZE(video_standards); n++) {
+			const bool is_selected = (current_vid_Standard == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(video_standards[n], is_selected)) {
+				current_vid_Standard = n;
+				changed_prefs.ntscmode = (current_vid_Standard == 1);
+				if (changed_prefs.ntscmode) {
+					changed_prefs.chipset_refreshrate = 60;
+				} else {
+					changed_prefs.chipset_refreshrate = 50;
+				}
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
 	}
 	ImGui::Columns(1);
 
@@ -374,7 +528,21 @@ void render_panel_display()
 	static int current_attr_idx = 0;
 	const char* attr_items[] = { "Brightness", "Contrast", "Gamma", "Gamma [R]", "Gamma [G]", "Gamma [B]", "Dark palette fix" };
 	ImGui::SetNextItemWidth(120);
-	ImGui::Combo("##AttrCombo", &current_attr_idx, attr_items, IM_ARRAYSIZE(attr_items));
+	if (ImGui::BeginCombo("##AttrCombo", attr_items[current_attr_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(attr_items); n++) {
+			const bool is_selected = (current_attr_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(attr_items[n], is_selected)) {
+				current_attr_idx = n;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	
 	int* val_ptr = nullptr;
 	int min_val = -200;

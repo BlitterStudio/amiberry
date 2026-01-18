@@ -136,7 +136,7 @@ void render_panel_savestates()
 
         bool has_state = strlen(savestate_fname) > 0;
         if (has_state) {
-            struct stat st;
+            struct stat st{};
             if (stat(savestate_fname, &st) == 0) {
                  ImGui::Text("Filename: %s", extract_filename(std::string(savestate_fname)).c_str());
                  ImGui::Text("%s", get_file_timestamp(savestate_fname).c_str());
@@ -155,7 +155,7 @@ void render_panel_savestates()
 
         // Buttons
         ImGui::BeginDisabled(!has_state);
-        if (ImGui::Button("Load from Slot"))
+        if (ImGui::Button("Load from Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
             if (emulating && strlen(savestate_fname) > 0) {
                 FILE* f = fopen(savestate_fname, "rbe");
@@ -172,7 +172,7 @@ void render_panel_savestates()
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save to Slot"))
+        if (ImGui::Button("Save to Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
              if (emulating) {
                 savestate_initsave(savestate_fname, 1, 0, true);
@@ -186,7 +186,7 @@ void render_panel_savestates()
              }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Delete Slot"))
+        if (ImGui::Button("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
         {
              if (strlen(savestate_fname) > 0) {
                  show_delete_confirm_popup = true;
@@ -196,7 +196,7 @@ void render_panel_savestates()
 
         ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
-        if (ImGui::Button("Load state..."))
+        if (ImGui::Button("Load state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
              disk_selection(4, &changed_prefs);
              current_state_num = 99;
@@ -205,7 +205,7 @@ void render_panel_savestates()
              ClearScreenshotTexture();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save state..."))
+        if (ImGui::Button("Save state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
              if (emulating) {
                  disk_selection(5, &changed_prefs);

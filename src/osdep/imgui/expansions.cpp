@@ -135,10 +135,17 @@ void render_panel_expansions()
     ImGui::PushItemWidth(-1);
     if (ImGui::BeginCombo("##Category", ExpansionCategories[scsiromselectedcatnum])) {
         for (int i = 0; i < IM_ARRAYSIZE(ExpansionCategories); i++) {
-            if (ImGui::Selectable(ExpansionCategories[i], scsiromselectedcatnum == i)) {
+            const bool is_selected = (scsiromselectedcatnum == i);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(ExpansionCategories[i], is_selected)) {
                 scsiromselectedcatnum = i;
                 scsiromselected = 0; // Reset board selection
                 RefreshExpansionList();
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
             }
         }
         ImGui::EndCombo();
@@ -164,7 +171,7 @@ void render_panel_expansions()
     if (ImGui::BeginCombo("##ExpansionBoard", preview_val)) {
         for (size_t i = 0; i < displayed_rom_indices.size(); i++) {
             int global_idx = displayed_rom_indices[i];
-            bool is_selected = (current_combo_idx == i);
+            const bool is_selected = (current_combo_idx == i);
             
             // Format name with count if multiple
             int cnt = 0;
@@ -174,10 +181,15 @@ void render_panel_expansions()
             std::string name_label = expansionroms[global_idx].friendlyname;
             if (cnt > 0) name_label = (cnt > 1 ? "[" + std::to_string(cnt) + "] " : "* ") + name_label;
 
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             if (ImGui::Selectable(name_label.c_str(), is_selected)) {
                  scsiromselected = global_idx;
             }
-            if (is_selected) ImGui::SetItemDefaultFocus();
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
         }
         ImGui::EndCombo();
     }
@@ -219,14 +231,28 @@ void render_panel_expansions()
         
         // WinUAE adds "-" entry for Clockport, though effectively it maps to unit 0 often or is just visual
         if (deviceflags & EXPANSIONTYPE_CLOCKPORT) {
-             if (ImGui::Selectable("-", scsiromselectednum == 0)) {
+             const bool is_selected = (scsiromselectednum == 0);
+             if (is_selected)
+                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+             if (ImGui::Selectable("-", is_selected)) {
                  scsiromselectednum = 0;
+             }
+             if (is_selected) {
+                 ImGui::PopStyleColor();
+                 ImGui::SetItemDefaultFocus();
              }
         }
         
-        for (int i = 0; i < max_units; i++) { 
-             if (ImGui::Selectable(std::to_string(i + 1).c_str(), scsiromselectednum == i)) {
+        for (int i = 0; i < max_units; i++) {
+             const bool is_selected = (scsiromselectednum == i);
+             if (is_selected)
+                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+             if (ImGui::Selectable(std::to_string(i + 1).c_str(), is_selected)) {
                  scsiromselectednum = i;
+             }
+             if (is_selected) {
+                 ImGui::PopStyleColor();
+                 ImGui::SetItemDefaultFocus();
              }
         }
         ImGui::EndCombo();
@@ -267,16 +293,22 @@ void render_panel_expansions()
                 int st_idx = 0;
                 const expansionsubromtype* st = ert->subtypes;
                 while (st && st->name) {
-                    bool is_selected = (brc && brc->roms[index].subtype == st_idx);
+                    const bool is_selected = (brc && brc->roms[index].subtype == st_idx);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                     if (ImGui::Selectable(st->name, is_selected)) {
                          if (brc) brc->roms[index].subtype = st_idx;
+                    }
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
                     }
                     st++;
                     st_idx++;
                 }
                 ImGui::EndCombo();
-            }
-            ImGui::PopItemWidth();
+             }
+             ImGui::PopItemWidth();
         }
         
         // SCSI ID Jumper (visible if id_jumper is true)
@@ -287,8 +319,15 @@ void render_panel_expansions()
              ImGui::PushItemWidth(80);
              if (ImGui::BeginCombo("##ScsiId", std::to_string(current_id).c_str())) {
                   for (int i=0; i<8; ++i) {
-                       if (ImGui::Selectable(std::to_string(i).c_str(), current_id == i)) {
+                       const bool is_selected = (current_id == i);
+                       if (is_selected)
+                           ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                       if (ImGui::Selectable(std::to_string(i).c_str(), is_selected)) {
                             if (brc) brc->roms[index].device_id = i;
+                       }
+                       if (is_selected) {
+                           ImGui::PopStyleColor();
+                           ImGui::SetItemDefaultFocus();
                        }
                   }
                   ImGui::EndCombo();
@@ -337,6 +376,8 @@ void render_panel_expansions()
                              is_selected = (strcmp(opt.path.c_str(), rom_path) == 0);
                         }
                         
+                        if (is_selected)
+                            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                         if (ImGui::Selectable(opt.name.c_str(), is_selected)) {
                             if (brc) {
                                 if (opt.is_disabled_opt) {
@@ -346,7 +387,10 @@ void render_panel_expansions()
                                 }
                             }
                         }
-                        if (is_selected) ImGui::SetItemDefaultFocus();
+                        if (is_selected) {
+                            ImGui::PopStyleColor();
+                            ImGui::SetItemDefaultFocus();
+                        }
                     }
                     ImGui::EndCombo();
                 }
@@ -484,7 +528,10 @@ void render_panel_expansions()
 
                      if (ImGui::BeginCombo(label.c_str(), (items_count > val) ? options[val].c_str() : "Unknown")) { 
                          for (int opt_i = 0; opt_i < items_count; opt_i++) {
-                             if (ImGui::Selectable(options[opt_i].c_str(), opt_i == val)) {
+                             const bool is_selected = (opt_i == val);
+                             if (is_selected)
+                                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                             if (ImGui::Selectable(options[opt_i].c_str(), is_selected)) {
                                  val = opt_i;
                                  if (s->invert) val ^= (1 << bits) - 1; // Invert write
                                  
@@ -492,7 +539,10 @@ void render_panel_expansions()
                                  settings_val |= (val << current_bit_shift);
                                  brc->roms[index].device_settings = settings_val;
                              }
-                             if (opt_i == val) ImGui::SetItemDefaultFocus();
+                             if (is_selected) {
+                                 ImGui::PopStyleColor();
+                                 ImGui::SetItemDefaultFocus();
+                             }
                          }
                          ImGui::EndCombo();
                      }
@@ -515,10 +565,17 @@ void render_panel_expansions()
     ImGui::SetNextItemWidth(-1);
     if (ImGui::BeginCombo("##AccelType", cpuboards[changed_prefs.cpuboard_type].name)) {
         for (int i = 0; cpuboards[i].name; i++) {
-            if (ImGui::Selectable(cpuboards[i].name, changed_prefs.cpuboard_type == i)) {
+            const bool is_selected = (changed_prefs.cpuboard_type == i);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(cpuboards[i].name, is_selected)) {
                 changed_prefs.cpuboard_type = i;
                 changed_prefs.cpuboard_subtype = cpuboards[i].defaultsubtype;
                 changed_prefs.cpuboard_settings = 0;
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
             }
         }
         ImGui::EndCombo();
@@ -532,8 +589,15 @@ void render_panel_expansions()
          if (ImGui::BeginCombo("##AccelSub", subtypes[changed_prefs.cpuboard_subtype].name)) {
              int i = 0;
              while (subtypes[i].name) {
-                 if (ImGui::Selectable(subtypes[i].name, changed_prefs.cpuboard_subtype == i)) {
+                 const bool is_selected = (changed_prefs.cpuboard_subtype == i);
+                 if (is_selected)
+                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                 if (ImGui::Selectable(subtypes[i].name, is_selected)) {
                      changed_prefs.cpuboard_subtype = i;
+                 }
+                 if (is_selected) {
+                     ImGui::PopStyleColor();
+                     ImGui::SetItemDefaultFocus();
                  }
                  i++;
              }

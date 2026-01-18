@@ -368,19 +368,22 @@ static void RenderCDSection()
     {
         // Add current value if not empty
         if (cd_name && *cd_name) {
-             bool is_selected = true;
+             const bool is_selected = true;
+             ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
              if (ImGui::Selectable(cd_name, is_selected)) {}
-             if (is_selected) ImGui::SetItemDefaultFocus();
+             ImGui::PopStyleColor();
+             ImGui::SetItemDefaultFocus();
         }
         
         // MRU List
         for (const auto& path : lstMRUCDList) {
              if (path.empty()) continue;
-             bool is_selected = (strcmp(cd_name, path.c_str()) == 0);
+             if (cd_name && strcmp(cd_name, path.c_str()) == 0) continue; // Already added above
+
+             const bool is_selected = false; 
              if (ImGui::Selectable(path.c_str(), is_selected)) {
                  au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path.c_str());
              }
-             if (is_selected) ImGui::SetItemDefaultFocus();
         }
         ImGui::EndCombo();
     }
@@ -635,11 +638,16 @@ static void ShowEditFilesysHardfileModal()
             
             if (ImGui::BeginCombo("Interface", controller[current_ctrl_idx].display.c_str())) {
                 for (size_t i = 0; i < controller.size(); ++i) {
-                    bool is_selected = (current_ctrl_idx == i);
+                    const bool is_selected = (current_ctrl_idx == i);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                     if (ImGui::Selectable(controller[i].display.c_str(), is_selected)) {
                         current_hfdlg.ci.controller_type = controller[i].type;
                     }
-                    if (is_selected) ImGui::SetItemDefaultFocus();
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
                 }
                 ImGui::EndCombo();
             }
@@ -860,21 +868,33 @@ static void ShowEditCDDriveModal()
         }
 
         if (ImGui::BeginCombo("Controller", controller.size() > selected_controller ? controller[selected_controller].display.c_str() : "Unknown")) {
-             for (int i = 0; i < controller.size(); ++i) {
-                 if (ImGui::Selectable(controller[i].display.c_str(), selected_controller == i)) {
+             for (int i = 0; i < (int)controller.size(); ++i) {
+                 const bool is_selected = (selected_controller == i);
+                 if (is_selected)
+                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                 if (ImGui::Selectable(controller[i].display.c_str(), is_selected)) {
                      selected_controller = i;
                  }
-                 if (selected_controller == i) ImGui::SetItemDefaultFocus();
+                 if (is_selected) {
+                     ImGui::PopStyleColor();
+                     ImGui::SetItemDefaultFocus();
+                 }
              }
              ImGui::EndCombo();
         }
 
         if (ImGui::BeginCombo("Unit", std::to_string(selected_unit).c_str())) {
             for (int i = 0; i < 8; ++i) {
-                 if (ImGui::Selectable(std::to_string(i).c_str(), selected_unit == i)) {
+                 const bool is_selected = (selected_unit == i);
+                 if (is_selected)
+                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                 if (ImGui::Selectable(std::to_string(i).c_str(), is_selected)) {
                      selected_unit = i;
                  }
-                 if (selected_unit == i) ImGui::SetItemDefaultFocus();
+                 if (is_selected) {
+                     ImGui::PopStyleColor();
+                     ImGui::SetItemDefaultFocus();
+                 }
             }
             ImGui::EndCombo();
         }
@@ -885,7 +905,7 @@ static void ShowEditCDDriveModal()
             strncpy(current_cddlg.ci.rootdir, path_buf, MAX_DPATH);
             current_cddlg.ci.controller_unit = selected_unit;
             
-            if (selected_controller >= 0 && selected_controller < controller.size()) {
+            if (selected_controller >= 0 && selected_controller < (int)controller.size()) {
                 int posn = controller[selected_controller].type;
                 current_cddlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
                 current_cddlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;
@@ -949,21 +969,33 @@ static void ShowEditTapeDriveModal()
         }
 
         if (ImGui::BeginCombo("Controller", controller.size() > selected_controller ? controller[selected_controller].display.c_str() : "Unknown")) {
-             for (int i = 0; i < controller.size(); ++i) {
-                 if (ImGui::Selectable(controller[i].display.c_str(), selected_controller == i)) {
+             for (int i = 0; i < (int)controller.size(); ++i) {
+                 const bool is_selected = (selected_controller == i);
+                 if (is_selected)
+                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                 if (ImGui::Selectable(controller[i].display.c_str(), is_selected)) {
                      selected_controller = i;
                  }
-                 if (selected_controller == i) ImGui::SetItemDefaultFocus();
+                 if (is_selected) {
+                     ImGui::PopStyleColor();
+                     ImGui::SetItemDefaultFocus();
+                 }
              }
              ImGui::EndCombo();
         }
 
         if (ImGui::BeginCombo("Unit", std::to_string(selected_unit).c_str())) {
             for (int i = 0; i < 8; ++i) {
-                 if (ImGui::Selectable(std::to_string(i).c_str(), selected_unit == i)) {
+                 const bool is_selected = (selected_unit == i);
+                 if (is_selected)
+                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                 if (ImGui::Selectable(std::to_string(i).c_str(), is_selected)) {
                      selected_unit = i;
                  }
-                 if (selected_unit == i) ImGui::SetItemDefaultFocus();
+                 if (is_selected) {
+                     ImGui::PopStyleColor();
+                     ImGui::SetItemDefaultFocus();
+                 }
             }
             ImGui::EndCombo();
         }
@@ -977,7 +1009,7 @@ static void ShowEditTapeDriveModal()
                 strncpy(current_tapedlg.ci.rootdir, path_buf, MAX_DPATH);
                 current_tapedlg.ci.controller_unit = selected_unit;
                 
-                if (selected_controller >= 0 && selected_controller < controller.size()) {
+                if (selected_controller >= 0 && selected_controller < (int)controller.size()) {
                     int posn = controller[selected_controller].type;
                     current_tapedlg.ci.controller_type = posn % HD_CONTROLLER_NEXT_UNIT;
                     current_tapedlg.ci.controller_type_unit = posn / HD_CONTROLLER_NEXT_UNIT;

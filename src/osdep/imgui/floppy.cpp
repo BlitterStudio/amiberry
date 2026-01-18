@@ -102,21 +102,35 @@ static void RenderDriveSlot(int i)
         int type_idx = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
         
         ImGui::SetNextItemWidth(-1);
-        if (ImGui::Combo("##Type", &type_idx, drive_types, IM_ARRAYSIZE(drive_types))) {
-            int sub;
-            int dfxtype = todfxtype(i, type_idx, &sub); 
-            changed_prefs.floppyslots[i].dfxtype = dfxtype;
-            changed_prefs.floppyslots[i].dfxsubtype = sub;
-            
-            if (dfxtype == DRV_FB) {
-                if (type_idx >= 5 && (type_idx - 5) < 4) {
-                    TCHAR tmp[32];
-                    extern const std::vector<std::string> floppy_bridge_modes;
-                    _sntprintf(tmp, sizeof tmp, _T("%d:%s"), type_idx - 4, floppy_bridge_modes[type_idx - 5].c_str());
-                    _tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
+        if (ImGui::BeginCombo("##Type", drive_types[type_idx])) {
+            for (int n = 0; n < IM_ARRAYSIZE(drive_types); n++) {
+                const bool is_selected = (type_idx == n);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                if (ImGui::Selectable(drive_types[n], is_selected)) {
+                    type_idx = n;
+                    int sub;
+                    int dfxtype = todfxtype(i, type_idx, &sub);
+                    changed_prefs.floppyslots[i].dfxtype = dfxtype;
+                    changed_prefs.floppyslots[i].dfxsubtype = sub;
+
+                    if (dfxtype == DRV_FB) {
+                        if (type_idx >= 5 && (type_idx - 5) < 4) {
+                            TCHAR tmp[32];
+                            extern const std::vector<std::string> floppy_bridge_modes;
+                            _sntprintf(tmp, sizeof tmp, _T("%d:%s"), type_idx - 4, floppy_bridge_modes[type_idx - 5].c_str());
+                            _tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
+                        }
+                    } else {
+                        changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+                    }
                 }
-                changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
             }
+            ImGui::EndCombo();
         }
         
         // 3. WP Checkbox
@@ -170,12 +184,22 @@ static void RenderDriveSlot(int i)
         for (int h = 0; h < lstMRUDiskList.size(); ++h) {
             std::string label = format_mru_entry(lstMRUDiskList[h]);
             bool is_selected = (current_val == lstMRUDiskList[h]);
+            if (is_selected)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            }
+
             if (ImGui::Selectable(label.c_str(), is_selected)) {
                  strncpy(changed_prefs.floppyslots[i].df, lstMRUDiskList[h].c_str(), MAX_DPATH);
                  disk_insert(i, changed_prefs.floppyslots[i].df);
                  DISK_history_add(changed_prefs.floppyslots[i].df, -1, HISTORY_FLOPPY, 0);
             }
-            if (is_selected) ImGui::SetItemDefaultFocus();
+
+            if (is_selected)
+            {
+                ImGui::PopStyleColor(1);
+                ImGui::SetItemDefaultFocus();
+            }
         }
         ImGui::EndCombo();
     }
@@ -209,10 +233,15 @@ static void RenderDrawBridge()
             }
             for (int i = 0; i < driver_list.size(); ++i) {
                 bool is_selected = (changed_prefs.drawbridge_driver == i);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                 if (ImGui::Selectable(driver_list[i].name, is_selected)) {
                      changed_prefs.drawbridge_driver = i;
                 }
-                if (is_selected) ImGui::SetItemDefaultFocus();
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
             }
             ImGui::EndCombo();
         }
@@ -239,16 +268,27 @@ static void RenderDrawBridge()
 
         if (ImGui::BeginCombo("##DBSerial", current_port.c_str())) {
             bool is_none_selected = (changed_prefs.drawbridge_serial_port[0] == 0);
+            if (is_none_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
             if (ImGui::Selectable("none", is_none_selected)) {
                 changed_prefs.drawbridge_serial_port[0] = 0;
+            }
+            if (is_none_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
             }
             
             for (const auto& port : serial_ports) {
                 bool is_selected = (current_port == port);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                 if (ImGui::Selectable(port.c_str(), is_selected)) {
                     _sntprintf(changed_prefs.drawbridge_serial_port, 256, "%s", port.c_str());
                 }
-                if (is_selected) ImGui::SetItemDefaultFocus();
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
             }
             ImGui::EndCombo();
         }
@@ -269,8 +309,20 @@ static void RenderDrawBridge()
         ImGui::SameLine();
         ImGui::SetNextItemWidth(200);
         int cable_idx = changed_prefs.drawbridge_drive_cable;
-        if (ImGui::Combo("##DBCable", &cable_idx, drive_cable_list, IM_ARRAYSIZE(drive_cable_list))) {
-            changed_prefs.drawbridge_drive_cable = cable_idx;
+        if (ImGui::BeginCombo("##DBCable", drive_cable_list[cable_idx])) {
+            for (int n = 0; n < IM_ARRAYSIZE(drive_cable_list); n++) {
+                const bool is_selected = (cable_idx == n);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                if (ImGui::Selectable(drive_cable_list[n], is_selected)) {
+                    changed_prefs.drawbridge_drive_cable = n;
+                }
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
         }
 
         ImGui::EndGroup();
