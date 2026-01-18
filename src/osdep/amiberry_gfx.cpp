@@ -1688,7 +1688,6 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
 		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
 	{
-		update_leds(monid);
 		if (mon->statusline_surface) {
 			if (osd_texture != 0 && !glIsTexture(osd_texture)) {
 				osd_texture = 0;
