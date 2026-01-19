@@ -5176,6 +5176,10 @@ int main(int argc, char* argv[])
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+		int num = SDL_GetNumVideoDrivers();
+		for (int i = 0; i < num; ++i) {
+			write_log("Video Driver %d: %s\n", i, SDL_GetVideoDriver(i));
+		}
 		abort();
 	}
 #ifdef USE_OPENGL

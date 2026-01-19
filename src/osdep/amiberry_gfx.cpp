@@ -5112,14 +5112,30 @@ static bool is_gles_context()
 		}
 	}
 
-	// Reject GLES contexts (desktop GLEW does not support GLES reliably).
+	// On GLES contexts (e.g. RPi4/5), desktop GLEW might fail or return error.
+	// We should NOT fail initialization here, but instead warn and try to patch missing symbols.
 	if (is_gles_context()) {
 		const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-		write_log(_T("!!! OpenGL ES context detected (%hs); desktop GLEW not supported.\n"), ver ? ver : "unknown");
-		SDL_GL_DeleteContext(gl_context);
-		gl_context = nullptr;
-		return false;
+		write_log(_T("!!! OpenGL ES context detected (%hs); proceeding with manual symbol fixups if needed.\n"), ver ? ver : "unknown");
 	}
+
+	// Manually load VAO functions if GLEW failed to load them (common on GLES)
+    // We check the GLEW function pointers directly.
+    if (!__glewGenVertexArrays) {
+        write_log("Manual loading of glGenVertexArrays...\n");
+        __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
+        if (!__glewGenVertexArrays) __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArraysOES");
+    }
+    if (!__glewBindVertexArray) {
+        write_log("Manual loading of glBindVertexArray...\n");
+        __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray");
+        if (!__glewBindVertexArray) __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArrayOES");
+    }
+    if (!__glewDeleteVertexArrays) {
+        write_log("Manual loading of glDeleteVertexArrays...\n");
+        __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
+        if (!__glewDeleteVertexArrays) __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArraysOES");
+    }
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
