@@ -82,7 +82,7 @@ crtemu_t* crtemu_shader = nullptr;
 ExternalShader* external_shader = nullptr;
 static std::string external_shader_name;
 
-bool set_opengl_attributes();
+bool set_opengl_attributes(int mode);
 bool init_opengl_context(SDL_Window* window);
 static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src, const SDL_Rect& crop, SDL_Rect& out_buffer_rect);
 
@@ -325,10 +325,11 @@ static GLuint osd_texture = 0;
 static GLuint osd_program = 0;
 static GLint osd_tex_loc = -1;
 static GLuint osd_vbo = 0;
+static GLuint osd_vao = 0;
 static GLuint vbo_uploaded = 0;
 
 static const char* osd_vs_source =
-	"#version 120\n"
+	""
 	"attribute vec4 pos;\n"
 	"varying vec2 uv;\n"
 	"void main() {\n"
@@ -337,7 +338,7 @@ static const char* osd_vs_source =
 	"}\n";
 
 static const char* osd_fs_source =
-	"#version 120\n"
+	""
 	"varying vec2 uv;\n"
 	"uniform sampler2D tex0;\n"
 	"void main() {\n"
@@ -351,8 +352,38 @@ static bool init_osd_shader()
 	osd_program = 0;
 	osd_vbo = 0;
 
+	// Detect GL version and profile
+	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
+	bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") != nullptr);
+	int major = 0, minor = 0;
+	if (gl_ver_str) {
+		const char* v = gl_ver_str;
+		while (*v && (*v < '0' || *v > '9')) v++;
+		if (*v) {
+			major = atoi(v);
+			while (*v && *v != '.') v++;
+			if (*v == '.') {
+				v++;
+				minor = atoi(v);
+			}
+		}
+	}
+
+	const char* vs_preamble = "#version 120\n";
+	const char* fs_preamble = "#version 120\n";
+
+	if (is_gles && major >= 3) {
+		vs_preamble = "#version 300 es\nprecision mediump float;\n#define attribute in\n#define varying out\n";
+		fs_preamble = "#version 300 es\nprecision mediump float;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	}
+	else if (!is_gles && (major > 3 || (major == 3 && minor >= 2))) {
+		vs_preamble = "#version 330 core\n#define attribute in\n#define varying out\n";
+		fs_preamble = "#version 330 core\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	}
+
 	GLuint vsh = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vsh, 1, &osd_vs_source, nullptr);
+	const char* vs_sources[] = { vs_preamble, osd_vs_source };
+	glShaderSource(vsh, 2, vs_sources, nullptr);
 	glCompileShader(vsh);
 
 	GLint compiled;
@@ -365,7 +396,8 @@ static bool init_osd_shader()
 	}
 
 	GLuint fsh = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fsh, 1, &osd_fs_source, nullptr);
+	const char* fs_sources[] = { fs_preamble, osd_fs_source };
+	glShaderSource(fsh, 2, fs_sources, nullptr);
 	glCompileShader(fsh);
 	glGetShaderiv(fsh, GL_COMPILE_STATUS, &compiled);
 	if (!compiled) {
@@ -379,7 +411,10 @@ static bool init_osd_shader()
 	osd_program = glCreateProgram();
 	glAttachShader(osd_program, vsh);
 	glAttachShader(osd_program, fsh);
+	
+	// Bind attribute locations explicitly for modern GL
 	glBindAttribLocation(osd_program, 0, "pos");
+	
 	glLinkProgram(osd_program);
 
 	GLint linked;
@@ -395,10 +430,14 @@ static bool init_osd_shader()
 		return false;
 	}
 
+	// Flag for deletion (they stay attached until program is deleted)
 	glDeleteShader(vsh);
 	glDeleteShader(fsh);
 
 	osd_tex_loc = glGetUniformLocation(osd_program, "tex0");
+
+    glGenVertexArrays(1, &osd_vao);
+    glBindVertexArray(osd_vao);
 
 	glGenBuffers(1, &osd_vbo);
 
@@ -1589,6 +1628,7 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	
 	GLuint texture = shader->get_input_texture();
 	GLuint vbo = shader->get_input_vbo();
+	GLuint vao = shader->get_input_vao();
 	static int frame_count = 0;
 	
 	// Verify resources are still valid for this context
@@ -1601,6 +1641,11 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 		write_log("render_with_external_shader: VBO lost, resetting\n");
 		vbo = 0;
 		shader->set_input_vbo(0);
+	}
+	if (vao != 0 && !glIsVertexArray(vao)) {
+		write_log("render_with_external_shader: VAO lost, resetting\n");
+		vao = 0;
+		shader->set_input_vao(0);
 	}
 	
 	// Create texture if needed
@@ -1618,6 +1663,17 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
+
+	// Create VAO if needed
+	if (vao == 0) {
+		glGenVertexArrays(1, &vao);
+		if (vao == 0) {
+			write_log("ERROR: Failed to create VAO!\n");
+			return;
+		}
+		shader->set_input_vao(vao);
+	}
+	glBindVertexArray(vao);
 	
 	// Create VBO if needed
 	if (vbo == 0) {
@@ -1730,6 +1786,7 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glDisableVertexAttribArray(2);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(0);
 }
 #endif
 
@@ -1781,6 +1838,9 @@ static void render_osd(const int monid, int x, int y, int w, int h)
 			glUseProgram(osd_program);
 			if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
 
+            // Bind VAO
+            glBindVertexArray(osd_vao);
+
 			// Ensure only attribute 0 is enabled for OSD
 			glEnableVertexAttribArray(0);
 			glDisableVertexAttribArray(1);
@@ -1821,7 +1881,9 @@ static void render_osd(const int monid, int x, int y, int w, int h)
 			glDisableVertexAttribArray(0);
 			glDisableVertexAttribArray(1);
 			glDisableVertexAttribArray(2);
+			glDisableVertexAttribArray(2);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
 			glDisable(GL_BLEND);
 			glUseProgram(0);
 		}
@@ -4143,23 +4205,46 @@ static bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_width = rc.w;
 			mon->currentmode.native_height = rc.h;
 		}
+
 #ifdef USE_OPENGL
-		if (!set_opengl_attributes())
-		{
+		int gl_attempts = 0;
+		bool gl_success = false;
+		
+		while (gl_attempts < 2 && !gl_success) {
+			if (!set_opengl_attributes(gl_attempts))
+			{
+				write_log("Failed to set OpenGL attributes for mode %d\n", gl_attempts);
+				gl_attempts++;
+				continue;
+			}
+
+			if (!create_windows(mon))
+			{
+				close_hwnds(mon);
+				return false;
+			}
+
+			if (init_opengl_context(mon->amiga_window))
+			{
+				gl_success = true;
+			}
+			else
+			{
+				write_log("OpenGL context init failed for mode %d. Retrying...\n", gl_attempts);
+				// Close window to force recreation with new attributes
+				close_windows(mon);
+				gl_attempts++;
+			}
+		}
+
+		if (!gl_success) {
+			write_log("All OpenGL context attempts failed. Aborting doInit.\n");
 			return false;
 		}
-#endif
-
+#else
 		if (!create_windows(mon))
 		{
 			close_hwnds(mon);
-			return false;
-		}
-
-#ifdef USE_OPENGL
-		if (!init_opengl_context(mon->amiga_window))
-		{
-			write_log("OpenGL context init failed. Aborting doInit.\n");
 			return false;
 		}
 #endif
@@ -4688,6 +4773,11 @@ void destroy_shaders()
 		glDeleteBuffers(1, &osd_vbo);
 		osd_vbo = 0;
 	}
+	if (osd_vao != 0 && glIsVertexArray(osd_vao))
+	{
+		glDeleteVertexArrays(1, &osd_vao);
+		osd_vao = 0;
+	}
 	if (osd_texture != 0 && glIsTexture(osd_texture))
 	{
 		glDeleteTextures(1, &osd_texture);
@@ -4906,27 +4996,41 @@ void screenshot(int monid, int mode, int doprepare)
  * @brief Sets the required SDL GL attributes before window creation.
  *
  * This function configures the OpenGL context version and other attributes.
- * It requests an OpenGL 2.1 context, which corresponds to GLSL version 120.
- * This specific version is chosen to ensure maximum compatibility across
- * various platforms (macOS, Linux, Raspberry Pi) and to support the legacy
- * shaders used in the CRT emulation filter (see `crtemu.h`).
+ * It attempts to create a modern context (GLES 3.0 on ARM, GL 3.3 Core on Desktop)
+ * if mode == 0, or falls back to legacy OpenGL 2.1 Compatibility if mode == 1.
  *
- * By requesting OpenGL 2.1 without a CORE_PROFILE mask, we allow SDL to
- * create a compatibility profile. This is essential for running the GLSL 1.20
- * shaders, as a core profile would reject them. This approach provides a
- * stable and widely supported rendering backend.
- *
+ * @param mode 0 for modern, 1 for legacy fallback.
  * @return true if all attributes were set successfully, false otherwise.
  */
-[[nodiscard]] bool set_opengl_attributes()
+[[nodiscard]] bool set_opengl_attributes(int mode)
 {
 	bool success = true;
 
-	// Request a desktop OpenGL 2.1 compatibility context for GLSL 1.20 shaders.
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) == 0);
+	// Reset attributes to default before setting them (optional but good practice)
+	SDL_GL_ResetAttributes();
+
+	if (mode == 0) {
+#if defined(__arm__) || defined(__aarch64__)
+		// ARM/RPi4: Try GLES 3.0
+		write_log(_T("Requesting OpenGL ES 3.0 context...\n"));
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) == 0);
+#else
+		// Desktop: Try Core Profile 3.3
+		write_log(_T("Requesting OpenGL 3.3 Core context...\n"));
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) == 0);
+#endif
+	} else {
+		// Fallback: Legacy OpenGL 2.1 Compatibility
+		write_log(_T("Requesting OpenGL 2.1 Compatibility context...\n"));
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) == 0);
+	}
 
 	// Sensible defaults.
 	success &= (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) == 0);
@@ -4941,7 +5045,6 @@ void screenshot(int monid, int mode, int doprepare)
 
 	const char* drv = SDL_GetCurrentVideoDriver();
 	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
-	write_log(_T("Requested OpenGL context: 2.1 compatibility\n"));
 
 	return success;
 }
@@ -5009,14 +5112,30 @@ static bool is_gles_context()
 		}
 	}
 
-	// Reject GLES contexts (desktop GLEW does not support GLES reliably).
+	// On GLES contexts (e.g. RPi4/5), desktop GLEW might fail or return error.
+	// We should NOT fail initialization here, but instead warn and try to patch missing symbols.
 	if (is_gles_context()) {
 		const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-		write_log(_T("!!! OpenGL ES context detected (%hs); desktop GLEW not supported.\n"), ver ? ver : "unknown");
-		SDL_GL_DeleteContext(gl_context);
-		gl_context = nullptr;
-		return false;
+		write_log(_T("!!! OpenGL ES context detected (%hs); proceeding with manual symbol fixups if needed.\n"), ver ? ver : "unknown");
 	}
+
+	// Manually load VAO functions if GLEW failed to load them (common on GLES)
+    // We check the GLEW function pointers directly.
+    if (!__glewGenVertexArrays) {
+        write_log("Manual loading of glGenVertexArrays...\n");
+        __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
+        if (!__glewGenVertexArrays) __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArraysOES");
+    }
+    if (!__glewBindVertexArray) {
+        write_log("Manual loading of glBindVertexArray...\n");
+        __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray");
+        if (!__glewBindVertexArray) __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArrayOES");
+    }
+    if (!__glewDeleteVertexArrays) {
+        write_log("Manual loading of glDeleteVertexArrays...\n");
+        __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
+        if (!__glewDeleteVertexArrays) __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArraysOES");
+    }
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));

@@ -15,6 +15,7 @@ ExternalShader::ExternalShader()
 	, fragment_shader_(0)
 	, input_texture_(0)
 	, input_vbo_(0)
+	, input_vao_(0)
 	, u_texture_(-1)
 	, u_texture_size_(-1)
 	, u_input_size_(-1)
@@ -54,6 +55,11 @@ void ExternalShader::cleanup()
 		if (glIsBuffer(input_vbo_))
 			glDeleteBuffers(1, &input_vbo_);
 		input_vbo_ = 0;
+	}
+	if (input_vao_ != 0) {
+		if (glIsVertexArray(input_vao_))
+			glDeleteVertexArrays(1, &input_vao_);
+		input_vao_ = 0;
 	}
 	uniform_locations_.clear();
 }
