@@ -5039,7 +5039,11 @@ static void makeverstr(TCHAR* s)
 	}
 }
 
+#ifndef LIBRETRO
 int main(int argc, char* argv[])
+#else
+int amiberry_main(int argc, char* argv[])
+#endif
 {
 	max_uae_width = 8192;
 	max_uae_height = 8192;
@@ -5154,6 +5158,7 @@ int main(int argc, char* argv[])
 		return 0;
 	uae_time_calibrate();
 	
+#ifndef LIBRETRO
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -5165,6 +5170,7 @@ int main(int argc, char* argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
 #endif
 	(void)atexit(SDL_Quit);
+#endif
 
 	initialize_ini();
 	write_log(_T("Enumerating display devices.. \n"));
