@@ -695,8 +695,15 @@ bool audio_finish_pull()
 	return false;
 }
 
+#include "libretro_shared.h"
+
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 {
+#ifdef LIBRETRO
+	if (audio_batch_cb)
+		audio_batch_cb((const int16_t*)sndbuffer, sd->sndbufsize / (sd->channels * 2));
+	return;
+#endif
 	const auto* s = sd->data;
 	if (!sd->waiting_for_buffer)
 		return;
