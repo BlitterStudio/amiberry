@@ -3076,7 +3076,8 @@ int check_prefs_changed_gfx()
 
 static void update_pixel_format()
 {
-	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
+	const AmigaMonitor* mon = &AMonitors[0];
+	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE && mon->screen_is_picasso)
 		pixel_format = SDL_PIXELFORMAT_ARGB8888; // BGRA for custom boards
 	else
 		pixel_format = SDL_PIXELFORMAT_ABGR8888; // RGBA for UAE elements
