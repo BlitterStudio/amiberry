@@ -82,7 +82,7 @@ crtemu_t* crtemu_shader = nullptr;
 ExternalShader* external_shader = nullptr;
 static std::string external_shader_name;
 
-bool set_opengl_attributes();
+bool set_opengl_attributes(int mode);
 bool init_opengl_context(SDL_Window* window);
 static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src, const SDL_Rect& crop, SDL_Rect& out_buffer_rect);
 
@@ -183,6 +183,70 @@ static void OffsetRect(SDL_Rect* rect, const int dx, const int dy)
 	rect->y += dy;
 }
 
+static float SDL2_getrefreshrate(const int monid)
+{
+	SDL_DisplayMode mode;
+	if (SDL_GetCurrentDisplayMode(monid, &mode) != 0)
+	{
+		write_log("SDL_GetCurrentDisplayMode failed: %s\n", SDL_GetError());
+		return 0;
+	}
+	return static_cast<float>(mode.refresh_rate);
+}
+
+#ifdef USE_OPENGL
+static int current_vsync_interval = -1;
+static float cached_refresh_rate = 0.0f;
+
+void update_vsync(const int monid)
+{
+	if (!AMonitors[monid].amiga_window) return;
+	
+	const AmigaMonitor* mon = &AMonitors[monid];
+	const auto idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
+	const int vsync_mode = currprefs.gfx_apmode[idx].gfx_vsync;
+	int interval = 0;
+
+	if (vsync_mode > 0) {
+		if (vsync_mode > 1) {
+			// VSync 50/60Hz: Adapt for High Refresh Rate Monitors
+			// We cache the refresh rate check to avoid expensive calls every frame
+			if (cached_refresh_rate <= 0.0f) {
+				cached_refresh_rate = SDL2_getrefreshrate(monid);
+				write_log("VSync: Detected refresh rate: %.2f Hz\n", cached_refresh_rate);
+			}
+
+			float target_fps = (float)vblank_hz;
+			if (target_fps < 45 || target_fps > 125) target_fps = 50.0f; // Sanity check
+
+			if (cached_refresh_rate > 0) {
+				interval = (int)std::round(cached_refresh_rate / target_fps);
+				if (interval < 1) interval = 1;
+			}
+			else {
+				interval = 1;
+			}
+		}
+		else {
+			// Standard VSync
+			interval = 1;
+		}
+	}
+	
+	if (current_vsync_interval != interval) {
+		if (SDL_GL_SetSwapInterval(interval) == 0) {
+			current_vsync_interval = interval;
+			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
+		}
+		else {
+			write_log("OpenGL VSync: Failed to set interval %d: %s\n", interval, SDL_GetError());
+			// If failed, maybe try to reset to 0 to be safe? 
+			// But maybe the driver just doesn't support adaptive?
+		}
+	}
+}
+#endif
+
 void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
 {
 	SDL_GetWindowPosition(window, &rect->x, &rect->y);
@@ -256,26 +320,16 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 #endif
 }
 
-static float SDL2_getrefreshrate(const int monid)
-{
-	SDL_DisplayMode mode;
-	if (SDL_GetDisplayMode(monid, 0, &mode) != 0)
-	{
-		write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
-		return 0;
-	}
-	return static_cast<float>(mode.refresh_rate);
-}
-
 #ifdef USE_OPENGL
 static GLuint osd_texture = 0;
 static GLuint osd_program = 0;
 static GLint osd_tex_loc = -1;
 static GLuint osd_vbo = 0;
+static GLuint osd_vao = 0;
 static GLuint vbo_uploaded = 0;
 
 static const char* osd_vs_source =
-	"#version 120\n"
+	""
 	"attribute vec4 pos;\n"
 	"varying vec2 uv;\n"
 	"void main() {\n"
@@ -284,7 +338,7 @@ static const char* osd_vs_source =
 	"}\n";
 
 static const char* osd_fs_source =
-	"#version 120\n"
+	""
 	"varying vec2 uv;\n"
 	"uniform sampler2D tex0;\n"
 	"void main() {\n"
@@ -298,8 +352,38 @@ static bool init_osd_shader()
 	osd_program = 0;
 	osd_vbo = 0;
 
+	// Detect GL version and profile
+	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
+	bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") != nullptr);
+	int major = 0, minor = 0;
+	if (gl_ver_str) {
+		const char* v = gl_ver_str;
+		while (*v && (*v < '0' || *v > '9')) v++;
+		if (*v) {
+			major = atoi(v);
+			while (*v && *v != '.') v++;
+			if (*v == '.') {
+				v++;
+				minor = atoi(v);
+			}
+		}
+	}
+
+	const char* vs_preamble = "#version 120\n";
+	const char* fs_preamble = "#version 120\n";
+
+	if (is_gles && major >= 3) {
+		vs_preamble = "#version 300 es\nprecision mediump float;\n#define attribute in\n#define varying out\n";
+		fs_preamble = "#version 300 es\nprecision mediump float;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	}
+	else if (!is_gles && (major > 3 || (major == 3 && minor >= 2))) {
+		vs_preamble = "#version 330 core\n#define attribute in\n#define varying out\n";
+		fs_preamble = "#version 330 core\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	}
+
 	GLuint vsh = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vsh, 1, &osd_vs_source, nullptr);
+	const char* vs_sources[] = { vs_preamble, osd_vs_source };
+	glShaderSource(vsh, 2, vs_sources, nullptr);
 	glCompileShader(vsh);
 
 	GLint compiled;
@@ -312,7 +396,8 @@ static bool init_osd_shader()
 	}
 
 	GLuint fsh = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fsh, 1, &osd_fs_source, nullptr);
+	const char* fs_sources[] = { fs_preamble, osd_fs_source };
+	glShaderSource(fsh, 2, fs_sources, nullptr);
 	glCompileShader(fsh);
 	glGetShaderiv(fsh, GL_COMPILE_STATUS, &compiled);
 	if (!compiled) {
@@ -326,7 +411,10 @@ static bool init_osd_shader()
 	osd_program = glCreateProgram();
 	glAttachShader(osd_program, vsh);
 	glAttachShader(osd_program, fsh);
+	
+	// Bind attribute locations explicitly for modern GL
 	glBindAttribLocation(osd_program, 0, "pos");
+	
 	glLinkProgram(osd_program);
 
 	GLint linked;
@@ -342,10 +430,14 @@ static bool init_osd_shader()
 		return false;
 	}
 
+	// Flag for deletion (they stay attached until program is deleted)
 	glDeleteShader(vsh);
 	glDeleteShader(fsh);
 
 	osd_tex_loc = glGetUniformLocation(osd_program, "tex0");
+
+    glGenVertexArrays(1, &osd_vao);
+    glBindVertexArray(osd_vao);
 
 	glGenBuffers(1, &osd_vbo);
 
@@ -459,7 +551,7 @@ static void update_leds(const int monid)
 	const amigadisplay* ad = &adisplays[monid];
 	const int m = statusline_get_multiplier(monid) / 100;
 	const int led_height = TD_TOTAL_HEIGHT * m;
-	int led_width = ad->picasso_on ? mon->currentmode.native_width : 640;
+	int led_width = ad->picasso_on ? (amiga_surface ? amiga_surface->w : mon->currentmode.native_width) : 640;
 	if (led_width <= 0)
 		led_width = 640;
 
@@ -1536,6 +1628,7 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	
 	GLuint texture = shader->get_input_texture();
 	GLuint vbo = shader->get_input_vbo();
+	GLuint vao = shader->get_input_vao();
 	static int frame_count = 0;
 	
 	// Verify resources are still valid for this context
@@ -1548,6 +1641,11 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 		write_log("render_with_external_shader: VBO lost, resetting\n");
 		vbo = 0;
 		shader->set_input_vbo(0);
+	}
+	if (vao != 0 && !glIsVertexArray(vao)) {
+		write_log("render_with_external_shader: VAO lost, resetting\n");
+		vao = 0;
+		shader->set_input_vao(0);
 	}
 	
 	// Create texture if needed
@@ -1565,6 +1663,17 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
+
+	// Create VAO if needed
+	if (vao == 0) {
+		glGenVertexArrays(1, &vao);
+		if (vao == 0) {
+			write_log("ERROR: Failed to create VAO!\n");
+			return;
+		}
+		shader->set_input_vao(vao);
+	}
+	glBindVertexArray(vao);
 	
 	// Create VBO if needed
 	if (vbo == 0) {
@@ -1596,15 +1705,20 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 
+	// Determine correct OpenGL format based on global pixel_format
+	// SDL_PIXELFORMAT_ARGB8888 -> BGRA in memory -> GL_BGRA
+	// SDL_PIXELFORMAT_ABGR8888 -> RGBA in memory -> GL_RGBA
+	GLenum gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
+
 	static int last_w = 0, last_h = 0;
 	static GLuint last_texture = 0;
 	if (width != last_w || height != last_h || texture != last_texture) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_fmt, GL_UNSIGNED_BYTE, pixels);
 		last_w = width;
 		last_h = height;
 		last_texture = texture;
 	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, gl_fmt, GL_UNSIGNED_BYTE, pixels);
 	}
 	
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Reset for other textures
@@ -1672,11 +1786,12 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glDisableVertexAttribArray(2);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(0);
 }
 #endif
 
 #ifdef USE_OPENGL
-static void render_osd(const int monid, int drawableWidth, int drawableHeight)
+static void render_osd(const int monid, int x, int y, int w, int h)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
@@ -1718,10 +1833,13 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glDisable(GL_SCISSOR_TEST);
-			glViewport(0, 0, drawableWidth, drawableHeight);
+			glViewport(x, y, w, h);
 
 			glUseProgram(osd_program);
 			if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
+
+            // Bind VAO
+            glBindVertexArray(osd_vao);
 
 			// Ensure only attribute 0 is enabled for OSD
 			glEnableVertexAttribArray(0);
@@ -1730,8 +1848,8 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 
 			float osd_w = (float)mon->statusline_surface->w;
 			float osd_h = (float)mon->statusline_surface->h;
-			float win_w = (float)drawableWidth;
-			float win_h = (float)drawableHeight;
+			float win_w = (float)w;
+			float win_h = (float)h;
 
 			// Force full width (stretch to fit window)
 			float scale_x = win_w / osd_w;
@@ -1763,7 +1881,9 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 			glDisableVertexAttribArray(0);
 			glDisableVertexAttribArray(1);
 			glDisableVertexAttribArray(2);
+			glDisableVertexAttribArray(2);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
 			glDisable(GL_BLEND);
 			glUseProgram(0);
 		}
@@ -1813,13 +1933,8 @@ void show_screen(const int monid, int mode)
 
 	const auto time = SDL_GetTicks();
 
-	// Ensure we are not capping FPS unnecessarily if VSync is not explicitly requested.
-	// Some drivers might force VSync in full-window mode.
-	static bool swap_interval_checked = false;
-	if (!swap_interval_checked) {
-		SDL_GL_SetSwapInterval(0); // Default to no VSync for performance testing/flexibility
-		swap_interval_checked = true;
-	}
+	// Handle VSync options
+	update_vsync(monid);
 
 	int drawableWidth, drawableHeight;
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
@@ -1843,36 +1958,42 @@ void show_screen(const int monid, int mode)
 
 	float desired_aspect = calculate_desired_aspect(mon);
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
-	
+
+	int destW = drawableWidth;
+	int destH = (int) (drawableWidth / desired_aspect);
+
+	if (destH > drawableHeight) {
+		destH = drawableHeight;
+		destW = (int)(drawableHeight * desired_aspect);
+	}
+
+	if (destW <= 0) destW = 1;
+	if (destH <= 0) destH = 1;
+
+	int destX = (drawableWidth - destW) / 2;
+	int destY = (drawableHeight - destH) / 2;
+
+	glViewport(destX, destY, destW, destH);
+
+	// Update render_quad to reflect the actual drawn area
+	render_quad.x = destX;
+	render_quad.y = destY;
+	render_quad.w = destW;
+	render_quad.h = destH;
+
+	// Check if cropping is active
+	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+							 crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+							 crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+							 (crop_rect.w > 0 && crop_rect.h > 0);
+
 	// Handle external shader rendering (simplified single-pass)
 	if (external_shader && external_shader->is_valid()) {
-		int destW = drawableWidth;
-		int destH = (int)(drawableWidth / desired_aspect);
-
-		if (destH > drawableHeight) {
-			destH = drawableHeight;
-			destW = (int)(drawableHeight * desired_aspect);
-		}
-		
-		if (destW <= 0) destW = 1;
-		if (destH <= 0) destH = 1;
-
-		int destX = (drawableWidth - destW) / 2;
-		int destY = (drawableHeight - destH) / 2;
-
-		glViewport(destX, destY, destW, destH);
-
 		// Explicitly disable attributes to avoid leakage from previous passes
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
-		
-		// Check if cropping is active
-		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-		                         (crop_rect.w > 0 && crop_rect.h > 0);
-		
+
 		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
 			const int bpp = 4;
@@ -1891,41 +2012,18 @@ void show_screen(const int monid, int mode)
 				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, destW, destH);
 		}
 
-		render_osd(monid, drawableWidth, drawableHeight);
 	} else if (crtemu_shader) {
-		// Original crtemu rendering path
-		if (crtemu_shader->type == CRTEMU_TYPE_NONE) {
-			int destW = drawableWidth;
-			int destH = (int)(drawableWidth / desired_aspect);
-
-			if (destH > drawableHeight) {
-				destH = drawableHeight;
-				destW = (int)(drawableHeight * desired_aspect);
-			}
-
-			int destX = (drawableWidth - destW) / 2;
-			int destY = (drawableHeight - destH) / 2;
-
-			glViewport(destX, destY, destW, destH);
-		} else {
-			glViewport(0, 0, drawableWidth, drawableHeight);
-		}
-
 		// crtemu_present expects attribute 0 to be enabled.
 		glEnableVertexAttribArray(0);
 		// Disable other attributes that might have been enabled by OSD or other passes
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		// Check if any cropping is actually being applied.
-		// If crop_rect covers the entire surface, we can take a much faster path.
-		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-		                         (crop_rect.w > 0 && crop_rect.h > 0);
+		if (crtemu_shader->type != CRTEMU_TYPE_NONE) {
+			glViewport(0, 0, drawableWidth, drawableHeight);
+		}
 
-		if (is_cropped && amiga_surface)
-		{
+		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
 			const int bpp = 4;
 			int x = std::max(0, crop_rect.x);
@@ -1934,23 +2032,26 @@ void show_screen(const int monid, int mode)
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
 			
-			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
-				w, h, amiga_surface->pitch, 0xffffffff, 0x000000);
-		}
-		else
-		{
-			// FAST PATH: No cropping.
-			// Render the full surface directly without any expensive memory allocation or copying.
-			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000);
-		}
+			// Determine correct OpenGL format
+			unsigned int gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
 
-		render_osd(monid, drawableWidth, drawableHeight);
+			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
+				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
+		} else if (amiga_surface) {
+			// Determine correct OpenGL format
+			unsigned int gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
+
+			// FAST PATH: No cropping.
+			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
+			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
+		}
 	}
 
+	render_osd(monid, destX, destY, destW, destH);
+
 	SDL_GL_SwapWindow(mon->amiga_window);
-	wait_frame_timing();
 #else
+	wait_frame_timing();
 	SDL2_showframe(monid);
 #endif
 	mon->render_ok = false;
@@ -2175,6 +2276,8 @@ static void close_hwnds(struct AmigaMonitor* mon)
 	{
 		SDL_GL_DeleteContext(gl_context);
 		gl_context = nullptr;
+		current_vsync_interval = -1; // Reset VSync state
+		cached_refresh_rate = 0.0f;
 	}
 #else
 	if (mon->amiga_renderer && !kmsdrm_detected)
@@ -3077,9 +3180,9 @@ int check_prefs_changed_gfx()
 static void update_pixel_format()
 {
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
-		pixel_format = SDL_PIXELFORMAT_ARGB8888; // BGRA for custom boards
+		pixel_format = SDL_PIXELFORMAT_ARGB8888; // for custom boards (e.g. PicassoII)
 	else
-		pixel_format = SDL_PIXELFORMAT_ABGR8888; // RGBA for UAE elements
+		pixel_format = SDL_PIXELFORMAT_ABGR8888; // for native output and UAE RTG
 }
 
 /* Color management */
@@ -3247,6 +3350,14 @@ int reopen(struct AmigaMonitor* mon, int full, bool unacquire)
 bool vsync_switchmode(const int monid, int hz)
 {
 	const struct AmigaMonitor* mon = &AMonitors[monid];
+	
+	// In Full-Window mode or if using Adaptive VSync options, 
+	// we do not need to strictly match/switch resolution refresh rates.
+	// We accept the current state as valid.
+	if (isfullscreen() < 0 || currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync > 1) {
+		return true;
+	}
+
 	static struct PicassoResolution* oldmode;
 	static int oldhz;
 	int w = mon->currentmode.native_width;
@@ -4094,23 +4205,46 @@ static bool doInit(AmigaMonitor* mon)
 			mon->currentmode.native_width = rc.w;
 			mon->currentmode.native_height = rc.h;
 		}
+
 #ifdef USE_OPENGL
-		if (!set_opengl_attributes())
-		{
+		int gl_attempts = 0;
+		bool gl_success = false;
+		
+		while (gl_attempts < 2 && !gl_success) {
+			if (!set_opengl_attributes(gl_attempts))
+			{
+				write_log("Failed to set OpenGL attributes for mode %d\n", gl_attempts);
+				gl_attempts++;
+				continue;
+			}
+
+			if (!create_windows(mon))
+			{
+				close_hwnds(mon);
+				return false;
+			}
+
+			if (init_opengl_context(mon->amiga_window))
+			{
+				gl_success = true;
+			}
+			else
+			{
+				write_log("OpenGL context init failed for mode %d. Retrying...\n", gl_attempts);
+				// Close window to force recreation with new attributes
+				close_windows(mon);
+				gl_attempts++;
+			}
+		}
+
+		if (!gl_success) {
+			write_log("All OpenGL context attempts failed. Aborting doInit.\n");
 			return false;
 		}
-#endif
-
+#else
 		if (!create_windows(mon))
 		{
 			close_hwnds(mon);
-			return false;
-		}
-
-#ifdef USE_OPENGL
-		if (!init_opengl_context(mon->amiga_window))
-		{
-			write_log("OpenGL context init failed. Aborting doInit.\n");
 			return false;
 		}
 #endif
@@ -4639,6 +4773,11 @@ void destroy_shaders()
 		glDeleteBuffers(1, &osd_vbo);
 		osd_vbo = 0;
 	}
+	if (osd_vao != 0 && glIsVertexArray(osd_vao))
+	{
+		glDeleteVertexArrays(1, &osd_vao);
+		osd_vao = 0;
+	}
 	if (osd_texture != 0 && glIsTexture(osd_texture))
 	{
 		glDeleteTextures(1, &osd_texture);
@@ -4857,27 +4996,41 @@ void screenshot(int monid, int mode, int doprepare)
  * @brief Sets the required SDL GL attributes before window creation.
  *
  * This function configures the OpenGL context version and other attributes.
- * It requests an OpenGL 2.1 context, which corresponds to GLSL version 120.
- * This specific version is chosen to ensure maximum compatibility across
- * various platforms (macOS, Linux, Raspberry Pi) and to support the legacy
- * shaders used in the CRT emulation filter (see `crtemu.h`).
+ * It attempts to create a modern context (GLES 3.0 on ARM, GL 3.3 Core on Desktop)
+ * if mode == 0, or falls back to legacy OpenGL 2.1 Compatibility if mode == 1.
  *
- * By requesting OpenGL 2.1 without a CORE_PROFILE mask, we allow SDL to
- * create a compatibility profile. This is essential for running the GLSL 1.20
- * shaders, as a core profile would reject them. This approach provides a
- * stable and widely supported rendering backend.
- *
+ * @param mode 0 for modern, 1 for legacy fallback.
  * @return true if all attributes were set successfully, false otherwise.
  */
-[[nodiscard]] bool set_opengl_attributes()
+[[nodiscard]] bool set_opengl_attributes(int mode)
 {
 	bool success = true;
 
-	// Request a desktop OpenGL 2.1 compatibility context for GLSL 1.20 shaders.
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) == 0);
-	success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) == 0);
+	// Reset attributes to default before setting them (optional but good practice)
+	SDL_GL_ResetAttributes();
+
+	if (mode == 0) {
+#if defined(__arm__) || defined(__aarch64__)
+		// ARM/RPi4: Try GLES 3.0
+		write_log(_T("Requesting OpenGL ES 3.0 context...\n"));
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) == 0);
+#else
+		// Desktop: Try Core Profile 3.3
+		write_log(_T("Requesting OpenGL 3.3 Core context...\n"));
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) == 0);
+#endif
+	} else {
+		// Fallback: Legacy OpenGL 2.1 Compatibility
+		write_log(_T("Requesting OpenGL 2.1 Compatibility context...\n"));
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2) == 0);
+		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1) == 0);
+	}
 
 	// Sensible defaults.
 	success &= (SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1) == 0);
@@ -4892,7 +5045,6 @@ void screenshot(int monid, int mode, int doprepare)
 
 	const char* drv = SDL_GetCurrentVideoDriver();
 	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
-	write_log(_T("Requested OpenGL context: 2.1 compatibility\n"));
 
 	return success;
 }
@@ -4960,14 +5112,30 @@ static bool is_gles_context()
 		}
 	}
 
-	// Reject GLES contexts (desktop GLEW does not support GLES reliably).
+	// On GLES contexts (e.g. RPi4/5), desktop GLEW might fail or return error.
+	// We should NOT fail initialization here, but instead warn and try to patch missing symbols.
 	if (is_gles_context()) {
 		const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-		write_log(_T("!!! OpenGL ES context detected (%hs); desktop GLEW not supported.\n"), ver ? ver : "unknown");
-		SDL_GL_DeleteContext(gl_context);
-		gl_context = nullptr;
-		return false;
+		write_log(_T("!!! OpenGL ES context detected (%hs); proceeding with manual symbol fixups if needed.\n"), ver ? ver : "unknown");
 	}
+
+	// Manually load VAO functions if GLEW failed to load them (common on GLES)
+    // We check the GLEW function pointers directly.
+    if (!__glewGenVertexArrays) {
+        write_log("Manual loading of glGenVertexArrays...\n");
+        __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
+        if (!__glewGenVertexArrays) __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArraysOES");
+    }
+    if (!__glewBindVertexArray) {
+        write_log("Manual loading of glBindVertexArray...\n");
+        __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray");
+        if (!__glewBindVertexArray) __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArrayOES");
+    }
+    if (!__glewDeleteVertexArrays) {
+        write_log("Manual loading of glDeleteVertexArrays...\n");
+        __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
+        if (!__glewDeleteVertexArrays) __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArraysOES");
+    }
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));

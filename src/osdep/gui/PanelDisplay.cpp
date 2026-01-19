@@ -413,6 +413,11 @@ public:
 		int oldvs = changed_prefs.gfx_apmode[0].gfx_vsync;
 		changed_prefs.gfx_apmode[0].gfx_vsync = 0;
 		changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+		// i = 0 : None
+		// i = 1 : Lagless
+		// i = 2 : Lagless (50/60Hz)
+		// i = 3 : VSync Standard
+		// i = 4 : VSync Standard (50/60Hz)
 		if (i == 1) {
 			changed_prefs.gfx_apmode[0].gfx_vsync = 1;
 			changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;

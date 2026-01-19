@@ -38,7 +38,7 @@ void crtemu_destroy( crtemu_t* crtemu );
 void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, int frame_height );
 
 void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr, int width, int height, int pitch,
-                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr );
+                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format );
 
 void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int height, int* x, int* y );
 
@@ -116,7 +116,7 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
     typedef size_t CRTEMU_GLsizeiptr;
     typedef unsigned int CRTEMU_GLbitfield;
 
-    #define CRTEMU_GL_FLOAT 0x1406
+    #define CRTEMU_GL_VERTEX_ARRAY_BINDING 0x85B5
     #define CRTEMU_GL_FALSE 0
     #define CRTEMU_GL_FRAGMENT_SHADER 0x8b30
     #define CRTEMU_GL_VERTEX_SHADER 0x8b31
@@ -236,6 +236,8 @@ struct crtemu_t {
 	CRTEMU_GLuint blend_shader;
 	CRTEMU_GLuint copy_shader;
 
+    CRTEMU_GLuint vao;
+
 	int last_present_width;
 	int last_present_height;
 
@@ -305,19 +307,84 @@ struct crtemu_t {
 	void (CRTEMU_GLCALLTYPE* Viewport) (CRTEMU_GLint x, CRTEMU_GLint y, CRTEMU_GLsizei width, CRTEMU_GLsizei height);
 	void (CRTEMU_GLCALLTYPE* DeleteShader) (CRTEMU_GLuint shader);
 	void (CRTEMU_GLCALLTYPE* DeleteProgram) (CRTEMU_GLuint program);
+    void (CRTEMU_GLCALLTYPE* GenVertexArrays) (CRTEMU_GLsizei n, CRTEMU_GLuint *arrays);
+    void (CRTEMU_GLCALLTYPE* BindVertexArray) (CRTEMU_GLuint array);
+    void (CRTEMU_GLCALLTYPE* DeleteVertexArrays) (CRTEMU_GLsizei n, CRTEMU_GLuint const *arrays);
 #ifdef CRTEMU_REPORT_SHADER_ERRORS
 	void (CRTEMU_GLCALLTYPE* GetShaderInfoLog) (CRTEMU_GLuint shader, CRTEMU_GLsizei bufSize, CRTEMU_GLsizei *length, CRTEMU_GLchar *infoLog);
 #endif
 };
 
 
-static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const* vs_source, char const* fs_source ) {
+static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const* vs_source_in, char const* fs_source_in ) {
 #ifdef CRTEMU_REPORT_SHADER_ERRORS
 	char error_message[ 1024 ];
 #endif
 
+    // Detect GL version
+    const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
+    bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") || strstr(gl_ver_str, "OpenGL ES-CM"));
+    
+    // Check for Core Profile (Desktop GL >= 3.2 usually implied by Core)
+    // We can also check specific version numbers if needed.
+    bool is_core = !is_gles;
+    if (is_core && gl_ver_str) {
+        int major = 0, minor = 0;
+        const char* v = gl_ver_str;
+        while (*v && (*v < '0' || *v > '9')) v++;
+        if (*v) {
+            major = atoi(v);
+            while (*v && *v != '.') v++;
+            if (*v == '.') {
+                v++;
+                minor = atoi(v);
+            }
+        }
+        if (major < 3 || (major == 3 && minor < 2)) is_core = false;
+    }
+
+    const char* vs_preamble = "";
+    const char* fs_preamble = "";
+    const char* vs_defines = "";
+    const char* fs_defines = "";
+
+    // WebGL check (compile time)
+#ifdef CRTEMU_WEBGL
+    vs_preamble = "precision highp float;\n";
+    fs_preamble = "precision highp float;\n";
+#else
+    if (is_gles) {
+        vs_preamble = "#version 300 es\nprecision highp float;\n";
+        fs_preamble = "#version 300 es\nprecision highp float;\n";
+        vs_defines = "#define attribute in\n#define varying out\n";
+        fs_defines = "#define varying in\n#define texture2D texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n";
+    } else if (is_core) {
+        vs_preamble = "#version 330 core\n";
+        fs_preamble = "#version 330 core\n";
+        vs_defines = "#define attribute in\n#define varying out\n";
+        fs_defines = "#define varying in\n#define texture2D texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n";
+    } else {
+        vs_preamble = "#version 120\n";
+        fs_preamble = "#version 120\n";
+    }
+#endif
+
+    // Combine sources
+    size_t vs_len = strlen(vs_preamble) + strlen(vs_defines) + strlen(vs_source_in) + 1;
+    char* vs_final = (char*)CRTEMU_MALLOC(crtemu, vs_len);
+    strcpy(vs_final, vs_preamble);
+    strcat(vs_final, vs_defines);
+    strcat(vs_final, vs_source_in);
+
+    size_t fs_len = strlen(fs_preamble) + strlen(fs_defines) + strlen(fs_source_in) + 1;
+    char* fs_final = (char*)CRTEMU_MALLOC(crtemu, fs_len);
+    strcpy(fs_final, fs_preamble);
+    strcat(fs_final, fs_defines);
+    strcat(fs_final, fs_source_in);
+
 	CRTEMU_GLuint vs = crtemu->CreateShader( CRTEMU_GL_VERTEX_SHADER );
-	crtemu->ShaderSource( vs, 1, (char const**) &vs_source, NULL );
+	const char* vs_ptr = vs_final;
+	crtemu->ShaderSource( vs, 1, &vs_ptr, NULL );
 	crtemu->CompileShader( vs );
 	CRTEMU_GLint vs_compiled;
 	crtemu->GetShaderiv( vs, CRTEMU_GL_COMPILE_STATUS, &vs_compiled );
@@ -331,11 +398,14 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
 		                          error_message + strlen( prefix ) );
 		CRTEMU_REPORT_ERROR( error_message );
 #endif
+        CRTEMU_FREE(crtemu, vs_final);
+        CRTEMU_FREE(crtemu, fs_final);
 		return 0;
 	}
 
 	CRTEMU_GLuint fs = crtemu->CreateShader( CRTEMU_GL_FRAGMENT_SHADER );
-	crtemu->ShaderSource( fs, 1, (char const**) &fs_source, NULL );
+	const char* fs_ptr = fs_final;
+	crtemu->ShaderSource( fs, 1, &fs_ptr, NULL );
 	crtemu->CompileShader( fs );
 	CRTEMU_GLint fs_compiled;
 	crtemu->GetShaderiv( fs, CRTEMU_GL_COMPILE_STATUS, &fs_compiled );
@@ -344,11 +414,13 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
 		char const* prefix = "Fragment Shader Error: ";
 		strcpy( error_message, prefix );
 		int len = 0, written = 0;
-		crtemu->GetShaderiv( vs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
+		crtemu->GetShaderiv( fs, CRTEMU_GL_INFO_LOG_LENGTH, &len );
 		crtemu->GetShaderInfoLog( fs, (CRTEMU_GLsizei)( sizeof( error_message ) - strlen( prefix ) ), &written,
 		                          error_message + strlen( prefix ) );
 		CRTEMU_REPORT_ERROR( error_message );
 #endif
+        CRTEMU_FREE(crtemu, vs_final);
+        CRTEMU_FREE(crtemu, fs_final);
 		return 0;
 	}
 
@@ -358,6 +430,9 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
 	crtemu->AttachShader( prg, vs );
 	crtemu->BindAttribLocation( prg, 0, "pos" );
 	crtemu->LinkProgram( prg );
+
+    CRTEMU_FREE(crtemu, vs_final);
+    CRTEMU_FREE(crtemu, fs_final);
 
 	CRTEMU_GLint linked;
 	crtemu->GetProgramiv( prg, CRTEMU_GL_LINK_STATUS, &linked );
@@ -380,11 +455,6 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
 
 bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 	char const* vs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"attribute vec4 pos;"
 			"varying vec2 uv;"
@@ -396,11 +466,6 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    }";
 
 	char const* crt_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			"\n"
 			"varying vec2 uv;\n"
 			"\n"
@@ -532,39 +597,29 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"\n";
 
 	char const* blur_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
 			"uniform vec2 blur;"
-			"uniform sampler2D texture;"
+			"uniform sampler2D blur_texture_in;"
 			""
 			"void main( void )"
 			"    {"
-			"    vec4 sum = texture2D( texture, uv ) * 0.2270270270;"
-			"    sum += texture2D(texture, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
-			"    sum += texture2D(texture, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.2270270270;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
 
 
 	char const* accumulate_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -582,11 +637,6 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"";
 
 	char const* blend_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -604,11 +654,6 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"";
 
 	char const* copy_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -641,11 +686,6 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 
 bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 	char const* vs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"attribute vec4 pos;"
 			"varying vec2 uv;"
@@ -657,11 +697,6 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"    }";
 
 	char const* crt_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			"\n"
 			"varying vec2 uv;\n"
 			"\n"
@@ -796,39 +831,29 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"";
 
 	char const* blur_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
 			"uniform vec2 blur;"
-			"uniform sampler2D texture;"
+			"uniform sampler2D blur_texture_in;"
 			""
 			"void main( void )"
 			"    {"
-			"    vec4 sum = texture2D( texture, uv ) * 0.2270270270;"
-			"    sum += texture2D(texture, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
-			"    sum += texture2D(texture, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.2270270270;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
 
 
 	char const* accumulate_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -846,11 +871,6 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"";
 
 	char const* blend_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -868,11 +888,6 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"";
 
 	char const* copy_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -905,11 +920,6 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 
 bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 	char const* vs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"attribute vec4 pos;"
 			"varying vec2 uv;"
@@ -921,11 +931,6 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"    }";
 
 	char const* crt_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			"\n"
 			"varying vec2 uv;\n"
 			"\n"
@@ -992,39 +997,29 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"";
 
 	char const* blur_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
 			"uniform vec2 blur;"
-			"uniform sampler2D texture;"
+			"uniform sampler2D blur_texture_in;"
 			""
 			"void main( void )"
 			"    {"
-			"    vec4 sum = texture2D( texture, uv ) * 0.2270270270;"
-			"    sum += texture2D(texture, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
-			"    sum += texture2D(texture, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.2270270270;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
 
 
 	char const* accumulate_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -1042,11 +1037,6 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"";
 
 	char const* blend_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -1059,16 +1049,11 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
 			"    vec4 b = texture2D( tex1, uv );"
 			""
-			"    gl_FragColor = max( a, b * 0.2 );"
+			"    gl_FragColor = max( a, b * 0.20 );"
 			"    }   "
 			"";
 
 	char const* copy_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-			#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -1095,20 +1080,11 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 	crtemu->copy_shader = crtemu_internal_build_shader( crtemu, vs_source, copy_fs_source );
 	if( crtemu->copy_shader == 0 ) return false;
 
-
 	return true;
-
 }
-
-
 
 bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 	char const* vs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			""
 			"attribute vec4 pos;"
 			"varying vec2 uv;"
@@ -1120,11 +1096,6 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    }";
 
 	char const* crt_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			"\n"
 			"varying vec2 uv;\n"
 			"\n"
@@ -1257,39 +1228,28 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"\n";
 
 	char const* blur_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			""
 			"varying vec2 uv;"
 			""
 			"uniform vec2 blur;"
-			"uniform sampler2D texture;"
+			"uniform sampler2D blur_texture_in;"
 			""
 			"void main( void )"
 			"    {"
-			"    vec4 sum = texture2D( texture, uv ) * 0.2270270270;"
-			"    sum += texture2D(texture, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
-			"    sum += texture2D(texture, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
-			"    sum += texture2D(texture, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
-			"    sum += texture2D(texture, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
-			"    sum += texture2D(texture, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.2270270270;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
 
-
 	char const* accumulate_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -1307,11 +1267,6 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"";
 
 	char const* blend_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -1329,11 +1284,6 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"";
 
 	char const* copy_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -1363,14 +1313,8 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 	return true;
 }
 
-
 bool crtemu_shaders_none( crtemu_t* crtemu ) {
 	char const* vs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			""
 			"attribute vec4 pos;"
 			"varying vec2 uv;"
@@ -1382,11 +1326,6 @@ bool crtemu_shaders_none( crtemu_t* crtemu ) {
 			"    }";
 
 	char const* copy_fs_source =
-#ifdef CRTEMU_WEBGL
-			"precision highp float;\n\n"
-#else
-			"#version 120\n\n"
-#endif
 			""
 			"varying vec2 uv;"
 			""
@@ -1394,7 +1333,7 @@ bool crtemu_shaders_none( crtemu_t* crtemu ) {
 			""
 			"void main( void )"
 			"    {"
-			"    gl_FragColor = texture2D( tex0, uv );"
+			"    gl_FragColor = texture2D( tex0, vec2(uv.x, 1.0 - uv.y) );"
 			"    }   "
 			"";
 
@@ -1408,7 +1347,7 @@ bool crtemu_shaders_none( crtemu_t* crtemu ) {
 static void crtemu_init_uniform_locations(crtemu_t* crtemu) {
 	if (crtemu->blur_shader) {
 		crtemu->loc_blur_blur = crtemu->GetUniformLocation(crtemu->blur_shader, "blur");
-		crtemu->loc_blur_texture = crtemu->GetUniformLocation(crtemu->blur_shader, "texture");
+		crtemu->loc_blur_texture = crtemu->GetUniformLocation(crtemu->blur_shader, "blur_texture_in");
 	}
 	if (crtemu->copy_shader) {
 		crtemu->loc_copy_tex0 = crtemu->GetUniformLocation(crtemu->copy_shader, "tex0");
@@ -1497,6 +1436,9 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
         crtemu->Viewport = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLint, CRTEMU_GLint, CRTEMU_GLsizei, CRTEMU_GLsizei) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glViewport" );
         crtemu->DeleteShader = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteShader" );
         crtemu->DeleteProgram = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteProgram" );
+        crtemu->GenVertexArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint *) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGenVertexArrays" );
+        crtemu->BindVertexArray = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glBindVertexArray" );
+        crtemu->DeleteVertexArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const *) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glDeleteVertexArrays" );
         #ifdef CRTEMU_REPORT_SHADER_ERRORS
             crtemu->GetShaderInfoLog = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLsizei*, CRTEMU_GLchar*) ) (uintptr_t) GetProcAddress( crtemu->gl_dll, "glGetShaderInfoLog" );
         #endif
@@ -1547,6 +1489,10 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
         #ifdef CRTEMU_REPORT_SHADER_ERRORS
             if( !crtemu->GetShaderInfoLog ) crtemu->GetShaderInfoLog = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint, CRTEMU_GLsizei, CRTEMU_GLsizei*, CRTEMU_GLchar*) ) (uintptr_t) crtemu->wglGetProcAddress( "glGetShaderInfoLog" );
         #endif
+        // load VAO functions if missing
+        if( !crtemu->GenVertexArrays ) crtemu->GenVertexArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint *) ) (uintptr_t) crtemu->wglGetProcAddress( "glGenVertexArrays" );
+        if( !crtemu->BindVertexArray ) crtemu->BindVertexArray = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLuint) ) (uintptr_t) crtemu->wglGetProcAddress( "glBindVertexArray" );
+        if( !crtemu->DeleteVertexArrays ) crtemu->DeleteVertexArrays = ( void (CRTEMU_GLCALLTYPE*) (CRTEMU_GLsizei, CRTEMU_GLuint const *) ) (uintptr_t) crtemu->wglGetProcAddress( "glDeleteVertexArrays" );
 
 #else
 
@@ -1590,6 +1536,9 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->Viewport = glViewport;
 	crtemu->DeleteShader = glDeleteShader;
 	crtemu->DeleteProgram = glDeleteProgram;
+    crtemu->GenVertexArrays = glGenVertexArrays;
+    crtemu->BindVertexArray = glBindVertexArray;
+    crtemu->DeleteVertexArrays = glDeleteVertexArrays;
 	crtemu->TexSubImage2D = glTexSubImage2D;
 	crtemu->PixelStorei = glPixelStorei;
 #ifdef CRTEMU_REPORT_SHADER_ERRORS
@@ -1701,6 +1650,11 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_NEAREST );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_NEAREST );
 
+    if (crtemu->GenVertexArrays) {
+        crtemu->GenVertexArrays(1, &crtemu->vao);
+        crtemu->BindVertexArray(crtemu->vao);
+    }
+
 	crtemu->GenBuffers( 1, &crtemu->vertexbuffer );
 	crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
 	crtemu->EnableVertexAttribArray( 0 );
@@ -1778,6 +1732,9 @@ void crtemu_destroy( crtemu_t* crtemu ) {
 	crtemu->DeleteTextures( 1, &crtemu->backbuffer );
 	crtemu->DeleteBuffers( 1, &crtemu->vertexbuffer );
 	crtemu->DeleteBuffers( 1, &crtemu->vertexbuffer_static );
+    if (crtemu->DeleteVertexArrays && crtemu->vao) {
+        crtemu->DeleteVertexArrays(1, &crtemu->vao);
+    }
 #ifndef CRTEMU_SDL
 	FreeLibrary( crtemu->gl_dll );
 #endif
@@ -1801,6 +1758,8 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 
 static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU_GLuint blurbuffer_a, CRTEMU_GLuint blurbuffer_b,
                                   CRTEMU_GLuint blurtexture_b, float r, int width, int height ) {
+
+    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_b );
 	crtemu->UseProgram( crtemu->blur_shader );
@@ -1831,10 +1790,12 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
 
 
 void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr, int width, int height, int pitch,
-                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr ) {
+                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format ) {
 
 	int viewport[ 4 ];
 	crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
+
+    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	if (crtemu->type == CRTEMU_TYPE_NONE) {
 		// Just copy to backbuffer and present
@@ -1842,7 +1803,7 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / 4);
-			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 		}
@@ -1873,9 +1834,9 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 		crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / 4);
 		if (width != crtemu->last_present_width || height != crtemu->last_present_height) {
-			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
 		} else {
-			crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+			crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, pixel_format, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
 		}
 		crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
