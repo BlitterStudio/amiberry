@@ -62,6 +62,8 @@ public:
 	void set_input_texture(GLuint tex) { input_texture_ = tex; }
 	GLuint get_input_vbo() const { return input_vbo_; }
 	void set_input_vbo(GLuint vbo) { input_vbo_ = vbo; }
+	GLuint get_input_vao() const { return input_vao_; }
+	void set_input_vao(GLuint vao) { input_vao_ = vao; }
 
 private:
 	// Shader compilation and linking
@@ -86,6 +88,7 @@ private:
 	
 	GLuint input_texture_;
 	GLuint input_vbo_;
+	GLuint input_vao_;
 	
 	std::string filepath_;
 	std::string shader_source_;
