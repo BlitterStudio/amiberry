@@ -183,6 +183,70 @@ static void OffsetRect(SDL_Rect* rect, const int dx, const int dy)
 	rect->y += dy;
 }
 
+static float SDL2_getrefreshrate(const int monid)
+{
+	SDL_DisplayMode mode;
+	if (SDL_GetCurrentDisplayMode(monid, &mode) != 0)
+	{
+		write_log("SDL_GetCurrentDisplayMode failed: %s\n", SDL_GetError());
+		return 0;
+	}
+	return static_cast<float>(mode.refresh_rate);
+}
+
+#ifdef USE_OPENGL
+static int current_vsync_interval = -1;
+static float cached_refresh_rate = 0.0f;
+
+void update_vsync(const int monid)
+{
+	if (!AMonitors[monid].amiga_window) return;
+	
+	const AmigaMonitor* mon = &AMonitors[monid];
+	const auto idx = mon->screen_is_picasso ? APMODE_RTG : APMODE_NATIVE;
+	const int vsync_mode = currprefs.gfx_apmode[idx].gfx_vsync;
+	int interval = 0;
+
+	if (vsync_mode > 0) {
+		if (vsync_mode > 1) {
+			// VSync 50/60Hz: Adapt for High Refresh Rate Monitors
+			// We cache the refresh rate check to avoid expensive calls every frame
+			if (cached_refresh_rate <= 0.0f) {
+				cached_refresh_rate = SDL2_getrefreshrate(monid);
+				write_log("VSync: Detected refresh rate: %.2f Hz\n", cached_refresh_rate);
+			}
+
+			float target_fps = (float)vblank_hz;
+			if (target_fps < 45 || target_fps > 125) target_fps = 50.0f; // Sanity check
+
+			if (cached_refresh_rate > 0) {
+				interval = (int)std::round(cached_refresh_rate / target_fps);
+				if (interval < 1) interval = 1;
+			}
+			else {
+				interval = 1;
+			}
+		}
+		else {
+			// Standard VSync
+			interval = 1;
+		}
+	}
+	
+	if (current_vsync_interval != interval) {
+		if (SDL_GL_SetSwapInterval(interval) == 0) {
+			current_vsync_interval = interval;
+			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
+		}
+		else {
+			write_log("OpenGL VSync: Failed to set interval %d: %s\n", interval, SDL_GetError());
+			// If failed, maybe try to reset to 0 to be safe? 
+			// But maybe the driver just doesn't support adaptive?
+		}
+	}
+}
+#endif
+
 void GetWindowRect(SDL_Window* window, SDL_Rect* rect)
 {
 	SDL_GetWindowPosition(window, &rect->x, &rect->y);
@@ -254,17 +318,6 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scale_quality);
 	SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, integer_scale);
 #endif
-}
-
-static float SDL2_getrefreshrate(const int monid)
-{
-	SDL_DisplayMode mode;
-	if (SDL_GetDisplayMode(monid, 0, &mode) != 0)
-	{
-		write_log("SDL_GetDisplayMode failed: %s\n", SDL_GetError());
-		return 0;
-	}
-	return static_cast<float>(mode.refresh_rate);
 }
 
 #ifdef USE_OPENGL
@@ -1818,13 +1871,8 @@ void show_screen(const int monid, int mode)
 
 	const auto time = SDL_GetTicks();
 
-	// Ensure we are not capping FPS unnecessarily if VSync is not explicitly requested.
-	// Some drivers might force VSync in full-window mode.
-	static bool swap_interval_checked = false;
-	if (!swap_interval_checked) {
-		SDL_GL_SetSwapInterval(0);
-		swap_interval_checked = true;
-	}
+	// Handle VSync options
+	update_vsync(monid);
 
 	int drawableWidth, drawableHeight;
 	SDL_GL_GetDrawableSize(mon->amiga_window, &drawableWidth, &drawableHeight);
@@ -2160,6 +2208,8 @@ static void close_hwnds(struct AmigaMonitor* mon)
 	{
 		SDL_GL_DeleteContext(gl_context);
 		gl_context = nullptr;
+		current_vsync_interval = -1; // Reset VSync state
+		cached_refresh_rate = 0.0f;
 	}
 #else
 	if (mon->amiga_renderer && !kmsdrm_detected)
@@ -3232,6 +3282,14 @@ int reopen(struct AmigaMonitor* mon, int full, bool unacquire)
 bool vsync_switchmode(const int monid, int hz)
 {
 	const struct AmigaMonitor* mon = &AMonitors[monid];
+	
+	// In Full-Window mode or if using Adaptive VSync options, 
+	// we do not need to strictly match/switch resolution refresh rates.
+	// We accept the current state as valid.
+	if (isfullscreen() < 0 || currprefs.gfx_apmode[APMODE_NATIVE].gfx_vsync > 1) {
+		return true;
+	}
+
 	static struct PicassoResolution* oldmode;
 	static int oldhz;
 	int w = mon->currentmode.native_width;
