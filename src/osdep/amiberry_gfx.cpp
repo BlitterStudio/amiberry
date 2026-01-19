@@ -459,7 +459,7 @@ static void update_leds(const int monid)
 	const amigadisplay* ad = &adisplays[monid];
 	const int m = statusline_get_multiplier(monid) / 100;
 	const int led_height = TD_TOTAL_HEIGHT * m;
-	int led_width = ad->picasso_on ? mon->currentmode.native_width : 640;
+	int led_width = ad->picasso_on ? (amiga_surface ? amiga_surface->w : mon->currentmode.native_width) : 640;
 	if (led_width <= 0)
 		led_width = 640;
 
@@ -1681,7 +1681,7 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 #endif
 
 #ifdef USE_OPENGL
-static void render_osd(const int monid, int drawableWidth, int drawableHeight)
+static void render_osd(const int monid, int x, int y, int w, int h)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
@@ -1723,7 +1723,7 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glDisable(GL_SCISSOR_TEST);
-			glViewport(0, 0, drawableWidth, drawableHeight);
+			glViewport(x, y, w, h);
 
 			glUseProgram(osd_program);
 			if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
@@ -1735,8 +1735,8 @@ static void render_osd(const int monid, int drawableWidth, int drawableHeight)
 
 			float osd_w = (float)mon->statusline_surface->w;
 			float osd_h = (float)mon->statusline_surface->h;
-			float win_w = (float)drawableWidth;
-			float win_h = (float)drawableHeight;
+			float win_w = (float)w;
+			float win_h = (float)h;
 
 			// Force full width (stretch to fit window)
 			float scale_x = win_w / osd_w;
@@ -1848,36 +1848,36 @@ void show_screen(const int monid, int mode)
 
 	float desired_aspect = calculate_desired_aspect(mon);
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
-	
+
+	int destW = drawableWidth;
+	int destH = (int) (drawableWidth / desired_aspect);
+
+	if (destH > drawableHeight) {
+		destH = drawableHeight;
+		destW = (int)(drawableHeight * desired_aspect);
+	}
+
+	if (destW <= 0) destW = 1;
+	if (destH <= 0) destH = 1;
+
+	int destX = (drawableWidth - destW) / 2;
+	int destY = (drawableHeight - destH) / 2;
+
+	glViewport(destX, destY, destW, destH);
+
+	// Check if cropping is active
+	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+							 crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+							 crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+							 (crop_rect.w > 0 && crop_rect.h > 0);
+
 	// Handle external shader rendering (simplified single-pass)
 	if (external_shader && external_shader->is_valid()) {
-		int destW = drawableWidth;
-		int destH = (int)(drawableWidth / desired_aspect);
-
-		if (destH > drawableHeight) {
-			destH = drawableHeight;
-			destW = (int)(drawableHeight * desired_aspect);
-		}
-		
-		if (destW <= 0) destW = 1;
-		if (destH <= 0) destH = 1;
-
-		int destX = (drawableWidth - destW) / 2;
-		int destY = (drawableHeight - destH) / 2;
-
-		glViewport(destX, destY, destW, destH);
-
 		// Explicitly disable attributes to avoid leakage from previous passes
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
-		
-		// Check if cropping is active
-		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-		                         (crop_rect.w > 0 && crop_rect.h > 0);
-		
+
 		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
 			const int bpp = 4;
@@ -1896,41 +1896,18 @@ void show_screen(const int monid, int mode)
 				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, destW, destH);
 		}
 
-		render_osd(monid, drawableWidth, drawableHeight);
 	} else if (crtemu_shader) {
-		// Original crtemu rendering path
-		if (crtemu_shader->type == CRTEMU_TYPE_NONE) {
-			int destW = drawableWidth;
-			int destH = (int)(drawableWidth / desired_aspect);
-
-			if (destH > drawableHeight) {
-				destH = drawableHeight;
-				destW = (int)(drawableHeight * desired_aspect);
-			}
-
-			int destX = (drawableWidth - destW) / 2;
-			int destY = (drawableHeight - destH) / 2;
-
-			glViewport(destX, destY, destW, destH);
-		} else {
-			glViewport(0, 0, drawableWidth, drawableHeight);
-		}
-
 		// crtemu_present expects attribute 0 to be enabled.
 		glEnableVertexAttribArray(0);
 		// Disable other attributes that might have been enabled by OSD or other passes
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
 
-		// Check if any cropping is actually being applied.
-		// If crop_rect covers the entire surface, we can take a much faster path.
-		const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-		                         crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-		                         crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-		                         (crop_rect.w > 0 && crop_rect.h > 0);
+		if (crtemu_shader->type != CRTEMU_TYPE_NONE) {
+			glViewport(0, 0, drawableWidth, drawableHeight);
+		}
 
-		if (is_cropped && amiga_surface)
-		{
+		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
 			const int bpp = 4;
 			int x = std::max(0, crop_rect.x);
@@ -1944,20 +1921,17 @@ void show_screen(const int monid, int mode)
 
 			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
 				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
-		}
-		else
-		{
+		} else if (amiga_surface) {
 			// Determine correct OpenGL format
 			unsigned int gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
 
 			// FAST PATH: No cropping.
-			// Render the full surface directly without any expensive memory allocation or copying.
 			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
 			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
 		}
-
-		render_osd(monid, drawableWidth, drawableHeight);
 	}
+
+	render_osd(monid, destX, destY, destW, destH);
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 	wait_frame_timing();
