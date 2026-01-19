@@ -38,7 +38,7 @@ void crtemu_destroy( crtemu_t* crtemu );
 void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, int frame_height );
 
 void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr, int width, int height, int pitch,
-                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr );
+                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format );
 
 void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int height, int* x, int* y );
 
@@ -1825,7 +1825,7 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
 
 
 void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pixels_xbgr, int width, int height, int pitch,
-                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr ) {
+                     CRTEMU_U32 mod_xbgr, CRTEMU_U32 border_xbgr, unsigned int pixel_format ) {
 
 	int viewport[ 4 ];
 	crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
@@ -1836,7 +1836,7 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / 4);
-			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 		}
@@ -1867,9 +1867,9 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 		crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / 4);
 		if (width != crtemu->last_present_width || height != crtemu->last_present_height) {
-			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
 		} else {
-			crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, CRTEMU_GL_RGBA, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
+			crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, pixel_format, CRTEMU_GL_UNSIGNED_BYTE, pixels_xbgr );
 		}
 		crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );

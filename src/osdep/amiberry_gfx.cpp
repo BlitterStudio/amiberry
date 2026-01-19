@@ -1596,15 +1596,20 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 
+	// Determine correct OpenGL format based on global pixel_format
+	// SDL_PIXELFORMAT_ARGB8888 -> BGRA in memory -> GL_BGRA
+	// SDL_PIXELFORMAT_ABGR8888 -> RGBA in memory -> GL_RGBA
+	GLenum gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
+
 	static int last_w = 0, last_h = 0;
 	static GLuint last_texture = 0;
 	if (width != last_w || height != last_h || texture != last_texture) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_fmt, GL_UNSIGNED_BYTE, pixels);
 		last_w = width;
 		last_h = height;
 		last_texture = texture;
 	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, gl_fmt, GL_UNSIGNED_BYTE, pixels);
 	}
 	
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Reset for other textures
@@ -1934,15 +1939,21 @@ void show_screen(const int monid, int mode)
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
 			
+			// Determine correct OpenGL format
+			unsigned int gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
+
 			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
-				w, h, amiga_surface->pitch, 0xffffffff, 0x000000);
+				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
 		}
 		else
 		{
+			// Determine correct OpenGL format
+			unsigned int gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
+
 			// FAST PATH: No cropping.
 			// Render the full surface directly without any expensive memory allocation or copying.
 			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000);
+			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
 		}
 
 		render_osd(monid, drawableWidth, drawableHeight);
@@ -3076,11 +3087,10 @@ int check_prefs_changed_gfx()
 
 static void update_pixel_format()
 {
-	const AmigaMonitor* mon = &AMonitors[0];
-	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE && mon->screen_is_picasso)
-		pixel_format = SDL_PIXELFORMAT_ARGB8888; // BGRA for custom boards
+	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
+		pixel_format = SDL_PIXELFORMAT_ARGB8888; // for custom boards (e.g. PicassoII)
 	else
-		pixel_format = SDL_PIXELFORMAT_ABGR8888; // RGBA for UAE elements
+		pixel_format = SDL_PIXELFORMAT_ABGR8888; // for native output and UAE RTG
 }
 
 /* Color management */
