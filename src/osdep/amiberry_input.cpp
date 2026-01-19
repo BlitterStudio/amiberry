@@ -971,6 +971,7 @@ static int get_kb_widget_type(int kb, int num, TCHAR* name, uae_u32* code)
 static int init_kb()
 {
 	keyboard_german = 0;
+#ifndef LIBRETRO
 	if (SDL_GetKeyFromScancode(SDL_SCANCODE_Y) == SDLK_z)
 		keyboard_german = 1;
 
@@ -992,6 +993,7 @@ static int init_kb()
 		}
 	}
 	retroarch_inited = 1;	
+#endif
 	return 1;
 }
 
@@ -1291,6 +1293,7 @@ static int init_joystick()
 		return 1;
 	joystick_inited = 1;
 	
+#ifndef LIBRETRO
 	// This disables the use of gyroscopes as axis device
 	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
 	
@@ -1335,6 +1338,16 @@ static int init_joystick()
 		fix_didata(did);
 		setup_mapping(did, controllers, i);
 	}
+#else
+	num_joystick = 4;
+	for (int i = 0; i < num_joystick; i++)
+	{
+		struct didata* did = &di_joystick[i];
+		did->name = "Libretro Joystick";
+		did->buttons = 16;
+		did->axles = 8;
+	}
+#endif
 	return 1;
 }
 

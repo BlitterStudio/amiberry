@@ -815,8 +815,17 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	return false;
 }
 
+#include "libretro_shared.h"
 static void SDL2_showframe(const int monid)
 {
+#ifdef LIBRETRO
+	if (amiga_surface) {
+		video_cb(amiga_surface->pixels, amiga_surface->w, amiga_surface->h, amiga_surface->pitch);
+	}
+	libretro_yield();
+	return;
+#endif
+
 	// Skip presentation if headless mode
 	if (currprefs.headless) {
 		return;
