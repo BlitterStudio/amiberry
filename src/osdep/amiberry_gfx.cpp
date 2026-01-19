@@ -1822,7 +1822,7 @@ void show_screen(const int monid, int mode)
 	// Some drivers might force VSync in full-window mode.
 	static bool swap_interval_checked = false;
 	if (!swap_interval_checked) {
-		SDL_GL_SetSwapInterval(0); // Default to no VSync for performance testing/flexibility
+		SDL_GL_SetSwapInterval(0);
 		swap_interval_checked = true;
 	}
 
@@ -1934,8 +1934,8 @@ void show_screen(const int monid, int mode)
 	render_osd(monid, destX, destY, destW, destH);
 
 	SDL_GL_SwapWindow(mon->amiga_window);
-	wait_frame_timing();
 #else
+	wait_frame_timing();
 	SDL2_showframe(monid);
 #endif
 	mon->render_ok = false;
