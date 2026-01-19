@@ -1913,6 +1913,12 @@ void show_screen(const int monid, int mode)
 
 	glViewport(destX, destY, destW, destH);
 
+	// Update render_quad to reflect the actual drawn area
+	render_quad.x = destX;
+	render_quad.y = destY;
+	render_quad.w = destW;
+	render_quad.h = destH;
+
 	// Check if cropping is active
 	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
 							 crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
