@@ -1059,7 +1059,7 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
 			"    vec4 b = texture2D( tex1, uv );"
 			""
-			"    gl_FragColor = max( a, b * 0.2 );"
+			"    gl_FragColor = max( a, b * 0.20 );"
 			"    }   "
 			"";
 
@@ -1095,12 +1095,8 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 	crtemu->copy_shader = crtemu_internal_build_shader( crtemu, vs_source, copy_fs_source );
 	if( crtemu->copy_shader == 0 ) return false;
 
-
 	return true;
-
 }
-
-
 
 bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 	char const* vs_source =
@@ -1283,7 +1279,6 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-
 	char const* accumulate_fs_source =
 #ifdef CRTEMU_WEBGL
 			"precision highp float;\n\n"
@@ -1363,7 +1358,6 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 	return true;
 }
 
-
 bool crtemu_shaders_none( crtemu_t* crtemu ) {
 	char const* vs_source =
 #ifdef CRTEMU_WEBGL
@@ -1394,7 +1388,7 @@ bool crtemu_shaders_none( crtemu_t* crtemu ) {
 			""
 			"void main( void )"
 			"    {"
-			"    gl_FragColor = texture2D( tex0, uv );"
+			"    gl_FragColor = texture2D( tex0, vec2(uv.x, 1.0 - uv.y) );"
 			"    }   "
 			"";
 
