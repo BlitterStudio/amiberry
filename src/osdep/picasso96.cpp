@@ -4924,6 +4924,11 @@ void picasso_statusline(int monid, uae_u8 *dst)
 
 static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width, int srcbytesperrow, int srcpixbytes, int dx, int dy, int dstbytesperrow, int dstpixbytes, const int *convert_modep, const uae_u32 *p96_rgbx16p)
 {
+	// Zero-Copy Optimization: If source and destination are the same, no copy implies direct render from VRAM.
+	if (src == dst) {
+		return;
+	}
+
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	int endx = x + width, endx4;
@@ -5816,6 +5821,25 @@ addrbank gfxmem4_bank = {
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
+
+uae_u8* p96_get_native_memory(int monid)
+{
+	if (monid < 0 || monid >= MAX_RTG_BOARDS)
+		return nullptr;
+	if (gfxmem_banks[monid] == nullptr)
+		return nullptr;
+	return gfxmem_banks[monid]->start + natmem_offset;
+}
+
+uae_u8* p96_get_render_buffer_pointer(int monid)
+{
+	if (monid < 0 || monid >= MAX_RTG_BOARDS)
+		return nullptr;
+	if (gfxmem_banks[monid] == nullptr)
+		return nullptr;
+	struct picasso96_state_struct *state = &picasso96_state[monid];
+	return state->XYOffset + natmem_offset;
+}
 
 /* Call this function first, near the beginning of code flow
 * Place in InitGraphics() which seems reasonable...

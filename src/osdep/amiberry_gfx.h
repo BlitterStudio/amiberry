@@ -10,6 +10,11 @@
 #define RTG_MODE_CENTER 2
 #define RTG_MODE_INTEGER_SCALE 3
 
+#ifdef AMIBERRY
+extern Uint32 pixel_format;
+extern uae_u8* p96_get_render_buffer_pointer(int monid);
+#endif
+
 #define GUI_WIDTH  800
 #define GUI_HEIGHT 720
 
