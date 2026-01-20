@@ -4053,6 +4053,8 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags);
 	if (!mon->amiga_window) {
 		write_log(_T("main window creation failed\n"));
+		write_log(SDL_GetError());
+		write_log("\n");
 		return 0;
 	}
 
@@ -4063,12 +4065,6 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	w = mon->currentmode.native_width;
 	h = mon->currentmode.native_height;
-
-	if (!mon->amiga_window) {
-		write_log(_T("creation of amiga window failed\n"));
-		close_hwnds(mon);
-		return 0;
-	}
 
 	auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 	if (icon_surface != nullptr)
@@ -5037,8 +5033,9 @@ void screenshot(int monid, int mode, int doprepare)
  * @brief Sets the required SDL GL attributes before window creation.
  *
  * This function configures the OpenGL context version and other attributes.
- * It attempts to create a modern context (GLES 3.0 on ARM, GL 3.3 Core on Desktop)
- * if mode == 0, or falls back to legacy OpenGL 2.1 Compatibility if mode == 1.
+ * It attempts to create a modern context (GLES 3.0 on GLES-only drivers like KMSDRM,
+ * GL 3.3 Core on all other systems) if mode == 0, or falls back to legacy
+ * OpenGL 2.1 Compatibility if mode == 1.
  *
  * @param mode 0 for modern, 1 for legacy fallback.
  * @return true if all attributes were set successfully, false otherwise.
@@ -5050,20 +5047,31 @@ void screenshot(int monid, int mode, int doprepare)
 	// Reset attributes to default before setting them (optional but good practice)
 	SDL_GL_ResetAttributes();
 
+	// Get SDL video driver to determine OpenGL vs GLES
+	const char* drv = SDL_GetCurrentVideoDriver();
+	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
+
+	// Detect GLES-only drivers (e.g., KMSDRM on Raspberry Pi)
+	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
+
 	if (mode == 0) {
-#if defined(__arm__) || defined(__aarch64__)
-		// ARM/RPi4: Try GLES 3.0
-		write_log(_T("Requesting OpenGL ES 3.0 context...\n"));
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) == 0);
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) == 0);
-#else
-		// Desktop: Try Core Profile 3.3
-		write_log(_T("Requesting OpenGL 3.3 Core context...\n"));
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) == 0);
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
-		success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) == 0);
+		if (likely_gles_only) {
+			// GLES-only systems (e.g., Raspberry Pi with KMSDRM): Try GLES 3.0
+			write_log(_T("Requesting OpenGL ES 3.0 context (GLES-only driver detected)...\n"));
+			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES) == 0);
+			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
+			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0) == 0);
+		} else {
+			// Desktop OpenGL (x86, x86_64, ARM desktops, macOS): Try Core Profile 3.3
+			write_log(_T("Requesting OpenGL 3.3 Core context...\n"));
+			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE) == 0);
+			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3) == 0);
+			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) == 0);
+#ifdef __APPLE__
+			// macOS requires the forward-compatible flag for OpenGL 3.2+ Core Profile
+			success &= (SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG) == 0);
 #endif
+		}
 	} else {
 		// Fallback: Legacy OpenGL 2.1 Compatibility
 		write_log(_T("Requesting OpenGL 2.1 Compatibility context...\n"));
@@ -5083,9 +5091,6 @@ void screenshot(int monid, int mode, int doprepare)
 	success &= (SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8) == 0);
 	success &= (SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8) == 0);
 	success &= (SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8) == 0);
-
-	const char* drv = SDL_GetCurrentVideoDriver();
-	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
 
 	return success;
 }
