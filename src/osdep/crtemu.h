@@ -1832,16 +1832,18 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		return;
 	}
 
+	// Compute whether size/format changed BEFORE any updates
+	// This flag must be captured now for the accumulate/blur texture creation check later
+	bool size_changed = (width != crtemu->last_present_width || height != crtemu->last_present_height);
+
 	// Copy to backbuffer
 	if( pixels_xbgr ) {
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 		crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / bpp);
-		if (width != crtemu->last_present_width || height != crtemu->last_present_height ||
+		if (size_changed ||
 			pixel_format != crtemu->last_present_format || pixel_type != crtemu->last_present_type) {
 			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, pixel_type, pixels_xbgr );
-			crtemu->last_present_width = width;
-			crtemu->last_present_height = height;
 			crtemu->last_present_format = pixel_format;
 			crtemu->last_present_type = pixel_type;
 		} else {
@@ -1850,7 +1852,7 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 	} else {
-		if( width != crtemu->last_present_width || height != crtemu->last_present_height ) {
+		if( size_changed ) {
 			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
@@ -1871,7 +1873,8 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 	}
 
-	if( width != crtemu->last_present_width || height != crtemu->last_present_height ) {
+	// Use the pre-computed size_changed flag to create/resize accumulate and blur textures
+	if( size_changed ) {
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
@@ -1902,12 +1905,10 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 	}
 
-
+	// Update cached dimensions (only needs to be done once, not duplicated)
 	crtemu->last_present_width = width;
 	crtemu->last_present_height = height;
 
-	crtemu->last_present_width = width;
-	crtemu->last_present_height = height;
 
 	crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer_static );
 	crtemu->VertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );

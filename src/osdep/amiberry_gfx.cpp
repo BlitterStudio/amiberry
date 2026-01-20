@@ -4375,6 +4375,15 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		oldtex_w[monid] = w;
 		oldtex_h[monid] = h;
 		oldtex_rtg[monid] = mon->screen_is_picasso;
+		
+		// Even if buffer dimensions aren't ready yet, we need to ensure the shader is created
+		// for native mode. Use the amiga_surface dimensions that doInit already set up.
+		// This is critical for RTG→Native switches where the shader must be recreated for native mode.
+#ifdef USE_OPENGL
+		if (!mon->screen_is_picasso && amiga_surface) {
+			SDL2_alloctexture(mon->monitor_id, amiga_surface->w, amiga_surface->h);
+		}
+#endif
 		return false;
 	}
 
@@ -4437,9 +4446,14 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if (vbout) {
 		vbout->width_allocated = w;
 		vbout->height_allocated = h;
-		if (avidinfo->inbuffer != avidinfo->outbuffer) {
-			vbout->inwidth = w;
-			vbout->inheight = h;
+	}
+
+	if (avidinfo->inbuffer != avidinfo->outbuffer) {
+		if (avidinfo->outbuffer) {
+			avidinfo->outbuffer->inwidth = w;
+			avidinfo->outbuffer->inheight = h;
+			avidinfo->outbuffer->width_allocated = w;
+			avidinfo->outbuffer->height_allocated = h;
 		}
 	}
 
