@@ -396,6 +396,18 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	sd->samplesize = ch * 16 / 8;
 	s->pullmode = currprefs.sound_pullmode;
 
+#ifdef LIBRETRO
+	s->dev = 1;
+	s->pullmode = 0;
+	s->pullbuffer = nullptr;
+	s->pullbufferlen = 0;
+	s->pullbuffermaxlen = 0;
+	write_log("LIBRETRO: CH=%d, FREQ=%d '%s' buffer %d/%d\n", ch, freq, sound_devices[index]->name,
+		s->sndbufsize, s->framesperbuffer);
+	clearbuffer(sd);
+	return 1;
+#endif
+
 	SDL_AudioSpec want = {}, have;
 	want.freq = freq;
 	want.format = AUDIO_S16SYS;
@@ -700,8 +712,17 @@ bool audio_finish_pull()
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 {
 #ifdef LIBRETRO
-	if (audio_batch_cb)
-		audio_batch_cb((const int16_t*)sndbuffer, sd->sndbufsize / (sd->channels * 2));
+	const auto frames = sd->sndbufsize / (sd->channels * 2);
+	if (audio_batch_cb) {
+		audio_batch_cb((const int16_t*)sndbuffer, frames);
+	} else if (audio_cb) {
+		const auto* samples = reinterpret_cast<const int16_t*>(sndbuffer);
+		for (int i = 0; i < frames; i++) {
+			const int16_t left = samples[i * sd->channels];
+			const int16_t right = (sd->channels > 1) ? samples[i * sd->channels + 1] : left;
+			audio_cb(left, right);
+		}
+	}
 	return;
 #endif
 	const auto* s = sd->data;

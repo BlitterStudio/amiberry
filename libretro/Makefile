@@ -105,7 +105,7 @@ SDL2_LIBS := $(shell sdl2-config --libs 2>/dev/null)
 endif
 
 INCFLAGS += $(SDL2_CFLAGS) $(PNG_CFLAGS) $(ZLIB_CFLAGS) $(FLAC_CFLAGS)
-LDFLAGS += $(SDL2_LIBS) $(PNG_LIBS) $(ZLIB_LIBS) $(FLAC_LIBS)
+LDFLAGS += $(PNG_LIBS) $(ZLIB_LIBS) $(FLAC_LIBS)
 
 ifeq ($(platform), unix)
 LDFLAGS += -ldl -lm -pthread
@@ -216,6 +216,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
 # OSDep files
 SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(LIBRETRO_DIR)/libretro_stubs.cpp \
+                $(LIBRETRO_DIR)/sdl_stub.cpp \
                 $(LIBRETRO_DIR)/libretro_sdl_image.cpp \
                 $(LIBRETRO_DIR)/libretro_sdl_ttf.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry.cpp \
