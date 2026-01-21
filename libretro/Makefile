@@ -30,6 +30,13 @@ LIBRETRO_DIR := .
 AMIBERRY_DIR := ..
 LIBRETRO_COMMON ?= ../../libretro-common
 
+ifeq ($(wildcard $(LIBRETRO_COMMON)/include/libco.h),)
+ifneq ($(wildcard /opt/RetroArch/libretro-common/include/libco.h),)
+LIBRETRO_COMMON := /opt/RetroArch/libretro-common
+endif
+endif
+PKG_CONFIG ?= pkg-config
+
 TARGET_NAME := amiberry
 
 # Detect architecture
@@ -62,7 +69,7 @@ else
 endif
 
 # Add Amiberry defines
-FLAGS += -DAMIBERRY -DLIBRETRO -D_FILE_OFFSET_BITS=64
+FLAGS += -DAMIBERRY -DLIBRETRO -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
 
 ifneq (,$(findstring aarch64,$(ARCH)))
    FLAGS += -DCPU_AARCH64
@@ -77,8 +84,32 @@ INCFLAGS += -I$(AMIBERRY_DIR)/src
 INCFLAGS += -I$(AMIBERRY_DIR)/src/include
 INCFLAGS += -I$(AMIBERRY_DIR)/src/osdep
 INCFLAGS += -I$(AMIBERRY_DIR)/src/threaddep
+INCFLAGS += -I$(AMIBERRY_DIR)/src/archivers
+INCFLAGS += -I$(AMIBERRY_DIR)/external/libguisan/include
+INCFLAGS += -I$(AMIBERRY_DIR)/external/floppybridge/src
 INCFLAGS += -I$(LIBRETRO_DIR)
 INCFLAGS += -I$(LIBRETRO_COMMON)/include
+
+SDL2_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags sdl2 2>/dev/null)
+SDL2_LIBS ?= $(shell $(PKG_CONFIG) --libs sdl2 2>/dev/null)
+PNG_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags libpng 2>/dev/null)
+PNG_LIBS ?= $(shell $(PKG_CONFIG) --libs libpng 2>/dev/null)
+ZLIB_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags zlib 2>/dev/null)
+ZLIB_LIBS ?= $(shell $(PKG_CONFIG) --libs zlib 2>/dev/null)
+FLAC_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags flac 2>/dev/null)
+FLAC_LIBS ?= $(shell $(PKG_CONFIG) --libs flac 2>/dev/null)
+
+ifeq ($(SDL2_CFLAGS),)
+SDL2_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
+SDL2_LIBS := $(shell sdl2-config --libs 2>/dev/null)
+endif
+
+INCFLAGS += $(SDL2_CFLAGS) $(PNG_CFLAGS) $(ZLIB_CFLAGS) $(FLAC_CFLAGS)
+LDFLAGS += $(SDL2_LIBS) $(PNG_LIBS) $(ZLIB_LIBS) $(FLAC_LIBS)
+
+ifeq ($(platform), unix)
+LDFLAGS += -ldl -lm -pthread
+endif
 
 # Source files - Core Amiga Emulation
 SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
@@ -150,7 +181,6 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/main.cpp \
                $(AMIBERRY_DIR)/src/memory.cpp \
                $(AMIBERRY_DIR)/src/mos6502.cpp \
-               $(AMIBERRY_DIR)/src/midiemu.cpp \
                $(AMIBERRY_DIR)/src/native2amiga.cpp \
                $(AMIBERRY_DIR)/src/ncr9x_scsi.cpp \
                $(AMIBERRY_DIR)/src/ncr_scsi.cpp \
@@ -181,20 +211,33 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/vm.cpp \
                $(AMIBERRY_DIR)/src/x86.cpp \
                $(AMIBERRY_DIR)/src/zfile.cpp \
-               $(AMIBERRY_DIR)/src/zfile_archive.cpp \
-               $(AMIBERRY_DIR)/src/gameport.cpp
+               $(AMIBERRY_DIR)/src/zfile_archive.cpp
 
 # OSDep files
 SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
+                $(LIBRETRO_DIR)/libretro_stubs.cpp \
+                $(LIBRETRO_DIR)/libretro_sdl_image.cpp \
+                $(LIBRETRO_DIR)/libretro_sdl_ttf.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_gfx.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_input.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_mem.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_serial.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_uaenet.cpp \
+                $(AMIBERRY_DIR)/src/osdep/amiberry_hardfile.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_whdbooter.cpp \
+                $(AMIBERRY_DIR)/src/osdep/amiberry_filesys.cpp \
+                $(AMIBERRY_DIR)/src/osdep/cda_play.cpp \
                 $(AMIBERRY_DIR)/src/osdep/charset.cpp \
+                $(AMIBERRY_DIR)/src/osdep/clipboard.cpp \
+                $(AMIBERRY_DIR)/src/osdep/dpi_handler.cpp \
+                $(AMIBERRY_DIR)/src/osdep/ioport.cpp \
                 $(AMIBERRY_DIR)/src/osdep/keyboard.cpp \
+                $(AMIBERRY_DIR)/src/osdep/mp3decoder.cpp \
+                $(AMIBERRY_DIR)/src/osdep/registry.cpp \
+                $(AMIBERRY_DIR)/src/osdep/retroarch.cpp \
+                $(AMIBERRY_DIR)/src/osdep/vpar.cpp \
+                $(AMIBERRY_DIR)/src/osdep/vkbd/vkbd.cpp \
                 $(AMIBERRY_DIR)/src/osdep/writelog.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ahi_v1.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ahi_v2.cpp \
@@ -229,6 +272,21 @@ SOURCES_CPU := $(AMIBERRY_DIR)/src/newcpu.cpp \
               $(AMIBERRY_DIR)/src/cpuemu_35.cpp \
               $(AMIBERRY_DIR)/src/cpuemu_40.cpp \
               $(AMIBERRY_DIR)/src/cpuemu_50.cpp
+
+SOURCES_JIT := $(AMIBERRY_DIR)/src/jit/compemu.cpp \
+              $(AMIBERRY_DIR)/src/jit/compemu_fpp.cpp \
+              $(AMIBERRY_DIR)/src/jit/compemu_support.cpp \
+              $(AMIBERRY_DIR)/src/jit/compstbl.cpp
+
+SOURCES_PPC := $(AMIBERRY_DIR)/src/ppc/ppc.cpp \
+              $(AMIBERRY_DIR)/src/ppc/ppcd.cpp
+
+SOURCES_QEMUVGA := $(AMIBERRY_DIR)/src/qemuvga/qemu.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/qemuuaeglue.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/vga.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/cirrus_vga.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/ne2000.cpp \
+                  $(AMIBERRY_DIR)/src/qemuvga/es1370.cpp
 
 # Archivers
 SOURCES_ARCHIVE := $(AMIBERRY_DIR)/src/archivers/dms/crc_csum.cpp \
@@ -417,7 +475,11 @@ SOURCES_MISC := $(AMIBERRY_DIR)/src/caps/caps_amiberry.cpp \
                $(AMIBERRY_DIR)/src/mame/tm34010/tms34010.cpp \
                $(AMIBERRY_DIR)/external/floppybridge/src/floppybridge_lib.cpp
 
-SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_ARCHIVE) $(SOURCES_SLIRP) $(SOURCES_PCEM) $(SOURCES_MISC)
+SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(SOURCES_PPC) $(SOURCES_QEMUVGA) $(SOURCES_ARCHIVE) $(SOURCES_SLIRP) $(SOURCES_MISC)
+
+ifeq ($(USE_PCEM),1)
+SOURCES_CXX += $(SOURCES_PCEM)
+endif
 SOURCES_C := $(SOURCES_7Z) $(LIBRETRO_COMMON)/libco/libco.c
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)

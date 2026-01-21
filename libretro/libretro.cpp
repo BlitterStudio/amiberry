@@ -9,6 +9,9 @@
 #include "inputdevice.h"
 #include "keyboard.h"
 #include "uae.h"
+#include "memory.h"
+#include "savestate.h"
+#include "zfile.h"
 
 cothread_t main_fiber;
 cothread_t core_fiber;

@@ -5,7 +5,13 @@
 
 #include "zfile.h"
 #include "mp3decoder.h"
+
+#ifdef LIBRETRO
+#define DR_MP3_IMPLEMENTATION
+#include "dr_mp3.h"
+#else
 #include <mpg123.h>
+#endif
 
 
 #define MP3_BLOCK_SIZE 522
@@ -37,6 +43,51 @@ mp3decoder::mp3decoder()
 
 uae_u8* mp3decoder::get(struct zfile* zf, uae_u8* outbuf, int maxsize)
 {
+#ifdef LIBRETRO
+	write_log(_T("MP3: decoding '%s'..\n"), zfile_getname(zf));
+
+	auto read_proc = [](void* user, void* buffer, size_t bytes_to_read) -> size_t {
+		auto* file = static_cast<zfile*>(user);
+		return zfile_fread(buffer, 1, bytes_to_read, file);
+	};
+	auto seek_proc = [](void* user, int offset, drmp3_seek_origin origin) -> drmp3_bool32 {
+		auto* file = static_cast<zfile*>(user);
+		int whence = SEEK_CUR;
+		if (origin == DRMP3_SEEK_SET)
+			whence = SEEK_SET;
+		else if (origin == DRMP3_SEEK_END)
+			whence = SEEK_END;
+		return zfile_fseek(file, offset, whence) == 0 ? DRMP3_TRUE : DRMP3_FALSE;
+	};
+	auto tell_proc = [](void* user, drmp3_int64* cursor) -> drmp3_bool32 {
+		if (!cursor)
+			return DRMP3_FALSE;
+		auto* file = static_cast<zfile*>(user);
+		*cursor = (drmp3_int64)zfile_ftell(file);
+		return (*cursor >= 0) ? DRMP3_TRUE : DRMP3_FALSE;
+	};
+
+	zfile_fseek(zf, 0, SEEK_SET);
+	drmp3 mp3{};
+	if (!drmp3_init(&mp3, read_proc, seek_proc, tell_proc, nullptr, zf, nullptr)) {
+		write_log("MP3: dr_mp3 init failed\n");
+		return nullptr;
+	}
+
+	if (mp3.channels == 0) {
+		drmp3_uninit(&mp3);
+		return nullptr;
+	}
+
+	const size_t bytes_per_frame = mp3.channels * sizeof(drmp3_int16);
+	const drmp3_uint64 max_frames = bytes_per_frame ? (maxsize / bytes_per_frame) : 0;
+	const drmp3_uint64 frames_read = drmp3_read_pcm_frames_s16(&mp3, max_frames, (drmp3_int16*)outbuf);
+	drmp3_uninit(&mp3);
+
+	if (frames_read == 0)
+		return nullptr;
+	return outbuf;
+#else
 	int outoffset = 0;
 	unsigned char mp3buf[MP3_BLOCK_SIZE];
 	unsigned char rawbuf[RAW_BLOCK_SIZE];
@@ -112,6 +163,7 @@ uae_u8* mp3decoder::get(struct zfile* zf, uae_u8* outbuf, int maxsize)
 	mpg123_exit();
 
 	return outbuf;
+#endif
 }
 
 uae_u32 mp3decoder::getsize(struct zfile* zf)

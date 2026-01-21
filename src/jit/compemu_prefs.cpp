@@ -1,6 +1,12 @@
 /********************************************************************
  * Preferences handling. This is just a convenient place to put it  *
  ********************************************************************/
+#include "sysconfig.h"
+#include "sysdeps.h"
+#include "options.h"
+#include "memory.h"
+#include "jit/compemu.h"
+
 extern bool have_done_picasso;
 
 bool check_prefs_changed_comp (bool checkonly)

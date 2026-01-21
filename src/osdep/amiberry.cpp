@@ -57,7 +57,11 @@
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
+#ifdef LIBRETRO
+#include "gui_handling_stub.h"
+#else
 #include "gui/gui_handling.h"
+#endif
 
 #ifdef __MACH__
 #include <string>
