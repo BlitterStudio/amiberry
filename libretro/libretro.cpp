@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -22,8 +23,10 @@ retro_audio_sample_batch_t audio_batch_cb;
 retro_environment_t environ_cb;
 retro_input_poll_t input_poll_cb;
 retro_input_state_t input_state_cb;
+retro_log_printf_t log_cb;
 
 static char game_path[1024];
+static bool core_started = false;
 
 static const struct retro_variable variables[] = {
 	{ "amiberry_model", "Amiga Model; A500|A500+|A600|A1200|CD32|A4000|CDTV" },
@@ -31,6 +34,55 @@ static const struct retro_variable variables[] = {
 };
 
 extern int amiberry_main(int argc, char** argv);
+
+static bool file_readable(const char* path)
+{
+	return path && *path && access(path, R_OK) == 0;
+}
+
+static bool read_kickstart_path(char* out, size_t out_size)
+{
+	const char* conf_dir = getenv("AMIBERRY_CONFIG_DIR");
+	const char* home_dir = getenv("HOME");
+	char conf_path[1024] = {0};
+
+	if (conf_dir && *conf_dir) {
+		snprintf(conf_path, sizeof(conf_path), "%s/amiberry.conf", conf_dir);
+	} else if (home_dir && *home_dir) {
+		snprintf(conf_path, sizeof(conf_path), "%s/.config/amiberry/amiberry.conf", home_dir);
+	} else {
+		return false;
+	}
+
+	FILE* f = fopen(conf_path, "r");
+	if (!f) {
+		if (log_cb)
+			log_cb(RETRO_LOG_WARN, "amiberry.conf not found: %s\n", conf_path);
+		return false;
+	}
+
+	char line[2048];
+	while (fgets(line, sizeof(line), f)) {
+		char* p = line;
+		while (*p == ' ' || *p == '\t')
+			p++;
+		if (strncmp(p, "kickstart_rom_file=", 19) == 0) {
+			char* val = p + 19;
+			char* end = val + strlen(val);
+			while (end > val && (*(end - 1) == '\n' || *(end - 1) == '\r' || *(end - 1) == ' ' || *(end - 1) == '\t'))
+				*--end = '\0';
+			strncpy(out, val, out_size - 1);
+			out[out_size - 1] = '\0';
+			fclose(f);
+			return file_readable(out);
+		}
+	}
+
+	fclose(f);
+	if (log_cb)
+		log_cb(RETRO_LOG_WARN, "kickstart_rom_file not set in %s\n", conf_path);
+	return false;
+}
 
 void libretro_yield(void)
 {
@@ -153,7 +205,7 @@ static void keyboard_cb(bool down, unsigned keycode, uint32_t character, uint16_
 
 static void poll_input(void)
 {
-	if (!input_poll_cb)
+	if (!input_poll_cb || !input_state_cb)
 		return;
 
 	input_poll_cb();
@@ -215,6 +267,14 @@ static void core_entry(void)
 
 	argv[argc++] = strdup("-G"); // No GUI
 
+	char kick_path[1024] = {0};
+	if (read_kickstart_path(kick_path, sizeof(kick_path))) {
+		argv[argc++] = strdup("-r");
+		argv[argc++] = strdup(kick_path);
+		if (log_cb)
+			log_cb(RETRO_LOG_INFO, "Using Kickstart ROM from amiberry.conf: %s\n", kick_path);
+	}
+
 	if (game_path[0])
 	{
 		argv[argc++] = strdup(game_path);
@@ -234,6 +294,8 @@ void retro_init(void)
 	
 	if (!core_fiber)
 		core_fiber = co_create(65536 * sizeof(void*), core_entry);
+
+	core_started = false;
 }
 
 void retro_deinit(void)
@@ -243,6 +305,7 @@ void retro_deinit(void)
 		co_delete(core_fiber);
 		core_fiber = NULL;
 	}
+	core_started = false;
 }
 
 unsigned retro_api_version(void)
@@ -279,6 +342,17 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 void retro_set_environment(retro_environment_t cb)
 {
 	environ_cb = cb;
+	struct retro_log_callback logging;
+	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
+		log_cb = logging.log;
+	else
+		log_cb = NULL;
+	{
+		enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
+		if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt) && log_cb) {
+			log_cb(RETRO_LOG_WARN, "Failed to set pixel format XRGB8888; using default.\n");
+		}
+	}
 	static struct retro_keyboard_callback kb_cb = { keyboard_cb };
 	environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &kb_cb);
 	environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)variables);
@@ -327,6 +401,8 @@ void retro_set_input_state(retro_input_state_t cb)
 void retro_set_video_refresh(retro_video_refresh_t cb)
 {
 	video_cb = cb;
+	if (log_cb)
+		log_cb(RETRO_LOG_INFO, "retro_set_video_refresh=%p\n", (void*)cb);
 }
 
 void retro_reset(void)
@@ -336,6 +412,11 @@ void retro_reset(void)
 
 void retro_run(void)
 {
+	if (!core_started) {
+		co_switch(core_fiber);
+		core_started = true;
+		return;
+	}
 	poll_input();
 	co_switch(core_fiber);
 }
@@ -346,9 +427,6 @@ bool retro_load_game(const struct retro_game_info *info)
 		strncpy(game_path, info->path, sizeof(game_path) - 1);
 	else
 		game_path[0] = '\0';
-
-	// Switch to core fiber to perform initialisation
-	co_switch(core_fiber);
 
 	return true;
 }

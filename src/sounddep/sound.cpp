@@ -867,6 +867,27 @@ void finish_sound_buffer()
 
 int enumerate_sound_devices()
 {
+#ifdef LIBRETRO
+	if (!num_sound_devices) {
+		const char* devname = "Libretro";
+		sound_devices[0] = xcalloc(struct sound_device, 1);
+		sound_devices[0]->id = 0;
+		sound_devices[0]->cfgname = my_strdup(devname);
+		sound_devices[0]->type = SOUND_DEVICE_SDL2;
+		sound_devices[0]->name = my_strdup(devname);
+		sound_devices[0]->alname = my_strdup("0");
+		num_sound_devices = 1;
+
+		record_devices[0] = xcalloc(struct sound_device, 1);
+		record_devices[0]->id = 0;
+		record_devices[0]->cfgname = my_strdup(devname);
+		record_devices[0]->type = SOUND_DEVICE_SDL2;
+		record_devices[0]->name = my_strdup(devname);
+		record_devices[0]->alname = my_strdup("0");
+		num_record_devices = 1;
+	}
+	return num_sound_devices;
+#endif
 	if (!num_sound_devices) {
 
 		write_log("Enumerating SDL2 playback devices...\n");

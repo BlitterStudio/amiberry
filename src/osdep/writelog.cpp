@@ -14,6 +14,10 @@
 #include <poll.h>
 #include <clocale>
 
+#ifdef LIBRETRO
+#include "libretro_shared.h"
+#endif
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
@@ -539,8 +543,13 @@ void write_log(const char* format, ...)
 	int bufsize = WRITE_LOG_BUF_SIZE;
 	TCHAR* bufp;
 	va_list parms;
+#ifdef LIBRETRO
+	const bool has_libretro_log = log_cb != NULL;
+#else
+	const bool has_libretro_log = false;
+#endif
 
-	if (!amiberry_options.write_logfile && !console_logging && !debugfile)
+	if (!has_libretro_log && !amiberry_options.write_logfile && !console_logging && !debugfile)
 		return;
 
 	if (log_sem_init) uae_sem_wait(&log_sem);
@@ -564,6 +573,10 @@ void write_log(const char* format, ...)
 	ts = write_log_get_ts();
 	if (bufp[0] == '*')
 		count++;
+#ifdef LIBRETRO
+	if (log_cb)
+		log_cb(RETRO_LOG_INFO, "%s", bufp);
+#endif
 	if (SHOW_CONSOLE || console_logging) {
 		if (lfdetected && ts)
 			writeconsole(ts);

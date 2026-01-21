@@ -361,6 +361,10 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 
 	if (w == 0 || h == 0)
 		return false;
+#ifdef LIBRETRO
+	(void)monid;
+	return true;
+#endif
 #ifdef USE_OPENGL
 	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
 	
@@ -434,6 +438,10 @@ static void update_leds(const int monid)
 	if (currprefs.headless) {
 		return;
 	}
+#ifdef LIBRETRO
+	(void)mon;
+	return;
+#endif
 
 #ifndef USE_OPENGL
 	if (!mon->amiga_renderer)
@@ -513,6 +521,11 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	if (currprefs.headless) {
 		return amiga_surface != nullptr;
 	}
+#ifdef LIBRETRO
+	(void)mode;
+	(void)immediate;
+	return amiga_surface != nullptr;
+#endif
 
 	const amigadisplay* ad = &adisplays[monid];
 
@@ -684,7 +697,15 @@ static void SDL2_showframe(const int monid)
 {
 #ifdef LIBRETRO
 	if (amiga_surface) {
-		video_cb(amiga_surface->pixels, amiga_surface->w, amiga_surface->h, amiga_surface->pitch);
+		if (video_cb) {
+			video_cb(amiga_surface->pixels, amiga_surface->w, amiga_surface->h, amiga_surface->pitch);
+		} else {
+			static bool warned = false;
+			if (!warned) {
+				write_log("libretro video_cb is null; skipping frame output.\n");
+				warned = true;
+			}
+		}
 	}
 	libretro_yield();
 	return;
@@ -1277,6 +1298,51 @@ void reenumeratemonitors()
 	enumeratedisplays();
 }
 
+#ifdef LIBRETRO
+static void libretro_init_display_modes(struct MultiDisplay* md, int width, int height)
+{
+	if (md->DisplayModes)
+		return;
+
+	md->DisplayModes = xcalloc(struct PicassoResolution, 2);
+	if (!md->DisplayModes)
+		return;
+
+	md->DisplayModes[0].inuse = true;
+	md->DisplayModes[0].res.width = width;
+	md->DisplayModes[0].res.height = height;
+	md->DisplayModes[0].refresh[0] = 60;
+	md->DisplayModes[0].refresh[1] = 0;
+	md->DisplayModes[0].refreshtype[0] = 0;
+	md->DisplayModes[0].refreshtype[1] = 0;
+	_sntprintf(md->DisplayModes[0].name, sizeof md->DisplayModes[0].name, _T("%dx%d"), width, height);
+}
+
+void libretro_init_display(int width, int height)
+{
+	struct MultiDisplay* md = &Displays[0];
+	if (md->monitorname)
+		return;
+
+	md->primary = 1;
+	md->monitor = 0;
+	md->adaptername = my_strdup(_T("Libretro"));
+	md->adapterid = my_strdup(_T("Libretro"));
+	md->adapterkey = my_strdup(_T("Libretro"));
+	md->monitorname = my_strdup(_T("Libretro"));
+	md->monitorid = my_strdup(_T("Libretro"));
+	md->fullname = my_strdup(_T("Libretro"));
+	md->rect.x = 0;
+	md->rect.y = 0;
+	md->rect.w = width;
+	md->rect.h = height;
+	md->workrect = md->rect;
+	md->HasAdapterData = true;
+
+	libretro_init_display_modes(md, width, height);
+}
+#endif
+
 static bool enumeratedisplays2(bool selectall)
 {
 	struct MultiDisplay *md = Displays;
@@ -1345,12 +1411,19 @@ static bool enumeratedisplays2(bool selectall)
 
 void enumeratedisplays()
 {
+#ifdef LIBRETRO
+	libretro_init_display(1920, 1080);
+	return;
+#endif
 	if (!enumeratedisplays2 (false))
 		enumeratedisplays2(true);
 }
 
 void sortdisplays()
 {
+#ifdef LIBRETRO
+	return;
+#endif
 	struct MultiDisplay* md;
 	int i, idx;
 
@@ -1807,6 +1880,14 @@ void show_screen(const int monid, int mode)
 	}
 
 	AmigaMonitor* mon = &AMonitors[monid];
+#ifdef LIBRETRO
+	if (mode >= 0 && !mon->render_ok) {
+		return;
+	}
+	SDL2_showframe(monid);
+	mon->render_ok = false;
+	return;
+#endif
 	if (!mon->amiga_window) {
 		return;
 	}
@@ -1971,8 +2052,13 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	const struct AmigaMonitor* mon = &AMonitors[vb->monitor_id];
 	int ret = 0;
 
+#ifdef LIBRETRO
+	if (!amiga_surface)
+		return ret;
+#else
 	if (!mon->amiga_window || !amiga_surface)
 		return ret;
+#endif
 
 	// Ensure blanking limits are open and synchronized at the start of frame locking
 	set_custom_limits(-1, -1, -1, -1, false);
@@ -2388,6 +2474,10 @@ static int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 	if (!ret) {
 		return ret;
 	}
+#ifdef LIBRETRO
+	// Skip SDL window/input activation paths for libretro.
+	return ret;
+#endif
 
 	bool startactive = (started && mouseactive) || (!started && !currprefs.start_uncaptured && !currprefs.start_minimized);
 	bool startpaused = !started && ((currprefs.start_minimized && currprefs.minimized_pause) || (currprefs.start_uncaptured && currprefs.inactive_pause && isfullscreen() <= 0));
@@ -3086,10 +3176,14 @@ int check_prefs_changed_gfx()
 
 static void update_pixel_format()
 {
+#ifdef LIBRETRO
+	pixel_format = SDL_PIXELFORMAT_ARGB8888; // Matches libretro XRGB8888 on little-endian
+#else
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
 		pixel_format = SDL_PIXELFORMAT_ARGB8888; // BGRA for custom boards
 	else
 		pixel_format = SDL_PIXELFORMAT_ABGR8888; // RGBA for UAE elements
+#endif
 }
 
 /* Color management */
@@ -4055,6 +4149,67 @@ static bool doInit(AmigaMonitor* mon)
 	struct amigadisplay* ad = &adisplays[mon->monitor_id];
 	avidinfo->gfx_resolution_reserved = RES_MAX;
 	avidinfo->gfx_vresolution_reserved = VRES_MAX;
+
+#ifdef LIBRETRO
+	// Windowless init for libretro: set up buffers and surfaces without SDL windowing.
+	mon->amiga_window = nullptr;
+	mon->amiga_renderer = nullptr;
+
+	updatemodes(mon);
+	update_gfxparams(mon);
+
+#ifdef PICASSO96
+	if (mon->screen_is_picasso) {
+		display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
+		display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
+	} else {
+#endif
+		avidinfo->gfx_resolution_reserved = std::max(currprefs.gfx_resolution, avidinfo->gfx_resolution_reserved);
+		avidinfo->gfx_vresolution_reserved = std::max(currprefs.gfx_vresolution, avidinfo->gfx_vresolution_reserved);
+
+		if (!currprefs.gfx_autoresolution) {
+			mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
+			mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution;
+		} else {
+			mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << avidinfo->gfx_resolution_reserved;
+			mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << avidinfo->gfx_vresolution_reserved;
+		}
+		if (avidinfo->gfx_resolution_reserved == RES_SUPERHIRES)
+			mon->currentmode.amiga_height *= 2;
+		mon->currentmode.amiga_height = std::min(mon->currentmode.amiga_height, 1280);
+
+		display_width = mon->currentmode.amiga_width;
+		display_height = mon->currentmode.amiga_height;
+#ifdef PICASSO96
+	}
+#endif
+
+	updatepicasso96(mon);
+
+	if (!mon->screen_is_picasso) {
+		allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
+			1920, 1280);
+
+		allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
+			mon->currentmode.amiga_width > 2048 ? mon->currentmode.amiga_width : 2048,
+			mon->currentmode.amiga_height > 2048 ? mon->currentmode.amiga_height : 2048);
+	}
+
+	avidinfo->outbuffer = &avidinfo->drawbuffer;
+	avidinfo->inbuffer = &avidinfo->tempbuffer;
+
+	if (amiga_surface) {
+		SDL_FreeSurface(amiga_surface);
+		amiga_surface = nullptr;
+	}
+	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
+
+	mon->screen_is_initialized = 1;
+	init_colors(mon->monitor_id);
+	display_param_init(mon);
+	target_graphics_buffer_update(mon->monitor_id, false);
+	return true;
+#endif
 
 	// If headless mode, skip all window/renderer setup
 	if (currprefs.headless) {

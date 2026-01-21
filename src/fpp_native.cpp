@@ -149,8 +149,8 @@ static void set_fpucw_x87(uae_u32 m68k_cw)
 	x87_cw = x87_cw_tab[(m68k_cw >> 4) & 0xf];
 #if defined(X86_MSVC_ASSEMBLY) && 0
 	__asm { fldcw word ptr x87_cw }
-#elif defined(__GNUC__) && 0
-	__asm__("fldcw %0" : : "m" (*&x87_cw));
+#elif defined(__GNUC__) && defined(LIBRETRO)
+	__asm__ volatile("fldcw %0" : : "m" (x87_cw));
 #else
 	((x87_fldcw_function) x87_fldcw_code)();
 #endif

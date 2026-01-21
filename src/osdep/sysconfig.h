@@ -15,8 +15,10 @@
 
 #if defined(__x86_64__) || defined(_M_AMD64)
 #if defined(__FreeBSD__) || defined(__linux__) // not for macOS
+#if !defined(LIBRETRO_NO_JIT)
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
+#endif
 #endif
 #endif
 

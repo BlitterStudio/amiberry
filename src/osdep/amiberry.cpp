@@ -832,6 +832,10 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 #else
 	bool isrp = false;
 #endif
+#ifdef LIBRETRO
+	if (!mon->amiga_window)
+		return;
+#endif
 	const int lastmouseactive = mouseactive;
 
 	if (active == 0)
@@ -924,6 +928,10 @@ void setmouseactive(const int monid, const int active)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
+#ifdef LIBRETRO
+	if (!mon->amiga_window)
+		return;
+#endif
 	if (active > 1)
 		SDL_RaiseWindow(mon->amiga_window);
 	setmouseactive2(mon, active, true);
@@ -2113,15 +2121,20 @@ static void process_event(const SDL_Event& event)
 
 void update_clipboard()
 {
+#ifndef LIBRETRO
 	auto* clipboard_uae = uae_clipboard_get_text();
 	if (clipboard_uae) {
 		SDL_SetClipboardText(clipboard_uae);
 		uae_clipboard_free_text(clipboard_uae);
 	}
+#endif
 }
 
 int handle_msgpump(bool vblank)
 {
+#ifdef LIBRETRO
+	return 0;
+#endif
 	lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
 	auto got_event = 0;
 	SDL_Event event;
@@ -2157,11 +2170,13 @@ bool handle_events()
 			return true;
 		}
 		lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
+#ifndef LIBRETRO
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
 			process_event(event);
 		}
+#endif
 
 		// Keyboard, mouse and joystick read events are handled in process_event in Amiberry
 		//inputdevicefunc_keyboard.read();
@@ -2179,7 +2194,11 @@ bool handle_events()
 	}
 	// Insert a 10ms delay to prevent 100% CPU usage
 	if (pause_emulation)
+#ifndef LIBRETRO
 		SDL_Delay(10);
+#else
+		;
+#endif
 	return pause_emulation != 0;
 }
 
@@ -5193,10 +5212,13 @@ int amiberry_main(int argc, char* argv[])
 	}
 	write_log(_T("Enumeration done\n"));
 
+#ifndef LIBRETRO
 	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	clipboard_init();
+#endif
 	keyboard_settrans();
 
+#ifndef LIBRETRO
 #if defined( __linux__)
 	// set capslock state based upon current "real" state
 	ioctl(0, KDGKBLED, &kbd_flags);
@@ -5229,6 +5251,7 @@ int amiberry_main(int argc, char* argv[])
 	else
 		kbd_led_status &= ~0x04;
 #endif
+#endif
 
 #ifdef USE_GPIOD
 	// Open GPIO chip
@@ -5259,6 +5282,7 @@ int amiberry_main(int argc, char* argv[])
 #ifdef __APPLE__
     // On macOS, if the user double-clicked a file associated with the app, we need to catch the SDL_DROPFILE event
     // and pass it as a command line argument to the main function.
+#ifndef LIBRETRO
     SDL_PumpEvents();
     SDL_Event event;
     if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
@@ -5279,6 +5303,9 @@ int amiberry_main(int argc, char* argv[])
     {
         real_main(argc, argv);
     }
+#else
+	real_main(argc, argv);
+#endif
 #else
 	real_main(argc, argv);
 #endif
@@ -5319,7 +5346,9 @@ int amiberry_main(int argc, char* argv[])
 
 	logging_cleanup();
 
+#ifndef LIBRETRO
 	SDL_Quit();
+#endif
 
 	if (host_poweroff)
 		target_shutdown();

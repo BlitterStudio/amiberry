@@ -55,6 +55,9 @@ struct MultiDisplay {
 	bool HasAdapterData;
 };
 extern struct MultiDisplay Displays[MAX_DISPLAYS];
+#ifdef LIBRETRO
+void libretro_init_display(int width, int height);
+#endif
 
 struct winuae_currentmode {
 	unsigned int flags;

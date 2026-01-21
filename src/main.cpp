@@ -1416,7 +1416,6 @@ static int real_main2 (int argc, TCHAR **argv)
 	} else {
 		copy_prefs(&changed_prefs, &currprefs);
 	}
-
 	if (!machdep_init()) {
 		restart_program = 0;
 		return -1;
