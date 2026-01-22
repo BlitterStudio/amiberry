@@ -318,7 +318,7 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 	gl_texture_filter_mode = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
 	// Note: integer_scale is not directly applicable to OpenGL - it would need custom
 	// viewport calculations which are handled elsewhere in the rendering pipeline
-
+	
 	// Only apply filter mode when no shader is active (NONE mode without external shader)
 	// CRT shaders and external shaders handle their own texture filtering
 	bool no_shader_active = (crtemu_shader != nullptr && crtemu_shader->type == CRTEMU_TYPE_NONE && external_shader == nullptr);
@@ -327,7 +327,7 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 		if (crtemu_shader->backbuffer != 0 && glIsTexture(crtemu_shader->backbuffer)) {
 			// Update the persistent filter state in crtemu so it's used every frame
 			crtemu_shader->texture_filter = gl_texture_filter_mode;
-
+			
 			glBindTexture(GL_TEXTURE_2D, crtemu_shader->backbuffer);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_texture_filter_mode);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_texture_filter_mode);
@@ -474,8 +474,6 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
-	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
-	
 	// Clean up existing shaders
 	destroy_shaders();
 	
@@ -1653,7 +1651,7 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 		gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
 		bpp = 2;
 	}
-
+	
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -1999,7 +1997,7 @@ void show_screen(const int monid, int mode)
 			int w = std::min(crop_rect.w, amiga_surface->w - x);
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
-
+			
 			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
 				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		} else if (amiga_surface) {
@@ -2187,6 +2185,18 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 	if (amiga_surface == nullptr) {
 		return nullptr;
 	}
+
+	// When zero-copy is active, amiga_surface->pixels IS the VRAM.
+	// Detect this by comparing the surface pixels pointer with the RTG VRAM pointer.
+	// Returning nullptr here prevents picasso_flushpixels from copying
+	// VRAM to itself, which would cause display corruption.
+	if (currprefs.rtg_zerocopy) {
+		uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
+		if (rtg_vram != nullptr && amiga_surface->pixels == rtg_vram) {
+			return nullptr;
+		}
+	}
+
 
 	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
 	//SDL_QueryTexture(amiga_texture,
@@ -4328,7 +4338,7 @@ static bool doInit(AmigaMonitor* mon)
 
 bool target_graphics_buffer_update(const int monid, const bool force)
 {
-	const struct AmigaMonitor* mon = &AMonitors[monid];
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct vidbuf_description* avidinfo = &adisplays[monid].gfxvidinfo;
 	const struct picasso96_state_struct* state = &picasso96_state[monid];
 	struct vidbuffer *vb = NULL, *vbout = NULL;
@@ -4351,14 +4361,29 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 
 	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && amiga_surface && amiga_surface->format->format == pixel_format) {
-		if (SDL2_alloctexture(mon->monitor_id, -w, -h))
-		{
-			//osk_setup(monid, -2);
-			if (vbout) {
-				vbout->width_allocated = w;
-				vbout->height_allocated = h;
+		bool skip_update = true;
+		if (mon->screen_is_picasso) {
+			uae_u8* rtg_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
+			if (rtg_ptr && amiga_surface->pixels != rtg_ptr) {
+				skip_update = false;
+			} else {
+				// write_log("GFX: Skipping update. Pointers match: %p\n", rtg_ptr);
 			}
-			return false;
+		}
+
+		if (skip_update) {
+			if (SDL2_alloctexture(mon->monitor_id, -w, -h))
+			{
+				//osk_setup(monid, -2);
+				if (vbout) {
+					vbout->width_allocated = w;
+					vbout->height_allocated = h;
+				}
+				if (force) {
+					mon->full_render_needed = true;
+				}
+				return false;
+			}
 		}
 	}
 
@@ -4366,7 +4391,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		oldtex_w[monid] = w;
 		oldtex_h[monid] = h;
 		oldtex_rtg[monid] = mon->screen_is_picasso;
-
+		
 		// Even if buffer dimensions aren't ready yet, we need to ensure the shader is created
 		// for native mode. Use the amiga_surface dimensions that doInit already set up.
 		// This is critical for RTG→Native switches where the shader must be recreated for native mode.
@@ -4378,8 +4403,39 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		return false;
 	}
 
+	// Ensure amiga_surface is in sync with the texture size and format
+	// Zero-Copy Eligibility Check
+	uae_u8* rtg_render_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
+	bool is_zero_copy_eligible = false;
+	
+	if (mon->screen_is_picasso && currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE && currprefs.rtg_zerocopy) {
+		int p96_bpp = state->BytesPerPixel;
+
+		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);
+
+		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp && (pixel_format == SDL_PIXELFORMAT_ABGR8888 || pixel_format == SDL_PIXELFORMAT_RGB565)) {
+			is_zero_copy_eligible = true;
+		}
+	}
+
 	// Ensure amiga_surface is in sync with the texture size, format, and memory pointer (if zero-copy)
 	bool recreate_surface = (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h || amiga_surface->format->format != pixel_format);
+
+	// For zero-copy, also check if pitch matches the RTG state
+	if (!recreate_surface && is_zero_copy_eligible && amiga_surface->pitch != state->BytesPerRow) {
+		recreate_surface = true;
+	}
+	if(amiga_surface && is_zero_copy_eligible && amiga_surface->pixels != (void*)rtg_render_ptr) {
+		recreate_surface = true;
+	}
+	// If Zero-Copy is disabled, but we are still pointing to VRAM, we must recreate the surface
+	if (amiga_surface && !is_zero_copy_eligible && rtg_render_ptr && amiga_surface->pixels == rtg_render_ptr) {
+		recreate_surface = true;
+	}
+
+
+	// write_log("GFX Update: mon=%d, w=%d, h=%d, fmt=%s, zero_copy=%d, surf=%p, rtg=%p\n", 
+	// 	monid, w, h, SDL_GetPixelFormatName(pixel_format), is_zero_copy_eligible, amiga_surface, rtg_render_ptr);
 
 	if (recreate_surface) {
 		if (amiga_surface) {
@@ -4388,12 +4444,21 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		}
 		const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
 
-		write_log("Re-creating amiga_surface with size %dx%d to match texture.\n", w, h);
-		amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, surface_depth, pixel_format);
-		if (amiga_surface == nullptr) {
+		if (is_zero_copy_eligible) {
+			// Zero-Copy: Create surface from existing memory (rtg_render_ptr guaranteed non-null)
+			amiga_surface = SDL_CreateRGBSurfaceWithFormatFrom(rtg_render_ptr, w, h, surface_depth, state->BytesPerRow, pixel_format);
+		} else {
+			// Normal copy: Create fresh surface
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, surface_depth, pixel_format);
+		}
+
+		if (amiga_surface) {
+			SDL_SetSurfaceBlendMode(amiga_surface, SDL_BLENDMODE_NONE);
+		} else {
 			write_log("!!! Failed to create amiga_surface.\n");
 			return false;
 		}
+		mon->full_render_needed = true;
 		struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
 		vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 #ifndef PICASSO_STATE_SETDAC

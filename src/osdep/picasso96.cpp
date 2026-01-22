@@ -56,6 +56,9 @@
 #define P96SPRTRACING_ENABLED 0
 
 #include "options.h"
+#ifdef AMIBERRY
+#include "amiberry_gfx.h"
+#endif
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "custom.h"
@@ -1246,6 +1249,10 @@ void picasso_refresh(int monid)
 	const struct picasso96_state_struct *state = &picasso96_state[monid];
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 
+#ifdef AMIBERRY
+	target_graphics_buffer_update(monid, true);
+#endif
+
 	if (!ad->picasso_on)
 		return;
 	lockrtg();
@@ -1770,13 +1777,19 @@ static void do_blitrect_frame_buffer (const struct RenderInfo *ri, const struct
 		if(opcode == BLIT_SRC) {
 
 			/* handle normal case efficiently */
-			if (ri->Memory == dstri->Memory && dsty == srcy) {
+			if (ri->BytesPerRow == dstri->BytesPerRow && total_width == ri->BytesPerRow) {
+				// write_log("Optimized BlitRect: w=%d, h=%d, bpr=%d\n", width, height, ri->BytesPerRow);
+				memmove(dst, src, total_width * height);
+			} else if (ri->Memory == dstri->Memory && dsty == srcy) {
+				// write_log("BlitRect Fallback 1: w=%d, h=%d, bpr=%d vs tot=%d\n", width, height, ri->BytesPerRow, total_width);
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memmove (dst, src, total_width);
 			} else if (dsty < srcy) {
+				// write_log("BlitRect Fallback 2: w=%d, h=%d\n", width, height);
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memcpy (dst, src, total_width);
 			} else {
+				// write_log("BlitRect Fallback 3: w=%d, h=%d\n", width, height);
 				src += (height - 1) * ri->BytesPerRow;
 				dst += (height - 1) * dstri->BytesPerRow;
 				for (int i = 0; i < height; i++, src -= ri->BytesPerRow, dst -= dstri->BytesPerRow)
@@ -3446,6 +3459,12 @@ static uae_u32 REGPARAM2 picasso_SetDAC (TrapContext *ctx)
 	const int monid = currprefs.rtgboards[0].monitor_id;
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	const struct picasso96_state_struct* state = &picasso96_state[monid];
+	
+	// Force update check when DAC changes (e.g. format change)
+#ifdef AMIBERRY
+	target_graphics_buffer_update(monid, true);
+#endif
+
 	const uae_u16 idx = trap_get_dreg(ctx, 0);
 	const uae_u32 mode = trap_get_dreg(ctx, 7);
 	/* Fill in some static UAE related structure about this new DAC setting
@@ -3617,6 +3636,12 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 	const int monid = currprefs.rtgboards[0].monitor_id;
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	
+	// Force update check when setting panning (often indicates screen switch or double buffering)
+#ifdef AMIBERRY
+	target_graphics_buffer_update(monid, true);
+#endif
+	
 	uae_u16 Width = trap_get_dreg(ctx, 0);
 	const uaecptr start_of_screen = trap_get_areg(ctx, 1);
 	const uaecptr bi = trap_get_areg(ctx, 0);
@@ -4454,6 +4479,12 @@ static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	const uae_u32 setstate = trap_get_dreg(ctx, 0);
+
+	// Force update check when Display state changes (On/Off)
+#ifdef AMIBERRY
+	target_graphics_buffer_update(monid, true);
+#endif
+
 	P96TRACE_SETUP((_T("SetDisplay(%d)\n"), setstate));
 	resetpalette(state);
 	atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETDISPLAY);
@@ -5727,7 +5758,19 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (!dstp) {
 				dstp = gfx_lock_picasso(monid, dofull);
 			}
+			
+			// AMIBERRY: Zero Copy support
+			// If we are in Zero Copy mode, dstp is nullptr but we still want to process dirty regions
+			// so we can invalidate the texture correctly (partial updates)
+			bool zero_copy = false;
 			if (dstp == nullptr) {
+				uae_u8* rtg_ptr = p96_get_render_buffer_pointer(monid);
+				if (rtg_ptr != nullptr) {
+					zero_copy = true;
+				}
+			}
+
+			if (dstp == nullptr && !zero_copy) {
 				continue;
 			}
 			dst = dstp;
@@ -5743,10 +5786,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 #endif
 
 			if (!split && vidinfo->rtg_clear_flag) {
-				uae_u8 *p2 = dst;
-				for (int h = 0; h < vidinfo->maxheight; h++) {
-					memset(p2, 0, vidinfo->maxwidth * vidinfo->pixbytes);
-					p2 += vidinfo->rowbytes;
+				if (dst) {
+					uae_u8 *p2 = dst;
+					for (int h = 0; h < vidinfo->maxheight; h++) {
+						memset(p2, 0, vidinfo->maxwidth * vidinfo->pixbytes);
+						p2 += vidinfo->rowbytes;
+					}
 				}
 				vidinfo->rtg_clear_flag--;
 			}
@@ -5758,16 +5803,18 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			}
 
 			if (dofull) {
-				if (flashscreen != 0) {
-					copyallinvert(monid, src + off, dst, pwidth, pheight,
-						state->BytesPerRow, state->BytesPerPixel,
-						vidinfo->rowbytes, vidinfo->pixbytes,
-						vidinfo->picasso_convert);
-				} else {
-					copyall(monid, src + off, dst, pwidth, pheight,
-						state->BytesPerRow, state->BytesPerPixel,
-						vidinfo->rowbytes, vidinfo->pixbytes,
-						vidinfo->picasso_convert);
+				if (!zero_copy) {
+					if (flashscreen != 0) {
+						copyallinvert(monid, src + off, dst, pwidth, pheight,
+							state->BytesPerRow, state->BytesPerPixel,
+							vidinfo->rowbytes, vidinfo->pixbytes,
+							vidinfo->picasso_convert);
+					} else {
+						copyall(monid, src + off, dst, pwidth, pheight,
+							state->BytesPerRow, state->BytesPerPixel,
+							vidinfo->rowbytes, vidinfo->pixbytes,
+							vidinfo->picasso_convert);
+					}
 				}
 				miny = 0;
 				maxy = pheight;
@@ -5799,10 +5846,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 						int w = (gwwpagesize[index] + state->BytesPerPixel - 1) / state->BytesPerPixel;
 						x = (realoffset % state->BytesPerRow) / state->BytesPerPixel;
 						if (x < pwidth) {
-							copyrow(monid, src + off, dst, x, y, pwidth - x,
-								state->BytesPerRow, state->BytesPerPixel,
-								x, y, vidinfo->rowbytes, vidinfo->pixbytes,
-								vidinfo->picasso_convert, p96_rgbx16);
+							if (!zero_copy) {
+								copyrow(monid, src + off, dst, x, y, pwidth - x,
+									state->BytesPerRow, state->BytesPerPixel,
+									x, y, vidinfo->rowbytes, vidinfo->pixbytes,
+									vidinfo->picasso_convert, p96_rgbx16);
+							}
 							flushlines++;
 						}
 						w = (gwwpagesize[index] - (state->BytesPerRow - x * state->BytesPerPixel) + state->BytesPerPixel - 1) / state->BytesPerPixel;
@@ -5812,10 +5861,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 						y++;
 						while (y < pheight && w > 0) {
 							int maxw = w > pwidth ? pwidth : w;
-							copyrow(monid, src + off, dst, 0, y, maxw,
-								state->BytesPerRow, state->BytesPerPixel,
-								0, y, vidinfo->rowbytes, vidinfo->pixbytes,
-								vidinfo->picasso_convert, p96_rgbx16);
+							if (!zero_copy) {
+								copyrow(monid, src + off, dst, 0, y, maxw,
+									state->BytesPerRow, state->BytesPerPixel,
+									0, y, vidinfo->rowbytes, vidinfo->pixbytes,
+									vidinfo->picasso_convert, p96_rgbx16);
+							}
 							w -= maxw;
 							y++;
 							flushlines++;
@@ -5931,6 +5982,25 @@ addrbank gfxmem4_bank = {
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
+
+uae_u8* p96_get_native_memory(int monid)
+{
+	if (monid < 0 || monid >= MAX_RTG_BOARDS)
+		return nullptr;
+	if (gfxmem_banks[monid] == nullptr)
+		return nullptr;
+	return gfxmem_banks[monid]->start + natmem_offset;
+}
+
+uae_u8* p96_get_render_buffer_pointer(int monid)
+{
+	if (monid < 0 || monid >= MAX_RTG_BOARDS)
+		return nullptr;
+	if (gfxmem_banks[monid] == nullptr)
+		return nullptr;
+	struct picasso96_state_struct *state = &picasso96_state[monid];
+	return state->XYOffset + natmem_offset;
+}
 
 /* Call this function first, near the beginning of code flow
 * Place in InitGraphics() which seems reasonable...
