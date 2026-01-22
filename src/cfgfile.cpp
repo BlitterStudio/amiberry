@@ -2872,6 +2872,8 @@ void cfgfile_save_options (struct zfile *f, struct uae_prefs *p, int type)
 	cfgfile_dwrite_bool(f, _T("gfxcard_paletteswitch"), p->rtg_paletteswitch);
 	cfgfile_dwrite_bool(f, _T("gfxcard_dacswitch"), p->rtg_dacswitch);
 	cfgfile_write_bool(f, _T("gfxcard_multithread"), p->rtg_multithread);
+	cfgfile_write_bool(f, _T("gfxcard_zerocopy"), p->rtg_zerocopy);
+
 	for (int i = 0; i < MAX_RTG_BOARDS; i++) {
 		TCHAR tmp2[100];
 		struct rtgboardconfig *rbc = &p->rtgboards[i];

@@ -41,6 +41,7 @@ static gcn::CheckBox* chkRtgAlwaysCenter;
 static gcn::CheckBox* chkRtgHardwareInterrupt;
 static gcn::CheckBox* chkRtgHardwareSprite;
 static gcn::CheckBox* chkRtgMultithreaded;
+static gcn::CheckBox* chkRtgZerocopy;
 static gcn::Label* lblRtgRefreshRate;
 static gcn::DropDown* cboRtgRefreshRate;
 static gcn::Label* lblRtgBufferMode;
@@ -107,6 +108,9 @@ public:
 
 		else if (action_event.getSource() == chkRtgMultithreaded)
 			changed_prefs.rtg_multithread = chkRtgMultithreaded->isSelected();
+
+		else if (action_event.getSource() == chkRtgZerocopy)
+			changed_prefs.rtg_zerocopy = chkRtgZerocopy->isSelected();
 
 		else if (action_event.getSource() == cboRtgRefreshRate)
 			changed_prefs.rtgvblankrate = cboRtgRefreshRate->getSelected() == 0 ? 0 :
@@ -251,6 +255,13 @@ void InitPanelRTG(const config_category& category)
 	chkRtgMultithreaded->setForegroundColor(gui_foreground_color);
 	chkRtgMultithreaded->addActionListener(rtg_action_listener);
 
+	chkRtgZerocopy = new gcn::CheckBox("Zero copy (Buffer sharing)");
+	chkRtgZerocopy->setId("chkRtgZerocopy");
+	chkRtgZerocopy->setBaseColor(gui_base_color);
+	chkRtgZerocopy->setBackgroundColor(gui_background_color);
+	chkRtgZerocopy->setForegroundColor(gui_foreground_color);
+	chkRtgZerocopy->addActionListener(rtg_action_listener);
+
 	lblRtgRefreshRate = new gcn::Label("Refresh rate:");
 	lblRtgRefreshRate->setAlignment(gcn::Graphics::Left);
 	cboRtgRefreshRate = new gcn::DropDown(&rtg_refreshrates_list);
@@ -337,7 +348,10 @@ void InitPanelRTG(const config_category& category)
 	posY += chkRtgHardwareSprite->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(chkRtgMultithreaded, DISTANCE_BORDER, posY);
-	posY += chkRtgMultithreaded->getHeight() + DISTANCE_NEXT_Y * 2;
+	posY += chkRtgMultithreaded->getHeight() + DISTANCE_NEXT_Y;
+
+	category.panel->add(chkRtgZerocopy, DISTANCE_BORDER, posY);
+	posY += chkRtgZerocopy->getHeight() + DISTANCE_NEXT_Y;
 
 	category.panel->add(lblRtgRefreshRate, DISTANCE_BORDER, posY);
 	category.panel->add(lblRtgBufferMode, lblRtgRefreshRate->getX() + lblRtgRefreshRate->getWidth() + DISTANCE_NEXT_X * 5, posY);
@@ -364,6 +378,7 @@ void ExitPanelRTG()
 	delete chkRtgHardwareInterrupt;
 	delete chkRtgHardwareSprite;
 	delete chkRtgMultithreaded;
+	delete chkRtgZerocopy;
 	delete lblRtgRefreshRate;
 	delete cboRtgRefreshRate;
 	delete lblRtgBufferMode;
@@ -440,6 +455,9 @@ void RefreshPanelRTG()
 
 	chkRtgMultithreaded->setEnabled(!emulating);
 	chkRtgMultithreaded->setSelected(changed_prefs.rtg_multithread);
+
+    chkRtgZerocopy->setEnabled(!emulating);
+    chkRtgZerocopy->setSelected(changed_prefs.rtg_zerocopy);
 
 	if (changed_prefs.rtgvblankrate <= 0 ||
 		changed_prefs.rtgvblankrate == 50 ||

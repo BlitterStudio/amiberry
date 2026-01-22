@@ -723,6 +723,7 @@ struct uae_prefs {
 
 	float rtg_horiz_zoom_mult;
 	float rtg_vert_zoom_mult;
+	bool rtg_zerocopy;
 
 	bool immediate_blits;
 	int waiting_blits;

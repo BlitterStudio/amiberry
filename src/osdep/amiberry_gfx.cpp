@@ -2190,10 +2190,13 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 	// Detect this by comparing the surface pixels pointer with the RTG VRAM pointer.
 	// Returning nullptr here prevents picasso_flushpixels from copying
 	// VRAM to itself, which would cause display corruption.
-	uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
-	if (rtg_vram != nullptr && amiga_surface->pixels == rtg_vram) {
-		return nullptr;
+	if (currprefs.rtg_zerocopy) {
+		uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
+		if (rtg_vram != nullptr && amiga_surface->pixels == rtg_vram) {
+			return nullptr;
+		}
 	}
+
 
 	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
 	//SDL_QueryTexture(amiga_texture,
@@ -4402,12 +4405,12 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 	// Ensure amiga_surface is in sync with the texture size and format
 	// Zero-Copy Eligibility Check
-	uae_u8* rtg_render_ptr = nullptr;
+	uae_u8* rtg_render_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
 	bool is_zero_copy_eligible = false;
 	
-	if (mon->screen_is_picasso && currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE) {
-		rtg_render_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
+	if (mon->screen_is_picasso && currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE && currprefs.rtg_zerocopy) {
 		int p96_bpp = state->BytesPerPixel;
+
 		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);
 
 		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp && (pixel_format == SDL_PIXELFORMAT_ABGR8888 || pixel_format == SDL_PIXELFORMAT_RGB565)) {
@@ -4425,6 +4428,11 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if(amiga_surface && is_zero_copy_eligible && amiga_surface->pixels != (void*)rtg_render_ptr) {
 		recreate_surface = true;
 	}
+	// If Zero-Copy is disabled, but we are still pointing to VRAM, we must recreate the surface
+	if (amiga_surface && !is_zero_copy_eligible && rtg_render_ptr && amiga_surface->pixels == rtg_render_ptr) {
+		recreate_surface = true;
+	}
+
 
 	// write_log("GFX Update: mon=%d, w=%d, h=%d, fmt=%s, zero_copy=%d, surf=%p, rtg=%p\n", 
 	// 	monid, w, h, SDL_GetPixelFormatName(pixel_format), is_zero_copy_eligible, amiga_surface, rtg_render_ptr);
