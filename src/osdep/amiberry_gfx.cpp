@@ -4337,7 +4337,7 @@ static bool doInit(AmigaMonitor* mon)
 
 bool target_graphics_buffer_update(const int monid, const bool force)
 {
-	const struct AmigaMonitor* mon = &AMonitors[monid];
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct vidbuf_description* avidinfo = &adisplays[monid].gfxvidinfo;
 	const struct picasso96_state_struct* state = &picasso96_state[monid];
 	struct vidbuffer *vb = NULL, *vbout = NULL;
@@ -4360,14 +4360,29 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 
 	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && amiga_surface && amiga_surface->format->format == pixel_format) {
-		if (SDL2_alloctexture(mon->monitor_id, -w, -h))
-		{
-			//osk_setup(monid, -2);
-			if (vbout) {
-				vbout->width_allocated = w;
-				vbout->height_allocated = h;
+		bool skip_update = true;
+		if (mon->screen_is_picasso) {
+			uae_u8* rtg_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
+			if (rtg_ptr && amiga_surface->pixels != rtg_ptr) {
+				skip_update = false;
+			} else {
+				// write_log("GFX: Skipping update. Pointers match: %p\n", rtg_ptr);
 			}
-			return false;
+		}
+
+		if (skip_update) {
+			if (SDL2_alloctexture(mon->monitor_id, -w, -h))
+			{
+				//osk_setup(monid, -2);
+				if (vbout) {
+					vbout->width_allocated = w;
+					vbout->height_allocated = h;
+				}
+				if (force) {
+					mon->full_render_needed = true;
+				}
+				return false;
+			}
 		}
 	}
 
@@ -4423,7 +4438,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		if (is_zero_copy_eligible) {
 			// Zero-Copy: Create surface from existing memory (rtg_render_ptr guaranteed non-null)
 			amiga_surface = SDL_CreateRGBSurfaceWithFormatFrom(rtg_render_ptr, w, h, surface_depth, state->BytesPerRow, pixel_format);
-			write_log("GFX: Created Zero-Copy Surface from VRAM! w=%d h=%d depth=%d pitch=%d\n", w, h, surface_depth, state->BytesPerRow);
 		} else {
 			// Normal copy: Create fresh surface
 			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, surface_depth, pixel_format);
@@ -4435,6 +4449,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 			write_log("!!! Failed to create amiga_surface.\n");
 			return false;
 		}
+		mon->full_render_needed = true;
 		struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
 		vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 #ifndef PICASSO_STATE_SETDAC
