@@ -1047,65 +1047,136 @@ enum {
 	RGBFB_CLUT_RGBFB_32,
 	RGBFB_Y4U2V2_32,
 	RGBFB_Y4U1V1_32,
+
+	/* DEST = RGBFB_R5G6B5PC,16 */
+	RGBFB_A8R8G8B8_16,
+	RGBFB_A8B8G8R8_16,
+	RGBFB_R8G8B8A8_16,
+	RGBFB_B8G8R8A8_16,
+	RGBFB_R8G8B8_16,
+	RGBFB_B8G8R8_16,
+	RGBFB_R5G6B5PC_16,
+	RGBFB_R5G5B5PC_16,
+	RGBFB_R5G6B5_16,
+	RGBFB_R5G5B5_16,
+	RGBFB_B5G6R5PC_16,
+	RGBFB_B5G5R5PC_16,
+	RGBFB_CLUT_RGBFB_16,
+	RGBFB_Y4U2V2_16,
+	RGBFB_Y4U1V1_16,
+
+	/* DEST = RGBFB_CLUT,8 */
+	RGBFB_CLUT_8
 };
 
-int getconvert(int rgbformat)
+int getconvert(int rgbformat, int pixbytes)
 {
 	int v = 0;
+	const int d = pixbytes;
 
 	switch (rgbformat)
 	{
 	case RGBFB_CLUT:
-		v = RGBFB_CLUT_RGBFB_32;
+		if (d == 1)
+			v = RGBFB_CLUT_8;
+		else if (d == 2)
+			v = RGBFB_CLUT_RGBFB_16;
+		else if (d == 4)
+			v = RGBFB_CLUT_RGBFB_32;
 		break;
 
 	case RGBFB_B5G6R5PC:
-		v = RGBFB_B5G6R5PC_32;
+		if (d == 2)
+			v = RGBFB_B5G6R5PC_16;
+		else if (d == 4)
+			v = RGBFB_B5G6R5PC_32;
 		break;
 	case RGBFB_R5G6B5PC:
-		v = RGBFB_R5G6B5PC_32;
+		if (d == 2)
+			v = RGBFB_R5G6B5PC_16;
+		else if (d == 4)
+			v = RGBFB_R5G6B5PC_32;
 		break;
 
 	case RGBFB_R5G5B5PC:
-		v = RGBFB_R5G5B5PC_32;
+		if (d == 4)
+			v = RGBFB_R5G5B5PC_32;
+		else if (d == 2)
+			v = RGBFB_R5G5B5PC_16;
 		break;
 	case RGBFB_R5G6B5:
-		v = RGBFB_R5G6B5_32;
+		if (d == 4)
+			v = RGBFB_R5G6B5_32;
+		else
+			v = RGBFB_R5G6B5_16;
 		break;
 	case RGBFB_R5G5B5:
-		v = RGBFB_R5G5B5_32;
+		if (d == 4)
+			v = RGBFB_R5G5B5_32;
+		else
+			v = RGBFB_R5G5B5_16;
 		break;
 	case RGBFB_B5G5R5PC:
-		v = RGBFB_B5G5R5PC_32;
+		if (d == 4)
+			v = RGBFB_B5G5R5PC_32;
+		else
+			v = RGBFB_B5G5R5PC_16;
 		break;
 
 	case RGBFB_A8R8G8B8:
-		v = RGBFB_A8R8G8B8_32;
+		if (d == 2)
+			v = RGBFB_A8R8G8B8_16;
+		else if (d == 4)
+			v = RGBFB_A8R8G8B8_32;
 		break;
 	case RGBFB_R8G8B8:
-		v = RGBFB_R8G8B8_32;
+		if (d == 2)
+			v = RGBFB_R8G8B8_16;
+		else if (d == 4)
+			v = RGBFB_R8G8B8_32;
 		break;
 	case RGBFB_B8G8R8:
-		v = RGBFB_B8G8R8_32;
+		if (d == 2)
+			v = RGBFB_B8G8R8_16;
+		else if (d == 4)
+			v = RGBFB_B8G8R8_32;
 		break;
 	case RGBFB_A8B8G8R8:
-		v = RGBFB_A8B8G8R8_32;
+		if (d == 2)
+			v = RGBFB_A8B8G8R8_16;
+		else if (d == 4)
+			v = RGBFB_A8B8G8R8_32;
 		break;
 	case RGBFB_B8G8R8A8:
-		v = RGBFB_B8G8R8A8_32;
+		if (d == 2)
+			v = RGBFB_B8G8R8A8_16;
+		else if (d == 4)
+			v = RGBFB_B8G8R8A8_32;
 		break;
 	case RGBFB_R8G8B8A8:
-		v = RGBFB_R8G8B8A8_32;
+		if (d == 2)
+			v = RGBFB_R8G8B8A8_16;
+		else if (d == 4)
+			v = RGBFB_R8G8B8A8_32;
 		break;
 
 	case RGBFB_Y4U2V2:
-		v = RGBFB_Y4U2V2_32;
+		if (d == 4)
+			v = RGBFB_Y4U2V2_32;
+		else
+			v = RGBFB_Y4U2V2_16;
 		break;
 	case RGBFB_Y4U1V1:
-		v = RGBFB_Y4U1V1_32;
+		if (d == 4)
+			v = RGBFB_Y4U1V1_32;
+		else
+			v = RGBFB_Y4U1V1_16;
 		break;
 	default: // RGBFB_R5G6B5PC
-		v = RGBFB_R5G6B5PC_32;
+		if (d == 2)
+			v = RGBFB_R5G6B5PC_16;
+		else if (d == 4)
+			v = RGBFB_R5G6B5PC_32;
 		break;
 	}
 	return v;
@@ -1118,13 +1189,25 @@ static void setconvert(int monid)
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 
 	if (state->advDragging) {
-		vidinfo->picasso_convert[0] = getconvert(vidinfo->dacrgbformat[0]);
-		vidinfo->picasso_convert[1] = getconvert(vidinfo->dacrgbformat[1]);
+		vidinfo->picasso_convert[0] = getconvert(static_cast<int>(vidinfo->dacrgbformat[0]), picasso_vidinfo[monid].pixbytes);
+		vidinfo->picasso_convert[1] = getconvert(static_cast<int>(vidinfo->dacrgbformat[1]), picasso_vidinfo[monid].pixbytes);
 	} else {
-		vidinfo->picasso_convert[0] = vidinfo->picasso_convert[1] = getconvert(state->RGBFormat);
+		vidinfo->picasso_convert[0] = vidinfo->picasso_convert[1] = getconvert(state->RGBFormat, picasso_vidinfo[monid].pixbytes);
 	}
-	vidinfo->host_mode = RGBFB_R8G8B8A8;
-	alloc_colors_rgb(8, 8, 8, 0, 8, 16, 0, 0, 0, 0, p96rc, p96gc, p96bc);
+#ifdef AMIBERRY
+	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_R8G8B8A8 : RGBFB_B5G6R5PC;
+#else
+	vidinfo->host_mode = picasso_vidinfo[monid].pixbytes == 4 ? RGBFB_B8G8R8A8 : RGBFB_B5G6R5PC;
+#endif
+	if (picasso_vidinfo[monid].pixbytes == 4)
+#ifdef AMIBERRY
+		alloc_colors_rgb(8, 8, 8, 0, 8, 16, 0, 0, 0, 0, p96rc, p96gc, p96bc); // RGBA
+#else
+		alloc_colors_rgb(8, 8, 8, 16, 8, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc); // BGRA
+		
+#endif
+	else
+		alloc_colors_rgb(5, 6, 5, 11, 5, 0, 0, 0, 0, 0, p96rc, p96gc, p96bc);
 	gfx_set_picasso_colors(monid, state->RGBFormat);
 	picasso_palette(state->CLUT, vidinfo->clut);
 	if (vidinfo->host_mode != vidinfo->ohost_mode || state->RGBFormat != vidinfo->orgbformat) {
@@ -1220,8 +1303,8 @@ static void picasso_handle_vsync2(struct AmigaMonitor *mon)
 	if (state & PICASSO_STATE_SETDAC) {
 		atomic_and(&vidinfo->picasso_state_change, ~PICASSO_STATE_SETDAC);
 		if (p96state->advDragging) {
-			vidinfo->picasso_convert[0] = getconvert(vidinfo->dacrgbformat[0]);
-			vidinfo->picasso_convert[1] = getconvert(vidinfo->dacrgbformat[1]);
+			vidinfo->picasso_convert[0] = getconvert(static_cast<int>(vidinfo->dacrgbformat[0]), picasso_vidinfo[monid].pixbytes);
+			vidinfo->picasso_convert[1] = getconvert(static_cast<int>(vidinfo->dacrgbformat[1]), picasso_vidinfo[monid].pixbytes);
 		}
 		rtg_clear(mon->monitor_id);
 	}
@@ -2808,7 +2891,7 @@ static int resolution_compare (const void *a, const void *b)
 		return -1;
 	if (ma->res.height > mb->res.height)
 		return 1;
-	return 0;
+	return ma->depth - mb->depth;
 }
 
 static int missmodes[] = { 320, 200, 320, 240, 320, 256, 640, 400, 640, 480, 640, 512, 800, 600, 1024, 600, 1024, 768, 1280, 1024, -1 };
@@ -4965,6 +5048,7 @@ static void copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width
 #else
 		case RGBFB_R8G8B8A8_32:
 #endif
+		case RGBFB_R5G6B5PC_16:
 		memcpy(dst2 + dx * dstpix, src2 + x * srcpix, width * dstpix);
 		return;
 	}
@@ -5494,7 +5578,7 @@ uae_u8 *uaegfx_getrtgbuffer(const int monid, int *widthp, int *heightp, int *pit
 	dst = xmalloc (uae_u8, width * height * pixbytes);
 	if (!dst)
 		return nullptr;
-	convert[0] = getconvert(state->RGBFormat);
+	convert[0] = getconvert(state->RGBFormat, pixbytes);
 	convert[1] = convert[0];
 	alloc_colors_picasso(8, 8, 8, 0, 8, 16, state->RGBFormat, p96_rgbx16);
 
@@ -6321,7 +6405,7 @@ static uae_u32 REGPARAM2 picasso_CreateFeature(TrapContext *ctx)
 	overlay_src_height = trap_get_word(ctx, overlay_bitmap + 2);
 	overlay_vram = trap_get_long(ctx, overlay_bitmap + 8);
 	overlay_vram_offset = static_cast<int>(overlay_vram - gfxmem_banks[0]->start);
-	overlay_convert = getconvert(static_cast<int>(overlay_format));
+	overlay_convert = getconvert(static_cast<int>(overlay_format), picasso_vidinfo[0].pixbytes);
 	if (!p96_rgbx16_ovl)
 		p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
 	int of = static_cast<int>(overlay_format);
@@ -6818,7 +6902,7 @@ void restore_p96_finish ()
 
 		if (overlay_vram) {
 			overlay_vram_offset = static_cast<int>(overlay_vram - gfxmem_banks[0]->start);
-			overlay_convert = getconvert(static_cast<int>(overlay_format));
+			overlay_convert = getconvert(static_cast<int>(overlay_format), picasso_vidinfo[0].pixbytes);
 			if (!p96_rgbx16_ovl)
 				p96_rgbx16_ovl = xcalloc(uae_u32, 65536);
 			alloc_colors_picasso(8, 8, 8, 0, 8, 16, overlay_format, p96_rgbx16_ovl);

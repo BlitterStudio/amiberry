@@ -40,6 +40,7 @@ struct PicassoResolution
 {
 	bool inuse;
 	struct ScreenResolution res;
+	int depth;   /* depth in bytes-per-pixel */
 	int residx;
 	int refresh[MAX_REFRESH_RATES]; /* refresh-rates in Hz */
 	int refreshtype[MAX_REFRESH_RATES]; /* 0=normal,1=raw,2=lace */

@@ -4435,6 +4435,12 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 			write_log("!!! Failed to create amiga_surface.\n");
 			return false;
 		}
+		struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
+		vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
+#ifndef PICASSO_STATE_SETDAC
+#define PICASSO_STATE_SETDAC 8
+#endif
+		atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETDAC);
 	}
 
 	// Allocate/update texture (single call regardless of surface recreation)
