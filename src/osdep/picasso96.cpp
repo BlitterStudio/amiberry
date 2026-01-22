@@ -1772,13 +1772,19 @@ static void do_blitrect_frame_buffer (const struct RenderInfo *ri, const struct
 		if(opcode == BLIT_SRC) {
 
 			/* handle normal case efficiently */
-			if (ri->Memory == dstri->Memory && dsty == srcy) {
+			if (ri->BytesPerRow == dstri->BytesPerRow && total_width == ri->BytesPerRow) {
+				// write_log("Optimized BlitRect: w=%d, h=%d, bpr=%d\n", width, height, ri->BytesPerRow);
+				memmove(dst, src, total_width * height);
+			} else if (ri->Memory == dstri->Memory && dsty == srcy) {
+				// write_log("BlitRect Fallback 1: w=%d, h=%d, bpr=%d vs tot=%d\n", width, height, ri->BytesPerRow, total_width);
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memmove (dst, src, total_width);
 			} else if (dsty < srcy) {
+				// write_log("BlitRect Fallback 2: w=%d, h=%d\n", width, height);
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memcpy (dst, src, total_width);
 			} else {
+				// write_log("BlitRect Fallback 3: w=%d, h=%d\n", width, height);
 				src += (height - 1) * ri->BytesPerRow;
 				dst += (height - 1) * dstri->BytesPerRow;
 				for (int i = 0; i < height; i++, src -= ri->BytesPerRow, dst -= dstri->BytesPerRow)
@@ -5726,7 +5732,19 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (!dstp) {
 				dstp = gfx_lock_picasso(monid, dofull);
 			}
+			
+			// AMIBERRY: Zero Copy support
+			// If we are in Zero Copy mode, dstp is nullptr but we still want to process dirty regions
+			// so we can invalidate the texture correctly (partial updates)
+			bool zero_copy = false;
 			if (dstp == nullptr) {
+				uae_u8* rtg_ptr = p96_get_render_buffer_pointer(monid);
+				if (rtg_ptr != nullptr) {
+					zero_copy = true;
+				}
+			}
+
+			if (dstp == nullptr && !zero_copy) {
 				continue;
 			}
 			dst = dstp;
@@ -5742,10 +5760,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 #endif
 
 			if (!split && vidinfo->rtg_clear_flag) {
-				uae_u8 *p2 = dst;
-				for (int h = 0; h < vidinfo->maxheight; h++) {
-					memset(p2, 0, vidinfo->maxwidth * vidinfo->pixbytes);
-					p2 += vidinfo->rowbytes;
+				if (dst) {
+					uae_u8 *p2 = dst;
+					for (int h = 0; h < vidinfo->maxheight; h++) {
+						memset(p2, 0, vidinfo->maxwidth * vidinfo->pixbytes);
+						p2 += vidinfo->rowbytes;
+					}
 				}
 				vidinfo->rtg_clear_flag--;
 			}
@@ -5757,16 +5777,18 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			}
 
 			if (dofull) {
-				if (flashscreen != 0) {
-					copyallinvert(monid, src + off, dst, pwidth, pheight,
-						state->BytesPerRow, state->BytesPerPixel,
-						vidinfo->rowbytes, vidinfo->pixbytes,
-						vidinfo->picasso_convert);
-				} else {
-					copyall(monid, src + off, dst, pwidth, pheight,
-						state->BytesPerRow, state->BytesPerPixel,
-						vidinfo->rowbytes, vidinfo->pixbytes,
-						vidinfo->picasso_convert);
+				if (!zero_copy) {
+					if (flashscreen != 0) {
+						copyallinvert(monid, src + off, dst, pwidth, pheight,
+							state->BytesPerRow, state->BytesPerPixel,
+							vidinfo->rowbytes, vidinfo->pixbytes,
+							vidinfo->picasso_convert);
+					} else {
+						copyall(monid, src + off, dst, pwidth, pheight,
+							state->BytesPerRow, state->BytesPerPixel,
+							vidinfo->rowbytes, vidinfo->pixbytes,
+							vidinfo->picasso_convert);
+					}
 				}
 				miny = 0;
 				maxy = pheight;
@@ -5798,10 +5820,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 						int w = (gwwpagesize[index] + state->BytesPerPixel - 1) / state->BytesPerPixel;
 						x = (realoffset % state->BytesPerRow) / state->BytesPerPixel;
 						if (x < pwidth) {
-							copyrow(monid, src + off, dst, x, y, pwidth - x,
-								state->BytesPerRow, state->BytesPerPixel,
-								x, y, vidinfo->rowbytes, vidinfo->pixbytes,
-								vidinfo->picasso_convert, p96_rgbx16);
+							if (!zero_copy) {
+								copyrow(monid, src + off, dst, x, y, pwidth - x,
+									state->BytesPerRow, state->BytesPerPixel,
+									x, y, vidinfo->rowbytes, vidinfo->pixbytes,
+									vidinfo->picasso_convert, p96_rgbx16);
+							}
 							flushlines++;
 						}
 						w = (gwwpagesize[index] - (state->BytesPerRow - x * state->BytesPerPixel) + state->BytesPerPixel - 1) / state->BytesPerPixel;
@@ -5811,10 +5835,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 						y++;
 						while (y < pheight && w > 0) {
 							int maxw = w > pwidth ? pwidth : w;
-							copyrow(monid, src + off, dst, 0, y, maxw,
-								state->BytesPerRow, state->BytesPerPixel,
-								0, y, vidinfo->rowbytes, vidinfo->pixbytes,
-								vidinfo->picasso_convert, p96_rgbx16);
+							if (!zero_copy) {
+								copyrow(monid, src + off, dst, 0, y, maxw,
+									state->BytesPerRow, state->BytesPerPixel,
+									0, y, vidinfo->rowbytes, vidinfo->pixbytes,
+									vidinfo->picasso_convert, p96_rgbx16);
+							}
 							w -= maxw;
 							y++;
 							flushlines++;

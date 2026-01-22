@@ -474,8 +474,6 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
-	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
-	
 	// Clean up existing shaders
 	destroy_shaders();
 	
@@ -4427,6 +4425,9 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if(amiga_surface && is_zero_copy_eligible && amiga_surface->pixels != (void*)rtg_render_ptr) {
 		recreate_surface = true;
 	}
+
+	// write_log("GFX Update: mon=%d, w=%d, h=%d, fmt=%s, zero_copy=%d, surf=%p, rtg=%p\n", 
+	// 	monid, w, h, SDL_GetPixelFormatName(pixel_format), is_zero_copy_eligible, amiga_surface, rtg_render_ptr);
 
 	if (recreate_surface) {
 		if (amiga_surface) {
