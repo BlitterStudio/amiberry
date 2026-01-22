@@ -10,6 +10,10 @@
 #define RTG_MODE_CENTER 2
 #define RTG_MODE_INTEGER_SCALE 3
 
+#ifdef AMIBERRY
+extern Uint32 pixel_format;
+#endif
+
 #define GUI_WIDTH  800
 #define GUI_HEIGHT 720
 
@@ -35,6 +39,7 @@ struct PicassoResolution
 {
 	bool inuse;
 	struct ScreenResolution res;
+	int depth;   /* depth in bytes-per-pixel */
 	int residx;
 	int refresh[MAX_REFRESH_RATES]; /* refresh-rates in Hz */
 	int refreshtype[MAX_REFRESH_RATES]; /* 0=normal,1=raw,2=lace */

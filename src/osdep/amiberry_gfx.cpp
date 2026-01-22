@@ -81,6 +81,7 @@ SDL_GLContext gl_context;
 crtemu_t* crtemu_shader = nullptr;
 ExternalShader* external_shader = nullptr;
 static std::string external_shader_name;
+static GLenum gl_texture_filter_mode = GL_LINEAR; // Default to linear filtering
 
 bool set_opengl_attributes(int mode);
 bool init_opengl_context(SDL_Window* window);
@@ -313,7 +314,26 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 	}
 
 #ifdef USE_OPENGL
-	glBindTexture(GL_TEXTURE_2D, 0);
+	// Store the texture filter mode for use when creating/updating textures
+	gl_texture_filter_mode = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
+	// Note: integer_scale is not directly applicable to OpenGL - it would need custom
+	// viewport calculations which are handled elsewhere in the rendering pipeline
+
+	// Only apply filter mode when no shader is active (NONE mode without external shader)
+	// CRT shaders and external shaders handle their own texture filtering
+	bool no_shader_active = (crtemu_shader != nullptr && crtemu_shader->type == CRTEMU_TYPE_NONE && external_shader == nullptr);
+	if (no_shader_active) {
+		// For NONE mode without external shader, we need to apply filter to the backbuffer texture
+		if (crtemu_shader->backbuffer != 0 && glIsTexture(crtemu_shader->backbuffer)) {
+			// Update the persistent filter state in crtemu so it's used every frame
+			crtemu_shader->texture_filter = gl_texture_filter_mode;
+
+			glBindTexture(GL_TEXTURE_2D, crtemu_shader->backbuffer);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_texture_filter_mode);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_texture_filter_mode);
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
+	}
 #else
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, scale_quality);
 	SDL_RenderSetIntegerScale(AMonitors[monid].amiga_renderer, integer_scale);
@@ -628,7 +648,9 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 
 		// If a full render is needed or there are no specific dirty rects, update the whole texture.
 		if (mon->full_render_needed || mon->dirty_rects.empty()) {
-			SDL_UpdateTexture(amiga_texture, nullptr, amiga_surface->pixels, amiga_surface->pitch);
+			if (amiga_surface) {
+				SDL_UpdateTexture(amiga_texture, NULL, amiga_surface->pixels, amiga_surface->pitch);
+			}
 		} else {
 			// Otherwise, update only the collected dirty rectangles.
 			for (const auto& rect : mon->dirty_rects) {
@@ -683,98 +705,10 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	return false;
 }
 
-static void wait_frame_timing()
-{
-	static Uint64 freq = 0;
-	if (freq == 0) freq = SDL_GetPerformanceFrequency();
-
-	if (syncbase > 0)
-	{
-		double target_fps;
-		if (vblank_hz > 45 && vblank_hz < 65) target_fps = (double)vblank_hz;
-		else if (currprefs.ntscmode) target_fps = 60.0;
-		else target_fps = 50.0;
-		
-		static double accumulated_error = 0.0; 
-		double target_frame_dist_sec = 1.0 / target_fps;
-
-		// Custom Adaptive Sync using SDL Counters (PI Controller)
-		if (gui_data.sndbuf_avail) {
-			int buffer_error = gui_data.sndbuf - 750; // Target 75% (1.5 fragments) for stability
-			
-			// Integral term (accumulate error to find natural clock skew)
-			accumulated_error += buffer_error;
-			
-			// Anti-windup: Clamp accumulated error
-			accumulated_error = std::min(accumulated_error, 80000.0);
-			accumulated_error = std::max(accumulated_error, -80000.0);
-
-			// PI Gains
-			// Kp: Immediate reaction to spikes. 0.00005.
-			// Ki: Slow adaptation. 0.0000005.
-			double P = (double)buffer_error * 0.00005; 
-			double I = accumulated_error * 0.0000005;
-			
-			double adjustment_factor = 1.0 + P + I; 
-			
-			// Safety Clamp +/- 8%
-			adjustment_factor = std::min(adjustment_factor, 1.08);
-			adjustment_factor = std::max(adjustment_factor, 0.92);
-
-			target_frame_dist_sec *= adjustment_factor;
-		}
-		
-		Uint64 target_ticks = (Uint64)(target_frame_dist_sec * freq);
-		
-		static Uint64 next_frame_tick = 0;
-		Uint64 current_tick = SDL_GetPerformanceCounter();
-
-		if (next_frame_tick == 0)
-		{
-			next_frame_tick = current_tick + target_ticks;
-		}
-		else
-		{
-			next_frame_tick += target_ticks;
-			// Lag reset: if we are more than 100ms behind, reset
-			if (current_tick > next_frame_tick + (freq / 10)) {
-				next_frame_tick = current_tick + target_ticks;
-			}
-		}
-		
-		Sint64 ticks_left = next_frame_tick - current_tick;
-		
-		// Sleep wait (reduced to 1ms threshold for better precision on non-Windows systems)
-		while (ticks_left > (Sint64)(freq / 1000)) // > 1ms
-		{
-			struct timespec req = { 0, 500000 };
-			nanosleep(&req, nullptr);
-			current_tick = SDL_GetPerformanceCounter();
-			ticks_left = next_frame_tick - current_tick;
-		}
-
-		// Spin wait with CPU relaxation
-		while (SDL_GetPerformanceCounter() < next_frame_tick)
-		{
-#if defined(__x86_64__) || defined(__i386__)
-			__builtin_ia32_pause();
-#elif defined(__aarch64__) || defined(__arm__)
-			asm volatile("yield");
-#elif defined(__riscv)
-			asm volatile("pause");
-#endif
-		}
-	}
-	
-	// Sync legacy variable for other systems
-	wait_vblank_timestamp = read_processor_time();
-}
-
 static void SDL2_showframe(const int monid)
 {
 	// Skip presentation if headless mode
 	if (currprefs.headless) {
-		wait_frame_timing();
 		return;
 	}
 
@@ -782,7 +716,6 @@ static void SDL2_showframe(const int monid)
 	SDL_RenderPresent(mon->amiga_renderer);
 	if (waitvblankthread_mode <= 0)
 		wait_vblank_timestamp = read_processor_time();
-	wait_frame_timing();
 }
 
 void flush_screen(struct vidbuffer* vb, int y_start, int y_end)
@@ -1658,6 +1591,7 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 		shader->set_input_texture(texture);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
+		// External shaders handle their own filtering, use linear as base input
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -1696,29 +1630,44 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glDisable(GL_BLEND); // Disable blending by default for performance and to avoid issues with zero alpha
 	glDisable(GL_SCISSOR_TEST);
 
-	// Upload texture data
-	// amiga_surface uses SDL_PIXELFORMAT_ABGR8888
-	// On little-endian, ABGR in memory = RGBA when read as bytes
-	// crtemu uses GL_RGBA + GL_UNSIGNED_BYTE, so we do the same
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
-
 	// Determine correct OpenGL format based on global pixel_format
 	// SDL_PIXELFORMAT_ARGB8888 -> BGRA in memory -> GL_BGRA
 	// SDL_PIXELFORMAT_ABGR8888 -> RGBA in memory -> GL_RGBA
-	GLenum gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
+	// SDL_PIXELFORMAT_RGB565   -> RGB in memory  -> GL_RGB
+	GLenum gl_fmt = GL_RGBA;
+	GLenum gl_type = GL_UNSIGNED_BYTE;
+	int bpp = 4;
+
+	if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+		gl_fmt = GL_BGRA;
+		gl_type = GL_UNSIGNED_BYTE;
+		bpp = 4;
+	}
+	else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
+		gl_fmt = GL_RGB;
+		gl_type = GL_UNSIGNED_SHORT_5_6_5;
+		bpp = 2;
+	}
+	else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
+		gl_fmt = GL_RGBA;
+		gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
+		bpp = 2;
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / bpp);
 
 	static int last_w = 0, last_h = 0;
 	static GLuint last_texture = 0;
 	if (width != last_w || height != last_h || texture != last_texture) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_fmt, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_fmt, gl_type, pixels);
 		last_w = width;
 		last_h = height;
 		last_texture = texture;
 	} else {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, gl_fmt, GL_UNSIGNED_BYTE, pixels);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, gl_fmt, gl_type, pixels);
 	}
 	
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Reset for other textures
@@ -1912,7 +1861,6 @@ void show_screen(const int monid, int mode)
 {
 	// Skip all rendering if headless mode
 	if (currprefs.headless) {
-		wait_frame_timing();
 		return;
 	}
 
@@ -1927,7 +1875,6 @@ void show_screen(const int monid, int mode)
 #ifdef USE_OPENGL
 	// Safety check: if neither crtemu_shader nor external_shader is available, skip rendering
 	if (!crtemu_shader && !external_shader) {
-		wait_frame_timing();
 		return;
 	}
 
@@ -2025,25 +1972,62 @@ void show_screen(const int monid, int mode)
 
 		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
-			const int bpp = 4;
+			// Determine correct OpenGL format
+			unsigned int gl_fmt, gl_type;
+			int bpp = 4;
+			if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+				gl_fmt = GL_BGRA;
+				gl_type = GL_UNSIGNED_BYTE;
+			}
+			else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
+				gl_fmt = GL_RGB;
+				gl_type = GL_UNSIGNED_SHORT_5_6_5;
+				bpp = 2;
+			}
+			else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
+				gl_fmt = GL_RGBA;
+				gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
+				bpp = 2;
+			}
+			else {
+				gl_fmt = GL_RGBA;
+				gl_type = GL_UNSIGNED_BYTE;
+			}
+
 			int x = std::max(0, crop_rect.x);
 			int y = std::max(0, crop_rect.y);
 			int w = std::min(crop_rect.w, amiga_surface->w - x);
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
-			
-			// Determine correct OpenGL format
-			unsigned int gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
 
 			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
-				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
+				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		} else if (amiga_surface) {
 			// Determine correct OpenGL format
-			unsigned int gl_fmt = (pixel_format == SDL_PIXELFORMAT_ARGB8888) ? GL_BGRA : GL_RGBA;
+			unsigned int gl_fmt, gl_type;
+			int bpp = 4;
+			if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+				gl_fmt = GL_BGRA;
+				gl_type = GL_UNSIGNED_BYTE;
+			}
+			else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
+				gl_fmt = GL_RGB;
+				gl_type = GL_UNSIGNED_SHORT_5_6_5;
+				bpp = 2;
+			}
+			else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
+				gl_fmt = GL_RGBA;
+				gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
+				bpp = 2;
+			}
+			else {
+				gl_fmt = GL_RGBA;
+				gl_type = GL_UNSIGNED_BYTE;
+			}
 
 			// FAST PATH: No cropping.
 			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
-			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt);
+			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		}
 	}
 
@@ -2051,7 +2035,6 @@ void show_screen(const int monid, int mode)
 
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
-	wait_frame_timing();
 	SDL2_showframe(monid);
 #endif
 	mon->render_ok = false;
@@ -2200,6 +2183,11 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 {
 	struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[monid];
 	uae_u8* p;
+
+	if (amiga_surface == nullptr) {
+		return nullptr;
+	}
+
 	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
 	//SDL_QueryTexture(amiga_texture,
 	//	nullptr, nullptr,
@@ -2438,7 +2426,7 @@ static void update_gfxparams(struct AmigaMonitor* mon)
 
 static int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 {
-	// Skip window creation entirely if headless mode is enabled
+	// Skip window creation entirely if headless mode
 	if (currprefs.headless) {
 		write_log("Headless mode: Skipping window creation for monitor %d.\n", mon->monitor_id);
 		mon->screen_is_initialized = 1;
@@ -3179,10 +3167,19 @@ int check_prefs_changed_gfx()
 
 static void update_pixel_format()
 {
+	if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5 ||
+		picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC) {
+		pixel_format = SDL_PIXELFORMAT_RGB565;
+		return;
+	}
+
 	if (currprefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE)
-		pixel_format = SDL_PIXELFORMAT_ARGB8888; // for custom boards (e.g. PicassoII)
-	else
-		pixel_format = SDL_PIXELFORMAT_ABGR8888; // for native output and UAE RTG
+	{
+		pixel_format = SDL_PIXELFORMAT_ARGB8888; // Custom boards (e.g. PicassoII) output BGRA
+	}
+	else {
+		pixel_format = SDL_PIXELFORMAT_ABGR8888; // Default for native output, UAE RTG (32-bit)
+	}
 }
 
 /* Color management */
@@ -3193,6 +3190,7 @@ static int alpha;
 
 void init_colors(const int monid)
 {
+	update_pixel_format();
 	AmigaMonitor* mon = &AMonitors[monid];
 	/* init colors */
 
@@ -4340,7 +4338,9 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if (mon->screen_is_picasso) {
 		w = state->Width;
 		h = state->Height;
+		update_pixel_format();
 	} else {
+		pixel_format = SDL_PIXELFORMAT_ABGR8888;
 		vb = avidinfo->inbuffer;
 		vbout = avidinfo->outbuffer;
 		if (!vb) {
@@ -4350,7 +4350,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		h = vb->outheight;
 	}
 
-	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso) {
+	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && amiga_surface && amiga_surface->format->format == pixel_format) {
 		if (SDL2_alloctexture(mon->monitor_id, -w, -h))
 		{
 			//osk_setup(monid, -2);
@@ -4366,26 +4366,48 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		oldtex_w[monid] = w;
 		oldtex_h[monid] = h;
 		oldtex_rtg[monid] = mon->screen_is_picasso;
+
+		// Even if buffer dimensions aren't ready yet, we need to ensure the shader is created
+		// for native mode. Use the amiga_surface dimensions that doInit already set up.
+		// This is critical for RTG→Native switches where the shader must be recreated for native mode.
+#ifdef USE_OPENGL
+		if (!mon->screen_is_picasso && amiga_surface) {
+			SDL2_alloctexture(mon->monitor_id, amiga_surface->w, amiga_surface->h);
+		}
+#endif
 		return false;
 	}
 
-	// Ensure amiga_surface is in sync with the texture size
-	if (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h) {
+	// Ensure amiga_surface is in sync with the texture size, format, and memory pointer (if zero-copy)
+	bool recreate_surface = (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h || amiga_surface->format->format != pixel_format);
+
+	if (recreate_surface) {
 		if (amiga_surface) {
 			SDL_FreeSurface(amiga_surface);
+			amiga_surface = nullptr;
 		}
+		const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
+
 		write_log("Re-creating amiga_surface with size %dx%d to match texture.\n", w, h);
-		amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, pixel_format);
+		amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, surface_depth, pixel_format);
 		if (amiga_surface == nullptr) {
 			write_log("!!! Failed to create amiga_surface.\n");
 			return false;
 		}
+		struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
+		vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
+#ifndef PICASSO_STATE_SETDAC
+#define PICASSO_STATE_SETDAC 8
+#endif
+		atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETDAC);
 	}
 
+	// Allocate/update texture (single call regardless of surface recreation)
 	if (!SDL2_alloctexture(mon->monitor_id, w, h)) {
 		return false;
 	}
 
+	// Update video buffer dimensions (consolidated)
 	if (vbout) {
 		vbout->width_allocated = w;
 		vbout->height_allocated = h;
@@ -4517,9 +4539,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 			set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
 		}
 		else
-		{
 			return false;
-		}
 #endif
 	}
 
