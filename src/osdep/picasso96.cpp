@@ -101,6 +101,8 @@ void mman_ResetWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize);
 #else
 static bool* dirty_page_map[MAX_RTG_BOARDS];
 static int dirty_page_map_size[MAX_RTG_BOARDS];
+static int min_dirty_page_index[MAX_RTG_BOARDS];
+static int max_dirty_page_index[MAX_RTG_BOARDS];
 #endif
 
 static void picasso_flushpixels(int index, uae_u8 *src, int offset, bool render);
@@ -443,6 +445,9 @@ static void mark_dirty(int index, uae_u8* addr, int size)
 
 	if (start_page < 0) start_page = 0;
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
+
+	if (start_page < min_dirty_page_index[index]) min_dirty_page_index[index] = start_page;
+	if (end_page > max_dirty_page_index[index]) max_dirty_page_index[index] = end_page;
 
 	for (int i = start_page; i <= end_page; ++i) {
 		dirty_page_map[index][i] = true;
@@ -2757,6 +2762,15 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 	gwwbufsize[index] = gfxmemsize / gwwpagesize[index] + 1;
 	gwwpagemask[index] = gwwpagesize[index] - 1;
 	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
+
+	delete[] dirty_page_map[index];
+	const int pages = gwwbufsize[index];
+	dirty_page_map[index] = new bool[pages];
+	dirty_page_map_size[index] = pages;
+	// Initialize min/max to "empty" state
+	min_dirty_page_index[index] = pages;
+	max_dirty_page_index[index] = -1;
+	memset(dirty_page_map[index], 0, pages * sizeof(bool));
 #endif
 }
 
@@ -2793,7 +2807,19 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	const int page_size = gwwpagesize[index];
 	int count = 0;
 
-	for (int i = 0; i < dirty_page_map_size[index]; ++i) {
+	int start = min_dirty_page_index[index];
+	int end = max_dirty_page_index[index];
+
+	if (start > end) {
+		// Should not happen if dirty_page_map[index] is checked, but safe guard
+		return -1; 
+	}
+
+	// Reset bounds immediately for next frame accumulation
+	min_dirty_page_index[index] = dirty_page_map_size[index];
+	max_dirty_page_index[index] = -1;
+
+	for (int i = start; i <= end; ++i) {
 		if (dirty_page_map[index][i]) {
 			if (count < gwwbufsize[index]) {
 				gwwbuf[index][count++] = const_cast<uae_u8*>(base) + i * page_size;
