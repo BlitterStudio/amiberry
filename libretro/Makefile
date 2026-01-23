@@ -61,6 +61,8 @@ endif
 
 LDFLAGS += $(fpic) $(SHARED)
 FLAGS += $(fpic) 
+FLAGS += -ffunction-sections -fdata-sections
+LDFLAGS += -Wl,--gc-sections
 
 ifeq ($(DEBUG), 1)
    FLAGS += -O0 -g
