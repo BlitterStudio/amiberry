@@ -1085,13 +1085,20 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 		dy -= static_cast<float>(crop_rect.y);
 	}
 #endif
-	//if (ad->picasso_on) {
-	//	dx = picasso_offset_x * picasso_offset_mx;
-	//	dy = picasso_offset_y * picasso_offset_my;
-	//	mx = picasso_offset_mx;
-	//	my = picasso_offset_my;
-	//}
 
+#ifdef USE_OPENGL
+	// In OpenGL mode with RTG, use render_quad for offset and scaling calculations
+	// render_quad contains the actual viewport position and dimensions
+	if (ad->picasso_on && render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
+		// Offset: position of the viewport within the screen
+		dx -= static_cast<float>(render_quad.x);
+		dy -= static_cast<float>(render_quad.y);
+		// Scaling: ratio of Amiga surface to viewport size
+		mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
+		my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
+	}
+	else
+#endif
 	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
 		while (!(mon->scalepicasso && mon->screen_is_picasso)) {
 			if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))

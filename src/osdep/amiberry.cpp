@@ -1921,21 +1921,12 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
 		/* absolute */
-		if (isfullscreen() != 0 && render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
-			// Offset by the render quad position (handling letterboxing)
-			x -= render_quad.x;
-			y -= render_quad.y;
-
-			// Scale to the Amiga surface dimensions
-			x = (x * amiga_surface->w) / render_quad.w;
-			y = (y * amiga_surface->h) / render_quad.h;
-
-			// Clamp to surface bounds
-			x = std::max(0, std::min(x, amiga_surface->w));
-			y = std::max(0, std::min(y, amiga_surface->h));
-		}
-		else if (!is_picasso) {
-			// Legacy scaling for windowed/native modes if not covered above
+		// For absolute positioning, pass raw SDL coordinates to the input system.
+		// The get_mouse_position() function in inputdevice.cpp handles coordinate
+		// transformation via getgfxoffset() for both RTG and native modes.
+		// Applying transformation here causes double-transformation issues.
+		if (!is_picasso) {
+			// Legacy scaling for native modes - required for proper coordinate mapping
 			x = (x / 2) << currprefs.gfx_resolution;
 			y = (y / 2) << currprefs.gfx_vresolution;
 		}
