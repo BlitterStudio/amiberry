@@ -4338,6 +4338,59 @@ static bool doInit(AmigaMonitor* mon)
 	return true;
 }
 
+// Helper: Compute scaled dimensions for aspect ratio correction
+// RTG modes use 1:1 scaling, Native modes scale based on resolution settings
+static void compute_scaled_dimensions(const int w, const int h, const bool is_rtg, int& scaled_w, int& scaled_h)
+{
+	if (is_rtg) {
+		scaled_w = w;
+		scaled_h = h;
+		return;
+	}
+
+	scaled_w = w;
+	scaled_h = h;
+
+	if (currprefs.gfx_vresolution == VRES_NONDOUBLE) {
+		if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
+			scaled_h *= 2;
+	} else {
+		if (currprefs.gfx_resolution == RES_LORES)
+			scaled_w *= 2;
+	}
+
+	if (currprefs.ntscmode)
+		scaled_h = scaled_h * 6 / 5;
+}
+
+// Helper: Configure render_quad and crop_rect based on mode and crop settings
+// For RTG: direct 1:1 mapping
+// For Native: respects manual crop settings, auto_crop is handled elsewhere
+static void configure_render_rects(const int w, const int h, const int scaled_w, const int scaled_h, const bool is_rtg)
+{
+	if (is_rtg) {
+		render_quad = { dx, dy, w, h };
+		crop_rect = { dx, dy, w, h };
+		return;
+	}
+
+	// Native mode with manual crop
+	if (currprefs.gfx_manual_crop) {
+		render_quad = { dx, dy, scaled_w, scaled_h };
+		crop_rect = {
+			currprefs.gfx_horizontal_offset,
+			currprefs.gfx_vertical_offset,
+			(currprefs.gfx_manual_crop_width > 0) ? currprefs.gfx_manual_crop_width : w,
+			(currprefs.gfx_manual_crop_height > 0) ? currprefs.gfx_manual_crop_height : h
+		};
+	}
+	// Native mode without auto_crop (auto_crop is handled in auto_crop_image())
+	else if (!currprefs.gfx_auto_crop) {
+		render_quad = { dx, dy, scaled_w, scaled_h };
+		crop_rect = { dx, dy, w, h };
+	}
+}
+
 bool target_graphics_buffer_update(const int monid, const bool force)
 {
 	struct AmigaMonitor* mon = &AMonitors[monid];
@@ -4492,119 +4545,36 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 	write_log(_T("Buffer %d size (%d*%d) %s\n"), monid, w, h, mon->screen_is_picasso ? _T("RTG") : _T("Native"));
 
-	if (mon->screen_is_picasso)
-	{
-		if (mon->amiga_window && isfullscreen() == 0)
-		{
-			if (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h)
-			{
-				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
-			}
-			else
-			{
-				SDL_SetWindowSize(mon->amiga_window, w, h);
-			}
-		}
-#ifdef USE_OPENGL
-		render_quad = { dx, dy, w, h };
-		crop_rect = { dx, dy, w, h };
-		set_scaling_option(mon->monitor_id, &currprefs, w, h);
-#else
-		if (mon->amiga_renderer) {
-			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
-				render_quad = {dx, dy, w, h};
-				crop_rect = {dx, dy, w, h};
-			}
-			else
-			{
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, h, w);
-				render_quad = { -(w - h) / 2, (w - h) / 2, w, h };
-				crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
-			}
-			set_scaling_option(monid, &currprefs, w, h);
-		}
-		else
-			return false;
-#endif
-	}
-	else
-	{
-		int scaled_width = w;
-		int scaled_height = h;
-		if (currprefs.gfx_vresolution == VRES_NONDOUBLE)
-		{
-			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
-				scaled_height *= 2;
-//			else if (currprefs.gfx_resolution == RES_SUPERHIRES)
-//				scaled_width /= 2;
-		}
-		else
-		{
-			if (currprefs.gfx_resolution == RES_LORES)
-				scaled_width *= 2;
-//			else if (currprefs.gfx_resolution == RES_SUPERHIRES)
-//				scaled_width /= 2;
-		}
+	// Compute scaled dimensions for aspect ratio correction
+	int scaled_width, scaled_height;
+	compute_scaled_dimensions(w, h, mon->screen_is_picasso, scaled_width, scaled_height);
 
-		if (currprefs.ntscmode)
-			scaled_height = scaled_height * 6 / 5;
-
-		if (mon->amiga_window && isfullscreen() == 0)
-		{
-			if (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600)
-			{
-				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
-			}
-			else
-			{
-				SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
-			}
+	// Window sizing when not fullscreen
+	if (mon->amiga_window && isfullscreen() == 0) {
+		int win_w, win_h;
+		if (mon->screen_is_picasso) {
+			// RTG: use stored rect if larger, otherwise use RTG resolution
+			win_w = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.w : w;
+			win_h = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.h : h;
+		} else {
+			// Native: use stored rect if larger than default, otherwise use scaled dimensions
+			win_w = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.w : scaled_width;
+			win_h = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.h : scaled_height;
 		}
-#ifdef USE_OPENGL
-		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
-			render_quad = { dx, dy, scaled_width, scaled_height };
-			crop_rect = { dx, dy, w, h };
-		}
-		else if (currprefs.gfx_manual_crop)
-		{
-			render_quad = { dx, dy, scaled_width, scaled_height };
-			crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
-			if (crop_rect.w <= 0) crop_rect.w = w;
-			if (crop_rect.h <= 0) crop_rect.h = h;
-		}
-		set_scaling_option(mon->monitor_id, &currprefs, scaled_width, scaled_height);
-#else
-		if (mon->amiga_renderer)
-		{
-			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
-				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
-					render_quad = {dx, dy, scaled_width, scaled_height};
-					crop_rect = {dx, dy, w, h};
-				}
-				else if (currprefs.gfx_manual_crop)
-				{
-					render_quad = { dx, dy, scaled_width, scaled_height };
-					crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
-					if (crop_rect.w <= 0) crop_rect.w = w;
-					if (crop_rect.h <= 0) crop_rect.h = h;
-				}
-			}
-			else
-			{
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_height, scaled_width);
-				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
-					render_quad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
-					crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
-				}
-			}
-			set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
-		}
-		else
-			return false;
-#endif
+		SDL_SetWindowSize(mon->amiga_window, win_w, win_h);
 	}
+
+#ifdef USE_OPENGL
+	configure_render_rects(w, h, scaled_width, scaled_height, mon->screen_is_picasso);
+	set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
+#else
+	if (!mon->amiga_renderer)
+		return false;
+
+	SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
+	configure_render_rects(w, h, scaled_width, scaled_height, mon->screen_is_picasso);
+	set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
+#endif
 
 	return true;
 }
@@ -4897,6 +4867,12 @@ void auto_crop_image()
 			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
 				height *= 2;
 		}
+		else
+		{
+			// Add missing LORES width doubling to match compute_scaled_dimensions()
+			if (currprefs.gfx_resolution == RES_LORES)
+				width *= 2;
+		}
 
 		if (currprefs.ntscmode)
 			height = height * 6 / 5;
@@ -4912,21 +4888,11 @@ void auto_crop_image()
 		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
 		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 #else
-
-		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		{
-			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
-			render_quad = { dx, dy, width, height };
-			crop_rect = { cx, cy, cw, ch };
-			if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
-			if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
-		}
-		else
-		{
-			SDL_RenderSetLogicalSize(mon->amiga_renderer, height, width);
-			render_quad = { -(width - height) / 2, (width - height) / 2, width, height };
-			crop_rect = { -(width - height) / 2, (width - height) / 2, width, height };
-		}
+		SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
+		render_quad = { dx, dy, width, height };
+		crop_rect = { cx, cy, cw, ch };
+		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
+		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 
 		if (vkbd_allowed(0))
 		{
