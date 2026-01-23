@@ -1250,7 +1250,9 @@ void picasso_refresh(int monid)
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 
 #ifdef AMIBERRY
-	target_graphics_buffer_update(monid, true);
+	if (currprefs.rtg_zerocopy) {
+		target_graphics_buffer_update(monid, true);
+	}
 #endif
 
 	if (!ad->picasso_on)
@@ -3462,7 +3464,9 @@ static uae_u32 REGPARAM2 picasso_SetDAC (TrapContext *ctx)
 	
 	// Force update check when DAC changes (e.g. format change)
 #ifdef AMIBERRY
-	target_graphics_buffer_update(monid, true);
+	if (currprefs.rtg_zerocopy) {
+		target_graphics_buffer_update(monid, true);
+	}
 #endif
 
 	const uae_u16 idx = trap_get_dreg(ctx, 0);
@@ -3638,8 +3642,11 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	
 	// Force update check when setting panning (often indicates screen switch or double buffering)
+	// Only needed for Zero Copy, to update the pointer if the address changed.
 #ifdef AMIBERRY
-	target_graphics_buffer_update(monid, true);
+	if (currprefs.rtg_zerocopy) {
+		target_graphics_buffer_update(monid, true);
+	}
 #endif
 	
 	uae_u16 Width = trap_get_dreg(ctx, 0);
@@ -3671,6 +3678,12 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 	state->BytesPerPixel = GetBytesPerPixel (state->RGBFormat);
 	state->BytesPerRow = state->VirtualWidth * state->BytesPerPixel;
 	picasso_SetPanningInit(state);
+
+#ifdef AMIBERRY
+	if (currprefs.rtg_zerocopy) {
+		target_graphics_buffer_update(monid, true);
+	}
+#endif
 
 	if (rgbf != state->RGBFormat) {
 		setconvert(monid);
@@ -4482,9 +4495,10 @@ static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 
 	// Force update check when Display state changes (On/Off)
 #ifdef AMIBERRY
-	target_graphics_buffer_update(monid, true);
+	if (currprefs.rtg_zerocopy) {
+		target_graphics_buffer_update(monid, true);
+	}
 #endif
-
 	P96TRACE_SETUP((_T("SetDisplay(%d)\n"), setstate));
 	resetpalette(state);
 	atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETDISPLAY);
