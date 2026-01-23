@@ -1,6 +1,6 @@
 #ifndef LIBCO_LIBCO_H
 #define LIBCO_LIBCO_H
 
-#include <libco.h>
+#include "libretro-common/include/libco.h"
 
 #endif
