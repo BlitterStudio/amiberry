@@ -2054,7 +2054,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
         }
 
         // Optimization: Screen-to-Screen Copy (ROP 0x0D)
-        if ((gd5429->blt.mode & 0xC4) == 0 && gd5429->blt.rop == 0x0D) {
+        // Skip optimization for 8-bit depth until properly debugged
+        if (bpp != 1 && (gd5429->blt.mode & 0xC4) == 0 && gd5429->blt.rop == 0x0D) {
             // ... (Existing FastBlt code for Copy) ...
             int w = gd5429->blt.width_backup + 1;
             int h = gd5429->blt.height_internal + 1;
@@ -2069,8 +2070,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
                 uint32_t s_start = src_addr;
 
                 if (backward) {
-                    d_start = d_start - w + bpp; 
-                    s_start = s_start - w + bpp;
+                    d_start = d_start - w + 1; 
+                    s_start = s_start - w + 1;
                 }
 
                 if ((d_start + w) <= svga->vram_max && (s_start + w) <= svga->vram_max) {
@@ -2094,7 +2095,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
         // Optimization: Fast Pattern Fill (RectFill/RectFillPattern)
         // Matches logs: mode=0xD0 (Pattern Copy), rop=0x0D (Source Copy, actually Pattern Copy in this mode context)
         // Ext=0 means "Not solid block", so "Mono Expansion from VRAM Pattern".
-        if ((gd5429->blt.mode & 0xC0) == 0xC0 && !(gd5429->blt.extensions & 4)) {
+        // Skip optimization for 8-bit depth until properly debugged
+        if (bpp != 1 && (gd5429->blt.mode & 0xC0) == 0xC0 && !(gd5429->blt.extensions & 4)) {
              // Supports ROP 0x0D (Copy Pattern) and 0xF0 (Copy Pattern). 0x0D in Pattern Mode means "Copy Pattern Source"? 
              // Logic: Standard loop uses 'src' derived from pattern expansion, then applies ROP 0x0D -> dst=src.
              // So if ROP is 0x0D or 0xF0 (common copies), we can optimize.
@@ -2123,7 +2125,7 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
                      int pixels = w / bpp;
                      
                      uint32_t d_start = dst_addr;
-                     if (backward) d_start = d_start - w + bpp;
+                     if (backward) d_start = d_start - w + 1;
                      
                      // Get pattern byte for this line
                      uint8_t pattern_byte = svga->vram[(src_addr_base & svga->vram_mask & ~7) | (y_count & 7)];
@@ -2305,7 +2307,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
 
         // Optimization: Fast Solid Fill (RectFill)
         // We target the Solid Color Extension case (bit 2 of extensions)
-        if ((gd5429->blt.mode & 0xC0) && (gd5429->blt.extensions & 4) && (gd5429->blt.rop == 0xF0 || gd5429->blt.rop == 0x0D)) {
+        // Skip optimization for 8-bit depth until properly debugged
+        if (bpp != 1 && (gd5429->blt.mode & 0xC0) && (gd5429->blt.extensions & 4) && (gd5429->blt.rop == 0xF0 || gd5429->blt.rop == 0x0D)) {
              int w = gd5429->blt.width_backup + 1; // Width is already in bytes
              int h = gd5429->blt.height_internal + 1;
              int dst_pitch = (gd5429->blt.mode & 0x01) ? -gd5429->blt.dst_pitch : gd5429->blt.dst_pitch;
@@ -2322,7 +2325,7 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
 
              for (int i = 0; i < h; i++) {
                  uint32_t d_start = dst_addr;
-                 if (backwards) d_start = d_start - w + bpp;
+                 if (backwards) d_start = d_start - w + 1;
 
                  if ((d_start + w) <= svga->vram_max) {
                      if (bpp == 1) {
