@@ -75,7 +75,6 @@
 #include "rp.h"
 #endif
 #include "picasso96.h"
-#include "amiberry_gfx.h"
 #include "clipboard.h"
 #include "gfxboard.h"
 #include "devices.h"
@@ -1248,12 +1247,6 @@ void picasso_refresh(int monid)
 	const struct amigadisplay *ad = &adisplays[monid];
 	const struct picasso96_state_struct *state = &picasso96_state[monid];
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
-
-#ifdef AMIBERRY
-	if (currprefs.rtg_zerocopy) {
-		target_graphics_buffer_update(monid, true);
-	}
-#endif
 
 	if (!ad->picasso_on)
 		return;
@@ -3461,13 +3454,6 @@ static uae_u32 REGPARAM2 picasso_SetDAC (TrapContext *ctx)
 	const int monid = currprefs.rtgboards[0].monitor_id;
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	const struct picasso96_state_struct* state = &picasso96_state[monid];
-	
-	// Force update check when DAC changes (e.g. format change)
-#ifdef AMIBERRY
-	if (currprefs.rtg_zerocopy) {
-		target_graphics_buffer_update(monid, true);
-	}
-#endif
 
 	const uae_u16 idx = trap_get_dreg(ctx, 0);
 	const uae_u32 mode = trap_get_dreg(ctx, 7);
@@ -3641,14 +3627,6 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	
-	// Force update check when setting panning (often indicates screen switch or double buffering)
-	// Only needed for Zero Copy, to update the pointer if the address changed.
-#ifdef AMIBERRY
-	if (currprefs.rtg_zerocopy) {
-		target_graphics_buffer_update(monid, true);
-	}
-#endif
-	
 	uae_u16 Width = trap_get_dreg(ctx, 0);
 	const uaecptr start_of_screen = trap_get_areg(ctx, 1);
 	const uaecptr bi = trap_get_areg(ctx, 0);
@@ -3678,12 +3656,6 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 	state->BytesPerPixel = GetBytesPerPixel (state->RGBFormat);
 	state->BytesPerRow = state->VirtualWidth * state->BytesPerPixel;
 	picasso_SetPanningInit(state);
-
-#ifdef AMIBERRY
-	if (currprefs.rtg_zerocopy) {
-		target_graphics_buffer_update(monid, true);
-	}
-#endif
 
 	if (rgbf != state->RGBFormat) {
 		setconvert(monid);

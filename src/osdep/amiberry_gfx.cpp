@@ -2745,6 +2745,7 @@ int check_prefs_changed_gfx()
 	c |= currprefs.rtg_hardwareinterrupt != changed_prefs.rtg_hardwareinterrupt ? 32 : 0;
 	c |= currprefs.rtg_hardwaresprite != changed_prefs.rtg_hardwaresprite ? 32 : 0;
 	c |= currprefs.rtg_multithread != changed_prefs.rtg_multithread ? 32 : 0;
+	c |= currprefs.rtg_zerocopy != changed_prefs.rtg_zerocopy ? 32 : 0;
 #endif
 
 	if (display_change_requested || c)
@@ -2871,6 +2872,7 @@ int check_prefs_changed_gfx()
 		currprefs.rtg_hardwareinterrupt = changed_prefs.rtg_hardwareinterrupt;
 		currprefs.rtg_hardwaresprite = changed_prefs.rtg_hardwaresprite;
 		currprefs.rtg_multithread = changed_prefs.rtg_multithread;
+		currprefs.rtg_zerocopy = changed_prefs.rtg_zerocopy;
 #endif
 
 		bool unacquired = false;
