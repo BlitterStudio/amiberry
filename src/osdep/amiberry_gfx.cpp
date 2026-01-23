@@ -4046,9 +4046,7 @@ static int create_windows(struct AmigaMonitor* mon)
 
 #ifdef USE_OPENGL
 	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
-	const char* drv = SDL_GetCurrentVideoDriver();
-	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
-	if (!likely_gles_only) {
+	if (!kmsdrm_detected) {
 		flags |= SDL_WINDOW_OPENGL;
 	} else {
 		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
@@ -4087,10 +4085,6 @@ static int create_windows(struct AmigaMonitor* mon)
 		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
 		const auto* ad = &adisplays[mon->monitor_id];
 		const auto* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
-		// Force disable VSync for the renderer to prevent blocking in SDL_RenderPresent.
-		// We handle frame timing manually in SDL2_showframe with high precision.
-		// if (ap->gfx_vsync > 0)
-		//	renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
 
 		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, renderer_flags);
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
@@ -4116,6 +4110,7 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
 		write_log("SDL2: Set window not to minimize on focus loss\n");
+
 	return 1;
 }
 
@@ -4432,17 +4427,13 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	if (!recreate_surface && is_zero_copy_eligible && amiga_surface->pitch != state->BytesPerRow) {
 		recreate_surface = true;
 	}
-	if(amiga_surface && is_zero_copy_eligible && amiga_surface->pixels != (void*)rtg_render_ptr) {
+	if (amiga_surface && is_zero_copy_eligible && amiga_surface->pixels != (void*)rtg_render_ptr) {
 		recreate_surface = true;
 	}
 	// If Zero-Copy is disabled, but we are still pointing to VRAM, we must recreate the surface
 	if (amiga_surface && !is_zero_copy_eligible && rtg_render_ptr && amiga_surface->pixels == rtg_render_ptr) {
 		recreate_surface = true;
 	}
-
-
-	// write_log("GFX Update: mon=%d, w=%d, h=%d, fmt=%s, zero_copy=%d, surf=%p, rtg=%p\n", 
-	// 	monid, w, h, SDL_GetPixelFormatName(pixel_format), is_zero_copy_eligible, amiga_surface, rtg_render_ptr);
 
 	if (recreate_surface) {
 		if (amiga_surface) {
