@@ -4,7 +4,7 @@
 #include "libretro.h"
 
 #ifdef LIBRETRO
-#include <libco.h>
+#include "libco/libco.h"
 
 extern cothread_t main_fiber;
 extern cothread_t core_fiber;

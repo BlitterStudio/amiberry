@@ -29,6 +29,7 @@ endif
 LIBRETRO_DIR := .
 AMIBERRY_DIR := ..
 LIBRETRO_COMMON ?= $(LIBRETRO_DIR)/libretro-common
+LIBCO_DIR := $(LIBRETRO_DIR)/libco
 PKG_CONFIG ?= pkg-config
 
 TARGET_NAME := amiberry
@@ -84,6 +85,7 @@ INCFLAGS += -I$(AMIBERRY_DIR)/src/archivers
 INCFLAGS += -I$(AMIBERRY_DIR)/external/libguisan/include
 INCFLAGS += -I$(AMIBERRY_DIR)/external/floppybridge/src
 INCFLAGS += -I$(LIBRETRO_DIR)
+INCFLAGS += -I$(LIBCO_DIR)
 INCFLAGS += -I$(LIBRETRO_COMMON)/include
 
 SDL2_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags sdl2 2>/dev/null)
@@ -485,7 +487,7 @@ SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(
 ifeq ($(USE_PCEM),1)
 SOURCES_CXX += $(SOURCES_PCEM)
 endif
-SOURCES_C := $(SOURCES_7Z) $(LIBRETRO_COMMON)/libco/libco.c
+SOURCES_C := $(SOURCES_7Z) $(LIBCO_DIR)/libco.c
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
 
