@@ -1761,8 +1761,18 @@ static void handle_joy_hat_motion_event(const SDL_Event& event)
 
 static void handle_key_event(const SDL_Event& event)
 {
-	if (event.key.repeat != 0 || !isfocus() || (isfocus() < 2 && currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC)))
+	// Allow keyboard input if we have any focus level
+	const int focus_level = isfocus();
+	if (event.key.repeat != 0 || !focus_level)
 		return;
+	
+	// Only apply the virtual mouse focus restriction in windowed mode.
+	// In fullscreen/full-window modes (including KMSDRM console), keyboard should work
+	// because console mode never receives SDL_WINDOWEVENT_ENTER, leaving mouseinside false.
+	if (isfullscreen() == 0 && focus_level < 2 && 
+		currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
+		return;
+
 
 	int scancode = event.key.keysym.scancode;
 	const auto pressed = event.key.state;
