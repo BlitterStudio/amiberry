@@ -22,7 +22,9 @@
 #endif
 #endif
 
+#ifndef AMIBERRY
 #define AMIBERRY
+#endif
 #ifndef UAE
 #define UAE
 #endif

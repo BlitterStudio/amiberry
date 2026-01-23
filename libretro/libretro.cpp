@@ -27,6 +27,46 @@ retro_log_printf_t log_cb;
 
 static char game_path[1024];
 static bool core_started = false;
+static bool input_log_enabled = true;
+static uint8_t key_state[RETROK_LAST + 1];
+static constexpr size_t kJoypadMax = RETRO_DEVICE_ID_JOYPAD_R3 + 1;
+static int16_t last_joypad[2][kJoypadMax];
+static int16_t last_analog[2][4];
+static int16_t last_trigger[2][2];
+static int16_t last_mouse_buttons[3];
+static int16_t last_mouse_x;
+static int16_t last_mouse_y;
+
+static void log_input_button(unsigned port, const char* name, int state)
+{
+	if (log_cb && input_log_enabled)
+		log_cb(RETRO_LOG_INFO, "input p%u %s %s\n", port + 1, name, state ? "down" : "up");
+}
+
+static void log_input_axis(unsigned port, const char* name, int16_t value, int16_t* last)
+{
+	if (!log_cb || !input_log_enabled) {
+		*last = value;
+		return;
+	}
+	if ((value == 0 && *last != 0) || (value != 0 && *last == 0))
+		log_cb(RETRO_LOG_INFO, "input p%u %s %d\n", port + 1, name, value);
+	*last = value;
+}
+
+static void log_mouse_button(unsigned button, int state)
+{
+	if (log_cb && input_log_enabled)
+		log_cb(RETRO_LOG_INFO, "input mouse button%u %s\n", button, state ? "down" : "up");
+}
+
+static void log_mouse_motion(int16_t dx, int16_t dy)
+{
+	if (!log_cb || !input_log_enabled)
+		return;
+	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0))
+		log_cb(RETRO_LOG_INFO, "input mouse motion dx=%d dy=%d\n", dx, dy);
+}
 
 static const struct retro_variable variables[] = {
 	{ "amiberry_model", "Amiga Model; A500|A500+|A600|A1200|CD32|A4000|CDTV" },
@@ -92,6 +132,15 @@ void libretro_yield(void)
 
 static void keyboard_cb(bool down, unsigned keycode, uint32_t character, uint16_t mod)
 {
+	if (keycode < RETROK_LAST) {
+		if (key_state[keycode] == down)
+			return;
+		key_state[keycode] = down;
+	}
+	if (log_cb && input_log_enabled)
+		log_cb(RETRO_LOG_INFO, "input kbd %s key=%u mod=0x%x char=0x%x\n",
+			down ? "down" : "up", keycode, mod, character);
+
 	int scancode = 0;
 	switch (keycode)
 	{
@@ -211,20 +260,72 @@ static void poll_input(void)
 	input_poll_cb();
 
 	// Joystick input
+	struct JoypadMap {
+		unsigned retro_id;
+		int sdl_button;
+		const char* name;
+	};
+	static const JoypadMap joypad_map[] = {
+		{ RETRO_DEVICE_ID_JOYPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_UP, "dpad_up" },
+		{ RETRO_DEVICE_ID_JOYPAD_DOWN, SDL_CONTROLLER_BUTTON_DPAD_DOWN, "dpad_down" },
+		{ RETRO_DEVICE_ID_JOYPAD_LEFT, SDL_CONTROLLER_BUTTON_DPAD_LEFT, "dpad_left" },
+		{ RETRO_DEVICE_ID_JOYPAD_RIGHT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT, "dpad_right" },
+		{ RETRO_DEVICE_ID_JOYPAD_B, SDL_CONTROLLER_BUTTON_A, "b" },
+		{ RETRO_DEVICE_ID_JOYPAD_A, SDL_CONTROLLER_BUTTON_B, "a" },
+		{ RETRO_DEVICE_ID_JOYPAD_Y, SDL_CONTROLLER_BUTTON_X, "y" },
+		{ RETRO_DEVICE_ID_JOYPAD_X, SDL_CONTROLLER_BUTTON_Y, "x" },
+		{ RETRO_DEVICE_ID_JOYPAD_SELECT, SDL_CONTROLLER_BUTTON_BACK, "select" },
+		{ RETRO_DEVICE_ID_JOYPAD_START, SDL_CONTROLLER_BUTTON_START, "start" },
+		{ RETRO_DEVICE_ID_JOYPAD_L, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, "l1" },
+		{ RETRO_DEVICE_ID_JOYPAD_R, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, "r1" },
+		{ RETRO_DEVICE_ID_JOYPAD_L3, SDL_CONTROLLER_BUTTON_LEFTSTICK, "l3" },
+		{ RETRO_DEVICE_ID_JOYPAD_R3, SDL_CONTROLLER_BUTTON_RIGHTSTICK, "r3" }
+	};
+
 	for (int i = 0; i < 2; i++)
 	{
-		int port = (i == 0) ? 1 : 0; // Libretro P1 -> Amiga Port 1, Libretro P2 -> Amiga Port 0
-		
-		// Directions
-		setjoybuttonstate(port, DIR_UP_BIT, input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP));
-		setjoybuttonstate(port, DIR_DOWN_BIT, input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN));
-		setjoybuttonstate(port, DIR_LEFT_BIT, input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT));
-		setjoybuttonstate(port, DIR_RIGHT_BIT, input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT));
-		
-		// Buttons
-		setjoybuttonstate(port, JOYBUTTON_1, input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B));
-		setjoybuttonstate(port, JOYBUTTON_2, input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A));
-		setjoybuttonstate(port, JOYBUTTON_3, input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X));
+		const int joy = i;
+		for (const auto& mapping : joypad_map)
+		{
+			const int state = input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, mapping.retro_id) & 1;
+			if (state != last_joypad[i][mapping.retro_id]) {
+				last_joypad[i][mapping.retro_id] = state;
+				log_input_button(i, mapping.name, state);
+			}
+			setjoybuttonstate(joy, mapping.sdl_button, state);
+		}
+
+		const int l2 = input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) & 1;
+		const int r2 = input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) & 1;
+		if (l2 != last_joypad[i][RETRO_DEVICE_ID_JOYPAD_L2]) {
+			last_joypad[i][RETRO_DEVICE_ID_JOYPAD_L2] = l2;
+			log_input_button(i, "l2", l2);
+		}
+		if (r2 != last_joypad[i][RETRO_DEVICE_ID_JOYPAD_R2]) {
+			last_joypad[i][RETRO_DEVICE_ID_JOYPAD_R2] = r2;
+			log_input_button(i, "r2", r2);
+		}
+
+		const int16_t lx = (int16_t)input_state_cb(i, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+		const int16_t ly = (int16_t)input_state_cb(i, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
+		const int16_t rx = (int16_t)input_state_cb(i, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
+		const int16_t ry = (int16_t)input_state_cb(i, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y);
+		const int16_t lt = l2 ? 32767 : 0;
+		const int16_t rt = r2 ? 32767 : 0;
+
+		log_input_axis(i, "lx", lx, &last_analog[i][0]);
+		log_input_axis(i, "ly", ly, &last_analog[i][1]);
+		log_input_axis(i, "rx", rx, &last_analog[i][2]);
+		log_input_axis(i, "ry", ry, &last_analog[i][3]);
+		log_input_axis(i, "lt", lt, &last_trigger[i][0]);
+		log_input_axis(i, "rt", rt, &last_trigger[i][1]);
+
+		setjoystickstate(joy, SDL_CONTROLLER_AXIS_LEFTX, lx, 32767);
+		setjoystickstate(joy, SDL_CONTROLLER_AXIS_LEFTY, ly, 32767);
+		setjoystickstate(joy, SDL_CONTROLLER_AXIS_RIGHTX, rx, 32767);
+		setjoystickstate(joy, SDL_CONTROLLER_AXIS_RIGHTY, ry, 32767);
+		setjoystickstate(joy, SDL_CONTROLLER_AXIS_TRIGGERLEFT, lt, 32767);
+		setjoystickstate(joy, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, rt, 32767);
 	}
 
 	// Mouse input
@@ -232,6 +333,7 @@ static void poll_input(void)
 	{
 		int16_t mouse_x = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
 		int16_t mouse_y = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+		log_mouse_motion(mouse_x, mouse_y);
 		if (mouse_x != 0 || mouse_y != 0)
 		{
 			setmousestate(i, 0, mouse_x, 0);
@@ -245,9 +347,15 @@ static void poll_input(void)
 		};
 		for (int b = 0; b < 3; b++)
 		{
-			int16_t state = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, mouse_buttons[b]);
+			const int16_t state = input_state_cb(i, RETRO_DEVICE_MOUSE, 0, mouse_buttons[b]) & 1;
+			if (state != last_mouse_buttons[b]) {
+				last_mouse_buttons[b] = state;
+				log_mouse_button(b, state);
+			}
 			setmousebuttonstate(i, b, state);
 		}
+		last_mouse_x = mouse_x;
+		last_mouse_y = mouse_y;
 	}
 }
 

@@ -28,13 +28,7 @@ endif
 
 LIBRETRO_DIR := .
 AMIBERRY_DIR := ..
-LIBRETRO_COMMON ?= ../../libretro-common
-
-ifeq ($(wildcard $(LIBRETRO_COMMON)/include/libco.h),)
-ifneq ($(wildcard /opt/RetroArch/libretro-common/include/libco.h),)
-LIBRETRO_COMMON := /opt/RetroArch/libretro-common
-endif
-endif
+LIBRETRO_COMMON ?= $(LIBRETRO_DIR)/libretro-common
 PKG_CONFIG ?= pkg-config
 
 TARGET_NAME := amiberry
