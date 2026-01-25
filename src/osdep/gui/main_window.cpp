@@ -273,6 +273,7 @@ void amiberry_gui_init()
 		{
 			mon->gui_renderer = mon->amiga_renderer;
 		}
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
@@ -294,7 +295,7 @@ void amiberry_gui_init()
         Uint32 mode;
 		if (!kmsdrm_detected)
 		{
-			// Only enable Windowed mode if we're running under x11
+			// Only enable Windowed mode if we're running under a window environment
 			mode = SDL_WINDOW_RESIZABLE;
 		}
 		else
