@@ -248,12 +248,9 @@ void update_gui_screen()
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		gui_renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
-	else
-		gui_renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
-	
-	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &gui_renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	gui_renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+
+	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &gui_renderQuad, 0, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(mon->gui_renderer);
 
 	if (mon->amiga_window && !kmsdrm_detected)
@@ -315,24 +312,13 @@ void amiberry_gui_init()
 		// Set Window allow high DPI by default
 		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-        if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-        {
-			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+        mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
 				gui_window_rect.w,
 				gui_window_rect.h,
 				mode);
-        }
-        else
-        {
-			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				gui_window_rect.h,
-				gui_window_rect.w,
-				mode);
-        }
+
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
@@ -358,10 +344,7 @@ void amiberry_gui_init()
 									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 
-	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
-	else
-		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
+	SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);

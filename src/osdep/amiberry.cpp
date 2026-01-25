@@ -2508,7 +2508,7 @@ void target_default_options(uae_prefs* p, const int type)
 		//p->filesystem_mangle_reserved_names = true;
 	}
 
-	multithread_enabled = amiberry_options.default_multithreaded_drawing;
+	multithread_enabled = true;
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
@@ -3570,10 +3570,6 @@ void save_amiberry_settings()
 	// If you want to disable the default behavior for some reason
 	write_bool_option("gui_joystick_control", amiberry_options.gui_joystick_control);
 
-	// Use a separate thread for drawing native chipset output
-	// This helps with performance, but may cause glitches in some cases
-	write_bool_option("default_multithreaded_drawing", amiberry_options.default_multithreaded_drawing);
-
 	// Default mouse input speed
 	write_int_option("input_default_mouse_speed", amiberry_options.input_default_mouse_speed);
 
@@ -3592,9 +3588,6 @@ void save_amiberry_settings()
 	// Default key for Fullscreen Toggle
 	write_string_option("default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key);
 
-	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
-	write_int_option("rotation_angle", amiberry_options.rotation_angle);
-	
 	// Enable Horizontal Centering by default?
 	write_bool_option("default_horizontal_centering", amiberry_options.default_horizontal_centering);
 
@@ -3803,9 +3796,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 {
 	TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
 	int numROMs, numDisks, numCDs;
-	auto romType = -1;
-	char romName[MAX_DPATH] = {'\0'};
-	char romPath[MAX_DPATH] = {'\0'};
 	char tmpFile[MAX_DPATH];
 	int ret = 0;
 
@@ -3879,14 +3869,12 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
-		ret |= cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
 		ret |= cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
 		ret |= cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
 		ret |= cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
 		ret |= cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
-		ret |= cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
 		ret |= cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
 		ret |= cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);

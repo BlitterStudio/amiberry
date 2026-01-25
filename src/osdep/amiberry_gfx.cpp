@@ -683,7 +683,7 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 			}
 		}
 
-		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, p_crop, p_quad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, p_crop, p_quad, 0, nullptr, SDL_FLIP_NONE);
 
 #ifndef USE_OPENGL
 		// Render Software Cursor Overlay for RTG (when using relative mouse mode)
