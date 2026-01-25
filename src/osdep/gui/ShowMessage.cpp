@@ -89,24 +89,12 @@ static void InitShowMessage(const std::string& message)
 			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 		}
 
-		if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-		{
-			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+		mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
 				GUI_HEIGHT,
 				GUI_WIDTH,
 				mode);
-		}
-		else
-		{
-			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				GUI_WIDTH,
-				GUI_HEIGHT,
-				mode);
-		}
 		check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
 		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
@@ -131,10 +119,7 @@ static void InitShowMessage(const std::string& message)
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
 		if (!is_maximized && !is_fullscreen)
 		{
-			if (amiberry_options.rotation_angle != 0 && amiberry_options.rotation_angle != 180)
-				SDL_SetWindowSize(mon->gui_window, GUI_HEIGHT, GUI_WIDTH);
-			else
-				SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
+			SDL_SetWindowSize(mon->gui_window, GUI_HEIGHT, GUI_WIDTH);
 		}
 	}
 
@@ -147,11 +132,7 @@ static void InitShowMessage(const std::string& message)
 		check_error_sdl(gui_texture == nullptr, "Unable to create texture from Surface");
 	}
 
-	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
-	else
-		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
-
+	SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 

@@ -531,12 +531,9 @@ void update_gui_screen()
 	const AmigaMonitor* mon = &AMonitors[0];
 
 	SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		gui_renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
-	else
-		gui_renderQuad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
-	
-	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &gui_renderQuad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+	gui_renderQuad = { 0, 0, gui_screen->w, gui_screen->h };
+
+	SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &gui_renderQuad, 0, nullptr, SDL_FLIP_NONE);
 	SDL_RenderPresent(mon->gui_renderer);
 
 	if (mon->amiga_window && !kmsdrm_detected)
@@ -555,10 +552,10 @@ void BeginGroupBox(const char* name)
 {
     ImGui::BeginGroup();
     ImGui::PushID(name);
-    
+
     // Reserve space for the title and the top border part
     // The title will sit on the border line. We need space above the content.
-    ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f)); 
+    ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f));
     ImGui::Indent(10.0f); // Add internal padding
 }
 
@@ -567,19 +564,19 @@ void EndGroupBox(const char* name)
     ImGui::Unindent(10.0f);
     ImGui::PopID();
     ImGui::EndGroup(); // The group contains the content + dummy top space
-    
+
     // Now draw the border and title
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     ImVec2 item_min = ImGui::GetItemRectMin();
     ImVec2 item_max = ImGui::GetItemRectMax();
-    
+
     const float text_height = ImGui::GetTextLineHeight();
     const float border_y = item_min.y + text_height * 0.5f; // The border line y-coordinate
-    
+
     ImU32 border_col = ImGui::GetColorU32(ImGuiCol_Border);
     ImU32 shadow_col = ImGui::GetColorU32(ImGuiCol_BorderShadow);
     ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
-    
+
     ImVec2 text_size = ImGui::CalcTextSize(name);
     // Position text slightly indented from the left
     float text_start_x = item_min.x + 8.0f;
@@ -587,7 +584,7 @@ void EndGroupBox(const char* name)
 
     // Expand the box slightly to wrap content comfortably
     const float box_padding = 4.0f;
-    item_min.x -= box_padding; 
+    item_min.x -= box_padding;
     // item_min.y is controlled by border_y
 
     // Ensure the right line doesn't fall outside the visible area
@@ -604,38 +601,38 @@ void EndGroupBox(const char* name)
     item_max.y += box_padding;
 
     // Draw 3D-ish border
-    // AmigaOS 3.1 "etched" look for groups: 
+    // AmigaOS 3.1 "etched" look for groups:
     // Top and Left lines are Shadow (dark)
     // Bottom and Right lines are Shine (light)
-    
+
     // Top-Left Line (Shadow)
     draw_list->AddLine(
-        ImVec2(item_min.x, border_y), 
-        ImVec2(text_start_x - text_padding, border_y), 
+        ImVec2(item_min.x, border_y),
+        ImVec2(text_start_x - text_padding, border_y),
         border_col
     );
     draw_list->AddLine(
-        ImVec2(item_min.x, border_y), 
-        ImVec2(item_min.x, item_max.y), 
+        ImVec2(item_min.x, border_y),
+        ImVec2(item_min.x, item_max.y),
         border_col
     );
 
     // Top-Right Line (Shadow)
     draw_list->AddLine(
-        ImVec2(text_start_x + text_size.x + text_padding, border_y), 
-        ImVec2(item_max.x - 1.0f, border_y), 
+        ImVec2(text_start_x + text_size.x + text_padding, border_y),
+        ImVec2(item_max.x - 1.0f, border_y),
         border_col
     );
 
     // Bottom-Right Lines (Shine)
     draw_list->AddLine(
-        ImVec2(item_max.x, border_y), 
-        ImVec2(item_max.x, item_max.y), 
+        ImVec2(item_max.x, border_y),
+        ImVec2(item_max.x, item_max.y),
         shadow_col
     );
     draw_list->AddLine(
-        ImVec2(item_min.x, item_max.y), 
-        ImVec2(item_max.x, item_max.y), 
+        ImVec2(item_min.x, item_max.y),
+        ImVec2(item_max.x, item_max.y),
         shadow_col
     );
 
@@ -645,7 +642,7 @@ void EndGroupBox(const char* name)
     draw_list->AddText(ImVec2(text_start_x, text_y), text_col, name);
 
     // Add spacing after the box so the next one doesn't touch it
-    ImGui::Dummy(ImVec2(0.0f, 10.0f)); 
+    ImGui::Dummy(ImVec2(0.0f, 10.0f));
 }
 
 // Sidebar icons cache
@@ -702,6 +699,7 @@ void amiberry_gui_init()
 		{
 			mon->gui_renderer = mon->amiga_renderer;
 		}
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
 
@@ -738,7 +736,7 @@ void amiberry_gui_init()
         Uint32 mode;
 		if (!kmsdrm_detected)
 		{
-			// Only enable Windowed mode if we're running under x11
+			// Only enable Windowed mode if we're running under a window environment
 			mode = SDL_WINDOW_RESIZABLE;
 		}
 		else
@@ -756,24 +754,13 @@ void amiberry_gui_init()
 		// Set Window allow high DPI by default
 		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-        if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-        {
-			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+        mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
 				gui_window_rect.w,
 				gui_window_rect.h,
 				mode);
-        }
-        else
-        {
-			mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				gui_window_rect.h,
-				gui_window_rect.w,
-				mode);
-        }
+
         check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
 		// Sync rect to actual window metrics (handles SDL_WINDOWPOS_CENTERED)
@@ -879,18 +866,13 @@ void amiberry_gui_init()
 									gui_screen->h);
 	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 
-	if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
-	else
-		SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_HEIGHT, GUI_WIDTH);
-#endif
+	SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 
 	SDL_SetRelativeMouseMode(SDL_FALSE);
 	SDL_ShowCursor(SDL_ENABLE);
 
 	SDL_RaiseWindow(mon->gui_window);
 
-#ifdef USE_GUISAN
 	//-------------------------------------------------
 	// Create helpers for GUI framework
 	//-------------------------------------------------
@@ -969,6 +951,42 @@ void amiberry_gui_halt()
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
 	}
+}
+
+std::string get_filename_extension(const TCHAR* filename);
+extern void uae_restart(struct uae_prefs* p, int opengui, const TCHAR* cfgfile);
+
+static void handle_drop_file_event(const SDL_Event& event)
+{
+	char* dropped_file = event.drop.file;
+	const auto ext = get_filename_extension(dropped_file);
+
+	if (strcasecmp(ext.c_str(), ".uae") == 0)
+	{
+		// Load configuration file
+		uae_restart(&currprefs, -1, dropped_file);
+		gui_running = false;
+	}
+	else if (strcasecmp(ext.c_str(), ".adf") == 0 || strcasecmp(ext.c_str(), ".adz") == 0 || strcasecmp(ext.c_str(), ".dms") == 0 || strcasecmp(ext.c_str(), ".ipf") == 0 || strcasecmp(ext.c_str(), ".zip") == 0)
+	{
+		// Insert floppy image
+		disk_insert(0, dropped_file);
+	}
+	else if (strcasecmp(ext.c_str(), ".lha") == 0)
+	{
+		// WHDLoad archive
+		whdload_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, -1, nullptr);
+		gui_running = false;
+	}
+	else if (strcasecmp(ext.c_str(), ".cue") == 0 || strcasecmp(ext.c_str(), ".iso") == 0 || strcasecmp(ext.c_str(), ".chd") == 0)
+	{
+		// CD image
+		cd_auto_prefs(&currprefs, dropped_file);
+		uae_restart(&currprefs, -1, nullptr);
+		gui_running = false;
+	}
+	SDL_free(dropped_file);
 }
 
 #ifdef USE_GUISAN
@@ -2054,19 +2072,19 @@ void run_gui()
 			uae_reset(1, 1);
 			gui_running = false;
 		}
-		
+
 		// Right-aligned buttons
 		float right_buttons_width = (BUTTON_WIDTH * 2) + style.ItemSpacing.x;
 		ImGui::SameLine();
 		// Push cursor to the right
 		float cursor_x = ImGui::GetWindowWidth() - right_buttons_width - style.WindowPadding.x;
-		if (cursor_x < ImGui::GetCursorPosX()) 
+		if (cursor_x < ImGui::GetCursorPosX())
 			cursor_x = ImGui::GetCursorPosX(); // Prevent overlap
 		ImGui::SetCursorPosX(cursor_x);
 
 		if (start_disabled)
 			ImGui::BeginDisabled();
-		
+
 		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive]);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.05f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.10f));
@@ -2139,7 +2157,7 @@ void run_gui()
             const float vw = vp ? vp->Size.x : ImGui::GetIO().DisplaySize.x;
             const float vh = vp ? vp->Size.y : ImGui::GetIO().DisplaySize.y;
             const float desired_w = std::clamp(vw * 0.7f, 600.0f, 900.0f);
-            
+
             ImGui::SetNextWindowPos(vp ? vp->GetCenter() : ImVec2(vw * 0.5f, vh * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(desired_w, vh * 0.8f), ImGuiCond_Appearing);
 
@@ -2149,13 +2167,13 @@ void run_gui()
                 // Child region for text
                 const float footer_h = ImGui::GetFrameHeightWithSpacing() + 10.0f;
                 ImGui::BeginChild("DiskInfoText", ImVec2(0, -footer_h), true);
-                
+
                 for (const auto& line : disk_info_text) {
                     ImGui::TextUnformatted(line.c_str());
                 }
-                
+
                 ImGui::EndChild();
-                
+
                 ImGui::Spacing();
                 ImGui::Separator();
 
@@ -2164,12 +2182,12 @@ void run_gui()
                 float avail = ImGui::GetContentRegionAvail().x;
                 if (avail > btn_w)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - btn_w));
-                
+
                 if (ImGui::Button("Close", ImVec2(btn_w, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                     show_disk_info = false;
                     ImGui::CloseCurrentPopup();
                 }
-                
+
                 ImGui::EndPopup();
             }
         }

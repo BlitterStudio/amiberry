@@ -56,6 +56,9 @@
 #define P96SPRTRACING_ENABLED 0
 
 #include "options.h"
+#ifdef AMIBERRY
+#include "amiberry_gfx.h"
+#endif
 #include "threaddep/thread.h"
 #include "memory.h"
 #include "custom.h"
@@ -72,7 +75,6 @@
 #include "rp.h"
 #endif
 #include "picasso96.h"
-#include "amiberry_gfx.h"
 #include "clipboard.h"
 #include "gfxboard.h"
 #include "devices.h"
@@ -98,6 +100,8 @@ void mman_ResetWatch (PVOID lpBaseAddress, SIZE_T dwRegionSize);
 #else
 static bool* dirty_page_map[MAX_RTG_BOARDS];
 static int dirty_page_map_size[MAX_RTG_BOARDS];
+static int min_dirty_page_index[MAX_RTG_BOARDS];
+static int max_dirty_page_index[MAX_RTG_BOARDS];
 #endif
 
 static void picasso_flushpixels(int index, uae_u8 *src, int offset, bool render);
@@ -178,6 +182,11 @@ static HCURSOR wincursor;
 #else
 SDL_Cursor* p96_cursor;
 SDL_Surface* p96_cursor_surface;
+// Software cursor overlay for relative mouse mode (where SDL_Cursor doesn't work)
+static SDL_Surface* cursor_overlay_surface = nullptr;
+static SDL_Texture* cursor_overlay_texture = nullptr;
+static int cursor_overlay_x = 0, cursor_overlay_y = 0;
+static bool cursor_overlay_needs_update = false;
 #endif
 static int wincursor_shown;
 static uaecptr boardinfo, ABI_interrupt;
@@ -440,6 +449,9 @@ static void mark_dirty(int index, uae_u8* addr, int size)
 
 	if (start_page < 0) start_page = 0;
 	if (end_page >= dirty_page_map_size[index]) end_page = dirty_page_map_size[index] - 1;
+
+	if (start_page < min_dirty_page_index[index]) min_dirty_page_index[index] = start_page;
+	if (end_page > max_dirty_page_index[index]) max_dirty_page_index[index] = end_page;
 
 	for (int i = start_page; i <= end_page; ++i) {
 		dirty_page_map[index][i] = true;
@@ -828,6 +840,100 @@ static void do_fillrect_frame_buffer(const struct RenderInfo *ri, int X, int Y, 
 #endif
 }
 
+#ifdef AMIBERRY
+// Get whether we're using software cursor (for rendering code)
+bool p96_uses_software_cursor()
+{
+	// Always return true if we have a hardware sprite and valid data,
+	// as we now rely on the software overlay for all RTG cursor rendering.
+	if (!hwsprite || !cursorvisible)
+		return false;
+		
+	// If in Absolute Mouse mode (Tablet enabled), check Magic Mouse preferences
+	if (currprefs.input_tablet > 0) {
+		// If user wants Host Only cursor, do not draw the software overlay
+		if (currprefs.input_magic_mouse_cursor == MAGICMOUSE_HOST_ONLY)
+			return false;
+	}
+	
+	return true;
+}
+
+// Get current cursor position (used for software cursor rendering)
+void p96_get_cursor_position(int *x, int *y)
+{
+	if (x) *x = cursor_overlay_x;
+	if (y) *y = cursor_overlay_y;
+}
+
+// Get cursor dimensions
+void p96_get_cursor_dimensions(int *w, int *h)
+{
+	if (w) *w = cursorwidth;
+	if (h) *h = cursorheight;
+}
+
+// Update the software cursor overlay surface from cursor data
+static void update_cursor_overlay_surface()
+{
+	if (!cursordata || !cursorwidth || !cursorheight || !hwsprite)
+		return;
+
+	// (Re)create surface if dimensions changed
+	if (!cursor_overlay_surface ||
+		cursor_overlay_surface->w != cursorwidth ||
+		cursor_overlay_surface->h != cursorheight) {
+
+		if (cursor_overlay_surface) {
+			SDL_FreeSurface(cursor_overlay_surface);
+		}
+		cursor_overlay_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
+		if (!cursor_overlay_surface)
+			return;
+	}
+
+	// Copy cursor data to overlay surface
+	for (int y = 0; y < cursorheight; y++) {
+		uae_u8 *p1 = cursordata + cursorwidth * y;
+		auto *p2 = reinterpret_cast<uae_u32*>(static_cast<Uint8*>(cursor_overlay_surface->pixels) + cursor_overlay_surface->pitch * y);
+		for (int x = 0; x < cursorwidth; x++) {
+			uae_u8 c = *p1++;
+			if (c < 4) {
+				*p2 = cursorrgbn[c];
+			}
+			p2++;
+		}
+	}
+
+	cursor_overlay_needs_update = true;
+}
+
+// Get the cursor overlay surface (for texture update in rendering code)
+SDL_Surface* p96_get_cursor_overlay_surface()
+{
+	return cursor_overlay_surface;
+}
+
+// Check if cursor overlay texture needs update
+bool p96_cursor_needs_update()
+{
+	bool needs = cursor_overlay_needs_update;
+	cursor_overlay_needs_update = false;
+	return needs;
+}
+
+// Cleanup cursor overlay resources
+void p96_cleanup_cursor_overlay()
+{
+	if (cursor_overlay_surface) {
+		SDL_FreeSurface(cursor_overlay_surface);
+		cursor_overlay_surface = nullptr;
+	}
+	// Note: texture cleanup is handled by the renderer in amiberry_gfx.cpp
+
+}
+#endif
+
 static void setupcursor()
 {
 #ifdef AMIBERRY
@@ -838,30 +944,19 @@ static void setupcursor()
 
 	setupcursor_needed = 1;
 	if (cursordata && cursorwidth && cursorheight) {
-		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
-
-		for (int y = 0; y < cursorheight; y++) {
-			uae_u8 *p1 = cursordata + cursorwidth * y;
-			auto *p2 = reinterpret_cast<uae_u32*>(static_cast<Uint8*>(p96_cursor_surface->pixels) + p96_cursor_surface->pitch * y);
-			for (int x = 0; x < cursorwidth; x++) {
-				uae_u8 c = *p1++;
-				if (c < 4) {
-					*p2 = cursorrgbn[c];
-				}
-				p2++;
-			}
-		}
-
-		if (p96_cursor != nullptr) {
+		// Always update the overlay surface (used in software cursor mode)
+		// We use a software overlay for RTG cursors to ensure consistency
+		// across different mouse modes (relative/absolute) and drivers.
+		update_cursor_overlay_surface();
+		
+		// Ensure any native SDL cursor is hidden/freed so it doesn't conflict
+		if (p96_cursor) {
 			SDL_FreeCursor(p96_cursor);
 			p96_cursor = nullptr;
 		}
-		p96_cursor = SDL_CreateColorCursor(p96_cursor_surface, 0, 0);
-		SDL_FreeSurface(p96_cursor_surface);
 
-		SDL_SetCursor(p96_cursor);
 		setupcursor_needed = 0;
-		P96TRACE_SPR((_T("cursorsurface3d updated\n")));
+		P96TRACE_SPR((_T("cursorsurface3d updated (overlay)\n")));
 	} else {
 		P96TRACE_SPR((_T("cursorsurface3d LockRect() failed\n")));
 	}
@@ -911,8 +1006,10 @@ static void disablemouse ()
 	if (!hwsprite)
 		return;
 #ifdef AMIBERRY
-	if (p96_cursor)
+	if (p96_cursor) {
 		SDL_FreeCursor(p96_cursor);
+		p96_cursor = nullptr;
+	}
 #else
 	D3D_setcursor(0, 0, 0, 0, 0, 0, 0, false, true);
 #endif
@@ -1765,13 +1862,19 @@ static void do_blitrect_frame_buffer (const struct RenderInfo *ri, const struct
 		if(opcode == BLIT_SRC) {
 
 			/* handle normal case efficiently */
-			if (ri->Memory == dstri->Memory && dsty == srcy) {
+			if (ri->BytesPerRow == dstri->BytesPerRow && total_width == ri->BytesPerRow) {
+				// write_log("Optimized BlitRect: w=%d, h=%d, bpr=%d\n", width, height, ri->BytesPerRow);
+				memmove(dst, src, total_width * height);
+			} else if (ri->Memory == dstri->Memory && dsty == srcy) {
+				// write_log("BlitRect Fallback 1: w=%d, h=%d, bpr=%d vs tot=%d\n", width, height, ri->BytesPerRow, total_width);
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memmove (dst, src, total_width);
 			} else if (dsty < srcy) {
+				// write_log("BlitRect Fallback 2: w=%d, h=%d\n", width, height);
 				for (int i = 0; i < height; i++, src += ri->BytesPerRow, dst += dstri->BytesPerRow)
 					memcpy (dst, src, total_width);
 			} else {
+				// write_log("BlitRect Fallback 3: w=%d, h=%d\n", width, height);
 				src += (height - 1) * ri->BytesPerRow;
 				dst += (height - 1) * dstri->BytesPerRow;
 				for (int i = 0; i < height; i++, src -= ri->BytesPerRow, dst -= dstri->BytesPerRow)
@@ -1904,6 +2007,11 @@ static uae_u32 REGPARAM2 picasso_SetSpritePosition (TrapContext *ctx)
 	}
 	newcursor_x = x;
 	newcursor_y = y;
+#ifdef AMIBERRY
+	// Also update software cursor overlay position
+	cursor_overlay_x = x;
+	cursor_overlay_y = y;
+#endif
 	if (!hwsprite)
 		return 0;
 	return 1;
@@ -2107,7 +2215,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
+	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
 	if (!cursor_surface)
 		goto end;
 
@@ -2744,6 +2852,15 @@ void picasso_allocatewritewatch (int index, int gfxmemsize)
 	gwwbufsize[index] = gfxmemsize / gwwpagesize[index] + 1;
 	gwwpagemask[index] = gwwpagesize[index] - 1;
 	gwwbuf[index] = xmalloc (void*, gwwbufsize[index]);
+
+	delete[] dirty_page_map[index];
+	const int pages = gwwbufsize[index];
+	dirty_page_map[index] = new bool[pages];
+	dirty_page_map_size[index] = pages;
+	// Initialize min/max to "empty" state
+	min_dirty_page_index[index] = pages;
+	max_dirty_page_index[index] = -1;
+	memset(dirty_page_map[index], 0, pages * sizeof(bool));
 #endif
 }
 
@@ -2780,7 +2897,19 @@ int picasso_getwritewatch (int index, int offset, uae_u8 ***gwwbufp, uae_u8 **st
 	const int page_size = gwwpagesize[index];
 	int count = 0;
 
-	for (int i = 0; i < dirty_page_map_size[index]; ++i) {
+	int start = min_dirty_page_index[index];
+	int end = max_dirty_page_index[index];
+
+	if (start > end) {
+		// Should not happen if dirty_page_map[index] is checked, but safe guard
+		return -1; 
+	}
+
+	// Reset bounds immediately for next frame accumulation
+	min_dirty_page_index[index] = dirty_page_map_size[index];
+	max_dirty_page_index[index] = -1;
+
+	for (int i = start; i <= end; ++i) {
 		if (dirty_page_map[index][i]) {
 			if (count < gwwbufsize[index]) {
 				gwwbuf[index][count++] = const_cast<uae_u8*>(base) + i * page_size;
@@ -3420,6 +3549,7 @@ static uae_u32 REGPARAM2 picasso_SetDAC (TrapContext *ctx)
 	const int monid = currprefs.rtgboards[0].monitor_id;
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	const struct picasso96_state_struct* state = &picasso96_state[monid];
+
 	const uae_u16 idx = trap_get_dreg(ctx, 0);
 	const uae_u32 mode = trap_get_dreg(ctx, 7);
 	/* Fill in some static UAE related structure about this new DAC setting
@@ -3591,6 +3721,7 @@ static uae_u32 REGPARAM2 picasso_SetPanning (TrapContext *ctx)
 	const int monid = currprefs.rtgboards[0].monitor_id;
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
+	
 	uae_u16 Width = trap_get_dreg(ctx, 0);
 	const uaecptr start_of_screen = trap_get_areg(ctx, 1);
 	const uaecptr bi = trap_get_areg(ctx, 0);
@@ -4428,6 +4559,13 @@ static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 	struct picasso96_state_struct *state = &picasso96_state[monid];
 	struct picasso_vidbuf_description *vidinfo = &picasso_vidinfo[monid];
 	const uae_u32 setstate = trap_get_dreg(ctx, 0);
+
+	// Force update check when Display state changes (On/Off)
+#ifdef AMIBERRY
+	if (currprefs.rtg_zerocopy) {
+		target_graphics_buffer_update(monid, true);
+	}
+#endif
 	P96TRACE_SETUP((_T("SetDisplay(%d)\n"), setstate));
 	resetpalette(state);
 	atomic_or(&vidinfo->picasso_state_change, PICASSO_STATE_SETDISPLAY);
@@ -5701,7 +5839,19 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			if (!dstp) {
 				dstp = gfx_lock_picasso(monid, dofull);
 			}
+			
+			// AMIBERRY: Zero Copy support
+			// If we are in Zero Copy mode, dstp is nullptr but we still want to process dirty regions
+			// so we can invalidate the texture correctly (partial updates)
+			bool zero_copy = false;
 			if (dstp == nullptr) {
+				uae_u8* rtg_ptr = p96_get_render_buffer_pointer(monid);
+				if (rtg_ptr != nullptr) {
+					zero_copy = true;
+				}
+			}
+
+			if (dstp == nullptr && !zero_copy) {
 				continue;
 			}
 			dst = dstp;
@@ -5717,10 +5867,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 #endif
 
 			if (!split && vidinfo->rtg_clear_flag) {
-				uae_u8 *p2 = dst;
-				for (int h = 0; h < vidinfo->maxheight; h++) {
-					memset(p2, 0, vidinfo->maxwidth * vidinfo->pixbytes);
-					p2 += vidinfo->rowbytes;
+				if (dst) {
+					uae_u8 *p2 = dst;
+					for (int h = 0; h < vidinfo->maxheight; h++) {
+						memset(p2, 0, vidinfo->maxwidth * vidinfo->pixbytes);
+						p2 += vidinfo->rowbytes;
+					}
 				}
 				vidinfo->rtg_clear_flag--;
 			}
@@ -5732,16 +5884,18 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 			}
 
 			if (dofull) {
-				if (flashscreen != 0) {
-					copyallinvert(monid, src + off, dst, pwidth, pheight,
-						state->BytesPerRow, state->BytesPerPixel,
-						vidinfo->rowbytes, vidinfo->pixbytes,
-						vidinfo->picasso_convert);
-				} else {
-					copyall(monid, src + off, dst, pwidth, pheight,
-						state->BytesPerRow, state->BytesPerPixel,
-						vidinfo->rowbytes, vidinfo->pixbytes,
-						vidinfo->picasso_convert);
+				if (!zero_copy) {
+					if (flashscreen != 0) {
+						copyallinvert(monid, src + off, dst, pwidth, pheight,
+							state->BytesPerRow, state->BytesPerPixel,
+							vidinfo->rowbytes, vidinfo->pixbytes,
+							vidinfo->picasso_convert);
+					} else {
+						copyall(monid, src + off, dst, pwidth, pheight,
+							state->BytesPerRow, state->BytesPerPixel,
+							vidinfo->rowbytes, vidinfo->pixbytes,
+							vidinfo->picasso_convert);
+					}
 				}
 				miny = 0;
 				maxy = pheight;
@@ -5773,10 +5927,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 						int w = (gwwpagesize[index] + state->BytesPerPixel - 1) / state->BytesPerPixel;
 						x = (realoffset % state->BytesPerRow) / state->BytesPerPixel;
 						if (x < pwidth) {
-							copyrow(monid, src + off, dst, x, y, pwidth - x,
-								state->BytesPerRow, state->BytesPerPixel,
-								x, y, vidinfo->rowbytes, vidinfo->pixbytes,
-								vidinfo->picasso_convert, p96_rgbx16);
+							if (!zero_copy) {
+								copyrow(monid, src + off, dst, x, y, pwidth - x,
+									state->BytesPerRow, state->BytesPerPixel,
+									x, y, vidinfo->rowbytes, vidinfo->pixbytes,
+									vidinfo->picasso_convert, p96_rgbx16);
+							}
 							flushlines++;
 						}
 						w = (gwwpagesize[index] - (state->BytesPerRow - x * state->BytesPerPixel) + state->BytesPerPixel - 1) / state->BytesPerPixel;
@@ -5786,10 +5942,12 @@ static void picasso_flushpixels(int index, uae_u8 *src, int off, bool render)
 						y++;
 						while (y < pheight && w > 0) {
 							int maxw = w > pwidth ? pwidth : w;
-							copyrow(monid, src + off, dst, 0, y, maxw,
-								state->BytesPerRow, state->BytesPerPixel,
-								0, y, vidinfo->rowbytes, vidinfo->pixbytes,
-								vidinfo->picasso_convert, p96_rgbx16);
+							if (!zero_copy) {
+								copyrow(monid, src + off, dst, 0, y, maxw,
+									state->BytesPerRow, state->BytesPerPixel,
+									0, y, vidinfo->rowbytes, vidinfo->pixbytes,
+									vidinfo->picasso_convert, p96_rgbx16);
+							}
 							w -= maxw;
 							y++;
 							flushlines++;
@@ -5905,6 +6063,25 @@ addrbank gfxmem4_bank = {
 	ABFLAG_RAM | ABFLAG_RTG | ABFLAG_DIRECTACCESS, 0, 0
 };
 addrbank *gfxmem_banks[MAX_RTG_BOARDS];
+
+uae_u8* p96_get_native_memory(int monid)
+{
+	if (monid < 0 || monid >= MAX_RTG_BOARDS)
+		return nullptr;
+	if (gfxmem_banks[monid] == nullptr)
+		return nullptr;
+	return gfxmem_banks[monid]->start + natmem_offset;
+}
+
+uae_u8* p96_get_render_buffer_pointer(int monid)
+{
+	if (monid < 0 || monid >= MAX_RTG_BOARDS)
+		return nullptr;
+	if (gfxmem_banks[monid] == nullptr)
+		return nullptr;
+	struct picasso96_state_struct *state = &picasso96_state[monid];
+	return state->XYOffset + natmem_offset;
+}
 
 /* Call this function first, near the beginning of code flow
 * Place in InitGraphics() which seems reasonable...

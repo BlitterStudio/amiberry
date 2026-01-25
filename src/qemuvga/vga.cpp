@@ -1968,7 +1968,8 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
 				convert = 5;
 			break;
 		}
-		convert = getconvert(convert, 4);
+	    int pixbytes = (bits + 7) / 8;
+	    convert = getconvert(convert, pixbytes);
 
 		int ovl_format = 5;
 		if (s->old_ovl_format != ovl_format) {

@@ -12,6 +12,7 @@
 
 #ifdef AMIBERRY
 extern Uint32 pixel_format;
+extern uae_u8* p96_get_render_buffer_pointer(int monid);
 #endif
 
 #define GUI_WIDTH  800
@@ -160,6 +161,7 @@ extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
 extern void quit_drawing_thread();
 extern void start_drawing_thread();
+extern bool target_graphics_buffer_update(const int monid, const bool force);
 
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);

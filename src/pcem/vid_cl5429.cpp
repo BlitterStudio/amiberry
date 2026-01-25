@@ -2054,7 +2054,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
         }
 
         // Optimization: Screen-to-Screen Copy (ROP 0x0D)
-        if ((gd5429->blt.mode & 0xC4) == 0 && gd5429->blt.rop == 0x0D) {
+        // Optimization disabled for 8-bit SCREEN depth (svga->bpp == 8) due to regression
+        if (svga->bpp != 8 && (gd5429->blt.mode & 0xC4) == 0 && gd5429->blt.rop == 0x0D) {
             // ... (Existing FastBlt code for Copy) ...
             int w = gd5429->blt.width_backup + 1;
             int h = gd5429->blt.height_internal + 1;
@@ -2094,7 +2095,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
         // Optimization: Fast Pattern Fill (RectFill/RectFillPattern)
         // Matches logs: mode=0xD0 (Pattern Copy), rop=0x0D (Source Copy, actually Pattern Copy in this mode context)
         // Ext=0 means "Not solid block", so "Mono Expansion from VRAM Pattern".
-        if ((gd5429->blt.mode & 0xC0) == 0xC0 && !(gd5429->blt.extensions & 4)) {
+        // Optimization disabled for 8-bit SCREEN depth (svga->bpp == 8) due to regression
+        if (svga->bpp != 8 && (gd5429->blt.mode & 0xC0) == 0xC0 && !(gd5429->blt.extensions & 4)) {
              // Supports ROP 0x0D (Copy Pattern) and 0xF0 (Copy Pattern). 0x0D in Pattern Mode means "Copy Pattern Source"? 
              // Logic: Standard loop uses 'src' derived from pattern expansion, then applies ROP 0x0D -> dst=src.
              // So if ROP is 0x0D or 0xF0 (common copies), we can optimize.
@@ -2305,7 +2307,8 @@ void gd5429_start_blit(uint32_t cpu_dat, int count, void *p)
 
         // Optimization: Fast Solid Fill (RectFill)
         // We target the Solid Color Extension case (bit 2 of extensions)
-        if ((gd5429->blt.mode & 0xC0) && (gd5429->blt.extensions & 4) && (gd5429->blt.rop == 0xF0 || gd5429->blt.rop == 0x0D)) {
+        // Optimization disabled for 8-bit SCREEN depth (svga->bpp == 8) due to regression
+        if (svga->bpp != 8 && (gd5429->blt.mode & 0xC0) && (gd5429->blt.extensions & 4) && (gd5429->blt.rop == 0xF0 || gd5429->blt.rop == 0x0D)) {
              int w = gd5429->blt.width_backup + 1; // Width is already in bytes
              int h = gd5429->blt.height_internal + 1;
              int dst_pitch = (gd5429->blt.mode & 0x01) ? -gd5429->blt.dst_pitch : gd5429->blt.dst_pitch;

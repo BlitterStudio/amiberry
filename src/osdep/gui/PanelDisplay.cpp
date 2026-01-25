@@ -24,13 +24,7 @@ enum
 	AMIGAHEIGHT_COUNT = 5
 };
 
-static std::vector<std::string> fullscreen_resolutions = {};
-static gcn::StringListModel fullscreen_resolutions_list(fullscreen_resolutions);
-
-static std::vector<std::string> refresh_rates = {};
-static gcn::StringListModel refresh_rates_list(refresh_rates);
-
-static const std::vector<std::string> fullscreen_modes = { "Windowed", "Fullscreen", "Full-window" };
+static const std::vector<std::string> fullscreen_modes = { "Windowed", "Full-window" };
 static gcn::StringListModel fullscreen_modes_list(fullscreen_modes);
 
 static const std::vector<std::string> resolution = { "LowRes", "HighRes (normal)", "SuperHighRes" };
@@ -73,9 +67,6 @@ static gcn::Label* lblVOffsetValue;
 
 static gcn::Label* lblScreenmode;
 static gcn::DropDown* cboScreenmode;
-static gcn::Label* lblFullscreen;
-static gcn::DropDown* cboFullscreen;
-static gcn::DropDown* cboRefreshRate;
 
 static gcn::Label* lblVSyncNative;
 static gcn::DropDown* cboVSyncNative;
@@ -132,146 +123,6 @@ struct storedrefreshrate
 	int rate, type;
 };
 static struct storedrefreshrate storedrefreshrates[MAX_REFRESH_RATES + 4 + 1];
-
-static void init_frequency_combo(int dmode)
-{
-	int i, j, freq;
-	TCHAR hz[20], hz2[20];
-	int index;
-	MultiDisplay *md = getdisplay(&changed_prefs, 0);
-
-	i = 0; index = 0;
-	while (dmode >= 0 && (freq = md->DisplayModes[dmode].refresh[i]) > 0 && index < MAX_REFRESH_RATES) {
-		storedrefreshrates[index].rate = freq;
-		storedrefreshrates[index++].type = md->DisplayModes[dmode].refreshtype[i];
-		i++;
-	}
-	if (changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0 && changed_prefs.gfx_apmode[0].gfx_vsync) {
-		i = 0;
-		while ((freq = fakerefreshrates[i]) > 0 && index < MAX_REFRESH_RATES) {
-			for (j = 0; j < index; j++) {
-				if (storedrefreshrates[j].rate == freq)
-					break;
-			}
-			if (j == index) {
-				storedrefreshrates[index].rate = -freq;
-				storedrefreshrates[index++].type = 0;
-			}
-			i++;
-		}
-	}
-	storedrefreshrates[index].rate = 0;
-	for (i = 0; i < index; i++) {
-		for (j = i + 1; j < index; j++) {
-			if (abs (storedrefreshrates[i].rate) >= abs (storedrefreshrates[j].rate)) {
-				storedrefreshrate srr{};
-				memcpy (&srr, &storedrefreshrates[i], sizeof (struct storedrefreshrate));
-				memcpy (&storedrefreshrates[i], &storedrefreshrates[j], sizeof (struct storedrefreshrate));
-				memcpy (&storedrefreshrates[j], &srr, sizeof (struct storedrefreshrate));
-			}
-		}
-	}
-
-	hz[0] = hz2[0] = 0;
-	refresh_rates_list.clear();
-	refresh_rates_list.add("Default");
-	for (i = 0; i < index; i++) {
-		bool lace = (storedrefreshrates[i].type & REFRESH_RATE_LACE) != 0;
-		freq = storedrefreshrates[i].rate;
-		if (freq < 0) {
-			freq = -freq;
-			_sntprintf (hz, sizeof hz, _T("(%dHz)"), freq);
-		} else {
-			_sntprintf (hz, sizeof hz, _T("%dHz"), freq);
-		}
-		if (freq == 50 || freq == 100 || (freq * 2 == 50 && lace))
-			_tcscat (hz, _T(" PAL"));
-		if (freq == 60 || freq == 120 || (freq * 2 == 60 && lace))
-			_tcscat (hz, _T(" NTSC"));
-		if (lace) {
-			TCHAR tmp[10];
-			_sntprintf (tmp, sizeof tmp, _T(" (%di)"), freq * 2);
-			_tcscat (hz, tmp);
-		}
-		if (storedrefreshrates[i].type & REFRESH_RATE_RAW)
-			_tcscat (hz, _T(" (*)"));
-		if (abs (changed_prefs.gfx_apmode[0].gfx_refreshrate) == freq)
-			_tcscpy (hz2, hz);
-		refresh_rates_list.add(hz);
-	}
-	index = -1;
-	if (hz2[0] >= 0)
-	{
-		for (int item = 0; item < refresh_rates_list.getNumberOfElements(); item++)
-		{
-			if (refresh_rates_list.getElementAt(item) == hz2)
-			{
-				index = item;
-				cboRefreshRate->setSelected(item);
-				break;
-			}
-		}
-	}
-	if (index == -1) {
-		std::string default_refresh_rate = "Default";
-		for (int item = 0; item < refresh_rates_list.getNumberOfElements(); item++)
-		{
-			if (refresh_rates_list.getElementAt(item) == default_refresh_rate)
-			{
-				cboRefreshRate->setSelected(item);
-				break;
-			}
-		}
-		changed_prefs.gfx_apmode[0].gfx_refreshrate = 0;
-	}
-}
-
-static int display_mode_index (uae_u32 x, uae_u32 y, uae_u32 d)
-{
-	int i, j;
-	MultiDisplay *md = getdisplay(&changed_prefs, 0);
-
-	j = 0;
-	for (i = 0; md->DisplayModes[i].inuse; i++) {
-		if (md->DisplayModes[i].res.width == x &&
-			md->DisplayModes[i].res.height == y)
-			break;
-		j++;
-	}
-	if (x == 0 && y == 0) {
-		j = 0;
-		for (i = 0; md->DisplayModes[i].inuse; i++) {
-			if (md->DisplayModes[i].res.width == md->rect.w &&
-				md->DisplayModes[i].res.height == md->rect.h)
-				break;
-			j++;
-		}
-	}
-	if(!md->DisplayModes[i].inuse)
-		j = -1;
-	return j;
-}
-
-static int gui_display_depths[3];
-static void init_display_mode ()
-{
-	int index;
-	struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
-	struct monconfig *gm = &changed_prefs.gfx_monitor[0];
-
-	if (gm->gfx_size_fs.special == WH_NATIVE) {
-		int cnt = fullscreen_modes_list.getNumberOfElements();
-		cboFullscreen->setSelected(cnt - 1);
-		index = display_mode_index(gm->gfx_size_fs.width, gm->gfx_size_fs.height, 4);
-	} else {
-		index = display_mode_index(gm->gfx_size_fs.width, gm->gfx_size_fs.height, 4);
-		if (index >= 0)
-			cboFullscreen->setSelected(md->DisplayModes[index].residx);
-		gm->gfx_size_fs.special = 0;
-	}
-	init_frequency_combo (index);
-}
-
 
 class AmigaScreenKeyListener : public gcn::KeyListener
 {
@@ -543,7 +394,7 @@ public:
 		int dmode = -1;
 		bool native = false;
 		struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
-		posn1 = cboFullscreen->getSelected();
+		posn1 = 0;
 		changed_prefs.gfx_monitor[0].gfx_size_fs.special = 0;
 		for (dmode = 0; md->DisplayModes[dmode].inuse; dmode++) {
 			if (md->DisplayModes[dmode].residx == posn1)
@@ -566,39 +417,12 @@ public:
 				dmode = i;
 		}
 
-
-		if (oldvsmode != changed_prefs.gfx_apmode[0].gfx_vsyncmode || oldvs != changed_prefs.gfx_apmode[0].gfx_vsync)
-			init_frequency_combo(dmode);
-
 		if (source == cboResolution)
 			changed_prefs.gfx_resolution = cboResolution->getSelected();
 
 		//TODO
 		//else if (source == cboOverscan)
 		//	changed_prefs.gfx_overscanmode = cboOverscan->getSelected();
-
-		else if (source == cboFullscreen)
-		{
-			changed_prefs.gfx_monitor[0].gfx_size_fs.width = md->DisplayModes[dmode].res.width;
-			changed_prefs.gfx_monitor[0].gfx_size_fs.height = md->DisplayModes[dmode].res.height;
-			/* Set the Int boxes */
-			//SetDlgItemInt(hDlg, IDC_XSIZE, changed_prefs.gfx_monitor[0].gfx_size_win.width, FALSE);
-			//SetDlgItemInt(hDlg, IDC_YSIZE, changed_prefs.gfx_monitor[0].gfx_size_win.height, FALSE);
-			init_display_mode();
-		}
-		else if (source == cboRefreshRate)
-		{
-			posn1 = cboRefreshRate->getSelected();
-			if (posn1 == 0) {
-				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = 0;
-				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = dmode >= 0 && md->DisplayModes[dmode].lace;
-			}
-			else {
-				posn1--;
-				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_refreshrate = storedrefreshrates[posn1].rate;
-				changed_prefs.gfx_apmode[APMODE_NATIVE].gfx_interlaced = (storedrefreshrates[posn1].type & REFRESH_RATE_LACE) != 0;
-			}
-		}
 
 		if (source == chkManualCrop)
 		{
@@ -791,38 +615,6 @@ void InitPanelDisplay(const config_category& category)
 	struct MultiDisplay *md = getdisplay(&changed_prefs, 0);
 
 	idx = -1;
-	fullscreen_resolutions_list.clear();
-	for (i = 0; md->DisplayModes[i].inuse; i++)
-	{
-		if (md->DisplayModes[i].residx != idx) {
-			_sntprintf (tmp, sizeof tmp, _T("%dx%d%s"), md->DisplayModes[i].res.width, md->DisplayModes[i].res.height, md->DisplayModes[i].lace ? _T("i") : _T(""));
-			if (md->DisplayModes[i].rawmode)
-				_tcscat (tmp, _T(" (*)"));
-			fullscreen_resolutions_list.add(tmp);
-			idx = md->DisplayModes[i].residx;
-		}
-	}
-	fullscreen_resolutions_list.add("Native");
-
-	lblFullscreen = new gcn::Label("Fullscreen:");
-	lblFullscreen->setAlignment(gcn::Graphics::Left);
-	cboFullscreen = new gcn::DropDown(&fullscreen_resolutions_list);
-	cboFullscreen->setSize(150, cboFullscreen->getHeight());
-	cboFullscreen->setBaseColor(gui_base_color);
-	cboFullscreen->setBackgroundColor(gui_background_color);
-	cboFullscreen->setForegroundColor(gui_foreground_color);
-	cboFullscreen->setSelectionColor(gui_selection_color);
-	cboFullscreen->setId("cboFullscreen");
-	cboFullscreen->addActionListener(amigaScreenActionListener);
-
-	cboRefreshRate = new gcn::DropDown(&refresh_rates_list);
-	cboRefreshRate->setSize(80, cboRefreshRate->getHeight());
-	cboRefreshRate->setBaseColor(gui_base_color);
-	cboRefreshRate->setBackgroundColor(gui_background_color);
-	cboRefreshRate->setForegroundColor(gui_foreground_color);
-	cboRefreshRate->setSelectionColor(gui_selection_color);
-	cboRefreshRate->setId("cboRefreshRate");
-	cboRefreshRate->addActionListener(amigaScreenActionListener);
 
 	chkManualCrop = new gcn::CheckBox("Manual Crop");
 	chkManualCrop->setId("chkManualCrop");
@@ -1075,11 +867,6 @@ void InitPanelDisplay(const config_category& category)
 	grpAmigaScreen = new gcn::Window("Amiga Screen");
 	grpAmigaScreen->setPosition(DISTANCE_BORDER, DISTANCE_BORDER);
 
-	grpAmigaScreen->add(lblFullscreen, DISTANCE_BORDER, posY);
-	grpAmigaScreen->add(cboFullscreen, lblFullscreen->getX() + lblFullscreen->getWidth() + DISTANCE_NEXT_X, posY);
-	grpAmigaScreen->add(cboRefreshRate, cboFullscreen->getX() + cboFullscreen->getWidth() + DISTANCE_NEXT_X, posY);
-	posY += cboFullscreen->getHeight() + DISTANCE_NEXT_Y;
-
 	grpAmigaScreen->add(lblScreenmode, DISTANCE_BORDER, posY);
 	grpAmigaScreen->add(cboScreenmode, lblScreenmode->getX() + lblScreenmode->getWidth() + 8, posY);
 	posY += cboScreenmode->getHeight() + DISTANCE_NEXT_Y;
@@ -1313,9 +1100,6 @@ void ExitPanelDisplay()
 	delete chkAspect;
 	delete lblScreenmode;
 	delete cboScreenmode;
-	delete lblFullscreen;
-	delete cboFullscreen;
-	delete cboRefreshRate;
 
 	delete lblVSyncNative;
 	delete lblVSyncRtg;
@@ -1390,7 +1174,6 @@ static void refresh_fps_options()
 
 void RefreshPanelDisplay()
 {
-	init_display_mode();
 	refresh_fps_options();
 
 	chkFrameskip->setSelected(changed_prefs.gfx_framerate > 1);
@@ -1462,20 +1245,10 @@ void RefreshPanelDisplay()
 	if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_WINDOW)
 	{
 		cboScreenmode->setSelected(0);
-		cboFullscreen->setEnabled(false);
-		cboRefreshRate->setEnabled(false);
 	}
-	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
+	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW || changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLSCREEN)
 	{
 		cboScreenmode->setSelected(1);
-		cboFullscreen->setEnabled(true);
-		cboRefreshRate->setEnabled(true);
-	}
-	else if (changed_prefs.gfx_apmode[0].gfx_fullscreen == GFX_FULLWINDOW)
-	{
-		cboScreenmode->setSelected(2);
-		cboFullscreen->setEnabled(false);
-		cboRefreshRate->setEnabled(false);
 	}
 	int v = changed_prefs.gfx_apmode[0].gfx_vsync;
 	if (v < 0)
@@ -1602,7 +1375,6 @@ bool HelpPanelDisplay(std::vector<std::string>& helptext)
 	helptext.emplace_back("Here you can select the screen mode to be used as well:");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("- Windowed: the Amiga screen will be shown in a Window on your desktop");
-	helptext.emplace_back("- Fullscreen: the monitor resolution will change to the selected one.");
 	helptext.emplace_back("- Full-window: the Amiga screen will be scaled to the current resolution.");
 	helptext.emplace_back(" ");
 	helptext.emplace_back("The \"Auto-Crop\" option will try to detect the width/height automatically,");

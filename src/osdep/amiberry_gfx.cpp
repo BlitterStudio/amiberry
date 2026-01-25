@@ -75,6 +75,9 @@
 static bool force_auto_crop = false;
 SDL_DisplayMode sdl_mode;
 SDL_Surface* amiga_surface = nullptr;
+#ifndef USE_OPENGL
+static SDL_Texture* p96_cursor_overlay_texture = nullptr;  // Software cursor overlay for RTG
+#endif
 
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
@@ -342,6 +345,10 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 
 #ifdef USE_OPENGL
 static GLuint osd_texture = 0;
+// Software cursor overlay for OpenGL
+static GLuint p96_cursor_overlay_texture_gl = 0;
+static GLuint cursor_vao = 0;
+static GLuint cursor_vbo = 0;
 static GLuint osd_program = 0;
 static GLint osd_tex_loc = -1;
 static GLuint osd_vbo = 0;
@@ -474,8 +481,6 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
-	write_log("DEBUG: SDL2_alloctexture called with w=%d, h=%d\n", w, h);
-	
 	// Clean up existing shaders
 	destroy_shaders();
 	
@@ -678,7 +683,33 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 			}
 		}
 
-		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, p_crop, p_quad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, p_crop, p_quad, 0, nullptr, SDL_FLIP_NONE);
+
+#ifndef USE_OPENGL
+		// Render Software Cursor Overlay for RTG (when using relative mouse mode)
+		if (ad->picasso_on && p96_uses_software_cursor()) {
+			if (p96_cursor_needs_update() || !p96_cursor_overlay_texture) {
+				SDL_Surface* s = p96_get_cursor_overlay_surface();
+				if (s) {
+					if (p96_cursor_overlay_texture)
+						SDL_DestroyTexture(p96_cursor_overlay_texture);
+					p96_cursor_overlay_texture = SDL_CreateTextureFromSurface(mon->amiga_renderer, s);
+					if (p96_cursor_overlay_texture)
+						SDL_SetTextureBlendMode(p96_cursor_overlay_texture, SDL_BLENDMODE_BLEND);
+				}
+			}
+
+			if (p96_cursor_overlay_texture) {
+				int cx, cy, cw, ch;
+				p96_get_cursor_position(&cx, &cy);
+				p96_get_cursor_dimensions(&cw, &ch);
+				
+				// Renderer logical size matches RTG resolution, so 1:1 mapping
+				SDL_Rect dst_cursor = { cx, cy, cw, ch };
+				SDL_RenderCopy(mon->amiga_renderer, p96_cursor_overlay_texture, nullptr, &dst_cursor);
+			}
+		}
+#endif
 
 		// GPU-composited Status Line (OSD) for both native and RTG
 		if ((((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
@@ -1077,8 +1108,8 @@ void centerdstrect(struct AmigaMonitor* mon, SDL_Rect* dr)
 
 void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
-	struct AmigaMonitor* mon = &AMonitors[monid];
-	const struct amigadisplay* ad = &adisplays[monid];
+	const AmigaMonitor* mon = &AMonitors[monid];
+	const amigadisplay* ad = &adisplays[monid];
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 #ifdef AMIBERRY
 	if (currprefs.gfx_auto_crop)
@@ -1087,20 +1118,39 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 		dy -= static_cast<float>(crop_rect.y);
 	}
 #endif
-	//if (ad->picasso_on) {
-	//	dx = picasso_offset_x * picasso_offset_mx;
-	//	dy = picasso_offset_y * picasso_offset_my;
-	//	mx = picasso_offset_mx;
-	//	my = picasso_offset_my;
-	//}
 
 	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-		while (!(mon->scalepicasso && mon->screen_is_picasso)) {
-			if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
-				break;
+#ifdef USE_OPENGL
+		// In OpenGL Full-Window mode, use render_quad for offset and scaling calculations
+		// render_quad contains the actual viewport position and dimensions
+		if (render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
+			// Scaling: ratio of viewport size to Amiga surface (must compute first)
+			mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
+			my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
+			// Offset calculation differs between RTG and native modes due to 
+			// different formulas in get_mouse_position():
+			// - RTG mode: x = (x - XOffset) * fmx + fdx * fmx  (offset gets scaled)
+			// - Native mode: x = x * fmx - fdx  (offset is pre-scaled)
+			if (ad->picasso_on) {
+				// RTG mode: get_mouse_position scales the offset by fmx,
+				// so we pass raw window coordinates (negative for subtraction)
+				dx -= static_cast<float>(render_quad.x);
+				dy -= static_cast<float>(render_quad.y);
+			} else {
+				// Native mode: get_mouse_position uses offset directly,
+				// so we pre-scale to Amiga surface coordinates
+				dx += static_cast<float>(render_quad.x) / mx;
+				dy += static_cast<float>(render_quad.y) / my;
+			}
+		}
+		else
+#endif
+		// SDL renderer fallback path (no OpenGL or render_quad not set)
+		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
+			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || 
+			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {
 			dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
 			dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
-			break;
 		}
 	}
 
@@ -1840,6 +1890,95 @@ static void render_osd(const int monid, int x, int y, int w, int h)
 }
 #endif
 
+#ifdef USE_OPENGL
+static void render_software_cursor_gl(const int monid, int x, int y, int w, int h)
+{
+	const amigadisplay* ad = &adisplays[monid];
+	if (ad->picasso_on && p96_uses_software_cursor()) {
+		if (p96_cursor_needs_update() || !p96_cursor_overlay_texture_gl) {
+			SDL_Surface* s = p96_get_cursor_overlay_surface();
+			if (s) {
+				if (p96_cursor_overlay_texture_gl == 0) {
+					glGenTextures(1, &p96_cursor_overlay_texture_gl);
+				}
+				glBindTexture(GL_TEXTURE_2D, p96_cursor_overlay_texture_gl);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, s->w, s->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, s->pixels);
+			}
+		}
+
+		if (p96_cursor_overlay_texture_gl) {
+			if (cursor_vao == 0) glGenVertexArrays(1, &cursor_vao);
+			if (cursor_vbo == 0) glGenBuffers(1, &cursor_vbo);
+
+			if (!init_osd_shader()) return; // Re-use OSD shader (simple texture shader)
+
+			int cx, cy, cw, ch;
+			p96_get_cursor_position(&cx, &cy);
+			p96_get_cursor_dimensions(&cw, &ch);
+
+			if (amiga_surface) {
+				float surf_w = (float)amiga_surface->w;
+				float surf_h = (float)amiga_surface->h;
+				
+				// Percentage of surface
+				float px = (float)cx / surf_w;
+				float py = (float)cy / surf_h;
+				float pw = (float)cw / surf_w;
+				float ph = (float)ch / surf_h;
+
+				float x0 = px * 2.0f - 1.0f;
+				float y0 = 1.0f - (py * 2.0f + ph * 2.0f); // Origin top-left, GL bottom-left. 
+
+				float y_top = 1.0f - py * 2.0f;
+				float y_bottom = 1.0f - (py + ph) * 2.0f;
+				
+				float x_left = x0;
+				float x_right = px * 2.0f - 1.0f + pw * 2.0f;
+
+				GLfloat vertices[] = {
+					x_left,  y_bottom, 0.0f, 1.0f,
+					x_right, y_bottom, 1.0f, 1.0f,
+					x_right, y_top,    1.0f, 0.0f,
+					x_left,  y_top,    0.0f, 0.0f,
+				};
+
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				glDisable(GL_SCISSOR_TEST);
+				glViewport(x, y, w, h);
+
+				glUseProgram(osd_program);
+				if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
+
+				glBindVertexArray(cursor_vao);
+				
+				glEnableVertexAttribArray(0);
+				glDisableVertexAttribArray(1);
+				glDisableVertexAttribArray(2);
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, p96_cursor_overlay_texture_gl);
+				
+				glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo);
+				glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+				glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+				
+				glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+				glDisableVertexAttribArray(0);
+				glBindVertexArray(0);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glDisable(GL_BLEND);
+				glUseProgram(0);
+			}
+		}
+	}
+}
+#endif
+
 static float calculate_desired_aspect(const AmigaMonitor* mon)
 {
 	if (mon->screen_is_picasso && amiga_surface) {
@@ -1999,7 +2138,7 @@ void show_screen(const int monid, int mode)
 			int w = std::min(crop_rect.w, amiga_surface->w - x);
 			int h = std::min(crop_rect.h, amiga_surface->h - y);
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
-
+			
 			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
 				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		} else if (amiga_surface) {
@@ -2031,6 +2170,7 @@ void show_screen(const int monid, int mode)
 		}
 	}
 
+	render_software_cursor_gl(monid, destX, destY, destW, destH);
 	render_osd(monid, destX, destY, destW, destH);
 
 	SDL_GL_SwapWindow(mon->amiga_window);
@@ -2188,6 +2328,18 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 		return nullptr;
 	}
 
+	// When zero-copy is active, amiga_surface->pixels IS the VRAM.
+	// Detect this by comparing the surface pixels pointer with the RTG VRAM pointer.
+	// Returning nullptr here prevents picasso_flushpixels from copying
+	// VRAM to itself, which would cause display corruption.
+	if (currprefs.rtg_zerocopy) {
+		uae_u8* rtg_vram = p96_get_render_buffer_pointer(monid);
+		if (rtg_vram != nullptr && amiga_surface->pixels == rtg_vram) {
+			return nullptr;
+		}
+	}
+
+
 	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
 	//SDL_QueryTexture(amiga_texture,
 	//	nullptr, nullptr,
@@ -2251,11 +2403,28 @@ static void close_hwnds(struct AmigaMonitor* mon)
 
 #ifdef USE_OPENGL
 	destroy_shaders();
+	if (p96_cursor_overlay_texture_gl) {
+		glDeleteTextures(1, &p96_cursor_overlay_texture_gl);
+		p96_cursor_overlay_texture_gl = 0;
+	}
+	if (cursor_vao) {
+		glDeleteVertexArrays(1, &cursor_vao);
+		cursor_vao = 0;
+	}
+	if (cursor_vbo) {
+		glDeleteBuffers(1, &cursor_vbo);
+		cursor_vbo = 0;
+	}
 #else
 	if (amiga_texture)
 	{
 		SDL_DestroyTexture(amiga_texture);
 		amiga_texture = nullptr;
+	}
+	if (p96_cursor_overlay_texture)
+	{
+		SDL_DestroyTexture(p96_cursor_overlay_texture);
+		p96_cursor_overlay_texture = nullptr;
 	}
 #endif
 
@@ -2728,6 +2897,7 @@ int check_prefs_changed_gfx()
 	c |= currprefs.rtg_hardwareinterrupt != changed_prefs.rtg_hardwareinterrupt ? 32 : 0;
 	c |= currprefs.rtg_hardwaresprite != changed_prefs.rtg_hardwaresprite ? 32 : 0;
 	c |= currprefs.rtg_multithread != changed_prefs.rtg_multithread ? 32 : 0;
+	c |= currprefs.rtg_zerocopy != changed_prefs.rtg_zerocopy ? 32 : 0;
 #endif
 
 	if (display_change_requested || c)
@@ -2854,6 +3024,7 @@ int check_prefs_changed_gfx()
 		currprefs.rtg_hardwareinterrupt = changed_prefs.rtg_hardwareinterrupt;
 		currprefs.rtg_hardwaresprite = changed_prefs.rtg_hardwaresprite;
 		currprefs.rtg_multithread = changed_prefs.rtg_multithread;
+		currprefs.rtg_zerocopy = changed_prefs.rtg_zerocopy;
 #endif
 
 		bool unacquired = false;
@@ -4027,17 +4198,6 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
 
-#ifdef USE_OPENGL
-	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
-	const char* drv = SDL_GetCurrentVideoDriver();
-	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
-	if (!likely_gles_only) {
-		flags |= SDL_WINDOW_OPENGL;
-	} else {
-		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
-	}
-#endif
-
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
 		rc.w, rc.h,
@@ -4070,10 +4230,6 @@ static int create_windows(struct AmigaMonitor* mon)
 		Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
 		const auto* ad = &adisplays[mon->monitor_id];
 		const auto* ap = ad->picasso_on ? &currprefs.gfx_apmode[1] : &currprefs.gfx_apmode[0];
-		// Force disable VSync for the renderer to prevent blocking in SDL_RenderPresent.
-		// We handle frame timing manually in SDL2_showframe with high precision.
-		// if (ap->gfx_vsync > 0)
-		//	renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
 
 		mon->amiga_renderer = SDL_CreateRenderer(mon->amiga_window, -1, renderer_flags);
 		check_error_sdl(mon->amiga_renderer == nullptr, "Unable to create a renderer:");
@@ -4099,6 +4255,7 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	if (SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0") == SDL_TRUE)
 		write_log("SDL2: Set window not to minimize on focus loss\n");
+
 	return 1;
 }
 
@@ -4326,9 +4483,62 @@ static bool doInit(AmigaMonitor* mon)
 	return true;
 }
 
+// Helper: Compute scaled dimensions for aspect ratio correction
+// RTG modes use 1:1 scaling, Native modes scale based on resolution settings
+static void compute_scaled_dimensions(const int w, const int h, const bool is_rtg, int& scaled_w, int& scaled_h)
+{
+	if (is_rtg) {
+		scaled_w = w;
+		scaled_h = h;
+		return;
+	}
+
+	scaled_w = w;
+	scaled_h = h;
+
+	if (currprefs.gfx_vresolution == VRES_NONDOUBLE) {
+		if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
+			scaled_h *= 2;
+	} else {
+		if (currprefs.gfx_resolution == RES_LORES)
+			scaled_w *= 2;
+	}
+
+	if (currprefs.ntscmode)
+		scaled_h = scaled_h * 6 / 5;
+}
+
+// Helper: Configure render_quad and crop_rect based on mode and crop settings
+// For RTG: direct 1:1 mapping
+// For Native: respects manual crop settings, auto_crop is handled elsewhere
+static void configure_render_rects(const int w, const int h, const int scaled_w, const int scaled_h, const bool is_rtg)
+{
+	if (is_rtg) {
+		render_quad = { dx, dy, w, h };
+		crop_rect = { dx, dy, w, h };
+		return;
+	}
+
+	// Native mode with manual crop
+	if (currprefs.gfx_manual_crop) {
+		render_quad = { dx, dy, scaled_w, scaled_h };
+		crop_rect = {
+			currprefs.gfx_horizontal_offset,
+			currprefs.gfx_vertical_offset,
+			(currprefs.gfx_manual_crop_width > 0) ? currprefs.gfx_manual_crop_width : w,
+			(currprefs.gfx_manual_crop_height > 0) ? currprefs.gfx_manual_crop_height : h
+		};
+	}
+	// Native mode without auto_crop (auto_crop is handled in auto_crop_image())
+	else if (!currprefs.gfx_auto_crop) {
+		render_quad = { dx, dy, scaled_w, scaled_h };
+		crop_rect = { dx, dy, w, h };
+	}
+}
+
 bool target_graphics_buffer_update(const int monid, const bool force)
 {
-	const struct AmigaMonitor* mon = &AMonitors[monid];
+	struct AmigaMonitor* mon = &AMonitors[monid];
 	struct vidbuf_description* avidinfo = &adisplays[monid].gfxvidinfo;
 	const struct picasso96_state_struct* state = &picasso96_state[monid];
 	struct vidbuffer *vb = NULL, *vbout = NULL;
@@ -4351,14 +4561,29 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	}
 
 	if (!force && oldtex_w[monid] == w && oldtex_h[monid] == h && oldtex_rtg[monid] == mon->screen_is_picasso && amiga_surface && amiga_surface->format->format == pixel_format) {
-		if (SDL2_alloctexture(mon->monitor_id, -w, -h))
-		{
-			//osk_setup(monid, -2);
-			if (vbout) {
-				vbout->width_allocated = w;
-				vbout->height_allocated = h;
+		bool skip_update = true;
+		if (mon->screen_is_picasso) {
+			uae_u8* rtg_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
+			if (rtg_ptr && amiga_surface->pixels != rtg_ptr) {
+				skip_update = false;
+			} else {
+				// write_log("GFX: Skipping update. Pointers match: %p\n", rtg_ptr);
 			}
-			return false;
+		}
+
+		if (skip_update) {
+			if (SDL2_alloctexture(mon->monitor_id, -w, -h))
+			{
+				//osk_setup(monid, -2);
+				if (vbout) {
+					vbout->width_allocated = w;
+					vbout->height_allocated = h;
+				}
+				if (force) {
+					mon->full_render_needed = true;
+				}
+				return false;
+			}
 		}
 	}
 
@@ -4366,7 +4591,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		oldtex_w[monid] = w;
 		oldtex_h[monid] = h;
 		oldtex_rtg[monid] = mon->screen_is_picasso;
-
+		
 		// Even if buffer dimensions aren't ready yet, we need to ensure the shader is created
 		// for native mode. Use the amiga_surface dimensions that doInit already set up.
 		// This is critical for RTG→Native switches where the shader must be recreated for native mode.
@@ -4378,8 +4603,35 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		return false;
 	}
 
+	// Ensure amiga_surface is in sync with the texture size and format
+	// Zero-Copy Eligibility Check
+	uae_u8* rtg_render_ptr = p96_get_render_buffer_pointer(mon->monitor_id);
+	bool is_zero_copy_eligible = false;
+	
+	if (mon->screen_is_picasso && currprefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE && currprefs.rtg_zerocopy) {
+		int p96_bpp = state->BytesPerPixel;
+
+		int host_bpp = SDL_BYTESPERPIXEL(pixel_format);
+
+		if (rtg_render_ptr != nullptr && p96_bpp == host_bpp && (pixel_format == SDL_PIXELFORMAT_ABGR8888 || pixel_format == SDL_PIXELFORMAT_RGB565)) {
+			is_zero_copy_eligible = true;
+		}
+	}
+
 	// Ensure amiga_surface is in sync with the texture size, format, and memory pointer (if zero-copy)
 	bool recreate_surface = (amiga_surface == nullptr || amiga_surface->w != w || amiga_surface->h != h || amiga_surface->format->format != pixel_format);
+
+	// For zero-copy, also check if pitch matches the RTG state
+	if (!recreate_surface && is_zero_copy_eligible && amiga_surface->pitch != state->BytesPerRow) {
+		recreate_surface = true;
+	}
+	if (amiga_surface && is_zero_copy_eligible && amiga_surface->pixels != (void*)rtg_render_ptr) {
+		recreate_surface = true;
+	}
+	// If Zero-Copy is disabled, but we are still pointing to VRAM, we must recreate the surface
+	if (amiga_surface && !is_zero_copy_eligible && rtg_render_ptr && amiga_surface->pixels == rtg_render_ptr) {
+		recreate_surface = true;
+	}
 
 	if (recreate_surface) {
 		if (amiga_surface) {
@@ -4388,12 +4640,21 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		}
 		const int surface_depth = (pixel_format == SDL_PIXELFORMAT_RGB565 || pixel_format == SDL_PIXELFORMAT_RGB555) ? 16 : 32;
 
-		write_log("Re-creating amiga_surface with size %dx%d to match texture.\n", w, h);
-		amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, surface_depth, pixel_format);
-		if (amiga_surface == nullptr) {
+		if (is_zero_copy_eligible) {
+			// Zero-Copy: Create surface from existing memory (rtg_render_ptr guaranteed non-null)
+			amiga_surface = SDL_CreateRGBSurfaceWithFormatFrom(rtg_render_ptr, w, h, surface_depth, state->BytesPerRow, pixel_format);
+		} else {
+			// Normal copy: Create fresh surface
+			amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, surface_depth, pixel_format);
+		}
+
+		if (amiga_surface) {
+			SDL_SetSurfaceBlendMode(amiga_surface, SDL_BLENDMODE_NONE);
+		} else {
 			write_log("!!! Failed to create amiga_surface.\n");
 			return false;
 		}
+		mon->full_render_needed = true;
 		struct picasso_vidbuf_description* vidinfo = &picasso_vidinfo[mon->monitor_id];
 		vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 #ifndef PICASSO_STATE_SETDAC
@@ -4429,119 +4690,36 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 
 	write_log(_T("Buffer %d size (%d*%d) %s\n"), monid, w, h, mon->screen_is_picasso ? _T("RTG") : _T("Native"));
 
-	if (mon->screen_is_picasso)
-	{
-		if (mon->amiga_window && isfullscreen() == 0)
-		{
-			if (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h)
-			{
-				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
-			}
-			else
-			{
-				SDL_SetWindowSize(mon->amiga_window, w, h);
-			}
-		}
-#ifdef USE_OPENGL
-		render_quad = { dx, dy, w, h };
-		crop_rect = { dx, dy, w, h };
-		set_scaling_option(mon->monitor_id, &currprefs, w, h);
-#else
-		if (mon->amiga_renderer) {
-			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, w, h);
-				render_quad = {dx, dy, w, h};
-				crop_rect = {dx, dy, w, h};
-			}
-			else
-			{
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, h, w);
-				render_quad = { -(w - h) / 2, (w - h) / 2, w, h };
-				crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
-			}
-			set_scaling_option(monid, &currprefs, w, h);
-		}
-		else
-			return false;
-#endif
-	}
-	else
-	{
-		int scaled_width = w;
-		int scaled_height = h;
-		if (currprefs.gfx_vresolution == VRES_NONDOUBLE)
-		{
-			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
-				scaled_height *= 2;
-//			else if (currprefs.gfx_resolution == RES_SUPERHIRES)
-//				scaled_width /= 2;
-		}
-		else
-		{
-			if (currprefs.gfx_resolution == RES_LORES)
-				scaled_width *= 2;
-//			else if (currprefs.gfx_resolution == RES_SUPERHIRES)
-//				scaled_width /= 2;
-		}
+	// Compute scaled dimensions for aspect ratio correction
+	int scaled_width, scaled_height;
+	compute_scaled_dimensions(w, h, mon->screen_is_picasso, scaled_width, scaled_height);
 
-		if (currprefs.ntscmode)
-			scaled_height = scaled_height * 6 / 5;
-
-		if (mon->amiga_window && isfullscreen() == 0)
-		{
-			if (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600)
-			{
-				SDL_SetWindowSize(mon->amiga_window, mon->amigawin_rect.w, mon->amigawin_rect.h);
-			}
-			else
-			{
-				SDL_SetWindowSize(mon->amiga_window, scaled_width, scaled_height);
-			}
+	// Window sizing when not fullscreen
+	if (mon->amiga_window && isfullscreen() == 0) {
+		int win_w, win_h;
+		if (mon->screen_is_picasso) {
+			// RTG: use stored rect if larger, otherwise use RTG resolution
+			win_w = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.w : w;
+			win_h = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.h : h;
+		} else {
+			// Native: use stored rect if larger than default, otherwise use scaled dimensions
+			win_w = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.w : scaled_width;
+			win_h = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.h : scaled_height;
 		}
-#ifdef USE_OPENGL
-		if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
-			render_quad = { dx, dy, scaled_width, scaled_height };
-			crop_rect = { dx, dy, w, h };
-		}
-		else if (currprefs.gfx_manual_crop)
-		{
-			render_quad = { dx, dy, scaled_width, scaled_height };
-			crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
-			if (crop_rect.w <= 0) crop_rect.w = w;
-			if (crop_rect.h <= 0) crop_rect.h = h;
-		}
-		set_scaling_option(mon->monitor_id, &currprefs, scaled_width, scaled_height);
-#else
-		if (mon->amiga_renderer)
-		{
-			if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180) {
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
-				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
-					render_quad = {dx, dy, scaled_width, scaled_height};
-					crop_rect = {dx, dy, w, h};
-				}
-				else if (currprefs.gfx_manual_crop)
-				{
-					render_quad = { dx, dy, scaled_width, scaled_height };
-					crop_rect = { currprefs.gfx_horizontal_offset, currprefs.gfx_vertical_offset, currprefs.gfx_manual_crop_width, currprefs.gfx_manual_crop_height };
-					if (crop_rect.w <= 0) crop_rect.w = w;
-					if (crop_rect.h <= 0) crop_rect.h = h;
-				}
-			}
-			else
-			{
-				SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_height, scaled_width);
-				if (!currprefs.gfx_auto_crop && !currprefs.gfx_manual_crop) {
-					render_quad = { -(scaled_width - scaled_height) / 2, (scaled_width - scaled_height) / 2, scaled_width, scaled_height };
-					crop_rect = { -(w - h) / 2, (w - h) / 2, w, h };
-				}
-			}
-			set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
-		}
-		else
-			return false;
-#endif
+		SDL_SetWindowSize(mon->amiga_window, win_w, win_h);
 	}
+
+#ifdef USE_OPENGL
+	configure_render_rects(w, h, scaled_width, scaled_height, mon->screen_is_picasso);
+	set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
+#else
+	if (!mon->amiga_renderer)
+		return false;
+
+	SDL_RenderSetLogicalSize(mon->amiga_renderer, scaled_width, scaled_height);
+	configure_render_rects(w, h, scaled_width, scaled_height, mon->screen_is_picasso);
+	set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
+#endif
 
 	return true;
 }
@@ -4834,6 +5012,12 @@ void auto_crop_image()
 			if (currprefs.gfx_resolution == RES_HIRES || currprefs.gfx_resolution == RES_SUPERHIRES)
 				height *= 2;
 		}
+		else
+		{
+			// Add missing LORES width doubling to match compute_scaled_dimensions()
+			if (currprefs.gfx_resolution == RES_LORES)
+				width *= 2;
+		}
 
 		if (currprefs.ntscmode)
 			height = height * 6 / 5;
@@ -4849,21 +5033,11 @@ void auto_crop_image()
 		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
 		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 #else
-
-		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-		{
-			SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
-			render_quad = { dx, dy, width, height };
-			crop_rect = { cx, cy, cw, ch };
-			if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
-			if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
-		}
-		else
-		{
-			SDL_RenderSetLogicalSize(mon->amiga_renderer, height, width);
-			render_quad = { -(width - height) / 2, (width - height) / 2, width, height };
-			crop_rect = { -(width - height) / 2, (width - height) / 2, width, height };
-		}
+		SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
+		render_quad = { dx, dy, width, height };
+		crop_rect = { cx, cy, cw, ch };
+		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
+		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
 
 		if (vkbd_allowed(0))
 		{
