@@ -4198,15 +4198,6 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
 
-#ifdef USE_OPENGL
-	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
-	if (!kmsdrm_detected) {
-		flags |= SDL_WINDOW_OPENGL;
-	} else {
-		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
-	}
-#endif
-
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
 		rc.w, rc.h,
