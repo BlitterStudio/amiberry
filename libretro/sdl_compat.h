@@ -79,6 +79,11 @@ typedef struct SDL_Color {
 	Uint8 a;
 } SDL_Color;
 
+typedef struct _TTF_Font TTF_Font;
+
+int TTF_Init(void);
+int TTF_SetFontSizeDPI(TTF_Font* font, int ptsize, unsigned int hdpi, unsigned int vdpi);
+
 typedef struct SDL_DisplayMode {
 	Uint32 format;
 	int w;

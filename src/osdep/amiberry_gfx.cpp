@@ -48,7 +48,9 @@
 #include "uae/types.h"
 
 #include <png.h>
+#ifndef LIBRETRO
 #include <SDL_image.h>
+#endif
 #ifdef USE_OPENGL
 #include <GL/glew.h>
 #include <SDL_opengl.h>
@@ -4056,12 +4058,14 @@ static int create_windows(struct AmigaMonitor* mon)
 		return 0;
 	}
 
+#ifndef LIBRETRO
 	auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
 	if (icon_surface != nullptr)
 	{
 		SDL_SetWindowIcon(mon->amiga_window, icon_surface);
 		SDL_FreeSurface(icon_surface);
 	}
+#endif
 
 #ifndef USE_OPENGL
 	if (mon->amiga_renderer == nullptr)

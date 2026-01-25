@@ -82,7 +82,6 @@ INCFLAGS += -I$(AMIBERRY_DIR)/src/include
 INCFLAGS += -I$(AMIBERRY_DIR)/src/osdep
 INCFLAGS += -I$(AMIBERRY_DIR)/src/threaddep
 INCFLAGS += -I$(AMIBERRY_DIR)/src/archivers
-INCFLAGS += -I$(AMIBERRY_DIR)/external/libguisan/include
 INCFLAGS += -I$(AMIBERRY_DIR)/external/floppybridge/src
 INCFLAGS += -I$(LIBRETRO_DIR)
 INCFLAGS += -I$(LIBCO_DIR)
@@ -206,8 +205,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
 SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(LIBRETRO_DIR)/libretro_stubs.cpp \
                 $(LIBRETRO_DIR)/sdl_stub.cpp \
-                $(LIBRETRO_DIR)/libretro_sdl_image.cpp \
-                $(LIBRETRO_DIR)/libretro_sdl_ttf.cpp \
+                $(LIBRETRO_DIR)/libretro_gui_stubs.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_gfx.cpp \
                 $(AMIBERRY_DIR)/src/osdep/amiberry_input.cpp \
@@ -227,7 +225,6 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/registry.cpp \
                 $(AMIBERRY_DIR)/src/osdep/retroarch.cpp \
                 $(AMIBERRY_DIR)/src/osdep/vpar.cpp \
-                $(AMIBERRY_DIR)/src/osdep/vkbd/vkbd.cpp \
                 $(AMIBERRY_DIR)/src/osdep/writelog.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ahi_v1.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ahi_v2.cpp \
