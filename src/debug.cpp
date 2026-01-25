@@ -187,6 +187,7 @@ static const TCHAR *help[] = {
 	_T("  m <address> [<lines>] Memory dump starting at <address>.\n"),
 	_T("  a <address>           Assembler.\n"),
 	_T("  d <address> [<lines>] Disassembly starting at <address>.\n"),
+	_T("  bt [<frames>]         Show backtrace using A5 as frame pointer (max 50 frames).\n"),
 	_T("  t [instructions]      Step one or more instructions.\n"),
 	_T("  tx                    Break when any exception.\n"),
 	_T("  z                     Step through one instruction - useful for JSR, DBRA etc.\n"),
@@ -6848,6 +6849,74 @@ static bool parsecmd(TCHAR *cmd, bool *out)
 	return false;
 }
 
+static void debug_backtrace(int max_frames)
+{
+	// Frame pointer must be in A5 for this to give a correct backtrace
+
+	uaecptr pc = M68K_GETPC;
+	uaecptr sp = regs.usp;
+
+	console_out_f(_T("Attempting backtrace of %d frames:\n"), max_frames);
+
+	// First frame: current PC
+	uaecptr frame_pc = pc;
+	uaecptr func_address;
+
+	bool found_link = false;
+
+	// For first frame, use A5 value
+	uaecptr current_fp = regs.regs[13];
+
+	// Walk the stack using frame pointers
+	int frame;
+	for (frame = 0; frame < max_frames; frame++) {
+		func_address = frame_pc;
+		// Search backwards up to 200 bytes to find LINK
+		for (int i = 0; i < 200; i += 2) {
+			uaecptr test_addr = func_address - i;
+
+			if (!debug_safe_addr(test_addr, 4)) {
+				break;
+			}
+
+			uae_u16 opcode = get_word_debug(test_addr);
+
+			// Check for LINK instruction: 0x4e55 followed by any displacement
+			if (opcode == 0x4e55) {
+				func_address = test_addr;
+				found_link = true;
+				break;
+			}
+		}
+
+		// Display the frame
+		console_out_f(_T("#%d  %08X in %08X\n"), frame, frame_pc, func_address);
+
+		if (!debug_safe_addr(current_fp, 8))
+			break;
+
+		// Get the return address from the stack
+		frame_pc = get_long_debug(current_fp + 4);
+
+		// Sanity checks
+		if (frame_pc == 0 || frame_pc % 2 == 1 || !debug_safe_addr(frame_pc, 4)) {
+			break; // Invalid address, stop backtracing
+		}
+
+		// Move to next frame
+		uaecptr prev_fp = get_long_debug(current_fp);
+
+		if (prev_fp == 0 || prev_fp == current_fp || !debug_safe_addr(prev_fp, 8)) {
+			// Next frame is garbage
+			break;
+		}
+		current_fp = prev_fp;
+	}
+	if (frame < max_frames-1) {
+		console_out_f(_T("No more valid frames\n"));
+	}
+}
+
 static bool debug_line (TCHAR *input)
 {
 	TCHAR cmd, *inptr;
@@ -7460,7 +7529,18 @@ static bool debug_line (TCHAR *input)
 		case 'O':
 			break;
 		case 'b':
-			if (staterecorder (&inptr))
+			if (*inptr == 't') {
+				int max_frames = 5; // Default to 5 frames
+				next_char2(&inptr);
+				if (more_params(&inptr)) {
+					max_frames = readint(&inptr, NULL);
+					if (max_frames <= 0 || max_frames > 50) {
+						console_out_f(_T("Number of frames must be between 1 and 50\n"));
+						return false;
+					}
+				}
+				debug_backtrace(max_frames);
+			} else if (staterecorder (&inptr))
 				return true;
 			break;
 		case 'u':
