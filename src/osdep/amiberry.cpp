@@ -1884,26 +1884,14 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 	if (isfocus() <= 0) return;
 
-	const auto is_picasso = mon->screen_is_picasso;
-
 	Sint32 x = event.motion.x;
 	Sint32 y = event.motion.y;
-	Sint32 xrel = event.motion.xrel;
-	Sint32 yrel = event.motion.yrel;
+	const Sint32 xrel = event.motion.xrel;
+	const Sint32 yrel = event.motion.yrel;
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
 		/* absolute */
-		// For absolute positioning, pass raw SDL coordinates to the input system.
-		// The get_mouse_position() function in inputdevice.cpp handles coordinate
-		// transformation via getgfxoffset() for both RTG and native modes.
-		// Applying transformation here causes double-transformation issues.
-		if (!is_picasso) {
-			// Legacy scaling for native modes - required for proper coordinate mapping
-			x = (x / 2) << currprefs.gfx_resolution;
-			y = (y / 2) << currprefs.gfx_vresolution;
-		}
-
 		setmousestate(0, 0, x, 1);
 		setmousestate(0, 1, y, 1);
 	}

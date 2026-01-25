@@ -1108,8 +1108,8 @@ void centerdstrect(struct AmigaMonitor* mon, SDL_Rect* dr)
 
 void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
-	struct AmigaMonitor* mon = &AMonitors[monid];
-	const struct amigadisplay* ad = &adisplays[monid];
+	const AmigaMonitor* mon = &AMonitors[monid];
+	const amigadisplay* ad = &adisplays[monid];
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 #ifdef AMIBERRY
 	if (currprefs.gfx_auto_crop)
@@ -1119,26 +1119,38 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	}
 #endif
 
-#ifdef USE_OPENGL
-	// In OpenGL mode with RTG, use render_quad for offset and scaling calculations
-	// render_quad contains the actual viewport position and dimensions
-	if (ad->picasso_on && render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
-		// Offset: position of the viewport within the screen
-		dx -= static_cast<float>(render_quad.x);
-		dy -= static_cast<float>(render_quad.y);
-		// Scaling: ratio of Amiga surface to viewport size
-		mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
-		my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
-	}
-	else
-#endif
 	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-		while (!(mon->scalepicasso && mon->screen_is_picasso)) {
-			if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
-				break;
+#ifdef USE_OPENGL
+		// In OpenGL Full-Window mode, use render_quad for offset and scaling calculations
+		// render_quad contains the actual viewport position and dimensions
+		if (render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
+			// Scaling: ratio of viewport size to Amiga surface (must compute first)
+			mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
+			my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
+			// Offset calculation differs between RTG and native modes due to 
+			// different formulas in get_mouse_position():
+			// - RTG mode: x = (x - XOffset) * fmx + fdx * fmx  (offset gets scaled)
+			// - Native mode: x = x * fmx - fdx  (offset is pre-scaled)
+			if (ad->picasso_on) {
+				// RTG mode: get_mouse_position scales the offset by fmx,
+				// so we pass raw window coordinates (negative for subtraction)
+				dx -= static_cast<float>(render_quad.x);
+				dy -= static_cast<float>(render_quad.y);
+			} else {
+				// Native mode: get_mouse_position uses offset directly,
+				// so we pre-scale to Amiga surface coordinates
+				dx += static_cast<float>(render_quad.x) / mx;
+				dy += static_cast<float>(render_quad.y) / my;
+			}
+		}
+		else
+#endif
+		// SDL renderer fallback path (no OpenGL or render_quad not set)
+		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
+			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || 
+			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {
 			dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
 			dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
-			break;
 		}
 	}
 
