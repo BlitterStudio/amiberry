@@ -93,8 +93,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_I
 
 if (USE_IMGUI)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
-else()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_GUISAN)
 endif()
 
 set(libmt32emu_SHARED FALSE)
@@ -117,11 +115,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if (USE_IMGUI)
     add_subdirectory(external/imgui)
     target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
-else()
-    add_subdirectory(external/libguisan)
-    target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE guisan)
 endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -136,7 +129,5 @@ endif ()
 add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage)
 if (USE_IMGUI)
     add_dependencies(${PROJECT_NAME} imgui)
-else()
-    add_dependencies(${PROJECT_NAME} guisan)
 endif()
 

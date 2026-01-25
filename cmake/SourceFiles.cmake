@@ -298,50 +298,6 @@ set(SOURCE_FILES
         src/jit/compemu_support.cpp
 )
 
-set (GUISAN_GUI_FILES
-        src/osdep/gui/ControllerMap.cpp
-        src/osdep/gui/CreateFolder.cpp
-        src/osdep/gui/SelectorEntry.cpp
-        src/osdep/gui/ShowCustomFields.cpp
-        src/osdep/gui/ShowHelp.cpp
-        src/osdep/gui/ShowMessage.cpp
-        src/osdep/gui/ShowDiskInfo.cpp
-        src/osdep/gui/SelectFolder.cpp
-        src/osdep/gui/SelectFile.cpp
-        src/osdep/gui/CreateFilesysHardfile.cpp
-        src/osdep/gui/EditCDDrive.cpp
-        src/osdep/gui/EditFilesysVirtual.cpp
-        src/osdep/gui/EditFilesysHardfile.cpp
-        src/osdep/gui/EditFilesysHardDrive.cpp
-        src/osdep/gui/EditTapeDrive.cpp
-        src/osdep/gui/PanelAbout.cpp
-        src/osdep/gui/PanelPaths.cpp
-        src/osdep/gui/PanelQuickstart.cpp
-        src/osdep/gui/PanelConfig.cpp
-        src/osdep/gui/PanelCPU.cpp
-        src/osdep/gui/PanelChipset.cpp
-        src/osdep/gui/PanelCustom.cpp
-        src/osdep/gui/PanelROM.cpp
-        src/osdep/gui/PanelRAM.cpp
-        src/osdep/gui/PanelFloppy.cpp
-        src/osdep/gui/PanelExpansions.cpp
-        src/osdep/gui/PanelHD.cpp
-        src/osdep/gui/PanelRTG.cpp
-        src/osdep/gui/PanelHWInfo.cpp
-        src/osdep/gui/PanelInput.cpp
-        src/osdep/gui/PanelIOPorts.cpp
-        src/osdep/gui/PanelDisplay.cpp
-        src/osdep/gui/PanelSound.cpp
-        src/osdep/gui/PanelDiskSwapper.cpp
-        src/osdep/gui/PanelMisc.cpp
-        src/osdep/gui/PanelPrio.cpp
-        src/osdep/gui/PanelSavestate.cpp
-        src/osdep/gui/PanelThemes.cpp
-        src/osdep/gui/PanelVirtualKeyboard.cpp
-        src/osdep/gui/PanelWHDLoad.cpp
-        src/osdep/gui/Navigation.cpp
-)
-
 set(IMGUI_GUI_FILES
 		src/osdep/imgui/about.cpp
 		src/osdep/imgui/chipset.cpp
@@ -435,9 +391,6 @@ if (USE_IMGUI)
     message("Using ImGui for GUI")
     list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
     list(APPEND SOURCE_FILES ${IMGUI_GUI_FILES})
-else ()
-    message("Using libguisan for GUI")
-    list(APPEND SOURCE_FILES ${GUISAN_GUI_FILES})
 endif ()
 
 if (USE_PCEM)
@@ -497,8 +450,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 if (USE_IMGUI)
     target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
-else()
-    target_include_directories(${PROJECT_NAME} PRIVATE external/libguisan/include)
 endif()
 
 # Install the executable
