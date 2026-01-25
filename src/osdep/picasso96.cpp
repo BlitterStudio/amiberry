@@ -182,6 +182,11 @@ static HCURSOR wincursor;
 #else
 SDL_Cursor* p96_cursor;
 SDL_Surface* p96_cursor_surface;
+// Software cursor overlay for relative mouse mode (where SDL_Cursor doesn't work)
+static SDL_Surface* cursor_overlay_surface = nullptr;
+static SDL_Texture* cursor_overlay_texture = nullptr;
+static int cursor_overlay_x = 0, cursor_overlay_y = 0;
+static bool cursor_overlay_needs_update = false;
 #endif
 static int wincursor_shown;
 static uaecptr boardinfo, ABI_interrupt;
@@ -835,6 +840,100 @@ static void do_fillrect_frame_buffer(const struct RenderInfo *ri, int X, int Y, 
 #endif
 }
 
+#ifdef AMIBERRY
+// Get whether we're using software cursor (for rendering code)
+bool p96_uses_software_cursor()
+{
+	// Always return true if we have a hardware sprite and valid data,
+	// as we now rely on the software overlay for all RTG cursor rendering.
+	if (!hwsprite || !cursorvisible)
+		return false;
+		
+	// If in Absolute Mouse mode (Tablet enabled), check Magic Mouse preferences
+	if (currprefs.input_tablet > 0) {
+		// If user wants Host Only cursor, do not draw the software overlay
+		if (currprefs.input_magic_mouse_cursor == MAGICMOUSE_HOST_ONLY)
+			return false;
+	}
+	
+	return true;
+}
+
+// Get current cursor position (used for software cursor rendering)
+void p96_get_cursor_position(int *x, int *y)
+{
+	if (x) *x = cursor_overlay_x;
+	if (y) *y = cursor_overlay_y;
+}
+
+// Get cursor dimensions
+void p96_get_cursor_dimensions(int *w, int *h)
+{
+	if (w) *w = cursorwidth;
+	if (h) *h = cursorheight;
+}
+
+// Update the software cursor overlay surface from cursor data
+static void update_cursor_overlay_surface()
+{
+	if (!cursordata || !cursorwidth || !cursorheight || !hwsprite)
+		return;
+
+	// (Re)create surface if dimensions changed
+	if (!cursor_overlay_surface ||
+		cursor_overlay_surface->w != cursorwidth ||
+		cursor_overlay_surface->h != cursorheight) {
+
+		if (cursor_overlay_surface) {
+			SDL_FreeSurface(cursor_overlay_surface);
+		}
+		cursor_overlay_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
+		if (!cursor_overlay_surface)
+			return;
+	}
+
+	// Copy cursor data to overlay surface
+	for (int y = 0; y < cursorheight; y++) {
+		uae_u8 *p1 = cursordata + cursorwidth * y;
+		auto *p2 = reinterpret_cast<uae_u32*>(static_cast<Uint8*>(cursor_overlay_surface->pixels) + cursor_overlay_surface->pitch * y);
+		for (int x = 0; x < cursorwidth; x++) {
+			uae_u8 c = *p1++;
+			if (c < 4) {
+				*p2 = cursorrgbn[c];
+			}
+			p2++;
+		}
+	}
+
+	cursor_overlay_needs_update = true;
+}
+
+// Get the cursor overlay surface (for texture update in rendering code)
+SDL_Surface* p96_get_cursor_overlay_surface()
+{
+	return cursor_overlay_surface;
+}
+
+// Check if cursor overlay texture needs update
+bool p96_cursor_needs_update()
+{
+	bool needs = cursor_overlay_needs_update;
+	cursor_overlay_needs_update = false;
+	return needs;
+}
+
+// Cleanup cursor overlay resources
+void p96_cleanup_cursor_overlay()
+{
+	if (cursor_overlay_surface) {
+		SDL_FreeSurface(cursor_overlay_surface);
+		cursor_overlay_surface = nullptr;
+	}
+	// Note: texture cleanup is handled by the renderer in amiberry_gfx.cpp
+
+}
+#endif
+
 static void setupcursor()
 {
 #ifdef AMIBERRY
@@ -845,30 +944,19 @@ static void setupcursor()
 
 	setupcursor_needed = 1;
 	if (cursordata && cursorwidth && cursorheight) {
-		p96_cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, cursorwidth, cursorheight, 32, SDL_PIXELFORMAT_RGBA32);
-
-		for (int y = 0; y < cursorheight; y++) {
-			uae_u8 *p1 = cursordata + cursorwidth * y;
-			auto *p2 = reinterpret_cast<uae_u32*>(static_cast<Uint8*>(p96_cursor_surface->pixels) + p96_cursor_surface->pitch * y);
-			for (int x = 0; x < cursorwidth; x++) {
-				uae_u8 c = *p1++;
-				if (c < 4) {
-					*p2 = cursorrgbn[c];
-				}
-				p2++;
-			}
-		}
-
-		if (p96_cursor != nullptr) {
+		// Always update the overlay surface (used in software cursor mode)
+		// We use a software overlay for RTG cursors to ensure consistency
+		// across different mouse modes (relative/absolute) and drivers.
+		update_cursor_overlay_surface();
+		
+		// Ensure any native SDL cursor is hidden/freed so it doesn't conflict
+		if (p96_cursor) {
 			SDL_FreeCursor(p96_cursor);
 			p96_cursor = nullptr;
 		}
-		p96_cursor = SDL_CreateColorCursor(p96_cursor_surface, 0, 0);
-		SDL_FreeSurface(p96_cursor_surface);
 
-		SDL_SetCursor(p96_cursor);
 		setupcursor_needed = 0;
-		P96TRACE_SPR((_T("cursorsurface3d updated\n")));
+		P96TRACE_SPR((_T("cursorsurface3d updated (overlay)\n")));
 	} else {
 		P96TRACE_SPR((_T("cursorsurface3d LockRect() failed\n")));
 	}
@@ -918,8 +1006,10 @@ static void disablemouse ()
 	if (!hwsprite)
 		return;
 #ifdef AMIBERRY
-	if (p96_cursor)
+	if (p96_cursor) {
 		SDL_FreeCursor(p96_cursor);
+		p96_cursor = nullptr;
+	}
 #else
 	D3D_setcursor(0, 0, 0, 0, 0, 0, 0, false, true);
 #endif
@@ -1917,6 +2007,11 @@ static uae_u32 REGPARAM2 picasso_SetSpritePosition (TrapContext *ctx)
 	}
 	newcursor_x = x;
 	newcursor_y = y;
+#ifdef AMIBERRY
+	// Also update software cursor overlay position
+	cursor_overlay_x = x;
+	cursor_overlay_y = y;
+#endif
 	if (!hwsprite)
 		return 0;
 	return 1;
@@ -2120,7 +2215,7 @@ static int createwindowscursor(int monid, int set, int chipset)
 
 	tmp_sprite_w = tmp_sprite_h = 0;
 
-	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_BGRA32);
+	cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
 	if (!cursor_surface)
 		goto end;
 

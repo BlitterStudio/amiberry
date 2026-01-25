@@ -448,9 +448,7 @@ void RefreshPanelRTG()
 	chkRtgHardwareInterrupt->setEnabled(!emulating);
 	chkRtgHardwareInterrupt->setSelected(changed_prefs.rtg_hardwareinterrupt);
 
-	// Only enable this if Virtual Mouse option is enabled,
-	// otherwise we'll get no cursor at all (due to SDL2 and Relative Mouse mode)
-	chkRtgHardwareSprite->setEnabled(changed_prefs.input_tablet > 0 && !emulating);
+	chkRtgHardwareSprite->setEnabled(!emulating);
 	chkRtgHardwareSprite->setSelected(changed_prefs.rtg_hardwaresprite);
 
 	chkRtgMultithreaded->setEnabled(!emulating);

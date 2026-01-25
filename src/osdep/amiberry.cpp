@@ -711,10 +711,7 @@ static void setcursorshape(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (mon->screen_is_picasso && currprefs.rtg_hardwaresprite)
-			SDL_ShowCursor(SDL_ENABLE);
-		else
-			SDL_ShowCursor(SDL_DISABLE);
+		SDL_ShowCursor(SDL_DISABLE);
 	}
 	else if (!picasso_setwincursor(monid)) {
 		SDL_SetCursor(normalcursor);
@@ -1888,35 +1885,11 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 	if (isfocus() <= 0) return;
 
 	const auto is_picasso = mon->screen_is_picasso;
-	Sint32 x, y, xrel, yrel;
-	if (amiberry_options.rotation_angle == 0)
-	{
-		x = event.motion.x;
-		y = event.motion.y;
-		xrel = event.motion.xrel;
-		yrel = event.motion.yrel;
-	}
-	else if (amiberry_options.rotation_angle == 180)
-	{
-		x = -event.motion.x;
-		y = -event.motion.y;
-		xrel = -event.motion.xrel;
-		yrel = -event.motion.yrel;
-	}
-	else if (amiberry_options.rotation_angle == 90)
-	{
-		x = event.motion.y;
-		y = -event.motion.x;
-		xrel = event.motion.yrel;
-		yrel = -event.motion.xrel;
-	}
-	else // -90
-	{
-		x = -event.motion.y;
-		y = event.motion.x;
-		xrel = -event.motion.yrel;
-		yrel = event.motion.xrel;
-	}
+
+	Sint32 x = event.motion.x;
+	Sint32 y = event.motion.y;
+	Sint32 xrel = event.motion.xrel;
+	Sint32 yrel = event.motion.yrel;
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
@@ -2423,13 +2396,6 @@ void target_fixup_options(uae_prefs* p)
 		p->rtg_hardwareinterrupt = false;
 		p->rtg_hardwaresprite = false;
 	}
-
-#ifdef AMIBERRY
-	// Disable hardware sprite if not using Virtual mouse mode,
-	// otherwise we'll have no cursor showing (due to SDL2 Relative mouse)
-	if (p->rtg_hardwaresprite && p->input_tablet == 0)
-		p->rtg_hardwaresprite = false;
-#endif
 
 	const MultiDisplay* md = getdisplay(p, 0);
 	for (auto & j : p->gfx_monitor) {
