@@ -2,6 +2,7 @@
 #include "imgui_internal.h"
 #include "sysdeps.h"
 #include "config.h"
+#include "imgui_panels.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "statusline.h"
@@ -10,7 +11,7 @@
 static bool CheckboxFlags(const char* label, int* flags, int mask)
 {
     bool v = ((*flags & mask) == mask);
-    bool pressed = ImGui::Checkbox(label, &v);
+    bool pressed = AmigaCheckbox(label, &v);
     if (pressed)
     {
         if (v)
@@ -59,7 +60,7 @@ static void ShowHotkeyPopup() {
         if (ImGui::IsKeyPressed(ImGuiKey_Escape))
             ImGui::CloseCurrentPopup();
 
-        if (ImGui::Button("Cancel")) {
+        if (AmigaButton("Cancel")) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -78,12 +79,12 @@ static void HotkeyControl(const char* label, char* config_val) {
     ImGui::EndDisabled();
     
     ImGui::SameLine();
-    if (ImGui::Button("...")) {
+    if (AmigaButton("...")) {
         target_hotkey_string = config_val;
         open_hotkey_popup = true;
     }
     ImGui::SameLine();
-    if (ImGui::Button("X")) {
+    if (AmigaButton("X")) {
         config_val[0] = '\0';
     }
     ImGui::PopID();
@@ -102,29 +103,29 @@ void render_panel_misc()
         
         // --- LEFT COLUMN: Checkboxes ---
         CheckboxFlags("Untrap = middle button", &changed_prefs.input_mouse_untrap, MOUSEUNTRAP_MIDDLEBUTTON);
-        ImGui::Checkbox("Show GUI on startup", &changed_prefs.start_gui);
-        ImGui::Checkbox("Always on top", &changed_prefs.main_alwaysontop);
-        ImGui::Checkbox("GUI Always on top", &changed_prefs.gui_alwaysontop);
-        ImGui::Checkbox("Synchronize clock", &changed_prefs.tod_hack);
-        ImGui::Checkbox("One second reboot pause", &changed_prefs.reset_delay);
-        ImGui::Checkbox("Faster RTG", &changed_prefs.picasso96_nocustom);
-        ImGui::Checkbox("Clipboard sharing", &changed_prefs.clipboard_sharing);
-        ImGui::Checkbox("Allow native code", &changed_prefs.native_code);
+        AmigaCheckbox("Show GUI on startup", &changed_prefs.start_gui);
+        AmigaCheckbox("Always on top", &changed_prefs.main_alwaysontop);
+        AmigaCheckbox("GUI Always on top", &changed_prefs.gui_alwaysontop);
+        AmigaCheckbox("Synchronize clock", &changed_prefs.tod_hack);
+        AmigaCheckbox("One second reboot pause", &changed_prefs.reset_delay);
+        AmigaCheckbox("Faster RTG", &changed_prefs.picasso96_nocustom);
+        AmigaCheckbox("Clipboard sharing", &changed_prefs.clipboard_sharing);
+        AmigaCheckbox("Allow native code", &changed_prefs.native_code);
         CheckboxFlags("Status Line native", &changed_prefs.leds_on_screen, STATUSLINE_CHIPSET);
         CheckboxFlags("Status Line RTG", &changed_prefs.leds_on_screen, STATUSLINE_RTG);
-        ImGui::Checkbox("Log illegal memory accesses", &changed_prefs.illegal_mem);
-        ImGui::Checkbox("Minimize when focus is lost", &changed_prefs.minimize_inactive);
-        ImGui::Checkbox("Master floppy write protection", &changed_prefs.floppy_read_only);
-        ImGui::Checkbox("Master harddrive write protection", &changed_prefs.harddrive_read_only);
-        ImGui::Checkbox("Hide all UAE autoconfig boards", &changed_prefs.uae_hide_autoconfig);
-        ImGui::Checkbox("RCtrl = RAmiga", &changed_prefs.right_control_is_right_win_key);
-        ImGui::Checkbox("Capture mouse when window is activated", &changed_prefs.capture_always);
-        ImGui::Checkbox("A600/A1200/A4000 IDE scsi.device disable", &changed_prefs.scsidevicedisable);
-        ImGui::Checkbox("Alt-Tab releases control", &changed_prefs.alt_tab_release);
-        ImGui::Checkbox("Warp mode reset", &changed_prefs.turbo_boot);
-        ImGui::Checkbox("Use RetroArch Quit Button", &changed_prefs.use_retroarch_quit);
-        ImGui::Checkbox("Use RetroArch Menu Button", &changed_prefs.use_retroarch_menu);
-        ImGui::Checkbox("Use RetroArch Reset Button", &changed_prefs.use_retroarch_reset);
+        AmigaCheckbox("Log illegal memory accesses", &changed_prefs.illegal_mem);
+        AmigaCheckbox("Minimize when focus is lost", &changed_prefs.minimize_inactive);
+        AmigaCheckbox("Master floppy write protection", &changed_prefs.floppy_read_only);
+        AmigaCheckbox("Master harddrive write protection", &changed_prefs.harddrive_read_only);
+        AmigaCheckbox("Hide all UAE autoconfig boards", &changed_prefs.uae_hide_autoconfig);
+        AmigaCheckbox("RCtrl = RAmiga", &changed_prefs.right_control_is_right_win_key);
+        AmigaCheckbox("Capture mouse when window is activated", &changed_prefs.capture_always);
+        AmigaCheckbox("A600/A1200/A4000 IDE scsi.device disable", &changed_prefs.scsidevicedisable);
+        AmigaCheckbox("Alt-Tab releases control", &changed_prefs.alt_tab_release);
+        AmigaCheckbox("Warp mode reset", &changed_prefs.turbo_boot);
+        AmigaCheckbox("Use RetroArch Quit Button", &changed_prefs.use_retroarch_quit);
+        AmigaCheckbox("Use RetroArch Menu Button", &changed_prefs.use_retroarch_menu);
+        AmigaCheckbox("Use RetroArch Reset Button", &changed_prefs.use_retroarch_reset);
 
         ImGui::TableNextColumn();
 
@@ -149,12 +150,12 @@ void render_panel_misc()
                 ImGui::EndDisabled();
                 
                 ImGui::TableNextColumn();
-                if (ImGui::Button("...")) {
+                if (AmigaButton("...")) {
                     target_hotkey_string = config_val;
                     open_hotkey_popup = true;
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("X")) {
+                if (AmigaButton("X")) {
                     config_val[0] = '\0';
                 }
                 ImGui::EndTable();

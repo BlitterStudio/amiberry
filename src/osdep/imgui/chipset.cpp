@@ -146,14 +146,14 @@ void render_panel_chipset()
 		if (ImGui::RadioButton("OCS + ECS Denise", &chipset_selection, 2)) changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
 		if (ImGui::RadioButton("Full ECS", &chipset_selection, 3)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 		
-		ImGui::Checkbox("NTSC", &changed_prefs.ntscmode);
+		AmigaCheckbox("NTSC", &changed_prefs.ntscmode);
 		ImGui::SameLine(); ShowHelpMarker("Enable NTSC mode (60Hz)");
 		ImGui::EndGroup();
 
 		ImGui::Spacing();
 		
 		bool cycle_exact = changed_prefs.cpu_cycle_exact;
-		if (ImGui::Checkbox("Cycle Exact (Full)", &cycle_exact))
+		if (AmigaCheckbox("Cycle Exact (Full)", &cycle_exact))
 		{
             ImGui::SameLine(); ShowHelpMarker("Bit-perfect emulation. Requires fast CPU.");
 			changed_prefs.cpu_cycle_exact = cycle_exact;
@@ -175,7 +175,7 @@ void render_panel_chipset()
 		bool memory_exact = changed_prefs.cpu_memory_cycle_exact;
 		// Disabled if CPU < 68020 (WinUAE logic)
 		ImGui::BeginDisabled(changed_prefs.cpu_model < 68020);
-		if (ImGui::Checkbox("Cycle Exact (DMA/Memory)", &memory_exact))
+		if (AmigaCheckbox("Cycle Exact (DMA/Memory)", &memory_exact))
 		{
 			changed_prefs.cpu_memory_cycle_exact = memory_exact;
 			changed_prefs.blitter_cycle_exact = memory_exact;
@@ -217,7 +217,7 @@ void render_panel_chipset()
 		if (disable_nkro) changed_prefs.keyboard_nkro = true;
 		
 		ImGui::BeginDisabled(disable_nkro);
-		ImGui::Checkbox("Keyboard N-key rollover", &changed_prefs.keyboard_nkro);
+		AmigaCheckbox("Keyboard N-key rollover", &changed_prefs.keyboard_nkro);
 		ImGui::EndDisabled();
 	}
 	EndGroupBox("Keyboard");
@@ -228,7 +228,7 @@ void render_panel_chipset()
 	BeginGroupBox("Options");
 	{
 		ImGui::BeginDisabled(changed_prefs.cpu_cycle_exact);
-		if (ImGui::Checkbox("Immediate Blitter", &changed_prefs.immediate_blits)) {
+		if (AmigaCheckbox("Immediate Blitter", &changed_prefs.immediate_blits)) {
 			if (changed_prefs.immediate_blits) changed_prefs.waiting_blits = false;
 		}
 		ImGui::EndDisabled();
@@ -237,7 +237,7 @@ void render_panel_chipset()
 		if (disable_wait_blits) changed_prefs.waiting_blits = 0;
 		ImGui::BeginDisabled(disable_wait_blits);
 		bool wait_blits = changed_prefs.waiting_blits;
-		if (ImGui::Checkbox("Wait for Blitter", &wait_blits)) {
+		if (AmigaCheckbox("Wait for Blitter", &wait_blits)) {
 			changed_prefs.waiting_blits = wait_blits ? 1 : 0;
 			if (changed_prefs.waiting_blits) changed_prefs.immediate_blits = false;
 		}
@@ -245,7 +245,7 @@ void render_panel_chipset()
 		
 		
 		bool mt = multithread_enabled != 0;
-		if (ImGui::Checkbox("Multithreaded Denise", &mt)) {
+		if (AmigaCheckbox("Multithreaded Denise", &mt)) {
 			multithread_enabled = mt ? 1 : 0;
 		}
 		
@@ -360,7 +360,7 @@ void render_panel_chipset()
 	// Genlock section
 	BeginGroupBox("Genlock");
 	{
-		ImGui::Checkbox("Genlock connected", &changed_prefs.genlock);
+		AmigaCheckbox("Genlock connected", &changed_prefs.genlock);
 		ImGui::SameLine();
 		
 		bool genlock_enable = changed_prefs.genlock || changed_prefs.genlock_effects;
@@ -390,9 +390,9 @@ void render_panel_chipset()
 			if (changed_prefs.genlock_mix > 255) changed_prefs.genlock_mix = 255;
 		}
 		
-		ImGui::Checkbox("Include alpha channels in screenshots and video captures.", &changed_prefs.genlock_alpha);
+		AmigaCheckbox("Include alpha channels in screenshots and video captures.", &changed_prefs.genlock_alpha);
 		bool genlock_aspect = changed_prefs.genlock_aspect > 0;
-		if (ImGui::Checkbox("Keep aspect ratio", &genlock_aspect)) {
+		if (AmigaCheckbox("Keep aspect ratio", &genlock_aspect)) {
 			changed_prefs.genlock_aspect = genlock_aspect ? 1 : 0;
 		}
 
@@ -401,9 +401,9 @@ void render_panel_chipset()
 			// Show File selector
 			// Index 3 is Image, 4 and >= 6 are Video
 			char* filename_ptr = (changed_prefs.genlock_image == 3) ? changed_prefs.genlock_image_file : changed_prefs.genlock_video_file;
-			ImGui::InputText("Genlock File", filename_ptr, MAX_DPATH);
+			AmigaInputText("Genlock File", filename_ptr, MAX_DPATH);
 			ImGui::SameLine();
-			if (ImGui::Button("...##GenlockFile"))
+			if (AmigaButton("...##GenlockFile"))
 			{
 				const char* filter = (changed_prefs.genlock_image == 3) ? ".png,.jpg,.jpeg,.bmp" : ".avi,.mp4,.mkv";
 				std::string title = (changed_prefs.genlock_image == 3) ? "Select Genlock Image" : "Select Genlock Video";

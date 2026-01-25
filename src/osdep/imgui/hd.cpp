@@ -267,15 +267,15 @@ static void RenderActionButtons()
     float spacing = ImGui::GetStyle().ItemSpacing.x;
 
     // Row 1: Add Dir, Add HDF, Add HD
-    if (ImGui::Button("Add Directory...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Add Directory...", ImVec2(btn_w_3, 0))) {
         current_hd_dialog_mode = HDDialogMode::AddDir;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Add Hardfile...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Add Hardfile...", ImVec2(btn_w_3, 0))) {
         current_hd_dialog_mode = HDDialogMode::AddHDF;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Add Hard Drive...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Add Hard Drive...", ImVec2(btn_w_3, 0))) {
         current_hd_dialog_mode = HDDialogMode::AddHardDrive;
     }
 
@@ -293,14 +293,14 @@ static void RenderActionButtons()
     float btn_w_props_remove = (btn_w_3 - spacing) / 2.0f;
 
     // Add CD Drive
-    if (ImGui::Button("Add CD Drive...", ImVec2(btn_w_cd, 0))) {
+    if (AmigaButton("Add CD Drive...", ImVec2(btn_w_cd, 0))) {
          current_hd_dialog_mode = HDDialogMode::AddCD;
     }
     
     ImGui::SameLine();
 
     // Add Tape Drive
-    if (ImGui::Button("Add Tape Drive...", ImVec2(btn_w_tape, 0))) {
+    if (AmigaButton("Add Tape Drive...", ImVec2(btn_w_tape, 0))) {
          current_hd_dialog_mode = HDDialogMode::AddTape;
     }
 
@@ -308,13 +308,13 @@ static void RenderActionButtons()
     
     // Properties (Edit)
     ImGui::BeginDisabled(selected_row < 0 || selected_row >= changed_prefs.mountitems);
-    if (ImGui::Button("Properties", ImVec2(btn_w_props_remove, 0))) {
+    if (AmigaButton("Properties", ImVec2(btn_w_props_remove, 0))) {
         current_hd_dialog_mode = HDDialogMode::EditEntry;
         edit_entry_index = selected_row;
     }
     ImGui::SameLine();
     // Remove
-    if (ImGui::Button("Remove", ImVec2(btn_w_props_remove, 0))) {
+    if (AmigaButton("Remove", ImVec2(btn_w_props_remove, 0))) {
         kill_filesys_unitconfig(&changed_prefs, selected_row);
         if (selected_row >= changed_prefs.mountitems) selected_row = changed_prefs.mountitems - 1;
     }
@@ -322,20 +322,20 @@ static void RenderActionButtons()
 
     // Row 3: Create Hardfile (Full width or similar to top buttons?) 
     // WinUAE puts it on its own row usually or grouped. User asked for "new, third row, by itself".
-    if (ImGui::Button("Create Hardfile...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Create Hardfile...", ImVec2(btn_w_3, 0))) {
         current_hd_dialog_mode = HDDialogMode::CreateHDF;
     }
 }
 
 static void RenderCDSection()
 {
-    ImGui::Checkbox("CDFS automount CD/DVD drives", &changed_prefs.automount_cddrives);
+    AmigaCheckbox("CDFS automount CD/DVD drives", &changed_prefs.automount_cddrives);
     ImGui::SameLine();
     ImGui::Dummy(ImVec2(20, 0));
     ImGui::SameLine();
     
     bool turbo = (changed_prefs.cd_speed == 0);
-    if (ImGui::Checkbox("Turbo CD speed", &turbo)) {
+    if (AmigaCheckbox("Turbo CD speed", &turbo)) {
         changed_prefs.cd_speed = turbo ? 0 : 100;
     }
     
@@ -344,7 +344,7 @@ static void RenderCDSection()
     BeginGroupBox("CD Drive / Image");
     
     bool cd_enabled = changed_prefs.cdslots[0].inuse;
-    if (ImGui::Checkbox("CD drive/image", &cd_enabled)) {
+    if (AmigaCheckbox("CD drive/image", &cd_enabled)) {
         changed_prefs.cdslots[0].inuse = cd_enabled;
         if (!cd_enabled) {
             changed_prefs.cdslots[0].type = SCSI_UNIT_DISABLED;
@@ -392,12 +392,12 @@ static void RenderCDSection()
     xfree(cd_name);
     
     ImGui::SameLine();
-    if (ImGui::Button("Eject", ImVec2(70, 0))) {
+    if (AmigaButton("Eject", ImVec2(70, 0))) {
         changed_prefs.cdslots[0].name[0] = 0;
         changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
     }
     ImGui::SameLine();
-    if (ImGui::Button("...", ImVec2(30, 0))) {
+    if (AmigaButton("...", ImVec2(30, 0))) {
          char* curr_path = ua(changed_prefs.cdslots[0].name);
          std::string startPath = curr_path;
          if (startPath.empty()) {
@@ -461,7 +461,7 @@ static void ShowEditFilesysVirtualModal()
         ImGui::SameLine();
         InputTextT("##Path", current_fsvdlg.ci.rootdir, sizeof(current_fsvdlg.ci.rootdir));
         ImGui::SameLine();
-        if (ImGui::Button("... Dir"))
+        if (AmigaButton("... Dir"))
         {
             char* current_root = ua(current_fsvdlg.ci.rootdir);
             OpenDirDialog(current_root);
@@ -470,7 +470,7 @@ static void ShowEditFilesysVirtualModal()
             selecting_virtual_arch = false;
         }
         ImGui::SameLine();
-        if (ImGui::Button("... Arch"))
+        if (AmigaButton("... Arch"))
         {
              char* current_root = ua(current_fsvdlg.ci.rootdir);
              OpenFileDialog("Select archive", "Archives (*.zip,*.7z,*.rar,*.lha,*.lzh,*.lzx){.zip,.7z,.rar,.lha,.lzh,.lzx},All Files (*){.*}", current_root);
@@ -510,11 +510,11 @@ static void ShowEditFilesysVirtualModal()
         ImGui::Separator();
 
         bool rw = !current_fsvdlg.ci.readonly;
-        if (ImGui::Checkbox("Read/Write", &rw)) current_fsvdlg.ci.readonly = !rw;
+        if (AmigaCheckbox("Read/Write", &rw)) current_fsvdlg.ci.readonly = !rw;
         
         ImGui::SameLine();
         bool bootable = (current_fsvdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
-        if (ImGui::Checkbox("Bootable", &bootable)) {
+        if (AmigaCheckbox("Bootable", &bootable)) {
              if (bootable) current_fsvdlg.ci.bootpri = 0;
              else current_fsvdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
         }
@@ -533,14 +533,14 @@ static void ShowEditFilesysVirtualModal()
 
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(120, 0))) {
             new_filesys(edit_entry_index);
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_virtual_filesys_modal = false;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(120, 0))) {
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_virtual_filesys_modal = false;
@@ -559,7 +559,7 @@ static void ShowEditFilesysHardfileModal()
         ImGui::SameLine();
         InputTextT("##HDFPath", current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir));
         ImGui::SameLine();
-        if (ImGui::Button("..."))
+        if (AmigaButton("..."))
         {
              char* current_root = ua(current_hfdlg.ci.rootdir);
              OpenFileDialog("Select hard disk file", "Hardfiles (*.hdf,*.hdz,*.lha,*.zip,*.vhd,*.chd,*.7z){.hdf,.hdz,.lha,.zip,.vhd,.chd,.7z},All Files (*){.*}", current_root);
@@ -588,7 +588,7 @@ static void ShowEditFilesysHardfileModal()
         ImGui::Text("Geometry");
         
         bool manual_geo = current_hfdlg.ci.physical_geometry; 
-        if (ImGui::Checkbox("Manual Geometry", &manual_geo)) {
+        if (AmigaCheckbox("Manual Geometry", &manual_geo)) {
              current_hfdlg.ci.physical_geometry = manual_geo;
              updatehdfinfo(true, false, false, hdf_info_text1, hdf_info_text2);
         }
@@ -662,10 +662,10 @@ static void ShowEditFilesysHardfileModal()
         ImGui::Separator();
         
         bool rw = !current_hfdlg.ci.readonly;
-        if (ImGui::Checkbox("Read/Write", &rw)) current_hfdlg.ci.readonly = !rw;
+        if (AmigaCheckbox("Read/Write", &rw)) current_hfdlg.ci.readonly = !rw;
         ImGui::SameLine();
         bool bootable = (current_hfdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
-        if (ImGui::Checkbox("Bootable", &bootable)) {
+        if (AmigaCheckbox("Bootable", &bootable)) {
              if (bootable) current_hfdlg.ci.bootpri = 0;
              else current_hfdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
         }
@@ -679,14 +679,14 @@ static void ShowEditFilesysHardfileModal()
 
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(120, 0))) {
             new_hardfile(edit_entry_index);
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_hardfile_modal = false;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(120, 0))) {
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_hardfile_modal = false;
@@ -703,8 +703,8 @@ static void ShowCreateHardfileModal()
         ImGui::BeginGroup();
         ImGui::Text("Settings");
         ImGui::InputInt("Size (MB)", &create_hdf_size_mb);
-        ImGui::Checkbox("Dynamic HDF (Sparse)", &create_hdf_dynamic);
-        ImGui::Checkbox("RDB Mode", &create_hdf_rdb);
+        AmigaCheckbox("Dynamic HDF (Sparse)", &create_hdf_dynamic);
+        AmigaCheckbox("RDB Mode", &create_hdf_rdb);
         ImGui::EndGroup();
 
         ImGui::Separator();
@@ -713,7 +713,7 @@ static void ShowCreateHardfileModal()
         ImGui::Text("Path");
         InputTextT("##CreatePath", current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir));
         ImGui::SameLine();
-        if (ImGui::Button("...")) {
+        if (AmigaButton("...")) {
              char* current_root = ua(current_hfdlg.ci.rootdir);
              // SelectFile for CREATE needs different handling? OpenFileDialog helper handles create too?
              // Usually just picking a path is enough.
@@ -734,7 +734,7 @@ static void ShowCreateHardfileModal()
 
         ImGui::Separator();
 
-        if (ImGui::Button("Create", ImVec2(120, 0))) {
+        if (AmigaButton("Create", ImVec2(120, 0))) {
             uae_u64 size_bytes = (uae_u64)create_hdf_size_mb * 1024 * 1024;
             if (vhd_create(current_hfdlg.ci.rootdir, size_bytes, create_hdf_dynamic ? 1 : 0)) {
                 show_create_hdf_modal = false;
@@ -742,7 +742,7 @@ static void ShowCreateHardfileModal()
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(120, 0))) {
             show_create_hdf_modal = false;
             ImGui::CloseCurrentPopup();
         }
@@ -793,17 +793,17 @@ static void ShowAddHardDriveModal()
         }
         
         bool rw = !current_hfdlg.ci.readonly;
-        if (ImGui::Checkbox("Read/Write", &rw)) current_hfdlg.ci.readonly = !rw;
+        if (AmigaCheckbox("Read/Write", &rw)) current_hfdlg.ci.readonly = !rw;
         ImGui::SameLine();
         bool bootable = (current_hfdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
-        if (ImGui::Checkbox("Bootable", &bootable)) {
+        if (AmigaCheckbox("Bootable", &bootable)) {
              if (bootable) current_hfdlg.ci.bootpri = 0;
              else current_hfdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
         }
 
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(120, 0))) {
             if (selected_drive_idx >= 0 && selected_drive_idx < drive_names.size()) {
                 au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), drive_paths[selected_drive_idx].c_str());
                  char devname[256];
@@ -815,7 +815,7 @@ static void ShowAddHardDriveModal()
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(120, 0))) {
             show_add_harddrive_modal = false;
             ImGui::CloseCurrentPopup();
         }
@@ -858,7 +858,7 @@ static void ShowEditCDDriveModal()
 
         InputTextT("Path", path_buf, MAX_DPATH);
         ImGui::SameLine();
-        if (ImGui::Button("...")) {
+        if (AmigaButton("...")) {
             OpenFileDialog("Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", path_buf);
         }
 
@@ -901,7 +901,7 @@ static void ShowEditCDDriveModal()
 
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(120, 0))) {
             strncpy(current_cddlg.ci.rootdir, path_buf, MAX_DPATH);
             current_cddlg.ci.controller_unit = selected_unit;
             
@@ -921,7 +921,7 @@ static void ShowEditCDDriveModal()
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
             show_cd_modal = false;
             initialized = false;
@@ -949,14 +949,14 @@ static void ShowEditTapeDriveModal()
 
         InputTextT("Path", path_buf, MAX_DPATH);
         ImGui::SameLine();
-        if (ImGui::Button("... Dir")) {
+        if (AmigaButton("... Dir")) {
              char* current_root = ua(path_buf);
              OpenDirDialog(current_root);
              xfree(current_root);
              selecting_virtual_dir = true; 
         }
         ImGui::SameLine();
-        if (ImGui::Button("... File")) {
+        if (AmigaButton("... File")) {
             OpenFileDialog("Select Tape Image", "All Files (*){.*}", path_buf);
         }
         
@@ -1002,7 +1002,7 @@ static void ShowEditTapeDriveModal()
 
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(120, 0))) {
             if (path_buf[0] == 0) {
                  // Warning?
             } else {
@@ -1026,7 +1026,7 @@ static void ShowEditTapeDriveModal()
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
             show_tape_modal = false;
             initialized = false;

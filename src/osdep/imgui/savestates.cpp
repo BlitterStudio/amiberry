@@ -13,6 +13,8 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#include "imgui_panels.h"
+
 static std::string get_file_timestamp(const char* filename)
 {
     struct stat st;
@@ -155,7 +157,7 @@ void render_panel_savestates()
 
         // Buttons
         ImGui::BeginDisabled(!has_state);
-        if (ImGui::Button("Load from Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+        if (AmigaButton("Load from Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
             if (emulating && strlen(savestate_fname) > 0) {
                 FILE* f = fopen(savestate_fname, "rbe");
@@ -172,7 +174,7 @@ void render_panel_savestates()
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save to Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+        if (AmigaButton("Save to Slot", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
              if (emulating) {
                 savestate_initsave(savestate_fname, 1, 0, true);
@@ -186,7 +188,7 @@ void render_panel_savestates()
              }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+        if (AmigaButton("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
         {
              if (strlen(savestate_fname) > 0) {
                  show_delete_confirm_popup = true;
@@ -196,7 +198,7 @@ void render_panel_savestates()
 
         ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
-        if (ImGui::Button("Load state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+        if (AmigaButton("Load state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
              disk_selection(4, &changed_prefs);
              current_state_num = 99;
@@ -205,7 +207,7 @@ void render_panel_savestates()
              ClearScreenshotTexture();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Save state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+        if (AmigaButton("Save state...", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
         {
              if (emulating) {
                  disk_selection(5, &changed_prefs);
@@ -226,7 +228,7 @@ void render_panel_savestates()
     {
         ImGui::Text("%s", alert_message.c_str());
         ImGui::Separator();
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -241,14 +243,14 @@ void render_panel_savestates()
         ImGui::Text("Do you really want to delete the statefile?");
         ImGui::Text("This will also delete the corresponding screenshot.");
         ImGui::Separator();
-        if (ImGui::Button("Yes", ImVec2(120, 0))) {
+        if (AmigaButton("Yes", ImVec2(120, 0))) {
             remove(savestate_fname);
             if (!screenshot_filename.empty()) remove(screenshot_filename.c_str());
             ClearScreenshotTexture();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("No", ImVec2(120, 0))) {
+        if (AmigaButton("No", ImVec2(120, 0))) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

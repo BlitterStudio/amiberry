@@ -4,6 +4,7 @@
 #include "options.h"
 #include "inputdevice.h"
 #include "gui/gui_handling.h"
+#include "imgui_panels.h"
 #include <vector>
 #include <string>
 
@@ -152,7 +153,7 @@ void render_panel_input()
 		}
 
 		ImGui::SameLine();
-		ImGui::Button(std::string("Remap / Test##").append(std::to_string(port_idx)).c_str());
+		AmigaButton(std::string("Remap / Test##").append(std::to_string(port_idx)).c_str());
 		
 		// Row 3: Mouse Map
 		ImGui::AlignTextToFramePadding();
@@ -188,9 +189,9 @@ void render_panel_input()
 	// Swap & Autoswitch in Column 2
 	ImGui::NextColumn(); // Skip Col 1
 	ImGui::Dummy(ImVec2(0, 8.0f));
-	ImGui::Button("Swap ports");
+	AmigaButton("Swap ports");
 	ImGui::SameLine();
-	ImGui::Checkbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
+	AmigaCheckbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
 	ImGui::NextColumn(); // Finish Row
 	
 	ImGui::Columns(1);
@@ -252,7 +253,7 @@ void render_panel_input()
 			ImGui::EndCombo();
 		}
 		ImGui::SameLine();
-		ImGui::Button(std::string("Remap / Test##Par").append(std::to_string(port_idx)).c_str());
+		AmigaButton(std::string("Remap / Test##Par").append(std::to_string(port_idx)).c_str());
 		
 		ImGui::NextColumn();
 	};
@@ -410,7 +411,7 @@ void render_panel_input()
 	// Row 2
 	// Left: Virtual Mouse
 	bool virt_mouse = changed_prefs.input_tablet > 0;
-	if (ImGui::Checkbox("Install virtual mouse driver", &virt_mouse)) {
+	if (AmigaCheckbox("Install virtual mouse driver", &virt_mouse)) {
 		changed_prefs.input_tablet = virt_mouse ? TABLET_MOUSEHACK : TABLET_OFF; 
 	}
 	ImGui::NextColumn();
@@ -442,7 +443,7 @@ void render_panel_input()
 
 	// Row 3
 	// Left: Tablet Library emul
-	ImGui::Checkbox("Tablet.library emulation", &changed_prefs.tablet_library);
+	AmigaCheckbox("Tablet.library emulation", &changed_prefs.tablet_library);
 	ImGui::NextColumn();
 
 	// Right: Tablet Mode (Aligned with Row 3)

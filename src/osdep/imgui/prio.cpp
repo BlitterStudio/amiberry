@@ -1,6 +1,7 @@
 #include "imgui.h"
 #include "sysdeps.h"
 #include "config.h"
+#include "imgui_panels.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 
@@ -10,7 +11,7 @@ static bool CheckboxInt04(const char* label, int* value)
     // If value is 0, checkbox should be checked.
     // If value is 4, checkbox should be unchecked.
     bool v = (*value == 0);
-    bool pressed = ImGui::Checkbox(label, &v);
+    bool pressed = AmigaCheckbox(label, &v);
     if (pressed)
     {
         *value = v ? 0 : 4;
@@ -46,8 +47,8 @@ void render_panel_prio()
             
             ImGui::Dummy(ImVec2(0.0f, 5.0f));
             ImGui::Text("Mouse uncaptured:");
-            ImGui::Checkbox("Pause emulation", &changed_prefs.active_nocapture_pause);
-            ImGui::Checkbox("Disable sound", &changed_prefs.active_nocapture_nosound);
+            AmigaCheckbox("Pause emulation", &changed_prefs.active_nocapture_pause);
+            AmigaCheckbox("Disable sound", &changed_prefs.active_nocapture_nosound);
         }
         ImGui::EndChild();
 
@@ -61,8 +62,8 @@ void render_panel_prio()
             ImGui::Combo("##InactivePrio", &changed_prefs.inactive_priority, prio_items, IM_ARRAYSIZE(prio_items));
             
             ImGui::Dummy(ImVec2(0.0f, 18.0f)); // Spacing to align with Active group's "Mouse uncaptured" gap if needed, or just standard list
-            ImGui::Checkbox("Pause emulation", &changed_prefs.inactive_pause);
-            ImGui::Checkbox("Disable sound", &changed_prefs.inactive_nosound);
+            AmigaCheckbox("Pause emulation", &changed_prefs.inactive_pause);
+            AmigaCheckbox("Disable sound", &changed_prefs.inactive_nosound);
             CheckboxInt04("Disable input", &changed_prefs.inactive_input);
         }
         ImGui::EndChild();
@@ -77,8 +78,8 @@ void render_panel_prio()
             ImGui::Combo("##MinimizedPrio", &changed_prefs.minimized_priority, prio_items, IM_ARRAYSIZE(prio_items));
             
             ImGui::Dummy(ImVec2(0.0f, 18.0f));
-            ImGui::Checkbox("Pause emulation", &changed_prefs.minimized_pause);
-            ImGui::Checkbox("Disable sound", &changed_prefs.minimized_nosound);
+            AmigaCheckbox("Pause emulation", &changed_prefs.minimized_pause);
+            AmigaCheckbox("Disable sound", &changed_prefs.minimized_nosound);
             CheckboxInt04("Disable input", &changed_prefs.minimized_input);
         }
         ImGui::EndChild();

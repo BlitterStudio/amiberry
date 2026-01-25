@@ -36,7 +36,7 @@ void render_panel_diskswapper()
         ImGui::Text("%d", i + 1); 
         ImGui::SameLine();
         
-        if (ImGui::Button("..."))
+        if (AmigaButton("..."))
         {
              diskswapper_target_slot = i;
              std::string startPath = changed_prefs.dfxlist[i];
@@ -47,7 +47,7 @@ void render_panel_diskswapper()
              OpenFileDialog("Select disk image file", filter, startPath);
         }
         ImGui::SameLine();
-        if (ImGui::Button("X"))
+        if (AmigaButton("X"))
         {
             changed_prefs.dfxlist[i][0] = 0;
         }
@@ -76,7 +76,7 @@ void render_panel_diskswapper()
         else
             snprintf(drive_btn, sizeof(drive_btn), "DF%d:", drive);
             
-        if (ImGui::Button(drive_btn, ImVec2(-1, 0)))
+        if (AmigaButton(drive_btn, ImVec2(-1, 0)))
         {
             disk_swap(i, 1);
             add_file_to_mru_list(lstMRUDiskList, std::string(changed_prefs.dfxlist[i]));
@@ -88,7 +88,7 @@ void render_panel_diskswapper()
     ImGui::Columns(1);
     ImGui::EndChild();
 
-    if (ImGui::Button("Remove All", ImVec2(120, 0)))
+    if (AmigaButton("Remove All", ImVec2(120, 0)))
     {
         for (int row = 0; row < MAX_SPARE_DRIVES; ++row)
         {

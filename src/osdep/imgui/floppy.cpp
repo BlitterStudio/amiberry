@@ -88,7 +88,7 @@ static void RenderDriveSlot(int i)
         bool enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
         char label[8];
         snprintf(label, sizeof(label), "DF%d:", i);
-        if (ImGui::Checkbox(label, &enabled)) {
+        if (AmigaCheckbox(label, &enabled)) {
              if (enabled && changed_prefs.floppyslots[i].dfxtype == DRV_NONE)
                  changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
              else if (!enabled)
@@ -136,7 +136,7 @@ static void RenderDriveSlot(int i)
         // 3. WP Checkbox
         ImGui::TableNextColumn();
         bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
-        if (ImGui::Checkbox("##WP", &wp)) {
+        if (AmigaCheckbox("##WP", &wp)) {
             disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, wp);
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Write-protected");
@@ -146,21 +146,21 @@ static void RenderDriveSlot(int i)
         
         // 5. Info Button
         ImGui::TableNextColumn();
-        if (ImGui::Button("?", ImVec2(-1, 0))) {
+        if (AmigaButton("?", ImVec2(-1, 0))) {
              if (strlen(changed_prefs.floppyslots[i].df) > 0)
                 DisplayDiskInfo(i);
         }
         
         // 6. Eject Button
         ImGui::TableNextColumn();
-        if (ImGui::Button("Eject", ImVec2(-1, 0))) {
+        if (AmigaButton("Eject", ImVec2(-1, 0))) {
              disk_eject(i);
              changed_prefs.floppyslots[i].df[0] = 0;
         }
         
         // 7. Select Button
         ImGui::TableNextColumn();
-        if (ImGui::Button("...", ImVec2(-1, 0))) {
+        if (AmigaButton("...", ImVec2(-1, 0))) {
              current_floppy_dialog_mode = static_cast<FloppyDialogMode>(static_cast<int>(FloppyDialogMode::SelectDF0) + i);
              std::string startPath = changed_prefs.floppyslots[i].df;
              if (startPath.empty()) startPath = get_floppy_path(); 
@@ -246,13 +246,13 @@ static void RenderDrawBridge()
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Refresh")) {
+        if (AmigaButton("Refresh")) {
             FloppyBridgeAPI::getDriverList(driver_list);
         }
 
         // --- Serial Port ---
         bool auto_serial = changed_prefs.drawbridge_serial_auto;
-        if(ImGui::Checkbox("DrawBridge: Auto-Detect serial port", &auto_serial)) 
+        if(AmigaCheckbox("DrawBridge: Auto-Detect serial port", &auto_serial)) 
             changed_prefs.drawbridge_serial_auto = auto_serial;
         
         ImGui::BeginDisabled(auto_serial);
@@ -296,12 +296,12 @@ static void RenderDrawBridge()
         
         // --- Smart Speed ---
         bool smart_speed = changed_prefs.drawbridge_smartspeed;
-        if (ImGui::Checkbox("DrawBridge: Smart Speed (Dynamically switch on Turbo)", &smart_speed))
+        if (AmigaCheckbox("DrawBridge: Smart Speed (Dynamically switch on Turbo)", &smart_speed))
             changed_prefs.drawbridge_smartspeed = smart_speed;
 
         // --- Auto Cache ---
         bool auto_cache = changed_prefs.drawbridge_autocache;
-        if (ImGui::Checkbox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)", &auto_cache))
+        if (AmigaCheckbox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)", &auto_cache))
             changed_prefs.drawbridge_autocache = auto_cache;
 
         // --- Drive Cable ---
@@ -387,18 +387,18 @@ void render_panel_floppy()
     float avail_w = ImGui::GetContentRegionAvail().x;
     float btn_w = (avail_w - 20) / 3.0f;
     
-    if (ImGui::Button("Create 3.5'' DD disk", ImVec2(btn_w, 0))) {
+    if (AmigaButton("Create 3.5'' DD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateDD;
         OpenFileDialog("Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", current_dir); 
     }
     ImGui::SameLine();
-    if (ImGui::Button("Create 3.5'' HD disk", ImVec2(btn_w, 0))) {
+    if (AmigaButton("Create 3.5'' HD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateHD;
         OpenFileDialog("Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", current_dir);
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(strlen(changed_prefs.floppyslots[0].df) == 0);
-    if (ImGui::Button("Save config for disk", ImVec2(btn_w, 0))) {
+    if (AmigaButton("Save config for disk", ImVec2(btn_w, 0))) {
         char filename[MAX_DPATH];
         char diskname[MAX_DPATH];
         extract_filename(changed_prefs.floppyslots[0].df, diskname);

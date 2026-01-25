@@ -1,6 +1,7 @@
 #include "imgui.h"
 #include "sysdeps.h"
 #include "config.h"
+#include "imgui_panels.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "sounddep/sound.h"
@@ -130,7 +131,7 @@ void render_panel_io()
 
 	bool stereo_enabled = (sampler_idx > 0);
 	if (!stereo_enabled) ImGui::BeginDisabled();
-	ImGui::Checkbox("Stereo sampler", &changed_prefs.sampler_stereo);
+	AmigaCheckbox("Stereo sampler", &changed_prefs.sampler_stereo);
 	if (!stereo_enabled) ImGui::EndDisabled();
 
 	ImGui::EndChild();
@@ -172,15 +173,15 @@ void render_panel_io()
 	if (!use_serial) ImGui::BeginDisabled();
 	
 	ImGui::Columns(4, "SerialOpts", false);
-	ImGui::Checkbox("Shared", &changed_prefs.serial_demand); ImGui::NextColumn();
-	ImGui::Checkbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts); ImGui::NextColumn();
-	ImGui::Checkbox("Direct", &changed_prefs.serial_direct); ImGui::NextColumn();
-	ImGui::Checkbox("uaeserial.device", &changed_prefs.uaeserial); ImGui::NextColumn();
+	AmigaCheckbox("Shared", &changed_prefs.serial_demand); ImGui::NextColumn();
+	AmigaCheckbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts); ImGui::NextColumn();
+	AmigaCheckbox("Direct", &changed_prefs.serial_direct); ImGui::NextColumn();
+	AmigaCheckbox("uaeserial.device", &changed_prefs.uaeserial); ImGui::NextColumn();
 	ImGui::Columns(1);
 
 	ImGui::Columns(2, "SerialStatus", false);
-	ImGui::Checkbox("Serial status (RTS/...)", &changed_prefs.serial_rtsctsdtrdtecd); ImGui::NextColumn();
-	ImGui::Checkbox("Serial status: Ring Ind.", &changed_prefs.serial_ri); ImGui::NextColumn();
+	AmigaCheckbox("Serial status (RTS/...)", &changed_prefs.serial_rtsctsdtrdtecd); ImGui::NextColumn();
+	AmigaCheckbox("Serial status: Ring Ind.", &changed_prefs.serial_ri); ImGui::NextColumn();
 	ImGui::Columns(1);
 	
 	if (!use_serial) ImGui::EndDisabled();
@@ -248,7 +249,7 @@ void render_panel_io()
 	// Route
 	bool route_enabled = (midi_in_idx > 0);
 	if (!route_enabled) ImGui::BeginDisabled();
-	ImGui::Checkbox("Route MIDI In to MIDI Out", &changed_prefs.midirouter);
+	AmigaCheckbox("Route MIDI In to MIDI Out", &changed_prefs.midirouter);
 	if (!route_enabled) ImGui::EndDisabled();
 
 	ImGui::EndChild();

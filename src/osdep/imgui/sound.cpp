@@ -70,7 +70,7 @@ void render_panel_sound()
 	ImGui::EndDisabled();
 	
 	ImGui::SameLine();
-	ImGui::Checkbox("System default", &changed_prefs.soundcard_default);
+	AmigaCheckbox("System default", &changed_prefs.soundcard_default);
 	
 	ImGui::Spacing();
 
@@ -91,7 +91,7 @@ void render_panel_sound()
 	}
 	
 	ImGui::Spacing();
-	ImGui::Checkbox("Automatic switching", &changed_prefs.sound_auto);
+	AmigaCheckbox("Automatic switching", &changed_prefs.sound_auto);
 	ImGui::EndChild();
 	ImGui::EndGroup();
 

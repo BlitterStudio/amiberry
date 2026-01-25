@@ -47,7 +47,7 @@ void render_panel_paths()
 		strncpy(buffer, path.c_str(), MAX_DPATH);
 		buffer[MAX_DPATH - 1] = '\0';
 		
-		if (ImGui::InputText("##Input", buffer, MAX_DPATH)) {
+		if (AmigaInputText("##Input", buffer, MAX_DPATH)) {
 			// User edited text, update immediately
 			setter(buffer);
 		}
@@ -60,7 +60,7 @@ void render_panel_paths()
 		}
 
 		ImGui::SameLine();
-		if (ImGui::Button("...", ImVec2(button_width, 0)))
+		if (AmigaButton("...", ImVec2(button_width, 0)))
 		{
 			if (is_file) {
 				OpenFileDialog(filter_name ? filter_name : "Choose File", filter_ext ? filter_ext : ".*", path);
@@ -124,14 +124,14 @@ void render_panel_paths()
 
 	// Logging Options
 	auto logging_enabled = get_logfile_enabled();
-	if (ImGui::Checkbox("Enable logging", &logging_enabled))
+	if (AmigaCheckbox("Enable logging", &logging_enabled))
 	{
 		set_logfile_enabled(logging_enabled);
 		logging_init();
 	}
 	ImGui::SameLine();
 	auto log_to_console = console_logging > 0;
-	if (ImGui::Checkbox("Log to console", &log_to_console))
+	if (AmigaCheckbox("Log to console", &log_to_console))
 	{
 		console_logging = log_to_console ? 1 : 0;
 	}
@@ -139,7 +139,7 @@ void render_panel_paths()
 	RenderPathRow("Logfile path:", "LogFilePath", get_logfile_path(), [](const std::string& p) { set_logfile_path(p); }, true, "Choose File", ".log");
 
 	ImGui::Spacing();
-	if (ImGui::Button("Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	if (AmigaButton("Rescan Paths", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		scan_roms(true);
 		symlink_roms(&changed_prefs);
@@ -148,7 +148,7 @@ void render_panel_paths()
 		ShowMessageBox("Rescan Paths", "Scan complete:\n\n- ROMs list updated\n- Joysticks (re)initialized\n- Symlinks recreated.");
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	if (AmigaButton("Update WHDBooter files", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		std::string destination;
 		//  download WHDLoad executable
@@ -193,7 +193,7 @@ void render_panel_paths()
 			ShowMessageBox("XML Downloader", "Failed to download files!\n\nPlease check the log for more details.");
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
+	if (AmigaButton("Update Controllers DB", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT)))
 	{
 		std::string destination = get_controllers_path();
 		destination += "gamecontrollerdb.txt";

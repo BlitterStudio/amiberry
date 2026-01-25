@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include "imgui.h"
 
 // Forward declaration to avoid pulling in SDL headers in every includer
 struct SDL_Texture;
@@ -19,6 +20,11 @@ bool ConsumeDirDialogResult(std::string& outPath);
 
 void BeginGroupBox(const char* name);
 void EndGroupBox(const char* name);
+
+// Amiga-style widget wrappers
+bool AmigaButton(const char* label, const ImVec2& size = ImVec2(0, 0));
+bool AmigaCheckbox(const char* label, bool* v);
+bool AmigaInputText(const char* label, char* buf, size_t buf_size);
 
 void render_panel_about();
 void render_panel_paths();

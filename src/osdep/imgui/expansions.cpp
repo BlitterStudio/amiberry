@@ -263,7 +263,7 @@ void render_panel_expansions()
     ImGui::SameLine();
     
     // Enable Checkbox
-    if (ert && ImGui::Checkbox("Enable Board", &enabled)) {
+    if (ert && AmigaCheckbox("Enable Board", &enabled)) {
         if (enabled) {
             if (!brc) {
                 brc = get_device_rom_new(&changed_prefs, ert->romtype, scsiromselectednum, &index);
@@ -400,7 +400,7 @@ void render_panel_expansions()
             }
             ImGui::PopItemWidth();
             ImGui::SameLine();
-            if (ImGui::Button("...")) {
+            if (AmigaButton("...")) {
                  OpenFileDialog("Select ROM Image", "ROM Files (*.rom,*.bin){.rom,.bin}", rom_path);
             }
             
@@ -415,7 +415,7 @@ void render_panel_expansions()
          // Flags
         bool autoboot_disabled = brc ? brc->roms[index].autoboot_disabled : false;
         if (ert->autoboot_jumper) {
-             if (ImGui::Checkbox("Disable Autoboot", &autoboot_disabled)) {
+             if (AmigaCheckbox("Disable Autoboot", &autoboot_disabled)) {
                  if (brc) brc->roms[index].autoboot_disabled = autoboot_disabled;
              }
         }
@@ -423,14 +423,14 @@ void render_panel_expansions()
         if (deviceflags & EXPANSIONTYPE_PCMCIA) {
             bool inserted = brc ? brc->roms[index].inserted : false;
             // WinUAE uses "PCMCIA inserted"
-            if (ImGui::Checkbox("PCMCIA inserted", &inserted)) {
+            if (AmigaCheckbox("PCMCIA inserted", &inserted)) {
                 if (brc) brc->roms[index].inserted = inserted;
             }
         }
 
         if (deviceflags & EXPANSIONTYPE_DMA24) {
             bool dma24 = brc ? brc->roms[index].dma24bit : false;
-            if (ImGui::Checkbox("24-bit DMA", &dma24)) {
+            if (AmigaCheckbox("24-bit DMA", &dma24)) {
                 if (brc) brc->roms[index].dma24bit = dma24;
             }
         }
@@ -466,7 +466,7 @@ void render_panel_expansions()
                 if (s->type == EXPANSIONBOARD_CHECKBOX) {
                     bool checked = (settings_val & (1 << current_bit_shift)) != 0;
                     if (s->invert) checked = !checked;
-                    if (ImGui::Checkbox(s->name, &checked)) {
+                    if (AmigaCheckbox(s->name, &checked)) {
                          if (s->invert) checked = !checked;
                          if (checked) settings_val |= (1 << current_bit_shift);
                          else settings_val &= ~(1 << current_bit_shift);
@@ -547,7 +547,7 @@ void render_panel_expansions()
                          ImGui::EndCombo();
                      }
                 } else if (s->type == EXPANSIONBOARD_STRING) {
-                     ImGui::InputText(s->name, brc->roms[index].configtext, sizeof(brc->roms[index].configtext));
+                     AmigaInputText(s->name, brc->roms[index].configtext, sizeof(brc->roms[index].configtext));
                 }
                 item_idx++;
             }
@@ -621,7 +621,7 @@ void render_panel_expansions()
          ImGui::InputText("##AccelROM", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
          ImGui::PopItemWidth();
          ImGui::SameLine();
-         if (ImGui::Button("...##Accel")) {
+         if (AmigaButton("...##Accel")) {
               OpenFileDialog("Select Boot ROM", "ROM Files (*.rom,*.bin){.rom,.bin}", rom_path);
          }
          ImGui::EndDisabled();
@@ -695,7 +695,7 @@ void render_panel_expansions()
                 if (s->type == EXPANSIONBOARD_CHECKBOX) {
                     bool checked = (settings_val & (1 << current_bit_shift)) != 0;
                     if (s->invert) checked = !checked;
-                    if (ImGui::Checkbox(s->name, &checked)) {
+                    if (AmigaCheckbox(s->name, &checked)) {
                          if (s->invert) checked = !checked;
                          if (checked) settings_val |= (1 << current_bit_shift);
                          else settings_val &= ~(1 << current_bit_shift);
@@ -732,16 +732,16 @@ void render_panel_expansions()
     ImGui::Columns(2, "MiscCols", false);
     ImGui::BeginDisabled(!gui_enabled); // WinUAE disables misc expansions when running? logic says "ew(hDlg, IDC_SOCKETS, workprefs.socket_emu)" - check enable_for_expansion2dlg
     
-    ImGui::Checkbox("bsdsocket.library", &changed_prefs.socket_emu);
+    AmigaCheckbox("bsdsocket.library", &changed_prefs.socket_emu);
     
     bool scsi_enabled = changed_prefs.scsi != 0;
-    if (ImGui::Checkbox("uaescsi.device", &scsi_enabled)) {
+    if (AmigaCheckbox("uaescsi.device", &scsi_enabled)) {
         changed_prefs.scsi = scsi_enabled ? 1 : 0;
     }
     
     ImGui::NextColumn();
     // CD32 FMV Card removed for WinUAE parity
-    ImGui::Checkbox("uaenet.device", &changed_prefs.sana2);
+    AmigaCheckbox("uaenet.device", &changed_prefs.sana2);
     
     ImGui::EndDisabled();
     ImGui::Columns(1);

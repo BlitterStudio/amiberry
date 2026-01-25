@@ -103,7 +103,7 @@ static void apply_imgui_theme()
 	colors[ImGuiCol_ScrollbarGrab]        = col_base;
 	colors[ImGuiCol_ScrollbarGrabHovered] = lighten(col_base, 0.05f);
 	colors[ImGuiCol_ScrollbarGrabActive]  = col_act;
-	colors[ImGuiCol_CheckMark]            = col_act;
+	colors[ImGuiCol_CheckMark]            = darken(col_act, 0.15f);
 	colors[ImGuiCol_SliderGrab]           = col_act;
 	colors[ImGuiCol_SliderGrabActive]     = lighten(col_act, 0.15f);
 	colors[ImGuiCol_Button]               = col_base;
@@ -114,10 +114,10 @@ static void apply_imgui_theme()
 	colors[ImGuiCol_HeaderActive]         = col_act;
 	colors[ImGuiCol_TextSelectedBg]       = col_sel;
 
-	style.FrameBorderSize = 1.0f;
+	style.FrameBorderSize = 0.0f; // We will draw our own bevels
 	style.WindowBorderSize = 0.0f;
 	style.PopupBorderSize = 1.0f;
-	style.ChildBorderSize = 1.0f;
+	style.ChildBorderSize = 0.0f;
 	style.ItemSpacing = ImVec2(8.0f, 4.0f);
 	style.SelectableTextAlign = ImVec2(0.0f, 0.5f);
 
@@ -391,101 +391,212 @@ static char message_box_title[128] = {0};
 static char message_box_message[1024] = {0};
 static bool start_disabled = false; // Added for disable_resume logic
 
+// Helper to draw Amiga 3D bevels
+// recessed = true (In), recessed = false (Out)
+void AmigaBevel(const ImVec2 min, const ImVec2 max, const bool recessed)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+	const ImU32 col_shine = ImGui::GetColorU32(ImGuiCol_BorderShadow); // Usually White
+	const ImU32 col_shadow = ImGui::GetColorU32(ImGuiCol_Border);      // Usually Dark Gray
+
+	ImU32 top_left = recessed ? col_shadow : col_shine;
+	ImU32 bottom_right = recessed ? col_shine : col_shadow;
+
+	// Top
+	draw_list->AddLine(ImVec2(min.x, min.y), ImVec2(max.x - 1, min.y), top_left, 1.5f);
+	// Left
+	draw_list->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, max.y - 1), top_left, 1.5f);
+	// Bottom
+	draw_list->AddLine(ImVec2(min.x, max.y - 1), ImVec2(max.x - 1, max.y - 1), bottom_right, 1.5f);
+	// Right
+	draw_list->AddLine(ImVec2(max.x - 1, min.y), ImVec2(max.x - 1, max.y - 1), bottom_right, 1.5f);
+}
+
 void BeginGroupBox(const char* name)
 {
-    ImGui::BeginGroup();
-    ImGui::PushID(name);
+	ImGui::BeginGroup();
+	ImGui::PushID(name);
 
-    // Reserve space for the title and the top border part
-    // The title will sit on the border line. We need space above the content.
-    ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f));
-    ImGui::Indent(10.0f); // Add internal padding
+	// Reserve space for the title and the top border part
+	ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight() + 2.0f));
+	ImGui::Indent(10.0f); // Add internal padding
 }
 
 void EndGroupBox(const char* name)
 {
-    ImGui::Unindent(10.0f);
-    ImGui::PopID();
-    ImGui::EndGroup(); // The group contains the content + dummy top space
+	ImGui::Unindent(10.0f);
+	ImGui::PopID();
+	ImGui::EndGroup();
 
-    // Now draw the border and title
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    ImVec2 item_min = ImGui::GetItemRectMin();
-    ImVec2 item_max = ImGui::GetItemRectMax();
+	// Now draw the border and title
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+	ImVec2 item_min = ImGui::GetItemRectMin();
+	ImVec2 item_max = ImGui::GetItemRectMax();
 
-    const float text_height = ImGui::GetTextLineHeight();
-    const float border_y = item_min.y + text_height * 0.5f; // The border line y-coordinate
+	const float text_height = ImGui::GetTextLineHeight();
+	const float border_y = item_min.y + text_height * 0.5f;
 
-    ImU32 border_col = ImGui::GetColorU32(ImGuiCol_Border);
-    ImU32 shadow_col = ImGui::GetColorU32(ImGuiCol_BorderShadow);
-    ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
+	ImU32 shadow_col = ImGui::GetColorU32(ImGuiCol_Border);
+	ImU32 shine_col = ImGui::GetColorU32(ImGuiCol_BorderShadow);
+	ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
 
-    ImVec2 text_size = ImGui::CalcTextSize(name);
-    // Position text slightly indented from the left
-    float text_start_x = item_min.x + 8.0f;
-    float text_padding = 8.0f; // Gap around text
+	ImVec2 text_size = ImGui::CalcTextSize(name);
+	float text_start_x = item_min.x + 8.0f;
+	float text_padding = 8.0f;
 
-    // Expand the box slightly to wrap content comfortably
-    const float box_padding = 4.0f;
-    item_min.x -= box_padding;
-    // item_min.y is controlled by border_y
+	const float box_padding = 4.0f;
+	item_min.x -= box_padding;
 
-    // Ensure the right line doesn't fall outside the visible area
-    // Use GetWindowContentRegionMax to find the rightmost edge of the content area
-    ImVec2 content_max = ImGui::GetWindowContentRegionMax();
-    ImVec2 window_pos = ImGui::GetWindowPos();
-    float max_x = window_pos.x + content_max.x - 1.0f;
+	ImVec2 content_max = ImGui::GetWindowContentRegionMax();
+	ImVec2 window_pos = ImGui::GetWindowPos();
+	float max_x = window_pos.x + content_max.x - 1.0f;
 
-    if (item_max.x + box_padding > max_x)
-        item_max.x = max_x;
-    else
-        item_max.x += box_padding;
+	if (item_max.x + box_padding > max_x)
+		item_max.x = max_x;
+	else
+		item_max.x += box_padding;
 
-    item_max.y += box_padding;
+	item_max.y += box_padding;
 
-    // Draw 3D-ish border
-    // AmigaOS 3.1 "etched" look for groups:
-    // Top and Left lines are Shadow (dark)
-    // Bottom and Right lines are Shine (light)
+	// Draw Etched Group Border (Double line bevel)
+	// Outer Shadow, Inner Shine
+	draw_list->AddRect(ImVec2(item_min.x, border_y), ImVec2(item_max.x, item_max.y), shadow_col);
+	draw_list->AddRect(ImVec2(item_min.x + 1, border_y + 1), ImVec2(item_max.x + 1, item_max.y + 1), shine_col);
 
-    // Top-Left Line (Shadow)
-    draw_list->AddLine(
-        ImVec2(item_min.x, border_y),
-        ImVec2(text_start_x - text_padding, border_y),
-        border_col
-    );
-    draw_list->AddLine(
-        ImVec2(item_min.x, border_y),
-        ImVec2(item_min.x, item_max.y),
-        border_col
-    );
+	// Clear background for text
+	draw_list->AddRectFilled(ImVec2(text_start_x - text_padding, border_y - 2), ImVec2(text_start_x + text_size.x + text_padding, border_y + 2), ImGui::GetColorU32(ImGuiCol_WindowBg));
 
-    // Top-Right Line (Shadow)
-    draw_list->AddLine(
-        ImVec2(text_start_x + text_size.x + text_padding, border_y),
-        ImVec2(item_max.x - 1.0f, border_y),
-        border_col
-    );
+	// Draw Title
+	draw_list->AddText(ImVec2(text_start_x, item_min.y), text_col, name);
 
-    // Bottom-Right Lines (Shine)
-    draw_list->AddLine(
-        ImVec2(item_max.x, border_y),
-        ImVec2(item_max.x, item_max.y),
-        shadow_col
-    );
-    draw_list->AddLine(
-        ImVec2(item_min.x, item_max.y),
-        ImVec2(item_max.x, item_max.y),
-        shadow_col
-    );
+	ImGui::Dummy(ImVec2(0.0f, 10.0f));
+}
 
-    // Draw Title
-    // Adjust y to center text vertically on the line (standard text rendering is top-left)
-    float text_y = item_min.y; // Should match the dummy space we reserved approx
-    draw_list->AddText(ImVec2(text_start_x, text_y), text_col, name);
+bool AmigaButton(const char* label, const ImVec2& size)
+{
+	ImGui::PushStyleColor(ImGuiCol_Border, 0); // Hide default border if any
+	const bool pressed = ImGui::Button(label, size);
+	ImGui::PopStyleColor();
 
-    // Add spacing after the box so the next one doesn't touch it
-    ImGui::Dummy(ImVec2(0.0f, 10.0f));
+	const ImVec2 min = ImGui::GetItemRectMin();
+	const ImVec2 max = ImGui::GetItemRectMax();
+	const bool active = ImGui::IsItemActive();
+
+	AmigaBevel(min, max, active);
+
+	return pressed;
+}
+
+bool AmigaCheckbox(const char* label, bool* v)
+{
+	// Use ImGui's standard checkbox (checkmark) and only add the Amiga-style bevel.
+	const bool changed = ImGui::Checkbox(label, v);
+
+	const float sz = ImGui::GetFrameHeight();
+	const ImVec2 pos = ImGui::GetItemRectMin();
+	const ImVec2 box_min = pos;
+	const ImVec2 box_max = ImVec2(pos.x + sz, pos.y + sz);
+
+	AmigaBevel(box_min, box_max, false);
+
+	return changed;
+}
+
+bool AmigaInputText(const char* label, char* buf, const size_t buf_size)
+{
+	// Recessed frame
+	const bool changed = ImGui::InputText(label, buf, buf_size);
+	const ImVec2 min = ImGui::GetItemRectMin();
+	const ImVec2 max = ImGui::GetItemRectMax();
+	// InputText frame is slightly smaller than the item rect if there is a label,
+	// but here we usually use ## labels.
+	// Actually, ImGui::InputText draws the frame.
+	AmigaBevel(min, max, true);
+
+	return changed;
+}
+
+// Amiga-style combo box wrapper (array-of-strings variant)
+// Returns true if the current item changed.
+bool AmigaComboBox(const char* label, int* current_item, const char* const items[], int items_count,
+	int popup_max_height_in_items = -1)
+{
+	if (!current_item || items_count <= 0)
+		return false;
+	const int cur = (*current_item >= 0 && *current_item < items_count) ? *current_item : 0;
+	const char* preview = items[cur] ? items[cur] : "";
+
+	bool changed = false;
+	ImGui::PushStyleColor(ImGuiCol_Border, 0);
+
+	ImGuiComboFlags flags = 0;
+	if (popup_max_height_in_items > 0)
+		flags |= ImGuiComboFlags_HeightRegular; // a reasonable default; user can control height via style
+
+	if (ImGui::BeginCombo(label, preview, flags))
+	{
+		for (int i = 0; i < items_count; ++i)
+		{
+			const bool is_selected = (i == *current_item);
+			if (ImGui::Selectable(items[i] ? items[i] : "", is_selected))
+			{
+				*current_item = i;
+				changed = true;
+			}
+			if (is_selected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
+	ImGui::PopStyleColor();
+
+	// Bevel around the combo frame
+	const ImVec2 min = ImGui::GetItemRectMin();
+	const ImVec2 max = ImGui::GetItemRectMax();
+	const bool active = ImGui::IsItemActive();
+	AmigaBevel(min, max, active);
+
+	return changed;
+}
+
+// Amiga-style radio button wrapper (bool variant)
+// Returns true when pressed (matching ImGui::RadioButton semantics).
+bool AmigaRadioButton(const char* label, const bool active)
+{	const bool pressed = ImGui::RadioButton(label, active);
+
+	// Draw a bevel around the radio indicator square (ImGui renders it as a frame-sized box)
+	const float sz = ImGui::GetFrameHeight();
+	const ImVec2 pos = ImGui::GetItemRectMin();
+	const ImVec2 box_min = pos;
+	const ImVec2 box_max = ImVec2(pos.x + sz, pos.y + sz);
+	AmigaBevel(box_min, box_max, false);
+
+	return pressed;
+}
+
+// Amiga-style radio button wrapper (int* variant)
+bool AmigaRadioButton(const char* label, int* v, const int v_button)
+{
+	const bool pressed = ImGui::RadioButton(label, v, v_button);
+
+	const float sz = ImGui::GetFrameHeight();
+	const ImVec2 pos = ImGui::GetItemRectMin();
+	const ImVec2 box_min = pos;
+	const ImVec2 box_max = ImVec2(pos.x + sz, pos.y + sz);
+	AmigaBevel(box_min, box_max, false);
+
+	return pressed;
+}
+
+// Apply Amiga bevels to scrollbars: Dear ImGui does not expose scrollbar rects in its public API.
+// For now, this is a harmless no-op placeholder so call sites can be added without forking imgui.
+// If we later decide to style scrollbars fully, we can implement it via an imgui internal include
+// (imgui_internal.h) or via custom scrollbars.
+void AmigaScrollbarsBevelCurrentWindow()
+{
+	// Intentionally empty.
+	// Scrollbar colors are already themed in apply_imgui_theme() and rounding is set to 0.
 }
 
 // Sidebar icons cache
@@ -1000,24 +1111,24 @@ void run_gui()
 		// Button bar
 		// Left-aligned buttons (Shutdown, Reset, Quit, Restart, Help)
 		if (!amiberry_options.disable_shutdown_button) {
-			if (ImGui::Button("Shutdown", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+			if (AmigaButton("Shutdown", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 				uae_quit();
 				gui_running = false;
 				host_poweroff = true;
 			}
 			ImGui::SameLine();
 		}
-		if (ImGui::Button("Reset", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton("Reset", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			uae_reset(1, 1);
 			gui_running = false;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Quit", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton("Quit", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			uae_quit();
 			gui_running = false;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton("Restart", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			char tmp[MAX_DPATH] = {0};
 			get_configuration_path(tmp, sizeof tmp);
 			if (strlen(last_loaded_config) > 0) {
@@ -1045,11 +1156,11 @@ void run_gui()
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.05f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, lighten(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive], 0.10f));
 		if (emulating) {
-			if (ImGui::Button("Resume", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+			if (AmigaButton("Resume", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 				gui_running = false;
 			}
 		} else {
-			if (ImGui::Button("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+			if (AmigaButton("Start", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 				uae_reset(0, 1);
 				gui_running = false;
 			}
@@ -1059,7 +1170,7 @@ void run_gui()
 		if (start_disabled)
 			ImGui::EndDisabled();
 		ImGui::SameLine();
-		if (ImGui::Button("Help", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+		if (AmigaButton("Help", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
 			const char* help_ptr = nullptr;
 			if (last_active_panel >= 0 && categories[last_active_panel].category != nullptr && categories[last_active_panel].HelpText != nullptr)
 				help_ptr = categories[last_active_panel].HelpText;
@@ -1096,7 +1207,7 @@ void run_gui()
                 float avail = ImGui::GetContentRegionAvail().x;
                 if (avail > btn_w)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - btn_w));
-                if (ImGui::Button("OK", ImVec2(btn_w, btn_h)) || ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                if (AmigaButton("OK", ImVec2(btn_w, btn_h)) || ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                     show_message_box = false;
                     ImGui::CloseCurrentPopup();
                 }

@@ -190,7 +190,7 @@ void render_panel_quickstart() {
         }
         ImGui::SameLine();
         bool ntsc = changed_prefs.ntscmode != 0;
-        if (ImGui::Checkbox("NTSC", &ntsc)) {
+        if (AmigaCheckbox("NTSC", &ntsc)) {
             changed_prefs.ntscmode = ntsc;
             changed_prefs.chipset_refreshrate = ntsc ? 60 : 50;
         }
@@ -241,7 +241,7 @@ void render_panel_quickstart() {
 
         // 1. Checkbox DFx:
         if (!is_editable) ImGui::BeginDisabled();
-        if (ImGui::Checkbox(label, &drive_enabled)) {
+        if (AmigaCheckbox(label, &drive_enabled)) {
             if (drive_enabled) {
                 changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
             } else {
@@ -256,7 +256,7 @@ void render_panel_quickstart() {
         // 2. Select file Button
         const float button_width = 120.0f; // Wider button for "Select file"
         if (!drive_enabled) ImGui::BeginDisabled();
-        if (ImGui::Button("Select file", ImVec2(button_width, 0))) {
+        if (AmigaButton("Select file", ImVec2(button_width, 0))) {
             std::string tmp;
             if (disk_present)
                 tmp = changed_prefs.floppyslots[i].df;
@@ -313,7 +313,7 @@ void render_panel_quickstart() {
         if (!wp_enabled) ImGui::BeginDisabled();
         bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != 0;
         snprintf(label, sizeof(label), "Write-protected##QSFloppyWriteProtected%d", i);
-        if (ImGui::Checkbox(label, &wp)) {
+        if (AmigaCheckbox(label, &wp)) {
             disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, wp);
             if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != wp) {
                 wp = !wp;
@@ -330,7 +330,7 @@ void render_panel_quickstart() {
         bool info_enabled = drive_enabled && disk_present;
         if (!info_enabled) ImGui::BeginDisabled();
         snprintf(label, sizeof(label), "?##QSFloppyInfo%d", i);
-        if (ImGui::Button(label, ImVec2(SMALL_BUTTON_WIDTH, 0))) {
+        if (AmigaButton(label, ImVec2(SMALL_BUTTON_WIDTH, 0))) {
             DisplayDiskInfo(i);
         }
         if (!info_enabled) ImGui::EndDisabled();
@@ -344,7 +344,7 @@ void render_panel_quickstart() {
 
         bool eject_enabled = drive_enabled && disk_present;
         if (!eject_enabled) ImGui::BeginDisabled();
-        if (ImGui::Button("Eject", ImVec2(eject_button_width, 0))) {
+        if (AmigaButton("Eject", ImVec2(eject_button_width, 0))) {
             disk_eject(i);
             changed_prefs.floppyslots[i].df[0] = 0;
         }
@@ -407,13 +407,13 @@ void render_panel_quickstart() {
         ImGui::PushID("CD");
         bool cd_inuse = changed_prefs.cdslots[0].inuse;
         ImGui::BeginDisabled();
-        ImGui::Checkbox("CD Drive", &cd_inuse);
+        AmigaCheckbox("CD Drive", &cd_inuse);
         ImGui::EndDisabled();
 
         ImGui::SameLine();
 
         const float button_width = 120.0f;
-        if (ImGui::Button("Select file", ImVec2(button_width, 0))) {
+        if (AmigaButton("Select file", ImVec2(button_width, 0))) {
             std::string tmp;
             if (std::strlen(changed_prefs.cdslots[0].name) > 0)
                 tmp = changed_prefs.cdslots[0].name;
@@ -432,7 +432,7 @@ void render_panel_quickstart() {
 
         bool cd_controls_enabled = changed_prefs.cdslots[0].inuse;
         if (!cd_controls_enabled) ImGui::BeginDisabled();
-        if (ImGui::Button("Eject", ImVec2(eject_button_width, 0))) {
+        if (AmigaButton("Eject", ImVec2(eject_button_width, 0))) {
             changed_prefs.cdslots[0].name[0] = 0;
             changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
         }
@@ -496,7 +496,7 @@ void render_panel_quickstart() {
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
     BeginGroupBox("WHDLoad auto-config:");
-    if (ImGui::Button("Select file##QSWHD", ImVec2(120.0f, 0))) {
+    if (AmigaButton("Select file##QSWHD", ImVec2(120.0f, 0))) {
         std::string tmp;
         if (!whdload_prefs.whdload_filename.empty())
             tmp = whdload_prefs.whdload_filename;
@@ -511,7 +511,7 @@ void render_panel_quickstart() {
     if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 20.0f);
     else ImGui::SameLine();
 
-    if (ImGui::Button("Eject##QSWHD", ImVec2(BUTTON_WIDTH, 0))) {
+    if (AmigaButton("Eject##QSWHD", ImVec2(BUTTON_WIDTH, 0))) {
         whdload_prefs.whdload_filename.clear();
     }
 
@@ -561,12 +561,12 @@ void render_panel_quickstart() {
 
     BeginGroupBox("Mode");
     bool qs_mode = amiberry_options.quickstart_start;
-    if (ImGui::Checkbox("Start in Quickstart mode", &qs_mode))
+    if (AmigaCheckbox("Start in Quickstart mode", &qs_mode))
         amiberry_options.quickstart_start = qs_mode;
     EndGroupBox("Mode");
 
     ImGui::Spacing();
-    if (ImGui::Button("Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
+    if (AmigaButton("Set Configuration", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
         Quickstart_ApplyDefaults();
     }
 

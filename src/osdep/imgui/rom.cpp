@@ -110,7 +110,7 @@ void render_panel_rom()
 	}
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romfile);
 	ImGui::SameLine();
-	if (ImGui::Button("...##MainRomFileButton"))
+	if (AmigaButton("...##MainRomFileButton"))
 	{
 		current_pick_type = RomPickType::Main;
 		OpenFileDialog("Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.romfile);
@@ -121,7 +121,7 @@ void render_panel_rom()
 	RomCombo("##ExtRomCombo", changed_prefs.romextfile, MAX_DPATH, ext_rom_list);
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romextfile);
 	ImGui::SameLine();
-	if (ImGui::Button("...##ExtRomFileButton"))
+	if (AmigaButton("...##ExtRomFileButton"))
 	{
 		current_pick_type = RomPickType::Extended;
 		OpenFileDialog("Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.romextfile);
@@ -129,14 +129,14 @@ void render_panel_rom()
 
     bool maprom_disabled = (changed_prefs.cpuboard_type != 0);
     ImGui::BeginDisabled(maprom_disabled);
-	if (ImGui::Checkbox("MapROM emulation", (bool*)&changed_prefs.maprom)) {
+	if (AmigaCheckbox("MapROM emulation", (bool*)&changed_prefs.maprom)) {
 		if (changed_prefs.maprom)
 			changed_prefs.maprom = 0x0f000000;
 	}
     ImGui::EndDisabled();
     
 	ImGui::SameLine();
-	ImGui::Checkbox("ShapeShifter support", &changed_prefs.kickshifter);
+	AmigaCheckbox("ShapeShifter support", &changed_prefs.kickshifter);
 	EndGroupBox("System ROM Settings");
 
 	BeginGroupBox("Advanced Custom ROM Settings");
@@ -177,9 +177,9 @@ void render_panel_rom()
 		rb->end_address = ((rb->end_address - 1) & ~65535) | 0xffff;
 	}
 
-	ImGui::InputText("##CustomRomFilename", rb->lf.loadfile, MAX_DPATH);
+	AmigaInputText("##CustomRomFilename", rb->lf.loadfile, MAX_DPATH);
 	ImGui::SameLine();
-    if (ImGui::Button("...##CustomRomFileButton")) {
+    if (AmigaButton("...##CustomRomFileButton")) {
     	current_pick_type = RomPickType::Custom;
 	    OpenFileDialog("Select Custom ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
     }
@@ -190,23 +190,23 @@ void render_panel_rom()
 	RomCombo("##CartRomCombo", changed_prefs.cartfile, MAX_DPATH, cart_rom_list);
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.cartfile);
 	ImGui::SameLine();
-	if (ImGui::Button("...##CartRomFileButton")) {
+	if (AmigaButton("...##CartRomFileButton")) {
 		current_pick_type = RomPickType::Cartridge;
 		OpenFileDialog("Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.cartfile);
 	}
 
 	ImGui::Text("Flash RAM or A2286/A2386SX BIOS CMOS RAM file:");
-	ImGui::InputText("##FlashROM", changed_prefs.flashfile, MAX_DPATH);
+	AmigaInputText("##FlashROM", changed_prefs.flashfile, MAX_DPATH);
 	ImGui::SameLine();
-	if (ImGui::Button("...##FlashRomFileButton")) {
+	if (AmigaButton("...##FlashRomFileButton")) {
 		current_pick_type = RomPickType::Flash;
 		OpenFileDialog("Select Flash ROM File", ".*", changed_prefs.flashfile);
 	}
 
 	ImGui::Text("Real Time Clock file:");
-	ImGui::InputText("##RTC", changed_prefs.rtcfile, MAX_DPATH);
+	AmigaInputText("##RTC", changed_prefs.rtcfile, MAX_DPATH);
 	ImGui::SameLine();
-	if (ImGui::Button("...##RTCFileButton")) {
+	if (AmigaButton("...##RTCFileButton")) {
 		current_pick_type = RomPickType::RTC;
 		OpenFileDialog("Select RTC File", ".*", changed_prefs.rtcfile);
 	}

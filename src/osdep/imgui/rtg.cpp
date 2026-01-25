@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 
+#include "imgui_panels.h"
+
 static std::vector<std::string> rtg_board_names;
 static bool rtg_boards_initialized = false;
 
@@ -80,7 +82,7 @@ void render_panel_rtg()
     // Override initial native chipset display
     // WinUAE logic: Exclusive across boards
     bool override_native = changed_prefs.rtgboards[0].initial_active;
-    if (ImGui::Checkbox("Override initial native chipset display", &override_native)) {
+    if (AmigaCheckbox("Override initial native chipset display", &override_native)) {
         if (override_native) {
             for (int i = 0; i < MAX_RTG_BOARDS; ++i)
                 changed_prefs.rtgboards[i].initial_active = false;
@@ -192,34 +194,34 @@ void render_panel_rtg()
     int current_autoscale_mode = changed_prefs.gf[1].gfx_filter_autoscale;
     
     bool scale_smaller = (current_autoscale_mode == RTG_MODE_SCALE);
-    if (ImGui::Checkbox("Scale if smaller than display size", &scale_smaller)) {
+    if (AmigaCheckbox("Scale if smaller than display size", &scale_smaller)) {
         changed_prefs.gf[1].gfx_filter_autoscale = scale_smaller ? RTG_MODE_SCALE : 0;
     }
 
-    ImGui::Checkbox("Always scale in windowed mode", &changed_prefs.rtgallowscaling);
+    AmigaCheckbox("Always scale in windowed mode", &changed_prefs.rtgallowscaling);
 
     bool always_center = (current_autoscale_mode == RTG_MODE_CENTER);
-    if (ImGui::Checkbox("Always center", &always_center)) {
+    if (AmigaCheckbox("Always center", &always_center)) {
         changed_prefs.gf[1].gfx_filter_autoscale = always_center ? RTG_MODE_CENTER : 0;
     }
 
     bool int_scale = (current_autoscale_mode == RTG_MODE_INTEGER_SCALE);
-    if (ImGui::Checkbox("Integer scaling", &int_scale)) {
+    if (AmigaCheckbox("Integer scaling", &int_scale)) {
         changed_prefs.gf[1].gfx_filter_autoscale = int_scale ? RTG_MODE_INTEGER_SCALE : 0;
     }
 
     ImGui::NextColumn();
 
     // Right Column: Hardware/Misc Checkboxes
-    ImGui::Checkbox("Native/RTG autoswitch", &changed_prefs.rtgboards[0].autoswitch);
-    ImGui::Checkbox("Multithreaded", &changed_prefs.rtg_multithread);
+    AmigaCheckbox("Native/RTG autoswitch", &changed_prefs.rtgboards[0].autoswitch);
+    AmigaCheckbox("Multithreaded", &changed_prefs.rtg_multithread);
     
     bool tablet_enabled = (changed_prefs.input_tablet > 0);
     ImGui::BeginDisabled(!tablet_enabled);
-    ImGui::Checkbox("Hardware sprite emulation", &changed_prefs.rtg_hardwaresprite);
+    AmigaCheckbox("Hardware sprite emulation", &changed_prefs.rtg_hardwaresprite);
     ImGui::EndDisabled();
     
-    ImGui::Checkbox("Hardware vertical blank interrupt", &changed_prefs.rtg_hardwareinterrupt);
+    AmigaCheckbox("Hardware vertical blank interrupt", &changed_prefs.rtg_hardwareinterrupt);
 
     ImGui::Columns(1);
     ImGui::Dummy(ImVec2(0.0f, 10.0f));

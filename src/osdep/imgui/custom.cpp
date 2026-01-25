@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 
+#include "imgui_panels.h"
+
 static std::vector<std::string> custom_event_items;
 static bool initialized = false;
 static char set_hotkey_buf[64] = { 0 };
@@ -109,11 +111,11 @@ void render_panel_custom()
 	ImGui::EndDisabled();
 	ImGui::SameLine();
 
-	if (ImGui::Button("...")) {
+	if (AmigaButton("...")) {
 		ImGui::OpenPopup("Set Hotkey");
 	}
 	ImGui::SameLine();
-	if (ImGui::Button("X")) {
+	if (AmigaButton("X")) {
 		did->mapping.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
 	}
 	
@@ -144,7 +146,7 @@ void render_panel_custom()
 		}
 
 		// Also Allow clearing via button in popup?
-		if (ImGui::Button("Cancel")) {
+		if (AmigaButton("Cancel")) {
 			ImGui::CloseCurrentPopup();
 		}
 		
@@ -333,7 +335,7 @@ void render_panel_custom()
 	// Save Button
 	// ---------------------------------------------------------
 	if (!did->mapping.is_retroarch) {
-		if (ImGui::Button("Save as default mapping", ImVec2(-1, 0))) {
+		if (AmigaButton("Save as default mapping", ImVec2(-1, 0))) {
 			std::string controller_path = get_controllers_path();
 			std::string controller_file = controller_path + did->name + ".controller";
 			save_controller_mapping_to_file(did->mapping, controller_file);

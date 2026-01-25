@@ -9,7 +9,7 @@
 static void CheckboxFlags(const char* label, int* flags, int bit_value)
 {
 	bool v = (*flags & bit_value) != 0;
-	if (ImGui::Checkbox(label, &v))
+	if (AmigaCheckbox(label, &v))
 	{
 		if (v)
 			*flags |= bit_value;
@@ -37,7 +37,7 @@ void render_panel_adv_chipset()
 	ImGui::Text("Compatible Settings");
 	ImGui::SameLine();
 	bool compatible = changed_prefs.cs_compatible != 0;
-	if (ImGui::Checkbox("##CompatibleSettings", &compatible))
+	if (AmigaCheckbox("##CompatibleSettings", &compatible))
 	{
 		if (compatible) {
 			if (!changed_prefs.cs_compatible)
@@ -86,77 +86,77 @@ void render_panel_adv_chipset()
 		if (ImGui::BeginTable("FeaturesTable", 3))
 		{
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CIA ROM Overlay", &changed_prefs.cs_ciaoverlay);
+			AmigaCheckbox("CIA ROM Overlay", &changed_prefs.cs_ciaoverlay);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("A1000 Boot RAM/ROM", &changed_prefs.cs_a1000ram);
+			AmigaCheckbox("A1000 Boot RAM/ROM", &changed_prefs.cs_a1000ram);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("DF0: ID Hardware", &changed_prefs.cs_df0idhw);
+			AmigaCheckbox("DF0: ID Hardware", &changed_prefs.cs_df0idhw);
 
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CD32 CD", &changed_prefs.cs_cd32cd);
+			AmigaCheckbox("CD32 CD", &changed_prefs.cs_cd32cd);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CD32 C2P", &changed_prefs.cs_cd32c2p);
+			AmigaCheckbox("CD32 C2P", &changed_prefs.cs_cd32c2p);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CD32 NVRAM", &changed_prefs.cs_cd32nvram);
+			AmigaCheckbox("CD32 NVRAM", &changed_prefs.cs_cd32nvram);
 
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CDTV CD", &changed_prefs.cs_cdtvcd);
+			AmigaCheckbox("CDTV CD", &changed_prefs.cs_cdtvcd);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CDTV SRAM", &changed_prefs.cs_cdtvram);
+			AmigaCheckbox("CDTV SRAM", &changed_prefs.cs_cdtvram);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CDTV-CR", &changed_prefs.cs_cdtvcr);
+			AmigaCheckbox("CDTV-CR", &changed_prefs.cs_cdtvcr);
 
 			ImGui::TableNextColumn();
 			bool ide_a600 = (changed_prefs.cs_ide & 1) != 0;
-			if (ImGui::Checkbox("A600/A1200 IDE", &ide_a600)) {
+			if (AmigaCheckbox("A600/A1200 IDE", &ide_a600)) {
 				if (ide_a600) changed_prefs.cs_ide = 1; else if (changed_prefs.cs_ide == 1) changed_prefs.cs_ide = 0;
 			}
 			ImGui::TableNextColumn();
 			bool ide_a4000 = (changed_prefs.cs_ide & 2) != 0;
-			if (ImGui::Checkbox("A4000/A4000T IDE", &ide_a4000)) {
+			if (AmigaCheckbox("A4000/A4000T IDE", &ide_a4000)) {
 				if (ide_a4000) changed_prefs.cs_ide = 2; else if (changed_prefs.cs_ide == 2) changed_prefs.cs_ide = 0;
 			}
 			ImGui::TableNextColumn(); 
 			bool pcmcia = changed_prefs.cs_pcmcia != 0;
-			if (ImGui::Checkbox("PCMCIA", &pcmcia)) changed_prefs.cs_pcmcia = pcmcia;
+			if (AmigaCheckbox("PCMCIA", &pcmcia)) changed_prefs.cs_pcmcia = pcmcia;
 
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("ROM Mirror (E0)", &changed_prefs.cs_ksmirror_e0);
+			AmigaCheckbox("ROM Mirror (E0)", &changed_prefs.cs_ksmirror_e0);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("ROM Mirror (A8)", &changed_prefs.cs_ksmirror_a8);
+			AmigaCheckbox("ROM Mirror (A8)", &changed_prefs.cs_ksmirror_a8);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("Composite color burst", &changed_prefs.cs_color_burst);
+			AmigaCheckbox("Composite color burst", &changed_prefs.cs_color_burst);
 
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("KB Reset Warning", &changed_prefs.cs_resetwarning);
+			AmigaCheckbox("KB Reset Warning", &changed_prefs.cs_resetwarning);
 			ImGui::TableNextColumn();
 			bool z3auto = changed_prefs.cs_z3autoconfig != 0;
-			if (ImGui::Checkbox("Z3 Autoconfig", &z3auto)) changed_prefs.cs_z3autoconfig = z3auto;
+			if (AmigaCheckbox("Z3 Autoconfig", &z3auto)) changed_prefs.cs_z3autoconfig = z3auto;
 			ImGui::TableNextColumn();
 			bool cia_new = changed_prefs.cs_ciatype[0];
-			if (ImGui::Checkbox("CIA 391078-01", &cia_new)) {
+			if (AmigaCheckbox("CIA 391078-01", &cia_new)) {
 				changed_prefs.cs_ciatype[0] = changed_prefs.cs_ciatype[1] = cia_new;
 			}
 
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("CIA TOD bug", &changed_prefs.cs_ciatodbug);
+			AmigaCheckbox("CIA TOD bug", &changed_prefs.cs_ciatodbug);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("Custom register byte write bug", &changed_prefs.cs_bytecustomwritebug);
+			AmigaCheckbox("Custom register byte write bug", &changed_prefs.cs_bytecustomwritebug);
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("Power up memory pattern", &changed_prefs.cs_memorypatternfill);
+			AmigaCheckbox("Power up memory pattern", &changed_prefs.cs_memorypatternfill);
 
 			ImGui::TableNextColumn();
 			bool chip1m = changed_prefs.cs_1mchipjumper || changed_prefs.chipmem.size >= 0x100000;
 			bool disable_1m = changed_prefs.chipmem.size >= 0x100000;
 			ImGui::BeginDisabled(disable_1m);
-			if (ImGui::Checkbox("1M Chip / 0.5M+0.5M", &chip1m)) changed_prefs.cs_1mchipjumper = chip1m;
+			if (AmigaCheckbox("1M Chip / 0.5M+0.5M", &chip1m)) changed_prefs.cs_1mchipjumper = chip1m;
 			ImGui::EndDisabled();
 
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("KS ROM has Chip RAM speed", &changed_prefs.cs_romisslow);
+			AmigaCheckbox("KS ROM has Chip RAM speed", &changed_prefs.cs_romisslow);
 			
 			ImGui::TableNextColumn();
-			ImGui::Checkbox("Toshiba Gary", &changed_prefs.cs_toshibagary);
+			AmigaCheckbox("Toshiba Gary", &changed_prefs.cs_toshibagary);
 
 			ImGui::EndTable();
 		}
@@ -218,13 +218,13 @@ void render_panel_adv_chipset()
 		
 		// Reduce spacing for checkbox groups if desired, but default is usually fine here
 		bool scsi_a3000 = (changed_prefs.cs_mbdmac & 1) != 0;
-		if (ImGui::Checkbox("A3000 WD33C93 SCSI", &scsi_a3000))
+		if (AmigaCheckbox("A3000 WD33C93 SCSI", &scsi_a3000))
 		{
 			if (scsi_a3000) changed_prefs.cs_mbdmac |= 1; else changed_prefs.cs_mbdmac &= ~1;
 		}
 		ImGui::SameLine(0, 50);
 		bool scsi_a4000 = (changed_prefs.cs_mbdmac & 2) != 0;
-		if (ImGui::Checkbox("A4000T NCR53C710 SCSI", &scsi_a4000))
+		if (AmigaCheckbox("A4000T NCR53C710 SCSI", &scsi_a4000))
 		{
 			if (scsi_a4000) changed_prefs.cs_mbdmac |= 2; else changed_prefs.cs_mbdmac &= ~2;
 		}
@@ -250,7 +250,7 @@ void render_panel_adv_chipset()
 			// Ramsey
 			{
 				bool ramsey_en = changed_prefs.cs_ramseyrev >= 0;
-				if (ImGui::Checkbox("Ramsey revision:", &ramsey_en)) changed_prefs.cs_ramseyrev = ramsey_en ? 0x0f : -1;
+				if (AmigaCheckbox("Ramsey revision:", &ramsey_en)) changed_prefs.cs_ramseyrev = ramsey_en ? 0x0f : -1;
 				ImGui::SameLine(0, 5); 
 				ImGui::BeginDisabled(!ramsey_en);
 				ImGui::SetNextItemWidth(40);
@@ -262,7 +262,7 @@ void render_panel_adv_chipset()
 			// Fat Gary
 			{
 				bool gary_en = changed_prefs.cs_fatgaryrev >= 0;
-				if (ImGui::Checkbox("Fat Gary revision:", &gary_en)) changed_prefs.cs_fatgaryrev = gary_en ? 0x00 : -1;
+				if (AmigaCheckbox("Fat Gary revision:", &gary_en)) changed_prefs.cs_fatgaryrev = gary_en ? 0x00 : -1;
 				ImGui::SameLine(0, 5);
 				ImGui::BeginDisabled(!gary_en);
 				ImGui::SetNextItemWidth(40);
@@ -277,7 +277,7 @@ void render_panel_adv_chipset()
 			// Agnus
 			{
 				bool agnus_en = changed_prefs.cs_agnusrev >= 0;
-				if (ImGui::Checkbox("Agnus/Alice model:", &agnus_en)) changed_prefs.cs_agnusrev = agnus_en ? 0 : -1;
+				if (AmigaCheckbox("Agnus/Alice model:", &agnus_en)) changed_prefs.cs_agnusrev = agnus_en ? 0 : -1;
 				ImGui::SameLine(0, 5);
 				ImGui::BeginDisabled(!agnus_en);
 				ImGui::SetNextItemWidth(40);
@@ -327,7 +327,7 @@ void render_panel_adv_chipset()
 			// Denise
 			{
 				bool denise_en = changed_prefs.cs_deniserev >= 0;
-				if (ImGui::Checkbox("Denise/Lisa model:", &denise_en)) changed_prefs.cs_deniserev = denise_en ? 0 : -1;
+				if (AmigaCheckbox("Denise/Lisa model:", &denise_en)) changed_prefs.cs_deniserev = denise_en ? 0 : -1;
 				ImGui::SameLine(0, 5);
 				ImGui::BeginDisabled(!denise_en);
 				ImGui::SetNextItemWidth(40);

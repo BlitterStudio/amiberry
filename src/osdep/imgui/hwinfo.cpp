@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "imgui_panels.h"
+
 // Define MAX_INFOS if not present, or just use a safe loop limit
 #ifndef MAX_INFOS
 #define MAX_INFOS 100
@@ -84,7 +86,7 @@ void render_panel_hwinfo()
     // Bottom Controls
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
     
-    if (ImGui::Checkbox("Custom board order", &changed_prefs.autoconfig_custom_sort)) {
+    if (AmigaCheckbox("Custom board order", &changed_prefs.autoconfig_custom_sort)) {
         if (changed_prefs.autoconfig_custom_sort) {
             expansion_set_autoconfig_sort(&changed_prefs);
         }
@@ -92,12 +94,12 @@ void render_panel_hwinfo()
     
     ImGui::SameLine();
     ImGui::BeginDisabled(!changed_prefs.autoconfig_custom_sort || selected_row < 0);
-    if (ImGui::Button("Move up")) {
+    if (AmigaButton("Move up")) {
         int new_idx = expansion_autoconfig_move(&changed_prefs, selected_row, -1, false);
         if (new_idx >= 0) selected_row = new_idx;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Move down")) {
+    if (AmigaButton("Move down")) {
         int new_idx = expansion_autoconfig_move(&changed_prefs, selected_row, 1, false);
         if (new_idx >= 0) selected_row = new_idx;
     }

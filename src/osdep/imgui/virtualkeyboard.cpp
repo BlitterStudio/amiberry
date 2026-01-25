@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "imgui_panels.h"
+
 static const char* languages[] = { "US", "FR", "UK", "DE" };
 static const char* styles[] = { "Original", "Warm", "Cool", "Dark" };
 
@@ -78,7 +80,7 @@ static void ShowVkbdHotkeyPopup() {
             }
         }
 
-        if (ImGui::Button("Cancel")) {
+        if (AmigaButton("Cancel")) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -87,12 +89,12 @@ static void ShowVkbdHotkeyPopup() {
 
 void render_panel_virtual_keyboard()
 {
-    ImGui::Checkbox("Virtual Keyboard enabled", &changed_prefs.vkbd_enabled);
+    AmigaCheckbox("Virtual Keyboard enabled", &changed_prefs.vkbd_enabled);
 
     ImGui::BeginDisabled(!changed_prefs.vkbd_enabled);
 
-    ImGui::Checkbox("High-Resolution", &changed_prefs.vkbd_hires);
-    ImGui::Checkbox("Quit button on keyboard", &changed_prefs.vkbd_exit);
+    AmigaCheckbox("High-Resolution", &changed_prefs.vkbd_hires);
+    AmigaCheckbox("Quit button on keyboard", &changed_prefs.vkbd_exit);
 
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Transparency:");
@@ -151,11 +153,11 @@ void render_panel_virtual_keyboard()
     ImGui::InputText("##ToggleDisplay", buf, 255, ImGuiInputTextFlags_ReadOnly);
     
     ImGui::SameLine();
-    if (ImGui::Button("...")) {
+    if (AmigaButton("...")) {
         open_vkbd_hotkey_popup = true;
     }
     ImGui::SameLine();
-    if (ImGui::Button("X")) {
+    if (AmigaButton("X")) {
          changed_prefs.vkbd_toggle[0] = '\0';
          // Also clear joy mapping
          for (int port = 0; port < 2; port++) {
@@ -168,7 +170,7 @@ void render_panel_virtual_keyboard()
     
     ImGui::EndDisabled(); // RetroArch disable
 
-    ImGui::Checkbox("Use RetroArch Vkbd button", &changed_prefs.use_retroarch_vkbd);
+    AmigaCheckbox("Use RetroArch Vkbd button", &changed_prefs.use_retroarch_vkbd);
 
     ImGui::EndDisabled(); // Enabled disable
 

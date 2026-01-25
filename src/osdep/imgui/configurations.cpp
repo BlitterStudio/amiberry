@@ -4,6 +4,7 @@
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "uae.h"
+#include "imgui_panels.h"
 
 void render_panel_configurations()
 {
@@ -101,28 +102,28 @@ void render_panel_configurations()
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Search:");
 	ImGui::SameLine(label_width);
-	ImGui::InputText("##Search", search_text, sizeof(search_text));
+	AmigaInputText("##Search", search_text, sizeof(search_text));
 	ImGui::SameLine();
 	if (search_text[0] == '\0') ImGui::BeginDisabled();
-	if (ImGui::Button("X"))
+	if (AmigaButton("X"))
 		search_text[0] = '\0';
 	if (search_text[0] == '\0') ImGui::EndDisabled();
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Name:");
 	ImGui::SameLine(label_width);
-	ImGui::InputText("##Name", name, MAX_DPATH);
+	AmigaInputText("##Name", name, MAX_DPATH);
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Description:");
 	ImGui::SameLine(label_width);
-	ImGui::InputText("##Description", desc, MAX_DPATH);
+	AmigaInputText("##Description", desc, MAX_DPATH);
 
 	ImGui::Spacing();
 	ImGui::Separator();
 	ImGui::Spacing();
 
-	if (ImGui::Button("Load", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	if (AmigaButton("Load", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (selected != -1)
 		{
@@ -132,7 +133,7 @@ void render_panel_configurations()
 	}
 	ImGui::SameLine();
 	if (strlen(name) == 0) ImGui::BeginDisabled();
-	if (ImGui::Button("Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	if (AmigaButton("Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		char filename[MAX_DPATH];
 		get_configuration_path(filename, MAX_DPATH);
@@ -155,7 +156,7 @@ void render_panel_configurations()
 	if (strlen(name) == 0) ImGui::EndDisabled();
 	ImGui::SameLine();
 	if (selected == -1) ImGui::BeginDisabled();
-	if (ImGui::Button("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+	if (AmigaButton("Delete", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		if (selected != -1)
 			ImGui::OpenPopup("Delete Configuration");
@@ -167,7 +168,7 @@ void render_panel_configurations()
 		ImGui::Text("Do you want to delete '%s'?", ConfigFilesList[selected]->Name);
 		ImGui::Separator();
 
-		if (ImGui::Button("Yes", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		if (AmigaButton("Yes", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			remove(ConfigFilesList[selected]->FullPath);
 			ReadConfigFileList();
@@ -178,7 +179,7 @@ void render_panel_configurations()
 		}
 		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
-		if (ImGui::Button("No", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
+		if (AmigaButton("No", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 		{
 			ImGui::CloseCurrentPopup();
 		}

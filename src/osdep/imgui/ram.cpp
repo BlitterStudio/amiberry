@@ -268,15 +268,15 @@ void render_panel_ram()
              // Order: Edit Autoconfig, Manual, DMA, 16-bit, Slow
              
              bool edit_ac = false; // logic not implemented
-             ImGui::Checkbox("Edit Autoconfig data", &edit_ac);
+             AmigaCheckbox("Edit Autoconfig data", &edit_ac);
              
-             ImGui::Checkbox("Manual configuration", &rb->manual_config);
+             AmigaCheckbox("Manual configuration", &rb->manual_config);
              
              bool dma_capable = !rb->nodma;
-             if (ImGui::Checkbox("DMA Capable", &dma_capable)) rb->nodma = !dma_capable;
+             if (AmigaCheckbox("DMA Capable", &dma_capable)) rb->nodma = !dma_capable;
              
-             ImGui::Checkbox("Force 16-bit", &rb->force16bit);
-             ImGui::Checkbox("Slow RAM", &rb->chipramtiming);
+             AmigaCheckbox("Force 16-bit", &rb->force16bit);
+             AmigaCheckbox("Slow RAM", &rb->chipramtiming);
              
              // Z3 Mapping Mode - Bottom Right
              ImGui::Dummy(ImVec2(0, 10));

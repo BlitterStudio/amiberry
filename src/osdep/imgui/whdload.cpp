@@ -51,7 +51,7 @@ static void RenderCustomFieldsPopup()
                     ImGui::Text("Custom%d:", i + 1);
                     for (size_t j = 0; j < field->label_bit_pairs.size(); ++j) {
                         bool v = is_bit_set(field->value, field->label_bit_pairs[j].second);
-                        if (ImGui::Checkbox(field->label_bit_pairs[j].first.c_str(), &v)) {
+                        if (AmigaCheckbox(field->label_bit_pairs[j].first.c_str(), &v)) {
                             field->value = v ? set_bit(field->value, field->label_bit_pairs[j].second)
                                              : clear_bit(field->value, field->label_bit_pairs[j].second);
                         }
@@ -65,7 +65,7 @@ static void RenderCustomFieldsPopup()
                     ImGui::Text("Custom%d:", i + 1);
                     {
                          bool v = field->value != 0;
-                         if (ImGui::Checkbox(field->caption.c_str(), &v)) {
+                         if (AmigaCheckbox(field->caption.c_str(), &v)) {
                              field->value = v ? 1 : 0;
                          }
                     }
@@ -94,7 +94,7 @@ static void RenderCustomFieldsPopup()
             ImGui::Separator();
         }
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(120, 0))) {
             create_startup_sequence(); // Apply changes
             ImGui::CloseCurrentPopup();
         }
@@ -118,12 +118,12 @@ void render_panel_whdload()
     float spacer = available_w - eject_width - select_width - spacing;
     if (spacer > 0) ImGui::SetCursorPosX(current_x + spacer);
 
-    if (ImGui::Button("Eject", ImVec2(eject_width, 0))) {
+    if (AmigaButton("Eject", ImVec2(eject_width, 0))) {
         whdload_prefs.whdload_filename = "";
         clear_whdload_prefs();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Select file", ImVec2(select_width, 0))) {
+    if (AmigaButton("Select file", ImVec2(select_width, 0))) {
          std::string startPath = whdload_prefs.whdload_filename;
          if (startPath.empty()) startPath = get_whdload_arch_path();
          const char *filter = "LHA Files (*.lha,*.lzh){.lha,.lzh},All Files (*){.*}";
@@ -196,7 +196,7 @@ void render_panel_whdload()
     DrawReadOnlyInput("UUID", whdload_prefs.variant_uuid);
     DrawReadOnlyInput("Slave Default", whdload_prefs.slave_default);
     
-    ImGui::Checkbox("Slave Libraries", &whdload_prefs.slave_libraries);
+    AmigaCheckbox("Slave Libraries", &whdload_prefs.slave_libraries);
     
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Slaves:");
@@ -229,7 +229,7 @@ void render_panel_whdload()
     ImGui::SetNextItemWidth(-1);
     char custom_buf[1024];
     strncpy(custom_buf, whdload_prefs.custom.c_str(), 1023);
-    if(ImGui::InputText("##CustomInput", custom_buf, 1024)) {
+    if(AmigaInputText("##CustomInput", custom_buf, 1024)) {
         whdload_prefs.custom = custom_buf;
         create_startup_sequence();
     }
@@ -237,7 +237,7 @@ void render_panel_whdload()
     ImGui::SetCursorPosX(120.0f);
     bool custom_enabled = !whdload_prefs.whdload_filename.empty();
     ImGui::BeginDisabled(!custom_enabled);
-    if(ImGui::Button("Custom Fields", ImVec2(200.0f, 0.0f))) {
+    if(AmigaButton("Custom Fields", ImVec2(200.0f, 0.0f))) {
             show_custom_fields = true; 
     }
     ImGui::EndDisabled();
@@ -247,8 +247,8 @@ void render_panel_whdload()
     ImGui::Text("Global options");
     ImGui::BeginChild("GlobalOptions", ImVec2(0, 0), true); 
     
-    if(ImGui::Checkbox("Button Wait", &whdload_prefs.button_wait)) create_startup_sequence();
-    if(ImGui::Checkbox("Show Splash", &whdload_prefs.show_splash)) create_startup_sequence();
+    if(AmigaCheckbox("Button Wait", &whdload_prefs.button_wait)) create_startup_sequence();
+    if(AmigaCheckbox("Show Splash", &whdload_prefs.show_splash)) create_startup_sequence();
     
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Config Delay:");
@@ -259,8 +259,8 @@ void render_panel_whdload()
         create_startup_sequence();
     }
     
-    if(ImGui::Checkbox("Write Cache", &whdload_prefs.write_cache)) create_startup_sequence();
-    if(ImGui::Checkbox("Quit on Exit", &whdload_prefs.quit_on_exit)) create_startup_sequence();
+    if(AmigaCheckbox("Write Cache", &whdload_prefs.write_cache)) create_startup_sequence();
+    if(AmigaCheckbox("Quit on Exit", &whdload_prefs.quit_on_exit)) create_startup_sequence();
 
     ImGui::EndChild();
     

@@ -245,12 +245,12 @@ void render_panel_cpu() {
         }
 
         ImGui::BeginDisabled(!enable_24bit);
-        ImGui::Checkbox("24-bit addressing", &changed_prefs.address_space_24);
+        AmigaCheckbox("24-bit addressing", &changed_prefs.address_space_24);
         ImGui::SameLine(); ShowHelpMarker("Essential for A500/A1200 compatibility. Disable for Z3 RAM usage.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_compatible);
-        if (ImGui::Checkbox("More compatible", &changed_prefs.cpu_compatible)) {
+        if (AmigaCheckbox("More compatible", &changed_prefs.cpu_compatible)) {
             // Side effects
             changed_prefs.cpu_compatible =
                     changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_compatible;
@@ -266,18 +266,18 @@ void render_panel_cpu() {
 
         bool unimplemented_cpu = !changed_prefs.int_no_unimplemented;
         ImGui::BeginDisabled(!enable_cpu_unimplemented);
-        if (ImGui::Checkbox("Unimplemented CPU emu", &unimplemented_cpu)) {
+        if (AmigaCheckbox("Unimplemented CPU emu", &unimplemented_cpu)) {
             changed_prefs.int_no_unimplemented = !unimplemented_cpu;
         }
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_datacache);
-        ImGui::Checkbox("Data cache emulation", &changed_prefs.cpu_data_cache);
+        AmigaCheckbox("Data cache emulation", &changed_prefs.cpu_data_cache);
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_jit);
         bool jit_box = changed_prefs.cachesize > 0;
-        if (ImGui::Checkbox("JIT", &jit_box)) {
+        if (AmigaCheckbox("JIT", &jit_box)) {
             // Toggle Logic
             if (jit_box) {
                 // Enabling JIT
@@ -310,7 +310,7 @@ void render_panel_cpu() {
                                changed_prefs.cpu_model)) {
             changed_prefs.mmu_ec = false;
         }
-        if (ImGui::Checkbox("EC", &changed_prefs.mmu_ec)) {
+        if (AmigaCheckbox("EC", &changed_prefs.mmu_ec)) {
             if (changed_prefs.mmu_ec)
                 changed_prefs.mmu_model = changed_prefs.cpu_model;
         }
@@ -345,7 +345,7 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_fpustrict);
-        ImGui::Checkbox("More compatible##FPU", &changed_prefs.fpu_strict);
+        AmigaCheckbox("More compatible##FPU", &changed_prefs.fpu_strict);
         
         // FPU Mode Combo
         const char* fpu_mode_items[] = { "Host (64-bit)", "Host (80-bit)", "Softfloat (80-bit)" };
@@ -361,7 +361,7 @@ void render_panel_cpu() {
         bool unimplemented_fpu = !changed_prefs.fpu_no_unimplemented;
         bool enable_unimplemented = (changed_prefs.fpu_model > 0) && (changed_prefs.cachesize == 0);
         ImGui::BeginDisabled(!enable_unimplemented);
-        if (ImGui::Checkbox("Unimplemented FPU emu", &unimplemented_fpu)) {
+        if (AmigaCheckbox("Unimplemented FPU emu", &unimplemented_fpu)) {
             changed_prefs.fpu_no_unimplemented = !unimplemented_fpu;
         }
         ImGui::EndDisabled();
@@ -458,7 +458,7 @@ void render_panel_cpu() {
 
         ImGui::BeginDisabled(true);
         // ("Disabled until fixed upstream")
-        ImGui::Checkbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
+        AmigaCheckbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
         ImGui::EndDisabled();
         
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
@@ -467,7 +467,7 @@ void render_panel_cpu() {
         BeginGroupBox("PowerPC CPU Options");
         ImGui::BeginDisabled(!enable_ppc);
         bool ppc_bool = changed_prefs.ppc_mode != 0;
-        if (ImGui::Checkbox("PPC CPU emulation", &ppc_bool)) {
+        if (AmigaCheckbox("PPC CPU emulation", &ppc_bool)) {
             if (ppc_bool) {
                 if (changed_prefs.ppc_mode == 0)
                     changed_prefs.ppc_mode = 1;
@@ -552,29 +552,29 @@ void render_panel_cpu() {
         ImGui::Columns(2, "JITColumns", false);
         
         ImGui::BeginDisabled(!enable_chk_fpujit);
-        ImGui::Checkbox("FPU Support##JIT", &changed_prefs.compfpu);
+        AmigaCheckbox("FPU Support##JIT", &changed_prefs.compfpu);
         ImGui::SameLine(); ShowHelpMarker("Enable JIT compilation for FPU instructions.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_constjump);
-        ImGui::Checkbox("Constant jump", &changed_prefs.comp_constjump);
+        AmigaCheckbox("Constant jump", &changed_prefs.comp_constjump);
         ImGui::SameLine(); ShowHelpMarker("JIT compilation optimization.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_hardflush);
-        ImGui::Checkbox("Hard flush", &changed_prefs.comp_hardflush);
+        AmigaCheckbox("Hard flush", &changed_prefs.comp_hardflush);
         ImGui::SameLine(); ShowHelpMarker("Flush JIT cache on every resize/reset.");
         ImGui::EndDisabled();
         
         ImGui::NextColumn();
 
         ImGui::BeginDisabled(!enable_chk_noflags);
-        ImGui::Checkbox("No flags", &changed_prefs.compnf);
+        AmigaCheckbox("No flags", &changed_prefs.compnf);
         ImGui::SameLine(); ShowHelpMarker("Don't update status flags (faster but less compatible).");
         ImGui::EndDisabled();
         
         ImGui::BeginDisabled(!enable_chk_catch);
-        ImGui::Checkbox("Catch unexpect. exc.", &changed_prefs.comp_catchfault);
+        AmigaCheckbox("Catch unexpect. exc.", &changed_prefs.comp_catchfault);
         ImGui::SameLine(); ShowHelpMarker("Catch memory access faults in compiled code.");
         ImGui::EndDisabled();
         

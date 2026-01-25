@@ -4,6 +4,7 @@
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "amiberry_gfx.h" // For getdisplay and MultiDisplay
+#include "imgui_panels.h"
 
 static std::vector<std::string> fullscreen_resolutions;
 static std::vector<std::pair<int, int>> fullscreen_resolution_values;
@@ -153,7 +154,7 @@ void render_panel_display()
 	ImGui::SetNextItemWidth(50);
 	ImGui::InputInt("##WinH", &changed_prefs.gfx_monitor[0].gfx_size_win.height, 0, 0);
 	ImGui::SameLine();
-	ImGui::Checkbox("Window resize", &changed_prefs.gfx_windowed_resize);
+	AmigaCheckbox("Window resize", &changed_prefs.gfx_windowed_resize);
 
 	ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 160);
 	
@@ -192,9 +193,9 @@ void render_panel_display()
 		ImGui::Text("Amiberry Specific");
 		ImGui::EndMenuBar();
 	}
-	ImGui::Checkbox("Auto Crop", &changed_prefs.gfx_auto_crop);
+	AmigaCheckbox("Auto Crop", &changed_prefs.gfx_auto_crop);
 	ImGui::SameLine();
-	ImGui::Checkbox("Manual Crop", &changed_prefs.gfx_manual_crop);
+	AmigaCheckbox("Manual Crop", &changed_prefs.gfx_manual_crop);
 	if (changed_prefs.gfx_manual_crop) {
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(100);
@@ -233,7 +234,7 @@ void render_panel_display()
 	ImGui::SameLine();
 	bool is_windowed = changed_prefs.gfx_apmode[0].gfx_fullscreen == 0;
 	if (!is_windowed) ImGui::BeginDisabled();
-	ImGui::Checkbox("Borderless", &changed_prefs.borderless);
+	AmigaCheckbox("Borderless", &changed_prefs.borderless);
 	if (!is_windowed) ImGui::EndDisabled();
 
 	ImGui::Columns(2, "Offsets", false);
@@ -360,18 +361,18 @@ void render_panel_display()
 
 	// Checkboxes
 	ImGui::Columns(2, "ChkCols", false);
-	ImGui::Checkbox("Blacker than black", &changed_prefs.gfx_blackerthanblack);
-	ImGui::Checkbox("Remove interlace artifacts", &changed_prefs.gfx_scandoubler);
-	ImGui::Checkbox("Monochrome video out", &changed_prefs.gfx_grayscale);
+	AmigaCheckbox("Blacker than black", &changed_prefs.gfx_blackerthanblack);
+	AmigaCheckbox("Remove interlace artifacts", &changed_prefs.gfx_scandoubler);
+	AmigaCheckbox("Monochrome video out", &changed_prefs.gfx_grayscale);
 	ImGui::NextColumn();
-	ImGui::Checkbox("Filtered low resolution", (bool*)&changed_prefs.gfx_lores_mode);
+	AmigaCheckbox("Filtered low resolution", (bool*)&changed_prefs.gfx_lores_mode);
 	
 	if (!vga_autoswitch_enabled) ImGui::BeginDisabled();
-	ImGui::Checkbox("VGA mode resolution autoswitch", &changed_prefs.gfx_autoresolution_vga);
+	AmigaCheckbox("VGA mode resolution autoswitch", &changed_prefs.gfx_autoresolution_vga);
 	if (!vga_autoswitch_enabled) ImGui::EndDisabled();
 	
 	bool resync_blank = changed_prefs.gfx_monitorblankdelay > 0;
-	if (ImGui::Checkbox("Display resync blanking", &resync_blank)) {
+	if (AmigaCheckbox("Display resync blanking", &resync_blank)) {
 		changed_prefs.gfx_monitorblankdelay = resync_blank ? 1000 : 0;
 	}
 	ImGui::Columns(1);
@@ -519,7 +520,7 @@ void render_panel_display()
 	snprintf(buf, sizeof(buf), "%.6f", changed_prefs.cr[changed_prefs.cr_selected].rate);
 	ImGui::InputText("##FPSVal", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly); 
 	ImGui::SameLine();
-	ImGui::Checkbox("##FPSLocked", (bool*)&changed_prefs.cr[changed_prefs.cr_selected].locked);
+	AmigaCheckbox("##FPSLocked", (bool*)&changed_prefs.cr[changed_prefs.cr_selected].locked);
 	ImGui::Columns(1);
 
 	ImGui::Separator();
@@ -603,10 +604,10 @@ void render_panel_display()
 		ImGui::EndMenuBar();
 	}
 	bool h_center = changed_prefs.gfx_xcenter == 2;
-	if (ImGui::Checkbox("Horizontal", &h_center)) changed_prefs.gfx_xcenter = h_center ? 2 : 0;
+	if (AmigaCheckbox("Horizontal", &h_center)) changed_prefs.gfx_xcenter = h_center ? 2 : 0;
 	
 	bool v_center = changed_prefs.gfx_ycenter == 2;
-	if (ImGui::Checkbox("Vertical", &v_center)) changed_prefs.gfx_ycenter = v_center ? 2 : 0;
+	if (AmigaCheckbox("Vertical", &v_center)) changed_prefs.gfx_ycenter = v_center ? 2 : 0;
 	ImGui::EndChild();
 
 	// Line Mode Group
