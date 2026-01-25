@@ -75,6 +75,9 @@
 static bool force_auto_crop = false;
 SDL_DisplayMode sdl_mode;
 SDL_Surface* amiga_surface = nullptr;
+#ifndef USE_OPENGL
+static SDL_Texture* p96_cursor_overlay_texture = nullptr;  // Software cursor overlay for RTG
+#endif
 
 #ifdef USE_OPENGL
 SDL_GLContext gl_context;
@@ -342,6 +345,10 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 
 #ifdef USE_OPENGL
 static GLuint osd_texture = 0;
+// Software cursor overlay for OpenGL
+static GLuint p96_cursor_overlay_texture_gl = 0;
+static GLuint cursor_vao = 0;
+static GLuint cursor_vbo = 0;
 static GLuint osd_program = 0;
 static GLint osd_tex_loc = -1;
 static GLuint osd_vbo = 0;
@@ -676,7 +683,33 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 			}
 		}
 
-		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, p_crop, p_quad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(mon->amiga_renderer, amiga_texture, p_crop, p_quad, 0, nullptr, SDL_FLIP_NONE);
+
+#ifndef USE_OPENGL
+		// Render Software Cursor Overlay for RTG (when using relative mouse mode)
+		if (ad->picasso_on && p96_uses_software_cursor()) {
+			if (p96_cursor_needs_update() || !p96_cursor_overlay_texture) {
+				SDL_Surface* s = p96_get_cursor_overlay_surface();
+				if (s) {
+					if (p96_cursor_overlay_texture)
+						SDL_DestroyTexture(p96_cursor_overlay_texture);
+					p96_cursor_overlay_texture = SDL_CreateTextureFromSurface(mon->amiga_renderer, s);
+					if (p96_cursor_overlay_texture)
+						SDL_SetTextureBlendMode(p96_cursor_overlay_texture, SDL_BLENDMODE_BLEND);
+				}
+			}
+
+			if (p96_cursor_overlay_texture) {
+				int cx, cy, cw, ch;
+				p96_get_cursor_position(&cx, &cy);
+				p96_get_cursor_dimensions(&cw, &ch);
+				
+				// Renderer logical size matches RTG resolution, so 1:1 mapping
+				SDL_Rect dst_cursor = { cx, cy, cw, ch };
+				SDL_RenderCopy(mon->amiga_renderer, p96_cursor_overlay_texture, nullptr, &dst_cursor);
+			}
+		}
+#endif
 
 		// GPU-composited Status Line (OSD) for both native and RTG
 		if ((((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
@@ -1075,8 +1108,8 @@ void centerdstrect(struct AmigaMonitor* mon, SDL_Rect* dr)
 
 void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* myp)
 {
-	struct AmigaMonitor* mon = &AMonitors[monid];
-	const struct amigadisplay* ad = &adisplays[monid];
+	const AmigaMonitor* mon = &AMonitors[monid];
+	const amigadisplay* ad = &adisplays[monid];
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
 #ifdef AMIBERRY
 	if (currprefs.gfx_auto_crop)
@@ -1086,26 +1119,38 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	}
 #endif
 
-#ifdef USE_OPENGL
-	// In OpenGL mode with RTG, use render_quad for offset and scaling calculations
-	// render_quad contains the actual viewport position and dimensions
-	if (ad->picasso_on && render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
-		// Offset: position of the viewport within the screen
-		dx -= static_cast<float>(render_quad.x);
-		dy -= static_cast<float>(render_quad.y);
-		// Scaling: ratio of Amiga surface to viewport size
-		mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
-		my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
-	}
-	else
-#endif
 	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-		while (!(mon->scalepicasso && mon->screen_is_picasso)) {
-			if (mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || mon->currentmode.current_height > mon->currentmode.native_height))
-				break;
+#ifdef USE_OPENGL
+		// In OpenGL Full-Window mode, use render_quad for offset and scaling calculations
+		// render_quad contains the actual viewport position and dimensions
+		if (render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
+			// Scaling: ratio of viewport size to Amiga surface (must compute first)
+			mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
+			my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
+			// Offset calculation differs between RTG and native modes due to 
+			// different formulas in get_mouse_position():
+			// - RTG mode: x = (x - XOffset) * fmx + fdx * fmx  (offset gets scaled)
+			// - Native mode: x = x * fmx - fdx  (offset is pre-scaled)
+			if (ad->picasso_on) {
+				// RTG mode: get_mouse_position scales the offset by fmx,
+				// so we pass raw window coordinates (negative for subtraction)
+				dx -= static_cast<float>(render_quad.x);
+				dy -= static_cast<float>(render_quad.y);
+			} else {
+				// Native mode: get_mouse_position uses offset directly,
+				// so we pre-scale to Amiga surface coordinates
+				dx += static_cast<float>(render_quad.x) / mx;
+				dy += static_cast<float>(render_quad.y) / my;
+			}
+		}
+		else
+#endif
+		// SDL renderer fallback path (no OpenGL or render_quad not set)
+		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
+			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || 
+			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {
 			dx += (mon->currentmode.native_width - mon->currentmode.current_width) / 2;
 			dy += (mon->currentmode.native_height - mon->currentmode.current_height) / 2;
-			break;
 		}
 	}
 
@@ -1845,6 +1890,95 @@ static void render_osd(const int monid, int x, int y, int w, int h)
 }
 #endif
 
+#ifdef USE_OPENGL
+static void render_software_cursor_gl(const int monid, int x, int y, int w, int h)
+{
+	const amigadisplay* ad = &adisplays[monid];
+	if (ad->picasso_on && p96_uses_software_cursor()) {
+		if (p96_cursor_needs_update() || !p96_cursor_overlay_texture_gl) {
+			SDL_Surface* s = p96_get_cursor_overlay_surface();
+			if (s) {
+				if (p96_cursor_overlay_texture_gl == 0) {
+					glGenTextures(1, &p96_cursor_overlay_texture_gl);
+				}
+				glBindTexture(GL_TEXTURE_2D, p96_cursor_overlay_texture_gl);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, s->w, s->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, s->pixels);
+			}
+		}
+
+		if (p96_cursor_overlay_texture_gl) {
+			if (cursor_vao == 0) glGenVertexArrays(1, &cursor_vao);
+			if (cursor_vbo == 0) glGenBuffers(1, &cursor_vbo);
+
+			if (!init_osd_shader()) return; // Re-use OSD shader (simple texture shader)
+
+			int cx, cy, cw, ch;
+			p96_get_cursor_position(&cx, &cy);
+			p96_get_cursor_dimensions(&cw, &ch);
+
+			if (amiga_surface) {
+				float surf_w = (float)amiga_surface->w;
+				float surf_h = (float)amiga_surface->h;
+				
+				// Percentage of surface
+				float px = (float)cx / surf_w;
+				float py = (float)cy / surf_h;
+				float pw = (float)cw / surf_w;
+				float ph = (float)ch / surf_h;
+
+				float x0 = px * 2.0f - 1.0f;
+				float y0 = 1.0f - (py * 2.0f + ph * 2.0f); // Origin top-left, GL bottom-left. 
+
+				float y_top = 1.0f - py * 2.0f;
+				float y_bottom = 1.0f - (py + ph) * 2.0f;
+				
+				float x_left = x0;
+				float x_right = px * 2.0f - 1.0f + pw * 2.0f;
+
+				GLfloat vertices[] = {
+					x_left,  y_bottom, 0.0f, 1.0f,
+					x_right, y_bottom, 1.0f, 1.0f,
+					x_right, y_top,    1.0f, 0.0f,
+					x_left,  y_top,    0.0f, 0.0f,
+				};
+
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				glDisable(GL_SCISSOR_TEST);
+				glViewport(x, y, w, h);
+
+				glUseProgram(osd_program);
+				if (osd_tex_loc != -1) glUniform1i(osd_tex_loc, 0);
+
+				glBindVertexArray(cursor_vao);
+				
+				glEnableVertexAttribArray(0);
+				glDisableVertexAttribArray(1);
+				glDisableVertexAttribArray(2);
+
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, p96_cursor_overlay_texture_gl);
+				
+				glBindBuffer(GL_ARRAY_BUFFER, cursor_vbo);
+				glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+				glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+				
+				glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+				glDisableVertexAttribArray(0);
+				glBindVertexArray(0);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				glDisable(GL_BLEND);
+				glUseProgram(0);
+			}
+		}
+	}
+}
+#endif
+
 static float calculate_desired_aspect(const AmigaMonitor* mon)
 {
 	if (mon->screen_is_picasso && amiga_surface) {
@@ -2036,6 +2170,7 @@ void show_screen(const int monid, int mode)
 		}
 	}
 
+	render_software_cursor_gl(monid, destX, destY, destW, destH);
 	render_osd(monid, destX, destY, destW, destH);
 
 	SDL_GL_SwapWindow(mon->amiga_window);
@@ -2268,11 +2403,28 @@ static void close_hwnds(struct AmigaMonitor* mon)
 
 #ifdef USE_OPENGL
 	destroy_shaders();
+	if (p96_cursor_overlay_texture_gl) {
+		glDeleteTextures(1, &p96_cursor_overlay_texture_gl);
+		p96_cursor_overlay_texture_gl = 0;
+	}
+	if (cursor_vao) {
+		glDeleteVertexArrays(1, &cursor_vao);
+		cursor_vao = 0;
+	}
+	if (cursor_vbo) {
+		glDeleteBuffers(1, &cursor_vbo);
+		cursor_vbo = 0;
+	}
 #else
 	if (amiga_texture)
 	{
 		SDL_DestroyTexture(amiga_texture);
 		amiga_texture = nullptr;
+	}
+	if (p96_cursor_overlay_texture)
+	{
+		SDL_DestroyTexture(p96_cursor_overlay_texture);
+		p96_cursor_overlay_texture = nullptr;
 	}
 #endif
 

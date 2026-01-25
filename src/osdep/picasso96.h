@@ -701,6 +701,14 @@ void fb_copyrow(int monid, uae_u8 *src, uae_u8 *dst, int x, int y, int width, in
 
 extern int p96refresh_active;
 
+// Software cursor overlay functions (for relative mouse mode where SDL cursor doesn't work)
+bool p96_uses_software_cursor();
+void p96_get_cursor_position(int *x, int *y);
+void p96_get_cursor_dimensions(int *w, int *h);
+SDL_Surface* p96_get_cursor_overlay_surface();
+bool p96_cursor_needs_update();
+void p96_cleanup_cursor_overlay();
+
 #define LIB_SIZE 34
 #define CARD_FLAGS LIB_SIZE
 #define CARD_EXECBASE (CARD_FLAGS + 2)

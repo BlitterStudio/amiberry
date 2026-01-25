@@ -711,10 +711,7 @@ static void setcursorshape(const int monid)
 {
 	const AmigaMonitor* mon = &AMonitors[monid];
 	if (currprefs.input_tablet && currprefs.input_magic_mouse_cursor == MAGICMOUSE_NATIVE_ONLY) {
-		if (mon->screen_is_picasso && currprefs.rtg_hardwaresprite)
-			SDL_ShowCursor(SDL_ENABLE);
-		else
-			SDL_ShowCursor(SDL_DISABLE);
+		SDL_ShowCursor(SDL_DISABLE);
 	}
 	else if (!picasso_setwincursor(monid)) {
 		SDL_SetCursor(normalcursor);
@@ -1887,50 +1884,14 @@ static void handle_mouse_motion_event(const SDL_Event& event, const AmigaMonitor
 
 	if (isfocus() <= 0) return;
 
-	const auto is_picasso = mon->screen_is_picasso;
-	Sint32 x, y, xrel, yrel;
-	if (amiberry_options.rotation_angle == 0)
-	{
-		x = event.motion.x;
-		y = event.motion.y;
-		xrel = event.motion.xrel;
-		yrel = event.motion.yrel;
-	}
-	else if (amiberry_options.rotation_angle == 180)
-	{
-		x = -event.motion.x;
-		y = -event.motion.y;
-		xrel = -event.motion.xrel;
-		yrel = -event.motion.yrel;
-	}
-	else if (amiberry_options.rotation_angle == 90)
-	{
-		x = event.motion.y;
-		y = -event.motion.x;
-		xrel = event.motion.yrel;
-		yrel = -event.motion.xrel;
-	}
-	else // -90
-	{
-		x = -event.motion.y;
-		y = event.motion.x;
-		xrel = -event.motion.yrel;
-		yrel = event.motion.xrel;
-	}
+	Sint32 x = event.motion.x;
+	Sint32 y = event.motion.y;
+	const Sint32 xrel = event.motion.xrel;
+	const Sint32 yrel = event.motion.yrel;
 
 	if (currprefs.input_tablet >= TABLET_MOUSEHACK)
 	{
 		/* absolute */
-		// For absolute positioning, pass raw SDL coordinates to the input system.
-		// The get_mouse_position() function in inputdevice.cpp handles coordinate
-		// transformation via getgfxoffset() for both RTG and native modes.
-		// Applying transformation here causes double-transformation issues.
-		if (!is_picasso) {
-			// Legacy scaling for native modes - required for proper coordinate mapping
-			x = (x / 2) << currprefs.gfx_resolution;
-			y = (y / 2) << currprefs.gfx_vresolution;
-		}
-
 		setmousestate(0, 0, x, 1);
 		setmousestate(0, 1, y, 1);
 	}
@@ -2424,13 +2385,6 @@ void target_fixup_options(uae_prefs* p)
 		p->rtg_hardwaresprite = false;
 	}
 
-#ifdef AMIBERRY
-	// Disable hardware sprite if not using Virtual mouse mode,
-	// otherwise we'll have no cursor showing (due to SDL2 Relative mouse)
-	if (p->rtg_hardwaresprite && p->input_tablet == 0)
-		p->rtg_hardwaresprite = false;
-#endif
-
 	const MultiDisplay* md = getdisplay(p, 0);
 	for (auto & j : p->gfx_monitor) {
 		if (j.gfx_size_fs.special == WH_NATIVE) {
@@ -2542,7 +2496,7 @@ void target_default_options(uae_prefs* p, const int type)
 		//p->filesystem_mangle_reserved_names = true;
 	}
 
-	multithread_enabled = amiberry_options.default_multithreaded_drawing;
+	multithread_enabled = true;
 
 	p->kbd_led_num = -1; // No status on numlock
 	p->kbd_led_scr = -1; // No status on scrollock
@@ -3604,10 +3558,6 @@ void save_amiberry_settings()
 	// If you want to disable the default behavior for some reason
 	write_bool_option("gui_joystick_control", amiberry_options.gui_joystick_control);
 
-	// Use a separate thread for drawing native chipset output
-	// This helps with performance, but may cause glitches in some cases
-	write_bool_option("default_multithreaded_drawing", amiberry_options.default_multithreaded_drawing);
-
 	// Default mouse input speed
 	write_int_option("input_default_mouse_speed", amiberry_options.input_default_mouse_speed);
 
@@ -3626,9 +3576,6 @@ void save_amiberry_settings()
 	// Default key for Fullscreen Toggle
 	write_string_option("default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key);
 
-	// Rotation angle of the output display (useful for screens with portrait orientation, like the Go Advance)
-	write_int_option("rotation_angle", amiberry_options.rotation_angle);
-	
 	// Enable Horizontal Centering by default?
 	write_bool_option("default_horizontal_centering", amiberry_options.default_horizontal_centering);
 
@@ -3837,9 +3784,6 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 {
 	TCHAR option[CONFIG_BLEN], value[CONFIG_BLEN];
 	int numROMs, numDisks, numCDs;
-	auto romType = -1;
-	char romName[MAX_DPATH] = {'\0'};
-	char romPath[MAX_DPATH] = {'\0'};
 	char tmpFile[MAX_DPATH];
 	int ret = 0;
 
@@ -3913,14 +3857,12 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_intval(option, value, "default_line_mode", &amiberry_options.default_line_mode, 1);
 		ret |= cfgfile_yesno(option, value, "rctrl_as_ramiga", &amiberry_options.rctrl_as_ramiga);
 		ret |= cfgfile_yesno(option, value, "gui_joystick_control", &amiberry_options.gui_joystick_control);
-		ret |= cfgfile_yesno(option, value, "default_multithreaded_drawing", &amiberry_options.default_multithreaded_drawing);
 		ret |= cfgfile_intval(option, value, "input_default_mouse_speed", &amiberry_options.input_default_mouse_speed, 1);
 		ret |= cfgfile_yesno(option, value, "input_keyboard_as_joystick_stop_keypresses", &amiberry_options.input_keyboard_as_joystick_stop_keypresses);
 		ret |= cfgfile_string(option, value, "default_open_gui_key", amiberry_options.default_open_gui_key, sizeof amiberry_options.default_open_gui_key);
 		ret |= cfgfile_string(option, value, "default_quit_key", amiberry_options.default_quit_key, sizeof amiberry_options.default_quit_key);
 		ret |= cfgfile_string(option, value, "default_ar_key", amiberry_options.default_ar_key, sizeof amiberry_options.default_ar_key);
 		ret |= cfgfile_string(option, value, "default_fullscreen_toggle_key", amiberry_options.default_fullscreen_toggle_key, sizeof amiberry_options.default_fullscreen_toggle_key);
-		ret |= cfgfile_intval(option, value, "rotation_angle", &amiberry_options.rotation_angle, 1);
 		ret |= cfgfile_yesno(option, value, "default_horizontal_centering", &amiberry_options.default_horizontal_centering);
 		ret |= cfgfile_yesno(option, value, "default_vertical_centering", &amiberry_options.default_vertical_centering);
 		ret |= cfgfile_intval(option, value, "default_scaling_method", &amiberry_options.default_scaling_method, 1);
