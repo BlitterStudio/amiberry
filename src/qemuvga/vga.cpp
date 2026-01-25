@@ -1943,7 +1943,7 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
 			bool ck, uint32_t colorkey,
 			int convert_mode, uint32_t *p96_rgbx16p, uint32_t *clut, bool yuv_swap);
 		void alloc_colors_picasso(int rw, int gw, int bw, int rs, int gs, int bs, int rgbfmt, uint32_t *rgbx16);
-		int getconvert(int rgbformat);
+		int getconvert(int rgbformat, int pixbytes);
 
 		uint32_t format = (s->cr[0x3e] >> 1) & 7;
 		bool clutmode = false;
@@ -1968,7 +1968,8 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
 				convert = 5;
 			break;
 		}
-		convert = getconvert(convert);
+	    int pixbytes = (bits + 7) / 8;
+	    convert = getconvert(convert, pixbytes);
 
 		int ovl_format = 5;
 		if (s->old_ovl_format != ovl_format) {

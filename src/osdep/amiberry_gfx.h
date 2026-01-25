@@ -14,6 +14,11 @@
 #define RTG_MODE_CENTER 2
 #define RTG_MODE_INTEGER_SCALE 3
 
+#ifdef AMIBERRY
+extern Uint32 pixel_format;
+extern uae_u8* p96_get_render_buffer_pointer(int monid);
+#endif
+
 #define GUI_WIDTH  800
 #define GUI_HEIGHT 720
 
@@ -39,6 +44,7 @@ struct PicassoResolution
 {
 	bool inuse;
 	struct ScreenResolution res;
+	int depth;   /* depth in bytes-per-pixel */
 	int residx;
 	int refresh[MAX_REFRESH_RATES]; /* refresh-rates in Hz */
 	int refreshtype[MAX_REFRESH_RATES]; /* 0=normal,1=raw,2=lace */
@@ -162,6 +168,7 @@ extern void auto_crop_image();
 extern bool vkbd_allowed(int monid);
 extern void quit_drawing_thread();
 extern void start_drawing_thread();
+extern bool target_graphics_buffer_update(const int monid, const bool force);
 
 extern SDL_GameControllerButton vkbd_button;
 extern void GetWindowRect(SDL_Window* window, SDL_Rect* rect);

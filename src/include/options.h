@@ -743,6 +743,7 @@ struct uae_prefs {
 
 	float rtg_horiz_zoom_mult;
 	float rtg_vert_zoom_mult;
+	bool rtg_zerocopy;
 
 	bool immediate_blits;
 	int waiting_blits;
@@ -1326,7 +1327,6 @@ struct amiberry_options
 	bool write_logfile = false;
 	bool rctrl_as_ramiga = false;
 	bool gui_joystick_control = true;
-	bool default_multithreaded_drawing = true;
 	int default_line_mode = 1;
 	int input_default_mouse_speed = 100;
 	bool input_keyboard_as_joystick_stop_keypresses = false;
@@ -1334,7 +1334,6 @@ struct amiberry_options
 	char default_quit_key[128]{};
 	char default_ar_key[128] = "Pause";
 	char default_fullscreen_toggle_key[128]{};
-	int rotation_angle = 0;
 	bool default_horizontal_centering = false;
 	bool default_vertical_centering = false;
 	int default_scaling_method = -1;
@@ -1346,8 +1345,8 @@ struct amiberry_options
 	int default_height = 568;
 	int default_fullscreen_mode = 0;
 	int default_stereo_separation = 7;
-	int default_sound_buffer = 8192;
-	bool default_sound_pull = true;
+	int default_sound_buffer = 3072;
+	bool default_sound_pull = false;
 	int default_sound_frequency = 44100;
 	int default_joystick_deadzone = 33;
 	bool default_retroarch_quit = true;

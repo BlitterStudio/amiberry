@@ -47,7 +47,25 @@ static void sdl_fill_format(SDL_PixelFormat* fmt, Uint32 format)
 	fmt->format = format;
 	fmt->BitsPerPixel = 32;
 	fmt->BytesPerPixel = 4;
-	if (format == SDL_PIXELFORMAT_ABGR8888) {
+	if (format == SDL_PIXELFORMAT_RGB565) {
+		fmt->BitsPerPixel = 16;
+		fmt->BytesPerPixel = 2;
+		fmt->Rmask = 0xF800;
+		fmt->Gmask = 0x07E0;
+		fmt->Bmask = 0x001F;
+		fmt->Rshift = 11;
+		fmt->Gshift = 5;
+		fmt->Bshift = 0;
+	} else if (format == SDL_PIXELFORMAT_RGB555) {
+		fmt->BitsPerPixel = 16;
+		fmt->BytesPerPixel = 2;
+		fmt->Rmask = 0x7C00;
+		fmt->Gmask = 0x03E0;
+		fmt->Bmask = 0x001F;
+		fmt->Rshift = 10;
+		fmt->Gshift = 5;
+		fmt->Bshift = 0;
+	} else if (format == SDL_PIXELFORMAT_ABGR8888) {
 		fmt->Rmask = 0x000000ff;
 		fmt->Gmask = 0x0000ff00;
 		fmt->Bmask = 0x00ff0000;
@@ -335,6 +353,24 @@ SDL_Surface* SDL_CreateRGBSurfaceWithFormat(Uint32 flags, int w, int h, int dept
 	return s;
 }
 
+SDL_Surface* SDL_CreateRGBSurfaceWithFormatFrom(void* pixels, int w, int h, int depth, int pitch, Uint32 format)
+{
+	SDL_Surface* s = (SDL_Surface*)calloc(1, sizeof(SDL_Surface));
+	if (!s) return nullptr;
+	s->format = SDL_AllocFormat(format);
+	if (!s->format) { free(s); return nullptr; }
+	s->flags |= SDL_PREALLOC;
+	s->w = w;
+	s->h = h;
+	s->pitch = pitch;
+	s->pixels = pixels;
+	if (depth > 0) {
+		s->format->BitsPerPixel = (Uint8)depth;
+		s->format->BytesPerPixel = (Uint8)(depth / 8);
+	}
+	return s;
+}
+
 SDL_Surface* SDL_CreateRGBSurface(Uint32 flags, int w, int h, int depth,
 	Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask)
 {
@@ -464,6 +500,10 @@ int SDL_SetRenderDrawBlendMode(SDL_Renderer* renderer, SDL_BlendMode blendMode)
 {
 	(void)renderer; (void)blendMode; return 0;
 }
+int SDL_SetSurfaceBlendMode(SDL_Surface* surface, SDL_BlendMode blendMode)
+{
+	(void)surface; (void)blendMode; return 0;
+}
 int SDL_SetTextureBlendMode(SDL_Texture* texture, SDL_BlendMode blendMode)
 {
 	(void)texture; (void)blendMode; return 0;
@@ -524,6 +564,7 @@ void SDL_SetWindowIcon(SDL_Window* window, SDL_Surface* icon) { (void)window; (v
 
 SDL_bool SDL_SetHint(const char* name, const char* value) { (void)name; (void)value; return SDL_TRUE; }
 int SDL_GL_SetAttribute(SDL_GLattr attr, int value) { (void)attr; (void)value; return 0; }
+void SDL_GL_ResetAttributes(void) {}
 
 int SDL_PushEvent(SDL_Event* event) { (void)event; return -1; }
 int SDL_PollEvent(SDL_Event* event) { (void)event; return 0; }

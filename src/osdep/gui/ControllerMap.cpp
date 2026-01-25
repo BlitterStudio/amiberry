@@ -571,11 +571,8 @@ WatchJoystick(SDL_Joystick* joystick)
 		uae_gui->draw();
 
 		SDL_UpdateTexture(gui_texture, nullptr, gui_screen->pixels, gui_screen->pitch);
-		if (amiberry_options.rotation_angle == 0 || amiberry_options.rotation_angle == 180)
-			render_quad = { 0, 0, gui_screen->w, gui_screen->h };
-		else
-			render_quad = { -(GUI_WIDTH - GUI_HEIGHT) / 2, (GUI_WIDTH - GUI_HEIGHT) / 2, gui_screen->w, gui_screen->h };
-		SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &render_quad, amiberry_options.rotation_angle, nullptr, SDL_FLIP_NONE);
+		render_quad = { 0, 0, gui_screen->w, gui_screen->h };
+		SDL_RenderCopyEx(mon->gui_renderer, gui_texture, nullptr, &render_quad, 0, nullptr, SDL_FLIP_NONE);
 
 		// Blit marker on top
 		SDL_SetTextureAlphaMod(marker, alpha);

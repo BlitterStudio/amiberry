@@ -562,6 +562,8 @@ enum {
 #define SDL_PIXELFORMAT_RGBA8888 0x16462004u
 #define SDL_PIXELFORMAT_ABGR8888 0x16762004u
 #define SDL_PIXELFORMAT_BGRA8888 0x16862004u
+#define SDL_PIXELFORMAT_RGB565 0x15151002u
+#define SDL_PIXELFORMAT_RGB555 0x15141002u
 
 #if SDL_BYTEORDER == 1234
 #define SDL_PIXELFORMAT_RGBA32 SDL_PIXELFORMAT_ABGR8888
@@ -605,7 +607,9 @@ enum {
 #define SDL_HINT_RENDER_SCALE_QUALITY "SDL_RENDER_SCALE_QUALITY"
 #define SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS "SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS"
 
-#define SDL_GL_CONTEXT_PROFILE_COMPATIBILITY 0
+#define SDL_GL_CONTEXT_PROFILE_COMPATIBILITY 0x0002
+#define SDL_GL_CONTEXT_PROFILE_CORE 0x0001
+#define SDL_GL_CONTEXT_PROFILE_ES 0x0004
 #define SDL_GL_CONTEXT_FLAGS 0
 #define SDL_GL_CONTEXT_PROFILE_MASK 0
 #define SDL_GL_CONTEXT_MAJOR_VERSION 0
@@ -618,7 +622,8 @@ enum {
 #define SDL_GL_BLUE_SIZE 0
 #define SDL_GL_ALPHA_SIZE 0
 
-#define SDL_BITSPERPIXEL(format) 32
+#define SDL_BYTESPERPIXEL(format) (((format) == SDL_PIXELFORMAT_RGB565 || (format) == SDL_PIXELFORMAT_RGB555) ? 2 : 4)
+#define SDL_BITSPERPIXEL(format) (SDL_BYTESPERPIXEL(format) * 8)
 
 #define SDL_zero(x) memset(&(x), 0, sizeof(x))
 
@@ -697,6 +702,7 @@ SDL_threadID SDL_GetThreadID(SDL_Thread* t);
 int SDL_SetThreadPriority(SDL_ThreadPriority pri);
 
 SDL_Surface* SDL_CreateRGBSurfaceWithFormat(Uint32 flags, int w, int h, int depth, Uint32 format);
+SDL_Surface* SDL_CreateRGBSurfaceWithFormatFrom(void* pixels, int w, int h, int depth, int pitch, Uint32 format);
 SDL_Surface* SDL_CreateRGBSurface(Uint32 flags, int w, int h, int depth, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
 SDL_Surface* SDL_CreateRGBSurfaceFrom(void* pixels, int w, int h, int depth, int pitch, Uint32 Rmask, Uint32 Gmask, Uint32 Bmask, Uint32 Amask);
 void SDL_FreeSurface(SDL_Surface* s);
@@ -726,6 +732,7 @@ void SDL_DestroyRenderer(SDL_Renderer* renderer);
 int SDL_SetRenderDrawColor(SDL_Renderer* renderer, Uint8 r, Uint8 g, Uint8 b, Uint8 a);
 int SDL_GetRenderDrawColor(SDL_Renderer* renderer, Uint8* r, Uint8* g, Uint8* b, Uint8* a);
 int SDL_SetRenderDrawBlendMode(SDL_Renderer* renderer, SDL_BlendMode blendMode);
+int SDL_SetSurfaceBlendMode(SDL_Surface* surface, SDL_BlendMode blendMode);
 int SDL_SetTextureBlendMode(SDL_Texture* texture, SDL_BlendMode blendMode);
 int SDL_SetTextureAlphaMod(SDL_Texture* texture, Uint8 alpha);
 
@@ -764,6 +771,7 @@ int SDL_SetClipboardText(const char* text);
 
 SDL_bool SDL_SetHint(const char* name, const char* value);
 int SDL_GL_SetAttribute(SDL_GLattr attr, int value);
+void SDL_GL_ResetAttributes(void);
 
 int SDL_PushEvent(SDL_Event* event);
 int SDL_PollEvent(SDL_Event* event);
