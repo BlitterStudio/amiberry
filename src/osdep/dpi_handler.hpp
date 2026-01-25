@@ -1,7 +1,12 @@
 #pragma once
 
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#include "SDL_ttf.h"
+#else
 #include "SDL.h"
 #include "SDL_ttf.h"
+#endif
 
 struct WindowSize {
     int width;

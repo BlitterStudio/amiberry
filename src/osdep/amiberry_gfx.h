@@ -1,5 +1,9 @@
 #pragma once
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
 #include <SDL.h>
+#endif
 #include "rtgmodes.h"
 #include "uae/types.h"
 #include <vector>

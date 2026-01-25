@@ -22,7 +22,11 @@
 #include "gensound.h"
 #include "xwin.h"
 
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
 #include <SDL.h>
+#endif
 #include <cmath>
 #include <algorithm>
 

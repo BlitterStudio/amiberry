@@ -1,4 +1,7 @@
 #include <cstring>
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#endif
 
 #include "sysdeps.h"
 #include "gui.h"

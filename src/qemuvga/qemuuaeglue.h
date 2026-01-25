@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stddef.h>
 #include "sysconfig.h"
 
 #ifdef DEBUGGER
@@ -429,4 +430,3 @@ extern uint64_t lsi_mmio_read(void *opaque, hwaddr addr, unsigned size);
 
 typedef void *qemu_irq;
 typedef void* SysBusDevice;
-

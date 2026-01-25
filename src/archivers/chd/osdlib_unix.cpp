@@ -12,7 +12,11 @@
 #include "osdcore.h"
 #include "osdlib.h"
 
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
 #include <SDL2/SDL.h>
+#endif
 
 #include <csignal>
 #include <cstdio>

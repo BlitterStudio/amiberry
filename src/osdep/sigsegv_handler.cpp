@@ -51,7 +51,11 @@
 #ifdef HAVE_EXECINFO
 #include <execinfo.h>
 #endif
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
 #include <SDL.h>
+#endif
 
 #ifdef JIT
 extern uae_u8* current_compile_p;

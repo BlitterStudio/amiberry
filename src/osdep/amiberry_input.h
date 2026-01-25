@@ -1,5 +1,10 @@
 #pragma once
 #include "options.h"
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
+#include <SDL.h>
+#endif
 
 #ifdef AMIBERRY
 #define MAX_MAPPINGS 128

@@ -1,6 +1,10 @@
 #include <cstdio>
 #include <cstdlib>
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
 #include <SDL.h>
+#endif
 #include <SDL_image.h>
 
 #include "vkbd.h"

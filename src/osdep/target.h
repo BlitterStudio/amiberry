@@ -5,7 +5,11 @@
   */
 
 #pragma once
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
 #include <SDL.h>
+#endif
 
 #include "options.h"
 

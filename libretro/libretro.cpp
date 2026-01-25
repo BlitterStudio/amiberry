@@ -1,5 +1,8 @@
 #include "libretro.h"
 #include "libretro_shared.h"
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

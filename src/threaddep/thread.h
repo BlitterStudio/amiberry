@@ -7,8 +7,12 @@
   */
 
 #pragma once
+#ifdef LIBRETRO
+#include "sdl_compat.h"
+#else
 #include <SDL.h>
 #include <SDL_thread.h>
+#endif
 
 /* Sempahores. We use POSIX semaphores; if you are porting this to a machine
  * with different ones, make them look like POSIX semaphores. */

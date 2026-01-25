@@ -1,5 +1,5 @@
 #ifdef LIBRETRO
-#include <SDL.h>
+#include "sdl_compat.h"
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -47,7 +47,7 @@ static void sdl_fill_format(SDL_PixelFormat* fmt, Uint32 format)
 	fmt->format = format;
 	fmt->BitsPerPixel = 32;
 	fmt->BytesPerPixel = 4;
-	if (format == SDL_PIXELFORMAT_ABGR8888 || format == SDL_PIXELFORMAT_RGBA32) {
+	if (format == SDL_PIXELFORMAT_ABGR8888) {
 		fmt->Rmask = 0x000000ff;
 		fmt->Gmask = 0x0000ff00;
 		fmt->Bmask = 0x00ff0000;
@@ -56,6 +56,24 @@ static void sdl_fill_format(SDL_PixelFormat* fmt, Uint32 format)
 		fmt->Gshift = 8;
 		fmt->Bshift = 16;
 		fmt->Ashift = 24;
+	} else if (format == SDL_PIXELFORMAT_RGBA8888) {
+		fmt->Rmask = 0xff000000;
+		fmt->Gmask = 0x00ff0000;
+		fmt->Bmask = 0x0000ff00;
+		fmt->Amask = 0x000000ff;
+		fmt->Rshift = 24;
+		fmt->Gshift = 16;
+		fmt->Bshift = 8;
+		fmt->Ashift = 0;
+	} else if (format == SDL_PIXELFORMAT_BGRA8888) {
+		fmt->Rmask = 0x0000ff00;
+		fmt->Gmask = 0x00ff0000;
+		fmt->Bmask = 0xff000000;
+		fmt->Amask = 0x000000ff;
+		fmt->Rshift = 8;
+		fmt->Gshift = 16;
+		fmt->Bshift = 24;
+		fmt->Ashift = 0;
 	} else {
 		// Default to ARGB8888
 		fmt->Rmask = 0x00ff0000;
@@ -160,6 +178,48 @@ int SDL_GetDisplayDPI(int displayIndex, float* ddpi, float* hdpi, float* vdpi)
 	return 0;
 }
 
+const char* SDL_GetDisplayName(int displayIndex)
+{
+	(void)displayIndex;
+	return "libretro";
+}
+
+int SDL_GetNumDisplayModes(int displayIndex)
+{
+	(void)displayIndex;
+	return 1;
+}
+
+int SDL_GetWindowDisplayMode(SDL_Window* window, SDL_DisplayMode* mode)
+{
+	(void)window;
+	return SDL_GetDesktopDisplayMode(0, mode);
+}
+
+int SDL_PointInRect(const SDL_Point* p, const SDL_Rect* r)
+{
+	if (!p || !r)
+		return SDL_FALSE;
+	return (p->x >= r->x && p->x < (r->x + r->w) && p->y >= r->y && p->y < (r->y + r->h)) ? SDL_TRUE : SDL_FALSE;
+}
+
+int SDL_IntersectRect(const SDL_Rect* a, const SDL_Rect* b, SDL_Rect* result)
+{
+	if (!a || !b || !result)
+		return SDL_FALSE;
+	const int x1 = (a->x > b->x) ? a->x : b->x;
+	const int y1 = (a->y > b->y) ? a->y : b->y;
+	const int x2 = ((a->x + a->w) < (b->x + b->w)) ? (a->x + a->w) : (b->x + b->w);
+	const int y2 = ((a->y + a->h) < (b->y + b->h)) ? (a->y + a->h) : (b->y + b->h);
+	if (x2 <= x1 || y2 <= y1)
+		return SDL_FALSE;
+	result->x = x1;
+	result->y = y1;
+	result->w = x2 - x1;
+	result->h = y2 - y1;
+	return SDL_TRUE;
+}
+
 SDL_mutex* SDL_CreateMutex(void)
 {
 	SDL_mutex* m = (SDL_mutex*)calloc(1, sizeof(SDL_mutex));
@@ -175,6 +235,7 @@ void SDL_DestroyMutex(SDL_mutex* m)
 }
 int SDL_LockMutex(SDL_mutex* m) { return m ? pthread_mutex_lock(&m->mutex) : -1; }
 int SDL_UnlockMutex(SDL_mutex* m) { return m ? pthread_mutex_unlock(&m->mutex) : -1; }
+int SDL_TryLockMutex(SDL_mutex* m) { return m ? pthread_mutex_trylock(&m->mutex) : -1; }
 
 SDL_cond* SDL_CreateCond(void)
 {
@@ -326,9 +387,20 @@ int SDL_UpperBlit(SDL_Surface* src, const SDL_Rect* sr, SDL_Surface* dst, SDL_Re
 	return 0;
 }
 
+int SDL_FillRect(SDL_Surface* dst, const SDL_Rect* rect, Uint32 color)
+{
+	(void)dst; (void)rect; (void)color;
+	return 0;
+}
+
 SDL_Texture* SDL_CreateTextureFromSurface(SDL_Renderer* renderer, SDL_Surface* surface)
 {
 	(void)renderer; (void)surface;
+	return nullptr;
+}
+SDL_Texture* SDL_CreateTexture(SDL_Renderer* renderer, Uint32 format, int access, int w, int h)
+{
+	(void)renderer; (void)format; (void)access; (void)w; (void)h;
 	return nullptr;
 }
 void SDL_DestroyTexture(SDL_Texture* texture) { (void)texture; }
@@ -336,9 +408,22 @@ int SDL_QueryTexture(SDL_Texture* texture, Uint32* format, int* access, int* w, 
 {
 	(void)texture; if (format) *format = 0; if (access) *access = 0; if (w) *w = 0; if (h) *h = 0; return -1;
 }
+int SDL_UpdateTexture(SDL_Texture* texture, const SDL_Rect* rect, const void* pixels, int pitch)
+{
+	(void)texture; (void)rect; (void)pixels; (void)pitch; return 0;
+}
+int SDL_LockTexture(SDL_Texture* texture, const SDL_Rect* rect, void** pixels, int* pitch)
+{
+	(void)texture; (void)rect; if (pixels) *pixels = nullptr; if (pitch) *pitch = 0; return 0;
+}
+void SDL_UnlockTexture(SDL_Texture* texture) { (void)texture; }
 int SDL_RenderCopy(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_Rect* sr, const SDL_Rect* dr)
 {
 	(void)renderer; (void)texture; (void)sr; (void)dr; return 0;
+}
+int SDL_RenderCopyEx(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_Rect* sr, const SDL_Rect* dr, const double angle, const SDL_Point* center, const SDL_RendererFlip flip)
+{
+	(void)renderer; (void)texture; (void)sr; (void)dr; (void)angle; (void)center; (void)flip; return 0;
 }
 int SDL_RenderFillRect(SDL_Renderer* renderer, const SDL_Rect* rect)
 {
@@ -352,6 +437,20 @@ int SDL_RenderSetIntegerScale(SDL_Renderer* renderer, SDL_bool enable)
 {
 	(void)renderer; (void)enable; return 0;
 }
+int SDL_RenderSetScale(SDL_Renderer* renderer, float scaleX, float scaleY)
+{
+	(void)renderer; (void)scaleX; (void)scaleY; return 0;
+}
+void SDL_RenderGetLogicalSize(SDL_Renderer* renderer, int* w, int* h)
+{
+	(void)renderer; if (w) *w = 0; if (h) *h = 0;
+}
+int SDL_GetRendererOutputSize(SDL_Renderer* renderer, int* w, int* h)
+{
+	(void)renderer; if (w) *w = 0; if (h) *h = 0; return 0;
+}
+void SDL_RenderPresent(SDL_Renderer* renderer) { (void)renderer; }
+int SDL_RenderClear(SDL_Renderer* renderer) { (void)renderer; return 0; }
 void SDL_DestroyRenderer(SDL_Renderer* renderer) { (void)renderer; }
 int SDL_SetRenderDrawColor(SDL_Renderer* renderer, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 {
@@ -401,6 +500,18 @@ SDL_bool SDL_HasClipboardText(void) { return SDL_FALSE; }
 char* SDL_GetClipboardText(void) { return SDL_strdup(""); }
 int SDL_SetClipboardText(const char* text) { (void)text; return 0; }
 
+SDL_Window* SDL_CreateWindow(const char* title, int x, int y, int w, int h, Uint32 flags)
+{
+	(void)title; (void)x; (void)y; (void)w; (void)h; (void)flags;
+	return nullptr;
+}
+SDL_Renderer* SDL_CreateRenderer(SDL_Window* window, int index, Uint32 flags)
+{
+	(void)window; (void)index; (void)flags;
+	return nullptr;
+}
+SDL_Window* SDL_GetWindowFromID(Uint32 id) { (void)id; return nullptr; }
+Uint32 SDL_GetWindowID(SDL_Window* window) { (void)window; return 0; }
 Uint32 SDL_GetWindowFlags(SDL_Window* window) { (void)window; return 0; }
 void SDL_GetWindowPosition(SDL_Window* window, int* x, int* y) { (void)window; if (x) *x = 0; if (y) *y = 0; }
 void SDL_GetWindowSize(SDL_Window* window, int* w, int* h) { (void)window; if (w) *w = 0; if (h) *h = 0; }
@@ -409,11 +520,19 @@ void SDL_SetWindowSize(SDL_Window* window, int w, int h) { (void)window; (void)w
 void SDL_RaiseWindow(SDL_Window* window) { (void)window; }
 void SDL_MinimizeWindow(SDL_Window* window) { (void)window; }
 void SDL_DestroyWindow(SDL_Window* window) { (void)window; }
+void SDL_SetWindowIcon(SDL_Window* window, SDL_Surface* icon) { (void)window; (void)icon; }
 
 SDL_bool SDL_SetHint(const char* name, const char* value) { (void)name; (void)value; return SDL_TRUE; }
 int SDL_GL_SetAttribute(SDL_GLattr attr, int value) { (void)attr; (void)value; return 0; }
 
 int SDL_PushEvent(SDL_Event* event) { (void)event; return -1; }
+int SDL_PollEvent(SDL_Event* event) { (void)event; return 0; }
+void SDL_PumpEvents(void) {}
+int SDL_PeepEvents(SDL_Event* events, int numevents, int action, Uint32 minType, Uint32 maxType)
+{
+	(void)events; (void)numevents; (void)action; (void)minType; (void)maxType;
+	return 0;
+}
 
 SDL_GameController* SDL_GameControllerOpen(int joystick_index) { (void)joystick_index; return nullptr; }
 void SDL_GameControllerClose(SDL_GameController* gamecontroller) { (void)gamecontroller; }
@@ -431,6 +550,8 @@ SDL_GameControllerButton SDL_GameControllerGetButtonFromString(const char* str)
 {
 	(void)str; return SDL_CONTROLLER_BUTTON_INVALID;
 }
+int SDL_GameControllerAddMappingsFromFile(const char* path) { (void)path; return 0; }
+SDL_bool SDL_IsGameController(int joystick_index) { (void)joystick_index; return SDL_FALSE; }
 
 SDL_Joystick* SDL_JoystickOpen(int device_index) { (void)device_index; return nullptr; }
 void SDL_JoystickClose(SDL_Joystick* joystick) { (void)joystick; }
@@ -449,6 +570,7 @@ int SDL_JoystickNumButtons(SDL_Joystick* joystick) { (void)joystick; return 0; }
 int SDL_JoystickNumHats(SDL_Joystick* joystick) { (void)joystick; return 0; }
 Sint16 SDL_JoystickGetAxis(SDL_Joystick* joystick, int axis) { (void)joystick; (void)axis; return 0; }
 Uint8 SDL_JoystickGetButton(SDL_Joystick* joystick, int button) { (void)joystick; (void)button; return 0; }
+int SDL_NumJoysticks(void) { return 0; }
 
 const char* SDL_GetAudioDeviceName(int index, int iscapture)
 {
@@ -476,6 +598,43 @@ Uint32 SDL_DequeueAudio(SDL_AudioDeviceID dev, void* data, Uint32 len)
 Uint32 SDL_GetQueuedAudioSize(SDL_AudioDeviceID dev) { (void)dev; return 0; }
 void SDL_LockAudioDevice(SDL_AudioDeviceID dev) { (void)dev; }
 void SDL_UnlockAudioDevice(SDL_AudioDeviceID dev) { (void)dev; }
+
+int SDL_GetNumAudioDevices(int iscapture)
+{
+	(void)iscapture;
+	return 0;
+}
+
+int SDL_Init(Uint32 flags)
+{
+	(void)flags;
+	return 0;
+}
+
+SDL_Cursor* SDL_CreateSystemCursor(int id) { (void)id; return nullptr; }
+
+SDL_TimerID SDL_AddTimer(Uint32 interval, Uint32 (*callback)(Uint32, void*), void* param)
+{
+	(void)interval; (void)callback; (void)param;
+	return 0;
+}
+
+SDL_bool SDL_RemoveTimer(SDL_TimerID id)
+{
+	(void)id;
+	return SDL_TRUE;
+}
+
+SDL_AudioSpec* SDL_LoadWAV(const char* file, SDL_AudioSpec* spec, Uint8** audio_buf, Uint32* audio_len)
+{
+	(void)file; (void)spec; (void)audio_buf; (void)audio_len;
+	return nullptr;
+}
+
+void SDL_FreeWAV(Uint8* audio_buf)
+{
+	(void)audio_buf;
+}
 
 void SDL_Quit(void) {}
 
