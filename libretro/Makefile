@@ -88,19 +88,12 @@ INCFLAGS += -I$(LIBRETRO_DIR)
 INCFLAGS += -I$(LIBCO_DIR)
 INCFLAGS += -I$(LIBRETRO_COMMON)/include
 
-SDL2_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags sdl2 2>/dev/null)
-SDL2_LIBS ?= $(shell $(PKG_CONFIG) --libs sdl2 2>/dev/null)
 PNG_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags libpng 2>/dev/null)
 PNG_LIBS ?= $(shell $(PKG_CONFIG) --libs libpng 2>/dev/null)
 ZLIB_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags zlib 2>/dev/null)
 ZLIB_LIBS ?= $(shell $(PKG_CONFIG) --libs zlib 2>/dev/null)
 
-ifeq ($(SDL2_CFLAGS),)
-SDL2_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
-SDL2_LIBS := $(shell sdl2-config --libs 2>/dev/null)
-endif
-
-INCFLAGS += $(SDL2_CFLAGS) $(PNG_CFLAGS) $(ZLIB_CFLAGS)
+INCFLAGS += $(PNG_CFLAGS) $(ZLIB_CFLAGS)
 LDFLAGS += $(PNG_LIBS) $(ZLIB_LIBS)
 
 ifeq ($(platform), unix)
