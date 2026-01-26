@@ -5472,13 +5472,15 @@ static void run_cpu_thread(int (*f)(void *))
 		// Horizontal position sync and frame rate limiter
 		if (vp != vpos) {
 			vp = vpos;
-			if (currprefs.m68k_speed >= 0) {
+			if (((vpos & 31) == 0 || vpos >= maxvpos - 32) && (currprefs.m68k_speed >= 0 || !currprefs.turbo_emulation)) {
 				frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
 				frame_time_t c = read_processor_time();
-				if (next - c > 1000 && next - c < vsyncmaxtime * 2) {
-					if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) > 2) {
-						sleep_millis(0);
-					}
+				while (next > c && next - c < vsyncmaxtime * 2) {
+					if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) <= 2)
+						break;
+					
+					sleep_millis(0); // Yield
+					c = read_processor_time();
 				}
 			}
 		}
