@@ -87,13 +87,11 @@ INCFLAGS += -I$(LIBRETRO_DIR)
 INCFLAGS += -I$(LIBCO_DIR)
 INCFLAGS += -I$(LIBRETRO_COMMON)/include
 
-PNG_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags libpng 2>/dev/null)
-PNG_LIBS ?= $(shell $(PKG_CONFIG) --libs libpng 2>/dev/null)
 ZLIB_CFLAGS ?= $(shell $(PKG_CONFIG) --cflags zlib 2>/dev/null)
 ZLIB_LIBS ?= $(shell $(PKG_CONFIG) --libs zlib 2>/dev/null)
 
-INCFLAGS += $(PNG_CFLAGS) $(ZLIB_CFLAGS)
-LDFLAGS += $(PNG_LIBS) $(ZLIB_LIBS)
+INCFLAGS += $(ZLIB_CFLAGS)
+LDFLAGS += $(ZLIB_LIBS)
 
 ifeq ($(platform), unix)
 LDFLAGS += -ldl -lm -pthread

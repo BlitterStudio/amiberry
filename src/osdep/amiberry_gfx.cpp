@@ -47,7 +47,9 @@
 #include "savestate.h"
 #include "uae/types.h"
 
+#ifndef LIBRETRO
 #include <png.h>
+#endif
 #ifndef LIBRETRO
 #include <SDL_image.h>
 #endif
@@ -5318,6 +5320,20 @@ unsigned long target_lastsynctime()
 	return last_synctime;
 }
 
+#ifdef LIBRETRO
+static int save_png(const SDL_Surface* surface, const std::string& path)
+{
+	(void)surface;
+	(void)path;
+	return 0;
+}
+
+bool create_screenshot()
+{
+	// RetroArch handles screenshots; skip core-side PNG export.
+	return false;
+}
+#else
 static int save_png(const SDL_Surface* surface, const std::string& path)
 {
 	const auto w = surface->w;
@@ -5407,6 +5423,7 @@ bool create_screenshot()
 	}
 	return current_screenshot != nullptr;
 }
+#endif
 
 int save_thumb(const std::string& path)
 {
