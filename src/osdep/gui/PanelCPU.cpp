@@ -908,6 +908,7 @@ void RefreshPanelCPU()
 	chkHardFlush->setSelected(changed_prefs.comp_hardflush);
 	chkConstantJump->setSelected(changed_prefs.comp_constjump);
 #ifdef JIT
+	chkJIT->setEnabled(!changed_prefs.cpu_thread);
 	chkJIT->setSelected(changed_prefs.cachesize > 0);
 #else
 	chkJIT->setSelected(false);
@@ -929,9 +930,9 @@ void RefreshPanelCPU()
 			optMMUEnabled->setSelected(true);
 	}
 
-	bool no_thread = (changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
+	bool no_thread = (changed_prefs.cachesize > 0 || changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
 	chkCPUMultiThread->setEnabled(!no_thread && !emulating);
-	chkCPUMultiThread->setSelected(changed_prefs.cpu_thread);
+	chkCPUMultiThread->setSelected(changed_prefs.cpu_thread && changed_prefs.cachesize == 0);
 
 	chkPPCEnabled->setSelected(changed_prefs.ppc_mode || is_ppc_cpu(&changed_prefs));
 }
