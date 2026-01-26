@@ -23,7 +23,13 @@
 #include "savestate.h"
 #include "disk.h"
 #include "gui.h"
+#include "amiberry_gfx.h"
 #include "zfile.h"
+
+struct AmigaMonitor;
+extern struct AmigaMonitor AMonitors[];
+extern int gfx_GetWidth(const struct AmigaMonitor* mon);
+extern int gfx_GetHeight(const struct AmigaMonitor* mon);
 
 cothread_t main_fiber;
 cothread_t core_fiber;
@@ -62,6 +68,10 @@ static int last_vsync_setting = -1;
 static float last_refresh_rate = -1.0f;
 static bool input_bitmask_supported = false;
 static bool memory_map_set = false;
+static bool ff_override_supported = false;
+static bool ff_override_active = false;
+static int last_geometry_width = -1;
+static int last_geometry_height = -1;
 
 static retro_set_led_state_t led_state_cb = nullptr;
 enum RetroLedIndex {
@@ -96,6 +106,9 @@ static unsigned disk_index = 0;
 static bool disk_ejected = false;
 static int initial_disk_index = -1;
 static std::string initial_disk_path;
+static unsigned last_disk_index = 0;
+static bool last_disk_ejected = false;
+static std::string disk_command;
 
 static void update_memory_map()
 {
@@ -169,6 +182,46 @@ static void update_led_interface()
 	}
 }
 
+static void set_fastforward_override(bool enabled)
+{
+	if (!ff_override_supported || !environ_cb)
+		return;
+	if (ff_override_active == enabled)
+		return;
+
+	struct retro_fastforwarding_override ff = {};
+	ff.ratio = 0.0f;
+	ff.fastforward = enabled;
+	ff.notification = enabled;
+	ff.inhibit_toggle = false;
+	environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, &ff);
+	ff_override_active = enabled;
+}
+
+static void update_geometry()
+{
+	if (!environ_cb)
+		return;
+
+	const int width = gfx_GetWidth(&AMonitors[0]);
+	const int height = gfx_GetHeight(&AMonitors[0]);
+	if (width <= 0 || height <= 0)
+		return;
+
+	if (width == last_geometry_width && height == last_geometry_height)
+		return;
+
+	struct retro_game_geometry geom;
+	geom.base_width = width;
+	geom.base_height = height;
+	geom.max_width = std::max(width, 1280);
+	geom.max_height = std::max(height, 1024);
+	geom.aspect_ratio = (float)width / (float)height;
+	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
+	last_geometry_width = width;
+	last_geometry_height = height;
+}
+
 static void log_input_button(unsigned port, const char* name, int state)
 {
 	if (log_cb && input_log_enabled)
@@ -214,6 +267,7 @@ static void log_mouse_motion(int16_t dx, int16_t dy)
 
 static const struct retro_variable variables[] = {
 	{ "amiberry_model", "Amiga Model; A500|A500+|A600|A1200|CD32|A4000|CDTV" },
+	{ "amiberry_kickstart", "Kickstart ROM; auto|kick.rom|kick13.rom|kick20.rom|kick31.rom|kick205.rom|kick40068.A1200|kick40068.A4000|cd32.rom|cdtv.rom" },
 	{ "amiberry_port0_device", "Port 1 Device; mouse|joystick" },
 	{ "amiberry_port1_device", "Port 2 Device; joystick|mouse" },
 	{ "amiberry_swap_ports", "Swap Ports; disabled|enabled" },
@@ -226,6 +280,229 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_input_log", "Input Log File; disabled|enabled" },
 	{ NULL, NULL }
 };
+
+static struct retro_core_option_v2_category option_cats[] = {
+	{ "system", "System", "System and ROM settings." },
+	{ "input", "Input", "Controller and mouse settings." },
+	{ "video", "Video", "Video and sync settings." },
+	{ NULL, NULL, NULL }
+};
+
+static struct retro_core_option_v2_definition option_defs[] = {
+	{
+		"amiberry_model",
+		"System Model",
+		"Model",
+		"Select the base Amiga model preset. Core restart required.",
+		NULL,
+		"system",
+		{
+			{ "A500", "A500" },
+			{ "A500+", "A500+" },
+			{ "A600", "A600" },
+			{ "A1200", "A1200" },
+			{ "CD32", "CD32" },
+			{ "A4000", "A4000" },
+			{ "CDTV", "CDTV" },
+			{ NULL, NULL }
+		},
+		"A500"
+	},
+	{
+		"amiberry_kickstart",
+		"Kickstart ROM",
+		"Kickstart ROM",
+		"Override the Kickstart ROM file. Uses system directory unless an absolute path is provided. Core restart required.",
+		NULL,
+		"system",
+		{
+			{ "auto", "Automatic" },
+			{ "kick.rom", "kick.rom" },
+			{ "kick13.rom", "kick13.rom" },
+			{ "kick20.rom", "kick20.rom" },
+			{ "kick31.rom", "kick31.rom" },
+			{ "kick205.rom", "kick205.rom" },
+			{ "kick40068.A1200", "kick40068.A1200" },
+			{ "kick40068.A4000", "kick40068.A4000" },
+			{ "cd32.rom", "cd32.rom" },
+			{ "cdtv.rom", "cdtv.rom" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
+		"amiberry_port0_device",
+		"Port 1 Device",
+		"Port 1 Device",
+		"Select the input device for Amiga port 1.",
+		NULL,
+		"input",
+		{
+			{ "mouse", "Mouse" },
+			{ "joystick", "Joystick" },
+			{ NULL, NULL }
+		},
+		"mouse"
+	},
+	{
+		"amiberry_port1_device",
+		"Port 2 Device",
+		"Port 2 Device",
+		"Select the input device for Amiga port 2.",
+		NULL,
+		"input",
+		{
+			{ "joystick", "Joystick" },
+			{ "mouse", "Mouse" },
+			{ NULL, NULL }
+		},
+		"joystick"
+	},
+	{
+		"amiberry_swap_ports",
+		"Swap Ports",
+		"Swap Ports",
+		"Swap input devices between port 1 and port 2.",
+		NULL,
+		"input",
+		{
+			{ "disabled", NULL },
+			{ "enabled", NULL },
+			{ NULL, NULL }
+		},
+		"disabled"
+	},
+	{
+		"amiberry_joyport_order",
+		"Joyport Order",
+		"Joyport Order",
+		"Order for mapping controller ports to Amiga ports.",
+		NULL,
+		"input",
+		{
+			{ "auto", "Automatic" },
+			{ "21", "2-1" },
+			{ "12", "1-2" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
+		"amiberry_joy_deadzone",
+		"Joystick Deadzone",
+		"Deadzone",
+		"Analog deadzone percentage.",
+		NULL,
+		"input",
+		{
+			{ "33", "33%" },
+			{ "25", "25%" },
+			{ "20", "20%" },
+			{ "15", "15%" },
+			{ "10", "10%" },
+			{ "5", "5%" },
+			{ "0", "0%" },
+			{ "40", "40%" },
+			{ "50", "50%" },
+			{ NULL, NULL }
+		},
+		"33"
+	},
+	{
+		"amiberry_analog_sensitivity",
+		"Analog Sensitivity",
+		"Sensitivity",
+		"Adjust analog sensitivity.",
+		NULL,
+		"input",
+		{
+			{ "18", "18" },
+			{ "15", "15" },
+			{ "20", "20" },
+			{ "25", "25" },
+			{ "30", "30" },
+			{ "10", "10" },
+			{ NULL, NULL }
+		},
+		"18"
+	},
+	{
+		"amiberry_analog",
+		"Analog Input",
+		"Analog Input",
+		"Enable analog input mapping.",
+		NULL,
+		"input",
+		{
+			{ "enabled", NULL },
+			{ "disabled", NULL },
+			{ NULL, NULL }
+		},
+		"enabled"
+	},
+	{
+		"amiberry_internal_vsync",
+		"Internal VSync",
+		"Internal VSync",
+		"Select internal vsync mode.",
+		NULL,
+		"video",
+		{
+			{ "disabled", NULL },
+			{ "standard", "Standard" },
+			{ "standard_50", "Standard (50Hz)" },
+			{ NULL, NULL }
+		},
+		"disabled"
+	},
+	{
+		"amiberry_joy_as_mouse",
+		"Joystick As Mouse",
+		"Joystick As Mouse",
+		"Map joystick to mouse input.",
+		NULL,
+		"input",
+		{
+			{ "disabled", NULL },
+			{ "port1", "Port 1" },
+			{ "port2", "Port 2" },
+			{ "both", "Both" },
+			{ NULL, NULL }
+		},
+		"disabled"
+	},
+	{
+		"amiberry_input_log",
+		"Input Log File",
+		"Input Log File",
+		"Write input events to /tmp/amiberry_libretro_input.log.",
+		NULL,
+		"input",
+		{
+			{ "disabled", NULL },
+			{ "enabled", NULL },
+			{ NULL, NULL }
+		},
+		"disabled"
+	},
+	{ NULL, NULL, NULL, NULL, NULL, NULL, { { NULL, NULL } }, NULL }
+};
+
+static void set_core_options()
+{
+	unsigned version = 0;
+	if (environ_cb && environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && version >= 2) {
+		static struct retro_core_options_v2 options_v2 = {
+			option_cats,
+			option_defs
+		};
+		if (environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2, &options_v2))
+			return;
+	}
+
+	if (environ_cb)
+		environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)variables);
+}
 
 extern int amiberry_main(int argc, char** argv);
 
@@ -397,7 +674,12 @@ static bool parse_m3u(const char* path, std::vector<DiskImage>& out_images)
 		while (*p == ' ' || *p == '\t')
 			p++;
 		if (*p == '#') {
-			if (strncmp(p, "#EXTINF:", 8) == 0) {
+			if (strncmp(p, "#COMMAND:", 9) == 0) {
+				disk_command = trim_copy(p + 9);
+			} else if (strncmp(p, "#SAVEDISK:", 10) == 0) {
+				if (log_cb)
+					log_cb(RETRO_LOG_WARN, "M3U savedisk tag not supported in libretro core\n");
+			} else if (strncmp(p, "#EXTINF:", 8) == 0) {
 				char* comma = strchr(p, ',');
 				if (comma)
 					pending_label = trim_copy(comma + 1);
@@ -416,19 +698,74 @@ static bool parse_m3u(const char* path, std::vector<DiskImage>& out_images)
 		if (*p == '\0')
 			continue;
 
-		std::string entry = p;
+		std::string entry;
+		std::string label;
+		bool label_set = false;
+
+		char* delim = strchr(p, '|');
+		if (delim) {
+			entry.assign(p, delim - p);
+			label = trim_copy(delim + 1);
+			label_set = true;
+		} else {
+			entry = p;
+		}
 		if (!path_is_absolute(entry))
 			entry = path_join(base_dir, entry);
 		DiskImage image;
 		image.path = entry;
-		if (!pending_label.empty()) {
+		if (label_set) {
+			image.label = label;
+		} else if (!pending_label.empty()) {
 			image.label = pending_label;
-			pending_label.clear();
 		}
+		pending_label.clear();
 		out_images.push_back(image);
 	}
 	fclose(f);
 	return !out_images.empty();
+}
+
+static bool libretro_get_image_label(unsigned index, char* s, size_t len);
+
+static void show_message(const char* text)
+{
+	if (!environ_cb || !text || !*text)
+		return;
+	struct retro_message msg;
+	msg.msg = text;
+	msg.frames = 120;
+	environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+}
+
+static void notify_disk_change()
+{
+	if (disk_ejected) {
+		if (!last_disk_ejected)
+			show_message("Disk ejected");
+		last_disk_ejected = true;
+		return;
+	}
+
+	if (disk_index >= disk_images.size())
+		return;
+	if (disk_images[disk_index].path.empty())
+		return;
+
+	if (last_disk_ejected || disk_index != last_disk_index) {
+		char label[256];
+		const char* label_ptr = nullptr;
+		if (libretro_get_image_label(disk_index, label, sizeof(label)))
+			label_ptr = label;
+		char msg[320];
+		if (label_ptr && *label_ptr)
+			snprintf(msg, sizeof(msg), "Disk %u: %s inserted", disk_index + 1, label_ptr);
+		else
+			snprintf(msg, sizeof(msg), "Disk %u inserted", disk_index + 1);
+		show_message(msg);
+	}
+	last_disk_index = disk_index;
+	last_disk_ejected = false;
 }
 
 static void disk_control_apply()
@@ -438,18 +775,21 @@ static void disk_control_apply()
 
 	if (disk_ejected) {
 		disk_eject(0);
+		notify_disk_change();
 		return;
 	}
 	if (disk_index >= disk_images.size())
 		return;
 	if (disk_images[disk_index].path.empty()) {
 		disk_eject(0);
+		notify_disk_change();
 		return;
 	}
 	TCHAR tpath[MAX_DPATH];
 	uae_tcslcpy(tpath, disk_images[disk_index].path.c_str(), MAX_DPATH);
 	disk_eject(0);
 	disk_insert(0, tpath);
+	notify_disk_change();
 }
 
 static bool libretro_set_eject_state(bool ejected)
@@ -597,6 +937,28 @@ static const char* get_option_value(const char* key)
 	if (environ_cb && environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 		return var.value;
 	return nullptr;
+}
+
+static bool resolve_kickstart_override(char* out, size_t out_size)
+{
+	const char* opt = get_option_value("amiberry_kickstart");
+	if (!opt || !*opt || strcmp(opt, "auto") == 0)
+		return false;
+
+	std::string path = opt;
+	if (!path_is_absolute(path)) {
+		if (system_dir.empty())
+			return false;
+		path = path_join(system_dir, path);
+	}
+	if (!file_readable(path.c_str())) {
+		if (log_cb)
+			log_cb(RETRO_LOG_WARN, "Kickstart override not found: %s\n", path.c_str());
+		return false;
+	}
+	strncpy(out, path.c_str(), out_size - 1);
+	out[out_size - 1] = '\0';
+	return true;
 }
 
 static unsigned device_from_option(const char* value, unsigned fallback)
@@ -1083,7 +1445,8 @@ static void core_entry(void)
 	argv.push_back(strdup("-G")); // No GUI
 
 	char kick_path[1024] = {0};
-	if (find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path)) ||
+	if (resolve_kickstart_override(kick_path, sizeof(kick_path)) ||
+		find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path)) ||
 		read_kickstart_path(kick_path, sizeof(kick_path))) {
 		argv.push_back(strdup("-r"));
 		argv.push_back(strdup(kick_path));
@@ -1133,6 +1496,9 @@ void retro_init(void)
 
 	core_started = false;
 	memory_map_set = false;
+	ff_override_active = false;
+	last_geometry_width = -1;
+	last_geometry_height = -1;
 }
 
 void retro_deinit(void)
@@ -1148,6 +1514,7 @@ void retro_deinit(void)
 	last_refresh_rate = -1.0f;
 	core_started = false;
 	memory_map_set = false;
+	ff_override_active = false;
 }
 
 unsigned retro_api_version(void)
@@ -1201,7 +1568,11 @@ void retro_set_environment(retro_environment_t cb)
 	}
 	static struct retro_keyboard_callback kb_cb = { keyboard_cb };
 	environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &kb_cb);
-	environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)variables);
+	set_core_options();
+	{
+		bool achievements = true;
+		environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
+	}
 	{
 		const char* dir = nullptr;
 		if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
@@ -1210,9 +1581,11 @@ void retro_set_environment(retro_environment_t cb)
 			save_dir = dir;
 		if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &dir) && dir)
 			content_dir = dir;
-	if (save_dir.empty())
-		save_dir = system_dir;
+		if (save_dir.empty())
+			save_dir = system_dir;
 	}
+
+	ff_override_supported = environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, NULL);
 
 	{
 		struct retro_led_interface led_interface = {};
@@ -1386,12 +1759,14 @@ void retro_run(void)
 				warpmode(0);
 				fastforward_forced = false;
 			}
+			set_fastforward_override(fastforwarding);
 		}
 	}
 	poll_input();
 	co_switch(core_fiber);
 	update_memory_map();
 	update_led_interface();
+	update_geometry();
 }
 
 bool retro_load_game(const struct retro_game_info *info)
@@ -1402,6 +1777,8 @@ bool retro_load_game(const struct retro_game_info *info)
 		disk_images.clear();
 		disk_index = 0;
 		disk_ejected = false;
+		last_disk_index = 0;
+		last_disk_ejected = false;
 
 		const auto ext_pos = path.find_last_of('.');
 		const std::string ext = (ext_pos == std::string::npos) ? "" : path.substr(ext_pos);
