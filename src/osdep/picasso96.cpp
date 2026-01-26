@@ -4563,7 +4563,7 @@ static uae_u32 REGPARAM2 picasso_SetDisplay(TrapContext* ctx)
 	// Force update check when Display state changes (On/Off)
 #ifdef AMIBERRY
 	if (currprefs.rtg_zerocopy) {
-		target_graphics_buffer_update(monid, true);
+		adisplays[monid].picasso_zero_copy_update_needed = true;
 	}
 #endif
 	P96TRACE_SETUP((_T("SetDisplay(%d)\n"), setstate));

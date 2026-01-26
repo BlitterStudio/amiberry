@@ -632,6 +632,12 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	}
 
 	const amigadisplay* ad = &adisplays[monid];
+	if (ad->picasso_zero_copy_update_needed) {
+		const_cast<amigadisplay*>(ad)->picasso_zero_copy_update_needed = false;
+		if (currprefs.rtg_zerocopy) {
+			target_graphics_buffer_update(monid, true);
+		}
+	}
 
 	// Unified OSD update: handle both native (CHIPSET) and RTG modes
 	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
