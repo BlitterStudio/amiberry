@@ -1111,41 +1111,66 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
+	// Determine effective Amiga source dimensions/offset
+	float src_w = 0, src_h = 0;
+	float src_x = 0, src_y = 0;
+
 #ifdef AMIBERRY
-	if (currprefs.gfx_auto_crop)
-	{
-		dx -= static_cast<float>(crop_rect.x);
-		dy -= static_cast<float>(crop_rect.y);
+	if (currprefs.gfx_auto_crop && !ad->picasso_on) {
+		src_w = static_cast<float>(crop_rect.w);
+		src_h = static_cast<float>(crop_rect.h);
+		src_x = static_cast<float>(crop_rect.x);
+		src_y = static_cast<float>(crop_rect.y);
 	}
 #endif
+	if (src_w <= 0 && amiga_surface) {
+		src_w = static_cast<float>(amiga_surface->w);
+		src_h = static_cast<float>(amiga_surface->h);
+		src_x = 0;
+		src_y = 0;
+	}
 
-	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
 #ifdef USE_OPENGL
-		// In OpenGL Full-Window mode, use render_quad for offset and scaling calculations
-		// render_quad contains the actual viewport position and dimensions
-		if (render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
-			// Scaling: ratio of viewport size to Amiga surface (must compute first)
-			mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
-			my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
-			// Offset calculation differs between RTG and native modes due to 
-			// different formulas in get_mouse_position():
-			// - RTG mode: x = (x - XOffset) * fmx + fdx * fmx  (offset gets scaled)
-			// - Native mode: x = x * fmx - fdx  (offset is pre-scaled)
-			if (ad->picasso_on) {
-				// RTG mode: get_mouse_position scales the offset by fmx,
-				// so we pass raw window coordinates (negative for subtraction)
-				dx -= static_cast<float>(render_quad.x);
-				dy -= static_cast<float>(render_quad.y);
-			} else {
-				// Native mode: get_mouse_position uses offset directly,
-				// so we pre-scale to Amiga surface coordinates
-				dx += static_cast<float>(render_quad.x) / mx;
-				dy += static_cast<float>(render_quad.y) / my;
-			}
+	// OpenGL Path (Windowed & Fullscreen)
+	// Always use render_quad if available, as it reflects the true viewport
+	if (amiga_surface && render_quad.w > 0 && render_quad.h > 0) {
+		// Scaling: Viewport / Amiga Source
+		if (src_w > 0) mx = static_cast<float>(render_quad.w) / src_w;
+		if (src_h > 0) my = static_cast<float>(render_quad.h) / src_h;
+
+		if (ad->picasso_on) {
+			// RTG Mode: inputdevice logic x = (x_win - dx) * fmx + fdx * fmx (Wait, verify formula)
+			// Actually: x = (x - XOffset) * fmx + fdx * fmx
+			// We want: x_amiga = (x_win - render_quad.x) * fmx + crop_x
+			// InputDevice: x_win * fmx + (fdx * fmx)
+			// => fdx * fmx = -render_quad.x * fmx + crop_x
+			// => fdx = -render_quad.x + crop_x / fmx
+			// => fdx = -render_quad.x + crop_x * mx
+			
+			dx = -static_cast<float>(render_quad.x) + src_x * mx;
+			dy = -static_cast<float>(render_quad.y) + src_y * my;
+		} else {
+			// Native Mode: x = x * fmx - fdx (where x is already window coords)
+			// Wait, inputdevice Native: x = (x * fmx) - fdx
+			// We want: x_amiga = (x_win - render_quad.x) * fmx + crop_x
+			// x_win * fmx - (render_quad.x * fmx - crop_x)
+			// => fdx = render_quad.x * fmx - crop_x
+			// => fdx = render_quad.x / mx - crop_x
+			
+			dx = static_cast<float>(render_quad.x) / mx - src_x;
+			dy = static_cast<float>(render_quad.y) / my - src_y;
 		}
-		else
+	} else 
 #endif
-		// SDL renderer fallback path (no OpenGL or render_quad not set)
+	// Fallback / Software Renderer Path
+	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+#ifdef AMIBERRY
+		// Legacy AutoCrop for software renderer
+		if (currprefs.gfx_auto_crop) {
+			dx -= src_x;
+			dy -= src_y;
+		}
+#endif
 		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
 			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || 
 			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {
