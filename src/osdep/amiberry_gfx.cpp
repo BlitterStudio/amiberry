@@ -47,12 +47,6 @@
 #include "savestate.h"
 #include "uae/types.h"
 
-#ifndef LIBRETRO
-#include <png.h>
-#endif
-#ifndef LIBRETRO
-#include <SDL_image.h>
-#endif
 #ifdef USE_OPENGL
 #include <GL/glew.h>
 #include <SDL_opengl.h>
@@ -152,6 +146,14 @@ static int deskhz;
 
 struct MultiDisplay Displays[MAX_DISPLAYS];
 struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
+
+static void updatemodes(struct AmigaMonitor* mon);
+static void update_gfxparams(struct AmigaMonitor* mon);
+static void updatepicasso96(struct AmigaMonitor* mon);
+static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf, int flags, int width, int height);
+static void display_param_init(struct AmigaMonitor* mon);
+
+#include "gfx_platform_internal.h"
 
 static int display_change_requested;
 int window_led_drives, window_led_drives_end;
@@ -484,10 +486,8 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 
 	if (w == 0 || h == 0)
 		return false;
-#ifdef LIBRETRO
-	(void)monid;
-	return true;
-#endif
+	if (gfx_platform_skip_alloctexture(monid, w, h))
+		return true;
 #ifdef USE_OPENGL
 	// Clean up existing shaders
 	destroy_shaders();
@@ -559,10 +559,8 @@ static void update_leds(const int monid)
 	if (currprefs.headless) {
 		return;
 	}
-#ifdef LIBRETRO
-	(void)mon;
-	return;
-#endif
+	if (!gfx_platform_render_leds())
+		return;
 
 #ifndef USE_OPENGL
 	if (!mon->amiga_renderer)
@@ -642,11 +640,8 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	if (currprefs.headless) {
 		return amiga_surface != nullptr;
 	}
-#ifdef LIBRETRO
-	(void)mode;
-	(void)immediate;
-	return amiga_surface != nullptr;
-#endif
+	if (gfx_platform_skip_renderframe(monid, mode, immediate))
+		return amiga_surface != nullptr;
 
 	const amigadisplay* ad = &adisplays[monid];
 
@@ -840,25 +835,11 @@ static void wait_frame_timing()
 	wait_vblank_timestamp = read_processor_time();
 }
 
-#include "libretro_shared.h"
-
 static void SDL2_showframe(const int monid)
 {
-#ifdef LIBRETRO
-	if (amiga_surface) {
-		if (video_cb) {
-			video_cb(amiga_surface->pixels, amiga_surface->w, amiga_surface->h, amiga_surface->pitch);
-		} else {
-			static bool warned = false;
-			if (!warned) {
-				write_log("libretro video_cb is null; skipping frame output.\n");
-				warned = true;
-			}
-		}
+	if (gfx_platform_present_frame(amiga_surface)) {
+		return;
 	}
-	libretro_yield();
-	return;
-#endif
 
 	// Skip presentation if headless mode
 	if (currprefs.headless) {
@@ -1464,50 +1445,6 @@ void reenumeratemonitors()
 	enumeratedisplays();
 }
 
-#ifdef LIBRETRO
-static void libretro_init_display_modes(struct MultiDisplay* md, int width, int height)
-{
-	if (md->DisplayModes)
-		return;
-
-	md->DisplayModes = xcalloc(struct PicassoResolution, 2);
-	if (!md->DisplayModes)
-		return;
-
-	md->DisplayModes[0].inuse = true;
-	md->DisplayModes[0].res.width = width;
-	md->DisplayModes[0].res.height = height;
-	md->DisplayModes[0].refresh[0] = 60;
-	md->DisplayModes[0].refresh[1] = 0;
-	md->DisplayModes[0].refreshtype[0] = 0;
-	md->DisplayModes[0].refreshtype[1] = 0;
-	_sntprintf(md->DisplayModes[0].name, sizeof md->DisplayModes[0].name, _T("%dx%d"), width, height);
-}
-
-void libretro_init_display(int width, int height)
-{
-	struct MultiDisplay* md = &Displays[0];
-	if (md->monitorname)
-		return;
-
-	md->primary = 1;
-	md->monitor = 0;
-	md->adaptername = my_strdup(_T("Libretro"));
-	md->adapterid = my_strdup(_T("Libretro"));
-	md->adapterkey = my_strdup(_T("Libretro"));
-	md->monitorname = my_strdup(_T("Libretro"));
-	md->monitorid = my_strdup(_T("Libretro"));
-	md->fullname = my_strdup(_T("Libretro"));
-	md->rect.x = 0;
-	md->rect.y = 0;
-	md->rect.w = width;
-	md->rect.h = height;
-	md->workrect = md->rect;
-	md->HasAdapterData = true;
-
-	libretro_init_display_modes(md, width, height);
-}
-#endif
 
 static bool enumeratedisplays2(bool selectall)
 {
@@ -1577,19 +1514,16 @@ static bool enumeratedisplays2(bool selectall)
 
 void enumeratedisplays()
 {
-#ifdef LIBRETRO
-	libretro_init_display(1920, 1080);
-	return;
-#endif
+	if (gfx_platform_enumeratedisplays())
+		return;
 	if (!enumeratedisplays2 (false))
 		enumeratedisplays2(true);
 }
 
 void sortdisplays()
 {
-#ifdef LIBRETRO
-	return;
-#endif
+	if (gfx_platform_skip_sortdisplays())
+		return;
 	struct MultiDisplay* md;
 	int i, idx;
 
@@ -2178,15 +2112,7 @@ void show_screen(const int monid, int mode)
 	}
 
 	AmigaMonitor* mon = &AMonitors[monid];
-#ifdef LIBRETRO
-	if (mode >= 0 && !mon->render_ok) {
-		return;
-	}
-	SDL2_showframe(monid);
-	mon->render_ok = false;
-	return;
-#endif
-	if (!mon->amiga_window) {
+	if (gfx_platform_requires_window() && !mon->amiga_window) {
 		return;
 	}
 
@@ -2367,13 +2293,8 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	const struct AmigaMonitor* mon = &AMonitors[vb->monitor_id];
 	int ret = 0;
 
-#ifdef LIBRETRO
-	if (!amiga_surface)
+	if ((gfx_platform_requires_window() && !mon->amiga_window) || !amiga_surface)
 		return ret;
-#else
-	if (!mon->amiga_window || !amiga_surface)
-		return ret;
-#endif
 
 	// Ensure blanking limits are open and synchronized at the start of frame locking
 	set_custom_limits(-1, -1, -1, -1, false);
@@ -2825,10 +2746,8 @@ static int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 	if (!ret) {
 		return ret;
 	}
-#ifdef LIBRETRO
-	// Skip SDL window/input activation paths for libretro.
-	return ret;
-#endif
+	if (gfx_platform_skip_window_activation())
+		return ret;
 
 	bool startactive = (started && mouseactive) || (!started && !currprefs.start_uncaptured && !currprefs.start_minimized);
 	bool startpaused = !started && ((currprefs.start_minimized && currprefs.minimized_pause) || (currprefs.start_uncaptured && currprefs.inactive_pause && isfullscreen() <= 0));
@@ -3530,9 +3449,9 @@ int check_prefs_changed_gfx()
 static void update_pixel_format()
 {
 	// TODO LIBRETRO support picasso96 ABGR
-#ifdef LIBRETRO
-	pixel_format = SDL_PIXELFORMAT_ARGB8888; // Matches libretro XRGB8888 on little-endian
-#else
+	if (gfx_platform_override_pixel_format(&pixel_format))
+		return;
+
 	if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5 ||
 		picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC) {
 		pixel_format = SDL_PIXELFORMAT_RGB565;
@@ -3546,7 +3465,6 @@ static void update_pixel_format()
 	else {
 		pixel_format = SDL_PIXELFORMAT_ABGR8888; // Default for native output, UAE RTG (32-bit)
 	}
-#endif
 }
 
 /* Color management */
@@ -4419,14 +4337,7 @@ static int create_windows(struct AmigaMonitor* mon)
 		return 0;
 	}
 
-#ifndef LIBRETRO
-	auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
-	if (icon_surface != nullptr)
-	{
-		SDL_SetWindowIcon(mon->amiga_window, icon_surface);
-		SDL_FreeSurface(icon_surface);
-	}
-#endif
+	gfx_platform_set_window_icon(mon->amiga_window);
 
 #ifndef USE_OPENGL
 	if (mon->amiga_renderer == nullptr)
@@ -4511,67 +4422,8 @@ static bool doInit(AmigaMonitor* mon)
 	struct amigadisplay* ad = &adisplays[mon->monitor_id];
 	avidinfo->gfx_resolution_reserved = RES_MAX;
 	avidinfo->gfx_vresolution_reserved = VRES_MAX;
-
-#ifdef LIBRETRO
-	// Windowless init for libretro: set up buffers and surfaces without SDL windowing.
-	mon->amiga_window = nullptr;
-	mon->amiga_renderer = nullptr;
-
-	updatemodes(mon);
-	update_gfxparams(mon);
-
-#ifdef PICASSO96
-	if (mon->screen_is_picasso) {
-		display_width = picasso96_state[0].Width ? picasso96_state[0].Width : 640;
-		display_height = picasso96_state[0].Height ? picasso96_state[0].Height : 480;
-	} else {
-#endif
-		avidinfo->gfx_resolution_reserved = std::max(currprefs.gfx_resolution, avidinfo->gfx_resolution_reserved);
-		avidinfo->gfx_vresolution_reserved = std::max(currprefs.gfx_vresolution, avidinfo->gfx_vresolution_reserved);
-
-		if (!currprefs.gfx_autoresolution) {
-			mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << currprefs.gfx_resolution;
-			mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution;
-		} else {
-			mon->currentmode.amiga_width = AMIGA_WIDTH_MAX << avidinfo->gfx_resolution_reserved;
-			mon->currentmode.amiga_height = AMIGA_HEIGHT_MAX << avidinfo->gfx_vresolution_reserved;
-		}
-		if (avidinfo->gfx_resolution_reserved == RES_SUPERHIRES)
-			mon->currentmode.amiga_height *= 2;
-		mon->currentmode.amiga_height = std::min(mon->currentmode.amiga_height, 1280);
-
-		display_width = mon->currentmode.amiga_width;
-		display_height = mon->currentmode.amiga_height;
-#ifdef PICASSO96
-	}
-#endif
-
-	updatepicasso96(mon);
-
-	if (!mon->screen_is_picasso) {
-		allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
-			1920, 1280);
-
-		allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
-			mon->currentmode.amiga_width > 2048 ? mon->currentmode.amiga_width : 2048,
-			mon->currentmode.amiga_height > 2048 ? mon->currentmode.amiga_height : 2048);
-	}
-
-	avidinfo->outbuffer = &avidinfo->drawbuffer;
-	avidinfo->inbuffer = &avidinfo->tempbuffer;
-
-	if (amiga_surface) {
-		SDL_FreeSurface(amiga_surface);
-		amiga_surface = nullptr;
-	}
-	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
-
-	mon->screen_is_initialized = 1;
-	init_colors(mon->monitor_id);
-	display_param_init(mon);
-	target_graphics_buffer_update(mon->monitor_id, false);
-	return true;
-#endif
+	if (gfx_platform_do_init(mon))
+		return true;
 
 	// If headless mode, skip all window/renderer setup
 	if (currprefs.headless) {
@@ -5320,86 +5172,9 @@ unsigned long target_lastsynctime()
 	return last_synctime;
 }
 
-#ifdef LIBRETRO
 static int save_png(const SDL_Surface* surface, const std::string& path)
 {
-	(void)surface;
-	(void)path;
-	return 0;
-}
-
-bool create_screenshot()
-{
-	// RetroArch handles screenshots; skip core-side PNG export.
-	return false;
-}
-#else
-static int save_png(const SDL_Surface* surface, const std::string& path)
-{
-	const auto w = surface->w;
-	const auto h = surface->h;
-	auto* const pix = static_cast<unsigned char*>(surface->pixels);
-	unsigned char writeBuffer[1920 * 3]{};
-
-	// Open the file for writing
-	auto* const f = fopen(path.c_str(), "wbe");
-	if (!f)
-	{
-		write_log(_T("Failed to open file for writing: %s\n"), path.c_str());
-		return 0;
-	}
-
-	// Create a PNG write structure
-	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-	if (!png_ptr)
-	{
-		write_log(_T("Failed to create PNG write structure\n"));
-		fclose(f);
-		return 0;
-	}
-
-	auto* info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr)
-	{
-		png_destroy_write_struct(&png_ptr, nullptr);
-		fclose(f);
-		return 0;
-	}
-
-	png_init_io(png_ptr, f);
-	png_set_IHDR(png_ptr,
-		info_ptr,
-		w,
-		h,
-		8,
-		PNG_COLOR_TYPE_RGB,
-		PNG_INTERLACE_NONE,
-		PNG_COMPRESSION_TYPE_DEFAULT,
-		PNG_FILTER_TYPE_DEFAULT);
-	png_write_info(png_ptr, info_ptr);
-
-	auto* b = writeBuffer;
-	const auto sizeX = w;
-	const auto sizeY = h;
-
-	auto* p = reinterpret_cast<unsigned int*>(pix);
-	for (auto y = 0; y < sizeY; y++) {
-		for (auto x = 0; x < sizeX; x++) {
-			auto v = p[x];
-			*b++ = ((v & SYSTEM_RED_MASK) >> SYSTEM_RED_SHIFT); // R
-			*b++ = ((v & SYSTEM_GREEN_MASK) >> SYSTEM_GREEN_SHIFT); // G
-			*b++ = ((v & SYSTEM_BLUE_MASK) >> SYSTEM_BLUE_SHIFT); // B
-		}
-		p += surface->pitch / 4;
-		png_write_row(png_ptr, writeBuffer);
-		b = writeBuffer;
-	}
-
-	png_write_end(png_ptr, info_ptr);
-	png_destroy_write_struct(&png_ptr, &info_ptr);
-
-	fclose(f);
-	return 1;
+	return gfx_platform_save_png(surface, path);
 }
 
 bool create_screenshot()
@@ -5409,21 +5184,8 @@ bool create_screenshot()
 		SDL_FreeSurface(current_screenshot);
 		current_screenshot = nullptr;
 	}
-
-	if (amiga_surface != nullptr) {
-		current_screenshot = SDL_CreateRGBSurfaceFrom(amiga_surface->pixels,
-			AMIGA_WIDTH_MAX << currprefs.gfx_resolution,
-			AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution,
-			amiga_surface->format->BitsPerPixel,
-			amiga_surface->pitch,
-			amiga_surface->format->Rmask,
-			amiga_surface->format->Gmask,
-			amiga_surface->format->Bmask,
-			amiga_surface->format->Amask);
-	}
-	return current_screenshot != nullptr;
+	return gfx_platform_create_screenshot(amiga_surface, &current_screenshot);
 }
-#endif
 
 int save_thumb(const std::string& path)
 {

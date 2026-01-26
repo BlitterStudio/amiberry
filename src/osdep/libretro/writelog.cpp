@@ -15,6 +15,8 @@
 #include <clocale>
 #include <SDL.h>
 
+#include "libretro_shared.h"
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
@@ -540,7 +542,7 @@ void write_log(const char* format, ...)
 	int bufsize = WRITE_LOG_BUF_SIZE;
 	TCHAR* bufp;
 	va_list parms;
-	const bool has_libretro_log = false;
+	const bool has_libretro_log = log_cb != NULL;
 
 	if (!has_libretro_log && !amiberry_options.write_logfile && !console_logging && !debugfile)
 		return;
@@ -566,6 +568,8 @@ void write_log(const char* format, ...)
 	ts = write_log_get_ts();
 	if (bufp[0] == '*')
 		count++;
+	if (log_cb)
+		log_cb(RETRO_LOG_INFO, "%s", bufp);
 	if (SHOW_CONSOLE || console_logging) {
 		if (lfdetected && ts)
 			writeconsole(ts);

@@ -219,10 +219,12 @@ set(SOURCE_FILES
         src/osdep/picasso96.cpp
         src/osdep/writelog.cpp
         src/osdep/amiberry.cpp
+        src/osdep/main.cpp
         src/osdep/ahi_v2.cpp
         src/osdep/amiberry_dbus.cpp
         src/osdep/amiberry_filesys.cpp
         src/osdep/amiberry_input.cpp
+        src/osdep/input_platform.cpp
         src/osdep/amiberry_gfx.cpp
         src/osdep/external_shader.cpp
         src/osdep/amiberry_gui.cpp
@@ -430,6 +432,13 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         -DAMIBERRY_VERSION_PRE_RELEASE="${VERSION_PRE_RELEASE}"
         -DAMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
         -DAMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
+        -DOSDEP_GFX_PLATFORM_HEADER="gfx_platform_internal_host.h"
+        -DOSDEP_AMIBERRY_PLATFORM_HEADER="amiberry_platform_internal_host.h"
+        -DOSDEP_INPUT_PLATFORM_HEADER="input_platform_internal_host.h"
+        -DOSDEP_GUI_HANDLING_HEADER="gui_handling_platform_host.h"
+        -DOSDEP_GUI_COLOR_HEADER="gui_color_platform_host.h"
+        -DCHD_FLAC_PLATFORM_HEADER="flac_platform_internal_host.h"
+        -DSOUND_PLATFORM_HEADER="sound_platform_internal_host.h"
 )
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")

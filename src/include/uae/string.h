@@ -4,15 +4,11 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#ifdef LIBRETRO
+#include <SDL.h>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <strings.h>
-#else
-#include <SDL.h>
-#endif
 
 #include "uae/types.h"
 #include <cstring>
@@ -27,46 +23,6 @@
 
 #ifdef _WIN32
 /* Using the real _tcs* functions */
-#else
-#ifdef LIBRETRO
-#define _istxdigit isxdigit
-#define _istdigit isdigit
-#define _istspace isspace
-#define _istupper isupper
-#define _sntprintf snprintf
-#define _stprintf sprintf
-#define _strtoui64 strtoll
-#define _tcscat strcat
-#define _tcschr strchr
-#define _tcscmp strcmp
-#define _tcscpy strcpy
-#define _tcscspn strcspn
-#define _tcsdup strdup
-#define _tcsftime strftime
-#define _tcsicmp strcasecmp
-#define _tcslen strlen
-#define uaestrlen strlen
-#define uaetcslen strlen
-#define _tcsncat strncat
-#define _tcsncmp strncmp
-#define _tcsncpy strncpy
-#define _tcsnicmp strncasecmp
-#define _tcsrchr strrchr
-#define _tcsspn strspn
-#define _tcsstr strstr
-#define _tcstod strtod
-#define _tcstok strtok
-#define _tcstol strtol
-#define _tcstoul strtoul 
-#define _totlower tolower
-#define _totupper toupper
-#define _tprintf printf
-#define _tstof atof
-#define _tstoi64 atoll
-#define _tstoi atoi
-#define _tstol atol
-#define _vsnprintf vsnprintf
-#define _vsntprintf vsnprintf
 #else
 #define _istxdigit isxdigit
 #define _istdigit SDL_isdigit
@@ -106,7 +62,6 @@
 #define _tstol atol
 #define _vsnprintf SDL_vsnprintf
 #define _vsntprintf SDL_vsnprintf
-#endif
 #endif
 
 static size_t uae_tcslcpy(char *dst, const TCHAR *src, size_t size)

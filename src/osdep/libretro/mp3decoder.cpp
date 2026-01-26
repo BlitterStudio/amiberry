@@ -6,8 +6,8 @@
 #include "zfile.h"
 #include "mp3decoder.h"
 
-#include <mpg123.h>
-
+#define DR_MP3_IMPLEMENTATION
+#include "dr_mp3.h"
 
 #define MP3_BLOCK_SIZE 522
 #define RAW_BLOCK_SIZE 32768
@@ -38,80 +38,48 @@ mp3decoder::mp3decoder()
 
 uae_u8* mp3decoder::get(struct zfile* zf, uae_u8* outbuf, int maxsize)
 {
-	int outoffset = 0;
-	unsigned char mp3buf[MP3_BLOCK_SIZE];
-	unsigned char rawbuf[RAW_BLOCK_SIZE];
-
 	write_log(_T("MP3: decoding '%s'..\n"), zfile_getname(zf));
 
-	if (mpg123_init() != MPG123_OK)
-	{
-		write_log("MP3: failed to init mpeg123\n");
+	auto read_proc = [](void* user, void* buffer, size_t bytes_to_read) -> size_t {
+		auto* file = static_cast<zfile*>(user);
+		return zfile_fread(buffer, 1, bytes_to_read, file);
+	};
+	auto seek_proc = [](void* user, int offset, drmp3_seek_origin origin) -> drmp3_bool32 {
+		auto* file = static_cast<zfile*>(user);
+		int whence = SEEK_CUR;
+		if (origin == DRMP3_SEEK_SET)
+			whence = SEEK_SET;
+		else if (origin == DRMP3_SEEK_END)
+			whence = SEEK_END;
+		return zfile_fseek(file, offset, whence) == 0 ? DRMP3_TRUE : DRMP3_FALSE;
+	};
+	auto tell_proc = [](void* user, drmp3_int64* cursor) -> drmp3_bool32 {
+		if (!cursor)
+			return DRMP3_FALSE;
+		auto* file = static_cast<zfile*>(user);
+		*cursor = (drmp3_int64)zfile_ftell(file);
+		return (*cursor >= 0) ? DRMP3_TRUE : DRMP3_FALSE;
+	};
+
+	zfile_fseek(zf, 0, SEEK_SET);
+	drmp3 mp3{};
+	if (!drmp3_init(&mp3, read_proc, seek_proc, tell_proc, nullptr, zf, nullptr)) {
+		write_log("MP3: dr_mp3 init failed\n");
 		return nullptr;
 	}
 
-	const char** decoders = mpg123_decoders();
-	if (decoders == nullptr || decoders[0] == nullptr)
-	{
-		write_log("MP3: no mp3 decoder available\n");
-		mpg123_exit();
+	if (mp3.channels == 0) {
+		drmp3_uninit(&mp3);
 		return nullptr;
 	}
 
-	mpg123_handle* mh = mpg123_new(nullptr, nullptr); // Open default decoder
-	if (mh == nullptr)
-	{
-		write_log("MP3: failed to init default decoder\n");
-		mpg123_exit();
+	const size_t bytes_per_frame = mp3.channels * sizeof(drmp3_int16);
+	const drmp3_uint64 max_frames = bytes_per_frame ? (maxsize / bytes_per_frame) : 0;
+	const drmp3_uint64 frames_read = drmp3_read_pcm_frames_s16(&mp3, max_frames, (drmp3_int16*)outbuf);
+	drmp3_uninit(&mp3);
+
+	if (frames_read == 0)
 		return nullptr;
-	}
-
-	if (mpg123_open_feed(mh) == MPG123_OK)
-	{
-		zfile_fseek(zf, 0, SEEK_SET);
-		while (outoffset < maxsize)
-		{
-			size_t count = zfile_fread(mp3buf, 1, MP3_BLOCK_SIZE, zf);
-			if (count != MP3_BLOCK_SIZE)
-				break;
-
-			size_t decoded = 0;
-			int ret = mpg123_decode(mh, mp3buf, MP3_BLOCK_SIZE, rawbuf, RAW_BLOCK_SIZE, &decoded);
-
-			if (ret != MPG123_ERR && decoded != 0)
-			{
-				if (outoffset + decoded > maxsize)
-					decoded = maxsize - outoffset;
-				memcpy(outbuf + outoffset, rawbuf, decoded);
-				outoffset += decoded;
-			}
-
-			while (ret != MPG123_ERR && ret != MPG123_NEED_MORE && outoffset < maxsize)
-			{
-				ret = mpg123_decode(mh, nullptr, 0, rawbuf, RAW_BLOCK_SIZE, &decoded);
-				if (ret != MPG123_ERR && decoded != 0)
-				{
-					if (outoffset + decoded > maxsize)
-						decoded = maxsize - outoffset;
-					memcpy(outbuf + outoffset, rawbuf, decoded);
-					outoffset += decoded;
-				}
-			}
-
-			if (ret == MPG123_ERR)
-			{
-				write_log("MP3: error while decoding\n");
-				outbuf = nullptr;
-				break;
-			}
-		}
-
-		mpg123_close(mh);
-	}
-
-	mpg123_delete(mh);
-	mpg123_exit();
-
 	return outbuf;
 }
 
@@ -185,7 +153,6 @@ uae_u32 mp3decoder::getsize(struct zfile* zf)
 	{
 		zfile_fseek(zf, -static_cast<int>(sizeof id3), SEEK_CUR);
 	}
-
 
 	for (;;)
 	{
@@ -272,7 +239,6 @@ uae_u32 mp3decoder::getsize(struct zfile* zf)
 		}
 		if (sameframes == 0 && frames > 100)
 		{
-			// assume this is CBR MP3
 			size = samplerate * 2 * (isstereo ? 2 : 1) * ((zfile_size32(zf) - firstframe) / ((samplerate / 8 * bitrate) /
 				freq));
 			break;

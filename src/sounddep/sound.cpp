@@ -22,11 +22,7 @@
 #include "gensound.h"
 #include "xwin.h"
 
-#ifdef LIBRETRO
-#include "sdl_compat.h"
-#else
 #include <SDL.h>
-#endif
 #include <cmath>
 #include <algorithm>
 
@@ -257,6 +253,8 @@ static void clearbuffer (struct sound_data *sd)
 	}
 }
 
+#include "sound_platform_internal.h"
+
 static void set_reset(struct sound_data *sd)
 {
 	sd->reset = true;
@@ -400,17 +398,8 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 	sd->samplesize = ch * 16 / 8;
 	s->pullmode = currprefs.sound_pullmode;
 
-#ifdef LIBRETRO
-	s->dev = 1;
-	s->pullmode = 0;
-	s->pullbuffer = nullptr;
-	s->pullbufferlen = 0;
-	s->pullbuffermaxlen = 0;
-	write_log("LIBRETRO: CH=%d, FREQ=%d '%s' buffer %d/%d\n", ch, freq, sound_devices[index]->name,
-		s->sndbufsize, s->framesperbuffer);
-	clearbuffer(sd);
-	return 1;
-#endif
+	if (sound_platform_open_audio(sd, index))
+		return 1;
 
 	SDL_AudioSpec want = {}, have;
 	want.freq = freq;
@@ -711,24 +700,10 @@ bool audio_finish_pull()
 	return false;
 }
 
-#include "libretro_shared.h"
-
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 {
-#ifdef LIBRETRO
-	const auto frames = sd->sndbufsize / (sd->channels * 2);
-	if (audio_batch_cb) {
-		audio_batch_cb((const int16_t*)sndbuffer, frames);
-	} else if (audio_cb) {
-		const auto* samples = reinterpret_cast<const int16_t*>(sndbuffer);
-		for (int i = 0; i < frames; i++) {
-			const int16_t left = samples[i * sd->channels];
-			const int16_t right = (sd->channels > 1) ? samples[i * sd->channels + 1] : left;
-			audio_cb(left, right);
-		}
-	}
-	return;
-#endif
+	if (sound_platform_output_audio(sd, sndbuffer))
+		return;
 	const auto* s = sd->data;
 	if (!sd->waiting_for_buffer)
 		return;
@@ -892,27 +867,8 @@ void finish_sound_buffer()
 
 int enumerate_sound_devices()
 {
-#ifdef LIBRETRO
-	if (!num_sound_devices) {
-		const char* devname = "Libretro";
-		sound_devices[0] = xcalloc(struct sound_device, 1);
-		sound_devices[0]->id = 0;
-		sound_devices[0]->cfgname = my_strdup(devname);
-		sound_devices[0]->type = SOUND_DEVICE_SDL2;
-		sound_devices[0]->name = my_strdup(devname);
-		sound_devices[0]->alname = my_strdup("0");
-		num_sound_devices = 1;
-
-		record_devices[0] = xcalloc(struct sound_device, 1);
-		record_devices[0]->id = 0;
-		record_devices[0]->cfgname = my_strdup(devname);
-		record_devices[0]->type = SOUND_DEVICE_SDL2;
-		record_devices[0]->name = my_strdup(devname);
-		record_devices[0]->alname = my_strdup("0");
-		num_record_devices = 1;
-	}
-	return num_sound_devices;
-#endif
+	if (sound_platform_enumerate_devices())
+		return num_sound_devices;
 	if (!num_sound_devices) {
 
 		write_log("Enumerating SDL2 playback devices...\n");

@@ -19,24 +19,7 @@
 #include <cstdint>
 #include <vector>
 
-#ifndef LIBRETRO
-#include <FLAC/all.h>
-#else
-using FLAC__StreamEncoderState = int;
-using FLAC__StreamDecoderState = int;
-
-struct drflac_memory_stream {
-	const uint8_t* data{};
-	size_t size{};
-	size_t cursor{};
-};
-struct drflac_file_stream {
-	util::read_stream* file{};
-	util::random_access* random{};
-	uint64_t size{};
-	uint64_t cursor{};
-};
-#endif
+#include "flac_platform_internal.h"
 
 
 //**************************************************************************
@@ -61,7 +44,7 @@ public:
 	void set_strip_metadata(bool strip) { m_strip_metadata = strip; }
 
 	// getters (valid after reset)
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	FLAC__StreamEncoderState state() const { return FLAC__stream_encoder_get_state(m_encoder); }
 	const char* state_string() const { return FLAC__stream_encoder_get_resolved_state_string(m_encoder); }
 #else
@@ -83,7 +66,7 @@ public:
 
 private:
 	// internal helpers
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	void init_common();
 	static FLAC__StreamEncoderWriteStatus write_callback_static(const FLAC__StreamEncoder* encoder, const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame, void* client_data);
 	FLAC__StreamEncoderWriteStatus write_callback(const FLAC__byte buffer[], size_t bytes, unsigned samples, unsigned current_frame);
@@ -92,14 +75,14 @@ private:
 #endif
 
 	// internal state
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	FLAC__StreamEncoder* m_encoder;              // actual encoder
 #else
 	void* m_encoder;                             // unused in libretro builds
 #endif
 	util::random_write* m_file;                 // output file
 	uint32_t                m_compressed_offset;    // current offset with the compressed stream
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	FLAC__byte* m_compressed_start;     // start of compressed data
 #else
 	uint8_t* m_compressed_start;        // start of compressed data
@@ -133,7 +116,7 @@ public:
 	uint32_t sample_rate() const { return m_sample_rate; }
 	uint8_t channels() const { return m_channels; }
 	uint8_t bits_per_sample() const { return m_bits_per_sample; }
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	uint32_t total_samples() const { return FLAC__stream_decoder_get_total_samples(m_decoder); }
 	FLAC__StreamDecoderState state() const { return FLAC__stream_decoder_get_state(m_decoder); }
 	const char* state_string() const { return FLAC__stream_decoder_get_resolved_state_string(m_decoder); }
@@ -158,7 +141,7 @@ public:
 
 private:
 	// internal helpers
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	static FLAC__StreamDecoderReadStatus read_callback_static(const FLAC__StreamDecoder* decoder, FLAC__byte buffer[], size_t* bytes, void* client_data);
 	FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t* bytes);
 	static void metadata_callback_static(const FLAC__StreamDecoder* decoder, const FLAC__StreamMetadata* metadata, void* client_data);
@@ -175,7 +158,7 @@ private:
 #endif
 
 	// output state
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	FLAC__StreamDecoder* m_decoder;              // actual decoder
 #else
 	void* m_decoder;                            // actual decoder
@@ -184,17 +167,17 @@ private:
 	uint32_t                m_sample_rate;          // decoded sample rate
 	uint8_t                 m_channels;             // decoded number of channels
 	uint8_t                 m_bits_per_sample;      // decoded bits per sample
-#ifdef LIBRETRO
+#if CHD_FLAC_USE_DRFLAC
 	uint32_t                m_total_samples;
 #endif
 	uint32_t                m_compressed_offset;    // current offset in compressed data
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	const FLAC__byte* m_compressed_start;     // start of compressed data
 #else
 	const uint8_t* m_compressed_start;        // start of compressed data
 #endif
 	uint32_t                m_compressed_length;    // length of compressed data
-#ifndef LIBRETRO
+#if !CHD_FLAC_USE_DRFLAC
 	const FLAC__byte* m_compressed2_start;    // start of compressed data
 #else
 	const uint8_t* m_compressed2_start;       // start of compressed data
@@ -205,7 +188,7 @@ private:
 	uint32_t                m_uncompressed_length;  // length of uncompressed data
 	bool                    m_uncompressed_swap;    // swap uncompressed sample data
 	uint8_t                 m_custom_header[0x2a];  // custom header
-#ifdef LIBRETRO
+#if CHD_FLAC_USE_DRFLAC
 	std::vector<uint8_t> m_stream_buffer;
 	drflac_memory_stream m_mem_stream;
 	drflac_file_stream m_file_stream;

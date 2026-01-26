@@ -52,11 +52,7 @@
 #include <cstring>
 #include <vector>
 #include <unistd.h>
-#ifdef LIBRETRO
-#include "sdl_compat.h"
-#else
 #include <SDL_mutex.h>
-#endif
 #if defined(__linux__)
 #include <pthread.h>
 #elif defined(__APPLE__)

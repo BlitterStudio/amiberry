@@ -57,11 +57,7 @@
 #include "threaddep/thread.h"
 #include "uae/uae.h"
 #include "sana2.h"
-#ifdef LIBRETRO
-#include "gui_handling_stub.h"
-#else
-#include "gui/gui_handling.h"
-#endif
+#include "gui_handling_platform.h"
 
 #ifdef __MACH__
 #include <string>
@@ -338,6 +334,8 @@ std::string current_dir;
 #include <sys/ioctl.h>
 unsigned char kbd_led_status;
 char kbd_flags;
+
+#include "amiberry_platform_internal.h"
 
 std::string config_path;
 std::string rom_path;
@@ -829,10 +827,8 @@ static void setmouseactive2(AmigaMonitor* mon, int active, const bool allowpause
 #else
 	bool isrp = false;
 #endif
-#ifdef LIBRETRO
-	if (!mon->amiga_window)
+	if (osdep_platform_require_window_for_mouse() && !mon->amiga_window)
 		return;
-#endif
 	const int lastmouseactive = mouseactive;
 
 	if (active == 0)
@@ -925,10 +921,8 @@ void setmouseactive(const int monid, const int active)
 {
 	AmigaMonitor* mon = &AMonitors[monid];
 	monitor_off = 0;
-#ifdef LIBRETRO
-	if (!mon->amiga_window)
+	if (osdep_platform_require_window_for_mouse() && !mon->amiga_window)
 		return;
-#endif
 	if (active > 1)
 		SDL_RaiseWindow(mon->amiga_window);
 	setmouseactive2(mon, active, true);
@@ -2102,20 +2096,13 @@ static void process_event(const SDL_Event& event)
 
 void update_clipboard()
 {
-#ifndef LIBRETRO
-	auto* clipboard_uae = uae_clipboard_get_text();
-	if (clipboard_uae) {
-		SDL_SetClipboardText(clipboard_uae);
-		uae_clipboard_free_text(clipboard_uae);
-	}
-#endif
+	osdep_platform_update_clipboard();
 }
 
 int handle_msgpump(bool vblank)
 {
-#ifdef LIBRETRO
-	return 0;
-#endif
+	if (!osdep_platform_use_event_pump())
+		return 0;
 	lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
 	auto got_event = 0;
 	SDL_Event event;
@@ -2151,13 +2138,13 @@ bool handle_events()
 			return true;
 		}
 		lctrl_pressed = rctrl_pressed = lalt_pressed = ralt_pressed = lshift_pressed = rshift_pressed = lgui_pressed = rgui_pressed = false;
-#ifndef LIBRETRO
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
-		{
-			process_event(event);
+		if (osdep_platform_use_event_pump()) {
+			SDL_Event event;
+			while (SDL_PollEvent(&event))
+			{
+				process_event(event);
+			}
 		}
-#endif
 
 		// Keyboard, mouse and joystick read events are handled in process_event in Amiberry
 		//inputdevicefunc_keyboard.read();
@@ -2174,12 +2161,8 @@ bool handle_events()
 		was_paused = 0;
 	}
 	// Insert a 10ms delay to prevent 100% CPU usage
-	if (pause_emulation)
-#ifndef LIBRETRO
+	if (pause_emulation && osdep_platform_should_delay_on_pause())
 		SDL_Delay(10);
-#else
-		;
-#endif
 	return pause_emulation != 0;
 }
 
@@ -5024,11 +5007,7 @@ static void makeverstr(TCHAR* s)
 	}
 }
 
-#ifndef LIBRETRO
-int main(int argc, char* argv[])
-#else
 int amiberry_main(int argc, char* argv[])
-#endif
 {
 	max_uae_width = 8192;
 	max_uae_height = 8192;
@@ -5143,19 +5122,8 @@ int amiberry_main(int argc, char* argv[])
 		return 0;
 	uae_time_calibrate();
 	
-#ifndef LIBRETRO
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-	{
-		write_log("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		int num = SDL_GetNumVideoDrivers();
-		for (int i = 0; i < num; ++i) {
-			write_log("Video Driver %d: %s\n", i, SDL_GetVideoDriver(i));
-		}
+	if (!osdep_platform_init_sdl())
 		abort();
-	}
-
-	(void)atexit(SDL_Quit);
-#endif
 
 	initialize_ini();
 	write_log(_T("Enumerating display devices.. \n"));
@@ -5174,46 +5142,10 @@ int amiberry_main(int argc, char* argv[])
 	}
 	write_log(_T("Enumeration done\n"));
 
-#ifndef LIBRETRO
-	normalcursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-	clipboard_init();
-#endif
+	osdep_platform_init_ui();
 	keyboard_settrans();
 
-#ifndef LIBRETRO
-#if defined( __linux__)
-	// set capslock state based upon current "real" state
-	ioctl(0, KDGKBLED, &kbd_flags);
-	ioctl(0, KDGETLED, &kbd_led_status);
-	if (kbd_flags & 07 & LED_CAP)
-	{
-		// record capslock pressed
-		kbd_led_status |= LED_CAP;
-		inputdevice_do_keyboard(AK_CAPSLOCK, 1);
-	}
-	else
-	{
-		// record capslock as not pressed
-		kbd_led_status &= ~LED_CAP;
-		inputdevice_do_keyboard(AK_CAPSLOCK, 0);
-	}
-	ioctl(0, KDSETLED, kbd_led_status);
-#else
-	// I tried to use Apple IO KIT to poll the status of the various leds, but it requires a special input reading permission (that the user needs to explicitly allow
-	// for the app on launch) and in addition to that it doesn't consistently work well enough, more often than not we'll get a permission denied from the IOKIT framework 
-	// which causes the app to silently fail anyway.  I can't find recent examples for macOS that work well enough and I feel it's not good to rely on a framework that
-	// doesn't work all the time
-
-	// We'll just call SDL and do a rudimentary state check instead
-	int caps = SDL_GetModState();
-		caps = caps & KMOD_CAPS;
-	if(caps == KMOD_CAPS)
-		// 0x04 is LED_CAP in the Linux file which is used here to trigger it
-		kbd_led_status |= ~0x04;
-	else
-		kbd_led_status &= ~0x04;
-#endif
-#endif
+	osdep_platform_sync_keyboard_leds();
 
 #ifdef USE_GPIOD
 	// Open GPIO chip
@@ -5241,36 +5173,7 @@ int amiberry_main(int argc, char* argv[])
 #endif
 	enummidiports();
 
-#ifdef __APPLE__
-    // On macOS, if the user double-clicked a file associated with the app, we need to catch the SDL_DROPFILE event
-    // and pass it as a command line argument to the main function.
-#ifndef LIBRETRO
-    SDL_PumpEvents();
-    SDL_Event event;
-    if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
-    {
-        write_log("Intercepted SDL_DROPFILE event: %s\n", event.drop.file);
-        char** new_argv = new char*[argc + 2];
-        for (int i = 0; i < argc; ++i)
-        {
-            new_argv[i] = argv[i];
-        }
-        new_argv[argc] = event.drop.file;
-        new_argv[argc + 1] = nullptr;
-        real_main(argc + 1, new_argv);
-        SDL_free(event.drop.file);
-        delete[] new_argv;
-    }
-    else
-    {
-        real_main(argc, argv);
-    }
-#else
-	real_main(argc, argv);
-#endif
-#else
-	real_main(argc, argv);
-#endif
+	osdep_platform_call_real_main(argc, argv);
 
 #ifdef USE_GPIOD
 	// Release lines and chip
@@ -5308,9 +5211,7 @@ int amiberry_main(int argc, char* argv[])
 
 	logging_cleanup();
 
-#ifndef LIBRETRO
-	SDL_Quit();
-#endif
+	osdep_platform_shutdown_sdl();
 
 	if (host_poweroff)
 		target_shutdown();

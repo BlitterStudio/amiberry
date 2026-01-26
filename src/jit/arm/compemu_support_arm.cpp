@@ -43,11 +43,7 @@
 #include "newcpu.h"
 #include "comptbl_arm.h"
 #include "compemu_arm.h"
-#ifdef LIBRETRO
-#include "sdl_compat.h"
-#else
 #include <SDL.h>
-#endif
 
 #if defined(__pie__) || defined (__PIE__)
 #error Position-independent code (PIE) cannot be used with JIT

@@ -16,7 +16,7 @@
 #include <cstring>
 #include <new>
 
-#ifdef LIBRETRO
+#if CHD_FLAC_USE_DRFLAC
 #define DR_FLAC_IMPLEMENTATION
 #include "dr_flac.h"
 

@@ -1,9 +1,5 @@
 #pragma once
-#ifdef LIBRETRO
-#include "sdl_compat.h"
-#else
 #include <SDL.h>
-#endif
 #include "rtgmodes.h"
 #include "uae/types.h"
 #include <vector>
@@ -65,9 +61,6 @@ struct MultiDisplay {
 	bool HasAdapterData;
 };
 extern struct MultiDisplay Displays[MAX_DISPLAYS];
-#ifdef LIBRETRO
-void libretro_init_display(int width, int height);
-#endif
 
 struct winuae_currentmode {
 	unsigned int flags;

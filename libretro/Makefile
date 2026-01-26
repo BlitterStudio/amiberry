@@ -67,6 +67,13 @@ endif
 
 # Add Amiberry defines
 FLAGS += -DAMIBERRY -DLIBRETRO -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
+FLAGS += -DOSDEP_GFX_PLATFORM_HEADER=\"libretro/gfx_platform_internal.h\"
+FLAGS += -DOSDEP_AMIBERRY_PLATFORM_HEADER=\"libretro/amiberry_platform_internal.h\"
+FLAGS += -DOSDEP_INPUT_PLATFORM_HEADER=\"libretro/input_platform_internal.h\"
+FLAGS += -DOSDEP_GUI_HANDLING_HEADER=\"libretro/gui_handling_platform.h\"
+FLAGS += -DOSDEP_GUI_COLOR_HEADER=\"gui_color_platform_libretro.h\"
+FLAGS += -DCHD_FLAC_PLATFORM_HEADER=\"flac_platform_internal_libretro.h\"
+FLAGS += -DSOUND_PLATFORM_HEADER=\"sound_platform_internal_libretro.h\"
 
 ifneq (,$(findstring aarch64,$(ARCH)))
    FLAGS += -DCPU_AARCH64
@@ -79,6 +86,7 @@ endif
 # Include paths
 INCFLAGS += -I$(AMIBERRY_DIR)/src
 INCFLAGS += -I$(AMIBERRY_DIR)/src/include
+INCFLAGS += -I$(AMIBERRY_DIR)/src/osdep/libretro
 INCFLAGS += -I$(AMIBERRY_DIR)/src/osdep
 INCFLAGS += -I$(AMIBERRY_DIR)/src/threaddep
 INCFLAGS += -I$(AMIBERRY_DIR)/src/archivers
@@ -217,13 +225,14 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/charset.cpp \
                 $(AMIBERRY_DIR)/src/osdep/clipboard.cpp \
                 $(AMIBERRY_DIR)/src/osdep/dpi_handler.cpp \
+                $(AMIBERRY_DIR)/src/osdep/libretro/input_platform.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ioport.cpp \
                 $(AMIBERRY_DIR)/src/osdep/keyboard.cpp \
-                $(AMIBERRY_DIR)/src/osdep/mp3decoder.cpp \
+                $(AMIBERRY_DIR)/src/osdep/libretro/mp3decoder.cpp \
                 $(AMIBERRY_DIR)/src/osdep/registry.cpp \
                 $(AMIBERRY_DIR)/src/osdep/retroarch.cpp \
                 $(AMIBERRY_DIR)/src/osdep/vpar.cpp \
-                $(AMIBERRY_DIR)/src/osdep/writelog.cpp \
+                $(AMIBERRY_DIR)/src/osdep/libretro/writelog.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ahi_v1.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ahi_v2.cpp \
                 $(AMIBERRY_DIR)/src/osdep/bsdsocket_host.cpp \

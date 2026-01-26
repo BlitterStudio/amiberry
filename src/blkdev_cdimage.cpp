@@ -35,11 +35,12 @@
 #endif
 
 #include "zarchive.h"
-#ifndef LIBRETRO
+#include "archivers/chd/flac_platform_internal.h"
+#if CHD_FLAC_USE_DRFLAC
+#include "dr_flac.h"
+#else
 #define FLAC__NO_DLL
 #include "FLAC/stream_decoder.h"
-#else
-#include "dr_flac.h"
 #endif
 
 #ifdef WITH_CHD
@@ -194,7 +195,7 @@ static int do_read (struct cdunit *cdu, struct cdtoc *t, uae_u8 *data, int secto
 	return 0;
 }
 
-#ifdef LIBRETRO
+#if CHD_FLAC_USE_DRFLAC
 struct flac_zfile_stream
 {
 	struct zfile* handle;

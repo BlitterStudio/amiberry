@@ -6,6 +6,7 @@
 #include "options.h"
 #include "inputdevice.h"
 #include "amiberry_input.h"
+#include "input_platform.h"
 #include "amiberry_gfx.h"
 #include "fsdb.h"
 #include "uae.h"
@@ -970,30 +971,7 @@ static int get_kb_widget_type(int kb, int num, TCHAR* name, uae_u32* code)
 
 static int init_kb()
 {
-	keyboard_german = 0;
-#ifndef LIBRETRO
-	if (SDL_GetKeyFromScancode(SDL_SCANCODE_Y) == SDLK_z)
-		keyboard_german = 1;
-
-	if (retroarch_inited) return 1;
-	
-	// Check if we have a Retroarch file
-	std::string retroarch_file = get_retroarch_file();
-	if (my_existsfile2(retroarch_file.c_str()))
-	{
-		// Add as many keyboards as joysticks that are set up
-		// on arcade machines, you could have a 4 player ipac using all keyboard buttons
-		// so you want to have at least 4 keyboards to choose from!
-		// once one config is missing, simply stop adding them!
-		auto valid = true;
-		for (auto kb = 0; kb < 4 && valid; ++kb)
-		{
-			valid = init_kb_from_retroarch(kb, retroarch_file);
-			if (valid) num_retroarch_kbdjoy++;
-		}
-	}
-	retroarch_inited = 1;	
-#endif
+	osdep_init_keyboard(&keyboard_german, &retroarch_inited, &num_retroarch_kbdjoy);
 	return 1;
 }
 
@@ -1272,95 +1250,15 @@ void setup_mapping(didata* did, const std::string& controllers, const int id)
 	}
 }
 
+#include "input_platform_internal.h"
+
 static int init_joystick()
 {
 	if (joystick_inited)
 		return 1;
 	joystick_inited = 1;
 	
-#ifndef LIBRETRO
-	// This disables the use of gyroscopes as axis device
-	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
-	
-	num_joystick = SDL_NumJoysticks();
-	if (num_joystick > MAX_INPUT_DEVICES)
-		num_joystick = MAX_INPUT_DEVICES;
-
-	// set up variables / paths etc.
-	std::string cfg = get_controllers_path();
-	cfg += "gamecontrollerdb.txt";
-	SDL_GameControllerAddMappingsFromFile(cfg.c_str());
-
-	std::string controllers = get_controllers_path();
-	controllers.append("gamecontrollerdb_user.txt");
-	SDL_GameControllerAddMappingsFromFile(controllers.c_str());
-	
-	// Possible scenarios:
-	// 1 - Controller is an SDL2 Game Controller, no retroarch file: we use the default mapping
-	// 2 - Controller is an SDL2 Game Controller, but there's a retroarch file: retroarch overrides default mapping
-	// 3 - Controller is not an SDL2 Game Controller, but there's a retroarch file: open it as Joystick, use retroarch mapping
-	// 4 - Controller is not an SDL2 Game Controller, no retroarch file: open as Joystick with default map
-
-	controllers = get_controllers_path();
-	// do the loop
-	for (auto i = 0; i < num_joystick; i++)
-	{
-		struct didata* did = &di_joystick[i];
-
-		// Check if joystick supports SDL's game controller interface (a mapping is available)
-		if (SDL_IsGameController(i))
-		{
-			open_as_game_controller(did, i);
-			setup_controller_mappings(did, i);
-		}
-		// Controller interface not supported, try to open as joystick
-		else
-		{
-			open_as_joystick(did, i);
-			write_log("Joystick #%i does not have a mapping available\n", did->joystick_id);
-		}
-
-		fix_didata(did);
-		setup_mapping(did, controllers, i);
-	}
-#else
-	num_joystick = 4;
-	for (int i = 0; i < num_joystick; i++)
-	{
-		struct didata* did = &di_joystick[i];
-		did->name = std::string("Libretro Joystick ").append(std::to_string(i + 1));
-		did->is_controller = true;
-		did->joystick_id = i;
-		did->buttons = 16;
-		did->buttons_real = did->buttons;
-		did->axles = 8;
-		did->analogstick = did->axles >= 2;
-		fill_default_controller(did->mapping);
-		did->mapping.amiberry_custom_none.fill(0);
-		did->mapping.amiberry_custom_hotkey.fill(0);
-		did->mapping.amiberry_custom_axis_none.fill(0);
-		did->mapping.amiberry_custom_axis_hotkey.fill(0);
-		for (uae_s16 b = 0; b < did->buttons; b++) {
-			did->buttonmappings[b] = b;
-			did->buttonsort[b] = b;
-			did->buttonaxisparent[b] = -1;
-			did->buttonaxisparentdir[b] = 0;
-			did->buttonaxistype[b] = AXISTYPE_NORMAL;
-			did->buttonname[b] = std::string("Button ").append(std::to_string(b));
-		}
-		for (uae_s16 a = 0; a < did->axles; a++) {
-			did->axismappings[a] = a;
-			did->axissort[a] = a;
-			did->axisname[a] = std::string("Axis ").append(std::to_string(a));
-			if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_RIGHTX)
-				did->axistype[a] = AXISTYPE_POV_X;
-			else if (a == SDL_CONTROLLER_AXIS_LEFTY || a == SDL_CONTROLLER_AXIS_RIGHTY)
-				did->axistype[a] = AXISTYPE_POV_Y;
-			else
-				did->axistype[a] = AXISTYPE_NORMAL;
-		}
-	}
-#endif
+	input_platform_init_joystick(&num_joystick, di_joystick);
 	return 1;
 }
 
