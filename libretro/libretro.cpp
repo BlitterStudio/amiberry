@@ -8,7 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 #include <unistd.h>
+#include <algorithm>
+#include <string>
+#include <vector>
 
 #include "sysdeps.h"
 #include "options.h"
@@ -17,6 +21,8 @@
 #include "uae.h"
 #include "memory.h"
 #include "savestate.h"
+#include "disk.h"
+#include "gui.h"
 #include "zfile.h"
 
 cothread_t main_fiber;
@@ -54,10 +60,114 @@ static bool libretro_analog_enabled = true;
 static bool last_analog_enabled = true;
 static int last_vsync_setting = -1;
 static float last_refresh_rate = -1.0f;
+static bool input_bitmask_supported = false;
+static bool memory_map_set = false;
+
+static retro_set_led_state_t led_state_cb = nullptr;
+enum RetroLedIndex {
+	RETRO_LED_POWER = 0,
+	RETRO_LED_DRIVES,
+	RETRO_LED_HDCDMD,
+	RETRO_LED_DRIVE0,
+	RETRO_LED_DRIVE1,
+	RETRO_LED_DRIVE2,
+	RETRO_LED_DRIVE3,
+	RETRO_LED_HD,
+	RETRO_LED_CDMD,
+	RETRO_LED_NUM
+};
+static unsigned retro_led_state[RETRO_LED_NUM] = { 0 };
 
 extern float vblank_hz;
 
 static void input_log_file_write(const char* fmt, ...);
+
+static std::string system_dir;
+static std::string save_dir;
+static std::string content_dir;
+
+struct DiskImage {
+	std::string path;
+	std::string label;
+};
+
+static std::vector<DiskImage> disk_images;
+static unsigned disk_index = 0;
+static bool disk_ejected = false;
+static int initial_disk_index = -1;
+static std::string initial_disk_path;
+
+static void update_memory_map()
+{
+	if (!environ_cb || memory_map_set)
+		return;
+
+	struct retro_memory_descriptor memdesc[3];
+	unsigned count = 0;
+
+	if (chipmem_bank.baseaddr && chipmem_bank.allocated_size) {
+		memdesc[count++] = { RETRO_MEMDESC_SYSTEM_RAM, chipmem_bank.baseaddr, 0, chipmem_bank.start, 0, 0, chipmem_bank.allocated_size, "CHIP" };
+	}
+	if (bogomem_bank.baseaddr && bogomem_bank.allocated_size) {
+		memdesc[count++] = { RETRO_MEMDESC_SYSTEM_RAM, bogomem_bank.baseaddr, 0, bogomem_bank.start, 0, 0, bogomem_bank.allocated_size, "SLOW" };
+	}
+	if (fastmem_bank[0].baseaddr && fastmem_bank[0].allocated_size) {
+		memdesc[count++] = { RETRO_MEMDESC_SYSTEM_RAM, fastmem_bank[0].baseaddr, 0, fastmem_bank[0].start, 0, 0, fastmem_bank[0].allocated_size, "FAST" };
+	}
+
+	if (count == 0)
+		return;
+
+	const struct retro_memory_map mmap = { memdesc, count };
+	environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, (void*)&mmap);
+	memory_map_set = true;
+}
+
+static void update_led_interface()
+{
+	if (!led_state_cb)
+		return;
+
+	unsigned led_state[RETRO_LED_NUM] = { 0 };
+	led_state[RETRO_LED_POWER] = gui_data.powerled ? 1 : 0;
+
+	for (int i = 0; i < 4; i++) {
+		if (gui_data.drives[i].df[0]) {
+			if (!led_state[RETRO_LED_DRIVES])
+				led_state[RETRO_LED_DRIVES] = gui_data.drives[i].drive_motor ? 1 : 0;
+			switch (i) {
+				case 0: led_state[RETRO_LED_DRIVE0] = gui_data.drives[i].drive_motor ? 1 : 0; break;
+				case 1: led_state[RETRO_LED_DRIVE1] = gui_data.drives[i].drive_motor ? 1 : 0; break;
+				case 2: led_state[RETRO_LED_DRIVE2] = gui_data.drives[i].drive_motor ? 1 : 0; break;
+				case 3: led_state[RETRO_LED_DRIVE3] = gui_data.drives[i].drive_motor ? 1 : 0; break;
+				default: break;
+			}
+		}
+	}
+
+	if (gui_data.hd >= 0) {
+		led_state[RETRO_LED_HD] = gui_data.hd ? 1 : 0;
+		if (!led_state[RETRO_LED_HDCDMD])
+			led_state[RETRO_LED_HDCDMD] = led_state[RETRO_LED_HD];
+	}
+	if (gui_data.cd >= 0) {
+		led_state[RETRO_LED_CDMD] = (gui_data.cd & (LED_CD_ACTIVE | LED_CD_AUDIO)) ? 1 : 0;
+		if (!led_state[RETRO_LED_HDCDMD])
+			led_state[RETRO_LED_HDCDMD] = led_state[RETRO_LED_CDMD];
+	}
+	if (gui_data.md >= 0) {
+		led_state[RETRO_LED_CDMD] = gui_data.md ? 1 : 0;
+		if (!led_state[RETRO_LED_HDCDMD])
+			led_state[RETRO_LED_HDCDMD] = led_state[RETRO_LED_CDMD];
+	}
+
+	for (unsigned i = 0; i < RETRO_LED_NUM; i++) {
+		if (retro_led_state[i] != led_state[i]) {
+			retro_led_state[i] = led_state[i];
+			led_state_cb(i, led_state[i]);
+		}
+	}
+}
 
 static void log_input_button(unsigned port, const char* name, int state)
 {
@@ -119,9 +229,112 @@ static const struct retro_variable variables[] = {
 
 extern int amiberry_main(int argc, char** argv);
 
+static bool path_is_absolute(const std::string& path)
+{
+	if (path.empty())
+		return false;
+	if (path[0] == '/' || path[0] == '\\')
+		return true;
+	if (path.size() > 1 && path[1] == ':')
+		return true;
+	return false;
+}
+
+static std::string path_dirname(const std::string& path)
+{
+	const auto pos = path.find_last_of("/\\");
+	if (pos == std::string::npos)
+		return std::string();
+	return path.substr(0, pos);
+}
+
+static std::string path_basename(const std::string& path)
+{
+	const auto pos = path.find_last_of("/\\");
+	if (pos == std::string::npos)
+		return path;
+	return path.substr(pos + 1);
+}
+
+static std::string path_join(const std::string& dir, const std::string& file)
+{
+	if (dir.empty())
+		return file;
+	if (file.empty())
+		return dir;
+	const char last = dir.back();
+	if (last == '/' || last == '\\')
+		return dir + file;
+	return dir + "/" + file;
+}
+
+static std::string trim_copy(const char* input)
+{
+	if (!input)
+		return std::string();
+	const char* start = input;
+	while (*start && isspace(static_cast<unsigned char>(*start)))
+		start++;
+	const char* end = start + strlen(start);
+	while (end > start && isspace(static_cast<unsigned char>(*(end - 1))))
+		end--;
+	return std::string(start, end - start);
+}
+
 static bool file_readable(const char* path)
 {
 	return path && *path && access(path, R_OK) == 0;
+}
+
+static bool find_kickstart_in_system_dir(const char* model, char* out, size_t out_size)
+{
+	if (system_dir.empty())
+		return false;
+
+	const char* candidates_generic[] = {
+		"kick.rom",
+		"kick13.rom",
+		"kick20.rom",
+		"kick31.rom"
+	};
+	const char* candidates_a1200[] = { "kick31.rom", "kick40068.A1200", "kick.rom" };
+	const char* candidates_a4000[] = { "kick31.rom", "kick40068.A4000", "kick.rom" };
+	const char* candidates_a600[] = { "kick20.rom", "kick205.rom", "kick.rom", "kick13.rom" };
+	const char* candidates_cd32[] = { "cd32.rom", "kick31.rom", "kick.rom" };
+	const char* candidates_cdtv[] = { "cdtv.rom", "kick13.rom", "kick.rom" };
+
+	const char** candidates = candidates_generic;
+	size_t count = sizeof(candidates_generic) / sizeof(candidates_generic[0]);
+
+	if (model) {
+		if (!strcmp(model, "A1200")) {
+			candidates = candidates_a1200;
+			count = sizeof(candidates_a1200) / sizeof(candidates_a1200[0]);
+		} else if (!strcmp(model, "A4000")) {
+			candidates = candidates_a4000;
+			count = sizeof(candidates_a4000) / sizeof(candidates_a4000[0]);
+		} else if (!strcmp(model, "A600")) {
+			candidates = candidates_a600;
+			count = sizeof(candidates_a600) / sizeof(candidates_a600[0]);
+		} else if (!strcmp(model, "CD32")) {
+			candidates = candidates_cd32;
+			count = sizeof(candidates_cd32) / sizeof(candidates_cd32[0]);
+		} else if (!strcmp(model, "CDTV")) {
+			candidates = candidates_cdtv;
+			count = sizeof(candidates_cdtv) / sizeof(candidates_cdtv[0]);
+		}
+	}
+
+	for (size_t i = 0; i < count; i++) {
+		const std::string candidate = path_join(system_dir, candidates[i]);
+		if (file_readable(candidate.c_str())) {
+			strncpy(out, candidate.c_str(), out_size - 1);
+			out[out_size - 1] = '\0';
+			return true;
+		}
+	}
+
+	return false;
 }
 
 static bool read_kickstart_path(char* out, size_t out_size)
@@ -166,6 +379,185 @@ static bool read_kickstart_path(char* out, size_t out_size)
 	if (log_cb)
 		log_cb(RETRO_LOG_WARN, "kickstart_rom_file not set in %s\n", conf_path);
 	return false;
+}
+
+static bool parse_m3u(const char* path, std::vector<DiskImage>& out_images)
+{
+	if (!path || !*path)
+		return false;
+	FILE* f = fopen(path, "r");
+	if (!f)
+		return false;
+
+	std::string base_dir = path_dirname(path);
+	std::string pending_label;
+	char line[2048];
+	while (fgets(line, sizeof(line), f)) {
+		char* p = line;
+		while (*p == ' ' || *p == '\t')
+			p++;
+		if (*p == '#') {
+			if (strncmp(p, "#EXTINF:", 8) == 0) {
+				char* comma = strchr(p, ',');
+				if (comma)
+					pending_label = trim_copy(comma + 1);
+			} else if (strncmp(p, "#LABEL:", 7) == 0) {
+				pending_label = trim_copy(p + 7);
+			} else if (strncmp(p, "#DISK:", 6) == 0) {
+				pending_label = trim_copy(p + 6);
+			}
+			continue;
+		}
+		if (*p == '\0' || *p == '\n' || *p == '\r')
+			continue;
+		char* end = p + strlen(p);
+		while (end > p && (*(end - 1) == '\n' || *(end - 1) == '\r' || *(end - 1) == ' ' || *(end - 1) == '\t'))
+			*--end = '\0';
+		if (*p == '\0')
+			continue;
+
+		std::string entry = p;
+		if (!path_is_absolute(entry))
+			entry = path_join(base_dir, entry);
+		DiskImage image;
+		image.path = entry;
+		if (!pending_label.empty()) {
+			image.label = pending_label;
+			pending_label.clear();
+		}
+		out_images.push_back(image);
+	}
+	fclose(f);
+	return !out_images.empty();
+}
+
+static void disk_control_apply()
+{
+	if (!core_started)
+		return;
+
+	if (disk_ejected) {
+		disk_eject(0);
+		return;
+	}
+	if (disk_index >= disk_images.size())
+		return;
+	if (disk_images[disk_index].path.empty()) {
+		disk_eject(0);
+		return;
+	}
+	TCHAR tpath[MAX_DPATH];
+	uae_tcslcpy(tpath, disk_images[disk_index].path.c_str(), MAX_DPATH);
+	disk_eject(0);
+	disk_insert(0, tpath);
+}
+
+static bool libretro_set_eject_state(bool ejected)
+{
+	disk_ejected = ejected;
+	disk_control_apply();
+	return true;
+}
+
+static bool libretro_get_eject_state(void)
+{
+	return disk_ejected;
+}
+
+static unsigned libretro_get_image_index(void)
+{
+	return disk_index;
+}
+
+static bool libretro_set_image_index(unsigned index)
+{
+	if (index >= disk_images.size())
+		return false;
+	disk_index = index;
+	disk_control_apply();
+	return true;
+}
+
+static unsigned libretro_get_num_images(void)
+{
+	return (unsigned)disk_images.size();
+}
+
+static bool libretro_replace_image_index(unsigned index, const struct retro_game_info* info)
+{
+	if (index >= disk_images.size())
+		return false;
+	if (info && info->path) {
+		disk_images[index].path = info->path;
+		disk_images[index].label.clear();
+	} else {
+		disk_images[index].path.clear();
+		disk_images[index].label.clear();
+	}
+	if (index == disk_index)
+		disk_control_apply();
+	return true;
+}
+
+static bool libretro_add_image_index(void)
+{
+	disk_images.emplace_back();
+	return true;
+}
+
+static bool libretro_set_initial_image(unsigned index, const char* path)
+{
+	initial_disk_index = static_cast<int>(index);
+	if (path && *path)
+		initial_disk_path = path;
+	else
+		initial_disk_path.clear();
+
+	if (!disk_images.empty()) {
+		if (index >= disk_images.size())
+			return false;
+		if (!initial_disk_path.empty()) {
+			for (size_t i = 0; i < disk_images.size(); i++) {
+				if (disk_images[i].path == initial_disk_path) {
+					initial_disk_index = static_cast<int>(i);
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool libretro_get_image_path(unsigned index, char* s, size_t len)
+{
+	if (!s || len == 0 || index >= disk_images.size())
+		return false;
+	if (disk_images[index].path.empty())
+		return false;
+	strncpy(s, disk_images[index].path.c_str(), len - 1);
+	s[len - 1] = '\0';
+	return true;
+}
+
+static bool libretro_get_image_label(unsigned index, char* s, size_t len)
+{
+	if (!s || len == 0 || index >= disk_images.size())
+		return false;
+	std::string label = disk_images[index].label;
+	if (label.empty()) {
+		if (disk_images[index].path.empty())
+			return false;
+		label = path_basename(disk_images[index].path);
+		const auto dot = label.find_last_of('.');
+		if (dot != std::string::npos)
+			label = label.substr(0, dot);
+	}
+	if (label.empty())
+		return false;
+	strncpy(s, label.c_str(), len - 1);
+	s[len - 1] = '\0';
+	return true;
 }
 
 static void input_log_file_write(const char* fmt, ...)
@@ -577,9 +969,14 @@ static void poll_input(void)
 	for (int i = 0; i < 2; i++)
 	{
 		const int joy = i;
+		unsigned joypad_mask = 0;
+		if (input_bitmask_supported)
+			joypad_mask = (unsigned)input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
 		for (const auto& mapping : joypad_map)
 		{
-			const int state = input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, mapping.retro_id) & 1;
+			const int state = input_bitmask_supported
+				? ((joypad_mask >> mapping.retro_id) & 1)
+				: (input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, mapping.retro_id) & 1);
 			if (state != last_joypad[i][mapping.retro_id]) {
 				last_joypad[i][mapping.retro_id] = state;
 				log_input_button(i, mapping.name, state);
@@ -587,8 +984,12 @@ static void poll_input(void)
 			setjoybuttonstate(joy, mapping.sdl_button, state);
 		}
 
-		const int l2 = input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) & 1;
-		const int r2 = input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) & 1;
+		const int l2 = input_bitmask_supported
+			? ((joypad_mask >> RETRO_DEVICE_ID_JOYPAD_L2) & 1)
+			: (input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) & 1);
+		const int r2 = input_bitmask_supported
+			? ((joypad_mask >> RETRO_DEVICE_ID_JOYPAD_R2) & 1)
+			: (input_state_cb(i, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) & 1);
 		if (l2 != last_joypad[i][RETRO_DEVICE_ID_JOYPAD_L2]) {
 			last_joypad[i][RETRO_DEVICE_ID_JOYPAD_L2] = l2;
 			log_input_button(i, "l2", l2);
@@ -665,35 +1066,58 @@ static void poll_input(void)
 
 static void core_entry(void)
 {
-	char* argv[10];
-	int argc = 0;
-	argv[argc++] = strdup("amiberry");
+	std::vector<char*> argv;
+	argv.reserve(32);
+	argv.push_back(strdup("amiberry"));
 
 	struct retro_variable var;
 	var.key = "amiberry_model";
+	const char* model = nullptr;
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
 	{
-		argv[argc++] = strdup("--model");
-		argv[argc++] = strdup(var.value);
+		model = var.value;
+		argv.push_back(strdup("--model"));
+		argv.push_back(strdup(var.value));
 	}
 
-	argv[argc++] = strdup("-G"); // No GUI
+	argv.push_back(strdup("-G")); // No GUI
 
 	char kick_path[1024] = {0};
-	if (read_kickstart_path(kick_path, sizeof(kick_path))) {
-		argv[argc++] = strdup("-r");
-		argv[argc++] = strdup(kick_path);
+	if (find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path)) ||
+		read_kickstart_path(kick_path, sizeof(kick_path))) {
+		argv.push_back(strdup("-r"));
+		argv.push_back(strdup(kick_path));
 		if (log_cb)
-			log_cb(RETRO_LOG_INFO, "Using Kickstart ROM from amiberry.conf: %s\n", kick_path);
+			log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
+	}
+
+	if (!system_dir.empty()) {
+		const std::string rom_path = "rom_path=" + system_dir;
+		argv.push_back(strdup("-s"));
+		argv.push_back(strdup(rom_path.c_str()));
+	}
+	if (!save_dir.empty()) {
+		const std::string cfg_path = "config_path=" + save_dir;
+		const std::string saveimage_path = "saveimage_dir=" + save_dir;
+		const std::string savestate_path = "savestate_dir=" + save_dir;
+		const std::string statefile_path = "statefile_path=" + save_dir;
+		argv.push_back(strdup("-s"));
+		argv.push_back(strdup(cfg_path.c_str()));
+		argv.push_back(strdup("-s"));
+		argv.push_back(strdup(saveimage_path.c_str()));
+		argv.push_back(strdup("-s"));
+		argv.push_back(strdup(savestate_path.c_str()));
+		argv.push_back(strdup("-s"));
+		argv.push_back(strdup(statefile_path.c_str()));
 	}
 
 	if (game_path[0])
 	{
-		argv[argc++] = strdup(game_path);
+		argv.push_back(strdup(game_path));
 	}
-	argv[argc] = NULL;
+	argv.push_back(nullptr);
 
-	amiberry_main(argc, argv);
+	amiberry_main((int)argv.size() - 1, argv.data());
 	
 	// If amiberry_main returns, we are done
 	libretro_yield();
@@ -708,6 +1132,7 @@ void retro_init(void)
 		core_fiber = co_create(65536 * sizeof(void*), core_entry);
 
 	core_started = false;
+	memory_map_set = false;
 }
 
 void retro_deinit(void)
@@ -722,6 +1147,7 @@ void retro_deinit(void)
 	fastforward_forced = false;
 	last_refresh_rate = -1.0f;
 	core_started = false;
+	memory_map_set = false;
 }
 
 unsigned retro_api_version(void)
@@ -776,6 +1202,27 @@ void retro_set_environment(retro_environment_t cb)
 	static struct retro_keyboard_callback kb_cb = { keyboard_cb };
 	environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &kb_cb);
 	environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)variables);
+	{
+		const char* dir = nullptr;
+		if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
+			system_dir = dir;
+		if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &dir) && dir)
+			save_dir = dir;
+		if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &dir) && dir)
+			content_dir = dir;
+	if (save_dir.empty())
+		save_dir = system_dir;
+	}
+
+	{
+		struct retro_led_interface led_interface = {};
+		if (environ_cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_interface))
+			led_state_cb = led_interface.set_led_state;
+		else
+			led_state_cb = nullptr;
+	}
+
+	input_bitmask_supported = environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL);
 
 	static const struct retro_controller_description port_controllers[] = {
 		{ "Joypad", RETRO_DEVICE_JOYPAD },
@@ -788,6 +1235,30 @@ void retro_set_environment(retro_environment_t cb)
 		{ nullptr, 0 }
 	};
 	environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)controller_info);
+	{
+		struct retro_disk_control_ext_callback disk_ext = {};
+		disk_ext.set_eject_state = libretro_set_eject_state;
+		disk_ext.get_eject_state = libretro_get_eject_state;
+		disk_ext.get_image_index = libretro_get_image_index;
+		disk_ext.set_image_index = libretro_set_image_index;
+		disk_ext.get_num_images = libretro_get_num_images;
+		disk_ext.replace_image_index = libretro_replace_image_index;
+		disk_ext.add_image_index = libretro_add_image_index;
+		disk_ext.set_initial_image = libretro_set_initial_image;
+		disk_ext.get_image_path = libretro_get_image_path;
+		disk_ext.get_image_label = libretro_get_image_label;
+		if (!environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE, &disk_ext)) {
+			struct retro_disk_control_callback disk_cb = {};
+			disk_cb.set_eject_state = libretro_set_eject_state;
+			disk_cb.get_eject_state = libretro_get_eject_state;
+			disk_cb.get_image_index = libretro_get_image_index;
+			disk_cb.set_image_index = libretro_set_image_index;
+			disk_cb.get_num_images = libretro_get_num_images;
+			disk_cb.replace_image_index = libretro_replace_image_index;
+			disk_cb.add_image_index = libretro_add_image_index;
+			environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &disk_cb);
+		}
+	}
 
 	struct retro_input_descriptor desc[] = {
 		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "D-Pad Left" },
@@ -882,6 +1353,7 @@ void retro_run(void)
 	if (!core_started) {
 		co_switch(core_fiber);
 		core_started = true;
+		update_memory_map();
 		return;
 	}
 	if (environ_cb) {
@@ -918,12 +1390,52 @@ void retro_run(void)
 	}
 	poll_input();
 	co_switch(core_fiber);
+	update_memory_map();
+	update_led_interface();
 }
 
 bool retro_load_game(const struct retro_game_info *info)
 {
 	if (info && info->path)
-		strncpy(game_path, info->path, sizeof(game_path) - 1);
+	{
+		std::string path = info->path;
+		disk_images.clear();
+		disk_index = 0;
+		disk_ejected = false;
+
+		const auto ext_pos = path.find_last_of('.');
+		const std::string ext = (ext_pos == std::string::npos) ? "" : path.substr(ext_pos);
+		if (ext == ".m3u" || ext == ".m3u8") {
+			if (!parse_m3u(path.c_str(), disk_images)) {
+				if (log_cb)
+					log_cb(RETRO_LOG_WARN, "Failed to parse m3u, using content path\n");
+				DiskImage image;
+				image.path = path;
+				disk_images.push_back(image);
+			}
+		} else {
+			DiskImage image;
+			image.path = path;
+			disk_images.push_back(image);
+		}
+
+		if (!disk_images.empty()) {
+			if (!initial_disk_path.empty()) {
+				for (size_t i = 0; i < disk_images.size(); i++) {
+					if (disk_images[i].path == initial_disk_path) {
+						disk_index = static_cast<unsigned>(i);
+						break;
+					}
+				}
+			} else if (initial_disk_index >= 0 && static_cast<unsigned>(initial_disk_index) < disk_images.size()) {
+				disk_index = static_cast<unsigned>(initial_disk_index);
+			}
+			strncpy(game_path, disk_images[disk_index].path.c_str(), sizeof(game_path) - 1);
+			game_path[sizeof(game_path) - 1] = '\0';
+		}
+		else
+			game_path[0] = '\0';
+	}
 	else
 		game_path[0] = '\0';
 
