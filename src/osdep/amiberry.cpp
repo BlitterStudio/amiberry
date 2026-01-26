@@ -2398,6 +2398,10 @@ void target_fixup_options(uae_prefs* p)
 		// Make sure that Auto-Center is disabled
 		p->gfx_xcenter = p->gfx_ycenter = 0;
 	}
+	// Can't combine JIT and CPU Thread
+	if (p->cachesize > 0) {
+		p->cpu_thread = false;
+	}
 #endif
 	
 	if (p->rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE) {
