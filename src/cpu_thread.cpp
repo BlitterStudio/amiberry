@@ -14,7 +14,9 @@
 #include "memory.h"
 #include "events.h"
 #include "newcpu.h"
+#include "custom.h"
 
+#ifdef WITH_THREADED_CPU
 /* Global diagnostics structure */
 cpu_thread_diagnostics cpu_thread_diag = {0};
 
@@ -42,7 +44,7 @@ static volatile uae_atomic register_batch_count = 0;
 void cpu_thread_diag_init(void)
 {
 	memset(&cpu_thread_diag, 0, sizeof(cpu_thread_diag));
-	cpu_thread_diag.enable_diagnostics = 1;
+	cpu_thread_diag.enable_diagnostics = 0;
 	cpu_thread_diag.queue_strategy = 1;  // Default: immediate processing
 }
 
@@ -290,16 +292,29 @@ void cpu_thread_flush_register_batch(void)
 {
 	uae_u32 count = atomic_read(&register_batch_count);
 
-	if (count == 0) {
-		return;  /* Nothing to flush */
+	if (count == 0 || !is_mainthread()) {
+		return;  /* Nothing to flush or wrong thread */
 	}
 
-	/* In a full implementation, this would process all queued operations
-	 * For now, just reset the counter
-	 * TODO: Implement actual operation processing in main thread
-	 */
+	/* Process all queued operations */
+	for (uae_u32 i = 0; i < count; i++) {
+		if (register_batch[i].is_write) {
+			switch (register_batch[i].size) {
+				case 1:
+					custom_bput(register_batch[i].address, (uae_u8)register_batch[i].value);
+					break;
+				case 2:
+					custom_wput(register_batch[i].address, (uae_u16)register_batch[i].value);
+					break;
+				case 4:
+					custom_lput(register_batch[i].address, register_batch[i].value);
+					break;
+			}
+		}
+	}
 
 	atomic_set(&register_batch_count, 0);
 	atomic_inc(&cpu_thread_diag.batch_flushes);
 }
 
+#endif

@@ -11,6 +11,7 @@
 
 #include "uae/types.h"
 
+#ifdef WITH_THREADED_CPU
 /* CPU Thread IO Operation Queue
  * Lock-free ring buffer for high-priority IO operations that need immediate main-thread processing
  */
@@ -87,3 +88,5 @@ void cpu_thread_flush_register_batch(void);
 int cpu_thread_register_batch_full(void);
 
 #endif /* UAE_CPU_THREAD_H */
+
+#endif
