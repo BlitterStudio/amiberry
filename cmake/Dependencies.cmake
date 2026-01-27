@@ -27,74 +27,145 @@ endif ()
 
 if(ANDROID)
     include(FetchContent)
-    
-    # We use Prefabs for SDL2, but might need to fetch others or rely on system
-    # However, on Android these are usually not present in the system image for NDK
-    
-    # ZLIB is usually available in NDK
-    find_package(ZLIB REQUIRED)
-    
-    # FLAC, PNG, MPG123 need to be fetched or built
-    # Simplified approach: Use FetchContent or ExternalProject if not found, 
-    # but for now let's assume we might need to add them.
-    # To keep it simple for this step, we will allow them to be MISSING if fetching isn't set up,
-    # but practically we would add FetchContent here.
-    
-    # Build SDL2 and extensions from source
-    add_subdirectory(external/sdl2)
-    add_subdirectory(external/sdl2_image)
-    add_subdirectory(external/sdl2_ttf)
-    
-    # dependencies (SDL2 source build provides SDL2::SDL2 target alias)
-    # SDL2_image and SDL2_ttf also provide targets.
-    target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf)
-    
-    # Allow missing packages for now to proceed with build file generation, 
-    # but we should implement proper fetching later
-    # FLAC dependencies
+
+    # Android doesn't provide ALSA. Disable ALSA backends in bundled deps that try to detect it.
+    set(SDL_ALSA OFF CACHE BOOL "Disable ALSA for Android" FORCE)
+    set(SDL_ALSA_SHARED OFF CACHE BOOL "Disable ALSA shared loading for Android" FORCE)
+    set(DEFAULT_OUTPUT_MODULE "" CACHE STRING "Disable mpg123 default output module selection" FORCE)
+
+    # -------------------------------------------------------------------------
+    # Android: build third-party deps from source via FetchContent (pinned tags)
+    # -------------------------------------------------------------------------
+    # Note: Desktop builds use system packages (see non-ANDROID branch below).
+    set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
+    # SDL2 / SDL2_image / SDL2_ttf
+    FetchContent_Declare(
+        sdl2
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+        GIT_TAG        release-2.30.10
+    )
+    FetchContent_Declare(
+        sdl2_image
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+        GIT_TAG        release-2.8.2
+    )
+    FetchContent_Declare(
+        sdl2_ttf
+        GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
+        GIT_TAG        release-2.22.0
+    )
+
+    # Zstd
+    set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "Build zstd programs" FORCE)
+    set(ZSTD_BUILD_SHARED OFF CACHE BOOL "Build zstd shared lib" FORCE)
+    set(ZSTD_BUILD_STATIC ON CACHE BOOL "Build zstd static lib" FORCE)
+    FetchContent_Declare(
+        zstd
+        GIT_REPOSITORY https://github.com/facebook/zstd.git
+        GIT_TAG        v1.5.6
+    )
+
+    # FLAC
     set(BUILD_PROGRAMS OFF CACHE BOOL "Build and install programs" FORCE)
     set(BUILD_EXAMPLES OFF CACHE BOOL "Build and install examples" FORCE)
     set(BUILD_TESTING OFF CACHE BOOL "Build tests" FORCE)
     set(BUILD_DOCS OFF CACHE BOOL "Build and install doxygen documents" FORCE)
     set(INSTALL_MANPAGES OFF CACHE BOOL "Install MAN pages" FORCE)
     set(WITH_OGG OFF CACHE BOOL "ogg support" FORCE)
-    
-    add_subdirectory(external/flac)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
+    FetchContent_Declare(
+        flac
+        GIT_REPOSITORY https://github.com/xiph/flac.git
+        GIT_TAG        1.5.0
+    )
 
-    # mpg123 dependencies
+    # mpg123
     set(BUILD_PROGRAMS OFF CACHE BOOL "Build programs" FORCE)
     set(BUILD_LIBOUT123 OFF CACHE BOOL "Build libout123" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
-    
-    add_subdirectory(external/mpg123/ports/cmake)
-    target_include_directories(${PROJECT_NAME} PRIVATE external/mpg123/src/include)
+    FetchContent_Declare(
+        mpg123
+        # madebr/mpg123 is a mirror of the upstream SVN repo but does not publish git tags.
+        # Pin to an existing ref so FetchContent can check out reliably.
+        GIT_REPOSITORY https://github.com/madebr/mpg123.git
+        GIT_TAG        master
+    )
 
-    target_include_directories(${PROJECT_NAME} PRIVATE external/mpg123/src/include)
-
-    # libpng dependencies
+    # libpng
     set(PNG_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
     set(PNG_STATIC ON CACHE BOOL "Build static lib" FORCE)
     set(PNG_TESTS OFF CACHE BOOL "Build tests" FORCE)
-    add_subdirectory(external/libpng)
-    target_include_directories(${PROJECT_NAME} PRIVATE external/libpng) # For png.h
-    
-    # zstd dependencies
-    set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "Build programs" FORCE)
-    set(ZSTD_BUILD_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
-    set(ZSTD_BUILD_STATIC ON CACHE BOOL "Build static lib" FORCE)
-    add_subdirectory(external/zstd/build/cmake)
-    target_include_directories(${PROJECT_NAME} PRIVATE external/zstd/lib) # For zstd.h
+    FetchContent_Declare(
+        libpng
+        GIT_REPOSITORY https://github.com/pnggroup/libpng.git
+        GIT_TAG        v1.6.43
+    )
 
-    
+    # Materialize deps (order matters a bit: SDL2 first for *_image/_ttf)
+    FetchContent_MakeAvailable(sdl2 sdl2_image sdl2_ttf flac mpg123 libpng zstd)
+
+    # We use Prefabs for SDL2, but might need to fetch others or rely on system
+    # However, on Android these are usually not present in the system image for NDK
+
+    # ZLIB is usually available in NDK
+    find_package(ZLIB REQUIRED)
+
+    # Link SDL2 + extensions
+    target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf)
+
+    # mpg123 include path (subproject)
+    if(EXISTS "${mpg123_SOURCE_DIR}/src/include")
+        target_include_directories(${PROJECT_NAME} PRIVATE "${mpg123_SOURCE_DIR}/src/include")
+    endif()
+    # libpng (headers are exported by the target, but keep compatible include behavior)
+    if(EXISTS "${libpng_SOURCE_DIR}")
+        target_include_directories(${PROJECT_NAME} PRIVATE "${libpng_SOURCE_DIR}")
+    endif()
+    # pnglibconf.h is generated into libpng's binary dir; include it so png.h can find it.
+    if(EXISTS "${libpng_BINARY_DIR}/pnglibconf.h")
+        target_include_directories(${PROJECT_NAME} PRIVATE "${libpng_BINARY_DIR}")
+    endif()
+    # zstd headers
+    if(EXISTS "${zstd_SOURCE_DIR}/lib")
+        target_include_directories(${PROJECT_NAME} PRIVATE "${zstd_SOURCE_DIR}/lib")
+    endif()
+
+
     # --- PortMidi ---
     if(USE_PORTMIDI)
+        # PortMidi decides whether to use ALSA based on the LINUX_DEFINES cache var.
+        # On Android, ALSA is unavailable, so force PortMidi to build with PMNULL.
+        set(LINUX_DEFINES "PMNULL" CACHE STRING "Disable PortMidi ALSA backend on Android" FORCE)
+
         FetchContent_Declare(
             portmidi
             GIT_REPOSITORY https://github.com/PortMidi/portmidi.git
             GIT_TAG        v2.0.4
         )
         FetchContent_MakeAvailable(portmidi)
+
+        # PortMidi uses bzero() in pmutil.c; Android builds treat implicit decls as errors.
+        # Replace bzero() with memset() in the fetched sources.
+        if (EXISTS "${portmidi_SOURCE_DIR}/pm_common/pmutil.c")
+            file(READ "${portmidi_SOURCE_DIR}/pm_common/pmutil.c" _pmutil_c)
+            if (_pmutil_c MATCHES "\\bbzero\\b")
+                string(REPLACE "bzero(" "memset(" _pmutil_c "${_pmutil_c}")
+                file(WRITE "${portmidi_SOURCE_DIR}/pm_common/pmutil.c" "${_pmutil_c}")
+            endif()
+        endif()
+
         target_link_libraries(${PROJECT_NAME} PRIVATE portmidi)
+
+        # Amiberry includes porttime.h directly; ensure PortMidi's porttime headers are visible.
+        if (EXISTS "${portmidi_SOURCE_DIR}/porttime/porttime.h")
+            target_include_directories(${PROJECT_NAME} PRIVATE "${portmidi_SOURCE_DIR}/porttime")
+        endif()
+
+        # Amiberry includes portmidi.h directly; it's located in PortMidi's pm_common directory.
+        if (EXISTS "${portmidi_SOURCE_DIR}/pm_common/portmidi.h")
+            target_include_directories(${PROJECT_NAME} PRIVATE "${portmidi_SOURCE_DIR}/pm_common")
+        endif()
     endif()
 
     # --- ENet ---
@@ -108,6 +179,11 @@ if(ANDROID)
         # But lsalzman/enet usually has CMake support.
         FetchContent_MakeAvailable(enet) 
         target_link_libraries(${PROJECT_NAME} PRIVATE enet)
+
+        # Ensure the enet/enet.h header is visible when compiling amiberry on Android.
+        if (EXISTS "${enet_SOURCE_DIR}/include/enet/enet.h")
+            target_include_directories(${PROJECT_NAME} PRIVATE "${enet_SOURCE_DIR}/include")
+        endif()
     endif()
 
     # --- LibSerialPort ---
@@ -120,6 +196,14 @@ if(ANDROID)
         )
         FetchContent_MakeAvailable(libserialport)
         target_link_libraries(${PROJECT_NAME} PRIVATE serialport)
+
+        # The serialport target doesn't consistently propagate public include dirs across toolchains.
+        # Ensure the header (<libserialport.h>) is visible when compiling amiberry on Android.
+        if (EXISTS "${libserialport_SOURCE_DIR}/libserialport.h")
+            target_include_directories(${PROJECT_NAME} PRIVATE "${libserialport_SOURCE_DIR}")
+        elseif (EXISTS "${libserialport_SOURCE_DIR}/libserialport")
+            target_include_directories(${PROJECT_NAME} PRIVATE "${libserialport_SOURCE_DIR}")
+        endif()
     endif()
     
     # --- Existing dependencies --- 
@@ -137,7 +221,7 @@ if (USE_ZSTD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_ZSTD)
     find_helper(ZSTD libzstd zstd.h zstd)
     if(NOT ZSTD_FOUND)
-        message(WARNING "ZSTD library not found - CHD compressed disk images will not be supported")
+        message(STATUS "ZSTD library not found - CHD compressed disk images will not be supported")
     else()
         target_include_directories(${PROJECT_NAME} PRIVATE ${ZSTD_INCLUDE_DIRS})
         target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
@@ -147,13 +231,25 @@ endif ()
 if (USE_LIBSERIALPORT)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBSERIALPORT)
     find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBSERIALPORT_LIBRARIES})
+    if(TARGET serialport)
+        target_link_libraries(${PROJECT_NAME} PRIVATE serialport)
+    elseif(LIBSERIALPORT_FOUND AND LIBSERIALPORT_LIBRARIES)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBSERIALPORT_LIBRARIES})
+    else()
+        message(STATUS "LibSerialPort enabled but library was not found")
+    endif()
 endif ()
 
 if (USE_PORTMIDI)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_PORTMIDI)
     find_helper(PORTMIDI portmidi portmidi.h portmidi)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${PORTMIDI_LIBRARIES})
+    if(TARGET portmidi)
+        target_link_libraries(${PROJECT_NAME} PRIVATE portmidi)
+    elseif(PORTMIDI_FOUND AND PORTMIDI_LIBRARIES)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${PORTMIDI_LIBRARIES})
+    else()
+        message(STATUS "PortMidi enabled but library was not found")
+    endif()
 endif ()
 
 if (USE_LIBMPEG2)
@@ -167,7 +263,7 @@ if (USE_LIBENET)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBENET)
     find_helper(LIBENET libenet enet/enet.h enet)
     if(NOT LIBENET_FOUND)
-        message(WARNING "LibENET library not found - network emulation will not be supported")
+        message(STATUS "LibENET library not found - network emulation will not be supported")
     else()
         target_include_directories(${PROJECT_NAME} PRIVATE ${LIBENET_INCLUDE_DIRS})
         target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBENET_LIBRARIES})

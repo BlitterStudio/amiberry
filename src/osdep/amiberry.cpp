@@ -4288,10 +4288,8 @@ std::string get_home_directory(const bool portable_mode)
     if (path) {
         std::string home(path);
         home += "/";
-        LOGD("get_home_directory: Set home to %s", home.c_str());
         return home;
     }
-    LOGD("get_home_directory: SDL_AndroidGetExternalStoragePath failed");
     return prefix_with_application_directory_path("");
 #endif
 	if (portable_mode)
@@ -5128,7 +5126,6 @@ static void makeverstr(TCHAR* s)
 int main(int argc, char* argv[]) {
 #ifdef __ANDROID__
     if (SDL_Init(0) < 0) {
-        LOGD("Early SDL_Init failed: %s", SDL_GetError());
     }
 #endif
 	max_uae_width = 8192;

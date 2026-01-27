@@ -1,8 +1,0 @@
-[submodule "external/freetype"]
-	path = external/freetype
-	url = https://github.com/libsdl-org/freetype.git
-	branch = VER-2-13-2-SDL
-[submodule "external/harfbuzz"]
-	path = external/harfbuzz
-	url = https://github.com/libsdl-org/harfbuzz.git
-	branch = 8.1.1-SDL
