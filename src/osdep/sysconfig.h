@@ -622,7 +622,9 @@ typedef unsigned short USHORT;
 #define _T(x)               x
 typedef char TCHAR;
 #endif
+#ifndef _WIN32
 #define _tzset()            tzset()
+#endif
 #define _timezone           timezone
 #define _daylight           daylight
 // Ftello and fseeko on OSX are alerady 64bit

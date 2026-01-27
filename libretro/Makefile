@@ -49,8 +49,8 @@ else ifeq ($(platform), osx)
    SHARED := -dynamiclib
 else
    TARGET := $(TARGET_NAME)_libretro.dll
-   CC = gcc
-   CXX = g++
+   CC ?= gcc
+   CXX ?= g++
    SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
 endif
 
@@ -81,6 +81,16 @@ else ifneq (,$(findstring arm,$(ARCH)))
    FLAGS += -DCPU_ARM
 else
    FLAGS += -DCPU_X86_64
+endif
+
+ifeq ($(platform), win)
+   ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
+      CC ?= x86_64-w64-mingw32-gcc
+      CXX ?= x86_64-w64-mingw32-g++
+   else ifneq ($(wildcard /mingw64/bin/gcc.exe),)
+      CC ?= /mingw64/bin/gcc
+      CXX ?= /mingw64/bin/g++
+   endif
 endif
 
 # Include paths
