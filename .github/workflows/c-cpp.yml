@@ -980,37 +980,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Cache vendored SDL2_ttf / SDL2_image dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            external/sdl2_ttf/external/freetype
-            external/sdl2_ttf/external/harfbuzz
-            external/sdl2_image/external/libpng
-            external/sdl2_image/external/libjpeg
-            external/sdl2_image/external/libtiff
-            external/sdl2_image/external/libwebp
-            external/sdl2_image/external/zlib
-            external/sdl2_image/external/libjxl
-          key: ${{ runner.os }}-android-vendored-${{ hashFiles('external/sdl2_ttf/.gitmodules', 'external/sdl2_image/.gitmodules', 'external/sdl2_ttf/external/download.sh', 'external/sdl2_image/external/download.sh') }}
-          restore-keys: |
-            ${{ runner.os }}-android-vendored-
-
-      - name: Fetch vendored SDL_image/SDL_ttf dependencies (freetype/harfbuzz)
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Android builds use the vendored SDL2_ttf by default, which expects vendored freetype sources.
-          # These are not included in the repo, so we fetch them here.
-          if [ -f external/sdl2_ttf/external/download.sh ]; then
-            chmod +x external/sdl2_ttf/external/download.sh
-            external/sdl2_ttf/external/download.sh
-          fi
-          if [ -f external/sdl2_image/external/download.sh ]; then
-            chmod +x external/sdl2_image/external/download.sh
-            external/sdl2_image/external/download.sh
-          fi
-          test -f external/sdl2_ttf/external/freetype/CMakeLists.txt
+      # Note: Android dependencies are fetched via CMake FetchContent during the native build,
+      # so we no longer download SDL2_image/SDL2_ttf vendored third-party sources here.
 
       - name: set up JDK 17
         uses: actions/setup-java@v4
