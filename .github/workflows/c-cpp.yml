@@ -999,7 +999,7 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
           elif [ "${{ matrix.arch }}" = "aarch64" ]; then
-            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ -j$(nproc)
           else
             make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
           fi

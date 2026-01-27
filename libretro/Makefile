@@ -34,6 +34,14 @@ PKG_CONFIG ?= pkg-config
 
 TARGET_NAME := amiberry
 
+ifneq ($(CROSS_COMPILE),)
+   CC ?= $(CROSS_COMPILE)gcc
+   CXX ?= $(CROSS_COMPILE)g++
+   AR ?= $(CROSS_COMPILE)ar
+   RANLIB ?= $(CROSS_COMPILE)ranlib
+   STRIP ?= $(CROSS_COMPILE)strip
+endif
+
 # Detect architecture
 ifeq ($(ARCH),)
    ARCH = $(shell uname -m)
@@ -84,7 +92,6 @@ else
 endif
 
 ifeq ($(platform), win)
-   FLAGS += -D_WIN32 -DWIN32 -D__MINGW32__ -D__MINGW64__
    ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
       CC ?= x86_64-w64-mingw32-gcc
       CXX ?= x86_64-w64-mingw32-g++
@@ -92,6 +99,11 @@ ifeq ($(platform), win)
       CC ?= /mingw64/bin/gcc
       CXX ?= /mingw64/bin/g++
    endif
+endif
+
+# Ensure Windows target macros are set when using MinGW, even if platform isn't detected.
+ifneq (,$(findstring mingw32,$(shell $(CXX) -dumpmachine 2>/dev/null)))
+   FLAGS += -D_WIN32 -DWIN32 -D__MINGW32__ -D__MINGW64__
 endif
 
 # Include paths
