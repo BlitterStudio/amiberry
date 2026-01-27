@@ -4283,6 +4283,17 @@ std::string get_data_directory(bool portable_mode)
 // Kickstart ROMs, HDD images, Floppy images will live under this directory
 std::string get_home_directory(const bool portable_mode)
 {
+#if defined(__ANDROID__)
+    const char* path = SDL_AndroidGetExternalStoragePath();
+    if (path) {
+        std::string home(path);
+        home += "/";
+        LOGD("get_home_directory: Set home to %s", home.c_str());
+        return home;
+    }
+    LOGD("get_home_directory: SDL_AndroidGetExternalStoragePath failed");
+    return prefix_with_application_directory_path("");
+#endif
 	if (portable_mode)
 	{
 		// Portable mode, all in startup path
@@ -4291,9 +4302,7 @@ std::string get_home_directory(const bool portable_mode)
 		getcwd(tmp, MAX_DPATH);
 		return {tmp};
 	}
-#if defined(__ANDROID__)
-    return prefix_with_application_directory_path("");
-#endif
+
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 	const auto user_home_dir = getenv("HOME");
 
@@ -4396,6 +4405,8 @@ std::string get_plugins_directory(bool portable_mode)
 		}
 	}
 	return directory + "/Resources/plugins/";
+#elif defined(__ANDROID__)
+    return prefix_with_application_directory_path("plugins/");
 #else
 	if (portable_mode)
 	{
@@ -4666,6 +4677,13 @@ static bool locate_amiberry_conf(const bool portable_mode)
 	{
 #ifdef __MACH__
 		const std::string amiberry_dir = "Amiberry";
+#elif defined(__ANDROID__)
+        const std::string amiberry_dir = "amiberry";
+        // On Android, use the home directory (external files dir) for config
+        config_path = get_home_directory(false);
+        amiberry_conf_file = config_path + "amiberry.conf";
+        amiberry_ini_file = config_path + "amiberry.ini";
+        return my_existsfile2(amiberry_conf_file.c_str());
 #else
 		const std::string amiberry_dir = "amiberry";
 #endif
@@ -4678,6 +4696,7 @@ static bool locate_amiberry_conf(const bool portable_mode)
 
 		amiberry_conf_file = xdg_config_home + "/amiberry.conf";
 		amiberry_ini_file = xdg_config_home + "/amiberry.ini";
+        config_path = xdg_config_home;
 	}
 	return my_existsfile2(amiberry_conf_file.c_str());
 }
@@ -4695,6 +4714,8 @@ static void init_amiberry_dirs(const bool portable_mode)
 
 #ifdef __MACH__
 	if constexpr (true)
+#elif defined(__ANDROID__)
+    if constexpr (true)
 #else
 	if (portable_mode)
 #endif
@@ -4767,6 +4788,26 @@ static void init_amiberry_dirs(const bool portable_mode)
 	video_dir.append("/Videos/");
 	themes_path.append("/Themes/");
 	shaders_path.append("/Shaders/");
+#elif defined(__ANDROID__)
+    controllers_path.append("controllers/");
+    whdboot_path.append("whdboot/");
+    rom_path.append("roms/");
+    // Add other Android specific paths as needed, generally lowercase
+    whdload_arch_path.append("lha/");
+    floppy_path.append("floppies/");
+    harddrive_path.append("harddrives/");
+    cdrom_path.append("cdroms/");
+    logfile_path.append("amiberry.log");
+    rp9_path.append("rp9/");
+    saveimage_dir.append("/");
+    savestate_dir.append("savestates/");
+    ripper_path.append("ripper/");
+    input_dir.append("inputrecordings/");
+    screenshot_dir.append("screenshots/");
+    nvram_dir.append("nvram/");
+    video_dir.append("videos/");
+    themes_path.append("themes/");
+    shaders_path.append("shaders/");
 #else
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
@@ -5085,6 +5126,11 @@ static void makeverstr(TCHAR* s)
 
 
 int main(int argc, char* argv[]) {
+#ifdef __ANDROID__
+    if (SDL_Init(0) < 0) {
+        LOGD("Early SDL_Init failed: %s", SDL_GetError());
+    }
+#endif
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 

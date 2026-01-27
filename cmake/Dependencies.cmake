@@ -86,6 +86,43 @@ if(ANDROID)
     target_include_directories(${PROJECT_NAME} PRIVATE external/zstd/lib) # For zstd.h
 
     
+    # --- PortMidi ---
+    if(USE_PORTMIDI)
+        FetchContent_Declare(
+            portmidi
+            GIT_REPOSITORY https://github.com/PortMidi/portmidi.git
+            GIT_TAG        v2.0.4
+        )
+        FetchContent_MakeAvailable(portmidi)
+        target_link_libraries(${PROJECT_NAME} PRIVATE portmidi)
+    endif()
+
+    # --- ENet ---
+    if(USE_LIBENET)
+        FetchContent_Declare(
+            enet
+            GIT_REPOSITORY https://github.com/lsalzman/enet
+            GIT_TAG        v1.3.18
+        )
+        # ENet doesn't export a target in older versions, so we might need to be careful
+        # But lsalzman/enet usually has CMake support.
+        FetchContent_MakeAvailable(enet) 
+        target_link_libraries(${PROJECT_NAME} PRIVATE enet)
+    endif()
+
+    # --- LibSerialPort ---
+    if(USE_LIBSERIALPORT)
+        # Use a CMake-friendly fork
+        FetchContent_Declare(
+            libserialport
+            GIT_REPOSITORY https://github.com/scottmudge/libserialport-cmake
+            GIT_TAG        master
+        )
+        FetchContent_MakeAvailable(libserialport)
+        target_link_libraries(${PROJECT_NAME} PRIVATE serialport)
+    endif()
+    
+    # --- Existing dependencies --- 
 else()
     find_package(SDL2 CONFIG REQUIRED)
     find_package(SDL2_image MODULE REQUIRED)

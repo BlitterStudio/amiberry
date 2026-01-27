@@ -1,6 +1,6 @@
 app-id: com.blitterstudio.amiberry
 runtime: org.freedesktop.Platform
-runtime-version: "24.08"
+runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
 command: amiberry
 rename-desktop-file: Amiberry.desktop
@@ -26,9 +26,13 @@ modules:
   - name: libpcap
     buildsystem: autotools
     sources:
-    - type: archive
-      url: https://www.tcpdump.org/release/libpcap-1.10.5.tar.gz
-      sha256: 37ced90a19a302a7f32e458224a00c365c117905c2cd35ac544b6880a81488f0
+      - type: archive
+        url: http://www.tcpdump.org/release/libpcap-1.10.6.tar.gz
+        sha256: 872dd11337fe1ab02ad9d4fee047c9da244d695c6ddf34e2ebb733efd4ed8aa9
+        x-checker-data:
+          type: anitya
+          project-id: 1702
+          url-template: http://www.tcpdump.org/release/libpcap-$version.tar.gz
 
   - name: libmpeg2
     config-opts:
@@ -36,7 +40,7 @@ modules:
     rm-configure: true
     sources:
       - type: archive
-        url: https://libmpeg2.sourceforge.net/files/libmpeg2-0.5.1.tar.gz
+        url: https://web.archive.org/web/20250314123645/https://libmpeg2.sourceforge.io/files/libmpeg2-0.5.1.tar.gz
         sha256: dee22e893cb5fc2b2b6ebd60b88478ab8556cb3b93f9a0d7ce8f3b61851871d4
       - type: script
         dest-filename: autogen.sh
@@ -46,8 +50,8 @@ modules:
       - /bin
       - /include
       - /lib/pkgconfig
-      - "*.la"
-      - "*.a"
+      - '*.la'
+      - '*.a'
 
   - name: libserialport
     buildsystem: autotools
@@ -58,8 +62,8 @@ modules:
         commit: 348a6d353af8ac142f68fbf9fe0f4d070448d945
     cleanup:
       - /include
-      - "*.la"
-      - "*.a"
+      - '*.la'
+      - '*.a'
 
   - name: portmidi
     buildsystem: cmake-ninja
@@ -76,18 +80,16 @@ modules:
       - /include
       - '*.a'
       - '*.la'
-
   - name: enet
-    buildsystem: autotools
     sources:
-      - type: git
-        url: https://github.com/lsalzman/enet.git
-        tag: v1.3.18
-        commit: 2662c0de09e36f2a2030ccc2c528a3e4c9e8138a
+      - sha256: 28603c895f9ed24a846478180ee72c7376b39b4bb1287b73877e5eae7d96b0dd
+        type: archive
+        url: https://github.com/lsalzman/enet/archive/v1.3.18.tar.gz
         x-checker-data:
-          type: git
-          tag-pattern: ^v([\d.]+)$
-      - type: script
+          type: anitya
+          project-id: 696
+          url-template: https://github.com/lsalzman/enet/archive/v$version.tar.gz
+      - type: script  # cf. https://github.com/lsalzman/enet/blob/master/README
         dest-filename: autogen.sh
         commands:
           - autoreconf -ifv
@@ -98,5 +100,5 @@ modules:
     sources:
       - type: git
         url: https://github.com/BlitterStudio/amiberry
-        tag: flatpak-7.0.0
-        commit: 44fa30332ed4190cb0a8eb2d5bcf0da0fdd76aba
+        tag: v7.1.1
+        commit: c53d6db770a5580732a7f2bb48abcbfcd95fd0f4

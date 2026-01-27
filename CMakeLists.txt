@@ -40,13 +40,14 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES
 endif()
 if(ANDROID)
     set(USE_UAENET_PCAP OFF CACHE BOOL "Use libpcap for uaenet (Linux/macOS)" FORCE)
-    set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
+    # set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
     set(USE_DBUS OFF CACHE BOOL "Use DBus to control the emulator" FORCE)
     set(USE_GPIOD OFF CACHE BOOL "Use GPIOD to control GPIO LEDs" FORCE)
-    set(USE_LIBENET OFF CACHE BOOL "Use LibENET for network emulation" FORCE)
+    # Enabled features for Android
+    # set(USE_LIBENET OFF CACHE BOOL "Use LibENET for network emulation" FORCE)
     set(USE_LIBMPEG2 OFF CACHE BOOL "Use LibMPEG2 for CD32 FMV support" FORCE)
-    set(USE_LIBSERIALPORT OFF CACHE BOOL "Use LibSerialPort for serial port emulation" FORCE)
-    set(USE_PORTMIDI OFF CACHE BOOL "Use PortMidi for MIDI emulation" FORCE)
+    # set(USE_LIBSERIALPORT OFF CACHE BOOL "Use LibSerialPort for serial port emulation" FORCE)
+    # set(USE_PORTMIDI OFF CACHE BOOL "Use PortMidi for MIDI emulation" FORCE)
 endif()
 
 # Versioning

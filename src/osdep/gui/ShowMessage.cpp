@@ -73,7 +73,11 @@ static void InitShowMessage(const std::string& message)
 		Uint32 mode;
 		if (sdl_mode.w >= 800 && sdl_mode.h >= 600 && !kmsdrm_detected)
 		{
+#ifdef __ANDROID__
+			mode = SDL_WINDOW_FULLSCREEN;
+#else
 			mode = SDL_WINDOW_RESIZABLE;
+#endif
 			if (currprefs.gui_alwaysontop)
 				mode |= SDL_WINDOW_ALWAYS_ON_TOP;
 			if (currprefs.start_minimized)

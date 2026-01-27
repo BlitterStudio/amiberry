@@ -786,8 +786,8 @@ void check_input()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = (gui_event.type == SDL_FINGERDOWN) ? SDL_PRESSED : (gui_event.type == SDL_FINGERUP) ? SDL_RELEASED : 0;
-			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
+			touch_event.button.x = static_cast<int>(gui_graphics->getTarget()->w * gui_event.tfinger.x);
+			touch_event.button.y = static_cast<int>(gui_graphics->getTarget()->h * gui_event.tfinger.y);
 			gui_input->pushInput(touch_event);
 			break;
 
