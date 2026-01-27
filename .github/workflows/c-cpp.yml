@@ -1139,4 +1139,10 @@ jobs:
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
-
+          prerelease: true
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          body: ${{ steps.changelog.outputs.changes }}
+          artifacts: |
+            artifacts/amiberry-*.zip
+            artifacts/Amiberry-*.zip
