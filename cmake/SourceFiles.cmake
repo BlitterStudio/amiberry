@@ -25,6 +25,7 @@ set(SOURCE_FILES
         src/cia.cpp
         src/consolehook.cpp
         src/cpuboard.cpp
+        src/cpu_thread.cpp
         src/crc32.cpp
         src/custom.cpp
         src/debug.cpp
