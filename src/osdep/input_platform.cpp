@@ -1,3 +1,4 @@
+#include "sysdeps.h"
 #include "input_platform.h"
 
 #include <SDL.h>
