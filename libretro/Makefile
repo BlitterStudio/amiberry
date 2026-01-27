@@ -132,6 +132,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/consolehook.cpp \
                $(AMIBERRY_DIR)/src/cpuboard.cpp \
                $(AMIBERRY_DIR)/src/crc32.cpp \
+               $(AMIBERRY_DIR)/src/cpu_thread.cpp \
                $(AMIBERRY_DIR)/src/custom.cpp \
                $(AMIBERRY_DIR)/src/debug.cpp \
                $(AMIBERRY_DIR)/src/debugmem.cpp \
