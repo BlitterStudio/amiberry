@@ -1,0 +1,16 @@
+projectfullname = SDL_ttf
+projectshortname = SDL_ttf
+incsubdir =
+wikisubdir = SDL_ttf
+apiprefixregex = TTF_
+mainincludefname = SDL_ttf.h
+versionfname = SDL_ttf.h
+versionmajorregex = \A\#define\s+SDL_TTF_MAJOR_VERSION\s+(\d+)\Z
+versionminorregex = \A\#define\s+SDL_TTF_MINOR_VERSION\s+(\d+)\Z
+versionpatchregex = \A\#define\s+SDL_TTF_PATCHLEVEL\s+(\d+)\Z
+selectheaderregex = \ASDL_ttf\.h\Z
+projecturl = https://libsdl.org/projects/SDL_ttf
+wikiurl = https://wiki.libsdl.org/SDL_ttf
+bugreporturl = https://github.com/libsdl-org/sdlwiki/issues/new
+warn_about_missing = 1
+wikipreamble = (This function is part of SDL_ttf, a separate library from SDL.)

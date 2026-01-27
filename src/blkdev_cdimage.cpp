@@ -13,9 +13,10 @@
 */
 #include "sysconfig.h"
 #include "sysdeps.h"
-#ifdef HAVE_SYS_TIMEB_H
+#if defined(HAVE_SYS_TIMEB_H) && !defined(__ANDROID__)
 #include <sys/timeb.h>
 #endif
+#include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 

@@ -50,8 +50,21 @@
 #include <png.h>
 #include <SDL_image.h>
 #ifdef USE_OPENGL
+#ifndef __ANDROID__
 #include <GL/glew.h>
 #include <SDL_opengl.h>
+#else
+#include <GLES3/gl3.h>
+#include <SDL_opengles2.h>
+#endif
+
+#ifndef GL_BGRA
+#ifdef GL_BGRA_EXT
+#define GL_BGRA GL_BGRA_EXT
+#else
+#define GL_BGRA 0x80E1
+#endif
+#endif
 
 #define CRTEMU_REPORT_SHADER_ERRORS
 #define CRTEMU_IMPLEMENTATION
@@ -5242,7 +5255,11 @@ void screenshot(int monid, int mode, int doprepare)
 	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
 
 	// Detect GLES-only drivers (e.g., KMSDRM on Raspberry Pi)
+#ifdef __ANDROID__
+	const bool likely_gles_only = true;
+#else
 	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
+#endif
 
 	if (mode == 0) {
 		if (likely_gles_only) {
@@ -5331,6 +5348,7 @@ static bool is_gles_context()
 		return false;
 	}
 
+#ifndef __ANDROID__
 	// GLEW: enable modern/core entry points before init, then clear benign error.
 	glewExperimental = GL_TRUE;
 	const GLenum glew_err = glewInit();
@@ -5347,6 +5365,7 @@ static bool is_gles_context()
 			return false;
 		}
 	}
+#endif
 
 	// On GLES contexts (e.g. RPi4/5), desktop GLEW might fail or return error.
 	// We should NOT fail initialization here, but instead warn and try to patch missing symbols.
@@ -5357,6 +5376,7 @@ static bool is_gles_context()
 
 	// Manually load VAO functions if GLEW failed to load them (common on GLES)
     // We check the GLEW function pointers directly.
+#ifndef __ANDROID__
     if (!__glewGenVertexArrays) {
         write_log("Manual loading of glGenVertexArrays...\n");
         __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
@@ -5372,6 +5392,7 @@ static bool is_gles_context()
         __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
         if (!__glewDeleteVertexArrays) __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArraysOES");
     }
+#endif
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));

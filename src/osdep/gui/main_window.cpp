@@ -295,8 +295,12 @@ void amiberry_gui_init()
         Uint32 mode;
 		if (!kmsdrm_detected)
 		{
+#ifdef __ANDROID__
+            mode = SDL_WINDOW_FULLSCREEN;
+#else
 			// Only enable Windowed mode if we're running under a window environment
 			mode = SDL_WINDOW_RESIZABLE;
+#endif
 		}
 		else
 		{

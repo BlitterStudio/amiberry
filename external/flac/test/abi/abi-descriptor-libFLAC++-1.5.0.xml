@@ -1,0 +1,11 @@
+<version>
+    1.5.0
+</version>
+
+<headers>
+    include/FLAC++/all.h
+</headers>
+
+<libs>
+    src/libFLAC++/.libs/libFLAC++.so.11.0.0
+</libs>

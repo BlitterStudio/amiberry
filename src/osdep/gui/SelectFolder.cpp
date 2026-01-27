@@ -43,6 +43,10 @@ class SelectDirListModel : public gcn::ListModel
 	std::vector<std::string> dirs;
 
 public:
+	SelectDirListModel()
+	{
+	}
+
 	SelectDirListModel(const std::string& path)
 	{
 		changeDir(path);
@@ -78,7 +82,7 @@ public:
 	}
 };
 
-static SelectDirListModel dirList(".");
+static SelectDirListModel dirList;
 
 static void checkfoldername(const std::string& current)
 {

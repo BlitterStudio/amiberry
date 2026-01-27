@@ -16,18 +16,85 @@ endif ()
 
 if (USE_OPENGL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
-    find_package(OpenGL REQUIRED)
-    find_package(GLEW REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
+    if (NOT ANDROID)
+        find_package(OpenGL REQUIRED)
+        find_package(GLEW REQUIRED)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
+    else()
+        target_link_libraries(${PROJECT_NAME} PRIVATE GLESv3 EGL)
+    endif()
 endif ()
 
-find_package(SDL2 CONFIG REQUIRED)
-find_package(SDL2_image MODULE REQUIRED)
-find_package(SDL2_ttf MODULE REQUIRED)
-find_package(FLAC REQUIRED)
-find_package(mpg123 REQUIRED)
-find_package(PNG REQUIRED)
-find_package(ZLIB REQUIRED)
+if(ANDROID)
+    include(FetchContent)
+    
+    # We use Prefabs for SDL2, but might need to fetch others or rely on system
+    # However, on Android these are usually not present in the system image for NDK
+    
+    # ZLIB is usually available in NDK
+    find_package(ZLIB REQUIRED)
+    
+    # FLAC, PNG, MPG123 need to be fetched or built
+    # Simplified approach: Use FetchContent or ExternalProject if not found, 
+    # but for now let's assume we might need to add them.
+    # To keep it simple for this step, we will allow them to be MISSING if fetching isn't set up,
+    # but practically we would add FetchContent here.
+    
+    # Build SDL2 and extensions from source
+    add_subdirectory(external/sdl2)
+    add_subdirectory(external/sdl2_image)
+    add_subdirectory(external/sdl2_ttf)
+    
+    # dependencies (SDL2 source build provides SDL2::SDL2 target alias)
+    # SDL2_image and SDL2_ttf also provide targets.
+    target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf)
+    
+    # Allow missing packages for now to proceed with build file generation, 
+    # but we should implement proper fetching later
+    # FLAC dependencies
+    set(BUILD_PROGRAMS OFF CACHE BOOL "Build and install programs" FORCE)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "Build and install examples" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "Build tests" FORCE)
+    set(BUILD_DOCS OFF CACHE BOOL "Build and install doxygen documents" FORCE)
+    set(INSTALL_MANPAGES OFF CACHE BOOL "Install MAN pages" FORCE)
+    set(WITH_OGG OFF CACHE BOOL "ogg support" FORCE)
+    
+    add_subdirectory(external/flac)
+
+    # mpg123 dependencies
+    set(BUILD_PROGRAMS OFF CACHE BOOL "Build programs" FORCE)
+    set(BUILD_LIBOUT123 OFF CACHE BOOL "Build libout123" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
+    
+    add_subdirectory(external/mpg123/ports/cmake)
+    target_include_directories(${PROJECT_NAME} PRIVATE external/mpg123/src/include)
+
+    target_include_directories(${PROJECT_NAME} PRIVATE external/mpg123/src/include)
+
+    # libpng dependencies
+    set(PNG_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
+    set(PNG_STATIC ON CACHE BOOL "Build static lib" FORCE)
+    set(PNG_TESTS OFF CACHE BOOL "Build tests" FORCE)
+    add_subdirectory(external/libpng)
+    target_include_directories(${PROJECT_NAME} PRIVATE external/libpng) # For png.h
+    
+    # zstd dependencies
+    set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "Build programs" FORCE)
+    set(ZSTD_BUILD_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
+    set(ZSTD_BUILD_STATIC ON CACHE BOOL "Build static lib" FORCE)
+    add_subdirectory(external/zstd/build/cmake)
+    target_include_directories(${PROJECT_NAME} PRIVATE external/zstd/lib) # For zstd.h
+
+    
+else()
+    find_package(SDL2 CONFIG REQUIRED)
+    find_package(SDL2_image MODULE REQUIRED)
+    find_package(SDL2_ttf MODULE REQUIRED)
+    find_package(FLAC REQUIRED)
+    find_package(mpg123 REQUIRED)
+    find_package(PNG REQUIRED)
+    find_package(ZLIB REQUIRED)
+endif()
 
 if (USE_ZSTD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_ZSTD)
@@ -99,16 +166,59 @@ add_subdirectory(external/libguisan)
 
 target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
+set(AMIBERRY_LIBS
         guisan
         mt32emu
-        FLAC
-        png
-        MPG123::libmpg123
         z
-        pthread
         dl
 )
+if (NOT ANDROID)
+    list(APPEND AMIBERRY_LIBS pthread)
+endif()
+
+if(TARGET FLAC)
+    list(APPEND AMIBERRY_LIBS FLAC)
+elseif(FLAC_FOUND)
+     # Fallback if FLAC_FOUND is set but target not visible (old FindFLAC)
+     list(APPEND AMIBERRY_LIBS ${FLAC_LIBRARIES})
+endif()
+
+if(TARGET PNG::PNG)
+    list(APPEND AMIBERRY_LIBS PNG::PNG)
+elseif(TARGET png)
+    list(APPEND AMIBERRY_LIBS png)
+elseif(PNG_FOUND)
+     list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
+endif()
+
+if(TARGET MPG123::libmpg123)
+    list(APPEND AMIBERRY_LIBS MPG123::libmpg123)
+elseif(TARGET libmpg123)
+    list(APPEND AMIBERRY_LIBS libmpg123)
+elseif(MPG123_FOUND)
+    list(APPEND AMIBERRY_LIBS ${MPG123_LIBRARIES})
+endif()
+
+if(TARGET png_static)
+    list(APPEND AMIBERRY_LIBS png_static)
+elseif(TARGET png)
+    list(APPEND AMIBERRY_LIBS png)
+    list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
+endif()
+
+if(TARGET libzstd_static)
+    list(APPEND AMIBERRY_LIBS libzstd_static)
+elseif(TARGET zstd)
+    list(APPEND AMIBERRY_LIBS zstd)
+elseif(ZSTD_FOUND)
+    list(APPEND AMIBERRY_LIBS ${ZSTD_LIBRARIES})
+endif()
+
+if(ANDROID)
+    list(APPEND AMIBERRY_LIBS log android)
+endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_LIBS})
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_library(UTIL_LIBRARY util)

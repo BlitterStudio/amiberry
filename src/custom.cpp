@@ -3394,7 +3394,9 @@ static void rethink_intreq(void)
 
 static void intreq_checks(uae_u16 oldreq, uae_u16 newreq)
 {
+#ifdef SERIAL_PORT
 	serial_rbf_change((newreq & 0x0800) ? 1 : 0);
+#endif
 }
 
 static void event_doint_delay_do_ext_old(uae_u32 v)

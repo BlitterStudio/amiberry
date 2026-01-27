@@ -1,0 +1,29 @@
+# Built artifacts
+bin
+gen
+out
+build
+.gradle
+
+# IDE - IntelliJ
+.idea
+*.iml
+*.ipr
+*.iws
+
+# Android Studio
+.externalNativeBuild
+.cxx
+captures/
+*.hprof
+
+# Local configuration
+local.properties
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Signing files
+*.jks
+*.keystore

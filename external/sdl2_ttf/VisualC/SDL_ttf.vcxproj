@@ -1,0 +1,399 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>SDL2_ttf</ProjectName>
+    <ProjectGuid>{DDDBD07D-DC76-4AF6-8D02-3E2DEB6EE255}</ProjectGuid>
+    <RootNamespace>SDL_ttf</RootNamespace>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Platform)\$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Platform)\$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</IntDir>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>..\external\freetype\include;..\external\harfbuzz\src;$(SolutionDir)..\..\SDL\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\..\SDL\VisualC\$(PlatformName)\$(Configuration);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>..\external\freetype\include;..\external\harfbuzz\src;$(SolutionDir)..\..\SDL\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\..\SDL\VisualC\$(PlatformName)\$(Configuration);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>..\external\freetype\include;..\external\harfbuzz\src;$(SolutionDir)..\..\SDL\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\..\SDL\VisualC\$(PlatformName)\$(Configuration);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>..\external\freetype\include;..\external\harfbuzz\src;$(SolutionDir)..\..\SDL\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\..\SDL\VisualC\$(PlatformName)\$(Configuration);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>.\Debug/SDL2_ttf.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>DLL_EXPORT;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;TTF_USE_HARFBUZZ=1;FT_PUBLIC_FUNCTION_ATTRIBUTE=;FT_CONFIG_OPTION_USE_HARFBUZZ;FT2_BUILD_LIBRARY;HAVE_FREETYPE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>SDL2.lib;ucrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>external\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>X64</TargetEnvironment>
+      <TypeLibraryName>.\Debug/SDL2_ttf.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>DLL_EXPORT;WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;TTF_USE_HARFBUZZ=1;FT_PUBLIC_FUNCTION_ATTRIBUTE=;FT_CONFIG_OPTION_USE_HARFBUZZ;FT2_BUILD_LIBRARY;HAVE_FREETYPE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>SDL2.lib;ucrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>external\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <TypeLibraryName>.\Release/SDL2_ttf.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <PreprocessorDefinitions>DLL_EXPORT;WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;TTF_USE_HARFBUZZ=1;FT_PUBLIC_FUNCTION_ATTRIBUTE=;FT_CONFIG_OPTION_USE_HARFBUZZ;FT2_BUILD_LIBRARY;HAVE_FREETYPE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>external\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>X64</TargetEnvironment>
+      <TypeLibraryName>.\Release/SDL2_ttf.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <PreprocessorDefinitions>DLL_EXPORT;WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;TTF_USE_HARFBUZZ=1;FT_PUBLIC_FUNCTION_ATTRIBUTE=;FT_CONFIG_OPTION_USE_HARFBUZZ;FT2_BUILD_LIBRARY;HAVE_FREETYPE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>external\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="external\lib\x86\LICENSE.freetype.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="external\lib\x86\LICENSE.harfbuzz.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="external\lib\x86\LICENSE.zlib.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="external\lib\x64\LICENSE.freetype.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="external\lib\x64\LICENSE.harfbuzz.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="external\lib\x64\LICENSE.zlib.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Copying %(Filename)%(Extension)</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">copy %(FullPath) $(SolutionDir)\$(Platform)\$(Configuration)\</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)\$(Platform)\$(Configuration)\%(Filename)%(Extension);%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\external\freetype\src\autofit\autofit.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftbase.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftbbox.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftbdf.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftbitmap.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftcid.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftdebug.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftfstype.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftgasp.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftglyph.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftgxval.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftinit.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftmm.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftotval.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftpatent.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftpfr.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftstroke.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftsynth.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftsystem.c" />
+    <ClCompile Include="..\external\freetype\src\base\fttype1.c" />
+    <ClCompile Include="..\external\freetype\src\base\ftwinfnt.c" />
+    <ClCompile Include="..\external\freetype\src\bdf\bdf.c" />
+    <ClCompile Include="..\external\freetype\src\cache\ftcache.c" />
+    <ClCompile Include="..\external\freetype\src\cff\cff.c" />
+    <ClCompile Include="..\external\freetype\src\cid\type1cid.c" />
+    <ClCompile Include="..\external\freetype\src\gzip\ftgzip.c" />
+    <ClCompile Include="..\external\freetype\src\lzw\ftlzw.c" />
+    <ClCompile Include="..\external\freetype\src\pcf\pcf.c" />
+    <ClCompile Include="..\external\freetype\src\pfr\pfr.c" />
+    <ClCompile Include="..\external\freetype\src\psaux\psaux.c" />
+    <ClCompile Include="..\external\freetype\src\pshinter\pshinter.c" />
+    <ClCompile Include="..\external\freetype\src\psnames\psmodule.c" />
+    <ClCompile Include="..\external\freetype\src\raster\raster.c" />
+    <ClCompile Include="..\external\freetype\src\sdf\sdf.c" />
+    <ClCompile Include="..\external\freetype\src\sfnt\sfnt.c" />
+    <ClCompile Include="..\external\freetype\src\svg\svg.c" />
+    <ClCompile Include="..\external\freetype\src\smooth\smooth.c" />
+    <ClCompile Include="..\external\freetype\src\truetype\truetype.c" />
+    <ClCompile Include="..\external\freetype\src\type1\type1.c" />
+    <ClCompile Include="..\external\freetype\src\type42\type42.c" />
+    <ClCompile Include="..\external\freetype\src\winfonts\winfnt.c" />
+    <ClCompile Include="..\external\harfbuzz\src\graph\gsubgpos-context.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-aat-layout.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-aat-map.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-blob.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-buffer-serialize.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-buffer-verify.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-buffer.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-cairo-utils.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-cairo.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-common.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-coretext.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-directwrite.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-draw.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-face-builder.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-face.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-fallback-shape.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-font.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ft.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-gdi.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-glib.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-gobject-structs.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-graphite2.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-icu.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-map.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-number.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-cff1-table.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-cff2-table.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-color.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-face.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-font.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-layout.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-map.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-math.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-meta.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-metrics.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-name.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shape-fallback.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shape-normalize.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shape.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-arabic.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-default.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-hangul.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-hebrew.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-indic-table.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-indic.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-khmer.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-myanmar.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-syllabic.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-thai.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-use.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-shaper-vowel-constraints.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-tag.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ot-var.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-outline.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-paint-extents.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-paint.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-set.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-shape-plan.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-shape.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-shaper.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-static.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-style.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset-cff-common.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset-cff1.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset-cff2.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset-input.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset-instancer-solver.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset-plan.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset-repacker.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-subset.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-ucd.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-unicode.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-uniscribe.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-wasm-api.cc" />
+    <ClCompile Include="..\external\harfbuzz\src\hb-wasm-shape.cc" />
+    <ClCompile Include="..\SDL_ttf.c">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Version.rc">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\SDL_ttf.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1801,6 +1801,12 @@ static void handle_key_event(const SDL_Event& event)
 	{
 		scancode = SDL_SCANCODE_RGUI;
 	}
+#ifdef __ANDROID__
+	if (scancode == SDL_SCANCODE_AC_BACK)
+	{
+		scancode = SDL_SCANCODE_F12;
+	}
+#endif
 
 	scancode = keyhack(scancode, pressed, 0);
 	if (scancode >= 0)
@@ -1811,17 +1817,33 @@ static void handle_key_event(const SDL_Event& event)
 
 static void handle_finger_event(const SDL_Event& event)
 {
-	if (!isfocus() || event.tfinger.fingerId != 0)
+	if (!isfocus())
 		return;
 
-	if (event.tfinger.type == SDL_FINGERDOWN && event.button.clicks == 2)
+    // Simple single-finger tap for Left Click
+	if (event.tfinger.fingerId == 0)
 	{
-		setmousebuttonstate(0, 0, 1);
+        if (event.tfinger.type == SDL_FINGERDOWN)
+        {
+            setmousebuttonstate(0, 0, 1);
+        }
+        else if (event.tfinger.type == SDL_FINGERUP)
+        {
+            setmousebuttonstate(0, 0, 0);
+        }
 	}
-	else if (event.tfinger.type == SDL_FINGERUP)
-	{
-		setmousebuttonstate(0, 0, 0);
-	}
+    // 2nd finger tap for Right Click
+    else if (event.tfinger.fingerId == 1)
+    {
+        if (event.tfinger.type == SDL_FINGERDOWN)
+        {
+            setmousebuttonstate(0, 1, 1);
+        }
+        else if (event.tfinger.type == SDL_FINGERUP)
+        {
+            setmousebuttonstate(0, 1, 0);
+        }
+    }
 }
 
 static void handle_mouse_button_event(const SDL_Event& event, const AmigaMonitor* mon)
@@ -1868,8 +1890,21 @@ static void handle_finger_motion_event(const SDL_Event& event)
 {
 	if (isfocus() && event.tfinger.fingerId == 0)
 	{
-		setmousestate(0, 0, event.tfinger.x, 1);
-		setmousestate(0, 1, event.tfinger.y, 1);
+        // Use relative movement for better control (Laptop touchpad style)
+        // Scale normalized coords (0..1) to window pixels
+        int w = 0, h = 0;
+        if (AMonitors[0].amiga_window) {
+             SDL_GetWindowSize(AMonitors[0].amiga_window, &w, &h);
+        } else {
+             // Fallback if window not ready, though unlikely if getting events
+             w = 640; h = 480; 
+        }
+        
+        int relX = (int)(event.tfinger.dx * w);
+        int relY = (int)(event.tfinger.dy * h);
+
+        setmousestate(0, 0, relX, 0); // 0 = relative
+        setmousestate(0, 1, relY, 0);
 	}
 }
 
@@ -2023,6 +2058,16 @@ static void process_event(const SDL_Event& event)
 		{
 		case SDL_QUIT:
 			handle_quit_event();
+			break;
+
+		case SDL_APP_WILLENTERBACKGROUND:
+		case SDL_APP_DIDENTERBACKGROUND:
+			pause_emulation = 1;
+			break;
+
+		case SDL_APP_WILLENTERFOREGROUND:
+		case SDL_APP_DIDENTERFOREGROUND:
+			pause_emulation = 0;
 			break;
 
 		case SDL_CLIPBOARDUPDATE:
@@ -3499,28 +3544,34 @@ void read_directory(const std::string& path, std::vector<std::string>* dirs, std
 	// check if the path exists first
 	if (!std::filesystem::exists(path))
 		return;
-	for (const auto& entry : std::filesystem::directory_iterator(path))
-	{
-		if (entry.is_directory())
+
+	try {
+		for (const auto& entry : std::filesystem::directory_iterator(path))
 		{
-			if (dirs != nullptr && (entry.path().filename().string()[0] != '.' || (entry.path().filename().string()[0] == '.' && entry.path().filename().string()[1] == '.')))
-				dirs->emplace_back(entry.path().filename().string());
-		}
-		else if (entry.is_symlink())
-		{
-			if (std::filesystem::is_directory(entry))
+			if (entry.is_directory())
 			{
 				if (dirs != nullptr && (entry.path().filename().string()[0] != '.' || (entry.path().filename().string()[0] == '.' && entry.path().filename().string()[1] == '.')))
 					dirs->emplace_back(entry.path().filename().string());
 			}
-			else
+			else if (entry.is_symlink())
 			{
-				if (files != nullptr && entry.path().filename().string()[0] != '.')
-					files->emplace_back(entry.path().filename().string());
+				if (std::filesystem::is_directory(entry))
+				{
+					if (dirs != nullptr && (entry.path().filename().string()[0] != '.' || (entry.path().filename().string()[0] == '.' && entry.path().filename().string()[1] == '.')))
+						dirs->emplace_back(entry.path().filename().string());
+				}
+				else
+				{
+					if (files != nullptr && entry.path().filename().string()[0] != '.')
+						files->emplace_back(entry.path().filename().string());
+				}
 			}
+			else if (files != nullptr && entry.path().filename().string()[0] != '.')
+				files->emplace_back(entry.path().filename().string());
 		}
-		else if (files != nullptr && entry.path().filename().string()[0] != '.')
-			files->emplace_back(entry.path().filename().string());
+	}
+	catch (const std::filesystem::filesystem_error& e) {
+		write_log("read_directory error: %s\n", e.what());
 	}
 
 	if (dirs != nullptr && !dirs->empty() && (*dirs)[0] == ".")
@@ -4190,6 +4241,8 @@ std::string get_data_directory(bool portable_mode)
 		}
 	}
 	return directory + "/Resources/data/";
+#elif defined(__ANDROID__)
+    return prefix_with_application_directory_path("data/");
 #else
 	if (portable_mode)
 	{
@@ -4238,6 +4291,9 @@ std::string get_home_directory(const bool portable_mode)
 		getcwd(tmp, MAX_DPATH);
 		return {tmp};
 	}
+#if defined(__ANDROID__)
+    return prefix_with_application_directory_path("");
+#endif
 	const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
 	const auto user_home_dir = getenv("HOME");
 
@@ -5027,8 +5083,8 @@ static void makeverstr(TCHAR* s)
 	}
 }
 
-int main(int argc, char* argv[])
-{
+
+int main(int argc, char* argv[]) {
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
@@ -5109,12 +5165,16 @@ int main(int argc, char* argv[])
 	if (sigaction(SIGSEGV, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGSEGV).\n");
+#ifndef __ANDROID__
 		abort();
+#endif
 	}
 	if (sigaction(SIGILL, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGILL).\n");
+#ifndef __ANDROID__
 		abort();
+#endif
 	}
 
 	memset(&action, 0, sizeof action);
@@ -5123,7 +5183,9 @@ int main(int argc, char* argv[])
 	if (sigaction(SIGBUS, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGBUS).\n");
+#ifndef __ANDROID__
 		abort();
+#endif
 	}
 
 	memset(&action, 0, sizeof action);
@@ -5132,7 +5194,9 @@ int main(int argc, char* argv[])
 	if (sigaction(SIGTERM, &action, nullptr) < 0)
 	{
 		printf("Failed to set signal handler (SIGTERM).\n");
+#ifndef __ANDROID__
 		abort();
+#endif
 	}
 #endif
 
@@ -5200,10 +5264,10 @@ int main(int argc, char* argv[])
 
 	// We'll just call SDL and do a rudimentary state check instead
 	int caps = SDL_GetModState();
-		caps = caps & KMOD_CAPS;
+	caps = caps & KMOD_CAPS;
 	if(caps == KMOD_CAPS)
 		// 0x04 is LED_CAP in the Linux file which is used here to trigger it
-		kbd_led_status |= ~0x04;
+			kbd_led_status |= ~0x04;
 	else
 		kbd_led_status &= ~0x04;
 #endif
@@ -5235,30 +5299,32 @@ int main(int argc, char* argv[])
 	enummidiports();
 
 #ifdef __APPLE__
-    // On macOS, if the user double-clicked a file associated with the app, we need to catch the SDL_DROPFILE event
-    // and pass it as a command line argument to the main function.
-    SDL_PumpEvents();
-    SDL_Event event;
-    if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
-    {
-        write_log("Intercepted SDL_DROPFILE event: %s\n", event.drop.file);
-        char** new_argv = new char*[argc + 2];
-        for (int i = 0; i < argc; ++i)
-        {
-            new_argv[i] = argv[i];
-        }
-        new_argv[argc] = event.drop.file;
-        new_argv[argc + 1] = nullptr;
-        real_main(argc + 1, new_argv);
-        SDL_free(event.drop.file);
-        delete[] new_argv;
-    }
-    else
-    {
-        real_main(argc, argv);
-    }
+	// On macOS, if the user double-clicked a file associated with the app, we need to catch the SDL_DROPFILE event
+	// and pass it as a command line argument to the main function.
+	SDL_PumpEvents();
+	SDL_Event event;
+	if (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_DROPFILE, SDL_DROPFILE) > 0)
+	{
+		write_log("Intercepted SDL_DROPFILE event: %s\n", event.drop.file);
+		char** new_argv = new char*[argc + 2];
+		for (int i = 0; i < argc; ++i)
+		{
+			new_argv[i] = argv[i];
+		}
+		new_argv[argc] = event.drop.file;
+		new_argv[argc + 1] = nullptr;
+		real_main(argc + 1, new_argv);
+		SDL_free(event.drop.file);
+		delete[] new_argv;
+	}
+	else
+	{
+		real_main(argc, argv);
+	}
 #else
-	real_main(argc, argv);
+	{
+		real_main(argc, argv);
+	}
 #endif
 
 #ifdef USE_GPIOD

@@ -1,0 +1,69 @@
+name: Autotools distcheck and ABI check
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  distcheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ietf-wg-cellar/flac-test-files
+          path: ./test-files
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libtool-bin libogg-dev doxygen libxml2-utils w3c-sgml-lib pandoc abi-compliance-checker vorbis-tools oggz-tools
+
+      - name: Build with Autotools
+        run: |
+          ./autogen.sh
+          ./configure
+
+      - name: Build and check source package
+        run: make distcheck
+
+      - name: Compute checksum
+        run: sha256sum ./flac-*.tar.xz
+
+      - name: Check binary compatibility
+        run: |
+          make
+          unxz --keep test/abi/abi-libFLAC-1.5.0.dump.xz
+          unxz --keep test/abi/abi-libFLAC++-1.5.0.dump.xz
+          abi-compliance-checker -l flac -old test/abi/abi-libFLAC-1.5.0.dump -new test/abi/abi-descriptor-libFLAC-1.5.0.xml
+          abi-compliance-checker -l flac++ -old test/abi/abi-libFLAC++-1.5.0.dump -new test/abi/abi-descriptor-libFLAC++-1.5.0.xml
+
+      - name: Check with flac test files
+        run: ./src/flac/flac -t test-files/subset/*.flac test-files/uncommon/0[5-9]*.flac test-files/uncommon/10*.flac
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-tarball
+          path: |
+            ./flac-*.tar.xz
+
+      - name: Upload ABI compliance reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: flac-${{ github.sha }}-${{ github.run_id }}-compat
+          path: |
+            ./compat_reports
+
+      - name: Upload logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: flac-${{ github.sha }}-${{ github.run_id }}-logs
+          path: |
+            ./flac-**/**/*.log
+            ./compat_reports

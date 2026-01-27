@@ -14,6 +14,10 @@
 #include <poll.h>
 #include <clocale>
 
+#if defined(ANDROID)
+#include <android/log.h>
+#endif
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
@@ -567,7 +571,11 @@ void write_log(const char* format, ...)
 	if (SHOW_CONSOLE || console_logging) {
 		if (lfdetected && ts)
 			writeconsole(ts);
+#if defined(ANDROID)
+		__android_log_print(ANDROID_LOG_INFO, "Amiberry", "%s", bufp);
+#else
 		writeconsole(bufp);
+#endif
 	}
 	if (debugfile) {
 		if (lfdetected && ts)
