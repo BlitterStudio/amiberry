@@ -142,18 +142,11 @@ if(ANDROID)
             portmidi
             GIT_REPOSITORY https://github.com/PortMidi/portmidi.git
             GIT_TAG        v2.0.4
-        )
-        FetchContent_MakeAvailable(portmidi)
-
-        # PortMidi uses bzero() in pmutil.c; Android builds treat implicit decls as errors.
-        # Replace bzero() with memset() in the fetched sources.
-        if (EXISTS "${portmidi_SOURCE_DIR}/pm_common/pmutil.c")
-            file(READ "${portmidi_SOURCE_DIR}/pm_common/pmutil.c" _pmutil_c)
-            if (_pmutil_c MATCHES "\\bbzero\\b")
-                string(REPLACE "bzero(" "memset(" _pmutil_c "${_pmutil_c}")
-                file(WRITE "${portmidi_SOURCE_DIR}/pm_common/pmutil.c" "${_pmutil_c}")
-            endif()
-        endif()
+            PATCH_COMMAND  ${CMAKE_COMMAND} -E echo "Patching PortMidi for Android (bzero -> memset)" &&
+                           ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> git apply --ignore-space-change --ignore-whitespace
+                               "${CMAKE_SOURCE_DIR}/cmake/patches/portmidi-android-bzero.patch"
+         )
+         FetchContent_MakeAvailable(portmidi)
 
         target_link_libraries(${PROJECT_NAME} PRIVATE portmidi)
 
