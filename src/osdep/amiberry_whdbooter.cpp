@@ -24,6 +24,7 @@
 #include "drawing.h"
 #include "midiemu.h"
 #include "registry.h"
+#include "zfile.h"
 
 extern void set_last_active_config(const char* filename);
 extern std::string current_dir;
@@ -75,6 +76,66 @@ std::filesystem::path kickstart_path;
 std::string uae_config;
 std::string whd_config;
 std::string whd_startup;
+
+static std::string to_lower_copy(std::string value)
+{
+	std::transform(value.begin(), value.end(), value.begin(),
+		[](unsigned char c) { return static_cast<char>(tolower(c)); });
+	return value;
+}
+
+static bool dir_has_rom(const std::filesystem::path& dir)
+{
+	if (dir.empty() || !std::filesystem::exists(dir))
+		return false;
+	for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+		if (!entry.is_regular_file())
+			continue;
+		const auto ext = to_lower_copy(entry.path().extension().string());
+		if (ext == ".rom")
+			return true;
+	}
+	return false;
+}
+
+static bool find_slave_in_archive(const char* filepath, std::string& out_subpath, std::string& out_slave)
+{
+	if (!filepath || !*filepath)
+		return false;
+
+	const std::string base = to_lower_copy(remove_file_extension(extract_filename(filepath)));
+	struct zdirectory* zd = zfile_opendir_archive(filepath, ZFD_ALL);
+	if (!zd)
+		return false;
+
+	bool found = false;
+	bool matched_base = false;
+	TCHAR entry[MAX_DPATH];
+	while (zfile_readdir_archive(zd, entry, true)) {
+		std::string path = entry;
+		const std::string lower = to_lower_copy(path);
+		if (lower.size() < 6 || lower.rfind(".slave") != lower.size() - 6)
+			continue;
+
+		const auto slash = path.find_last_of("/\\");
+		std::string dir = (slash == std::string::npos) ? "" : path.substr(0, slash);
+		std::string file = (slash == std::string::npos) ? path : path.substr(slash + 1);
+		const std::string file_base = to_lower_copy(remove_file_extension(file));
+		const bool exact = (!base.empty() && file_base == base);
+
+		if (!found || (exact && !matched_base)) {
+			out_subpath = dir;
+			out_slave = file;
+			found = true;
+			matched_base = exact;
+			if (matched_base)
+				break;
+		}
+	}
+
+	zfile_closedir_archive(zd);
+	return found;
+}
 
 static TCHAR* parse_text(const TCHAR* s)
 {
@@ -252,8 +313,22 @@ void symlink_roms(struct uae_prefs* prefs)
 	current_dir = home_dir;
 
 	// are we using save-data/ ?
-	kickstart_path = get_savedatapath(true);
-	kickstart_path /= "Kickstarts";
+	{
+		const char* whdboot_save = getenv("WHDBOOT_SAVE_DATA");
+		if (whdboot_save && *whdboot_save)
+			kickstart_path = whdboot_save;
+		else
+			kickstart_path = get_savedatapath(false);
+		kickstart_path /= "Kickstarts";
+	}
+	if (!dir_has_rom(kickstart_path)) {
+		const char* whdboot_save = getenv("AMIBERRY_WHDBOOT_SAVE_DATA");
+		if (whdboot_save && *whdboot_save) {
+			std::filesystem::path alt = std::filesystem::path(whdboot_save) / "Kickstarts";
+			if (dir_has_rom(alt))
+				kickstart_path = alt;
+		}
+	}
 
 	if (!std::filesystem::exists(kickstart_path)) {
 		// otherwise, use the old route
@@ -1212,6 +1287,19 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
+#ifdef LIBRETRO
+	const char* whdboot_override = getenv("AMIBERRY_WHDBOOT_PATH");
+	if (whdboot_override && *whdboot_override)
+		set_whdbootpath(whdboot_override);
+	const char* whdboot_save = getenv("AMIBERRY_WHDBOOT_SAVE_DATA");
+	if (whdboot_save && *whdboot_save) {
+#ifdef _WIN32
+		_putenv_s("WHDBOOT_SAVE_DATA", whdboot_save);
+#else
+		setenv("WHDBOOT_SAVE_DATA", whdboot_save, 1);
+#endif
+	}
+#endif
 	write_log("WHDBooter Launched\n");
 	if (amiberry_options.use_jst_instead_of_whd)
 		write_log("WHDBooter - Using JST instead of WHDLoad\n");
@@ -1219,6 +1307,14 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	conf_path = get_configuration_path();
 	whdbooter_path = get_whdbootpath();
 	save_path = get_savedatapath(false);
+	if (!save_path.empty()) {
+		try {
+			std::filesystem::create_directories(save_path);
+			std::filesystem::create_directories(save_path / "Savegames");
+		} catch (...) {
+			// best effort
+		}
+	}
 
 	symlink_roms(prefs);
 
@@ -1245,8 +1341,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	whd_startup = "/tmp/amiberry/s/startup-sequence";
 	std::filesystem::remove(whd_startup);
 
-	// are we using save-data/ ?
-	kickstart_path = std::filesystem::path(get_savedatapath(true)) / "Kickstarts";
+	// Use WHDBOOT_SAVE_DATA override when available (libretro sets this)
+	kickstart_path = std::filesystem::path(get_savedatapath(false)) / "Kickstarts";
 
 	// LOAD GAME SPECIFICS
 	whd_path = whdbooter_path / "game-data";
@@ -1270,6 +1366,22 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
+	}
+
+	if (whdload_prefs.selected_slave.filename.empty()) {
+		std::string sub_path;
+		std::string slave_file;
+		if (find_slave_in_archive(filepath, sub_path, slave_file)) {
+			whdload_prefs.sub_path = sub_path;
+			whdload_prefs.slave_default = slave_file;
+			whdload_prefs.selected_slave.filename = slave_file;
+			whdload_prefs.slave_count = 1;
+			whdload_prefs.slaves.clear();
+			whdload_prefs.slaves.emplace_back(whdload_prefs.selected_slave);
+			write_log("WHDBooter - Fallback slave: %s (subpath '%s')\n",
+				whdload_prefs.selected_slave.filename.c_str(),
+				whdload_prefs.sub_path.c_str());
+		}
 	}
 
 	// If we have a slave, create a startup-sequence
@@ -1308,9 +1420,27 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		}
 
 		// create a symlink for DEVS in /tmp/amiberry/
-		if (!std::filesystem::exists("/tmp/amiberry/devs/Kickstarts")) {
+		const std::filesystem::path devs_link = "/tmp/amiberry/devs/Kickstarts";
+		bool needs_link = true;
+		if (std::filesystem::exists(devs_link)) {
+			if (std::filesystem::is_symlink(devs_link)) {
+				try {
+					const auto current = std::filesystem::read_symlink(devs_link);
+					if (current == kickstart_path)
+						needs_link = false;
+					else
+						std::filesystem::remove(devs_link);
+				} catch (...) {
+					std::filesystem::remove(devs_link);
+				}
+			} else {
+				// if it's a real directory, leave it as-is
+				needs_link = false;
+			}
+		}
+		if (needs_link) {
 			write_log("WHDBooter - Creating symlink to Kickstarts in /tmp/amiberry/devs/ \n");
-			std::filesystem::create_symlink(kickstart_path, "/tmp/amiberry/devs/Kickstarts");
+			std::filesystem::create_symlink(kickstart_path, devs_link);
 		}
 	}
 #if DEBUG

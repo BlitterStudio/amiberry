@@ -1399,6 +1399,8 @@ void check_error_sdl(const bool check, const char* message)
 
 static int real_main2 (int argc, TCHAR **argv)
 {
+#ifdef LIBRETRO
+#endif
 	set_config_changed();
 	if (restart_config[0]) {
 		default_prefs (&currprefs, true, 0);
@@ -1408,18 +1410,26 @@ static int real_main2 (int argc, TCHAR **argv)
 	if (!graphics_setup()) {
 		abort();
 	}
+#ifdef LIBRETRO
+#endif
 
 	event_init();
+#ifdef LIBRETRO
+#endif
 
 	if (restart_config[0]) {
 		parse_cmdline_and_init_file(argc, argv);
 	} else {
 		copy_prefs(&changed_prefs, &currprefs);
 	}
+#ifdef LIBRETRO
+#endif
 	if (!machdep_init()) {
 		restart_program = 0;
 		return -1;
 	}
+#ifdef LIBRETRO
+#endif
 
 	if (console_emulation) {
 		consolehook_config (&currprefs, console_path[0] ? console_path : NULL);
@@ -1430,7 +1440,11 @@ static int real_main2 (int argc, TCHAR **argv)
 		write_log (_T("Sound driver unavailable: Sound output disabled\n"));
 		currprefs.produce_sound = 0;
 	}
+#ifdef LIBRETRO
+#endif
 	inputdevice_init ();
+#ifdef LIBRETRO
+#endif
 
 	copy_prefs(&currprefs, &changed_prefs);
 	inputdevice_updateconfig(&currprefs, &changed_prefs);
@@ -1453,6 +1467,8 @@ static int real_main2 (int argc, TCHAR **argv)
 			return 1;
 		}
 	}
+#ifdef LIBRETRO
+#endif
 
 	memset (&gui_data, 0, sizeof gui_data);
 	gui_data.cd = -1;
@@ -1470,6 +1486,8 @@ static int real_main2 (int argc, TCHAR **argv)
 		return 0;
 	}
 #endif
+#ifdef LIBRETRO
+#endif
 #ifdef WITH_LUA
 	uae_lua_init ();
 #endif
@@ -1481,6 +1499,8 @@ static int real_main2 (int argc, TCHAR **argv)
 	uaerandomizeseed();
 	copy_prefs(&currprefs, &changed_prefs);
 	target_run ();
+#ifdef LIBRETRO
+#endif
 	/* force sound settings change */
 	currprefs.produce_sound = 0;
 
@@ -1488,12 +1508,16 @@ static int real_main2 (int argc, TCHAR **argv)
 	savestate_init ();
 #endif
 	keybuf_init (); /* Must come after init_joystick */
+#ifdef LIBRETRO
+#endif
 
 #ifdef DEBUGGER
 	disasm_init();
 #endif
 	memory_hardreset (2);
 	memory_reset ();
+#ifdef LIBRETRO
+#endif
 
 #ifdef AUTOCONFIG
 	native2amiga_install ();
@@ -1509,6 +1533,8 @@ static int real_main2 (int argc, TCHAR **argv)
 
 	reset_frame_rate_hack ();
 	init_m68k (); /* must come after reset_frame_rate_hack (); */
+#ifdef LIBRETRO
+#endif
 
 	if (graphics_init (true)) {
 	// This never gets triggered anyway, debuggable always returns 0 in WinUAE
@@ -1523,7 +1549,11 @@ static int real_main2 (int argc, TCHAR **argv)
 			}
 			currprefs.produce_sound = 0;
 		}
+#ifdef LIBRETRO
+#endif
 		start_program ();
+#ifdef LIBRETRO
+#endif
 	}
 	return 0;
 }

@@ -10,6 +10,7 @@
 #include <math.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -25,6 +26,7 @@
 #include "gui.h"
 #include "amiberry_gfx.h"
 #include "zfile.h"
+#include "target.h"
 
 struct AmigaMonitor;
 extern struct AmigaMonitor AMonitors[];
@@ -95,6 +97,12 @@ static void input_log_file_write(const char* fmt, ...);
 static std::string system_dir;
 static std::string save_dir;
 static std::string content_dir;
+static std::string whdload_temp_path;
+static std::string cached_model;
+static std::string cached_kickstart_override;
+
+static struct retro_vfs_interface vfs_iface = {};
+static bool vfs_available = false;
 
 struct DiskImage {
 	std::string path;
@@ -109,6 +117,151 @@ static std::string initial_disk_path;
 static unsigned last_disk_index = 0;
 static bool last_disk_ejected = false;
 static std::string disk_command;
+
+struct CheatOp {
+	uaecptr addr;
+	uae_u32 value;
+	uae_u8 size;
+};
+
+struct CheatEntry {
+	bool enabled = false;
+	std::vector<CheatOp> ops;
+};
+
+static std::vector<CheatEntry> cheat_entries;
+
+static const char *skip_cheat_separators(const char *p)
+{
+	while (*p && (isspace((unsigned char)*p) || *p == ':' || *p == '=' || *p == ',' || *p == '|' || *p == '\t'))
+		p++;
+	return p;
+}
+
+static bool parse_hex_token(const char *&p, uae_u32 &out)
+{
+	p = skip_cheat_separators(p);
+	if (*p == '$')
+		p++;
+	if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X'))
+		p += 2;
+
+	uae_u32 value = 0;
+	int digits = 0;
+	while (*p && isxdigit((unsigned char)*p)) {
+		char c = *p;
+		uae_u32 v = 0;
+		if (c >= '0' && c <= '9')
+			v = static_cast<uae_u32>(c - '0');
+		else if (c >= 'a' && c <= 'f')
+			v = static_cast<uae_u32>(c - 'a' + 10);
+		else if (c >= 'A' && c <= 'F')
+			v = static_cast<uae_u32>(c - 'A' + 10);
+		value = (value << 4) | v;
+		p++;
+		digits++;
+	}
+	if (digits == 0)
+		return false;
+
+	out = value;
+	return true;
+}
+
+static bool parse_size_token(const char *&p, uae_u8 &out_size)
+{
+	const char *orig = p;
+	p = skip_cheat_separators(p);
+	if (!*p || *p == '+' || *p == ';')
+		return false;
+
+	char *end = nullptr;
+	unsigned long sz = strtoul(p, &end, 0);
+	if (end == p) {
+		p = orig;
+		return false;
+	}
+	p = end;
+	if (sz == 8 || sz == 16 || sz == 32)
+		sz /= 8;
+	if (sz != 1 && sz != 2 && sz != 4)
+		return false;
+	out_size = static_cast<uae_u8>(sz);
+	return true;
+}
+
+static bool parse_cheat_code(const char *code, std::vector<CheatOp> &ops)
+{
+	if (!code)
+		return false;
+
+	const char *p = code;
+	while (*p) {
+		p = skip_cheat_separators(p);
+		if (!*p)
+			break;
+		if (*p == '+' || *p == ';') {
+			p++;
+			continue;
+		}
+
+		uae_u32 addr = 0;
+		uae_u32 value = 0;
+		if (!parse_hex_token(p, addr))
+			return false;
+		if (!parse_hex_token(p, value))
+			return false;
+
+		uae_u8 size = 0;
+		const char *size_start = p;
+		if (!parse_size_token(p, size))
+			p = size_start;
+
+		if (size == 0) {
+			if (value <= 0xFF)
+				size = 1;
+			else if (value <= 0xFFFF)
+				size = 2;
+			else
+				size = 4;
+		}
+
+		ops.push_back({ static_cast<uaecptr>(addr), value, size });
+
+		p = skip_cheat_separators(p);
+		if (*p == '+' || *p == ';')
+			p++;
+	}
+	return !ops.empty();
+}
+
+static void apply_cheats()
+{
+	if (cheat_entries.empty())
+		return;
+
+	for (const auto &cheat : cheat_entries) {
+		if (!cheat.enabled)
+			continue;
+		for (const auto &op : cheat.ops) {
+			if (!valid_address(op.addr, op.size))
+				continue;
+			switch (op.size) {
+				case 1:
+					put_byte_compatible(op.addr, op.value);
+					break;
+				case 2:
+					put_word_compatible(op.addr, op.value);
+					break;
+				case 4:
+					put_long_compatible(op.addr, op.value);
+					break;
+				default:
+					break;
+			}
+		}
+	}
+}
 
 static void update_memory_map()
 {
@@ -545,6 +698,131 @@ static std::string path_join(const std::string& dir, const std::string& file)
 	return dir + "/" + file;
 }
 
+static std::string to_lower_copy(std::string value)
+{
+	std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return static_cast<char>(tolower(c)); });
+	return value;
+}
+
+static std::string path_extension_lower(const std::string& path)
+{
+	const auto pos = path.find_last_of('.');
+	if (pos == std::string::npos)
+		return std::string();
+	return to_lower_copy(path.substr(pos + 1));
+}
+
+static std::string sanitize_filename(const std::string& name)
+{
+	std::string out = name;
+	for (char& ch : out) {
+		if (ch == '/' || ch == '\\' || ch == ':')
+			ch = '_';
+	}
+	return out;
+}
+
+static bool has_non_ascii(const std::string& value)
+{
+	for (unsigned char ch : value) {
+		if (ch >= 0x80)
+			return true;
+	}
+	return false;
+}
+
+static bool vfs_write_file(const char* path, const void* data, size_t size)
+{
+	if (!path || !*path || !data || size == 0)
+		return false;
+
+	if (vfs_available && vfs_iface.open && vfs_iface.write && vfs_iface.close) {
+		struct retro_vfs_file_handle* fp = vfs_iface.open(path, RETRO_VFS_FILE_ACCESS_WRITE, RETRO_VFS_FILE_ACCESS_HINT_NONE);
+		if (!fp)
+			return false;
+		const int64_t written = vfs_iface.write(fp, data, size);
+		vfs_iface.close(fp);
+		return written == static_cast<int64_t>(size);
+	}
+
+	FILE* f = fopen(path, "wb");
+	if (!f)
+		return false;
+	const size_t written = fwrite(data, 1, size, f);
+	fclose(f);
+	return written == size;
+}
+
+static bool vfs_read_all(const char* path, std::vector<uint8_t>& out)
+{
+	if (!vfs_available || !vfs_iface.open || !vfs_iface.read || !vfs_iface.close)
+		return false;
+
+	struct retro_vfs_file_handle* fp = vfs_iface.open(path, RETRO_VFS_FILE_ACCESS_READ, RETRO_VFS_FILE_ACCESS_HINT_NONE);
+	if (!fp)
+		return false;
+
+	int64_t size = -1;
+	if (vfs_iface.size)
+		size = vfs_iface.size(fp);
+
+	if (size > 0) {
+		out.resize(static_cast<size_t>(size));
+		const int64_t read = vfs_iface.read(fp, out.data(), static_cast<uint64_t>(size));
+		vfs_iface.close(fp);
+		if (read != size)
+			return false;
+		return true;
+	}
+
+	const size_t chunk = 1 << 16;
+	std::vector<uint8_t> buffer(chunk);
+	out.clear();
+	while (true) {
+		const int64_t read = vfs_iface.read(fp, buffer.data(), buffer.size());
+		if (read <= 0)
+			break;
+		out.insert(out.end(), buffer.begin(), buffer.begin() + static_cast<size_t>(read));
+	}
+	vfs_iface.close(fp);
+	return !out.empty();
+}
+
+static void setup_whdload_paths()
+{
+	if (!system_dir.empty())
+		set_whdbootpath(system_dir);
+	else if (!save_dir.empty())
+		set_whdbootpath(save_dir);
+	else if (!content_dir.empty())
+		set_whdbootpath(content_dir);
+
+	const char* whdboot_env = nullptr;
+	if (!system_dir.empty())
+		whdboot_env = system_dir.c_str();
+	else if (!save_dir.empty())
+		whdboot_env = save_dir.c_str();
+	else if (!content_dir.empty())
+		whdboot_env = content_dir.c_str();
+	if (whdboot_env && *whdboot_env) {
+#ifdef _WIN32
+		_putenv_s("AMIBERRY_WHDBOOT_PATH", whdboot_env);
+#else
+		setenv("AMIBERRY_WHDBOOT_PATH", whdboot_env, 1);
+#endif
+	}
+
+	if (!save_dir.empty()) {
+#ifdef _WIN32
+		_putenv_s("WHDBOOT_SAVE_DATA", save_dir.c_str());
+		_putenv_s("AMIBERRY_WHDBOOT_SAVE_DATA", save_dir.c_str());
+#else
+		setenv("WHDBOOT_SAVE_DATA", save_dir.c_str(), 1);
+		setenv("AMIBERRY_WHDBOOT_SAVE_DATA", save_dir.c_str(), 1);
+#endif
+	}
+}
+
 static std::string trim_copy(const char* input)
 {
 	if (!input)
@@ -561,6 +839,14 @@ static std::string trim_copy(const char* input)
 static bool file_readable(const char* path)
 {
 	return path && *path && access(path, R_OK) == 0;
+}
+
+static bool dir_exists(const std::string& path)
+{
+	if (path.empty())
+		return false;
+	struct stat st {};
+	return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
 }
 
 static bool find_kickstart_in_system_dir(const char* model, char* out, size_t out_size)
@@ -939,9 +1225,16 @@ static const char* get_option_value(const char* key)
 	return nullptr;
 }
 
-static bool resolve_kickstart_override(char* out, size_t out_size)
+static void snapshot_core_options()
 {
-	const char* opt = get_option_value("amiberry_kickstart");
+	const char* model = get_option_value("amiberry_model");
+	cached_model = model ? model : "";
+	const char* kick = get_option_value("amiberry_kickstart");
+	cached_kickstart_override = kick ? kick : "";
+}
+
+static bool resolve_kickstart_override_value(const char* opt, char* out, size_t out_size)
+{
 	if (!opt || !*opt || strcmp(opt, "auto") == 0)
 		return false;
 
@@ -959,6 +1252,11 @@ static bool resolve_kickstart_override(char* out, size_t out_size)
 	strncpy(out, path.c_str(), out_size - 1);
 	out[out_size - 1] = '\0';
 	return true;
+}
+
+static bool resolve_kickstart_override(char* out, size_t out_size)
+{
+	return resolve_kickstart_override_value(get_option_value("amiberry_kickstart"), out, out_size);
 }
 
 static unsigned device_from_option(const char* value, unsigned fallback)
@@ -1431,31 +1729,57 @@ static void core_entry(void)
 	std::vector<char*> argv;
 	argv.reserve(32);
 	argv.push_back(strdup("amiberry"));
+	std::string game_ext;
+	if (game_path[0])
+		game_ext = path_extension_lower(game_path);
+	const bool is_whdload = (game_ext == "lha" || game_ext == "lzh");
+	const bool user_kick_override = !cached_kickstart_override.empty() && cached_kickstart_override != "auto";
 
-	struct retro_variable var;
-	var.key = "amiberry_model";
-	const char* model = nullptr;
-	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	const char* model = cached_model.empty() ? nullptr : cached_model.c_str();
+	if (model)
 	{
-		model = var.value;
 		argv.push_back(strdup("--model"));
-		argv.push_back(strdup(var.value));
+		argv.push_back(strdup(model));
 	}
 
 	argv.push_back(strdup("-G")); // No GUI
 
-	char kick_path[1024] = {0};
-	if (resolve_kickstart_override(kick_path, sizeof(kick_path)) ||
-		find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path)) ||
-		read_kickstart_path(kick_path, sizeof(kick_path))) {
-		argv.push_back(strdup("-r"));
-		argv.push_back(strdup(kick_path));
-		if (log_cb)
-			log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
+	if (!is_whdload || user_kick_override)
+	{
+		char kick_path[1024] = {0};
+		if (resolve_kickstart_override_value(cached_kickstart_override.c_str(), kick_path, sizeof(kick_path)) ||
+			find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path))
+#ifndef LIBRETRO
+			|| read_kickstart_path(kick_path, sizeof(kick_path))
+#endif
+		) {
+			argv.push_back(strdup("-r"));
+			argv.push_back(strdup(kick_path));
+			if (log_cb)
+				log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
+		}
 	}
 
 	if (!system_dir.empty()) {
-		const std::string rom_path = "rom_path=" + system_dir;
+		std::string rom_path_value;
+		if (!save_dir.empty()) {
+			const std::string kick_dir = path_join(save_dir, "Kickstarts");
+			if (dir_exists(kick_dir))
+				rom_path_value = kick_dir;
+		}
+		if (rom_path_value.empty()) {
+			const std::string kick_dir = path_join(system_dir, "Kickstarts");
+			if (dir_exists(kick_dir))
+				rom_path_value = kick_dir;
+		}
+		if (rom_path_value.empty()) {
+			const std::string kick_dir = path_join(system_dir, "save-data/Kickstarts");
+			if (dir_exists(kick_dir))
+				rom_path_value = kick_dir;
+		}
+		if (rom_path_value.empty())
+			rom_path_value = system_dir;
+		const std::string rom_path = "rom_path=" + rom_path_value;
 		argv.push_back(strdup("-s"));
 		argv.push_back(strdup(rom_path.c_str()));
 	}
@@ -1476,7 +1800,14 @@ static void core_entry(void)
 
 	if (game_path[0])
 	{
-		argv.push_back(strdup(game_path));
+		if (is_whdload) {
+			if (log_cb)
+				log_cb(RETRO_LOG_INFO, "WHDLoad autoload: %s\n", game_path);
+			argv.push_back(strdup("--autoload"));
+			argv.push_back(strdup(game_path));
+		} else {
+			argv.push_back(strdup(game_path));
+		}
 	}
 	argv.push_back(nullptr);
 
@@ -1493,6 +1824,9 @@ void retro_init(void)
 	
 	if (!core_fiber)
 		core_fiber = co_create(65536 * sizeof(void*), core_entry);
+
+	if (log_cb)
+		log_cb(RETRO_LOG_INFO, "retro_init: main_fiber=%p core_fiber=%p\n", (void*)main_fiber, (void*)core_fiber);
 
 	core_started = false;
 	memory_map_set = false;
@@ -1515,6 +1849,7 @@ void retro_deinit(void)
 	core_started = false;
 	memory_map_set = false;
 	ff_override_active = false;
+	cheat_entries.clear();
 }
 
 unsigned retro_api_version(void)
@@ -1583,6 +1918,26 @@ void retro_set_environment(retro_environment_t cb)
 			content_dir = dir;
 		if (save_dir.empty())
 			save_dir = system_dir;
+	}
+
+	{
+		struct retro_vfs_interface_info vfs_info = {};
+		vfs_info.required_interface_version = 3;
+		if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, &vfs_info) && vfs_info.iface) {
+			vfs_iface = *vfs_info.iface;
+			vfs_available = true;
+		} else {
+			memset(&vfs_iface, 0, sizeof(vfs_iface));
+			vfs_available = false;
+		}
+	}
+
+	{
+		static const struct retro_system_content_info_override overrides[] = {
+			{ "lha", true, false },
+			{ nullptr, false, false }
+		};
+		environ_cb(RETRO_ENVIRONMENT_SET_CONTENT_INFO_OVERRIDE, (void*)overrides);
 	}
 
 	ff_override_supported = environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, NULL);
@@ -1724,6 +2079,8 @@ void retro_reset(void)
 void retro_run(void)
 {
 	if (!core_started) {
+		if (log_cb)
+			log_cb(RETRO_LOG_INFO, "retro_run: starting core, core_fiber=%p\n", (void*)core_fiber);
 		co_switch(core_fiber);
 		core_started = true;
 		update_memory_map();
@@ -1764,6 +2121,7 @@ void retro_run(void)
 	}
 	poll_input();
 	co_switch(core_fiber);
+	apply_cheats();
 	update_memory_map();
 	update_led_interface();
 	update_geometry();
@@ -1771,9 +2129,104 @@ void retro_run(void)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-	if (info && info->path)
+	const struct retro_game_info_ext* info_ext = nullptr;
+	if (environ_cb)
+		environ_cb(RETRO_ENVIRONMENT_GET_GAME_INFO_EXT, &info_ext);
+	snapshot_core_options();
+
+	std::string path;
+	if (info_ext && info_ext->full_path && *info_ext->full_path)
+		path = info_ext->full_path;
+	else if (info && info->path)
+		path = info->path;
+
+	const std::string ext = info_ext && info_ext->ext ? info_ext->ext : path_extension_lower(path);
+	const bool is_whdload = (ext == "lha" || ext == "lzh");
+
+	if (is_whdload) {
+		if (log_cb) {
+			log_cb(RETRO_LOG_INFO, "WHDLoad content detected: path='%s' ext='%s'\n",
+				path.c_str(), ext.c_str());
+			if (info_ext)
+				log_cb(RETRO_LOG_INFO, "WHDLoad info_ext: full_path='%s' archive_path='%s' archive_file='%s' file_in_archive=%d size=%zu\n",
+					info_ext->full_path ? info_ext->full_path : "",
+					info_ext->archive_path ? info_ext->archive_path : "",
+					info_ext->archive_file ? info_ext->archive_file : "",
+					info_ext->file_in_archive ? 1 : 0,
+					info_ext->size);
+		}
+		setup_whdload_paths();
+
+		std::string whd_path = path;
+		bool extracted = false;
+
+		if (info_ext && info_ext->data && info_ext->size > 0 &&
+			(info_ext->file_in_archive || !info_ext->full_path || !*info_ext->full_path)) {
+			const std::string base = info_ext->name ? info_ext->name : "whdload";
+			const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
+			const std::string out_file = "whdload_" + sanitize_filename(base) + "." + (info_ext->ext ? info_ext->ext : "lha");
+			const std::string out_path = path_join(out_dir, out_file);
+			if (vfs_write_file(out_path.c_str(), info_ext->data, info_ext->size)) {
+				whd_path = out_path;
+				extracted = true;
+			} else if (log_cb) {
+				log_cb(RETRO_LOG_WARN, "Failed to write WHDLoad data to %s\n", out_path.c_str());
+			}
+		} else if (info_ext && info_ext->file_in_archive && info_ext->archive_path && info_ext->archive_file) {
+			std::string vfs_path = std::string(info_ext->archive_path) + "#" + info_ext->archive_file;
+			std::vector<uint8_t> data;
+			if (vfs_read_all(vfs_path.c_str(), data)) {
+				const std::string base = info_ext->name ? info_ext->name : path_basename(info_ext->archive_file);
+				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
+				const std::string out_file = "whdload_" + sanitize_filename(base) + "." + ext;
+				const std::string out_path = path_join(out_dir, out_file);
+				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
+					whd_path = out_path;
+					extracted = true;
+				} else if (log_cb) {
+					log_cb(RETRO_LOG_WARN, "Failed to write WHDLoad file to %s\n", out_path.c_str());
+				}
+			}
+		}
+
+		if (!extracted && (has_non_ascii(whd_path) || !file_readable(whd_path.c_str()))) {
+			std::vector<uint8_t> data;
+			if (vfs_read_all(whd_path.c_str(), data)) {
+				const std::string base = path_basename(whd_path);
+				const std::string out_dir = !save_dir.empty() ? save_dir : (!system_dir.empty() ? system_dir : (!content_dir.empty() ? content_dir : "."));
+				const std::string out_file = "whdload_" + sanitize_filename(base);
+				const std::string out_path = path_join(out_dir, out_file);
+				if (vfs_write_file(out_path.c_str(), data.data(), data.size())) {
+					whd_path = out_path;
+					extracted = true;
+				} else if (log_cb) {
+					log_cb(RETRO_LOG_WARN, "Failed to write WHDLoad temp file to %s\n", out_path.c_str());
+				}
+			} else if (log_cb) {
+				log_cb(RETRO_LOG_WARN, "Failed to read WHDLoad path via VFS: %s\n", whd_path.c_str());
+			}
+		}
+
+		if (!whd_path.empty()) {
+			whdload_temp_path = extracted ? whd_path : std::string();
+			disk_images.clear();
+			disk_index = 0;
+			disk_ejected = false;
+			last_disk_index = 0;
+			last_disk_ejected = false;
+			DiskImage image;
+			image.path = whd_path;
+			disk_images.push_back(image);
+			strncpy(game_path, whd_path.c_str(), sizeof(game_path) - 1);
+			game_path[sizeof(game_path) - 1] = '\0';
+			if (log_cb)
+				log_cb(RETRO_LOG_INFO, "WHDLoad using path: %s\n", game_path);
+			return true;
+		}
+	}
+
+	if (!path.empty())
 	{
-		std::string path = info->path;
 		disk_images.clear();
 		disk_index = 0;
 		disk_ejected = false;
@@ -1781,8 +2234,8 @@ bool retro_load_game(const struct retro_game_info *info)
 		last_disk_ejected = false;
 
 		const auto ext_pos = path.find_last_of('.');
-		const std::string ext = (ext_pos == std::string::npos) ? "" : path.substr(ext_pos);
-		if (ext == ".m3u" || ext == ".m3u8") {
+		const std::string path_ext = (ext_pos == std::string::npos) ? "" : path.substr(ext_pos);
+		if (path_ext == ".m3u" || path_ext == ".m3u8") {
 			if (!parse_m3u(path.c_str(), disk_images)) {
 				if (log_cb)
 					log_cb(RETRO_LOG_WARN, "Failed to parse m3u, using content path\n");
@@ -1822,6 +2275,14 @@ bool retro_load_game(const struct retro_game_info *info)
 void retro_unload_game(void)
 {
 	uae_quit();
+	cheat_entries.clear();
+	if (!whdload_temp_path.empty()) {
+		if (vfs_available && vfs_iface.remove)
+			vfs_iface.remove(whdload_temp_path.c_str());
+		else
+			remove(whdload_temp_path.c_str());
+		whdload_temp_path.clear();
+	}
 }
 
 unsigned retro_get_region(void)
@@ -1902,8 +2363,28 @@ size_t retro_get_memory_size(unsigned id)
 
 void retro_cheat_reset(void)
 {
+	cheat_entries.clear();
 }
 
 void retro_cheat_set(unsigned index, bool enabled, const char *code)
 {
+	if (index >= cheat_entries.size())
+		cheat_entries.resize(index + 1);
+
+	CheatEntry &cheat = cheat_entries[index];
+	cheat.enabled = enabled;
+	cheat.ops.clear();
+
+	if (!code || !*code)
+		return;
+
+	if (!parse_cheat_code(code, cheat.ops)) {
+		cheat.enabled = false;
+		if (log_cb)
+			log_cb(RETRO_LOG_WARN, "Failed to parse cheat code: %s\n", code);
+		return;
+	}
+
+	if (log_cb)
+		log_cb(RETRO_LOG_INFO, "Cheat %u %s: %s\n", index, enabled ? "enabled" : "disabled", code);
 }
