@@ -84,6 +84,7 @@ else
 endif
 
 ifeq ($(platform), win)
+   FLAGS += -D_WIN32 -DWIN32 -D__MINGW32__ -D__MINGW64__
    ifneq ($(shell command -v x86_64-w64-mingw32-gcc 2>/dev/null),)
       CC ?= x86_64-w64-mingw32-gcc
       CXX ?= x86_64-w64-mingw32-g++

@@ -622,7 +622,7 @@ typedef unsigned short USHORT;
 #define _T(x)               x
 typedef char TCHAR;
 #endif
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__MINGW32__)
 #define _tzset()            tzset()
 #endif
 #define _timezone           timezone
