@@ -5177,14 +5177,14 @@ static uae_u16 get_word_020_prefetchf (uae_u32 pc)
 
 #ifdef WITH_THREADED_CPU
 static volatile int cpu_thread_active;
-static uae_sem_t cpu_in_sema, cpu_out_sema, cpu_wakeup_sema;
+uae_sem_t cpu_in_sema, cpu_out_sema, cpu_wakeup_sema;
 
 static volatile int cpu_thread_ilvl;
-static volatile uae_u32 cpu_thread_indirect_mode;
+static volatile uae_atomic cpu_thread_indirect_mode;
 static volatile uae_u32 cpu_thread_indirect_addr;
 static volatile uae_u32 cpu_thread_indirect_val;
 static volatile uae_u32 cpu_thread_indirect_size;
-static volatile uae_u32 cpu_thread_reset;
+static volatile uae_atomic cpu_thread_reset;
 static SDL_Thread* cpu_thread;
 static SDL_threadID cpu_thread_tid;
 
@@ -5197,35 +5197,53 @@ static int do_specialties_thread()
 	if (spcflags & SPCFLAG_MODE_CHANGE)
 		return 1;
 
+	if (spcflags & SPCFLAG_UAEINT) {
+		check_uae_int_request();
+		unset_special(SPCFLAG_UAEINT);
+	}
+
 #ifdef JIT
 	if (currprefs.cachesize) {
 		unset_special(SPCFLAG_END_COMPILE);
 	}
 #endif
 
-	if (spcflags & SPCFLAG_DOTRACE)
-		Exception(9);
+	if (spcflags & SPCFLAG_MMURESTART) {
+		unset_special(SPCFLAG_MMURESTART);
+		if (spcflags & SPCFLAG_TRACE) {
+			do_trace();
+		}
+	} else {
+		if (spcflags & SPCFLAG_DOTRACE)
+			Exception(9);
 
-	if (spcflags & SPCFLAG_TRAP) {
-		unset_special(SPCFLAG_TRAP);
-		Exception(3);
+		if (spcflags & SPCFLAG_TRAP) {
+			unset_special(SPCFLAG_TRAP);
+			Exception(3);
+		}
+
+		if (spcflags & SPCFLAG_TRACE)
+			do_trace();
+
+		if (spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
+			int intr = cpu_thread_ilvl;
+			if (intr > regs.intmask || (intr == 7 && intr > regs.lastipl)) {
+				do_interrupt(intr);
+			}
+			regs.lastipl = intr;
+			unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
+		}
 	}
-
-	if (spcflags & SPCFLAG_TRACE)
-		do_trace();
-
-	for (;;) {
-
-		if (spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
-			return 1;
+	if (spcflags & SPCFLAG_BRK) {
+		unset_special(SPCFLAG_BRK);
+#ifdef DEBUGGER
+		if (debugging) {
+			debug();
 		}
-
-		int ilvl = cpu_thread_ilvl;
-		if (ilvl > 0 && (ilvl > regs.intmask || ilvl == 7)) {
-			do_interrupt(ilvl);
-		}
-
-		break;
+#endif
+	}
+	if (spcflags & (SPCFLAG_BRK | SPCFLAG_MODE_CHANGE)) {
+		return 1;
 	}
 
 	return 0;
@@ -5266,12 +5284,26 @@ uae_u32 process_cpu_indirect_memory_read(uae_u32 addr, int size)
 		return data;
 	}
 
-	cpu_thread_indirect_mode = 2;
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
+	__atomic_store_n(&cpu_thread_indirect_mode, 2, __ATOMIC_RELEASE);
 	uae_sem_post(&cpu_out_sema);
+
+	for (int i = 0; i < 500000; i++) {
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) == 0xfe) {
+			if (uae_sem_trywait(&cpu_in_sema) == 0)
+				return cpu_thread_indirect_val;
+		}
+#if defined(CPU_arm) || defined(CPU_AARCH64)
+		__asm__ __volatile__ ("yield");
+#elif defined(CPU_x86_64) || defined(CPU_i386)
+		__asm__ __volatile__ ("pause");
+#elif defined(__riscv)
+		__asm__ __volatile__ ("pause");
+#endif
+	}
+
 	uae_sem_wait(&cpu_in_sema);
-	cpu_thread_indirect_mode = 0xfe;
 	return cpu_thread_indirect_val;
 }
 
@@ -5293,13 +5325,28 @@ void process_cpu_indirect_memory_write(uae_u32 addr, uae_u32 data, int size)
 		}
 		return;
 	}
-	cpu_thread_indirect_mode = 1;
+
 	cpu_thread_indirect_addr = addr;
 	cpu_thread_indirect_size = size;
 	cpu_thread_indirect_val = data;
+	__atomic_store_n(&cpu_thread_indirect_mode, 1, __ATOMIC_RELEASE);
 	uae_sem_post(&cpu_out_sema);
+
+	for (int i = 0; i < 500000; i++) {
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) == 0xff) {
+			if (uae_sem_trywait(&cpu_in_sema) == 0)
+				return;
+		}
+#if defined(CPU_arm) || defined(CPU_AARCH64)
+		__asm__ __volatile__ ("yield");
+#elif defined(CPU_x86_64) || defined(CPU_i386)
+		__asm__ __volatile__ ("pause");
+#elif defined(__riscv)
+		__asm__ __volatile__ ("pause");
+#endif
+	}
+
 	uae_sem_wait(&cpu_in_sema);
-	cpu_thread_indirect_mode = 0xff;
 }
 
 static void run_cpu_thread(int (*f)(void *))
@@ -5307,87 +5354,105 @@ static void run_cpu_thread(int (*f)(void *))
 	uae_u32 framecnt = -1;
 	int vp = 0;
 	int intlev_prev = 0;
+	int cck_cnt = 0;
 
 	cpu_thread_active = 0;
+	cpu_thread_tid = 0;
+	cpu_thread_indirect_mode = 0xff;
+	atomic_set(&cpu_thread_reset, 0);
+
 	uae_sem_init(&cpu_in_sema, 0, 0);
 	uae_sem_init(&cpu_out_sema, 0, 0);
 	uae_sem_init(&cpu_wakeup_sema, 0, 0);
 
 	if (!uae_start_thread(_T("cpu"), f, nullptr, &cpu_thread))
 		return;
+	cpu_thread_tid = uae_thread_get_id(cpu_thread);
 	while (!cpu_thread_active) {
 		sleep_millis(1);
 	}
 
 	while (!(regs.spcflags & SPCFLAG_MODE_CHANGE)) {
-		int maxperloop = 10;
-
-		while (!uae_sem_trywait(&cpu_out_sema)) {
-			uae_u32 addr, data, size, mode;
-
-			addr = cpu_thread_indirect_addr;
-			data = cpu_thread_indirect_val;
-			size = cpu_thread_indirect_size;
-			mode = cpu_thread_indirect_mode;
-
-			switch(mode)
-			{
-				case 1:
+		// Check for CPU requests
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_ACQUIRE) <= 2) {
+			while (uae_sem_trywait(&cpu_out_sema) == 0) {
+				uaecptr addr;
+				uae_u32 data, size, mode;
+				mode = cpu_thread_indirect_mode;
+				if (mode == 0 || mode == 0xff || mode == 0xfe) break;
+				addr = cpu_thread_indirect_addr;
+				data = cpu_thread_indirect_val;
+				size = cpu_thread_indirect_size;
+				switch (mode)
 				{
-					addrbank *ab = thread_mem_banks[bankindex(addr)];
+				case 1: // Write
+				{
+					addrbank* ab = thread_mem_banks[bankindex(addr)];
 					switch (size)
 					{
-					case 0:
-						ab->bput(addr, data & 0xff);
-						break;
-					case 1:
-						ab->wput(addr, data & 0xffff);
-						break;
-					case 2:
-						ab->lput(addr, data);
-						break;
+					case 0: ab->bput(addr, data & 0xff); break;
+					case 1: ab->wput(addr, data & 0xffff); break;
+					case 2: ab->lput(addr, data); break;
 					}
+					__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
 					uae_sem_post(&cpu_in_sema);
 					break;
 				}
-				case 2:
+				case 2: // Read
 				{
-					addrbank *ab = thread_mem_banks[bankindex(addr)];
+					addrbank* ab = thread_mem_banks[bankindex(addr)];
 					switch (size)
 					{
-					case 0:
-						data = ab->bget(addr) & 0xff;
-						break;
-					case 1:
-						data = ab->wget(addr) & 0xffff;
-						break;
-					case 2:
-						data = ab->lget(addr);
-						break;
+					case 0: data = ab->bget(addr) & 0xff; break;
+					case 1: data = ab->wget(addr) & 0xffff; break;
+					case 2: data = ab->lget(addr); break;
 					}
 					cpu_thread_indirect_val = data;
+					__atomic_store_n(&cpu_thread_indirect_mode, 0xfe, __ATOMIC_RELEASE);
 					uae_sem_post(&cpu_in_sema);
 					break;
 				}
-				default:
-					write_log(_T("cpu_thread_indirect_mode=%08x!\n"), mode);
-					break;
+				}
+			}
+		}
+
+		uae_u32 reset_val = __atomic_load_n(&cpu_thread_reset, __ATOMIC_ACQUIRE);
+		if (reset_val & 1) {
+			bool hardreset = reset_val & 2;
+			bool keyboardreset = reset_val & 4;
+			custom_reset(hardreset, keyboardreset);
+			__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
+			uae_sem_post(&cpu_in_sema);
+		}
+
+		// Advance time
+		int cycles_to_do = 1;
+		if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) > 2) {
+			cycles_to_do = currprefs.m68k_speed < 0 ? 256 : 128; // Process more CCKs when idle
+		}
+
+		for (int i = 0; i < cycles_to_do; i++) {
+			if (i > 0 && __atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) <= 2) {
+				break;
+			}
+			do_cycles(CYCLE_UNIT);
+
+			if (++cck_cnt >= 227) {
+				cck_cnt = 0;
 			}
 
-			if (maxperloop-- < 0)
-				break;
-		}
-
-		if (framecnt != vsync_counter) {
-			framecnt = vsync_counter;
-		}
-
-		if (cpu_thread_reset) {
-			bool hardreset = cpu_thread_reset & 2;
-			bool keyboardreset = cpu_thread_reset & 4;
-			custom_reset(hardreset, keyboardreset);
-			cpu_thread_reset = 0;
-			uae_sem_post(&cpu_in_sema);
+			if ((cck_cnt & 1) == 0) { // Check interrupts more frequently
+				check_uae_int_request();
+				int intr = intlev();
+				if (intr != intlev_prev) {
+					cpu_thread_ilvl = intr;
+					if (intr > 0) {
+						cycles_do_special();
+						uae_sem_post(&cpu_wakeup_sema);
+					}
+					intlev_prev = intr;
+				}
+			}
 		}
 
 		if (regs.spcflags & SPCFLAG_BRK) {
@@ -5399,32 +5464,26 @@ static void run_cpu_thread(int (*f)(void *))
 #endif
 		}
 
-		if (vp == vpos) {
-
-			do_cycles((maxhpos / 2) * CYCLE_UNIT);
-
+		if (regs.spcflags & SPCFLAG_UAEINT) {
 			check_uae_int_request();
-			if (regs.spcflags & (SPCFLAG_INT | SPCFLAG_DOINT)) {
-				int intr = intlev();
-				unset_special(SPCFLAG_INT | SPCFLAG_DOINT);
-				if (intr > 0) {
-					cpu_thread_ilvl = intr;
-					cycles_do_special();
-					uae_sem_post(&cpu_wakeup_sema);
-				} else {
-					cpu_thread_ilvl = 0;
-				}
-			}
-			continue;
+			unset_special(SPCFLAG_UAEINT);
 		}
 
-		frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
-		frame_time_t c = read_processor_time();
-		if (next - c > 0 && next - c < vsyncmaxtime * 2)
-			continue;
-
-		vp = vpos;
-
+		// Horizontal position sync and frame rate limiter
+		if (vp != vpos) {
+			vp = vpos;
+			if (((vpos & 31) == 0 || vpos >= maxvpos - 32) && (currprefs.m68k_speed >= 0 || !currprefs.turbo_emulation)) {
+				frame_time_t next = vsyncmintimepre + (vsynctimebase * vpos / (maxvpos + 1));
+				frame_time_t c = read_processor_time();
+				while (next > c && next - c < vsyncmaxtime * 2) {
+					if (__atomic_load_n(&cpu_thread_indirect_mode, __ATOMIC_RELAXED) <= 2)
+						break;
+					
+					sleep_millis(0); // Yield
+					c = read_processor_time();
+				}
+			}
+		}
 	}
 
 	while (cpu_thread_active) {
@@ -5432,7 +5491,8 @@ static void run_cpu_thread(int (*f)(void *))
 		uae_sem_post(&cpu_wakeup_sema);
 		sleep_millis(1);
 	}
-
+	uae_wait_thread(&cpu_thread);
+	cpu_thread = nullptr;
 }
 
 #endif
@@ -5440,13 +5500,13 @@ static void run_cpu_thread(int (*f)(void *))
 static void custom_reset_cpu(bool hardreset, bool keyboardreset)
 {
 #ifdef WITH_THREADED_CPU
-	if (cpu_thread_tid != uae_thread_get_id(cpu_thread)) {
+	if (cpu_thread_tid == uae_thread_get_id(nullptr)) {
+		__atomic_store_n(&cpu_thread_reset, 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0), __ATOMIC_RELEASE);
+		uae_sem_post(&cpu_wakeup_sema);
+		uae_sem_wait(&cpu_in_sema);
+	} else {
 		custom_reset(hardreset, keyboardreset);
-		return;
 	}
-	cpu_thread_reset = 1 | (hardreset ? 2 : 0) | (keyboardreset ? 4 : 0);
-	uae_sem_post(&cpu_wakeup_sema);
-	uae_sem_wait(&cpu_in_sema);
 #else
 	custom_reset(hardreset, keyboardreset);
 #endif
@@ -5571,19 +5631,25 @@ typedef void compiled_handler (void);
 #ifdef WITH_THREADED_CPU
 static int cpu_thread_run_jit(void *v)
 {
-	cpu_thread_tid = uae_thread_get_id(cpu_thread);
+	cpu_thread_tid = uae_thread_get_id(nullptr);
+	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
+	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 	cpu_thread_active = 1;
 #ifdef USE_STRUCTURED_EXCEPTION_HANDLING
 	__try
 #endif
 	{
 		for (;;) {
+			check_debugger();
 			((compiled_handler*)(pushall_call_handler))();
 			/* Whenever we return from that, we should check spcflags */
 			if (regs.spcflags || cpu_thread_ilvl > 0) {
 				if (do_specialties_thread()) {
 					break;
 				}
+			}
+			if (regs.stopped) {
+				uae_sem_wait(&cpu_wakeup_sema);
 			}
 		}
 	}
@@ -6418,22 +6484,33 @@ static int cpu_thread_run_2(void *v)
 	bool exit = false;
 	struct regstruct *r = &regs;
 
-	cpu_thread_tid = uae_thread_get_id(cpu_thread);
+	cpu_thread_tid = uae_thread_get_id(nullptr);
+	__atomic_store_n(&cpu_thread_indirect_mode, 0xff, __ATOMIC_RELEASE);
+	__atomic_store_n(&cpu_thread_reset, 0, __ATOMIC_RELEASE);
 
 	cpu_thread_active = 1;
 	while (!exit) {
+		check_debugger();
 		TRY(prb)
 		{
 			while (!exit) {
 				r->instruction_pc = m68k_getpc();
 
 				r->opcode = x_get_iword(0);
-
+				count_instr(r->opcode);
+#ifdef DEBUGGER
+				if (debug_opcode_watch) {
+					debug_trainer_match();
+				}
+#endif
 				(*cpufunctbl[r->opcode])(r->opcode);
 
 				if (regs.spcflags || cpu_thread_ilvl > 0) {
 					if (do_specialties_thread())
 						exit = true;
+				}
+				if (regs.stopped) {
+					uae_sem_wait(&cpu_wakeup_sema);
 				}
 
 			}

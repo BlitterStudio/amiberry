@@ -70,4 +70,20 @@ static void atomic_set(volatile uae_atomic* p, uae_u32 v)
 {
     __atomic_store_n(p, v, __ATOMIC_SEQ_CST);
 }
+
+static uae_u32 atomic_read(volatile uae_atomic* p)
+{
+    return __atomic_load_n(p, __ATOMIC_SEQ_CST);
+}
+
+static uae_u32 atomic_add(volatile uae_atomic* p, uae_u32 v)
+{
+    return __atomic_add_fetch(p, v, __ATOMIC_SEQ_CST);
+}
+
+static int atomic_cas(volatile uae_atomic* p, uae_u32 expected, uae_u32 desired)
+{
+    uae_u32 exp = expected;
+    return __atomic_compare_exchange_n((uae_u32*)p, &exp, desired, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
 #endif

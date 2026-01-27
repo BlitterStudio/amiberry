@@ -331,6 +331,11 @@ extern int current_linear_vpos, current_linear_hpos;
 extern uae_u8 agnus_hpos;
 
 void vsync_event_done(void);
+#ifdef WITH_THREADED_CPU
+extern void REGPARAM3 custom_lput(uaecptr, uae_u32) REGPARAM;
+extern void REGPARAM3 custom_wput(uaecptr, uae_u32) REGPARAM;
+extern void REGPARAM3 custom_bput(uaecptr, uae_u32) REGPARAM;
+#endif
 bool get_custom_color_reg(int colreg, uae_u8 *r, uae_u8 *g, uae_u8 *b);
 void event_doint_delay_do_ext(uae_u32 v);
 
