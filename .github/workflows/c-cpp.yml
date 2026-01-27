@@ -977,12 +977,6 @@ jobs:
         with:
           path: amiberry
 
-      - name: Check out libretro-common
-        uses: actions/checkout@v4
-        with:
-          repository: libretro/libretro-common
-          path: libretro-common
-
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -990,6 +984,9 @@ jobs:
           sudo apt-get install -y build-essential
           if [ "${{ matrix.arch }}" = "aarch64" ]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            sudo dpkg --add-architecture arm64
+            sudo apt-get update
+            sudo apt-get install -y zlib1g-dev:arm64
           fi
 
       - name: Build Libretro Core
@@ -999,7 +996,7 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
           elif [ "${{ matrix.arch }}" = "aarch64" ]; then
-            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ -j$(nproc)
+            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ ZLIB_CFLAGS=-I/usr/aarch64-linux-gnu/include ZLIB_LIBS="-L/usr/aarch64-linux-gnu/lib -lz" -j$(nproc)
           else
             make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
           fi
