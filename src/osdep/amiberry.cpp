@@ -2136,7 +2136,6 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
-			write_log("Top-level SDL Key Event: type=%d, scancode=%d, sym=%d\n", event.type, event.key.keysym.scancode, event.key.keysym.sym);
 			handle_key_event(event);
 			break;
 
