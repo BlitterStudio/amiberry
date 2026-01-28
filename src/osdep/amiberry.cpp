@@ -1649,6 +1649,32 @@ static void handle_controller_button_event(const SDL_Event& event)
 	const auto button = event.cbutton.button;
 	const auto state = event.cbutton.state == SDL_PRESSED;
 
+	write_log("handle_controller_button_event: button=%d, state=%d\n", button, state);
+
+#ifdef __ANDROID__
+	// Check for Android Back Button (often mapped as Button 1/B on "qwerty2" or similar virtual devices)
+	// We check the name "qwerty2" or the specific GUID to be safe.
+	bool is_virtual_back_button = false;
+	
+	// Check GUID first as it's more reliable
+	char guid_str[33];
+    SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(SDL_JoystickFromInstanceID(event.cbutton.which)), guid_str, sizeof(guid_str));
+	if (strcmp(guid_str, "0500c8dc270600000100000051780000") == 0) {
+		is_virtual_back_button = true;
+	} else {
+		// Fallback to name check if GUID varies (though GUID should be constant for this emulator device)
+		auto* gc = SDL_GameControllerFromInstanceID(event.cbutton.which);
+		if (gc && strcmp(SDL_GameControllerName(gc), "qwerty2") == 0) {
+			is_virtual_back_button = true;
+		}
+	}
+
+	if (is_virtual_back_button && button == 1) { // SDL_CONTROLLER_BUTTON_B
+		// This is the Android Back button
+		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
+	}
+#endif
+
 	if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
 	}
@@ -1682,6 +1708,8 @@ static void handle_joy_button_event(const SDL_Event& event)
 {
 	const auto button = event.jbutton.button;
 	const auto state = event.jbutton.state == SDL_PRESSED;
+
+	write_log("handle_joy_button_event: button=%d, state=%d\n", button, state);
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
@@ -1774,6 +1802,19 @@ static void handle_key_event(const SDL_Event& event)
 	int scancode = event.key.keysym.scancode;
 	const auto pressed = event.key.state;
 
+#ifdef __ANDROID__
+	//write_log("handle_key_event: scancode=%d, focus=%d, repeat=%d\n", event.key.keysym.scancode, focus_level, event.key.repeat);
+	if (scancode == SDL_SCANCODE_AC_BACK)
+	{
+		write_log("AC_BACK detected early, triggering enter_gui. pressed=%d\n", pressed);
+		inputdevice_add_inputcode(AKS_ENTERGUI, pressed, nullptr);
+		return;
+	}
+#endif
+
+	if (event.key.repeat != 0 || !focus_level)
+		return;
+
 	if (key_swap_hack == 1) {
 		if (scancode == SDL_SCANCODE_F11) {
 			scancode = SDL_SCANCODE_EQUALS;
@@ -1801,13 +1842,6 @@ static void handle_key_event(const SDL_Event& event)
 	{
 		scancode = SDL_SCANCODE_RGUI;
 	}
-#ifdef __ANDROID__
-	if (scancode == SDL_SCANCODE_AC_BACK)
-	{
-		scancode = SDL_SCANCODE_F12;
-	}
-#endif
-
 	scancode = keyhack(scancode, pressed, 0);
 	if (scancode >= 0)
 	{
@@ -2105,6 +2139,7 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
+			write_log("Top-level SDL Key Event: type=%d, scancode=%d, sym=%d\n", event.type, event.key.keysym.scancode, event.key.keysym.sym);
 			handle_key_event(event);
 			break;
 
@@ -2170,6 +2205,7 @@ int handle_msgpump(bool vblank)
 
 	while (SDL_PollEvent(&event))
 	{
+		write_log("Event Loop: SDL_Event type=0x%x\n", event.type);
 		got_event = 1;
 		process_event(event);
 		if (currprefs.clipboard_sharing)
@@ -5125,6 +5161,8 @@ static void makeverstr(TCHAR* s)
 
 int main(int argc, char* argv[]) {
 #ifdef __ANDROID__
+	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+	write_log("SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, \"1\") called.\n");
     if (SDL_Init(0) < 0) {
     }
 #endif
