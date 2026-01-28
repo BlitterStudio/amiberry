@@ -1144,6 +1144,7 @@ jobs:
             artifacts/*.aab
 
 
+
   create-prerelease:
     needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android, build-libretro]
     runs-on: ubuntu-latest
