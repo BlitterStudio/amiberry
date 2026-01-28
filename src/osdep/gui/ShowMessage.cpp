@@ -469,6 +469,13 @@ static void ShowMessageWaitInputLoop()
 		case SDL_RENDER_TARGETS_RESET:
 		case SDL_RENDER_DEVICE_RESET:
 		case SDL_WINDOWEVENT:
+			if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			}
+			got_event = 1;
+			break;
+
 		case SDL_DISPLAYEVENT:
 		case SDL_SYSWMEVENT:
 			got_event = 1;
@@ -549,6 +556,14 @@ static void ShowMessageLoop()
 
 		case SDL_MOUSEWHEEL:
 			got_event = handle_mousewheel(event);
+			break;
+
+		case SDL_WINDOWEVENT:
+			if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			}
+			got_event = true;
 			break;
 
 		default:

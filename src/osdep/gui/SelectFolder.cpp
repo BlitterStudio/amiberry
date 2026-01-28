@@ -335,6 +335,19 @@ static void SelectFolderLoop()
 			got_event = handle_mousewheel(event);
 			break;
 
+		case SDL_WINDOWEVENT:
+			if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			}
+			got_event = true;
+			break;
+
+		case SDL_APP_DIDENTERFOREGROUND:
+			SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			got_event = true;
+			break;
+
 		default:
 			got_event = true;
 			break;

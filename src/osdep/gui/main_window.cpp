@@ -292,6 +292,8 @@ void amiberry_gui_init()
         if (mon->amiga_window) {
             write_log("Reusing Amiga window for GUI on Android.\n");
             mon->gui_window = mon->amiga_window;
+            SDL_SetWindowResizable(mon->gui_window, SDL_TRUE);
+            SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
         }
 #endif
         if (!mon->gui_window)
@@ -304,7 +306,8 @@ void amiberry_gui_init()
             if (!kmsdrm_detected)
             {
 #ifdef __ANDROID__
-                mode = SDL_WINDOW_FULLSCREEN;
+                mode = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE;
+                SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
 #else
                 // Only enable Windowed mode if we're running under a window environment
 			mode = SDL_WINDOW_RESIZABLE;
@@ -498,9 +501,11 @@ void check_input()
 					gui_window_rect.x = gui_event.window.data1;
 					gui_window_rect.y = gui_event.window.data2;
 					break;
+				case SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL_WINDOWEVENT_RESIZED:
 					gui_window_rect.w = gui_event.window.data1;
 					gui_window_rect.h = gui_event.window.data2;
+					SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 					break;
 				default: 
 					break;
@@ -509,6 +514,11 @@ void check_input()
 			got_event = 1;
 			break;
 		
+		case SDL_APP_DIDENTERFOREGROUND:
+			SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			got_event = 1;
+			break;
+
 		case SDL_QUIT:
 			got_event = 1;
 			//-------------------------------------------------

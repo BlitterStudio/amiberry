@@ -5156,8 +5156,7 @@ static void makeverstr(TCHAR* s)
 
 int main(int argc, char* argv[]) {
 #ifdef __ANDROID__
-	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
-	write_log("SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, \"1\") called.\n");
+
     if (SDL_Init(0) < 0) {
     }
 #endif

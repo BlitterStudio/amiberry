@@ -4215,10 +4215,16 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (fullwindow) {
 		rc = md->rect;
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef __ANDROID__
+		flags |= SDL_WINDOW_RESIZABLE;
+#endif
 		mon->currentmode.native_width = rc.w;
 		mon->currentmode.native_height = rc.h;
 	} else if (fullscreen) {
 		flags = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef __ANDROID__
+		flags |= SDL_WINDOW_RESIZABLE;
+#endif
 		getbestmode(mon, 0);
 		w = mon->currentmode.native_width;
 		h = mon->currentmode.native_height;
