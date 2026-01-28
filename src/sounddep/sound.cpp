@@ -695,7 +695,9 @@ bool audio_finish_pull()
 	return false;
 }
 
+#ifdef LIBRETRO
 #include "libretro_shared.h"
+#endif
 
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 {
