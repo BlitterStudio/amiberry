@@ -5155,12 +5155,11 @@ static void makeverstr(TCHAR* s)
 
 
 #ifndef LIBRETRO
-int main(int argc, char* argv[])
+int main(int argc, char* argv[]) {
 #else
-int amiberry_main(int argc, char* argv[])
+int amiberry_main(int argc, char* argv[]) {
 #endif
 #ifdef __ANDROID__
-
     if (SDL_Init(0) < 0) {
     }
 #endif
