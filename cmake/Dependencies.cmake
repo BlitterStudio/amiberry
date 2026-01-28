@@ -214,10 +214,17 @@ if(ANDROID)
         FetchContent_MakeAvailable(libserialport)
 
         # Link to the produced CMake target to avoid raw '-lserialport' flags.
-        # Different libserialport CMake setups use different target names.
+        # scottmudge/libserialport-cmake defines project(serialport) and creates:
+        #   - serialport-static
+        #   - serialport-shared
+        # Other libserialport setups may use different target names, so keep fallbacks.
         set(AMIBERRY_LIBSERIALPORT_TARGET "")
-        if(TARGET serialport)
+        if(TARGET serialport-static)
+            set(AMIBERRY_LIBSERIALPORT_TARGET serialport-static)
+        elseif(TARGET serialport)
             set(AMIBERRY_LIBSERIALPORT_TARGET serialport)
+        elseif(TARGET serialport-shared)
+            set(AMIBERRY_LIBSERIALPORT_TARGET serialport-shared)
         elseif(TARGET libserialport)
             set(AMIBERRY_LIBSERIALPORT_TARGET libserialport)
         elseif(TARGET libserialport-static)
@@ -225,7 +232,7 @@ if(ANDROID)
         endif()
 
         if(AMIBERRY_LIBSERIALPORT_TARGET STREQUAL "")
-            message(FATAL_ERROR "libserialport target was not created (tried: serialport, libserialport, libserialport-static)")
+            message(FATAL_ERROR "libserialport target was not created (tried: serialport-static, serialport-shared, serialport, libserialport, libserialport-static)")
         endif()
 
         target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_LIBSERIALPORT_TARGET})
