@@ -61,7 +61,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private static final String TAG = "SDL";
     private static final int SDL_MAJOR_VERSION = 2;
     private static final int SDL_MINOR_VERSION = 30;
-    private static final int SDL_MICRO_VERSION = 0;
+    private static final int SDL_MICRO_VERSION = 10;
 /*
     // Display InputType.SOURCE/CLASS of events and devices
     //
@@ -269,7 +269,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
      */
     protected String[] getLibraries() {
         return new String[] {
-            "SDL2",
+            // SDL2 is built and linked from source via CMake (static), so don't load libSDL2.so at runtime.
+            // "SDL2",
             // "SDL2_image",
             // "SDL2_mixer",
             // "SDL2_net",
