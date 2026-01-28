@@ -38,6 +38,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES
     endif()
     set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
 endif()
+
 if(ANDROID)
     set(USE_UAENET_PCAP OFF CACHE BOOL "Use libpcap for uaenet (Linux/macOS)" FORCE)
     # set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
@@ -48,6 +49,7 @@ if(ANDROID)
     set(USE_LIBMPEG2 OFF CACHE BOOL "Use LibMPEG2 for CD32 FMV support" FORCE)
     # set(USE_LIBSERIALPORT OFF CACHE BOOL "Use LibSerialPort for serial port emulation" FORCE)
     # set(USE_PORTMIDI OFF CACHE BOOL "Use PortMidi for MIDI emulation" FORCE)
+    set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
 endif()
 
 # Versioning

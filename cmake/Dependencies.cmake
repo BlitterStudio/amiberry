@@ -64,6 +64,7 @@ if(ANDROID)
         zstd
         GIT_REPOSITORY https://github.com/facebook/zstd.git
         GIT_TAG        v1.5.6
+        SOURCE_SUBDIR  build/cmake
     )
 
     # FLAC
@@ -80,17 +81,19 @@ if(ANDROID)
         GIT_TAG        1.5.0
     )
 
-    # mpg123
-    set(BUILD_PROGRAMS OFF CACHE BOOL "Build programs" FORCE)
-    set(BUILD_LIBOUT123 OFF CACHE BOOL "Build libout123" FORCE)
-    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
-    FetchContent_Declare(
-        mpg123
-        # madebr/mpg123 is a mirror of the upstream SVN repo but does not publish git tags.
-        # Pin to an existing ref so FetchContent can check out reliably.
-        GIT_REPOSITORY https://github.com/madebr/mpg123.git
-        GIT_TAG        master
-    )
+    # mpg123 (only if enabled)
+    if(USE_MPG123)
+        set(BUILD_PROGRAMS OFF CACHE BOOL "Build programs" FORCE)
+        set(BUILD_LIBOUT123 OFF CACHE BOOL "Build libout123" FORCE)
+        set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs" FORCE)
+        FetchContent_Declare(
+            mpg123
+            # madebr/mpg123 is a mirror of the upstream SVN repo but does not publish git tags.
+            # Pin to an existing ref so FetchContent can check out reliably.
+            GIT_REPOSITORY https://github.com/madebr/mpg123.git
+            GIT_TAG        master
+        )
+    endif()
 
     # libpng
     set(PNG_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
@@ -103,7 +106,55 @@ if(ANDROID)
     )
 
     # Materialize deps (order matters a bit: SDL2 first for *_image/_ttf)
-    FetchContent_MakeAvailable(sdl2 sdl2_image sdl2_ttf flac mpg123 libpng zstd)
+    if(USE_MPG123)
+        FetchContent_MakeAvailable(sdl2 sdl2_image sdl2_ttf flac mpg123 libpng zstd)
+    else()
+        FetchContent_MakeAvailable(sdl2 sdl2_image sdl2_ttf flac libpng zstd)
+    endif()
+
+    # Make zstd discoverable for the rest of this file (later FindHelper/pkg-config logic).
+    if(TARGET libzstd_static)
+        set(ZSTD_FOUND TRUE)
+        set(ZSTD_LIBRARIES libzstd_static)
+        if(EXISTS "${zstd_SOURCE_DIR}/lib")
+            set(ZSTD_INCLUDE_DIRS "${zstd_SOURCE_DIR}/lib")
+        endif()
+    elseif(TARGET zstd)
+        set(ZSTD_FOUND TRUE)
+        set(ZSTD_LIBRARIES zstd)
+        if(EXISTS "${zstd_SOURCE_DIR}/lib")
+            set(ZSTD_INCLUDE_DIRS "${zstd_SOURCE_DIR}/lib")
+        endif()
+    endif()
+
+    # --- Android link hygiene ------------------------------------------------
+    # Some upstream CMake projects (notably SDL2_ttf's vendored freetype) can
+    # propagate a raw "SDL2" or "pthread" library name via INTERFACE properties.
+    # On Android this becomes "-lSDL2" / "-pthread" and breaks the link.
+    function(amiberry_android_sanitize_target _tgt)
+        if(NOT TARGET ${_tgt})
+            return()
+        endif()
+
+        # If this is an ALIAS target (e.g. SDL2::SDL2), resolve to the real target.
+        get_target_property(_aliased ${_tgt} ALIASED_TARGET)
+        if(_aliased)
+            set(_tgt ${_aliased})
+        else()
+            set(_tgt ${_tgt})
+        endif()
+
+        foreach(_prop IN ITEMS INTERFACE_LINK_LIBRARIES INTERFACE_LINK_OPTIONS)
+            get_target_property(_val ${_tgt} ${_prop})
+            if(_val)
+                # Remove both "SDL2" (library name) and the common flag spellings.
+                list(REMOVE_ITEM _val SDL2 pthread -lSDL2 -pthread)
+                set_target_properties(${_tgt} PROPERTIES ${_prop} "${_val}")
+            endif()
+        endforeach()
+    endfunction()
+
+    # -------------------------------------------------------------------------
 
     # We use Prefabs for SDL2, but might need to fetch others or rely on system
     # However, on Android these are usually not present in the system image for NDK
@@ -126,10 +177,55 @@ if(ANDROID)
         message(FATAL_ERROR "SDL2 target not found (expected SDL2::SDL2, SDL2-static, or SDL2)")
     endif()
 
+    # Ensure SDL extension libs depend on the chosen SDL2 target (not a raw "SDL2" name)
+    if(TARGET SDL2_ttf)
+        target_link_libraries(SDL2_ttf PRIVATE ${AMIBERRY_SDL2_TARGET})
+    endif()
+    if(TARGET SDL2_image)
+        target_link_libraries(SDL2_image PRIVATE ${AMIBERRY_SDL2_TARGET})
+    endif()
+
+    # Compatibility shim: some deps still emit a raw "SDL2" item that becomes -lSDL2.
+    # Provide a CMake target named "SDL2" that aliases the real SDL2 target so the
+    # dependency resolves via target linking (no -lSDL2 lookup).
+    # Note: CMake doesn't allow ALIAS -> ALIAS, so resolve to the underlying target.
+    if(NOT TARGET SDL2)
+        set(_amiberry_sdl2_real_target "${AMIBERRY_SDL2_TARGET}")
+        if(TARGET ${_amiberry_sdl2_real_target})
+            get_target_property(_amiberry_sdl2_aliased ${_amiberry_sdl2_real_target} ALIASED_TARGET)
+            if(_amiberry_sdl2_aliased)
+                set(_amiberry_sdl2_real_target ${_amiberry_sdl2_aliased})
+            endif()
+        endif()
+        add_library(SDL2 ALIAS ${_amiberry_sdl2_real_target})
+        unset(_amiberry_sdl2_real_target)
+        unset(_amiberry_sdl2_aliased)
+    endif()
+
+    # Sanitize known SDL-related targets so they can't inject raw -lSDL2/-pthread
+    amiberry_android_sanitize_target(SDL2_ttf)
+    amiberry_android_sanitize_target(SDL2_image)
+    amiberry_android_sanitize_target(${AMIBERRY_SDL2_TARGET})
+
+    # SDL2_ttf vendors freetype by default and its target name can vary.
+    foreach(_ft IN ITEMS freetype freetype-static freetyped)
+        amiberry_android_sanitize_target(${_ft})
+    endforeach()
+
     target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_SDL2_TARGET} SDL2_image SDL2_ttf)
 
+    # Defensive: ensure we never add raw SDL2/pthread libraries or flags on Android.
+    # Some transitive/legacy paths may still append plain library names or link options.
+    foreach(_prop IN ITEMS LINK_LIBRARIES LINK_OPTIONS INTERFACE_LINK_LIBRARIES INTERFACE_LINK_OPTIONS)
+        get_target_property(_amiberry_val ${PROJECT_NAME} ${_prop})
+        if(_amiberry_val)
+            list(REMOVE_ITEM _amiberry_val SDL2 pthread -lSDL2 -pthread)
+            set_target_properties(${PROJECT_NAME} PROPERTIES ${_prop} "${_amiberry_val}")
+        endif()
+    endforeach()
+
     # mpg123 include path (subproject)
-    if(EXISTS "${mpg123_SOURCE_DIR}/src/include")
+    if(USE_MPG123 AND EXISTS "${mpg123_SOURCE_DIR}/src/include")
         target_include_directories(${PROJECT_NAME} PRIVATE "${mpg123_SOURCE_DIR}/src/include")
     endif()
     # libpng (headers are exported by the target, but keep compatible include behavior)
@@ -255,16 +351,33 @@ else()
     find_package(mpg123 REQUIRED)
     find_package(PNG REQUIRED)
     find_package(ZLIB REQUIRED)
+
+    # mpg123 is available on desktop builds; enable mp3 decoding in code.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MPG123)
 endif()
 
 if (USE_ZSTD)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_ZSTD)
-    find_helper(ZSTD libzstd zstd.h zstd)
-    if(NOT ZSTD_FOUND)
-        message(STATUS "ZSTD library not found - CHD compressed disk images will not be supported")
+
+    # On Android, zstd is provided via FetchContent above. Prefer its CMake target.
+    if(ANDROID)
+        if(TARGET libzstd_static)
+            target_include_directories(${PROJECT_NAME} PRIVATE "${zstd_SOURCE_DIR}/lib")
+            target_link_libraries(${PROJECT_NAME} PRIVATE libzstd_static)
+        elseif(TARGET zstd)
+            target_include_directories(${PROJECT_NAME} PRIVATE "${zstd_SOURCE_DIR}/lib")
+            target_link_libraries(${PROJECT_NAME} PRIVATE zstd)
+        else()
+            message(STATUS "ZSTD enabled but zstd target was not created - CHD compressed disk images will not be supported")
+        endif()
     else()
-        target_include_directories(${PROJECT_NAME} PRIVATE ${ZSTD_INCLUDE_DIRS})
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
+        find_helper(ZSTD libzstd zstd.h zstd)
+        if(NOT ZSTD_FOUND)
+            message(STATUS "ZSTD library not found - CHD compressed disk images will not be supported")
+        else()
+            target_include_directories(${PROJECT_NAME} PRIVATE ${ZSTD_INCLUDE_DIRS})
+            target_link_libraries(${PROJECT_NAME} PRIVATE ${ZSTD_LIBRARIES})
+        endif()
     endif()
 endif ()
 
@@ -411,6 +524,11 @@ endif()
 
 if(ANDROID)
     list(APPEND AMIBERRY_LIBS log android)
+endif()
+
+# Do not add SDL2 as a raw library name; Android must link SDL via the CMake target above.
+if(ANDROID)
+    list(REMOVE_ITEM AMIBERRY_LIBS SDL2 pthread)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_LIBS})
