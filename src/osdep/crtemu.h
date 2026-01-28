@@ -1661,8 +1661,10 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 
 	crtemu->GenTextures( 1, &crtemu->frametexture );
 #ifndef CRTEMU_WEBGL
+#if !defined(__ANDROID__)
 	// This enable call is not necessary when using fragment shaders, avoid logged warnings in WebGL
 	crtemu->Enable( CRTEMU_GL_TEXTURE_2D );
+#endif
 #endif
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
@@ -1673,8 +1675,10 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->GenTextures( 1, &crtemu->backbuffer );
 	crtemu->GenFramebuffers( 1, &crtemu->fbo_backbuffer );
 #ifndef CRTEMU_WEBGL
+#if !defined(__ANDROID__)
 	// This enable call is not necessary when using fragment shaders, avoid logged warnings in WebGL
 	crtemu->Enable( CRTEMU_GL_TEXTURE_2D );
+#endif
 #endif
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
