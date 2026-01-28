@@ -755,7 +755,10 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	return false;
 }
 
+#ifdef LIBRETRO
 #include "libretro_shared.h"
+#endif
+
 static void SDL2_showframe(const int monid)
 {
 #ifdef LIBRETRO
