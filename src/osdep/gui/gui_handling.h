@@ -10,24 +10,21 @@
 #include "registry.h"
 #include "autoconf.h"
 
-enum
-{
-	DISTANCE_BORDER = 10,
-	DISTANCE_NEXT_X = 15,
-	DISTANCE_NEXT_Y = 15,
-	BUTTON_WIDTH = 90,
-	BUTTON_HEIGHT = 30,
-	SMALL_BUTTON_WIDTH = 30,
-	SMALL_BUTTON_HEIGHT = 22,
-	LABEL_HEIGHT = 20,
-	TEXTFIELD_HEIGHT = 20,
-	DROPDOWN_HEIGHT = 20,
-	SLIDER_HEIGHT = 20,
-	TITLEBAR_HEIGHT = 24,
-	SELECTOR_WIDTH = 165,
-	SELECTOR_HEIGHT = 24,
-	SCROLLBAR_WIDTH = 20
-};
+extern int DISTANCE_BORDER;
+extern int DISTANCE_NEXT_X;
+extern int DISTANCE_NEXT_Y;
+extern int BUTTON_WIDTH;
+extern int BUTTON_HEIGHT;
+extern int SMALL_BUTTON_WIDTH;
+extern int SMALL_BUTTON_HEIGHT;
+extern int LABEL_HEIGHT;
+extern int TEXTFIELD_HEIGHT;
+extern int DROPDOWN_HEIGHT;
+extern int SLIDER_HEIGHT;
+extern int TITLEBAR_HEIGHT;
+extern int SELECTOR_WIDTH;
+extern int SELECTOR_HEIGHT;
+extern int SCROLLBAR_WIDTH;
 
 struct amigamodels
 {

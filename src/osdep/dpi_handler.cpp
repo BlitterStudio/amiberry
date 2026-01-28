@@ -12,6 +12,19 @@ float DPIHandler::get_scale() {
     return floor(dpi / default_dpi);
 }
 
+float DPIHandler::get_layout_scale() {
+#ifdef __ANDROID__
+    SDL_Rect bounds;
+    if (SDL_GetDisplayBounds(0, &bounds) == 0) {
+        float scaling_factor = (float)bounds.w / 800.0f;
+        return (scaling_factor < 1.0f) ? 1.0f : scaling_factor;
+    }
+    return 1.0f;
+#else
+    return 1.0f;
+#endif
+}
+
 void DPIHandler::set_render_scale([[maybe_unused]] SDL_Renderer* renderer) {
     // Do nothing on Linux
 #ifdef __MACH__

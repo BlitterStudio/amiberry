@@ -58,6 +58,22 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 
 // Forward declarations used in this early block
 static void apply_imgui_theme();
+
+int DISTANCE_BORDER = 10;
+int DISTANCE_NEXT_X = 15;
+int DISTANCE_NEXT_Y = 15;
+int BUTTON_WIDTH = 90;
+int BUTTON_HEIGHT = 30;
+int SMALL_BUTTON_WIDTH = 30;
+int SMALL_BUTTON_HEIGHT = 22;
+int LABEL_HEIGHT = 20;
+int TEXTFIELD_HEIGHT = 20;
+int DROPDOWN_HEIGHT = 20;
+int SLIDER_HEIGHT = 20;
+int TITLEBAR_HEIGHT = 24;
+int SELECTOR_WIDTH = 165;
+int SELECTOR_HEIGHT = 24;
+int SCROLLBAR_WIDTH = 20;
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
 static ImVec4 darken(const ImVec4& c, float f) { return ImVec4{ std::max(c.x - f, 0.0f), std::max(c.y - f, 0.0f), std::max(c.z - f, 0.0f), c.w }; }
@@ -790,10 +806,31 @@ void amiberry_gui_init()
 	// Apply theme colors to ImGui (map GUISAN theme fields)
 	apply_imgui_theme();
 
+	float scaling_factor = DPIHandler::get_layout_scale();
+
+	// Apply scaling to GUI constants
+	BUTTON_WIDTH = (int)(90 * scaling_factor);
+	BUTTON_HEIGHT = (int)(30 * scaling_factor);
+	SMALL_BUTTON_WIDTH = (int)(30 * scaling_factor);
+	SMALL_BUTTON_HEIGHT = (int)(22 * scaling_factor);
+	DISTANCE_BORDER = (int)(10 * scaling_factor);
+	DISTANCE_NEXT_X = (int)(15 * scaling_factor);
+	DISTANCE_NEXT_Y = (int)(15 * scaling_factor);
+	LABEL_HEIGHT = (int)(20 * scaling_factor);
+	TEXTFIELD_HEIGHT = (int)(20 * scaling_factor);
+	DROPDOWN_HEIGHT = (int)(20 * scaling_factor);
+	SLIDER_HEIGHT = (int)(20 * scaling_factor);
+	TITLEBAR_HEIGHT = (int)(24 * scaling_factor);
+	SELECTOR_WIDTH = (int)(165 * scaling_factor);
+	SELECTOR_HEIGHT = (int)(24 * scaling_factor);
+	SCROLLBAR_WIDTH = (int)(20 * scaling_factor);
+	style.ScaleAllSizes(scaling_factor);
+
 	// Load custom font from data/ (default to AmigaTopaz.ttf), scale by DPI
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
 	const std::string font_path = prefix_with_data_path(font_file);
-	const float font_px = gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f;
+	float font_px = gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f;
+	font_px *= scaling_factor;
 
 	ImFont* loaded_font = nullptr;
 	if (!font_path.empty()) {
