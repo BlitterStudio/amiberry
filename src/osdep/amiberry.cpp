@@ -1553,6 +1553,12 @@ static void handle_moved_event(AmigaMonitor* mon)
 	setsizemove(mon, mon->amiga_window);
 }
 
+static void handle_resized_event(AmigaMonitor* mon, int width, int height)
+{
+	write_log("Window resized to: %dx%d\n", width, height);
+	setsizemove(mon, mon->amiga_window);
+}
+
 static void handle_enter_event()
 {
 	mouseinside = true;
@@ -1597,6 +1603,10 @@ static void handle_window_event(const SDL_Event& event, AmigaMonitor* mon)
 		break;
 	case SDL_WINDOWEVENT_MOVED:
 		handle_moved_event(mon);
+		break;
+	case SDL_WINDOWEVENT_SIZE_CHANGED:
+	case SDL_WINDOWEVENT_RESIZED:
+		handle_resized_event(mon, event.window.data1, event.window.data2);
 		break;
 	case SDL_WINDOWEVENT_ENTER:
 		handle_enter_event();
@@ -1648,8 +1658,6 @@ static void handle_controller_button_event(const SDL_Event& event)
 {
 	const auto button = event.cbutton.button;
 	const auto state = event.cbutton.state == SDL_PRESSED;
-
-	write_log("handle_controller_button_event: button=%d, state=%d\n", button, state);
 
 #ifdef __ANDROID__
 	// Check for Android Back Button (often mapped as Button 1/B on "qwerty2" or similar virtual devices)
@@ -1708,8 +1716,6 @@ static void handle_joy_button_event(const SDL_Event& event)
 {
 	const auto button = event.jbutton.button;
 	const auto state = event.jbutton.state == SDL_PRESSED;
-
-	write_log("handle_joy_button_event: button=%d, state=%d\n", button, state);
 
 	for (auto id = 0; id < MAX_INPUT_DEVICES; id++)
 	{
@@ -1801,16 +1807,6 @@ static void handle_key_event(const SDL_Event& event)
 
 	int scancode = event.key.keysym.scancode;
 	const auto pressed = event.key.state;
-
-#ifdef __ANDROID__
-	//write_log("handle_key_event: scancode=%d, focus=%d, repeat=%d\n", event.key.keysym.scancode, focus_level, event.key.repeat);
-	if (scancode == SDL_SCANCODE_AC_BACK)
-	{
-		write_log("AC_BACK detected early, triggering enter_gui. pressed=%d\n", pressed);
-		inputdevice_add_inputcode(AKS_ENTERGUI, pressed, nullptr);
-		return;
-	}
-#endif
 
 	if (event.key.repeat != 0 || !focus_level)
 		return;
@@ -2205,7 +2201,6 @@ int handle_msgpump(bool vblank)
 
 	while (SDL_PollEvent(&event))
 	{
-		write_log("Event Loop: SDL_Event type=0x%x\n", event.type);
 		got_event = 1;
 		process_event(event);
 		if (currprefs.clipboard_sharing)

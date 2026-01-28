@@ -996,23 +996,32 @@ jobs:
       - name: Build with Gradle
         run: |
           cd android
-          ./gradlew --no-daemon --stacktrace --warning-mode all assembleDebug assembleRelease
+          ./gradlew --no-daemon --stacktrace --warning-mode all assembleDebug assembleRelease bundleRelease
 
       - name: Collect Android outputs
         shell: bash
         run: |
           set -euo pipefail
+          shopt -s globstar
           mkdir -p artifacts
           # Copy outputs rather than renaming in-place (AGP may produce multiple variants).
+          VERSION_SUFFIX="${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+          
           if compgen -G "android/app/build/outputs/apk/debug/*.apk" > /dev/null; then
-            cp -v android/app/build/outputs/apk/debug/*.apk artifacts/
+            for f in android/app/build/outputs/apk/debug/*.apk; do
+              cp -v "$f" "artifacts/amiberry-android-${VERSION_SUFFIX}-debug.apk"
+            done
           fi
           if compgen -G "android/app/build/outputs/apk/release/*.apk" > /dev/null; then
-            cp -v android/app/build/outputs/apk/release/*.apk artifacts/
+            for f in android/app/build/outputs/apk/release/*.apk; do
+              cp -v "$f" "artifacts/amiberry-android-${VERSION_SUFFIX}-release.apk"
+            done
           fi
           # Also collect AABs if present
           if compgen -G "android/app/build/outputs/bundle/**/*.aab" > /dev/null; then
-            find android/app/build/outputs/bundle -name "*.aab" -print -exec cp -v {} artifacts/ \;
+             for f in android/app/build/outputs/bundle/**/*.aab; do
+                cp -v "$f" "artifacts/amiberry-android-${VERSION_SUFFIX}.aab"
+             done
           fi
 
       - name: Upload Android artifacts
@@ -1022,7 +1031,6 @@ jobs:
           name: amiberry-android-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
           path: |
             artifacts/*
-            android/app/build/outputs/**
           if-no-files-found: error
 
       - name: Upload Android build reports (on failure)
@@ -1075,6 +1083,8 @@ jobs:
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/Amiberry-*.zip
+            artifacts/*.apk
+            artifacts/*.aab
 
   create-prerelease:
     needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android]
@@ -1117,3 +1127,5 @@ jobs:
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/Amiberry-*.zip
+            artifacts/*.apk
+            artifacts/*.aab
