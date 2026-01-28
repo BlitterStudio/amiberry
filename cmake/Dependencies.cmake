@@ -112,7 +112,21 @@ if(ANDROID)
     find_package(ZLIB REQUIRED)
 
     # Link SDL2 + extensions
-    target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 SDL2_image SDL2_ttf)
+    # Use real CMake targets to avoid generating raw '-lSDL2' flags on Android.
+    set(AMIBERRY_SDL2_TARGET "")
+    if(TARGET SDL2::SDL2)
+        set(AMIBERRY_SDL2_TARGET SDL2::SDL2)
+    elseif(TARGET SDL2-static)
+        set(AMIBERRY_SDL2_TARGET SDL2-static)
+    elseif(TARGET SDL2)
+        set(AMIBERRY_SDL2_TARGET SDL2)
+    endif()
+
+    if(AMIBERRY_SDL2_TARGET STREQUAL "")
+        message(FATAL_ERROR "SDL2 target not found (expected SDL2::SDL2, SDL2-static, or SDL2)")
+    endif()
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_SDL2_TARGET} SDL2_image SDL2_ttf)
 
     # mpg123 include path (subproject)
     if(EXISTS "${mpg123_SOURCE_DIR}/src/include")
@@ -138,13 +152,20 @@ if(ANDROID)
         # On Android, ALSA is unavailable, so force PortMidi to build with PMNULL.
         set(LINUX_DEFINES "PMNULL" CACHE STRING "Disable PortMidi ALSA backend on Android" FORCE)
 
+        # PortTime: PortMidi's "ptlinux" backend includes sys/timeb.h which is not available
+        # on Android NDK. Force PortTime to use the null backend for Android builds.
+        set(PT_BACKEND "ptnull" CACHE STRING "PortTime backend" FORCE)
+
         FetchContent_Declare(
             portmidi
             GIT_REPOSITORY https://github.com/PortMidi/portmidi.git
             GIT_TAG        v2.0.4
-            PATCH_COMMAND  ${CMAKE_COMMAND} -E echo "Patching PortMidi for Android (bzero -> memset)" &&
-                           ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> git apply --ignore-space-change --ignore-whitespace
-                               "${CMAKE_SOURCE_DIR}/cmake/patches/portmidi-android-bzero.patch"
+            # FetchContent may download a tarball snapshot. Don't rely on git being available
+            # in <SOURCE_DIR>. Apply Android fixes via a deterministic CMake script.
+            PATCH_COMMAND  ${CMAKE_COMMAND} -E echo "Fixing PortMidi for Android" &&
+                           ${CMAKE_COMMAND} -DPORTMIDI_SOURCE_DIR=<SOURCE_DIR>
+                                          -DAMIBERRY_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+                                          -P "${CMAKE_SOURCE_DIR}/cmake/portmidi_fix_android.cmake"
          )
          FetchContent_MakeAvailable(portmidi)
 
@@ -186,9 +207,28 @@ if(ANDROID)
             libserialport
             GIT_REPOSITORY https://github.com/scottmudge/libserialport-cmake
             GIT_TAG        master
+            PATCH_COMMAND  ${CMAKE_COMMAND} -E echo "Fixing libserialport for Android" &&
+                           ${CMAKE_COMMAND} -DLIBSERIALPORT_SOURCE_DIR=<SOURCE_DIR>
+                                          -P "${CMAKE_SOURCE_DIR}/cmake/libserialport_fix_android.cmake"
         )
         FetchContent_MakeAvailable(libserialport)
-        target_link_libraries(${PROJECT_NAME} PRIVATE serialport)
+
+        # Link to the produced CMake target to avoid raw '-lserialport' flags.
+        # Different libserialport CMake setups use different target names.
+        set(AMIBERRY_LIBSERIALPORT_TARGET "")
+        if(TARGET serialport)
+            set(AMIBERRY_LIBSERIALPORT_TARGET serialport)
+        elseif(TARGET libserialport)
+            set(AMIBERRY_LIBSERIALPORT_TARGET libserialport)
+        elseif(TARGET libserialport-static)
+            set(AMIBERRY_LIBSERIALPORT_TARGET libserialport-static)
+        endif()
+
+        if(AMIBERRY_LIBSERIALPORT_TARGET STREQUAL "")
+            message(FATAL_ERROR "libserialport target was not created (tried: serialport, libserialport, libserialport-static)")
+        endif()
+
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_LIBSERIALPORT_TARGET})
 
         # The serialport target doesn't consistently propagate public include dirs across toolchains.
         # Ensure the header (<libserialport.h>) is visible when compiling amiberry on Android.
@@ -221,7 +261,10 @@ if (USE_ZSTD)
     endif()
 endif ()
 
-if (USE_LIBSERIALPORT)
+# libserialport find/link fallback is for desktop builds.
+# On Android, libserialport is built via FetchContent above and linked via the 'serialport' target;
+# running FindHelper can inject a raw '-lserialport' link flag, which fails on the NDK.
+if (USE_LIBSERIALPORT AND NOT ANDROID)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBSERIALPORT)
     find_helper(LIBSERIALPORT libserialport libserialport.h serialport)
     if(TARGET serialport)
@@ -281,8 +324,22 @@ if (USE_UAENET_PCAP)
     endif()
 endif()
 
-get_target_property(SDL2_INCLUDE_DIRS SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+# SDL include dirs: FetchContent builds may not provide SDL2::SDL2.
+set(SDL2_INCLUDE_DIRS "")
+if(TARGET SDL2::SDL2)
+    get_target_property(SDL2_INCLUDE_DIRS SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
+elseif(TARGET SDL2-static)
+    get_target_property(SDL2_INCLUDE_DIRS SDL2-static INTERFACE_INCLUDE_DIRECTORIES)
+elseif(TARGET SDL2)
+    get_target_property(SDL2_INCLUDE_DIRS SDL2 INTERFACE_INCLUDE_DIRECTORIES)
+endif()
+
+if(SDL2_INCLUDE_DIRS)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+else()
+    # Keep previous behavior if detection fails; include dirs are often already set by targets.
+    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+endif()
 
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
@@ -290,7 +347,12 @@ add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 add_subdirectory(external/libguisan)
 
-target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+# Keep guisan include behavior aligned
+if(SDL2_INCLUDE_DIRS)
+    target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+else()
+    target_include_directories(guisan PRIVATE ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+endif()
 
 set(AMIBERRY_LIBS
         guisan
