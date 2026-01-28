@@ -96,8 +96,8 @@ static void InitShowMessage(const std::string& message)
 		mon->gui_window = SDL_CreateWindow("Amiberry GUI",
 				SDL_WINDOWPOS_CENTERED,
 				SDL_WINDOWPOS_CENTERED,
-				GUI_HEIGHT,
 				GUI_WIDTH,
+				GUI_HEIGHT,
 				mode);
 		check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
@@ -123,7 +123,7 @@ static void InitShowMessage(const std::string& message)
 		const bool is_fullscreen = window_flags & SDL_WINDOW_FULLSCREEN;
 		if (!is_maximized && !is_fullscreen)
 		{
-			SDL_SetWindowSize(mon->gui_window, GUI_HEIGHT, GUI_WIDTH);
+			SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
 		}
 	}
 
