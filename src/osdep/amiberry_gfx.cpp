@@ -2483,14 +2483,22 @@ static void close_hwnds(struct AmigaMonitor* mon)
 #else
 	if (mon->amiga_renderer && !kmsdrm_detected)
 	{
+#ifdef __ANDROID__
+		// Don't destroy the renderer on Android, as we reuse it
+#else
 		SDL_DestroyRenderer(mon->amiga_renderer);
 		mon->amiga_renderer = nullptr;
+#endif
 	}
 #endif
 	if (mon->amiga_window && !kmsdrm_detected)
 	{
+#ifdef __ANDROID__
+		// Reuse existing window
+#else
 		SDL_DestroyWindow(mon->amiga_window);
 		mon->amiga_window = nullptr;
+#endif
 	}
 
 	if (currprefs.vkbd_enabled)
@@ -4116,6 +4124,16 @@ static int create_windows(struct AmigaMonitor* mon)
 			mon->amiga_renderer = mon->gui_renderer;
 		}
 	}
+#ifdef __ANDROID__
+	if (!mon->amiga_window && mon->gui_window)
+	{
+		mon->amiga_window = mon->gui_window;
+	}
+	if (!mon->amiga_renderer && mon->gui_renderer)
+	{
+		mon->amiga_renderer = mon->gui_renderer;
+	}
+#endif
 	// If KMSDRM is detected, force Full-Window mode
 	if (kmsdrm_detected)
 	{

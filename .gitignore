@@ -152,3 +152,4 @@ android/app/src/main/assets/data
 android/app/src/main/assets/controllers
 android/app/src/main/assets/roms
 android/app/src/main/assets/whdboot
+android/local.properties

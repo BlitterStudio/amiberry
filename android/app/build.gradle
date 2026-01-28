@@ -11,7 +11,7 @@ android {
         minSdk 24
         targetSdk 34
         versionCode 1
-        versionName "1.0"
+        versionName "8.0"
 
         externalNativeBuild {
             cmake {
@@ -48,6 +48,7 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    ndkVersion '28.2.13676358'
 }
 
 dependencies {
@@ -59,14 +60,14 @@ dependencies {
 }
 
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << "-Xlint:deprecation"
 }
 
-task copyAssets(type: Copy) {
+tasks.register('copyAssets', Copy) {
     description = 'Copies Amiberry data files to Android assets'
     into 'src/main/assets'
-    
+
     from('../../data') {
         into 'data'
     }

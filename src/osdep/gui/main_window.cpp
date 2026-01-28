@@ -642,6 +642,13 @@ void amiberry_gui_init()
 	AmigaMonitor* mon = &AMonitors[0];
 	sdl_video_driver = SDL_GetCurrentVideoDriver();
 
+#ifdef __ANDROID__
+	if (mon->amiga_window && !mon->gui_window)
+		mon->gui_window = mon->amiga_window;
+	if (mon->amiga_renderer && !mon->gui_renderer)
+		mon->gui_renderer = mon->amiga_renderer;
+#endif
+
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
 	{
 		kmsdrm_detected = true;
@@ -851,14 +858,16 @@ void amiberry_gui_halt()
 	if (mon->gui_renderer && !kmsdrm_detected)
 	{
 #ifdef __ANDROID__
+		// Don't destroy the renderer on Android, as we reuse it
+#else
 		if (mon->gui_renderer == SDL_GetRenderer(mon->amiga_window)) {
 			mon->gui_renderer = nullptr;
 		} else
-#endif
 		{
 			SDL_DestroyRenderer(mon->gui_renderer);
 			mon->gui_renderer = nullptr;
 		}
+#endif
 	}
 
 	if (mon->gui_window && !kmsdrm_detected) {
@@ -866,8 +875,12 @@ void amiberry_gui_halt()
 			regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
 			regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
 		}
+#ifdef __ANDROID__
+		// Don't destroy the window on Android, as we reuse it
+#else
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
+#endif
 	}
 }
 
