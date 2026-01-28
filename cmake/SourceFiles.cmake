@@ -25,6 +25,7 @@ set(SOURCE_FILES
         src/cia.cpp
         src/consolehook.cpp
         src/cpuboard.cpp
+        src/cpu_thread.cpp
         src/crc32.cpp
         src/custom.cpp
         src/debug.cpp
@@ -400,7 +401,11 @@ else ()
     message(STATUS "PCem support disabled")
 endif ()
 
-add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
+if(ANDROID)
+    add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+else()
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
+endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE TRUE
@@ -434,8 +439,10 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
     )
 endif ()
 
-target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
-target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
+if(NOT ANDROID)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
+    target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
+endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         src

@@ -48,7 +48,7 @@ addrbank rtarea_bank = {
 	rtarea_lput, rtarea_wput, rtarea_bput,
 	rtarea_xlate, rtarea_check, NULL, _T("rtarea"), _T("UAE Boot ROM"),
 	rtarea_lget, rtarea_wget,
-	ABFLAG_ROMIN | ABFLAG_PPCIOSPACE, S_READ, S_WRITE
+	ABFLAG_ROMIN | ABFLAG_PPCIOSPACE | ABFLAG_THREADSAFE, S_READ, S_WRITE
 };
 
 #define MAX_ABSOLUTE_ROM_ADDRESS 1024

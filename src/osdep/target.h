@@ -120,7 +120,7 @@ extern void send_tablet_proximity(int);
 
 extern bool can_have_1gb();
 
-#ifdef __MACH__
+#if defined(__MACH__) || defined(__ANDROID__)
 // from amifilesys.cpp
 string prefix_with_application_directory_path(string currentpath);
 #endif

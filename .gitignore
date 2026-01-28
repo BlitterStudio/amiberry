@@ -141,3 +141,14 @@ Brewfile.lock.json
 
 # Gradle wrapper
 !/gradle/wrapper/gradle-wrapper.jar
+
+# Android subproject specific
+/android/local.properties
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/.idea/
+android/app/src/main/assets/data
+android/app/src/main/assets/controllers
+android/app/src/main/assets/roms
+android/app/src/main/assets/whdboot

@@ -297,33 +297,44 @@ namespace gcn
 
     void DropDown::mousePressed(MouseEvent& mouseEvent)
     {
-        // If we have a mouse press on the widget.
-        if (0 <= mouseEvent.getY()
+        // On touch backends (e.g., Android), the event source can be the deepest child
+        // widget under the finger, while the event distributor is the widget currently
+        // receiving the bubbled event.
+
+        const bool isLeft = mouseEvent.getButton() == MouseEvent::Left;
+        const bool eventDistributedByThis = (mouseEvent.getDistributor() == this);
+
+        // If we have a press on the folded header part (focus + open).
+        if (eventDistributedByThis
+            && isLeft
+            && !mDroppedDown
+            && 0 <= mouseEvent.getY()
             && mouseEvent.getY() < getHeight()
             && mouseEvent.getX() >= 0
-            && mouseEvent.getX() < getWidth()
-            && mouseEvent.getButton() == MouseEvent::Left
-            && !mDroppedDown
-            && mouseEvent.getSource() == this)
+            && mouseEvent.getX() < getWidth())
         {
+            // On touch devices the first tap typically should both focus and open.
+            // (On desktop, this is still fine and matches common dropdown behavior.)
+            requestFocus();
+
             mPushed = true;
             dropDown();
             requestModalMouseInputFocus();
         }
-        // Fold up the listbox if the upper part is clicked after fold down
-        else if (0 <= mouseEvent.getY()
+        // Fold up the listbox if the header part is clicked after fold down.
+        else if (eventDistributedByThis
+            && isLeft
+            && mDroppedDown
+            && 0 <= mouseEvent.getY()
             && mouseEvent.getY() < mFoldedUpHeight
             && mouseEvent.getX() >= 0
-            && mouseEvent.getX() < getWidth()
-            && mouseEvent.getButton() == MouseEvent::Left
-            && mDroppedDown
-            && mouseEvent.getSource() == this)
+            && mouseEvent.getX() < getWidth())
         {
             mPushed = false;
             foldUp();
             releaseModalMouseInputFocus();
         }
-        // If we have a mouse press outside the widget
+        // If we have a press outside the widget.
         else if (0 > mouseEvent.getY()
             || mouseEvent.getY() >= getHeight()
             || mouseEvent.getX() < 0
@@ -331,6 +342,12 @@ namespace gcn
         {
             mPushed = false;
             foldUp();
+
+            // Be defensive: if we held modal focus, release it when tapping elsewhere.
+            if (isModalMouseInputFocused())
+            {
+                releaseModalMouseInputFocus();
+            }
         }
     }
 

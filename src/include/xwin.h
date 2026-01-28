@@ -153,6 +153,7 @@ struct amigadisplay
 	bool specialmonitoron;
 	int inhibit_frame;
 	bool pending_render;
+	volatile bool picasso_zero_copy_update_needed;
 
 	struct vidbuf_description gfxvidinfo;
 };

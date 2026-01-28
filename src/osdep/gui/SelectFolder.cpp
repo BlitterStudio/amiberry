@@ -43,6 +43,10 @@ class SelectDirListModel : public gcn::ListModel
 	std::vector<std::string> dirs;
 
 public:
+	SelectDirListModel()
+	{
+	}
+
 	SelectDirListModel(const std::string& path)
 	{
 		changeDir(path);
@@ -78,7 +82,7 @@ public:
 	}
 };
 
-static SelectDirListModel dirList(".");
+static SelectDirListModel dirList;
 
 static void checkfoldername(const std::string& current)
 {
@@ -329,6 +333,19 @@ static void SelectFolderLoop()
 
 		case SDL_MOUSEWHEEL:
 			got_event = handle_mousewheel(event);
+			break;
+
+		case SDL_WINDOWEVENT:
+			if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			}
+			got_event = true;
+			break;
+
+		case SDL_APP_DIDENTERFOREGROUND:
+			SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			got_event = true;
 			break;
 
 		default:

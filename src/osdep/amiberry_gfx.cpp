@@ -50,8 +50,21 @@
 #include <png.h>
 #include <SDL_image.h>
 #ifdef USE_OPENGL
+#ifndef __ANDROID__
 #include <GL/glew.h>
 #include <SDL_opengl.h>
+#else
+#include <GLES3/gl3.h>
+#include <SDL_opengles2.h>
+#endif
+
+#ifndef GL_BGRA
+#ifdef GL_BGRA_EXT
+#define GL_BGRA GL_BGRA_EXT
+#else
+#define GL_BGRA 0x80E1
+#endif
+#endif
 
 #define CRTEMU_REPORT_SHADER_ERRORS
 #define CRTEMU_IMPLEMENTATION
@@ -88,7 +101,6 @@ static GLenum gl_texture_filter_mode = GL_LINEAR; // Default to linear filtering
 
 bool set_opengl_attributes(int mode);
 bool init_opengl_context(SDL_Window* window);
-static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src, const SDL_Rect& crop, SDL_Rect& out_buffer_rect);
 
 // Check if shader name refers to an external .glsl file
 static bool is_external_shader(const char* shader)
@@ -467,6 +479,7 @@ static bool init_osd_shader()
     glBindVertexArray(osd_vao);
 
 	glGenBuffers(1, &osd_vbo);
+    glBindVertexArray(0);
 
 	return true;
 }
@@ -632,14 +645,20 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	}
 
 	const amigadisplay* ad = &adisplays[monid];
-
 	// Unified OSD update: handle both native (CHIPSET) and RTG modes
 	if (((currprefs.leds_on_screen & STATUSLINE_CHIPSET) && !ad->picasso_on) ||
 		((currprefs.leds_on_screen & STATUSLINE_RTG) && ad->picasso_on))
 	{
 		update_leds(monid);
 	}
-
+#ifdef WITH_THREADED_CPU
+	if (ad->picasso_zero_copy_update_needed) {
+		const_cast<amigadisplay*>(ad)->picasso_zero_copy_update_needed = false;
+		if (currprefs.rtg_zerocopy) {
+			target_graphics_buffer_update(monid, true);
+		}
+	}
+#endif
 #ifdef USE_OPENGL
 	return amiga_surface != nullptr;
 #else
@@ -1111,41 +1130,66 @@ void getgfxoffset(const int monid, float* dxp, float* dyp, float* mxp, float* my
 	const AmigaMonitor* mon = &AMonitors[monid];
 	const amigadisplay* ad = &adisplays[monid];
 	float dx = 0, dy = 0, mx = 1.0, my = 1.0;
+	// Determine effective Amiga source dimensions/offset
+	float src_w = 0, src_h = 0;
+	float src_x = 0, src_y = 0;
+
 #ifdef AMIBERRY
-	if (currprefs.gfx_auto_crop)
-	{
-		dx -= static_cast<float>(crop_rect.x);
-		dy -= static_cast<float>(crop_rect.y);
+	if (currprefs.gfx_auto_crop && !ad->picasso_on) {
+		src_w = static_cast<float>(crop_rect.w);
+		src_h = static_cast<float>(crop_rect.h);
+		src_x = static_cast<float>(crop_rect.x);
+		src_y = static_cast<float>(crop_rect.y);
 	}
 #endif
+	if (src_w <= 0 && amiga_surface) {
+		src_w = static_cast<float>(amiga_surface->w);
+		src_h = static_cast<float>(amiga_surface->h);
+		src_x = 0;
+		src_y = 0;
+	}
 
-	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
 #ifdef USE_OPENGL
-		// In OpenGL Full-Window mode, use render_quad for offset and scaling calculations
-		// render_quad contains the actual viewport position and dimensions
-		if (render_quad.w > 0 && render_quad.h > 0 && amiga_surface) {
-			// Scaling: ratio of viewport size to Amiga surface (must compute first)
-			mx = static_cast<float>(render_quad.w) / static_cast<float>(amiga_surface->w);
-			my = static_cast<float>(render_quad.h) / static_cast<float>(amiga_surface->h);
-			// Offset calculation differs between RTG and native modes due to 
-			// different formulas in get_mouse_position():
-			// - RTG mode: x = (x - XOffset) * fmx + fdx * fmx  (offset gets scaled)
-			// - Native mode: x = x * fmx - fdx  (offset is pre-scaled)
-			if (ad->picasso_on) {
-				// RTG mode: get_mouse_position scales the offset by fmx,
-				// so we pass raw window coordinates (negative for subtraction)
-				dx -= static_cast<float>(render_quad.x);
-				dy -= static_cast<float>(render_quad.y);
-			} else {
-				// Native mode: get_mouse_position uses offset directly,
-				// so we pre-scale to Amiga surface coordinates
-				dx += static_cast<float>(render_quad.x) / mx;
-				dy += static_cast<float>(render_quad.y) / my;
-			}
+	// OpenGL Path (Windowed & Fullscreen)
+	// Always use render_quad if available, as it reflects the true viewport
+	if (amiga_surface && render_quad.w > 0 && render_quad.h > 0) {
+		// Scaling: Viewport / Amiga Source
+		if (src_w > 0) mx = static_cast<float>(render_quad.w) / src_w;
+		if (src_h > 0) my = static_cast<float>(render_quad.h) / src_h;
+
+		if (ad->picasso_on) {
+			// RTG Mode: inputdevice logic x = (x_win - dx) * fmx + fdx * fmx (Wait, verify formula)
+			// Actually: x = (x - XOffset) * fmx + fdx * fmx
+			// We want: x_amiga = (x_win - render_quad.x) * fmx + crop_x
+			// InputDevice: x_win * fmx + (fdx * fmx)
+			// => fdx * fmx = -render_quad.x * fmx + crop_x
+			// => fdx = -render_quad.x + crop_x / fmx
+			// => fdx = -render_quad.x + crop_x * mx
+			
+			dx = -static_cast<float>(render_quad.x) + src_x * mx;
+			dy = -static_cast<float>(render_quad.y) + src_y * my;
+		} else {
+			// Native Mode: x = x * fmx - fdx (where x is already window coords)
+			// Wait, inputdevice Native: x = (x * fmx) - fdx
+			// We want: x_amiga = (x_win - render_quad.x) * fmx + crop_x
+			// x_win * fmx - (render_quad.x * fmx - crop_x)
+			// => fdx = render_quad.x * fmx - crop_x
+			// => fdx = render_quad.x / mx - crop_x
+			
+			dx = static_cast<float>(render_quad.x) / mx - src_x;
+			dy = static_cast<float>(render_quad.y) / my - src_y;
 		}
-		else
+	} else 
 #endif
-		// SDL renderer fallback path (no OpenGL or render_quad not set)
+	// Fallback / Software Renderer Path
+	if (mon->currentmode.flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+#ifdef AMIBERRY
+		// Legacy AutoCrop for software renderer
+		if (currprefs.gfx_auto_crop) {
+			dx -= src_x;
+			dy -= src_y;
+		}
+#endif
 		if (!(mon->scalepicasso && mon->screen_is_picasso) &&
 			!(mon->currentmode.fullfill && (mon->currentmode.current_width > mon->currentmode.native_width || 
 			                                 mon->currentmode.current_height > mon->currentmode.native_height))) {
@@ -4171,10 +4215,16 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (fullwindow) {
 		rc = md->rect;
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef __ANDROID__
+		flags |= SDL_WINDOW_RESIZABLE;
+#endif
 		mon->currentmode.native_width = rc.w;
 		mon->currentmode.native_height = rc.h;
 	} else if (fullscreen) {
 		flags = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_ALLOW_HIGHDPI;
+#ifdef __ANDROID__
+		flags |= SDL_WINDOW_RESIZABLE;
+#endif
 		getbestmode(mon, 0);
 		w = mon->currentmode.native_width;
 		h = mon->currentmode.native_height;
@@ -4197,7 +4247,14 @@ static int create_windows(struct AmigaMonitor* mon)
 		flags |= SDL_WINDOW_BORDERLESS;
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
-
+#ifdef USE_OPENGL
+	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
+	if (!kmsdrm_detected) {
+		flags |= SDL_WINDOW_OPENGL;
+	} else {
+		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
+	}
+#endif
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
 		rc.w, rc.h,
@@ -5205,7 +5262,11 @@ void screenshot(int monid, int mode, int doprepare)
 	write_log(_T("SDL video driver: %hs\n"), drv ? drv : "unknown");
 
 	// Detect GLES-only drivers (e.g., KMSDRM on Raspberry Pi)
+#ifdef __ANDROID__
+	const bool likely_gles_only = true;
+#else
 	const bool likely_gles_only = (drv && (strcmp(drv, "KMSDRM") == 0));
+#endif
 
 	if (mode == 0) {
 		if (likely_gles_only) {
@@ -5294,6 +5355,7 @@ static bool is_gles_context()
 		return false;
 	}
 
+#ifndef __ANDROID__
 	// GLEW: enable modern/core entry points before init, then clear benign error.
 	glewExperimental = GL_TRUE;
 	const GLenum glew_err = glewInit();
@@ -5310,6 +5372,7 @@ static bool is_gles_context()
 			return false;
 		}
 	}
+#endif
 
 	// On GLES contexts (e.g. RPi4/5), desktop GLEW might fail or return error.
 	// We should NOT fail initialization here, but instead warn and try to patch missing symbols.
@@ -5320,6 +5383,7 @@ static bool is_gles_context()
 
 	// Manually load VAO functions if GLEW failed to load them (common on GLES)
     // We check the GLEW function pointers directly.
+#ifndef __ANDROID__
     if (!__glewGenVertexArrays) {
         write_log("Manual loading of glGenVertexArrays...\n");
         __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
@@ -5335,6 +5399,7 @@ static bool is_gles_context()
         __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
         if (!__glewDeleteVertexArrays) __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArraysOES");
     }
+#endif
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
@@ -5346,73 +5411,4 @@ static bool is_gles_context()
 	return true;
 }
 
-/**
-   * @brief Creates a new tightly-packed pixel buffer from a specified cropped region of an SDL_Surface.
-   *
-   * This function is essential for preparing pixel data for rendering systems like `crtemu_present`
-   * that require pixel buffers to be tightly packed (without any additional padding bytes, i.e., pitch / stride.
-   *
-   * SDL_Surfaces, especially when representing a sub-region or when their `pitch` (bytes per row)
-   * is greater than `(width * bytes_per_pixel)`, do not always guarantee tightly-packed data.
-   * This function addresses that by:
-   * 1. Calculating the effective crop region, clamped to the source surface's boundaries.
-   * 2. Allocating a new memory buffer precisely sized for the cropped, tightly-packed data.
-   * 3. Copying the pixel data row by row from the source surface into the new buffer,
-   *    ensuring contiguity and removing any pitch discrepancies.
-   *
-   * The caller is responsible for deallocating the returned buffer using `delete[]`.
-   *
-   * @param src A pointer to the source SDL_Surface from which to extract pixels. Must not be null.
-   * @param crop The SDL_Rect defining the desired region to crop from the source surface.
-   * @param out_buffer_rect An output parameter. On successful return, this SDL_Rect will contain
-   *   the actual dimensions (x, y, w, h) of the data within the returned `uae_u8*` buffer.
-   *   The x and y components will typically be 0, and w/h will represent the width and height
-   *   of the copied pixel data.
-   * @return A pointer to a newly allocated `uae_u8` array containing the tightly-packed pixel data
-   *   of the cropped region. Returns `nullptr` if `src` is null, the effective crop region is
-   *   invalid/empty, or memory allocation fails.
-   */
-static uae_u8* create_packed_pixel_buffer(const SDL_Surface* src,
-	const SDL_Rect& crop, SDL_Rect& out_buffer_rect)
-{
-	if (!src)
-	{
-		out_buffer_rect = { 0, 0, 0, 0 };
-		return nullptr;
-	}
-
-	const SDL_Rect src_bounds = { 0, 0, src->w, src->h };
-	SDL_Rect final_crop;
-	if (!SDL_IntersectRect(&crop, &src_bounds, &final_crop))
-	{
-		out_buffer_rect = { 0, 0, 0, 0 };
-		return nullptr;
-	}
-
-	const int bytes_per_pixel = src->format->BytesPerPixel;
-	const int buffer_row_bytes = final_crop.w * bytes_per_pixel;
-	const size_t buffer_size = buffer_row_bytes * final_crop.h;
-
-	if (buffer_size == 0)
-	{
-		out_buffer_rect = { 0, 0, 0, 0 };
-		return nullptr;
-	}
-	uae_u8* packed_buffer = new uae_u8[buffer_size];
-
-	const uae_u8* src_row_start = static_cast<const uae_u8*>(src->pixels)
-							  + final_crop.y * src->pitch
-							  + final_crop.x * bytes_per_pixel;
-	uae_u8* dst_row_start = packed_buffer;
-
-	for (int y = 0; y < final_crop.h; ++y)
-	{
-		memcpy(dst_row_start, src_row_start, buffer_row_bytes);
-		src_row_start += src->pitch;
-		dst_row_start += buffer_row_bytes;
-	}
-
-	out_buffer_rect = final_crop;
-	return packed_buffer;
-}
 #endif

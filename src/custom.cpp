@@ -46,6 +46,9 @@
 #include "enforcer.h"
 #endif
 #include "threaddep/thread.h"
+#ifdef WITH_THREADED_CPU
+#include "cpu_thread.h"
+#endif
 #ifdef WITH_LUA
 #include "luascript.h"
 #endif
@@ -3391,7 +3394,9 @@ static void rethink_intreq(void)
 
 static void intreq_checks(uae_u16 oldreq, uae_u16 newreq)
 {
+#ifdef SERIAL_PORT
 	serial_rbf_change((newreq & 0x0800) ? 1 : 0);
+#endif
 }
 
 static void event_doint_delay_do_ext_old(uae_u32 v)
@@ -7147,6 +7152,10 @@ int custom_init(void)
 		org(pos);
 	}
 #endif
+#ifdef WITH_THREADED_CPU
+	/* Initialize CPU threading diagnostics */
+	cpu_thread_diag_init();
+#endif
 
 	build_blitfilltable();
 
@@ -7165,9 +7174,13 @@ static uae_u32 REGPARAM3 custom_wget(uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_bget(uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_lgeti(uaecptr) REGPARAM;
 static uae_u32 REGPARAM3 custom_wgeti(uaecptr) REGPARAM;
+#ifdef WITH_THREADED_CPU
+// we have these in custom.h as non-static
+#else
 static void REGPARAM3 custom_lput(uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 custom_wput(uaecptr, uae_u32) REGPARAM;
 static void REGPARAM3 custom_bput(uaecptr, uae_u32) REGPARAM;
+#endif
 
 addrbank custom_bank = {
 	custom_lget, custom_wget, custom_bget,
@@ -7734,9 +7747,17 @@ static int REGPARAM2 custom_wput_1(uaecptr addr, uae_u32 value, int noget)
 	}
 	return ret;
 }
-
-static void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
+#ifndef WITH_THREADED_CPU
+static
+#endif
+void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
 {
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		if (cpu_thread_queue_register_op(addr, value, 2, 1))
+			return;
+	}
+#endif
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
 		dummy_put(addr, 2, value);
 		return;
@@ -7756,8 +7777,17 @@ static void REGPARAM2 custom_wput(uaecptr addr, uae_u32 value)
 	custom_wput_1(addr, value, 0);
 }
 
-static void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
+#ifndef WITH_THREADED_CPU
+static
+#endif
+void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
 {
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		if (cpu_thread_queue_register_op(addr, value, 1, 1))
+			return;
+	}
+#endif
 	uae_u16 rval;
 
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
@@ -7787,8 +7817,17 @@ static void REGPARAM2 custom_bput(uaecptr addr, uae_u32 value)
 	}
 }
 
-static void REGPARAM2 custom_lput(uaecptr addr, uae_u32 value)
+#ifndef WITH_THREADED_CPU
+static
+#endif
+void REGPARAM2 custom_lput(uaecptr addr, uae_u32 value)
 {
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		if (cpu_thread_queue_register_op(addr, value, 4, 1))
+			return;
+	}
+#endif
 	if ((addr & 0xffff) < 0x8000 && currprefs.cs_fatgaryrev >= 0) {
 		dummy_put(addr, 4, value);
 		return;
@@ -12499,6 +12538,18 @@ static void sync_imm_evhandler(void)
 
 int do_cycles_cck(int cycles)
 {
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		/* CPU thread is skipping cycle accounting */
+		/* Phase 2: Flush any batched register operations before returning */
+		cpu_thread_flush_register_batch();
+
+		if (cpu_thread_diag.enable_diagnostics) {
+			cpu_thread_diag_log_stall(cycles);
+		}
+		return (cycles / CYCLE_UNIT) * CYCLE_UNIT;
+	}
+#endif
 	int c = 0;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -12803,6 +12854,14 @@ void wait_cpu_cycle_write_ce020(uaecptr addr, int mode, uae_u32 v)
 
 void do_cycles_ce(int cycles)
 {
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		if (cpu_thread_diag.enable_diagnostics) {
+			cpu_thread_diag_log_stall(cycles);
+		}
+		return;
+	}
+#endif
 	cycles += extra_cycle;
 	while (cycles >= CYCLE_UNIT) {
 		do_cck(true);
@@ -12813,6 +12872,14 @@ void do_cycles_ce(int cycles)
 
 void do_cycles_ce020(int cycles)
 {
+#ifdef WITH_THREADED_CPU
+	if (currprefs.cpu_thread && !is_mainthread()) {
+		if (cpu_thread_diag.enable_diagnostics) {
+			cpu_thread_diag_log_stall(cycles);
+		}
+		return;
+	}
+#endif
 	evt_t cc;
 	static int extra;
 

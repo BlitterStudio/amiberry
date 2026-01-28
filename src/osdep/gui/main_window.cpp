@@ -676,35 +676,39 @@ void amiberry_gui_init()
 			}
 		}
 
-        Uint32 mode;
-		if (!kmsdrm_detected)
-		{
-			// Only enable Windowed mode if we're running under a window environment
+            Uint32 mode;
+            if (!kmsdrm_detected)
+            {
+#ifdef __ANDROID__
+                mode = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE;
+                SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
+#else
+                // Only enable Windowed mode if we're running under a window environment
 			mode = SDL_WINDOW_RESIZABLE;
-		}
-		else
-		{
-			// otherwise go for Full-window
-			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-		}
+#endif
+            }
+            else
+            {
+                // otherwise go for Full-window
+                mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+            }
 
-        if (currprefs.gui_alwaysontop)
-            mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-        if (currprefs.start_minimized)
-            mode |= SDL_WINDOW_HIDDEN;
-        else
-            mode |= SDL_WINDOW_SHOWN;
-		// Set Window allow high DPI by default
-		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+            if (currprefs.gui_alwaysontop)
+                mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+            if (currprefs.start_minimized)
+                mode |= SDL_WINDOW_HIDDEN;
+            else
+                mode |= SDL_WINDOW_SHOWN;
+            // Set Window allow high DPI by default
+            mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-        mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				gui_window_rect.w,
-				gui_window_rect.h,
-				mode);
+            mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+                                               SDL_WINDOWPOS_CENTERED,
+                                               SDL_WINDOWPOS_CENTERED,
+                                               gui_window_rect.w,
+                                               gui_window_rect.h,
+                                               mode);
 
-        check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
 		// Sync rect to actual window metrics (handles SDL_WINDOWPOS_CENTERED)
 		int wx, wy, ww, wh;
@@ -846,8 +850,15 @@ void amiberry_gui_halt()
 	}
 	if (mon->gui_renderer && !kmsdrm_detected)
 	{
-		SDL_DestroyRenderer(mon->gui_renderer);
-		mon->gui_renderer = nullptr;
+#ifdef __ANDROID__
+		if (mon->gui_renderer == SDL_GetRenderer(mon->amiga_window)) {
+			mon->gui_renderer = nullptr;
+		} else
+#endif
+		{
+			SDL_DestroyRenderer(mon->gui_renderer);
+			mon->gui_renderer = nullptr;
+		}
 	}
 
 	if (mon->gui_window && !kmsdrm_detected) {
