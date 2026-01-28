@@ -28,6 +28,10 @@
 
 #include "sounddep/sound.h"
 
+#ifdef LIBRETRO
+#include "libretro_shared.h"
+#endif
+
 struct sound_dp
 {
 	SDL_AudioDeviceID dev;
