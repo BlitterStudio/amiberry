@@ -154,13 +154,7 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 #else
 
 #ifndef CRTEMU_WEBGL
-#ifndef __ANDROID__
-#include <GL/glew.h>
-#include "SDL_opengl.h"
-#else
-#include <GLES3/gl3.h>
-#include "SDL_opengles2.h"
-#endif
+#include "gl_platform.h"
 #else
 #include <wajic_gl.h>
 #endif
@@ -1796,7 +1790,7 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU_GLuint blurbuffer_a, CRTEMU_GLuint blurbuffer_b,
                                   CRTEMU_GLuint blurtexture_b, float r, int width, int height ) {
 
-    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_b );
 	crtemu->UseProgram( crtemu->blur_shader );
@@ -1832,7 +1826,7 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	int viewport[ 4 ];
 	crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	if (crtemu->type == CRTEMU_TYPE_NONE) {
 		// Just copy to backbuffer and present

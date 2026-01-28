@@ -1,11 +1,7 @@
 #ifndef EXTERNAL_SHADER_H
 #define EXTERNAL_SHADER_H
 
-#ifndef __ANDROID__
-#include <GL/glew.h>
-#else
-#include <GLES3/gl3.h>
-#endif
+#include "gl_platform.h"
 #include <string>
 #include <vector>
 #include <map>

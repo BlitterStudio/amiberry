@@ -50,13 +50,7 @@
 #include <png.h>
 #include <SDL_image.h>
 #ifdef USE_OPENGL
-#ifndef __ANDROID__
-#include <GL/glew.h>
-#include <SDL_opengl.h>
-#else
-#include <GLES3/gl3.h>
-#include <SDL_opengles2.h>
-#endif
+#include "gl_platform.h"
 
 #ifndef GL_BGRA
 #ifdef GL_BGRA_EXT
@@ -67,6 +61,7 @@
 #endif
 
 #define CRTEMU_REPORT_SHADER_ERRORS
+#define CRTEMU_REPORT_ERROR( str ) write_log( "%s\n", str )
 #define CRTEMU_IMPLEMENTATION
 #include "crtemu.h"
 
@@ -75,7 +70,7 @@
 
 #include "external_shader.h"
 
-#endif
+#endif // USE_OPENGL
 
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
@@ -251,14 +246,13 @@ void update_vsync(const int monid)
 	
 	if (current_vsync_interval != interval) {
 		if (SDL_GL_SetSwapInterval(interval) == 0) {
-			current_vsync_interval = interval;
 			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
 		}
 		else {
-			write_log("OpenGL VSync: Failed to set interval %d: %s\n", interval, SDL_GetError());
-			// If failed, maybe try to reset to 0 to be safe? 
-			// But maybe the driver just doesn't support adaptive?
+			write_log("OpenGL VSync: Failed to set interval %d: %s (will not retry)\n", interval, SDL_GetError());
 		}
+		// Update interval even on failure to prevent repeated attempts
+		current_vsync_interval = interval;
 	}
 }
 #endif
@@ -528,6 +522,12 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (crtemu_shader == nullptr) {
 		const int crt_type = get_crtemu_type(shader_name);
 		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
+
+		// Fallback to NONE if shader creation failed (e.g., shader compilation error)
+		if (crtemu_shader == nullptr && crt_type != CRTEMU_TYPE_NONE) {
+			write_log("WARNING: Failed to create CRT shader type %d, falling back to NONE\n", crt_type);
+			crtemu_shader = crtemu_create(CRTEMU_TYPE_NONE, nullptr);
+		}
 	}
 	return crtemu_shader != nullptr || external_shader != nullptr;
 #else
@@ -4266,12 +4266,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
 #ifdef USE_OPENGL
-	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
-	if (!kmsdrm_detected) {
-		flags |= SDL_WINDOW_OPENGL;
-	} else {
-		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
-	}
+	flags |= SDL_WINDOW_OPENGL;
 #endif
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
@@ -5336,16 +5331,14 @@ static bool is_gles_context()
 }
 
 /**
- * @brief Creates the OpenGL context and initializes the GLEW extension loader.
+ * @brief Creates the OpenGL context and initializes extension function pointers.
  *
  * This function must be called after an SDL window has been successfully
  * created. It performs the final steps required to prepare for OpenGL
  * rendering:
  * 1. Creates an OpenGL context and associates it with the given window.
  * 2. Binds the newly created context to the current thread.
- * 3. Initializes the GLEW library, which dynamically loads the function
- *    pointers for all available OpenGL extensions. This is essential for
- *    accessing any functionality beyond the OpenGL 1.1 core.
+ * 3. Loads OpenGL extension function pointers via SDL_GL_GetProcAddress.
  *
  * The function includes error checking after each step and will log detailed
  * error messages if any part of the process fails. It also logs the vendor,
@@ -5353,7 +5346,7 @@ static bool is_gles_context()
  *
  * @param window A pointer to the SDL_Window that the OpenGL context will be
  *               created for.
- * @return true if the context was created and GLEW was initialized
+ * @return true if the context was created and extension functions were loaded
  *         successfully, false otherwise.
  */
 [[nodiscard]] bool init_opengl_context(SDL_Window* window)
@@ -5373,15 +5366,8 @@ static bool is_gles_context()
 		return false;
 	}
 
-#ifndef __ANDROID__
-	// GLEW: enable modern/core entry points before init, then clear benign error.
-	glewExperimental = GL_TRUE;
-	const GLenum glew_err = glewInit();
-	(void)glGetError(); // clear spurious GL_INVALID_ENUM produced by glewInit on core profiles
-
-	if (glew_err != GLEW_OK) {
-		write_log(_T("!!! Error initializing GLEW: %hs\n"), glewGetErrorString(glew_err));
-		// If GLEW reports an error but GL is valid, continue; otherwise fail.
+	// Load OpenGL extension functions (does nothing on Android/GLES3)
+	if (!gl_platform_init()) {
 		const GLubyte* ver = glGetString(GL_VERSION);
 		if (!ver) {
 			write_log(_T("!!! glGetString(GL_VERSION) is null; failing OpenGL init.\n"));
@@ -5389,35 +5375,8 @@ static bool is_gles_context()
 			gl_context = nullptr;
 			return false;
 		}
+		write_log(_T("!!! OpenGL version: %hs\n"), ver);
 	}
-#endif
-
-	// On GLES contexts (e.g. RPi4/5), desktop GLEW might fail or return error.
-	// We should NOT fail initialization here, but instead warn and try to patch missing symbols.
-	if (is_gles_context()) {
-		const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-		write_log(_T("!!! OpenGL ES context detected (%hs); proceeding with manual symbol fixups if needed.\n"), ver ? ver : "unknown");
-	}
-
-	// Manually load VAO functions if GLEW failed to load them (common on GLES)
-    // We check the GLEW function pointers directly.
-#ifndef __ANDROID__
-    if (!__glewGenVertexArrays) {
-        write_log("Manual loading of glGenVertexArrays...\n");
-        __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
-        if (!__glewGenVertexArrays) __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArraysOES");
-    }
-    if (!__glewBindVertexArray) {
-        write_log("Manual loading of glBindVertexArray...\n");
-        __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray");
-        if (!__glewBindVertexArray) __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArrayOES");
-    }
-    if (!__glewDeleteVertexArrays) {
-        write_log("Manual loading of glDeleteVertexArrays...\n");
-        __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
-        if (!__glewDeleteVertexArrays) __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArraysOES");
-    }
-#endif
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
