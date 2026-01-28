@@ -5,6 +5,12 @@ on:
   push:
   pull_request:
 
+# Cancel older in-progress runs for the same branch/PR ref.
+# This reduces wasted CI minutes when multiple pushes happen quickly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # Set least-privilege defaults for all jobs
 permissions:
   contents: read
@@ -953,8 +959,92 @@ jobs:
           name: amiberry-debian-trixie-armhf-opengl
           path: "amiberry-*.zip"
 
+  build-android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Keep Gradle state inside the workspace so actions/cache can persist it reliably.
+      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Gradle (wrapper + caches)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/gradle-wrapper.properties', 'android/**/*.gradle*', 'android/gradle.properties', 'android/settings.gradle', 'android/build.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Note: Android dependencies are fetched via CMake FetchContent during the native build,
+      # so we no longer download SDL2_image/SDL2_ttf vendored third-party sources here.
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build with Gradle
+        run: |
+          cd android
+          ./gradlew --no-daemon --stacktrace --warning-mode all assembleDebug assembleRelease bundleRelease
+
+      - name: Collect Android outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar
+          mkdir -p artifacts
+          # Copy outputs rather than renaming in-place (AGP may produce multiple variants).
+          VERSION_SUFFIX="${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+          
+          if compgen -G "android/app/build/outputs/apk/debug/*.apk" > /dev/null; then
+            for f in android/app/build/outputs/apk/debug/*.apk; do
+              cp -v "$f" "artifacts/amiberry-android-${VERSION_SUFFIX}-debug.apk"
+            done
+          fi
+          if compgen -G "android/app/build/outputs/apk/release/*.apk" > /dev/null; then
+            for f in android/app/build/outputs/apk/release/*.apk; do
+              cp -v "$f" "artifacts/amiberry-android-${VERSION_SUFFIX}-release.apk"
+            done
+          fi
+          # Also collect AABs if present
+          if compgen -G "android/app/build/outputs/bundle/**/*.aab" > /dev/null; then
+             for f in android/app/build/outputs/bundle/**/*.aab; do
+                cp -v "$f" "artifacts/amiberry-android-${VERSION_SUFFIX}.aab"
+             done
+          fi
+
+      - name: Upload Android artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-android-${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          path: |
+            artifacts/*
+          if-no-files-found: error
+
+      - name: Upload Android build reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-android-reports-${{ github.sha }}
+          path: |
+            android/app/build/reports/**
+            android/app/build/logs/**
+          if-no-files-found: warn
+
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl]
+    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     # Elevated permissions only where needed for creating a release
@@ -993,9 +1083,11 @@ jobs:
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/Amiberry-*.zip
+            artifacts/*.apk
+            artifacts/*.aab
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl]
+    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     # Elevated permissions only where needed for creating a prerelease
@@ -1035,3 +1127,5 @@ jobs:
           artifacts: |
             artifacts/amiberry-*.zip
             artifacts/Amiberry-*.zip
+            artifacts/*.apk
+            artifacts/*.aab

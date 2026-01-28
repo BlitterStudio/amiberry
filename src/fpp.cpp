@@ -3699,8 +3699,11 @@ void fpu_reset (void)
 
 #if defined(CPU_i386) || defined(CPU_x86_64)
 #ifndef __MACH__
+#ifndef __ANDROID__
 	init_fpucw_x87();
 #endif
+#endif
+
 #ifdef MSVC_LONG_DOUBLE
 	init_fpucw_x87_80();
 #endif

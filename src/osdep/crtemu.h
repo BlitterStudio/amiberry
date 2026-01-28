@@ -110,6 +110,9 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
     typedef int CRTEMU_GLsizei;
     typedef unsigned int CRTEMU_GLenum;
     typedef int CRTEMU_GLint;
+#ifndef CRTEMU_GLCALLTYPE
+    #define CRTEMU_GLCALLTYPE
+#endif
     typedef float CRTEMU_GLfloat;
     typedef char CRTEMU_GLchar;
     typedef unsigned char CRTEMU_GLboolean;
@@ -151,10 +154,24 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 #else
 
 #ifndef CRTEMU_WEBGL
+#ifndef __ANDROID__
 #include <GL/glew.h>
 #include "SDL_opengl.h"
 #else
+#include <GLES3/gl3.h>
+#include "SDL_opengles2.h"
+#endif
+#else
 #include <wajic_gl.h>
+#endif
+#ifndef GLAPIENTRY
+    #ifdef GL_APIENTRY
+        #define GLAPIENTRY GL_APIENTRY
+    #elif defined(APIENTRY)
+        #define GLAPIENTRY APIENTRY
+    #else
+        #define GLAPIENTRY
+    #endif
 #endif
 #define CRTEMU_GLCALLTYPE GLAPIENTRY
 
@@ -198,12 +215,22 @@ typedef GLbitfield CRTEMU_GLbitfield;
 #define CRTEMU_GL_TEXTURE_WRAP_S GL_TEXTURE_WRAP_S
 #define CRTEMU_GL_TEXTURE_WRAP_T GL_TEXTURE_WRAP_T
 #ifndef CRTEMU_WEBGL
-#define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_BORDER
-#define CRTEMU_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
+    #if defined(GL_CLAMP_TO_BORDER) && !defined(__ANDROID__)
+        #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_BORDER
+        #define CRTEMU_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
+    #else
+        // Fallback for Android/GLES where CLAMP_TO_BORDER might be missing
+        #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_EDGE
+        #ifndef GL_TEXTURE_BORDER_COLOR
+             #define CRTEMU_GL_TEXTURE_BORDER_COLOR 0x1004 // Define if missing, though likely unused if CLAMP_TO_BORDER is replaced
+        #else
+             #define CRTEMU_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
+        #endif
+    #endif
 #else
 // WebGL does not support GL_CLAMP_TO_BORDER, we have to emulate
-         // this behavior with code in the fragment shader
-         #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_EDGE
+          // this behavior with code in the fragment shader
+          #define CRTEMU_GL_CLAMP_TO_BORDER GL_CLAMP_TO_EDGE
 #endif
 #endif
 
@@ -1634,8 +1661,10 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 
 	crtemu->GenTextures( 1, &crtemu->frametexture );
 #ifndef CRTEMU_WEBGL
+#if !defined(__ANDROID__)
 	// This enable call is not necessary when using fragment shaders, avoid logged warnings in WebGL
 	crtemu->Enable( CRTEMU_GL_TEXTURE_2D );
+#endif
 #endif
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
@@ -1646,8 +1675,10 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->GenTextures( 1, &crtemu->backbuffer );
 	crtemu->GenFramebuffers( 1, &crtemu->fbo_backbuffer );
 #ifndef CRTEMU_WEBGL
+#if !defined(__ANDROID__)
 	// This enable call is not necessary when using fragment shaders, avoid logged warnings in WebGL
 	crtemu->Enable( CRTEMU_GL_TEXTURE_2D );
+#endif
 #endif
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
@@ -1699,6 +1730,8 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
         crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
         crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 #endif
+
+    if (crtemu->BindVertexArray) crtemu->BindVertexArray(0);
 
 	return crtemu;
 
@@ -1763,7 +1796,7 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU_GLuint blurbuffer_a, CRTEMU_GLuint blurbuffer_b,
                                   CRTEMU_GLuint blurtexture_b, float r, int width, int height ) {
 
-    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_b );
 	crtemu->UseProgram( crtemu->blur_shader );
@@ -1799,7 +1832,7 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	int viewport[ 4 ];
 	crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	if (crtemu->type == CRTEMU_TYPE_NONE) {
 		// Just copy to backbuffer and present
@@ -2065,9 +2098,10 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-#ifndef CRTEMU_WEBGL
+#if !defined(CRTEMU_WEBGL) && !defined(__ANDROID__)
 	crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
 #endif
+
 
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
@@ -2075,9 +2109,10 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-#ifndef CRTEMU_WEBGL
+#if !defined(CRTEMU_WEBGL) && !defined(__ANDROID__)
 	crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
 #endif
+
 
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE2 );
 	if( crtemu->type == CRTEMU_TYPE_LITE ) {
@@ -2092,11 +2127,14 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
 	crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
-#ifndef CRTEMU_WEBGL
+#if !defined(CRTEMU_WEBGL) && !defined(__ANDROID__)
 	crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
 #endif
 
+
 	crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+
+    if (crtemu->BindVertexArray) crtemu->BindVertexArray(0);
 
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );

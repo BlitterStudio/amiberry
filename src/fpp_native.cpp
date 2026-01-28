@@ -162,9 +162,12 @@ static void native_set_fpucw(uae_u32 m68k_cw)
 {
 #ifndef __MACH__
 #if defined(CPU_i386) || defined(CPU_x86_64)
+#ifndef __ANDROID__
 	set_fpucw_x87(m68k_cw);
 #endif
 #endif
+#endif
+
 }
 
 /* Functions for setting host/library modes and getting status */

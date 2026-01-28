@@ -43,6 +43,14 @@ namespace fs = std::filesystem;
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#ifdef __ANDROID__
+#include <SDL.h>
+#define iconv_t SDL_iconv_t
+#define iconv_open SDL_iconv_open
+#define iconv_close SDL_iconv_close
+#define iconv SDL_iconv
+#endif
+
 struct my_opendir_s {
 	DIR* dir{};
 };
@@ -138,7 +146,11 @@ static bool has_logged_iconv_fail = false;
         char* dst_ptr = buf.data();
         size_t dst_size = buf.size();
 
+#ifdef __ANDROID__
+        size_t res = iconv(iconv_handle, (const char**)&src_ptr, &src_size, &dst_ptr, &dst_size);
+#else
         size_t res = iconv(iconv_handle, &src_ptr, &src_size, &dst_ptr, &dst_size);
+#endif
 
         if (res == size_t(-1)) {
             switch (errno) {
@@ -238,7 +250,7 @@ std::string CFStringCopyUTF8String(CFStringRef aString) {
 }
 #endif
 
-[[nodiscard]] std::string prefix_with_application_directory_path(std::string_view currentpath)
+[[nodiscard]] std::string prefix_with_application_directory_path(std::string currentpath)
 {
 	if (currentpath.empty()) {
 		write_log("prefix_with_application_directory_path: Empty path provided\n");
@@ -298,7 +310,17 @@ std::string CFStringCopyUTF8String(CFStringRef aString) {
 	catch (const std::exception& e) {
 		write_log("prefix_with_application_directory_path: Exception: %s\n", e.what());
 		return std::string(currentpath);
+		return std::string(currentpath);
 	}
+#elif defined(__ANDROID__)
+    const char *path = SDL_AndroidGetExternalStoragePath();
+    if (path) {
+        std::string result(path);
+        result += "/";
+        result += currentpath;
+        return result;
+    }
+    return std::string(currentpath);
 #else
 	try {
 		if (const auto env_dir = std::getenv("EXTERNAL_FILES_DIR")) {
@@ -342,6 +364,15 @@ std::string prefix_with_data_path(const std::string& filename)
 	}
 	filePath = CFStringCopyUTF8String(path);
 	return filePath;
+#elif defined(__ANDROID__)
+    const char *path = SDL_AndroidGetExternalStoragePath();
+    if (path) {
+        std::string result(path);
+        result += "/data/";
+        result += filename;
+        return result;
+    }
+    return filename;
 #else
 	auto result = get_data_path();
 	return result.append(filename);
