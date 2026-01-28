@@ -6,7 +6,9 @@
 #include "zfile.h"
 #include "mp3decoder.h"
 
+#if defined(HAVE_MPG123)
 #include <mpg123.h>
+#endif
 
 
 #define MP3_BLOCK_SIZE 522
@@ -38,6 +40,13 @@ mp3decoder::mp3decoder()
 
 uae_u8* mp3decoder::get(struct zfile* zf, uae_u8* outbuf, int maxsize)
 {
+#if !defined(HAVE_MPG123)
+	(void)zf;
+	(void)outbuf;
+	(void)maxsize;
+	write_log(_T("MP3: mpg123 support disabled at build time\n"));
+	return nullptr;
+#else
 	int outoffset = 0;
 	unsigned char mp3buf[MP3_BLOCK_SIZE];
 	unsigned char rawbuf[RAW_BLOCK_SIZE];
@@ -113,6 +122,7 @@ uae_u8* mp3decoder::get(struct zfile* zf, uae_u8* outbuf, int maxsize)
 	mpg123_exit();
 
 	return outbuf;
+#endif
 }
 
 uae_u32 mp3decoder::getsize(struct zfile* zf)

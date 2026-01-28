@@ -286,88 +286,113 @@ void amiberry_gui_init()
 		check_error_sdl(gui_screen == nullptr, "Unable to create GUI surface:");
 	}
 
-	if (!mon->gui_window)
-	{
-		write_log("Creating Amiberry GUI window...\n");
-		regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
-		regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
+    if (!mon->gui_window)
+    {
+#ifdef __ANDROID__
+        if (mon->amiga_window) {
+            write_log("Reusing Amiga window for GUI on Android.\n");
+            mon->gui_window = mon->amiga_window;
+            SDL_SetWindowResizable(mon->gui_window, SDL_TRUE);
+            SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
+        }
+#endif
+        if (!mon->gui_window)
+        {
+            write_log("Creating Amiberry GUI window...\n");
+            regqueryint(nullptr, _T("GUIPosX"), &gui_window_rect.x);
+            regqueryint(nullptr, _T("GUIPosY"), &gui_window_rect.y);
 
-        Uint32 mode;
-		if (!kmsdrm_detected)
-		{
-			// Only enable Windowed mode if we're running under a window environment
+            Uint32 mode;
+            if (!kmsdrm_detected)
+            {
+#ifdef __ANDROID__
+                mode = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE;
+                SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
+#else
+                // Only enable Windowed mode if we're running under a window environment
 			mode = SDL_WINDOW_RESIZABLE;
-		}
-		else
-		{
-			// otherwise go for Full-window
-			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-		}
+#endif
+            }
+            else
+            {
+                // otherwise go for Full-window
+                mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+            }
 
-        if (currprefs.gui_alwaysontop)
-            mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-        if (currprefs.start_minimized)
-            mode |= SDL_WINDOW_HIDDEN;
-        else
-            mode |= SDL_WINDOW_SHOWN;
-		// Set Window allow high DPI by default
-		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+            if (currprefs.gui_alwaysontop)
+                mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+            if (currprefs.start_minimized)
+                mode |= SDL_WINDOW_HIDDEN;
+            else
+                mode |= SDL_WINDOW_SHOWN;
+            // Set Window allow high DPI by default
+            mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-        mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-				SDL_WINDOWPOS_CENTERED,
-				SDL_WINDOWPOS_CENTERED,
-				gui_window_rect.w,
-				gui_window_rect.h,
-				mode);
+            mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+                                               SDL_WINDOWPOS_CENTERED,
+                                               SDL_WINDOWPOS_CENTERED,
+                                               gui_window_rect.w,
+                                               gui_window_rect.h,
+                                               mode);
 
-        check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
-		auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
-		if (icon_surface != nullptr)
-		{
-			SDL_SetWindowIcon(mon->gui_window, icon_surface);
-			SDL_FreeSurface(icon_surface);
-		}
-	}
-	else if (kmsdrm_detected)
-	{
-		SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
-	}
+            check_error_sdl(mon->gui_window == nullptr, "Unable to create window:");
 
-	if (mon->gui_renderer == nullptr)
-	{
-		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
-	}
-	DPIHandler::set_render_scale(mon->gui_renderer);
+            auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
+            if (icon_surface != nullptr)
+            {
+                SDL_SetWindowIcon(mon->gui_window, icon_surface);
+                SDL_FreeSurface(icon_surface);
+            }
+        }
+    }
+    else if (kmsdrm_detected)
+    {
+        SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
+    }
 
-	gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
-									gui_screen->h);
-	check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
+    if (mon->gui_renderer == nullptr)
+    {
+#ifdef __ANDROID__
+        mon->gui_renderer = SDL_GetRenderer(mon->gui_window);
+        if (mon->gui_renderer) {
+            write_log("Reusing existing renderer from window.\n");
+        }
+#endif
+        if (!mon->gui_renderer) {
+            mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+        }
+        check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
+    }
+    DPIHandler::set_render_scale(mon->gui_renderer);
 
-	SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+    gui_texture = SDL_CreateTexture(mon->gui_renderer, gui_screen->format->format, SDL_TEXTUREACCESS_STREAMING, gui_screen->w,
+                                    gui_screen->h);
+    check_error_sdl(gui_texture == nullptr, "Unable to create GUI texture:");
 
-	SDL_SetRelativeMouseMode(SDL_FALSE);
-	SDL_ShowCursor(SDL_ENABLE);
+    SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 
-	SDL_RaiseWindow(mon->gui_window);
+    SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_ShowCursor(SDL_ENABLE);
 
-	//-------------------------------------------------
-	// Create helpers for GUI framework
-	//-------------------------------------------------
+    SDL_RaiseWindow(mon->gui_window);
 
-	gui_imageLoader = new gcn::SDLImageLoader();
-	gui_imageLoader->setRenderer(mon->gui_renderer);
+    //-------------------------------------------------
+    // Create helpers for GUI framework
+    //-------------------------------------------------
 
-	// The ImageLoader in use is static and must be set to be
-	// able to load images
-	gcn::Image::setImageLoader(gui_imageLoader);
-	gui_graphics = new gcn::SDLGraphics();
-	// Set the target for the graphics object to be the screen.
-	// In other words, we will draw to the screen.
-	// Note, any surface will do, it doesn't have to be the screen.
-	gui_graphics->setTarget(gui_screen);
-	gui_input = new gcn::SDLInput();
+    gui_imageLoader = new gcn::SDLImageLoader();
+    gui_imageLoader->setRenderer(mon->gui_renderer);
+
+    // The ImageLoader in use is static and must be set to be
+    // able to load images
+    gcn::Image::setImageLoader(gui_imageLoader);
+    gui_graphics = new gcn::SDLGraphics();
+    // Set the target for the graphics object to be the screen.
+    // In other words, we will draw to the screen.
+    // Note, any surface will do, it doesn't have to be the screen.
+    gui_graphics->setTarget(gui_screen);
+    gui_input = new gcn::SDLInput();
 }
 
 void amiberry_gui_halt()
@@ -393,15 +418,29 @@ void amiberry_gui_halt()
 	}
 	if (mon->gui_renderer && !kmsdrm_detected)
 	{
-		SDL_DestroyRenderer(mon->gui_renderer);
-		mon->gui_renderer = nullptr;
+#ifdef __ANDROID__
+		if (mon->gui_renderer == SDL_GetRenderer(mon->amiga_window)) {
+			mon->gui_renderer = nullptr;
+		} else
+#endif
+		{
+			SDL_DestroyRenderer(mon->gui_renderer);
+			mon->gui_renderer = nullptr;
+		}
 	}
 
 	if (mon->gui_window && !kmsdrm_detected) {
 		regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
 		regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
-		SDL_DestroyWindow(mon->gui_window);
-		mon->gui_window = nullptr;
+#ifdef __ANDROID__
+		if (mon->gui_window == mon->amiga_window) {
+			mon->gui_window = nullptr;
+		} else
+#endif
+		{
+			SDL_DestroyWindow(mon->gui_window);
+			mon->gui_window = nullptr;
+		}
 	}
 }
 
@@ -462,9 +501,11 @@ void check_input()
 					gui_window_rect.x = gui_event.window.data1;
 					gui_window_rect.y = gui_event.window.data2;
 					break;
+				case SDL_WINDOWEVENT_SIZE_CHANGED:
 				case SDL_WINDOWEVENT_RESIZED:
 					gui_window_rect.w = gui_event.window.data1;
 					gui_window_rect.h = gui_event.window.data2;
+					SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
 					break;
 				default: 
 					break;
@@ -473,6 +514,11 @@ void check_input()
 			got_event = 1;
 			break;
 		
+		case SDL_APP_DIDENTERFOREGROUND:
+			SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+			got_event = 1;
+			break;
+
 		case SDL_QUIT:
 			got_event = 1;
 			//-------------------------------------------------
@@ -782,8 +828,8 @@ void check_input()
 			touch_event.button.which = 0;
 			touch_event.button.button = SDL_BUTTON_LEFT;
 			touch_event.button.state = (gui_event.type == SDL_FINGERDOWN) ? SDL_PRESSED : (gui_event.type == SDL_FINGERUP) ? SDL_RELEASED : 0;
-			touch_event.button.x = gui_graphics->getTarget()->w * static_cast<int>(gui_event.tfinger.x);
-			touch_event.button.y = gui_graphics->getTarget()->h * static_cast<int>(gui_event.tfinger.y);
+			touch_event.button.x = static_cast<int>(gui_graphics->getTarget()->w * gui_event.tfinger.x);
+			touch_event.button.y = static_cast<int>(gui_graphics->getTarget()->h * gui_event.tfinger.y);
 			gui_input->pushInput(touch_event);
 			break;
 

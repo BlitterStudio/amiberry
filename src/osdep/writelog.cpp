@@ -15,6 +15,10 @@
 #include <clocale>
 #include <SDL.h>
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
@@ -542,8 +546,10 @@ void write_log(const char* format, ...)
 	va_list parms;
 	const bool has_libretro_log = false;
 
+#ifndef __ANDROID__
 	if (!has_libretro_log && !amiberry_options.write_logfile && !console_logging && !debugfile)
 		return;
+#endif
 
 	if (log_sem_init) uae_sem_wait(&log_sem);
 
@@ -566,10 +572,15 @@ void write_log(const char* format, ...)
 	ts = write_log_get_ts();
 	if (bufp[0] == '*')
 		count++;
+#if defined(__ANDROID__)
+		__android_log_print(ANDROID_LOG_INFO, "Amiberry", "%s", bufp);
+#endif
 	if (SHOW_CONSOLE || console_logging) {
 		if (lfdetected && ts)
 			writeconsole(ts);
+#if !defined(__ANDROID__)
 		writeconsole(bufp);
+#endif
 	}
 	if (debugfile) {
 		if (lfdetected && ts)

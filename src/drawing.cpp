@@ -7641,9 +7641,11 @@ static bool waitqueue(int id)
 }
 static void addtowritequeue(void)
 {
-	atomic_inc(&rga_queue_write);
+	if (denise_thread_state == 1) {
+		atomic_inc(&rga_queue_write);
 
-	uae_sem_post(&write_sem);
+		uae_sem_post(&write_sem);
+	}
 }
 
 static bool multithread_denise_active(void)

@@ -15,7 +15,7 @@
 
 #if defined(__x86_64__) || defined(_M_AMD64)
 #if defined(__FreeBSD__) || defined(__linux__) // not for macOS
-#if !defined(LIBRETRO_NO_JIT)
+#if !defined(LIBRETRO_NO_JIT) && !defined(__ANDROID__) // not for android or if jit disabled under libretro
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
@@ -628,7 +628,7 @@ typedef char TCHAR;
 #define _timezone           timezone
 #define _daylight           daylight
 // Ftello and fseeko on OSX are alerady 64bit
-#if defined ANDROID || defined __MACH__ || defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
+#if defined(ANDROID) || defined(__ANDROID__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define _ftelli64(x)        ftello(x)
 #define _fseeki64(x,y,z)    fseeko(x,y,z)
 #else

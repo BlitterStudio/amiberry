@@ -701,6 +701,12 @@ WatchJoystick(SDL_Joystick* joystick)
 			case SDL_QUIT:
 				done = SDL_TRUE;
 				break;
+			case SDL_WINDOWEVENT:
+				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_RESIZED)
+				{
+					SDL_RenderSetLogicalSize(mon->gui_renderer, GUI_WIDTH, GUI_HEIGHT);
+				}
+				break;
 			default:
 				break;
 			}

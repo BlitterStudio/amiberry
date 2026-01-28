@@ -45,6 +45,7 @@
 #endif
 #include <netinet/tcp.h>
 #include <sys/mman.h>
+#include <fcntl.h>
 
 #define SERIALLOGGING 0
 #define SERIALDEBUG 0 /* 0, 1, 2 3 */
@@ -140,10 +141,14 @@ int shmem_serial_state()
 	if (sermap_master)
 		return 1;
 	return 2;
+#else
+	return false;
+#endif
 }
 
 void shmem_serial_delete()
 {
+#ifndef __ANDROID__
 	sermap_deactivate();
 	sermap_master = false;
 	if (sermap_data) {
@@ -155,11 +160,13 @@ void shmem_serial_delete()
 	sermap_data = nullptr;
 	sermap_handle = nullptr;
 	sermap1 = sermap2 = nullptr;
+#endif
 }
 
 
 bool shmem_serial_create()
 {
+#ifndef __ANDROID__
 	shmem_serial_delete();
 
 	int fd = shm_open(SER_MEMORY_MAPPING, O_RDWR, 0666);
@@ -208,9 +215,10 @@ bool shmem_serial_create()
 	}
 
 	return true;
-}
-
+#else
+	return false;
 #endif
+}
 
 #ifdef USE_LIBSERIALPORT
 /* A pointer to a struct sp_port, which will refer to
