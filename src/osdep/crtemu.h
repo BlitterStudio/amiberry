@@ -1731,6 +1731,8 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
         crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 #endif
 
+    if (crtemu->BindVertexArray) crtemu->BindVertexArray(0);
+
 	return crtemu;
 
 	failed:
@@ -1794,7 +1796,7 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU_GLuint blurbuffer_a, CRTEMU_GLuint blurbuffer_b,
                                   CRTEMU_GLuint blurtexture_b, float r, int width, int height ) {
 
-    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_b );
 	crtemu->UseProgram( crtemu->blur_shader );
@@ -1830,7 +1832,7 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	int viewport[ 4 ];
 	crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	if (crtemu->type == CRTEMU_TYPE_NONE) {
 		// Just copy to backbuffer and present
@@ -2131,6 +2133,8 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 
 	crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+
+    if (crtemu->BindVertexArray) crtemu->BindVertexArray(0);
 
 	crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 	crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );

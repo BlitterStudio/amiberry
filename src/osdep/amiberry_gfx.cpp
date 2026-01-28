@@ -479,6 +479,7 @@ static bool init_osd_shader()
     glBindVertexArray(osd_vao);
 
 	glGenBuffers(1, &osd_vbo);
+    glBindVertexArray(0);
 
 	return true;
 }
