@@ -76,6 +76,15 @@ std::string uae_config;
 std::string whd_config;
 std::string whd_startup;
 
+// Returns the temporary directory for WHDBooter boot files
+// Uses whdboot/tmp/ which is always user-writable on all platforms
+std::filesystem::path get_whdboot_temp_path()
+{
+	std::filesystem::path temp_path = get_whdbootpath();
+	temp_path /= "tmp";
+	return temp_path;
+}
+
 static TCHAR* parse_text(const TCHAR* s)
 {
 	if (*s == '"' || *s == '\'')
@@ -1159,7 +1168,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 
 	if (!whdload_prefs.selected_slave.filename.empty()) // new booter solution
 	{
-		boot_path = "/tmp/amiberry/";
+		boot_path = get_whdboot_temp_path();
 
 		tmp = "filesystem2=rw,DH0:DH0:" + boot_path.string() + ",10";
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
@@ -1239,10 +1248,11 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	whdload_prefs.filename = filename_no_extension;
 
 	// setup for tmp folder.
-	std::filesystem::create_directories("/tmp/amiberry/s");
-	std::filesystem::create_directories("/tmp/amiberry/c");
-	std::filesystem::create_directories("/tmp/amiberry/devs");
-	whd_startup = "/tmp/amiberry/s/startup-sequence";
+	std::filesystem::path temp_base = get_whdboot_temp_path();
+	std::filesystem::create_directories(temp_base / "s");
+	std::filesystem::create_directories(temp_base / "c");
+	std::filesystem::create_directories(temp_base / "devs");
+	whd_startup = (temp_base / "s" / "startup-sequence").string();
 	std::filesystem::remove(whd_startup);
 
 	// are we using save-data/ ?
@@ -1283,34 +1293,66 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	{
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
-			// create a symlink to JST in /tmp/amiberry/
+			// create a symlink to JST
 			whd_path = whdbooter_path / "JST";
-			if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/JST")) {
-				write_log("WHDBooter - Creating symlink to JST in /tmp/amiberry/c/ \n");
-				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/JST");
+			std::filesystem::path jst_link = temp_base / "c" / "JST";
+			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(jst_link)) {
+				write_log("WHDBooter - Creating symlink to JST in %s\n", (temp_base / "c").string().c_str());
+				try {
+					std::filesystem::create_symlink(whd_path, jst_link);
+				}
+				catch (std::filesystem::filesystem_error& e) {
+					if (e.code() == std::errc::operation_not_permitted) {
+						std::filesystem::copy(whd_path, jst_link);
+					}
+				}
 			}
 		}
 		else
 		{
-			// create a symlink to WHDLoad in /tmp/amiberry/
+			// create a symlink to WHDLoad
 			whd_path = whdbooter_path / "WHDLoad";
-			if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
-				write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
-				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
+			std::filesystem::path whdload_link = temp_base / "c" / "WHDLoad";
+			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(whdload_link)) {
+				write_log("WHDBooter - Creating symlink to WHDLoad in %s\n", (temp_base / "c").string().c_str());
+				try {
+					std::filesystem::create_symlink(whd_path, whdload_link);
+				}
+				catch (std::filesystem::filesystem_error& e) {
+					if (e.code() == std::errc::operation_not_permitted) {
+						std::filesystem::copy(whd_path, whdload_link);
+					}
+				}
 			}
 		}
 
-		// Create a symlink to AmiQuit in /tmp/amiberry/
+		// Create a symlink to AmiQuit
 		whd_path = whdbooter_path / "AmiQuit";
-		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/AmiQuit")) {
-			write_log("WHDBooter - Creating symlink to AmiQuit in /tmp/amiberry/c/ \n");
-			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
+		std::filesystem::path amiquit_link = temp_base / "c" / "AmiQuit";
+		if (std::filesystem::exists(whd_path) && !std::filesystem::exists(amiquit_link)) {
+			write_log("WHDBooter - Creating symlink to AmiQuit in %s\n", (temp_base / "c").string().c_str());
+			try {
+				std::filesystem::create_symlink(whd_path, amiquit_link);
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				if (e.code() == std::errc::operation_not_permitted) {
+					std::filesystem::copy(whd_path, amiquit_link);
+				}
+			}
 		}
 
-		// create a symlink for DEVS in /tmp/amiberry/
-		if (!std::filesystem::exists("/tmp/amiberry/devs/Kickstarts")) {
-			write_log("WHDBooter - Creating symlink to Kickstarts in /tmp/amiberry/devs/ \n");
-			std::filesystem::create_symlink(kickstart_path, "/tmp/amiberry/devs/Kickstarts");
+		// create a symlink for DEVS/Kickstarts
+		std::filesystem::path kickstarts_link = temp_base / "devs" / "Kickstarts";
+		if (!std::filesystem::exists(kickstarts_link)) {
+			write_log("WHDBooter - Creating symlink to Kickstarts in %s\n", (temp_base / "devs").string().c_str());
+			try {
+				std::filesystem::create_symlink(kickstart_path, kickstarts_link);
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				if (e.code() == std::errc::operation_not_permitted) {
+					std::filesystem::copy(kickstart_path, kickstarts_link, std::filesystem::copy_options::recursive);
+				}
+			}
 		}
 	}
 #if DEBUG
