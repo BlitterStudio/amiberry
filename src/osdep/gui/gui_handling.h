@@ -10,21 +10,21 @@
 #include "registry.h"
 #include "autoconf.h"
 
-extern int DISTANCE_BORDER;
-extern int DISTANCE_NEXT_X;
-extern int DISTANCE_NEXT_Y;
-extern int BUTTON_WIDTH;
-extern int BUTTON_HEIGHT;
-extern int SMALL_BUTTON_WIDTH;
-extern int SMALL_BUTTON_HEIGHT;
-extern int LABEL_HEIGHT;
-extern int TEXTFIELD_HEIGHT;
-extern int DROPDOWN_HEIGHT;
-extern int SLIDER_HEIGHT;
-extern int TITLEBAR_HEIGHT;
-extern int SELECTOR_WIDTH;
-extern int SELECTOR_HEIGHT;
-extern int SCROLLBAR_WIDTH;
+extern float DISTANCE_BORDER;
+extern float DISTANCE_NEXT_X;
+extern float DISTANCE_NEXT_Y;
+extern float BUTTON_WIDTH;
+extern float BUTTON_HEIGHT;
+extern float SMALL_BUTTON_WIDTH;
+extern float SMALL_BUTTON_HEIGHT;
+extern float LABEL_HEIGHT;
+extern float TEXTFIELD_HEIGHT;
+extern float DROPDOWN_HEIGHT;
+extern float SLIDER_HEIGHT;
+extern float TITLEBAR_HEIGHT;
+extern float SELECTOR_WIDTH;
+extern float SELECTOR_HEIGHT;
+extern float SCROLLBAR_WIDTH;
 
 struct amigamodels
 {

@@ -163,7 +163,8 @@ void render_panel_quickstart() {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Model:");
         ImGui::TableSetColumnIndex(1);
-        if (ImGui::BeginCombo("Model##combo", qs_models[quickstart_model])) {
+
+        if (ImGui::BeginCombo("##ModelCombo", qs_models[quickstart_model])) {
             for (int i = 0; i < static_cast<int>(qs_models.size()); i++) {
                 const bool is_selected = (quickstart_model == i);
                 if (is_selected)
@@ -188,6 +189,12 @@ void render_panel_quickstart() {
             }
             ImGui::EndCombo();
         }
+        // Bevel around the combo frame
+        ImVec2 min = ImGui::GetItemRectMin();
+        ImVec2 max = ImGui::GetItemRectMax();
+        bool active = ImGui::IsItemActive();
+        AmigaBevel(min, max, active);
+
         ImGui::SameLine();
         bool ntsc = changed_prefs.ntscmode != 0;
         if (AmigaCheckbox("NTSC", &ntsc)) {
@@ -205,7 +212,7 @@ void render_panel_quickstart() {
         if (!qs_configs.empty()) {
             if (quickstart_conf < 0 || quickstart_conf >= static_cast<int>(qs_configs.size()))
                 quickstart_conf = 0;
-            if (ImGui::BeginCombo("Configuration##combo", qs_configs[quickstart_conf])) {
+            if (ImGui::BeginCombo("##ConfigurationCombo", qs_configs[quickstart_conf])) {
                 for (int i = 0; i < static_cast<int>(qs_configs.size()); i++) {
                     const bool is_selected = (quickstart_conf == i);
                     if (is_selected)
@@ -223,6 +230,11 @@ void render_panel_quickstart() {
                 }
                 ImGui::EndCombo();
             }
+            // Bevel around the combo frame
+            min = ImGui::GetItemRectMin();
+            max = ImGui::GetItemRectMax();
+            active = ImGui::IsItemActive();
+            AmigaBevel(min, max, active);
         }
         ImGui::EndTable();
     }
@@ -304,6 +316,11 @@ void render_panel_quickstart() {
             }
             ImGui::EndCombo();
         }
+        // Bevel around the combo frame
+        auto min = ImGui::GetItemRectMin();
+        auto max = ImGui::GetItemRectMax();
+        auto active = ImGui::IsItemActive();
+        AmigaBevel(min, max, active);
         if (!drive_enabled) ImGui::EndDisabled();
 
         ImGui::SameLine();
@@ -335,16 +352,11 @@ void render_panel_quickstart() {
         }
         if (!info_enabled) ImGui::EndDisabled();
 
-        // 6. Eject Button (Right Aligned)
-        const float eject_button_width = BUTTON_WIDTH;
-        float offset = ImGui::GetContentRegionAvail().x - eject_button_width;
-        // Ensure we don't overlap if resizing really small, though GroupBox has min width usually.
-        if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 20.0f);
-        else ImGui::SameLine();
+        ImGui::SameLine();
 
         bool eject_enabled = drive_enabled && disk_present;
         if (!eject_enabled) ImGui::BeginDisabled();
-        if (AmigaButton("Eject", ImVec2(eject_button_width, 0))) {
+        if (AmigaButton("Eject", ImVec2((BUTTON_WIDTH * 1.33f) / 2.0f, 0))) {
             disk_eject(i);
             changed_prefs.floppyslots[i].df[0] = 0;
         }
@@ -393,6 +405,12 @@ void render_panel_quickstart() {
             }
             ImGui::EndCombo();
         }
+        // Bevel around the combo frame
+        min = ImGui::GetItemRectMin();
+        max = ImGui::GetItemRectMax();
+        active = ImGui::IsItemActive();
+        AmigaBevel(min, max, active);
+
         ImGui::PopItemWidth();
         ImGui::PopID();
     };
@@ -488,6 +506,12 @@ void render_panel_quickstart() {
             }
             ImGui::EndCombo();
         }
+        // Bevel around the combo frame
+        auto min = ImGui::GetItemRectMin();
+        auto max = ImGui::GetItemRectMax();
+        auto active = ImGui::IsItemActive();
+        AmigaBevel(min, max, active);
+
         ImGui::PopItemWidth();
         ImGui::PopID();
     }
@@ -527,7 +551,7 @@ void render_panel_quickstart() {
 
     int combo_whd_index = whd_index + 1;
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
-    if (ImGui::BeginCombo("WHD List##combo", whd_items[combo_whd_index])) {
+    if (ImGui::BeginCombo("##WHDLoadCombo", whd_items[combo_whd_index])) {
         for (int n = 0; n < static_cast<int>(whd_items.size()); n++) {
             const bool is_selected = (combo_whd_index == n);
             if (is_selected)
@@ -554,6 +578,12 @@ void render_panel_quickstart() {
         }
         ImGui::EndCombo();
     }
+    // Bevel around the combo frame
+    auto min = ImGui::GetItemRectMin();
+    auto max = ImGui::GetItemRectMax();
+    auto active = ImGui::IsItemActive();
+    AmigaBevel(min, max, active);
+
     ImGui::PopItemWidth();
     EndGroupBox("WHDLoad auto-config:");
 

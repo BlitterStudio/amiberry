@@ -59,21 +59,21 @@ void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 // Forward declarations used in this early block
 static void apply_imgui_theme();
 
-int DISTANCE_BORDER = 10;
-int DISTANCE_NEXT_X = 15;
-int DISTANCE_NEXT_Y = 15;
-int BUTTON_WIDTH = 90;
-int BUTTON_HEIGHT = 30;
-int SMALL_BUTTON_WIDTH = 30;
-int SMALL_BUTTON_HEIGHT = 22;
-int LABEL_HEIGHT = 20;
-int TEXTFIELD_HEIGHT = 20;
-int DROPDOWN_HEIGHT = 20;
-int SLIDER_HEIGHT = 20;
-int TITLEBAR_HEIGHT = 24;
-int SELECTOR_WIDTH = 165;
-int SELECTOR_HEIGHT = 24;
-int SCROLLBAR_WIDTH = 20;
+float DISTANCE_BORDER = 10;
+float DISTANCE_NEXT_X = 15;
+float DISTANCE_NEXT_Y = 15;
+float BUTTON_WIDTH = 80;
+float BUTTON_HEIGHT = 30;
+float SMALL_BUTTON_WIDTH = 30;
+float SMALL_BUTTON_HEIGHT = 22;
+float LABEL_HEIGHT = 20;
+float TEXTFIELD_HEIGHT = 20;
+float DROPDOWN_HEIGHT = 20;
+float SLIDER_HEIGHT = 20;
+float TITLEBAR_HEIGHT = 24;
+float SELECTOR_WIDTH = 165;
+float SELECTOR_HEIGHT = 24;
+float SCROLLBAR_WIDTH = 20;
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
 static ImVec4 darken(const ImVec4& c, float f) { return ImVec4{ std::max(c.x - f, 0.0f), std::max(c.y - f, 0.0f), std::max(c.z - f, 0.0f), c.w }; }

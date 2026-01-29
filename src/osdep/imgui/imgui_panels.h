@@ -21,6 +21,7 @@ bool ConsumeDirDialogResult(std::string& outPath);
 void BeginGroupBox(const char* name);
 void EndGroupBox(const char* name);
 
+void AmigaBevel(const ImVec2 min, const ImVec2 max, const bool recessed);
 // Amiga-style widget wrappers
 bool AmigaButton(const char* label, const ImVec2& size = ImVec2(0, 0));
 bool AmigaCheckbox(const char* label, bool* v);
