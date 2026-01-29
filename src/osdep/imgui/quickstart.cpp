@@ -148,8 +148,7 @@ void render_panel_quickstart() {
     bool df0_editable = true;
     qs_set_control_state(quickstart_model, df1_visible, cd_visible, df0_editable);
 
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
-    ImGui::Indent(5.0f);
+    ImGui::Indent(4.0f);
 
     BeginGroupBox("Emulated Hardware");
     if (ImGui::BeginTable("QuickstartModelTable", 2, ImGuiTableFlags_SizingStretchProp,
@@ -190,10 +189,7 @@ void render_panel_quickstart() {
             ImGui::EndCombo();
         }
         // Bevel around the combo frame
-        ImVec2 min = ImGui::GetItemRectMin();
-        ImVec2 max = ImGui::GetItemRectMax();
-        bool active = ImGui::IsItemActive();
-        AmigaBevel(min, max, active);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
         ImGui::SameLine();
         bool ntsc = changed_prefs.ntscmode != 0;
@@ -231,10 +227,7 @@ void render_panel_quickstart() {
                 ImGui::EndCombo();
             }
             // Bevel around the combo frame
-            min = ImGui::GetItemRectMin();
-            max = ImGui::GetItemRectMax();
-            active = ImGui::IsItemActive();
-            AmigaBevel(min, max, active);
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         }
         ImGui::EndTable();
     }
@@ -286,7 +279,7 @@ void render_panel_quickstart() {
         // 3. Drive Type Combo
         int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
         int selectedFloppyType = nn + 1;
-        ImGui::SetNextItemWidth(100.0f); // Narrower combo
+        ImGui::SetNextItemWidth(BUTTON_WIDTH); // Narrower combo
         snprintf(label, sizeof(label), "##QSFloppyType%d", i);
         if (!drive_enabled) ImGui::BeginDisabled();
         if (ImGui::BeginCombo(label, floppy_drive_types[selectedFloppyType])) {
@@ -317,10 +310,7 @@ void render_panel_quickstart() {
             ImGui::EndCombo();
         }
         // Bevel around the combo frame
-        auto min = ImGui::GetItemRectMin();
-        auto max = ImGui::GetItemRectMax();
-        auto active = ImGui::IsItemActive();
-        AmigaBevel(min, max, active);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         if (!drive_enabled) ImGui::EndDisabled();
 
         ImGui::SameLine();
@@ -354,9 +344,10 @@ void render_panel_quickstart() {
 
         ImGui::SameLine();
 
+        // 6. Eject Button
         bool eject_enabled = drive_enabled && disk_present;
         if (!eject_enabled) ImGui::BeginDisabled();
-        if (AmigaButton("Eject", ImVec2((BUTTON_WIDTH * 1.33f) / 2.0f, 0))) {
+        if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH * 1.33f / 2.0f, 0))) {
             disk_eject(i);
             changed_prefs.floppyslots[i].df[0] = 0;
         }
@@ -406,10 +397,7 @@ void render_panel_quickstart() {
             ImGui::EndCombo();
         }
         // Bevel around the combo frame
-        min = ImGui::GetItemRectMin();
-        max = ImGui::GetItemRectMax();
-        active = ImGui::IsItemActive();
-        AmigaBevel(min, max, active);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
         ImGui::PopItemWidth();
         ImGui::PopID();
@@ -507,10 +495,7 @@ void render_panel_quickstart() {
             ImGui::EndCombo();
         }
         // Bevel around the combo frame
-        auto min = ImGui::GetItemRectMin();
-        auto max = ImGui::GetItemRectMax();
-        auto active = ImGui::IsItemActive();
-        AmigaBevel(min, max, active);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
         ImGui::PopItemWidth();
         ImGui::PopID();
@@ -530,12 +515,9 @@ void render_panel_quickstart() {
         qs_pending_whd = true;
     }
 
-    // Eject Right Aligned
-    float offset = ImGui::GetContentRegionAvail().x - BUTTON_WIDTH;
-    if (offset > 0) ImGui::SameLine(ImGui::GetCursorPosX() + offset - 20.0f);
-    else ImGui::SameLine();
+    ImGui::SameLine();
 
-    if (AmigaButton("Eject##QSWHD", ImVec2(BUTTON_WIDTH, 0))) {
+    if (AmigaButton("Eject##QSWHD", ImVec2(BUTTON_WIDTH * 1.33f / 2.0f, 0))) {
         whdload_prefs.whdload_filename.clear();
     }
 
@@ -579,10 +561,7 @@ void render_panel_quickstart() {
         ImGui::EndCombo();
     }
     // Bevel around the combo frame
-    auto min = ImGui::GetItemRectMin();
-    auto max = ImGui::GetItemRectMax();
-    auto active = ImGui::IsItemActive();
-    AmigaBevel(min, max, active);
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
     ImGui::PopItemWidth();
     EndGroupBox("WHDLoad auto-config:");

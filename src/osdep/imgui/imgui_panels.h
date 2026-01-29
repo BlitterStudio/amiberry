@@ -21,11 +21,14 @@ bool ConsumeDirDialogResult(std::string& outPath);
 void BeginGroupBox(const char* name);
 void EndGroupBox(const char* name);
 
-void AmigaBevel(const ImVec2 min, const ImVec2 max, const bool recessed);
+void AmigaBevel(ImVec2 min, ImVec2 max, bool recessed);
+void AmigaCircularBevel(ImVec2 center, float radius, bool recessed);
 // Amiga-style widget wrappers
 bool AmigaButton(const char* label, const ImVec2& size = ImVec2(0, 0));
 bool AmigaCheckbox(const char* label, bool* v);
 bool AmigaInputText(const char* label, char* buf, size_t buf_size);
+bool AmigaRadioButton(const char* label, bool active);
+bool AmigaRadioButton(const char* label, int* v, int v_button);
 
 void render_panel_about();
 void render_panel_paths();

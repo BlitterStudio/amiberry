@@ -25,6 +25,7 @@
 #include "xwin.h"
 #include "custom.h"
 #include "disk.h"
+#include "imgui_internal.h"
 #include "savestate.h"
 #include "target.h"
 #include "tinyxml2.h"
@@ -419,13 +420,36 @@ void AmigaBevel(const ImVec2 min, const ImVec2 max, const bool recessed)
 	ImU32 bottom_right = recessed ? col_shine : col_shadow;
 
 	// Top
-	draw_list->AddLine(ImVec2(min.x, min.y), ImVec2(max.x - 1, min.y), top_left, 1.5f);
+	draw_list->AddLine(ImVec2(min.x, min.y), ImVec2(max.x - 1, min.y), top_left, 1.0f);
 	// Left
-	draw_list->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, max.y - 1), top_left, 1.5f);
+	draw_list->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, max.y - 1), top_left, 1.0f);
 	// Bottom
-	draw_list->AddLine(ImVec2(min.x, max.y - 1), ImVec2(max.x - 1, max.y - 1), bottom_right, 1.5f);
+	draw_list->AddLine(ImVec2(min.x, max.y - 1), ImVec2(max.x - 1, max.y - 1), bottom_right, 1.0f);
 	// Right
-	draw_list->AddLine(ImVec2(max.x - 1, min.y), ImVec2(max.x - 1, max.y - 1), bottom_right, 1.5f);
+	draw_list->AddLine(ImVec2(max.x - 1, min.y), ImVec2(max.x - 1, max.y - 1), bottom_right, 1.0f);
+}
+
+void AmigaCircularBevel(const ImVec2 center, const float radius, const bool recessed)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+	const ImU32 col_shine = ImGui::GetColorU32(ImGuiCol_BorderShadow); // Usually White
+	const ImU32 col_shadow = ImGui::GetColorU32(ImGuiCol_Border);      // Usually Dark Gray
+
+	ImU32 col_top_left = recessed ? col_shadow : col_shine;
+	ImU32 col_bottom_right = recessed ? col_shine : col_shadow;
+
+	// Top-Left Arc (135 deg to 315 deg, covering Left and Top)
+	// 3PI/4 (135) to 7PI/4 (315)
+	const float a_min_tl = 3.0f * IM_PI / 4.0f;
+	const float a_max_tl = 7.0f * IM_PI / 4.0f;
+
+	draw_list->PathArcTo(center, radius, a_min_tl, a_max_tl);
+	draw_list->PathStroke(col_top_left, 0, 1.0f);
+
+	// Bottom-Right Arc (315 deg to 135 deg, covering Right and Bottom)
+	// -PI/4 (-45) to 3PI/4 (135)
+	draw_list->PathArcTo(center, radius, -IM_PI / 4.0f, 3.0f * IM_PI / 4.0f);
+	draw_list->PathStroke(col_bottom_right, 0, 1.0f);
 }
 
 void BeginGroupBox(const char* name)
@@ -444,6 +468,9 @@ void EndGroupBox(const char* name)
 	ImGui::PopID();
 	ImGui::EndGroup();
 
+	constexpr float text_padding = 8.0f;
+	constexpr float box_padding = 4.0f;
+
 	// Now draw the border and title
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 	ImVec2 item_min = ImGui::GetItemRectMin();
@@ -457,15 +484,12 @@ void EndGroupBox(const char* name)
 	ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
 
 	ImVec2 text_size = ImGui::CalcTextSize(name);
-	float text_start_x = item_min.x + 8.0f;
-	float text_padding = 8.0f;
-
-	const float box_padding = 4.0f;
+	float text_start_x = item_min.x + text_padding;
 	item_min.x -= box_padding;
 
 	ImVec2 content_max = ImGui::GetWindowContentRegionMax();
 	ImVec2 window_pos = ImGui::GetWindowPos();
-	float max_x = window_pos.x + content_max.x - 1.0f;
+	float max_x = window_pos.x + content_max.x;
 
 	if (item_max.x + box_padding > max_x)
 		item_max.x = max_x;
@@ -480,7 +504,7 @@ void EndGroupBox(const char* name)
 	draw_list->AddRect(ImVec2(item_min.x + 1, border_y + 1), ImVec2(item_max.x + 1, item_max.y + 1), shine_col);
 
 	// Clear background for text
-	draw_list->AddRectFilled(ImVec2(text_start_x - text_padding, border_y - 2), ImVec2(text_start_x + text_size.x + text_padding, border_y + 2), ImGui::GetColorU32(ImGuiCol_WindowBg));
+	draw_list->AddRectFilled(ImVec2(text_start_x - text_padding, border_y - text_height * 0.5f - 1), ImVec2(text_start_x + text_size.x + text_padding, border_y + text_height * 0.5f + 1), ImGui::GetColorU32(ImGuiCol_WindowBg));
 
 	// Draw Title
 	draw_list->AddText(ImVec2(text_start_x, item_min.y), text_col, name);
@@ -532,61 +556,19 @@ bool AmigaInputText(const char* label, char* buf, const size_t buf_size)
 	return changed;
 }
 
-// Amiga-style combo box wrapper (array-of-strings variant)
-// Returns true if the current item changed.
-bool AmigaComboBox(const char* label, int* current_item, const char* const items[], int items_count,
-	int popup_max_height_in_items = -1)
-{
-	if (!current_item || items_count <= 0)
-		return false;
-	const int cur = (*current_item >= 0 && *current_item < items_count) ? *current_item : 0;
-	const char* preview = items[cur] ? items[cur] : "";
-
-	bool changed = false;
-	ImGui::PushStyleColor(ImGuiCol_Border, 0);
-
-	ImGuiComboFlags flags = 0;
-	if (popup_max_height_in_items > 0)
-		flags |= ImGuiComboFlags_HeightRegular; // a reasonable default; user can control height via style
-
-	if (ImGui::BeginCombo(label, preview, flags))
-	{
-		for (int i = 0; i < items_count; ++i)
-		{
-			const bool is_selected = (i == *current_item);
-			if (ImGui::Selectable(items[i] ? items[i] : "", is_selected))
-			{
-				*current_item = i;
-				changed = true;
-			}
-			if (is_selected)
-				ImGui::SetItemDefaultFocus();
-		}
-		ImGui::EndCombo();
-	}
-
-	ImGui::PopStyleColor();
-
-	// Bevel around the combo frame
-	const ImVec2 min = ImGui::GetItemRectMin();
-	const ImVec2 max = ImGui::GetItemRectMax();
-	const bool active = ImGui::IsItemActive();
-	AmigaBevel(min, max, active);
-
-	return changed;
-}
-
 // Amiga-style radio button wrapper (bool variant)
 // Returns true when pressed (matching ImGui::RadioButton semantics).
 bool AmigaRadioButton(const char* label, const bool active)
-{	const bool pressed = ImGui::RadioButton(label, active);
+{
+	const bool pressed = ImGui::RadioButton(label, active);
 
-	// Draw a bevel around the radio indicator square (ImGui renders it as a frame-sized box)
+	// Draw a circular recessed bevel around the radio indicator
 	const float sz = ImGui::GetFrameHeight();
 	const ImVec2 pos = ImGui::GetItemRectMin();
-	const ImVec2 box_min = pos;
-	const ImVec2 box_max = ImVec2(pos.x + sz, pos.y + sz);
-	AmigaBevel(box_min, box_max, false);
+	const float radius = (sz * 0.5f) - 0.5f;
+	const ImVec2 center = ImVec2(pos.x + sz * 0.5f, pos.y + sz * 0.5f);
+	
+	AmigaCircularBevel(center, radius, true);
 
 	return pressed;
 }
@@ -596,11 +578,13 @@ bool AmigaRadioButton(const char* label, int* v, const int v_button)
 {
 	const bool pressed = ImGui::RadioButton(label, v, v_button);
 
+	// Draw a circular recessed bevel around the radio indicator
 	const float sz = ImGui::GetFrameHeight();
 	const ImVec2 pos = ImGui::GetItemRectMin();
-	const ImVec2 box_min = pos;
-	const ImVec2 box_max = ImVec2(pos.x + sz, pos.y + sz);
-	AmigaBevel(box_min, box_max, false);
+	const float radius = (sz * 0.5f) - 0.5f;
+	const ImVec2 center = ImVec2(pos.x + sz * 0.5f, pos.y + sz * 0.5f);
+
+	AmigaCircularBevel(center, radius, true);
 
 	return pressed;
 }
@@ -699,39 +683,38 @@ void amiberry_gui_init()
 			}
 		}
 
-            Uint32 mode;
-            if (!kmsdrm_detected)
-            {
+		Uint32 mode;
+		if (!kmsdrm_detected)
+		{
 #ifdef __ANDROID__
-                mode = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE;
-                SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
+			mode = SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE;
+			SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight Portrait PortraitUpsideDown");
 #else
-                // Only enable Windowed mode if we're running under a window environment
+			// Only enable Windowed mode if we're running under a window environment
 			mode = SDL_WINDOW_RESIZABLE;
 #endif
-            }
-            else
-            {
-                // otherwise go for Full-window
-                mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-            }
+		}
+		else
+		{
+			// otherwise go for Full-window
+			mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+		}
 
-            if (currprefs.gui_alwaysontop)
-                mode |= SDL_WINDOW_ALWAYS_ON_TOP;
-            if (currprefs.start_minimized)
-                mode |= SDL_WINDOW_HIDDEN;
-            else
-                mode |= SDL_WINDOW_SHOWN;
-            // Set Window allow high DPI by default
-            mode |= SDL_WINDOW_ALLOW_HIGHDPI;
+		if (currprefs.gui_alwaysontop)
+			mode |= SDL_WINDOW_ALWAYS_ON_TOP;
+		if (currprefs.start_minimized)
+			mode |= SDL_WINDOW_HIDDEN;
+		else
+			mode |= SDL_WINDOW_SHOWN;
+		// Set Window allow high DPI by default
+		mode |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-            mon->gui_window = SDL_CreateWindow("Amiberry GUI",
-                                               SDL_WINDOWPOS_CENTERED,
-                                               SDL_WINDOWPOS_CENTERED,
-                                               gui_window_rect.w,
-                                               gui_window_rect.h,
-                                               mode);
-
+		mon->gui_window = SDL_CreateWindow("Amiberry GUI",
+										   SDL_WINDOWPOS_CENTERED,
+										   SDL_WINDOWPOS_CENTERED,
+										   gui_window_rect.w,
+										   gui_window_rect.h,
+										   mode);
 
 		// Sync rect to actual window metrics (handles SDL_WINDOWPOS_CENTERED)
 		int wx, wy, ww, wh;
@@ -809,21 +792,21 @@ void amiberry_gui_init()
 	float scaling_factor = DPIHandler::get_layout_scale();
 
 	// Apply scaling to GUI constants
-	BUTTON_WIDTH = (int)(90 * scaling_factor);
-	BUTTON_HEIGHT = (int)(30 * scaling_factor);
-	SMALL_BUTTON_WIDTH = (int)(30 * scaling_factor);
-	SMALL_BUTTON_HEIGHT = (int)(22 * scaling_factor);
-	DISTANCE_BORDER = (int)(10 * scaling_factor);
-	DISTANCE_NEXT_X = (int)(15 * scaling_factor);
-	DISTANCE_NEXT_Y = (int)(15 * scaling_factor);
-	LABEL_HEIGHT = (int)(20 * scaling_factor);
-	TEXTFIELD_HEIGHT = (int)(20 * scaling_factor);
-	DROPDOWN_HEIGHT = (int)(20 * scaling_factor);
-	SLIDER_HEIGHT = (int)(20 * scaling_factor);
-	TITLEBAR_HEIGHT = (int)(24 * scaling_factor);
-	SELECTOR_WIDTH = (int)(165 * scaling_factor);
-	SELECTOR_HEIGHT = (int)(24 * scaling_factor);
-	SCROLLBAR_WIDTH = (int)(20 * scaling_factor);
+	BUTTON_WIDTH = 90 * scaling_factor;
+	BUTTON_HEIGHT = 30 * scaling_factor;
+	SMALL_BUTTON_WIDTH = 30 * scaling_factor;
+	SMALL_BUTTON_HEIGHT = 22 * scaling_factor;
+	DISTANCE_BORDER = 10 * scaling_factor;
+	DISTANCE_NEXT_X = 15 * scaling_factor;
+	DISTANCE_NEXT_Y = 15 * scaling_factor;
+	LABEL_HEIGHT = 20 * scaling_factor;
+	TEXTFIELD_HEIGHT = 20 * scaling_factor;
+	DROPDOWN_HEIGHT = 20 * scaling_factor;
+	SLIDER_HEIGHT = 20 * scaling_factor;
+	TITLEBAR_HEIGHT = 24 * scaling_factor;
+	SELECTOR_WIDTH = 165 * scaling_factor;
+	SELECTOR_HEIGHT = 24 * scaling_factor;
+	SCROLLBAR_WIDTH = 20 * scaling_factor;
 	style.ScaleAllSizes(scaling_factor);
 	style.FontScaleDpi = scaling_factor;  // Enable DPI-aware font scaling (ImGui v1.92+)
 
@@ -831,7 +814,7 @@ void amiberry_gui_init()
 	// Note: Don't manually scale font_px here - FontScaleDpi handles DPI scaling automatically
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
 	const std::string font_path = prefix_with_data_path(font_file);
-	const float font_px = gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f;
+	const float font_px = gui_theme.font_size > 0 ? static_cast<float>(gui_theme.font_size) : 15.0f;
 
 	ImFont* loaded_font = nullptr;
 	if (!font_path.empty()) {
@@ -1083,7 +1066,7 @@ void run_gui()
 		// Compute button bar height from style
 		const auto button_bar_height = ImGui::GetFrameHeight() + style.WindowPadding.y * 2.0f;
 
-		// Make the main window occupy the full SDL window (no smaller inner window), and set its size
+		// Make the main window occupies the full SDL window (no smaller inner window) and set its size
 		const ImGuiViewport* vp = ImGui::GetMainViewport();
 		ImVec2 work_pos = vp->WorkPos;
 		ImVec2 work_size = vp->WorkSize;
@@ -1102,11 +1085,16 @@ void run_gui()
 		const float sidebar_width = std::clamp(content_width * 0.18f, 180.0f, 380.0f);
 
 		// Sidebar
-		ImGui::BeginChild("Sidebar", ImVec2(sidebar_width, -button_bar_height), true);
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 1.0f);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.0f);
+		ImGui::BeginChild("Sidebar", ImVec2(sidebar_width - 2.0f, -button_bar_height));
+		ImGui::Indent(4.0f);
+		ImGui::Dummy(ImVec2(0, 2.0f));
+
 		// Ensure icons are ready
 		ensure_sidebar_icons_loaded();
 
- 		ImGuiStyle& s = ImGui::GetStyle();
+ 		const ImGuiStyle& s = ImGui::GetStyle();
 		const float base_text_h = ImGui::GetTextLineHeight();
 		const float base_row_h = ImGui::GetTextLineHeightWithSpacing();
 		// Make icons larger than text height using gui_scale
@@ -1152,7 +1140,7 @@ void run_gui()
 			ImVec2 icon_p1 = ImVec2(icon_p0.x + icon_w, icon_p0.y + icon_h);
 			ImDrawList* dl = ImGui::GetWindowDrawList();
 			if (icon_tex) {
-				dl->AddImage((ImTextureID)icon_tex, icon_p0, icon_p1);
+				dl->AddImage(icon_tex, icon_p0, icon_p1);
 			} else {
 				// Fallback: small filled square as placeholder
 				dl->AddRectFilled(icon_p0, icon_p1, ImGui::GetColorU32(ImGuiCol_TextDisabled), 3.0f);
@@ -1162,7 +1150,12 @@ void run_gui()
 			float text_y = pos.y + ((rmax.y - rmin.y) - ImGui::GetTextLineHeight()) * 0.5f;
 			dl->AddText(ImVec2(text_x, text_y), ImGui::GetColorU32(ImGuiCol_Text), categories[i].category);
 		}
+		ImGui::Unindent(4.0f);
 		ImGui::EndChild();
+		// Draw Sidebar bevel (outside child to avoid clipping)
+		const ImVec2 min = ImGui::GetItemRectMin();
+		const ImVec2 max = ImGui::GetItemRectMax();
+		AmigaBevel(ImVec2(min.x - 1, min.y - 1), ImVec2(max.x + 1, max.y + 1), false);
 
 		ImGui::SameLine();
 
@@ -1175,6 +1168,8 @@ void run_gui()
 				categories[last_active_panel].RenderFunc();
 		}
 		ImGui::EndChild();
+
+		ImGui::Dummy(ImVec2(0, 2.0f));
 
 		// Button bar
 		// Left-aligned buttons (Shutdown, Reset, Quit, Restart, Help)

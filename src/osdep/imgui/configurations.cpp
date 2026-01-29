@@ -6,6 +6,9 @@
 #include "uae.h"
 #include "imgui_panels.h"
 
+static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
+static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
+
 void render_panel_configurations()
 {
 	static int selected = -1;
@@ -56,7 +59,19 @@ void render_panel_configurations()
 		strncpy(last_seen_config, last_active_config, MAX_DPATH);
 	}
 
-	ImGui::BeginChild("ConfigList", ImVec2(0, -150), true);
+	// Calculate footer height dynamically
+	const ImGuiStyle& style = ImGui::GetStyle();
+	const float input_row_h = std::max(TEXTFIELD_HEIGHT, ImGui::GetTextLineHeight()) + style.ItemSpacing.y;
+	// 3 input rows + 2 Spacings + Separator + Buttons, plus extra padding to avoid scrollbar
+	const float footer_h = (input_row_h * 3) + (style.ItemSpacing.y * 2) + 1.0f + BUTTON_HEIGHT + style.WindowPadding.y + 10.0f;
+
+	// Reduce width slightly to ensure bevel is clearly visible and not clipped by parent
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 1.0f);
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.0f);
+	ImGui::BeginChild("ConfigList", ImVec2(ImGui::GetContentRegionAvail().x - 2.0f, -footer_h));
+	ImGui::Indent(4.0f);
+	ImGui::Dummy(ImVec2(0, 2.0f));
+
 	for (int i = 0; i < ConfigFilesList.size(); ++i)
 	{
 		if (search_text[0] != '\0' && strcasestr(ConfigFilesList[i]->Name, search_text) == nullptr)
@@ -68,10 +83,13 @@ void render_panel_configurations()
 		else
 			snprintf(label, sizeof(label), "%s", ConfigFilesList[i]->Name);
 
-		bool is_selected = (selected == i);
+		const bool is_selected = (selected == i);
 		if (is_selected)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			const ImVec4 col_act = rgb_to_vec4(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
+			ImGui::PushStyleColor(ImGuiCol_Header, col_act);
+			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, lighten(col_act, 0.05f));
+			ImGui::PushStyleColor(ImGuiCol_HeaderActive, lighten(col_act, 0.10f));
 		}
 
 		if (ImGui::Selectable(label, is_selected, ImGuiSelectableFlags_AllowDoubleClick))
@@ -84,20 +102,25 @@ void render_panel_configurations()
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 				strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
-				uae_restart(NULL, 0, ConfigFilesList[selected]->FullPath);
+				uae_restart(nullptr, 0, ConfigFilesList[selected]->FullPath);
 				gui_running = false;
 			}
 		}
 
 		if (is_selected)
 		{
-			ImGui::PopStyleColor(1);
+			ImGui::PopStyleColor(3);
 		}
 	}
+	ImGui::Unindent(4.0f);
 	ImGui::EndChild();
+	// Draw bevel outside child
+	const ImVec2 min = ImGui::GetItemRectMin();
+	const ImVec2 max = ImGui::GetItemRectMax();
+	AmigaBevel(ImVec2(min.x - 1, min.y - 1), ImVec2(max.x + 1, max.y + 1), false);
 
 	// Define a fixed width for labels to align input fields
-	const float label_width = 100.0f;
+	const float label_width = BUTTON_WIDTH;
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Search:");

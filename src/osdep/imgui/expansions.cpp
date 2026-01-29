@@ -339,7 +339,7 @@ void render_panel_expansions()
         bool show_rom_file = !(ert->romtype & ROMTYPE_NOT);
         if (show_rom_file) {
             char rom_path[MAX_DPATH] = "";
-            if (brc && brc->roms[index].romfile) {
+            if (brc && brc->roms[index].romfile[0]) {
                 strncpy(rom_path, brc->roms[index].romfile, MAX_DPATH);
             }
             

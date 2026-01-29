@@ -55,6 +55,7 @@ void render_panel_about()
 
 	ImGui::Spacing();
 
+	ImGui::Indent(10.0f);
 	// Version and environment info
 	ImGui::TextUnformatted(get_version_string().c_str());
 	ImGui::TextUnformatted(get_copyright_notice().c_str());
@@ -91,6 +92,10 @@ void render_panel_about()
 
 	// Use a child region with border to mimic a textbox look
 	ImGui::BeginChild("AboutScroll", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+	ImGui::Indent(10.0f);
+	ImGui::Dummy(ImVec2(0, 10.0f));
 	ImGui::TextUnformatted(about_long_text);
+	ImGui::Dummy(ImVec2(0, 10.0f));
 	ImGui::EndChild();
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 }

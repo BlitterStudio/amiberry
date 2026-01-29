@@ -31,13 +31,12 @@ static void ShowHelpMarker(const char* desc)
 }
 
 void render_panel_cpu() {
-    const float slider_width = 150.0f;
-    const float slider_label_width = 140.0f; // Fixed aligned width for labels
+    const float slider_width = BUTTON_WIDTH * 1.5f;
+    const float slider_label_width = BUTTON_WIDTH * 1.5f; // Fixed aligned width for labels
     bool settings_changed = false;
 
     // Global padding for the whole panel
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
-    ImGui::Indent(5.0f);
+    ImGui::Indent(4.0f);
 
     // ---------------------------------------------------------
     // Logic / State Calculation (mimicking RefreshPanelCPU)
@@ -146,31 +145,31 @@ void render_panel_cpu() {
         BeginGroupBox("CPU");
 
         int old_cpu_model = changed_prefs.cpu_model;
-        if (ImGui::RadioButton("68000", &changed_prefs.cpu_model, 68000))
+        if (AmigaRadioButton("68000", &changed_prefs.cpu_model, 68000))
             settings_changed = true;
         ImGui::SameLine(); ShowHelpMarker("Original Amiga 500/1000/2000 CPU.");
         
-        if (ImGui::RadioButton("68010", &changed_prefs.cpu_model, 68010))
+        if (AmigaRadioButton("68010", &changed_prefs.cpu_model, 68010))
             settings_changed = true;
         ImGui::SameLine(); ShowHelpMarker("Slightly faster version of 68000, used in some accelerators.");
 
-        if (ImGui::RadioButton("68020", &changed_prefs.cpu_model, 68020))
+        if (AmigaRadioButton("68020", &changed_prefs.cpu_model, 68020))
             settings_changed = true;
         ImGui::SameLine(); ShowHelpMarker("Amiga 1200 CPU. 32-bit.");
 
-        if (ImGui::RadioButton("68030", &changed_prefs.cpu_model, 68030))
+        if (AmigaRadioButton("68030", &changed_prefs.cpu_model, 68030))
             settings_changed = true;
         ImGui::SameLine(); ShowHelpMarker("Amiga 3000/4000 CPU. Includes MMU.");
 
-        if (ImGui::RadioButton("68040", &changed_prefs.cpu_model, 68040))
+        if (AmigaRadioButton("68040", &changed_prefs.cpu_model, 68040))
             settings_changed = true;
         ImGui::SameLine(); ShowHelpMarker("Faster 32-bit CPU with integrated FPU and MMU.");
 
-        if (ImGui::RadioButton("68060", &changed_prefs.cpu_model, 68060))
+        if (AmigaRadioButton("68060", &changed_prefs.cpu_model, 68060))
             settings_changed = true;
         ImGui::SameLine(); ShowHelpMarker("Fastest Amiga CPU.");
-        
-        float left_group_min_width = 180.0f;
+
+        const float left_group_min_width = BUTTON_WIDTH * 2.0f;
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
 
         if (settings_changed && old_cpu_model != changed_prefs.cpu_model) {
@@ -303,13 +302,14 @@ void render_panel_cpu() {
 
         BeginGroupBox("MMU");
         ImGui::BeginDisabled(!enable_mmu);
-        if (ImGui::RadioButton("None##MMU", &changed_prefs.mmu_model, 0)) {
+        if (AmigaRadioButton("None##MMU", &changed_prefs.mmu_model, 0)) {
             changed_prefs.mmu_ec = false;
         }
-        if (ImGui::RadioButton("MMU", &changed_prefs.mmu_model,
+        if (AmigaRadioButton("MMU", &changed_prefs.mmu_model,
                                changed_prefs.cpu_model)) {
             changed_prefs.mmu_ec = false;
         }
+        ImGui::SameLine();
         if (AmigaCheckbox("EC", &changed_prefs.mmu_ec)) {
             if (changed_prefs.mmu_ec)
                 changed_prefs.mmu_model = changed_prefs.cpu_model;
@@ -318,7 +318,6 @@ void render_panel_cpu() {
 
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
         EndGroupBox("MMU");
-
 
         BeginGroupBox("FPU");
         int current_fpu_sel = 0;
@@ -329,18 +328,18 @@ void render_panel_cpu() {
         else if (changed_prefs.fpu_model != 0)
             current_fpu_sel = 3;
 
-        if (ImGui::RadioButton("None##FPU", &current_fpu_sel, 0))
+        if (AmigaRadioButton("None##FPU", &current_fpu_sel, 0))
             changed_prefs.fpu_model = 0;
 
         ImGui::BeginDisabled(!enable_fpu_ext);
-        if (ImGui::RadioButton("68881", &current_fpu_sel, 1))
+        if (AmigaRadioButton("68881", &current_fpu_sel, 1))
             changed_prefs.fpu_model = 68881;
-        if (ImGui::RadioButton("68882", &current_fpu_sel, 2))
+        if (AmigaRadioButton("68882", &current_fpu_sel, 2))
             changed_prefs.fpu_model = 68882;
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_fpu_int);
-        if (ImGui::RadioButton("CPU internal", &current_fpu_sel, 3))
+        if (AmigaRadioButton("CPU internal", &current_fpu_sel, 3))
             changed_prefs.fpu_model = changed_prefs.cpu_model;
         ImGui::EndDisabled();
 
@@ -371,7 +370,7 @@ void render_panel_cpu() {
     ImGui::EndGroup();
 
     ImGui::SameLine();
-    ImGui::Dummy(ImVec2(5.0f, 0.0f)); // Spacing between columns
+    ImGui::Dummy(ImVec2(2.0f, 0.0f)); // Spacing between columns
     ImGui::SameLine();
 
     ImGui::BeginGroup(); // Right Column
@@ -380,11 +379,11 @@ void render_panel_cpu() {
         // Logic: WinUAE sets m68k_speed to -1 for "Fastest Possible", 0 for "Cycle Exact/Approx"
         // Also updates throttle.
         int speed_mode = changed_prefs.m68k_speed < 0 ? -1 : 0;
-        if (ImGui::RadioButton("Fastest Possible", &speed_mode, -1)) {
+        if (AmigaRadioButton("Fastest Possible", &speed_mode, -1)) {
             changed_prefs.m68k_speed = -1;
             changed_prefs.m68k_speed_throttle = 0;
         }
-        if (ImGui::RadioButton("Approximate A500/A1200 or cycle-exact", &speed_mode, 0)) {
+        if (AmigaRadioButton("Approximate A500/A1200 or cycle-exact", &speed_mode, 0)) {
             changed_prefs.m68k_speed = 0;
         }
 
@@ -412,14 +411,15 @@ void render_panel_cpu() {
         ImGui::SameLine(slider_label_width);
         ImGui::SetNextItemWidth(slider_width);
         if (ImGui::SliderInt("##CPU Idle", &idle_slider_val, 0, 10, "%d0%%")) {
-             if (idle_slider_val == 0)
+            if (idle_slider_val == 0) {
                 changed_prefs.cpu_idle = 0;
-            else
+            } else {
                 changed_prefs.cpu_idle = (12 - idle_slider_val) * 15;
+            }
         }
         ImGui::EndDisabled();
 
-        float right_group_min_width = 450.0f;
+        float right_group_min_width = BUTTON_WIDTH * 5.0f;
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("CPU Speed");
 
@@ -440,7 +440,9 @@ void render_panel_cpu() {
                 changed_prefs.cpu_clock_multiplier = (1 << 8) << freq_combo_idx;
             }
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::EndDisabled();
+
         ImGui::SameLine();
         // Display Frequency MHz text if applicable
         float freq_mhz = 0.0f;
@@ -453,11 +455,11 @@ void render_panel_cpu() {
         // WinUAE style readout
         char freq_label[32];
         snprintf(freq_label, sizeof(freq_label), "%.6f", freq_mhz / 1000000.0f);
-        ImGui::SetNextItemWidth(80.0f); // Reduced from 100.0f
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputText("##FreqReadout", freq_label, sizeof(freq_label), ImGuiInputTextFlags_ReadOnly);
 
-        ImGui::BeginDisabled(true);
-        // ("Disabled until fixed upstream")
+        const bool no_thread = (changed_prefs.cachesize > 0 || changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
+        ImGui::BeginDisabled(no_thread || emulating);
         AmigaCheckbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
         ImGui::EndDisabled();
         
@@ -511,8 +513,6 @@ void render_panel_cpu() {
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
         EndGroupBox("x86 Bridgeboard CPU options");
 
-
-        
         // Re-organized JIT settings
         BeginGroupBox("Advanced JIT Settings");
         
@@ -574,7 +574,7 @@ void render_panel_cpu() {
         ImGui::EndDisabled();
         
         ImGui::BeginDisabled(!enable_chk_catch);
-        AmigaCheckbox("Catch unexpect. exc.", &changed_prefs.comp_catchfault);
+        AmigaCheckbox("Catch exceptions", &changed_prefs.comp_catchfault);
         ImGui::SameLine(); ShowHelpMarker("Catch memory access faults in compiled code.");
         ImGui::EndDisabled();
         
@@ -584,13 +584,13 @@ void render_panel_cpu() {
         ImGui::BeginDisabled(!enable_opt_direct);
         ImGui::Text("Memory Access:");
         ImGui::SameLine();
-        if (ImGui::RadioButton("Direct##memaccess", &changed_prefs.comptrustbyte, 0)) {
+        if (AmigaRadioButton("Direct##memaccess", &changed_prefs.comptrustbyte, 0)) {
             changed_prefs.comptrustword = 0;
             changed_prefs.comptrustlong = 0;
             changed_prefs.comptrustnaddr = 0;
         }
         ImGui::SameLine();
-        if (ImGui::RadioButton("Indirect##memaccess", &changed_prefs.comptrustbyte, 1)) {
+        if (AmigaRadioButton("Indirect##memaccess", &changed_prefs.comptrustbyte, 1)) {
             changed_prefs.comptrustword = 1;
             changed_prefs.comptrustlong = 1;
             changed_prefs.comptrustnaddr = 1;

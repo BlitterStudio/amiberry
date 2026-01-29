@@ -20,8 +20,8 @@ void render_panel_paths()
 		ImGui::PushID(id);
 		ImGui::Text("%s", label);
 
-		const float button_width = 40.0f; // Fixed width for "..." button
-		const float spacing = ImGui::GetStyle().ItemSpacing.x;
+		const float button_width = SMALL_BUTTON_WIDTH; // Fixed width for "..." button
+		const float spacing = ImGui::GetStyle().ItemSpacing.x * 2;
 		const float input_width = ImGui::GetContentRegionAvail().x - button_width - spacing;
 
 		ImGui::SetNextItemWidth(input_width);
@@ -29,7 +29,7 @@ void render_panel_paths()
 		// Validation check
 		bool exists = false;
 		if (path.empty()) {
-			exists = true; // Treat empty path as valid (or at least not error) to avoid clutter
+			exists = true; // Treat an empty path as valid (or at least not error) to avoid clutter
 		} else {
 			if (is_file) {
 				exists = my_existsfile(path.c_str());
@@ -60,6 +60,7 @@ void render_panel_paths()
 		}
 
 		ImGui::SameLine();
+
 		if (AmigaButton("...", ImVec2(button_width, 0)))
 		{
 			if (is_file) {

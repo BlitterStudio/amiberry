@@ -9,6 +9,8 @@
 #include <vector>
 #include <string>
 
+#include "gui/gui_handling.h"
+
 static bool initialized = false;
 static std::vector<std::string> keyboard_items_strs;
 static std::vector<const char*> keyboard_items_ptr;
@@ -133,18 +135,18 @@ void render_panel_chipset()
 	{
 		// Chipset radios
 		ImGui::BeginGroup();
-		if (ImGui::RadioButton("A1000 (No EHB)", &chipset_selection, 6)) changed_prefs.chipset_mask = CSMASK_A1000_NOEHB;
-		if (ImGui::RadioButton("OCS + OCS Denise", &chipset_selection, 0)) changed_prefs.chipset_mask = CSMASK_OCS;
-		if (ImGui::RadioButton("ECS + OCS Denise", &chipset_selection, 1)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
-		if (ImGui::RadioButton("AGA", &chipset_selection, 4)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+		if (AmigaRadioButton("A1000 (No EHB)", &chipset_selection, 6)) changed_prefs.chipset_mask = CSMASK_A1000_NOEHB;
+		if (AmigaRadioButton("OCS + OCS Denise", &chipset_selection, 0)) changed_prefs.chipset_mask = CSMASK_OCS;
+		if (AmigaRadioButton("ECS + OCS Denise", &chipset_selection, 1)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
+		if (AmigaRadioButton("AGA", &chipset_selection, 4)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
 		ImGui::EndGroup();
 
 		ImGui::SameLine();
 
 		ImGui::BeginGroup();
-		if (ImGui::RadioButton("A1000", &chipset_selection, 5)) changed_prefs.chipset_mask = CSMASK_A1000;
-		if (ImGui::RadioButton("OCS + ECS Denise", &chipset_selection, 2)) changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
-		if (ImGui::RadioButton("Full ECS", &chipset_selection, 3)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+		if (AmigaRadioButton("A1000", &chipset_selection, 5)) changed_prefs.chipset_mask = CSMASK_A1000;
+		if (AmigaRadioButton("OCS + ECS Denise", &chipset_selection, 2)) changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
+		if (AmigaRadioButton("Full ECS", &chipset_selection, 3)) changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
 		
 		AmigaCheckbox("NTSC", &changed_prefs.ntscmode);
 		ImGui::SameLine(); ShowHelpMarker("Enable NTSC mode (60Hz)");
@@ -206,12 +208,13 @@ void render_panel_chipset()
 
 	BeginGroupBox("Keyboard");
 	{
-		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH * 3.0f);
 		int kb_mode = changed_prefs.keyboard_mode + 1;
 		if (ImGui::Combo("##Keyboard Layout", &kb_mode, keyboard_items_ptr.data(), keyboard_items_ptr.size()))
 		{
 			changed_prefs.keyboard_mode = kb_mode - 1;
 		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 		
 		bool disable_nkro = (changed_prefs.keyboard_mode == KB_UAE || changed_prefs.keyboard_mode == KB_A2000_8039);
 		if (disable_nkro) changed_prefs.keyboard_nkro = true;
@@ -242,8 +245,7 @@ void render_panel_chipset()
 			if (changed_prefs.waiting_blits) changed_prefs.immediate_blits = false;
 		}
 		ImGui::EndDisabled();
-		
-		
+
 		bool mt = multithread_enabled != 0;
 		if (AmigaCheckbox("Multithreaded Denise", &mt)) {
 			multithread_enabled = mt ? 1 : 0;
@@ -255,10 +257,10 @@ void render_panel_chipset()
 		ImGui::Text("Optimizations");
 		ImGui::SameLine();
 		ShowHelpMarker("Keep at 'Full' for best compatibility.");
-		ImGui::SameLine(140.0f);
-		
+
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		ImGui::Combo("##Optimizations", &changed_prefs.cs_optimizations, optimization_items, IM_ARRAYSIZE(optimization_items));
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
 		const char* chipset_items[] = { "Custom", "Generic", "CDTV", "CDTV-CR", "CD32", "A500", "A500+", "A600", "A1000", "A1200", "A2000", "A3000", "A3000T", "A4000", "A4000T", "Velvet", "Casablanca", "DraCo" };
 		
@@ -266,8 +268,7 @@ void render_panel_chipset()
 		ImGui::Text("Chipset Extra");
 		ImGui::SameLine();
 		ShowHelpMarker("Select specialized chipset behavior.");
-		ImGui::SameLine(140.0f);
-		
+
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		
 		// Map cs_compatible value to index
@@ -295,10 +296,11 @@ void render_panel_chipset()
 			}
 			ImGui::EndCombo();
 		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Monitor sync source:");
-		// ImGui::SameLine(180.0f);
+
 		const char* sync_items[] = { "Combined", "CSync", "H/VSync" };
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		if (ImGui::BeginCombo("##SyncSource", sync_items[changed_prefs.cs_hvcsync])) {
@@ -316,10 +318,10 @@ void render_panel_chipset()
 			}
 			ImGui::EndCombo();
 		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Video port display hardware");
-		// ImGui::SameLine(180.0f);
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		if (ImGui::BeginCombo("##VideoPort", special_monitor_ptr[changed_prefs.monitoremu])) {
 			for (int n = 0; n < static_cast<int>(special_monitor_ptr.size()); n++) {
@@ -336,6 +338,7 @@ void render_panel_chipset()
 			}
 			ImGui::EndCombo();
 		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	}
 	EndGroupBox("Options");
 
@@ -346,13 +349,17 @@ void render_panel_chipset()
 	BeginGroupBox("Collision Level");
 	{
 		ImGui::BeginGroup();
-		ImGui::RadioButton("None##Collision", &changed_prefs.collision_level, 0);
-		ImGui::RadioButton("Sprites only", &changed_prefs.collision_level, 1);
+		AmigaRadioButton("None##Collision", &changed_prefs.collision_level, 0);
+		AmigaRadioButton("Sprites only", &changed_prefs.collision_level, 1);
 		ImGui::EndGroup();
+
 		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(20.0f, 0));
+		ImGui::SameLine();
+
 		ImGui::BeginGroup();
-		ImGui::RadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
-		ImGui::RadioButton("Full (rarely needed)", &changed_prefs.collision_level, 3);
+		AmigaRadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
+		AmigaRadioButton("Full (rarely needed)", &changed_prefs.collision_level, 3);
 		ImGui::EndGroup();
 	}
 	EndGroupBox("Collision Level");
@@ -377,18 +384,20 @@ void render_panel_chipset()
 			"Sony LaserDisc Player", 
 			"Pioneer LaserDisc Player" 
 		};
-		ImGui::SetNextItemWidth(300.0f);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH * 3.5f);
 		ImGui::Combo("##Genlock", &changed_prefs.genlock_image, genlock_items, IM_ARRAYSIZE(genlock_items));
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 		ImGui::SameLine();
 		
 		const char* genlock_mix_items[] = { "100%", "90%", "80%", "70%", "60%", "50%", "40%", "30%", "20%", "10%", "0%" };
 		int genlock_mix_index = changed_prefs.genlock_mix / 25;
-		ImGui::SetNextItemWidth(100.0f);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH);
 		if (ImGui::Combo("##GenlockMix", &genlock_mix_index, genlock_mix_items, IM_ARRAYSIZE(genlock_mix_items)))
 		{
 			changed_prefs.genlock_mix = genlock_mix_index * 25;
 			if (changed_prefs.genlock_mix > 255) changed_prefs.genlock_mix = 255;
 		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 		
 		AmigaCheckbox("Include alpha channels in screenshots and video captures.", &changed_prefs.genlock_alpha);
 		bool genlock_aspect = changed_prefs.genlock_aspect > 0;
@@ -419,5 +428,4 @@ void render_panel_chipset()
 		ImGui::EndDisabled();
 	}
 	EndGroupBox("Genlock");
-	// ImGui::Unindent(5.0f);
 }
