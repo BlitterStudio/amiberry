@@ -100,9 +100,48 @@ static std::string content_dir;
 static std::string whdload_temp_path;
 static std::string cached_model;
 static std::string cached_kickstart_override;
+static std::string cached_cpu_model;
+static std::string cached_chipset;
+static std::string cached_chipset_aga;
+static std::string cached_audio_rate;
+static std::string cached_audio_interpol;
+static int cached_audio_rate_value = 44100;
+static const char* get_option_value(const char* key);
 
 static struct retro_vfs_interface vfs_iface = {};
 static bool vfs_available = false;
+
+static FILE* libretro_debug_file = nullptr;
+
+static void libretro_debug_open()
+{
+	if (libretro_debug_file)
+		return;
+	const char* env = getenv("AMIBERRY_LIBRETRO_DEBUG");
+	if (env && !strcmp(env, "0"))
+		return;
+	libretro_debug_file = fopen("/tmp/amiberry_libretro_debug.log", "a");
+	if (libretro_debug_file)
+		setvbuf(libretro_debug_file, nullptr, _IOLBF, 0);
+}
+
+static void libretro_debug_close()
+{
+	if (!libretro_debug_file)
+		return;
+	fclose(libretro_debug_file);
+	libretro_debug_file = nullptr;
+}
+
+static void libretro_debug_log(const char* fmt, ...)
+{
+	if (!libretro_debug_file)
+		return;
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(libretro_debug_file, fmt, ap);
+	va_end(ap);
+}
 
 struct DiskImage {
 	std::string path;
@@ -421,6 +460,11 @@ static void log_mouse_motion(int16_t dx, int16_t dy)
 static const struct retro_variable variables[] = {
 	{ "amiberry_model", "Amiga Model; A500|A500+|A600|A1200|CD32|A4000|CDTV" },
 	{ "amiberry_kickstart", "Kickstart ROM; auto|kick.rom|kick13.rom|kick20.rom|kick31.rom|kick205.rom|kick40068.A1200|kick40068.A4000|cd32.rom|cdtv.rom" },
+	{ "amiberry_cpu_model", "CPU Model; auto|68000|68010|68020|68030" },
+	{ "amiberry_chipset", "Chipset; auto|ocs|ecs" },
+	{ "amiberry_chipset_aga", "Chipset (AGA Models); auto|ocs|ecs|aga" },
+	{ "amiberry_audio_rate", "Audio Rate (Hz); auto|44100|48000" },
+	{ "amiberry_audio_interpolation", "Audio Interpolation; auto|none|anti|sinc" },
 	{ "amiberry_port0_device", "Port 1 Device; mouse|joystick" },
 	{ "amiberry_port1_device", "Port 2 Device; joystick|mouse" },
 	{ "amiberry_swap_ports", "Swap Ports; disabled|enabled" },
@@ -438,6 +482,7 @@ static struct retro_core_option_v2_category option_cats[] = {
 	{ "system", "System", "System and ROM settings." },
 	{ "input", "Input", "Controller and mouse settings." },
 	{ "video", "Video", "Video and sync settings." },
+	{ "audio", "Audio", "Audio settings." },
 	{ NULL, NULL, NULL }
 };
 
@@ -479,6 +524,54 @@ static struct retro_core_option_v2_definition option_defs[] = {
 			{ "kick40068.A4000", "kick40068.A4000" },
 			{ "cd32.rom", "cd32.rom" },
 			{ "cdtv.rom", "cdtv.rom" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
+		"amiberry_cpu_model",
+		"CPU Model",
+		"CPU Model",
+		"Override the CPU model. Uses model defaults when set to Auto. Core restart required.",
+		NULL,
+		"system",
+		{
+			{ "auto", "Auto" },
+			{ "68000", "68000" },
+			{ "68010", "68010" },
+			{ "68020", "68020" },
+			{ "68030", "68030" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
+		"amiberry_chipset",
+		"Chipset",
+		"Chipset",
+		"Override the chipset. Uses model defaults when set to Auto. Core restart required.",
+		NULL,
+		"system",
+		{
+			{ "auto", "Auto" },
+			{ "ocs", "OCS" },
+			{ "ecs", "ECS" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
+		"amiberry_chipset_aga",
+		"Chipset (AGA Models)",
+		"Chipset (AGA)",
+		"Override the chipset on AGA-capable models. Uses model defaults when set to Auto. Core restart required.",
+		NULL,
+		"system",
+		{
+			{ "auto", "Auto" },
+			{ "ocs", "OCS" },
+			{ "ecs", "ECS" },
+			{ "aga", "AGA" },
 			{ NULL, NULL }
 		},
 		"auto"
@@ -609,6 +702,37 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"disabled"
 	},
 	{
+		"amiberry_audio_rate",
+		"Audio Rate (Hz)",
+		"Audio Rate",
+		"Override audio sample rate. Uses defaults when set to Auto. Core restart required.",
+		NULL,
+		"audio",
+		{
+			{ "auto", "Auto" },
+			{ "44100", "44100" },
+			{ "48000", "48000" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
+		"amiberry_audio_interpolation",
+		"Audio Interpolation",
+		"Interpolation",
+		"Override audio interpolation. Uses defaults when set to Auto. Core restart required.",
+		NULL,
+		"audio",
+		{
+			{ "auto", "Auto" },
+			{ "none", "Off" },
+			{ "anti", "Anti-alias" },
+			{ "sinc", "Sinc" },
+			{ NULL, NULL }
+		},
+		"auto"
+	},
+	{
 		"amiberry_joy_as_mouse",
 		"Joystick As Mouse",
 		"Joystick As Mouse",
@@ -655,6 +779,35 @@ static void set_core_options()
 
 	if (environ_cb)
 		environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)variables);
+}
+
+static bool is_aga_model_name(const char* model)
+{
+	return model && (strcmp(model, "A1200") == 0 || strcmp(model, "A4000") == 0 || strcmp(model, "CD32") == 0);
+}
+
+static bool update_core_option_visibility(void)
+{
+	if (!environ_cb)
+		return false;
+	const char* model = get_option_value("amiberry_model");
+	const bool aga_model = is_aga_model_name(model);
+
+	struct retro_core_option_display disp;
+	disp.key = "amiberry_chipset";
+	disp.visible = !aga_model;
+	environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &disp);
+
+	disp.key = "amiberry_chipset_aga";
+	disp.visible = aga_model;
+	environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &disp);
+
+	return true;
+}
+
+static bool core_options_update_display_callback(void)
+{
+	return update_core_option_visibility();
 }
 
 extern int amiberry_main(int argc, char** argv);
@@ -847,6 +1000,26 @@ static bool dir_exists(const std::string& path)
 		return false;
 	struct stat st {};
 	return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+static bool find_kickstart_in_dir(const std::string& dir, const char* name, char* out, size_t out_size)
+{
+	if (dir.empty() || !name || !*name)
+		return false;
+	const std::string full = path_join(dir, name);
+	if (!file_readable(full.c_str()))
+		return false;
+	snprintf(out, out_size, "%s", full.c_str());
+	return true;
+}
+
+static bool pick_whdload_kickstart(const std::string& dir, char* out, size_t out_size)
+{
+	if (find_kickstart_in_dir(dir, "kick205.rom", out, out_size))
+		return true;
+	if (find_kickstart_in_dir(dir, "kick31.rom", out, out_size))
+		return true;
+	return false;
 }
 
 static bool find_kickstart_in_system_dir(const char* model, char* out, size_t out_size)
@@ -1225,12 +1398,47 @@ static const char* get_option_value(const char* key)
 	return nullptr;
 }
 
+static int parse_audio_rate_value(const char* value)
+{
+	if (!value || strcmp(value, "auto") == 0)
+		return 44100;
+	const int rate = atoi(value);
+	return rate > 0 ? rate : 44100;
+}
+
+static int audio_rate_for_av_info()
+{
+	if (!cached_audio_rate.empty())
+		return cached_audio_rate_value;
+	return parse_audio_rate_value(get_option_value("amiberry_audio_rate"));
+}
+
 static void snapshot_core_options()
 {
 	const char* model = get_option_value("amiberry_model");
 	cached_model = model ? model : "";
 	const char* kick = get_option_value("amiberry_kickstart");
 	cached_kickstart_override = kick ? kick : "";
+	const char* cpu_model = get_option_value("amiberry_cpu_model");
+	cached_cpu_model = cpu_model ? cpu_model : "";
+	const char* chipset = get_option_value("amiberry_chipset");
+	cached_chipset = chipset ? chipset : "";
+	const char* chipset_aga = get_option_value("amiberry_chipset_aga");
+	cached_chipset_aga = chipset_aga ? chipset_aga : "";
+	const char* audio_rate = get_option_value("amiberry_audio_rate");
+	cached_audio_rate = audio_rate ? audio_rate : "";
+	cached_audio_rate_value = parse_audio_rate_value(audio_rate);
+	const char* audio_interpol = get_option_value("amiberry_audio_interpolation");
+	cached_audio_interpol = audio_interpol ? audio_interpol : "";
+}
+
+static const char* cached_chipset_value()
+{
+	const bool aga_model = is_aga_model_name(cached_model.empty() ? nullptr : cached_model.c_str());
+	const std::string& value = aga_model ? cached_chipset_aga : cached_chipset;
+	if (value.empty())
+		return nullptr;
+	return value.c_str();
 }
 
 static bool resolve_kickstart_override_value(const char* opt, char* out, size_t out_size)
@@ -1726,6 +1934,8 @@ static void poll_input(void)
 
 static void core_entry(void)
 {
+	libretro_debug_open();
+	libretro_debug_log("core_entry start: game_path='%s'\n", game_path);
 	std::vector<char*> argv;
 	argv.reserve(32);
 	argv.push_back(strdup("amiberry"));
@@ -1742,26 +1952,35 @@ static void core_entry(void)
 		argv.push_back(strdup(model));
 	}
 
-	argv.push_back(strdup("-G")); // No GUI
+	auto push_s_option = [&argv](const std::string& value) {
+		argv.push_back(strdup("-s"));
+		argv.push_back(strdup(value.c_str()));
+	};
 
-	if (!is_whdload || user_kick_override)
-	{
-		char kick_path[1024] = {0};
-		if (resolve_kickstart_override_value(cached_kickstart_override.c_str(), kick_path, sizeof(kick_path)) ||
-			find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path))
-#ifndef LIBRETRO
-			|| read_kickstart_path(kick_path, sizeof(kick_path))
-#endif
-		) {
-			argv.push_back(strdup("-r"));
-			argv.push_back(strdup(kick_path));
-			if (log_cb)
-				log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
-		}
+	const char* cpu_model = cached_cpu_model.empty() ? nullptr : cached_cpu_model.c_str();
+	if (cpu_model && strcmp(cpu_model, "auto") != 0) {
+		push_s_option(std::string("cpu_model=") + cpu_model);
 	}
 
+	const char* chipset = cached_chipset_value();
+	if (chipset && strcmp(chipset, "auto") != 0) {
+		push_s_option(std::string("chipset=") + chipset);
+	}
+
+	const char* audio_rate = cached_audio_rate.empty() ? nullptr : cached_audio_rate.c_str();
+	if (audio_rate && strcmp(audio_rate, "auto") != 0) {
+		push_s_option(std::string("sound_frequency=") + audio_rate);
+	}
+
+	const char* audio_interpol = cached_audio_interpol.empty() ? nullptr : cached_audio_interpol.c_str();
+	if (audio_interpol && strcmp(audio_interpol, "auto") != 0) {
+		push_s_option(std::string("sound_interpol=") + audio_interpol);
+	}
+
+	argv.push_back(strdup("-G")); // No GUI
+
+	std::string rom_path_value;
 	if (!system_dir.empty()) {
-		std::string rom_path_value;
 		if (!save_dir.empty()) {
 			const std::string kick_dir = path_join(save_dir, "Kickstarts");
 			if (dir_exists(kick_dir))
@@ -1780,8 +1999,30 @@ static void core_entry(void)
 		if (rom_path_value.empty())
 			rom_path_value = system_dir;
 		const std::string rom_path = "rom_path=" + rom_path_value;
-		argv.push_back(strdup("-s"));
-		argv.push_back(strdup(rom_path.c_str()));
+		push_s_option(rom_path);
+	}
+
+	{
+		char kick_path[1024] = {0};
+		bool have_kick = false;
+
+		if (user_kick_override) {
+			have_kick = resolve_kickstart_override_value(cached_kickstart_override.c_str(), kick_path, sizeof(kick_path)) ||
+				find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path));
+		} else if (is_whdload) {
+			if (!rom_path_value.empty())
+				have_kick = pick_whdload_kickstart(rom_path_value, kick_path, sizeof(kick_path));
+		} else {
+			have_kick = find_kickstart_in_system_dir(model, kick_path, sizeof(kick_path));
+		}
+
+		if (have_kick) {
+			argv.push_back(strdup("-r"));
+			argv.push_back(strdup(kick_path));
+			if (log_cb)
+				log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
+			libretro_debug_log("kickstart override: %s\n", kick_path);
+		}
 	}
 	if (!save_dir.empty()) {
 		const std::string cfg_path = "config_path=" + save_dir;
@@ -1811,6 +2052,12 @@ static void core_entry(void)
 	}
 	argv.push_back(nullptr);
 
+	if (libretro_debug_file) {
+		libretro_debug_log("core_entry argv:");
+		for (size_t i = 0; i + 1 < argv.size(); i++)
+			libretro_debug_log(" [%s]", argv[i] ? argv[i] : "");
+		libretro_debug_log("\n");
+	}
 	amiberry_main((int)argv.size() - 1, argv.data());
 	
 	// If amiberry_main returns, we are done
@@ -1819,6 +2066,7 @@ static void core_entry(void)
 
 void retro_init(void)
 {
+	libretro_debug_open();
 	if (!main_fiber)
 		main_fiber = co_active();
 	
@@ -1827,6 +2075,7 @@ void retro_init(void)
 
 	if (log_cb)
 		log_cb(RETRO_LOG_INFO, "retro_init: main_fiber=%p core_fiber=%p\n", (void*)main_fiber, (void*)core_fiber);
+	libretro_debug_log("retro_init: main_fiber=%p core_fiber=%p\n", (void*)main_fiber, (void*)core_fiber);
 
 	core_started = false;
 	memory_map_set = false;
@@ -1842,6 +2091,7 @@ void retro_deinit(void)
 		co_delete(core_fiber);
 		core_fiber = NULL;
 	}
+	libretro_debug_close();
 	update_input_log_file(false);
 	last_input_log_file = false;
 	fastforward_forced = false;
@@ -1884,11 +2134,12 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 	info->geometry.max_height   = 1024;
 	info->geometry.aspect_ratio = 4.0f / 3.0f;
 	info->timing.fps            = get_core_refresh_rate();
-	info->timing.sample_rate    = 44100.0;
+	info->timing.sample_rate    = static_cast<double>(audio_rate_for_av_info());
 }
 
 void retro_set_environment(retro_environment_t cb)
 {
+	libretro_debug_open();
 	environ_cb = cb;
 	struct retro_log_callback logging;
 	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
@@ -1905,6 +2156,11 @@ void retro_set_environment(retro_environment_t cb)
 	environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &kb_cb);
 	set_core_options();
 	{
+		struct retro_core_options_update_display_callback cb_info = { core_options_update_display_callback };
+		environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK, &cb_info);
+		update_core_option_visibility();
+	}
+	{
 		bool achievements = true;
 		environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
 	}
@@ -1918,6 +2174,8 @@ void retro_set_environment(retro_environment_t cb)
 			content_dir = dir;
 		if (save_dir.empty())
 			save_dir = system_dir;
+		libretro_debug_log("env system_dir='%s' save_dir='%s' content_dir='%s'\n",
+			system_dir.c_str(), save_dir.c_str(), content_dir.c_str());
 	}
 
 	{
@@ -1926,9 +2184,11 @@ void retro_set_environment(retro_environment_t cb)
 		if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, &vfs_info) && vfs_info.iface) {
 			vfs_iface = *vfs_info.iface;
 			vfs_available = true;
+			libretro_debug_log("env vfs_available=1\n");
 		} else {
 			memset(&vfs_iface, 0, sizeof(vfs_iface));
 			vfs_available = false;
+			libretro_debug_log("env vfs_available=0\n");
 		}
 	}
 
@@ -2093,6 +2353,7 @@ void retro_run(void)
 	}
 	if (libretro_options_dirty) {
 		apply_libretro_input_options();
+		update_core_option_visibility();
 		libretro_options_dirty = false;
 	}
 	if (environ_cb) {
@@ -2129,6 +2390,7 @@ void retro_run(void)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
+	libretro_debug_open();
 	const struct retro_game_info_ext* info_ext = nullptr;
 	if (environ_cb)
 		environ_cb(RETRO_ENVIRONMENT_GET_GAME_INFO_EXT, &info_ext);
@@ -2142,6 +2404,8 @@ bool retro_load_game(const struct retro_game_info *info)
 
 	const std::string ext = info_ext && info_ext->ext ? info_ext->ext : path_extension_lower(path);
 	const bool is_whdload = (ext == "lha" || ext == "lzh");
+	libretro_debug_log("retro_load_game: path='%s' ext='%s' is_whdload=%d\n",
+		path.c_str(), ext.c_str(), is_whdload ? 1 : 0);
 
 	if (is_whdload) {
 		if (log_cb) {
@@ -2209,6 +2473,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
 		if (!whd_path.empty()) {
 			whdload_temp_path = extracted ? whd_path : std::string();
+			libretro_debug_log("WHDLoad using path: %s (extracted=%d)\n", whd_path.c_str(), extracted ? 1 : 0);
 			disk_images.clear();
 			disk_index = 0;
 			disk_ejected = false;
