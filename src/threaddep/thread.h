@@ -8,7 +8,6 @@
 
 #pragma once
 #include <SDL.h>
-#include <SDL_thread.h>
 
 /* Sempahores. We use POSIX semaphores; if you are porting this to a machine
  * with different ones, make them look like POSIX semaphores. */

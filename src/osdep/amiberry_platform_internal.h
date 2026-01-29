@@ -1,0 +1,7 @@
+#pragma once
+
+#ifndef OSDEP_AMIBERRY_PLATFORM_HEADER
+#error OSDEP_AMIBERRY_PLATFORM_HEADER is not defined
+#endif
+
+#include OSDEP_AMIBERRY_PLATFORM_HEADER

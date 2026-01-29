@@ -212,7 +212,8 @@ int slirp_openpty(int *amaster, int *aslave)
 			} else {
 				line[5] = 't';
 				/* These will fail */
-				(void) chown(line, getuid(), 0);
+				int chown_rc = chown(line, getuid(), 0);
+				(void)chown_rc;
 				(void) chmod(line, S_IRUSR|S_IWUSR|S_IWGRP);
 #ifdef HAVE_REVOKE
 				(void) revoke(line);
@@ -359,7 +360,8 @@ int fork_exec(struct socket *so, char *ex, int do_pty)
 			  
 			  sprintf(buff, "Error: execvp of %s failed: %s\n", 
 				  argv[0], strerror(errno));
-			  write(2, buff, strlen(buff)+1);
+			  ssize_t write_rc = write(2, buff, strlen(buff)+1);
+			  (void)write_rc;
 		  }
 		close(0); close(1); close(2); /* XXX */
 		exit(1);
@@ -431,7 +433,8 @@ void snooze_hup(int num)
 		if (connect(s, (struct sockaddr *)&sock_in, sizeof(sock_in)) != 0)
 		   slirp_exit(1); /* just exit...*/
 		sprintf(buff, "kill %s:%d", slirp_socket_passwd, slirp_socket_unit);
-		write(s, buff, strlen(buff)+1);
+		ssize_t write_rc = write(s, buff, strlen(buff)+1);
+		(void)write_rc;
 	}
 #ifndef NO_UNIX_SOCKETS
 	  else {
@@ -444,7 +447,8 @@ void snooze_hup(int num)
 			      sizeof(sock_un.sun_family) + sizeof(sock_un.sun_path)) != 0)
 		   slirp_exit(1);
 		sprintf(buff, "kill none:%d", slirp_socket_unit);
-		write(s, buff, strlen(buff)+1);
+		ssize_t write_rc = write(s, buff, strlen(buff)+1);
+		(void)write_rc;
 	}
 #endif
 	slirp_exit(0);
@@ -814,7 +818,8 @@ int rsh_exec(struct socket *so, struct socket *ns,
            
            sprintf(buff, "Error: execlp of %s failed: %s\n", 
                    "rsh", strerror(errno));
-           write(2, buff, strlen(buff)+1);
+           ssize_t write_rc = write(2, buff, strlen(buff)+1);
+           (void)write_rc;
            close(0); close(1); close(2); /* XXX */
            exit(1);
            

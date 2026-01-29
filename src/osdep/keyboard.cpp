@@ -1,4 +1,5 @@
 #include <cstring>
+#include <SDL.h>
 
 #include "sysdeps.h"
 #include "gui.h"

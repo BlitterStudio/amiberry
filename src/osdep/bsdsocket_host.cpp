@@ -630,7 +630,8 @@ static int event_monitor_thread(void* data)
 		// Check wake pipe
 		if (FD_ISSET(monitor->wake_pipe[0], &readfds)) {
 			char buf[256];
-			read(monitor->wake_pipe[0], buf, sizeof(buf));
+			ssize_t read_rc = read(monitor->wake_pipe[0], buf, sizeof(buf));
+			(void)read_rc;
 			// Socket list changed, loop again to rebuild fd_sets
 			continue;
 		}
@@ -812,7 +813,8 @@ static void stop_event_monitor()
 	
 	// Wake up the thread
 	char wake = 1;
-	write(g_event_monitor->wake_pipe[1], &wake, 1);
+	ssize_t write_rc = write(g_event_monitor->wake_pipe[1], &wake, 1);
+	(void)write_rc;
 	
 	// Wait for thread to exit
 	uae_wait_thread(&g_event_monitor->thread);
@@ -870,7 +872,8 @@ static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 	
 	// Wake up monitor thread to rebuild fd_sets
 	char wake = 1;
-	write(g_event_monitor->wake_pipe[1], &wake, 1);
+	ssize_t write_rc = write(g_event_monitor->wake_pipe[1], &wake, 1);
+	(void)write_rc;
 	
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
@@ -897,7 +900,8 @@ static void unregister_socket_events(struct socketbase* sb, int sd)
 	
 	// Wake up monitor thread
 	char wake = 1;
-	write(g_event_monitor->wake_pipe[1], &wake, 1);
+	ssize_t write_rc = write(g_event_monitor->wake_pipe[1], &wake, 1);
+	(void)write_rc;
 	
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
@@ -918,7 +922,8 @@ static void set_socket_connecting(struct socketbase* sb, int sd, bool connecting
 	// Wake up monitor to update handling
 	if (g_event_monitor->wake_pipe[1] != -1) {
 		char b = 1;
-		write(g_event_monitor->wake_pipe[1], &b, 1);
+		ssize_t write_rc = write(g_event_monitor->wake_pipe[1], &b, 1);
+		(void)write_rc;
 	}
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
@@ -937,7 +942,8 @@ static void socket_reenable_events(struct socketbase* sb, int sd, int events)
 				// Wake up monitor to check this socket again
 				if (g_event_monitor->wake_pipe[1] != -1) {
 					char b = 1;
-					write(g_event_monitor->wake_pipe[1], &b, 1);
+					ssize_t write_rc = write(g_event_monitor->wake_pipe[1], &b, 1);
+					(void)write_rc;
 				}
 			}
 			break;

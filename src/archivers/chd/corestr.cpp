@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <limits>
 #include <cstdint>
 #include <cctype>
 #include <cstdlib>
@@ -255,22 +256,33 @@ namespace util {
 		std::u32string_view const& shorter((lhs.length() < rhs.length()) ? lhs : rhs);
 
 		// find matches
-		long const range((std::max)(long(longer.length() / 2) - 1, 0L));
-		std::unique_ptr<long[]> match_idx(std::make_unique<long[]>(shorter.length()));
-		std::unique_ptr<bool[]> match_flg(std::make_unique<bool[]>(longer.length()));
-		std::fill_n(match_idx.get(), shorter.length(), -1);
-		std::fill_n(match_flg.get(), longer.length(), false);
+		const size_t longer_len = longer.length();
+		const size_t shorter_len = shorter.length();
+		const size_t long_max = static_cast<size_t>(std::numeric_limits<long>::max());
+		if (longer_len > long_max || shorter_len > long_max)
+			return 1.0;
+
+		long const longer_len_long = static_cast<long>(longer_len);
+		long const shorter_len_long = static_cast<long>(shorter_len);
+		long const range((std::max)(long(longer_len_long / 2) - 1, 0L));
+		std::unique_ptr<long[]> match_idx(std::make_unique<long[]>(shorter_len));
+		std::unique_ptr<bool[]> match_flg(std::make_unique<bool[]>(longer_len));
+		for (size_t i = 0; i < shorter_len; ++i)
+			match_idx[i] = -1;
+		for (size_t i = 0; i < longer_len; ++i)
+			match_flg[i] = false;
 		long match_cnt(0);
-		for (long i = 0; shorter.length() > i; ++i)
+		for (long i = 0; shorter_len_long > i; ++i)
 		{
-			char32_t const ch(shorter[i]);
-			long const n((std::min)(i + range + 1L, long(longer.length())));
+			char32_t const ch(shorter[static_cast<size_t>(i)]);
+			long const n((std::min)(i + range + 1L, longer_len_long));
 			for (long j = (std::max)(i - range, 0L); n > j; ++j)
 			{
-				if (!match_flg[j] && (ch == longer[j]))
+				size_t const j_idx = static_cast<size_t>(j);
+				if (!match_flg[j_idx] && (ch == longer[j_idx]))
 				{
 					match_idx[i] = j;
-					match_flg[j] = true;
+					match_flg[j_idx] = true;
 					++match_cnt;
 					break;
 				}
@@ -286,16 +298,16 @@ namespace util {
 		std::fill_n(ms.get(), 2 * match_cnt, char32_t(0));
 		char32_t* const ms1(&ms[0]);
 		char32_t* const ms2(&ms[match_cnt]);
-		for (long i = 0, j = 0; shorter.length() > i; ++i)
+		for (long i = 0, j = 0; shorter_len_long > i; ++i)
 		{
 			if (0 <= match_idx[i])
-				ms1[j++] = shorter[i];
+				ms1[j++] = shorter[static_cast<size_t>(i)];
 		}
 		match_idx.reset();
-		for (long i = 0, j = 0; longer.length() > i; ++i)
+		for (long i = 0, j = 0; longer_len_long > i; ++i)
 		{
-			if (match_flg[i])
-				ms2[j++] = longer[i];
+			if (match_flg[static_cast<size_t>(i)])
+				ms2[j++] = longer[static_cast<size_t>(i)];
 		}
 		match_flg.reset();
 		long halftrans_cnt(0);
@@ -308,7 +320,8 @@ namespace util {
 
 		// simple prefix detection
 		long prefix_len(0);
-		for (long i = 0; ((std::min)(long(shorter.length()), MAX_PREFIX) > i) && (lhs[i] == rhs[i]); ++i)
+		for (long i = 0; ((std::min)(shorter_len_long, MAX_PREFIX) > i)
+			&& (lhs[static_cast<size_t>(i)] == rhs[static_cast<size_t>(i)]); ++i)
 			++prefix_len;
 
 		// do the weighting

@@ -16,7 +16,7 @@
 #include "uae/types.h"
 
 #include "traps.h"
-#include "guisan/color.hpp"
+#include "gui_color_platform.h"
 
 #define UAEMAJOR 8
 #define UAEMINOR 0

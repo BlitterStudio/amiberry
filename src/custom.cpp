@@ -30,9 +30,7 @@
 #include "blitter.h"
 #include "xwin.h"
 #include "inputdevice.h"
-#ifdef SERIAL_PORT
 #include "serial.h"
-#endif
 #include "autoconf.h"
 #include "traps.h"
 #include "gui.h"
