@@ -5293,6 +5293,11 @@ int main(int argc, char* argv[]) {
 		abort();
 	}
 
+	// Enable native IME for international text input (SDL 2.0.18+)
+#ifdef SDL_HINT_IME_SHOW_UI
+	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+#endif
+
 	(void)atexit(SDL_Quit);
 
 	initialize_ini();

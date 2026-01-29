@@ -825,12 +825,13 @@ void amiberry_gui_init()
 	SELECTOR_HEIGHT = (int)(24 * scaling_factor);
 	SCROLLBAR_WIDTH = (int)(20 * scaling_factor);
 	style.ScaleAllSizes(scaling_factor);
+	style.FontScaleDpi = scaling_factor;  // Enable DPI-aware font scaling (ImGui v1.92+)
 
-	// Load custom font from data/ (default to AmigaTopaz.ttf), scale by DPI
+	// Load custom font from data/ (default to AmigaTopaz.ttf)
+	// Note: Don't manually scale font_px here - FontScaleDpi handles DPI scaling automatically
 	const std::string font_file = gui_theme.font_name.empty() ? std::string("AmigaTopaz.ttf") : gui_theme.font_name;
 	const std::string font_path = prefix_with_data_path(font_file);
-	float font_px = gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f;
-	font_px *= scaling_factor;
+	const float font_px = gui_theme.font_size > 0 ? (float)gui_theme.font_size : 15.0f;
 
 	ImFont* loaded_font = nullptr;
 	if (!font_path.empty()) {
@@ -843,9 +844,9 @@ void amiberry_gui_init()
 	}
 	io.FontDefault = loaded_font;
 
-	// Setup Platform/Renderer backends
-	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
+	// Setup Platform/Renderer backends (platform first, then renderer per ImGui example)
 	ImGui_ImplSDL2_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
+	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
 
 	if (amiberry_options.quickstart_start && !emulating)
 	{
@@ -1067,9 +1068,15 @@ void run_gui()
 			}
 		}
 
-		// Start the Dear ImGui frame
-		ImGui_ImplSDL2_NewFrame();
+		// Skip rendering when minimized to save CPU
+		if (SDL_GetWindowFlags(mon->gui_window) & SDL_WINDOW_MINIMIZED) {
+			SDL_Delay(10);
+			continue;
+		}
+
+		// Start the Dear ImGui frame (renderer first, then platform per ImGui example)
 		ImGui_ImplSDLRenderer2_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
 		const ImGuiStyle& style = ImGui::GetStyle();
@@ -1326,6 +1333,8 @@ void run_gui()
 
 		// Rendering
 		ImGui::Render();
+		const ImGuiIO& render_io = ImGui::GetIO();
+		SDL_RenderSetScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
 		SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<Uint8>(0.45f * 255), static_cast<Uint8>(0.55f * 255),
 						   static_cast<Uint8>(0.60f * 255), static_cast<Uint8>(1.00f * 255));
 		SDL_RenderClear(mon->gui_renderer);
