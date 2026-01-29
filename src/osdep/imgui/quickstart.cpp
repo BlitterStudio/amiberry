@@ -154,7 +154,7 @@ void render_panel_quickstart() {
     BeginGroupBox("Emulated Hardware");
     if (ImGui::BeginTable("QuickstartModelTable", 2, ImGuiTableFlags_SizingStretchProp,
                           ImVec2(ImGui::GetContentRegionAvail().x - 15.0f, 0.0f))) {
-        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.33f);
         ImGui::TableSetupColumn("Control", ImGuiTableColumnFlags_WidthStretch);
 
         // Model row
@@ -254,7 +254,7 @@ void render_panel_quickstart() {
         ImGui::SameLine();
 
         // 2. Select file Button
-        const float button_width = 120.0f; // Wider button for "Select file"
+        const float button_width = BUTTON_WIDTH * 1.33f; // Wider button for "Select file"
         if (!drive_enabled) ImGui::BeginDisabled();
         if (AmigaButton("Select file", ImVec2(button_width, 0))) {
             std::string tmp;
@@ -412,8 +412,8 @@ void render_panel_quickstart() {
 
         ImGui::SameLine();
 
-        const float button_width = 120.0f;
-        if (AmigaButton("Select file", ImVec2(button_width, 0))) {
+        const float cd_button_width = BUTTON_WIDTH * 1.33f;
+        if (AmigaButton("Select file", ImVec2(cd_button_width, 0))) {
             std::string tmp;
             if (std::strlen(changed_prefs.cdslots[0].name) > 0)
                 tmp = changed_prefs.cdslots[0].name;
@@ -496,7 +496,7 @@ void render_panel_quickstart() {
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
     BeginGroupBox("WHDLoad auto-config:");
-    if (AmigaButton("Select file##QSWHD", ImVec2(120.0f, 0))) {
+    if (AmigaButton("Select file##QSWHD", ImVec2(BUTTON_WIDTH * 1.33f, 0))) {
         std::string tmp;
         if (!whdload_prefs.whdload_filename.empty())
             tmp = whdload_prefs.whdload_filename;
