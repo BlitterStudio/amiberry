@@ -1249,6 +1249,18 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 
 	// setup for tmp folder.
 	std::filesystem::path temp_base = get_whdboot_temp_path();
+	// Clean up any stale files from previous runs to ensure a fresh tmp
+	// This helps avoid stale/broken symlinks causing WHDLoad not found
+	try {
+		if (std::filesystem::exists(temp_base)) {
+			write_log("WHDBooter - Cleaning existing tmp directory %s\n", temp_base.string().c_str());
+			std::filesystem::remove_all(temp_base);
+		}
+	}
+	catch (std::filesystem::filesystem_error &e) {
+		write_log("WHDBooter - Failed to clean tmp directory %s: %s\n", temp_base.string().c_str(), e.what());
+	}
+
 	std::filesystem::create_directories(temp_base / "s");
 	std::filesystem::create_directories(temp_base / "c");
 	std::filesystem::create_directories(temp_base / "devs");
@@ -1293,64 +1305,112 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	{
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
-			// create a symlink to JST
+			// create a link/copy to JST
 			whd_path = whdbooter_path / "JST";
 			std::filesystem::path jst_link = temp_base / "c" / "JST";
+			// Remove stale link if it exists
+			if (std::filesystem::is_symlink(jst_link) || std::filesystem::exists(jst_link)) {
+				// If it's a symlink, remove it; if it's a leftover file/dir, remove it too so we can place a fresh copy/link
+				try { std::filesystem::remove_all(jst_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing JST link/tree %s: %s\n", jst_link.string().c_str(), e.what()); }
+			}
 			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(jst_link)) {
-				write_log("WHDBooter - Creating symlink to JST in %s\n", (temp_base / "c").string().c_str());
+				write_log("WHDBooter - Creating link/copy to JST in %s\n", (temp_base / "c").string().c_str());
 				try {
-					std::filesystem::create_symlink(whd_path, jst_link);
+		#ifdef __ANDROID__
+				// Android's external storage often does not support symlinks; copy instead
+				std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
+		#else
+				std::filesystem::create_symlink(whd_path, jst_link);
+		#endif
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				write_log("WHDBooter - JST link creation failed (%s). Falling back to copy: %s\n", jst_link.string().c_str(), e.what());
+				try {
+					std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
 				}
-				catch (std::filesystem::filesystem_error& e) {
-					if (e.code() == std::errc::operation_not_permitted) {
-						std::filesystem::copy(whd_path, jst_link);
-					}
+				catch (std::filesystem::filesystem_error &e2) {
+					write_log("WHDBooter - JST copy also failed: %s\n", e2.what());
 				}
+			}
 			}
 		}
 		else
 		{
-			// create a symlink to WHDLoad
+			// create a link/copy to WHDLoad
 			whd_path = whdbooter_path / "WHDLoad";
 			std::filesystem::path whdload_link = temp_base / "c" / "WHDLoad";
+			// Remove stale link/file if present
+			if (std::filesystem::is_symlink(whdload_link) || std::filesystem::exists(whdload_link)) {
+				try { std::filesystem::remove_all(whdload_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing WHDLoad link/tree %s: %s\n", whdload_link.string().c_str(), e.what()); }
+			}
 			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(whdload_link)) {
-				write_log("WHDBooter - Creating symlink to WHDLoad in %s\n", (temp_base / "c").string().c_str());
+				write_log("WHDBooter - Creating link/copy to WHDLoad in %s\n", (temp_base / "c").string().c_str());
 				try {
-					std::filesystem::create_symlink(whd_path, whdload_link);
+		#ifdef __ANDROID__
+				std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
+		#else
+				std::filesystem::create_symlink(whd_path, whdload_link);
+		#endif
 				}
 				catch (std::filesystem::filesystem_error& e) {
-					if (e.code() == std::errc::operation_not_permitted) {
-						std::filesystem::copy(whd_path, whdload_link);
+					write_log("WHDBooter - WHDLoad link creation failed (%s). Falling back to copy: %s\n", whdload_link.string().c_str(), e.what());
+					try {
+						std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
+					}
+					catch (std::filesystem::filesystem_error &e2) {
+						write_log("WHDBooter - WHDLoad copy also failed: %s\n", e2.what());
 					}
 				}
 			}
 		}
 
-		// Create a symlink to AmiQuit
+		// Create a link/copy to AmiQuit
 		whd_path = whdbooter_path / "AmiQuit";
 		std::filesystem::path amiquit_link = temp_base / "c" / "AmiQuit";
+		if (std::filesystem::is_symlink(amiquit_link) || std::filesystem::exists(amiquit_link)) {
+			try { std::filesystem::remove_all(amiquit_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing AmiQuit link/tree %s: %s\n", amiquit_link.string().c_str(), e.what()); }
+		}
 		if (std::filesystem::exists(whd_path) && !std::filesystem::exists(amiquit_link)) {
-			write_log("WHDBooter - Creating symlink to AmiQuit in %s\n", (temp_base / "c").string().c_str());
+			write_log("WHDBooter - Creating link/copy to AmiQuit in %s\n", (temp_base / "c").string().c_str());
 			try {
-				std::filesystem::create_symlink(whd_path, amiquit_link);
+#ifdef __ANDROID__
+			std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
+#else
+			std::filesystem::create_symlink(whd_path, amiquit_link);
+#endif
 			}
 			catch (std::filesystem::filesystem_error& e) {
-				if (e.code() == std::errc::operation_not_permitted) {
-					std::filesystem::copy(whd_path, amiquit_link);
+				write_log("WHDBooter - AmiQuit link creation failed (%s). Falling back to copy: %s\n", amiquit_link.string().c_str(), e.what());
+				try {
+					std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
+				}
+				catch (std::filesystem::filesystem_error &e2) {
+					write_log("WHDBooter - AmiQuit copy also failed: %s\n", e2.what());
 				}
 			}
 		}
 
-		// create a symlink for DEVS/Kickstarts
+		// create a symlink/copy for DEVS/Kickstarts
 		std::filesystem::path kickstarts_link = temp_base / "devs" / "Kickstarts";
+		if (std::filesystem::is_symlink(kickstarts_link) || std::filesystem::exists(kickstarts_link)) {
+			try { std::filesystem::remove_all(kickstarts_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing Kickstarts link/tree %s: %s\n", kickstarts_link.string().c_str(), e.what()); }
+		}
 		if (!std::filesystem::exists(kickstarts_link)) {
-			write_log("WHDBooter - Creating symlink to Kickstarts in %s\n", (temp_base / "devs").string().c_str());
+			write_log("WHDBooter - Creating link/copy to Kickstarts in %s\n", (temp_base / "devs").string().c_str());
 			try {
+#ifdef __ANDROID__
+				std::filesystem::copy(kickstart_path, kickstarts_link, std::filesystem::copy_options::recursive);
+#else
 				std::filesystem::create_symlink(kickstart_path, kickstarts_link);
+#endif
 			}
 			catch (std::filesystem::filesystem_error& e) {
-				if (e.code() == std::errc::operation_not_permitted) {
+				write_log("WHDBooter - Kickstarts link creation failed (%s). Falling back to copy: %s\n", kickstarts_link.string().c_str(), e.what());
+				try {
 					std::filesystem::copy(kickstart_path, kickstarts_link, std::filesystem::copy_options::recursive);
+				}
+				catch (std::filesystem::filesystem_error &e2) {
+					write_log("WHDBooter - Kickstarts copy also failed: %s\n", e2.what());
 				}
 			}
 		}
