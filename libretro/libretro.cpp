@@ -15,6 +15,16 @@
 #include <string>
 #include <vector>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "retro_dirent.h"
+#include "streams/file_stream.h"
+#include "file/file_path.h"
+#ifdef __cplusplus
+}
+#endif
+
 #include "sysdeps.h"
 #include "options.h"
 #include "inputdevice.h"
@@ -317,18 +327,34 @@ static void update_memory_map()
 	if (!environ_cb || memory_map_set)
 		return;
 
-	struct retro_memory_descriptor memdesc[3];
+	struct retro_memory_descriptor memdesc[20];
 	unsigned count = 0;
 
-	if (chipmem_bank.baseaddr && chipmem_bank.allocated_size) {
-		memdesc[count++] = { RETRO_MEMDESC_SYSTEM_RAM, chipmem_bank.baseaddr, 0, chipmem_bank.start, 0, 0, chipmem_bank.allocated_size, "CHIP" };
+	auto add_mem = [&](uint64_t flags, uae_u8* base, uae_u32 start, uae_u32 size, const char* name) {
+		if (!base || !size || count >= sizeof(memdesc) / sizeof(memdesc[0]))
+			return;
+		memdesc[count++] = { flags, base, 0, start, 0, 0, size, name };
+	};
+
+	add_mem(RETRO_MEMDESC_SYSTEM_RAM, chipmem_bank.baseaddr, chipmem_bank.start, chipmem_bank.allocated_size, "CHIP");
+	add_mem(RETRO_MEMDESC_SYSTEM_RAM, bogomem_bank.baseaddr, bogomem_bank.start, bogomem_bank.allocated_size, "SLOW");
+	for (int i = 0; i < MAX_RAM_BOARDS; ++i) {
+		add_mem(RETRO_MEMDESC_SYSTEM_RAM, fastmem_bank[i].baseaddr, fastmem_bank[i].start,
+			fastmem_bank[i].allocated_size, "FAST");
 	}
-	if (bogomem_bank.baseaddr && bogomem_bank.allocated_size) {
-		memdesc[count++] = { RETRO_MEMDESC_SYSTEM_RAM, bogomem_bank.baseaddr, 0, bogomem_bank.start, 0, 0, bogomem_bank.allocated_size, "SLOW" };
+	for (int i = 0; i < MAX_RAM_BOARDS; ++i) {
+		add_mem(RETRO_MEMDESC_SYSTEM_RAM, z3fastmem_bank[i].baseaddr, z3fastmem_bank[i].start,
+			z3fastmem_bank[i].allocated_size, "Z3FAST");
 	}
-	if (fastmem_bank[0].baseaddr && fastmem_bank[0].allocated_size) {
-		memdesc[count++] = { RETRO_MEMDESC_SYSTEM_RAM, fastmem_bank[0].baseaddr, 0, fastmem_bank[0].start, 0, 0, fastmem_bank[0].allocated_size, "FAST" };
-	}
+	add_mem(RETRO_MEMDESC_SYSTEM_RAM, z3chipmem_bank.baseaddr, z3chipmem_bank.start,
+		z3chipmem_bank.allocated_size, "Z3CHIP");
+	add_mem(RETRO_MEMDESC_CONST, kickmem_bank.baseaddr, kickmem_bank.start, kickmem_bank.allocated_size, "KICK");
+	add_mem(RETRO_MEMDESC_CONST, extendedkickmem_bank.baseaddr, extendedkickmem_bank.start,
+		extendedkickmem_bank.allocated_size, "EXTROM");
+	add_mem(RETRO_MEMDESC_CONST, extendedkickmem2a_bank.baseaddr, extendedkickmem2a_bank.start,
+		extendedkickmem2a_bank.allocated_size, "EXTROM2A");
+	add_mem(RETRO_MEMDESC_CONST, extendedkickmem2b_bank.baseaddr, extendedkickmem2b_bank.start,
+		extendedkickmem2b_bank.allocated_size, "EXTROM2B");
 
 	if (count == 0)
 		return;
@@ -2195,6 +2221,9 @@ void retro_set_environment(retro_environment_t cb)
 			vfs_iface = *vfs_info.iface;
 			vfs_available = true;
 			libretro_debug_log("env vfs_available=1\n");
+			dirent_vfs_init(&vfs_info);
+			filestream_vfs_init(&vfs_info);
+			path_vfs_init(&vfs_info);
 		} else {
 			memset(&vfs_iface, 0, sizeof(vfs_iface));
 			vfs_available = false;

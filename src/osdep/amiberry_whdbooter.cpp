@@ -13,7 +13,12 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include "sysdeps.h"
+#include "osdep/libretro/libretro_fs_helpers.h"
+#ifdef LIBRETRO
+#include "osdep/libretro/libretro_vfs.h"
+#endif
 #include "uae.h"
 #include "options.h"
 #include "rommgr.h"
@@ -86,16 +91,129 @@ static std::string to_lower_copy(std::string value)
 
 static bool dir_has_rom(const std::filesystem::path& dir)
 {
-	if (dir.empty() || !std::filesystem::exists(dir))
+	if (dir.empty() || !libretro_fs::exists(dir))
 		return false;
-	for (const auto& entry : std::filesystem::directory_iterator(dir)) {
-		if (!entry.is_regular_file())
+	DIR* dirp = opendir(dir.c_str());
+	if (!dirp)
+		return false;
+
+	bool found = false;
+	while (auto* entry = readdir(dirp)) {
+		const char* name = entry->d_name;
+		if (!name || name[0] == '.')
 			continue;
-		const auto ext = to_lower_copy(entry.path().extension().string());
-		if (ext == ".rom")
-			return true;
+
+		const char* dot = strrchr(name, '.');
+		if (!dot)
+			continue;
+
+		std::string ext = to_lower_copy(dot);
+		if (ext != ".rom")
+			continue;
+
+		const std::filesystem::path candidate = dir / name;
+		STAT st{};
+		if (posixemu_stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode)) {
+			found = true;
+			break;
+		}
 	}
+	closedir(dirp);
+	return found;
+}
+
+static bool vfs_enabled()
+{
+#ifdef LIBRETRO
+	return libretro_is_vfs_available();
+#else
 	return false;
+#endif
+}
+
+static bool copy_file_vfs(const std::filesystem::path& src, const std::filesystem::path& dst)
+{
+	if (src.empty() || dst.empty())
+		return false;
+
+	const std::filesystem::path parent = dst.parent_path();
+	if (!parent.empty())
+		libretro_fs::create_directories(parent);
+
+	const int in_fd = posixemu_open(src.c_str(), O_RDONLY | O_BINARY, 0);
+	if (in_fd < 0)
+		return false;
+	const int out_fd = posixemu_open(dst.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0660);
+	if (out_fd < 0) {
+		posixemu_close(in_fd);
+		return false;
+	}
+
+	char buffer[64 * 1024];
+	bool ok = true;
+	for (;;) {
+		const int read_bytes = posixemu_read(in_fd, buffer, sizeof(buffer));
+		if (read_bytes < 0) {
+			ok = false;
+			break;
+		}
+		if (read_bytes == 0)
+			break;
+		int offset = 0;
+		while (offset < read_bytes) {
+			const int written = posixemu_write(out_fd, buffer + offset, read_bytes - offset);
+			if (written <= 0) {
+				ok = false;
+				break;
+			}
+			offset += written;
+		}
+		if (!ok)
+			break;
+	}
+
+	posixemu_close(out_fd);
+	posixemu_close(in_fd);
+	return ok;
+}
+
+static void copy_kickstarts_to_devs(const std::filesystem::path& src_dir,
+	const std::filesystem::path& dst_dir)
+{
+	if (src_dir.empty() || dst_dir.empty())
+		return;
+
+	libretro_fs::create_directories(dst_dir);
+
+	DIR* dirp = opendir(src_dir.c_str());
+	if (!dirp)
+		return;
+
+	while (auto* entry = readdir(dirp)) {
+		const char* name = entry->d_name;
+		if (!name || name[0] == '.')
+			continue;
+
+		std::string lower = to_lower_copy(name);
+		const bool is_key = (lower == "rom.key");
+		const bool is_rom = lower.size() > 4 && lower.rfind(".rom") == lower.size() - 4;
+		if (!is_key && !is_rom)
+			continue;
+
+		const std::filesystem::path src = src_dir / name;
+		STAT st{};
+		if (posixemu_stat(src.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
+			continue;
+
+		const std::filesystem::path dst = dst_dir / name;
+		if (libretro_fs::exists(dst))
+			continue;
+
+		if (!copy_file_vfs(src, dst)) {
+			write_log("WHDBooter - Failed to copy %s to %s\n", src.c_str(), dst.c_str());
+		}
+	}
+	closedir(dirp);
 }
 
 static bool find_slave_in_archive(const char* filepath, std::string& out_subpath, std::string& out_slave)
@@ -274,29 +392,39 @@ void make_rom_symlink(const std::string& kickstart_short_name, const int kicksta
 	kickstart_long_path /= kickstart_short_name;
 
 	// Remove the symlink if it already exists
-	if (std::filesystem::is_symlink(kickstart_long_path)) {
-		std::filesystem::remove(kickstart_long_path);
+	if (!vfs_enabled()) {
+		if (std::filesystem::is_symlink(kickstart_long_path))
+			libretro_fs::remove(kickstart_long_path);
 	}
 
-	if (!std::filesystem::exists(kickstart_long_path))
+	if (!libretro_fs::exists(kickstart_long_path))
 	{
 		const int roms[2] = { kickstart_number, -1 };
 		// copy the existing prefs->romfile to a backup variable, so we can restore it afterward
 		const std::string old_romfile = prefs->romfile;
 		if (configure_rom(prefs, roms, 0) == 1)
 		{
-			try {
-				std::filesystem::create_symlink(prefs->romfile, kickstart_long_path);
-				write_log("Making SymLink for Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
-			}
-			catch (std::filesystem::filesystem_error& e) {
-				if (e.code() == std::errc::operation_not_permitted) {
-					// Fallback to copying file if filesystem does not support the generation of symlinks
-					std::filesystem::copy(prefs->romfile, kickstart_long_path);
+			if (vfs_enabled()) {
+				if (copy_file_vfs(prefs->romfile, kickstart_long_path))
 					write_log("Copying Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+				else
+					write_log("Copying Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
+			} else {
+				try {
+					std::filesystem::create_symlink(prefs->romfile, kickstart_long_path);
+					write_log("Making SymLink for Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
 				}
-				else {
-					write_log("Error creating SymLink for Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
+				catch (std::filesystem::filesystem_error& e) {
+					if (e.code() == std::errc::operation_not_permitted) {
+						// Fallback to copying file if filesystem does not support the generation of symlinks
+						if (copy_file_vfs(prefs->romfile, kickstart_long_path))
+							write_log("Copying Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+						else
+							write_log("Copying Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
+					}
+					else {
+						write_log("Error creating SymLink for Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
+					}
 				}
 			}
 		}
@@ -330,7 +458,7 @@ void symlink_roms(struct uae_prefs* prefs)
 		}
 	}
 
-	if (!std::filesystem::exists(kickstart_path)) {
+	if (!libretro_fs::exists(kickstart_path)) {
 		// otherwise, use the old route
 		whdbooter_path = get_whdbootpath();
 		kickstart_path = whdbooter_path / "game-data" / "Devs" / "Kickstarts";
@@ -357,15 +485,20 @@ void symlink_roms(struct uae_prefs* prefs)
 	std::filesystem::path rom_key_destination_path = kickstart_path;
 	rom_key_destination_path /= "rom.key";
 
-	if (std::filesystem::exists(rom_key_source_path) && !std::filesystem::exists(rom_key_destination_path)) {
-		write_log("Making SymLink for rom.key\n");
-		try {
-			std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
-		}
-		catch (std::filesystem::filesystem_error& e) {
-			if (e.code() == std::errc::operation_not_permitted) {
-				// Fallback to copying file if filesystem does not support the generation of symlinks
-				std::filesystem::copy(rom_key_source_path, rom_key_destination_path);
+	if (libretro_fs::exists(rom_key_source_path) && !libretro_fs::exists(rom_key_destination_path)) {
+		if (vfs_enabled()) {
+			if (!copy_file_vfs(rom_key_source_path, rom_key_destination_path))
+				write_log("Copying rom.key failed\n");
+		} else {
+			write_log("Making SymLink for rom.key\n");
+			try {
+				std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				if (e.code() == std::errc::operation_not_permitted) {
+					// Fallback to copying file if filesystem does not support the generation of symlinks
+					copy_file_vfs(rom_key_source_path, rom_key_destination_path);
+				}
 			}
 		}
 	}
@@ -422,7 +555,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename(whdload_prefs.filename);
 
-	if (std::filesystem::exists(uae_config))
+	if (libretro_fs::exists(uae_config))
 	{
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
@@ -1213,12 +1346,21 @@ void create_startup_sequence()
 	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup.c_str());
 
+#ifdef LIBRETRO
+	FILE* myfile = fopen(whd_startup.c_str(), "wb");
+	if (myfile) {
+		const auto& script = whd_bootscript.str();
+		fwrite(script.c_str(), 1, script.size(), myfile);
+		fclose(myfile);
+	}
+#else
 	std::ofstream myfile(whd_startup);
 	if (myfile.is_open())
 	{
 		myfile << whd_bootscript.str();
 		myfile.close();
 	}
+#endif
 }
 
 bool is_a600_available(uae_prefs* prefs)
@@ -1243,7 +1385,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
 		boot_path = whdbooter_path / "boot-data.zip";
-		if (!std::filesystem::exists(boot_path))
+		if (!libretro_fs::exists(boot_path))
 			boot_path = whdbooter_path / "boot-data";
 
 		tmp = "filesystem2=rw,DH3:DH3:" + boot_path.string() + ",-10";
@@ -1255,7 +1397,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	else // revert to original booter is no slave was set
 	{
 		boot_path = whdbooter_path / "boot-data.zip";
-		if (!std::filesystem::exists(boot_path))
+		if (!libretro_fs::exists(boot_path))
 			boot_path = whdbooter_path / "boot-data";
 
 		tmp = "filesystem2=rw,DH0:DH0:" + boot_path.string() + ",10";
@@ -1275,7 +1417,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	//set the third (save data) drive
 	whd_path = save_path / "";
 
-	if (std::filesystem::exists(save_path))
+	if (libretro_fs::exists(save_path))
 	{
 		tmp = "filesystem2=rw,DH2:Saves:" + save_path.string() + ",0";
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
@@ -1309,8 +1451,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	save_path = get_savedatapath(false);
 	if (!save_path.empty()) {
 		try {
-			std::filesystem::create_directories(save_path);
-			std::filesystem::create_directories(save_path / "Savegames");
+			libretro_fs::create_directories(save_path);
+			libretro_fs::create_directories(save_path / "Savegames");
 		} catch (...) {
 			// best effort
 		}
@@ -1335,11 +1477,11 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	whdload_prefs.filename = filename_no_extension;
 
 	// setup for tmp folder.
-	std::filesystem::create_directories("/tmp/amiberry/s");
-	std::filesystem::create_directories("/tmp/amiberry/c");
-	std::filesystem::create_directories("/tmp/amiberry/devs");
+	libretro_fs::create_directories("/tmp/amiberry/s");
+	libretro_fs::create_directories("/tmp/amiberry/c");
+	libretro_fs::create_directories("/tmp/amiberry/devs");
 	whd_startup = "/tmp/amiberry/s/startup-sequence";
-	std::filesystem::remove(whd_startup);
+	libretro_fs::remove(whd_startup);
 
 	// Use WHDBOOT_SAVE_DATA override when available (libretro sets this)
 	kickstart_path = std::filesystem::path(get_savedatapath(false)) / "Kickstarts";
@@ -1349,7 +1491,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	game_hardware_options game_detail;
 	whd_config = whd_path / "whdload_db.xml";
 
-	if (std::filesystem::exists(whd_config))
+	if (libretro_fs::exists(whd_config))
 	{
 		game_detail = parse_settings_from_xml(prefs, filepath);
 	}
@@ -1361,7 +1503,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// LOAD CUSTOM CONFIG
 	build_uae_config_filename(whdload_prefs.filename);
 	// If we have a config file, we will load that on top of the XML settings
-	if (std::filesystem::exists(uae_config))
+	if (libretro_fs::exists(uae_config))
 	{
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
@@ -1391,56 +1533,76 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	}
 
 	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
-	if (std::filesystem::exists(whd_startup))
+	if (libretro_fs::exists(whd_startup))
 	{
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
 			// create a symlink to JST in /tmp/amiberry/
 			whd_path = whdbooter_path / "JST";
-			if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/JST")) {
-				write_log("WHDBooter - Creating symlink to JST in /tmp/amiberry/c/ \n");
-				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/JST");
+			if (libretro_fs::exists(whd_path) && !libretro_fs::exists("/tmp/amiberry/c/JST")) {
+				if (vfs_enabled()) {
+					write_log("WHDBooter - Copying JST to /tmp/amiberry/c/ \n");
+					copy_file_vfs(whd_path, "/tmp/amiberry/c/JST");
+				} else {
+					write_log("WHDBooter - Creating symlink to JST in /tmp/amiberry/c/ \n");
+					std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/JST");
+				}
 			}
 		}
 		else
 		{
 			// create a symlink to WHDLoad in /tmp/amiberry/
 			whd_path = whdbooter_path / "WHDLoad";
-			if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/WHDLoad")) {
-				write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
-				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
+			if (libretro_fs::exists(whd_path) && !libretro_fs::exists("/tmp/amiberry/c/WHDLoad")) {
+				if (vfs_enabled()) {
+					write_log("WHDBooter - Copying WHDLoad to /tmp/amiberry/c/ \n");
+					copy_file_vfs(whd_path, "/tmp/amiberry/c/WHDLoad");
+				} else {
+					write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
+					std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
+				}
 			}
 		}
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
 		whd_path = whdbooter_path / "AmiQuit";
-		if (std::filesystem::exists(whd_path) && !std::filesystem::exists("/tmp/amiberry/c/AmiQuit")) {
-			write_log("WHDBooter - Creating symlink to AmiQuit in /tmp/amiberry/c/ \n");
-			std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
+		if (libretro_fs::exists(whd_path) && !libretro_fs::exists("/tmp/amiberry/c/AmiQuit")) {
+			if (vfs_enabled()) {
+				write_log("WHDBooter - Copying AmiQuit to /tmp/amiberry/c/ \n");
+				copy_file_vfs(whd_path, "/tmp/amiberry/c/AmiQuit");
+			} else {
+				write_log("WHDBooter - Creating symlink to AmiQuit in /tmp/amiberry/c/ \n");
+				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
+			}
 		}
 
 		// create a symlink for DEVS in /tmp/amiberry/
 		const std::filesystem::path devs_link = "/tmp/amiberry/devs/Kickstarts";
-		bool needs_link = true;
-		if (std::filesystem::exists(devs_link)) {
-			if (std::filesystem::is_symlink(devs_link)) {
-				try {
-					const auto current = std::filesystem::read_symlink(devs_link);
-					if (current == kickstart_path)
-						needs_link = false;
-					else
-						std::filesystem::remove(devs_link);
-				} catch (...) {
-					std::filesystem::remove(devs_link);
+		if (vfs_enabled()) {
+			write_log("WHDBooter - Copying Kickstarts to /tmp/amiberry/devs/ \n");
+			copy_kickstarts_to_devs(kickstart_path, devs_link);
+		} else {
+			bool needs_link = true;
+			if (libretro_fs::exists(devs_link)) {
+				if (std::filesystem::is_symlink(devs_link)) {
+					try {
+						const auto current = std::filesystem::read_symlink(devs_link);
+						if (current == kickstart_path)
+							needs_link = false;
+						else
+							libretro_fs::remove(devs_link);
+					} catch (...) {
+						libretro_fs::remove(devs_link);
+					}
+				} else {
+					// if it's a real directory, leave it as-is
+					needs_link = false;
 				}
-			} else {
-				// if it's a real directory, leave it as-is
-				needs_link = false;
 			}
-		}
-		if (needs_link) {
-			write_log("WHDBooter - Creating symlink to Kickstarts in /tmp/amiberry/devs/ \n");
-			std::filesystem::create_symlink(kickstart_path, devs_link);
+			if (needs_link) {
+				write_log("WHDBooter - Creating symlink to Kickstarts in /tmp/amiberry/devs/ \n");
+				std::filesystem::create_symlink(kickstart_path, devs_link);
+			}
 		}
 	}
 #if DEBUG

@@ -16,6 +16,9 @@
 #include "options.h"
 #include "filesys.h"
 #include "zfile.h"
+#ifdef LIBRETRO
+#include "osdep/libretro/libretro_fs_helpers.h"
+#endif
 #include <unistd.h>
 #include <algorithm>
 #include <list>
@@ -415,6 +418,27 @@ std::string prefix_with_data_path(const std::string& filename)
 		return false;
 	}
 
+#ifdef LIBRETRO
+	const auto output = iso_8859_1_to_utf8(std::string_view(name));
+	STAT st{};
+	if (posixemu_stat(output.c_str(), &st) != 0) {
+		write_log("my_chmod: stat on file %s failed: %s\n",
+			output.c_str(), strerror(errno));
+		return false;
+	}
+
+	mode_t new_mode = st.st_mode;
+	new_mode &= ~(S_IWUSR | S_IWGRP | S_IWOTH);
+	if (mode & FILEFLAG_WRITE)
+		new_mode |= S_IWUSR;
+
+	if (posixemu_chmod(output.c_str(), static_cast<int>(new_mode)) != 0) {
+		write_log("my_chmod: chmod on file %s failed: %s\n",
+			output.c_str(), strerror(errno));
+		return false;
+	}
+	return true;
+#else
 	try {
 		// Use std::filesystem for path handling
 		const auto output = iso_8859_1_to_utf8(std::string_view(name));
@@ -455,6 +479,7 @@ std::string prefix_with_data_path(const std::string& filename)
 			name, e.what());
 		return false;
 	}
+#endif
 }
 
 [[nodiscard]] static time_t get_local_time_offset(time_t t)
@@ -476,6 +501,22 @@ std::string prefix_with_data_path(const std::string& filename)
 			return false;
 		}
 
+#ifdef LIBRETRO
+		const auto output = iso_8859_1_to_utf8(std::string_view(name));
+		STAT st{};
+		if (posixemu_stat(output.c_str(), &st) != 0) {
+			write_log("my_stat: stat failed for %s: %s\n",
+				output.c_str(), strerror(errno));
+			return false;
+		}
+
+		statbuf->size = st.st_size;
+		statbuf->mode = ((st.st_mode & S_IRUSR) ? FILEFLAG_READ : 0) |
+			((st.st_mode & S_IWUSR) ? FILEFLAG_WRITE : 0);
+		statbuf->mtime.tv_sec = st.st_mtime ? st.st_mtime + get_local_time_offset(st.st_mtime) : 0;
+		statbuf->mtime.tv_usec = 0;
+		return true;
+#else
 		// Use filesystem for better path handling
 		const auto output = iso_8859_1_to_utf8(std::string_view(name));
 		fs::path filepath(output);
@@ -505,6 +546,7 @@ std::string prefix_with_data_path(const std::string& filename)
 		statbuf->mtime.tv_usec = 0;
 
 		return true;
+#endif
 	}
 	catch (const std::exception& e) {
 		write_log("my_stat: Exception while processing %s: %s\n",
@@ -618,21 +660,33 @@ bool my_existslink(const char* name)
 bool my_existsfile2(const char* name)
 {
 	if (!name) return false;
+#ifdef LIBRETRO
+	return libretro_fs::exists(name) && libretro_fs::is_regular_file(name);
+#else
 	return fs::exists(name) && fs::is_regular_file(name);
+#endif
 }
 
 bool my_existsfile(const char* name)
 {
 	if (!name) return false;
 	const auto output = iso_8859_1_to_utf8(string(name));
+#ifdef LIBRETRO
+	return libretro_fs::exists(output) && libretro_fs::is_regular_file(output);
+#else
 	return fs::exists(output) && fs::is_regular_file(output);
+#endif
 }
 
 bool my_existsdir(const char* name)
 {
 	if (!name) return false;
 	const auto output = iso_8859_1_to_utf8(string(name));
+#ifdef LIBRETRO
+	return libretro_fs::exists(output) && libretro_fs::is_directory(output);
+#else
 	return fs::exists(output) && fs::is_directory(output);
+#endif
 }
 
 uae_s64 my_fsize(struct my_openfile_s* mos)
@@ -698,7 +752,12 @@ struct my_openfile_s* my_open(const TCHAR* name, int flags)
 	}
 
 	const auto output = iso_8859_1_to_utf8(std::string(name));
+#ifdef LIBRETRO
+	mos->fd = (flags & O_CREAT) ? posixemu_open(output.c_str(), flags, 0660)
+		: posixemu_open(output.c_str(), flags, 0);
+#else
 	mos->fd = (flags & O_CREAT) ? open(output.c_str(), flags, 0660) : open(output.c_str(), flags);
+#endif
 
 	if (mos->fd == -1) {
 		write_log("my_open: open on file %s failed: %s\n", name, strerror(errno));
@@ -715,7 +774,11 @@ void my_close(struct my_openfile_s* mos)
 		return;
 	}
 
+#ifdef LIBRETRO
+	if (posixemu_close(mos->fd) != 0) {
+#else
 	if (close(mos->fd) != 0) {
+#endif
 		write_log("my_close: close on file %s failed: %s\n", mos->path, strerror(errno));
 	}
 
@@ -735,7 +798,11 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		return 0;
 	}
 
+#ifdef LIBRETRO
+	ssize_t bytes_read = posixemu_read(mos->fd, b, size);
+#else
 	ssize_t bytes_read = read(mos->fd, b, size);
+#endif
 	if (bytes_read == -1) {
 		write_log("my_read: read on file %s failed with error %s\n", mos->path, strerror(errno));
 		return 0;
@@ -762,9 +829,15 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 
 	// Handle partial writes with retry logic
 	while (total_written < size) {
+#ifdef LIBRETRO
+		const ssize_t bytes_written = posixemu_write(mos->fd,
+			buffer + total_written,
+			size - total_written);
+#else
 		const ssize_t bytes_written = write(mos->fd,
 			buffer + total_written,
 			size - total_written);
+#endif
 
 		if (bytes_written == -1) {
 			// Check for interruption and retry
@@ -807,6 +880,32 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		// Convert input path to UTF-8 for filesystem operations
 		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
 
+#ifdef LIBRETRO
+		if (libretro_fs::exists(utf8_path)) {
+			if (libretro_fs::is_directory(utf8_path)) {
+				write_log("my_mkdir: directory %s already exists\n", path);
+				return -1;
+			}
+			write_log("my_mkdir: path %s exists but is not a directory\n", path);
+			return -1;
+		}
+
+		const std::filesystem::path parent = std::filesystem::path(utf8_path).parent_path();
+		if (!parent.empty() && !libretro_fs::exists(parent)) {
+			if (!libretro_fs::create_directories(parent)) {
+				write_log("my_mkdir: failed to create parent directories for %s\n", path);
+				return -1;
+			}
+		}
+
+		if (posixemu_mkdir(utf8_path.c_str(), 0755) != 0) {
+			write_log("my_mkdir: mkdir on path %s failed: %s\n",
+				path, strerror(errno));
+			return -1;
+		}
+
+		return 0;
+#else
 		// Check if directory already exists to provide better error reporting
 		std::error_code ec;
 		if (fs::exists(utf8_path, ec)) {
@@ -836,6 +935,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		}
 
 		return 0;
+#endif
 	}
 	catch (const std::exception& e) {
 		write_log("my_mkdir: exception while creating directory %s: %s\n",
@@ -855,6 +955,17 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		// Convert path to UTF-8 for filesystem operations
 		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(name));
 
+#ifdef LIBRETRO
+		if (!libretro_fs::exists(utf8_path)) {
+			write_log("my_truncate: file %s does not exist\n", name);
+			return -1;
+		}
+
+		if (!libretro_fs::is_regular_file(utf8_path)) {
+			write_log("my_truncate: %s is not a regular file\n", name);
+			return -1;
+		}
+#else
 		// Check if file exists and is writable
 		std::error_code ec;
 		if (!fs::exists(utf8_path, ec)) {
@@ -866,6 +977,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			write_log("my_truncate: %s is not a regular file\n", name);
 			return -1;
 		}
+#endif
 
 		// Use RAII to ensure file handle is properly closed
 		std::unique_ptr<my_openfile_s, decltype(&my_close)> mos(
@@ -926,6 +1038,24 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		// Append filename using proper path concatenation
 		filepath /= name;
 
+#ifdef LIBRETRO
+		if (!libretro_fs::exists(filepath)) {
+			// Not considering it an error if file doesn't exist
+			return true;
+		}
+
+		if (!libretro_fs::is_regular_file(filepath)) {
+			write_log("remove_extra_file: %s is not a regular file\n", filepath.c_str());
+			return false;
+		}
+
+		if (posixemu_unlink(filepath.c_str()) != 0) {
+			write_log("remove_extra_file: failed to remove %s: %s\n",
+				filepath.c_str(), strerror(errno));
+			return false;
+		}
+		return true;
+#else
 		// Check if file exists before attempting removal
 		std::error_code ec;
 		if (!fs::exists(filepath, ec)) {
@@ -946,6 +1076,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		}
 
 		return true;
+#endif
 	}
 	catch (const std::exception& e) {
 		write_log("remove_extra_file: exception while removing %s/%s: %s\n",
@@ -1009,11 +1140,18 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			return false;
 		}
 
+#ifdef LIBRETRO
+		if (!libretro_fs::exists(filepath)) {
+			write_log("my_setfilehidden: file %s does not exist\n", path);
+			return false;
+		}
+#else
 		std::error_code ec;
 		if (!fs::exists(filepath, ec)) {
 			write_log("my_setfilehidden: file %s does not exist\n", path);
 			return false;
 		}
+#endif
 
 #ifdef _WIN32
 		// Windows implementation using file attributes
@@ -1055,12 +1193,20 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			new_path /= name.substr(1);
 		}
 
+#ifdef LIBRETRO
+		if (posixemu_rename(filepath.c_str(), new_path.c_str()) != 0) {
+			write_log("my_setfilehidden: rename failed for %s: %s\n",
+				path, strerror(errno));
+			return false;
+		}
+#else
 		fs::rename(filepath, new_path, ec);
 		if (ec) {
 			write_log("my_setfilehidden: rename failed for %s: %s\n",
 				path, ec.message().c_str());
 			return false;
 		}
+#endif
 #endif
 		return true;
 	}
@@ -1083,6 +1229,49 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(path));
 		fs::path dirpath(utf8_path);
 
+#ifdef LIBRETRO
+		if (!libretro_fs::exists(dirpath)) {
+			write_log("my_rmdir: directory %s does not exist\n", path);
+			return -1;
+		}
+
+		if (!libretro_fs::is_directory(dirpath)) {
+			write_log("my_rmdir: path %s is not a directory\n", path);
+			return -1;
+		}
+
+		const std::array<const char*, 2> extra_files = { "Thumbs.db", ".DS_Store" };
+		for (const auto& file : extra_files) {
+			remove_extra_file(path, file);
+		}
+
+		bool is_empty = true;
+		DIR* dirp = opendir(utf8_path.c_str());
+		if (!dirp)
+			return -1;
+		while (auto* entry = readdir(dirp)) {
+			const char* name = entry->d_name;
+			if (!name)
+				continue;
+			if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+				continue;
+			is_empty = false;
+			break;
+		}
+		closedir(dirp);
+
+		if (!is_empty) {
+			write_log("my_rmdir: directory %s is not empty\n", path);
+			return -1;
+		}
+
+		if (posixemu_rmdir(utf8_path.c_str()) != 0) {
+			write_log("my_rmdir: rmdir on directory %s failed: %s\n",
+				path, strerror(errno));
+			return -1;
+		}
+		return 0;
+#else
 		// Validate path
 		std::error_code ec;
 		if (!fs::exists(dirpath, ec)) {
@@ -1124,6 +1313,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		}
 
 		return 0;
+#endif
 	}
 	catch (const std::exception& e) {
 		write_log("my_rmdir: exception while removing directory %s: %s\n",
@@ -1149,6 +1339,24 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			return -1;
 		}
 
+#ifdef LIBRETRO
+		if (!libretro_fs::exists(filepath)) {
+			write_log("my_unlink: file %s does not exist\n", path);
+			return -1;
+		}
+
+		if (!libretro_fs::is_regular_file(filepath)) {
+			write_log("my_unlink: %s is not a regular file\n", path);
+			return -1;
+		}
+
+		if (posixemu_unlink(filepath.c_str()) != 0) {
+			write_log("my_unlink: remove failed for %s: %s\n",
+				path, strerror(errno));
+			return -1;
+		}
+		return 0;
+#else
 		// Check file existence and type
 		std::error_code ec;
 		if (!fs::exists(filepath, ec)) {
@@ -1176,6 +1384,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		}
 
 		return 0;
+#endif
 	}
 	catch (const std::exception& e) {
 		write_log("my_unlink: exception while removing %s: %s\n",
@@ -1272,9 +1481,15 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 	errno = 0;
 
 	// Perform seek operation with proper type casting
+#ifdef LIBRETRO
+	const auto result = static_cast<uae_s64>(
+		posixemu_seek(mos->fd, static_cast<int>(offset), whence)
+		);
+#else
 	const auto result = static_cast<uae_s64>(
 		lseek(mos->fd, static_cast<off_t>(offset), whence)
 		);
+#endif
 
 	// Enhanced error reporting with specific error conditions
 	if (result == -1) {
@@ -1324,6 +1539,17 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			return nullptr;
 		}
 
+#ifdef LIBRETRO
+		if (!libretro_fs::exists(utf8_path)) {
+			write_log("my_opentext: file '%s' does not exist\n", name);
+			return nullptr;
+		}
+
+		if (!libretro_fs::is_regular_file(utf8_path)) {
+			write_log("my_opentext: '%s' is not a regular file\n", name);
+			return nullptr;
+		}
+#else
 		// Check if file exists and is readable before attempting to open
 		std::error_code ec;
 		if (!fs::exists(utf8_path, ec)) {
@@ -1335,6 +1561,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			write_log("my_opentext: '%s' is not a regular file\n", name);
 			return nullptr;
 		}
+#endif
 
 		// Reset errno before operation
 		errno = 0;
@@ -1385,6 +1612,13 @@ bool my_createshortcut(const char* source, const char* target, const char* descr
 		return false;
 	}
 
+#ifdef LIBRETRO
+	if (linkonly) {
+		write_log("my_resolvesoftlink: symlink resolution not supported under libretro\n");
+		return false;
+	}
+	return true;
+#else
 	try {
 		// Convert path to UTF-8 using string_view for efficiency
 		const auto utf8_path = iso_8859_1_to_utf8(std::string_view(linkfile));
@@ -1455,6 +1689,7 @@ bool my_createshortcut(const char* source, const char* target, const char* descr
 			linkfile, e.what());
 		return false;
 	}
+#endif
 }
 
 [[nodiscard]] const TCHAR* my_getfilepart(const TCHAR* filename) noexcept
@@ -1639,6 +1874,67 @@ bool copyfile(const char* target, const char* source, const bool replace)
         const auto source_path = iso_8859_1_to_utf8(std::string_view(source));
         const auto target_path = iso_8859_1_to_utf8(std::string_view(target));
 
+#ifdef LIBRETRO
+		if (!libretro_fs::exists(source_path) || !libretro_fs::is_regular_file(source_path)) {
+			write_log("copyfile: source '%s' does not exist or is not a regular file\n", source);
+			return false;
+		}
+
+		if (libretro_fs::exists(target_path)) {
+			if (!replace) {
+				write_log("copyfile: destination '%s' already exists\n", target);
+				return false;
+			}
+		}
+
+		const std::filesystem::path parent = std::filesystem::path(target_path).parent_path();
+		if (!parent.empty() && !libretro_fs::exists(parent)) {
+			if (!libretro_fs::create_directories(parent)) {
+				write_log("copyfile: failed to create parent directory for '%s'\n", target);
+				return false;
+			}
+		}
+
+		const int in_fd = posixemu_open(source_path.c_str(), O_RDONLY | O_BINARY, 0);
+		if (in_fd < 0) {
+			write_log("copyfile: open source '%s' failed: %s\n", source, strerror(errno));
+			return false;
+		}
+		const int out_fd = posixemu_open(target_path.c_str(),
+			O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0660);
+		if (out_fd < 0) {
+			posixemu_close(in_fd);
+			write_log("copyfile: open destination '%s' failed: %s\n", target, strerror(errno));
+			return false;
+		}
+
+		char buffer[64 * 1024];
+		bool ok = true;
+		for (;;) {
+			const int read_bytes = posixemu_read(in_fd, buffer, sizeof(buffer));
+			if (read_bytes < 0) {
+				ok = false;
+				break;
+			}
+			if (read_bytes == 0)
+				break;
+			int offset = 0;
+			while (offset < read_bytes) {
+				const int written = posixemu_write(out_fd, buffer + offset, read_bytes - offset);
+				if (written <= 0) {
+					ok = false;
+					break;
+				}
+				offset += written;
+			}
+			if (!ok)
+				break;
+		}
+
+		posixemu_close(out_fd);
+		posixemu_close(in_fd);
+		return ok;
+#else
         fs::path src_fs(source_path);
         fs::path dst_fs(target_path);
 
@@ -1683,6 +1979,7 @@ bool copyfile(const char* target, const char* source, const bool replace)
         }
 
         return true;
+#endif
     }
     catch (const std::exception& e) {
         write_log("copyfile: exception while copying from '%s' to '%s': %s\n",
@@ -1724,6 +2021,53 @@ std::string my_get_sha1_of_file(const char* filepath)
         // Convert path to UTF-8 for filesystem operations
         const auto utf8_path = iso_8859_1_to_utf8(std::string_view(filepath));
 
+#ifdef LIBRETRO
+		STAT st{};
+		if (posixemu_stat(utf8_path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) {
+			write_log("my_get_sha1_of_file: '%s' does not exist or is not a regular file\n", filepath);
+			return "";
+		}
+
+		if (st.st_size == 0) {
+			write_log("my_get_sha1_of_file: '%s' is an empty file\n", filepath);
+			return get_sha1_txt(nullptr, 0);
+		}
+
+		if (st.st_size < 0 || static_cast<uint64_t>(st.st_size) > static_cast<uint64_t>(SIZE_MAX)) {
+			write_log("my_get_sha1_of_file: file '%s' too large for SHA1 buffer\n", filepath);
+			return "";
+		}
+
+		const size_t file_size = static_cast<size_t>(st.st_size);
+		std::vector<unsigned char> buffer(file_size);
+
+		const int fd = posixemu_open(utf8_path.c_str(), O_RDONLY | O_BINARY, 0);
+		if (fd < 0) {
+			write_log("my_get_sha1_of_file: open on file '%s' failed: %s\n",
+				filepath, strerror(errno));
+			return "";
+		}
+
+		size_t offset = 0;
+		while (offset < file_size) {
+			const int read_bytes = posixemu_read(fd, buffer.data() + offset,
+				static_cast<int>(file_size - offset));
+			if (read_bytes <= 0) {
+				posixemu_close(fd);
+				write_log("my_get_sha1_of_file: read failed for '%s'\n", filepath);
+				return "";
+			}
+			offset += static_cast<size_t>(read_bytes);
+		}
+		posixemu_close(fd);
+
+		const TCHAR* sha1 = get_sha1_txt(buffer.data(), static_cast<int>(file_size));
+		if (!sha1) {
+			write_log("my_get_sha1_of_file: SHA1 calculation failed for '%s'\n", filepath);
+			return "";
+		}
+		return std::string(sha1);
+#else
         // Check file existence before attempting operations
         std::error_code ec;
         fs::path file_path(utf8_path);
@@ -1790,6 +2134,7 @@ std::string my_get_sha1_of_file(const char* filepath)
         }
 
         return std::string(sha1);
+#endif
     }
     catch (const std::exception& e) {
         write_log("my_get_sha1_of_file: exception processing '%s': %s\n",

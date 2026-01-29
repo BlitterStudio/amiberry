@@ -5479,6 +5479,54 @@ void clear_whdload_prefs()
 
 void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename)
 {
+#ifdef LIBRETRO
+	FILE* out_file = fopen(filename.c_str(), "wb");
+	if (!out_file) {
+		std::cerr << "Unable to open file " << filename << '\n';
+		return;
+	}
+
+	fputs("button=", out_file);
+	for (const auto& b : input.button) {
+		fprintf(out_file, "%d ", b);
+	}
+	fputs("\naxis=", out_file);
+	for (const auto& a : input.axis) {
+		fprintf(out_file, "%d ", a);
+	}
+	fprintf(out_file, "\nlstick_axis_y_invert=%d", input.lstick_axis_y_invert);
+	fprintf(out_file, "\nlstick_axis_x_invert=%d", input.lstick_axis_x_invert);
+	fprintf(out_file, "\nrstick_axis_y_invert=%d", input.rstick_axis_y_invert);
+	fprintf(out_file, "\nrstick_axis_x_invert=%d", input.rstick_axis_x_invert);
+	fprintf(out_file, "\nhotkey_button=%d", input.hotkey_button);
+	fprintf(out_file, "\nquit_button=%d", input.quit_button);
+	fprintf(out_file, "\nreset_button=%d", input.reset_button);
+	fprintf(out_file, "\nmenu_button=%d", input.menu_button);
+	fprintf(out_file, "\nload_state_button=%d", input.load_state_button);
+	fprintf(out_file, "\nsave_state_button=%d", input.save_state_button);
+	fprintf(out_file, "\nvkbd_button=%d", input.vkbd_button);
+	fprintf(out_file, "\nnumber_of_hats=%d", input.number_of_hats);
+	fprintf(out_file, "\nnumber_of_axis=%d", input.number_of_axis);
+	fprintf(out_file, "\nis_retroarch=%d", input.is_retroarch);
+	fputs("\namiberry_custom_none=", out_file);
+	for (const auto& b : input.amiberry_custom_none) {
+		fprintf(out_file, "%d ", b);
+	}
+	fputs("\namiberry_custom_hotkey=", out_file);
+	for (const auto& b : input.amiberry_custom_hotkey) {
+		fprintf(out_file, "%d ", b);
+	}
+	fputs("\namiberry_custom_axis_none=", out_file);
+	for (const auto& a : input.amiberry_custom_axis_none) {
+		fprintf(out_file, "%d ", a);
+	}
+	fputs("\namiberry_custom_axis_hotkey=", out_file);
+	for (const auto& a : input.amiberry_custom_axis_hotkey) {
+		fprintf(out_file, "%d ", a);
+	}
+
+	fclose(out_file);
+#else
 	std::ofstream out_file(filename);
 	if (!out_file) {
 		std::cerr << "Unable to open file " << filename << '\n';
@@ -5525,10 +5573,27 @@ void save_controller_mapping_to_file(const controller_mapping& input, const std:
 	}
 
 	out_file.close();
+#endif
 }
 
 void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename)
 {
+#ifdef LIBRETRO
+	FILE* in_file = fopen(filename.c_str(), "rb");
+	if (!in_file) {
+		std::cerr << "Unable to open file " << filename << '\n';
+		return;
+	}
+
+	char buffer[1024];
+	std::string line;
+	while (fgets(buffer, sizeof(buffer), in_file)) {
+		line = buffer;
+		if (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
+			while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+				line.pop_back();
+		}
+#else
 	std::ifstream in_file(filename);
 	if (!in_file) {
 		std::cerr << "Unable to open file " << filename << '\n';
@@ -5537,6 +5602,7 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 
 	std::string line;
 	while (std::getline(in_file, line)) {
+#endif
 		std::istringstream iss(line);
 		std::string key;
 		if (std::getline(iss, key, '=')) {
@@ -5615,7 +5681,11 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 		}
 	}
 
+#ifdef LIBRETRO
+	fclose(in_file);
+#else
 	in_file.close();
+#endif
 }
 
 std::vector<std::string> get_cd_drives()

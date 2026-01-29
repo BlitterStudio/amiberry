@@ -269,6 +269,15 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/sounddep/sound.cpp \
                 $(AMIBERRY_DIR)/src/threaddep/threading.cpp
 
+# libretro-common (VFS helpers)
+SOURCES_LIBRETRO_COMMON := $(LIBRETRO_COMMON)/file/file_path.c \
+                          $(LIBRETRO_COMMON)/file/file_path_io.c \
+                          $(LIBRETRO_COMMON)/file/retro_dirent.c \
+                          $(LIBRETRO_COMMON)/streams/file_stream.c \
+                          $(LIBRETRO_COMMON)/string/stdstring.c \
+                          $(LIBRETRO_COMMON)/compat/compat_strl.c \
+                          $(LIBRETRO_COMMON)/vfs/vfs_implementation.c
+
 # CPU Emulation
 SOURCES_CPU := $(AMIBERRY_DIR)/src/newcpu.cpp \
               $(AMIBERRY_DIR)/src/newcpu_common.cpp \
@@ -510,7 +519,7 @@ SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(
 ifeq ($(USE_PCEM),1)
 SOURCES_CXX += $(SOURCES_PCEM)
 endif
-SOURCES_C := $(SOURCES_7Z) $(LIBCO_DIR)/libco.c
+SOURCES_C := $(SOURCES_7Z) $(LIBCO_DIR)/libco.c $(SOURCES_LIBRETRO_COMMON)
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)
 
