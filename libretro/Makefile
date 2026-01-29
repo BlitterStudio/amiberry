@@ -250,6 +250,8 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/osdep/clipboard.cpp \
                 $(AMIBERRY_DIR)/src/osdep/dpi_handler.cpp \
                 $(AMIBERRY_DIR)/src/osdep/libretro/input_platform.cpp \
+                $(AMIBERRY_DIR)/src/osdep/libretro/posixemu_vfs.cpp \
+                $(AMIBERRY_DIR)/src/osdep/libretro/stdioemu_vfs.cpp \
                 $(AMIBERRY_DIR)/src/osdep/ioport.cpp \
                 $(AMIBERRY_DIR)/src/osdep/keyboard.cpp \
                 $(AMIBERRY_DIR)/src/osdep/libretro/mp3decoder.cpp \

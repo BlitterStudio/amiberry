@@ -111,6 +111,16 @@ static const char* get_option_value(const char* key);
 static struct retro_vfs_interface vfs_iface = {};
 static bool vfs_available = false;
 
+extern "C" const struct retro_vfs_interface* libretro_get_vfs_interface(void)
+{
+	return vfs_available ? &vfs_iface : nullptr;
+}
+
+extern "C" bool libretro_is_vfs_available(void)
+{
+	return vfs_available;
+}
+
 static FILE* libretro_debug_file = nullptr;
 
 static void libretro_debug_open()

@@ -135,6 +135,9 @@ using namespace std;
 
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
+#ifndef STAT
+typedef struct stat STAT;
+#endif
 #endif
 
 #if TIME_WITH_SYS_TIME
@@ -255,6 +258,11 @@ extern void to_upper (TCHAR *s, int len);
 #undef DONT_HAVE_STDIO
 #undef DONT_HAVE_MALLOC
 
+#if defined(LIBRETRO)
+#define DONT_HAVE_POSIX
+#define DONT_HAVE_STDIO
+#endif
+
 #if defined AMIBERRY
 
 #include <ctype.h>
@@ -271,65 +279,96 @@ extern void to_upper (TCHAR *s, int len);
 
 #ifdef DONT_HAVE_POSIX
 
-#define access posixemu_access
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern int posixemu_access (const TCHAR *, int);
-#define open posixemu_open
 extern int posixemu_open (const TCHAR *, int, int);
-#define close posixemu_close
-extern void posixemu_close (int);
-#define read posixemu_read
-extern int posixemu_read (int, TCHAR *, int);
-#define write posixemu_write
-extern int posixemu_write (int, const TCHAR *, int);
+extern int posixemu_close (int);
+extern int posixemu_read (int, void *, int);
+extern int posixemu_write (int, const void *, int);
 #undef lseek
-#define lseek posixemu_seek
 extern int posixemu_seek (int, int, int);
-#define stat(a,b) posixemu_stat ((a), (b))
 extern int posixemu_stat (const TCHAR *, STAT *);
-#define mkdir posixemu_mkdir
-extern int mkdir (const TCHAR *, int);
-#define rmdir posixemu_rmdir
+extern int posixemu_mkdir (const TCHAR *, int);
 extern int posixemu_rmdir (const TCHAR *);
-#define unlink posixemu_unlink
 extern int posixemu_unlink (const TCHAR *);
-#define truncate posixemu_truncate
 extern int posixemu_truncate (const TCHAR *, long int);
-#define rename posixemu_rename
 extern int posixemu_rename (const TCHAR *, const TCHAR *);
-#define chmod posixemu_chmod
 extern int posixemu_chmod (const TCHAR *, int);
-#define tmpnam posixemu_tmpnam
 extern void posixemu_tmpnam (TCHAR *);
-#define utime posixemu_utime
 extern int posixemu_utime (const TCHAR *, struct utimbuf *);
-#define opendir posixemu_opendir
 extern DIR * posixemu_opendir (const TCHAR *);
-#define readdir posixemu_readdir
-extern struct dirent* readdir (DIR *);
-#define closedir posixemu_closedir
-extern void closedir (DIR *);
+extern struct dirent* posixemu_readdir (DIR *);
+extern int posixemu_closedir (DIR *);
 
 /* This isn't the best place for this, but it fits reasonably well. The logic
  * is that you probably don't have POSIX errnos if you don't have the above
  * functions. */
-extern long dos_errno (void);
+extern int dos_errno (void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifndef __cplusplus
+#define access posixemu_access
+#define open posixemu_open
+#define close posixemu_close
+#define read posixemu_read
+#define write posixemu_write
+#define lseek posixemu_seek
+#define stat(a,b) posixemu_stat ((a), (b))
+#define mkdir posixemu_mkdir
+#define rmdir posixemu_rmdir
+#define unlink posixemu_unlink
+#define truncate posixemu_truncate
+#define rename posixemu_rename
+#define chmod posixemu_chmod
+#define tmpnam posixemu_tmpnam
+#define utime posixemu_utime
+#define opendir posixemu_opendir
+#define readdir posixemu_readdir
+#define closedir posixemu_closedir
+#else
+#define stat(a,b) posixemu_stat ((a), (b))
+#define mkdir posixemu_mkdir
+#define rmdir posixemu_rmdir
+#define unlink posixemu_unlink
+#define truncate posixemu_truncate
+#define chmod posixemu_chmod
+#define tmpnam posixemu_tmpnam
+#define utime posixemu_utime
+#define opendir posixemu_opendir
+#define readdir posixemu_readdir
+#define closedir posixemu_closedir
+#endif
 
 #endif
 
 #ifdef DONT_HAVE_STDIO
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern FILE *stdioemu_fopen (const TCHAR *, const TCHAR *);
 #define fopen(a,b) stdioemu_fopen(a, b)
 extern int stdioemu_fseek (FILE *, int, int);
 #define fseek(a,b,c) stdioemu_fseek(a, b, c)
-extern int stdioemu_fread (TCHAR *, int, int, FILE *);
+extern int stdioemu_fread (void *, int, int, FILE *);
 #define fread(a,b,c,d) stdioemu_fread(a, b, c, d)
-extern int stdioemu_fwrite (const TCHAR *, int, int, FILE *);
+extern int stdioemu_fwrite (const void *, int, int, FILE *);
 #define fwrite(a,b,c,d) stdioemu_fwrite(a, b, c, d)
 extern int stdioemu_ftell (FILE *);
 #define ftell(a) stdioemu_ftell(a)
 extern int stdioemu_fclose (FILE *);
 #define fclose(a) stdioemu_fclose(a)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
