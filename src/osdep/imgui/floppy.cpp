@@ -1,13 +1,10 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
 #include "disk.h"
-#include "uae.h"
-#include "parser.h"
 #include <string>
 #include <vector>
 
@@ -18,6 +15,7 @@ static bool drawbridge_initialized = false;
 #endif
 
 extern std::vector<std::string> lstMRUDiskList;
+extern void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file);
 
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
@@ -132,12 +130,18 @@ static void RenderDriveSlot(int i)
             }
             ImGui::EndCombo();
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         
         // 3. WP Checkbox
         ImGui::TableNextColumn();
         bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
         if (AmigaCheckbox("##WP", &wp)) {
             disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, wp);
+            if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != wp) {
+                // Failed to change write protection -> maybe filesystem doesn't support this
+                ShowMessageBox("Set/Clear write protect", "Failed to change write permission.\nMaybe underlying filesystem doesn't support this.");
+            }
+            DISK_reinsert(i);
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Write-protected");
         
@@ -203,130 +207,156 @@ static void RenderDriveSlot(int i)
         }
         ImGui::EndCombo();
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ImGui::EndDisabled();
     
-    ImGui::Dummy(ImVec2(0, 4));
+    ImGui::Spacing();
     ImGui::PopID(); 
 }
 
 #ifdef FLOPPYBRIDGE
 static void RenderDrawBridge()
 {
-    if (ImGui::CollapsingHeader("DrawBridge (FloppyBridge)", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::BeginGroup();
-        
-        // --- Driver Selection ---
-        ImGui::Text("DrawBridge driver:");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(300);
-        
-        std::string current_driver = "Select Driver...";
-        if (changed_prefs.drawbridge_driver >= 0 && changed_prefs.drawbridge_driver < driver_list.size()) {
-            current_driver = driver_list[changed_prefs.drawbridge_driver].name;
-        } else if (driver_list.empty()) {
-            current_driver = "No drivers found";
-        }
-        
-        if (ImGui::BeginCombo("##DBDriver", current_driver.c_str())) {
-            if (driver_list.empty()) {
-                ImGui::Selectable("No drivers found", false, ImGuiSelectableFlags_Disabled);
-            }
-            for (int i = 0; i < driver_list.size(); ++i) {
-                bool is_selected = (changed_prefs.drawbridge_driver == i);
-                if (is_selected)
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(driver_list[i].name, is_selected)) {
-                     changed_prefs.drawbridge_driver = i;
-                }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-        ImGui::SameLine();
-        if (AmigaButton("Refresh")) {
-            FloppyBridgeAPI::getDriverList(driver_list);
-        }
+    BeginGroupBox("DrawBridge (FloppyBridge)");
 
-        // --- Serial Port ---
-        bool auto_serial = changed_prefs.drawbridge_serial_auto;
-        if(AmigaCheckbox("DrawBridge: Auto-Detect serial port", &auto_serial)) 
-            changed_prefs.drawbridge_serial_auto = auto_serial;
-        
-        ImGui::BeginDisabled(auto_serial);
-        ImGui::SetNextItemWidth(300);
-        
-        std::string current_port = "none";
-        if (changed_prefs.drawbridge_serial_port[0] != 0) {
-            current_port = changed_prefs.drawbridge_serial_port;
+    // --- Driver Selection ---
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("DrawBridge driver:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 4);
+
+    std::string current_driver = "Select Driver...";
+    if (changed_prefs.drawbridge_driver >= 0 && changed_prefs.drawbridge_driver < driver_list.size()) {
+        current_driver = driver_list[changed_prefs.drawbridge_driver].name;
+    } else if (driver_list.empty()) {
+        current_driver = "No drivers found";
+    }
+
+    if (ImGui::BeginCombo("##DBDriver", current_driver.c_str())) {
+        if (driver_list.empty()) {
+            ImGui::Selectable("No drivers found", false, ImGuiSelectableFlags_Disabled);
         }
-
-        // Fetch serial ports dynamically if needed, accessing the global vector
-        extern std::vector<std::string> serial_ports;
-
-        if (ImGui::BeginCombo("##DBSerial", current_port.c_str())) {
-            bool is_none_selected = (changed_prefs.drawbridge_serial_port[0] == 0);
-            if (is_none_selected)
+        for (int i = 0; i < driver_list.size(); ++i) {
+            bool is_selected = (changed_prefs.drawbridge_driver == i);
+            if (is_selected)
                 ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-            if (ImGui::Selectable("none", is_none_selected)) {
-                changed_prefs.drawbridge_serial_port[0] = 0;
+            if (ImGui::Selectable(driver_list[i].name, is_selected)) {
+                 changed_prefs.drawbridge_driver = i;
             }
-            if (is_none_selected) {
+            if (is_selected) {
                 ImGui::PopStyleColor();
                 ImGui::SetItemDefaultFocus();
             }
-            
-            for (const auto& port : serial_ports) {
-                bool is_selected = (current_port == port);
-                if (is_selected)
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(port.c_str(), is_selected)) {
-                    _sntprintf(changed_prefs.drawbridge_serial_port, 256, "%s", port.c_str());
-                }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
         }
-        ImGui::EndDisabled();
-        
-        // --- Smart Speed ---
-        bool smart_speed = changed_prefs.drawbridge_smartspeed;
-        if (AmigaCheckbox("DrawBridge: Smart Speed (Dynamically switch on Turbo)", &smart_speed))
-            changed_prefs.drawbridge_smartspeed = smart_speed;
-
-        // --- Auto Cache ---
-        bool auto_cache = changed_prefs.drawbridge_autocache;
-        if (AmigaCheckbox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)", &auto_cache))
-            changed_prefs.drawbridge_autocache = auto_cache;
-
-        // --- Drive Cable ---
-        ImGui::Text("DrawBridge: Drive cable:");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(200);
-        int cable_idx = changed_prefs.drawbridge_drive_cable;
-        if (ImGui::BeginCombo("##DBCable", drive_cable_list[cable_idx])) {
-            for (int n = 0; n < IM_ARRAYSIZE(drive_cable_list); n++) {
-                const bool is_selected = (cable_idx == n);
-                if (is_selected)
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(drive_cable_list[n], is_selected)) {
-                    changed_prefs.drawbridge_drive_cable = n;
-                }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        ImGui::EndGroup();
+        ImGui::EndCombo();
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+
+    ImGui::SameLine();
+    if (AmigaButton("Refresh")) {
+        FloppyBridgeAPI::getDriverList(driver_list);
+    }
+
+    unsigned int config_options = 0;
+    if (changed_prefs.drawbridge_driver >= 0 && changed_prefs.drawbridge_driver < driver_list.size()) {
+       config_options = driver_list[changed_prefs.drawbridge_driver].configOptions;
+    }
+
+    // --- Serial Port ---
+    bool auto_serial_supported = (config_options & FloppyBridgeAPI::ConfigOption_AutoDetectComport) != 0;
+    ImGui::BeginDisabled(!auto_serial_supported);
+    bool auto_serial = changed_prefs.drawbridge_serial_auto;
+    if(AmigaCheckbox("DrawBridge: Auto-Detect serial port", &auto_serial))
+        changed_prefs.drawbridge_serial_auto = auto_serial;
+    ImGui::EndDisabled();
+
+    // Serial port selection enabled if supported AND (auto is supported OR auto is disabled) - wait, logical check matching old GUI:
+    // Old GUI: chkDBSerialAuto->setEnabled(true) if ConfigOption_AutoDetectComport.
+    // cboDBSerialPort->setEnabled(!chkDBSerialAuto->isSelected()); if ConfigOption_ComPort supported.
+    bool serial_port_supported = (config_options & FloppyBridgeAPI::ConfigOption_ComPort) != 0;
+    ImGui::BeginDisabled(!serial_port_supported || changed_prefs.drawbridge_serial_auto);
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
+
+    std::string current_port = "none";
+    if (changed_prefs.drawbridge_serial_port[0] != 0) {
+        current_port = changed_prefs.drawbridge_serial_port;
+    }
+
+    // Fetch serial ports dynamically if needed, accessing the global vector
+    extern std::vector<std::string> serial_ports;
+
+    if (ImGui::BeginCombo("##DBSerial", current_port.c_str())) {
+        bool is_none_selected = (changed_prefs.drawbridge_serial_port[0] == 0);
+        if (is_none_selected)
+            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+        if (ImGui::Selectable("none", is_none_selected)) {
+            changed_prefs.drawbridge_serial_port[0] = 0;
+        }
+        if (is_none_selected) {
+            ImGui::PopStyleColor();
+            ImGui::SetItemDefaultFocus();
+        }
+
+        for (const auto& port : serial_ports) {
+            bool is_selected = (current_port == port);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(port.c_str(), is_selected)) {
+                _sntprintf(changed_prefs.drawbridge_serial_port, 256, "%s", port.c_str());
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ImGui::EndDisabled();
+
+    // --- Smart Speed ---
+    bool smart_speed_supported = (config_options & FloppyBridgeAPI::ConfigOption_SmartSpeed) != 0;
+    ImGui::BeginDisabled(!smart_speed_supported);
+    bool smart_speed = changed_prefs.drawbridge_smartspeed;
+    if (AmigaCheckbox("DrawBridge: Smart Speed (Dynamically switch on Turbo)", &smart_speed))
+        changed_prefs.drawbridge_smartspeed = smart_speed;
+    ImGui::EndDisabled();
+
+    // --- Auto Cache ---
+    bool auto_cache_supported = (config_options & FloppyBridgeAPI::ConfigOption_AutoCache) != 0;
+    ImGui::BeginDisabled(!auto_cache_supported);
+    bool auto_cache = changed_prefs.drawbridge_autocache;
+    if (AmigaCheckbox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)", &auto_cache))
+        changed_prefs.drawbridge_autocache = auto_cache;
+    ImGui::EndDisabled();
+
+    // --- Drive Cable ---
+    bool drive_cable_supported = (config_options & FloppyBridgeAPI::ConfigOption_DriveABCable) != 0;
+    ImGui::BeginDisabled(!drive_cable_supported);
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("DrawBridge: Drive cable:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    int cable_idx = changed_prefs.drawbridge_drive_cable;
+    if (ImGui::BeginCombo("##DBCable", drive_cable_list[cable_idx])) {
+        for (int n = 0; n < IM_ARRAYSIZE(drive_cable_list); n++) {
+            const bool is_selected = (cable_idx == n);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(drive_cable_list[n], is_selected)) {
+                changed_prefs.drawbridge_drive_cable = n;
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ImGui::EndDisabled();
+
+    EndGroupBox("DrawBridge (FloppyBridge)");
 }
 #endif
 
@@ -339,7 +369,7 @@ void render_panel_floppy()
     }
 #endif
 
-    ImGui::Indent(5.0f);
+    ImGui::Indent(4.0f);
     
     // ---------------------------------------------------------
     // FLOPPY DRIVES GROUP
@@ -368,10 +398,11 @@ void render_panel_floppy()
     if (ImGui::SliderInt("##SpeedSlider", &speed_idx, 0, 4, "")) {
         changed_prefs.floppy_speed = drive_speed_values[speed_idx];
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
     ImGui::SameLine();
     
     ImGui::BeginDisabled();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x);
     char speed_label[32];
     strncpy(speed_label, drive_speed_list[speed_idx], 32);
     ImGui::InputText("##SpeedLabel", speed_label, 32, ImGuiInputTextFlags_ReadOnly);
@@ -389,12 +420,12 @@ void render_panel_floppy()
     
     if (AmigaButton("Create 3.5'' DD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateDD;
-        OpenFileDialog("Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", current_dir); 
+        OpenFileDialog("Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
     }
     ImGui::SameLine();
     if (AmigaButton("Create 3.5'' HD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateHD;
-        OpenFileDialog("Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", current_dir);
+        OpenFileDialog("Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(strlen(changed_prefs.floppyslots[0].df) == 0);
@@ -418,11 +449,10 @@ void render_panel_floppy()
     RenderDrawBridge();
 #endif
 
-    ImGui::Unindent(5.0f);
-
     std::string result_path;
     if (ConsumeFileDialogResult(result_path)) {
-        if (!result_path.empty()) {
+       // Existing logic for file Selection
+       if (!result_path.empty()) {
             if (current_floppy_dialog_mode == FloppyDialogMode::CreateDD) {
                 char diskname[MAX_DPATH];
                 extract_filename(result_path.c_str(), diskname);
@@ -430,6 +460,7 @@ void render_panel_floppy()
                 diskname[31] = '\0';
                 disk_creatediskfile(&changed_prefs, result_path.c_str(), 0, DRV_35_DD, -1, diskname, false, false, nullptr);
                 DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
+                add_file_to_mru_list(lstMRUDiskList, result_path);
             }
             else if (current_floppy_dialog_mode == FloppyDialogMode::CreateHD) {
                 char diskname[MAX_DPATH];
@@ -438,10 +469,11 @@ void render_panel_floppy()
                 diskname[31] = '\0';
                 disk_creatediskfile(&changed_prefs, result_path.c_str(), 0, DRV_35_HD, -1, diskname, false, false, nullptr);
                 DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
+                add_file_to_mru_list(lstMRUDiskList, result_path);
             }
             else {
-                int drive_idx = -1;
-                switch(current_floppy_dialog_mode) {
+                 int drive_idx = -1;
+                 switch(current_floppy_dialog_mode) {
                     case FloppyDialogMode::SelectDF0: drive_idx = 0; break;
                     case FloppyDialogMode::SelectDF1: drive_idx = 1; break;
                     case FloppyDialogMode::SelectDF2: drive_idx = 2; break;
@@ -455,7 +487,7 @@ void render_panel_floppy()
                      DISK_history_add(result_path.c_str(), -1, HISTORY_FLOPPY, 0);
                 }
             }
-        }
-        current_floppy_dialog_mode = FloppyDialogMode::None;
+            current_floppy_dialog_mode = FloppyDialogMode::None;
+       }
     }
 }

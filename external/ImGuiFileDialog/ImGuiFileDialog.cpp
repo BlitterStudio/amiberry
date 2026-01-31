@@ -3839,7 +3839,12 @@ bool IGFD::FileDialog::Display(const std::string& vKey, ImGuiWindowFlags vFlags,
             ImGui::EndChild();
 
             // for display in dialog center, the confirm to overwrite dlg
-            m_FileDialogInternal.dialogCenterPos = ImGui::GetCurrentWindowRead()->ContentRegionRect.GetCenter();
+            ImGuiWindow* curWin = ImGui::GetCurrentWindowRead();
+            if (curWin) {
+                m_FileDialogInternal.dialogCenterPos = curWin->ContentRegionRect.GetCenter();
+            } else {
+                m_FileDialogInternal.dialogCenterPos = ImVec2(0, 0);
+            }
 
             // when the confirm to overwrite dialog will appear we need to
             // disable the modal mode of the main file dialog

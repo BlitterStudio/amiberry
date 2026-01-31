@@ -130,6 +130,7 @@ static void apply_imgui_theme()
 	colors[ImGuiCol_HeaderHovered]        = lighten(col_base, 0.05f);
 	colors[ImGuiCol_HeaderActive]         = col_act;
 	colors[ImGuiCol_TextSelectedBg]       = col_sel;
+	colors[ImGuiCol_TableHeaderBg]        = col_base;
 
 	style.FrameBorderSize = 0.0f; // We will draw our own bevels
 	style.WindowBorderSize = 0.0f;
@@ -165,29 +166,30 @@ void OpenDirDialog(const std::string &initialPath)
 namespace
 {
 	// Shared sizing/constraints used for both file/dir dialogs.
-	// Apply only on first use so user-resized dimensions persist thereafter.
-	void SetNextFileDialogWindowDefaults()
-	{
-		const ImGuiViewport* vp = ImGui::GetMainViewport();
-		const float vw = vp->Size.x;
-		const float vh = vp->Size.y;
-		const float maxW = std::max(320.0f, vw * 0.95f);
-		const float maxH = std::max(240.0f, vh * 0.90f);
-		const float minW = std::min(720.0f, maxW);
-		const float minH = std::min(480.0f, maxH);
-		const float defW = std::clamp(vw * 0.60f, minW, maxW);
-		const float defH = std::clamp(vh * 0.60f, minH, maxH);
-		ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
-		ImGui::SetNextWindowSize(ImVec2(defW, defH), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSizeConstraints(ImVec2(minW, minH), ImVec2(maxW, maxH));
-	}
-
 	// Generic consume helper: handles Display/IsOk/Close and delegates result extraction.
 	bool ConsumeIGFDResult(const char* dialogKey, std::string& outPath,
 		const std::function<std::string(ImGuiFileDialog*)>& getResult)
 	{
-		SetNextFileDialogWindowDefaults();
-		if (!ImGuiFileDialog::Instance()->Display(dialogKey))
+		ImVec2 minSize(0,0), maxSize(FLT_MAX, FLT_MAX);
+		ImGuiViewport* vp = ImGui::GetMainViewport();
+		if (vp) {
+			const float vw = vp->Size.x;
+			const float vh = vp->Size.y;
+			const float maxW = std::max(320.0f, vw * 0.95f);
+			const float maxH = std::max(240.0f, vh * 0.90f);
+			const float minW = std::min(720.0f, maxW);
+			const float minH = std::min(480.0f, maxH);
+			const float defW = std::clamp(vw * 0.60f, minW, maxW);
+			const float defH = std::clamp(vh * 0.60f, minH, maxH);
+			
+			minSize = ImVec2(minW, minH);
+			maxSize = ImVec2(maxW, maxH);
+
+			ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(defW, defH), ImGuiCond_Appearing);
+		}
+
+		if (!ImGuiFileDialog::Instance()->Display(dialogKey, ImGuiWindowFlags_NoCollapse, minSize, maxSize))
 			return false;
 
 		bool ok = false;
@@ -221,6 +223,7 @@ bool ConsumeFileDialogResult(std::string &outPath)
 	return ConsumeIGFDResult("ChooseFileDlgKey", outPath,
 		[](ImGuiFileDialog* dlg) { return dlg->GetFilePathName(); });
 }
+
 #endif
 
 // Helper: get usable bounds for a display index (fallback to full bounds)

@@ -9,9 +9,6 @@
 #include "blkdev.h"
 #include "rommgr.h"
 
-extern void new_cddrive(int entry);
-extern void new_tapedrive(int entry);
-
 // Enum for Dialog Modes (Modals)
 enum class HDDialogMode {
     None,
@@ -24,28 +21,13 @@ enum class HDDialogMode {
     AddTape
 };
 
-
 static HDDialogMode current_hd_dialog_mode = HDDialogMode::None;
 static int edit_entry_index = -1;
 static int selected_row = -1; // Track selected drive in the list
 
 extern void default_fsvdlg(struct hardfiledata *hfd);
 extern void default_hfdlg(struct hardfiledata *hfd, bool rdb); 
-extern void CreateDefaultDevicename(char* name); 
-extern int tweakbootpri(int bp, int ab, int dnm);
-extern void new_filesys(int entry);
-extern void new_hardfile(int entry);
 extern void updatehdfinfo(bool force, bool defaults, bool realdrive, std::string& txtHdfInfo, std::string& txtHdfInfo2);
-extern std::vector<controller_map> controller; 
-
-extern int hdf_getnumharddrives(void);
-extern TCHAR* hdf_getnameharddrive(int index, int flags, int* sectorsize, int* dangerousdrive, uae_u32* outflags);
-extern int vhd_create(const TCHAR* name, uae_u64 size, uae_u32 flags);
-extern void new_harddrive(int entry);
-extern void new_cddrive(int entry);
-extern void new_tapedrive(int entry);
-
-extern std::vector<std::string> lstMRUCDList;
 
 static std::string hdf_info_text1;
 static std::string hdf_info_text2;
@@ -281,12 +263,7 @@ static void RenderActionButtons()
 
     // Row 2: Add CD, Add Tape, Properties, Remove
     // "Add CD Drive", "Add Tape Drive", "Properties", "Remove"
-    
-    // User Requirements:
-    // Add CD width == Add Directory (btn_w_3)
-    // Add Tape width == Add Hardfile (btn_w_3)
-    // Properties + Remove width == Add Hard Drive (btn_w_3)
-    
+
     // Calculate widths for Row 2
     float btn_w_cd = btn_w_3;
     float btn_w_tape = btn_w_3;
@@ -321,7 +298,6 @@ static void RenderActionButtons()
     ImGui::EndDisabled();
 
     // Row 3: Create Hardfile (Full width or similar to top buttons?) 
-    // WinUAE puts it on its own row usually or grouped. User asked for "new, third row, by itself".
     if (AmigaButton("Create Hardfile...", ImVec2(btn_w_3, 0))) {
         current_hd_dialog_mode = HDDialogMode::CreateHDF;
     }
@@ -387,6 +363,7 @@ static void RenderCDSection()
         }
         ImGui::EndCombo();
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ImGui::PopItemWidth();
     
     xfree(cd_name);
@@ -1038,10 +1015,9 @@ static void ShowEditTapeDriveModal()
 
 void render_panel_hd()
 {
+    ImGui::Indent(4.0f);
     RenderMountedDrives();
-    ImGui::Dummy(ImVec2(0, 5));
     RenderActionButtons();
-    ImGui::Dummy(ImVec2(0, 5));
     RenderCDSection();
     
     // Logic to open Modals - Add Directory

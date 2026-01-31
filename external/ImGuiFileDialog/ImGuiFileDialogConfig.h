@@ -1,6 +1,8 @@
 #pragma once
 
 // uncomment and modify defines under for customize ImGuiFileDialog
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "../../src/osdep/imgui/imgui_panels.h"
 
 /////////////////////////////////
 //// STL FILE SYSTEM ////////////
@@ -96,9 +98,10 @@
 // filter combobox width
 // #define FILTER_COMBO_MIN_WIDTH 120.0f
 // button widget use for compose path
-// #define IMGUI_PATH_BUTTON ImGui::Button
+// button widget use for compose path
+#define IMGUI_PATH_BUTTON AmigaButton
 // standard button
-// #define IMGUI_BUTTON ImGui::Button
+#define IMGUI_BUTTON AmigaButton
 
 /////////////////////////////////
 //// STRING'S ///////////////////
