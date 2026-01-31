@@ -97,6 +97,9 @@ static void ShowHelpMarker(const char* desc)
 
 void render_panel_chipset()
 {
+	// Global padding for the whole panel
+	ImGui::Indent(4.0f);
+
 	if (!initialized) init_lists();
 
 	// Determine Chipset Selection Index (Logic from WinUAE values_to_chipsetdlg)

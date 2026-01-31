@@ -1,13 +1,10 @@
 #include "sysdeps.h"
 #include "imgui.h"
-#include "config.h"
 #include "imgui_panels.h"
 #include "options.h"
-#include "gui/gui_handling.h"
 #include "rommgr.h"
-#include "registry.h"
-#include "uae.h"
 #include "memory.h"
+#include "gui/gui_handling.h"
 
 struct RomListEntry {
 	std::string name;
@@ -37,7 +34,7 @@ static void update_rom_list(std::vector<RomListEntry>& list, int romtype_mask) {
 	list.push_back({ "Select ROM...", "" });
 
 	int count = romlist_count();
-	struct romlist* rl = romlist_getit();
+	const romlist* rl = romlist_getit();
 	for (int i = 0; i < count; i++) {
 		if (rl[i].rd->type & romtype_mask) {
 			const char* name = rl[i].rd->name;
@@ -100,7 +97,7 @@ static bool RomCombo(const char* label, char* current_path, int max_len, std::ve
 void render_panel_rom()
 {
 	InitializeROMLists();
-	ImGui::Indent(5.0f);
+	ImGui::Indent(4.0f);
 
 	BeginGroupBox("System ROM Settings");
 	// Main ROM
@@ -108,6 +105,8 @@ void render_panel_rom()
 	if (RomCombo("##MainRomCombo", changed_prefs.romfile, MAX_DPATH, main_rom_list)) {
 		read_kickstart_version(&changed_prefs);
 	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romfile);
 	ImGui::SameLine();
 	if (AmigaButton("...##MainRomFileButton"))
@@ -119,6 +118,7 @@ void render_panel_rom()
 	// Extended ROM
 	ImGui::Text("Extended ROM File:");
 	RomCombo("##ExtRomCombo", changed_prefs.romextfile, MAX_DPATH, ext_rom_list);
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romextfile);
 	ImGui::SameLine();
 	if (AmigaButton("...##ExtRomFileButton"))
@@ -142,12 +142,13 @@ void render_panel_rom()
 	BeginGroupBox("Advanced Custom ROM Settings");
 	// Custom ROM SELECTOR
 	const char* custom_rom_items[] = { "ROM #1", "ROM #2", "ROM #3", "ROM #4" };
-	ImGui::SetNextItemWidth(100);
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
 	if (ImGui::Combo("##CustomROM", &customromselectnum, custom_rom_items, IM_ARRAYSIZE(custom_rom_items))) {
 		// Just changed selection, fields will update automatically in next frame based on selection
 	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	
-	struct romboard* rb = &changed_prefs.romboards[customromselectnum];
+	romboard* rb = &changed_prefs.romboards[customromselectnum];
 	
 	ImGui::SameLine();
 	ImGui::Text("Address range");
@@ -156,11 +157,12 @@ void render_panel_rom()
 	char addr_from[16];
 	sprintf(addr_from, "%08x", rb->start_address);
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(80);
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
 	if (ImGui::InputText("##AddressRangeFrom", addr_from, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
 		rb->start_address = strtoul(addr_from, nullptr, 16);
 		rb->start_address &= ~65535; // Logic from values_from_kickstartdlg2
 	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
 	// Address To
 	char addr_to[16];
@@ -170,12 +172,13 @@ void render_panel_rom()
 		sprintf(addr_to, "%08x", rb->end_address);
 		
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(80);
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
 	if (ImGui::InputText("##AddressRangeTo", addr_to, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
 		rb->end_address = strtoul(addr_to, nullptr, 16);
 		// Logic from values_from_kickstartdlg2
 		rb->end_address = ((rb->end_address - 1) & ~65535) | 0xffff;
 	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
 	AmigaInputText("##CustomRomFilename", rb->lf.loadfile, MAX_DPATH);
 	ImGui::SameLine();
@@ -188,6 +191,7 @@ void render_panel_rom()
 	BeginGroupBox("Miscellaneous");
 	ImGui::Text("Cartridge ROM File:");
 	RomCombo("##CartRomCombo", changed_prefs.cartfile, MAX_DPATH, cart_rom_list);
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.cartfile);
 	ImGui::SameLine();
 	if (AmigaButton("...##CartRomFileButton")) {
@@ -225,7 +229,8 @@ void render_panel_rom()
 	bool uae_enabled = !emulating;
 	
 	ImGui::BeginDisabled(!uae_enabled);
-	if (ImGui::Combo("Board type", &current_uaeboard_idx, uae_items, IM_ARRAYSIZE(uae_items))) {
+	ImGui::Text("Board Type:");
+	if (ImGui::Combo("##BoardTypeCombo", &current_uaeboard_idx, uae_items, IM_ARRAYSIZE(uae_items))) {
 		if (current_uaeboard_idx > 0) {
 			changed_prefs.uaeboard = current_uaeboard_idx - 1;
 			changed_prefs.boot_rom = 0;
@@ -234,10 +239,11 @@ void render_panel_rom()
 			changed_prefs.boot_rom = 1;
 		}
 	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	ImGui::EndDisabled();
 	EndGroupBox("Advanced UAE expansion board/Boot ROM Settings");
 
-	ImGui::Unindent(5.0f);
+	ImGui::Unindent(4.0f);
 
 	// Handle File Dialog Result
 	std::string file_dialog_result;

@@ -355,6 +355,7 @@ void render_panel_cpu() {
             else if (fpu_mode_idx == 1) changed_prefs.fpu_mode = -1;
             else if (fpu_mode_idx == 2) changed_prefs.fpu_mode = 1;
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::EndDisabled();
 
         bool unimplemented_fpu = !changed_prefs.fpu_no_unimplemented;
@@ -403,6 +404,7 @@ void render_panel_cpu() {
             if (changed_prefs.m68k_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
                 changed_prefs.m68k_speed_throttle = 0;
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_cpu_idle_slider);
@@ -417,6 +419,7 @@ void render_panel_cpu() {
                 changed_prefs.cpu_idle = (12 - idle_slider_val) * 15;
             }
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::EndDisabled();
 
         float right_group_min_width = BUTTON_WIDTH * 5.0f;
@@ -488,6 +491,7 @@ void render_panel_cpu() {
         ImGui::SetNextItemWidth(slider_width);
         ImGui::BeginDisabled(!enable_ppc_idle);
         ImGui::SliderInt("##PPC Idle", &changed_prefs.ppc_cpu_idle, 0, 10);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
@@ -507,7 +511,7 @@ void render_panel_cpu() {
              if (changed_prefs.x86_speed_throttle > 0 && changed_prefs.m68k_speed < 0)
                 changed_prefs.x86_speed_throttle = 0; // Mirroring safety logic? Maybe not needed for x86 but safe.
         }
-
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
@@ -542,6 +546,7 @@ void render_panel_cpu() {
                 changed_prefs.cpu_compatible = false;
             }
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
         ImGui::EndDisabled();
         ImGui::SameLine();
         ImGui::Text("%d MB", changed_prefs.cachesize / 1024);

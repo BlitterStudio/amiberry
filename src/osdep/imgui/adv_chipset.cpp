@@ -1,22 +1,8 @@
 #include "sysdeps.h"
 #include "options.h"
-#include "uae.h"
 #include "imgui.h"
 #include "imgui_panels.h"
-#include "custom.h"
-
-// Helper for bitfield checkboxes
-static void CheckboxFlags(const char* label, int* flags, int bit_value)
-{
-	bool v = (*flags & bit_value) != 0;
-	if (AmigaCheckbox(label, &v))
-	{
-		if (v)
-			*flags |= bit_value;
-		else
-			*flags &= ~bit_value;
-	}
-}
+#include "gui/gui_handling.h"
 
 // WinUAE-like helper to disable controls
 static void BeginDisableableGroup(bool disabled)
@@ -31,8 +17,8 @@ static void EndDisableableGroup(bool disabled)
 
 void render_panel_adv_chipset()
 {
-	ImGui::Dummy(ImVec2(0.0f, 5.0f));
-	ImGui::Indent(5.0f); // Global indentation matching CPU panel
+	// Global padding for the whole panel
+	ImGui::Indent(4.0f);
 
 	ImGui::Text("Compatible Settings");
 	ImGui::SameLine();
@@ -53,18 +39,19 @@ void render_panel_adv_chipset()
 
 	BeginGroupBox("Battery Backed Up Real Time Clock");
 	{
-		ImGui::RadioButton("None", &changed_prefs.cs_rtc, 0); ImGui::SameLine();
-		ImGui::RadioButton("MSM6242B", &changed_prefs.cs_rtc, 1); ImGui::SameLine();
-		ImGui::RadioButton("RF5C01A", &changed_prefs.cs_rtc, 2); ImGui::SameLine();
-		ImGui::RadioButton("A2000 MSM6242B", &changed_prefs.cs_rtc, 3);
+		AmigaRadioButton("None", &changed_prefs.cs_rtc, 0); ImGui::SameLine();
+		AmigaRadioButton("MSM6242B", &changed_prefs.cs_rtc, 1); ImGui::SameLine();
+		AmigaRadioButton("RF5C01A", &changed_prefs.cs_rtc, 2); ImGui::SameLine();
+		AmigaRadioButton("A2000 MSM6242B", &changed_prefs.cs_rtc, 3);
 		
 		BeginDisableableGroup(controls_disabled);
 		ImGui::SameLine();
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Adj:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(60);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH);
 		ImGui::InputInt("##RTCAdjust", &changed_prefs.cs_rtc_adjust, 1, 10);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 		EndDisableableGroup(controls_disabled);
 	}
 	EndGroupBox("Battery Backed Up Real Time Clock");
@@ -72,9 +59,9 @@ void render_panel_adv_chipset()
 	BeginGroupBox("CIA-A TOD Clock Source");
 	{
 		BeginDisableableGroup(controls_disabled);
-		ImGui::RadioButton("Vertical Sync", &changed_prefs.cs_ciaatod, 0); ImGui::SameLine();
-		ImGui::RadioButton("Power Supply 50Hz", &changed_prefs.cs_ciaatod, 1); ImGui::SameLine();
-		ImGui::RadioButton("Power Supply 60Hz", &changed_prefs.cs_ciaatod, 2);
+		AmigaRadioButton("Vertical Sync", &changed_prefs.cs_ciaatod, 0); ImGui::SameLine();
+		AmigaRadioButton("Power Supply 50Hz", &changed_prefs.cs_ciaatod, 1); ImGui::SameLine();
+		AmigaRadioButton("Power Supply 60Hz", &changed_prefs.cs_ciaatod, 2);
 		EndDisableableGroup(controls_disabled);
 	}
 	EndGroupBox("CIA-A TOD Clock Source");
@@ -168,7 +155,7 @@ void render_panel_adv_chipset()
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("Unmapped address space:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(120);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH);
 		if (ImGui::BeginCombo("##Unmapped", unmapped_items[changed_prefs.cs_unmapped_space])) {
 			for (int n = 0; n < IM_ARRAYSIZE(unmapped_items); n++) {
 				const bool is_selected = (changed_prefs.cs_unmapped_space == n);
@@ -184,6 +171,7 @@ void render_panel_adv_chipset()
 			}
 			ImGui::EndCombo();
 		}
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
 		ImGui::SameLine(0, 20); // Keep reasonable spacing between separate control groups
 		
@@ -191,7 +179,7 @@ void render_panel_adv_chipset()
 		ImGui::AlignTextToFramePadding();
 		ImGui::Text("CIA E-Clock Sync:");
 		ImGui::SameLine();
-		ImGui::SetNextItemWidth(120);
+		ImGui::SetNextItemWidth(BUTTON_WIDTH);
 		if (ImGui::BeginCombo("##CiaSync", ciasync_items[changed_prefs.cs_eclocksync])) {
 			for (int n = 0; n < IM_ARRAYSIZE(ciasync_items); n++) {
 				const bool is_selected = (changed_prefs.cs_eclocksync == n);
@@ -207,7 +195,7 @@ void render_panel_adv_chipset()
 			}
 			ImGui::EndCombo();
 		}
-
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 		EndDisableableGroup(controls_disabled);
 	}
 	EndGroupBox("Chipset Features");
@@ -237,130 +225,118 @@ void render_panel_adv_chipset()
 	{
 		BeginDisableableGroup(controls_disabled);
 
-		// Optimized Table: Fixed width for First column to prevent wasted space
-		if (ImGui::BeginTable("RevTable", 2)) 
+		// Ramsey
 		{
-			ImGui::TableSetupColumn("Col1", ImGuiTableColumnFlags_WidthFixed, 210.0f); // Give just enough space for Checkbox+Input
-			ImGui::TableSetupColumn("Col2", ImGuiTableColumnFlags_WidthStretch);       // Rest of space for Agnus/Denise
-			// Note: We don't call TableHeadersRow() so header height is 0
-
-			// -- Column 1: Ramsey & Gary --
-			ImGui::TableNextColumn();
-			
-			// Ramsey
-			{
-				bool ramsey_en = changed_prefs.cs_ramseyrev >= 0;
-				if (AmigaCheckbox("Ramsey revision:", &ramsey_en)) changed_prefs.cs_ramseyrev = ramsey_en ? 0x0f : -1;
-				ImGui::SameLine(0, 5); 
-				ImGui::BeginDisabled(!ramsey_en);
-				ImGui::SetNextItemWidth(40);
-				int v = changed_prefs.cs_ramseyrev;
-				if (ImGui::InputInt("##RamseyRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_ramseyrev = v;
-				ImGui::EndDisabled();
-			}
-			
-			// Fat Gary
-			{
-				bool gary_en = changed_prefs.cs_fatgaryrev >= 0;
-				if (AmigaCheckbox("Fat Gary revision:", &gary_en)) changed_prefs.cs_fatgaryrev = gary_en ? 0x00 : -1;
-				ImGui::SameLine(0, 5);
-				ImGui::BeginDisabled(!gary_en);
-				ImGui::SetNextItemWidth(40);
-				int v = changed_prefs.cs_fatgaryrev;
-				if (ImGui::InputInt("##GaryRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_fatgaryrev = v;
-				ImGui::EndDisabled();
-			}
-
-			// -- Column 2: Agnus & Denise --
-			ImGui::TableNextColumn();
-			
-			// Agnus
-			{
-				bool agnus_en = changed_prefs.cs_agnusrev >= 0;
-				if (AmigaCheckbox("Agnus/Alice model:", &agnus_en)) changed_prefs.cs_agnusrev = agnus_en ? 0 : -1;
-				ImGui::SameLine(0, 5);
-				ImGui::BeginDisabled(!agnus_en);
-				ImGui::SetNextItemWidth(40);
-				int v = changed_prefs.cs_agnusrev;
-				if (ImGui::InputInt("##AgnusRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_agnusrev = v;
-				ImGui::EndDisabled();
-
-				ImGui::SameLine(0, 5);
-				const char* agnus_models[] = { "Auto", "Velvet", "A1000" };
-				ImGui::SetNextItemWidth(60);
-				if (ImGui::BeginCombo("##AgnusModel", agnus_models[changed_prefs.cs_agnusmodel])) {
-					for (int n = 0; n < IM_ARRAYSIZE(agnus_models); n++) {
-						const bool is_selected = (changed_prefs.cs_agnusmodel == n);
-						if (is_selected)
-							ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-						if (ImGui::Selectable(agnus_models[n], is_selected)) {
-							changed_prefs.cs_agnusmodel = n;
-						}
-						if (is_selected) {
-							ImGui::PopStyleColor();
-							ImGui::SetItemDefaultFocus();
-						}
-					}
-					ImGui::EndCombo();
-				}
-				
-				ImGui::SameLine(0, 5);
-				const char* agnus_sizes[] = { "Auto", "512k", "1M", "2M" };
-				ImGui::SetNextItemWidth(60);
-				if (ImGui::BeginCombo("##AgnusSize", agnus_sizes[changed_prefs.cs_agnussize])) {
-					for (int n = 0; n < IM_ARRAYSIZE(agnus_sizes); n++) {
-						const bool is_selected = (changed_prefs.cs_agnussize == n);
-						if (is_selected)
-							ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-						if (ImGui::Selectable(agnus_sizes[n], is_selected)) {
-							changed_prefs.cs_agnussize = n;
-						}
-						if (is_selected) {
-							ImGui::PopStyleColor();
-							ImGui::SetItemDefaultFocus();
-						}
-					}
-					ImGui::EndCombo();
-				}
-			}
-
-			// Denise
-			{
-				bool denise_en = changed_prefs.cs_deniserev >= 0;
-				if (AmigaCheckbox("Denise/Lisa model:", &denise_en)) changed_prefs.cs_deniserev = denise_en ? 0 : -1;
-				ImGui::SameLine(0, 5);
-				ImGui::BeginDisabled(!denise_en);
-				ImGui::SetNextItemWidth(40);
-				int v = changed_prefs.cs_deniserev;
-				if (ImGui::InputInt("##DeniseRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_deniserev = v;
-				ImGui::EndDisabled();
-
-				ImGui::SameLine(0, 5);
-				const char* denise_models[] = { "Auto", "Velvet", "A1000 No-EHB", "A1000" };
-				ImGui::SetNextItemWidth(100);
-				if (ImGui::BeginCombo("##DeniseModel", denise_models[changed_prefs.cs_denisemodel])) {
-					for (int n = 0; n < IM_ARRAYSIZE(denise_models); n++) {
-						const bool is_selected = (changed_prefs.cs_denisemodel == n);
-						if (is_selected)
-							ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-						if (ImGui::Selectable(denise_models[n], is_selected)) {
-							changed_prefs.cs_denisemodel = n;
-						}
-						if (is_selected) {
-							ImGui::PopStyleColor();
-							ImGui::SetItemDefaultFocus();
-						}
-					}
-					ImGui::EndCombo();
-				}
-			}
-
-			ImGui::EndTable();
+			bool ramsey_en = changed_prefs.cs_ramseyrev >= 0;
+			if (AmigaCheckbox("Ramsey revision:", &ramsey_en)) changed_prefs.cs_ramseyrev = ramsey_en ? 0x0f : -1;
+			ImGui::SameLine();
+			ImGui::BeginDisabled(!ramsey_en);
+			ImGui::SetNextItemWidth(BUTTON_WIDTH);
+			int v = changed_prefs.cs_ramseyrev;
+			if (ImGui::InputInt("##RamseyRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_ramseyrev = v;
+			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+			ImGui::EndDisabled();
 		}
 
+		// Fat Gary
+		{
+			bool gary_en = changed_prefs.cs_fatgaryrev >= 0;
+			if (AmigaCheckbox("Fat Gary revision:", &gary_en)) changed_prefs.cs_fatgaryrev = gary_en ? 0x00 : -1;
+			ImGui::SameLine();
+			ImGui::BeginDisabled(!gary_en);
+			ImGui::SetNextItemWidth(BUTTON_WIDTH);
+			int v = changed_prefs.cs_fatgaryrev;
+			if (ImGui::InputInt("##GaryRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_fatgaryrev = v;
+			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+			ImGui::EndDisabled();
+		}
+
+		// Agnus
+		{
+			bool agnus_en = changed_prefs.cs_agnusrev >= 0;
+			if (AmigaCheckbox("Agnus/Alice model:", &agnus_en)) changed_prefs.cs_agnusrev = agnus_en ? 0 : -1;
+			ImGui::SameLine();
+			ImGui::BeginDisabled(!agnus_en);
+			ImGui::SetNextItemWidth(BUTTON_WIDTH);
+			int v = changed_prefs.cs_agnusrev;
+			if (ImGui::InputInt("##AgnusRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_agnusrev = v;
+			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+			ImGui::EndDisabled();
+
+			ImGui::SameLine();
+			const char* agnus_models[] = { "Auto", "Velvet", "A1000" };
+			ImGui::SetNextItemWidth(BUTTON_WIDTH);
+			if (ImGui::BeginCombo("##AgnusModel", agnus_models[changed_prefs.cs_agnusmodel])) {
+				for (int n = 0; n < IM_ARRAYSIZE(agnus_models); n++) {
+					const bool is_selected = (changed_prefs.cs_agnusmodel == n);
+					if (is_selected)
+						ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+					if (ImGui::Selectable(agnus_models[n], is_selected)) {
+						changed_prefs.cs_agnusmodel = n;
+					}
+					if (is_selected) {
+						ImGui::PopStyleColor();
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+
+			ImGui::SameLine();
+			const char* agnus_sizes[] = { "Auto", "512k", "1M", "2M" };
+			ImGui::SetNextItemWidth(BUTTON_WIDTH);
+			if (ImGui::BeginCombo("##AgnusSize", agnus_sizes[changed_prefs.cs_agnussize])) {
+				for (int n = 0; n < IM_ARRAYSIZE(agnus_sizes); n++) {
+					const bool is_selected = (changed_prefs.cs_agnussize == n);
+					if (is_selected)
+						ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+					if (ImGui::Selectable(agnus_sizes[n], is_selected)) {
+						changed_prefs.cs_agnussize = n;
+					}
+					if (is_selected) {
+						ImGui::PopStyleColor();
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		}
+
+		// Denise
+		{
+			bool denise_en = changed_prefs.cs_deniserev >= 0;
+			if (AmigaCheckbox("Denise/Lisa model:", &denise_en)) changed_prefs.cs_deniserev = denise_en ? 0 : -1;
+			ImGui::SameLine();
+			ImGui::BeginDisabled(!denise_en);
+			ImGui::SetNextItemWidth(BUTTON_WIDTH);
+			int v = changed_prefs.cs_deniserev;
+			if (ImGui::InputInt("##DeniseRev", &v, 0, 0, ImGuiInputTextFlags_CharsHexadecimal)) changed_prefs.cs_deniserev = v;
+			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+			ImGui::EndDisabled();
+
+			ImGui::SameLine();
+			const char* denise_models[] = { "Auto", "Velvet", "A1000 No-EHB", "A1000" };
+			ImGui::SetNextItemWidth(BUTTON_WIDTH);
+			if (ImGui::BeginCombo("##DeniseModel", denise_models[changed_prefs.cs_denisemodel])) {
+				for (int n = 0; n < IM_ARRAYSIZE(denise_models); n++) {
+					const bool is_selected = (changed_prefs.cs_denisemodel == n);
+					if (is_selected)
+						ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+					if (ImGui::Selectable(denise_models[n], is_selected)) {
+						changed_prefs.cs_denisemodel = n;
+					}
+					if (is_selected) {
+						ImGui::PopStyleColor();
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		}
 		EndDisableableGroup(controls_disabled);
 	}
 	EndGroupBox("Chipset Revision");
-
-	ImGui::Unindent(5.0f);
 }

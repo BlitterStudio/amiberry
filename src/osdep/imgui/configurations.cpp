@@ -143,8 +143,6 @@ void render_panel_configurations()
 	AmigaInputText("##Description", desc, MAX_DPATH);
 
 	ImGui::Spacing();
-	ImGui::Separator();
-	ImGui::Spacing();
 
 	if (AmigaButton("Load", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
