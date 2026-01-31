@@ -548,37 +548,40 @@ void render_panel_cpu() {
 
         ImGui::Spacing();
         
-        // Use columns for better organization
-        ImGui::Columns(2, "JITColumns", false);
-        
-        ImGui::BeginDisabled(!enable_chk_fpujit);
-        AmigaCheckbox("FPU Support##JIT", &changed_prefs.compfpu);
-        ImGui::SameLine(); ShowHelpMarker("Enable JIT compilation for FPU instructions.");
-        ImGui::EndDisabled();
+        // Use table for better organization
+        if (ImGui::BeginTable("JITTable", 2, ImGuiTableFlags_None)) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
 
-        ImGui::BeginDisabled(!enable_chk_constjump);
-        AmigaCheckbox("Constant jump", &changed_prefs.comp_constjump);
-        ImGui::SameLine(); ShowHelpMarker("JIT compilation optimization.");
-        ImGui::EndDisabled();
+            ImGui::BeginDisabled(!enable_chk_fpujit);
+            AmigaCheckbox("FPU Support##JIT", &changed_prefs.compfpu);
+            ImGui::SameLine(); ShowHelpMarker("Enable JIT compilation for FPU instructions.");
+            ImGui::EndDisabled();
 
-        ImGui::BeginDisabled(!enable_chk_hardflush);
-        AmigaCheckbox("Hard flush", &changed_prefs.comp_hardflush);
-        ImGui::SameLine(); ShowHelpMarker("Flush JIT cache on every resize/reset.");
-        ImGui::EndDisabled();
-        
-        ImGui::NextColumn();
+            ImGui::BeginDisabled(!enable_chk_constjump);
+            AmigaCheckbox("Constant jump", &changed_prefs.comp_constjump);
+            ImGui::SameLine(); ShowHelpMarker("JIT compilation optimization.");
+            ImGui::EndDisabled();
 
-        ImGui::BeginDisabled(!enable_chk_noflags);
-        AmigaCheckbox("No flags", &changed_prefs.compnf);
-        ImGui::SameLine(); ShowHelpMarker("Don't update status flags (faster but less compatible).");
-        ImGui::EndDisabled();
-        
-        ImGui::BeginDisabled(!enable_chk_catch);
-        AmigaCheckbox("Catch exceptions", &changed_prefs.comp_catchfault);
-        ImGui::SameLine(); ShowHelpMarker("Catch memory access faults in compiled code.");
-        ImGui::EndDisabled();
-        
-        ImGui::Columns(1);
+            ImGui::BeginDisabled(!enable_chk_hardflush);
+            AmigaCheckbox("Hard flush", &changed_prefs.comp_hardflush);
+            ImGui::SameLine(); ShowHelpMarker("Flush JIT cache on every resize/reset.");
+            ImGui::EndDisabled();
+
+            ImGui::TableNextColumn();
+
+            ImGui::BeginDisabled(!enable_chk_noflags);
+            AmigaCheckbox("No flags", &changed_prefs.compnf);
+            ImGui::SameLine(); ShowHelpMarker("Don't update status flags (faster but less compatible).");
+            ImGui::EndDisabled();
+
+            ImGui::BeginDisabled(!enable_chk_catch);
+            AmigaCheckbox("Catch exceptions", &changed_prefs.comp_catchfault);
+            ImGui::SameLine(); ShowHelpMarker("Catch memory access faults in compiled code.");
+            ImGui::EndDisabled();
+
+            ImGui::EndTable();
+        }
         ImGui::Spacing();
 
         ImGui::BeginDisabled(!enable_opt_direct);

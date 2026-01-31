@@ -171,19 +171,23 @@ void render_panel_io()
 
 	bool use_serial = (serial_idx > 0);
 	if (!use_serial) ImGui::BeginDisabled();
-	
-	ImGui::Columns(4, "SerialOpts", false);
-	AmigaCheckbox("Shared", &changed_prefs.serial_demand); ImGui::NextColumn();
-	AmigaCheckbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts); ImGui::NextColumn();
-	AmigaCheckbox("Direct", &changed_prefs.serial_direct); ImGui::NextColumn();
-	AmigaCheckbox("uaeserial.device", &changed_prefs.uaeserial); ImGui::NextColumn();
-	ImGui::Columns(1);
 
-	ImGui::Columns(2, "SerialStatus", false);
-	AmigaCheckbox("Serial status (RTS/...)", &changed_prefs.serial_rtsctsdtrdtecd); ImGui::NextColumn();
-	AmigaCheckbox("Serial status: Ring Ind.", &changed_prefs.serial_ri); ImGui::NextColumn();
-	ImGui::Columns(1);
-	
+	if (ImGui::BeginTable("SerialOptsTable", 4, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn(); AmigaCheckbox("Shared", &changed_prefs.serial_demand);
+		ImGui::TableNextColumn(); AmigaCheckbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts);
+		ImGui::TableNextColumn(); AmigaCheckbox("Direct", &changed_prefs.serial_direct);
+		ImGui::TableNextColumn(); AmigaCheckbox("uaeserial.device", &changed_prefs.uaeserial);
+		ImGui::EndTable();
+	}
+
+	if (ImGui::BeginTable("SerialStatusTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn(); AmigaCheckbox("Serial status (RTS/...)", &changed_prefs.serial_rtsctsdtrdtecd);
+		ImGui::TableNextColumn(); AmigaCheckbox("Serial status: Ring Ind.", &changed_prefs.serial_ri);
+		ImGui::EndTable();
+	}
+
 	if (!use_serial) ImGui::EndDisabled();
 
 	ImGui::EndChild();
@@ -196,55 +200,59 @@ void render_panel_io()
 	ImGui::BeginChild("MIDI", ImVec2(0, 100), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("MIDI"); ImGui::EndMenuBar(); }
 
-	ImGui::Columns(2, "MidiCols", false);
-	
-	// Out
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Out:"); ImGui::SameLine();
 	int midi_out_idx = 0;
-	if (changed_prefs.midioutdev[0]) {
-		char* out_name = ua(changed_prefs.midioutdev);
-		std::string s_out(out_name);
-		xfree(out_name);
-		
-		for(size_t i=0; i<midi_out_names.size(); ++i) if(midi_out_names[i] == s_out) { midi_out_idx = i; break; }
-	}
-	ImGui::SetNextItemWidth(-1);
-	if (VectorCombo("##MidiOut", &midi_out_idx, midi_out_names)) {
-		if (midi_out_idx == 0) {
-			changed_prefs.midioutdev[0] = 0;
-			changed_prefs.midiindev[0] = 0; // Clear IN if OUT is cleared
-		} else {
-			if (midi_out_idx - 1 < (int)midi_out_ports.size())
-				au_copy(changed_prefs.midioutdev, 256, midi_out_ports[midi_out_idx - 1].c_str());
-		}
-	}
-	ImGui::NextColumn();
-
-	// In
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("In:"); ImGui::SameLine();
 	int midi_in_idx = 0;
-	bool midi_in_enabled = (midi_out_idx > 0);
-	if (changed_prefs.midiindev[0]) {
-		char* in_name = ua(changed_prefs.midiindev);
-		std::string s_in(in_name);
-		xfree(in_name);
-		
-		for(size_t i=0; i<midi_in_names.size(); ++i) if(midi_in_names[i] == s_in) { midi_in_idx = i; break; }
-	}
-	
-	if (!midi_in_enabled) ImGui::BeginDisabled();
-	ImGui::SetNextItemWidth(-1);
-	if (VectorCombo("##MidiIn", &midi_in_idx, midi_in_names)) {
-		if (midi_in_idx == 0) changed_prefs.midiindev[0] = 0;
-		else if (midi_in_idx - 1 < (int)midi_in_ports.size())
-			au_copy(changed_prefs.midiindev, 256, midi_in_ports[midi_in_idx - 1].c_str());
-	}
-	if (!midi_in_enabled) ImGui::EndDisabled();
-	ImGui::NextColumn();
 
-	ImGui::Columns(1);
+	if (ImGui::BeginTable("MidiTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+
+		// Out
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Out:"); ImGui::SameLine();
+		if (changed_prefs.midioutdev[0]) {
+			char* out_name = ua(changed_prefs.midioutdev);
+			std::string s_out(out_name);
+			xfree(out_name);
+
+			for(size_t i=0; i<midi_out_names.size(); ++i) if(midi_out_names[i] == s_out) { midi_out_idx = i; break; }
+		}
+		ImGui::SetNextItemWidth(-1);
+		if (VectorCombo("##MidiOut", &midi_out_idx, midi_out_names)) {
+			if (midi_out_idx == 0) {
+				changed_prefs.midioutdev[0] = 0;
+				changed_prefs.midiindev[0] = 0; // Clear IN if OUT is cleared
+			} else {
+				if (midi_out_idx - 1 < (int)midi_out_ports.size())
+					au_copy(changed_prefs.midioutdev, 256, midi_out_ports[midi_out_idx - 1].c_str());
+			}
+		}
+
+		ImGui::TableNextColumn();
+
+		// In
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("In:"); ImGui::SameLine();
+		bool midi_in_enabled = (midi_out_idx > 0);
+		if (changed_prefs.midiindev[0]) {
+			char* in_name = ua(changed_prefs.midiindev);
+			std::string s_in(in_name);
+			xfree(in_name);
+
+			for(size_t i=0; i<midi_in_names.size(); ++i) if(midi_in_names[i] == s_in) { midi_in_idx = i; break; }
+		}
+
+		if (!midi_in_enabled) ImGui::BeginDisabled();
+		ImGui::SetNextItemWidth(-1);
+		if (VectorCombo("##MidiIn", &midi_in_idx, midi_in_names)) {
+			if (midi_in_idx == 0) changed_prefs.midiindev[0] = 0;
+			else if (midi_in_idx - 1 < (int)midi_in_ports.size())
+				au_copy(changed_prefs.midiindev, 256, midi_in_ports[midi_in_idx - 1].c_str());
+		}
+		if (!midi_in_enabled) ImGui::EndDisabled();
+
+		ImGui::EndTable();
+	}
 
 	// Route
 	bool route_enabled = (midi_in_idx > 0);

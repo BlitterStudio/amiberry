@@ -92,11 +92,13 @@ void render_panel_rtg()
 
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
 
-    // Columns: VRAM (Left) vs Color Modes (Right)
-    ImGui::Columns(2, "rtg_main_cols", false); 
-    
-    // VRAM Section
-    int vram_bytes = changed_prefs.rtgboards[0].rtgmem_size;
+    // Table: VRAM (Left) vs Color Modes (Right)
+    if (ImGui::BeginTable("rtg_main_table", 2, ImGuiTableFlags_None)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        // VRAM Section
+        int vram_bytes = changed_prefs.rtgboards[0].rtgmem_size;
     int vram_mb = vram_bytes >> 20;
     int slider_val = 0;
     // Calculate log2 of MB to get slider index. 1MB=0, 2MB=1, 4MB=2...
@@ -126,10 +128,10 @@ void render_panel_rtg()
     }
     ImGui::EndDisabled();
 
-    ImGui::NextColumn();
+        ImGui::TableNextColumn();
 
-    // Right Column: Color Modes
-    ImGui::Text("Color modes:");
+        // Right Column: Color Modes
+        ImGui::Text("Color modes:");
     
     // 8-bit Mode
     const char* rtg_8bit_modes[] = { "8-bit", "All", "CLUT (*)" };
@@ -181,12 +183,15 @@ void render_panel_rtg()
         else if (idx32 == 5) mask |= RGBFF_B8G8R8A8;
         changed_prefs.picasso96_modeflags = mask;
     }
-    
-    ImGui::Columns(1); // Reset
+
+        ImGui::EndTable();
+    }
     ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
     // --- Settings Checkboxes (2 Columns) ---
-    ImGui::Columns(2, "rtg_settings_cols", false);
+    if (ImGui::BeginTable("rtg_settings_table", 2, ImGuiTableFlags_None)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
 
     // Left Column: Scaling options
     // Autoscale modes are mutually exclusive in valid RTG filter:
@@ -210,9 +215,9 @@ void render_panel_rtg()
         changed_prefs.gf[1].gfx_filter_autoscale = int_scale ? RTG_MODE_INTEGER_SCALE : 0;
     }
 
-    ImGui::NextColumn();
+        ImGui::TableNextColumn();
 
-    // Right Column: Hardware/Misc Checkboxes
+        // Right Column: Hardware/Misc Checkboxes
     AmigaCheckbox("Native/RTG autoswitch", &changed_prefs.rtgboards[0].autoswitch);
     AmigaCheckbox("Multithreaded", &changed_prefs.rtg_multithread);
     
@@ -223,14 +228,17 @@ void render_panel_rtg()
     
     AmigaCheckbox("Hardware vertical blank interrupt", &changed_prefs.rtg_hardwareinterrupt);
 
-    ImGui::Columns(1);
+        ImGui::EndTable();
+    }
     ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
     // --- Bottom Row: Screen Mode Details ---
     ImGui::Text("Screen Mode settings");
     ImGui::Separator();
-    
-    ImGui::Columns(3, "rtg_bottom", false);
+
+    if (ImGui::BeginTable("rtg_bottom_table", 3, ImGuiTableFlags_None)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
     
     const char* rtg_refreshrates[] = { "Chipset", "Default", "50", "60", "70", "75" };
     int current_rate_idx = 0;
@@ -252,24 +260,25 @@ void render_panel_rtg()
             case 5: changed_prefs.rtgvblankrate = 75; break;
         }
     }
-    
-    ImGui::NextColumn();
-    
-    const char* rtg_buffermodes[] = { "Double buffering", "Triple buffering" };
+
+        ImGui::TableNextColumn();
+
+        const char* rtg_buffermodes[] = { "Double buffering", "Triple buffering" };
     int current_buffer = (changed_prefs.gfx_apmode[1].gfx_backbuffers > 0) ? changed_prefs.gfx_apmode[1].gfx_backbuffers - 1 : 0;
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::Combo("Buffer mode", &current_buffer, rtg_buffermodes, IM_ARRAYSIZE(rtg_buffermodes))) {
         changed_prefs.gfx_apmode[1].gfx_backbuffers = current_buffer + 1;
     }
-    
-    ImGui::NextColumn();
-    
-    const char* rtg_aspectratios[] = { "Disabled", "Automatic" };
+
+        ImGui::TableNextColumn();
+
+        const char* rtg_aspectratios[] = { "Disabled", "Automatic" };
     int current_aspect = (changed_prefs.rtgscaleaspectratio == 0) ? 0 : 1;
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::Combo("Aspect Ratio", &current_aspect, rtg_aspectratios, IM_ARRAYSIZE(rtg_aspectratios))) {
         changed_prefs.rtgscaleaspectratio = (current_aspect == 0) ? 0 : -1;
     }
-    
-    ImGui::Columns(1);
+
+        ImGui::EndTable();
+    }
 }

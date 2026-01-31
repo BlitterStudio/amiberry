@@ -77,10 +77,12 @@ void render_panel_sound()
 	// ---------------------------------------------------------
 	// Emulation | Volume
 	// ---------------------------------------------------------
-	ImGui::Columns(2, "TopRow", true);
-	
-	ImGui::BeginGroup();
-	ImGui::BeginChild("SoundEmu", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
+	if (ImGui::BeginTable("TopRowTable", 2, ImGuiTableFlags_Borders)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+
+		ImGui::BeginGroup();
+		ImGui::BeginChild("SoundEmu", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Sound Emulation"); ImGui::EndMenuBar(); }
 	
 	if (ImGui::RadioButton("Disabled", changed_prefs.produce_sound == 0)) changed_prefs.produce_sound = 0;
@@ -95,13 +97,13 @@ void render_panel_sound()
 	ImGui::EndChild();
 	ImGui::EndGroup();
 
-	ImGui::NextColumn();
+		ImGui::TableNextColumn();
 
-	// ---------------------------------------------------------
-	// Volume (WinUAE Style)
-	// ---------------------------------------------------------
-	ImGui::BeginGroup();
-	ImGui::BeginChild("Volume", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
+		// ---------------------------------------------------------
+		// Volume (WinUAE Style)
+		// ---------------------------------------------------------
+		ImGui::BeginGroup();
+		ImGui::BeginChild("Volume", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Volume"); ImGui::EndMenuBar(); }
 
 	// Row 1: Master Slider
@@ -153,18 +155,21 @@ void render_panel_sound()
 	}
 	ImGui::SameLine(); ImGui::Text("%d%%", display_vol);
 
-	ImGui::EndChild();
-	ImGui::EndGroup();
+		ImGui::EndChild();
+		ImGui::EndGroup();
 
-	ImGui::Columns(1);
-	
+		ImGui::EndTable();
+	}
+
 	// ---------------------------------------------------------
 	// Settings
 	// ---------------------------------------------------------
 	ImGui::BeginChild("Settings", ImVec2(0, 150), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Settings"); ImGui::EndMenuBar(); }
 
-	ImGui::Columns(3, "SettingsRow1", false);
+	if (ImGui::BeginTable("SettingsRow1Table", 3, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
 	ImGui::Text("Channel mode:");
 	const char* channel_mode_items[] = { "Mono", "Stereo", "Cloned stereo (4 ch)", "4 Channels", "Cloned stereo (5.1)", "5.1 Channels", "Cloned stereo (7.1)", "7.1 channels" };
 	ImGui::SetNextItemWidth(-1);
@@ -183,9 +188,9 @@ void render_panel_sound()
 		}
 		ImGui::EndCombo();
 	}
-	
-	ImGui::NextColumn();
-	ImGui::Text("Stereo separation:");
+
+		ImGui::TableNextColumn();
+		ImGui::Text("Stereo separation:");
 	const char* separation_items[] = { "100%", "90%", "80%", "70%", "60%", "50%", "40%", "30%", "20%", "10%", "0%" };
 	int sep_idx = 10 - changed_prefs.sound_stereo_separation;
 	ImGui::SetNextItemWidth(-1);
@@ -209,9 +214,9 @@ void render_panel_sound()
 		ImGui::EndCombo();
 	}
 	ImGui::EndDisabled();
-	
-	ImGui::NextColumn();
-	ImGui::Text("Interpolation:");
+
+		ImGui::TableNextColumn();
+		ImGui::Text("Interpolation:");
 	const char* interpolation_items[] = { "Disabled", "Anti", "Sinc", "RH", "Crux" };
 	ImGui::SetNextItemWidth(-1);
 	if (ImGui::BeginCombo("##Interp", interpolation_items[changed_prefs.sound_interpol])) {
@@ -229,11 +234,15 @@ void render_panel_sound()
 		}
 		ImGui::EndCombo();
 	}
-	
-	ImGui::Columns(1); ImGui::Spacing();
-	
-	ImGui::Columns(4, "SettingsRow2", false);
-	ImGui::Text("Frequency:");
+
+		ImGui::EndTable();
+	}
+	ImGui::Spacing();
+
+	if (ImGui::BeginTable("SettingsRow2Table", 4, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Frequency:");
 	const char* frequency_items[] = { "11025", "22050", "32000", "44100", "48000" };
 	int freq_idx = 0;
 	if (changed_prefs.sound_freq == 11025) freq_idx = 0;
@@ -258,9 +267,9 @@ void render_panel_sound()
 		}
 		ImGui::EndCombo();
 	}
-	
-	ImGui::NextColumn();
-	ImGui::Text("Swap channels:");
+
+		ImGui::TableNextColumn();
+		ImGui::Text("Swap channels:");
 	const char* swap_channels_items[] = { "-", "Paula only", "AHI only", "Both" };
 	int swap_idx = 0;
 	if (changed_prefs.sound_stereo_swap_paula && changed_prefs.sound_stereo_swap_ahi) swap_idx = 3;
@@ -283,9 +292,9 @@ void render_panel_sound()
 		}
 		ImGui::EndCombo();
 	}
-	
-	ImGui::NextColumn();
-	ImGui::Text("Stereo delay:");
+
+		ImGui::TableNextColumn();
+		ImGui::Text("Stereo delay:");
 	const char* stereo_delay_items[] = { "-", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" };
 	int delay_idx = changed_prefs.sound_mixed_stereo_delay > 0 ? changed_prefs.sound_mixed_stereo_delay : 0;
 	ImGui::SetNextItemWidth(-1);
@@ -308,9 +317,9 @@ void render_panel_sound()
 		ImGui::EndCombo();
 	}
 	ImGui::EndDisabled();
-	
-	ImGui::NextColumn();
-	ImGui::Text("Audio filter:");
+
+		ImGui::TableNextColumn();
+		ImGui::Text("Audio filter:");
 	const char* filter_items[] = { "Always off", "Emulated (A500)", "Emulated (A1200)", "Always on (A500)", "Always on (A1200)", "Always on (Fixed only)" };
 	int filter_idx = 0;
 	if (changed_prefs.sound_filter == FILTER_SOUND_OFF) filter_idx = 0;
@@ -341,18 +350,21 @@ void render_panel_sound()
 		}
 		ImGui::EndCombo();
 	}
-	
-	ImGui::Columns(1);
+
+		ImGui::EndTable();
+	}
 	ImGui::EndChild();
 
 	// ---------------------------------------------------------
 	// Floppy | Buffer
 	// ---------------------------------------------------------
-	ImGui::Columns(2, "BottomRow", true);
-	
-	// --- Floppy Sound (WinUAE Layout) ---
-	ImGui::BeginGroup();
-	ImGui::BeginChild("FloppySound", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
+	if (ImGui::BeginTable("BottomRowTable", 2, ImGuiTableFlags_Borders)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+
+		// --- Floppy Sound (WinUAE Layout) ---
+		ImGui::BeginGroup();
+		ImGui::BeginChild("FloppySound", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Floppy Drive Sound Emulation"); ImGui::EndMenuBar(); }
 	
 	int& vol_empty = changed_prefs.dfxclickvolume_empty[selected_floppy_drive];
@@ -416,14 +428,14 @@ void render_panel_sound()
 		ImGui::EndCombo();
 	}
 	
-	ImGui::EndChild();
-	ImGui::EndGroup();
+		ImGui::EndChild();
+		ImGui::EndGroup();
 
-	ImGui::NextColumn();
-	
-	// --- Buffer Size ---
-	ImGui::BeginGroup();
-	ImGui::BeginChild("BufferSize", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
+		ImGui::TableNextColumn();
+
+		// --- Buffer Size ---
+		ImGui::BeginGroup();
+		ImGui::BeginChild("BufferSize", ImVec2(0, 140), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Sound Buffer Size"); ImGui::EndMenuBar(); }
 	
 	int buf_idx = getsoundbufsizeindex(changed_prefs.sound_maxbsiz);
@@ -443,8 +455,9 @@ void render_panel_sound()
 	ImGui::SameLine();
 	ImGui::RadioButton("Push", &changed_prefs.sound_pullmode, 0);
 
-	ImGui::EndChild();
-	ImGui::EndGroup();
+		ImGui::EndChild();
+		ImGui::EndGroup();
 
-	ImGui::Columns(1);
+		ImGui::EndTable();
+	}
 }

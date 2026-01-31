@@ -237,11 +237,14 @@ void render_panel_display()
 	AmigaCheckbox("Borderless", &changed_prefs.borderless);
 	if (!is_windowed) ImGui::EndDisabled();
 
-	ImGui::Columns(2, "Offsets", false);
-	ImGui::SliderInt("H. Offset", &changed_prefs.gfx_horizontal_offset, -80, 80);
-	ImGui::NextColumn();
-	ImGui::SliderInt("V. Offset", &changed_prefs.gfx_vertical_offset, -80, 80);
-	ImGui::Columns(1);
+	if (ImGui::BeginTable("OffsetsTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::SliderInt("H. Offset", &changed_prefs.gfx_horizontal_offset, -80, 80);
+		ImGui::TableNextColumn();
+		ImGui::SliderInt("V. Offset", &changed_prefs.gfx_vertical_offset, -80, 80);
+		ImGui::EndTable();
+	}
 	ImGui::EndChild();
 
 	// ---------------------------------------------------------
@@ -255,15 +258,18 @@ void render_panel_display()
 		ImGui::EndMenuBar();
 	}
 
-	// Columns for Grid Layout
-	ImGui::Columns(4, "SettingsGrid", false); 
-	ImGui::SetColumnWidth(0, 60); // Labels "Native:", "RTG:"
-	ImGui::SetColumnWidth(1, 130); // Combos 1
-	ImGui::SetColumnWidth(2, 60); // Spacer/Label? or just spacing
-	ImGui::SetColumnWidth(3, 140); // Combos 2
+	// Table for Grid Layout
+	if (ImGui::BeginTable("SettingsGrid", 4, ImGuiTableFlags_None)) {
+		ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+		ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, 130.0f);
+		ImGui::TableSetupColumn("spacer", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+		ImGui::TableSetupColumn("combo2", ImGuiTableColumnFlags_WidthFixed, 140.0f);
 
-	// Row 1: Native
-	ImGui::Text("Native:"); ImGui::NextColumn();
+		// Row 1: Native
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Native:");
+		ImGui::TableNextColumn();
 	const char* screenmode_items[] = { "Windowed", "Fullscreen", "Full-window" };
 	ImGui::SetNextItemWidth(120);
 	if (ImGui::BeginCombo("##NativeMode", screenmode_items[changed_prefs.gfx_apmode[0].gfx_fullscreen])) {
@@ -281,9 +287,10 @@ void render_panel_display()
 		}
 		ImGui::EndCombo();
 	}
-	ImGui::NextColumn(); ImGui::NextColumn(); // Skip col 2
-	
-	// VSync Mapping
+		ImGui::TableNextColumn(); // Skip col 2
+		ImGui::TableNextColumn();
+
+		// VSync Mapping
 	const char* vsync_items[] = { "-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz" }; 
 	// Calc current index
 	int vsync_idx = 0;
@@ -315,11 +322,13 @@ void render_panel_display()
 		}
 		ImGui::EndCombo();
 	}
-	ImGui::NextColumn();
 
-	// Row 2: RTG
-	if (!rtg_enabled) ImGui::BeginDisabled();
-	ImGui::Text("RTG:"); ImGui::NextColumn();
+		// Row 2: RTG
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		if (!rtg_enabled) ImGui::BeginDisabled();
+		ImGui::Text("RTG:");
+		ImGui::TableNextColumn();
 	ImGui::SetNextItemWidth(120);
 	if (ImGui::BeginCombo("##RTGMode", screenmode_items[changed_prefs.gfx_apmode[1].gfx_fullscreen])) {
 		for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
@@ -336,8 +345,9 @@ void render_panel_display()
 		}
 		ImGui::EndCombo();
 	}
-	ImGui::NextColumn(); ImGui::NextColumn();
-	const char* vsync_rtg_items[] = { "-", "Lagless" };
+		ImGui::TableNextColumn(); // Skip col 2
+		ImGui::TableNextColumn();
+		const char* vsync_rtg_items[] = { "-", "Lagless" };
 	ImGui::SetNextItemWidth(150);
 	if (ImGui::BeginCombo("##RTGVSync", vsync_rtg_items[changed_prefs.gfx_apmode[1].gfx_vsync])) {
 		for (int n = 0; n < IM_ARRAYSIZE(vsync_rtg_items); n++) {
@@ -354,18 +364,21 @@ void render_panel_display()
 		}
 		ImGui::EndCombo();
 	}
-	if (!rtg_enabled) ImGui::EndDisabled();
-	
-	ImGui::Columns(1);
+		if (!rtg_enabled) ImGui::EndDisabled();
+
+		ImGui::EndTable();
+	}
 	ImGui::Separator();
 
 	// Checkboxes
-	ImGui::Columns(2, "ChkCols", false);
+	if (ImGui::BeginTable("ChkTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
 	AmigaCheckbox("Blacker than black", &changed_prefs.gfx_blackerthanblack);
 	AmigaCheckbox("Remove interlace artifacts", &changed_prefs.gfx_scandoubler);
 	AmigaCheckbox("Monochrome video out", &changed_prefs.gfx_grayscale);
-	ImGui::NextColumn();
-	AmigaCheckbox("Filtered low resolution", (bool*)&changed_prefs.gfx_lores_mode);
+		ImGui::TableNextColumn();
+		AmigaCheckbox("Filtered low resolution", (bool*)&changed_prefs.gfx_lores_mode);
 	
 	if (!vga_autoswitch_enabled) ImGui::BeginDisabled();
 	AmigaCheckbox("VGA mode resolution autoswitch", &changed_prefs.gfx_autoresolution_vga);
@@ -375,17 +388,21 @@ void render_panel_display()
 	if (AmigaCheckbox("Display resync blanking", &resync_blank)) {
 		changed_prefs.gfx_monitorblankdelay = resync_blank ? 1000 : 0;
 	}
-	ImGui::Columns(1);
+		ImGui::EndTable();
+	}
 	ImGui::Dummy(ImVec2(0, 5));
 
 	// Resolution row
-	ImGui::Columns(4, "ResCols", false);
-	ImGui::SetColumnWidth(0, 80); // Label "Resolution:"
-	ImGui::SetColumnWidth(1, 140); // Combo
-	ImGui::SetColumnWidth(2, 80); // Label "Overscan:"
-	ImGui::SetColumnWidth(3, 140); // Combo
+	if (ImGui::BeginTable("ResTable", 4, ImGuiTableFlags_None)) {
+		ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+		ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, 140.0f);
+		ImGui::TableSetupColumn("label2", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+		ImGui::TableSetupColumn("combo2", ImGuiTableColumnFlags_WidthFixed, 140.0f);
 
-	ImGui::Text("Resolution:"); ImGui::NextColumn();
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Resolution:");
+		ImGui::TableNextColumn();
 	const char* resolution_items[] = { "LowRes", "HighRes (normal)", "SuperHighRes" };
 	ImGui::SetNextItemWidth(130);
 	if (!resolution_enabled) ImGui::BeginDisabled();
@@ -405,9 +422,10 @@ void render_panel_display()
 		ImGui::EndCombo();
 	}
 	if (!resolution_enabled) ImGui::EndDisabled();
-	ImGui::NextColumn();
-	
-	ImGui::Text("Overscan:"); ImGui::NextColumn();
+		ImGui::TableNextColumn();
+
+		ImGui::Text("Overscan:");
+		ImGui::TableNextColumn();
 	const char* overscan_items[] = { "Standard", "Overscan", "Broadcast", "Extreme", "Ultra" }; 
 	ImGui::SetNextItemWidth(130);
 	if (ImGui::BeginCombo("##Overscan", overscan_items[changed_prefs.gfx_overscanmode])) {
@@ -425,7 +443,8 @@ void render_panel_display()
 		}
 		ImGui::EndCombo();
 	}
-	ImGui::Columns(1);
+		ImGui::EndTable();
+	}
 
 	// Autoswitch
 	ImGui::Dummy(ImVec2(0, 4));
@@ -467,17 +486,21 @@ void render_panel_display()
 
 	// Refresh Slider + PAL/NTSC
 	// WinUAE: Label "Refresh:" -> Slider -> Dropdown "PAL"
-	ImGui::Columns(3, "RefreshRow", false);
-	ImGui::SetColumnWidth(0, 60);
-	ImGui::SetColumnWidth(1, 250); // Increased with group wideth
-	
-	ImGui::Text("Refresh:"); ImGui::NextColumn();
+	if (ImGui::BeginTable("RefreshRowTable", 3, ImGuiTableFlags_None)) {
+		ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+		ImGui::TableSetupColumn("slider", ImGuiTableColumnFlags_WidthFixed, 250.0f);
+		ImGui::TableSetupColumn("combo", ImGuiTableColumnFlags_WidthStretch);
+
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Refresh:");
+		ImGui::TableNextColumn();
 	ImGui::SetNextItemWidth(240);
 	if (!refresh_enabled) ImGui::BeginDisabled();
 	ImGui::SliderInt("##RefreshSld", &changed_prefs.gfx_framerate, 1, 10, ""); // 1=Every, 2=Every 2nd
 	if (!refresh_enabled) ImGui::EndDisabled();
-	ImGui::NextColumn();
-	const char* video_standards[] = { "PAL", "NTSC" };
+		ImGui::TableNextColumn();
+		const char* video_standards[] = { "PAL", "NTSC" };
 	int current_vid_Standard = changed_prefs.ntscmode ? 1 : 0;
 	ImGui::SetNextItemWidth(80);
 	if (ImGui::BeginCombo("##VideoStandard", video_standards[current_vid_Standard])) {
@@ -501,27 +524,33 @@ void render_panel_display()
 		}
 		ImGui::EndCombo();
 	}
-	ImGui::Columns(1);
+		ImGui::EndTable();
+	}
 
 	// FPS Adj
-	ImGui::Columns(3, "FPSAdjRow", false);
-	ImGui::SetColumnWidth(0, 60);
-	ImGui::SetColumnWidth(1, 250);
+	if (ImGui::BeginTable("FPSAdjRowTable", 3, ImGuiTableFlags_None)) {
+		ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+		ImGui::TableSetupColumn("slider", ImGuiTableColumnFlags_WidthFixed, 250.0f);
+		ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
 
-	ImGui::Text("FPS adj.:"); ImGui::NextColumn();
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("FPS adj.:");
+		ImGui::TableNextColumn();
 	ImGui::SetNextItemWidth(240);
 	if (!refresh_enabled) ImGui::BeginDisabled();
 	ImGui::SliderFloat("##FPSAdjSld", &changed_prefs.cr[changed_prefs.cr_selected].rate, 1.0f, 100.0f, "");
 	if (!refresh_enabled) ImGui::EndDisabled();
-	ImGui::NextColumn();
-	
-	ImGui::SetNextItemWidth(60);
+		ImGui::TableNextColumn();
+
+		ImGui::SetNextItemWidth(60);
 	char buf[32];
 	snprintf(buf, sizeof(buf), "%.6f", changed_prefs.cr[changed_prefs.cr_selected].rate);
 	ImGui::InputText("##FPSVal", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly); 
 	ImGui::SameLine();
 	AmigaCheckbox("##FPSLocked", (bool*)&changed_prefs.cr[changed_prefs.cr_selected].locked);
-	ImGui::Columns(1);
+		ImGui::EndTable();
+	}
 
 	ImGui::Separator();
 	

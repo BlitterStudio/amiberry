@@ -85,11 +85,15 @@ void render_panel_input()
 	ImGui::BeginChild("GamePorts", ImVec2(0, 230), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Mouse and Joystick settings"); ImGui::EndMenuBar(); }
 
-	ImGui::Columns(2, "PortsCols", false); 
-	ImGui::SetColumnWidth(0, 60);
+	if (ImGui::BeginTable("PortsTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+		ImGui::TableSetupColumn("controls", ImGuiTableColumnFlags_WidthStretch);
 
-	auto render_port = [&](int port_idx, const char* label) {
-		ImGui::Text("%s", label); ImGui::NextColumn();
+		auto render_port = [&](int port_idx, const char* label) {
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", label);
+			ImGui::TableNextColumn();
 		
 		int dev_idx = get_device_index(changed_prefs.jports[port_idx].id);
 		ImGui::SetNextItemWidth(-1);
@@ -178,23 +182,26 @@ void render_panel_input()
 			ImGui::EndCombo();
 		}
 		ImGui::EndDisabled();
-
-		ImGui::NextColumn();
 	};
 
 	render_port(0, "Port 1:");
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn(); // separator row spans both columns
+	ImGui::TableNextColumn();
 	ImGui::Separator();
 	render_port(1, "Port 2:");
-	
+
 	// Swap & Autoswitch in Column 2
-	ImGui::NextColumn(); // Skip Col 1
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn(); // Skip Col 1
+	ImGui::TableNextColumn();
 	ImGui::Dummy(ImVec2(0, 8.0f));
 	AmigaButton("Swap ports");
 	ImGui::SameLine();
 	AmigaCheckbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
-	ImGui::NextColumn(); // Finish Row
-	
-	ImGui::Columns(1);
+
+		ImGui::EndTable();
+	}
 	ImGui::EndChild();
 	ImGui::EndGroup();
 
@@ -205,11 +212,15 @@ void render_panel_input()
 	ImGui::BeginChild("ParallelPorts", ImVec2(0, 160), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Emulated parallel port joystick adapter"); ImGui::EndMenuBar(); }
 	
-	ImGui::Columns(2, "ParCols", false); 
-	ImGui::SetColumnWidth(0, 60);
+	if (ImGui::BeginTable("ParTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+		ImGui::TableSetupColumn("controls", ImGuiTableColumnFlags_WidthStretch);
 
-	auto render_par_port = [&](int port_idx, const char* label) {
-		ImGui::Text("%s", label); ImGui::NextColumn();
+		auto render_par_port = [&](int port_idx, const char* label) {
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", label);
+			ImGui::TableNextColumn();
 		
 		int dev_idx = get_device_index(changed_prefs.jports[port_idx].id);
 		ImGui::SetNextItemWidth(-1);
@@ -254,15 +265,17 @@ void render_panel_input()
 		}
 		ImGui::SameLine();
 		AmigaButton(std::string("Remap / Test##Par").append(std::to_string(port_idx)).c_str());
-		
-		ImGui::NextColumn();
 	};
 
 	render_par_port(2, "Port 3:");
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::TableNextColumn();
 	ImGui::Separator();
 	render_par_port(3, "Port 4:");
 
-	ImGui::Columns(1);
+		ImGui::EndTable();
+	}
 	ImGui::EndChild();
 	ImGui::EndGroup();
 
@@ -276,84 +289,84 @@ void render_panel_input()
 	ImGui::BeginChild("ControllerSettings", ImVec2(0, 110), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Game Controller Settings"); ImGui::EndMenuBar(); }
 
-	ImGui::Columns(2, "ControllerCols", false);
+	if (ImGui::BeginTable("ControllerTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
 
-	// Joystick Dead Zone
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Joystick dead zone:"); ImGui::SameLine();
-	ImGui::SetCursorPosX(ImGui::GetColumnOffset() + 190);
-	ImGui::SetNextItemWidth(120);
-	ImGui::SliderInt("##DeadZone", &changed_prefs.input_joystick_deadzone, 0, 100, "%d%%");
-	ImGui::NextColumn();
+		// Joystick Dead Zone
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Joystick dead zone:"); ImGui::SameLine();
+		ImGui::SetNextItemWidth(120);
+		ImGui::SliderInt("##DeadZone", &changed_prefs.input_joystick_deadzone, 0, 100, "%d%%");
 
-	// Autofire Rate
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Autofire Rate:"); ImGui::SameLine();
-	int af_rate_idx = 0;
-	if (changed_prefs.input_autofire_linecnt == 0) af_rate_idx = 0;
-	else if (changed_prefs.input_autofire_linecnt > 10 * 312) af_rate_idx = 1;
-	else if (changed_prefs.input_autofire_linecnt > 6 * 312) af_rate_idx = 2;
-	else af_rate_idx = 3;
-	
-	ImGui::SetCursorPosX(ImGui::GetColumnOffset() + 190);
-	ImGui::SetNextItemWidth(100);
-	const char* af_rate_names[] = { "Off", "Slow", "Medium", "Fast" };
-	if (ImGui::BeginCombo("##AutofireRate", af_rate_names[af_rate_idx])) {
-		for (int n = 0; n < IM_ARRAYSIZE(af_rate_names); n++) {
-			const bool is_selected = (af_rate_idx == n);
-			if (is_selected)
-				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-			if (ImGui::Selectable(af_rate_names[n], is_selected)) {
-				af_rate_idx = n;
-				if (af_rate_idx == 0) changed_prefs.input_autofire_linecnt = 0;
-				else if (af_rate_idx == 1) changed_prefs.input_autofire_linecnt = 12 * 312;
-				else if (af_rate_idx == 2) changed_prefs.input_autofire_linecnt = 8 * 312;
-				else changed_prefs.input_autofire_linecnt = 4 * 312;
+		// Autofire Rate
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Autofire Rate:"); ImGui::SameLine();
+		int af_rate_idx = 0;
+		if (changed_prefs.input_autofire_linecnt == 0) af_rate_idx = 0;
+		else if (changed_prefs.input_autofire_linecnt > 10 * 312) af_rate_idx = 1;
+		else if (changed_prefs.input_autofire_linecnt > 6 * 312) af_rate_idx = 2;
+		else af_rate_idx = 3;
+
+		ImGui::SetNextItemWidth(100);
+		const char* af_rate_names[] = { "Off", "Slow", "Medium", "Fast" };
+		if (ImGui::BeginCombo("##AutofireRate", af_rate_names[af_rate_idx])) {
+			for (int n = 0; n < IM_ARRAYSIZE(af_rate_names); n++) {
+				const bool is_selected = (af_rate_idx == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(af_rate_names[n], is_selected)) {
+					af_rate_idx = n;
+					if (af_rate_idx == 0) changed_prefs.input_autofire_linecnt = 0;
+					else if (af_rate_idx == 1) changed_prefs.input_autofire_linecnt = 12 * 312;
+					else if (af_rate_idx == 2) changed_prefs.input_autofire_linecnt = 8 * 312;
+					else changed_prefs.input_autofire_linecnt = 4 * 312;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
 			}
-			if (is_selected) {
-				ImGui::PopStyleColor();
-				ImGui::SetItemDefaultFocus();
+			ImGui::EndCombo();
+		}
+
+		ImGui::TableNextRow();
+
+		// Digital Joy-Mouse Speed
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Digital joy-mouse speed:"); ImGui::SameLine();
+		int dig_speed_idx = 2; // Default 10
+		for (int i = 0; i < IM_ARRAYSIZE(digital_joymousespeed_values); ++i) {
+			if (changed_prefs.input_joymouse_speed == digital_joymousespeed_values[i]) {
+				dig_speed_idx = i; break;
 			}
 		}
-		ImGui::EndCombo();
-	}
-	ImGui::NextColumn();
-
-	// Digital Joy-Mouse Speed
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Digital joy-mouse speed:"); ImGui::SameLine();
-	int dig_speed_idx = 2; // Default 10
-	for (int i = 0; i < IM_ARRAYSIZE(digital_joymousespeed_values); ++i) {
-		if (changed_prefs.input_joymouse_speed == digital_joymousespeed_values[i]) {
-			dig_speed_idx = i; break;
+		ImGui::SetNextItemWidth(120);
+		if (ImGui::SliderInt("##DigSpeed", &dig_speed_idx, 0, IM_ARRAYSIZE(digital_joymousespeed_values) - 1, "")) {
+			changed_prefs.input_joymouse_speed = digital_joymousespeed_values[dig_speed_idx];
 		}
-	}
-	ImGui::SetCursorPosX(ImGui::GetColumnOffset() + 190);
-	ImGui::SetNextItemWidth(120);
-	if (ImGui::SliderInt("##DigSpeed", &dig_speed_idx, 0, IM_ARRAYSIZE(digital_joymousespeed_values) - 1, "")) {
-		changed_prefs.input_joymouse_speed = digital_joymousespeed_values[dig_speed_idx];
-	}
-	ImGui::SameLine(); ImGui::Text("%d", changed_prefs.input_joymouse_speed);
-	ImGui::NextColumn();
-	
-	// Analog Joy-Mouse Speed
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Analog joy-mouse speed:"); ImGui::SameLine();
-	int ana_speed_idx = 1; // Default 10
-	for (int i = 0; i < IM_ARRAYSIZE(analog_joymousespeed_values); ++i) {
-		if (changed_prefs.input_joymouse_multiplier == analog_joymousespeed_values[i]) {
-			ana_speed_idx = i; break;
-		}
-	}
-	ImGui::SetCursorPosX(ImGui::GetColumnOffset() + 190);
-	ImGui::SetNextItemWidth(120);
-	if (ImGui::SliderInt("##AnaSpeed", &ana_speed_idx, 0, IM_ARRAYSIZE(analog_joymousespeed_values) - 1, "")) {
-		changed_prefs.input_joymouse_multiplier = analog_joymousespeed_values[ana_speed_idx];
-	}
-	ImGui::SameLine(); ImGui::Text("%d", changed_prefs.input_joymouse_multiplier);
-	ImGui::NextColumn();
+		ImGui::SameLine(); ImGui::Text("%d", changed_prefs.input_joymouse_speed);
 
-	ImGui::Columns(1);
+		// Analog Joy-Mouse Speed
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Analog joy-mouse speed:"); ImGui::SameLine();
+		int ana_speed_idx = 1; // Default 10
+		for (int i = 0; i < IM_ARRAYSIZE(analog_joymousespeed_values); ++i) {
+			if (changed_prefs.input_joymouse_multiplier == analog_joymousespeed_values[i]) {
+				ana_speed_idx = i; break;
+			}
+		}
+		ImGui::SetNextItemWidth(120);
+		if (ImGui::SliderInt("##AnaSpeed", &ana_speed_idx, 0, IM_ARRAYSIZE(analog_joymousespeed_values) - 1, "")) {
+			changed_prefs.input_joymouse_multiplier = analog_joymousespeed_values[ana_speed_idx];
+		}
+		ImGui::SameLine(); ImGui::Text("%d", changed_prefs.input_joymouse_multiplier);
+
+		ImGui::EndTable();
+	}
 	ImGui::EndChild();
 	ImGui::EndGroup();
 
@@ -364,100 +377,106 @@ void render_panel_input()
 	ImGui::BeginChild("MouseSettings", ImVec2(0, 130), true, ImGuiWindowFlags_MenuBar);
 	if (ImGui::BeginMenuBar()) { ImGui::Text("Mouse extra settings"); ImGui::EndMenuBar(); }
 
-	ImGui::Columns(2, "MouseExtras", false);
-	
-	// Row 1
-	// Left: Mouse Speed
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Mouse speed:"); ImGui::SameLine(); 
-	ImGui::SetNextItemWidth(100);
-	ImGui::InputInt("##MouseSpd", &changed_prefs.input_mouse_speed, 1, 10);
-	ImGui::NextColumn();
+	if (ImGui::BeginTable("MouseExtrasTable", 2, ImGuiTableFlags_None)) {
+		// Row 1
+		ImGui::TableNextRow();
 
-	// Right: Mouse Untrap (Inline Label)
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Mouse untrap:"); ImGui::SameLine();
-	
-	const char* untrap_items[] = { "None", "Middle button", "Magic mouse", "Both" };
-	int untrap_val = changed_prefs.input_mouse_untrap;
-	int untrap_idx = 0;
-	if ((untrap_val & MOUSEUNTRAP_MIDDLEBUTTON) && (untrap_val & MOUSEUNTRAP_MAGIC)) untrap_idx = 3;
-	else if (untrap_val & MOUSEUNTRAP_MAGIC) untrap_idx = 2;
-	else if (untrap_val & MOUSEUNTRAP_MIDDLEBUTTON) untrap_idx = 1;
-	
-	ImGui::SetNextItemWidth(-1);
-	if (ImGui::BeginCombo("##UntrapMode", untrap_items[untrap_idx])) {
-		for (int n = 0; n < IM_ARRAYSIZE(untrap_items); n++) {
-			const bool is_selected = (untrap_idx == n);
-			if (is_selected)
-				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-			if (ImGui::Selectable(untrap_items[n], is_selected)) {
-				untrap_idx = n;
-				int new_val = 0;
-				if (untrap_idx == 1) new_val = MOUSEUNTRAP_MIDDLEBUTTON;
-				else if (untrap_idx == 2) new_val = MOUSEUNTRAP_MAGIC;
-				else if (untrap_idx == 3) new_val = MOUSEUNTRAP_MIDDLEBUTTON | MOUSEUNTRAP_MAGIC;
-				changed_prefs.input_mouse_untrap = new_val;
+		// Left: Mouse Speed
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Mouse speed:"); ImGui::SameLine();
+		ImGui::SetNextItemWidth(100);
+		ImGui::InputInt("##MouseSpd", &changed_prefs.input_mouse_speed, 1, 10);
+
+		// Right: Mouse Untrap (Inline Label)
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Mouse untrap:"); ImGui::SameLine();
+
+		const char* untrap_items[] = { "None", "Middle button", "Magic mouse", "Both" };
+		int untrap_val = changed_prefs.input_mouse_untrap;
+		int untrap_idx = 0;
+		if ((untrap_val & MOUSEUNTRAP_MIDDLEBUTTON) && (untrap_val & MOUSEUNTRAP_MAGIC)) untrap_idx = 3;
+		else if (untrap_val & MOUSEUNTRAP_MAGIC) untrap_idx = 2;
+		else if (untrap_val & MOUSEUNTRAP_MIDDLEBUTTON) untrap_idx = 1;
+
+		ImGui::SetNextItemWidth(-1);
+		if (ImGui::BeginCombo("##UntrapMode", untrap_items[untrap_idx])) {
+			for (int n = 0; n < IM_ARRAYSIZE(untrap_items); n++) {
+				const bool is_selected = (untrap_idx == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(untrap_items[n], is_selected)) {
+					untrap_idx = n;
+					int new_val = 0;
+					if (untrap_idx == 1) new_val = MOUSEUNTRAP_MIDDLEBUTTON;
+					else if (untrap_idx == 2) new_val = MOUSEUNTRAP_MAGIC;
+					else if (untrap_idx == 3) new_val = MOUSEUNTRAP_MIDDLEBUTTON | MOUSEUNTRAP_MAGIC;
+					changed_prefs.input_mouse_untrap = new_val;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
 			}
-			if (is_selected) {
-				ImGui::PopStyleColor();
-				ImGui::SetItemDefaultFocus();
-			}
+			ImGui::EndCombo();
 		}
-		ImGui::EndCombo();
-	}
-	ImGui::NextColumn();
 
-	// Row 2
-	// Left: Virtual Mouse
-	bool virt_mouse = changed_prefs.input_tablet > 0;
-	if (AmigaCheckbox("Install virtual mouse driver", &virt_mouse)) {
-		changed_prefs.input_tablet = virt_mouse ? TABLET_MOUSEHACK : TABLET_OFF; 
-	}
-	ImGui::NextColumn();
+		// Row 2
+		ImGui::TableNextRow();
 
-	// Right: Cursor Mode
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Magic Mouse cursor:"); ImGui::SameLine();
-	const char* magic_items[] = { "Both", "Native only", "Host only" };
-	ImGui::SetNextItemWidth(-1);
-	
-	ImGui::BeginDisabled(changed_prefs.input_tablet == 0);
-	if (ImGui::BeginCombo("##MagicMouse", magic_items[changed_prefs.input_magic_mouse_cursor])) {
-		for (int n = 0; n < IM_ARRAYSIZE(magic_items); n++) {
-			const bool is_selected = (changed_prefs.input_magic_mouse_cursor == n);
-			if (is_selected)
-				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-			if (ImGui::Selectable(magic_items[n], is_selected)) {
-				changed_prefs.input_magic_mouse_cursor = n;
-			}
-			if (is_selected) {
-				ImGui::PopStyleColor();
-				ImGui::SetItemDefaultFocus();
-			}
+		// Left: Virtual Mouse
+		ImGui::TableNextColumn();
+		bool virt_mouse = changed_prefs.input_tablet > 0;
+		if (AmigaCheckbox("Install virtual mouse driver", &virt_mouse)) {
+			changed_prefs.input_tablet = virt_mouse ? TABLET_MOUSEHACK : TABLET_OFF;
 		}
-		ImGui::EndCombo();
-	}
-	ImGui::EndDisabled();
-	ImGui::NextColumn();
 
-	// Row 3
-	// Left: Tablet Library emul
-	AmigaCheckbox("Tablet.library emulation", &changed_prefs.tablet_library);
-	ImGui::NextColumn();
+		// Right: Cursor Mode
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Magic Mouse cursor:"); ImGui::SameLine();
+		const char* magic_items[] = { "Both", "Native only", "Host only" };
+		ImGui::SetNextItemWidth(-1);
 
-	// Right: Tablet Mode (Aligned with Row 3)
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Tablet mode:"); ImGui::SameLine();
-	
-	int tablet_mode = changed_prefs.input_tablet == TABLET_MOUSEHACK ? 1 : 0;
-	ImGui::SetNextItemWidth(-1);
-	if (ImGui::Combo("##TabletMode", &tablet_mode, "Disabled\0MouseHack\0")) {
-		changed_prefs.input_tablet = tablet_mode == 1 ? TABLET_MOUSEHACK : TABLET_OFF;
+		ImGui::BeginDisabled(changed_prefs.input_tablet == 0);
+		if (ImGui::BeginCombo("##MagicMouse", magic_items[changed_prefs.input_magic_mouse_cursor])) {
+			for (int n = 0; n < IM_ARRAYSIZE(magic_items); n++) {
+				const bool is_selected = (changed_prefs.input_magic_mouse_cursor == n);
+				if (is_selected)
+					ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+				if (ImGui::Selectable(magic_items[n], is_selected)) {
+					changed_prefs.input_magic_mouse_cursor = n;
+				}
+				if (is_selected) {
+					ImGui::PopStyleColor();
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::EndDisabled();
+
+		// Row 3
+		ImGui::TableNextRow();
+
+		// Left: Tablet Library emul
+		ImGui::TableNextColumn();
+		AmigaCheckbox("Tablet.library emulation", &changed_prefs.tablet_library);
+
+		// Right: Tablet Mode (Aligned with Row 3)
+		ImGui::TableNextColumn();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Tablet mode:"); ImGui::SameLine();
+
+		int tablet_mode = changed_prefs.input_tablet == TABLET_MOUSEHACK ? 1 : 0;
+		ImGui::SetNextItemWidth(-1);
+		if (ImGui::Combo("##TabletMode", &tablet_mode, "Disabled\0MouseHack\0")) {
+			changed_prefs.input_tablet = tablet_mode == 1 ? TABLET_MOUSEHACK : TABLET_OFF;
+		}
+
+		ImGui::EndTable();
 	}
-	ImGui::NextColumn();
-	
-	ImGui::Columns(1);
 	ImGui::EndChild();
 	ImGui::EndGroup();
 }

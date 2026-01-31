@@ -558,10 +558,15 @@ void render_panel_expansions()
 
     // Accelerator Settings
     BeginGroupBox("Accelerator Board Settings");
-    ImGui::Columns(2, "AccelCols", false); // Invisible border
-    
-    // Left Column: Type & Subtype
-    ImGui::Text("Accelerator Board:");
+    const int type = changed_prefs.cpuboard_type;
+    const cpuboardsubtype* st = &cpuboards[type].subtypes[changed_prefs.cpuboard_subtype];
+
+    if (ImGui::BeginTable("AccelTable", 2, ImGuiTableFlags_None)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        // Left Column: Type & Subtype
+        ImGui::Text("Accelerator Board:");
     ImGui::SetNextItemWidth(-1);
     if (ImGui::BeginCombo("##AccelType", cpuboards[changed_prefs.cpuboard_type].name)) {
         for (int i = 0; cpuboards[i].name; i++) {
@@ -580,8 +585,7 @@ void render_panel_expansions()
         }
         ImGui::EndCombo();
     }
-    
-    const int type = changed_prefs.cpuboard_type;
+
     if (cpuboards[type].subtypes) {
          ImGui::Text("Subtype:");
          ImGui::SetNextItemWidth(-1);
@@ -605,10 +609,10 @@ void render_panel_expansions()
          }
     }
     
-    ImGui::NextColumn();
-    
-    // Right Column: ROM & Memory
-    if (changed_prefs.cpuboard_type != 0) {
+        ImGui::TableNextColumn();
+
+        // Right Column: ROM & Memory
+        if (changed_prefs.cpuboard_type != 0) {
          int idx = 0;
          boardromconfig* brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &idx);
          
@@ -644,8 +648,7 @@ void render_panel_expansions()
     for (int i=0; i < IM_ARRAYSIZE(mem_sizes); ++i) {
         if (mem_sizes[i] == current_size) { current_idx = i; break; }
     }
-    
-    const cpuboardsubtype* st = &cpuboards[type].subtypes[changed_prefs.cpuboard_subtype];
+
     int max_mb = st->maxmemory >> 20;
     int max_idx = 0;
      for (int i=0; i < IM_ARRAYSIZE(mem_sizes); ++i) {
@@ -663,9 +666,10 @@ void render_panel_expansions()
     } else {
         ImGui::Text("Board Memory: None / Fixed");
     }
-    
-    ImGui::Columns(1); // Reset
-    
+
+        ImGui::EndTable();
+    }
+
     // Accelerator Settings (Jumpers) - Full width below columns
      if (st->settings) {
           ImGui::Separator();
@@ -729,22 +733,26 @@ void render_panel_expansions()
     EndGroupBox("Accelerator Board Settings");
 
 	BeginGroupBox("Miscellaneous Expansions");
-    ImGui::Columns(2, "MiscCols", false);
-    ImGui::BeginDisabled(!gui_enabled); // WinUAE disables misc expansions when running? logic says "ew(hDlg, IDC_SOCKETS, workprefs.socket_emu)" - check enable_for_expansion2dlg
-    
-    AmigaCheckbox("bsdsocket.library", &changed_prefs.socket_emu);
-    
-    bool scsi_enabled = changed_prefs.scsi != 0;
-    if (AmigaCheckbox("uaescsi.device", &scsi_enabled)) {
-        changed_prefs.scsi = scsi_enabled ? 1 : 0;
+    if (ImGui::BeginTable("MiscTable", 2, ImGuiTableFlags_None)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        ImGui::BeginDisabled(!gui_enabled); // WinUAE disables misc expansions when running? logic says "ew(hDlg, IDC_SOCKETS, workprefs.socket_emu)" - check enable_for_expansion2dlg
+
+        AmigaCheckbox("bsdsocket.library", &changed_prefs.socket_emu);
+
+        bool scsi_enabled = changed_prefs.scsi != 0;
+        if (AmigaCheckbox("uaescsi.device", &scsi_enabled)) {
+            changed_prefs.scsi = scsi_enabled ? 1 : 0;
+        }
+
+        ImGui::TableNextColumn();
+        // CD32 FMV Card removed for WinUAE parity
+        AmigaCheckbox("uaenet.device", &changed_prefs.sana2);
+
+        ImGui::EndDisabled();
+        ImGui::EndTable();
     }
-    
-    ImGui::NextColumn();
-    // CD32 FMV Card removed for WinUAE parity
-    AmigaCheckbox("uaenet.device", &changed_prefs.sana2);
-    
-    ImGui::EndDisabled();
-    ImGui::Columns(1);
     EndGroupBox("Miscellaneous Expansions");
 }
 

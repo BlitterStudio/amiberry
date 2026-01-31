@@ -127,11 +127,15 @@ void render_panel_chipset()
 		break;
 	}
 
-	ImGui::Columns(2, "chipset_columns", false); // 2 columns, no border
-	ImGui::SetColumnWidth(0, ImGui::GetWindowWidth() * 0.56f);
+	if (ImGui::BeginTable("chipset_table", 2, ImGuiTableFlags_None)) {
+		ImGui::TableSetupColumn("left", ImGuiTableColumnFlags_WidthStretch, 0.56f);
+		ImGui::TableSetupColumn("right", ImGuiTableColumnFlags_WidthStretch, 0.44f);
 
-	// LEFT COLUMN
-	BeginGroupBox("Chipset");
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+
+		// LEFT COLUMN
+		BeginGroupBox("Chipset");
 	{
 		// Chipset radios
 		ImGui::BeginGroup();
@@ -225,7 +229,7 @@ void render_panel_chipset()
 	}
 	EndGroupBox("Keyboard");
 
-	ImGui::NextColumn();
+	ImGui::TableNextColumn();
 
 	// RIGHT COLUMN
 	BeginGroupBox("Options");
@@ -342,8 +346,9 @@ void render_panel_chipset()
 	}
 	EndGroupBox("Options");
 
-	ImGui::Columns(1);
-    
+		ImGui::EndTable();
+	}
+
     ImGui::Indent(4.0f);
 
 	BeginGroupBox("Collision Level");

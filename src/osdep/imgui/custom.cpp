@@ -198,137 +198,141 @@ void render_panel_custom()
 	};
 
 	ImGui::BeginChild("RemapArea", ImVec2(0, -40), true);
-	ImGui::Columns(2, "RemapCols", false);
 
 	int half_btns = SDL_CONTROLLER_BUTTON_MAX / 2;
 	int half_axes = SDL_CONTROLLER_AXIS_MAX / 2 + 1;
 
-	// Loop for Buttons (First Half)
-	for (int i = 0; i < half_btns; i++) {
-		int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_none[i] : &did->mapping.amiberry_custom_hotkey[i];
-		int display_val = *store_ptr;
-		if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_button_mapping[i];
-		
-		int idx = get_mapped_event_index(display_val);
-		
-		// Unmapped Check
-		bool is_mapped = did->mapping.button[i] > -1;
-		
-		// D-Pad override
-		if (i >= SDL_CONTROLLER_BUTTON_DPAD_UP && i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
-			is_mapped = true;
+	if (ImGui::BeginTable("RemapTable", 2, ImGuiTableFlags_None)) {
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
 
-		std::string in_use_type;
-		bool in_use = CheckInUse(i, in_use_type);
+		// Loop for Buttons (First Half)
+		for (int i = 0; i < half_btns; i++) {
+			int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_none[i] : &did->mapping.amiberry_custom_hotkey[i];
+			int display_val = *store_ptr;
+			if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_button_mapping[i];
 
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
-		ImGui::SetNextItemWidth(-1);
-		
-		ImGui::PushID(i);
-		if (!is_mapped || in_use) ImGui::BeginDisabled();
-		
-		if (in_use) {
-			std::string label = "In-Use (" + in_use_type + ")";
-			if (ImGui::BeginCombo("##btn", label.c_str())) ImGui::EndCombo(); // Just show label
+			int idx = get_mapped_event_index(display_val);
+
+			// Unmapped Check
+			bool is_mapped = did->mapping.button[i] > -1;
+
+			// D-Pad override
+			if (i >= SDL_CONTROLLER_BUTTON_DPAD_UP && i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
+				is_mapped = true;
+
+			std::string in_use_type;
+			bool in_use = CheckInUse(i, in_use_type);
+
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
+			ImGui::SetNextItemWidth(-1);
+
+			ImGui::PushID(i);
+			if (!is_mapped || in_use) ImGui::BeginDisabled();
+
+			if (in_use) {
+				std::string label = "In-Use (" + in_use_type + ")";
+				if (ImGui::BeginCombo("##btn", label.c_str())) ImGui::EndCombo(); // Just show label
+			}
+			else if (VectorCombo("##btn", &idx, custom_event_items)) {
+				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
+				*store_ptr = new_evt;
+				inputdevice_updateconfig(nullptr, &changed_prefs);
+			}
+
+			if (!is_mapped || in_use) ImGui::EndDisabled();
+			ImGui::PopID();
 		}
-		else if (VectorCombo("##btn", &idx, custom_event_items)) {
-			int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
-			*store_ptr = new_evt;
-			inputdevice_updateconfig(nullptr, &changed_prefs);
+
+		// Loop for Axes (First Half)
+		for (int i = 0; i < half_axes; i++) {
+			int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_axis_none[i] : &did->mapping.amiberry_custom_axis_hotkey[i];
+			int display_val = *store_ptr;
+			if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_axis_mapping[i];
+
+			int idx = get_mapped_event_index(display_val);
+			bool is_mapped = did->mapping.axis[i] > -1;
+
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("%s", label_axis_list[i].c_str()); ImGui::SameLine();
+			ImGui::SetNextItemWidth(-1);
+
+			ImGui::PushID(100 + i);
+			if (!is_mapped) ImGui::BeginDisabled();
+			if (VectorCombo("##axis", &idx, custom_event_items)) {
+				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
+				*store_ptr = new_evt;
+				inputdevice_updateconfig(nullptr, &changed_prefs);
+			}
+			if (!is_mapped) ImGui::EndDisabled();
+			ImGui::PopID();
 		}
-		
-		if (!is_mapped || in_use) ImGui::EndDisabled();
-		ImGui::PopID();
+
+		ImGui::TableNextColumn();
+
+		// Loop for Buttons (Second Half)
+		for (int i = half_btns; i < SDL_CONTROLLER_BUTTON_MAX; i++) {
+			int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_none[i] : &did->mapping.amiberry_custom_hotkey[i];
+			int display_val = *store_ptr;
+			if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_button_mapping[i];
+
+			int idx = get_mapped_event_index(display_val);
+
+			bool is_mapped = did->mapping.button[i] > -1;
+			if (i >= SDL_CONTROLLER_BUTTON_DPAD_UP && i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
+				is_mapped = true;
+
+			std::string in_use_type;
+			bool in_use = CheckInUse(i, in_use_type);
+
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
+			ImGui::SetNextItemWidth(-1);
+
+			ImGui::PushID(i);
+			if (!is_mapped || in_use) ImGui::BeginDisabled();
+
+			if (in_use) {
+				std::string label = "In-Use (" + in_use_type + ")";
+				if (ImGui::BeginCombo("##btn", label.c_str())) ImGui::EndCombo();
+			}
+			else if (VectorCombo("##btn", &idx, custom_event_items)) {
+				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
+				*store_ptr = new_evt;
+				inputdevice_updateconfig(nullptr, &changed_prefs);
+			}
+
+			if (!is_mapped || in_use) ImGui::EndDisabled();
+			ImGui::PopID();
+		}
+
+		// Loop for Axes (Second Half)
+		for (int i = half_axes; i < SDL_CONTROLLER_AXIS_MAX; i++) {
+			int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_axis_none[i] : &did->mapping.amiberry_custom_axis_hotkey[i];
+			int display_val = *store_ptr;
+			if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_axis_mapping[i];
+
+			int idx = get_mapped_event_index(display_val);
+			bool is_mapped = did->mapping.axis[i] > -1;
+
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("%s", label_axis_list[i].c_str()); ImGui::SameLine();
+			ImGui::SetNextItemWidth(-1);
+
+			ImGui::PushID(100 + i);
+			if (!is_mapped) ImGui::BeginDisabled();
+			if (VectorCombo("##axis", &idx, custom_event_items)) {
+				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
+				*store_ptr = new_evt;
+				inputdevice_updateconfig(nullptr, &changed_prefs);
+			}
+			if (!is_mapped) ImGui::EndDisabled();
+			ImGui::PopID();
+		}
+
+		ImGui::EndTable();
 	}
-	
-	// Loop for Axes (First Half)
-	for (int i = 0; i < half_axes; i++) {
-		int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_axis_none[i] : &did->mapping.amiberry_custom_axis_hotkey[i];
-		int display_val = *store_ptr;
-		if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_axis_mapping[i];
-
-		int idx = get_mapped_event_index(display_val);
-		bool is_mapped = did->mapping.axis[i] > -1;
-
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("%s", label_axis_list[i].c_str()); ImGui::SameLine();
-		ImGui::SetNextItemWidth(-1);
-		
-		ImGui::PushID(100 + i);
-		if (!is_mapped) ImGui::BeginDisabled();
-		if (VectorCombo("##axis", &idx, custom_event_items)) {
-			int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
-			*store_ptr = new_evt;
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-		}
-		if (!is_mapped) ImGui::EndDisabled();
-		ImGui::PopID();
-	}
-
-	ImGui::NextColumn();
-
-	// Loop for Buttons (Second Half)
-	for (int i = half_btns; i < SDL_CONTROLLER_BUTTON_MAX; i++) {
-		int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_none[i] : &did->mapping.amiberry_custom_hotkey[i];
-		int display_val = *store_ptr;
-		if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_button_mapping[i];
-		
-		int idx = get_mapped_event_index(display_val);
-		
-		bool is_mapped = did->mapping.button[i] > -1;
-		if (i >= SDL_CONTROLLER_BUTTON_DPAD_UP && i <= SDL_CONTROLLER_BUTTON_DPAD_RIGHT && did->mapping.number_of_hats > 0)
-			is_mapped = true;
-
-		std::string in_use_type;
-		bool in_use = CheckInUse(i, in_use_type);
-		
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
-		ImGui::SetNextItemWidth(-1);
-		
-		ImGui::PushID(i);
-		if (!is_mapped || in_use) ImGui::BeginDisabled();
-
-		if (in_use) {
-			std::string label = "In-Use (" + in_use_type + ")";
-			if (ImGui::BeginCombo("##btn", label.c_str())) ImGui::EndCombo();
-		}
-		else if (VectorCombo("##btn", &idx, custom_event_items)) {
-			int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
-			*store_ptr = new_evt;
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-		}
-
-		if (!is_mapped || in_use) ImGui::EndDisabled();
-		ImGui::PopID();
-	}
-	
-	// Loop for Axes (Second Half)
-	for (int i = half_axes; i < SDL_CONTROLLER_AXIS_MAX; i++) {
-		int* store_ptr = (SelectedFunction == 0) ? &did->mapping.amiberry_custom_axis_none[i] : &did->mapping.amiberry_custom_axis_hotkey[i];
-		int display_val = *store_ptr;
-		if (display_val <= 0 && !did->mapping.is_retroarch) display_val = default_axis_mapping[i];
-
-		int idx = get_mapped_event_index(display_val);
-		bool is_mapped = did->mapping.axis[i] > -1;
-
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("%s", label_axis_list[i].c_str()); ImGui::SameLine();
-		ImGui::SetNextItemWidth(-1);
-		
-		ImGui::PushID(100 + i);
-		if (!is_mapped) ImGui::BeginDisabled();
-		if (VectorCombo("##axis", &idx, custom_event_items)) {
-			int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
-			*store_ptr = new_evt;
-			inputdevice_updateconfig(nullptr, &changed_prefs);
-		}
-		if (!is_mapped) ImGui::EndDisabled();
-		ImGui::PopID();
-	}
-	
-	ImGui::Columns(1);
 	ImGui::EndChild();
 
 	// ---------------------------------------------------------
