@@ -1,7 +1,6 @@
 #include "imgui.h"
 #include "imgui_panels.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 #include <string>
@@ -85,6 +84,7 @@ static void RenderCustomFieldsPopup()
                         if (ImGui::Combo("##Combo", &current_item, items.data(), (int)items.size())) {
                             field->value = current_item;
                         }
+                        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
                     }
                     break;
                 default:
@@ -94,7 +94,7 @@ static void RenderCustomFieldsPopup()
             ImGui::Separator();
         }
 
-        if (AmigaButton("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             create_startup_sequence(); // Apply changes
             ImGui::CloseCurrentPopup();
         }
@@ -104,32 +104,20 @@ static void RenderCustomFieldsPopup()
 
 void render_panel_whdload()
 {
-    // Top Section: WHDLoad auto-config
-    ImGui::Text("WHDLoad auto-config:");
-    
-    ImGui::SameLine();
-    
-    const float eject_width = 80.0f;
-    const float select_width = 100.0f;
-    const float spacing = ImGui::GetStyle().ItemSpacing.x;
-    
-    float current_x = ImGui::GetCursorPosX();
-    float available_w = ImGui::GetContentRegionAvail().x;
-    float spacer = available_w - eject_width - select_width - spacing;
-    if (spacer > 0) ImGui::SetCursorPosX(current_x + spacer);
+    ImGui::Indent(4.0f);
 
-    if (AmigaButton("Eject", ImVec2(eject_width, 0))) {
-        whdload_prefs.whdload_filename = "";
-        clear_whdload_prefs();
-    }
+    // Top Section: WHDLoad auto-config
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("WHDLoad auto-config:");
+
     ImGui::SameLine();
-    if (AmigaButton("Select file", ImVec2(select_width, 0))) {
-         std::string startPath = whdload_prefs.whdload_filename;
-         if (startPath.empty()) startPath = get_whdload_arch_path();
-         const char *filter = "LHA Files (*.lha,*.lzh){.lha,.lzh},All Files (*){.*}";
-         OpenFileDialog("Select WHDLoad LHA file", filter, startPath);
+    if (AmigaButton("Select file", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+        std::string startPath = whdload_prefs.whdload_filename;
+        if (startPath.empty()) startPath = get_whdload_arch_path();
+        const auto filter = "LHA Files (*.lha,*.lzh){.lha,.lzh},All Files (*){.*}";
+        OpenFileDialog("Select WHDLoad LHA file", filter, startPath);
     }
-    
+
     // Process File Dialog Result
     std::string result_path;
     if (ConsumeFileDialogResult(result_path)) {
@@ -140,6 +128,12 @@ void render_panel_whdload()
              if (!last_loaded_config[0])
                  set_last_active_config(whdload_prefs.whdload_filename.c_str());
         }
+    }
+
+    ImGui::SameLine();
+    if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
+        whdload_prefs.whdload_filename = "";
+        clear_whdload_prefs();
     }
 
     // WHDLoad File Dropdown
@@ -168,7 +162,7 @@ void render_panel_whdload()
         }
     }
 
-    ImGui::SetNextItemWidth(-1);
+    ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
     if (ImGui::Combo("##WhdFileCombo", &current_whd_idx, whd_files.data(), (int)whd_files.size())) {
         if (current_whd_idx >= 0 && current_whd_idx < (int)whd_paths.size()) {
              whdload_prefs.whdload_filename = whd_paths[current_whd_idx];
@@ -177,18 +171,20 @@ void render_panel_whdload()
                  set_last_active_config(whdload_prefs.whdload_filename.c_str());
         }
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     
     ImGui::Separator();
     
     auto DrawReadOnlyInput = [](const char* label, const std::string& value) {
         ImGui::AlignTextToFramePadding();
         ImGui::Text("%s", label);
-        ImGui::SameLine(120.0f);
-        ImGui::SetNextItemWidth(-1);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
         char buf[256];
         strncpy(buf, value.c_str(), 255);
         ImGui::BeginDisabled();
-        ImGui::InputText(label, buf, 255, ImGuiInputTextFlags_ReadOnly);
+        const auto hidden_label = "##" + std::string(label);
+        ImGui::InputText(hidden_label.c_str(), buf, 255, ImGuiInputTextFlags_ReadOnly);
         ImGui::EndDisabled();
     };
 
@@ -200,7 +196,7 @@ void render_panel_whdload()
     
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Slaves:");
-    ImGui::SameLine(120.0f);
+    ImGui::SameLine();
     
     std::vector<const char*> slave_names;
     for(const auto& s : whdload_prefs.slaves) slave_names.push_back(s.filename.c_str());
@@ -213,56 +209,59 @@ void render_panel_whdload()
         }
     }
     
-    ImGui::SetNextItemWidth(-1);
+    ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
     if(ImGui::Combo("##SlavesCombo", &current_slave_idx, slave_names.data(), (int)slave_names.size())) {
         if(current_slave_idx >= 0) {
             whdload_prefs.selected_slave = whdload_prefs.slaves[current_slave_idx];
             create_startup_sequence();
         }
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     
     DrawReadOnlyInput("Slave Data path", whdload_prefs.selected_slave.data_path);
     
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Custom:");
-    ImGui::SameLine(120.0f);
-    ImGui::SetNextItemWidth(-1);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
     char custom_buf[1024];
     strncpy(custom_buf, whdload_prefs.custom.c_str(), 1023);
     if(AmigaInputText("##CustomInput", custom_buf, 1024)) {
         whdload_prefs.custom = custom_buf;
         create_startup_sequence();
     }
-    
-    ImGui::SetCursorPosX(120.0f);
+
+    ImGui::Spacing();
     bool custom_enabled = !whdload_prefs.whdload_filename.empty();
     ImGui::BeginDisabled(!custom_enabled);
-    if(AmigaButton("Custom Fields", ImVec2(200.0f, 0.0f))) {
+    if(AmigaButton("Custom Fields", ImVec2(BUTTON_WIDTH * 2, BUTTON_HEIGHT))) {
             show_custom_fields = true; 
     }
     ImGui::EndDisabled();
-    
+
+    ImGui::Spacing();
     ImGui::Separator();
-    
-    ImGui::Text("Global options");
-    ImGui::BeginChild("GlobalOptions", ImVec2(0, 0), true); 
-    
+    ImGui::Spacing();
+
+    BeginGroupBox("Global options");
+
     if(AmigaCheckbox("Button Wait", &whdload_prefs.button_wait)) create_startup_sequence();
     if(AmigaCheckbox("Show Splash", &whdload_prefs.show_splash)) create_startup_sequence();
     
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Config Delay:");
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SetNextItemWidth(BUTTON_WIDTH);
     if(ImGui::InputInt("##ConfigDelay", &whdload_prefs.config_delay)) {
         if(whdload_prefs.config_delay < 0) whdload_prefs.config_delay = 0;
         create_startup_sequence();
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
     
     if(AmigaCheckbox("Write Cache", &whdload_prefs.write_cache)) create_startup_sequence();
     if(AmigaCheckbox("Quit on Exit", &whdload_prefs.quit_on_exit)) create_startup_sequence();
 
-    ImGui::EndChild();
+    EndGroupBox("Global options");
     
     RenderCustomFieldsPopup();
 }

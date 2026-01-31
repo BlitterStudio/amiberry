@@ -16,6 +16,8 @@
 
 void render_panel_hwinfo()
 {
+    ImGui::Indent(4.0f);
+
     // Ensure the card list is populated based on current prefs
     expansion_scan_autoconfig(&changed_prefs, false);
 
@@ -41,9 +43,8 @@ void render_panel_hwinfo()
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             
+            ImGui::PushID(i);
             // Selectable Row Logic
-            char label[32];
-            sprintf(label, "##row%d", i);
             bool is_selected = (selected_row == i);
             
             // Type
@@ -57,6 +58,7 @@ void render_panel_hwinfo()
             if (ImGui::Selectable(type_str, is_selected, ImGuiSelectableFlags_SpanAllColumns)) {
                 selected_row = i;
             }
+            ImGui::PopID();
             
             ImGui::TableNextColumn();
             ImGui::Text("%s", aci->name);
@@ -104,5 +106,4 @@ void render_panel_hwinfo()
         if (new_idx >= 0) selected_row = new_idx;
     }
     ImGui::EndDisabled();
-
 }

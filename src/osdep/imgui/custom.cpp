@@ -1,6 +1,5 @@
 #include "imgui.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
 #include "inputdevice.h"
 #include "gui/gui_handling.h"
@@ -32,6 +31,7 @@ static bool VectorCombo(const char* label, int* current_item, const std::vector<
 		}
 		ImGui::EndCombo();
 	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	return changed;
 }
 
@@ -46,12 +46,14 @@ static int get_mapped_event_index(int event_id)
 
 void render_panel_custom()
 {
+	ImGui::Indent(4.0f);
+
 	if (!initialized) {
 		custom_event_items.clear();
-		custom_event_items.push_back("None");
+		custom_event_items.emplace_back("None");
 		for (int idx = 0; idx < remap_event_list_size; idx++) {
 			const auto* ie = inputdevice_get_eventinfo(remap_event_list[idx]);
-			if (ie) custom_event_items.push_back(ie->name);
+			if (ie) custom_event_items.emplace_back(ie->name);
 		}
 		initialized = true;
 	}
@@ -63,17 +65,14 @@ void render_panel_custom()
 	// ---------------------------------------------------------
 	// Joystick Port Selection
 	// ---------------------------------------------------------
-	ImGui::BeginGroup();
-	ImGui::BeginChild("JoystickPort", ImVec2(0, 60), true, ImGuiWindowFlags_MenuBar);
-	if (ImGui::BeginMenuBar()) { ImGui::Text("Joystick Port"); ImGui::EndMenuBar(); }
+	BeginGroupBox("Joystick Port");
 
-	ImGui::RadioButton("0: Mouse", &SelectedPort, 0); ImGui::SameLine();
-	ImGui::RadioButton("1: Joystick", &SelectedPort, 1); ImGui::SameLine();
-	ImGui::RadioButton("2: Parallel 1", &SelectedPort, 2); ImGui::SameLine();
-	ImGui::RadioButton("3: Parallel 2", &SelectedPort, 3);
+	AmigaRadioButton("0: Mouse", &SelectedPort, 0); ImGui::SameLine();
+	AmigaRadioButton("1: Joystick", &SelectedPort, 1); ImGui::SameLine();
+	AmigaRadioButton("2: Parallel 1", &SelectedPort, 2); ImGui::SameLine();
+	AmigaRadioButton("3: Parallel 2", &SelectedPort, 3);
 
-	ImGui::EndChild();
-	ImGui::EndGroup();
+	EndGroupBox("Joystick Port");
 
 	// ---------------------------------------------------------
 	// Device & Logic Setup
@@ -90,9 +89,10 @@ void render_panel_custom()
 	// ---------------------------------------------------------
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Function Key:"); ImGui::SameLine();
-	ImGui::RadioButton("None", &SelectedFunction, 0); ImGui::SameLine();
-	ImGui::RadioButton("HotKey", &SelectedFunction, 1); ImGui::SameLine();
+	AmigaRadioButton("None", &SelectedFunction, 0); ImGui::SameLine();
+	AmigaRadioButton("HotKey", &SelectedFunction, 1); ImGui::SameLine();
 
+	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Set Hotkey:"); ImGui::SameLine();
 	
 	// Hotkey Display/Set
@@ -106,7 +106,7 @@ void render_panel_custom()
 	}
 	
 	ImGui::BeginDisabled(); // Read-only text
-	ImGui::SetNextItemWidth(100);
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
 	ImGui::InputText("##HotkeyText", set_hotkey_buf, sizeof(set_hotkey_buf), ImGuiInputTextFlags_ReadOnly);
 	ImGui::EndDisabled();
 	ImGui::SameLine();
@@ -167,7 +167,7 @@ void render_panel_custom()
 	}
 	
 	ImGui::BeginDisabled();
-	ImGui::SetNextItemWidth(-1);
+	ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 	ImGui::InputText("##DeviceInfo", device_info, sizeof(device_info), ImGuiInputTextFlags_ReadOnly);
 	ImGui::EndDisabled();
 
@@ -226,7 +226,7 @@ void render_panel_custom()
 
 			ImGui::AlignTextToFramePadding();
 			ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
-			ImGui::SetNextItemWidth(-1);
+			ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 
 			ImGui::PushID(i);
 			if (!is_mapped || in_use) ImGui::BeginDisabled();
@@ -234,6 +234,7 @@ void render_panel_custom()
 			if (in_use) {
 				std::string label = "In-Use (" + in_use_type + ")";
 				if (ImGui::BeginCombo("##btn", label.c_str())) ImGui::EndCombo(); // Just show label
+				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
 			}
 			else if (VectorCombo("##btn", &idx, custom_event_items)) {
 				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];
@@ -256,7 +257,7 @@ void render_panel_custom()
 
 			ImGui::AlignTextToFramePadding();
 			ImGui::Text("%s", label_axis_list[i].c_str()); ImGui::SameLine();
-			ImGui::SetNextItemWidth(-1);
+			ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 
 			ImGui::PushID(100 + i);
 			if (!is_mapped) ImGui::BeginDisabled();
@@ -288,7 +289,7 @@ void render_panel_custom()
 
 			ImGui::AlignTextToFramePadding();
 			ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
-			ImGui::SetNextItemWidth(-1);
+			ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
 
 			ImGui::PushID(i);
 			if (!is_mapped || in_use) ImGui::BeginDisabled();
@@ -296,6 +297,7 @@ void render_panel_custom()
 			if (in_use) {
 				std::string label = "In-Use (" + in_use_type + ")";
 				if (ImGui::BeginCombo("##btn", label.c_str())) ImGui::EndCombo();
+				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
 			}
 			else if (VectorCombo("##btn", &idx, custom_event_items)) {
 				int new_evt = (idx == 0) ? -1 : remap_event_list[idx - 1];

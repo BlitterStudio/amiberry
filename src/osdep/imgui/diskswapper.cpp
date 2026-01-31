@@ -1,10 +1,8 @@
 #include "imgui.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
-#include "disk.h"
 #include "target.h"
 
 static int diskswapper_target_slot = -1;
@@ -14,8 +12,8 @@ void render_panel_diskswapper()
     ImGui::BeginChild("DiskSwapperList", ImVec2(0, -50), true);
     if (ImGui::BeginTable("DiskSwapperTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
         // Set up column widths
-        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 100.0f);
-        ImGui::TableSetupColumn("Disk Image", ImGuiTableColumnFlags_WidthFixed, 400.0f);
+        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+        ImGui::TableSetupColumn("Disk Image", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 4);
         ImGui::TableSetupColumn("Drive", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
@@ -56,7 +54,7 @@ void render_panel_diskswapper()
             }
 
             ImGui::BeginDisabled();
-            ImGui::SetNextItemWidth(-1);
+            ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
             ImGui::InputText("##Path", (char*)display_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
             ImGui::EndDisabled();
 

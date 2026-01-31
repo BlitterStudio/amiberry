@@ -1,11 +1,9 @@
 #include "imgui.h"
-#include "imgui_internal.h"
 #include "sysdeps.h"
-#include "config.h"
 #include "imgui_panels.h"
 #include "options.h"
-#include "gui/gui_handling.h"
 #include "statusline.h"
+#include "gui/gui_handling.h"
 
 // Helper for bitmask checkboxes
 static bool CheckboxFlags(const char* label, int* flags, int mask)
@@ -92,6 +90,9 @@ static void HotkeyControl(const char* label, char* config_val) {
 
 void render_panel_misc()
 {
+    // Global padding for the whole panel
+    ImGui::Indent(4.0f);
+
     // Use a table for better column control
     if (ImGui::BeginTable("MiscPanelTable", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable))
     {
@@ -138,8 +139,8 @@ void render_panel_misc()
             // Nested table for Input + Buttons on the next line
             if (ImGui::BeginTable("##HotkeyRow", 2, ImGuiTableFlags_SizingStretchProp))
             {
-                ImGui::TableSetupColumn("Input", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("Btns", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                ImGui::TableSetupColumn("Input", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
+                ImGui::TableSetupColumn("Btns", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
                 
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
@@ -176,7 +177,7 @@ void render_panel_misc()
         // LEDs Table (2 columns)
         if (ImGui::BeginTable("MiscLEDTable", 2, ImGuiTableFlags_SizingStretchProp))
         {
-            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
             ImGui::TableSetupColumn("Combo", ImGuiTableColumnFlags_WidthStretch);
             
             const char* led_items[] = { "none", "POWER", "DF0", "DF1", "DF2", "DF3", "HD", "CD" };
@@ -187,8 +188,10 @@ void render_panel_misc()
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("%s", label);
                 ImGui::TableNextColumn();
-                ImGui::SetNextItemWidth(-FLT_MIN);
-                ImGui::Combo(label, val, led_items, IM_ARRAYSIZE(led_items));
+                ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
+                const std::string combo_label = "##" + std::string(label);
+                ImGui::Combo(combo_label.c_str(), val, led_items, IM_ARRAYSIZE(led_items));
+                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
             };
 
             LedRow("NumLock:", &changed_prefs.kbd_led_num);
