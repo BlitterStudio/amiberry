@@ -824,7 +824,7 @@ void amiberry_gui_init()
 	ImGui_ImplSDL2_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
 	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
 
-	if (amiberry_options.quickstart_start && !emulating)
+	if (amiberry_options.quickstart_start && !emulating && strlen(last_loaded_config) == 0)
 	{
 		Quickstart_ApplyDefaults();
 	}

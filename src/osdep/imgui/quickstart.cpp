@@ -538,7 +538,7 @@ void render_panel_quickstart() {
     }
     EndGroupBox("Emulated Drives");
 
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    ImGui::Spacing();
 
     BeginGroupBox("WHDLoad auto-config:");
     if (AmigaButton("Select file##QSWHD", ImVec2(BUTTON_WIDTH * 1.33f, 0))) {
@@ -568,7 +568,7 @@ void render_panel_quickstart() {
         whd_index = qs_find_in_mru(lstMRUWhdloadList, whdload_prefs.whdload_filename.c_str());
 
     int combo_whd_index = whd_index + 1;
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
+    ImGui::PushItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2.0f);
     if (ImGui::BeginCombo("##WHDLoadCombo", whd_items[combo_whd_index])) {
         for (int n = 0; n < static_cast<int>(whd_items.size()); n++) {
             const bool is_selected = (combo_whd_index == n);
@@ -602,7 +602,7 @@ void render_panel_quickstart() {
     ImGui::PopItemWidth();
     EndGroupBox("WHDLoad auto-config:");
 
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    ImGui::Spacing();
 
     BeginGroupBox("Mode");
     bool qs_mode = amiberry_options.quickstart_start;
