@@ -147,9 +147,6 @@ void Quickstart_ApplyDefaults() {
         default:
             break;
     }
-    
-    // Clear current config filename to indicate we are running in Quickstart mode
-    last_loaded_config[0] = 0;
 }
 
 void render_panel_quickstart() {
