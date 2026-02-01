@@ -2655,7 +2655,7 @@ skip:
 		for (x = 0; x < src->inwidth; x++) {
 			uae_u8 *s2 = s + src->rowbytes;
 			uae_u8 *d2 = d + dst->rowbytes;
-			if (*s_genlock == 0xffff) {
+			if (*s_genlock == 0xff) {
 				PUT_PRGBA(d, d2, dst, 0, 0, 0, 0, 0, doublelines, false);
 			} else if ((!zclken && is_transparent(*s_genlock)) || (zclken && ztoggle)) {
 				a = amix2;

@@ -528,13 +528,13 @@ static void call_card_init(int index)
 					expamem_write(i * 4, aci->autoconfig_bytes[i]);
 				}
 				expamem_autoconfig_mode = 1;
-			} else if (aci->autoconfig_bytes) {
+			} else if (aci->autoconfig_bytes[0]) {
 				memset(expamem, 0xff, AUTOMATIC_AUTOCONFIG_MAX_ADDRESS);
 				for (int i = 0; i < 16; i++) {
 					expamem_write(i * 4, aci->autoconfig_bytes[i]);
 				}
 				expamem_autoconfig_mode = 1;
-			} else if (aci->autoconfig_raw) {
+			} else if (aci->autoconfig_raw[0]) {
 				memcpy(expamem, aci->autoconfig_raw, sizeof aci->autoconfig_raw);
 			}
 		} else {

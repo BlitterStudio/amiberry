@@ -4148,7 +4148,7 @@ void parallel_port_scsi_write(int reg, uae_u8 v, uae_u8 dir)
 
 static bool isautoconfigaddr(uaecptr addr)
 {
-	return addr < 65536 || (addr >= 0xe80000 && addr < 0xe90000) || (addr >= 0xff000000 && addr < 0xff0000200);
+	return addr < 65536 || (addr >= 0xe80000 && addr < 0xe90000) || (addr >= 0xff000000 && addr < 0xff000200);
 }
 
 static uae_u32 REGPARAM2 ncr80_lget(struct soft_scsi *ncr, uaecptr addr)

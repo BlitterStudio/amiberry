@@ -1735,7 +1735,7 @@ void compute_framesync(void)
 		hblank_hz,
 		maxhpos, maxvpos, lof_store ? 1 : 0,
 		cr ? cr->index : -1,
-		cr != NULL && cr->label != NULL ? cr->label : _T("<?>"),
+		cr != NULL && cr->label[0] != '\0' ? cr->label : _T("<?>"),
 		currprefs.gfx_apmode[ad->picasso_on ? 1 : 0].gfx_display, ad->picasso_on, ad->picasso_requested_on
 	);
 
@@ -3144,6 +3144,8 @@ static void COPJMP(int num, int vblank)
 					case copper_states::COP_read2:
 						// Wake up is delayed by 1 copper cycle if copper is currently loading words
 						cop_state.state = COP_strobe_vbl_extra_delay2;
+						break;
+					default:
 						break;
 				}
 #endif
@@ -7742,7 +7744,7 @@ static int REGPARAM2 custom_wput_1(uaecptr addr, uae_u32 value, int noget)
 				denise_update_reg_queue(addr, value, rga_denise_cycle_line);
 			}
 		} else {
-			write_drga(addr, NULL, v);
+			write_drga(addr, 0, v);
 		}
 	}
 	return ret;
@@ -9503,6 +9505,8 @@ static void generate_copper(void)
 					generate_copper_cycle_if_free(CYCLE_PIPE_COPPER | 0xf);
 				}
 				break;
+				default:
+					break;
 			}
 		}
 		return;
@@ -11309,9 +11313,7 @@ static int can_fast_custom(void)
 			}
 		}
 	}
-	if (0 || 1)
-		return 1;
-	return 0;
+	return 1;
 }
 
 static void do_imm_dmal(void)

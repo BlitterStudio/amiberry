@@ -178,7 +178,7 @@ static TCHAR* amigatopc(const char* txt)
 	auto j = 0;
 	for (unsigned int i = 0; i < len; i++)
 	{
-		const auto c = txt[i];
+		const auto c = static_cast<unsigned char>(txt[i]);
 		if (c == 0 && i + 1 < len)
 			continue;
 #ifdef _WIN32
