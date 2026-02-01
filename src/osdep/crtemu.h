@@ -264,6 +264,7 @@ struct crtemu_t {
 	unsigned int last_present_format;
 	unsigned int last_present_type;
 	CRTEMU_GLint texture_filter; // GL_NEAREST or GL_LINEAR for NONE mode
+	bool is_mobile_gpu; // True for GLES/VideoCore - enables mobile optimizations
 
 	CRTEMU_GLint loc_blur_blur;
 	CRTEMU_GLint loc_blur_texture;
@@ -348,7 +349,13 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
     // Detect GL version
     const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
     bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") || strstr(gl_ver_str, "OpenGL ES-CM"));
-    
+
+    // Detect mobile GPU (GLES indicates mobile/embedded GPU like VideoCore on RPI)
+    // This enables performance optimizations like mediump precision and reduced blur
+    if (is_gles && !crtemu->is_mobile_gpu) {
+        crtemu->is_mobile_gpu = true;
+    }
+
     // Check for Core Profile (Desktop GL >= 3.2 usually implied by Core)
     // We can also check specific version numbers if needed.
     bool is_core = !is_gles;
@@ -378,8 +385,15 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
     fs_preamble = "precision highp float;\n";
 #else
     if (is_gles) {
-        vs_preamble = "#version 300 es\nprecision highp float;\n";
-        fs_preamble = "#version 300 es\nprecision highp float;\n";
+        // Use mediump on mobile GPUs for better performance (2-3x faster on VideoCore)
+        // highp is slow on mobile tile-based GPUs; mediump is sufficient for CRT effects
+        if (crtemu->is_mobile_gpu) {
+            vs_preamble = "#version 300 es\nprecision mediump float;\n";
+            fs_preamble = "#version 300 es\nprecision mediump float;\n";
+        } else {
+            vs_preamble = "#version 300 es\nprecision highp float;\n";
+            fs_preamble = "#version 300 es\nprecision highp float;\n";
+        }
         vs_defines = "#define attribute in\n#define varying out\n";
         fs_defines = "#define varying in\n#define texture2D texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n";
     } else if (is_core) {
@@ -620,6 +634,7 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    }\n"
 			"\n";
 
+	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
 			"varying vec2 uv;"
@@ -638,6 +653,25 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
@@ -692,7 +726,9 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -854,6 +890,7 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"   \n"
 			"";
 
+	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
 			"varying vec2 uv;"
@@ -872,6 +909,25 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
@@ -926,7 +982,9 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -1020,6 +1078,7 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"   \n"
 			"";
 
+	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
 			"varying vec2 uv;"
@@ -1038,6 +1097,25 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
@@ -1092,7 +1170,9 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -1273,6 +1353,25 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
 	char const* accumulate_fs_source =
 			""
 			"varying vec2 uv;"
@@ -1322,7 +1421,9 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -1409,6 +1510,11 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->last_present_width = 0;
 	crtemu->last_present_height = 0;
 	crtemu->texture_filter = CRTEMU_GL_LINEAR; // Default to linear filtering for NONE mode
+
+	// Detect mobile GPU (GLES) for performance optimizations
+	// This must be done after GL context is current, so we defer to first use
+	// The actual detection happens in crtemu_internal_build_shader
+	crtemu->is_mobile_gpu = false;
 
 #ifndef CRTEMU_SDL
 
@@ -1829,16 +1935,34 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	if (crtemu->type == CRTEMU_TYPE_NONE) {
+		// Track size/format changes for texture caching (same optimization as non-NONE shaders)
+		bool size_or_format_changed = (width != crtemu->last_present_width ||
+									   height != crtemu->last_present_height ||
+									   pixel_format != crtemu->last_present_format ||
+									   pixel_type != crtemu->last_present_type);
+
 		// Just copy to backbuffer and present
 		if( pixels_xbgr ) {
 			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / bpp);
-			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, pixel_type, pixels_xbgr );
+
+			if (size_or_format_changed) {
+				// Reallocate texture only when dimensions/format change
+				crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, pixel_type, pixels_xbgr );
+				crtemu->last_present_width = width;
+				crtemu->last_present_height = height;
+				crtemu->last_present_format = pixel_format;
+				crtemu->last_present_type = pixel_type;
+			} else {
+				// Fast path: update existing texture without reallocation
+				crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, pixel_format, pixel_type, pixels_xbgr );
+			}
+
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 		}
-		
+
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 		crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 		crtemu->UseProgram( crtemu->copy_shader );
@@ -1846,12 +1970,16 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
-		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
-		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
+
+		// Only set texture filter parameters when texture was recreated
+		if (size_or_format_changed) {
+			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
+			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
+		}
 
 		crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer_static );
 		crtemu->VertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );
-		
+
 		crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
@@ -1998,12 +2126,17 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
 
-	// Add slight blur to backbuffer
-	float backbuffer_blur = crtemu->type == CRTEMU_TYPE_TV ? 0.17f : 0.0f;
-	crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->accumulatebuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, backbuffer_blur, width, height );
+	// Add slight blur to backbuffer (skip on mobile for performance - this is a subtle effect)
+	if (!crtemu->is_mobile_gpu) {
+		float backbuffer_blur = crtemu->type == CRTEMU_TYPE_TV ? 0.17f : 0.0f;
+		if (backbuffer_blur > 0.0f) {
+			crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->accumulatebuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, backbuffer_blur, width, height );
+		}
+	}
 
-	// Create fully blurred version of backbuffer
-	crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->blurbuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, 1.0f, width, height );
+	// Create blurred version for ghosting (reduced radius on mobile for better performance)
+	float ghosting_blur_radius = crtemu->is_mobile_gpu ? 0.5f : 1.0f;
+	crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->blurbuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, ghosting_blur_radius, width, height );
 
 
 	// Present to screen with CRT shader

@@ -208,6 +208,7 @@ static float SDL2_getrefreshrate(const int monid)
 #ifdef USE_OPENGL
 static int current_vsync_interval = -1;
 static float cached_refresh_rate = 0.0f;
+static bool gl_state_initialized = false; // Track if GL state has been set for current context
 
 void update_vsync(const int monid)
 {
@@ -2076,15 +2077,15 @@ void show_screen(const int monid, int mode)
 		}
 	}
 
-	// Reset GL state to a known baseline
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_STENCIL_TEST);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
-	
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	// Reset GL state to a known baseline - only on first frame after context creation
+	if (!gl_state_initialized) {
+		glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_BLEND);
+		gl_state_initialized = true;
+	}
 
 	float desired_aspect = calculate_desired_aspect(mon);
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
@@ -2102,6 +2103,12 @@ void show_screen(const int monid, int mode)
 
 	int destX = (drawableWidth - destW) / 2;
 	int destY = (drawableHeight - destH) / 2;
+
+	// Only clear if letterboxing is active (frame doesn't cover entire window)
+	if (destW < drawableWidth || destH < drawableHeight) {
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
 
 	glViewport(destX, destY, destW, destH);
 
@@ -2479,6 +2486,7 @@ static void close_hwnds(struct AmigaMonitor* mon)
 		gl_context = nullptr;
 		current_vsync_interval = -1; // Reset VSync state
 		cached_refresh_rate = 0.0f;
+		gl_state_initialized = false; // Reset GL state flag for next context
 	}
 #else
 	if (mon->amiga_renderer && !kmsdrm_detected)
