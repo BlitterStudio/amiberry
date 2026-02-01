@@ -2848,36 +2848,36 @@ et4000w32p_hwcursor_draw(svga_t *svga, int displine)
         if (!(xx % shift)) {
             xx2 = xx / shift;
             if (!(dat & 2))
-                buffer32->line[displine][xx2] = (dat & 1) ? 0xFFFFFF : 0;
+                ((uint32_t *)buffer32->line[displine])[xx2] = (dat & 1) ? 0xFFFFFF : 0;
             else if ((dat & 3) == 3)
-                buffer32->line[displine][xx2] ^= 0xFFFFFF;
+                ((uint32_t *)buffer32->line[displine])[xx2] ^= 0xFFFFFF;
         }
         dat >>= 2;
         xx++;
         if (!(xx % shift)) {
             xx2 = xx / shift;
             if (!(dat & 2))
-                buffer32->line[displine][xx2] = (dat & 1) ? 0xFFFFFF : 0;
+                ((uint32_t *)buffer32->line[displine])[xx2] = (dat & 1) ? 0xFFFFFF : 0;
             else if ((dat & 3) == 3)
-                buffer32->line[displine][xx2] ^= 0xFFFFFF;
+                ((uint32_t *)buffer32->line[displine])[xx2] ^= 0xFFFFFF;
         }
         dat >>= 2;
         xx++;
         if (!(xx % shift)) {
             xx2 = xx / shift;
             if (!(dat & 2))
-                buffer32->line[displine][xx2] = (dat & 1) ? 0xFFFFFF : 0;
+                ((uint32_t *)buffer32->line[displine])[xx2] = (dat & 1) ? 0xFFFFFF : 0;
             else if ((dat & 3) == 3)
-                buffer32->line[displine][xx2] ^= 0xFFFFFF;
+                ((uint32_t *)buffer32->line[displine])[xx2] ^= 0xFFFFFF;
         }
         dat >>= 2;
         xx++;
         if (!(xx % shift)) {
             xx2 = xx / shift;
             if (!(dat & 2))
-                buffer32->line[displine][xx2] = (dat & 1) ? 0xFFFFFF : 0;
+                ((uint32_t *)buffer32->line[displine])[xx2] = (dat & 1) ? 0xFFFFFF : 0;
             else if ((dat & 3) == 3)
-                buffer32->line[displine][xx2] ^= 0xFFFFFF;
+                ((uint32_t *)buffer32->line[displine])[xx2] ^= 0xFFFFFF;
         }
         dat >>= 2;
 

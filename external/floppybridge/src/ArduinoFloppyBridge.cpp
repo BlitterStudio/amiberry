@@ -254,6 +254,8 @@ bool ArduinoFloppyDiskBridge::performNoClickSeek() {
 	case ArduinoFloppyReader::DiagnosticResponse::drSendParameterFailed:
 		m_wasIOError = true;
 		return false;
+	default:
+		break;
 	}
 
 	return false;

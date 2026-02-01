@@ -85,7 +85,6 @@ set(SOURCE_FILES
         src/scsi.cpp
         src/scsiemul.cpp
         src/scsitape.cpp
-        src/slirp_uae.cpp
         src/sndboard.cpp
         src/specialmonitors.cpp
         src/statusline.cpp
@@ -250,24 +249,6 @@ set(SOURCE_FILES
         src/qemuvga/qemu.cpp
         src/qemuvga/qemuuaeglue.cpp
         src/qemuvga/vga.cpp
-        src/slirp/bootp.cpp
-        src/slirp/cksum.cpp
-        src/slirp/if.cpp
-        src/slirp/ip_icmp.cpp
-        src/slirp/ip_input.cpp
-        src/slirp/ip_output.cpp
-        src/slirp/mbuf.cpp
-        src/slirp/misc.cpp
-        src/slirp/sbuf.cpp
-        src/slirp/slirp.cpp
-        src/slirp/slirpdebug.cpp
-        src/slirp/socket.cpp
-        src/slirp/tcp_input.cpp
-        src/slirp/tcp_output.cpp
-        src/slirp/tcp_subr.cpp
-        src/slirp/tcp_timer.cpp
-        src/slirp/tftp.cpp
-        src/slirp/udp.cpp
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
         src/osdep/gui/main_window.cpp
@@ -299,6 +280,34 @@ set(SOURCE_FILES
         src/jit/compemu_fpp.cpp
         src/jit/compemu_support.cpp
 )
+
+# Suppress pragma-pack warnings for SLIRP network protocol headers
+# These are legacy headers with specific struct alignment requirements
+set(SLIRP_SOURCES
+		src/slirp_uae.cpp
+		src/slirp/bootp.cpp
+		src/slirp/cksum.cpp
+		src/slirp/if.cpp
+		src/slirp/ip_icmp.cpp
+		src/slirp/ip_input.cpp
+		src/slirp/ip_output.cpp
+		src/slirp/mbuf.cpp
+		src/slirp/misc.cpp
+		src/slirp/sbuf.cpp
+		src/slirp/slirp.cpp
+		src/slirp/slirpdebug.cpp
+		src/slirp/socket.cpp
+		src/slirp/tcp_input.cpp
+		src/slirp/tcp_output.cpp
+		src/slirp/tcp_subr.cpp
+		src/slirp/tcp_timer.cpp
+		src/slirp/tftp.cpp
+		src/slirp/udp.cpp
+)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+	set_source_files_properties(${SLIRP_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-pragma-pack")
+endif()
+list(APPEND SOURCE_FILES ${SLIRP_SOURCES})
 
 set(IMGUI_GUI_FILES
 		src/osdep/imgui/about.cpp

@@ -15,7 +15,9 @@
 #include "vid_svga_render.h"
 #include "vid_vga.h"
 #include "vid_unk_ramdac.h"
+#undef printf
 #include "uae/log.h"
+#define printf pclog
 
 enum
 {
