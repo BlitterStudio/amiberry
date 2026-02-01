@@ -16,8 +16,6 @@
 
 #include "floppybridge_lib.h"
 #include <string>
-#include <codecvt>
-#include <locale>
 #include <algorithm>
 #include <cstring>
 #ifndef _WIN32
@@ -318,15 +316,22 @@ void prepareBridge() {
 	}
 }
 
-// character conversions
-using convert_t = std::codecvt_utf8<wchar_t>;
-static std::wstring_convert<convert_t, wchar_t> strconverter;
-
+// Simple wstring to string conversion (ASCII-safe)
 void _quickw2a(const std::wstring& wstr, std::string& str) {
-	str = strconverter.to_bytes(wstr);
+	str.clear();
+	str.reserve(wstr.size());
+	for (wchar_t wc : wstr) {
+		str.push_back(static_cast<char>(wc & 0xFF));
+	}
 }
+
+// Simple string to wstring conversion
 void _quicka2w(const std::string& str, std::wstring& wstr) {
-	wstr = strconverter.from_bytes(str);
+	wstr.clear();
+	wstr.reserve(str.size());
+	for (char c : str) {
+		wstr.push_back(static_cast<wchar_t>(static_cast<unsigned char>(c)));
+	}
 }
 
 // Copy or convert a char* to a TCHAR

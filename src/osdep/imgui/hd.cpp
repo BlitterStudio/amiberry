@@ -130,7 +130,7 @@ static void RenderMountedDrives()
 
             // Handle TCHAR rootdir
             std::string rootdir_str;
-            char* tmp_root = ua(mi.rootdir ? mi.rootdir : ci->rootdir);
+            char* tmp_root = ua(mi.rootdir[0] ? mi.rootdir : ci->rootdir);
             if (tmp_root) {
                 rootdir_str = tmp_root;
                 xfree(tmp_root);

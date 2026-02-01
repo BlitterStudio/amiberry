@@ -155,7 +155,7 @@ void render_panel_rom()
 	
 	// Address From
 	char addr_from[16];
-	sprintf(addr_from, "%08x", rb->start_address);
+	snprintf(addr_from, sizeof(addr_from), "%08x", rb->start_address);
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(BUTTON_WIDTH);
 	if (ImGui::InputText("##AddressRangeFrom", addr_from, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
@@ -169,7 +169,7 @@ void render_panel_rom()
 	if (!rb->end_address && !rb->start_address)
 		strcpy(addr_to, "00000000");
 	else
-		sprintf(addr_to, "%08x", rb->end_address);
+		snprintf(addr_to, sizeof(addr_to), "%08x", rb->end_address);
 		
 	ImGui::SameLine();
 	ImGui::SetNextItemWidth(BUTTON_WIDTH);

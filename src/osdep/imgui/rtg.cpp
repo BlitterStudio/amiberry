@@ -120,7 +120,7 @@ void render_panel_rtg() {
 
         // Display textual representation of the slider value
         char vram_label[32];
-        sprintf(vram_label, "%d MB", 1 << slider_val);
+        snprintf(vram_label, sizeof(vram_label), "%d MB", 1 << slider_val);
 
         ImGui::Text("VRAM size:");
         if (ImGui::SliderInt("##VRAMsizeSlider", &slider_val, 0, max_slider_val, vram_label)) {

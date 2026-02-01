@@ -80,6 +80,18 @@ static void qs_set_control_state(int model, bool &df1_visible, bool &cd_visible,
 
 void Quickstart_ApplyDefaults() {
     built_in_prefs(&changed_prefs, quickstart_model, quickstart_conf, 0, 0);
+
+    // Enforce constraints similar to WinUAE
+    if (quickstart_model <= 4) { // A500, A500+, A600, A1000, A1200
+        // Force DF0 to DD if it was set to HD
+        if (changed_prefs.floppyslots[0].dfxtype == DRV_35_HD)
+            changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
+        
+        // Disable other drives for these stock models if needed, 
+        // but built_in_prefs usually handles it. 
+        // We just ensure DF0 isn't HD.
+    }
+
     switch (quickstart_model) {
         case 0: // A500
         case 1: // A500+
@@ -88,7 +100,11 @@ void Quickstart_ApplyDefaults() {
         case 4: // A1200
         case 5: // A3000
             // df0 always active
-            changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
+            // Ensure type is DD for A500-A1200 (Cases 0-4) handled above, 
+            // A3000 (Case 5) can have HD, so we don't force it to DD here.
+            if (changed_prefs.floppyslots[0].dfxtype == DRV_NONE)
+                changed_prefs.floppyslots[0].dfxtype = DRV_35_DD;
+            
             changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 
             // No CD available
@@ -102,7 +118,8 @@ void Quickstart_ApplyDefaults() {
         case 7: // A4000T
         case 12: // Macrosystem
             // df0 always active
-            changed_prefs.floppyslots[0].dfxtype = DRV_35_HD;
+            if (changed_prefs.floppyslots[0].dfxtype == DRV_NONE)
+                changed_prefs.floppyslots[0].dfxtype = DRV_35_HD;
             changed_prefs.floppyslots[1].dfxtype = DRV_NONE;
 
             // No CD available
@@ -130,9 +147,19 @@ void Quickstart_ApplyDefaults() {
         default:
             break;
     }
+    
+    // Clear current config filename to indicate we are running in Quickstart mode
+    last_loaded_config[0] = 0;
 }
 
 void render_panel_quickstart() {
+    // Check if we need to apply Quickstart defaults on first show
+    static bool initial_sync_done = false;
+    if (!initial_sync_done && !emulating && !last_loaded_config[0]) {
+        Quickstart_ApplyDefaults();
+        initial_sync_done = true;
+    }
+
     // Refresh MRU display lists once per frame
     qs_refresh_disk_list_model();
     qs_refresh_cd_list_model();
@@ -233,7 +260,7 @@ void render_panel_quickstart() {
     }
     EndGroupBox("Emulated Hardware");
 
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    ImGui::Spacing();
 
     BeginGroupBox("Emulated Drives");
     auto render_floppy_drive = [&](int i, bool is_editable) {
@@ -279,7 +306,7 @@ void render_panel_quickstart() {
         // 3. Drive Type Combo
         int nn = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
         int selectedFloppyType = nn + 1;
-        ImGui::SetNextItemWidth(BUTTON_WIDTH); // Narrower combo
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
         snprintf(label, sizeof(label), "##QSFloppyType%d", i);
         if (!drive_enabled) ImGui::BeginDisabled();
         if (ImGui::BeginCombo(label, floppy_drive_types[selectedFloppyType])) {
@@ -287,24 +314,36 @@ void render_panel_quickstart() {
                 const bool is_selected = (selectedFloppyType == n);
                 if (is_selected)
                     ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(floppy_drive_types[n], is_selected)) {
-                    selectedFloppyType = n;
-                    int sub = 0;
-                    int dfxtype = todfxtype(i, selectedFloppyType - 1, &sub);
-                    changed_prefs.floppyslots[i].dfxtype = dfxtype;
-                    changed_prefs.floppyslots[i].dfxsubtype = sub;
-                    if (dfxtype == DRV_FB) {
-                        TCHAR tmp[32];
-                        _sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedFloppyType - 5,
-                                   drivebridgeModes[selectedFloppyType - 6].data());
-                        _tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
-                    } else {
-                        changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
-                    }
+                // Filter out HD options for models that don't support it in Quickstart
+                bool allowed = true;
+                if (quickstart_model <= 4) { // A500-A1200
+                     int sub = 0;
+                     int dfxtype = todfxtype(i, n - 1, &sub);
+                     if (dfxtype == DRV_35_HD)
+                         allowed = false;
                 }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
+
+                if (allowed) {
+                    if (ImGui::Selectable(floppy_drive_types[n], is_selected)) {
+                        selectedFloppyType = n;
+                        int sub = 0;
+                        int dfxtype = todfxtype(i, selectedFloppyType - 1, &sub);
+                        changed_prefs.floppyslots[i].dfxtype = dfxtype;
+                        changed_prefs.floppyslots[i].dfxsubtype = sub;
+    
+                        if (dfxtype == DRV_FB) {
+                            TCHAR tmp[32];
+                            _sntprintf(tmp, sizeof tmp, _T("%d:%s"), selectedFloppyType - 5,
+                                       drivebridgeModes[selectedFloppyType - 6].data());
+                            _tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
+                        } else {
+                            changed_prefs.floppyslots[i].dfxsubtypeid[0] = 0;
+                        }
+                    }
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
                 }
             }
             ImGui::EndCombo();

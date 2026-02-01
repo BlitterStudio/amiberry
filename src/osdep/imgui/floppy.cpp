@@ -14,9 +14,6 @@ static std::vector<FloppyBridgeAPI::DriverInformation> driver_list;
 static bool drawbridge_initialized = false;
 #endif
 
-extern std::vector<std::string> lstMRUDiskList;
-extern void add_file_to_mru_list(std::vector<std::string>& vec, const std::string& file);
-
 static const char* drive_speed_list[] = {"Turbo", "100% (compatible)", "200%", "400%", "800%"};
 static const int drive_speed_values[] = {0, 100, 200, 400, 800};
 
@@ -62,7 +59,7 @@ static std::string format_mru_entry(const std::string& fullpath) {
     return filename + " { " + fullpath + " }";
 }
 
-static void RenderDriveSlot(int i)
+static void RenderDriveSlot(const int i)
 {
     ImGui::PushID(i);
         
@@ -71,36 +68,37 @@ static void RenderDriveSlot(int i)
     
     if (ImGui::BeginTable(table_id, 7, ImGuiTableFlags_None))
     {
-        ImGui::TableSetupColumn("En", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 130.0f); 
-        ImGui::TableSetupColumn("WP", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("En", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH / 2);
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.5f);
+        ImGui::TableSetupColumn("WP", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.5f);
         ImGui::TableSetupColumn("Filler", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, 30.0f);
-        ImGui::TableSetupColumn("Eject", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-        ImGui::TableSetupColumn("Sel", ImGuiTableColumnFlags_WidthFixed, 30.0f);
+        ImGui::TableSetupColumn("Info", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH / 3);
+        ImGui::TableSetupColumn("Eject", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+        ImGui::TableSetupColumn("Sel", ImGuiTableColumnFlags_WidthStretch);
 
         ImGui::TableNextRow();
         
         // 1. Enabled Checkbox
         ImGui::TableNextColumn();
-        bool enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
+        bool drive_enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
         char label[8];
         snprintf(label, sizeof(label), "DF%d:", i);
-        if (AmigaCheckbox(label, &enabled)) {
-             if (enabled && changed_prefs.floppyslots[i].dfxtype == DRV_NONE)
+        if (AmigaCheckbox(label, &drive_enabled)) {
+             if (drive_enabled && changed_prefs.floppyslots[i].dfxtype == DRV_NONE)
                  changed_prefs.floppyslots[i].dfxtype = DRV_35_DD;
-             else if (!enabled)
+             else if (!drive_enabled)
                  changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
         }
 
-        ImGui::BeginDisabled(!enabled);
+        ImGui::BeginDisabled(!drive_enabled);
 
         // 2. Type Dropdown
         ImGui::TableNextColumn();
         int type_idx = fromdfxtype(i, changed_prefs.floppyslots[i].dfxtype, changed_prefs.floppyslots[i].dfxsubtype);
         
-        ImGui::SetNextItemWidth(-1);
-        if (ImGui::BeginCombo("##Type", drive_types[type_idx])) {
+        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x);
+        const char* type_name = (type_idx >= 0 && type_idx < IM_ARRAYSIZE(drive_types)) ? drive_types[type_idx] : "Disabled";
+        if (ImGui::BeginCombo("##FloppyTypeCombo", type_name)) {
             for (int n = 0; n < IM_ARRAYSIZE(drive_types); n++) {
                 const bool is_selected = (type_idx == n);
                 if (is_selected)
@@ -115,7 +113,6 @@ static void RenderDriveSlot(int i)
                     if (dfxtype == DRV_FB) {
                         if (type_idx >= 5 && (type_idx - 5) < 4) {
                             TCHAR tmp[32];
-                            extern const std::vector<std::string> floppy_bridge_modes;
                             _sntprintf(tmp, sizeof tmp, _T("%d:%s"), type_idx - 4, floppy_bridge_modes[type_idx - 5].c_str());
                             _tcscpy(changed_prefs.floppyslots[i].dfxsubtypeid, tmp);
                         }
@@ -135,7 +132,7 @@ static void RenderDriveSlot(int i)
         // 3. WP Checkbox
         ImGui::TableNextColumn();
         bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
-        if (AmigaCheckbox("##WP", &wp)) {
+        if (AmigaCheckbox("Write Protected", &wp)) {
             disk_setwriteprotect(&changed_prefs, i, changed_prefs.floppyslots[i].df, wp);
             if (disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i) != wp) {
                 // Failed to change write protection -> maybe filesystem doesn't support this
@@ -144,7 +141,7 @@ static void RenderDriveSlot(int i)
             DISK_reinsert(i);
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Write-protected");
-        
+
         // 4. Filler
         ImGui::TableNextColumn();
         
@@ -164,7 +161,7 @@ static void RenderDriveSlot(int i)
         
         // 7. Select Button
         ImGui::TableNextColumn();
-        if (AmigaButton("...", ImVec2(-1, 0))) {
+        if (AmigaButton("...")) {
              current_floppy_dialog_mode = static_cast<FloppyDialogMode>(static_cast<int>(FloppyDialogMode::SelectDF0) + i);
              std::string startPath = changed_prefs.floppyslots[i].df;
              if (startPath.empty()) startPath = get_floppy_path(); 
@@ -179,7 +176,7 @@ static void RenderDriveSlot(int i)
     bool enabled = changed_prefs.floppyslots[i].dfxtype != DRV_NONE;
     ImGui::BeginDisabled(!enabled);
     
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+    ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x);
     std::string current_val = changed_prefs.floppyslots[i].df;
     if (current_val.empty()) current_val = "";
     

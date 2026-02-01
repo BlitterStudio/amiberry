@@ -232,7 +232,6 @@ void render_panel_ram() {
     // Top Row: Selector ...... Slider [ Size ]
     ImGui::SetNextItemWidth(BUTTON_WIDTH * 3);
     if (ImGui::BeginCombo("##RamSelector", get_ramboard_name(current_advanced_ram_idx))) {
-        bool z3_enabled = !changed_prefs.address_space_24;
         for (int i = 0; i < 7; ++i) {
             // Filter out Z3/32-bit boards if in 24-bit mode
             if (!z3_enabled) {
@@ -282,8 +281,8 @@ void render_panel_ram() {
         }
 
         if (current_msi) {
-             ImGui::SameLine(300); // Fixed offset to push to right side
-             ImGui::SetNextItemWidth(BUTTON_WIDTH);
+             ImGui::SameLine();
+             ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
              
              int current_size_idx = get_mem_index(rb->size, current_msi, msi_count);
 
@@ -298,6 +297,7 @@ void render_panel_ram() {
                          changed_prefs.chipmem.size = 0x200000;
                  }
              }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
 
              ImGui::SameLine();
              ImGui::SetNextItemWidth(BUTTON_WIDTH);
@@ -309,7 +309,7 @@ void render_panel_ram() {
         }
     }
 
-    ImGui::Dummy(ImVec2(0, 5));
+    ImGui::Spacing();
 
     if (rb) {
         if (ImGui::BeginTable("AdvRamDetails", 2)) {
@@ -328,11 +328,11 @@ void render_panel_ram() {
             // Manufacturer & Product on same line
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Manufacturer");
-            ImGui::SameLine(130);
+            ImGui::SameLine();
             
             ImGui::BeginDisabled(!edit_ac);
             char manuf_buf[8];
-            sprintf(manuf_buf, "%04X", rb->manufacturer);
+            snprintf(manuf_buf, sizeof(manuf_buf), "%04X", rb->manufacturer);
             ImGui::SetNextItemWidth(BUTTON_WIDTH);
             if (ImGui::InputText("##Manuf", manuf_buf, 8, ImGuiInputTextFlags_CharsHexadecimal)) {
                 rb->manufacturer = (uae_u16) strtoul(manuf_buf, nullptr, 16);
@@ -345,7 +345,7 @@ void render_panel_ram() {
             ImGui::Text("Product");
             ImGui::SameLine();
             char prod_buf[8];
-            sprintf(prod_buf, "%02X", rb->product);
+            snprintf(prod_buf, sizeof(prod_buf), "%02X", rb->product);
             ImGui::SetNextItemWidth(BUTTON_WIDTH / 2);
             if (ImGui::InputText("##Product", prod_buf, 8, ImGuiInputTextFlags_CharsHexadecimal)) {
                 rb->product = (uae_u8) strtoul(prod_buf, nullptr, 16);
@@ -372,7 +372,7 @@ void render_panel_ram() {
                      *p++ = '.';
                  }
                  if (i < 12) // WinUAE usually shows first 12 bytes or so
-                    sprintf(p, "%02X", rb->autoconfig[i]);
+                    snprintf(p, 3, "%02X", rb->autoconfig[i]);
                  p += 2;
             }
             ImGui::InputText("##Autoconfig", autoconfig_buf, 64, ImGuiInputTextFlags_ReadOnly);
@@ -441,7 +441,7 @@ void render_panel_ram() {
             ImGui::Text("Address range");
             ImGui::SameLine();
             char addr_buf[16];
-            sprintf(addr_buf, "%08X", rb->start_address);
+            snprintf(addr_buf, sizeof(addr_buf), "%08X", rb->start_address);
             ImGui::SetNextItemWidth(BUTTON_WIDTH);
             if (ImGui::InputText("##Address", addr_buf, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
                 rb->start_address = strtoul(addr_buf, nullptr, 16);
@@ -453,12 +453,12 @@ void render_panel_ram() {
             uae_u32 end_addr = rb->start_address + rb->size;
             if (end_addr > 0) end_addr -= 1; // Inclusive range usually
             if (rb->manual_config) {
-                 if (rb->end_address > rb->start_address) 
+                 if (rb->end_address > rb->start_address)
                      end_addr = rb->end_address;
                  else
                      end_addr = rb->start_address + rb->size - 1; // Default
             }
-            sprintf(end_addr_buf, "%08X", end_addr);
+            snprintf(end_addr_buf, sizeof(end_addr_buf), "%08X", end_addr);
             ImGui::InputText("##AddressEnd", end_addr_buf, 16, ImGuiInputTextFlags_ReadOnly);
             ImGui::EndDisabled();
 
@@ -488,7 +488,6 @@ void render_panel_ram() {
             ImGui::Text("Z3 mapping mode:");
             const char *z3_mapping_items[] = {"Automatic (*)", "UAE", "Real"};
             ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-            bool z3_enabled = !changed_prefs.address_space_24;
             ImGui::BeginDisabled(!z3_enabled);
             ImGui::Combo("##Z3Mapping", &changed_prefs.z3_mapping_mode, z3_mapping_items,
                          IM_ARRAYSIZE(z3_mapping_items));
