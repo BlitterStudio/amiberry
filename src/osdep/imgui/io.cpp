@@ -130,7 +130,7 @@ void render_panel_io()
 	if (!stereo_enabled) ImGui::BeginDisabled();
 	AmigaCheckbox("Stereo sampler", &changed_prefs.sampler_stereo);
 	if (!stereo_enabled) ImGui::EndDisabled();
-
+	ImGui::Spacing();
 	EndGroupBox("Parallel Port");
 
 	// ---------------------------------------------------------

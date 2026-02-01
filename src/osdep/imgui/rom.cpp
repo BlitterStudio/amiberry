@@ -137,6 +137,7 @@ void render_panel_rom()
     
 	ImGui::SameLine();
 	AmigaCheckbox("ShapeShifter support", &changed_prefs.kickshifter);
+	ImGui::Spacing();
 	EndGroupBox("System ROM Settings");
 
 	BeginGroupBox("Advanced Custom ROM Settings");
@@ -186,6 +187,7 @@ void render_panel_rom()
     	current_pick_type = RomPickType::Custom;
 	    OpenFileDialog("Select Custom ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
     }
+	ImGui::Spacing();
 	EndGroupBox("Advanced Custom ROM Settings");
 
 	BeginGroupBox("Miscellaneous");
@@ -214,6 +216,7 @@ void render_panel_rom()
 		current_pick_type = RomPickType::RTC;
 		OpenFileDialog("Select RTC File", ".*", changed_prefs.rtcfile);
 	}
+	ImGui::Spacing();
 	EndGroupBox("Miscellaneous");
 
 	BeginGroupBox("Advanced UAE expansion board/Boot ROM Settings");
@@ -241,6 +244,7 @@ void render_panel_rom()
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 	ImGui::EndDisabled();
+	ImGui::Spacing();
 	EndGroupBox("Advanced UAE expansion board/Boot ROM Settings");
 
 	ImGui::Unindent(4.0f);

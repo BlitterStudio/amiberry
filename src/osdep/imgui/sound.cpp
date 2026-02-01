@@ -174,7 +174,7 @@ void render_panel_sound() {
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         ImGui::SameLine();
         ImGui::Text("%d%%", display_vol);
-
+        ImGui::Spacing();
         EndGroupBox("Volume");
 
         ImGui::EndTable();
@@ -405,6 +405,7 @@ void render_panel_sound() {
 
         ImGui::EndTable();
     }
+    ImGui::Spacing();
     EndGroupBox("Settings");
 
     // ---------------------------------------------------------
@@ -486,7 +487,7 @@ void render_panel_sound() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-
+        ImGui::Spacing();
         EndGroupBox("Floppy Drive Sound Emulation");
 
         ImGui::TableNextColumn();
@@ -513,7 +514,7 @@ void render_panel_sound() {
         AmigaRadioButton("Pull", &changed_prefs.sound_pullmode, 1);
         ImGui::SameLine();
         AmigaRadioButton("Push", &changed_prefs.sound_pullmode, 0);
-
+        ImGui::Spacing();
         EndGroupBox("Sound Buffer Size");
 
         ImGui::EndTable();

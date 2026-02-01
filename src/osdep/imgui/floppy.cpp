@@ -352,7 +352,7 @@ static void RenderDrawBridge()
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ImGui::EndDisabled();
-
+    ImGui::Spacing();
     EndGroupBox("DrawBridge (FloppyBridge)");
 }
 #endif
@@ -404,7 +404,7 @@ void render_panel_floppy()
     strncpy(speed_label, drive_speed_list[speed_idx], 32);
     ImGui::InputText("##SpeedLabel", speed_label, 32, ImGuiInputTextFlags_ReadOnly);
     ImGui::EndDisabled();
-
+    ImGui::Spacing();
     EndGroupBox("Floppy Drive Emulation Speed");
 
     // ---------------------------------------------------------
@@ -439,7 +439,7 @@ void render_panel_floppy()
         cfgfile_save(&changed_prefs, filename, 0);
     }
     ImGui::EndDisabled();
-
+    ImGui::Spacing();
     EndGroupBox("New Floppy Disk Image");
 
 #ifdef FLOPPYBRIDGE

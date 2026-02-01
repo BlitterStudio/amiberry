@@ -202,6 +202,7 @@ void render_panel_chipset() {
                 }
             }
             ImGui::EndDisabled();
+            ImGui::Spacing();
         }
         EndGroupBox("Chipset");
 
@@ -214,11 +215,13 @@ void render_panel_chipset() {
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
+            ImGui::Spacing();
             bool disable_nkro = (changed_prefs.keyboard_mode == KB_UAE || changed_prefs.keyboard_mode == KB_A2000_8039);
             if (disable_nkro) changed_prefs.keyboard_nkro = true;
 
             ImGui::BeginDisabled(disable_nkro);
             AmigaCheckbox("Keyboard N-key rollover", &changed_prefs.keyboard_nkro);
+            ImGui::Spacing();
             ImGui::EndDisabled();
         }
         EndGroupBox("Keyboard");
@@ -276,9 +279,6 @@ void render_panel_chipset() {
 
             // Map cs_compatible value to index
             int cs_compatible_idx = changed_prefs.cs_compatible;
-            // Note: Since Chipset Extra list has "Custom" at 0, "Generic" at 1... and CP_GENERIC=1,
-            // the index maps 1:1 to the enum value for all valid items.
-            // If value is invalid, we might default to 0?
             if (cs_compatible_idx < 0 || cs_compatible_idx >= IM_ARRAYSIZE(chipset_items)) {
                 cs_compatible_idx = 0; // Default to Custom
             }
@@ -345,6 +345,7 @@ void render_panel_chipset() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+            ImGui::Spacing();
         }
         EndGroupBox("Options");
 
@@ -357,16 +358,20 @@ void render_panel_chipset() {
     {
         ImGui::BeginGroup();
         AmigaRadioButton("None##Collision", &changed_prefs.collision_level, 0);
+        ImGui::Spacing();
         AmigaRadioButton("Sprites only", &changed_prefs.collision_level, 1);
+        ImGui::Spacing();
         ImGui::EndGroup();
 
         ImGui::SameLine();
-        ImGui::Dummy(ImVec2(20.0f, 0));
+        ImGui::Dummy(ImVec2(BUTTON_WIDTH / 2, 0));
         ImGui::SameLine();
 
         ImGui::BeginGroup();
         AmigaRadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
+        ImGui::Spacing();
         AmigaRadioButton("Full (rarely needed)", &changed_prefs.collision_level, 3);
+        ImGui::Spacing();
         ImGui::EndGroup();
     }
     EndGroupBox("Collision Level");
@@ -434,8 +439,8 @@ void render_panel_chipset() {
                 strncpy(filename_ptr, filePath.c_str(), MAX_DPATH);
             }
         }
-
         ImGui::EndDisabled();
+        ImGui::Spacing();
     }
     EndGroupBox("Genlock");
 }

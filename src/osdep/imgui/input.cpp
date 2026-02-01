@@ -211,6 +211,7 @@ void render_panel_input() {
 
         ImGui::EndTable();
     }
+    ImGui::Spacing();
     EndGroupBox("Mouse and Joystick settings");
 
     // ---------------------------------------------------------
@@ -288,6 +289,7 @@ void render_panel_input() {
 
         ImGui::EndTable();
     }
+    ImGui::Spacing();
     EndGroupBox("Emulated parallel port joystick adapter");
 
     // ---------------------------------------------------------
@@ -378,7 +380,7 @@ void render_panel_input() {
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
     ImGui::Text("%d", changed_prefs.input_joymouse_multiplier);
-
+    ImGui::Spacing();
     EndGroupBox("Game Controller Settings");
 
     // ---------------------------------------------------------
@@ -494,5 +496,6 @@ void render_panel_input() {
 
         ImGui::EndTable();
     }
+    ImGui::Spacing();
     EndGroupBox("Mouse extra settings");
 }

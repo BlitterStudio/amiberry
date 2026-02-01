@@ -20,7 +20,6 @@ void render_panel_prio() {
     ImGui::Indent(4.0f);
 
     const char *prio_items[] = {"Low", "Normal", "High"};
-    const float group_height = 220.0f;
 
     if (ImGui::BeginTable("PrioPanelTable", 3, ImGuiTableFlags_SizingStretchProp)) {
         // --- When Active ---

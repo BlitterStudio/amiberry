@@ -86,7 +86,7 @@ void render_panel_hwinfo()
     }
 
     // Bottom Controls
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    ImGui::Spacing();
     
     if (AmigaCheckbox("Custom board order", &changed_prefs.autoconfig_custom_sort)) {
         if (changed_prefs.autoconfig_custom_sort) {
@@ -96,12 +96,12 @@ void render_panel_hwinfo()
     
     ImGui::SameLine();
     ImGui::BeginDisabled(!changed_prefs.autoconfig_custom_sort || selected_row < 0);
-    if (AmigaButton("Move up")) {
+    if (AmigaButton("Move up", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
         int new_idx = expansion_autoconfig_move(&changed_prefs, selected_row, -1, false);
         if (new_idx >= 0) selected_row = new_idx;
     }
     ImGui::SameLine();
-    if (AmigaButton("Move down")) {
+    if (AmigaButton("Move down", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT))) {
         int new_idx = expansion_autoconfig_move(&changed_prefs, selected_row, 1, false);
         if (new_idx >= 0) selected_row = new_idx;
     }

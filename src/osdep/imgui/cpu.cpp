@@ -298,6 +298,7 @@ void render_panel_cpu() {
         }
         ImGui::SameLine(); ShowHelpMarker("Just-In-Time compilation. Greatly speeds up CPU emulation but reduces compatibility.");
         ImGui::EndDisabled();
+        ImGui::Spacing();
         EndGroupBox("CPU");
 
         BeginGroupBox("MMU");

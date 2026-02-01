@@ -39,7 +39,6 @@ static const int ExpansionCategoriesMask[] = {
     EXPANSIONTYPE_X86_EXPANSION
 };
 
-
 static std::vector<int> displayed_rom_indices;
 
 static void RefreshExpansionList() {
@@ -134,7 +133,7 @@ void render_panel_expansions() {
     BeginGroupBox("Expansion Board Settings");
 
     // Category Selector
-    ImGui::PushItemWidth(-1);
+    ImGui::PushItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
     if (ImGui::BeginCombo("##Category", ExpansionCategories[scsiromselectedcatnum])) {
         for (int i = 0; i < IM_ARRAYSIZE(ExpansionCategories); i++) {
             const bool is_selected = (scsiromselectedcatnum == i);
@@ -168,9 +167,9 @@ void render_panel_expansions() {
                                   : "Select Board...";
 
     float avail_w = ImGui::GetContentRegionAvail().x;
-    float enable_w = 120.0f;
-    float unit_w = 80.0f;
-    float board_w = avail_w - enable_w - unit_w - 20.0f;
+    float enable_w = BUTTON_WIDTH * 1.5f;
+    float unit_w = BUTTON_WIDTH;
+    float board_w = avail_w - enable_w - unit_w - BUTTON_WIDTH / 4;
 
     ImGui::PushItemWidth(board_w);
     if (ImGui::BeginCombo("##ExpansionBoard", preview_val)) {
@@ -515,26 +514,10 @@ void render_panel_expansions() {
                         const char *pp = (const char *) s->configname;
                         // If configname matches pattern (ID\0Val1\0Val2)
                         if (*pp) {
-                            // Use first item as Label/ID if name failed?
-                            // Or just assume it's a list.
-                            // Current buggy implementation treated it as list only.
-                            // But for multi, we need options.
-                            // Let's assume options are in name. If not, maybe it's malformed.
-                            // Fallback: use configname as options list (WinUAE compatibility check?)
                             while (*pp) {
                                 options.emplace_back(pp);
                                 pp += strlen(pp) + 1;
                             }
-
-                            // If we fell back to configname, the first item is likely the ID/Label,
-                            // so maybe we should remove it from options or use it as label?
-                            // But let's trust s->name is populated correctly for Multi.
-
-                            // Actually, for the Keyboard example:
-                            // name: "Options\0-\0RAM fault\0..."
-                            // configname: "kbmcuopt\0-\0ramf\0..."
-                            // So if we used configname, we got "kbmcuopt", "-", "ramf".
-                            // We want "-", "RAM fault" from name.
                         }
                     }
 
@@ -595,7 +578,7 @@ void render_panel_expansions() {
 
         // Left Column: Type & Subtype
         ImGui::Text("Accelerator Board:");
-        ImGui::SetNextItemWidth(-1);
+        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
         if (ImGui::BeginCombo("##AccelType", cpuboards[changed_prefs.cpuboard_type].name)) {
             for (int i = 0; cpuboards[i].name; i++) {
                 const bool is_selected = (changed_prefs.cpuboard_type == i);
@@ -617,7 +600,7 @@ void render_panel_expansions() {
 
         if (cpuboards[type].subtypes) {
             ImGui::Text("Subtype:");
-            ImGui::SetNextItemWidth(-1);
+            ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
             const cpuboardsubtype *subtypes = cpuboards[type].subtypes;
             if (ImGui::BeginCombo("##AccelSub", subtypes[changed_prefs.cpuboard_subtype].name)) {
                 int i = 0;
@@ -650,7 +633,7 @@ void render_panel_expansions() {
             char rom_path[MAX_DPATH] = "";
             if (brc) strncpy(rom_path, brc->roms[idx].romfile, MAX_DPATH);
 
-            ImGui::PushItemWidth(-40);
+            ImGui::PushItemWidth(-BUTTON_WIDTH / 2);
             ImGui::BeginDisabled(!gui_enabled); // Only change ROM if not running/safe
             ImGui::InputText("##AccelROM", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
             ImGui::PopItemWidth();
@@ -692,7 +675,7 @@ void render_panel_expansions() {
 
         if (max_idx > 0) {
             ImGui::Text("Board Memory:");
-            ImGui::SetNextItemWidth(-1);
+            ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
             ImGui::BeginDisabled(!gui_enabled);
             if (ImGui::SliderInt("##BoardMem", &current_idx, 0, max_idx, mem_labels[current_idx])) {
                 changed_prefs.cpuboardmem1.size = mem_sizes[current_idx] << 20;

@@ -89,7 +89,7 @@ static std::string format_size(long long size) {
         snprintf(buffer, sizeof(buffer), "%lldK", size / 1024);
     else
         snprintf(buffer, sizeof(buffer), "%.1fM", (double)(size / 1024) / 1024.0);
-    return std::string(buffer);
+    return {buffer};
 }
 
 static void RenderMountedDrives()
@@ -104,12 +104,12 @@ static void RenderMountedDrives()
 
     if (ImGui::BeginTable("MountedDrivesTable", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY))
     {
-        ImGui::TableSetupColumn("Device", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-        ImGui::TableSetupColumn("Volume", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+        ImGui::TableSetupColumn("Device", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+        ImGui::TableSetupColumn("Volume", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
         ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("R/W", ImGuiTableColumnFlags_WidthFixed, 40.0f);
-        ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 60.0f);
-        ImGui::TableSetupColumn("Boot", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("R/W", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH / 2);
+        ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
+        ImGui::TableSetupColumn("Boot", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH / 2);
         ImGui::TableHeadersRow();
 
         for (int row = 0; row < changed_prefs.mountitems; ++row)
@@ -315,7 +315,7 @@ static void RenderCDSection()
         changed_prefs.cd_speed = turbo ? 0 : 100;
     }
     
-    ImGui::Dummy(ImVec2(0, 5));
+    ImGui::Spacing();
 
     BeginGroupBox("CD Drive / Image");
     
@@ -387,6 +387,7 @@ static void RenderCDSection()
     }
     
     ImGui::EndDisabled();
+    ImGui::Spacing();
 
     std::string result_path;
     if (ConsumeFileDialogResult(result_path)) { 
@@ -1017,8 +1018,11 @@ void render_panel_hd()
 {
     ImGui::Indent(4.0f);
     RenderMountedDrives();
+    ImGui::Spacing();
     RenderActionButtons();
+    ImGui::Spacing();
     RenderCDSection();
+    ImGui::Spacing();
     
     // Logic to open Modals - Add Directory
     if (current_hd_dialog_mode == HDDialogMode::AddDir) {

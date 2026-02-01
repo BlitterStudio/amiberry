@@ -118,7 +118,7 @@ void render_panel_display() {
     ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
     ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -80, 80);
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-
+    ImGui::Spacing();
     EndGroupBox("Screen");
 
     ImGui::Spacing();
@@ -527,7 +527,7 @@ void render_panel_display() {
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
     }
-
+    ImGui::Spacing();
     EndGroupBox("Settings");
 
     ImGui::Spacing();
@@ -548,6 +548,7 @@ void render_panel_display() {
         if (AmigaCheckbox("Horizontal", &h_center)) changed_prefs.gfx_xcenter = h_center ? 2 : 0;
         bool v_center = changed_prefs.gfx_ycenter == 2;
         if (AmigaCheckbox("Vertical", &v_center)) changed_prefs.gfx_ycenter = v_center ? 2 : 0;
+        ImGui::Spacing();
         EndGroupBox("Centering");
 
         ImGui::TableNextColumn();
@@ -577,6 +578,7 @@ void render_panel_display() {
             changed_prefs.gfx_pscanlines = 3;
                                }
         if (!linemode_enabled) ImGui::EndDisabled();
+        ImGui::Spacing();
         EndGroupBox("Line Mode");
 
         ImGui::TableNextColumn();
@@ -629,6 +631,7 @@ void render_panel_display() {
         AmigaRadioButton("Double, fields##I", &changed_prefs.gfx_iscanlines, 1);
         AmigaRadioButton("Double, fields+##I", &changed_prefs.gfx_iscanlines, 2);
         if (!linemode_enabled || !is_double) ImGui::EndDisabled();
+        ImGui::Spacing();
         EndGroupBox("Interlaced line mode");
 
         ImGui::EndTable();

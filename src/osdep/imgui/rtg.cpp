@@ -92,7 +92,7 @@ void render_panel_rtg() {
         changed_prefs.rtgboards[0].initial_active = override_native;
     }
 
-    ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    ImGui::Spacing();
 
     // Table: VRAM (Left) vs Color Modes (Right)
     if (ImGui::BeginTable("rtg_main_table", 2, ImGuiTableFlags_None)) {
@@ -207,7 +207,7 @@ void render_panel_rtg() {
 
         ImGui::EndTable();
     }
-    ImGui::Dummy(ImVec2(0.0f, 10.0f));
+    ImGui::Spacing();
 
     // --- Settings Checkboxes (2 Columns) ---
     if (ImGui::BeginTable("rtg_settings_table", 2, ImGuiTableFlags_None)) {
@@ -251,7 +251,7 @@ void render_panel_rtg() {
 
         ImGui::EndTable();
     }
-    ImGui::Dummy(ImVec2(0.0f, 10.0f));
+    ImGui::Spacing();
 
     // --- Bottom Row: Screen Mode Details ---
     ImGui::Text("Screen Mode settings");

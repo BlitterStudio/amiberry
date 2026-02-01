@@ -53,6 +53,7 @@ void render_panel_adv_chipset()
 		ImGui::InputInt("##RTCAdjust", &changed_prefs.cs_rtc_adjust, 1, 10);
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 		EndDisableableGroup(controls_disabled);
+		ImGui::Spacing();
 	}
 	EndGroupBox("Battery Backed Up Real Time Clock");
 
@@ -63,6 +64,7 @@ void render_panel_adv_chipset()
 		AmigaRadioButton("Power Supply 50Hz", &changed_prefs.cs_ciaatod, 1); ImGui::SameLine();
 		AmigaRadioButton("Power Supply 60Hz", &changed_prefs.cs_ciaatod, 2);
 		EndDisableableGroup(controls_disabled);
+		ImGui::Spacing();
 	}
 	EndGroupBox("CIA-A TOD Clock Source");
 
@@ -197,13 +199,13 @@ void render_panel_adv_chipset()
 		}
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 		EndDisableableGroup(controls_disabled);
+		ImGui::Spacing();
 	}
 	EndGroupBox("Chipset Features");
 
 	BeginGroupBox("Internal SCSI Hardware");
 	{
 		BeginDisableableGroup(controls_disabled);
-		
 		// Reduce spacing for checkbox groups if desired, but default is usually fine here
 		bool scsi_a3000 = (changed_prefs.cs_mbdmac & 1) != 0;
 		if (AmigaCheckbox("A3000 WD33C93 SCSI", &scsi_a3000))
@@ -216,8 +218,8 @@ void render_panel_adv_chipset()
 		{
 			if (scsi_a4000) changed_prefs.cs_mbdmac |= 2; else changed_prefs.cs_mbdmac &= ~2;
 		}
-
 		EndDisableableGroup(controls_disabled);
+		ImGui::Spacing();
 	}
 	EndGroupBox("Internal SCSI Hardware");
 
@@ -337,6 +339,7 @@ void render_panel_adv_chipset()
 			AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 		}
 		EndDisableableGroup(controls_disabled);
+		ImGui::Spacing();
 	}
 	EndGroupBox("Chipset Revision");
 }
