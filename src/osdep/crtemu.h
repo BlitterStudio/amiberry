@@ -1829,16 +1829,34 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	if (crtemu->type == CRTEMU_TYPE_NONE) {
+		// Track size/format changes for texture caching (same optimization as non-NONE shaders)
+		bool size_or_format_changed = (width != crtemu->last_present_width ||
+									   height != crtemu->last_present_height ||
+									   pixel_format != crtemu->last_present_format ||
+									   pixel_type != crtemu->last_present_type);
+
 		// Just copy to backbuffer and present
 		if( pixels_xbgr ) {
 			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / bpp);
-			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, pixel_type, pixels_xbgr );
+
+			if (size_or_format_changed) {
+				// Reallocate texture only when dimensions/format change
+				crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, pixel_type, pixels_xbgr );
+				crtemu->last_present_width = width;
+				crtemu->last_present_height = height;
+				crtemu->last_present_format = pixel_format;
+				crtemu->last_present_type = pixel_type;
+			} else {
+				// Fast path: update existing texture without reallocation
+				crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, pixel_format, pixel_type, pixels_xbgr );
+			}
+
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 		}
-		
+
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 		crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 		crtemu->UseProgram( crtemu->copy_shader );
@@ -1846,12 +1864,16 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
-		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
-		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
+
+		// Only set texture filter parameters when texture was recreated
+		if (size_or_format_changed) {
+			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
+			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
+		}
 
 		crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer_static );
 		crtemu->VertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );
-		
+
 		crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
