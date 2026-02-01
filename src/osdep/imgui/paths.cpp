@@ -16,11 +16,11 @@ void render_panel_paths()
 	char tmp[MAX_DPATH];
 
 	// Helper lambda for rendering path rows
-	auto RenderPathRow = [&](const char* label, const char* id, std::string path, const std::function<void(const std::string&)>& setter, bool is_file = false, const char* filter_name = nullptr, const char* filter_ext = nullptr) {
+	auto RenderPathRow = [&](const char* label, const char* id, const std::string& path, const std::function<void(const std::string&)>& setter, const bool is_file = false, const char* filter_name = nullptr, const char* filter_ext = nullptr) {
 		ImGui::PushID(id);
 		ImGui::Text("%s", label);
 
-		const float button_width = SMALL_BUTTON_WIDTH; // Fixed width for "..." button
+		const float button_width = SMALL_BUTTON_WIDTH;
 		const float spacing = ImGui::GetStyle().ItemSpacing.x * 2;
 		const float input_width = ImGui::GetContentRegionAvail().x - button_width - spacing;
 

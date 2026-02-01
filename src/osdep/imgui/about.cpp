@@ -93,9 +93,9 @@ void render_panel_about()
 	// Use a child region with border to mimic a textbox look
 	ImGui::BeginChild("AboutScroll", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 	ImGui::Indent(10.0f);
-	ImGui::Dummy(ImVec2(0, 10.0f));
+	ImGui::Spacing();
 	ImGui::TextUnformatted(about_long_text);
-	ImGui::Dummy(ImVec2(0, 10.0f));
+	ImGui::Spacing();
 	ImGui::EndChild();
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 }

@@ -592,16 +592,6 @@ bool AmigaRadioButton(const char* label, int* v, const int v_button)
 	return pressed;
 }
 
-// Apply Amiga bevels to scrollbars: Dear ImGui does not expose scrollbar rects in its public API.
-// For now, this is a harmless no-op placeholder so call sites can be added without forking imgui.
-// If we later decide to style scrollbars fully, we can implement it via an imgui internal include
-// (imgui_internal.h) or via custom scrollbars.
-void AmigaScrollbarsBevelCurrentWindow()
-{
-	// Intentionally empty.
-	// Scrollbar colors are already themed in apply_imgui_theme() and rounding is set to 0.
-}
-
 // Sidebar icons cache
 struct IconTex { SDL_Texture* tex; int w; int h; };
 static std::unordered_map<std::string, IconTex> g_sidebar_icons;

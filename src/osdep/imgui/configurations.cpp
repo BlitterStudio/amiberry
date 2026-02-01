@@ -65,12 +65,11 @@ void render_panel_configurations()
 	// 3 input rows + 2 Spacings + Separator + Buttons, plus extra padding to avoid scrollbar
 	const float footer_h = (input_row_h * 3) + (style.ItemSpacing.y * 2) + 1.0f + BUTTON_HEIGHT + style.WindowPadding.y + 10.0f;
 
-	// Reduce width slightly to ensure bevel is clearly visible and not clipped by parent
-	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 1.0f);
-	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.0f);
-	ImGui::BeginChild("ConfigList", ImVec2(ImGui::GetContentRegionAvail().x - 2.0f, -footer_h));
 	ImGui::Indent(4.0f);
-	ImGui::Dummy(ImVec2(0, 2.0f));
+	ImGui::Spacing();
+	ImGui::BeginChild("ConfigList", ImVec2(ImGui::GetContentRegionAvail().x - 2.0f, -footer_h));
+	ImGui::Spacing();
+	ImGui::Indent(4.0f);
 
 	for (int i = 0; i < ConfigFilesList.size(); ++i)
 	{

@@ -21,21 +21,21 @@ static void qs_refresh_disk_list_model() {
     for (const auto &entry: lstMRUDiskList) {
         const std::string full_path = entry;
         const auto sep = full_path.find_last_of("/\\");
-        const std::string filename = sep == std::string::npos ? full_path : full_path.substr(sep + 1);
-        qs_disk_display.emplace_back(filename + " { " + full_path + " }");
+        std::string filename = sep == std::string::npos ? full_path : full_path.substr(sep + 1);
+        qs_disk_display.emplace_back(filename.append(" { ").append(full_path).append(" }"));
     }
 }
 
 static void qs_refresh_cd_list_model() {
     qs_cd_display.clear();
-    auto cd_drives = get_cd_drives();
+    const auto cd_drives = get_cd_drives();
     for (const auto &drive: cd_drives)
         qs_cd_display.emplace_back(drive);
     for (const auto &entry: lstMRUCDList) {
         const std::string full_path = entry;
         const auto sep = full_path.find_last_of("/\\");
-        const std::string filename = sep == std::string::npos ? full_path : full_path.substr(sep + 1);
-        qs_cd_display.emplace_back(filename + " { " + full_path + " }");
+        std::string filename = sep == std::string::npos ? full_path : full_path.substr(sep + 1);
+        qs_cd_display.emplace_back(filename.append(" { ").append(full_path).append(" }"));
     }
 }
 
@@ -44,8 +44,8 @@ static void qs_refresh_whd_list_model() {
     for (const auto &entry: lstMRUWhdloadList) {
         const std::string full_path = entry;
         const auto sep = full_path.find_last_of("/\\");
-        const std::string filename = sep == std::string::npos ? full_path : full_path.substr(sep + 1);
-        qs_whd_display.emplace_back(filename + " { " + full_path + " }");
+        std::string filename = sep == std::string::npos ? full_path : full_path.substr(sep + 1);
+        qs_whd_display.emplace_back(filename.append(" { ").append(full_path).append(" }"));
     }
 }
 
