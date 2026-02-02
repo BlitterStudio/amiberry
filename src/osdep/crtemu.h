@@ -634,6 +634,73 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    }\n"
 			"\n";
 
+	// Simplified CRT shader for mobile GPUs (removes expensive pow/sin/cos operations)
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 resolution;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"uniform sampler2D frametexture;\n"
+			"uniform float use_frame;\n"
+			"\n"
+			"vec2 curve(vec2 uv) {\n"
+			"    uv = (uv - 0.5) * 2.0;\n"
+			"    uv *= 1.1;\n"
+			"    float ay = abs(uv.y) / 5.0;\n"
+			"    float ax = abs(uv.x) / 4.0;\n"
+			"    uv.x *= 1.0 + ay * ay;\n"
+			"    uv.y *= 1.0 + ax * ax;\n"
+			"    uv = (uv / 2.0) + 0.5;\n"
+			"    uv = uv * 0.92 + 0.04;\n"
+			"    return uv;\n"
+			"}\n"
+			"\n"
+			"void main(void) {\n"
+			"    vec2 curved_uv = mix(curve(uv), uv, 0.4);\n"
+			"\n"
+			"    // Main color - single texture read (no chromatic aberration)\n"
+			"    vec3 col = texture2D(backbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    col *= 1.25;\n"
+			"\n"
+			"    // Ghosting - simple static blur blend\n"
+			"    vec3 blur = texture2D(blurbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    col += blur * 0.15;\n"
+			"\n"
+			"    // Level adjustment (simplified)\n"
+			"    col *= vec3(0.95, 1.05, 0.95);\n"
+			"    col = clamp(col * 1.3 + 0.75 * col * col, vec3(0.0), vec3(1.0));\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * curved_uv.x * curved_uv.y * (1.0 - curved_uv.x) * (1.0 - curved_uv.y);\n"
+			"    vig = 0.1 + 0.9 * clamp(vig * 1.5, 0.0, 1.0);\n"
+			"    col *= vig;\n"
+			"\n"
+			"    // Scanlines (simplified - no animation)\n"
+			"    float scans = 0.35 + 0.35 * cos(curved_uv.y * size.y * 3.14159);\n"
+			"    col *= scans;\n"
+			"\n"
+			"    // Shadow mask\n"
+			"    col *= 1.0 - 0.23 * clamp(mod(gl_FragCoord.x, 3.0) / 2.0, 0.0, 1.0);\n"
+			"\n"
+			"    // Clamp to visible area\n"
+			"    if (curved_uv.x < 0.0 || curved_uv.x > 1.0 || curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
+			"        col = vec3(0.0);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"\n"
+			"    // Frame overlay\n"
+			"    vec2 fuv = vec2(uv.x, 1.0 - uv.y);\n"
+			"    vec4 f = texture2D(frametexture, fuv);\n"
+			"    col = mix(col, f.rgb, f.a * use_frame);\n"
+			"\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
+
 	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
@@ -723,7 +790,9 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
 	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
@@ -890,6 +959,75 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"   \n"
 			"";
 
+	// Simplified CRT shader for mobile GPUs (PC monitor style - less curve)
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 resolution;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"uniform sampler2D frametexture;\n"
+			"uniform float use_frame;\n"
+			"\n"
+			"vec2 curve(vec2 uv) {\n"
+			"    uv = (uv - 0.5) * 2.0;\n"
+			"    uv *= 1.1;\n"
+			"    float ay = abs(uv.y) / 5.0;\n"
+			"    float ax = abs(uv.x) / 4.0;\n"
+			"    uv.x *= 1.0 + ay * ay;\n"
+			"    uv.y *= 1.0 + ax * ax;\n"
+			"    uv = (uv / 2.0) + 0.5;\n"
+			"    uv = uv * 0.92 + 0.04;\n"
+			"    return uv;\n"
+			"}\n"
+			"\n"
+			"void main(void) {\n"
+			"    vec2 curved_uv = mix(curve(uv), uv, 0.8);\n"
+			"    float scale = 0.04;\n"
+			"    vec2 scuv = curved_uv * (1.0 - scale) + scale / 2.0 + vec2(0.003, -0.001);\n"
+			"\n"
+			"    // Main color - single texture read (no chromatic aberration)\n"
+			"    vec3 col = texture2D(backbuffer, vec2(scuv.x, 1.0 - scuv.y)).rgb;\n"
+			"    col *= 1.25;\n"
+			"\n"
+			"    // Ghosting - simple static blur blend\n"
+			"    vec3 blur = texture2D(blurbuffer, vec2(scuv.x, 1.0 - scuv.y)).rgb;\n"
+			"    col += blur * 0.05;\n"
+			"\n"
+			"    // Level adjustment (simplified)\n"
+			"    col *= vec3(0.95, 0.95, 0.95);\n"
+			"    col = clamp(col * 1.3 + 0.75 * col * col, vec3(0.0), vec3(1.0));\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * curved_uv.x * curved_uv.y * (1.0 - curved_uv.x) * (1.0 - curved_uv.y);\n"
+			"    vig = 0.1 + 0.9 * clamp(vig * 1.5, 0.0, 1.0);\n"
+			"    col *= vig;\n"
+			"\n"
+			"    // Scanlines (simplified - no animation)\n"
+			"    float scans = 0.5 + 0.2 * cos(curved_uv.y * size.y * 3.5);\n"
+			"    col *= scans;\n"
+			"\n"
+			"    // Shadow mask\n"
+			"    col *= 1.0 - 0.23 * clamp(mod(gl_FragCoord.x, 3.0) / 2.0, 0.0, 1.0);\n"
+			"\n"
+			"    // Clamp to visible area\n"
+			"    if (curved_uv.x < 0.0 || curved_uv.x > 1.0 || curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
+			"        col = vec3(0.0);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"\n"
+			"    // Frame overlay\n"
+			"    vec2 fuv = vec2(uv.x, 1.0 - uv.y);\n"
+			"    vec4 f = texture2D(frametexture, fuv);\n"
+			"    col = mix(col, f.rgb, f.a * use_frame);\n"
+			"\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
+
 	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
@@ -979,7 +1117,9 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
 	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
@@ -1078,6 +1218,39 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"   \n"
 			"";
 
+	// Simplified LITE CRT shader for mobile GPUs (removes pow calls)
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"\n"
+			"void main(void) {\n"
+			"    // Main color - simple sampling\n"
+			"    vec3 col = texture2D(backbuffer, vec2(uv.x, 1.0 - uv.y)).rgb;\n"
+			"    col = col * 3.0 + col * col * col;\n"
+			"    col += texture2D(blurbuffer, vec2(uv.x, 1.0 - uv.y)).rgb * 0.3;\n"
+			"\n"
+			"    // Scanlines (simplified - no pow)\n"
+			"    float scans = 0.5 - 0.5 * cos(uv.y * 6.28319 * size.y);\n"
+			"    col = mix(col, col * scans, 0.7);\n"
+			"\n"
+			"    // Shadow mask\n"
+			"    col *= 1.0 - 0.23 * clamp(mod(gl_FragCoord.x, 3.0) / 2.0, 0.0, 1.0);\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);\n"
+			"    vig = 0.1 + 0.9 * clamp(vig * 1.5, 0.0, 1.0);\n"
+			"    col = mix(col, col * vig, 0.2);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
+
 	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
@@ -1167,7 +1340,9 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
 	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
@@ -1331,6 +1506,73 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    }\n"
 			"\n";
 
+	// Simplified 1084 CRT shader for mobile GPUs
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 resolution;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"uniform sampler2D frametexture;\n"
+			"uniform float use_frame;\n"
+			"\n"
+			"vec2 curve(vec2 uv) {\n"
+			"    uv = (uv - 0.5) * 2.0;\n"
+			"    uv *= 1.1;\n"
+			"    float ay = abs(uv.y) / 5.0;\n"
+			"    float ax = abs(uv.x) / 4.0;\n"
+			"    uv.x *= 1.0 + ay * ay;\n"
+			"    uv.y *= 1.0 + ax * ax;\n"
+			"    uv = (uv / 2.0) + 0.5;\n"
+			"    uv = uv * 0.92 + 0.04;\n"
+			"    return uv;\n"
+			"}\n"
+			"\n"
+			"void main(void) {\n"
+			"    vec2 curved_uv = mix(curve(uv), uv, 0.6);\n"
+			"\n"
+			"    // Main color - single texture read (no chromatic aberration)\n"
+			"    vec3 col = texture2D(backbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    col *= 1.25;\n"
+			"\n"
+			"    // Ghosting - simple static blur blend\n"
+			"    vec3 blur = texture2D(blurbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    col += blur * 0.12;\n"
+			"\n"
+			"    // Level adjustment (simplified)\n"
+			"    col *= vec3(0.95, 1.05, 0.95);\n"
+			"    col = clamp(col * 1.3 + 0.75 * col * col, vec3(0.0), vec3(1.0));\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * curved_uv.x * curved_uv.y * (1.0 - curved_uv.x) * (1.0 - curved_uv.y);\n"
+			"    vig = 0.2 + 0.8 * clamp(vig * 1.5, 0.0, 1.0);\n"
+			"    col *= vig;\n"
+			"\n"
+			"    // Scanlines (simplified - no animation)\n"
+			"    float scans = 0.35 + 0.35 * cos(curved_uv.y * size.y * 3.0);\n"
+			"    col *= scans;\n"
+			"\n"
+			"    // Shadow mask (1084 style - 2 pixel pattern)\n"
+			"    col *= 1.0 - 0.15 * clamp(mod(gl_FragCoord.x, 2.0), 0.0, 1.0);\n"
+			"\n"
+			"    // Clamp to visible area\n"
+			"    if (curved_uv.x < 0.0 || curved_uv.x > 1.0 || curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
+			"        col = vec3(0.0);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"\n"
+			"    // Frame overlay\n"
+			"    vec2 fuv = vec2(uv.x, 1.0 - uv.y);\n"
+			"    vec4 f = texture2D(frametexture, fuv);\n"
+			"    col = mix(col, f.rgb, f.a * use_frame);\n"
+			"\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
+
 	char const* blur_fs_source =
 			""
 			"varying vec2 uv;"
@@ -1418,7 +1660,9 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
 	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
