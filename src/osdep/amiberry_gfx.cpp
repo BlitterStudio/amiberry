@@ -491,13 +491,16 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 #ifdef USE_OPENGL
 	// Clean up existing shaders
 	destroy_shaders();
-	
-	const auto mon = &AMonitors[monid];
+
+	auto mon = &AMonitors[monid];
 	const char* shader_name;
 	if (mon->screen_is_picasso)
 		shader_name = amiberry_options.shader_rtg;
 	else
 		shader_name = amiberry_options.shader;
+
+	// Force full render on next frame after shader switch
+	mon->full_render_needed = true;
 	
 	// Ensure GL context is current before creating shaders
 	if (gl_context && mon->amiga_window) {
@@ -522,7 +525,8 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	// Use built-in crtemu shaders
 	if (crtemu_shader == nullptr) {
 		const int crt_type = get_crtemu_type(shader_name);
-		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
+		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr,
+			amiberry_options.force_mobile_shaders);
 
 		// Apply force_mobile_shaders override if enabled
 		if (crtemu_shader != nullptr && amiberry_options.force_mobile_shaders) {
@@ -1637,7 +1641,8 @@ float target_adjust_vblank_hz(const int monid, float hz)
 #ifdef USE_OPENGL
 // Render using external shader (single-pass)
 static void render_with_external_shader(ExternalShader* shader, const int monid, 
-	const uae_u8* pixels, int width, int height, int pitch, int viewport_width, int viewport_height)
+	const uae_u8* pixels, int width, int height, int pitch, 
+	int viewport_x, int viewport_y, int viewport_width, int viewport_height)
 {
 	if (!shader || !shader->is_valid()) {
 		write_log("render_with_external_shader: shader is null or invalid\n");
@@ -1724,6 +1729,9 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	// Ensure we're rendering to the default framebuffer (screen)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	
+	// Set viewport explicitly - critical fix for external shaders
+	glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
+	
 	// Set up GL state for 2D rendering
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
@@ -1759,8 +1767,21 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / bpp);
 
+	// Track texture changes per-shader to handle shader switches properly
+	// Using shader program ID as part of cache key to detect shader changes
+	GLuint current_program = shader->get_program();
 	static int last_w = 0, last_h = 0;
 	static GLuint last_texture = 0;
+	static GLuint last_shader_program = 0;
+	
+	// Reset cache if shader changed (handles shader switching)
+	if (current_program != last_shader_program) {
+		last_w = 0;
+		last_h = 0;
+		last_texture = 0;
+		last_shader_program = current_program;
+	}
+	
 	if (width != last_w || height != last_h || texture != last_texture) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_fmt, gl_type, pixels);
 		last_w = width;
@@ -1778,7 +1799,13 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	// Set uniforms
 	shader->set_texture_size(static_cast<float>(width), static_cast<float>(height));
 	shader->set_input_size(static_cast<float>(width), static_cast<float>(height));
-	shader->set_output_size(static_cast<float>(viewport_width), static_cast<float>(viewport_height));
+	
+	// Many CRT shaders calculate scale = floor(OutputSize / InputSize)
+	// If OutputSize < InputSize, scale becomes 0, causing division by zero.
+	// Ensure OutputSize is always at least InputSize to prevent shader errors.
+	int safe_output_w = (viewport_width >= width) ? viewport_width : width;
+	int safe_output_h = (viewport_height >= height) ? viewport_height : height;
+	shader->set_output_size(static_cast<float>(safe_output_w), static_cast<float>(safe_output_h));
 	shader->set_frame_count(frame_count++);
 	
 	// Set MVP matrix (orthographic projection for fullscreen quad)
@@ -1794,20 +1821,21 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	shader->bind_texture(texture, 0);
 	
 	// Set up vertex data for fullscreen quad
-	// The shader expects: attribute vec4 VertexCoord (position as vec2 in xy)
-	//                     attribute vec2 TexCoord
-	// We'll use interleaved format: x, y, u, v
+	// The shader expects: attribute vec4 VertexCoord (position as x,y,z,w)
+	//                     attribute vec2/vec4 TexCoord (s,t,...)
+	// We'll use interleaved format: x, y, z, w, s, t, 0, 0 (8 floats per vertex)
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	if (vbo_uploaded == 0) {
-		float vertices[] = {
-			-1.0f, -1.0f, 0.0f, 1.0f,  // Bottom-left
-			 1.0f, -1.0f, 1.0f, 1.0f,  // Bottom-right
-			 1.0f,  1.0f, 1.0f, 0.0f,  // Top-right
-			-1.0f,  1.0f, 0.0f, 0.0f   // Top-left
-		};
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		vbo_uploaded = vbo;
-	}
+	
+	// Always upload vertex data - it's small (128 bytes) and ensures correct state
+	// after shader switches or window resize
+	float vertices[] = {
+		// VertexCoord (x,y,z,w), TexCoord (s,t,0,0)
+		-1.0f, -1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f, 0.0f,  // Bottom-left
+		 1.0f, -1.0f, 0.0f, 1.0f,   1.0f, 1.0f, 0.0f, 0.0f,  // Bottom-right
+		 1.0f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f, 0.0f,  // Top-right
+		-1.0f,  1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f, 0.0f   // Top-left
+	};
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 	
 	// Set up vertex attributes to match shader bindings
 	// Explicitly disable any previously enabled arrays to avoid state leakage
@@ -1815,17 +1843,23 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 
-	// Attribute 0: VertexCoord (vec4, but we only use xy for position)
+	// Stride: 8 floats per vertex (4 for VertexCoord + 4 for TexCoord)
+	const GLsizei stride = 8 * sizeof(float);
+
+	// Attribute 0: VertexCoord (vec4: x, y, z, w)
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
 	
 	// Attribute 1: Color (vec4) - Set to white by default
 	// Many RetroArch shaders multiply the sampled color by this attribute.
 	glVertexAttrib4f(1, 1.0f, 1.0f, 1.0f, 1.0f);
 
-	// Attribute 2: TexCoord (vec2)
+
+	// Attribute 2: TexCoord (vec2: s, t)
+	// Note: Some shaders use vec2, some use vec4. Using 2 components is more compatible.
+	// The shader will only read the first 2 components anyway.
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float)));
 	
 	// Draw fullscreen quad
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -2135,6 +2169,24 @@ void show_screen(const int monid, int mode)
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
+		
+		// Get source dimensions for this frame
+		int src_w = amiga_surface ? amiga_surface->w : 0;
+		int src_h = amiga_surface ? amiga_surface->h : 0;
+		if (is_cropped && amiga_surface) {
+			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
+			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
+		}
+		
+		// Use aspect-corrected viewport, but ensure it's at least as large as the source
+		// Many CRT shaders calculate scale = floor(OutputSize / InputSize) which fails if OutputSize < InputSize
+		int viewport_w = std::max(destW, src_w);
+		int viewport_h = std::max(destH, src_h);
+		int viewport_x = (drawableWidth - viewport_w) / 2;
+		int viewport_y = (drawableHeight - viewport_h) / 2;
+		
+		// Set viewport for shader rendering
+		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
 		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
@@ -2146,12 +2198,12 @@ void show_screen(const int monid, int mode)
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
 
 			render_with_external_shader(external_shader, monid, crop_ptr,
-				w, h, amiga_surface->pitch, destW, destH);
+				w, h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		} else if (amiga_surface) {
 			// FAST PATH: No cropping
 			render_with_external_shader(external_shader, monid, 
 				static_cast<const uae_u8*>(amiga_surface->pixels),
-				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, destW, destH);
+				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		}
 
 	} else if (crtemu_shader) {
@@ -2165,30 +2217,30 @@ void show_screen(const int monid, int mode)
 			glViewport(0, 0, drawableWidth, drawableHeight);
 		}
 
+		// Determine correct OpenGL format
+		unsigned int gl_fmt, gl_type;
+		int bpp = 4;
+		if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+			gl_fmt = GL_BGRA;
+			gl_type = GL_UNSIGNED_BYTE;
+		}
+		else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
+			gl_fmt = GL_RGB;
+			gl_type = GL_UNSIGNED_SHORT_5_6_5;
+			bpp = 2;
+		}
+		else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
+			gl_fmt = GL_RGBA;
+			gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
+			bpp = 2;
+		}
+		else {
+			gl_fmt = GL_RGBA;
+			gl_type = GL_UNSIGNED_BYTE;
+		}
+
 		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
-			// Determine correct OpenGL format
-			unsigned int gl_fmt, gl_type;
-			int bpp = 4;
-			if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-				gl_fmt = GL_BGRA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-				gl_fmt = GL_RGB;
-				gl_type = GL_UNSIGNED_SHORT_5_6_5;
-				bpp = 2;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
-				bpp = 2;
-			}
-			else {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-
 			int x = std::max(0, crop_rect.x);
 			int y = std::max(0, crop_rect.y);
 			int w = std::min(crop_rect.w, amiga_surface->w - x);
@@ -2198,28 +2250,6 @@ void show_screen(const int monid, int mode)
 			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
 				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		} else if (amiga_surface) {
-			// Determine correct OpenGL format
-			unsigned int gl_fmt, gl_type;
-			int bpp = 4;
-			if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-				gl_fmt = GL_BGRA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-				gl_fmt = GL_RGB;
-				gl_type = GL_UNSIGNED_SHORT_5_6_5;
-				bpp = 2;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
-				bpp = 2;
-			}
-			else {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-
 			// FAST PATH: No cropping.
 			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
 			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
@@ -2397,9 +2427,7 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 
 
 	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
-	//SDL_QueryTexture(amiga_texture,
-	//	nullptr, nullptr,
-	//	&vidinfo->maxwidth, &vidinfo->maxheight);
+
 	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 	vidinfo->rowbytes = amiga_surface->pitch;
 	vidinfo->maxwidth = amiga_surface->w;
@@ -3982,7 +4010,7 @@ static int getbestmode(struct AmigaMonitor* mon, int nextbest)
 		}
 		// first iterate only modes that have similar aspect ratio
 		startidx = i;
-		for (; md->DisplayModes[i].inuse; i++) {
+		for ( ; md->DisplayModes[i].inuse; i++) {
 			struct PicassoResolution* pr = &md->DisplayModes[i];
 			int r = pr->res.width > pr->res.height ? 1 : 0;
 			if (pr->res.width >= mon->currentmode.native_width && pr->res.height >= mon->currentmode.native_height && r == ratio) {
@@ -3997,7 +4025,7 @@ static int getbestmode(struct AmigaMonitor* mon, int nextbest)
 		}
 		// still not match? check all modes
 		i = startidx;
-		for (; md->DisplayModes[i].inuse; i++) {
+		for ( ; md->DisplayModes[i].inuse; i++) {
 			struct PicassoResolution* pr = &md->DisplayModes[i];
 			int r = pr->res.width > pr->res.height ? 1 : 0;
 			if (pr->res.width >= mon->currentmode.native_width && pr->res.height >= mon->currentmode.native_height) {
@@ -4181,13 +4209,53 @@ static int create_windows(struct AmigaMonitor* mon)
 	mon->md = md;
 
 	if (mon->amiga_window) {
+		SDL_Rect r;
+		int nw, nh, nx, ny;
+
 		if (minimized) {
 			minimized = -1;
 			return 1;
 		}
 
+		GetWindowRect(mon->amiga_window, &r);
+
+		x = r.x;
+		y = r.y;
+		w = r.w;
+		h = r.h;
+
+		if (mon->screen_is_picasso) {
+			nw = mon->currentmode.current_width;
+			nh = mon->currentmode.current_height;
+		} else {
+			nw = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.width;
+			nh = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.height;
+		}
+
+		if (fullwindow) {
+			SDL_Rect rc = md->rect;
+			nx = rc.x;
+			ny = rc.y;
+			nw = rc.w;
+			nh = rc.h;
+		}
+
+		if (w != nw || h != nh || x != nx || y != ny) {
+			w = nw;
+			h = nh;
+			x = nx;
+			y = ny;
+			mon->in_sizemove++;
+			SDL_SetWindowPosition(mon->amiga_window, x, y);
+			SDL_SetWindowSize(mon->amiga_window, w, h);
+		} else {
+			w = nw;
+			h = nh;
+			x = nx;
+			y = ny;
+		}
+
 		updatewinrect(mon, false);
-		GetWindowRect(mon->amiga_window, &mon->amigawin_rect);
 		write_log(_T("window already open (%dx%d %dx%d)\n"),
 			mon->amigawin_rect.x, mon->amigawin_rect.y, mon->amigawin_rect.w, mon->amigawin_rect.h);
 		updatemouseclip(mon);
@@ -4777,21 +4845,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	int scaled_width, scaled_height;
 	compute_scaled_dimensions(w, h, mon->screen_is_picasso, scaled_width, scaled_height);
 
-	// Window sizing when not fullscreen
-	if (mon->amiga_window && isfullscreen() == 0) {
-		int win_w, win_h;
-		if (mon->screen_is_picasso) {
-			// RTG: use stored rect if larger, otherwise use RTG resolution
-			win_w = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.w : w;
-			win_h = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.h : h;
-		} else {
-			// Native: use stored rect if larger than default, otherwise use scaled dimensions
-			win_w = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.w : scaled_width;
-			win_h = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.h : scaled_height;
-		}
-		SDL_SetWindowSize(mon->amiga_window, win_w, win_h);
-	}
-
 #ifdef USE_OPENGL
 	configure_render_rects(w, h, scaled_width, scaled_height, mon->screen_is_picasso);
 	set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
@@ -5060,6 +5113,26 @@ void destroy_shaders()
 		glDeleteTextures(1, &osd_texture);
 		osd_texture = 0;
 	}
+
+	// Reset GL state flag to ensure clean slate for next shader
+	gl_state_initialized = false;
+
+	// Reset GL state to ensure clean slate for next shader
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glUseProgram(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// Reset pixel store settings
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+	// Disable all vertex attributes that might have been enabled
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
 }
 #endif
 
@@ -5336,12 +5409,6 @@ void screenshot(int monid, int mode, int doprepare)
 }
 
 #ifdef USE_OPENGL
-
-static bool is_gles_context()
-{
-	const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-	return ver && (strstr(ver, "OpenGL ES") != nullptr || strstr(ver, "OpenGL ES-CM") != nullptr);
-}
 
 /**
  * @brief Creates the OpenGL context and initializes extension function pointers.

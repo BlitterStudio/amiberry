@@ -236,6 +236,8 @@ void render_panel_rtg() {
             changed_prefs.gf[1].gfx_filter_autoscale = int_scale ? RTG_MODE_INTEGER_SCALE : 0;
         }
 
+        AmigaCheckbox("Zero Copy (Buffer sharing)", &changed_prefs.rtg_zerocopy);
+
         ImGui::TableNextColumn();
 
         // Right Column: Hardware/Misc Checkboxes

@@ -31,7 +31,7 @@ typedef enum crtemu_type_t {
 
 typedef struct crtemu_t crtemu_t;
 
-crtemu_t* crtemu_create( crtemu_type_t type, void* memctx );
+crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile = false );
 
 void crtemu_destroy( crtemu_t* crtemu );
 
@@ -1743,7 +1743,7 @@ static void crtemu_init_uniform_locations(crtemu_t* crtemu) {
 	}
 }
 
-crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
+crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile ) {
 	crtemu_t* crtemu = (crtemu_t*) CRTEMU_MALLOC( memctx, sizeof( crtemu_t ) );
 	memset( crtemu, 0, sizeof( crtemu_t ) );
 	crtemu->type = type;
@@ -1755,10 +1755,10 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->last_present_height = 0;
 	crtemu->texture_filter = CRTEMU_GL_LINEAR; // Default to linear filtering for NONE mode
 
-	// Detect mobile GPU (GLES) for performance optimizations
-	// This must be done after GL context is current, so we defer to first use
-	// The actual detection happens in crtemu_internal_build_shader
-	crtemu->is_mobile_gpu = false;
+	// Detect mobile GPU (GLES) BEFORE shader compilation so mobile variants are selected
+	// force_mobile allows UI override for testing or when auto-detection fails
+	const char* gl_ver = (const char*)glGetString(GL_VERSION);
+	crtemu->is_mobile_gpu = force_mobile || (gl_ver && strstr(gl_ver, "OpenGL ES") != nullptr);
 
 #ifndef CRTEMU_SDL
 

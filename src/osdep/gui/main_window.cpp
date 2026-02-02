@@ -1299,7 +1299,7 @@ void run_gui()
                 ImGui::Separator();
 
                 // Button alignment logic
-                const float btn_w = 120.0f;
+                const float btn_w = BUTTON_WIDTH;
                 float avail = ImGui::GetContentRegionAvail().x;
                 if (avail > btn_w)
                     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail - btn_w));
@@ -1312,10 +1312,6 @@ void run_gui()
                 ImGui::EndPopup();
             }
         }
-
-		// Check for config changes that require a reset
-		if (gui_rtarea_flags_onenter != gui_create_rtarea_flag(&changed_prefs))
-			disable_resume();
 
 		ImGui::End();
 

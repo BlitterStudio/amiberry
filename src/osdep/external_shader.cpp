@@ -166,33 +166,33 @@ bool ExternalShader::parse_shader_file(const std::string& source)
 // Extract vertex shader from combined source
 std::string ExternalShader::extract_vertex_shader(const std::string& source)
 {
-	// Check for #version and insert #define VERTEX after it
+	// Check for #version and insert defines after it
 	size_t version_pos = source.find("#version");
 	if (version_pos != std::string::npos) {
 		size_t newline_pos = source.find("\n", version_pos);
 		if (newline_pos != std::string::npos) {
 			std::string vs_source = source;
-			vs_source.insert(newline_pos + 1, "#define VERTEX\n");
+			vs_source.insert(newline_pos + 1, "#define VERTEX\n#define PARAMETER_UNIFORM\n");
 			return vs_source;
 		}
 	}
-	return "#define VERTEX\n" + source;
+	return "#define VERTEX\n#define PARAMETER_UNIFORM\n" + source;
 }
 
 // Extract fragment shader from combined source
 std::string ExternalShader::extract_fragment_shader(const std::string& source)
 {
-	// Check for #version and insert #define FRAGMENT after it
+	// Check for #version and insert defines after it
 	size_t version_pos = source.find("#version");
 	if (version_pos != std::string::npos) {
 		size_t newline_pos = source.find("\n", version_pos);
 		if (newline_pos != std::string::npos) {
 			std::string fs_source = source;
-			fs_source.insert(newline_pos + 1, "#define FRAGMENT\n");
+			fs_source.insert(newline_pos + 1, "#define FRAGMENT\n#define PARAMETER_UNIFORM\n");
 			return fs_source;
 		}
 	}
-	return "#define FRAGMENT\n" + source;
+	return "#define FRAGMENT\n#define PARAMETER_UNIFORM\n" + source;
 }
 
 // Parse #pragma parameter directives

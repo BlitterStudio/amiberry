@@ -44,7 +44,7 @@ void render_panel_cpu() {
 
     bool cpu_based_enable =
             changed_prefs.cpu_model >= 68020 && changed_prefs.address_space_24 == 0;
-    bool jit_enable = cpu_based_enable && !changed_prefs.mmu_model;
+    bool jit_enable = cpu_based_enable && !changed_prefs.mmu_model && !changed_prefs.cpu_thread; // eventually cpu_thread _should_ work with JIT, but it requires some refactoring
 #ifndef JIT
     jit_enable = false;
 #endif
