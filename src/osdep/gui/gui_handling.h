@@ -520,6 +520,7 @@ PANEL(expansions,         "Expansions",         "expansion.png") \
 PANEL(rtg,                "RTG board",          "expansion.png") \
 PANEL(hwinfo,             "Hardware info",      "expansion.png") \
 PANEL(display,            "Display",            "screen.png") \
+PANEL(filter,             "Filter",             "misc.png") \
 PANEL(sound,              "Sound",              "sound.png") \
 PANEL(input,              "Input",              "joystick.png") \
 PANEL(io,                 "IO Ports",           "port.png") \

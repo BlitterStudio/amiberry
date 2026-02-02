@@ -524,6 +524,11 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 		const int crt_type = get_crtemu_type(shader_name);
 		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
 
+		// Apply force_mobile_shaders override if enabled
+		if (crtemu_shader != nullptr && amiberry_options.force_mobile_shaders) {
+			crtemu_shader->is_mobile_gpu = true;
+		}
+
 		// Fallback to NONE if shader creation failed (e.g., shader compilation error)
 		if (crtemu_shader == nullptr && crt_type != CRTEMU_TYPE_NONE) {
 			write_log("WARNING: Failed to create CRT shader type %d, falling back to NONE\n", crt_type);

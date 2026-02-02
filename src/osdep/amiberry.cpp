@@ -3819,6 +3819,9 @@ void save_amiberry_settings()
 	// Shader to use for RTG modes (if any)
 	write_string_option("shader_rtg", amiberry_options.shader_rtg);
 
+	// Force mobile-optimized shaders
+	write_bool_option("force_mobile_shaders", amiberry_options.force_mobile_shaders);
+
 	// Paths
 	write_string_option("config_path", config_path);
 	write_string_option("controllers_path", controllers_path);
@@ -4018,6 +4021,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
 		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
+		ret |= cfgfile_yesno(option, value, "force_mobile_shaders", &amiberry_options.force_mobile_shaders);
 	}
 	return ret;
 }

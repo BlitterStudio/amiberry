@@ -318,6 +318,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/custom.cpp
 		src/osdep/imgui/diskswapper.cpp
 		src/osdep/imgui/display.cpp
+		src/osdep/imgui/filter.cpp
 		src/osdep/imgui/expansions.cpp
 		src/osdep/imgui/floppy.cpp
 		src/osdep/imgui/hd.cpp
