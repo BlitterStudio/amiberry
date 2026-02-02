@@ -866,87 +866,6 @@ jobs:
           name: amiberry-debian-trixie-arm64-opengl
           path: "amiberry-*.zip"
 
-  build-debian-armhf:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    strategy:
-      matrix:
-        include:
-          - name: bookworm
-            image: midwan/amiberry-debian-armhf:bookworm
-            artifact_name: amiberry-debian-bookworm-armhf
-            release_name: debian-bookworm-armhf
-          - name: trixie
-            image: midwan/amiberry-debian-armhf:trixie
-            artifact_name: amiberry-debian-trixie-armhf
-            release_name: debian-trixie-armhf
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: ${{ matrix.image }}
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: "amiberry_*.deb"
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-${{ matrix.release_name }}.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: ${{ matrix.artifact_name }}
-          path: "amiberry-*.zip"
-
-  build-debian-armhf-trixie-opengl:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-armhf:trixie
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja -DUSE_OPENGL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-trixie-armhf-opengl
-        path: "amiberry_*.deb"
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-trixie-armhf-opengl.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-debian-trixie-armhf-opengl
-          path: "amiberry-*.zip"
-
   build-android:
     runs-on: ubuntu-latest
     permissions:
@@ -1032,7 +951,7 @@ jobs:
           if-no-files-found: warn
 
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android]
+    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-android]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     # Elevated permissions only where needed for creating a release
@@ -1075,7 +994,7 @@ jobs:
             artifacts/*.aab
 
   create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android]
+    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-android]
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
     # Elevated permissions only where needed for creating a prerelease

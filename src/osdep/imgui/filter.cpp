@@ -7,13 +7,8 @@
 #include <vector>
 #include <string>
 
-// External declarations
-std::string get_shaders_path();
-void save_amiberry_settings();
-
 // Built-in shader names
 static const char* builtin_shaders[] = { "none", "tv", "pc", "lite", "1084" };
-static constexpr int builtin_shader_count = 5;
 
 // Shader list storage
 static std::vector<std::string> shader_names;
@@ -41,8 +36,8 @@ static void scan_shaders()
 	shader_items.clear();
 
 	// Add built-in shaders first
-	for (int i = 0; i < builtin_shader_count; i++) {
-		shader_names.push_back(builtin_shaders[i]);
+	for (auto & builtin_shader : builtin_shaders) {
+		shader_names.emplace_back(builtin_shader);
 	}
 
 	// Scan shaders directory for .glsl files
