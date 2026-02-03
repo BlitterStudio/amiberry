@@ -86,6 +86,67 @@ void render_panel_filter()
 		scan_shaders();
 	}
 
+	BeginGroupBox("Crop and Offset");
+	if (changed_prefs.gfx_manual_crop) ImGui::BeginDisabled();
+	AmigaCheckbox("Auto Crop", &changed_prefs.gfx_auto_crop);
+	if (changed_prefs.gfx_manual_crop) ImGui::EndDisabled();
+	ImGui::SameLine();
+	if (changed_prefs.gfx_auto_crop) ImGui::BeginDisabled();
+	AmigaCheckbox("Manual Crop", &changed_prefs.gfx_manual_crop);
+	if (changed_prefs.gfx_auto_crop) ImGui::EndDisabled();
+	if (changed_prefs.gfx_manual_crop) {
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(BUTTON_WIDTH);
+		ImGui::SliderInt("##W", &changed_prefs.gfx_manual_crop_width, 0, 800);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(BUTTON_WIDTH);
+		ImGui::SliderInt("##H", &changed_prefs.gfx_manual_crop_height, 0, 600);
+		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+	}
+	// Scaling Method
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("Scaling method:");
+	ImGui::SameLine();
+	const char *scaling_items[] = {"Auto", "Nearest", "Linear", "Integer"};
+	int scaling_idx = changed_prefs.scaling_method + 1; // -1 -> 0, 0 -> 1, etc.
+	if (scaling_idx < 0) scaling_idx = 0;
+	if (scaling_idx > 3) scaling_idx = 3;
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
+	if (ImGui::BeginCombo("##ScalingMethod", scaling_items[scaling_idx])) {
+		for (int n = 0; n < IM_ARRAYSIZE(scaling_items); n++) {
+			const bool is_selected = (scaling_idx == n);
+			if (is_selected)
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			if (ImGui::Selectable(scaling_items[n], is_selected)) {
+				scaling_idx = n;
+				changed_prefs.scaling_method = scaling_idx - 1;
+			}
+			if (is_selected) {
+				ImGui::PopStyleColor();
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+	ImGui::Spacing();
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("H. Offset:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+	ImGui::SliderInt("##HOffsetSlider", &changed_prefs.gfx_horizontal_offset, -80, 80);
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text("V. Offset:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+	ImGui::SliderInt("##VOffsetSlider", &changed_prefs.gfx_vertical_offset, -80, 80);
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+	ImGui::Spacing();
+	EndGroupBox("Crop and Offset");
+
 	// Native Shader Selection
 	BeginGroupBox("Native Display Shader");
 	{
