@@ -2,15 +2,13 @@
 // Created by Dimitris Panokostas on 29/11/2023.
 //
 
-#include "amiberry_dbus.h"
-#include "amiberry_dbus.h"
+#ifdef USE_DBUS
+
 #include "amiberry_dbus.h"
 #include <iostream>
 #include <cstring>
 #include "inputdevice.h"
 #include "memory.h"
-
-#ifdef USE_DBUS
 
 using namespace Amiberry::DBus;
 
