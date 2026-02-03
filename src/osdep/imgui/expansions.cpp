@@ -7,6 +7,7 @@
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
 #include "autoconf.h"
+#include "cpuboard.h"
 #include "rommgr.h"
 
 // Categories for Expansion Boards (Matches WinUAE scsiromselectedmask)
@@ -40,6 +41,48 @@ static const int ExpansionCategoriesMask[] = {
 };
 
 static std::vector<int> displayed_rom_indices;
+
+// WinUAE sync: copycpuboardmem() syncs CPU board memory with the appropriate memory subsystem
+void copycpuboardmem(bool tomem)
+{
+	int maxmem = cpuboard_maxmemory(&changed_prefs);
+	int memtype = cpuboard_memorytype(&changed_prefs);
+
+	if (tomem) {
+		// Copy from memory subsystems to cpuboardmem1
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.fastmem[0].size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mem25bit.size;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mbresmem_high.size;
+		}
+		// WinUAE sync: Enforce maximum memory limit for CPU board
+		if (changed_prefs.cpuboardmem1.size > static_cast<uae_u32>(maxmem)) {
+			changed_prefs.cpuboardmem1.size = maxmem;
+		}
+	} else {
+		// WinUAE sync: Enforce maximum memory limit before copying back
+		if (changed_prefs.cpuboardmem1.size > static_cast<uae_u32>(maxmem)) {
+			changed_prefs.cpuboardmem1.size = maxmem;
+		}
+		// Copy from cpuboardmem1 to memory subsystems
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
+		}
+		if (changed_prefs.cpuboard_type == 0) {
+			changed_prefs.mem25bit.size = 0;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+		}
+	}
+}
 
 static void RefreshExpansionList() {
     displayed_rom_indices.clear();
@@ -679,6 +722,7 @@ void render_panel_expansions() {
             ImGui::BeginDisabled(!gui_enabled);
             if (ImGui::SliderInt("##BoardMem", &current_idx, 0, max_idx, mem_labels[current_idx])) {
                 changed_prefs.cpuboardmem1.size = mem_sizes[current_idx] << 20;
+                copycpuboardmem(false);
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
             ImGui::EndDisabled();

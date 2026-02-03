@@ -427,6 +427,7 @@ void InitPanelExpansions(const struct config_category& category);
 void ExitPanelExpansions();
 void RefreshPanelExpansions();
 bool HelpPanelExpansions(std::vector<std::string>& helptext);
+void copycpuboardmem(bool tomem);
 
 void InitPanelRTG(const struct config_category& category);
 void ExitPanelRTG();

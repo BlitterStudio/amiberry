@@ -135,23 +135,43 @@ static void enable_for_expansion2dlg()
 	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type);
 }
 
+void copycpuboardmem(bool tomem)
+{
+	int memtype = cpuboard_memorytype(&changed_prefs);
+	if (tomem) {
+		// Copy from memory subsystems to cpuboardmem1
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.fastmem[0].size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mem25bit.size;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mbresmem_high.size;
+		}
+	} else {
+		// Copy from cpuboardmem1 to memory subsystems
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
+		}
+		if (changed_prefs.cpuboard_type == 0) {
+			changed_prefs.mem25bit.size = 0;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+		}
+	}
+}
+
 static void setcpuboardmemsize()
 {
 	changed_prefs.cpuboardmem1.size = std::min<uae_u32>(changed_prefs.cpuboardmem1.size,
 	                                                    cpuboard_maxmemory(&changed_prefs));
 
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_Z2) {
-		changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
-	}
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_25BITMEM) {
-		changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
-	}
-	if (changed_prefs.cpuboard_type == 0) {
-		changed_prefs.mem25bit.size = 0;
-	}
-
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_HIGHMEM)
-		changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+	copycpuboardmem(false);
 
 	int maxmem = cpuboard_maxmemory(&changed_prefs);
 	changed_prefs.cpuboardmem1.size = std::min<uae_u32>(changed_prefs.cpuboardmem1.size, maxmem);

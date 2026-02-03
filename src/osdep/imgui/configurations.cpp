@@ -101,7 +101,7 @@ void render_panel_configurations()
 			{
 				target_cfgfile_load(&changed_prefs, ConfigFilesList[selected]->FullPath, CONFIG_TYPE_DEFAULT, 0);
 				strncpy(last_active_config, ConfigFilesList[selected]->Name, MAX_DPATH);
-				uae_restart(nullptr, 0, ConfigFilesList[selected]->FullPath);
+				uae_reset(1, 1);
 				gui_running = false;
 			}
 		}

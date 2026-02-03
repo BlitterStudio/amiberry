@@ -287,10 +287,15 @@ void set_expamem_z3_hack_mode(int mode)
 
 bool expamem_z3hack(struct uae_prefs *p)
 {
-	if (z3hack_override == Z3MAPPING_UAE)
+	if (p->z3chipmem.size >= 0x40000000) {
 		return true;
-	if (z3hack_override == Z3MAPPING_REAL)
+	}
+	if (z3hack_override == Z3MAPPING_UAE) {
+		return true;
+	}
+	if (z3hack_override == Z3MAPPING_REAL) {
 		return false;
+	}
 	return p->z3_mapping_mode == Z3MAPPING_UAE || cpuboard_memorytype(p) == BOARD_MEMORY_BLIZZARD_12xx;
 }
 

@@ -43,6 +43,7 @@ void render_panel_ram();
 void render_panel_floppy();
 void render_panel_hd();
 void render_panel_expansions();
+void copycpuboardmem(bool tomem);
 void render_panel_rtg();
 void render_panel_hwinfo();
 void render_panel_display();
