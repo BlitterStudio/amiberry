@@ -249,15 +249,15 @@ static void RenderActionButtons()
     float spacing = ImGui::GetStyle().ItemSpacing.x;
 
     // Row 1: Add Dir, Add HDF, Add HD
-    if (AmigaButton("Add Directory...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Add Directory...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::AddDir;
     }
     ImGui::SameLine();
-    if (AmigaButton("Add Hardfile...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Add Hardfile...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::AddHDF;
     }
     ImGui::SameLine();
-    if (AmigaButton("Add Hard Drive...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Add Hard Drive...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::AddHardDrive;
     }
 
@@ -270,14 +270,14 @@ static void RenderActionButtons()
     float btn_w_props_remove = (btn_w_3 - spacing) / 2.0f;
 
     // Add CD Drive
-    if (AmigaButton("Add CD Drive...", ImVec2(btn_w_cd, 0))) {
+    if (AmigaButton("Add CD Drive...", ImVec2(btn_w_cd, BUTTON_HEIGHT))) {
          current_hd_dialog_mode = HDDialogMode::AddCD;
     }
     
     ImGui::SameLine();
 
     // Add Tape Drive
-    if (AmigaButton("Add Tape Drive...", ImVec2(btn_w_tape, 0))) {
+    if (AmigaButton("Add Tape Drive...", ImVec2(btn_w_tape, BUTTON_HEIGHT))) {
          current_hd_dialog_mode = HDDialogMode::AddTape;
     }
 
@@ -285,20 +285,20 @@ static void RenderActionButtons()
     
     // Properties (Edit)
     ImGui::BeginDisabled(selected_row < 0 || selected_row >= changed_prefs.mountitems);
-    if (AmigaButton("Properties", ImVec2(btn_w_props_remove, 0))) {
+    if (AmigaButton("Properties", ImVec2(btn_w_props_remove, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::EditEntry;
         edit_entry_index = selected_row;
     }
     ImGui::SameLine();
     // Remove
-    if (AmigaButton("Remove", ImVec2(btn_w_props_remove, 0))) {
+    if (AmigaButton("Remove", ImVec2(btn_w_props_remove, BUTTON_HEIGHT))) {
         kill_filesys_unitconfig(&changed_prefs, selected_row);
         if (selected_row >= changed_prefs.mountitems) selected_row = changed_prefs.mountitems - 1;
     }
     ImGui::EndDisabled();
 
     // Row 3: Create Hardfile (Full width or similar to top buttons?) 
-    if (AmigaButton("Create Hardfile...", ImVec2(btn_w_3, 0))) {
+    if (AmigaButton("Create Hardfile...", ImVec2(btn_w_3, BUTTON_HEIGHT))) {
         current_hd_dialog_mode = HDDialogMode::CreateHDF;
     }
 }
@@ -339,7 +339,7 @@ static void RenderCDSection()
     // Preview value
     const char* preview_val = (cd_name && *cd_name) ? cd_name : "";
 
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 160); // Reserve space for buttons
+    ImGui::PushItemWidth(-ImGui::GetStyle().ItemSpacing.x - BUTTON_WIDTH * 1.5f); // Reserve space for buttons
     if (ImGui::BeginCombo("##CDPath", preview_val))
     {
         // Add current value if not empty
@@ -369,12 +369,12 @@ static void RenderCDSection()
     xfree(cd_name);
     
     ImGui::SameLine();
-    if (AmigaButton("Eject", ImVec2(70, 0))) {
+    if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH, 0))) {
         changed_prefs.cdslots[0].name[0] = 0;
         changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
     }
     ImGui::SameLine();
-    if (AmigaButton("...", ImVec2(30, 0))) {
+    if (AmigaButton("...")) {
          char* curr_path = ua(changed_prefs.cdslots[0].name);
          std::string startPath = curr_path;
          if (startPath.empty()) {
@@ -424,12 +424,16 @@ static void ShowEditFilesysVirtualModal()
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Device Name:");
         ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
         InputTextT("##Device", current_fsvdlg.ci.devname, sizeof(current_fsvdlg.ci.devname));
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Volume Label:");
         ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
         InputTextT("##Volume", current_fsvdlg.ci.volname, sizeof(current_fsvdlg.ci.volname));
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::EndGroup();
 
         ImGui::SameLine();
@@ -438,6 +442,7 @@ static void ShowEditFilesysVirtualModal()
         ImGui::Text("Path:");
         ImGui::SameLine();
         InputTextT("##Path", current_fsvdlg.ci.rootdir, sizeof(current_fsvdlg.ci.rootdir));
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("... Dir"))
         {
@@ -501,6 +506,7 @@ static void ShowEditFilesysVirtualModal()
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Boot priority:");
         ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
         int bp = current_fsvdlg.ci.bootpri;
         if (bp == BOOTPRI_NOAUTOBOOT) bp = -128;
         if (ImGui::InputInt("##BootPri", &bp)) {
@@ -508,17 +514,18 @@ static void ShowEditFilesysVirtualModal()
             if (bp > 127) bp = 127;
             current_fsvdlg.ci.bootpri = bp;
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             new_filesys(edit_entry_index);
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_virtual_filesys_modal = false;
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_virtual_filesys_modal = false;
@@ -536,6 +543,7 @@ static void ShowEditFilesysHardfileModal()
         ImGui::Text("Path:");
         ImGui::SameLine();
         InputTextT("##HDFPath", current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir));
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("..."))
         {
@@ -577,22 +585,45 @@ static void ShowEditFilesysHardfileModal()
         int blocksize = current_hfdlg.ci.blocksize;
 
         bool geo_changed = false;
-        if (ImGui::InputInt("Surfaces", &surfaces)) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Surfaces:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        if (ImGui::InputInt("##Surfaces", &surfaces)) {
              if (manual_geo) current_hfdlg.ci.pheads = surfaces; else current_hfdlg.ci.surfaces = surfaces;
              geo_changed = true;
         }
-        if (ImGui::InputInt("Sectors", &sectors)) {
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Sectors:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        if (ImGui::InputInt("##Sectors", &sectors)) {
              if (manual_geo) current_hfdlg.ci.psecs = sectors; else current_hfdlg.ci.sectors = sectors;
              geo_changed = true;
         }
-        if (ImGui::InputInt("Reserved", &reserved)) {
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Reserved:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        if (ImGui::InputInt("##Reserved", &reserved)) {
              if (manual_geo) current_hfdlg.ci.pcyls = reserved; else current_hfdlg.ci.reserved = reserved;
              geo_changed = true;
         }
-        if (ImGui::InputInt("Blocksize", &blocksize)) {
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Blocksize:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        if (ImGui::InputInt("##Blocksize", &blocksize)) {
              current_hfdlg.ci.blocksize = blocksize;
              geo_changed = true;
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         
         if (geo_changed) {
              updatehdfinfo(true, false, false, hdf_info_text1, hdf_info_text2);
@@ -604,6 +635,7 @@ static void ShowEditFilesysHardfileModal()
         ImGui::Text("Controller");
         
         if (controller.empty()) {
+            ImGui::AlignTextToFramePadding();
             ImGui::Text("No controllers available");
         } else {
             int current_ctrl_idx = 0;
@@ -613,8 +645,12 @@ static void ShowEditFilesysHardfileModal()
                     break;
                 }
             }
-            
-            if (ImGui::BeginCombo("Interface", controller[current_ctrl_idx].display.c_str())) {
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Interface:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+            if (ImGui::BeginCombo("##Interface", controller[current_ctrl_idx].display.c_str())) {
                 for (size_t i = 0; i < controller.size(); ++i) {
                     const bool is_selected = (current_ctrl_idx == i);
                     if (is_selected)
@@ -629,11 +665,22 @@ static void ShowEditFilesysHardfileModal()
                 }
                 ImGui::EndCombo();
             }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         }
 
-        ImGui::InputInt("Unit", &current_hfdlg.ci.controller_unit); 
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Unit:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        ImGui::InputInt("##Unit", &current_hfdlg.ci.controller_unit);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
-        InputTextT("Device Name", current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname));
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Device Name:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        InputTextT("##DeviceName", current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname));
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         
         ImGui::EndGroup();
 
@@ -647,8 +694,14 @@ static void ShowEditFilesysHardfileModal()
              if (bootable) current_hfdlg.ci.bootpri = 0;
              else current_hfdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
         }
+
         ImGui::SameLine();
-        ImGui::InputInt("Boot Pri", &current_hfdlg.ci.bootpri);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Boot priority:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        ImGui::InputInt("##BootPri", &current_hfdlg.ci.bootpri);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
         ImGui::Separator();
         
@@ -657,14 +710,14 @@ static void ShowEditFilesysHardfileModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             new_hardfile(edit_entry_index);
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_hardfile_modal = false;
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             current_hd_dialog_mode = HDDialogMode::None;
             ImGui::CloseCurrentPopup();
             show_hardfile_modal = false;
@@ -680,7 +733,10 @@ static void ShowCreateHardfileModal()
     {
         ImGui::BeginGroup();
         ImGui::Text("Settings");
-        ImGui::InputInt("Size (MB)", &create_hdf_size_mb);
+        ImGui::Text("Size (MB):");
+        ImGui::SameLine();
+        ImGui::InputInt("##Size(MB)", &create_hdf_size_mb);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         AmigaCheckbox("Dynamic HDF (Sparse)", &create_hdf_dynamic);
         AmigaCheckbox("RDB Mode", &create_hdf_rdb);
         ImGui::EndGroup();
@@ -690,6 +746,7 @@ static void ShowCreateHardfileModal()
         ImGui::BeginGroup();
         ImGui::Text("Path");
         InputTextT("##CreatePath", current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir));
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("...")) {
              char* current_root = ua(current_hfdlg.ci.rootdir);
@@ -712,7 +769,7 @@ static void ShowCreateHardfileModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("Create", ImVec2(120, 0))) {
+        if (AmigaButton("Create", ImVec2(BUTTON_WIDTH, 0))) {
             uae_u64 size_bytes = (uae_u64)create_hdf_size_mb * 1024 * 1024;
             if (vhd_create(current_hfdlg.ci.rootdir, size_bytes, create_hdf_dynamic ? 1 : 0)) {
                 show_create_hdf_modal = false;
@@ -720,7 +777,7 @@ static void ShowCreateHardfileModal()
             }
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             show_create_hdf_modal = false;
             ImGui::CloseCurrentPopup();
         }
@@ -750,8 +807,8 @@ static void ShowAddHardDriveModal()
                 TCHAR* name = hdf_getnameharddrive(i, 0, &sectorsize, &dangerous, &flags);
                 if (name) {
                     char* tmp = ua(name);
-                    drive_names.push_back(std::string(tmp)); 
-                    drive_paths.push_back(std::string(tmp)); 
+                    drive_names.emplace_back(tmp);
+                    drive_paths.emplace_back(tmp);
                     xfree(tmp);
                     xfree(name);
                 }
@@ -781,7 +838,7 @@ static void ShowAddHardDriveModal()
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             if (selected_drive_idx >= 0 && selected_drive_idx < drive_names.size()) {
                 au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), drive_paths[selected_drive_idx].c_str());
                  char devname[256];
@@ -793,7 +850,7 @@ static void ShowAddHardDriveModal()
             }
         }
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             show_add_harddrive_modal = false;
             ImGui::CloseCurrentPopup();
         }
@@ -834,7 +891,11 @@ static void ShowEditCDDriveModal()
              initialized = false; 
         }
 
-        InputTextT("Path", path_buf, MAX_DPATH);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Path:");
+        ImGui::SameLine();
+        InputTextT("##Path", path_buf, MAX_DPATH);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("...")) {
             OpenFileDialog("Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", path_buf);
@@ -845,7 +906,10 @@ static void ShowEditCDDriveModal()
              if (!result_path.empty()) strncpy(path_buf, result_path.c_str(), MAX_DPATH);
         }
 
-        if (ImGui::BeginCombo("Controller", controller.size() > selected_controller ? controller[selected_controller].display.c_str() : "Unknown")) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Controller:");
+        ImGui::SameLine();
+        if (ImGui::BeginCombo("##Controller", controller.size() > selected_controller ? controller[selected_controller].display.c_str() : "Unknown")) {
              for (int i = 0; i < (int)controller.size(); ++i) {
                  const bool is_selected = (selected_controller == i);
                  if (is_selected)
@@ -860,8 +924,13 @@ static void ShowEditCDDriveModal()
              }
              ImGui::EndCombo();
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
-        if (ImGui::BeginCombo("Unit", std::to_string(selected_unit).c_str())) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Unit:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        if (ImGui::BeginCombo("##Unit", std::to_string(selected_unit).c_str())) {
             for (int i = 0; i < 8; ++i) {
                  const bool is_selected = (selected_unit == i);
                  if (is_selected)
@@ -876,10 +945,11 @@ static void ShowEditCDDriveModal()
             }
             ImGui::EndCombo();
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             strncpy(current_cddlg.ci.rootdir, path_buf, MAX_DPATH);
             current_cddlg.ci.controller_unit = selected_unit;
             
@@ -899,7 +969,7 @@ static void ShowEditCDDriveModal()
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             ImGui::CloseCurrentPopup();
             show_cd_modal = false;
             initialized = false;
@@ -925,7 +995,11 @@ static void ShowEditTapeDriveModal()
             initialized = true;
         }
 
-        InputTextT("Path", path_buf, MAX_DPATH);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Path:");
+        ImGui::SameLine();
+        InputTextT("##Path", path_buf, MAX_DPATH);
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("... Dir")) {
              char* current_root = ua(path_buf);
@@ -946,7 +1020,11 @@ static void ShowEditTapeDriveModal()
              if (!result_path.empty()) strncpy(path_buf, result_path.c_str(), MAX_DPATH);
         }
 
-        if (ImGui::BeginCombo("Controller", controller.size() > selected_controller ? controller[selected_controller].display.c_str() : "Unknown")) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Controller:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+        if (ImGui::BeginCombo("##Controller", controller.size() > selected_controller ? controller[selected_controller].display.c_str() : "Unknown")) {
              for (int i = 0; i < (int)controller.size(); ++i) {
                  const bool is_selected = (selected_controller == i);
                  if (is_selected)
@@ -961,8 +1039,13 @@ static void ShowEditTapeDriveModal()
              }
              ImGui::EndCombo();
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
-        if (ImGui::BeginCombo("Unit", std::to_string(selected_unit).c_str())) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Unit:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        if (ImGui::BeginCombo("##Unit", std::to_string(selected_unit).c_str())) {
             for (int i = 0; i < 8; ++i) {
                  const bool is_selected = (selected_unit == i);
                  if (is_selected)
@@ -977,10 +1060,11 @@ static void ShowEditTapeDriveModal()
             }
             ImGui::EndCombo();
         }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
         ImGui::Separator();
 
-        if (AmigaButton("OK", ImVec2(120, 0))) {
+        if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
             if (path_buf[0] == 0) {
                  // Warning?
             } else {
@@ -1004,7 +1088,7 @@ static void ShowEditTapeDriveModal()
         }
         ImGui::SetItemDefaultFocus();
         ImGui::SameLine();
-        if (AmigaButton("Cancel", ImVec2(120, 0))) {
+        if (AmigaButton("Cancel", ImVec2(BUTTON_WIDTH, 0))) {
             ImGui::CloseCurrentPopup();
             show_tape_modal = false;
             initialized = false;
