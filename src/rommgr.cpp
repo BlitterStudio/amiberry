@@ -97,7 +97,7 @@ struct romdata *getromdatabypath (const TCHAR *path)
 	return NULL;
 }
 
-#define NEXT_ROM_ID 340
+#define NEXT_ROM_ID 341
 
 #if NEXT_ROM_ID >= MAX_ROMMGR_ROMS
 #error Increase MAX_ROMMGR_ROMS!
@@ -822,6 +822,8 @@ static struct romdata roms[] = {
 	0x667c7616, 0x0eb1cb38,0x3133f070,0x7cb57944,0xc516f236,0xbad4d4f6, NULL, NULL },
 	{ _T("Combitec HD20A/HD40A"), 0, 0, 0, 0, _T("HD20A\0"), 32768, 267, 0, 0, ROMTYPE_HD20A, 0, 0, NULL,
 	0x0e7391b4, 0x7c365adb,0x3496c479,0x5e94a166,0xd834254a,0x6112d91c, NULL, NULL },
+	{ _T("Buddha v103.17"), 103, 17, 103, 17, _T("BUDDHA\0"), 32768, 340, 0, 0, ROMTYPE_BUDDHA, 0, 0, NULL,
+	0x2b7b24e0, 0xec17a589,0x62c373a2,0x892090ec,0x9b1722d2,0xc326d631, NULL, NULL },
 
 	{ _T("CyberStorm MK I 68060 Support"), 0, 0, 0, 0, _T("CSMKI\0"), 32768, 95, 0, 0, ROMTYPE_CB_CSMK1, 0, 0, NULL,
 	0x33a8ff3a, 0x8f4bdda0,0x10338a48,0x51e4a2fb,0xb4aa6d6e,0x202fe98e, NULL, NULL },
