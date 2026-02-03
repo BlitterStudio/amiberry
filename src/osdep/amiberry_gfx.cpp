@@ -2487,17 +2487,20 @@ static void close_hwnds(struct AmigaMonitor* mon)
 
 #ifdef USE_OPENGL
 	destroy_shaders();
-	if (p96_cursor_overlay_texture_gl) {
-		glDeleteTextures(1, &p96_cursor_overlay_texture_gl);
-		p96_cursor_overlay_texture_gl = 0;
-	}
-	if (cursor_vao) {
-		glDeleteVertexArrays(1, &cursor_vao);
-		cursor_vao = 0;
-	}
-	if (cursor_vbo) {
-		glDeleteBuffers(1, &cursor_vbo);
-		cursor_vbo = 0;
+	if (gl_context != nullptr)
+	{
+		if (p96_cursor_overlay_texture_gl) {
+			glDeleteTextures(1, &p96_cursor_overlay_texture_gl);
+			p96_cursor_overlay_texture_gl = 0;
+		}
+		if (cursor_vao) {
+			glDeleteVertexArrays(1, &cursor_vao);
+			cursor_vao = 0;
+		}
+		if (cursor_vbo) {
+			glDeleteBuffers(1, &cursor_vbo);
+			cursor_vbo = 0;
+		}
 	}
 #else
 	if (amiga_texture)
@@ -5083,6 +5086,16 @@ void toggle_fullscreen(const int monid, const int mode)
 #ifdef USE_OPENGL
 void destroy_shaders()
 {
+	// Early exit if no GL context exists (e.g., quitting before emulation started)
+	if (gl_context == nullptr)
+	{
+		// Reset non-GL state
+		crtemu_shader = nullptr;
+		external_shader = nullptr;
+		gl_state_initialized = false;
+		return;
+	}
+
 	if (crtemu_shader != nullptr)
 	{
 		crtemu_destroy(crtemu_shader);
