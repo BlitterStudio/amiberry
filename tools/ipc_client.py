@@ -27,10 +27,18 @@ def get_socket_path() -> str:
     return '/tmp/amiberry.sock'
 
 
+def expand_path(path: str) -> str:
+    """Expand ~ and environment variables in a path."""
+    return os.path.expanduser(os.path.expandvars(path))
+
+
 def send_command(sock: socket.socket, command: str, *args: str) -> str:
     """Send a command and receive the response."""
+    # Expand paths in arguments (for commands that take file paths)
+    expanded_args = [expand_path(arg) for arg in args]
+
     # Build message: COMMAND\tARG1\tARG2...\n
-    parts = [command.upper()] + list(args)
+    parts = [command.upper()] + expanded_args
     message = '\t'.join(parts) + '\n'
 
     sock.sendall(message.encode('utf-8'))
@@ -91,14 +99,15 @@ Config options for GET_CONFIG/SET_CONFIG:
   joyport0, joyport1, description
   turbo_emulation
 
-Type 'help' for this message, 'exit' or 'quit' to exit.
+Type 'help' for this message, 'exit' or 'q' to quit the client.
+Note: Use 'QUIT' to quit Amiberry (the emulator).
 """)
 
 
 def interactive_mode(socket_path: str):
     """Run in interactive mode."""
     print(f"Amiberry IPC Client - Connected to {socket_path}")
-    print("Type 'help' for available commands, 'exit' to quit.\n")
+    print("Type 'help' for available commands, 'exit' or 'q' to quit the client.\n")
 
     while True:
         try:
@@ -110,7 +119,7 @@ def interactive_mode(socket_path: str):
         if not line:
             continue
 
-        if line.lower() in ('exit', 'quit', 'q'):
+        if line.lower() in ('exit', 'q'):
             break
 
         if line.lower() == 'help':

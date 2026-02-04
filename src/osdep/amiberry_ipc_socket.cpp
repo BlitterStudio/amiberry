@@ -127,8 +127,15 @@ static std::string HandleScreenshot(const std::vector<std::string>& args)
 		return make_response(false, {"Missing filename"});
 	}
 
-	create_screenshot();
-	save_thumb(args[0]);
+	if (!create_screenshot()) {
+		return make_response(false, {"Failed to create screenshot"});
+	}
+
+	int ret = save_thumb(args[0]);
+	if (ret == 0) {
+		return make_response(false, {"Failed to save screenshot to: " + args[0]});
+	}
+
 	return make_response(true, {args[0]});
 }
 
@@ -167,8 +174,13 @@ static std::string HandleDiskSwap(const std::vector<std::string>& args)
 		return make_response(false, {"Usage: DISKSWAP <disknum> <drivenum>"});
 	}
 
-	int disknum = std::stoi(args[0]);
-	int drivenum = std::stoi(args[1]);
+	int disknum, drivenum;
+	try {
+		disknum = std::stoi(args[0]);
+		drivenum = std::stoi(args[1]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid disk or drive number"});
+	}
 
 	if (disknum < 0 || disknum >= MAX_SPARE_DRIVES || drivenum < 0 || drivenum > 3) {
 		return make_response(false, {"Invalid disk or drive number"});
@@ -191,9 +203,15 @@ static std::string HandleQueryDiskSwap(const std::vector<std::string>& args)
 		return make_response(false, {"Usage: QUERYDISKSWAP <drivenum>"});
 	}
 
-	int drivenum = std::stoi(args[0]);
+	int drivenum;
+	try {
+		drivenum = std::stoi(args[0]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid drive number: " + args[0]});
+	}
+
 	if (drivenum < 0 || drivenum > 3) {
-		return make_response(false, {"Invalid drive number"});
+		return make_response(false, {"Drive number must be 0-3"});
 	}
 
 	int disknum = -1;
@@ -214,9 +232,15 @@ static std::string HandleInsertFloppy(const std::vector<std::string>& args)
 		return make_response(false, {"Usage: INSERTFLOPPY <path> <drivenum>"});
 	}
 
-	int drivenum = std::stoi(args[1]);
+	int drivenum;
+	try {
+		drivenum = std::stoi(args[1]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid drive number: " + args[1]});
+	}
+
 	if (drivenum < 0 || drivenum > 3) {
-		return make_response(false, {"Invalid drive number"});
+		return make_response(false, {"Drive number must be 0-3"});
 	}
 
 	_tcsncpy(changed_prefs.floppyslots[drivenum].df, args[0].c_str(), MAX_DPATH);
@@ -340,43 +364,47 @@ static std::string HandleSetConfig(const std::vector<std::string>& args)
 	const std::string& optname = args[0];
 	const std::string& optval = args[1];
 
-	// Floppy options
-	if (optname == "floppy_speed") {
-		changed_prefs.floppy_speed = std::stol(optval);
-		set_config_changed();
-	}
-	// CPU options
-	else if (optname == "cpu_speed") {
-		changed_prefs.m68k_speed = std::stol(optval);
-		set_config_changed();
-	} else if (optname == "turbo_emulation") {
-		changed_prefs.turbo_emulation = (optval == "true" || optval == "1");
-		set_config_changed();
-	}
-	// Display options
-	else if (optname == "gfx_fullscreen") {
-		bool fullscreen = (optval == "true" || optval == "1");
-		changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLSCREEN : GFX_WINDOW;
-		set_config_changed();
-	}
-	// Sound options
-	else if (optname == "sound_output") {
-		changed_prefs.produce_sound = std::stol(optval);
-		set_config_changed();
-	} else if (optname == "sound_stereo") {
-		changed_prefs.sound_stereo = std::stol(optval);
-		set_config_changed();
-	} else if (optname == "sound_volume") {
-		changed_prefs.sound_volume_master = std::stol(optval);
-		set_config_changed();
-	}
-	// Chipset options
-	else if (optname == "ntsc") {
-		changed_prefs.ntscmode = (optval == "true" || optval == "1");
-		set_config_changed();
-	}
-	else {
-		return make_response(false, {"Unknown option: " + optname});
+	try {
+		// Floppy options
+		if (optname == "floppy_speed") {
+			changed_prefs.floppy_speed = std::stol(optval);
+			set_config_changed();
+		}
+		// CPU options
+		else if (optname == "cpu_speed") {
+			changed_prefs.m68k_speed = std::stol(optval);
+			set_config_changed();
+		} else if (optname == "turbo_emulation") {
+			changed_prefs.turbo_emulation = (optval == "true" || optval == "1");
+			set_config_changed();
+		}
+		// Display options
+		else if (optname == "gfx_fullscreen") {
+			bool fullscreen = (optval == "true" || optval == "1");
+			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLSCREEN : GFX_WINDOW;
+			set_config_changed();
+		}
+		// Sound options
+		else if (optname == "sound_output") {
+			changed_prefs.produce_sound = std::stol(optval);
+			set_config_changed();
+		} else if (optname == "sound_stereo") {
+			changed_prefs.sound_stereo = std::stol(optval);
+			set_config_changed();
+		} else if (optname == "sound_volume") {
+			changed_prefs.sound_volume_master = std::stol(optval);
+			set_config_changed();
+		}
+		// Chipset options
+		else if (optname == "ntsc") {
+			changed_prefs.ntscmode = (optval == "true" || optval == "1");
+			set_config_changed();
+		}
+		else {
+			return make_response(false, {"Unknown option: " + optname});
+		}
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid value for " + optname + ": " + optval});
 	}
 
 	return make_response(true);
@@ -405,8 +433,14 @@ static std::string HandleSendKey(const std::vector<std::string>& args)
 		return make_response(false, {"Usage: SEND_KEY <keycode> <state>"});
 	}
 
-	int keycode = std::stoi(args[0]);
-	int state = std::stoi(args[1]);
+	int keycode, state;
+	try {
+		keycode = std::stoi(args[0]);
+		state = std::stoi(args[1]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid keycode or state"});
+	}
+
 	inputdevice_add_inputcode(keycode, state, nullptr);
 
 	return make_response(true);
@@ -419,8 +453,14 @@ static std::string HandleReadMem(const std::vector<std::string>& args)
 		return make_response(false, {"Usage: READ_MEM <address> <width(1,2,4)>"});
 	}
 
-	uint32_t addr = std::stoul(args[0], nullptr, 0);
-	int width = std::stoi(args[1]);
+	uint32_t addr;
+	int width;
+	try {
+		addr = std::stoul(args[0], nullptr, 0);
+		width = std::stoi(args[1]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid address or width"});
+	}
 
 	uint32_t value;
 	if (width == 1) {
@@ -443,9 +483,16 @@ static std::string HandleWriteMem(const std::vector<std::string>& args)
 		return make_response(false, {"Usage: WRITE_MEM <address> <width(1,2,4)> <value>"});
 	}
 
-	uint32_t addr = std::stoul(args[0], nullptr, 0);
-	int width = std::stoi(args[1]);
-	uint32_t value = std::stoul(args[2], nullptr, 0);
+	uint32_t addr;
+	int width;
+	uint32_t value;
+	try {
+		addr = std::stoul(args[0], nullptr, 0);
+		width = std::stoi(args[1]);
+		value = std::stoul(args[2], nullptr, 0);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid address, width, or value"});
+	}
 
 	if (width == 1) {
 		put_byte(addr, value);
