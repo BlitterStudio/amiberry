@@ -83,15 +83,29 @@ def print_help():
   LIST_FLOPPIES             - List all floppy drives and contents
   DISKSWAP <disknum> <drv>  - Swap disk from swapper to drive
   QUERYDISKSWAP <drivenum>  - Query which swapper disk is in drive
+  SET_FLOPPY_SPEED <speed>  - Set speed (0=turbo, 100=1x, 200=2x, 400=4x, 800=8x)
+  GET_FLOPPY_SPEED          - Get current floppy speed
+  DISK_WRITE_PROTECT <d> <p>- Set write protection (drive 0-3, p: 0|1)
+  GET_DISK_WRITE_PROTECT <d>- Get write protection status
 
 === CD-ROM ===
   INSERTCD <path>           - Insert CD image
   EJECT_CD                  - Eject CD
 
+=== Hard Drives ===
+  LIST_HARDDRIVES           - List mounted hard drives/directories
+
+=== WHDLoad ===
+  INSERT_WHDLOAD <path>     - Load WHDLoad game/demo from path
+  EJECT_WHDLOAD             - Eject current WHDLoad content
+  GET_WHDLOAD               - Get current WHDLoad status
+
 === State Management ===
   SCREENSHOT <filename>     - Take screenshot (supports ~/path)
   SAVESTATE <state> <cfg>   - Save state and config files
   LOADSTATE <statefile>     - Load state file
+  QUICKSAVE [slot]          - Quick save to slot (0-9, default: 0)
+  QUICKLOAD [slot]          - Quick load from slot (0-9, default: 0)
 
 === Audio ===
   SET_VOLUME <0-100>        - Set master volume (0-100)
@@ -103,6 +117,27 @@ def print_help():
   TOGGLE_FULLSCREEN         - Toggle fullscreen/windowed mode
   SET_WARP <0|1>            - Enable/disable warp mode
   GET_WARP                  - Get warp mode status
+  SET_DISPLAY_MODE <mode>   - Set mode (0=window, 1=fullscreen, 2=fullwindow)
+  GET_DISPLAY_MODE          - Get current display mode
+  SET_NTSC <0|1>            - Set video mode (0=PAL, 1=NTSC)
+  GET_NTSC                  - Get current video mode (PAL/NTSC)
+  TOGGLE_RTG [monid]        - Toggle between RTG and chipset display
+  TOGGLE_STATUS_LINE        - Cycle status line (off/chipset/rtg/both)
+  GET_FPS                   - Get current frame rate and idle percentage
+  SET_WINDOW_SIZE <w> <h>   - Set window size (width, height)
+  GET_WINDOW_SIZE           - Get current window size
+  SET_SCALING <mode>        - Set scaling mode
+  GET_SCALING               - Get current scaling mode
+  SET_LINE_MODE <mode>      - Set line mode (scanlines, etc.)
+  GET_LINE_MODE             - Get current line mode
+  SET_RESOLUTION <w> <h>    - Set emulated screen resolution
+  GET_RESOLUTION            - Get current resolution
+  SET_AUTOCROP <0|1>        - Enable/disable automatic display cropping
+  GET_AUTOCROP              - Get autocrop status
+
+=== Sound ===
+  SET_SOUND_MODE <mode>     - Set mode (0=off, 1=normal, 2=stereo, 3=best)
+  GET_SOUND_MODE            - Get current sound mode
 
 === Configuration ===
   GET_STATUS                - Get emulation status
@@ -115,10 +150,53 @@ def print_help():
   SEND_KEY <keycode> <state>- Send key (state: 0=release, 1=press)
   SEND_MOUSE <dx> <dy> <btn>- Send mouse input (btn: bit0=L, bit1=R, bit2=M)
   SET_MOUSE_SPEED <10-200>  - Set mouse sensitivity
+  GET_MOUSE_SPEED           - Get current mouse speed
+  TOGGLE_MOUSE_GRAB         - Toggle mouse capture
+
+=== Joystick/Gamepad ===
+  GET_JOYPORT_MODE <port>   - Get port mode (port: 0-3)
+  SET_JOYPORT_MODE <p> <m>  - Set port mode (modes: 0=default, 2=mouse, 3=joy, 7=cd32)
+  GET_AUTOFIRE <port>       - Get autofire mode for port
+  SET_AUTOFIRE <port> <m>   - Set autofire (0=off, 1=normal, 2=toggle, 3=always)
+
+=== Status ===
+  GET_LED_STATUS            - Get all LED states (power, floppy, HD, CD)
+
+=== Hardware ===
+  SET_CHIPSET <chipset>     - Set chipset (OCS, ECS_AGNUS, ECS_DENISE, ECS, AGA)
+  GET_CHIPSET               - Get current chipset
+  SET_CPU_MODEL <model>     - Set CPU model (68000, 68010, 68020, 68030, 68040, 68060)
+  GET_CPU_MODEL             - Get current CPU model
+  SET_CPU_SPEED <speed>     - Set CPU speed (-1=max, 0=cycle-exact, >0=%)
+  GET_CPU_SPEED             - Get current CPU speed setting
+  GET_MEMORY_CONFIG         - Get all memory sizes (chip, fast, bogo, z3, rtg)
+  SET_CHIP_MEM <size>       - Set chip memory size (in KB)
+  SET_FAST_MEM <size>       - Set fast memory size (in KB)
+  SET_SLOW_MEM <size>       - Set slow (bogo) memory size (in KB)
+  SET_Z3_MEM <size>         - Set Zorro III memory size (in KB)
 
 === Memory Access ===
   READ_MEM <addr> <width>   - Read memory (width: 1, 2, or 4 bytes)
   WRITE_MEM <addr> <w> <v>  - Write value to memory
+
+=== Debugging ===
+  DEBUG_ACTIVATE            - Activate the debugger
+  DEBUG_DEACTIVATE          - Deactivate the debugger
+  DEBUG_STATUS              - Get debugger status
+  DEBUG_STEP                - Step one instruction
+  DEBUG_STEP_OVER           - Step over (skip subroutine calls)
+  DEBUG_CONTINUE            - Continue execution until next breakpoint
+  GET_CPU_REGS              - Get all CPU register values
+  GET_CUSTOM_REGS           - Get Amiga custom chip register values
+  DISASSEMBLE <addr> [n]    - Disassemble n instructions at address
+  SET_BREAKPOINT <addr>     - Set breakpoint at address
+  CLEAR_BREAKPOINT <addr>   - Clear breakpoint at address
+  LIST_BREAKPOINTS          - List all active breakpoints
+  GET_COPPER_STATE          - Get Copper co-processor state
+  GET_BLITTER_STATE         - Get Blitter state
+  GET_DRIVE_STATE           - Get floppy drive state (track, motor, etc.)
+  GET_AUDIO_STATE           - Get audio channel states
+  GET_DMA_STATE             - Get DMA channel states
 
 === Utility ===
   GET_VERSION               - Get Amiberry version info
