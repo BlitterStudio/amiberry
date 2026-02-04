@@ -13,6 +13,10 @@
 #include "savestate.h"
 #include "inputdevice.h"
 #include "memory.h"
+#include "disk.h"
+#include "xwin.h"
+#include "sounddep/sound.h"
+#include <dirent.h>
 
 #include <iostream>
 #include <sstream>
@@ -507,6 +511,276 @@ static std::string HandleWriteMem(const std::vector<std::string>& args)
 	return make_response(true);
 }
 
+// === NEW COMMAND HANDLERS ===
+
+static std::string HandleEjectFloppy(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received EJECT_FLOPPY" << std::endl;
+	if (args.empty()) {
+		return make_response(false, {"Usage: EJECT_FLOPPY <drivenum>"});
+	}
+
+	int drivenum;
+	try {
+		drivenum = std::stoi(args[0]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid drive number: " + args[0]});
+	}
+
+	if (drivenum < 0 || drivenum > 3) {
+		return make_response(false, {"Drive number must be 0-3"});
+	}
+
+	disk_eject(drivenum);
+	return make_response(true);
+}
+
+static std::string HandleEjectCD(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received EJECT_CD" << std::endl;
+
+	changed_prefs.cdslots[0].name[0] = 0;
+	changed_prefs.cdslots[0].inuse = false;
+	set_config_changed();
+
+	return make_response(true);
+}
+
+static std::string HandleSetVolume(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received SET_VOLUME" << std::endl;
+	if (args.empty()) {
+		return make_response(false, {"Usage: SET_VOLUME <0-100>"});
+	}
+
+	int volume;
+	try {
+		volume = std::stoi(args[0]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid volume: " + args[0]});
+	}
+
+	if (volume < 0 || volume > 100) {
+		return make_response(false, {"Volume must be 0-100"});
+	}
+
+	changed_prefs.sound_volume_master = volume;
+	set_config_changed();
+
+	return make_response(true);
+}
+
+static std::string HandleGetVolume(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received GET_VOLUME" << std::endl;
+	return make_response(true, {std::to_string(currprefs.sound_volume_master)});
+}
+
+static std::string HandleMute(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received MUTE" << std::endl;
+	set_volume(0, 1);
+	return make_response(true);
+}
+
+static std::string HandleUnmute(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received UNMUTE" << std::endl;
+	set_volume(currprefs.sound_volume_master, 0);
+	return make_response(true);
+}
+
+static std::string HandleToggleFullscreen(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received TOGGLE_FULLSCREEN" << std::endl;
+	toggle_fullscreen(0, -1);
+	return make_response(true);
+}
+
+static std::string HandleSetWarp(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received SET_WARP" << std::endl;
+	if (args.empty()) {
+		return make_response(false, {"Usage: SET_WARP <0|1>"});
+	}
+
+	int mode;
+	try {
+		mode = std::stoi(args[0]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid warp mode: " + args[0]});
+	}
+
+	warpmode(mode ? 1 : 0);
+	return make_response(true);
+}
+
+static std::string HandleGetWarp(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received GET_WARP" << std::endl;
+	return make_response(true, {std::to_string(currprefs.turbo_emulation ? 1 : 0)});
+}
+
+static std::string HandleGetVersion(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received GET_VERSION" << std::endl;
+	std::vector<std::string> info;
+	info.push_back("version=" + get_version_string());
+	info.push_back("sdl=" + get_sdl2_version_string());
+	return make_response(true, info);
+}
+
+static std::string HandleListFloppies(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received LIST_FLOPPIES" << std::endl;
+	std::vector<std::string> responses;
+
+	for (int i = 0; i < 4; ++i) {
+		std::string entry = "DF" + std::to_string(i) + "=";
+		if (currprefs.floppyslots[i].df[0]) {
+			entry += currprefs.floppyslots[i].df;
+		} else {
+			entry += "<empty>";
+		}
+		responses.push_back(entry);
+	}
+
+	return make_response(true, responses);
+}
+
+static std::string HandleListConfigs(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received LIST_CONFIGS" << std::endl;
+	std::vector<std::string> configs;
+
+	std::string config_path = get_configuration_path();
+	DIR* dir = opendir(config_path.c_str());
+	if (dir) {
+		struct dirent* entry;
+		while ((entry = readdir(dir)) != nullptr) {
+			std::string name = entry->d_name;
+			// Only list .uae files
+			if (name.length() > 4 && name.substr(name.length() - 4) == ".uae") {
+				configs.push_back(name);
+			}
+		}
+		closedir(dir);
+	}
+
+	if (configs.empty()) {
+		return make_response(true, {"<no configs found>"});
+	}
+
+	return make_response(true, configs);
+}
+
+static std::string HandleFrameAdvance(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received FRAME_ADVANCE" << std::endl;
+	if (!pause_emulation) {
+		return make_response(false, {"Emulation must be paused first"});
+	}
+
+	int frames = 1;
+	if (!args.empty()) {
+		try {
+			frames = std::stoi(args[0]);
+		} catch (const std::exception& e) {
+			return make_response(false, {"Invalid frame count: " + args[0]});
+		}
+		if (frames < 1) frames = 1;
+		if (frames > 100) frames = 100;
+	}
+
+	// Advance one frame at a time
+	for (int i = 0; i < frames; ++i) {
+		resumepaused(3);
+		// Brief resume then pause again
+		setpaused(3);
+	}
+
+	return make_response(true, {std::to_string(frames) + " frame(s) advanced"});
+}
+
+static std::string HandleSetMouseSpeed(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received SET_MOUSE_SPEED" << std::endl;
+	if (args.empty()) {
+		return make_response(false, {"Usage: SET_MOUSE_SPEED <10-200>"});
+	}
+
+	int speed;
+	try {
+		speed = std::stoi(args[0]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid speed: " + args[0]});
+	}
+
+	if (speed < 10 || speed > 200) {
+		return make_response(false, {"Mouse speed must be 10-200"});
+	}
+
+	changed_prefs.input_mouse_speed = speed;
+	set_config_changed();
+
+	return make_response(true);
+}
+
+static std::string HandleSendMouse(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received SEND_MOUSE" << std::endl;
+	if (args.size() < 3) {
+		return make_response(false, {"Usage: SEND_MOUSE <dx> <dy> <buttons>"});
+	}
+
+	int dx, dy, buttons;
+	try {
+		dx = std::stoi(args[0]);
+		dy = std::stoi(args[1]);
+		buttons = std::stoi(args[2]);
+	} catch (const std::exception& e) {
+		return make_response(false, {"Invalid mouse parameters"});
+	}
+
+	// Send mouse movement (relative)
+	setmousestate(0, 0, dx, 0);  // X axis
+	setmousestate(0, 1, dy, 0);  // Y axis
+
+	// Send button states (bit 0 = left, bit 1 = right, bit 2 = middle)
+	setmousebuttonstate(0, 0, (buttons & 1) ? 1 : 0);  // Left button
+	setmousebuttonstate(0, 1, (buttons & 2) ? 1 : 0);  // Right button
+	setmousebuttonstate(0, 2, (buttons & 4) ? 1 : 0);  // Middle button
+
+	return make_response(true);
+}
+
+static std::string HandlePing(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received PING" << std::endl;
+	return make_response(true, {"PONG"});
+}
+
+static std::string HandleHelp(const std::vector<std::string>& args)
+{
+	std::cout << "IPC: Received HELP" << std::endl;
+	std::vector<std::string> commands;
+	commands.push_back("Available commands:");
+	commands.push_back("QUIT, PAUSE, RESUME, RESET [HARD|SOFT]");
+	commands.push_back("SCREENSHOT <path>, SAVESTATE <state> <cfg>, LOADSTATE <state>");
+	commands.push_back("INSERTFLOPPY <path> <drive>, EJECT_FLOPPY <drive>, LIST_FLOPPIES");
+	commands.push_back("INSERTCD <path>, EJECT_CD");
+	commands.push_back("DISKSWAP <disknum> <drive>, QUERYDISKSWAP <drive>");
+	commands.push_back("GET_STATUS, GET_CONFIG <opt>, SET_CONFIG <opt> <val>");
+	commands.push_back("LOAD_CONFIG <path>, LIST_CONFIGS");
+	commands.push_back("SET_VOLUME <0-100>, GET_VOLUME, MUTE, UNMUTE");
+	commands.push_back("SET_WARP <0|1>, GET_WARP, TOGGLE_FULLSCREEN");
+	commands.push_back("FRAME_ADVANCE [n], SET_MOUSE_SPEED <10-200>");
+	commands.push_back("SEND_KEY <code> <state>, SEND_MOUSE <dx> <dy> <buttons>");
+	commands.push_back("READ_MEM <addr> <width>, WRITE_MEM <addr> <width> <val>");
+	commands.push_back("GET_VERSION, PING, HELP");
+	return make_response(true, commands);
+}
+
 // Initialize command handlers
 static void InitHandlers()
 {
@@ -530,6 +804,25 @@ static void InitHandlers()
 	command_handlers[CMD_SEND_KEY] = HandleSendKey;
 	command_handlers[CMD_READ_MEM] = HandleReadMem;
 	command_handlers[CMD_WRITE_MEM] = HandleWriteMem;
+
+	// New commands
+	command_handlers[CMD_EJECT_FLOPPY] = HandleEjectFloppy;
+	command_handlers[CMD_EJECT_CD] = HandleEjectCD;
+	command_handlers[CMD_SET_VOLUME] = HandleSetVolume;
+	command_handlers[CMD_GET_VOLUME] = HandleGetVolume;
+	command_handlers[CMD_MUTE] = HandleMute;
+	command_handlers[CMD_UNMUTE] = HandleUnmute;
+	command_handlers[CMD_TOGGLE_FULLSCREEN] = HandleToggleFullscreen;
+	command_handlers[CMD_SET_WARP] = HandleSetWarp;
+	command_handlers[CMD_GET_WARP] = HandleGetWarp;
+	command_handlers[CMD_GET_VERSION] = HandleGetVersion;
+	command_handlers[CMD_LIST_FLOPPIES] = HandleListFloppies;
+	command_handlers[CMD_LIST_CONFIGS] = HandleListConfigs;
+	command_handlers[CMD_FRAME_ADVANCE] = HandleFrameAdvance;
+	command_handlers[CMD_SET_MOUSE_SPEED] = HandleSetMouseSpeed;
+	command_handlers[CMD_SEND_MOUSE] = HandleSendMouse;
+	command_handlers[CMD_PING] = HandlePing;
+	command_handlers[CMD_HELP] = HandleHelp;
 }
 
 // Process a single command line

@@ -70,25 +70,60 @@ def parse_response(response: str) -> tuple[bool, list[str]]:
 def print_help():
     """Print available commands."""
     print("""
-Available commands:
+=== Emulation Control ===
   QUIT                      - Quit Amiberry
   PAUSE                     - Pause emulation
   RESUME                    - Resume emulation
   RESET [HARD|SOFT]         - Reset emulation (default: SOFT)
-  SCREENSHOT <filename>     - Take screenshot
-  SAVESTATE <state> <cfg>   - Save state and config
-  LOADSTATE <statefile>     - Load state file
-  DISKSWAP <disknum> <drv>  - Swap disk to drive
-  QUERYDISKSWAP <drivenum>  - Query disk in drive
+  FRAME_ADVANCE [n]         - Advance n frames (when paused, default: 1)
+
+=== Floppy Disk ===
   INSERTFLOPPY <path> <drv> - Insert floppy in drive (0-3)
+  EJECT_FLOPPY <drivenum>   - Eject floppy from drive (0-3)
+  LIST_FLOPPIES             - List all floppy drives and contents
+  DISKSWAP <disknum> <drv>  - Swap disk from swapper to drive
+  QUERYDISKSWAP <drivenum>  - Query which swapper disk is in drive
+
+=== CD-ROM ===
   INSERTCD <path>           - Insert CD image
+  EJECT_CD                  - Eject CD
+
+=== State Management ===
+  SCREENSHOT <filename>     - Take screenshot (supports ~/path)
+  SAVESTATE <state> <cfg>   - Save state and config files
+  LOADSTATE <statefile>     - Load state file
+
+=== Audio ===
+  SET_VOLUME <0-100>        - Set master volume (0-100)
+  GET_VOLUME                - Get current volume
+  MUTE                      - Mute audio
+  UNMUTE                    - Unmute audio
+
+=== Display ===
+  TOGGLE_FULLSCREEN         - Toggle fullscreen/windowed mode
+  SET_WARP <0|1>            - Enable/disable warp mode
+  GET_WARP                  - Get warp mode status
+
+=== Configuration ===
   GET_STATUS                - Get emulation status
-  GET_CONFIG <option>       - Get config option
+  GET_CONFIG <option>       - Get config option value
   SET_CONFIG <option> <val> - Set config option
   LOAD_CONFIG <path>        - Load config file
-  SEND_KEY <keycode> <state>- Send key (state: 0=up, 1=down)
-  READ_MEM <addr> <width>   - Read memory (width: 1, 2, or 4)
-  WRITE_MEM <addr> <w> <v>  - Write memory
+  LIST_CONFIGS              - List available config files
+
+=== Input ===
+  SEND_KEY <keycode> <state>- Send key (state: 0=release, 1=press)
+  SEND_MOUSE <dx> <dy> <btn>- Send mouse input (btn: bit0=L, bit1=R, bit2=M)
+  SET_MOUSE_SPEED <10-200>  - Set mouse sensitivity
+
+=== Memory Access ===
+  READ_MEM <addr> <width>   - Read memory (width: 1, 2, or 4 bytes)
+  WRITE_MEM <addr> <w> <v>  - Write value to memory
+
+=== Utility ===
+  GET_VERSION               - Get Amiberry version info
+  PING                      - Test connection (returns PONG)
+  HELP                      - Show this help (also works via IPC)
 
 Config options for GET_CONFIG/SET_CONFIG:
   chipmem_size, fastmem_size, bogomem_size, z3fastmem_size
@@ -96,8 +131,7 @@ Config options for GET_CONFIG/SET_CONFIG:
   chipset, ntsc, floppy_speed, nr_floppies
   gfx_width, gfx_height, gfx_fullscreen
   sound_output, sound_stereo, sound_volume
-  joyport0, joyport1, description
-  turbo_emulation
+  joyport0, joyport1, description, turbo_emulation
 
 Type 'help' for this message, 'exit' or 'q' to quit the client.
 Note: Use 'QUIT' to quit Amiberry (the emulator).
