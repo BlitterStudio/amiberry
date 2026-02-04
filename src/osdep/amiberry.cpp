@@ -86,6 +86,9 @@ struct gpiod_line* lineYellow; // Yellow LED
 #ifdef USE_DBUS
 #include "amiberry_dbus.h"
 #endif
+#ifdef USE_IPC_SOCKET
+#include "amiberry_ipc.h"
+#endif
 
 static SDL_threadID mainthreadid;
 static int logging_started;
@@ -2216,6 +2219,9 @@ bool handle_events()
 
 #ifdef USE_DBUS
 	DBusHandle();
+#endif
+#ifdef USE_IPC_SOCKET
+	Amiberry::IPC::IPCHandle();
 #endif
 
 	if (pause_emulation)
@@ -5188,6 +5194,9 @@ int main(int argc, char* argv[]) {
 
 #ifdef USE_DBUS
 	DBusSetup();
+#endif
+#ifdef USE_IPC_SOCKET
+	Amiberry::IPC::IPCSetup();
 #endif
 
 	// Parse the command line to possibly set amiberry_config.

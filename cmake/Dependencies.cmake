@@ -14,6 +14,11 @@ if (USE_DBUS)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${DBUS_LIBRARIES})
 endif ()
 
+if (USE_IPC_SOCKET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IPC_SOCKET)
+    message(STATUS "Unix socket IPC enabled")
+endif ()
+
 if (USE_OPENGL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
     if (NOT ANDROID)

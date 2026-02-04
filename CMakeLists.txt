@@ -26,6 +26,7 @@ option(USE_ZSTD 	     "Use Zstandard for CHD compressed disk images" ON)
 option(USE_GPIOD         "Use GPIOD to control GPIO LEDs" OFF)
 option(USE_DBUS          "Use DBus to control the emulator" OFF)
 option(USE_OPENGL        "Use OpenGL for rendering (currently WIP)" OFF)
+option(USE_IPC_SOCKET    "Use Unix socket for IPC control (cross-platform)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
 option(USE_IMGUI         "Use ImGui for the GUI" ON)
@@ -44,6 +45,7 @@ if(ANDROID)
     set(USE_UAENET_PCAP OFF CACHE BOOL "Use libpcap for uaenet (Linux/macOS)" FORCE)
     # set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
     set(USE_DBUS OFF CACHE BOOL "Use DBus to control the emulator" FORCE)
+    set(USE_IPC_SOCKET OFF CACHE BOOL "Use Unix socket for IPC control" FORCE)
     set(USE_GPIOD OFF CACHE BOOL "Use GPIOD to control GPIO LEDs" FORCE)
     # Enabled features for Android
     # set(USE_LIBENET OFF CACHE BOOL "Use LibENET for network emulation" FORCE)
@@ -96,9 +98,6 @@ endif()
 # Project identity
 set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
-
-# Global definitions
-#add_definitions(-DLIBICONV_PLUG)
 
 # FreeBSD-specific linking and paths
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
