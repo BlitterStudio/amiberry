@@ -45,6 +45,7 @@ static void SendReply(DBusMessage* msg, bool status, const std::vector<std::stri
 static void HandleQuit(DBusMessage* msg)
 {
 	std::cout << "DBUS: Received QUIT" << std::endl;
+	SendReply(msg, true);  // Send reply before quitting
 	uae_quit();
 }
 
@@ -61,6 +62,7 @@ static void HandleResume(DBusMessage* msg)
 	std::cout << "DBUS: Received RESUME" << std::endl;
 	resumepaused(3);
 	activationtoggle(0, false);
+	SendReply(msg, true);
 }
 
 static void HandleReset(DBusMessage* msg)
@@ -69,76 +71,38 @@ static void HandleReset(DBusMessage* msg)
 	DBusErrorWrapper err;
 	char *type = nullptr;
 	bool hard = false;
-	bool result = true;
+	bool keyboard = true;  // Default to keyboard (soft) reset
+	bool status = true;
 
 	dbus_message_get_args(msg, &err.err, DBUS_TYPE_STRING, &type, DBUS_TYPE_INVALID);
-	if (err.is_set())
-	{
-		// optional arg, ignore error but clear it implies we just proceed with defaults if missing? 
-		// Original code: if error is set, it frees it and continues. 
-		// If type is null (which it might be if get_args failed?), it defaults to keyboard.
-	}
-	
+	// Optional argument - if not provided, defaults to keyboard reset
+
 	if (type)
 	{
-		if (strcmp(type, "HARD") == 0 || strcmp(type, "KEYBOARD") == 0)
+		if (strcmp(type, "HARD") == 0)
 		{
 			hard = true;
+			keyboard = false;
+		}
+		else if (strcmp(type, "SOFT") == 0 || strcmp(type, "KEYBOARD") == 0)
+		{
+			// Soft/keyboard reset (default behavior)
+			hard = false;
+			keyboard = true;
 		}
 		else
 		{
-			// invalid string
-			result = false;
+			// Invalid reset type
+			status = false;
 		}
 	}
 
-	if (result)
+	if (status)
 	{
-		uae_reset(hard, !hard); // !hard is roughly 'keyboard' logic from original: if type!=HARD/KEYBOARD, error. else hard=true for both? Wait.
-		// Original logic:
-		// if "HARD" or "KEYBOARD" -> hard = true.
-		// else error.
-		// if NO type (else branch of if(type)) -> keyboard = true (hard stays false).
-		// then uae_reset(hard, keyboard).
-		
-		// Let's re-read carefully.
-		// if type is present:
-		//    if type == HARD or type == KEYBOARD: hard = true. 
-		//    else: status=false, error=true.
-		// else (type is null):
-		//    keyboard = true.
-		
-		// Wait, if type is KEYBOARD, hard becomes true? That seems wrong in the original code?
-		// "if(strcmp(type,"HARD") == 0 || strcmp(type,"KEYBOARD") == 0) { hard = true; }"
-		// Yes, original code sets hard=true for "KEYBOARD".
-		// And then calls uae_reset(hard, keyboard). 
-		// initialized: keyboard=false, hard=false.
-		// So if "KEYBOARD" passed: hard=true, keyboard=false. uae_reset(1, 0).
-		// If "HARD" passed: hard=true, keyboard=false. uae_reset(1, 0).
-		// If NO arg passed: hard=false, keyboard=true. uae_reset(0, 1).
-		
-		// So "KEYBOARD" string argument actually triggers a hard reset in original code? That sounds like a bug or odd naming.
-		// I will preserve existing behavior for now but maybe add a TODO.
-		
-		// Actually, let's look at uae_reset signature: void uae_reset (int hard, int keyboard);
-		// If hard is true, it does a hard reset.
-		
-		if (type) {
-			if (strcmp(type, "HARD") == 0 || strcmp(type, "KEYBOARD") == 0) {
-				hard = true;
-			} else {
-				result = false;
-			}
-		} 
-		
-		if (result) {
-			// If type was null, hard is false, we want keyboard reset.
-			// If type was valid, hard is true.
-			uae_reset(hard, !hard);
-		}
+		uae_reset(hard, keyboard);
 	}
-	
-	// Original does NOT reply for RESET.
+
+	SendReply(msg, status);
 }
 
 static void HandleScreenshot(DBusMessage* msg)
@@ -378,7 +342,6 @@ static void HandleGetStatus(DBusMessage* msg)
 
 static void HandleGetConfig(DBusMessage* msg)
 {
-	// TODO: limited implementation for now
 	std::cout << "DBUS: Received GET_CONFIG" << std::endl;
 	DBusErrorWrapper err;
 	char *optname = nullptr;
@@ -386,17 +349,69 @@ static void HandleGetConfig(DBusMessage* msg)
 	std::vector<std::string> responses;
 
 	dbus_message_get_args(msg, &err.err, DBUS_TYPE_STRING, &optname, DBUS_TYPE_INVALID);
-	
+
 	if (err.is_set() || !optname) {
 		status = false;
 	} else {
+		// Memory options
 		if (strcmp(optname, "chipmem_size") == 0) {
 			responses.push_back(std::to_string(changed_prefs.chipmem_size));
 		} else if (strcmp(optname, "fastmem_size") == 0) {
 			responses.push_back(std::to_string(changed_prefs.fastmem_size));
-		} else {
-			// Unknown or unsupported config option for this simple getter
-			status = false; 
+		} else if (strcmp(optname, "bogomem_size") == 0) {
+			responses.push_back(std::to_string(changed_prefs.bogomem_size));
+		} else if (strcmp(optname, "z3fastmem_size") == 0) {
+			responses.push_back(std::to_string(changed_prefs.z3fastmem_size));
+		}
+		// CPU options
+		else if (strcmp(optname, "cpu_model") == 0) {
+			responses.push_back(std::to_string(changed_prefs.cpu_model));
+		} else if (strcmp(optname, "cpu_speed") == 0) {
+			responses.push_back(std::to_string(changed_prefs.m68k_speed));
+		} else if (strcmp(optname, "cpu_compatible") == 0) {
+			responses.push_back(changed_prefs.cpu_compatible ? "true" : "false");
+		} else if (strcmp(optname, "cpu_24bit_addressing") == 0) {
+			responses.push_back(changed_prefs.address_space_24 ? "true" : "false");
+		}
+		// Chipset options
+		else if (strcmp(optname, "chipset") == 0) {
+			responses.push_back(std::to_string(changed_prefs.chipset_mask));
+		} else if (strcmp(optname, "ntsc") == 0) {
+			responses.push_back(changed_prefs.ntscmode ? "true" : "false");
+		}
+		// Floppy options
+		else if (strcmp(optname, "floppy_speed") == 0) {
+			responses.push_back(std::to_string(changed_prefs.floppy_speed));
+		} else if (strcmp(optname, "nr_floppies") == 0) {
+			responses.push_back(std::to_string(changed_prefs.nr_floppies));
+		}
+		// Display options
+		else if (strcmp(optname, "gfx_width") == 0) {
+			responses.push_back(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.width));
+		} else if (strcmp(optname, "gfx_height") == 0) {
+			responses.push_back(std::to_string(changed_prefs.gfx_monitor[0].gfx_size_win.height));
+		} else if (strcmp(optname, "gfx_fullscreen") == 0) {
+			responses.push_back(changed_prefs.gfx_apmode[0].gfx_fullscreen ? "true" : "false");
+		}
+		// Sound options
+		else if (strcmp(optname, "sound_output") == 0) {
+			responses.push_back(std::to_string(changed_prefs.produce_sound));
+		} else if (strcmp(optname, "sound_stereo") == 0) {
+			responses.push_back(std::to_string(changed_prefs.sound_stereo));
+		}
+		// Joystick options
+		else if (strcmp(optname, "joyport0") == 0) {
+			responses.push_back(std::to_string(changed_prefs.jports[0].id));
+		} else if (strcmp(optname, "joyport1") == 0) {
+			responses.push_back(std::to_string(changed_prefs.jports[1].id));
+		}
+		// Description
+		else if (strcmp(optname, "description") == 0) {
+			responses.push_back(changed_prefs.description);
+		}
+		else {
+			// Unknown config option
+			status = false;
 		}
 	}
 	SendReply(msg, status, responses);
@@ -415,12 +430,43 @@ static void HandleSetConfig(DBusMessage* msg)
 	if (err.is_set() || !optname || !optval) {
 		status = false;
 	} else {
-		// Basic implementation for commonly requested tweaks
-		// For full implementation, we'd need a parser mapping
+		// Floppy options
 		if (strcmp(optname, "floppy_speed") == 0) {
 			changed_prefs.floppy_speed = atol(optval);
 			set_config_changed();
-		} else {
+		}
+		// CPU options
+		else if (strcmp(optname, "cpu_speed") == 0) {
+			changed_prefs.m68k_speed = atol(optval);
+			set_config_changed();
+		} else if (strcmp(optname, "turbo_emulation") == 0) {
+			changed_prefs.turbo_emulation = (strcmp(optval, "true") == 0 || strcmp(optval, "1") == 0);
+			set_config_changed();
+		}
+		// Display options
+		else if (strcmp(optname, "gfx_fullscreen") == 0) {
+			bool fullscreen = (strcmp(optval, "true") == 0 || strcmp(optval, "1") == 0);
+			changed_prefs.gfx_apmode[0].gfx_fullscreen = fullscreen ? GFX_FULLSCREEN : GFX_WINDOW;
+			set_config_changed();
+		}
+		// Sound options
+		else if (strcmp(optname, "sound_output") == 0) {
+			changed_prefs.produce_sound = atol(optval);
+			set_config_changed();
+		} else if (strcmp(optname, "sound_stereo") == 0) {
+			changed_prefs.sound_stereo = atol(optval);
+			set_config_changed();
+		} else if (strcmp(optname, "sound_volume") == 0) {
+			changed_prefs.sound_volume_master = atol(optval);
+			set_config_changed();
+		}
+		// Chipset options
+		else if (strcmp(optname, "ntsc") == 0) {
+			changed_prefs.ntscmode = (strcmp(optval, "true") == 0 || strcmp(optval, "1") == 0);
+			set_config_changed();
+		}
+		else {
+			// Unknown config option
 			status = false;
 		}
 	}
@@ -442,6 +488,71 @@ static void HandleSendKey(DBusMessage* msg)
 	} else {
 		inputdevice_add_inputcode(keycode, state, nullptr);
 	}
+	SendReply(msg, status);
+}
+
+static void HandleLoadConfig(DBusMessage* msg)
+{
+	std::cout << "DBUS: Received LOAD_CONFIG" << std::endl;
+	DBusErrorWrapper err;
+	char *configpath = nullptr;
+	bool status = true;
+
+	dbus_message_get_args(msg, &err.err, DBUS_TYPE_STRING, &configpath, DBUS_TYPE_INVALID);
+
+	if (err.is_set())
+	{
+		std::cout << "DBUS Arguments Error: " << err.err.message << std::endl;
+		status = false;
+	}
+	else if (!configpath)
+	{
+		status = false;
+	}
+	else
+	{
+		// Load the config file into changed_prefs
+		int result = target_cfgfile_load(&changed_prefs, configpath, CONFIG_TYPE_DEFAULT, 0);
+		if (result)
+		{
+			set_config_changed();
+		}
+		else
+		{
+			std::cout << "DBUS: Failed to load config: " << configpath << std::endl;
+			status = false;
+		}
+	}
+
+	SendReply(msg, status);
+}
+
+static void HandleLoadState(DBusMessage* msg)
+{
+	std::cout << "DBUS: Received LOADSTATE" << std::endl;
+	DBusErrorWrapper err;
+	char *statepath = nullptr;
+	bool status = true;
+
+	dbus_message_get_args(msg, &err.err, DBUS_TYPE_STRING, &statepath, DBUS_TYPE_INVALID);
+
+	if (err.is_set())
+	{
+		std::cout << "DBUS Arguments Error: " << err.err.message << std::endl;
+		status = false;
+	}
+	else if (!statepath)
+	{
+		status = false;
+	}
+	else
+	{
+		// Set up the state restore
+		savestate_state = STATE_DORESTORE;
+		_tcscpy(savestate_fname, statepath);
+		std::cout << "DBUS: Will restore state from: " << statepath << std::endl;
+	}
+
 	SendReply(msg, status);
 }
 
@@ -522,7 +633,8 @@ void DBusHandle()
 		request_handlers[CMD_GET_STATUS] = HandleGetStatus;
 		request_handlers[CMD_GET_CONFIG] = HandleGetConfig;
 		request_handlers[CMD_SET_CONFIG] = HandleSetConfig;
-		// request_handlers[CMD_LOAD_CONFIG] = HandleLoadConfig; // TODO
+		request_handlers[CMD_LOAD_CONFIG] = HandleLoadConfig;
+		request_handlers[CMD_LOAD_STATE] = HandleLoadState;
 		request_handlers[CMD_SEND_KEY] = HandleSendKey;
 		request_handlers[CMD_READ_MEM] = HandleReadMem;
 		request_handlers[CMD_WRITE_MEM] = HandleWriteMem;
