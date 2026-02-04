@@ -1605,7 +1605,7 @@ static std::string HandleSetScaling(const std::vector<std::string>& args)
 {
 	std::cout << "IPC: Received SET_SCALING" << std::endl;
 	if (args.empty()) {
-		return make_response(false, {"Usage: SET_SCALING <method> (0=none, 1=auto, 2=manual, 3=integer, 4=center)"});
+		return make_response(false, {"Usage: SET_SCALING <method> (-1=auto, 0=nearest, 1=linear, 2=integer)"});
 	}
 
 	int method;
@@ -1615,27 +1615,27 @@ static std::string HandleSetScaling(const std::vector<std::string>& args)
 		// Try string values
 		std::string str = args[0];
 		std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-		if (str == "none") method = 0;
-		else if (str == "auto") method = 1;
-		else if (str == "manual") method = 2;
-		else if (str == "integer") method = 3;
-		else if (str == "center") method = 4;
+		if (str == "auto") method = -1;
+		else if (str == "nearest") method = 0;
+		else if (str == "linear") method = 1;
+		else if (str == "integer") method = 2;
 		else {
 			return make_response(false, {"Invalid scaling method: " + args[0]});
 		}
 	}
 
-	if (method < 0 || method > 4) {
-		return make_response(false, {"Scaling method must be 0-4 (0=none, 1=auto, 2=manual, 3=integer, 4=center)"});
+	if (method < -1 || method > 2) {
+		return make_response(false, {"Scaling method must be -1..2 (-1=auto, 0=nearest, 1=linear, 2=integer)"});
 	}
 
-	// Set scaling method (affects gfx_xcenter and gfx_ycenter)
-	changed_prefs.gfx_xcenter = method;
-	changed_prefs.gfx_ycenter = method;
+	// Set scaling method
+	changed_prefs.scaling_method = method;
 	set_config_changed();
 
-	const char* method_names[] = {"none", "auto", "manual", "integer", "center"};
-	return make_response(true, {std::to_string(method), method_names[method]});
+	const char* method_names[] = {"auto", "nearest", "linear", "integer"};
+	const int method_index = method + 1; // -1..2 -> 0..3
+	const char* method_name = (method_index >= 0 && method_index <= 3) ? method_names[method_index] : "unknown";
+	return make_response(true, {std::to_string(method), method_name});
 }
 
 static std::string HandleGetScaling(const std::vector<std::string>& args)
@@ -1643,17 +1643,13 @@ static std::string HandleGetScaling(const std::vector<std::string>& args)
 	std::cout << "IPC: Received GET_SCALING" << std::endl;
 	std::vector<std::string> responses;
 
-	int xcenter = currprefs.gfx_xcenter;
-	int ycenter = currprefs.gfx_ycenter;
+	int method = currprefs.scaling_method;
+	const char* method_names[] = {"auto", "nearest", "linear", "integer"};
+	const int method_index = method + 1; // -1..2 -> 0..3
+	std::string method_name = (method_index >= 0 && method_index <= 3) ? method_names[method_index] : "unknown";
 
-	const char* center_names[] = {"none", "auto", "manual", "integer", "center"};
-	std::string xcenter_name = (xcenter >= 0 && xcenter <= 4) ? center_names[xcenter] : "unknown";
-	std::string ycenter_name = (ycenter >= 0 && ycenter <= 4) ? center_names[ycenter] : "unknown";
-
-	responses.push_back("horizontal=" + std::to_string(xcenter));
-	responses.push_back("horizontal_name=" + xcenter_name);
-	responses.push_back("vertical=" + std::to_string(ycenter));
-	responses.push_back("vertical_name=" + ycenter_name);
+	responses.push_back("method=" + std::to_string(method));
+	responses.push_back("method_name=" + method_name);
 
 	return make_response(true, responses);
 }
@@ -2377,7 +2373,7 @@ static std::string HandleHelp(const std::vector<std::string>& args)
 	commands.emplace_back("GET_MEMORY_CONFIG, GET_FPS");
 	commands.emplace_back("SET_CHIP_MEM <kb>, SET_FAST_MEM <kb>, SET_SLOW_MEM <kb>, SET_Z3_MEM <mb>");
 	commands.emplace_back("SET_WINDOW_SIZE <w> <h>, GET_WINDOW_SIZE");
-	commands.emplace_back("SET_SCALING <0-4>, GET_SCALING");
+	commands.emplace_back("SET_SCALING <-1..2>, GET_SCALING");
 	commands.emplace_back("SET_LINE_MODE <0-2>, GET_LINE_MODE");
 	commands.emplace_back("SET_RESOLUTION <0-2>, GET_RESOLUTION");
 	commands.emplace_back("GET_JOYPORT_MODE <port>, SET_JOYPORT_MODE <port> <mode>");

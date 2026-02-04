@@ -126,7 +126,7 @@ def print_help():
   GET_FPS                   - Get current frame rate and idle percentage
   SET_WINDOW_SIZE <w> <h>   - Set window size (width, height)
   GET_WINDOW_SIZE           - Get current window size
-  SET_SCALING <mode>        - Set scaling mode
+  SET_SCALING <mode>        - Set scaling mode (-1=auto, 0=nearest, 1=linear, 2=integer)
   GET_SCALING               - Get current scaling mode
   SET_LINE_MODE <mode>      - Set line mode (scanlines, etc.)
   GET_LINE_MODE             - Get current line mode
