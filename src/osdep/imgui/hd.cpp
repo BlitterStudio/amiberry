@@ -383,7 +383,7 @@ static void RenderCDSection()
              xfree(tmp);
          }
          xfree(curr_path);
-         OpenFileDialog("Select CD image file", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", startPath);
+         OpenFileDialog("Select CD image file", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
     }
     
     ImGui::EndDisabled();
@@ -447,7 +447,7 @@ static void ShowEditFilesysVirtualModal()
         if (AmigaButton("... Dir"))
         {
             char* current_root = ua(current_fsvdlg.ci.rootdir);
-            OpenDirDialog(current_root);
+            OpenDirDialog(get_harddrive_path());
             xfree(current_root);
             selecting_virtual_dir = true;
             selecting_virtual_arch = false;
@@ -456,7 +456,7 @@ static void ShowEditFilesysVirtualModal()
         if (AmigaButton("... Arch"))
         {
              char* current_root = ua(current_fsvdlg.ci.rootdir);
-             OpenFileDialog("Select archive", "Archives (*.zip,*.7z,*.rar,*.lha,*.lzh,*.lzx){.zip,.7z,.rar,.lha,.lzh,.lzx},All Files (*){.*}", current_root);
+             OpenFileDialog("Select archive", "Archives (*.zip,*.7z,*.rar,*.lha,*.lzh,*.lzx){.zip,.7z,.rar,.lha,.lzh,.lzx},All Files (*){.*}", get_harddrive_path());
              xfree(current_root);
              selecting_virtual_dir = false;
              selecting_virtual_arch = true;
@@ -548,7 +548,7 @@ static void ShowEditFilesysHardfileModal()
         if (AmigaButton("..."))
         {
              char* current_root = ua(current_hfdlg.ci.rootdir);
-             OpenFileDialog("Select hard disk file", "Hardfiles (*.hdf,*.hdz,*.lha,*.zip,*.vhd,*.chd,*.7z){.hdf,.hdz,.lha,.zip,.vhd,.chd,.7z},All Files (*){.*}", current_root);
+             OpenFileDialog("Select hard disk file", "Hardfiles (*.hdf,*.hdz,*.lha,*.zip,*.vhd,*.chd,*.7z){.hdf,.hdz,.lha,.zip,.vhd,.chd,.7z},All Files (*){.*}", get_harddrive_path());
              xfree(current_root);
              selecting_hdf_path = true;
         }
@@ -752,7 +752,7 @@ static void ShowCreateHardfileModal()
              char* current_root = ua(current_hfdlg.ci.rootdir);
              // SelectFile for CREATE needs different handling? OpenFileDialog helper handles create too?
              // Usually just picking a path is enough.
-             OpenFileDialog("Select new hard disk file", "Hardfiles (*.hdf,*.hdz,*.vhd,*.chd){.hdf,.hdz,.vhd,.chd},All Files (*){.*}", current_root);
+             OpenFileDialog("Select new hard disk file", "Hardfiles (*.hdf,*.hdz,*.vhd,*.chd){.hdf,.hdz,.vhd,.chd},All Files (*){.*}", get_harddrive_path());
              xfree(current_root);
              selecting_create_hdf_path = true;
         }
@@ -898,7 +898,7 @@ static void ShowEditCDDriveModal()
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("...")) {
-            OpenFileDialog("Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", path_buf);
+            OpenFileDialog("Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
         }
 
         std::string result_path;
@@ -1003,13 +1003,13 @@ static void ShowEditTapeDriveModal()
         ImGui::SameLine();
         if (AmigaButton("... Dir")) {
              char* current_root = ua(path_buf);
-             OpenDirDialog(current_root);
+             OpenDirDialog(get_harddrive_path());
              xfree(current_root);
              selecting_virtual_dir = true; 
         }
         ImGui::SameLine();
         if (AmigaButton("... File")) {
-            OpenFileDialog("Select Tape Image", "All Files (*){.*}", path_buf);
+            OpenFileDialog("Select Tape Image", "All Files (*){.*}", get_harddrive_path());
         }
         
         std::string result_path;

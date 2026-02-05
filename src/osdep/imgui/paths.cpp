@@ -91,8 +91,7 @@ void render_panel_paths()
 	// Begin scrollable area for path entries
 	ImGui::BeginChild("PathsScroll", ImVec2(0, -reserved_height), true, ImGuiChildFlags_AutoResizeY);
 
-	get_rom_path(tmp, sizeof tmp);
-	RenderPathRow("System ROMs:", "SystemROMs", tmp, [](const std::string& p) { set_rom_path(p); });
+	RenderPathRow("System ROMs:", "SystemROMs", get_rom_path(), [](const std::string& p) { set_rom_path(p); });
 
 	get_configuration_path(tmp, sizeof tmp);
 	RenderPathRow("Configuration files:", "ConfigPath", tmp, [](const std::string& p) { set_configuration_path(p); });
