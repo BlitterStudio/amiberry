@@ -97,6 +97,21 @@ static GLenum gl_texture_filter_mode = GL_LINEAR; // Default to linear filtering
 bool set_opengl_attributes(int mode);
 bool init_opengl_context(SDL_Window* window);
 
+// Load or unload the CRT bezel frame overlay based on amiberry_options.use_bezel
+void update_crtemu_bezel()
+{
+	if (crtemu_shader == nullptr)
+		return;
+	if (amiberry_options.use_bezel) {
+		auto* frame_pixels = new CRTEMU_U32[CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT];
+		crt_frame(frame_pixels);
+		crtemu_frame(crtemu_shader, frame_pixels, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
+		delete[] frame_pixels;
+	} else {
+		crtemu_frame(crtemu_shader, nullptr, 0, 0);
+	}
+}
+
 // Check if shader name refers to an external .glsl file
 static bool is_external_shader(const char* shader)
 {
@@ -538,6 +553,9 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 			write_log("WARNING: Failed to create CRT shader type %d, falling back to NONE\n", crt_type);
 			crtemu_shader = crtemu_create(CRTEMU_TYPE_NONE, nullptr);
 		}
+
+		// Load bezel frame overlay if enabled
+		update_crtemu_bezel();
 	}
 	return crtemu_shader != nullptr || external_shader != nullptr;
 #else

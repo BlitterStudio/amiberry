@@ -1366,6 +1366,7 @@ struct amiberry_options
 	char shader[128] = "pc";
 	char shader_rtg[128] = "none";
 	bool force_mobile_shaders = false;
+	bool use_bezel = false;
 };
 
 extern struct amiberry_options amiberry_options;

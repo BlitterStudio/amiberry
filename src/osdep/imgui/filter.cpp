@@ -3,6 +3,7 @@
 #include "imgui_panels.h"
 #include "options.h"
 #include "gui/gui_handling.h"
+#include "amiberry_gfx.h"
 #include <filesystem>
 #include <vector>
 #include <string>
@@ -192,6 +193,21 @@ void render_panel_filter()
 		ImGui::Text("Shader for RTG/Picasso modes");
 	}
 	EndGroupBox("RTG Display Shader");
+
+	ImGui::Spacing();
+
+	// CRT Bezel Overlay
+	BeginGroupBox("CRT Bezel Overlay");
+	{
+		if (AmigaCheckbox("Show bezel frame", &amiberry_options.use_bezel)) {
+			update_crtemu_bezel();
+		}
+		ImGui::SameLine();
+		ShowHelpMarker("Overlay a CRT television bezel frame around the display.\n"
+					   "Only works with built-in CRT shaders (tv, pc, 1084).\n"
+					   "Has no effect with the 'none', 'lite' or external shaders.");
+	}
+	EndGroupBox("CRT Bezel Overlay");
 
 	ImGui::Spacing();
 
