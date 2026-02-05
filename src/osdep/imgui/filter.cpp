@@ -200,7 +200,9 @@ void render_panel_filter()
 	BeginGroupBox("CRT Bezel Overlay");
 	{
 		if (AmigaCheckbox("Show bezel frame", &amiberry_options.use_bezel)) {
+#ifdef USE_OPENGL
 			update_crtemu_bezel();
+#endif
 		}
 		ImGui::SameLine();
 		ShowHelpMarker("Overlay a CRT television bezel frame around the display.\n"
