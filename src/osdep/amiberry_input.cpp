@@ -1635,7 +1635,10 @@ void read_joystick_buttons(const int id)
 		}
 
 		// Check all Joystick buttons, including axes acting as buttons
-		for (int did_button = 0; did_button < did->buttons; did_button++)
+		// Use at least 15 to cover all RetroArch-mapped buttons (indices 0-14),
+		// even when the controller reports fewer physical buttons (issue #1493)
+		const int num_buttons = did->buttons > 15 ? did->buttons : 15;
+		for (int did_button = 0; did_button < num_buttons; did_button++)
 		{
 			if (did->mapping.button[did_button] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
