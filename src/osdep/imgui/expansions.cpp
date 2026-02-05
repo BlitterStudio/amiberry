@@ -9,6 +9,7 @@
 #include "autoconf.h"
 #include "cpuboard.h"
 #include "rommgr.h"
+#include "uae.h"
 
 // Categories for Expansion Boards (Matches WinUAE scsiromselectedmask)
 static const char *ExpansionCategories[] = {
@@ -41,6 +42,14 @@ static const int ExpansionCategoriesMask[] = {
 };
 
 static std::vector<int> displayed_rom_indices;
+
+// Track which ROM browse button opened the file dialog to avoid cross-assignment
+enum RomDialogSource {
+    ROM_DIALOG_NONE = 0,
+    ROM_DIALOG_EXPANSION,
+    ROM_DIALOG_ACCELERATOR
+};
+static RomDialogSource rom_dialog_source = ROM_DIALOG_NONE;
 
 // WinUAE sync: copycpuboardmem() syncs CPU board memory with the appropriate memory subsystem
 void copycpuboardmem(bool tomem)
@@ -328,7 +337,7 @@ void render_panel_expansions() {
     }
 
     // Detailed Settings
-    if (ert && scsiromselected > 0) {
+    if (ert) {
         ImGui::BeginDisabled(!enabled || !brc);
         ImGui::Spacing();
 
@@ -450,17 +459,25 @@ void render_panel_expansions() {
             } else {
                 // Fallback to text input
                 ImGui::InputText("##ROMPath", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
+                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
             }
             ImGui::PopItemWidth();
             ImGui::SameLine();
             if (AmigaButton("...")) {
-                OpenFileDialog("Select ROM Image", "ROM Files (*.rom,*.bin){.rom,.bin}", rom_path);
+                rom_dialog_source = ROM_DIALOG_EXPANSION;
+                OpenFileDialog("Select ROM Image", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
             }
 
             std::string result_path;
-            if (ConsumeFileDialogResult(result_path)) {
-                if (brc && !result_path.empty()) {
-                    strncpy(brc->roms[index].romfile, result_path.c_str(), MAX_DPATH);
+            if (rom_dialog_source == ROM_DIALOG_EXPANSION && ConsumeFileDialogResult(result_path)) {
+                rom_dialog_source = ROM_DIALOG_NONE;
+                if (!result_path.empty() && ert) {
+                    // WinUAE sync: Use get_device_rom_new() to create config if it doesn't exist
+                    int new_idx = 0;
+                    boardromconfig *new_brc = get_device_rom_new(&changed_prefs, ert->romtype, scsiromselectednum, &new_idx);
+                    if (new_brc) {
+                        strncpy(new_brc->roms[new_idx].romfile, result_path.c_str(), MAX_DPATH);
+                    }
                 }
             }
         }
@@ -631,6 +648,13 @@ void render_panel_expansions() {
                     changed_prefs.cpuboard_type = i;
                     changed_prefs.cpuboard_subtype = cpuboards[i].defaultsubtype;
                     changed_prefs.cpuboard_settings = 0;
+                    // WinUAE sync: Adjust ppc_mode based on CPU board type
+                    if (is_ppc_cpu(&changed_prefs)) {
+                        changed_prefs.ppc_mode = 2;
+                    } else if (changed_prefs.ppc_mode == 2) {
+                        changed_prefs.ppc_mode = 0;
+                    }
+                    cpuboard_set_cpu(&changed_prefs);
                 }
                 if (is_selected) {
                     ImGui::PopStyleColor();
@@ -653,6 +677,9 @@ void render_panel_expansions() {
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
                     if (ImGui::Selectable(subtypes[i].name, is_selected)) {
                         changed_prefs.cpuboard_subtype = i;
+                        // WinUAE sync: Reset settings when subtype changes, then update CPU configuration
+                        changed_prefs.cpuboard_settings = 0;
+                        cpuboard_set_cpu(&changed_prefs);
                     }
                     if (is_selected) {
                         ImGui::PopStyleColor();
@@ -679,17 +706,25 @@ void render_panel_expansions() {
             ImGui::PushItemWidth(-BUTTON_WIDTH / 2);
             ImGui::BeginDisabled(!gui_enabled); // Only change ROM if not running/safe
             ImGui::InputText("##AccelROM", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
             ImGui::PopItemWidth();
             ImGui::SameLine();
             if (AmigaButton("...##Accel")) {
-                OpenFileDialog("Select Boot ROM", "ROM Files (*.rom,*.bin){.rom,.bin}", rom_path);
+                rom_dialog_source = ROM_DIALOG_ACCELERATOR;
+                OpenFileDialog("Select Boot ROM", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
             }
             ImGui::EndDisabled();
 
             std::string result_path;
-            if (ConsumeFileDialogResult(result_path)) {
-                if (brc && !result_path.empty()) {
-                    strncpy(brc->roms[idx].romfile, result_path.c_str(), MAX_DPATH);
+            if (rom_dialog_source == ROM_DIALOG_ACCELERATOR && ConsumeFileDialogResult(result_path)) {
+                rom_dialog_source = ROM_DIALOG_NONE;
+                if (!result_path.empty()) {
+                    // WinUAE sync: Use get_device_rom_new() to create config if it doesn't exist
+                    int new_idx = 0;
+                    boardromconfig *new_brc = get_device_rom_new(&changed_prefs, ROMTYPE_CPUBOARD, 0, &new_idx);
+                    if (new_brc) {
+                        strncpy(new_brc->roms[new_idx].romfile, result_path.c_str(), MAX_DPATH);
+                    }
                 }
             }
         } else {
@@ -719,7 +754,8 @@ void render_panel_expansions() {
         if (max_idx > 0) {
             ImGui::Text("Board Memory:");
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
-            ImGui::BeginDisabled(!gui_enabled);
+            // WinUAE sync: Memory slider enabled based on cpuboard_type > 0, not just !emulating
+            ImGui::BeginDisabled(!gui_enabled || changed_prefs.cpuboard_type == 0);
             if (ImGui::SliderInt("##BoardMem", &current_idx, 0, max_idx, mem_labels[current_idx])) {
                 changed_prefs.cpuboardmem1.size = mem_sizes[current_idx] << 20;
                 copycpuboardmem(false);
@@ -777,31 +813,52 @@ void render_panel_expansions() {
                     changed_prefs.cpuboard_settings = settings_val;
                 }
             } else if (s->type == EXPANSIONBOARD_MULTI) {
-                int items = 0;
                 const char *pp = (const char *) s->configname;
                 std::vector<std::string> options;
                 while (*pp) {
                     options.emplace_back(pp);
                     pp += strlen(pp) + 1;
                 }
+                int items_count = (int) options.size();
                 int bits = 1;
                 for (int b = 0; b < 8; b++) {
-                    if ((1 << b) >= (int) options.size()) {
+                    if ((1 << b) >= items_count) {
                         bits = b;
                         break;
                     }
                 }
                 int mask = (1 << bits) - 1;
                 int val = (settings_val >> current_bit_shift) & mask;
+                // WinUAE sync: Handle invert on read
+                if (s->invert) val ^= (1 << bits) - 1;
 
-                if (ImGui::BeginCombo(s->configname ? s->configname : "Settings",
-                                      options.size() > val ? options[val].c_str() : "Unknown")) {
-                    for (size_t opt_i = 0; opt_i < options.size(); opt_i++) {
-                        if (ImGui::Selectable(options[opt_i].c_str(), (int) opt_i == val)) {
-                            val = (int) opt_i;
+                // Ensure val is within bounds
+                if (val >= items_count) val = 0;
+
+                // WinUAE sync: Extract label from s->name, not s->configname
+                std::string accel_label = "Settings";
+                if (s->name) {
+                    const char *lp = s->name;
+                    if (*lp) accel_label = lp;
+                }
+                if (ImGui::BeginCombo(accel_label.c_str(),
+                                      (items_count > val) ? options[val].c_str() : "Unknown")) {
+                    for (int opt_i = 0; opt_i < items_count; opt_i++) {
+                        const bool is_selected = (opt_i == val);
+                        if (is_selected)
+                            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                        if (ImGui::Selectable(options[opt_i].c_str(), is_selected)) {
+                            val = opt_i;
+                            // WinUAE sync: Handle invert on write
+                            if (s->invert) val ^= (1 << bits) - 1;
+
                             settings_val &= ~(mask << current_bit_shift);
                             settings_val |= (val << current_bit_shift);
                             changed_prefs.cpuboard_settings = settings_val;
+                        }
+                        if (is_selected) {
+                            ImGui::PopStyleColor();
+                            ImGui::SetItemDefaultFocus();
                         }
                     }
                     ImGui::EndCombo();

@@ -354,8 +354,6 @@ void render_panel_ram() {
         current_advanced_ram_idx = ADVANCED_RAM_CHIP;
     }
 
-    ramboard *rb = get_selected_ramboard(current_advanced_ram_idx);
-
     // Top Row: Selector ...... Slider [ Size ]
     char current_name_buf[128];
     get_ramboard_name(current_advanced_ram_idx, current_name_buf, sizeof(current_name_buf), true);
@@ -421,7 +419,7 @@ void render_panel_ram() {
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
 
     // Update rb pointer after potential index change
-    rb = get_selected_ramboard(current_advanced_ram_idx);
+    ramboard *rb = get_selected_ramboard(current_advanced_ram_idx);
 
     if (rb) {
         const int *current_msi = nullptr;
@@ -494,6 +492,7 @@ void render_panel_ram() {
              strncpy(size_buf, memsize_names[current_msi[current_size_idx]], sizeof(size_buf));
              ImGui::InputText("##AdvSize", size_buf, sizeof(size_buf),
                               ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_NoHorizontalScroll);
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         }
 
         ImGui::Spacing();
@@ -505,8 +504,6 @@ void render_panel_ram() {
             ImGui::TableSetupColumn("Flags", ImGuiTableColumnFlags_WidthStretch, 1.0f);
             
             ImGui::TableNextColumn();
-
-            // Left Column: Inputs
 
             // Left Column: Inputs
             bool edit_ac = rb->autoconfig_inuse;
@@ -526,6 +523,7 @@ void render_panel_ram() {
                 rb->autoconfig[4] = (rb->manufacturer >> 8) & 0xff;
                 rb->autoconfig[5] = rb->manufacturer & 0xff;
             }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
             ImGui::SameLine();
             ImGui::Text("Product");
@@ -538,6 +536,7 @@ void render_panel_ram() {
                 // Update Autoconfig bytes
                 rb->autoconfig[1] = rb->product;
             }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
             ImGui::EndDisabled();
 
             // Autoconfig Data
@@ -562,6 +561,7 @@ void render_panel_ram() {
                  p += 2;
             }
             ImGui::InputText("##Autoconfig", autoconfig_buf, 64, ImGuiInputTextFlags_ReadOnly);
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
 
             // WinUAE sync: Memory Board Dropdown - only enabled for Z2/Z3 Fast RAM
             ImGui::AlignTextToFramePadding();
@@ -662,6 +662,7 @@ void render_panel_ram() {
             if (ImGui::InputText("##Address", addr_buf, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
                 rb->start_address = strtoul(addr_buf, nullptr, 16);
             }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
             // Second box for end address
             ImGui::SameLine();
             ImGui::SetNextItemWidth(BUTTON_WIDTH);
@@ -676,12 +677,10 @@ void render_panel_ram() {
             }
             snprintf(end_addr_buf, sizeof(end_addr_buf), "%08X", end_addr);
             ImGui::InputText("##AddressEnd", end_addr_buf, 16, ImGuiInputTextFlags_ReadOnly);
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
             ImGui::EndDisabled();
 
             ImGui::TableNextColumn();
-
-            // Right Column: Flags
-            // Order: Edit Autoconfig, Manual, DMA, 16-bit, Slow
 
             // Right Column: Flags
             // Order: Edit Autoconfig, Manual, DMA, 16-bit, Slow
@@ -711,7 +710,7 @@ void render_panel_ram() {
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
             ImGui::EndTable();
         }
-    } // end if (rb)
+    }
 
     EndGroupBox("Advanced Memory Settings");
 

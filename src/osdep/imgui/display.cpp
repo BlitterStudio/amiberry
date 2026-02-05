@@ -4,6 +4,7 @@
 #include "amiberry_gfx.h" // For getdisplay and MultiDisplay
 #include "imgui_panels.h"
 #include "gui/gui_handling.h"
+#include "gfxboard.h"
 
 void render_panel_display() {
     ImGui::Indent(4.0f);
@@ -11,12 +12,11 @@ void render_panel_display() {
     // Logic Check: RTG Enabled
     // WinUAE: ((!address_space_24 || configtype==2) && size) || type >= HARDWARE
     bool rtg_enabled = false;
-    // Simplification: Check if any RTG board is configured with memory
-    if (changed_prefs.rtgboards[0].rtgmem_size > 0) rtg_enabled = true;
 #ifdef PICASSO96
-    // Add proper check if headers allowed, but for now simple check
-#else
-    rtg_enabled = false;
+    bool addr_ok = !changed_prefs.address_space_24 ||
+                   gfxboard_get_configtype(&changed_prefs.rtgboards[0]) == 2;
+    rtg_enabled = (addr_ok && changed_prefs.rtgboards[0].rtgmem_size) ||
+                  changed_prefs.rtgboards[0].rtgmem_type >= GFXBOARD_HARDWARE;
 #endif
 
     // Logic Check: Refresh Rate Slider / FPS Adj
@@ -42,7 +42,7 @@ void render_panel_display() {
     // Windowed & Buffering
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Windowed:");
-    ImGui::SameLine();
+    ImGui::SameLine(BUTTON_WIDTH);
     ImGui::SetNextItemWidth(BUTTON_WIDTH / 2);
     ImGui::InputInt("##WinW", &changed_prefs.gfx_monitor[0].gfx_size_win.width, 0, 0);
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
@@ -62,133 +62,132 @@ void render_panel_display() {
 
     ImGui::Spacing();
 
-    // Table for Grid Layout
-    if (ImGui::BeginTable("SettingsGrid", 3, ImGuiTableFlags_None)) {
-        ImGui::TableSetupColumn("label1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH);
-        ImGui::TableSetupColumn("combo1", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2);
-        ImGui::TableSetupColumn("combo2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2);
-
-        // Row 1: Native
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("Native:");
-        ImGui::TableNextColumn();
-        const char *screenmode_items[] = {"Windowed", "Fullscreen", "Full-window"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-        if (ImGui::BeginCombo("##NativeMode", screenmode_items[changed_prefs.gfx_apmode[0].gfx_fullscreen])) {
-            for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
-                const bool is_selected = (changed_prefs.gfx_apmode[0].gfx_fullscreen == n);
-                if (is_selected)
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(screenmode_items[n], is_selected)) {
-                    changed_prefs.gfx_apmode[0].gfx_fullscreen = n;
-                }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
-                }
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Native:");
+    ImGui::SameLine(BUTTON_WIDTH);
+    const char *screenmode_items[] = {"Windowed", "Fullscreen", "Full-window"};
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    if (ImGui::BeginCombo("##NativeMode", screenmode_items[changed_prefs.gfx_apmode[0].gfx_fullscreen])) {
+        for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
+            const bool is_selected = (changed_prefs.gfx_apmode[0].gfx_fullscreen == n);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(screenmode_items[n], is_selected)) {
+                changed_prefs.gfx_apmode[0].gfx_fullscreen = n;
             }
-            ImGui::EndCombo();
-        }
-        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-        ImGui::TableNextColumn();
-
-        // VSync Mapping
-        const char *vsync_items[] = {"-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz"};
-        // Calc current index
-        int vsync_idx = 0;
-        if (changed_prefs.gfx_apmode[0].gfx_vsync == 1 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 1) vsync_idx = 1;
-        else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 1)
-            vsync_idx = 2;
-        else if (changed_prefs.gfx_apmode[0].gfx_vsync == 1 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
-            vsync_idx = 3;
-        else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
-            vsync_idx = 4;
-
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-        if (ImGui::BeginCombo("##NativeVSync", vsync_items[vsync_idx])) {
-            for (int n = 0; n < IM_ARRAYSIZE(vsync_items); n++) {
-                const bool is_selected = (vsync_idx == n);
-                if (is_selected)
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(vsync_items[n], is_selected)) {
-                    vsync_idx = n;
-                    switch (vsync_idx) {
-                        case 0: changed_prefs.gfx_apmode[0].gfx_vsync = 0;
-                            changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-                            break;
-                        case 1: changed_prefs.gfx_apmode[0].gfx_vsync = 1;
-                            changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
-                            break;
-                        case 2: changed_prefs.gfx_apmode[0].gfx_vsync = 2;
-                            changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
-                            break;
-                        case 3: changed_prefs.gfx_apmode[0].gfx_vsync = 1;
-                            changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-                            break;
-                        case 4: changed_prefs.gfx_apmode[0].gfx_vsync = 2;
-                            changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
-                            break;
-                    }
-                }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
-                }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
             }
-            ImGui::EndCombo();
         }
-        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-
-        // Row 2: RTG
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        if (!rtg_enabled) ImGui::BeginDisabled();
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("RTG:");
-        ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-        if (ImGui::BeginCombo("##RTGMode", screenmode_items[changed_prefs.gfx_apmode[1].gfx_fullscreen])) {
-            for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
-                const bool is_selected = (changed_prefs.gfx_apmode[1].gfx_fullscreen == n);
-                if (is_selected)
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(screenmode_items[n], is_selected)) {
-                    changed_prefs.gfx_apmode[1].gfx_fullscreen = n;
-                }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-
-        ImGui::TableNextColumn();
-        const char *vsync_rtg_items[] = {"-", "Lagless"};
-        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
-        if (ImGui::BeginCombo("##RTGVSync", vsync_rtg_items[changed_prefs.gfx_apmode[1].gfx_vsync])) {
-            for (int n = 0; n < IM_ARRAYSIZE(vsync_rtg_items); n++) {
-                const bool is_selected = (changed_prefs.gfx_apmode[1].gfx_vsync == n);
-                if (is_selected)
-                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-                if (ImGui::Selectable(vsync_rtg_items[n], is_selected)) {
-                    changed_prefs.gfx_apmode[1].gfx_vsync = n;
-                }
-                if (is_selected) {
-                    ImGui::PopStyleColor();
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-        if (!rtg_enabled) ImGui::EndDisabled();
-
-        ImGui::EndTable();
+        ImGui::EndCombo();
     }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+
+    ImGui::SameLine();
+
+    // VSync Mapping
+    const char *vsync_items[] = {"-", "Lagless", "Lagless 50/60Hz", "Standard", "Standard 50/60Hz"};
+    // Calc current index
+    int vsync_idx = 0;
+    if (changed_prefs.gfx_apmode[0].gfx_vsync == 1 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 1) vsync_idx = 1;
+    else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 1)
+        vsync_idx = 2;
+    else if (changed_prefs.gfx_apmode[0].gfx_vsync == 1 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
+        vsync_idx = 3;
+    else if (changed_prefs.gfx_apmode[0].gfx_vsync == 2 && changed_prefs.gfx_apmode[0].gfx_vsyncmode == 0)
+        vsync_idx = 4;
+
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    if (ImGui::BeginCombo("##NativeVSync", vsync_items[vsync_idx])) {
+        for (int n = 0; n < IM_ARRAYSIZE(vsync_items); n++) {
+            const bool is_selected = (vsync_idx == n);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(vsync_items[n], is_selected)) {
+                vsync_idx = n;
+                switch (vsync_idx) {
+                    case 0: changed_prefs.gfx_apmode[0].gfx_vsync = 0;
+                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+                        break;
+                    case 1: changed_prefs.gfx_apmode[0].gfx_vsync = 1;
+                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+                        break;
+                    case 2: changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 1;
+                        break;
+                    case 3: changed_prefs.gfx_apmode[0].gfx_vsync = 1;
+                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+                        break;
+                    case 4: changed_prefs.gfx_apmode[0].gfx_vsync = 2;
+                        changed_prefs.gfx_apmode[0].gfx_vsyncmode = 0;
+                        break;
+                }
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+
+    ImGui::Spacing();
+
+    if (!rtg_enabled) ImGui::BeginDisabled();
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("RTG:");
+    ImGui::SameLine(BUTTON_WIDTH);
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    if (ImGui::BeginCombo("##RTGMode", screenmode_items[changed_prefs.gfx_apmode[1].gfx_fullscreen])) {
+        for (int n = 0; n < IM_ARRAYSIZE(screenmode_items); n++) {
+            const bool is_selected = (changed_prefs.gfx_apmode[1].gfx_fullscreen == n);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(screenmode_items[n], is_selected)) {
+                changed_prefs.gfx_apmode[1].gfx_fullscreen = n;
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+
+    ImGui::SameLine();
+
+    const char *vsync_rtg_items[] = {"-", "Lagless"};
+    // Calculate RTG VSync index from gfx_vsync value
+    int rtg_vsync_idx = 0;
+    if (changed_prefs.gfx_apmode[1].gfx_vsync > 0)
+        rtg_vsync_idx = 1;
+    ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+    if (ImGui::BeginCombo("##RTGVSync", vsync_rtg_items[rtg_vsync_idx])) {
+        for (int n = 0; n < IM_ARRAYSIZE(vsync_rtg_items); n++) {
+            const bool is_selected = (rtg_vsync_idx == n);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(vsync_rtg_items[n], is_selected)) {
+                if (n == 0) {
+                    changed_prefs.gfx_apmode[1].gfx_vsync = 0;
+                    changed_prefs.gfx_apmode[1].gfx_vsyncmode = 0;
+                } else if (n == 1) {
+                    changed_prefs.gfx_apmode[1].gfx_vsync = 1;
+                    changed_prefs.gfx_apmode[1].gfx_vsyncmode = 1;
+                }
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    if (!rtg_enabled) ImGui::EndDisabled();
 
     ImGui::Spacing();
 
@@ -370,17 +369,21 @@ void render_panel_display() {
         ImGui::Text("FPS adj.:");
         ImGui::TableNextColumn();
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
-        if (!refresh_enabled) ImGui::BeginDisabled();
+        // WinUAE: FPS adj slider/text enabled by cr->locked, not by cpu_memory_cycle_exact
+        bool fps_adj_enabled = changed_prefs.cr[changed_prefs.cr_selected].locked;
+        if (!fps_adj_enabled) ImGui::BeginDisabled();
         ImGui::SliderFloat("##FPSAdjSld", &changed_prefs.cr[changed_prefs.cr_selected].rate, 1.0f, 100.0f, "");
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
-        if (!refresh_enabled) ImGui::EndDisabled();
+        if (!fps_adj_enabled) ImGui::EndDisabled();
         ImGui::TableNextColumn();
 
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         char buf[32];
         snprintf(buf, sizeof(buf), "%.6f", changed_prefs.cr[changed_prefs.cr_selected].rate);
+        if (!fps_adj_enabled) ImGui::BeginDisabled();
         ImGui::InputText("##FPSVal", buf, sizeof(buf), ImGuiInputTextFlags_ReadOnly);
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+        if (!fps_adj_enabled) ImGui::EndDisabled();
         ImGui::SameLine();
         AmigaCheckbox("##FPSLocked", (bool *) &changed_prefs.cr[changed_prefs.cr_selected].locked);
         ImGui::EndTable();

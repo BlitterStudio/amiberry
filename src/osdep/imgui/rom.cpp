@@ -4,7 +4,9 @@
 #include "options.h"
 #include "rommgr.h"
 #include "memory.h"
+#include "uae.h"
 #include "gui/gui_handling.h"
+#include "pcem/paths.h"
 
 struct RomListEntry {
 	std::string name;
@@ -112,7 +114,7 @@ void render_panel_rom()
 	if (AmigaButton("...##MainRomFileButton"))
 	{
 		current_pick_type = RomPickType::Main;
-		OpenFileDialog("Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.romfile);
+		OpenFileDialog("Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
 	// Extended ROM
@@ -124,7 +126,7 @@ void render_panel_rom()
 	if (AmigaButton("...##ExtRomFileButton"))
 	{
 		current_pick_type = RomPickType::Extended;
-		OpenFileDialog("Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.romextfile);
+		OpenFileDialog("Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
     bool maprom_disabled = (changed_prefs.cpuboard_type != 0);
@@ -198,7 +200,7 @@ void render_panel_rom()
 	ImGui::SameLine();
 	if (AmigaButton("...##CartRomFileButton")) {
 		current_pick_type = RomPickType::Cartridge;
-		OpenFileDialog("Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", changed_prefs.cartfile);
+		OpenFileDialog("Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
 	ImGui::Text("Flash RAM or A2286/A2386SX BIOS CMOS RAM file:");

@@ -119,7 +119,7 @@ void render_panel_configurations()
 	AmigaBevel(ImVec2(min.x - 1, min.y - 1), ImVec2(max.x + 1, max.y + 1), false);
 
 	// Define a fixed width for labels to align input fields
-	const float label_width = BUTTON_WIDTH;
+	const float label_width = BUTTON_WIDTH * 1.2f;
 
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Search:");
