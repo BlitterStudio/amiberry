@@ -865,8 +865,8 @@ void usage()
 	std::cout << " -1 <disk.adf>              " << '\n';
 	std::cout << " -2 <disk.adf>              " << '\n';
 	std::cout << " -3 <disk.adf>              \n" << '\n';
-	std::cout << " -diskswapper=d1.adf,d2.adf Comma-separated list of disk images to pre-load to the Disk Swapper." <<
-		'\n';
+	std::cout << " -diskswapper=d1.adf,d2.adf Comma-separated list of disk images to pre-load to the Disk Swapper." << '\n';
+	std::cout << "                            Use quotes for paths with commas: \"path with,comma/d1.adf\",d2.adf" << '\n';
 	std::cout << " -r <kick.rom>              Load main ROM from the specified path." << '\n';
 	std::cout << " -K <kick.rom>              Load extended ROM from the specified path." << '\n';
 	std::cout << " -m VOLNAME:mount_point     Attach a volume directly to the specified mount point." << '\n';
@@ -939,25 +939,41 @@ static int diskswapper_cb (struct zfile *f, void *vrsd)
 
 static void parse_diskswapper (const TCHAR *s)
 {
-	auto* const tmp = my_strdup (s);
-	const auto* delim = _T(",");
-	TCHAR* p2;
+	TCHAR path[MAX_DPATH];
+	int pathlen = 0;
+	bool quoted = false;
 	auto num = 0;
 
-	auto* p1 = tmp;
-	for (;;) {
-		p2 = _tcstok(p1, delim);
-		if (!p2)
-			break;
-		p1 = nullptr;
-		if (num >= MAX_SPARE_DRIVES)
-			break;
-		if (!zfile_zopen (p2, diskswapper_cb, &num)) {
-			_tcsncpy (currprefs.dfxlist[num], p2, 255);
-			num++;
+	for (int i = 0; ; i++) {
+		TCHAR c = s[i];
+
+		if (c == '\0' || (c == ',' && !quoted)) {
+			// End of a path token
+			path[pathlen] = '\0';
+
+			if (pathlen > 0 && num < MAX_SPARE_DRIVES) {
+				auto *expanded = target_expand_environment(path, nullptr, 0);
+				const TCHAR *use_path = expanded ? expanded : path;
+
+				if (!zfile_zopen(use_path, diskswapper_cb, &num)) {
+					_tcsncpy(currprefs.dfxlist[num], use_path, 255);
+					num++;
+				}
+
+				xfree(expanded);
+			}
+
+			pathlen = 0;
+
+			if (c == '\0')
+				break;
+		} else if (c == '"') {
+			quoted = !quoted;
+		} else {
+			if (pathlen < MAX_DPATH - 1)
+				path[pathlen++] = c;
 		}
 	}
-	xfree (tmp);
 }
 
 static TCHAR *parsetext (const TCHAR *s)
@@ -1028,9 +1044,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			continue;
 		}
 		if (!_tcsncmp(argv[i], _T("-diskswapper="), 13)) {
-			auto* txt = parsetextpath(argv[i] + 13);
-			parse_diskswapper(txt);
-			xfree(txt);
+			parse_diskswapper(argv[i] + 13);
 		}
 		else if (_tcsncmp(argv[i], _T("-cfgparam="), 10) == 0) {
 			;
