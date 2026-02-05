@@ -569,7 +569,7 @@ bool AmigaRadioButton(const char* label, const bool active)
 	const float sz = ImGui::GetFrameHeight();
 	const ImVec2 pos = ImGui::GetItemRectMin();
 	const float radius = (sz * 0.5f) - 0.5f;
-	const ImVec2 center = ImVec2(pos.x + sz * 0.5f, pos.y + sz * 0.5f);
+	const ImVec2 center = ImVec2(floor(pos.x + sz * 0.5f + 0.5f), floor(pos.y + sz * 0.5f + 0.5f));
 	
 	AmigaCircularBevel(center, radius, true);
 
@@ -585,7 +585,7 @@ bool AmigaRadioButton(const char* label, int* v, const int v_button)
 	const float sz = ImGui::GetFrameHeight();
 	const ImVec2 pos = ImGui::GetItemRectMin();
 	const float radius = (sz * 0.5f) - 0.5f;
-	const ImVec2 center = ImVec2(pos.x + sz * 0.5f, pos.y + sz * 0.5f);
+	const ImVec2 center = ImVec2(floor(pos.x + sz * 0.5f + 0.5f), floor(pos.y + sz * 0.5f + 0.5f));
 
 	AmigaCircularBevel(center, radius, true);
 
