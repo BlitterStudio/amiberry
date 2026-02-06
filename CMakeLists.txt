@@ -55,12 +55,8 @@ if(ANDROID)
     set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
 endif()
 
-# Versioning
-set(VERSION_MAJOR "8" CACHE STRING "Major version")
-set(VERSION_MINOR "0" CACHE STRING "Minor version")
-set(VERSION_PATCH "0" CACHE STRING "Patch version")
-set(VERSION_PRE_RELEASE "18" CACHE STRING "Pre-release version")
-set(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+# Pre-release version suffix (project version is set in project() above)
+set(VERSION_PRE_RELEASE "19" CACHE STRING "Pre-release version")
 
 # Use PkgConfig only on FreeBSD
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
@@ -72,15 +68,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	pkg_check_modules(FLAC REQUIRED flac)
 	pkg_check_modules(PNG REQUIRED libpng)
 
-	include_directories(
+	# Store FreeBSD include/link info for target-specific application in SourceFiles.cmake
+	set(FREEBSD_INCLUDE_DIRS
     	${SDL2_INCLUDE_DIRS}
     	${SDL2_TTF_INCLUDE_DIRS}
     	${SDL2_IMAGE_INCLUDE_DIRS}
     	${FLAC_INCLUDE_DIRS}
     	${PNG_INCLUDE_DIRS}
 	)
-
-	link_libraries(
+	set(FREEBSD_LIBRARIES
     	${SDL2_LIBRARIES}
     	${SDL2_TTF_LIBRARIES}
     	${SDL2_IMAGE_LIBRARIES}
@@ -89,19 +85,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	)
 endif()
 
-# macOS-specific identifier (optional cosmetic)
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(PROJECT_NAME "Amiberry")
-    set(CMAKE_PROJECT_NAME "Amiberry")
-endif()
-
 # Project identity
+set(AMIBERRY_DISPLAY_NAME "Amiberry")
 set(PROJECT_COMPANY_NAME "BlitterStudio")
 set(PROJECT_COMPANY_NAMESPACE "com.blitterstudio")
 
-# FreeBSD-specific linking and paths
+# FreeBSD-specific paths and libraries
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-    link_directories(/usr/local/lib)
+    list(APPEND AMIBERRY_PLATFORM_LINK_DIRS /usr/local/lib)
 
     find_library(LIBUSB_LIBRARY NAMES usb PATHS /usr/lib REQUIRED)
     if(NOT LIBUSB_LIBRARY)
@@ -114,10 +105,18 @@ include(GNUInstallDirs)
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/SourceFiles.cmake)
 include(cmake/Dependencies.cmake)
-add_subdirectory(packaging)
+include(packaging/CMakeLists.txt)
 
 # Link libraries (FreeBSD needs correct order)
 if(TARGET amiberry AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    # Apply FreeBSD pkg-config include/link dirs
+    if(FREEBSD_INCLUDE_DIRS)
+        target_include_directories(amiberry PRIVATE ${FREEBSD_INCLUDE_DIRS})
+    endif()
+    if(FREEBSD_LIBRARIES)
+        target_link_libraries(amiberry PRIVATE ${FREEBSD_LIBRARIES})
+    endif()
+
     # forkpty() lives in libutil on FreeBSD
     target_link_libraries(amiberry PRIVATE util)
 

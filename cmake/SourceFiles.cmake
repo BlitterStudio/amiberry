@@ -402,7 +402,7 @@ set(PCEM_SOURCE_FILES
 )
 
 if (USE_IMGUI)
-    message("Using ImGui for GUI")
+    message(STATUS "Using ImGui for GUI")
     list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
     list(APPEND SOURCE_FILES ${IMGUI_GUI_FILES})
 endif ()
@@ -420,10 +420,26 @@ else()
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
 endif()
 
+# Pre-release flag (integer, usable in C if statements)
+if(VERSION_PRE_RELEASE)
+    set(AMIBERRY_IS_PRE_RELEASE 1)
+else()
+    set(AMIBERRY_IS_PRE_RELEASE 0)
+endif()
+
+# Build date components (configure-time timestamp)
+string(TIMESTAMP AMIBERRY_BUILD_YEAR "%Y")
+string(TIMESTAMP AMIBERRY_BUILD_MONTH "%m")
+string(TIMESTAMP AMIBERRY_BUILD_DAY "%d")
+# Remove leading zeros for C integer literals
+math(EXPR AMIBERRY_BUILD_MONTH_INT "${AMIBERRY_BUILD_MONTH}")
+math(EXPR AMIBERRY_BUILD_DAY_INT "${AMIBERRY_BUILD_DAY}")
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_NAME "${AMIBERRY_DISPLAY_NAME}"
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_EXECUTABLE_NAME "Amiberry"
-        MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME} ${PROJECT_VERSION}"
+        MACOSX_BUNDLE_EXECUTABLE_NAME "${AMIBERRY_DISPLAY_NAME}"
+        MACOSX_BUNDLE_INFO_STRING "${AMIBERRY_DISPLAY_NAME} ${PROJECT_VERSION}"
         MACOSX_BUNDLE_ICON_FILE "data/icon"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.Amiberry"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.blitterstudio.Amiberry"
@@ -431,17 +447,24 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_BUNDLE_NAME "Amiberry"
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-        MACOSX_BUNDLE_COPYRIGHT "(c) 2025 Dimitris Panokostas"
+        MACOSX_BUNDLE_COPYRIGHT "(c) ${AMIBERRY_BUILD_YEAR} Dimitris Panokostas"
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/MacOSXBundleInfo.plist.in"
 )
 
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         _FILE_OFFSET_BITS=64
-        -DAMIBERRY_VERSION="${PROJECT_VERSION}"
-        -DAMIBERRY_VERSION_PRE_RELEASE="${VERSION_PRE_RELEASE}"
-        -DAMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
-        -DAMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
+        AMIBERRY_VERSION="${PROJECT_VERSION}"
+        AMIBERRY_VERSION_PRE_RELEASE="${VERSION_PRE_RELEASE}"
+        AMIBERRY_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        AMIBERRY_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        AMIBERRY_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+        AMIBERRY_IS_PRE_RELEASE=${AMIBERRY_IS_PRE_RELEASE}
+        AMIBERRY_BUILD_YEAR=${AMIBERRY_BUILD_YEAR}
+        AMIBERRY_BUILD_MONTH=${AMIBERRY_BUILD_MONTH_INT}
+        AMIBERRY_BUILD_DAY=${AMIBERRY_BUILD_DAY_INT}
+        AMIBERRY_BUILD_DATE="${AMIBERRY_BUILD_YEAR}-${AMIBERRY_BUILD_MONTH}-${AMIBERRY_BUILD_DAY}"
+        AMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
+        AMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
 )
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
@@ -451,6 +474,24 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
             CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV
     )
 endif ()
+
+# Apply accumulated compile/link options from StandardProjectSettings.cmake
+# These are target-specific so they don't leak into FetchContent-ed third-party builds.
+target_compile_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_COMPILE_OPTIONS})
+if(AMIBERRY_LINK_OPTIONS)
+    target_link_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_LINK_OPTIONS})
+endif()
+
+# Apply platform-specific include/link paths from StandardProjectSettings.cmake
+if(AMIBERRY_PLATFORM_INCLUDE_DIRS)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_INCLUDE_DIRS})
+endif()
+if(AMIBERRY_PLATFORM_LINK_DIRS)
+    target_link_directories(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LINK_DIRS})
+endif()
+if(AMIBERRY_PLATFORM_LIBS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LIBS})
+endif()
 
 if(NOT ANDROID)
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
@@ -482,7 +523,7 @@ install(TARGETS ${PROJECT_NAME}
 
 # Settings for installing per platform
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include(cmake/linux/CMakeLists.txt)
+    include(cmake/linux/install.cmake)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    include(cmake/macos/CMakeLists.txt)
+    include(cmake/macos/install.cmake)
 endif ()

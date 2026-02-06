@@ -93,9 +93,9 @@ if(ANDROID)
         FetchContent_Declare(
             mpg123
             # madebr/mpg123 is a mirror of the upstream SVN repo but does not publish git tags.
-            # Pin to an existing ref so FetchContent can check out reliably.
+            # Pin to a specific commit for reproducible builds.
             GIT_REPOSITORY https://github.com/madebr/mpg123.git
-            GIT_TAG        master
+            GIT_TAG        a06133928e6518bd65314c9cea12ccb5588703e9
         )
     endif()
 
@@ -306,7 +306,7 @@ if(ANDROID)
         FetchContent_Declare(
             libserialport
             GIT_REPOSITORY https://github.com/scottmudge/libserialport-cmake
-            GIT_TAG        master
+            GIT_TAG        c82d28deb05185df8c4dafea96dd520a3c0db7c9
             PATCH_COMMAND  ${CMAKE_COMMAND} -E echo "Fixing libserialport for Android" &&
                            ${CMAKE_COMMAND} -DLIBSERIALPORT_SOURCE_DIR=<SOURCE_DIR>
                                           -P "${CMAKE_SOURCE_DIR}/cmake/libserialport_fix_android.cmake"
@@ -474,17 +474,10 @@ add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 
-# Keep guisan include behavior aligned
-if(SDL2_INCLUDE_DIRS)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
-else()
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
-endif()
-
 set(AMIBERRY_LIBS
         mt32emu
-        z
-        dl
+        ZLIB::ZLIB
+        ${CMAKE_DL_LIBS}
         SDL2_ttf
         SDL2_image
 )
@@ -502,10 +495,12 @@ endif()
 
 if(TARGET PNG::PNG)
     list(APPEND AMIBERRY_LIBS PNG::PNG)
+elseif(TARGET png_static)
+    list(APPEND AMIBERRY_LIBS png_static)
 elseif(TARGET png)
     list(APPEND AMIBERRY_LIBS png)
 elseif(PNG_FOUND)
-     list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
+    list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
 endif()
 
 if(TARGET MPG123::libmpg123)
@@ -514,13 +509,6 @@ elseif(TARGET libmpg123)
     list(APPEND AMIBERRY_LIBS libmpg123)
 elseif(MPG123_FOUND)
     list(APPEND AMIBERRY_LIBS ${MPG123_LIBRARIES})
-endif()
-
-if(TARGET png_static)
-    list(APPEND AMIBERRY_LIBS png_static)
-elseif(TARGET png)
-    list(APPEND AMIBERRY_LIBS png)
-    list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
 endif()
 
 if(TARGET libzstd_static)
@@ -547,6 +535,10 @@ if (USE_IMGUI)
     target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
 endif()
 
+# capsimage and floppybridge are plugins (not linked into amiberry) but are
+# copied by post-build commands. Explicit dependencies ensure they are built.
+add_dependencies(${PROJECT_NAME} floppybridge capsimage)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_library(UTIL_LIBRARY util)
     if(UTIL_LIBRARY)
@@ -555,9 +547,4 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
 endif ()
 
-# Add dependencies to ensure external libraries are built
-add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage)
-if (USE_IMGUI)
-    add_dependencies(${PROJECT_NAME} imgui)
-endif()
 

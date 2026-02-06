@@ -45,6 +45,6 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
     list(APPEND PERF_FLAGS "-fprefetch-loop-arrays" "-finline-limit=600")
 endif()
 
-add_compile_options(${OPTIMIZED_FLAGS} ${PERF_FLAGS})
+list(APPEND AMIBERRY_COMPILE_OPTIONS ${OPTIMIZED_FLAGS} ${PERF_FLAGS})
 
 

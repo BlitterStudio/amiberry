@@ -20,9 +20,10 @@
 #include "guisan/color.hpp"
 #endif
 
-#define UAEMAJOR 8
-#define UAEMINOR 0
-#define UAESUBREV 0
+// Version comes from CMake compile definitions (AMIBERRY_VERSION_MAJOR/MINOR/PATCH)
+#define UAEMAJOR AMIBERRY_VERSION_MAJOR
+#define UAEMINOR AMIBERRY_VERSION_MINOR
+#define UAESUBREV AMIBERRY_VERSION_PATCH
 
 #define MAX_AMIGADISPLAYS 1
 
