@@ -39,6 +39,7 @@
 #include <fstream>
 #include <sstream>
 #include "imgui/imgui_panels.h"
+#include "imgui/imgui_help_text.h"
 
 bool ctrl_state = false, shift_state = false, alt_state = false, win_state = false;
 int last_x = 0;
@@ -175,13 +176,13 @@ namespace
 		if (vp) {
 			const float vw = vp->Size.x;
 			const float vh = vp->Size.y;
-			const float maxW = std::max(320.0f, vw * 0.95f);
-			const float maxH = std::max(240.0f, vh * 0.90f);
-			const float minW = std::min(720.0f, maxW);
-			const float minH = std::min(480.0f, maxH);
-			const float defW = std::clamp(vw * 0.60f, minW, maxW);
-			const float defH = std::clamp(vh * 0.60f, minH, maxH);
-			
+			const float maxW = vw * 0.95f;
+			const float maxH = vh * 0.90f;
+			const float minW = vw * 0.50f;
+			const float minH = vh * 0.50f;
+			const float defW = vw * 0.70f;
+			const float defH = vh * 0.70f;
+
 			minSize = ImVec2(minW, minH);
 			maxSize = ImVec2(maxW, maxH);
 
@@ -408,7 +409,7 @@ void gui_restart()
 // IMGUI runtime state and helpers
 static bool show_message_box = false;
 static char message_box_title[128] = {0};
-static char message_box_message[1024] = {0};
+static std::string message_box_message;
 static bool start_disabled = false; // Added for disable_resume logic
 
 // Helper to draw Amiga 3D bevels
@@ -945,8 +946,7 @@ void ShowMessageBox(const char* title, const char* message)
     // Safely copy and ensure null-termination
     strncpy(message_box_title, title ? title : "Message", sizeof(message_box_title) - 1);
     message_box_title[sizeof(message_box_title) - 1] = '\0';
-    strncpy(message_box_message, message ? message : "", sizeof(message_box_message) - 1);
-    message_box_message[sizeof(message_box_message) - 1] = '\0';
+    message_box_message = message ? message : "";
     show_message_box = true;
 }
 
@@ -960,7 +960,7 @@ void ShowDiskInfo(const char* title, const std::vector<std::string>& text)
 
 // Provide IMGUI categories using centralized panel list
 ConfigCategory categories[] = {
-#define PANEL(id, label, icon) { label, icon, render_panel_##id, nullptr },
+#define PANEL(id, label, icon) { label, icon, render_panel_##id, help_text_##id },
 	IMGUI_PANEL_LIST
 #undef PANEL
 	{ nullptr, nullptr, nullptr, nullptr }
@@ -1075,7 +1075,7 @@ void run_gui()
 
 		// Determine sidebar width based on current window content width, with sane clamps
 		const float content_width = ImGui::GetContentRegionAvail().x;
-		const float sidebar_width = std::clamp(content_width * 0.18f, 180.0f, 380.0f);
+		const float sidebar_width = content_width * 0.22f;
 
 		// Sidebar
 		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 1.0f);
@@ -1235,10 +1235,10 @@ void run_gui()
 		}
 
 		if (show_message_box) {
-            // Center the dialog on appearing and enforce a consistent width
+            // Center the dialog on appearing; use viewport-relative sizes for proper scaling on all platforms
             const float vw = vp->Size.x;
             const float vh = vp->Size.y;
-            const float desired_w = std::clamp(vw * 0.56f, 520.0f, 760.0f); // ~56% of viewport, clamped
+            const float desired_w = vw * 0.56f;
             ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(desired_w, 0.0f), ImGuiCond_Appearing);
             // Lock width to desired_w; allow height to grow up to 85% viewport
@@ -1247,11 +1247,10 @@ void run_gui()
             ImGui::OpenPopup(message_box_title);
             if (ImGui::BeginPopupModal(message_box_title, &show_message_box, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
             {
-                // Scrollable message area with reasonable max height
-                const float line_h = ImGui::GetTextLineHeightWithSpacing();
-                const float max_child_h = std::clamp(line_h * 10.0f, 140.0f, vh * 0.5f);
+                // Scrollable message area; height scales with viewport
+                const float max_child_h = vh * 0.65f;
                 ImGui::BeginChild("MessageScroll", ImVec2(0, max_child_h), true, ImGuiWindowFlags_HorizontalScrollbar);
-                ImGui::TextWrapped("%s", message_box_message);
+                ImGui::TextWrapped("%s", message_box_message.c_str());
                 ImGui::EndChild();
 
                 ImGui::Spacing();
@@ -1277,7 +1276,7 @@ void run_gui()
 		if (show_disk_info) {
             const float vw = vp->Size.x;
             const float vh = vp->Size.y;
-            const float desired_w = std::clamp(vw * 0.7f, 600.0f, 900.0f);
+            const float desired_w = vw * 0.7f;
 
             ImGui::SetNextWindowPos(vp->GetCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(desired_w, vh * 0.8f), ImGuiCond_Appearing);
@@ -1286,7 +1285,7 @@ void run_gui()
             if (ImGui::BeginPopupModal(disk_info_title, &show_disk_info, ImGuiWindowFlags_NoSavedSettings))
             {
                 // Child region for text
-                const float footer_h = ImGui::GetFrameHeightWithSpacing() + 10.0f;
+                const float footer_h = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
                 ImGui::BeginChild("DiskInfoText", ImVec2(0, -footer_h), true);
 
                 for (const auto& line : disk_info_text) {
