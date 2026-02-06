@@ -111,13 +111,16 @@ void render_panel_custom()
 	ImGui::EndDisabled();
 	ImGui::SameLine();
 
+	if (did->mapping.is_retroarch) ImGui::BeginDisabled();
 	if (AmigaButton("...")) {
 		ImGui::OpenPopup("Set Hotkey");
 	}
 	ImGui::SameLine();
 	if (AmigaButton("X")) {
 		did->mapping.hotkey_button = SDL_CONTROLLER_BUTTON_INVALID;
+		inputdevice_updateconfig(nullptr, &changed_prefs);
 	}
+	if (did->mapping.is_retroarch) ImGui::EndDisabled();
 	
 	if (ImGui::BeginPopupModal("Set Hotkey", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
@@ -131,18 +134,23 @@ void render_panel_custom()
 		// Check for Controller Button Input
 		if (did->controller) {
 			for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; ++i) {
-				if (SDL_GameControllerGetButton(did->controller, (SDL_GameControllerButton)i)) {
-					// Debounce: Wait for release? Or just assign. 
-					// Ideally we assign and close.
+				if (SDL_GameControllerGetButton(did->controller, static_cast<SDL_GameControllerButton>(i))) {
 					did->mapping.hotkey_button = i;
+					inputdevice_updateconfig(nullptr, &changed_prefs);
 					ImGui::CloseCurrentPopup();
 					break;
 				}
 			}
 		} else if (did->joystick) {
-			// Fallback for joystick API if controller not available? 
-			// Guisan code uses SDL events. 
-			// For now, let's assume Controller API is primary for mappings.
+			const int num_buttons = SDL_JoystickNumButtons(did->joystick);
+			for (int i = 0; i < num_buttons; ++i) {
+				if (SDL_JoystickGetButton(did->joystick, i)) {
+					did->mapping.hotkey_button = i;
+					inputdevice_updateconfig(nullptr, &changed_prefs);
+					ImGui::CloseCurrentPopup();
+					break;
+				}
+			}
 		}
 
 		// Also Allow clearing via button in popup?
@@ -172,24 +180,21 @@ void render_panel_custom()
 	ImGui::EndDisabled();
 
 	// Helper for checking if a button is "In-Use"
-	auto CheckInUse = [&](int button_idx, std::string& type_out) -> bool {
-		if (did->mapping.button[button_idx] == did->mapping.hotkey_button) {
+	auto CheckInUse = [&](int button_idx, bool is_mapped, std::string& type_out) -> bool {
+		const auto button = did->mapping.button[button_idx];
+		if (button == did->mapping.hotkey_button && is_mapped) {
 			type_out = "Hotkey"; return true;
 		}
-		if (SelectedFunction == 1) { // Only check these if custom function is selected? Guisan logic seems to imply SelectedFunction==1 for some.
-		    // Actually Guisan checks: if button == quit_button && SelectedFunction == 1 && use_retroarch_quit
-			if (did->mapping.button[button_idx] == did->mapping.quit_button && changed_prefs.use_retroarch_quit) {
-				type_out = "Quit"; return true;
-			}
-			if (did->mapping.button[button_idx] == did->mapping.menu_button && changed_prefs.use_retroarch_menu) {
-				type_out = "Menu"; return true;
-			}
-			if (did->mapping.button[button_idx] == did->mapping.reset_button && changed_prefs.use_retroarch_reset) {
-				type_out = "Reset"; return true;
-			}
+		if (button == did->mapping.quit_button && is_mapped && SelectedFunction == 1 && changed_prefs.use_retroarch_quit) {
+			type_out = "Quit"; return true;
 		}
-		// VKBD: if SelectedFunction == 1 && retroarch_vkbd OR SelectedFunction == 0 && !is_retroarch
-		if (did->mapping.button[button_idx] == did->mapping.vkbd_button) {
+		if (button == did->mapping.menu_button && is_mapped && SelectedFunction == 1 && changed_prefs.use_retroarch_menu) {
+			type_out = "Menu"; return true;
+		}
+		if (button == did->mapping.reset_button && is_mapped && SelectedFunction == 1 && changed_prefs.use_retroarch_reset) {
+			type_out = "Reset"; return true;
+		}
+		if (button == did->mapping.vkbd_button && is_mapped) {
 			if ((SelectedFunction == 1 && changed_prefs.use_retroarch_vkbd) || (SelectedFunction == 0 && !did->mapping.is_retroarch)) {
 				type_out = "VKBD"; return true;
 			}
@@ -222,7 +227,7 @@ void render_panel_custom()
 				is_mapped = true;
 
 			std::string in_use_type;
-			bool in_use = CheckInUse(i, in_use_type);
+			bool in_use = CheckInUse(i, is_mapped, in_use_type);
 
 			ImGui::AlignTextToFramePadding();
 			ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
@@ -285,7 +290,7 @@ void render_panel_custom()
 				is_mapped = true;
 
 			std::string in_use_type;
-			bool in_use = CheckInUse(i, in_use_type);
+			bool in_use = CheckInUse(i, is_mapped, in_use_type);
 
 			ImGui::AlignTextToFramePadding();
 			ImGui::Text("%s", label_button_list[i].c_str()); ImGui::SameLine();
