@@ -252,7 +252,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
+          sudo apt-get install -y build-essential cmake ninja-build file libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
 
       - name: make for Ubuntu ${{ matrix.name }}
         env:
