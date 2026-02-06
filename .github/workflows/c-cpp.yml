@@ -164,15 +164,20 @@ jobs:
         run: |
           cpack -G DragNDrop --config build/CPackConfig.cmake
 
-      - name: ZIP package
-        if: github.ref_type != 'tag'
-        run: zip -r Amiberry-${{ github.sha }}-${{ matrix.zip_suffix }}.zip Amiberry-*.dmg
-
       - name: ZIP package for release
         if: github.ref_type == 'tag'
         run: zip -r Amiberry-${{ github.ref_name }}-${{ matrix.zip_suffix }}.zip Amiberry-*.dmg
 
       - name: Upload artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: Amiberry-*.dmg
+          retention-days: 7
+
+      - name: Upload artifact for release
+        if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
