@@ -3,8 +3,12 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 endif ()
 set(CPACK_VERBATIM_VARIABLES YES)
-set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .vscode/ _CPack_Packages/)
-set(CPACK_PACKAGE_NAME ${AMIBERRY_DISPLAY_NAME})
+set(CPACK_SOURCE_IGNORE_FILES .git/ .github/ .claude/ android/ _CPack_Packages/)
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    set(CPACK_PACKAGE_NAME ${AMIBERRY_DISPLAY_NAME})
+else()
+    set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+endif()
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
@@ -23,7 +27,7 @@ endif()
 set(CPACK_PACKAGE_VENDOR "BlitterStudio")
 set(CPACK_PACKAGE_CONTACT "Dimitris Panokostas <midwan@gmail.com>")
 set(CPACK_PACKAGE_DESCRIPTION
-        "Optimized Amiga emulator for various ARM, ARM64, AMD64 and RISC-V platforms.
+        "Optimized Amiga emulator for various ARM64, AMD64 and RISC-V platforms.
 Amiberry is an optimized Amiga emulator for various platforms. It is based on
 the latest WinUAE and supports various Amiga models, including the A4000T,
 A4000D, A1200, A3000 and A600. Additionally, it includes several unique
