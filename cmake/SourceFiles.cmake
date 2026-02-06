@@ -227,6 +227,7 @@ set(SOURCE_FILES
         src/osdep/amiberry_gfx.cpp
         src/osdep/gl_platform.cpp
         src/osdep/external_shader.cpp
+        src/osdep/shader_preset.cpp
         src/osdep/amiberry_gui.cpp
         src/osdep/amiberry_mem.cpp
         src/osdep/amiberry_serial.cpp

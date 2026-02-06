@@ -69,6 +69,7 @@
 #include "crt_frame.h"
 
 #include "external_shader.h"
+#include "shader_preset.h"
 
 #endif // USE_OPENGL
 
@@ -91,7 +92,9 @@ static SDL_Texture* p96_cursor_overlay_texture = nullptr;  // Software cursor ov
 SDL_GLContext gl_context;
 crtemu_t* crtemu_shader = nullptr;
 ExternalShader* external_shader = nullptr;
+ShaderPreset* shader_preset = nullptr;
 static std::string external_shader_name;
+static std::string loaded_shader_name; // Tracks currently loaded shader to avoid unnecessary recreation
 static GLenum gl_texture_filter_mode = GL_LINEAR; // Default to linear filtering
 
 bool set_opengl_attributes(int mode);
@@ -120,12 +123,20 @@ static bool is_external_shader(const char* shader)
 	return ext && !strcasecmp(ext, ".glsl");
 }
 
+// Check if shader name refers to a .glslp shader preset
+static bool is_shader_preset(const char* shader)
+{
+	if (!shader) return false;
+	const char* ext = strrchr(shader, '.');
+	return ext && !strcasecmp(ext, ".glslp");
+}
+
 static int get_crtemu_type(const char* shader)
 {
 	if (!shader) return CRTEMU_TYPE_TV;
 	
-	// Check if it's an external shader file
-	if (is_external_shader(shader)) {
+	// Check if it's an external shader file or preset
+	if (is_external_shader(shader) || is_shader_preset(shader)) {
 		external_shader_name = shader;
 		return CRTEMU_TYPE_NONE; // Use NONE to skip crtemu initialization
 	}
@@ -504,15 +515,23 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
-	// Clean up existing shaders
-	destroy_shaders();
-
 	auto mon = &AMonitors[monid];
 	const char* shader_name;
 	if (mon->screen_is_picasso)
 		shader_name = amiberry_options.shader_rtg;
 	else
 		shader_name = amiberry_options.shader;
+
+	// Skip shader recreation if already loaded with the same name.
+	// This preserves runtime parameter changes made by the user.
+	bool shader_exists = (crtemu_shader != nullptr || external_shader != nullptr || shader_preset != nullptr);
+	if (shader_exists && loaded_shader_name == shader_name) {
+		return true;
+	}
+
+	// Clean up existing shaders (name changed or no shader loaded yet)
+	destroy_shaders();
+	loaded_shader_name = shader_name;
 
 	// Force full render on next frame after shader switch
 	mon->full_render_needed = true;
@@ -522,11 +541,24 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
 	}
 
-	// Check if we should use an external shader
-	if (is_external_shader(shader_name)) {
+	// Check if we should use a shader preset (.glslp)
+	if (is_shader_preset(shader_name)) {
+		write_log("Loading shader preset: %s\n", shader_name);
+		shader_preset = create_shader_preset(shader_name);
+
+		if (!shader_preset) {
+			write_log("Failed to load shader preset, falling back to built-in shaders\n");
+			shader_name = "none";
+		} else {
+			write_log("Shader preset loaded successfully (%d passes)\n", shader_preset->get_pass_count());
+			return true;
+		}
+	}
+	// Check if we should use an external shader (.glsl)
+	else if (is_external_shader(shader_name)) {
 		write_log("Loading external shader: %s\n", shader_name);
 		external_shader = create_external_shader(shader_name);
-		
+
 		if (!external_shader) {
 			write_log("Failed to load external shader, falling back to built-in shaders\n");
 			// Fall back to built-in shaders
@@ -557,7 +589,7 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 		// Load bezel frame overlay if enabled
 		update_crtemu_bezel();
 	}
-	return crtemu_shader != nullptr || external_shader != nullptr;
+	return crtemu_shader != nullptr || external_shader != nullptr || shader_preset != nullptr;
 #else
 	if (w < 0 || h < 0)
 	{
@@ -1835,9 +1867,14 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	};
 	shader->set_mvp_matrix(mvp);
 	
+	// Apply parameter uniforms from the emulator's GL context.
+	// set_parameter() only stores values; the actual glUniform1f calls
+	// must happen here in the render loop where the correct GL context is active.
+	shader->apply_parameter_uniforms();
+
 	// Bind texture
 	shader->bind_texture(texture, 0);
-	
+
 	// Set up vertex data for fullscreen quad
 	// The shader expects: attribute vec4 VertexCoord (position as x,y,z,w)
 	//                     attribute vec2/vec4 TexCoord (s,t,...)
@@ -2114,8 +2151,8 @@ void show_screen(const int monid, int mode)
 		return;
 	}
 #ifdef USE_OPENGL
-	// Safety check: if neither crtemu_shader nor external_shader is available, skip rendering
-	if (!crtemu_shader && !external_shader) {
+	// Safety check: if no shader is available, skip rendering
+	if (!crtemu_shader && !external_shader && !shader_preset) {
 		return;
 	}
 
@@ -2181,8 +2218,45 @@ void show_screen(const int monid, int mode)
 							 crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
 							 (crop_rect.w > 0 && crop_rect.h > 0);
 
+	// Handle shader preset rendering (multi-pass .glslp)
+	if (shader_preset && shader_preset->is_valid()) {
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+
+		int src_w = amiga_surface ? amiga_surface->w : 0;
+		int src_h = amiga_surface ? amiga_surface->h : 0;
+		if (is_cropped && amiga_surface) {
+			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
+			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
+		}
+
+		int viewport_w = std::max(destW, src_w);
+		int viewport_h = std::max(destH, src_h);
+		int viewport_x = (drawableWidth - viewport_w) / 2;
+		int viewport_y = (drawableHeight - viewport_h) / 2;
+
+		static int preset_frame_count = 0;
+
+		if (is_cropped && amiga_surface) {
+			const int bpp = 4;
+			int x = std::max(0, crop_rect.x);
+			int y = std::max(0, crop_rect.y);
+			int w = std::min(crop_rect.w, amiga_surface->w - x);
+			int h = std::min(crop_rect.h, amiga_surface->h - y);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+
+			shader_preset->render(crop_ptr, w, h, amiga_surface->pitch,
+				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
+		} else if (amiga_surface) {
+			shader_preset->render(static_cast<const unsigned char*>(amiga_surface->pixels),
+				amiga_surface->w, amiga_surface->h, amiga_surface->pitch,
+				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
+		}
+
+	}
 	// Handle external shader rendering (simplified single-pass)
-	if (external_shader && external_shader->is_valid()) {
+	else if (external_shader && external_shader->is_valid()) {
 		// Explicitly disable attributes to avoid leakage from previous passes
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
@@ -5104,12 +5178,16 @@ void toggle_fullscreen(const int monid, const int mode)
 #ifdef USE_OPENGL
 void destroy_shaders()
 {
+	// Clear tracked name so next SDL2_alloctexture call will recreate
+	loaded_shader_name.clear();
+
 	// Early exit if no GL context exists (e.g., quitting before emulation started)
 	if (gl_context == nullptr)
 	{
 		// Reset non-GL state
 		crtemu_shader = nullptr;
 		external_shader = nullptr;
+		shader_preset = nullptr;
 		gl_state_initialized = false;
 		return;
 	}
@@ -5123,6 +5201,11 @@ void destroy_shaders()
 	{
 		destroy_external_shader(external_shader);
 		external_shader = nullptr;
+	}
+	if (shader_preset != nullptr)
+	{
+		destroy_shader_preset(shader_preset);
+		shader_preset = nullptr;
 	}
 	if (osd_program != 0 && glIsProgram(osd_program))
 	{

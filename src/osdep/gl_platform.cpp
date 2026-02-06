@@ -51,6 +51,8 @@ PFNGLBINDFRAMEBUFFERPROC glp_BindFramebuffer = nullptr;
 PFNGLGENFRAMEBUFFERSPROC glp_GenFramebuffers = nullptr;
 PFNGLDELETEFRAMEBUFFERSPROC glp_DeleteFramebuffers = nullptr;
 PFNGLFRAMEBUFFERTEXTURE2DPROC glp_FramebufferTexture2D = nullptr;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC glp_CheckFramebufferStatus = nullptr;
+PFNGLGENERATEMIPMAPPROC glp_GenerateMipmap = nullptr;
 
 bool gl_platform_init()
 {
@@ -115,6 +117,8 @@ bool gl_platform_init()
 	glp_GenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffers");
 	glp_DeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffers");
 	glp_FramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2D");
+	glp_CheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)SDL_GL_GetProcAddress("glCheckFramebufferStatus");
+	glp_GenerateMipmap = (PFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmap");
 
 	// Verify critical functions loaded successfully
 	if (!glp_CreateShader || !glp_CreateProgram || !glp_GenBuffers || !glp_GenVertexArrays) {

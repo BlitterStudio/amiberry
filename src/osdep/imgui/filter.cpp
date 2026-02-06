@@ -4,9 +4,17 @@
 #include "options.h"
 #include "gui/gui_handling.h"
 #include "amiberry_gfx.h"
+#include <algorithm>
 #include <filesystem>
 #include <vector>
 #include <string>
+
+#ifdef USE_OPENGL
+#include "external_shader.h"
+#include "shader_preset.h"
+extern ExternalShader* external_shader;
+extern ShaderPreset* shader_preset;
+#endif
 
 // Built-in shader names
 static const char* builtin_shaders[] = { "none", "tv", "pc", "lite", "1084" };
@@ -30,7 +38,7 @@ static void ShowHelpMarker(const char* desc)
 	}
 }
 
-// Scan for available shaders (built-in + .glsl files)
+// Scan for available shaders (built-in + .glsl + .glslp files)
 static void scan_shaders()
 {
 	shader_names.clear();
@@ -41,23 +49,42 @@ static void scan_shaders()
 		shader_names.emplace_back(builtin_shader);
 	}
 
-	// Scan shaders directory for .glsl files
+	// Scan shaders directory for shader files:
+	// - .glsl files: top-level only (user's custom single-pass shaders)
+	// - .glslp presets: recursively (e.g. crt/crt-aperture.glslp)
 	std::string shaders_dir = get_shaders_path();
 	if (!shaders_dir.empty()) {
+		namespace fs = std::filesystem;
+		fs::path base_path(shaders_dir);
 		try {
-			for (const auto& entry : std::filesystem::directory_iterator(shaders_dir)) {
-				if (entry.is_regular_file()) {
-					std::string filename = entry.path().filename().string();
-					if (filename.size() > 5 &&
-						filename.substr(filename.size() - 5) == ".glsl") {
-						shader_names.push_back(filename);
-					}
-				}
+			for (const auto& entry : fs::recursive_directory_iterator(base_path,
+				fs::directory_options::skip_permission_denied)) {
+				if (!entry.is_regular_file()) continue;
+
+				std::string filename = entry.path().filename().string();
+				bool is_glslp = filename.size() > 6 &&
+					filename.substr(filename.size() - 6) == ".glslp";
+				bool is_glsl = !is_glslp && filename.size() > 5 &&
+					filename.substr(filename.size() - 5) == ".glsl";
+
+				if (!is_glsl && !is_glslp) continue;
+
+				// For .glsl files, only include those at the top level
+				// (subdirectory .glsl files are shader components, not standalone)
+				if (is_glsl && entry.path().parent_path() != base_path) continue;
+
+				// Store path relative to shaders base dir
+				fs::path rel = fs::relative(entry.path(), base_path);
+				std::string rel_str = rel.generic_string(); // use forward slashes
+				shader_names.push_back(rel_str);
 			}
 		} catch (...) {
 			// Directory doesn't exist or can't be read - ignore
 		}
 	}
+
+	// Sort external shaders alphabetically (after built-in shaders)
+	std::sort(shader_names.begin() + 5, shader_names.end());
 
 	// Build const char* array for ImGui
 	for (const auto& name : shader_names) {
@@ -77,6 +104,73 @@ static int find_shader_index(const char* shader_name)
 	}
 	return 2;  // Default to "pc" (index 2)
 }
+
+#ifdef USE_OPENGL
+static bool show_shader_params_popup = false;
+
+static void render_shader_parameters_popup()
+{
+	if (!show_shader_params_popup) return;
+
+	ImGui::SetNextWindowSize(ImVec2(BUTTON_WIDTH * 5, BUTTON_HEIGHT * 10), ImGuiCond_FirstUseEver);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+	if (ImGui::Begin("Shader Parameters", &show_shader_params_popup)) {
+		std::vector<ShaderParameter>* params = nullptr;
+
+		if (shader_preset && shader_preset->is_valid()) {
+			params = &shader_preset->get_all_parameters();
+		} else if (external_shader && external_shader->is_valid()) {
+			params = const_cast<std::vector<ShaderParameter>*>(&external_shader->get_parameters());
+		}
+
+		if (params && !params->empty()) {
+			ImGui::Text("Adjust shader parameters:");
+			ImGui::Separator();
+			ImGui::Spacing();
+
+			for (auto& param : *params) {
+				ImGui::PushID(param.name.c_str());
+				ImGui::AlignTextToFramePadding();
+				ImGui::Text("%s", param.description.c_str());
+				ImGui::SameLine();
+				ShowHelpMarker(param.name.c_str());
+
+				ImGui::SetNextItemWidth(-1);
+				if (ImGui::SliderFloat("##val", &param.current_value,
+					param.min_value, param.max_value, "%.3f")) {
+					// Apply the parameter change
+					if (shader_preset) {
+						shader_preset->set_parameter(param.name, param.current_value);
+					} else if (external_shader) {
+						external_shader->set_parameter(param.name, param.current_value);
+					}
+				}
+				AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+				ImGui::PopID();
+			}
+
+			ImGui::Spacing();
+			ImGui::Separator();
+			if (AmigaButton("Reset to Defaults")) {
+				for (auto& param : *params) {
+					param.current_value = param.default_value;
+					if (shader_preset) {
+						shader_preset->set_parameter(param.name, param.default_value);
+					} else if (external_shader) {
+						external_shader->set_parameter(param.name, param.default_value);
+					}
+				}
+			}
+		} else {
+			ImGui::Text("No adjustable parameters for the current shader.");
+		}
+	}
+	ImGui::End();
+	ImGui::PopStyleColor();
+	ImGui::PopStyleVar();
+}
+#endif
 
 void render_panel_filter()
 {
@@ -234,8 +328,21 @@ void render_panel_filter()
 	}
 	ImGui::SameLine();
 
+#ifdef USE_OPENGL
+	// Shader Parameters button
+	if (AmigaButton("Shader Parameters...", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
+		show_shader_params_popup = true;
+	}
+	ImGui::SameLine();
+#endif
+
 	// Save button
 	if (AmigaButton("Save Settings", ImVec2(BUTTON_WIDTH * 1.5f, BUTTON_HEIGHT))) {
 		save_amiberry_settings();
 	}
+
+#ifdef USE_OPENGL
+	// Render the shader parameters popup if open
+	render_shader_parameters_popup();
+#endif
 }

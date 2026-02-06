@@ -166,33 +166,47 @@ bool ExternalShader::parse_shader_file(const std::string& source)
 // Extract vertex shader from combined source
 std::string ExternalShader::extract_vertex_shader(const std::string& source)
 {
+	// Only inject PARAMETER_UNIFORM if #pragma parameter directives were found.
+	// Without this, shaders that use #ifdef PARAMETER_UNIFORM / #else blocks
+	// (like crt-royale) would declare uniforms that never get set, defaulting
+	// to 0.0 and causing black screen due to division by zero / NaN.
+	std::string defines = "#define VERTEX\n";
+	if (!parameters_.empty()) {
+		defines += "#define PARAMETER_UNIFORM\n";
+	}
+
 	// Check for #version and insert defines after it
 	size_t version_pos = source.find("#version");
 	if (version_pos != std::string::npos) {
 		size_t newline_pos = source.find("\n", version_pos);
 		if (newline_pos != std::string::npos) {
 			std::string vs_source = source;
-			vs_source.insert(newline_pos + 1, "#define VERTEX\n#define PARAMETER_UNIFORM\n");
+			vs_source.insert(newline_pos + 1, defines);
 			return vs_source;
 		}
 	}
-	return "#define VERTEX\n#define PARAMETER_UNIFORM\n" + source;
+	return defines + source;
 }
 
 // Extract fragment shader from combined source
 std::string ExternalShader::extract_fragment_shader(const std::string& source)
 {
+	std::string defines = "#define FRAGMENT\n";
+	if (!parameters_.empty()) {
+		defines += "#define PARAMETER_UNIFORM\n";
+	}
+
 	// Check for #version and insert defines after it
 	size_t version_pos = source.find("#version");
 	if (version_pos != std::string::npos) {
 		size_t newline_pos = source.find("\n", version_pos);
 		if (newline_pos != std::string::npos) {
 			std::string fs_source = source;
-			fs_source.insert(newline_pos + 1, "#define FRAGMENT\n#define PARAMETER_UNIFORM\n");
+			fs_source.insert(newline_pos + 1, defines);
 			return fs_source;
 		}
 	}
-	return "#define FRAGMENT\n#define PARAMETER_UNIFORM\n" + source;
+	return defines + source;
 }
 
 // Parse #pragma parameter directives
@@ -201,7 +215,7 @@ void ExternalShader::parse_pragma_parameters(const std::string& source)
 	parameters_.clear();
 	
 	// Regex to match: #pragma parameter NAME "Description" default min max step
-	std::regex param_regex(R"(#pragma\s+parameter\s+(\w+)\s+\"([^\"]+)\"\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+))");
+	std::regex param_regex(R"(#pragma\s+parameter\s+(\w+)\s+\"([^\"]+)\"\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+))");
 	
 	std::sregex_iterator iter(source.begin(), source.end(), param_regex);
 	std::sregex_iterator end;
@@ -218,9 +232,6 @@ void ExternalShader::parse_pragma_parameters(const std::string& source)
 		param.current_value = param.default_value;
 		
 		parameters_.push_back(param);
-		write_log("Shader parameter: %s = %.2f (%.2f - %.2f)\n", 
-			param.name.c_str(), param.default_value, param.min_value, param.max_value);
-		
 		++iter;
 	}
 }
@@ -378,23 +389,49 @@ void ExternalShader::bind_texture(GLuint texture_id, int texture_unit)
 	}
 }
 
-// Set parameter value
+// Set an integer uniform by name
+void ExternalShader::set_uniform_int(const char* name, int value)
+{
+	GLint loc = get_uniform_location(name);
+	if (loc >= 0) {
+		glUniform1i(loc, value);
+	}
+}
+
+// Set a vec2 uniform by name
+void ExternalShader::set_uniform_vec2(const char* name, float x, float y)
+{
+	GLint loc = get_uniform_location(name);
+	if (loc >= 0) {
+		glUniform2f(loc, x, y);
+	}
+}
+
+// Set parameter value (stores value only, no GL calls)
+// The actual uniform update happens in apply_parameter_uniforms() during the render loop,
+// because set_parameter() may be called from the GUI which runs in a different GL context.
 bool ExternalShader::set_parameter(const std::string& name, float value)
 {
 	for (auto& param : parameters_) {
 		if (param.name == name) {
 			// Clamp value to valid range
 			param.current_value = std::max(param.min_value, std::min(param.max_value, value));
-			
-			// Update uniform if shader is active
-			GLint loc = get_uniform_location(param.name.c_str());
-			if (loc >= 0) {
-				glUniform1f(loc, param.current_value);
-			}
 			return true;
 		}
 	}
 	return false;
+}
+
+// Apply all parameter uniforms to the currently bound shader program.
+// Must be called from the emulator's render loop (correct GL context) after use().
+void ExternalShader::apply_parameter_uniforms()
+{
+	for (const auto& param : parameters_) {
+		GLint loc = get_uniform_location(param.name.c_str());
+		if (loc >= 0) {
+			glUniform1f(loc, param.current_value);
+		}
+	}
 }
 
 // Global shader management functions

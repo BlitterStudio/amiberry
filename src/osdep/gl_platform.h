@@ -62,6 +62,8 @@ extern PFNGLBINDFRAMEBUFFERPROC glp_BindFramebuffer;
 extern PFNGLGENFRAMEBUFFERSPROC glp_GenFramebuffers;
 extern PFNGLDELETEFRAMEBUFFERSPROC glp_DeleteFramebuffers;
 extern PFNGLFRAMEBUFFERTEXTURE2DPROC glp_FramebufferTexture2D;
+extern PFNGLCHECKFRAMEBUFFERSTATUSPROC glp_CheckFramebufferStatus;
+extern PFNGLGENERATEMIPMAPPROC glp_GenerateMipmap;
 
 // Define macros to redirect standard GL calls to our function pointers
 #define glGenVertexArrays glp_GenVertexArrays
@@ -103,8 +105,30 @@ extern PFNGLFRAMEBUFFERTEXTURE2DPROC glp_FramebufferTexture2D;
 #define glGenFramebuffers glp_GenFramebuffers
 #define glDeleteFramebuffers glp_DeleteFramebuffers
 #define glFramebufferTexture2D glp_FramebufferTexture2D
+#define glCheckFramebufferStatus glp_CheckFramebufferStatus
+#define glGenerateMipmap glp_GenerateMipmap
 
 #endif // __ANDROID__
+
+// GL format constants that may not be defined on all platforms
+#ifndef GL_RGBA16F
+#define GL_RGBA16F 0x881A
+#endif
+#ifndef GL_SRGB8_ALPHA8
+#define GL_SRGB8_ALPHA8 0x8C43
+#endif
+#ifndef GL_FRAMEBUFFER_COMPLETE
+#define GL_FRAMEBUFFER_COMPLETE 0x8CD5
+#endif
+#ifndef GL_FRAMEBUFFER_SRGB
+#define GL_FRAMEBUFFER_SRGB 0x8DB9
+#endif
+#ifndef GL_COLOR_ATTACHMENT0
+#define GL_COLOR_ATTACHMENT0 0x8CE0
+#endif
+#ifndef GL_FRAMEBUFFER
+#define GL_FRAMEBUFFER 0x8D40
+#endif
 
 // Initialize OpenGL function pointers (call after creating GL context)
 // Returns true on success, false if critical functions failed to load
