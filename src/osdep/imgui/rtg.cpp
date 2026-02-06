@@ -79,6 +79,7 @@ void render_panel_rtg() {
         cfgfile_compatibility_rtg(&changed_prefs);
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Select RTG graphics card to emulate (Picasso96, CyberGraphX compatible)");
 
     // Override initial native chipset display
     // WinUAE logic: Exclusive across boards
@@ -91,6 +92,7 @@ void render_panel_rtg() {
         }
         changed_prefs.rtgboards[0].initial_active = override_native;
     }
+    ShowHelpMarker("Start with RTG display active instead of native Amiga chipset");
 
     ImGui::Spacing();
 
@@ -127,6 +129,7 @@ void render_panel_rtg() {
             changed_prefs.rtgboards[0].rtgmem_size = (1 << slider_val) * 1024 * 1024;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+        ShowHelpMarker("Video memory on the emulated RTG card. Zorro II max 8MB, Zorro III/PCI max 256MB");
 
         ImGui::TableNextColumn();
 
@@ -144,6 +147,7 @@ void render_panel_rtg() {
             changed_prefs.picasso96_modeflags = mask;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("8-bit color mode settings. CLUT = Color LookUp Table (palette-based)");
 
         // 16-bit Mode
         const char *rtg_16bit_modes[] = {
@@ -170,6 +174,7 @@ void render_panel_rtg() {
             changed_prefs.picasso96_modeflags = mask;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("15/16-bit color format. R=Red, G=Green, B=Blue, PC=PC byte order");
 
         // 24-bit Mode
         const char *rtg_24bit_modes[] = {"24-bit", "All", "R8G8B8", "B8G8R8"};
@@ -185,6 +190,7 @@ void render_panel_rtg() {
             changed_prefs.picasso96_modeflags = mask;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("24-bit true color format (8 bits per RGB channel)");
 
         // 32-bit Mode
         const char *rtg_32bit_modes[] = {"32-bit", "All", "A8R8G8B8", "A8B8G8R8", "R8G8B8A8 (*)", "B8G8R8A8"};
@@ -204,6 +210,7 @@ void render_panel_rtg() {
             changed_prefs.picasso96_modeflags = mask;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("32-bit color with alpha channel (A=Alpha for transparency)");
 
         ImGui::EndTable();
     }
@@ -223,33 +230,42 @@ void render_panel_rtg() {
         if (AmigaCheckbox("Scale if smaller than display size", &scale_smaller)) {
             changed_prefs.gf[1].gfx_filter_autoscale = scale_smaller ? RTG_MODE_SCALE : 0;
         }
+        ShowHelpMarker("Automatically scale RTG output if resolution is smaller than display");
 
         AmigaCheckbox("Always scale in windowed mode", &changed_prefs.rtgallowscaling);
+        ShowHelpMarker("Scale RTG output even when running in windowed mode");
 
         bool always_center = (current_autoscale_mode == RTG_MODE_CENTER);
         if (AmigaCheckbox("Always center", &always_center)) {
             changed_prefs.gf[1].gfx_filter_autoscale = always_center ? RTG_MODE_CENTER : 0;
         }
+        ShowHelpMarker("Center RTG display on screen without scaling");
 
         bool int_scale = (current_autoscale_mode == RTG_MODE_INTEGER_SCALE);
         if (AmigaCheckbox("Integer scaling", &int_scale)) {
             changed_prefs.gf[1].gfx_filter_autoscale = int_scale ? RTG_MODE_INTEGER_SCALE : 0;
         }
+        ShowHelpMarker("Scale by whole number multiples only (2x, 3x, etc.) for sharp pixels");
 
         AmigaCheckbox("Zero Copy (Buffer sharing)", &changed_prefs.rtg_zerocopy);
+        ShowHelpMarker("Share buffers directly between emulation and display for better performance");
 
         ImGui::TableNextColumn();
 
         // Right Column: Hardware/Misc Checkboxes
         AmigaCheckbox("Native/RTG autoswitch", &changed_prefs.rtgboards[0].autoswitch);
+        ShowHelpMarker("Automatically switch between native chipset and RTG display");
         AmigaCheckbox("Multithreaded", &changed_prefs.rtg_multithread);
+        ShowHelpMarker("Use multiple CPU threads for RTG rendering (better performance)");
 
         bool hwsprite_enabled = changed_prefs.rtgboards[0].rtgmem_type < GFXBOARD_HARDWARE;
         ImGui::BeginDisabled(!hwsprite_enabled);
         AmigaCheckbox("Hardware sprite emulation", &changed_prefs.rtg_hardwaresprite);
         ImGui::EndDisabled();
+        ShowHelpMarker("Use RTG card's hardware sprite engine for mouse pointer");
 
         AmigaCheckbox("Hardware vertical blank interrupt", &changed_prefs.rtg_hardwareinterrupt);
+        ShowHelpMarker("Emulate hardware VBlank interrupt for RTG display timing");
 
         ImGui::EndTable();
     }
@@ -291,6 +307,7 @@ void render_panel_rtg() {
             }
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("RTG display refresh rate in Hz. Chipset uses native Amiga timing");
 
         ImGui::TableNextColumn();
 
@@ -304,6 +321,7 @@ void render_panel_rtg() {
             changed_prefs.gfx_apmode[1].gfx_backbuffers = current_buffer + 1;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Number of display buffers. Triple buffering reduces tearing but uses more VRAM");
 
         ImGui::TableNextColumn();
 
@@ -315,6 +333,7 @@ void render_panel_rtg() {
             changed_prefs.rtgscaleaspectratio = (current_aspect == 0) ? 0 : -1;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Correct aspect ratio for square pixels when scaling RTG display");
 
         ImGui::EndTable();
     }

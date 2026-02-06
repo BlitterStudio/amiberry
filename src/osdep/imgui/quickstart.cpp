@@ -221,6 +221,7 @@ void render_panel_quickstart() {
             changed_prefs.ntscmode = ntsc;
             changed_prefs.chipset_refreshrate = ntsc ? 60 : 50;
         }
+        ShowHelpMarker("Use NTSC video mode (60Hz) instead of PAL (50Hz)");
 
         // Configuration row
         ImGui::TableNextRow();
@@ -608,6 +609,7 @@ void render_panel_quickstart() {
     bool qs_mode = amiberry_options.quickstart_start;
     if (AmigaCheckbox("Start in Quickstart mode", &qs_mode))
         amiberry_options.quickstart_start = qs_mode;
+    ShowHelpMarker("Show this Quickstart panel when Amiberry starts");
     EndGroupBox("Mode");
 
     ImGui::Spacing();

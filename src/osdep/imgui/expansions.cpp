@@ -204,6 +204,7 @@ void render_panel_expansions() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Filter expansion boards by category");
     ImGui::PopItemWidth();
 
     // Board Selection Logic
@@ -250,6 +251,7 @@ void render_panel_expansions() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Select an expansion board type. * indicates enabled boards");
     ImGui::PopItemWidth();
 
     ImGui::SameLine();
@@ -315,6 +317,7 @@ void render_panel_expansions() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Unit number for boards that support multiple instances");
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
 
@@ -335,6 +338,7 @@ void render_panel_expansions() {
             brc = nullptr;
         }
     }
+    ShowHelpMarker("Enable this expansion board in the emulated system");
 
     // Detailed Settings
     if (ert) {
@@ -367,6 +371,7 @@ void render_panel_expansions() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Select specific variant or revision of this expansion board");
             ImGui::PopItemWidth();
         }
 
@@ -392,6 +397,7 @@ void render_panel_expansions() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("SCSI device ID (0-7). Avoid conflicts with other SCSI devices");
             ImGui::PopItemWidth();
         }
 
@@ -488,6 +494,7 @@ void render_panel_expansions() {
             if (AmigaCheckbox("Disable Autoboot", &autoboot_disabled)) {
                 if (brc) brc->roms[index].autoboot_disabled = autoboot_disabled;
             }
+            ShowHelpMarker("Prevent board from booting automatically. Use for non-bootable configurations");
         }
 
         if (deviceflags & EXPANSIONTYPE_PCMCIA) {
@@ -496,6 +503,7 @@ void render_panel_expansions() {
             if (AmigaCheckbox("PCMCIA inserted", &inserted)) {
                 if (brc) brc->roms[index].inserted = inserted;
             }
+            ShowHelpMarker("Simulate PCMCIA card insertion. Required for A600/A1200 PCMCIA devices");
         }
 
         if (deviceflags & EXPANSIONTYPE_DMA24) {
@@ -503,6 +511,7 @@ void render_panel_expansions() {
             if (AmigaCheckbox("24-bit DMA", &dma24)) {
                 if (brc) brc->roms[index].dma24bit = dma24;
             }
+            ShowHelpMarker("Limit DMA to 24-bit address space. Required for some older boards");
         }
 
         // Custom Settings
@@ -664,6 +673,7 @@ void render_panel_expansions() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("CPU accelerator board. Provides faster CPU and additional memory");
 
         if (cpuboards[type].subtypes) {
             ImGui::Text("Subtype:");
@@ -690,6 +700,7 @@ void render_panel_expansions() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Specific variant or revision of the accelerator board");
         }
 
         ImGui::TableNextColumn();
@@ -761,6 +772,7 @@ void render_panel_expansions() {
                 copycpuboardmem(false);
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+            ShowHelpMarker("On-board memory provided by the accelerator. Faster than standard Fast RAM");
             ImGui::EndDisabled();
         } else {
             ImGui::Text("Board Memory: None / Fixed");
@@ -879,15 +891,18 @@ void render_panel_expansions() {
         // WinUAE disables misc expansions when running? logic says "ew(hDlg, IDC_SOCKETS, workprefs.socket_emu)" - check enable_for_expansion2dlg
 
         AmigaCheckbox("bsdsocket.library", &changed_prefs.socket_emu);
+        ShowHelpMarker("Emulate TCP/IP networking via host OS network stack");
 
         bool scsi_enabled = changed_prefs.scsi != 0;
         if (AmigaCheckbox("uaescsi.device", &scsi_enabled)) {
             changed_prefs.scsi = scsi_enabled ? 1 : 0;
         }
+        ShowHelpMarker("Emulate SCSI device for CD-ROM and hard drive access");
 
         ImGui::TableNextColumn();
         // CD32 FMV Card removed for WinUAE parity
         AmigaCheckbox("uaenet.device", &changed_prefs.sana2);
+        ShowHelpMarker("Direct network device emulation using host network interface");
 
         ImGui::EndDisabled();
         ImGui::EndTable();

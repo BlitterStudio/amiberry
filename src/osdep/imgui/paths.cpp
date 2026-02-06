@@ -129,12 +129,14 @@ void render_panel_paths()
 		set_logfile_enabled(logging_enabled);
 		logging_init();
 	}
+	ShowHelpMarker("Write debug information to log file");
 	ImGui::SameLine();
 	auto log_to_console = console_logging > 0;
 	if (AmigaCheckbox("Log to console", &log_to_console))
 	{
 		console_logging = log_to_console ? 1 : 0;
 	}
+	ShowHelpMarker("Also output log messages to terminal");
 
 	RenderPathRow("Logfile path:", "LogFilePath", get_logfile_path(), [](const std::string& p) { set_logfile_path(p); }, true, "Choose File", ".log");
 

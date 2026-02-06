@@ -84,8 +84,10 @@ void render_panel_sound() {
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ImGui::EndDisabled();
+    ShowHelpMarker("Select which audio device to use for sound output");
 
     AmigaCheckbox("System default", &changed_prefs.soundcard_default);
+    ShowHelpMarker("Use the operating system's default audio device");
 
     ImGui::Spacing();
 
@@ -99,16 +101,20 @@ void render_panel_sound() {
         BeginGroupBox("Sound Emulation");
 
         if (AmigaRadioButton("Disabled", changed_prefs.produce_sound == 0)) changed_prefs.produce_sound = 0;
+        ShowHelpMarker("No sound processing or output");
         if (AmigaRadioButton("Disabled, but emulated", changed_prefs.produce_sound == 1))
             changed_prefs.produce_sound = 1;
+        ShowHelpMarker("Paula sound chip is emulated for timing accuracy but no audio output");
         // Treat >= 2 as Enabled. If switching to Enabled, default to 2. If already >= 2, keep current value.
         if (AmigaRadioButton("Enabled", changed_prefs.produce_sound >= 2)) {
             if (changed_prefs.produce_sound < 2) changed_prefs.produce_sound = 2;
         }
+        ShowHelpMarker("Full sound emulation with audio output");
 
         ImGui::Spacing();
 
         AmigaCheckbox("Automatic switching", &changed_prefs.sound_auto);
+        ShowHelpMarker("Automatically adjust sound emulation quality based on performance");
         ImGui::Spacing();
         EndGroupBox("Sound Emulation");
 
@@ -134,6 +140,7 @@ void render_panel_sound() {
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         ImGui::SameLine();
         ImGui::Text("%d%%", master_volume);
+        ShowHelpMarker("Master volume control for all audio output");
 
         ImGui::Spacing();
 
@@ -174,6 +181,7 @@ void render_panel_sound() {
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
         ImGui::SameLine();
         ImGui::Text("%d%%", display_vol);
+        ShowHelpMarker("Individual volume controls - Paula: Amiga sound chip, CD: CD audio, AHI: retargetable audio, MIDI: external MIDI");
         ImGui::Spacing();
         EndGroupBox("Volume");
 
@@ -212,6 +220,7 @@ void render_panel_sound() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Audio channel mode: Mono=single channel, Stereo=2ch, 4/5.1/7.1=multi-channel");
 
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -240,6 +249,7 @@ void render_panel_sound() {
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         ImGui::EndDisabled();
+        ShowHelpMarker("Controls the amount of stereo separation between left and right channels (100%=full separation, 0%=mono)");
 
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -262,6 +272,7 @@ void render_panel_sound() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Audio quality filter: Disabled=raw output, Anti=anti-aliasing, Sinc=high quality resampling");
 
         ImGui::EndTable();
     }
@@ -297,6 +308,7 @@ void render_panel_sound() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Audio output sample rate in Hz (44100 or 48000 recommended for modern systems)");
 
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -324,6 +336,7 @@ void render_panel_sound() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Swap left and right audio channels for Paula (Amiga sound chip) or AHI (retargetable audio)");
 
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -351,6 +364,7 @@ void render_panel_sound() {
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
         ImGui::EndDisabled();
+        ShowHelpMarker("Adds a small delay between stereo channels for a wider soundstage effect");
 
         ImGui::TableNextColumn();
         ImGui::AlignTextToFramePadding();
@@ -402,6 +416,7 @@ void render_panel_sound() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Emulates the Amiga's hardware low-pass audio filter (A500=sharper, A1200=softer)");
 
         ImGui::EndTable();
     }
@@ -431,6 +446,7 @@ void render_panel_sound() {
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Empty drive");
+        ShowHelpMarker("Volume for floppy drive head movement sounds when no disk is inserted");
 
         // Row 2: Slider | Value | Label
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
@@ -443,6 +459,7 @@ void render_panel_sound() {
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Disk in drive");
+        ShowHelpMarker("Volume for floppy drive sounds when a disk is being read");
 
         // Row 3: Sound Dropdown | Drive Selector
         ImGui::Dummy(ImVec2(0, 10)); // Spacer
@@ -467,6 +484,7 @@ void render_panel_sound() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Enable realistic floppy drive sound emulation using A500 drive samples");
 
         ImGui::SameLine();
         const char *drive_items[] = {"DF0:", "DF1:", "DF2:", "DF3:"};
@@ -506,14 +524,17 @@ void render_panel_sound() {
         ImGui::AlignTextToFramePadding();
         if (buf_idx == 0) ImGui::Text("Min");
         else ImGui::Text("%d", changed_prefs.sound_maxbsiz);
+        ShowHelpMarker("Audio buffer size in bytes - smaller values reduce latency but may cause audio glitches");
 
         ImGui::Spacing();
 
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Audio Pull/Push:");
         AmigaRadioButton("Pull", &changed_prefs.sound_pullmode, 1);
+        ShowHelpMarker("Pull mode: emulator requests audio data when needed (recommended)");
         ImGui::SameLine();
         AmigaRadioButton("Push", &changed_prefs.sound_pullmode, 0);
+        ShowHelpMarker("Push mode: emulator continuously sends audio data to output device");
         ImGui::Spacing();
         EndGroupBox("Sound Buffer Size");
 

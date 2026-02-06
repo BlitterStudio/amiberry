@@ -104,29 +104,53 @@ void render_panel_misc()
         
         // --- LEFT COLUMN: Checkboxes ---
         CheckboxFlags("Untrap = middle button", &changed_prefs.input_mouse_untrap, MOUSEUNTRAP_MIDDLEBUTTON);
+        ShowHelpMarker("Use middle mouse button to release mouse capture");
         AmigaCheckbox("Show GUI on startup", &changed_prefs.start_gui);
+        ShowHelpMarker("Show the configuration GUI when Amiberry starts");
         AmigaCheckbox("Always on top", &changed_prefs.main_alwaysontop);
+        ShowHelpMarker("Keep the emulator window on top of other windows");
         AmigaCheckbox("GUI Always on top", &changed_prefs.gui_alwaysontop);
+        ShowHelpMarker("Keep the configuration GUI on top of other windows");
         AmigaCheckbox("Synchronize clock", &changed_prefs.tod_hack);
+        ShowHelpMarker("Sync Amiga's clock with host system time");
         AmigaCheckbox("One second reboot pause", &changed_prefs.reset_delay);
+        ShowHelpMarker("Add a 1 second delay when resetting the emulated Amiga");
         AmigaCheckbox("Faster RTG", &changed_prefs.picasso96_nocustom);
+        ShowHelpMarker("Speed up RTG (graphics card) operations by disabling custom chipset emulation");
         AmigaCheckbox("Clipboard sharing", &changed_prefs.clipboard_sharing);
+        ShowHelpMarker("Share clipboard between Amiga and host system");
         AmigaCheckbox("Allow native code", &changed_prefs.native_code);
+        ShowHelpMarker("Allow execution of native code (JIT compiler required)");
         CheckboxFlags("Status Line native", &changed_prefs.leds_on_screen, STATUSLINE_CHIPSET);
+        ShowHelpMarker("Show status line with LED indicators in native chipset modes");
         CheckboxFlags("Status Line RTG", &changed_prefs.leds_on_screen, STATUSLINE_RTG);
+        ShowHelpMarker("Show status line with LED indicators in RTG modes");
         AmigaCheckbox("Log illegal memory accesses", &changed_prefs.illegal_mem);
+        ShowHelpMarker("Log attempts to access invalid memory addresses to console");
         AmigaCheckbox("Minimize when focus is lost", &changed_prefs.minimize_inactive);
+        ShowHelpMarker("Automatically minimize the emulator window when it loses focus");
         AmigaCheckbox("Master floppy write protection", &changed_prefs.floppy_read_only);
+        ShowHelpMarker("Enable write protection for all floppy disk images");
         AmigaCheckbox("Master harddrive write protection", &changed_prefs.harddrive_read_only);
+        ShowHelpMarker("Enable write protection for all hard drive images");
         AmigaCheckbox("Hide all UAE autoconfig boards", &changed_prefs.uae_hide_autoconfig);
+        ShowHelpMarker("Hide UAE expansion boards from Amiga's autoconfig system");
         AmigaCheckbox("RCtrl = RAmiga", &changed_prefs.right_control_is_right_win_key);
+        ShowHelpMarker("Map Right Control key to Right Amiga key");
         AmigaCheckbox("Capture mouse when window is activated", &changed_prefs.capture_always);
+        ShowHelpMarker("Automatically capture mouse when clicking on the emulator window");
         AmigaCheckbox("A600/A1200/A4000 IDE scsi.device disable", &changed_prefs.scsidevicedisable);
+        ShowHelpMarker("Disable scsi.device for built-in IDE controllers on these models");
         AmigaCheckbox("Alt-Tab releases control", &changed_prefs.alt_tab_release);
+        ShowHelpMarker("Release mouse and keyboard capture when Alt-Tab is pressed");
         AmigaCheckbox("Warp mode reset", &changed_prefs.turbo_boot);
+        ShowHelpMarker("Enable turbo/warp mode during reset for faster booting");
         AmigaCheckbox("Use RetroArch Quit Button", &changed_prefs.use_retroarch_quit);
+        ShowHelpMarker("Enable RetroArch-style quit button mapping");
         AmigaCheckbox("Use RetroArch Menu Button", &changed_prefs.use_retroarch_menu);
+        ShowHelpMarker("Enable RetroArch-style menu button mapping");
         AmigaCheckbox("Use RetroArch Reset Button", &changed_prefs.use_retroarch_reset);
+        ShowHelpMarker("Enable RetroArch-style reset button mapping");
 
         ImGui::TableNextColumn();
 
@@ -165,12 +189,19 @@ void render_panel_misc()
         };
 
         HotkeyRow("Open GUI:", changed_prefs.open_gui);
+        ShowHelpMarker("Keyboard shortcut to open the configuration GUI");
         HotkeyRow("Quit Key:", changed_prefs.quit_amiberry);
+        ShowHelpMarker("Keyboard shortcut to quit the emulator");
         HotkeyRow("Action Replay:", changed_prefs.action_replay);
+        ShowHelpMarker("Keyboard shortcut to activate Action Replay cartridge");
         HotkeyRow("FullScreen:", changed_prefs.fullscreen_toggle);
+        ShowHelpMarker("Keyboard shortcut to toggle fullscreen mode");
         HotkeyRow("Minimize:", changed_prefs.minimize);
+        ShowHelpMarker("Keyboard shortcut to minimize the emulator window");
         HotkeyRow("Left Amiga:", changed_prefs.left_amiga);
+        ShowHelpMarker("Keyboard shortcut to simulate Left Amiga key press");
         HotkeyRow("Right Amiga:", changed_prefs.right_amiga);
+        ShowHelpMarker("Keyboard shortcut to simulate Right Amiga key press");
 
         ImGui::Separator();
         
@@ -195,8 +226,11 @@ void render_panel_misc()
             };
 
             LedRow("NumLock:", &changed_prefs.kbd_led_num);
+            ShowHelpMarker("Map Amiga status LED to keyboard NumLock indicator");
             LedRow("ScrollLock:", &changed_prefs.kbd_led_scr);
+            ShowHelpMarker("Map Amiga status LED to keyboard ScrollLock indicator");
             LedRow("CapsLock:", &changed_prefs.kbd_led_cap);
+            ShowHelpMarker("Map Amiga status LED to keyboard CapsLock indicator");
             
             ImGui::EndTable();
         }

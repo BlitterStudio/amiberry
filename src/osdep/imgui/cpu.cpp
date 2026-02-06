@@ -17,19 +17,6 @@ static float getcpufreq(int m) {
     return f * static_cast<float>(m >> 8) / 8.0f;
 }
 
-static void ShowHelpMarker(const char* desc)
-{
-    ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
-}
-
 void render_panel_cpu() {
     const float slider_width = BUTTON_WIDTH * 1.5f;
     const float slider_label_width = BUTTON_WIDTH * 1.5f; // Fixed aligned width for labels
@@ -147,27 +134,27 @@ void render_panel_cpu() {
         int old_cpu_model = changed_prefs.cpu_model;
         if (AmigaRadioButton("68000", &changed_prefs.cpu_model, 68000))
             settings_changed = true;
-        ImGui::SameLine(); ShowHelpMarker("Original Amiga 500/1000/2000 CPU.");
+        ShowHelpMarker("Original Amiga 500/1000/2000 CPU.");
         
         if (AmigaRadioButton("68010", &changed_prefs.cpu_model, 68010))
             settings_changed = true;
-        ImGui::SameLine(); ShowHelpMarker("Slightly faster version of 68000, used in some accelerators.");
+        ShowHelpMarker("Slightly faster version of 68000, used in some accelerators.");
 
         if (AmigaRadioButton("68020", &changed_prefs.cpu_model, 68020))
             settings_changed = true;
-        ImGui::SameLine(); ShowHelpMarker("Amiga 1200 CPU. 32-bit.");
+        ShowHelpMarker("Amiga 1200 CPU. 32-bit.");
 
         if (AmigaRadioButton("68030", &changed_prefs.cpu_model, 68030))
             settings_changed = true;
-        ImGui::SameLine(); ShowHelpMarker("Amiga 3000/4000 CPU. Includes MMU.");
+        ShowHelpMarker("Amiga 3000/4000 CPU. Includes MMU.");
 
         if (AmigaRadioButton("68040", &changed_prefs.cpu_model, 68040))
             settings_changed = true;
-        ImGui::SameLine(); ShowHelpMarker("Faster 32-bit CPU with integrated FPU and MMU.");
+        ShowHelpMarker("Faster 32-bit CPU with integrated FPU and MMU.");
 
         if (AmigaRadioButton("68060", &changed_prefs.cpu_model, 68060))
             settings_changed = true;
-        ImGui::SameLine(); ShowHelpMarker("Fastest Amiga CPU.");
+        ShowHelpMarker("Fastest Amiga CPU.");
 
         const float left_group_min_width = BUTTON_WIDTH * 2.0f;
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
@@ -245,7 +232,7 @@ void render_panel_cpu() {
 
         ImGui::BeginDisabled(!enable_24bit);
         AmigaCheckbox("24-bit addressing", &changed_prefs.address_space_24);
-        ImGui::SameLine(); ShowHelpMarker("Essential for A500/A1200 compatibility. Disable for Z3 RAM usage.");
+        ShowHelpMarker("Essential for A500/A1200 compatibility. Disable for Z3 RAM usage.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_compatible);
@@ -260,7 +247,7 @@ void render_panel_cpu() {
                     changed_prefs.fpu_model = 0;
             }
         }
-        ImGui::SameLine(); ShowHelpMarker("Approximates prefetch pipeline of 68000/010. Required for some timing sensitive games.");
+        ShowHelpMarker("Approximates prefetch pipeline of 68000/010. Required for some timing sensitive games.");
         ImGui::EndDisabled();
 
         bool unimplemented_cpu = !changed_prefs.int_no_unimplemented;
@@ -268,10 +255,12 @@ void render_panel_cpu() {
         if (AmigaCheckbox("Unimplemented CPU emu", &unimplemented_cpu)) {
             changed_prefs.int_no_unimplemented = !unimplemented_cpu;
         }
+        ShowHelpMarker("Emulate unimplemented 68060 instructions in software.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_datacache);
         AmigaCheckbox("Data cache emulation", &changed_prefs.cpu_data_cache);
+        ShowHelpMarker("Emulate the CPU data cache. Required for some 68030+ software.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_jit);
@@ -296,7 +285,7 @@ void render_panel_cpu() {
                 changed_prefs.compfpu = false;
             }
         }
-        ImGui::SameLine(); ShowHelpMarker("Just-In-Time compilation. Greatly speeds up CPU emulation but reduces compatibility.");
+        ShowHelpMarker("Just-In-Time compilation. Greatly speeds up CPU emulation but reduces compatibility.");
         ImGui::EndDisabled();
         ImGui::Spacing();
         EndGroupBox("CPU");
@@ -306,10 +295,12 @@ void render_panel_cpu() {
         if (AmigaRadioButton("None##MMU", &changed_prefs.mmu_model, 0)) {
             changed_prefs.mmu_ec = false;
         }
+        ShowHelpMarker("Disable Memory Management Unit emulation.");
         if (AmigaRadioButton("MMU", &changed_prefs.mmu_model,
                                changed_prefs.cpu_model)) {
             changed_prefs.mmu_ec = false;
         }
+        ShowHelpMarker("Enable full MMU emulation. Required for some operating systems.");
         ImGui::SameLine();
         if (AmigaCheckbox("EC", &changed_prefs.mmu_ec)) {
             if (changed_prefs.mmu_ec)
@@ -331,21 +322,26 @@ void render_panel_cpu() {
 
         if (AmigaRadioButton("None##FPU", &current_fpu_sel, 0))
             changed_prefs.fpu_model = 0;
+        ShowHelpMarker("Disable Floating Point Unit.");
 
         ImGui::BeginDisabled(!enable_fpu_ext);
         if (AmigaRadioButton("68881", &current_fpu_sel, 1))
             changed_prefs.fpu_model = 68881;
+        ShowHelpMarker("External Motorola 68881 FPU. Used with 68020/68030.");
         if (AmigaRadioButton("68882", &current_fpu_sel, 2))
             changed_prefs.fpu_model = 68882;
+        ShowHelpMarker("External Motorola 68882 FPU. Faster version of 68881.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_fpu_int);
         if (AmigaRadioButton("CPU internal", &current_fpu_sel, 3))
             changed_prefs.fpu_model = changed_prefs.cpu_model;
+        ShowHelpMarker("Use the FPU built into 68040/68060.");
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled(!enable_chk_fpustrict);
         AmigaCheckbox("More compatible##FPU", &changed_prefs.fpu_strict);
+        ShowHelpMarker("More accurate but slower FPU emulation.");
         
         // FPU Mode Combo
         const char* fpu_mode_items[] = { "Host (64-bit)", "Host (80-bit)", "Softfloat (80-bit)" };
@@ -357,6 +353,7 @@ void render_panel_cpu() {
             else if (fpu_mode_idx == 2) changed_prefs.fpu_mode = 1;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+        ShowHelpMarker("FPU precision mode. Softfloat is most accurate but slowest.");
         ImGui::EndDisabled();
 
         bool unimplemented_fpu = !changed_prefs.fpu_no_unimplemented;
@@ -365,6 +362,7 @@ void render_panel_cpu() {
         if (AmigaCheckbox("Unimplemented FPU emu", &unimplemented_fpu)) {
             changed_prefs.fpu_no_unimplemented = !unimplemented_fpu;
         }
+        ShowHelpMarker("Emulate unimplemented FPU instructions in software.");
         ImGui::EndDisabled();
         ImGui::Dummy(ImVec2(left_group_min_width, 0.0f));
         EndGroupBox("FPU");
@@ -385,9 +383,11 @@ void render_panel_cpu() {
             changed_prefs.m68k_speed = -1;
             changed_prefs.m68k_speed_throttle = 0;
         }
+        ShowHelpMarker("Run the CPU as fast as your host system allows.");
         if (AmigaRadioButton("Approximate A500/A1200 or cycle-exact", &speed_mode, 0)) {
             changed_prefs.m68k_speed = 0;
         }
+        ShowHelpMarker("Match original Amiga CPU speed. Required for most games.");
 
         ImGui::Spacing();
 
@@ -465,6 +465,7 @@ void render_panel_cpu() {
         const bool no_thread = (changed_prefs.cachesize > 0 || changed_prefs.cpu_compatible || changed_prefs.ppc_mode || changed_prefs.cpu_memory_cycle_exact || changed_prefs.cpu_model < 68020);
         ImGui::BeginDisabled(no_thread || emulating);
         AmigaCheckbox("Multi-threaded CPU", &changed_prefs.cpu_thread);
+        ShowHelpMarker("Run CPU emulation on a separate thread. Experimental.");
         ImGui::EndDisabled();
         
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));
@@ -484,6 +485,7 @@ void render_panel_cpu() {
                 changed_prefs.ppc_mode = 0;
             }
         }
+        ShowHelpMarker("Enable PowerPC CPU emulation for CyberStorm PPC or Blizzard PPC boards.");
         ImGui::EndDisabled();
 
         ImGui::AlignTextToFramePadding();
@@ -561,29 +563,29 @@ void render_panel_cpu() {
 
             ImGui::BeginDisabled(!enable_chk_fpujit);
             AmigaCheckbox("FPU Support##JIT", &changed_prefs.compfpu);
-            ImGui::SameLine(); ShowHelpMarker("Enable JIT compilation for FPU instructions.");
+            ShowHelpMarker("Enable JIT compilation for FPU instructions.");
             ImGui::EndDisabled();
 
             ImGui::BeginDisabled(!enable_chk_constjump);
             AmigaCheckbox("Constant jump", &changed_prefs.comp_constjump);
-            ImGui::SameLine(); ShowHelpMarker("JIT compilation optimization.");
+            ShowHelpMarker("JIT compilation optimization.");
             ImGui::EndDisabled();
 
             ImGui::BeginDisabled(!enable_chk_hardflush);
             AmigaCheckbox("Hard flush", &changed_prefs.comp_hardflush);
-            ImGui::SameLine(); ShowHelpMarker("Flush JIT cache on every resize/reset.");
+            ShowHelpMarker("Flush JIT cache on every resize/reset.");
             ImGui::EndDisabled();
 
             ImGui::TableNextColumn();
 
             ImGui::BeginDisabled(!enable_chk_noflags);
             AmigaCheckbox("No flags", &changed_prefs.compnf);
-            ImGui::SameLine(); ShowHelpMarker("Don't update status flags (faster but less compatible).");
+            ShowHelpMarker("Don't update status flags (faster but less compatible).");
             ImGui::EndDisabled();
 
             ImGui::BeginDisabled(!enable_chk_catch);
             AmigaCheckbox("Catch exceptions", &changed_prefs.comp_catchfault);
-            ImGui::SameLine(); ShowHelpMarker("Catch memory access faults in compiled code.");
+            ShowHelpMarker("Catch memory access faults in compiled code.");
             ImGui::EndDisabled();
 
             ImGui::EndTable();
@@ -598,12 +600,14 @@ void render_panel_cpu() {
             changed_prefs.comptrustlong = 0;
             changed_prefs.comptrustnaddr = 0;
         }
+        ShowHelpMarker("Direct memory access. Faster but less compatible.");
         ImGui::SameLine();
         if (AmigaRadioButton("Indirect##memaccess", &changed_prefs.comptrustbyte, 1)) {
             changed_prefs.comptrustword = 1;
             changed_prefs.comptrustlong = 1;
             changed_prefs.comptrustnaddr = 1;
         }
+        ShowHelpMarker("Indirect memory access. Slower but more compatible.");
         ImGui::EndDisabled();
 
         ImGui::Dummy(ImVec2(right_group_min_width, 0.0f));

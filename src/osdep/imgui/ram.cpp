@@ -264,6 +264,7 @@ void render_panel_ram() {
             fix_values_memorydlg();
         }
     }
+    ShowHelpMarker("Main memory accessible by all Amiga custom chips. A500 had 512KB, A1200 had 2MB. More than 512KB requires ECS Agnus.");
 
     int fast_idx = get_mem_index(changed_prefs.fastmem[0].size, msi_fast, 9);
     if (RamControl("Z2 Fast:", &fast_idx, msi_fast, 9)) {
@@ -271,6 +272,7 @@ void render_panel_ram() {
         if (changed_prefs.fastmem[0].size > 0 && changed_prefs.chipmem.size > 0x200000)
             changed_prefs.chipmem.size = 0x200000;
     }
+    ShowHelpMarker("Zorro II expansion memory. Not accessible by custom chips. 16-bit, max 8MB. Incompatible with Chip RAM > 2MB.");
 
     int mbhigh_idx = get_mem_index(changed_prefs.mbresmem_high.size, msi_mb, 9);
     if (RamControl("Processor slot:", &mbhigh_idx, msi_mb, 9)) {
@@ -278,6 +280,7 @@ void render_panel_ram() {
         if (currprefs.mbresmem_high.size != changed_prefs.mbresmem_high.size)
             disable_resume();
     }
+    ShowHelpMarker("Fast RAM on CPU accelerator cards installed in the processor slot. Not accessible by custom chips.");
 
     int mblow_idx = get_mem_index(changed_prefs.mbresmem_low.size, msi_mb, 8);
     if (RamControl("Motherboard Fast:", &mblow_idx, msi_mb, 8)) {
@@ -285,11 +288,13 @@ void render_panel_ram() {
         if (currprefs.mbresmem_low.size != changed_prefs.mbresmem_low.size)
             disable_resume();
     }
+    ShowHelpMarker("Fast RAM on the motherboard (A3000/A4000). Not accessible by custom chips.");
 
     int slow_idx = get_mem_index(changed_prefs.bogomem.size, msi_bogo, 5);
     if (RamControl("Slow:", &slow_idx, msi_bogo, 5)) {
         changed_prefs.bogomem.size = memsizes[msi_bogo[slow_idx]];
     }
+    ShowHelpMarker("512KB expansion in A500/A2000 'trapdoor' slot (Ranger RAM). Accessible by custom chips but slower than Chip RAM.");
 
     bool z3_enabled = !changed_prefs.address_space_24;
     ImGui::BeginDisabled(!z3_enabled);
@@ -301,6 +306,7 @@ void render_panel_ram() {
         if (changed_prefs.z3fastmem[0].size > max_z3fastmem)
             changed_prefs.z3fastmem[0].size = max_z3fastmem;
     }
+    ShowHelpMarker("Zorro III expansion memory. 32-bit, used with 68030+ CPUs. Requires 32-bit addressing mode. Not accessible by custom chips.");
 
     int z3chip_count = can_have_1gb() ? 10 : 9;
     int z3chip_idx = get_mem_index(changed_prefs.z3chipmem.size, msi_z3chip, z3chip_count);
@@ -309,6 +315,7 @@ void render_panel_ram() {
         if (changed_prefs.z3chipmem.size > max_z3fastmem)
             changed_prefs.z3chipmem.size = max_z3fastmem;
     }
+    ShowHelpMarker("Extended Chip RAM accessible by custom chips. Requires 32-bit addressing mode. Used in advanced configurations.");
     ImGui::EndDisabled();
 
     ImGui::Spacing();
@@ -417,6 +424,7 @@ void render_panel_ram() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+    ShowHelpMarker("Select which memory board to configure. Allows detailed control over individual RAM expansions and their properties.");
 
     // Update rb pointer after potential index change
     ramboard *rb = get_selected_ramboard(current_advanced_ram_idx);
@@ -485,6 +493,7 @@ void render_panel_ram() {
                  }
              }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+            ShowHelpMarker("Size of the selected memory board. Available sizes depend on the type of memory.");
 
              ImGui::SameLine();
              ImGui::SetNextItemWidth(BUTTON_WIDTH);
@@ -645,6 +654,7 @@ void render_panel_ram() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+            ShowHelpMarker("Select specific RAM expansion board type with manufacturer and product ID for accurate hardware emulation.");
 
             if (!enable_board_select) ImGui::EndDisabled();
 
@@ -690,13 +700,24 @@ void render_panel_ram() {
                  // If enabling, ensure autoconfig bytes are synced from current Manuf/Product if currently zero?
                  // Or just trust the current state.
             }
-            AmigaCheckbox("Manual configuration", &rb->manual_config);
+            ShowHelpMarker("Enable editing of manufacturer and product IDs for custom RAM board identification.");
+            if (AmigaCheckbox("Manual configuration", &rb->manual_config)) {
+                // Checkbox value already updated
+            }
+            ShowHelpMarker("Override automatic memory board configuration and specify custom address range.");
 
             bool dma_capable = !rb->nodma;
             if (AmigaCheckbox("DMA Capable", &dma_capable)) rb->nodma = !dma_capable;
+            ShowHelpMarker("Whether the memory board supports DMA (Direct Memory Access) transfers. Most expansion RAM supports DMA.");
 
-            AmigaCheckbox("Force 16-bit", &rb->force16bit);
-            AmigaCheckbox("Slow RAM", &rb->chipramtiming);
+            if (AmigaCheckbox("Force 16-bit", &rb->force16bit)) {
+                // Checkbox value already updated
+            }
+            ShowHelpMarker("Force 16-bit access width for this memory. May be needed for compatibility with some 16-bit memory boards.");
+            if (AmigaCheckbox("Slow RAM", &rb->chipramtiming)) {
+                // Checkbox value already updated
+            }
+            ShowHelpMarker("Use Chip RAM timing for this memory. Slower but may be required for certain configurations or compatibility.");
 
             // Z3 Mapping Mode - Bottom Right
             ImGui::Spacing();
@@ -708,6 +729,7 @@ void render_panel_ram() {
                          IM_ARRAYSIZE(z3_mapping_items));
             ImGui::EndDisabled();
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+            ShowHelpMarker("Z3 memory address mapping mode. Automatic uses optimal settings, UAE uses UAE-compatible layout, Real uses real Amiga addresses.");
             ImGui::EndTable();
         }
     }

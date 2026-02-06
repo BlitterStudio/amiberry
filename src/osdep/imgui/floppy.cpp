@@ -89,6 +89,11 @@ static void RenderDriveSlot(const int i)
              else if (!drive_enabled)
                  changed_prefs.floppyslots[i].dfxtype = DRV_NONE;
         }
+        if (i == 0) {
+            ShowHelpMarker("Enable/disable floppy drive. DF0: is the boot drive");
+        } else {
+            ShowHelpMarker("Enable/disable floppy drive");
+        }
 
         ImGui::BeginDisabled(!drive_enabled);
 
@@ -128,7 +133,8 @@ static void RenderDriveSlot(const int i)
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
-        
+        ShowHelpMarker("Drive type: 3.5\" DD (880KB standard), 3.5\" HD (1.76MB A4000), 5.25\" DD, or FB (FloppyBridge for real drives)");
+
         // 3. WP Checkbox
         ImGui::TableNextColumn();
         bool wp = disk_getwriteprotect(&changed_prefs, changed_prefs.floppyslots[i].df, i);
@@ -140,7 +146,7 @@ static void RenderDriveSlot(const int i)
             }
             DISK_reinsert(i);
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Write-protected");
+        ShowHelpMarker("Prevent writing to the disk image");
 
         // 4. Filler
         ImGui::TableNextColumn();
@@ -248,11 +254,13 @@ static void RenderDrawBridge()
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Select the DrawBridge hardware driver for connecting real Amiga floppy drives");
 
     ImGui::SameLine();
     if (AmigaButton("Refresh")) {
         FloppyBridgeAPI::getDriverList(driver_list);
     }
+    ShowHelpMarker("Refresh the list of available DrawBridge drivers");
 
     unsigned int config_options = 0;
     if (changed_prefs.drawbridge_driver >= 0 && changed_prefs.drawbridge_driver < driver_list.size()) {
@@ -265,6 +273,7 @@ static void RenderDrawBridge()
     bool auto_serial = changed_prefs.drawbridge_serial_auto;
     if(AmigaCheckbox("DrawBridge: Auto-Detect serial port", &auto_serial))
         changed_prefs.drawbridge_serial_auto = auto_serial;
+    ShowHelpMarker("Automatically detect which serial port the DrawBridge is connected to");
     ImGui::EndDisabled();
 
     // Serial port selection enabled if supported AND (auto is supported OR auto is disabled) - wait, logical check matching old GUI:
@@ -309,6 +318,7 @@ static void RenderDrawBridge()
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Select which serial port the DrawBridge hardware is connected to");
     ImGui::EndDisabled();
 
     // --- Smart Speed ---
@@ -317,6 +327,7 @@ static void RenderDrawBridge()
     bool smart_speed = changed_prefs.drawbridge_smartspeed;
     if (AmigaCheckbox("DrawBridge: Smart Speed (Dynamically switch on Turbo)", &smart_speed))
         changed_prefs.drawbridge_smartspeed = smart_speed;
+    ShowHelpMarker("Automatically speed up disk access when possible without breaking compatibility");
     ImGui::EndDisabled();
 
     // --- Auto Cache ---
@@ -325,6 +336,7 @@ static void RenderDrawBridge()
     bool auto_cache = changed_prefs.drawbridge_autocache;
     if (AmigaCheckbox("DrawBridge: Auto-Cache (Cache disk data while drive is idle)", &auto_cache))
         changed_prefs.drawbridge_autocache = auto_cache;
+    ShowHelpMarker("Cache track data from the real floppy when the drive is idle to improve performance");
     ImGui::EndDisabled();
 
     // --- Drive Cable ---
@@ -351,6 +363,7 @@ static void RenderDrawBridge()
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Select drive cable type: IBM PC (A/B) or SHUGART (0-3) standard");
     ImGui::EndDisabled();
     ImGui::Spacing();
     EndGroupBox("DrawBridge (FloppyBridge)");
@@ -396,6 +409,7 @@ void render_panel_floppy()
         changed_prefs.floppy_speed = drive_speed_values[speed_idx];
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+    ShowHelpMarker("Floppy drive speed: 100% = real Amiga speed, higher = faster loading. Turbo speed may break copy protections");
     ImGui::SameLine();
     
     ImGui::BeginDisabled();
@@ -419,11 +433,13 @@ void render_panel_floppy()
         current_floppy_dialog_mode = FloppyDialogMode::CreateDD;
         OpenFileDialog("Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
     }
+    ShowHelpMarker("Create a new 880KB double-density floppy disk image");
     ImGui::SameLine();
     if (AmigaButton("Create 3.5'' HD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateHD;
         OpenFileDialog("Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
     }
+    ShowHelpMarker("Create a new 1.76MB high-density floppy disk image");
     ImGui::SameLine();
     ImGui::BeginDisabled(strlen(changed_prefs.floppyslots[0].df) == 0);
     if (AmigaButton("Save config for disk", ImVec2(btn_w, 0))) {
@@ -434,10 +450,11 @@ void render_panel_floppy()
         get_configuration_path(filename, MAX_DPATH);
         strncat(filename, diskname, MAX_DPATH - 1);
         strncat(filename, ".uae", MAX_DPATH - 1);
-        
+
         _sntprintf(changed_prefs.description, sizeof changed_prefs.description, "Configuration for disk '%s'", diskname);
         cfgfile_save(&changed_prefs, filename, 0);
     }
+    ShowHelpMarker("Save current configuration with the name of the disk in DF0:");
     ImGui::EndDisabled();
     ImGui::Spacing();
     EndGroupBox("New Floppy Disk Image");

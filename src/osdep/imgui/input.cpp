@@ -111,6 +111,7 @@ void render_panel_input() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Select the input device to use for this Amiga port. Port 0 is typically for mouse, Port 1 for joystick");
 
             float avail_w = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2;
             float item_w = (avail_w - BUTTON_WIDTH * 1.5f) / 2;
@@ -136,6 +137,7 @@ void render_panel_input() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Automatically repeat fire button presses. Toggle mode allows switching on/off with a button");
 
             ImGui::SameLine();
             ImGui::SetNextItemWidth(item_w);
@@ -161,6 +163,7 @@ void render_panel_input() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Select the emulation mode for this device (default, mouse, joystick, gamepad, CD32 pad, etc.)");
 
             ImGui::SameLine();
             AmigaButton(std::string("Remap / Test##").append(std::to_string(port_idx)).c_str());
@@ -190,6 +193,7 @@ void render_panel_input() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Map mouse movement to analog stick (LStick). Only available when mode is not default");
             ImGui::EndDisabled();
         };
 
@@ -208,6 +212,7 @@ void render_panel_input() {
         AmigaButton("Swap ports");
         ImGui::SameLine();
         AmigaCheckbox("Mouse/Joystick autoswitching", &changed_prefs.input_autoswitch);
+        ShowHelpMarker("Automatically switch Port 0 and Port 1 devices based on input activity");
 
         ImGui::EndTable();
     }
@@ -276,6 +281,7 @@ void render_panel_input() {
                 ImGui::EndCombo();
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Automatically repeat fire button presses on this parallel port device");
 
             ImGui::SameLine();
             AmigaButton(std::string("Remap / Test##Par").append(std::to_string(port_idx)).c_str());
@@ -306,6 +312,7 @@ void render_panel_input() {
     ImGui::SetNextItemWidth(BUTTON_WIDTH);
     ImGui::SliderInt("##DeadZone", &changed_prefs.input_joystick_deadzone, 0, 100, "%d%%");
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+    ShowHelpMarker("Analog stick dead zone - area of no response around center position (0-100%)");
 
     // Autofire Rate
     ImGui::SameLine();
@@ -340,6 +347,7 @@ void render_panel_input() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+    ShowHelpMarker("How fast autofire repeats (lower values = faster repeat rate)");
 
     // Digital Joy-Mouse Speed
     ImGui::AlignTextToFramePadding();
@@ -357,6 +365,7 @@ void render_panel_input() {
         changed_prefs.input_joymouse_speed = digital_joymousespeed_values[dig_speed_idx];
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+    ShowHelpMarker("Mouse cursor speed when controlled by digital joystick directions");
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
     ImGui::Text("%d", changed_prefs.input_joymouse_speed);
@@ -377,6 +386,7 @@ void render_panel_input() {
         changed_prefs.input_joymouse_multiplier = analog_joymousespeed_values[ana_speed_idx];
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+    ShowHelpMarker("Sensitivity multiplier for mouse cursor controlled by analog joystick");
     ImGui::SameLine();
     ImGui::AlignTextToFramePadding();
     ImGui::Text("%d", changed_prefs.input_joymouse_multiplier);
@@ -400,6 +410,7 @@ void render_panel_input() {
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputInt("##MouseSpd", &changed_prefs.input_mouse_speed, 1, 10);
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+        ShowHelpMarker("Mouse sensitivity multiplier (100 = normal speed, higher = faster)");
 
         // Right: Mouse Untrap (Inline Label)
         ImGui::TableNextColumn();
@@ -436,6 +447,7 @@ void render_panel_input() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("How to release the mouse from the emulator window (middle button, magic mouse, or both)");
 
         // Row 2
         ImGui::TableNextRow();
@@ -446,6 +458,7 @@ void render_panel_input() {
         if (AmigaCheckbox("Install virtual mouse driver", &virt_mouse)) {
             changed_prefs.input_tablet = virt_mouse ? TABLET_MOUSEHACK : TABLET_OFF;
         }
+        ShowHelpMarker("Install a virtual mouse driver for tablet/touchscreen absolute positioning");
 
         // Right: Cursor Mode
         ImGui::TableNextColumn();
@@ -472,6 +485,7 @@ void render_panel_input() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Display Amiga cursor, host cursor, or both when using magic mouse mode");
         ImGui::EndDisabled();
 
         // Row 3
@@ -480,6 +494,7 @@ void render_panel_input() {
         // Left: Tablet Library emul
         ImGui::TableNextColumn();
         AmigaCheckbox("Tablet.library emulation", &changed_prefs.tablet_library);
+        ShowHelpMarker("Emulate Amiga tablet.library for graphics tablet support");
 
         // Right: Tablet Mode (Aligned with Row 3)
         ImGui::TableNextColumn();
@@ -493,6 +508,7 @@ void render_panel_input() {
             changed_prefs.input_tablet = tablet_mode == 1 ? TABLET_MOUSEHACK : TABLET_OFF;
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Enable MouseHack for absolute positioning of tablet/touchscreen input");
 
         ImGui::EndTable();
     }

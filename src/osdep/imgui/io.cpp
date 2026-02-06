@@ -125,10 +125,12 @@ void render_panel_io()
 		if (sampler_idx > 0)
 			changed_prefs.prtname[0] = 0;
 	}
+	ShowHelpMarker("Audio sampling device connected to the parallel port");
 
 	bool stereo_enabled = (sampler_idx > 0);
 	if (!stereo_enabled) ImGui::BeginDisabled();
 	AmigaCheckbox("Stereo sampler", &changed_prefs.sampler_stereo);
+	ShowHelpMarker("Enable stereo audio sampling instead of mono");
 	if (!stereo_enabled) ImGui::EndDisabled();
 	ImGui::Spacing();
 	EndGroupBox("Parallel Port");
@@ -162,6 +164,7 @@ void render_panel_io()
 			}
 		}
 	}
+	ShowHelpMarker("Map Amiga's RS-232 serial port to host serial port");
 
 	bool use_serial = (serial_idx > 0);
 	if (!use_serial) ImGui::BeginDisabled();
@@ -173,9 +176,13 @@ void render_panel_io()
 		ImGui::TableSetupColumn("column4", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 1.8f);
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn(); AmigaCheckbox("Shared", &changed_prefs.serial_demand);
+		ShowHelpMarker("Allow host and emulated Amiga to share the serial port");
 		ImGui::TableNextColumn(); AmigaCheckbox("Host RTS/CTS", &changed_prefs.serial_hwctsrts);
+		ShowHelpMarker("Use hardware flow control from the host serial port");
 		ImGui::TableNextColumn(); AmigaCheckbox("Direct", &changed_prefs.serial_direct);
+		ShowHelpMarker("Direct serial port access bypassing emulation layer");
 		ImGui::TableNextColumn(); AmigaCheckbox("uaeserial.device", &changed_prefs.uaeserial);
+		ShowHelpMarker("Enable UAE's custom serial device driver");
 		ImGui::EndTable();
 	}
 
@@ -184,7 +191,9 @@ void render_panel_io()
 		ImGui::TableSetupColumn("column2", ImGuiTableColumnFlags_WidthFixed, BUTTON_WIDTH * 2.9f);
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn(); AmigaCheckbox("Serial status (RTS/CTS/...)", &changed_prefs.serial_rtsctsdtrdtecd);
+		ShowHelpMarker("Emulate serial port status lines (RTS, CTS, DTR, DSR, CD)");
 		ImGui::TableNextColumn(); AmigaCheckbox("Serial status: Ring Indicator", &changed_prefs.serial_ri);
+		ShowHelpMarker("Emulate the RI serial line used by modems");
 		ImGui::EndTable();
 	}
 
@@ -226,6 +235,7 @@ void render_panel_io()
 					au_copy(changed_prefs.midioutdev, 256, midi_out_ports[midi_out_idx - 1].c_str());
 			}
 		}
+		ShowHelpMarker("Connect Amiga MIDI output to host MIDI device");
 
 		ImGui::TableNextColumn();
 
@@ -248,6 +258,7 @@ void render_panel_io()
 			else if (midi_in_idx - 1 < (int)midi_in_ports.size())
 				au_copy(changed_prefs.midiindev, 256, midi_in_ports[midi_in_idx - 1].c_str());
 		}
+		ShowHelpMarker("Connect host MIDI input to Amiga MIDI");
 		if (!midi_in_enabled) ImGui::EndDisabled();
 
 		ImGui::EndTable();
@@ -257,6 +268,7 @@ void render_panel_io()
 	bool route_enabled = (midi_in_idx > 0);
 	if (!route_enabled) ImGui::BeginDisabled();
 	AmigaCheckbox("Route MIDI In to MIDI Out", &changed_prefs.midirouter);
+	ShowHelpMarker("Pass MIDI input directly through to MIDI output");
 	if (!route_enabled) ImGui::EndDisabled();
 	ImGui::Spacing();
 	EndGroupBox("MIDI");
@@ -283,6 +295,7 @@ void render_panel_io()
 		ImGui::EndCombo();
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	ShowHelpMarker("Emulate copy protection dongles for specific games");
 	ImGui::Spacing();
 	EndGroupBox("Protection Dongle");
 }

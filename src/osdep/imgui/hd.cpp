@@ -306,14 +306,16 @@ static void RenderActionButtons()
 static void RenderCDSection()
 {
     AmigaCheckbox("CDFS automount CD/DVD drives", &changed_prefs.automount_cddrives);
+    ShowHelpMarker("Automatically mount CD/DVD drives in the system");
     ImGui::SameLine();
     ImGui::Dummy(ImVec2(20, 0));
     ImGui::SameLine();
-    
+
     bool turbo = (changed_prefs.cd_speed == 0);
     if (AmigaCheckbox("Turbo CD speed", &turbo)) {
         changed_prefs.cd_speed = turbo ? 0 : 100;
     }
+    ShowHelpMarker("Read CDs faster than real hardware");
     
     ImGui::Spacing();
 
@@ -494,13 +496,15 @@ static void ShowEditFilesysVirtualModal()
 
         bool rw = !current_fsvdlg.ci.readonly;
         if (AmigaCheckbox("Read/Write", &rw)) current_fsvdlg.ci.readonly = !rw;
-        
+        ShowHelpMarker("Allow writing to this directory");
+
         ImGui::SameLine();
         bool bootable = (current_fsvdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
         if (AmigaCheckbox("Bootable", &bootable)) {
              if (bootable) current_fsvdlg.ci.bootpri = 0;
              else current_fsvdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
         }
+        ShowHelpMarker("Enable booting from this volume");
 
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
@@ -573,11 +577,12 @@ static void ShowEditFilesysHardfileModal()
         ImGui::BeginGroup();
         ImGui::Text("Geometry");
         
-        bool manual_geo = current_hfdlg.ci.physical_geometry; 
+        bool manual_geo = current_hfdlg.ci.physical_geometry;
         if (AmigaCheckbox("Manual Geometry", &manual_geo)) {
              current_hfdlg.ci.physical_geometry = manual_geo;
              updatehdfinfo(true, false, false, hdf_info_text1, hdf_info_text2);
         }
+        ShowHelpMarker("Manually specify the drive geometry parameters");
 
         int surfaces = manual_geo ? current_hfdlg.ci.pheads : current_hfdlg.ci.surfaces;
         int sectors = manual_geo ? current_hfdlg.ci.psecs : current_hfdlg.ci.sectors;
@@ -685,15 +690,17 @@ static void ShowEditFilesysHardfileModal()
         ImGui::EndGroup();
 
         ImGui::Separator();
-        
+
         bool rw = !current_hfdlg.ci.readonly;
         if (AmigaCheckbox("Read/Write", &rw)) current_hfdlg.ci.readonly = !rw;
+        ShowHelpMarker("Allow writing to this hardfile");
         ImGui::SameLine();
         bool bootable = (current_hfdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
         if (AmigaCheckbox("Bootable", &bootable)) {
              if (bootable) current_hfdlg.ci.bootpri = 0;
              else current_hfdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
         }
+        ShowHelpMarker("Enable booting from this hard drive");
 
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
@@ -702,6 +709,7 @@ static void ShowEditFilesysHardfileModal()
         ImGui::SetNextItemWidth(BUTTON_WIDTH);
         ImGui::InputInt("##BootPri", &current_hfdlg.ci.bootpri);
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+        ShowHelpMarker("Boot priority (-128 to 127, higher boots first)");
 
         ImGui::Separator();
         
@@ -738,7 +746,9 @@ static void ShowCreateHardfileModal()
         ImGui::InputInt("##Size(MB)", &create_hdf_size_mb);
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         AmigaCheckbox("Dynamic HDF (Sparse)", &create_hdf_dynamic);
+        ShowHelpMarker("Create a sparse file that grows as data is written");
         AmigaCheckbox("RDB Mode", &create_hdf_rdb);
+        ShowHelpMarker("Create with Rigid Disk Block (partitionable)");
         ImGui::EndGroup();
 
         ImGui::Separator();
@@ -829,12 +839,14 @@ static void ShowAddHardDriveModal()
         
         bool rw = !current_hfdlg.ci.readonly;
         if (AmigaCheckbox("Read/Write", &rw)) current_hfdlg.ci.readonly = !rw;
+        ShowHelpMarker("Allow writing to this physical drive");
         ImGui::SameLine();
         bool bootable = (current_hfdlg.ci.bootpri != BOOTPRI_NOAUTOBOOT);
         if (AmigaCheckbox("Bootable", &bootable)) {
              if (bootable) current_hfdlg.ci.bootpri = 0;
              else current_hfdlg.ci.bootpri = BOOTPRI_NOAUTOBOOT;
         }
+        ShowHelpMarker("Enable booting from this physical drive");
 
         ImGui::Separator();
 

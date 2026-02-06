@@ -52,12 +52,14 @@ void render_panel_display() {
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
     ImGui::SameLine();
     AmigaCheckbox("Window resize", &changed_prefs.gfx_windowed_resize);
+    ShowHelpMarker("Allow resizing the emulator window by dragging the window edges");
 
    // Borderless (Enable only if Windowed)
     ImGui::SameLine();
     bool is_windowed = changed_prefs.gfx_apmode[0].gfx_fullscreen == 0;
     if (!is_windowed) ImGui::BeginDisabled();
     AmigaCheckbox("Borderless", &changed_prefs.borderless);
+    ShowHelpMarker("Remove window decorations (title bar and borders) while in windowed mode");
     if (!is_windowed) ImGui::EndDisabled();
 
     ImGui::Spacing();
@@ -83,6 +85,7 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Native chipset screen mode: Windowed, Fullscreen or Full-window (borderless fullscreen)");
 
     ImGui::SameLine();
 
@@ -132,6 +135,7 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("VSync mode: Lagless minimizes input lag, Standard waits for vertical blank, 50/60Hz variants enforce specific refresh rates");
 
     ImGui::Spacing();
 
@@ -156,6 +160,7 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("RTG (Picasso96) screen mode when using graphics card emulation");
 
     ImGui::SameLine();
 
@@ -187,6 +192,7 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("VSync mode for RTG display");
     if (!rtg_enabled) ImGui::EndDisabled();
 
     ImGui::Spacing();
@@ -199,19 +205,25 @@ void render_panel_display() {
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         AmigaCheckbox("Blacker than black", &changed_prefs.gfx_blackerthanblack);
+        ShowHelpMarker("Enable proper black levels for displays that support it");
         AmigaCheckbox("Remove interlace artifacts", &changed_prefs.gfx_scandoubler);
+        ShowHelpMarker("Apply scanline doubling to reduce flickering from interlaced video modes");
         AmigaCheckbox("Monochrome video out", &changed_prefs.gfx_grayscale);
+        ShowHelpMarker("Render display in grayscale, simulating a monochrome monitor");
         ImGui::TableNextColumn();
         AmigaCheckbox("Filtered low resolution", (bool *) &changed_prefs.gfx_lores_mode);
+        ShowHelpMarker("Apply filtering to low resolution modes for smoother appearance");
 
         if (!vga_autoswitch_enabled) ImGui::BeginDisabled();
         AmigaCheckbox("VGA mode res. autoswitch", &changed_prefs.gfx_autoresolution_vga);
+        ShowHelpMarker("Automatically switch to VGA resolution when VGA modes are detected (requires HighRes and Double line mode)");
         if (!vga_autoswitch_enabled) ImGui::EndDisabled();
 
         bool resync_blank = changed_prefs.gfx_monitorblankdelay > 0;
         if (AmigaCheckbox("Display resync blanking", &resync_blank)) {
             changed_prefs.gfx_monitorblankdelay = resync_blank ? 1000 : 0;
         }
+        ShowHelpMarker("Blank the screen briefly when display mode changes to prevent visual artifacts");
         ImGui::EndTable();
     }
 
@@ -246,6 +258,7 @@ void render_panel_display() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Horizontal resolution: LowRes (320px), HighRes (640px), or SuperHighRes (1280px). Disabled when resolution autoswitch is enabled");
         if (!resolution_enabled) ImGui::EndDisabled();
 
         ImGui::TableNextColumn();
@@ -270,6 +283,7 @@ void render_panel_display() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Amount of border area to display. Higher values show more of the display area including normally hidden borders");
         ImGui::EndTable();
     }
 
@@ -315,6 +329,7 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Automatically switch resolution based on Amiga display mode. Percentage values control sensitivity threshold");
 
     ImGui::Spacing();
 
@@ -334,6 +349,7 @@ void render_panel_display() {
         if (!refresh_enabled) ImGui::BeginDisabled();
         ImGui::SliderInt("##RefreshSld", &changed_prefs.gfx_framerate, 1, 10, ""); // 1=Every, 2=Every 2nd
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+        ShowHelpMarker("Frame skip rate: 1=every frame (no skip), 2=every other frame, etc. Disabled in cycle-exact mode");
         if (!refresh_enabled) ImGui::EndDisabled();
 
         ImGui::TableNextColumn();
@@ -362,6 +378,7 @@ void render_panel_display() {
             ImGui::EndCombo();
         }
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("Video standard: PAL (50Hz, European) or NTSC (60Hz, American/Japanese)");
 
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
@@ -374,6 +391,7 @@ void render_panel_display() {
         if (!fps_adj_enabled) ImGui::BeginDisabled();
         ImGui::SliderFloat("##FPSAdjSld", &changed_prefs.cr[changed_prefs.cr_selected].rate, 1.0f, 100.0f, "");
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+        ShowHelpMarker("Adjust frame rate adjustment percentage. Only active when locked checkbox is enabled");
         if (!fps_adj_enabled) ImGui::EndDisabled();
         ImGui::TableNextColumn();
 
@@ -386,6 +404,7 @@ void render_panel_display() {
         if (!fps_adj_enabled) ImGui::EndDisabled();
         ImGui::SameLine();
         AmigaCheckbox("##FPSLocked", (bool *) &changed_prefs.cr[changed_prefs.cr_selected].locked);
+        ShowHelpMarker("Lock the FPS adjustment to a fixed value. When unlocked, automatic adjustment is used");
         ImGui::EndTable();
     }
 
@@ -413,6 +432,7 @@ void render_panel_display() {
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Display color adjustment attribute. Adjust using slider and numeric input below");
 
     int *val_ptr = nullptr;
     int min_val = -200;
@@ -484,8 +504,10 @@ void render_panel_display() {
         BeginGroupBox("Centering");
         bool h_center = changed_prefs.gfx_xcenter == 2;
         if (AmigaCheckbox("Horizontal", &h_center)) changed_prefs.gfx_xcenter = h_center ? 2 : 0;
+        ShowHelpMarker("Automatically center the display horizontally on screen");
         bool v_center = changed_prefs.gfx_ycenter == 2;
         if (AmigaCheckbox("Vertical", &v_center)) changed_prefs.gfx_ycenter = v_center ? 2 : 0;
+        ShowHelpMarker("Automatically center the display vertically on screen");
         ImGui::Spacing();
         EndGroupBox("Centering");
 
@@ -498,23 +520,28 @@ void render_panel_display() {
             changed_prefs.gfx_vresolution = 0;
             changed_prefs.gfx_pscanlines = 0;
         }
+        ShowHelpMarker("Single scan: display one line per scanline (200 lines for NTSC, 256 for PAL)");
         if (AmigaRadioButton("Double", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 0)) {
             changed_prefs.gfx_vresolution = 1;
             changed_prefs.gfx_pscanlines = 0;
         }
+        ShowHelpMarker("Line doubling: display each line twice for better visibility (400/512 lines)");
         if (AmigaRadioButton("Scanlines", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 1)) {
             changed_prefs.gfx_vresolution = 1;
             changed_prefs.gfx_pscanlines = 1;
         }
+        ShowHelpMarker("Simulate scanlines with black lines between display lines for CRT effect");
         if (AmigaRadioButton("Double, fields", changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 2)) {
             changed_prefs.gfx_vresolution = 1;
             changed_prefs.gfx_pscanlines = 2;
         }
+        ShowHelpMarker("Interlaced field rendering: alternates between even and odd lines");
         if (AmigaRadioButton("Double, fields+",
                                changed_prefs.gfx_vresolution == 1 && changed_prefs.gfx_pscanlines == 3)) {
             changed_prefs.gfx_vresolution = 1;
             changed_prefs.gfx_pscanlines = 3;
                                }
+        ShowHelpMarker("Enhanced interlaced field rendering with improved blending");
         if (!linemode_enabled) ImGui::EndDisabled();
         ImGui::Spacing();
         EndGroupBox("Line Mode");
@@ -528,6 +555,7 @@ void render_panel_display() {
         if (AmigaRadioButton("Single##I", changed_prefs.gfx_iscanlines == 0 && !is_double)) {
             changed_prefs.gfx_iscanlines = 0;
         }
+        ShowHelpMarker("Single line mode for interlaced screens (available only in single line mode)");
         if (!linemode_enabled || is_double) ImGui::EndDisabled();
 
         if (!linemode_enabled || !is_double) ImGui::BeginDisabled();
@@ -566,8 +594,11 @@ void render_panel_display() {
         // Toggle radio button for "Double frames" manually if iscan==0.
         bool dbl_frames_active = (changed_prefs.gfx_iscanlines == 0 && is_double);
         if (AmigaRadioButton("Double, frames##I", dbl_frames_active)) { changed_prefs.gfx_iscanlines = 0; }
+        ShowHelpMarker("Double frames mode for interlaced screens (available only in double line mode)");
         AmigaRadioButton("Double, fields##I", &changed_prefs.gfx_iscanlines, 1);
+        ShowHelpMarker("Interlaced field rendering: alternates between even and odd lines");
         AmigaRadioButton("Double, fields+##I", &changed_prefs.gfx_iscanlines, 2);
+        ShowHelpMarker("Enhanced interlaced field rendering with improved blending");
         if (!linemode_enabled || !is_double) ImGui::EndDisabled();
         ImGui::Spacing();
         EndGroupBox("Interlaced line mode");

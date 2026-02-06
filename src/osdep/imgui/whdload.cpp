@@ -191,8 +191,9 @@ void render_panel_whdload()
     DrawReadOnlyInput("Game Name", whdload_prefs.game_name);
     DrawReadOnlyInput("UUID", whdload_prefs.variant_uuid);
     DrawReadOnlyInput("Slave Default", whdload_prefs.slave_default);
-    
+
     AmigaCheckbox("Slave Libraries", &whdload_prefs.slave_libraries);
+    ShowHelpMarker("Use slave-specific libraries");
     
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Slaves:");
@@ -246,8 +247,10 @@ void render_panel_whdload()
     BeginGroupBox("Global options");
 
     if(AmigaCheckbox("Button Wait", &whdload_prefs.button_wait)) create_startup_sequence();
+    ShowHelpMarker("Wait for button press before starting the game");
     if(AmigaCheckbox("Show Splash", &whdload_prefs.show_splash)) create_startup_sequence();
-    
+    ShowHelpMarker("Show WHDLoad splash screen on startup");
+
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Config Delay:");
     ImGui::SameLine();
@@ -257,9 +260,12 @@ void render_panel_whdload()
         create_startup_sequence();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
-    
+    ShowHelpMarker("Delay in seconds before starting the game");
+
     if(AmigaCheckbox("Write Cache", &whdload_prefs.write_cache)) create_startup_sequence();
+    ShowHelpMarker("Cache writes for better performance (less safe)");
     if(AmigaCheckbox("Quit on Exit", &whdload_prefs.quit_on_exit)) create_startup_sequence();
+    ShowHelpMarker("Return to emulator when the game exits");
 
     EndGroupBox("Global options");
     

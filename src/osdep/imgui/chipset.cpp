@@ -80,16 +80,6 @@ static void init_lists() {
         special_monitor_ptr.push_back(s.c_str());
 }
 
-static void ShowHelpMarker(const char *desc) {
-    ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
-}
 
 void render_panel_chipset() {
     // Global padding for the whole panel
@@ -138,24 +128,30 @@ void render_panel_chipset() {
             ImGui::BeginGroup();
             if (AmigaRadioButton("A1000 (No EHB)", &chipset_selection, 6))
                 changed_prefs.chipset_mask = CSMASK_A1000_NOEHB;
+            ShowHelpMarker("Original A1000 chipset without Extra Half-Brite mode.");
             if (AmigaRadioButton("OCS + OCS Denise", &chipset_selection, 0)) changed_prefs.chipset_mask = CSMASK_OCS;
+            ShowHelpMarker("Original Chip Set with original Denise. Standard A500/A2000.");
             if (AmigaRadioButton("ECS + OCS Denise", &chipset_selection, 1))
                 changed_prefs.chipset_mask = CSMASK_ECS_AGNUS;
+            ShowHelpMarker("Enhanced Chip Set Agnus with original Denise.");
             if (AmigaRadioButton("AGA", &chipset_selection, 4))
                 changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE | CSMASK_AGA;
+            ShowHelpMarker("Advanced Graphics Architecture. A1200/A4000 chipset.");
             ImGui::EndGroup();
 
             ImGui::SameLine();
 
             ImGui::BeginGroup();
             if (AmigaRadioButton("A1000", &chipset_selection, 5)) changed_prefs.chipset_mask = CSMASK_A1000;
+            ShowHelpMarker("Original A1000 chipset with EHB support.");
             if (AmigaRadioButton("OCS + ECS Denise", &chipset_selection, 2))
                 changed_prefs.chipset_mask = CSMASK_ECS_DENISE;
+            ShowHelpMarker("Original Agnus with Enhanced Denise chip.");
             if (AmigaRadioButton("Full ECS", &chipset_selection, 3))
                 changed_prefs.chipset_mask = CSMASK_ECS_AGNUS | CSMASK_ECS_DENISE;
+            ShowHelpMarker("Full Enhanced Chip Set. A600/A3000.");
 
             AmigaCheckbox("NTSC", &changed_prefs.ntscmode);
-            ImGui::SameLine();
             ShowHelpMarker("Enable NTSC mode (60Hz)");
             ImGui::EndGroup();
 
@@ -163,8 +159,6 @@ void render_panel_chipset() {
 
             bool cycle_exact = changed_prefs.cpu_cycle_exact;
             if (AmigaCheckbox("Cycle Exact (Full)", &cycle_exact)) {
-                ImGui::SameLine();
-                ShowHelpMarker("Bit-perfect emulation. Requires fast CPU.");
                 changed_prefs.cpu_cycle_exact = cycle_exact;
                 if (cycle_exact) {
                     changed_prefs.cpu_memory_cycle_exact = true;
@@ -176,6 +170,7 @@ void render_panel_chipset() {
                     }
                 }
             }
+            ShowHelpMarker("Bit-perfect emulation. Requires fast CPU.");
 
             bool memory_exact = changed_prefs.cpu_memory_cycle_exact;
             // Disabled if CPU < 68020 (WinUAE logic)
@@ -201,6 +196,7 @@ void render_panel_chipset() {
                     changed_prefs.cpu_cycle_exact = false;
                 }
             }
+            ShowHelpMarker("Cycle-exact DMA and memory access emulation.");
             ImGui::EndDisabled();
             ImGui::Spacing();
         }
@@ -214,6 +210,7 @@ void render_panel_chipset() {
                 changed_prefs.keyboard_mode = kb_mode - 1;
             }
             AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+            ShowHelpMarker("Select keyboard controller emulation mode.");
 
             ImGui::Spacing();
             bool disable_nkro = (changed_prefs.keyboard_mode == KB_UAE || changed_prefs.keyboard_mode == KB_A2000_8039);
@@ -221,6 +218,7 @@ void render_panel_chipset() {
 
             ImGui::BeginDisabled(disable_nkro);
             AmigaCheckbox("Keyboard N-key rollover", &changed_prefs.keyboard_nkro);
+            ShowHelpMarker("Allow multiple simultaneous key presses.");
             ImGui::Spacing();
             ImGui::EndDisabled();
         }
@@ -235,6 +233,7 @@ void render_panel_chipset() {
             if (AmigaCheckbox("Immediate Blitter", &changed_prefs.immediate_blits)) {
                 if (changed_prefs.immediate_blits) changed_prefs.waiting_blits = false;
             }
+            ShowHelpMarker("Blitter operations complete instantly. Faster but less accurate.");
             ImGui::EndDisabled();
 
             bool disable_wait_blits = (changed_prefs.immediate_blits || (
@@ -246,18 +245,19 @@ void render_panel_chipset() {
                 changed_prefs.waiting_blits = wait_blits ? 1 : 0;
                 if (changed_prefs.waiting_blits) changed_prefs.immediate_blits = false;
             }
+            ShowHelpMarker("CPU waits for Blitter to finish. More compatible than Immediate Blitter.");
             ImGui::EndDisabled();
 
             bool mt = multithread_enabled != 0;
             if (AmigaCheckbox("Multithreaded Denise", &mt)) {
                 multithread_enabled = mt ? 1 : 0;
             }
+            ShowHelpMarker("Run Denise graphics chip emulation on a separate thread.");
 
             ImGui::Spacing();
             const char *optimization_items[] = {"Full", "Partial", "None"};
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Optimizations");
-            ImGui::SameLine();
             ShowHelpMarker("Keep at 'Full' for best compatibility.");
 
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
@@ -272,7 +272,6 @@ void render_panel_chipset() {
 
             ImGui::AlignTextToFramePadding();
             ImGui::Text("Chipset Extra");
-            ImGui::SameLine();
             ShowHelpMarker("Select specialized chipset behavior.");
 
             ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
@@ -358,8 +357,10 @@ void render_panel_chipset() {
     {
         ImGui::BeginGroup();
         AmigaRadioButton("None##Collision", &changed_prefs.collision_level, 0);
+        ShowHelpMarker("Disable all collision detection. Fastest.");
         ImGui::Spacing();
         AmigaRadioButton("Sprites only", &changed_prefs.collision_level, 1);
+        ShowHelpMarker("Detect sprite-to-sprite collisions only.");
         ImGui::Spacing();
         ImGui::EndGroup();
 
@@ -369,8 +370,10 @@ void render_panel_chipset() {
 
         ImGui::BeginGroup();
         AmigaRadioButton("Sprites and Sprites vs. Playfield", &changed_prefs.collision_level, 2);
+        ShowHelpMarker("Detect sprite-to-sprite and sprite-to-playfield collisions.");
         ImGui::Spacing();
         AmigaRadioButton("Full (rarely needed)", &changed_prefs.collision_level, 3);
+        ShowHelpMarker("Full collision detection including playfield-to-playfield. Slowest.");
         ImGui::Spacing();
         ImGui::EndGroup();
     }
@@ -380,6 +383,7 @@ void render_panel_chipset() {
     BeginGroupBox("Genlock");
     {
         AmigaCheckbox("Genlock connected", &changed_prefs.genlock);
+        ShowHelpMarker("Connect a genlock device for video overlay mixing.");
         ImGui::SameLine();
 
         bool genlock_enable = changed_prefs.genlock || changed_prefs.genlock_effects;

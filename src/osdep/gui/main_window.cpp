@@ -516,6 +516,18 @@ void EndGroupBox(const char* name)
 	ImGui::Dummy(ImVec2(0.0f, 10.0f));
 }
 
+void ShowHelpMarker(const char* desc)
+{
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_NoSharedDelay))
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+		ImGui::TextUnformatted(desc);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+}
+
 bool AmigaButton(const char* label, const ImVec2& size)
 {
 	ImGui::PushStyleColor(ImGuiCol_Border, 0); // Hide default border if any

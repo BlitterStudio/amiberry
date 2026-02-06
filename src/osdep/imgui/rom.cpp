@@ -135,10 +135,12 @@ void render_panel_rom()
 		if (changed_prefs.maprom)
 			changed_prefs.maprom = 0x0f000000;
 	}
+	ShowHelpMarker("Map the ROM into fast RAM for faster access");
     ImGui::EndDisabled();
-    
+
 	ImGui::SameLine();
 	AmigaCheckbox("ShapeShifter support", &changed_prefs.kickshifter);
+	ShowHelpMarker("Enable support for the ShapeShifter Mac emulator");
 	ImGui::Spacing();
 	EndGroupBox("System ROM Settings");
 
@@ -245,6 +247,7 @@ void render_panel_rom()
 		}
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	ShowHelpMarker("UAE-specific expansion features for compatibility");
 	ImGui::EndDisabled();
 	ImGui::Spacing();
 	EndGroupBox("Advanced UAE expansion board/Boot ROM Settings");

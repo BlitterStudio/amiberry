@@ -24,20 +24,6 @@ static std::vector<std::string> shader_names;
 static std::vector<const char*> shader_items;
 static bool shaders_initialized = false;
 
-// Help marker (same pattern as other panels)
-static void ShowHelpMarker(const char* desc)
-{
-	ImGui::TextDisabled("(?)");
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-		ImGui::TextUnformatted(desc);
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
-	}
-}
-
 // Scan for available shaders (built-in + .glsl + .glslp files)
 static void scan_shaders()
 {
@@ -133,7 +119,6 @@ static void render_shader_parameters_popup()
 				ImGui::PushID(param.name.c_str());
 				ImGui::AlignTextToFramePadding();
 				ImGui::Text("%s", param.description.c_str());
-				ImGui::SameLine();
 				ShowHelpMarker(param.name.c_str());
 
 				ImGui::SetNextItemWidth(-1);
@@ -184,10 +169,12 @@ void render_panel_filter()
 	BeginGroupBox("Crop and Offset");
 	if (changed_prefs.gfx_manual_crop) ImGui::BeginDisabled();
 	AmigaCheckbox("Auto Crop", &changed_prefs.gfx_auto_crop);
+	ShowHelpMarker("Automatically crop black borders from the display.");
 	if (changed_prefs.gfx_manual_crop) ImGui::EndDisabled();
 	ImGui::SameLine();
 	if (changed_prefs.gfx_auto_crop) ImGui::BeginDisabled();
 	AmigaCheckbox("Manual Crop", &changed_prefs.gfx_manual_crop);
+	ShowHelpMarker("Manually set the visible display area size.");
 	if (changed_prefs.gfx_auto_crop) ImGui::EndDisabled();
 	if (changed_prefs.gfx_manual_crop) {
 		ImGui::SameLine();
@@ -225,6 +212,7 @@ void render_panel_filter()
 		ImGui::EndCombo();
 	}
 	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+	ShowHelpMarker("How the display is scaled to fit the window.\nAuto: best fit, Nearest: sharp pixels, Linear: smooth, Integer: pixel-perfect.");
 	ImGui::Spacing();
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("H. Offset:");
@@ -259,6 +247,7 @@ void render_panel_filter()
 			ImGui::EndCombo();
 		}
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		ShowHelpMarker("CRT shader applied to native Amiga chipset display modes.");
 		ImGui::SameLine();
 		ImGui::Text("Shader for native Amiga modes");
 	}
@@ -283,6 +272,7 @@ void render_panel_filter()
 			ImGui::EndCombo();
 		}
 		AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+		ShowHelpMarker("CRT shader applied to RTG/Picasso96 graphics card display modes.");
 		ImGui::SameLine();
 		ImGui::Text("Shader for RTG/Picasso modes");
 	}
@@ -298,7 +288,6 @@ void render_panel_filter()
 			update_crtemu_bezel();
 #endif
 		}
-		ImGui::SameLine();
 		ShowHelpMarker("Overlay a CRT television bezel frame around the display.\n"
 					   "Only works with built-in CRT shaders (tv, pc, 1084).\n"
 					   "Has no effect with the 'none', 'lite' or external shaders.");
@@ -312,7 +301,6 @@ void render_panel_filter()
 	{
 		AmigaCheckbox("Force mobile-optimized shaders",
 					  &amiberry_options.force_mobile_shaders);
-		ImGui::SameLine();
 		ShowHelpMarker("Enable mobile shader variants regardless of auto-detection.\n"
 					   "Mobile shaders are faster but have reduced visual effects.\n"
 					   "Useful for testing on desktop or when auto-detection fails.");
