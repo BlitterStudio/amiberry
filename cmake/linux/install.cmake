@@ -39,9 +39,11 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/whdboot
 # Install desktop file
 install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/Amiberry.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-# Install icon
-install(FILES ${CMAKE_SOURCE_DIR}/data/amiberry.png
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps)
+# Install icons at multiple sizes for proper desktop integration
+foreach(_size 64 128 256 512)
+    install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/icons/${_size}x${_size}/amiberry.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${_size}x${_size}/apps)
+endforeach()
 
 install(FILES ${CMAKE_SOURCE_DIR}/debian/changelog.gz
         DESTINATION ${CMAKE_INSTALL_DOCDIR})

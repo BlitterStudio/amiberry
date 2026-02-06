@@ -27,12 +27,12 @@ modules:
     buildsystem: autotools
     sources:
       - type: archive
-        url: http://www.tcpdump.org/release/libpcap-1.10.6.tar.gz
+        url: https://www.tcpdump.org/release/libpcap-1.10.6.tar.gz
         sha256: 872dd11337fe1ab02ad9d4fee047c9da244d695c6ddf34e2ebb733efd4ed8aa9
         x-checker-data:
           type: anitya
           project-id: 1702
-          url-template: http://www.tcpdump.org/release/libpcap-$version.tar.gz
+          url-template: https://www.tcpdump.org/release/libpcap-$version.tar.gz
 
   - name: libmpeg2
     config-opts:
