@@ -70,6 +70,12 @@ static int get_device_index(int id) {
 }
 
 void render_panel_input() {
+    std::string mapping;
+    if (ControllerMap_ConsumeResult(mapping)) {
+        SDL_GameControllerAddMapping(mapping.c_str());
+        save_mapping_to_file(mapping);
+    }
+
     if (input_device_names.empty()) poll_input_devices();
 
     ImGui::Indent(4.0f);
@@ -166,7 +172,14 @@ void render_panel_input() {
             ShowHelpMarker("Select the emulation mode for this device (default, mouse, joystick, gamepad, CD32 pad, etc.)");
 
             ImGui::SameLine();
-            AmigaButton(std::string("Remap / Test##").append(std::to_string(port_idx)).c_str());
+            const bool remap_enabled = changed_prefs.jports[port_idx].id >= JSEM_JOYS
+                                       && changed_prefs.jports[port_idx].id < JSEM_MICE - 1;
+            ImGui::BeginDisabled(!remap_enabled);
+            if (AmigaButton(std::string("Remap / Test##").append(std::to_string(port_idx)).c_str())) {
+                const auto host_joy_id = changed_prefs.jports[port_idx].id - JSEM_JOYS;
+                ControllerMap_Open(host_joy_id, false);
+            }
+            ImGui::EndDisabled();
 
             // Row 3: Mouse Map
             ImGui::AlignTextToFramePadding();
@@ -284,7 +297,14 @@ void render_panel_input() {
             ShowHelpMarker("Automatically repeat fire button presses on this parallel port device");
 
             ImGui::SameLine();
-            AmigaButton(std::string("Remap / Test##Par").append(std::to_string(port_idx)).c_str());
+            const bool remap_enabled = changed_prefs.jports[port_idx].id >= JSEM_JOYS
+                                       && changed_prefs.jports[port_idx].id < JSEM_MICE - 1;
+            ImGui::BeginDisabled(!remap_enabled);
+            if (AmigaButton(std::string("Remap / Test##Par").append(std::to_string(port_idx)).c_str())) {
+                const auto host_joy_id = changed_prefs.jports[port_idx].id - JSEM_JOYS;
+                ControllerMap_Open(host_joy_id, false);
+            }
+            ImGui::EndDisabled();
         };
 
         render_par_port(2, "Port 3:");

@@ -6,6 +6,7 @@
 
 // Forward declaration to avoid pulling in SDL headers in every includer
 struct SDL_Texture;
+union SDL_Event;
 
 // Shared globals moved into the ImGui implementation files
 extern std::vector<const char*> qs_models;
@@ -71,3 +72,10 @@ void render_panel_virtual_keyboard();
 void render_panel_whdload();
 void render_panel_themes();
 void render_panel_filter();
+
+// Controller mapping modal (ImGui)
+void ControllerMap_Open(int device, bool map_touchpad);
+bool ControllerMap_IsActive();
+bool ControllerMap_ConsumeResult(std::string& out_mapping);
+bool ControllerMap_HandleEvent(const SDL_Event& event);
+void ControllerMap_RenderModal();

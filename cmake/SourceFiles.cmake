@@ -315,6 +315,7 @@ set(IMGUI_GUI_FILES
 		src/osdep/imgui/about.cpp
 		src/osdep/imgui/chipset.cpp
 		src/osdep/imgui/adv_chipset.cpp
+		src/osdep/imgui/controller_map.cpp
 		src/osdep/imgui/configurations.cpp
 		src/osdep/imgui/cpu.cpp
 		src/osdep/imgui/custom.cpp

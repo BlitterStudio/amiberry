@@ -1043,6 +1043,10 @@ void run_gui()
 			// Make sure ImGui sees all events
 			ImGui_ImplSDL2_ProcessEvent(&gui_event);
 
+			if (ControllerMap_HandleEvent(gui_event)) {
+				continue;
+			}
+
 			if (gui_event.type == SDL_QUIT)	{
 				uae_quit();
 				gui_running = false;
@@ -1213,6 +1217,9 @@ void run_gui()
 				categories[last_active_panel].RenderFunc();
 		}
 		ImGui::EndChild();
+
+		// Controller mapping modal (if active)
+		ControllerMap_RenderModal();
 
 		ImGui::Dummy(ImVec2(0, 2.0f));
 
