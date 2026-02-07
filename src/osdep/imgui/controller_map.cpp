@@ -5,6 +5,7 @@
 #include "gui/gui_handling.h"
 #include "amiberry_gfx.h"
 #include "fsdb_host.h"
+#include "dpi_handler.hpp"
 
 #include <SDL_image.h>
 #include <cmath>
@@ -836,19 +837,22 @@ void ControllerMap_RenderModal()
 	}
 
 	// Compute a fixed window height to avoid scrollbars while fitting all content.
+	const float ui_scale = DPIHandler::get_layout_scale();
+	const float scaled_screen_w = SCREEN_WIDTH * ui_scale;
 	const float text_line_h = ImGui::GetTextLineHeightWithSpacing();
-	const float wrap_w = SCREEN_WIDTH - 2.0f * DISTANCE_BORDER;
+	const float wrap_w = scaled_screen_w - 2.0f * DISTANCE_BORDER;
 	const ImVec2 info_size = ImGui::CalcTextSize(
 		"Press the buttons on your controller when indicated.\n"
 		"Backspace/Back goes to previous, Space skips, ESC cancels.", nullptr, false, wrap_w);
+	const float scaled_bg_h = static_cast<float>(g_controller_map.bg_h) * ui_scale;
 	const float desired_height =
 		DISTANCE_BORDER + info_size.y + DISTANCE_NEXT_Y +
 		text_line_h + DISTANCE_NEXT_Y +
-		static_cast<float>(g_controller_map.bg_h) + DISTANCE_NEXT_Y * 0.5f +
+		scaled_bg_h + DISTANCE_NEXT_Y * 0.5f +
 		text_line_h * 2.0f + DISTANCE_NEXT_Y +
 		BUTTON_HEIGHT + DISTANCE_BORDER;
 
-	ImGui::SetNextWindowSize(ImVec2(SCREEN_WIDTH, desired_height), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(scaled_screen_w, desired_height), ImGuiCond_Always);
 	if (ImGui::BeginPopupModal(kControllerMapTitle, nullptr,
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 	{
@@ -897,10 +901,10 @@ void ControllerMap_RenderModal()
 			SDL_Texture* bg_tex = use_back && g_controller_map.background_back ? g_controller_map.background_back : g_controller_map.background_front;
 
 			const float bg_top_y = message_y + text_line_h + DISTANCE_NEXT_Y;
-			const ImVec2 img_pos = ImVec2(origin.x + (SCREEN_WIDTH - g_controller_map.bg_w) * 0.5f,
+			const float scaled_bg_w = static_cast<float>(g_controller_map.bg_w) * ui_scale;
+			const ImVec2 img_pos = ImVec2(origin.x + (scaled_screen_w - scaled_bg_w) * 0.5f,
 										  origin.y + bg_top_y);
-			const ImVec2 img_size = ImVec2(static_cast<float>(g_controller_map.bg_w),
-										   static_cast<float>(g_controller_map.bg_h));
+			const ImVec2 img_size = ImVec2(scaled_bg_w, scaled_bg_h);
 
 			ImDrawList* dl = ImGui::GetWindowDrawList();
 			ImDrawList* dl_overlay = ImGui::GetForegroundDrawList();
@@ -917,13 +921,11 @@ void ControllerMap_RenderModal()
 				marker_src_w = 32;
 				marker_src_h = 32;
 			}
-			const float scale_x = (g_controller_map.bg_w > 0) ? (img_size.x / static_cast<float>(g_controller_map.bg_w)) : 1.0f;
-			const float scale_y = (g_controller_map.bg_h > 0) ? (img_size.y / static_cast<float>(g_controller_map.bg_h)) : 1.0f;
-			const ImVec2 marker_size = ImVec2(static_cast<float>(marker_src_w) * scale_x,
-											  static_cast<float>(marker_src_h) * scale_y);
+			const ImVec2 marker_size = ImVec2(static_cast<float>(marker_src_w) * ui_scale,
+											  static_cast<float>(marker_src_h) * ui_scale);
 
-			const float dst_x = static_cast<float>(s_arrBindingDisplay[iElement].x) * scale_x;
-			const float dst_y = static_cast<float>(s_arrBindingDisplay[iElement].y) * scale_y;
+			const float dst_x = static_cast<float>(s_arrBindingDisplay[iElement].x) * ui_scale;
+			const float dst_y = static_cast<float>(s_arrBindingDisplay[iElement].y) * ui_scale;
 			const ImVec2 marker_center = ImVec2(img_pos.x + dst_x + marker_size.x * 0.5f,
 												img_pos.y + dst_y + marker_size.y * 0.5f);
 
@@ -947,7 +949,7 @@ void ControllerMap_RenderModal()
 
 		}
 
-		const float press_y = message_y + text_line_h + DISTANCE_NEXT_Y + g_controller_map.bg_h + DISTANCE_NEXT_Y * 0.5f;
+		const float press_y = message_y + text_line_h + DISTANCE_NEXT_Y + scaled_bg_h + DISTANCE_NEXT_Y * 0.5f;
 		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, press_y));
 		ImGui::Text("Press: %s", s_arrBindingDisplay[iElement].input.c_str());
 		ImGui::SetCursorPos(ImVec2(DISTANCE_BORDER, press_y + text_line_h));
