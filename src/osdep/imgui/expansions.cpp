@@ -471,11 +471,11 @@ void render_panel_expansions() {
             ImGui::SameLine();
             if (AmigaButton("...")) {
                 rom_dialog_source = ROM_DIALOG_EXPANSION;
-                OpenFileDialog("Select ROM Image", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
+                OpenFileDialogKey("EXPANSIONS_ROM", "Select ROM Image", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
             }
 
             std::string result_path;
-            if (rom_dialog_source == ROM_DIALOG_EXPANSION && ConsumeFileDialogResult(result_path)) {
+            if (rom_dialog_source == ROM_DIALOG_EXPANSION && ConsumeFileDialogResultKey("EXPANSIONS_ROM", result_path)) {
                 rom_dialog_source = ROM_DIALOG_NONE;
                 if (!result_path.empty() && ert) {
                     // WinUAE sync: Use get_device_rom_new() to create config if it doesn't exist
@@ -722,12 +722,12 @@ void render_panel_expansions() {
             ImGui::SameLine();
             if (AmigaButton("...##Accel")) {
                 rom_dialog_source = ROM_DIALOG_ACCELERATOR;
-                OpenFileDialog("Select Boot ROM", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
+                OpenFileDialogKey("EXPANSIONS_ROM", "Select Boot ROM", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
             }
             ImGui::EndDisabled();
 
             std::string result_path;
-            if (rom_dialog_source == ROM_DIALOG_ACCELERATOR && ConsumeFileDialogResult(result_path)) {
+            if (rom_dialog_source == ROM_DIALOG_ACCELERATOR && ConsumeFileDialogResultKey("EXPANSIONS_ROM", result_path)) {
                 rom_dialog_source = ROM_DIALOG_NONE;
                 if (!result_path.empty()) {
                     // WinUAE sync: Use get_device_rom_new() to create config if it doesn't exist

@@ -171,7 +171,7 @@ static void RenderDriveSlot(const int i)
              current_floppy_dialog_mode = static_cast<FloppyDialogMode>(static_cast<int>(FloppyDialogMode::SelectDF0) + i);
              std::string startPath = changed_prefs.floppyslots[i].df;
              if (startPath.empty()) startPath = get_floppy_path(); 
-             OpenFileDialog("Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}", startPath);
+             OpenFileDialogKey("FLOPPY", "Select Disk Image", "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}", startPath);
         }
         
         ImGui::EndDisabled();
@@ -431,13 +431,13 @@ void render_panel_floppy()
     
     if (AmigaButton("Create 3.5'' DD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateDD;
-        OpenFileDialog("Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
+        OpenFileDialogKey("FLOPPY", "Create 3.5\" DD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
     }
     ShowHelpMarker("Create a new 880KB double-density floppy disk image");
     ImGui::SameLine();
     if (AmigaButton("Create 3.5'' HD disk", ImVec2(btn_w, 0))) {
         current_floppy_dialog_mode = FloppyDialogMode::CreateHD;
-        OpenFileDialog("Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
+        OpenFileDialogKey("FLOPPY", "Create 3.5\" HD disk file", "Amiga Disk File (*.adf){.adf}", get_floppy_path());
     }
     ShowHelpMarker("Create a new 1.76MB high-density floppy disk image");
     ImGui::SameLine();
@@ -464,7 +464,7 @@ void render_panel_floppy()
 #endif
 
     std::string result_path;
-    if (ConsumeFileDialogResult(result_path)) {
+    if (ConsumeFileDialogResultKey("FLOPPY", result_path)) {
        // Existing logic for file Selection
        if (!result_path.empty()) {
             if (current_floppy_dialog_mode == FloppyDialogMode::CreateDD) {

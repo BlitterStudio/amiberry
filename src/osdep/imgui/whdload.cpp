@@ -115,12 +115,12 @@ void render_panel_whdload()
         std::string startPath = whdload_prefs.whdload_filename;
         if (startPath.empty()) startPath = get_whdload_arch_path();
         const auto filter = "LHA Files (*.lha,*.lzh){.lha,.lzh},All Files (*){.*}";
-        OpenFileDialog("Select WHDLoad LHA file", filter, startPath);
+        OpenFileDialogKey("WHDLOAD", "Select WHDLoad LHA file", filter, startPath);
     }
 
     // Process File Dialog Result
     std::string result_path;
-    if (ConsumeFileDialogResult(result_path)) {
+    if (ConsumeFileDialogResultKey("WHDLOAD", result_path)) {
         if (!result_path.empty()) {
              whdload_prefs.whdload_filename = result_path;
              add_file_to_mru_list(lstMRUWhdloadList, whdload_prefs.whdload_filename);

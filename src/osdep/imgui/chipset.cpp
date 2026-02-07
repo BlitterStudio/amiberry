@@ -435,11 +435,11 @@ void render_panel_chipset() {
                 std::string title = (changed_prefs.genlock_image == 3)
                                         ? "Select Genlock Image"
                                         : "Select Genlock Video";
-                OpenFileDialog(title.c_str(), filter, filename_ptr);
+                OpenFileDialogKey("CHIPSET_FILE", title.c_str(), filter, filename_ptr);
             }
 
             std::string filePath;
-            if (ConsumeFileDialogResult(filePath)) {
+            if (ConsumeFileDialogResultKey("CHIPSET_FILE", filePath)) {
                 strncpy(filename_ptr, filePath.c_str(), MAX_DPATH);
             }
         }

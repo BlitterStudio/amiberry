@@ -114,7 +114,7 @@ void render_panel_rom()
 	if (AmigaButton("...##MainRomFileButton"))
 	{
 		current_pick_type = RomPickType::Main;
-		OpenFileDialog("Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+		OpenFileDialogKey("ROM", "Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
 	// Extended ROM
@@ -126,7 +126,7 @@ void render_panel_rom()
 	if (AmigaButton("...##ExtRomFileButton"))
 	{
 		current_pick_type = RomPickType::Extended;
-		OpenFileDialog("Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+		OpenFileDialogKey("ROM", "Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
     bool maprom_disabled = (changed_prefs.cpuboard_type != 0);
@@ -189,7 +189,7 @@ void render_panel_rom()
 	ImGui::SameLine();
     if (AmigaButton("...##CustomRomFileButton")) {
     	current_pick_type = RomPickType::Custom;
-	    OpenFileDialog("Select Custom ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
+	    OpenFileDialogKey("ROM", "Select Custom ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
     }
 	ImGui::Spacing();
 	EndGroupBox("Advanced Custom ROM Settings");
@@ -202,7 +202,7 @@ void render_panel_rom()
 	ImGui::SameLine();
 	if (AmigaButton("...##CartRomFileButton")) {
 		current_pick_type = RomPickType::Cartridge;
-		OpenFileDialog("Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+		OpenFileDialogKey("ROM", "Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
 	}
 
 	ImGui::Text("Flash RAM or A2286/A2386SX BIOS CMOS RAM file:");
@@ -210,7 +210,7 @@ void render_panel_rom()
 	ImGui::SameLine();
 	if (AmigaButton("...##FlashRomFileButton")) {
 		current_pick_type = RomPickType::Flash;
-		OpenFileDialog("Select Flash ROM File", ".*", changed_prefs.flashfile);
+		OpenFileDialogKey("ROM", "Select Flash ROM File", ".*", changed_prefs.flashfile);
 	}
 
 	ImGui::Text("Real Time Clock file:");
@@ -218,7 +218,7 @@ void render_panel_rom()
 	ImGui::SameLine();
 	if (AmigaButton("...##RTCFileButton")) {
 		current_pick_type = RomPickType::RTC;
-		OpenFileDialog("Select RTC File", ".*", changed_prefs.rtcfile);
+		OpenFileDialogKey("ROM", "Select RTC File", ".*", changed_prefs.rtcfile);
 	}
 	ImGui::Spacing();
 	EndGroupBox("Miscellaneous");
@@ -256,7 +256,7 @@ void render_panel_rom()
 
 	// Handle File Dialog Result
 	std::string file_dialog_result;
-	if (ConsumeFileDialogResult(file_dialog_result)) {
+	if (ConsumeFileDialogResultKey("ROM", file_dialog_result)) {
 		switch(current_pick_type) {
 			case RomPickType::Main:
 				strncpy(changed_prefs.romfile, file_dialog_result.c_str(), MAX_DPATH);

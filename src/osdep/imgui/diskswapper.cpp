@@ -36,7 +36,7 @@ void render_panel_diskswapper()
 
                  // Use a standard filter similar to Floppy panel
                  const char* filter = "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z){.adf,.adz,.dms,.ipf,.zip,.7z},All Files (*){.*}";
-                 OpenFileDialog("Select disk image file", filter, startPath);
+                 OpenFileDialogKey("DISKSWAP", "Select disk image file", filter, startPath);
             }
             ImGui::SameLine();
             if (AmigaButton("X"))
@@ -90,7 +90,7 @@ void render_panel_diskswapper()
     
     // Handle Dialog Result
     std::string result_path;
-    if (ConsumeFileDialogResult(result_path)) {
+    if (ConsumeFileDialogResultKey("DISKSWAP", result_path)) {
         if (!result_path.empty() && diskswapper_target_slot >= 0 && diskswapper_target_slot < MAX_SPARE_DRIVES) {
              // Check content of slot?
              if (strncmp(changed_prefs.dfxlist[diskswapper_target_slot], result_path.c_str(), MAX_DPATH) != 0)

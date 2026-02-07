@@ -13,10 +13,19 @@ extern std::vector<const char*> qs_configs;
 extern SDL_Texture* about_logo_texture;
 
 // File dialog helpers used across imgui panels (defined in main_window.cpp)
+void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath);
+bool ConsumeFileDialogResultKey(const char* key, std::string& outPath);
+bool IsFileDialogOpenKey(const char* key);
+void OpenDirDialogKey(const char* key, const std::string& initialPath);
+bool ConsumeDirDialogResultKey(const char* key, std::string& outPath);
+bool IsDirDialogOpenKey(const char* key);
+
 void OpenFileDialog(const char* title, const char* filters, const std::string& initialPath);
 bool ConsumeFileDialogResult(std::string& outPath);
+bool IsFileDialogOpen();
 void OpenDirDialog(const std::string& initialPath);
 bool ConsumeDirDialogResult(std::string& outPath);
+bool IsDirDialogOpen();
 
 void BeginGroupBox(const char* name);
 void EndGroupBox(const char* name);

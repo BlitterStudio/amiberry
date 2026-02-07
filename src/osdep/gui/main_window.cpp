@@ -155,13 +155,13 @@ static void apply_imgui_theme()
 	style.FramePadding = ImVec2(5.0f, 4.0f);
 }
 
-void OpenDirDialog(const std::string &initialPath)
+void OpenDirDialogKey(const char* key, const std::string &initialPath)
 {
 	IGFD::FileDialogConfig config;
 	config.path = initialPath;
 	config.countSelectionMax = 1;
 	config.flags = ImGuiFileDialogFlags_Modal;
-	ImGuiFileDialog::Instance()->OpenDialog("ChooseDirDlgKey", "Choose Directory", nullptr, config);
+	ImGuiFileDialog::Instance()->OpenDialog(key, "Choose Directory", nullptr, config);
 }
 
 namespace
@@ -204,25 +204,65 @@ namespace
 	}
 }
 
-bool ConsumeDirDialogResult(std::string &outPath)
+bool ConsumeDirDialogResultKey(const char* key, std::string &outPath)
 {
-	return ConsumeIGFDResult("ChooseDirDlgKey", outPath,
+	return ConsumeIGFDResult(key, outPath,
 		[](ImGuiFileDialog* dlg) { return dlg->GetCurrentPath(); });
 }
 
-void OpenFileDialog(const char *title, const char *filters, const std::string &initialPath)
+bool IsDirDialogOpenKey(const char* key)
+{
+	return ImGuiFileDialog::Instance()->IsOpened(key);
+}
+
+void OpenFileDialogKey(const char* key, const char *title, const char *filters, const std::string &initialPath)
 {
 	IGFD::FileDialogConfig config;
 	config.path = initialPath;
 	config.countSelectionMax = 1;
 	config.flags = ImGuiFileDialogFlags_Modal;
-	ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", title, filters, config);
+	ImGuiFileDialog::Instance()->OpenDialog(key, title, filters, config);
+}
+
+bool ConsumeFileDialogResultKey(const char* key, std::string &outPath)
+{
+	return ConsumeIGFDResult(key, outPath,
+		[](ImGuiFileDialog* dlg) { return dlg->GetFilePathName(); });
+}
+
+bool IsFileDialogOpenKey(const char* key)
+{
+	return ImGuiFileDialog::Instance()->IsOpened(key);
+}
+
+void OpenDirDialog(const std::string &initialPath)
+{
+	OpenDirDialogKey("ChooseDirDlgKey", initialPath);
+}
+
+bool ConsumeDirDialogResult(std::string &outPath)
+{
+	return ConsumeDirDialogResultKey("ChooseDirDlgKey", outPath);
+}
+
+bool IsDirDialogOpen()
+{
+	return IsDirDialogOpenKey("ChooseDirDlgKey");
+}
+
+void OpenFileDialog(const char *title, const char *filters, const std::string &initialPath)
+{
+	OpenFileDialogKey("ChooseFileDlgKey", title, filters, initialPath);
 }
 
 bool ConsumeFileDialogResult(std::string &outPath)
 {
-	return ConsumeIGFDResult("ChooseFileDlgKey", outPath,
-		[](ImGuiFileDialog* dlg) { return dlg->GetFilePathName(); });
+	return ConsumeFileDialogResultKey("ChooseFileDlgKey", outPath);
+}
+
+bool IsFileDialogOpen()
+{
+	return IsFileDialogOpenKey("ChooseFileDlgKey");
 }
 
 #endif

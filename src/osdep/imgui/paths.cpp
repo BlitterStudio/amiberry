@@ -61,22 +61,23 @@ void render_panel_paths()
 
 		ImGui::SameLine();
 
-		if (AmigaButton("...", ImVec2(button_width, 0)))
+        std::string dialog_key = std::string("PATHS_") + id + (is_file ? "_FILE" : "_DIR");
+        if (AmigaButton("...", ImVec2(button_width, 0)))
 		{
 			if (is_file) {
-				OpenFileDialog(filter_name ? filter_name : "Choose File", filter_ext ? filter_ext : ".*", path);
+				OpenFileDialogKey(dialog_key.c_str(), filter_name ? filter_name : "Choose File", filter_ext ? filter_ext : ".*", path);
 			} else {
-				OpenDirDialog(path);
+				OpenDirDialogKey(dialog_key.c_str(), path);
 			}
 		}
 
 		std::string filePath;
 		if (is_file) {
-			if (ConsumeFileDialogResult(filePath)) {
+			if (ConsumeFileDialogResultKey(dialog_key.c_str(), filePath)) {
 				setter(filePath);
 			}
 		} else {
-			if (ConsumeDirDialogResult(filePath)) {
+			if (ConsumeDirDialogResultKey(dialog_key.c_str(), filePath)) {
 				setter(filePath);
 			}
 		}

@@ -385,14 +385,14 @@ static void RenderCDSection()
              xfree(tmp);
          }
          xfree(curr_path);
-         OpenFileDialog("Select CD image file", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
+         OpenFileDialogKey("HD_CD_SLOT", "Select CD image file", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
     }
     
     ImGui::EndDisabled();
     ImGui::Spacing();
 
     std::string result_path;
-    if (ConsumeFileDialogResult(result_path)) { 
+    if (ConsumeFileDialogResultKey("HD_CD_SLOT", result_path)) {
         if (!result_path.empty()) {
              au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, result_path.c_str());
              changed_prefs.cdslots[0].inuse = true;
@@ -417,6 +417,10 @@ static bool selecting_virtual_dir = false;
 static bool selecting_virtual_arch = false;
 static bool selecting_create_hdf_path = false;
 static bool selecting_hdf_path = false;
+static bool selecting_cd_image = false;
+static bool selecting_cd_modal_image = false;
+static bool selecting_tape_dir = false;
+static bool selecting_tape_file = false;
 
 static void ShowEditFilesysVirtualModal()
 {
@@ -449,7 +453,7 @@ static void ShowEditFilesysVirtualModal()
         if (AmigaButton("... Dir"))
         {
             char* current_root = ua(current_fsvdlg.ci.rootdir);
-            OpenDirDialog(get_harddrive_path());
+            OpenDirDialogKey("HD_VDIR", get_harddrive_path());
             xfree(current_root);
             selecting_virtual_dir = true;
             selecting_virtual_arch = false;
@@ -458,7 +462,7 @@ static void ShowEditFilesysVirtualModal()
         if (AmigaButton("... Arch"))
         {
              char* current_root = ua(current_fsvdlg.ci.rootdir);
-             OpenFileDialog("Select archive", "Archives (*.zip,*.7z,*.rar,*.lha,*.lzh,*.lzx){.zip,.7z,.rar,.lha,.lzh,.lzx},All Files (*){.*}", get_harddrive_path());
+             OpenFileDialogKey("HD_VARCH", "Select archive", "Archives (*.zip,*.7z,*.rar,*.lha,*.lzh,*.lzx){.zip,.7z,.rar,.lha,.lzh,.lzx},All Files (*){.*}", get_harddrive_path());
              xfree(current_root);
              selecting_virtual_dir = false;
              selecting_virtual_arch = true;
@@ -467,7 +471,7 @@ static void ShowEditFilesysVirtualModal()
 
         // Consume dialog results
         std::string result_path;
-        if (selecting_virtual_dir && ConsumeDirDialogResult(result_path)) {
+        if (selecting_virtual_dir && ConsumeDirDialogResultKey("HD_VDIR", result_path)) {
             if (!result_path.empty()) {
                 au_copy(current_fsvdlg.ci.rootdir, sizeof(current_fsvdlg.ci.rootdir), result_path.c_str());
                 if (current_fsvdlg.ci.devname[0] == 0) {
@@ -478,8 +482,10 @@ static void ShowEditFilesysVirtualModal()
                 if (current_fsvdlg.ci.volname[0] == 0) _tcscpy(current_fsvdlg.ci.volname, current_fsvdlg.ci.devname);
             }
             selecting_virtual_dir = false;
+        } else if (selecting_virtual_dir && !IsDirDialogOpenKey("HD_VDIR")) {
+            selecting_virtual_dir = false;
         }
-        if (selecting_virtual_arch && ConsumeFileDialogResult(result_path)) {
+        if (selecting_virtual_arch && ConsumeFileDialogResultKey("HD_VARCH", result_path)) {
             if (!result_path.empty()) {
                 au_copy(current_fsvdlg.ci.rootdir, sizeof(current_fsvdlg.ci.rootdir), result_path.c_str());
                 if (current_fsvdlg.ci.devname[0] == 0) {
@@ -489,6 +495,8 @@ static void ShowEditFilesysVirtualModal()
                 }
                 if (current_fsvdlg.ci.volname[0] == 0) _tcscpy(current_fsvdlg.ci.volname, current_fsvdlg.ci.devname);
             }
+            selecting_virtual_arch = false;
+        } else if (selecting_virtual_arch && !IsFileDialogOpenKey("HD_VARCH")) {
             selecting_virtual_arch = false;
         }
 
@@ -552,13 +560,13 @@ static void ShowEditFilesysHardfileModal()
         if (AmigaButton("..."))
         {
              char* current_root = ua(current_hfdlg.ci.rootdir);
-             OpenFileDialog("Select hard disk file", "Hardfiles (*.hdf,*.hdz,*.lha,*.zip,*.vhd,*.chd,*.7z){.hdf,.hdz,.lha,.zip,.vhd,.chd,.7z},All Files (*){.*}", get_harddrive_path());
+             OpenFileDialogKey("HD_HDF", "Select hard disk file", "Hardfiles (*.hdf,*.hdz,*.lha,*.zip,*.vhd,*.chd,*.7z){.hdf,.hdz,.lha,.zip,.vhd,.chd,.7z},All Files (*){.*}", get_harddrive_path());
              xfree(current_root);
              selecting_hdf_path = true;
         }
         
         std::string result_path;
-        if (selecting_hdf_path && ConsumeFileDialogResult(result_path)) {
+        if (selecting_hdf_path && ConsumeFileDialogResultKey("HD_HDF", result_path)) {
              if (!result_path.empty()) {
                   au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), result_path.c_str());
                   if (current_hfdlg.ci.devname[0] == 0) {
@@ -569,6 +577,8 @@ static void ShowEditFilesysHardfileModal()
                   updatehdfinfo(true, true, false, hdf_info_text1, hdf_info_text2);
                   updatehdfinfo(false, false, false, hdf_info_text1, hdf_info_text2);
              }
+             selecting_hdf_path = false;
+        } else if (selecting_hdf_path && !IsFileDialogOpenKey("HD_HDF")) {
              selecting_hdf_path = false;
         }
 
@@ -762,16 +772,18 @@ static void ShowCreateHardfileModal()
              char* current_root = ua(current_hfdlg.ci.rootdir);
              // SelectFile for CREATE needs different handling? OpenFileDialog helper handles create too?
              // Usually just picking a path is enough.
-             OpenFileDialog("Select new hard disk file", "Hardfiles (*.hdf,*.hdz,*.vhd,*.chd){.hdf,.hdz,.vhd,.chd},All Files (*){.*}", get_harddrive_path());
+             OpenFileDialogKey("HD_CREATE_HDF", "Select new hard disk file", "Hardfiles (*.hdf,*.hdz,*.vhd,*.chd){.hdf,.hdz,.vhd,.chd},All Files (*){.*}", get_harddrive_path());
              xfree(current_root);
              selecting_create_hdf_path = true;
         }
         
         std::string result_path;
-        if (selecting_create_hdf_path && ConsumeFileDialogResult(result_path)) {
+        if (selecting_create_hdf_path && ConsumeFileDialogResultKey("HD_CREATE_HDF", result_path)) {
              if (!result_path.empty()) {
                   au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), result_path.c_str());
              }
+             selecting_create_hdf_path = false;
+        } else if (selecting_create_hdf_path && !IsFileDialogOpenKey("HD_CREATE_HDF")) {
              selecting_create_hdf_path = false;
         }
         
@@ -910,12 +922,16 @@ static void ShowEditCDDriveModal()
         AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
         ImGui::SameLine();
         if (AmigaButton("...")) {
-            OpenFileDialog("Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
+            OpenFileDialogKey("HD_CD_MODAL", "Select CD Image", "CD Images (*.cue,*.iso,*.ccd,*.mds,*.chd,*.nrg){.cue,.iso,.ccd,.mds,.chd,.nrg},All Files (*){.*}", get_cdrom_path());
+            selecting_cd_modal_image = true;
         }
 
         std::string result_path;
-        if (ConsumeFileDialogResult(result_path)) {
+        if (selecting_cd_modal_image && ConsumeFileDialogResultKey("HD_CD_MODAL", result_path)) {
              if (!result_path.empty()) strncpy(path_buf, result_path.c_str(), MAX_DPATH);
+             selecting_cd_modal_image = false;
+        } else if (selecting_cd_modal_image && !IsFileDialogOpenKey("HD_CD_MODAL")) {
+             selecting_cd_modal_image = false;
         }
 
         ImGui::AlignTextToFramePadding();
@@ -1015,21 +1031,28 @@ static void ShowEditTapeDriveModal()
         ImGui::SameLine();
         if (AmigaButton("... Dir")) {
              char* current_root = ua(path_buf);
-             OpenDirDialog(get_harddrive_path());
+             OpenDirDialogKey("HD_TAPE_DIR", get_harddrive_path());
              xfree(current_root);
-             selecting_virtual_dir = true; 
+             selecting_tape_dir = true; 
         }
         ImGui::SameLine();
         if (AmigaButton("... File")) {
-            OpenFileDialog("Select Tape Image", "All Files (*){.*}", get_harddrive_path());
+            OpenFileDialogKey("HD_TAPE_FILE", "Select Tape Image", "All Files (*){.*}", get_harddrive_path());
+            selecting_tape_file = true;
         }
         
         std::string result_path;
-        if (ConsumeDirDialogResult(result_path)) {
+        if (selecting_tape_dir && ConsumeDirDialogResultKey("HD_TAPE_DIR", result_path)) {
              if (!result_path.empty()) strncpy(path_buf, result_path.c_str(), MAX_DPATH);
+             selecting_tape_dir = false;
+        } else if (selecting_tape_dir && !IsDirDialogOpenKey("HD_TAPE_DIR")) {
+             selecting_tape_dir = false;
         }
-        if (ConsumeFileDialogResult(result_path)) {
+        if (selecting_tape_file && ConsumeFileDialogResultKey("HD_TAPE_FILE", result_path)) {
              if (!result_path.empty()) strncpy(path_buf, result_path.c_str(), MAX_DPATH);
+             selecting_tape_file = false;
+        } else if (selecting_tape_file && !IsFileDialogOpenKey("HD_TAPE_FILE")) {
+             selecting_tape_file = false;
         }
 
         ImGui::AlignTextToFramePadding();
@@ -1236,5 +1259,3 @@ void render_panel_hd()
     ShowEditCDDriveModal();
     ShowEditTapeDriveModal();
 }
-
-

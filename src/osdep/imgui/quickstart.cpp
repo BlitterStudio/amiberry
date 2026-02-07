@@ -292,7 +292,7 @@ void render_panel_quickstart() {
                 tmp = changed_prefs.floppyslots[i].df;
             else
                 tmp = get_floppy_path();
-            OpenFileDialog("Select disk image file",
+            OpenFileDialogKey("QUICKSTART", "Select disk image file",
                            "All Supported Files (*.adf,*.adz,*.dms,*.ipf,*.zip,*.7z,*.lha,*.lzh,*.lzx,*.fdi,*.scp,*.gz,*.xz,*.hdf,*.img){.adf,.adz,.dms,.ipf,.zip,.7z,.lha,.lzh,.lzx,.fdi,.scp,.gz,.xz,.hdf,.img},All Files (*){.*}",
                            tmp);
             qs_pending_floppy_drive = i;
@@ -463,7 +463,7 @@ void render_panel_quickstart() {
             else
                 tmp = get_cdrom_path();
 
-            OpenFileDialog("Select CD image file", ".cue,.bin,.iso,.ccd,.mds,.chd,.*", tmp);
+            OpenFileDialogKey("QUICKSTART", "Select CD image file", ".cue,.bin,.iso,.ccd,.mds,.chd,.*", tmp);
             qs_pending_cd = true;
         }
 
@@ -548,7 +548,7 @@ void render_panel_quickstart() {
             tmp = whdload_prefs.whdload_filename;
         else
             tmp = get_whdload_arch_path();
-        OpenFileDialog("Select WHDLoad LHA file", ".lha,.lzh,.*", tmp);
+        OpenFileDialogKey("QUICKSTART", "Select WHDLoad LHA file", ".lha,.lzh,.*", tmp);
         qs_pending_whd = true;
     }
 
@@ -619,7 +619,7 @@ void render_panel_quickstart() {
 
     {
         std::string filePath;
-        if (ConsumeFileDialogResult(filePath)) {
+        if (ConsumeFileDialogResultKey("QUICKSTART", filePath)) {
             if (qs_pending_floppy_drive >= 0 && qs_pending_floppy_drive < 2) {
                 int i = qs_pending_floppy_drive;
                 if (!filePath.empty()) {
