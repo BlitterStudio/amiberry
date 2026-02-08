@@ -816,26 +816,39 @@ static void ShowAddHardDriveModal()
         static int selected_drive_idx = -1;
         static std::vector<std::string> drive_names;
         static std::vector<std::string> drive_paths;
-        static bool drives_scanned = false;
-
-        if (!drives_scanned) {
+        static std::vector<int> drive_sector_sizes;
+        static std::vector<uae_u32> drive_flags;
+        if (ImGui::IsWindowAppearing()) {
             drive_names.clear();
             drive_paths.clear();
+            drive_sector_sizes.clear();
+            drive_flags.clear();
+            selected_drive_idx = -1;
+            hdf_init_target();
+            inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
             int num = hdf_getnumharddrives();
             for (int i = 0; i < num; ++i) {
                 int sectorsize = 0;
                 int dangerous = 0;
                 uae_u32 flags = 0;
                 TCHAR* name = hdf_getnameharddrive(i, 0, &sectorsize, &dangerous, &flags);
-                if (name) {
-                    char* tmp = ua(name);
-                    drive_names.emplace_back(tmp);
-                    drive_paths.emplace_back(tmp);
-                    xfree(tmp);
-                    xfree(name);
+                TCHAR* path = hdf_getpathharddrive(i);
+                if (name && path) {
+                    char* tmp_name = ua(name);
+                    char* tmp_path = ua(path);
+                    drive_names.emplace_back(tmp_name ? tmp_name : "");
+                    drive_paths.emplace_back(tmp_path ? tmp_path : "");
+                    drive_sector_sizes.emplace_back(sectorsize > 0 ? sectorsize : 512);
+                    drive_flags.emplace_back(flags);
+                    if (tmp_path && current_hfdlg.ci.rootdir[0] && !_tcscmp(path, current_hfdlg.ci.rootdir)) {
+                        selected_drive_idx = (int)drive_names.size() - 1;
+                    }
+                    xfree(tmp_name);
+                    xfree(tmp_path);
                 }
+                if (path) xfree(path);
+                if (name) xfree(name);
             }
-            drives_scanned = true;
         }
 
         if (ImGui::BeginListBox("##PhysicalDrives", ImVec2(-FLT_MIN, 200))) {
@@ -843,10 +856,26 @@ static void ShowAddHardDriveModal()
                 bool is_selected = (selected_drive_idx == i);
                 if (ImGui::Selectable(drive_names[i].c_str(), is_selected)) {
                     selected_drive_idx = i;
+                    if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_paths.size()) {
+                        au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), drive_paths[selected_drive_idx].c_str());
+                        current_hfdlg.ci.blocksize = drive_sector_sizes[selected_drive_idx];
+                        updatehdfinfo(true, true, true, hdf_info_text1, hdf_info_text2);
+                    }
                 }
                 if (is_selected) ImGui::SetItemDefaultFocus();
             }
             ImGui::EndListBox();
+        }
+        if (drive_names.empty()) {
+            ImGui::TextDisabled("No devices found.");
+        }
+
+        bool is_mounted = false;
+        if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_flags.size()) {
+            is_mounted = (drive_flags[selected_drive_idx] & HDF_DRIVEFLAG_MOUNTED) != 0;
+        }
+        if (is_mounted) {
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Warning: selected device is mounted by the host.");
         }
         
         bool rw = !current_hfdlg.ci.readonly;
@@ -862,15 +891,82 @@ static void ShowAddHardDriveModal()
 
         ImGui::Separator();
 
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Controller:");
+        ImGui::SameLine();
+        int current_ctrl_idx = 0;
+        for (size_t i = 0; i < controller.size(); ++i) {
+            if (controller[i].type == current_hfdlg.ci.controller_type) {
+                current_ctrl_idx = (int)i;
+                break;
+            }
+        }
+        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+        if (ImGui::BeginCombo("##HDInterface", controller.size() > 0 ? controller[current_ctrl_idx].display.c_str() : "None")) {
+            for (size_t i = 0; i < controller.size(); ++i) {
+                const bool is_selected = (current_ctrl_idx == (int)i);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                if (ImGui::Selectable(controller[i].display.c_str(), is_selected)) {
+                    current_hfdlg.ci.controller_type = controller[i].type;
+                    current_hfdlg.ci.controller_type_unit = 0;
+                    if (current_hfdlg.ci.controller_type > HD_CONTROLLER_TYPE_UAE) {
+                        current_hfdlg.ci.sectors = 0;
+                        current_hfdlg.ci.surfaces = 0;
+                        current_hfdlg.ci.reserved = 0;
+                    }
+                    inithdcontroller(current_hfdlg.ci.controller_type, current_hfdlg.ci.controller_type_unit, UAEDEV_HDF, current_hfdlg.ci.rootdir[0] != 0);
+                }
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Unit:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH);
+        if (ImGui::BeginCombo("##HDUnit", std::to_string(current_hfdlg.ci.controller_unit).c_str())) {
+            for (int i = 0; i < (int)controller_unit.size(); ++i) {
+                const bool is_selected = (current_hfdlg.ci.controller_unit == i);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                if (ImGui::Selectable(controller_unit[i].c_str(), is_selected)) {
+                    current_hfdlg.ci.controller_unit = i;
+                }
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+
+        ImGui::Separator();
+
+        ImGui::TextWrapped("%s", hdf_info_text1.c_str());
+        ImGui::TextWrapped("%s", hdf_info_text2.c_str());
+        ImGui::Separator();
+
         if (AmigaButton("OK", ImVec2(BUTTON_WIDTH, 0))) {
-            if (selected_drive_idx >= 0 && selected_drive_idx < drive_names.size()) {
+            if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_names.size()) {
                 au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), drive_paths[selected_drive_idx].c_str());
-                 char devname[256];
-                 CreateDefaultDevicename(devname);
-                 au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
-                 new_harddrive(edit_entry_index);
-                 show_add_harddrive_modal = false;
-                 ImGui::CloseCurrentPopup();
+                current_hfdlg.ci.blocksize = drive_sector_sizes[selected_drive_idx];
+            }
+            if (current_hfdlg.ci.rootdir[0]) {
+                if (current_hfdlg.ci.devname[0] == 0) {
+                    char devname[256];
+                    CreateDefaultDevicename(devname);
+                    au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
+                }
+                new_harddrive(edit_entry_index);
+                show_add_harddrive_modal = false;
+                ImGui::CloseCurrentPopup();
             }
         }
         ImGui::SameLine();
@@ -1180,6 +1276,8 @@ void render_panel_hd()
         au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
         
         edit_entry_index = -1;
+        hdf_info_text1.clear();
+        hdf_info_text2.clear();
         
         ImGui::OpenPopup("Add Hard Drive");
         show_add_harddrive_modal = true;
@@ -1247,6 +1345,12 @@ void render_panel_hd()
              updatehdfinfo(true, false, false, hdf_info_text1, hdf_info_text2); 
              ImGui::OpenPopup("Hardfile Settings");
              show_hardfile_modal = true;
+         }
+         else if (type == FILESYS_HARDDRIVE) {
+             memcpy(&current_hfdlg.ci, uci, sizeof(struct uaedev_config_info));
+             updatehdfinfo(true, true, true, hdf_info_text1, hdf_info_text2);
+             ImGui::OpenPopup("Add Hard Drive");
+             show_add_harddrive_modal = true;
          }
          
          current_hd_dialog_mode = HDDialogMode::None;

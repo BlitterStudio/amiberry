@@ -6,9 +6,22 @@
 #include "zfile.h"
 #include "uae.h"
 
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <cstdio>
+#include <vector>
+#include <string>
+#include <map>
+#include <algorithm>
+#include <cctype>
+
 #ifdef __MACH__
 #include <sys/stat.h>
 #include <sys/disk.h>
+#include <sys/mount.h>
 #endif
 
 struct hardfilehandle
@@ -32,6 +45,7 @@ struct uae_driveinfo {
 	int nomedia;
 	int dangerous;
 	int readonly;
+	int mounted;
 };
 
 #ifdef __MACH__
@@ -57,6 +71,362 @@ struct uae_driveinfo {
 
 int harddrive_dangerous, do_rdbdump;
 static struct uae_driveinfo uae_drives[MAX_FILESYSTEM_UNITS];
+static int num_drives;
+
+static void trim_spaces(char* s)
+{
+	if (!s)
+		return;
+	size_t len = strlen(s);
+	while (len > 0 && (s[len - 1] == ' ' || s[len - 1] == '\t' || s[len - 1] == '\n' || s[len - 1] == '\r'))
+		s[--len] = 0;
+	size_t start = 0;
+	while (s[start] == ' ' || s[start] == '\t')
+		start++;
+	if (start > 0)
+		memmove(s, s + start, len - start + 1);
+}
+
+static uae_u64 read_uint64_file(const char* path)
+{
+	FILE* f = fopen(path, "r");
+	if (!f)
+		return 0;
+	unsigned long long v = 0;
+	if (fscanf(f, "%llu", &v) != 1)
+		v = 0;
+	fclose(f);
+	return (uae_u64)v;
+}
+
+static int read_int_file(const char* path)
+{
+	FILE* f = fopen(path, "r");
+	if (!f)
+		return 0;
+	int v = 0;
+	if (fscanf(f, "%d", &v) != 1)
+		v = 0;
+	fclose(f);
+	return v;
+}
+
+static bool read_string_file(const char* path, char* out, size_t outlen)
+{
+	FILE* f = fopen(path, "r");
+	if (!f)
+		return false;
+	if (!fgets(out, (int)outlen, f)) {
+		fclose(f);
+		return false;
+	}
+	fclose(f);
+	trim_spaces(out);
+	return true;
+}
+
+static std::string format_size_bytes(uae_u64 bytes)
+{
+	char buf[64];
+	if (bytes >= (1024ULL * 1024ULL * 1024ULL)) {
+		snprintf(buf, sizeof(buf), "%.1fG", (double)bytes / (1024.0 * 1024.0 * 1024.0));
+	} else if (bytes >= (1024ULL * 1024ULL)) {
+		snprintf(buf, sizeof(buf), "%.1fM", (double)bytes / (1024.0 * 1024.0));
+	} else {
+		snprintf(buf, sizeof(buf), "%lluK", (unsigned long long)(bytes / 1024ULL));
+	}
+	return std::string(buf);
+}
+
+static bool is_skipped_sys_block(const char* name)
+{
+	if (!name || !name[0])
+		return true;
+	if (!strncmp(name, "loop", 4))
+		return true;
+	if (!strncmp(name, "ram", 3))
+		return true;
+	if (!strncmp(name, "zram", 4))
+		return true;
+	return false;
+}
+
+static bool is_partition_of(const char* disk, const char* part)
+{
+	if (!disk || !part)
+		return false;
+	const size_t disk_len = strlen(disk);
+	if (strncmp(part, disk, disk_len) != 0)
+		return false;
+	const char* rest = part + disk_len;
+	if (!*rest)
+		return false;
+	if (*rest == 'p')
+		rest++;
+	for (const char* p = rest; *p; ++p) {
+		if (*p < '0' || *p > '9')
+			return false;
+	}
+	return true;
+}
+
+static void add_drive_entry(const char* display, const char* path, uae_u64 size_bytes, int bytespersector,
+	int readonly, int removable, int mounted)
+{
+	if (num_drives >= MAX_FILESYSTEM_UNITS)
+		return;
+	struct uae_driveinfo* di = &uae_drives[num_drives++];
+	memset(di, 0, sizeof(*di));
+	if (display)
+		_tcsncpy(di->device_name, display, sizeof(di->device_name) / sizeof(TCHAR) - 1);
+	if (path)
+		_tcsncpy(di->device_path, path, sizeof(di->device_path) / sizeof(TCHAR) - 1);
+	di->size = size_bytes;
+	di->bytespersector = bytespersector > 0 ? bytespersector : 512;
+	di->readonly = readonly;
+	di->removablemedia = removable;
+	di->mounted = mounted;
+}
+
+static void scan_harddrives_linux()
+{
+	DIR* d = opendir("/sys/block");
+	if (!d)
+		return;
+
+	char vendor[128] = {};
+	char model[128] = {};
+
+	// Track mounted devices
+	std::vector<std::string> mounted;
+	FILE* mf = fopen("/proc/self/mounts", "r");
+	if (!mf)
+		mf = fopen("/proc/mounts", "r");
+	if (mf) {
+		char dev[256] = {};
+		char mountpt[256] = {};
+		char fstype[64] = {};
+		while (fscanf(mf, "%255s %255s %63s %*s %*d %*d\n", dev, mountpt, fstype) == 3) {
+			if (strncmp(dev, "/dev/", 5) == 0)
+				mounted.emplace_back(dev);
+		}
+		fclose(mf);
+	}
+
+	std::map<std::string, bool> parent_mounted;
+
+	struct dirent* ent;
+	while ((ent = readdir(d)) != nullptr) {
+		if (ent->d_name[0] == '.')
+			continue;
+		if (is_skipped_sys_block(ent->d_name))
+			continue;
+
+		const std::string disk(ent->d_name);
+		const std::string disk_path = "/dev/" + disk;
+		struct stat st{};
+		if (stat(disk_path.c_str(), &st) != 0)
+			continue;
+
+		std::string sys_base = "/sys/block/" + disk;
+		std::string size_path = sys_base + "/size";
+		std::string ro_path = sys_base + "/ro";
+		std::string rem_path = sys_base + "/removable";
+		std::string hwsec_path = sys_base + "/queue/hw_sector_size";
+		std::string logsec_path = sys_base + "/queue/logical_block_size";
+		std::string vendor_path = sys_base + "/device/vendor";
+		std::string model_path = sys_base + "/device/model";
+
+		uae_u64 sectors = read_uint64_file(size_path.c_str());
+		int readonly = read_int_file(ro_path.c_str());
+		int removable = read_int_file(rem_path.c_str());
+		int bytespersector = (int)read_uint64_file(hwsec_path.c_str());
+		if (bytespersector <= 0)
+			bytespersector = (int)read_uint64_file(logsec_path.c_str());
+		if (bytespersector <= 0)
+			bytespersector = 512;
+		uae_u64 size_bytes = sectors * 512ULL;
+
+		vendor[0] = model[0] = 0;
+		read_string_file(vendor_path.c_str(), vendor, sizeof(vendor));
+		read_string_file(model_path.c_str(), model, sizeof(model));
+
+		std::string label;
+		if (vendor[0] || model[0]) {
+			label = std::string(vendor) + (vendor[0] && model[0] ? " " : "") + std::string(model);
+		} else {
+			label = disk;
+		}
+
+		bool mounted_self = std::find(mounted.begin(), mounted.end(), disk_path) != mounted.end();
+		std::string display = label + " (" + format_size_bytes(size_bytes) + ") — " + disk_path;
+		add_drive_entry(display.c_str(), disk_path.c_str(), size_bytes, bytespersector, readonly, removable, mounted_self);
+
+		if (mounted_self)
+			parent_mounted[disk] = true;
+
+		// Partitions
+		DIR* pd = opendir(sys_base.c_str());
+		if (!pd)
+			continue;
+		struct dirent* pent;
+		while ((pent = readdir(pd)) != nullptr) {
+			if (pent->d_name[0] == '.')
+				continue;
+			if (!is_partition_of(disk.c_str(), pent->d_name))
+				continue;
+
+			const std::string part(pent->d_name);
+			const std::string part_path = "/dev/" + part;
+			struct stat pst{};
+			if (stat(part_path.c_str(), &pst) != 0)
+				continue;
+
+			std::string p_sys = sys_base + "/" + part;
+			uae_u64 p_sectors = read_uint64_file((p_sys + "/size").c_str());
+			int p_readonly = read_int_file((p_sys + "/ro").c_str());
+			uae_u64 p_size_bytes = p_sectors * 512ULL;
+			bool p_mounted = std::find(mounted.begin(), mounted.end(), part_path) != mounted.end();
+			if (p_mounted)
+				parent_mounted[disk] = true;
+			std::string p_display = part + " (" + format_size_bytes(p_size_bytes) + ") — " + part_path;
+			add_drive_entry(p_display.c_str(), part_path.c_str(), p_size_bytes, bytespersector, p_readonly, removable, p_mounted);
+		}
+		closedir(pd);
+	}
+	closedir(d);
+
+	// Update mounted flag for parent disks if any partition is mounted
+	for (int i = 0; i < num_drives; ++i) {
+		const char* path = ua(uae_drives[i].device_path);
+		if (!path)
+			continue;
+		std::string spath(path);
+		xfree((void*)path);
+		if (spath.rfind("/dev/", 0) != 0)
+			continue;
+		std::string name = spath.substr(5);
+		auto it = parent_mounted.find(name);
+		if (it != parent_mounted.end() && it->second) {
+			uae_drives[i].mounted = 1;
+		}
+	}
+}
+
+#ifdef __MACH__
+static bool is_disk_name(const char* name)
+{
+	if (!name)
+		return false;
+	if (strncmp(name, "disk", 4) != 0)
+		return false;
+	const char* p = name + 4;
+	if (!isdigit((unsigned char)*p))
+		return false;
+	while (isdigit((unsigned char)*p))
+		p++;
+	if (*p == 0)
+		return true;
+	if (*p != 's')
+		return false;
+	p++;
+	if (!isdigit((unsigned char)*p))
+		return false;
+	while (isdigit((unsigned char)*p))
+		p++;
+	return *p == 0;
+}
+
+static std::string disk_parent(const std::string& name)
+{
+	const auto s = name.find('s');
+	if (s == std::string::npos)
+		return name;
+	return name.substr(0, s);
+}
+
+static void scan_harddrives_macos()
+{
+	DIR* d = opendir("/dev");
+	if (!d)
+		return;
+
+	std::vector<std::string> mounted;
+	struct statfs* mntbuf = nullptr;
+	int mntcount = getmntinfo(&mntbuf, MNT_NOWAIT);
+	for (int i = 0; i < mntcount; ++i) {
+		if (mntbuf[i].f_mntfromname[0])
+			mounted.emplace_back(mntbuf[i].f_mntfromname);
+	}
+
+	std::map<std::string, bool> parent_mounted;
+
+	struct dirent* ent;
+	while ((ent = readdir(d)) != nullptr) {
+		if (!is_disk_name(ent->d_name))
+			continue;
+		std::string name(ent->d_name);
+		std::string path = "/dev/" + name;
+
+		struct stat st{};
+		if (stat(path.c_str(), &st) != 0)
+			continue;
+
+		int fd = open(path.c_str(), O_RDONLY);
+		if (fd < 0)
+			continue;
+		uint32_t block_size = 0;
+		uint64_t block_count = 0;
+		if (ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) != 0 || ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) != 0) {
+			close(fd);
+			continue;
+		}
+		close(fd);
+
+		uae_u64 size_bytes = (uae_u64)block_size * (uae_u64)block_count;
+		bool is_mounted = std::find(mounted.begin(), mounted.end(), path) != mounted.end();
+		if (is_mounted)
+			parent_mounted[disk_parent(name)] = true;
+
+		std::string display = name + " (" + format_size_bytes(size_bytes) + ") — " + path;
+		add_drive_entry(display.c_str(), path.c_str(), size_bytes, (int)block_size, 0, 0, is_mounted);
+	}
+	closedir(d);
+
+	for (int i = 0; i < num_drives; ++i) {
+		const char* path = ua(uae_drives[i].device_path);
+		if (!path)
+			continue;
+		std::string spath(path);
+		xfree((void*)path);
+		if (spath.rfind("/dev/", 0) != 0)
+			continue;
+		std::string name = spath.substr(5);
+		auto it = parent_mounted.find(disk_parent(name));
+		if (it != parent_mounted.end() && it->second) {
+			uae_drives[i].mounted = 1;
+		}
+	}
+}
+#endif
+
+static int scan_harddrives(bool force)
+{
+	static int done;
+	if (done && !force)
+		return num_drives;
+	done = 1;
+	num_drives = 0;
+	memset(uae_drives, 0, sizeof(uae_drives));
+
+#ifdef __MACH__
+	scan_harddrives_macos();
+#else
+	scan_harddrives_linux();
+#endif
+
+	return num_drives;
+}
 
 static void rdbdump(FILE* h, uae_u64 offset, uae_u8* buf, int blocksize)
 {
@@ -171,6 +541,7 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	int i;
 	char* name = my_strdup(pname);
 	int zmode = 0;
+	struct stat st{};
 	
 	hfd->flags = 0;
 	hfd->drive_empty = 0;
@@ -197,6 +568,10 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 				zmode = 1;
 		}
 	}
+	if (stat(name, &st) == 0) {
+		if (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode))
+			hfd->flags |= 1;
+	}
 	h = uae_tfopen(name, hfd->ci.readonly ? "rb" : "r+b");
 	if (h == nullptr && !hfd->ci.readonly) {
 		h = uae_tfopen(name, "rb");
@@ -217,13 +592,12 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 	if (h != nullptr) {
 		uae_s64 size;
 #ifdef __MACH__
-		// check type of file
-		struct stat st{};
-		int ret = stat(name,&st);
-		if(ret) {
-			write_log ("osx: can't stat '%s'\n", name);
-			goto end;
-		}
+	// check type of file
+	int ret = stat(name,&st);
+	if(ret) {
+		write_log ("osx: can't stat '%s'\n", name);
+		goto end;
+	}
 		// block devices need special handling on osx
 		if(S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode)) {
 			uint32_t block_size;
@@ -600,22 +974,14 @@ int get_guid_target(uae_u8* out)
 	return 0;
 }
 
-static int num_drives;
-
 static int hdf_init2(int force)
 {
-	static int done;
-
-	if (done && !force)
-		return num_drives;
-	done = 1;
-	num_drives = 0;
-	return num_drives;
+	return scan_harddrives(force != 0);
 }
 
 int hdf_init_target()
 {
-	return hdf_init2(0);
+	return hdf_init2(1);
 }
 
 int hdf_getnumharddrives()
@@ -628,10 +994,19 @@ TCHAR *hdf_getnameharddrive (int index, int flags, int *sectorsize, int *dangero
 	if (index >= num_drives || index < 0)
 		return NULL;
 	if (dangerousdrive)
-		*dangerousdrive = 0;
+		*dangerousdrive = uae_drives[index].dangerous;
 	if (sectorsize)
-		*sectorsize = 512;
+		*sectorsize = uae_drives[index].bytespersector ? uae_drives[index].bytespersector : 512;
 	if (outflags)
-		*outflags = 0;
+		*outflags = (uae_drives[index].mounted ? HDF_DRIVEFLAG_MOUNTED : 0) |
+			(uae_drives[index].readonly ? HDF_DRIVEFLAG_READONLY : 0) |
+			(uae_drives[index].removablemedia ? HDF_DRIVEFLAG_REMOVABLE : 0);
 	return my_strdup(uae_drives[index].device_name);
+}
+
+TCHAR *hdf_getpathharddrive(int index)
+{
+	if (index >= num_drives || index < 0)
+		return NULL;
+	return my_strdup(uae_drives[index].device_path);
 }
