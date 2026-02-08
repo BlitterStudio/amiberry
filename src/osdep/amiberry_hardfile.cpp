@@ -22,6 +22,9 @@
 #include <sys/stat.h>
 #include <sys/disk.h>
 #include <sys/mount.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/storage/IOMedia.h>
 #endif
 
 struct hardfilehandle
@@ -314,6 +317,47 @@ static void scan_harddrives_linux()
 }
 
 #ifdef __MACH__
+static bool macos_get_media_info(const std::string& bsd_name, uae_u64* out_size, int* out_blocksize)
+{
+	if (!out_size || !out_blocksize)
+		return false;
+	*out_size = 0;
+	*out_blocksize = 0;
+
+	CFMutableDictionaryRef match = IOBSDNameMatching(kIOMainPortDefault, 0, bsd_name.c_str());
+	if (!match)
+		return false;
+
+	io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, match);
+	if (service == MACH_PORT_NULL)
+		return false;
+
+	CFTypeRef size_cf = IORegistryEntryCreateCFProperty(service, CFSTR(kIOMediaSizeKey), kCFAllocatorDefault, 0);
+	if (size_cf && CFGetTypeID(size_cf) == CFNumberGetTypeID()) {
+		long long size_ll = 0;
+		if (CFNumberGetValue((CFNumberRef)size_cf, kCFNumberLongLongType, &size_ll)) {
+			if (size_ll > 0)
+				*out_size = (uae_u64)size_ll;
+		}
+	}
+	if (size_cf)
+		CFRelease(size_cf);
+
+	CFTypeRef block_cf = IORegistryEntryCreateCFProperty(service, CFSTR(kIOMediaPreferredBlockSizeKey), kCFAllocatorDefault, 0);
+	if (block_cf && CFGetTypeID(block_cf) == CFNumberGetTypeID()) {
+		int block_i = 0;
+		if (CFNumberGetValue((CFNumberRef)block_cf, kCFNumberIntType, &block_i)) {
+			if (block_i > 0)
+				*out_blocksize = block_i;
+		}
+	}
+	if (block_cf)
+		CFRelease(block_cf);
+
+	IOObjectRelease(service);
+	return (*out_size > 0 || *out_blocksize > 0);
+}
+
 static bool is_disk_name(const char* name)
 {
 	if (!name)
@@ -367,29 +411,53 @@ static void scan_harddrives_macos()
 			continue;
 		std::string name(ent->d_name);
 		std::string path = "/dev/" + name;
+		std::string rpath = "/dev/r" + name;
 
 		struct stat st{};
 		if (stat(path.c_str(), &st) != 0)
 			continue;
+		bool has_rpath = (stat(rpath.c_str(), &st) == 0);
+		const std::string& device_path = has_rpath ? rpath : path;
 
-		int fd = open(path.c_str(), O_RDONLY);
+		int fd = open(rpath.c_str(), O_RDONLY);
 		if (fd < 0)
-			continue;
+			fd = open(path.c_str(), O_RDONLY);
+
 		uint32_t block_size = 0;
 		uint64_t block_count = 0;
-		if (ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) != 0 || ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) != 0) {
+		uint64_t media_size = 0;
+		if (fd >= 0) {
+			if (ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) != 0)
+				block_size = 0;
+#ifdef DKIOCGETMEDIASIZE
+			if (ioctl(fd, DKIOCGETMEDIASIZE, &media_size) != 0)
+				media_size = 0;
+#endif
+			if (media_size == 0 && ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) != 0)
+				block_count = 0;
 			close(fd);
-			continue;
 		}
-		close(fd);
 
-		uae_u64 size_bytes = (uae_u64)block_size * (uae_u64)block_count;
+		uae_u64 size_bytes = media_size ? (uae_u64)media_size : (uae_u64)block_size * (uae_u64)block_count;
+		if (size_bytes == 0 || block_size == 0) {
+			uae_u64 iokit_size = 0;
+			int iokit_block = 0;
+			if (macos_get_media_info(name, &iokit_size, &iokit_block)) {
+				if (size_bytes == 0)
+					size_bytes = iokit_size;
+				if (block_size == 0)
+					block_size = (uint32_t)iokit_block;
+			}
+		}
 		bool is_mounted = std::find(mounted.begin(), mounted.end(), path) != mounted.end();
+		if (!is_mounted)
+			is_mounted = std::find(mounted.begin(), mounted.end(), rpath) != mounted.end();
 		if (is_mounted)
 			parent_mounted[disk_parent(name)] = true;
 
-		std::string display = name + " (" + format_size_bytes(size_bytes) + ") — " + path;
-		add_drive_entry(display.c_str(), path.c_str(), size_bytes, (int)block_size, 0, 0, is_mounted);
+		const std::string size_str = size_bytes ? format_size_bytes(size_bytes) : std::string("unknown");
+		std::string display = name + " (" + size_str + ") — " + path;
+		add_drive_entry(display.c_str(), device_path.c_str(), size_bytes, block_size > 0 ? (int)block_size : 512, 0, 0, is_mounted);
 	}
 	closedir(d);
 

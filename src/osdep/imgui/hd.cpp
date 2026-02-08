@@ -809,6 +809,9 @@ static void ShowCreateHardfileModal()
 
 static void ShowAddHardDriveModal()
 {
+    const ImVec2 display = ImGui::GetIO().DisplaySize;
+    const float modal_w = display.x * 0.75f;
+    ImGui::SetNextWindowSize(ImVec2(modal_w, 0.0f), ImGuiCond_Appearing);
     if (ImGui::BeginPopupModal("Add Hard Drive", &show_add_harddrive_modal, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::Text("Select Physical Drive:");
@@ -859,6 +862,13 @@ static void ShowAddHardDriveModal()
                     if (selected_drive_idx >= 0 && selected_drive_idx < (int)drive_paths.size()) {
                         au_copy(current_hfdlg.ci.rootdir, sizeof(current_hfdlg.ci.rootdir), drive_paths[selected_drive_idx].c_str());
                         current_hfdlg.ci.blocksize = drive_sector_sizes[selected_drive_idx];
+                        current_hfdlg.forcedcylinders = 0;
+                        current_hfdlg.ci.cyls = 0;
+                        current_hfdlg.ci.highcyl = 0;
+                        current_hfdlg.ci.sectors = 0;
+                        current_hfdlg.ci.surfaces = 0;
+                        current_hfdlg.ci.reserved = 0;
+                        current_hfdlg.ci.geometry[0] = 0;
                         updatehdfinfo(true, true, true, hdf_info_text1, hdf_info_text2);
                     }
                 }
@@ -876,6 +886,9 @@ static void ShowAddHardDriveModal()
         }
         if (is_mounted) {
             ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Warning: selected device is mounted by the host.");
+#ifdef __MACH__
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "macOS: unmount the drive before attaching (diskutil unmountDisk).");
+#endif
         }
         
         bool rw = !current_hfdlg.ci.readonly;
@@ -1270,7 +1283,7 @@ void render_panel_hd()
 
     // Logic to open Modals - Add Hard Drive
     if (current_hd_dialog_mode == HDDialogMode::AddHardDrive) {
-        default_hfdlg(&current_hfdlg, false); 
+        default_hfdlg(&current_hfdlg, true); 
         char devname[256];
         CreateDefaultDevicename(devname);
         au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
