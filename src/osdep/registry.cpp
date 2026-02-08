@@ -10,7 +10,7 @@
 #include "uae.h"
 
 #include <filesystem>
-#include "osdep/libretro/libretro_fs_helpers.h"
+#include "osdep/libretro/amiberry_fs.h"
 
 #ifdef _WIN32
 static int inimode = 0;
@@ -496,7 +496,7 @@ int reginitializeinit(TCHAR** pppath)
             return 0;
 #else
         std::string ini_file_path = get_ini_file_path();
-        if (libretro_fs::exists(ini_file_path)) {
+        if (amiberry_fs::exists(ini_file_path)) {
             _tcscpy(path, ini_file_path.c_str());
             ok = 1;
         }
@@ -532,9 +532,9 @@ fail:
     if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES)
         goto end;
 #else
-    if (libretro_fs::exists(path))
-        libretro_fs::remove(path);
-    if (libretro_fs::exists(path))
+    if (amiberry_fs::exists(path))
+        amiberry_fs::remove(path);
+    if (amiberry_fs::exists(path))
         goto end;
 #endif
     f = fopen(path, _T("wb"));

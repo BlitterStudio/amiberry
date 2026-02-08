@@ -150,6 +150,9 @@ static void set_fpucw_x87(uae_u32 m68k_cw)
 #if defined(X86_MSVC_ASSEMBLY) && 0
 	__asm { fldcw word ptr x87_cw }
 #elif defined(__GNUC__) && defined(LIBRETRO)
+	// Use inline assembly instead of the fallback's executable memory allocation
+	// (uae_vm_alloc with UAE_VM_READ_WRITE_EXECUTE), which some libretro
+	// frontends may restrict.
 	__asm__ volatile("fldcw %0" : : "m" (x87_cw));
 #else
 	((x87_fldcw_function) x87_fldcw_code)();

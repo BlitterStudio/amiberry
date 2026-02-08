@@ -5479,7 +5479,6 @@ void clear_whdload_prefs()
 
 void save_controller_mapping_to_file(const controller_mapping& input, const std::string& filename)
 {
-#ifdef LIBRETRO
 	FILE* out_file = fopen(filename.c_str(), "wb");
 	if (!out_file) {
 		std::cerr << "Unable to open file " << filename << '\n';
@@ -5526,59 +5525,10 @@ void save_controller_mapping_to_file(const controller_mapping& input, const std:
 	}
 
 	fclose(out_file);
-#else
-	std::ofstream out_file(filename);
-	if (!out_file) {
-		std::cerr << "Unable to open file " << filename << '\n';
-		return;
-	}
-
-	out_file << "button=";
-	for (const auto& b : input.button) {
-		out_file << b << " ";
-	}
-	out_file << "\naxis=";
-	for (const auto& a : input.axis) {
-		out_file << a << " ";
-	}
-	out_file << "\nlstick_axis_y_invert=" << input.lstick_axis_y_invert;
-	out_file << "\nlstick_axis_x_invert=" << input.lstick_axis_x_invert;
-	out_file << "\nrstick_axis_y_invert=" << input.rstick_axis_y_invert;
-	out_file << "\nrstick_axis_x_invert=" << input.rstick_axis_x_invert;
-	out_file << "\nhotkey_button=" << input.hotkey_button;
-	out_file << "\nquit_button=" << input.quit_button;
-	out_file << "\nreset_button=" << input.reset_button;
-	out_file << "\nmenu_button=" << input.menu_button;
-	out_file << "\nload_state_button=" << input.load_state_button;
-	out_file << "\nsave_state_button=" << input.save_state_button;
-	out_file << "\nvkbd_button=" << input.vkbd_button;
-	out_file << "\nnumber_of_hats=" << input.number_of_hats;
-	out_file << "\nnumber_of_axis=" << input.number_of_axis;
-	out_file << "\nis_retroarch=" << input.is_retroarch;
-	out_file << "\namiberry_custom_none=";
-	for (const auto& b : input.amiberry_custom_none) {
-		out_file << b << " ";
-	}
-	out_file << "\namiberry_custom_hotkey=";
-	for (const auto& b : input.amiberry_custom_hotkey) {
-		out_file << b << " ";
-	}
-	out_file << "\namiberry_custom_axis_none=";
-	for (const auto& a : input.amiberry_custom_axis_none) {
-		out_file << a << " ";
-	}
-	out_file << "\namiberry_custom_axis_hotkey=";
-	for (const auto& a : input.amiberry_custom_axis_hotkey) {
-		out_file << a << " ";
-	}
-
-	out_file.close();
-#endif
 }
 
 void read_controller_mapping_from_file(controller_mapping& input, const std::string& filename)
 {
-#ifdef LIBRETRO
 	FILE* in_file = fopen(filename.c_str(), "rb");
 	if (!in_file) {
 		std::cerr << "Unable to open file " << filename << '\n';
@@ -5589,20 +5539,9 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 	std::string line;
 	while (fgets(buffer, sizeof(buffer), in_file)) {
 		line = buffer;
-		if (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
-			while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
-				line.pop_back();
-		}
-#else
-	std::ifstream in_file(filename);
-	if (!in_file) {
-		std::cerr << "Unable to open file " << filename << '\n';
-		return;
-	}
+		while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+			line.pop_back();
 
-	std::string line;
-	while (std::getline(in_file, line)) {
-#endif
 		std::istringstream iss(line);
 		std::string key;
 		if (std::getline(iss, key, '=')) {
@@ -5681,11 +5620,7 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 		}
 	}
 
-#ifdef LIBRETRO
 	fclose(in_file);
-#else
-	in_file.close();
-#endif
 }
 
 std::vector<std::string> get_cd_drives()

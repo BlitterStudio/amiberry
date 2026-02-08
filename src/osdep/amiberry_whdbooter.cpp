@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "sysdeps.h"
-#include "osdep/libretro/libretro_fs_helpers.h"
+#include "osdep/libretro/amiberry_fs.h"
 #ifdef LIBRETRO
 #include "osdep/libretro/libretro_vfs.h"
 #endif
@@ -91,7 +91,7 @@ static std::string to_lower_copy(std::string value)
 
 static bool dir_has_rom(const std::filesystem::path& dir)
 {
-	if (dir.empty() || !libretro_fs::exists(dir))
+	if (dir.empty() || !amiberry_fs::exists(dir))
 		return false;
 	DIR* dirp = opendir(dir.c_str());
 	if (!dirp)
@@ -144,7 +144,7 @@ static bool copy_file_vfs(const std::filesystem::path& src, const std::filesyste
 
 	const std::filesystem::path parent = dst.parent_path();
 	if (!parent.empty())
-		libretro_fs::create_directories(parent);
+		amiberry_fs::create_directories(parent);
 
 	const int in_fd = posixemu_open(src.c_str(), O_RDONLY | O_BINARY, 0);
 	if (in_fd < 0)
@@ -187,7 +187,7 @@ static bool copy_file_vfs(const std::filesystem::path& src, const std::filesyste
 
 	const std::filesystem::path parent = dst.parent_path();
 	if (!parent.empty())
-		libretro_fs::create_directories(parent);
+		amiberry_fs::create_directories(parent);
 
 	std::error_code ec;
 	if (!std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing, ec))
@@ -202,7 +202,7 @@ static void copy_kickstarts_to_devs(const std::filesystem::path& src_dir,
 	if (src_dir.empty() || dst_dir.empty())
 		return;
 
-	libretro_fs::create_directories(dst_dir);
+	amiberry_fs::create_directories(dst_dir);
 
 	DIR* dirp = opendir(src_dir.c_str());
 	if (!dirp)
@@ -230,7 +230,7 @@ static void copy_kickstarts_to_devs(const std::filesystem::path& src_dir,
 			continue;
 
 		const std::filesystem::path dst = dst_dir / name;
-		if (libretro_fs::exists(dst))
+		if (amiberry_fs::exists(dst))
 			continue;
 
 		if (!copy_file_vfs(src, dst)) {
@@ -418,10 +418,10 @@ void make_rom_symlink(const std::string& kickstart_short_name, const int kicksta
 	// Remove the symlink if it already exists
 	if (!vfs_enabled()) {
 		if (std::filesystem::is_symlink(kickstart_long_path))
-			libretro_fs::remove(kickstart_long_path);
+			amiberry_fs::remove(kickstart_long_path);
 	}
 
-	if (!libretro_fs::exists(kickstart_long_path))
+	if (!amiberry_fs::exists(kickstart_long_path))
 	{
 		const int roms[2] = { kickstart_number, -1 };
 		// copy the existing prefs->romfile to a backup variable, so we can restore it afterward
@@ -482,7 +482,7 @@ void symlink_roms(struct uae_prefs* prefs)
 		}
 	}
 
-	if (!libretro_fs::exists(kickstart_path)) {
+	if (!amiberry_fs::exists(kickstart_path)) {
 		// otherwise, use the old route
 		whdbooter_path = get_whdbootpath();
 		kickstart_path = whdbooter_path / "game-data" / "Devs" / "Kickstarts";
@@ -509,7 +509,7 @@ void symlink_roms(struct uae_prefs* prefs)
 	std::filesystem::path rom_key_destination_path = kickstart_path;
 	rom_key_destination_path /= "rom.key";
 
-	if (libretro_fs::exists(rom_key_source_path) && !libretro_fs::exists(rom_key_destination_path)) {
+	if (amiberry_fs::exists(rom_key_source_path) && !amiberry_fs::exists(rom_key_destination_path)) {
 		if (vfs_enabled()) {
 			if (!copy_file_vfs(rom_key_source_path, rom_key_destination_path))
 				write_log("Copying rom.key failed\n");
@@ -579,7 +579,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename(whdload_prefs.filename);
 
-	if (libretro_fs::exists(uae_config))
+	if (amiberry_fs::exists(uae_config))
 	{
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
@@ -1409,7 +1409,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
 		boot_path = whdbooter_path / "boot-data.zip";
-		if (!libretro_fs::exists(boot_path))
+		if (!amiberry_fs::exists(boot_path))
 			boot_path = whdbooter_path / "boot-data";
 
 		tmp = "filesystem2=rw,DH3:DH3:" + boot_path.string() + ",-10";
@@ -1421,7 +1421,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	else // revert to original booter is no slave was set
 	{
 		boot_path = whdbooter_path / "boot-data.zip";
-		if (!libretro_fs::exists(boot_path))
+		if (!amiberry_fs::exists(boot_path))
 			boot_path = whdbooter_path / "boot-data";
 
 		tmp = "filesystem2=rw,DH0:DH0:" + boot_path.string() + ",10";
@@ -1441,7 +1441,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	//set the third (save data) drive
 	whd_path = save_path / "";
 
-	if (libretro_fs::exists(save_path))
+	if (amiberry_fs::exists(save_path))
 	{
 		tmp = "filesystem2=rw,DH2:Saves:" + save_path.string() + ",0";
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
@@ -1475,8 +1475,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	save_path = get_savedatapath(false);
 	if (!save_path.empty()) {
 		try {
-			libretro_fs::create_directories(save_path);
-			libretro_fs::create_directories(save_path / "Savegames");
+			amiberry_fs::create_directories(save_path);
+			amiberry_fs::create_directories(save_path / "Savegames");
 		} catch (...) {
 			// best effort
 		}
@@ -1501,11 +1501,11 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	whdload_prefs.filename = filename_no_extension;
 
 	// setup for tmp folder.
-	libretro_fs::create_directories("/tmp/amiberry/s");
-	libretro_fs::create_directories("/tmp/amiberry/c");
-	libretro_fs::create_directories("/tmp/amiberry/devs");
+	amiberry_fs::create_directories("/tmp/amiberry/s");
+	amiberry_fs::create_directories("/tmp/amiberry/c");
+	amiberry_fs::create_directories("/tmp/amiberry/devs");
 	whd_startup = "/tmp/amiberry/s/startup-sequence";
-	libretro_fs::remove(whd_startup);
+	amiberry_fs::remove(whd_startup);
 
 	// Use WHDBOOT_SAVE_DATA override when available (libretro sets this)
 	kickstart_path = std::filesystem::path(get_savedatapath(false)) / "Kickstarts";
@@ -1515,7 +1515,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	game_hardware_options game_detail;
 	whd_config = whd_path / "whdload_db.xml";
 
-	if (libretro_fs::exists(whd_config))
+	if (amiberry_fs::exists(whd_config))
 	{
 		game_detail = parse_settings_from_xml(prefs, filepath);
 	}
@@ -1527,7 +1527,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// LOAD CUSTOM CONFIG
 	build_uae_config_filename(whdload_prefs.filename);
 	// If we have a config file, we will load that on top of the XML settings
-	if (libretro_fs::exists(uae_config))
+	if (amiberry_fs::exists(uae_config))
 	{
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
@@ -1557,13 +1557,13 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	}
 
 	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
-	if (libretro_fs::exists(whd_startup))
+	if (amiberry_fs::exists(whd_startup))
 	{
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
 			// create a symlink to JST in /tmp/amiberry/
 			whd_path = whdbooter_path / "JST";
-			if (libretro_fs::exists(whd_path) && !libretro_fs::exists("/tmp/amiberry/c/JST")) {
+			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists("/tmp/amiberry/c/JST")) {
 				if (vfs_enabled()) {
 					write_log("WHDBooter - Copying JST to /tmp/amiberry/c/ \n");
 					copy_file_vfs(whd_path, "/tmp/amiberry/c/JST");
@@ -1577,7 +1577,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		{
 			// create a symlink to WHDLoad in /tmp/amiberry/
 			whd_path = whdbooter_path / "WHDLoad";
-			if (libretro_fs::exists(whd_path) && !libretro_fs::exists("/tmp/amiberry/c/WHDLoad")) {
+			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists("/tmp/amiberry/c/WHDLoad")) {
 				if (vfs_enabled()) {
 					write_log("WHDBooter - Copying WHDLoad to /tmp/amiberry/c/ \n");
 					copy_file_vfs(whd_path, "/tmp/amiberry/c/WHDLoad");
@@ -1590,7 +1590,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 
 		// Create a symlink to AmiQuit in /tmp/amiberry/
 		whd_path = whdbooter_path / "AmiQuit";
-		if (libretro_fs::exists(whd_path) && !libretro_fs::exists("/tmp/amiberry/c/AmiQuit")) {
+		if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists("/tmp/amiberry/c/AmiQuit")) {
 			if (vfs_enabled()) {
 				write_log("WHDBooter - Copying AmiQuit to /tmp/amiberry/c/ \n");
 				copy_file_vfs(whd_path, "/tmp/amiberry/c/AmiQuit");
@@ -1607,16 +1607,16 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 			copy_kickstarts_to_devs(kickstart_path, devs_link);
 		} else {
 			bool needs_link = true;
-			if (libretro_fs::exists(devs_link)) {
+			if (amiberry_fs::exists(devs_link)) {
 				if (std::filesystem::is_symlink(devs_link)) {
 					try {
 						const auto current = std::filesystem::read_symlink(devs_link);
 						if (current == kickstart_path)
 							needs_link = false;
 						else
-							libretro_fs::remove(devs_link);
+							amiberry_fs::remove(devs_link);
 					} catch (...) {
-						libretro_fs::remove(devs_link);
+						amiberry_fs::remove(devs_link);
 					}
 				} else {
 					// if it's a real directory, leave it as-is
