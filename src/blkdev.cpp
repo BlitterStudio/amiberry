@@ -1078,12 +1078,18 @@ struct device_info *sys_command_info (int unitnum, struct device_info *di, int q
 	dix = sys_command_info_session (unitnum, di, quick, -1);
 	if (dix && dix->media_inserted && !quick && !dix->audio_playing) {
 		TCHAR *name = NULL;
-		uae_u8 buf[2048];
+		uae_u8 buf[4096];
 		if (sys_command_cd_read(unitnum, buf, 16, 1)) {
 			if ((buf[0] == 1 || buf[0] == 2) && !memcmp(buf + 1, "CD001", 5)) {
 				TCHAR *p;
-				au_copy(dix->volume_id, 32, (uae_char*)buf + 40);
-				au_copy(dix->system_id, 32, (uae_char*)buf + 8);
+				char vol[33];
+				char sysid[33];
+				memcpy(vol, buf + 40, 32);
+				vol[32] = 0;
+				memcpy(sysid, buf + 8, 32);
+				sysid[32] = 0;
+				au_copy(dix->volume_id, 32, vol);
+				au_copy(dix->system_id, 32, sysid);
 				p = dix->volume_id + _tcslen(dix->volume_id) - 1;
 				while (p > dix->volume_id && *p == ' ')
 					*p-- = 0;
@@ -2480,4 +2486,3 @@ uae_u8 *restore_cd (int num, uae_u8 *src)
 }
 
 #endif
-

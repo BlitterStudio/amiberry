@@ -482,9 +482,29 @@ void render_panel_quickstart() {
         if (!cd_controls_enabled) ImGui::EndDisabled();
 
         int cd_index = -1;
-        if (changed_prefs.cdslots[0].inuse && changed_prefs.cdslots[0].type == SCSI_UNIT_DEFAULT && std::strlen(
-                changed_prefs.cdslots[0].name) > 0)
-            cd_index = qs_find_in_mru(lstMRUCDList, changed_prefs.cdslots[0].name);
+        int cd_drive_count = 0;
+        for (const auto &entry : qs_cd_display) {
+            if (entry.rfind("/dev/", 0) == 0)
+                cd_drive_count++;
+            else
+                break;
+        }
+
+        if (changed_prefs.cdslots[0].inuse && std::strlen(changed_prefs.cdslots[0].name) > 0) {
+            if (changed_prefs.cdslots[0].type == SCSI_UNIT_DEFAULT) {
+                const int mru_index = qs_find_in_mru(lstMRUCDList, changed_prefs.cdslots[0].name);
+                if (mru_index >= 0)
+                    cd_index = cd_drive_count + mru_index;
+            } else if (changed_prefs.cdslots[0].type == SCSI_UNIT_IOCTL &&
+                       std::strncmp(changed_prefs.cdslots[0].name, "/dev/", 5) == 0) {
+                for (int i = 0; i < static_cast<int>(qs_cd_display.size()); ++i) {
+                    if (qs_cd_display[i] == changed_prefs.cdslots[0].name) {
+                        cd_index = i;
+                        break;
+                    }
+                }
+            }
+        }
 
         std::vector<const char *> cd_items;
         cd_items.push_back("<empty>");
@@ -494,7 +514,7 @@ void render_panel_quickstart() {
 
         int combo_index = cd_index + 1;
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - 15.0f);
-        if (ImGui::BeginCombo("CD Image##combo", cd_items[combo_index])) {
+        if (ImGui::BeginCombo("##CDImageCombo", cd_items[combo_index])) {
             for (int n = 0; n < static_cast<int>(cd_items.size()); n++) {
                 const bool is_selected = (combo_index == n);
                 if (is_selected)

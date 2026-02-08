@@ -2,12 +2,14 @@
 #include "options.h"
 #include "imgui.h"
 #include "imgui_internal.h"
+#include <algorithm>
 #include "gui/gui_handling.h"
 #include "imgui_panels.h"
 #include "filesys.h"
 #include "autoconf.h"
 #include "blkdev.h"
 #include "rommgr.h"
+#include "uae.h"
 
 // Enum for Dialog Modes (Modals)
 enum class HDDialogMode {
@@ -42,6 +44,29 @@ static bool show_tape_modal = false;
 static int create_hdf_size_mb = 100;
 static bool create_hdf_dynamic = false;
 static bool create_hdf_rdb = false;
+
+static bool IsCdDevicePath(const char* path)
+{
+    return path && std::strncmp(path, "/dev/", 5) == 0;
+}
+
+static bool IsCdDevicePath(const std::string& path)
+{
+    return path.rfind("/dev/", 0) == 0;
+}
+
+static void AddToMruCdList(const std::string& path)
+{
+    if (path.empty() || IsCdDevicePath(path))
+        return;
+
+    auto it = std::find(lstMRUCDList.begin(), lstMRUCDList.end(), path);
+    if (it != lstMRUCDList.end())
+        lstMRUCDList.erase(it);
+    lstMRUCDList.insert(lstMRUCDList.begin(), path);
+    if (lstMRUCDList.size() > 10)
+        lstMRUCDList.resize(10);
+}
 
 // Helper to handle TCHAR arrays in ImGui
 static bool InputTextT(const char* label, TCHAR* buf, size_t buf_size, ImGuiInputTextFlags flags = 0)
@@ -344,32 +369,49 @@ static void RenderCDSection()
     ImGui::PushItemWidth(-ImGui::GetStyle().ItemSpacing.x - BUTTON_WIDTH * 1.5f); // Reserve space for buttons
     if (ImGui::BeginCombo("##CDPath", preview_val))
     {
-        // Add current value if not empty
-        if (cd_name && *cd_name) {
-             const bool is_selected = true;
-             ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
-             if (ImGui::Selectable(cd_name, is_selected)) {}
-             ImGui::PopStyleColor();
-             ImGui::SetItemDefaultFocus();
-        }
-        
-        // MRU List
-        for (const auto& path : lstMRUCDList) {
-             if (path.empty()) continue;
-             if (cd_name && strcmp(cd_name, path.c_str()) == 0) continue; // Already added above
+        const auto cd_drives = get_cd_drives();
+        bool current_in_list = false;
 
-             const bool is_selected = false; 
-             if (ImGui::Selectable(path.c_str(), is_selected)) {
-                 au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path.c_str());
-             }
+        for (const auto& drive : cd_drives) {
+            const bool is_selected = (cd_name && strcmp(cd_name, drive.c_str()) == 0);
+            if (is_selected) current_in_list = true;
+            if (ImGui::Selectable(drive.c_str(), is_selected)) {
+                au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, drive.c_str());
+                changed_prefs.cdslots[0].inuse = true;
+                changed_prefs.cdslots[0].type = SCSI_UNIT_IOCTL;
+            }
+            if (is_selected) ImGui::SetItemDefaultFocus();
+        }
+
+        for (const auto& path : lstMRUCDList) {
+            if (path.empty()) continue;
+            const bool is_selected = (cd_name && strcmp(cd_name, path.c_str()) == 0);
+            if (is_selected) current_in_list = true;
+            if (ImGui::Selectable(path.c_str(), is_selected)) {
+                au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path.c_str());
+                changed_prefs.cdslots[0].inuse = true;
+                changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
+                AddToMruCdList(path);
+            }
+            if (is_selected) ImGui::SetItemDefaultFocus();
+        }
+
+        if (!current_in_list && cd_name && *cd_name) {
+            const bool is_selected = true;
+            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(cd_name, is_selected)) {}
+            ImGui::PopStyleColor();
+            ImGui::SetItemDefaultFocus();
         }
         ImGui::EndCombo();
     }
     AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
     ImGui::PopItemWidth();
-    
+
     xfree(cd_name);
-    
+
+    ImGui::SameLine();
+    ShowHelpMarker("Physical devices require OS permission to read /dev/...");
     ImGui::SameLine();
     if (AmigaButton("Eject", ImVec2(BUTTON_WIDTH, 0))) {
         changed_prefs.cdslots[0].name[0] = 0;
@@ -397,15 +439,7 @@ static void RenderCDSection()
              au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, result_path.c_str());
              changed_prefs.cdslots[0].inuse = true;
              changed_prefs.cdslots[0].type = SCSI_UNIT_DEFAULT;
-             
-             // Add to MRU logic (simplistic: check existence and push back if new)
-             bool found = false;
-             for(const auto& p : lstMRUCDList) {
-                 if (p == result_path) { found = true; break; }
-             }
-             if (!found) lstMRUCDList.insert(lstMRUCDList.begin(), result_path);
-             // Limit MRU size?
-             if (lstMRUCDList.size() > 10) lstMRUCDList.resize(10);
+             AddToMruCdList(result_path);
         }
     }
 
@@ -1024,6 +1058,39 @@ static void ShowEditCDDriveModal()
              initialized = false; 
         }
 
+        const auto cd_drives = get_cd_drives();
+        int device_index = -1;
+        for (int i = 0; i < (int)cd_drives.size(); ++i) {
+            if (strcmp(path_buf, cd_drives[i].c_str()) == 0) {
+                device_index = i;
+                break;
+            }
+        }
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Physical device:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(BUTTON_WIDTH * 2);
+        const char* device_preview = (device_index >= 0 && device_index < (int)cd_drives.size()) ? cd_drives[device_index].c_str() : "<none>";
+        if (ImGui::BeginCombo("##CDDevice", device_preview)) {
+            const bool none_selected = (device_index == -1);
+            if (ImGui::Selectable("<none>", none_selected)) {
+                path_buf[0] = 0;
+            }
+            for (int i = 0; i < (int)cd_drives.size(); ++i) {
+                const bool is_selected = (device_index == i);
+                if (ImGui::Selectable(cd_drives[i].c_str(), is_selected)) {
+                    strncpy(path_buf, cd_drives[i].c_str(), MAX_DPATH);
+                    path_buf[MAX_DPATH - 1] = 0;
+                }
+                if (is_selected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+        ImGui::SameLine();
+        ShowHelpMarker("Physical devices require OS permission to read /dev/...");
+
         ImGui::AlignTextToFramePadding();
         ImGui::Text("Path:");
         ImGui::SameLine();
@@ -1097,6 +1164,14 @@ static void ShowEditCDDriveModal()
             }
             
             inithdcontroller(current_cddlg.ci.controller_type, current_cddlg.ci.controller_type_unit, UAEDEV_CD, path_buf[0] != 0);
+
+            if (path_buf[0]) {
+                au_copy(changed_prefs.cdslots[0].name, MAX_DPATH, path_buf);
+                changed_prefs.cdslots[0].inuse = true;
+                changed_prefs.cdslots[0].type = IsCdDevicePath(path_buf) ? SCSI_UNIT_IOCTL : SCSI_UNIT_DEFAULT;
+                if (!IsCdDevicePath(path_buf))
+                    AddToMruCdList(path_buf);
+            }
 
             new_cddrive(-1); 
             gui_force_rtarea_hdchange(); 

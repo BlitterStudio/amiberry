@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <cctype>
 #include <sys/types.h>
 #include <dirent.h>
 #include <cstdlib>
@@ -62,6 +63,8 @@
 #ifdef __MACH__
 #include <string>
 #include <mach-o/dyld.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <DiskArbitration/DiskArbitration.h>
 #endif
 
 #ifdef AHI
@@ -5707,10 +5710,94 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 
 std::vector<std::string> get_cd_drives()
 {
-	char path[MAX_DPATH];
 	std::vector<std::string> results{};
-#ifndef __MACH__
-	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom' | awk '{print \"/dev/\" $1}'", "r");
+#ifdef __MACH__
+	DASessionRef session = DASessionCreate(kCFAllocatorDefault);
+	if (!session) {
+		write_log("Failed to create DiskArbitration session, cannot auto-detect CD drives in system\n");
+		return results;
+	}
+
+	DIR* devdir = opendir("/dev");
+	if (!devdir) {
+		write_log("Failed to open /dev, cannot auto-detect CD drives in system\n");
+		CFRelease(session);
+		return results;
+	}
+
+	auto is_whole_disk_name = [](const char* name) -> bool {
+		if (!name) return false;
+		if (strncmp(name, "disk", 4) != 0) return false;
+		const char* p = name + 4;
+		if (!*p) return false;
+		for (; *p; ++p) {
+			if (*p < '0' || *p > '9') return false;
+		}
+		return true;
+	};
+
+	auto cfstring_contains_ci = [](CFStringRef str, const char* needle) -> bool {
+		if (!str || !needle) return false;
+		char buf[256];
+		if (!CFStringGetCString(str, buf, sizeof(buf), kCFStringEncodingUTF8))
+			return false;
+		for (char* p = buf; *p; ++p) *p = static_cast<char>(tolower(static_cast<unsigned char>(*p)));
+		std::string hay(buf);
+		std::string ndl(needle);
+		for (char& c : ndl) c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
+		return hay.find(ndl) != std::string::npos;
+	};
+
+	struct dirent* entry = nullptr;
+	while ((entry = readdir(devdir)) != nullptr) {
+		if (!is_whole_disk_name(entry->d_name))
+			continue;
+
+		DADiskRef disk = DADiskCreateFromBSDName(kCFAllocatorDefault, session, entry->d_name);
+		if (!disk)
+			continue;
+
+		CFDictionaryRef desc = DADiskCopyDescription(disk);
+		if (!desc) {
+			CFRelease(disk);
+			continue;
+		}
+
+		CFBooleanRef whole = (CFBooleanRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaWholeKey);
+		if (whole != kCFBooleanTrue) {
+			CFRelease(desc);
+			CFRelease(disk);
+			continue;
+		}
+
+		CFBooleanRef ejectable = (CFBooleanRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaEjectableKey);
+		CFBooleanRef removable = (CFBooleanRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaRemovableKey);
+		if (ejectable != kCFBooleanTrue && removable != kCFBooleanTrue) {
+			CFRelease(desc);
+			CFRelease(disk);
+			continue;
+		}
+
+		CFStringRef kind = (CFStringRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaKindKey);
+		bool is_optical = cfstring_contains_ci(kind, "cd") || cfstring_contains_ci(kind, "dvd");
+		if (is_optical) {
+			std::string devpath = "/dev/";
+			devpath.append(entry->d_name);
+			results.emplace_back(devpath);
+		}
+
+		CFRelease(desc);
+		CFRelease(disk);
+	}
+
+	closedir(devdir);
+	CFRelease(session);
+
+	if (results.empty())
+		write_log("DiskArbitration did not find any CD drives on this system\n");
+#else
+	char path[MAX_DPATH];
+	FILE* fp = popen("lsblk -o NAME,TYPE | awk '$2==\"rom\"{print \"/dev/\"$1}'", "r");
 	if (fp == nullptr) {
 		write_log("Failed to run 'lsblk' command, cannot auto-detect CD drives in system\n");
 		return results;
