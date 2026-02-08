@@ -112,13 +112,7 @@ static bool dir_has_rom(const std::filesystem::path& dir)
 			continue;
 
 		const std::filesystem::path candidate = dir / name;
-#ifdef LIBRETRO
-		STAT st{};
-		if (posixemu_stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode)) {
-#else
-		struct stat st{};
-		if (::stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode)) {
-#endif
+		if (amiberry_fs::is_regular_file(candidate)) {
 			found = true;
 			break;
 		}
@@ -220,13 +214,7 @@ static void copy_kickstarts_to_devs(const std::filesystem::path& src_dir,
 			continue;
 
 		const std::filesystem::path src = src_dir / name;
-#ifdef LIBRETRO
-		STAT st{};
-		if (posixemu_stat(src.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
-#else
-		struct stat st{};
-		if (::stat(src.c_str(), &st) != 0 || !S_ISREG(st.st_mode))
-#endif
+		if (!amiberry_fs::is_regular_file(src))
 			continue;
 
 		const std::filesystem::path dst = dst_dir / name;
@@ -1370,21 +1358,12 @@ void create_startup_sequence()
 	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup.c_str());
 
-#ifdef LIBRETRO
 	FILE* myfile = fopen(whd_startup.c_str(), "wb");
 	if (myfile) {
 		const auto& script = whd_bootscript.str();
 		fwrite(script.c_str(), 1, script.size(), myfile);
 		fclose(myfile);
 	}
-#else
-	std::ofstream myfile(whd_startup);
-	if (myfile.is_open())
-	{
-		myfile << whd_bootscript.str();
-		myfile.close();
-	}
-#endif
 }
 
 bool is_a600_available(uae_prefs* prefs)
@@ -1453,7 +1432,6 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
-#ifdef LIBRETRO
 	const char* whdboot_override = getenv("AMIBERRY_WHDBOOT_PATH");
 	if (whdboot_override && *whdboot_override)
 		set_whdbootpath(whdboot_override);
@@ -1465,7 +1443,6 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		setenv("WHDBOOT_SAVE_DATA", whdboot_save, 1);
 #endif
 	}
-#endif
 	write_log("WHDBooter Launched\n");
 	if (amiberry_options.use_jst_instead_of_whd)
 		write_log("WHDBooter - Using JST instead of WHDLoad\n");
