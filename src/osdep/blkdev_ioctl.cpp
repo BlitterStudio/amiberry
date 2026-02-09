@@ -364,7 +364,6 @@ retry:
 		if (!ciw->usesptiread && sectorsize == 2048 && ciw->trackmode[track] == 0) {
 			if (read2048(ciw, sector) == 2048) {
 				memcpy(data, p, 2048);
-				sector++;
 				data += sectorsize;
 				ret += sectorsize;
 				got = true;
@@ -391,13 +390,11 @@ retry:
 				encode_l2(data, sector + 150);
 				if (sectorsize > 2352)
 					memset(data + 2352, 0, sectorsize - 2352);
-				sector++;
 				data += sectorsize;
 				ret += sectorsize;
 			}
 			else if (sectorsize == 2048) {
 				memcpy(data, p, 2048);
-				sector++;
 				data += sectorsize;
 				ret += sectorsize;
 			}
@@ -898,13 +895,9 @@ static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device
 		return 0;
 	}
 
+	ciw->di.bytespersector = 2048;
+
 	uae_sem_post(&ciw->cda.sub_sem);
-	// if (di) {
-	//     di->cylinders = geom.cylinders;
-	//     di->sectorspertrack = geom.sectors;
-	//     di->trackspercylinder = geom.heads;
-	//     di->bytespersector = 2048; // Typical CD-ROM sector size
-	// }
 	return 1;
 #endif
 }
@@ -1102,6 +1095,13 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	th->tracks = th->last_track - th->first_track + 1;
 	th->points = th->tracks + 3;
 	th->firstaddress = 0;
+
+	// Read the leadout entry to get lastaddress
+	tocentry.cdte_track = CDROM_LEADOUT;
+	tocentry.cdte_format = CDROM_MSF;
+	if (ioctl(ciw->fd, CDROMREADTOCENTRY, &tocentry) == -1) {
+		return 0;
+	}
 	th->lastaddress = msf2lsn((tocentry.cdte_addr.msf.minute << 16) | (tocentry.cdte_addr.msf.second << 8) |
 		(tocentry.cdte_addr.msf.frame << 0));
 
@@ -1111,8 +1111,8 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	t++;
 
 	th->first_track_offset = 1;
-	for (i = 0; i < th->last_track; i++) {
-		tocentry.cdte_track = i + 1;
+	for (i = th->first_track; i <= th->last_track; i++) {
+		tocentry.cdte_track = i;
 		tocentry.cdte_format = CDROM_MSF;
 		if (ioctl(ciw->fd, CDROMREADTOCENTRY, &tocentry) == -1) {
 			return 0;
@@ -1121,7 +1121,7 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 		t->control = tocentry.cdte_ctrl;
 		t->paddress = msf2lsn((tocentry.cdte_addr.msf.minute << 16) | (tocentry.cdte_addr.msf.second << 8) |
 			(tocentry.cdte_addr.msf.frame << 0));
-		t->point = t->track = i + 1;
+		t->point = t->track = i;
 		t++;
 	}
 
@@ -1405,11 +1405,7 @@ static int open_bus(int flags)
 					) {
 					strncpy(ciw32[total_devices].drvletter, open_path, sizeof(ciw32[total_devices].drvletter));
 					strcpy(ciw32[total_devices].drvlettername, open_path);
-#ifdef __MACH__
 					ciw32[total_devices].type = DRIVE_CDROM;
-#else
-					ciw32[total_devices].type = st.st_rdev;
-#endif
 					ciw32[total_devices].di.bytespersector = 2048;
 					strcpy(ciw32[total_devices].devname, drive.c_str());
 					ciw32[total_devices].fd = fd;
