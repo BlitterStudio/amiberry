@@ -1080,7 +1080,7 @@ jobs:
               echo "ZLIB_CFLAGS=-I/usr/aarch64-linux-gnu/include" >> "$GITHUB_ENV"
               echo "ZLIB_LIBS=-L/usr/aarch64-linux-gnu/lib -lz" >> "$GITHUB_ENV"
             else
-              curl -L https://zlib.net/zlib-1.3.1.tar.gz | tar xz -C "${RUNNER_TEMP}"
+              curl -fL https://zlib.net/zlib-1.3.1.tar.gz | tar xz -C "${RUNNER_TEMP}"
               pushd "${RUNNER_TEMP}/zlib-1.3.1"
               CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar RANLIB=aarch64-linux-gnu-ranlib \
                 ./configure --static --prefix="${ZLIB_PREFIX}"
