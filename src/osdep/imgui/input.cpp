@@ -104,11 +104,13 @@ void render_panel_input() {
                     const bool is_selected = (dev_idx == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    ImGui::PushID(n);
                     if (ImGui::Selectable(input_device_items[n], is_selected)) {
                         dev_idx = n;
                         changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
                         inputdevice_validate_jports(&changed_prefs, port_idx, nullptr); // Validate change
                     }
+                    ImGui::PopID();
                     if (is_selected) {
                         ImGui::PopStyleColor();
                         ImGui::SetItemDefaultFocus();
@@ -256,10 +258,12 @@ void render_panel_input() {
                     const bool is_selected = (dev_idx == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    ImGui::PushID(n);
                     if (ImGui::Selectable(input_device_items[n], is_selected)) {
                         dev_idx = n;
                         changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
                     }
+                    ImGui::PopID();
                     if (is_selected) {
                         ImGui::PopStyleColor();
                         ImGui::SetItemDefaultFocus();
