@@ -20,6 +20,13 @@
 #define USE_JIT_FPU
 #endif
 #endif
+#elif defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__FreeBSD__) || defined(__linux__) // not for macOS (yet)
+#ifndef __ANDROID__ // not for android
+#define JIT /* JIT compiler support */
+#define USE_JIT_FPU
+#endif
+#endif
 #endif
 
 #define AMIBERRY

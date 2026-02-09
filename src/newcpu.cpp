@@ -3161,6 +3161,7 @@ static void Exception_normal (int nr)
 	exception_debug (nr);
 	MakeSR ();
 
+
 	if (!regs.s) {
 		regs.usp = m68k_areg (regs, 7);
 		if (currprefs.cpu_model >= 68020 && currprefs.cpu_model < 68060) {
@@ -3172,6 +3173,7 @@ static void Exception_normal (int nr)
 		if (currprefs.mmu_model)
 			mmu_set_super (regs.s != 0);
 	}
+
 
 	if ((m68k_areg(regs, 7) & 1) && currprefs.cpu_model < 68020) {
 		if (nr == 2 || nr == 3)
@@ -3369,6 +3371,26 @@ kludge_me_do:
 	if (interrupt)
 		regs.intmask = nr - 24;
 	newpc = x_get_long (regs.vbr + 4 * vector_nr);
+
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+	// v41: Multi-vector shadow guard — protect against blitter DMA corrupting
+	// exception vectors 1-6 (0x004-0x01B) during Kickstart init.
+	// v40 only guarded vector 2 (Bus Error). v40 testing proved vector 4
+	// (Illegal Instruction) also gets corrupted, causing infinite exception
+	// loops and stack overflow crashes.
+	// v41 also fixes v40 byte-order bug: shadows now stored in M68k BE format
+	// matching x_get_long() output, so comparisons work correctly on LE ARM64.
+	if (vector_nr >= 1 && vector_nr <= 6) {
+		extern uae_u32 jit_vec_shadow[];
+		uae_u32 shadow_val = jit_vec_shadow[vector_nr];
+		if (shadow_val != 0 && newpc != shadow_val) {
+			// Vector differs from shadow — likely blitter DMA corruption
+			write_log("JIT_VEC v41: Exception %d: vec=0x%08x shadow=0x%08x "
+				"— using shadow!\n", vector_nr, newpc, shadow_val);
+			newpc = shadow_val;
+		}
+	}
+#endif
 	exception_in_exception = 0;
 	if (newpc & 1) {
 		if (nr == 2 || nr == 3) {
@@ -5528,6 +5550,16 @@ void execute_exception(uae_u32 cycles)
 
 void do_nothing (void)
 {
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+	{
+		// v34: Vec2 check in do_nothing — called on every cycle budget expiration.
+		// This is the MOST CRITICAL check: compiled blocks chain via hash table,
+		// and do_nothing is the only C function called during that chaining
+		// (when spcflags != 0 and countdown goes negative).
+		extern void jit_dbg_check_vec2_dispatch(const char* func_name);
+		jit_dbg_check_vec2_dispatch("do_nothing");
+	}
+#endif
 	if (!currprefs.cpu_thread) {
 		/* What did you expect this to do? */
 		do_cycles (0);
@@ -5555,6 +5587,14 @@ static uae_u32 get_jit_opcode(void)
 
 void exec_nostats (void)
 {
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+	{
+		// v34: Vec2 check at entry to exec_nostats — M68k interpreter loop.
+		// If detected here, corruption came from compiled code chain before interpret.
+		extern void jit_dbg_check_vec2_dispatch(const char* func_name);
+		jit_dbg_check_vec2_dispatch("exec_nostats");
+	}
+#endif
 	struct regstruct *r = &regs;
 
 	for (;;)
@@ -5581,6 +5621,15 @@ void exec_nostats (void)
 
 void execute_normal(void)
 {
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+	{
+		// v34: Vec2 check at ENTRY to execute_normal.
+		// If detected here, corruption came from compiled code chain BEFORE
+		// the interpreter + compile_block runs. This is a key transition point.
+		extern void jit_dbg_check_vec2_dispatch(const char* func_name);
+		jit_dbg_check_vec2_dispatch("execute_normal_ENTRY");
+	}
+#endif
 	struct regstruct *r = &regs;
 	int blocklen;
 	cpu_history pc_hist[MAXRUN];
@@ -5613,6 +5662,15 @@ void execute_normal(void)
 		pc_hist[blocklen].specmem = special_mem;
 		blocklen++;
 		if (end_block (r->opcode) || blocklen >= MAXRUN || r->spcflags || uae_int_requested) {
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+			{
+				// v34: Vec2 check AFTER interpreter loop, BEFORE compile_block.
+				// If detected here, corruption happened during M68k interpretation
+				// (between execute_normal entry and this point).
+				extern void jit_dbg_check_vec2_dispatch(const char* func_name);
+				jit_dbg_check_vec2_dispatch("execute_normal_PRE_COMPILE");
+			}
+#endif
 			compile_block (pc_hist, blocklen, total_cycles);
 			return; /* We will deal with the spcflags in the caller */
 		}

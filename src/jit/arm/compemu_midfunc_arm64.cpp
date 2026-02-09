@@ -164,13 +164,19 @@ MENDFUNC(0,make_flags_live,(void))
 
 MIDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
 {
-	/* d points always to memory in regs struct */
+	/* d usually points to memory in regs struct, but can also be a global
+	   (e.g. regflags.nzcv). Use absolute address if out of LDR/STR range. */
 	LOAD_U32(REG_WORK2, s);
-	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
-		STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
-	else
-		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	if(d >= (uintptr)&regs && d < (uintptr)&regs + 32760) {
+		uintptr idx = d - (uintptr) &regs;
+		if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
+			STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
+		else
+			STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	} else {
+		LOAD_U64(REG_WORK1, d);
+		STR_wXi(REG_WORK2, REG_WORK1, 0);
+	}
 }
 MENDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
 
@@ -376,7 +382,8 @@ MENDFUNC(2,mov_l_rr,(W4 d, RR4 s))
 
 MIDFUNC(2,mov_l_mr,(IMPTR d, RR4 s))
 {
-	/* d points always to memory in regs struct */
+	/* d usually points to memory in regs struct, but can also be a global
+	   (e.g. regflags.nzcv). Use absolute address if out of LDR/STR range. */
 	if (isconst(s)) {
 		COMPCALL(mov_l_mi)(d, live.state[s].val);
 		return;
@@ -384,11 +391,16 @@ MIDFUNC(2,mov_l_mr,(IMPTR d, RR4 s))
 
 	s = readreg(s);
 
-	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr)&regs.pc_oldp || d == (uintptr)&regs.pc_p)
-		STR_xXi(s, R_REGSTRUCT, idx);
-	else
-		STR_wXi(s, R_REGSTRUCT, idx);
+	if(d >= (uintptr)&regs && d < (uintptr)&regs + 32760) {
+		uintptr idx = d - (uintptr) &regs;
+		if(d == (uintptr)&regs.pc_oldp || d == (uintptr)&regs.pc_p)
+			STR_xXi(s, R_REGSTRUCT, idx);
+		else
+			STR_wXi(s, R_REGSTRUCT, idx);
+	} else {
+		LOAD_U64(REG_WORK1, d);
+		STR_wXi(s, REG_WORK1, 0);
+	}
 
 	unlock2(s);
 }
@@ -396,11 +408,17 @@ MENDFUNC(2,mov_l_mr,(IMPTR d, RR4 s))
 
 MIDFUNC(2,mov_l_rm,(W4 d, IMPTR s))
 {
-	/* s points always to memory in regs struct */
+	/* s usually points to memory in regs struct, but can also be a global
+	   (e.g. regflags.nzcv). Use absolute address if out of LDR/STR range. */
 	d = writereg(d);
 
-	uintptr idx = s - (uintptr) &regs;
-	LDR_wXi(d, R_REGSTRUCT, idx);
+	if(s >= (uintptr)&regs && s < (uintptr)&regs + 32760) {
+		uintptr idx = s - (uintptr) &regs;
+		LDR_wXi(d, R_REGSTRUCT, idx);
+	} else {
+		LOAD_U64(REG_WORK1, s);
+		LDR_wXi(d, REG_WORK1, 0);
+	}
 
 	unlock2(d);
 }
@@ -421,8 +439,8 @@ MIDFUNC(2,mov_b_ri,(W1 d, IM8 s))
 		}
 		d = rmw(d);
 
-		MOV_xi(REG_WORK1, (s & 0xff));
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		MOV_wi(REG_WORK1, (s & 0xff));
+		BFI_wwii(d, REG_WORK1, 0, 8);
 
 		unlock2(d);
 	} else {
@@ -442,7 +460,7 @@ MIDFUNC(2,sub_l_ri,(RW4 d, IM8 i))
 
 	d = rmw(d);
 
-	SUB_xxi(d, d, i);
+	SUB_wwi(d, d, i);
 
 	unlock2(d);
 }
@@ -518,16 +536,19 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
 
 	d = rmw(d);
 
+	// Use 32-bit ADD (ADD_www/ADD_wwi) to keep upper 32 bits of the X
+	// register zeroed.  The result may later be used as an Amiga memory
+	// address in [Xn, X27] indexed loads, which read the full 64-bit
+	// register.  64-bit ADD_xxx could leave upper bits set on wrap.
 	if(i >= 0 && i <= 0xfff) {
-		ADD_xxi(d, d, i);
+		ADD_wwi(d, d, i);
 	} else {
 		if(i > -0x7fff && i < 0x7fff) {
 			SIGNED16_IMM_2_REG(REG_WORK1, i);
 		} else {
 			LOAD_U32(REG_WORK1, i);
-			SXTW_xw(REG_WORK1, REG_WORK1);
 		}
-		ADD_xxx(d, d, REG_WORK1);
+		ADD_www(d, d, REG_WORK1);
 	}
 
 	unlock2(d);
@@ -544,7 +565,7 @@ MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 	}
 
 	d = rmw(d);
-	ADD_xxi(d, d, i);
+	ADD_wwi(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
@@ -559,7 +580,7 @@ MIDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
 	}
 
 	d = rmw(d);
-	SUB_xxi(d, d, i);
+	SUB_wwi(d, d, i);
 	unlock2(d);
 }
 MENDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
@@ -598,8 +619,7 @@ STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
   }
 #endif
 
-	//__builtin___clear_cache(start, stop);
-	__clear_cache(start, stop);
+	__builtin___clear_cache((char *)start, (char *)stop);
 }
 
 
@@ -1110,6 +1130,9 @@ MIDFUNC(2,fp_fscc_ri,(RW4 d, int cc))
 {
 	d = rmw(d);
 	raw_fp_fscc_ri(d, cc);
+	// Fix 20: raw_fp_fscc_ri uses CLEAR_LOW8_xx, SET_LOW8_xx, and BFXIL_xxii
+	// which are all 64-bit ops that preserve dirty upper 32 bits.
+	MOV_ww(d, d);
 	unlock2(d);
 }
 MENDFUNC(2,fp_fscc_ri,(RW4 d, int cc))

@@ -32,6 +32,14 @@
 
 #include <math.h>
 
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+#include <signal.h>
+#include <sys/mman.h>
+#include <ucontext.h>
+#include <errno.h>
+#include <dlfcn.h>
+#endif
+
 #include "sysconfig.h"
 #include "sysdeps.h"
 
@@ -305,6 +313,359 @@ extern const struct comptbl op_smalltbl_0_comp_ff[];
 static void flush_icache_hard(int);
 static void flush_icache_lazy(int);
 static void flush_icache_none(int);
+
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+// JIT Page 0 DMA Guard
+// Protects the first 4KB of Amiga memory (natmem page 0) from corruption
+// caused by blitter DMA during Kickstart initialization.
+//
+// Root cause: Kickstart ROM programs the blitter to clear M68k addresses
+// 0x004-0x01B (exception vectors 1-6) during init. With JIT's asynchronous
+// blitter, this DMA fires BETWEEN JIT blocks, creating a window where
+// exception vectors are zeroed. If an exception fires during this window,
+// the CPU jumps to address 0, causing illegal instruction cascades.
+//
+// Fix: After the first vec2 (Bus Error vector) change — which signals that
+// exec library init is replacing ROM handlers — we snapshot the entire first
+// page and protect it with mprotect(PROT_READ). All writes trigger SIGSEGV,
+// which uses BRK single-step to allow each write through individually.
+// After each write completes (SIGTRAP from BRK):
+//   - DMA writes (from blitter C code): restored from shadow
+//   - CPU writes (from JIT compiled code): shadow updated with new value
+// Exception_normal() also has a safety net guard using vector shadows.
+
+// Vec2 tracking — detect when exec library init changes vectors, to arm protection
+static uae_u32 jit_dbg_vec2_last = 0;
+
+// Signal handler saved state
+static struct sigaction jit_dbg_old_sigaction;
+static struct sigaction jit_dbg_old_sigtrap_action;
+static volatile int jit_dbg_vec2_page_protected = 0;
+static volatile int jit_dbg_vec2_trap_armed = 0;
+
+// BRK single-step state
+static volatile uint32_t jit_dbg_saved_next_insn = 0;
+static volatile uint32_t *jit_dbg_saved_next_insn_addr = NULL;
+static volatile int jit_dbg_brk_step_count = 0;
+#define JIT_DBG_BRK_IMM 0xD42EEEE0  // BRK #0x7777
+
+// SIGSEGV→SIGTRAP communication
+static volatile uae_u32 jit_dbg_last_write_m68k_addr = 0xFFFFFFFF;
+static volatile uae_u64 jit_dbg_last_write_arm64_pc = 0;
+static volatile int jit_dbg_vec2_sigsegv_count = 0;
+
+// Full-page shadow (4KB) — initialized when protection is armed
+static uae_u8 jit_page0_shadow[4096];
+static int jit_page0_shadow_valid = 0;
+static int jit_dbg_page0_restore_count = 0;
+static int jit_dbg_vec_restore_count = 0;
+static int jit_dbg_vec2_write_count = 0;
+
+// Vector shadow for Exception_normal() safety net (M68k big-endian format)
+#define JIT_VEC_SHADOW_COUNT 7
+uae_u32 jit_vec_shadow[JIT_VEC_SHADOW_COUNT] = {0};
+
+
+// v36: SIGTRAP handler for BRK single-step.
+// When a non-vec2 store to the protected natmem page triggers SIGSEGV, the
+// SIGSEGV handler inserts a BRK at the next instruction (PC+4) and unprotects
+// the page. The faulting store executes, then hits BRK which fires SIGTRAP.
+// This handler restores the original instruction and immediately re-protects
+// the natmem page, eliminating the gap where vec2 corruption could slip through.
+static void jit_dbg_vec2_sigtrap_handler(int sig, siginfo_t *si, void *ctx_raw)
+{
+    ucontext_t *uc = (ucontext_t*)ctx_raw;
+    unsigned long long trap_pc = uc->uc_mcontext.pc;
+
+    // Check if this is our BRK — the PC should point to our saved address
+    if (jit_dbg_saved_next_insn_addr != NULL &&
+        trap_pc == (unsigned long long)(uintptr_t)jit_dbg_saved_next_insn_addr)
+    {
+        jit_dbg_brk_step_count++;
+
+        // Restore the original instruction that was replaced by BRK
+        // First ensure the code page is writable
+        uintptr_t code_page = (uintptr_t)jit_dbg_saved_next_insn_addr & ~0xFFFUL;
+        mprotect((void*)code_page, 4096, PROT_READ | PROT_WRITE | PROT_EXEC);
+
+        *(volatile uint32_t*)jit_dbg_saved_next_insn_addr = jit_dbg_saved_next_insn;
+        __builtin___clear_cache(
+            (char*)jit_dbg_saved_next_insn_addr,
+            (char*)(jit_dbg_saved_next_insn_addr + 1));
+
+        jit_dbg_saved_next_insn_addr = NULL;
+
+        // v43: Full-page shadow restore/update after writes to page 0.
+        // v42 only protected vectors 1-6 (0x004-0x01B). v43 protects the
+        // entire 4KB page, catching DMA writes to FPU vectors (0x0c0-0x0d8),
+        // OS data (0x5d0+), and any other low-memory locations.
+        //   - DMA writes (ARM64 PC outside JIT cache): restore from shadow
+        //   - CPU writes (ARM64 PC inside JIT cache): update shadow
+        // The page is still unprotected here, so we can read/write natmem freely.
+        {
+            uae_u32 wr_addr = jit_dbg_last_write_m68k_addr;
+            if (wr_addr < 4096 && jit_page0_shadow_valid) {
+                uae_u64 wr_pc = jit_dbg_last_write_arm64_pc;
+                // JIT code cache: compiled_code .. current_compile_p
+                // If the write came from outside this range, it's DMA → restore
+                int from_jit = (compiled_code != NULL &&
+                    wr_pc >= (uae_u64)(uintptr_t)compiled_code &&
+                    wr_pc < (uae_u64)(uintptr_t)current_compile_p);
+
+                // Align to 4-byte boundary for the restore/update
+                uae_u32 aligned_addr = wr_addr & ~3u;
+
+                if (!from_jit) {
+                    // DMA write — restore from shadow (undo the corruption)
+                    uae_u32 shadow_val = *(uae_u32*)(jit_page0_shadow + aligned_addr);
+                    *(volatile uae_u32*)(natmem_offset + aligned_addr) = shadow_val;
+                    jit_dbg_page0_restore_count++;
+
+                    // Also update jit_vec_shadow if this was a vector address (safety net)
+                    int vec_nr = aligned_addr / 4;
+                    if (vec_nr >= 1 && vec_nr <= 6) {
+                        jit_dbg_vec_restore_count++;
+                    }
+
+                    if (jit_dbg_page0_restore_count <= 30 ||
+                        (jit_dbg_page0_restore_count <= 300 && jit_dbg_page0_restore_count % 10 == 0) ||
+                        (jit_dbg_page0_restore_count % 500 == 0)) {
+                        write_log("JIT_VEC v43: page0 M68k 0x%03x restored from shadow "
+                            "after DMA write #%d (ARM64 PC=0x%016llx)\n",
+                            aligned_addr, jit_dbg_page0_restore_count,
+                            (unsigned long long)wr_pc);
+                    }
+                } else {
+                    // CPU write (from JIT cache) — update shadow with new value
+                    uae_u32 new_val = *(volatile uae_u32*)(natmem_offset + aligned_addr);
+                    *(uae_u32*)(jit_page0_shadow + aligned_addr) = new_val;
+
+                    // Also update jit_vec_shadow for vectors (Exception_normal safety net)
+                    int vec_nr = aligned_addr / 4;
+                    if (vec_nr >= 1 && vec_nr <= 6) {
+                        uae_u32 m68k_val = do_byteswap_32(new_val);
+                        if (m68k_val != 0) {
+                            jit_vec_shadow[vec_nr] = m68k_val;
+                        }
+                    }
+                }
+            }
+            jit_dbg_last_write_m68k_addr = 0xFFFFFFFF;  // Reset for next write
+        }
+
+        // Re-protect the natmem page IMMEDIATELY — this is the key improvement.
+        // The page was only unprotected for exactly ONE instruction (the faulting store).
+        unsigned long page_base = (unsigned long)natmem_offset & ~0xFFFUL;
+        mprotect((void*)page_base, 4096, PROT_READ);
+        jit_dbg_vec2_page_protected = 1;
+
+        // Log periodic stats
+        if (jit_dbg_brk_step_count <= 10 ||
+            (jit_dbg_brk_step_count <= 100 && jit_dbg_brk_step_count % 10 == 0) ||
+            (jit_dbg_brk_step_count % 500 == 0)) {
+            write_log("JIT_VEC v36:BRK step #%d completed, page re-protected.\n",
+                jit_dbg_brk_step_count);
+        }
+
+        // Return — CPU re-executes at PC, which now has the restored original instruction
+        return;
+    }
+
+    // Not our BRK — chain to original SIGTRAP handler
+    if (jit_dbg_old_sigtrap_action.sa_flags & SA_SIGINFO) {
+        jit_dbg_old_sigtrap_action.sa_sigaction(sig, si, ctx_raw);
+    } else if (jit_dbg_old_sigtrap_action.sa_handler != SIG_DFL &&
+               jit_dbg_old_sigtrap_action.sa_handler != SIG_IGN) {
+        jit_dbg_old_sigtrap_action.sa_handler(sig);
+    } else {
+        // Default action for SIGTRAP is to terminate — but only if not ours
+        write_log("JIT_VEC v36:WARNING: unexpected SIGTRAP at PC=0x%016llx (not our BRK)\n",
+            trap_pc);
+        // Don't terminate — just return and hope for the best
+    }
+}
+
+// v36: SIGSEGV handler for mprotect-based vec2 write trap.
+// When the first page of natmem is read-only, any write triggers this handler.
+// If the write targets the vec2 area (M68k 0x008-0x00b), we dump the ARM64 PC
+// and all registers — this identifies the EXACT JIT-compiled instruction responsible.
+// For non-vec2 writes: uses BRK single-step to keep the page protected.
+static void jit_dbg_vec2_sigsegv_handler(int sig, siginfo_t *si, void *ctx_raw)
+{
+    uae_u8 *fault_addr = (uae_u8*)si->si_addr;
+
+    // Check if fault is in our protected page
+    unsigned long page_base = (unsigned long)natmem_offset & ~0xFFFUL;
+    if ((unsigned long)fault_addr < page_base ||
+        (unsigned long)fault_addr >= page_base + 4096) {
+        // Not our fault — chain to original handler
+        if (jit_dbg_old_sigaction.sa_flags & SA_SIGINFO) {
+            jit_dbg_old_sigaction.sa_sigaction(sig, si, ctx_raw);
+        } else if (jit_dbg_old_sigaction.sa_handler != SIG_DFL &&
+                   jit_dbg_old_sigaction.sa_handler != SIG_IGN) {
+            jit_dbg_old_sigaction.sa_handler(sig);
+        } else {
+            signal(SIGSEGV, SIG_DFL);
+            raise(SIGSEGV);
+        }
+        return;
+    }
+
+    ucontext_t *uc = (ucontext_t*)ctx_raw;
+    unsigned long long arm64_pc = uc->uc_mcontext.pc;
+    uae_u32 m68k_addr = (uae_u32)(fault_addr - natmem_offset);
+
+    jit_dbg_vec2_sigsegv_count++;
+
+    // v42: Save write info for SIGTRAP handler (immediate vector restore)
+    jit_dbg_last_write_m68k_addr = m68k_addr;
+    jit_dbg_last_write_arm64_pc = arm64_pc;
+
+    // Unprotect the page so the write can complete and we can log
+    mprotect((void*)page_base, 4096, PROT_READ | PROT_WRITE);
+    jit_dbg_vec2_page_protected = 0;
+
+    // Check if this write targets the vector table area (M68k 0x004-0x01b)
+    // v41: expanded from vec2-only (0x008-0x00b) to full blitter-cleared range.
+    // Vectors 1-6 all get corrupted by blitter DMA during Kickstart init.
+    if (m68k_addr >= 0x004 && m68k_addr <= 0x01b) {
+        jit_dbg_vec2_write_count++;
+        if (jit_dbg_vec2_write_count <= 20 ||
+            (jit_dbg_vec2_write_count <= 200 && jit_dbg_vec2_write_count % 10 == 0) ||
+            (jit_dbg_vec2_write_count % 100 == 0)) {
+            int vec_nr = m68k_addr / 4;
+            write_log("JIT_VEC v41: vector DMA write #%d: vec%d M68k 0x%03x, "
+                "ARM64 PC=0x%016llx, val=0x%04llx (BRK step)\n",
+                jit_dbg_vec2_write_count, vec_nr, m68k_addr, arm64_pc,
+                (unsigned long long)uc->uc_mcontext.regs[1]);
+        }
+        // Fall through to BRK single-step below (same path as non-vector writes)
+    }
+
+    // BRK single-step for ALL writes (vec2 and non-vec2).
+    // Strategy: insert BRK at next instruction (PC+4), return.
+    // Faulting store re-executes (succeeds), then hits BRK -> SIGTRAP handler
+    // immediately re-protects the page. Page is unprotected for exactly ONE insn.
+
+    if (jit_dbg_vec2_sigsegv_count <= 30 ||
+        (jit_dbg_vec2_sigsegv_count <= 300 && jit_dbg_vec2_sigsegv_count % 10 == 0) ||
+        (jit_dbg_vec2_sigsegv_count % 500 == 0)) {
+        write_log("JIT_VEC v36:page write #%d: M68k 0x%03x ARM64_PC=0x%016llx (BRK step)\n",
+            jit_dbg_vec2_sigsegv_count, m68k_addr, arm64_pc);
+    }
+
+    // Safety check: if a previous BRK is still pending, something went wrong.
+    // Fall back to unprotect-and-return (v35 behavior) for safety.
+    if (jit_dbg_saved_next_insn_addr != NULL) {
+        write_log("JIT_VEC v36:WARNING: previous BRK still pending at %p! "
+            "Falling back to unprotect-and-return.\n",
+            (void*)jit_dbg_saved_next_insn_addr);
+        // Page is already unprotected (we did it at line 684 above)
+        jit_dbg_vec2_page_protected = 0;
+        return;
+    }
+
+    // Insert BRK #0x7777 at the instruction AFTER the faulting store (PC+4).
+    // When the store re-executes (page is unprotected), control flows to PC+4
+    // which now has BRK. This fires SIGTRAP, and our handler re-protects the page.
+    uint32_t *next_insn_addr = (uint32_t*)((uintptr_t)arm64_pc + 4);
+
+    // Ensure the code page containing PC+4 is writable (JIT cache may be RX)
+    uintptr_t code_page = (uintptr_t)next_insn_addr & ~0xFFFUL;
+    mprotect((void*)code_page, 4096, PROT_READ | PROT_WRITE | PROT_EXEC);
+
+    // Save the original instruction and insert BRK
+    jit_dbg_saved_next_insn = *next_insn_addr;
+    jit_dbg_saved_next_insn_addr = next_insn_addr;
+    *next_insn_addr = JIT_DBG_BRK_IMM;
+
+    // Flush instruction cache so CPU sees the BRK
+    __builtin___clear_cache((char*)next_insn_addr, (char*)(next_insn_addr + 1));
+
+    // Page is already unprotected (we did it above for logging).
+    // The faulting store will re-execute successfully, then hit BRK → SIGTRAP.
+    jit_dbg_vec2_page_protected = 0;
+    // Return — store executes, then BRK fires SIGTRAP → handler re-protects page
+}
+
+// v34: Vec2 check function callable from ALL C dispatch functions.
+// This covers the "dark zone" where compiled blocks chain via hash table
+// dispatch without any vec2 monitoring. Called from:
+//   do_nothing(), exec_nostats(), execute_normal() [in newcpu.cpp]
+//   cache_miss(), recompile_block(), compile_block end [in this file]
+// Called from C dispatch functions to detect vec2 changes and arm page protection.
+// Once armed, signal handlers take over — this function stops being called.
+void jit_dbg_check_vec2_dispatch(const char* func_name)
+{
+    if (jit_dbg_vec2_trap_armed || !natmem_offset)
+        return;
+
+    // Read vec2 (Bus Error vector at M68k 0x008)
+    uae_u32 cur_vec2 = *(volatile uae_u32*)(natmem_offset + 0x008);
+    if (cur_vec2 == 0)
+        return;  // ROM hasn't initialized vectors yet
+
+    // Track first non-zero value
+    if (jit_dbg_vec2_last == 0) {
+        jit_dbg_vec2_last = cur_vec2;
+        return;
+    }
+
+    // No change — nothing to do
+    if (cur_vec2 == jit_dbg_vec2_last)
+        return;
+
+    // Vec2 changed — exec library is replacing ROM handlers.
+    // Time to arm the page 0 DMA guard.
+    write_log("JIT: Page 0 DMA guard: vec2 changed in %s, arming protection.\n", func_name);
+    jit_dbg_vec2_last = cur_vec2;
+
+    // Initialize vector shadows (M68k big-endian format)
+    for (int vi = 1; vi <= 6; vi++) {
+        uae_u32 raw_val = *(volatile uae_u32*)(natmem_offset + vi * 4);
+        uae_u32 m68k_val = do_byteswap_32(raw_val);
+        if (m68k_val != 0)
+            jit_vec_shadow[vi] = m68k_val;
+    }
+
+    // Install SIGTRAP handler (for BRK single-step)
+    struct sigaction sa_trap;
+    memset(&sa_trap, 0, sizeof(sa_trap));
+    sa_trap.sa_sigaction = jit_dbg_vec2_sigtrap_handler;
+    sa_trap.sa_flags = SA_SIGINFO | SA_RESTART;
+    sigemptyset(&sa_trap.sa_mask);
+    if (sigaction(SIGTRAP, &sa_trap, &jit_dbg_old_sigtrap_action) != 0) {
+        write_log("JIT: WARNING: SIGTRAP handler install failed, errno=%d\n", errno);
+        return;
+    }
+
+    // Install SIGSEGV handler (for page fault interception)
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_sigaction = jit_dbg_vec2_sigsegv_handler;
+    sa.sa_flags = SA_SIGINFO | SA_RESTART;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGSEGV, &sa, &jit_dbg_old_sigaction) != 0) {
+        write_log("JIT: WARNING: SIGSEGV handler install failed, errno=%d\n", errno);
+        return;
+    }
+
+    // Snapshot the entire first page BEFORE protecting it
+    memcpy(jit_page0_shadow, (void*)natmem_offset, 4096);
+    jit_page0_shadow_valid = 1;
+    write_log("JIT: Page 0 shadow initialized (4096 bytes).\n");
+
+    // Protect the first page of natmem (M68k 0x000-0xFFF)
+    unsigned long page_base = (unsigned long)natmem_offset & ~0xFFFUL;
+    if (mprotect((void*)page_base, 4096, PROT_READ) == 0) {
+        jit_dbg_vec2_page_protected = 1;
+        jit_dbg_vec2_trap_armed = 1;
+        write_log("JIT: Page 0 DMA guard active at %p.\n", (void*)page_base);
+    } else {
+        write_log("JIT: WARNING: mprotect failed, errno=%d\n", errno);
+    }
+}
+#endif
 
 static bigstate live;
 static smallstate empty_ss;
@@ -2173,7 +2534,13 @@ static inline uint8 *alloc_code(uint32 size)
 {
     uint8 *ptr = do_alloc_code(size, 0);
 	/* allocated code must fit in 32-bit boundaries */
-	assert((uintptr)ptr <= 0xffffffff);
+#ifdef CPU_64_BIT
+	if (ptr && (uintptr)ptr + size > (uintptr)0xffffffff) {
+		jit_log("WARNING: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
+		vm_release(ptr, size);
+		return NULL;
+	}
+#endif
 	return ptr;
 }
 
@@ -2261,6 +2628,9 @@ int check_for_cache_miss(void)
 
 static void recompile_block(void)
 {
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+    jit_dbg_check_vec2_dispatch("recompile_block");
+#endif
     /* An existing block's countdown code has expired. We need to make
        sure that execute_normal doesn't refuse to recompile due to a
        perceived cache miss... */
@@ -2274,6 +2644,9 @@ static void recompile_block(void)
 
 static void cache_miss(void)
 {
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+    jit_dbg_check_vec2_dispatch("cache_miss");
+#endif
     blockinfo* bi = get_blockinfo_addr(regs.pc_p);
 #if COMP_DEBUG
     uae_u32     cl = cacheline(regs.pc_p);
@@ -2346,6 +2719,7 @@ static int called_check_checksum(blockinfo* bi)
 
 static void check_checksum(void)
 {
+
     blockinfo* bi = get_blockinfo_addr(regs.pc_p);
     uae_u32 cl = cacheline(regs.pc_p);
     blockinfo* bi2 = get_blockinfo(cl);
@@ -2473,9 +2847,13 @@ STATIC_INLINE void create_popalls(void)
 #endif
 
     // no need to further write into popallspace
+#if defined(CPU_AARCH64)
+    // ARM64 has separate I-cache and D-cache: we MUST flush the I-cache
+    // after writing code before making it executable, or we'll execute
+    // stale/random data from the I-cache.
+    flush_cpu_icache((void *)popallspace, (void *)get_target());
+#endif
 	vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_EXECUTE);
-    // No need to flush. Initialized and not modified
-    // flush_cpu_icache((void *)popallspace, (void *)target);
 }
 
 static inline void reset_lists(void)
@@ -3071,6 +3449,10 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bi->status = BI_ACTIVE;
         if (redo_current_block)
             block_need_recompile(bi);
+
+#ifdef JIT_DEBUG_MEM_CORRUPTION
+        jit_dbg_check_vec2_dispatch("compile_block_end");
+#endif
 
 #ifdef PROFILE_COMPILE_TIME
         compile_time += (clock() - start_time);
