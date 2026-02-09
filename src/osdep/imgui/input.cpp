@@ -5,6 +5,7 @@
 #include "imgui_panels.h"
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include "gui/gui_handling.h"
 
@@ -57,6 +58,19 @@ static void poll_input_devices() {
     int num_mice = inputdevice_get_device_total(IDTYPE_MOUSE);
     for (int j = 0; j < num_mice; j++) {
         add(inputdevice_get_device_name(IDTYPE_MOUSE, j), JSEM_MICE + j);
+    }
+
+    // Disambiguate duplicate device names by appending instance numbers
+    std::unordered_map<std::string, int> name_counts;
+    for (const auto &name : input_device_names) {
+        name_counts[name]++;
+    }
+    std::unordered_map<std::string, int> name_seen;
+    for (auto &name : input_device_names) {
+        if (name_counts[name] > 1) {
+            int instance = ++name_seen[name];
+            name = name + " (" + std::to_string(instance) + ")";
+        }
     }
 
     for (const auto &name: input_device_names) input_device_items.push_back(name.c_str());
