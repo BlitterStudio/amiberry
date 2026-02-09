@@ -606,63 +606,6 @@ jobs:
           name: amiberry-libretro-${{ matrix.platform }}-${{ matrix.arch }}
           path: amiberry/libretro/${{ matrix.artifact }}
 
-  build-libretro:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: unix
-            arch: x86_64
-            artifact: amiberry_libretro.so
-          - os: ubuntu-latest
-            platform: unix
-            arch: aarch64
-            artifact: amiberry_libretro.so
-          - os: windows-latest
-            platform: win
-            arch: x86_64
-            artifact: amiberry_libretro.dll
-    steps:
-      - name: Check out amiberry
-        uses: actions/checkout@v4
-        with:
-          path: amiberry
-
-      - name: Check out libretro-common
-        uses: actions/checkout@v4
-        with:
-          repository: libretro/libretro-common
-          path: libretro-common
-
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
-          if [ "${{ matrix.arch }}" = "aarch64" ]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          fi
-
-      - name: Build Libretro Core
-        shell: bash
-        run: |
-          cd amiberry/libretro
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
-          elif [ "${{ matrix.arch }}" = "aarch64" ]; then
-            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
-          else
-            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-libretro-${{ matrix.platform }}-${{ matrix.arch }}
-          path: amiberry/libretro/${{ matrix.artifact }}
-
   create-release:
     needs: [build-macOS, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-android, build-libretro]
     runs-on: ubuntu-latest
