@@ -177,11 +177,16 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 		write_log(_T("IOCTL: opening IOCTL %s\n"), ciw->devname);
 	ciw->fd = open(ciw->devname, fullaccess ? O_RDWR : O_RDONLY);
 #ifdef __MACH__
+	// On macOS, audio CDs may not open without O_NONBLOCK since there's no mounted filesystem
+	if (ciw->fd == -1)
+		ciw->fd = open(ciw->devname, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
 	if (ciw->fd == -1) {
 		if (!strncmp(ciw->devname, "/dev/disk", 9)) {
 			char alt[64];
 			snprintf(alt, sizeof(alt), "/dev/rdisk%s", ciw->devname + 9);
 			ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
+			if (ciw->fd == -1)
+				ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
 			if (ciw->fd != -1) {
 				strncpy(ciw->devname, alt, sizeof(ciw->devname));
 				ciw->devname[sizeof(ciw->devname) - 1] = 0;
@@ -190,6 +195,8 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 			char alt[64];
 			snprintf(alt, sizeof(alt), "/dev/disk%s", ciw->devname + 10);
 			ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
+			if (ciw->fd == -1)
+				ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
 			if (ciw->fd != -1) {
 				strncpy(ciw->devname, alt, sizeof(ciw->devname));
 				ciw->devname[sizeof(ciw->devname) - 1] = 0;
@@ -861,6 +868,8 @@ static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device
 		char alt[64];
 		snprintf(alt, sizeof(alt), "/dev/disk%s", ciw->devname + 10);
 		int fd2 = open(alt, O_RDONLY);
+		if (fd2 == -1)
+			fd2 = open(alt, O_RDONLY | O_NONBLOCK);
 		if (fd2 != -1) {
 			ok = ioctl(fd2, DKIOCCDREADTOC, &rtoc);
 			close(fd2);
@@ -1194,7 +1203,7 @@ static void update_device_info(int unitnum)
 	if (fetch_geometry(ciw, unitnum, di)) { // || ioctl_command_toc (unitnum))
 		di->media_inserted = 1;
 	}
-	if (ciw->changed) {
+	if (ciw->changed || di->media_inserted) {
 		ioctl_command_toc2(unitnum, &di->toc, true);
 		ciw->changed = false;
 	}
