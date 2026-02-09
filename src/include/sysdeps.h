@@ -289,7 +289,7 @@ extern int posixemu_close (int);
 extern int posixemu_read (int, void *, int);
 extern int posixemu_write (int, const void *, int);
 #undef lseek
-extern int posixemu_seek (int, int, int);
+extern off_t posixemu_seek (int, off_t, int);
 extern int posixemu_stat (const TCHAR *, STAT *);
 extern int posixemu_mkdir (const TCHAR *, int);
 extern int posixemu_rmdir (const TCHAR *);

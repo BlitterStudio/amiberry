@@ -1214,7 +1214,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 
 	// Perform seek operation with proper type casting
 	const auto result = static_cast<uae_s64>(
-		amiberry_fs::io_lseek(mos->fd, static_cast<int>(offset), whence)
+		amiberry_fs::io_lseek(mos->fd, static_cast<off_t>(offset), whence)
 		);
 
 	// Enhanced error reporting with specific error conditions

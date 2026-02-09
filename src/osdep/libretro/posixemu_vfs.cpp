@@ -207,19 +207,19 @@ extern "C" int posixemu_write(int fd, const void* buf, int len)
 	return static_cast<int>(::write(fd, buf, len));
 }
 
-extern "C" int posixemu_seek(int fd, int offset, int whence)
+extern "C" off_t posixemu_seek(int fd, off_t offset, int whence)
 {
 	retro_vfs_file_handle* handle = vfs_get_fd(fd);
 	if (handle) {
 		const struct retro_vfs_interface* vfs = libretro_get_vfs_interface();
 		if (vfs && vfs->seek) {
 			const int64_t ret = vfs->seek(handle, offset, vfs_whence(whence));
-			return ret < 0 ? -1 : static_cast<int>(ret);
+			return ret < 0 ? static_cast<off_t>(-1) : static_cast<off_t>(ret);
 		}
 		errno = ESPIPE;
-		return -1;
+		return static_cast<off_t>(-1);
 	}
-	return static_cast<int>(::lseek(fd, offset, whence));
+	return ::lseek(fd, offset, whence);
 }
 
 extern "C" int posixemu_stat(const TCHAR* path, STAT* st)

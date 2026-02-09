@@ -271,8 +271,7 @@ static void flac_get_size(struct cdtoc* t)
 	drflac* flac = drflac_open(flac_zfile_read, flac_zfile_seek, flac_zfile_tell, &stream, nullptr);
 	if (flac) {
 		if (flac->totalPCMFrameCount > 0 && flac->channels > 0) {
-			const uint64_t bytes_per_sample = (flac->bitsPerSample + 7) / 8;
-			t->filesize = static_cast<uae_s64>(flac->totalPCMFrameCount * flac->channels * bytes_per_sample);
+			t->filesize = static_cast<uae_s64>(flac->totalPCMFrameCount * flac->channels * sizeof(int16_t));
 		}
 		drflac_close(flac);
 	}
@@ -300,10 +299,9 @@ static uae_u8* flac_get_data(struct cdtoc* t)
 
 	drflac* flac = drflac_open(flac_zfile_read, flac_zfile_seek, flac_zfile_tell, &stream, nullptr);
 	if (flac && t->data) {
-		const uint64_t bytes_per_sample = (flac->bitsPerSample + 7) / 8;
 		drflac_uint64 frames = flac->totalPCMFrameCount;
 		if (frames == 0 && t->filesize > 0 && flac->channels > 0)
-			frames = static_cast<drflac_uint64>(t->filesize / (flac->channels * bytes_per_sample));
+			frames = static_cast<drflac_uint64>(t->filesize / (flac->channels * sizeof(int16_t)));
 
 		if (frames > 0) {
 			const drflac_uint64 frames_read = drflac_read_pcm_frames_s16(

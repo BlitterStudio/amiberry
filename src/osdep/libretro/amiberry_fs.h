@@ -90,7 +90,7 @@ static inline int io_write(int fd, const void* buf, int count)
 	return posixemu_write(fd, buf, count);
 }
 
-static inline int io_lseek(int fd, int offset, int whence)
+static inline off_t io_lseek(int fd, off_t offset, int whence)
 {
 	return posixemu_seek(fd, offset, whence);
 }
@@ -145,9 +145,9 @@ static inline int io_write(int fd, const void* buf, int count)
 	return static_cast<int>(::write(fd, buf, static_cast<size_t>(count)));
 }
 
-static inline int io_lseek(int fd, int offset, int whence)
+static inline off_t io_lseek(int fd, off_t offset, int whence)
 {
-	return static_cast<int>(::lseek(fd, static_cast<off_t>(offset), whence));
+	return ::lseek(fd, offset, whence);
 }
 #endif
 } // namespace amiberry_fs
