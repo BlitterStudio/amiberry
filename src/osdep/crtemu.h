@@ -2350,31 +2350,52 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	if( size_changed ) {
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 
+		// Reallocate accumulation and blur textures to new dimensions
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
 		crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
 		crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a, 0 );
-		crtemu->ClearColor( 0, 0, 0, 0 );
-		crtemu->Clear( CRTEMU_GL_COLOR_BUFFER_BIT );
 
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b );
 		crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_b );
 		crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_b, 0 );
-		crtemu->Clear( CRTEMU_GL_COLOR_BUFFER_BIT );
 
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
 		crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->blurbuffer_a );
 		crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a, 0 );
-		crtemu->Clear( CRTEMU_GL_COLOR_BUFFER_BIT );
 
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b );
 		crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGB, width, height, 0, CRTEMU_GL_RGB, CRTEMU_GL_UNSIGNED_BYTE, 0 );
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->blurbuffer_b );
 		crtemu->FramebufferTexture2D( CRTEMU_GL_FRAMEBUFFER, CRTEMU_GL_COLOR_ATTACHMENT0, CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_b, 0 );
-		crtemu->Clear( CRTEMU_GL_COLOR_BUFFER_BIT );
 
+		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
+
+		// Seed accumulation buffers with current backbuffer content instead of leaving
+		// them black. This prevents black frames when resolution changes rapidly (e.g.
+		// auto-crop during reset/boot). The backbuffer already contains the current
+		// frame data from the upload above.
+		crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer_static );
+		crtemu->VertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );
+		crtemu->Viewport( 0, 0, width, height );
+
+		crtemu->UseProgram( crtemu->copy_shader );
+		crtemu->Uniform1i( crtemu->loc_copy_tex0, 0 );
+		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
+		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
+		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
+
+		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_a );
+		crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+
+		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, crtemu->accumulatebuffer_b );
+		crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
+
+		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
+		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 	}
 

@@ -5710,6 +5710,18 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 
 std::vector<std::string> get_cd_drives()
 {
+	// Cache results to avoid expensive system calls on every GUI frame.
+	// CD drives rarely change, so a 5-second refresh interval is sufficient.
+	static std::vector<std::string> cached_results;
+	static Uint32 last_query_time = 0;
+	constexpr Uint32 cache_interval_ms = 5000;
+
+	Uint32 now = SDL_GetTicks();
+	if (last_query_time != 0 && (now - last_query_time) < cache_interval_ms) {
+		return cached_results;
+	}
+	last_query_time = now;
+
 	std::vector<std::string> results{};
 #ifdef __MACH__
 	DASessionRef session = DASessionCreate(kCFAllocatorDefault);
@@ -5809,7 +5821,8 @@ std::vector<std::string> get_cd_drives()
 	}
 	pclose(fp);
 #endif
-	return results;
+	cached_results = results;
+	return cached_results;
 }
 
 void target_setdefaultstatefilename(const TCHAR* name)
