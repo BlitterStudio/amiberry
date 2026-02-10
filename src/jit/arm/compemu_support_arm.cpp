@@ -2789,7 +2789,7 @@ STATIC_INLINE void create_popalls(void)
     raw_push_regs_to_preserve();
 #ifdef JIT_DEBUG
     write_log("Address of regs: 0x%016x, regs.pc_p: 0x%016x\n", &regs, &regs.pc_p);
-    write_log("Address of natmem_offset: 0x%016x, natmem_offset = 0x%016x\n", &regs.natmem_offset, regs.natmem_offset);
+    write_log("Address of natmem_offset: 0x%016x, natmem_offset = 0x%016x\n", &natmem_offset, natmem_offset);
     write_log("Address of cache_tags: 0x%016x\n", cache_tags);
 #endif
     compemu_raw_init_r_regstruct((uintptr)&regs);
