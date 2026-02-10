@@ -127,23 +127,16 @@ static int uaenet_worker_thread(void *arg)
     struct uaenet_data *ud = (struct uaenet_data*)arg;
     struct pcap_pkthdr *header;
     const u_char *pkt_data;
-    
+
     ud->active2 = true;
     uae_sem_post(&ud->sync_sem);
-    
+
     while (ud->active2) {
-        // Check if there are any packets to process
-        if (uaenet_checkpacket(ud))
-            continue;
-        
-        // Wait for more packets
-        uae_sem_wait(&queue_available);
-        
-        // Check if we should exit
-        if (!ud->active2)
-            break;
-        
-        // Process packets from pcap
+        // Process any received packets in the queue
+        while (uaenet_checkpacket(ud))
+            ;
+
+        // Poll pcap for new packets (uses timeout from pcap_open_live)
         if (ud->handle) {
             int res = pcap_next_ex(ud->handle, &header, &pkt_data);
             if (res == 1 && header && pkt_data) {
@@ -151,7 +144,7 @@ static int uaenet_worker_thread(void *arg)
             }
         }
     }
-    
+
     ud->active2 = false;
     return 0;
 }
