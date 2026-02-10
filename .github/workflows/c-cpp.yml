@@ -3,7 +3,7 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
-    branches: [master, imgui]
+    branches: [master]
     paths-ignore:
       - '**.md'
       - 'wiki/**'
