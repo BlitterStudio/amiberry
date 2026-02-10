@@ -2425,7 +2425,7 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 		chcnt = 0;
 	}
 	if (dr->cf_reg != 0xffff) {
-		_stprintf(srtext, _T("!%03x"), dr->cf_reg);
+		_sntprintf(srtext, sizeof srtext, _T("!%03x"), dr->cf_reg);
 		chcnt = -1;
 		regsize--;
 	} else {
@@ -2742,7 +2742,7 @@ static bool get_record_dma_info(struct dma_rec *drs, struct dma_rec *dr, TCHAR *
 				}
 			}
 		} else if (dr->miscsize) {
-			_stprintf(l5, _T("ROM%c%c %08X"), dr->ciarw ? 'W' : 'R', dr->miscsize == 1 ? 'B' : (dr->miscsize == 2 ? 'W' : 'L'), dr->miscaddr);
+			_sntprintf(l5, 30, _T("ROM%c%c %08X"), dr->ciarw ? 'W' : 'R', dr->miscsize == 1 ? 'B' : (dr->miscsize == 2 ? 'W' : 'L'), dr->miscaddr);
 		}
 	}
 	if (l6) {

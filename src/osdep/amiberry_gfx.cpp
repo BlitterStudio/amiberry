@@ -50,13 +50,7 @@
 #include <png.h>
 #include <SDL_image.h>
 #ifdef USE_OPENGL
-#ifndef __ANDROID__
-#include <GL/glew.h>
-#include <SDL_opengl.h>
-#else
-#include <GLES3/gl3.h>
-#include <SDL_opengles2.h>
-#endif
+#include "gl_platform.h"
 
 #ifndef GL_BGRA
 #ifdef GL_BGRA_EXT
@@ -67,6 +61,7 @@
 #endif
 
 #define CRTEMU_REPORT_SHADER_ERRORS
+#define CRTEMU_REPORT_ERROR( str ) write_log( "%s\n", str )
 #define CRTEMU_IMPLEMENTATION
 #include "crtemu.h"
 
@@ -74,8 +69,9 @@
 #include "crt_frame.h"
 
 #include "external_shader.h"
+#include "shader_preset.h"
 
-#endif
+#endif // USE_OPENGL
 
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
@@ -96,11 +92,28 @@ static SDL_Texture* p96_cursor_overlay_texture = nullptr;  // Software cursor ov
 SDL_GLContext gl_context;
 crtemu_t* crtemu_shader = nullptr;
 ExternalShader* external_shader = nullptr;
+ShaderPreset* shader_preset = nullptr;
 static std::string external_shader_name;
+static std::string loaded_shader_name; // Tracks currently loaded shader to avoid unnecessary recreation
 static GLenum gl_texture_filter_mode = GL_LINEAR; // Default to linear filtering
 
 bool set_opengl_attributes(int mode);
 bool init_opengl_context(SDL_Window* window);
+
+// Load or unload the CRT bezel frame overlay based on amiberry_options.use_bezel
+void update_crtemu_bezel()
+{
+	if (crtemu_shader == nullptr)
+		return;
+	if (amiberry_options.use_bezel) {
+		auto* frame_pixels = new CRTEMU_U32[CRT_FRAME_WIDTH * CRT_FRAME_HEIGHT];
+		crt_frame(frame_pixels);
+		crtemu_frame(crtemu_shader, frame_pixels, CRT_FRAME_WIDTH, CRT_FRAME_HEIGHT);
+		delete[] frame_pixels;
+	} else {
+		crtemu_frame(crtemu_shader, nullptr, 0, 0);
+	}
+}
 
 // Check if shader name refers to an external .glsl file
 static bool is_external_shader(const char* shader)
@@ -110,12 +123,20 @@ static bool is_external_shader(const char* shader)
 	return ext && !strcasecmp(ext, ".glsl");
 }
 
+// Check if shader name refers to a .glslp shader preset
+static bool is_shader_preset(const char* shader)
+{
+	if (!shader) return false;
+	const char* ext = strrchr(shader, '.');
+	return ext && !strcasecmp(ext, ".glslp");
+}
+
 static int get_crtemu_type(const char* shader)
 {
 	if (!shader) return CRTEMU_TYPE_TV;
 	
-	// Check if it's an external shader file
-	if (is_external_shader(shader)) {
+	// Check if it's an external shader file or preset
+	if (is_external_shader(shader) || is_shader_preset(shader)) {
 		external_shader_name = shader;
 		return CRTEMU_TYPE_NONE; // Use NONE to skip crtemu initialization
 	}
@@ -213,6 +234,7 @@ static float SDL2_getrefreshrate(const int monid)
 #ifdef USE_OPENGL
 static int current_vsync_interval = -1;
 static float cached_refresh_rate = 0.0f;
+static bool gl_state_initialized = false; // Track if GL state has been set for current context
 
 void update_vsync(const int monid)
 {
@@ -251,14 +273,13 @@ void update_vsync(const int monid)
 	
 	if (current_vsync_interval != interval) {
 		if (SDL_GL_SetSwapInterval(interval) == 0) {
-			current_vsync_interval = interval;
 			write_log("OpenGL VSync: Mode %d, Interval set to %d\n", vsync_mode, interval);
 		}
 		else {
-			write_log("OpenGL VSync: Failed to set interval %d: %s\n", interval, SDL_GetError());
-			// If failed, maybe try to reset to 0 to be safe? 
-			// But maybe the driver just doesn't support adaptive?
+			write_log("OpenGL VSync: Failed to set interval %d: %s (will not retry)\n", interval, SDL_GetError());
 		}
+		// Update interval even on failure to prevent repeated attempts
+		current_vsync_interval = interval;
 	}
 }
 #endif
@@ -333,7 +354,7 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 	gl_texture_filter_mode = (strcmp(scale_quality, "linear") == 0) ? GL_LINEAR : GL_NEAREST;
 	// Note: integer_scale is not directly applicable to OpenGL - it would need custom
 	// viewport calculations which are handled elsewhere in the rendering pipeline
-	
+
 	// Only apply filter mode when no shader is active (NONE mode without external shader)
 	// CRT shaders and external shaders handle their own texture filtering
 	bool no_shader_active = (crtemu_shader != nullptr && crtemu_shader->type == CRTEMU_TYPE_NONE && external_shader == nullptr);
@@ -342,7 +363,7 @@ void set_scaling_option(const int monid, const uae_prefs* p, const int width, co
 		if (crtemu_shader->backbuffer != 0 && glIsTexture(crtemu_shader->backbuffer)) {
 			// Update the persistent filter state in crtemu so it's used every frame
 			crtemu_shader->texture_filter = gl_texture_filter_mode;
-			
+
 			glBindTexture(GL_TEXTURE_2D, crtemu_shader->backbuffer);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_texture_filter_mode);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_texture_filter_mode);
@@ -494,26 +515,50 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	if (w == 0 || h == 0)
 		return false;
 #ifdef USE_OPENGL
-	// Clean up existing shaders
-	destroy_shaders();
-	
-	const auto mon = &AMonitors[monid];
+	auto mon = &AMonitors[monid];
 	const char* shader_name;
 	if (mon->screen_is_picasso)
 		shader_name = amiberry_options.shader_rtg;
 	else
 		shader_name = amiberry_options.shader;
+
+	// Skip shader recreation if already loaded with the same name.
+	// This preserves runtime parameter changes made by the user.
+	bool shader_exists = (crtemu_shader != nullptr || external_shader != nullptr || shader_preset != nullptr);
+	if (shader_exists && loaded_shader_name == shader_name) {
+		return true;
+	}
+
+	// Clean up existing shaders (name changed or no shader loaded yet)
+	destroy_shaders();
+	loaded_shader_name = shader_name;
+
+	// Force full render on next frame after shader switch
+	mon->full_render_needed = true;
 	
 	// Ensure GL context is current before creating shaders
 	if (gl_context && mon->amiga_window) {
 		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
 	}
 
-	// Check if we should use an external shader
-	if (is_external_shader(shader_name)) {
+	// Check if we should use a shader preset (.glslp)
+	if (is_shader_preset(shader_name)) {
+		write_log("Loading shader preset: %s\n", shader_name);
+		shader_preset = create_shader_preset(shader_name);
+
+		if (!shader_preset) {
+			write_log("Failed to load shader preset, falling back to built-in shaders\n");
+			shader_name = "none";
+		} else {
+			write_log("Shader preset loaded successfully (%d passes)\n", shader_preset->get_pass_count());
+			return true;
+		}
+	}
+	// Check if we should use an external shader (.glsl)
+	else if (is_external_shader(shader_name)) {
 		write_log("Loading external shader: %s\n", shader_name);
 		external_shader = create_external_shader(shader_name);
-		
+
 		if (!external_shader) {
 			write_log("Failed to load external shader, falling back to built-in shaders\n");
 			// Fall back to built-in shaders
@@ -527,9 +572,24 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 	// Use built-in crtemu shaders
 	if (crtemu_shader == nullptr) {
 		const int crt_type = get_crtemu_type(shader_name);
-		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr);
+		crtemu_shader = crtemu_create(static_cast<crtemu_type_t>(crt_type), nullptr,
+			amiberry_options.force_mobile_shaders);
+
+		// Apply force_mobile_shaders override if enabled
+		if (crtemu_shader != nullptr && amiberry_options.force_mobile_shaders) {
+			crtemu_shader->is_mobile_gpu = true;
+		}
+
+		// Fallback to NONE if shader creation failed (e.g., shader compilation error)
+		if (crtemu_shader == nullptr && crt_type != CRTEMU_TYPE_NONE) {
+			write_log("WARNING: Failed to create CRT shader type %d, falling back to NONE\n", crt_type);
+			crtemu_shader = crtemu_create(CRTEMU_TYPE_NONE, nullptr);
+		}
+
+		// Load bezel frame overlay if enabled
+		update_crtemu_bezel();
 	}
-	return crtemu_shader != nullptr || external_shader != nullptr;
+	return crtemu_shader != nullptr || external_shader != nullptr || shader_preset != nullptr;
 #else
 	if (w < 0 || h < 0)
 	{
@@ -1631,7 +1691,8 @@ float target_adjust_vblank_hz(const int monid, float hz)
 #ifdef USE_OPENGL
 // Render using external shader (single-pass)
 static void render_with_external_shader(ExternalShader* shader, const int monid, 
-	const uae_u8* pixels, int width, int height, int pitch, int viewport_width, int viewport_height)
+	const uae_u8* pixels, int width, int height, int pitch, 
+	int viewport_x, int viewport_y, int viewport_width, int viewport_height)
 {
 	if (!shader || !shader->is_valid()) {
 		write_log("render_with_external_shader: shader is null or invalid\n");
@@ -1718,6 +1779,9 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	// Ensure we're rendering to the default framebuffer (screen)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	
+	// Set viewport explicitly - critical fix for external shaders
+	glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
+	
 	// Set up GL state for 2D rendering
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
@@ -1747,14 +1811,27 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 		gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
 		bpp = 2;
 	}
-	
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / bpp);
 
+	// Track texture changes per-shader to handle shader switches properly
+	// Using shader program ID as part of cache key to detect shader changes
+	GLuint current_program = shader->get_program();
 	static int last_w = 0, last_h = 0;
 	static GLuint last_texture = 0;
+	static GLuint last_shader_program = 0;
+	
+	// Reset cache if shader changed (handles shader switching)
+	if (current_program != last_shader_program) {
+		last_w = 0;
+		last_h = 0;
+		last_texture = 0;
+		last_shader_program = current_program;
+	}
+	
 	if (width != last_w || height != last_h || texture != last_texture) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, gl_fmt, gl_type, pixels);
 		last_w = width;
@@ -1772,7 +1849,13 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	// Set uniforms
 	shader->set_texture_size(static_cast<float>(width), static_cast<float>(height));
 	shader->set_input_size(static_cast<float>(width), static_cast<float>(height));
-	shader->set_output_size(static_cast<float>(viewport_width), static_cast<float>(viewport_height));
+	
+	// Many CRT shaders calculate scale = floor(OutputSize / InputSize)
+	// If OutputSize < InputSize, scale becomes 0, causing division by zero.
+	// Ensure OutputSize is always at least InputSize to prevent shader errors.
+	int safe_output_w = (viewport_width >= width) ? viewport_width : width;
+	int safe_output_h = (viewport_height >= height) ? viewport_height : height;
+	shader->set_output_size(static_cast<float>(safe_output_w), static_cast<float>(safe_output_h));
 	shader->set_frame_count(frame_count++);
 	
 	// Set MVP matrix (orthographic projection for fullscreen quad)
@@ -1784,24 +1867,30 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	};
 	shader->set_mvp_matrix(mvp);
 	
+	// Apply parameter uniforms from the emulator's GL context.
+	// set_parameter() only stores values; the actual glUniform1f calls
+	// must happen here in the render loop where the correct GL context is active.
+	shader->apply_parameter_uniforms();
+
 	// Bind texture
 	shader->bind_texture(texture, 0);
-	
+
 	// Set up vertex data for fullscreen quad
-	// The shader expects: attribute vec4 VertexCoord (position as vec2 in xy)
-	//                     attribute vec2 TexCoord
-	// We'll use interleaved format: x, y, u, v
+	// The shader expects: attribute vec4 VertexCoord (position as x,y,z,w)
+	//                     attribute vec2/vec4 TexCoord (s,t,...)
+	// We'll use interleaved format: x, y, z, w, s, t, 0, 0 (8 floats per vertex)
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	if (vbo_uploaded == 0) {
-		float vertices[] = {
-			-1.0f, -1.0f, 0.0f, 1.0f,  // Bottom-left
-			 1.0f, -1.0f, 1.0f, 1.0f,  // Bottom-right
-			 1.0f,  1.0f, 1.0f, 0.0f,  // Top-right
-			-1.0f,  1.0f, 0.0f, 0.0f   // Top-left
-		};
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-		vbo_uploaded = vbo;
-	}
+	
+	// Always upload vertex data - it's small (128 bytes) and ensures correct state
+	// after shader switches or window resize
+	float vertices[] = {
+		// VertexCoord (x,y,z,w), TexCoord (s,t,0,0)
+		-1.0f, -1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f, 0.0f,  // Bottom-left
+		 1.0f, -1.0f, 0.0f, 1.0f,   1.0f, 1.0f, 0.0f, 0.0f,  // Bottom-right
+		 1.0f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f, 0.0f, 0.0f,  // Top-right
+		-1.0f,  1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f, 0.0f   // Top-left
+	};
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 	
 	// Set up vertex attributes to match shader bindings
 	// Explicitly disable any previously enabled arrays to avoid state leakage
@@ -1809,17 +1898,23 @@ static void render_with_external_shader(ExternalShader* shader, const int monid,
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 
-	// Attribute 0: VertexCoord (vec4, but we only use xy for position)
+	// Stride: 8 floats per vertex (4 for VertexCoord + 4 for TexCoord)
+	const GLsizei stride = 8 * sizeof(float);
+
+	// Attribute 0: VertexCoord (vec4: x, y, z, w)
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
 	
 	// Attribute 1: Color (vec4) - Set to white by default
 	// Many RetroArch shaders multiply the sampled color by this attribute.
 	glVertexAttrib4f(1, 1.0f, 1.0f, 1.0f, 1.0f);
 
-	// Attribute 2: TexCoord (vec2)
+
+	// Attribute 2: TexCoord (vec2: s, t)
+	// Note: Some shaders use vec2, some use vec4. Using 2 components is more compatible.
+	// The shader will only read the first 2 components anyway.
 	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float)));
 	
 	// Draw fullscreen quad
 	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -2056,8 +2151,8 @@ void show_screen(const int monid, int mode)
 		return;
 	}
 #ifdef USE_OPENGL
-	// Safety check: if neither crtemu_shader nor external_shader is available, skip rendering
-	if (!crtemu_shader && !external_shader) {
+	// Safety check: if no shader is available, skip rendering
+	if (!crtemu_shader && !external_shader && !shader_preset) {
 		return;
 	}
 
@@ -2076,15 +2171,15 @@ void show_screen(const int monid, int mode)
 		}
 	}
 
-	// Reset GL state to a known baseline
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_STENCIL_TEST);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
-	
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	// Reset GL state to a known baseline - only on first frame after context creation
+	if (!gl_state_initialized) {
+		glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_BLEND);
+		gl_state_initialized = true;
+	}
 
 	float desired_aspect = calculate_desired_aspect(mon);
 	if (desired_aspect <= 0.0f) desired_aspect = 4.0f / 3.0f;
@@ -2103,6 +2198,12 @@ void show_screen(const int monid, int mode)
 	int destX = (drawableWidth - destW) / 2;
 	int destY = (drawableHeight - destH) / 2;
 
+	// Only clear if letterboxing is active (frame doesn't cover entire window)
+	if (destW < drawableWidth || destH < drawableHeight) {
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
 	glViewport(destX, destY, destW, destH);
 
 	// Update render_quad to reflect the actual drawn area
@@ -2117,12 +2218,67 @@ void show_screen(const int monid, int mode)
 							 crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
 							 (crop_rect.w > 0 && crop_rect.h > 0);
 
+	// Handle shader preset rendering (multi-pass .glslp)
+	if (shader_preset && shader_preset->is_valid()) {
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+
+		int src_w = amiga_surface ? amiga_surface->w : 0;
+		int src_h = amiga_surface ? amiga_surface->h : 0;
+		if (is_cropped && amiga_surface) {
+			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
+			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
+		}
+
+		int viewport_w = std::max(destW, src_w);
+		int viewport_h = std::max(destH, src_h);
+		int viewport_x = (drawableWidth - viewport_w) / 2;
+		int viewport_y = (drawableHeight - viewport_h) / 2;
+
+		static int preset_frame_count = 0;
+
+		if (is_cropped && amiga_surface) {
+			const int bpp = 4;
+			int x = std::max(0, crop_rect.x);
+			int y = std::max(0, crop_rect.y);
+			int w = std::min(crop_rect.w, amiga_surface->w - x);
+			int h = std::min(crop_rect.h, amiga_surface->h - y);
+			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
+
+			shader_preset->render(crop_ptr, w, h, amiga_surface->pitch,
+				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
+		} else if (amiga_surface) {
+			shader_preset->render(static_cast<const unsigned char*>(amiga_surface->pixels),
+				amiga_surface->w, amiga_surface->h, amiga_surface->pitch,
+				viewport_x, viewport_y, viewport_w, viewport_h, preset_frame_count++);
+		}
+
+	}
 	// Handle external shader rendering (simplified single-pass)
-	if (external_shader && external_shader->is_valid()) {
+	else if (external_shader && external_shader->is_valid()) {
 		// Explicitly disable attributes to avoid leakage from previous passes
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
+		
+		// Get source dimensions for this frame
+		int src_w = amiga_surface ? amiga_surface->w : 0;
+		int src_h = amiga_surface ? amiga_surface->h : 0;
+		if (is_cropped && amiga_surface) {
+			src_w = std::min(crop_rect.w, amiga_surface->w - std::max(0, crop_rect.x));
+			src_h = std::min(crop_rect.h, amiga_surface->h - std::max(0, crop_rect.y));
+		}
+		
+		// Use aspect-corrected viewport, but ensure it's at least as large as the source
+		// Many CRT shaders calculate scale = floor(OutputSize / InputSize) which fails if OutputSize < InputSize
+		int viewport_w = std::max(destW, src_w);
+		int viewport_h = std::max(destH, src_h);
+		int viewport_x = (drawableWidth - viewport_w) / 2;
+		int viewport_y = (drawableHeight - viewport_h) / 2;
+		
+		// Set viewport for shader rendering
+		glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
 		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
@@ -2134,12 +2290,12 @@ void show_screen(const int monid, int mode)
 			uae_u8* crop_ptr = static_cast<uae_u8*>(amiga_surface->pixels) + (y * amiga_surface->pitch) + (x * bpp);
 
 			render_with_external_shader(external_shader, monid, crop_ptr,
-				w, h, amiga_surface->pitch, destW, destH);
+				w, h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		} else if (amiga_surface) {
 			// FAST PATH: No cropping
 			render_with_external_shader(external_shader, monid, 
 				static_cast<const uae_u8*>(amiga_surface->pixels),
-				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, destW, destH);
+				amiga_surface->w, amiga_surface->h, amiga_surface->pitch, viewport_x, viewport_y, viewport_w, viewport_h);
 		}
 
 	} else if (crtemu_shader) {
@@ -2153,30 +2309,30 @@ void show_screen(const int monid, int mode)
 			glViewport(0, 0, drawableWidth, drawableHeight);
 		}
 
+		// Determine correct OpenGL format
+		unsigned int gl_fmt, gl_type;
+		int bpp = 4;
+		if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
+			gl_fmt = GL_BGRA;
+			gl_type = GL_UNSIGNED_BYTE;
+		}
+		else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
+			gl_fmt = GL_RGB;
+			gl_type = GL_UNSIGNED_SHORT_5_6_5;
+			bpp = 2;
+		}
+		else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
+			gl_fmt = GL_RGBA;
+			gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
+			bpp = 2;
+		}
+		else {
+			gl_fmt = GL_RGBA;
+			gl_type = GL_UNSIGNED_BYTE;
+		}
+
 		if (is_cropped && amiga_surface) {
 			// Fast path for cropping using GL_UNPACK_ROW_LENGTH
-			// Determine correct OpenGL format
-			unsigned int gl_fmt, gl_type;
-			int bpp = 4;
-			if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-				gl_fmt = GL_BGRA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-				gl_fmt = GL_RGB;
-				gl_type = GL_UNSIGNED_SHORT_5_6_5;
-				bpp = 2;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
-				bpp = 2;
-			}
-			else {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-
 			int x = std::max(0, crop_rect.x);
 			int y = std::max(0, crop_rect.y);
 			int w = std::min(crop_rect.w, amiga_surface->w - x);
@@ -2186,28 +2342,6 @@ void show_screen(const int monid, int mode)
 			crtemu_present(crtemu_shader, time * 1000, reinterpret_cast<const CRTEMU_U32*>(crop_ptr),
 				w, h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
 		} else if (amiga_surface) {
-			// Determine correct OpenGL format
-			unsigned int gl_fmt, gl_type;
-			int bpp = 4;
-			if (pixel_format == SDL_PIXELFORMAT_ARGB8888) {
-				gl_fmt = GL_BGRA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB565) {
-				gl_fmt = GL_RGB;
-				gl_type = GL_UNSIGNED_SHORT_5_6_5;
-				bpp = 2;
-			}
-			else if (pixel_format == SDL_PIXELFORMAT_RGB555) {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_SHORT_5_5_5_1;
-				bpp = 2;
-			}
-			else {
-				gl_fmt = GL_RGBA;
-				gl_type = GL_UNSIGNED_BYTE;
-			}
-
 			// FAST PATH: No cropping.
 			crtemu_present(crtemu_shader, time * 1000, (CRTEMU_U32 const*)amiga_surface->pixels,
 			amiga_surface->w, amiga_surface->h, amiga_surface->pitch, 0xffffffff, 0x000000, gl_fmt, gl_type, bpp);
@@ -2385,9 +2519,7 @@ static uae_u8* gfx_lock_picasso2(int monid, bool fullupdate)
 
 
 	//SDL_LockTexture(amiga_texture, nullptr, reinterpret_cast<void**>(&p), &vidinfo->rowbytes);
-	//SDL_QueryTexture(amiga_texture,
-	//	nullptr, nullptr,
-	//	&vidinfo->maxwidth, &vidinfo->maxheight);
+
 	vidinfo->pixbytes = amiga_surface->format->BytesPerPixel;
 	vidinfo->rowbytes = amiga_surface->pitch;
 	vidinfo->maxwidth = amiga_surface->w;
@@ -2447,17 +2579,20 @@ static void close_hwnds(struct AmigaMonitor* mon)
 
 #ifdef USE_OPENGL
 	destroy_shaders();
-	if (p96_cursor_overlay_texture_gl) {
-		glDeleteTextures(1, &p96_cursor_overlay_texture_gl);
-		p96_cursor_overlay_texture_gl = 0;
-	}
-	if (cursor_vao) {
-		glDeleteVertexArrays(1, &cursor_vao);
-		cursor_vao = 0;
-	}
-	if (cursor_vbo) {
-		glDeleteBuffers(1, &cursor_vbo);
-		cursor_vbo = 0;
+	if (gl_context != nullptr)
+	{
+		if (p96_cursor_overlay_texture_gl) {
+			glDeleteTextures(1, &p96_cursor_overlay_texture_gl);
+			p96_cursor_overlay_texture_gl = 0;
+		}
+		if (cursor_vao) {
+			glDeleteVertexArrays(1, &cursor_vao);
+			cursor_vao = 0;
+		}
+		if (cursor_vbo) {
+			glDeleteBuffers(1, &cursor_vbo);
+			cursor_vbo = 0;
+		}
 	}
 #else
 	if (amiga_texture)
@@ -2479,18 +2614,27 @@ static void close_hwnds(struct AmigaMonitor* mon)
 		gl_context = nullptr;
 		current_vsync_interval = -1; // Reset VSync state
 		cached_refresh_rate = 0.0f;
+		gl_state_initialized = false; // Reset GL state flag for next context
 	}
 #else
 	if (mon->amiga_renderer && !kmsdrm_detected)
 	{
+#ifdef __ANDROID__
+		// Don't destroy the renderer on Android, as we reuse it
+#else
 		SDL_DestroyRenderer(mon->amiga_renderer);
 		mon->amiga_renderer = nullptr;
+#endif
 	}
 #endif
 	if (mon->amiga_window && !kmsdrm_detected)
 	{
+#ifdef __ANDROID__
+		// Reuse existing window
+#else
 		SDL_DestroyWindow(mon->amiga_window);
 		mon->amiga_window = nullptr;
+#endif
 	}
 
 	if (currprefs.vkbd_enabled)
@@ -3961,7 +4105,7 @@ static int getbestmode(struct AmigaMonitor* mon, int nextbest)
 		}
 		// first iterate only modes that have similar aspect ratio
 		startidx = i;
-		for (; md->DisplayModes[i].inuse; i++) {
+		for ( ; md->DisplayModes[i].inuse; i++) {
 			struct PicassoResolution* pr = &md->DisplayModes[i];
 			int r = pr->res.width > pr->res.height ? 1 : 0;
 			if (pr->res.width >= mon->currentmode.native_width && pr->res.height >= mon->currentmode.native_height && r == ratio) {
@@ -3976,7 +4120,7 @@ static int getbestmode(struct AmigaMonitor* mon, int nextbest)
 		}
 		// still not match? check all modes
 		i = startidx;
-		for (; md->DisplayModes[i].inuse; i++) {
+		for ( ; md->DisplayModes[i].inuse; i++) {
 			struct PicassoResolution* pr = &md->DisplayModes[i];
 			int r = pr->res.width > pr->res.height ? 1 : 0;
 			if (pr->res.width >= mon->currentmode.native_width && pr->res.height >= mon->currentmode.native_height) {
@@ -4116,6 +4260,16 @@ static int create_windows(struct AmigaMonitor* mon)
 			mon->amiga_renderer = mon->gui_renderer;
 		}
 	}
+#ifdef __ANDROID__
+	if (!mon->amiga_window && mon->gui_window)
+	{
+		mon->amiga_window = mon->gui_window;
+	}
+	if (!mon->amiga_renderer && mon->gui_renderer)
+	{
+		mon->amiga_renderer = mon->gui_renderer;
+	}
+#endif
 	// If KMSDRM is detected, force Full-Window mode
 	if (kmsdrm_detected)
 	{
@@ -4150,13 +4304,53 @@ static int create_windows(struct AmigaMonitor* mon)
 	mon->md = md;
 
 	if (mon->amiga_window) {
+		SDL_Rect r;
+		int nw, nh, nx, ny;
+
 		if (minimized) {
 			minimized = -1;
 			return 1;
 		}
 
+		GetWindowRect(mon->amiga_window, &r);
+
+		x = r.x;
+		y = r.y;
+		w = r.w;
+		h = r.h;
+
+		if (mon->screen_is_picasso) {
+			nw = mon->currentmode.current_width;
+			nh = mon->currentmode.current_height;
+		} else {
+			nw = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.width;
+			nh = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.height;
+		}
+
+		if (fullwindow) {
+			SDL_Rect rc = md->rect;
+			nx = rc.x;
+			ny = rc.y;
+			nw = rc.w;
+			nh = rc.h;
+		}
+
+		if (w != nw || h != nh || x != nx || y != ny) {
+			w = nw;
+			h = nh;
+			x = nx;
+			y = ny;
+			mon->in_sizemove++;
+			SDL_SetWindowPosition(mon->amiga_window, x, y);
+			SDL_SetWindowSize(mon->amiga_window, w, h);
+		} else {
+			w = nw;
+			h = nh;
+			x = nx;
+			y = ny;
+		}
+
 		updatewinrect(mon, false);
-		GetWindowRect(mon->amiga_window, &mon->amigawin_rect);
 		write_log(_T("window already open (%dx%d %dx%d)\n"),
 			mon->amigawin_rect.x, mon->amigawin_rect.y, mon->amigawin_rect.w, mon->amigawin_rect.h);
 		updatemouseclip(mon);
@@ -4248,12 +4442,7 @@ static int create_windows(struct AmigaMonitor* mon)
 	if (currprefs.start_minimized || currprefs.headless)
 		flags |= SDL_WINDOW_HIDDEN;
 #ifdef USE_OPENGL
-	// Avoid forcing OpenGL on drivers likely to provide GLES-only contexts.
-	if (!kmsdrm_detected) {
-		flags |= SDL_WINDOW_OPENGL;
-	} else {
-		write_log(_T("KMSDRM detected; skipping SDL_WINDOW_OPENGL to avoid GLES context with GLEW.\n"));
-	}
+	flags |= SDL_WINDOW_OPENGL;
 #endif
 	mon->amiga_window = SDL_CreateWindow(_T("Amiberry"),
 		rc.x, rc.y,
@@ -4751,21 +4940,6 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 	int scaled_width, scaled_height;
 	compute_scaled_dimensions(w, h, mon->screen_is_picasso, scaled_width, scaled_height);
 
-	// Window sizing when not fullscreen
-	if (mon->amiga_window && isfullscreen() == 0) {
-		int win_w, win_h;
-		if (mon->screen_is_picasso) {
-			// RTG: use stored rect if larger, otherwise use RTG resolution
-			win_w = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.w : w;
-			win_h = (mon->amigawin_rect.w > w || mon->amigawin_rect.h > h) ? mon->amigawin_rect.h : h;
-		} else {
-			// Native: use stored rect if larger than default, otherwise use scaled dimensions
-			win_w = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.w : scaled_width;
-			win_h = (mon->amigawin_rect.w > 800 && mon->amigawin_rect.h != 600) ? mon->amigawin_rect.h : scaled_height;
-		}
-		SDL_SetWindowSize(mon->amiga_window, win_w, win_h);
-	}
-
 #ifdef USE_OPENGL
 	configure_render_rects(w, h, scaled_width, scaled_height, mon->screen_is_picasso);
 	set_scaling_option(monid, &currprefs, scaled_width, scaled_height);
@@ -5004,6 +5178,20 @@ void toggle_fullscreen(const int monid, const int mode)
 #ifdef USE_OPENGL
 void destroy_shaders()
 {
+	// Clear tracked name so next SDL2_alloctexture call will recreate
+	loaded_shader_name.clear();
+
+	// Early exit if no GL context exists (e.g., quitting before emulation started)
+	if (gl_context == nullptr)
+	{
+		// Reset non-GL state
+		crtemu_shader = nullptr;
+		external_shader = nullptr;
+		shader_preset = nullptr;
+		gl_state_initialized = false;
+		return;
+	}
+
 	if (crtemu_shader != nullptr)
 	{
 		crtemu_destroy(crtemu_shader);
@@ -5013,6 +5201,11 @@ void destroy_shaders()
 	{
 		destroy_external_shader(external_shader);
 		external_shader = nullptr;
+	}
+	if (shader_preset != nullptr)
+	{
+		destroy_shader_preset(shader_preset);
+		shader_preset = nullptr;
 	}
 	if (osd_program != 0 && glIsProgram(osd_program))
 	{
@@ -5034,6 +5227,26 @@ void destroy_shaders()
 		glDeleteTextures(1, &osd_texture);
 		osd_texture = 0;
 	}
+
+	// Reset GL state flag to ensure clean slate for next shader
+	gl_state_initialized = false;
+
+	// Reset GL state to ensure clean slate for next shader
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glUseProgram(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// Reset pixel store settings
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+	// Disable all vertex attributes that might have been enabled
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
 }
 #endif
 
@@ -5311,23 +5524,15 @@ void screenshot(int monid, int mode, int doprepare)
 
 #ifdef USE_OPENGL
 
-static bool is_gles_context()
-{
-	const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-	return ver && (strstr(ver, "OpenGL ES") != nullptr || strstr(ver, "OpenGL ES-CM") != nullptr);
-}
-
 /**
- * @brief Creates the OpenGL context and initializes the GLEW extension loader.
+ * @brief Creates the OpenGL context and initializes extension function pointers.
  *
  * This function must be called after an SDL window has been successfully
  * created. It performs the final steps required to prepare for OpenGL
  * rendering:
  * 1. Creates an OpenGL context and associates it with the given window.
  * 2. Binds the newly created context to the current thread.
- * 3. Initializes the GLEW library, which dynamically loads the function
- *    pointers for all available OpenGL extensions. This is essential for
- *    accessing any functionality beyond the OpenGL 1.1 core.
+ * 3. Loads OpenGL extension function pointers via SDL_GL_GetProcAddress.
  *
  * The function includes error checking after each step and will log detailed
  * error messages if any part of the process fails. It also logs the vendor,
@@ -5335,7 +5540,7 @@ static bool is_gles_context()
  *
  * @param window A pointer to the SDL_Window that the OpenGL context will be
  *               created for.
- * @return true if the context was created and GLEW was initialized
+ * @return true if the context was created and extension functions were loaded
  *         successfully, false otherwise.
  */
 [[nodiscard]] bool init_opengl_context(SDL_Window* window)
@@ -5355,15 +5560,8 @@ static bool is_gles_context()
 		return false;
 	}
 
-#ifndef __ANDROID__
-	// GLEW: enable modern/core entry points before init, then clear benign error.
-	glewExperimental = GL_TRUE;
-	const GLenum glew_err = glewInit();
-	(void)glGetError(); // clear spurious GL_INVALID_ENUM produced by glewInit on core profiles
-
-	if (glew_err != GLEW_OK) {
-		write_log(_T("!!! Error initializing GLEW: %hs\n"), glewGetErrorString(glew_err));
-		// If GLEW reports an error but GL is valid, continue; otherwise fail.
+	// Load OpenGL extension functions (does nothing on Android/GLES3)
+	if (!gl_platform_init()) {
 		const GLubyte* ver = glGetString(GL_VERSION);
 		if (!ver) {
 			write_log(_T("!!! glGetString(GL_VERSION) is null; failing OpenGL init.\n"));
@@ -5371,35 +5569,8 @@ static bool is_gles_context()
 			gl_context = nullptr;
 			return false;
 		}
+		write_log(_T("!!! OpenGL version: %hs\n"), ver);
 	}
-#endif
-
-	// On GLES contexts (e.g. RPi4/5), desktop GLEW might fail or return error.
-	// We should NOT fail initialization here, but instead warn and try to patch missing symbols.
-	if (is_gles_context()) {
-		const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-		write_log(_T("!!! OpenGL ES context detected (%hs); proceeding with manual symbol fixups if needed.\n"), ver ? ver : "unknown");
-	}
-
-	// Manually load VAO functions if GLEW failed to load them (common on GLES)
-    // We check the GLEW function pointers directly.
-#ifndef __ANDROID__
-    if (!__glewGenVertexArrays) {
-        write_log("Manual loading of glGenVertexArrays...\n");
-        __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArrays");
-        if (!__glewGenVertexArrays) __glewGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glGenVertexArraysOES");
-    }
-    if (!__glewBindVertexArray) {
-        write_log("Manual loading of glBindVertexArray...\n");
-        __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArray");
-        if (!__glewBindVertexArray) __glewBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)SDL_GL_GetProcAddress("glBindVertexArrayOES");
-    }
-    if (!__glewDeleteVertexArrays) {
-        write_log("Manual loading of glDeleteVertexArrays...\n");
-        __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArrays");
-        if (!__glewDeleteVertexArrays) __glewDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)SDL_GL_GetProcAddress("glDeleteVertexArraysOES");
-    }
-#endif
 
 	const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 	const char* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));

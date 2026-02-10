@@ -16,6 +16,7 @@
 #include "blkdev.h"
 #include "scsidev.h"
 #include "gui.h"
+#include "uae.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -25,12 +26,17 @@
 #ifdef __MACH__
 // macOS
 #include <errno.h>
+#include <sys/disk.h>
 #include <IOKit/storage/IODVDMediaBSDClient.h>
 #include <IOKit/storage/IODVDMedia.h>
 #include <IOKit/storage/IODVDTypes.h>
 #include <IOKit/storage/IOCDMediaBSDClient.h>
 #include <IOKit/storage/IOCDMedia.h>
 #include <IOKit/storage/IOCDTypes.h>
+
+#ifndef ENOMEDIUM
+#define ENOMEDIUM ENXIO
+#endif
 
 #elif defined(__FreeBSD__)
 // FreeBSD
@@ -67,7 +73,9 @@ struct dev_info_ioctl {
 	TCHAR drvlettername[30];
 	TCHAR devname[30];
 	int type;
+#ifndef __MACH__
 	struct cdrom_tocentry cdromtoc;
+#endif
 	uae_u8 trackmode[100];
 	UINT errormode;
 	int fullaccess;
@@ -105,7 +113,7 @@ static struct dev_info_ioctl* unitcheck(int unitnum)
 	if (unittable[unitnum] <= 0)
 		return NULL;
 	unitnum = unittable[unitnum] - 1;
-	if (ciw32[unitnum].drvletter == 0)
+	if (ciw32[unitnum].drvletter[0] == 0)
 		return NULL;
 	return &ciw32[unitnum];
 }
@@ -168,6 +176,34 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 	if (log_scsi)
 		write_log(_T("IOCTL: opening IOCTL %s\n"), ciw->devname);
 	ciw->fd = open(ciw->devname, fullaccess ? O_RDWR : O_RDONLY);
+#ifdef __MACH__
+	// On macOS, audio CDs may not open without O_NONBLOCK since there's no mounted filesystem
+	if (ciw->fd == -1)
+		ciw->fd = open(ciw->devname, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
+	if (ciw->fd == -1) {
+		if (!strncmp(ciw->devname, "/dev/disk", 9)) {
+			char alt[64];
+			snprintf(alt, sizeof(alt), "/dev/rdisk%s", ciw->devname + 9);
+			ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
+			if (ciw->fd == -1)
+				ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
+			if (ciw->fd != -1) {
+				strncpy(ciw->devname, alt, sizeof(ciw->devname));
+				ciw->devname[sizeof(ciw->devname) - 1] = 0;
+			}
+		} else if (!strncmp(ciw->devname, "/dev/rdisk", 10)) {
+			char alt[64];
+			snprintf(alt, sizeof(alt), "/dev/disk%s", ciw->devname + 10);
+			ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
+			if (ciw->fd == -1)
+				ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
+			if (ciw->fd != -1) {
+				strncpy(ciw->devname, alt, sizeof(ciw->devname));
+				ciw->devname[sizeof(ciw->devname) - 1] = 0;
+			}
+		}
+	}
+#endif
 	if (ciw->fd == -1) {
 		int err = errno;
 		write_log(_T("IOCTL: failed to open '%s', err=%d\n"), ciw->devname, err);
@@ -180,6 +216,7 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 }
 
 
+#ifndef __MACH__
 static int do_raw_scsi(struct dev_info_ioctl* ciw, int unitnum, unsigned char* cmd, int cmdlen, unsigned char* data, int datalen) {
 	struct sg_io_hdr io_hdr;
 	unsigned char sense_buffer[32];
@@ -200,6 +237,7 @@ static int do_raw_scsi(struct dev_info_ioctl* ciw, int unitnum, unsigned char* c
 	}
 	return io_hdr.dxfer_len;
 }
+#endif
 
 static void sub_deinterleave(const uae_u8* s, uae_u8* d)
 {
@@ -215,12 +253,13 @@ static void sub_deinterleave(const uae_u8* s, uae_u8* d)
 	}
 }
 
+#ifndef __MACH__
 static int spti_read(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int sector, int sectorsize)
 {
 	uae_u8 cmd[12] = { 0xbe, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 };
 	int tlen = sectorsize;
 
-	write_log(_T("spti_read %d %d %d\n"), unitnum, sector, sectorsize);
+	//write_log(_T("spti_read %d %d %d\n"), unitnum, sector, sectorsize);
 
 	if (sectorsize == 2048 || sectorsize == 2336 || sectorsize == 2328) {
 		cmd[9] |= 1 << 4; // userdata
@@ -245,11 +284,50 @@ static int spti_read(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int 
 	int len = sizeof cmd;
 	return do_raw_scsi(ciw, unitnum, cmd, len, data, tlen);
 }
+#else
+static int spti_read(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int sector, int sectorsize)
+{
+	(void)ciw;
+	(void)unitnum;
+	(void)data;
+	(void)sector;
+	(void)sectorsize;
+	return 0;
+}
+#endif
 
 extern void encode_l2(uae_u8* p, int address);
 
+#ifdef __MACH__
+static int mac_cd_read_sector(struct dev_info_ioctl* ciw, int sector, uae_u8* dst, int bytes, uae_u8 sectorType)
+{
+	dk_cd_read_t rd{};
+	uint64_t sectorsize = (sectorType == kCDSectorTypeCDDA) ? kCDSectorSizeCDDA : kCDSectorSizeMode1;
+	rd.offset = (uint64_t)sector * sectorsize;
+	rd.sectorArea = kCDSectorAreaUser;
+	rd.sectorType = sectorType;
+	rd.bufferLength = (uint32_t)bytes;
+	rd.buffer = dst;
+	if (ioctl(ciw->fd, DKIOCCDREAD, &rd) == -1)
+		return 0;
+	return bytes;
+}
+
+static int mac_cd_read_mode1(struct dev_info_ioctl* ciw, int sector, uae_u8* dst)
+{
+	if (mac_cd_read_sector(ciw, sector, dst, kCDSectorSizeMode1, kCDSectorTypeMode1))
+		return kCDSectorSizeMode1;
+	if (mac_cd_read_sector(ciw, sector, dst, kCDSectorSizeMode1, kCDSectorTypeMode2Form1))
+		return kCDSectorSizeMode1;
+	return 0;
+}
+#endif
+
 static int read2048(struct dev_info_ioctl* ciw, int sector)
 {
+#ifdef __MACH__
+	return mac_cd_read_mode1(ciw, sector, ciw->tempbuffer);
+#else
 	off_t offset = (off_t)sector * 2048;
 
 	if (lseek(ciw->fd, offset, SEEK_SET) == (off_t)-1) {
@@ -257,6 +335,7 @@ static int read2048(struct dev_info_ioctl* ciw, int sector)
 	}
 	ssize_t dtotal = read(ciw->fd, ciw->tempbuffer, 2048);
 	return dtotal == 2048 ? 2048 : 0;
+#endif
 }
 
 static int read_block(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int sector, int size, int sectorsize)
@@ -276,11 +355,22 @@ retry:
 		int track = cdtracknumber(&ciw->di.toc, sector);
 		if (track < 0)
 			return 0;
+#ifdef __MACH__
+		if (isaudiotrack(&ciw->di.toc, sector) && sectorsize >= 2352 && data) {
+			if (!mac_cd_read_sector(ciw, sector, data, 2352, kCDSectorTypeCDDA))
+				return ret;
+			ciw->cda.cd_last_pos = sector;
+			data += sectorsize;
+			ret += sectorsize;
+			sector++;
+			size--;
+			continue;
+		}
+#endif
 		got = false;
 		if (!ciw->usesptiread && sectorsize == 2048 && ciw->trackmode[track] == 0) {
 			if (read2048(ciw, sector) == 2048) {
 				memcpy(data, p, 2048);
-				sector++;
 				data += sectorsize;
 				ret += sectorsize;
 				got = true;
@@ -307,13 +397,11 @@ retry:
 				encode_l2(data, sector + 150);
 				if (sectorsize > 2352)
 					memset(data + 2352, 0, sectorsize - 2352);
-				sector++;
 				data += sectorsize;
 				ret += sectorsize;
 			}
 			else if (sectorsize == 2048) {
 				memcpy(data, p, 2048);
-				sector++;
 				data += sectorsize;
 				ret += sectorsize;
 			}
@@ -405,6 +493,60 @@ static int ioctl_command_play(int unitnum, int startlsn, int endlsn, int scan, p
 /* read qcode */
 static int ioctl_command_qcode(int unitnum, uae_u8* buf, int sector, bool all)
 {
+#ifdef __MACH__
+	struct dev_info_ioctl* ciw = unitisopen(unitnum);
+	if (!ciw)
+		return 0;
+
+	if (all)
+		return 0;
+
+	memset(buf, 0, SUBQ_SIZE);
+	uae_u8* p = buf;
+
+	int status = AUDIO_STATUS_NO_STATUS;
+	if (ciw->cda.cdda_play) {
+		status = AUDIO_STATUS_IN_PROGRESS;
+		if (ciw->cda.cdda_paused)
+			status = AUDIO_STATUS_PAUSED;
+	} else if (ciw->cda.cdda_play_finished) {
+		status = AUDIO_STATUS_PLAY_COMPLETE;
+	}
+
+	p[1] = status;
+	p[3] = 12;
+	p = buf + 4;
+
+	int pos = (sector < 0) ? ciw->cda.cd_last_pos : sector;
+
+	int trk = cdtracknumber(&ciw->di.toc, pos);
+	if (trk < 0)
+		return 0;
+
+	int start = 0;
+	int end = INT_MAX;
+	for (int i = ciw->di.toc.first_track; i <= ciw->di.toc.last_track; ++i) {
+		struct cd_toc* t = &ciw->di.toc.toc[i];
+		if (t->point != i)
+			continue;
+		start = t->paddress;
+		if (i < ciw->di.toc.last_track) {
+			struct cd_toc* tn = &ciw->di.toc.toc[i + 1];
+			end = tn->paddress;
+		}
+		if (pos >= start && pos < end) {
+			p[0] = (t->control << 4) | (t->adr << 0);
+			p[1] = tobcd(i);
+			p[2] = tobcd(1);
+			int msf = lsn2msf(pos);
+			tolongbcd(p + 7, msf);
+			msf = lsn2msf(pos - start - 150);
+			tolongbcd(p + 3, msf);
+			return 1;
+		}
+	}
+	return 0;
+#else
 	struct dev_info_ioctl* ciw = unitisopen(unitnum);
 	if (!ciw)
 		return 0;
@@ -507,6 +649,7 @@ static int ioctl_command_qcode(int unitnum, uae_u8* buf, int sector, bool all)
 	}
 
 	return 1;
+#endif
 }
 
 static int ioctl_command_rawread(int unitnum, uae_u8* data, int sector, int size, int sectorsize, uae_u32 extra)
@@ -604,6 +747,24 @@ static int ioctl_command_readwrite(int unitnum, int sector, int size, int do_wri
 	if (!ciw)
 		return 0;
 
+#ifdef __MACH__
+	// macOS: prefer raw CD reads via DKIOCCDREAD to avoid block-size mismatches
+	if (!do_write && data) {
+		int remaining = size;
+		int current = sector;
+		int ok = 1;
+		while (remaining-- > 0) {
+			if (!mac_cd_read_mode1(ciw, current, data)) {
+				ok = 0;
+				break;
+			}
+			data += kCDSectorSizeMode1;
+			current++;
+		}
+		return ok;
+	}
+#endif
+
 	if (ciw->usesptiread)
 		return ioctl_command_rawread(unitnum, data, sector, size, 2048, 0);
 
@@ -612,7 +773,7 @@ static int ioctl_command_readwrite(int unitnum, int sector, int size, int do_wri
 	ssize_t dtotal;
 	int cnt = 3;
 	uae_u8* p = ciw->tempbuffer;
-	int blocksize = ciw->di.bytespersector;
+	int blocksize = ciw->di.bytespersector > 0 ? ciw->di.bytespersector : 2048;
 
 	if (!open_createfile(ciw, 0))
 		return 0;
@@ -682,9 +843,54 @@ static int ioctl_command_read(int unitnum, uae_u8* data, int sector, int size)
 
 static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device_info* di)
 {
-    if (!open_createfile(ciw, 0))
-        return 0;
-    uae_sem_wait(&ciw->cda.sub_sem);
+#ifdef __MACH__
+	if (!open_createfile(ciw, 0))
+		return 0;
+
+	uae_sem_wait(&ciw->cda.sub_sem);
+
+	uint32_t blocksize = 0;
+	if (ioctl(ciw->fd, DKIOCGETBLOCKSIZE, &blocksize) == 0 && blocksize > 0)
+		ciw->di.bytespersector = (int)blocksize;
+	else
+		ciw->di.bytespersector = 2048;
+
+	dk_cd_read_toc_t rtoc{};
+	unsigned char buf[4096];
+	memset(buf, 0, sizeof(buf));
+	rtoc.format = kCDTOCFormatTOC;
+	rtoc.formatAsTime = 1;
+	rtoc.address.track = 0;
+	rtoc.bufferLength = sizeof(buf);
+	rtoc.buffer = buf;
+	int ok = ioctl(ciw->fd, DKIOCCDREADTOC, &rtoc);
+	if (ok == -1 && !strncmp(ciw->devname, "/dev/rdisk", 10)) {
+		char alt[64];
+		snprintf(alt, sizeof(alt), "/dev/disk%s", ciw->devname + 10);
+		int fd2 = open(alt, O_RDONLY);
+		if (fd2 == -1)
+			fd2 = open(alt, O_RDONLY | O_NONBLOCK);
+		if (fd2 != -1) {
+			ok = ioctl(fd2, DKIOCCDREADTOC, &rtoc);
+			close(fd2);
+		}
+	}
+	if (ok == -1) {
+		if (errno != ENOMEDIUM)
+			perror("IOCTL: DKIOCCDREADTOC");
+		ciw->changed = true;
+		uae_sem_post(&ciw->cda.sub_sem);
+		return 0;
+	}
+	if (rtoc.bufferLength > sizeof(buf))
+		rtoc.bufferLength = sizeof(buf);
+
+	uae_sem_post(&ciw->cda.sub_sem);
+	return 1;
+#else
+	if (!open_createfile(ciw, 0))
+		return 0;
+	uae_sem_wait(&ciw->cda.sub_sem);
 
 	int status = ioctl(ciw->fd, CDROM_DRIVE_STATUS, CDSL_NONE);
 	if (status == -1)
@@ -698,14 +904,11 @@ static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device
 		return 0;
 	}
 
-    uae_sem_post(&ciw->cda.sub_sem);
-    // if (di) {
-    //     di->cylinders = geom.cylinders;
-    //     di->sectorspertrack = geom.sectors;
-    //     di->trackspercylinder = geom.heads;
-    //     di->bytespersector = 2048; // Typical CD-ROM sector size
-    // }
-    return 1;
+	ciw->di.bytespersector = 2048;
+
+	uae_sem_post(&ciw->cda.sub_sem);
+	return 1;
+#endif
 }
 
 static int ismedia(struct dev_info_ioctl* ciw, int unitnum)
@@ -725,9 +928,16 @@ static int eject(int unitnum, bool eject)
     if (!open_createfile(ciw, 0))
         return 0;
     int ret = 0;
+#ifdef __MACH__
+    if (eject) {
+        if (ioctl(ciw->fd, DKIOCEJECT, 0) < 0)
+            ret = 1;
+    }
+#else
     if (ioctl(ciw->fd, eject ? CDROMEJECT : CDROMCLOSETRAY, 0) < 0) {
         ret = 1;
     }
+#endif
     return ret;
 }
 
@@ -737,6 +947,131 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	if (!ciw)
 		return 0;
 
+#ifdef __MACH__
+	struct cd_toc_head* th = &ciw->di.toc;
+	struct cd_toc* t = th->toc;
+
+	if (!unitisopen(unitnum))
+		return 0;
+	if (!open_createfile(ciw, 0))
+		return 0;
+
+	dk_cd_read_toc_t rtoc{};
+	unsigned char buf[4096];
+	memset(buf, 0, sizeof(buf));
+	rtoc.format = kCDTOCFormatTOC;
+	rtoc.formatAsTime = 1;
+	rtoc.address.track = 0;
+	rtoc.bufferLength = sizeof(buf);
+	rtoc.buffer = buf;
+
+	if (ioctl(ciw->fd, DKIOCCDREADTOC, &rtoc) == -1) {
+		int err = errno;
+		if (!hide_errors || (hide_errors && err == ENOMEDIUM)) {
+			if (win32_error(ciw, unitnum, _T("DKIOCCDREADTOC")) < 0)
+				return 0;
+		}
+		return 0;
+	}
+
+	CDTOC* toc = (CDTOC*)buf;
+	UInt32 count = CDTOCGetDescriptorCount(toc);
+	if (count == 0)
+		return 0;
+
+	memset(th, 0, sizeof(struct cd_toc_head));
+	memset(ciw->trackmode, 0xff, sizeof(ciw->trackmode));
+
+	int first_track = 99;
+	int last_track = 0;
+	int leadout_lsn = 0;
+	struct {
+		int present;
+		uae_u8 adr;
+		uae_u8 control;
+		int lsn;
+	} tracks[100]{};
+
+	for (UInt32 i = 0; i < count; ++i) {
+		const CDTOCDescriptor& d = toc->descriptors[i];
+		if (d.point >= 1 && d.point <= 99) {
+			int lsn = (int)CDConvertMSFToLBA(d.p);
+			tracks[d.point].present = 1;
+			tracks[d.point].adr = d.adr;
+			tracks[d.point].control = d.control;
+			tracks[d.point].lsn = lsn;
+			if (d.point < first_track) first_track = d.point;
+			if (d.point > last_track) last_track = d.point;
+		} else if (d.point == 0xA2) {
+			leadout_lsn = (int)CDConvertMSFToLBA(d.p);
+		}
+	}
+
+	if (last_track < first_track)
+		return 0;
+
+	if (leadout_lsn == 0 && tracks[last_track].present)
+		leadout_lsn = tracks[last_track].lsn;
+
+	th->first_track = first_track;
+	th->last_track = last_track;
+	th->tracks = th->last_track - th->first_track + 1;
+	th->points = th->tracks + 3;
+	th->firstaddress = 0;
+	th->lastaddress = leadout_lsn;
+
+	t->adr = 1;
+	t->point = 0xa0;
+	t->track = th->first_track;
+	t++;
+
+	th->first_track_offset = 1;
+	for (int tr = th->first_track; tr <= th->last_track; ++tr) {
+		if (!tracks[tr].present)
+			return 0;
+		t->adr = tracks[tr].adr;
+		t->control = tracks[tr].control;
+		t->point = t->track = tr;
+		t->paddress = tracks[tr].lsn;
+		t++;
+	}
+
+	th->last_track_offset = th->last_track;
+	t->adr = 1;
+	t->point = 0xa1;
+	t->track = th->last_track;
+	t->paddress = th->lastaddress;
+	t++;
+
+	t->adr = 1;
+	t->point = 0xa2;
+	t->paddress = th->lastaddress;
+	t++;
+
+	memcpy(tocout, th, sizeof(struct cd_toc_head));
+	for (int i = th->first_track_offset; i <= th->last_track_offset + 1; i++) {
+		uae_u32 addr;
+		uae_u32 msf;
+		t = &th->toc[i];
+		if (i <= th->last_track_offset) {
+			write_log(_T("%2d: "), t->track);
+			addr = t->paddress;
+			msf = lsn2msf(addr);
+		} else {
+			write_log(_T("    "));
+			addr = th->toc[th->last_track_offset + 2].paddress;
+			msf = lsn2msf(addr);
+		}
+		write_log(_T("%7d %02d:%02d:%02d"),
+			addr, (msf >> 16) & 0x7fff, (msf >> 8) & 0xff, (msf >> 0) & 0xff);
+		if (i <= th->last_track_offset) {
+			write_log(_T(" %s %x"),
+				(t->control & 4) ? _T("DATA    ") : _T("CDA     "), t->control);
+		}
+		write_log(_T("\n"));
+	}
+	return 1;
+#else
 	int len;
 	int i;
 	struct cd_toc_head* th = &ciw->di.toc;
@@ -769,6 +1104,13 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	th->tracks = th->last_track - th->first_track + 1;
 	th->points = th->tracks + 3;
 	th->firstaddress = 0;
+
+	// Read the leadout entry to get lastaddress
+	tocentry.cdte_track = CDROM_LEADOUT;
+	tocentry.cdte_format = CDROM_MSF;
+	if (ioctl(ciw->fd, CDROMREADTOCENTRY, &tocentry) == -1) {
+		return 0;
+	}
 	th->lastaddress = msf2lsn((tocentry.cdte_addr.msf.minute << 16) | (tocentry.cdte_addr.msf.second << 8) |
 		(tocentry.cdte_addr.msf.frame << 0));
 
@@ -778,8 +1120,8 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	t++;
 
 	th->first_track_offset = 1;
-	for (i = 0; i < th->last_track; i++) {
-		tocentry.cdte_track = i + 1;
+	for (i = th->first_track; i <= th->last_track; i++) {
+		tocentry.cdte_track = i;
 		tocentry.cdte_format = CDROM_MSF;
 		if (ioctl(ciw->fd, CDROMREADTOCENTRY, &tocentry) == -1) {
 			return 0;
@@ -788,7 +1130,7 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 		t->control = tocentry.cdte_ctrl;
 		t->paddress = msf2lsn((tocentry.cdte_addr.msf.minute << 16) | (tocentry.cdte_addr.msf.second << 8) |
 			(tocentry.cdte_addr.msf.frame << 0));
-		t->point = t->track = i + 1;
+		t->point = t->track = i;
 		t++;
 	}
 
@@ -829,6 +1171,7 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 
 	memcpy(tocout, th, sizeof(struct cd_toc_head));
 	return 1;
+#endif
 }
 static int ioctl_command_toc(int unitnum, struct cd_toc_head* tocout)
 {
@@ -860,7 +1203,7 @@ static void update_device_info(int unitnum)
 	if (fetch_geometry(ciw, unitnum, di)) { // || ioctl_command_toc (unitnum))
 		di->media_inserted = 1;
 	}
-	if (ciw->changed) {
+	if (ciw->changed || di->media_inserted) {
 		ioctl_command_toc2(unitnum, &di->toc, true);
 		ciw->changed = false;
 	}
@@ -883,6 +1226,10 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 {
 	ciw->cda.cdda_volume[0] = 0x7fff;
 	ciw->cda.cdda_volume[1] = 0x7fff;
+#ifdef __MACH__
+	uint32_t blocksize = 0;
+#endif
+	memset(&ciw->di, 0, sizeof(ciw->di));
 	ciw->tempbuffer = (unsigned char*)malloc(IOCTL_DATA_BUFFER);
 	if (!ciw->tempbuffer) {
 		write_log("IOCTL: Failed to allocate buffer\n");
@@ -893,7 +1240,7 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 	memset(ciw->di.productid, 0, sizeof(ciw->di.productid));
 	memset(ciw->di.revision, 0, sizeof(ciw->di.revision));
 	_tcscpy(ciw->di.vendorid, _T("UAE"));
-	_stprintf(ciw->di.productid, _T("SCSI CD%d IMG"), unitnum);
+	snprintf(ciw->di.productid, sizeof(ciw->di.productid), "SCSI CD%d IMG", unitnum);
 	_tcscpy(ciw->di.revision, _T("0.2"));
 
 	if (!open_createfile(ciw, 0)) {
@@ -901,12 +1248,19 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 		goto error;
 	}
 
+#ifdef __MACH__
+	if (ioctl(ciw->fd, DKIOCGETBLOCKSIZE, &blocksize) == 0 && blocksize > 0)
+		ciw->di.bytespersector = (int)blocksize;
+	else
+		ciw->di.bytespersector = 2048;
+#else
 	struct hd_driveid id;
 	if (ioctl(ciw->fd, HDIO_GET_IDENTITY, &id) == 0) {
 		strncpy(ciw->di.vendorid, (const char*)id.model, sizeof(ciw->di.vendorid) - 1);
 		strncpy(ciw->di.productid, (const char*)id.serial_no, sizeof(ciw->di.productid) - 1);
 		strncpy(ciw->di.revision, (const char*)id.fw_rev, sizeof(ciw->di.revision) - 1);
 	}
+#endif
 
 	write_log(_T("IOCTL: device '%s' (%s/%s/%s) opened successfully (unit=%d,media=%d)\n"),
 		ciw->devname, ciw->di.vendorid, ciw->di.productid, ciw->di.revision,
@@ -950,10 +1304,22 @@ static int open_device(int unitnum, const char* ident, int flags)
 {
 	struct dev_info_ioctl* ciw = NULL;
 	if (ident && ident[0]) {
+#ifdef __MACH__
+		char ident_buf[64];
+		const char* ident_match = ident;
+		if (!strncmp(ident, "/dev/rdisk", 10)) {
+			snprintf(ident_buf, sizeof(ident_buf), "/dev/disk%s", ident + 10);
+			ident_match = ident_buf;
+		}
+#endif
 		for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 			ciw = &ciw32[i];
-			if (unittable[i] == 0 && ciw->drvletter != 0) {
+			if (unittable[i] == 0 && ciw->drvletter[0] != 0) {
+#ifdef __MACH__
+				if (!strcmp(ciw->drvlettername, ident_match)) {
+#else
 				if (!strcmp(ciw->drvlettername, ident)) {
+#endif
 					unittable[unitnum] = i + 1;
 					if (sys_cddev_open(ciw, unitnum) == 0)
 						return 1;
@@ -969,7 +1335,7 @@ static int open_device(int unitnum, const char* ident, int flags)
 		if (unittable[i] == unitnum + 1)
 			return 0;
 	}
-	if (ciw->drvletter == 0)
+	if (ciw->drvletter[0] == 0)
 		return 0;
 	unittable[unitnum] = unitnum + 1;
 	if (sys_cddev_open(ciw, unitnum) == 0)
@@ -1021,17 +1387,39 @@ static int open_bus(int flags)
 	{
 		for (const auto& drive: cd_drives)
 		{
-			int fd = open(drive.c_str(), O_RDONLY | O_NONBLOCK);
+			const char* open_path = drive.c_str();
+#ifdef __MACH__
+			char open_buf[64];
+			if (!strncmp(open_path, "/dev/rdisk", 10)) {
+				snprintf(open_buf, sizeof(open_buf), "/dev/disk%s", open_path + 10);
+				open_path = open_buf;
+			}
+#endif
+			int fd = open(open_path, O_RDONLY | O_NONBLOCK);
+#ifdef __MACH__
+			if (fd == -1)
+				fd = open(open_path, O_RDONLY);
+#endif
 			if (fd != -1) {
 				struct stat st;
-				if (fstat(fd, &st) == 0 && S_ISBLK(st.st_mode)) {
-					strncpy(ciw32[total_devices].drvletter, drive.c_str(), sizeof(ciw32[total_devices].drvletter));
-					strcpy(ciw32[total_devices].drvlettername, drive.c_str());
-					ciw32[total_devices].type = st.st_rdev;
+				if (fstat(fd, &st) == 0) {
+					bool is_block = S_ISBLK(st.st_mode);
+#ifdef __MACH__
+					bool is_char = S_ISCHR(st.st_mode);
+#endif
+					if (is_block
+#ifdef __MACH__
+						|| is_char
+#endif
+					) {
+					strncpy(ciw32[total_devices].drvletter, open_path, sizeof(ciw32[total_devices].drvletter));
+					strcpy(ciw32[total_devices].drvlettername, open_path);
+					ciw32[total_devices].type = DRIVE_CDROM;
 					ciw32[total_devices].di.bytespersector = 2048;
 					strcpy(ciw32[total_devices].devname, drive.c_str());
 					ciw32[total_devices].fd = fd;
 					total_devices++;
+					}
 				}
 				close(fd);
 			}

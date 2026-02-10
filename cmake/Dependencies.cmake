@@ -14,12 +14,16 @@ if (USE_DBUS)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${DBUS_LIBRARIES})
 endif ()
 
+if (USE_IPC_SOCKET)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IPC_SOCKET)
+    message(STATUS "Unix socket IPC enabled")
+endif ()
+
 if (USE_OPENGL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_OPENGL)
     if (NOT ANDROID)
         find_package(OpenGL REQUIRED)
-        find_package(GLEW REQUIRED)
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} GLEW OpenGL::GL)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${TARGET_LINK_LIBRARIES} OpenGL::GL)
     else()
         target_link_libraries(${PROJECT_NAME} PRIVATE GLESv3 EGL)
     endif()
@@ -89,9 +93,9 @@ if(ANDROID)
         FetchContent_Declare(
             mpg123
             # madebr/mpg123 is a mirror of the upstream SVN repo but does not publish git tags.
-            # Pin to an existing ref so FetchContent can check out reliably.
+            # Pin to a specific commit for reproducible builds.
             GIT_REPOSITORY https://github.com/madebr/mpg123.git
-            GIT_TAG        master
+            GIT_TAG        a06133928e6518bd65314c9cea12ccb5588703e9
         )
     endif()
 
@@ -302,7 +306,7 @@ if(ANDROID)
         FetchContent_Declare(
             libserialport
             GIT_REPOSITORY https://github.com/scottmudge/libserialport-cmake
-            GIT_TAG        master
+            GIT_TAG        c82d28deb05185df8c4dafea96dd520a3c0db7c9
             PATCH_COMMAND  ${CMAKE_COMMAND} -E echo "Fixing libserialport for Android" &&
                            ${CMAKE_COMMAND} -DLIBSERIALPORT_SOURCE_DIR=<SOURCE_DIR>
                                           -P "${CMAKE_SOURCE_DIR}/cmake/libserialport_fix_android.cmake"
@@ -461,25 +465,23 @@ else()
     target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 endif()
 
+if (USE_IMGUI)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_IMGUI)
+endif()
+
 set(libmt32emu_SHARED FALSE)
 add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
-add_subdirectory(external/libguisan)
-
-# Keep guisan include behavior aligned
-if(SDL2_INCLUDE_DIRS)
-    target_include_directories(guisan PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
-else()
-    target_include_directories(guisan PRIVATE ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
-endif()
 
 set(AMIBERRY_LIBS
-        guisan
         mt32emu
-        z
-        dl
+        ZLIB::ZLIB
+        ${CMAKE_DL_LIBS}
+        SDL2_ttf
+        SDL2_image
 )
+
 if (NOT ANDROID)
     list(APPEND AMIBERRY_LIBS pthread)
 endif()
@@ -493,10 +495,12 @@ endif()
 
 if(TARGET PNG::PNG)
     list(APPEND AMIBERRY_LIBS PNG::PNG)
+elseif(TARGET png_static)
+    list(APPEND AMIBERRY_LIBS png_static)
 elseif(TARGET png)
     list(APPEND AMIBERRY_LIBS png)
 elseif(PNG_FOUND)
-     list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
+    list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
 endif()
 
 if(TARGET MPG123::libmpg123)
@@ -505,13 +509,6 @@ elseif(TARGET libmpg123)
     list(APPEND AMIBERRY_LIBS libmpg123)
 elseif(MPG123_FOUND)
     list(APPEND AMIBERRY_LIBS ${MPG123_LIBRARIES})
-endif()
-
-if(TARGET png_static)
-    list(APPEND AMIBERRY_LIBS png_static)
-elseif(TARGET png)
-    list(APPEND AMIBERRY_LIBS png)
-    list(APPEND AMIBERRY_LIBS ${PNG_LIBRARIES})
 endif()
 
 if(TARGET libzstd_static)
@@ -533,6 +530,15 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_LIBS})
 
+if (USE_IMGUI)
+    add_subdirectory(external/imgui)
+    target_link_libraries(${PROJECT_NAME} PRIVATE imgui)
+endif()
+
+# capsimage and floppybridge are plugins (not linked into amiberry) but are
+# copied by post-build commands. Explicit dependencies ensure they are built.
+add_dependencies(${PROJECT_NAME} floppybridge capsimage)
+
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_library(UTIL_LIBRARY util)
     if(UTIL_LIBRARY)
@@ -541,5 +547,4 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
 endif ()
 
-# Add dependencies to ensure external libraries are built
-add_dependencies(${PROJECT_NAME} mt32emu floppybridge capsimage guisan)
+

@@ -31,7 +31,7 @@ typedef enum crtemu_type_t {
 
 typedef struct crtemu_t crtemu_t;
 
-crtemu_t* crtemu_create( crtemu_type_t type, void* memctx );
+crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile = false );
 
 void crtemu_destroy( crtemu_t* crtemu );
 
@@ -154,13 +154,7 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 #else
 
 #ifndef CRTEMU_WEBGL
-#ifndef __ANDROID__
-#include <GL/glew.h>
-#include "SDL_opengl.h"
-#else
-#include <GLES3/gl3.h>
-#include "SDL_opengles2.h"
-#endif
+#include "gl_platform.h"
 #else
 #include <wajic_gl.h>
 #endif
@@ -270,6 +264,7 @@ struct crtemu_t {
 	unsigned int last_present_format;
 	unsigned int last_present_type;
 	CRTEMU_GLint texture_filter; // GL_NEAREST or GL_LINEAR for NONE mode
+	bool is_mobile_gpu; // True for GLES/VideoCore - enables mobile optimizations
 
 	CRTEMU_GLint loc_blur_blur;
 	CRTEMU_GLint loc_blur_texture;
@@ -354,7 +349,13 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
     // Detect GL version
     const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
     bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") || strstr(gl_ver_str, "OpenGL ES-CM"));
-    
+
+    // Detect mobile GPU (GLES indicates mobile/embedded GPU like VideoCore on RPI)
+    // This enables performance optimizations like mediump precision and reduced blur
+    if (is_gles && !crtemu->is_mobile_gpu) {
+        crtemu->is_mobile_gpu = true;
+    }
+
     // Check for Core Profile (Desktop GL >= 3.2 usually implied by Core)
     // We can also check specific version numbers if needed.
     bool is_core = !is_gles;
@@ -384,8 +385,15 @@ static CRTEMU_GLuint crtemu_internal_build_shader( crtemu_t* crtemu, char const*
     fs_preamble = "precision highp float;\n";
 #else
     if (is_gles) {
-        vs_preamble = "#version 300 es\nprecision highp float;\n";
-        fs_preamble = "#version 300 es\nprecision highp float;\n";
+        // Use mediump on mobile GPUs for better performance (2-3x faster on VideoCore)
+        // highp is slow on mobile tile-based GPUs; mediump is sufficient for CRT effects
+        if (crtemu->is_mobile_gpu) {
+            vs_preamble = "#version 300 es\nprecision mediump float;\n";
+            fs_preamble = "#version 300 es\nprecision mediump float;\n";
+        } else {
+            vs_preamble = "#version 300 es\nprecision highp float;\n";
+            fs_preamble = "#version 300 es\nprecision highp float;\n";
+        }
         vs_defines = "#define attribute in\n#define varying out\n";
         fs_defines = "#define varying in\n#define texture2D texture\n#define gl_FragColor fragColor\nout vec4 fragColor;\n";
     } else if (is_core) {
@@ -626,6 +634,84 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    }\n"
 			"\n";
 
+	// Simplified CRT shader for mobile GPUs (removes expensive pow/sin/cos operations)
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 resolution;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"uniform sampler2D frametexture;\n"
+			"uniform float use_frame;\n"
+			"\n"
+			"vec3 filmic(vec3 LinearColor) {\n"
+			"    vec3 x = max(vec3(0.0), LinearColor - vec3(0.004));\n"
+			"    return (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);\n"
+			"}\n"
+			"\n"
+			"vec2 curve(vec2 uv) {\n"
+			"    uv = (uv - 0.5) * 2.0;\n"
+			"    uv *= 1.1;\n"
+			"    float ay = abs(uv.y) / 5.0;\n"
+			"    float ax = abs(uv.x) / 4.0;\n"
+			"    uv.x *= 1.0 + ay * ay;\n"
+			"    uv.y *= 1.0 + ax * ax;\n"
+			"    uv = (uv / 2.0) + 0.5;\n"
+			"    uv = uv * 0.92 + 0.04;\n"
+			"    return uv;\n"
+			"}\n"
+			"\n"
+			"void main(void) {\n"
+			"    vec2 curved_uv = mix(curve(uv), uv, 0.4);\n"
+			"\n"
+			"    // Main color - single texture read (no chromatic aberration)\n"
+			"    vec3 col = texture2D(backbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    col *= col; // Sqr for ~2.2 Gamma decode\n"
+			"    col *= 1.25;\n"
+			"\n"
+			"    // Ghosting - simple static blur blend\n"
+			"    vec3 blur = texture2D(blurbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    blur *= blur; // Sqr for ~2.2 Gamma decode\n"
+			"    col += blur * 0.15;\n"
+			"\n"
+			"    // Level adjustment (simplified)\n"
+			"    col *= vec3(0.95, 1.05, 0.95);\n"
+			"    col = clamp(col * 1.3 + 0.75 * col * col, vec3(0.0), vec3(10.0));\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * curved_uv.x * curved_uv.y * (1.0 - curved_uv.x) * (1.0 - curved_uv.y);\n"
+			"    vig = 0.1 + 0.9 * clamp(vig * 1.5, 0.0, 1.0);\n"
+			"    col *= vig;\n"
+			"\n"
+			"    // Scanlines (simplified - no animation)\n"
+			"    float scans = 0.35 + 0.35 * cos(curved_uv.y * size.y * 1.5);\n"
+			"    col *= scans;\n"
+			"\n"
+			"    // Shadow mask\n"
+			"    col *= 1.0 - 0.23 * clamp(mod(gl_FragCoord.x, 3.0) / 2.0, 0.0, 1.0);\n"
+			"\n"
+			"    // Tone map\n"
+			"    col = filmic(col);\n"
+			"\n"
+			"    // Clamp to visible area\n"
+			"    if (curved_uv.x < 0.0 || curved_uv.x > 1.0 || curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
+			"        col = vec3(0.0);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"\n"
+			"    // Frame overlay\n"
+			"    vec2 fuv = vec2(uv.x, 1.0 - uv.y);\n"
+			"    vec4 f = texture2D(frametexture, fuv);\n"
+			"    col = mix(col, f.rgb, f.a * use_frame);\n"
+			"\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
+
+	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
 			"varying vec2 uv;"
@@ -644,6 +730,25 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
@@ -695,10 +800,14 @@ bool crtemu_shaders_tv( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -860,6 +969,86 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"   \n"
 			"";
 
+	// Simplified CRT shader for mobile GPUs (PC monitor style - less curve)
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 resolution;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"uniform sampler2D frametexture;\n"
+			"uniform float use_frame;\n"
+			"\n"
+			"vec3 filmic(vec3 LinearColor) {\n"
+			"    vec3 x = max(vec3(0.0), LinearColor - vec3(0.004));\n"
+			"    return (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);\n"
+			"}\n"
+			"\n"
+			"vec2 curve(vec2 uv) {\n"
+			"    uv = (uv - 0.5) * 2.0;\n"
+			"    uv *= 1.1;\n"
+			"    float ay = abs(uv.y) / 5.0;\n"
+			"    float ax = abs(uv.x) / 4.0;\n"
+			"    uv.x *= 1.0 + ay * ay;\n"
+			"    uv.y *= 1.0 + ax * ax;\n"
+			"    uv = (uv / 2.0) + 0.5;\n"
+			"    uv = uv * 0.92 + 0.04;\n"
+			"    return uv;\n"
+			"}\n"
+			"\n"
+			"void main(void) {\n"
+			"    vec2 curved_uv = mix(curve(uv), uv, 0.8);\n"
+			"    float scale = 0.04;\n"
+			"    vec2 scuv = curved_uv * (1.0 - scale) + scale / 2.0 + vec2(0.003, -0.001);\n"
+			"\n"
+			"    // Main color - single texture read (no chromatic aberration)\n"
+			"    vec3 col = texture2D(backbuffer, vec2(scuv.x, 1.0 - scuv.y)).rgb;\n"
+			"    col *= col; // Sqr for ~2.2 Gamma decode\n"
+			"    col *= 1.25;\n"
+			"\n"
+			"    // Ghosting - simple static blur blend\n"
+			"    vec3 blur = texture2D(blurbuffer, vec2(scuv.x, 1.0 - scuv.y)).rgb;\n"
+			"    blur *= blur; // Sqr for ~2.2 Gamma decode\n"
+			"    col += blur * 0.05;\n"
+			"\n"
+			"    // Level adjustment (simplified)\n"
+			"    col *= vec3(0.95, 0.95, 0.95);\n"
+			"    col = clamp(col * 1.3 + 0.75 * col * col + 1.25 * col * col * col * col * col, vec3(0.0), vec3(10.0));\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * curved_uv.x * curved_uv.y * (1.0 - curved_uv.x) * (1.0 - curved_uv.y);\n"
+			"    vig = 0.1 + 0.9 * clamp(vig * 1.5, 0.0, 1.0);\n"
+			"    col *= vig;\n"
+			"\n"
+			"    // Scanlines (simplified - no animation)\n"
+			"    float scans = 0.5 + 0.2 * cos(curved_uv.y * size.y * 1.75);\n"
+			"    col *= scans;\n"
+			"\n"
+			"    // Shadow mask\n"
+			"    col *= 1.0 - 0.23 * clamp(mod(gl_FragCoord.x, 3.0) / 2.0, 0.0, 1.0);\n"
+			"\n"
+			"    // Tone map\n"
+			"    col = filmic(col);\n"
+			"\n"
+			"    // Clamp to visible area\n"
+			"    if (curved_uv.x < 0.0 || curved_uv.x > 1.0 || curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
+			"        col = vec3(0.0);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"\n"
+			"    // Frame overlay\n"
+			"    vec2 fuv = vec2(uv.x, 1.0 - uv.y);\n"
+			"    vec4 f = texture2D(frametexture, fuv);\n"
+			"    col = mix(col, f.rgb, f.a * use_frame);\n"
+			"\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
+
+	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
 			"varying vec2 uv;"
@@ -878,6 +1067,25 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
@@ -929,10 +1137,14 @@ bool crtemu_shaders_pc( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -1026,6 +1238,51 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"   \n"
 			"";
 
+	// Simplified LITE CRT shader for mobile GPUs (removes pow calls)
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"\n"
+			"vec3 filmic(vec3 LinearColor) {\n"
+			"    vec3 x = max(vec3(0.0), LinearColor - vec3(0.004));\n"
+			"    return (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);\n"
+			"}\n"
+			"\n"
+			"void main(void) {\n"
+			"    // Main color - simple sampling\n"
+			"    vec3 col = texture2D(backbuffer, vec2(uv.x, 1.0 - uv.y)).rgb;\n"
+			"    col *= col; // Sqr for ~2.2 Gamma decode\n"
+			"    col = col * 3.0 + col * col * col;\n"
+			"    vec3 blur = texture2D(blurbuffer, vec2(uv.x, 1.0 - uv.y)).rgb;\n"
+			"    blur *= blur; // Sqr for ~2.2 Gamma decode\n"
+			"    col += blur * 0.3;\n"
+			"\n"
+			"    // Scanlines (simplified - no pow)\n"
+			"    float scans = 0.5 - 0.5 * cos(uv.y * 6.28319 * size.y);\n"
+			"    col = mix(col, col * scans, 0.7);\n"
+			"\n"
+			"    // Shadow mask\n"
+			"    col *= 1.0 - 0.23 * clamp(mod(gl_FragCoord.x, 3.0) / 2.0, 0.0, 1.0);\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);\n"
+			"    vig = 0.1 + 0.9 * clamp(vig * 1.5, 0.0, 1.0);\n"
+			"    col = mix(col, col * vig, 0.2);\n"
+			"\n"
+			"    // Tone map\n"
+			"    col = filmic(col);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
+
+	// Full 9-tap Gaussian blur for desktop GPUs
 	char const* blur_fs_source =
 			""
 			"varying vec2 uv;"
@@ -1044,6 +1301,25 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
@@ -1095,10 +1371,14 @@ bool crtemu_shaders_lite( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -1140,122 +1420,232 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"\n"
 			#ifdef CRTEMU_WEBGL
 			// WebGL does not support GL_CLAMP_TO_BORDER so we overwrite texture2D
-            // with this function which emulates the clamp-to-border behavior
-            "vec4 texture2Dborder(sampler2D samp, vec2 tc)\n"
-            "    {\n"
-            "    float borderdist = .502-max(abs(.5-tc.x), abs(.5-tc.y));\n"
-            "    float borderfade = clamp(borderdist * 400.0, 0.0, 1.0);\n"
-            "    return texture2D( samp, tc ) * borderfade;\n"
-            "    }\n"
-            "#define texture2D texture2Dborder\n"
+			// with this function which emulates the clamp-to-border behavior
+			"vec4 texture2Dborder(sampler2D samp, vec2 tc)\n"
+			"    {\n"
+			"    float borderdist = .502-max(abs(.5-tc.x), abs(.5-tc.y));\n"
+			"    float borderfade = clamp(borderdist * 400.0, 0.0, 1.0);\n"
+			"    return texture2D( samp, tc ) * borderfade;\n"
+			"    }\n"
+			"#define texture2D texture2Dborder\n"
 			#endif
 			"vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )\n"
 			"    {\n"
 			"    vec3 s = pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) );\n"
-			"    return s*vec3(1.25);\n"
+			"    return s * vec3(1.25);\n"
 			"    }\n"
 			"\n"
 			"vec3 filmic( vec3 LinearColor )\n"
 			"    {\n"
-			"    vec3 x = max( vec3(0.0), LinearColor-vec3(0.004));\n"
+			"    vec3 x = max( vec3(0.0), LinearColor - vec3(0.004));\n"
 			"    return (x*(6.2*x+0.5))/(x*(6.2*x+1.7)+0.06);\n"
 			"    }\n"
 			"\n"
 			"vec2 curve( vec2 uv )\n"
 			"    {\n"
 			"    uv = (uv - 0.5) * 2.0;\n"
-			"    uv *= 1.1;  \n"
-			"    uv.x *= 1.0 + pow((abs(uv.y) / 6.0), 2.0);\n"
-			"    uv.y *= 1.0 + pow((abs(uv.x) / 5.0), 2.0);\n"
+			"    uv *= 1.04;\n"
+			"    uv.x *= 1.0 + pow((abs(uv.y) / 8.0), 2.0);\n"
+			"    uv.y *= 1.0 + pow((abs(uv.x) / 7.0), 2.0);\n"
 			"    uv  = (uv / 2.0) + 0.5;\n"
-			"    uv =  uv *0.92 + 0.04;\n"
+			"    uv =  uv * 0.92 + 0.04;\n"
 			"    return uv;\n"
 			"    }\n"
 			"\n"
 			"float rand(vec2 co)\n"
 			"    {\n"
-			"    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);\n"
+			"    return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);\n"
 			"    }\n"
-			"    \n"
+			"\n"
 			"void main(void)\n"
-			"   {\n"
-			"    /* Curve */\n"
-			"    vec2 curved_uv = mix( curve( uv ), uv, 0.65 );\n"
-			"    float scale = 0.04;\n"
+			"    {\n"
+			"    /* Barrel distortion - 1084S nearly flat screen */\n"
+			"    vec2 curved_uv = mix( curve( uv ), uv, 0.80 );\n"
 			"    vec2 scuv = curved_uv;\n"
 			"\n"
-			"    /* Main color, Bleed */\n"
+			"    /* Edge-dependent RGB convergence */\n"
+			"    vec2 center_dist = curved_uv - 0.5;\n"
+			"    float edge_factor = dot(center_dist, center_dist) * 4.0;\n"
+			"\n"
+			"    /* Horizontal instability (much less than TV - stable monitor sync) */\n"
+			"    float x = sin(0.1*time+curved_uv.y*13.0)*sin(0.23*time+curved_uv.y*19.0)\n"
+			"            * sin(0.3+0.11*time+curved_uv.y*23.0)*0.0012;\n"
+			"    float o = sin(gl_FragCoord.y*1.5)/resolution.x;\n"
+			"    x = x*0.06 + o*0.06;\n"
+			"\n"
+			"    /* Sample RGB with edge-dependent convergence */\n"
 			"    vec3 col;\n"
-			"    float x =  sin(0.1*time+curved_uv.y*13.0)*sin(0.23*time+curved_uv.y*19.0)*sin(0.3+0.11*time+curved_uv.y*23.0)*0.0012;\n"
-			"    float o =sin(gl_FragCoord.y*1.5)/resolution.x;\n"
-			"    x=x*0.2+o*0.2;\n"
-			"    col.r = tsample(backbuffer,vec2(x+scuv.x+0.0005,scuv.y+0.0005),resolution.y/800.0, resolution ).x+0.02;\n"
-			"    col.g = tsample(backbuffer,vec2(x+scuv.x+0.0000,scuv.y-0.0006),resolution.y/800.0, resolution ).y+0.02;\n"
-			"    col.b = tsample(backbuffer,vec2(x+scuv.x-0.0007,scuv.y+0.0000),resolution.y/800.0, resolution ).z+0.02;\n"
-			"    float i = clamp(col.r*0.299 + col.g*0.587 + col.b*0.114, 0.0, 1.0 );        \n"
-			"    i = pow( 1.0 - pow(i,2.0), 1.0 );\n"
-			"    i = (1.0-i) * 0.85 + 0.15;  \n"
+			"    float cs = 0.0004;\n"
+			"    col.r = tsample(backbuffer, vec2(x+scuv.x + cs*(1.0+2.0*edge_factor),\n"
+			"                                     scuv.y + cs*(0.7+1.2*edge_factor)),\n"
+			"                    resolution.y/800.0, resolution).x + 0.02;\n"
+			"    col.g = tsample(backbuffer, vec2(x+scuv.x, scuv.y),\n"
+			"                    resolution.y/800.0, resolution).y + 0.02;\n"
+			"    col.b = tsample(backbuffer, vec2(x+scuv.x - cs*(1.2+1.5*edge_factor),\n"
+			"                                     scuv.y + cs*(0.5+1.0*edge_factor)),\n"
+			"                    resolution.y/800.0, resolution).z + 0.02;\n"
 			"\n"
-			"    /* Ghosting */\n"
-			"    float ghs = 0.10;\n"
-			"    vec3 r = tsample(blurbuffer, vec2(x-0.014*1.0, -0.027)*0.85+0.007*vec2( 0.35*sin(1.0/7.0 + 15.0*curved_uv.y + 0.9*time), \n"
-			"        0.35*sin( 2.0/7.0 + 10.0*curved_uv.y + 1.37*time) )+vec2(scuv.x+0.001,scuv.y+0.001),\n"
-			"        5.5+1.3*sin( 3.0/9.0 + 31.0*curved_uv.x + 1.70*time),resolution).xyz*vec3(0.5,0.25,0.25);\n"
-			"    vec3 g = tsample(blurbuffer, vec2(x-0.019*1.0, -0.020)*0.85+0.007*vec2( 0.35*cos(1.0/9.0 + 15.0*curved_uv.y + 0.5*time), \n"
-			"        0.35*sin( 2.0/9.0 + 10.0*curved_uv.y + 1.50*time) )+vec2(scuv.x+0.000,scuv.y-0.002),\n"
-			"        5.4+1.3*sin( 3.0/3.0 + 71.0*curved_uv.x + 1.90*time),resolution).xyz*vec3(0.25,0.5,0.25);\n"
-			"    vec3 b = tsample(blurbuffer, vec2(x-0.017*1.0, -0.003)*0.85+0.007*vec2( 0.35*sin(2.0/3.0 + 15.0*curved_uv.y + 0.7*time), \n"
-			"        0.35*cos( 2.0/3.0 + 10.0*curved_uv.y + 1.63*time) )+vec2(scuv.x-0.002,scuv.y+0.000),\n"
-			"        5.3+1.3*sin( 3.0/7.0 + 91.0*curved_uv.x + 1.65*time),resolution).xyz*vec3(0.25,0.25,0.5);\n"
+			"    /* Halation: bright areas glow through CRT glass */\n"
+			"    vec3 blur_sample = tsample(blurbuffer, vec2(scuv.x, scuv.y), 0.0, resolution);\n"
+			"    float blur_luma = dot(blur_sample, vec3(0.299, 0.587, 0.114));\n"
+			"    vec3 halation_color = blur_sample * vec3(1.1, 1.0, 0.85);\n"
+			"    col += halation_color * 0.12 * smoothstep(0.15, 0.8, blur_luma);\n"
+			"    col += blur_sample * 0.04;\n"
 			"\n"
-			"    col += vec3(ghs*(1.0-0.299))*pow(clamp(vec3(3.0)*r,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
-			"    col += vec3(ghs*(1.0-0.587))*pow(clamp(vec3(3.0)*g,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
-			"    col += vec3(ghs*(1.0-0.114))*pow(clamp(vec3(3.0)*b,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
+			"    /* 1084S warm color temperature */\n"
+			"    col *= vec3(1.08, 1.02, 0.88);\n"
 			"\n"
-			"    /* Level adjustment (curves) */\n"
-			"    col *= vec3(0.95,1.05,0.95);\n"
-			"    col = clamp(col*1.3 + 0.75*col*col + 1.25*col*col*col*col*col,vec3(0.0),vec3(10.0));\n"
+			"    /* Level adjustment (contrast curve) */\n"
+			"    col = clamp(col*1.2 + 0.65*col*col + 1.1*col*col*col*col*col,\n"
+			"                vec3(0.0), vec3(10.0));\n"
 			"\n"
-			"    /* Vignette */\n"
-			"    float vig = (0.2 + 1.0*16.0*curved_uv.x*curved_uv.y*(1.0-curved_uv.x)*(1.0-curved_uv.y));\n"
-			"    vig = 1.3*pow(vig,0.5);\n"
+			"    /* Vignette - mild for monitor */\n"
+			"    float vig = (0.3 + 1.0*16.0*curved_uv.x*curved_uv.y\n"
+			"               * (1.0-curved_uv.x)*(1.0-curved_uv.y));\n"
+			"    vig = 1.2*pow(vig, 0.4);\n"
 			"    col *= vig;\n"
 			"\n"
-			"    /* Scanlines */\n"
-			"    float scans = clamp( 0.35+0.35*sin(3.5*time+curved_uv.y*size.y*1.5), 0.0, 1.0);\n"
-			"    float s = pow(scans,0.9);\n"
-			"    col = col * vec3(s);\n"
+			"    /* Brightness-dependent scanlines */\n"
+			"    float luma = dot(col, vec3(0.299, 0.587, 0.114));\n"
+			"    float scanline_phase = curved_uv.y * size.y * 1.5;\n"
+			"    float scans = clamp(0.35 + 0.35*sin(1.5*time + scanline_phase), 0.0, 1.0);\n"
+			"    float s = pow(scans, 0.9);\n"
+			"    float scanline_reduction = smoothstep(0.0, 0.7, luma);\n"
+			"    s = mix(s, 1.0, scanline_reduction * 0.65);\n"
+			"    col *= s;\n"
 			"\n"
-			"    /* Vertical lines (shadow mask) */\n"
-			"    col*=1.0-0.15*(clamp((mod(gl_FragCoord.x, 2.0)),0.0,1.0));\n"
+			"    /* Aperture grille: vertical RGB phosphor stripes (Trinitron-style) */\n"
+			"    float stripe = mod(gl_FragCoord.x, 3.0);\n"
+			"    vec3 grille_mask;\n"
+			"    if (stripe < 1.0) {\n"
+			"        grille_mask = vec3(1.0, 0.65, 0.65);\n"
+			"    } else if (stripe < 2.0) {\n"
+			"        grille_mask = vec3(0.65, 1.0, 0.65);\n"
+			"    } else {\n"
+			"        grille_mask = vec3(0.65, 0.65, 1.0);\n"
+			"    }\n"
+			"    col *= grille_mask;\n"
 			"\n"
-			"    /* Tone map */\n"
+			"    /* Filmic tone mapping */\n"
 			"    col = filmic( col );\n"
 			"\n"
-			"    /* Noise */\n"
-			"    /*vec2 seed = floor(curved_uv*resolution.xy*vec2(0.5))/resolution.xy;*/\n"
-			"    vec2 seed = curved_uv*resolution.xy;;\n"
-			"    /* seed = curved_uv; */\n"
-			"    col -= 0.015*pow(vec3(rand( seed +time ), rand( seed +time*2.0 ), rand( seed +time * 3.0 ) ), vec3(1.5) );\n"
+			"    /* Subtle analog noise */\n"
+			"    vec2 seed = curved_uv * resolution.xy;\n"
+			"    col -= 0.008*pow(vec3(rand(seed+time), rand(seed+time*2.0),\n"
+			"                          rand(seed+time*3.0)), vec3(1.5));\n"
 			"\n"
-			"    /* Flicker */\n"
-			"    col *= (1.0-0.002*(sin(50.0*time+curved_uv.y*2.0)*0.5+0.5));\n"
+			"    /* Minimal flicker */\n"
+			"    col *= (1.0 - 0.001*(sin(50.0*time+curved_uv.y*2.0)*0.5+0.5));\n"
 			"\n"
-			"    /* Clamp */\n"
+			"    /* Boundary clamp */\n"
 			"    if (curved_uv.x < 0.0 || curved_uv.x > 1.0)\n"
 			"        col *= 0.0;\n"
 			"    if (curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
 			"        col *= 0.0;\n"
 			"    col *= modulate;\n"
-			"    /* Frame */\n"
-			"    vec2 fuv=vec2( uv.x, 1.0 - uv.y);\n"
-			"    vec4 f=texture2D(frametexture,fuv);\n"
+			"\n"
+			"    /* Frame overlay */\n"
+			"    vec2 fuv = vec2( uv.x, 1.0 - uv.y);\n"
+			"    vec4 f = texture2D(frametexture, fuv);\n"
 			"    vec3 fr = mix( max( col, 0.0), f.xyz, f.w);\n"
 			"    col = mix( col, fr, vec3( use_frame ) );\n"
-			"    \n"
+			"\n"
 			"    gl_FragColor = vec4( col, 1.0 );\n"
 			"    }\n"
 			"\n";
+
+	// Simplified 1084S CRT shader for mobile GPUs
+	char const* crt_fs_source_mobile =
+			"\n"
+			"varying vec2 uv;\n"
+			"\n"
+			"uniform vec3 modulate;\n"
+			"uniform vec2 resolution;\n"
+			"uniform vec2 size;\n"
+			"uniform sampler2D backbuffer;\n"
+			"uniform sampler2D blurbuffer;\n"
+			"uniform sampler2D frametexture;\n"
+			"uniform float use_frame;\n"
+			"\n"
+			"vec3 filmic(vec3 LinearColor) {\n"
+			"    vec3 x = max(vec3(0.0), LinearColor - vec3(0.004));\n"
+			"    return (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);\n"
+			"}\n"
+			"\n"
+			"vec2 curve(vec2 uv) {\n"
+			"    uv = (uv - 0.5) * 2.0;\n"
+			"    uv *= 1.04;\n"
+			"    float ay = abs(uv.y) / 8.0;\n"
+			"    float ax = abs(uv.x) / 7.0;\n"
+			"    uv.x *= 1.0 + ay * ay;\n"
+			"    uv.y *= 1.0 + ax * ax;\n"
+			"    uv = (uv / 2.0) + 0.5;\n"
+			"    uv = uv * 0.92 + 0.04;\n"
+			"    return uv;\n"
+			"}\n"
+			"\n"
+			"void main(void) {\n"
+			"    vec2 curved_uv = mix(curve(uv), uv, 0.80);\n"
+			"\n"
+			"    // Main color - single texture read (no chromatic aberration on mobile)\n"
+			"    vec3 col = texture2D(backbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    col *= col; // Sqr for ~2.2 Gamma decode\n"
+			"    col *= 1.25;\n"
+			"\n"
+			"    // Halation from blurbuffer\n"
+			"    vec3 blur = texture2D(blurbuffer, vec2(curved_uv.x, 1.0 - curved_uv.y)).rgb;\n"
+			"    blur *= blur; // Sqr for ~2.2 Gamma decode\n"
+			"    float blur_luma = dot(blur, vec3(0.299, 0.587, 0.114));\n"
+			"    col += blur * vec3(1.1, 1.0, 0.85) * 0.10 * clamp(blur_luma * 2.0, 0.0, 1.0);\n"
+			"    col += blur * 0.04;\n"
+			"\n"
+			"    // 1084S warm color temperature\n"
+			"    col *= vec3(1.08, 1.02, 0.88);\n"
+			"\n"
+			"    // Level adjustment (simplified)\n"
+			"    col = clamp(col * 1.2 + 0.65 * col * col, vec3(0.0), vec3(10.0));\n"
+			"\n"
+			"    // Vignette (simplified - no pow)\n"
+			"    float vig = 16.0 * curved_uv.x * curved_uv.y * (1.0 - curved_uv.x) * (1.0 - curved_uv.y);\n"
+			"    vig = 0.3 + 0.7 * clamp(vig * 1.3, 0.0, 1.0);\n"
+			"    col *= vig;\n"
+			"\n"
+			"    // Brightness-dependent scanlines\n"
+			"    float luma = dot(col, vec3(0.299, 0.587, 0.114));\n"
+			"    float scans = 0.35 + 0.35 * cos(curved_uv.y * size.y * 1.5);\n"
+			"    float scanline_reduction = clamp(luma * 1.5, 0.0, 1.0);\n"
+			"    scans = mix(scans, 1.0, scanline_reduction * 0.65);\n"
+			"    col *= scans;\n"
+			"\n"
+			"    // Aperture grille: simplified vertical stripe pattern\n"
+			"    float stripe = mod(gl_FragCoord.x, 3.0);\n"
+			"    vec3 grille_mask;\n"
+			"    if (stripe < 1.0) {\n"
+			"        grille_mask = vec3(1.0, 0.65, 0.65);\n"
+			"    } else if (stripe < 2.0) {\n"
+			"        grille_mask = vec3(0.65, 1.0, 0.65);\n"
+			"    } else {\n"
+			"        grille_mask = vec3(0.65, 0.65, 1.0);\n"
+			"    }\n"
+			"    col *= grille_mask;\n"
+			"\n"
+			"    // Tone map\n"
+			"    col = filmic(col);\n"
+			"\n"
+			"    // Clamp to visible area\n"
+			"    if (curved_uv.x < 0.0 || curved_uv.x > 1.0 || curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
+			"        col = vec3(0.0);\n"
+			"\n"
+			"    col *= modulate;\n"
+			"\n"
+			"    // Frame overlay\n"
+			"    vec2 fuv = vec2(uv.x, 1.0 - uv.y);\n"
+			"    vec4 f = texture2D(frametexture, fuv);\n"
+			"    col = mix(col, f.rgb, f.a * use_frame);\n"
+			"\n"
+			"    gl_FragColor = vec4(col, 1.0);\n"
+			"}\n"
+			"";
 
 	char const* blur_fs_source =
 			""
@@ -1275,6 +1665,25 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
 			"    sum += texture2D(blur_texture_in, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+			"    gl_FragColor = sum;"
+			"    }   "
+			"";
+
+	// Fast 5-tap Gaussian blur for mobile GPUs (45% fewer texture samples)
+	char const* blur_fs_source_fast =
+			""
+			"varying vec2 uv;"
+			""
+			"uniform vec2 blur;"
+			"uniform sampler2D blur_texture_in;"
+			""
+			"void main( void )"
+			"    {"
+			"    vec4 sum = texture2D( blur_texture_in, uv ) * 0.29412;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.08824;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.20588;"
+			"    sum += texture2D(blur_texture_in, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.08824;"
 			"    gl_FragColor = sum;"
 			"    }   "
 			"";
@@ -1325,10 +1734,14 @@ bool crtemu_shaders_1084( crtemu_t* crtemu ) {
 			"    }   "
 			"";
 
-	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source, crt_fs_source );
+	// Use simplified CRT shader on mobile GPUs, full shader on desktop
+	crtemu->crt_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? crt_fs_source_mobile : crt_fs_source );
 	if( crtemu->crt_shader == 0 ) return false;
 
-	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source, blur_fs_source );
+	// Use fast 5-tap blur on mobile GPUs, full 9-tap on desktop
+	crtemu->blur_shader = crtemu_internal_build_shader( crtemu, vs_source,
+		crtemu->is_mobile_gpu ? blur_fs_source_fast : blur_fs_source );
 	if( crtemu->blur_shader == 0 ) return false;
 
 	crtemu->accumulate_shader = crtemu_internal_build_shader( crtemu, vs_source, accumulate_fs_source );
@@ -1404,7 +1817,7 @@ static void crtemu_init_uniform_locations(crtemu_t* crtemu) {
 	}
 }
 
-crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
+crtemu_t* crtemu_create( crtemu_type_t type, void* memctx, bool force_mobile ) {
 	crtemu_t* crtemu = (crtemu_t*) CRTEMU_MALLOC( memctx, sizeof( crtemu_t ) );
 	memset( crtemu, 0, sizeof( crtemu_t ) );
 	crtemu->type = type;
@@ -1415,6 +1828,11 @@ crtemu_t* crtemu_create( crtemu_type_t type, void* memctx ) {
 	crtemu->last_present_width = 0;
 	crtemu->last_present_height = 0;
 	crtemu->texture_filter = CRTEMU_GL_LINEAR; // Default to linear filtering for NONE mode
+
+	// Detect mobile GPU (GLES) BEFORE shader compilation so mobile variants are selected
+	// force_mobile allows UI override for testing or when auto-detection fails
+	const char* gl_ver = (const char*)glGetString(GL_VERSION);
+	crtemu->is_mobile_gpu = force_mobile || (gl_ver && strstr(gl_ver, "OpenGL ES") != nullptr);
 
 #ifndef CRTEMU_SDL
 
@@ -1796,7 +2214,7 @@ void crtemu_frame( crtemu_t* crtemu, CRTEMU_U32* frame_abgr, int frame_width, in
 static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU_GLuint blurbuffer_a, CRTEMU_GLuint blurbuffer_b,
                                   CRTEMU_GLuint blurtexture_b, float r, int width, int height ) {
 
-    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, blurbuffer_b );
 	crtemu->UseProgram( crtemu->blur_shader );
@@ -1832,19 +2250,37 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	int viewport[ 4 ];
 	crtemu->GetIntegerv( CRTEMU_GL_VIEWPORT, viewport );
 
-    // if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
+    if (crtemu->BindVertexArray && crtemu->vao) crtemu->BindVertexArray(crtemu->vao);
 
 	if (crtemu->type == CRTEMU_TYPE_NONE) {
+		// Track size/format changes for texture caching (same optimization as non-NONE shaders)
+		bool size_or_format_changed = (width != crtemu->last_present_width ||
+									   height != crtemu->last_present_height ||
+									   pixel_format != crtemu->last_present_format ||
+									   pixel_type != crtemu->last_present_type);
+
 		// Just copy to backbuffer and present
 		if( pixels_xbgr ) {
 			crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, pitch / bpp);
-			crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, pixel_type, pixels_xbgr );
+
+			if (size_or_format_changed) {
+				// Reallocate texture only when dimensions/format change
+				crtemu->TexImage2D( CRTEMU_GL_TEXTURE_2D, 0, CRTEMU_GL_RGBA, width, height, 0, pixel_format, pixel_type, pixels_xbgr );
+				crtemu->last_present_width = width;
+				crtemu->last_present_height = height;
+				crtemu->last_present_format = pixel_format;
+				crtemu->last_present_type = pixel_type;
+			} else {
+				// Fast path: update existing texture without reallocation
+				crtemu->TexSubImage2D( CRTEMU_GL_TEXTURE_2D, 0, 0, 0, width, height, pixel_format, pixel_type, pixels_xbgr );
+			}
+
 			crtemu->PixelStorei(CRTEMU_GL_UNPACK_ROW_LENGTH, 0);
 			crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
 		}
-		
+
 		crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 		crtemu->Viewport( viewport[ 0 ], viewport[ 1 ], viewport[ 2 ], viewport[ 3 ] );
 		crtemu->UseProgram( crtemu->copy_shader );
@@ -1852,12 +2288,16 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
 		crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
-		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
-		crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
+
+		// Only set texture filter parameters when texture was recreated
+		if (size_or_format_changed) {
+			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, crtemu->texture_filter );
+			crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, crtemu->texture_filter );
+		}
 
 		crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer_static );
 		crtemu->VertexAttribPointer( 0, 4, CRTEMU_GL_FLOAT, CRTEMU_GL_FALSE, 4 * sizeof( CRTEMU_GLfloat ), 0 );
-		
+
 		crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 
 		crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
@@ -2004,12 +2444,17 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
 	crtemu->BindFramebuffer( CRTEMU_GL_FRAMEBUFFER, 0 );
 
 
-	// Add slight blur to backbuffer
-	float backbuffer_blur = crtemu->type == CRTEMU_TYPE_TV ? 0.17f : 0.0f;
-	crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->accumulatebuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, backbuffer_blur, width, height );
+	// Add slight blur to backbuffer (skip on mobile for performance - this is a subtle effect)
+	if (!crtemu->is_mobile_gpu) {
+		float backbuffer_blur = crtemu->type == CRTEMU_TYPE_TV ? 0.17f : 0.0f;
+		if (backbuffer_blur > 0.0f) {
+			crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->accumulatebuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, backbuffer_blur, width, height );
+		}
+	}
 
-	// Create fully blurred version of backbuffer
-	crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->blurbuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, 1.0f, width, height );
+	// Create blurred version for ghosting (reduced radius on mobile for better performance)
+	float ghosting_blur_radius = crtemu->is_mobile_gpu ? 0.5f : 1.0f;
+	crtemu_internal_blur( crtemu, crtemu->accumulatetexture_a, crtemu->blurbuffer_a, crtemu->blurbuffer_b, crtemu->blurtexture_b, ghosting_blur_radius, width, height );
 
 
 	// Present to screen with CRT shader
@@ -2290,21 +2735,21 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 			float xp = ( ( *x - hborder ) / hscale ) / (float) width;
 			float yp = ( ( *y - vborder ) / vscale ) / (float) height;
 
-			/* TODO: Common params for shader and this */
+			/* Inverse of shader curve() - matches 1084S nearly flat barrel distortion */
 			float xc = ( xp - 0.5f ) * 2.0f;
 			float yc = ( yp - 0.5f ) * 2.0f;
-			xc *= 1.1f;
-			yc *= 1.1f;
-			float yt = ( yc >= 0.0f ? yc : -yc ) / 6.0f;
-			float xt = ( xc >= 0.0f ? xc : -xc ) / 5.0f;
+			xc *= 1.04f;
+			yc *= 1.04f;
+			float yt = ( yc >= 0.0f ? yc : -yc ) / 8.0f;
+			float xt = ( xc >= 0.0f ? xc : -xc ) / 7.0f;
 			xc *= 1.0f + ( yt * yt );
 			yc *= 1.0f + ( xt * xt );
 			xc = ( xc / 2.0f ) + 0.5f;
 			yc = ( yc / 2.0f ) + 0.5f;
 			xc = xc * 0.92f + 0.04f;
 			yc = yc * 0.92f + 0.04f;
-			xp = xc * 0.35f + xp * 0.65f;
-			yp = yc * 0.35f + yp * 0.65f;
+			xp = xc * 0.20f + xp * 0.80f;
+			yp = yc * 0.20f + yp * 0.80f;
 
 			xp *= width;
 			yp *= height;

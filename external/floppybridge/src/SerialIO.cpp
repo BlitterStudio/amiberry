@@ -79,18 +79,24 @@ DEFINE_GUID(GUID_DEVINTERFACE_COMPORT,0x86e0d1e0, 0x8089, 0x11d0, 0x9c, 0xe4, 0x
 #endif
 
 #include <string>
-#include <codecvt>
-#include <locale>
 #include <algorithm>
 
-using convert_t = std::codecvt_utf8<wchar_t>;
-static std::wstring_convert<convert_t, wchar_t> strconverter;
-
+// Simple wstring to string conversion (ASCII-safe for serial port names)
 void quickw2a(const std::wstring& wstr, std::string& str) {
-	str = strconverter.to_bytes(wstr);
+	str.clear();
+	str.reserve(wstr.size());
+	for (wchar_t wc : wstr) {
+		str.push_back(static_cast<char>(wc & 0xFF));
+	}
 }
+
+// Simple string to wstring conversion
 void quicka2w(const std::string& str, std::wstring& wstr) {
-	wstr = strconverter.from_bytes(str);
+	wstr.clear();
+	wstr.reserve(str.size());
+	for (char c : str) {
+		wstr.push_back(static_cast<wchar_t>(static_cast<unsigned char>(c)));
+	}
 }
 
 // Constructor etc

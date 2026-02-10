@@ -162,16 +162,18 @@ bool SupercardProDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
 		switch (m_io.checkForDisk(forceCheck)) {
-		case SCPErr::scpNoDiskInDrive:
-			if (m_currentCylinder == 0) {
-				m_io.performNoClickSeek();
-			}
-			else {
-				m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, true);
-				m_io.selectTrack(m_currentCylinder, true);
-			}
-			break;
-		case SCPErr::scpUnknownError: m_wasIOError = true; return false;
+			case SCPErr::scpNoDiskInDrive:
+				if (m_currentCylinder == 0) {
+					m_io.performNoClickSeek();
+				}
+				else {
+					m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, true);
+					m_io.selectTrack(m_currentCylinder, true);
+				}
+				break;
+			case SCPErr::scpUnknownError: m_wasIOError = true; return false;
+			default:
+				break;
 		}
 	}
 

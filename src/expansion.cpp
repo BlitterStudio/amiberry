@@ -287,10 +287,15 @@ void set_expamem_z3_hack_mode(int mode)
 
 bool expamem_z3hack(struct uae_prefs *p)
 {
-	if (z3hack_override == Z3MAPPING_UAE)
+	if (p->z3chipmem.size >= 0x40000000) {
 		return true;
-	if (z3hack_override == Z3MAPPING_REAL)
+	}
+	if (z3hack_override == Z3MAPPING_UAE) {
+		return true;
+	}
+	if (z3hack_override == Z3MAPPING_REAL) {
 		return false;
+	}
 	return p->z3_mapping_mode == Z3MAPPING_UAE || cpuboard_memorytype(p) == BOARD_MEMORY_BLIZZARD_12xx;
 }
 
@@ -528,13 +533,13 @@ static void call_card_init(int index)
 					expamem_write(i * 4, aci->autoconfig_bytes[i]);
 				}
 				expamem_autoconfig_mode = 1;
-			} else if (aci->autoconfig_bytes) {
+			} else if (aci->autoconfig_bytes[0]) {
 				memset(expamem, 0xff, AUTOMATIC_AUTOCONFIG_MAX_ADDRESS);
 				for (int i = 0; i < 16; i++) {
 					expamem_write(i * 4, aci->autoconfig_bytes[i]);
 				}
 				expamem_autoconfig_mode = 1;
-			} else if (aci->autoconfig_raw) {
+			} else if (aci->autoconfig_raw[0]) {
 				memcpy(expamem, aci->autoconfig_raw, sizeof aci->autoconfig_raw);
 			}
 		} else {

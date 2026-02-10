@@ -152,6 +152,7 @@ extern void gfx_lock();
 extern void gfx_unlock();
 
 extern void destroy_shaders();
+extern void update_crtemu_bezel();
 
 struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);

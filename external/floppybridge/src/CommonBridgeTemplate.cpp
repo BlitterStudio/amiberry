@@ -569,12 +569,12 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 			});
 		switch (r) {
 			case ReadResponse::rrNoDiskInDrive:
-				 m_diskInDrive = false;
-				 m_delayStreaming = true;
-				 m_delayStreamingStart = std::chrono::steady_clock::now();
-				 resetMFMCache();
-				 m_inHDMode = false;
-				 break;
+				m_diskInDrive = false;
+				m_delayStreaming = true;
+				m_delayStreamingStart = std::chrono::steady_clock::now();
+				resetMFMCache();
+				m_inHDMode = false;
+				break;
 
 			case ReadResponse::rrOK:
 				if (!m_diskInDrive) {
@@ -600,6 +600,8 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 					}
 
 				}
+				break;
+			default:
 				break;
 		}
 	}
@@ -634,50 +636,52 @@ void CommonBridgeTemplate::handleBackgroundDiskRead() {
 
 					});
 				switch (r) {
-				case ReadResponse::rrNoDiskInDrive:
-					m_diskInDrive = false;
-					m_delayStreaming = true;
-					m_delayStreamingStart = std::chrono::steady_clock::now();
-					m_inHDMode = false;
-					resetMFMCache();
-					break;
-
-				case ReadResponse::rrOK:
-					if (!m_diskInDrive) {
-						m_diskInDrive = true;
-						m_delayStreaming = false;
-						m_lastDiskCheckTime = std::chrono::steady_clock::now();
+					case ReadResponse::rrNoDiskInDrive:
+						m_diskInDrive = false;
+						m_delayStreaming = true;
+						m_delayStreamingStart = std::chrono::steady_clock::now();
 						m_inHDMode = false;
-					}
-					else {
-						if (m_firstTrackMode) {
-							if (trackWasRead) {
-								// Average the speed of both revolutions
-								unsigned int newSpeed = m_extractor.getRevolutionTime();
-								m_extractor.setRevolutionTime((newSpeed + oldRevolutionTime) / 2);
+						resetMFMCache();
+						break;
+
+					case ReadResponse::rrOK:
+						if (!m_diskInDrive) {
+							m_diskInDrive = true;
+							m_delayStreaming = false;
+							m_lastDiskCheckTime = std::chrono::steady_clock::now();
+							m_inHDMode = false;
+						}
+						else {
+							if (m_firstTrackMode) {
+								if (trackWasRead) {
+									// Average the speed of both revolutions
+									unsigned int newSpeed = m_extractor.getRevolutionTime();
+									m_extractor.setRevolutionTime((newSpeed + oldRevolutionTime) / 2);
+								}
+								else {
+									// Apply the first one... This shouldn't happen
+									m_extractor.setRevolutionTime(oldRevolutionTime);
+								}
 							}
-							else {
-								// Apply the first one... This shouldn't happen
-								m_extractor.setRevolutionTime(oldRevolutionTime);
+
+							if (!m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next.ready) {
+								// Try for a re-play
+								trackData = m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next;
+								trackData.amountReadInBits = 0;
+								trackData.ready = false;
+
+								m_pll.rePlayData(MFM_BUFFER_MAX_TRACK_LENGTH, trackData.mfmBuffer, m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].startBitPatterns,
+									[this, &trackData, &flipSurface](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
+										trackData.amountReadInBits = dataLengthInBits;
+										saveNextBuffer(m_actualCurrentCylinder, flipSurface);
+										return false;
+									});
 							}
 						}
-
-						if (!m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next.ready) {
-							// Try for a re-play
-							trackData = m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].next;
-							trackData.amountReadInBits = 0;
-							trackData.ready = false;
-
-							m_pll.rePlayData(MFM_BUFFER_MAX_TRACK_LENGTH, trackData.mfmBuffer, m_mfmRead[m_actualCurrentCylinder][(int)flipSurface].startBitPatterns,
-								[this, &trackData, &flipSurface](RotationExtractor::MFMSample* mfmData, const unsigned int dataLengthInBits) -> bool {
-									trackData.amountReadInBits = dataLengthInBits;
-									saveNextBuffer(m_actualCurrentCylinder, flipSurface);
-									return false;
-								});
-						}
-					}
-					break;
-				}				
+						break;
+					default:
+						break;
+				}
 
 				m_isCurrentlyHeadCheating = false;
 			}
@@ -1057,22 +1061,24 @@ void CommonBridgeTemplate::handleBackgroundCaching() {
 		}
 
 		switch (r) {
-		case ReadResponse::rrNoDiskInDrive:
-			m_diskInDrive = false;
-			m_delayStreaming = true;
-			m_delayStreamingStart = std::chrono::steady_clock::now();
-			resetMFMCache();
-			m_inHDMode = false;
-			break;
-
-		case ReadResponse::rrOK:
-			if (!m_diskInDrive) {
-				m_diskInDrive = true;
-				m_delayStreaming = false;
-				m_lastDiskCheckTime = std::chrono::steady_clock::now();
+			case ReadResponse::rrNoDiskInDrive:
+				m_diskInDrive = false;
+				m_delayStreaming = true;
+				m_delayStreamingStart = std::chrono::steady_clock::now();
+				resetMFMCache();
 				m_inHDMode = false;
-			}
-			break;
+				break;
+
+			case ReadResponse::rrOK:
+				if (!m_diskInDrive) {
+					m_diskInDrive = true;
+					m_delayStreaming = false;
+					m_lastDiskCheckTime = std::chrono::steady_clock::now();
+					m_inHDMode = false;
+				}
+				break;
+			default:
+				break;
 		}
 		m_driveStreamingData = false;
 		m_lastDiskCheckTime = std::chrono::steady_clock::now();
@@ -1453,10 +1459,12 @@ void CommonBridgeTemplate::setMotorStatus(bool side, bool turnOn) {
 			std::lock_guard lock(m_queueProtect);
 			if (!m_queue.empty()) {
 				switch (m_queue.back().command) {
-				case QueueCommand::qcMotorOff:
-				case QueueCommand::qcMotorOffDelay:
-					m_queue.back().command = QueueCommand::qcNOP;
-					break;
+					case QueueCommand::qcMotorOff:
+					case QueueCommand::qcMotorOffDelay:
+						m_queue.back().command = QueueCommand::qcNOP;
+						break;
+					default:
+						break;
 				}
 			}
 		}

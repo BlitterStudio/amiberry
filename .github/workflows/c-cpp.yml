@@ -3,7 +3,18 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
+    branches: [master, imgui]
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/FUNDING.yml'
+      - '.github/CODE_OF_CONDUCT.md'
+      - '.github/CONTRIBUTING.md'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'wiki/**'
 
 # Cancel older in-progress runs for the same branch/PR ref.
 # This reduces wasted CI minutes when multiple pushes happen quickly.
@@ -16,16 +27,54 @@ permissions:
   contents: read
 
 jobs:
-  build-macOS-x86_64:
-    runs-on: macos-15-intel
+  build-macOS:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: x86_64
+            runner: macos-15-intel
+            arch: intel
+            opengl: OFF
+            extra_brew_deps: ""
+            notary_suffix: macOS-x86_64
+            zip_suffix: macOS-x86_64
+            artifact_name: amiberry-macOS-64bit-intel
+          - name: x86_64-opengl
+            runner: macos-15-intel
+            arch: intel
+            opengl: ON
+            extra_brew_deps: ""
+            notary_suffix: macOS-x86_64-opengl
+            zip_suffix: macOS-x86_64-opengl
+            artifact_name: amiberry-macOS-64bit-intel-opengl
+          - name: Apple-Silicon
+            runner: macos-15
+            arch: apple-silicon
+            opengl: OFF
+            extra_brew_deps: ""
+            notary_suffix: macOS-Apple-Silicon
+            zip_suffix: macOS-apple-silicon
+            artifact_name: amiberry-macOS-64bit-apple-silicon
+          - name: Apple-Silicon-opengl
+            runner: macos-15
+            arch: apple-silicon
+            opengl: ON
+            extra_brew_deps: ""
+            notary_suffix: macOS-Apple-Silicon-opengl
+            zip_suffix: macOS-apple-silicon-opengl
+            artifact_name: amiberry-macOS-64bit-apple-silicon-opengl
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
 
       - name: Cache Homebrew
+        if: matrix.arch == 'intel'
         uses: actions/cache@v4
         with:
           path: /usr/local/Homebrew
@@ -34,122 +83,27 @@ jobs:
             ${{ runner.os }}-brew-
 
       - name: Fix homebrew in Github Runner
+        if: matrix.arch == 'intel'
         run: |
           for f in $(find /usr/local/bin -type l -print); do \
             (readlink $f | grep -q -s "/Library") && echo Removing "$f" && rm -f "$f"; \
           done || exit 0
 
       - name: Pre-install gobject-introspection from source
+        if: matrix.arch == 'intel'
         run: brew install --build-from-source gobject-introspection
 
-      - name: Install dependencies (Homebrew)
+      - name: Install dependencies (Homebrew - Intel)
+        if: matrix.arch == 'intel'
         run: |
           brew update && \
           if [ -f Brewfile ]; then brew bundle; else brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler; fi
 
-      - name: Install the Apple certificate
-        env:
-          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
-          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
-          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+      - name: Install dependencies (Homebrew - Apple Silicon)
+        if: matrix.arch == 'apple-silicon'
         run: |
-          set +x  # Mask output for security
-          # create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          # import certificate from secret
-          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          # create keychain
-          security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          # import certificate to keychain
-          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          security list-keychains -d user -s $KEYCHAIN_PATH
-
-      - name: Build for macOS X64
-        run: |
-          cmake -B build && cmake --build build -j4
-
-      - name: Codesign the dylibs
-        run: |
-          for file in build/Amiberry.app/Contents/Frameworks/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
-            fi
-          done
-          for file in build/Amiberry.app/Contents/Resources/plugins/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
-            fi
-          done
-
-      - name: Codesign the app
-        run: |
-          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
-
-      - name: Create a zip to send to the notary service
-        run: |
-          zip -r Amiberry-${{ github.sha }}-macOS-x86_64.zip build/Amiberry.app
-
-      - name: Send the file to be notarized by Apple
-        run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-x86_64.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Staple the notary receipt to the application bundle
-        run: |
-          xcrun stapler staple build/Amiberry.app
-          rm Amiberry-${{ github.sha }}-macOS-x86_64.zip
-
-      - name: Create DMG package
-        run: |
-          cpack -G DragNDrop --config build/CPackConfig.cmake
-
-      - name: ZIP package
-        if: github.ref_type != 'tag'
-        run: zip -r Amiberry-${{ github.sha }}-macOS-x86_64.zip Amiberry-*.dmg
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r Amiberry-${{ github.ref_name }}-macOS-x86_64.zip Amiberry-*.dmg
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-macOS-64bit-intel
-          path: Amiberry-*.zip
-
-  build-macOS-x86_64-opengl:
-    runs-on: macos-15-intel
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Cache Homebrew
-        uses: actions/cache@v4
-        with:
-          path: /usr/local/Homebrew
-          key: ${{ runner.os }}-brew-${{ hashFiles('Brewfile') }}
-          restore-keys: |
-            ${{ runner.os }}-brew-
-
-      - name: Fix homebrew in Github Runner
-        run: |
-          for f in $(find /usr/local/bin -type l -print); do \
-            (readlink $f | grep -q -s "/Library") && echo Removing "$f" && rm -f "$f"; \
-          done || exit 0
-
-      - name: Pre-install gobject-introspection from source
-        run: brew install --build-from-source gobject-introspection
-
-      - name: Install dependencies (Homebrew)
-        run: |
-          brew update && \
-          if [ -f Brewfile ]; then brew bundle; else brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd glew dylibbundler; fi
+          brew update
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler ${{ matrix.extra_brew_deps }}
 
       - name: Install the Apple certificate
         env:
@@ -172,9 +126,9 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
           security list-keychains -d user -s $KEYCHAIN_PATH
 
-      - name: Build for macOS X64 (OpenGL)
+      - name: Build for macOS (${{ matrix.name }})
         run: |
-          cmake -B build -DUSE_OPENGL=ON && cmake --build build -j4
+          cmake -B build ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} && cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Codesign the dylibs
         run: |
@@ -195,216 +149,45 @@ jobs:
 
       - name: Create a zip to send to the notary service
         run: |
-          zip -r Amiberry-${{ github.sha }}-macOS-x86_64-opengl.zip build/Amiberry.app
+          zip -r Amiberry-${{ github.sha }}-${{ matrix.notary_suffix }}.zip build/Amiberry.app
 
       - name: Send the file to be notarized by Apple
         run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-x86_64-opengl.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
+          xcrun notarytool submit Amiberry-${{ github.sha }}-${{ matrix.notary_suffix }}.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Staple the notary receipt to the application bundle
         run: |
           xcrun stapler staple build/Amiberry.app
-          rm Amiberry-${{ github.sha }}-macOS-x86_64-opengl.zip
+          rm Amiberry-${{ github.sha }}-${{ matrix.notary_suffix }}.zip
 
       - name: Create DMG package
         run: |
           cpack -G DragNDrop --config build/CPackConfig.cmake
 
-      - name: ZIP package
-        if: github.ref_type != 'tag'
-        run: zip -r Amiberry-${{ github.sha }}-macOS-x86_64-opengl.zip Amiberry-*.dmg
-
       - name: ZIP package for release
         if: github.ref_type == 'tag'
-        run: zip -r Amiberry-${{ github.ref_name }}-macOS-x86_64-opengl.zip Amiberry-*.dmg
+        run: zip -r Amiberry-${{ github.ref_name }}-${{ matrix.zip_suffix }}.zip Amiberry-*.dmg
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-macOS-64bit-intel-opengl
-          path: Amiberry-*.zip
-
-  build-macOS-Apple-Silicon:
-    runs-on: macos-15
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies (Homebrew)
-        run: |
-          brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
-
-      - name: Install the Apple certificate
-        env:
-          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
-          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
-          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
-        run: |
-          # create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          
-          # import certificate from secret
-          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          
-          # create keychain
-          security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          
-          # import certificate to keychain
-          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          security list-keychains -d user -s $KEYCHAIN_PATH
-
-      - name: Build for macOS Apple Silicon
-        run: |
-          cmake -B build && cmake --build build -j4
-          
-      - name: Codesign the dylibs
-        run: |
-          for file in build/Amiberry.app/Contents/Frameworks/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
-            fi
-          done
-          for file in build/Amiberry.app/Contents/Resources/plugins/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
-            fi
-          done
-
-      - name: Codesign the app
-        run: |
-          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
-
-      - name: Create a zip to send to the notary service
-        run: |
-          zip -r Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip build/Amiberry.app
-
-      - name: Send the file to be notarized by Apple
-        run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Staple the notary receipt to the application bundle
-        run: |
-          xcrun stapler staple build/Amiberry.app
-          rm Amiberry-${{ github.sha }}-macOS-Apple-Silicon.zip
-
-      - name: Create DMG package
-        run: |
-          cpack -G DragNDrop --config build/CPackConfig.cmake
-
-      - name: ZIP package
         if: github.ref_type != 'tag'
-        run: zip -r Amiberry-${{ github.sha }}-macOS-apple-silicon.zip Amiberry-*.dmg
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r Amiberry-${{ github.ref_name }}-macOS-apple-silicon.zip Amiberry-*.dmg
-
-      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: amiberry-macOS-64bit-apple-silicon
-          path: Amiberry-*.zip
+          name: ${{ matrix.artifact_name }}
+          path: Amiberry-*.dmg
+          retention-days: 7
 
-  build-macOS-Apple-Silicon-opengl:
-    runs-on: macos-15
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies (Homebrew)
-        run: |
-          brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd glew dylibbundler
-
-      - name: Install the Apple certificate
-        env:
-          APPLE_DEVID_CERT_BASE64: ${{ secrets.APPLE_DEVID_CERT_BASE64 }}
-          APPLE_DEVID_CERT_P12_PASSWORD: ${{ secrets.APPLE_DEVID_CERT_P12_PASSWORD }}
-          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
-        run: |
-          # create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          
-          # import certificate from secret
-          echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          
-          # create keychain
-          security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          
-          # import certificate to keychain
-          security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          security list-keychains -d user -s $KEYCHAIN_PATH
-
-      - name: Build for macOS Apple Silicon (OpenGL)
-        run: |
-          cmake -B build -DUSE_OPENGL=ON && cmake --build build -j4
-
-      - name: Codesign the dylibs
-        run: |
-          for file in build/Amiberry.app/Contents/Frameworks/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
-            fi
-          done
-          for file in build/Amiberry.app/Contents/Resources/plugins/*.dylib; do
-            if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
-            fi
-          done
-
-      - name: Codesign the app
-        run: |
-          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
-
-      - name: Create a zip to send to the notary service
-        run: |
-          zip -r Amiberry-${{ github.sha }}-macOS-Apple-Silicon-opengl.zip build/Amiberry.app
-
-      - name: Send the file to be notarized by Apple
-        run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-Apple-Silicon-opengl.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Staple the notary receipt to the application bundle
-        run: |
-          xcrun stapler staple build/Amiberry.app
-          rm Amiberry-${{ github.sha }}-macOS-Apple-Silicon-opengl.zip
-
-      - name: Create DMG package
-        run: |
-          cpack -G DragNDrop --config build/CPackConfig.cmake
-
-      - name: ZIP package
-        if: github.ref_type != 'tag'
-        run: zip -r Amiberry-${{ github.sha }}-macOS-apple-silicon-opengl.zip Amiberry-*.dmg
-
-      - name: ZIP package for release
+      - name: Upload artifact for release
         if: github.ref_type == 'tag'
-        run: zip -r Amiberry-${{ github.ref_name }}-macOS-apple-silicon-opengl.zip Amiberry-*.dmg
-
-      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: amiberry-macOS-64bit-apple-silicon-opengl
+          name: ${{ matrix.artifact_name }}
           path: Amiberry-*.zip
+          retention-days: 7
 
   build-ubuntu:
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: write
@@ -415,95 +198,32 @@ jobs:
           - name: 22.04-amd64
             runner: ubuntu-latest
             container: ubuntu:22.04
+            opengl: OFF
             artifact_name: amiberry-ubuntu-22.04-amd64
           - name: 24.04-amd64
             runner: ubuntu-latest
             container: ubuntu:24.04
+            opengl: OFF
             artifact_name: amiberry-ubuntu-24.04-amd64
           - name: 25.10-amd64
             runner: ubuntu-latest
             container: ubuntu:25.10
+            opengl: OFF
             artifact_name: amiberry-ubuntu-25.10-amd64
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
+            opengl: OFF
             artifact_name: amiberry-ubuntu-25.10-arm64
-    steps:
-      - name: Install prerequisites
-        run: |
-          apt-get update
-          apt-get install -y sudo git
-
-      - name: Check out repository code
-        uses: actions/checkout@v4
-
-      - name: Install ccache
-        run: sudo apt-get install -y ccache
-
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.name }}-ccache-
-
-      - name: Cache apt packages
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-${{ matrix.name }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.name }}-apt-
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libglew-dev
-
-      - name: make for Ubuntu ${{ matrix.name }}
-        env:
-          CCACHE_DIR: ~/.ccache
-        run: |
-          export PATH="/usr/lib/ccache:$PATH"
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-      - name: Upload artifact
-        if: always() && github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}
-          path: amiberry_*.deb
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r ${{ matrix.artifact_name }}.zip amiberry_*.deb
-
-      - name: Upload artifact for release
-        if: always() && github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}
-          path: amiberry-*.zip
-
-  build-ubuntu-opengl:
-    runs-on: ${{ matrix.runner }}
-    container: ${{ matrix.container }}
-    permissions:
-      contents: read
-      actions: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
           - name: 25.10-amd64-opengl
             runner: ubuntu-latest
             container: ubuntu:25.10
+            opengl: ON
             artifact_name: amiberry-ubuntu-25.10-amd64-opengl
           - name: 25.10-arm64-opengl
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
+            opengl: ON
             artifact_name: amiberry-ubuntu-25.10-arm64-opengl
     steps:
       - name: Install prerequisites
@@ -521,8 +241,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ccache
-          key: ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.sha }}
+          key: ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.ref }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-${{ matrix.name }}-ccache-${{ github.ref }}-
             ${{ runner.os }}-${{ matrix.name }}-ccache-
 
       - name: Cache apt packages
@@ -536,14 +257,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev libglew-dev
+          sudo apt-get install -y build-essential cmake ninja-build file libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
 
       - name: make for Ubuntu ${{ matrix.name }}
         env:
           CCACHE_DIR: ~/.ccache
         run: |
           export PATH="/usr/lib/ccache:$PATH"
-          cmake -B build -G Ninja -DUSE_OPENGL=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j4
+          cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
@@ -552,6 +273,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: amiberry_*.deb
+          retention-days: 7
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
@@ -564,166 +286,96 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: amiberry-*.zip
 
-  build-fedora-x86_64:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-fedora-x86_64:latest
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G RPM --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-fedora-x86_64
-        path: amiberry-*.rpm
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-fedora-x86_64.zip amiberry-*.rpm
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-fedora-x86_64
-          path: amiberry-*.zip
-
-  build-fedora-x86_64-opengl:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-fedora-x86_64:latest
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build -G Ninja -DUSE_OPENGL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G RPM --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-fedora-x86_64-opengl
-        path: amiberry-*.rpm
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-fedora-x86_64-opengl.zip amiberry-*.rpm
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-fedora-x86_64-opengl
-          path: amiberry-*.zip
-
-  build-fedora-aarch64:
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-      actions: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-fedora-arm64:latest
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G RPM --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-fedora-aarch64
-        path: amiberry-*.rpm
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-fedora-aarch64.zip amiberry-*.rpm
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-fedora-aarch64
-        path: amiberry-*.zip
-
-  build-fedora-aarch64-opengl:
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-      actions: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-fedora-arm64:latest
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build -G Ninja -DUSE_OPENGL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G RPM --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-fedora-aarch64-opengl
-        path: amiberry-*.rpm
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-fedora-aarch64-opengl.zip amiberry-*.rpm
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-fedora-aarch64-opengl
-        path: amiberry-*.zip
-
-  build-debian-amd64:
-    runs-on: ubuntu-latest
+  build-fedora:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: write
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - name: bullseye
-            image: midwan/amiberry-debian-x86_64:bullseye
-            artifact_name: amiberry-debian-bullseye-amd64
-            release_name: debian-bullseye-amd64
+          - name: x86_64
+            runner: ubuntu-latest
+            image: midwan/amiberry-fedora-x86_64:latest
+            opengl: OFF
+            artifact_name: amiberry-fedora-x86_64
+            release_suffix: fedora-x86_64
+          - name: x86_64-opengl
+            runner: ubuntu-latest
+            image: midwan/amiberry-fedora-x86_64:latest
+            opengl: ON
+            artifact_name: amiberry-fedora-x86_64-opengl
+            release_suffix: fedora-x86_64-opengl
+          - name: aarch64
+            runner: ubuntu-24.04-arm
+            image: midwan/amiberry-fedora-arm64:latest
+            opengl: OFF
+            artifact_name: amiberry-fedora-aarch64
+            release_suffix: fedora-aarch64
+          - name: aarch64-opengl
+            runner: ubuntu-24.04-arm
+            image: midwan/amiberry-fedora-arm64:latest
+            opengl: ON
+            artifact_name: amiberry-fedora-aarch64-opengl
+            release_suffix: fedora-aarch64-opengl
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run the build process with Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: ${{ matrix.image }}
+        options: -v ${{ github.workspace }}:/build
+        run: |
+          cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j$(nproc)
+          cpack -G RPM --config build/CPackConfig.cmake
+
+    - name: Upload artifact
+      if: always() && github.ref_type != 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: amiberry-*.rpm
+        retention-days: 7
+
+    - name: ZIP package for release
+      if: github.ref_type == 'tag'
+      run: zip -r amiberry-${{ github.ref_name }}-${{ matrix.release_suffix }}.zip amiberry-*.rpm
+
+    - name: Upload artifact for release
+      if: always() && github.ref_type == 'tag'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: amiberry-*.zip
+
+  build-debian-amd64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
           - name: bookworm
             image: midwan/amiberry-debian-x86_64:bookworm
+            opengl: OFF
             artifact_name: amiberry-debian-bookworm-amd64
             release_name: debian-bookworm-amd64
           - name: trixie
             image: midwan/amiberry-debian-x86_64:trixie
+            opengl: OFF
             artifact_name: amiberry-debian-trixie-amd64
             release_name: debian-trixie-amd64
+          - name: trixie-opengl
+            image: midwan/amiberry-debian-x86_64:trixie
+            opengl: ON
+            artifact_name: amiberry-debian-trixie-amd64-opengl
+            release_name: debian-trixie-amd64-opengl
     steps:
       - uses: actions/checkout@v4
 
@@ -733,7 +385,7 @@ jobs:
           image: ${{ matrix.image }}
           options: -v ${{ github.workspace }}:/build
           run: |
-            cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
+            cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j$(nproc)
             cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
@@ -742,6 +394,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: "amiberry_*.deb"
+          retention-days: 7
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
@@ -754,61 +407,31 @@ jobs:
           name: ${{ matrix.artifact_name }}
           path: "amiberry-*.zip"
 
-  build-debian-amd64-trixie-opengl:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: midwan/amiberry-debian-x86_64:trixie
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            cmake -B build -G Ninja -DUSE_OPENGL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-            cpack -G DEB --config build/CPackConfig.cmake
-
-      - name: Upload artifact
-        if: always() && github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-debian-trixie-amd64-opengl
-          path: "amiberry_*.deb"
-
-      - name: ZIP package for release
-        if: github.ref_type == 'tag'
-        run: zip -r "amiberry-${{ github.ref_name }}-debian-trixie-amd64-opengl.zip" amiberry_*.deb
-
-      - name: Upload artifact for release
-        if: always() && github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
-        with:
-          name: amiberry-debian-trixie-amd64-opengl
-          path: "amiberry-*.zip"
-
   build-debian-arm64:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: write
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - name: bullseye
-            image: midwan/amiberry-debian-aarch64:bullseye
-            artifact_name: amiberry-debian-bullseye-arm64
-            release_name: debian-bullseye-arm64
           - name: bookworm
             image: midwan/amiberry-debian-aarch64:bookworm
+            opengl: OFF
             artifact_name: amiberry-debian-bookworm-arm64
             release_name: debian-bookworm-arm64
           - name: trixie
             image: midwan/amiberry-debian-aarch64:trixie
+            opengl: OFF
             artifact_name: amiberry-debian-trixie-arm64
             release_name: debian-trixie-arm64
+          - name: trixie-opengl
+            image: midwan/amiberry-debian-aarch64:trixie
+            opengl: ON
+            artifact_name: amiberry-debian-trixie-arm64-opengl
+            release_name: debian-trixie-arm64-opengl
     steps:
     - uses: actions/checkout@v4
 
@@ -818,7 +441,7 @@ jobs:
         image: ${{ matrix.image }}
         options: -v ${{ github.workspace }}:/build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
+          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
     - name: Upload artifact
@@ -827,6 +450,7 @@ jobs:
       with:
         name: ${{ matrix.artifact_name }}
         path: "amiberry_*.deb"
+        retention-days: 7
 
     - name: ZIP package for release
       if: github.ref_type == 'tag'
@@ -836,131 +460,12 @@ jobs:
       if: always() && github.ref_type == 'tag'
       uses: actions/upload-artifact@v4
       with:
-          name: ${{ matrix.artifact_name }}
-          path: "amiberry-*.zip"
-
-  build-debian-arm64-trixie-opengl:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-aarch64:trixie
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DUSE_OPENGL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-trixie-arm64-opengl
-        path: "amiberry_*.deb"
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-trixie-arm64-opengl.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-debian-trixie-arm64-opengl
-          path: "amiberry-*.zip"
-
-  build-debian-armhf:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    strategy:
-      matrix:
-        include:
-          - name: bullseye
-            image: midwan/amiberry-debian-armhf:bullseye
-            artifact_name: amiberry-debian-bullseye-armhf
-            release_name: debian-bullseye-armhf
-          - name: bookworm
-            image: midwan/amiberry-debian-armhf:bookworm
-            artifact_name: amiberry-debian-bookworm-armhf
-            release_name: debian-bookworm-armhf
-          - name: trixie
-            image: midwan/amiberry-debian-armhf:trixie
-            artifact_name: amiberry-debian-trixie-armhf
-            release_name: debian-trixie-armhf
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: ${{ matrix.image }}
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
         name: ${{ matrix.artifact_name }}
-        path: "amiberry_*.deb"
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-${{ matrix.release_name }}.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: ${{ matrix.artifact_name }}
-          path: "amiberry-*.zip"
-
-  build-debian-armhf-trixie-opengl:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: midwan/amiberry-debian-armhf:trixie
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-arm-linux-gnueabihf.cmake -B build -G Ninja -DUSE_OPENGL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j4
-          cpack -G DEB --config build/CPackConfig.cmake
-
-    - name: Upload artifact
-      if: always() && github.ref_type != 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-        name: amiberry-debian-trixie-armhf-opengl
-        path: "amiberry_*.deb"
-
-    - name: ZIP package for release
-      if: github.ref_type == 'tag'
-      run: zip -r amiberry-${{ github.ref_name }}-debian-trixie-armhf-opengl.zip amiberry_*.deb
-
-    - name: Upload artifact for release
-      if: always() && github.ref_type == 'tag'
-      uses: actions/upload-artifact@v4
-      with:
-          name: amiberry-debian-trixie-armhf-opengl
-          path: "amiberry-*.zip"
+        path: "amiberry-*.zip"
 
   build-android:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
     env:
@@ -1006,7 +511,7 @@ jobs:
           mkdir -p artifacts
           # Copy outputs rather than renaming in-place (AGP may produce multiple variants).
           VERSION_SUFFIX="${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
-          
+
           if compgen -G "android/app/build/outputs/apk/debug/*.apk" > /dev/null; then
             for f in android/app/build/outputs/apk/debug/*.apk; do
               cp -v "$f" "artifacts/amiberry-android-${VERSION_SUFFIX}-debug.apk"
@@ -1032,6 +537,7 @@ jobs:
           path: |
             artifacts/*
           if-no-files-found: error
+          retention-days: 7
 
       - name: Upload Android build reports (on failure)
         if: failure()
@@ -1044,9 +550,10 @@ jobs:
           if-no-files-found: warn
 
   create-release:
-    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android]
+    needs: [build-macOS, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-android]
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    timeout-minutes: 15
+    if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
     # Elevated permissions only where needed for creating a release
     permissions:
       contents: write
@@ -1057,7 +564,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create Changelog
-        if: github.ref_type == 'tag'
         id: changelog
         uses: loopwerk/tag-changelog@v1
         with:
@@ -1074,53 +580,9 @@ jobs:
         run: ls -R artifacts
 
       - name: Create Release
-        if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
-          allowUpdates: true
-          omitBodyDuringUpdate: true
-          body: ${{ steps.changelog.outputs.changes }}
-          artifacts: |
-            artifacts/amiberry-*.zip
-            artifacts/Amiberry-*.zip
-            artifacts/*.apk
-            artifacts/*.aab
-
-  create-prerelease:
-    needs: [build-macOS-x86_64, build-macOS-x86_64-opengl, build-macOS-Apple-Silicon, build-macOS-Apple-Silicon-opengl, build-fedora-x86_64, build-fedora-x86_64-opengl, build-fedora-aarch64, build-fedora-aarch64-opengl, build-ubuntu, build-ubuntu-opengl, build-debian-amd64, build-debian-amd64-trixie-opengl, build-debian-arm64, build-debian-arm64-trixie-opengl, build-debian-armhf, build-debian-armhf-trixie-opengl, build-android]
-    runs-on: ubuntu-latest
-    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'preview-v')
-    # Elevated permissions only where needed for creating a prerelease
-    permissions:
-      contents: write
-      actions: read
-      pull-requests: read
-      issues: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Changelog
-        if: github.ref_type == 'tag'
-        id: changelog
-        uses: loopwerk/tag-changelog@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config_file: .github/tag-changelog-config.js
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Display structure of downloaded files
-        run: ls -R artifacts
-
-      - name: Create PreRelease
-        if: github.ref_type == 'tag'
-        uses: ncipollo/release-action@v1
-        with:
-          prerelease: true
+          prerelease: ${{ startsWith(github.ref_name, 'preview-v') }}
           allowUpdates: true
           omitBodyDuringUpdate: true
           body: ${{ steps.changelog.outputs.changes }}

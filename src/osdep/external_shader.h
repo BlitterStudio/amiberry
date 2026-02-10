@@ -1,11 +1,7 @@
 #ifndef EXTERNAL_SHADER_H
 #define EXTERNAL_SHADER_H
 
-#ifndef __ANDROID__
-#include <GL/glew.h>
-#else
-#include <GLES3/gl3.h>
-#endif
+#include "gl_platform.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -49,8 +45,12 @@ public:
 	// Get shader parameters
 	const std::vector<ShaderParameter>& get_parameters() const { return parameters_; }
 	
-	// Set parameter value
+	// Set parameter value (stores value only, does not issue GL calls)
 	bool set_parameter(const std::string& name, float value);
+
+	// Apply all parameter uniforms to the currently active shader program.
+	// Must be called from the render loop (emulator GL context) after use().
+	void apply_parameter_uniforms();
 	
 	// Check if shader is valid
 	bool is_valid() const { return program_ != 0; }
@@ -60,6 +60,13 @@ public:
 
 	// Get error message
 	const std::string& get_error() const { return error_message_; }
+
+	// Uniform location access (public for multi-pass shader preset use)
+	GLint get_uniform_location(const char* name);
+
+	// Additional uniform setters for multi-pass pipeline
+	void set_uniform_int(const char* name, int value);
+	void set_uniform_vec2(const char* name, float x, float y);
 
 	// Getters for input resources
 	GLuint get_input_texture() const { return input_texture_; }
@@ -79,9 +86,6 @@ private:
 	std::string extract_vertex_shader(const std::string& source);
 	std::string extract_fragment_shader(const std::string& source);
 	void parse_pragma_parameters(const std::string& source);
-	
-	// Uniform location caching
-	GLint get_uniform_location(const char* name);
 	
 	// Cleanup
 	void cleanup();

@@ -231,7 +231,7 @@ static int opPFRSQIT1(uint32_t fetchdat)
         MMX_REG src;
 
         MMX_GETSRC();
-        UNUSED(src);
+        (void)src;
 
         return 0;
 }

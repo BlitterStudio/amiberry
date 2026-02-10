@@ -1,6 +1,6 @@
 static int opINT3(uint32_t fetchdat)
 {
-        int cycles_old = cycles; UNUSED(cycles_old);
+        int cycles_old = cycles; (void)cycles_old;
         if ((cr0 & 1) && (cpu_state.eflags & VM_FLAG) && (IOPL != 3))
         {
                 x86gpf(NULL,0);
@@ -14,7 +14,7 @@ static int opINT3(uint32_t fetchdat)
 
 static int opINT1(uint32_t fetchdat)
 {
-        int cycles_old = cycles; UNUSED(cycles_old);
+        int cycles_old = cycles; (void)cycles_old;
         if ((cr0 & 1) && (cpu_state.eflags & VM_FLAG) && (IOPL != 3))
         {
                 x86gpf(NULL,0);
@@ -28,7 +28,7 @@ static int opINT1(uint32_t fetchdat)
 
 static int opINT(uint32_t fetchdat)
 {
-        int cycles_old = cycles; UNUSED(cycles_old);
+        int cycles_old = cycles; (void)cycles_old;
         uint8_t temp = getbytef();
 
         if ((cr0 & 1) && (cpu_state.eflags & VM_FLAG) && (IOPL != 3))
@@ -102,7 +102,7 @@ static int opINT(uint32_t fetchdat)
 
 static int opINTO(uint32_t fetchdat)
 {
-        int cycles_old = cycles; UNUSED(cycles_old);
+        int cycles_old = cycles; (void)cycles_old;
         
         if ((cr0 & 1) && (cpu_state.eflags & VM_FLAG) && (IOPL != 3))
         {

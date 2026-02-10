@@ -18,8 +18,7 @@
 
 #include "utf8proc.h"
 
-#include <codecvt>
-#include <locale>
+#include <cstdint>
 
 
 namespace {
@@ -460,8 +459,44 @@ std::wstring wstring_from_utf8(std::string_view utf8string)
 	// for some reason, using codecvt yields bad results on MinGW (but not MSVC)
 	return osd::text::to_wstring(utf8string);
 #else
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-	return converter.from_bytes(utf8string.data(), utf8string.data() + utf8string.length());
+	std::wstring result;
+	result.reserve(utf8string.length());
+	size_t i = 0;
+	while (i < utf8string.length()) {
+		uint32_t codepoint;
+		unsigned char c = static_cast<unsigned char>(utf8string[i]);
+		if ((c & 0x80) == 0) {
+			codepoint = c;
+			i += 1;
+		} else if ((c & 0xE0) == 0xC0 && i + 1 < utf8string.length()) {
+			codepoint = (c & 0x1F) << 6;
+			codepoint |= (static_cast<unsigned char>(utf8string[i + 1]) & 0x3F);
+			i += 2;
+		} else if ((c & 0xF0) == 0xE0 && i + 2 < utf8string.length()) {
+			codepoint = (c & 0x0F) << 12;
+			codepoint |= (static_cast<unsigned char>(utf8string[i + 1]) & 0x3F) << 6;
+			codepoint |= (static_cast<unsigned char>(utf8string[i + 2]) & 0x3F);
+			i += 3;
+		} else if ((c & 0xF8) == 0xF0 && i + 3 < utf8string.length()) {
+			codepoint = (c & 0x07) << 18;
+			codepoint |= (static_cast<unsigned char>(utf8string[i + 1]) & 0x3F) << 12;
+			codepoint |= (static_cast<unsigned char>(utf8string[i + 2]) & 0x3F) << 6;
+			codepoint |= (static_cast<unsigned char>(utf8string[i + 3]) & 0x3F);
+			i += 4;
+		} else {
+			codepoint = 0xFFFD; // replacement character
+			i += 1;
+		}
+		if (sizeof(wchar_t) == 4 || codepoint <= 0xFFFF) {
+			result.push_back(static_cast<wchar_t>(codepoint));
+		} else {
+			// UTF-16 surrogate pair for narrow wchar_t
+			codepoint -= 0x10000;
+			result.push_back(static_cast<wchar_t>(0xD800 | (codepoint >> 10)));
+			result.push_back(static_cast<wchar_t>(0xDC00 | (codepoint & 0x3FF)));
+		}
+	}
+	return result;
 #endif
 }
 
@@ -476,8 +511,40 @@ std::string utf8_from_wstring(std::wstring_view string)
 	// for some reason, using codecvt yields bad results on MinGW (but not MSVC)
 	return osd::text::from_wstring(string);
 #else
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-	return converter.to_bytes(string.data(), string.data() + string.length());
+	std::string result;
+	result.reserve(string.length() * 4); // worst case
+	size_t i = 0;
+	while (i < string.length()) {
+		uint32_t codepoint = static_cast<uint32_t>(string[i]);
+		// Handle UTF-16 surrogate pairs for narrow wchar_t
+		if (sizeof(wchar_t) == 2 && codepoint >= 0xD800 && codepoint <= 0xDBFF && i + 1 < string.length()) {
+			uint32_t low = static_cast<uint32_t>(string[i + 1]);
+			if (low >= 0xDC00 && low <= 0xDFFF) {
+				codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
+				i += 2;
+			} else {
+				i += 1;
+			}
+		} else {
+			i += 1;
+		}
+		if (codepoint < 0x80) {
+			result.push_back(static_cast<char>(codepoint));
+		} else if (codepoint < 0x800) {
+			result.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
+			result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+		} else if (codepoint < 0x10000) {
+			result.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
+			result.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+		} else {
+			result.push_back(static_cast<char>(0xF0 | (codepoint >> 18)));
+			result.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+			result.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+		}
+	}
+	return result;
 #endif
 }
 

@@ -85,7 +85,6 @@ set(SOURCE_FILES
         src/scsi.cpp
         src/scsiemul.cpp
         src/scsitape.cpp
-        src/slirp_uae.cpp
         src/sndboard.cpp
         src/specialmonitors.cpp
         src/statusline.cpp
@@ -222,10 +221,13 @@ set(SOURCE_FILES
         src/osdep/amiberry.cpp
         src/osdep/ahi_v2.cpp
         src/osdep/amiberry_dbus.cpp
+        src/osdep/amiberry_ipc_socket.cpp
         src/osdep/amiberry_filesys.cpp
         src/osdep/amiberry_input.cpp
         src/osdep/amiberry_gfx.cpp
+        src/osdep/gl_platform.cpp
         src/osdep/external_shader.cpp
+        src/osdep/shader_preset.cpp
         src/osdep/amiberry_gui.cpp
         src/osdep/amiberry_mem.cpp
         src/osdep/amiberry_serial.cpp
@@ -249,68 +251,9 @@ set(SOURCE_FILES
         src/qemuvga/qemu.cpp
         src/qemuvga/qemuuaeglue.cpp
         src/qemuvga/vga.cpp
-        src/slirp/bootp.cpp
-        src/slirp/cksum.cpp
-        src/slirp/if.cpp
-        src/slirp/ip_icmp.cpp
-        src/slirp/ip_input.cpp
-        src/slirp/ip_output.cpp
-        src/slirp/mbuf.cpp
-        src/slirp/misc.cpp
-        src/slirp/sbuf.cpp
-        src/slirp/slirp.cpp
-        src/slirp/slirpdebug.cpp
-        src/slirp/socket.cpp
-        src/slirp/tcp_input.cpp
-        src/slirp/tcp_output.cpp
-        src/slirp/tcp_subr.cpp
-        src/slirp/tcp_timer.cpp
-        src/slirp/tftp.cpp
-        src/slirp/udp.cpp
         src/sounddep/sound.cpp
         src/threaddep/threading.cpp
-        src/osdep/gui/ControllerMap.cpp
-        src/osdep/gui/CreateFolder.cpp
-        src/osdep/gui/SelectorEntry.cpp
-        src/osdep/gui/ShowCustomFields.cpp
-        src/osdep/gui/ShowHelp.cpp
-        src/osdep/gui/ShowMessage.cpp
-        src/osdep/gui/ShowDiskInfo.cpp
-        src/osdep/gui/SelectFolder.cpp
-        src/osdep/gui/SelectFile.cpp
-        src/osdep/gui/CreateFilesysHardfile.cpp
-        src/osdep/gui/EditCDDrive.cpp
-        src/osdep/gui/EditFilesysVirtual.cpp
-        src/osdep/gui/EditFilesysHardfile.cpp
-        src/osdep/gui/EditFilesysHardDrive.cpp
-        src/osdep/gui/EditTapeDrive.cpp
-        src/osdep/gui/PanelAbout.cpp
-        src/osdep/gui/PanelPaths.cpp
-        src/osdep/gui/PanelQuickstart.cpp
-        src/osdep/gui/PanelConfig.cpp
-        src/osdep/gui/PanelCPU.cpp
-        src/osdep/gui/PanelChipset.cpp
-        src/osdep/gui/PanelCustom.cpp
-        src/osdep/gui/PanelROM.cpp
-        src/osdep/gui/PanelRAM.cpp
-        src/osdep/gui/PanelFloppy.cpp
-        src/osdep/gui/PanelExpansions.cpp
-        src/osdep/gui/PanelHD.cpp
-        src/osdep/gui/PanelRTG.cpp
-        src/osdep/gui/PanelHWInfo.cpp
-        src/osdep/gui/PanelInput.cpp
-        src/osdep/gui/PanelIOPorts.cpp
-        src/osdep/gui/PanelDisplay.cpp
-        src/osdep/gui/PanelSound.cpp
-        src/osdep/gui/PanelDiskSwapper.cpp
-        src/osdep/gui/PanelMisc.cpp
-        src/osdep/gui/PanelPrio.cpp
-        src/osdep/gui/PanelSavestate.cpp
-        src/osdep/gui/PanelThemes.cpp
-        src/osdep/gui/PanelVirtualKeyboard.cpp
-        src/osdep/gui/PanelWHDLoad.cpp
         src/osdep/gui/main_window.cpp
-        src/osdep/gui/Navigation.cpp
         src/osdep/vkbd/vkbd.cpp
         src/newcpu.cpp
         src/newcpu_common.cpp
@@ -338,6 +281,65 @@ set(SOURCE_FILES
         src/jit/compstbl.cpp
         src/jit/compemu_fpp.cpp
         src/jit/compemu_support.cpp
+)
+
+# Suppress pragma-pack warnings for SLIRP network protocol headers
+# These are legacy headers with specific struct alignment requirements
+set(SLIRP_SOURCES
+		src/slirp_uae.cpp
+		src/slirp/bootp.cpp
+		src/slirp/cksum.cpp
+		src/slirp/if.cpp
+		src/slirp/ip_icmp.cpp
+		src/slirp/ip_input.cpp
+		src/slirp/ip_output.cpp
+		src/slirp/mbuf.cpp
+		src/slirp/misc.cpp
+		src/slirp/sbuf.cpp
+		src/slirp/slirp.cpp
+		src/slirp/slirpdebug.cpp
+		src/slirp/socket.cpp
+		src/slirp/tcp_input.cpp
+		src/slirp/tcp_output.cpp
+		src/slirp/tcp_subr.cpp
+		src/slirp/tcp_timer.cpp
+		src/slirp/tftp.cpp
+		src/slirp/udp.cpp
+)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+	set_source_files_properties(${SLIRP_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-pragma-pack")
+endif()
+list(APPEND SOURCE_FILES ${SLIRP_SOURCES})
+
+set(IMGUI_GUI_FILES
+		src/osdep/imgui/about.cpp
+		src/osdep/imgui/chipset.cpp
+		src/osdep/imgui/adv_chipset.cpp
+		src/osdep/imgui/controller_map.cpp
+		src/osdep/imgui/configurations.cpp
+		src/osdep/imgui/cpu.cpp
+		src/osdep/imgui/custom.cpp
+		src/osdep/imgui/diskswapper.cpp
+		src/osdep/imgui/display.cpp
+		src/osdep/imgui/filter.cpp
+		src/osdep/imgui/expansions.cpp
+		src/osdep/imgui/floppy.cpp
+		src/osdep/imgui/hd.cpp
+		src/osdep/imgui/hwinfo.cpp
+		src/osdep/imgui/input.cpp
+		src/osdep/imgui/io.cpp
+		src/osdep/imgui/misc.cpp
+		src/osdep/imgui/paths.cpp
+		src/osdep/imgui/prio.cpp
+		src/osdep/imgui/quickstart.cpp
+		src/osdep/imgui/ram.cpp
+		src/osdep/imgui/rom.cpp
+		src/osdep/imgui/rtg.cpp
+		src/osdep/imgui/savestates.cpp
+		src/osdep/imgui/sound.cpp
+		src/osdep/imgui/themes.cpp
+		src/osdep/imgui/virtualkeyboard.cpp
+		src/osdep/imgui/whdload.cpp
 )
 
 set(PCEM_SOURCE_FILES
@@ -400,6 +402,12 @@ set(PCEM_SOURCE_FILES
         src/pcem/x87_timings.cpp
 )
 
+if (USE_IMGUI)
+    message(STATUS "Using ImGui for GUI")
+    list(APPEND SOURCE_FILES external/ImGuiFileDialog/ImGuiFileDialog.cpp)
+    list(APPEND SOURCE_FILES ${IMGUI_GUI_FILES})
+endif ()
+
 if (USE_PCEM)
     message(STATUS "PCem support enabled")
     list(APPEND SOURCE_FILES ${PCEM_SOURCE_FILES})
@@ -413,10 +421,32 @@ else()
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
 endif()
 
+# Pre-release flag (integer, usable in C if statements)
+if(VERSION_PRE_RELEASE)
+    set(AMIBERRY_IS_PRE_RELEASE 1)
+else()
+    set(AMIBERRY_IS_PRE_RELEASE 0)
+endif()
+
+# Build date components (configure-time timestamp)
+string(TIMESTAMP AMIBERRY_BUILD_YEAR "%Y")
+string(TIMESTAMP AMIBERRY_BUILD_MONTH "%m")
+string(TIMESTAMP AMIBERRY_BUILD_DAY "%d")
+# Remove leading zeros for C integer literals
+math(EXPR AMIBERRY_BUILD_MONTH_INT "${AMIBERRY_BUILD_MONTH}")
+math(EXPR AMIBERRY_BUILD_DAY_INT "${AMIBERRY_BUILD_DAY}")
+
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    set(AMIBERRY_OUTPUT_NAME "${AMIBERRY_DISPLAY_NAME}")
+else()
+    set(AMIBERRY_OUTPUT_NAME "${PROJECT_NAME}")
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_NAME "${AMIBERRY_OUTPUT_NAME}"
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_EXECUTABLE_NAME "Amiberry"
-        MACOSX_BUNDLE_INFO_STRING "${PROJECT_NAME} ${PROJECT_VERSION}"
+        MACOSX_BUNDLE_EXECUTABLE_NAME "${AMIBERRY_DISPLAY_NAME}"
+        MACOSX_BUNDLE_INFO_STRING "${AMIBERRY_DISPLAY_NAME} ${PROJECT_VERSION}"
         MACOSX_BUNDLE_ICON_FILE "data/icon"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.blitterstudio.Amiberry"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.blitterstudio.Amiberry"
@@ -424,17 +454,24 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         MACOSX_BUNDLE_BUNDLE_NAME "Amiberry"
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-        MACOSX_BUNDLE_COPYRIGHT "(c) 2025 Dimitris Panokostas"
+        MACOSX_BUNDLE_COPYRIGHT "(c) ${AMIBERRY_BUILD_YEAR} Dimitris Panokostas"
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/packaging/MacOSXBundleInfo.plist.in"
 )
 
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         _FILE_OFFSET_BITS=64
-        -DAMIBERRY_VERSION="${PROJECT_VERSION}"
-        -DAMIBERRY_VERSION_PRE_RELEASE="${VERSION_PRE_RELEASE}"
-        -DAMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
-        -DAMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
+        AMIBERRY_VERSION="${PROJECT_VERSION}"
+        AMIBERRY_VERSION_PRE_RELEASE="${VERSION_PRE_RELEASE}"
+        AMIBERRY_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        AMIBERRY_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        AMIBERRY_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+        AMIBERRY_IS_PRE_RELEASE=${AMIBERRY_IS_PRE_RELEASE}
+        AMIBERRY_BUILD_YEAR=${AMIBERRY_BUILD_YEAR}
+        AMIBERRY_BUILD_MONTH=${AMIBERRY_BUILD_MONTH_INT}
+        AMIBERRY_BUILD_DAY=${AMIBERRY_BUILD_DAY_INT}
+        AMIBERRY_BUILD_DATE="${AMIBERRY_BUILD_YEAR}-${AMIBERRY_BUILD_MONTH}-${AMIBERRY_BUILD_DAY}"
+        AMIBERRY_DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}"
+        AMIBERRY_LIBDIR="${CMAKE_INSTALL_FULL_LIBDIR}/${PROJECT_NAME}"
 )
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
@@ -444,6 +481,24 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
             CPU_arm ARMV6_ASSEMBLY ARMV6T2 USE_ARMNEON ARM_HAS_DIV
     )
 endif ()
+
+# Apply accumulated compile/link options from StandardProjectSettings.cmake
+# These are target-specific so they don't leak into FetchContent-ed third-party builds.
+target_compile_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_COMPILE_OPTIONS})
+if(AMIBERRY_LINK_OPTIONS)
+    target_link_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_LINK_OPTIONS})
+endif()
+
+# Apply platform-specific include/link paths from StandardProjectSettings.cmake
+if(AMIBERRY_PLATFORM_INCLUDE_DIRS)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_INCLUDE_DIRS})
+endif()
+if(AMIBERRY_PLATFORM_LINK_DIRS)
+    target_link_directories(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LINK_DIRS})
+endif()
+if(AMIBERRY_PLATFORM_LIBS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LIBS})
+endif()
 
 if(NOT ANDROID)
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
@@ -457,10 +512,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/threaddep
         src/archivers
         src/ppc/pearpc
-        external/libguisan/include
         external/mt32emu/src
         external/floppybridge/src
 )
+
+if (USE_IMGUI)
+    target_include_directories(${PROJECT_NAME} PRIVATE external/imgui external/ImGuiFileDialog)
+endif()
 
 # Install the executable
 install(TARGETS ${PROJECT_NAME}
@@ -472,7 +530,7 @@ install(TARGETS ${PROJECT_NAME}
 
 # Settings for installing per platform
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include(cmake/linux/CMakeLists.txt)
+    include(cmake/linux/install.cmake)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    include(cmake/macos/CMakeLists.txt)
+    include(cmake/macos/install.cmake)
 endif ()

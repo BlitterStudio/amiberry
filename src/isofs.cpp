@@ -328,7 +328,7 @@ static int make_date(int year, int month, int day, int hour, int minute, int sec
 
 		/* sign extend */
 		if (tz & 0x80)
-			tz |= (-1 << 8);
+			tz |= ~0xFF;
 		
 		/* 
 		 * The timezone offset is unreliable on some disks,

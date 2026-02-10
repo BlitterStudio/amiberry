@@ -1008,6 +1008,21 @@ void release_keys()
 		my_kbd_handler(0, SDL_SCANCODE_TAB, 0, true);
 	}
 
+	// Always force-release modifier keys, even if SDL doesn't report them as pressed.
+	// When the window loses focus (e.g. Windows/GUI key opens the desktop menu),
+	// SDL internally clears its keyboard state, so SDL_GetKeyboardState() won't
+	// show these keys as pressed. But the emulator's internal qualifier state
+	// still has them set from the original KEYDOWN, causing stuck modifiers.
+	static const SDL_Scancode modifier_keys[] = {
+		SDL_SCANCODE_LCTRL, SDL_SCANCODE_RCTRL,
+		SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT,
+		SDL_SCANCODE_LALT, SDL_SCANCODE_RALT,
+		SDL_SCANCODE_LGUI, SDL_SCANCODE_RGUI
+	};
+	for (const auto mod_scancode : modifier_keys) {
+		my_kbd_handler(0, mod_scancode, 0, true);
+	}
+
 	const Uint8* state = SDL_GetKeyboardState(nullptr);
 	SDL_Event event;
 
@@ -1620,7 +1635,10 @@ void read_joystick_buttons(const int id)
 		}
 
 		// Check all Joystick buttons, including axes acting as buttons
-		for (int did_button = 0; did_button < did->buttons; did_button++)
+		// Use at least 15 to cover all RetroArch-mapped buttons (indices 0-14),
+		// even when the controller reports fewer physical buttons (issue #1493)
+		const int num_buttons = did->buttons > 15 ? did->buttons : 15;
+		for (int did_button = 0; did_button < num_buttons; did_button++)
 		{
 			if (did->mapping.button[did_button] != SDL_CONTROLLER_BUTTON_INVALID)
 			{
