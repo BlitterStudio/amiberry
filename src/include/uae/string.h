@@ -5,6 +5,10 @@
 #include "config.h"
 #endif
 #include <SDL.h>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #include "uae/types.h"
 #include <cstring>

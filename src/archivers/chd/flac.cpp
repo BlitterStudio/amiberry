@@ -16,6 +16,466 @@
 #include <cstring>
 #include <new>
 
+#if CHD_FLAC_USE_DRFLAC
+#define DR_FLAC_IMPLEMENTATION
+#include "dr_flac.h"
+
+namespace {
+
+size_t drflac_memory_read(void* user, void* buffer_out, size_t bytes_to_read)
+{
+	auto* stream = static_cast<drflac_memory_stream*>(user);
+	if (!stream || !buffer_out || bytes_to_read == 0)
+		return 0;
+	const size_t remaining = (stream->cursor < stream->size) ? (stream->size - stream->cursor) : 0;
+	const size_t to_read = (bytes_to_read < remaining) ? bytes_to_read : remaining;
+	if (to_read > 0) {
+		memcpy(buffer_out, stream->data + stream->cursor, to_read);
+		stream->cursor += to_read;
+	}
+	return to_read;
+}
+
+drflac_bool32 drflac_memory_seek(void* user, int offset, drflac_seek_origin origin)
+{
+	auto* stream = static_cast<drflac_memory_stream*>(user);
+	if (!stream)
+		return DRFLAC_FALSE;
+
+	drflac_int64 base = 0;
+	if (origin == DRFLAC_SEEK_CUR)
+		base = static_cast<drflac_int64>(stream->cursor);
+	else if (origin == DRFLAC_SEEK_END)
+		base = static_cast<drflac_int64>(stream->size);
+
+	const drflac_int64 target = base + offset;
+	if (target < 0 || static_cast<size_t>(target) > stream->size)
+		return DRFLAC_FALSE;
+	stream->cursor = static_cast<size_t>(target);
+	return DRFLAC_TRUE;
+}
+
+drflac_bool32 drflac_memory_tell(void* user, drflac_int64* cursor)
+{
+	auto* stream = static_cast<drflac_memory_stream*>(user);
+	if (!stream || !cursor)
+		return DRFLAC_FALSE;
+	*cursor = static_cast<drflac_int64>(stream->cursor);
+	return DRFLAC_TRUE;
+}
+
+size_t drflac_file_read(void* user, void* buffer_out, size_t bytes_to_read)
+{
+	auto* stream = static_cast<drflac_file_stream*>(user);
+	if (!stream || !stream->file || !buffer_out || bytes_to_read == 0)
+		return 0;
+
+	size_t actual = 0;
+	stream->file->read(buffer_out, bytes_to_read, actual);
+	stream->cursor += actual;
+	return actual;
+}
+
+drflac_bool32 drflac_file_seek(void* user, int offset, drflac_seek_origin origin)
+{
+	auto* stream = static_cast<drflac_file_stream*>(user);
+	if (!stream || !stream->random)
+		return DRFLAC_FALSE;
+
+	uint64_t base = 0;
+	if (origin == DRFLAC_SEEK_CUR) {
+		base = stream->cursor;
+	} else if (origin == DRFLAC_SEEK_END) {
+		if (stream->size == 0) {
+			uint64_t length = 0;
+			const std::error_condition err = stream->random->length(length);
+			if (err)
+				return DRFLAC_FALSE;
+			stream->size = length;
+		}
+		base = stream->size;
+	}
+
+	const int64_t target = static_cast<int64_t>(base) + offset;
+	if (target < 0)
+		return DRFLAC_FALSE;
+	const std::error_condition seek_err = stream->random->seek(target, SEEK_SET);
+	if (seek_err)
+		return DRFLAC_FALSE;
+	stream->cursor = static_cast<uint64_t>(target);
+	return DRFLAC_TRUE;
+}
+
+drflac_bool32 drflac_file_tell(void* user, drflac_int64* cursor)
+{
+	auto* stream = static_cast<drflac_file_stream*>(user);
+	if (!stream || !cursor)
+		return DRFLAC_FALSE;
+	*cursor = static_cast<drflac_int64>(stream->cursor);
+	return DRFLAC_TRUE;
+}
+
+} // namespace
+
+//**************************************************************************
+//  FLAC ENCODER (libretro stub)
+//**************************************************************************
+
+flac_encoder::flac_encoder()
+{
+	init_common();
+}
+
+flac_encoder::flac_encoder(void* buffer, uint32_t buflength)
+{
+	init_common();
+	reset(buffer, buflength);
+}
+
+flac_encoder::flac_encoder(util::random_write& file)
+{
+	init_common();
+	reset(file);
+}
+
+flac_encoder::~flac_encoder() = default;
+
+bool flac_encoder::reset()
+{
+	m_compressed_offset = 0;
+	m_ignore_bytes = 0;
+	m_found_audio = false;
+	return false;
+}
+
+bool flac_encoder::reset(void* buffer, uint32_t buflength)
+{
+	m_compressed_start = static_cast<uint8_t*>(buffer);
+	m_compressed_length = buflength;
+	m_file = nullptr;
+	return reset();
+}
+
+bool flac_encoder::reset(util::random_write& file)
+{
+	m_compressed_start = nullptr;
+	m_compressed_length = 0;
+	m_file = &file;
+	return reset();
+}
+
+bool flac_encoder::encode_interleaved(const int16_t* samples, uint32_t samples_per_channel, bool swap_endian)
+{
+	(void)samples;
+	(void)samples_per_channel;
+	(void)swap_endian;
+	return false;
+}
+
+bool flac_encoder::encode(int16_t* const* samples, uint32_t samples_per_channel, bool swap_endian)
+{
+	(void)samples;
+	(void)samples_per_channel;
+	(void)swap_endian;
+	return false;
+}
+
+uint32_t flac_encoder::finish()
+{
+	return 0;
+}
+
+void flac_encoder::init_common()
+{
+	m_encoder = nullptr;
+	m_file = nullptr;
+	m_compressed_offset = 0;
+	m_compressed_start = nullptr;
+	m_compressed_length = 0;
+	m_sample_rate = 44100;
+	m_channels = 2;
+	m_block_size = 0;
+	m_strip_metadata = false;
+	m_ignore_bytes = 0;
+	m_found_audio = false;
+}
+
+//**************************************************************************
+//  FLAC DECODER (dr_flac)
+//**************************************************************************
+
+flac_decoder::flac_decoder()
+	: m_decoder(nullptr),
+	m_file(nullptr),
+	m_sample_rate(0),
+	m_channels(0),
+	m_bits_per_sample(0),
+	m_total_samples(0),
+	m_compressed_offset(0),
+	m_compressed_start(nullptr),
+	m_compressed_length(0),
+	m_compressed2_start(nullptr),
+	m_compressed2_length(0),
+	m_uncompressed_offset(0),
+	m_uncompressed_length(0),
+	m_uncompressed_swap(false),
+	m_custom_header_size(0),
+	m_has_custom_header(false),
+	m_use_file_stream(false)
+{
+	memset(m_uncompressed_start, 0, sizeof(m_uncompressed_start));
+	memset(m_custom_header, 0, sizeof(m_custom_header));
+	m_mem_stream = {};
+	m_file_stream = {};
+}
+
+flac_decoder::flac_decoder(const void* buffer, uint32_t length, const void* buffer2, uint32_t length2)
+	: flac_decoder()
+{
+	reset(buffer, length, buffer2, length2);
+}
+
+flac_decoder::flac_decoder(util::read_stream& file)
+	: flac_decoder()
+{
+	reset(file);
+}
+
+flac_decoder::~flac_decoder()
+{
+	close_decoder();
+}
+
+bool flac_decoder::open_decoder()
+{
+	close_decoder();
+
+	drflac* decoder = nullptr;
+	if (m_use_file_stream)
+		decoder = drflac_open(drflac_file_read, drflac_file_seek, drflac_file_tell, &m_file_stream, nullptr);
+	else
+		decoder = drflac_open(drflac_memory_read, drflac_memory_seek, drflac_memory_tell, &m_mem_stream, nullptr);
+	m_decoder = decoder;
+
+	if (!decoder)
+		return false;
+
+	m_sample_rate = decoder->sampleRate;
+	m_channels = decoder->channels;
+	m_bits_per_sample = decoder->bitsPerSample;
+	m_total_samples = static_cast<uint32_t>(decoder->totalPCMFrameCount);
+	return true;
+}
+
+void flac_decoder::close_decoder()
+{
+	if (m_decoder) {
+		drflac_close(static_cast<drflac*>(m_decoder));
+		m_decoder = nullptr;
+	}
+}
+
+uint64_t flac_decoder::stream_cursor() const
+{
+	return m_use_file_stream ? m_file_stream.cursor : m_mem_stream.cursor;
+}
+
+uint64_t flac_decoder::bytes_consumed() const
+{
+	if (!m_decoder)
+		return 0;
+
+	const drflac_bs* bs = &static_cast<drflac*>(m_decoder)->bs;
+	const uint64_t l1_bits = DRFLAC_CACHE_L1_BITS_REMAINING(bs);
+	const uint64_t l1_bytes = (l1_bits + 7) / 8;
+	const uint64_t l2_bytes = DRFLAC_CACHE_L2_LINES_REMAINING(bs) * DRFLAC_CACHE_L1_SIZE_BYTES(bs);
+	const uint64_t remaining = l1_bytes + l2_bytes + bs->unalignedByteCount;
+	const uint64_t cursor = stream_cursor();
+	if (cursor < remaining)
+		return 0;
+	return cursor - remaining;
+}
+
+void flac_decoder::swap_samples(int16_t* samples, size_t count) const
+{
+	if (!samples)
+		return;
+	for (size_t i = 0; i < count; ++i) {
+		const uint16_t v = static_cast<uint16_t>(samples[i]);
+		samples[i] = static_cast<int16_t>((v << 8) | (v >> 8));
+	}
+}
+
+bool flac_decoder::reset()
+{
+	m_compressed_offset = 0;
+	if (m_use_file_stream) {
+		if (m_file_stream.random)
+			m_file_stream.random->seek(static_cast<int64_t>(m_file_stream.cursor), SEEK_SET);
+	} else {
+		m_mem_stream.cursor = 0;
+	}
+	return open_decoder();
+}
+
+bool flac_decoder::reset(const void* buffer, uint32_t length, const void* buffer2, uint32_t length2)
+{
+	m_use_file_stream = false;
+	m_has_custom_header = false;
+	m_custom_header_size = 0;
+
+	const size_t total = static_cast<size_t>(length) + static_cast<size_t>(length2);
+	m_stream_buffer.resize(total);
+	if (length)
+		memcpy(m_stream_buffer.data(), buffer, length);
+	if (length2)
+		memcpy(m_stream_buffer.data() + length, buffer2, length2);
+
+	m_mem_stream.data = m_stream_buffer.data();
+	m_mem_stream.size = m_stream_buffer.size();
+	m_mem_stream.cursor = 0;
+	return reset();
+}
+
+bool flac_decoder::reset(uint32_t sample_rate, uint8_t num_channels, uint32_t block_size, const void* buffer, uint32_t length)
+{
+	// modify the template header with our parameters
+	static const uint8_t s_header_template[0x2a] =
+	{
+		0x66, 0x4C, 0x61, 0x43,                         // +00: 'fLaC' stream header
+		0x80,                                           // +04: metadata block type 0 (STREAMINFO),
+														//      flagged as last block
+		0x00, 0x00, 0x22,                               // +05: metadata block length = 0x22
+		0x00, 0x00,                                     // +08: minimum block size
+		0x00, 0x00,                                     // +0A: maximum block size
+		0x00, 0x00, 0x00,                               // +0C: minimum frame size (0 == unknown)
+		0x00, 0x00, 0x00,                               // +0F: maximum frame size (0 == unknown)
+		0x0A, 0xC4, 0x42, 0xF0, 0x00, 0x00, 0x00, 0x00, // +12: sample rate (0x0ac44 == 44100),
+														//      numchannels (2), sample bits (16),
+														//      samples in stream (0 == unknown)
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // +1A: MD5 signature (0 == none)
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  //
+														// +2A: start of stream data
+	};
+
+	memcpy(m_custom_header, s_header_template, sizeof(s_header_template));
+	m_custom_header[0x08] = m_custom_header[0x0a] = block_size >> 8;
+	m_custom_header[0x09] = m_custom_header[0x0b] = block_size & 0xff;
+	m_custom_header[0x12] = sample_rate >> 12;
+	m_custom_header[0x13] = sample_rate >> 4;
+	m_custom_header[0x14] = (sample_rate << 4) | ((num_channels - 1) << 1);
+
+	m_use_file_stream = false;
+	m_has_custom_header = true;
+	m_custom_header_size = sizeof(m_custom_header);
+
+	m_stream_buffer.resize(m_custom_header_size + length);
+	memcpy(m_stream_buffer.data(), m_custom_header, m_custom_header_size);
+	if (length)
+		memcpy(m_stream_buffer.data() + m_custom_header_size, buffer, length);
+
+	m_mem_stream.data = m_stream_buffer.data();
+	m_mem_stream.size = m_stream_buffer.size();
+	m_mem_stream.cursor = 0;
+	return reset();
+}
+
+bool flac_decoder::reset(util::read_stream& file)
+{
+	m_file = &file;
+	m_use_file_stream = false;
+	m_has_custom_header = false;
+	m_custom_header_size = 0;
+
+	auto* random = dynamic_cast<util::random_access*>(&file);
+	if (random) {
+		uint64_t length = 0;
+		const std::error_condition length_err = random->length(length);
+		if (!length_err)
+			m_file_stream.size = length;
+		uint64_t pos = 0;
+		const std::error_condition tell_err = random->tell(pos);
+		if (!tell_err)
+			m_file_stream.cursor = pos;
+		m_file_stream.file = &file;
+		m_file_stream.random = random;
+		m_use_file_stream = true;
+		return open_decoder();
+	}
+
+	m_stream_buffer.clear();
+	constexpr size_t kChunk = 64 * 1024;
+	for (;;) {
+		uint8_t temp[kChunk];
+		size_t actual = 0;
+		file.read(temp, sizeof(temp), actual);
+		if (actual == 0)
+			break;
+		const size_t old_size = m_stream_buffer.size();
+		m_stream_buffer.resize(old_size + actual);
+		memcpy(m_stream_buffer.data() + old_size, temp, actual);
+	}
+
+	if (m_stream_buffer.empty())
+		return false;
+
+	m_mem_stream.data = m_stream_buffer.data();
+	m_mem_stream.size = m_stream_buffer.size();
+	m_mem_stream.cursor = 0;
+	return reset();
+}
+
+bool flac_decoder::decode_interleaved(int16_t* samples, uint32_t num_samples, bool swap_endian)
+{
+	if (!m_decoder || !samples || num_samples == 0)
+		return false;
+
+	const drflac_uint64 frames_read = drflac_read_pcm_frames_s16(static_cast<drflac*>(m_decoder),
+		num_samples, reinterpret_cast<drflac_int16*>(samples));
+	if (frames_read != num_samples)
+		return false;
+
+	if (swap_endian)
+		swap_samples(samples, static_cast<size_t>(frames_read) * m_channels);
+	return true;
+}
+
+bool flac_decoder::decode(int16_t** samples, uint32_t num_samples, bool swap_endian)
+{
+	if (!samples || num_samples == 0)
+		return false;
+
+	const int chans = channels();
+	if (chans <= 0 || chans > 8)
+		return false;
+
+	std::vector<int16_t> temp;
+	temp.resize(static_cast<size_t>(num_samples) * chans);
+	if (!decode_interleaved(temp.data(), num_samples, swap_endian))
+		return false;
+
+	for (uint32_t frame = 0; frame < num_samples; ++frame) {
+		for (int chan = 0; chan < chans; ++chan) {
+			if (samples[chan])
+				samples[chan][frame] = temp[frame * chans + chan];
+		}
+	}
+	return true;
+}
+
+uint32_t flac_decoder::finish()
+{
+	uint64_t offset = bytes_consumed();
+	if (m_has_custom_header) {
+		if (offset >= m_custom_header_size)
+			offset -= m_custom_header_size;
+		else
+			offset = 0;
+	}
+	return static_cast<uint32_t>(offset);
+}
+
+#else
 
 //**************************************************************************
 //  FLAC ENCODER
@@ -641,3 +1101,5 @@ FLAC__StreamDecoderWriteStatus flac_decoder::write_callback(const ::FLAC__Frame*
 void flac_decoder::error_callback_static(const FLAC__StreamDecoder* decoder, FLAC__StreamDecoderErrorStatus status, void* client_data)
 {
 }
+
+#endif

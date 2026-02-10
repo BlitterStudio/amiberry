@@ -15,14 +15,16 @@
 
 #if defined(__x86_64__) || defined(_M_AMD64)
 #if defined(__FreeBSD__) || defined(__linux__) // not for macOS
-#ifndef __ANDROID__ // not for android
+#if !defined(LIBRETRO_NO_JIT) && !defined(__ANDROID__) // not for android or if jit disabled under libretro
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
 #endif
 #endif
 
+#ifndef AMIBERRY
 #define AMIBERRY
+#endif
 #ifndef UAE
 #define UAE
 #endif
@@ -619,7 +621,9 @@ typedef unsigned short USHORT;
 #define _T(x)               x
 typedef char TCHAR;
 #endif
+#if !defined(_WIN32) && !defined(__MINGW32__)
 #define _tzset()            tzset()
+#endif
 #define _timezone           timezone
 #define _daylight           daylight
 // Ftello and fseeko on OSX are alerady 64bit

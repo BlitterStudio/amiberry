@@ -47,10 +47,12 @@
 #include "savestate.h"
 #include "uae/types.h"
 
-#include <png.h>
-#include <SDL_image.h>
 #ifdef USE_OPENGL
 #include "gl_platform.h"
+
+#ifdef LIBRETRO
+#include "libretro_shared.h"
+#endif
 
 #ifndef GL_BGRA
 #ifdef GL_BGRA_EXT
@@ -181,6 +183,14 @@ static int deskhz;
 
 struct MultiDisplay Displays[MAX_DISPLAYS];
 struct AmigaMonitor AMonitors[MAX_AMIGAMONITORS];
+
+static void updatemodes(struct AmigaMonitor* mon);
+static void update_gfxparams(struct AmigaMonitor* mon);
+static void updatepicasso96(struct AmigaMonitor* mon);
+static void allocsoftbuffer(int monid, const TCHAR* name, struct vidbuffer* buf, int flags, int width, int height);
+static void display_param_init(struct AmigaMonitor* mon);
+
+#include "gfx_platform_internal.h"
 
 static int display_change_requested;
 int window_led_drives, window_led_drives_end;
@@ -514,6 +524,8 @@ static bool SDL2_alloctexture(int monid, int w, int h)
 
 	if (w == 0 || h == 0)
 		return false;
+	if (gfx_platform_skip_alloctexture(monid, w, h))
+		return true;
 #ifdef USE_OPENGL
 	auto mon = &AMonitors[monid];
 	const char* shader_name;
@@ -624,6 +636,8 @@ static void update_leds(const int monid)
 	if (currprefs.headless) {
 		return;
 	}
+	if (!gfx_platform_render_leds())
+		return;
 
 #ifndef USE_OPENGL
 	if (!mon->amiga_renderer)
@@ -703,6 +717,8 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	if (currprefs.headless) {
 		return amiga_surface != nullptr;
 	}
+	if (gfx_platform_skip_renderframe(monid, mode, immediate))
+		return amiga_surface != nullptr;
 
 	const amigadisplay* ad = &adisplays[monid];
 	// Unified OSD update: handle both native (CHIPSET) and RTG modes
@@ -815,19 +831,98 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 	return false;
 }
 
-#ifdef LIBRETRO
-#include "libretro_shared.h"
+static void wait_frame_timing()
+{
+	static Uint64 freq = 0;
+	if (freq == 0) freq = SDL_GetPerformanceFrequency();
+
+	if (syncbase > 0)
+	{
+		double target_fps;
+		if (vblank_hz > 45 && vblank_hz < 65) target_fps = (double)vblank_hz;
+		else if (currprefs.ntscmode) target_fps = 60.0;
+		else target_fps = 50.0;
+		
+		static double accumulated_error = 0.0; 
+		double target_frame_dist_sec = 1.0 / target_fps;
+
+		// Custom Adaptive Sync using SDL Counters (PI Controller)
+		if (gui_data.sndbuf_avail) {
+			int buffer_error = gui_data.sndbuf - 750; // Target 75% (1.5 fragments) for stability
+			
+			// Integral term (accumulate error to find natural clock skew)
+			accumulated_error += buffer_error;
+			
+			// Anti-windup: Clamp accumulated error
+			accumulated_error = std::min(accumulated_error, 80000.0);
+			accumulated_error = std::max(accumulated_error, -80000.0);
+
+			// PI Gains
+			// Kp: Immediate reaction to spikes. 0.00005.
+			// Ki: Slow adaptation. 0.0000005.
+			double P = (double)buffer_error * 0.00005; 
+			double I = accumulated_error * 0.0000005;
+			
+			double adjustment_factor = 1.0 + P + I; 
+			
+			// Safety Clamp +/- 8%
+			adjustment_factor = std::min(adjustment_factor, 1.08);
+			adjustment_factor = std::max(adjustment_factor, 0.92);
+
+			target_frame_dist_sec *= adjustment_factor;
+		}
+		
+		Uint64 target_ticks = (Uint64)(target_frame_dist_sec * freq);
+		
+		static Uint64 next_frame_tick = 0;
+		Uint64 current_tick = SDL_GetPerformanceCounter();
+
+		if (next_frame_tick == 0)
+		{
+			next_frame_tick = current_tick + target_ticks;
+		}
+		else
+		{
+			next_frame_tick += target_ticks;
+			// Lag reset: if we are more than 100ms behind, reset
+			if (current_tick > next_frame_tick + (freq / 10)) {
+				next_frame_tick = current_tick + target_ticks;
+			}
+		}
+		
+		Sint64 ticks_left = next_frame_tick - current_tick;
+		
+		// Sleep wait (reduced to 1ms threshold for better precision on non-Windows systems)
+		while (ticks_left > (Sint64)(freq / 1000)) // > 1ms
+		{
+			struct timespec req = { 0, 500000 };
+			nanosleep(&req, nullptr);
+			current_tick = SDL_GetPerformanceCounter();
+			ticks_left = next_frame_tick - current_tick;
+		}
+
+		// Spin wait with CPU relaxation
+		while (SDL_GetPerformanceCounter() < next_frame_tick)
+		{
+#if defined(__x86_64__) || defined(__i386__)
+			__builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+			asm volatile("yield");
+#elif defined(__riscv)
+			asm volatile("pause");
 #endif
+		}
+	}
+	
+	// Sync legacy variable for other systems
+	wait_vblank_timestamp = read_processor_time();
+}
 
 static void SDL2_showframe(const int monid)
 {
-#ifdef LIBRETRO
-	if (amiga_surface) {
-		video_cb(amiga_surface->pixels, amiga_surface->w, amiga_surface->h, amiga_surface->pitch);
+	if (gfx_platform_present_frame(amiga_surface)) {
+		return;
 	}
-	libretro_yield();
-	return;
-#endif
 
 	// Skip presentation if headless mode
 	if (currprefs.headless) {
@@ -1458,6 +1553,7 @@ void reenumeratemonitors()
 	enumeratedisplays();
 }
 
+
 static bool enumeratedisplays2(bool selectall)
 {
 	struct MultiDisplay *md = Displays;
@@ -1526,12 +1622,16 @@ static bool enumeratedisplays2(bool selectall)
 
 void enumeratedisplays()
 {
+	if (gfx_platform_enumeratedisplays())
+		return;
 	if (!enumeratedisplays2 (false))
 		enumeratedisplays2(true);
 }
 
 void sortdisplays()
 {
+	if (gfx_platform_skip_sortdisplays())
+		return;
 	struct MultiDisplay* md;
 	int i, idx;
 
@@ -2155,7 +2255,7 @@ void show_screen(const int monid, int mode)
 	}
 
 	AmigaMonitor* mon = &AMonitors[monid];
-	if (!mon->amiga_window) {
+	if (gfx_platform_requires_window() && !mon->amiga_window) {
 		return;
 	}
 
@@ -2375,7 +2475,7 @@ int lockscr(struct vidbuffer* vb, bool fullupdate, bool skip)
 	const struct AmigaMonitor* mon = &AMonitors[vb->monitor_id];
 	int ret = 0;
 
-	if (!mon->amiga_window || !amiga_surface)
+	if ((gfx_platform_requires_window() && !mon->amiga_window) || !amiga_surface)
 		return ret;
 
 	// Ensure blanking limits are open and synchronized at the start of frame locking
@@ -2838,6 +2938,8 @@ static int open_windows(AmigaMonitor* mon, bool mousecapture, bool started)
 	if (!ret) {
 		return ret;
 	}
+	if (gfx_platform_skip_window_activation())
+		return ret;
 
 	bool startactive = (started && mouseactive) || (!started && !currprefs.start_uncaptured && !currprefs.start_minimized);
 	bool startpaused = !started && ((currprefs.start_minimized && currprefs.minimized_pause) || (currprefs.start_uncaptured && currprefs.inactive_pause && isfullscreen() <= 0));
@@ -3538,6 +3640,10 @@ int check_prefs_changed_gfx()
 
 static void update_pixel_format()
 {
+	// TODO LIBRETRO support picasso96 ABGR
+	if (gfx_platform_override_pixel_format(&pixel_format))
+		return;
+
 	if (picasso96_state[0].RGBFormat == RGBFB_R5G6B5 ||
 		picasso96_state[0].RGBFormat == RGBFB_R5G6B5PC) {
 		pixel_format = SDL_PIXELFORMAT_RGB565;
@@ -4475,12 +4581,13 @@ static int create_windows(struct AmigaMonitor* mon)
 	w = mon->currentmode.native_width;
 	h = mon->currentmode.native_height;
 
-	auto* const icon_surface = IMG_Load(prefix_with_data_path("amiberry.png").c_str());
-	if (icon_surface != nullptr)
-	{
-		SDL_SetWindowIcon(mon->amiga_window, icon_surface);
-		SDL_FreeSurface(icon_surface);
+	if (!mon->amiga_window) {
+		write_log(_T("creation of amiga window failed\n"));
+		close_hwnds(mon);
+		return 0;
 	}
+
+	gfx_platform_set_window_icon(mon->amiga_window);
 
 #ifndef USE_OPENGL
 	if (mon->amiga_renderer == nullptr)
@@ -4565,6 +4672,8 @@ static bool doInit(AmigaMonitor* mon)
 	struct amigadisplay* ad = &adisplays[mon->monitor_id];
 	avidinfo->gfx_resolution_reserved = RES_MAX;
 	avidinfo->gfx_vresolution_reserved = VRES_MAX;
+	if (gfx_platform_do_init(mon))
+		return true;
 
 	// If headless mode, skip all window/renderer setup
 	if (currprefs.headless) {
@@ -5339,70 +5448,7 @@ unsigned long target_lastsynctime()
 
 static int save_png(const SDL_Surface* surface, const std::string& path)
 {
-	const auto w = surface->w;
-	const auto h = surface->h;
-	auto* const pix = static_cast<unsigned char*>(surface->pixels);
-	unsigned char writeBuffer[1920 * 3]{};
-
-	// Open the file for writing
-	auto* const f = fopen(path.c_str(), "wbe");
-	if (!f)
-	{
-		write_log(_T("Failed to open file for writing: %s\n"), path.c_str());
-		return 0;
-	}
-
-	// Create a PNG write structure
-	auto* png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-	if (!png_ptr)
-	{
-		write_log(_T("Failed to create PNG write structure\n"));
-		fclose(f);
-		return 0;
-	}
-
-	auto* info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr)
-	{
-		png_destroy_write_struct(&png_ptr, nullptr);
-		fclose(f);
-		return 0;
-	}
-
-	png_init_io(png_ptr, f);
-	png_set_IHDR(png_ptr,
-		info_ptr,
-		w,
-		h,
-		8,
-		PNG_COLOR_TYPE_RGB,
-		PNG_INTERLACE_NONE,
-		PNG_COMPRESSION_TYPE_DEFAULT,
-		PNG_FILTER_TYPE_DEFAULT);
-	png_write_info(png_ptr, info_ptr);
-
-	auto* b = writeBuffer;
-	const auto sizeX = w;
-	const auto sizeY = h;
-
-	auto* p = reinterpret_cast<unsigned int*>(pix);
-	for (auto y = 0; y < sizeY; y++) {
-		for (auto x = 0; x < sizeX; x++) {
-			auto v = p[x];
-			*b++ = ((v & SYSTEM_RED_MASK) >> SYSTEM_RED_SHIFT); // R
-			*b++ = ((v & SYSTEM_GREEN_MASK) >> SYSTEM_GREEN_SHIFT); // G
-			*b++ = ((v & SYSTEM_BLUE_MASK) >> SYSTEM_BLUE_SHIFT); // B
-		}
-		p += surface->pitch / 4;
-		png_write_row(png_ptr, writeBuffer);
-		b = writeBuffer;
-	}
-
-	png_write_end(png_ptr, info_ptr);
-	png_destroy_write_struct(&png_ptr, &info_ptr);
-
-	fclose(f);
-	return 1;
+	return gfx_platform_save_png(surface, path);
 }
 
 bool create_screenshot()
@@ -5412,19 +5458,7 @@ bool create_screenshot()
 		SDL_FreeSurface(current_screenshot);
 		current_screenshot = nullptr;
 	}
-
-	if (amiga_surface != nullptr) {
-		current_screenshot = SDL_CreateRGBSurfaceFrom(amiga_surface->pixels,
-			AMIGA_WIDTH_MAX << currprefs.gfx_resolution,
-			AMIGA_HEIGHT_MAX << currprefs.gfx_vresolution,
-			amiga_surface->format->BitsPerPixel,
-			amiga_surface->pitch,
-			amiga_surface->format->Rmask,
-			amiga_surface->format->Gmask,
-			amiga_surface->format->Bmask,
-			amiga_surface->format->Amask);
-	}
-	return current_screenshot != nullptr;
+	return gfx_platform_create_screenshot(amiga_surface, &current_screenshot);
 }
 
 int save_thumb(const std::string& path)
