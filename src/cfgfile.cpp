@@ -5955,8 +5955,14 @@ static int cfgfile_parse_hardware (struct uae_prefs *p, const TCHAR *option, TCH
 
 
 	if (cfgfile_string(option, value, _T("a2065"), p->a2065name, sizeof p->a2065name / sizeof(TCHAR))) {
-		if (p->a2065name[0])
+		if (p->a2065name[0]) {
 			addbcromtype(p, ROMTYPE_A2065, true, nullptr, 0);
+			struct romconfig *rc = get_device_romconfig(p, ROMTYPE_A2065, 0);
+			if (rc && !rc->device_settings) {
+				ethernet_updateselection();
+				rc->device_settings = ethernet_getselection(p->a2065name);
+			}
+		}
 		return 1;
 	}
 
