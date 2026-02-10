@@ -1,39 +1,164 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
-
-#include <guisan.hpp>
-#include <guisan/sdl.hpp>
+#ifdef USE_GUISAN
 #include <guisan/sdl/sdlinput.hpp>
+#endif
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "filesys.h"
 #include "options.h"
 #include "registry.h"
-#include "SelectorEntry.hpp"
+#include "autoconf.h"
 
-enum
+extern float DISTANCE_BORDER;
+extern float DISTANCE_NEXT_X;
+extern float DISTANCE_NEXT_Y;
+extern float BUTTON_WIDTH;
+extern float BUTTON_HEIGHT;
+extern float SMALL_BUTTON_WIDTH;
+extern float SMALL_BUTTON_HEIGHT;
+extern float LABEL_HEIGHT;
+extern float TEXTFIELD_HEIGHT;
+extern float DROPDOWN_HEIGHT;
+extern float SLIDER_HEIGHT;
+extern float TITLEBAR_HEIGHT;
+extern float SELECTOR_WIDTH;
+extern float SELECTOR_HEIGHT;
+extern float SCROLLBAR_WIDTH;
+
+struct amigamodels
 {
-	DISTANCE_BORDER = 10,
-	DISTANCE_NEXT_X = 15,
-	DISTANCE_NEXT_Y = 15,
-	BUTTON_WIDTH = 90,
-	BUTTON_HEIGHT = 30,
-	SMALL_BUTTON_WIDTH = 30,
-	SMALL_BUTTON_HEIGHT = 22,
-	LABEL_HEIGHT = 20,
-	TEXTFIELD_HEIGHT = 20,
-	DROPDOWN_HEIGHT = 20,
-	SLIDER_HEIGHT = 20,
-	TITLEBAR_HEIGHT = 24,
-	SELECTOR_WIDTH = 165,
-	SELECTOR_HEIGHT = 24,
-	SCROLLBAR_WIDTH = 20
+	int compalevels;
+	char name[32];
+	char configs[8][128];
 };
 
-static const std::vector<std::string> floppy_drive_types = {
+static amigamodels amodels[] = {
+	{
+		4, "Amiga 500", {
+			"1.3 ROM, OCS, 512 KB Chip + 512 KB Slow RAM (most common)",
+			"1.3 ROM, ECS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
+			"1.3 ROM, ECS Agnus, 1 MB Chip RAM",
+			"1.3 ROM, OCS Agnus, 512 KB Chip RAM",
+			"1.2 ROM, OCS Agnus, 512 KB Chip RAM",
+			"1.2 ROM, OCS Agnus, 512 KB Chip RAM + 512 KB Slow RAM",
+			"\0"
+		}
+	},
+	{
+		4, "Amiga 500+", {
+			"Basic non-expanded configuration",
+			"2 MB Chip RAM expanded configuration",
+			"4 MB Fast RAM expanded configuration",
+			"\0"
+		}
+	},
+	{
+		4, "Amiga 600", {
+			"Basic non-expanded configuration",
+			"2 MB Chip RAM expanded configuration",
+			"4 MB Fast RAM expanded configuration",
+			"8 MB Fast RAM expanded configuration"
+			"\0"
+		}
+	},
+	{
+		4, "Amiga 1000", {
+			"512 KB Chip RAM",
+			"ICS Denise without EHB support",
+			"256 KB Chip RAM",
+			"A1000 Velvet prototype",
+			"\0"
+		}
+	},
+	{
+		5, "Amiga 1200", {
+			"Basic non-expanded configuration",
+			"4 MB Fast RAM expanded configuration",
+#ifdef WITH_CPUBOARD
+			"Blizzard 1230 IV",
+			"Blizzard 1240",
+			"Blizzard 1260",
+#ifdef WITH_PPC
+			"Blizzard PPC",
+#endif
+#else
+			"8 MB Fast RAM expanded configuration"
+#endif
+			"\0"
+		}
+	},
+	{
+		2, "Amiga 3000", {
+			"1.4 ROM, 2MB Chip + 8MB Fast",
+			"2.04 ROM, 2MB Chip + 8MB Fast",
+			"3.1 ROM, 2MB Chip + 8MB Fast",
+			"\0"
+		}
+	},
+	{
+		1, "Amiga 4000", {
+			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+#ifdef WITH_PPC
+			"CyberStorm PPC",
+#endif
+			"\0"
+		}
+	},
+	{
+		1, "Amiga 4000T", {
+			"68030, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"68040, 3.1 ROM, 2MB Chip + 8MB Fast",
+			"\0"
+		}
+	},
+	{
+		4, "CD32", {
+			"CD32",
+			"CD32 with Full Motion Video cartridge",
+			"Cubo CD32",
+			"CD32, 8MB Fast"
+			"\0"
+		}
+	},
+	{
+		4, "CDTV", {
+			"CDTV",
+			"Floppy drive and 64KB SRAM card expanded",
+			"CDTV-CR",
+			"\0"
+		}
+	},
+	{4, "American Laser Games / Picmatic", {
+			"\0"
+		}
+	},
+	{
+		4, "Arcadia Multi Select system", {
+			"\0"
+		}
+	},
+	{
+		1, "Macrosystem", {
+			"DraCo",
+			"Casablanca",
+			"\0"
+		}
+	},
+	{-1}
+};
+
+inline const char* floppy_drive_types[] = {
 	"Disabled", "3.5\" DD", "3.5\" HD", "5.25\" (40)",
 	"5.25\" (80)", "3.5\" ESCOM", "FB: Normal", "FB: Compatible",
 	"FB: Turbo", "FB: Stalling"
+};
+
+static const int scsiromselectedmask[] = {
+	EXPANSIONTYPE_INTERNAL, EXPANSIONTYPE_SCSI, EXPANSIONTYPE_IDE, EXPANSIONTYPE_SASI, EXPANSIONTYPE_CUSTOM,
+	EXPANSIONTYPE_PCI_BRIDGE, EXPANSIONTYPE_X86_BRIDGE, EXPANSIONTYPE_RTG,
+	EXPANSIONTYPE_SOUND, EXPANSIONTYPE_NET, EXPANSIONTYPE_FLOPPY, EXPANSIONTYPE_X86_EXPANSION
 };
 
 static const TCHAR* memsize_names[] = {
@@ -142,6 +267,11 @@ enum
 	MAX_SOUND_MEM = 10
 };
 
+enum
+{
+	MAX_INFOS = 18
+};
+
 static const char* diskfile_filter[] = {
 	".adf", ".adz", ".fdi", ".ipf", ".zip", ".dms", ".gz", ".xz", ".scp",
 	".7z", ".lha", ".lzh", ".lzx", "\0"
@@ -159,10 +289,24 @@ static string drivebridgeModes[] =
 	"Stalling"
 };
 
+const string label_button_list[] = {
+	"South:", "East:", "West:", "North:", "Select:", "Guide:", "Start:", "L.Stick:", "R.Stick:",
+	"L.Shoulder:", "R.Shoulder:", "DPad Up:", "DPad Down:", "DPad Left:", "DPad Right:",
+	"Misc1:", "Paddle1:", "Paddle2:", "Paddle3:", "Paddle4:", "Touchpad:"
+};
+
+const string label_axis_list[] = {
+	"Left X:", "Left Y:", "Right X:", "Right Y:", "L.Trigger:", "R.Trigger:"
+};
+
+static int SelectedPort = 1;
+static int SelectedFunction = 0;
+
 using ConfigCategory = struct config_category
 {
 	const char* category;
 	const char* imagepath;
+#ifdef USE_GUISAN
 	gcn::SelectorEntry* selector;
 	gcn::Container* panel;
 
@@ -170,17 +314,26 @@ using ConfigCategory = struct config_category
 	void (*ExitFunc)();
 	void (*RefreshFunc)();
 	bool (*HelpFunc)(std::vector<std::string>&);
+#endif
+#ifdef USE_IMGUI
+	// ImGui-specific: direct render function and optional static help text
+	void (*RenderFunc)();
+	const char* HelpText; // nullptr if no help available yet
+#endif
 };
 
 extern bool gui_running;
+#ifdef USE_GUISAN
 extern gcn::Container* selectors;
 extern gcn::ScrollArea* selectorsScrollArea;
-extern ConfigCategory categories[];
 extern gcn::Gui* uae_gui;
 extern gcn::Container* gui_top;
+#endif
+extern ConfigCategory categories[];
 
 // GUI Colors
 extern amiberry_gui_theme gui_theme;
+#ifdef USE_GUISAN
 extern gcn::Color gui_base_color;
 extern gcn::Color gui_background_color;
 extern gcn::Color gui_selector_inactive_color;
@@ -190,13 +343,18 @@ extern gcn::Color gui_foreground_color;
 extern gcn::Color gui_font_color;
 
 extern gcn::SDLInput* gui_input;
+#endif
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
-
+#ifdef USE_GUISAN
 extern gcn::SDLGraphics* gui_graphics;
 extern gcn::SDLTrueTypeFont* gui_font;
+#endif
 extern SDL_Texture* gui_texture;
 
+extern int scsiromselected;
+extern int scsiromselectednum;
+extern int scsiromselectedcatnum;
 
 extern std::string current_dir;
 extern char last_loaded_config[MAX_DPATH];
@@ -214,6 +372,7 @@ typedef struct {
 
 extern vector<ConfigFileInfo*> ConfigFilesList;
 
+#ifdef USE_GUISAN
 void InitPanelAbout(const struct config_category& category);
 void ExitPanelAbout();
 void RefreshPanelAbout();
@@ -268,6 +427,7 @@ void InitPanelExpansions(const struct config_category& category);
 void ExitPanelExpansions();
 void RefreshPanelExpansions();
 bool HelpPanelExpansions(std::vector<std::string>& helptext);
+void copycpuboardmem(bool tomem);
 
 void InitPanelRTG(const struct config_category& category);
 void ExitPanelRTG();
@@ -342,7 +502,43 @@ bool HelpPanelThemes(std::vector<std::string>& helptext);
 void refresh_all_panels();
 void focus_bug_workaround(const gcn::Window* wnd);
 void disable_resume();
+#elif USE_IMGUI
+// Forward declaration shared with ImGui backend as well
+void disable_resume();
+#define IMGUI_PANEL_LIST \
+PANEL(about,              "About",              "amigainfo.png") \
+PANEL(paths,              "Paths",              "paths.png") \
+PANEL(quickstart,         "Quickstart",         "quickstart.png") \
+PANEL(configurations,     "Configurations",     "file.png") \
+PANEL(cpu,                "CPU and FPU",        "cpu.png") \
+PANEL(chipset,            "Chipset",            "cpu.png") \
+PANEL(adv_chipset,        "Adv. Chipset",       "cpu.png") \
+PANEL(rom,                "ROM",                "chip.png") \
+PANEL(ram,                "RAM",                "chip.png") \
+PANEL(floppy,             "Floppy drives",      "35floppy.png") \
+PANEL(hd,                 "Hard drives/CD",     "drive.png") \
+PANEL(expansions,         "Expansions",         "expansion.png") \
+PANEL(rtg,                "RTG board",          "expansion.png") \
+PANEL(hwinfo,             "Hardware info",      "expansion.png") \
+PANEL(display,            "Display",            "screen.png") \
+PANEL(filter,             "Filter",             "misc.png") \
+PANEL(sound,              "Sound",              "sound.png") \
+PANEL(input,              "Input",              "joystick.png") \
+PANEL(io,                 "IO Ports",           "port.png") \
+PANEL(custom,             "Custom controls",    "controller.png") \
+PANEL(diskswapper,        "Disk swapper",       "35floppy.png") \
+PANEL(misc,               "Miscellaneous",      "misc.png") \
+PANEL(prio,               "Priority",           "misc.png") \
+PANEL(savestates,         "Savestates",         "savestate.png") \
+PANEL(virtual_keyboard,   "Virtual Keyboard",   "keyboard.png") \
+PANEL(whdload,            "WHDLoad",            "drive.png") \
+PANEL(themes,             "Themes",             "amigainfo.png")
 
+#endif
+
+#ifdef USE_IMGUI
+void ShowMessageBox(const char* title, const char* message);
+#endif
 bool ShowMessage(const std::string& title, const std::string& line1, const std::string& line2, const std::string& line3,
                  const std::string& button1, const std::string& button2);
 amiberry_hotkey ShowMessageForInput(const char* title, const char* line1, const char* button1);
@@ -364,6 +560,12 @@ void ShowCustomFields();
 std::string show_controller_map(int device, bool map_touchpad);
 extern void read_directory(const std::string& path, vector<string>* dirs, vector<string>* files);
 extern void FilterFiles(vector<string>* files, const char* filter[]);
+
+enum
+{
+	MAX_STARTUP_TITLE = 64,
+	MAX_STARTUP_MESSAGE = 256
+};
 
 enum
 {
@@ -446,7 +648,11 @@ extern void apply_theme_extras();
 extern void SetLastLoadedConfig(const char* filename);
 extern void set_last_active_config(const char* filename);
 extern void disk_selection(const int shortcut, uae_prefs* prefs);
+extern int disk_swap(int entry, int mode);
+extern int disk_in_drive(int entry);
 
+#ifdef USE_GUISAN
 extern void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2);
+#endif
 
 #endif // GUI_HANDLING_H

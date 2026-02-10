@@ -242,7 +242,7 @@ static int load_roms (struct arcadiarom *rom)
 			_sntprintf (path, sizeof path, _T("%s%d"), xpath, i + 1);
 		else
 			_tcscpy (path, xpath);
-		if (!load_rom8 (path, arbmemory + 2 * 65536 * i + offset, rom->extra, rom->ext, rom->exts && rom->exts[0] ? &rom->exts[i * 2] : NULL)) {
+		if (!load_rom8 (path, arbmemory + 2 * 65536 * i + offset, rom->extra, rom->ext, rom->exts[0] ? &rom->exts[i * 2] : NULL)) {
 			if (i == 0)
 				write_log (_T("Arcadia: %s rom load failed ('%s')\n"), rom->type == ARCADIA_BIOS ? _T("bios") : _T("game"), path);
 			break;

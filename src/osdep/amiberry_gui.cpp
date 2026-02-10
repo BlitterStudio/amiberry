@@ -9,8 +9,16 @@
 #include <vector>
 #include <string>
 
+#ifdef USE_GUISAN
 #include <guisan.hpp>
 #include <guisan/sdl.hpp>
+#include "osdep/gui/SelectorEntry.hpp"
+#endif
+#ifdef USE_IMGUI
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_sdlrenderer2.h"
+#endif
 
 #include "sysdeps.h"
 #include "uae.h"
@@ -18,7 +26,6 @@
 #include "keybuf.h"
 #include "zfile.h"
 #include "gui.h"
-#include "osdep/gui/SelectorEntry.hpp"
 #include "gui/gui_handling.h"
 #include "rommgr.h"
 #include "custom.h"
@@ -55,6 +62,7 @@ int emulating = 0;
 bool config_loaded = false;
 int gui_active;
 int recursiveromscan = 2;
+int current_state_num = 0;
 
 std::vector<std::string> serial_ports;
 std::vector<std::string> midi_in_ports;
@@ -125,6 +133,7 @@ struct romdataentry
 	int priority;
 };
 
+#ifdef USE_GUISAN
 void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2)
 {
 	int idx;
@@ -225,6 +234,7 @@ void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, i
 
 	xfree(rde);
 }
+#endif
 
 static int extpri(const TCHAR* p, int size)
 {
@@ -722,7 +732,9 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 			tmp = std::string(prefs->floppyslots[shortcut].df);
 		else
 			tmp = get_floppy_path();
+#ifdef USE_GUISAN
 		tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
+#endif
 		if (!tmp.empty())
 		{
 			if (strncmp(prefs->floppyslots[shortcut].df, tmp.c_str(), MAX_DPATH) != 0)
@@ -739,7 +751,10 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 		TCHAR tmp[MAX_DPATH];
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
-		const std::string selected = SelectFile("Load a save state file", tmp, statefile_filter);
+		std::string selected;
+#ifdef USE_GUISAN
+		selected = SelectFile("Load a save state file", tmp, statefile_filter);
+#endif
 		if (!selected.empty())
 		{
 			_tcscpy(savestate_fname, selected.c_str());
@@ -762,7 +777,10 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 		TCHAR tmp[MAX_DPATH];
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
-		std::string selected = SelectFile("Save a save state file", tmp, statefile_filter, true);
+		std::string selected;
+#ifdef USE_GUISAN
+		selected = SelectFile("Save a save state file", tmp, statefile_filter, true);
+#endif
 		if (!selected.empty())
 		{
 			// ensure the selected filename ends with .uss
@@ -793,7 +811,9 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 			tmp = std::string(prefs->cdslots[0].name);
 		else
 			tmp = get_cdrom_path();
+#ifdef USE_GUISAN
 		tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
+#endif
 		if (!tmp.empty())
 		{
 			if (strncmp(prefs->cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
@@ -824,6 +844,8 @@ static void prefs_to_gui()
 		load_theme(amiberry_options.gui_theme);
 	else
 		load_default_theme();
+	
+	copy_prefs(&currprefs, &changed_prefs);
 
 	/* filesys hack */
 	changed_prefs.mountitems = currprefs.mountitems;
@@ -966,9 +988,13 @@ void gui_display(int shortcut)
 	else if (shortcut >= 0 && shortcut <= 6)
 	{
 		amiberry_gui_init();
+#ifdef USE_GUISAN
 		gui_widgets_init();
+#endif
 		disk_selection(shortcut, &changed_prefs);
+#ifdef USE_GUISAN
 		gui_widgets_halt();
+#endif
 		amiberry_gui_halt();
 	}
 
@@ -1182,8 +1208,11 @@ void gui_message(const char* format, ...)
 	va_start(parms, format);
 	_vsntprintf(msg, sizeof(msg), format, parms);
 	va_end(parms);
-
+#ifdef USE_GUISAN
 	ShowMessage("", msg, "", "", "Ok", "");
+#elif USE_IMGUI
+	ShowMessageBox("Message", msg);
+#endif
 }
 
 void notify_user(int msg)
@@ -1843,7 +1872,6 @@ void DisplayDiskInfo(int num)
 		linebuffer[w * 3 + 1 + w] = 0;
 		infotext.emplace_back(linebuffer);
 	}
-
 	ShowDiskInfo(title, infotext);
 }
 
@@ -1868,7 +1896,7 @@ void load_default_theme()
 	gui_theme.font_color = { 0, 0, 0 };
 	gui_theme.base_color = { 170, 170, 170 };
 	gui_theme.selector_inactive = { 170, 170, 170 };
-	gui_theme.selector_active = { 103, 136, 187 };
+	gui_theme.selector_active = { 0, 85, 170 }; // Classic Amiga Blue
 	gui_theme.selection_color = { 195, 217, 217 };
 	gui_theme.background_color = { 220, 220, 220 };
 	gui_theme.foreground_color = { 0, 0, 0 };
@@ -1902,15 +1930,16 @@ std::string get_system_fonts_path()
 	return path;
 }
 
+#ifdef USE_GUISAN
 void apply_theme()
 {
-	gui_base_color = gui_theme.base_color;
-	gui_foreground_color = gui_theme.foreground_color;
-	gui_background_color = gui_theme.background_color;
-	gui_selection_color = gui_theme.selection_color;
-	gui_selector_inactive_color = gui_theme.selector_inactive;
-	gui_selector_active_color = gui_theme.selector_active;
-	gui_font_color = gui_theme.font_color;
+	gui_base_color = gcn::Color(gui_theme.base_color.r, gui_theme.base_color.g, gui_theme.base_color.b);
+	gui_foreground_color = gcn::Color(gui_theme.foreground_color.r, gui_theme.foreground_color.g, gui_theme.foreground_color.b);
+	gui_background_color = gcn::Color(gui_theme.background_color.r, gui_theme.background_color.g, gui_theme.background_color.b);
+	gui_selection_color = gcn::Color(gui_theme.selection_color.r, gui_theme.selection_color.g, gui_theme.selection_color.b);
+	gui_selector_inactive_color = gcn::Color(gui_theme.selector_inactive.r, gui_theme.selector_inactive.g, gui_theme.selector_inactive.b);
+	gui_selector_active_color = gcn::Color(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
+	gui_font_color = gcn::Color(gui_theme.font_color.r, gui_theme.font_color.g, gui_theme.font_color.b);
 
 	if (gui_theme.font_name.empty())
 	{
@@ -1988,6 +2017,7 @@ void apply_theme_extras()
 		categories[i].panel->setForegroundColor(gui_foreground_color);
 	}
 }
+#endif
 
 void save_theme(const std::string& theme_filename)
 {
@@ -1999,13 +2029,13 @@ void save_theme(const std::string& theme_filename)
 	{
 		file_output << "font_name=" << gui_theme.font_name << '\n';
 		file_output << "font_size=" << gui_theme.font_size << '\n';
-		file_output << "font_color=" << gui_theme.font_color.r << "," << gui_theme.font_color.g << "," << gui_theme.font_color.b << '\n';
-		file_output << "base_color=" << gui_theme.base_color.r << "," << gui_theme.base_color.g << "," << gui_theme.base_color.b << '\n';
-		file_output << "selector_inactive=" << gui_theme.selector_inactive.r << "," << gui_theme.selector_inactive.g << "," << gui_theme.selector_inactive.b << '\n';
-		file_output << "selector_active=" << gui_theme.selector_active.r << "," << gui_theme.selector_active.g << "," << gui_theme.selector_active.b << '\n';
-		file_output << "selection_color=" << gui_theme.selection_color.r << "," << gui_theme.selection_color.g << "," << gui_theme.selection_color.b << '\n';
-		file_output << "background_color=" << gui_theme.background_color.r << "," << gui_theme.background_color.g << "," << gui_theme.background_color.b << '\n';
-		file_output << "foreground_color=" << gui_theme.foreground_color.r << "," << gui_theme.foreground_color.g << "," << gui_theme.foreground_color.b << '\n';
+		file_output << "font_color=" << (int)gui_theme.font_color.r << "," << (int)gui_theme.font_color.g << "," << (int)gui_theme.font_color.b << '\n';
+		file_output << "base_color=" << (int)gui_theme.base_color.r << "," << (int)gui_theme.base_color.g << "," << (int)gui_theme.base_color.b << '\n';
+		file_output << "selector_inactive=" << (int)gui_theme.selector_inactive.r << "," << (int)gui_theme.selector_inactive.g << "," << (int)gui_theme.selector_inactive.b << '\n';
+		file_output << "selector_active=" << (int)gui_theme.selector_active.r << "," << (int)gui_theme.selector_active.g << "," << (int)gui_theme.selector_active.b << '\n';
+		file_output << "selection_color=" << (int)gui_theme.selection_color.r << "," << (int)gui_theme.selection_color.g << "," << (int)gui_theme.selection_color.b << '\n';
+		file_output << "background_color=" << (int)gui_theme.background_color.r << "," << (int)gui_theme.background_color.g << "," << (int)gui_theme.background_color.b << '\n';
+		file_output << "foreground_color=" << (int)gui_theme.foreground_color.r << "," << (int)gui_theme.foreground_color.g << "," << (int)gui_theme.foreground_color.b << '\n';
 		file_output.close();
 	}
 }
@@ -2029,37 +2059,37 @@ void load_theme(const std::string& theme_filename)
 			else if (key == "font_color")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.font_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.font_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
 			}
 			else if (key == "base_color")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.base_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.base_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
 			}
 			else if (key == "selector_inactive")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.selector_inactive = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.selector_inactive = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
 			}
 			else if (key == "selector_active")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.selector_active = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.selector_active = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
 			}
 			else if (key == "selection_color")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.selection_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.selection_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
 			}
 			else if (key == "background_color")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.background_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.background_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
 			}
 			else if (key == "foreground_color")
 			{
 				const std::vector<int> rgb = parse_color_string(value);
-				gui_theme.foreground_color = gcn::Color(rgb[0], rgb[1], rgb[2]);
+				gui_theme.foreground_color = { (uint8_t)rgb[0], (uint8_t)rgb[1], (uint8_t)rgb[2] };
 			}
 		}
 		file_input.close();

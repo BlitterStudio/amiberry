@@ -75,11 +75,15 @@ endif
 
 # Add Amiberry defines
 FLAGS += -DAMIBERRY -DLIBRETRO -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
+FLAGS += -DAMIBERRY_VERSION=\"8.0.0\" -DAMIBERRY_VERSION_PRE_RELEASE=\"\"
+FLAGS += -DAMIBERRY_VERSION_MAJOR=8 -DAMIBERRY_VERSION_MINOR=0 -DAMIBERRY_VERSION_PATCH=0
+FLAGS += -DAMIBERRY_IS_PRE_RELEASE=0
+FLAGS += -DAMIBERRY_BUILD_YEAR=$(shell date +%Y) -DAMIBERRY_BUILD_MONTH=$(shell date +%-m) -DAMIBERRY_BUILD_DAY=$(shell date +%-d)
+FLAGS += -DAMIBERRY_BUILD_DATE=\"$(shell date +%Y-%m-%d)\"
 FLAGS += -DOSDEP_GFX_PLATFORM_HEADER=\"libretro/gfx_platform_internal.h\"
 FLAGS += -DOSDEP_AMIBERRY_PLATFORM_HEADER=\"libretro/amiberry_platform_internal.h\"
 FLAGS += -DOSDEP_INPUT_PLATFORM_HEADER=\"libretro/input_platform_internal.h\"
 FLAGS += -DOSDEP_GUI_HANDLING_HEADER=\"libretro/gui_handling_platform.h\"
-FLAGS += -DOSDEP_GUI_COLOR_HEADER=\"gui_color_platform_libretro.h\"
 FLAGS += -DCHD_FLAC_PLATFORM_HEADER=\"flac_platform_internal_libretro.h\"
 FLAGS += -DSOUND_PLATFORM_HEADER=\"sound_platform_internal_libretro.h\"
 

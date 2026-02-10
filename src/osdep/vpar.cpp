@@ -109,7 +109,7 @@ static const char *get_ts()
 {
 	struct timeval tv{};
 	gettimeofday(&tv, nullptr);
-	_sntprintf(buf2, sizeof buf2, "%8ld.%06ld",tv.tv_sec,tv.tv_usec);
+	_sntprintf(buf2, sizeof buf2, "%8ld.%06ld",(long)tv.tv_sec,(long)tv.tv_usec);
 	return buf2;
 }
 

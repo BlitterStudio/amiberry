@@ -366,16 +366,19 @@ static char *place_target(char *ptr, int comma)
 {
     char *old;
     u32 *t = (u32 *)&o->target;
+    // Calculate remaining space in operands buffer
+    size_t remaining = sizeof(o->operands) - (ptr - o->operands);
 
-    if(comma) operands_append(&ptr, "%s", COMMA);
+    if(comma) ptr += snprintf(ptr, remaining, "%s", COMMA);
+    remaining = sizeof(o->operands) - (ptr - o->operands);
     old = ptr;
 #ifdef  POWERPC_32
-    operands_append(&ptr, HEX1 "%08X" HEX2, (u32)o->target);
+    ptr += snprintf(ptr, remaining, HEX1 "%08X" HEX2, (u32)o->target);
 #endif
 #ifdef  POWERPC_64
     ptr = old;
-    if(bigendian) operands_append(&ptr, HEX1 "%08X_%08X" HEX2, t[0], t[1]);
-    else operands_append(&ptr, HEX1 "%08X_%08X" HEX2, t[1], t[0]);
+    if(bigendian) ptr += snprintf(ptr, remaining, HEX1 "%08X_%08X" HEX2, t[0], t[1]);
+    else ptr += snprintf(ptr, remaining, HEX1 "%08X_%08X" HEX2, t[1], t[0]);
 #endif
     return ptr;
 }

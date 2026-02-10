@@ -194,18 +194,20 @@ bool GreaseWeazleDiskBridge::getDiskChangeStatus(const bool forceCheck) {
 	// We actually trigger a SEEK operation to ensure this is right
 	if (forceCheck) {
 		switch (m_io.checkForDisk(forceCheck)) {
-		case GWResponse::drNoDiskInDrive:
-			if ((m_currentCylinder == 0) && (m_io.supportsDiskChange())) {
-				m_io.performNoClickSeek();
-			}
-			else {
-				m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, TrackSearchSpeed::tssNormal, true);
-				m_io.selectTrack(m_currentCylinder, TrackSearchSpeed::tssNormal, true);
-			}
-			break;
-		case GWResponse::drError:
-			m_wasIOError = true;
-			return false;
+			case GWResponse::drNoDiskInDrive:
+				if ((m_currentCylinder == 0) && (m_io.supportsDiskChange())) {
+					m_io.performNoClickSeek();
+				}
+				else {
+					m_io.selectTrack((m_currentCylinder > 40) ? m_currentCylinder - 1 : m_currentCylinder + 1, TrackSearchSpeed::tssNormal, true);
+					m_io.selectTrack(m_currentCylinder, TrackSearchSpeed::tssNormal, true);
+				}
+				break;
+			case GWResponse::drError:
+				m_wasIOError = true;
+				return false;
+			default:
+				break;
 		}
 	}
 
@@ -233,7 +235,8 @@ bool GreaseWeazleDiskBridge::performNoClickSeek() {
 		case GWResponse::drError:
 			m_wasIOError = true;
 			return false;
-
+		default:
+			break;
 	}
 	return false;
 }

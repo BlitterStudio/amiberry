@@ -6715,7 +6715,6 @@ void m68k_go (int may_quit)
 	in_m68k_go++;
 	for (;;) {
 		int restored = 0;
-		void (*run_func)(void);
 
 		cputrace.state = -1;
 

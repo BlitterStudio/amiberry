@@ -940,7 +940,7 @@ int tcp_emu(struct socket *so, struct mbuf *m)
 					*(so_rcv->sb_rptr + num) = 0;
 					if (ctl_password && !ctl_password_ok) {
 						/* Need a password */
-						if (sscanf(so_rcv->sb_rptr, "pass %256s", buff) == 1) {
+						if (sscanf(so_rcv->sb_rptr, "pass %255s", buff) == 1) {
 							if (strcmp(buff, ctl_password) == 0) {
 								ctl_password_ok = 1;
 								n = sprintf(so_snd->sb_wptr,
@@ -980,7 +980,7 @@ do_prompt:
 			/*
 			 * Need to emulate the PORT command
 			 */			
-			x = sscanf(bptr, "ORT %d,%d,%d,%d,%d,%d\r\n%256[^\177]", 
+			x = sscanf(bptr, "ORT %d,%d,%d,%d,%d,%d\r\n%255[^\177]", 
 				   &n1, &n2, &n3, &n4, &n5, &n6, buff);
 			if (x < 6)
 			   return 1;
@@ -1003,23 +1003,15 @@ do_prompt:
 			n3 = ((laddr >> 8)  & 0xff);
 			n4 =  (laddr & 0xff);
 			
-			size_t prefix = (size_t)(bptr - m->m_data);
-			size_t avail = M_ROOM(m);
-			if (prefix >= avail)
-				return 1;
-			avail -= prefix;
-			int wrote = snprintf(bptr, avail, "ORT %d,%d,%d,%d,%d,%d\r\n%s",
+			m->m_len = bptr - m->m_data; /* Adjust length */
+			m->m_len += snprintf(bptr, M_FREEROOM(m), "ORT %d,%d,%d,%d,%d,%d\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
-			size_t used = wrote > 0 ? (size_t)wrote : 0;
-			if (used >= avail)
-				used = avail - 1;
-			m->m_len = prefix + used;
 			return 1;
 		} else if ((bptr = (char *)strstr(m->m_data, "27 Entering")) != NULL) {
 			/*
 			 * Need to emulate the PASV response
 			 */
-			x = sscanf(bptr, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%256[^\177]",
+			x = sscanf(bptr, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%255[^\177]",
 				   &n1, &n2, &n3, &n4, &n5, &n6, buff);
 			if (x < 6)
 			   return 1;
@@ -1042,18 +1034,10 @@ do_prompt:
 			n3 = ((laddr >> 8)  & 0xff);
 			n4 =  (laddr & 0xff);
 			
-			size_t prefix = (size_t)(bptr - m->m_data);
-			size_t avail = M_ROOM(m);
-			if (prefix >= avail)
-				return 1;
-			avail -= prefix;
-			int wrote = snprintf(bptr, avail, "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
+			m->m_len = bptr - m->m_data; /* Adjust length */
+			m->m_len += snprintf(bptr, M_FREEROOM(m), "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
-			size_t used = wrote > 0 ? (size_t)wrote : 0;
-			if (used >= avail)
-				used = avail - 1;
-			m->m_len = prefix + used;
-			
+
 			return 1;
 		}
 		
@@ -1095,55 +1079,31 @@ do_prompt:
 		if ((bptr = (char *)strstr(m->m_data, "DCC")) == NULL)
 			 return 1;
 		
-		/* The %256s is for the broken mIRC */
-		if (sscanf(bptr, "DCC CHAT %256s %u %u", buff, &laddr, &lport) == 3) {
+		/* The %255s is for the broken mIRC */
+		if (sscanf(bptr, "DCC CHAT %255s %u %u", buff, &laddr, &lport) == 3) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
 			
-			size_t prefix = (size_t)(bptr - m->m_data);
-			size_t avail = M_ROOM(m);
-			if (prefix >= avail)
-				return 1;
-			avail -= prefix;
-			int wrote = snprintf(bptr, avail, "DCC CHAT chat %lu %u%c\n",
+			m->m_len = bptr - m->m_data; /* Adjust length */
+			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC CHAT chat %lu %u%c\n",
 			     (unsigned long)ntohl(so->so_faddr.s_addr),
 			     ntohs(so->so_fport), 1);
-			size_t used = wrote > 0 ? (size_t)wrote : 0;
-			if (used >= avail)
-				used = avail - 1;
-			m->m_len = prefix + used;
-		} else if (sscanf(bptr, "DCC SEND %256s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
+		} else if (sscanf(bptr, "DCC SEND %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
-			
-			size_t prefix = (size_t)(bptr - m->m_data);
-			size_t avail = M_ROOM(m);
-			if (prefix >= avail)
-				return 1;
-			avail -= prefix;
-			int wrote = snprintf(bptr, avail, "DCC SEND %s %lu %u %u%c\n",
+
+			m->m_len = bptr - m->m_data; /* Adjust length */
+			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC SEND %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
-			size_t used = wrote > 0 ? (size_t)wrote : 0;
-			if (used >= avail)
-				used = avail - 1;
-			m->m_len = prefix + used;
-		} else if (sscanf(bptr, "DCC MOVE %256s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
+		} else if (sscanf(bptr, "DCC MOVE %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
-			
-			size_t prefix = (size_t)(bptr - m->m_data);
-			size_t avail = M_ROOM(m);
-			if (prefix >= avail)
-				return 1;
-			avail -= prefix;
-			int wrote = snprintf(bptr, avail, "DCC MOVE %s %lu %u %u%c\n",
+
+			m->m_len = bptr - m->m_data; /* Adjust length */
+			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC MOVE %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
-			size_t used = wrote > 0 ? (size_t)wrote : 0;
-			if (used >= avail)
-				used = avail - 1;
-			m->m_len = prefix + used;
 		}
 		return 1;
 	}
@@ -1329,18 +1289,9 @@ int tcp_ctl(struct socket *so)
 		/* tcp_fconnect(so); */
 		
 		/* FALLTHROUGH */
-	case CTL_ALIAS: {
-	  size_t sb_avail = (size_t)(sb->sb_data + sb->sb_datalen - sb->sb_wptr);
-	  if (sb_avail > 0) {
-		  int wrote = snprintf(sb->sb_wptr, sb_avail,
-				      "Error: No application configured.\r\n");
-		  size_t used = wrote > 0 ? (size_t)wrote : 0;
-		  if (used >= sb_avail)
-			  used = sb_avail - 1;
-		  sb->sb_cc = (u_int)used;
-	  } else {
-		  sb->sb_cc = 0;
-	  }
+	case CTL_ALIAS:
+	  sb->sb_cc = snprintf(sb->sb_wptr, sbspace(sb),
+			      "Error: No application configured.\r\n");
 	  sb->sb_wptr += sb->sb_cc;
 	  return(0);
 	}
@@ -1369,5 +1320,4 @@ int tcp_ctl(struct socket *so)
 	   do_echo=-1;
 	   return(2);
 #endif
-	}
 }

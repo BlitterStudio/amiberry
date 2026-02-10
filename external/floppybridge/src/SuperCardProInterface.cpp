@@ -139,7 +139,7 @@ SCPErr SCPInterface::openPort(bool useDriveA) {
 		}
 		if (m_comPort.isPortOpen()) break;
 	}
-	if (!m_comPort.isPortOpen()) SCPErr::scpNotFound;
+	if (!m_comPort.isPortOpen()) return SCPErr::scpNotFound;
 
 	// Configure the port
 	SerialIO::Configuration config;

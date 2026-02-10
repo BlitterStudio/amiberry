@@ -9,37 +9,38 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Clear out environment CFLAGS/CXXFLAGS first
-if(CMAKE_BUILD_TYPE MATCHES "^(Release|Debug)$")
-    set(CMAKE_C_FLAGS "")
-    set(CMAKE_CXX_FLAGS "")
-    set(CMAKE_EXE_LINKER_FLAGS "")
-    set(CMAKE_SHARED_LINKER_FLAGS "")
+# Set build type to "Release" if user did not specify any build type yet
+# Other possible values: Debug and None.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# Base compiler flags
-add_compile_options("-pipe")
+# Accumulate compile and link flags in variables.
+# These are applied to the amiberry target in SourceFiles.cmake after the target is created,
+# so they do not leak into third-party FetchContent builds.
+set(AMIBERRY_COMPILE_OPTIONS "-pipe")
+set(AMIBERRY_LINK_OPTIONS "")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options("-Og" "-funwind-tables" "-DDEBUG")
+    list(APPEND AMIBERRY_COMPILE_OPTIONS "-Og" "-funwind-tables" "-DDEBUG")
 
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        add_compile_options("-ggdb")
+        list(APPEND AMIBERRY_COMPILE_OPTIONS "-ggdb")
     else()
-        add_compile_options("-g")
+        list(APPEND AMIBERRY_COMPILE_OPTIONS "-g")
     endif()
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_compile_options("-fdata-sections" "-ffunction-sections")
+    list(APPEND AMIBERRY_COMPILE_OPTIONS "-fdata-sections" "-ffunction-sections")
 elseif(CMAKE_BUILD_TYPE)
-    add_compile_options("-O1")
+    list(APPEND AMIBERRY_COMPILE_OPTIONS "-O1")
 endif()
 
 # Platform-specific linker flags
 if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    add_link_options("-Wl,--no-undefined" "-Wl,-z,combreloc" "-Wl,--as-needed")
+    list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,--no-undefined" "-Wl,-z,combreloc" "-Wl,--as-needed")
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_link_options(
+        list(APPEND AMIBERRY_LINK_OPTIONS
             "-Wl,--gc-sections"
             "-Wl,--strip-all"
             "-Wl,-O1"
@@ -49,7 +50,7 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
 
         # GNU ld-only flags (do not work on FreeBSD)
         if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-            add_link_options(
+            list(APPEND AMIBERRY_LINK_OPTIONS
                 "-Wl,--sort-common=descending"
                 "-Wl,--hash-style=gnu"
             )
@@ -57,22 +58,15 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
     endif()
 else()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_link_options("-Wl,-dead_strip")
+        list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,-dead_strip")
     endif()
-endif()
-
-
-# Set build type to "Release" if user did not specify any build type yet
-# Other possible values: Debug and None. 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 if(WITH_OPTIMIZE)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         include(${CMAKE_SOURCE_DIR}/cmake/optimize.cmake)
     else()
-			message(FATAL_ERROR "WITH_OPTIMIZE can only be used on Release builds")
+        message(FATAL_ERROR "WITH_OPTIMIZE can only be used on Release builds")
     endif()
 endif()
 
@@ -86,16 +80,22 @@ if(WITH_LTO)
     endif()
 endif()
 
+# Platform-specific include/link paths and frameworks.
+# Stored in variables and applied to the target in SourceFiles.cmake.
+set(AMIBERRY_PLATFORM_INCLUDE_DIRS "")
+set(AMIBERRY_PLATFORM_LINK_DIRS "")
+set(AMIBERRY_PLATFORM_LIBS "")
+
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-        include_directories("/opt/homebrew/include")
-        link_directories("/opt/homebrew/lib")
+        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS "/opt/homebrew/include")
+        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS "/opt/homebrew/lib")
     else()
-        include_directories("/usr/local/include")
-        link_directories("/usr/local/lib")
+        list(APPEND AMIBERRY_PLATFORM_INCLUDE_DIRS "/usr/local/include")
+        list(APPEND AMIBERRY_PLATFORM_LINK_DIRS "/usr/local/lib")
     endif()
 
-    link_libraries("-framework IOKit" "-framework Foundation" "iconv")
+    list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "iconv")
 
-    add_compile_options("$<$<CONFIG:Debug>:-fno-omit-frame-pointer;-mno-omit-leaf-frame-pointer>")
+    list(APPEND AMIBERRY_COMPILE_OPTIONS "$<$<CONFIG:Debug>:-fno-omit-frame-pointer;-mno-omit-leaf-frame-pointer>")
 endif()

@@ -1048,7 +1048,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 
 		const std::array<const char*, 2> extra_files = { "Thumbs.db", ".DS_Store" };
 		for (const auto& file : extra_files) {
-			remove_extra_file(path, file);
+			(void)remove_extra_file(path, file);  // Best-effort cleanup, ignore result
 		}
 
 		bool is_empty = true;

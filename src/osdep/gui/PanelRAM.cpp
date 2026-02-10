@@ -422,6 +422,8 @@ void RefreshPanelRAM()
 	}
 
 	cboZ3Mapping->setSelected(changed_prefs.z3_mapping_mode);
+
+	copycpuboardmem(true);
 }
 
 bool HelpPanelRAM(std::vector<std::string>& helptext)

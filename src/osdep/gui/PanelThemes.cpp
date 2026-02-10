@@ -200,9 +200,9 @@ class ThemesActionListener : public gcn::ActionListener
         }
     }
 
-	static void UpdateColorComponent(int& colorComponent, const gcn::Slider* slider, gcn::Label* label) {
-        colorComponent = static_cast<int>(slider->getValue());
-        label->setCaption(std::to_string(slider->getValue()));
+	static void UpdateColorComponent(uint8_t& colorComponent, const gcn::Slider* slider, gcn::Label* label) {
+        colorComponent = static_cast<uint8_t>(slider->getValue());
+        label->setCaption(std::to_string((int)colorComponent));
     }
 };
 
@@ -434,14 +434,14 @@ void ExitPanelThemes()
 	delete themesActionListener;
 }
 
-void RefreshRGBColorComponents(const RGBColorComponents& components, const gcn::Color& color) {
+void RefreshRGBColorComponents(const RGBColorComponents& components, const amiberry_gui_color& color) {
     components.sliderR->setValue(color.r);
     components.sliderG->setValue(color.g);
     components.sliderB->setValue(color.b);
     components.valueR->setCaption(std::to_string(color.r));
     components.valueG->setCaption(std::to_string(color.g));
     components.valueB->setCaption(std::to_string(color.b));
-	components.colorBox->setBaseColor(color);
+	components.colorBox->setBaseColor(gcn::Color(color.r, color.g, color.b));
 }
 
 void RefreshPanelThemes()

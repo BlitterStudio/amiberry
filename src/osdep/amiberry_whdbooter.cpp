@@ -267,6 +267,15 @@ static bool find_slave_in_archive(const char* filepath, std::string& out_subpath
 	return found;
 }
 
+// Returns the temporary directory for WHDBooter boot files
+// Uses whdboot/tmp/ which is always user-writable on all platforms
+std::filesystem::path get_whdboot_temp_path()
+{
+	std::filesystem::path temp_path = get_whdbootpath();
+	temp_path /= "tmp";
+	return temp_path;
+}
+
 static TCHAR* parse_text(const TCHAR* s)
 {
 	if (*s == '"' || *s == '\'')
@@ -1379,7 +1388,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 
 	if (!whdload_prefs.selected_slave.filename.empty()) // new booter solution
 	{
-		boot_path = "/tmp/amiberry/";
+		boot_path = get_whdboot_temp_path();
 
 		tmp = "filesystem2=rw,DH0:DH0:" + boot_path.string() + ",10";
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
@@ -1478,10 +1487,23 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	whdload_prefs.filename = filename_no_extension;
 
 	// setup for tmp folder.
-	amiberry_fs::create_directories("/tmp/amiberry/s");
-	amiberry_fs::create_directories("/tmp/amiberry/c");
-	amiberry_fs::create_directories("/tmp/amiberry/devs");
-	whd_startup = "/tmp/amiberry/s/startup-sequence";
+	std::filesystem::path temp_base = get_whdboot_temp_path();
+	// Clean up any stale files from previous runs to ensure a fresh tmp
+	// This helps avoid stale/broken symlinks causing WHDLoad not found
+	try {
+		if (amiberry_fs::exists(temp_base)) {
+			write_log("WHDBooter - Cleaning existing tmp directory %s\n", temp_base.string().c_str());
+			std::filesystem::remove_all(temp_base);
+		}
+	}
+	catch (std::filesystem::filesystem_error &e) {
+		write_log("WHDBooter - Failed to clean tmp directory %s: %s\n", temp_base.string().c_str(), e.what());
+	}
+
+	amiberry_fs::create_directories(temp_base / "s");
+	amiberry_fs::create_directories(temp_base / "c");
+	amiberry_fs::create_directories(temp_base / "devs");
+	whd_startup = (temp_base / "s" / "startup-sequence").string();
 	amiberry_fs::remove(whd_startup);
 
 	// Use WHDBOOT_SAVE_DATA override when available (libretro sets this)
@@ -1538,71 +1560,115 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	{
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
-			// create a symlink to JST in /tmp/amiberry/
+			// create a link/copy to JST
 			whd_path = whdbooter_path / "JST";
-			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists("/tmp/amiberry/c/JST")) {
+			std::filesystem::path jst_link = temp_base / "c" / "JST";
+			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists(jst_link)) {
 				if (vfs_enabled()) {
-					write_log("WHDBooter - Copying JST to /tmp/amiberry/c/ \n");
-					copy_file_vfs(whd_path, "/tmp/amiberry/c/JST");
+					write_log("WHDBooter - Copying JST to %s\n", (temp_base / "c").string().c_str());
+					copy_file_vfs(whd_path, jst_link);
 				} else {
-					write_log("WHDBooter - Creating symlink to JST in /tmp/amiberry/c/ \n");
-					std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/JST");
+					write_log("WHDBooter - Creating link/copy to JST in %s\n", (temp_base / "c").string().c_str());
+					try {
+#ifdef __ANDROID__
+					std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
+#else
+					std::filesystem::create_symlink(whd_path, jst_link);
+#endif
+					}
+					catch (std::filesystem::filesystem_error& e) {
+						write_log("WHDBooter - JST link creation failed (%s). Falling back to copy: %s\n", jst_link.string().c_str(), e.what());
+						try {
+							std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
+						}
+						catch (std::filesystem::filesystem_error &e2) {
+							write_log("WHDBooter - JST copy also failed: %s\n", e2.what());
+						}
+					}
 				}
 			}
 		}
 		else
 		{
-			// create a symlink to WHDLoad in /tmp/amiberry/
+			// create a link/copy to WHDLoad
 			whd_path = whdbooter_path / "WHDLoad";
-			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists("/tmp/amiberry/c/WHDLoad")) {
+			std::filesystem::path whdload_link = temp_base / "c" / "WHDLoad";
+			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists(whdload_link)) {
 				if (vfs_enabled()) {
-					write_log("WHDBooter - Copying WHDLoad to /tmp/amiberry/c/ \n");
-					copy_file_vfs(whd_path, "/tmp/amiberry/c/WHDLoad");
+					write_log("WHDBooter - Copying WHDLoad to %s\n", (temp_base / "c").string().c_str());
+					copy_file_vfs(whd_path, whdload_link);
 				} else {
-					write_log("WHDBooter - Creating symlink to WHDLoad in /tmp/amiberry/c/ \n");
-					std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/WHDLoad");
-				}
-			}
-		}
-
-		// Create a symlink to AmiQuit in /tmp/amiberry/
-		whd_path = whdbooter_path / "AmiQuit";
-		if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists("/tmp/amiberry/c/AmiQuit")) {
-			if (vfs_enabled()) {
-				write_log("WHDBooter - Copying AmiQuit to /tmp/amiberry/c/ \n");
-				copy_file_vfs(whd_path, "/tmp/amiberry/c/AmiQuit");
-			} else {
-				write_log("WHDBooter - Creating symlink to AmiQuit in /tmp/amiberry/c/ \n");
-				std::filesystem::create_symlink(whd_path, "/tmp/amiberry/c/AmiQuit");
-			}
-		}
-
-		// create a symlink for DEVS in /tmp/amiberry/
-		const std::filesystem::path devs_link = "/tmp/amiberry/devs/Kickstarts";
-		if (vfs_enabled()) {
-			write_log("WHDBooter - Copying Kickstarts to /tmp/amiberry/devs/ \n");
-			copy_kickstarts_to_devs(kickstart_path, devs_link);
-		} else {
-			bool needs_link = true;
-			if (amiberry_fs::exists(devs_link)) {
-				if (std::filesystem::is_symlink(devs_link)) {
+					write_log("WHDBooter - Creating link/copy to WHDLoad in %s\n", (temp_base / "c").string().c_str());
 					try {
-						const auto current = std::filesystem::read_symlink(devs_link);
-						if (current == kickstart_path)
-							needs_link = false;
-						else
-							amiberry_fs::remove(devs_link);
-					} catch (...) {
-						amiberry_fs::remove(devs_link);
+#ifdef __ANDROID__
+					std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
+#else
+					std::filesystem::create_symlink(whd_path, whdload_link);
+#endif
 					}
-				} else {
-					// if it's a real directory, leave it as-is
-					needs_link = false;
+					catch (std::filesystem::filesystem_error& e) {
+						write_log("WHDBooter - WHDLoad link creation failed (%s). Falling back to copy: %s\n", whdload_link.string().c_str(), e.what());
+						try {
+							std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
+						}
+						catch (std::filesystem::filesystem_error &e2) {
+							write_log("WHDBooter - WHDLoad copy also failed: %s\n", e2.what());
+						}
+					}
 				}
 			}
-			if (needs_link) {
-				write_log("WHDBooter - Creating symlink to Kickstarts in /tmp/amiberry/devs/ \n");
-				std::filesystem::create_symlink(kickstart_path, devs_link);
+		}
+
+		// Create a link/copy to AmiQuit
+		whd_path = whdbooter_path / "AmiQuit";
+		std::filesystem::path amiquit_link = temp_base / "c" / "AmiQuit";
+		if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists(amiquit_link)) {
+			if (vfs_enabled()) {
+				write_log("WHDBooter - Copying AmiQuit to %s\n", (temp_base / "c").string().c_str());
+				copy_file_vfs(whd_path, amiquit_link);
+			} else {
+				write_log("WHDBooter - Creating link/copy to AmiQuit in %s\n", (temp_base / "c").string().c_str());
+				try {
+#ifdef __ANDROID__
+				std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
+#else
+				std::filesystem::create_symlink(whd_path, amiquit_link);
+#endif
+				}
+				catch (std::filesystem::filesystem_error& e) {
+					write_log("WHDBooter - AmiQuit link creation failed (%s). Falling back to copy: %s\n", amiquit_link.string().c_str(), e.what());
+					try {
+						std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
+					}
+					catch (std::filesystem::filesystem_error &e2) {
+						write_log("WHDBooter - AmiQuit copy also failed: %s\n", e2.what());
+					}
+				}
+			}
+		}
+
+		// create a symlink/copy for DEVS/Kickstarts
+		std::filesystem::path kickstarts_link = temp_base / "devs" / "Kickstarts";
+		if (vfs_enabled()) {
+			write_log("WHDBooter - Copying Kickstarts to %s\n", (temp_base / "devs").string().c_str());
+			copy_kickstarts_to_devs(kickstart_path, kickstarts_link);
+		} else {
+			write_log("WHDBooter - Creating link/copy to Kickstarts in %s\n", (temp_base / "devs").string().c_str());
+			try {
+#ifdef __ANDROID__
+				std::filesystem::copy(kickstart_path, kickstarts_link, std::filesystem::copy_options::recursive);
+#else
+				std::filesystem::create_symlink(kickstart_path, kickstarts_link);
+#endif
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				write_log("WHDBooter - Kickstarts link creation failed (%s). Falling back to copy: %s\n", kickstarts_link.string().c_str(), e.what());
+				try {
+					std::filesystem::copy(kickstart_path, kickstarts_link, std::filesystem::copy_options::recursive);
+				}
+				catch (std::filesystem::filesystem_error &e2) {
+					write_log("WHDBooter - Kickstarts copy also failed: %s\n", e2.what());
+				}
 			}
 		}
 	}

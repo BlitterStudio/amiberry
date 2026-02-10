@@ -357,8 +357,8 @@ int fork_exec(struct socket *so, char *ex, int do_pty)
 		/* Ooops, failed, let's tell the user why */
 		  {
 			  char buff[256];
-			  
-			  sprintf(buff, "Error: execvp of %s failed: %s\n", 
+
+			  snprintf(buff, sizeof(buff), "Error: execvp of %s failed: %s\n",
 				  argv[0], strerror(errno));
 			  ssize_t write_rc = write(2, buff, strlen(buff)+1);
 			  (void)write_rc;
@@ -604,7 +604,7 @@ void add_emu(char *buff)
 	struct emu_t *emup;
 	struct socket *so;
 	
-	if (sscanf(buff, "%256s %256s", buff2, buff1) != 2) {
+	if (sscanf(buff, "%255s %255s", buff2, buff1) != 2) {
 		lprint("Error: Bad arguments\r\n");
 		return;
 	}
@@ -617,9 +617,9 @@ void add_emu(char *buff)
 		}
 	}
 	
-	if (sscanf(buff2, "%128[^:]:%128s", buff1, buff3) != 2) {
+	if (sscanf(buff2, "%127[^:]:%127s", buff1, buff3) != 2) {
 		buff3 = 0;
-		if (sscanf(buff2, "%256s", buff1) != 1) {
+		if (sscanf(buff2, "%255s", buff1) != 1) {
 			lprint("Error: Bad second argument\r\n");
 			return;
 		}

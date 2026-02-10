@@ -77,10 +77,6 @@ static gcn::CheckBox* chkScsi;
 static gcn::CheckBox* chkCD32Fmv;
 static gcn::CheckBox* chkSana2;
 
-int scsiromselected = 0;
-static int scsiromselectednum = 0;
-static int scsiromselectedcatnum = 0;
-
 static void gui_add_string(int* table, gcn::StringListModel* item, int id, const TCHAR* str)
 {
 	while (*table >= 0)
@@ -139,23 +135,43 @@ static void enable_for_expansion2dlg()
 	cboCpuBoardSubType->setEnabled(changed_prefs.cpuboard_type);
 }
 
+void copycpuboardmem(bool tomem)
+{
+	int memtype = cpuboard_memorytype(&changed_prefs);
+	if (tomem) {
+		// Copy from memory subsystems to cpuboardmem1
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.fastmem[0].size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mem25bit.size;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mbresmem_high.size;
+		}
+	} else {
+		// Copy from cpuboardmem1 to memory subsystems
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
+		}
+		if (changed_prefs.cpuboard_type == 0) {
+			changed_prefs.mem25bit.size = 0;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+		}
+	}
+}
+
 static void setcpuboardmemsize()
 {
 	changed_prefs.cpuboardmem1.size = std::min<uae_u32>(changed_prefs.cpuboardmem1.size,
 	                                                    cpuboard_maxmemory(&changed_prefs));
 
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_Z2) {
-		changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
-	}
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_25BITMEM) {
-		changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
-	}
-	if (changed_prefs.cpuboard_type == 0) {
-		changed_prefs.mem25bit.size = 0;
-	}
-
-	if (cpuboard_memorytype(&changed_prefs) == BOARD_MEMORY_HIGHMEM)
-		changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+	copycpuboardmem(false);
 
 	int maxmem = cpuboard_maxmemory(&changed_prefs);
 	changed_prefs.cpuboardmem1.size = std::min<uae_u32>(changed_prefs.cpuboardmem1.size, maxmem);
@@ -400,24 +416,6 @@ static void get_expansionrom_gui(expansionrom_gui* eg)
 	}
 	eg->expansionrom_gui_settings = settings;
 }
-
-static struct netdriverdata* ndd[MAX_TOTAL_NET_DEVICES + 1];
-static int net_enumerated;
-
-struct netdriverdata** target_ethernet_enumerate()
-{
-	if (net_enumerated)
-		return ndd;
-	ethernet_enumerate(ndd, 0);
-	net_enumerated = 1;
-	return ndd;
-}
-
-static const int scsiromselectedmask[] = {
-	EXPANSIONTYPE_INTERNAL, EXPANSIONTYPE_SCSI, EXPANSIONTYPE_IDE, EXPANSIONTYPE_SASI, EXPANSIONTYPE_CUSTOM,
-	EXPANSIONTYPE_PCI_BRIDGE, EXPANSIONTYPE_X86_BRIDGE, EXPANSIONTYPE_RTG,
-	EXPANSIONTYPE_SOUND, EXPANSIONTYPE_NET, EXPANSIONTYPE_FLOPPY, EXPANSIONTYPE_X86_EXPANSION
-};
 
 static void init_expansion_scsi_id()
 {

@@ -433,7 +433,7 @@ static uae_u32 REGPARAM2 dev_open_2 (TrapContext *ctx)
 	pdev->unit = unit;
 	pdev->flags = flags;
 	pdev->inuse = 1;
-	pdev->td = td ? td[unit] : NULL;
+	pdev->td = td[unit];
 	pdev->promiscuous = (flags & SANA2OPF_PROM) ? 1 : 0;
 
 	if (pdev->td == NULL || pdev->td->active == 0)

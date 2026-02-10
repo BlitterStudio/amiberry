@@ -557,6 +557,7 @@ void SDL_GetWindowPosition(SDL_Window* window, int* x, int* y) { (void)window; i
 void SDL_GetWindowSize(SDL_Window* window, int* w, int* h) { (void)window; if (w) *w = 0; if (h) *h = 0; }
 void SDL_SetWindowGrab(SDL_Window* window, SDL_bool grabbed) { (void)window; (void)grabbed; }
 void SDL_SetWindowSize(SDL_Window* window, int w, int h) { (void)window; (void)w; (void)h; }
+void SDL_SetWindowPosition(SDL_Window* window, int x, int y) { (void)window; (void)x; (void)y; }
 void SDL_RaiseWindow(SDL_Window* window) { (void)window; }
 void SDL_MinimizeWindow(SDL_Window* window) { (void)window; }
 void SDL_DestroyWindow(SDL_Window* window) { (void)window; }

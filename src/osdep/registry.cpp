@@ -118,7 +118,7 @@ int regsetlonglong(UAEREG* root, const TCHAR* name, unsigned long long val)
 {
     if (inimode) {
         TCHAR tmp[100];
-        _sntprintf(tmp, sizeof tmp, _T("%I64d"), val);
+        _sntprintf(tmp, sizeof tmp, _T("%llu"), (unsigned long long)val);
         const int ret = ini_addstring(inidata, gs(root), name, tmp);
         return ret;
     }

@@ -16,11 +16,14 @@
 #include "uae/types.h"
 
 #include "traps.h"
-#include "gui_color_platform.h"
+#ifdef USE_GUISAN
+#include "guisan/color.hpp"
+#endif
 
-#define UAEMAJOR 8
-#define UAEMINOR 0
-#define UAESUBREV 0
+// Version comes from CMake compile definitions (AMIBERRY_VERSION_MAJOR/MINOR/PATCH)
+#define UAEMAJOR AMIBERRY_VERSION_MAJOR
+#define UAEMINOR AMIBERRY_VERSION_MINOR
+#define UAESUBREV AMIBERRY_VERSION_PATCH
 
 #define MAX_AMIGADISPLAYS 1
 
@@ -1287,17 +1290,22 @@ struct amiberry_hotkey
 	hotkey_modifiers modifiers;
 };
 
+struct amiberry_gui_color
+{
+	uint8_t r, g, b;
+};
+
 struct amiberry_gui_theme
 {
-	gcn::Color base_color;
-	gcn::Color selector_inactive;
-	gcn::Color selector_active;
-	gcn::Color background_color;
-	gcn::Color selection_color;
-	gcn::Color foreground_color;
+	amiberry_gui_color base_color;
+	amiberry_gui_color selector_inactive;
+	amiberry_gui_color selector_active;
+	amiberry_gui_color background_color;
+	amiberry_gui_color selection_color;
+	amiberry_gui_color foreground_color;
 	std::string font_name;
 	int font_size;
-	gcn::Color font_color;
+	amiberry_gui_color font_color;
 };
 
 struct amiberry_options
@@ -1358,6 +1366,8 @@ struct amiberry_options
 	char gui_theme[128] = "Default.theme";
 	char shader[128] = "pc";
 	char shader_rtg[128] = "none";
+	bool force_mobile_shaders = false;
+	bool use_bezel = false;
 };
 
 extern struct amiberry_options amiberry_options;

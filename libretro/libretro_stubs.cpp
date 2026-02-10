@@ -4,8 +4,7 @@
 #include "options.h"
 #include "filesys.h"
 #include "disk.h"
-#include "ethernet.h"
-#include "sana2.h"
+#include "blkdev.h"
 
 #include <string>
 #include <vector>
@@ -23,7 +22,6 @@ struct hfdlg_vals current_hfdlg;
 int emulating = 0;
 bool config_loaded = false;
 bool joystick_refresh_needed = false;
-int scsiromselected = 0;
 
 int gui_init(void)
 {
@@ -388,15 +386,12 @@ int scan_roms(int show)
 	return 0;
 }
 
-static struct netdriverdata* libretro_ndd[MAX_TOTAL_NET_DEVICES + 1];
-static int net_enumerated;
-
-struct netdriverdata** target_ethernet_enumerate(void)
-{
-	if (net_enumerated)
-		return libretro_ndd;
-	ethernet_enumerate(libretro_ndd, 0);
-	net_enumerated = 1;
-	return libretro_ndd;
-}
+// No physical SCSI/IOCTL device support in libretro
+struct device_functions devicefunc_scsi_ioctl = {
+	_T("IOCTL"),
+	nullptr, nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr
+};
 #endif

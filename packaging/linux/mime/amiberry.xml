@@ -29,18 +29,18 @@
         <generic-icon name="input-gaming"/>
         <magic-deleteall/>
         <magic priority="60">
-            <match type="big32" value="0x001000084" offset="8:11"/>
+            <match type="big32" value="0x01000084" offset="8:11"/>
         </magic>
         <glob-deleteall/>
         <glob pattern="*.lha"/>
     </mime-type>
-	<mime-type type="application/x-UAE-savestate-file">
-		<comment>UAE SaveState file</comment>
-		<generic-icon name="amiberry"/>
-		<magic-deleteall/>
-		<magic priority="60">
-			<match type="string" value="UAE" offset="16:18"/>
-		</magic>
-		<glob pattern="*.uss"/>
-	</mime-type>
+    <mime-type type="application/x-UAE-savestate-file">
+        <comment>UAE SaveState file</comment>
+        <generic-icon name="amiberry"/>
+        <magic-deleteall/>
+        <magic priority="60">
+            <match type="string" value="UAE" offset="16:18"/>
+        </magic>
+        <glob pattern="*.uss"/>
+    </mime-type>
 </mime-info>

@@ -1,0 +1,285 @@
+#include "sysdeps.h"
+#include "imgui.h"
+#include "imgui_panels.h"
+#include "options.h"
+#include "rommgr.h"
+#include "memory.h"
+#include "uae.h"
+#include "gui/gui_handling.h"
+#include "pcem/paths.h"
+
+struct RomListEntry {
+	std::string name;
+	std::string path;
+};
+
+static std::vector<RomListEntry> main_rom_list;
+static std::vector<RomListEntry> ext_rom_list;
+static std::vector<RomListEntry> cart_rom_list;
+static bool roms_initialized = false;
+static int customromselectnum = 0;
+
+enum class RomPickType {
+	None,
+	Main,
+	Extended,
+	Cartridge,
+	Flash,
+	RTC,
+	Custom
+};
+
+static RomPickType current_pick_type = RomPickType::None;
+
+static void update_rom_list(std::vector<RomListEntry>& list, int romtype_mask) {
+	list.clear();
+	list.push_back({ "Select ROM...", "" });
+
+	int count = romlist_count();
+	const romlist* rl = romlist_getit();
+	for (int i = 0; i < count; i++) {
+		if (rl[i].rd->type & romtype_mask) {
+			const char* name = rl[i].rd->name;
+			const char* path = rl[i].path;
+			if (path && *path) {
+				list.push_back({ name ? name : path, path });
+			}
+		}
+	}
+}
+
+static void InitializeROMLists() {
+	if (roms_initialized) return;
+	update_rom_list(main_rom_list, ROMTYPE_KICK | ROMTYPE_KICKCD32);
+	update_rom_list(ext_rom_list, ROMTYPE_EXTCD32 | ROMTYPE_EXTCDTV | ROMTYPE_ARCADIABIOS | ROMTYPE_ALG);
+	update_rom_list(cart_rom_list, ROMTYPE_FREEZER | ROMTYPE_ARCADIAGAME | ROMTYPE_CD32CART);
+	roms_initialized = true;
+}
+
+static bool RomCombo(const char* label, char* current_path, int max_len, std::vector<RomListEntry>& list) {
+	std::string preview_value = "Select ROM...";
+	bool match_found = false;
+	bool value_changed = false;
+	
+	for (const auto& entry : list) {
+		if (entry.path == current_path) {
+			preview_value = entry.name;
+			match_found = true;
+			break;
+		}
+	}
+	if (!match_found && current_path[0]) {
+		preview_value = current_path;
+	}
+
+	if (ImGui::BeginCombo(label, preview_value.c_str())) {
+		for (const auto& entry : list) {
+			bool is_selected = (entry.path == current_path);
+			if (is_selected)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+			}
+
+			if (ImGui::Selectable(entry.name.c_str(), is_selected)) {
+				strncpy(current_path, entry.path.c_str(), max_len);
+				value_changed = true;
+			}
+
+			if (is_selected)
+			{
+				ImGui::PopStyleColor(1);
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	return value_changed;
+}
+
+void render_panel_rom()
+{
+	InitializeROMLists();
+	ImGui::Indent(4.0f);
+
+	BeginGroupBox("System ROM Settings");
+	// Main ROM
+	ImGui::Text("Main ROM File:");
+	if (RomCombo("##MainRomCombo", changed_prefs.romfile, MAX_DPATH, main_rom_list)) {
+		read_kickstart_version(&changed_prefs);
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romfile);
+	ImGui::SameLine();
+	if (AmigaButton("...##MainRomFileButton"))
+	{
+		current_pick_type = RomPickType::Main;
+		OpenFileDialogKey("ROM", "Select Main ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+	}
+
+	// Extended ROM
+	ImGui::Text("Extended ROM File:");
+	RomCombo("##ExtRomCombo", changed_prefs.romextfile, MAX_DPATH, ext_rom_list);
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.romextfile);
+	ImGui::SameLine();
+	if (AmigaButton("...##ExtRomFileButton"))
+	{
+		current_pick_type = RomPickType::Extended;
+		OpenFileDialogKey("ROM", "Select Extended ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+	}
+
+    bool maprom_disabled = (changed_prefs.cpuboard_type != 0);
+    ImGui::BeginDisabled(maprom_disabled);
+	if (AmigaCheckbox("MapROM emulation", (bool*)&changed_prefs.maprom)) {
+		if (changed_prefs.maprom)
+			changed_prefs.maprom = 0x0f000000;
+	}
+	ShowHelpMarker("Map the ROM into fast RAM for faster access");
+    ImGui::EndDisabled();
+
+	ImGui::SameLine();
+	AmigaCheckbox("ShapeShifter support", &changed_prefs.kickshifter);
+	ShowHelpMarker("Enable support for the ShapeShifter Mac emulator");
+	ImGui::Spacing();
+	EndGroupBox("System ROM Settings");
+
+	BeginGroupBox("Advanced Custom ROM Settings");
+	// Custom ROM SELECTOR
+	const char* custom_rom_items[] = { "ROM #1", "ROM #2", "ROM #3", "ROM #4" };
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
+	if (ImGui::Combo("##CustomROM", &customromselectnum, custom_rom_items, IM_ARRAYSIZE(custom_rom_items))) {
+		// Just changed selection, fields will update automatically in next frame based on selection
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	
+	romboard* rb = &changed_prefs.romboards[customromselectnum];
+	
+	ImGui::SameLine();
+	ImGui::Text("Address range");
+	
+	// Address From
+	char addr_from[16];
+	snprintf(addr_from, sizeof(addr_from), "%08x", rb->start_address);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
+	if (ImGui::InputText("##AddressRangeFrom", addr_from, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
+		rb->start_address = strtoul(addr_from, nullptr, 16);
+		rb->start_address &= ~65535; // Logic from values_from_kickstartdlg2
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+
+	// Address To
+	char addr_to[16];
+	if (!rb->end_address && !rb->start_address)
+		strcpy(addr_to, "00000000");
+	else
+		snprintf(addr_to, sizeof(addr_to), "%08x", rb->end_address);
+		
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(BUTTON_WIDTH);
+	if (ImGui::InputText("##AddressRangeTo", addr_to, 16, ImGuiInputTextFlags_CharsHexadecimal)) {
+		rb->end_address = strtoul(addr_to, nullptr, 16);
+		// Logic from values_from_kickstartdlg2
+		rb->end_address = ((rb->end_address - 1) & ~65535) | 0xffff;
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+
+	AmigaInputText("##CustomRomFilename", rb->lf.loadfile, MAX_DPATH);
+	ImGui::SameLine();
+    if (AmigaButton("...##CustomRomFileButton")) {
+    	current_pick_type = RomPickType::Custom;
+	    OpenFileDialogKey("ROM", "Select Custom ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", rb->lf.loadfile);
+    }
+	ImGui::Spacing();
+	EndGroupBox("Advanced Custom ROM Settings");
+
+	BeginGroupBox("Miscellaneous");
+	ImGui::Text("Cartridge ROM File:");
+	RomCombo("##CartRomCombo", changed_prefs.cartfile, MAX_DPATH, cart_rom_list);
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", changed_prefs.cartfile);
+	ImGui::SameLine();
+	if (AmigaButton("...##CartRomFileButton")) {
+		current_pick_type = RomPickType::Cartridge;
+		OpenFileDialogKey("ROM", "Select Cartridge ROM", ".rom,.bin,.a500,.a600,.a1200,.a3000,.a4000,.cdtv,.cd32", get_rom_path());
+	}
+
+	ImGui::Text("Flash RAM or A2286/A2386SX BIOS CMOS RAM file:");
+	AmigaInputText("##FlashROM", changed_prefs.flashfile, MAX_DPATH);
+	ImGui::SameLine();
+	if (AmigaButton("...##FlashRomFileButton")) {
+		current_pick_type = RomPickType::Flash;
+		OpenFileDialogKey("ROM", "Select Flash ROM File", ".*", changed_prefs.flashfile);
+	}
+
+	ImGui::Text("Real Time Clock file:");
+	AmigaInputText("##RTC", changed_prefs.rtcfile, MAX_DPATH);
+	ImGui::SameLine();
+	if (AmigaButton("...##RTCFileButton")) {
+		current_pick_type = RomPickType::RTC;
+		OpenFileDialogKey("ROM", "Select RTC File", ".*", changed_prefs.rtcfile);
+	}
+	ImGui::Spacing();
+	EndGroupBox("Miscellaneous");
+
+	BeginGroupBox("Advanced UAE expansion board/Boot ROM Settings");
+	const char* uae_items[] = { "ROM disabled", "Original UAE (FS + F0 ROM)", "New UAE (64k + F0 ROM)", "New UAE (128k, ROM, Direct)", "New UAE (128k, ROM, Indirect)" };
+	
+	int current_uaeboard_idx = 0;
+	if (changed_prefs.boot_rom == 1) {
+		current_uaeboard_idx = 0; // Disabled
+	} else {
+		current_uaeboard_idx = changed_prefs.uaeboard + 1;
+	}
+	
+	bool uae_enabled = !emulating;
+	
+	ImGui::BeginDisabled(!uae_enabled);
+	ImGui::Text("Board Type:");
+	if (ImGui::Combo("##BoardTypeCombo", &current_uaeboard_idx, uae_items, IM_ARRAYSIZE(uae_items))) {
+		if (current_uaeboard_idx > 0) {
+			changed_prefs.uaeboard = current_uaeboard_idx - 1;
+			changed_prefs.boot_rom = 0;
+		} else {
+			changed_prefs.uaeboard = 0;
+			changed_prefs.boot_rom = 1;
+		}
+	}
+	AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActive());
+	ShowHelpMarker("UAE-specific expansion features for compatibility");
+	ImGui::EndDisabled();
+	ImGui::Spacing();
+	EndGroupBox("Advanced UAE expansion board/Boot ROM Settings");
+
+	ImGui::Unindent(4.0f);
+
+	// Handle File Dialog Result
+	std::string file_dialog_result;
+	if (ConsumeFileDialogResultKey("ROM", file_dialog_result)) {
+		switch(current_pick_type) {
+			case RomPickType::Main:
+				strncpy(changed_prefs.romfile, file_dialog_result.c_str(), MAX_DPATH);
+				read_kickstart_version(&changed_prefs);
+				break;
+			case RomPickType::Extended:
+				strncpy(changed_prefs.romextfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::Cartridge:
+				strncpy(changed_prefs.cartfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::Flash:
+				strncpy(changed_prefs.flashfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::RTC:
+				strncpy(changed_prefs.rtcfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			case RomPickType::Custom:
+				if (rb) strncpy(rb->lf.loadfile, file_dialog_result.c_str(), MAX_DPATH);
+				break;
+			default:
+				break;
+		}
+		current_pick_type = RomPickType::None;
+	}
+}

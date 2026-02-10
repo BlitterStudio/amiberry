@@ -1,0 +1,939 @@
+#include <vector>
+#include <string>
+#include "imgui.h"
+#include "sysdeps.h"
+#include "options.h"
+
+#include "imgui_panels.h"
+#include "gui/gui_handling.h"
+#include "autoconf.h"
+#include "cpuboard.h"
+#include "rommgr.h"
+#include "uae.h"
+
+// Categories for Expansion Boards (Matches WinUAE scsiromselectedmask)
+static const char *ExpansionCategories[] = {
+    "Built-in / Internal",
+    "SCSI Controllers (AutoConfig)",
+    "IDE Controllers",
+    "SASI Controllers",
+    "Custom / Other",
+    "PCI Bridge Boards",
+    "x86 Bridge Boards",
+    "RTG Graphics Cards",
+    "Sound Cards",
+    "Network Cards",
+    "Floppy Controllers",
+    "x86 Expansion Boards"
+};
+static const int ExpansionCategoriesMask[] = {
+    EXPANSIONTYPE_INTERNAL,
+    EXPANSIONTYPE_SCSI,
+    EXPANSIONTYPE_IDE,
+    EXPANSIONTYPE_SASI,
+    EXPANSIONTYPE_CUSTOM,
+    EXPANSIONTYPE_PCI_BRIDGE,
+    EXPANSIONTYPE_X86_BRIDGE,
+    EXPANSIONTYPE_RTG,
+    EXPANSIONTYPE_SOUND,
+    EXPANSIONTYPE_NET,
+    EXPANSIONTYPE_FLOPPY,
+    EXPANSIONTYPE_X86_EXPANSION
+};
+
+static std::vector<int> displayed_rom_indices;
+
+// Track which ROM browse button opened the file dialog to avoid cross-assignment
+enum RomDialogSource {
+    ROM_DIALOG_NONE = 0,
+    ROM_DIALOG_EXPANSION,
+    ROM_DIALOG_ACCELERATOR
+};
+static RomDialogSource rom_dialog_source = ROM_DIALOG_NONE;
+
+// WinUAE sync: copycpuboardmem() syncs CPU board memory with the appropriate memory subsystem
+void copycpuboardmem(bool tomem)
+{
+	int maxmem = cpuboard_maxmemory(&changed_prefs);
+	int memtype = cpuboard_memorytype(&changed_prefs);
+
+	if (tomem) {
+		// Copy from memory subsystems to cpuboardmem1
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.fastmem[0].size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mem25bit.size;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.cpuboardmem1.size = changed_prefs.mbresmem_high.size;
+		}
+		// WinUAE sync: Enforce maximum memory limit for CPU board
+		if (changed_prefs.cpuboardmem1.size > static_cast<uae_u32>(maxmem)) {
+			changed_prefs.cpuboardmem1.size = maxmem;
+		}
+	} else {
+		// WinUAE sync: Enforce maximum memory limit before copying back
+		if (changed_prefs.cpuboardmem1.size > static_cast<uae_u32>(maxmem)) {
+			changed_prefs.cpuboardmem1.size = maxmem;
+		}
+		// Copy from cpuboardmem1 to memory subsystems
+		if (memtype == BOARD_MEMORY_Z2) {
+			changed_prefs.fastmem[0].size = changed_prefs.cpuboardmem1.size;
+		}
+		if (memtype == BOARD_MEMORY_25BITMEM) {
+			changed_prefs.mem25bit.size = changed_prefs.cpuboardmem1.size;
+		}
+		if (changed_prefs.cpuboard_type == 0) {
+			changed_prefs.mem25bit.size = 0;
+		}
+		if (memtype == BOARD_MEMORY_HIGHMEM) {
+			changed_prefs.mbresmem_high.size = changed_prefs.cpuboardmem1.size;
+		}
+	}
+}
+
+static void RefreshExpansionList() {
+    displayed_rom_indices.clear();
+    int first_match = -1;
+    bool matched = false;
+
+    for (int i = 0; expansionroms[i].name; i++) {
+        if (expansionroms[i].romtype & ROMTYPE_CPUBOARD) continue;
+
+        int mask = ExpansionCategoriesMask[scsiromselectedcatnum];
+        if (!(expansionroms[i].deviceflags & mask)) continue;
+
+        if (scsiromselectedcatnum == 0 && (expansionroms[i].deviceflags & (EXPANSIONTYPE_SASI | EXPANSIONTYPE_CUSTOM)))
+            continue;
+        if ((expansionroms[i].deviceflags & EXPANSIONTYPE_X86_EXPANSION) && mask != EXPANSIONTYPE_X86_EXPANSION)
+            continue;
+
+        // Check for duplicates/enabled instances
+        int cnt = 0;
+        for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
+            if (is_board_enabled(&changed_prefs, expansionroms[i].romtype, j)) {
+                cnt++;
+            }
+        }
+
+        if (i == scsiromselected) matched = true;
+        if (cnt > 0 && first_match < 0) first_match = i;
+
+        displayed_rom_indices.push_back(i);
+    }
+
+    // Auto-select if current choice is invalid
+    bool current_valid = false;
+    for (int idx: displayed_rom_indices) {
+        if (idx == scsiromselected) {
+            current_valid = true;
+            break;
+        }
+    }
+    if (!current_valid) {
+        if (first_match >= 0) scsiromselected = first_match;
+        else if (!displayed_rom_indices.empty()) scsiromselected = displayed_rom_indices[0];
+        else scsiromselected = 0;
+    }
+}
+
+
+static void InitializeExpansionSelection();
+
+struct ROMOption {
+    std::string name;
+    std::string path;
+    bool is_disabled_opt;
+};
+
+static std::vector<ROMOption> GetAvailableROMs(int romtype, int romtype_extra) {
+    std::vector<ROMOption> options;
+
+    // WinUAE adds "ROM Disabled" effectively by allowing NULL path or specific selection
+    options.push_back({"ROM Disabled", "", true});
+
+    struct romlist *rl = romlist_getit();
+    int count = romlist_count();
+
+    for (int i = 0; i < count; i++) {
+        const romdata *rd = rl[i].rd;
+        if (!rd) continue;
+
+        bool match = false;
+        if ((rd->type & ROMTYPE_MASK) == (romtype & ROMTYPE_MASK)) match = true;
+        if (romtype_extra && (rd->type & ROMTYPE_MASK) == (romtype_extra & ROMTYPE_MASK)) match = true;
+
+        if (match) {
+            options.push_back({rd->name, rl[i].path, false});
+        }
+    }
+    return options;
+}
+
+void render_panel_expansions() {
+    ImGui::Indent(4.0f);
+
+    // Initialize if needed
+    if (displayed_rom_indices.empty()) {
+        InitializeExpansionSelection();
+    }
+
+    // Enable/Disable based on emulation state (enable_for_expansion2dlg logic)
+    bool gui_enabled = !emulating;
+
+    BeginGroupBox("Expansion Board Settings");
+
+    // Category Selector
+    ImGui::PushItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
+    if (ImGui::BeginCombo("##Category", ExpansionCategories[scsiromselectedcatnum])) {
+        for (int i = 0; i < IM_ARRAYSIZE(ExpansionCategories); i++) {
+            const bool is_selected = (scsiromselectedcatnum == i);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(ExpansionCategories[i], is_selected)) {
+                scsiromselectedcatnum = i;
+                scsiromselected = 0; // Reset board selection
+                RefreshExpansionList();
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Filter expansion boards by category");
+    ImGui::PopItemWidth();
+
+    // Board Selection Logic
+    int current_combo_idx = -1;
+    for (size_t i = 0; i < displayed_rom_indices.size(); ++i) {
+        if (displayed_rom_indices[i] == scsiromselected) {
+            current_combo_idx = i;
+            break;
+        }
+    }
+    const char *preview_val = (current_combo_idx >= 0)
+                                  ? expansionroms[displayed_rom_indices[current_combo_idx]].friendlyname
+                                  : "Select Board...";
+
+    float avail_w = ImGui::GetContentRegionAvail().x;
+    float enable_w = BUTTON_WIDTH * 1.5f;
+    float unit_w = BUTTON_WIDTH;
+    float board_w = avail_w - enable_w - unit_w - BUTTON_WIDTH / 4;
+
+    ImGui::PushItemWidth(board_w);
+    if (ImGui::BeginCombo("##ExpansionBoard", preview_val)) {
+        for (size_t i = 0; i < displayed_rom_indices.size(); i++) {
+            int global_idx = displayed_rom_indices[i];
+            const bool is_selected = (current_combo_idx == i);
+
+            // Format name with count if multiple
+            int cnt = 0;
+            for (int j = 0; j < MAX_DUPLICATE_EXPANSION_BOARDS; j++) {
+                if (is_board_enabled(&changed_prefs, expansionroms[global_idx].romtype, j)) cnt++;
+            }
+            std::string name_label = expansionroms[global_idx].friendlyname;
+            if (cnt > 0) name_label = (cnt > 1 ? "[" + std::to_string(cnt) + "] " : "* ") + name_label;
+
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(name_label.c_str(), is_selected)) {
+                scsiromselected = global_idx;
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Select an expansion board type. * indicates enabled boards");
+    ImGui::PopItemWidth();
+
+    ImGui::SameLine();
+
+    const expansionromtype *ert = (scsiromselected >= 0) ? &expansionroms[scsiromselected] : nullptr;
+    // Verify ert is valid (expansionroms is null-terminated)
+    if (ert && !ert->name) ert = nullptr;
+
+    int index = 0;
+    boardromconfig *brc = ert ? get_device_rom(&changed_prefs, ert->romtype, scsiromselectednum, &index) : nullptr;
+    bool enabled = (brc != nullptr);
+
+    // Flag Aggregation (Board + Subtype)
+    int deviceflags = ert ? ert->deviceflags : 0;
+    if (ert && ert->subtypes) {
+        int subtype_idx = brc ? brc->roms[index].subtype : 0;
+        deviceflags |= ert->subtypes[subtype_idx].deviceflags;
+    }
+
+    // Unit Selector (WinUAE logic: values_to_expansion2dlg_sub)
+    // Enabled only if Zorro >= 2 (and not singleonly) OR Clockport
+    bool unit_selector_enabled = false;
+    if (ert) {
+        if ((ert->zorro >= 2 && !ert->singleonly) || (deviceflags & EXPANSIONTYPE_CLOCKPORT)) {
+            unit_selector_enabled = true;
+        } else {
+            // Force Unit 0 if selector is disabled (WinUAE behavior)
+            scsiromselectednum = 0;
+        }
+    }
+
+    ImGui::PushItemWidth(unit_w);
+    ImGui::BeginDisabled(!unit_selector_enabled);
+    if (ImGui::BeginCombo("##Unit", std::to_string(scsiromselectednum + 1).c_str())) {
+        int max_units = MAX_AVAILABLE_DUPLICATE_EXPANSION_BOARDS;
+
+        // WinUAE adds "-" entry for Clockport, though effectively it maps to unit 0 often or is just visual
+        if (deviceflags & EXPANSIONTYPE_CLOCKPORT) {
+            const bool is_selected = (scsiromselectednum == 0);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable("-", is_selected)) {
+                scsiromselectednum = 0;
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+
+        for (int i = 0; i < max_units; i++) {
+            const bool is_selected = (scsiromselectednum == i);
+            if (is_selected)
+                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+            if (ImGui::Selectable(std::to_string(i + 1).c_str(), is_selected)) {
+                scsiromselectednum = i;
+            }
+            if (is_selected) {
+                ImGui::PopStyleColor();
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+    ShowHelpMarker("Unit number for boards that support multiple instances");
+    ImGui::EndDisabled();
+    ImGui::PopItemWidth();
+
+    ImGui::SameLine();
+
+    // Enable Checkbox
+    if (ert && AmigaCheckbox("Enable Board", &enabled)) {
+        if (enabled) {
+            if (!brc) {
+                brc = get_device_rom_new(&changed_prefs, ert->romtype, scsiromselectednum, &index);
+            }
+            // WinUAE logic: If ROMTYPE_NOT, set romfile to ":ENABLED" to mark it active without a file
+            if (ert->romtype & ROMTYPE_NOT) {
+                if (brc) strncpy(brc->roms[index].romfile, ":ENABLED", MAX_DPATH);
+            }
+        } else {
+            clear_device_rom(&changed_prefs, ert->romtype, scsiromselectednum, true);
+            brc = nullptr;
+        }
+    }
+    ShowHelpMarker("Enable this expansion board in the emulated system");
+
+    // Detailed Settings
+    if (ert) {
+        ImGui::BeginDisabled(!enabled || !brc);
+        ImGui::Spacing();
+
+        // Subtype Selector
+        if (ert->subtypes) {
+            const expansionsubromtype *current_subtype = &ert->subtypes[brc ? brc->roms[index].subtype : 0];
+            ImGui::Text("Subtype:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(-1);
+            if (ImGui::BeginCombo("##Subtype", current_subtype->name)) {
+                int st_idx = 0;
+                const expansionsubromtype *st = ert->subtypes;
+                while (st && st->name) {
+                    const bool is_selected = (brc && brc->roms[index].subtype == st_idx);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    if (ImGui::Selectable(st->name, is_selected)) {
+                        if (brc) brc->roms[index].subtype = st_idx;
+                    }
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
+                    st++;
+                    st_idx++;
+                }
+                ImGui::EndCombo();
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Select specific variant or revision of this expansion board");
+            ImGui::PopItemWidth();
+        }
+
+        // SCSI ID Jumper (visible if id_jumper is true)
+        if (ert->id_jumper) {
+            int current_id = brc ? brc->roms[index].device_id : 0;
+            ImGui::Text("SCSI ID:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(80);
+            if (ImGui::BeginCombo("##ScsiId", std::to_string(current_id).c_str())) {
+                for (int i = 0; i < 8; ++i) {
+                    const bool is_selected = (current_id == i);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    if (ImGui::Selectable(std::to_string(i).c_str(), is_selected)) {
+                        if (brc) brc->roms[index].device_id = i;
+                    }
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("SCSI device ID (0-7). Avoid conflicts with other SCSI devices");
+            ImGui::PopItemWidth();
+        }
+
+        bool show_rom_file = !(ert->romtype & ROMTYPE_NOT);
+        if (show_rom_file) {
+            char rom_path[MAX_DPATH] = "";
+            if (brc && brc->roms[index].romfile[0]) {
+                strncpy(rom_path, brc->roms[index].romfile, MAX_DPATH);
+            }
+
+            // Check for available ROMs for this type
+            std::vector<ROMOption> rom_options = GetAvailableROMs(ert->romtype, ert->romtype_extra);
+
+            ImGui::Text("ROM Image:");
+            ImGui::SameLine();
+            ImGui::PushItemWidth(-40);
+
+            if (rom_options.size() > 1) {
+                // More than just "ROM Disabled"
+                std::string current_preview = "Select ROM...";
+                // Logic to set preview based on current path match
+                for (const auto &opt: rom_options) {
+                    if (opt.is_disabled_opt) {
+                        if (strcmp(rom_path, ":ENABLED") == 0 || rom_path[0] == 0) {
+                            // Or some other disabled marker? WinUAE uses empty for disabled usually?
+                            if (rom_path[0] == 0) current_preview = opt.name;
+                        }
+                    } else if (strcmp(opt.path.c_str(), rom_path) == 0) {
+                        current_preview = opt.name;
+                    }
+                }
+                // Fallback if path is custom/unknown
+                if (current_preview == "Select ROM..." && rom_path[0] != 0) {
+                    current_preview = rom_path; // Show path if custom
+                }
+
+                if (ImGui::BeginCombo("##ROMSelector", current_preview.c_str())) {
+                    for (const auto &opt: rom_options) {
+                        bool is_selected = false;
+                        if (opt.is_disabled_opt) {
+                            is_selected = (rom_path[0] == 0);
+                        } else {
+                            is_selected = (strcmp(opt.path.c_str(), rom_path) == 0);
+                        }
+
+                        if (is_selected)
+                            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                        if (ImGui::Selectable(opt.name.c_str(), is_selected)) {
+                            if (brc) {
+                                if (opt.is_disabled_opt) {
+                                    brc->roms[index].romfile[0] = 0;
+                                } else {
+                                    strncpy(brc->roms[index].romfile, opt.path.c_str(), MAX_DPATH);
+                                }
+                            }
+                        }
+                        if (is_selected) {
+                            ImGui::PopStyleColor();
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            } else {
+                // Fallback to text input
+                ImGui::InputText("##ROMPath", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
+                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+            }
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            if (AmigaButton("...")) {
+                rom_dialog_source = ROM_DIALOG_EXPANSION;
+                OpenFileDialogKey("EXPANSIONS_ROM", "Select ROM Image", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
+            }
+
+            std::string result_path;
+            if (rom_dialog_source == ROM_DIALOG_EXPANSION && ConsumeFileDialogResultKey("EXPANSIONS_ROM", result_path)) {
+                rom_dialog_source = ROM_DIALOG_NONE;
+                if (!result_path.empty() && ert) {
+                    // WinUAE sync: Use get_device_rom_new() to create config if it doesn't exist
+                    int new_idx = 0;
+                    boardromconfig *new_brc = get_device_rom_new(&changed_prefs, ert->romtype, scsiromselectednum, &new_idx);
+                    if (new_brc) {
+                        strncpy(new_brc->roms[new_idx].romfile, result_path.c_str(), MAX_DPATH);
+                    }
+                }
+            }
+        }
+
+        // Flags
+        bool autoboot_disabled = brc ? brc->roms[index].autoboot_disabled : false;
+        if (ert->autoboot_jumper) {
+            if (AmigaCheckbox("Disable Autoboot", &autoboot_disabled)) {
+                if (brc) brc->roms[index].autoboot_disabled = autoboot_disabled;
+            }
+            ShowHelpMarker("Prevent board from booting automatically. Use for non-bootable configurations");
+        }
+
+        if (deviceflags & EXPANSIONTYPE_PCMCIA) {
+            bool inserted = brc ? brc->roms[index].inserted : false;
+            // WinUAE uses "PCMCIA inserted"
+            if (AmigaCheckbox("PCMCIA inserted", &inserted)) {
+                if (brc) brc->roms[index].inserted = inserted;
+            }
+            ShowHelpMarker("Simulate PCMCIA card insertion. Required for A600/A1200 PCMCIA devices");
+        }
+
+        if (deviceflags & EXPANSIONTYPE_DMA24) {
+            bool dma24 = brc ? brc->roms[index].dma24bit : false;
+            if (AmigaCheckbox("24-bit DMA", &dma24)) {
+                if (brc) brc->roms[index].dma24bit = dma24;
+            }
+            ShowHelpMarker("Limit DMA to 24-bit address space. Required for some older boards");
+        }
+
+        // Custom Settings
+        if (enabled && brc && ert->settings) {
+            ImGui::Separator();
+            ImGui::Text("Board Settings:");
+            const expansionboardsettings *ebs = ert->settings;
+            int settings_val = brc->roms[index].device_settings;
+
+            int item_idx = 0;
+            while (ebs[item_idx].name) {
+                const expansionboardsettings *s = &ebs[item_idx];
+                int bitcnt = 0;
+                int current_bit_shift = 0;
+                for (int k = 0; k < item_idx; ++k) {
+                    const expansionboardsettings *prev = &ebs[k];
+                    if (prev->type == EXPANSIONBOARD_MULTI) {
+                        int items = 0;
+                        const char *pp = (const char *) prev->configname;
+                        while (*pp) {
+                            items++;
+                            pp += strlen(pp) + 1;
+                        }
+                        int bits = 1;
+                        for (int b = 0; b < 8; b++) {
+                            if ((1 << b) >= items) {
+                                bits = b;
+                                break;
+                            }
+                        }
+                        current_bit_shift += bits;
+                    } else if (prev->type == EXPANSIONBOARD_CHECKBOX) {
+                        current_bit_shift++;
+                    }
+                    current_bit_shift += prev->bitshift;
+                }
+                current_bit_shift += s->bitshift;
+
+                if (s->type == EXPANSIONBOARD_CHECKBOX) {
+                    bool checked = (settings_val & (1 << current_bit_shift)) != 0;
+                    if (s->invert) checked = !checked;
+                    if (AmigaCheckbox(s->name, &checked)) {
+                        if (s->invert) checked = !checked;
+                        if (checked) settings_val |= (1 << current_bit_shift);
+                        else settings_val &= ~(1 << current_bit_shift);
+                        brc->roms[index].device_settings = settings_val;
+                    }
+                } else if (s->type == EXPANSIONBOARD_MULTI) {
+                    // s->name format: "Label\0Option1\0Option2\0\0"
+                    // s->configname format: "id\0id1\0id2\0\0"
+
+                    std::vector<std::string> options;
+                    std::string label = "Settings";
+
+                    if (s->name) {
+                        const char *pp = (const char *) s->name;
+                        if (*pp) {
+                            label = pp;
+                            pp += strlen(pp) + 1;
+                            while (*pp) {
+                                options.emplace_back(pp);
+                                pp += strlen(pp) + 1;
+                            }
+                        }
+                    }
+
+                    // If no options found in name, fall back to configname (legacy/safety)
+                    if (options.empty() && s->configname) {
+                        const char *pp = (const char *) s->configname;
+                        // If configname matches pattern (ID\0Val1\0Val2)
+                        if (*pp) {
+                            while (*pp) {
+                                options.emplace_back(pp);
+                                pp += strlen(pp) + 1;
+                            }
+                        }
+                    }
+
+                    int items_count = (int) options.size();
+                    int bits = 1;
+                    for (int b = 0; b < 8; b++) {
+                        if ((1 << b) >= items_count) {
+                            bits = b;
+                            break;
+                        }
+                    }
+                    int mask = (1 << bits) - 1;
+                    int val = (settings_val >> current_bit_shift) & mask;
+                    if (s->invert) val ^= (1 << bits) - 1; // Invert read
+
+                    // Ensure val is within bounds
+                    if (val >= items_count) val = 0; // Default to 0 if out of range
+
+                    if (ImGui::BeginCombo(label.c_str(), (items_count > val) ? options[val].c_str() : "Unknown")) {
+                        for (int opt_i = 0; opt_i < items_count; opt_i++) {
+                            const bool is_selected = (opt_i == val);
+                            if (is_selected)
+                                ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                            if (ImGui::Selectable(options[opt_i].c_str(), is_selected)) {
+                                val = opt_i;
+                                if (s->invert) val ^= (1 << bits) - 1; // Invert write
+
+                                settings_val &= ~(mask << current_bit_shift);
+                                settings_val |= (val << current_bit_shift);
+                                brc->roms[index].device_settings = settings_val;
+                            }
+                            if (is_selected) {
+                                ImGui::PopStyleColor();
+                                ImGui::SetItemDefaultFocus();
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+                    AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+                } else if (s->type == EXPANSIONBOARD_STRING) {
+                    AmigaInputText(s->name, brc->roms[index].configtext, sizeof(brc->roms[index].configtext));
+                }
+                item_idx++;
+            }
+        }
+        ImGui::EndDisabled();
+    }
+    EndGroupBox("Expansion Board Settings");
+
+    // Accelerator Settings
+    BeginGroupBox("Accelerator Board Settings");
+    const int type = changed_prefs.cpuboard_type;
+    const cpuboardsubtype *st = &cpuboards[type].subtypes[changed_prefs.cpuboard_subtype];
+
+    if (ImGui::BeginTable("AccelTable", 2, ImGuiTableFlags_None)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        // Left Column: Type & Subtype
+        ImGui::Text("Accelerator Board:");
+        ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
+        if (ImGui::BeginCombo("##AccelType", cpuboards[changed_prefs.cpuboard_type].name)) {
+            for (int i = 0; cpuboards[i].name; i++) {
+                const bool is_selected = (changed_prefs.cpuboard_type == i);
+                if (is_selected)
+                    ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                if (ImGui::Selectable(cpuboards[i].name, is_selected)) {
+                    changed_prefs.cpuboard_type = i;
+                    changed_prefs.cpuboard_subtype = cpuboards[i].defaultsubtype;
+                    changed_prefs.cpuboard_settings = 0;
+                    // WinUAE sync: Adjust ppc_mode based on CPU board type
+                    if (is_ppc_cpu(&changed_prefs)) {
+                        changed_prefs.ppc_mode = 2;
+                    } else if (changed_prefs.ppc_mode == 2) {
+                        changed_prefs.ppc_mode = 0;
+                    }
+                    cpuboard_set_cpu(&changed_prefs);
+                }
+                if (is_selected) {
+                    ImGui::PopStyleColor();
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+        ShowHelpMarker("CPU accelerator board. Provides faster CPU and additional memory");
+
+        if (cpuboards[type].subtypes) {
+            ImGui::Text("Subtype:");
+            ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
+            const cpuboardsubtype *subtypes = cpuboards[type].subtypes;
+            if (ImGui::BeginCombo("##AccelSub", subtypes[changed_prefs.cpuboard_subtype].name)) {
+                int i = 0;
+                while (subtypes[i].name) {
+                    const bool is_selected = (changed_prefs.cpuboard_subtype == i);
+                    if (is_selected)
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    if (ImGui::Selectable(subtypes[i].name, is_selected)) {
+                        changed_prefs.cpuboard_subtype = i;
+                        // WinUAE sync: Reset settings when subtype changes, then update CPU configuration
+                        changed_prefs.cpuboard_settings = 0;
+                        cpuboard_set_cpu(&changed_prefs);
+                    }
+                    if (is_selected) {
+                        ImGui::PopStyleColor();
+                        ImGui::SetItemDefaultFocus();
+                    }
+                    i++;
+                }
+                ImGui::EndCombo();
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            ShowHelpMarker("Specific variant or revision of the accelerator board");
+        }
+
+        ImGui::TableNextColumn();
+
+        // Right Column: ROM & Memory
+        if (changed_prefs.cpuboard_type != 0) {
+            int idx = 0;
+            boardromconfig *brc = get_device_rom(&changed_prefs, ROMTYPE_CPUBOARD, 0, &idx);
+
+            ImGui::Text("Boot ROM:");
+            char rom_path[MAX_DPATH] = "";
+            if (brc) strncpy(rom_path, brc->roms[idx].romfile, MAX_DPATH);
+
+            ImGui::PushItemWidth(-BUTTON_WIDTH / 2);
+            ImGui::BeginDisabled(!gui_enabled); // Only change ROM if not running/safe
+            ImGui::InputText("##AccelROM", rom_path, MAX_DPATH, ImGuiInputTextFlags_ReadOnly);
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true);
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            if (AmigaButton("...##Accel")) {
+                rom_dialog_source = ROM_DIALOG_ACCELERATOR;
+                OpenFileDialogKey("EXPANSIONS_ROM", "Select Boot ROM", "ROM Files (*.rom,*.bin){.rom,.bin}", get_rom_path());
+            }
+            ImGui::EndDisabled();
+
+            std::string result_path;
+            if (rom_dialog_source == ROM_DIALOG_ACCELERATOR && ConsumeFileDialogResultKey("EXPANSIONS_ROM", result_path)) {
+                rom_dialog_source = ROM_DIALOG_NONE;
+                if (!result_path.empty()) {
+                    // WinUAE sync: Use get_device_rom_new() to create config if it doesn't exist
+                    int new_idx = 0;
+                    boardromconfig *new_brc = get_device_rom_new(&changed_prefs, ROMTYPE_CPUBOARD, 0, &new_idx);
+                    if (new_brc) {
+                        strncpy(new_brc->roms[new_idx].romfile, result_path.c_str(), MAX_DPATH);
+                    }
+                }
+            }
+        } else {
+            ImGui::Text("Boot ROM: Not Required");
+        }
+
+        // Memory Slider
+        static const int mem_sizes[] = {0, 1, 2, 4, 8, 16, 32, 64, 128, 256};
+        static const char *mem_labels[] = {
+            "0 MB", "1 MB", "2 MB", "4 MB", "8 MB", "16 MB", "32 MB", "64 MB", "128 MB", "256 MB"
+        };
+        int current_size = changed_prefs.cpuboardmem1.size >> 20;
+        int current_idx = 0;
+        for (int i = 0; i < IM_ARRAYSIZE(mem_sizes); ++i) {
+            if (mem_sizes[i] == current_size) {
+                current_idx = i;
+                break;
+            }
+        }
+
+        int max_mb = st->maxmemory >> 20;
+        int max_idx = 0;
+        for (int i = 0; i < IM_ARRAYSIZE(mem_sizes); ++i) {
+            if (mem_sizes[i] <= max_mb) max_idx = i;
+        }
+
+        if (max_idx > 0) {
+            ImGui::Text("Board Memory:");
+            ImGui::SetNextItemWidth(-ImGui::GetStyle().ItemSpacing.x * 2);
+            // WinUAE sync: Memory slider enabled based on cpuboard_type > 0, not just !emulating
+            ImGui::BeginDisabled(!gui_enabled || changed_prefs.cpuboard_type == 0);
+            if (ImGui::SliderInt("##BoardMem", &current_idx, 0, max_idx, mem_labels[current_idx])) {
+                changed_prefs.cpuboardmem1.size = mem_sizes[current_idx] << 20;
+                copycpuboardmem(false);
+            }
+            AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), false);
+            ShowHelpMarker("On-board memory provided by the accelerator. Faster than standard Fast RAM");
+            ImGui::EndDisabled();
+        } else {
+            ImGui::Text("Board Memory: None / Fixed");
+        }
+
+        ImGui::EndTable();
+    }
+
+    // Accelerator Settings (Jumpers) - Full width below columns
+    if (st->settings) {
+        ImGui::Separator();
+        ImGui::Text("Jumper Settings:");
+        const expansionboardsettings *ebs = st->settings;
+        int settings_val = changed_prefs.cpuboard_settings;
+        int item_idx = 0;
+        while (ebs[item_idx].name) {
+            const expansionboardsettings *s = &ebs[item_idx];
+            int current_bit_shift = 0;
+            for (int k = 0; k < item_idx; ++k) {
+                const expansionboardsettings *prev = &ebs[k];
+                if (prev->type == EXPANSIONBOARD_MULTI) {
+                    int items = 0;
+                    const char *pp = prev->configname;
+                    while (*pp) {
+                        items++;
+                        pp += strlen(pp) + 1;
+                    }
+                    int bits = 1;
+                    for (int b = 0; b < 8; b++) {
+                        if ((1 << b) >= items) {
+                            bits = b;
+                            break;
+                        }
+                    }
+                    current_bit_shift += bits;
+                } else if (prev->type == EXPANSIONBOARD_CHECKBOX) {
+                    current_bit_shift++;
+                }
+                current_bit_shift += prev->bitshift;
+            }
+            current_bit_shift += s->bitshift;
+
+            if (s->type == EXPANSIONBOARD_CHECKBOX) {
+                bool checked = (settings_val & (1 << current_bit_shift)) != 0;
+                if (s->invert) checked = !checked;
+                if (AmigaCheckbox(s->name, &checked)) {
+                    if (s->invert) checked = !checked;
+                    if (checked) settings_val |= (1 << current_bit_shift);
+                    else settings_val &= ~(1 << current_bit_shift);
+                    changed_prefs.cpuboard_settings = settings_val;
+                }
+            } else if (s->type == EXPANSIONBOARD_MULTI) {
+                const char *pp = (const char *) s->configname;
+                std::vector<std::string> options;
+                while (*pp) {
+                    options.emplace_back(pp);
+                    pp += strlen(pp) + 1;
+                }
+                int items_count = (int) options.size();
+                int bits = 1;
+                for (int b = 0; b < 8; b++) {
+                    if ((1 << b) >= items_count) {
+                        bits = b;
+                        break;
+                    }
+                }
+                int mask = (1 << bits) - 1;
+                int val = (settings_val >> current_bit_shift) & mask;
+                // WinUAE sync: Handle invert on read
+                if (s->invert) val ^= (1 << bits) - 1;
+
+                // Ensure val is within bounds
+                if (val >= items_count) val = 0;
+
+                // WinUAE sync: Extract label from s->name, not s->configname
+                std::string accel_label = "Settings";
+                if (s->name) {
+                    const char *lp = s->name;
+                    if (*lp) accel_label = lp;
+                }
+                if (ImGui::BeginCombo(accel_label.c_str(),
+                                      (items_count > val) ? options[val].c_str() : "Unknown")) {
+                    for (int opt_i = 0; opt_i < items_count; opt_i++) {
+                        const bool is_selected = (opt_i == val);
+                        if (is_selected)
+                            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                        if (ImGui::Selectable(options[opt_i].c_str(), is_selected)) {
+                            val = opt_i;
+                            // WinUAE sync: Handle invert on write
+                            if (s->invert) val ^= (1 << bits) - 1;
+
+                            settings_val &= ~(mask << current_bit_shift);
+                            settings_val |= (val << current_bit_shift);
+                            changed_prefs.cpuboard_settings = settings_val;
+                        }
+                        if (is_selected) {
+                            ImGui::PopStyleColor();
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+                AmigaBevel(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::IsItemActivated());
+            }
+            item_idx++;
+        }
+    }
+    EndGroupBox("Accelerator Board Settings");
+
+    BeginGroupBox("Miscellaneous Expansions");
+    if (ImGui::BeginTable("MiscTable", 2, ImGuiTableFlags_None)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+
+        ImGui::BeginDisabled(!gui_enabled);
+        // WinUAE disables misc expansions when running? logic says "ew(hDlg, IDC_SOCKETS, workprefs.socket_emu)" - check enable_for_expansion2dlg
+
+        AmigaCheckbox("bsdsocket.library", &changed_prefs.socket_emu);
+        ShowHelpMarker("Emulate TCP/IP networking via host OS network stack");
+
+        bool scsi_enabled = changed_prefs.scsi != 0;
+        if (AmigaCheckbox("uaescsi.device", &scsi_enabled)) {
+            changed_prefs.scsi = scsi_enabled ? 1 : 0;
+        }
+        ShowHelpMarker("Emulate SCSI device for CD-ROM and hard drive access");
+
+        ImGui::TableNextColumn();
+        // CD32 FMV Card removed for WinUAE parity
+        AmigaCheckbox("uaenet.device", &changed_prefs.sana2);
+        ShowHelpMarker("Direct network device emulation using host network interface");
+
+        ImGui::EndDisabled();
+        ImGui::EndTable();
+    }
+    EndGroupBox("Miscellaneous Expansions");
+}
+
+static void InitializeExpansionSelection() {
+    // Logic from WinUAE init_expansion2: Find the first enabled board to select on open
+    scsiromselected = 0;
+    scsiromselectedcatnum = 0;
+    scsiromselectednum = 0;
+
+    // Check all categories
+    for (int cat = 0; cat < IM_ARRAYSIZE(ExpansionCategoriesMask); cat++) {
+        int mask = ExpansionCategoriesMask[cat];
+        for (int i = 0; expansionroms[i].name; i++) {
+            if (expansionroms[i].romtype & ROMTYPE_CPUBOARD) continue;
+            if (!(expansionroms[i].deviceflags & mask)) continue;
+            if (cat == 0 && (expansionroms[i].deviceflags & (EXPANSIONTYPE_SASI | EXPANSIONTYPE_CUSTOM))) continue;
+            if ((expansionroms[i].deviceflags & EXPANSIONTYPE_X86_EXPANSION) && mask != EXPANSIONTYPE_X86_EXPANSION)
+                continue;
+
+            // Is this board enabled?
+            if (is_board_enabled(&changed_prefs, expansionroms[i].romtype, 0)) {
+                scsiromselectedcatnum = cat;
+                scsiromselected = i;
+                goto found_active;
+            }
+        }
+    }
+found_active:
+    RefreshExpansionList();
+}

@@ -136,8 +136,7 @@
 /* vpar virtual parallel port */
 #define WITH_VPAR 1
 
-// TODO: Disabled until this is fully implemented
-//#define WITH_SCSI_IOCTL
+#define WITH_SCSI_IOCTL
 
 /* #define WITH_SCSI_SPTI */
 

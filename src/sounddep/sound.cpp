@@ -70,7 +70,7 @@ static int statuscnt;
 #if SOUND_MODE_NG
 uae_u16 paula_sndbuffer[SND_MAX_BUFFER * 2 + 8];
 #else
-uae_u16 paula_sndbuffer[SND_MAX_BUFFER];
+uae_u16 paula_sndbuffer[SND_MAX_BUFFER * 2 + 1024];
 #endif
 uae_u16 *paula_sndbufpt;
 int paula_sndbufsize;

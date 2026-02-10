@@ -792,6 +792,8 @@ static void drive_image_free (drive *drv)
 		drv->fdi = 0;
 #endif
 		break;
+	default:
+		break;
 	}
 	drv->filetype = ADF_NONE;
 	zfile_fclose(drv->diskfile);
@@ -2985,6 +2987,8 @@ static void drive_write_data (drive * drv)
 		}
 		break;
 #endif
+	default:
+		break;
 	}
 	drv->tracktiming[0] = 0;
 }
@@ -3910,6 +3914,8 @@ static void fetchnextrevolution (drive *drv)
 		drv->trackspeed = get_floppy_speed_from_image(drv);
 		break;
 #endif
+	default:
+		break;
 	}
 }
 

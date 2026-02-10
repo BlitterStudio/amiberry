@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <cctype>
 #include <sys/types.h>
 #include <dirent.h>
 #include <cstdlib>
@@ -62,6 +63,8 @@
 #ifdef __MACH__
 #include <string>
 #include <mach-o/dyld.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <DiskArbitration/DiskArbitration.h>
 #endif
 
 #ifdef AHI
@@ -85,6 +88,9 @@ struct gpiod_line* lineYellow; // Yellow LED
 
 #ifdef USE_DBUS
 #include "amiberry_dbus.h"
+#endif
+#ifdef USE_IPC_SOCKET
+#include "amiberry_ipc.h"
 #endif
 
 static SDL_threadID mainthreadid;
@@ -127,6 +133,8 @@ int quickstart_conf = 0;
 bool host_poweroff = false;
 int relativepaths = 0;
 int saveimageoriginalpath = 0;
+int net_enumerated;
+struct netdriverdata* ndd[MAX_TOTAL_NET_DEVICES + 1];
 
 whdload_options whdload_prefs = {};
 struct amiberry_options amiberry_options = {};
@@ -1810,7 +1818,6 @@ static void handle_key_event(const SDL_Event& event)
 		currprefs.input_tablet >= TABLET_MOUSEHACK && (currprefs.input_mouse_untrap & MOUSEUNTRAP_MAGIC))
 		return;
 
-
 	int scancode = event.key.keysym.scancode;
 	const auto pressed = event.key.state;
 
@@ -2141,7 +2148,6 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_KEYDOWN:
 		case SDL_KEYUP:
-			write_log("Top-level SDL Key Event: type=%d, scancode=%d, sym=%d\n", event.type, event.key.keysym.scancode, event.key.keysym.sym);
 			handle_key_event(event);
 			break;
 
@@ -2220,6 +2226,9 @@ bool handle_events()
 
 #ifdef USE_DBUS
 	DBusHandle();
+#endif
+#ifdef USE_IPC_SOCKET
+	Amiberry::IPC::IPCHandle();
 #endif
 
 	if (pause_emulation)
@@ -2761,7 +2770,9 @@ static const TCHAR* scsimode[] = { _T("SCSIEMU"), _T("SPTI"), _T("SPTI+SCSISCAN"
 //	return NULL;
 //}
 
-extern int scsiromselected;
+int scsiromselected = 0;
+int scsiromselectednum = 0;
+int scsiromselectedcatnum = 0;
 
 void target_save_options(zfile* f, uae_prefs* p)
 {
@@ -3823,6 +3834,12 @@ void save_amiberry_settings()
 	// Shader to use for RTG modes (if any)
 	write_string_option("shader_rtg", amiberry_options.shader_rtg);
 
+	// Force mobile-optimized shaders
+	write_bool_option("force_mobile_shaders", amiberry_options.force_mobile_shaders);
+
+	// Show CRT bezel frame overlay
+	write_bool_option("use_bezel", amiberry_options.use_bezel);
+
 	// Paths
 	write_string_option("config_path", config_path);
 	write_string_option("controllers_path", controllers_path);
@@ -4022,6 +4039,8 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_string(option, value, "gui_theme", amiberry_options.gui_theme, sizeof amiberry_options.gui_theme);
 		ret |= cfgfile_string(option, value, "shader", amiberry_options.shader, sizeof amiberry_options.shader);
 		ret |= cfgfile_string(option, value, "shader_rtg", amiberry_options.shader_rtg, sizeof amiberry_options.shader_rtg);
+		ret |= cfgfile_yesno(option, value, "force_mobile_shaders", &amiberry_options.force_mobile_shaders);
+		ret |= cfgfile_yesno(option, value, "use_bezel", &amiberry_options.use_bezel);
 	}
 	return ret;
 }
@@ -5188,6 +5207,9 @@ int amiberry_main(int argc, char* argv[])
 #ifdef USE_DBUS
 	DBusSetup();
 #endif
+#ifdef USE_IPC_SOCKET
+	Amiberry::IPC::IPCSetup();
+#endif
 
 	// Parse the command line to possibly set amiberry_config.
 	// Do not remove used args yet.
@@ -5625,10 +5647,94 @@ void read_controller_mapping_from_file(controller_mapping& input, const std::str
 
 std::vector<std::string> get_cd_drives()
 {
-	char path[MAX_DPATH];
 	std::vector<std::string> results{};
-#ifndef __MACH__
-	FILE* fp = popen("lsblk -o NAME,TYPE | grep 'rom' | awk '{print \"/dev/\" $1}'", "r");
+#ifdef __MACH__
+	DASessionRef session = DASessionCreate(kCFAllocatorDefault);
+	if (!session) {
+		write_log("Failed to create DiskArbitration session, cannot auto-detect CD drives in system\n");
+		return results;
+	}
+
+	DIR* devdir = opendir("/dev");
+	if (!devdir) {
+		write_log("Failed to open /dev, cannot auto-detect CD drives in system\n");
+		CFRelease(session);
+		return results;
+	}
+
+	auto is_whole_disk_name = [](const char* name) -> bool {
+		if (!name) return false;
+		if (strncmp(name, "disk", 4) != 0) return false;
+		const char* p = name + 4;
+		if (!*p) return false;
+		for (; *p; ++p) {
+			if (*p < '0' || *p > '9') return false;
+		}
+		return true;
+	};
+
+	auto cfstring_contains_ci = [](CFStringRef str, const char* needle) -> bool {
+		if (!str || !needle) return false;
+		char buf[256];
+		if (!CFStringGetCString(str, buf, sizeof(buf), kCFStringEncodingUTF8))
+			return false;
+		for (char* p = buf; *p; ++p) *p = static_cast<char>(tolower(static_cast<unsigned char>(*p)));
+		std::string hay(buf);
+		std::string ndl(needle);
+		for (char& c : ndl) c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
+		return hay.find(ndl) != std::string::npos;
+	};
+
+	struct dirent* entry = nullptr;
+	while ((entry = readdir(devdir)) != nullptr) {
+		if (!is_whole_disk_name(entry->d_name))
+			continue;
+
+		DADiskRef disk = DADiskCreateFromBSDName(kCFAllocatorDefault, session, entry->d_name);
+		if (!disk)
+			continue;
+
+		CFDictionaryRef desc = DADiskCopyDescription(disk);
+		if (!desc) {
+			CFRelease(disk);
+			continue;
+		}
+
+		CFBooleanRef whole = (CFBooleanRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaWholeKey);
+		if (whole != kCFBooleanTrue) {
+			CFRelease(desc);
+			CFRelease(disk);
+			continue;
+		}
+
+		CFBooleanRef ejectable = (CFBooleanRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaEjectableKey);
+		CFBooleanRef removable = (CFBooleanRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaRemovableKey);
+		if (ejectable != kCFBooleanTrue && removable != kCFBooleanTrue) {
+			CFRelease(desc);
+			CFRelease(disk);
+			continue;
+		}
+
+		CFStringRef kind = (CFStringRef)CFDictionaryGetValue(desc, kDADiskDescriptionMediaKindKey);
+		bool is_optical = cfstring_contains_ci(kind, "cd") || cfstring_contains_ci(kind, "dvd");
+		if (is_optical) {
+			std::string devpath = "/dev/";
+			devpath.append(entry->d_name);
+			results.emplace_back(devpath);
+		}
+
+		CFRelease(desc);
+		CFRelease(disk);
+	}
+
+	closedir(devdir);
+	CFRelease(session);
+
+	if (results.empty())
+		write_log("DiskArbitration did not find any CD drives on this system\n");
+#else
+	char path[MAX_DPATH];
+	FILE* fp = popen("lsblk -o NAME,TYPE | awk '$2==\"rom\"{print \"/dev/\"$1}'", "r");
 	if (fp == nullptr) {
 		write_log("Failed to run 'lsblk' command, cannot auto-detect CD drives in system\n");
 		return results;
@@ -5673,4 +5779,15 @@ void target_setdefaultstatefilename(const TCHAR* name)
 		}
 	}
 	_tcscpy(savestate_fname, path);
+}
+
+
+
+struct netdriverdata** target_ethernet_enumerate()
+{
+	if (net_enumerated)
+		return ndd;
+	ethernet_enumerate(ndd, 0);
+	net_enumerated = 1;
+	return ndd;
 }
