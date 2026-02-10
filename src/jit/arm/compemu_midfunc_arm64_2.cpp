@@ -1361,6 +1361,9 @@ MIDFUNC(2,jff_ASR_l_imm,(RW4 d, IM8 i))
 
 		flags_carry_inverted = false;
 		DUPLICACTE_CARRY
+
+		// Clean upper 32 bits after 64-bit ASR_xxi
+		MOV_ww(d, d);
 	} else {
 		TST_ww(d, d);
 		flags_carry_inverted = false;
@@ -4838,7 +4841,7 @@ MIDFUNC(3,jnf_MVMEL_l,(W4 d, RR4 s, IM8 offset))
 		d = writereg(d);
 
 		LDR_wXi(REG_WORK1, s, offset);
-		REV32_xx(d, REG_WORK1);
+		REV_ww(d, REG_WORK1);
 
 		unlock2(d);
 		unlock2(s);
@@ -4846,7 +4849,7 @@ MIDFUNC(3,jnf_MVMEL_l,(W4 d, RR4 s, IM8 offset))
 		s = readreg(s);
 
 		LDR_wXi(REG_WORK1, s, offset);
-		REV32_xx(REG_WORK2, REG_WORK1);
+		REV_ww(REG_WORK2, REG_WORK1);
 		uintptr idx = (uintptr)(&regs.regs[d]) - (uintptr) &regs;
 		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 
@@ -4880,7 +4883,7 @@ MIDFUNC(3,jnf_MVMLE_l,(RR4 d, RR4 s, IM8 offset))
 		s = readreg(s);
 		d = readreg(d);
 
-		REV32_xx(REG_WORK1, s);
+		REV_ww(REG_WORK1, s);
 		STUR_wXi(REG_WORK1, d, offset);
 
 		unlock2(d);
@@ -4890,7 +4893,7 @@ MIDFUNC(3,jnf_MVMLE_l,(RR4 d, RR4 s, IM8 offset))
 
 		uintptr idx = (uintptr)(&regs.regs[s]) - (uintptr) &regs;
 		LDR_wXi(REG_WORK2, R_REGSTRUCT, idx);
-		REV32_xx(REG_WORK1, REG_WORK2);
+		REV_ww(REG_WORK1, REG_WORK2);
 		STUR_wXi(REG_WORK1, d, offset);
 
 		unlock2(d);
@@ -7741,7 +7744,7 @@ MIDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 	adr = readreg(adr);
 	l = readreg(l);
 
-	REV32_xx(REG_WORK1, l);
+	REV_ww(REG_WORK1, l);
 	STR_wXx(REG_WORK1, adr, R_MEMSTART);
 
 	unlock2(l);
@@ -7781,7 +7784,7 @@ MIDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 	d = writereg(d);
 
 	LDR_wXx(REG_WORK1, adr, R_MEMSTART);
-	REV32_xx(d, REG_WORK1);
+	REV_ww(d, REG_WORK1);
 
 	unlock2(d);
 	unlock2(adr);
@@ -7822,7 +7825,7 @@ MIDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 	l = readreg(l);
 
 	UBFIZ_xxii(REG_WORK1, adr, 0, 24);
-	REV32_xx(REG_WORK3, l);
+	REV_ww(REG_WORK3, l);
 	STR_wXx(REG_WORK3, REG_WORK1, R_MEMSTART);
 
 	unlock2(l);
@@ -7865,7 +7868,7 @@ MIDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 
 	UBFIZ_xxii(REG_WORK1, adr, 0, 24);
 	LDR_wXx(d, REG_WORK1, R_MEMSTART);
-	REV32_xx(d, d);
+	REV_ww(d, d);
 
 	unlock2(d);
 	unlock2(adr);
