@@ -86,6 +86,7 @@ FLAGS += -DOSDEP_INPUT_PLATFORM_HEADER=\"libretro/input_platform_internal.h\"
 FLAGS += -DOSDEP_GUI_HANDLING_HEADER=\"libretro/gui_handling_platform.h\"
 FLAGS += -DCHD_FLAC_PLATFORM_HEADER=\"flac_platform_internal_libretro.h\"
 FLAGS += -DSOUND_PLATFORM_HEADER=\"sound_platform_internal_libretro.h\"
+FLAGS += -DWITH_MIDI
 
 ifneq (,$(findstring aarch64,$(ARCH)))
    FLAGS += -DCPU_AARCH64
@@ -237,6 +238,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
 
 # OSDep files
 SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
+                $(LIBRETRO_DIR)/libretro_midi.cpp \
                 $(LIBRETRO_DIR)/libretro_stubs.cpp \
                 $(LIBRETRO_DIR)/sdl_stub.cpp \
                 $(LIBRETRO_DIR)/libretro_gui_stubs.cpp \
@@ -522,6 +524,40 @@ SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(
 
 ifeq ($(USE_PCEM),1)
 SOURCES_CXX += $(SOURCES_PCEM)
+endif
+
+# Optional MT-32/CM-32L emulation via MUNT
+# Note: WITH_MIDIEMU is already defined in sysconfig.h;
+# WITH_MT32EMU_SOURCES tells stubs they are not needed.
+ifeq ($(WITH_MT32EMU),1)
+FLAGS += -DWITH_MT32EMU_SOURCES
+MT32EMU_DIR = $(AMIBERRY_DIR)/external/mt32emu/src
+SOURCES_MT32EMU = \
+    $(MT32EMU_DIR)/Analog.cpp \
+    $(MT32EMU_DIR)/BReverbModel.cpp \
+    $(MT32EMU_DIR)/Display.cpp \
+    $(MT32EMU_DIR)/File.cpp \
+    $(MT32EMU_DIR)/FileStream.cpp \
+    $(MT32EMU_DIR)/LA32FloatWaveGenerator.cpp \
+    $(MT32EMU_DIR)/LA32Ramp.cpp \
+    $(MT32EMU_DIR)/LA32WaveGenerator.cpp \
+    $(MT32EMU_DIR)/MidiStreamParser.cpp \
+    $(MT32EMU_DIR)/Part.cpp \
+    $(MT32EMU_DIR)/Partial.cpp \
+    $(MT32EMU_DIR)/PartialManager.cpp \
+    $(MT32EMU_DIR)/Poly.cpp \
+    $(MT32EMU_DIR)/ROMInfo.cpp \
+    $(MT32EMU_DIR)/SampleRateConverter.cpp \
+    $(MT32EMU_DIR)/Synth.cpp \
+    $(MT32EMU_DIR)/Tables.cpp \
+    $(MT32EMU_DIR)/TVA.cpp \
+    $(MT32EMU_DIR)/TVF.cpp \
+    $(MT32EMU_DIR)/TVP.cpp \
+    $(MT32EMU_DIR)/VersionTagging.cpp \
+    $(MT32EMU_DIR)/sha1/sha1.cpp \
+    $(MT32EMU_DIR)/c_interface/c_interface.cpp
+INCFLAGS += -I$(MT32EMU_DIR)
+SOURCES_CXX += $(SOURCES_MT32EMU) $(AMIBERRY_DIR)/src/midiemu.cpp
 endif
 SOURCES_C := $(SOURCES_7Z) $(LIBCO_DIR)/libco.c $(SOURCES_LIBRETRO_COMMON)
 

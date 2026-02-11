@@ -100,6 +100,10 @@ enum RetroLedIndex {
 };
 static unsigned retro_led_state[RETRO_LED_NUM] = { 0 };
 
+#ifdef WITH_MIDI
+struct retro_midi_interface *midi_iface_ptr = nullptr;
+#endif
+
 extern float vblank_hz;
 
 static void input_log_file_write(const char* fmt, ...);
@@ -129,6 +133,11 @@ extern "C" const struct retro_vfs_interface* libretro_get_vfs_interface(void)
 extern "C" bool libretro_is_vfs_available(void)
 {
 	return vfs_available;
+}
+
+extern "C" const char* libretro_get_system_dir(void)
+{
+	return system_dir.c_str();
 }
 
 static FILE* libretro_debug_file = nullptr;
@@ -511,6 +520,13 @@ static const struct retro_variable variables[] = {
 	{ "amiberry_internal_vsync", "Internal VSync; disabled|standard|standard_50" },
 	{ "amiberry_joy_as_mouse", "Joystick As Mouse; disabled|port1|port2|both" },
 	{ "amiberry_input_log", "Input Log File; disabled|enabled" },
+#ifdef WITH_MIDI
+	{ "amiberry_midi_output", "MIDI Output; disabled|libretro"
+#ifdef WITH_MIDIEMU
+		"|munt_mt32|munt_cm32l"
+#endif
+		},
+#endif
 	{ NULL, NULL }
 };
 
@@ -768,6 +784,30 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		},
 		"auto"
 	},
+#ifdef WITH_MIDI
+	{
+		"amiberry_midi_output",
+		"MIDI Output",
+		"MIDI Output",
+		"Select MIDI output device. 'Frontend MIDI' routes through RetroArch's MIDI driver (configure in Settings > Audio > MIDI)."
+#ifdef WITH_MIDIEMU
+		" Munt options provide built-in MT-32/CM-32L synthesis (requires ROM files in system/mt32-roms/)."
+#endif
+		,
+		NULL,
+		"audio",
+		{
+			{ "disabled", "Disabled" },
+			{ "libretro", "Frontend MIDI" },
+#ifdef WITH_MIDIEMU
+			{ "munt_mt32", "Munt MT-32" },
+			{ "munt_cm32l", "Munt CM-32L" },
+#endif
+			{ NULL, NULL }
+		},
+		"disabled"
+	},
+#endif
 	{
 		"amiberry_joy_as_mouse",
 		"Joystick As Mouse",
@@ -1559,6 +1599,34 @@ static int mousemap_from_option(const char* value)
 	return 0;
 }
 
+#ifdef WITH_MIDI
+static std::string last_midi_output;
+
+static void apply_libretro_midi_options(void)
+{
+	const char* midi_opt = get_option_value("amiberry_midi_output");
+	const std::string midi_val = midi_opt ? midi_opt : "disabled";
+
+	if (midi_val == last_midi_output)
+		return;
+	last_midi_output = midi_val;
+
+	if (midi_val == "libretro") {
+		_tcscpy(changed_prefs.midioutdev, _T("Libretro MIDI"));
+	}
+#ifdef WITH_MIDIEMU
+	else if (midi_val == "munt_mt32") {
+		_tcscpy(changed_prefs.midioutdev, _T("Munt MT-32"));
+	} else if (midi_val == "munt_cm32l") {
+		_tcscpy(changed_prefs.midioutdev, _T("Munt CM-32L"));
+	}
+#endif
+	else {
+		changed_prefs.midioutdev[0] = 0;
+	}
+}
+#endif
+
 static void apply_port_device(struct uae_prefs* prefs, unsigned port, unsigned device, int joy_index)
 {
 	const TCHAR* name = _T("none");
@@ -2013,6 +2081,27 @@ static void core_entry(void)
 		push_s_option(std::string("sound_interpol=") + audio_interpol);
 	}
 
+#ifdef WITH_MIDI
+	{
+		const char* midi_opt = get_option_value("amiberry_midi_output");
+		if (midi_opt && strcmp(midi_opt, "disabled") != 0) {
+			const char* devname = nullptr;
+			if (strcmp(midi_opt, "libretro") == 0)
+				devname = "Libretro MIDI";
+#ifdef WITH_MIDIEMU
+			else if (strcmp(midi_opt, "munt_mt32") == 0)
+				devname = "Munt MT-32";
+			else if (strcmp(midi_opt, "munt_cm32l") == 0)
+				devname = "Munt CM-32L";
+#endif
+			if (devname) {
+				push_s_option(std::string("midiout_device_name=") + devname);
+				last_midi_output = midi_opt;
+			}
+		}
+	}
+#endif
+
 	argv.push_back(strdup("-G")); // No GUI
 
 	std::string rom_path_value;
@@ -2155,8 +2244,8 @@ void retro_get_system_info(struct retro_system_info *info)
 {
 	memset(info, 0, sizeof(*info));
 	info->library_name     = "Amiberry";
-	info->library_version  = "v5.7.0-dev";
-	info->valid_extensions = "adf|uae|ipf|zip|lha|hdf|rp9";
+	info->library_version  = "v" AMIBERRY_VERSION;
+	info->valid_extensions = "adf|adz|dms|fdi|raw|ipf|hdf|hdz|lha|lzh|zip|7z|uae|rp9|m3u|m3u8|iso|cue|ccd|nrg|mds|chd";
 	info->need_fullpath    = true;
 	info->block_extract    = false;
 }
@@ -2233,7 +2322,7 @@ void retro_set_environment(retro_environment_t cb)
 
 	{
 		static const struct retro_system_content_info_override overrides[] = {
-			{ "lha", true, false },
+			{ "lha|lzh", true, false },
 			{ nullptr, false, false }
 		};
 		environ_cb(RETRO_ENVIRONMENT_SET_CONTENT_INFO_OVERRIDE, (void*)overrides);
@@ -2248,6 +2337,16 @@ void retro_set_environment(retro_environment_t cb)
 		else
 			led_state_cb = nullptr;
 	}
+
+#ifdef WITH_MIDI
+	{
+		static struct retro_midi_interface midi_iface_storage = {};
+		if (environ_cb(RETRO_ENVIRONMENT_GET_MIDI_INTERFACE, &midi_iface_storage))
+			midi_iface_ptr = &midi_iface_storage;
+		else
+			midi_iface_ptr = nullptr;
+	}
+#endif
 
 	input_bitmask_supported = environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL);
 
@@ -2392,6 +2491,9 @@ void retro_run(void)
 	}
 	if (libretro_options_dirty) {
 		apply_libretro_input_options();
+#ifdef WITH_MIDI
+		apply_libretro_midi_options();
+#endif
 		update_core_option_visibility();
 		libretro_options_dirty = false;
 	}
@@ -2424,6 +2526,10 @@ void retro_run(void)
 	apply_cheats();
 	update_memory_map();
 	update_led_interface();
+#ifdef WITH_MIDI
+	if (midi_iface_ptr)
+		midi_iface_ptr->flush();
+#endif
 	update_geometry();
 }
 

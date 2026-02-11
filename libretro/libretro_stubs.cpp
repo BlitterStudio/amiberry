@@ -144,6 +144,7 @@ int translate_message(int msg, TCHAR* out)
 	return 0;
 }
 
+#ifndef WITH_MT32EMU_SOURCES
 int midi_emu = 0;
 
 void midi_emu_close(void)
@@ -176,6 +177,7 @@ void midi_update_sound(float v)
 {
 	(void)v;
 }
+#endif
 
 static bool is_hdf_rdb(void)
 {

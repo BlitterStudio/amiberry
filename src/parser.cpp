@@ -47,7 +47,9 @@
 #endif
 
 #ifdef WITH_MIDI
+#ifndef LIBRETRO
 #include "portmidi.h"
+#endif
 #endif
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
@@ -718,6 +720,12 @@ int enummidiports (void)
 	int total = 0;
 
 #ifdef WITH_MIDI
+#ifdef LIBRETRO
+	midi_out_ports.emplace_back("Libretro MIDI");
+	midi_in_ports.emplace_back("Libretro MIDI");
+	total++;
+	write_log(_T("MIDI: using libretro MIDI interface\n"));
+#else
 	total = Pm_CountDevices();
 	write_log(_T("MIDI: found devices: %d\n"), total);
 	for(int i=0; i<total; i++) {
@@ -734,6 +742,7 @@ int enummidiports (void)
 			midi_out_ports.emplace_back(info->name);
 		}
 	}
+#endif
 #endif
 
 #ifdef WITH_MIDIEMU
