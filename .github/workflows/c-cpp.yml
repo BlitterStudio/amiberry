@@ -3,7 +3,7 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
-    branches: [master, imgui]
+    branches: [master]
     paths-ignore:
       - '**.md'
       - 'wiki/**'
@@ -563,10 +563,10 @@ jobs:
             platform: unix
             arch: aarch64
             artifact: amiberry_libretro.so
-          - os: windows-latest
-            platform: win
-            arch: x86_64
-            artifact: amiberry_libretro.dll
+    #      - os: windows-latest
+    #        platform: win
+    #        arch: x86_64
+    #        artifact: amiberry_libretro.dll
     steps:
       - name: Check out amiberry
         uses: actions/checkout@v4

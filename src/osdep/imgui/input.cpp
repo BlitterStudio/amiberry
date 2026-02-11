@@ -5,6 +5,7 @@
 #include "imgui_panels.h"
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include "gui/gui_handling.h"
 
@@ -59,6 +60,19 @@ static void poll_input_devices() {
         add(inputdevice_get_device_name(IDTYPE_MOUSE, j), JSEM_MICE + j);
     }
 
+    // Disambiguate duplicate device names by appending instance numbers
+    std::unordered_map<std::string, int> name_counts;
+    for (const auto &name : input_device_names) {
+        name_counts[name]++;
+    }
+    std::unordered_map<std::string, int> name_seen;
+    for (auto &name : input_device_names) {
+        if (name_counts[name] > 1) {
+            int instance = ++name_seen[name];
+            name = name + " (" + std::to_string(instance) + ")";
+        }
+    }
+
     for (const auto &name: input_device_names) input_device_items.push_back(name.c_str());
 }
 
@@ -104,11 +118,13 @@ void render_panel_input() {
                     const bool is_selected = (dev_idx == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    ImGui::PushID(n);
                     if (ImGui::Selectable(input_device_items[n], is_selected)) {
                         dev_idx = n;
                         changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
                         inputdevice_validate_jports(&changed_prefs, port_idx, nullptr); // Validate change
                     }
+                    ImGui::PopID();
                     if (is_selected) {
                         ImGui::PopStyleColor();
                         ImGui::SetItemDefaultFocus();
@@ -256,10 +272,12 @@ void render_panel_input() {
                     const bool is_selected = (dev_idx == n);
                     if (is_selected)
                         ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]);
+                    ImGui::PushID(n);
                     if (ImGui::Selectable(input_device_items[n], is_selected)) {
                         dev_idx = n;
                         changed_prefs.jports[port_idx].id = input_device_ids[dev_idx];
                     }
+                    ImGui::PopID();
                     if (is_selected) {
                         ImGui::PopStyleColor();
                         ImGui::SetItemDefaultFocus();

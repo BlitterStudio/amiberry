@@ -2324,11 +2324,22 @@ void show_screen(const int monid, int mode)
 	render_quad.w = destW;
 	render_quad.h = destH;
 
-	// Check if cropping is active
-	const bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
-							 crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
-							 crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
-							 (crop_rect.w > 0 && crop_rect.h > 0);
+	// Check if cropping is active and valid
+	bool is_cropped = (crop_rect.x != 0 || crop_rect.y != 0 ||
+					   crop_rect.w != (amiga_surface ? amiga_surface->w : 0) ||
+					   crop_rect.h != (amiga_surface ? amiga_surface->h : 0)) &&
+					   (crop_rect.w > 0 && crop_rect.h > 0);
+
+	// Validate that the crop rectangle produces usable dimensions within the surface
+	if (is_cropped && amiga_surface) {
+		int cx = std::max(0, crop_rect.x);
+		int cy = std::max(0, crop_rect.y);
+		int cw = std::min(crop_rect.w, amiga_surface->w - cx);
+		int ch = std::min(crop_rect.h, amiga_surface->h - cy);
+		if (cw <= 0 || ch <= 0) {
+			is_cropped = false;
+		}
+	}
 
 	// Handle shader preset rendering (multi-pass .glslp)
 	if (shader_preset && shader_preset->is_valid()) {
@@ -4742,6 +4753,19 @@ static bool doInit(AmigaMonitor* mon)
 				return false;
 			}
 
+			// Destroy existing shaders and GL context before creating a new one.
+			// When the window is reused (e.g. auto-resolution change), create_windows
+			// returns without calling close_hwnds, so the old GL context and shaders
+			// survive. The shaders hold GL resources tied to the old context, so they
+			// must be destroyed while the old context is still current. Without this,
+			// init_opengl_context creates a new context, leaks the old one, and leaves
+			// stale shader GL objects that produce a black screen after a few frames.
+			destroy_shaders();
+			if (gl_context != nullptr) {
+				SDL_GL_DeleteContext(gl_context);
+				gl_context = nullptr;
+			}
+
 			if (init_opengl_context(mon->amiga_window))
 			{
 				gl_success = true;
@@ -5421,14 +5445,30 @@ void auto_crop_image()
 #ifdef USE_OPENGL
 		render_quad = { dx, dy, width, height };
 		crop_rect = { cx, cy, cw, ch };
-		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
-		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
+		if (amiga_surface) {
+			if (crop_rect.x < 0) crop_rect.x = 0;
+			if (crop_rect.y < 0) crop_rect.y = 0;
+			if (crop_rect.x >= amiga_surface->w) crop_rect.x = 0;
+			if (crop_rect.y >= amiga_surface->h) crop_rect.y = 0;
+			if (crop_rect.w <= 0 || crop_rect.x + crop_rect.w > amiga_surface->w)
+				crop_rect.w = amiga_surface->w - crop_rect.x;
+			if (crop_rect.h <= 0 || crop_rect.y + crop_rect.h > amiga_surface->h)
+				crop_rect.h = amiga_surface->h - crop_rect.y;
+		}
 #else
 		SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);
 		render_quad = { dx, dy, width, height };
 		crop_rect = { cx, cy, cw, ch };
-		if (crop_rect.w <= 0 && amiga_surface) crop_rect.w = amiga_surface->w;
-		if (crop_rect.h <= 0 && amiga_surface) crop_rect.h = amiga_surface->h;
+		if (amiga_surface) {
+			if (crop_rect.x < 0) crop_rect.x = 0;
+			if (crop_rect.y < 0) crop_rect.y = 0;
+			if (crop_rect.x >= amiga_surface->w) crop_rect.x = 0;
+			if (crop_rect.y >= amiga_surface->h) crop_rect.y = 0;
+			if (crop_rect.w <= 0 || crop_rect.x + crop_rect.w > amiga_surface->w)
+				crop_rect.w = amiga_surface->w - crop_rect.x;
+			if (crop_rect.h <= 0 || crop_rect.y + crop_rect.h > amiga_surface->h)
+				crop_rect.h = amiga_surface->h - crop_rect.y;
+		}
 
 		if (vkbd_allowed(0))
 		{
