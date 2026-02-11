@@ -32,6 +32,7 @@ extern int ethernet_getdatalength (struct netdriverdata *ndd);
 extern int ethernet_open (struct netdriverdata *ndd, void*, void*, ethernet_gotfunc*, ethernet_getfunc*, int, const uae_u8 *mac);
 extern void ethernet_close (struct netdriverdata *ndd, void*);
 extern void ethernet_trigger (struct netdriverdata *ndd, void*);
+extern void ethernet_receive_poll (struct netdriverdata *ndd, void*);
 
 extern bool ariadne2_init(struct autoconfig_info *aci);
 extern bool hydra_init(struct autoconfig_info *aci);

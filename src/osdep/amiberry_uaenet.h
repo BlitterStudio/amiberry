@@ -21,5 +21,6 @@ extern int uaenet_getbytespending (void*);
 extern int uaenet_open (void*, struct netdriverdata*, void*, uaenet_gotfunc*, uaenet_getfunc*, int, const uae_u8*);
 extern void uaenet_close (void*);
 extern void uaenet_trigger (void*);
+extern void uaenet_receive_poll (void*);
 
 #endif //AMIBERRY_UAENET_H

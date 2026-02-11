@@ -107,6 +107,20 @@ void ethernet_trigger (struct netdriverdata *ndd, void *vsd)
 	}
 }
 
+void ethernet_receive_poll (struct netdriverdata *ndd, void *vsd)
+{
+	if (!ndd)
+		return;
+	switch (ndd->type)
+	{
+#ifdef WITH_UAENET_PCAP
+		case UAENET_PCAP:
+		uaenet_receive_poll (vsd);
+		return;
+#endif
+	}
+}
+
 int ethernet_open (struct netdriverdata *ndd, void *vsd, void *user, ethernet_gotfunc *gotfunc, ethernet_getfunc *getfunc, int promiscuous, const uae_u8 *mac)
 {
 	switch (ndd->type)
