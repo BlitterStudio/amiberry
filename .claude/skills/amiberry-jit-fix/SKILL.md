@@ -85,7 +85,18 @@ Place it near the other JIT defines (around line 19-30 where `#define JIT` is).
 
 Black window gadgets (should be blue/white) and garbled ROM version text ("ROM 2C.21..." instead of "ROM 2C.2ft") appear during boot. Present across ALL versions, including before the DMA guard. This is a separate JIT issue, NOT caused by page 0 DMA corruption.
 
-Likely candidates: ARM64 register width bugs in the 64→32-bit instruction patches, or a separate code generation issue in the blitter/graphics path.
+See [references/visual-corruption-investigation.md](references/visual-corruption-investigation.md) for the exhaustive comparison between Amiberry and Amiberry-Lite that has ruled out essentially ALL JIT code differences.
+
+### Key Finding: All JIT Code is Functionally Identical
+An exhaustive line-by-line comparison of 12 major subsystems (codegen, midfuncs, memory access, compile_block, build_comp, popall, compemu, cpuemu handlers, struct offsets, regflags, special_mem, bank lookup) found the ARM64 JIT code to be functionally identical between Amiberry-Lite (where it works) and current Amiberry (where it doesn't).
+
+### What Differs (Not Yet Proven Causative)
+1. **cpuemu_40.cpp returns 0** instead of actual cycle counts (by design in newer WinUAE gencpu)
+2. **execute_normal() hardcodes 4*CYCLE_UNIT** and has adjust_cycles() commented out
+3. **Newer WinUAE emulator core** may have behavioral differences in chipset emulation, event system, or memory bank initialization that interact differently with JIT-compiled code
+
+### Next Steps
+Runtime diagnostics needed — code comparison has been exhausted. Need to instrument JIT at runtime to catch wrong values being read/written.
 
 ## Key Technical Details
 
