@@ -16,9 +16,6 @@
 #include "uae/types.h"
 
 #include "traps.h"
-#ifdef USE_GUISAN
-#include "guisan/color.hpp"
-#endif
 
 // Version comes from CMake compile definitions (AMIBERRY_VERSION_MAJOR/MINOR/PATCH)
 #define UAEMAJOR AMIBERRY_VERSION_MAJOR
@@ -726,7 +723,9 @@ struct uae_prefs {
 
 	float rtg_horiz_zoom_mult;
 	float rtg_vert_zoom_mult;
+#ifdef AMIBERRY
 	bool rtg_zerocopy;
+#endif
 
 	bool immediate_blits;
 	int waiting_blits;
