@@ -25,7 +25,9 @@ Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 #include <sys/stat.h>
 #endif
 
-#if defined(STAT_STATVFS)
+#if defined(_WIN32) || defined(__MINGW32__)
+/* Windows: filesystem stats handled via GetDiskFreeSpaceEx */
+#elif defined(STAT_STATVFS)
 #include <sys/statvfs.h>
 // For osx, sigurbjornl
 #elif defined (__MACH__) || defined(__FreeBSD__)
@@ -55,8 +57,10 @@ static long adjust_blocks (long blocks, int fromsize, int tosize)
 		return (blocks + (blocks < 0 ? -1 : 1)) / (tosize / fromsize);
 }
 
-#ifdef WINDOWS
+#if defined(WINDOWS) || defined(__MINGW32__)
+#ifndef LIBRETRO
 #include "od-win32/posixemu.h"
+#endif
 #include <windows.h>
 int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 {
@@ -93,7 +97,7 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 	return 0;
 }
 
-#else /* ! _WIN32 */
+#else /* ! WINDOWS && ! __MINGW32__ */
 
 int statfs ();
 
@@ -177,7 +181,7 @@ methods that need to know it.
 Return 0 if successful, -1 if not.  When returning -1, ensure that
 ERRNO is either a system error value, or zero if DISK is NULL
 on a system that requires a non-NULL value.  */
-#ifndef WINDOWS
+#if !defined(WINDOWS) && !defined(__MINGW32__)
 int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 {
 #ifdef STAT_STATFS3_OSF1
@@ -351,4 +355,4 @@ struct statfs *fsb;
 
 #endif /* _AIX && _I386 */
 
-#endif /* ! _WIN32 */
+#endif /* ! WINDOWS && ! __MINGW32__ */

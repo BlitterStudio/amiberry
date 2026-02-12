@@ -11,7 +11,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#ifndef LIBRETRO
 #include "win32.h"
+#endif
 #endif
 
 #include "options.h"

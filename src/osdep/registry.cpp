@@ -3,7 +3,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
+#ifndef LIBRETRO
 #include "win32.h"
+#endif
 #endif
 #include "registry.h"
 #include "ini.h"
@@ -12,7 +14,7 @@
 #include <filesystem>
 #include "osdep/libretro/amiberry_fs.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(LIBRETRO)
 static int inimode = 0;
 #else
 static int inimode = 1;
@@ -25,7 +27,7 @@ static struct ini_data* inidata;
 
 static HKEY gr(UAEREG* root)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(LIBRETRO)
     if (!root)
         return hWinUAEKey;
 #else

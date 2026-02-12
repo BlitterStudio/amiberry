@@ -316,7 +316,7 @@ typedef int32_t uae_atomic;
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)
+#if (defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)) && !defined(__MINGW32__)
 #define SIZEOF_LONG 8
 #else
 #define SIZEOF_LONG 4
@@ -337,6 +337,8 @@ typedef int32_t uae_atomic;
 #ifndef LT_MODULE_EXT
 #ifdef __MACH__
 #define LT_MODULE_EXT _T(".dylib")
+#elif defined(__MINGW32__)
+#define LT_MODULE_EXT _T(".dll")
 #else
 #define LT_MODULE_EXT _T(".so")
 #endif
@@ -572,13 +574,49 @@ typedef int32_t uae_atomic;
 /* Define if you have the <windows.h> header file.  */
 /* #undef HAVE_WINDOWS_H */
 
+#ifdef __MINGW32__
+/* MinGW does not have these POSIX/Linux-specific headers and features.
+ * Rather than guarding each define individually, undef them in one block. */
+#undef POSIX_SERIAL
+#undef HAVE_GETMNTENT
+#undef TIME_WITH_SYS_TIME
+#undef HAVE_SYS_TIME_H
+#undef HAVE_SYS_IOCTL_H
+#undef HAVE_SYS_IPC_H
+#undef HAVE_SYS_MOUNT_H
+#undef HAVE_SYS_SHM_H
+#undef HAVE_SYS_SOUNDCARD_H
+#undef HAVE_SYS_VFS_H
+#undef HAVE_SYS_STATFS_H
+#undef HAVE_SYS_PARAM_H
+#undef HAVE_FEATURES_H
+#undef HAVE_MNTENT_H
+#undef HAVE_NCURSES_H
+#undef HAVE_CURSES_H
+#undef MOUNTED_GETMNTENT1
+#undef STAT_STATVFS
+#undef HAVE_BCOPY
+#undef HAVE_ENDGRENT
+#undef HAVE_ENDPWENT
+#undef HAVE_FCHDIR
+#undef HAVE_MKFIFO
+#undef HAVE_LCHOWN
+#undef HAVE_READDIR_R
+#undef HAVE_SIGACTION
+#undef HAVE_TCGETATTR
+#undef HAVE_GETOPT
+#undef HAVE_GETOPT_H
+#define HAVE_SYS_UTIME_H 1
+#define HAVE_WINDOWS_H 1
+#endif
+
 #define FSDB_DIR_SEPARATOR '/'
 #define FSDB_DIR_SEPARATOR_S "/"
 
 /* Define to 1 if `S_un' is a member of `struct in_addr'. */
 /* #un#def HAVE_STRUCT_IN_ADDR_S_UN */
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 #undef _WIN32
 #endif
 
@@ -612,7 +650,9 @@ typedef unsigned char boolean;
 
 typedef unsigned short USHORT;
 
+#ifndef __MINGW32__
 #define Sleep(x) usleep((x)*1000)
+#endif
 
 /* Some defines to make it easier to compare files with WinUAE */
 #include "uae/string.h"
@@ -624,15 +664,21 @@ typedef char TCHAR;
 #if !defined(_WIN32) && !defined(__MINGW32__)
 #define _tzset()            tzset()
 #endif
+#ifndef __MINGW32__
 #define _timezone           timezone
 #define _daylight           daylight
+#endif
 // Ftello and fseeko on OSX are alerady 64bit
-#if defined(ANDROID) || defined(__ANDROID__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__MINGW32__)
+/* _ftelli64 and _fseeki64 are native on MinGW */
+#elif defined(ANDROID) || defined(__ANDROID__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define _ftelli64(x)        ftello(x)
 #define _fseeki64(x,y,z)    fseeko(x,y,z)
 #else
 #define _ftelli64(x)        ftello64(x)
 #define _fseeki64(x,y,z)    fseeko64(x,y,z)
 #endif
+#ifndef __MINGW32__
 #define _wunlink(x)         unlink(x)
+#endif
 #define _istalnum(x)        isalnum(x)

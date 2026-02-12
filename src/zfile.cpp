@@ -1860,7 +1860,7 @@ static struct zfile *zfile_fopen_x (const TCHAR *name, const TCHAR *mode, int ma
 	return l;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(LIBRETRO)
 static int isinternetfile (const TCHAR *name)
 {
 	if (!_tcsnicmp (name, _T("http://"), 7) || !_tcsnicmp (name, _T("https://"), 8))
