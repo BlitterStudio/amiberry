@@ -8,10 +8,12 @@
 #include <cstdarg>
 #include <cstdio>
 #include <iostream>
+#ifndef _WIN32
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <poll.h>
+#endif
 #include <clocale>
 #include <SDL.h>
 
@@ -65,6 +67,7 @@ static void restore_console_settings()
 
 void set_console_input_mode(int line)
 {
+#ifndef _WIN32
 	if (console_input_linemode < 0)
 		return;
 	if (line == console_input_linemode)
@@ -78,10 +81,14 @@ void set_console_input_mode(int line)
 		tcsetattr(STDIN_FILENO, TCSANOW, &term);
 		console_input_linemode = line;
 	}
+#else
+	(void)line;
+#endif
 }
 
 static void getconsole()
 {
+#ifndef _WIN32
 	struct termios term{};
 	struct winsize ws{};
 
@@ -102,6 +109,9 @@ static void getconsole()
 		// No direct way to set terminal buffer size on Linux like Windows,
 		// but we can log that we are initializing.
 	}
+#else
+	setlocale(LC_ALL, "en_US.UTF-8");
+#endif
 }
 
 void deactivate_console(void)
@@ -192,69 +202,13 @@ void open_console()
 
 void reopen_console ()
 {
-#ifdef _WIN32
-	HWND hwnd;
-
-	if (realconsole)
-		return;
-	if (consoleopen >= 0)
-		return;
-	hwnd = myGetConsoleWindow ();
-	if (hwnd) {
-		int newpos = 1;
-		int x, y, w, h;
-		if (!regqueryint (NULL, _T("LoggerPosX"), &x))
-			newpos = 0;
-		if (!regqueryint (NULL, _T("LoggerPosY"), &y))
-			newpos = 0;
-		if (!regqueryint (NULL, _T("LoggerPosW"), &w))
-			newpos = 0;
-		if (!regqueryint (NULL, _T("LoggerPosH"), &h))
-			newpos = 0;
-		if (newpos) {
-			RECT rc;
-			rc.left = x;
-			rc.top = y;
-			rc.right = x + w;
-			rc.bottom = y + h;
-			if (MonitorFromRect (&rc, MONITOR_DEFAULTTONULL) != NULL) {
-				SetForegroundWindow (hwnd);
-				SetWindowPos (hwnd, HWND_TOP, x, y, w, h, SWP_NOACTIVATE);
-
-			}
-		}
-	}
-#endif
+	// No console management needed in libretro builds
 }
 
 void close_console ()
 {
 	if (realconsole)
 		return;
-#ifdef _WIN32
-	if (consoleopen > 0) {
-		//close_debug_window ();
-	} else if (consoleopen < 0) {
-		HWND hwnd = myGetConsoleWindow ();
-		if (hwnd && !IsIconic (hwnd)) {
-			RECT r;
-			if (GetWindowRect (hwnd, &r)) {
-				r.bottom -= r.top;
-				r.right -= r.left;
-				int dpi = 96; // Fallback for window positioning
-				r.left = r.left * 96 / dpi;
-				r.right = r.right * 96 / dpi;
-				r.top = r.top * 96 / dpi;
-				r.bottom = r.bottom * 96 / dpi;
-				regsetint (NULL, _T("LoggerPosX"), r.left);
-				regsetint (NULL, _T("LoggerPosY"), r.top);
-				regsetint (NULL, _T("LoggerPosW"), r.right);
-				regsetint (NULL, _T("LoggerPosH"), r.bottom);
-			}
-		}
-		FreeConsole ();
-	}
-#endif
 	consoleopen = 0;
 }
 
@@ -262,11 +216,13 @@ int read_log()
 {
 	if (consoleopen >= 0)
 		return -1;
+#ifndef _WIN32
 	if (console_isch()) {
 		unsigned char ch;
 		if (read(STDIN_FILENO, &ch, 1) == 1)
 			return ch;
 	}
+#endif
 	return -1;
 }
 
@@ -361,17 +317,8 @@ void console_out(const TCHAR* txt)
 
 bool console_isch ()
 {
-#ifdef _WIN32
-	flushmsgpump();
-	if (console_buffer) {
-		return 0;
-	} else if (realconsole) {
-		return false;
-	} else if (consoleopen < 0) {
-		DWORD events = 0;
-		GetNumberOfConsoleInputEvents (stdinput, &events);
-		return events > 0;
-	}
+#if defined(_WIN32) || defined(LIBRETRO)
+	// No interactive console in libretro or simplified Windows builds
 	return false;
 #else
 	if (console_buffer)
@@ -395,6 +342,7 @@ TCHAR console_getch()
 	{
 		return getchar();
 	}
+#ifndef _WIN32
 	if (consoleopen < 0)
 	{
 		set_console_input_mode(0);
@@ -403,51 +351,12 @@ TCHAR console_getch()
 			return ch;
 		}
 	}
+#endif
 	return 0;
 }
 
 int console_get (TCHAR *out, int maxlen)
 {
-#ifdef _WIN32
-	*out = 0;
-
-	flushmsgpump();
-	set_console_input_mode(1);
-	if (consoleopen > 0) {
-		return console_get_gui (out, maxlen);
-	} else if (realconsole) {
-		DWORD totallen;
-
-		*out = 0;
-		totallen = 0;
-		while (maxlen > 0) {
-			*out = getwc (stdin);
-			if (*out == 13)
-				break;
-			out++;
-			maxlen--;
-			totallen++;
-		}
-		*out = 0;
-		return totallen;
-	} else if (consoleopen < 0) {
-		DWORD len, totallen;
-
-		*out = 0;
-		totallen = 0;
-		while(maxlen > 0) {
-			ReadConsole (stdinput, out, 1, &len, 0);
-			if(*out == 13)
-				break;
-			out++;
-			maxlen--;
-			totallen++;
-		}
-		*out = 0;
-		return totallen;
-	}
-	return 0;
-#else
 	set_console_input_mode(1);
 	TCHAR *res = fgets(out, maxlen, stdin);
 	if (res == nullptr) {
@@ -459,7 +368,6 @@ int console_get (TCHAR *out, int maxlen)
 		len--;
 	}
 	return len;
-#endif
 }
 
 
@@ -478,7 +386,11 @@ FILE *log_open (const TCHAR *name, int append, int bootlog, TCHAR *outpath)
 			f = fopen(name, append ? _T("a") : _T("w"));
 			if (!f && bootlog) {
 				TCHAR tmp[MAX_DPATH];
-				_tcscpy(tmp, _T("/tmp/amiberry_log.txt"));
+				const char* tmpdir = getenv("TMPDIR");
+				if (!tmpdir) tmpdir = getenv("TMP");
+				if (!tmpdir) tmpdir = getenv("TEMP");
+				if (!tmpdir) tmpdir = ".";
+				_sntprintf(tmp, MAX_DPATH, _T("%s/amiberry_log.txt"), tmpdir);
 				_tcscpy (outpath, tmp);
 				f = fopen(tmp, append ? _T("a") : _T("w"));
 			}

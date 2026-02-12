@@ -9,7 +9,16 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
+#ifdef _WIN32
+#include <io.h>
+#include <direct.h>
+#define access _access
+#ifndef R_OK
+#define R_OK 4
+#endif
+#else
 #include <unistd.h>
+#endif
 #include <sys/stat.h>
 #include <algorithm>
 #include <string>
@@ -84,6 +93,7 @@ static bool ff_override_supported = false;
 static bool ff_override_active = false;
 static int last_geometry_width = -1;
 static int last_geometry_height = -1;
+bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
 enum RetroLedIndex {
@@ -101,6 +111,12 @@ enum RetroLedIndex {
 static unsigned retro_led_state[RETRO_LED_NUM] = { 0 };
 
 extern float vblank_hz;
+
+static constexpr int DEFAULT_GFX_WIDTH = 640;
+static constexpr int DEFAULT_GFX_HEIGHT = 480;
+static constexpr int MAX_GFX_WIDTH = 1280;
+static constexpr int MAX_GFX_HEIGHT = 1024;
+static constexpr size_t CORE_FIBER_STACK_SIZE = 65536 * sizeof(void*);
 
 static void input_log_file_write(const char* fmt, ...);
 
@@ -133,6 +149,17 @@ extern "C" bool libretro_is_vfs_available(void)
 
 static FILE* libretro_debug_file = nullptr;
 
+static std::string get_log_directory()
+{
+	if (!save_dir.empty()) return save_dir;
+	if (!system_dir.empty()) return system_dir;
+	const char* tmp = getenv("TMPDIR");
+	if (!tmp) tmp = getenv("TMP");
+	if (!tmp) tmp = getenv("TEMP");
+	if (tmp) return tmp;
+	return ".";
+}
+
 static void libretro_debug_open()
 {
 	if (libretro_debug_file)
@@ -140,7 +167,10 @@ static void libretro_debug_open()
 	const char* env = getenv("AMIBERRY_LIBRETRO_DEBUG");
 	if (env && !strcmp(env, "0"))
 		return;
-	libretro_debug_file = fopen("/tmp/amiberry_libretro_debug.log", "a");
+	const std::string dir = get_log_directory();
+	const std::string path = dir.empty() ? std::string("amiberry_libretro_debug.log")
+		: dir + "/amiberry_libretro_debug.log";
+	libretro_debug_file = fopen(path.c_str(), "a");
 	if (libretro_debug_file)
 		setvbuf(libretro_debug_file, nullptr, _IOLBF, 0);
 }
@@ -442,8 +472,8 @@ static void update_geometry()
 	struct retro_game_geometry geom;
 	geom.base_width = width;
 	geom.base_height = height;
-	geom.max_width = std::max(width, 1280);
-	geom.max_height = std::max(height, 1024);
+	geom.max_width = std::max(width, MAX_GFX_WIDTH);
+	geom.max_height = std::max(height, MAX_GFX_HEIGHT);
 	geom.aspect_ratio = (float)width / (float)height;
 	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
 	last_geometry_width = width;
@@ -465,10 +495,10 @@ static void log_input_axis(unsigned port, const char* name, int16_t value, int16
 			input_log_file_write("input p%u %s %d\n", port + 1, name, value);
 		return;
 	}
-	if ((value == 0 && *last != 0) || (value != 0 && *last == 0))
+	if ((value == 0 && *last != 0) || (value != 0 && *last == 0)) {
 		log_cb(RETRO_LOG_INFO, "input p%u %s %d\n", port + 1, name, value);
-	if ((value == 0 && *last != 0) || (value != 0 && *last == 0))
 		input_log_file_write("input p%u %s %d\n", port + 1, name, value);
+	}
 	*last = value;
 }
 
@@ -487,12 +517,14 @@ static void log_mouse_motion(int16_t dx, int16_t dy)
 			input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
 		return;
 	}
-	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0))
+	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0)) {
 		log_cb(RETRO_LOG_INFO, "input mouse motion dx=%d dy=%d\n", dx, dy);
-	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0))
 		input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
+	}
 }
 
+// NOTE: This v1 options array is a fallback for old frontends that don't support v2.
+// When modifying options, keep this in sync with option_defs[] below.
 static const struct retro_variable variables[] = {
 	{ "amiberry_model", "Amiga Model; A500|A500+|A600|A1200|CD32|A4000|CDTV" },
 	{ "amiberry_kickstart", "Kickstart ROM; auto|kick.rom|kick13.rom|kick20.rom|kick31.rom|kick205.rom|kick40068.A1200|kick40068.A4000|cd32.rom|cdtv.rom" },
@@ -788,7 +820,7 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_input_log",
 		"Input Log File",
 		"Input Log File",
-		"Write input events to /tmp/amiberry_libretro_input.log.",
+		"Write input events to a log file in the save directory.",
 		NULL,
 		"input",
 		{
@@ -1410,7 +1442,10 @@ static void update_input_log_file(bool enabled)
 {
 	if (enabled) {
 		if (!input_log_file) {
-			input_log_file = fopen("/tmp/amiberry_libretro_input.log", "a");
+			const std::string dir = get_log_directory();
+			const std::string path = dir.empty() ? std::string("amiberry_libretro_input.log")
+				: dir + "/amiberry_libretro_input.log";
+			input_log_file = fopen(path.c_str(), "a");
 			if (input_log_file)
 				input_log_file_write("amiberry libretro input log start\n");
 		}
@@ -2095,7 +2130,12 @@ static void core_entry(void)
 		libretro_debug_log("\n");
 	}
 	amiberry_main((int)argv.size() - 1, argv.data());
-	
+
+	// Free strdup'd argv strings
+	for (auto p : argv)
+		free(p);
+	argv.clear();
+
 	// If amiberry_main returns, we are done
 	libretro_yield();
 }
@@ -2107,7 +2147,7 @@ void retro_init(void)
 		main_fiber = co_active();
 	
 	if (!core_fiber)
-		core_fiber = co_create(65536 * sizeof(void*), core_entry);
+		core_fiber = co_create(CORE_FIBER_STACK_SIZE, core_entry);
 
 	if (log_cb)
 		log_cb(RETRO_LOG_INFO, "retro_init: main_fiber=%p core_fiber=%p\n", (void*)main_fiber, (void*)core_fiber);
@@ -2155,7 +2195,7 @@ void retro_get_system_info(struct retro_system_info *info)
 {
 	memset(info, 0, sizeof(*info));
 	info->library_name     = "Amiberry";
-	info->library_version  = "v5.7.0-dev";
+	info->library_version  = "v" AMIBERRY_VERSION;
 	info->valid_extensions = "adf|uae|ipf|zip|lha|hdf|rp9";
 	info->need_fullpath    = true;
 	info->block_extract    = false;
@@ -2164,10 +2204,10 @@ void retro_get_system_info(struct retro_system_info *info)
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
 	memset(info, 0, sizeof(*info));
-	info->geometry.base_width   = 640;
-	info->geometry.base_height  = 480;
-	info->geometry.max_width    = 1280;
-	info->geometry.max_height   = 1024;
+	info->geometry.base_width   = DEFAULT_GFX_WIDTH;
+	info->geometry.base_height  = DEFAULT_GFX_HEIGHT;
+	info->geometry.max_width    = MAX_GFX_WIDTH;
+	info->geometry.max_height   = MAX_GFX_HEIGHT;
 	info->geometry.aspect_ratio = 4.0f / 3.0f;
 	info->timing.fps            = get_core_refresh_rate();
 	info->timing.sample_rate    = static_cast<double>(audio_rate_for_av_info());
@@ -2175,7 +2215,6 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
 void retro_set_environment(retro_environment_t cb)
 {
-	libretro_debug_open();
 	environ_cb = cb;
 	struct retro_log_callback logging;
 	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
@@ -2184,9 +2223,9 @@ void retro_set_environment(retro_environment_t cb)
 		log_cb = NULL;
 	{
 		enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
-		if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt) && log_cb) {
+		pixel_format_xrgb8888 = environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt);
+		if (!pixel_format_xrgb8888 && log_cb)
 			log_cb(RETRO_LOG_WARN, "Failed to set pixel format XRGB8888; using default.\n");
-		}
 	}
 	static struct retro_keyboard_callback kb_cb = { keyboard_cb };
 	environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &kb_cb);
@@ -2210,6 +2249,7 @@ void retro_set_environment(retro_environment_t cb)
 			content_dir = dir;
 		if (save_dir.empty())
 			save_dir = system_dir;
+		libretro_debug_open();
 		libretro_debug_log("env system_dir='%s' save_dir='%s' content_dir='%s'\n",
 			system_dir.c_str(), save_dir.c_str(), content_dir.c_str());
 	}
@@ -2572,6 +2612,10 @@ bool retro_load_game(const struct retro_game_info *info)
 	}
 	else
 		game_path[0] = '\0';
+
+	// No content is valid: Amiga can boot to Workbench with just a Kickstart ROM
+	if (game_path[0] == '\0' && log_cb)
+		log_cb(RETRO_LOG_INFO, "No game content provided; booting to Workbench.\n");
 
 	return true;
 }

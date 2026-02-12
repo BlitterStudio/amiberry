@@ -4,6 +4,11 @@
 
 #include "libretro_shared.h"
 
+static constexpr int LIBRETRO_DISPLAY_INIT_WIDTH = 1920;
+static constexpr int LIBRETRO_DISPLAY_INIT_HEIGHT = 1080;
+static constexpr int LIBRETRO_DRAWBUFFER_WIDTH = 1920;
+static constexpr int LIBRETRO_DRAWBUFFER_HEIGHT = 1280;
+
 static inline bool gfx_platform_skip_alloctexture(int monid, int w, int h)
 {
 	(void)monid;
@@ -97,7 +102,7 @@ static inline void libretro_init_display(int width, int height)
 
 static inline bool gfx_platform_enumeratedisplays()
 {
-	libretro_init_display(1920, 1080);
+	libretro_init_display(LIBRETRO_DISPLAY_INIT_WIDTH, LIBRETRO_DISPLAY_INIT_HEIGHT);
 	return true;
 }
 
@@ -116,7 +121,7 @@ static inline bool gfx_platform_override_pixel_format(Uint32* format)
 	if (!format)
 		return false;
 
-	*format = SDL_PIXELFORMAT_ARGB8888;
+	*format = pixel_format_xrgb8888 ? SDL_PIXELFORMAT_ARGB8888 : SDL_PIXELFORMAT_RGB565;
 	return true;
 }
 
@@ -166,7 +171,7 @@ static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 
 	if (!mon->screen_is_picasso) {
 		allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
-			1920, 1280);
+			LIBRETRO_DRAWBUFFER_WIDTH, LIBRETRO_DRAWBUFFER_HEIGHT);
 
 		allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
 			mon->currentmode.amiga_width > 2048 ? mon->currentmode.amiga_width : 2048,

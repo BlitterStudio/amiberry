@@ -563,16 +563,24 @@ jobs:
             platform: unix
             arch: aarch64
             artifact: amiberry_libretro.so
-    #      - os: windows-latest
-    #        platform: win
-    #        arch: x86_64
-    #        artifact: amiberry_libretro.dll
+          - os: windows-latest
+            platform: win
+            arch: x86_64
+            artifact: amiberry_libretro.dll
     steps:
       - name: Check out amiberry
         uses: actions/checkout@v4
         with:
           path: amiberry
           submodules: true
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib make
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -598,13 +606,19 @@ jobs:
             fi
           fi
 
+      - name: Build Libretro Core (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          cd amiberry/libretro
+          make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
+
       - name: Build Libretro Core
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cd amiberry/libretro
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
-          elif [ "${{ matrix.arch }}" = "aarch64" ]; then
+          if [ "${{ matrix.arch }}" = "aarch64" ]; then
             make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ ZLIB_CFLAGS="${ZLIB_CFLAGS}" ZLIB_LIBS="${ZLIB_LIBS}" -j$(nproc)
           else
             make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)

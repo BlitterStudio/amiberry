@@ -4,14 +4,21 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <time.h>
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
+#ifndef _WIN32
 #include <strings.h>
+#endif
 
 struct SDL_Thread {
 	pthread_t thread;
@@ -125,8 +132,13 @@ double SDL_atof(const char* s) { return s ? atof(s) : 0.0; }
 size_t SDL_strlen(const char* s) { return s ? strlen(s) : 0; }
 int SDL_strcmp(const char* a, const char* b) { return strcmp(a ? a : "", b ? b : ""); }
 int SDL_strncmp(const char* a, const char* b, size_t n) { return strncmp(a ? a : "", b ? b : "", n); }
+#ifdef _WIN32
+int SDL_strcasecmp(const char* a, const char* b) { return _stricmp(a ? a : "", b ? b : ""); }
+int SDL_strncasecmp(const char* a, const char* b, size_t n) { return _strnicmp(a ? a : "", b ? b : "", n); }
+#else
 int SDL_strcasecmp(const char* a, const char* b) { return strcasecmp(a ? a : "", b ? b : ""); }
 int SDL_strncasecmp(const char* a, const char* b, size_t n) { return strncasecmp(a ? a : "", b ? b : "", n); }
+#endif
 char* SDL_strchr(const char* s, int c) { return const_cast<char*>(strchr(s ? s : "", c)); }
 char* SDL_strrchr(const char* s, int c) { return const_cast<char*>(strrchr(s ? s : "", c)); }
 char* SDL_strstr(const char* s, const char* f) { return const_cast<char*>(strstr(s ? s : "", f ? f : "")); }
@@ -144,6 +156,28 @@ int SDL_isspace(int c) { return isspace(c); }
 void* SDL_memset(void* dst, int c, size_t n) { return memset(dst, c, n); }
 void SDL_free(void* p) { free(p); }
 
+#ifdef _WIN32
+Uint64 SDL_GetPerformanceCounter(void)
+{
+	LARGE_INTEGER counter;
+	QueryPerformanceCounter(&counter);
+	return (Uint64)counter.QuadPart;
+}
+
+Uint64 SDL_GetPerformanceFrequency(void)
+{
+	LARGE_INTEGER freq;
+	QueryPerformanceFrequency(&freq);
+	return (Uint64)freq.QuadPart;
+}
+
+Uint32 SDL_GetTicks(void)
+{
+	return (Uint32)GetTickCount();
+}
+
+void SDL_Delay(Uint32 ms) { Sleep(ms); }
+#else
 Uint64 SDL_GetPerformanceCounter(void)
 {
 	struct timespec ts;
@@ -154,6 +188,7 @@ Uint64 SDL_GetPerformanceCounter(void)
 Uint64 SDL_GetPerformanceFrequency(void) { return 1000000000ull; }
 Uint32 SDL_GetTicks(void) { return (Uint32)(SDL_GetPerformanceCounter() / 1000000ull); }
 void SDL_Delay(Uint32 ms) { usleep((useconds_t)ms * 1000); }
+#endif
 
 void SDL_GetVersion(SDL_version* v)
 {
@@ -302,7 +337,11 @@ int SDL_SemWaitTimeout(SDL_sem* s, Uint32 ms)
 	if (ts.tv_nsec >= 1000000000L) { ts.tv_sec++; ts.tv_nsec -= 1000000000L; }
 	return sem_timedwait(&s->sem, &ts);
 #else
+#ifdef _WIN32
+	Sleep(ms);
+#else
 	usleep((useconds_t)ms * 1000);
+#endif
 	return sem_trywait(&s->sem);
 #endif
 }
