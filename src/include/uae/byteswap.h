@@ -15,7 +15,12 @@
 
 #include "uae/types.h"
 
-#ifdef _WIN32
+#if defined(__MINGW32__)
+/* MinGW (GCC): use compiler builtins directly */
+#define uae_bswap_16 __builtin_bswap16
+#define uae_bswap_32 __builtin_bswap32
+#define uae_bswap_64 __builtin_bswap64
+#elif defined(_WIN32)
 #include <stdlib.h>
 #define uae_bswap_16 _byteswap_uint16
 #define uae_bswap_32 _byteswap_uint32

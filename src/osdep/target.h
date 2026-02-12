@@ -222,6 +222,10 @@ void restore_host_fp_regs(void* buf);
 #endif
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifndef _WIN32
 // Dummy types so this header file can be included on other platforms (for
 // a few declarations).

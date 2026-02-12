@@ -681,4 +681,6 @@ typedef char TCHAR;
 #ifndef __MINGW32__
 #define _wunlink(x)         unlink(x)
 #endif
+#ifndef __MINGW32__
 #define _istalnum(x)        isalnum(x)
+#endif
