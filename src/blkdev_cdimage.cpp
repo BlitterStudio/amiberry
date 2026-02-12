@@ -18,7 +18,9 @@
 #endif
 #include <time.h>
 #include <sys/types.h>
+#ifndef __MINGW32__
 #include <sys/wait.h>
+#endif
 
 #include "options.h"
 #include "blkdev.h"
