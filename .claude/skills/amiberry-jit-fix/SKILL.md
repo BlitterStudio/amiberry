@@ -1,17 +1,20 @@
 ---
 name: amiberry-jit-fix
 description: >
-  Continue development of the ARM64 JIT compiler crash fix for Amiberry (GitHub issue #1766).
-  This skill captures the complete technical knowledge from 15+ debugging sessions that identified
-  and fixed a page 0 DMA corruption bug during A1200 Kickstart boot. Use this skill when working
-  on: (1) the JIT_DEBUG_MEM_CORRUPTION code in compemu_support_arm.cpp or newcpu.cpp,
+  ARM64 JIT compiler fixes for Amiberry (GitHub issue #1766). This skill captures the complete
+  technical knowledge from 20+ debugging sessions that identified and fixed: (a) a page 0 DMA
+  corruption crash during A1200 Kickstart boot, and (b) visual corruption (black gadgets, garbled
+  text) caused by incorrect inter-block flag optimization. Use this skill when working on:
+  (1) the JIT_DEBUG_MEM_CORRUPTION code in compemu_support_arm.cpp or newcpu.cpp,
   (2) the page 0 DMA guard mechanism (mprotect/SIGSEGV/BRK single-step),
-  (3) the visual corruption issue (black gadgets, garbled ROM version text) that remains unsolved,
-  (4) any ARM64 JIT register width bugs (64-bit vs 32-bit instruction selection),
-  (5) any crash or exception cascade during A1200 boot with JIT enabled.
+  (3) any ARM64 JIT register width bugs (64-bit vs 32-bit instruction selection),
+  (4) any crash or exception cascade during A1200 boot with JIT enabled,
+  (5) 68040 JIT mode issues on ARM64,
+  (6) the inter-block flag optimization bug and its fix (dont_care_flags at block boundaries).
   MANDATORY TRIGGERS: JIT crash, page 0, DMA guard, vec2, exception vector corruption,
   blitter DMA, mprotect, SIGSEGV handler, BRK single-step, ARM64 JIT, Kickstart boot,
-  visual corruption, black gadgets, garbled ROM version, compemu_support_arm, JIT_DEBUG_MEM_CORRUPTION.
+  visual corruption, black gadgets, garbled ROM version, compemu_support_arm,
+  JIT_DEBUG_MEM_CORRUPTION, inter-block flag, dont_care_flags, 68040 JIT.
 ---
 
 # Amiberry ARM64 JIT Crash Fix — Session Knowledge
@@ -19,7 +22,8 @@ description: >
 ## Status Summary
 
 **Crash fix: SOLVED (v43-clean).** System boots to Workbench and runs SysInfo without crash.
-**Visual corruption: UNSOLVED.** Black window gadgets and garbled ROM version text persist.
+**Visual corruption: SOLVED.** Caused by inter-block flag optimization in compile_block() — disabled with `#if 0`.
+**68040 JIT: NOT YET TESTED.** The above fixes are confirmed for 68020 JIT. 68040 mode may have additional issues.
 
 ## Root Cause (Crash)
 
@@ -81,22 +85,36 @@ Place it near the other JIT defines (around line 19-30 where `#define JIT` is).
 - **v43**: Full-page 4KB shadow → **clean boot to SysInfo** (57 DMA writes across 25 addresses restored)
 - **v43-clean**: Removed ~1,300 lines of diagnostic scaffolding, kept ~300 lines of core fix
 
-## Visual Corruption (UNSOLVED)
+## Visual Corruption (SOLVED)
 
-Black window gadgets (should be blue/white) and garbled ROM version text ("ROM 2C.21..." instead of "ROM 2C.2ft") appear during boot. Present across ALL versions, including before the DMA guard. This is a separate JIT issue, NOT caused by page 0 DMA corruption.
+### Root Cause
+Inter-block flag optimization in `compile_block()` (`src/jit/arm/compemu_support_arm.cpp`)
+incorrectly discards CPU flags at block boundaries. The optimization uses a single-instruction
+lookahead to decide if flags can be dropped, but this misses cases where the second (or later)
+instruction in the next block needs those flags.
 
-See [references/visual-corruption-investigation.md](references/visual-corruption-investigation.md) for the exhaustive comparison between Amiberry and Amiberry-Lite that has ruled out essentially ALL JIT code differences.
+### Fix
+Changed `#if 1` to `#if 0` on the inter-block flag optimization block (~line 3528).
+This matches Amiberry-Lite's ARM64 JIT which never had this optimization.
 
-### Key Finding: All JIT Code is Functionally Identical
-An exhaustive line-by-line comparison of 12 major subsystems (codegen, midfuncs, memory access, compile_block, build_comp, popall, compemu, cpuemu handlers, struct offsets, regflags, special_mem, bank lookup) found the ARM64 JIT code to be functionally identical between Amiberry-Lite (where it works) and current Amiberry (where it doesn't).
+### Symptoms (now fixed)
+- Black window gadgets (should be blue/white)
+- Missing AmigaDOS window title text
+- Garbled ROM version string during Kickstart splash
+- H3 CPU crash when loading SysInfo
 
-### What Differs (Not Yet Proven Causative)
-1. **cpuemu_40.cpp returns 0** instead of actual cycle counts (by design in newer WinUAE gencpu)
-2. **execute_normal() hardcodes 4*CYCLE_UNIT** and has adjust_cycles() commented out
-3. **Newer WinUAE emulator core** may have behavioral differences in chipset emulation, event system, or memory bank initialization that interact differently with JIT-compiled code
+### Key Insight
+The bug was NOT in any individual opcode handler — it was in the compile_block()
+infrastructure that manages flag state between blocks. This is why exhaustive comparison
+of all codegen functions found them correct: they ARE correct. The corruption came from
+`dont_care_flags()` being called at block boundaries when it shouldn't have been.
 
-### Next Steps
-Runtime diagnostics needed — code comparison has been exhausted. Need to instrument JIT at runtime to catch wrong values being read/written.
+### Disproved Hypotheses
+- BFI_wwii (32-bit) vs BFI_xxii (64-bit): BFI_wwii is CORRECT; reverting to xxii caused H3 crashes
+- Infrastructure 32→64-bit width changes: 32-bit is CORRECT; reverting caused H3 crashes
+- Individual opcode handler bugs: All handlers verified correct via line-by-line comparison
+
+See [references/visual-corruption-investigation.md](references/visual-corruption-investigation.md) for the full investigation history, bisection methodology, and diagnostic tools.
 
 ## Key Technical Details
 

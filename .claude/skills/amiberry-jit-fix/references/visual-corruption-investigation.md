@@ -1,18 +1,101 @@
 # Visual Corruption Investigation — ARM64 JIT
 
-## Status: BLOCKED ON RUNTIME DIAGNOSTICS (as of 2026-02-12)
+## Status: SOLVED (2026-02-12)
 
-Static analysis is exhausted. Every individual piece of ARM64-specific codegen has been
-verified correct through line-by-line comparison. Runtime diagnostic tools have been added
-to isolate whether the bug is in compiled opcode handlers or JIT infrastructure.
+**Root cause**: Inter-block flag optimization in `compile_block()` incorrectly discards
+CPU flags at block boundaries, causing wrong conditional branches in graphics routines.
 
-## Symptoms
-When JIT is enabled on ARM64 Linux, A1200 boots to Workbench but shows:
-1. Window gadgets are black (should be blue/white Workbench 3.x style)
-2. AmigaDOS window title text is missing
-3. ROM version string during Kickstart splash is garbled ("ROM 2C.21..." instead of readable)
+**Fix**: Disabled the `#if 1` inter-block flag optimization block in
+`src/jit/arm/compemu_support_arm.cpp` (changed to `#if 0`). This optimization does not
+exist in Amiberry-Lite's working ARM64 JIT.
 
-This is separate from the page 0 DMA crash (SOLVED via v43-clean).
+## Symptoms (now fixed)
+When JIT was enabled on ARM64 Linux, A1200 booted to Workbench but showed:
+1. Window gadgets were black (should be blue/white Workbench 3.x style)
+2. AmigaDOS window title text was missing
+3. ROM version string during Kickstart splash was garbled
+4. SysInfo loading triggered H3 CPU crash
+
+This was separate from the page 0 DMA crash (SOLVED via v43-clean).
+
+## Root Cause: Inter-block Flag Optimization
+
+### The Bug
+In `src/jit/arm/compemu_support_arm.cpp`, the `compile_block()` function contains an
+inter-block flag optimization (marked `#if 1 /* This isn't completely kosher yet */`).
+After compiling all opcodes in a block, this code checks whether the next block's first
+instruction and the branch target need CPU flags (CZNV). If neither appears to need them,
+it calls `dont_care_flags()` to mark flags as unimportant before flushing registers.
+
+### Why It Was Wrong
+1. **`|| 1` forces recalculation**: Line `if (x == 0xff || 1)` means `bi1->needed_flags`
+   is NEVER used — the code always recalculates from just the first instruction of the
+   next block.
+2. **Single-instruction lookahead is insufficient**: If the next block's first instruction
+   neither uses nor sets flags, the SECOND instruction's flag needs are completely missed.
+   Example: if instruction 1 is a MOVE (sets no flags, uses no flags) and instruction 2 is
+   a Bcc (uses flags), the optimization would discard flags that Bcc needs.
+3. **`dont_care_flags()` sets `live.flags_are_important = 0`**: This tells the register
+   allocator that flags don't need to be preserved during the subsequent `flush()`. If flags
+   ARE actually needed by the next block, they get lost.
+
+### Why It Only Affected ARM64
+The x86 JIT has the same optimization code (`compemu_support_x86.cpp:5079`) but x86
+handles flags via native EFLAGS which are preserved differently through the register
+allocator. On ARM64, the JIT explicitly manages flags through virtual register allocation,
+making `dont_care_flags()` more destructive — it can cause the flag register to not be
+written back to memory during flush.
+
+### Why It Caused Visual Corruption
+Graphics rendering involves many comparison and conditional branch sequences:
+- CMP + Bcc for pixel coordinate bounds checking
+- SUB + Bcc for loop counters in blitter/font rendering
+- EOR + TST for bitplane manipulation
+When flags from CMP/SUB/EOR were discarded at a block boundary, the subsequent Bcc would
+branch based on stale/garbage flag state, causing wrong pixels, missing text, and garbled
+rendering.
+
+### Why It Caused H3 CPU Crash
+Same mechanism: if flags from a comparison are discarded and a conditional branch takes
+the wrong path during CPU emulation logic, the emulated CPU can end up executing invalid
+M68k code, triggering the H3 CPU stopped error.
+
+### The Fix
+Changed `#if 1` to `#if 0` to disable the optimization entirely. This matches
+Amiberry-Lite's ARM64 JIT which never had this optimization.
+
+### Bisection Evidence
+Exclude-mode bisection (compile everything EXCEPT a range) identified THREE separate
+corruption sources across different opcode families:
+- 0x8000-0x9FFF (OR/DIV/SBCD + SUB/SUBX/SUBA): widget corruption
+- 0xB000-0xBFFF (CMP/EOR): widget corruption
+- 0x0000-0x7FFF (lower half): window title corruption
+
+This multi-family pattern pointed to a systemic infrastructure issue rather than individual
+handler bugs, which led to investigating the compile_block infrastructure differences.
+
+## Diagnostic Methodology
+
+### Phase 1: JIT_INTERPRET_ONLY
+Confirmed corruption was in compiled opcode handlers (corruption disappeared when all
+opcodes forced through interpreter fallback).
+
+### Phase 2: JIT_BISECT_OPCODES (Exclude Mode)
+Binary-searched opcode ranges using exclude mode (compile everything EXCEPT target range).
+Include mode was flawed because corruption only appeared during Workbench boot, not during
+Kickstart splash, so include-mode tests that only reached Kickstart couldn't confirm ranges
+were clean.
+
+### Phase 3: Disproved BFI_wwii and Infrastructure Width Changes
+- Reverting all 132 BFI_wwii→BFI_xxii made things WORSE (H3 crash)
+- Reverting infrastructure 32→64-bit width changes also made things WORSE (H3 crash)
+- This proved Amiberry's 32-bit width fixes are CORRECT and necessary
+
+### Phase 4: Compile Loop Infrastructure Comparison
+Systematic comparison of `compile_block()` between Amiberry and Lite revealed:
+1. Inter-block flag optimization: exists in Amiberry, NOT in Lite
+2. `nfcpufunctbl` for interpreter fallback: exists in Amiberry, NOT in Lite
+Disabling #1 alone fixed all corruption. #2 was proven innocent.
 
 ## Key Paradox
 

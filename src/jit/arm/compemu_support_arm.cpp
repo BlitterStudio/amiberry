@@ -98,6 +98,158 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 // %%% BRIAN KING WAS HERE %%%
 extern bool canbang;
 
+#ifdef JIT_DEBUG_VISUAL
+// Runtime diagnostic for visual corruption debugging.
+// Enable by adding #define JIT_DEBUG_VISUAL in sysconfig.h.
+// Verifies JIT direct memory path matches bank-based reads.
+
+static int jit_diag_block_count = 0;
+static bool jit_diag_verified_memstart = false;
+static int jit_diag_specmem_mismatch_count = 0;
+
+// Called once from compile_block to verify natmem_offset + memory mapping
+static void jit_diag_verify_natmem(void)
+{
+	if (!jit_diag_verified_memstart) {
+		jit_diag_verified_memstart = true;
+		write_log("JIT_DIAG: === JIT Visual Corruption Diagnostic ===\n");
+		write_log("JIT_DIAG: natmem_offset = %p, canbang = %d\n",
+			natmem_offset, (int)canbang);
+		write_log("JIT_DIAG: COMP_DEBUG = %d\n", COMP_DEBUG);
+		write_log("JIT_DIAG: special_mem_default = %d (0=direct, 7=indirect)\n",
+			special_mem_default);
+		write_log("JIT_DIAG: comptrustbyte=%d comptrustword=%d comptrustlong=%d\n",
+			currprefs.comptrustbyte, currprefs.comptrustword, currprefs.comptrustlong);
+		write_log("JIT_DIAG: address_space_24 = %d\n", currprefs.address_space_24);
+
+		if (!natmem_offset) {
+			write_log("JIT_DIAG: *** natmem_offset is NULL!\n");
+			return;
+		}
+
+		// Verify ROM via direct path vs bank path
+		// Kickstart ROM is at 0xF80000-0xFFFFFF (512KB)
+		uae_u8 *rom_native = natmem_offset + 0xF80000;
+		uae_u16 rom_id_direct = (rom_native[0] << 8) | rom_native[1];
+		uae_u16 rom_id_bank = get_word(0xF80000);
+		write_log("JIT_DIAG: ROM[F80000] direct=0x%04x bank=0x%04x %s\n",
+			rom_id_direct, rom_id_bank,
+			(rom_id_direct == rom_id_bank) ? "OK" : "*** MISMATCH ***");
+
+		// ROM version at offset 12-13 (version), 14-15 (revision)
+		uae_u16 rom_ver_d = (rom_native[12] << 8) | rom_native[13];
+		uae_u16 rom_rev_d = (rom_native[14] << 8) | rom_native[15];
+		uae_u16 rom_ver_b = get_word(0xF8000C);
+		uae_u16 rom_rev_b = get_word(0xF8000E);
+		write_log("JIT_DIAG: ROM version direct=%d.%d bank=%d.%d\n",
+			rom_ver_d, rom_rev_d, rom_ver_b, rom_rev_b);
+
+		// Dump first 32 bytes of ROM via both paths
+		write_log("JIT_DIAG: ROM first 32 bytes (direct): ");
+		for (int i = 0; i < 32; i++)
+			write_log("%02x ", rom_native[i]);
+		write_log("\n");
+
+		write_log("JIT_DIAG: ROM first 32 bytes (bank):   ");
+		for (int i = 0; i < 32; i++)
+			write_log("%02x ", get_byte(0xF80000 + i));
+		write_log("\n");
+
+		// Verify Chip RAM mapping
+		uae_u8 *chip_native = natmem_offset + 0x000000;
+		write_log("JIT_DIAG: ChipRAM[000000] native ptr = %p\n", chip_native);
+
+		// Check a few addresses in Chip RAM
+		for (uae_u32 addr = 0; addr < 0x20; addr += 4) {
+			uae_u32 val_direct = ((uae_u32)chip_native[addr] << 24) |
+				((uae_u32)chip_native[addr+1] << 16) |
+				((uae_u32)chip_native[addr+2] << 8) |
+				chip_native[addr+3];
+			uae_u32 val_bank = get_long(addr);
+			if (val_direct != val_bank) {
+				write_log("JIT_DIAG: ChipRAM[%06x] direct=0x%08x bank=0x%08x *** MISMATCH ***\n",
+					addr, val_direct, val_bank);
+			}
+		}
+
+		// Check kickmem_bank jit flags
+		extern addrbank kickmem_bank;
+		write_log("JIT_DIAG: kickmem_bank jit_read_flag=%d jit_write_flag=%d\n",
+			kickmem_bank.jit_read_flag, kickmem_bank.jit_write_flag);
+		extern addrbank chipmem_bank;
+		write_log("JIT_DIAG: chipmem_bank jit_read_flag=%d jit_write_flag=%d\n",
+			chipmem_bank.jit_read_flag, chipmem_bank.jit_write_flag);
+
+		write_log("JIT_DIAG: === End Initial Verification ===\n");
+	}
+}
+
+// Called from compile_block to log block info
+static void jit_diag_log_block(cpu_history* pc_hist, int blocklen, uae_u32 start_pc_val)
+{
+	jit_diag_block_count++;
+
+	// Log first 20 blocks in detail
+	if (jit_diag_block_count <= 20) {
+		write_log("JIT_DIAG: Block #%d PC=0x%08x len=%d\n",
+			jit_diag_block_count, start_pc_val, blocklen);
+		for (int i = 0; i < blocklen && i < 8; i++) {
+			uae_u16 op = *(pc_hist[i].location);
+			// Byte-swap to get M68k opcode (same as DO_GET_OPCODE but available before its #define)
+			uae_u16 swapped = do_get_mem_word(pc_hist[i].location);
+			write_log("JIT_DIAG:   [%d] rawop=0x%04x swapped=0x%04x specmem=%d\n",
+				i, op, swapped, pc_hist[i].specmem);
+		}
+	}
+	// Then log every 5000th block
+	else if ((jit_diag_block_count % 5000) == 0) {
+		write_log("JIT_DIAG: Block #%d PC=0x%08x len=%d specmem[0]=%d\n",
+			jit_diag_block_count, start_pc_val, blocklen,
+			pc_hist[0].specmem);
+	}
+}
+
+// Called from inside compile_block's compilation loop to log compile decisions
+static void jit_diag_log_compile_decision(int block_num, int insn_idx, uae_u32 opcode,
+	int failure, int special_mem_val, int needed_flags_val, int optlev_val)
+{
+	// Only log first 20 blocks
+	if (block_num > 20)
+		return;
+	const char *decision = failure ? "INTERP" : "JIT";
+	write_log("JIT_DIAG:   compile[%d] op=0x%04x -> %s specmem=%d nflags=0x%02x optlev=%d\n",
+		insn_idx, opcode, decision, special_mem_val, needed_flags_val, optlev_val);
+}
+
+// Called from execute_normal to verify specmem consistency
+// Checks that the bank-based jit_read/write flags match what specmem recorded
+void jit_diag_verify_specmem(uae_u32 pc, uae_u8 recorded_specmem)
+{
+	// Only check first 500 instructions and then every 10000th
+	static int check_count = 0;
+	check_count++;
+	if (check_count > 500 && (check_count % 10000) != 0)
+		return;
+
+	// Verify: if specmem says "no special mem" (0), the PC should be in
+	// a bank with jit_read_flag=0 (i.e., directly accessible memory)
+	addrbank *bank = &get_mem_bank(pc);
+	int expected_read_flag = bank->jit_read_flag;
+
+	// The recorded specmem includes S_READ | S_WRITE | S_N_ADDR accumulated
+	// from ALL memory accesses in the instruction. So if specmem has S_READ
+	// but the PC bank doesn't set it, that's from data accesses (not instruction fetch).
+	// We just log suspicious cases.
+	if (recorded_specmem == 0 && expected_read_flag != 0) {
+		jit_diag_specmem_mismatch_count++;
+		if (jit_diag_specmem_mismatch_count <= 10) {
+			write_log("JIT_DIAG: specmem=0 but PC bank has jit_read_flag=%d at PC=0x%08x (bank=%s)\n",
+				expected_read_flag, pc, bank->name ? bank->name : "?");
+		}
+	}
+}
+#endif // JIT_DEBUG_VISUAL
+
 #include "../compemu_prefs.cpp"
 
 #define uint32 uae_u32
@@ -195,6 +347,29 @@ static compop_func *nfcompfunctbl[65536];
 #ifdef NOFLAGS_SUPPORT_GENCOMP
 static cpuop_func* nfcpufunctbl[65536];
 #endif
+
+#ifdef JIT_DEBUG_VISUAL
+static bool jit_diag_tables_logged = false;
+static void jit_diag_log_tables(void)
+{
+	if (jit_diag_tables_logged)
+		return;
+	jit_diag_tables_logged = true;
+	int comp_count = 0, nfcomp_count = 0, both_count = 0, neither_count = 0;
+	for (int idx = 0; idx < 65536; idx++) {
+		bool has_c = (compfunctbl[idx] != NULL);
+		bool has_nf = (nfcompfunctbl[idx] != NULL);
+		if (has_c && has_nf) both_count++;
+		else if (has_c) comp_count++;
+		else if (has_nf) nfcomp_count++;
+		else neither_count++;
+	}
+	write_log("JIT_DIAG: Compiler table: comp_only=%d nfcomp_only=%d both=%d neither=%d\n",
+		comp_count, nfcomp_count, both_count, neither_count);
+	write_log("JIT_DIAG: compnf=%d\n", currprefs.compnf);
+}
+#endif
+
 uae_u8* comp_pc_p;
 
 // gb-- Extra data for Basilisk II/JIT
@@ -2935,21 +3110,33 @@ void build_comp(void)
             cflow = fl_const_jump;
         else
             cflow &= ~fl_const_jump;
-        prop[tbl[i].opcode].cflow = cflow;
+        prop[cft_map(tbl[i].opcode)].cflow = cflow;
 
         bool uses_fpu = (tbl[i].specific & COMP_OPCODE_USES_FPU) != 0;
         if (uses_fpu && avoid_fpu)
-            compfunctbl[tbl[i].opcode] = NULL;
+            compfunctbl[cft_map(tbl[i].opcode)] = NULL;
         else
-            compfunctbl[tbl[i].opcode] = tbl[i].handler;
+            compfunctbl[cft_map(tbl[i].opcode)] = tbl[i].handler;
     }
 
     for (i = 0; nftbl[i].opcode < 65536; i++) {
-		bool uses_fpu = (tbl[i].specific & COMP_OPCODE_USES_FPU) != 0;
+        bool uses_fpu = (tbl[i].specific & COMP_OPCODE_USES_FPU) != 0;
         if (uses_fpu && avoid_fpu)
-            nfcompfunctbl[nftbl[i].opcode] = NULL;
+            nfcompfunctbl[cft_map(nftbl[i].opcode)] = NULL;
         else
-            nfcompfunctbl[nftbl[i].opcode] = nftbl[i].handler;
+            nfcompfunctbl[cft_map(nftbl[i].opcode)] = nftbl[i].handler;
+        for (j = 0; nfctbl[j].handler_ff; j++) {
+            if (nfctbl[j].opcode == nftbl[i].opcode) {
+#ifdef NOFLAGS_SUPPORT_GENCOMP
+#ifdef NOFLAGS_SUPPORT_GENCPU
+                nfcpufunctbl[cft_map(nftbl[i].opcode)] = nfctbl[j].handler_nf;
+#else
+                nfcpufunctbl[cft_map(nftbl[i].opcode)] = nfctbl[j].handler_ff;
+#endif
+#endif
+                break;
+            }
+        }
         if (!nfctbl[j].handler_ff && currprefs.cachesize) {
             int mnemo = table68k[nftbl[i].opcode].mnemo;
             struct mnemolookup* lookup;
@@ -2961,9 +3148,17 @@ void build_comp(void)
         }
     }
 
+#ifdef NOFLAGS_SUPPORT_GENCOMP
+#ifdef NOFLAGS_SUPPORT_GENCPU
+    for (i = 0; nfctbl[i].handler_nf; i++) {
+        nfcpufunctbl[cft_map(nfctbl[i].opcode)] = nfctbl[i].handler_nf;
+    }
+#else
     for (i = 0; nfctbl[i].handler_ff; i++) {
         nfcpufunctbl[cft_map(nfctbl[i].opcode)] = nfctbl[i].handler_ff;
     }
+#endif
+#endif
 
     for (opcode = 0; opcode < 65536; opcode++) {
         compop_func* f;
@@ -3115,6 +3310,12 @@ static inline unsigned int get_opcode_cft_map(unsigned int f)
 
 void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 {
+#ifdef JIT_DEBUG_VISUAL
+    jit_diag_verify_natmem();
+    jit_diag_log_tables();
+    jit_diag_log_block(pc_hist, blocklen, start_pc);
+#endif
+
     if (cache_enabled && compiled_code && currprefs.cpu_model >= 68020) {
 #ifdef PROFILE_COMPILE_TIME
         compile_count++;
@@ -3253,7 +3454,29 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 }
 
                 failure = 1; // gb-- defaults to failure state
+#ifdef JIT_INTERPRET_ONLY
+                // Force all opcodes through interpreter fallback to isolate
+                // whether visual corruption is caused by compiled handlers.
+                if (false) {
+#elif defined(JIT_BISECT_OPCODES)
+  #ifdef JIT_BISECT_EXCLUDE
+                // Exclude mode: compile ALL opcodes EXCEPT those in excluded range(s).
+                // If corruption disappears, the guilty opcode is in an excluded range.
+                if (comptbl[opcode] && optlev > 1
+                    && !(opcode >= JIT_BISECT_MIN && opcode <= JIT_BISECT_MAX)
+    #ifdef JIT_BISECT_MIN2
+                    && !(opcode >= JIT_BISECT_MIN2 && opcode <= JIT_BISECT_MAX2)
+    #endif
+                    ) {
+  #else
+                // Include mode: only COMPILE opcodes in [MIN,MAX].
+                // If corruption appears, the guilty opcode is in this range.
+                if (comptbl[opcode] && optlev > 1
+                    && (opcode >= JIT_BISECT_MIN && opcode <= JIT_BISECT_MAX)) {
+  #endif
+#else
                 if (comptbl[opcode] && optlev > 1) {
+#endif
                     failure = 0;
                     if (!was_comp) {
                         comp_pc_p = (uae_u8*)pc_hist[i].location;
@@ -3269,6 +3492,11 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     }
                 }
 
+
+#ifdef JIT_DEBUG_VISUAL
+                jit_diag_log_compile_decision(jit_diag_block_count, i, opcode,
+                    failure, special_mem, needed_flags, optlev);
+#endif
                 if (failure) {
                     if (was_comp) {
                         flush(1);
@@ -3301,8 +3529,14 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     may_raise_exception = false;
                 }
             }
-#if 1 /* This isn't completely kosher yet; It really needs to be
-         integrated into a general inter-block-dependency scheme */
+#if 0 /* Disabled: this inter-block flag optimization incorrectly
+         discards flags at block boundaries on ARM64, causing visual
+         corruption (black gadgets, garbled text) and crashes.
+         The single-instruction lookahead (`|| 1` forces recalculation)
+         is insufficient — if the next block's first instruction neither
+         uses nor sets flags, the second instruction's flag needs are
+         missed. This optimization does not exist in Amiberry-Lite's
+         working ARM64 JIT. */
             if (next_pc_p && taken_pc_p &&
                 was_comp && taken_pc_p == current_block_pc_p)
             {

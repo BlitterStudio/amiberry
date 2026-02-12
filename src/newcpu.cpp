@@ -5660,6 +5660,12 @@ void execute_normal(void)
 		total_cycles += cpu_cycles;
 
 		pc_hist[blocklen].specmem = special_mem;
+#ifdef JIT_DEBUG_VISUAL
+		{
+			extern void jit_diag_verify_specmem(uae_u32 pc, uae_u8 recorded_specmem);
+			jit_diag_verify_specmem(m68k_getpc(), special_mem);
+		}
+#endif
 		blocklen++;
 		if (end_block (r->opcode) || blocklen >= MAXRUN || r->spcflags || uae_int_requested) {
 #ifdef JIT_DEBUG_MEM_CORRUPTION
