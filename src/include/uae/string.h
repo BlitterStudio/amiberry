@@ -23,6 +23,8 @@
 
 #ifdef _WIN32
 /* Using the real _tcs* functions */
+#define uaestrlen _tcslen
+#define uaetcslen _tcslen
 #else
 #define _istxdigit isxdigit
 #define _istdigit SDL_isdigit

@@ -580,7 +580,7 @@ typedef int32_t uae_atomic;
 #undef POSIX_SERIAL
 #undef HAVE_GETMNTENT
 #undef TIME_WITH_SYS_TIME
-#undef HAVE_SYS_TIME_H
+/* Note: HAVE_SYS_TIME_H is NOT undef'd — MinGW has <sys/time.h> */
 #undef HAVE_SYS_IOCTL_H
 #undef HAVE_SYS_IPC_H
 #undef HAVE_SYS_MOUNT_H
