@@ -637,8 +637,10 @@ typedef int32_t uae_atomic;
 #define strcmpi(x,y) SDL_strcasecmp(x,y)
 #define stricmp(x,y) SDL_strcasecmp(x,y)
 
+#ifndef __MINGW32__
 typedef int SOCKET;
 #define INVALID_SOCKET -1
+#endif
 
 typedef unsigned char boolean;
 #ifndef FALSE

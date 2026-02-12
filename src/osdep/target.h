@@ -222,13 +222,11 @@ void restore_host_fp_regs(void* buf);
 #endif
 #endif
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
-#ifndef _WIN32
+#if !defined(_WIN32) || (defined(__MINGW32__) && defined(LIBRETRO))
 // Dummy types so this header file can be included on other platforms (for
 // a few declarations).
+// On MinGW libretro builds we also use these dummies because including
+// <windows.h> this early conflicts with C++ std::byte and UAE type defs.
 typedef void* HINSTANCE;
 typedef void* HMODULE;
 typedef SDL_Window* HWND;
