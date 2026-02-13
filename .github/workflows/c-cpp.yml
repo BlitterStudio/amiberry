@@ -83,7 +83,7 @@ jobs:
 
       - name: Build for macOS (${{ matrix.name }})
         run: |
-          cmake -B build -DUSE_OPENGL=ON && cmake --build build -j$(sysctl -n hw.ncpu)
+          cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Upload intermediate app bundle
         uses: actions/upload-artifact@v4
@@ -230,7 +230,7 @@ jobs:
 
       - name: Generate CPackConfig.cmake
         run: |
-          cmake -B build -DUSE_OPENGL=ON
+          cmake -B build
 
       - name: Copy universal app to build dir for cpack
         run: |
@@ -275,33 +275,19 @@ jobs:
           - name: 22.04-amd64
             runner: ubuntu-latest
             container: ubuntu:22.04
-            opengl: OFF
             artifact_name: amiberry-ubuntu-22.04-amd64
           - name: 24.04-amd64
             runner: ubuntu-latest
             container: ubuntu:24.04
-            opengl: OFF
             artifact_name: amiberry-ubuntu-24.04-amd64
           - name: 25.10-amd64
             runner: ubuntu-latest
             container: ubuntu:25.10
-            opengl: OFF
             artifact_name: amiberry-ubuntu-25.10-amd64
           - name: 25.10-arm64
             runner: ubuntu-24.04-arm
             container: ubuntu:25.10
-            opengl: OFF
             artifact_name: amiberry-ubuntu-25.10-arm64
-          - name: 25.10-amd64-opengl
-            runner: ubuntu-latest
-            container: ubuntu:25.10
-            opengl: ON
-            artifact_name: amiberry-ubuntu-25.10-amd64-opengl
-          - name: 25.10-arm64-opengl
-            runner: ubuntu-24.04-arm
-            container: ubuntu:25.10
-            opengl: ON
-            artifact_name: amiberry-ubuntu-25.10-arm64-opengl
     steps:
       - name: Install prerequisites
         run: |
@@ -341,7 +327,7 @@ jobs:
           CCACHE_DIR: ~/.ccache
         run: |
           export PATH="/usr/lib/ccache:$PATH"
-          cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
+          cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build build -j$(nproc)
           cpack -G DEB --config build/CPackConfig.cmake
 
       - name: Upload artifact
@@ -376,34 +362,20 @@ jobs:
           - name: x86_64
             runner: ubuntu-latest
             image: midwan/amiberry-fedora-x86_64:latest
-            opengl: OFF
             artifact_name: amiberry-fedora-x86_64
             release_suffix: fedora-x86_64
-          - name: x86_64-opengl
-            runner: ubuntu-latest
-            image: midwan/amiberry-fedora-x86_64:latest
-            opengl: ON
-            artifact_name: amiberry-fedora-x86_64-opengl
-            release_suffix: fedora-x86_64-opengl
           - name: aarch64
             runner: ubuntu-24.04-arm
             image: midwan/amiberry-fedora-arm64:latest
-            opengl: OFF
             artifact_name: amiberry-fedora-aarch64
             release_suffix: fedora-aarch64
-          - name: aarch64-opengl
-            runner: ubuntu-24.04-arm
-            image: midwan/amiberry-fedora-arm64:latest
-            opengl: ON
-            artifact_name: amiberry-fedora-aarch64-opengl
-            release_suffix: fedora-aarch64-opengl
     steps:
     - uses: actions/checkout@v4
 
     - name: Run the build process with Docker
       run: |
         docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake"
+          bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -436,26 +408,19 @@ jobs:
         include:
           - name: bookworm
             image: midwan/amiberry-debian-x86_64:bookworm
-            opengl: OFF
             artifact_name: amiberry-debian-bookworm-amd64
             release_name: debian-bookworm-amd64
           - name: trixie
             image: midwan/amiberry-debian-x86_64:trixie
-            opengl: OFF
             artifact_name: amiberry-debian-trixie-amd64
             release_name: debian-trixie-amd64
-          - name: trixie-opengl
-            image: midwan/amiberry-debian-x86_64:trixie
-            opengl: ON
-            artifact_name: amiberry-debian-trixie-amd64-opengl
-            release_name: debian-trixie-amd64-opengl
     steps:
       - uses: actions/checkout@v4
 
       - name: Run the build process with Docker
         run: |
           docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-            bash -c "cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+            bash -c "cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
@@ -488,26 +453,19 @@ jobs:
         include:
           - name: bookworm
             image: midwan/amiberry-debian-aarch64:bookworm
-            opengl: OFF
             artifact_name: amiberry-debian-bookworm-arm64
             release_name: debian-bookworm-arm64
           - name: trixie
             image: midwan/amiberry-debian-aarch64:trixie
-            opengl: OFF
             artifact_name: amiberry-debian-trixie-arm64
             release_name: debian-trixie-arm64
-          - name: trixie-opengl
-            image: midwan/amiberry-debian-aarch64:trixie
-            opengl: ON
-            artifact_name: amiberry-debian-trixie-arm64-opengl
-            release_name: debian-trixie-arm64-opengl
     steps:
     - uses: actions/checkout@v4
 
     - name: Run the build process with Docker
       run: |
         docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
-          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
+          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -539,13 +497,8 @@ jobs:
       matrix:
         include:
           - name: x64
-            opengl: OFF
             artifact_name: amiberry-windows-x64
             release_suffix: windows-x64
-          - name: x64-opengl
-            opengl: ON
-            artifact_name: amiberry-windows-x64-opengl
-            release_suffix: windows-x64-opengl
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -573,7 +526,7 @@ jobs:
         env:
           VCPKG_ROOT: C:/vcpkg
         run: |
-          cmake --preset windows-release ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }}
+          cmake --preset windows-release
           cmake --build out/build/windows-release -j$(nproc)
 
       - name: Package

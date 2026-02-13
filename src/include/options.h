@@ -1363,7 +1363,7 @@ struct amiberry_options
 	int default_vkbd_transparency;
 	char default_vkbd_toggle[128] = "guide";
 	char gui_theme[128] = "Default.theme";
-	char shader[128] = "pc";
+	char shader[128] = "none";
 	char shader_rtg[128] = "none";
 	bool force_mobile_shaders = false;
 	bool use_bezel = false;
