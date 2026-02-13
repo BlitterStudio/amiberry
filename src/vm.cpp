@@ -166,7 +166,7 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 		 * work well enough when there is not a lot of allocations. */
 		int step = uae_vm_page_size();
 		uae_u8 *p = (uae_u8 *) 0x40000000;
-		uae_u8 *p_end = natmem_reserved + natmem_reserved_size - size;
+		uae_u8 *p_end = natmem_reserved - size;
 		if (size > 1024 * 1024) {
 			/* Reserve some space for smaller allocations */
 			p += 32 * 1024 * 1024;

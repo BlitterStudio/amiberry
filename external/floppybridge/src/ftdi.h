@@ -28,12 +28,14 @@
 
 #ifdef FTDI_D2XX_AVAILABLE
 
-namespace FTDI {	
-
-
 #ifdef _WIN32
 #include <Windows.h>
-#else
+#endif
+
+namespace FTDI {
+
+
+#ifndef _WIN32
 #include <dlfcn.h>
 #include <stdint.h>
 #ifndef DWORD

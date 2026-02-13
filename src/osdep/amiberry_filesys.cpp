@@ -16,11 +16,21 @@
 #include "options.h"
 #include "filesys.h"
 #include "zfile.h"
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <algorithm>
 #include <list>
 #include <dirent.h>
+#ifndef _WIN32
 #include <iconv.h>
+#else
+#include <SDL.h>
+#define iconv_t SDL_iconv_t
+#define iconv_open SDL_iconv_open
+#define iconv_close SDL_iconv_close
+#define iconv SDL_iconv
+#endif
 #include <iostream>
 #include <mutex>
 
@@ -33,7 +43,80 @@ namespace fs = std::filesystem;
 #endif
 
 #include <set>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <io.h>
+#else
 #include <sys/mman.h>
+#endif
+
+#ifdef _WIN32
+// Windows compatibility: POSIX functions not available on Windows
+#include <sys/utime.h>
+
+// localtime_r / gmtime_r: Windows equivalents have swapped args
+static inline struct tm* localtime_r(const time_t* timep, struct tm* result) {
+	return localtime_s(result, timep) == 0 ? result : nullptr;
+}
+static inline struct tm* gmtime_r(const time_t* timep, struct tm* result) {
+	return gmtime_s(result, timep) == 0 ? result : nullptr;
+}
+
+// lstat: Windows has no symlinks in the traditional sense, use stat
+#define lstat stat
+
+// S_ISLNK: not meaningful on Windows
+#ifndef S_ISLNK
+#define S_ISLNK(m) 0
+#endif
+
+// mkdir: Windows _mkdir takes only 1 argument
+#include <direct.h>
+#define mkdir(path, mode) _mkdir(path)
+
+// sync: no-op on Windows
+#define sync()
+
+// strcasestr: not available on Windows, provide a replacement
+static inline const char* strcasestr(const char* haystack, const char* needle)
+{
+	if (!needle[0]) return haystack;
+	for (; *haystack; ++haystack) {
+		const char* h = haystack;
+		const char* n = needle;
+		while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+			++h; ++n;
+		}
+		if (!*n) return haystack;
+	}
+	return nullptr;
+}
+
+// utimes: use _utime on Windows
+#include <sys/types.h>
+#ifndef _TIMEVAL_DEFINED
+#define _TIMEVAL_DEFINED
+struct timeval {
+	long tv_sec;
+	long tv_usec;
+};
+#endif
+static inline int utimes(const char* path, const struct timeval tv[2])
+{
+	struct _utimbuf ut;
+	if (tv) {
+		ut.actime = tv[0].tv_sec;
+		ut.modtime = tv[1].tv_sec;
+	} else {
+		ut.actime = time(nullptr);
+		ut.modtime = time(nullptr);
+	}
+	return _utime(path, &ut);
+}
+#endif /* _WIN32 */
 
 #include "crc32.h"
 #include "fsdb_host.h"
@@ -146,7 +229,7 @@ static bool has_logged_iconv_fail = false;
         char* dst_ptr = buf.data();
         size_t dst_size = buf.size();
 
-#ifdef __ANDROID__
+#if defined (__ANDROID__) || defined(_WIN32)
         size_t res = iconv(iconv_handle, (const char**)&src_ptr, &src_size, &dst_ptr, &dst_size);
 #else
         size_t res = iconv(iconv_handle, &src_ptr, &src_size, &dst_ptr, &dst_size);
@@ -878,7 +961,7 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 			return -1;
 		}
 
-#ifdef WINDOWS
+#ifdef _WIN32
 		if (len > static_cast<uae_u64>(INT_MAX)) {
 			write_log("my_truncate: length %llu exceeds maximum file size on Windows\n", len);
 			return -1;
@@ -970,15 +1053,13 @@ unsigned int my_read(struct my_openfile_s* mos, void* b, unsigned int size)
 		}
 
 #ifdef _WIN32
-		// On Windows, check the file attributes
-		std::error_code ec;
-		const auto attrs = fs::status(filepath, ec).permissions();
-		if (ec) {
-			write_log("my_isfilehidden: failed to get attributes for %s: %s\n",
-				path, ec.message().c_str());
+		// On Windows, check the file attributes using Win32 API
+		const DWORD attrs = GetFileAttributes(path);
+		if (attrs == INVALID_FILE_ATTRIBUTES) {
+			write_log("my_isfilehidden: failed to get attributes for %s\n", path);
 			return false;
 		}
-		return (attrs & fs::perms::hidden) != fs::perms::none;
+		return (attrs & FILE_ATTRIBUTE_HIDDEN) != 0;
 #else
 		// On Unix-like systems, check if filename starts with '.'
 		const std::string filename = filepath.filename().string();
@@ -1761,6 +1842,28 @@ std::string my_get_sha1_of_file(const char* filepath)
         }
 
         // Use RAII for memory mapping
+#ifdef _WIN32
+        struct MappedMemory {
+            void* mem = nullptr;
+            size_t size = 0;
+            HANDLE hMapping = INVALID_HANDLE_VALUE;
+
+            MappedMemory(int fd, size_t sz) : size(sz) {
+                HANDLE hFile = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+                if (hFile == INVALID_HANDLE_VALUE) return;
+                hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+                if (!hMapping) return;
+                mem = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
+            }
+
+            ~MappedMemory() {
+                if (mem) UnmapViewOfFile(mem);
+                if (hMapping && hMapping != INVALID_HANDLE_VALUE) CloseHandle(hMapping);
+            }
+
+            bool valid() const { return mem != nullptr; }
+        } mapping(file.fd, static_cast<size_t>(sb.st_size));
+#else
         struct MappedMemory {
             void* mem = MAP_FAILED;
             size_t size = 0;
@@ -1775,6 +1878,7 @@ std::string my_get_sha1_of_file(const char* filepath)
 
             bool valid() const { return mem != MAP_FAILED; }
         } mapping(file.fd, static_cast<size_t>(sb.st_size));
+#endif
 
         if (!mapping.valid()) {
             write_log("my_get_sha1_of_file: mmap on file '%s' failed: %s\n",

@@ -17,7 +17,7 @@
 #include <chrono>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifdef WINDOWS
+#ifdef _WIN32
 #include <sys/utime.h>
 #else
 #include <sys/time.h>
@@ -251,7 +251,6 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 	}
 
 	struct mytimeval mtv;
-	struct timeval times[2];
 
 	try {
 		if (tv == nullptr) {
@@ -268,17 +267,28 @@ bool my_utime(const char* name, const struct mytimeval* tv)
 				return false;
 			}
 
-			struct timeval current_time {};
 			mtv.tv_sec = local_time;
-			mtv.tv_usec = (gettimeofday(&current_time, nullptr) != -1)
-				? current_time.tv_usec : 0;
+			mtv.tv_usec = 0;
+#ifndef _WIN32
+			struct timeval current_time {};
+			if (gettimeofday(&current_time, nullptr) != -1)
+				mtv.tv_usec = current_time.tv_usec;
+#endif
 		}
 		else {
 			mtv = *tv;
 		}
 
+#ifdef _WIN32
+		struct _utimbuf utb;
+		utb.actime = mtv.tv_sec;
+		utb.modtime = mtv.tv_sec;
+		return _utime(name, &utb) == 0;
+#else
+		struct timeval times[2];
 		times[0] = times[1] = { mtv.tv_sec, mtv.tv_usec };
 		return utimes(name, times) == 0;
+#endif
 	}
 	catch (...) {
 		return false;

@@ -3,7 +3,7 @@
 #include "sysdeps.h"
 
 #include "ethernet.h"
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 #include "win32_uaenet.h"
 #elif defined (AMIBERRY)
 #include "amiberry_uaenet.h"
@@ -14,6 +14,12 @@
 #include "uae/slirp.h"
 #include "gui.h"
 #include "rommgr.h"
+
+#ifdef _WIN32
+/* Need struct in_addr and inet_addr for SLIRP IP configuration. */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 
 #ifndef HAVE_INET_ATON
 static int inet_aton(const char *cp, struct in_addr *ia)
@@ -102,6 +108,20 @@ void ethernet_trigger (struct netdriverdata *ndd, void *vsd)
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
 		uaenet_trigger (vsd);
+		return;
+#endif
+	}
+}
+
+void ethernet_receive_poll (struct netdriverdata *ndd, void *vsd)
+{
+	if (!ndd)
+		return;
+	switch (ndd->type)
+	{
+#ifdef WITH_UAENET_PCAP
+		case UAENET_PCAP:
+		uaenet_receive_poll (vsd);
 		return;
 #endif
 	}

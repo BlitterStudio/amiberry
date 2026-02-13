@@ -836,18 +836,10 @@ DiagnosticResponse ArduinoInterface::selectTrack(const unsigned char trackIndex,
 	if (isV18) {
 		char flags = (int)searchSpeed;
 		if (!ignoreDiskInsertCheck) flags |= 4;
-#ifdef _WIN32		
-		snprintf_s(buf, sizeof buf, "%c%02i%c", COMMAND_GOTOTRACK_REPORT, trackIndex, flags);
-#else
-		snprintf(buf, sizeof buf, "%c%02i%c", COMMAND_GOTOTRACK_REPORT, trackIndex, flags);
-#endif	
+		snprintf(buf, sizeof buf, "%c%02i%c", COMMAND_GOTOTRACK_REPORT, trackIndex, flags);	
 	}
 	else {
-#ifdef _WIN32			
-		snprintf_s(buf, sizeof buf, "%c%02i", COMMAND_GOTOTRACK, trackIndex);
-#else		
-		snprintf(buf, sizeof buf, "%c%02i", COMMAND_GOTOTRACK, trackIndex);
-#endif	
+		snprintf(buf, sizeof buf, "%c%02i", COMMAND_GOTOTRACK, trackIndex);	
 	}
 
 	// Send track number. 

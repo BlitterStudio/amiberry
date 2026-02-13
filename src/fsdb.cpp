@@ -38,7 +38,7 @@ TCHAR *nname_begin (TCHAR *nname)
 	return nname;
 }
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(AMIBERRY)
 /* Find the name REL in directory DIRNAME.  If we find a file that
 * has exactly the same name, return REL.  If we find a file that
 * has the same name when compared case-insensitively, return a

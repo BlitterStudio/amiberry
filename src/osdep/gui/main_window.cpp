@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <string>
+#include <filesystem>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <dpi_handler.hpp>
@@ -820,6 +821,7 @@ void amiberry_gui_init()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
+	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -863,7 +865,7 @@ void amiberry_gui_init()
 	const float font_px = gui_theme.font_size > 0 ? static_cast<float>(gui_theme.font_size) : 15.0f;
 
 	ImFont* loaded_font = nullptr;
-	if (!font_path.empty()) {
+	if (!font_path.empty() && std::filesystem::exists(font_path)) {
 		loaded_font = io.Fonts->AddFontFromFileTTF(font_path.c_str(), font_px);
 	}
 	if (!loaded_font) {
