@@ -130,25 +130,44 @@ jobs:
             arm64-app/Amiberry.app/Contents/MacOS/Amiberry \
             -output universal-app/Amiberry.app/Contents/MacOS/Amiberry
 
+          # Helper: merge a single binary with lipo, skipping if already universal
+          merge_binary() {
+            local x86_file="$1" arm_file="$2" output="$3"
+            if [ ! -f "$x86_file" ] || [ ! -f "$arm_file" ]; then
+              return
+            fi
+            # If a file is already universal (e.g. capsimage builds fat), just copy it
+            local x86_archs arm_archs
+            x86_archs=$(lipo -info "$x86_file" 2>/dev/null | sed 's/.*: //')
+            arm_archs=$(lipo -info "$arm_file" 2>/dev/null | sed 's/.*: //')
+            if echo "$x86_archs" | grep -q "x86_64" && echo "$x86_archs" | grep -q "arm64"; then
+              echo "  Already universal: $(basename "$output") — copying as-is"
+              cp "$x86_file" "$output"
+            elif [ "$x86_archs" = "$arm_archs" ]; then
+              echo "  WARNING: same arch in both — copying x86 version: $(basename "$output")"
+              cp "$x86_file" "$output"
+            else
+              lipo -create "$x86_file" "$arm_file" -output "$output"
+            fi
+          }
+
           # Merge all dylibs in Frameworks
           for dylib in universal-app/Amiberry.app/Contents/Frameworks/*.dylib; do
             basename=$(basename "$dylib")
-            x86_file="x86_64-app/Amiberry.app/Contents/Frameworks/$basename"
-            arm_file="arm64-app/Amiberry.app/Contents/Frameworks/$basename"
-            if [ -f "$x86_file" ] && [ -f "$arm_file" ]; then
-              lipo -create "$x86_file" "$arm_file" -output "$dylib"
-            fi
+            merge_binary \
+              "x86_64-app/Amiberry.app/Contents/Frameworks/$basename" \
+              "arm64-app/Amiberry.app/Contents/Frameworks/$basename" \
+              "$dylib"
           done
 
           # Merge all dylibs in plugins
           if [ -d "universal-app/Amiberry.app/Contents/Resources/plugins" ]; then
             for dylib in universal-app/Amiberry.app/Contents/Resources/plugins/*.dylib; do
               basename=$(basename "$dylib")
-              x86_file="x86_64-app/Amiberry.app/Contents/Resources/plugins/$basename"
-              arm_file="arm64-app/Amiberry.app/Contents/Resources/plugins/$basename"
-              if [ -f "$x86_file" ] && [ -f "$arm_file" ]; then
-                lipo -create "$x86_file" "$arm_file" -output "$dylib"
-              fi
+              merge_binary \
+                "x86_64-app/Amiberry.app/Contents/Resources/plugins/$basename" \
+                "arm64-app/Amiberry.app/Contents/Resources/plugins/$basename" \
+                "$dylib"
             done
           fi
 
