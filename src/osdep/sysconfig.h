@@ -1,4 +1,15 @@
 #pragma once
+
+#ifdef _WIN32
+/* Include Winsock2 early, before any C++ std headers that bring in
+ * std::byte (via 'using namespace std' in sysdeps.h).  This avoids
+ * the ambiguity between std::byte and rpcndr.h's 'byte' typedef
+ * that occurs in MinGW when Windows headers are included later.
+ * Must come before <climits> or any other std header. */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #define SUPPORT_THREADS
 
 #include <climits>

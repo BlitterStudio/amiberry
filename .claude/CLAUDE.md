@@ -175,6 +175,10 @@ Platform-specific code is in `src/osdep/`:
 
 **Winsock:** `src/slirp/` has full Winsock2 support. Key pattern differences: `closesocket()` not `close()`, `ioctlsocket()` not `ioctl()`/`fcntl()`, `WSAGetLastError()` not `errno`, cast socket options to `(char*)`.
 
+**bsdsocket.library emulation:** On Windows, uses WinUAE's native WSAAsyncSelect + hidden HWND model (`src/osdep/bsdsocket_host.cpp`, `#ifdef _WIN32` block). Architecture: hidden window receives async socket events, dedicated `sock_thread` with `MsgWaitForMultipleObjects` loop, thread pools for WaitSelect (64 threads) and DNS lookups (64 threads), `CRITICAL_SECTION` synchronization. On POSIX platforms, uses the original Amiberry implementation (select() + worker threads). Key MinGW adaptation: no SEH (`__try/__except` removed), `GetModuleHandle(NULL)` replaces WinUAE's `hInst`.
+
+**std::byte ambiguity:** `sysconfig.h` includes `<winsock2.h>` at the very top on Windows, before any C++ standard headers. This prevents the `std::byte` vs `rpcndr.h byte` typedef ambiguity that occurs when `sysdeps.h`'s `using namespace std;` pulls `std::byte` into the global namespace before Windows headers define their `byte` typedef.
+
 **Features disabled on Windows:** `USE_IPC_SOCKET`, `USE_GPIOD`, `USE_DBUS`, `USE_UAENET_PCAP`, `WITH_VPAR`, physical CD-ROM IOCTL, physical hard drive enumeration.
 
 **Runtime data directory:** The `data/` directory (fonts, icons, controller maps) must exist in the working directory at runtime. On Windows, `get_data_directory()` returns `getcwd() + "\data\"`. Missing fonts will crash debug builds due to ImGui assertions in `AddFontFromFileTTF`. The fix in `main_window.cpp` checks `std::filesystem::exists(font_path)` before loading.

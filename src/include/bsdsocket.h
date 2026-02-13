@@ -10,6 +10,15 @@
 #ifndef UAE_BSDSOCKET_H
 #define UAE_BSDSOCKET_H
 
+#ifdef _WIN32
+/* Winsock2 must be included before any C++ std headers that bring in
+ * std::byte (via 'using namespace std') to avoid ambiguity with the
+ * rpcndr.h 'byte' typedef.  Including it here makes bsdsocket.h
+ * self-contained — every consumer gets the SOCKET type automatically. */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #include "uae/types.h"
 #include "thread.h"
 
@@ -17,7 +26,7 @@
 
 extern int log_bsd;
 
-#define ISBSDTRACE (log_bsd || BSD_TRACING_ENABLED) 
+#define ISBSDTRACE (log_bsd || BSD_TRACING_ENABLED)
 #define BSDTRACE(x) do { if (ISBSDTRACE) { write_log x; } } while(0)
 
 extern int init_socket_layer (void);
@@ -32,19 +41,10 @@ extern void deinit_socket_layer (void);
 
 #define MAXADDRLEN 256
 
-#if defined(_WIN32) && !defined(AMIBERRY)
+#if defined(_WIN32)
 #define SOCKET_TYPE SOCKET
 #else
 #define SOCKET_TYPE int
-/* On Amiberry-Windows, define SOCKET as int (POSIX-style) since
-   we don't include winsock2.h globally. Code using SOCKET directly
-   (from WinUAE heritage) works with int file descriptors. */
-#if defined(_WIN32) && defined(AMIBERRY)
-#ifndef _WINSOCK2API_
-typedef int SOCKET;
-#define INVALID_SOCKET (-1)
-#endif
-#endif
 #endif
 
 /* allocated and maintained on a per-task basis */
@@ -83,7 +83,7 @@ struct socketbase {
 
 	unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
 	/* host-specific fields below */
-#if defined(_WIN32) && !defined(AMIBERRY)
+#if defined(_WIN32)
 	SOCKET_TYPE sockAbort;	/* for aborting WinSock2 select() (damn Microsoft) */
 	SOCKET_TYPE sockAsync;	/* for aborting WSBAsyncSelect() in window message handler */
 	int needAbort;		/* abort flag */

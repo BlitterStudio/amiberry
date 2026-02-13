@@ -99,6 +99,29 @@ When Amiberry runs natively on Windows, socket code needs these adaptations:
 
 **Note:** `src/slirp/` already has full Winsock2 support from QEMU heritage.
 
+### bsdsocket.library Emulation
+
+The bsdsocket subsystem has a **split architecture** on Windows vs POSIX:
+
+**Windows (`#ifdef _WIN32` in `src/osdep/bsdsocket_host.cpp`):**
+Uses WinUAE's native model — WSAAsyncSelect + hidden HWND + dedicated `sock_thread` + thread pools. Key Win32 APIs used:
+- `WSAAsyncSelect()` for async socket events
+- `MsgWaitForMultipleObjects()` in sock_thread event loop
+- `_beginthreadex()` / `_endthreadex()` for thread management
+- `CRITICAL_SECTION` for synchronization
+- `GetAdaptersAddresses()` for network interface queries (SIOCGIF* ioctls)
+- `WSAIoctl(SIO_GET_INTERFACE_LIST)` for interface enumeration
+
+**MinGW adaptation notes:**
+- No SEH (`__try/__except`) — thread functions called directly, no exception filter
+- `hInst` → `GetModuleHandle(NULL)` (no WinUAE win32.h dependency)
+- `IDI_APPICON` → NULL for hidden window
+- TCHAR/`au()` conversions removed — Amiberry uses `char` strings
+- `_IOWR` macro renamed to `_IOWR_BSD` to avoid MinGW conflict
+
+**POSIX (`#else /* !_WIN32 */`):**
+Uses the original Amiberry implementation — `select()` in a background thread, `pipe()` for abort signaling, `fcntl()` for non-blocking. Untouched by the Windows port.
+
 ### Symlink Handling
 - `std::filesystem::create_symlink()` requires admin or Developer Mode on Windows
 - For directories, must use `create_directory_symlink()` (not `create_symlink()`)
@@ -153,6 +176,8 @@ When Amiberry runs natively on Windows, socket code needs these adaptations:
     #include <SDL.h>
 #endif
 ```
+
+**std::byte ambiguity (MinGW):** `sysdeps.h` has `using namespace std;` which pulls `std::byte` into the global namespace. Windows headers (`rpcndr.h`) also define a `byte` typedef. This causes ambiguity errors in `objidl.h` and other COM headers. Fix: `sysconfig.h` includes `<winsock2.h>` at the very top (before any C++ std headers) so Windows' `byte` typedef is established first. Any new file that includes Windows headers on Windows should ensure `sysconfig.h` is included first.
 
 **Android-specific UI considerations:**
 ```cpp
