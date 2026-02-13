@@ -177,11 +177,11 @@ void render_panel_configurations()
 		char config_path[MAX_DPATH];
 		get_configuration_path(config_path, MAX_DPATH);
 		snprintf(filename, MAX_DPATH, "%s%s.uae", config_path, name);
-		strncpy(changed_prefs.description, desc, 256);
+		snprintf(changed_prefs.description, 256, "%s", desc);
 		if (cfgfile_save(&changed_prefs, filename, 0))
 		{
 			write_log("Config save: SUCCESS\n");
-			strncpy(last_active_config, name, MAX_DPATH);
+			snprintf(last_active_config, MAX_DPATH, "%s", name);
 			ReadConfigFileList();
 			// Re-select the saved file
 			for (int i = 0; i < ConfigFilesList.size(); ++i) {
