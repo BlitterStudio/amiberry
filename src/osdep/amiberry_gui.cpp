@@ -55,7 +55,9 @@
 #if defined(__linux__)
 #include <linux/kd.h>
 #endif
+#ifndef _WIN32
 #include <sys/ioctl.h>
+#endif
 #endif
 
 int emulating = 0;
@@ -558,7 +560,11 @@ static int scan_roms_3(UAEREG* fkey, TCHAR** paths, const TCHAR* path)
 	ret = 0;
 	scan_rom_hook(nullptr, 0);
 	pathp[0] = 0;
+#ifdef _WIN32
+	_fullpath(pathp, path, MAX_DPATH);
+#else
 	realpath(path, pathp);
+#endif
 	if (!pathp[0])
 		return ret;
 	if (_tcsicmp(pathp, get_rom_path().c_str()) == 0)
@@ -918,7 +924,9 @@ int gui_init()
 
 void gui_exit()
 {
+#ifndef _WIN32
 	sync();
+#endif
 	close_sound();
 	save_amiberry_settings();
 	ClearConfigFileList();

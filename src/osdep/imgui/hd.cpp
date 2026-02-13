@@ -608,6 +608,7 @@ static void ShowEditFilesysHardfileModal()
                      CreateDefaultDevicename(devname);
                      au_copy(current_hfdlg.ci.devname, sizeof(current_hfdlg.ci.devname), devname);
                   }
+                  hardfile_testrdb(&current_hfdlg);
                   updatehdfinfo(true, true, false, hdf_info_text1, hdf_info_text2);
                   updatehdfinfo(false, false, false, hdf_info_text1, hdf_info_text2);
              }

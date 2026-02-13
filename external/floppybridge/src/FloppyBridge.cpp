@@ -22,13 +22,25 @@
 * https://github.com/RobSmithDev/FloppyDriveBridge
 */
 
+/* When building with Amiberry (MinGW GCC), AMIBERRY may not be defined
+   by the build system for this external library. Define it here to exclude
+   WinUAE-specific code (dialogs, resources, DnsQuery update checks). */
+#if defined(_WIN32) && defined(__GNUC__) && !defined(AMIBERRY)
+#define AMIBERRY 1
+#endif
+
 #include <cstring>
 #include "FloppyBridge.h"
 #include "resource.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#endif
 
 // For compatibility with older methods
 #define ROMTYPE_ARDUINOREADER_WRITER
@@ -39,19 +51,6 @@
 #include "GreaseWeazleBridge.h"
 #include "SuperCardProBridge.h"
 
-#ifdef _WIN32
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#include <WinSock2.h>
-#include "bridgeProfileListEditor.h"
-#include "bridgeProfileEditor.h"
-#include <WinDNS.h>
-#pragma comment(lib, "Dnsapi.lib")
-HINSTANCE hInstance;
-
-#else
-#include <netdb.h>
-#endif 
- 
 #include <unordered_map>
 
 
@@ -148,13 +147,13 @@ void BridgeConfig::toString(char** serialisedOptions) {
 
 // Returns a pointer to information about the project
 void handleAbout(bool checkForUpdates, FloppyBridge::BridgeAbout** output) {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     checkForUpdates |= BridgeProfileListEditor::shouldAutoCheckForUpdates();
 #endif
     if ((checkForUpdates) && (!hasUpdateChecked)) {
         hasUpdateChecked = true;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
         // Start winsock
         WSADATA data;
         WSAStartup(MAKEWORD(2, 0), &data);
@@ -317,7 +316,7 @@ extern "C" {
     void releaseVirtualDrives(bool release, int controllerType) {
         if (!enableUsageNotifications) return;
 #ifdef _WIN32
-        HWND remoteWindow = FindWindow(L"VIRTUALDRIVE_CONTROLLER_CLASS", L"DiskFlashback Tray Control");
+        HWND remoteWindow = FindWindowA("VIRTUALDRIVE_CONTROLLER_CLASS", "DiskFlashback Tray Control");
         if (remoteWindow) {
             // Signal to release all interfaces of this type
             SendMessage(remoteWindow, WM_USER + 2, (controllerType & 0x7FFF) | (release ? 0 : 0x8000), (LPARAM)GetCurrentProcessId());
@@ -326,7 +325,7 @@ extern "C" {
     }
      
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     // Displays the config dialog (modal) for Floppy Bridge profiles.  
     // *If* you pass a profile ID, the dialog will jump to editing that profile, or return FALSE if it was not found.
     // Returns FALSE if cancel was pressed
@@ -1023,7 +1022,7 @@ extern "C" {
     }
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 
 BOOL WINAPI DllMain(
     HINSTANCE hinstDLL,  // handle to DLL module
@@ -1041,7 +1040,7 @@ BOOL WINAPI DllMain(
             bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_BRIDGELOGO2), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
             bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_SMALLLOGO0), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
             bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_SMALLLOGO1), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
-            bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_SMALLLOGO2), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));           
+            bridgeLogos.push_back((HBITMAP)LoadImage(hInstance, MAKEINTRESOURCE(IDB_SMALLLOGO2), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         }
         break;
 

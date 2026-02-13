@@ -329,10 +329,10 @@ void SerialIO::enumSerialPorts(std::vector<SerialPortInformation>& serialPorts) 
 
 						// Description
 						DWORD type;
-						if (SetupDiGetDeviceProperty(hDevInfoSet, &devInfo, &DEVPKEY_Device_BusReportedDeviceDesc2, &type, (PBYTE)name, 128, 0, 0)) port.productName = name;
+						if (SetupDiGetDevicePropertyW(hDevInfoSet, &devInfo, &DEVPKEY_Device_BusReportedDeviceDesc2, &type, (PBYTE)name, 128, 0, 0)) port.productName = name;
 
 						// Instance
-						if (SetupDiGetDeviceProperty(hDevInfoSet, &devInfo, &DEVPKEY_Device_InstanceId2, &type, (PBYTE)name, 128, 0, 0)) port.instanceID = name;
+						if (SetupDiGetDevicePropertyW(hDevInfoSet, &devInfo, &DEVPKEY_Device_InstanceId2, &type, (PBYTE)name, 128, 0, 0)) port.instanceID = name;
 
 						// Don't add any duplicates
 						if (std::find_if(serialPorts.begin(), serialPorts.end(), [&port](SerialPortInformation search)->bool {

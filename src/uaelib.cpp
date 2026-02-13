@@ -387,7 +387,9 @@ struct ShellSession {
 #include <vector>
 #include <map>
 #include <unistd.h>
+#ifndef _WIN32
 #include <sys/wait.h>
+#endif
 #include <fcntl.h>
 #include <signal.h>
 #if !defined(_WIN32)                                                                                                       
@@ -455,14 +457,17 @@ static uae_u32 uaelib_host_open(TrapContext* ctx, uaecptr command)
 
 static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
 {
+#if defined(_WIN32)
+	return -1; // Not supported on Windows yet
+#else
 	if (shell_sessions.find(handle) == shell_sessions.end())
 		return -1;
 
 	ShellSession& session = shell_sessions[handle];
 	std::vector<char> buf(size);
-	
+
 	ssize_t bytes_read = read(session.outfd, buf.data(), size);
-	
+
 	if (bytes_read > 0) {
 		trap_put_bytes(ctx, (uae_u8*)buf.data(), buffer, bytes_read);
 		return bytes_read;
@@ -472,16 +477,20 @@ static uae_u32 uaelib_host_read(TrapContext* ctx, uae_u32 handle, uaecptr buffer
 		if (waitpid(session.pid, &status, WNOHANG) != 0) {
 			return -1; // Process exited
 		}
-		return 0; 
+		return 0;
 	} else {
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return 0;
 		return -1;
 	}
+#endif
 }
 
 static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffer, uae_u32 size)
 {
+#if defined(_WIN32)
+	return -1; // Not supported on Windows yet
+#else
 	if (shell_sessions.find(handle) == shell_sessions.end())
 		return -1;
 
@@ -491,10 +500,14 @@ static uae_u32 uaelib_host_write(TrapContext* ctx, uae_u32 handle, uaecptr buffe
 
 	ssize_t bytes_written = write(session.infd, buf.data(), size);
 	return bytes_written;
+#endif
 }
 
 static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 {
+#if defined(_WIN32)
+	return 0; // Not supported on Windows yet
+#else
 	if (shell_sessions.find(handle) == shell_sessions.end())
 		return 0;
 
@@ -503,9 +516,10 @@ static uae_u32 uaelib_host_close(TrapContext* ctx, uae_u32 handle)
 	close(session.outfd);
 	kill(session.pid, SIGTERM);
 	waitpid(session.pid, NULL, 0);
-	
+
 	shell_sessions.erase(handle);
 	return 1;
+#endif
 }
 
 static std::string quote_path(const char* path) {
@@ -523,13 +537,15 @@ static uae_u32 uaelib_host_view(TrapContext* ctx, uaecptr filename) {
 	if (trap_get_string(ctx, file, filename, sizeof file) >= sizeof file)
 		return 0;
 
-#if defined(__APPLE__)
+#if defined(_WIN32)
+	std::string cmd = "start \"\" ";
+#elif defined(__APPLE__)
 	std::string cmd = "open ";
 #else
 	std::string cmd = "xdg-open ";
 #endif
 	cmd += quote_path(file);
-	
+
 	target_execute(cmd.c_str());
 	return 1;
 }

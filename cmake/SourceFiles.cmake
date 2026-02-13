@@ -415,8 +415,28 @@ else ()
     message(STATUS "PCem support disabled")
 endif ()
 
+# On Windows, swap POSIX-specific CHD files for Windows equivalents
+if(WIN32)
+    list(REMOVE_ITEM SOURCE_FILES
+        src/archivers/chd/osdlib_unix.cpp
+        src/archivers/chd/posixdir.cpp
+        src/archivers/chd/posixfile.cpp
+        src/archivers/chd/posixptty.cpp
+        src/archivers/chd/posixsocket.cpp
+    )
+    list(APPEND SOURCE_FILES
+        src/archivers/chd/osdlib_win32.cpp
+        src/archivers/chd/windir.cpp
+        src/archivers/chd/winfile.cpp
+        src/archivers/chd/winptty.cpp
+        src/archivers/chd/winsocket.cpp
+    )
+endif()
+
 if(ANDROID)
     add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
+elseif(WIN32)
+    add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 else()
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SOURCE_FILES})
 endif()
@@ -482,6 +502,10 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
     )
 endif ()
 
+if(WIN32)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WINDOWS UTF8PROC_STATIC USE_STD_FILESYSTEM SDL_MAIN_HANDLED)
+endif()
+
 # Apply accumulated compile/link options from StandardProjectSettings.cmake
 # These are target-specific so they don't leak into FetchContent-ed third-party builds.
 target_compile_options(${PROJECT_NAME} PRIVATE ${AMIBERRY_COMPILE_OPTIONS})
@@ -496,13 +520,23 @@ endif()
 if(AMIBERRY_PLATFORM_LINK_DIRS)
     target_link_directories(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LINK_DIRS})
 endif()
-if(AMIBERRY_PLATFORM_LIBS)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LIBS})
-endif()
+# AMIBERRY_PLATFORM_LIBS are linked in Dependencies.cmake after all
+# library dependencies, so Windows system libs (ws2_32, winmm, etc.)
+# come after static libs that depend on them (enet, etc.).
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT WIN32)
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
     target_link_options(${PROJECT_NAME} PRIVATE -no-pie)
+elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # JIT compiler uses 32-bit addressing (x86-64 address override prefix).
+    # All pointers referenced from JIT code must be below 4GB, including
+    # host functions and global data in the executable itself. Force the
+    # image base below 4GB and disable high-entropy ASLR which would
+    # place it at a random high address.
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -Wl,--default-image-base-low
+        -Wl,--disable-high-entropy-va
+    )
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -512,7 +546,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/threaddep
         src/archivers
         src/ppc/pearpc
-        external/mt32emu/src
         external/floppybridge/src
 )
 
@@ -533,4 +566,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     include(cmake/linux/install.cmake)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     include(cmake/macos/install.cmake)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    include(cmake/windows/install.cmake)
 endif ()

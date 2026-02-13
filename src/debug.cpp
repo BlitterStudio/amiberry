@@ -7093,7 +7093,7 @@ static bool debug_line (TCHAR *input)
 				} else if (*inptr == 't') {
 					next_char (&inptr);
 					debugtest_set (&inptr);
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 				} else if (*inptr == 'g') {
 					extern void update_disassembly (uae_u32);
 					next_char (&inptr);
@@ -7350,7 +7350,7 @@ static bool debug_line (TCHAR *input)
 			{
 				uae_u32 maddr;
 				int lines;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 				if (*inptr == 'g') {
 					extern void update_memdump (uae_u32);
 					next_char (&inptr);
