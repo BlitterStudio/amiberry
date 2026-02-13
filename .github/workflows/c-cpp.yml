@@ -40,35 +40,11 @@ jobs:
           - name: x86_64
             runner: macos-15-intel
             arch: intel
-            opengl: OFF
-            extra_brew_deps: ""
-            notary_suffix: macOS-x86_64
-            zip_suffix: macOS-x86_64
-            artifact_name: amiberry-macOS-64bit-intel
-          - name: x86_64-opengl
-            runner: macos-15-intel
-            arch: intel
-            opengl: ON
-            extra_brew_deps: ""
-            notary_suffix: macOS-x86_64-opengl
-            zip_suffix: macOS-x86_64-opengl
-            artifact_name: amiberry-macOS-64bit-intel-opengl
+            artifact_name: amiberry-macOS-x86_64-intermediate
           - name: Apple-Silicon
             runner: macos-15
             arch: apple-silicon
-            opengl: OFF
-            extra_brew_deps: ""
-            notary_suffix: macOS-Apple-Silicon
-            zip_suffix: macOS-apple-silicon
-            artifact_name: amiberry-macOS-64bit-apple-silicon
-          - name: Apple-Silicon-opengl
-            runner: macos-15
-            arch: apple-silicon
-            opengl: ON
-            extra_brew_deps: ""
-            notary_suffix: macOS-Apple-Silicon-opengl
-            zip_suffix: macOS-apple-silicon-opengl
-            artifact_name: amiberry-macOS-64bit-apple-silicon-opengl
+            artifact_name: amiberry-macOS-arm64-intermediate
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -103,7 +79,83 @@ jobs:
         if: matrix.arch == 'apple-silicon'
         run: |
           brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler ${{ matrix.extra_brew_deps }}
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
+
+      - name: Build for macOS (${{ matrix.name }})
+        run: |
+          cmake -B build -DUSE_OPENGL=ON && cmake --build build -j$(sysctl -n hw.ncpu)
+
+      - name: Upload intermediate app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: build/Amiberry.app
+          retention-days: 1
+
+  merge-macOS-universal:
+    needs: [build-macOS]
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Download x86_64 app bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: amiberry-macOS-x86_64-intermediate
+          path: x86_64-app/Amiberry.app
+
+      - name: Download arm64 app bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: amiberry-macOS-arm64-intermediate
+          path: arm64-app/Amiberry.app
+
+      - name: Create Universal binary with lipo
+        run: |
+          set -euo pipefail
+
+          mkdir -p universal-app/Amiberry.app
+
+          # Start with the arm64 app as the base (preserves bundle structure)
+          cp -R arm64-app/Amiberry.app/ universal-app/Amiberry.app/
+
+          # Merge the main executable
+          lipo -create \
+            x86_64-app/Amiberry.app/Contents/MacOS/Amiberry \
+            arm64-app/Amiberry.app/Contents/MacOS/Amiberry \
+            -output universal-app/Amiberry.app/Contents/MacOS/Amiberry
+
+          # Merge all dylibs in Frameworks
+          for dylib in universal-app/Amiberry.app/Contents/Frameworks/*.dylib; do
+            basename=$(basename "$dylib")
+            x86_file="x86_64-app/Amiberry.app/Contents/Frameworks/$basename"
+            arm_file="arm64-app/Amiberry.app/Contents/Frameworks/$basename"
+            if [ -f "$x86_file" ] && [ -f "$arm_file" ]; then
+              lipo -create "$x86_file" "$arm_file" -output "$dylib"
+            fi
+          done
+
+          # Merge all dylibs in plugins
+          if [ -d "universal-app/Amiberry.app/Contents/Resources/plugins" ]; then
+            for dylib in universal-app/Amiberry.app/Contents/Resources/plugins/*.dylib; do
+              basename=$(basename "$dylib")
+              x86_file="x86_64-app/Amiberry.app/Contents/Resources/plugins/$basename"
+              arm_file="arm64-app/Amiberry.app/Contents/Resources/plugins/$basename"
+              if [ -f "$x86_file" ] && [ -f "$arm_file" ]; then
+                lipo -create "$x86_file" "$arm_file" -output "$dylib"
+              fi
+            done
+          fi
+
+          # Verify the main binary is universal
+          echo "=== Universal binary info ==="
+          lipo -info universal-app/Amiberry.app/Contents/MacOS/Amiberry
+          file universal-app/Amiberry.app/Contents/MacOS/Amiberry
 
       - name: Install the Apple certificate
         env:
@@ -112,53 +164,59 @@ jobs:
           APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
         run: |
           set +x  # Mask output for security
-          # create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/apple_devid_cert.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          # import certificate from secret
           echo -n "$APPLE_DEVID_CERT_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          # create keychain
           security create-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
-          # import certificate to keychain
           security import $CERTIFICATE_PATH -P $APPLE_DEVID_CERT_P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple: -s -k $APPLE_KEYCHAIN_PASSWORD $KEYCHAIN_PATH
           security list-keychains -d user -s $KEYCHAIN_PATH
 
-      - name: Build for macOS (${{ matrix.name }})
-        run: |
-          cmake -B build ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} && cmake --build build -j$(sysctl -n hw.ncpu)
-
       - name: Codesign the dylibs
         run: |
-          for file in build/Amiberry.app/Contents/Frameworks/*.dylib; do
+          for file in universal-app/Amiberry.app/Contents/Frameworks/*.dylib; do
             if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
+              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard "$file"
             fi
           done
-          for file in build/Amiberry.app/Contents/Resources/plugins/*.dylib; do
+          for file in universal-app/Amiberry.app/Contents/Resources/plugins/*.dylib; do
             if [ -f "$file" ]; then
-              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard $file
+              codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard "$file"
             fi
           done
 
       - name: Codesign the app
         run: |
-          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard build/Amiberry.app
+          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard universal-app/Amiberry.app
 
       - name: Create a zip to send to the notary service
         run: |
-          zip -r Amiberry-${{ github.sha }}-${{ matrix.notary_suffix }}.zip build/Amiberry.app
+          zip -r Amiberry-${{ github.sha }}-macOS-universal.zip universal-app/Amiberry.app
 
       - name: Send the file to be notarized by Apple
         run: |
-          xcrun notarytool submit Amiberry-${{ github.sha }}-${{ matrix.notary_suffix }}.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
+          xcrun notarytool submit Amiberry-${{ github.sha }}-macOS-universal.zip --wait --apple-id "midwan@gmail.com" --password ${{ secrets.APPLE_NOTARY_APP_PASSWORD }} --team-id ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Staple the notary receipt to the application bundle
         run: |
-          xcrun stapler staple build/Amiberry.app
-          rm Amiberry-${{ github.sha }}-${{ matrix.notary_suffix }}.zip
+          xcrun stapler staple universal-app/Amiberry.app
+          rm Amiberry-${{ github.sha }}-macOS-universal.zip
+
+      - name: Install dependencies for cpack
+        run: |
+          brew update
+          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd
+
+      - name: Generate CPackConfig.cmake
+        run: |
+          cmake -B build -DUSE_OPENGL=ON
+
+      - name: Copy universal app to build dir for cpack
+        run: |
+          rm -rf build/Amiberry.app
+          cp -R universal-app/Amiberry.app build/Amiberry.app
 
       - name: Create DMG package
         run: |
@@ -166,13 +224,13 @@ jobs:
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
-        run: zip -r Amiberry-${{ github.ref_name }}-${{ matrix.zip_suffix }}.zip Amiberry-*.dmg
+        run: zip -r Amiberry-${{ github.ref_name }}-macOS-universal.zip Amiberry-*.dmg
 
       - name: Upload artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
+          name: amiberry-macOS-universal
           path: Amiberry-*.dmg
           retention-days: 7
 
@@ -180,7 +238,7 @@ jobs:
         if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
+          name: amiberry-macOS-universal
           path: Amiberry-*.zip
           retention-days: 7
 
@@ -550,7 +608,7 @@ jobs:
           if-no-files-found: warn
 
   create-release:
-    needs: [build-macOS, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-android]
+    needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-android]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
