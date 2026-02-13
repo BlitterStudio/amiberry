@@ -37,18 +37,29 @@ endif()
 
 # Platform-specific linker flags
 if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,--no-undefined" "-Wl,-z,combreloc" "-Wl,--as-needed")
+    list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,--no-undefined" "-Wl,--as-needed")
+
+    # ELF-specific flags (not available on Windows PE)
+    if(NOT WIN32)
+        list(APPEND AMIBERRY_LINK_OPTIONS "-Wl,-z,combreloc")
+    endif()
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         list(APPEND AMIBERRY_LINK_OPTIONS
             "-Wl,--gc-sections"
             "-Wl,--strip-all"
             "-Wl,-O1"
-            "-Wl,-z,relro"
-            "-Wl,-z,now"
         )
 
-        # GNU ld-only flags (do not work on FreeBSD)
+        # ELF-specific hardening flags (not available on Windows PE)
+        if(NOT WIN32)
+            list(APPEND AMIBERRY_LINK_OPTIONS
+                "-Wl,-z,relro"
+                "-Wl,-z,now"
+            )
+        endif()
+
+        # GNU ld-only flags (do not work on FreeBSD or Windows)
         if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             list(APPEND AMIBERRY_LINK_OPTIONS
                 "-Wl,--sort-common=descending"
@@ -98,4 +109,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     list(APPEND AMIBERRY_PLATFORM_LIBS "-framework IOKit" "-framework Foundation" "-framework CoreFoundation" "-framework DiskArbitration" "iconv")
 
     list(APPEND AMIBERRY_COMPILE_OPTIONS "$<$<CONFIG:Debug>:-fno-omit-frame-pointer;-mno-omit-leaf-frame-pointer>")
+endif()
+
+if(WIN32)
+    list(APPEND AMIBERRY_PLATFORM_LIBS ws2_32 winmm imm32 version setupapi shlwapi advapi32)
 endif()

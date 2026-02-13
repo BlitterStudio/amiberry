@@ -6,6 +6,24 @@
 #include "uae.h"
 #include "imgui_panels.h"
 
+#ifdef _WIN32
+#include <cstring>
+#include <cctype>
+static const char* strcasestr(const char* haystack, const char* needle)
+{
+	if (!needle[0]) return haystack;
+	for (; *haystack; ++haystack) {
+		const char* h = haystack;
+		const char* n = needle;
+		while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+			++h; ++n;
+		}
+		if (!*n) return haystack;
+	}
+	return nullptr;
+}
+#endif
+
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
 

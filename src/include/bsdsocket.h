@@ -32,10 +32,19 @@ extern void deinit_socket_layer (void);
 
 #define MAXADDRLEN 256
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 #define SOCKET_TYPE SOCKET
 #else
 #define SOCKET_TYPE int
+/* On Amiberry-Windows, define SOCKET as int (POSIX-style) since
+   we don't include winsock2.h globally. Code using SOCKET directly
+   (from WinUAE heritage) works with int file descriptors. */
+#if defined(_WIN32) && defined(AMIBERRY)
+#ifndef _WINSOCK2API_
+typedef int SOCKET;
+#define INVALID_SOCKET (-1)
+#endif
+#endif
 #endif
 
 /* allocated and maintained on a per-task basis */
@@ -74,7 +83,7 @@ struct socketbase {
 
 	unsigned int *mtable;	/* window messages allocated for asynchronous event notification */
 	/* host-specific fields below */
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	SOCKET_TYPE sockAbort;	/* for aborting WinSock2 select() (damn Microsoft) */
 	SOCKET_TYPE sockAsync;	/* for aborting WSBAsyncSelect() in window message handler */
 	int needAbort;		/* abort flag */

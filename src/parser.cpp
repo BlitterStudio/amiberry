@@ -11,6 +11,7 @@
 
 #include <cstring>
 #include <cstdio>
+#include <pthread.h>
 
 #undef SERIAL_ENET
 

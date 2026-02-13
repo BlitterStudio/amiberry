@@ -482,7 +482,7 @@ set(AMIBERRY_LIBS
         SDL2_image
 )
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WIN32)
     list(APPEND AMIBERRY_LIBS pthread)
 endif()
 

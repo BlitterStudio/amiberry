@@ -36,6 +36,28 @@
 #endif
 #include "uae.h"
 
+#ifdef _WIN32
+/* On Windows x86_64, JIT exception handling is done via
+ * AddVectoredExceptionHandler in jit/x86/exception_handler.cpp.
+ * This file only provides stubs for the POSIX signal handler API. */
+#include <SDL.h>
+
+static int max_signals = 200;
+
+void init_max_signals()
+{
+#ifdef WITH_LOGGING
+	max_signals = 20;
+#else
+	max_signals = 200;
+#endif
+}
+
+/* Windows stubs -- signal_segv, signal_buserror, signal_term are not used.
+ * The install_segv_handler in amiberry.cpp will skip sigaction on Windows. */
+
+#else /* !_WIN32 */
+
 #if !defined(__MACH__) && !defined(CPU_AMD64) && !defined(__x86_64__) && !defined(__riscv)
 #include <asm/sigcontext.h>
 #else
@@ -994,3 +1016,5 @@ void signal_term(int signum, siginfo_t* info, void* ptr)
 	SDL_Quit();
 	exit(1);
 }
+
+#endif /* !_WIN32 */

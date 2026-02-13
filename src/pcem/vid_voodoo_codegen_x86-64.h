@@ -9,7 +9,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
-#if WIN64
+#if defined(_WIN32) || defined(WIN64)
 #define BITMAP windows_BITMAP
 #include <windows.h>
 #undef BITMAP

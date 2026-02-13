@@ -34,6 +34,13 @@
 #include "native2amiga.h"
 #include "bsdsocket.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <io.h>
+#include <fcntl.h>
+#include <cstdarg>
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -44,16 +51,19 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <cstddef>
 #include <netdb.h>
-
 #include <csignal>
 #include <arpa/inet.h>
+#include <unistd.h>
+#endif /* _WIN32 */
+#include <cstddef>
 #include <cstring>
 #include <vector>
-#include <unistd.h>
 #include <SDL_mutex.h>
-#if defined(__linux__)
+#if defined(_WIN32)
+#include <mutex>
+static std::mutex bsdsock_mutex;
+#elif defined(__linux__)
 #include <pthread.h>
 #elif defined(__APPLE__)
 #include <mutex>
@@ -61,6 +71,127 @@ static std::mutex bsdsock_mutex;
 #else
 #include <mutex>
 static std::mutex bsdsock_mutex;
+#endif
+
+#ifdef _WIN32
+/* Winsock compatibility shims */
+#define close_socket closesocket
+#define SOCK_ERRNO WSAGetLastError()
+#ifndef MSG_DONTWAIT
+#define MSG_DONTWAIT 0
+#endif
+static int winsock_initialized = 0;
+static void ensure_winsock()
+{
+	if (!winsock_initialized) {
+		WSADATA wsaData;
+		WSAStartup(MAKEWORD(2, 2), &wsaData);
+		winsock_initialized = 1;
+	}
+}
+/* pipe() replacement using loopback sockets for select()-compatibility */
+static int socketpair_pipe(int fds[2])
+{
+	struct sockaddr_in addr;
+	SOCKET listener, client, server;
+	int addrlen = sizeof(addr);
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr.sin_port = 0;
+	listener = socket(AF_INET, SOCK_STREAM, 0);
+	if (listener == INVALID_SOCKET) return -1;
+	if (bind(listener, (struct sockaddr*)&addr, sizeof(addr)) < 0) { closesocket(listener); return -1; }
+	if (listen(listener, 1) < 0) { closesocket(listener); return -1; }
+	if (getsockname(listener, (struct sockaddr*)&addr, &addrlen) < 0) { closesocket(listener); return -1; }
+	client = socket(AF_INET, SOCK_STREAM, 0);
+	if (client == INVALID_SOCKET) { closesocket(listener); return -1; }
+	if (connect(client, (struct sockaddr*)&addr, sizeof(addr)) < 0) { closesocket(client); closesocket(listener); return -1; }
+	server = accept(listener, NULL, NULL);
+	closesocket(listener);
+	if (server == INVALID_SOCKET) { closesocket(client); return -1; }
+	fds[0] = (int)server;
+	fds[1] = (int)client;
+	return 0;
+}
+#define pipe(fds) socketpair_pipe(fds)
+/* On Windows, pipe fds are actually sockets, so use closesocket and send/recv */
+#define close_pipe(fd) closesocket(fd)
+#define write_pipe(fd, buf, len) send(fd, (const char*)(buf), (int)(len), 0)
+#define read_pipe(fd, buf, len) recv(fd, (char*)(buf), (int)(len), 0)
+
+/* POSIX errno values not available on Windows - map to Winsock equivalents */
+#ifndef ESOCKTNOSUPPORT
+#define ESOCKTNOSUPPORT WSAESOCKTNOSUPPORT
+#endif
+#ifndef EPFNOSUPPORT
+#define EPFNOSUPPORT WSAEPFNOSUPPORT
+#endif
+#ifndef ESHUTDOWN
+#define ESHUTDOWN WSAESHUTDOWN
+#endif
+#ifndef ETOOMANYREFS
+#define ETOOMANYREFS WSAETOOMANYREFS
+#endif
+
+/* POSIX socket options not available on Windows */
+#ifndef IPPROTO_ENCAP
+#define IPPROTO_ENCAP 98
+#endif
+#ifndef IP_RECVOPTS
+#define IP_RECVOPTS 6
+#endif
+#ifndef IP_RECVRETOPTS
+#define IP_RECVRETOPTS 7
+#endif
+#ifndef IP_RETOPTS
+#define IP_RETOPTS 8
+#endif
+#ifndef TCP_MAXSEG
+#define TCP_MAXSEG 4
+#endif
+
+/* fcntl emulation for Winsock sockets.
+   Only F_GETFL and F_SETFL with O_NONBLOCK are meaningfully supported.
+   O_ASYNC is ignored (Windows uses WSAAsyncSelect/WSAEventSelect instead). */
+#ifndef F_GETFL
+#define F_GETFL 3
+#endif
+#ifndef F_SETFL
+#define F_SETFL 4
+#endif
+#ifndef O_NONBLOCK
+#define O_NONBLOCK 0x0004
+#endif
+#ifndef O_ASYNC
+#define O_ASYNC 0x2000
+#endif
+static int fcntl(int fd, int cmd, ...)
+{
+	if (cmd == F_GETFL) {
+		return 0; /* Cannot query flags on Windows; assume default */
+	} else if (cmd == F_SETFL) {
+		va_list ap;
+		va_start(ap, cmd);
+		int flags = va_arg(ap, int);
+		va_end(ap);
+		u_long mode = (flags & O_NONBLOCK) ? 1 : 0;
+		return ioctlsocket((SOCKET)fd, FIONBIO, &mode);
+	}
+	return -1;
+}
+/* ssize_t is not defined by Winsock */
+#ifndef _SSIZE_T_DEFINED
+typedef intptr_t ssize_t;
+#define _SSIZE_T_DEFINED
+#endif
+#else
+#define close_socket close
+#define SOCK_ERRNO errno
+#define ensure_winsock() ((void)0)
+#define close_pipe(fd) close(fd)
+#define write_pipe(fd, buf, len) write(fd, buf, len)
+#define read_pipe(fd, buf, len) read(fd, buf, len)
 #endif
 
 #define WAITSIGNAL  waitsig (ctx, sb)
@@ -75,8 +206,13 @@ static std::mutex bsdsock_mutex;
 	} while (0)
 
 
+#ifdef _WIN32
+#define SETERRNO    bsdsocklib_seterrno (ctx, sb, mapErrno (SOCK_ERRNO))
+#define SETHERRNO   bsdsocklib_setherrno (ctx, sb, SOCK_ERRNO)
+#else
 #define SETERRNO    bsdsocklib_seterrno (ctx, sb,mapErrno (errno))
 #define SETHERRNO   bsdsocklib_setherrno (ctx, sb, h_errno)
+#endif
 
 
 /* BSD-systems don't seem to have MSG_NOSIGNAL..
@@ -630,7 +766,7 @@ static int event_monitor_thread(void* data)
 		// Check wake pipe
 		if (FD_ISSET(monitor->wake_pipe[0], &readfds)) {
 			char buf[256];
-			read(monitor->wake_pipe[0], buf, sizeof(buf));
+			read_pipe(monitor->wake_pipe[0], buf, sizeof(buf));
 			// Socket list changed, loop again to rebuild fd_sets
 			continue;
 		}
@@ -677,7 +813,7 @@ static int event_monitor_thread(void* data)
 				if (entry.connecting) {
 					int error = 0;
 					socklen_t len = sizeof(error);
-					if (getsockopt(entry.s, SOL_SOCKET, SO_ERROR, &error, &len) < 0 || error != 0) {
+					if (getsockopt(entry.s, SOL_SOCKET, SO_ERROR, (char*)&error, &len) < 0 || error != 0) {
 						// Connection failed
 						write_log("BSDSOCK: Socket %d connect check failed (errno=%d), checking SO_ERROR\n", entry.sd, errno);
 						// We don't set REP_ERROR here, maybe we should? But WinUAE usually handles it via generic error?
@@ -772,8 +908,8 @@ static bool start_event_monitor()
 	g_event_monitor->mutex = SDL_CreateMutex();
 	if (!g_event_monitor->mutex) {
 		write_log("BSDSOCK: Failed to create mutex\n");
-		close(g_event_monitor->wake_pipe[0]);
-		close(g_event_monitor->wake_pipe[1]);
+		close_pipe(g_event_monitor->wake_pipe[0]);
+		close_pipe(g_event_monitor->wake_pipe[1]);
 		free(g_event_monitor);
 		g_event_monitor = nullptr;
 		return false;
@@ -787,8 +923,8 @@ static bool start_event_monitor()
 	if (!uae_start_thread("bsdsock_event_monitor", event_monitor_thread, g_event_monitor, &g_event_monitor->thread)) {
 		write_log("BSDSOCK: Failed to start event monitor thread\n");
 		SDL_DestroyMutex(g_event_monitor->mutex);
-		close(g_event_monitor->wake_pipe[0]);
-		close(g_event_monitor->wake_pipe[1]);
+		close_pipe(g_event_monitor->wake_pipe[0]);
+		close_pipe(g_event_monitor->wake_pipe[1]);
 		free(g_event_monitor);
 		g_event_monitor = nullptr;
 		return false;
@@ -812,15 +948,15 @@ static void stop_event_monitor()
 	
 	// Wake up the thread
 	char wake = 1;
-	write(g_event_monitor->wake_pipe[1], &wake, 1);
+	write_pipe(g_event_monitor->wake_pipe[1], &wake, 1);
 	
 	// Wait for thread to exit
 	uae_wait_thread(&g_event_monitor->thread);
 	
 	// Cleanup
 	SDL_DestroyMutex(g_event_monitor->mutex);
-	close(g_event_monitor->wake_pipe[0]);
-	close(g_event_monitor->wake_pipe[1]);
+	close_pipe(g_event_monitor->wake_pipe[0]);
+	close_pipe(g_event_monitor->wake_pipe[1]);
 	free(g_event_monitor);
 	g_event_monitor = nullptr;
 	
@@ -870,7 +1006,7 @@ static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 	
 	// Wake up monitor thread to rebuild fd_sets
 	char wake = 1;
-	write(g_event_monitor->wake_pipe[1], &wake, 1);
+	write_pipe(g_event_monitor->wake_pipe[1], &wake, 1);
 	
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
@@ -897,7 +1033,7 @@ static void unregister_socket_events(struct socketbase* sb, int sd)
 	
 	// Wake up monitor thread
 	char wake = 1;
-	write(g_event_monitor->wake_pipe[1], &wake, 1);
+	write_pipe(g_event_monitor->wake_pipe[1], &wake, 1);
 	
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
@@ -918,7 +1054,7 @@ static void set_socket_connecting(struct socketbase* sb, int sd, bool connecting
 	// Wake up monitor to update handling
 	if (g_event_monitor->wake_pipe[1] != -1) {
 		char b = 1;
-		write(g_event_monitor->wake_pipe[1], &b, 1);
+		write_pipe(g_event_monitor->wake_pipe[1], &b, 1);
 	}
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
@@ -937,7 +1073,7 @@ static void socket_reenable_events(struct socketbase* sb, int sd, int events)
 				// Wake up monitor to check this socket again
 				if (g_event_monitor->wake_pipe[1] != -1) {
 					char b = 1;
-					write(g_event_monitor->wake_pipe[1], &b, 1);
+					write_pipe(g_event_monitor->wake_pipe[1], &b, 1);
 				}
 			}
 			break;
@@ -1108,7 +1244,7 @@ uae_u32 bsdthr_Recv_2 (SB)
     int foo;
     int socktype = 0;
     socklen_t optlen = sizeof(socktype);
-    getsockopt(sb->s, SOL_SOCKET, SO_TYPE, &socktype, &optlen);
+    getsockopt(sb->s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &optlen);
     int retries = (socktype == SOCK_RAW) ? 5 : 1;
     if (sb->from == 0) {
         ssize_t n;
@@ -1116,7 +1252,7 @@ uae_u32 bsdthr_Recv_2 (SB)
             if (sb->s != -1 && socktype == SOCK_RAW) {
                 write_log("[RAW RECV] fd=%d, buf=%p, len=%d, flags=0x%x\n", sb->s, sb->buf, sb->len, sb->flags);
             }
-            n = recv(sb->s, sb->buf, sb->len, sb->flags /*| MSG_NOSIGNAL*/);
+            n = recv(sb->s, (char*)sb->buf, sb->len, sb->flags /*| MSG_NOSIGNAL*/);
             foo = (int)n;
             write_log("recv2, recv returns %d, errno is %d\n", foo, errno);
             if (foo >= 0) break;
@@ -1131,7 +1267,7 @@ uae_u32 bsdthr_Recv_2 (SB)
             if (sb->s != -1 && socktype == SOCK_RAW) {
                 write_log("[RAW RECVFROM] fd=%d, buf=%p, len=%d, flags=0x%x\n", sb->s, sb->buf, sb->len, sb->flags);
             }
-            n = recvfrom(sb->s, sb->buf, sb->len, sb->flags | MSG_NOSIGNAL, (struct sockaddr *)&addr, &l);
+            n = recvfrom(sb->s, (char*)sb->buf, sb->len, sb->flags | MSG_NOSIGNAL, (struct sockaddr *)&addr, &l);
             foo = (int)n;
             write_log("recv2, recvfrom returns %d, errno is %d\n", foo, errno);
             if (foo >= 0) {
@@ -1151,12 +1287,12 @@ uae_u32 bsdthr_Send_2 (SB)
         if (sb->s != -1) {
             int socktype = 0;
             socklen_t optlen = sizeof(socktype);
-            getsockopt(sb->s, SOL_SOCKET, SO_TYPE, &socktype, &optlen);
+            getsockopt(sb->s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &optlen);
             if (socktype == SOCK_RAW) {
                 write_log("[RAW SEND] fd=%d, buf=%p, len=%d, flags=0x%x\n", sb->s, sb->buf, sb->len, sb->flags);
             }
         }
-        n = send (sb->s, sb->buf, sb->len, sb->flags | MSG_NOSIGNAL);
+        n = send (sb->s, (const char*)sb->buf, sb->len, sb->flags | MSG_NOSIGNAL);
         return (int)n;
     } else {
         struct sockaddr_in addr{};
@@ -1166,12 +1302,12 @@ uae_u32 bsdthr_Send_2 (SB)
         if (sb->s != -1) {
             int socktype = 0;
             socklen_t optlen = sizeof(socktype);
-            getsockopt(sb->s, SOL_SOCKET, SO_TYPE, &socktype, &optlen);
+            getsockopt(sb->s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &optlen);
             if (socktype == SOCK_RAW) {
                 write_log("[RAW SENDTO] fd=%d, buf=%p, len=%d, flags=0x%x\n", sb->s, sb->buf, sb->len, sb->flags);
             }
         }
-        n = sendto (sb->s, sb->buf, sb->len, sb->flags | MSG_NOSIGNAL, (struct sockaddr *)&addr, l);
+        n = sendto (sb->s, (const char*)sb->buf, sb->len, sb->flags | MSG_NOSIGNAL, (struct sockaddr *)&addr, l);
         return (int)n;
     }
 }
@@ -1197,7 +1333,7 @@ uae_u32 bsdthr_Connect_2 (SB)
 		int foo;
 		socklen_t bar;
 		bar = sizeof (foo);
-		if (getsockopt (sb->s, SOL_SOCKET, SO_ERROR, &foo, &bar) == 0) {
+		if (getsockopt (sb->s, SOL_SOCKET, SO_ERROR, (char*)&foo, &bar) == 0) {
 			errno = foo;
 			write_log("Connect status is %d\n", foo);
 			return (foo == 0) ? 0 : -1;
@@ -1222,24 +1358,37 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
     struct timeval orig_timeout = {0}, timeout = {0};
     socklen_t tvlen = sizeof(orig_timeout);
     int timeout_set = 0;
+#ifdef _WIN32
+    flags = 0;
+#else
     if ((flags = fcntl(sb->s, F_GETFL)) == -1)
         flags = 0;
+#endif
     // Check if this is a raw socket
-    if (getsockopt(sb->s, SOL_SOCKET, SO_TYPE, &socktype, &optlen) == 0 && socktype == SOCK_RAW) {
+    if (getsockopt(sb->s, SOL_SOCKET, SO_TYPE, (char*)&socktype, &optlen) == 0 && socktype == SOCK_RAW) {
         is_raw = 1;
         // Save original timeout
-        if (getsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, &orig_timeout, &tvlen) == 0) {
+        if (getsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (char*)&orig_timeout, &tvlen) == 0) {
             timeout_set = 1;
         }
         // Set a 1 second timeout for raw sockets
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
-        setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
     }
+#ifdef _WIN32
+    nonblock = 0; /* Cannot query nonblock state on Windows; assume blocking */
+#else
     nonblock = (flags & O_NONBLOCK);
+#endif
     // Only set non-blocking for non-raw sockets
     if (!is_raw) {
+#ifdef _WIN32
+        u_long mode = 1;
+        ioctlsocket(sb->s, FIONBIO, &mode);
+#else
         fcntl(sb->s, F_SETFL, flags | O_NONBLOCK);
+#endif
     }
     while (!done) {
         done = 1;
@@ -1267,8 +1416,12 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                 } while (num == -1 && errno == EINTR); // retry on EINTR
                 if (num == -1) {
                     write_log("Blocking select(%d) returns -1,errno is %d\n", sb->sockabort[0], errno);
+#ifdef _WIN32
+                    if (!is_raw) { u_long mode = 0; ioctlsocket(sb->s, FIONBIO, &mode); }
+#else
                     if (!is_raw) fcntl(sb->s, F_SETFL, flags);
-                    if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, &orig_timeout, sizeof(orig_timeout));
+#endif
+                    if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&orig_timeout, sizeof(orig_timeout));
                     return -1;
                 }
 
@@ -1290,8 +1443,12 @@ uae_u32 bsdthr_blockingstuff(uae_u32(*tryfunc)(SB), SB)
                 done = 1;
         }
     }
+#ifdef _WIN32
+    if (!is_raw) { u_long mode = 0; ioctlsocket(sb->s, FIONBIO, &mode); }
+#else
     if (!is_raw) fcntl(sb->s, F_SETFL, flags);
-    if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, &orig_timeout, sizeof(orig_timeout));
+#endif
+    if (is_raw && timeout_set) setsockopt(sb->s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&orig_timeout, sizeof(orig_timeout));
     return foo;
 }
 
@@ -1391,7 +1548,7 @@ static int bsdlib_threadfunc(void* arg)
 			}
 #else
 			std::lock_guard<std::mutex> lock(bsdsock_mutex);
-			struct hostent* tmphostent = gethostbyaddr(get_real_address(sb->name), sb->a_addrlen, sb->flags);
+			struct hostent* tmphostent = gethostbyaddr((const char*)get_real_address(sb->name), sb->a_addrlen, sb->flags);
 			if (tmphostent) {
 				copyHostent(ctx, tmphostent, sb);
 				bsdsocklib_setherrno(ctx, sb, 0);
@@ -1413,7 +1570,7 @@ void clearsockabort(SB)
 	int chr;
 	int num;
 
-	while ((num = read(sb->sockabort[0], &chr, sizeof(chr))) >= 0) {
+	while ((num = read_pipe(sb->sockabort[0], &chr, sizeof(chr))) >= 0) {
 		write_log("Sockabort got %d bytes\n", num);
 	}
 }
@@ -1421,6 +1578,7 @@ void clearsockabort(SB)
 int init_socket_layer(void)
 {
 	int result = 0;
+	ensure_winsock();
 
 	if (currprefs.socket_emu) {
 		if (uae_sem_init(&sem_queue, 0, 1) < 0) {
@@ -1449,14 +1607,21 @@ int host_sbinit (TrapContext *ctx, SB)
 		return 0;
 	}
 
+#ifdef _WIN32
+	{
+		u_long mode = 1;
+		ioctlsocket(sb->sockabort[0], FIONBIO, &mode);
+	}
+#else
 	if (fcntl (sb->sockabort[0], F_SETFL, O_NONBLOCK) < 0) {
 		write_log ("Set nonblock failed %d\n", errno);
 	}
+#endif
 
 	if (uae_sem_init (&sb->sem, 0, 0)) {
 		write_log ("BSDSOCK: Failed to create semaphore.\n");
-		close (sb->sockabort[0]);
-		close (sb->sockabort[1]);
+		close_pipe (sb->sockabort[0]);
+		close_pipe (sb->sockabort[1]);
 		return 0;
 	}
 
@@ -1468,8 +1633,8 @@ int host_sbinit (TrapContext *ctx, SB)
 	if (uae_start_thread ("bsdsocket", bsdlib_threadfunc, (void *)sb, &sb->thread) == BAD_THREAD) {
 		write_log ("BSDSOCK: Failed to create thread.\n");
 		uae_sem_destroy (&sb->sem);
-		close (sb->sockabort[0]);
-		close (sb->sockabort[1]);
+		close_pipe (sb->sockabort[0]);
+		close_pipe (sb->sockabort[1]);
 		return 0;
 	}
 	return 1;
@@ -1481,8 +1646,8 @@ void host_closesocketquick (int s)
 	l.l_onoff = 0;
 	l.l_linger = 0;
 	if(s != -1) {
-		setsockopt (s, SOL_SOCKET, SO_LINGER, &l, sizeof(l));
-		close (s);
+		setsockopt (s, SOL_SOCKET, SO_LINGER, (const char*)&l, sizeof(l));
+		close_socket (s);
 	}
 }
 
@@ -1495,11 +1660,11 @@ void host_sbcleanup (SB)
 	}
 
 	uae_thread_id thread = sb->thread;
-	close (sb->sockabort[0]);
-	close (sb->sockabort[1]);
+	close_pipe (sb->sockabort[0]);
+	close_pipe (sb->sockabort[1]);
 	for (i = 0; i < sb->dtablesize; i++) {
 		if (sb->dtable[i] != -1) {
-			close(sb->dtable[i]);
+			close_socket(sb->dtable[i]);
 		}
 	}
 	sb->action = 0;
@@ -1523,7 +1688,7 @@ void sockabort (SB)
 {
 	int chr = 1;
 	write_log ("Sock abort!!\n");
-	if (write (sb->sockabort[1], &chr, sizeof (chr)) != sizeof (chr)) {
+	if (write_pipe (sb->sockabort[1], &chr, sizeof (chr)) != sizeof (chr)) {
 		write_log("sockabort - did not write %zd bytes\n", sizeof(chr));
 	}
 }
@@ -1543,7 +1708,7 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 			fd2++;
 			s2 = getsock(ctx, sb, fd2);
 			if (s2 != -1) {
-				close (s2);
+				close_socket (s2);
 			}
 			setsd (ctx, sb, fd2, dup (s1));
 			return 0;
@@ -1579,7 +1744,7 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
     } else {
         int arg = 1;
         sd = getsd (ctx, sb, s);
-        setsockopt (s, SOL_SOCKET, SO_REUSEADDR, &arg, sizeof(arg));
+        setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (const char*)&arg, sizeof(arg));
     }
 
     sb->ftable[sd-1] = SF_BLOCKING;
@@ -1901,13 +2066,13 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		}
 	}
 	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
-		sb->resultval = setsockopt(s, nativelevel, nativeoptname, &timeout, sizeof(timeout));
+		sb->resultval = setsockopt(s, nativelevel, nativeoptname, (const char*)&timeout, sizeof(timeout));
 	}
 	else if (nativeoptname == SO_LINGER) {
-		sb->resultval = setsockopt(s, nativelevel, nativeoptname, &sl, sizeof(sl));
+		sb->resultval = setsockopt(s, nativelevel, nativeoptname, (const char*)&sl, sizeof(sl));
 	}
 	else {
-		sb->resultval = setsockopt(s, nativelevel, nativeoptname, buf, len);
+		sb->resultval = setsockopt(s, nativelevel, nativeoptname, (const char*)buf, len);
 	}
 	if (buf)
 		free(buf);
@@ -1945,13 +2110,13 @@ uae_u32 host_getsockopt(TrapContext* ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 	}
 
 	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
-		r = getsockopt(s, nativelevel, nativeoptname, &timeout, &len);
+		r = getsockopt(s, nativelevel, nativeoptname, (char*)&timeout, &len);
 	}
 	else if (nativeoptname == SO_LINGER) {
-		r = getsockopt(s, nativelevel, nativeoptname, &sl, &len);
+		r = getsockopt(s, nativelevel, nativeoptname, (char*)&sl, &len);
 	}
 	else {
-		r = getsockopt(s, nativelevel, nativeoptname, optval ? buf : NULL, optlen ? &len : NULL);
+		r = getsockopt(s, nativelevel, nativeoptname, optval ? (char*)buf : NULL, optlen ? &len : NULL);
 	}
 
 	if (optlen)
@@ -2051,10 +2216,14 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		return -1;
 	}
 
+#ifdef _WIN32
+	flags = 0; /* fcntl F_GETFL not available on Windows */
+#else
 	if ((flags = fcntl (sock, F_GETFL)) == -1) {
 		SETERRNO;
 		return -1;
 	}
+#endif
 
 	// Only log non-FIONREAD ioctls, or errors for FIONREAD
 	if (request != 0x4004667F) {
@@ -2070,7 +2239,10 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		trap_put_long(ctx, arg,sb->ownertask);
 		return 0;
 	case 0x8004667D: /* FIOASYNC */
-#   ifdef O_ASYNC
+#ifdef _WIN32
+		/* O_ASYNC / SIGIO not available on Windows */
+		return 0;
+#elif defined(O_ASYNC)
 		r = fcntl (sock, F_SETFL, argval ? flags | O_ASYNC : flags & ~O_ASYNC);
 		return r;
 #   else
@@ -2079,8 +2251,14 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 #   endif
 
 	case 0x8004667E: /* FIONBIO */
+	{
+#ifdef _WIN32
+		u_long mode = argval ? 1 : 0;
+		r = ioctlsocket(sock, FIONBIO, &mode);
+#else
 		r = fcntl (sock, F_SETFL, argval ?
 			   flags | O_NONBLOCK : flags & ~O_NONBLOCK);
+#endif
 		if (argval) {
 			write_log("nonblocking\n");
 			sb->ftable[sd-1] &= ~SF_BLOCKING;
@@ -2089,12 +2267,17 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 			sb->ftable[sd-1] |= SF_BLOCKING;
 		}
 		return r;
+	}
 
 	case 0x4004667F: /* FIONREAD */
 	{
+#ifdef _WIN32
+		u_long nbytes = 0;
+		r = ioctlsocket(sock, FIONREAD, &nbytes);
+#else
 		int nbytes = 0;
 		r = ioctl(sock, FIONREAD, &nbytes);
-		
+#endif
 
 		if (r >= 0) {
 			put_long (arg, nbytes);
@@ -2103,7 +2286,8 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		break;
 	}
 
-	// Interface discovery IOCTLs - purely additive, won't affect existing code
+#ifndef _WIN32
+	// Interface discovery IOCTLs - not available on Windows (no ifreq/ifconf)
 	case 0x80106921: /* SIOCGIFADDR */
 	case 0x80106923: /* SIOCGIFDSTADDR */
 	case 0x80106925: /* SIOCGIFBRDADDR */
@@ -2156,6 +2340,7 @@ uae_u32 host_IoctlSocket(TrapContext *ctx, SB, uae_u32 sd, uae_u32 request, uae_
 		}
 		return r;
 	}
+#endif /* !_WIN32 */
 
 	} /* end switch */
 
@@ -2183,7 +2368,7 @@ int host_CloseSocket(TrapContext *ctx, SB, int sd)
 	// Unregister from event monitoring if registered
 	unregister_socket_events(sb, sd);
 	
-	retval = close (s);
+	retval = close_socket (s);
 	SETERRNO;
 	releasesock (ctx, sb, sd + 1);
 	return retval;

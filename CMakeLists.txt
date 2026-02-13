@@ -55,6 +55,16 @@ if(ANDROID)
     set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
 endif()
 
+if(WIN32)
+    set(USE_GPIOD OFF CACHE BOOL "GPIO not available on Windows" FORCE)
+    set(USE_DBUS OFF CACHE BOOL "DBus not available on Windows" FORCE)
+    set(USE_IPC_SOCKET OFF CACHE BOOL "Unix sockets not available on Windows" FORCE)
+    set(USE_UAENET_PCAP OFF CACHE BOOL "Disable pcap on Windows initially" FORCE)
+    set(USE_LIBMPEG2 OFF CACHE BOOL "LibMPEG2 not available in vcpkg" FORCE)
+    set(USE_LIBSERIALPORT OFF CACHE BOOL "LibSerialPort not available in vcpkg for MinGW" FORCE)
+    set(USE_PORTMIDI OFF CACHE BOOL "PortMidi not available in vcpkg for MinGW" FORCE)
+endif()
+
 # Pre-release version suffix (project version is set in project() above)
 set(VERSION_PRE_RELEASE "20" CACHE STRING "Pre-release version")
 

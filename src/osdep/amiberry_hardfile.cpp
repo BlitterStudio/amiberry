@@ -8,7 +8,9 @@
 
 #include <dirent.h>
 #include <sys/stat.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <errno.h>
 #include <cstdio>
@@ -191,6 +193,7 @@ static void add_drive_entry(const char* display, const char* path, uae_u64 size_
 	di->mounted = mounted;
 }
 
+#if !defined(_WIN32)
 static void scan_harddrives_linux()
 {
 	DIR* d = opendir("/sys/block");
@@ -315,6 +318,7 @@ static void scan_harddrives_linux()
 		}
 	}
 }
+#endif /* !_WIN32 */
 
 #ifdef __MACH__
 static bool macos_get_media_info(const std::string& bsd_name, uae_u64* out_size, int* out_blocksize)
@@ -489,6 +493,9 @@ static int scan_harddrives(bool force)
 
 #ifdef __MACH__
 	scan_harddrives_macos();
+#elif defined(_WIN32)
+	// Windows: physical drive enumeration not yet implemented
+	// HDF file access works without it
 #else
 	scan_harddrives_linux();
 #endif
@@ -636,10 +643,12 @@ int hdf_open_target(struct hardfiledata *hfd, const TCHAR *pname)
 				zmode = 1;
 		}
 	}
+#ifndef _WIN32
 	if (stat(name, &st) == 0) {
 		if (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode))
 			hfd->flags |= 1;
 	}
+#endif
 	h = uae_tfopen(name, hfd->ci.readonly ? "rb" : "r+b");
 	if (h == nullptr && !hfd->ci.readonly) {
 		h = uae_tfopen(name, "rb");

@@ -47,7 +47,18 @@
 
 #ifdef AMIBERRY
 #include "amiberry_input.h"
+#ifndef _WIN32
 #include <arpa/inet.h>
+#else
+/* MinGW: need inet_addr/inet_ntoa and struct in_addr for SLIRP IP config.
+   Cannot include <winsock2.h> here as it conflicts with Amiberry's SOCKET typedef.
+   Use <inaddr.h> for the struct and link against ws2_32 for the functions. */
+#include <inaddr.h>
+extern "C" {
+__declspec(dllimport) unsigned long __stdcall inet_addr(const char*);
+__declspec(dllimport) char* __stdcall inet_ntoa(struct in_addr);
+}
+#endif
 #endif
 
 #define cfgfile_warning write_log

@@ -13,11 +13,16 @@
 #include "cpuboard.h"
 #include "rommgr.h"
 #include "newcpu.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/mman.h>
+#endif
 
 #include "gui.h"
 #include "sys/types.h"
-#ifndef __MACH__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include "sys/sysinfo.h"
 #endif
 
@@ -25,12 +30,15 @@
 #include <sys/sysctl.h>
 #endif
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(__MACH__)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(__MACH__) || defined(_WIN64)
 static int os_64bit = 1;
 #else
 static int os_64bit = 0;
 #endif
 
+#ifndef _WIN32
+/* POSIX wrappers that emulate VirtualAlloc/VirtualProtect/VirtualFree
+ * using mmap. On Windows, we use the real Win32 APIs directly. */
 #define MEM_COMMIT       0x00001000
 #define MEM_RESERVE      0x00002000
 #define MEM_DECOMMIT         0x4000
@@ -45,6 +53,7 @@ static int os_64bit = 0;
 
 typedef void* LPVOID;
 typedef size_t SIZE_T;
+typedef unsigned long DWORD;
 
 typedef struct {
 	int dwPageSize;
@@ -119,7 +128,7 @@ static void* VirtualAlloc(void* lpAddress, size_t dwSize, int flAllocationType,
 }
 
 static int VirtualProtect(void* lpAddress, int dwSize, int flNewProtect,
-	unsigned int* lpflOldProtect)
+	DWORD* lpflOldProtect)
 {
 	write_log("- VirtualProtect addr=%p size=%d prot=%d\n",
 		lpAddress, dwSize, flNewProtect);
@@ -164,6 +173,7 @@ static int my_getpagesize()
 }
 
 #define getpagesize my_getpagesize
+#endif /* !_WIN32 */
 
 uae_u32 max_z3fastmem;
 uae_u32 max_physmem;
@@ -193,7 +203,15 @@ bool jit_direct_compatible_memory;
 
 bool can_have_1gb()
 {
-	#if defined(__linux__)
+#if defined(_WIN32)
+	MEMORYSTATUSEX memstatsex;
+	memstatsex.dwLength = sizeof(MEMORYSTATUSEX);
+	if (GlobalMemoryStatusEx(&memstatsex)) {
+		if (memstatsex.ullTotalPhys > 2147483648ULL)
+			return true;
+	}
+	return false;
+#elif defined(__linux__) && !defined(__ANDROID__)
 	struct sysinfo mem_info{};
 	sysinfo(&mem_info);
 	long long total_phys_mem = mem_info.totalram;
@@ -202,10 +220,10 @@ bool can_have_1gb()
 	if (total_phys_mem > 2147483648LL)
 		return true;
 	return false;
-	#else
+#else
 	// On OSX just return true, there's no M1 mac with less than 8G of RAM
 	return true;
-	#endif
+#endif
 }
 
 static uae_u8 *virtualallocwithlock (LPVOID addr, SIZE_T size, unsigned int allocationtype, unsigned int protect)
@@ -239,9 +257,11 @@ bool preinit_shm ()
 {
 	uae_u64 total64;
 	uae_u64 totalphys64;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	MEMORYSTATUS memstats;
 	GLOBALMEMORYSTATUSEX pGlobalMemoryStatusEx;
+	MEMORYSTATUSEX memstatsex;
+#elif defined(_WIN32) && defined(AMIBERRY)
 	MEMORYSTATUSEX memstatsex;
 #endif
 
@@ -259,16 +279,21 @@ bool preinit_shm ()
 	}
 	max_allowed_mman = std::max<uae_u32>(maxmem, max_allowed_mman);
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(AMIBERRY)
+	memstatsex.dwLength = sizeof (MEMORYSTATUSEX);
+	if (GlobalMemoryStatusEx(&memstatsex)) {
+		totalphys64 = memstatsex.ullTotalPhys;
+		total64 = memstatsex.ullAvailPageFile + memstatsex.ullTotalPhys;
+	} else {
+		totalphys64 = 0;
+		total64 = 0;
+	}
+#elif defined(_WIN32)
 	memstats.dwLength = sizeof(memstats);
 	GlobalMemoryStatus(&memstats);
 	totalphys64 = memstats.dwTotalPhys;
 	total64 = (uae_u64)memstats.dwAvailPageFile + (uae_u64)memstats.dwTotalPhys;
-#ifdef AMIBERRY
-	pGlobalMemoryStatusEx = GlobalMemoryStatusEx;
-#else
 	pGlobalMemoryStatusEx = (GLOBALMEMORYSTATUSEX)GetProcAddress (GetModuleHandle (_T("kernel32.dll")), "GlobalMemoryStatusEx");
-#endif
 	if (pGlobalMemoryStatusEx) {
 		memstatsex.dwLength = sizeof (MEMORYSTATUSEX);
 		if (pGlobalMemoryStatusEx(&memstatsex)) {
@@ -1059,7 +1084,7 @@ void unprotect_maprom()
 		if (shm->maprom <= 0)
 			continue;
 		shm->maprom = -1;
-		unsigned int old;
+		DWORD old;
 		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
 			write_log (_T("unprotect_maprom VP %08lX - %08lX %x (%dk) failed %d\n"),
 				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->size,
@@ -1083,7 +1108,7 @@ void protect_roms(bool protect)
 			continue;
 		if (shm->maprom < 0 && protect)
 			continue;
-		unsigned int old;
+		DWORD old;
 		if (!VirtualProtect (shm->attached, shm->rosize, protect ? PAGE_READONLY : PAGE_READWRITE, &old)) {
 			write_log (_T("protect_roms VP %08lX - %08lX %x (%dk) failed %d\n"),
 				static_cast<uae_u8*>(shm->attached) - natmem_offset, static_cast<uae_u8*>(shm->attached) - natmem_offset + shm->rosize,
@@ -1121,7 +1146,7 @@ void mman_set_barriers(bool disable)
 		}
 		abprev = ab;
 		if (ab && ab->baseaddr == NULL && (ab->flags & ABFLAG_ALLOCINDIRECT)) {
-			unsigned int old;
+			DWORD old;
 			if (disable || !currprefs.cachesize || currprefs.comptrustbyte || currprefs.comptrustword || currprefs.comptrustlong) {
 				if (!ab->protectmode) {
 					ab->protectmode = PAGE_READWRITE;

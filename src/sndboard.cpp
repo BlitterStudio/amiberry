@@ -3013,7 +3013,7 @@ static void snd_init(void)
 }
 
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 
 #include <mmdeviceapi.h>
 #include <Audioclient.h>

@@ -1273,7 +1273,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// LOAD GAME SPECIFICS
 	whd_path = whdbooter_path / "game-data";
 	game_hardware_options game_detail;
-	whd_config = whd_path / "whdload_db.xml";
+	whd_config = (whd_path / "whdload_db.xml").string();
 
 	if (std::filesystem::exists(whd_config))
 	{

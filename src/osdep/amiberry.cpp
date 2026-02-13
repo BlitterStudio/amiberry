@@ -5,7 +5,9 @@
  *
  */
 
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -324,9 +326,11 @@ static void set_key_configs(const uae_prefs* p)
 	}
 }
 
+#ifndef _WIN32
 extern void signal_segv(int signum, siginfo_t* info, void* ptr);
 extern void signal_buserror(int signum, siginfo_t* info, void* ptr);
 extern void signal_term(int signum, siginfo_t* info, void* ptr);
+#endif
 
 extern void set_last_active_config(const char* filename);
 
@@ -339,7 +343,9 @@ std::string current_dir;
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #endif
+#ifndef _WIN32
 #include <sys/ioctl.h>
+#endif
 unsigned char kbd_led_status;
 char kbd_flags;
 
@@ -1476,7 +1482,7 @@ static void getsizemove(AmigaMonitor* mon)
 	mon->ratio_sizing = state[SDL_SCANCODE_LCTRL] || state[SDL_SCANCODE_RCTRL];
 }
 
-static int setsizemove(AmigaMonitor* mon, HWND hWnd)
+static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 {
 	if (isfullscreen() > 0)
 		return 0;
@@ -2354,7 +2360,11 @@ void fullpath(TCHAR* path, int size, bool userelative)
 	// Resolve absolute path
 	TCHAR tmp1[MAX_DPATH];
 	tmp1[0] = 0;
+#ifdef _WIN32
+	if (_fullpath(tmp1, path, MAX_DPATH) != nullptr)
+#else
 	if (realpath(path, tmp1) != nullptr)
+#endif
 	{
 		if (_tcsnicmp(path, tmp1, _tcslen(tmp1)) != 0)
 			_tcscpy(path, tmp1);
@@ -5036,7 +5046,7 @@ struct winuae	//this struct is put in a6 if you call
 void* uaenative_get_uaevar()
 {
 	static winuae uaevar;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	uaevar.amigawnd = mon->hAmigaWnd;
 #endif
 	// WARNING: not 64-bit safe!
@@ -5187,7 +5197,9 @@ int main(int argc, char* argv[]) {
 			usage();
 	}
 
+#ifndef _WIN32
 	struct sigaction action{};
+#endif
 	mainthreadid = uae_thread_get_id(nullptr);
 
 	if(argc == 2)

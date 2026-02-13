@@ -123,11 +123,7 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 		if ((fv.major <= 1) && (fv.minor < 8)) {
 			// Must be at least V1.8
 			char buf[20];
-#ifdef _WIN32			
-			snprintf_s(buf, sizeof buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
-#else
 			snprintf(buf, sizeof buf, "%i.%i.%i", fv.major, fv.minor, fv.buildNumber);
-#endif			
 			errorMessage = "DrawBridge aka Arduino Floppy Reader/Writer Firmware is Out Of Date\n\nWinUAE requires V1.8 (and ideally with the modded circuit design).\n\n";
 			errorMessage += "You are currently using V" + std::string(buf) + ".  Please update the firmware.";
 		}
@@ -140,11 +136,11 @@ bool ArduinoFloppyDiskBridge::openInterface(std::string& errorMessage) {
 				
 				HKEY key = 0;
 				if (SUCCEEDED(RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\RobSmithDev\\ArduinoReaderWriter", 0, NULL, 0, KEY_READ | KEY_WRITE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY, NULL, &key, NULL)))
-					if (!RegQueryValueEx(key, L"WarningShown", NULL, NULL, (LPBYTE)&hasBeenSeen, &dataSize)) dataSize = 0;
+					if (!RegQueryValueExA(key, "WarningShown", NULL, NULL, (LPBYTE)&hasBeenSeen, &dataSize)) dataSize = 0;
 
 				if (!hasBeenSeen) {
 					hasBeenSeen = 1;
-					if (key) RegSetValueEx(key, L"WarningShown", NULL, REG_DWORD, (LPBYTE)&hasBeenSeen, sizeof(hasBeenSeen));
+					if (key) RegSetValueExA(key, "WarningShown", NULL, REG_DWORD, (LPBYTE)&hasBeenSeen, sizeof(hasBeenSeen));
 					errorMessage = "DrawBridge aka Arduino Reader / Writer hasn't had the 'hardware mod' applied for optimal WinUAE Support.\nThis mod is highly recommended for best experience and will reduce disk access.";
 				}
 				if (key) RegCloseKey(key);

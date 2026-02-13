@@ -57,6 +57,9 @@
 #define _lrotr(x,n) (((x) >> (n)) | ((x) << (sizeof(x)*8-(n))))
 typedef const char *LPCSTR;
 typedef const char *LPCTSTR;
+#elif defined(__MINGW32__)
+/* MinGW: _WIN32 is defined but some MSVC-isms are missing */
+#include <unistd.h>
 #endif
 
 
@@ -122,4 +125,20 @@ typedef struct _SYSTEMTIME {
         WORD wMilliseconds;
 } SYSTEMTIME, *LPSYSTEMTIME;
 extern "C" void GetLocalTime(LPSYSTEMTIME lpSystemTime);
+#endif
+
+/* MinGW GCC on Windows: missing MSVC-specific builtins */
+#if defined(_WIN32) && defined(__GNUC__)
+#ifndef __assume
+#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#endif
+#ifndef min
+#define min(x, y) (((x) < (y)) ? (x) : (y))
+#endif
+#ifndef _lrotl
+#define _lrotl(x,n) (((x) << (n)) | ((x) >> (sizeof(x)*8-(n))))
+#endif
+#ifndef _lrotr
+#define _lrotr(x,n) (((x) >> (n)) | ((x) << (sizeof(x)*8-(n))))
+#endif
 #endif

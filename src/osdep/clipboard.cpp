@@ -5,6 +5,9 @@
 #include <stdarg.h>
 
 #ifdef AMIBERRY
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #else
 #include <windows.h>
 #endif

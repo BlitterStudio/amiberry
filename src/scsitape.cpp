@@ -195,7 +195,7 @@ static void erase (struct scsi_data_tape *tape)
 			if (ext && !_tcsicmp (ext, _T(".tape"))) {
 				_sntprintf (path, sizeof path, _T("%s%s%s"), tape->tape_dir, FSDB_DIR_SEPARATOR_S, filename);
 				if (my_existsfile (path))
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 					my_unlink (path, false);
 #else
 					my_unlink (path);

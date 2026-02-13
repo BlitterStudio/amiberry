@@ -18,6 +18,10 @@
 #include "gui.h"
 #include "uae.h"
 
+#ifdef _WIN32
+// Windows: CD/DVD IOCTL not yet implemented - stub only
+#include <sys/stat.h>
+#else
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -52,6 +56,7 @@
 #include <scsi/sg.h>
 
 #endif
+#endif /* !_WIN32 */
 
 #include <cstring>
 #include <cstdio>
@@ -65,6 +70,20 @@
 #define IOCTL_DATA_BUFFER 8192
 
 #ifdef WITH_SCSI_IOCTL
+
+#ifdef _WIN32
+/* Windows: CD/DVD IOCTL via SPTI not yet implemented.
+ * ISO/BIN/CUE image support works without physical drive access.
+ * Provide a minimal stub so the build links. */
+struct device_functions devicefunc_scsi_ioctl = {
+	_T("IOCTL"),
+	nullptr, nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr
+};
+#else /* !_WIN32 */
 
 struct dev_info_ioctl {
 	int fd;
@@ -1499,4 +1518,5 @@ struct device_functions devicefunc_scsi_ioctl = {
 	0, ioctl_ismedia, ioctl_scsiemu
 };
 
-#endif
+#endif /* !_WIN32 */
+#endif /* WITH_SCSI_IOCTL */

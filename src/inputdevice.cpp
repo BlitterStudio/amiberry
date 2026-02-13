@@ -5378,7 +5378,7 @@ static int handle_input_event2(int nr, int state, int max, int flags, int extra)
 	if (nr <= 0 || nr == INPUTEVENT_SPC_CUSTOM_EVENT)
 		return 0;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	// ignore normal GUI event if forced gui key is in use
 	if (nr == INPUTEVENT_SPC_ENTERGUI) {
 		if (currprefs.win32_guikey > 0)

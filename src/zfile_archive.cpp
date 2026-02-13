@@ -9,7 +9,7 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 #include <windows.h>
 #include "win32.h"
 #endif
@@ -51,6 +51,16 @@ static time_t fromdostime (uae_u32 dd)
 	t -= timezone;
 	if (daylight)
 		t -= 3600;
+#elif defined(_WIN32)
+	{
+		long tz_offset;
+		_get_timezone(&tz_offset);
+		t -= tz_offset;
+		int dst;
+		_get_daylight(&dst);
+		if (dst)
+			t -= 3600;
+	}
 #else
 	struct tm *lt = localtime(&t);
 	t -= lt->tm_gmtoff;
@@ -346,6 +356,16 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 			zai.tv.tv_sec += timezone;
 			if (daylight)
 				zai.tv.tv_sec -= 3600;
+#elif defined(_WIN32)
+			{
+				long tz_offset;
+				_get_timezone(&tz_offset);
+				zai.tv.tv_sec -= tz_offset;
+				int dst;
+				_get_daylight(&dst);
+				if (dst)
+					zai.tv.tv_sec -= 3600;
+			}
 #else
 			auto sec = static_cast<time_t>(zai.tv.tv_sec);
 			struct tm *lt = localtime(&sec);
@@ -549,7 +569,7 @@ static ISzAlloc allocTempImp;
 static SRes SzFileReadImp (void *object, void *buffer, size_t *size)
 {
 	CFileInStream *s = (CFileInStream *)object;
-#ifdef _WIN32
+#ifdef USE_WINDOWS_FILE
 	struct zfile *zf = (struct zfile*)s->file.myhandle;
 #else
 	struct zfile *zf = (struct zfile*)s->file.file;
@@ -561,7 +581,7 @@ static SRes SzFileReadImp (void *object, void *buffer, size_t *size)
 static SRes SzFileSeekImp(void *object, Int64 *pos, ESzSeek origin)
 {
 	CFileInStream *s = (CFileInStream *)object;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	struct zfile *zf = (struct zfile*)s->file.myhandle;
 #else
 	struct zfile *zf =(struct zfile*) s->file.file;
@@ -744,7 +764,7 @@ struct zvolume *archive_directory_7z (struct zfile *z)
 	ctx->blockIndex = 0xffffffff;
 	ctx->archiveStream.s.Read = SzFileReadImp;
 	ctx->archiveStream.s.Seek = SzFileSeekImp;
-#ifdef _WIN32
+#ifdef USE_WINDOWS_FILE
 	ctx->archiveStream.file.myhandle = (void*)z;
 #else
 	ctx->archiveStream.file.file = (FILE*)z;
@@ -781,6 +801,16 @@ struct zvolume *archive_directory_7z (struct zfile *z)
     			zai.tv.tv_sec -= timezone;
     			if (daylight)
         			zai.tv.tv_sec += 3600;
+			#elif defined(_WIN32)
+			{
+				long tz_offset;
+				_get_timezone(&tz_offset);
+				zai.tv.tv_sec -= tz_offset;
+				int dst;
+				_get_daylight(&dst);
+				if (dst)
+					zai.tv.tv_sec += 3600;
+			}
 			#else
     			time_t sec = (time_t)zai.tv.tv_sec;
 			struct tm *lt = localtime(&sec);
