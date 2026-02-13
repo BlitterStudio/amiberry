@@ -174,9 +174,9 @@ void render_panel_configurations()
 	if (AmigaButton("Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		char filename[MAX_DPATH];
-		get_configuration_path(filename, MAX_DPATH);
-		strncat(filename, name, MAX_DPATH - strlen(filename) - 1);
-		strncat(filename, ".uae", MAX_DPATH - strlen(filename) - 1);
+		char config_path[MAX_DPATH];
+		get_configuration_path(config_path, MAX_DPATH);
+		snprintf(filename, MAX_DPATH, "%s%s.uae", config_path, name);
 		strncpy(changed_prefs.description, desc, 256);
 		if (cfgfile_save(&changed_prefs, filename, 0))
 		{
