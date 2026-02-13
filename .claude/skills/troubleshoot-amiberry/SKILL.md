@@ -231,3 +231,6 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - **Symlink failures in WHDBooter**: Windows requires admin or Developer Mode for symlinks. Directory symlinks use `std::filesystem::copy()` directly. File symlinks have try-catch fallback.
 - **Winsock differences**: `close()` → `closesocket()`, `ioctl()` → `ioctlsocket()`, `errno` → `WSAGetLastError()`. Check `src/slirp/` for patterns.
 - **No log output**: `write_log()` returns early if neither `--log` nor `write_logfile` is enabled. Always pass `--log` when debugging.
+- **GUI crash on startup (missing data dir)**: If the `data/` directory (fonts, icons) is missing from the runtime working directory, ImGui's `AddFontFromFileTTF` asserts and crashes in debug builds (exit code 3). Fix: `main_window.cpp` checks `std::filesystem::exists(font_path)` before loading. Deployment fix: copy `data/` from source tree to working directory.
+- **Config save does nothing**: MinGW links `msvcrt.dll` which doesn't support `"ccs=UTF-8"` fopen mode (`errno=22`). Fixed with plain `"w"`/`"rt"`/`"wt"` modes under `#ifdef AMIBERRY` in `cfgfile.cpp` and `ini.cpp`.
+- **Hardfile RDB not detected in GUI**: ImGui `hd.cpp` was missing `hardfile_testrdb()` call after HDF file selection, causing geometry to stay at 32,1,2 instead of auto-detecting RDB (0,0,0). Fixed in commit `c2b5c053`.

@@ -1,6 +1,6 @@
 ---
 name: winuae-amiberry-merge
-description: Assist with merging updates and synchronizing functionality from the upstream WinUAE repository (Windows) to Amiberry (Linux/macOS/Android). Includes a comprehensive guide for porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, and analyzing platform-specific code. Use this for analyzing upstream commits, identifying Windows-specific code, adapting GUI panels, and verifying feature parity.
+description: Assist with merging updates and synchronizing functionality from the upstream WinUAE repository (Windows) to Amiberry (Linux/macOS/Android/Windows). Includes a comprehensive guide for porting Win32 GUI dialogs to Dear ImGui, mapping Windows controls to ImGui equivalents, and analyzing platform-specific code. Use this for analyzing upstream commits, identifying Windows-specific code, adapting GUI panels, and verifying feature parity.
 ---
 
 # WinUAE to Amiberry Merge Assistant
@@ -273,6 +273,17 @@ When WinUAE updates WASAPI audio code:
 - Test audio quality and synchronization
 
 ## Common Pitfalls & Troubleshooting
+
+### 0. Missing GUI Logic When Porting Panels
+**Symptom:** Feature works in WinUAE but not in Amiberry's ImGui GUI.
+**Cause:** WinUAE's `win32gui.cpp` dialog procedures contain logic (validation, auto-detection, side effects) that may not have been ported to the corresponding ImGui panel.
+**Example:** `hd.cpp` was missing `hardfile_testrdb()` after HDF file selection — WinUAE calls this in `HarddiskDlgProc` to auto-detect RDB and reset geometry. The ImGui port omitted it.
+**Fix:** When debugging GUI issues, always compare the ImGui panel code against the corresponding WinUAE dialog procedure for missing function calls, especially `values_from_*`, `fix_values_*`, and helper functions called on control changes.
+
+### 0b. fopen Mode Strings on MinGW
+**Symptom:** `fopen()` returns NULL with `errno=22 (EINVAL)` on Windows.
+**Cause:** MinGW GCC links `msvcrt.dll` (not `ucrtbase.dll`). The `"ccs=UTF-8"` fopen mode extension is UCRT-only. WinUAE (MSVC) links `ucrtbase.dll` where this works.
+**Fix:** Under `#ifdef AMIBERRY`, use plain modes (`"w"`, `"rt"`, `"wt"`) without `ccs=UTF-8`. Also note: the `'e'` flag (close-on-exec) is not valid on Windows — strip it.
 
 ### 1. The "Black Screen" on Standard VSync
 **Symptom:** Amiga emulation runs (Audio works) but screen is black when `VSync Standard` is active.
