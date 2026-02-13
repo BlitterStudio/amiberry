@@ -1178,7 +1178,9 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 		}
 		else if (_tcscmp(argv[i], _T("--log")) == 0)
+		{
 			console_logging = 1;
+		}
 		else if (_tcscmp(argv[i], _T("-s")) == 0)
 		{
 			if (i + 1 == argc)

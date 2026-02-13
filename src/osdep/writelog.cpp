@@ -167,6 +167,16 @@ static void open_console_window()
 	if (!consoleopen) {
 		previousactivewindow = SDL_GetKeyboardFocus();
 	}
+#ifdef _WIN32
+	/* When built with -mwindows (Release), there is no console.
+	 * Allocate one on demand so log output is visible.
+	 * This mirrors WinUAE's open_console_window(). */
+	if (AllocConsole()) {
+		freopen("CONOUT$", "w", stdout);
+		freopen("CONOUT$", "w", stderr);
+		freopen("CONIN$", "r", stdin);
+	}
+#endif
 	getconsole();
 	consoleopen = -1;
 	reopen_console();
@@ -272,27 +282,8 @@ void close_console ()
 {
 	if (realconsole)
 		return;
-#if defined(_WIN32) && !defined(AMIBERRY)
-	if (consoleopen > 0) {
-		//close_debug_window ();
-	} else if (consoleopen < 0) {
-		HWND hwnd = myGetConsoleWindow ();
-		if (hwnd && !IsIconic (hwnd)) {
-			RECT r;
-			if (GetWindowRect (hwnd, &r)) {
-				r.bottom -= r.top;
-				r.right -= r.left;
-				int dpi = 96; // Fallback for window positioning
-				r.left = r.left * 96 / dpi;
-				r.right = r.right * 96 / dpi;
-				r.top = r.top * 96 / dpi;
-				r.bottom = r.bottom * 96 / dpi;
-				regsetint (NULL, _T("LoggerPosX"), r.left);
-				regsetint (NULL, _T("LoggerPosY"), r.top);
-				regsetint (NULL, _T("LoggerPosW"), r.right);
-				regsetint (NULL, _T("LoggerPosH"), r.bottom);
-			}
-		}
+#ifdef _WIN32
+	if (consoleopen < 0) {
 		FreeConsole ();
 	}
 #endif
@@ -323,14 +314,22 @@ static void writeconsole_2 (const TCHAR *buffer)
 		openconsole ();
 
 	if (consoleopen > 0) {
+#ifdef _WIN32
+		fprintf(stdout, "%s", buffer);
+#else
 		SDL_Log("%s", buffer);
+#endif
 	}
 	else if (realconsole) {
 		fprintf(stdout, "%s", buffer);
 		fflush(stdout);
 	}
 	else if (consoleopen < 0) {
+#ifdef _WIN32
+		fprintf(stdout, "%s", buffer);
+#else
 		SDL_Log("%s", buffer);
+#endif
 	}
 }
 

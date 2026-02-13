@@ -537,6 +537,13 @@ elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
         -Wl,--default-image-base-low
         -Wl,--disable-high-entropy-va
     )
+    # Mark as GUI application in Release builds to suppress the console
+    # window. Debug builds keep the console for convenience.
+    # When --log is passed at runtime, main.cpp calls AllocConsole() to
+    # create a console on demand.
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
+    endif()
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
