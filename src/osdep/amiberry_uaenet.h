@@ -1,7 +1,7 @@
 /*
 * UAE - The Un*x Amiga Emulator
 *
-* Amiberry uaenet emulation (libpcap-based, Linux/macOS)
+* Amiberry uaenet emulation (libpcap and TAP backends, Linux/macOS)
 *
 * Copyright 2025 Dimitris Panokostas
 */
@@ -22,5 +22,10 @@ extern int uaenet_open (void*, struct netdriverdata*, void*, uaenet_gotfunc*, ua
 extern void uaenet_close (void*);
 extern void uaenet_trigger (void*);
 extern void uaenet_receive_poll (void*);
+
+#ifdef WITH_UAENET_TAP
+extern struct netdriverdata *uaenet_tap_enumerate (const TCHAR *name);
+extern void uaenet_tap_enumerate_free (void);
+#endif
 
 #endif //AMIBERRY_UAENET_H
