@@ -10,8 +10,10 @@
 #include "sysdeps.h"
 #include "ethernet.h"
 
+#if defined(WITH_UAENET_PCAP) || defined(WITH_UAENET_TAP)
 #ifdef WITH_UAENET_PCAP
 #include <pcap.h>
+#endif
 
 #include "options.h"
 #include "sana2.h"
@@ -21,15 +23,20 @@
 #ifndef ETH_HLEN
 #define ETH_HLEN 14
 #endif
+#define MAX_FRAME_LEN 1514    // Standard Ethernet frame without FCS
+
+#ifdef WITH_UAENET_PCAP
 #ifndef ETH_P_IP
 #define ETH_P_IP 0x0800
 #endif
 #define IP_PROTO_TCP 6
-#define MAX_FRAME_LEN 1514    // Standard Ethernet frame without FCS
 #define MAX_GRO_SIZE 65536    // Max coalesced packet size from GRO/virtio
+#endif
 
 // Forward declarations
+#ifdef WITH_UAENET_PCAP
 static int uaenet_worker_thread(void *arg);
+#endif
 static void uaenet_close_driver_internal(struct uaenet_data *ud);
 
 struct uaenet_queue {
@@ -41,8 +48,10 @@ struct uaenet_queue {
 struct uaenet_data {
     int slirp;
     int promiscuous;
+#ifdef WITH_UAENET_PCAP
     pcap_t *handle;
     char errbuf[PCAP_ERRBUF_SIZE];
+#endif
     bool active;
     bool active2;
     uae_thread_id tid;
@@ -66,6 +75,7 @@ int log_ethernet;
 static int enumerated;
 static int ethernet_paused;
 
+#ifdef WITH_UAENET_PCAP
 // Internet checksum (RFC 1071)
 static uae_u16 compute_ip_checksum(const uae_u8 *data, int len)
 {
@@ -100,6 +110,7 @@ static uae_u16 compute_tcp_checksum(const uae_u8 *ip_hdr, int ip_hdr_len,
         sum = (sum & 0xffff) + (sum >> 16);
     return (uae_u16)(~sum & 0xffff);
 }
+#endif
 
 // Insert a single packet into the incoming queue (called from worker thread)
 static void uaenet_queue_one(struct uaenet_data *ud, const uae_u8 *data, int len)
@@ -130,6 +141,7 @@ static void uaenet_queue_one(struct uaenet_data *ud, const uae_u8 *data, int len
     uae_sem_post(&ud->queue_sem);
 }
 
+#ifdef WITH_UAENET_PCAP
 // Segment GRO/GSO-coalesced IPv4/TCP packets into individual Ethernet frames.
 // Linux GRO, GSO, and virtio NICs can deliver TCP segments coalesced into packets
 // far larger than the Ethernet MTU. The A2065 emulation expects standard-sized
@@ -240,15 +252,16 @@ static void uaenet_queue(struct uaenet_data *ud, const uae_u8 *data, int len)
         seg_num++;
     }
 }
+#endif
 
 // Process packets in queue
 static int uaenet_checkpacket(struct uaenet_data *ud)
 {
     struct uaenet_queue *q;
-    
+
     if (!ud || !ud->first)
         return 0;
-    
+
     uae_sem_wait(&ud->queue_sem);
     q = ud->first;
     if (!q) {
@@ -259,17 +272,18 @@ static int uaenet_checkpacket(struct uaenet_data *ud)
     if (!ud->first)
         ud->last = NULL;
     uae_sem_post(&ud->queue_sem);
-    
+
     if (ud->active && ud->active2 && ud->gotfunc) {
         ud->gotfunc(ud->userdata, q->data, q->len);
     }
-    
+
     xfree(q->data);
     xfree(q);
     ud->packetsinbuffer--;
     return 1;
 }
 
+#ifdef WITH_UAENET_PCAP
 // Thread to handle network traffic
 static int uaenet_worker_thread(void *arg)
 {
@@ -297,13 +311,14 @@ static int uaenet_worker_thread(void *arg)
     ud->active2 = false;
     return 0;
 }
+#endif
 
 // Internal close function
 static void uaenet_close_driver_internal(struct uaenet_data *ud)
 {
     if (!ud)
         return;
-    
+
     ud->active = false;
     ud->active2 = false;
 
@@ -313,54 +328,58 @@ static void uaenet_close_driver_internal(struct uaenet_data *ud)
         ud->tid = 0;
         write_log(_T("UAENET: Thread terminated\n"));
     }
-    
+
+#ifdef WITH_UAENET_PCAP
     if (ud->handle) {
         pcap_close(ud->handle);
         ud->handle = NULL;
     }
+#endif
 }
 
 static struct netdriverdata nd[MAX_TOTAL_NET_DEVICES + 1];
 
+#ifdef WITH_UAENET_PCAP
 // Enumerate network devices
 struct netdriverdata *uaenet_enumerate(const TCHAR *name)
 {
     pcap_if_t *alldevs;
     char errbuf[PCAP_ERRBUF_SIZE];
     memset(nd, 0, sizeof(nd));
-    
+
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
         write_log(_T("UAENET: Error in pcap_findalldevs: %s\n"), errbuf);
         return NULL;
     }
-    
+
     int j = 0;
     for (pcap_if_t *d = alldevs; d && j < MAX_TOTAL_NET_DEVICES; d = d->next) {
         if (name != NULL && name[0] != '\0') {
             if (_tcsicmp(name, d->name) != 0)
                 continue;
         }
-        
+
         TCHAR *n2 = my_strdup(d->name);
         if (d->description)
             nd[j].desc = my_strdup(d->description);
         else
             nd[j].desc = my_strdup(d->name);
-        
+
         nd[j].name = n2;
         nd[j].type = UAENET_PCAP;
         nd[j].active = 1;
         nd[j].driverdata = nullptr; // Initialize driverdata to nullptr
         j++;
-        
+
         if (name != NULL)
             break;
     }
-    
+
     pcap_freealldevs(alldevs);
     enumerated = 1;
     return nd;
 }
+#endif
 
 // Version that matches the signature in ethernet.cpp
 void uaenet_close_driver(struct netdriverdata *ndd)
@@ -383,7 +402,11 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
         return 0;
 
     // If already open (re-init), shut down existing thread and handle first
-    if (ud->active || ud->active2 || ud->handle) {
+    if (ud->active || ud->active2
+#ifdef WITH_UAENET_PCAP
+        || ud->handle
+#endif
+    ) {
         write_log(_T("UAENET: Re-opening '%s', shutting down existing state\n"), ndd->name);
         ud->active = false;
         ud->active2 = false;
@@ -391,10 +414,12 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
             uae_wait_thread(&ud->tid);
             ud->tid = 0;
         }
+#ifdef WITH_UAENET_PCAP
         if (ud->handle) {
             pcap_close(ud->handle);
             ud->handle = NULL;
         }
+#endif
         // Flush any queued packets
         struct uaenet_queue *q = ud->first;
         while (q) {
@@ -426,6 +451,8 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
     uae_sem_init(&ud->change_sem, 0, 1);
     uae_sem_init(&ud->sync_sem, 0, 0);
     uae_sem_init(&ud->queue_sem, 0, 1);
+
+#ifdef WITH_UAENET_PCAP
     // Open the device
     // Always use promiscuous mode: on Linux bridge interfaces, the host
     // interface (br0) has a different MAC than the emulated device. Without
@@ -439,7 +466,7 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
         uaenet_close_driver_internal(ud);
         return 0;
     }
-    
+
     // BPF filter: accept packets destined to the Amiga's MAC, broadcast, or
     // multicast — but reject packets sourced from the Amiga's own MAC.
     // The source exclusion prevents transmit loopback (packets we send via
@@ -467,6 +494,7 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
                       pcap_geterr(ud->handle));
         }
     }
+#endif
 
     // Store the pointer to uaenet_data in the netdriverdata for later cleanup
     ndd->driverdata = ud;
@@ -476,12 +504,14 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
     ud->userdata = userdata;
     ud->active = true;
 
+#ifdef WITH_UAENET_PCAP
     // Start worker thread
     uae_start_thread(_T("uaenet_pcap"), uaenet_worker_thread, ud, &ud->tid);
     uae_sem_wait(&ud->sync_sem);
-    
+#endif
+
     write_log(_T("UAENET: '%s' open successful\n"), ndd->name);
-    
+
     return 1;
 }
 
@@ -489,10 +519,15 @@ int uaenet_open(void *vsd, struct netdriverdata *ndd, void *userdata, ethernet_g
 int uaenet_send(void *vsd, const void *data, int len)
 {
     struct uaenet_data *ud = (struct uaenet_data*)vsd;
-    if (!ud || !ud->handle || !ud->active)
+    if (!ud || !ud->active)
         return 0;
-    
+#ifdef WITH_UAENET_PCAP
+    if (!ud->handle)
+        return 0;
     return pcap_sendpacket(ud->handle, (const u_char *)data, len) == 0;
+#else
+    return 0;
+#endif
 }
 
 // Close device
@@ -523,13 +558,13 @@ uae_u8 *uaenet_getmac(void *vsd)
     struct uaenet_data *ud = (struct uaenet_data*)vsd;
     if (!ud)
         return NULL;
-    
+
     // If we have a stored MAC address, use it
-    if (ud->mac_addr[0] || ud->mac_addr[1] || ud->mac_addr[2] || 
+    if (ud->mac_addr[0] || ud->mac_addr[1] || ud->mac_addr[2] ||
         ud->mac_addr[3] || ud->mac_addr[4] || ud->mac_addr[5]) {
         return ud->mac_addr;
     }
-    
+
     // Otherwise return a default MAC
     static uae_u8 mac[6] = { 0x00, 0x80, 0xD3, 0x54, 0x26, 0x1A };
     return mac;
@@ -541,7 +576,7 @@ int uaenet_getmtu(void *vsd)
     struct uaenet_data *ud = (struct uaenet_data*)vsd;
     if (!ud)
         return MAX_MTU;
-    
+
     return ud->mtu;
 }
 
@@ -561,7 +596,7 @@ int uaenet_getbytespending(void *vsd)
     struct uaenet_data *ud = (struct uaenet_data*)vsd;
     if (!ud)
         return 0;
-    
+
     // Count bytes in all pending packets
     int bytes = 0;
     struct uaenet_queue *q = ud->first;
@@ -578,14 +613,20 @@ int uaenet_getbytespending(void *vsd)
 void uaenet_trigger(void *vsd)
 {
     struct uaenet_data *ud = (struct uaenet_data*)vsd;
-    if (!ud || !ud->active || !ud->handle)
+    if (!ud || !ud->active)
         return;
+#ifdef WITH_UAENET_PCAP
+    if (!ud->handle)
+        return;
+#endif
 
     if (ud->getfunc) {
         uae_u8 pkt[4000];
         int len = sizeof pkt;
         if (ud->getfunc(ud->userdata, pkt, &len)) {
+#ifdef WITH_UAENET_PCAP
             pcap_sendpacket(ud->handle, (const u_char *)pkt, len);
+#endif
         }
     }
 }
@@ -617,12 +658,12 @@ int uaenet_getdatalenght(void)
     return sizeof(struct uaenet_data);
 }
 
-#endif // WITH_UAENET_PCAP
+#endif // defined(WITH_UAENET_PCAP) || defined(WITH_UAENET_TAP)
 
 // Pause ethernet operations
 void ethernet_pause(int pause)
 {
-#ifdef WITH_UAENET_PCAP
+#if defined(WITH_UAENET_PCAP) || defined(WITH_UAENET_TAP)
     ethernet_paused = pause;
 #endif
 }
@@ -630,7 +671,7 @@ void ethernet_pause(int pause)
 // Reset ethernet subsystem
 void ethernet_reset(void)
 {
-#ifdef WITH_UAENET_PCAP
+#if defined(WITH_UAENET_PCAP) || defined(WITH_UAENET_TAP)
     ethernet_paused = 0;
 #endif
 }
