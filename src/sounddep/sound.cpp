@@ -689,7 +689,8 @@ bool audio_finish_pull()
 	const int type = sdp->devicetype;
 	if (sdp->paused || sdp->deactive || sdp->reset)
 		return false;
-	if (audio_pull_buffer() && audio_is_pull_event()) {
+	int apb = audio_pull_buffer();
+	if (apb >= 2 || (apb == 1 && audio_is_pull_event())) {
 		return send_sound_do(sdp);
 	}
 	return false;

@@ -117,8 +117,10 @@ void deactivate_debugger (void)
 void activate_debugger (void)
 {
 	disasm_init();
-	if (isfullscreen() > 0)
+
+	if (!is_interactive_console() || isfullscreen() > 0) {
 		return;
+	}
 
 	debugger_load_libraries();
 	open_console();

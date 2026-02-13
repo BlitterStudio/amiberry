@@ -240,6 +240,10 @@ void open_console()
 	}
 }
 
+bool is_interactive_console(void)
+{
+	return console_logging;
+}
 
 void reopen_console ()
 {
