@@ -175,11 +175,12 @@ void render_panel_configurations()
 	{
 		char filename[MAX_DPATH];
 		get_configuration_path(filename, MAX_DPATH);
-		strncat(filename, name, MAX_DPATH - 1);
-		strncat(filename, ".uae", MAX_DPATH - 10);
+		strncat(filename, name, MAX_DPATH - strlen(filename) - 1);
+		strncat(filename, ".uae", MAX_DPATH - strlen(filename) - 1);
 		strncpy(changed_prefs.description, desc, 256);
 		if (cfgfile_save(&changed_prefs, filename, 0))
 		{
+			write_log("Config save: SUCCESS\n");
 			strncpy(last_active_config, name, MAX_DPATH);
 			ReadConfigFileList();
 			// Re-select the saved file
@@ -189,6 +190,10 @@ void render_panel_configurations()
 					break;
 				}
 			}
+		}
+		else
+		{
+			write_log("Config save: FAILED for '%s'\n", filename);
 		}
 	}
 	if (strlen(name) == 0) ImGui::EndDisabled();

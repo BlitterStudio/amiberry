@@ -7442,9 +7442,16 @@ int cfgfile_save (struct uae_prefs *p, const TCHAR *filename, int type)
 	struct zfile *fh;
 
 	cfgfile_backup (filename);
+#ifdef AMIBERRY
+	// MinGW's msvcrt.dll does not support the "ccs=UTF-8" fopen extension
+	fh = zfile_fopen (filename, _T("w"), ZFD_NORMAL);
+#else
 	fh = zfile_fopen (filename, _T("w, ccs=UTF-8"), ZFD_NORMAL);
-	if (! fh)
+#endif
+	if (! fh) {
+		write_log(_T("cfgfile_save: zfile_fopen failed for '%s'\n"), filename);
 		return 0;
+	}
 
 	if (!type)
 		type = CONFIG_TYPE_HARDWARE | CONFIG_TYPE_HOST;
