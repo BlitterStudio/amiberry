@@ -1316,8 +1316,8 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(jst_link)) {
 				write_log("WHDBooter - Creating link/copy to JST in %s\n", (temp_base / "c").string().c_str());
 				try {
-		#ifdef __ANDROID__
-				// Android's external storage often does not support symlinks; copy instead
+		#if defined(__ANDROID__) || defined(_WIN32)
+				// Android's external storage and Windows often do not support symlinks; copy instead
 				std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
 		#else
 				std::filesystem::create_symlink(whd_path, jst_link);
@@ -1346,7 +1346,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(whdload_link)) {
 				write_log("WHDBooter - Creating link/copy to WHDLoad in %s\n", (temp_base / "c").string().c_str());
 				try {
-		#ifdef __ANDROID__
+		#if defined(__ANDROID__) || defined(_WIN32)
 				std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
 		#else
 				std::filesystem::create_symlink(whd_path, whdload_link);
@@ -1373,7 +1373,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		if (std::filesystem::exists(whd_path) && !std::filesystem::exists(amiquit_link)) {
 			write_log("WHDBooter - Creating link/copy to AmiQuit in %s\n", (temp_base / "c").string().c_str());
 			try {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(_WIN32)
 			std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
 #else
 			std::filesystem::create_symlink(whd_path, amiquit_link);
@@ -1398,7 +1398,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		if (!std::filesystem::exists(kickstarts_link)) {
 			write_log("WHDBooter - Creating link/copy to Kickstarts in %s\n", (temp_base / "devs").string().c_str());
 			try {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(_WIN32)
 				std::filesystem::copy(kickstart_path, kickstarts_link, std::filesystem::copy_options::recursive);
 #else
 				std::filesystem::create_symlink(kickstart_path, kickstarts_link);
