@@ -9,11 +9,6 @@
 #include <vector>
 #include <string>
 
-#ifdef USE_GUISAN
-#include <guisan.hpp>
-#include <guisan/sdl.hpp>
-#include "osdep/gui/SelectorEntry.hpp"
-#endif
 #ifdef USE_IMGUI
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
@@ -134,109 +129,6 @@ struct romdataentry
 	TCHAR* name;
 	int priority;
 };
-
-#ifdef USE_GUISAN
-void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2)
-{
-	int idx;
-	TCHAR tmp[MAX_DPATH];
-	TCHAR tmp2[MAX_DPATH];
-	TCHAR seltmp[MAX_DPATH];
-	struct romdata* rdx = nullptr;
-	struct romdataentry* rde = xcalloc(struct romdataentry, MAX_ROMMGR_ROMS);
-	int ridx = 0;
-
-	if (path)
-		rdx = scan_single_rom(path);
-	idx = 0;
-	seltmp[0] = 0;
-	for (; fkey;) {
-		int size = sizeof(tmp) / sizeof(TCHAR);
-		int size2 = sizeof(tmp2) / sizeof(TCHAR);
-		if (!regenumstr(fkey, idx, tmp, &size, tmp2, &size2))
-			break;
-		if (_tcslen(tmp) == 7 || _tcslen(tmp) == 13) {
-			int group = 0;
-			int subitem = 0;
-			int idx2 = _tstol(tmp + 4);
-			if (_tcslen(tmp) == 13) {
-				group = _tstol(tmp + 8);
-				subitem = _tstol(tmp + 11);
-			}
-			if (idx2 >= 0) {
-				struct romdata* rd = getromdatabyidgroup(idx2, group, subitem);
-				for (int i = 0; i < 2; i++) {
-					int type = i ? type2 : type1;
-					if (type) {
-						if (rd && ((((rd->type & ROMTYPE_GROUP_MASK) & (type & ROMTYPE_GROUP_MASK)) && ((rd->type & ROMTYPE_SUB_MASK) == (type & ROMTYPE_SUB_MASK) || !(type & ROMTYPE_SUB_MASK))) ||
-							(rd->type & type) == ROMTYPE_NONE || (rd->type & type) == ROMTYPE_NOT)) {
-							getromname(rd, tmp);
-							int j;
-							for (j = 0; j < ridx; j++) {
-								if (!_tcsicmp(rde[j].name, tmp)) {
-									break;
-								}
-							}
-							if (j >= ridx) {
-								rde[ridx].name = my_strdup(tmp);
-								rde[ridx].priority = rd->sortpriority;
-								ridx++;
-							}
-							if (rd == rdx)
-								_tcscpy(seltmp, tmp);
-							break;
-						}
-					}
-				}
-			}
-		}
-		idx++;
-	}
-
-	for (int i = 0; i < ridx; i++) {
-		for (int j = i + 1; j < ridx; j++) {
-			int ipri = rde[i].priority;
-			const TCHAR* iname = rde[i].name;
-			int jpri = rde[j].priority;
-			const TCHAR* jname = rde[j].name;
-			if ((ipri > jpri) || (ipri == jpri && _tcsicmp(iname, jname) > 0)) {
-				struct romdataentry rdet{};
-				memcpy(&rdet, &rde[i], sizeof(struct romdataentry));
-				memcpy(&rde[i], &rde[j], sizeof(struct romdataentry));
-				memcpy(&rde[j], &rdet, sizeof(struct romdataentry));
-			}
-		}
-	}
-
-	auto listmodel = d->getListModel();
-	listmodel->clear();
-	listmodel->add("");
-	for (int i = 0; i < ridx; i++) {
-		struct romdataentry* rdep = &rde[i];
-		listmodel->add(rdep->name);
-		xfree(rdep->name);
-	}
-	if (seltmp[0])
-	{
-		for (int i = 0; i < listmodel->getNumberOfElements(); i++) {
-			if (!_tcsicmp(listmodel->getElementAt(i).c_str(), seltmp)) {
-				d->setSelected(i);
-				break;
-			}
-		}
-	}
-	else
-	{
-		if (path && path[0])
-		{
-			listmodel->add(path);
-			d->setSelected(listmodel->getNumberOfElements() - 1);
-		}
-	}
-
-	xfree(rde);
-}
-#endif
 
 static int extpri(const TCHAR* p, int size)
 {
@@ -738,9 +630,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 			tmp = std::string(prefs->floppyslots[shortcut].df);
 		else
 			tmp = get_floppy_path();
-#ifdef USE_GUISAN
-		tmp = SelectFile("Select disk image file", tmp, diskfile_filter);
-#endif
+
 		if (!tmp.empty())
 		{
 			if (strncmp(prefs->floppyslots[shortcut].df, tmp.c_str(), MAX_DPATH) != 0)
@@ -758,9 +648,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
 		std::string selected;
-#ifdef USE_GUISAN
-		selected = SelectFile("Load a save state file", tmp, statefile_filter);
-#endif
+
 		if (!selected.empty())
 		{
 			_tcscpy(savestate_fname, selected.c_str());
@@ -784,9 +672,6 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 		get_savestate_path(tmp, sizeof tmp / sizeof(TCHAR));
 
 		std::string selected;
-#ifdef USE_GUISAN
-		selected = SelectFile("Save a save state file", tmp, statefile_filter, true);
-#endif
 		if (!selected.empty())
 		{
 			// ensure the selected filename ends with .uss
@@ -817,9 +702,7 @@ void disk_selection(const int shortcut, uae_prefs* prefs)
 			tmp = std::string(prefs->cdslots[0].name);
 		else
 			tmp = get_cdrom_path();
-#ifdef USE_GUISAN
-		tmp = SelectFile("Select CD image file", tmp, cdfile_filter);
-#endif
+
 		if (!tmp.empty())
 		{
 			if (strncmp(prefs->cdslots[0].name, tmp.c_str(), MAX_DPATH) != 0)
@@ -996,13 +879,7 @@ void gui_display(int shortcut)
 	else if (shortcut >= 0 && shortcut <= 6)
 	{
 		amiberry_gui_init();
-#ifdef USE_GUISAN
-		gui_widgets_init();
-#endif
 		disk_selection(shortcut, &changed_prefs);
-#ifdef USE_GUISAN
-		gui_widgets_halt();
-#endif
 		amiberry_gui_halt();
 	}
 
@@ -1216,9 +1093,7 @@ void gui_message(const char* format, ...)
 	va_start(parms, format);
 	_vsntprintf(msg, sizeof(msg), format, parms);
 	va_end(parms);
-#ifdef USE_GUISAN
-	ShowMessage("", msg, "", "", "Ok", "");
-#elif USE_IMGUI
+#ifdef USE_IMGUI
 	ShowMessageBox("Message", msg);
 #endif
 }
@@ -1937,95 +1812,6 @@ std::string get_system_fonts_path()
 #endif
 	return path;
 }
-
-#ifdef USE_GUISAN
-void apply_theme()
-{
-	gui_base_color = gcn::Color(gui_theme.base_color.r, gui_theme.base_color.g, gui_theme.base_color.b);
-	gui_foreground_color = gcn::Color(gui_theme.foreground_color.r, gui_theme.foreground_color.g, gui_theme.foreground_color.b);
-	gui_background_color = gcn::Color(gui_theme.background_color.r, gui_theme.background_color.g, gui_theme.background_color.b);
-	gui_selection_color = gcn::Color(gui_theme.selection_color.r, gui_theme.selection_color.g, gui_theme.selection_color.b);
-	gui_selector_inactive_color = gcn::Color(gui_theme.selector_inactive.r, gui_theme.selector_inactive.g, gui_theme.selector_inactive.b);
-	gui_selector_active_color = gcn::Color(gui_theme.selector_active.r, gui_theme.selector_active.g, gui_theme.selector_active.b);
-	gui_font_color = gcn::Color(gui_theme.font_color.r, gui_theme.font_color.g, gui_theme.font_color.b);
-
-	if (gui_theme.font_name.empty())
-	{
-		load_default_theme();
-	}
-	try
-	{
-    std::string font_path;
-
-    if (my_existsfile2(gui_theme.font_name.c_str()))
-    {
-        font_path = gui_theme.font_name;
-    }
-    else
-    {
-        // Try data directory
-        font_path = get_data_path() + gui_theme.font_name;
-        if (!my_existsfile2(font_path.c_str()))
-        {
-            // Try fallback system font
-            font_path = get_system_fonts_path() + "freefont/FreeSans.ttf";
-            if (!my_existsfile2(font_path.c_str()))
-            {
-                throw std::runtime_error("No usable font found in theme, data, or system paths.");
-            }
-        }
-    }
-
-    gui_font = new gcn::SDLTrueTypeFont(font_path, gui_theme.font_size);
-    gui_font->setAntiAlias(true);
-    gui_font->setColor(gui_font_color);
-}
-catch (gcn::Exception& e)
-	{
-		gui_running = false;
-		std::cout << e.getMessage() << '\n';
-		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", e.getMessage().c_str());
-		abort();
-	}
-	catch (std::exception& ex)
-	{
-		gui_running = false;
-		cout << ex.what() << '\n';
-		write_log("An error occurred while trying to open the GUI font! Exception: %s\n", ex.what());
-		abort();
-	}
-	gcn::Widget::setGlobalFont(gui_font);
-	gcn::Widget::setWidgetsBaseColor(gui_base_color);
-	gcn::Widget::setWidgetsForegroundColor(gui_foreground_color);
-	gcn::Widget::setWidgetsBackgroundColor(gui_background_color);
-	gcn::Widget::setWidgetsSelectionColor(gui_selection_color);
-}
-
-// Extra theme settings, that should be called separately from the above function
-void apply_theme_extras()
-{
-	if (selectors != nullptr)
-	{
-		selectors->setBaseColor(gui_base_color);
-		selectors->setBackgroundColor(gui_base_color);
-		selectors->setForegroundColor(gui_foreground_color);
-	}
-	if (selectorsScrollArea != nullptr)
-	{
-		selectorsScrollArea->setBaseColor(gui_base_color);
-		selectorsScrollArea->setBackgroundColor(gui_base_color);
-		selectorsScrollArea->setForegroundColor(gui_foreground_color);
-	}
-	for (int i = 0; categories[i].category != nullptr && categories[i].selector != nullptr; ++i)
-	{
-		categories[i].selector->setActiveColor(gui_selector_active_color);
-		categories[i].selector->setInactiveColor(gui_selector_inactive_color);
-
-		categories[i].panel->setBaseColor(gui_base_color);
-		categories[i].panel->setForegroundColor(gui_foreground_color);
-	}
-}
-#endif
 
 void save_theme(const std::string& theme_filename)
 {
