@@ -2342,14 +2342,22 @@ void fix_trailing(TCHAR* p)
 		return;
 	if (p[_tcslen(p) - 1] == '/' || p[_tcslen(p) - 1] == '\\')
 		return;
+#ifdef _WIN32
+	_tcscat(p, "\\");
+#else
 	_tcscat(p, "/");
+#endif
 }
 
 std::string fix_trailing(std::string& input)
 {
-	if (!input.empty() && input.back() != '/')
+	if (!input.empty() && input.back() != '/' && input.back() != '\\')
 	{
+#ifdef _WIN32
+		return input + "\\";
+#else
 		return input + "/";
+#endif
 	}
 	return input;
 }
@@ -4303,6 +4311,12 @@ std::string get_data_directory(bool portable_mode)
 	return directory + "/Resources/data/";
 #elif defined(__ANDROID__)
     return prefix_with_application_directory_path("data/");
+#elif defined(_WIN32)
+	{
+		char tmp[MAX_DPATH];
+		getcwd(tmp, MAX_DPATH);
+		return std::string(tmp) + "\\data\\";
+	}
 #else
 	if (portable_mode)
 	{
@@ -4351,6 +4365,38 @@ std::string get_home_directory(const bool portable_mode)
         return home;
     }
     return prefix_with_application_directory_path("");
+#elif defined(_WIN32)
+	if (portable_mode)
+	{
+		write_log("Portable mode: Setting home directory to startup path\n");
+		char tmp[MAX_DPATH];
+		getcwd(tmp, MAX_DPATH);
+		return {tmp};
+	}
+	{
+		const auto env_home_dir = getenv("AMIBERRY_HOME_DIR");
+		if (env_home_dir != nullptr && my_existsdir(env_home_dir))
+		{
+			write_log("Using home directory from AMIBERRY_HOME_DIR: %s\n", env_home_dir);
+			return { env_home_dir };
+		}
+		const auto user_home_dir = getenv("USERPROFILE");
+		if (user_home_dir != nullptr)
+		{
+			if (!directory_exists(user_home_dir, "\\Amiberry"))
+			{
+				my_mkdir((std::string(user_home_dir) + "\\Amiberry").c_str());
+			}
+			write_log("Using home directory from %%USERPROFILE%%\\Amiberry\n");
+			auto result = std::string(user_home_dir);
+			return result.append("\\Amiberry");
+		}
+		// Fallback: portable mode
+		write_log("Fallback Portable mode: Setting home directory to startup path\n");
+		char tmp[MAX_DPATH];
+		getcwd(tmp, MAX_DPATH);
+		return {tmp};
+	}
 #endif
 	if (portable_mode)
 	{
@@ -4407,6 +4453,23 @@ std::string get_config_directory(bool portable_mode)
 	}
 	auto result = std::string(user_home_dir);
 	return result.append("/Amiberry/Configurations");
+#elif defined(_WIN32)
+	{
+		const auto user_home_dir = getenv("USERPROFILE");
+		if (user_home_dir != nullptr)
+		{
+			if (!directory_exists(user_home_dir, "\\Amiberry"))
+				my_mkdir((std::string(user_home_dir) + "\\Amiberry").c_str());
+			if (!directory_exists(user_home_dir, "\\Amiberry\\Configurations"))
+				my_mkdir((std::string(user_home_dir) + "\\Amiberry\\Configurations").c_str());
+			auto result = std::string(user_home_dir);
+			return result.append("\\Amiberry\\Configurations");
+		}
+		// Fallback: portable mode
+		char tmp[MAX_DPATH];
+		getcwd(tmp, MAX_DPATH);
+		return { std::string(tmp) + "\\conf" };
+	}
 #else
 	if (portable_mode)
 	{
@@ -4465,6 +4528,12 @@ std::string get_plugins_directory(bool portable_mode)
 	return directory + "/Resources/plugins/";
 #elif defined(__ANDROID__)
     return prefix_with_application_directory_path("plugins/");
+#elif defined(_WIN32)
+	{
+		char tmp[MAX_DPATH];
+		getcwd(tmp, MAX_DPATH);
+		return std::string(tmp) + "\\plugins";
+	}
 #else
 	if (portable_mode)
 	{
@@ -4724,6 +4793,10 @@ static bool locate_amiberry_conf(const bool portable_mode)
 	config_path = get_config_directory(portable_mode);
 #ifdef __MACH__
 	if constexpr (true)
+#elif defined(__ANDROID__)
+	if constexpr (true)
+#elif defined(_WIN32)
+	if constexpr (true)
 #else
 	if (portable_mode)
 #endif
@@ -4774,6 +4847,8 @@ static void init_amiberry_dirs(const bool portable_mode)
 	if constexpr (true)
 #elif defined(__ANDROID__)
     if constexpr (true)
+#elif defined(_WIN32)
+	if constexpr (true)
 #else
 	if (portable_mode)
 #endif
@@ -4866,6 +4941,25 @@ static void init_amiberry_dirs(const bool portable_mode)
     video_dir.append("videos/");
     themes_path.append("themes/");
     shaders_path.append("shaders/");
+#elif defined(_WIN32)
+	controllers_path.append("\\Controllers\\");
+	whdboot_path.append("\\Whdboot\\");
+	whdload_arch_path.append("\\Lha\\");
+	floppy_path.append("\\Floppies\\");
+	harddrive_path.append("\\Harddrives\\");
+	cdrom_path.append("\\CDROMs\\");
+	logfile_path.append("\\Amiberry.log");
+	rom_path.append("\\Roms\\");
+	rp9_path.append("\\RP9\\");
+	saveimage_dir.append("\\");
+	savestate_dir.append("\\Savestates\\");
+	ripper_path.append("\\Ripper\\");
+	input_dir.append("\\Inputrecordings\\");
+	screenshot_dir.append("\\Screenshots\\");
+	nvram_dir.append("\\Nvram\\");
+	video_dir.append("\\Videos\\");
+	themes_path.append("\\Themes\\");
+	shaders_path.append("\\Shaders\\");
 #else
 	controllers_path.append("/controllers/");
 	whdboot_path.append("/whdboot/");
@@ -4888,10 +4982,18 @@ static void init_amiberry_dirs(const bool portable_mode)
 #endif
 
 	retroarch_file = config_path;
+#ifdef _WIN32
+	retroarch_file.append("\\retroarch.cfg");
+#else
 	retroarch_file.append("/retroarch.cfg");
+#endif
 
 	floppy_sounds_dir = data_dir;
+#ifdef _WIN32
+	floppy_sounds_dir.append("floppy_sounds\\");
+#else
 	floppy_sounds_dir.append("floppy_sounds/");
+#endif
 }
 
 void load_amiberry_settings()

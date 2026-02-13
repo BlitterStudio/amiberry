@@ -620,6 +620,25 @@ typedef int32_t uae_atomic;
 #define FSDB_DIR_SEPARATOR_S "/"
 #endif
 
+/* MinGW's fopen does not support the glibc 'e' (O_CLOEXEC) mode flag.
+ * Strip it on Windows since close-on-exec is not relevant there. */
+#ifdef _WIN32
+#include <cstdio>
+#include <cstring>
+static inline FILE* uae_fopen(const char* path, const char* mode)
+{
+	char winmode[8];
+	int j = 0;
+	for (int i = 0; mode[i] && j < 7; i++) {
+		if (mode[i] != 'e')
+			winmode[j++] = mode[i];
+	}
+	winmode[j] = '\0';
+	return fopen(path, winmode);
+}
+#define fopen(path, mode) uae_fopen(path, mode)
+#endif
+
 /* Define to 1 if `S_un' is a member of `struct in_addr'. */
 /* #un#def HAVE_STRUCT_IN_ADDR_S_UN */
 
