@@ -40,7 +40,7 @@ typedef unsigned long ioctlsockopt_t;
 /* MinGW GCC on Windows */
 #define container_of(address, type, field) ((type *)( \
         (char*)(address) - \
-        (unsigned long)(&((type *)0)->field)))
+        (uintptr_t)(&((type *)0)->field)))
 #endif
 
 #include <winsock2.h>

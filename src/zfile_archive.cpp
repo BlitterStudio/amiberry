@@ -53,12 +53,9 @@ static time_t fromdostime (uae_u32 dd)
 		t -= 3600;
 #elif defined(_WIN32)
 	{
-		long tz_offset;
-		_get_timezone(&tz_offset);
-		t -= tz_offset;
-		int dst;
-		_get_daylight(&dst);
-		if (dst)
+		_tzset();
+		t -= _timezone;
+		if (_daylight)
 			t -= 3600;
 	}
 #else
@@ -358,12 +355,8 @@ struct zvolume *archive_directory_tar (struct zfile *z)
 				zai.tv.tv_sec -= 3600;
 #elif defined(_WIN32)
 			{
-				long tz_offset;
-				_get_timezone(&tz_offset);
-				zai.tv.tv_sec -= tz_offset;
-				int dst;
-				_get_daylight(&dst);
-				if (dst)
+				zai.tv.tv_sec -= _timezone;
+				if (_daylight)
 					zai.tv.tv_sec -= 3600;
 			}
 #else
@@ -803,12 +796,8 @@ struct zvolume *archive_directory_7z (struct zfile *z)
         			zai.tv.tv_sec += 3600;
 			#elif defined(_WIN32)
 			{
-				long tz_offset;
-				_get_timezone(&tz_offset);
-				zai.tv.tv_sec -= tz_offset;
-				int dst;
-				_get_daylight(&dst);
-				if (dst)
+				zai.tv.tv_sec -= _timezone;
+				if (_daylight)
 					zai.tv.tv_sec += 3600;
 			}
 			#else

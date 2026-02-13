@@ -349,8 +349,14 @@ if(ANDROID)
     # --- Existing dependencies --- 
 else()
     find_package(SDL2 CONFIG REQUIRED)
-    find_package(SDL2_image MODULE REQUIRED)
-    find_package(SDL2_ttf MODULE REQUIRED)
+    find_package(SDL2_image CONFIG QUIET)
+    if(NOT SDL2_image_FOUND)
+        find_package(SDL2_image MODULE REQUIRED)
+    endif()
+    find_package(SDL2_ttf CONFIG QUIET)
+    if(NOT SDL2_ttf_FOUND)
+        find_package(SDL2_ttf MODULE REQUIRED)
+    endif()
     find_package(FLAC REQUIRED)
     find_package(mpg123 REQUIRED)
     find_package(PNG REQUIRED)
@@ -474,12 +480,29 @@ add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 
+# Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables
+if(TARGET SDL2_ttf::SDL2_ttf)
+    set(_SDL2_TTF_LIB SDL2_ttf::SDL2_ttf)
+elseif(SDL2_TTF_LIBRARIES)
+    set(_SDL2_TTF_LIB ${SDL2_TTF_LIBRARIES})
+else()
+    set(_SDL2_TTF_LIB SDL2_ttf)
+endif()
+
+if(TARGET SDL2_image::SDL2_image)
+    set(_SDL2_IMAGE_LIB SDL2_image::SDL2_image)
+elseif(SDL2_IMAGE_LIBRARIES)
+    set(_SDL2_IMAGE_LIB ${SDL2_IMAGE_LIBRARIES})
+else()
+    set(_SDL2_IMAGE_LIB SDL2_image)
+endif()
+
 set(AMIBERRY_LIBS
         mt32emu
         ZLIB::ZLIB
         ${CMAKE_DL_LIBS}
-        SDL2_ttf
-        SDL2_image
+        ${_SDL2_TTF_LIB}
+        ${_SDL2_IMAGE_LIB}
 )
 
 if (NOT ANDROID AND NOT WIN32)
@@ -546,5 +569,11 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
 endif ()
+
+# Platform system libraries must come AFTER all other dependencies so that
+# static libs (enet, etc.) can resolve their system library references.
+if(AMIBERRY_PLATFORM_LIBS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LIBS})
+endif()
 
 

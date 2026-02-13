@@ -3156,4 +3156,23 @@ Exit:;
 	return false;
 }
 
+#else
+
+// Stub implementations for platforms without WASAPI capture
+static uae_u8 *sndboard_get_buffer(int *frames)
+{
+	*frames = -1;
+	return NULL;
+}
+static void sndboard_release_buffer(uae_u8 *buffer, int frames)
+{
+}
+static void sndboard_free_capture(void)
+{
+}
+static bool sndboard_init_capture(int freq)
+{
+	return false;
+}
+
 #endif

@@ -25,6 +25,15 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 
+#ifdef _WIN32
+/* Include Winsock BEFORE bsdsocket.h to avoid SOCKET typedef conflict */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <io.h>
+#include <fcntl.h>
+#include <cstdarg>
+#endif
+
 #include "options.h"
 #include "memory.h"
 #include "newcpu.h"
@@ -34,13 +43,7 @@
 #include "native2amiga.h"
 #include "bsdsocket.h"
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <io.h>
-#include <fcntl.h>
-#include <cstdarg>
-#else
+#ifndef _WIN32
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>

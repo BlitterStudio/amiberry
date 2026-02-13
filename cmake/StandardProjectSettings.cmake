@@ -112,5 +112,5 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 if(WIN32)
-    list(APPEND AMIBERRY_PLATFORM_LIBS ws2_32 winmm imm32 version setupapi shlwapi advapi32)
+    list(APPEND AMIBERRY_PLATFORM_LIBS ws2_32 winmm imm32 version setupapi shlwapi advapi32 iphlpapi)
 endif()

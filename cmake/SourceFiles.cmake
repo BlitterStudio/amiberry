@@ -503,7 +503,7 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
 endif ()
 
 if(WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WINDOWS UTF8PROC_STATIC)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE AMIBERRY_WINDOWS UTF8PROC_STATIC USE_STD_FILESYSTEM SDL_MAIN_HANDLED)
 endif()
 
 # Apply accumulated compile/link options from StandardProjectSettings.cmake
@@ -520,9 +520,9 @@ endif()
 if(AMIBERRY_PLATFORM_LINK_DIRS)
     target_link_directories(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LINK_DIRS})
 endif()
-if(AMIBERRY_PLATFORM_LIBS)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LIBS})
-endif()
+# AMIBERRY_PLATFORM_LIBS are linked in Dependencies.cmake after all
+# library dependencies, so Windows system libs (ws2_32, winmm, etc.)
+# come after static libs that depend on them (enet, etc.).
 
 if(NOT ANDROID AND NOT WIN32)
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-pie)
@@ -536,7 +536,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/threaddep
         src/archivers
         src/ppc/pearpc
-        external/mt32emu/src
         external/floppybridge/src
 )
 
