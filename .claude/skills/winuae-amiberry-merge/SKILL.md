@@ -5,7 +5,7 @@ description: Assist with merging updates and synchronizing functionality from th
 
 # WinUAE to Amiberry Merge Assistant
 
-Help merge updates from WinUAE (Windows-only) to Amiberry (multi-platform: Linux/macOS/Android).
+Help merge updates from WinUAE (Windows-only, MSVC) to Amiberry (multi-platform: Linux/macOS/Android/Windows with MinGW-w64).
 
 ## Overview
 
@@ -20,7 +20,7 @@ WinUAE is the upstream Windows-based Amiga emulator. Amiberry is a cross-platfor
 - **Threading:** WinUAE uses Win32 threads; Amiberry uses SDL2 threading
 - **GUI:** WinUAE uses Win32 dialogs; Amiberry uses Dear ImGui (in `src/osdep/imgui/`)
 - **Build:** WinUAE uses Visual Studio; Amiberry uses CMake (+ Gradle for Android)
-- **Platforms:** Amiberry targets Linux, macOS, and Android (SDL2, migrating to SDL3 eventually)
+- **Platforms:** Amiberry targets Linux, macOS, Android, and Windows (SDL2, migrating to SDL3 eventually)
 - **CI/CD:** GitHub Actions builds all platforms on each commit
 
 ## Merge Workflow
@@ -87,7 +87,9 @@ For each identified issue:
 **Platform Guards:**
 ```cpp
 #ifdef _WIN32
-    // Windows (should not appear in Amiberry)
+    // Windows-specific (both WinUAE/MSVC and Amiberry/MinGW-w64)
+    // Note: Amiberry on Windows DOES define _WIN32, so many WinUAE
+    // Windows code paths are active. Use #ifdef AMIBERRY to distinguish.
 #elif defined(__APPLE__)
     // macOS-specific
 #elif defined(ANDROID)
@@ -95,7 +97,26 @@ For each identified issue:
 #else
     // Linux and other Unix-like
 #endif
+
+// To distinguish Amiberry from WinUAE on Windows:
+#if defined(_WIN32) && defined(AMIBERRY)
+    // Amiberry on Windows (MinGW-w64/GCC)
+#elif defined(_WIN32)
+    // WinUAE (MSVC)
+#endif
+
+// Platforms without reliable symlink support:
+#if defined(__ANDROID__) || defined(_WIN32)
+    // Use std::filesystem::copy() instead of create_symlink()
+#endif
 ```
+
+**Key difference: Amiberry on Windows vs WinUAE:**
+- Amiberry uses MinGW-w64 (GCC) — provides POSIX headers (`unistd.h`, `dirent.h`, etc.)
+- WinUAE uses MSVC — requires `_MSC_VER`-specific code
+- Many `#ifdef _WIN32` blocks from WinUAE now activate in Amiberry on Windows
+- `sysconfig.h` previously `#undef _WIN32` to suppress this; that was removed
+- JIT is non-functional on 64-bit Windows (pointers > 32-bit); interpreter mode is used
 
 ### 4. Apply Changes
 
@@ -260,6 +281,11 @@ When WinUAE updates WASAPI audio code:
 - Ensure `set_custom_limits(-1, -1, -1, -1, false)` is called in `lockscr()` (see `amiberry_gfx.cpp`).
 - Do NOT port WinUAE's `vbcopy()` changes if they enforce alpha channels incorrectly for SDL2.
 - Check `show_screen_maybe()` logic; Amiberry handles presentation in `SDL2_renderframe`.
+
+### 1b. Black Screen on Windows with USE_OPENGL (64-bit)
+**Symptom:** Emulation starts but screen stays black. Queue type 0/1/2 entries never processed.
+**Cause:** JIT `check_uae_p32()` detects 64-bit pointers → `jit_abort()` → `uae_reset(1,0)` → `quit_program=4` permanently. `waitqueue()` in `drawing.cpp` blocks all pixel-drawing queue entries when `quit_program != 0`.
+**Fix:** In `src/jit/x86/compemu_x86.h`, `check_uae_p32()` logs instead of calling `jit_abort()` under `#ifdef AMIBERRY`. JIT is non-functional on 64-bit Windows; interpreter mode handles everything.
 
 ### 2. Mouse Coordinate Drift
 **Symptom:** Mouse clicks are offset from the cursor, especially on macOS or High-DPI screens.
