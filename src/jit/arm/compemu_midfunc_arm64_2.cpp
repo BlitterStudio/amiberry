@@ -100,7 +100,7 @@ MIDFUNC(2,jnf_ADD_b_imm,(RW1 d, IM8 v))
 
 	if(targetIsReg) {
 		ADD_wwi(REG_WORK1, d, v & 0xff);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		ADD_wwi(d, d, v & 0xff);
 	}
@@ -120,7 +120,7 @@ MIDFUNC(2,jnf_ADD_b,(RW1 d, RR1 s))
 
 	if(targetIsReg) {
 		ADD_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		ADD_www(d, d, s);
 	}
@@ -140,7 +140,7 @@ MIDFUNC(2,jnf_ADD_w_imm,(RW2 d, IM16 v))
 			MOV_xi(REG_WORK1, v & 0xffff);
 			ADD_www(REG_WORK1, d, REG_WORK1);
 		}
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else{
 		if(v >= 0 && v <= 0xfff) {
 			ADD_wwi(d, d, v);
@@ -165,7 +165,7 @@ MIDFUNC(2,jnf_ADD_w,(RW2 d, RR2 s))
 
 	if(targetIsReg) {
 		ADD_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		ADD_www(d, d, s);
 	}
@@ -431,7 +431,7 @@ MIDFUNC(2,jnf_ADDX_b,(RW1 d, RR1 s))
 		ADD_www(REG_WORK1, d, s);
 		ADD_www(REG_WORK1, REG_WORK1, x);
 	}
-	BFI_xxii(d, REG_WORK1, 0, 8);
+	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	EXIT_REGS(d, s);
 	unlock2(x);
@@ -450,7 +450,7 @@ MIDFUNC(2,jnf_ADDX_w,(RW2 d, RR2 s))
 		ADD_www(REG_WORK1, d, s);
 		ADD_www(REG_WORK1, REG_WORK1, x);
 	}
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	EXIT_REGS(d, s);
 	unlock2(x);
@@ -594,7 +594,8 @@ MIDFUNC(2,jff_ANDSR,(IM32 s, IM8 x))
 
 	if (!x) {
 		int f = writereg(FLAGX);
-		MOV_xi(f, 0);
+		// Use 32-bit MOV for consistency (MOV_xi with 0 is safe, but MOV_wi is preferred).
+		MOV_wi(f, 0);
 		unlock2(f);
 	}
 }
@@ -641,7 +642,7 @@ MIDFUNC(2,jnf_AND_b,(RW1 d, RR1 s))
 
 	if(targetIsReg) {
 		AND_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		AND_www(d, d, s);
 	}
@@ -677,7 +678,7 @@ MIDFUNC(2,jnf_AND_w,(RW2 d, RR2 s))
 
 	if(targetIsReg) {
 		AND_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		AND_www(d, d, s);
 	}
@@ -725,7 +726,7 @@ MIDFUNC(2,jff_AND_b_imm,(RW1 d, IM8 v))
 	SIGNED8_IMM_2_REG(REG_WORK2, v);
 	if(targetIsReg) {
 		ANDS_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		ANDS_www(d, REG_WORK1, REG_WORK2);
 	}
@@ -748,7 +749,7 @@ MIDFUNC(2,jff_AND_b,(RW1 d, RR1 s))
 	SIGNED8_REG_2_REG(REG_WORK2, s);
 	if(targetIsReg) {
 		ANDS_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		ANDS_www(d, REG_WORK1, REG_WORK2);
 	}
@@ -766,7 +767,7 @@ MIDFUNC(2,jff_AND_w_imm,(RW2 d, IM16 v))
 	SIGNED16_IMM_2_REG(REG_WORK2, v);
 	if(targetIsReg) {
 		ANDS_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		ANDS_www(d, REG_WORK1, REG_WORK2);
 	}
@@ -789,7 +790,7 @@ MIDFUNC(2,jff_AND_w,(RW2 d, RR2 s))
 	SIGNED16_REG_2_REG(REG_WORK2, s);
 	if(targetIsReg) {
 		ANDS_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		ANDS_www(d, REG_WORK1, REG_WORK2);
 	}
@@ -970,6 +971,9 @@ MIDFUNC(2,jff_ASL_l_imm,(RW4 d, IM8 i))
 
 		flags_carry_inverted = false;
 		DUPLICACTE_CARRY
+
+		// Clean upper 32 bits of d after 64-bit LSL_xxi used for carry extraction
+		MOV_ww(d, d);
 	} else {
 		TST_ww(d, d);
 		flags_carry_inverted = false;
@@ -1139,6 +1143,9 @@ MIDFUNC(2,jff_ASL_l_reg,(RW4 d, RR4 i))
 	flags_carry_inverted = false;
 	DUPLICACTE_CARRY
 
+	// Clean upper 32 bits of d after 64-bit LSL_xxx used for carry extraction
+	MOV_ww(d, d);
+
 	// <end>
 	write_jmp_target(branchadd, (uintptr)get_target());
 
@@ -1231,7 +1238,7 @@ MIDFUNC(2,jnf_ASR_b_imm,(RW1 d, IM8 i))
 		if(i > 31)
 			i = 31;
 		ASR_wwi(REG_WORK1, REG_WORK1, i);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 
 		unlock2(d);
 	}
@@ -1247,7 +1254,7 @@ MIDFUNC(2,jnf_ASR_w_imm,(RW2 d, IM8 i))
 		if(i > 31)
 			i = 31;
 		ASR_wwi(REG_WORK1, REG_WORK1, i);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 
 		unlock2(d);
 	}
@@ -1354,6 +1361,9 @@ MIDFUNC(2,jff_ASR_l_imm,(RW4 d, IM8 i))
 
 		flags_carry_inverted = false;
 		DUPLICACTE_CARRY
+
+		// Clean upper 32 bits after 64-bit ASR_xxi
+		MOV_ww(d, d);
 	} else {
 		TST_ww(d, d);
 		flags_carry_inverted = false;
@@ -1918,8 +1928,10 @@ MIDFUNC(4,jnf_BFINS_ii,(RW4 d, RR4 s, IM8 offs, IM8 width))
 	INIT_REGS_l(d,s);
 
 	BFI_wwii(d, s, (32 - offs - width), width);
-	if(32 - offs - width < 0)
+	if(32 - offs - width < 0) {
 		BFI_xxii(d, s, (64 - offs - width), width);
+		MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFI for wrap-around case
+	}
 
 	EXIT_REGS(d,s);
 }
@@ -1931,8 +1943,10 @@ MIDFUNC(4,jff_BFINS_ii,(RW4 d, RR4 s, IM8 offs, IM8 width))
 
 	SBFX_wwii(REG_WORK1, s, 0, width);
 	BFI_wwii(d, REG_WORK1, (32 - offs - width), width);
-	if(32 - offs - width < 0)
+	if(32 - offs - width < 0) {
 		BFI_xxii(d, REG_WORK1, (64 - offs - width), width);
+		MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFI for wrap-around case
+	}
 	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
@@ -1949,6 +1963,7 @@ MIDFUNC(5,jnf_BFINS2_ii,(RW4 d, RW4 d2, RR4 s, IM8 offs, IM8 width))
 	BFI_xxii(d2, d, 32, 32);
 	BFI_xxii(d2, REG_WORK1, (64 - offs - width), width);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
 	EXIT_REGS(d,s);
 	unlock2(d2);
@@ -1964,6 +1979,7 @@ MIDFUNC(5,jff_BFINS2_ii,(RW4 d, RW4 d2, RR4 s, IM8 offs, IM8 width))
 	BFI_xxii(d2, d, 32, 32);
 	BFI_xxii(d2, REG_WORK1, (64 - offs - width), width);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 	TST_ww(REG_WORK1, REG_WORK1);
 
 	flags_carry_inverted = false;
@@ -1997,6 +2013,7 @@ MIDFUNC(4,jnf_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 
 	ORR_xxx(d, d, REG_WORK1);
 	ROR_xxi(d, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
 	unlock2(offs);
 	EXIT_REGS(d,s);
@@ -2027,6 +2044,7 @@ MIDFUNC(4,jff_BFINS_di,(RW4 d, RR4 s, RR4 offs, IM8 width))
 
 	ORR_xxx(d, d, REG_WORK1);
 	ROR_xxi(d, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
 	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
 	TST_xx(REG_WORK1, REG_WORK1);
@@ -2065,6 +2083,7 @@ MIDFUNC(4,jnf_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 
 	ORR_xxx(d, d, REG_WORK1);
 	ROR_xxi(d, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
 	unlock2(width);
 	EXIT_REGS(d,s);
@@ -2097,6 +2116,7 @@ MIDFUNC(4,jff_BFINS_id,(RW4 d, RR4 s, IM8 offs, RR4 width))
 
 	ORR_xxx(d, d, REG_WORK1);
 	ROR_xxi(d, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
 	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
 	TST_xx(REG_WORK1, REG_WORK1);
@@ -2136,6 +2156,7 @@ MIDFUNC(4,jnf_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 
 	ORR_xxx(d, d, REG_WORK1);
 	ROR_xxi(d, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
 	unlock2(width);
 	unlock2(offs);
@@ -2170,6 +2191,7 @@ MIDFUNC(4,jff_BFINS_dd,(RW4 d, RR4 s, RR4 offs, RR4 width))
 
 	ORR_xxx(d, d, REG_WORK1);
 	ROR_xxi(d, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit BFINS operations
 
 	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
 	TST_xx(REG_WORK1, REG_WORK1);
@@ -2206,6 +2228,7 @@ MIDFUNC(5,jnf_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
 
 	ORR_xxx(d2, d2, REG_WORK1);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
 	unlock2(offs);
 	EXIT_REGS(d,s);
@@ -2236,6 +2259,7 @@ MIDFUNC(5,jff_BFINS2_di,(RW4 d, RW4 d2, RR4 s, RR4 offs, IM8 width))
 
 	ORR_xxx(d2, d2, REG_WORK1);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
 	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
 	TST_xx(REG_WORK1, REG_WORK1);
@@ -2274,6 +2298,7 @@ MIDFUNC(5,jnf_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
 
 	ORR_xxx(d2, d2, REG_WORK1);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
 	unlock2(width);
 	EXIT_REGS(d,s);
@@ -2306,6 +2331,7 @@ MIDFUNC(5,jff_BFINS2_id,(RW4 d, RW4 d2, RR4 s, IM8 offs, RR4 width))
 
 	ORR_xxx(d2, d2, REG_WORK1);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
 	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
 	TST_xx(REG_WORK1, REG_WORK1);
@@ -2345,6 +2371,7 @@ MIDFUNC(5,jnf_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
 
 	ORR_xxx(d2, d2, REG_WORK1);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
 	unlock2(width);
 	unlock2(offs);
@@ -2379,6 +2406,7 @@ MIDFUNC(5,jff_BFINS2_dd,(RW4 d, RW4 d2, RR4 s, RR4 offs, RR4 width))
 
 	ORR_xxx(d2, d2, REG_WORK1);
 	LSR_xxi(d, d2, 32);
+	MOV_ww(d2, d2); // Clean upper 32 bits of d2 after 64-bit BFINS2 operations
 
 	LSL_xxx(REG_WORK1, REG_WORK1, REG_WORK3);
 	TST_xx(REG_WORK1, REG_WORK1);
@@ -2663,6 +2691,8 @@ MIDFUNC(1,jnf_CLR_b,(W1 d))
 	}
 	INIT_WREG_b(d);
 	CLEAR_LOW8_xx(d, d);
+	// Fix 19: CLEAR_LOW8_xx uses 64-bit AND, preserving dirty upper 32 bits.
+	MOV_ww(d, d);
 	unlock2(d);
 }
 MENDFUNC(1,jnf_CLR_b,(W1 d))
@@ -2675,6 +2705,8 @@ MIDFUNC(1,jnf_CLR_w,(W2 d))
 	}
 	INIT_WREG_w(d);
 	CLEAR_LOW16_xx(d, d);
+	// Fix 19: CLEAR_LOW16_xx uses 64-bit AND, preserving dirty upper 32 bits.
+	MOV_ww(d, d);
 	unlock2(d);
 }
 MENDFUNC(1,jnf_CLR_w,(W2 d))
@@ -2696,6 +2728,8 @@ MIDFUNC(1,jff_CLR_b,(W1 d))
 	}
 	INIT_WREG_b(d);
 	CLEAR_LOW8_xx(d, d);
+	// Fix 19: CLEAR_LOW8_xx uses 64-bit AND, preserving dirty upper 32 bits.
+	MOV_ww(d, d);
 	unlock2(d);
 }
 MENDFUNC(1,jff_CLR_b,(W1 d))
@@ -2711,6 +2745,8 @@ MIDFUNC(1,jff_CLR_w,(W2 d))
 	}
 	INIT_WREG_w(d);
 	CLEAR_LOW16_xx(d, d);
+	// Fix 19: CLEAR_LOW16_xx uses 64-bit AND, preserving dirty upper 32 bits.
+	MOV_ww(d, d);
 	unlock2(d);
 }
 MENDFUNC(1,jff_CLR_w,(W2 d))
@@ -3455,7 +3491,7 @@ MIDFUNC(2,jnf_EOR_b,(RW1 d, RR1 s))
 
 	if(targetIsReg) {
 		EOR_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		EOR_www(d, d, s);
 	}
@@ -3485,7 +3521,7 @@ MIDFUNC(2,jnf_EOR_w,(RW2 d, RR2 s))
 	INIT_REGS_w(d, s);
 
 	EOR_www(REG_WORK1, d, s);
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	EXIT_REGS(d, s);
 }
@@ -3530,7 +3566,7 @@ MIDFUNC(2,jff_EOR_b_imm,(RW1 d, IM8 v))
 	SIGNED8_IMM_2_REG(REG_WORK2, v);
 	if(targetIsReg) {
 		EOR_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 		TST_ww(REG_WORK1, REG_WORK1);
 	} else {
 		EOR_www(d, REG_WORK1, REG_WORK2);
@@ -3555,7 +3591,7 @@ MIDFUNC(2,jff_EOR_b,(RW1 d, RR1 s))
 	SIGNED8_REG_2_REG(REG_WORK2, s);
 	if(targetIsReg) {
 		EOR_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 		TST_ww(REG_WORK1, REG_WORK1);
 	} else {
 		EOR_www(d, REG_WORK1, REG_WORK2);
@@ -3575,7 +3611,7 @@ MIDFUNC(2,jff_EOR_w_imm,(RW2 d, IM16 v))
 	SIGNED16_IMM_2_REG(REG_WORK2, v);
 	if(targetIsReg) {
 		EOR_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 		TST_ww(REG_WORK1, REG_WORK1);
 	} else {
 		EOR_www(d, REG_WORK1, REG_WORK2);
@@ -3600,7 +3636,7 @@ MIDFUNC(2,jff_EOR_w,(RW2 d, RR2 s))
 	SIGNED16_REG_2_REG(REG_WORK2, s);
 	if(targetIsReg) {
 		EOR_www(REG_WORK1, REG_WORK1, REG_WORK2);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 		TST_ww(REG_WORK1, REG_WORK1);
 	} else {
 		EOR_www(d, REG_WORK1, REG_WORK2);
@@ -3712,7 +3748,7 @@ MIDFUNC(1,jnf_EXT_w,(RW4 d))
 	d = rmw(d);
 
 	SIGNED8_REG_2_REG(REG_WORK1, d);
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	unlock2(d);
 }
@@ -3763,7 +3799,7 @@ MIDFUNC(1,jff_EXT_w,(RW4 d))
 	}
 
 	TST_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	flags_carry_inverted = false;
 	unlock2(d);
@@ -4108,6 +4144,10 @@ MIDFUNC(2,jff_LSL_l_reg,(RW4 d, RR4 i))
 
 	flags_carry_inverted = false;
 	DUPLICACTE_CARRY
+
+	// Clean upper 32 bits of d after 64-bit LSL_xxx used for carry extraction
+	MOV_ww(d, d);
+
 	B_i(2);
 
 	// No shift
@@ -4580,7 +4620,7 @@ MIDFUNC(2,jnf_MOVE_b_imm,(W1 d, IM8 s))
 	d = rmw(d);
 
 	MOV_xi(REG_WORK1, s & 0xff);
-	BFI_xxii(d, REG_WORK1, 0, 8);
+	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	unlock2(d);
 }
@@ -4595,7 +4635,9 @@ MIDFUNC(2,jnf_MOVE_w_imm,(W2 d, IM16 s))
 
 	d = rmw(d);
 
-	MOVK_xi(d, s & 0xffff);
+	// Fix 21: MOVK_xi preserves dirty bits in [63:32]. Use MOVK_wi which
+	// writes to W register, zeroing [63:32] while preserving [31:16].
+	MOVK_wi(d, s & 0xffff);
 
 	unlock2(d);
 }
@@ -4612,7 +4654,7 @@ MIDFUNC(2,jnf_MOVE_b,(W1 d, RR1 s))
 
 	INIT_REGS_b(d, s);
 
-	BFI_xxii(d, s, 0, 8);
+	BFI_wwii(d, s, 0, 8);
 
 	EXIT_REGS(d, s);
 }
@@ -4629,7 +4671,7 @@ MIDFUNC(2,jnf_MOVE_w,(W2 d, RR2 s))
 
 	INIT_REGS_w(d, s);
 
-	BFI_xxii(d, s, 0, 16);
+	BFI_wwii(d, s, 0, 16);
 
 	EXIT_REGS(d, s);
 }
@@ -4651,7 +4693,7 @@ MIDFUNC(2,jff_MOVE_b_imm,(W1 d, IM8 s))
 		MOV_xi(REG_WORK1, (uae_u8) s);
 	}
 	TST_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 8);
+	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	flags_carry_inverted = false;
 	unlock2(d);
@@ -4677,7 +4719,7 @@ MIDFUNC(2,jff_MOVE_w_imm,(W2 d, IM16 s))
 
 	SIGNED16_IMM_2_REG(REG_WORK1, (uae_u16)s);
 	TST_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	flags_carry_inverted = false;
 	unlock2(d);
@@ -4717,7 +4759,7 @@ MIDFUNC(2,jff_MOVE_b,(W1 d, RR1 s))
 	SIGNED8_REG_2_REG(REG_WORK1, s);
 	TST_ww(REG_WORK1, REG_WORK1);
 	if(!s_is_d)
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 
 	flags_carry_inverted = false;
 	EXIT_REGS(d, s);
@@ -4742,7 +4784,7 @@ MIDFUNC(2,jff_MOVE_w,(W2 d, RR2 s))
 	SIGNED16_REG_2_REG(REG_WORK1, s);
 	TST_ww(REG_WORK1, REG_WORK1);
 	if(!s_is_d)
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 
 	flags_carry_inverted = false;
 	EXIT_REGS(d, s);
@@ -4799,7 +4841,7 @@ MIDFUNC(3,jnf_MVMEL_l,(W4 d, RR4 s, IM8 offset))
 		d = writereg(d);
 
 		LDR_wXi(REG_WORK1, s, offset);
-		REV32_xx(d, REG_WORK1);
+		REV_ww(d, REG_WORK1);
 
 		unlock2(d);
 		unlock2(s);
@@ -4807,7 +4849,7 @@ MIDFUNC(3,jnf_MVMEL_l,(W4 d, RR4 s, IM8 offset))
 		s = readreg(s);
 
 		LDR_wXi(REG_WORK1, s, offset);
-		REV32_xx(REG_WORK2, REG_WORK1);
+		REV_ww(REG_WORK2, REG_WORK1);
 		uintptr idx = (uintptr)(&regs.regs[d]) - (uintptr) &regs;
 		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
 
@@ -4841,7 +4883,7 @@ MIDFUNC(3,jnf_MVMLE_l,(RR4 d, RR4 s, IM8 offset))
 		s = readreg(s);
 		d = readreg(d);
 
-		REV32_xx(REG_WORK1, s);
+		REV_ww(REG_WORK1, s);
 		STUR_wXi(REG_WORK1, d, offset);
 
 		unlock2(d);
@@ -4851,7 +4893,7 @@ MIDFUNC(3,jnf_MVMLE_l,(RR4 d, RR4 s, IM8 offset))
 
 		uintptr idx = (uintptr)(&regs.regs[s]) - (uintptr) &regs;
 		LDR_wXi(REG_WORK2, R_REGSTRUCT, idx);
-		REV32_xx(REG_WORK1, REG_WORK2);
+		REV_ww(REG_WORK1, REG_WORK2);
 		STUR_wXi(REG_WORK1, d, offset);
 
 		unlock2(d);
@@ -4941,6 +4983,7 @@ MIDFUNC(2,jnf_MULS,(RW4 d, RR4 s))
 		SIGNED16_IMM_2_REG(REG_WORK1, tmp);
 		SIGNED16_REG_2_REG(d, d);
 		SMULL_xww(d, d, REG_WORK1);
+		MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 		unlock2(d);
 		return;
 	}
@@ -4950,6 +4993,7 @@ MIDFUNC(2,jnf_MULS,(RW4 d, RR4 s))
 	SIGNED16_REG_2_REG(d, d);
 	SIGNED16_REG_2_REG(REG_WORK1, s);
 	SMULL_xww(d, d, REG_WORK1);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 
 	EXIT_REGS(d, s);
 }
@@ -4962,6 +5006,7 @@ MIDFUNC(2,jff_MULS,(RW4 d, RR4 s))
 	SIGNED16_REG_2_REG(d, d);
 	SIGNED16_REG_2_REG(REG_WORK1, s);
 	SMULL_xww(d, d, REG_WORK1);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 	TST_ww(d, d);
 
 	flags_carry_inverted = false;
@@ -4974,6 +5019,7 @@ MIDFUNC(2,jnf_MULS32,(RW4 d, RR4 s))
 	INIT_REGS_l(d, s);
 
 	SMULL_xww(d, d, s);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 
 	EXIT_REGS(d, s);
 }
@@ -4993,6 +5039,7 @@ MIDFUNC(2,jff_MULS32,(RW4 d, RR4 s))
 		SET_xxVflag(REG_WORK4, REG_WORK4);
 		MSR_NZCV_x(REG_WORK4);
 	}
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply (after overflow check reads upper bits)
 	flags_carry_inverted = false;
 	EXIT_REGS(d, s);
 }
@@ -5005,6 +5052,7 @@ MIDFUNC(2,jnf_MULS64,(RW4 d, RW4 s))
 
 	SMULL_xww(d, d, s);
 	LSR_xxi(s, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
 	unlock2(s);
 	unlock2(d);
@@ -5021,6 +5069,7 @@ MIDFUNC(2,jff_MULS64,(RW4 d, RW4 s))
 	SMULL_xww(d, REG_WORK1, REG_WORK2);
 	TST_xx(d, d);
 	LSR_xxi(s, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
 	if (needed_flags & FLAG_V) {
 		// check overflow: no overflow if high part is 0 or 0xffffffff
@@ -5060,6 +5109,7 @@ MIDFUNC(2,jnf_MULU,(RW4 d, RR4 s))
 		UNSIGNED16_IMM_2_REG(REG_WORK1, tmp);
 		UNSIGNED16_REG_2_REG(d, d);
 		UMULL_xww(d, d, REG_WORK1);
+		MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 		unlock2(d);
 		return;
 	}
@@ -5069,6 +5119,7 @@ MIDFUNC(2,jnf_MULU,(RW4 d, RR4 s))
 	UNSIGNED16_REG_2_REG(d, d);
 	UNSIGNED16_REG_2_REG(REG_WORK1, s);
 	UMULL_xww(d, d, REG_WORK1);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 
 	EXIT_REGS(d, s);
 }
@@ -5082,6 +5133,7 @@ MIDFUNC(2,jff_MULU,(RW4 d, RR4 s))
 		UNSIGNED16_IMM_2_REG(REG_WORK1, tmp);
 		UNSIGNED16_REG_2_REG(d, d);
 		UMULL_xww(d, d, REG_WORK1);
+		MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 		TST_ww(d, d);
 		flags_carry_inverted = false;
 		unlock2(d);
@@ -5093,6 +5145,7 @@ MIDFUNC(2,jff_MULU,(RW4 d, RR4 s))
 	UNSIGNED16_REG_2_REG(d, d);
 	UNSIGNED16_REG_2_REG(REG_WORK1, s);
 	UMULL_xww(d, d, REG_WORK1);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 	TST_ww(d, d);
 
 	flags_carry_inverted = false;
@@ -5105,6 +5158,7 @@ MIDFUNC(2,jnf_MULU32,(RW4 d, RR4 s))
 	INIT_REGS_l(d, s);
 
 	UMULL_xww(d, d, s);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply
 
 	EXIT_REGS(d, s);
 }
@@ -5124,6 +5178,7 @@ MIDFUNC(2,jff_MULU32,(RW4 d, RR4 s))
 		SET_xxVflag(REG_WORK4, REG_WORK4);
 		MSR_NZCV_x(REG_WORK4);
 	}
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit multiply (after overflow check reads upper bits)
 
 	flags_carry_inverted = false;
 	EXIT_REGS(d, s);
@@ -5137,6 +5192,7 @@ MIDFUNC(2,jnf_MULU64,(RW4 d, RW4 s))
 
 	UMULL_xww(d, d, s);
 	LSR_xxi(s, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
 	unlock2(s);
 	unlock2(d);
@@ -5157,6 +5213,7 @@ MIDFUNC(2,jff_MULU64,(RW4 d, RW4 s))
 	}
 	TST_xx(d, d);
 	LSR_xxi(s, d, 32);
+	MOV_ww(d, d); // Clean upper 32 bits of d after 64-bit multiply
 
 	if (needed_flags & FLAG_V) {
 		// check overflow: no overflow if high part is 0
@@ -5192,7 +5249,7 @@ MIDFUNC(1,jnf_NEG_b,(RW1 d))
 
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	NEG_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 8);
+	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	unlock2(d);
 }
@@ -5204,7 +5261,7 @@ MIDFUNC(1,jnf_NEG_w,(RW2 d))
 
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	NEG_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	unlock2(d);
 }
@@ -5226,7 +5283,7 @@ MIDFUNC(1,jff_NEG_b,(RW1 d))
 
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	NEGS_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 8);
+	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	flags_carry_inverted = true;
 	DUPLICACTE_CARRY
@@ -5241,7 +5298,7 @@ MIDFUNC(1,jff_NEG_w,(RW2 d))
 
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	NEGS_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	flags_carry_inverted = true;
 	DUPLICACTE_CARRY
@@ -5289,7 +5346,7 @@ MIDFUNC(1,jnf_NEGX_b,(RW1 d))
 
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	NGC_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 8);
+	BFI_wwii(d, REG_WORK1, 0, 8);
 
 	unlock2(d);
 	unlock2(x);
@@ -5308,7 +5365,7 @@ MIDFUNC(1,jnf_NEGX_w,(RW2 d))
 
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	NGC_ww(REG_WORK1, REG_WORK1);
-	BFI_xxii(d, REG_WORK1, 0, 16);
+	BFI_wwii(d, REG_WORK1, 0, 16);
 
 	unlock2(d);
 	unlock2(x);
@@ -5441,7 +5498,7 @@ MIDFUNC(1,jnf_NOT_b,(RW1 d))
 
 	if(targetIsReg) {
 		MVN_ww(REG_WORK1, d);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		MVN_ww(d, d);
 	}
@@ -5461,7 +5518,7 @@ MIDFUNC(1,jnf_NOT_w,(RW2 d))
 
 	if(targetIsReg) {
 		MVN_ww(REG_WORK1, d);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		MVN_ww(d, d);
 	}
@@ -5492,7 +5549,7 @@ MIDFUNC(1,jff_NOT_b,(RW1 d))
 	SIGNED8_REG_2_REG(REG_WORK1, d);
 	if(targetIsReg) {
 		MVN_ww(REG_WORK1, REG_WORK1);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 		TST_ww(REG_WORK1, REG_WORK1);
 	} else {
 		MVN_ww(d, REG_WORK1);
@@ -5511,7 +5568,7 @@ MIDFUNC(1,jff_NOT_w,(RW2 d))
 	SIGNED16_REG_2_REG(REG_WORK1, d);
 	if(targetIsReg) {
 		MVN_ww(REG_WORK1, REG_WORK1);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 		TST_ww(REG_WORK1, REG_WORK1);
 	} else {
 		MVN_ww(d, REG_WORK1);
@@ -5576,7 +5633,7 @@ MIDFUNC(2,jnf_OR_b,(RW1 d, RR1 s))
 
 	if(targetIsReg) {
 		ORR_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		ORR_www(d, d, s);
 	}
@@ -5612,7 +5669,7 @@ MIDFUNC(2,jnf_OR_w,(RW2 d, RR2 s))
 
 	if(targetIsReg) {
 		ORR_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		ORR_www(d, d, s);
 	}
@@ -5661,7 +5718,7 @@ MIDFUNC(2,jff_OR_b_imm,(RW1 d, IM8 v))
 	if(targetIsReg) {
 		ORR_www(REG_WORK1, REG_WORK1, REG_WORK2);
 		TST_ww(REG_WORK1, REG_WORK1);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		ORR_www(d, REG_WORK1, REG_WORK2);
 		TST_ww(d, d);
@@ -5686,7 +5743,7 @@ MIDFUNC(2,jff_OR_b,(RW1 d, RR1 s))
 	if(targetIsReg) {
 		ORR_www(REG_WORK1, REG_WORK1, REG_WORK2);
 		TST_ww(REG_WORK1, REG_WORK1);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		ORR_www(d, REG_WORK1, REG_WORK2);
 		TST_ww(d, d);
@@ -5706,7 +5763,7 @@ MIDFUNC(2,jff_OR_w_imm,(RW2 d, IM16 v))
 	if(targetIsReg) {
 		ORR_www(REG_WORK1, REG_WORK1, REG_WORK2);
 		TST_ww(REG_WORK1, REG_WORK1);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		ORR_www(d, REG_WORK1, REG_WORK2);
 		TST_ww(d, d);
@@ -5731,7 +5788,7 @@ MIDFUNC(2,jff_OR_w,(RW2 d, RR2 s))
 	if(targetIsReg) {
 		ORR_www(REG_WORK1, REG_WORK1, REG_WORK2);
 		TST_ww(REG_WORK1, REG_WORK1);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else {
 		ORR_www(d, REG_WORK1, REG_WORK2);
 		TST_ww(d, d);
@@ -6280,6 +6337,7 @@ MIDFUNC(2,jnf_ROXL_l,(RW4 d, RR4 i))
 	MOV_wi(REG_WORK3, 33);
 	SUB_www(REG_WORK3, REG_WORK3, REG_WORK1);
 	LSR_xxx(d, REG_WORK2, REG_WORK3);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit LSR_xxx
 
 	// end of op
 	write_jmp_target(branchadd, (uintptr)get_target());
@@ -6412,6 +6470,7 @@ MIDFUNC(2,jff_ROXL_l,(RW4 d, RR4 i))
 	MOV_wi(REG_WORK3, 33);
 	SUB_www(REG_WORK3, REG_WORK3, REG_WORK1);
 	LSR_xxx(d, REG_WORK2, REG_WORK3);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit LSR_xxx
 
 	// Calculate NZ
 	TST_ww(d, d);
@@ -6849,6 +6908,7 @@ MIDFUNC(2,jnf_ROXR_l,(RW4 d, RR4 i))
 	BFI_xxii(REG_WORK2, REG_WORK2, 33, 31); // duplicate 31 bits
 
 	LSR_xxx(d, REG_WORK2, REG_WORK1);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit LSR_xxx
 
 	// end of op
 	write_jmp_target(branchadd, (uintptr)get_target());
@@ -6980,6 +7040,7 @@ MIDFUNC(2,jff_ROXR_l,(RW4 d, RR4 i))
 	BFI_xxii(REG_WORK2, REG_WORK2, 33, 31); // duplicate 31 bits
 
 	LSR_xxx(d, REG_WORK2, REG_WORK1);
+	MOV_ww(d, d); // Clean upper 32 bits after 64-bit LSR_xxx
 
 	// Calculate NZ
 	TST_ww(d, d);
@@ -7060,7 +7121,7 @@ MIDFUNC(2,jnf_SUB_b_imm,(RW1 d, IM8 v))
 
 	if(targetIsReg) {
 		SUB_wwi(REG_WORK1, d, v & 0xff);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		SUB_wwi(d, d, v & 0xff);
 	}
@@ -7080,7 +7141,7 @@ MIDFUNC(2,jnf_SUB_b,(RW1 d, RR1 s))
 
 	if(targetIsReg) {
 		SUB_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 8);
+		BFI_wwii(d, REG_WORK1, 0, 8);
 	} else {
 		SUB_www(d, d, s);
 	}
@@ -7101,7 +7162,7 @@ MIDFUNC(2,jnf_SUB_w_imm,(RW2 d, IM16 v))
 	UNSIGNED16_IMM_2_REG(REG_WORK1, (uae_u16)v);
 	if(targetIsReg) {
 		SUB_www(REG_WORK1, d, REG_WORK1);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else{
 		SUB_www(d, d, REG_WORK1);
 	}
@@ -7121,7 +7182,7 @@ MIDFUNC(2,jnf_SUB_w,(RW2 d, RR2 s))
 
 	if(targetIsReg) {
 		SUB_www(REG_WORK1, d, s);
-		BFI_xxii(d, REG_WORK1, 0, 16);
+		BFI_wwii(d, REG_WORK1, 0, 16);
 	} else{
 		SUB_www(d, d, s);
 	}
@@ -7683,7 +7744,7 @@ MIDFUNC(2,jnf_MEM_WRITE_OFF_l,(RR4 adr, RR4 l))
 	adr = readreg(adr);
 	l = readreg(l);
 
-	REV32_xx(REG_WORK1, l);
+	REV_ww(REG_WORK1, l);
 	STR_wXx(REG_WORK1, adr, R_MEMSTART);
 
 	unlock2(l);
@@ -7723,7 +7784,7 @@ MIDFUNC(2,jnf_MEM_READ_OFF_l,(W4 d, RR4 adr))
 	d = writereg(d);
 
 	LDR_wXx(REG_WORK1, adr, R_MEMSTART);
-	REV32_xx(d, REG_WORK1);
+	REV_ww(d, REG_WORK1);
 
 	unlock2(d);
 	unlock2(adr);
@@ -7764,7 +7825,7 @@ MIDFUNC(2,jnf_MEM_WRITE24_OFF_l,(RR4 adr, RR4 l))
 	l = readreg(l);
 
 	UBFIZ_xxii(REG_WORK1, adr, 0, 24);
-	REV32_xx(REG_WORK3, l);
+	REV_ww(REG_WORK3, l);
 	STR_wXx(REG_WORK3, REG_WORK1, R_MEMSTART);
 
 	unlock2(l);
@@ -7807,7 +7868,7 @@ MIDFUNC(2,jnf_MEM_READ24_OFF_l,(W4 d, RR4 adr))
 
 	UBFIZ_xxii(REG_WORK1, adr, 0, 24);
 	LDR_wXx(d, REG_WORK1, R_MEMSTART);
-	REV32_xx(d, d);
+	REV_ww(d, d);
 
 	unlock2(d);
 	unlock2(adr);
@@ -7860,6 +7921,9 @@ MIDFUNC(3,jnf_MEM_READMEMBANK,(W4 dest, RR4 adr, IM8 offset))
 	LDR_xXi(REG_WORK3, REG_WORK3, offset);
 
 	compemu_raw_call_r(REG_WORK3);
+	// Fix 18: ARM64 ABI (AAPCS64) says upper 32 bits of x0 are UNSPECIFIED
+	// for 32-bit return types. Zero them to maintain 32-bit cleanliness.
+	MOV_ww(REG_RESULT, REG_RESULT);
 
 	live.nat[REG_RESULT].holds[0] = dest;
 	live.nat[REG_RESULT].nholds = 1;
