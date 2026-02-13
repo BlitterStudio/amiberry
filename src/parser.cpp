@@ -47,8 +47,10 @@
 #include <netdb.h>
 #endif
 
-#ifdef WITH_MIDI
+#ifdef USE_PORTMIDI
 #include "portmidi.h"
+#elif defined(_WIN32) && defined(WITH_MIDI)
+#include <mmsystem.h>
 #endif
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
@@ -709,6 +711,29 @@ int enumserialports (void)
 	cnt++;
 	write_log(_T("Port enumeration end\n"));
 	return cnt;
+#elif defined(_WIN32)
+	int cnt = 0;
+	serial_ports.clear();
+	write_log(_T("Serial port enumeration (Windows)..\n"));
+	TCHAR devname[MAX_DPATH];
+	for (int i = 0; i < 32; i++) {
+		TCHAR comname[16];
+		_stprintf(comname, _T("COM%d"), i);
+		if (QueryDosDevice(comname, devname, sizeof(devname) / sizeof(TCHAR))) {
+			serial_ports.emplace_back(comname);
+			cnt++;
+		}
+	}
+	serial_ports.emplace_back(SERIAL_INTERNAL);
+	cnt++;
+	serial_ports.emplace_back(SERIAL_LOOPBACK);
+	cnt++;
+	serial_ports.emplace_back("TCP://0.0.0.0:1234");
+	cnt++;
+	serial_ports.emplace_back("TCP://0.0.0.0:1234/wait");
+	cnt++;
+	write_log(_T("Port enumeration end\n"));
+	return cnt;
 #else
 	return 0;
 #endif
@@ -718,7 +743,7 @@ int enummidiports (void)
 {
 	int total = 0;
 
-#ifdef WITH_MIDI
+#ifdef USE_PORTMIDI
 	total = Pm_CountDevices();
 	write_log(_T("MIDI: found devices: %d\n"), total);
 	for(int i=0; i<total; i++) {
@@ -733,6 +758,28 @@ int enummidiports (void)
 		}
 		if(info->output) {
 			midi_out_ports.emplace_back(info->name);
+		}
+	}
+#elif defined(_WIN32) && defined(WITH_MIDI)
+	{
+		UINT num_out = midiOutGetNumDevs();
+		UINT num_in = midiInGetNumDevs();
+		write_log(_T("MIDI: found %u output, %u input devices\n"), num_out, num_in);
+		for (UINT i = 0; i < num_out; i++) {
+			MIDIOUTCAPS caps;
+			if (midiOutGetDevCaps(i, &caps, sizeof(caps)) == MMSYSERR_NOERROR) {
+				write_log(_T("MIDI OUT: %u: '%s'\n"), i, caps.szPname);
+				midi_out_ports.emplace_back(caps.szPname);
+				total++;
+			}
+		}
+		for (UINT i = 0; i < num_in; i++) {
+			MIDIINCAPS caps;
+			if (midiInGetDevCaps(i, &caps, sizeof(caps)) == MMSYSERR_NOERROR) {
+				write_log(_T("MIDI IN: %u: '%s'\n"), i, caps.szPname);
+				midi_in_ports.emplace_back(caps.szPname);
+				total++;
+			}
 		}
 	}
 #endif

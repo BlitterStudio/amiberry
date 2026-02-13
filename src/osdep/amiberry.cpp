@@ -5921,6 +5921,16 @@ std::vector<std::string> get_cd_drives()
 
 	if (results.empty())
 		write_log("DiskArbitration did not find any CD drives on this system\n");
+#elif defined(_WIN32)
+	DWORD drive_mask = GetLogicalDrives();
+	for (char letter = 'A'; letter <= 'Z'; letter++, drive_mask >>= 1) {
+		if (!(drive_mask & 1))
+			continue;
+		char root[] = { letter, ':', '\\', '\0' };
+		if (GetDriveTypeA(root) == DRIVE_CDROM) {
+			results.emplace_back(root);
+		}
+	}
 #else
 	char path[MAX_DPATH];
 	FILE* fp = popen("lsblk -o NAME,TYPE | awk '$2==\"rom\"{print \"/dev/\"$1}'", "r");

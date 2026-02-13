@@ -51,6 +51,8 @@
 // We define this externally in Amiberry
 #ifdef USE_LIBSERIALPORT
 #define SERIAL_PORT  /* serial port emulation */
+#elif defined(_WIN32)
+#define SERIAL_PORT  /* serial port emulation (native Windows COM) */
 #endif
 
 // We define this externally in Amiberry
@@ -129,6 +131,8 @@
 // Use portmidi library for MIDI devices
 #ifdef USE_PORTMIDI
 #define WITH_MIDI
+#elif defined(_WIN32)
+#define WITH_MIDI  /* native Windows Multimedia MIDI */
 #endif
 
 /* vpar virtual parallel port (PTY-based, not available on Windows) */

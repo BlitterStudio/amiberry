@@ -324,13 +324,9 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: ${{ matrix.image }}
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j$(nproc)
-          cpack -G RPM --config build/CPackConfig.cmake
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
+          bash -c "cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G RPM --config build/CPackConfig.cmake"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'
@@ -380,13 +376,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run the build process with Docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: ${{ matrix.image }}
-          options: -v ${{ github.workspace }}:/build
-          run: |
-            cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j$(nproc)
-            cpack -G DEB --config build/CPackConfig.cmake
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
+            bash -c "cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
       - name: Upload artifact
         if: always() && github.ref_type != 'tag'
@@ -436,13 +428,9 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Run the build process with Docker
-      uses: addnab/docker-run-action@v3
-      with:
-        image: ${{ matrix.image }}
-        options: -v ${{ github.workspace }}:/build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j$(nproc)
-          cpack -G DEB --config build/CPackConfig.cmake
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/build ${{ matrix.image }} \
+          bash -c "cmake -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-aarch64-linux-gnu.cmake -B build -G Ninja ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }} -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build -j\$(nproc) && cpack -G DEB --config build/CPackConfig.cmake"
 
     - name: Upload artifact
       if: always() && github.ref_type != 'tag'

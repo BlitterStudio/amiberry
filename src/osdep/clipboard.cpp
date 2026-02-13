@@ -281,7 +281,8 @@ static void from_iff_text(uae_u8* addr, uae_u32 len)
 	xfree(txt);
 }
 
-#ifdef AMIBERRY // NL
+#if defined(AMIBERRY) && !defined(_WIN32)
+// Bitmap clipboard sharing requires Win32 GDI APIs (non-Windows Amiberry skips this)
 #else
 
 static void to_iff_ilbm(TrapContext *ctx, HBITMAP hbmp)
@@ -751,8 +752,8 @@ static void from_iff(TrapContext* ctx, uaecptr data, uae_u32 len)
 	{
 		if (!memcmp("FTXT", buf + 8, 4))
 			from_iff_text(buf, len);
-#ifdef AMIBERRY
-		/* Bitmaps are not supported in FS-UAE yet */
+#if defined(AMIBERRY) && !defined(_WIN32)
+		/* Bitmaps are not supported on non-Windows Amiberry yet */
 #else
 		if (!memcmp ("ILBM", buf + 8, 4))
 			from_iff_ilbm(buf, len);
@@ -792,9 +793,9 @@ static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 #endif
 	if (!filesys_heartbeat())
 		return;
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
 #else
-	if (!OpenClipboard (hwnd))
+	if (!OpenClipboard (NULL))
 		return;
 #endif
 #ifdef AMIBERRY
@@ -810,12 +811,22 @@ static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 		{
 			lptstr = nullptr;
 		}
-		// lptstr = strdup(
-		//	clipboard_from_host_text ? clipboard_from_host_text : "");
 		text = true;
 		clipboard_from_host_changed = false;
 	}
 	SDL_mutexV(clipboard_from_host_mutex);
+#if defined(_WIN32)
+	// On Windows, also check for bitmap clipboard data via Win32 API
+	if (!text && !keyboardinject) {
+		f = 0;
+		while ((f = EnumClipboardFormats(f))) {
+			if (f == CF_BITMAP) {
+				bmp = TRUE;
+				break;
+			}
+		}
+	}
+#endif
 #else
 	f = 0;
 	while (f = EnumClipboardFormats (f)) {
@@ -858,7 +869,7 @@ static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 	}
 	else if (bmp)
 	{
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
 		write_log(_T("[CLIPBOARD] Bitmap clipboard sharing not implemented\n"));
 #else
 		HBITMAP hbmp = (HBITMAP)GetClipboardData (CF_BITMAP);
@@ -870,7 +881,7 @@ static void clipboard_read(TrapContext* ctx, int hwnd, bool keyboardinject)
 		}
 #endif
 	}
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
 #else
 	CloseClipboard ();
 #endif
@@ -882,7 +893,7 @@ static void clipboard_free_delayed()
 		return;
 	if (clipboard_delayed_size < 0)
 		xfree(clipboard_delayed_data);
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
 #else
 	else
 		DeleteObject (clipboard_delayed_data);
@@ -910,17 +921,21 @@ void clipboard_changed(int hwnd)
 	clipboard_read(nullptr, hwnd, false);
 }
 
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
 #else
 static int clipboard_put_bmp_real (HBITMAP hbmp)
 {
 	int ret = FALSE;
 
-	if (!OpenClipboard (chwnd)) 
+#ifdef AMIBERRY
+	if (!OpenClipboard (NULL))
+#else
+	if (!OpenClipboard (chwnd))
+#endif
 		return ret;
 	clipopen++;
 	EmptyClipboard ();
-	SetClipboardData (CF_BITMAP, hbmp); 
+	SetClipboardData (CF_BITMAP, hbmp);
 	ret = TRUE;
 	CloseClipboard ();
 	clipopen--;
@@ -982,7 +997,7 @@ static int clipboard_put_text(const TCHAR* txt)
 #endif
 }
 
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
 #else
 static int clipboard_put_bmp (HBITMAP hbmp)
 {
@@ -1148,7 +1163,9 @@ void clipboard_reset()
 	to_amiga_size = 0;
 	to_amiga_phase = 0;
 	clip_disabled = false;
-#ifdef AMIBERRY
+#if defined(AMIBERRY) && !defined(_WIN32)
+#elif defined(_WIN32)
+	ReleaseDC (NULL, hdc);
 #else
 	ReleaseDC (chwnd, hdc);
 #endif
@@ -1165,6 +1182,9 @@ void clipboard_init()
 	// Activate clipboard functionality (let UAE think we are in the
 	// foreground).
 	clipactive = 1;
+#ifdef _WIN32
+	hdc = GetDC(NULL); // desktop DC for CreateDIBitmap in bitmap clipboard
+#endif
 #else
 void clipboard_init (HWND hwnd)
 {

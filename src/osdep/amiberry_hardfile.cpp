@@ -482,6 +482,147 @@ static void scan_harddrives_macos()
 }
 #endif
 
+#ifdef _WIN32
+#include <winioctl.h>
+
+static void scan_harddrives_windows()
+{
+	// Build a map of physical drive number -> list of mounted drive letters
+	std::map<DWORD, std::string> drive_letter_map;
+	DWORD logical_drives = GetLogicalDrives();
+	for (char letter = 'A'; letter <= 'Z'; letter++, logical_drives >>= 1) {
+		if (!(logical_drives & 1))
+			continue;
+		TCHAR vol_path[16];
+		_stprintf(vol_path, _T("\\\\.\\%c:"), letter);
+		HANDLE hVol = CreateFile(vol_path, 0,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+		if (hVol == INVALID_HANDLE_VALUE)
+			continue;
+		STORAGE_DEVICE_NUMBER sdn{};
+		DWORD bytes_returned = 0;
+		if (DeviceIoControl(hVol, IOCTL_STORAGE_GET_DEVICE_NUMBER,
+			nullptr, 0, &sdn, sizeof(sdn), &bytes_returned, nullptr)) {
+			if (sdn.DeviceType == FILE_DEVICE_DISK) {
+				if (drive_letter_map.find(sdn.DeviceNumber) == drive_letter_map.end()) {
+					drive_letter_map[sdn.DeviceNumber] = std::string(1, letter) + ":";
+				} else {
+					drive_letter_map[sdn.DeviceNumber] += std::string(", ") + letter + ":";
+				}
+			}
+		}
+		CloseHandle(hVol);
+	}
+
+	for (int drv = 0; drv < 32; drv++) {
+		TCHAR dev_path[64];
+		_stprintf(dev_path, _T("\\\\.\\PhysicalDrive%d"), drv);
+
+		// Probe with zero access first (just check existence)
+		HANDLE h = CreateFile(dev_path, 0,
+			FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+		if (h == INVALID_HANDLE_VALUE)
+			continue;
+
+		// Get device properties (vendor, product, revision)
+		char vendor[128] = {};
+		char product[128] = {};
+		char revision[128] = {};
+		{
+			BYTE buf[4096]{};
+			STORAGE_PROPERTY_QUERY spq{};
+			spq.PropertyId = StorageDeviceProperty;
+			spq.QueryType = PropertyStandardQuery;
+			DWORD bytes_returned = 0;
+			if (DeviceIoControl(h, IOCTL_STORAGE_QUERY_PROPERTY,
+				&spq, sizeof(spq), buf, sizeof(buf), &bytes_returned, nullptr)) {
+				auto* desc = reinterpret_cast<STORAGE_DEVICE_DESCRIPTOR*>(buf);
+				if (desc->VendorIdOffset && desc->VendorIdOffset < bytes_returned) {
+					strncpy(vendor, (char*)buf + desc->VendorIdOffset, sizeof(vendor) - 1);
+					trim_spaces(vendor);
+				}
+				if (desc->ProductIdOffset && desc->ProductIdOffset < bytes_returned) {
+					strncpy(product, (char*)buf + desc->ProductIdOffset, sizeof(product) - 1);
+					trim_spaces(product);
+				}
+				if (desc->ProductRevisionOffset && desc->ProductRevisionOffset < bytes_returned) {
+					strncpy(revision, (char*)buf + desc->ProductRevisionOffset, sizeof(revision) - 1);
+					trim_spaces(revision);
+				}
+			}
+		}
+
+		// Get disk size
+		uae_u64 size_bytes = 0;
+		{
+			GET_LENGTH_INFORMATION gli{};
+			DWORD bytes_returned = 0;
+			if (DeviceIoControl(h, IOCTL_DISK_GET_LENGTH_INFO,
+				nullptr, 0, &gli, sizeof(gli), &bytes_returned, nullptr)) {
+				size_bytes = gli.Length.QuadPart;
+			}
+		}
+
+		// Get sector size
+		int bytespersector = 512;
+		{
+			DISK_GEOMETRY dg{};
+			DWORD bytes_returned = 0;
+			if (DeviceIoControl(h, IOCTL_DISK_GET_DRIVE_GEOMETRY,
+				nullptr, 0, &dg, sizeof(dg), &bytes_returned, nullptr)) {
+				if (dg.BytesPerSector > 0)
+					bytespersector = dg.BytesPerSector;
+			}
+		}
+
+		// Check writable
+		int readonly = 0;
+		{
+			DWORD bytes_returned = 0;
+			if (!DeviceIoControl(h, IOCTL_DISK_IS_WRITABLE,
+				nullptr, 0, nullptr, 0, &bytes_returned, nullptr)) {
+				if (GetLastError() == ERROR_WRITE_PROTECT)
+					readonly = 1;
+			}
+		}
+
+		CloseHandle(h);
+
+		// Check if any partitions on this drive are mounted
+		int mounted = 0;
+		std::string letters;
+		auto it = drive_letter_map.find((DWORD)drv);
+		if (it != drive_letter_map.end()) {
+			mounted = 1;
+			letters = it->second;
+		}
+
+		// Build display name
+		std::string label;
+		if (vendor[0] || product[0]) {
+			label = std::string(vendor);
+			if (vendor[0] && product[0])
+				label += " ";
+			label += product;
+		} else {
+			label = "Disk";
+		}
+
+		char display[2048];
+		snprintf(display, sizeof(display), "%s (%s) \xe2\x80\x94 PhysicalDrive%d%s%s",
+			label.c_str(), format_size_bytes(size_bytes).c_str(), drv,
+			letters.empty() ? "" : " [",
+			letters.empty() ? "" : (letters + "]").c_str());
+
+		char path[256];
+		snprintf(path, sizeof(path), "\\\\.\\PhysicalDrive%d", drv);
+
+		add_drive_entry(display, path, size_bytes, bytespersector, readonly, 0, mounted);
+		write_log(_T("HD: found %s\n"), display);
+	}
+}
+#endif
+
 static int scan_harddrives(bool force)
 {
 	static int done;
@@ -494,8 +635,7 @@ static int scan_harddrives(bool force)
 #ifdef __MACH__
 	scan_harddrives_macos();
 #elif defined(_WIN32)
-	// Windows: physical drive enumeration not yet implemented
-	// HDF file access works without it
+	scan_harddrives_windows();
 #else
 	scan_harddrives_linux();
 #endif
