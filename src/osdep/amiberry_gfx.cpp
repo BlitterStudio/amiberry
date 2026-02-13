@@ -4330,6 +4330,10 @@ static int create_windows(struct AmigaMonitor* mon)
 		w = r.w;
 		h = r.h;
 
+		// Default new position to current position; fullwindow overrides below
+		nx = x;
+		ny = y;
+
 		if (mon->screen_is_picasso) {
 			nw = mon->currentmode.current_width;
 			nh = mon->currentmode.current_height;

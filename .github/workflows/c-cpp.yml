@@ -223,27 +223,41 @@ jobs:
           xcrun stapler staple universal-app/Amiberry.app
           rm Amiberry-${{ github.sha }}-macOS-universal.zip
 
-      - name: Install dependencies for cpack
-        run: |
-          brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd
-
-      - name: Generate CPackConfig.cmake
-        run: |
-          cmake -B build
-
-      - name: Copy universal app to build dir for cpack
-        run: |
-          rm -rf build/Amiberry.app
-          cp -R universal-app/Amiberry.app build/Amiberry.app
-
       - name: Create DMG package
         run: |
-          cpack -G DragNDrop --config build/CPackConfig.cmake
+          set -euo pipefail
+
+          # Read version from CMakeLists.txt (BSD-compatible, no grep -P)
+          VERSION=$(sed -n 's/.*VERSION \([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p' CMakeLists.txt | head -1)
+          PRE_RELEASE=$(sed -n 's/.*VERSION_PRE_RELEASE "\([0-9]*\)".*/\1/p' CMakeLists.txt | head -1)
+          if [ -n "$PRE_RELEASE" ]; then
+            DMG_VERSION="${VERSION}~pre${PRE_RELEASE}"
+          else
+            DMG_VERSION="${VERSION}"
+          fi
+          DMG_NAME="Amiberry-${DMG_VERSION}-Darwin"
+
+          # Create a staging directory for DMG contents
+          STAGING="dmg-staging"
+          mkdir -p "$STAGING"
+          cp -R universal-app/Amiberry.app "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+
+          # Copy background image
+          mkdir -p "$STAGING/.background"
+          cp packaging/dmg/AppDMGBackground.tiff "$STAGING/.background/background.tiff"
+
+          # Create the DMG
+          hdiutil create -volname "Amiberry" \
+            -srcfolder "$STAGING" \
+            -ov -format UDZO \
+            "${DMG_NAME}.dmg"
+
+          echo "DMG_NAME=${DMG_NAME}" >> "$GITHUB_ENV"
 
       - name: ZIP package for release
         if: github.ref_type == 'tag'
-        run: zip -r Amiberry-${{ github.ref_name }}-macOS-universal.zip Amiberry-*.dmg
+        run: zip -r Amiberry-${{ github.ref_name }}-macOS-universal.zip ${DMG_NAME}.dmg
 
       - name: Upload artifact
         if: github.ref_type != 'tag'
