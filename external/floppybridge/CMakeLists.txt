@@ -18,6 +18,8 @@ add_library(floppybridge SHARED
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 if(ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE dl)
+elseif(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE setupapi ws2_32)
 else()
     target_link_libraries(${PROJECT_NAME} PRIVATE pthread dl)
 endif()

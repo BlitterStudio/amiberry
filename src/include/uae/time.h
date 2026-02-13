@@ -13,7 +13,7 @@ uae_time_t uae_time(void);
 void uae_time_use_mode(int mode);
 uae_s64 read_system_time(void);
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__GNUC__)
 void uae_time_use_rdtsc(bool enable);
 uae_s64 read_processor_time_rdtsc(void);
 #else

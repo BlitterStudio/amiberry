@@ -85,12 +85,55 @@ Changes in these WinUAE subsystems **always require adaptation**:
 - `GetVersionEx()` → Platform-specific or remove
 - Registry access → Config files (libconfig, INI, JSON)
 
+### Winsock (MinGW-w64 on Windows)
+
+When Amiberry runs natively on Windows, socket code needs these adaptations:
+- `close(sock)` → `closesocket(sock)`
+- `ioctl(sock, FIONREAD, ...)` → `ioctlsocket(sock, FIONREAD, ...)`
+- `fcntl(sock, F_SETFL, O_NONBLOCK)` → `ioctlsocket(sock, FIONBIO, &mode)`
+- `errno` (for sockets) → `WSAGetLastError()`
+- `pipe()` → loopback TCP socket pair (for `select()`-compatible FDs)
+- `setsockopt`/`getsockopt` casts: `(void*)` → `(char*)`/`(const char*)`
+- `MSG_NOSIGNAL` → define as 0 (Windows has no SIGPIPE)
+- `struct ifreq`/`struct ifconf` → not available on Windows
+
+**Note:** `src/slirp/` already has full Winsock2 support from QEMU heritage.
+
+### bsdsocket.library Emulation
+
+The bsdsocket subsystem has a **split architecture** on Windows vs POSIX:
+
+**Windows (`#ifdef _WIN32` in `src/osdep/bsdsocket_host.cpp`):**
+Uses WinUAE's native model — WSAAsyncSelect + hidden HWND + dedicated `sock_thread` + thread pools. Key Win32 APIs used:
+- `WSAAsyncSelect()` for async socket events
+- `MsgWaitForMultipleObjects()` in sock_thread event loop
+- `_beginthreadex()` / `_endthreadex()` for thread management
+- `CRITICAL_SECTION` for synchronization
+- `GetAdaptersAddresses()` for network interface queries (SIOCGIF* ioctls)
+- `WSAIoctl(SIO_GET_INTERFACE_LIST)` for interface enumeration
+
+**MinGW adaptation notes:**
+- No SEH (`__try/__except`) — thread functions called directly, no exception filter
+- `hInst` → `GetModuleHandle(NULL)` (no WinUAE win32.h dependency)
+- `IDI_APPICON` → NULL for hidden window
+- TCHAR/`au()` conversions removed — Amiberry uses `char` strings
+- `_IOWR` macro renamed to `_IOWR_BSD` to avoid MinGW conflict
+
+**POSIX (`#else /* !_WIN32 */`):**
+Uses the original Amiberry implementation — `select()` in a background thread, `pipe()` for abort signaling, `fcntl()` for non-blocking. Untouched by the Windows port.
+
+### Symlink Handling
+- `std::filesystem::create_symlink()` requires admin or Developer Mode on Windows
+- For directories, must use `create_directory_symlink()` (not `create_symlink()`)
+- Preferred pattern: use `std::filesystem::copy()` on Android and Windows
+- Guard: `#if defined(__ANDROID__) || defined(_WIN32)`
+
 ## Platform-Specific Guards
 
 ### Standard Pattern
 ```cpp
 #ifdef _WIN32
-    // Windows-specific code
+    // Windows-specific code (both WinUAE/MSVC and Amiberry/MinGW-w64)
 #elif defined(__APPLE__)
     // macOS-specific code
 #elif defined(ANDROID)
@@ -99,6 +142,18 @@ Changes in these WinUAE subsystems **always require adaptation**:
     // Linux or other Unix-like systems
 #endif
 ```
+
+### Distinguishing Amiberry from WinUAE on Windows
+```cpp
+#if defined(_WIN32) && defined(AMIBERRY)
+    // Amiberry on Windows (MinGW-w64/GCC)
+    // Has POSIX headers (unistd.h, dirent.h) via MinGW
+#elif defined(_WIN32)
+    // WinUAE (MSVC) - not built by Amiberry
+#endif
+```
+
+**Important:** `_WIN32` IS defined in Amiberry Windows builds. Many WinUAE `#ifdef _WIN32` code paths are now active. The `AMIBERRY` define distinguishes the two projects when needed.
 
 ### Common Guard Scenarios
 
@@ -115,11 +170,14 @@ Changes in these WinUAE subsystems **always require adaptation**:
 ```cpp
 #ifdef _WIN32
     #include <windows.h>
+    // Note: MinGW-w64 also provides unistd.h, dirent.h, etc.
 #else
     #include <unistd.h>
     #include <SDL.h>
 #endif
 ```
+
+**std::byte ambiguity (MinGW):** `sysdeps.h` has `using namespace std;` which pulls `std::byte` into the global namespace. Windows headers (`rpcndr.h`) also define a `byte` typedef. This causes ambiguity errors in `objidl.h` and other COM headers. Fix: `sysconfig.h` includes `<winsock2.h>` at the very top (before any C++ std headers) so Windows' `byte` typedef is established first. Any new file that includes Windows headers on Windows should ensure `sysconfig.h` is included first.
 
 **Android-specific UI considerations:**
 ```cpp
@@ -181,7 +239,7 @@ WinUAE uses Win32 dialogs, Amiberry uses ImGui windows in `src/osdep/imgui/`.
 - [ ] Build succeeds on all platforms (CI will check)
 - [ ] Run-time testing on primary platform
 - [ ] Check GUI functionality matches WinUAE behavior
-- [ ] Verify no Windows API calls leaked through
+- [ ] Verify no unwanted Windows-only API calls leaked through (note: `_WIN32` IS defined on Amiberry Windows builds)
 - [ ] Confirm proper platform guards are in place
 - [ ] Test file I/O with platform-appropriate paths
 - [ ] Verify thread safety if threading code changed

@@ -73,7 +73,13 @@ SOFTWARE.
 #ifdef USE_STD_FILESYSTEM
 #include <windows.h>
 #else                       // USE_STD_FILESYSTEM
+#ifdef __MINGW32__
+#include <windows.h>        // MinGW needs windows.h for Win32 API calls (CreateDirectoryW, etc.)
+#include <dirent.h>         // MinGW provides dirent.h directly
+#else
+#include <windows.h>
 #include "dirent/dirent.h"  // directly open the dirent file attached to this lib
+#endif
 #endif                      // USE_STD_FILESYSTEM
 #define PATH_SEP '\\'
 #ifndef PATH_MAX

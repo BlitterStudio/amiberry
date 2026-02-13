@@ -1076,10 +1076,10 @@ struct uae_prefs {
 	bool vkbd_enabled;
 	bool vkbd_hires;
 	bool vkbd_exit;
-	char vkbd_language[128];
-	char vkbd_style[128];
+	char vkbd_language[256];
+	char vkbd_style[256];
 	int vkbd_transparency;
-	char vkbd_toggle[128];
+	char vkbd_toggle[256];
 	
 	int drawbridge_driver;
 	bool drawbridge_serial_auto;

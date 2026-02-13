@@ -5,7 +5,7 @@
 //  strconv.cpp - Win32 string conversion
 //
 //============================================================
-#if defined(SDLMAME_WIN32) || defined(OSD_WINDOWS)
+#if defined(SDLMAME_WIN32) || defined(OSD_WINDOWS) || defined(_WIN32)
 #include <windows.h>
 #endif
 #include <algorithm>
@@ -13,7 +13,7 @@
 // MAMEOS headers
 #include "strconv.h"
 
-#if defined(SDLMAME_WIN32) || defined(OSD_WINDOWS)
+#if defined(SDLMAME_WIN32) || defined(OSD_WINDOWS) || defined(_WIN32)
 
 namespace osd::text {
 
