@@ -627,9 +627,9 @@ typedef int32_t uae_atomic;
 #include <cstring>
 static inline FILE* uae_fopen(const char* path, const char* mode)
 {
-	char winmode[8];
+	char winmode[16];
 	int j = 0;
-	for (int i = 0; mode[i] && j < 7; i++) {
+	for (int i = 0; mode[i] && j < 15; i++) {
 		if (mode[i] != 'e')
 			winmode[j++] = mode[i];
 	}
