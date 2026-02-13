@@ -6,6 +6,9 @@
 #include "xwin.h"
 
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "uae/time.h"
 
 int64_t g_uae_epoch = 0;

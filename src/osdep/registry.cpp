@@ -1,9 +1,9 @@
 #include "sysconfig.h"
 #include "sysdeps.h"
 #ifdef _WIN32
-#include <windows.h>
+/* windows.h already included via target.h with WIN32_LEAN_AND_MEAN */
+#if !defined(AMIBERRY)
 #include <shlwapi.h>
-#ifndef LIBRETRO
 #include "win32.h"
 #endif
 #endif
@@ -12,12 +12,11 @@
 #include "uae.h"
 
 #include <filesystem>
-#include "osdep/libretro/amiberry_fs.h"
 
-#if defined(_WIN32) && !defined(LIBRETRO)
-static int inimode = 0;
+#if defined(_WIN32) && !defined(AMIBERRY)
+static int inimode = 0;  // WinUAE: use Windows Registry
 #else
-static int inimode = 1;
+static int inimode = 1;  // Amiberry: always use INI files (portable)
 #endif
 static TCHAR* inipath;
 
@@ -27,7 +26,7 @@ static struct ini_data* inidata;
 
 static HKEY gr(UAEREG* root)
 {
-#if defined(_WIN32) && !defined(LIBRETRO)
+#if defined(_WIN32) && !defined(AMIBERRY)
     if (!root)
         return hWinUAEKey;
 #else
@@ -60,7 +59,7 @@ int regsetstr(UAEREG* root, const TCHAR* name, const TCHAR* str)
         int ret = ini_addstring(inidata, gs(root), name, str);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         HKEY rk = gr(root);
         if (!rk)
@@ -79,7 +78,7 @@ int regsetint(UAEREG* root, const TCHAR* name, int val)
         int ret = ini_addstring(inidata, gs(root), name, tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         DWORD v = val;
         HKEY rk = gr(root);
@@ -103,7 +102,7 @@ int regqueryint(UAEREG* root, const TCHAR* name, int* val)
         xfree(tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         DWORD dwType = REG_DWORD;
         DWORD size = sizeof(int);
@@ -124,7 +123,7 @@ int regsetlonglong(UAEREG* root, const TCHAR* name, unsigned long long val)
         const int ret = ini_addstring(inidata, gs(root), name, tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         ULONGLONG v = val;
         HKEY rk = gr(root);
@@ -149,7 +148,7 @@ int regquerylonglong(UAEREG* root, const TCHAR* name, unsigned long long* val)
         xfree(tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         DWORD dwType = REG_QWORD;
         DWORD size = sizeof(ULONGLONG);
@@ -177,7 +176,7 @@ int regquerystr(UAEREG* root, const TCHAR* name, TCHAR* str, int* size)
         xfree(tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         DWORD size2 = *size * sizeof(TCHAR);
         HKEY rk = gr(root);
@@ -213,7 +212,7 @@ int regenumstr(UAEREG* root, int idx, TCHAR* name, const int* nsize, TCHAR* str,
         xfree(name2);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         DWORD nsize2 = *nsize;
         DWORD size2 = *size;
@@ -242,7 +241,7 @@ int regquerydatasize(UAEREG* root, const TCHAR* name, int* size)
         xfree(tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         HKEY rk = gr(root);
         if (!rk)
@@ -267,7 +266,7 @@ int regsetdata(UAEREG* root, const TCHAR* name, const void* str, int size)
         xfree(tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         HKEY rk = gr(root);
         if (!rk)
@@ -311,7 +310,7 @@ int regquerydata(UAEREG* root, const TCHAR* name, void* str, const int* size)
         xfree(tmp);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         HKEY rk = gr(root);
         if (!rk)
@@ -331,7 +330,7 @@ int regdelete(UAEREG* root, const TCHAR* name)
         ini_delete(inidata, gs(root), name);
         return 1;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         HKEY rk = gr(root);
         if (!rk)
@@ -350,7 +349,7 @@ int regexists(UAEREG* root, const TCHAR* name)
         int ret = ini_getstring(inidata, gs(root), name, nullptr);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         HKEY rk = gr(root);
         if (!rk)
@@ -370,7 +369,7 @@ void regdeletetree(UAEREG* root, const TCHAR* name)
         ini_delete(inidata, s, nullptr);
         xfree(s);
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         HKEY rk = gr(root);
         if (!rk)
@@ -391,7 +390,7 @@ int regexiststree(UAEREG* root, const TCHAR* name)
         xfree(s);
         return ret;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         int ret = 0;
         HKEY k = NULL;
@@ -429,7 +428,7 @@ UAEREG* regcreatetree(UAEREG* root, const TCHAR* name)
         fkey = xcalloc(UAEREG, 1);
         fkey->inipath = ininame;
     }
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     else {
         DWORD err;
         HKEY rk = gr(root);
@@ -460,7 +459,7 @@ void regclosetree(UAEREG* key)
     }
     if (!key)
         return;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     if (key->fkey)
         RegCloseKey(key->fkey);
 #endif
@@ -478,9 +477,11 @@ int reginitializeinit(TCHAR** pppath)
     inimode = 0;
     if (!ppath) {
         int ok = 0;
+#if defined(_WIN32) && !defined(AMIBERRY)
         TCHAR* posn;
+#endif
         path[0] = 0;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
         GetFullPathName(executable_path, sizeof path / sizeof(TCHAR), path, NULL);
         if (_tcslen(path) > 4 && !_tcsicmp(path + _tcslen(path) - 4, _T(".exe"))) {
             _tcscpy(path + _tcslen(path) - 3, _T("ini"));
@@ -490,7 +491,7 @@ int reginitializeinit(TCHAR** pppath)
         if (!ok) {
             path[0] = 0;
             GetFullPathName(executable_path, sizeof path / sizeof(TCHAR), path, NULL);
-            if ((posn = _tcsrchr(path, '\\'))
+            if ((posn = _tcsrchr(path, '\\')))
                 posn[1] = 0;
             _tcscat(path, _T("amiberry.ini"));
         }
@@ -498,7 +499,7 @@ int reginitializeinit(TCHAR** pppath)
             return 0;
 #else
         std::string ini_file_path = get_ini_file_path();
-        if (amiberry_fs::exists(ini_file_path)) {
+        if (std::filesystem::exists(ini_file_path)) {
             _tcscpy(path, ini_file_path.c_str());
             ok = 1;
         }
@@ -511,13 +512,15 @@ int reginitializeinit(TCHAR** pppath)
     }
 
     fpath[0] = 0;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
     GetFullPathName(path, sizeof fpath / sizeof(TCHAR), fpath, NULL);
     if (_tcslen(fpath) < 5 || _tcsicmp(fpath + _tcslen(fpath) - 4, _T(".ini")))
         return 0;
 #else
-    std::string ini_file_path = get_ini_file_path();
-    _tcscpy(fpath, ini_file_path.c_str());
+    {
+        std::string ini_file_path2 = get_ini_file_path();
+        _tcscpy(fpath, ini_file_path2.c_str());
+    }
 #endif
 
     inimode = 1;
@@ -534,9 +537,9 @@ fail:
     if (GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES)
         goto end;
 #else
-    if (amiberry_fs::exists(path))
-        amiberry_fs::remove(path);
-    if (amiberry_fs::exists(path))
+    if (std::filesystem::exists(path))
+        std::filesystem::remove(path);
+    if (std::filesystem::exists(path))
         goto end;
 #endif
     f = fopen(path, _T("wb"));

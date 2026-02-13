@@ -4322,7 +4322,7 @@ static void getextramonitorpos(const struct AmigaMonitor* mon, SDL_Rect* r)
 	int monid = MAX_AMIGAMONITORS - 1;
 	int rightmon = -1;
 	int rightedge = 0;
-	HWND hwnd = NULL;
+	SDL_Window* hwnd = NULL;
 	while (monid >= 1) {
 		monid--;
 		hwnd = AMonitors[monid].amiga_window;
@@ -4447,6 +4447,10 @@ static int create_windows(struct AmigaMonitor* mon)
 		y = r.y;
 		w = r.w;
 		h = r.h;
+
+		// Default new position to current position; fullwindow overrides below
+		nx = x;
+		ny = y;
 
 		if (mon->screen_is_picasso) {
 			nw = mon->currentmode.current_width;

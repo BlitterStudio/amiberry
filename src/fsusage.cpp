@@ -25,8 +25,8 @@ Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
 #include <sys/stat.h>
 #endif
 
-#if defined(_WIN32) || defined(__MINGW32__)
-/* Windows: filesystem stats handled via GetDiskFreeSpaceEx */
+#if defined(_WIN32)
+// Windows: filesystem usage via GetDiskFreeSpaceEx (no POSIX statfs)
 #elif defined(STAT_STATVFS)
 #include <sys/statvfs.h>
 // For osx, sigurbjornl
@@ -57,8 +57,8 @@ static long adjust_blocks (long blocks, int fromsize, int tosize)
 		return (blocks + (blocks < 0 ? -1 : 1)) / (tosize / fromsize);
 }
 
-#if defined(WINDOWS) || defined(__MINGW32__)
-#ifndef LIBRETRO
+#if defined(WINDOWS) || defined(_WIN32)
+#ifndef AMIBERRY
 #include "od-win32/posixemu.h"
 #endif
 #include <windows.h>

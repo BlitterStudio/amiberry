@@ -21,9 +21,11 @@ The MCP server (`amiberry-mcp-server`) provides tools for runtime control.
 **Determine the platform** before building:
 - **macOS**: Build natively with `cmake`
 - **Linux / WSL2**: Build with `cmake` (use `wsl -e` prefix if on Windows host)
+- **Windows (native)**: Build with MinGW-w64/GCC via CMake presets and Ninja
 
 ## Build Commands
 
+### Linux / macOS
 ```bash
 # Configure (first time or after CMake changes)
 cmake -B build -DCMAKE_BUILD_TYPE=Debug -DUSE_IPC_SOCKET=ON
@@ -32,10 +34,32 @@ cmake -B build -DCMAKE_BUILD_TYPE=Debug -DUSE_IPC_SOCKET=ON
 cmake --build build -j$(nproc)
 ```
 
-On Windows host targeting WSL2:
+### Windows host targeting WSL2
 ```bash
 wsl -e bash -c "cd ~/amiberry && cmake --build build -j$(nproc)"
 ```
+
+### Windows (native MinGW-w64)
+```powershell
+# Use the helper script (sets PATH for CLion's cmake/ninja/mingw, VCPKG_ROOT)
+powershell -ExecutionPolicy Bypass -File "build_and_run.ps1"
+
+# Or manually:
+$env:VCPKG_ROOT = "D:\Github\vcpkg"
+cmake --preset windows-debug
+cd out/build/windows-debug
+ninja -j12
+
+# Run with logging enabled
+.\amiberry.exe --log
+```
+
+**Windows build notes:**
+- Build dir: `out/build/windows-debug` (or `windows-release`)
+- Kill stale `amiberry.exe` before rebuild if "permission denied"
+- `write_log()` is silent unless `--log` flag or `write_logfile` config is set
+- JIT is non-functional on 64-bit Windows (interpreter mode works fine)
+- PowerShell `$env:` variables get stripped in bash inline commands; use `.ps1` files with `-File`
 
 ## Troubleshooting Workflow
 
@@ -182,7 +206,7 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 | Directory | Contents |
 |-----------|----------|
 | `src/` | Core emulation (UAE-derived) |
-| `src/osdep/` | Platform abstraction (Linux/macOS/Android) |
+| `src/osdep/` | Platform abstraction (Linux/macOS/Android/Windows) |
 | `src/osdep/imgui/` | GUI panels (Dear ImGui) |
 | `src/include/` | Headers and interfaces |
 | `src/osdep/amiberry_ipc_socket.cpp` | IPC socket implementation |
@@ -199,3 +223,14 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - For crashes, the signal name in `get_crash_info` tells you a lot: SIGSEGV = null pointer/bad memory, SIGABRT = assertion/abort, SIGBUS = alignment
 - Build with Debug type (`-DCMAKE_BUILD_TYPE=Debug`) for better crash info
 - If you need to test multiple configs, use `kill_amiberry` + `launch_and_wait_for_ipc` between each
+
+## Windows-Specific Troubleshooting
+
+- **Black screen with USE_OPENGL**: Usually caused by JIT `jit_abort()` → `uae_reset()` permanently setting `quit_program`, which blocks pixel drawing in `waitqueue()`. Fixed in `src/jit/x86/compemu_x86.h`.
+- **GUI crash only with debugger**: Debug builds (`-DDEBUG`) enable `assert()` in tinyxml2. This can cause crashes with debugger attached but not in normal execution. Not a real bug.
+- **Symlink failures in WHDBooter**: Windows requires admin or Developer Mode for symlinks. Directory symlinks use `std::filesystem::copy()` directly. File symlinks have try-catch fallback.
+- **Winsock differences**: `close()` → `closesocket()`, `ioctl()` → `ioctlsocket()`, `errno` → `WSAGetLastError()`. Check `src/slirp/` for patterns.
+- **No log output**: `write_log()` returns early if neither `--log` nor `write_logfile` is enabled. Always pass `--log` when debugging.
+- **GUI crash on startup (missing data dir)**: If the `data/` directory (fonts, icons) is missing from the runtime working directory, ImGui's `AddFontFromFileTTF` asserts and crashes in debug builds (exit code 3). Fix: `main_window.cpp` checks `std::filesystem::exists(font_path)` before loading. Deployment fix: copy `data/` from source tree to working directory.
+- **Config save does nothing**: MinGW links `msvcrt.dll` which doesn't support `"ccs=UTF-8"` fopen mode (`errno=22`). Fixed with plain `"w"`/`"rt"`/`"wt"` modes under `#ifdef AMIBERRY` in `cfgfile.cpp` and `ini.cpp`.
+- **Hardfile RDB not detected in GUI**: ImGui `hd.cpp` was missing `hardfile_testrdb()` call after HDF file selection, causing geometry to stay at 32,1,2 instead of auto-detecting RDB (0,0,0). Fixed in commit `c2b5c053`.

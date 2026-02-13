@@ -15,16 +15,16 @@
 
 #include "uae/types.h"
 
-#if defined(__MINGW32__)
-/* MinGW (GCC): use compiler builtins directly */
-#define uae_bswap_16 __builtin_bswap16
-#define uae_bswap_32 __builtin_bswap32
-#define uae_bswap_64 __builtin_bswap64
-#elif defined(_WIN32)
+#if defined(_WIN32) && !defined(__GNUC__)
 #include <stdlib.h>
 #define uae_bswap_16 _byteswap_uint16
 #define uae_bswap_32 _byteswap_uint32
 #define uae_bswap_64 _byteswap_uint64
+#elif defined(__GNUC__)
+/* GCC/MinGW: use compiler builtins */
+#define uae_bswap_16 __builtin_bswap16
+#define uae_bswap_32 __builtin_bswap32
+#define uae_bswap_64 __builtin_bswap64
 #elif defined(__APPLE__)
 #include <libkern/OSByteOrder.h>
 #define uae_bswap_16 OSSwapInt16

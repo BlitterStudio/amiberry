@@ -107,21 +107,26 @@ static const uae_u8 need_to_preserve[] = {0,0,0,0, 0,0,1,1, 1,1,1,1, 1,1,1,1, 1,
 STATIC_INLINE void SIGNED8_IMM_2_REG(W4 r, IM8 v) {
 	uae_s16 v16 = (uae_s16)(uae_s8)v;
 	if (v16 & 0x8000) {
-		MOVN_xi(r, (uae_u16) ~v16);
+		// Use 32-bit MOVN to keep upper 32 bits clean.
+		// MOVN_xi produces a 64-bit result with dirty upper bits for negative values
+		// (e.g., MOVN_xi for byte -1 → 0xFFFFFFFFFFFFFFFF).
+		MOVN_wi(r, (uae_u16) ~v16);
 	} else {
-		MOV_xi(r, (uae_u16) v16);
+		MOV_wi(r, (uae_u16) v16);
 	}
 }
 
 STATIC_INLINE void UNSIGNED16_IMM_2_REG(W4 r, IM16 v) {
-	MOV_xi(r, v);
+	// Use 32-bit MOV to keep upper 32 bits clean.
+	MOV_wi(r, v);
 }
 
 STATIC_INLINE void SIGNED16_IMM_2_REG(W4 r, IM16 v) {
 	if (v & 0x8000) {
-		MOVN_xi(r, (uae_u16) ~v);
+		// Use 32-bit MOVN to keep upper 32 bits clean.
+		MOVN_wi(r, (uae_u16) ~v);
 	} else {
-		MOV_xi(r, (uae_u16) v);
+		MOV_wi(r, (uae_u16) v);
 	}
 }
 
@@ -130,7 +135,10 @@ STATIC_INLINE void UNSIGNED8_REG_2_REG(W4 d, RR4 s) {
 }
 
 STATIC_INLINE void SIGNED8_REG_2_REG(W4 d, RR4 s) {
-	SXTB_xx(d, s);
+	// Use 32-bit sign extension to keep upper 32 bits clean.
+	// SXTB_xx sign-extends to 64 bits, leaving dirty upper 32 bits
+	// for negative values (e.g., SXTB_xx of 0xFF → 0xFFFFFFFFFFFFFFFF).
+	SXTB_ww(d, s);
 }
 
 STATIC_INLINE void UNSIGNED16_REG_2_REG(W4 d, RR4 s) {
@@ -138,17 +146,24 @@ STATIC_INLINE void UNSIGNED16_REG_2_REG(W4 d, RR4 s) {
 }
 
 STATIC_INLINE void SIGNED16_REG_2_REG(W4 d, RR4 s) {
-	SXTH_xx(d, s);
+	// Use 32-bit sign extension to keep upper 32 bits clean.
+	// SXTH_xx sign-extends to 64 bits, leaving dirty upper 32 bits
+	// for negative values (e.g., SXTH_xx of 0xFFFF → 0xFFFFFFFFFFFFFFFF).
+	SXTH_ww(d, s);
 }
 
 STATIC_INLINE void LOAD_U32(int r, uae_u32 val)
 {
+	// Use 32-bit W-register instructions so upper 32 bits are always zeroed.
+	// The 64-bit variants (MOVN_xi, MOV_xi) would sign-extend values like
+	// 0xFFFFxxxx to 0xFFFFFFFFFFFFxxxx, corrupting Amiga addresses used
+	// in register-indexed addressing [Xn, X27].
 	if((val & 0xffff0000) == 0xffff0000) {
-		MOVN_xi(r, ~val);
+		MOVN_wi(r, ~val);
 	} else {
-		MOV_xi(r, val);
+		MOV_wi(r, val);
 		if(val >> 16)
-			MOVK_xish(r, val >> 16, 16);
+			MOVK_wish(r, val >> 16, 16);
 	}
 }
 
@@ -176,14 +191,16 @@ STATIC_INLINE void raw_pop_preserved_regs(void) {
 
 STATIC_INLINE void raw_flags_to_reg(int r)
 {
-	uintptr idx = (uintptr) &(regflags.nzcv) - (uintptr) &regs;
 	MRS_NZCV_x(r);
 	if(flags_carry_inverted) {
 		EOR_xxCflag(r, r);
 		MSR_NZCV_x(r);
 		flags_carry_inverted = false;
 	}
-	STR_wXi(r, R_REGSTRUCT, idx);
+	// Use absolute address for regflags.nzcv instead of offset from regs,
+	// because LDR/STR unsigned immediate truncates offsets >32760 bytes.
+	LOAD_U64(REG_WORK3, (uintptr)&(regflags.nzcv));
+	STR_wXi(r, REG_WORK3, 0);
 
 	live.state[FLAGTMP].status = INMEM;
 	live.state[FLAGTMP].realreg = -1;
@@ -270,15 +287,19 @@ LOWFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 		else
 			LDR_wXi(d, R_REGSTRUCT, idx);
 	} else {
+		// Address outside regs struct (e.g. regflags.nzcv, regflags.x).
+		// Use 32-bit load to keep upper 32 bits clean. All M68k values
+		// are 32-bit; pc_p (the only 64-bit value) is always in the
+		// regs struct and handled by the branch above.
 		LOAD_U64(REG_WORK1, s);
-		LDR_xXi(d, REG_WORK1, 0);
+		LDR_wXi(d, REG_WORK1, 0);
 	}
 }
 LENDFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 
 LOWFUNC(NONE,NONE,2,compemu_raw_mov_l_rr,(W4 d, RR4 s))
 {
-	MOV_xx(d, s);
+	MOV_ww(d, s); // Must use 32-bit move to zero upper 32 bits for address cleanliness
 }
 LENDFUNC(NONE,NONE,2,compemu_raw_mov_l_rr,(W4 d, RR4 s))
 
@@ -497,15 +518,16 @@ STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles)
 	uae_s8 *branchadd = (uae_s8 *)get_target();
 	CBZ_wi(REG_WORK1, 0);  // <end>
 
-	idx = (uintptr)&countdown - (uintptr) &regs;
-	LDR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	// Use absolute address for countdown (global variable, may be >32KB from regs)
+	LOAD_U64(REG_WORK3, (uintptr)&countdown);
+	LDR_wXi(REG_WORK2, REG_WORK3, 0);
 	if(cycles >= 0 && cycles <= 0xfff) {
 		SUB_wwi(REG_WORK2, REG_WORK2, cycles);
 	} else {
 		LOAD_U32(REG_WORK1, cycles);
 		SUB_www(REG_WORK2, REG_WORK2, REG_WORK1);
 	}
-	STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	STR_wXi(REG_WORK2, REG_WORK3, 0);
 
 	uae_u32* branchadd2 = (uae_u32*)get_target();
 	B_i(0);
@@ -520,8 +542,12 @@ STATIC_INLINE void compemu_raw_maybe_do_nothing(IM32 cycles)
 LOWFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMPTR s))
 {
 	LOAD_U64(R_REGSTRUCT, s);
-	uintptr offsmem = (uintptr)&NATMEM_OFFSET - (uintptr) &regs;
-	LDR_xXi(R_MEMSTART, R_REGSTRUCT, offsmem);
+	// Load NATMEM_OFFSET via its absolute address instead of offset from regs.
+	// The old approach used LDR_xXi with offset = &NATMEM_OFFSET - &regs, but
+	// LDR_xXi silently truncates offsets >32760 bytes (12-bit field), which
+	// corrupts R27 when the global natmem_offset is far from regs in memory.
+	LOAD_U64(R_MEMSTART, (uintptr)&NATMEM_OFFSET);
+	LDR_xXi(R_MEMSTART, R_MEMSTART, 0);
 }
 LENDFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMPTR s))
 
@@ -529,19 +555,20 @@ LENDFUNC(NONE,NONE,1,compemu_raw_init_r_regstruct,(IMPTR s))
 LOWFUNC(NONE,NONE,2,compemu_raw_endblock_pc_inreg,(RR4 rr_pc, IM32 cycles))
 {
 	// countdown -= scaled_cycles(totcycles);
-	uintptr offs = (uintptr)&countdown - (uintptr)&regs;
-	LDR_wXi(REG_WORK1, R_REGSTRUCT, offs);
+	// Use absolute address for countdown (global variable, may be >32KB from regs)
+	LOAD_U64(REG_WORK3, (uintptr)&countdown);
+	LDR_wXi(REG_WORK1, REG_WORK3, 0);
 	if(cycles >= 0 && cycles <= 0xfff) {
 		SUB_wwi(REG_WORK1, REG_WORK1, cycles);
 	} else {
 		LOAD_U32(REG_WORK2, cycles);
 		SUB_www(REG_WORK1, REG_WORK1, REG_WORK2);
 	}
-	STR_wXi(REG_WORK1, R_REGSTRUCT, offs);
+	STR_wXi(REG_WORK1, REG_WORK3, 0);
 
 	TBNZ_xii(REG_WORK1, 31, 5); // test sign and branch if set (negative)
 	UBFIZ_xxii(rr_pc, rr_pc, 0, 16);  // apply TAGMASK
-	offs = (uintptr)(&regs.cache_tags) - (uintptr)&regs;
+	uintptr offs = (uintptr)(&regs.cache_tags) - (uintptr)&regs;
 	LDR_xXi(REG_WORK1, R_REGSTRUCT, offs);
 	LDR_xXxLSLi(REG_WORK1, REG_WORK1, rr_pc, 3); // cacheline holds pointer -> multiply with 8
 	BR_x(REG_WORK1);
@@ -557,22 +584,23 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 	/* v is always >= NATMEM_OFFSET and < NATMEM_OFFSET + max. Amiga mem */
 	uae_u32* tba;
 	// countdown -= scaled_cycles(totcycles);
-	uintptr offs = (uintptr)&countdown - (uintptr)&regs;
-	LDR_wXi(REG_WORK1, R_REGSTRUCT, offs);
+	// Use absolute address for countdown (global variable, may be >32KB from regs)
+	LOAD_U64(REG_WORK3, (uintptr)&countdown);
+	LDR_wXi(REG_WORK1, REG_WORK3, 0);
 	if(cycles >= 0 && cycles <= 0xfff) {
 		SUB_wwi(REG_WORK1, REG_WORK1, cycles);
 	} else {
 		LOAD_U32(REG_WORK2, cycles);
 		SUB_www(REG_WORK1, REG_WORK1, REG_WORK2);
 	}
-	STR_wXi(REG_WORK1, R_REGSTRUCT, offs);
+	STR_wXi(REG_WORK1, REG_WORK3, 0);
 
 	TBNZ_xii(REG_WORK1, 31, 2); // test sign and branch if set (negative)
 	tba = (uae_u32*)get_target();
 	B_i(0); // <target set by caller>
 
 	LDR_xPCi(REG_WORK1, 12); // <v>
-	offs = (uintptr)&regs.pc_p - (uintptr)&regs;
+	uintptr offs = (uintptr)&regs.pc_p - (uintptr)&regs;
 	STR_xXi(REG_WORK1, R_REGSTRUCT, offs);
 	uae_u32* branchadd = (uae_u32*)get_target();
 	B_i(0);

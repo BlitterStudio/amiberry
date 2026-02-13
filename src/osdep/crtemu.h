@@ -77,7 +77,7 @@ void crtemu_coordinates_window_to_bitmap( crtemu_t* crtemu, int width, int heigh
 #endif
 #endif
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(AMIBERRY)
 #define CRTEMU_SDL
 #endif
 

@@ -2773,7 +2773,7 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 
 	/* See if we have a file that has the same name as the aname we are
 	* looking for.  */
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	TCHAR *relalt = NULL;
 	found = fsdb_search_dir (base->nname, rel, &relalt);
 #else
@@ -2783,7 +2783,7 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 		return found;
 	}
 	if (found == rel) {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 		if (relalt) {
 			TCHAR *v = build_nname(base->nname, relalt);
 			xfree(relalt);
@@ -2793,7 +2793,7 @@ static TCHAR *get_nname (Unit *unit, a_inode *base, TCHAR *rel, TCHAR **modified
 		return build_nname(base->nname, rel);
 	}
 	*modified_rel = found;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	if (relalt) {
 		TCHAR *v = build_nname(base->nname, relalt);
 		xfree(relalt);
@@ -6159,7 +6159,7 @@ static void	action_delete_object(TrapContext *ctx, Unit *unit, dpacket *packet)
 				return;
 			}
 		} else {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 			if (my_unlink (a->nname, false) == -1) {
 #else
 			if (my_unlink (a->nname) == -1) {
@@ -9575,7 +9575,7 @@ void filesys_install_code (void)
 
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 #include "od-win32/win32_filesys.cpp"
 #endif
 

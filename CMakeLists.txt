@@ -25,7 +25,7 @@ option(USE_UAENET_PCAP   "Use libpcap for uaenet (Linux/macOS)" ON)
 option(USE_ZSTD 	     "Use Zstandard for CHD compressed disk images" ON)
 option(USE_GPIOD         "Use GPIOD to control GPIO LEDs" OFF)
 option(USE_DBUS          "Use DBus to control the emulator" OFF)
-option(USE_OPENGL        "Use OpenGL for rendering (currently WIP)" OFF)
+option(USE_OPENGL        "Use OpenGL for rendering" ON)
 option(USE_IPC_SOCKET    "Use Unix socket for IPC control (cross-platform)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
@@ -43,27 +43,32 @@ endif()
 
 if(ANDROID)
     set(USE_UAENET_PCAP OFF CACHE BOOL "Use libpcap for uaenet (Linux/macOS)" FORCE)
-    # set(USE_PCEM OFF CACHE BOOL "Use PCem for hardware emulation (no support for RISC-V)" FORCE)
     set(USE_DBUS OFF CACHE BOOL "Use DBus to control the emulator" FORCE)
     set(USE_IPC_SOCKET OFF CACHE BOOL "Use Unix socket for IPC control" FORCE)
     set(USE_GPIOD OFF CACHE BOOL "Use GPIOD to control GPIO LEDs" FORCE)
     # Enabled features for Android
-    # set(USE_LIBENET OFF CACHE BOOL "Use LibENET for network emulation" FORCE)
     set(USE_LIBMPEG2 OFF CACHE BOOL "Use LibMPEG2 for CD32 FMV support" FORCE)
-    # set(USE_LIBSERIALPORT OFF CACHE BOOL "Use LibSerialPort for serial port emulation" FORCE)
-    # set(USE_PORTMIDI OFF CACHE BOOL "Use PortMidi for MIDI emulation" FORCE)
     set(USE_MPG123 OFF CACHE BOOL "Disable mpg123 on Android" FORCE)
 endif()
 
+if(WIN32)
+    set(USE_GPIOD OFF CACHE BOOL "GPIO not available on Windows" FORCE)
+    set(USE_DBUS OFF CACHE BOOL "DBus not available on Windows" FORCE)
+    set(USE_IPC_SOCKET OFF CACHE BOOL "Unix sockets not available on Windows" FORCE)
+    set(USE_UAENET_PCAP OFF CACHE BOOL "Disable pcap on Windows initially" FORCE)
+    set(USE_LIBMPEG2 OFF CACHE BOOL "LibMPEG2 not available in vcpkg" FORCE)
+    set(USE_LIBSERIALPORT OFF CACHE BOOL "LibSerialPort not available in vcpkg for MinGW" FORCE)
+    set(USE_PORTMIDI OFF CACHE BOOL "PortMidi not available in vcpkg for MinGW" FORCE)
+endif()
+
 # Pre-release version suffix (project version is set in project() above)
-set(VERSION_PRE_RELEASE "20" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "21" CACHE STRING "Pre-release version")
 
 # Use PkgConfig only on FreeBSD
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	# Required packages via pkg-config
 	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(SDL2 REQUIRED sdl2)
-	pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 	pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
 	pkg_check_modules(FLAC REQUIRED flac)
 	pkg_check_modules(PNG REQUIRED libpng)
@@ -71,14 +76,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	# Store FreeBSD include/link info for target-specific application in SourceFiles.cmake
 	set(FREEBSD_INCLUDE_DIRS
     	${SDL2_INCLUDE_DIRS}
-    	${SDL2_TTF_INCLUDE_DIRS}
     	${SDL2_IMAGE_INCLUDE_DIRS}
     	${FLAC_INCLUDE_DIRS}
     	${PNG_INCLUDE_DIRS}
 	)
 	set(FREEBSD_LIBRARIES
     	${SDL2_LIBRARIES}
-    	${SDL2_TTF_LIBRARIES}
     	${SDL2_IMAGE_LIBRARIES}
     	${FLAC_LIBRARIES}
     	${PNG_LIBRARIES}

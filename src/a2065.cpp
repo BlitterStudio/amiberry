@@ -598,6 +598,12 @@ static void a2065_hsync_handler(void)
 {
 	static int cnt;
 
+	// Deliver any received packets queued by the PCAP worker thread.
+	// Must be done here (emulation thread) to avoid concurrent access
+	// to Am7990 chip state (csr[], boardram, interrupts).
+	if (td && sysdata)
+		ethernet_receive_poll(td, sysdata);
+
 	cnt--;
 	if (cnt < 0 || transmitnow) {
 		check_transmit(false);

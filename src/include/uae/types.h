@@ -111,14 +111,14 @@ typedef char TCHAR;
 
 typedef signed long long evt_t;
 
-// Some more types from the original UAE code
-// On MinGW these are already defined by <basetsd.h> via Windows headers
-#ifndef __MINGW32__
+// Some more types from the original UAE code.
+// On Windows, these are already defined by <basetsd.h> (included via <windef.h>).
+#ifndef _BASETSD_H_
 typedef signed char INT8;
 typedef signed short INT16;
 typedef signed int INT32;
 typedef signed long long INT64;
-typedef signed char UINT8;
+typedef unsigned char UINT8;
 typedef unsigned short UINT16;
 typedef unsigned int UINT32;
 typedef unsigned long long UINT64;

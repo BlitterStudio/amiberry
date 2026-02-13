@@ -5,6 +5,19 @@
   */
 
 #pragma once
+#ifdef _WIN32
+/* Include <windows.h> with WIN32_LEAN_AND_MEAN to get real Windows types
+   (HINSTANCE, HWND, HKEY, LPARAM, WPARAM, GUID, etc.) without pulling in
+   COM/OLE/RPC headers that would conflict with std::byte via rpcndr.h.
+   This MUST come before sysdeps.h (which has "using namespace std;"). */
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 #include <SDL.h>
 
 #include "options.h"
@@ -222,25 +235,26 @@ void restore_host_fp_regs(void* buf);
 #endif
 #endif
 
-#if !defined(_WIN32) || (defined(__MINGW32__) && defined(LIBRETRO))
-// Dummy types so this header file can be included on other platforms (for
-// a few declarations).
-// On MinGW libretro builds we also use these dummies because including
-// <windows.h> this early conflicts with C++ std::byte and UAE type defs.
+// Amiberry stub types for Win32 API handles/types.
+// On Windows: real types come from <windows.h> included above.
+// On non-Windows: provide dummy types so the codebase compiles.
+#ifndef _WIN32
 typedef void* HINSTANCE;
 typedef void* HMODULE;
 typedef SDL_Window* HWND;
 typedef void* HKEY;
 typedef void* OSVERSIONINFO;
-typedef bool BOOL;
-typedef int LPARAM;
-typedef int WPARAM;
-typedef int WORD;
+typedef int BOOL;
+typedef long LPARAM;
+typedef unsigned long WPARAM;
+typedef unsigned short WORD;
 typedef unsigned int UINT;
 typedef long LONG;
-#define WINAPI
-typedef long GUID;
 typedef wchar_t* LPCWSTR;
+typedef long GUID;
+#ifndef WINAPI
+#define WINAPI
+#endif
 #endif
 
 #define MAX_SOUND_DEVICES 100

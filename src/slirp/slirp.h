@@ -36,6 +36,11 @@ typedef unsigned long ioctlsockopt_t;
 #define container_of(address, type, field) ((type *)( \
         (PCHAR)(address) - \
         (ULONG_PTR)(&((type *)0)->field)))
+#else
+/* MinGW GCC on Windows */
+#define container_of(address, type, field) ((type *)( \
+        (char*)(address) - \
+        (uintptr_t)(&((type *)0)->field)))
 #endif
 
 #include <winsock2.h>
@@ -177,7 +182,7 @@ int inet_aton(const char *cp, struct in_addr *ia);
 #endif
 
 #include <fcntl.h>
-#ifndef NO_UNIX_SOCKETS
+#if !defined(NO_UNIX_SOCKETS) && !defined(_WIN32)
 #include <sys/un.h>
 #endif
 #include <signal.h>
@@ -188,7 +193,7 @@ int inet_aton(const char *cp, struct in_addr *ia);
 #include <sys/socket.h>
 #endif
 
-#if defined(HAVE_SYS_IOCTL_H)
+#if defined(HAVE_SYS_IOCTL_H) && !defined(_WIN32)
 # include <sys/ioctl.h>
 #endif
 

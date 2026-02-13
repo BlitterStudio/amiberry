@@ -74,6 +74,9 @@ using namespace std;
 #elif defined(CPU_x86_64)
 /* Parameters are passed in RDI, RSI by default (System V AMD64 ABI). */
 #define JITCALL
+#elif defined(CPU_arm) || defined(CPU_AARCH64)
+/* ARM/ARM64: parameters passed in R0-R7 by default (AAPCS/AAPCS64). */
+#define JITCALL
 #elif defined(HAVE_FUNC_ATTRIBUTE_REGPARM)
 /* Parameters are passed in EAX, EDX on x86 with regparm(2). */
 #define JITCALL __attribute__((regparm(2)))
@@ -395,6 +398,7 @@ extern void flush_log (void);
 extern TCHAR *setconsolemode (TCHAR *buffer, int maxlen);
 extern void close_console (void);
 extern void open_console(void);
+extern bool is_interactive_console(void);
 extern void reopen_console(void);
 extern void activate_console (void);
 extern void deactivate_console(void);

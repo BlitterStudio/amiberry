@@ -3,7 +3,7 @@
 <img src="https://i2.wp.com/blitterstudio.com/wp-content/uploads/2020/01/Logo-v3-1.png?resize=768%2C543&ssl=1" alt="Amiberry Logo" width="400"/>
 
 <h1>Amiberry</h1>
-<strong>Optimized Amiga Emulator for macOS and Linux</strong>
+<strong>Optimized Amiga Emulator for Linux, macOS and Windows</strong>
 
 <p>
   <a href="https://github.com/BlitterStudio/amiberry/actions/workflows/c-cpp.yml">
@@ -29,9 +29,9 @@
 
 ## 📖 Introduction
 
-**Amiberry** is an optimized Amiga emulator designed for ARM (32/64-bit), x86_64, and RISC-V platforms. It natively runs on **Linux** and **macOS**, providing a high-performance emulation experience suitable for everything from low-power SBCs (like Raspberry Pi) to powerful desktop workstations.
+**Amiberry** is an optimized Amiga emulator designed for ARM (32/64-bit), x86_64, and RISC-V platforms. It natively runs on **Linux**, **macOS** and **Windows**, providing a high-performance emulation experience suitable for everything from low-power SBCs (like Raspberry Pi) to powerful desktop workstations.
 
-Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-standard compatibility to non-Windows platforms while adding unique features tailored for modern setups.
+Built on the core of [WinUAE](https://www.winuae.net), Amiberry brings industry-standard compatibility to multiple platforms while adding unique features tailored for modern setups.
 
 ## ✨ Features
 
@@ -86,6 +86,20 @@ brew install --cask amiberry
 3.  Drag `Amiberry.app` to your `Applications` folder.
 
 > **Note**: For development builds, file associations for `.uae`, `.adf`, and `.lha` are set up automatically.
+
+### Windows 🪟
+
+Amiberry supports Windows x86_64 using MinGW-w64 (GCC).
+
+**Build from source:**
+```powershell
+# Prerequisites: MinGW-w64 (GCC), CMake, Ninja, vcpkg
+$env:VCPKG_ROOT = "path\to\vcpkg"
+cmake --preset windows-release
+cmake --build out/build/windows-release -j12
+```
+
+> **Note**: The Windows port uses interpreter mode for CPU emulation (JIT is not available on 64-bit Windows). All other features including OpenGL CRT shaders, WHDLoad booting, and the ImGui GUI are fully functional.
 
 ## 📚 Documentation
 

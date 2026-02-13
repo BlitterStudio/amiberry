@@ -13,12 +13,7 @@
 #include <sstream>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include "sysdeps.h"
-#include "osdep/libretro/amiberry_fs.h"
-#ifdef LIBRETRO
-#include "osdep/libretro/libretro_vfs.h"
-#endif
 #include "uae.h"
 #include "options.h"
 #include "rommgr.h"
@@ -29,7 +24,6 @@
 #include "drawing.h"
 #include "midiemu.h"
 #include "registry.h"
-#include "zfile.h"
 
 extern void set_last_active_config(const char* filename);
 extern std::string current_dir;
@@ -81,191 +75,6 @@ std::filesystem::path kickstart_path;
 std::string uae_config;
 std::string whd_config;
 std::string whd_startup;
-
-static std::string to_lower_copy(std::string value)
-{
-	std::transform(value.begin(), value.end(), value.begin(),
-		[](unsigned char c) { return static_cast<char>(tolower(c)); });
-	return value;
-}
-
-static bool dir_has_rom(const std::filesystem::path& dir)
-{
-	if (dir.empty() || !amiberry_fs::exists(dir))
-		return false;
-	DIR* dirp = opendir(dir.c_str());
-	if (!dirp)
-		return false;
-
-	bool found = false;
-	while (auto* entry = readdir(dirp)) {
-		const char* name = entry->d_name;
-		if (!name || name[0] == '.')
-			continue;
-
-		const char* dot = strrchr(name, '.');
-		if (!dot)
-			continue;
-
-		std::string ext = to_lower_copy(dot);
-		if (ext != ".rom")
-			continue;
-
-		const std::filesystem::path candidate = dir / name;
-		if (amiberry_fs::is_regular_file(candidate)) {
-			found = true;
-			break;
-		}
-	}
-	closedir(dirp);
-	return found;
-}
-
-static bool vfs_enabled()
-{
-#ifdef LIBRETRO
-	return libretro_is_vfs_available();
-#else
-	return false;
-#endif
-}
-
-static bool copy_file_vfs(const std::filesystem::path& src, const std::filesystem::path& dst)
-{
-#ifdef LIBRETRO
-	if (src.empty() || dst.empty())
-		return false;
-
-	const std::filesystem::path parent = dst.parent_path();
-	if (!parent.empty())
-		amiberry_fs::create_directories(parent);
-
-	const int in_fd = posixemu_open(src.c_str(), O_RDONLY | O_BINARY, 0);
-	if (in_fd < 0)
-		return false;
-	const int out_fd = posixemu_open(dst.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0660);
-	if (out_fd < 0) {
-		posixemu_close(in_fd);
-		return false;
-	}
-
-	char buffer[64 * 1024];
-	bool ok = true;
-	for (;;) {
-		const int read_bytes = posixemu_read(in_fd, buffer, sizeof(buffer));
-		if (read_bytes < 0) {
-			ok = false;
-			break;
-		}
-		if (read_bytes == 0)
-			break;
-		int offset = 0;
-		while (offset < read_bytes) {
-			const int written = posixemu_write(out_fd, buffer + offset, read_bytes - offset);
-			if (written <= 0) {
-				ok = false;
-				break;
-			}
-			offset += written;
-		}
-		if (!ok)
-			break;
-	}
-
-	posixemu_close(out_fd);
-	posixemu_close(in_fd);
-	return ok;
-#else
-	if (src.empty() || dst.empty())
-		return false;
-
-	const std::filesystem::path parent = dst.parent_path();
-	if (!parent.empty())
-		amiberry_fs::create_directories(parent);
-
-	std::error_code ec;
-	if (!std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing, ec))
-		return false;
-	return true;
-#endif
-}
-
-static void copy_kickstarts_to_devs(const std::filesystem::path& src_dir,
-	const std::filesystem::path& dst_dir)
-{
-	if (src_dir.empty() || dst_dir.empty())
-		return;
-
-	amiberry_fs::create_directories(dst_dir);
-
-	DIR* dirp = opendir(src_dir.c_str());
-	if (!dirp)
-		return;
-
-	while (auto* entry = readdir(dirp)) {
-		const char* name = entry->d_name;
-		if (!name || name[0] == '.')
-			continue;
-
-		std::string lower = to_lower_copy(name);
-		const bool is_key = (lower == "rom.key");
-		const bool is_rom = lower.size() > 4 && lower.rfind(".rom") == lower.size() - 4;
-		if (!is_key && !is_rom)
-			continue;
-
-		const std::filesystem::path src = src_dir / name;
-		if (!amiberry_fs::is_regular_file(src))
-			continue;
-
-		const std::filesystem::path dst = dst_dir / name;
-		if (amiberry_fs::exists(dst))
-			continue;
-
-		if (!copy_file_vfs(src, dst)) {
-			write_log("WHDBooter - Failed to copy %s to %s\n", src.c_str(), dst.c_str());
-		}
-	}
-	closedir(dirp);
-}
-
-static bool find_slave_in_archive(const char* filepath, std::string& out_subpath, std::string& out_slave)
-{
-	if (!filepath || !*filepath)
-		return false;
-
-	const std::string base = to_lower_copy(remove_file_extension(extract_filename(filepath)));
-	struct zdirectory* zd = zfile_opendir_archive(filepath, ZFD_ALL);
-	if (!zd)
-		return false;
-
-	bool found = false;
-	bool matched_base = false;
-	TCHAR entry[MAX_DPATH];
-	while (zfile_readdir_archive(zd, entry, true)) {
-		std::string path = entry;
-		const std::string lower = to_lower_copy(path);
-		if (lower.size() < 6 || lower.rfind(".slave") != lower.size() - 6)
-			continue;
-
-		const auto slash = path.find_last_of("/\\");
-		std::string dir = (slash == std::string::npos) ? "" : path.substr(0, slash);
-		std::string file = (slash == std::string::npos) ? path : path.substr(slash + 1);
-		const std::string file_base = to_lower_copy(remove_file_extension(file));
-		const bool exact = (!base.empty() && file_base == base);
-
-		if (!found || (exact && !matched_base)) {
-			out_subpath = dir;
-			out_slave = file;
-			found = true;
-			matched_base = exact;
-			if (matched_base)
-				break;
-		}
-	}
-
-	zfile_closedir_archive(zd);
-	return found;
-}
 
 // Returns the temporary directory for WHDBooter boot files
 // Uses whdboot/tmp/ which is always user-writable on all platforms
@@ -413,39 +222,29 @@ void make_rom_symlink(const std::string& kickstart_short_name, const int kicksta
 	kickstart_long_path /= kickstart_short_name;
 
 	// Remove the symlink if it already exists
-	if (!vfs_enabled()) {
-		if (std::filesystem::is_symlink(kickstart_long_path))
-			amiberry_fs::remove(kickstart_long_path);
+	if (std::filesystem::is_symlink(kickstart_long_path)) {
+		std::filesystem::remove(kickstart_long_path);
 	}
 
-	if (!amiberry_fs::exists(kickstart_long_path))
+	if (!std::filesystem::exists(kickstart_long_path))
 	{
 		const int roms[2] = { kickstart_number, -1 };
 		// copy the existing prefs->romfile to a backup variable, so we can restore it afterward
 		const std::string old_romfile = prefs->romfile;
 		if (configure_rom(prefs, roms, 0) == 1)
 		{
-			if (vfs_enabled()) {
-				if (copy_file_vfs(prefs->romfile, kickstart_long_path))
+			try {
+				std::filesystem::create_symlink(prefs->romfile, kickstart_long_path);
+				write_log("Making SymLink for Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				if (e.code() == std::errc::operation_not_permitted) {
+					// Fallback to copying file if filesystem does not support the generation of symlinks
+					std::filesystem::copy(prefs->romfile, kickstart_long_path);
 					write_log("Copying Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
-				else
-					write_log("Copying Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
-			} else {
-				try {
-					std::filesystem::create_symlink(prefs->romfile, kickstart_long_path);
-					write_log("Making SymLink for Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
 				}
-				catch (std::filesystem::filesystem_error& e) {
-					if (e.code() == std::errc::operation_not_permitted) {
-						// Fallback to copying file if filesystem does not support the generation of symlinks
-						if (copy_file_vfs(prefs->romfile, kickstart_long_path))
-							write_log("Copying Kickstart ROM: %s  [Ok]\n", kickstart_long_path.c_str());
-						else
-							write_log("Copying Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
-					}
-					else {
-						write_log("Error creating SymLink for Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
-					}
+				else {
+					write_log("Error creating SymLink for Kickstart ROM: %s  [Fail]\n", kickstart_long_path.c_str());
 				}
 			}
 		}
@@ -462,24 +261,10 @@ void symlink_roms(struct uae_prefs* prefs)
 	current_dir = home_dir;
 
 	// are we using save-data/ ?
-	{
-		const char* whdboot_save = getenv("WHDBOOT_SAVE_DATA");
-		if (whdboot_save && *whdboot_save)
-			kickstart_path = whdboot_save;
-		else
-			kickstart_path = get_savedatapath(false);
-		kickstart_path /= "Kickstarts";
-	}
-	if (!dir_has_rom(kickstart_path)) {
-		const char* whdboot_save = getenv("AMIBERRY_WHDBOOT_SAVE_DATA");
-		if (whdboot_save && *whdboot_save) {
-			std::filesystem::path alt = std::filesystem::path(whdboot_save) / "Kickstarts";
-			if (dir_has_rom(alt))
-				kickstart_path = alt;
-		}
-	}
+	kickstart_path = get_savedatapath(true);
+	kickstart_path /= "Kickstarts";
 
-	if (!amiberry_fs::exists(kickstart_path)) {
+	if (!std::filesystem::exists(kickstart_path)) {
 		// otherwise, use the old route
 		whdbooter_path = get_whdbootpath();
 		kickstart_path = whdbooter_path / "game-data" / "Devs" / "Kickstarts";
@@ -506,20 +291,15 @@ void symlink_roms(struct uae_prefs* prefs)
 	std::filesystem::path rom_key_destination_path = kickstart_path;
 	rom_key_destination_path /= "rom.key";
 
-	if (amiberry_fs::exists(rom_key_source_path) && !amiberry_fs::exists(rom_key_destination_path)) {
-		if (vfs_enabled()) {
-			if (!copy_file_vfs(rom_key_source_path, rom_key_destination_path))
-				write_log("Copying rom.key failed\n");
-		} else {
-			write_log("Making SymLink for rom.key\n");
-			try {
-				std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
-			}
-			catch (std::filesystem::filesystem_error& e) {
-				if (e.code() == std::errc::operation_not_permitted) {
-					// Fallback to copying file if filesystem does not support the generation of symlinks
-					copy_file_vfs(rom_key_source_path, rom_key_destination_path);
-				}
+	if (std::filesystem::exists(rom_key_source_path) && !std::filesystem::exists(rom_key_destination_path)) {
+		write_log("Making SymLink for rom.key\n");
+		try {
+			std::filesystem::create_symlink(rom_key_source_path, rom_key_destination_path);
+		}
+		catch (std::filesystem::filesystem_error& e) {
+			if (e.code() == std::errc::operation_not_permitted) {
+				// Fallback to copying file if filesystem does not support the generation of symlinks
+				std::filesystem::copy(rom_key_source_path, rom_key_destination_path);
 			}
 		}
 	}
@@ -576,7 +356,7 @@ void cd_auto_prefs(uae_prefs* prefs, char* filepath)
 	//  CONFIG LOAD IF .UAE IS IN CONFIG PATH
 	build_uae_config_filename(whdload_prefs.filename);
 
-	if (amiberry_fs::exists(uae_config))
+	if (std::filesystem::exists(uae_config))
 	{
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
@@ -1367,11 +1147,11 @@ void create_startup_sequence()
 	write_log("WHDBooter - Created Startup-Sequence  \n\n%s\n", whd_bootscript.str().c_str());
 	write_log("WHDBooter - Saved Auto-Startup to %s\n", whd_startup.c_str());
 
-	FILE* myfile = fopen(whd_startup.c_str(), "wb");
-	if (myfile) {
-		const auto& script = whd_bootscript.str();
-		fwrite(script.c_str(), 1, script.size(), myfile);
-		fclose(myfile);
+	std::ofstream myfile(whd_startup);
+	if (myfile.is_open())
+	{
+		myfile << whd_bootscript.str();
+		myfile.close();
 	}
 }
 
@@ -1397,7 +1177,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
 
 		boot_path = whdbooter_path / "boot-data.zip";
-		if (!amiberry_fs::exists(boot_path))
+		if (!std::filesystem::exists(boot_path))
 			boot_path = whdbooter_path / "boot-data";
 
 		tmp = "filesystem2=rw,DH3:DH3:" + boot_path.string() + ",-10";
@@ -1409,7 +1189,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	else // revert to original booter is no slave was set
 	{
 		boot_path = whdbooter_path / "boot-data.zip";
-		if (!amiberry_fs::exists(boot_path))
+		if (!std::filesystem::exists(boot_path))
 			boot_path = whdbooter_path / "boot-data";
 
 		tmp = "filesystem2=rw,DH0:DH0:" + boot_path.string() + ",10";
@@ -1429,7 +1209,7 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 	//set the third (save data) drive
 	whd_path = save_path / "";
 
-	if (amiberry_fs::exists(save_path))
+	if (std::filesystem::exists(save_path))
 	{
 		tmp = "filesystem2=rw,DH2:Saves:" + save_path.string() + ",0";
 		cfgfile_parse_line(prefs, parse_text(tmp.c_str()), 0);
@@ -1441,17 +1221,6 @@ void set_booter_drives(uae_prefs* prefs, const char* filepath)
 
 void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 {
-	const char* whdboot_override = getenv("AMIBERRY_WHDBOOT_PATH");
-	if (whdboot_override && *whdboot_override)
-		set_whdbootpath(whdboot_override);
-	const char* whdboot_save = getenv("AMIBERRY_WHDBOOT_SAVE_DATA");
-	if (whdboot_save && *whdboot_save) {
-#ifdef _WIN32
-		_putenv_s("WHDBOOT_SAVE_DATA", whdboot_save);
-#else
-		setenv("WHDBOOT_SAVE_DATA", whdboot_save, 1);
-#endif
-	}
 	write_log("WHDBooter Launched\n");
 	if (amiberry_options.use_jst_instead_of_whd)
 		write_log("WHDBooter - Using JST instead of WHDLoad\n");
@@ -1459,14 +1228,6 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	conf_path = get_configuration_path();
 	whdbooter_path = get_whdbootpath();
 	save_path = get_savedatapath(false);
-	if (!save_path.empty()) {
-		try {
-			amiberry_fs::create_directories(save_path);
-			amiberry_fs::create_directories(save_path / "Savegames");
-		} catch (...) {
-			// best effort
-		}
-	}
 
 	symlink_roms(prefs);
 
@@ -1491,7 +1252,7 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// Clean up any stale files from previous runs to ensure a fresh tmp
 	// This helps avoid stale/broken symlinks causing WHDLoad not found
 	try {
-		if (amiberry_fs::exists(temp_base)) {
+		if (std::filesystem::exists(temp_base)) {
 			write_log("WHDBooter - Cleaning existing tmp directory %s\n", temp_base.string().c_str());
 			std::filesystem::remove_all(temp_base);
 		}
@@ -1500,21 +1261,21 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		write_log("WHDBooter - Failed to clean tmp directory %s: %s\n", temp_base.string().c_str(), e.what());
 	}
 
-	amiberry_fs::create_directories(temp_base / "s");
-	amiberry_fs::create_directories(temp_base / "c");
-	amiberry_fs::create_directories(temp_base / "devs");
+	std::filesystem::create_directories(temp_base / "s");
+	std::filesystem::create_directories(temp_base / "c");
+	std::filesystem::create_directories(temp_base / "devs");
 	whd_startup = (temp_base / "s" / "startup-sequence").string();
-	amiberry_fs::remove(whd_startup);
+	std::filesystem::remove(whd_startup);
 
-	// Use WHDBOOT_SAVE_DATA override when available (libretro sets this)
-	kickstart_path = std::filesystem::path(get_savedatapath(false)) / "Kickstarts";
+	// are we using save-data/ ?
+	kickstart_path = std::filesystem::path(get_savedatapath(true)) / "Kickstarts";
 
 	// LOAD GAME SPECIFICS
 	whd_path = whdbooter_path / "game-data";
 	game_hardware_options game_detail;
-	whd_config = whd_path / "whdload_db.xml";
+	whd_config = (whd_path / "whdload_db.xml").string();
 
-	if (amiberry_fs::exists(whd_config))
+	if (std::filesystem::exists(whd_config))
 	{
 		game_detail = parse_settings_from_xml(prefs, filepath);
 	}
@@ -1526,27 +1287,11 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	// LOAD CUSTOM CONFIG
 	build_uae_config_filename(whdload_prefs.filename);
 	// If we have a config file, we will load that on top of the XML settings
-	if (amiberry_fs::exists(uae_config))
+	if (std::filesystem::exists(uae_config))
 	{
 		write_log("WHDBooter - %s found. Loading Config for WHDLoad options.\n", uae_config.c_str());
 		target_cfgfile_load(prefs, uae_config.c_str(), CONFIG_TYPE_DEFAULT, 0);
 		config_loaded = true;
-	}
-
-	if (whdload_prefs.selected_slave.filename.empty()) {
-		std::string sub_path;
-		std::string slave_file;
-		if (find_slave_in_archive(filepath, sub_path, slave_file)) {
-			whdload_prefs.sub_path = sub_path;
-			whdload_prefs.slave_default = slave_file;
-			whdload_prefs.selected_slave.filename = slave_file;
-			whdload_prefs.slave_count = 1;
-			whdload_prefs.slaves.clear();
-			whdload_prefs.slaves.emplace_back(whdload_prefs.selected_slave);
-			write_log("WHDBooter - Fallback slave: %s (subpath '%s')\n",
-				whdload_prefs.selected_slave.filename.c_str(),
-				whdload_prefs.sub_path.c_str());
-		}
 	}
 
 	// If we have a slave, create a startup-sequence
@@ -1556,36 +1301,37 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 	}
 
 	// now we should have a startup-sequence file (if we don't, we are going to use the original booter)
-	if (amiberry_fs::exists(whd_startup))
+	if (std::filesystem::exists(whd_startup))
 	{
 		if (amiberry_options.use_jst_instead_of_whd)
 		{
 			// create a link/copy to JST
 			whd_path = whdbooter_path / "JST";
 			std::filesystem::path jst_link = temp_base / "c" / "JST";
-			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists(jst_link)) {
-				if (vfs_enabled()) {
-					write_log("WHDBooter - Copying JST to %s\n", (temp_base / "c").string().c_str());
-					copy_file_vfs(whd_path, jst_link);
-				} else {
-					write_log("WHDBooter - Creating link/copy to JST in %s\n", (temp_base / "c").string().c_str());
-					try {
-#ifdef __ANDROID__
+			// Remove stale link if it exists
+			if (std::filesystem::is_symlink(jst_link) || std::filesystem::exists(jst_link)) {
+				// If it's a symlink, remove it; if it's a leftover file/dir, remove it too so we can place a fresh copy/link
+				try { std::filesystem::remove_all(jst_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing JST link/tree %s: %s\n", jst_link.string().c_str(), e.what()); }
+			}
+			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(jst_link)) {
+				write_log("WHDBooter - Creating link/copy to JST in %s\n", (temp_base / "c").string().c_str());
+				try {
+		#if defined(__ANDROID__) || defined(_WIN32)
+				// Android's external storage and Windows often do not support symlinks; copy instead
+				std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
+		#else
+				std::filesystem::create_symlink(whd_path, jst_link);
+		#endif
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				write_log("WHDBooter - JST link creation failed (%s). Falling back to copy: %s\n", jst_link.string().c_str(), e.what());
+				try {
 					std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
-#else
-					std::filesystem::create_symlink(whd_path, jst_link);
-#endif
-					}
-					catch (std::filesystem::filesystem_error& e) {
-						write_log("WHDBooter - JST link creation failed (%s). Falling back to copy: %s\n", jst_link.string().c_str(), e.what());
-						try {
-							std::filesystem::copy(whd_path, jst_link, std::filesystem::copy_options::recursive);
-						}
-						catch (std::filesystem::filesystem_error &e2) {
-							write_log("WHDBooter - JST copy also failed: %s\n", e2.what());
-						}
-					}
 				}
+				catch (std::filesystem::filesystem_error &e2) {
+					write_log("WHDBooter - JST copy also failed: %s\n", e2.what());
+				}
+			}
 			}
 		}
 		else
@@ -1593,27 +1339,26 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 			// create a link/copy to WHDLoad
 			whd_path = whdbooter_path / "WHDLoad";
 			std::filesystem::path whdload_link = temp_base / "c" / "WHDLoad";
-			if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists(whdload_link)) {
-				if (vfs_enabled()) {
-					write_log("WHDBooter - Copying WHDLoad to %s\n", (temp_base / "c").string().c_str());
-					copy_file_vfs(whd_path, whdload_link);
-				} else {
-					write_log("WHDBooter - Creating link/copy to WHDLoad in %s\n", (temp_base / "c").string().c_str());
+			// Remove stale link/file if present
+			if (std::filesystem::is_symlink(whdload_link) || std::filesystem::exists(whdload_link)) {
+				try { std::filesystem::remove_all(whdload_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing WHDLoad link/tree %s: %s\n", whdload_link.string().c_str(), e.what()); }
+			}
+			if (std::filesystem::exists(whd_path) && !std::filesystem::exists(whdload_link)) {
+				write_log("WHDBooter - Creating link/copy to WHDLoad in %s\n", (temp_base / "c").string().c_str());
+				try {
+		#if defined(__ANDROID__) || defined(_WIN32)
+				std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
+		#else
+				std::filesystem::create_symlink(whd_path, whdload_link);
+		#endif
+				}
+				catch (std::filesystem::filesystem_error& e) {
+					write_log("WHDBooter - WHDLoad link creation failed (%s). Falling back to copy: %s\n", whdload_link.string().c_str(), e.what());
 					try {
-#ifdef __ANDROID__
-					std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
-#else
-					std::filesystem::create_symlink(whd_path, whdload_link);
-#endif
+						std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
 					}
-					catch (std::filesystem::filesystem_error& e) {
-						write_log("WHDBooter - WHDLoad link creation failed (%s). Falling back to copy: %s\n", whdload_link.string().c_str(), e.what());
-						try {
-							std::filesystem::copy(whd_path, whdload_link, std::filesystem::copy_options::recursive);
-						}
-						catch (std::filesystem::filesystem_error &e2) {
-							write_log("WHDBooter - WHDLoad copy also failed: %s\n", e2.what());
-						}
+					catch (std::filesystem::filesystem_error &e2) {
+						write_log("WHDBooter - WHDLoad copy also failed: %s\n", e2.what());
 					}
 				}
 			}
@@ -1622,40 +1367,38 @@ void whdload_auto_prefs(uae_prefs* prefs, const char* filepath)
 		// Create a link/copy to AmiQuit
 		whd_path = whdbooter_path / "AmiQuit";
 		std::filesystem::path amiquit_link = temp_base / "c" / "AmiQuit";
-		if (amiberry_fs::exists(whd_path) && !amiberry_fs::exists(amiquit_link)) {
-			if (vfs_enabled()) {
-				write_log("WHDBooter - Copying AmiQuit to %s\n", (temp_base / "c").string().c_str());
-				copy_file_vfs(whd_path, amiquit_link);
-			} else {
-				write_log("WHDBooter - Creating link/copy to AmiQuit in %s\n", (temp_base / "c").string().c_str());
-				try {
-#ifdef __ANDROID__
-				std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
+		if (std::filesystem::is_symlink(amiquit_link) || std::filesystem::exists(amiquit_link)) {
+			try { std::filesystem::remove_all(amiquit_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing AmiQuit link/tree %s: %s\n", amiquit_link.string().c_str(), e.what()); }
+		}
+		if (std::filesystem::exists(whd_path) && !std::filesystem::exists(amiquit_link)) {
+			write_log("WHDBooter - Creating link/copy to AmiQuit in %s\n", (temp_base / "c").string().c_str());
+			try {
+#if defined(__ANDROID__) || defined(_WIN32)
+			std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
 #else
-				std::filesystem::create_symlink(whd_path, amiquit_link);
+			std::filesystem::create_symlink(whd_path, amiquit_link);
 #endif
+			}
+			catch (std::filesystem::filesystem_error& e) {
+				write_log("WHDBooter - AmiQuit link creation failed (%s). Falling back to copy: %s\n", amiquit_link.string().c_str(), e.what());
+				try {
+					std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
 				}
-				catch (std::filesystem::filesystem_error& e) {
-					write_log("WHDBooter - AmiQuit link creation failed (%s). Falling back to copy: %s\n", amiquit_link.string().c_str(), e.what());
-					try {
-						std::filesystem::copy(whd_path, amiquit_link, std::filesystem::copy_options::recursive);
-					}
-					catch (std::filesystem::filesystem_error &e2) {
-						write_log("WHDBooter - AmiQuit copy also failed: %s\n", e2.what());
-					}
+				catch (std::filesystem::filesystem_error &e2) {
+					write_log("WHDBooter - AmiQuit copy also failed: %s\n", e2.what());
 				}
 			}
 		}
 
 		// create a symlink/copy for DEVS/Kickstarts
 		std::filesystem::path kickstarts_link = temp_base / "devs" / "Kickstarts";
-		if (vfs_enabled()) {
-			write_log("WHDBooter - Copying Kickstarts to %s\n", (temp_base / "devs").string().c_str());
-			copy_kickstarts_to_devs(kickstart_path, kickstarts_link);
-		} else {
+		if (std::filesystem::is_symlink(kickstarts_link) || std::filesystem::exists(kickstarts_link)) {
+			try { std::filesystem::remove_all(kickstarts_link); } catch (std::filesystem::filesystem_error &e) { write_log("WHDBooter - Failed to remove existing Kickstarts link/tree %s: %s\n", kickstarts_link.string().c_str(), e.what()); }
+		}
+		if (!std::filesystem::exists(kickstarts_link)) {
 			write_log("WHDBooter - Creating link/copy to Kickstarts in %s\n", (temp_base / "devs").string().c_str());
 			try {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(_WIN32)
 				std::filesystem::copy(kickstart_path, kickstarts_link, std::filesystem::copy_options::recursive);
 #else
 				std::filesystem::create_symlink(kickstart_path, kickstarts_link);

@@ -718,11 +718,7 @@ int CommonBridgeTemplate::maxMFMBitPosition() {
 
 	// If there is no buffer ready, it's difficult to tell WinUAE what it wants to know, as we don't either.  So we supply a absolute MINIMUM that *should* be available on a disk
 	// As this is dynamically read each time it *shouldn't* be a problem and by the time it hopefully reaches it the buffer will have gone live
-#ifdef _WIN32
-	return max(THEORETICAL_MINIMUM_TRACK_LENGTH * 8, m_mfmRead[m_currentTrack][(int)m_floppySide].next.amountReadInBits);
-#else
 	return std::max(THEORETICAL_MINIMUM_TRACK_LENGTH * 8, m_mfmRead[m_currentTrack][(int)m_floppySide].next.amountReadInBits);
-#endif
 }
 
 // This is called to switch to a different copy of the track so multiple revolutions can be read

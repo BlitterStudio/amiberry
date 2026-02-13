@@ -43,7 +43,7 @@ if(ANDROID)
     # Note: Desktop builds use system packages (see non-ANDROID branch below).
     set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 
-    # SDL2 / SDL2_image / SDL2_ttf
+    # SDL2 / SDL2_image
     FetchContent_Declare(
         sdl2
         GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
@@ -53,11 +53,6 @@ if(ANDROID)
         sdl2_image
         GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
         GIT_TAG        release-2.8.2
-    )
-    FetchContent_Declare(
-        sdl2_ttf
-        GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
-        GIT_TAG        release-2.22.0
     )
 
     # Zstd
@@ -109,11 +104,11 @@ if(ANDROID)
         GIT_TAG        v1.6.43
     )
 
-    # Materialize deps (order matters a bit: SDL2 first for *_image/_ttf)
+    # Materialize deps (order matters a bit: SDL2 first for *_image)
     if(USE_MPG123)
-        FetchContent_MakeAvailable(sdl2 sdl2_image sdl2_ttf flac mpg123 libpng zstd)
+        FetchContent_MakeAvailable(sdl2 sdl2_image flac mpg123 libpng zstd)
     else()
-        FetchContent_MakeAvailable(sdl2 sdl2_image sdl2_ttf flac libpng zstd)
+        FetchContent_MakeAvailable(sdl2 sdl2_image flac libpng zstd)
     endif()
 
     # Make zstd discoverable for the rest of this file (later FindHelper/pkg-config logic).
@@ -132,8 +127,8 @@ if(ANDROID)
     endif()
 
     # --- Android link hygiene ------------------------------------------------
-    # Some upstream CMake projects (notably SDL2_ttf's vendored freetype) can
-    # propagate a raw "SDL2" or "pthread" library name via INTERFACE properties.
+    # Some upstream CMake projects can propagate a raw "SDL2" or "pthread"
+    # library name via INTERFACE properties.
     # On Android this becomes "-lSDL2" / "-pthread" and breaks the link.
     function(amiberry_android_sanitize_target _tgt)
         if(NOT TARGET ${_tgt})
@@ -182,9 +177,6 @@ if(ANDROID)
     endif()
 
     # Ensure SDL extension libs depend on the chosen SDL2 target (not a raw "SDL2" name)
-    if(TARGET SDL2_ttf)
-        target_link_libraries(SDL2_ttf PRIVATE ${AMIBERRY_SDL2_TARGET})
-    endif()
     if(TARGET SDL2_image)
         target_link_libraries(SDL2_image PRIVATE ${AMIBERRY_SDL2_TARGET})
     endif()
@@ -207,16 +199,10 @@ if(ANDROID)
     endif()
 
     # Sanitize known SDL-related targets so they can't inject raw -lSDL2/-pthread
-    amiberry_android_sanitize_target(SDL2_ttf)
     amiberry_android_sanitize_target(SDL2_image)
     amiberry_android_sanitize_target(${AMIBERRY_SDL2_TARGET})
 
-    # SDL2_ttf vendors freetype by default and its target name can vary.
-    foreach(_ft IN ITEMS freetype freetype-static freetyped)
-        amiberry_android_sanitize_target(${_ft})
-    endforeach()
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_SDL2_TARGET} SDL2_image SDL2_ttf)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_SDL2_TARGET} SDL2_image)
 
     # Defensive: ensure we never add raw SDL2/pthread libraries or flags on Android.
     # Some transitive/legacy paths may still append plain library names or link options.
@@ -349,8 +335,10 @@ if(ANDROID)
     # --- Existing dependencies --- 
 else()
     find_package(SDL2 CONFIG REQUIRED)
-    find_package(SDL2_image MODULE REQUIRED)
-    find_package(SDL2_ttf MODULE REQUIRED)
+    find_package(SDL2_image CONFIG QUIET)
+    if(NOT SDL2_image_FOUND)
+        find_package(SDL2_image MODULE REQUIRED)
+    endif()
     find_package(FLAC REQUIRED)
     find_package(mpg123 REQUIRED)
     find_package(PNG REQUIRED)
@@ -459,10 +447,10 @@ elseif(TARGET SDL2)
 endif()
 
 if(SDL2_INCLUDE_DIRS)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR})
 else()
     # Keep previous behavior if detection fails; include dirs are often already set by targets.
-    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_IMAGE_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_IMAGE_INCLUDE_DIR})
 endif()
 
 if (USE_IMGUI)
@@ -474,15 +462,23 @@ add_subdirectory(external/mt32emu)
 add_subdirectory(external/floppybridge)
 add_subdirectory(external/capsimage)
 
+# Prefer imported targets from CONFIG mode (vcpkg), fall back to MODULE variables
+if(TARGET SDL2_image::SDL2_image)
+    set(_SDL2_IMAGE_LIB SDL2_image::SDL2_image)
+elseif(SDL2_IMAGE_LIBRARIES)
+    set(_SDL2_IMAGE_LIB ${SDL2_IMAGE_LIBRARIES})
+else()
+    set(_SDL2_IMAGE_LIB SDL2_image)
+endif()
+
 set(AMIBERRY_LIBS
         mt32emu
         ZLIB::ZLIB
         ${CMAKE_DL_LIBS}
-        SDL2_ttf
-        SDL2_image
+        ${_SDL2_IMAGE_LIB}
 )
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WIN32)
     list(APPEND AMIBERRY_LIBS pthread)
 endif()
 
@@ -546,5 +542,11 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE rt)
 endif ()
+
+# Platform system libraries must come AFTER all other dependencies so that
+# static libs (enet, etc.) can resolve their system library references.
+if(AMIBERRY_PLATFORM_LIBS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AMIBERRY_PLATFORM_LIBS})
+endif()
 
 

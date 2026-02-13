@@ -1,4 +1,15 @@
 #pragma once
+
+#ifdef _WIN32
+/* Include Winsock2 early, before any C++ std headers that bring in
+ * std::byte (via 'using namespace std' in sysdeps.h).  This avoids
+ * the ambiguity between std::byte and rpcndr.h's 'byte' typedef
+ * that occurs in MinGW when Windows headers are included later.
+ * Must come before <climits> or any other std header. */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #define SUPPORT_THREADS
 
 #include <climits>
@@ -14,15 +25,38 @@
 #define PACKAGE_STRING "Amiberry"
 
 #if defined(__x86_64__) || defined(_M_AMD64)
-#if defined(__FreeBSD__) || defined(__linux__) // not for macOS
-#if !defined(LIBRETRO_NO_JIT) && !defined(__ANDROID__) // not for android or if jit disabled under libretro
+#if defined(__FreeBSD__) || defined(__linux__) || defined(_WIN32) // not for macOS
+#ifndef __ANDROID__ // not for android
+#define JIT /* JIT compiler support */
+#define USE_JIT_FPU
+#endif
+#endif
+#elif defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__FreeBSD__) || defined(__linux__) // not for macOS (yet)
+#ifndef __ANDROID__ // not for android
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
 #endif
 #endif
 
-#ifndef AMIBERRY
+// Uncomment to enable JIT visual corruption diagnostics
+//#define JIT_DEBUG_VISUAL
+
+// Uncomment to force all JIT opcodes through the interpreter fallback path.
+// If visual corruption disappears with this enabled, the bug is in a
+// compiled opcode handler. If it persists, the bug is in JIT infrastructure.
+//#define JIT_INTERPRET_ONLY
+
+// Uncomment to enable JIT opcode bisection.
+// Two modes controlled by JIT_BISECT_EXCLUDE:
+//   Without JIT_BISECT_EXCLUDE: ONLY opcodes in [MIN,MAX] are compiled
+//   With    JIT_BISECT_EXCLUDE: ALL opcodes compiled EXCEPT [MIN,MAX]
+//#define JIT_BISECT_OPCODES
+//#define JIT_BISECT_EXCLUDE
+//#define JIT_BISECT_MIN  0x8000
+//#define JIT_BISECT_MAX  0xFFFF
+
 #define AMIBERRY
 #endif
 #ifndef UAE
@@ -53,6 +87,8 @@
 // We define this externally in Amiberry
 #ifdef USE_LIBSERIALPORT
 #define SERIAL_PORT  /* serial port emulation */
+#elif defined(_WIN32)
+#define SERIAL_PORT  /* serial port emulation (native Windows COM) */
 #endif
 
 // We define this externally in Amiberry
@@ -131,10 +167,14 @@
 // Use portmidi library for MIDI devices
 #ifdef USE_PORTMIDI
 #define WITH_MIDI
+#elif defined(_WIN32)
+#define WITH_MIDI  /* native Windows Multimedia MIDI */
 #endif
 
-/* vpar virtual parallel port */
+/* vpar virtual parallel port (PTY-based, not available on Windows) */
+#ifndef _WIN32
 #define WITH_VPAR 1
+#endif
 
 #define WITH_SCSI_IOCTL
 
@@ -169,7 +209,7 @@
 
 #include <cstdint>
 
-#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)
+#if defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__) || defined(_WIN64)
 #define SIZEOF_VOID_P 8
 #else
 #define SIZEOF_VOID_P 4
@@ -201,7 +241,9 @@ typedef int32_t uae_atomic;
 #define HAVE_INET_NTOA 1
 
 /* Define to 1 if you have POSIX serial support */
+#ifndef _WIN32
 #define POSIX_SERIAL 1
+#endif
 
 /* Define if you have the getmntent function.  */
 #define HAVE_GETMNTENT 1
@@ -316,7 +358,9 @@ typedef int32_t uae_atomic;
 #define SIZEOF_INT 4
 
 /* The number of bytes in a long.  */
-#if (defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)) && !defined(__MINGW32__)
+#if defined(_WIN32)
+#define SIZEOF_LONG 4  /* Windows LLP64: long is always 4 bytes */
+#elif defined(__x86_64__) || defined(CPU_AARCH64) || defined(CPU_AMD64) || defined(__LP64__)
 #define SIZEOF_LONG 8
 #else
 #define SIZEOF_LONG 4
@@ -337,7 +381,7 @@ typedef int32_t uae_atomic;
 #ifndef LT_MODULE_EXT
 #ifdef __MACH__
 #define LT_MODULE_EXT _T(".dylib")
-#elif defined(__MINGW32__)
+#elif defined(_WIN32)
 #define LT_MODULE_EXT _T(".dll")
 #else
 #define LT_MODULE_EXT _T(".so")
@@ -574,51 +618,72 @@ typedef int32_t uae_atomic;
 /* Define if you have the <windows.h> header file.  */
 /* #undef HAVE_WINDOWS_H */
 
-#ifdef __MINGW32__
-/* MinGW does not have these POSIX/Linux-specific headers and features.
- * Rather than guarding each define individually, undef them in one block. */
+/* --- Windows overrides (MinGW-w64) ---
+ * MinGW provides many POSIX-compatible headers, but some features
+ * are genuinely unavailable on Windows. Override those here.
+ */
+#ifdef _WIN32
+#undef HAVE_WINDOWS_H
+#define HAVE_WINDOWS_H 1
+#undef HAVE_SYS_UTIME_H
+#define HAVE_SYS_UTIME_H 1
 #undef POSIX_SERIAL
+#undef HAVE_SIGACTION
+#undef HAVE_LCHOWN
+#undef HAVE_MKFIFO
+#undef HAVE_READDIR_R
+#undef HAVE_TCGETATTR
 #undef HAVE_GETMNTENT
-#undef TIME_WITH_SYS_TIME
-/* Note: HAVE_SYS_TIME_H is NOT undef'd — MinGW has <sys/time.h> */
-#undef HAVE_SYS_IOCTL_H
+#undef HAVE_ENDGRENT
+#undef HAVE_ENDPWENT
+#undef HAVE_MNTENT_H
+#undef HAVE_FEATURES_H
+#undef HAVE_CURSES_H
+#undef HAVE_NCURSES_H
 #undef HAVE_SYS_IPC_H
 #undef HAVE_SYS_MOUNT_H
 #undef HAVE_SYS_SHM_H
 #undef HAVE_SYS_SOUNDCARD_H
-#undef HAVE_SYS_VFS_H
 #undef HAVE_SYS_STATFS_H
-#undef HAVE_SYS_PARAM_H
-#undef HAVE_FEATURES_H
-#undef HAVE_MNTENT_H
-#undef HAVE_NCURSES_H
-#undef HAVE_CURSES_H
+#undef HAVE_SYS_TERMIOS_H
+#undef HAVE_SYS_VFS_H
+#undef HAVE_INET_ATON
 #undef MOUNTED_GETMNTENT1
 #undef STAT_STATVFS
-#undef HAVE_BCOPY
-#undef HAVE_ENDGRENT
-#undef HAVE_ENDPWENT
-#undef HAVE_FCHDIR
-#undef HAVE_MKFIFO
-#undef HAVE_LCHOWN
-#undef HAVE_READDIR_R
-#undef HAVE_SIGACTION
-#undef HAVE_TCGETATTR
-#undef HAVE_GETOPT
-#undef HAVE_GETOPT_H
-#define HAVE_SYS_UTIME_H 1
-#define HAVE_WINDOWS_H 1
-#endif
+#endif /* _WIN32 */
 
+#ifdef _WIN32
+#define FSDB_DIR_SEPARATOR '\\'
+#define FSDB_DIR_SEPARATOR_S "\\"
+#else
 #define FSDB_DIR_SEPARATOR '/'
 #define FSDB_DIR_SEPARATOR_S "/"
+#endif
+
+/* MinGW's fopen does not support the glibc 'e' (O_CLOEXEC) mode flag.
+ * Strip it on Windows since close-on-exec is not relevant there. */
+#ifdef _WIN32
+#include <cstdio>
+#include <cstring>
+static inline FILE* uae_fopen(const char* path, const char* mode)
+{
+	char winmode[16];
+	int j = 0;
+	for (int i = 0; mode[i] && j < 15; i++) {
+		if (mode[i] != 'e')
+			winmode[j++] = mode[i];
+	}
+	winmode[j] = '\0';
+	return fopen(path, winmode);
+}
+#define fopen(path, mode) uae_fopen(path, mode)
+#endif
 
 /* Define to 1 if `S_un' is a member of `struct in_addr'. */
 /* #un#def HAVE_STRUCT_IN_ADDR_S_UN */
 
-#if defined(_WIN32) && !defined(__MINGW32__)
-#undef _WIN32
-#endif
+/* _WIN32 is no longer undefined -- Windows builds need it active.
+   Non-Windows platforms never define it, so this is harmless. */
 
 #ifdef _GCCRES_
 #undef _GCCRES_
@@ -630,14 +695,22 @@ typedef int32_t uae_atomic;
 #define _GCCRES_ __restrict__
 #endif
 
+#ifndef _WIN32
 #ifndef __cdecl
 #define __cdecl
 #endif
+#endif
 
+#ifndef _WIN32
 #define strcmpi(x,y) SDL_strcasecmp(x,y)
 #define stricmp(x,y) SDL_strcasecmp(x,y)
+#else
+#define strcmpi(x,y) _stricmp(x,y)
+#define stricmp(x,y) _stricmp(x,y)
+#endif
 
-#ifndef __MINGW32__
+#ifndef _WIN32
+/* On non-Windows: SOCKET is just an int (POSIX file descriptor). */
 typedef int SOCKET;
 #define INVALID_SOCKET -1
 #endif
@@ -650,9 +723,12 @@ typedef unsigned char boolean;
 #define TRUE 1
 #endif
 
+#ifndef _WIN32
 typedef unsigned short USHORT;
+#endif
 
-#ifndef __MINGW32__
+#ifndef _WIN32
+/* On non-Windows: Sleep is not available, use usleep. */
 #define Sleep(x) usleep((x)*1000)
 #endif
 
@@ -663,17 +739,14 @@ typedef unsigned short USHORT;
 #define _T(x)               x
 typedef char TCHAR;
 #endif
-#if !defined(_WIN32) && !defined(__MINGW32__)
+#ifndef _WIN32
 #define _tzset()            tzset()
 #endif
 #ifndef __MINGW32__
 #define _timezone           timezone
 #define _daylight           daylight
-#endif
-// Ftello and fseeko on OSX are alerady 64bit
-#if defined(__MINGW32__)
-/* _ftelli64 and _fseeki64 are native on MinGW */
-#elif defined(ANDROID) || defined(__ANDROID__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+// Ftello and fseeko on OSX are already 64bit
+#if defined(ANDROID) || defined(__ANDROID__) || defined(__MACH__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 #define _ftelli64(x)        ftello(x)
 #define _fseeki64(x,y,z)    fseeko(x,y,z)
 #else
@@ -685,4 +758,11 @@ typedef char TCHAR;
 #endif
 #ifndef __MINGW32__
 #define _istalnum(x)        isalnum(x)
+#elif defined(AMIBERRY)
+/* Amiberry on Windows: TCHAR is char (non-UNICODE), so wide-char
+   functions need to be redirected to their narrow-char equivalents. */
+#define _wunlink(x)         _unlink(x)
+#ifndef _istalnum
+#define _istalnum(x)        isalnum(x)
+#endif
 #endif

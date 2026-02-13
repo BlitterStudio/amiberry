@@ -3013,7 +3013,7 @@ static void snd_init(void)
 }
 
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 
 #include <mmdeviceapi.h>
 #include <Audioclient.h>
@@ -3153,6 +3153,25 @@ Exit:;
 	CoTaskMemFree(wavfmt2);
 	write_log(_T("sndboard capture init failed %08x\n"), hr);
 	sndboard_free_capture();
+	return false;
+}
+
+#else
+
+// Stub implementations for platforms without WASAPI capture
+static uae_u8 *sndboard_get_buffer(int *frames)
+{
+	*frames = -1;
+	return NULL;
+}
+static void sndboard_release_buffer(uae_u8 *buffer, int frames)
+{
+}
+static void sndboard_free_capture(void)
+{
+}
+static bool sndboard_init_capture(int freq)
+{
 	return false;
 }
 

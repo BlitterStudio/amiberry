@@ -1,5 +1,5 @@
 # Base package settings
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT WIN32)
     set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 endif ()
 set(CPACK_VERBATIM_VARIABLES YES)
@@ -42,7 +42,7 @@ set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/packaging/dmg/AppDMGBackgrou
 set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/packaging/dmg/AppDMGSetup.scpt")
 
 # Linux DEB settings - build dependency list conditionally based on enabled features
-set(_deb_deps "libc6, libstdc++6, libsdl2-2.0-0, libsdl2-image-2.0-0, libsdl2-ttf-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g")
+set(_deb_deps "libc6, libstdc++6, libsdl2-2.0-0, libsdl2-image-2.0-0, flac, libmpg123-0, libpng16-16, zlib1g")
 if(USE_ZSTD)
     string(APPEND _deb_deps ", libzstd1")
 endif()
@@ -79,7 +79,7 @@ set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
         "${CMAKE_SOURCE_DIR}/packaging/linux/scripts/postrm")
 
 # Linux RPM settings - build dependency list conditionally based on enabled features
-set(_rpm_deps "glibc, libstdc++, SDL2, SDL2_ttf, SDL2_image, flac, mpg123, libpng, zlib")
+set(_rpm_deps "glibc, libstdc++, SDL2, SDL2_image, flac, mpg123, libpng, zlib")
 if(USE_ZSTD)
     string(APPEND _rpm_deps ", zstd")
 endif()
@@ -122,6 +122,8 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(CPACK_GENERATOR TGZ DragNDrop)
 elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
     set(CPACK_GENERATOR TGZ DEB RPM)
+elseif (WIN32)
+    set(CPACK_GENERATOR ZIP)
 else ()
     set(CPACK_GENERATOR TGZ)
 endif ()

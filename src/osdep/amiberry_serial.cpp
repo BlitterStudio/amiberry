@@ -43,9 +43,15 @@
 #ifdef USE_LIBSERIALPORT
 #include <libserialport.h>
 #endif
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <fcntl.h>
+#else
 #include <netinet/tcp.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#endif
 
 #define SERIALLOGGING 0
 #define SERIALDEBUG 0 /* 0, 1, 2 3 */
@@ -148,7 +154,7 @@ int shmem_serial_state()
 
 void shmem_serial_delete()
 {
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(_WIN32)
 	sermap_deactivate();
 	sermap_master = false;
 	if (sermap_data) {
@@ -166,7 +172,7 @@ void shmem_serial_delete()
 
 bool shmem_serial_create()
 {
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(_WIN32)
 	shmem_serial_delete();
 
 	int fd = shm_open(SER_MEMORY_MAPPING, O_RDWR, 0666);
