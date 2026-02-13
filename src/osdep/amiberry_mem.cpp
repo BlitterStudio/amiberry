@@ -274,8 +274,19 @@ bool preinit_shm ()
 	GetSystemInfo (&si);
 	uae_u32 max_allowed_mman = 512 + 256;
 	if (os_64bit) {
-		// Higher than 2G to support G-REX PCI VRAM
+#ifdef CPU_64_BIT
+		// On 64-bit builds, the JIT compiler uses 32-bit addressing (x86-64
+		// address override prefix / ARM64 32-bit operands). All pointers used
+		// by JIT code — natmem_offset, compiled_code, popallspace — must fit
+		// below 4GB. Since uae_vm_reserve() first tries base address 0x80000000,
+		// the maximum natmem_size that fits is 0x80000000 (2048 MB).
+		// This is plenty for Amiga emulation (2GB of Z3 address space).
+		max_allowed_mman = 2048 - 1;
+#else
+		// 32-bit builds (e.g. WoW64): all addresses are naturally below 4GB.
+		// Higher than 2G to support G-REX PCI VRAM.
 		max_allowed_mman = 2560;
+#endif
 	}
 	max_allowed_mman = std::max<uae_u32>(maxmem, max_allowed_mman);
 

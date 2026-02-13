@@ -463,6 +463,80 @@ jobs:
         name: ${{ matrix.artifact_name }}
         path: "amiberry-*.zip"
 
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: x64
+            opengl: OFF
+            artifact_name: amiberry-windows-x64
+            release_suffix: windows-x64
+          - name: x64-opengl
+            opengl: ON
+            artifact_name: amiberry-windows-x64-opengl
+            release_suffix: windows-x64-opengl
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+
+      - name: Cache vcpkg installed packages
+        uses: actions/cache@v4
+        with:
+          path: out/build/windows-release/vcpkg_installed
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-
+
+      - name: Build for Windows (${{ matrix.name }})
+        shell: msys2 {0}
+        env:
+          VCPKG_ROOT: C:/vcpkg
+        run: |
+          cmake --preset windows-release ${{ matrix.opengl == 'ON' && '-DUSE_OPENGL=ON' || '' }}
+          cmake --build out/build/windows-release -j$(nproc)
+
+      - name: Package
+        shell: msys2 {0}
+        run: |
+          # Copy MinGW runtime DLLs next to the executable
+          cp /mingw64/bin/libstdc++-6.dll out/build/windows-release/
+          cp /mingw64/bin/libgcc_s_seh-1.dll out/build/windows-release/
+          cp /mingw64/bin/libwinpthread-1.dll out/build/windows-release/
+          # Create ZIP package
+          cpack -G ZIP --config out/build/windows-release/CPackConfig.cmake
+
+      - name: Upload artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: amiberry-*.zip
+          retention-days: 7
+
+      - name: Upload artifact for release
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: amiberry-*.zip
+          retention-days: 7
+
   build-android:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -550,7 +624,7 @@ jobs:
           if-no-files-found: warn
 
   create-release:
-    needs: [build-macOS, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-android]
+    needs: [build-macOS, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-android]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))
