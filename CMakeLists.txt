@@ -69,7 +69,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	# Required packages via pkg-config
 	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(SDL2 REQUIRED sdl2)
-	pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 	pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
 	pkg_check_modules(FLAC REQUIRED flac)
 	pkg_check_modules(PNG REQUIRED libpng)
@@ -77,14 +76,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	# Store FreeBSD include/link info for target-specific application in SourceFiles.cmake
 	set(FREEBSD_INCLUDE_DIRS
     	${SDL2_INCLUDE_DIRS}
-    	${SDL2_TTF_INCLUDE_DIRS}
     	${SDL2_IMAGE_INCLUDE_DIRS}
     	${FLAC_INCLUDE_DIRS}
     	${PNG_INCLUDE_DIRS}
 	)
 	set(FREEBSD_LIBRARIES
     	${SDL2_LIBRARIES}
-    	${SDL2_TTF_LIBRARIES}
     	${SDL2_IMAGE_LIBRARIES}
     	${FLAC_LIBRARIES}
     	${PNG_LIBRARIES}

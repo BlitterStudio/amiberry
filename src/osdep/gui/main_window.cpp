@@ -6,7 +6,6 @@
 #include <string>
 #include <filesystem>
 #include <SDL_image.h>
-#include <SDL_ttf.h>
 #include <dpi_handler.hpp>
 #include <unordered_map>
 #include <cmath>

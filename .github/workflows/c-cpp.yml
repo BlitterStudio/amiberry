@@ -73,13 +73,13 @@ jobs:
         if: matrix.arch == 'intel'
         run: |
           brew update && \
-          if [ -f Brewfile ]; then brew bundle; else brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler; fi
+          if [ -f Brewfile ]; then brew bundle; else brew install sdl2 mpg123 sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler; fi
 
       - name: Install dependencies (Homebrew - Apple Silicon)
         if: matrix.arch == 'apple-silicon'
         run: |
           brew update
-          brew install sdl2 mpg123 sdl2_ttf sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
+          brew install sdl2 mpg123 sdl2_image flac libmpeg2 libserialport portmidi enet libpcap zstd dylibbundler
 
       - name: Build for macOS (${{ matrix.name }})
         run: |
@@ -334,7 +334,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build file libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
+          sudo apt-get install -y build-essential cmake ninja-build file libflac-dev libmpeg2-4-dev libpng-dev libsdl2-dev libsdl2-image-dev libasound2-dev libmpg123-dev libportmidi-dev libserialport-dev libenet-dev libpcap-dev libzstd-dev
 
       - name: make for Ubuntu ${{ matrix.name }}
         env:
@@ -591,8 +591,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # Note: Android dependencies are fetched via CMake FetchContent during the native build,
-      # so we no longer download SDL2_image/SDL2_ttf vendored third-party sources here.
+      # Note: Android dependencies are fetched via CMake FetchContent during the native build.
 
       - name: set up JDK 17
         uses: actions/setup-java@v4

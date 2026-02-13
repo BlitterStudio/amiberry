@@ -6,7 +6,6 @@
   "dependencies": [
     "sdl2",
     "sdl2-image",
-    "sdl2-ttf",
     "libflac",
     "mpg123",
     "libpng",

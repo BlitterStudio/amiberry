@@ -191,7 +191,7 @@ Platform-specific code is in `src/osdep/`:
 
 ### Required
 
-- SDL2, SDL2_image, SDL2_ttf
+- SDL2, SDL2_image
 - ZLIB
 - libpng
 - FLAC
