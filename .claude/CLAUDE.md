@@ -11,6 +11,7 @@ Amiberry is an optimized Amiga emulator based on UAE (Unix Amiga Emulator). It p
 - **macOS**: Intel (x86_64) and Apple Silicon (ARM64)
 - **Android**: AArch64 and x86_64
 - **FreeBSD**: x86_64
+- **Windows**: x86_64 (MinGW-w64/GCC, dependencies via vcpkg)
 
 - **Version**: 8.0.0 (pre-release 18)
 - **Languages**: C/C++
@@ -48,6 +49,32 @@ The Android build uses Gradle and fetches dependencies via CMake FetchContent:
 ```bash
 cd android
 ./gradlew assembleRelease
+```
+
+### Windows (MinGW-w64)
+
+```powershell
+# Prerequisites: MinGW-w64 (GCC), CMake, Ninja, vcpkg
+# Set environment
+$env:VCPKG_ROOT = "D:\Github\vcpkg"
+
+# Configure with CMake preset
+cmake --preset windows-debug   # or windows-release
+
+# Build
+cd out/build/windows-debug
+ninja -j12
+
+# Run (no GUI test)
+.\amiberry.exe -G
+
+# Run with logging
+.\amiberry.exe --log
+```
+
+Or use the helper script:
+```powershell
+powershell -ExecutionPolicy Bypass -File "build_and_run.ps1"
 ```
 
 ### Build Options
@@ -133,6 +160,24 @@ Platform-specific code is in `src/osdep/`:
 - Common POSIX code works across Linux, macOS, FreeBSD
 - Android has additional handling in `android/` directory
 - Architecture-specific JIT in `src/jit/arm/` and `src/jit/x86/`
+- Windows uses MinGW-w64 which provides POSIX-compatible headers (`unistd.h`, `dirent.h`, etc.)
+
+### Windows Port Notes
+
+**Key Differences from POSIX platforms:**
+- `sysconfig.h` previously `#undef _WIN32` — this was removed to unlock WinUAE Windows code paths
+- Windows LLP64: `long` is 4 bytes (not 8); `SIZEOF_LONG` must be 4 in `sysconfig.h`
+- JIT compiler is non-functional on 64-bit Windows (pointers exceed 32-bit); interpreter mode works fine
+- `src/jit/x86/compemu_x86.h`: `check_uae_p32()` logs instead of calling `jit_abort()` under `AMIBERRY`
+- `src/osdep/crtemu.h` line 80: uses `CRTEMU_SDL` path on Windows+Amiberry (not WinUAE's direct LoadLibrary path)
+
+**Symlinks:** Windows requires admin/DevMode for symlinks and uses different APIs for file vs directory symlinks. The WHDBooter (`src/osdep/amiberry_whdbooter.cpp`) uses `std::filesystem::copy()` directly on Windows for directory links, with try-catch fallback for file links.
+
+**Winsock:** `src/slirp/` has full Winsock2 support. Key pattern differences: `closesocket()` not `close()`, `ioctlsocket()` not `ioctl()`/`fcntl()`, `WSAGetLastError()` not `errno`, cast socket options to `(char*)`.
+
+**Features disabled on Windows:** `USE_IPC_SOCKET`, `USE_GPIOD`, `USE_DBUS`, `USE_UAENET_PCAP`, `WITH_VPAR`, physical CD-ROM IOCTL, physical hard drive enumeration.
+
+**Logging:** `write_log()` in `src/osdep/writelog.cpp` requires `--log` CLI flag or `write_logfile` config option. Without either, all logging is silently suppressed.
 
 ## Dependencies
 
@@ -193,4 +238,9 @@ No automated test suite. Manual testing with various Amiga software and configur
 
 ### Platform-specific changes
 
-Keep platform code in `src/osdep/` and use preprocessor guards for platform-specific sections (`#ifdef __ANDROID__`, `#ifdef __APPLE__`, etc.).
+Keep platform code in `src/osdep/` and use preprocessor guards for platform-specific sections:
+- `#ifdef __ANDROID__` — Android-specific
+- `#ifdef __APPLE__` — macOS-specific
+- `#ifdef _WIN32` — Windows-specific
+- `#ifdef AMIBERRY` — Amiberry-specific (distinguishes from WinUAE)
+- `#if defined(__ANDROID__) || defined(_WIN32)` — platforms without reliable symlink support
