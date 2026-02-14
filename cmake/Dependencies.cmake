@@ -436,6 +436,16 @@ if (USE_UAENET_PCAP)
     endif()
 endif()
 
+# Add TAP backend for uaenet (Linux only, no library dependencies)
+if (USE_UAENET_TAP)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_UAENET_TAP)
+        message(STATUS "TAP uaenet backend enabled")
+    else()
+        message(STATUS "TAP uaenet backend not available (Linux only)")
+    endif()
+endif()
+
 # SDL include dirs: FetchContent builds may not provide SDL2::SDL2.
 set(SDL2_INCLUDE_DIRS "")
 if(TARGET SDL2::SDL2)
