@@ -4505,6 +4505,12 @@ std::string get_config_directory(bool portable_mode)
 		getcwd(tmp, MAX_DPATH);
 		return { std::string(tmp) + "\\conf" };
 	}
+#elif defined(__ANDROID__)
+	const char* path = SDL_AndroidGetExternalStoragePath();
+	if (path) {
+		return std::string(path) + "/conf/";
+	}
+	return prefix_with_application_directory_path("conf/");
 #else
 	if (portable_mode)
 	{
@@ -4623,11 +4629,6 @@ std::string get_plugins_directory(bool portable_mode)
 	return { std::string(tmp) + "/plugins" };
 #endif
 }
-
-extern void save_theme(const std::string& theme_filename);
-extern void load_theme(const std::string& theme_filename);
-extern void load_default_theme();
-extern void load_default_dark_theme();
 
 void create_missing_amiberry_folders()
 {
@@ -5019,6 +5020,8 @@ static void init_amiberry_dirs(const bool portable_mode)
 	retroarch_file = config_path;
 #ifdef _WIN32
 	retroarch_file.append("\\retroarch.cfg");
+#elif defined(__ANDROID__)
+	retroarch_file.append("retroarch.cfg");
 #else
 	retroarch_file.append("/retroarch.cfg");
 #endif
