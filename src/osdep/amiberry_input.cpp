@@ -42,6 +42,8 @@ struct didata di_joystick[MAX_INPUT_DEVICES];
 
 static int num_mouse = 1, num_keyboard = 1, num_joystick = 0, num_retroarch_kbdjoy = 0;
 static int joystick_inited, retroarch_inited;
+// Index of the on-screen joystick inside di_joystick[]; -1 when not registered
+static int osj_device_index = -1;
 constexpr auto analog_upper_bound = 32767;
 constexpr auto analog_lower_bound = -analog_upper_bound;
 
@@ -1335,6 +1337,44 @@ static int init_joystick()
 		fix_didata(did);
 		setup_mapping(did, controllers, i);
 	}
+
+	// Register the built-in on-screen joystick as a virtual device
+	if (num_joystick < MAX_INPUT_DEVICES) {
+		osj_device_index = num_joystick;
+		struct didata* did = &di_joystick[osj_device_index];
+		cleardid(did);
+		did->name = "On-Screen Joystick";
+		did->joystick_name = "On-Screen Joystick";
+		did->is_controller = false;
+		did->controller = nullptr;
+		did->joystick = nullptr;
+		did->joystick_id = -1;
+		// 2 axes (X, Y) + 2 buttons (fire, 2nd fire)
+		did->axles = 2;
+		did->buttons = 2;
+		did->buttons_real = 2;
+		// Set up axis metadata
+		did->axismappings[0] = 0;
+		did->axisname[0] = "X Axis";
+		did->axissort[0] = 0;
+		did->axistype[0] = AXISTYPE_NORMAL;
+		did->axismappings[1] = 1;
+		did->axisname[1] = "Y Axis";
+		did->axissort[1] = 1;
+		did->axistype[1] = AXISTYPE_NORMAL;
+		// Set up button metadata
+		did->buttonmappings[0] = 0;
+		did->buttonname[0] = "Fire";
+		did->buttonsort[0] = 0;
+		did->buttonmappings[1] = 1;
+		did->buttonname[1] = "2nd Fire";
+		did->buttonsort[1] = 1;
+		// Create +/- button entries for axes (needed by the input mapping system)
+		fixthings(did);
+		num_joystick++;
+		write_log("On-Screen Joystick registered as JOY%d\n", osj_device_index);
+	}
+
 	return 1;
 }
 
@@ -1412,6 +1452,7 @@ static void close_joystick()
 	for (auto i = 0; i < num_joystick; i++)
 		di_dev_free(&di_joystick[i]);
 	num_joystick = 0;
+	osj_device_index = -1;
 	di_free();
 }
 
@@ -1526,6 +1567,11 @@ static int get_joystick_widget_first(const int joy, const int type)
 static int get_joystick_flags(int num)
 {
 	return 0;
+}
+
+int get_onscreen_joystick_device_index()
+{
+	return osj_device_index;
 }
 
 static bool invert_axis(int axis, const didata* did)

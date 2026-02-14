@@ -2,8 +2,8 @@
  * Amiberry - On-screen touch joystick controls
  *
  * Provides a virtual D-pad and fire buttons overlay for touchscreen devices.
- * Renders retro arcade-style graphics and injects joystick events into
- * the emulated Amiga joystick port 2.
+ * Registered as a proper joystick input device so it appears in the Input
+ * configuration panel and respects the selected port mode (joystick/mouse).
  *
  * Supports both SDL2 renderer and OpenGL rendering paths.
  *
@@ -24,6 +24,7 @@
 #include "on_screen_joystick.h"
 #include "sysdeps.h"
 #include "inputdevice.h"
+#include "amiberry_input.h"
 #include "options.h"
 #include "amiberry_gfx.h"
 
@@ -465,34 +466,54 @@ static SDL_Surface* create_kb_button_surface()
 // Input injection helpers
 // ---------------------------------------------------------------------------
 
+// On-screen joystick button indices (within the registered device).
+// Must match the layout set up in init_joystick() in amiberry_input.cpp.
+// Buttons are at widget offset FIRST_JOY_BUTTON (== MAX_JOY_AXES == 8).
+static constexpr int OSJ_BTN_FIRE1 = 0;
+static constexpr int OSJ_BTN_FIRE2 = 1;
+
 static void inject_directions()
 {
-	if (joy_up != prev_up) {
-		send_input_event(INPUTEVENT_JOY2_UP, joy_up ? 1 : 0, 1, 0);
-		prev_up = joy_up;
-	}
-	if (joy_down != prev_down) {
-		send_input_event(INPUTEVENT_JOY2_DOWN, joy_down ? 1 : 0, 1, 0);
-		prev_down = joy_down;
-	}
-	if (joy_left != prev_left) {
-		send_input_event(INPUTEVENT_JOY2_LEFT, joy_left ? 1 : 0, 1, 0);
+	int dev = get_onscreen_joystick_device_index();
+	if (dev < 0) return;
+
+	// Compute axis values from directional booleans.
+	// X axis: left = -32767, right = +32767, neither = 0
+	// Y axis: up   = -32767, down  = +32767, neither = 0
+	constexpr int AXIS_MAX = 32767;
+
+	bool x_changed = (joy_left != prev_left) || (joy_right != prev_right);
+	bool y_changed = (joy_up != prev_up) || (joy_down != prev_down);
+
+	if (x_changed) {
+		int x = 0;
+		if (joy_left)  x = -AXIS_MAX;
+		if (joy_right) x =  AXIS_MAX;
+		setjoystickstate(dev, 0, x, AXIS_MAX);
 		prev_left = joy_left;
-	}
-	if (joy_right != prev_right) {
-		send_input_event(INPUTEVENT_JOY2_RIGHT, joy_right ? 1 : 0, 1, 0);
 		prev_right = joy_right;
+	}
+	if (y_changed) {
+		int y = 0;
+		if (joy_up)   y = -AXIS_MAX;
+		if (joy_down) y =  AXIS_MAX;
+		setjoystickstate(dev, 1, y, AXIS_MAX);
+		prev_up = joy_up;
+		prev_down = joy_down;
 	}
 }
 
 static void inject_buttons()
 {
+	int dev = get_onscreen_joystick_device_index();
+	if (dev < 0) return;
+
 	if (joy_fire1 != prev_fire1) {
-		send_input_event(INPUTEVENT_JOY2_FIRE_BUTTON, joy_fire1 ? 1 : 0, 1, 0);
+		setjoybuttonstate(dev, OSJ_BTN_FIRE1, joy_fire1 ? 1 : 0);
 		prev_fire1 = joy_fire1;
 	}
 	if (joy_fire2 != prev_fire2) {
-		send_input_event(INPUTEVENT_JOY2_2ND_BUTTON, joy_fire2 ? 1 : 0, 1, 0);
+		setjoybuttonstate(dev, OSJ_BTN_FIRE2, joy_fire2 ? 1 : 0);
 		prev_fire2 = joy_fire2;
 	}
 }
@@ -869,7 +890,20 @@ bool on_screen_joystick_is_enabled()
 void on_screen_joystick_set_enabled(bool enabled)
 {
 	osj_enabled = enabled;
-	if (!enabled && osj_initialized) {
+	if (enabled) {
+		// Auto-assign the on-screen joystick to Port 1 (Amiga joystick port)
+		// so it is recognized by the input system as a proper joystick device.
+		int dev = get_onscreen_joystick_device_index();
+		if (dev >= 0) {
+			int target_id = JSEM_JOYS + dev;
+			if (changed_prefs.jports[1].id != target_id) {
+				changed_prefs.jports[1].id = target_id;
+				changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK;
+				inputdevice_config_change();
+			}
+		}
+	}
+	else if (osj_initialized) {
 		joy_up = joy_down = joy_left = joy_right = false;
 		joy_fire1 = joy_fire2 = false;
 		joy_kb_pressed = false;

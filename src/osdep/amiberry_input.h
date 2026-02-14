@@ -120,6 +120,9 @@ extern void read_joystick_buttons(int id);
 extern void read_joystick_axis(int id, int axis, int value);
 extern void read_joystick_hat(int id, int hat, int value);
 
+// Returns the joystick device index of the built-in on-screen joystick, or -1 if not registered
+extern int get_onscreen_joystick_device_index();
+
 extern void read_controller_button(int id, int button, int state);
 extern void read_controller_axis(int id, int axis, int value);
 

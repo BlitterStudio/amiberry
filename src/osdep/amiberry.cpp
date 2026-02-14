@@ -2212,6 +2212,10 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
+			// Skip touch-synthesized mouse events when the on-screen joystick is active,
+			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
+			if (on_screen_joystick_is_enabled() && event.button.which == SDL_TOUCH_MOUSEID)
+				break;
 			handle_mouse_button_event(event, mon);
 			break;
 
@@ -2229,6 +2233,10 @@ static void process_event(const SDL_Event& event)
 		}
 
 		case SDL_MOUSEMOTION:
+			// Skip touch-synthesized mouse events when the on-screen joystick is active,
+			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
+			if (on_screen_joystick_is_enabled() && event.motion.which == SDL_TOUCH_MOUSEID)
+				break;
 			handle_mouse_motion_event(event, mon);
 			break;
 
