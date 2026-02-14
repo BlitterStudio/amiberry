@@ -43,6 +43,7 @@
 
 #include "threaddep/thread.h"
 #include "vkbd/vkbd.h"
+#include "on_screen_joystick.h"
 #include "fsdb_host.h"
 #include "savestate.h"
 #include "uae/types.h"
@@ -808,6 +809,12 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		{
 			vkbd_redraw();
 		}
+
+		if (on_screen_joystick_is_enabled())
+		{
+			on_screen_joystick_redraw(mon->amiga_renderer);
+		}
+
 		return true;
 	}
 #endif
@@ -3525,6 +3532,26 @@ int check_prefs_changed_gfx()
 			vkbd_quit();
 		}
 	}
+
+	// On-screen joystick
+	if (currprefs.onscreen_joystick != changed_prefs.onscreen_joystick)
+	{
+		currprefs.onscreen_joystick = changed_prefs.onscreen_joystick;
+		if (currprefs.onscreen_joystick)
+		{
+			AmigaMonitor* mon = &AMonitors[0];
+			on_screen_joystick_init(mon->amiga_renderer);
+			int sw = 0, sh = 0;
+			SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+			on_screen_joystick_update_layout(sw, sh, render_quad);
+			on_screen_joystick_set_enabled(true);
+		}
+		else
+		{
+			on_screen_joystick_set_enabled(false);
+			on_screen_joystick_quit();
+		}
+	}
 #endif
 
 	if (changed_prefs.rtgboards[0].rtgmem_type != currprefs.rtgboards[0].rtgmem_type)
@@ -4752,6 +4779,16 @@ static bool doInit(AmigaMonitor* mon)
 		vkbd_set_language(string(currprefs.vkbd_language));
 		vkbd_set_style(string(currprefs.vkbd_style));
 		vkbd_init();
+	}
+
+	// Initialize on-screen joystick if enabled
+	if (currprefs.onscreen_joystick)
+	{
+		on_screen_joystick_init(mon->amiga_renderer);
+		int sw = 0, sh = 0;
+		SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+		on_screen_joystick_update_layout(sw, sh, render_quad);
+		on_screen_joystick_set_enabled(true);
 	}
 
 	return true;
