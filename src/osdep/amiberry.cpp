@@ -1713,30 +1713,6 @@ static void handle_controller_button_event(const SDL_Event& event)
 	const auto button = event.cbutton.button;
 	const auto state = event.cbutton.state == SDL_PRESSED;
 
-#ifdef __ANDROID__
-	// Check for Android Back Button (often mapped as Button 1/B on "qwerty2" or similar virtual devices)
-	// We check the name "qwerty2" or the specific GUID to be safe.
-	bool is_virtual_back_button = false;
-	
-	// Check GUID first as it's more reliable
-	char guid_str[33];
-    SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(SDL_JoystickFromInstanceID(event.cbutton.which)), guid_str, sizeof(guid_str));
-	if (strcmp(guid_str, "0500c8dc270600000100000051780000") == 0) {
-		is_virtual_back_button = true;
-	} else {
-		// Fallback to name check if GUID varies (though GUID should be constant for this emulator device)
-		auto* gc = SDL_GameControllerFromInstanceID(event.cbutton.which);
-		if (gc && strcmp(SDL_GameControllerName(gc), "qwerty2") == 0) {
-			is_virtual_back_button = true;
-		}
-	}
-
-	if (is_virtual_back_button && button == 1) { // SDL_CONTROLLER_BUTTON_B
-		// This is the Android Back button
-		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
-	}
-#endif
-
 	if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
 	}
@@ -1863,6 +1839,16 @@ static void handle_key_event(const SDL_Event& event)
 
 	if (event.key.repeat != 0 || !focus_level)
 		return;
+
+#ifdef __ANDROID__
+	// Android back button opens GUI on physical devices
+	if (scancode == SDL_SCANCODE_AC_BACK) {
+		if (pressed) {
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+		}
+		return;
+	}
+#endif
 
 	if (key_swap_hack == 1) {
 		if (scancode == SDL_SCANCODE_F11) {
@@ -5521,6 +5507,12 @@ int main(int argc, char* argv[]) {
 	// Enable native IME for international text input (SDL 2.0.18+)
 #ifdef SDL_HINT_IME_SHOW_UI
 	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
+#endif
+
+#ifdef __ANDROID__
+	// Trap the Android back button so SDL delivers it as SDL_SCANCODE_AC_BACK
+	// instead of letting the system handle it (which would exit/minimize the app)
+	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
 #endif
 
 	(void)atexit(SDL_Quit);
