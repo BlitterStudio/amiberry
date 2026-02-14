@@ -52,6 +52,7 @@ extern PFNGLUNIFORM1IPROC glp_Uniform1i;
 extern PFNGLUNIFORM1FPROC glp_Uniform1f;
 extern PFNGLUNIFORM2FPROC glp_Uniform2f;
 extern PFNGLUNIFORM3FPROC glp_Uniform3f;
+extern PFNGLUNIFORM4FPROC glp_Uniform4f;
 extern PFNGLUNIFORMMATRIX4FVPROC glp_UniformMatrix4fv;
 extern PFNGLACTIVETEXTUREPROC glp_ActiveTexture;
 extern PFNGLENABLEVERTEXATTRIBARRAYPROC glp_EnableVertexAttribArray;
@@ -95,6 +96,7 @@ extern PFNGLGENERATEMIPMAPPROC glp_GenerateMipmap;
 #define glUniform1f glp_Uniform1f
 #define glUniform2f glp_Uniform2f
 #define glUniform3f glp_Uniform3f
+#define glUniform4f glp_Uniform4f
 #define glUniformMatrix4fv glp_UniformMatrix4fv
 #define glActiveTexture glp_ActiveTexture
 #define glEnableVertexAttribArray glp_EnableVertexAttribArray

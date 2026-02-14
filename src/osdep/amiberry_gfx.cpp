@@ -2369,6 +2369,11 @@ void show_screen(const int monid, int mode)
 	render_software_cursor_gl(monid, destX, destY, destW, destH);
 	render_osd(monid, destX, destY, destW, destH);
 
+	if (vkbd_allowed(monid))
+	{
+		vkbd_redraw_gl(drawableWidth, drawableHeight);
+	}
+
 	if (on_screen_joystick_is_enabled())
 	{
 		on_screen_joystick_redraw_gl(drawableWidth, drawableHeight, render_quad);
@@ -3527,12 +3532,14 @@ int check_prefs_changed_gfx()
 			vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
 			vkbd_set_language(string(currprefs.vkbd_language));
 			vkbd_set_style(string(currprefs.vkbd_style));
+			vkbd_key = get_hotkey_from_config(string(currprefs.vkbd_toggle));
 			vkbd_button = SDL_GameControllerGetButtonFromString(currprefs.vkbd_toggle);
 			if (vkbd_allowed(0))
 				vkbd_init();
 		}
 		else
 		{
+			vkbd_key = {};
 			vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 			vkbd_quit();
 		}
@@ -5387,6 +5394,11 @@ void auto_crop_image()
 				crop_rect.w = amiga_surface->w - crop_rect.x;
 			if (crop_rect.h <= 0 || crop_rect.y + crop_rect.h > amiga_surface->h)
 				crop_rect.h = amiga_surface->h - crop_rect.y;
+		}
+
+		if (vkbd_allowed(0))
+		{
+			vkbd_update_position_from_texture();
 		}
 #else
 		SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);

@@ -3,6 +3,10 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#ifdef USE_OPENGL
+#include "gl_platform.h"
+#endif
+
 #include "vkbd.h"
 #include "keyboard.h"
 #include "sysdeps.h"
@@ -43,8 +47,30 @@ static std::chrono::time_point<std::chrono::system_clock> vkbdTimeLastRedraw;
 static std::map<int, int> vkbdStickyKeyToIndex;
 static std::set<int> vkbdPressedStickyKeys;
 static std::set<int> vkbdStickyKeys;
+#ifdef USE_OPENGL
+// GL textures for keyboard rendering
+static GLuint vkbdGLTexture = 0;
+static GLuint vkbdGLTextureShift = 0;
+static int vkbdGLTexWidth = 0;
+static int vkbdGLTexHeight = 0;
+// GL shader resources (simple textured quad with alpha)
+static GLuint vkbd_gl_program = 0;
+static GLint vkbd_gl_tex_loc = -1;
+static GLint vkbd_gl_alpha_loc = -1;
+static GLint vkbd_gl_color_loc = -1;
+static GLint vkbd_gl_mode_loc = -1;
+static GLuint vkbd_gl_vao = 0;
+static GLuint vkbd_gl_vbo = 0;
+// Keep surfaces around for GL texture upload
+static SDL_Surface* vkbdSurface = nullptr;
+static SDL_Surface* vkbdSurfaceShift = nullptr;
+// Coordinate space dimensions used by position system (for scaling to drawable)
+static int vkbdPositionSpaceW = 0;
+static int vkbdPositionSpaceH = 0;
+#else
 static SDL_Texture* vkbdTexture = nullptr;
 static SDL_Texture* vkbdTextureShift = nullptr;
+#endif
 
 static VkbdRect* vkbdRect;
 
@@ -651,7 +677,239 @@ static SDL_Surface* vkbd_concat_surfaces(SDL_Surface* keyboard, SDL_Surface* exi
 }
 
 #ifdef USE_OPENGL
-	//TODO needs implementation
+// Vertex shader: passes position and texture coordinates through
+static const char* vkbd_vs_source =
+	"attribute vec4 pos;\n"
+	"varying vec2 uv;\n"
+	"void main() {\n"
+	"  gl_Position = vec4(pos.xy, 0.0, 1.0);\n"
+	"  uv = pos.zw;\n"
+	"}\n";
+
+// Fragment shader: mode 0 = textured quad with alpha, mode 1 = solid color
+static const char* vkbd_fs_source =
+	"varying vec2 uv;\n"
+	"uniform sampler2D tex0;\n"
+	"uniform float alpha;\n"
+	"uniform vec4 fillColor;\n"
+	"uniform int mode;\n"
+	"void main() {\n"
+	"  if (mode == 1) {\n"
+	"    gl_FragColor = fillColor;\n"
+	"  } else {\n"
+	"    vec4 c = texture2D(tex0, uv);\n"
+	"    gl_FragColor = vec4(c.rgb, c.a * alpha);\n"
+	"  }\n"
+	"}\n";
+
+static bool init_vkbd_gl_shader()
+{
+	if (vkbd_gl_program != 0 && glIsProgram(vkbd_gl_program)) return true;
+
+	vkbd_gl_program = 0;
+
+	const char* gl_ver_str = (const char*)glGetString(GL_VERSION);
+	bool is_gles = gl_ver_str && (strstr(gl_ver_str, "OpenGL ES") != nullptr);
+	int major = 0, minor = 0;
+	if (gl_ver_str) {
+		const char* v = gl_ver_str;
+		while (*v && (*v < '0' || *v > '9')) v++;
+		if (*v) {
+			major = atoi(v);
+			while (*v && *v != '.') v++;
+			if (*v == '.') { v++; minor = atoi(v); }
+		}
+	}
+
+	const char* vs_preamble = "#version 120\n";
+	const char* fs_preamble = "#version 120\n";
+
+	if (is_gles && major >= 3) {
+		vs_preamble = "#version 300 es\nprecision mediump float;\n#define attribute in\n#define varying out\n";
+		fs_preamble = "#version 300 es\nprecision mediump float;\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	}
+	else if (!is_gles && (major > 3 || (major == 3 && minor >= 2))) {
+		vs_preamble = "#version 330 core\n#define attribute in\n#define varying out\n";
+		fs_preamble = "#version 330 core\nprecision mediump int;\n#define varying in\n#define texture2D texture\n#define gl_FragColor outFragColor\nout vec4 outFragColor;\n";
+	}
+
+	GLuint vsh = glCreateShader(GL_VERTEX_SHADER);
+	const char* vs_sources[] = { vs_preamble, vkbd_vs_source };
+	glShaderSource(vsh, 2, vs_sources, nullptr);
+	glCompileShader(vsh);
+
+	GLint compiled;
+	glGetShaderiv(vsh, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
+		char log[512];
+		glGetShaderInfoLog(vsh, 512, nullptr, log);
+		write_log("VKBD GL vertex shader error: %s\n", log);
+		glDeleteShader(vsh);
+		return false;
+	}
+
+	GLuint fsh = glCreateShader(GL_FRAGMENT_SHADER);
+	const char* fs_sources[] = { fs_preamble, vkbd_fs_source };
+	glShaderSource(fsh, 2, fs_sources, nullptr);
+	glCompileShader(fsh);
+	glGetShaderiv(fsh, GL_COMPILE_STATUS, &compiled);
+	if (!compiled) {
+		char log[512];
+		glGetShaderInfoLog(fsh, 512, nullptr, log);
+		write_log("VKBD GL fragment shader error: %s\n", log);
+		glDeleteShader(vsh);
+		glDeleteShader(fsh);
+		return false;
+	}
+
+	vkbd_gl_program = glCreateProgram();
+	glAttachShader(vkbd_gl_program, vsh);
+	glAttachShader(vkbd_gl_program, fsh);
+	glBindAttribLocation(vkbd_gl_program, 0, "pos");
+	glLinkProgram(vkbd_gl_program);
+
+	GLint linked;
+	glGetProgramiv(vkbd_gl_program, GL_LINK_STATUS, &linked);
+	if (!linked) {
+		char log[512];
+		glGetProgramInfoLog(vkbd_gl_program, 512, nullptr, log);
+		write_log("VKBD GL program link error: %s\n", log);
+		glDeleteProgram(vkbd_gl_program);
+		vkbd_gl_program = 0;
+		glDeleteShader(vsh);
+		glDeleteShader(fsh);
+		return false;
+	}
+
+	glDeleteShader(vsh);
+	glDeleteShader(fsh);
+
+	vkbd_gl_tex_loc = glGetUniformLocation(vkbd_gl_program, "tex0");
+	vkbd_gl_alpha_loc = glGetUniformLocation(vkbd_gl_program, "alpha");
+	vkbd_gl_color_loc = glGetUniformLocation(vkbd_gl_program, "fillColor");
+	vkbd_gl_mode_loc = glGetUniformLocation(vkbd_gl_program, "mode");
+
+	if (vkbd_gl_vao == 0) glGenVertexArrays(1, &vkbd_gl_vao);
+	if (vkbd_gl_vbo == 0) glGenBuffers(1, &vkbd_gl_vbo);
+
+	return true;
+}
+
+static GLuint vkbd_upload_surface_to_gl(SDL_Surface* surface)
+{
+	if (!surface) return 0;
+
+	// Convert to RGBA32 if needed
+	SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+	if (!rgba) return 0;
+
+	GLuint tex = 0;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, rgba->w, rgba->h, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, rgba->pixels);
+
+	SDL_FreeSurface(rgba);
+	return tex;
+}
+
+static void vkbd_render_gl_quad(GLuint texture, const SDL_Rect& rect,
+	int drawable_w, int drawable_h, float alpha_val)
+{
+	if (!texture || drawable_w <= 0 || drawable_h <= 0) return;
+
+	// Convert screen rect to NDC. Screen Y=0 is top, GL Y=0 is bottom.
+	float x0 = (2.0f * rect.x / drawable_w) - 1.0f;
+	float x1 = (2.0f * (rect.x + rect.w) / drawable_w) - 1.0f;
+	float y0 = 1.0f - (2.0f * (rect.y + rect.h) / drawable_h);
+	float y1 = 1.0f - (2.0f * rect.y / drawable_h);
+
+	GLfloat vertices[] = {
+		x0, y0, 0.0f, 1.0f,
+		x1, y0, 1.0f, 1.0f,
+		x1, y1, 1.0f, 0.0f,
+		x0, y1, 0.0f, 0.0f,
+	};
+
+	if (vkbd_gl_mode_loc != -1) glUniform1i(vkbd_gl_mode_loc, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	if (vkbd_gl_tex_loc != -1) glUniform1i(vkbd_gl_tex_loc, 0);
+	if (vkbd_gl_alpha_loc != -1) glUniform1f(vkbd_gl_alpha_loc, alpha_val);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vkbd_gl_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
+static void vkbd_render_gl_filled_rect(const SDL_Rect& rect,
+	int drawable_w, int drawable_h, float r, float g, float b, float a)
+{
+	if (drawable_w <= 0 || drawable_h <= 0) return;
+
+	float x0 = (2.0f * rect.x / drawable_w) - 1.0f;
+	float x1 = (2.0f * (rect.x + rect.w) / drawable_w) - 1.0f;
+	float y0 = 1.0f - (2.0f * (rect.y + rect.h) / drawable_h);
+	float y1 = 1.0f - (2.0f * rect.y / drawable_h);
+
+	GLfloat vertices[] = {
+		x0, y0, 0.0f, 0.0f,
+		x1, y0, 0.0f, 0.0f,
+		x1, y1, 0.0f, 0.0f,
+		x0, y1, 0.0f, 0.0f,
+	};
+
+	if (vkbd_gl_mode_loc != -1) glUniform1i(vkbd_gl_mode_loc, 1);
+	if (vkbd_gl_color_loc != -1) glUniform4f(vkbd_gl_color_loc, r, g, b, a);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vkbd_gl_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STREAM_DRAW);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}
+
+static void cleanup_vkbd_gl()
+{
+	if (vkbdGLTexture) { glDeleteTextures(1, &vkbdGLTexture); vkbdGLTexture = 0; }
+	if (vkbdGLTextureShift) { glDeleteTextures(1, &vkbdGLTextureShift); vkbdGLTextureShift = 0; }
+	if (vkbd_gl_vbo) { glDeleteBuffers(1, &vkbd_gl_vbo); vkbd_gl_vbo = 0; }
+	if (vkbd_gl_vao) { glDeleteVertexArrays(1, &vkbd_gl_vao); vkbd_gl_vao = 0; }
+	if (vkbd_gl_program) { glDeleteProgram(vkbd_gl_program); vkbd_gl_program = 0; }
+	if (vkbdSurface) { SDL_FreeSurface(vkbdSurface); vkbdSurface = nullptr; }
+	if (vkbdSurfaceShift) { SDL_FreeSurface(vkbdSurfaceShift); vkbdSurfaceShift = nullptr; }
+	vkbdGLTexWidth = 0;
+	vkbdGLTexHeight = 0;
+}
+
+static SDL_Surface* vkbd_create_keyboard_combined_surface(bool shift)
+{
+	const auto keyboard = vkbd_create_keyboard_surface(shift);
+	if (keyboard == nullptr) return nullptr;
+
+	SDL_Surface* surf;
+	if (vkbdKeyboardHasExitButton)
+	{
+		const auto exit = vkbd_create_exit_button_surface();
+		if (exit == nullptr)
+		{
+			SDL_FreeSurface(keyboard);
+			return nullptr;
+		}
+		surf = vkbd_concat_surfaces(keyboard, exit);
+		SDL_FreeSurface(exit);
+		if (surf == nullptr) return nullptr;
+	}
+	else
+	{
+		surf = keyboard;
+	}
+	return surf;
+}
 #else
 static SDL_Texture* vkbd_create_keyboard_texture(bool shift)
 {
@@ -705,14 +963,35 @@ static int vkbd_find_index(int key)
 void vkbd_update_position_from_texture()
 {
 	int width, height;
+#ifdef USE_OPENGL
+	width = vkbdGLTexWidth;
+	height = vkbdGLTexHeight;
+	if (width <= 0 || height <= 0) return;
+#else
 	SDL_QueryTexture(vkbdTexture, nullptr, nullptr, &width, &height);
+#endif
 	int renderedWidth = crop_rect.w, rendererHeight = crop_rect.h;
+
+#ifdef USE_OPENGL
+	// In OpenGL mode, crop_rect may not be set yet at init time.
+	// Skip until auto_crop_image() establishes valid crop_rect dimensions.
+	if (renderedWidth <= 0 || rendererHeight <= 0) return;
+	vkbdPositionSpaceW = renderedWidth;
+	vkbdPositionSpaceH = rendererHeight;
+#endif
 
 	vkbdEndX = (renderedWidth - width) / 2;
 	vkbdEndY = rendererHeight - height;
 
 	vkbdStartX = (renderedWidth - width) / 2;
 	vkbdStartY = rendererHeight;
+
+	// Initialize current position to start (hidden) if not currently showing
+	if (!vkbdShow)
+	{
+		vkbdCurrentX = vkbdStartX;
+		vkbdCurrentY = vkbdStartY;
+	}
 }
 
 void vkbd_update(bool createTextures)
@@ -733,7 +1012,43 @@ void vkbd_update(bool createTextures)
 		break;
 	}
 #ifdef USE_OPENGL
-	//TODO needs implementation
+	if (createTextures || vkbdSurface != nullptr)
+	{
+		if (vkbdSurface != nullptr)
+		{
+			SDL_FreeSurface(vkbdSurface);
+		}
+		if (vkbdGLTexture != 0)
+		{
+			glDeleteTextures(1, &vkbdGLTexture);
+			vkbdGLTexture = 0;
+		}
+		vkbdSurface = vkbd_create_keyboard_combined_surface(false);
+		if (vkbdSurface)
+		{
+			vkbdGLTexWidth = vkbdSurface->w;
+			vkbdGLTexHeight = vkbdSurface->h;
+		}
+	}
+
+	if (createTextures || vkbdSurfaceShift != nullptr)
+	{
+		if (vkbdSurfaceShift != nullptr)
+		{
+			SDL_FreeSurface(vkbdSurfaceShift);
+		}
+		if (vkbdGLTextureShift != 0)
+		{
+			glDeleteTextures(1, &vkbdGLTextureShift);
+			vkbdGLTextureShift = 0;
+		}
+		vkbdSurfaceShift = vkbd_create_keyboard_combined_surface(true);
+	}
+
+	if (createTextures)
+	{
+		vkbd_update_position_from_texture();
+	}
 #else
 	if (createTextures || vkbdTexture != nullptr)
 	{
@@ -879,15 +1194,21 @@ void vkbd_init()
 
 void vkbd_quit()
 {
+#ifdef USE_OPENGL
+	cleanup_vkbd_gl();
+#else
 	if (vkbdTexture != nullptr)
 	{
 		SDL_DestroyTexture(vkbdTexture);
+		vkbdTexture = nullptr;
 	}
 
 	if (vkbdTextureShift != nullptr)
 	{
-		SDL_DestroyTexture(vkbdTexture);
+		SDL_DestroyTexture(vkbdTextureShift);
+		vkbdTextureShift = nullptr;
 	}
+#endif
 }
 
 static const VkbdRect& vkbd_get_key_rect(int index)
@@ -912,13 +1233,18 @@ static SDL_Rect vkbd_get_key_drawing_rect(int index)
 	return rect;
 }
 
+static bool vkbd_is_shift_pressed()
+{
+	return vkbdPressedStickyKeys.find(AK_LSH) != vkbdPressedStickyKeys.end() ||
+		vkbdPressedStickyKeys.find(AK_RSH) != vkbdPressedStickyKeys.end();
+}
+
+#ifndef USE_OPENGL
 static SDL_Texture* vkbd_get_texture_to_draw()
 {
-	const bool shiftPressed = vkbdPressedStickyKeys.find(AK_LSH) != vkbdPressedStickyKeys.end() ||
-		vkbdPressedStickyKeys.find(AK_RSH) != vkbdPressedStickyKeys.end();
-	SDL_Texture* toDraw = shiftPressed ? vkbdTextureShift : vkbdTexture;
-	return toDraw;
+	return vkbd_is_shift_pressed() ? vkbdTextureShift : vkbdTexture;
 }
+#endif
 
 static void vkbd_update_current_xy()
 {
@@ -942,16 +1268,126 @@ static void vkbd_update_current_xy()
 	vkbdCurrentY = std::min(maxY, vkbdCurrentY);
 }
 
-void vkbd_redraw()
+#ifdef USE_OPENGL
+// Scale an SDL_Rect from vkbd position coordinate space to drawable pixel space
+static SDL_Rect vkbd_scale_rect(const SDL_Rect& r, float sx, float sy)
 {
-	AmigaMonitor* mon = &AMonitors[0];
+	return {
+		static_cast<int>(r.x * sx),
+		static_cast<int>(r.y * sy),
+		static_cast<int>(r.w * sx),
+		static_cast<int>(r.h * sy)
+	};
+}
 
-	if (!vkbdShow || (vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY))
+void vkbd_redraw_gl(int drawable_w, int drawable_h)
+{
+	if (!vkbdShow && (vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY))
 	{
 		return;
 	}
 
 	vkbd_update_current_xy();
+
+	// After animation update, check if fully hidden
+	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)
+	{
+		return;
+	}
+
+	// Determine which surface/texture to use
+	const bool shiftPressed = vkbd_is_shift_pressed();
+	SDL_Surface* surf = shiftPressed ? vkbdSurfaceShift : vkbdSurface;
+	GLuint* gl_tex = shiftPressed ? &vkbdGLTextureShift : &vkbdGLTexture;
+
+	if (surf == nullptr) return;
+
+	// Lazy-init GL shader
+	if (!init_vkbd_gl_shader()) return;
+
+	// Upload surface to GL texture on first use (or after recreation)
+	if (*gl_tex == 0)
+	{
+		*gl_tex = vkbd_upload_surface_to_gl(surf);
+		if (*gl_tex == 0) return;
+	}
+
+	// Compute scale factor from position coordinate space to drawable pixels.
+	// The position system uses crop_rect dimensions at the time
+	// vkbd_update_position_from_texture() was called.
+	// Skip rendering if position space hasn't been established yet.
+	if (vkbdPositionSpaceW <= 0 || vkbdPositionSpaceH <= 0) return;
+	const float scaleX = static_cast<float>(drawable_w) / vkbdPositionSpaceW;
+	const float scaleY = static_cast<float>(drawable_h) / vkbdPositionSpaceH;
+
+	int w = surf->w;
+	int h = surf->h;
+	SDL_Rect rect;
+	rect.x = vkbdCurrentX;
+	rect.y = vkbdCurrentY;
+	rect.w = w;
+	rect.h = h;
+	rect = vkbd_scale_rect(rect, scaleX, scaleY);
+
+	// Set up GL state for overlay rendering
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_SCISSOR_TEST);
+	glViewport(0, 0, drawable_w, drawable_h);
+
+	glUseProgram(vkbd_gl_program);
+	glBindVertexArray(vkbd_gl_vao);
+	glEnableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+
+	// Render keyboard texture
+	const float alpha = static_cast<float>(vkbdAlpha) / 255.0f;
+	vkbd_render_gl_quad(*gl_tex, rect, drawable_w, drawable_h, alpha);
+
+	// Draw currently selected key highlight
+	const float keyAlpha = static_cast<float>((1.0 - vkbdTransparency) * vkbdPressedKeyColor.a) / 255.0f;
+	rect = vkbd_scale_rect(vkbd_get_key_drawing_rect(vkbdActualIndex), scaleX, scaleY);
+	vkbd_render_gl_filled_rect(rect, drawable_w, drawable_h,
+		vkbdPressedKeyColor.r / 255.0f, vkbdPressedKeyColor.g / 255.0f,
+		vkbdPressedKeyColor.b / 255.0f, keyAlpha);
+
+	// Draw sticky keys
+	for (auto key : vkbdPressedStickyKeys)
+	{
+		const auto index = vkbdStickyKeyToIndex[key];
+		rect = vkbd_scale_rect(vkbd_get_key_drawing_rect(index), scaleX, scaleY);
+		vkbd_render_gl_filled_rect(rect, drawable_w, drawable_h,
+			vkbdPressedKeyColor.r / 255.0f, vkbdPressedKeyColor.g / 255.0f,
+			vkbdPressedKeyColor.b / 255.0f, keyAlpha);
+	}
+
+	// Restore GL state
+	glDisableVertexAttribArray(0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glDisable(GL_BLEND);
+	glUseProgram(0);
+}
+#endif
+
+void vkbd_redraw()
+{
+#ifndef USE_OPENGL
+	AmigaMonitor* mon = &AMonitors[0];
+
+	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)
+	{
+		return;
+	}
+
+	vkbd_update_current_xy();
+
+	// After animation update, check if fully hidden
+	if (!vkbdShow && vkbdCurrentX == vkbdStartX && vkbdCurrentY == vkbdStartY)
+	{
+		return;
+	}
 
 	SDL_Texture* toDraw = vkbd_get_texture_to_draw();
 
@@ -969,9 +1405,6 @@ void vkbd_redraw()
 	rect.w = w;
 	rect.h = h;
 
-#ifdef USE_OPENGL
-	//TODO needs implementation
-#else
 	SDL_SetRenderDrawBlendMode(mon->amiga_renderer, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(toDraw, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureAlphaMod(toDraw, vkbdAlpha);

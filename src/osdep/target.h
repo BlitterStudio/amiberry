@@ -83,6 +83,7 @@ extern void activationtoggle(int monid, bool inactiveonly);
 extern bool create_screenshot();
 extern int save_thumb(const std::string& path);
 
+extern amiberry_hotkey get_hotkey_from_config(const std::string& config_option);
 extern amiberry_hotkey enter_gui_key;
 extern SDL_GameControllerButton enter_gui_button;
 extern amiberry_hotkey quit_key;
@@ -91,6 +92,7 @@ extern amiberry_hotkey fullscreen_key;
 extern amiberry_hotkey minimize_key;
 extern amiberry_hotkey left_amiga_key;
 extern amiberry_hotkey right_amiga_key;
+extern amiberry_hotkey vkbd_key;
 
 extern int emulating;
 extern bool config_loaded;

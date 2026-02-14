@@ -150,6 +150,7 @@ amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
 amiberry_hotkey left_amiga_key;
 amiberry_hotkey right_amiga_key;
+amiberry_hotkey vkbd_key;
 SDL_GameControllerButton vkbd_button;
 
 bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, rshift_pressed, lgui_pressed, rgui_pressed;
@@ -202,7 +203,7 @@ std::vector<int> parse_color_string(const std::string& input)
 	return result;
 }
 
-static amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
+amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 {
 	amiberry_hotkey hotkey = {};
 
@@ -221,6 +222,7 @@ static amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 	};
 
 	static const std::unordered_map<std::string, const char*> sdl2_name_map = {
+		// Modifier keys (ImGui short names → SDL2 names)
 		{"LCtrl", "Left Ctrl"},
 		{"RCtrl", "Right Ctrl"},
 		{"LAlt", "Left Alt"},
@@ -228,7 +230,38 @@ static amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 		{"LShift", "Left Shift"},
 		{"RShift", "Right Shift"},
 		{"LGUI", "Left GUI"},
-		{"RGUI", "Right GUI"}
+		{"RGUI", "Right GUI"},
+		// ImGui full names → SDL2 names (from ImGui::GetKeyName)
+		{"LeftCtrl", "Left Ctrl"},
+		{"RightCtrl", "Right Ctrl"},
+		{"LeftAlt", "Left Alt"},
+		{"RightAlt", "Right Alt"},
+		{"LeftShift", "Left Shift"},
+		{"RightShift", "Right Shift"},
+		{"LeftSuper", "Left GUI"},
+		{"RightSuper", "Right GUI"},
+		// Arrow keys
+		{"LeftArrow", "Left"},
+		{"RightArrow", "Right"},
+		{"UpArrow", "Up"},
+		{"DownArrow", "Down"},
+		// Punctuation / symbol keys
+		{"Equal", "="},
+		{"Minus", "-"},
+		{"Comma", ","},
+		{"Period", "."},
+		{"Slash", "/"},
+		{"Backslash", "\\"},
+		{"Semicolon", ";"},
+		{"Apostrophe", "'"},
+		{"GraveAccent", "`"},
+		{"LeftBracket", "["},
+		{"RightBracket", "]"},
+		// Misc keys
+		{"Enter", "Return"},
+		{"NumLock", "Numlock"},
+		{"ScrollLock", "ScrollLock"},
+		{"PrintScreen", "PrintScreen"},
 	};
 
 	// Parse tokens more efficiently without modifying the original string
@@ -312,6 +345,11 @@ static void set_key_configs(const uae_prefs* p)
 
 	if (strncmp(p->right_amiga, "", 1) != 0)
 		right_amiga_key = get_hotkey_from_config(p->right_amiga);
+
+	if (strncmp(p->vkbd_toggle, "", 1) != 0)
+		vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
+	else
+		vkbd_key = get_hotkey_from_config(amiberry_options.default_vkbd_toggle);
 
 	vkbd_button = SDL_GameControllerGetButtonFromString(p->vkbd_toggle);
 	if (vkbd_button == SDL_CONTROLLER_BUTTON_INVALID)
