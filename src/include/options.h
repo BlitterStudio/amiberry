@@ -1357,7 +1357,11 @@ struct amiberry_options
 	bool disable_shutdown_button = true;
 	bool allow_display_settings_from_xml = true;
 	int default_soundcard = 0;
-	bool default_onscreen_joystick;
+#ifdef __ANDROID__
+	bool default_onscreen_joystick = true;
+#else
+	bool default_onscreen_joystick = false;
+#endif
 	bool default_vkbd_enabled;
 	bool default_vkbd_hires;
 	bool default_vkbd_exit;
