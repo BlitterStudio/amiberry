@@ -19,6 +19,7 @@
 #include "sysdeps.h"
 #include "inputdevice.h"
 #include "options.h"
+#include "amiberry_gfx.h"
 
 // ---------------------------------------------------------------------------
 // Configuration constants
@@ -649,6 +650,23 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 {
 	if (!osj_enabled || !osj_initialized) return;
 	if (!dpad_tex || !btn1_tex || !btn2_tex) return;
+
+	// Auto-recalculate layout when screen geometry changes.
+	// render_quad is updated by the core renderer whenever the Amiga display
+	// size or scaling changes, so we detect that here and re-layout.
+	{
+		int sw = 0, sh = 0;
+		SDL_GetRendererOutputSize(renderer, &sw, &sh);
+		if (sw > 0 && sh > 0 && render_quad.w > 0 && render_quad.h > 0) {
+			if (sw != screen_w || sh != screen_h ||
+				render_quad.x != cached_game_rect.x || render_quad.y != cached_game_rect.y ||
+				render_quad.w != cached_game_rect.w || render_quad.h != cached_game_rect.h)
+			{
+				on_screen_joystick_update_layout(sw, sh, render_quad);
+				cached_game_rect = render_quad;
+			}
+		}
+	}
 
 	// D-pad
 	{
