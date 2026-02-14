@@ -143,6 +143,31 @@ amiberry/
 - `src/custom.cpp` - Amiga custom chip emulation
 - `src/newcpu.cpp` - 68000 CPU emulation
 - `src/memory.cpp` - Memory management
+- `src/osdep/amiberry_mem.cpp` - Natmem shared memory mapping and gap management
+- `src/osdep/sigsegv_handler.cpp` - SIGSEGV handler for JIT code faults
+- `src/vm.cpp` - Virtual memory abstraction (reserve/commit/decommit)
+
+### Natmem / JIT Memory System
+
+The emulator maps Amiga's address space into a contiguous host virtual memory block ("natmem") for direct pointer-based access from both the JIT compiler and interpreter (`canbang` mode).
+
+**Architecture:**
+- `uae_vm_reserve()` reserves a large block (up to 2GB) with `PROT_NONE` (no access)
+- Individual memory banks (Chip RAM, ROMs, Z3 RAM, RTG VRAM) are committed via `uae_vm_commit()` during `memory_reset()`
+- JIT-compiled code and interpreter access emulated memory as `natmem_offset + M68k_address` — direct dereference, no bank lookup
+- `shmids[]` array (MAX_SHMID=256) tracks all committed regions
+
+**Gap handling (`commit_natmem_gaps()`):**
+Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and Kickstart ROM) would cause SIGSEGV on access. After all banks are mapped, `commit_natmem_gaps()` walks the natmem space and commits any remaining gaps with the correct fill value (zero or 0xFF based on `cs_unmapped_space`). This is called at the end of `memory_reset()` behind `#ifdef NATMEM_OFFSET`.
+
+**Key variables** (in `amiberry_mem.cpp`):
+- `natmem_reserved` — base pointer of reserved block
+- `natmem_reserved_size` — total size of reserved block
+- `natmem_offset` — pointer used for M68k address translation (may differ from `natmem_reserved` when RTG VRAM is offset)
+- `canbang` — flag indicating direct natmem access is active
+
+**SIGSEGV handler** (`sigsegv_handler.cpp`):
+When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR instruction and emulates the access via bank handlers. Faults outside JIT code range are not recovered.
 
 ### GUI System
 

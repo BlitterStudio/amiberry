@@ -3,18 +3,21 @@ name: amiberry-jit-fix
 description: >
   ARM64 JIT compiler fixes for Amiberry (GitHub issue #1766). This skill captures the complete
   technical knowledge from 20+ debugging sessions that identified and fixed: (a) a page 0 DMA
-  corruption crash during A1200 Kickstart boot, and (b) visual corruption (black gadgets, garbled
-  text) caused by incorrect inter-block flag optimization. Use this skill when working on:
+  corruption crash during A1200 Kickstart boot, (b) visual corruption (black gadgets, garbled
+  text) caused by incorrect inter-block flag optimization, and (c) SIGSEGV crashes on unmapped
+  natmem gaps (e.g., 0x00F10000) in complex configs with hardfiles/RTG. Use this skill when working on:
   (1) the JIT_DEBUG_MEM_CORRUPTION code in compemu_support_arm.cpp or newcpu.cpp,
   (2) the page 0 DMA guard mechanism (mprotect/SIGSEGV/BRK single-step),
   (3) any ARM64 JIT register width bugs (64-bit vs 32-bit instruction selection),
   (4) any crash or exception cascade during A1200 boot with JIT enabled,
   (5) 68040 JIT mode issues on ARM64,
-  (6) the inter-block flag optimization bug and its fix (dont_care_flags at block boundaries).
+  (6) the inter-block flag optimization bug and its fix (dont_care_flags at block boundaries),
+  (7) natmem gap crashes and the commit_natmem_gaps() fix in amiberry_mem.cpp.
   MANDATORY TRIGGERS: JIT crash, page 0, DMA guard, vec2, exception vector corruption,
   blitter DMA, mprotect, SIGSEGV handler, BRK single-step, ARM64 JIT, Kickstart boot,
   visual corruption, black gadgets, garbled ROM version, compemu_support_arm,
-  JIT_DEBUG_MEM_CORRUPTION, inter-block flag, dont_care_flags, 68040 JIT.
+  JIT_DEBUG_MEM_CORRUPTION, inter-block flag, dont_care_flags, 68040 JIT,
+  natmem gap, unmapped region, commit_natmem_gaps, 0x00F10000, canbang, PROT_NONE.
 ---
 
 # Amiberry ARM64 JIT Crash Fix — Session Knowledge
@@ -23,6 +26,7 @@ description: >
 
 **Crash fix: SOLVED (v43-clean).** System boots to Workbench and runs SysInfo without crash.
 **Visual corruption: SOLVED.** Caused by inter-block flag optimization in compile_block() — disabled with `#if 0`.
+**Natmem gap crash: SOLVED.** Complex configs (hardfiles, RTG, etc.) crashed at unmapped natmem gaps — fixed by `commit_natmem_gaps()`.
 **68040 JIT: NOT YET TESTED.** The above fixes are confirmed for 68020 JIT. 68040 mode may have additional issues.
 
 ## Root Cause (Crash)
@@ -120,6 +124,39 @@ See [references/visual-corruption-investigation.md](references/visual-corruption
 
 See [references/technical-details.md](references/technical-details.md) for signal handler implementation, BRK mechanism, DMA vs CPU write distinction, byte order handling, and ARM64 register width fix patterns.
 
+## Natmem Gap Crash (SOLVED)
+
+### Root Cause
+Complex configs (A4000, 68060/040/020, JIT+FPU, hardfiles, RTG) crashed with SIGSEGV at M68k addresses
+in unmapped natmem gaps (e.g., 0x00F10000 — a 448K gap between UAE Boot ROM at 0x00F00000 and
+Kickstart ROM at 0x00F80000). The natmem block is reserved with `PROT_NONE` (2GB), and only actual
+memory banks get committed. Gaps between banks remain uncommitted, causing faults when both JIT-compiled
+code and the interpreter (in `canbang`/direct mode) access natmem directly.
+
+The existing SIGSEGV handler (`sigsegv_handler.cpp`) only handles faults inside JIT code range. Faults
+from interpreter code (outside JIT range) are not recovered — they trigger `max_signals` countdown and crash.
+
+### Fix
+`commit_natmem_gaps()` in `src/osdep/amiberry_mem.cpp` — called at end of `memory_reset()` in `src/memory.cpp`.
+After all memory banks are mapped, walks the natmem space and commits any remaining gaps via `uae_vm_commit()`
+with the correct fill value (zero or 0xFF based on `cs_unmapped_space`). Zero runtime cost — direct memory
+access just works with no signals or bank lookups needed.
+
+### Files Modified (3 total)
+| File | Changes |
+|------|---------|
+| `src/osdep/amiberry_mem.cpp` | Added `commit_natmem_gaps()` function (~110 lines) |
+| `src/include/uae/mman.h` | Added declaration |
+| `src/memory.cpp` | Added call site in `memory_reset()` behind `#ifdef NATMEM_OFFSET` |
+
+### Key Technical Details
+- Uses `shmids[]` array (MAX_SHMID=256) to collect committed regions
+- Calculates offsets relative to `natmem_reserved` (not `natmem_offset`, which differs with RTG offset)
+- Page-aligns gap boundaries to host page size
+- Fill byte: `0x00` for `cs_unmapped_space` 0/1, `0xFF` for `cs_unmapped_space` 2
+- Cross-platform: works on Linux (`mprotect`), macOS, and Windows (`VirtualAlloc(MEM_COMMIT)`)
+- Idempotent — safe to call on config changes/resets
+
 ## Known Separate Issues
 
-- "Error in compiled code" at M68k 0x00F00000 (unmapped region) — occurs early in every boot, system recovers. Separate JIT bug, not addressed.
+None currently. All identified JIT crashes have been fixed.
