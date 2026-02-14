@@ -53,6 +53,11 @@ bool gui_running = false;
 static int last_active_panel = 3;
 bool joystick_refresh_needed = false;
 
+// Touch-drag scrolling state (converts finger swipes to ImGui scroll wheel events)
+static bool touch_scrolling = false;
+static float touch_scroll_accum = 0.0f;
+static SDL_FingerID touch_scroll_finger = 0;
+
 static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
 
@@ -196,9 +201,14 @@ static void apply_imgui_theme()
 	style.PopupRounding = 0.0f;
 	style.ChildRounding = 0.0f;
 	style.ScrollbarRounding = 0.0f;
-	style.ScrollbarSize = 16.0f;
 	style.GrabRounding = 0.0f;
-	style.GrabMinSize = 10.0f;
+	if (SDL_GetNumTouchDevices() > 0) {
+		style.ScrollbarSize = 24.0f;  // Wider for touch targets
+		style.GrabMinSize = 20.0f;
+	} else {
+		style.ScrollbarSize = 16.0f;
+		style.GrabMinSize = 10.0f;
+	}
 	style.TabRounding = 0.0f;
 
 	// Add a bit more padding inside windows/child areas
@@ -913,6 +923,8 @@ void amiberry_gui_init()
 	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	if (SDL_GetNumTouchDevices() > 0)
+		io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;      // Optimize for touch input
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
@@ -1243,6 +1255,42 @@ void run_gui()
 				if (gui_event.window.event == SDL_WINDOWEVENT_CLOSE && gui_event.window.windowID == SDL_GetWindowID(mon->gui_window))
 					gui_running = false;
 			}
+			// Touch-drag scrolling: convert finger swipes into ImGui scroll wheel events
+			// SDL2 synthesizes mouse events from touch, but not mouse-wheel, so ImGui
+			// child windows won't scroll from finger drags without this.
+			else if (gui_event.type == SDL_FINGERDOWN) {
+				touch_scroll_finger = gui_event.tfinger.fingerId;
+				touch_scrolling = false;
+				touch_scroll_accum = 0.0f;
+			}
+			else if (gui_event.type == SDL_FINGERMOTION
+				&& gui_event.tfinger.fingerId == touch_scroll_finger) {
+				int wh = 0;
+				SDL_GetWindowSize(mon->gui_window, nullptr, &wh);
+				const float dy_pixels = gui_event.tfinger.dy * static_cast<float>(wh);
+				touch_scroll_accum += dy_pixels;
+
+				// Dead-zone: require a minimum drag distance before scrolling,
+				// so taps on buttons don't accidentally scroll
+				const float drag_threshold = 8.0f * DPIHandler::get_layout_scale();
+				if (!touch_scrolling && std::abs(touch_scroll_accum) > drag_threshold) {
+					touch_scrolling = true;
+					// Cancel the synthetic mouse-down so ImGui doesn't treat
+					// the ongoing touch as a widget click-drag
+					ImGui::GetIO().AddMouseButtonEvent(0, false);
+				}
+				if (touch_scrolling) {
+					const float line_height = ImGui::GetTextLineHeightWithSpacing();
+					if (line_height > 0.0f) {
+						const float scroll_lines = dy_pixels / (line_height * 3.0f);
+						ImGui::GetIO().AddMouseWheelEvent(0.0f, scroll_lines);
+					}
+				}
+			}
+			else if (gui_event.type == SDL_FINGERUP
+				&& gui_event.tfinger.fingerId == touch_scroll_finger) {
+				touch_scrolling = false;
+			}
 		}
 
 #ifdef __ANDROID__
@@ -1275,6 +1323,14 @@ void run_gui()
 #endif
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
+
+		// While touch-scrolling, suppress hover highlight so items don't
+		// visually react to the finger position during a scroll gesture
+		if (touch_scrolling) {
+			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0, 0, 0, 0));
+		}
 
 		const ImGuiStyle& style = ImGui::GetStyle();
 		// Compute button bar height from style
@@ -1537,6 +1593,11 @@ void run_gui()
         }
 
 		ImGui::End();
+
+		// Pop touch-scrolling hover suppression colors
+		if (touch_scrolling) {
+			ImGui::PopStyleColor(3);
+		}
 
 		// Rendering
 		ImGui::Render();
