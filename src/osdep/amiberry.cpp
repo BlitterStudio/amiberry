@@ -61,6 +61,7 @@
 #include "uae/uae.h"
 #include "sana2.h"
 #include "gui/gui_handling.h"
+#include "on_screen_joystick.h"
 
 #ifdef __MACH__
 #include <string>
@@ -2153,8 +2154,22 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_FINGERDOWN:
 		case SDL_FINGERUP:
-			handle_finger_event(event);
+		{
+			// Let on-screen joystick consume the event first if applicable
+			int ww = 0, wh = 0;
+			if (mon->amiga_window)
+				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
+			bool consumed = false;
+			if (on_screen_joystick_is_enabled() && ww > 0 && wh > 0) {
+				if (event.type == SDL_FINGERDOWN)
+					consumed = on_screen_joystick_handle_finger_down(event, ww, wh);
+				else
+					consumed = on_screen_joystick_handle_finger_up(event, ww, wh);
+			}
+			if (!consumed)
+				handle_finger_event(event);
 			break;
+		}
 
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
@@ -2162,8 +2177,17 @@ static void process_event(const SDL_Event& event)
 			break;
 
 		case SDL_FINGERMOTION:
-			handle_finger_motion_event(event);
+		{
+			int ww = 0, wh = 0;
+			if (mon->amiga_window)
+				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
+			bool consumed = false;
+			if (on_screen_joystick_is_enabled() && ww > 0 && wh > 0)
+				consumed = on_screen_joystick_handle_finger_motion(event, ww, wh);
+			if (!consumed)
+				handle_finger_motion_event(event);
 			break;
+		}
 
 		case SDL_MOUSEMOTION:
 			handle_mouse_motion_event(event, mon);
@@ -2753,6 +2777,9 @@ void target_default_options(uae_prefs* p, const int type)
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
 
+	// On-screen joystick
+	p->onscreen_joystick = amiberry_options.default_onscreen_joystick;
+
 	// Virtual keyboard default options
 	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
 	p->vkbd_exit = amiberry_options.default_vkbd_exit;
@@ -2907,6 +2934,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	if (scsiromselected > 0)
 		cfgfile_target_write(f, _T("expansion_gui_page"), expansionroms[scsiromselected].name);
 
+	cfgfile_target_dwrite_bool(f, _T("onscreen_joystick"), p->onscreen_joystick);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_hires"), p->vkbd_hires);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_exit"), p->vkbd_exit);
@@ -3029,6 +3057,9 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "left_amiga", p->left_amiga, sizeof p->left_amiga)
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+		return 1;
+
+	if (cfgfile_yesno(option, value, _T("onscreen_joystick"), &p->onscreen_joystick))
 		return 1;
 
 	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled)
@@ -3815,7 +3846,10 @@ void save_amiberry_settings()
 
 	// Default Sound Card (0=default, first one available in the system)
 	write_int_option("default_soundcard", amiberry_options.default_soundcard);
-	
+
+	// Enable On-screen Joystick by default (for touchscreen devices)
+	write_bool_option("default_onscreen_joystick", amiberry_options.default_onscreen_joystick);
+
 	// Enable Virtual Keyboard by default
 	write_bool_option("default_vkbd_enabled", amiberry_options.default_vkbd_enabled);
 
@@ -4041,6 +4075,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
 		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
+		ret |= cfgfile_yesno(option, value, "default_onscreen_joystick", &amiberry_options.default_onscreen_joystick);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_hires", &amiberry_options.default_vkbd_hires);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_exit", &amiberry_options.default_vkbd_exit);
@@ -4470,6 +4505,12 @@ std::string get_config_directory(bool portable_mode)
 		getcwd(tmp, MAX_DPATH);
 		return { std::string(tmp) + "\\conf" };
 	}
+#elif defined(__ANDROID__)
+	const char* path = SDL_AndroidGetExternalStoragePath();
+	if (path) {
+		return std::string(path) + "/conf/";
+	}
+	return prefix_with_application_directory_path("conf/");
 #else
 	if (portable_mode)
 	{
@@ -4588,11 +4629,6 @@ std::string get_plugins_directory(bool portable_mode)
 	return { std::string(tmp) + "/plugins" };
 #endif
 }
-
-extern void save_theme(const std::string& theme_filename);
-extern void load_theme(const std::string& theme_filename);
-extern void load_default_theme();
-extern void load_default_dark_theme();
 
 void create_missing_amiberry_folders()
 {
@@ -4984,6 +5020,8 @@ static void init_amiberry_dirs(const bool portable_mode)
 	retroarch_file = config_path;
 #ifdef _WIN32
 	retroarch_file.append("\\retroarch.cfg");
+#elif defined(__ANDROID__)
+	retroarch_file.append("retroarch.cfg");
 #else
 	retroarch_file.append("/retroarch.cfg");
 #endif

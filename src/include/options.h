@@ -1080,6 +1080,8 @@ struct uae_prefs {
 	char vkbd_style[256];
 	int vkbd_transparency;
 	char vkbd_toggle[256];
+
+	bool onscreen_joystick;
 	
 	int drawbridge_driver;
 	bool drawbridge_serial_auto;
@@ -1355,6 +1357,11 @@ struct amiberry_options
 	bool disable_shutdown_button = true;
 	bool allow_display_settings_from_xml = true;
 	int default_soundcard = 0;
+#ifdef __ANDROID__
+	bool default_onscreen_joystick = true;
+#else
+	bool default_onscreen_joystick = false;
+#endif
 	bool default_vkbd_enabled;
 	bool default_vkbd_hires;
 	bool default_vkbd_exit;
