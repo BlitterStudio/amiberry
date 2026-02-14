@@ -894,11 +894,20 @@ void gui_display(int shortcut)
 	}
 	//rawinput_alloc();
 	struct AmigaMonitor* mon = &AMonitors[0];
-	SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
+	if (mon->amiga_window)
+		SDL_SetWindowGrab(mon->amiga_window, SDL_TRUE);
 	if (kmsdrm_detected && amiga_surface != nullptr)
 	{
 		target_graphics_buffer_update(mon->monitor_id, true);
 	}
+#if defined(_WIN32) && defined(USE_OPENGL)
+	// After GUI close on Windows+OpenGL, the emulation shaders were destroyed
+	// to let ImGui use the GL context. Force shader recreation now.
+	if (gl_context != nullptr && amiga_surface != nullptr)
+	{
+		target_graphics_buffer_update(mon->monitor_id, true);
+	}
+#endif
 	fpscounter_reset();
 	//screenshot_free();
 	//write_disk_history();

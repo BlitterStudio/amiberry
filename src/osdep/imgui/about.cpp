@@ -6,23 +6,20 @@
 #include <SDL_image.h>
 
 // About panel logo texture (loaded on demand)
-SDL_Texture* about_logo_texture = nullptr;
+ImTextureID about_logo_texture = ImTextureID_Invalid;
 static int about_logo_tex_w = 0, about_logo_tex_h = 0;
 
 static void ensure_about_logo_texture()
 {
 	if (about_logo_texture)
 		return;
-	AmigaMonitor* mon = &AMonitors[0];
 	const auto path = prefix_with_data_path("amiberry-logo.png");
 	SDL_Surface* surf = IMG_Load(path.c_str());
 	if (!surf) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to load %s: %s", path.c_str(), SDL_GetError());
 		return;
 	}
-	about_logo_tex_w = surf->w;
-	about_logo_tex_h = surf->h;
-	about_logo_texture = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
+	about_logo_texture = gui_create_texture(surf, &about_logo_tex_w, &about_logo_tex_h);
 	SDL_FreeSurface(surf);
 	if (!about_logo_texture) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "About panel: failed to create texture: %s", SDL_GetError());

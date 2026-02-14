@@ -153,6 +153,12 @@ extern void gfx_unlock();
 
 extern void destroy_shaders();
 extern void update_crtemu_bezel();
+#ifdef USE_OPENGL
+extern SDL_GLContext gl_context;
+extern bool gl_state_initialized;
+extern bool init_opengl_context(SDL_Window* window);
+extern void clear_loaded_shader_name();
+#endif
 
 struct MultiDisplay* getdisplay(const uae_prefs* p, int monid);
 extern int getrefreshrate(int monid, int width, int height);

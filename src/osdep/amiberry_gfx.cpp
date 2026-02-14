@@ -235,7 +235,7 @@ static float SDL2_getrefreshrate(const int monid)
 #ifdef USE_OPENGL
 static int current_vsync_interval = -1;
 static float cached_refresh_rate = 0.0f;
-static bool gl_state_initialized = false; // Track if GL state has been set for current context
+bool gl_state_initialized = false; // Track if GL state has been set for current context
 
 void update_vsync(const int monid)
 {
@@ -2647,8 +2647,15 @@ static void close_hwnds(struct AmigaMonitor* mon)
 #else
 	if (mon->amiga_renderer && !kmsdrm_detected)
 	{
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 		// Don't destroy the renderer on Android, as we reuse it
+#elif defined(_WIN32)
+		if (mon->gui_renderer == mon->amiga_renderer) {
+			// GUI is sharing this renderer — don't destroy
+		} else {
+			SDL_DestroyRenderer(mon->amiga_renderer);
+			mon->amiga_renderer = nullptr;
+		}
 #else
 		SDL_DestroyRenderer(mon->amiga_renderer);
 		mon->amiga_renderer = nullptr;
@@ -2657,8 +2664,15 @@ static void close_hwnds(struct AmigaMonitor* mon)
 #endif
 	if (mon->amiga_window && !kmsdrm_detected)
 	{
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 		// Reuse existing window
+#elif defined(_WIN32)
+		if (mon->gui_window == mon->amiga_window) {
+			// GUI is sharing this window — don't destroy
+		} else {
+			SDL_DestroyWindow(mon->amiga_window);
+			mon->amiga_window = nullptr;
+		}
 #else
 		SDL_DestroyWindow(mon->amiga_window);
 		mon->amiga_window = nullptr;
@@ -5332,6 +5346,11 @@ void destroy_shaders()
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
+}
+
+void clear_loaded_shader_name()
+{
+	loaded_shader_name.clear();
 }
 #endif
 

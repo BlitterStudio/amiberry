@@ -40,24 +40,18 @@ static void ShowAlert(const char *title, const char *message) {
     show_alert_popup = true;
 }
 
-static SDL_Texture *savestate_screenshot_tex = nullptr;
+static ImTextureID savestate_screenshot_tex = ImTextureID_Invalid;
 static int savestate_screenshot_slot = -1;
-static SDL_Renderer *cached_renderer = nullptr;
 
 static void ClearScreenshotTexture() {
     if (savestate_screenshot_tex) {
-        SDL_DestroyTexture(savestate_screenshot_tex);
-        savestate_screenshot_tex = nullptr;
+        gui_destroy_texture(savestate_screenshot_tex);
+        savestate_screenshot_tex = ImTextureID_Invalid;
     }
     savestate_screenshot_slot = -1;
 }
 
 static void UpdateScreenshotTexture(int slot) {
-    if (AMonitors[0].gui_renderer != cached_renderer) {
-        ClearScreenshotTexture();
-        cached_renderer = AMonitors[0].gui_renderer;
-    }
-
     if (slot == savestate_screenshot_slot && savestate_screenshot_tex) return;
 
     if (slot != savestate_screenshot_slot) {
@@ -68,9 +62,7 @@ static void UpdateScreenshotTexture(int slot) {
     if (!screenshot_filename.empty()) {
         SDL_Surface *surface = IMG_Load(screenshot_filename.c_str());
         if (surface) {
-            if (cached_renderer) {
-                savestate_screenshot_tex = SDL_CreateTextureFromSurface(cached_renderer, surface);
-            }
+            savestate_screenshot_tex = gui_create_texture(surface, nullptr, nullptr);
             SDL_FreeSurface(surface);
         }
     }
