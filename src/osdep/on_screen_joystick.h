@@ -30,6 +30,10 @@ bool on_screen_joystick_handle_finger_motion(const SDL_Event& event, int window_
 bool on_screen_joystick_is_enabled();
 void on_screen_joystick_set_enabled(bool enabled);
 
+// Returns true if the keyboard button was just tapped (and consumed).
+// Call after handling finger events; resets to false after reading.
+bool on_screen_joystick_keyboard_tapped();
+
 // Update the control layout when screen geometry changes.
 // game_rect is the destination rectangle of the Amiga screen on the display.
 void on_screen_joystick_update_layout(int screen_w, int screen_h, const SDL_Rect& game_rect);

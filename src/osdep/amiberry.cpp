@@ -62,6 +62,7 @@
 #include "sana2.h"
 #include "gui/gui_handling.h"
 #include "on_screen_joystick.h"
+#include "vkbd/vkbd.h"
 
 #ifdef __MACH__
 #include <string>
@@ -2203,6 +2204,20 @@ static void process_event(const SDL_Event& event)
 					consumed = on_screen_joystick_handle_finger_down(event, ww, wh);
 				else
 					consumed = on_screen_joystick_handle_finger_up(event, ww, wh);
+			}
+			// Check if the on-screen keyboard button was tapped
+			if (on_screen_joystick_keyboard_tapped()) {
+#ifdef __ANDROID__
+				// Toggle native Android soft keyboard
+				if (SDL_IsTextInputActive())
+					SDL_StopTextInput();
+				else
+					SDL_StartTextInput();
+#else
+				// Toggle the virtual keyboard overlay on other platforms
+				if (vkbd_allowed(0))
+					vkbd_toggle();
+#endif
 			}
 			if (!consumed)
 				handle_finger_event(event);

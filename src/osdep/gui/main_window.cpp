@@ -1101,6 +1101,19 @@ void run_gui()
 			}
 		}
 
+#ifdef __ANDROID__
+		// Toggle native soft keyboard based on ImGui's text input state.
+		// ImGui sets WantTextInput when a text field is active.
+		{
+			bool want_text = ImGui::GetIO().WantTextInput;
+			bool text_active = SDL_IsTextInputActive();
+			if (want_text && !text_active)
+				SDL_StartTextInput();
+			else if (!want_text && text_active)
+				SDL_StopTextInput();
+		}
+#endif
+
 		// Skip rendering when minimized to save CPU
 		if (SDL_GetWindowFlags(mon->gui_window) & SDL_WINDOW_MINIMIZED) {
 			SDL_Delay(10);

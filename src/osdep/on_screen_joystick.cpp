@@ -69,6 +69,12 @@ static constexpr Color BTN1_HIGHLIGHT = {255, 100, 100, 255 };
 static constexpr Color BTN2_OUTER     = { 20,  40, 160, 255 };
 static constexpr Color BTN2_INNER     = { 50,  70, 220, 255 };
 static constexpr Color BTN2_HIGHLIGHT = {100, 130, 255, 255 };
+// Keyboard button (green)
+static constexpr Color BTNKB_OUTER     = { 20, 130,  40, 255 };
+static constexpr Color BTNKB_INNER     = { 50, 180,  70, 255 };
+static constexpr Color BTNKB_HIGHLIGHT = {100, 230, 130, 255 };
+// Keyboard button size as fraction of shorter dimension (smaller than fire buttons)
+static constexpr float KB_BUTTON_SIZE_FRACTION = 0.12f;
 
 // ---------------------------------------------------------------------------
 // Internal state
@@ -81,17 +87,20 @@ static bool osj_initialized = false;
 static SDL_Texture* dpad_tex = nullptr;
 static SDL_Texture* btn1_tex = nullptr;
 static SDL_Texture* btn2_tex = nullptr;
+static SDL_Texture* btnkb_tex = nullptr;
 
 // SDL Surfaces (kept around for GL texture upload)
 static SDL_Surface* dpad_surface = nullptr;
 static SDL_Surface* btn1_surface = nullptr;
 static SDL_Surface* btn2_surface = nullptr;
+static SDL_Surface* btnkb_surface = nullptr;
 
 #ifdef USE_OPENGL
 // OpenGL textures
 static GLuint gl_dpad_tex = 0;
 static GLuint gl_btn1_tex = 0;
 static GLuint gl_btn2_tex = 0;
+static GLuint gl_btnkb_tex = 0;
 static GLuint osj_gl_program = 0;
 static GLint  osj_gl_tex_loc = -1;
 static GLuint osj_gl_vao = 0;
@@ -103,11 +112,13 @@ static bool   osj_gl_initialized = false;
 static SDL_Rect dpad_rect = {};
 static SDL_Rect btn1_rect = {};
 static SDL_Rect btn2_rect = {};
+static SDL_Rect btnkb_rect = {};
 
 // Center and radius for hit-testing (in screen coords)
 static int dpad_cx = 0, dpad_cy = 0, dpad_hit_radius = 0;
 static int btn1_cx = 0, btn1_cy = 0, btn1_hit_radius = 0;
 static int btn2_cx = 0, btn2_cy = 0, btn2_hit_radius = 0;
+static int btnkb_cx = 0, btnkb_cy = 0, btnkb_hit_radius = 0;
 
 // Joystick state
 static bool joy_up = false, joy_down = false, joy_left = false, joy_right = false;
@@ -115,9 +126,12 @@ static bool joy_fire1 = false, joy_fire2 = false;
 // Previous state for change detection
 static bool prev_up = false, prev_down = false, prev_left = false, prev_right = false;
 static bool prev_fire1 = false, prev_fire2 = false;
+// Keyboard button tapped flag (consumed on read)
+static bool kb_tapped = false;
+static bool joy_kb_pressed = false;
 
 // Multi-touch tracking
-enum ControlType { CTL_NONE, CTL_DPAD, CTL_BUTTON1, CTL_BUTTON2 };
+enum ControlType { CTL_NONE, CTL_DPAD, CTL_BUTTON1, CTL_BUTTON2, CTL_KEYBOARD };
 
 struct FingerTrack {
 	SDL_FingerID id;
@@ -333,6 +347,52 @@ static SDL_Surface* create_dpad_surface()
 }
 
 // ---------------------------------------------------------------------------
+// Helper: draw a simple pixel-art character on an SDL_Surface
+// Each character is defined as a 5x7 bitmap.
+// ---------------------------------------------------------------------------
+
+static const uint8_t font_K[7] = {
+	0b10010,
+	0b10100,
+	0b11000,
+	0b10000,
+	0b11000,
+	0b10100,
+	0b10010,
+};
+
+static const uint8_t font_B[7] = {
+	0b11100,
+	0b10010,
+	0b10010,
+	0b11100,
+	0b10010,
+	0b10010,
+	0b11100,
+};
+
+static void draw_char(SDL_Surface* s, const uint8_t bitmap[7], int ox, int oy, int scale, Color col)
+{
+	Uint32 color = SDL_MapRGBA(s->format, col.r, col.g, col.b, col.a);
+	auto* pixels = static_cast<Uint32*>(s->pixels);
+	int pitch = s->pitch / 4;
+	for (int row = 0; row < 7; row++) {
+		for (int col_idx = 0; col_idx < 5; col_idx++) {
+			if (bitmap[row] & (1 << (4 - col_idx))) {
+				for (int sy = 0; sy < scale; sy++) {
+					for (int sx = 0; sx < scale; sx++) {
+						int x = ox + col_idx * scale + sx;
+						int y = oy + row * scale + sy;
+						if (x >= 0 && x < s->w && y >= 0 && y < s->h)
+							pixels[y * pitch + x] = color;
+					}
+				}
+			}
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Surface generation: arcade button
 // ---------------------------------------------------------------------------
 
@@ -357,6 +417,46 @@ static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 
 	// Main button surface with gradient
 	fill_circle_gradient(surface, cx, cy, r - 4, outer, inner, glint);
+
+	return surface;
+}
+
+// ---------------------------------------------------------------------------
+// Surface generation: keyboard button (green with "KB" label)
+// ---------------------------------------------------------------------------
+
+static SDL_Surface* create_kb_button_surface()
+{
+	const int sz = BUTTON_TEX_SIZE;
+	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
+	if (!surface) return nullptr;
+
+	SDL_FillRect(surface, nullptr, 0);
+
+	int cx = sz / 2;
+	int cy = sz / 2;
+	int r = sz / 2 - 4;
+
+	// Outer ring (bezel)
+	Color bezel = { static_cast<Uint8>(BTNKB_OUTER.r / 2), static_cast<Uint8>(BTNKB_OUTER.g / 2),
+		static_cast<Uint8>(BTNKB_OUTER.b / 2), 255 };
+	fill_circle(surface, cx, cy, r, bezel);
+
+	// Main button surface with gradient
+	fill_circle_gradient(surface, cx, cy, r - 4, BTNKB_OUTER, BTNKB_INNER, BTNKB_HIGHLIGHT);
+
+	// Draw "KB" text centered on the button
+	Color text_col = { 255, 255, 255, 255 };
+	int char_scale = sz / 32;  // Scale factor for the 5x7 font
+	if (char_scale < 1) char_scale = 1;
+	int char_w = 5 * char_scale;
+	int char_h = 7 * char_scale;
+	int gap = char_scale;  // Gap between K and B
+	int total_w = char_w * 2 + gap;
+	int text_x = cx - total_w / 2;
+	int text_y = cy - char_h / 2;
+	draw_char(surface, font_K, text_x, text_y, char_scale, text_col);
+	draw_char(surface, font_B, text_x + char_w + gap, text_y, char_scale, text_col);
 
 	return surface;
 }
@@ -444,6 +544,9 @@ static void release_button(ControlType ctl)
 		joy_fire1 = false;
 	} else if (ctl == CTL_BUTTON2) {
 		joy_fire2 = false;
+	} else if (ctl == CTL_KEYBOARD) {
+		joy_kb_pressed = false;
+		return;  // No Amiga input to inject
 	}
 	inject_buttons();
 }
@@ -487,6 +590,12 @@ static ControlType hit_test(int px, int py)
 		int dy = py - btn2_cy;
 		if (dx * dx + dy * dy <= btn2_hit_radius * btn2_hit_radius)
 			return CTL_BUTTON2;
+	}
+	{
+		int dx = px - btnkb_cx;
+		int dy = py - btnkb_cy;
+		if (dx * dx + dy * dy <= btnkb_hit_radius * btnkb_hit_radius)
+			return CTL_KEYBOARD;
 	}
 	return CTL_NONE;
 }
@@ -666,6 +775,7 @@ static void cleanup_osj_gl()
 	if (gl_dpad_tex) { glDeleteTextures(1, &gl_dpad_tex); gl_dpad_tex = 0; }
 	if (gl_btn1_tex) { glDeleteTextures(1, &gl_btn1_tex); gl_btn1_tex = 0; }
 	if (gl_btn2_tex) { glDeleteTextures(1, &gl_btn2_tex); gl_btn2_tex = 0; }
+	if (gl_btnkb_tex) { glDeleteTextures(1, &gl_btnkb_tex); gl_btnkb_tex = 0; }
 	if (osj_gl_vbo) { glDeleteBuffers(1, &osj_gl_vbo); osj_gl_vbo = 0; }
 	if (osj_gl_vao) { glDeleteVertexArrays(1, &osj_gl_vao); osj_gl_vao = 0; }
 	if (osj_gl_program) { glDeleteProgram(osj_gl_program); osj_gl_program = 0; }
@@ -687,6 +797,7 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 	dpad_surface = create_dpad_surface();
 	btn1_surface = create_button_surface(BTN1_OUTER, BTN1_INNER, BTN1_HIGHLIGHT);
 	btn2_surface = create_button_surface(BTN2_OUTER, BTN2_INNER, BTN2_HIGHLIGHT);
+	btnkb_surface = create_kb_button_surface();
 
 #ifndef USE_OPENGL
 	// Create SDL textures from surfaces (only when using SDL2 renderer)
@@ -702,6 +813,10 @@ void on_screen_joystick_init(SDL_Renderer* renderer)
 		if (btn2_surface) {
 			btn2_tex = SDL_CreateTextureFromSurface(renderer, btn2_surface);
 			if (btn2_tex) SDL_SetTextureBlendMode(btn2_tex, SDL_BLENDMODE_BLEND);
+		}
+		if (btnkb_surface) {
+			btnkb_tex = SDL_CreateTextureFromSurface(renderer, btnkb_surface);
+			if (btnkb_tex) SDL_SetTextureBlendMode(btnkb_tex, SDL_BLENDMODE_BLEND);
 		}
 	}
 #endif
@@ -731,10 +846,12 @@ void on_screen_joystick_quit()
 	if (dpad_tex) { SDL_DestroyTexture(dpad_tex); dpad_tex = nullptr; }
 	if (btn1_tex) { SDL_DestroyTexture(btn1_tex); btn1_tex = nullptr; }
 	if (btn2_tex) { SDL_DestroyTexture(btn2_tex); btn2_tex = nullptr; }
+	if (btnkb_tex) { SDL_DestroyTexture(btnkb_tex); btnkb_tex = nullptr; }
 
 	if (dpad_surface) { SDL_FreeSurface(dpad_surface); dpad_surface = nullptr; }
 	if (btn1_surface) { SDL_FreeSurface(btn1_surface); btn1_surface = nullptr; }
 	if (btn2_surface) { SDL_FreeSurface(btn2_surface); btn2_surface = nullptr; }
+	if (btnkb_surface) { SDL_FreeSurface(btnkb_surface); btnkb_surface = nullptr; }
 
 #ifdef USE_OPENGL
 	cleanup_osj_gl();
@@ -755,10 +872,21 @@ void on_screen_joystick_set_enabled(bool enabled)
 	if (!enabled && osj_initialized) {
 		joy_up = joy_down = joy_left = joy_right = false;
 		joy_fire1 = joy_fire2 = false;
+		joy_kb_pressed = false;
+		kb_tapped = false;
 		inject_directions();
 		inject_buttons();
 		active_fingers.clear();
 	}
+}
+
+bool on_screen_joystick_keyboard_tapped()
+{
+	if (kb_tapped) {
+		kb_tapped = false;
+		return true;
+	}
+	return false;
 }
 
 void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
@@ -821,6 +949,20 @@ void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 	btn2_cx = btn2_rect.x + btn_size / 2;
 	btn2_cy = btn2_rect.y + btn_size / 2;
 	btn2_hit_radius = btn_size / 2 + btn_size / 8;
+
+	// Keyboard button: smaller, placed below the two fire buttons
+	int kb_size = static_cast<int>(shorter * KB_BUTTON_SIZE_FRACTION);
+	int kb_x = btn_x + (btn_size - kb_size) / 2;  // Centered under fire buttons
+	int kb_y = btn2_rect.y + btn_size + btn_gap;
+
+	btnkb_rect.x = kb_x;
+	btnkb_rect.y = kb_y;
+	btnkb_rect.w = kb_size;
+	btnkb_rect.h = kb_size;
+
+	btnkb_cx = btnkb_rect.x + kb_size / 2;
+	btnkb_cy = btnkb_rect.y + kb_size / 2;
+	btnkb_hit_radius = kb_size / 2 + kb_size / 8;
 }
 
 void on_screen_joystick_redraw(SDL_Renderer* renderer)
@@ -905,6 +1047,18 @@ void on_screen_joystick_redraw(SDL_Renderer* renderer)
 		}
 		SDL_RenderCopy(renderer, btn2_tex, nullptr, &btn2_rect);
 	}
+
+	// Keyboard button (green)
+	if (btnkb_tex) {
+		Uint8 alpha = joy_kb_pressed ? ALPHA_PRESSED : ALPHA_NORMAL;
+		SDL_SetTextureAlphaMod(btnkb_tex, alpha);
+		if (joy_kb_pressed) {
+			SDL_SetTextureColorMod(btnkb_tex, 200, 255, 200);
+		} else {
+			SDL_SetTextureColorMod(btnkb_tex, 255, 255, 255);
+		}
+		SDL_RenderCopy(renderer, btnkb_tex, nullptr, &btnkb_rect);
+	}
 }
 
 #ifdef USE_OPENGL
@@ -931,6 +1085,7 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect
 	if (!gl_dpad_tex) gl_dpad_tex = upload_surface_to_gl(dpad_surface);
 	if (!gl_btn1_tex) gl_btn1_tex = upload_surface_to_gl(btn1_surface);
 	if (!gl_btn2_tex) gl_btn2_tex = upload_surface_to_gl(btn2_surface);
+	if (!gl_btnkb_tex) gl_btnkb_tex = upload_surface_to_gl(btnkb_surface);
 
 	if (!gl_dpad_tex || !gl_btn1_tex || !gl_btn2_tex) return;
 
@@ -965,6 +1120,12 @@ void on_screen_joystick_redraw_gl(int drawable_w, int drawable_h, const SDL_Rect
 	{
 		float alpha = joy_fire2 ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f);
 		render_gl_quad(gl_btn2_tex, btn2_rect, drawable_w, drawable_h, alpha);
+	}
+
+	// Keyboard button (green)
+	if (gl_btnkb_tex) {
+		float alpha = joy_kb_pressed ? (ALPHA_PRESSED / 255.0f) : (ALPHA_NORMAL / 255.0f);
+		render_gl_quad(gl_btnkb_tex, btnkb_rect, drawable_w, drawable_h, alpha);
 	}
 
 	// Restore GL state
@@ -1006,6 +1167,10 @@ bool on_screen_joystick_handle_finger_down(const SDL_Event& event, int window_w,
 	case CTL_BUTTON2:
 		joy_fire2 = true;
 		inject_buttons();
+		break;
+	case CTL_KEYBOARD:
+		joy_kb_pressed = true;
+		kb_tapped = true;
 		break;
 	default:
 		break;
