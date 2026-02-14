@@ -135,6 +135,9 @@ amiberry/
 - `src/osdep/amiberry.cpp` - Main platform abstraction (~170KB, core initialization)
 - `src/osdep/amiberry_gfx.cpp` - Graphics/display handling
 - `src/osdep/amiberry_input.cpp` - Input device handling
+- `src/osdep/amiberry_input.h` - Input device types and declarations
+- `src/osdep/on_screen_joystick.cpp` - On-screen touch joystick (Android/touchscreens)
+- `src/osdep/on_screen_joystick.h` - On-screen joystick public API
 - `src/osdep/amiberry_gui.cpp` - GUI management
 - `src/cfgfile.cpp` - Configuration file parsing
 - `src/custom.cpp` - Amiga custom chip emulation
@@ -152,6 +155,48 @@ The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in 
 - `display.cpp`, `sound.cpp` - Output settings
 - `input.cpp` - Controller configuration
 - `whdload.cpp` - WHDLoad integration
+
+### On-Screen Joystick (Touch Controls)
+
+The on-screen joystick provides touch-based D-pad and fire buttons for Android and other touchscreen devices. It is implemented in `src/osdep/on_screen_joystick.cpp` with rendering support for both SDL2 renderer and OpenGL.
+
+**Architecture:**
+- Registered as a **virtual joystick device** ("On-Screen Joystick") in the UAE input device system via `init_joystick()` in `amiberry_input.cpp`
+- Always the **last device** in `di_joystick[]` (appended after physical SDL joysticks)
+- Has 2 axes (X, Y) and 2 buttons (Fire, 2nd Fire), configured with proper `axismappings`, `buttonmappings`, and metadata
+- Input injected via `setjoystickstate()` / `setjoybuttonstate()` — the proper UAE input device API that routes through the full input mapping and port mode system
+- **Auto-assigns to Port 1** in joystick mode when enabled via `on_screen_joystick_set_enabled(true)`, using `JSEM_JOYS + dev` as the port assignment ID and calling `inputdevice_config_change()` to reconfigure
+
+**Key functions:**
+- `get_onscreen_joystick_device_index()` — returns the `di_joystick[]` index, or -1 if not registered (declared in `amiberry_input.h`)
+- `on_screen_joystick_set_enabled(bool)` — enables/disables and handles auto-assignment
+- `on_screen_joystick_update_layout()` — recalculates positions when screen geometry changes
+- `on_screen_joystick_handle_finger_down/up/motion()` — touch event handlers; return true if consumed
+
+**SDL touch-to-mouse filtering:**
+SDL2 synthesizes mouse events from touch events by default (`SDL_HINT_TOUCH_MOUSE_EVENTS = "1"`). When the on-screen joystick is active, `amiberry.cpp` filters out these synthetic events by checking `event.button.which == SDL_TOUCH_MOUSEID` / `event.motion.which == SDL_TOUCH_MOUSEID` to prevent touch D-pad input from being interpreted as Amiga mouse movement.
+
+**Layout sizing constants** (in `on_screen_joystick.cpp`):
+- `DPAD_SIZE_FRACTION = 0.38` — D-pad diameter as fraction of min(screen_w, screen_h)
+- `BUTTON_SIZE_FRACTION = 0.22` — fire button diameter
+- `BUTTON_GAP_FRACTION = 0.05` — gap between fire buttons
+- `KB_BUTTON_SIZE_FRACTION = 0.14` — keyboard toggle button size
+
+**Config options** (in `struct uae_prefs`):
+- `onscreen_joystick` — enable on-screen joystick (boolean)
+- `input_default_onscreen_keyboard` — show keyboard button on the on-screen overlay
+
+### Input Device System Overview
+
+The UAE input device system uses `inputdevice_functions` structs for each device type (`IDTYPE_JOYSTICK`, `IDTYPE_MOUSE`, `IDTYPE_KEYBOARD`). Joystick devices are stored in the `di_joystick[]` array with count `num_joystick`.
+
+**Port assignment IDs:** `JSEM_JOYS + device_index` for joysticks, `JSEM_MICE + index` for mice, `JSEM_KBDLAYOUT + index` for keyboard layouts. These are stored in `changed_prefs.jports[port].id`.
+
+**Input injection APIs:**
+- `setjoystickstate(dev, axis, state, max)` / `setjoybuttonstate(dev, button, state)` — proper device API, respects port mode (joystick/mouse/analog) and full input mapping
+- `send_input_event(INPUTEVENT_JOY*_*, state, max, autofire)` — direct event injection, bypasses port mode. Avoid for new code.
+
+**Device registration pattern:** Append to `di_joystick[]`, increment `num_joystick`, call `cleardid()` + `fixthings()` to initialize metadata, set axes/buttons/names/mappings. The device then appears in the Input configuration GUI dropdown.
 
 ### Platform Support
 

@@ -224,6 +224,18 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - Build with Debug type (`-DCMAKE_BUILD_TYPE=Debug`) for better crash info
 - If you need to test multiple configs, use `kill_amiberry` + `launch_and_wait_for_ipc` between each
 
+## Input & On-Screen Joystick Troubleshooting
+
+- **On-screen D-pad acts like a mouse instead of joystick**: Two possible causes:
+  1. **SDL touch-to-mouse synthesis**: SDL2 synthesizes `SDL_MOUSEBUTTONDOWN`/`SDL_MOUSEMOTION` from touch events by default. Fix: filter `event.button.which == SDL_TOUCH_MOUSEID` / `event.motion.which == SDL_TOUCH_MOUSEID` in mouse event handlers when on-screen joystick is active (done in `amiberry.cpp`).
+  2. **Wrong port assignment**: Another device (e.g., Android accelerometer) may be assigned to Port 1, overriding the on-screen joystick. The on-screen joystick auto-assigns to Port 1 via `on_screen_joystick_set_enabled(true)`, but check `changed_prefs.jports[1].id` to verify.
+
+- **On-screen joystick not appearing in Input dropdown**: The virtual device must be registered in `init_joystick()` (`amiberry_input.cpp`). Check that `num_joystick < MAX_INPUT_DEVICES` and `osj_device_index` is set. The device appears as "On-Screen Joystick" in the joystick device list.
+
+- **Input injection debugging**: Use `--log` flag. The on-screen joystick logs `"On-Screen Joystick registered as JOY%d"` at startup. Use `setjoystickstate()`/`setjoybuttonstate()` (proper device API); avoid `send_input_event()` which bypasses port mode configuration.
+
+- **Port mode mismatch**: If port 1 mode is not `JSEM_MODE_JOYSTICK`, D-pad input may behave as mouse. The auto-assignment sets `changed_prefs.jports[1].mode = JSEM_MODE_JOYSTICK` and calls `inputdevice_config_change()`.
+
 ## Windows-Specific Troubleshooting
 
 - **Black screen with USE_OPENGL**: Usually caused by JIT `jit_abort()` → `uae_reset()` permanently setting `quit_program`, which blocks pixel drawing in `waitqueue()`. Fixed in `src/jit/x86/compemu_x86.h`.
