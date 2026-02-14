@@ -2369,6 +2369,11 @@ void show_screen(const int monid, int mode)
 	render_software_cursor_gl(monid, destX, destY, destW, destH);
 	render_osd(monid, destX, destY, destW, destH);
 
+	if (on_screen_joystick_is_enabled())
+	{
+		on_screen_joystick_redraw_gl(drawableWidth, drawableHeight, render_quad);
+	}
+
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
 	SDL2_showframe(monid);
@@ -3542,7 +3547,11 @@ int check_prefs_changed_gfx()
 			AmigaMonitor* mon = &AMonitors[0];
 			on_screen_joystick_init(mon->amiga_renderer);
 			int sw = 0, sh = 0;
+#ifdef USE_OPENGL
+			SDL_GL_GetDrawableSize(mon->amiga_window, &sw, &sh);
+#else
 			SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+#endif
 			on_screen_joystick_update_layout(sw, sh, render_quad);
 			on_screen_joystick_set_enabled(true);
 		}
@@ -4786,7 +4795,11 @@ static bool doInit(AmigaMonitor* mon)
 	{
 		on_screen_joystick_init(mon->amiga_renderer);
 		int sw = 0, sh = 0;
+#ifdef USE_OPENGL
+		SDL_GL_GetDrawableSize(mon->amiga_window, &sw, &sh);
+#else
 		SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+#endif
 		on_screen_joystick_update_layout(sw, sh, render_quad);
 		on_screen_joystick_set_enabled(true);
 	}
