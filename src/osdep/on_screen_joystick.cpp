@@ -32,11 +32,11 @@
 // ---------------------------------------------------------------------------
 
 // D-pad size as fraction of the shorter screen dimension
-static constexpr float DPAD_SIZE_FRACTION = 0.32f;
+static constexpr float DPAD_SIZE_FRACTION = 0.38f;
 // Button size as fraction of the shorter screen dimension
-static constexpr float BUTTON_SIZE_FRACTION = 0.19f;
+static constexpr float BUTTON_SIZE_FRACTION = 0.22f;
 // Vertical spacing between the two buttons as fraction of shorter dimension
-static constexpr float BUTTON_GAP_FRACTION = 0.06f;
+static constexpr float BUTTON_GAP_FRACTION = 0.05f;
 // Margin from screen edge as fraction of shorter dimension
 static constexpr float EDGE_MARGIN_FRACTION = 0.02f;
 // Texture resolution for procedurally-generated graphics
@@ -74,7 +74,7 @@ static constexpr Color BTNKB_OUTER     = { 20, 130,  40, 255 };
 static constexpr Color BTNKB_INNER     = { 50, 180,  70, 255 };
 static constexpr Color BTNKB_HIGHLIGHT = {100, 230, 130, 255 };
 // Keyboard button size as fraction of shorter dimension (smaller than fire buttons)
-static constexpr float KB_BUTTON_SIZE_FRACTION = 0.12f;
+static constexpr float KB_BUTTON_SIZE_FRACTION = 0.14f;
 
 // ---------------------------------------------------------------------------
 // Internal state
