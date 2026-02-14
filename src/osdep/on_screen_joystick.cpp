@@ -284,7 +284,9 @@ static void draw_arrow_right(SDL_Surface* s, int cx, int cy, int size, Color col
 static SDL_Surface* create_dpad_surface()
 {
 	const int sz = DPAD_TEX_SIZE;
-	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_RGBA8888);
+	// ABGR8888 stores bytes as [R,G,B,A] in memory on little-endian,
+	// which matches GL_RGBA + GL_UNSIGNED_BYTE for OpenGL upload.
+	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
 	if (!surface) return nullptr;
 
 	SDL_FillRect(surface, nullptr, 0);
@@ -337,7 +339,9 @@ static SDL_Surface* create_dpad_surface()
 static SDL_Surface* create_button_surface(Color outer, Color inner, Color glint)
 {
 	const int sz = BUTTON_TEX_SIZE;
-	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_RGBA8888);
+	// ABGR8888 stores bytes as [R,G,B,A] in memory on little-endian,
+	// which matches GL_RGBA + GL_UNSIGNED_BYTE for OpenGL upload.
+	SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, sz, sz, 32, SDL_PIXELFORMAT_ABGR8888);
 	if (!surface) return nullptr;
 
 	SDL_FillRect(surface, nullptr, 0);
