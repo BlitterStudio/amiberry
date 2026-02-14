@@ -1324,8 +1324,8 @@ static void gen_end(void)
 	outf("			denise_hcounter &= 511;");
 	outf("			denise_hcounter_next++;");
 	outf("			denise_hcounter_next &= 511;");
+	outf("			denise_pixtotal++;");
 	outf("		}");
-	outf("		denise_pixtotal++;");
 	outf("		if (denise_pixtotal == 0) {");
 	outf("			internal_pixel_start_cnt = internal_pixel_cnt;");
 	outf("		}");

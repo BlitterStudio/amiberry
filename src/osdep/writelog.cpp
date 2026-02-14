@@ -240,6 +240,10 @@ void open_console()
 	}
 }
 
+bool is_interactive_console(void)
+{
+	return console_logging;
+}
 
 void reopen_console ()
 {
@@ -312,6 +316,20 @@ static void writeconsole_2 (const TCHAR *buffer)
 {
 	if (!consoleopen)
 		openconsole ();
+
+#ifdef _WIN32
+	/* In Release builds linked with -mwindows, stdout is disconnected.
+	 * Allocate a console on demand so log output is actually visible. */
+	static bool win_console_allocated = false;
+	if (!win_console_allocated && (console_logging || SHOW_CONSOLE)) {
+		if (AllocConsole()) {
+			freopen("CONOUT$", "w", stdout);
+			freopen("CONOUT$", "w", stderr);
+			freopen("CONIN$", "r", stdin);
+		}
+		win_console_allocated = true;
+	}
+#endif
 
 	if (consoleopen > 0) {
 #ifdef _WIN32

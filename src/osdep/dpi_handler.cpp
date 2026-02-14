@@ -1,7 +1,6 @@
 #include <cmath>
 #include <algorithm>
 #include "dpi_handler.hpp"
-#include <SDL_ttf.h>
 
 float DPIHandler::get_scale() {
     constexpr int display_index{0};
@@ -45,18 +44,5 @@ void DPIHandler::set_render_scale([[maybe_unused]] SDL_Renderer* renderer) {
 #ifdef __MACH__
     auto scale{get_scale()};
     SDL_RenderSetScale(renderer, scale, scale);
-#endif
-}
-
-void DPIHandler::set_font_size(TTF_Font* font, float size) {
-    constexpr int display_index{0};
-    float hdpi{};
-    float vdpi{};
-    SDL_GetDisplayDPI(display_index, nullptr, &hdpi, &vdpi);
-#if SDL_VERSION_ATLEAST(2, 0, 18)
-    TTF_SetFontSizeDPI(font,
-        static_cast<int>(size / get_scale()),
-        static_cast<unsigned int>(hdpi),
-        static_cast<unsigned int>(vdpi));
 #endif
 }

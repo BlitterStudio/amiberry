@@ -359,6 +359,7 @@ extern void flush_log (void);
 extern TCHAR *setconsolemode (TCHAR *buffer, int maxlen);
 extern void close_console (void);
 extern void open_console(void);
+extern bool is_interactive_console(void);
 extern void reopen_console(void);
 extern void activate_console (void);
 extern void deactivate_console(void);

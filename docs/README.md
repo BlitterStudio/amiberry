@@ -91,15 +91,10 @@ brew install --cask amiberry
 
 Amiberry supports Windows x86_64 using MinGW-w64 (GCC).
 
-**Build from source:**
-```powershell
-# Prerequisites: MinGW-w64 (GCC), CMake, Ninja, vcpkg
-$env:VCPKG_ROOT = "path\to\vcpkg"
-cmake --preset windows-release
-cmake --build out/build/windows-release -j12
-```
-
-> **Note**: The Windows port uses interpreter mode for CPU emulation (JIT is not available on 64-bit Windows). All other features including OpenGL CRT shaders, WHDLoad booting, and the ImGui GUI are fully functional.
+**Releases:**
+1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+2.  Extract the contents to a directory of your choice.
+3.  Run `Amiberry.exe` to start the emulator.
 
 ## 📚 Documentation
 

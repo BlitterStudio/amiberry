@@ -1,7 +1,6 @@
 #pragma once
 
 #include "SDL.h"
-#include "SDL_ttf.h"
 
 struct WindowSize {
     int width;
@@ -15,5 +14,4 @@ public:
     [[nodiscard]] static float get_touch_scale();
 
     static void set_render_scale(SDL_Renderer* renderer);
-    static void set_font_size(TTF_Font* font, float size);
 };

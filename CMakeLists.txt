@@ -26,7 +26,7 @@ option(USE_UAENET_TAP    "Use TAP backend for uaenet (Linux only)" ON)
 option(USE_ZSTD 	     "Use Zstandard for CHD compressed disk images" ON)
 option(USE_GPIOD         "Use GPIOD to control GPIO LEDs" OFF)
 option(USE_DBUS          "Use DBus to control the emulator" OFF)
-option(USE_OPENGL        "Use OpenGL for rendering" OFF)
+option(USE_OPENGL        "Use OpenGL for rendering" ON)
 option(USE_IPC_SOCKET    "Use Unix socket for IPC control (cross-platform)" ON)
 option(WITH_LTO          "Enable Link Time Optimization" OFF)
 option(WITH_OPTIMIZE     "Enable GCC native CPU optimizations" OFF)
@@ -69,14 +69,13 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 # Pre-release version suffix (project version is set in project() above)
-set(VERSION_PRE_RELEASE "20" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "21" CACHE STRING "Pre-release version")
 
 # Use PkgConfig only on FreeBSD
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	# Required packages via pkg-config
 	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(SDL2 REQUIRED sdl2)
-	pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 	pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
 	pkg_check_modules(FLAC REQUIRED flac)
 	pkg_check_modules(PNG REQUIRED libpng)
@@ -84,14 +83,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	# Store FreeBSD include/link info for target-specific application in SourceFiles.cmake
 	set(FREEBSD_INCLUDE_DIRS
     	${SDL2_INCLUDE_DIRS}
-    	${SDL2_TTF_INCLUDE_DIRS}
     	${SDL2_IMAGE_INCLUDE_DIRS}
     	${FLAC_INCLUDE_DIRS}
     	${PNG_INCLUDE_DIRS}
 	)
 	set(FREEBSD_LIBRARIES
     	${SDL2_LIBRARIES}
-    	${SDL2_TTF_LIBRARIES}
     	${SDL2_IMAGE_LIBRARIES}
     	${FLAC_LIBRARIES}
     	${PNG_LIBRARIES}

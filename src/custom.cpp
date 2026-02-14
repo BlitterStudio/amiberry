@@ -11285,6 +11285,12 @@ static int can_fast_custom(void)
 		return 0;
 #endif
 	}
+	if (vpos == plflastline || vpos == plffirstline) {
+		return 0;
+	}
+	if (agnus_bsvb && !harddis_v) {
+		return 0;
+	}
 	if (!display_hstart_fastmode) {
 		return 0;
 	}
@@ -12399,7 +12405,10 @@ static void do_cck(bool docycles)
 		check_bpl_vdiw();
 	}
 
-	check_hsyncs();
+	// if returning from fast mode: don't change VB state too early
+	if (custom_fastmode == 0) {
+		check_hsyncs();
+	}
 
 	if (agnus_hpos == HARDWIRED_DMA_TRIGGER_HPOS) {
 		if (custom_fastmode < 0) {
@@ -12501,9 +12510,8 @@ static void sync_equalline_handler(void)
 
 	custom_trigger_start();
 
-	check_vsyncs_fast();
-
 	if (eventtab[ev_sync].active) {
+		check_vsyncs_fast();
 		check_bpl_vdiw();
 		do_imm_dmal();
 	} else {

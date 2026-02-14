@@ -1,8 +1,6 @@
 #ifndef GUI_HANDLING_H
 #define GUI_HANDLING_H
-#ifdef USE_GUISAN
-#include <guisan/sdl/sdlinput.hpp>
-#endif
+
 #include "amiberry_gfx.h"
 #include "amiberry_input.h"
 #include "filesys.h"
@@ -306,15 +304,6 @@ using ConfigCategory = struct config_category
 {
 	const char* category;
 	const char* imagepath;
-#ifdef USE_GUISAN
-	gcn::SelectorEntry* selector;
-	gcn::Container* panel;
-
-	void (*InitFunc)(const config_category& category);
-	void (*ExitFunc)();
-	void (*RefreshFunc)();
-	bool (*HelpFunc)(std::vector<std::string>&);
-#endif
 #ifdef USE_IMGUI
 	// ImGui-specific: direct render function and optional static help text
 	void (*RenderFunc)();
@@ -323,33 +312,13 @@ using ConfigCategory = struct config_category
 };
 
 extern bool gui_running;
-#ifdef USE_GUISAN
-extern gcn::Container* selectors;
-extern gcn::ScrollArea* selectorsScrollArea;
-extern gcn::Gui* uae_gui;
-extern gcn::Container* gui_top;
-#endif
 extern ConfigCategory categories[];
 
 // GUI Colors
 extern amiberry_gui_theme gui_theme;
-#ifdef USE_GUISAN
-extern gcn::Color gui_base_color;
-extern gcn::Color gui_background_color;
-extern gcn::Color gui_selector_inactive_color;
-extern gcn::Color gui_selector_active_color;
-extern gcn::Color gui_selection_color;
-extern gcn::Color gui_foreground_color;
-extern gcn::Color gui_font_color;
 
-extern gcn::SDLInput* gui_input;
-#endif
 extern SDL_Surface* gui_screen;
 extern SDL_Joystick* gui_joystick;
-#ifdef USE_GUISAN
-extern gcn::SDLGraphics* gui_graphics;
-extern gcn::SDLTrueTypeFont* gui_font;
-#endif
 extern SDL_Texture* gui_texture;
 
 extern int scsiromselected;
@@ -372,137 +341,7 @@ typedef struct {
 
 extern vector<ConfigFileInfo*> ConfigFilesList;
 
-#ifdef USE_GUISAN
-void InitPanelAbout(const struct config_category& category);
-void ExitPanelAbout();
-void RefreshPanelAbout();
-bool HelpPanelAbout(std::vector<std::string>& helptext);
-
-void InitPanelPaths(const struct config_category& category);
-void ExitPanelPaths();
-void RefreshPanelPaths();
-bool HelpPanelPaths(std::vector<std::string>& helptext);
-
-void InitPanelQuickstart(const struct config_category& category);
-void ExitPanelQuickstart();
-void RefreshPanelQuickstart();
-bool HelpPanelQuickstart(std::vector<std::string>& helptext);
-
-void InitPanelConfig(const struct config_category& category);
-void ExitPanelConfig();
-void RefreshPanelConfig();
-bool HelpPanelConfig(std::vector<std::string>& helptext);
-
-void InitPanelCPU(const struct config_category& category);
-void ExitPanelCPU();
-void RefreshPanelCPU();
-bool HelpPanelCPU(std::vector<std::string>& helptext);
-
-void InitPanelChipset(const struct config_category& category);
-void ExitPanelChipset();
-void RefreshPanelChipset();
-bool HelpPanelChipset(std::vector<std::string>& helptext);
-
-void InitPanelROM(const struct config_category& category);
-void ExitPanelROM();
-void RefreshPanelROM();
-bool HelpPanelROM(std::vector<std::string>& helptext);
-
-void InitPanelRAM(const struct config_category& category);
-void ExitPanelRAM();
-void RefreshPanelRAM();
-bool HelpPanelRAM(std::vector<std::string>& helptext);
-
-void InitPanelFloppy(const struct config_category& category);
-void ExitPanelFloppy();
-void RefreshPanelFloppy();
-bool HelpPanelFloppy(std::vector<std::string>& helptext);
-
-void InitPanelHD(const struct config_category& category);
-void ExitPanelHD();
-void RefreshPanelHD();
-bool HelpPanelHD(std::vector<std::string>& helptext);
-
-void InitPanelExpansions(const struct config_category& category);
-void ExitPanelExpansions();
-void RefreshPanelExpansions();
-bool HelpPanelExpansions(std::vector<std::string>& helptext);
-void copycpuboardmem(bool tomem);
-
-void InitPanelRTG(const struct config_category& category);
-void ExitPanelRTG();
-void RefreshPanelRTG();
-bool HelpPanelRTG(std::vector<std::string>& helptext);
-
-void InitPanelHWInfo(const struct config_category& category);
-void ExitPanelHWInfo();
-void RefreshPanelHWInfo();
-bool HelpPanelHWInfo(std::vector<std::string>& helptext);
-
-void InitPanelDisplay(const struct config_category& category);
-void ExitPanelDisplay();
-void RefreshPanelDisplay();
-bool HelpPanelDisplay(std::vector<std::string>& helptext);
-
-void InitPanelSound(const struct config_category& category);
-void ExitPanelSound();
-void RefreshPanelSound();
-bool HelpPanelSound(std::vector<std::string>& helptext);
-
-void InitPanelInput(const struct config_category& category);
-void ExitPanelInput();
-void RefreshPanelInput();
-bool HelpPanelInput(std::vector<std::string>& helptext);
-
-void InitPanelIO(const struct config_category& category);
-void ExitPanelIO();
-void RefreshPanelIO();
-bool HelpPanelIO(std::vector<std::string>& helptext);
-
-void InitPanelCustom(const struct config_category& category);
-void ExitPanelCustom();
-void RefreshPanelCustom();
-bool HelpPanelCustom(std::vector<std::string>& helptext);
-
-void InitPanelDiskSwapper(const struct config_category& category);
-void ExitPanelDiskSwapper();
-void RefreshPanelDiskSwapper();
-bool HelpPanelDiskSwapper(std::vector<std::string>& helptext);
-
-void InitPanelMisc(const struct config_category& category);
-void ExitPanelMisc();
-void RefreshPanelMisc();
-bool HelpPanelMisc(std::vector<std::string>& helptext);
-
-void InitPanelPrio(const struct config_category& category);
-void ExitPanelPrio();
-void RefreshPanelPrio();
-bool HelpPanelPrio(std::vector<std::string>& helptext);
-
-void InitPanelSavestate(const struct config_category& category);
-void ExitPanelSavestate();
-void RefreshPanelSavestate();
-bool HelpPanelSavestate(std::vector<std::string>& helptext);
-
-void InitPanelVirtualKeyboard(const struct config_category& category);
-void ExitPanelVirtualKeyboard();
-void RefreshPanelVirtualKeyboard();
-bool HelpPanelVirtualKeyboard(std::vector<std::string>& helptext);
-
-void InitPanelWHDLoad(const struct config_category& category);
-void ExitPanelWHDLoad();
-void RefreshPanelWHDLoad();
-bool HelpPanelWHDLoad(std::vector<std::string>& helptext);
-
-void InitPanelThemes(const struct config_category& category);
-void ExitPanelThemes();
-void RefreshPanelThemes();
-bool HelpPanelThemes(std::vector<std::string>& helptext);
-
-void refresh_all_panels();
-void focus_bug_workaround(const gcn::Window* wnd);
-void disable_resume();
-#elif USE_IMGUI
+#ifdef USE_IMGUI
 // Forward declaration shared with ImGui backend as well
 void disable_resume();
 #define IMGUI_PANEL_LIST \
@@ -650,9 +489,5 @@ extern void set_last_active_config(const char* filename);
 extern void disk_selection(const int shortcut, uae_prefs* prefs);
 extern int disk_swap(int entry, int mode);
 extern int disk_in_drive(int entry);
-
-#ifdef USE_GUISAN
-extern void addromfiles(UAEREG* fkey, gcn::DropDown* d, const TCHAR* path, int type1, int type2);
-#endif
 
 #endif // GUI_HANDLING_H
