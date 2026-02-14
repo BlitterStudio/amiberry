@@ -105,8 +105,15 @@ void ethernet_trigger (struct netdriverdata *ndd, void *vsd)
 		}
 		return;
 #endif
+		// TAP and PCAP share the same uaenet implementation; case labels are
+		// conditionally compiled, code block runs if either backend is defined.
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
+#endif
+#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
 		uaenet_trigger (vsd);
 		return;
 #endif
@@ -119,8 +126,13 @@ void ethernet_receive_poll (struct netdriverdata *ndd, void *vsd)
 		return;
 	switch (ndd->type)
 	{
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
+#endif
+#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
 		uaenet_receive_poll (vsd);
 		return;
 #endif
@@ -180,8 +192,13 @@ int ethernet_open (struct netdriverdata *ndd, void *vsd, void *user, ethernet_go
 		}
 		return 1;
 #endif
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
+#endif
+#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
 		if (uaenet_open (vsd, ndd, user, gotfunc, getfunc, promiscuous, mac)) {
 			netmode = ndd->type;
 			return 1;
@@ -210,8 +227,13 @@ void ethernet_close (struct netdriverdata *ndd, void *vsd)
 		}
 		return;
 #endif
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
+#endif
+#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
 		return uaenet_close (vsd);
 #endif
 	}
@@ -219,6 +241,9 @@ void ethernet_close (struct netdriverdata *ndd, void *vsd)
 
 void ethernet_enumerate_free (void)
 {
+#ifdef WITH_UAENET_TAP
+	uaenet_tap_enumerate_free ();
+#endif
 #ifdef WITH_UAENET_PCAP
 	uaenet_enumerate_free ();
 #endif
@@ -243,6 +268,13 @@ bool ethernet_enumerate (struct netdriverdata **nddp, int romtype)
 			*nddp = &slirpd;
 		if (!_tcsicmp (slirpd2.name, name))
 			*nddp = &slirpd2;
+#ifdef WITH_UAENET_TAP
+		if (*nddp == NULL) {
+			struct netdriverdata *tapd = uaenet_tap_enumerate (name);
+			if (tapd && tapd[0].active)
+				*nddp = tapd;
+		}
+#endif
 #ifdef WITH_UAENET_PCAP
 		if (*nddp == NULL)
 			*nddp = uaenet_enumerate (name);
@@ -256,13 +288,33 @@ bool ethernet_enumerate (struct netdriverdata **nddp, int romtype)
 	j = 0;
 	nddp[j++] = &slirpd;
 	nddp[j++] = &slirpd2;
-#ifdef WITH_UAENET_PCAP
-	nd = uaenet_enumerate (NULL);
+#ifdef WITH_UAENET_TAP
+	nd = uaenet_tap_enumerate (NULL);
 	if (nd) {
 		int last = MAX_TOTAL_NET_DEVICES - 1 - j;
 		for (int i = 0; i < last; i++) {
 			if (nd[i].active)
 				nddp[j++] = &nd[i];
+		}
+	}
+#endif
+#ifdef WITH_UAENET_PCAP
+	nd = uaenet_enumerate (NULL);
+	if (nd) {
+		int last = MAX_TOTAL_NET_DEVICES - 1 - j;
+		for (int i = 0; i < last; i++) {
+			if (nd[i].active) {
+				// Dedup: skip pcap entries whose name matches a TAP entry
+				bool dup = false;
+				for (int k = 2; k < j; k++) {
+					if (nddp[k] && nddp[k]->name && !_tcsicmp(nddp[k]->name, nd[i].name)) {
+						dup = true;
+						break;
+					}
+				}
+				if (!dup)
+					nddp[j++] = &nd[i];
+			}
 		}
 	}
 #endif
@@ -277,8 +329,13 @@ void ethernet_close_driver (struct netdriverdata *ndd)
 		case UAENET_SLIRP:
 		case UAENET_SLIRP_INBOUND:
 		return;
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
+#endif
+#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
 		return uaenet_close_driver (ndd);
 #endif
 	}
@@ -292,8 +349,13 @@ int ethernet_getdatalength (struct netdriverdata *ndd)
 		case UAENET_SLIRP:
 		case UAENET_SLIRP_INBOUND:
 		return sizeof (struct ethernet_data);
+#ifdef WITH_UAENET_TAP
+		case UAENET_TAP:
+#endif
 #ifdef WITH_UAENET_PCAP
 		case UAENET_PCAP:
+#endif
+#if defined(WITH_UAENET_TAP) || defined(WITH_UAENET_PCAP)
 		return uaenet_getdatalenght ();
 #endif
 	}
