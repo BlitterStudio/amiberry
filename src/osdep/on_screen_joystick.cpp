@@ -34,17 +34,17 @@
 // D-pad size as fraction of the shorter screen dimension
 static constexpr float DPAD_SIZE_FRACTION = 0.32f;
 // Button size as fraction of the shorter screen dimension
-static constexpr float BUTTON_SIZE_FRACTION = 0.14f;
+static constexpr float BUTTON_SIZE_FRACTION = 0.19f;
 // Vertical spacing between the two buttons as fraction of shorter dimension
-static constexpr float BUTTON_GAP_FRACTION = 0.04f;
+static constexpr float BUTTON_GAP_FRACTION = 0.06f;
 // Margin from screen edge as fraction of shorter dimension
 static constexpr float EDGE_MARGIN_FRACTION = 0.02f;
 // Texture resolution for procedurally-generated graphics
 static constexpr int DPAD_TEX_SIZE = 256;
 static constexpr int BUTTON_TEX_SIZE = 128;
 // Alpha values (0-255)
-static constexpr Uint8 ALPHA_NORMAL = 100;
-static constexpr Uint8 ALPHA_PRESSED = 180;
+static constexpr Uint8 ALPHA_NORMAL = 160;
+static constexpr Uint8 ALPHA_PRESSED = 220;
 // Dead zone in the center of the D-pad (fraction of radius)
 static constexpr float DPAD_DEADZONE = 0.20f;
 
@@ -799,13 +799,14 @@ void on_screen_joystick_update_layout(int sw, int sh, const SDL_Rect& game_rect)
 	int total_btn_height = btn_size * 2 + btn_gap;
 	int btn_y_start = (sh - total_btn_height) / 2;
 
-	btn1_rect.x = btn_x + btn_size / 4;
-	btn1_rect.y = btn_y_start - btn_size / 6;
+	// Stack buttons vertically, no diagonal offset
+	btn1_rect.x = btn_x;
+	btn1_rect.y = btn_y_start;
 	btn1_rect.w = btn_size;
 	btn1_rect.h = btn_size;
 
-	btn2_rect.x = btn_x - btn_size / 4;
-	btn2_rect.y = btn_y_start + btn_size + btn_gap + btn_size / 6;
+	btn2_rect.x = btn_x;
+	btn2_rect.y = btn_y_start + btn_size + btn_gap;
 	btn2_rect.w = btn_size;
 	btn2_rect.h = btn_size;
 
