@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
 
 #include "sysconfig.h"
 #include "sysdeps.h"
@@ -1182,6 +1183,114 @@ void mman_set_barriers(bool disable)
 		}
 	}
 #endif
+}
+
+/*
+ * Commit dummy pages for all unmapped gaps in the natmem reservation.
+ *
+ * When JIT direct memory access (canbang) is active, both JIT-compiled code
+ * and the interpreter access emulated memory via natmem_offset + M68k_address.
+ * The natmem block is reserved with PROT_NONE, and only actual memory banks
+ * (chip RAM, ROMs, Z3 RAM, RTG, etc.) get committed. Gaps between banks
+ * remain uncommitted, causing SIGSEGV on direct access.
+ *
+ * This function commits all gap pages so they are readable/writable,
+ * filled with the appropriate value based on cs_unmapped_space:
+ *   0/1 = zero (matches dummy_bank returning 0)
+ *   2   = 0xFF (matches dummy_bank returning 0xFFFFFFFF)
+ */
+void commit_natmem_gaps(void)
+{
+	if (!canbang || !natmem_reserved || !natmem_reserved_size)
+		return;
+
+	struct range {
+		uae_u32 start;
+		uae_u32 end;
+	};
+
+	std::vector<range> committed;
+
+	// Collect all committed regions from shmids[]
+	for (int i = 0; i < MAX_SHMID; i++) {
+		if (shmids[i].key == -1 || !shmids[i].attached || !shmids[i].natmembase)
+			continue;
+
+		// Calculate offset relative to natmem_reserved (not natmem_offset,
+		// which may differ when RTG VRAM is offset)
+		auto host_addr = static_cast<uae_u8*>(shmids[i].attached);
+		if (host_addr < natmem_reserved || host_addr >= natmem_reserved + natmem_reserved_size)
+			continue;
+
+		uae_u32 offset = static_cast<uae_u32>(host_addr - natmem_reserved);
+		uae_u32 size = shmids[i].size;
+		if (offset + size > natmem_reserved_size)
+			size = natmem_reserved_size - offset;
+		if (size > 0)
+			committed.push_back({offset, offset + size});
+	}
+
+	// Sort by start offset
+	std::sort(committed.begin(), committed.end(),
+		[](const range& a, const range& b) { return a.start < b.start; });
+
+	// Merge overlapping/adjacent ranges
+	std::vector<range> merged;
+	for (auto& r : committed) {
+		if (!merged.empty() && r.start <= merged.back().end) {
+			if (r.end > merged.back().end)
+				merged.back().end = r.end;
+		} else {
+			merged.push_back(r);
+		}
+	}
+
+	// Determine fill byte based on unmapped_address_space config
+	uae_u8 fill_byte = (currprefs.cs_unmapped_space == 2) ? 0xFF : 0x00;
+
+	int page_size = uae_vm_page_size();
+	uae_u32 page_mask = static_cast<uae_u32>(page_size - 1);
+	uae_u32 total_gap = 0;
+	uae_u32 pos = 0;
+
+	// Walk gaps between committed regions and commit them
+	for (auto& r : merged) {
+		if (r.start > pos) {
+			// Gap from pos to r.start — align to page boundaries
+			uae_u32 gap_start = (pos + page_mask) & ~page_mask;
+			uae_u32 gap_end = r.start & ~page_mask;
+			if (gap_end > gap_start) {
+				uae_u32 gap_size = gap_end - gap_start;
+				uae_u8* addr = natmem_reserved + gap_start;
+				if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
+					memset(addr, fill_byte, gap_size);
+					total_gap += gap_size;
+					write_log(_T("MMAN: Committed gap %08x-%08x (%uK) fill=0x%02x\n"),
+						gap_start, gap_end, gap_size >> 10, fill_byte);
+				}
+			}
+		}
+		pos = r.end;
+	}
+
+	// Trailing gap after last committed region
+	if (pos < natmem_reserved_size) {
+		uae_u32 gap_start = (pos + page_mask) & ~page_mask;
+		uae_u32 gap_end = natmem_reserved_size & ~page_mask;
+		if (gap_end > gap_start) {
+			uae_u32 gap_size = gap_end - gap_start;
+			uae_u8* addr = natmem_reserved + gap_start;
+			if (uae_vm_commit(addr, gap_size, UAE_VM_READ_WRITE)) {
+				memset(addr, fill_byte, gap_size);
+				total_gap += gap_size;
+				write_log(_T("MMAN: Committed trailing gap %08x-%08x (%uK) fill=0x%02x\n"),
+					gap_start, gap_end, gap_size >> 10, fill_byte);
+			}
+		}
+	}
+
+	if (total_gap > 0)
+		write_log(_T("MMAN: Total gap pages committed: %uK\n"), total_gap >> 10);
 }
 
 int uae_shmdt (const void *shmaddr)

@@ -42,5 +42,6 @@ struct uae_mman_data
 	bool hasbarrier;
 };
 bool uae_mman_info(addrbank *ab, struct uae_mman_data *md);
+void commit_natmem_gaps(void);
 
 #endif /* UAE_MMAN_H */

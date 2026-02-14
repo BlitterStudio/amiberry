@@ -3411,6 +3411,13 @@ void memory_reset (void)
 	if (mem_hardreset) {
 		memory_clear ();
 	}
+
+#ifdef NATMEM_OFFSET
+	if (canbang) {
+		commit_natmem_gaps();
+	}
+#endif
+
 	write_log (_T("memory init end\n"));
 }
 
