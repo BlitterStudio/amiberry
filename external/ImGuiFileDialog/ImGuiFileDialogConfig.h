@@ -98,7 +98,6 @@
 // filter combobox width
 // #define FILTER_COMBO_MIN_WIDTH 120.0f
 // button widget use for compose path
-// button widget use for compose path
 #define IMGUI_PATH_BUTTON AmigaButton
 // standard button
 #define IMGUI_BUTTON AmigaButton
