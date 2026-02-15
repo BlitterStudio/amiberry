@@ -136,7 +136,9 @@
 /* vpar virtual parallel port */
 #define WITH_VPAR 1
 
+#ifndef LIBRETRO
 #define WITH_SCSI_IOCTL
+#endif
 
 /* #define WITH_SCSI_SPTI */
 

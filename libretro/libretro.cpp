@@ -37,6 +37,10 @@ extern "C" {
 #include "amiberry_gfx.h"
 #include "zfile.h"
 #include "target.h"
+#ifdef WITH_CHD
+#include "archivers/chd/chd.h"
+#include "archivers/chd/cdrom.h"
+#endif
 
 struct AmigaMonitor;
 extern struct AmigaMonitor AMonitors[];
@@ -1070,6 +1074,154 @@ static bool file_readable(const char* path)
 	return path && *path && access(path, R_OK) == 0;
 }
 
+// Detected CD content type for auto-model selection
+enum cd_content_type {
+	CD_CONTENT_NONE = 0,    // Not a CD image, or unrecognized
+	CD_CONTENT_CDTV,        // CDTV disc (signature "CDTV" at sector 16 offset 8)
+	CD_CONTENT_CD32,        // CD32 disc (signature "CD32" or "COMM" at sector 16 offset 8)
+	CD_CONTENT_UNKNOWN_CD,  // CD image but could not read/identify content
+};
+
+static bool is_cd_extension(const std::string& ext)
+{
+	return ext == "iso" || ext == "cue" || ext == "ccd"
+		|| ext == "nrg" || ext == "mds" || ext == "chd";
+}
+
+// Detect CD32/CDTV content by reading sector 16 of an ISO image.
+// Sector 16 (LBA 16) is in the ISO 9660 system area. Amiga CD32/CDTV discs
+// place a 4-byte trademark string at offset 8: "CD32", "CDTV", or "COMM".
+static cd_content_type detect_cd_content_from_iso(const char* path)
+{
+	FILE* f = fopen(path, "rb");
+	if (!f)
+		return CD_CONTENT_UNKNOWN_CD;
+
+	// Sector 16, 2048 bytes per sector
+	const long sector16_offset = 16 * 2048;
+	if (fseek(f, sector16_offset, SEEK_SET) != 0) {
+		fclose(f);
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+
+	unsigned char buf[2048];
+	if (fread(buf, 1, sizeof(buf), f) < 12) {
+		fclose(f);
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+	fclose(f);
+
+	// Check the 4-byte signature at offset 8
+	if (memcmp(buf + 8, "CD32", 4) == 0 || memcmp(buf + 8, "COMM", 4) == 0)
+		return CD_CONTENT_CD32;
+	if (memcmp(buf + 8, "CDTV", 4) == 0)
+		return CD_CONTENT_CDTV;
+
+	return CD_CONTENT_UNKNOWN_CD;
+}
+
+// Detect CD content from a CHD file using MAME CHD/cdrom API.
+// First checks metadata tags to determine if the CHD is a CD-ROM or HDD,
+// then reads sector 16 to identify CD32/CDTV content.
+#ifdef WITH_CHD
+static cd_content_type detect_cd_content_from_chd(const char* path)
+{
+	chd_file chd;
+	auto err = chd.open(path, false, nullptr);
+	if (err != std::error_condition()) {
+		write_log(_T("CHD detect: failed to open '%s'\n"), path);
+		return CD_CONTENT_NONE;
+	}
+
+	// Check metadata to determine if this is a CD-ROM or HDD image.
+	// CD-ROM CHDs have CDROM_TRACK_METADATA2_TAG, CDROM_TRACK_METADATA_TAG,
+	// or CDROM_OLD_METADATA_TAG. HDD CHDs have HARD_DISK_METADATA_TAG.
+	std::string metadata;
+	bool is_cdrom = false;
+
+	if (chd.read_metadata(CDROM_TRACK_METADATA2_TAG, 0, metadata) == std::error_condition())
+		is_cdrom = true;
+	else if (chd.read_metadata(CDROM_TRACK_METADATA_TAG, 0, metadata) == std::error_condition())
+		is_cdrom = true;
+	else if (chd.read_metadata(CDROM_OLD_METADATA_TAG, 0, metadata) == std::error_condition())
+		is_cdrom = true;
+
+	if (!is_cdrom) {
+		// Not a CD-ROM CHD (likely HDD) — don't auto-detect model
+		chd.close();
+		return CD_CONTENT_NONE;
+	}
+
+	// It's a CD-ROM CHD. Open as cdrom and read sector 16 for Amiga signature.
+	cdrom_file* cdf = cdrom_open(&chd);
+	if (!cdf) {
+		write_log(_T("CHD detect: cdrom_open failed for '%s'\n"), path);
+		chd.close();
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+
+	unsigned char buf[2048] = {};
+	uint32_t bytes_read = cdrom_read_data(cdf, 16, buf, CD_TRACK_MODE1, false);
+	cdrom_close(cdf);
+	chd.close();
+
+	if (bytes_read == 0) {
+		write_log(_T("CHD detect: failed to read sector 16 from '%s'\n"), path);
+		return CD_CONTENT_UNKNOWN_CD;
+	}
+
+	// Check the 4-byte signature at offset 8 (same as ISO detection)
+	if (memcmp(buf + 8, "CD32", 4) == 0 || memcmp(buf + 8, "COMM", 4) == 0)
+		return CD_CONTENT_CD32;
+	if (memcmp(buf + 8, "CDTV", 4) == 0)
+		return CD_CONTENT_CDTV;
+
+	return CD_CONTENT_UNKNOWN_CD;
+}
+#endif
+
+// Detect CD content type from a file path and its extension.
+// For raw ISO files, reads sector 16 directly.
+// For CHD files, uses MAME CHD API to check metadata and read sector 16.
+// For other CD image formats, uses heuristics or defaults.
+static cd_content_type detect_cd_content(const char* path, const std::string& ext)
+{
+	if (!path || !*path)
+		return CD_CONTENT_NONE;
+
+	if (!is_cd_extension(ext))
+		return CD_CONTENT_NONE;
+
+	// Raw ISO: read sector 16 directly
+	if (ext == "iso")
+		return detect_cd_content_from_iso(path);
+
+	// CHD: use MAME CHD API to detect CD vs HDD and read sector 16
+	if (ext == "chd") {
+#ifdef WITH_CHD
+		return detect_cd_content_from_chd(path);
+#else
+		return CD_CONTENT_NONE;
+#endif
+	}
+
+	// TODO: CUE/CCD/MDS/NRG — parse the sheet/descriptor to locate the
+	// data track, then read sector 16 from the binary. For now, fall through
+	// to heuristics below.
+
+	// CUE/CCD/MDS/NRG: cannot read sector 16 without parsing the sheet.
+	// Use filename heuristic as fallback (like PUAE does).
+	if (path) {
+		std::string lower_path = to_lower_copy(path);
+		if (lower_path.find("cdtv") != std::string::npos)
+			return CD_CONTENT_CDTV;
+	}
+
+	// Default: any unrecognized CUE/CCD/MDS/NRG is likely CD32
+	// (most common Amiga CD format by far)
+	return CD_CONTENT_CD32;
+}
+
 static bool dir_exists(const std::string& path)
 {
 	if (path.empty())
@@ -1112,8 +1264,8 @@ static bool find_kickstart_in_system_dir(const char* model, char* out, size_t ou
 	const char* candidates_a1200[] = { "kick31.rom", "kick40068.A1200", "kick.rom" };
 	const char* candidates_a4000[] = { "kick31.rom", "kick40068.A4000", "kick.rom" };
 	const char* candidates_a600[] = { "kick20.rom", "kick205.rom", "kick.rom", "kick13.rom" };
-	const char* candidates_cd32[] = { "cd32.rom", "kick31.rom", "kick.rom" };
-	const char* candidates_cdtv[] = { "cdtv.rom", "kick13.rom", "kick.rom" };
+	const char* candidates_cd32[] = { "cd32.rom", "kick40060.CD32", "kick31.rom", "kick.rom" };
+	const char* candidates_cdtv[] = { "cdtv.rom", "kick34005.CDTV", "kick13.rom", "kick.rom" };
 
 	const char** candidates = candidates_generic;
 	size_t count = sizeof(candidates_generic) / sizeof(candidates_generic[0]);
@@ -2678,6 +2830,23 @@ bool retro_load_game(const struct retro_game_info *info)
 	}
 	else
 		game_path[0] = '\0';
+
+	// Auto-detect CD32/CDTV content and override model if needed
+	if (game_path[0]) {
+		const std::string gp_ext = path_extension_lower(game_path);
+		const cd_content_type cd_type = detect_cd_content(game_path, gp_ext);
+		if (cd_type != CD_CONTENT_NONE) {
+			// Only auto-switch if the user hasn't already selected a CD model
+			const bool user_chose_cd = (cached_model == "CD32" || cached_model == "CDTV");
+			if (!user_chose_cd) {
+				const char* detected_model = (cd_type == CD_CONTENT_CDTV) ? "CDTV" : "CD32";
+				if (log_cb)
+					log_cb(RETRO_LOG_INFO, "CD content detected: auto-selecting model '%s' for %s\n",
+						detected_model, game_path);
+				cached_model = detected_model;
+			}
+		}
+	}
 
 	return true;
 }
