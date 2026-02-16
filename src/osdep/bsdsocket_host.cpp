@@ -3323,7 +3323,10 @@ static void printSockAddr(struct sockaddr_in* in)
 static void post_socket_event(struct socketbase* sb, int sd, int event_type)
 {
 	if (!sb || sd < 0) return;
-	
+
+	// Verify socket still has an active event mask — race with SO_EVENTMASK=0
+	if (!(sb->ftable[sd] & REP_ALL)) return;
+
 	// Set the appropriate SET_* flag in ftable
 	sb->ftable[sd] |= (event_type << 8);
 
@@ -4753,6 +4756,8 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		} else {
 			// Unregister socket from event monitoring
 			unregister_socket_events(sb, sd);
+			// Clear pending SET_* flags to prevent stale events on fd reuse
+			sb->ftable[sd] &= ~SET_ALL;
 		}
 		
 		sb->resultval = 0;
@@ -5116,7 +5121,9 @@ int host_CloseSocket(TrapContext *ctx, SB, int sd)
 	
 	// Unregister from event monitoring if registered
 	unregister_socket_events(sb, sd);
-	
+	// Clear pending event flags to prevent stale GetSocketEvents on fd reuse
+	sb->ftable[sd] &= ~SET_ALL;
+
 	retval = close_socket (s);
 	SETERRNO;
 	releasesock (ctx, sb, sd + 1);
