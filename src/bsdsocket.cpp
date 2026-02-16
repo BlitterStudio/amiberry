@@ -1146,7 +1146,8 @@ static uae_u32 REGPARAM2 bsdsocklib_sendmsg (TrapContext *ctx)
 		p += cnt;
 	}
 	uaecptr to = trap_get_long(ctx, msg + 0);
-	host_sendto(ctx, sb, sd, 0, data, total, flags, to, msg + 4);
+	uae_u32 tolen = trap_get_long(ctx, msg + 4);
+	host_sendto(ctx, sb, sd, 0, data, total, flags, to, tolen);
 	xfree(data);
 	return sb->resultval;
 }
@@ -1200,7 +1201,7 @@ static uae_u32 REGPARAM2 bsdsocklib_recvmsg (TrapContext *ctx)
 		}
 		if (total2 == sb->resultval)
 			msg_flags |= MSG_EOR;
-		if (total > 0 && (sb->ftable[sd - 1] & SF_DGRAM))
+		if (total > 0 && (sb->ftable[sd] & SF_DGRAM))
 			msg_flags |= MSG_TRUNC;
 		trap_put_long(ctx, msg + 24, msg_flags);
 	}
