@@ -989,22 +989,19 @@ static uae_u32 REGPARAM2 bsdsocklib_inet_addr (TrapContext *ctx)
 /* Inet_LnaOf(in)(d0) */
 static uae_u32 REGPARAM2 bsdsocklib_Inet_LnaOf (TrapContext *ctx)
 {
-	write_log (_T("bsdsocket: UNSUPPORTED: Inet_LnaOf()\n"));
-	return 0;
+	return host_Inet_LnaOf(trap_get_dreg(ctx, 0));
 }
 
 /* Inet_NetOf(in)(d0) */
 static uae_u32 REGPARAM2 bsdsocklib_Inet_NetOf (TrapContext *ctx)
 {
-	write_log (_T("bsdsocket: UNSUPPORTED: Inet_NetOf()\n"));
-	return 0;
+	return host_Inet_NetOf(trap_get_dreg(ctx, 0));
 }
 
 /* Inet_MakeAddr(net, host)(d0/d1) */
 static uae_u32 REGPARAM2 bsdsocklib_Inet_MakeAddr (TrapContext *ctx)
 {
-	write_log (_T("bsdsocket: UNSUPPORTED: Inet_MakeAddr()\n"));
-	return 0;
+	return host_Inet_MakeAddr(trap_get_dreg(ctx, 0), trap_get_dreg(ctx, 1));
 }
 
 /* inet_network(cp)(a0) */

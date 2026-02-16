@@ -2164,6 +2164,51 @@ uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
 	return addr;
 }
 
+uae_u32 host_Inet_LnaOf(uae_u32 in)
+{
+	uae_u32 result;
+
+	if ((in & 0x80000000) == 0) {
+		result = in & 0x00ffffff;
+	} else if ((in & 0xc0000000) == 0x80000000) {
+		result = in & 0x0000ffff;
+	} else {
+		result = in & 0x000000ff;
+	}
+	BSDTRACE((_T("Inet_LnaOf(0x%08x) -> 0x%08x\n"), in, result));
+	return result;
+}
+
+uae_u32 host_Inet_NetOf(uae_u32 in)
+{
+	uae_u32 result;
+
+	if ((in & 0x80000000) == 0) {
+		result = (in >> 24) & 0xff;
+	} else if ((in & 0xc0000000) == 0x80000000) {
+		result = (in >> 16) & 0xffff;
+	} else {
+		result = (in >> 8) & 0xffffff;
+	}
+	BSDTRACE((_T("Inet_NetOf(0x%08x) -> 0x%08x\n"), in, result));
+	return result;
+}
+
+uae_u32 host_Inet_MakeAddr(uae_u32 net, uae_u32 host)
+{
+	uae_u32 result;
+
+	if (net < 128) {
+		result = (net << 24) | (host & 0x00ffffff);
+	} else if (net < 65536) {
+		result = (net << 16) | (host & 0x0000ffff);
+	} else {
+		result = (net << 8) | (host & 0x000000ff);
+	}
+	BSDTRACE((_T("Inet_MakeAddr(0x%08x, 0x%08x) -> 0x%08x\n"), net, host, result));
+	return result;
+}
+
 /* DNS/proto/serv thread pool */
 
 #define GET_STATE_FREE 0
@@ -5272,6 +5317,51 @@ uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
 
 	xfree(cp_rp);
 	return addr;
+}
+
+uae_u32 host_Inet_LnaOf(uae_u32 in)
+{
+	uae_u32 result;
+
+	if ((in & 0x80000000) == 0) {
+		result = in & 0x00ffffff;
+	} else if ((in & 0xc0000000) == 0x80000000) {
+		result = in & 0x0000ffff;
+	} else {
+		result = in & 0x000000ff;
+	}
+	BSDTRACE((_T("Inet_LnaOf(0x%08x) -> 0x%08x\n"), in, result));
+	return result;
+}
+
+uae_u32 host_Inet_NetOf(uae_u32 in)
+{
+	uae_u32 result;
+
+	if ((in & 0x80000000) == 0) {
+		result = (in >> 24) & 0xff;
+	} else if ((in & 0xc0000000) == 0x80000000) {
+		result = (in >> 16) & 0xffff;
+	} else {
+		result = (in >> 8) & 0xffffff;
+	}
+	BSDTRACE((_T("Inet_NetOf(0x%08x) -> 0x%08x\n"), in, result));
+	return result;
+}
+
+uae_u32 host_Inet_MakeAddr(uae_u32 net, uae_u32 host)
+{
+	uae_u32 result;
+
+	if (net < 128) {
+		result = (net << 24) | (host & 0x00ffffff);
+	} else if (net < 65536) {
+		result = (net << 16) | (host & 0x0000ffff);
+	} else {
+		result = (net << 8) | (host & 0x000000ff);
+	}
+	BSDTRACE((_T("Inet_MakeAddr(0x%08x, 0x%08x) -> 0x%08x\n"), net, host, result));
+	return result;
 }
 
 // --- Wrap getservbyname, getservbyport, getprotobyname, getprotobynumber with mutex ---
