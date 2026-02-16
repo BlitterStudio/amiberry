@@ -4610,7 +4610,7 @@ void host_sendto (TrapContext *ctx, SB, uae_u32 sd, uae_u32 msg, uae_u8 *hmsg, u
 		}
 
 		sb->s = s;
-		sb->buf    = get_real_address (msg);
+		sb->buf    = realpt;
 		sb->len    = len;
 		sb->flags  = flags;
 		sb->to     = to;
