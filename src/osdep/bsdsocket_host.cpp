@@ -3396,7 +3396,12 @@ static int event_monitor_thread(void* data)
 					BSDTRACE((_T("BSDSOCK: Adding socket %d to readfds (mask has REP_ACCEPT)\n"), entry.sd));
 				}
 			}
-			
+
+			// REP_CLOSE requires readfds to detect EOF via peek_socket
+			if ((active_mask & REP_CLOSE) && entry.connected && !entry.connecting) {
+				FD_SET(entry.s, &readfds);
+			}
+
 			// REP_WRITE is treated as Level Triggered in select() but Edge Triggered/One-Shot for Amiga signals.
 			// If connected and not connecting, we monitor for write if the event is active (not fired).
 			// FIX: Also monitor if REP_CONNECT was requested, as implicit Writability expectation.
@@ -3518,7 +3523,7 @@ static int event_monitor_thread(void* data)
 				}
 				
 				// Standard Write Signaling
-				if (entry.eventmask & REP_WRITE) {
+				if ((entry.eventmask & REP_WRITE) && !(entry.fired_mask & REP_WRITE)) {
 					events |= REP_WRITE;
 					wrote = true;
 				}
@@ -3677,7 +3682,10 @@ static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 		entry.s = s;
 		entry.eventmask = eventmask;
 		entry.connecting = false;
-		entry.connected = true; // Default to true (optimistic), disable if ENOTCONN seen
+		// Determine actual connection state — bare sockets must not fire REP_WRITE/READ
+		struct sockaddr_in peer;
+		socklen_t plen = sizeof(peer);
+		entry.connected = (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
 		entry.fired_mask = 0;
 		g_event_monitor->socket_list.push_back(entry);
 		
@@ -4185,6 +4193,8 @@ static int bsdlib_threadfunc(void* arg)
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Connect_2, sb);
 			if ((int)sb->resultval < 0) {
 				SETERRNO;
+			} else {
+				bsdsocklib_seterrno(ctx, sb, 0);
 			}
 			break;
 
@@ -4193,6 +4203,8 @@ static int bsdlib_threadfunc(void* arg)
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Send_2, sb);
 			if ((int)sb->resultval < 0) {
 				SETERRNO;
+			} else {
+				bsdsocklib_seterrno(ctx, sb, 0);
 			}
 			break;
 
@@ -4200,6 +4212,8 @@ static int bsdlib_threadfunc(void* arg)
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Recv_2, sb);
 			if ((int)sb->resultval < 0) {
 				SETERRNO;
+			} else {
+				bsdsocklib_seterrno(ctx, sb, 0);
 			}
 			break;
 
@@ -4414,6 +4428,7 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 		if (fd2 != -1) {
 			if ((unsigned int) (fd2) >= (unsigned int) sb->dtablesize) {
 				bsdsocklib_seterrno (ctx, sb, 9); /* EBADF */
+				return -1;
 			}
 			fd2++;
 			s2 = getsock(ctx, sb, fd2);
@@ -4422,7 +4437,7 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 				close_socket (s2);
 			}
 			setsd (ctx, sb, fd2, dup (s1));
-			return 0;
+			return fd2 - 1;
 		} else {
 			fd2 = getsd (ctx, sb, 1);
 			if (fd2 != -1) {
@@ -4833,13 +4848,24 @@ uae_u32 host_getsockopt(TrapContext* ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 	}
 
 	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+		len = sizeof(timeout);
 		r = getsockopt(s, nativelevel, nativeoptname, (char*)&timeout, &len);
 	}
 	else if (nativeoptname == SO_LINGER) {
+		len = sizeof(sl);
 		r = getsockopt(s, nativelevel, nativeoptname, (char*)&sl, &len);
 	}
 	else {
 		r = getsockopt(s, nativelevel, nativeoptname, optval ? (char*)buf : NULL, optlen ? &len : NULL);
+	}
+
+	// Write back Amiga-appropriate optlen for size-mismatched types
+	if (r == 0 && optlen) {
+		if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+			len = 8; // Amiga sizeof(struct timeval) = 4+4
+		} else if (nativeoptname == SO_LINGER) {
+			len = 8; // Amiga sizeof(struct linger) = 4+4
+		}
 	}
 
 	if (optlen)
@@ -5407,13 +5433,13 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 	struct servent *s;
 #if defined(__linux__)
 	s = (type) ?
-		getservbyport (nameport, (char *)get_real_address (proto)) :
+		getservbyport (htons((unsigned short)nameport), (char *)get_real_address (proto)) :
 		getservbyname ((char *)get_real_address (nameport), (char *)get_real_address (proto));
 #else
 	// Thread safety: protect non-reentrant getservby* functions
 	std::lock_guard<std::mutex> lock(bsdsock_mutex);
 	s = (type) ?
-		getservbyport (nameport, (char *)get_real_address (proto)) :
+		getservbyport (htons((unsigned short)nameport), (char *)get_real_address (proto)) :
 		getservbyname ((char *)get_real_address (nameport), (char *)get_real_address (proto));
 #endif
 	int size;
@@ -5467,6 +5493,11 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 
 		bsdsocklib_seterrno (ctx, sb,0);
 	} else {
+		// Free previous allocation and clear so Amiga side returns NULL
+		if (sb->servent) {
+			uae_FreeMem(ctx, sb->servent, sb->serventsize, sb->sysbase);
+		}
+		sb->servent = 0;
 		SETHERRNO;
 		SETERRNO;
 		return;
@@ -5492,9 +5523,12 @@ uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
 {
 	if (!trap_valid_address(ctx, name, namelen))
 		return -1;
-	uae_char buf[256];
-	trap_get_string(ctx, buf, name, sizeof buf);
-	return gethostname(buf, namelen);
+	char buf[256];
+	if (gethostname(buf, sizeof(buf)) != 0)
+		return -1;
+	buf[sizeof(buf) - 1] = '\0';
+	trap_put_string(ctx, (uae_char *)buf, name, namelen);
+	return 0;
 }
 
 #endif /* _WIN32 */
