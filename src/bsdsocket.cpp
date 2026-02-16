@@ -729,9 +729,8 @@ static uae_u32 REGPARAM2 bsdsocklib_SetSocketSignals (TrapContext *ctx)
 }
 
 /* SetDTableSize(size)(d0) */
-static uae_u32 bsdsocklib_SetDTableSize (SB, int newSize)
+static uae_u32 bsdsocklib_SetDTableSize (TrapContext *ctx, SB, int newSize)
 {
-	TrapContext *ctx = NULL;
 	int *newdtable;
 	int *newftable;
 	unsigned int *newmtable;
@@ -757,9 +756,10 @@ static uae_u32 bsdsocklib_SetDTableSize (SB, int newSize)
 
 	memcpy (newdtable, sb->dtable, sb->dtablesize * sizeof(*sb->dtable));
 	memcpy (newftable, sb->ftable, sb->dtablesize * sizeof(*sb->ftable));
-	memcpy (newmtable, sb->mtable, sb->dtablesize * sizeof(*sb->mtable));
-	for (i = sb->dtablesize + 1; i < newSize; i++)
-		newdtable[i] = -1;
+	if (sb->mtable)
+		memcpy (newmtable, sb->mtable, sb->dtablesize * sizeof(*sb->mtable));
+	for (i = sb->dtablesize; i < newSize; i++)
+		newdtable[i] = INVALID_SOCKET;
 
 	sb->dtablesize = newSize;
 	xfree(sb->dtable);
@@ -1549,10 +1549,19 @@ static uae_u32 REGPARAM2 bsdsocklib_SocketBaseTagList(TrapContext *ctx)
 					break;
 				case SBTC_DTABLESIZE:
 					BSDTRACE ((_T("SBTC_DTABLESIZE),0x%x"), currval));
-					if (currtag & 1) {
-						bsdsocklib_SetDTableSize(sb, currval);
-					} else {
-						put_long (tagptr + 4, sb->dtablesize);
+					switch (currtag & 0x8001) {
+					case 0x0000: /* GETVAL */
+						trap_put_long(ctx, tagptr + 4, sb->dtablesize);
+						break;
+					case 0x8000: /* GETREF */
+						trap_put_long(ctx, currval, sb->dtablesize);
+						break;
+					case 0x0001: /* SETVAL */
+						bsdsocklib_SetDTableSize(ctx, sb, currval);
+						break;
+					default: /* SETREF */
+						bsdsocklib_SetDTableSize(ctx, sb, trap_get_long(ctx, currval));
+						break;
 					}
 					break;
 
