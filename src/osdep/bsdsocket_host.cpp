@@ -5068,10 +5068,16 @@ uae_u32 bsdthr_WaitSelect(SB)
 	int r;
 	TrapContext* ctx = NULL;  // FIXME: Correct?
 
-	write_log("WaitSelect: %d 0x%x 0x%x 0x%x 0x%x 0x%x\n", sb->nfds, sb->sets[0], sb->sets[1], sb->sets[2], sb->timeout, sb->sigmp);
+	int nfds = sb->nfds;
+	if (nfds > sb->dtablesize) {
+		write_log(_T("BSDSOCK: WaitSelect nfds (%d) exceeds dtablesize (%d), clamping\n"), nfds, sb->dtablesize);
+		nfds = sb->dtablesize;
+	}
+
+	BSDTRACE((_T("WaitSelect: %d 0x%x 0x%x 0x%x 0x%x 0x%x\n"), sb->nfds, sb->sets[0], sb->sets[1], sb->sets[2], sb->timeout, sb->sigmp));
 
 	if (sb->timeout)
-		write_log("WaitSelect: timeout %d %d\n", get_long(sb->timeout), get_long(sb->timeout + 4));
+		BSDTRACE((_T("WaitSelect: timeout %d %d\n"), get_long(sb->timeout), get_long(sb->timeout + 4)));
 
 	FD_ZERO(&sets[0]);
 	FD_ZERO(&sets[1]);
@@ -5085,12 +5091,12 @@ uae_u32 bsdthr_WaitSelect(SB)
 	for (set = 0; set < 3; set++) {
 		if (sb->sets[set] != 0) {
 			a_set = sb->sets[set];
-			for (i = 0; i < sb->nfds; i++) {
+			for (i = 0; i < nfds; i++) {
 				if (bsd_amigaside_FD_ISSET(i, a_set)) {
 					s = getsock(ctx, sb, i + 1);
-					write_log("WaitSelect: AmigaSide %d set. NativeSide %d.\n", i, s);
+					BSDTRACE((_T("WaitSelect: AmigaSide %d set. NativeSide %d.\n"), i, s));
 					if (s == -1) {
-						write_log("BSDSOCK: WaitSelect() called with invalid descriptor %d in set %d.\n", i, set);
+						write_log(_T("BSDSOCK: WaitSelect() called with invalid descriptor %d in set %d.\n"), i, set);
 					} else {
 						FD_SET(s, &sets[set]);
 						if (max < s) max = s;
@@ -5107,14 +5113,14 @@ uae_u32 bsdthr_WaitSelect(SB)
 		tv.tv_usec = get_long(sb->timeout + 4);
 	}
 
-	write_log("Select going to select\n");
+	BSDTRACE((_T("Select going to select\n")));
 	r = select(max, &sets[0], &sets[1], &sets[2], (sb->timeout == 0) ? NULL : &tv);
-	write_log("Select returns %d, errno is %d\n", r, errno);
+	BSDTRACE((_T("Select returns %d, errno is %d\n"), r, errno));
 	if (r > 0) {
 		/* Socket told us to abort */
 		if (FD_ISSET(sb->sockabort[0], &sets[0])) {
 			/* read from the pipe to reset it */
-			write_log("WaitSelect aborted from signal\n");
+			BSDTRACE((_T("WaitSelect aborted from signal\n")));
 			r = 0;
 			for (set = 0; set < 3; set++)
 				if (sb->sets[set] != 0)
@@ -5127,11 +5133,11 @@ uae_u32 bsdthr_WaitSelect(SB)
 				a_set = sb->sets[set];
 				if (a_set != 0) {
 					bsd_amigaside_FD_ZERO(a_set);
-					for (i = 0; i < sb->nfds; i++) {
+					for (i = 0; i < nfds; i++) {
 						a_s = getsock(ctx, sb, i + 1);
 						if (!(a_s < 0)) {
 							if (FD_ISSET(a_s, &sets[set])) {
-								write_log("WaitSelect: NativeSide %d set. AmigaSide %d.\n", a_s, i);
+								BSDTRACE((_T("WaitSelect: NativeSide %d set. AmigaSide %d.\n"), a_s, i));
 
 								bsd_amigaside_FD_SET(i, a_set);
 							}
@@ -5144,7 +5150,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 			if (sb->sets[set] != 0)
 				bsd_amigaside_FD_ZERO(sb->sets[set]);
 	}
-	write_log("WaitSelect: r=%d errno=%d\n", r, errno);
+	BSDTRACE((_T("WaitSelect: r=%d errno=%d\n"), r, errno));
 	return r;
 }
 
@@ -5203,7 +5209,7 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 
 	if (sigs & wssigs) {
 		/* Received the signals we were waiting on */
-		write_log("WaitSelect: got signal(s) %x\n", sigs);
+		BSDTRACE((_T("WaitSelect: got signal(s) %x\n"), sigs));
 
 
 		if (!(sigs & (((uae_u32)1) << sb->signal))) {
@@ -5223,7 +5229,7 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 		bsdsocklib_seterrno (ctx, sb, 0);
 	} else if (sigs & sb->eintrsigs) {
 		/* Wait select was interrupted */
-		write_log("WaitSelect: interrupted\n");
+		BSDTRACE((_T("WaitSelect: interrupted\n")));
 
 		if (!(sigs & (((uae_u32)1) << sb->signal))) {
 			sockabort (sb);
