@@ -382,6 +382,7 @@ SDL_Texture* gui_texture;
 SDL_Rect gui_renderQuad;
 SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
 static bool gui_window_moved = false; // track if user moved the GUI window
+static bool gui_window_size_initialized = false;
 
 /* Flag for changes in rtarea:
   Bit 0: any HD in config?
@@ -804,6 +805,13 @@ void amiberry_gui_init()
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
+
+	if (!gui_window_size_initialized) {
+		const float gui_scale = DPIHandler::get_layout_scale();
+		gui_window_rect.w = std::max(GUI_WIDTH, static_cast<int>(std::lround(static_cast<float>(GUI_WIDTH) * gui_scale)));
+		gui_window_rect.h = std::max(GUI_HEIGHT, static_cast<int>(std::lround(static_cast<float>(GUI_HEIGHT) * gui_scale)));
+		gui_window_size_initialized = true;
+	}
 
 	if (!mon->gui_window)
 	{
