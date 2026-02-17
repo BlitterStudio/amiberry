@@ -1,0 +1,17 @@
+{
+  "name": "amiberry",
+  "version": "8.0.0",
+  "description": "Optimized Amiga emulator for various platforms",
+  "homepage": "https://amiberry.com",
+  "dependencies": [
+    "sdl2",
+    "sdl2-image",
+    "libflac",
+    "mpg123",
+    "libpng",
+    "zlib",
+    "zstd",
+    "enet",
+    "libiconv"
+  ]
+}

@@ -6,6 +6,24 @@
 #include "uae.h"
 #include "imgui_panels.h"
 
+#ifdef _WIN32
+#include <cstring>
+#include <cctype>
+static const char* strcasestr(const char* haystack, const char* needle)
+{
+	if (!needle[0]) return haystack;
+	for (; *haystack; ++haystack) {
+		const char* h = haystack;
+		const char* n = needle;
+		while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+			++h; ++n;
+		}
+		if (!*n) return haystack;
+	}
+	return nullptr;
+}
+#endif
+
 static ImVec4 rgb_to_vec4(int r, int g, int b, float a = 1.0f) { return ImVec4{ static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, a }; }
 static ImVec4 lighten(const ImVec4& c, float f) { return ImVec4{ std::min(c.x + f, 1.0f), std::min(c.y + f, 1.0f), std::min(c.z + f, 1.0f), c.w }; }
 
@@ -156,13 +174,14 @@ void render_panel_configurations()
 	if (AmigaButton("Save", ImVec2(BUTTON_WIDTH, BUTTON_HEIGHT)))
 	{
 		char filename[MAX_DPATH];
-		get_configuration_path(filename, MAX_DPATH);
-		strncat(filename, name, MAX_DPATH - 1);
-		strncat(filename, ".uae", MAX_DPATH - 10);
-		strncpy(changed_prefs.description, desc, 256);
+		char config_path[MAX_DPATH];
+		get_configuration_path(config_path, MAX_DPATH);
+		snprintf(filename, MAX_DPATH, "%s%s.uae", config_path, name);
+		snprintf(changed_prefs.description, 256, "%s", desc);
 		if (cfgfile_save(&changed_prefs, filename, 0))
 		{
-			strncpy(last_active_config, name, MAX_DPATH);
+			write_log("Config save: SUCCESS\n");
+			snprintf(last_active_config, MAX_DPATH, "%s", name);
 			ReadConfigFileList();
 			// Re-select the saved file
 			for (int i = 0; i < ConfigFilesList.size(); ++i) {
@@ -171,6 +190,10 @@ void render_panel_configurations()
 					break;
 				}
 			}
+		}
+		else
+		{
+			write_log("Config save: FAILED for '%s'\n", filename);
 		}
 	}
 	if (strlen(name) == 0) ImGui::EndDisabled();

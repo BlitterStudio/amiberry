@@ -138,7 +138,7 @@ void initFTDILibrary() {
 	libraryLoadCounter++;
 	if (libraryLoadCounter == 1) {
 #ifdef WIN32
-		m_dll = LoadLibrary(L"FTD2XX.DLL");
+		m_dll = LoadLibraryA("FTD2XX.DLL");
 #else
 		m_dll = dlopen("libftd2xx.so", RTLD_NOW);
 #endif

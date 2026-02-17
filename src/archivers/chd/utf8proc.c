@@ -41,6 +41,9 @@
    */
 
 
+#ifndef UTF8PROC_STATIC
+#define UTF8PROC_STATIC
+#endif
 #include "utf8proc.h"
 
 #ifndef SSIZE_MAX

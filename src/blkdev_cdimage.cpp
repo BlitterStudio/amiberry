@@ -18,7 +18,9 @@
 #endif
 #include <time.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/wait.h>
+#endif
 
 #include "options.h"
 #include "blkdev.h"
@@ -623,14 +625,13 @@ static bool cdda_play_func2 (struct cdunit *cdu, int *outpos)
 		if (oldplay != cdu->cdda_play) {
 			struct cdtoc *t;
 			int sector, diff;
-#ifdef WIN32
+#if defined(_MSC_VER) && defined(WIN32)
 			struct _timeb tb1, tb2;
-#else
-#ifdef HAVE_SYS_TIMEB_H
+#elif defined(HAVE_SYS_TIMEB_H)
+			/* MinGW provides clock_gettime/timespec (POSIX-compatible) */
 			struct timespec ts1, ts2;
 #else
 #warning Missing timing functions
-#endif
 #endif
 
 			idleframes = 0;

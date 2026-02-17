@@ -181,7 +181,12 @@ struct ini_data *ini_load(const TCHAR *path, bool sort)
 	size_t v = fread(tmp, 1, sizeof tmp, f);
 	fclose (f);
 	if (v == 3 && tmp[0] == 0xef && tmp[1] == 0xbb && tmp[2] == 0xbf) {
+#ifdef AMIBERRY
+		// MinGW's msvcrt.dll does not support "ccs=UTF-8"; char-based I/O handles UTF-8 natively
+		f = _tfopen (path, _T("rt"));
+#else
 		f = _tfopen (path, _T("rt, ccs=UTF-8"));
+#endif
 	} else {
 		f = _tfopen (path, _T("rt"));
 	}
@@ -274,7 +279,12 @@ bool ini_save(struct ini_data *ini, const TCHAR *path)
 	if (!ini)
 		return false;
 	ini_sort(ini);
+#ifdef AMIBERRY
+	// MinGW's msvcrt.dll does not support "ccs=UTF-8"; char-based I/O handles UTF-8 natively
+	FILE *f = _tfopen(path, _T("wt"));
+#else
 	FILE *f = _tfopen(path, _T("wt, ccs=UTF-8"));
+#endif
 	if (!f)
 		return false;
 	section[0] = 0;

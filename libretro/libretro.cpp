@@ -9,7 +9,16 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
+#ifdef _WIN32
+#include <io.h>
+#include <direct.h>
+#define access _access
+#ifndef R_OK
+#define R_OK 4
+#endif
+#else
 #include <unistd.h>
+#endif
 #include <sys/stat.h>
 #include <algorithm>
 #include <string>
@@ -60,6 +69,7 @@ retro_log_printf_t log_cb;
 
 static char game_path[1024];
 static bool core_started = false;
+static bool core_shutdown_complete = false;
 static bool input_log_enabled = true;
 static uint8_t key_state[RETROK_LAST + 1];
 static constexpr size_t kJoypadMax = RETRO_DEVICE_ID_JOYPAD_R3 + 1;
@@ -88,6 +98,7 @@ static bool ff_override_supported = false;
 static bool ff_override_active = false;
 static int last_geometry_width = -1;
 static int last_geometry_height = -1;
+bool pixel_format_xrgb8888 = false;
 
 static retro_set_led_state_t led_state_cb = nullptr;
 enum RetroLedIndex {
@@ -109,6 +120,12 @@ struct retro_midi_interface *midi_iface_ptr = nullptr;
 #endif
 
 extern float vblank_hz;
+
+static constexpr int DEFAULT_GFX_WIDTH = 640;
+static constexpr int DEFAULT_GFX_HEIGHT = 480;
+static constexpr int MAX_GFX_WIDTH = 1280;
+static constexpr int MAX_GFX_HEIGHT = 1024;
+static constexpr size_t CORE_FIBER_STACK_SIZE = 65536 * sizeof(void*);
 
 static void input_log_file_write(const char* fmt, ...);
 
@@ -146,6 +163,17 @@ extern "C" const char* libretro_get_system_dir(void)
 
 static FILE* libretro_debug_file = nullptr;
 
+static std::string get_log_directory()
+{
+	if (!save_dir.empty()) return save_dir;
+	if (!system_dir.empty()) return system_dir;
+	const char* tmp = getenv("TMPDIR");
+	if (!tmp) tmp = getenv("TMP");
+	if (!tmp) tmp = getenv("TEMP");
+	if (tmp) return tmp;
+	return ".";
+}
+
 static void libretro_debug_open()
 {
 	if (libretro_debug_file)
@@ -153,7 +181,10 @@ static void libretro_debug_open()
 	const char* env = getenv("AMIBERRY_LIBRETRO_DEBUG");
 	if (env && !strcmp(env, "0"))
 		return;
-	libretro_debug_file = fopen("/tmp/amiberry_libretro_debug.log", "a");
+	const std::string dir = get_log_directory();
+	const std::string path = dir.empty() ? std::string("amiberry_libretro_debug.log")
+		: dir + "/amiberry_libretro_debug.log";
+	libretro_debug_file = fopen(path.c_str(), "a");
 	if (libretro_debug_file)
 		setvbuf(libretro_debug_file, nullptr, _IOLBF, 0);
 }
@@ -455,8 +486,8 @@ static void update_geometry()
 	struct retro_game_geometry geom;
 	geom.base_width = width;
 	geom.base_height = height;
-	geom.max_width = std::max(width, 1280);
-	geom.max_height = std::max(height, 1024);
+	geom.max_width = std::max(width, MAX_GFX_WIDTH);
+	geom.max_height = std::max(height, MAX_GFX_HEIGHT);
 	geom.aspect_ratio = (float)width / (float)height;
 	environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
 	last_geometry_width = width;
@@ -478,10 +509,10 @@ static void log_input_axis(unsigned port, const char* name, int16_t value, int16
 			input_log_file_write("input p%u %s %d\n", port + 1, name, value);
 		return;
 	}
-	if ((value == 0 && *last != 0) || (value != 0 && *last == 0))
+	if ((value == 0 && *last != 0) || (value != 0 && *last == 0)) {
 		log_cb(RETRO_LOG_INFO, "input p%u %s %d\n", port + 1, name, value);
-	if ((value == 0 && *last != 0) || (value != 0 && *last == 0))
 		input_log_file_write("input p%u %s %d\n", port + 1, name, value);
+	}
 	*last = value;
 }
 
@@ -500,14 +531,16 @@ static void log_mouse_motion(int16_t dx, int16_t dy)
 			input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
 		return;
 	}
-	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0))
+	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0)) {
 		log_cb(RETRO_LOG_INFO, "input mouse motion dx=%d dy=%d\n", dx, dy);
-	if ((dx != 0 || dy != 0) && (last_mouse_x == 0 && last_mouse_y == 0))
 		input_log_file_write("input mouse motion dx=%d dy=%d\n", dx, dy);
+	}
 }
 
+// NOTE: This v1 options array is a fallback for old frontends that don't support v2.
+// When modifying options, keep this in sync with option_defs[] below.
 static const struct retro_variable variables[] = {
-	{ "amiberry_model", "Amiga Model; A500|A500+|A600|A1200|CD32|A4000|CDTV" },
+	{ "amiberry_model", "Amiga Model; A500|A500OG|A500+|A600|A1200OG|A1200|A4030|A4040|CD32|CD32FR|CDTV" },
 	{ "amiberry_kickstart", "Kickstart ROM; auto|kick.rom|kick13.rom|kick20.rom|kick31.rom|kick205.rom|kick40068.A1200|kick40068.A4000|cd32.rom|cdtv.rom" },
 	{ "amiberry_cpu_model", "CPU Model; auto|68000|68010|68020|68030" },
 	{ "amiberry_chipset", "Chipset; auto|ocs|ecs" },
@@ -547,17 +580,21 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_model",
 		"System Model",
 		"Model",
-		"Select the base Amiga model preset. Core restart required.",
+		"Select the Amiga model and configuration preset. Models with expanded RAM allow more demanding software to run. Core restart required.",
 		NULL,
 		"system",
 		{
-			{ "A500", "A500" },
-			{ "A500+", "A500+" },
-			{ "A600", "A600" },
-			{ "A1200", "A1200" },
-			{ "CD32", "CD32" },
-			{ "A4000", "A4000" },
-			{ "CDTV", "CDTV" },
+			{ "A500", "A500 (512K Chip + 512K Slow, OCS, KS 1.3)" },
+			{ "A500OG", "A500 Original (512K Chip, OCS, KS 1.2)" },
+			{ "A500+", "A500+ (1MB Chip, ECS)" },
+			{ "A600", "A600 (2MB Chip + 8MB Fast, ECS)" },
+			{ "A1200OG", "A1200 Original (2MB Chip, AGA)" },
+			{ "A1200", "A1200 (2MB Chip + 8MB Fast, AGA)" },
+			{ "A4030", "A4000/030 (2MB Chip + 8MB, AGA)" },
+			{ "A4040", "A4000/040 (2MB Chip + 8MB, AGA)" },
+			{ "CD32", "CD32 (2MB Chip, AGA)" },
+			{ "CD32FR", "CD32 (2MB Chip + 8MB Fast, AGA)" },
+			{ "CDTV", "CDTV (1MB Chip, ECS)" },
 			{ NULL, NULL }
 		},
 		"A500"
@@ -832,7 +869,7 @@ static struct retro_core_option_v2_definition option_defs[] = {
 		"amiberry_input_log",
 		"Input Log File",
 		"Input Log File",
-		"Write input events to /tmp/amiberry_libretro_input.log.",
+		"Write input events to a log file in the save directory.",
 		NULL,
 		"input",
 		{
@@ -863,7 +900,10 @@ static void set_core_options()
 
 static bool is_aga_model_name(const char* model)
 {
-	return model && (strcmp(model, "A1200") == 0 || strcmp(model, "A4000") == 0 || strcmp(model, "CD32") == 0);
+	if (!model) return false;
+	return strncmp(model, "A1200", 5) == 0
+		|| strncmp(model, "A40", 3) == 0
+		|| strncmp(model, "CD32", 4) == 0;
 }
 
 static bool update_core_option_visibility(void)
@@ -891,6 +931,7 @@ static bool core_options_update_display_callback(void)
 }
 
 extern int amiberry_main(int argc, char** argv);
+extern void reset_parse_cmdline();
 
 static bool path_is_absolute(const std::string& path)
 {
@@ -1250,10 +1291,28 @@ static bool pick_whdload_kickstart(const std::string& dir, char* out, size_t out
 	return false;
 }
 
+// Map a model preset name to its base model family for kickstart/CD detection.
+// e.g. "A1200OG" -> "A1200", "A4030" -> "A4000", "CD32FR" -> "CD32"
+static std::string model_base_name(const char* model)
+{
+	if (!model) return "";
+	if (strcmp(model, "A500OG") == 0) return "A500OG";
+	if (strncmp(model, "A1200", 5) == 0) return "A1200";
+	if (strncmp(model, "A500+", 5) == 0 || strncmp(model, "A500P", 5) == 0) return "A500+";
+	if (strncmp(model, "A500", 4) == 0) return "A500";
+	if (strncmp(model, "A600", 4) == 0) return "A600";
+	if (strncmp(model, "A40", 3) == 0) return "A4000";
+	if (strncmp(model, "CD32", 4) == 0) return "CD32";
+	if (strncmp(model, "CDTV", 4) == 0) return "CDTV";
+	return model;
+}
+
 static bool find_kickstart_in_system_dir(const char* model, char* out, size_t out_size)
 {
 	if (system_dir.empty())
 		return false;
+
+	const std::string base = model_base_name(model);
 
 	const char* candidates_generic[] = {
 		"kick.rom",
@@ -1261,29 +1320,41 @@ static bool find_kickstart_in_system_dir(const char* model, char* out, size_t ou
 		"kick20.rom",
 		"kick31.rom"
 	};
+	const char* candidates_a500og[] = { "kick12.rom", "kick13.rom", "kick.rom" };
+	const char* candidates_a500[] = { "kick13.rom", "kick.rom", "kick12.rom" };
+	const char* candidates_a500p[] = { "kick20.rom", "kick204.rom", "kick.rom" };
+	const char* candidates_a600[] = { "kick205.rom", "kick20.rom", "kick31.rom", "kick.rom" };
 	const char* candidates_a1200[] = { "kick31.rom", "kick40068.A1200", "kick.rom" };
 	const char* candidates_a4000[] = { "kick31.rom", "kick40068.A4000", "kick.rom" };
-	const char* candidates_a600[] = { "kick20.rom", "kick205.rom", "kick.rom", "kick13.rom" };
 	const char* candidates_cd32[] = { "cd32.rom", "kick40060.CD32", "kick31.rom", "kick.rom" };
 	const char* candidates_cdtv[] = { "cdtv.rom", "kick34005.CDTV", "kick13.rom", "kick.rom" };
 
 	const char** candidates = candidates_generic;
 	size_t count = sizeof(candidates_generic) / sizeof(candidates_generic[0]);
 
-	if (model) {
-		if (!strcmp(model, "A1200")) {
-			candidates = candidates_a1200;
-			count = sizeof(candidates_a1200) / sizeof(candidates_a1200[0]);
-		} else if (!strcmp(model, "A4000")) {
-			candidates = candidates_a4000;
-			count = sizeof(candidates_a4000) / sizeof(candidates_a4000[0]);
-		} else if (!strcmp(model, "A600")) {
+	if (!base.empty()) {
+		if (base == "A500OG") {
+			candidates = candidates_a500og;
+			count = sizeof(candidates_a500og) / sizeof(candidates_a500og[0]);
+		} else if (base == "A500") {
+			candidates = candidates_a500;
+			count = sizeof(candidates_a500) / sizeof(candidates_a500[0]);
+		} else if (base == "A500+") {
+			candidates = candidates_a500p;
+			count = sizeof(candidates_a500p) / sizeof(candidates_a500p[0]);
+		} else if (base == "A600") {
 			candidates = candidates_a600;
 			count = sizeof(candidates_a600) / sizeof(candidates_a600[0]);
-		} else if (!strcmp(model, "CD32")) {
+		} else if (base == "A1200") {
+			candidates = candidates_a1200;
+			count = sizeof(candidates_a1200) / sizeof(candidates_a1200[0]);
+		} else if (base == "A4000") {
+			candidates = candidates_a4000;
+			count = sizeof(candidates_a4000) / sizeof(candidates_a4000[0]);
+		} else if (base == "CD32") {
 			candidates = candidates_cd32;
 			count = sizeof(candidates_cd32) / sizeof(candidates_cd32[0]);
-		} else if (!strcmp(model, "CDTV")) {
+		} else if (base == "CDTV") {
 			candidates = candidates_cdtv;
 			count = sizeof(candidates_cdtv) / sizeof(candidates_cdtv[0]);
 		}
@@ -1602,7 +1673,10 @@ static void update_input_log_file(bool enabled)
 {
 	if (enabled) {
 		if (!input_log_file) {
-			input_log_file = fopen("/tmp/amiberry_libretro_input.log", "a");
+			const std::string dir = get_log_directory();
+			const std::string path = dir.empty() ? std::string("amiberry_libretro_input.log")
+				: dir + "/amiberry_libretro_input.log";
+			input_log_file = fopen(path.c_str(), "a");
 			if (input_log_file)
 				input_log_file_write("amiberry libretro input log start\n");
 		}
@@ -2201,17 +2275,43 @@ static void core_entry(void)
 	const bool is_whdload = (game_ext == "lha" || game_ext == "lzh");
 	const bool user_kick_override = !cached_kickstart_override.empty() && cached_kickstart_override != "auto";
 
-	const char* model = cached_model.empty() ? nullptr : cached_model.c_str();
-	if (model)
-	{
-		argv.push_back(strdup("--model"));
-		argv.push_back(strdup(model));
-	}
-
 	auto push_s_option = [&argv](const std::string& value) {
 		argv.push_back(strdup("-s"));
 		argv.push_back(strdup(value.c_str()));
 	};
+
+	const char* model = cached_model.empty() ? nullptr : cached_model.c_str();
+	if (model)
+	{
+		// Map libretro preset names to --model args that main.cpp recognizes.
+		// main.cpp only handles: A500, A500P, A600, A1000, A2000, A3000, A1200, A4000, CD32, CDTV
+		const char* engine_model = model;
+		if (strcmp(model, "A500OG") == 0)
+			engine_model = "A500";
+		else if (strcmp(model, "A500+") == 0)
+			engine_model = "A500P";
+		else if (strcmp(model, "A1200OG") == 0)
+			engine_model = "A1200";
+		else if (strcmp(model, "A4030") == 0 || strcmp(model, "A4040") == 0)
+			engine_model = "A4000";
+		else if (strcmp(model, "CD32FR") == 0)
+			engine_model = "CD32";
+
+		argv.push_back(strdup("--model"));
+		argv.push_back(strdup(engine_model));
+
+		// Expanded preset overrides: -s options after --model so bip_*() sets
+		// the base config first, then we override individual fields.
+		if (strcmp(model, "A500OG") == 0)
+			push_s_option("bogomem_size=0");
+		if (strcmp(model, "A600") == 0 || strcmp(model, "A1200") == 0
+			|| strcmp(model, "CD32FR") == 0)
+			push_s_option("fastmem_size=8");
+		if (strcmp(model, "A4040") == 0) {
+			push_s_option("cpu_model=68040");
+			push_s_option("fpu_model=68040");
+		}
+	}
 
 	const char* cpu_model = cached_cpu_model.empty() ? nullptr : cached_cpu_model.c_str();
 	if (cpu_model && strcmp(cpu_model, "auto") != 0) {
@@ -2335,9 +2435,16 @@ static void core_entry(void)
 			libretro_debug_log(" [%s]", argv[i] ? argv[i] : "");
 		libretro_debug_log("\n");
 	}
+	reset_parse_cmdline();
 	amiberry_main((int)argv.size() - 1, argv.data());
-	
-	// If amiberry_main returns, we are done
+
+	// Free strdup'd argv strings
+	for (auto p : argv)
+		free(p);
+	argv.clear();
+
+	// amiberry_main has returned — device cleanup (akiko_free, etc.) is done.
+	core_shutdown_complete = true;
 	libretro_yield();
 }
 
@@ -2348,7 +2455,7 @@ void retro_init(void)
 		main_fiber = co_active();
 	
 	if (!core_fiber)
-		core_fiber = co_create(65536 * sizeof(void*), core_entry);
+		core_fiber = co_create(CORE_FIBER_STACK_SIZE, core_entry);
 
 	if (log_cb)
 		log_cb(RETRO_LOG_INFO, "retro_init: main_fiber=%p core_fiber=%p\n", (void*)main_fiber, (void*)core_fiber);
@@ -2365,6 +2472,14 @@ void retro_deinit(void)
 {
 	if (core_fiber)
 	{
+		// Pump the core fiber so it can process uae_quit() and run the
+		// device cleanup chain (joins threads like akiko_thread).
+		// Each co_switch runs roughly one emulated frame.
+		if (core_started && !core_shutdown_complete) {
+			uae_quit();
+			for (int i = 0; i < 200 && !core_shutdown_complete; i++)
+				co_switch(core_fiber);
+		}
 		co_delete(core_fiber);
 		core_fiber = NULL;
 	}
@@ -2374,6 +2489,7 @@ void retro_deinit(void)
 	fastforward_forced = false;
 	last_refresh_rate = -1.0f;
 	core_started = false;
+	core_shutdown_complete = false;
 	memory_map_set = false;
 	ff_override_active = false;
 	cheat_entries.clear();
@@ -2397,6 +2513,7 @@ void retro_get_system_info(struct retro_system_info *info)
 	memset(info, 0, sizeof(*info));
 	info->library_name     = "Amiberry";
 	info->library_version  = "v" AMIBERRY_VERSION;
+	/* info->valid_extensions = "adf|uae|ipf|zip|lha|hdf|rp9"; */
 	info->valid_extensions = "adf|adz|dms|fdi|raw|ipf|hdf|hdz|lha|lzh|zip|7z|uae|rp9|m3u|m3u8|iso|cue|ccd|nrg|mds|chd";
 	info->need_fullpath    = true;
 	info->block_extract    = false;
@@ -2405,10 +2522,10 @@ void retro_get_system_info(struct retro_system_info *info)
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
 	memset(info, 0, sizeof(*info));
-	info->geometry.base_width   = 640;
-	info->geometry.base_height  = 480;
-	info->geometry.max_width    = 1280;
-	info->geometry.max_height   = 1024;
+	info->geometry.base_width   = DEFAULT_GFX_WIDTH;
+	info->geometry.base_height  = DEFAULT_GFX_HEIGHT;
+	info->geometry.max_width    = MAX_GFX_WIDTH;
+	info->geometry.max_height   = MAX_GFX_HEIGHT;
 	info->geometry.aspect_ratio = 4.0f / 3.0f;
 	info->timing.fps            = get_core_refresh_rate();
 	info->timing.sample_rate    = static_cast<double>(audio_rate_for_av_info());
@@ -2416,7 +2533,6 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
 void retro_set_environment(retro_environment_t cb)
 {
-	libretro_debug_open();
 	environ_cb = cb;
 	struct retro_log_callback logging;
 	if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
@@ -2425,9 +2541,9 @@ void retro_set_environment(retro_environment_t cb)
 		log_cb = NULL;
 	{
 		enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
-		if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt) && log_cb) {
+		pixel_format_xrgb8888 = environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt);
+		if (!pixel_format_xrgb8888 && log_cb)
 			log_cb(RETRO_LOG_WARN, "Failed to set pixel format XRGB8888; using default.\n");
-		}
 	}
 	static struct retro_keyboard_callback kb_cb = { keyboard_cb };
 	environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &kb_cb);
@@ -2451,6 +2567,7 @@ void retro_set_environment(retro_environment_t cb)
 			content_dir = dir;
 		if (save_dir.empty())
 			save_dir = system_dir;
+		libretro_debug_open();
 		libretro_debug_log("env system_dir='%s' save_dir='%s' content_dir='%s'\n",
 			system_dir.c_str(), save_dir.c_str(), content_dir.c_str());
 	}
@@ -2837,7 +2954,8 @@ bool retro_load_game(const struct retro_game_info *info)
 		const cd_content_type cd_type = detect_cd_content(game_path, gp_ext);
 		if (cd_type != CD_CONTENT_NONE) {
 			// Only auto-switch if the user hasn't already selected a CD model
-			const bool user_chose_cd = (cached_model == "CD32" || cached_model == "CDTV");
+			const std::string base = model_base_name(cached_model.c_str());
+			const bool user_chose_cd = (base == "CD32" || base == "CDTV");
 			if (!user_chose_cd) {
 				const char* detected_model = (cd_type == CD_CONTENT_CDTV) ? "CDTV" : "CD32";
 				if (log_cb)
@@ -2847,6 +2965,10 @@ bool retro_load_game(const struct retro_game_info *info)
 			}
 		}
 	}
+
+	// No content is valid: Amiga can boot to Workbench with just a Kickstart ROM
+	if (game_path[0] == '\0' && log_cb)
+		log_cb(RETRO_LOG_INFO, "No game content provided; booting to Workbench.\n");
 
 	return true;
 }

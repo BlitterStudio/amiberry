@@ -4,6 +4,11 @@
 
 #include "libretro_shared.h"
 
+static constexpr int LIBRETRO_DISPLAY_INIT_WIDTH = 1920;
+static constexpr int LIBRETRO_DISPLAY_INIT_HEIGHT = 1080;
+static constexpr int LIBRETRO_DRAWBUFFER_WIDTH = 1920;
+static constexpr int LIBRETRO_DRAWBUFFER_HEIGHT = 1280;
+
 static inline bool gfx_platform_skip_alloctexture(int monid, int w, int h)
 {
 	(void)monid;
@@ -97,7 +102,7 @@ static inline void libretro_init_display(int width, int height)
 
 static inline bool gfx_platform_enumeratedisplays()
 {
-	libretro_init_display(1920, 1080);
+	libretro_init_display(LIBRETRO_DISPLAY_INIT_WIDTH, LIBRETRO_DISPLAY_INIT_HEIGHT);
 	return true;
 }
 
@@ -116,6 +121,9 @@ static inline bool gfx_platform_override_pixel_format(Uint32* format)
 	if (!format)
 		return false;
 
+	// Always use ARGB8888 for libretro (matches RETRO_PIXEL_FORMAT_XRGB8888).
+	// Never return RGB565 here: the drawbuffer is 32-bit and a 16-bit surface
+	// would cause a buffer overflow when the drawing code writes 4 bytes/pixel.
 	*format = SDL_PIXELFORMAT_ARGB8888;
 	return true;
 }
@@ -166,7 +174,7 @@ static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 
 	if (!mon->screen_is_picasso) {
 		allocsoftbuffer(mon->monitor_id, _T("draw"), &avidinfo->drawbuffer, mon->currentmode.flags,
-			1920, 1280);
+			LIBRETRO_DRAWBUFFER_WIDTH, LIBRETRO_DRAWBUFFER_HEIGHT);
 
 		allocsoftbuffer(mon->monitor_id, _T("monemu"), &avidinfo->tempbuffer, mon->currentmode.flags,
 			mon->currentmode.amiga_width > 2048 ? mon->currentmode.amiga_width : 2048,
@@ -180,6 +188,10 @@ static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 		SDL_FreeSurface(amiga_surface);
 		amiga_surface = nullptr;
 	}
+	// Set pixel_format to match the libretro frontend expectation (XRGB8888)
+	// BEFORE creating the surface so init_colors and target_graphics_buffer_update
+	// see a consistent format (no surface recreation = no crash).
+	gfx_platform_override_pixel_format(&pixel_format);
 	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
 
 	mon->screen_is_initialized = 1;

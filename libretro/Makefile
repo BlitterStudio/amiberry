@@ -50,7 +50,11 @@ endif
 ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
-   SHARED := -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   ifeq ($(DEBUG), 1)
+   SHARED := -shared -Wl,-Bsymbolic-functions
+   else
+   SHARED := -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
+   endif
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
    fpic := -fPIC
@@ -63,14 +67,22 @@ else
 endif
 
 LDFLAGS += $(fpic) $(SHARED)
-FLAGS += $(fpic) 
+FLAGS += $(fpic)
+ifneq ($(DEBUG), 1)
+FLAGS += -fvisibility=hidden
+endif
 FLAGS += -ffunction-sections -fdata-sections
 LDFLAGS += -Wl,--gc-sections
 
 ifeq ($(DEBUG), 1)
-   FLAGS += -O0 -g
+   FLAGS += -O0 -g -fno-omit-frame-pointer
 else
-   FLAGS += -O3 -DNDEBUG
+   FLAGS += -O3 -g -DNDEBUG
+endif
+
+ifeq ($(SANITIZE), 1)
+   FLAGS += -fsanitize=address -fno-omit-frame-pointer
+   LDFLAGS += -fsanitize=address
 endif
 
 # Add Amiberry defines

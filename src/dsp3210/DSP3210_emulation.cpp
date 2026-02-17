@@ -508,12 +508,12 @@ void doinst(int32_t addr)
 			//conditional branch
 			switch(incode)
 			{
-            case static_cast<int32_t>(0x80000000):
+			case static_cast<int32_t>(0x80000000):
 				//nop
 				reg_PC = reg_PC + 0;
 				break;
 
-            case static_cast<int32_t>(0x803E0000):
+			case static_cast<int32_t>(0x803E0000):
 				//ireturn
 				DSP_irsh_flag = 1;
 				reg_PC = reg_pcsh;	//jump execution to shadown PC
@@ -1312,7 +1312,7 @@ void doinst(int32_t addr)
 				case 1: //move io 7b instruction
 					switch(incode)
 					{
-                    case static_cast<int32_t>(0x09DE0040A):
+					case static_cast<int32_t>(0x09DE0040A):
 						//execute waiti
 						DSP_reg_irsh = DSP_swapl(DSP_get_long(reg_PC + 4));
 						DSP_irsh_flag = 4;	//execute one more instruction, then pause DSP
@@ -1320,12 +1320,12 @@ void doinst(int32_t addr)
 						DSP_irsh_pcw = DSP_io_r[12];
 						break;
 
-                    case static_cast<int32_t>(0x9D00040A):
+					case static_cast<int32_t>(0x9D00040A):
 						//execute sftrst = reset
 						DSP_reset();
 						break;
 
-                    case static_cast<int32_t>(0x9D60040A):
+					case static_cast<int32_t>(0x9D60040A):
 						//execute breakpoint
 						DSP_breakpoint();
 						break;

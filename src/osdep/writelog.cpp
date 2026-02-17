@@ -8,12 +8,21 @@
 #include <cstdarg>
 #include <cstdio>
 #include <iostream>
+#include <clocale>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <conio.h>
+#include <io.h>
+#else
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <poll.h>
-#include <clocale>
-#include <SDL.h>
+#endif
 
 #if defined(__ANDROID__)
 #include <android/log.h>
@@ -45,7 +54,7 @@ extern bool lof_store;
 static int console_input_linemode = -1;
 int always_flush_log = 1;
 TCHAR* conlogfile = nullptr;
-static HWND previousactivewindow;
+static SDL_Window* previousactivewindow;
 
 #define WRITE_LOG_BUF_SIZE 4096
 
@@ -71,6 +80,19 @@ void set_console_input_mode(int line)
 		return;
 	if (line == console_input_linemode)
 		return;
+#ifdef _WIN32
+	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+	if (hStdin != INVALID_HANDLE_VALUE) {
+		DWORD mode;
+		GetConsoleMode(hStdin, &mode);
+		if (line)
+			mode |= (ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+		else
+			mode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+		SetConsoleMode(hStdin, mode);
+		console_input_linemode = line;
+	}
+#else
 	struct termios term;
 	if (tcgetattr(STDIN_FILENO, &term) == 0) {
 		if (line)
@@ -80,10 +102,26 @@ void set_console_input_mode(int line)
 		tcsetattr(STDIN_FILENO, TCSANOW, &term);
 		console_input_linemode = line;
 	}
+#endif
 }
 
 static void getconsole()
 {
+#ifdef _WIN32
+	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+	if (hStdin != INVALID_HANDLE_VALUE) {
+		DWORD mode;
+		GetConsoleMode(hStdin, &mode);
+		mode |= (ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+		SetConsoleMode(hStdin, mode);
+		console_input_linemode = 1;
+		std::atexit(restore_console_settings);
+	}
+
+	// Set the console code pages to UTF-8
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
+#else
 	struct termios term{};
 	struct winsize ws{};
 
@@ -104,6 +142,7 @@ static void getconsole()
 		// No direct way to set terminal buffer size on Linux like Windows,
 		// but we can log that we are initializing.
 	}
+#endif
 }
 
 void deactivate_console(void)
@@ -128,6 +167,16 @@ static void open_console_window()
 	if (!consoleopen) {
 		previousactivewindow = SDL_GetKeyboardFocus();
 	}
+#ifdef _WIN32
+	/* When built with -mwindows (Release), there is no console.
+	 * Allocate one on demand so log output is visible.
+	 * This mirrors WinUAE's open_console_window(). */
+	if (AllocConsole()) {
+		freopen("CONOUT$", "w", stdout);
+		freopen("CONOUT$", "w", stderr);
+		freopen("CONIN$", "r", stdin);
+	}
+#endif
 	getconsole();
 	consoleopen = -1;
 	reopen_console();
@@ -191,10 +240,14 @@ void open_console()
 	}
 }
 
+bool is_interactive_console(void)
+{
+	return console_logging;
+}
 
 void reopen_console ()
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	HWND hwnd;
 
 	if (realconsole)
@@ -234,26 +287,7 @@ void close_console ()
 	if (realconsole)
 		return;
 #ifdef _WIN32
-	if (consoleopen > 0) {
-		//close_debug_window ();
-	} else if (consoleopen < 0) {
-		HWND hwnd = myGetConsoleWindow ();
-		if (hwnd && !IsIconic (hwnd)) {
-			RECT r;
-			if (GetWindowRect (hwnd, &r)) {
-				r.bottom -= r.top;
-				r.right -= r.left;
-				int dpi = 96; // Fallback for window positioning
-				r.left = r.left * 96 / dpi;
-				r.right = r.right * 96 / dpi;
-				r.top = r.top * 96 / dpi;
-				r.bottom = r.bottom * 96 / dpi;
-				regsetint (NULL, _T("LoggerPosX"), r.left);
-				regsetint (NULL, _T("LoggerPosY"), r.top);
-				regsetint (NULL, _T("LoggerPosW"), r.right);
-				regsetint (NULL, _T("LoggerPosH"), r.bottom);
-			}
-		}
+	if (consoleopen < 0) {
 		FreeConsole ();
 	}
 #endif
@@ -265,9 +299,14 @@ int read_log()
 	if (consoleopen >= 0)
 		return -1;
 	if (console_isch()) {
+#ifdef _WIN32
+		if (_kbhit())
+			return _getch();
+#else
 		unsigned char ch;
 		if (read(STDIN_FILENO, &ch, 1) == 1)
 			return ch;
+#endif
 	}
 	return -1;
 }
@@ -278,15 +317,37 @@ static void writeconsole_2 (const TCHAR *buffer)
 	if (!consoleopen)
 		openconsole ();
 
+#ifdef _WIN32
+	/* In Release builds linked with -mwindows, stdout is disconnected.
+	 * Allocate a console on demand so log output is actually visible. */
+	static bool win_console_allocated = false;
+	if (!win_console_allocated && (console_logging || SHOW_CONSOLE)) {
+		if (AllocConsole()) {
+			freopen("CONOUT$", "w", stdout);
+			freopen("CONOUT$", "w", stderr);
+			freopen("CONIN$", "r", stdin);
+		}
+		win_console_allocated = true;
+	}
+#endif
+
 	if (consoleopen > 0) {
+#ifdef _WIN32
+		fprintf(stdout, "%s", buffer);
+#else
 		SDL_Log("%s", buffer);
+#endif
 	}
 	else if (realconsole) {
 		fprintf(stdout, "%s", buffer);
 		fflush(stdout);
 	}
 	else if (consoleopen < 0) {
+#ifdef _WIN32
+		fprintf(stdout, "%s", buffer);
+#else
 		SDL_Log("%s", buffer);
+#endif
 	}
 }
 
@@ -363,7 +424,7 @@ void console_out(const TCHAR* txt)
 
 bool console_isch ()
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	flushmsgpump();
 	if (console_buffer) {
 		return 0;
@@ -373,6 +434,13 @@ bool console_isch ()
 		DWORD events = 0;
 		GetNumberOfConsoleInputEvents (stdinput, &events);
 		return events > 0;
+	}
+	return false;
+#elif defined(_WIN32) && defined(AMIBERRY)
+	if (console_buffer)
+		return false;
+	if (consoleopen < 0) {
+		return _kbhit() != 0;
 	}
 	return false;
 #else
@@ -400,17 +468,22 @@ TCHAR console_getch()
 	if (consoleopen < 0)
 	{
 		set_console_input_mode(0);
+#ifdef _WIN32
+		if (_kbhit())
+			return _getch();
+#else
 		char ch;
 		if (read(STDIN_FILENO, &ch, 1) == 1) {
 			return ch;
 		}
+#endif
 	}
 	return 0;
 }
 
 int console_get (TCHAR *out, int maxlen)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 	*out = 0;
 
 	flushmsgpump();
@@ -480,7 +553,13 @@ FILE *log_open (const TCHAR *name, int append, int bootlog, TCHAR *outpath)
 			f = fopen(name, append ? _T("a") : _T("w"));
 			if (!f && bootlog) {
 				TCHAR tmp[MAX_DPATH];
+	#ifdef _WIN32
+				const char* tmpdir = getenv("TEMP");
+				if (!tmpdir) tmpdir = ".";
+				_sntprintf(tmp, MAX_DPATH, _T("%s\\amiberry_log.txt"), tmpdir);
+#else
 				_tcscpy(tmp, _T("/tmp/amiberry_log.txt"));
+#endif
 				_tcscpy (outpath, tmp);
 				f = fopen(tmp, append ? _T("a") : _T("w"));
 			}

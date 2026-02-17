@@ -16,9 +16,6 @@
 #include "uae/types.h"
 
 #include "traps.h"
-#ifdef USE_GUISAN
-#include "guisan/color.hpp"
-#endif
 
 // Version comes from CMake compile definitions (AMIBERRY_VERSION_MAJOR/MINOR/PATCH)
 #define UAEMAJOR AMIBERRY_VERSION_MAJOR
@@ -726,7 +723,9 @@ struct uae_prefs {
 
 	float rtg_horiz_zoom_mult;
 	float rtg_vert_zoom_mult;
+#ifdef AMIBERRY
 	bool rtg_zerocopy;
+#endif
 
 	bool immediate_blits;
 	int waiting_blits;
@@ -1077,10 +1076,10 @@ struct uae_prefs {
 	bool vkbd_enabled;
 	bool vkbd_hires;
 	bool vkbd_exit;
-	char vkbd_language[128];
-	char vkbd_style[128];
+	char vkbd_language[256];
+	char vkbd_style[256];
 	int vkbd_transparency;
-	char vkbd_toggle[128];
+	char vkbd_toggle[256];
 	
 	int drawbridge_driver;
 	bool drawbridge_serial_auto;
@@ -1364,7 +1363,7 @@ struct amiberry_options
 	int default_vkbd_transparency;
 	char default_vkbd_toggle[128] = "guide";
 	char gui_theme[128] = "Default.theme";
-	char shader[128] = "pc";
+	char shader[128] = "none";
 	char shader_rtg[128] = "none";
 	bool force_mobile_shaders = false;
 	bool use_bezel = false;

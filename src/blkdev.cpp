@@ -7,6 +7,10 @@
 *
 */
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 #include "sysconfig.h"
 #include "sysdeps.h"
 #include "options.h"
@@ -396,7 +400,7 @@ static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 		return unitnum;
 	}
 	device_func_init (SCSI_UNIT_IOCTL);
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(LIBRETRO)
 	for (int drive = 'C'; drive <= 'Z'; ++drive) {
 		TCHAR vol[100];
 		_stprintf (vol, _T("%c:\\"), drive);

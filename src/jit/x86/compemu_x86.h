@@ -564,8 +564,22 @@ void jit_abort(const char *format,...) __attribute__((format(printf, 1, 2))) __a
 static inline uae_u32 check_uae_p32(uintptr address, const char *file, int line)
 {
 	if (address > (uintptr_t) 0xffffffff) {
+#ifdef AMIBERRY
+		// JIT compiler uses 32-bit addressing — pointers must fit in 32 bits.
+		// Do NOT call jit_abort() here as it triggers uae_reset() which
+		// permanently sets quit_program, blocking the rendering thread.
+		// Log the error; the truncated pointer will cause JIT malfunction
+		// but the emulator can fall back to interpreter mode.
+		static int p32_warn_count = 0;
+		if (p32_warn_count < 5) {
+			write_log("JIT: WARNING: 64-bit pointer 0x%llx at %s:%d (natmem not in 32-bit range?)\n",
+				(unsigned long long)address, file, line);
+			p32_warn_count++;
+		}
+#else
 		jit_abort("JIT: 64-bit pointer (0x%llx) at %s:%d (fatal)",
 			(unsigned long long)address, file, line);
+#endif
 	}
 	return (uae_u32) address;
 }

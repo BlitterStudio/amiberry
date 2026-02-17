@@ -114,8 +114,8 @@ static void lts_ecs_shres_dhires(void)
 			denise_hcounter &= 511;
 			denise_hcounter_next++;
 			denise_hcounter_next &= 511;
+			denise_pixtotal++;
 		}
-		denise_pixtotal++;
 		if (denise_pixtotal == 0) {
 			internal_pixel_start_cnt = internal_pixel_cnt;
 		}
@@ -238,8 +238,8 @@ static void lts_ecs_shres_dhires_filtered(void)
 			denise_hcounter &= 511;
 			denise_hcounter_next++;
 			denise_hcounter_next &= 511;
+			denise_pixtotal++;
 		}
-		denise_pixtotal++;
 		if (denise_pixtotal == 0) {
 			internal_pixel_start_cnt = internal_pixel_cnt;
 		}
@@ -374,8 +374,8 @@ static void lts_ecs_shres_dshres(void)
 			denise_hcounter &= 511;
 			denise_hcounter_next++;
 			denise_hcounter_next &= 511;
+			denise_pixtotal++;
 		}
-		denise_pixtotal++;
 		if (denise_pixtotal == 0) {
 			internal_pixel_start_cnt = internal_pixel_cnt;
 		}
@@ -511,8 +511,8 @@ static void lts_ecs_shres_dhires_genlock(void)
 			denise_hcounter &= 511;
 			denise_hcounter_next++;
 			denise_hcounter_next &= 511;
+			denise_pixtotal++;
 		}
-		denise_pixtotal++;
 		if (denise_pixtotal == 0) {
 			internal_pixel_start_cnt = internal_pixel_cnt;
 		}
@@ -643,8 +643,8 @@ static void lts_ecs_shres_dhires_genlock_filtered(void)
 			denise_hcounter &= 511;
 			denise_hcounter_next++;
 			denise_hcounter_next &= 511;
+			denise_pixtotal++;
 		}
-		denise_pixtotal++;
 		if (denise_pixtotal == 0) {
 			internal_pixel_start_cnt = internal_pixel_cnt;
 		}
@@ -787,8 +787,8 @@ static void lts_ecs_shres_dshres_genlock(void)
 			denise_hcounter &= 511;
 			denise_hcounter_next++;
 			denise_hcounter_next &= 511;
+			denise_pixtotal++;
 		}
-		denise_pixtotal++;
 		if (denise_pixtotal == 0) {
 			internal_pixel_start_cnt = internal_pixel_cnt;
 		}

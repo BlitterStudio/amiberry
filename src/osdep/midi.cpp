@@ -4,6 +4,7 @@
  * Serial-to-MidiPort interface
  *
  * Written by Christian Vogelgsang <chris@vogelgsang.org>
+ * Windows native MIDI support added for Amiberry
  */
 
 #include "sysconfig.h"
@@ -14,8 +15,6 @@
 
 #include "midi.h"
 #include "options.h"
-#include "portmidi.h"
-#include "porttime.h"
 
 //#define MIDI_TRACING_ENABLED
 
@@ -24,15 +23,6 @@
 #else
 #define TRACE(x)
 #endif
-
-#define IN_QUEUE_SIZE 1024
-#define OUT_QUEUE_SIZE 1024
-
-// local data
-static PmDeviceID in_dev_id = pmNoDevice;
-static PmDeviceID out_dev_id = pmNoDevice;
-static PortMidiStream *out;
-static PortMidiStream *in;
 
 // parameter length of midi commands
 static const uae_u8 param_len[128] = {
@@ -45,6 +35,325 @@ static const uae_u8 param_len[128] = {
 	2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
 	1,1,2,1,0,0,0,0,0,0,0,0,0,0,0,0
 };
+
+#if defined(_WIN32)
+// ========================================================================
+// Windows native MIDI implementation using Windows Multimedia API
+// ========================================================================
+
+#include <mmsystem.h>
+
+#define IN_QUEUE_SIZE 256
+
+static HMIDIOUT out_handle;
+static HMIDIIN in_handle;
+static int out_dev_id = -1;
+static int in_dev_id = -1;
+
+// Input ring buffer
+static uae_u8 in_ring[IN_QUEUE_SIZE];
+static volatile int in_ring_wr = 0;
+static volatile int in_ring_rd = 0;
+static uae_sem_t in_ring_sem;
+
+// Sysex output buffer
+#define SYSEX_BUFLEN 65536
+static uae_u8 sysex_buf[SYSEX_BUFLEN];
+static int sysex_len = 0;
+static MIDIHDR sysex_hdr;
+
+static void in_ring_add(uae_u8 byte)
+{
+	uae_sem_wait(&in_ring_sem);
+	in_ring[in_ring_wr] = byte;
+	in_ring_wr = (in_ring_wr + 1) % IN_QUEUE_SIZE;
+	if (in_ring_wr == in_ring_rd) {
+		// overflow: advance read pointer
+		in_ring_rd = (in_ring_rd + 1) % IN_QUEUE_SIZE;
+	}
+	uae_sem_post(&in_ring_sem);
+}
+
+static void CALLBACK midi_in_callback(HMIDIIN hMidiIn, UINT wMsg,
+	DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+{
+	if (wMsg == MIM_DATA) {
+		DWORD msg = (DWORD)dwParam1;
+		uae_u8 status = msg & 0xFF;
+		int bytes = 1;
+		if (status < 0xF0) {
+			bytes = 1 + param_len[status & 0x7F];
+		} else if (status == 0xF1 || status == 0xF3) {
+			bytes = 2;
+		} else if (status == 0xF2) {
+			bytes = 3;
+		}
+		for (int i = 0; i < bytes; i++) {
+			in_ring_add((uae_u8)(msg & 0xFF));
+			msg >>= 8;
+		}
+	} else if (wMsg == MIM_LONGDATA) {
+		MIDIHDR* hdr = (MIDIHDR*)dwParam1;
+		if (hdr->dwBytesRecorded > 0) {
+			for (DWORD i = 0; i < hdr->dwBytesRecorded; i++) {
+				in_ring_add((uae_u8)hdr->lpData[i]);
+			}
+		}
+		// Re-add the buffer for more sysex data
+		if (in_handle) {
+			midiInAddBuffer(in_handle, hdr, sizeof(MIDIHDR));
+		}
+	}
+}
+
+static void parse_config(const uae_prefs* cfg)
+{
+	out_dev_id = -1;
+	in_dev_id = -1;
+
+	UINT num_out = midiOutGetNumDevs();
+	UINT num_in = midiInGetNumDevs();
+
+	for (UINT i = 0; i < num_out; i++) {
+		MIDIOUTCAPS caps;
+		if (midiOutGetDevCaps(i, &caps, sizeof(caps)) == MMSYSERR_NOERROR) {
+			if (cfg->midioutdev[0] && _tcscmp(cfg->midioutdev, caps.szPname) == 0) {
+				out_dev_id = i;
+			}
+		}
+	}
+	for (UINT i = 0; i < num_in; i++) {
+		MIDIINCAPS caps;
+		if (midiInGetDevCaps(i, &caps, sizeof(caps)) == MMSYSERR_NOERROR) {
+			if (cfg->midiindev[0] && _tcscmp(cfg->midiindev, caps.szPname) == 0) {
+				in_dev_id = i;
+			}
+		}
+	}
+
+	// Fall back to first available device
+	if (out_dev_id < 0 && num_out > 0)
+		out_dev_id = 0;
+	if (in_dev_id < 0 && num_in > 0)
+		in_dev_id = 0;
+}
+
+int midi_open()
+{
+	write_log(_T("midi_open() [Windows native]\n"));
+
+	in_ring_sem = nullptr;
+	uae_sem_init(&in_ring_sem, 0, 1);
+	in_ring_wr = 0;
+	in_ring_rd = 0;
+
+	parse_config(&currprefs);
+
+	bool opened_any = false;
+
+	// Open output
+	if (out_dev_id >= 0) {
+		MMRESULT res = midiOutOpen(&out_handle, out_dev_id, 0, 0, CALLBACK_NULL);
+		if (res == MMSYSERR_NOERROR) {
+			write_log(_T("MIDI OUT: opened device #%d\n"), out_dev_id);
+			opened_any = true;
+		} else {
+			write_log(_T("MIDI OUT: ERROR opening device #%d, code=%d\n"), out_dev_id, res);
+			out_handle = nullptr;
+		}
+	}
+
+	// Open input
+	if (in_dev_id >= 0) {
+		MMRESULT res = midiInOpen(&in_handle, in_dev_id,
+			(DWORD_PTR)midi_in_callback, 0, CALLBACK_FUNCTION);
+		if (res == MMSYSERR_NOERROR) {
+			write_log(_T("MIDI IN: opened device #%d\n"), in_dev_id);
+			midiInStart(in_handle);
+			opened_any = true;
+		} else {
+			write_log(_T("MIDI IN: ERROR opening device #%d, code=%d\n"), in_dev_id, res);
+			in_handle = nullptr;
+		}
+	}
+
+	if (opened_any) {
+		write_log(_T("midi_open(): ok\n"));
+		return 1;
+	}
+
+	write_log(_T("midi_open(): failed!\n"));
+	return 0;
+}
+
+void midi_close()
+{
+	write_log(_T("midi_close() [Windows native]\n"));
+
+	if (in_handle) {
+		midiInStop(in_handle);
+		midiInReset(in_handle);
+		midiInClose(in_handle);
+		in_handle = nullptr;
+	}
+
+	if (out_handle) {
+		midiOutReset(out_handle);
+		midiOutClose(out_handle);
+		out_handle = nullptr;
+	}
+
+	uae_sem_destroy(&in_ring_sem);
+	write_log(_T("midi_close(): done\n"));
+}
+
+// ----- MIDI OUT -----
+
+static DWORD out_msg;
+static int out_msg_bits;
+static int out_msg_bytes;
+static uae_u8 out_msg_last_command;
+static int out_sysex_mode;
+
+static void write_short_msg(DWORD msg)
+{
+	if (!out_handle)
+		return;
+	MMRESULT err = midiOutShortMsg(out_handle, msg);
+	if (err != MMSYSERR_NOERROR) {
+		static MMRESULT last_err;
+		if (err != last_err) {
+			write_log(_T("MIDI OUT: midiOutShortMsg error %d\n"), err);
+		}
+		last_err = err;
+	}
+	TRACE((_T("-> midi_out: %08x\n"), msg));
+}
+
+static void flush_sysex()
+{
+	if (!out_handle || sysex_len == 0)
+		return;
+
+	memset(&sysex_hdr, 0, sizeof(sysex_hdr));
+	sysex_hdr.lpData = (LPSTR)sysex_buf;
+	sysex_hdr.dwBufferLength = sysex_len;
+	sysex_hdr.dwBytesRecorded = sysex_len;
+
+	MMRESULT res = midiOutPrepareHeader(out_handle, &sysex_hdr, sizeof(sysex_hdr));
+	if (res == MMSYSERR_NOERROR) {
+		res = midiOutLongMsg(out_handle, &sysex_hdr, sizeof(sysex_hdr));
+		if (res != MMSYSERR_NOERROR) {
+			write_log(_T("MIDI OUT: midiOutLongMsg error %d\n"), res);
+		}
+		// Wait for completion then unprepare
+		while ((sysex_hdr.dwFlags & MHDR_DONE) == 0)
+			Sleep(1);
+		midiOutUnprepareHeader(out_handle, &sysex_hdr, sizeof(sysex_hdr));
+	} else {
+		write_log(_T("MIDI OUT: midiOutPrepareHeader error %d\n"), res);
+	}
+	sysex_len = 0;
+}
+
+void midi_send_byte(uint8_t ch)
+{
+	TRACE((_T("midi_send_byte(%02x)\n"), ch));
+
+	if ((ch & 0x80) == 0x80) {
+		// Status byte
+		if (ch == 0xf0) {
+			// SYSEX begin
+			out_sysex_mode = 1;
+			sysex_len = 0;
+			sysex_buf[sysex_len++] = ch;
+		} else if (ch == 0xf7) {
+			// SYSEX end
+			if (out_sysex_mode) {
+				sysex_buf[sysex_len++] = ch;
+				flush_sysex();
+				out_sysex_mode = 0;
+			}
+		} else {
+			if ((ch < 0xf8) && out_sysex_mode) {
+				// Abort sysex
+				sysex_buf[sysex_len++] = 0xf7;
+				flush_sysex();
+				out_sysex_mode = 0;
+			}
+			out_msg_bytes = param_len[ch & 0x7f];
+			out_msg = ch;
+			out_msg_last_command = ch;
+			out_msg_bits = 8;
+			if (out_msg_bytes == 0) {
+				write_short_msg(out_msg);
+			}
+		}
+	} else {
+		// Data byte
+		if (out_sysex_mode) {
+			if (sysex_len < SYSEX_BUFLEN)
+				sysex_buf[sysex_len++] = ch;
+		} else if (out_msg_bytes > 0) {
+			out_msg |= ch << out_msg_bits;
+			out_msg_bits += 8;
+			out_msg_bytes--;
+			if (out_msg_bytes == 0) {
+				write_short_msg(out_msg);
+			}
+		} else {
+			// Running status
+			out_msg = out_msg_last_command & 0xff;
+			out_msg |= ch << 8;
+			out_msg_bits = 16;
+			out_msg_bytes = param_len[out_msg_last_command & 0x7f] - 1;
+			if (out_msg_bytes == 0) {
+				write_short_msg(out_msg);
+			}
+		}
+	}
+}
+
+// ----- MIDI IN -----
+
+int midi_has_byte()
+{
+	uae_sem_wait(&in_ring_sem);
+	int res = (in_ring_rd != in_ring_wr);
+	uae_sem_post(&in_ring_sem);
+	return res;
+}
+
+int midi_recv_byte(uint8_t *ch)
+{
+	uae_sem_wait(&in_ring_sem);
+	if (in_ring_rd != in_ring_wr) {
+		*ch = in_ring[in_ring_rd];
+		in_ring_rd = (in_ring_rd + 1) % IN_QUEUE_SIZE;
+		uae_sem_post(&in_ring_sem);
+		TRACE((_T("midi_recv: %02x\n"), *ch));
+		return 1;
+	}
+	uae_sem_post(&in_ring_sem);
+	return 0;
+}
+
+#elif defined(USE_PORTMIDI)
+// ========================================================================
+// PortMidi implementation (Linux, macOS, FreeBSD)
+// ========================================================================
+
+#include "portmidi.h"
+#include "porttime.h"
+
+#define IN_QUEUE_SIZE 1024
+#define OUT_QUEUE_SIZE 1024
+
+// local data
+static PmDeviceID in_dev_id = pmNoDevice;
+static PmDeviceID out_dev_id = pmNoDevice;
+static PortMidiStream *out;
+static PortMidiStream *in;
 
 #define MY_IN_QUEUE_SIZE 64
 static int timer_active = 0;
@@ -497,6 +806,7 @@ int midi_recv_byte(uint8_t *ch)
 			else {
 				in_msg_bytes = param_len[status & 0x7f];
 			}
+
 			in_msg_bits = 8;
 			*ch = status;
 			res = 1;
@@ -509,9 +819,18 @@ int midi_recv_byte(uint8_t *ch)
 	return res;
 }
 
-// The following functions are added for compatibility with WinUAE / PCem code.
-// The Midi_Parse function has not been tested yet, so this might not work
-// correctly.
+#else
+// No MIDI backend available
+int midi_open() { return 0; }
+void midi_close() {}
+void midi_send_byte(uint8_t ch) {}
+int midi_has_byte() { return 0; }
+int midi_recv_byte(uint8_t *ch) { return 0; }
+#endif // _WIN32 / USE_PORTMIDI
+
+// ========================================================================
+// Common compatibility wrappers (shared by all backends)
+// ========================================================================
 
 int Midi_Open()
 {

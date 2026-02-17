@@ -4,7 +4,7 @@
 
 #ifdef CAPS
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(AMIBERRY)
 #include <shlobj.h>
 #endif
 
