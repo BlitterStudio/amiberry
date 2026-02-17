@@ -65,8 +65,8 @@
 #include <iostream>
 #if defined(__linux__)
 #include <linux/kd.h>
-#endif
 #include <sys/ioctl.h>
+#endif
 
 #include "fsdb.h"
 #include "fsdb_host.h"
