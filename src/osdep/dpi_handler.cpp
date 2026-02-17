@@ -114,6 +114,34 @@ float DPIHandler::get_touch_scale() {
 #endif
 }
 
+int DPIHandler::scale_window_dimension(const int value)
+{
+	if (value <= 0)
+		return value;
+
+#if defined(__linux__)
+	const float scale = get_scale();
+	if (scale > 1.0f)
+		return std::max(1, static_cast<int>(std::lround(static_cast<float>(value) * scale)));
+#endif
+
+	return value;
+}
+
+int DPIHandler::unscale_window_dimension(const int value)
+{
+	if (value <= 0)
+		return value;
+
+#if defined(__linux__)
+	const float scale = get_scale();
+	if (scale > 1.0f)
+		return std::max(1, static_cast<int>(std::lround(static_cast<float>(value) / scale)));
+#endif
+
+	return value;
+}
+
 void DPIHandler::set_render_scale([[maybe_unused]] SDL_Renderer* renderer) {
     // SDL renderer scale is only needed on macOS where drawable pixels differ from window points.
 #ifdef __MACH__

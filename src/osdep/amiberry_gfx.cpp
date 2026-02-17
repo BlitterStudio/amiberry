@@ -4399,6 +4399,11 @@ static int create_windows(struct AmigaMonitor* mon)
 			nh = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.height;
 		}
 
+		if (!fullscreen && !fullwindow) {
+			nw = DPIHandler::scale_window_dimension(nw);
+			nh = DPIHandler::scale_window_dimension(nh);
+		}
+
 		if (fullwindow) {
 			SDL_Rect rc = md->rect;
 			nx = rc.x;
@@ -4468,6 +4473,11 @@ static int create_windows(struct AmigaMonitor* mon)
 	rc.w = mon->currentmode.current_width;
 	rc.h = mon->currentmode.current_height;
 
+	if (!fullscreen && !fullwindow) {
+		rc.w = DPIHandler::scale_window_dimension(rc.w);
+		rc.h = DPIHandler::scale_window_dimension(rc.h);
+	}
+
 	oldx = rc.x;
 	oldy = rc.y;
 
@@ -4529,8 +4539,14 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	SDL_Rect rc2;
 	GetWindowRect(mon->amiga_window, &rc2);
-	mon->window_extra_width = rc2.w - mon->currentmode.current_width;
-	mon->window_extra_height = rc2.h - mon->currentmode.current_height;
+	int expected_client_width = mon->currentmode.current_width;
+	int expected_client_height = mon->currentmode.current_height;
+	if (!fullscreen && !fullwindow) {
+		expected_client_width = DPIHandler::scale_window_dimension(expected_client_width);
+		expected_client_height = DPIHandler::scale_window_dimension(expected_client_height);
+	}
+	mon->window_extra_width = rc2.w - expected_client_width;
+	mon->window_extra_height = rc2.h - expected_client_height;
 
 	w = mon->currentmode.native_width;
 	h = mon->currentmode.native_height;
