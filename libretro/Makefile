@@ -50,6 +50,7 @@ endif
 ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
+   CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
    ifeq ($(DEBUG), 1)
    SHARED := -shared -Wl,-Bsymbolic-functions
    else
@@ -58,11 +59,13 @@ ifeq ($(platform), unix)
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
    fpic := -fPIC
+   CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
    SHARED := -dynamiclib
 else
    TARGET := $(TARGET_NAME)_libretro.dll
    CC ?= gcc
    CXX ?= g++
+   CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_win32.cpp
    SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
 endif
 
@@ -391,7 +394,7 @@ SOURCES_ARCHIVE := $(AMIBERRY_DIR)/src/archivers/dms/crc_csum.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/huffman.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/md5.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/osdcore.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp \
+                  $(CHD_OSDLIB) \
                   $(AMIBERRY_DIR)/src/archivers/chd/osdsync.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/palette.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp \
