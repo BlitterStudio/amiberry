@@ -2456,10 +2456,6 @@ static int open_device (int unitnum, const TCHAR *ident, int flags)
 	struct cdunit *cdu = &cdunits[unitnum];
 	int ret = 0;
 
-	fprintf(stderr, "CDIMAGE DEBUG: open_device unit=%d ident='%s' flags=%d open=%d\n",
-		unitnum, ident ? ident : "(null)", flags, cdu->open ? 1 : 0);
-	fflush(stderr);
-
 	if (!cdu->open) {
 		uae_sem_init (&cdu->sub_sem, 0, 1);
 		cdu->imgname_out[0] = 0;
@@ -2467,9 +2463,6 @@ static int open_device (int unitnum, const TCHAR *ident, int flags)
 		if (ident) {
 			_tcscpy(cdu->imgname_in, ident);
 			cfgfile_resolve_path_out_load(cdu->imgname_in, cdu->imgname_out, MAX_DPATH, PATH_CD);
-			fprintf(stderr, "CDIMAGE DEBUG: resolved path in='%s' out='%s'\n",
-				cdu->imgname_in, cdu->imgname_out);
-			fflush(stderr);
 			parse_image(cdu, cdu->imgname_out);
 		}
 		cdu->open = true;
