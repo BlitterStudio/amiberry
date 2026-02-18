@@ -51,6 +51,7 @@ ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
    CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
+   CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp
    ifeq ($(DEBUG), 1)
    SHARED := -shared -Wl,-Bsymbolic-functions
    else
@@ -60,12 +61,14 @@ else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
    fpic := -fPIC
    CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
+   CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp
    SHARED := -dynamiclib
 else
    TARGET := $(TARGET_NAME)_libretro.dll
    CC ?= gcc
    CXX ?= g++
    CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_win32.cpp
+   CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/winfile.cpp
    SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
 endif
 
@@ -398,7 +401,7 @@ SOURCES_ARCHIVE := $(AMIBERRY_DIR)/src/archivers/dms/crc_csum.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/osdsync.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/palette.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp \
+                  $(CHD_FILEIMP) \
                   $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/strconv.cpp \
