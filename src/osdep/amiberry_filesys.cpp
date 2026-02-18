@@ -73,9 +73,12 @@ static inline struct tm* gmtime_r(const time_t* timep, struct tm* result) {
 #define S_ISLNK(m) 0
 #endif
 
-// mkdir: Windows _mkdir takes only 1 argument
+#ifndef LIBRETRO
+// mkdir: Windows _mkdir takes only 1 argument (standalone only;
+// LIBRETRO builds use posixemu_mkdir via sysdeps.h macros)
 #include <direct.h>
 #define mkdir(path, mode) _mkdir(path)
+#endif
 
 // sync: no-op on Windows
 #define sync()
@@ -229,7 +232,7 @@ static bool has_logged_iconv_fail = false;
         char* dst_ptr = buf.data();
         size_t dst_size = buf.size();
 
-#if defined (__ANDROID__) || defined(_WIN32)
+#if defined(__ANDROID__) || (defined(_WIN32) && !defined(LIBRETRO))
         size_t res = iconv(iconv_handle, (const char**)&src_ptr, &src_size, &dst_ptr, &dst_size);
 #else
         size_t res = iconv(iconv_handle, &src_ptr, &src_size, &dst_ptr, &dst_size);
