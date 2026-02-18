@@ -2108,6 +2108,13 @@ static constexpr uae_u32 ARM64_UNSTABLE_KEY_MASK = ~((1u << ARM64_UNSTABLE_KEY_S
 static constexpr uae_u32 ARM64_UNSTABLE_BITMAP_BYTES = 1u << (32 - ARM64_UNSTABLE_KEY_SHIFT - 3);
 static uae_u8 arm64_dynamic_unstable_bitmap[ARM64_UNSTABLE_BITMAP_BYTES];
 static uae_u32 arm64_dynamic_unstable_count = 0;
+static uae_u32 arm64_dynamic_window_learn_count = 0;
+static uae_u32 arm64_guard_compile_total = 0;
+static uae_u32 arm64_guard_compile_interp = 0;
+static uae_u32 arm64_guard_compile_interp_rom = 0;
+static uae_u32 arm64_guard_compile_interp_compat = 0;
+static uae_u32 arm64_guard_compile_interp_static = 0;
+static uae_u32 arm64_guard_compile_interp_dynamic = 0;
 
 static inline uae_u32 arm64_unstable_block_key(uae_u32 pc)
 {
@@ -2127,6 +2134,76 @@ static inline bool arm64_guard_verbose_logging(void)
         }
     }
     return enabled;
+}
+
+static inline bool arm64_guard_stats_enabled(void)
+{
+    static bool initialized = false;
+    static bool enabled = false;
+    if (!initialized) {
+        initialized = true;
+        const char* env = getenv("AMIBERRY_ARM64_GUARD_STATS");
+        enabled = env && env[0] != '\0' && env[0] != '0';
+        if (enabled) {
+            write_log("JIT: ARM64 guard stats enabled by AMIBERRY_ARM64_GUARD_STATS\n");
+        }
+    }
+    return enabled;
+}
+
+static inline void arm64_guard_stats_note_compile(bool interp_only, bool rom_only, bool compat_only, bool static_hotspot_only, bool dynamic_hotspot_only)
+{
+    if (!arm64_guard_stats_enabled()) {
+        return;
+    }
+    arm64_guard_compile_total++;
+    if (!interp_only) {
+        return;
+    }
+    arm64_guard_compile_interp++;
+    if (rom_only) {
+        arm64_guard_compile_interp_rom++;
+    }
+    if (compat_only) {
+        arm64_guard_compile_interp_compat++;
+    }
+    if (static_hotspot_only) {
+        arm64_guard_compile_interp_static++;
+    }
+    if (dynamic_hotspot_only) {
+        arm64_guard_compile_interp_dynamic++;
+    }
+}
+
+static inline void arm64_guard_stats_log(const char* reason)
+{
+    if (!arm64_guard_stats_enabled()) {
+        return;
+    }
+    if (arm64_guard_compile_total == 0 && arm64_dynamic_unstable_count == 0 && arm64_dynamic_window_learn_count == 0) {
+        return;
+    }
+    write_log("JIT: ARM64 guard stats (%s): compile=%u interp=%u rom=%u compat=%u static=%u dynamic=%u learned_keys=%u learned_windows=%u\n",
+        reason,
+        arm64_guard_compile_total,
+        arm64_guard_compile_interp,
+        arm64_guard_compile_interp_rom,
+        arm64_guard_compile_interp_compat,
+        arm64_guard_compile_interp_static,
+        arm64_guard_compile_interp_dynamic,
+        arm64_dynamic_unstable_count,
+        arm64_dynamic_window_learn_count);
+}
+
+static inline void arm64_guard_stats_reset(void)
+{
+    arm64_dynamic_window_learn_count = 0;
+    arm64_guard_compile_total = 0;
+    arm64_guard_compile_interp = 0;
+    arm64_guard_compile_interp_rom = 0;
+    arm64_guard_compile_interp_compat = 0;
+    arm64_guard_compile_interp_static = 0;
+    arm64_guard_compile_interp_dynamic = 0;
 }
 
 static inline bool arm64_is_dynamic_unstable_key(uae_u32 key)
@@ -2182,6 +2259,9 @@ void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after
     if (learned > 0 && arm64_guard_verbose_logging()) {
         write_log("JIT: ARM64 dynamic guard learned unstable window PC=%08x range=%08x-%08x (%d keys)\n",
             pc, first, last, learned);
+    }
+    if (learned > 0) {
+        arm64_dynamic_window_learn_count++;
     }
 }
 #else
@@ -2337,6 +2417,10 @@ void compiler_init(void)
 
 void compiler_exit(void)
 {
+#if defined(CPU_AARCH64)
+    arm64_guard_stats_log("exit");
+#endif
+
 #ifdef PROFILE_COMPILE_TIME
     emul_end_time = clock();
 #endif
@@ -3206,8 +3290,10 @@ static void prepare_block(blockinfo* bi)
 void compemu_reset(void)
 {
 #if defined(CPU_AARCH64)
+    arm64_guard_stats_log("reset");
     memset(arm64_dynamic_unstable_bitmap, 0, sizeof arm64_dynamic_unstable_bitmap);
     arm64_dynamic_unstable_count = 0;
+    arm64_guard_stats_reset();
 #endif
     flush_icache = lazy_flush ? flush_icache_lazy : flush_icache_hard;
     set_cache_state(0);
@@ -3498,6 +3584,12 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         const bool arm64_dynamic_hotspot_interp_only = isarm64dynamicunstableblock(start_pc);
         const bool arm64_hotspot_interp_only = arm64_static_hotspot_interp_only || arm64_dynamic_hotspot_interp_only;
         const bool arm64_interp_only = arm64_compat_interp_only || arm64_rom_interp_only || arm64_hotspot_interp_only;
+        arm64_guard_stats_note_compile(
+            arm64_interp_only,
+            arm64_rom_interp_only,
+            arm64_compat_interp_only,
+            arm64_static_hotspot_interp_only,
+            arm64_dynamic_hotspot_interp_only);
         if (arm64_interp_only) {
             static int arm64_rom_guard_logged = 0;
             static int arm64_compat_guard_logged = 0;

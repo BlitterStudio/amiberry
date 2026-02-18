@@ -69,7 +69,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 # Pre-release version suffix (project version is set in project() above)
-set(VERSION_PRE_RELEASE "22" CACHE STRING "Pre-release version")
+set(VERSION_PRE_RELEASE "23" CACHE STRING "Pre-release version")
 
 # Use PkgConfig only on FreeBSD
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
