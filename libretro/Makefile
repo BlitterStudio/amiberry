@@ -52,6 +52,9 @@ ifeq ($(platform), unix)
    fpic := -fPIC
    CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
    CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp
+   CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp
+   CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
+   CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    ifeq ($(DEBUG), 1)
    SHARED := -shared -Wl,-Bsymbolic-functions
    else
@@ -62,6 +65,9 @@ else ifeq ($(platform), osx)
    fpic := -fPIC
    CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
    CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp
+   CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp
+   CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
+   CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    SHARED := -dynamiclib
 else
    TARGET := $(TARGET_NAME)_libretro.dll
@@ -69,6 +75,9 @@ else
    CXX ?= g++
    CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_win32.cpp
    CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/winfile.cpp
+   CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/windir.cpp
+   CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/winptty.cpp
+   CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/winsocket.cpp
    SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
 endif
 
@@ -400,10 +409,10 @@ SOURCES_ARCHIVE := $(AMIBERRY_DIR)/src/archivers/dms/crc_csum.cpp \
                   $(CHD_OSDLIB) \
                   $(AMIBERRY_DIR)/src/archivers/chd/osdsync.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/palette.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp \
+                  $(CHD_DIR) \
                   $(CHD_FILEIMP) \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp \
+                  $(CHD_PTTY) \
+                  $(CHD_SOCKET) \
                   $(AMIBERRY_DIR)/src/archivers/chd/strconv.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/strformat.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/unicode.cpp \
