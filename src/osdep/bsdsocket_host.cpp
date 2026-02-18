@@ -703,6 +703,11 @@ static unsigned int __stdcall sock_thread(void *p)
 
 /* host_* functions */
 
+/* TODO: Windows Dup2Socket does not duplicate the underlying SOCKET handle.
+ * Two descriptor table entries alias the same handle, so closing one
+ * invalidates the other.  The correct fix is WSADuplicateSocket() +
+ * WSASocket(), but that is a pre-existing WinUAE design choice and out
+ * of scope for this change. */
 int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 {
 	SOCKET s1, s2;
@@ -716,6 +721,7 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 			if ((unsigned int)(fd2) >= (unsigned int)sb->dtablesize) {
 				BSDTRACE((_T("Bad file descriptor (%d)\n"), fd2));
 				bsdsocklib_seterrno(ctx, sb, 9);
+				return -1;
 			}
 			fd2++;
 			s2 = getsock(ctx, sb, fd2);
@@ -728,6 +734,9 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 			return 0;
 		} else {
 			fd2 = getsd(ctx, sb, 1);
+			if (fd2 == -1) {
+				return -1;
+			}
 			setsd(ctx, sb, fd2, s1);
 			BSDTRACE((_T("%d\n"), fd2));
 			return (fd2 - 1);
@@ -757,6 +766,9 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
 		BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
 		return -1;
 	} else {
+		/* TODO: getsd() returns -1 when the descriptor table is full.
+		 * Unchecked, this causes ftable[sd-1] to write out of bounds.
+		 * Same bug exists in the POSIX host_socket. */
 		sd = getsd(ctx, sb, s);
 	}
 
@@ -903,6 +915,9 @@ void host_accept(TrapContext *ctx, SB, uae_u32 sd, uae_u32 name, uae_u32 namelen
 			sb->resultval = -1;
 			BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
 		} else {
+			/* TODO: getsd() returns -1 when the descriptor table is full.
+			 * Unchecked, this causes ftable[resultval-1] to write out of bounds.
+			 * Same bug exists in the POSIX bsdthr_Accept_2. */
 			sb->resultval = getsd(ctx, sb, s2);
 			sb->ftable[sb->resultval - 1] = sb->ftable[sd - 1];
 			callfdcallback(ctx, sb, sb->resultval - 1, FDCB_ALLOC);
@@ -2127,88 +2142,6 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 	}
 }
 
-uae_u32 host_Inet_NtoA(TrapContext *ctx, SB, uae_u32 in)
-{
-	uae_char *addr;
-	struct in_addr ina;
-	uae_u32 scratchbuf;
-
-	*(uae_u32 *)&ina = htonl(in);
-
-	BSDTRACE((_T("Inet_NtoA(%x) -> "), in));
-
-	if ((addr = inet_ntoa(ina)) != NULL) {
-		scratchbuf = trap_get_areg(ctx, 6) + offsetof(struct UAEBSDBase, scratchbuf);
-		strncpyha(ctx, scratchbuf, addr, SCRATCHBUFSIZE);
-		BSDTRACE((_T("%s\n"), addr));
-		return scratchbuf;
-	} else
-		SETERRNO;
-
-	BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
-
-	return 0;
-}
-
-uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
-{
-	uae_u32 addr;
-	char *cp_rp;
-
-	if (!trap_valid_address(ctx, cp, 4))
-		return 0;
-	cp_rp = trap_get_alloc_string(ctx, cp, 256);
-	addr = htonl(inet_addr(cp_rp));
-	BSDTRACE((_T("inet_addr(%s) -> 0x%08lx\n"), cp_rp, addr));
-	xfree(cp_rp);
-	return addr;
-}
-
-uae_u32 host_Inet_LnaOf(uae_u32 in)
-{
-	uae_u32 result;
-
-	if ((in & 0x80000000) == 0) {
-		result = in & 0x00ffffff;
-	} else if ((in & 0xc0000000) == 0x80000000) {
-		result = in & 0x0000ffff;
-	} else {
-		result = in & 0x000000ff;
-	}
-	BSDTRACE((_T("Inet_LnaOf(0x%08x) -> 0x%08x\n"), in, result));
-	return result;
-}
-
-uae_u32 host_Inet_NetOf(uae_u32 in)
-{
-	uae_u32 result;
-
-	if ((in & 0x80000000) == 0) {
-		result = (in >> 24) & 0xff;
-	} else if ((in & 0xc0000000) == 0x80000000) {
-		result = (in >> 16) & 0xffff;
-	} else {
-		result = (in >> 8) & 0xffffff;
-	}
-	BSDTRACE((_T("Inet_NetOf(0x%08x) -> 0x%08x\n"), in, result));
-	return result;
-}
-
-uae_u32 host_Inet_MakeAddr(uae_u32 net, uae_u32 host)
-{
-	uae_u32 result;
-
-	if (net < 128) {
-		result = (net << 24) | (host & 0x00ffffff);
-	} else if (net < 65536) {
-		result = (net << 16) | (host & 0x0000ffff);
-	} else {
-		result = (net << 8) | (host & 0x000000ff);
-	}
-	BSDTRACE((_T("Inet_MakeAddr(0x%08x, 0x%08x) -> 0x%08x\n"), net, host, result));
-	return result;
-}
-
 /* DNS/proto/serv thread pool */
 
 #define GET_STATE_FREE 0
@@ -2301,7 +2234,7 @@ static unsigned int thread_get2(void *indexp)
 				}
 
 				if (type) {
-					serv = getservbyport(nameport, proto_rp);
+					serv = getservbyport(htons((unsigned short)nameport), proto_rp);
 				} else {
 					if (addr_valid(_T("thread_get4"), nameport, 1)) {
 						name_rp = (char*)get_real_address(nameport);
@@ -2697,15 +2630,6 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 	}
 
 	release_get_thread(tindex);
-}
-
-uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
-{
-	if (!trap_valid_address(ctx, name, namelen))
-		return -1;
-	uae_char buf[256];
-	trap_get_string(ctx, buf, name, sizeof buf);
-	return gethostname(buf, namelen);
 }
 
 #endif /* BSDSOCKET */
@@ -3944,6 +3868,9 @@ uae_u32 bsdthr_Accept_2 (SB)
 		if ((flags = fcntl (s, F_GETFL)) == -1)
 			flags = 0;
 		fcntl (s, F_SETFL, flags & ~O_NONBLOCK); /* @@@ Don't do this if it's supposed to stay nonblocking... */
+		/* TODO: getsd() returns -1 when the descriptor table is full.
+		 * Unchecked, this causes ftable[s2-1] to write out of bounds.
+		 * Same bug exists in the Windows host_accept. */
 		s2 = getsd (sb->context, sb, s);
 		sb->ftable[s2-1] = sb->ftable[sb->len]; /* new socket inherits the old socket's properties */
 		write_log ("Accept: AmigaSide %d, NativeSide %d, len %d(%d)", sb->resultval, s, hlen, get_long (sb->a_addrlen));
@@ -4472,6 +4399,9 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
         return -1;
     } else {
         int arg = 1;
+        /* TODO: getsd() returns -1 when the descriptor table is full.
+         * Unchecked, this causes ftable[sd-1] to write out of bounds.
+         * Same bug exists in the Windows host_socket. */
         sd = getsd (ctx, sb, s);
         setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (const char*)&arg, sizeof(arg));
     }
@@ -5320,83 +5250,6 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 	clearsockabort(sb);
 }
 
-uae_u32 host_Inet_NtoA(TrapContext *ctx, SB, uae_u32 in)
-{
-	uae_char *addr;
-	struct in_addr ina;
-	uae_u32 buf;
-
-	*(uae_u32 *)&ina = htonl (in);
-
-	if ((addr = inet_ntoa(ina)) != NULL) {
-		buf = m68k_areg (regs, 6) + offsetof (struct UAEBSDBase, scratchbuf);
-		strncpyha (ctx, buf, addr, SCRATCHBUFSIZE);
-		return buf;
-	} else
-		SETERRNO;
-
-	return 0;
-}
-
-uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
-{
-	uae_u32 addr;
-	char *cp_rp;
-
-	if (!trap_valid_address(ctx, cp, 4))
-		return 0;
-	cp_rp = trap_get_alloc_string(ctx, cp, 256);
-	addr = htonl(inet_addr(cp_rp));
-
-	xfree(cp_rp);
-	return addr;
-}
-
-uae_u32 host_Inet_LnaOf(uae_u32 in)
-{
-	uae_u32 result;
-
-	if ((in & 0x80000000) == 0) {
-		result = in & 0x00ffffff;
-	} else if ((in & 0xc0000000) == 0x80000000) {
-		result = in & 0x0000ffff;
-	} else {
-		result = in & 0x000000ff;
-	}
-	BSDTRACE((_T("Inet_LnaOf(0x%08x) -> 0x%08x\n"), in, result));
-	return result;
-}
-
-uae_u32 host_Inet_NetOf(uae_u32 in)
-{
-	uae_u32 result;
-
-	if ((in & 0x80000000) == 0) {
-		result = (in >> 24) & 0xff;
-	} else if ((in & 0xc0000000) == 0x80000000) {
-		result = (in >> 16) & 0xffff;
-	} else {
-		result = (in >> 8) & 0xffffff;
-	}
-	BSDTRACE((_T("Inet_NetOf(0x%08x) -> 0x%08x\n"), in, result));
-	return result;
-}
-
-uae_u32 host_Inet_MakeAddr(uae_u32 net, uae_u32 host)
-{
-	uae_u32 result;
-
-	if (net < 128) {
-		result = (net << 24) | (host & 0x00ffffff);
-	} else if (net < 65536) {
-		result = (net << 16) | (host & 0x0000ffff);
-	} else {
-		result = (net << 8) | (host & 0x000000ff);
-	}
-	BSDTRACE((_T("Inet_MakeAddr(0x%08x, 0x%08x) -> 0x%08x\n"), net, host, result));
-	return result;
-}
-
 // --- Wrap getservbyname, getservbyport, getprotobyname, getprotobynumber with mutex ---
 
 void host_getprotobyname (TrapContext *ctx, SB, uae_u32 name)
@@ -5524,18 +5377,6 @@ void host_gethostbynameaddr (TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen
 	uae_sem_post (&sb->sem);
 
 	WAITSIGNAL;
-}
-
-uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
-{
-	if (!trap_valid_address(ctx, name, namelen))
-		return -1;
-	char buf[256];
-	if (gethostname(buf, sizeof(buf)) != 0)
-		return -1;
-	buf[sizeof(buf) - 1] = '\0';
-	trap_put_string(ctx, (uae_char *)buf, name, namelen);
-	return 0;
 }
 
 #endif /* _WIN32 */
