@@ -132,11 +132,10 @@ static int delete_trigger(blockinfo *bi, void *pc)
 {
 	while (bi) {
 		if (bi->handler && (uae_u8*)bi->direct_handler <= pc &&	(uae_u8*)bi->nexthandler > pc) {
-			output_log(_T("JIT: Deleted trigger (0x%016x < 0x%016x < 0x%016x) 0x%016x\n"),
+			output_log(_T("JIT: Deleted trigger (%p < %p < %p) %p\n"),
 				bi->handler, pc, bi->nexthandler, bi->pc_p);
 			invalidate_block(bi);
 			raise_in_cl_list(bi);
-			countdown = 0;
 			set_special(0);
 			return 1;
 		}
@@ -177,7 +176,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 #ifdef JIT
 	for (;;) {
 		// We analyze only exceptions from JIT
-		if (currprefs.cachesize == 0) {
+		if (!canbang || currprefs.cachesize == 0) {
 			output_log(_T("JIT not in use.\n"));
 			break;
 		}
@@ -192,12 +191,14 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 			break;
 		}
 
-		// Get Amiga address of illegal memory address
-		long amiga_addr = long(fault_addr) - long(natmem_offset);
+		// Get Amiga address of illegal memory address using 32-bit wrap semantics.
+		const uae_u32 fault_addr32 = static_cast<uae_u32>(static_cast<uintptr>(fault_addr));
+		const uae_u32 natmem32 = static_cast<uae_u32>(reinterpret_cast<uintptr>(natmem_offset));
+		uaecptr amiga_addr = fault_addr32 - natmem32;
 
 		// Check for stupid RAM detection of kickstart
 		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
-			output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08lx.\n"), amiga_addr);
+			output_log(_T("  Stupid kickstart detection for size of ramsey_low at 0x%08x.\n"), amiga_addr);
 #ifndef __MACH__
 			sigcont->pc += 4;
 #else
@@ -209,7 +210,7 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 
 		// Check for stupid RAM detection of kickstart
 		if (a3000hmem_bank.allocated_size > 0 && amiga_addr >= a3000hmem_bank.start + a3000hmem_bank.allocated_size && amiga_addr < a3000hmem_bank.start + a3000hmem_bank.allocated_size + 8) {
-			output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08lx.\n"), amiga_addr);
+			output_log(_T("  Stupid kickstart detection for size of ramsey_high at 0x%08x.\n"), amiga_addr);
 #ifndef __MACH__
 			sigcont->pc += 4;
 #else
@@ -221,8 +222,10 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 
 		// Get memory bank of address
 		addrbank* ab = &get_mem_bank(amiga_addr);
-		if (ab)
-			output_log(_T("JIT: Address bank: %s, address %08lx\n"), ab->name ? ab->name : _T("NONE"), amiga_addr);
+		if (ab) {
+			output_log(_T("JIT: Address bank: %s, address %08x (jit_read=%d jit_write=%d flags=%08x)\n"),
+				ab->name ? ab->name : _T("NONE"), amiga_addr, ab->jit_read_flag, ab->jit_write_flag, ab->flags);
+		}
 
 		// Analyze AARCH64 instruction
 		const unsigned int opcode = ((uae_u32*)fault_pc)[0];
@@ -234,119 +237,242 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 		transfer_type_t transfer_type = TYPE_UNKNOWN;
 		int transfer_size = SIZE_UNKNOWN;
 
-		unsigned int masked_op = opcode & 0xfffffc00;
-		switch (masked_op) {
-		case 0x383b6800: // STRB_wXx
-			transfer_size = SIZE_BYTE;
-			transfer_type = TYPE_STORE;
-			break;
-
-		case 0x783b6800: // STRH_wXx
-			transfer_size = SIZE_WORD;
-			transfer_type = TYPE_STORE;
-			break;
-
-		case 0xb83b6800: // STR_wXx
-			transfer_size = SIZE_INT;
-			transfer_type = TYPE_STORE;
-			break;
-
-		case 0x387b6800: // LDRB_wXx
-			transfer_size = SIZE_BYTE;
-			transfer_type = TYPE_LOAD;
-			break;
-
-		case 0x787b6800: // LDRH_wXx
-			transfer_size = SIZE_WORD;
-			transfer_type = TYPE_LOAD;
-			break;
-
-		case 0xb87b6800: // LDR_wXx
-			transfer_size = SIZE_INT;
-			transfer_type = TYPE_LOAD;
-			break;
-
-		default:
-			output_log(_T("AARCH64: Handling of instruction 0x%08x not supported.\n"), opcode);
-		}
-
-		if (transfer_size != SIZE_UNKNOWN) {
-			// Get AARCH64 register
-			int rd = opcode & 0x1f;
-
-			output_log(_T("%s %s register x%d\n"),
-				transfer_size == SIZE_BYTE ? _T("byte") : transfer_size == SIZE_WORD ? _T("word") : transfer_size == SIZE_INT ? _T("long") : _T("unknown"),
-				transfer_type == TYPE_LOAD ? _T("load to") : _T("store from"),
-				rd);
-
-			if (transfer_type == TYPE_LOAD) {
-				// Perform load via indirect memory call
+			const auto get_reg_w = [&](const int reg) -> uae_u32 {
+				if (reg == 31)
+					return 0;
 #ifndef __MACH__
-				uae_u32 oldval = sigcont->regs[rd];
+				return static_cast<uae_u32>(sigcont->regs[reg]);
 #else
-				uae_u32 oldval = sigcont->__ss.__x[rd];
+				return static_cast<uae_u32>(sigcont->__ss.__x[reg]);
 #endif
-				switch (transfer_size) {
-				case SIZE_BYTE:
+			};
+			const auto get_reg_x = [&](const int reg) -> uae_u64 {
+				if (reg == 31)
+					return 0;
 #ifndef __MACH__
-					sigcont->regs[rd] = (uae_u8)get_byte(amiga_addr);
+				return static_cast<uae_u64>(sigcont->regs[reg]);
 #else
-					sigcont->__ss.__x[rd] = (uae_u8)get_byte(amiga_addr);
+				return static_cast<uae_u64>(sigcont->__ss.__x[reg]);
 #endif
-					break;
-
-				case SIZE_WORD:
+			};
+			const auto get_base_x = [&](const int reg) -> uae_u64 {
+				if (reg == 31) {
 #ifndef __MACH__
-					sigcont->regs[rd] = uae_bswap_16((uae_u16)get_word(amiga_addr));
+					return static_cast<uae_u64>(sigcont->sp);
 #else
-					sigcont->__ss.__x[rd] = uae_bswap_16((uae_u16)get_word(amiga_addr));
+					return static_cast<uae_u64>(sigcont->__ss.__sp);
 #endif
-					break;
-
-				case SIZE_INT:
-#ifndef __MACH__
-					sigcont->regs[rd] = uae_bswap_32(get_long(amiga_addr));
-#else
-					sigcont->__ss.__x[rd] = uae_bswap_32(get_long(amiga_addr));
-#endif
-					break;
 				}
+				return get_reg_x(reg);
+			};
+			const auto set_reg_w = [&](const int reg, const uae_u32 value) {
+				if (reg == 31)
+					return;
 #ifndef __MACH__
-				output_log(_T("New value in x%d: 0x%08llx (old: 0x%08x)\n"), rd, sigcont->regs[rd], oldval);
+				sigcont->regs[reg] = value;
 #else
-				output_log(_T("New value in x%d: 0x%08llx (old: 0x%08x)\n"), rd, sigcont->__ss.__x[rd], oldval);
+				sigcont->__ss.__x[reg] = value;
 #endif
+			};
+
+			// Decode memory operands for additional diagnostics.
+			const int rd = opcode & 0x1f;
+			const int rn = (opcode >> 5) & 0x1f;
+			const int rm = (opcode >> 16) & 0x1f;
+			const uae_u32 option = (opcode >> 13) & 0x7;
+			const uae_u32 sbit = (opcode >> 12) & 0x1;
+			const uae_u32 imm12 = (opcode >> 10) & 0xfff;
+			bool reg_indexed = false;
+			bool unsigned_imm = false;
+
+			unsigned int masked_op = opcode & 0xffe00c00;
+			switch (masked_op) {
+			case 0x38200800: // STRB_wXx
+				transfer_size = SIZE_BYTE;
+				transfer_type = TYPE_STORE;
+				reg_indexed = true;
+				break;
+
+			case 0x78200800: // STRH_wXx
+				transfer_size = SIZE_WORD;
+				transfer_type = TYPE_STORE;
+				reg_indexed = true;
+				break;
+
+			case 0xb8200800: // STR_wXx
+				transfer_size = SIZE_INT;
+				transfer_type = TYPE_STORE;
+				reg_indexed = true;
+				break;
+
+			case 0x38600800: // LDRB_wXx
+				transfer_size = SIZE_BYTE;
+				transfer_type = TYPE_LOAD;
+				reg_indexed = true;
+				break;
+
+			case 0x78600800: // LDRH_wXx
+				transfer_size = SIZE_WORD;
+				transfer_type = TYPE_LOAD;
+				reg_indexed = true;
+				break;
+
+			case 0xb8600800: // LDR_wXx
+				transfer_size = SIZE_INT;
+				transfer_type = TYPE_LOAD;
+				reg_indexed = true;
+				break;
+
+			default:
+				break;
 			}
-			else {
-				// Perform store via indirect memory call
-				switch (transfer_size) {
-				case SIZE_BYTE: {
-#ifndef __MACH__
-					put_byte(amiga_addr, sigcont->regs[rd]);
-#else
-					put_byte(amiga_addr, sigcont->__ss.__x[rd]);
-#endif
+
+			if (transfer_size == SIZE_UNKNOWN) {
+				// Unsigned immediate forms: [Xn, #imm12 << scale]
+				masked_op = opcode & 0xffc00000;
+				switch (masked_op) {
+				case 0x39000000: // STRB_wXi
+					transfer_size = SIZE_BYTE;
+					transfer_type = TYPE_STORE;
+					unsigned_imm = true;
+					break;
+				case 0x79000000: // STRH_wXi
+					transfer_size = SIZE_WORD;
+					transfer_type = TYPE_STORE;
+					unsigned_imm = true;
+					break;
+				case 0xb9000000: // STR_wXi
+					transfer_size = SIZE_INT;
+					transfer_type = TYPE_STORE;
+					unsigned_imm = true;
+					break;
+				case 0x39400000: // LDRB_wXi
+					transfer_size = SIZE_BYTE;
+					transfer_type = TYPE_LOAD;
+					unsigned_imm = true;
+					break;
+				case 0x79400000: // LDRH_wXi
+					transfer_size = SIZE_WORD;
+					transfer_type = TYPE_LOAD;
+					unsigned_imm = true;
+					break;
+				case 0xb9400000: // LDR_wXi
+					transfer_size = SIZE_INT;
+					transfer_type = TYPE_LOAD;
+					unsigned_imm = true;
+					break;
+				default:
+					output_log(_T("AARCH64: Handling of instruction 0x%08x not supported.\n"), opcode);
 					break;
 				}
-				case SIZE_WORD: {
-#ifndef __MACH__
-					put_word(amiga_addr, uae_bswap_16(sigcont->regs[rd]));
-#else
-					put_word(amiga_addr, uae_bswap_16(sigcont->__ss.__x[rd]));
-#endif
-					break;
-				}
-				case SIZE_INT: {
-#ifndef __MACH__
-					put_long(amiga_addr, uae_bswap_32(sigcont->regs[rd]));
-#else
-					put_long(amiga_addr, uae_bswap_32(sigcont->__ss.__x[rd]));
-#endif
-					break;
-				}
-				}
-				output_log(_T("Stored value from x%d to 0x%08lx\n"), rd, amiga_addr);
 			}
+
+			const uae_u64 rn_val = get_base_x(rn);
+			uae_u64 rm_x = 0;
+			uae_u64 offset = 0;
+			if (transfer_size != SIZE_UNKNOWN) {
+				const int scale_bits = transfer_size == SIZE_WORD ? 1 : transfer_size == SIZE_INT ? 2 : 0;
+				if (reg_indexed) {
+					const uae_u32 shift = sbit ? static_cast<uae_u32>(scale_bits) : 0;
+					rm_x = get_reg_x(rm);
+					offset = rm_x;
+					switch (option) {
+					case 0b010: // UXTW
+						offset = static_cast<uae_u64>(static_cast<uae_u32>(rm_x)) << shift;
+						break;
+					case 0b011: // LSL
+						offset = rm_x << shift;
+						break;
+					case 0b110: { // SXTW
+						uae_s64 s = static_cast<uae_s64>(static_cast<uae_s32>(static_cast<uae_u32>(rm_x)));
+						if (shift)
+							s <<= shift;
+						offset = static_cast<uae_u64>(s);
+						break;
+					}
+					case 0b111: { // SXTX
+						uae_s64 s = static_cast<uae_s64>(rm_x);
+						if (shift)
+							s <<= shift;
+						offset = static_cast<uae_u64>(s);
+						break;
+					}
+					default:
+						offset = rm_x << shift;
+						break;
+					}
+				} else if (unsigned_imm) {
+					offset = static_cast<uae_u64>(imm12) << scale_bits;
+				}
+			}
+			const uae_u64 eff_addr = rn_val + offset;
+			output_log(_T("JIT: fault64=%016llx natmem64=%016llx m68k=%08x op=%04x rd=x%d rn=x%d=%016llx rm=x%d=%016llx opt=%u s=%u imm12=%u mode=%s ea64=%016llx\n"),
+				static_cast<unsigned long long>(static_cast<uintptr>(fault_addr)),
+				static_cast<unsigned long long>(reinterpret_cast<uintptr>(natmem_offset)),
+				static_cast<uae_u32>(M68K_GETPC), regs.opcode, rd, rn,
+				static_cast<unsigned long long>(rn_val), rm, static_cast<unsigned long long>(rm_x),
+				option, sbit, imm12, reg_indexed ? "reg" : (unsigned_imm ? "imm" : "unknown"),
+				static_cast<unsigned long long>(eff_addr));
+			output_log(_T("JIT: regs.pc=%08x A7=%08x A6=%08x D0=%08x D1=%08x pc_p=%p pc_oldp=%p spcflags=%08x special_mem=%02x\n"),
+				regs.pc, m68k_areg(regs, 7), m68k_areg(regs, 6), m68k_dreg(regs, 0), m68k_dreg(regs, 1),
+				regs.pc_p, regs.pc_oldp, regs.spcflags, special_mem);
+			if (eff_addr != static_cast<uae_u64>(static_cast<uintptr>(fault_addr))) {
+				output_log(_T("JIT: EA mismatch: fault64=%016llx ea64=%016llx (delta=%016llx)\n"),
+					static_cast<unsigned long long>(static_cast<uintptr>(fault_addr)),
+					static_cast<unsigned long long>(eff_addr),
+					static_cast<unsigned long long>(eff_addr - static_cast<uae_u64>(static_cast<uintptr>(fault_addr))));
+			}
+
+			if (transfer_size != SIZE_UNKNOWN) {
+				output_log(_T("%s %s register x%d\n"),
+					transfer_size == SIZE_BYTE ? _T("byte") : transfer_size == SIZE_WORD ? _T("word") : transfer_size == SIZE_INT ? _T("long") : _T("unknown"),
+					transfer_type == TYPE_LOAD ? _T("load to") : _T("store from"),
+					rd);
+
+				if (transfer_type == TYPE_LOAD) {
+					// Perform load via indirect memory call
+					const uae_u32 oldval = get_reg_w(rd);
+					uae_u32 newval = oldval;
+					switch (transfer_size) {
+					case SIZE_BYTE:
+						newval = static_cast<uae_u8>(get_byte(amiga_addr));
+						break;
+
+					case SIZE_WORD:
+						newval = uae_bswap_16(static_cast<uae_u16>(get_word(amiga_addr)));
+						break;
+
+					case SIZE_INT:
+						newval = uae_bswap_32(get_long(amiga_addr));
+						break;
+					}
+					if (rd != 31) {
+						set_reg_w(rd, newval);
+						output_log(_T("New value in x%d: 0x%08x (old: 0x%08x)\n"), rd, get_reg_w(rd), oldval);
+					}
+					else {
+						output_log(_T("Load target x31/WZR ignored (value 0x%08x)\n"), newval);
+					}
+				}
+				else {
+					// Perform store via indirect memory call
+					const uae_u32 regval = get_reg_w(rd);
+					switch (transfer_size) {
+					case SIZE_BYTE: {
+						put_byte(amiga_addr, regval);
+						break;
+					}
+					case SIZE_WORD: {
+						put_word(amiga_addr, uae_bswap_16(static_cast<uae_u16>(regval)));
+						break;
+					}
+					case SIZE_INT: {
+						put_long(amiga_addr, uae_bswap_32(regval));
+						break;
+					}
+					}
+					output_log(_T("Stored value 0x%08x from x%d to 0x%08x\n"), regval, rd, amiga_addr);
+				}
 
 			// Go to next instruction
 #ifndef __MACH__
@@ -354,14 +480,19 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 #else
 			sigcont->__ss.__pc += 4;
 #endif
-			handled = HANDLE_EXCEPTION_OK;
+				handled = HANDLE_EXCEPTION_OK;
 
-			if (!delete_trigger(active, (void*)fault_pc)) {
-				/* Not found in the active list. Might be a rom routine that
-				 * is in the dormant list */
-				delete_trigger(dormant, (void*)fault_pc);
-			}
-		}
+					bool deleted = delete_trigger(active, (void*)fault_pc);
+					if (!deleted) {
+						/* Not found in the active list. Might be a rom routine that
+						 * is in the dormant list */
+						deleted = delete_trigger(dormant, (void*)fault_pc);
+					}
+					if (!deleted) {
+						// Can happen if one emulated instruction causes multiple faults.
+						set_special(0);
+					}
+				}
 
 		break;
 	}
@@ -395,6 +526,8 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 	const auto addr = reinterpret_cast<uintptr>(info->si_addr);
 
 	handled = handle_exception(context, addr);
+	if (handled == HANDLE_EXCEPTION_OK || handled == HANDLE_EXCEPTION_A4000RAM)
+		return;
 
 #if SHOW_DETAILS
 	if (handled != HANDLE_EXCEPTION_A4000RAM) {
@@ -403,12 +536,14 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 		else
 			output_log(_T("Segmentation Fault\n"));
 
-		output_log(_T("info.si_signo = %d\n"), signum);
-		output_log(_T("info.si_errno = %d\n"), info->si_errno);
-		output_log(_T("info.si_code = %d\n"), info->si_code);
-		output_log(_T("info.si_addr = %08x\n"), info->si_addr);
-		if (signum == 4)
-			output_log(_T("       value = 0x%08x\n"), *static_cast<uae_u32*>(info->si_addr));
+			output_log(_T("info.si_signo = %d\n"), signum);
+			output_log(_T("info.si_errno = %d\n"), info->si_errno);
+			output_log(_T("info.si_code = %d\n"), info->si_code);
+			output_log(_T("info.si_addr = %08x\n"), info->si_addr);
+			output_log(_T("JIT: regs.pc=%08x regs.pc_p=%p regs.pc_oldp=%p canbang=%d cachesize=%d\n"),
+				::regs.pc, ::regs.pc_p, ::regs.pc_oldp, canbang, currprefs.cachesize);
+			if (signum == 4)
+				output_log(_T("       value = 0x%08x\n"), *static_cast<uae_u32*>(info->si_addr));
 
 		for (int i = 0; i < 31; ++i)
 #ifndef __MACH__
@@ -505,12 +640,14 @@ void signal_buserror(int signum, siginfo_t* info, void* ptr)
 
 	auto addr = reinterpret_cast<uintptr_t>(info->si_addr);
 
-	output_log(_T("info.si_signo = %d\n"), signum);
-	output_log(_T("info.si_errno = %d\n"), info->si_errno);
-	output_log(_T("info.si_code = %d\n"), info->si_code);
-	output_log(_T("info.si_addr = %08x\n"), info->si_addr);
-	if (signum == 4)
-		output_log(_T("       value = 0x%08x\n"), *static_cast<uae_u32*>(info->si_addr));
+		output_log(_T("info.si_signo = %d\n"), signum);
+		output_log(_T("info.si_errno = %d\n"), info->si_errno);
+		output_log(_T("info.si_code = %d\n"), info->si_code);
+		output_log(_T("info.si_addr = %08x\n"), info->si_addr);
+		output_log(_T("JIT: regs.pc=%08x regs.pc_p=%p regs.pc_oldp=%p canbang=%d cachesize=%d\n"),
+			::regs.pc, ::regs.pc_p, ::regs.pc_oldp, canbang, currprefs.cachesize);
+		if (signum == 4)
+			output_log(_T("       value = 0x%08x\n"), *static_cast<uae_u32*>(info->si_addr));
 
 	for (int i = 0; i < 31; ++i)
 #ifndef __MACH__
@@ -585,11 +722,10 @@ static int delete_trigger(blockinfo *bi, void *pc)
 {
 	while (bi) {
 		if (bi->handler && (uae_u8*)bi->direct_handler <= pc &&	(uae_u8*)bi->nexthandler > pc) {
-			output_log(_T("JIT: Deleted trigger (0x%08x < 0x%08x < 0x%08x) 0x%08x\n"),
+			output_log(_T("JIT: Deleted trigger (%p < %p < %p) %p\n"),
 				bi->handler, pc, bi->nexthandler, bi->pc_p);
 			invalidate_block(bi);
 			raise_in_cl_list(bi);
-			countdown = 0;
 			set_special(0);
 			return 1;
 		}
@@ -621,7 +757,7 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 #ifdef JIT
 	for (;;) {
 		// We analyze only exceptions from JIT
-		if (currprefs.cachesize == 0) {
+		if (!canbang || currprefs.cachesize == 0) {
 			output_log(_T("JIT not in use.\n"));
 			break;
 		}
@@ -636,8 +772,10 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 			break;
 		}
 
-		// Get Amiga address of illegal memory address
-		auto amiga_addr = (long)fault_addr - (long)natmem_offset;
+		// Get Amiga address of illegal memory address using 32-bit wrap semantics.
+		const uae_u32 fault_addr32 = static_cast<uae_u32>(static_cast<uintptr>(fault_addr));
+		const uae_u32 natmem32 = static_cast<uae_u32>(reinterpret_cast<uintptr>(natmem_offset));
+		uaecptr amiga_addr = fault_addr32 - natmem32;
 
 		// Check for stupid RAM detection of kickstart
 		if (a3000lmem_bank.allocated_size > 0 && amiga_addr >= a3000lmem_bank.start - 0x00100000 && amiga_addr < a3000lmem_bank.start - 0x00100000 + 8) {
@@ -723,15 +861,17 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 				uae_u32 oldval = pregs[rd];
 				switch (transfer_size) {
 				case SIZE_BYTE:
-					pregs[rd] = style == STYLE_SIGNED ? (uae_s8)get_byte(amiga_addr) : (uae_u8)get_byte(amiga_addr);
+					pregs[rd] = style == STYLE_SIGNED ? (uae_s8)get_byte_jit(amiga_addr) : (uae_u8)get_byte_jit(amiga_addr);
 					break;
 
 				case SIZE_WORD:
-					pregs[rd] = uae_bswap_16(style == STYLE_SIGNED ? (uae_s16)get_word(amiga_addr) : (uae_u16)get_word(amiga_addr));
+					pregs[rd] = style == STYLE_SIGNED
+						? static_cast<uae_s16>(uae_bswap_16(static_cast<uae_u16>(get_word_jit(amiga_addr))))
+						: static_cast<uae_u16>(uae_bswap_16(static_cast<uae_u16>(get_word_jit(amiga_addr))));
 					break;
 
 				case SIZE_INT:
-					pregs[rd] = uae_bswap_32(get_long(amiga_addr));
+					pregs[rd] = uae_bswap_32(get_long_jit(amiga_addr));
 					break;
 				}
 				output_log(_T("New value in %s: 0x%08x (old: 0x%08x)\n"), reg_names[rd], pregs[rd], oldval);
@@ -740,15 +880,15 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 				// Perform store via indirect memory call
 				switch (transfer_size) {
 				case SIZE_BYTE: {
-					put_byte(amiga_addr, pregs[rd]);
+					put_byte_jit(amiga_addr, pregs[rd]);
 					break;
 				}
 				case SIZE_WORD: {
-					put_word(amiga_addr, uae_bswap_16(pregs[rd]));
+					put_word_jit(amiga_addr, uae_bswap_16(static_cast<uae_u16>(pregs[rd])));
 					break;
 				}
 				case SIZE_INT: {
-					put_long(amiga_addr, uae_bswap_32(pregs[rd]));
+					put_long_jit(amiga_addr, uae_bswap_32(pregs[rd]));
 					break;
 				}
 				}
@@ -757,12 +897,19 @@ static int handle_exception(unsigned long* pregs, long fault_addr)
 
 			// Go to next instruction
 			pregs[ARM_REG_PC] += 4;
+			/* Force a quick return to interpreter after fault-emulated accesses. */
+			countdown = 0;
 			handled = HANDLE_EXCEPTION_OK;
 
-			if (!delete_trigger(active, fault_pc)) {
+			bool deleted = delete_trigger(active, fault_pc);
+			if (!deleted) {
 				/* Not found in the active list. Might be a rom routine that
 				 * is in the dormant list */
-				delete_trigger(dormant, fault_pc);
+				deleted = delete_trigger(dormant, fault_pc);
+			}
+			if (!deleted) {
+				// Can happen if one emulated instruction causes multiple faults.
+				set_special(0);
 			}
 		}
 
@@ -793,6 +940,8 @@ void signal_segv(int signum, siginfo_t* info, void* ptr)
 	uintptr addr = (uintptr)info->si_addr;
 
 	handled = handle_exception(regs, addr);
+	if (handled == HANDLE_EXCEPTION_OK || handled == HANDLE_EXCEPTION_A4000RAM)
+		return;
 
 #if SHOW_DETAILS
 	if (handled != HANDLE_EXCEPTION_A4000RAM) {

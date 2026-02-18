@@ -2074,10 +2074,50 @@ static void fflags_into_flags_internal(void)
 static inline int isinrom(uintptr addr)
 {
 #ifdef UAE
-    return (addr >= uae_p32(kickmem_bank.baseaddr) &&
-        addr < uae_p32(kickmem_bank.baseaddr + 8 * 65536));
+    if (addr >= uae_p32(kickmem_bank.baseaddr) &&
+        addr < uae_p32(kickmem_bank.baseaddr + 8 * 65536)) {
+        return 1;
+    }
+    /* Treat UAE Boot ROM (rtarea) as ROM too for ARM64 JIT safety guards. */
+    if (rtarea_bank.baseaddr &&
+        addr >= (uintptr)rtarea_bank.baseaddr &&
+        addr < (uintptr)rtarea_bank.baseaddr + 65536) {
+        return 1;
+    }
+    return 0;
 #else
     return ((addr >= (uintptr)ROMBaseHost) && (addr < (uintptr)ROMBaseHost + ROMSize));
+#endif
+}
+
+static inline bool isarm64unstableblock(uae_u32 pc)
+{
+#if defined(CPU_AARCH64)
+    /* Narrow guard for the known Lightwave startup hotspot that loops under
+     * ARM64 JIT in this codebase (observed at/around PC=0x4003dfbe). */
+    return pc >= 0x4003df00 && pc <= 0x4003e1ff;
+#else
+    (void)pc;
+    return false;
+#endif
+}
+
+static inline bool arm64_hotspot_guard_enabled(void)
+{
+#if defined(CPU_AARCH64)
+    static bool initialized = false;
+    static bool enabled = true;
+    if (!initialized) {
+        initialized = true;
+        const char* env = getenv("AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD");
+        if (env && env[0] != '\0' && env[0] != '0') {
+            enabled = false;
+            write_log("JIT: ARM64 hotspot guard disabled by AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD\n");
+        }
+    }
+    return enabled;
+#else
+    return false;
 #endif
 }
 
@@ -2494,7 +2534,7 @@ static inline void writemem_special(int address, int source, int offset)
 
 void writebyte(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_byte() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 5);
     else
         writemem_real(address, source, 1);
@@ -2502,7 +2542,7 @@ void writebyte(int address, int source)
 
 void writeword(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_word() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 4);
     else
         writemem_real(address, source, 2);
@@ -2510,7 +2550,7 @@ void writeword(int address, int source)
 
 void writelong(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_long() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 3);
     else
         writemem_real(address, source, 4);
@@ -2519,7 +2559,7 @@ void writelong(int address, int source)
 // Now the same for clobber variant
 void writeword_clobber(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_word() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 4);
     else
         writemem_real(address, source, 2);
@@ -2528,7 +2568,7 @@ void writeword_clobber(int address, int source)
 
 void writelong_clobber(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_long() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 3);
     else
         writemem_real(address, source, 4);
@@ -2564,7 +2604,7 @@ static inline void readmem_special(int address, int dest, int offset)
 
 void readbyte(int address, int dest)
 {
-    if (special_mem & S_READ)
+    if ((special_mem & S_READ) || distrust_byte() || jit_n_addr_unsafe)
         readmem_special(address, dest, SIZEOF_VOID_P * 2);
     else
         readmem_real(address, dest, 1);
@@ -2572,7 +2612,7 @@ void readbyte(int address, int dest)
 
 void readword(int address, int dest)
 {
-    if (special_mem & S_READ)
+    if ((special_mem & S_READ) || distrust_word() || jit_n_addr_unsafe)
         readmem_special(address, dest, SIZEOF_VOID_P * 1);
     else
         readmem_real(address, dest, 2);
@@ -2580,7 +2620,7 @@ void readword(int address, int dest)
 
 void readlong(int address, int dest)
 {
-    if (special_mem & S_READ)
+    if ((special_mem & S_READ) || distrust_long() || jit_n_addr_unsafe)
         readmem_special(address, dest, SIZEOF_VOID_P * 0);
     else
         readmem_real(address, dest, 4);
@@ -2602,7 +2642,7 @@ STATIC_INLINE void get_n_addr_real(int address, int dest)
 
 void get_n_addr(int address, int dest)
 {
-    if (special_mem)
+    if (special_mem || distrust_addr() || jit_n_addr_unsafe)
         get_n_addr_old(address, dest);
     else
         get_n_addr_real(address, dest);
@@ -2612,10 +2652,10 @@ void get_n_addr_jmp(int address, int dest)
 {
     /* For this, we need to get the same address as the rest of UAE
        would --- otherwise we end up translating everything twice */
-    if (special_mem)
+    if (special_mem || distrust_addr() || jit_n_addr_unsafe)
         get_n_addr_old(address, dest);
     else
-        get_n_addr_real(address, dest);
+        jnf_MEM_GETADR_JMP_OFF(dest, address);
 }
 
 /* base is a register, but dp is an actual value. 
@@ -3346,6 +3386,30 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bi2 = get_blockinfo(cl);
 
         optlev = bi->optlevel;
+#if defined(CPU_AARCH64)
+        const bool arm64_compat_interp_only = currprefs.cpu_compatible != 0;
+        const bool arm64_rom_interp_only = trace_in_rom;
+        const bool arm64_hotspot_interp_only = arm64_hotspot_guard_enabled() && isarm64unstableblock(start_pc);
+        const bool arm64_interp_only = arm64_compat_interp_only || arm64_rom_interp_only || arm64_hotspot_interp_only;
+        if (arm64_interp_only) {
+            static int arm64_rom_guard_logged = 0;
+            static int arm64_compat_guard_logged = 0;
+            static int arm64_hotspot_guard_logged = 0;
+            if (arm64_rom_interp_only && !arm64_rom_guard_logged) {
+                write_log("JIT: ARM64 guard active, running ROM blocks without JIT\n");
+                arm64_rom_guard_logged = 1;
+            }
+            if (arm64_compat_interp_only && !arm64_compat_guard_logged) {
+                write_log("JIT: ARM64 guard active, cpu_compatible=true uses interpreter blocks\n");
+                arm64_compat_guard_logged = 1;
+            }
+            if (arm64_hotspot_interp_only && !arm64_hotspot_guard_logged) {
+                write_log("JIT: ARM64 guard active, running known unstable ARM64 block range without JIT\n");
+                arm64_hotspot_guard_logged = 1;
+            }
+            optlev = 0;
+        }
+#endif
         if (bi->status != BI_INVALID) {
             Dif(bi != bi2) {
                 /* I don't think it can happen anymore. Shouldn't, in
@@ -3359,10 +3423,19 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
             }
         }
         if (bi->count == -1) {
+#if defined(CPU_AARCH64)
+            if (arm64_interp_only) {
+                /* Keep ROM/compat/known-hotspot blocks at interpreter level
+                 * to avoid unstable ARM64 codegen paths. */
+                optlev = 0;
+            } else
+#endif
+            {
             optlev++;
             while (!optcount[optlev])
                 optlev++;
             bi->count = optcount[optlev] - 1;
+            }
         }
         current_block_pc_p = JITPTR pc_hist[0].location;
 

@@ -254,7 +254,7 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IM32 s))
 	/* d points always to memory in regs struct */
 	LOAD_U32(REG_WORK2, s);
 	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p))
+	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
 		STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
 	else
 		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
@@ -265,7 +265,7 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 {
 	/* d points always to memory in regs struct */
 	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p))
+	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
 		STR_xXi(s, R_REGSTRUCT, idx);
 	else
 		STR_wXi(s, R_REGSTRUCT, idx);
@@ -282,7 +282,7 @@ LOWFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 {
 	if(s >= (uintptr) &regs && s < ((uintptr) &regs) + sizeof(struct regstruct)) {
 		uintptr idx = s - (uintptr) &regs;
-		if(s == (uintptr) &(regs.pc_p))
+		if(s == (uintptr) &(regs.pc_p) || s == (uintptr) &(regs.pc_oldp))
 			LDR_xXi(d, R_REGSTRUCT, idx);
 		else
 			LDR_wXi(d, R_REGSTRUCT, idx);

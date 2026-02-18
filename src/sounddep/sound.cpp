@@ -351,10 +351,15 @@ static void finish_sound_buffer_sdl2_push(struct sound_data* sd, uae_u16* sndbuf
 static void finish_sound_buffer_pull(struct sound_data* sd, uae_u16* sndbuffer)
 {
 	auto* s = sd->data;
+	static unsigned int pull_overflow_count;
 
 	SDL_LockAudioDevice(s->dev);
 	if (s->pullbufferlen + sd->sndbufsize > s->pullbuffermaxlen) {
-		write_log(_T("pull overflow! %d %d %d\n"), s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen);
+		pull_overflow_count++;
+		if (pull_overflow_count <= 8 || (pull_overflow_count % 512) == 0) {
+			write_log(_T("pull overflow! %d %d %d (count=%u)\n"),
+				s->pullbufferlen, sd->sndbufsize, s->pullbuffermaxlen, pull_overflow_count);
+		}
 		s->pullbufferlen = 0;
 		gui_data.sndbuf_status = 1;
 	}

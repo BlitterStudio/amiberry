@@ -27,7 +27,11 @@ description: >
 **Crash fix: SOLVED (v43-clean).** System boots to Workbench and runs SysInfo without crash.
 **Visual corruption: SOLVED.** Caused by inter-block flag optimization in compile_block() — disabled with `#if 0`.
 **Natmem gap crash: SOLVED.** Complex configs (hardfiles, RTG, etc.) crashed at unmapped natmem gaps — fixed by `commit_natmem_gaps()`.
-**68040 JIT: NOT YET TESTED.** The above fixes are confirmed for 68020 JIT. 68040 mode may have additional issues.
+**ARM64 JIT runtime status (2026-02): STABLE with narrow fallback.**
+- SysInfo + A4000 configs pass with JIT enabled.
+- Lightwave boots with JIT enabled using a narrow ARM64 hotspot fallback.
+- Broad ARM64 Z3 fallback was removed (performance parity improved).
+- `jit_n_addr_unsafe` now starts at `0` again (direct mode), with normal unsafe-bank escalation.
 
 ## Root Cause (Crash)
 
@@ -157,6 +161,19 @@ access just works with no signals or bank lookups needed.
 - Cross-platform: works on Linux (`mprotect`), macOS, and Windows (`VirtualAlloc(MEM_COMMIT)`)
 - Idempotent — safe to call on config changes/resets
 
+## Current ARM64 Guard Policy (2026-02)
+
+Implemented in `src/jit/arm/compemu_support_arm.cpp`:
+
+- ROM and UAE Boot ROM (`rtarea`) blocks run interpreter-only on ARM64.
+- Narrow hotspot interpreter fallback for known unstable Lightwave startup range:
+  - `PC 0x4003df00` to `0x4003e1ff`
+  - log marker: `JIT: ARM64 guard active, running known unstable ARM64 block range without JIT`
+- Runtime A/B toggle:
+  - set `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` to disable this narrow fallback.
+  - use only for validation/perf comparison; crashes/loops may return in Lightwave-like configs.
+
 ## Known Separate Issues
 
-None currently. All identified JIT crashes have been fixed.
+- `pull overflow` log spam can still occur under heavy workloads, even when emulation is stable.
+- One narrow ARM64 hotspot fallback remains; full parity goal is to eliminate it without regressions.

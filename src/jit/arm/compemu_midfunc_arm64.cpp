@@ -414,7 +414,10 @@ MIDFUNC(2,mov_l_rm,(W4 d, IMPTR s))
 
 	if(s >= (uintptr)&regs && s < (uintptr)&regs + 32760) {
 		uintptr idx = s - (uintptr) &regs;
-		LDR_wXi(d, R_REGSTRUCT, idx);
+		if (s == (uintptr)&regs.pc_p || s == (uintptr)&regs.pc_oldp)
+			LDR_xXi(d, R_REGSTRUCT, idx);
+		else
+			LDR_wXi(d, R_REGSTRUCT, idx);
 	} else {
 		LOAD_U64(REG_WORK1, s);
 		LDR_wXi(d, REG_WORK1, 0);

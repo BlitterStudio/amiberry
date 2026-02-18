@@ -8074,6 +8074,22 @@ MIDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 }
 MENDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 
+MIDFUNC(2,jnf_MEM_GETADR_JMP_OFF,(W4 d, RR4 adr))
+{
+  adr = readreg(adr);
+  d = writereg(d);
+
+  LOAD_U32(REG_WORK2, (uintptr)baseaddr);
+  LSR_rri(REG_WORK1, adr, 16);
+  LDR_rRR_LSLi(REG_WORK3, REG_WORK2, REG_WORK1, 2);
+  ADD_rrr(d, adr, REG_WORK3);
+  BIC_rri(d, d, 1);
+
+  unlock2(d);
+  unlock2(adr);
+}
+MENDFUNC(2,jnf_MEM_GETADR_JMP_OFF,(W4 d, RR4 adr))
+
 
 MIDFUNC(3,jnf_MEM_READMEMBANK,(W4 dest, RR4 adr, IM8 offset))
 {
@@ -8127,4 +8143,3 @@ MIDFUNC(3,jnf_MEM_WRITEMEMBANK,(RR4 adr, RR4 source, IM8 offset))
   compemu_raw_call_r(REG_WORK3);
 }
 MENDFUNC(3,jnf_MEM_WRITEMEMBANK,(RR4 adr, RR4 source, IM8 offset))
-

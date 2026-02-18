@@ -13,7 +13,7 @@ Amiberry is an optimized Amiga emulator based on UAE (Unix Amiga Emulator). It p
 - **FreeBSD**: x86_64
 - **Windows**: x86_64 (MinGW-w64/GCC, dependencies via vcpkg)
 
-- **Version**: 8.0.0 (Public Beta 20)
+- **Version**: 8.0.0 (Public Beta 22)
 - **Languages**: C/C++
 - **Build System**: CMake (minimum 3.16)
 - **License**: GPL (see LICENSE file)
@@ -168,6 +168,13 @@ Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and K
 
 **SIGSEGV handler** (`sigsegv_handler.cpp`):
 When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR instruction and emulates the access via bank handlers. Faults outside JIT code range are not recovered.
+
+### ARM64 JIT Stability Notes (2026-02)
+
+- ARM64 now defaults to direct JIT address mode (`jit_n_addr_unsafe=0` at reset). Unsafe banks still flip to indirect mode via normal `S_N_ADDR` handling in `map_banks()`.
+- ARM64 keeps ROM and UAE Boot ROM (`rtarea`) blocks in interpreter mode to avoid known unstable codegen paths.
+- A narrow ARM64 fallback remains for a known Lightwave startup hotspot (`PC` range `0x4003df00`-`0x4003e1ff`).
+- Runtime A/B toggle: set environment variable `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` to disable that hotspot fallback and force full JIT in that range.
 
 ### GUI System
 
