@@ -2543,14 +2543,6 @@ static void core_entry(void)
 	}
 	argv.push_back(nullptr);
 
-	fprintf(stderr, "LIBRETRO CD DEBUG: is_cd=%d content_is_cd=%d game_path='%s'\n",
-		is_cd ? 1 : 0, content_is_cd ? 1 : 0, game_path);
-	fprintf(stderr, "LIBRETRO CD DEBUG: argv[%zu]:", argv.size() - 1);
-	for (size_t i = 0; i + 1 < argv.size(); i++)
-		fprintf(stderr, " [%s]", argv[i] ? argv[i] : "(null)");
-	fprintf(stderr, "\n");
-	fflush(stderr);
-
 	if (libretro_debug_file) {
 		libretro_debug_log("core_entry argv:");
 		for (size_t i = 0; i + 1 < argv.size(); i++)
