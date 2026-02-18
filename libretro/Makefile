@@ -101,7 +101,7 @@ ifeq ($(SANITIZE), 1)
 endif
 
 # Add Amiberry defines
-FLAGS += -DAMIBERRY -DLIBRETRO -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
+FLAGS += -DAMIBERRY -DLIBRETRO -DUTF8PROC_STATIC -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
 FLAGS += -DAMIBERRY_VERSION=\"8.0.0\" -DAMIBERRY_VERSION_PRE_RELEASE=\"\"
 FLAGS += -DAMIBERRY_VERSION_MAJOR=8 -DAMIBERRY_VERSION_MINOR=0 -DAMIBERRY_VERSION_PATCH=0
 FLAGS += -DAMIBERRY_IS_PRE_RELEASE=0
@@ -160,8 +160,12 @@ ifeq ($(platform), unix)
 LDFLAGS += -ldl -lm -pthread
 endif
 
+ifeq ($(platform), osx)
+LDFLAGS += -lm -lpthread
+endif
+
 ifeq ($(platform), win)
-LDFLAGS += -liconv -lws2_32
+LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm
 endif
 
 # Source files - Core Amiga Emulation
@@ -306,13 +310,16 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/sounddep/sound.cpp \
                 $(AMIBERRY_DIR)/src/threaddep/threading.cpp
 
-# libretro-common (VFS helpers)
+# libretro-common (VFS helpers + encoding/time)
 SOURCES_LIBRETRO_COMMON := $(LIBRETRO_COMMON)/file/file_path.c \
                           $(LIBRETRO_COMMON)/file/file_path_io.c \
                           $(LIBRETRO_COMMON)/file/retro_dirent.c \
                           $(LIBRETRO_COMMON)/streams/file_stream.c \
                           $(LIBRETRO_COMMON)/string/stdstring.c \
                           $(LIBRETRO_COMMON)/compat/compat_strl.c \
+                          $(LIBRETRO_COMMON)/compat/fopen_utf8.c \
+                          $(LIBRETRO_COMMON)/encodings/encoding_utf.c \
+                          $(LIBRETRO_COMMON)/time/rtime.c \
                           $(LIBRETRO_COMMON)/vfs/vfs_implementation.c
 
 # CPU Emulation

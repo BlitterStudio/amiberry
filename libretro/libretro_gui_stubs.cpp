@@ -1,5 +1,12 @@
+#include <string>
+#include <vector>
+
 #include "sdl_compat.h"
 #include "vkbd/vkbd.h"
+
+// serial_ports is declared in parser.h and defined in amiberry_gui.cpp (standalone).
+// The libretro build doesn't include amiberry_gui.cpp, so provide the definition here.
+std::vector<std::string> serial_ports;
 
 int TTF_Init(void)
 {
