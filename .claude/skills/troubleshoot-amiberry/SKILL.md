@@ -227,7 +227,9 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 ### ARM64 JIT toggles (current)
 
 - `AMIBERRY_ARM64_GUARD_VERBOSE=1`: enables detailed dynamic guard learning logs (per key/window). Keep this off for normal runs.
-- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1`: disables optional hotspot logic only; fixed ARM64 safety fallback for the known Lightwave startup hotspot remains active.
+- Optional ARM64 hotspot guard is OFF by default for performance.
+- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1`: re-enables optional hotspot logic for A/B diagnostics.
+- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1`: forces optional hotspot logic off; fixed ARM64 safety fallback for the known Lightwave startup hotspot remains active.
 - ARM64 JIT stability checks should be validated with at least 3 configs: SysInfo, A4000, and Lightwave.
 
 ## Input & On-Screen Joystick Troubleshooting

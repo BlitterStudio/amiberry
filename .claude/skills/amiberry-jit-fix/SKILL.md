@@ -174,7 +174,9 @@ Implemented in `src/jit/arm/compemu_support_arm.cpp`:
   - Autoconfig warning paths (`expansion.cpp`)
   - Selected startup illegal-op probes (`newcpu.cpp`, `op_illg`)
 - Dynamic unstable-key tracking now uses a bitmap (O(1) lookup) and resets on `compemu_reset()`.
-- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` only disables optional hotspot logic and does not bypass the fixed safety hotspot guard.
+- Optional ARM64 hotspot guard defaults OFF for performance.
+- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` re-enables optional hotspot logic for A/B testing.
+- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` forces optional hotspot logic OFF and does not bypass the fixed safety hotspot guard.
 - `AMIBERRY_ARM64_GUARD_VERBOSE=1` enables per-key/per-window dynamic guard learning logs for diagnostics.
 
 ## Known Separate Issues

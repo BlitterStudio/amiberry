@@ -2297,11 +2297,16 @@ static inline bool arm64_hotspot_guard_enabled(void)
 {
 #if defined(CPU_AARCH64)
     static bool initialized = false;
-    static bool enabled = true;
+    static bool enabled = false;
     if (!initialized) {
         initialized = true;
-        const char* env = getenv("AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD");
-        if (env && env[0] != '\0' && env[0] != '0') {
+        const char* enable_env = getenv("AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD");
+        const char* disable_env = getenv("AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD");
+        if (enable_env && enable_env[0] != '\0' && enable_env[0] != '0') {
+            enabled = true;
+            write_log("JIT: ARM64 hotspot guard enabled by AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD\n");
+        }
+        if (disable_env && disable_env[0] != '\0' && disable_env[0] != '0') {
             enabled = false;
             write_log("JIT: ARM64 hotspot guard disabled by AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD\n");
         }
