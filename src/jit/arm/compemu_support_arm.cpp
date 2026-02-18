@@ -2115,6 +2115,8 @@ static uae_u32 arm64_guard_compile_interp_rom = 0;
 static uae_u32 arm64_guard_compile_interp_compat = 0;
 static uae_u32 arm64_guard_compile_interp_static = 0;
 static uae_u32 arm64_guard_compile_interp_dynamic = 0;
+static constexpr uae_u32 ARM64_GUARD_STATS_SNAPSHOT_INTERVAL = 1024;
+static uae_u32 arm64_guard_compile_snapshot_target = ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
 
 static inline uae_u32 arm64_unstable_block_key(uae_u32 pc)
 {
@@ -2151,6 +2153,8 @@ static inline bool arm64_guard_stats_enabled(void)
     return enabled;
 }
 
+static inline void arm64_guard_stats_log(const char* reason);
+
 static inline void arm64_guard_stats_note_compile(bool interp_only, bool rom_only, bool compat_only, bool static_hotspot_only, bool dynamic_hotspot_only)
 {
     if (!arm64_guard_stats_enabled()) {
@@ -2172,6 +2176,12 @@ static inline void arm64_guard_stats_note_compile(bool interp_only, bool rom_onl
     }
     if (dynamic_hotspot_only) {
         arm64_guard_compile_interp_dynamic++;
+    }
+    if (arm64_guard_compile_total >= arm64_guard_compile_snapshot_target) {
+        arm64_guard_stats_log("periodic");
+        while (arm64_guard_compile_total >= arm64_guard_compile_snapshot_target) {
+            arm64_guard_compile_snapshot_target += ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
+        }
     }
 }
 
@@ -2204,6 +2214,7 @@ static inline void arm64_guard_stats_reset(void)
     arm64_guard_compile_interp_compat = 0;
     arm64_guard_compile_interp_static = 0;
     arm64_guard_compile_interp_dynamic = 0;
+    arm64_guard_compile_snapshot_target = ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
 }
 
 static inline bool arm64_is_dynamic_unstable_key(uae_u32 key)
@@ -3598,6 +3609,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
             static int arm64_dynamic_guard_logged = 0;
             if (arm64_rom_interp_only && !arm64_rom_guard_logged) {
                 write_log("JIT: ARM64 guard active, running ROM blocks without JIT\n");
+                arm64_guard_stats_log("startup");
                 arm64_rom_guard_logged = 1;
             }
             if (arm64_compat_interp_only && !arm64_compat_guard_logged) {
