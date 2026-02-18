@@ -2103,36 +2103,37 @@ static inline bool isarm64unstableblock(uae_u32 pc)
 }
 
 #if defined(CPU_AARCH64)
-static constexpr int ARM64_DYNAMIC_UNSTABLE_MAX = 512;
-static uae_u32 arm64_dynamic_unstable_pc[ARM64_DYNAMIC_UNSTABLE_MAX];
-static int arm64_dynamic_unstable_count = 0;
-static bool arm64_dynamic_unstable_full_logged = false;
+static constexpr uae_u32 ARM64_UNSTABLE_KEY_SHIFT = 9;
+static constexpr uae_u32 ARM64_UNSTABLE_KEY_MASK = ~((1u << ARM64_UNSTABLE_KEY_SHIFT) - 1u);
+static constexpr uae_u32 ARM64_UNSTABLE_BITMAP_BYTES = 1u << (32 - ARM64_UNSTABLE_KEY_SHIFT - 3);
+static uae_u8 arm64_dynamic_unstable_bitmap[ARM64_UNSTABLE_BITMAP_BYTES];
+static uae_u32 arm64_dynamic_unstable_count = 0;
 
 static inline uae_u32 arm64_unstable_block_key(uae_u32 pc)
 {
-    return pc & ~0x1ffu;
+    return pc & ARM64_UNSTABLE_KEY_MASK;
+}
+
+static inline bool arm64_is_dynamic_unstable_key(uae_u32 key)
+{
+    if (!key)
+        return false;
+    const uae_u32 idx = key >> ARM64_UNSTABLE_KEY_SHIFT;
+    return (arm64_dynamic_unstable_bitmap[idx >> 3] & (1u << (idx & 7))) != 0;
 }
 
 static bool arm64_add_dynamic_unstable_key(uae_u32 key, bool log_key)
 {
     if (!key)
         return false;
-    for (int i = 0; i < arm64_dynamic_unstable_count; ++i) {
-        if (arm64_dynamic_unstable_pc[i] == key)
-            return false;
-    }
-    int idx = 0;
-    if (arm64_dynamic_unstable_count < ARM64_DYNAMIC_UNSTABLE_MAX) {
-        idx = arm64_dynamic_unstable_count++;
-    } else {
-        if (!arm64_dynamic_unstable_full_logged) {
-            arm64_dynamic_unstable_full_logged = true;
-            write_log("JIT: ARM64 dynamic guard table full (%d keys), keeping existing quarantined keys\n",
-                ARM64_DYNAMIC_UNSTABLE_MAX);
-        }
+    const uae_u32 idx = key >> ARM64_UNSTABLE_KEY_SHIFT;
+    uae_u8* const bits = &arm64_dynamic_unstable_bitmap[idx >> 3];
+    const uae_u8 mask = static_cast<uae_u8>(1u << (idx & 7));
+    if ((*bits & mask) != 0) {
         return false;
     }
-    arm64_dynamic_unstable_pc[idx] = key;
+    *bits |= mask;
+    arm64_dynamic_unstable_count++;
     if (log_key)
         write_log("JIT: ARM64 dynamic guard learned unstable block PC=%08x\n", key);
     return true;
@@ -2140,12 +2141,7 @@ static bool arm64_add_dynamic_unstable_key(uae_u32 key, bool log_key)
 
 static inline bool isarm64dynamicunstableblock(uae_u32 pc)
 {
-    const uae_u32 key = arm64_unstable_block_key(pc);
-    for (int i = 0; i < arm64_dynamic_unstable_count; ++i) {
-        if (arm64_dynamic_unstable_pc[i] == key)
-            return true;
-    }
-    return false;
+    return arm64_is_dynamic_unstable_key(arm64_unstable_block_key(pc));
 }
 
 void jit_mark_arm64_unstable_pc(uae_u32 pc)
@@ -3195,8 +3191,8 @@ static void prepare_block(blockinfo* bi)
 void compemu_reset(void)
 {
 #if defined(CPU_AARCH64)
+    memset(arm64_dynamic_unstable_bitmap, 0, sizeof arm64_dynamic_unstable_bitmap);
     arm64_dynamic_unstable_count = 0;
-    arm64_dynamic_unstable_full_logged = false;
 #endif
     flush_icache = lazy_flush ? flush_icache_lazy : flush_icache_hard;
     set_cache_state(0);
