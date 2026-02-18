@@ -121,7 +121,10 @@ static inline bool gfx_platform_override_pixel_format(Uint32* format)
 	if (!format)
 		return false;
 
-	*format = pixel_format_xrgb8888 ? SDL_PIXELFORMAT_ARGB8888 : SDL_PIXELFORMAT_RGB565;
+	// Always use ARGB8888 for libretro (matches RETRO_PIXEL_FORMAT_XRGB8888).
+	// Never return RGB565 here: the drawbuffer is 32-bit and a 16-bit surface
+	// would cause a buffer overflow when the drawing code writes 4 bytes/pixel.
+	*format = SDL_PIXELFORMAT_ARGB8888;
 	return true;
 }
 
@@ -185,6 +188,10 @@ static inline bool gfx_platform_do_init(AmigaMonitor* mon)
 		SDL_FreeSurface(amiga_surface);
 		amiga_surface = nullptr;
 	}
+	// Set pixel_format to match the libretro frontend expectation (XRGB8888)
+	// BEFORE creating the surface so init_colors and target_graphics_buffer_update
+	// see a consistent format (no surface recreation = no crash).
+	gfx_platform_override_pixel_format(&pixel_format);
 	amiga_surface = SDL_CreateRGBSurfaceWithFormat(0, display_width, display_height, 32, pixel_format);
 
 	mon->screen_is_initialized = 1;

@@ -323,7 +323,11 @@ extern int dos_errno (void);
 #define write posixemu_write
 #define lseek posixemu_seek
 #define stat(a,b) posixemu_stat ((a), (b))
+#if defined(_WIN32) && defined(LIBRETRO)
+#define mkdir(a, b) posixemu_mkdir(a, b)
+#else
 #define mkdir posixemu_mkdir
+#endif
 #define rmdir posixemu_rmdir
 #define unlink posixemu_unlink
 #define truncate posixemu_truncate
@@ -336,7 +340,11 @@ extern int dos_errno (void);
 #define closedir posixemu_closedir
 #else
 #define stat(a,b) posixemu_stat ((a), (b))
+#if defined(_WIN32) && defined(LIBRETRO)
+#define mkdir(a, b) posixemu_mkdir(a, b)
+#else
 #define mkdir posixemu_mkdir
+#endif
 #define rmdir posixemu_rmdir
 #define unlink posixemu_unlink
 #define truncate posixemu_truncate

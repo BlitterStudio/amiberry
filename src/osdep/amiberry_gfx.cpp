@@ -4945,7 +4945,7 @@ bool target_graphics_buffer_update(const int monid, const bool force)
 		h = state->Height;
 		update_pixel_format();
 	} else {
-		pixel_format = SDL_PIXELFORMAT_ABGR8888;
+		update_pixel_format();
 		vb = avidinfo->inbuffer;
 		vbout = avidinfo->outbuffer;
 		if (!vb) {

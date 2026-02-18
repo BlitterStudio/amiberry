@@ -273,7 +273,11 @@ extern "C" int posixemu_mkdir(const TCHAR* path, int mode)
 	char* fs_path = to_fs_path(path);
 	if (!fs_path)
 		return -1;
+#ifdef _WIN32
+	const int ret = ::mkdir(fs_path);
+#else
 	const int ret = ::mkdir(fs_path, mode);
+#endif
 	free(fs_path);
 	return ret;
 }

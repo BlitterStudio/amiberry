@@ -47,10 +47,14 @@
 #include <netdb.h>
 #endif
 
+#ifdef WITH_MIDI
+#ifndef LIBRETRO
 #ifdef USE_PORTMIDI
 #include "portmidi.h"
 #elif defined(_WIN32) && defined(WITH_MIDI)
 #include <mmsystem.h>
+#endif
+#endif
 #endif
 #ifdef WITH_MIDIEMU
 #include "midiemu.h"
@@ -743,6 +747,13 @@ int enummidiports (void)
 {
 	int total = 0;
 
+#ifdef WITH_MIDI
+#ifdef LIBRETRO
+	midi_out_ports.emplace_back("Libretro MIDI");
+	midi_in_ports.emplace_back("Libretro MIDI");
+	total++;
+	write_log(_T("MIDI: using libretro MIDI interface\n"));
+#else
 #ifdef USE_PORTMIDI
 	total = Pm_CountDevices();
 	write_log(_T("MIDI: found devices: %d\n"), total);
@@ -782,6 +793,8 @@ int enummidiports (void)
 			}
 		}
 	}
+#endif
+#endif
 #endif
 
 #ifdef WITH_MIDIEMU

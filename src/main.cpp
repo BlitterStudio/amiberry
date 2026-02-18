@@ -65,8 +65,6 @@
 #include <iostream>
 #if defined(__linux__)
 #include <linux/kd.h>
-#endif
-#ifndef _WIN32
 #include <sys/ioctl.h>
 #endif
 
@@ -1014,16 +1012,24 @@ std::string get_filename_extension(const TCHAR* filename)
 
 extern void set_last_active_config(const char* filename);
 
+static bool cmdline_started;
+
+#ifdef LIBRETRO
+void reset_parse_cmdline()
+{
+	cmdline_started = false;
+}
+#endif
+
 static void parse_cmdline (int argc, TCHAR **argv)
 {
-	static bool started;
 	auto firstconfig = true;
 	auto loaded = false;
 
 	// only parse command line when starting for the first time
-	if (started)
+	if (cmdline_started)
 		return;
-	started = true;
+	cmdline_started = true;
 
 	for (auto i = 1; i < argc; i++) {
 		if (_tcsncmp(argv[i], _T("-cli="), 5) == 0 || _tcsncmp(argv[i], _T("--cli="), 6) == 0) {
@@ -1178,9 +1184,7 @@ static void parse_cmdline (int argc, TCHAR **argv)
 			}
 		}
 		else if (_tcscmp(argv[i], _T("--log")) == 0)
-		{
 			console_logging = 1;
-		}
 		else if (_tcscmp(argv[i], _T("-s")) == 0)
 		{
 			if (i + 1 == argc)

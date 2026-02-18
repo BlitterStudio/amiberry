@@ -45,7 +45,7 @@ extern bool lof_store;
 static int console_input_linemode = -1;
 int always_flush_log = 1;
 TCHAR* conlogfile = nullptr;
-static HWND previousactivewindow;
+static SDL_Window* previousactivewindow;
 
 #define WRITE_LOG_BUF_SIZE 4096
 
@@ -58,6 +58,11 @@ static int log_sem_init;
 bool is_console_open()
 {
 	return consoleopen;
+}
+
+bool is_interactive_console(void)
+{
+	return false;
 }
 
 static void restore_console_settings()

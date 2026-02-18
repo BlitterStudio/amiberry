@@ -50,31 +50,58 @@ endif
 ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
-   SHARED := -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
+   CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp
+   CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp
+   CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
+   CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
+   ifeq ($(DEBUG), 1)
+   SHARED := -shared -Wl,-Bsymbolic-functions
+   else
+   SHARED := -shared -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,-Bsymbolic-functions
+   endif
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
    fpic := -fPIC
+   CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp
+   CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp
+   CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp
+   CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp
+   CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp
    SHARED := -dynamiclib
 else
    TARGET := $(TARGET_NAME)_libretro.dll
    CC ?= gcc
    CXX ?= g++
+   CHD_OSDLIB := $(AMIBERRY_DIR)/src/archivers/chd/osdlib_win32.cpp
+   CHD_FILEIMP := $(AMIBERRY_DIR)/src/archivers/chd/winfile.cpp
+   CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/windir.cpp
+   CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/winptty.cpp
+   CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/winsocket.cpp
    SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
 endif
 
 LDFLAGS += $(fpic) $(SHARED)
-FLAGS += $(fpic) 
+FLAGS += $(fpic)
+ifneq ($(DEBUG), 1)
+FLAGS += -fvisibility=hidden
+endif
 FLAGS += -ffunction-sections -fdata-sections
 LDFLAGS += -Wl,--gc-sections
 
 ifeq ($(DEBUG), 1)
-   FLAGS += -O0 -g
+   FLAGS += -O0 -g -fno-omit-frame-pointer
 else
-   FLAGS += -O3 -DNDEBUG
+   FLAGS += -O3 -g -DNDEBUG
+endif
+
+ifeq ($(SANITIZE), 1)
+   FLAGS += -fsanitize=address -fno-omit-frame-pointer
+   LDFLAGS += -fsanitize=address
 endif
 
 # Add Amiberry defines
-FLAGS += -DAMIBERRY -DLIBRETRO -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
+FLAGS += -DAMIBERRY -DLIBRETRO -DUTF8PROC_STATIC -D_FILE_OFFSET_BITS=64 -DAMIBERRY_DATADIR=\".\" -DAMIBERRY_LIBDIR=\".\"
 FLAGS += -DAMIBERRY_VERSION=\"8.0.0\" -DAMIBERRY_VERSION_PRE_RELEASE=\"\"
 FLAGS += -DAMIBERRY_VERSION_MAJOR=8 -DAMIBERRY_VERSION_MINOR=0 -DAMIBERRY_VERSION_PATCH=0
 FLAGS += -DAMIBERRY_IS_PRE_RELEASE=0
@@ -86,6 +113,7 @@ FLAGS += -DOSDEP_INPUT_PLATFORM_HEADER=\"libretro/input_platform_internal.h\"
 FLAGS += -DOSDEP_GUI_HANDLING_HEADER=\"libretro/gui_handling_platform.h\"
 FLAGS += -DCHD_FLAC_PLATFORM_HEADER=\"flac_platform_internal_libretro.h\"
 FLAGS += -DSOUND_PLATFORM_HEADER=\"sound_platform_internal_libretro.h\"
+FLAGS += -DWITH_MIDI
 
 ifneq (,$(findstring aarch64,$(ARCH)))
    FLAGS += -DCPU_AARCH64
@@ -130,6 +158,14 @@ LDFLAGS += $(ZLIB_LIBS)
 
 ifeq ($(platform), unix)
 LDFLAGS += -ldl -lm -pthread
+endif
+
+ifeq ($(platform), osx)
+LDFLAGS += -lm -lpthread
+endif
+
+ifeq ($(platform), win)
+LDFLAGS += -liconv -lws2_32 -lz -liphlpapi -lgdi32 -lwinmm
 endif
 
 # Source files - Core Amiga Emulation
@@ -237,6 +273,7 @@ SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
 
 # OSDep files
 SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
+                $(LIBRETRO_DIR)/libretro_midi.cpp \
                 $(LIBRETRO_DIR)/libretro_stubs.cpp \
                 $(LIBRETRO_DIR)/sdl_stub.cpp \
                 $(LIBRETRO_DIR)/libretro_gui_stubs.cpp \
@@ -273,13 +310,16 @@ SOURCES_OSDEP := $(LIBRETRO_DIR)/libretro.cpp \
                 $(AMIBERRY_DIR)/src/sounddep/sound.cpp \
                 $(AMIBERRY_DIR)/src/threaddep/threading.cpp
 
-# libretro-common (VFS helpers)
+# libretro-common (VFS helpers + encoding/time)
 SOURCES_LIBRETRO_COMMON := $(LIBRETRO_COMMON)/file/file_path.c \
                           $(LIBRETRO_COMMON)/file/file_path_io.c \
                           $(LIBRETRO_COMMON)/file/retro_dirent.c \
                           $(LIBRETRO_COMMON)/streams/file_stream.c \
                           $(LIBRETRO_COMMON)/string/stdstring.c \
                           $(LIBRETRO_COMMON)/compat/compat_strl.c \
+                          $(LIBRETRO_COMMON)/compat/fopen_utf8.c \
+                          $(LIBRETRO_COMMON)/encodings/encoding_utf.c \
+                          $(LIBRETRO_COMMON)/time/rtime.c \
                           $(LIBRETRO_COMMON)/vfs/vfs_implementation.c
 
 # CPU Emulation
@@ -373,13 +413,13 @@ SOURCES_ARCHIVE := $(AMIBERRY_DIR)/src/archivers/dms/crc_csum.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/huffman.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/md5.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/osdcore.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/osdlib_unix.cpp \
+                  $(CHD_OSDLIB) \
                   $(AMIBERRY_DIR)/src/archivers/chd/osdsync.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/palette.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixdir.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixfile.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixptty.cpp \
-                  $(AMIBERRY_DIR)/src/archivers/chd/posixsocket.cpp \
+                  $(CHD_DIR) \
+                  $(CHD_FILEIMP) \
+                  $(CHD_PTTY) \
+                  $(CHD_SOCKET) \
                   $(AMIBERRY_DIR)/src/archivers/chd/strconv.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/strformat.cpp \
                   $(AMIBERRY_DIR)/src/archivers/chd/unicode.cpp \
@@ -523,6 +563,41 @@ SOURCES_CXX := $(SOURCES_CORE) $(SOURCES_OSDEP) $(SOURCES_CPU) $(SOURCES_JIT) $(
 ifeq ($(USE_PCEM),1)
 SOURCES_CXX += $(SOURCES_PCEM)
 endif
+
+# Optional MT-32/CM-32L emulation via MUNT
+# Note: WITH_MIDIEMU is already defined in sysconfig.h;
+# WITH_MT32EMU_SOURCES tells stubs they are not needed.
+ifeq ($(WITH_MT32EMU),1)
+FLAGS += -DWITH_MT32EMU_SOURCES
+MT32EMU_DIR = $(AMIBERRY_DIR)/external/mt32emu/src
+SOURCES_MT32EMU = \
+    $(MT32EMU_DIR)/Analog.cpp \
+    $(MT32EMU_DIR)/BReverbModel.cpp \
+    $(MT32EMU_DIR)/Display.cpp \
+    $(MT32EMU_DIR)/File.cpp \
+    $(MT32EMU_DIR)/FileStream.cpp \
+    $(MT32EMU_DIR)/LA32FloatWaveGenerator.cpp \
+    $(MT32EMU_DIR)/LA32Ramp.cpp \
+    $(MT32EMU_DIR)/LA32WaveGenerator.cpp \
+    $(MT32EMU_DIR)/MidiStreamParser.cpp \
+    $(MT32EMU_DIR)/Part.cpp \
+    $(MT32EMU_DIR)/Partial.cpp \
+    $(MT32EMU_DIR)/PartialManager.cpp \
+    $(MT32EMU_DIR)/Poly.cpp \
+    $(MT32EMU_DIR)/ROMInfo.cpp \
+    $(MT32EMU_DIR)/SampleRateConverter.cpp \
+    $(MT32EMU_DIR)/Synth.cpp \
+    $(MT32EMU_DIR)/Tables.cpp \
+    $(MT32EMU_DIR)/TVA.cpp \
+    $(MT32EMU_DIR)/TVF.cpp \
+    $(MT32EMU_DIR)/TVP.cpp \
+    $(MT32EMU_DIR)/VersionTagging.cpp \
+    $(MT32EMU_DIR)/sha1/sha1.cpp \
+    $(MT32EMU_DIR)/c_interface/c_interface.cpp
+INCFLAGS += -I$(MT32EMU_DIR)
+SOURCES_CXX += $(SOURCES_MT32EMU) $(AMIBERRY_DIR)/src/midiemu.cpp
+endif
+
 SOURCES_C := $(SOURCES_7Z) $(LIBCO_DIR)/libco.c $(SOURCES_LIBRETRO_COMMON)
 
 OBJECTS := $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o)

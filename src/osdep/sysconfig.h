@@ -24,6 +24,7 @@
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "Amiberry"
 
+#ifndef LIBRETRO_NO_JIT
 #if defined(__x86_64__) || defined(_M_AMD64)
 #if defined(__FreeBSD__) || defined(__linux__) || defined(_WIN32) // not for macOS
 #ifndef __ANDROID__ // not for android
@@ -36,6 +37,7 @@
 #ifndef __ANDROID__ // not for android
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
+#endif
 #endif
 #endif
 #endif
@@ -57,6 +59,7 @@
 //#define JIT_BISECT_MIN  0x8000
 //#define JIT_BISECT_MAX  0xFFFF
 
+#ifndef AMIBERRY
 #define AMIBERRY
 #endif
 #ifndef UAE
@@ -176,7 +179,9 @@
 #define WITH_VPAR 1
 #endif
 
+#ifndef LIBRETRO
 #define WITH_SCSI_IOCTL
+#endif
 
 /* #define WITH_SCSI_SPTI */
 
@@ -752,6 +757,7 @@ typedef char TCHAR;
 #else
 #define _ftelli64(x)        ftello64(x)
 #define _fseeki64(x,y,z)    fseeko64(x,y,z)
+#endif
 #endif
 #ifndef __MINGW32__
 #define _wunlink(x)         unlink(x)

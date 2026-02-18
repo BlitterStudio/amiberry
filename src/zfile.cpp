@@ -1745,8 +1745,18 @@ static struct zfile *zfile_fopen_2 (const TCHAR *name, const TCHAR *mode, int ma
 			zfile_fclose (l);
 			return 0;
 		}
-		if (my_stat (l->name, &st))
+		if (my_stat (l->name, &st)) {
 			l->size = st.size;
+		} else if (f) {
+			// my_stat can fail for paths with non-ASCII chars (e.g. UTF-8
+			// paths passed through iso_8859_1_to_utf8 get double-encoded).
+			// Fall back to fseek/ftell on the already-opened FILE handle.
+			long pos = ftell(f);
+			if (fseek(f, 0, SEEK_END) == 0) {
+				l->size = ftell(f);
+				fseek(f, pos, SEEK_SET);
+			}
+		}
 		l->f = f;
 	}
 	return l;
