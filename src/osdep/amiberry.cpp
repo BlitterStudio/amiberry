@@ -51,6 +51,7 @@
 
 #include "amiberry_input.h"
 #include "clipboard.h"
+#include "dpi_handler.hpp"
 #include "fsdb.h"
 #include "scsidev.h"
 #ifdef FLOPPYBRIDGE
@@ -1564,10 +1565,14 @@ static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 			if (canstretch(mon)) {
 				int w = mon->mainwin_rect.w;
 				int h = mon->mainwin_rect.h;
-				if (w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width + mon->window_extra_width ||
-					h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height + mon->window_extra_height) {
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = w - mon->window_extra_width;
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = h - mon->window_extra_height;
+				const int content_w = w - mon->window_extra_width;
+				const int content_h = h - mon->window_extra_height;
+				const int logical_w = DPIHandler::unscale_window_dimension(content_w);
+				const int logical_h = DPIHandler::unscale_window_dimension(content_h);
+				if (logical_w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width ||
+					logical_h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height) {
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = logical_w;
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = logical_h;
 					set_config_changed();
 				}
 				//if (mon->hStatusWnd)
