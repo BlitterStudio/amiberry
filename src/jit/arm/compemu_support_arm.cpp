@@ -2102,6 +2102,95 @@ static inline bool isarm64unstableblock(uae_u32 pc)
 #endif
 }
 
+#if defined(CPU_AARCH64)
+static constexpr int ARM64_DYNAMIC_UNSTABLE_MAX = 512;
+static uae_u32 arm64_dynamic_unstable_pc[ARM64_DYNAMIC_UNSTABLE_MAX];
+static int arm64_dynamic_unstable_count = 0;
+static bool arm64_dynamic_unstable_full_logged = false;
+
+static inline uae_u32 arm64_unstable_block_key(uae_u32 pc)
+{
+    return pc & ~0x1ffu;
+}
+
+static bool arm64_add_dynamic_unstable_key(uae_u32 key, bool log_key)
+{
+    if (!key)
+        return false;
+    for (int i = 0; i < arm64_dynamic_unstable_count; ++i) {
+        if (arm64_dynamic_unstable_pc[i] == key)
+            return false;
+    }
+    int idx = 0;
+    if (arm64_dynamic_unstable_count < ARM64_DYNAMIC_UNSTABLE_MAX) {
+        idx = arm64_dynamic_unstable_count++;
+    } else {
+        if (!arm64_dynamic_unstable_full_logged) {
+            arm64_dynamic_unstable_full_logged = true;
+            write_log("JIT: ARM64 dynamic guard table full (%d keys), keeping existing quarantined keys\n",
+                ARM64_DYNAMIC_UNSTABLE_MAX);
+        }
+        return false;
+    }
+    arm64_dynamic_unstable_pc[idx] = key;
+    if (log_key)
+        write_log("JIT: ARM64 dynamic guard learned unstable block PC=%08x\n", key);
+    return true;
+}
+
+static inline bool isarm64dynamicunstableblock(uae_u32 pc)
+{
+    const uae_u32 key = arm64_unstable_block_key(pc);
+    for (int i = 0; i < arm64_dynamic_unstable_count; ++i) {
+        if (arm64_dynamic_unstable_pc[i] == key)
+            return true;
+    }
+    return false;
+}
+
+void jit_mark_arm64_unstable_pc(uae_u32 pc)
+{
+    const uae_u32 key = arm64_unstable_block_key(pc);
+    arm64_add_dynamic_unstable_key(key, true);
+}
+
+void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after)
+{
+    if (!pc)
+        return;
+    const uae_u32 start_pc = pc > before ? pc - before : 0;
+    const uae_u32 first = arm64_unstable_block_key(start_pc);
+    const uae_u32 last = arm64_unstable_block_key(pc + after);
+    int learned = 0;
+    for (uae_u32 key = first; key <= last; key += 0x200u) {
+        if (arm64_add_dynamic_unstable_key(key, false))
+            ++learned;
+        if (key > 0xfffffdffu)
+            break;
+    }
+    if (learned > 0) {
+        write_log("JIT: ARM64 dynamic guard learned unstable window PC=%08x range=%08x-%08x (%d keys)\n",
+            pc, first, last, learned);
+    }
+}
+#else
+static inline bool isarm64dynamicunstableblock(uae_u32 pc)
+{
+    (void)pc;
+    return false;
+}
+void jit_mark_arm64_unstable_pc(uae_u32 pc)
+{
+    (void)pc;
+}
+void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after)
+{
+    (void)pc;
+    (void)before;
+    (void)after;
+}
+#endif
+
 static inline bool arm64_hotspot_guard_enabled(void)
 {
 #if defined(CPU_AARCH64)
@@ -3105,6 +3194,10 @@ static void prepare_block(blockinfo* bi)
 
 void compemu_reset(void)
 {
+#if defined(CPU_AARCH64)
+    arm64_dynamic_unstable_count = 0;
+    arm64_dynamic_unstable_full_logged = false;
+#endif
     flush_icache = lazy_flush ? flush_icache_lazy : flush_icache_hard;
     set_cache_state(0);
 }
@@ -3389,12 +3482,17 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #if defined(CPU_AARCH64)
         const bool arm64_compat_interp_only = currprefs.cpu_compatible != 0;
         const bool arm64_rom_interp_only = trace_in_rom;
-        const bool arm64_hotspot_interp_only = arm64_hotspot_guard_enabled() && isarm64unstableblock(start_pc);
+        const bool arm64_optional_hotspot_guard_enabled = arm64_hotspot_guard_enabled();
+        const bool arm64_static_hotspot_interp_only = isarm64unstableblock(start_pc);
+        const bool arm64_dynamic_hotspot_interp_only = isarm64dynamicunstableblock(start_pc);
+        const bool arm64_hotspot_interp_only = arm64_static_hotspot_interp_only || arm64_dynamic_hotspot_interp_only;
         const bool arm64_interp_only = arm64_compat_interp_only || arm64_rom_interp_only || arm64_hotspot_interp_only;
         if (arm64_interp_only) {
             static int arm64_rom_guard_logged = 0;
             static int arm64_compat_guard_logged = 0;
             static int arm64_hotspot_guard_logged = 0;
+            static int arm64_hotspot_guard_forced_logged = 0;
+            static int arm64_dynamic_guard_logged = 0;
             if (arm64_rom_interp_only && !arm64_rom_guard_logged) {
                 write_log("JIT: ARM64 guard active, running ROM blocks without JIT\n");
                 arm64_rom_guard_logged = 1;
@@ -3403,9 +3501,17 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 write_log("JIT: ARM64 guard active, cpu_compatible=true uses interpreter blocks\n");
                 arm64_compat_guard_logged = 1;
             }
-            if (arm64_hotspot_interp_only && !arm64_hotspot_guard_logged) {
+            if (arm64_static_hotspot_interp_only && !arm64_hotspot_guard_logged) {
                 write_log("JIT: ARM64 guard active, running known unstable ARM64 block range without JIT\n");
                 arm64_hotspot_guard_logged = 1;
+            }
+            if (arm64_static_hotspot_interp_only && !arm64_optional_hotspot_guard_enabled && !arm64_hotspot_guard_forced_logged) {
+                write_log("JIT: ARM64 fixed safety guard still active for known-bad block range while optional hotspot guard is disabled\n");
+                arm64_hotspot_guard_forced_logged = 1;
+            }
+            if (arm64_dynamic_hotspot_interp_only && !arm64_dynamic_guard_logged) {
+                write_log("JIT: ARM64 dynamic guard active, running learned unstable block without JIT\n");
+                arm64_dynamic_guard_logged = 1;
             }
             optlev = 0;
         }

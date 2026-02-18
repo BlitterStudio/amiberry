@@ -72,6 +72,32 @@
 #include "dsp3210/dsp_glue.h"
 #endif
 
+#if defined(CPU_AARCH64) && defined(JIT)
+extern void jit_mark_arm64_unstable_pc(uae_u32 pc);
+extern void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after);
+static inline void arm64_quarantine_expamem_warning(void)
+{
+	/* Escalate known unstable ARM64 JIT autoconfig access loops to interpreter
+	 * before they cascade into repeated fault-handled compiled accesses. */
+	if (!canbang || currprefs.cachesize == 0) {
+		return;
+	}
+	const uae_u32 pc = M68K_GETPC;
+	jit_mark_arm64_unstable_pc(pc);
+	/* Include nearby block starts: the warning PC can sit late in the
+	 * fragment while compile_block keys by fragment start PC. */
+	jit_mark_arm64_unstable_pc_window(pc, 0xD000u, 0x2000u);
+	countdown = 0;
+	set_special(SPCFLAG_END_COMPILE);
+	set_special(0);
+	flush_icache(3);
+}
+#else
+static inline void arm64_quarantine_expamem_warning(void)
+{
+}
+#endif
+
 
 #define CARD_FLAG_CAN_Z3 1
 #define CARD_FLAG_CHILD 8
@@ -705,6 +731,7 @@ static uae_u32 REGPARAM2 expamem_lget (uaecptr addr)
 		return expamem_bank_current->sub_banks ? expamem_bank_current->sub_banks[0].bank->lget(addr) : expamem_bank_current->lget(addr);
 	}
 	write_log (_T("warning: Z2 READ.L from address $%08x PC=%x\n"), addr, M68K_GETPC);
+	arm64_quarantine_expamem_warning();
 	return (expamem_wget (addr) << 16) | expamem_wget (addr + 2);
 }
 
@@ -727,6 +754,7 @@ static uae_u32 REGPARAM2 expamem_wget (uaecptr addr)
 		v = val;
 	}
 	write_log (_T("warning: READ.W from address $%08x=%04x PC=%x\n"), addr, v & 0xffff, M68K_GETPC);
+	arm64_quarantine_expamem_warning();
 	return v;
 }
 
@@ -766,6 +794,7 @@ static void REGPARAM2 expamem_lput (uaecptr addr, uae_u32 value)
 		return;
 	}
 	write_log (_T("warning: Z2 WRITE.L to address $%08x : value $%08x\n"), addr, value);
+	arm64_quarantine_expamem_warning();
 }
 
 static void REGPARAM2 expamem_wput (uaecptr addr, uae_u32 value)
@@ -785,6 +814,7 @@ static void REGPARAM2 expamem_wput (uaecptr addr, uae_u32 value)
 		expamem_map = cd->map;
 	if (expamem_type () != zorroIII) {
 		write_log (_T("warning: WRITE.W to address $%08x : value $%x PC=%08x\n"), addr, value, M68K_GETPC);
+		arm64_quarantine_expamem_warning();
 	}
 	switch (addr & 0xff) {
 	case 0x48:
@@ -945,12 +975,14 @@ static uae_u32 REGPARAM2 expamemz3_wget (uaecptr addr)
 {
 	uae_u32 v = (expamemz3_bget (addr) << 8) | expamemz3_bget (addr + 1);
 	write_log (_T("warning: Z3 READ.W from address $%08x=%04x PC=%x\n"), addr, v & 0xffff, M68K_GETPC);
+	arm64_quarantine_expamem_warning();
 	return v;
 }
 
 static uae_u32 REGPARAM2 expamemz3_lget (uaecptr addr)
 {
 	write_log (_T("warning: Z3 READ.L from address $%08x PC=%x\n"), addr, M68K_GETPC);
+	arm64_quarantine_expamem_warning();
 	return (expamemz3_wget (addr) << 16) | expamemz3_wget (addr + 2);
 }
 
@@ -999,6 +1031,7 @@ static void REGPARAM2 expamemz3_wput (uaecptr addr, uae_u32 value)
 static void REGPARAM2 expamemz3_lput (uaecptr addr, uae_u32 value)
 {
 	write_log (_T("warning: Z3 WRITE.L to address $%08x : value $%08x\n"), addr, value);
+	arm64_quarantine_expamem_warning();
 }
 
 #ifdef CD32

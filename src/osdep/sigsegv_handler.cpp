@@ -83,6 +83,9 @@ extern blockinfo* active;
 extern blockinfo* dormant;
 extern void invalidate_block(blockinfo* bi);
 extern void raise_in_cl_list(blockinfo* bi);
+#if defined(CPU_AARCH64)
+extern void jit_mark_arm64_unstable_pc(uae_u32 pc);
+#endif
 #endif
   
 
@@ -220,12 +223,13 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 			break;
 		}
 
-		// Get memory bank of address
-		addrbank* ab = &get_mem_bank(amiga_addr);
-		if (ab) {
-			output_log(_T("JIT: Address bank: %s, address %08x (jit_read=%d jit_write=%d flags=%08x)\n"),
-				ab->name ? ab->name : _T("NONE"), amiga_addr, ab->jit_read_flag, ab->jit_write_flag, ab->flags);
-		}
+			// Get memory bank of address
+			addrbank* ab = &get_mem_bank(amiga_addr);
+			if (ab) {
+				output_log(_T("JIT: Address bank: %s, address %08x (jit_read=%d jit_write=%d flags=%08x)\n"),
+					ab->name ? ab->name : _T("NONE"), amiga_addr, ab->jit_read_flag, ab->jit_write_flag, ab->flags);
+			}
+			const bool arm64_quarantine_candidate = (!ab || !ab->name) && amiga_addr >= 0xFF000000;
 
 		// Analyze AARCH64 instruction
 		const unsigned int opcode = ((uae_u32*)fault_pc)[0];
@@ -406,10 +410,11 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 				}
 			}
 			const uae_u64 eff_addr = rn_val + offset;
+			const uae_u32 fault_m68k_pc = static_cast<uae_u32>(M68K_GETPC);
 			output_log(_T("JIT: fault64=%016llx natmem64=%016llx m68k=%08x op=%04x rd=x%d rn=x%d=%016llx rm=x%d=%016llx opt=%u s=%u imm12=%u mode=%s ea64=%016llx\n"),
 				static_cast<unsigned long long>(static_cast<uintptr>(fault_addr)),
 				static_cast<unsigned long long>(reinterpret_cast<uintptr>(natmem_offset)),
-				static_cast<uae_u32>(M68K_GETPC), regs.opcode, rd, rn,
+				fault_m68k_pc, regs.opcode, rd, rn,
 				static_cast<unsigned long long>(rn_val), rm, static_cast<unsigned long long>(rm_x),
 				option, sbit, imm12, reg_indexed ? "reg" : (unsigned_imm ? "imm" : "unknown"),
 				static_cast<unsigned long long>(eff_addr));
@@ -435,64 +440,78 @@ static int handle_exception(mcontext_t sigcont, long fault_addr)
 					uae_u32 newval = oldval;
 					switch (transfer_size) {
 					case SIZE_BYTE:
-						newval = static_cast<uae_u8>(get_byte(amiga_addr));
+						newval = static_cast<uae_u8>(get_byte_jit(amiga_addr));
 						break;
 
 					case SIZE_WORD:
-						newval = uae_bswap_16(static_cast<uae_u16>(get_word(amiga_addr)));
+						newval = uae_bswap_16(static_cast<uae_u16>(get_word_jit(amiga_addr)));
 						break;
 
 					case SIZE_INT:
-						newval = uae_bswap_32(get_long(amiga_addr));
+						newval = uae_bswap_32(get_long_jit(amiga_addr));
 						break;
 					}
 					if (rd != 31) {
 						set_reg_w(rd, newval);
 						output_log(_T("New value in x%d: 0x%08x (old: 0x%08x)\n"), rd, get_reg_w(rd), oldval);
-					}
-					else {
+					} else {
 						output_log(_T("Load target x31/WZR ignored (value 0x%08x)\n"), newval);
 					}
-				}
-				else {
+				} else {
 					// Perform store via indirect memory call
 					const uae_u32 regval = get_reg_w(rd);
 					switch (transfer_size) {
 					case SIZE_BYTE: {
-						put_byte(amiga_addr, regval);
+						put_byte_jit(amiga_addr, regval);
 						break;
 					}
 					case SIZE_WORD: {
-						put_word(amiga_addr, uae_bswap_16(static_cast<uae_u16>(regval)));
+						put_word_jit(amiga_addr, uae_bswap_16(static_cast<uae_u16>(regval)));
 						break;
 					}
 					case SIZE_INT: {
-						put_long(amiga_addr, uae_bswap_32(regval));
+						put_long_jit(amiga_addr, uae_bswap_32(regval));
 						break;
 					}
 					}
 					output_log(_T("Stored value 0x%08x from x%d to 0x%08x\n"), regval, rd, amiga_addr);
 				}
 
-			// Go to next instruction
+				// Go to next instruction
 #ifndef __MACH__
-			sigcont->pc += 4;
+				sigcont->pc += 4;
 #else
-			sigcont->__ss.__pc += 4;
+				sigcont->__ss.__pc += 4;
 #endif
+				/* Keep ARM64 behavior aligned with 32-bit ARM path:
+				 * after fault-emulated memory access, force a quick return
+				 * to interpreter so we don't keep running the same JIT block. */
+				countdown = 0;
 				handled = HANDLE_EXCEPTION_OK;
-
-					bool deleted = delete_trigger(active, (void*)fault_pc);
-					if (!deleted) {
-						/* Not found in the active list. Might be a rom routine that
-						 * is in the dormant list */
-						deleted = delete_trigger(dormant, (void*)fault_pc);
-					}
-					if (!deleted) {
-						// Can happen if one emulated instruction causes multiple faults.
-						set_special(0);
-					}
+				/* End current compiled fragment immediately after any handled
+				 * fault-emulated memory operation to avoid cascading faults in
+				 * the same translated block. */
+				set_special(SPCFLAG_END_COMPILE);
+				if (arm64_quarantine_candidate) {
+					jit_mark_arm64_unstable_pc(regs.pc);
+					jit_mark_arm64_unstable_pc(fault_m68k_pc);
+					/* This pattern can involve multiple chained compiled fragments.
+					 * Flush translated cache so control quickly returns via interpreter
+					 * and recompiles with learned dynamic guard keys. */
+					flush_icache(3);
 				}
+
+				bool deleted = delete_trigger(active, (void*)fault_pc);
+				if (!deleted) {
+					/* Not found in the active list. Might be a rom routine that
+					 * is in the dormant list */
+					deleted = delete_trigger(dormant, (void*)fault_pc);
+				}
+				if (!deleted) {
+					// Can happen if one emulated instruction causes multiple faults.
+					set_special(0);
+				}
+			}
 
 		break;
 	}
