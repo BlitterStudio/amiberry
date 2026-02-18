@@ -2114,6 +2114,21 @@ static inline uae_u32 arm64_unstable_block_key(uae_u32 pc)
     return pc & ARM64_UNSTABLE_KEY_MASK;
 }
 
+static inline bool arm64_guard_verbose_logging(void)
+{
+    static bool initialized = false;
+    static bool enabled = false;
+    if (!initialized) {
+        initialized = true;
+        const char* env = getenv("AMIBERRY_ARM64_GUARD_VERBOSE");
+        enabled = env && env[0] != '\0' && env[0] != '0';
+        if (enabled) {
+            write_log("JIT: ARM64 verbose guard logging enabled by AMIBERRY_ARM64_GUARD_VERBOSE\n");
+        }
+    }
+    return enabled;
+}
+
 static inline bool arm64_is_dynamic_unstable_key(uae_u32 key)
 {
     if (!key)
@@ -2134,7 +2149,7 @@ static bool arm64_add_dynamic_unstable_key(uae_u32 key, bool log_key)
     }
     *bits |= mask;
     arm64_dynamic_unstable_count++;
-    if (log_key)
+    if (log_key && arm64_guard_verbose_logging())
         write_log("JIT: ARM64 dynamic guard learned unstable block PC=%08x\n", key);
     return true;
 }
@@ -2164,7 +2179,7 @@ void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after
         if (key > 0xfffffdffu)
             break;
     }
-    if (learned > 0) {
+    if (learned > 0 && arm64_guard_verbose_logging()) {
         write_log("JIT: ARM64 dynamic guard learned unstable window PC=%08x range=%08x-%08x (%d keys)\n",
             pc, first, last, learned);
     }

@@ -3833,16 +3833,17 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 #if defined(JIT) && defined(CPU_AARCH64)
 	/* Illegal-instruction probe code in early Z3 startup can destabilize ARM64
 	 * translated control flow; quarantine those PCs to interpreter. */
-	if (currprefs.cachesize > 0) {
+	if (currprefs.cachesize > 0 && !inrom && !inrt) {
 		const uae_u32 illg_key = pc & ~0x1ffu;
+		const bool known_startup_probe = opcode == 0x4e7a && pc >= 0x40020000 && pc < 0x40040000;
 		static uae_u32 last_illg_flush_key = 0xffffffffu;
 		jit_mark_arm64_unstable_pc(pc);
-		if (pc >= 0x40000000 && pc < 0x50000000) {
+		if (known_startup_probe) {
 			jit_mark_arm64_unstable_pc_window(pc, 0x2000u, 0x2000u);
 		}
 		countdown = 0;
 		set_special(SPCFLAG_END_COMPILE);
-		if (illg_key != last_illg_flush_key) {
+		if (known_startup_probe && illg_key != last_illg_flush_key) {
 			last_illg_flush_key = illg_key;
 			set_special(0);
 			flush_icache(3);
