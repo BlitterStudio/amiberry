@@ -173,8 +173,11 @@ When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR
 
 - ARM64 now defaults to direct JIT address mode (`jit_n_addr_unsafe=0` at reset). Unsafe banks still flip to indirect mode via normal `S_N_ADDR` handling in `map_banks()`.
 - ARM64 keeps ROM and UAE Boot ROM (`rtarea`) blocks in interpreter mode to avoid known unstable codegen paths.
-- A narrow ARM64 fallback remains for a known Lightwave startup hotspot (`PC` range `0x4003df00`-`0x4003e1ff`).
-- Runtime A/B toggle: set environment variable `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` to disable that hotspot fallback and force full JIT in that range.
+- A fixed safety fallback remains for the known Lightwave startup hotspot (`PC` range `0x4003df00`-`0x4003e1ff`), even if optional hotspot guard toggles are disabled.
+- ARM64 dynamically quarantines unstable JIT blocks learned at runtime (SIGSEGV/JIT fault recovery, autoconfig warning paths, and selected illegal-op startup probes), then runs those blocks interpreted.
+- Dynamic unstable-key lookup uses a bitmap (O(1) lookup), reset on `compemu_reset()`.
+- Guard logging is quiet by default; set `AMIBERRY_ARM64_GUARD_VERBOSE=1` for per-key/per-window quarantine logs during investigation.
+- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` now only disables the optional guard path and is retained for A/B diagnostics; it does not bypass the fixed safety hotspot guard.
 
 ### GUI System
 

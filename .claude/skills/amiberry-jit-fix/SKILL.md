@@ -166,12 +166,16 @@ access just works with no signals or bank lookups needed.
 Implemented in `src/jit/arm/compemu_support_arm.cpp`:
 
 - ROM and UAE Boot ROM (`rtarea`) blocks run interpreter-only on ARM64.
-- Narrow hotspot interpreter fallback for known unstable Lightwave startup range:
+- Narrow fixed-safety interpreter fallback for known unstable Lightwave startup range:
   - `PC 0x4003df00` to `0x4003e1ff`
   - log marker: `JIT: ARM64 guard active, running known unstable ARM64 block range without JIT`
-- Runtime A/B toggle:
-  - set `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` to disable this narrow fallback.
-  - use only for validation/perf comparison; crashes/loops may return in Lightwave-like configs.
+- Dynamic unstable-block quarantine is learned at runtime from:
+  - SIGSEGV/JIT fault recovery (`sigsegv_handler.cpp`)
+  - Autoconfig warning paths (`expansion.cpp`)
+  - Selected startup illegal-op probes (`newcpu.cpp`, `op_illg`)
+- Dynamic unstable-key tracking now uses a bitmap (O(1) lookup) and resets on `compemu_reset()`.
+- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` only disables optional hotspot logic and does not bypass the fixed safety hotspot guard.
+- `AMIBERRY_ARM64_GUARD_VERBOSE=1` enables per-key/per-window dynamic guard learning logs for diagnostics.
 
 ## Known Separate Issues
 

@@ -224,6 +224,12 @@ To send a keypress, call `send_key` twice: once with state=1 (press), then state
 - Build with Debug type (`-DCMAKE_BUILD_TYPE=Debug`) for better crash info
 - If you need to test multiple configs, use `kill_amiberry` + `launch_and_wait_for_ipc` between each
 
+### ARM64 JIT toggles (current)
+
+- `AMIBERRY_ARM64_GUARD_VERBOSE=1`: enables detailed dynamic guard learning logs (per key/window). Keep this off for normal runs.
+- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1`: disables optional hotspot logic only; fixed ARM64 safety fallback for the known Lightwave startup hotspot remains active.
+- ARM64 JIT stability checks should be validated with at least 3 configs: SysInfo, A4000, and Lightwave.
+
 ## Input & On-Screen Joystick Troubleshooting
 
 - **On-screen D-pad acts like a mouse instead of joystick**: Two possible causes:
