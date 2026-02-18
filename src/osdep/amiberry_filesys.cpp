@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <list>
 #include <dirent.h>
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(LIBRETRO)
 #include <iconv.h>
 #else
 #include <SDL.h>

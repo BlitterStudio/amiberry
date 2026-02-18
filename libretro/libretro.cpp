@@ -42,6 +42,7 @@ extern "C" {
 #include "memory.h"
 #include "savestate.h"
 #include "disk.h"
+#include "blkdev.h"
 #include "gui.h"
 #include "amiberry_gfx.h"
 #include "zfile.h"
@@ -220,6 +221,7 @@ static std::string initial_disk_path;
 static unsigned last_disk_index = 0;
 static bool last_disk_ejected = false;
 static std::string disk_command;
+static bool content_is_cd = false;
 
 struct CheatOp {
 	uaecptr addr;
@@ -1326,7 +1328,7 @@ static bool find_kickstart_in_system_dir(const char* model, char* out, size_t ou
 	const char* candidates_a600[] = { "kick205.rom", "kick20.rom", "kick31.rom", "kick.rom" };
 	const char* candidates_a1200[] = { "kick31.rom", "kick40068.A1200", "kick.rom" };
 	const char* candidates_a4000[] = { "kick31.rom", "kick40068.A4000", "kick.rom" };
-	const char* candidates_cd32[] = { "cd32.rom", "kick40060.CD32", "kick31.rom", "kick.rom" };
+	const char* candidates_cd32[] = { "cd32.rom", "amiga-os-310-cd32.rom", "kick40060.CD32", "kick31.rom", "kick.rom" };
 	const char* candidates_cdtv[] = { "cdtv.rom", "kick34005.CDTV", "kick13.rom", "kick.rom" };
 
 	const char** candidates = candidates_generic;
@@ -1359,6 +1361,48 @@ static bool find_kickstart_in_system_dir(const char* model, char* out, size_t ou
 			count = sizeof(candidates_cdtv) / sizeof(candidates_cdtv[0]);
 		}
 	}
+
+	for (size_t i = 0; i < count; i++) {
+		const std::string candidate = path_join(system_dir, candidates[i]);
+		if (file_readable(candidate.c_str())) {
+			strncpy(out, candidate.c_str(), out_size - 1);
+			out[out_size - 1] = '\0';
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Find a CD32 or CDTV extended ROM in the system directory.
+// CD32 extended ROM is 512KB, separate from the main kickstart.
+// If the user has a combined 1MB cd32.rom, this is not needed
+// because load_kickstart() auto-detects the extended part.
+static bool find_ext_rom_in_system_dir(const char* model, char* out, size_t out_size)
+{
+	if (system_dir.empty())
+		return false;
+
+	const std::string base = model_base_name(model);
+
+	// CD32 extended ROM candidates
+	const char* candidates_cd32[] = { "cd32ext.rom", "amiga-ext-310-cd32.rom", "CD32 Extended.ROM" };
+	// CDTV extended ROM candidates
+	const char* candidates_cdtv[] = { "cdtvext.rom", "CDTV Extended.ROM" };
+
+	const char** candidates = nullptr;
+	size_t count = 0;
+
+	if (base == "CD32") {
+		candidates = candidates_cd32;
+		count = sizeof(candidates_cd32) / sizeof(candidates_cd32[0]);
+	} else if (base == "CDTV") {
+		candidates = candidates_cdtv;
+		count = sizeof(candidates_cdtv) / sizeof(candidates_cdtv[0]);
+	}
+
+	if (!candidates)
+		return false;
 
 	for (size_t i = 0; i < count; i++) {
 		const std::string candidate = path_join(system_dir, candidates[i]);
@@ -1526,28 +1570,61 @@ static void notify_disk_change()
 	last_disk_ejected = false;
 }
 
+static void cd_eject()
+{
+	changed_prefs.cdslots[0].name[0] = 0;
+	changed_prefs.cdslots[0].inuse = true;
+	set_config_changed();
+}
+
+static void cd_insert(const char* path)
+{
+	_tcsncpy(changed_prefs.cdslots[0].name, path, MAX_DPATH);
+	changed_prefs.cdslots[0].name[MAX_DPATH - 1] = 0;
+	changed_prefs.cdslots[0].inuse = true;
+	changed_prefs.cdslots[0].type = SCSI_UNIT_IMAGE;
+	set_config_changed();
+}
+
 static void disk_control_apply()
 {
 	if (!core_started)
 		return;
 
-	if (disk_ejected) {
-		disk_eject(0);
+	if (content_is_cd) {
+		if (disk_ejected) {
+			cd_eject();
+			notify_disk_change();
+			return;
+		}
+		if (disk_index >= disk_images.size())
+			return;
+		if (disk_images[disk_index].path.empty()) {
+			cd_eject();
+			notify_disk_change();
+			return;
+		}
+		cd_insert(disk_images[disk_index].path.c_str());
 		notify_disk_change();
-		return;
-	}
-	if (disk_index >= disk_images.size())
-		return;
-	if (disk_images[disk_index].path.empty()) {
+	} else {
+		if (disk_ejected) {
+			disk_eject(0);
+			notify_disk_change();
+			return;
+		}
+		if (disk_index >= disk_images.size())
+			return;
+		if (disk_images[disk_index].path.empty()) {
+			disk_eject(0);
+			notify_disk_change();
+			return;
+		}
+		TCHAR tpath[MAX_DPATH];
+		uae_tcslcpy(tpath, disk_images[disk_index].path.c_str(), MAX_DPATH);
 		disk_eject(0);
+		disk_insert(0, tpath);
 		notify_disk_change();
-		return;
 	}
-	TCHAR tpath[MAX_DPATH];
-	uae_tcslcpy(tpath, disk_images[disk_index].path.c_str(), MAX_DPATH);
-	disk_eject(0);
-	disk_insert(0, tpath);
-	notify_disk_change();
 }
 
 static bool libretro_set_eject_state(bool ejected)
@@ -2273,6 +2350,7 @@ static void core_entry(void)
 	if (game_path[0])
 		game_ext = path_extension_lower(game_path);
 	const bool is_whdload = (game_ext == "lha" || game_ext == "lzh");
+	const bool is_cd = content_is_cd || is_cd_extension(game_ext);
 	const bool user_kick_override = !cached_kickstart_override.empty() && cached_kickstart_override != "auto";
 
 	auto push_s_option = [&argv](const std::string& value) {
@@ -2310,6 +2388,20 @@ static void core_entry(void)
 		if (strcmp(model, "A4040") == 0) {
 			push_s_option("cpu_model=68040");
 			push_s_option("fpu_model=68040");
+		}
+
+		// Ensure CD hardware flags are set explicitly.
+		// bip_cd32() sets these before configure_rom(), which fails in libretro
+		// (scan_roms is stubbed), but built_in_chipset_prefs() in fixup_prefs()
+		// restores them via cs_compatible=CP_CD32.  Add them as -s safety net.
+		const std::string base = model_base_name(model);
+		if (base == "CD32") {
+			push_s_option("cd32cd=true");
+			push_s_option("cd32c2p=true");
+			push_s_option("cd32nvram=true");
+		} else if (base == "CDTV") {
+			push_s_option("cdtvcd=true");
+			push_s_option("cdtvram=true");
 		}
 	}
 
@@ -2400,6 +2492,18 @@ static void core_entry(void)
 				log_cb(RETRO_LOG_INFO, "Using Kickstart ROM: %s\n", kick_path);
 			libretro_debug_log("kickstart override: %s\n", kick_path);
 		}
+
+		// For CD32/CDTV: look for a separate extended ROM file and pass via -K.
+		// Not needed if the user has a combined 1MB ROM (load_kickstart auto-detects it).
+		if (is_cd && model) {
+			char ext_path[1024] = {0};
+			if (find_ext_rom_in_system_dir(model, ext_path, sizeof(ext_path))) {
+				argv.push_back(strdup("-K"));
+				argv.push_back(strdup(ext_path));
+				if (log_cb)
+					log_cb(RETRO_LOG_INFO, "Using Extended ROM: %s\n", ext_path);
+			}
+		}
 	}
 	if (!save_dir.empty()) {
 		const std::string cfg_path = "config_path=" + save_dir;
@@ -2423,11 +2527,29 @@ static void core_entry(void)
 				log_cb(RETRO_LOG_INFO, "WHDLoad autoload: %s\n", game_path);
 			argv.push_back(strdup("--autoload"));
 			argv.push_back(strdup(game_path));
+		} else if (is_cd) {
+			// Pass CD image via -s cdimage0= instead of positional arg.
+			// A positional .iso/.cue/.chd triggers cd_auto_prefs() which calls
+			// built_in_prefs() → buildin_default_prefs() that RESETS ALL prefs,
+			// wiping romfile set by -r and all -s overrides.
+			// Using -s sets cdimage0 directly without resetting prefs.
+			if (log_cb)
+				log_cb(RETRO_LOG_INFO, "CD image: %s\n", game_path);
+			std::string cd_opt = std::string("cdimage0=") + game_path + ",image";
+			push_s_option(cd_opt);
 		} else {
 			argv.push_back(strdup(game_path));
 		}
 	}
 	argv.push_back(nullptr);
+
+	fprintf(stderr, "LIBRETRO CD DEBUG: is_cd=%d content_is_cd=%d game_path='%s'\n",
+		is_cd ? 1 : 0, content_is_cd ? 1 : 0, game_path);
+	fprintf(stderr, "LIBRETRO CD DEBUG: argv[%zu]:", argv.size() - 1);
+	for (size_t i = 0; i + 1 < argv.size(); i++)
+		fprintf(stderr, " [%s]", argv[i] ? argv[i] : "(null)");
+	fprintf(stderr, "\n");
+	fflush(stderr);
 
 	if (libretro_debug_file) {
 		libretro_debug_log("core_entry argv:");
@@ -2492,6 +2614,7 @@ void retro_deinit(void)
 	core_shutdown_complete = false;
 	memory_map_set = false;
 	ff_override_active = false;
+	content_is_cd = false;
 	cheat_entries.clear();
 }
 
@@ -2948,16 +3071,30 @@ bool retro_load_game(const struct retro_game_info *info)
 	else
 		game_path[0] = '\0';
 
-	// Auto-detect CD32/CDTV content and override model if needed
+	// Determine if content is CD-based (affects disc swap mechanism)
+	content_is_cd = false;
 	if (game_path[0]) {
 		const std::string gp_ext = path_extension_lower(game_path);
+		if (is_cd_extension(gp_ext)) {
+			content_is_cd = true;
+		} else {
+			// Check if the user explicitly selected a CD model
+			const std::string base = model_base_name(cached_model.c_str());
+			if (base == "CD32" || base == "CDTV")
+				content_is_cd = true;
+		}
+
+		// Auto-detect CD32/CDTV content and override model if needed
 		const cd_content_type cd_type = detect_cd_content(game_path, gp_ext);
 		if (cd_type != CD_CONTENT_NONE) {
+			content_is_cd = true;
 			// Only auto-switch if the user hasn't already selected a CD model
 			const std::string base = model_base_name(cached_model.c_str());
 			const bool user_chose_cd = (base == "CD32" || base == "CDTV");
 			if (!user_chose_cd) {
-				const char* detected_model = (cd_type == CD_CONTENT_CDTV) ? "CDTV" : "CD32";
+				// Use CD32FR (8MB fast RAM) for better game compatibility,
+				// matching what cd_auto_prefs() does with config 3.
+				const char* detected_model = (cd_type == CD_CONTENT_CDTV) ? "CDTV" : "CD32FR";
 				if (log_cb)
 					log_cb(RETRO_LOG_INFO, "CD content detected: auto-selecting model '%s' for %s\n",
 						detected_model, game_path);
@@ -2965,6 +3102,9 @@ bool retro_load_game(const struct retro_game_info *info)
 			}
 		}
 	}
+
+	if (content_is_cd && log_cb)
+		log_cb(RETRO_LOG_INFO, "Content is CD-based; disc swap will use cdimage0\n");
 
 	// No content is valid: Amiga can boot to Workbench with just a Kickstart ROM
 	if (game_path[0] == '\0' && log_cb)

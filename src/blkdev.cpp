@@ -386,6 +386,9 @@ static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 {
 	int unitnum = 0;
 	int isaudio = 0;
+	fprintf(stderr, "BLKDEV CD DEBUG: get_standard_cd_unit2 cdslots[0].name='%s' inuse=%d type=%d\n",
+		p->cdslots[unitnum].name, p->cdslots[unitnum].inuse, p->cdslots[unitnum].type);
+	fflush(stderr);
 	if (p->cdslots[unitnum].name[0] || p->cdslots[unitnum].inuse) {
 		if (p->cdslots[unitnum].name[0]) {
 			device_func_init (SCSI_UNIT_IOCTL);

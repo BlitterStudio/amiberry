@@ -1357,6 +1357,12 @@ static void parse_cmdline_and_init_file(int argc, TCHAR **argv)
 
 	parse_cmdline(argc, argv);
 
+	fprintf(stderr, "PARSE_CMDLINE CD DEBUG: cdslots[0].name='%s' inuse=%d type=%d cs_cd32cd=%d cs_compatible=%d romfile='%s' romextfile='%s'\n",
+		currprefs.cdslots[0].name, currprefs.cdslots[0].inuse, currprefs.cdslots[0].type,
+		currprefs.cs_cd32cd ? 1 : 0, currprefs.cs_compatible,
+		currprefs.romfile, currprefs.romextfile);
+	fflush(stderr);
+
 	fixup_prefs(&currprefs, false);
 }
 

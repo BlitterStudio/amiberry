@@ -145,6 +145,10 @@ ifeq ($(platform), unix)
 LDFLAGS += -ldl -lm -pthread
 endif
 
+ifeq ($(platform), win)
+LDFLAGS += -liconv -lws2_32
+endif
+
 # Source files - Core Amiga Emulation
 SOURCES_CORE := $(AMIBERRY_DIR)/src/a2065.cpp \
                $(AMIBERRY_DIR)/src/a2091.cpp \
