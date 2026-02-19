@@ -58,6 +58,7 @@
 #include "jit/compemu.h"
 #endif
 #include "disasm.h"
+#include "uae/vm.h"
 #ifdef RETROPLATFORM
 #include "rp.h"
 #endif
@@ -841,6 +842,92 @@ void print_version()
 	exit(0);
 }
 
+static bool has_cmdline_option(int argc, TCHAR** argv, const TCHAR* option)
+{
+	for (int i = 1; i < argc; i++) {
+		if (_tcscmp(argv[i], option) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+#if defined(JIT)
+static inline uae_u32 arm64_mov_w0_imm16(uae_u16 imm)
+{
+	return 0x52800000u | (static_cast<uae_u32>(imm) << 5);
+}
+
+int run_jit_selftest_cli(void)
+{
+#if defined(CPU_AARCH64)
+	constexpr uae_u16 first_result = 0x1234;
+	constexpr uae_u16 patched_result = 0x4B1D;
+	constexpr uae_u32 arm64_ret = 0xD65F03C0u;
+	const int page_size = uae_vm_page_size();
+	if (page_size <= 0) {
+		write_log("JIT selftest: invalid VM page size (%d)\n", page_size);
+		return 2;
+	}
+
+	int vm_flags = UAE_VM_JIT;
+
+	auto* page = static_cast<uae_u8*>(
+		uae_vm_alloc(static_cast<uae_u32>(page_size), vm_flags, UAE_VM_READ_WRITE_EXECUTE));
+	if (!page) {
+		write_log("JIT selftest: failed to allocate JIT page (flags=%d)\n", vm_flags);
+		return 3;
+	}
+
+	auto* code = reinterpret_cast<uae_u32*>(page);
+	using jit_fn_t = uae_u32 (*)();
+	auto* fn = reinterpret_cast<jit_fn_t>(page);
+
+	uae_vm_jit_write_protect(false);
+	code[0] = arm64_mov_w0_imm16(first_result);
+	code[1] = arm64_ret;
+	__builtin___clear_cache(reinterpret_cast<char*>(code), reinterpret_cast<char*>(code + 2));
+	uae_vm_jit_write_protect(true);
+
+	const uae_u32 first_value = fn();
+	if (first_value != first_result) {
+		write_log("JIT selftest: first execution mismatch, got %u expected %u\n", first_value, first_result);
+		uae_vm_free(page, page_size);
+		return 4;
+	}
+
+	uae_vm_jit_write_protect(false);
+	code[0] = arm64_mov_w0_imm16(patched_result);
+	__builtin___clear_cache(reinterpret_cast<char*>(code), reinterpret_cast<char*>(code + 2));
+	uae_vm_jit_write_protect(true);
+
+	const uae_u32 patched_value = fn();
+	if (patched_value != patched_result) {
+		write_log("JIT selftest: patched execution mismatch, got %u expected %u\n", patched_value, patched_result);
+		uae_vm_free(page, page_size);
+		return 5;
+	}
+
+	if (!uae_vm_free(page, page_size)) {
+		write_log("JIT selftest: failed to free JIT page\n");
+		return 6;
+	}
+
+	write_log("JIT selftest: PASS (first=%u patched=%u)\n", first_value, patched_value);
+	return 0;
+#else
+	write_log("JIT selftest: unsupported on this architecture\n");
+	return 1;
+#endif
+}
+#else
+int run_jit_selftest_cli(void)
+{
+	write_log("JIT selftest: unavailable because this build was compiled without JIT\n");
+	return 1;
+}
+#endif
+
 void usage()
 {
 	std::cout << __ver << '\n';
@@ -848,6 +935,7 @@ void usage()
 	std::cout << " -h                         Show this help." << '\n';
 	std::cout << " --help                     \n" << '\n';
 	std::cout << " --log                      Show log output to console." << '\n';
+	std::cout << " --jit-selftest             Run ARM64 JIT VM/write/execute selftest and exit." << '\n';
 	std::cout << " -f <file>                  Load a configuration file." << '\n';
 	std::cout << " --config <file>            " << '\n';
 	std::cout << " --model <Amiga Model>      Amiga model to emulate, from the QuickStart options." << '\n';
@@ -1570,6 +1658,13 @@ void real_main (int argc, TCHAR **argv)
 #ifndef NO_MAIN_IN_MAIN_C
 int main (int argc, TCHAR **argv)
 {
+	if (has_cmdline_option(argc, argv, _T("--log"))) {
+		console_logging = 1;
+	}
+	if (has_cmdline_option(argc, argv, _T("--jit-selftest"))) {
+		return run_jit_selftest_cli();
+	}
+
 	real_main (argc, argv);
 	return 0;
 }

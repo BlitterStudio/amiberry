@@ -17238,7 +17238,7 @@ uae_u32 REGPARAM2 op_6000_0_comp_ff(uae_u32 opcode) {
 	arm_ADD_l_ri(PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 	mov_l_rr(PC_P, src);
-	comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+	comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
 }
@@ -17258,7 +17258,7 @@ uae_u32 REGPARAM2 op_6001_0_comp_ff(uae_u32 opcode) {
 	arm_ADD_l_ri(PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 	mov_l_rr(PC_P, src);
-	comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+	comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
 }
@@ -17277,7 +17277,7 @@ uae_u32 REGPARAM2 op_60ff_0_comp_ff(uae_u32 opcode) {
 	arm_ADD_l_ri(PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 	mov_l_rr(PC_P, src);
-	comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+	comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
 }
@@ -17297,7 +17297,7 @@ uae_u32 REGPARAM2 op_6100_0_comp_ff(uae_u32 opcode) {
 		arm_ADD_l_ri(src, m68k_pc_offset_thisinst + 2);
 		m68k_pc_offset = 0;
 		arm_ADD_l(PC_P, src);
-		comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+		comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	}
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
@@ -17319,7 +17319,7 @@ uae_u32 REGPARAM2 op_6101_0_comp_ff(uae_u32 opcode) {
 		arm_ADD_l_ri(src, m68k_pc_offset_thisinst + 2);
 		m68k_pc_offset = 0;
 		arm_ADD_l(PC_P, src);
-		comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+		comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	}
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
@@ -17340,7 +17340,7 @@ uae_u32 REGPARAM2 op_61ff_0_comp_ff(uae_u32 opcode) {
 		arm_ADD_l_ri(src, m68k_pc_offset_thisinst + 2);
 		m68k_pc_offset = 0;
 		arm_ADD_l(PC_P, src);
-		comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+		comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	}
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
@@ -44025,7 +44025,7 @@ uae_u32 REGPARAM2 op_6000_0_comp_nf(uae_u32 opcode) {
 	arm_ADD_l_ri(PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 	mov_l_rr(PC_P, src);
-	comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+	comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
 }
@@ -44045,7 +44045,7 @@ uae_u32 REGPARAM2 op_6001_0_comp_nf(uae_u32 opcode) {
 	arm_ADD_l_ri(PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 	mov_l_rr(PC_P, src);
-	comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+	comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
 }
@@ -44064,7 +44064,7 @@ uae_u32 REGPARAM2 op_60ff_0_comp_nf(uae_u32 opcode) {
 	arm_ADD_l_ri(PC_P, m68k_pc_offset);
 	m68k_pc_offset = 0;
 	mov_l_rr(PC_P, src);
-	comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+	comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
 }
@@ -44084,7 +44084,7 @@ uae_u32 REGPARAM2 op_6100_0_comp_nf(uae_u32 opcode) {
 		arm_ADD_l_ri(src, m68k_pc_offset_thisinst + 2);
 		m68k_pc_offset = 0;
 		arm_ADD_l(PC_P, src);
-		comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+		comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	}
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
@@ -44106,7 +44106,7 @@ uae_u32 REGPARAM2 op_6101_0_comp_nf(uae_u32 opcode) {
 		arm_ADD_l_ri(src, m68k_pc_offset_thisinst + 2);
 		m68k_pc_offset = 0;
 		arm_ADD_l(PC_P, src);
-		comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+		comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	}
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;
@@ -44127,7 +44127,7 @@ uae_u32 REGPARAM2 op_61ff_0_comp_nf(uae_u32 opcode) {
 		arm_ADD_l_ri(src, m68k_pc_offset_thisinst + 2);
 		m68k_pc_offset = 0;
 		arm_ADD_l(PC_P, src);
-		comp_pc_p = (uae_u8 *) (uintptr) get_const(PC_P);
+		comp_pc_p = compemu_host_pc_from_const(get_const(PC_P));
 	}
 	if (m68k_pc_offset > SYNC_PC_OFFSET) sync_m68k_pc();
 	return 0;

@@ -254,10 +254,11 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IM32 s))
 	/* d points always to memory in regs struct */
 	LOAD_U32(REG_WORK2, s);
 	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
+	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp)) {
 		STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
-	else
+	} else {
 		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	}
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IM32 s))
 
@@ -265,10 +266,11 @@ LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 {
 	/* d points always to memory in regs struct */
 	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
+	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp)) {
 		STR_xXi(s, R_REGSTRUCT, idx);
-	else
+	} else {
 		STR_wXi(s, R_REGSTRUCT, idx);
+	}
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 

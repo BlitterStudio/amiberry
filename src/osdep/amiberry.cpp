@@ -98,6 +98,9 @@ struct gpiod_line* lineYellow; // Yellow LED
 #include "amiberry_ipc.h"
 #endif
 
+extern int run_jit_selftest_cli(void);
+extern int console_logging;
+
 static SDL_threadID mainthreadid;
 static int logging_started;
 int log_scsi;
@@ -5384,10 +5387,18 @@ int main(int argc, char* argv[]) {
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
+	bool run_jit_selftest = false;
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
 			usage();
+		if (_tcscmp(argv[i], _T("--log")) == 0)
+			console_logging = 1;
+		if (_tcscmp(argv[i], _T("--jit-selftest")) == 0)
+			run_jit_selftest = true;
 	}
+
+	if (run_jit_selftest)
+		return run_jit_selftest_cli();
 
 #ifndef _WIN32
 	struct sigaction action{};

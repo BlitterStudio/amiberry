@@ -310,6 +310,7 @@ extern void calc_disp_ea_020(int base, uae_u32 dp, int target);
 #define SYNC_PC_OFFSET 124
 extern void sync_m68k_pc(void);
 extern uae_u32 get_const(int r);
+extern uae_u8* compemu_host_pc_from_const(uae_u32 pc_const);
 extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
 extern void register_possible_exception(void);
 

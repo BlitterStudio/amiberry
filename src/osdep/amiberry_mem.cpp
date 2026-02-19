@@ -422,6 +422,12 @@ bool preinit_shm ()
 	clear_shm ();
 
 	canbang = true;
+#ifdef CPU_64_BIT
+	if ((uintptr_t)natmem_reserved + natmem_reserved_size > (uintptr_t)0x100000000ULL) {
+		write_log (_T("MMAN: WARNING: natmem at %p exceeds 32-bit range - JIT direct mode disabled\n"), natmem_reserved);
+		canbang = false;
+	}
+#endif
 	return true;
 }
 

@@ -547,6 +547,13 @@ elseif(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     endif()
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64"))
+    # Reduce PageZero size to 64KB (default is 4GB on Apple Silicon) to allow
+    # memory allocation in the lower 4GB address space, which is required for
+    # JIT generated code that relies on 32-bit pointers/offsets.
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,-pagezero_size,0x10000)
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
         src
         src/osdep

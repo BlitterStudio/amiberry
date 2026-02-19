@@ -24,19 +24,10 @@
 //#define USE_SOFT_LONG_DOUBLE
 #define PACKAGE_STRING "Amiberry"
 
-#if defined(__x86_64__) || defined(_M_AMD64)
-#if defined(__FreeBSD__) || defined(__linux__) || defined(_WIN32) // not for macOS
+#if defined(__x86_64__) || defined(_M_AMD64) || defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
 #ifndef __ANDROID__ // not for android
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
-#endif
-#endif
-#elif defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
-#if defined(__FreeBSD__) || defined(__linux__) // not for macOS (yet)
-#ifndef __ANDROID__ // not for android
-#define JIT /* JIT compiler support */
-#define USE_JIT_FPU
-#endif
 #endif
 #endif
 

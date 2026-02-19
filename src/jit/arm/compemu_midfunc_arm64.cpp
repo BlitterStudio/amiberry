@@ -622,12 +622,17 @@ STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
   }
 #endif
 
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	sys_icache_invalidate(start, (char *)stop - (char *)start);
+#else
 	__builtin___clear_cache((char *)start, (char *)stop);
+#endif
 }
 
 
 STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a)
 {
+	jit_begin_write_window();
 	uintptr off = (a - (uintptr)jmpaddr) >> 2;
 	if((*(jmpaddr) & 0xfc000000) == 0x14000000) {
 		/* branch always */
@@ -648,6 +653,7 @@ STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a)
 	}
 
 	flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
+	jit_end_write_window();
 }
 
 static inline void emit_jmp_target(uae_u32 a) {

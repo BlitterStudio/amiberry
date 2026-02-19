@@ -7881,7 +7881,7 @@ MIDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 	adr = readreg(adr);
 	d = writereg(d);
 
-	ADD_www(d, adr, R_MEMSTART);
+	ADD_xxwEX(d, R_MEMSTART, adr, EX_SXTW);
 
 	unlock2(d);
 	unlock2(adr);
@@ -7894,7 +7894,7 @@ MIDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 	d = writereg(d);
 
 	UBFIZ_xxii(REG_WORK1, adr, 0, 24);
-	ADD_www(d, REG_WORK1, R_MEMSTART);
+	ADD_xxwEX(d, R_MEMSTART, REG_WORK1, EX_UXTW);
 
 	unlock2(d);
 	unlock2(adr);
@@ -7909,10 +7909,9 @@ MIDFUNC(2,jnf_MEM_GETADR_JMP_OFF,(W4 d, RR4 adr))
 	LOAD_U64(REG_WORK2, (uintptr)baseaddr);
 	LSR_wwi(REG_WORK1, adr, 16);
 	LDR_xXxLSLi(REG_WORK3, REG_WORK2, REG_WORK1, 1); // 1 means shift by 3
-	/* Keep ARM32-compatible 32-bit wrapped address math. */
-	ADD_www(d, adr, REG_WORK3);
-	LOAD_U32(REG_WORK1, ~1u);
-	AND_www(d, d, REG_WORK1);
+	ADD_xxwEX(d, REG_WORK3, adr, EX_SXTW);
+	LOAD_U64(REG_WORK1, ~1ULL);
+	AND_xxx(d, d, REG_WORK1);
 
 	unlock2(d);
 	unlock2(adr);

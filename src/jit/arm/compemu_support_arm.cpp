@@ -31,6 +31,9 @@
 #include "sysdeps.h"
 
 #include <math.h>
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+#include <sys/mman.h>
+#endif
 
 #ifdef JIT_DEBUG_MEM_CORRUPTION
 #include <signal.h>
@@ -75,7 +78,27 @@
 static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 {
 	assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
-	return uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
+	int flags = UAE_VM_32BIT;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	/* ARM64 JIT metadata pools don't need low 4GB addresses on macOS. */
+	flags = 0;
+#endif
+	return uae_vm_alloc(size, flags, UAE_VM_READ_WRITE);
+}
+
+static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
+{
+	assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
+	int flags = UAE_VM_32BIT;
+	int protect = UAE_VM_READ_WRITE;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	/* On macOS ARM64, MAP_JIT mappings may not be placeable below 4GB.
+	 * Allow normal placement and rely on ARM64 codegen's 64-bit pointers. */
+	flags = UAE_VM_JIT;
+	/* MAP_JIT allocations are expected to be executable mappings. */
+	protect = UAE_VM_READ_WRITE_EXECUTE;
+#endif
+	return uae_vm_alloc(size, flags, protect);
 }
 
 #define UNUSED(x)
@@ -89,7 +112,12 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
   write_log("JIT: " format "\n", ##__VA_ARGS__);
 #define jit_log2(format, ...)
 
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+/* Not used on ARM64; R_MEMSTART (x27) holds full 64-bit natmem_offset */
+#define MEMBaseDiff ((uae_u32)0)
+#else
 #define MEMBaseDiff uae_p32(NATMEM_OFFSET)
+#endif
 
 #ifdef NATMEM_OFFSET
 #define FIXED_ADDRESSING 1
@@ -478,6 +506,15 @@ static blockinfo* hold_bi[MAX_HOLD_BI];
 blockinfo* active;
 blockinfo* dormant;
 
+static void disable_jit_runtime(const char* reason)
+{
+	jit_log("JIT disabled: %s", reason);
+	currprefs.cachesize = 0;
+	changed_prefs.cachesize = 0;
+	cache_size = 0;
+	cache_enabled = 0;
+}
+
 #ifdef NOFLAGS_SUPPORT_GENCOMP
 /* 68040 */
 extern const struct cputbl op_smalltbl_0[];
@@ -859,8 +896,37 @@ static void prepare_for_call_1(void);
 static void prepare_for_call_2(void);
 
 STATIC_INLINE void flush_cpu_icache(void *from, void *to);
+STATIC_INLINE void jit_begin_write_window(void);
+STATIC_INLINE void jit_end_write_window(void);
 #endif
 STATIC_INLINE void write_jmp_target(uae_u32 *jmpaddr, uintptr a);
+
+static int jit_write_window_depth = 0;
+
+STATIC_INLINE void jit_begin_write_window(void)
+{
+	jit_write_window_depth++;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (jit_write_window_depth == 1) {
+		uae_vm_jit_write_protect(false);
+	}
+#endif
+}
+
+STATIC_INLINE void jit_end_write_window(void)
+{
+	if (jit_write_window_depth <= 0) {
+		write_log("JIT: write window underflow\n");
+		jit_write_window_depth = 0;
+		return;
+	}
+	jit_write_window_depth--;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (jit_write_window_depth == 0) {
+		uae_vm_jit_write_protect(true);
+	}
+#endif
+}
 
 uae_u32 m68k_pc_offset;
 
@@ -1250,10 +1316,6 @@ static inline void alloc_blockinfos(void)
         if (hold_bi[i])
             return;
         bi = hold_bi[i] = alloc_blockinfo();
-#ifdef __MACH__
-        // Turn off write protect (which prevents execution) on JIT cache while the blocks are prepared, this is Mac OS X specific, it will work on x86-64, but as a noop
-        pthread_jit_write_protect_np(false);
-#endif
         prepare_block(bi);
     }
 }
@@ -2074,8 +2136,8 @@ static void fflags_into_flags_internal(void)
 static inline int isinrom(uintptr addr)
 {
 #ifdef UAE
-    if (addr >= uae_p32(kickmem_bank.baseaddr) &&
-        addr < uae_p32(kickmem_bank.baseaddr + 8 * 65536)) {
+    if (addr >= (uintptr)kickmem_bank.baseaddr &&
+        addr < (uintptr)kickmem_bank.baseaddr + 8 * 65536) {
         return 1;
     }
     /* Treat UAE Boot ROM (rtarea) as ROM too for ARM64 JIT safety guards. */
@@ -2394,6 +2456,11 @@ uae_u32 get_const(int r)
         jit_abort("Register %d should be constant, but isn't", r);
     }
     return live.state[r].val;
+}
+
+uae_u8* compemu_host_pc_from_const(uae_u32 pc_const)
+{
+    return (uae_u8*)(uintptr)pc_const;
 }
 
 void sync_m68k_pc(void)
@@ -2941,7 +3008,7 @@ uae_u32 get_jitted_size(void)
 static uint8 *do_alloc_code(uint32 size, int depth)
 {
 	UNUSED(depth);
-    uint8*code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
+    uint8*code = (uint8 *)vm_acquire_code(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
 	return code == VM_MAP_FAILED ? NULL : code;
 }
 
@@ -2950,14 +3017,84 @@ static inline uint8 *alloc_code(uint32 size)
     uint8 *ptr = do_alloc_code(size, 0);
 	/* allocated code must fit in 32-bit boundaries */
 #ifdef CPU_64_BIT
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (ptr && (uintptr)ptr + size > (uintptr)0xffffffff) {
+		static bool arm64_macos_high_jit_logged = false;
+		if (!arm64_macos_high_jit_logged) {
+			jit_log("ARM64 macOS: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
+			arm64_macos_high_jit_logged = true;
+		}
+	}
+#else
 	if (ptr && (uintptr)ptr + size > (uintptr)0xffffffff) {
 		jit_log("WARNING: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
 		vm_release(ptr, size);
 		return NULL;
 	}
 #endif
+#endif
 	return ptr;
 }
+
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+static inline bool arm64_uncond_branch_reachable(uintptr from, uintptr to)
+{
+	/* AArch64 B immediate range: signed 26-bit immediate, shifted left by 2. */
+	const intptr_t diff = (intptr_t)to - (intptr_t)from;
+	const intptr_t min = -(128 * 1024 * 1024);
+	const intptr_t max = (128 * 1024 * 1024) - 4;
+	return diff >= min && diff <= max;
+}
+
+static inline bool arm64_cache_reaches_popall(uint8 *cache_start, uint32 cache_size_bytes)
+{
+	if (!cache_start || !cache_size_bytes || !popallspace) {
+		return false;
+	}
+	const uintptr popall = (uintptr)popallspace;
+	const uintptr start = (uintptr)cache_start;
+	const uintptr end = start + cache_size_bytes - 4;
+	return arm64_uncond_branch_reachable(start, popall) &&
+		arm64_uncond_branch_reachable(end, popall);
+}
+
+static uint8 *alloc_code_near_popall(uint32 size)
+{
+	if (!popallspace || size == 0) {
+		return alloc_code(size);
+	}
+#ifdef MAP_JIT
+	const int prot = PROT_READ | PROT_WRITE | PROT_EXEC;
+	const int flags = MAP_PRIVATE | MAP_ANON | MAP_JIT;
+	const uintptr page = (uintptr)uae_vm_page_size();
+	const uintptr anchor = (uintptr)popallspace;
+	const intptr_t max_delta = 120 * 1024 * 1024;
+	const intptr_t step = 4 * 1024 * 1024;
+
+	for (intptr_t delta = 0; delta <= max_delta; delta += step) {
+		for (int dir = 0; dir < 2; dir++) {
+			if (delta == 0 && dir == 1) {
+				continue;
+			}
+			const intptr_t signed_delta = dir == 0 ? delta : -delta;
+			uintptr hint = (uintptr)((intptr_t)anchor + signed_delta);
+			hint &= ~(page - 1);
+			void *p = mmap((void *)hint, size, prot, flags, -1, 0);
+			if (p == MAP_FAILED) {
+				continue;
+			}
+			uint8 *code = (uint8 *)p;
+			if (arm64_cache_reaches_popall(code, size)) {
+				return code;
+			}
+			munmap(code, size);
+		}
+	}
+#endif
+	/* Fallback allocation may place cache out of branch range, checked by caller. */
+	return alloc_code(size);
+}
+#endif
 
 void alloc_cache(void)
 {
@@ -2972,14 +3109,35 @@ void alloc_cache(void)
         return;
 
 	while (!compiled_code && cache_size) {
-		if ((compiled_code = alloc_code(cache_size * 1024)) == NULL) {
+		const uint32 cache_bytes = cache_size * 1024;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+		compiled_code = alloc_code_near_popall(cache_bytes);
+		if (compiled_code && !arm64_cache_reaches_popall(compiled_code, cache_bytes)) {
+			jit_log("ARM64 macOS: JIT cache %p (size %u) is out of branch range from popallspace %p",
+				compiled_code, cache_bytes, popallspace);
+			vm_release(compiled_code, cache_bytes);
+			compiled_code = NULL;
+		}
+#else
+		compiled_code = alloc_code(cache_bytes);
+#endif
+		if (compiled_code == NULL) {
 			compiled_code = 0;
 			cache_size /= 2;
 		}
 	}
+#if !defined(__APPLE__) || !defined(CPU_AARCH64)
 	vm_protect(compiled_code, cache_size * 1024, VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE);
+#endif
 
     if (compiled_code) {
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+		static bool arm64_macos_jit_mode_logged = false;
+		if (!arm64_macos_jit_mode_logged) {
+			jit_log("ARM64 macOS JIT mode active: MAP_JIT allocation + write/execute switching");
+			arm64_macos_jit_mode_logged = true;
+		}
+#endif
         jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size * 1024);
 #ifdef USE_DATA_BUFFER
         max_compile_start = compiled_code + cache_size * 1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;
@@ -3181,7 +3339,10 @@ STATIC_INLINE void create_popalls(void)
             return;
         }
     }
+#if !defined(__APPLE__) || !defined(CPU_AARCH64)
     vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_WRITE);
+#endif
+	jit_begin_write_window();
 
     current_compile_p = popallspace;
     set_target(current_compile_p);
@@ -3268,7 +3429,10 @@ STATIC_INLINE void create_popalls(void)
     // stale/random data from the I-cache.
     flush_cpu_icache((void *)popallspace, (void *)get_target());
 #endif
+#if !defined(__APPLE__) || !defined(CPU_AARCH64)
 	vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_EXECUTE);
+#endif
+	jit_end_write_window();
 }
 
 static inline void reset_lists(void)
@@ -3285,6 +3449,7 @@ static void prepare_block(blockinfo* bi)
 {
     int i;
 
+	jit_begin_write_window();
     set_target(current_compile_p);
     bi->direct_pen = (cpuop_func*)get_target();
     compemu_raw_execute_normal((uintptr) & (bi->pc_p));
@@ -3293,6 +3458,7 @@ static void prepare_block(blockinfo* bi)
     compemu_raw_check_checksum((uintptr) & (bi->pc_p));
 
     flush_cpu_icache((void*)current_compile_p, (void*)target);
+	jit_end_write_window();
     current_compile_p = get_target();
 
     bi->deplist = NULL;
@@ -3455,10 +3621,18 @@ void build_comp(void)
     }
     jit_log("<JIT compiler> : supposedly %d compileable opcodes!", count);
 
-    /* Initialise state */
-    create_popalls();
-    alloc_cache();
-    reset_lists();
+	/* Initialise state */
+	create_popalls();
+	if (!pushall_call_handler || !popall_execute_normal) {
+		disable_jit_runtime("failed to initialize JIT dispatcher stubs (popallspace)");
+		return;
+	}
+	alloc_cache();
+	if (!compiled_code) {
+		disable_jit_runtime("failed to allocate ARM64 JIT code cache");
+		return;
+	}
+	reset_lists();
 
     for (i = 0; i < TAGSIZE; i += 2) {
         cache_tags[i].handler = (cpuop_func*)popall_execute_normal;
@@ -3563,6 +3737,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
 
     if (cache_enabled && compiled_code && currprefs.cpu_model >= 68020) {
+		jit_begin_write_window();
 #ifdef PROFILE_COMPILE_TIME
         compile_count++;
         clock_t start_time = clock();
@@ -3992,6 +4167,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
         /* Account for compilation time */
         do_extra_cycles(totcycles);
+		jit_end_write_window();
     }
 }
 
