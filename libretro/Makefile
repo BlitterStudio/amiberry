@@ -78,7 +78,7 @@ else
    CHD_DIR := $(AMIBERRY_DIR)/src/archivers/chd/windir.cpp
    CHD_PTTY := $(AMIBERRY_DIR)/src/archivers/chd/winptty.cpp
    CHD_SOCKET := $(AMIBERRY_DIR)/src/archivers/chd/winsocket.cpp
-   SHARED := -shared -static-libgcc -static-libstdc++ -s -Wl,--version-script=$(LIBRETRO_DIR)/link.T -Wl,--no-undefined
+   SHARED := -shared -static-libgcc -static-libstdc++ -Wl,--no-undefined
 endif
 
 LDFLAGS += $(fpic) $(SHARED)
