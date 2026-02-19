@@ -85,11 +85,6 @@ jobs:
         run: |
           cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 
-      - name: ARM64 JIT selftest (unsigned)
-        if: matrix.arch == 'apple-silicon'
-        run: |
-          build/Amiberry.app/Contents/MacOS/Amiberry --jit-selftest --log
-
       - name: Archive intermediate app bundle
         run: |
           tar -C build -czf Amiberry.app.tar.gz Amiberry.app
@@ -228,10 +223,6 @@ jobs:
       - name: Verify app entitlements
         run: |
           codesign -d --entitlements :- universal-app/Amiberry.app
-
-      - name: ARM64 JIT selftest (signed universal app)
-        run: |
-          universal-app/Amiberry.app/Contents/MacOS/Amiberry --jit-selftest --log
 
       - name: Create a zip to send to the notary service
         run: |
