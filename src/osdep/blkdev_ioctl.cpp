@@ -32,6 +32,9 @@
 // macOS
 #include <errno.h>
 #include <sys/disk.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <DiskArbitration/DiskArbitration.h>
+#include <IOKit/IOKitLib.h>
 #include <IOKit/storage/IODVDMediaBSDClient.h>
 #include <IOKit/storage/IODVDMedia.h>
 #include <IOKit/storage/IODVDTypes.h>
@@ -1166,26 +1169,26 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 		write_log(_T("IOCTL: opening IOCTL %s\n"), ciw->devname);
 	ciw->fd = open(ciw->devname, fullaccess ? O_RDWR : O_RDONLY);
 #ifdef __MACH__
-	// On macOS, audio CDs may not open without O_NONBLOCK since there's no mounted filesystem
 	if (ciw->fd == -1)
 		ciw->fd = open(ciw->devname, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
 	if (ciw->fd == -1) {
 		if (!strncmp(ciw->devname, "/dev/disk", 9)) {
 			char alt[64];
 			snprintf(alt, sizeof(alt), "/dev/rdisk%s", ciw->devname + 9);
-			ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
+			ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
 			if (ciw->fd == -1)
-				ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
+				ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
 			if (ciw->fd != -1) {
 				strncpy(ciw->devname, alt, sizeof(ciw->devname));
 				ciw->devname[sizeof(ciw->devname) - 1] = 0;
 			}
 		} else if (!strncmp(ciw->devname, "/dev/rdisk", 10)) {
+			// It's already the rdisk, maybe try the block device for kicks
 			char alt[64];
 			snprintf(alt, sizeof(alt), "/dev/disk%s", ciw->devname + 10);
-			ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
+			ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
 			if (ciw->fd == -1)
-				ciw->fd = open(alt, (fullaccess ? O_RDWR : O_RDONLY) | O_NONBLOCK);
+				ciw->fd = open(alt, fullaccess ? O_RDWR : O_RDONLY);
 			if (ciw->fd != -1) {
 				strncpy(ciw->devname, alt, sizeof(ciw->devname));
 				ciw->devname[sizeof(ciw->devname) - 1] = 0;
@@ -1288,25 +1291,25 @@ static int spti_read(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int 
 extern void encode_l2(uae_u8* p, int address);
 
 #ifdef __MACH__
-static int mac_cd_read_sector(struct dev_info_ioctl* ciw, int sector, uae_u8* dst, int bytes, uae_u8 sectorType)
+static int mac_cd_read_sector(struct dev_info_ioctl* ciw, int sector, uae_u8* dst, int num_sectors, uae_u8 sectorType)
 {
 	dk_cd_read_t rd{};
 	uint64_t sectorsize = (sectorType == kCDSectorTypeCDDA) ? kCDSectorSizeCDDA : kCDSectorSizeMode1;
 	rd.offset = (uint64_t)sector * sectorsize;
 	rd.sectorArea = kCDSectorAreaUser;
 	rd.sectorType = sectorType;
-	rd.bufferLength = (uint32_t)bytes;
+	rd.bufferLength = (uint32_t)(num_sectors * sectorsize);
 	rd.buffer = dst;
 	if (ioctl(ciw->fd, DKIOCCDREAD, &rd) == -1)
 		return 0;
-	return bytes;
+	return rd.bufferLength;
 }
 
 static int mac_cd_read_mode1(struct dev_info_ioctl* ciw, int sector, uae_u8* dst)
 {
-	if (mac_cd_read_sector(ciw, sector, dst, kCDSectorSizeMode1, kCDSectorTypeMode1))
+	if (mac_cd_read_sector(ciw, sector, dst, 1, kCDSectorTypeMode1))
 		return kCDSectorSizeMode1;
-	if (mac_cd_read_sector(ciw, sector, dst, kCDSectorSizeMode1, kCDSectorTypeMode2Form1))
+	if (mac_cd_read_sector(ciw, sector, dst, 1, kCDSectorTypeMode2Form1))
 		return kCDSectorSizeMode1;
 	return 0;
 }
@@ -1344,16 +1347,26 @@ retry:
 		int track = cdtracknumber(&ciw->di.toc, sector);
 		if (track < 0)
 			return 0;
+		got = false;
 #ifdef __MACH__
 		if (isaudiotrack(&ciw->di.toc, sector) && sectorsize >= 2352 && data) {
-			if (!mac_cd_read_sector(ciw, sector, data, 2352, kCDSectorTypeCDDA))
-				return ret;
-			ciw->cda.cd_last_pos = sector;
-			data += sectorsize;
-			ret += sectorsize;
-			sector++;
-			size--;
-			continue;
+			uae_u8* temp_cd_buf = (uae_u8*)malloc(size * 2352);
+			if (temp_cd_buf) {
+				if (!mac_cd_read_sector(ciw, sector, temp_cd_buf, size, kCDSectorTypeCDDA)) {
+					free(temp_cd_buf);
+					return ret;
+				}
+				for (int i = 0; i < size; i++) {
+					memcpy(data + (i * sectorsize), temp_cd_buf + (i * 2352), 2352);
+				}
+				free(temp_cd_buf);
+				ciw->cda.cd_last_pos = sector + size - 1;
+				data += sectorsize * size;
+				ret += sectorsize * size;
+				sector += size;
+				size = 0;
+				continue;
+			}
 		}
 #endif
 		got = false;
@@ -1940,33 +1953,57 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 	struct cd_toc_head* th = &ciw->di.toc;
 	struct cd_toc* t = th->toc;
 
-	if (!unitisopen(unitnum))
+	if (!unitisopen(unitnum)) {
 		return 0;
-	if (!open_createfile(ciw, 0))
-		return 0;
-
-	dk_cd_read_toc_t rtoc{};
-	unsigned char buf[4096];
-	memset(buf, 0, sizeof(buf));
-	rtoc.format = kCDTOCFormatTOC;
-	rtoc.formatAsTime = 1;
-	rtoc.address.track = 0;
-	rtoc.bufferLength = sizeof(buf);
-	rtoc.buffer = buf;
-
-	if (ioctl(ciw->fd, DKIOCCDREADTOC, &rtoc) == -1) {
-		int err = errno;
-		if (!hide_errors || (hide_errors && err == ENOMEDIUM)) {
-			if (win32_error(ciw, unitnum, _T("DKIOCCDREADTOC")) < 0)
-				return 0;
-		}
+	}
+	if (!open_createfile(ciw, 0)) {
 		return 0;
 	}
 
-	CDTOC* toc = (CDTOC*)buf;
-	UInt32 count = CDTOCGetDescriptorCount(toc);
-	if (count == 0)
+	DASessionRef session = DASessionCreate(kCFAllocatorDefault);
+	if (!session) {
 		return 0;
+	}
+
+	char bsd_name[64];
+	strncpy(bsd_name, ciw->devname, sizeof(bsd_name));
+	bsd_name[sizeof(bsd_name) - 1] = '\0';
+	if (!strncmp(bsd_name, "/dev/rdisk", 10)) {
+		snprintf(bsd_name, sizeof(bsd_name), "/dev/disk%s", ciw->devname + 10);
+	}
+
+	DADiskRef disk = DADiskCreateFromBSDName(kCFAllocatorDefault, session, bsd_name);
+	if (!disk) {
+		CFRelease(session);
+		return 0;
+	}
+	io_service_t media = DADiskCopyIOMedia(disk);
+	if (!media) {
+		CFRelease(disk);
+		CFRelease(session);
+		return 0;
+	}
+	CFTypeRef tocDataRef = IORegistryEntryCreateCFProperty(media, CFSTR("TOC"), kCFAllocatorDefault, 0);
+	if (!tocDataRef || CFGetTypeID(tocDataRef) != CFDataGetTypeID()) {
+		if (tocDataRef) CFRelease(tocDataRef);
+		IOObjectRelease(media);
+		CFRelease(disk);
+		CFRelease(session);
+		return 0;
+	}
+
+	CFDataRef tocData = (CFDataRef)tocDataRef;
+	const UInt8* bytes = CFDataGetBytePtr(tocData);
+	CDTOC* toc = (CDTOC*)bytes;
+	UInt32 count = CDTOCGetDescriptorCount(toc);
+
+	if (count == 0) {
+		CFRelease(tocDataRef);
+		IOObjectRelease(media);
+		CFRelease(disk);
+		CFRelease(session);
+		return 0;
+	}
 
 	memset(th, 0, sizeof(struct cd_toc_head));
 	memset(ciw->trackmode, 0xff, sizeof(ciw->trackmode));
@@ -1995,9 +2032,14 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 			leadout_lsn = (int)CDConvertMSFToLBA(d.p);
 		}
 	}
+	CFRelease(tocDataRef);
+	IOObjectRelease(media);
+	CFRelease(disk);
+	CFRelease(session);
 
-	if (last_track < first_track)
+	if (last_track < first_track) {
 		return 0;
+	}
 
 	if (leadout_lsn == 0 && tracks[last_track].present)
 		leadout_lsn = tracks[last_track].lsn;
@@ -2251,9 +2293,9 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 	}
 #endif
 
-	write_log(_T("IOCTL: device '%s' (%s/%s/%s) opened successfully (unit=%d,media=%d)\n"),
+	write_log(_T("IOCTL: sys_cddev_open device '%s' (%s/%s/%s) opened successfully (unit=%d,media=%d,fd=%d)\n"),
 		ciw->devname, ciw->di.vendorid, ciw->di.productid, ciw->di.revision,
-		unitnum, ciw->di.media_inserted);
+		unitnum, ciw->di.media_inserted, ciw->fd);
 	if (!_tcsicmp(ciw->di.vendorid, _T("iomega")) && !_tcsicmp(ciw->di.productid, _T("rrd"))) {
 		write_log(_T("Device blacklisted\n"));
 		goto error;
@@ -2262,15 +2304,17 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 	uae_sem_init(&ciw->cda.sub_sem2, 0, 1);
 	ioctl_command_stop(unitnum);
 	update_device_info(unitnum);
+	write_log(_T("IOCTL: sys_cddev_open update_device_info completed.\n"));
 	ciw->open = true;
 	return 0;
 
 error:
+	write_log(_T("IOCTL: sys_cddev_open error for unit %d\n"), unitnum);
 	win32_error(ciw, unitnum, _T("CreateFile"));
 
 	free(ciw->tempbuffer);
 	ciw->tempbuffer = NULL;
-	close(ciw->fd);
+	if (ciw->fd != -1) close(ciw->fd);
 	ciw->fd = -1;
 	return -1;
 }
@@ -2279,6 +2323,7 @@ error:
 static void sys_cddev_close(struct dev_info_ioctl* ciw, int unitnum) {
 	if (ciw->open == false)
 		return;
+	write_log(_T("IOCTL: sys_cddev_close called for unit %d\n"), unitnum);
 	ciw_cdda_stop(&ciw->cda);
 	close_createfile(ciw);
 	free(ciw->tempbuffer);
@@ -2295,17 +2340,21 @@ static int open_device(int unitnum, const char* ident, int flags)
 	if (ident && ident[0]) {
 #ifdef __MACH__
 		char ident_buf[64];
-		const char* ident_match = ident;
+		const char* ident_match1 = ident;
+		const char* ident_match2 = ident;
 		if (!strncmp(ident, "/dev/rdisk", 10)) {
 			snprintf(ident_buf, sizeof(ident_buf), "/dev/disk%s", ident + 10);
-			ident_match = ident_buf;
+			ident_match2 = ident_buf;
+		} else if (!strncmp(ident, "/dev/disk", 9)) {
+			snprintf(ident_buf, sizeof(ident_buf), "/dev/rdisk%s", ident + 9);
+			ident_match2 = ident_buf;
 		}
 #endif
 		for (int i = 0; i < MAX_TOTAL_SCSI_DEVICES; i++) {
 			ciw = &ciw32[i];
 			if (unittable[i] == 0 && ciw->drvletter[0] != 0) {
 #ifdef __MACH__
-				if (!strcmp(ciw->drvlettername, ident_match)) {
+				if (!strcmp(ciw->drvlettername, ident_match1) || !strcmp(ciw->drvlettername, ident_match2)) {
 #else
 				if (!strcmp(ciw->drvlettername, ident)) {
 #endif
@@ -2370,6 +2419,7 @@ static int open_bus(int flags)
 		write_log(_T("IOCTL open_bus() more than once!\n"));
 		return 1;
 	}
+	write_log(_T("IOCTL open_bus() called with flags=%d\n"), flags);
 	total_devices = 0;
 	auto cd_drives = get_cd_drives();
 	if (!cd_drives.empty())
@@ -2377,6 +2427,7 @@ static int open_bus(int flags)
 		for (const auto& drive: cd_drives)
 		{
 			const char* open_path = drive.c_str();
+			write_log(_T("IOCTL evaluating drive: %s\n"), open_path);
 #ifdef __MACH__
 			char open_buf[64];
 			if (!strncmp(open_path, "/dev/rdisk", 10)) {
@@ -2386,8 +2437,20 @@ static int open_bus(int flags)
 #endif
 			int fd = open(open_path, O_RDONLY | O_NONBLOCK);
 #ifdef __MACH__
-			if (fd == -1)
+			if (fd == -1) {
 				fd = open(open_path, O_RDONLY);
+			}
+
+			if (fd == -1 && !strncmp(open_path, "/dev/disk", 9)) {
+				snprintf(open_buf, sizeof(open_buf), "/dev/rdisk%s", open_path + 9);
+				fd = open(open_buf, O_RDONLY | O_NONBLOCK);
+				if (fd == -1) {
+					fd = open(open_buf, O_RDONLY);
+				}
+				if (fd != -1) {
+					open_path = open_buf;
+				}
+			}
 #endif
 			if (fd != -1) {
 				struct stat st;
@@ -2413,6 +2476,8 @@ static int open_bus(int flags)
 				close(fd);
 			}
 		}
+	} else {
+		write_log(_T("IOCTL get_cd_drives() returned no drives.\n"));
 	}
 	bus_open = 1;
 	uae_sem_init(&play_sem, 0, 1);

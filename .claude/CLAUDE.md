@@ -243,6 +243,14 @@ Platform-specific code is in `src/osdep/`:
 - Architecture-specific JIT in `src/jit/arm/` and `src/jit/x86/`
 - Windows uses MinGW-w64 which provides POSIX-compatible headers (`unistd.h`, `dirent.h`, etc.)
 
+### macOS Port Notes
+
+**DiskArbitration & CD-ROMs:**
+- macOS mounts Audio CDs via `cddafs`, which inherently puts an exclusive lock on the standard block device (e.g., `/dev/disk4`) returning `EBUSY` when `open()` is attempted.
+- `src/osdep/blkdev_ioctl.cpp` handles this by intentionally falling back to the raw character device (`/dev/rdisk4`).
+- Interfacing with Apple's `DiskArbitration` framework (to retrieve CD TOCs) *requires* the block device string. Therefore `ioctl_command_toc2` temporarily reverts `/dev/rdiskX` back to `/dev/diskX` before passing it to `DADiskCreateFromBSDName`. 
+- Fetching audio sectors requires grouping `CDDA_BUFFERS` into a single `ioctl` call from the character device, and unpacking the contiguous stream with a 96-byte padding gap matching Amiberry's 2448-byte CDDA stride.
+
 ### Windows Port Notes
 
 **Key Differences from POSIX platforms:**
