@@ -1209,7 +1209,7 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 }
 
 
-#ifdef __Linux__
+#ifdef __linux__
 static int do_raw_scsi(struct dev_info_ioctl* ciw, int unitnum, unsigned char* cmd, int cmdlen, unsigned char* data, int datalen) {
 	struct sg_io_hdr io_hdr;
 	unsigned char sense_buffer[32];
