@@ -667,6 +667,7 @@ int SDL_toupper(int c);
 int SDL_isdigit(int c);
 int SDL_isspace(int c);
 void* SDL_memset(void* dst, int c, size_t n);
+char* SDL_getenv(const char* name);
 void SDL_free(void* p);
 
 Uint64 SDL_GetPerformanceCounter(void);

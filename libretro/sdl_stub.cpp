@@ -155,6 +155,7 @@ int SDL_isdigit(int c) { return isdigit(c); }
 int SDL_isspace(int c) { return isspace(c); }
 void* SDL_memset(void* dst, int c, size_t n) { return memset(dst, c, n); }
 void SDL_free(void* p) { free(p); }
+char* SDL_getenv(const char* name) { return getenv(name); }
 
 #ifdef _WIN32
 Uint64 SDL_GetPerformanceCounter(void)
