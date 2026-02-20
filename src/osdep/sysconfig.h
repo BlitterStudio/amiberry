@@ -25,7 +25,7 @@
 #define PACKAGE_STRING "Amiberry"
 
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
-#ifndef __ANDROID__ // not for android
+#if !defined(__ANDROID__) && !defined(LIBRETRO_NO_JIT)
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
