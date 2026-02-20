@@ -244,6 +244,7 @@ When WinUAE updates core emulation (CPU, chipset, floppy, HDD, memory):
 - **Usually no platform dependencies** - code is identical between projects
 - Check for timing functions if present (`QueryPerformanceCounter` → `SDL_GetPerformanceCounter`)
 - Check for file I/O if disk/ROM handling changed
+- Check for CD-ROM physical IOCTL handling. **macOS specifically mounts physical audio CDs with exclusive `cddafs` locks**, requiring physical CD access `open()` to target character devices (`/dev/rdiskX`) instead of block devices (`/dev/diskX`). Apple's DiskArbitration framework TOC retrieval requires the block device string counterpart instead.
 - Check for threading if multi-threaded emulation changed
 - **Most core emulation merges cleanly with minimal or no changes**
 
