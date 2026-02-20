@@ -20,6 +20,10 @@
 #include <mach-o/dyld.h>
 #endif
 
+#ifdef LIBRETRO
+extern "C" const char* libretro_get_system_dir(void);
+#endif
+
 UAE_DLHANDLE uae_dlopen(const TCHAR *path)
 {
 	UAE_DLHANDLE result;
@@ -67,6 +71,26 @@ void uae_dlclose(UAE_DLHANDLE handle)
 
 UAE_DLHANDLE uae_dlopen_plugin(const TCHAR *name)
 {
+#ifdef LIBRETRO
+	const char* sysdir = libretro_get_system_dir();
+	if (sysdir && sysdir[0]) {
+		TCHAR path[MAX_DPATH];
+		// Try PUAE-compatible name first: {system_dir}/capsimg.so
+		snprintf(path, MAX_DPATH, "%s/%s%s", sysdir, "capsimg", LT_MODULE_EXT);
+		UAE_DLHANDLE handle = uae_dlopen(path);
+		if (!handle) {
+			// Try original amiberry name: {system_dir}/{name}.so
+			snprintf(path, MAX_DPATH, "%s/%s%s", sysdir, name, LT_MODULE_EXT);
+			handle = uae_dlopen(path);
+		}
+		if (handle) {
+			write_log(_T("DLOPEN: Loaded plugin %s\n"), path);
+			uae_dlopen_patch_common(handle);
+			return handle;
+		}
+	}
+	// Fall through to existing get_plugins_path() logic
+#endif
 #if defined(FSUAE)
 	const TCHAR *path = NULL;
 	if (plugin_lookup) {

@@ -37,9 +37,14 @@
 #include "rp.h"
 #endif
 
-#define FLAC__NO_DLL
 #include "zarchive.h"
+#include "archivers/chd/flac_platform_internal.h"
+#if CHD_FLAC_USE_DRFLAC
+#include "dr_flac.h"
+#else
+#define FLAC__NO_DLL
 #include "FLAC/stream_decoder.h"
+#endif
 
 #ifdef WITH_CHD
 #include "archivers/chd/chd.h"
@@ -193,6 +198,128 @@ static int do_read (struct cdunit *cdu, struct cdtoc *t, uae_u8 *data, int secto
 	return 0;
 }
 
+#if CHD_FLAC_USE_DRFLAC
+struct flac_zfile_stream
+{
+	struct zfile* handle;
+	drflac_uint64 size;
+	drflac_uint64 cursor;
+	drflac_uint64 base_offset;
+};
+
+static size_t flac_zfile_read(void* user, void* buffer_out, size_t bytes_to_read)
+{
+	auto* stream = static_cast<flac_zfile_stream*>(user);
+	if (!stream || !stream->handle || !buffer_out || bytes_to_read == 0)
+		return 0;
+	const size_t actual = zfile_fread(buffer_out, 1, bytes_to_read, stream->handle);
+	stream->cursor += actual;
+	return actual;
+}
+
+static drflac_bool32 flac_zfile_seek(void* user, int offset, drflac_seek_origin origin)
+{
+	auto* stream = static_cast<flac_zfile_stream*>(user);
+	if (!stream || !stream->handle)
+		return DRFLAC_FALSE;
+
+	if (origin == DRFLAC_SEEK_END && stream->size == 0)
+		stream->size = zfile_size(stream->handle) - stream->base_offset;
+
+	drflac_int64 target = 0;
+	if (origin == DRFLAC_SEEK_CUR)
+		target = static_cast<drflac_int64>(stream->base_offset + stream->cursor) + offset;
+	else if (origin == DRFLAC_SEEK_END)
+		target = static_cast<drflac_int64>(stream->base_offset + stream->size) + offset;
+	else
+		target = static_cast<drflac_int64>(stream->base_offset) + offset;
+
+	if (target < 0)
+		return DRFLAC_FALSE;
+
+	if (zfile_fseek(stream->handle, target, SEEK_SET) != 0)
+		return DRFLAC_FALSE;
+
+	stream->cursor = static_cast<drflac_uint64>(target - stream->base_offset);
+	return DRFLAC_TRUE;
+}
+
+static drflac_bool32 flac_zfile_tell(void* user, drflac_int64* cursor)
+{
+	auto* stream = static_cast<flac_zfile_stream*>(user);
+	if (!stream || !cursor)
+		return DRFLAC_FALSE;
+	*cursor = static_cast<drflac_int64>(stream->cursor);
+	return DRFLAC_TRUE;
+}
+
+static void flac_get_size(struct cdtoc* t)
+{
+	if (!t->handle)
+		return;
+
+	const uae_s64 start_pos = zfile_ftell(t->handle);
+	zfile_fseek(t->handle, t->offset, SEEK_SET);
+
+	flac_zfile_stream stream = {};
+	stream.handle = t->handle;
+	stream.base_offset = t->offset;
+	{
+		const uae_s64 size = zfile_size(t->handle);
+		stream.size = (size > static_cast<uae_s64>(stream.base_offset)) ? static_cast<drflac_uint64>(size - stream.base_offset) : 0;
+	}
+	stream.cursor = 0;
+
+	drflac* flac = drflac_open(flac_zfile_read, flac_zfile_seek, flac_zfile_tell, &stream, nullptr);
+	if (flac) {
+		if (flac->totalPCMFrameCount > 0 && flac->channels > 0) {
+			t->filesize = static_cast<uae_s64>(flac->totalPCMFrameCount * flac->channels * sizeof(int16_t));
+		}
+		drflac_close(flac);
+	}
+
+	if (start_pos >= 0)
+		zfile_fseek(t->handle, start_pos, SEEK_SET);
+}
+
+static uae_u8* flac_get_data(struct cdtoc* t)
+{
+	write_log(_T("FLAC: unpacking '%s'..\n"), zfile_getname(t->handle));
+	t->writeoffset = 0;
+
+	const uae_s64 start_pos = zfile_ftell(t->handle);
+	zfile_fseek(t->handle, t->offset, SEEK_SET);
+
+	flac_zfile_stream stream = {};
+	stream.handle = t->handle;
+	stream.base_offset = t->offset;
+	{
+		const uae_s64 size = zfile_size(t->handle);
+		stream.size = (size > static_cast<uae_s64>(stream.base_offset)) ? static_cast<drflac_uint64>(size - stream.base_offset) : 0;
+	}
+	stream.cursor = 0;
+
+	drflac* flac = drflac_open(flac_zfile_read, flac_zfile_seek, flac_zfile_tell, &stream, nullptr);
+	if (flac && t->data) {
+		drflac_uint64 frames = flac->totalPCMFrameCount;
+		if (frames == 0 && t->filesize > 0 && flac->channels > 0)
+			frames = static_cast<drflac_uint64>(t->filesize / (flac->channels * sizeof(int16_t)));
+
+		if (frames > 0) {
+			const drflac_uint64 frames_read = drflac_read_pcm_frames_s16(
+				flac, frames, reinterpret_cast<drflac_int16*>(t->data));
+			t->writeoffset = static_cast<int>(frames_read * flac->channels * sizeof(int16_t));
+		}
+		drflac_close(flac);
+		write_log(_T("FLAC: %s unpacked\n"), zfile_getname(t->handle));
+	}
+
+	if (start_pos >= 0)
+		zfile_fseek(t->handle, start_pos, SEEK_SET);
+
+	return t->data;
+}
+#else
 // WOHOO, library that supports virtual file access functions. Perfect!
 static void flac_metadata_callback (const FLAC__StreamDecoder *decoder, const FLAC__StreamMetadata *metadata, void *client_data)
 {
@@ -282,6 +409,7 @@ static uae_u8 *flac_get_data (struct cdtoc *t)
 	}
 	return t->data;
 }
+#endif
 
 void sub_to_interleaved (const uae_u8 *s, uae_u8 *d)
 {

@@ -1,5 +1,6 @@
 #pragma once
 #include "options.h"
+#include <SDL.h>
 
 #ifdef AMIBERRY
 #define MAX_MAPPINGS 128

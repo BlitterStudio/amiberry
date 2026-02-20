@@ -8,7 +8,9 @@
 #include "inputdevice.h"
 #include "amiberry_input.h"
 
+#ifndef LIBRETRO
 #include <fstream>
+#endif
 #include <algorithm>
 
 // Retroarch mapping reference: https://docs.libretro.com/guides/controller-autoconfiguration/
@@ -43,20 +45,73 @@ const std::string controller_axis_list[] = {
 	"lefttrigger", "righttrigger"
 };
 
+// Platform-agnostic line reader: FILE* for libretro (no <fstream>), ifstream for host
+class config_reader
+{
+public:
+	explicit config_reader(const std::string& path)
+	{
+#ifdef LIBRETRO
+		fp_ = fopen(path.c_str(), "rb");
+#else
+		ifs_.open(path);
+#endif
+	}
+	~config_reader()
+	{
+#ifdef LIBRETRO
+		if (fp_) fclose(fp_);
+#endif
+	}
+	config_reader(const config_reader&) = delete;
+	config_reader& operator=(const config_reader&) = delete;
+
+	bool is_open() const
+	{
+#ifdef LIBRETRO
+		return fp_ != nullptr;
+#else
+		return ifs_.is_open();
+#endif
+	}
+
+	bool getline(std::string& line)
+	{
+#ifdef LIBRETRO
+		char buf[1024];
+		if (!fgets(buf, sizeof(buf), fp_))
+			return false;
+		line = buf;
+		while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+			line.pop_back();
+		return true;
+#else
+		return static_cast<bool>(std::getline(ifs_, line));
+#endif
+	}
+
+private:
+#ifdef LIBRETRO
+	FILE* fp_ = nullptr;
+#else
+	std::ifstream ifs_;
+#endif
+};
+
 int find_retroarch(const std::string& find_setting, const std::string& retroarch_file)
 {
-	std::ifstream read_file(retroarch_file);
+	config_reader read_file(retroarch_file);
 	if (!read_file.is_open())
 	{
 		write_log("Controller Detection: Could not open config file: %s\n", retroarch_file.c_str());
-		return -1; // File not found / not readable
+		return -1;
 	}
 
 	std::string line;
 	std::string delimiter = " = ";
 	int button = -1;
 
-	while (std::getline(read_file, line))
+	while (read_file.getline(line))
 	{
 		if (line.length() <= 1)
 			continue;
@@ -135,14 +190,15 @@ int find_retroarch(const std::string& find_setting, const std::string& retroarch
 
 bool find_retroarch_polarity(const std::string& find_setting, const std::string& retroarch_file)
 {
-	std::ifstream read_file(retroarch_file);
+	config_reader read_file(retroarch_file);
 	if (!read_file.is_open())
 		return false;
+
 	std::string line;
 	std::string delimiter = " = ";
 	bool button = false;
 
-	while (std::getline(read_file, line))
+	while (read_file.getline(line))
 	{
 		if (line.length() <= 1)
 			continue;
@@ -176,9 +232,9 @@ bool find_retroarch_polarity(const std::string& find_setting, const std::string&
 
 std::string find_retroarch_key(const std::string& find_setting_prefix, int player, const std::string& suffix, const std::string& retroarch_file)
 {
-	std::ifstream read_file(retroarch_file);
+	config_reader read_file(retroarch_file);
 	if (!read_file.is_open())
-		return "nul"; // Fail fast if file can't be opened
+		return "nul";
 
 	std::string line;
 	const std::string delimiter = " = ";
@@ -188,7 +244,7 @@ std::string find_retroarch_key(const std::string& find_setting_prefix, int playe
 	if (!suffix.empty())
 		find_setting += std::to_string(player) + "_" + suffix;
 
-	while (std::getline(read_file, line))
+	while (read_file.getline(line))
 	{
 		if (line.length() <= 1)
 			continue;

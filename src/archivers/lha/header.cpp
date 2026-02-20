@@ -681,8 +681,20 @@ void init_header(char *name, struct stat *v_stat, LzHeader *hdr)
 		hdr->attribute = GENERIC_DIRECTORY_ATTRIBUTE;
 		hdr->original_size = 0;
 		len = readlink(name, lkname, 256);
-		lkname[len] = (char)'\0';
-		_sntprintf(hdr->name, sizeof hdr->name, "%s|%s", hdr->name, lkname);
+		if (len < 0) {
+			lkname[0] = (char)'\0';
+		} else {
+			if (len >= (int)sizeof lkname)
+				len = (int)sizeof lkname - 1;
+			lkname[len] = (char)'\0';
+		}
+
+		size_t name_len = strlen(hdr->name);
+		if (name_len < sizeof hdr->name) {
+			_sntprintf(hdr->name + name_len, sizeof hdr->name - name_len, "|%s", lkname);
+		} else {
+			hdr->name[sizeof hdr->name - 1] = (char)'\0';
+		}
 	}
 #endif
 	if (generic_format)

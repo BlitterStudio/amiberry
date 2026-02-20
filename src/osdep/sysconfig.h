@@ -25,7 +25,7 @@
 #define PACKAGE_STRING "Amiberry"
 
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(CPU_AARCH64) || defined(__aarch64__) || defined(_M_ARM64)
-#ifndef __ANDROID__ // not for android
+#if !defined(__ANDROID__) && !defined(LIBRETRO_NO_JIT)
 #define JIT /* JIT compiler support */
 #define USE_JIT_FPU
 #endif
@@ -35,7 +35,9 @@
 //#define JIT_DEBUG_VISUAL
 
 
+#ifndef AMIBERRY
 #define AMIBERRY
+#endif
 #ifndef UAE
 #define UAE
 #endif
@@ -153,7 +155,9 @@
 #define WITH_VPAR 1
 #endif
 
+#ifndef LIBRETRO
 #define WITH_SCSI_IOCTL
+#endif
 
 /* #define WITH_SCSI_SPTI */
 
@@ -718,6 +722,8 @@ typedef char TCHAR;
 #endif
 #ifndef _WIN32
 #define _tzset()            tzset()
+#endif
+#ifndef __MINGW32__
 #define _timezone           timezone
 #define _daylight           daylight
 // Ftello and fseeko on OSX are already 64bit
@@ -728,6 +734,8 @@ typedef char TCHAR;
 #define _ftelli64(x)        ftello64(x)
 #define _fseeki64(x,y,z)    fseeko64(x,y,z)
 #endif
+#endif
+#ifndef __MINGW32__
 #define _wunlink(x)         unlink(x)
 #define _istalnum(x)        isalnum(x)
 #elif defined(AMIBERRY)

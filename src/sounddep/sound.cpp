@@ -28,6 +28,10 @@
 
 #include "sounddep/sound.h"
 
+#ifdef LIBRETRO
+#include "libretro_shared.h"
+#endif
+
 struct sound_dp
 {
 	SDL_AudioDeviceID dev;
@@ -253,6 +257,8 @@ static void clearbuffer (struct sound_data *sd)
 	}
 }
 
+#include "sound_platform_internal.h"
+
 static void set_reset(struct sound_data *sd)
 {
 	sd->reset = true;
@@ -400,6 +406,9 @@ static int open_audio_sdl2(struct sound_data* sd, int index)
 		sd->sndbufsize = SND_MAX_BUFFER;
 	sd->samplesize = ch * 16 / 8;
 	s->pullmode = currprefs.sound_pullmode;
+
+	if (sound_platform_open_audio(sd, index))
+		return 1;
 
 	SDL_AudioSpec want = {}, have;
 	want.freq = freq;
@@ -703,6 +712,8 @@ bool audio_finish_pull()
 
 static void finish_sound_buffer_sdl2(struct sound_data *sd, uae_u16 *sndbuffer)
 {
+	if (sound_platform_output_audio(sd, sndbuffer))
+		return;
 	const auto* s = sd->data;
 	if (!sd->waiting_for_buffer)
 		return;
@@ -866,6 +877,8 @@ void finish_sound_buffer()
 
 int enumerate_sound_devices()
 {
+	if (sound_platform_enumerate_devices())
+		return num_sound_devices;
 	if (!num_sound_devices) {
 
 		write_log("Enumerating SDL2 playback devices...\n");

@@ -693,8 +693,89 @@ jobs:
             android/app/build/logs/**
           if-no-files-found: warn
 
+  build-libretro:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: unix
+            arch: x86_64
+            artifact: amiberry_libretro.so
+          - os: ubuntu-latest
+            platform: unix
+            arch: aarch64
+            artifact: amiberry_libretro.so
+          - os: windows-latest
+            platform: win
+            arch: x86_64
+            artifact: amiberry_libretro.dll
+    steps:
+      - name: Check out amiberry
+        uses: actions/checkout@v4
+        with:
+          path: amiberry
+          submodules: true
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-zlib make
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          if [ "${{ matrix.arch }}" = "aarch64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            ZLIB_PREFIX="${RUNNER_TEMP}/zlib-aarch64"
+            if sudo apt-get install -y zlib1g-dev-arm64-cross || sudo apt-get install -y libz-dev-arm64-cross; then
+              echo "ZLIB_CFLAGS=-I/usr/aarch64-linux-gnu/include" >> "$GITHUB_ENV"
+              echo "ZLIB_LIBS=-L/usr/aarch64-linux-gnu/lib -lz" >> "$GITHUB_ENV"
+            else
+              curl -fL https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz | tar xz -C "${RUNNER_TEMP}"
+              pushd "${RUNNER_TEMP}/zlib-1.3.2"
+              CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar RANLIB=aarch64-linux-gnu-ranlib \
+                ./configure --static --prefix="${ZLIB_PREFIX}"
+              make -j$(nproc)
+              make install
+              popd
+              echo "ZLIB_CFLAGS=-I${ZLIB_PREFIX}/include" >> "$GITHUB_ENV"
+              echo "ZLIB_LIBS=${ZLIB_PREFIX}/lib/libz.a" >> "$GITHUB_ENV"
+            fi
+          fi
+
+      - name: Build Libretro Core (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          cd amiberry/libretro
+          make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
+
+      - name: Build Libretro Core
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd amiberry/libretro
+          if [ "${{ matrix.arch }}" = "aarch64" ]; then
+            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ ZLIB_CFLAGS="${ZLIB_CFLAGS}" ZLIB_LIBS="${ZLIB_LIBS}" -j$(nproc)
+          else
+            make platform=${{ matrix.platform }} ARCH=${{ matrix.arch }} -j$(nproc)
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amiberry-libretro-${{ matrix.platform }}-${{ matrix.arch }}
+          path: amiberry/libretro/${{ matrix.artifact }}
+
   create-release:
-    needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-android]
+    needs: [merge-macOS-universal, build-fedora, build-ubuntu, build-debian-amd64, build-debian-arm64, build-windows, build-android, build-libretro]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.ref_type == 'tag' && (startsWith(github.ref_name, 'v') || startsWith(github.ref_name, 'preview-v'))

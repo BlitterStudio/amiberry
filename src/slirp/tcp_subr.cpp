@@ -661,7 +661,16 @@ int tcp_emu(struct socket *so, struct mbuf *m)
 						}
 					}
 				}
-				so_rcv->sb_cc = snprintf(so_rcv->sb_data, sizeof so_rcv->sb_data, "%d,%d\r\n", n1, n2);
+				size_t sb_avail = so_rcv->sb_datalen;
+				if (sb_avail > 0) {
+					int wrote = snprintf(so_rcv->sb_data, sb_avail, "%d,%d\r\n", n1, n2);
+					size_t used = wrote > 0 ? (size_t)wrote : 0;
+					if (used >= sb_avail)
+						used = sb_avail - 1;
+					so_rcv->sb_cc = (u_int)used;
+				} else {
+					so_rcv->sb_cc = 0;
+				}
 				so_rcv->sb_rptr = so_rcv->sb_data;
 				so_rcv->sb_wptr = so_rcv->sb_data + so_rcv->sb_cc;
 			}
@@ -1028,13 +1037,13 @@ do_prompt:
 			m->m_len = bptr - m->m_data; /* Adjust length */
 			m->m_len += snprintf(bptr, M_FREEROOM(m), "27 Entering Passive Mode (%d,%d,%d,%d,%d,%d)\r\n%s",
 					    n1, n2, n3, n4, n5, n6, x==7?buff:"");
-			
+
 			return 1;
 		}
 		
 		return 1;
 				   
-	 case EMU_KSH:
+	 case EMU_KSH: {
 		/*
 		 * The kshell (Kerberos rsh) and shell services both pass
 		 * a local port port number to carry signals to the server
@@ -1049,11 +1058,20 @@ do_prompt:
 			lport += m->m_data[i] - '0';
 		}
 		if (m->m_data[m->m_len-1] == '\0' && lport != 0 &&
-		    (so = solisten(0, so->so_laddr.s_addr, htons(lport), SS_FACCEPTONCE)) != NULL)
-			m->m_len = snprintf(m->m_data, sizeof m->m_data, "%d", ntohs(so->so_fport))+1;
+		    (so = solisten(0, so->so_laddr.s_addr, htons(lport), SS_FACCEPTONCE)) != NULL) {
+			size_t avail = M_ROOM(m);
+			if (avail == 0)
+				return 1;
+			int wrote = snprintf(m->m_data, avail, "%d", ntohs(so->so_fport));
+			size_t used = wrote > 0 ? (size_t)wrote : 0;
+			if (used >= avail)
+				used = avail - 1;
+			m->m_len = used + 1;
+		}
 		return 1;
+	}
 		
-	 case EMU_IRC:
+	 case EMU_IRC: {
 		/*
 		 * Need to emulate DCC CHAT, DCC SEND and DCC MOVE
 		 */
@@ -1073,7 +1091,7 @@ do_prompt:
 		} else if (sscanf(bptr, "DCC SEND %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
-			
+
 			m->m_len = bptr - m->m_data; /* Adjust length */
 			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC SEND %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
@@ -1081,13 +1099,14 @@ do_prompt:
 		} else if (sscanf(bptr, "DCC MOVE %255s %u %u %u", buff, &laddr, &lport, &n1) == 4) {
 			if ((so = solisten(0, htonl(laddr), htons(lport), SS_FACCEPTONCE)) == NULL)
 				return 1;
-			
+
 			m->m_len = bptr - m->m_data; /* Adjust length */
 			m->m_len += snprintf(bptr, M_FREEROOM(m), "DCC MOVE %s %lu %u %u%c\n",
 			      buff, (unsigned long)ntohl(so->so_faddr.s_addr),
 			      ntohs(so->so_fport), n1, 1);
 		}
 		return 1;
+	}
 
 	 case EMU_REALAUDIO:
                 /* 
@@ -1275,6 +1294,7 @@ int tcp_ctl(struct socket *so)
 			      "Error: No application configured.\r\n");
 	  sb->sb_wptr += sb->sb_cc;
 	  return(0);
+	}
 
 	do_exec:
 		DEBUG_MISC((" executing %s \n",ex_ptr->ex_exec));
@@ -1300,5 +1320,4 @@ int tcp_ctl(struct socket *so)
 	   do_echo=-1;
 	   return(2);
 #endif
-	}
 }
