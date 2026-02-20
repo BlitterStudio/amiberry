@@ -79,6 +79,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
 	pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
 	pkg_check_modules(FLAC REQUIRED flac)
 	pkg_check_modules(PNG REQUIRED libpng)
+  pkg_check_modules(SERIALPORT REQUIRED libserialport)
 
 	# Store FreeBSD include/link info for target-specific application in SourceFiles.cmake
 	set(FREEBSD_INCLUDE_DIRS
@@ -119,6 +120,7 @@ include(packaging/CMakeLists.txt)
 
 # Link libraries (FreeBSD needs correct order)
 if(TARGET amiberry AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    target_link_options(amiberry PRIVATE -L/usr/local/lib)
     # Apply FreeBSD pkg-config include/link dirs
     if(FREEBSD_INCLUDE_DIRS)
         target_include_directories(amiberry PRIVATE ${FREEBSD_INCLUDE_DIRS})

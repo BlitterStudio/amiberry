@@ -1065,7 +1065,7 @@ struct dev_info_ioctl {
 	TCHAR drvlettername[30];
 	TCHAR devname[30];
 	int type;
-#ifndef __MACH__
+#ifdef __linux__
 	struct cdrom_tocentry cdromtoc;
 #endif
 	uae_u8 trackmode[100];
@@ -1125,7 +1125,7 @@ static int win32_error(struct dev_info_ioctl* ciw, int unitnum, const TCHAR* for
 	va_list arglist;
 	TCHAR buf[1000];
 	int err = errno;
-
+#ifdef __linux__
 	if (err == ENOMEDIUM) {
 		write_log(_T("IOCTL: media change, re-opening device\n"));
 		sys_cddev_close(ciw, unitnum);
@@ -1133,6 +1133,7 @@ static int win32_error(struct dev_info_ioctl* ciw, int unitnum, const TCHAR* for
 			write_log(_T("IOCTL: re-opening failed!\n"));
 		return -1;
 	}
+#endif
 	va_start(arglist, format);
 	_vsntprintf(buf, sizeof buf / sizeof(TCHAR), format, arglist);
 	write_log(_T("IOCTL ERR: unit=%d,%s,%d: %s\n"), unitnum, buf, err, strerror(err));
@@ -1208,7 +1209,7 @@ static int open_createfile(struct dev_info_ioctl* ciw, int fullaccess)
 }
 
 
-#ifndef __MACH__
+#ifdef __Linux__
 static int do_raw_scsi(struct dev_info_ioctl* ciw, int unitnum, unsigned char* cmd, int cmdlen, unsigned char* data, int datalen) {
 	struct sg_io_hdr io_hdr;
 	unsigned char sense_buffer[32];
@@ -1245,7 +1246,7 @@ static void sub_deinterleave(const uae_u8* s, uae_u8* d)
 	}
 }
 
-#ifndef __MACH__
+#ifdef __linux__
 static int spti_read(struct dev_info_ioctl* ciw, int unitnum, uae_u8* data, int sector, int sectorsize)
 {
 	uae_u8 cmd[12] = { 0xbe, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 };
@@ -1548,7 +1549,7 @@ static int ioctl_command_qcode(int unitnum, uae_u8* buf, int sector, bool all)
 		}
 	}
 	return 0;
-#else
+#elif defined(__linux__)
 	struct dev_info_ioctl* ciw = unitisopen(unitnum);
 	if (!ciw)
 		return 0;
@@ -1651,6 +1652,9 @@ static int ioctl_command_qcode(int unitnum, uae_u8* buf, int sector, bool all)
 	}
 
 	return 1;
+#else
+  //FreeBSD not implemented
+  return 0;
 #endif
 }
 
@@ -1889,7 +1893,7 @@ static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device
 
 	uae_sem_post(&ciw->cda.sub_sem);
 	return 1;
-#else
+#elif defined(__linux__)
 	if (!open_createfile(ciw, 0))
 		return 0;
 	uae_sem_wait(&ciw->cda.sub_sem);
@@ -1910,6 +1914,9 @@ static int fetch_geometry(struct dev_info_ioctl* ciw, int unitnum, struct device
 
 	uae_sem_post(&ciw->cda.sub_sem);
 	return 1;
+#else
+  //FreeBSD not implemented 
+  return 0;
 #endif
 }
 
@@ -1935,10 +1942,12 @@ static int eject(int unitnum, bool eject)
         if (ioctl(ciw->fd, DKIOCEJECT, 0) < 0)
             ret = 1;
     }
-#else
+#elif defined(__linux__)
     if (ioctl(ciw->fd, eject ? CDROMEJECT : CDROMCLOSETRAY, 0) < 0) {
         ret = 1;
     }
+#else
+    //FreeBSD not implemented 
 #endif
     return ret;
 }
@@ -2102,7 +2111,7 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 		write_log(_T("\n"));
 	}
 	return 1;
-#else
+#elif defined(__linux__)
 	int len;
 	int i;
 	struct cd_toc_head* th = &ciw->di.toc;
@@ -2202,6 +2211,9 @@ static int ioctl_command_toc2(int unitnum, struct cd_toc_head* tocout, bool hide
 
 	memcpy(tocout, th, sizeof(struct cd_toc_head));
 	return 1;
+#else
+  //FreeBSD not implemented 
+  return 0;
 #endif
 }
 static int ioctl_command_toc(int unitnum, struct cd_toc_head* tocout)
@@ -2284,13 +2296,14 @@ static int sys_cddev_open(struct dev_info_ioctl* ciw, int unitnum)
 		ciw->di.bytespersector = (int)blocksize;
 	else
 		ciw->di.bytespersector = 2048;
-#else
+#elif defined(__linux__)
 	struct hd_driveid id;
 	if (ioctl(ciw->fd, HDIO_GET_IDENTITY, &id) == 0) {
 		strncpy(ciw->di.vendorid, (const char*)id.model, sizeof(ciw->di.vendorid) - 1);
 		strncpy(ciw->di.productid, (const char*)id.serial_no, sizeof(ciw->di.productid) - 1);
 		strncpy(ciw->di.revision, (const char*)id.fw_rev, sizeof(ciw->di.revision) - 1);
 	}
+#else
 #endif
 
 	write_log(_T("IOCTL: sys_cddev_open device '%s' (%s/%s/%s) opened successfully (unit=%d,media=%d,fd=%d)\n"),
