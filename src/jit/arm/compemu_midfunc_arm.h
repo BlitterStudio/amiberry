@@ -34,7 +34,7 @@
 // Arm optimized midfunc
 DECLARE_MIDFUNC(arm_ADD_l(RW4 d, RR4 s));
 DECLARE_MIDFUNC(arm_ADD_ldiv8(RW4 d, RR4 s));
-DECLARE_MIDFUNC(arm_ADD_l_ri(RW4 d, IM32 i));
+DECLARE_MIDFUNC(arm_ADD_l_ri(RW4 d, IMPTR i));
 DECLARE_MIDFUNC(arm_ADD_l_ri8(RW4 d, IM8 i));
 DECLARE_MIDFUNC(arm_SUB_l_ri8(RW4 d, IM8 i));
 
@@ -42,7 +42,7 @@ DECLARE_MIDFUNC(arm_SUB_l_ri8(RW4 d, IM8 i));
 DECLARE_MIDFUNC(disp_ea20_target_add(RW4 target, RR4 reg, IM8 shift, IM8 extend));
 DECLARE_MIDFUNC(disp_ea20_target_mov(W4 target, RR4 reg, IM8 shift, IM8 extend));
 
-DECLARE_MIDFUNC(mov_l_mi(IMPTR d, IM32 s));
+DECLARE_MIDFUNC(mov_l_mi(IMPTR d, IMPTR s));
 DECLARE_MIDFUNC(pop_l(W4 d));
 DECLARE_MIDFUNC(push_l(RR4 s));
 DECLARE_MIDFUNC(sign_extend_16_rr(W4 d, RR2 s));
@@ -52,7 +52,7 @@ DECLARE_MIDFUNC(lea_l_rr_indexed(W4 d, RR4 s, RR4 index, IM8 factor));
 DECLARE_MIDFUNC(mov_l_rr(W4 d, RR4 s));
 DECLARE_MIDFUNC(mov_l_mr(IMPTR d, RR4 s));
 DECLARE_MIDFUNC(mov_l_rm(W4 d, IMPTR s));
-DECLARE_MIDFUNC(mov_l_ri(W4 d, IM32 s));
+DECLARE_MIDFUNC(mov_l_ri(W4 d, IMPTR s));
 DECLARE_MIDFUNC(mov_b_ri(W1 d, IM8 s));
 DECLARE_MIDFUNC(sub_l_ri(RW4 d, IM8 i));
 DECLARE_MIDFUNC(sub_w_ri(RW2 d, IM8 i));

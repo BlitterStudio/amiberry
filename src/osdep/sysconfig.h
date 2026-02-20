@@ -34,19 +34,6 @@
 // Uncomment to enable JIT visual corruption diagnostics
 //#define JIT_DEBUG_VISUAL
 
-// Uncomment to force all JIT opcodes through the interpreter fallback path.
-// If visual corruption disappears with this enabled, the bug is in a
-// compiled opcode handler. If it persists, the bug is in JIT infrastructure.
-//#define JIT_INTERPRET_ONLY
-
-// Uncomment to enable JIT opcode bisection.
-// Two modes controlled by JIT_BISECT_EXCLUDE:
-//   Without JIT_BISECT_EXCLUDE: ONLY opcodes in [MIN,MAX] are compiled
-//   With    JIT_BISECT_EXCLUDE: ALL opcodes compiled EXCEPT [MIN,MAX]
-//#define JIT_BISECT_OPCODES
-//#define JIT_BISECT_EXCLUDE
-//#define JIT_BISECT_MIN  0x8000
-//#define JIT_BISECT_MAX  0xFFFF
 
 #define AMIBERRY
 #ifndef UAE

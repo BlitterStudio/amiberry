@@ -462,7 +462,7 @@ static inline unsigned int cft_map(unsigned int f)
 
 uae_u8* start_pc_p;
 uae_u32 start_pc;
-uae_u32 current_block_pc_p;
+uintptr current_block_pc_p;
 static uintptr current_block_start_target;
 uae_u32 needed_flags;
 static uintptr next_pc_p;
@@ -1113,9 +1113,9 @@ void invalidate_block(blockinfo* bi)
     remove_deps(bi);
 }
 
-static inline void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uae_u32 target)
+static inline void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uintptr target)
 {
-    blockinfo* tbi = get_blockinfo_addr((void*)(uintptr)target);
+    blockinfo* tbi = get_blockinfo_addr((void*)target);
 
     Dif(!tbi) {
         jit_abort("Could not create jmpdep!");
@@ -1688,7 +1688,14 @@ static inline void writeback_const(int r)
         jit_abort("Trying to write back constant NF_HANDLER!");
     }
 
-    compemu_raw_mov_l_mi((uintptr)live.state[r].mem, live.state[r].val);
+    if (r == PC_P) {
+        /* PC_P holds a 64-bit host pointer — use the dedicated 64-bit
+           store path (LOAD_U64 + STR_xXi) instead of compemu_raw_mov_l_mi
+           which truncates to 32 bits via its IM32 parameter. */
+        compemu_raw_set_pc_i(live.state[r].val);
+    } else {
+        compemu_raw_mov_l_mi((uintptr)live.state[r].mem, live.state[r].val);
+    }
     log_vwrite(r);
     live.state[r].val = 0;
     set_status(r, INMEM);
@@ -1758,7 +1765,7 @@ static inline void disassociate(int r)
     evict(r);
 }
 
-static inline void set_const(int r, uae_u32 val)
+static inline void set_const(int r, uintptr val)
 {
     disassociate(r);
     live.state[r].val = val;
@@ -1816,7 +1823,13 @@ static int alloc_reg_hinted(int r, int willclobber, int hint)
     if (!willclobber) {
         if (live.state[r].status != UNDEF) {
             if (isconst(r)) {
-                compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+                if (r == PC_P) {
+                    /* PC_P holds a 64-bit host pointer — use LOAD_U64.
+                       compemu_raw_mov_l_ri uses LOAD_U32 which truncates. */
+                    LOAD_U64(bestreg, live.state[r].val);
+                } else {
+                    compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+                }
                 live.state[r].val = 0;
                 set_status(r, DIRTY);
                 log_isused(bestreg);
@@ -2155,9 +2168,21 @@ static inline int isinrom(uintptr addr)
 static inline bool isarm64unstableblock(uae_u32 pc)
 {
 #if defined(CPU_AARCH64)
-    /* Narrow guard for the known Lightwave startup hotspot that loops under
-     * ARM64 JIT in this codebase (observed at/around PC=0x4003dfbe). */
-    return pc >= 0x4003df00 && pc <= 0x4003e1ff;
+    /* Fixed safety guard for the known Lightwave startup hotspot that loops
+     * under ARM64 JIT (observed at/around PC=0x4003dfbe).  This guard is
+     * always active — the optional hotspot guard toggle does NOT bypass it. */
+    if (pc >= 0x4003df00 && pc <= 0x4003e1ff)
+        return true;
+
+    /* Guard for KS 3.1 boot-time code in RAMSEY memory where D0/D2
+     * corruption was confirmed.  Two corruption sites:
+     *   1. PC=0x0803ae96 — checksum loop
+     *   2. PC=0x0803b094 — tight loop where D0/D2 become garbage when
+     *      blocks get promoted from optlev=0 to full JIT compilation. */
+    if (pc >= 0x0803ae00 && pc <= 0x0803b100)
+        return true;
+
+    return false;
 #else
     (void)pc;
     return false;
@@ -2450,7 +2475,7 @@ void cache_invalidate(void) {
 }
 #endif
 
-uae_u32 get_const(int r)
+uintptr get_const(int r)
 {
     Dif(!isconst(r)) {
         jit_abort("Register %d should be constant, but isn't", r);
@@ -2458,9 +2483,9 @@ uae_u32 get_const(int r)
     return live.state[r].val;
 }
 
-uae_u8* compemu_host_pc_from_const(uae_u32 pc_const)
+uae_u8* compemu_host_pc_from_const(uintptr pc_const)
 {
-    return (uae_u8*)(uintptr)pc_const;
+    return (uae_u8*)pc_const;
 }
 
 void sync_m68k_pc(void)
@@ -2752,7 +2777,7 @@ static void freescratch(void)
  * Memory access and related functions, CREATE time                 *
  ********************************************************************/
 
-void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond)
+void register_branch(uintptr not_taken, uintptr taken, uae_u8 cond)
 {
     next_pc_p = not_taken;
     taken_pc_p = taken;
@@ -3928,29 +3953,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 }
 
                 failure = 1; // gb-- defaults to failure state
-#ifdef JIT_INTERPRET_ONLY
-                // Force all opcodes through interpreter fallback to isolate
-                // whether visual corruption is caused by compiled handlers.
-                if (false) {
-#elif defined(JIT_BISECT_OPCODES)
-  #ifdef JIT_BISECT_EXCLUDE
-                // Exclude mode: compile ALL opcodes EXCEPT those in excluded range(s).
-                // If corruption disappears, the guilty opcode is in an excluded range.
-                if (comptbl[opcode] && optlev > 1
-                    && !(opcode >= JIT_BISECT_MIN && opcode <= JIT_BISECT_MAX)
-    #ifdef JIT_BISECT_MIN2
-                    && !(opcode >= JIT_BISECT_MIN2 && opcode <= JIT_BISECT_MAX2)
-    #endif
-                    ) {
-  #else
-                // Include mode: only COMPILE opcodes in [MIN,MAX].
-                // If corruption appears, the guilty opcode is in this range.
-                if (comptbl[opcode] && optlev > 1
-                    && (opcode >= JIT_BISECT_MIN && opcode <= JIT_BISECT_MAX)) {
-  #endif
-#else
                 if (comptbl[opcode] && optlev > 1) {
-#endif
                     failure = 0;
                     if (!was_comp) {
                         comp_pc_p = (uae_u8*)pc_hist[i].location;
@@ -4098,6 +4101,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     uintptr v = live.state[PC_P].val;
                     uae_u32* tba;
                     blockinfo* tbi;
+
 
                     tbi = get_blockinfo_addr_new((void*)v);
                     match_states(tbi);

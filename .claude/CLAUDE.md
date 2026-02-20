@@ -171,14 +171,37 @@ When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR
 
 ### ARM64 JIT Stability Notes (2026-02)
 
-- ARM64 now defaults to direct JIT address mode (`jit_n_addr_unsafe=0` at reset). Unsafe banks still flip to indirect mode via normal `S_N_ADDR` handling in `map_banks()`.
-- ARM64 keeps ROM and UAE Boot ROM (`rtarea`) blocks in interpreter mode to avoid known unstable codegen paths.
-- A fixed safety fallback remains for the known Lightwave startup hotspot (`PC` range `0x4003df00`-`0x4003e1ff`), even if optional hotspot guard toggles are disabled.
-- ARM64 dynamically quarantines unstable JIT blocks learned at runtime (SIGSEGV/JIT fault recovery, autoconfig warning paths, and selected illegal-op startup probes), then runs those blocks interpreted.
-- Dynamic unstable-key lookup uses a bitmap (O(1) lookup), reset on `compemu_reset()`.
-- Guard logging is quiet by default; set `AMIBERRY_ARM64_GUARD_VERBOSE=1` for per-key/per-window quarantine logs during investigation.
-- Optional ARM64 hotspot guard now defaults OFF for performance; use `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` to re-enable it for A/B diagnostics.
-- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` forces optional hotspot guard OFF and does not bypass the fixed safety hotspot guard.
+- ARM64 defaults to direct JIT address mode (`jit_n_addr_unsafe=0` at reset). Unsafe banks flip to indirect mode via `S_N_ADDR` handling in `map_banks()`.
+- ARM64 keeps ROM and UAE Boot ROM (`rtarea`) blocks in interpreter mode.
+- Fixed safety fallback for the Lightwave startup hotspot (`PC` range `0x4003df00`-`0x4003e1ff`).
+- ARM64 dynamically quarantines unstable JIT blocks (SIGSEGV recovery, autoconfig paths, illegal-op probes) using an O(1) bitmap lookup, reset on `compemu_reset()`.
+- Fixed KS 3.1 quarantine guards PC range `0x0803ae00`-`0x0803b100` (RAMSEY memory CRC kernel).
+
+**Debugging env vars** (all optional, zero overhead when unset):
+- `AMIBERRY_ARM64_GUARD_VERBOSE=1` — log quarantine events
+- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` — re-enable optional hotspot guard (defaults OFF)
+
+### ARM64 JIT 64-bit Pointer Fix (2026-02, macos-jit branch)
+
+**Problem**: On platforms where `natmem_offset` lives above 4GB (e.g. macOS ARM64 at `0x300000000`), the JIT's virtual register `PC_P` (register 16) holds a 64-bit host pointer, but 18 code paths truncated it to 32 bits. All fixes are `CPU_AARCH64`-guarded (not macOS-only).
+
+**Design principle**: PC_P is the ONLY virtual register holding a 64-bit host pointer. All others (D0-D7, A0-A7, FLAGX, etc.) hold 32-bit M68k values. Fixes add PC_P-specific 64-bit paths while keeping 32-bit ops for everything else (W-register ops zero upper 32 bits for clean `[Xn, X27]` indexing).
+
+**Fix points** (files: `compemu_arm.h`, `compemu_support_arm.cpp`, `compemu_arm.cpp`, `codegen_arm64.cpp`, `compemu_midfunc_arm64.cpp`, `gencomp_arm.c`):
+1-3. `reg_status::val`, `set_const()`, `get_const()` — `uae_u32` → `uintptr`
+4-5. `register_branch()`, `compemu_host_pc_from_const()` — `uae_u32` → `uintptr`
+6-7. `arm_ADD_l_ri()`, `arm_ADD_l_ri8()`, `arm_SUB_l_ri8()` — 64-bit ADD/SUB when `d == PC_P`
+8-9. `mov_l_ri()`, `mov_l_mi()` — `IM32` → `IMPTR`; `LOAD_U64` for pc_p/pc_oldp
+10. `compemu_raw_mov_l_rr()` — `MOV_ww` → `MOV_xx` for PC_P
+11-12. `writeback_const()`, `alloc_reg_hinted()` — `LOAD_U64` path for PC_P
+13-14. Generated `compemu_arm.cpp` + `gencomp_arm.c` — `uae_u32 v1/v2` → `uintptr`
+15. `JITPTR` macro — `(uae_u32)(uintptr)` → `(uintptr)`
+16-17. `current_block_pc_p`, `create_jmpdep()` — `uae_u32` → `uintptr`
+18. `arm_ADD_l_ri()` parameter — `IM32` → `IMPTR` (was truncating `comp_pc_p` in all Bcc/DBcc branch target computations — the root cause of runtime crashes)
+
+**Natmem reservation**: On ARM64, `UAE_VM_32BIT` is dropped from the natmem reservation call since the JIT is 64-bit-clean. This avoids ~25 wasted mmap/munmap cycles on platforms where the kernel ignores low-address hints.
+
+**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has the same 32-bit type patterns but uses separate files. It works on platforms where natmem fits below 4GB. If x86_64 natmem ever moves above 4GB, the same fixes would be needed there.
 
 ### GUI System
 

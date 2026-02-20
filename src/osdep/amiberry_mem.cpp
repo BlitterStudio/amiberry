@@ -276,11 +276,10 @@ bool preinit_shm ()
 	uae_u32 max_allowed_mman = 512 + 256;
 	if (os_64bit) {
 #ifdef CPU_64_BIT
-		// On 64-bit builds, the JIT compiler uses 32-bit addressing (x86-64
-		// address override prefix / ARM64 32-bit operands). All pointers used
-		// by JIT code — natmem_offset, compiled_code, popallspace — must fit
-		// below 4GB. Since uae_vm_reserve() first tries base address 0x80000000,
-		// the maximum natmem_size that fits is 0x80000000 (2048 MB).
+		// On x86-64, the JIT compiler uses 32-bit addressing (address override
+		// prefix) so natmem must fit below 4GB → max 2GB from 0x80000000.
+		// On ARM64, the JIT is 64-bit pointer-clean so natmem can be anywhere,
+		// but we still cap the reservation size at 2GB (plenty for Amiga).
 		// This is plenty for Amiga emulation (2GB of Z3 address space).
 		max_allowed_mman = 2048 - 1;
 #else
@@ -367,7 +366,16 @@ bool preinit_shm ()
 	write_log(_T("MMAN: Attempting to reserve: %u MB\n"), natmem_size >> 20);
 
 #if 1
-	natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, UAE_VM_32BIT | UAE_VM_WRITE_WATCH));
+	{
+		int vm_flags = UAE_VM_32BIT | UAE_VM_WRITE_WATCH;
+#if defined(CPU_AARCH64)
+		/* ARM64 JIT is 64-bit pointer-clean: natmem can live above 4GB.
+		   Dropping UAE_VM_32BIT avoids ~25 futile mmap/munmap cycles on
+		   platforms (e.g. macOS) where the kernel ignores low-address hints. */
+		vm_flags &= ~UAE_VM_32BIT;
+#endif
+		natmem_reserved = static_cast<uae_u8*>(uae_vm_reserve(natmem_size, vm_flags));
+	}
 #else
 	natmem_size = 0x20000000;
 	natmem_reserved = (uae_u8 *) uae_vm_reserve_fixed(
@@ -424,8 +432,7 @@ bool preinit_shm ()
 	canbang = true;
 #ifdef CPU_64_BIT
 	if ((uintptr_t)natmem_reserved + natmem_reserved_size > (uintptr_t)0x100000000ULL) {
-		write_log (_T("MMAN: WARNING: natmem at %p exceeds 32-bit range - JIT direct mode disabled\n"), natmem_reserved);
-		canbang = false;
+		write_log (_T("MMAN: INFO: natmem at %p exceeds 32-bit range - JIT direct mode allowed (64-bit clean)\n"), natmem_reserved);
 	}
 #endif
 	return true;
