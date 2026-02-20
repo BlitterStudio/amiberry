@@ -1,5 +1,8 @@
 #pragma once
 
+// Returns true if mouse activation should be skipped when no SDL window exists.
+// Host always has a window, so this guard is unnecessary — return false.
+// Libretro returns true since it runs without an SDL window.
 static inline bool osdep_platform_require_window_for_mouse()
 {
 	return false;

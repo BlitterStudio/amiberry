@@ -66,6 +66,8 @@
 #include <iostream>
 #if defined(__linux__)
 #include <linux/kd.h>
+#endif
+#ifndef _WIN32
 #include <sys/ioctl.h>
 #endif
 

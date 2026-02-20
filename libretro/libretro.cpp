@@ -933,7 +933,6 @@ static bool core_options_update_display_callback(void)
 }
 
 extern int amiberry_main(int argc, char** argv);
-extern void reset_parse_cmdline();
 
 static bool path_is_absolute(const std::string& path)
 {

@@ -18,6 +18,7 @@ extern retro_log_printf_t log_cb;
 extern bool pixel_format_xrgb8888;
 
 void libretro_yield(void);
+void reset_parse_cmdline(void);
 
 #endif
 

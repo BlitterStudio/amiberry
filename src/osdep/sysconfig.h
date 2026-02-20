@@ -737,8 +737,6 @@ typedef char TCHAR;
 #endif
 #ifndef __MINGW32__
 #define _wunlink(x)         unlink(x)
-#endif
-#ifndef __MINGW32__
 #define _istalnum(x)        isalnum(x)
 #elif defined(AMIBERRY)
 /* Amiberry on Windows: TCHAR is char (non-UNICODE), so wide-char
