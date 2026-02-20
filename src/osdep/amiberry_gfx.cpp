@@ -1473,7 +1473,6 @@ void reenumeratemonitors()
 	enumeratedisplays();
 }
 
-
 static bool enumeratedisplays2(bool selectall)
 {
 	struct MultiDisplay *md = Displays;
