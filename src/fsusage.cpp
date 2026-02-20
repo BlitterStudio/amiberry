@@ -97,7 +97,7 @@ int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 	return 0;
 }
 
-#else /* ! _WIN32 */
+#else /* ! WINDOWS && ! __MINGW32__ */
 
 int statfs ();
 
@@ -181,7 +181,7 @@ methods that need to know it.
 Return 0 if successful, -1 if not.  When returning -1, ensure that
 ERRNO is either a system error value, or zero if DISK is NULL
 on a system that requires a non-NULL value.  */
-#ifndef WINDOWS
+#if !defined(WINDOWS) && !defined(__MINGW32__)
 int get_fs_usage (const TCHAR *path, const TCHAR *disk, struct fs_usage *fsp)
 {
 #ifdef STAT_STATFS3_OSF1
@@ -355,4 +355,4 @@ struct statfs *fsb;
 
 #endif /* _AIX && _I386 */
 
-#endif /* ! _WIN32 */
+#endif /* ! WINDOWS && ! __MINGW32__ */

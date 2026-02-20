@@ -623,9 +623,10 @@ void write_log(const char* format, ...)
 	int bufsize = WRITE_LOG_BUF_SIZE;
 	TCHAR* bufp;
 	va_list parms;
+	const bool has_libretro_log = false;
 
 #ifndef __ANDROID__
-	if (!amiberry_options.write_logfile && !console_logging && !debugfile)
+	if (!has_libretro_log && !amiberry_options.write_logfile && !console_logging && !debugfile)
 		return;
 #endif
 

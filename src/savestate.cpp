@@ -594,6 +594,198 @@ static void restore_header (uae_u8 *src)
 
 /* restore all subsystems */
 
+void restore_state_file(struct zfile *f)
+{
+	uae_u8 *chunk, *end;
+	TCHAR name[5];
+	unsigned int len, totallen;
+	size_t filepos;
+	int z3num, z2num;
+	bool end_found = false;
+
+	chunk = 0;
+	savestate_state = STATE_RESTORE;
+	savestate_init();
+
+	chunk = restore_chunk(f, name, &len, &totallen, &filepos);
+	if (!chunk || _tcsncmp(name, _T("ASF "), 4)) {
+		write_log(_T("Not an AmigaStateFile\n"));
+		return;
+	}
+	set_config_changed();
+	savestate_file = f;
+	restore_header(chunk);
+	xfree(chunk);
+	devices_restore_start();
+	clear_events();
+	z2num = z3num = 0;
+	for (;;) {
+		name[0] = 0;
+		chunk = end = restore_chunk(f, name, &len, &totallen, &filepos);
+		if (!_tcscmp(name, _T("END "))) {
+			if (end_found)
+				break;
+			end_found = true;
+			continue;
+		}
+		if (!_tcscmp(name, _T("CRAM"))) {
+			restore_cram(totallen, filepos);
+			continue;
+		}
+		else if (!_tcscmp(name, _T("BRAM"))) {
+			restore_bram(totallen, filepos);
+			continue;
+		}
+		else if (!_tcscmp(name, _T("A3K1"))) {
+			restore_a3000lram(totallen, filepos);
+			continue;
+		}
+		else if (!_tcscmp(name, _T("A3K2"))) {
+			restore_a3000hram(totallen, filepos);
+			continue;
+#ifdef AUTOCONFIG
+		}
+		else if (!_tcscmp(name, _T("FRAM"))) {
+			restore_fram(totallen, filepos, z2num++);
+			continue;
+		}
+		else if (!_tcscmp(name, _T("ZRAM"))) {
+			restore_zram(totallen, filepos, z3num++);
+			continue;
+		}
+		else if (!_tcscmp(name, _T("ZCRM"))) {
+			restore_zram(totallen, filepos, -1);
+			continue;
+		}
+		else if (!_tcscmp(name, _T("BORO"))) {
+			restore_bootrom(totallen, filepos);
+			continue;
+#endif
+#ifdef PICASSO96
+		}
+		else if (!_tcscmp(name, _T("PRAM"))) {
+			restore_pram(totallen, filepos);
+			continue;
+#endif
+		}
+		else if (!_tcscmp(name, _T("CYCS"))) {
+			end = restore_cycles(chunk);
+		}
+		else if (!_tcscmp(name, _T("CPU "))) {
+			end = restore_cpu(chunk);
+		}
+		else if (!_tcscmp(name, _T("CPUX")))
+			end = restore_cpu_extra(chunk);
+		else if (!_tcscmp(name, _T("CPUT")))
+			end = restore_cpu_trace(chunk);
+#ifdef FPUEMU
+		else if (!_tcscmp(name, _T("FPU ")))
+			end = restore_fpu(chunk);
+#endif
+#ifdef MMUEMU
+		else if (!_tcscmp(name, _T("MMU ")))
+			end = restore_mmu(chunk);
+#endif
+		else if (!_tcscmp(name, _T("AGAC")))
+			end = restore_custom_agacolors(chunk);
+		else if (!_tcscmp(name, _T("SPR0")))
+			end = restore_custom_sprite(0, chunk);
+		else if (!_tcscmp(name, _T("SPR1")))
+			end = restore_custom_sprite(1, chunk);
+		else if (!_tcscmp(name, _T("SPR2")))
+			end = restore_custom_sprite(2, chunk);
+		else if (!_tcscmp(name, _T("SPR3")))
+			end = restore_custom_sprite(3, chunk);
+		else if (!_tcscmp(name, _T("SPR4")))
+			end = restore_custom_sprite(4, chunk);
+		else if (!_tcscmp(name, _T("SPR5")))
+			end = restore_custom_sprite(5, chunk);
+		else if (!_tcscmp(name, _T("SPR6")))
+			end = restore_custom_sprite(6, chunk);
+		else if (!_tcscmp(name, _T("SPR7")))
+			end = restore_custom_sprite(7, chunk);
+		else if (!_tcscmp(name, _T("BPLX")))
+			end = restore_custom_bpl(chunk);
+		else if (!_tcscmp(name, _T("CIAA")))
+			end = restore_cia(0, chunk);
+		else if (!_tcscmp(name, _T("CIAB")))
+			end = restore_cia(1, chunk);
+		else if (!_tcscmp(name, _T("CHIP")))
+			end = restore_custom(chunk);
+		else if (!_tcscmp(name, _T("CINP")))
+			end = restore_input(chunk);
+		else if (!_tcscmp(name, _T("CHPX")))
+			end = restore_custom_extra(chunk);
+		else if (!_tcscmp(name, _T("CHPD")))
+			end = restore_custom_event_delay(chunk);
+		else if (!_tcscmp(name, _T("CHSL")))
+			end = restore_custom_slots(chunk);
+		else if (!_tcscmp(name, _T("AUD0")))
+			end = restore_audio(0, chunk);
+		else if (!_tcscmp(name, _T("AUD1")))
+			end = restore_audio(1, chunk);
+		else if (!_tcscmp(name, _T("AUD2")))
+			end = restore_audio(2, chunk);
+		else if (!_tcscmp(name, _T("AUD3")))
+			end = restore_audio(3, chunk);
+		else if (!_tcscmp(name, _T("BLIT")))
+			end = restore_blitter(chunk);
+		else if (!_tcscmp(name, _T("BLTX")))
+			end = restore_blitter_new(chunk);
+		else if (!_tcscmp(name, _T("DISK")))
+			end = restore_floppy(chunk);
+		else if (!_tcscmp(name, _T("DSK0")))
+			end = restore_disk(0, chunk);
+		else if (!_tcscmp(name, _T("DSK1")))
+			end = restore_disk(1, chunk);
+		else if (!_tcscmp(name, _T("DSK2")))
+			end = restore_disk(2, chunk);
+		else if (!_tcscmp(name, _T("DSK3")))
+			end = restore_disk(3, chunk);
+		else if (!_tcscmp(name, _T("DSD0")))
+			end = restore_disk2(0, chunk);
+		else if (!_tcscmp(name, _T("DSD1")))
+			end = restore_disk2(1, chunk);
+		else if (!_tcscmp(name, _T("DSD2")))
+			end = restore_disk2(2, chunk);
+		else if (!_tcscmp(name, _T("DSD3")))
+			end = restore_disk2(3, chunk);
+		else if (!_tcscmp(name, _T("KEYB")))
+			end = restore_keyboard(chunk);
+		else if (!_tcscmp(name, _T("KBM1")))
+			end = restore_kbmcu(chunk);
+		else if (!_tcscmp(name, _T("KBM2")))
+			end = restore_kbmcu2(chunk);
+		else if (!_tcscmp(name, _T("KBM3")))
+			end = restore_kbmcu3(chunk);
+#ifdef AUTOCONFIG
+		else if (!_tcscmp(name, _T("EXPA")))
+			end = restore_expansion(chunk);
+#endif
+		else if (!_tcscmp(name, _T("ROM ")))
+			end = restore_rom(chunk);
+#ifdef PICASSO96
+		else if (!_tcscmp(name, _T("P96 ")))
+			end = restore_p96(chunk);
+#endif
+		else if (!_tcscmp(name, _T("SCSD")))
+			end = restore_scsidev(chunk);
+		else if (!_tcscmp(name, _T("GAYL")))
+			end = restore_gayle(chunk);
+		else if (!_tcscmp(name, _T("IDE ")))
+			end = restore_gayle_ide(chunk);
+		else if (!_tcscmp(name, _T("FSYC")))
+			end = restore_filesys_common(chunk);
+		else if (!_tcscmp(name, _T("FSYP")))
+			end = restore_filesys_paths(chunk);
+		else if (!_tcscmp(name, _T("FSYS")))
+			end = restore_filesys(chunk);
+
+		if (chunk) xfree(chunk);
+	}
+	savestate_restore_finish();
+}
+
 void restore_state (const TCHAR *filename)
 {
 	struct zfile *f;
@@ -957,7 +1149,7 @@ static void save_rams (struct zfile *f, int comp)
 
 /* Save all subsystems */
 
-static int save_state_internal (struct zfile *f, const TCHAR *description, int comp, bool savepath)
+int save_state_internal (struct zfile *f, const TCHAR *description, int comp, bool savepath)
 {
 	uae_u8 endhunk[] = { 'E', 'N', 'D', ' ', 0, 0, 0, 8 };
 	uae_u8 header[1000];

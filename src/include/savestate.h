@@ -260,7 +260,9 @@ extern void restore_ar_finish(void);
 
 extern void savestate_initsave(const TCHAR *filename, int docompress, int nodialogs, bool save);
 extern int save_state(const TCHAR *filename, const TCHAR *description);
+extern int save_state_internal(struct zfile *f, const TCHAR *description, int comp, bool savepath);
 extern void restore_state(const TCHAR *filename);
+extern void restore_state_file(struct zfile *f);
 extern bool savestate_restore_finish(void);
 extern void savestate_restore_final(void);
 extern void savestate_memorysave(void);

@@ -11,7 +11,9 @@
 
 #if defined(_WIN32) && !defined(AMIBERRY)
 #include <windows.h>
+#ifndef LIBRETRO
 #include "win32.h"
+#endif
 #endif
 
 #include "options.h"

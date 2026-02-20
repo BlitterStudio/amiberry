@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "ppcd.h"
 
@@ -103,6 +104,24 @@ static char * simm(int val, int hex, int s)
     return out;
 }
 
+static void operands_append(char **ptr, const char *fmt, ...)
+{
+    size_t offset = (size_t)(*ptr - o->operands);
+    if (offset >= sizeof(o->operands))
+        return;
+
+    size_t remaining = sizeof(o->operands) - offset;
+    va_list ap;
+    va_start(ap, fmt);
+    int written = vsnprintf(*ptr, remaining, fmt, ap);
+    va_end(ap);
+    if (written < 0)
+        return;
+
+    size_t advance = (written >= (int)remaining) ? remaining - 1 : (size_t)written;
+    *ptr += advance;
+}
+
 // Simple instruction form + reserved bitmask.
 static void put(const char * mnem, u32 mask, u32 chkval=0, int iclass=PPC_DISA_OTHER)
 {
@@ -187,68 +206,68 @@ static void integer(const char *mnem, char form, int dab, int hex=0, int s=1, in
     char * ptr = o->operands;
     int rd = DIS_RD, ra = DIS_RA, rb = DIS_RB;
     strncpy(o->mnemonic, mnem, sizeof(o->mnemonic));
-    if(crfD) ptr += snprintf(ptr, sizeof ptr, "%s%i" COMMA, crname, rd >> 2); // CMP only
-    if(L) ptr += snprintf(ptr, sizeof ptr, "%i" COMMA, rd & 1);           // CMP only
+    if(crfD) operands_append(&ptr, "%s%i" COMMA, crname, rd >> 2); // CMP only
+    if(L) operands_append(&ptr, "%i" COMMA, rd & 1);           // CMP only
     if(form == 'D')
     {
-        if(dab & DAB_D) ptr += snprintf(ptr, sizeof ptr, "%s", REGD);
+        if(dab & DAB_D) operands_append(&ptr, "%s", REGD);
         if(dab & DAB_A)
         {
-            if(dab & DAB_D) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGA);
+            if(dab & DAB_D) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGA);
         }
-        if(imm) ptr += snprintf(ptr, sizeof ptr, COMMA "%s", simm(s ? DIS_SIMM : DIS_UIMM, hex, s));
+        if(imm) operands_append(&ptr, COMMA "%s", simm(s ? DIS_SIMM : DIS_UIMM, hex, s));
     }
     else if(form == 'S')
     {
-        if(dab & ASB_A) ptr += snprintf(ptr, sizeof ptr, "%s", REGA);
+        if(dab & ASB_A) operands_append(&ptr, "%s", REGA);
         if(dab & ASB_S)
         {
-            if(dab & ASB_A) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGS);
+            if(dab & ASB_A) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGS);
         }
-        if(imm) ptr += snprintf(ptr, sizeof ptr, COMMA "%s", simm(s ? DIS_SIMM : DIS_UIMM, hex, s));
+        if(imm) operands_append(&ptr, COMMA "%s", simm(s ? DIS_SIMM : DIS_UIMM, hex, s));
     }
     else if(form == 'X')    // DAB
     {
-        if(dab & DAB_D) ptr += snprintf(ptr, sizeof ptr, "%s", REGD);
+        if(dab & DAB_D) operands_append(&ptr, "%s", REGD);
         if(dab & DAB_A)
         {
-            if(dab & DAB_D) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGA);
+            if(dab & DAB_D) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGA);
         }
         if(dab & DAB_B)
         {
-            if(dab & (DAB_D|DAB_A)) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGB);
+            if(dab & (DAB_D|DAB_A)) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGB);
         }
     }
     else if(form == 'F')    // FPU DAB
     {
-        if(dab & DAB_D) ptr += snprintf(ptr, sizeof ptr, "%s%i", fregname, rd);
+        if(dab & DAB_D) operands_append(&ptr, "%s%i", fregname, rd);
         if(dab & DAB_A)
         {
-            if(dab & DAB_D) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGA);
+            if(dab & DAB_D) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGA);
         }
         if(dab & DAB_B)
         {
-            if(dab & (DAB_D|DAB_A)) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGB);
+            if(dab & (DAB_D|DAB_A)) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGB);
         }
     }
     else if(form == 'Z')    // ASB
     {
-        if(dab & ASB_A) ptr += snprintf(ptr, sizeof ptr, "%s", REGA);
+        if(dab & ASB_A) operands_append(&ptr, "%s", REGA);
         if(dab & ASB_S)
         {
-            if(dab & ASB_A) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGS);
+            if(dab & ASB_A) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGS);
         }
         if(dab & ASB_B)
         {
-            if(dab & (ASB_A|ASB_S)) ptr += snprintf(ptr, sizeof ptr, "%s", COMMA);
-            ptr += snprintf(ptr, sizeof ptr, "%s", REGB);
+            if(dab & (ASB_A|ASB_S)) operands_append(&ptr, "%s", COMMA);
+            operands_append(&ptr, "%s", REGB);
         }
     }
     else { ill(); return; }
@@ -411,8 +430,8 @@ static void bcx(int Disp, int L)
             const char *cond = b_cond[((bo & 8) >> 1) | (bi & 3)];
             if(cond != NULL)                                            // BO[1]
             {
-                snprintf(o->mnemonic, sizeof o->mnemonic, "b%s%s%s%c", cond, r, b_opt[Disp ? AALK : LK], y);
-                if(bi >= 4) ptr += snprintf(ptr, sizeof ptr, "%s%i", crname, bi >> 2);
+            snprintf(o->mnemonic, sizeof o->mnemonic, "b%s%s%s%c", cond, r, b_opt[Disp ? AALK : LK], y);
+                if(bi >= 4) operands_append(&ptr, "%s%i", crname, bi >> 2);
                 if(Disp) ptr = place_target(ptr, bi >= 4);
                 o->iclass |= PPC_DISA_SIMPLIFIED;
                 return;
@@ -428,7 +447,7 @@ static void bcx(int Disp, int L)
         if(b_ctr[bo >> 1])
         {
             snprintf(o->mnemonic, sizeof o->mnemonic, "b%s%s%s%c", b_ctr[bo >> 1], r, b_opt[Disp ? AALK : LK], y);
-            if(!(bo & 16)) ptr += snprintf(ptr, sizeof ptr, "%i", bi);
+            if(!(bo & 16)) operands_append(&ptr, "%i", bi);
             if(Disp) ptr = place_target(ptr, !(bo & 16));
             o->iclass |= PPC_DISA_SIMPLIFIED;
             return;
@@ -438,7 +457,7 @@ static void bcx(int Disp, int L)
 
     // Not simplified standard form
     snprintf(o->mnemonic, sizeof o->mnemonic, "bc%s%s", r, b_opt[Disp ? AALK : LK]);
-    ptr += snprintf(ptr, sizeof ptr, "%i" COMMA "%i", bo, bi);
+    operands_append(&ptr, "%i" COMMA "%i", bo, bi);
     if(Disp) ptr = place_target(ptr, 1);
 }
 
@@ -514,10 +533,10 @@ static void rlw(const char *name, int rb, int ins=0)
     int mb = DIS_MB, me = DIS_ME;
     char * ptr = o->operands;
     snprintf(o->mnemonic, sizeof o->mnemonic, "rlw%s%c", name, Rc ? '.' : '\0');
-    ptr += snprintf(ptr, sizeof ptr, "%s" COMMA "%s" COMMA, REGA, REGS);
-    if(rb) ptr += snprintf(ptr, sizeof ptr,"%s" COMMA, REGB);
-    else   ptr += snprintf(ptr, sizeof ptr, "%i" COMMA, DIS_RB);     // sh
-    ptr += snprintf(ptr, sizeof ptr, "%i" COMMA "%i", mb, me);
+    operands_append(&ptr, "%s" COMMA "%s" COMMA, REGA, REGS);
+    if(rb) operands_append(&ptr, "%s" COMMA, REGB);
+    else   operands_append(&ptr, "%i" COMMA, DIS_RB);     // sh
+    operands_append(&ptr, "%i" COMMA "%i", mb, me);
 
     // Put mask in target.
     MASK32(mb, me);
@@ -545,11 +564,11 @@ static void rld(char *name, int rb, int mtype)
     if(Instr & 0x02) n += 32;   // sh
 
     char * ptr = o->operands;
-    snprintf(o->mnemonic, "rld%s%c", name, Rc ? '.' : '\0');
-    ptr += snprintf(ptr, "%s" COMMA "%s" COMMA, REGA, REGS);
-    if(rb) ptr += snprintf(ptr, "%s" COMMA, REGB);
-    else   ptr += snprintf(ptr, "%i" COMMA, n);
-    ptr += snprintf(ptr, "%i", m);
+    snprintf(o->mnemonic, sizeof o->mnemonic, "rld%s%c", name, Rc ? '.' : '\0');
+    operands_append(&ptr, "%s" COMMA "%s" COMMA, REGA, REGS);
+    if(rb) operands_append(&ptr, "%s" COMMA, REGB);
+    else   operands_append(&ptr, "%i" COMMA, n);
+    operands_append(&ptr, "%i", m);
 
     // Put mask in target.
     switch(mtype)

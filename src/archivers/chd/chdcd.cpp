@@ -394,7 +394,8 @@ uint16_t read_uint16(FILE* infile)
 	uint16_t res = 0;
 	unsigned char buffer[2];
 
-	fread(buffer, 2, 1, infile);
+	if (fread(buffer, 2, 1, infile) != 1)
+		return 0;
 
 	res = buffer[1] | buffer[0] << 8;
 
@@ -416,7 +417,8 @@ uint32_t read_uint32(FILE* infile)
 	uint32_t res = 0;
 	unsigned char buffer[4];
 
-	fread(buffer, 4, 1, infile);
+	if (fread(buffer, 4, 1, infile) != 1)
+		return 0;
 
 	res = buffer[3] | buffer[2] << 8 | buffer[1] << 16 | buffer[0] << 24;
 
@@ -439,7 +441,8 @@ uint64_t read_uint64(FILE* infile)
 	uint64_t res;
 	unsigned char buffer[8];
 
-	fread(buffer, 8, 1, infile);
+	if (fread(buffer, 8, 1, infile) != 1)
+		return 0;
 
 	res0 = buffer[3] | buffer[2] << 8 | buffer[1] << 16 | buffer[0] << 24;
 	res1 = buffer[7] | buffer[6] << 8 | buffer[5] << 16 | buffer[4] << 24;
@@ -487,7 +490,11 @@ std::error_condition chdcd_parse_nero(const char* tocfname, cdrom_toc& outtoc, c
 
 	// seek to 12 bytes before the end
 	fseek(infile, -12, SEEK_END);
-	fread(buffer, 12, 1, infile);
+	if (fread(buffer, 12, 1, infile) != 1)
+	{
+		fclose(infile);
+		return std::error_condition(errno, std::generic_category());
+	}
 
 	if (memcmp(buffer, "NER5", 4))
 	{
@@ -514,7 +521,11 @@ std::error_condition chdcd_parse_nero(const char* tocfname, cdrom_toc& outtoc, c
 		int track;
 
 		fseek(infile, chain_offs, SEEK_SET);
-		fread(buffer, 8, 1, infile);
+		if (fread(buffer, 8, 1, infile) != 1)
+		{
+			fclose(infile);
+			return std::error_condition(errno, std::generic_category());
+		}
 
 		chunk_size = (buffer[7] | buffer[6] << 8 | buffer[5] << 16 | buffer[4] << 24);
 
@@ -526,8 +537,11 @@ std::error_condition chdcd_parse_nero(const char* tocfname, cdrom_toc& outtoc, c
 			// skip second chunk size and UPC code
 			fseek(infile, 20, SEEK_CUR);
 
-			fread(&start, 1, 1, infile);
-			fread(&end, 1, 1, infile);
+			if (fread(&start, 1, 1, infile) != 1 || fread(&end, 1, 1, infile) != 1)
+			{
+				fclose(infile);
+				return std::error_condition(errno, std::generic_category());
+			}
 
 			//          printf("Start track %d  End track: %d\n", start, end);
 
@@ -754,7 +768,11 @@ static std::error_condition chdcd_parse_gdi(const char* tocfname, cdrom_toc& out
 
 	outtoc.flags = CD_FLAG_GDROM;
 
-	fgets(linebuffer, 511, infile);
+	if (!fgets(linebuffer, sizeof linebuffer, infile))
+	{
+		fclose(infile);
+		return chd_file::error::INVALID_DATA;
+	}
 	numtracks = atoi(linebuffer);
 
 	for (i = 0; i < numtracks; ++i)
@@ -764,7 +782,11 @@ static std::error_condition chdcd_parse_gdi(const char* tocfname, cdrom_toc& out
 		int trksize, trktype;
 		int sz;
 
-		fgets(linebuffer, 511, infile);
+		if (!fgets(linebuffer, sizeof linebuffer, infile))
+		{
+			fclose(infile);
+			return chd_file::error::INVALID_DATA;
+		}
 
 		tok = strtok(linebuffer, " ");
 
@@ -890,15 +912,12 @@ std::error_condition chdcd_parse_cue(const char* tocfname, cdrom_toc& outtoc, ch
 
 	while (!feof(infile))
 	{
-		/* get the next line */
-		fgets(linebuffer, 511, infile);
+		if (!fgets(linebuffer, sizeof linebuffer, infile))
+			break;
 
-		/* if EOF didn't hit, keep going */
-		if (!feof(infile))
-		{
-			i = 0;
+		i = 0;
 
-			TOKENIZE
+		TOKENIZE
 
 				if (!strcmp(token, "FILE"))
 				{
@@ -1055,7 +1074,6 @@ std::error_condition chdcd_parse_cue(const char* tocfname, cdrom_toc& outtoc, ch
 
 					outtoc.tracks[trknum].postgap = frames;
 				}
-		}
 	}
 
 	/* close the input CUE */
@@ -1178,16 +1196,10 @@ bool chdcd_is_gdicue(const char* tocfname)
 
 	path = get_file_path(path);
 
-	while (!feof(infile))
+	while (fgets(linebuffer, sizeof linebuffer, infile))
 	{
-		fgets(linebuffer, 511, infile);
-
-		/* if EOF didn't hit, keep going */
-		if (!feof(infile))
-		{
-			has_rem_singledensity = has_rem_singledensity || !strncmp(linebuffer, "REM SINGLE-DENSITY AREA", 23);
-			has_rem_highdensity = has_rem_highdensity || !strncmp(linebuffer, "REM HIGH-DENSITY AREA", 21);
-		}
+		has_rem_singledensity = has_rem_singledensity || !strncmp(linebuffer, "REM SINGLE-DENSITY AREA", 23);
+		has_rem_highdensity = has_rem_highdensity || !strncmp(linebuffer, "REM HIGH-DENSITY AREA", 21);
 	}
 
 	fclose(infile);
@@ -1252,29 +1264,26 @@ std::error_condition chdcd_parse_gdicue(const char* tocfname, cdrom_toc& outtoc,
 
 	while (!feof(infile))
 	{
-		/* get the next line */
-		fgets(linebuffer, 511, infile);
+		if (!fgets(linebuffer, sizeof linebuffer, infile))
+			break;
 
-		/* if EOF didn't hit, keep going */
-		if (!feof(infile))
+		/* single-density area starts LBA = 0 */
+		if (!strncmp(linebuffer, "REM SINGLE-DENSITY AREA", 23))
 		{
-			/* single-density area starts LBA = 0 */
-			if (!strncmp(linebuffer, "REM SINGLE-DENSITY AREA", 23))
-			{
-				current_area = SINGLE_DENSITY;
-				continue;
-			}
+			current_area = SINGLE_DENSITY;
+			continue;
+		}
 
-			/* high-density area starts LBA = 45000 */
-			if (!strncmp(linebuffer, "REM HIGH-DENSITY AREA", 21))
-			{
-				current_area = HIGH_DENSITY;
-				continue;
-			}
+		/* high-density area starts LBA = 45000 */
+		if (!strncmp(linebuffer, "REM HIGH-DENSITY AREA", 21))
+		{
+			current_area = HIGH_DENSITY;
+			continue;
+		}
 
-			i = 0;
+		i = 0;
 
-			TOKENIZE
+		TOKENIZE
 
 				if (!strcmp(token, "FILE"))
 				{
@@ -1434,7 +1443,6 @@ std::error_condition chdcd_parse_gdicue(const char* tocfname, cdrom_toc& outtoc,
 
 					outtoc.tracks[trknum].postgap = frames;
 				}
-		}
 	}
 
 	/* close the input CUE */
@@ -1715,15 +1723,12 @@ std::error_condition chdcd_parse_toc(const char* tocfname, cdrom_toc& outtoc, ch
 
 	while (!feof(infile))
 	{
-		/* get the next line */
-		fgets(linebuffer, 511, infile);
+		if (!fgets(linebuffer, sizeof linebuffer, infile))
+			break;
 
-		/* if EOF didn't hit, keep going */
-		if (!feof(infile))
-		{
-			i = 0;
+		i = 0;
 
-			TOKENIZE
+		TOKENIZE
 
 				if ((!strcmp(token, "DATAFILE")) || (!strcmp(token, "AUDIOFILE")) || (!strcmp(token, "FILE")))
 				{
@@ -1839,7 +1844,6 @@ std::error_condition chdcd_parse_toc(const char* tocfname, cdrom_toc& outtoc, ch
 
 					outtoc.tracks[trknum].pregap = frames;
 				}
-		}
 	}
 
 	/* close the input TOC */
