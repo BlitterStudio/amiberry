@@ -5585,6 +5585,7 @@ void do_nothing (void)
 		jit_dbg_check_vec2_dispatch("do_nothing");
 	}
 #endif
+
 	if (!currprefs.cpu_thread) {
 		/* What did you expect this to do? */
 		do_cycles (0);
@@ -5620,6 +5621,7 @@ void exec_nostats (void)
 		jit_dbg_check_vec2_dispatch("exec_nostats");
 	}
 #endif
+
 	struct regstruct *r = &regs;
 
 	for (;;)
@@ -5655,6 +5657,7 @@ void execute_normal(void)
 		jit_dbg_check_vec2_dispatch("execute_normal_ENTRY");
 	}
 #endif
+
 	struct regstruct *r = &regs;
 	int blocklen;
 	cpu_history pc_hist[MAXRUN];

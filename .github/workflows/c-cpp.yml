@@ -218,7 +218,11 @@ jobs:
 
       - name: Codesign the app
         run: |
-          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard universal-app/Amiberry.app
+          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard --entitlements packaging/macos/Amiberry.entitlements universal-app/Amiberry.app
+
+      - name: Verify app entitlements
+        run: |
+          codesign -d --entitlements :- universal-app/Amiberry.app
 
       - name: Create a zip to send to the notary service
         run: |

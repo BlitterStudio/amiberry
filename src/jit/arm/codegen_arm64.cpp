@@ -249,26 +249,29 @@ LOWFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
 }
 LENDFUNC(NONE,WRITE,1,compemu_raw_set_pc_i,(IMPTR s))
 
-LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IM32 s))
+LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMPTR s))
 {
 	/* d points always to memory in regs struct */
-	LOAD_U32(REG_WORK2, s);
 	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
+	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp)) {
+		LOAD_U64(REG_WORK2, s);  // pc_p/pc_oldp are 64-bit host pointers
 		STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
-	else
+	} else {
+		LOAD_U32(REG_WORK2, (uae_u32)s);
 		STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+	}
 }
-LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IM32 s))
+LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mi,(MEMW d, IMPTR s))
 
 LOWFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 {
 	/* d points always to memory in regs struct */
 	uintptr idx = d - (uintptr) &regs;
-	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
+	if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp)) {
 		STR_xXi(s, R_REGSTRUCT, idx);
-	else
+	} else {
 		STR_wXi(s, R_REGSTRUCT, idx);
+	}
 }
 LENDFUNC(NONE,WRITE,2,compemu_raw_mov_l_mr,(MEMW d, RR4 s))
 
@@ -299,7 +302,11 @@ LENDFUNC(NONE,READ,2,compemu_raw_mov_l_rm,(W4 d, MEMR s))
 
 LOWFUNC(NONE,NONE,2,compemu_raw_mov_l_rr,(W4 d, RR4 s))
 {
-	MOV_ww(d, s); // Must use 32-bit move to zero upper 32 bits for address cleanliness
+	// Use 64-bit MOV to preserve full register width.  PC_P holds a
+	// 64-bit host pointer; all other virtual registers hold 32-bit M68k
+	// values whose upper 32 bits are already zeroed by W-register ops
+	// upstream, so MOV_xx is safe for both cases.
+	MOV_xx(d, s);
 }
 LENDFUNC(NONE,NONE,2,compemu_raw_mov_l_rr,(W4 d, RR4 s))
 
@@ -583,6 +590,7 @@ STATIC_INLINE uae_u32* compemu_raw_endblock_pc_isconst(IM32 cycles, IMPTR v)
 {
 	/* v is always >= NATMEM_OFFSET and < NATMEM_OFFSET + max. Amiga mem */
 	uae_u32* tba;
+
 	// countdown -= scaled_cycles(totcycles);
 	// Use absolute address for countdown (global variable, may be >32KB from regs)
 	LOAD_U64(REG_WORK3, (uintptr)&countdown);

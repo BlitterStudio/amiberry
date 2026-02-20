@@ -22,6 +22,9 @@
 #endif
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
+#if defined(CPU_AARCH64)
+#include <pthread.h>
+#endif
 #endif
 
 //#if defined(LINUX) && defined(CPU_x86_64)
@@ -156,9 +159,18 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 #else
 	int mmap_flags = MAP_PRIVATE | MAP_ANON;
 	int mmap_prot = protect_to_native(protect);
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (flags & UAE_VM_JIT) {
+#ifdef MAP_JIT
+		mmap_flags |= MAP_JIT;
+#else
+		write_log("VM: UAE_VM_JIT requested but MAP_JIT is unavailable on this SDK\n");
+#endif
+	}
+#endif
 #endif
 
-#if !defined(CPU_64_BIT) || defined(__APPLE__)
+#if !defined(CPU_64_BIT)
 	flags &= ~UAE_VM_32BIT;
 #endif
 	if (flags & UAE_VM_32BIT) {
@@ -208,8 +220,23 @@ static void *uae_vm_alloc_with_flags(uae_u32 size, int flags, int protect)
 	}
 
 	if (address == NULL) {
-		write_log("VM: uae_vm_alloc(%u, %d, %d) mmap failed (%d)\n",
-		    size, flags, protect, errno);
+		const int err = errno;
+		if (flags & UAE_VM_JIT) {
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+			const bool entitlement_hint = (err == EPERM || err == EINVAL);
+			write_log("VM: uae_vm_alloc(%u, %d, %d) JIT mmap failed (%d: %s)%s\n",
+				size, flags, protect, err, strerror(err),
+				entitlement_hint
+					? " - check MAP_JIT policy and com.apple.security.cs.allow-jit entitlement"
+					: "");
+#else
+			write_log("VM: uae_vm_alloc(%u, %d, %d) JIT mmap failed (%d: %s)\n",
+				size, flags, protect, err, strerror(err));
+#endif
+		} else {
+			write_log("VM: uae_vm_alloc(%u, %d, %d) mmap failed (%d: %s)\n",
+				size, flags, protect, err, strerror(err));
+		}
 	    return NULL;
 	}
 #ifdef TRACK_ALLOCATIONS
@@ -278,6 +305,15 @@ bool uae_vm_free(void *address, int size)
 	return do_free(address, size);
 }
 
+void uae_vm_jit_write_protect(bool enable_execute_mode)
+{
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	pthread_jit_write_protect_np(enable_execute_mode ? 1 : 0);
+#else
+	(void)enable_execute_mode;
+#endif
+}
+
 static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
 {
 	void *address = NULL;
@@ -299,6 +335,15 @@ static void *try_reserve(uintptr_t try_addr, uae_u32 size, int flags)
 	}
 #else
 	int mmap_flags = MAP_PRIVATE | MAP_ANON;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (flags & UAE_VM_JIT) {
+#ifdef MAP_JIT
+		mmap_flags |= MAP_JIT;
+#else
+		write_log("VM: UAE_VM_JIT reserve requested but MAP_JIT is unavailable on this SDK\n");
+#endif
+	}
+#endif
     #if defined(__FreeBSD__)
     // On FreeBSD, force the main memory reservation into the low 32-bit space.
     // This is critical for the JIT's direct memory access model.

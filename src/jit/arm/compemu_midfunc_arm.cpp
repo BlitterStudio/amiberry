@@ -500,9 +500,9 @@ MIDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 }
 MENDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 
-MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
+MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IMPTR i))
 {
-	if (!i) 
+	if (!i)
 	  return;
 	if (isconst(d)) {
 		live.state[d].val += i;
@@ -517,10 +517,10 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
     LOAD_U32(REG_WORK1, i);
 		ADD_rrr(d, d, REG_WORK1);
   }
-	
+
 	unlock2(d);
 }
-MENDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
+MENDFUNC(2,arm_ADD_l_ri,(RW4 d, IMPTR i))
 
 MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 {

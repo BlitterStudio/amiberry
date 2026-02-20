@@ -162,23 +162,26 @@ MIDFUNC(0,make_flags_live,(void))
 }
 MENDFUNC(0,make_flags_live,(void))
 
-MIDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
+MIDFUNC(2,mov_l_mi,(IMPTR d, IMPTR s))
 {
 	/* d usually points to memory in regs struct, but can also be a global
 	   (e.g. regflags.nzcv). Use absolute address if out of LDR/STR range. */
-	LOAD_U32(REG_WORK2, s);
 	if(d >= (uintptr)&regs && d < (uintptr)&regs + 32760) {
 		uintptr idx = d - (uintptr) &regs;
-		if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp))
+		if(d == (uintptr) &(regs.pc_p) || d == (uintptr) &(regs.pc_oldp)) {
+			LOAD_U64(REG_WORK2, s);  // pc_p/pc_oldp are 64-bit host pointers
 			STR_xXi(REG_WORK2, R_REGSTRUCT, idx);
-		else
+		} else {
+			LOAD_U32(REG_WORK2, (uae_u32)s);
 			STR_wXi(REG_WORK2, R_REGSTRUCT, idx);
+		}
 	} else {
+		LOAD_U32(REG_WORK2, (uae_u32)s);
 		LOAD_U64(REG_WORK1, d);
 		STR_wXi(REG_WORK2, REG_WORK1, 0);
 	}
 }
-MENDFUNC(2,mov_l_mi,(IMPTR d, IM32 s))
+MENDFUNC(2,mov_l_mi,(IMPTR d, IMPTR s))
 
 MIDFUNC(4,disp_ea20_target_add,(RW4 target, RR4 reg, IM8 shift, IM8 extend))
 {
@@ -427,11 +430,11 @@ MIDFUNC(2,mov_l_rm,(W4 d, IMPTR s))
 }
 MENDFUNC(2,mov_l_rm,(W4 d, IMPTR s))
 
-MIDFUNC(2,mov_l_ri,(W4 d, IM32 s))
+MIDFUNC(2,mov_l_ri,(W4 d, IMPTR s))
 {
 	set_const(d, s);
 }
-MENDFUNC(2,mov_l_ri,(W4 d, IM32 s))
+MENDFUNC(2,mov_l_ri,(W4 d, IMPTR s))
 
 MIDFUNC(2,mov_b_ri,(W1 d, IM8 s))
 {
@@ -528,7 +531,7 @@ MIDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 }
 MENDFUNC(2,arm_ADD_ldiv8,(RW4 d, RR4 s))
 
-MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
+MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IMPTR i))
 {
 	if (!i)
 		return;
@@ -537,26 +540,37 @@ MIDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
 		return;
 	}
 
+	// Use 64-bit ADD when d is PC_P (always a host pointer) or when
+	// the immediate itself exceeds 32 bits (e.g. branch target scratch
+	// registers that hold natmem_offset + M68k_addr).
+	bool is_ptr = (d == PC_P) || (i > (IMPTR)0xFFFFFFFFULL);
 	d = rmw(d);
 
-	// Use 32-bit ADD (ADD_www/ADD_wwi) to keep upper 32 bits of the X
-	// register zeroed.  The result may later be used as an Amiga memory
-	// address in [Xn, X27] indexed loads, which read the full 64-bit
-	// register.  64-bit ADD_xxx could leave upper bits set on wrap.
-	if(i >= 0 && i <= 0xfff) {
-		ADD_wwi(d, d, i);
-	} else {
-		if(i > -0x7fff && i < 0x7fff) {
-			SIGNED16_IMM_2_REG(REG_WORK1, i);
+	if (is_ptr) {
+		// 64-bit ADD to preserve upper bits (e.g. 0x300000000 on macOS).
+		if(i <= 0xfff) {
+			ADD_xxi(d, d, i);
 		} else {
-			LOAD_U32(REG_WORK1, i);
+			LOAD_U64(REG_WORK1, (uintptr)i);
+			ADD_xxx(d, d, REG_WORK1);
 		}
-		ADD_www(d, d, REG_WORK1);
+	} else {
+		// Use 32-bit ADD (ADD_www/ADD_wwi) to keep upper 32 bits of the X
+		// register zeroed.  The result may later be used as an Amiga memory
+		// address in [Xn, X27] indexed loads, which read the full 64-bit
+		// register.  64-bit ADD_xxx could leave upper bits set on wrap.
+		uae_u32 i32 = (uae_u32)i;
+		if(i32 <= 0xfff) {
+			ADD_wwi(d, d, i32);
+		} else {
+			LOAD_U32(REG_WORK1, i32);
+			ADD_www(d, d, REG_WORK1);
+		}
 	}
 
 	unlock2(d);
 }
-MENDFUNC(2,arm_ADD_l_ri,(RW4 d, IM32 i))
+MENDFUNC(2,arm_ADD_l_ri,(RW4 d, IMPTR i))
 
 MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 {
@@ -567,8 +581,12 @@ MIDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
 		return;
 	}
 
+	bool is_ptr = (d == PC_P);
 	d = rmw(d);
-	ADD_wwi(d, d, i);
+	if (is_ptr)
+		ADD_xxi(d, d, i);  // 64-bit ADD for host pointer
+	else
+		ADD_wwi(d, d, i);  // 32-bit ADD for M68k values
 	unlock2(d);
 }
 MENDFUNC(2,arm_ADD_l_ri8,(RW4 d, IM8 i))
@@ -582,8 +600,12 @@ MIDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
 		return;
 	}
 
+	bool is_ptr = (d == PC_P);
 	d = rmw(d);
-	SUB_wwi(d, d, i);
+	if (is_ptr)
+		SUB_xxi(d, d, i);  // 64-bit SUB for host pointer
+	else
+		SUB_wwi(d, d, i);  // 32-bit SUB for M68k values
 	unlock2(d);
 }
 MENDFUNC(2,arm_SUB_l_ri8,(RW4 d, IM8 i))
@@ -622,12 +644,17 @@ STATIC_INLINE void flush_cpu_icache(void *start, void *stop)
   }
 #endif
 
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	sys_icache_invalidate(start, (char *)stop - (char *)start);
+#else
 	__builtin___clear_cache((char *)start, (char *)stop);
+#endif
 }
 
 
 STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a)
 {
+	jit_begin_write_window();
 	uintptr off = (a - (uintptr)jmpaddr) >> 2;
 	if((*(jmpaddr) & 0xfc000000) == 0x14000000) {
 		/* branch always */
@@ -648,6 +675,7 @@ STATIC_INLINE void write_jmp_target(uae_u32* jmpaddr, uintptr a)
 	}
 
 	flush_cpu_icache((void *)jmpaddr, (void *)&jmpaddr[1]);
+	jit_end_write_window();
 }
 
 static inline void emit_jmp_target(uae_u32 a) {
