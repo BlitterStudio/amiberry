@@ -10,9 +10,9 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 	// This disables the use of gyroscopes as axis device
 	SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
 
-	num_joystick = SDL_NumJoysticks();
-	if (num_joystick > MAX_INPUT_DEVICES)
-		num_joystick = MAX_INPUT_DEVICES;
+	*num_joystick = SDL_NumJoysticks();
+	if (*num_joystick > MAX_INPUT_DEVICES)
+		*num_joystick = MAX_INPUT_DEVICES;
 
 	// set up variables / paths etc.
 	std::string cfg = get_controllers_path();
@@ -31,7 +31,7 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 
 	controllers = get_controllers_path();
 	// do the loop
-	for (auto i = 0; i < num_joystick; i++)
+	for (auto i = 0; i < *num_joystick; i++)
 	{
 		struct didata* did = &di_joystick[i];
 
@@ -53,8 +53,8 @@ static inline void input_platform_init_joystick(int* num_joystick, didata* di_jo
 	}
 
 	// Register the built-in on-screen joystick as a virtual device
-	if (num_joystick < MAX_INPUT_DEVICES) {
-		osj_device_index = num_joystick;
+	if (*num_joystick < MAX_INPUT_DEVICES) {
+		osj_device_index = *num_joystick;
 		struct didata* did = &di_joystick[osj_device_index];
 		cleardid(did);
 		did->name = "On-Screen Joystick";
