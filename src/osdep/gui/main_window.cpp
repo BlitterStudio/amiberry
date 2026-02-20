@@ -34,6 +34,10 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#if defined(_WIN32) && defined(USE_OPENGL)
+#include "imgui_impl_opengl3.h"
+#include <SDL_opengl.h>
+#endif
 #include "ImGuiFileDialog.h"
 #include <array>
 #include <fstream>
@@ -49,8 +53,60 @@ bool gui_running = false;
 static int last_active_panel = 3;
 bool joystick_refresh_needed = false;
 
+// Touch-drag scrolling state (converts finger swipes to ImGui scroll wheel events)
+static bool touch_scrolling = false;
+static float touch_scroll_accum = 0.0f;
+static SDL_FingerID touch_scroll_finger = 0;
+
 static TCHAR startup_title[MAX_STARTUP_TITLE] = _T("");
 static TCHAR startup_message[MAX_STARTUP_MESSAGE] = _T("");
+
+#ifdef _WIN32
+static int saved_emu_x = 0, saved_emu_y = 0, saved_emu_w = 0, saved_emu_h = 0;
+static Uint32 saved_emu_flags = 0;
+#endif
+#if defined(_WIN32) && defined(USE_OPENGL)
+static bool gui_use_opengl = false;
+#endif
+
+// Texture helpers: abstract SDL_Texture (SDLRenderer2) vs GLuint (OpenGL3)
+ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h)
+{
+	if (!surface) return ImTextureID_Invalid;
+	if (out_w) *out_w = surface->w;
+	if (out_h) *out_h = surface->h;
+#if defined(_WIN32) && defined(USE_OPENGL)
+	if (gui_use_opengl) {
+		SDL_Surface* rgba = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_ABGR8888, 0);
+		if (!rgba) return ImTextureID_Invalid;
+		GLuint tex;
+		glGenTextures(1, &tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, rgba->w, rgba->h, 0,
+			GL_RGBA, GL_UNSIGNED_BYTE, rgba->pixels);
+		SDL_FreeSurface(rgba);
+		return (ImTextureID)(intptr_t)tex;
+	}
+#endif
+	AmigaMonitor* mon = &AMonitors[0];
+	return (ImTextureID)SDL_CreateTextureFromSurface(mon->gui_renderer, surface);
+}
+
+void gui_destroy_texture(ImTextureID tex)
+{
+	if (tex == ImTextureID_Invalid) return;
+#if defined(_WIN32) && defined(USE_OPENGL)
+	if (gui_use_opengl) {
+		GLuint gl_tex = (GLuint)(intptr_t)tex;
+		glDeleteTextures(1, &gl_tex);
+		return;
+	}
+#endif
+	SDL_DestroyTexture((SDL_Texture*)tex);
+}
 
 void target_startup_msg(const TCHAR* title, const TCHAR* msg)
 {
@@ -145,9 +201,14 @@ static void apply_imgui_theme()
 	style.PopupRounding = 0.0f;
 	style.ChildRounding = 0.0f;
 	style.ScrollbarRounding = 0.0f;
-	style.ScrollbarSize = 16.0f;
 	style.GrabRounding = 0.0f;
-	style.GrabMinSize = 10.0f;
+	if (SDL_GetNumTouchDevices() > 0) {
+		style.ScrollbarSize = 24.0f;  // Wider for touch targets
+		style.GrabMinSize = 20.0f;
+	} else {
+		style.ScrollbarSize = 16.0f;
+		style.GrabMinSize = 10.0f;
+	}
 	style.TabRounding = 0.0f;
 
 	// Add a bit more padding inside windows/child areas
@@ -321,6 +382,7 @@ SDL_Texture* gui_texture;
 SDL_Rect gui_renderQuad;
 SDL_Rect gui_window_rect{0, 0, GUI_WIDTH, GUI_HEIGHT};
 static bool gui_window_moved = false; // track if user moved the GUI window
+static bool gui_window_size_initialized = false;
 
 /* Flag for changes in rtarea:
   Bit 0: any HD in config?
@@ -646,15 +708,15 @@ bool AmigaRadioButton(const char* label, int* v, const int v_button)
 }
 
 // Sidebar icons cache
-struct IconTex { SDL_Texture* tex; int w; int h; };
+struct IconTex { ImTextureID tex; int w; int h; };
 static std::unordered_map<std::string, IconTex> g_sidebar_icons;
 
 static void release_sidebar_icons()
 {
 	for (auto& kv : g_sidebar_icons) {
 		if (kv.second.tex) {
-			SDL_DestroyTexture(kv.second.tex);
-			kv.second.tex = nullptr;
+			gui_destroy_texture(kv.second.tex);
+			kv.second.tex = ImTextureID_Invalid;
 		}
 	}
 	g_sidebar_icons.clear();
@@ -662,7 +724,6 @@ static void release_sidebar_icons()
 
 static void ensure_sidebar_icons_loaded()
 {
-	AmigaMonitor* mon = &AMonitors[0];
 	for (int i = 0; categories[i].category != nullptr; ++i) {
 		if (!categories[i].imagepath) continue;
 		std::string key = categories[i].imagepath;
@@ -672,10 +733,10 @@ static void ensure_sidebar_icons_loaded()
 		SDL_Surface* surf = IMG_Load(full.c_str());
 		if (!surf) {
 			SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Sidebar icon load failed: %s: %s", full.c_str(), SDL_GetError());
-			g_sidebar_icons.emplace(key, IconTex{nullptr, 0, 0});
+			g_sidebar_icons.emplace(key, IconTex{ImTextureID_Invalid, 0, 0});
 			continue;
 		}
-		SDL_Texture* tex = SDL_CreateTextureFromSurface(mon->gui_renderer, surf);
+		ImTextureID tex = gui_create_texture(surf, nullptr, nullptr);
 		IconTex it{ tex, surf->w, surf->h };
 		SDL_FreeSurface(surf);
 		g_sidebar_icons.emplace(std::move(key), it);
@@ -695,6 +756,41 @@ void amiberry_gui_init()
 		mon->gui_renderer = mon->amiga_renderer;
 #endif
 
+#ifdef _WIN32
+	// On Windows, reuse the emulation window to avoid dual D3D11/OpenGL context
+	// conflicts that cause crashes. This mirrors the Android/KMSDRM pattern.
+	if (mon->amiga_window && !mon->gui_window)
+		mon->gui_window = mon->amiga_window;
+#ifndef USE_OPENGL
+	if (mon->amiga_renderer && !mon->gui_renderer)
+		mon->gui_renderer = mon->amiga_renderer;
+#else
+	// OpenGL path: keep GL context alive, destroy only emulation shaders.
+	// ImGui will use the OpenGL3 backend directly instead of SDLRenderer2.
+	if (mon->gui_window == mon->amiga_window && gl_context != nullptr) {
+		destroy_shaders();
+		gl_state_initialized = false;
+	}
+#endif
+	if (mon->gui_window == mon->amiga_window) {
+		SDL_GetWindowPosition(mon->gui_window, &saved_emu_x, &saved_emu_y);
+		SDL_GetWindowSize(mon->gui_window, &saved_emu_w, &saved_emu_h);
+		saved_emu_flags = SDL_GetWindowFlags(mon->gui_window);
+		// Exit fullscreen for GUI if needed
+		if (saved_emu_flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP))
+			SDL_SetWindowFullscreen(mon->gui_window, 0);
+		SDL_SetWindowSize(mon->gui_window, gui_window_rect.w, gui_window_rect.h);
+		SDL_SetWindowPosition(mon->gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+		SDL_SetWindowTitle(mon->gui_window, "Amiberry GUI");
+		SDL_SetWindowResizable(mon->gui_window, SDL_TRUE);
+		SDL_SetWindowGrab(mon->gui_window, SDL_FALSE);
+	}
+#endif
+
+#if defined(_WIN32) && defined(USE_OPENGL)
+	gui_use_opengl = (gl_context != nullptr && mon->gui_window == mon->amiga_window);
+#endif
+
 	if (sdl_video_driver != nullptr && strcmpi(sdl_video_driver, "KMSDRM") == 0)
 	{
 		kmsdrm_detected = true;
@@ -709,6 +805,13 @@ void amiberry_gui_init()
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	}
 	SDL_GetCurrentDisplayMode(0, &sdl_mode);
+
+	if (!gui_window_size_initialized) {
+		const float gui_scale = DPIHandler::get_layout_scale();
+		gui_window_rect.w = std::max(GUI_WIDTH, static_cast<int>(std::lround(static_cast<float>(GUI_WIDTH) * gui_scale)));
+		gui_window_rect.h = std::max(GUI_HEIGHT, static_cast<int>(std::lround(static_cast<float>(GUI_HEIGHT) * gui_scale)));
+		gui_window_size_initialized = true;
+	}
 
 	if (!mon->gui_window)
 	{
@@ -807,13 +910,18 @@ void amiberry_gui_init()
 		SDL_SetWindowSize(mon->gui_window, GUI_WIDTH, GUI_HEIGHT);
 	}
 
-	if (mon->gui_renderer == nullptr)
-	{
-		mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-		check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
+#if defined(_WIN32) && defined(USE_OPENGL)
+	if (!gui_use_opengl) {
+#endif
+		if (mon->gui_renderer == nullptr)
+		{
+			mon->gui_renderer = SDL_CreateRenderer(mon->gui_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+			check_error_sdl(mon->gui_renderer == nullptr, "Unable to create a renderer:");
+		}
+		DPIHandler::set_render_scale(mon->gui_renderer);
+#if defined(_WIN32) && defined(USE_OPENGL)
 	}
-
-	DPIHandler::set_render_scale(mon->gui_renderer);
+#endif
 
 #ifdef USE_IMGUI
 	// Setup Dear ImGui context
@@ -823,6 +931,8 @@ void amiberry_gui_init()
 	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	if (SDL_GetNumTouchDevices() > 0)
+		io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;      // Optimize for touch input
 
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
@@ -874,9 +984,20 @@ void amiberry_gui_init()
 	}
 	io.FontDefault = loaded_font;
 
-	// Setup Platform/Renderer backends (platform first, then renderer per ImGui example)
+	// Setup Platform/Renderer backends
+#if defined(_WIN32) && defined(USE_OPENGL)
+	if (gui_use_opengl) {
+		SDL_GL_MakeCurrent(mon->gui_window, gl_context);
+		ImGui_ImplSDL2_InitForOpenGL(mon->gui_window, gl_context);
+		ImGui_ImplOpenGL3_Init("#version 130");
+	} else {
+		ImGui_ImplSDL2_InitForSDLRenderer(mon->gui_window, mon->gui_renderer);
+		ImGui_ImplSDLRenderer2_Init(mon->gui_renderer);
+	}
+#else
 	ImGui_ImplSDL2_InitForSDLRenderer(AMonitors[0].gui_window, AMonitors[0].gui_renderer);
 	ImGui_ImplSDLRenderer2_Init(AMonitors[0].gui_renderer);
+#endif
 
 	if (amiberry_options.quickstart_start && !emulating && strlen(last_loaded_config) == 0)
 	{
@@ -902,13 +1023,20 @@ void amiberry_gui_halt()
 #ifdef USE_IMGUI
 	// Release any About panel resources
 	if (about_logo_texture) {
-		SDL_DestroyTexture(about_logo_texture);
-		about_logo_texture = nullptr;
+		gui_destroy_texture(about_logo_texture);
+		about_logo_texture = ImTextureID_Invalid;
 	}
 	// Release sidebar icon textures
 	release_sidebar_icons();
 	// Properly shutdown ImGui backends/context
+#if defined(_WIN32) && defined(USE_OPENGL)
+	if (gui_use_opengl)
+		ImGui_ImplOpenGL3_Shutdown();
+	else
+		ImGui_ImplSDLRenderer2_Shutdown();
+#else
 	ImGui_ImplSDLRenderer2_Shutdown();
+#endif
 	ImGui_ImplSDL2_Shutdown();
 	ImGui::DestroyContext();
 #endif
@@ -925,8 +1053,15 @@ void amiberry_gui_halt()
 	}
 	if (mon->gui_renderer && !kmsdrm_detected)
 	{
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 		// Don't destroy the renderer on Android, as we reuse it
+#elif defined(_WIN32)
+		if (mon->gui_renderer == mon->amiga_renderer) {
+			mon->gui_renderer = nullptr;  // Shared — don't destroy
+		} else {
+			SDL_DestroyRenderer(mon->gui_renderer);  // OpenGL path — separate renderer
+			mon->gui_renderer = nullptr;
+		}
 #else
 		if (mon->gui_renderer == SDL_GetRenderer(mon->amiga_window)) {
 			mon->gui_renderer = nullptr;
@@ -943,13 +1078,42 @@ void amiberry_gui_halt()
 			regsetint(nullptr, _T("GUIPosX"), gui_window_rect.x);
 			regsetint(nullptr, _T("GUIPosY"), gui_window_rect.y);
 		}
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 		// Don't destroy the window on Android, as we reuse it
+#elif defined(_WIN32)
+		if (mon->gui_window == mon->amiga_window) {
+			mon->gui_window = nullptr;  // Shared — don't destroy
+		} else {
+			SDL_DestroyWindow(mon->gui_window);
+			mon->gui_window = nullptr;
+		}
 #else
 		SDL_DestroyWindow(mon->gui_window);
 		mon->gui_window = nullptr;
 #endif
 	}
+
+#ifdef _WIN32
+	// Restore emulation window state
+	if (mon->amiga_window && saved_emu_w > 0) {
+		SDL_SetWindowTitle(mon->amiga_window, "Amiberry");
+		SDL_SetWindowSize(mon->amiga_window, saved_emu_w, saved_emu_h);
+		SDL_SetWindowPosition(mon->amiga_window, saved_emu_x, saved_emu_y);
+		if (saved_emu_flags & SDL_WINDOW_FULLSCREEN)
+			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN);
+		else if (saved_emu_flags & SDL_WINDOW_FULLSCREEN_DESKTOP)
+			SDL_SetWindowFullscreen(mon->amiga_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		saved_emu_w = saved_emu_h = 0;
+	}
+#ifdef USE_OPENGL
+	// GL context was kept alive — force full GL state reset for emulation
+	if (gui_use_opengl && mon->amiga_window && gl_context != nullptr) {
+		SDL_GL_MakeCurrent(mon->amiga_window, gl_context);
+		gl_state_initialized = false;
+		clear_loaded_shader_name();
+	}
+#endif
+#endif
 }
 
 std::string get_filename_extension(const TCHAR* filename);
@@ -1099,7 +1263,56 @@ void run_gui()
 				if (gui_event.window.event == SDL_WINDOWEVENT_CLOSE && gui_event.window.windowID == SDL_GetWindowID(mon->gui_window))
 					gui_running = false;
 			}
+			// Touch-drag scrolling: convert finger swipes into ImGui scroll wheel events
+			// SDL2 synthesizes mouse events from touch, but not mouse-wheel, so ImGui
+			// child windows won't scroll from finger drags without this.
+			else if (gui_event.type == SDL_FINGERDOWN) {
+				touch_scroll_finger = gui_event.tfinger.fingerId;
+				touch_scrolling = false;
+				touch_scroll_accum = 0.0f;
+			}
+			else if (gui_event.type == SDL_FINGERMOTION
+				&& gui_event.tfinger.fingerId == touch_scroll_finger) {
+				int wh = 0;
+				SDL_GetWindowSize(mon->gui_window, nullptr, &wh);
+				const float dy_pixels = gui_event.tfinger.dy * static_cast<float>(wh);
+				touch_scroll_accum += dy_pixels;
+
+				// Dead-zone: require a minimum drag distance before scrolling,
+				// so taps on buttons don't accidentally scroll
+				const float drag_threshold = 8.0f * DPIHandler::get_layout_scale();
+				if (!touch_scrolling && std::abs(touch_scroll_accum) > drag_threshold) {
+					touch_scrolling = true;
+					// Cancel the synthetic mouse-down so ImGui doesn't treat
+					// the ongoing touch as a widget click-drag
+					ImGui::GetIO().AddMouseButtonEvent(0, false);
+				}
+				if (touch_scrolling) {
+					const float line_height = ImGui::GetTextLineHeightWithSpacing();
+					if (line_height > 0.0f) {
+						const float scroll_lines = dy_pixels / (line_height * 3.0f);
+						ImGui::GetIO().AddMouseWheelEvent(0.0f, scroll_lines);
+					}
+				}
+			}
+			else if (gui_event.type == SDL_FINGERUP
+				&& gui_event.tfinger.fingerId == touch_scroll_finger) {
+				touch_scrolling = false;
+			}
 		}
+
+#ifdef __ANDROID__
+		// Toggle native soft keyboard based on ImGui's text input state.
+		// ImGui sets WantTextInput when a text field is active.
+		{
+			bool want_text = ImGui::GetIO().WantTextInput;
+			bool text_active = SDL_IsTextInputActive();
+			if (want_text && !text_active)
+				SDL_StartTextInput();
+			else if (!want_text && text_active)
+				SDL_StopTextInput();
+		}
+#endif
 
 		// Skip rendering when minimized to save CPU
 		if (SDL_GetWindowFlags(mon->gui_window) & SDL_WINDOW_MINIMIZED) {
@@ -1107,10 +1320,25 @@ void run_gui()
 			continue;
 		}
 
-		// Start the Dear ImGui frame (renderer first, then platform per ImGui example)
+		// Start the Dear ImGui frame
+#if defined(_WIN32) && defined(USE_OPENGL)
+		if (gui_use_opengl)
+			ImGui_ImplOpenGL3_NewFrame();
+		else
+			ImGui_ImplSDLRenderer2_NewFrame();
+#else
 		ImGui_ImplSDLRenderer2_NewFrame();
+#endif
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
+
+		// While touch-scrolling, suppress hover highlight so items don't
+		// visually react to the finger position during a scroll gesture
+		if (touch_scrolling) {
+			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0, 0, 0, 0));
+		}
 
 		const ImGuiStyle& style = ImGui::GetStyle();
 		// Compute button bar height from style
@@ -1174,7 +1402,7 @@ void run_gui()
 			float avail_h = (rmax.y - rmin.y) - 2.0f * pad_y;
 			float icon_h = std::min(icon_h_target, avail_h > 0.0f ? avail_h : (row_h - 2.0f * pad_y));
 			float icon_w = icon_h; // default square
-			SDL_Texture* icon_tex = nullptr;
+			ImTextureID icon_tex = ImTextureID_Invalid;
 			int tex_w = 0, tex_h = 0;
 			if (categories[i].imagepath) {
 				auto it = g_sidebar_icons.find(categories[i].imagepath);
@@ -1374,8 +1602,30 @@ void run_gui()
 
 		ImGui::End();
 
+		// Pop touch-scrolling hover suppression colors
+		if (touch_scrolling) {
+			ImGui::PopStyleColor(3);
+		}
+
 		// Rendering
 		ImGui::Render();
+#if defined(_WIN32) && defined(USE_OPENGL)
+		if (gui_use_opengl) {
+			glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
+			glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+			glClear(GL_COLOR_BUFFER_BIT);
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			SDL_GL_SwapWindow(mon->gui_window);
+		} else {
+			const ImGuiIO& render_io = ImGui::GetIO();
+			SDL_RenderSetScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
+			SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<Uint8>(0.45f * 255), static_cast<Uint8>(0.55f * 255),
+							   static_cast<Uint8>(0.60f * 255), static_cast<Uint8>(1.00f * 255));
+			SDL_RenderClear(mon->gui_renderer);
+			ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
+			SDL_RenderPresent(mon->gui_renderer);
+		}
+#else
 		const ImGuiIO& render_io = ImGui::GetIO();
 		SDL_RenderSetScale(mon->gui_renderer, render_io.DisplayFramebufferScale.x, render_io.DisplayFramebufferScale.y);
 		SDL_SetRenderDrawColor(mon->gui_renderer, static_cast<Uint8>(0.45f * 255), static_cast<Uint8>(0.55f * 255),
@@ -1383,6 +1633,7 @@ void run_gui()
 		SDL_RenderClear(mon->gui_renderer);
 		ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), mon->gui_renderer);
 		SDL_RenderPresent(mon->gui_renderer);
+#endif
 	}
 
 	amiberry_gui_halt();

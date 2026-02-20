@@ -23,6 +23,10 @@
 #include "native2amiga.h"
 #include "debug.h"
 
+#ifndef _WIN32
+#include <arpa/inet.h>
+#endif
+
 #ifdef BSDSOCKET
 
 #define NEWTRAP 1
@@ -729,9 +733,8 @@ static uae_u32 REGPARAM2 bsdsocklib_SetSocketSignals (TrapContext *ctx)
 }
 
 /* SetDTableSize(size)(d0) */
-static uae_u32 bsdsocklib_SetDTableSize (SB, int newSize)
+static uae_u32 bsdsocklib_SetDTableSize (TrapContext *ctx, SB, int newSize)
 {
-	TrapContext *ctx = NULL;
 	int *newdtable;
 	int *newftable;
 	unsigned int *newmtable;
@@ -757,9 +760,10 @@ static uae_u32 bsdsocklib_SetDTableSize (SB, int newSize)
 
 	memcpy (newdtable, sb->dtable, sb->dtablesize * sizeof(*sb->dtable));
 	memcpy (newftable, sb->ftable, sb->dtablesize * sizeof(*sb->ftable));
-	memcpy (newmtable, sb->mtable, sb->dtablesize * sizeof(*sb->mtable));
-	for (i = sb->dtablesize + 1; i < newSize; i++)
-		newdtable[i] = -1;
+	if (sb->mtable)
+		memcpy (newmtable, sb->mtable, sb->dtablesize * sizeof(*sb->mtable));
+	for (i = sb->dtablesize; i < newSize; i++)
+		newdtable[i] = INVALID_SOCKET;
 
 	sb->dtablesize = newSize;
 	xfree(sb->dtable);
@@ -989,22 +993,19 @@ static uae_u32 REGPARAM2 bsdsocklib_inet_addr (TrapContext *ctx)
 /* Inet_LnaOf(in)(d0) */
 static uae_u32 REGPARAM2 bsdsocklib_Inet_LnaOf (TrapContext *ctx)
 {
-	write_log (_T("bsdsocket: UNSUPPORTED: Inet_LnaOf()\n"));
-	return 0;
+	return host_Inet_LnaOf(trap_get_dreg(ctx, 0));
 }
 
 /* Inet_NetOf(in)(d0) */
 static uae_u32 REGPARAM2 bsdsocklib_Inet_NetOf (TrapContext *ctx)
 {
-	write_log (_T("bsdsocket: UNSUPPORTED: Inet_NetOf()\n"));
-	return 0;
+	return host_Inet_NetOf(trap_get_dreg(ctx, 0));
 }
 
 /* Inet_MakeAddr(net, host)(d0/d1) */
 static uae_u32 REGPARAM2 bsdsocklib_Inet_MakeAddr (TrapContext *ctx)
 {
-	write_log (_T("bsdsocket: UNSUPPORTED: Inet_MakeAddr()\n"));
-	return 0;
+	return host_Inet_MakeAddr(trap_get_dreg(ctx, 0), trap_get_dreg(ctx, 1));
 }
 
 /* inet_network(cp)(a0) */
@@ -1101,6 +1102,9 @@ struct msghdr {
 };
 #endif
 
+/* Amiga MSG_* flag values (differ from host values) */
+#undef MSG_EOR
+#undef MSG_TRUNC
 #define MSG_EOR		0x08	/* data completes record */
 #define	MSG_TRUNC	0x10	/* data discarded before delivery */
 
@@ -1149,7 +1153,8 @@ static uae_u32 REGPARAM2 bsdsocklib_sendmsg (TrapContext *ctx)
 		p += cnt;
 	}
 	uaecptr to = trap_get_long(ctx, msg + 0);
-	host_sendto(ctx, sb, sd, 0, data, total, flags, to, msg + 4);
+	uae_u32 tolen = trap_get_long(ctx, msg + 4);
+	host_sendto(ctx, sb, sd, 0, data, total, flags, to, tolen);
 	xfree(data);
 	return sb->resultval;
 }
@@ -1203,7 +1208,7 @@ static uae_u32 REGPARAM2 bsdsocklib_recvmsg (TrapContext *ctx)
 		}
 		if (total2 == sb->resultval)
 			msg_flags |= MSG_EOR;
-		if (total > 0 && (sb->ftable[sd - 1] & SF_DGRAM))
+		if (total > 0 && (sb->ftable[sd] & SF_DGRAM))
 			msg_flags |= MSG_TRUNC;
 		trap_put_long(ctx, msg + 24, msg_flags);
 	}
@@ -1549,10 +1554,19 @@ static uae_u32 REGPARAM2 bsdsocklib_SocketBaseTagList(TrapContext *ctx)
 					break;
 				case SBTC_DTABLESIZE:
 					BSDTRACE ((_T("SBTC_DTABLESIZE),0x%x"), currval));
-					if (currtag & 1) {
-						bsdsocklib_SetDTableSize(sb, currval);
-					} else {
-						put_long (tagptr + 4, sb->dtablesize);
+					switch (currtag & 0x8001) {
+					case 0x0000: /* GETVAL */
+						trap_put_long(ctx, tagptr + 4, sb->dtablesize);
+						break;
+					case 0x8000: /* GETREF */
+						trap_put_long(ctx, currval, sb->dtablesize);
+						break;
+					case 0x0001: /* SETVAL */
+						bsdsocklib_SetDTableSize(ctx, sb, currval);
+						break;
+					default: /* SETREF */
+						bsdsocklib_SetDTableSize(ctx, sb, trap_get_long(ctx, currval));
+						break;
 					}
 					break;
 
@@ -2036,6 +2050,108 @@ void bsdlib_install (void)
 	dl (*sockfuncvecs);
 
 	write_log (_T("bsdsocket.library installed\n"));
+}
+
+/* =========================================================================
+ * Platform-independent host_* functions
+ *
+ * These were previously duplicated in both the Windows and POSIX sections
+ * of bsdsocket_host.cpp.  They use only portable types and standard
+ * library calls available on all platforms.
+ * ========================================================================= */
+
+uae_u32 host_Inet_NtoA(TrapContext *ctx, SB, uae_u32 in)
+{
+	uae_char *addr;
+	struct in_addr ina;
+	uae_u32 scratchbuf;
+
+	*(uae_u32 *)&ina = htonl(in);
+
+	BSDTRACE((_T("Inet_NtoA(%x) -> "), in));
+
+	if ((addr = inet_ntoa(ina)) != NULL) {
+		scratchbuf = trap_get_areg(ctx, 6) + offsetof(struct UAEBSDBase, scratchbuf);
+		strncpyha(ctx, scratchbuf, addr, SCRATCHBUFSIZE);
+		BSDTRACE((_T("%s\n"), addr));
+		return scratchbuf;
+	} else
+		bsdsocklib_seterrno(ctx, sb, 22); /* EINVAL */
+
+	BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
+
+	return 0;
+}
+
+uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
+{
+	uae_u32 addr;
+	char *cp_rp;
+
+	if (!trap_valid_address(ctx, cp, 4))
+		return 0;
+	cp_rp = trap_get_alloc_string(ctx, cp, 256);
+	addr = htonl(inet_addr(cp_rp));
+	BSDTRACE((_T("inet_addr(%s) -> 0x%08lx\n"), cp_rp, addr));
+	xfree(cp_rp);
+	return addr;
+}
+
+uae_u32 host_Inet_LnaOf(uae_u32 in)
+{
+	uae_u32 result;
+
+	if ((in & 0x80000000) == 0) {
+		result = in & 0x00ffffff;
+	} else if ((in & 0xc0000000) == 0x80000000) {
+		result = in & 0x0000ffff;
+	} else {
+		result = in & 0x000000ff;
+	}
+	BSDTRACE((_T("Inet_LnaOf(0x%08x) -> 0x%08x\n"), in, result));
+	return result;
+}
+
+uae_u32 host_Inet_NetOf(uae_u32 in)
+{
+	uae_u32 result;
+
+	if ((in & 0x80000000) == 0) {
+		result = (in >> 24) & 0xff;
+	} else if ((in & 0xc0000000) == 0x80000000) {
+		result = (in >> 16) & 0xffff;
+	} else {
+		result = (in >> 8) & 0xffffff;
+	}
+	BSDTRACE((_T("Inet_NetOf(0x%08x) -> 0x%08x\n"), in, result));
+	return result;
+}
+
+uae_u32 host_Inet_MakeAddr(uae_u32 net, uae_u32 host)
+{
+	uae_u32 result;
+
+	if (net < 128) {
+		result = (net << 24) | (host & 0x00ffffff);
+	} else if (net < 65536) {
+		result = (net << 16) | (host & 0x0000ffff);
+	} else {
+		result = (net << 8) | (host & 0x000000ff);
+	}
+	BSDTRACE((_T("Inet_MakeAddr(0x%08x, 0x%08x) -> 0x%08x\n"), net, host, result));
+	return result;
+}
+
+uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
+{
+	if (!trap_valid_address(ctx, name, namelen))
+		return -1;
+	char buf[256];
+	if (gethostname(buf, sizeof(buf)) != 0)
+		return -1;
+	buf[sizeof(buf) - 1] = '\0';
+	trap_put_string(ctx, (uae_char *)buf, name, namelen);
+	return 0;
 }
 
 #endif /* ! BSDSOCKET */

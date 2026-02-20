@@ -170,10 +170,10 @@ static struct
 	std::string joystick_name;
 	std::string mapping_result;
 	std::string error_text;
-	SDL_Texture* background_front = nullptr;
-	SDL_Texture* background_back = nullptr;
-	SDL_Texture* marker_button = nullptr;
-	SDL_Texture* marker_axis = nullptr;
+	ImTextureID background_front = ImTextureID_Invalid;
+	ImTextureID background_back = ImTextureID_Invalid;
+	ImTextureID marker_button = ImTextureID_Invalid;
+	ImTextureID marker_axis = ImTextureID_Invalid;
 	int bg_w = 0;
 	int bg_h = 0;
 	int marker_button_w = 0;
@@ -184,13 +184,13 @@ static struct
 
 static const char* kControllerMapTitle = "Controller Map";
 
-static SDL_Texture* LoadTexture(SDL_Renderer* renderer, const char* file, SDL_bool transparent, int* out_w, int* out_h)
+static ImTextureID LoadTexture(const char* file, SDL_bool transparent, int* out_w, int* out_h)
 {
 	SDL_Surface* temp = IMG_Load(file);
 	if (temp == nullptr)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load %s: %s", file, SDL_GetError());
-		return nullptr;
+		return ImTextureID_Invalid;
 	}
 
 	if (transparent)
@@ -201,20 +201,12 @@ static SDL_Texture* LoadTexture(SDL_Renderer* renderer, const char* file, SDL_bo
 		}
 	}
 
-	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, temp);
+	ImTextureID texture = gui_create_texture(temp, out_w, out_h);
+	SDL_FreeSurface(temp);
 	if (!texture)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create texture: %s\n", SDL_GetError());
-		SDL_FreeSurface(temp);
-		return nullptr;
 	}
-
-	if (out_w && out_h)
-	{
-		*out_w = temp->w;
-		*out_h = temp->h;
-	}
-	SDL_FreeSurface(temp);
 	return texture;
 }
 
@@ -226,39 +218,38 @@ static void ControllerMap_EnsureTextures()
 		return;
 	}
 
-	AmigaMonitor* mon = &AMonitors[0];
 	const auto front_path = prefix_with_data_path("controllermap.png");
 	const auto back_path = prefix_with_data_path("controllermap_back.png");
 	const auto button_path = prefix_with_data_path("button.png");
 	const auto axis_path = prefix_with_data_path("axis.png");
 
-	g_controller_map.background_front = LoadTexture(mon->gui_renderer, front_path.c_str(), SDL_TRUE, &g_controller_map.bg_w, &g_controller_map.bg_h);
-	g_controller_map.background_back = LoadTexture(mon->gui_renderer, back_path.c_str(), SDL_TRUE, nullptr, nullptr);
-	g_controller_map.marker_button = LoadTexture(mon->gui_renderer, button_path.c_str(), SDL_TRUE, &g_controller_map.marker_button_w, &g_controller_map.marker_button_h);
-	g_controller_map.marker_axis = LoadTexture(mon->gui_renderer, axis_path.c_str(), SDL_TRUE, &g_controller_map.marker_axis_w, &g_controller_map.marker_axis_h);
+	g_controller_map.background_front = LoadTexture(front_path.c_str(), SDL_TRUE, &g_controller_map.bg_w, &g_controller_map.bg_h);
+	g_controller_map.background_back = LoadTexture(back_path.c_str(), SDL_TRUE, nullptr, nullptr);
+	g_controller_map.marker_button = LoadTexture(button_path.c_str(), SDL_TRUE, &g_controller_map.marker_button_w, &g_controller_map.marker_button_h);
+	g_controller_map.marker_axis = LoadTexture(axis_path.c_str(), SDL_TRUE, &g_controller_map.marker_axis_w, &g_controller_map.marker_axis_h);
 }
 
 static void ControllerMap_DestroyTextures()
 {
 	if (g_controller_map.background_front)
 	{
-		SDL_DestroyTexture(g_controller_map.background_front);
-		g_controller_map.background_front = nullptr;
+		gui_destroy_texture(g_controller_map.background_front);
+		g_controller_map.background_front = ImTextureID_Invalid;
 	}
 	if (g_controller_map.background_back)
 	{
-		SDL_DestroyTexture(g_controller_map.background_back);
-		g_controller_map.background_back = nullptr;
+		gui_destroy_texture(g_controller_map.background_back);
+		g_controller_map.background_back = ImTextureID_Invalid;
 	}
 	if (g_controller_map.marker_button)
 	{
-		SDL_DestroyTexture(g_controller_map.marker_button);
-		g_controller_map.marker_button = nullptr;
+		gui_destroy_texture(g_controller_map.marker_button);
+		g_controller_map.marker_button = ImTextureID_Invalid;
 	}
 	if (g_controller_map.marker_axis)
 	{
-		SDL_DestroyTexture(g_controller_map.marker_axis);
-		g_controller_map.marker_axis = nullptr;
+		gui_destroy_texture(g_controller_map.marker_axis);
+		g_controller_map.marker_axis = ImTextureID_Invalid;
 	}
 	g_controller_map.bg_w = 0;
 	g_controller_map.bg_h = 0;
@@ -898,7 +889,7 @@ void ControllerMap_RenderModal()
 			const bool use_back = false;
 #endif
 
-			SDL_Texture* bg_tex = use_back && g_controller_map.background_back ? g_controller_map.background_back : g_controller_map.background_front;
+			ImTextureID bg_tex = use_back && g_controller_map.background_back ? g_controller_map.background_back : g_controller_map.background_front;
 
 			const float bg_top_y = message_y + text_line_h + DISTANCE_NEXT_Y;
 			const float scaled_bg_w = static_cast<float>(g_controller_map.bg_w) * ui_scale;
@@ -908,12 +899,12 @@ void ControllerMap_RenderModal()
 
 			ImDrawList* dl = ImGui::GetWindowDrawList();
 			ImDrawList* dl_overlay = ImGui::GetForegroundDrawList();
-			dl->AddImage(reinterpret_cast<ImTextureID>(bg_tex),
+			dl->AddImage(bg_tex,
 				img_pos,
 				ImVec2(img_pos.x + img_size.x, img_pos.y + img_size.y));
 
 			const bool is_axis_marker = (s_arrBindingDisplay[iElement].marker == 2);
-			SDL_Texture* marker_tex = is_axis_marker ? g_controller_map.marker_axis : g_controller_map.marker_button;
+			ImTextureID marker_tex = is_axis_marker ? g_controller_map.marker_axis : g_controller_map.marker_button;
 			int marker_src_w = is_axis_marker ? g_controller_map.marker_axis_w : g_controller_map.marker_button_w;
 			int marker_src_h = is_axis_marker ? g_controller_map.marker_axis_h : g_controller_map.marker_button_h;
 			if (marker_src_w <= 0 || marker_src_h <= 0)
@@ -936,7 +927,7 @@ void ControllerMap_RenderModal()
 			if (marker_tex)
 			{
 				AddImageRotated(dl_overlay,
-					reinterpret_cast<ImTextureID>(marker_tex),
+					marker_tex,
 					marker_center,
 					marker_size,
 					angle,

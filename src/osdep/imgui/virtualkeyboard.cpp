@@ -68,6 +68,14 @@ void render_panel_virtual_keyboard()
 {
     ImGui::Indent(4.0f);
 
+    // On-screen touch joystick (D-pad + fire buttons overlay)
+    AmigaCheckbox("On-screen Joystick", &changed_prefs.onscreen_joystick);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Show virtual D-pad and fire buttons for touchscreen control");
+    }
+
+    ImGui::Separator();
+
     AmigaCheckbox("Virtual Keyboard enabled", &changed_prefs.vkbd_enabled);
 
     ImGui::BeginDisabled(!changed_prefs.vkbd_enabled);

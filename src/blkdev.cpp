@@ -17,6 +17,7 @@
 #include "memory.h"
 
 #include "traps.h"
+#include "uae.h"
 #include "blkdev.h"
 #include "scsidev.h"
 #include "savestate.h"
@@ -413,12 +414,31 @@ static int get_standard_cd_unit2 (struct uae_prefs *p, cd_standard_unit csu)
 			}
 		}
 	}
+#else
+	{
+		auto drives = get_cd_drives();
+		for (const auto& drive : drives) {
+			if (sys_command_open_internal (unitnum, drive.c_str(), csu)) {
+				if (getunitinfo (unitnum, 0, csu, &isaudio))
+					return unitnum;
+				sys_command_close (unitnum);
+			}
+		}
+	}
 #endif
 	if (isaudio) {
+#ifdef _WIN32
 		TCHAR vol[100];
 		_sntprintf (vol, sizeof vol, _T("%c:\\"), isaudio);
 		if (sys_command_open_internal (unitnum, vol, csu)) 
 			return unitnum;
+#else
+		auto drives = get_cd_drives();
+		if (!drives.empty()) {
+			if (sys_command_open_internal (unitnum, drives[0].c_str(), csu)) 
+				return unitnum;
+		}
+#endif
 	}
 fallback:
 	device_func_init (SCSI_UNIT_IMAGE);

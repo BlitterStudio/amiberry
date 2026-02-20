@@ -91,15 +91,10 @@ brew install --cask amiberry
 
 Amiberry supports Windows x86_64 using MinGW-w64 (GCC).
 
-**Build from source:**
-```powershell
-# Prerequisites: MinGW-w64 (GCC), CMake, Ninja, vcpkg
-$env:VCPKG_ROOT = "path\to\vcpkg"
-cmake --preset windows-release
-cmake --build out/build/windows-release -j12
-```
-
-> **Note**: The Windows port uses interpreter mode for CPU emulation (JIT is not available on 64-bit Windows). All other features including OpenGL CRT shaders, WHDLoad booting, and the ImGui GUI are fully functional.
+**Releases:**
+1.  Download the latest `.zip` from [Releases](https://github.com/BlitterStudio/amiberry/releases).
+2.  Extract the contents to a directory of your choice.
+3.  Run `Amiberry.exe` to start the emulator.
 
 ## 📚 Documentation
 
@@ -107,6 +102,16 @@ For detailed configuration guides, tutorials, and compatibility lists, please vi
 
 -   [First Installation Guide](https://github.com/BlitterStudio/amiberry/wiki/First-Installation)
 -   [Compile from Source](https://github.com/BlitterStudio/amiberry/wiki/Compile-from-source)
+-   [Troubleshooting](https://github.com/BlitterStudio/amiberry/wiki/Troubleshooting)
+
+### ARM64 JIT diagnostics
+
+On ARM64 hosts, JIT includes runtime safety guards for known unstable startup paths.
+
+- `AMIBERRY_ARM64_GUARD_VERBOSE=1` enables detailed guard-learning logs (diagnostic use).
+- Optional ARM64 hotspot guard is now disabled by default for performance.
+- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` re-enables optional hotspot guard logic for A/B testing.
+- `AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD=1` forces optional hotspot guard off; fixed safety fallback for the known startup hotspot remains active.
 
 ## 🤝 Contributing
 

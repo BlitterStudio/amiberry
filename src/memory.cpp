@@ -3141,6 +3141,8 @@ void memory_reset (void)
 	need_hardreset = false;
 	rom_write_enabled = true;
 #ifdef JIT
+	/* Start in direct n_addr mode; map_banks() will flip this if a bank
+	 * explicitly requires S_N_ADDR indirection. */
 	jit_n_addr_unsafe = 0;
 #endif
 	/* Use changed_prefs, as m68k_reset is called later.  */
@@ -3411,6 +3413,13 @@ void memory_reset (void)
 	if (mem_hardreset) {
 		memory_clear ();
 	}
+
+#ifdef NATMEM_OFFSET
+	if (canbang) {
+		commit_natmem_gaps();
+	}
+#endif
+
 	write_log (_T("memory init end\n"));
 }
 
@@ -3770,6 +3779,10 @@ void map_banks (addrbank *bank, int start, int size, int realsize)
 
 #ifdef JIT
 	if ((bank->jit_read_flag | bank->jit_write_flag) & S_N_ADDR) {
+		if (!jit_n_addr_unsafe) {
+			write_log(_T("JIT: jit_n_addr_unsafe enabled by bank '%s' at %08x (r=%d w=%d)\n"),
+				bank->name ? bank->name : _T("<unnamed>"), start << 16, bank->jit_read_flag, bank->jit_write_flag);
+		}
 		jit_n_addr_unsafe = 1;
 	}
 #endif

@@ -43,6 +43,8 @@ struct didata di_joystick[MAX_INPUT_DEVICES];
 
 static int num_mouse = 1, num_keyboard = 1, num_joystick = 0, num_retroarch_kbdjoy = 0;
 static int joystick_inited, retroarch_inited;
+// Index of the on-screen joystick inside di_joystick[]; -1 when not registered
+static int osj_device_index = -1;
 constexpr auto analog_upper_bound = 32767;
 constexpr auto analog_lower_bound = -analog_upper_bound;
 
@@ -1351,6 +1353,7 @@ static void close_joystick()
 	for (auto i = 0; i < num_joystick; i++)
 		di_dev_free(&di_joystick[i]);
 	num_joystick = 0;
+	osj_device_index = -1;
 	di_free();
 }
 
@@ -1465,6 +1468,11 @@ static int get_joystick_widget_first(const int joy, const int type)
 static int get_joystick_flags(int num)
 {
 	return 0;
+}
+
+int get_onscreen_joystick_device_index()
+{
+	return osj_device_index;
 }
 
 static bool invert_axis(int axis, const didata* did)

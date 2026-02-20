@@ -10485,6 +10485,12 @@ static void check_vsyncs_fast(void)
 		lof_detect = 1;
 		update_lof_detect();
 	}
+	// VSYNC (HCENTER)
+	if (vpos == 3 && !lof_store) {
+		agnus_vsync = true;
+		lof_detect = 0;
+		update_lof_detect();
+	}
 	if (vpos == 5 && !lof_store) {
 		agnus_vsync = false;
 	}
@@ -10493,7 +10499,7 @@ static void check_vsyncs_fast(void)
 		lof_detect = 0;
 		update_lof_detect();
 	}
-	if (vpos == 5 && lof_store) {
+	if (vpos == 5) {
 		agnus_vsync = false;
 	}
 

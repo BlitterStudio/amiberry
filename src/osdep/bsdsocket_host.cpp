@@ -31,6 +31,7 @@
 #include <process.h>
 #include <iphlpapi.h>
 #endif
+#include <atomic>
 #include <cstdarg>
 
 #include "options.h"
@@ -702,6 +703,11 @@ static unsigned int __stdcall sock_thread(void *p)
 
 /* host_* functions */
 
+/* TODO: Windows Dup2Socket does not duplicate the underlying SOCKET handle.
+ * Two descriptor table entries alias the same handle, so closing one
+ * invalidates the other.  The correct fix is WSADuplicateSocket() +
+ * WSASocket(), but that is a pre-existing WinUAE design choice and out
+ * of scope for this change. */
 int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 {
 	SOCKET s1, s2;
@@ -715,6 +721,7 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 			if ((unsigned int)(fd2) >= (unsigned int)sb->dtablesize) {
 				BSDTRACE((_T("Bad file descriptor (%d)\n"), fd2));
 				bsdsocklib_seterrno(ctx, sb, 9);
+				return -1;
 			}
 			fd2++;
 			s2 = getsock(ctx, sb, fd2);
@@ -727,6 +734,9 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 			return 0;
 		} else {
 			fd2 = getsd(ctx, sb, 1);
+			if (fd2 == -1) {
+				return -1;
+			}
 			setsd(ctx, sb, fd2, s1);
 			BSDTRACE((_T("%d\n"), fd2));
 			return (fd2 - 1);
@@ -756,6 +766,9 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
 		BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
 		return -1;
 	} else {
+		/* TODO: getsd() returns -1 when the descriptor table is full.
+		 * Unchecked, this causes ftable[sd-1] to write out of bounds.
+		 * Same bug exists in the POSIX host_socket. */
 		sd = getsd(ctx, sb, s);
 	}
 
@@ -902,6 +915,9 @@ void host_accept(TrapContext *ctx, SB, uae_u32 sd, uae_u32 name, uae_u32 namelen
 			sb->resultval = -1;
 			BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
 		} else {
+			/* TODO: getsd() returns -1 when the descriptor table is full.
+			 * Unchecked, this causes ftable[resultval-1] to write out of bounds.
+			 * Same bug exists in the POSIX bsdthr_Accept_2. */
 			sb->resultval = getsd(ctx, sb, s2);
 			sb->ftable[sb->resultval - 1] = sb->ftable[sd - 1];
 			callfdcallback(ctx, sb, sb->resultval - 1, FDCB_ALLOC);
@@ -2126,43 +2142,6 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 	}
 }
 
-uae_u32 host_Inet_NtoA(TrapContext *ctx, SB, uae_u32 in)
-{
-	uae_char *addr;
-	struct in_addr ina;
-	uae_u32 scratchbuf;
-
-	*(uae_u32 *)&ina = htonl(in);
-
-	BSDTRACE((_T("Inet_NtoA(%x) -> "), in));
-
-	if ((addr = inet_ntoa(ina)) != NULL) {
-		scratchbuf = trap_get_areg(ctx, 6) + offsetof(struct UAEBSDBase, scratchbuf);
-		strncpyha(ctx, scratchbuf, addr, SCRATCHBUFSIZE);
-		BSDTRACE((_T("%s\n"), addr));
-		return scratchbuf;
-	} else
-		SETERRNO;
-
-	BSDTRACE((_T("failed (%d)\n"), sb->sb_errno));
-
-	return 0;
-}
-
-uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
-{
-	uae_u32 addr;
-	char *cp_rp;
-
-	if (!trap_valid_address(ctx, cp, 4))
-		return 0;
-	cp_rp = trap_get_alloc_string(ctx, cp, 256);
-	addr = htonl(inet_addr(cp_rp));
-	BSDTRACE((_T("inet_addr(%s) -> 0x%08lx\n"), cp_rp, addr));
-	xfree(cp_rp);
-	return addr;
-}
-
 /* DNS/proto/serv thread pool */
 
 #define GET_STATE_FREE 0
@@ -2255,7 +2234,7 @@ static unsigned int thread_get2(void *indexp)
 				}
 
 				if (type) {
-					serv = getservbyport(nameport, proto_rp);
+					serv = getservbyport(htons((unsigned short)nameport), proto_rp);
 				} else {
 					if (addr_valid(_T("thread_get4"), nameport, 1)) {
 						name_rp = (char*)get_real_address(nameport);
@@ -2653,15 +2632,6 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 	release_get_thread(tindex);
 }
 
-uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
-{
-	if (!trap_valid_address(ctx, name, namelen))
-		return -1;
-	uae_char buf[256];
-	trap_get_string(ctx, buf, name, sizeof buf);
-	return gethostname(buf, namelen);
-}
-
 #endif /* BSDSOCKET */
 
 #else /* !_WIN32 */
@@ -2885,7 +2855,7 @@ struct event_monitor {
 	uae_thread_id thread;      // Monitor thread
 	SDL_mutex* mutex;          // Protects socket_list
 	int wake_pipe[2];          // Pipe to wake thread on changes
-	bool running;              // Thread running flag
+	std::atomic<bool> running; // Thread running flag
 	std::vector<socket_event_entry> socket_list;  // Sockets to monitor
 };
 
@@ -3277,7 +3247,10 @@ static void printSockAddr(struct sockaddr_in* in)
 static void post_socket_event(struct socketbase* sb, int sd, int event_type)
 {
 	if (!sb || sd < 0) return;
-	
+
+	// Verify socket still has an active event mask — race with SO_EVENTMASK=0
+	if (!(sb->ftable[sd] & REP_ALL)) return;
+
 	// Set the appropriate SET_* flag in ftable
 	sb->ftable[sd] |= (event_type << 8);
 
@@ -3319,7 +3292,7 @@ static int event_monitor_thread(void* data)
 		SDL_LockMutex(monitor->mutex);
 		
 		if (!monitor->socket_list.empty()) {
-			write_log("BSDSOCK: Event monitor checking %d sockets\n", (int)monitor->socket_list.size());
+			BSDTRACE((_T("BSDSOCK: Event monitor checking %d sockets\n"), (int)monitor->socket_list.size()));
 		}
 		
 		for (const auto& entry : monitor->socket_list) {
@@ -3347,10 +3320,15 @@ static int event_monitor_thread(void* data)
 				} else {
 					// REP_ACCEPT always monitored (if in active_mask)
 					FD_SET(entry.s, &readfds);
-					write_log("BSDSOCK: Adding socket %d to readfds (mask has REP_ACCEPT)\n", entry.sd);
+					BSDTRACE((_T("BSDSOCK: Adding socket %d to readfds (mask has REP_ACCEPT)\n"), entry.sd));
 				}
 			}
-			
+
+			// REP_CLOSE requires readfds to detect EOF via peek_socket
+			if ((active_mask & REP_CLOSE) && entry.connected && !entry.connecting) {
+				FD_SET(entry.s, &readfds);
+			}
+
 			// REP_WRITE is treated as Level Triggered in select() but Edge Triggered/One-Shot for Amiga signals.
 			// If connected and not connecting, we monitor for write if the event is active (not fired).
 			// FIX: Also monitor if REP_CONNECT was requested, as implicit Writability expectation.
@@ -3363,7 +3341,7 @@ static int event_monitor_thread(void* data)
 			// Only monitor if explicitly connecting.
 			if ((active_mask & REP_CONNECT) && entry.connecting) {
 				FD_SET(entry.s, &writefds);
-				write_log("BSDSOCK: Monitoring socket %d for connect completion (connecting=true)\n", entry.sd);
+				BSDTRACE((_T("BSDSOCK: Monitoring socket %d for connect completion (connecting=true)\n"), entry.sd));
 			}
 
 			if (active_mask & REP_OOB) {
@@ -3379,12 +3357,17 @@ static int event_monitor_thread(void* data)
 		
 		int result = select(maxfd + 1, &readfds, &writefds, &exceptfds, &timeout);
 		
-		write_log("BSDSOCK: select() returned %d\n", result);
+		BSDTRACE((_T("BSDSOCK: select() returned %d\n"), result));
 		
 		if (result < 0) {
 			if (errno == EINTR) continue;
+			if (errno == EBADF) {
+				BSDTRACE((_T("BSDSOCK: Event monitor select() got EBADF, rebuilding\n")));
+				continue;
+			}
 			write_log("BSDSOCK: Event monitor select() error: %d\n", errno);
-			break;
+			SDL_Delay(100);
+			continue;
 		}
 		
 		if (result == 0) {
@@ -3461,13 +3444,13 @@ static int event_monitor_thread(void* data)
 							events |= REP_WRITE;
 						}
                         // Do NOT set REP_READ here blindly. Let readfds handle it.
-						write_log("BSDSOCK: Socket %d CONNECT completed successfully\n", entry.sd);
+						BSDTRACE((_T("BSDSOCK: Socket %d CONNECT completed successfully\n"), entry.sd));
 					}
 					wrote = true;
 				}
 				
 				// Standard Write Signaling
-				if (entry.eventmask & REP_WRITE) {
+				if ((entry.eventmask & REP_WRITE) && !(entry.fired_mask & REP_WRITE)) {
 					events |= REP_WRITE;
 					wrote = true;
 				}
@@ -3496,8 +3479,8 @@ static int event_monitor_thread(void* data)
 				// Do NOT clear them from eventmask, as that loses the user's request.
 				// Do NOT update ftable here, post_socket_event handles the SET_ flags.
 				
-				write_log("BSDSOCK: Fired events 0x%x for socket %d, fired_mask now 0x%x\n", 
-				          events, entry.sd, entry.fired_mask);
+				BSDTRACE((_T("BSDSOCK: Fired events 0x%x for socket %d, fired_mask now 0x%x\n"),
+				          events, entry.sd, entry.fired_mask));
 			}
 		}
 		
@@ -3519,7 +3502,7 @@ static bool start_event_monitor()
 		return true; // Already running
 	}
 	
-	g_event_monitor = (struct event_monitor*)malloc(sizeof(struct event_monitor));
+	g_event_monitor = new event_monitor();
 	if (!g_event_monitor) {
 		write_log("BSDSOCK: Failed to allocate event monitor\n");
 		return false;
@@ -3528,7 +3511,7 @@ static bool start_event_monitor()
 	// Create wake pipe
 	if (pipe(g_event_monitor->wake_pipe) < 0) {
 		write_log("BSDSOCK: Failed to create wake pipe: %d\n", errno);
-		free(g_event_monitor);
+		delete g_event_monitor;
 		g_event_monitor = nullptr;
 		return false;
 	}
@@ -3539,7 +3522,7 @@ static bool start_event_monitor()
 		write_log("BSDSOCK: Failed to create mutex\n");
 		close_pipe(g_event_monitor->wake_pipe[0]);
 		close_pipe(g_event_monitor->wake_pipe[1]);
-		free(g_event_monitor);
+		delete g_event_monitor;
 		g_event_monitor = nullptr;
 		return false;
 	}
@@ -3554,7 +3537,7 @@ static bool start_event_monitor()
 		SDL_DestroyMutex(g_event_monitor->mutex);
 		close_pipe(g_event_monitor->wake_pipe[0]);
 		close_pipe(g_event_monitor->wake_pipe[1]);
-		free(g_event_monitor);
+		delete g_event_monitor;
 		g_event_monitor = nullptr;
 		return false;
 	}
@@ -3586,7 +3569,7 @@ static void stop_event_monitor()
 	SDL_DestroyMutex(g_event_monitor->mutex);
 	close_pipe(g_event_monitor->wake_pipe[0]);
 	close_pipe(g_event_monitor->wake_pipe[1]);
-	free(g_event_monitor);
+	delete g_event_monitor;
 	g_event_monitor = nullptr;
 	
 	write_log("BSDSOCK: Event monitor stopped\n");
@@ -3611,7 +3594,7 @@ static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 			// Update existing entry
 			entry.eventmask = eventmask;
 			found = true;
-			write_log("BSDSOCK: Updated event mask 0x%x for socket %d\n", eventmask, sd);
+			BSDTRACE((_T("BSDSOCK: Updated event mask 0x%x for socket %d\n"), eventmask, sd));
 			break;
 		}
 	}
@@ -3626,11 +3609,14 @@ static void register_socket_events(struct socketbase* sb, int sd, SOCKET_TYPE s,
 		entry.s = s;
 		entry.eventmask = eventmask;
 		entry.connecting = false;
-		entry.connected = true; // Default to true (optimistic), disable if ENOTCONN seen
+		// Determine actual connection state — bare sockets must not fire REP_WRITE/READ
+		struct sockaddr_in peer;
+		socklen_t plen = sizeof(peer);
+		entry.connected = (getpeername(s, (struct sockaddr*)&peer, &plen) == 0);
 		entry.fired_mask = 0;
 		g_event_monitor->socket_list.push_back(entry);
 		
-		write_log("BSDSOCK: Registered socket %d (native %d) for event monitoring (mask 0x%x)\n", sd, s, eventmask);
+		BSDTRACE((_T("BSDSOCK: Registered socket %d (native %d) for event monitoring (mask 0x%x)\n"), sd, s, eventmask));
 	}
 	
 	// Wake up monitor thread to rebuild fd_sets
@@ -3654,7 +3640,7 @@ static void unregister_socket_events(struct socketbase* sb, int sd)
 	while (it != g_event_monitor->socket_list.end()) {
 		if (it->sb == sb && it->sd == sd) {
 			it = g_event_monitor->socket_list.erase(it);
-			write_log("BSDSOCK: Unregistered socket %d from event monitoring\n", sd);
+			BSDTRACE((_T("BSDSOCK: Unregistered socket %d from event monitoring\n"), sd));
 		} else {
 			++it;
 		}
@@ -3667,6 +3653,34 @@ static void unregister_socket_events(struct socketbase* sb, int sd)
 	SDL_UnlockMutex(g_event_monitor->mutex);
 }
 
+// Unregister all sockets for a socketbase (called during cleanup)
+static void unregister_all_socket_events(struct socketbase* sb)
+{
+	if (!g_event_monitor) {
+		return;
+	}
+
+	SDL_LockMutex(g_event_monitor->mutex);
+
+	bool removed = false;
+	auto it = g_event_monitor->socket_list.begin();
+	while (it != g_event_monitor->socket_list.end()) {
+		if (it->sb == sb) {
+			it = g_event_monitor->socket_list.erase(it);
+			removed = true;
+		} else {
+			++it;
+		}
+	}
+
+	if (removed) {
+		char wake = 1;
+		write_pipe(g_event_monitor->wake_pipe[1], &wake, 1);
+	}
+
+	SDL_UnlockMutex(g_event_monitor->mutex);
+}
+
 // Set the connecting state for a socket
 static void set_socket_connecting(struct socketbase* sb, int sd, bool connecting)
 {
@@ -3676,7 +3690,7 @@ static void set_socket_connecting(struct socketbase* sb, int sd, bool connecting
 	for (auto& entry : g_event_monitor->socket_list) {
 		if (entry.sb == sb && entry.sd == sd) {
 			entry.connecting = connecting;
-			write_log("BSDSOCK: Socket %d connecting state set to %d\n", sd, connecting);
+			BSDTRACE((_T("BSDSOCK: Socket %d connecting state set to %d\n"), sd, connecting));
 			break;
 		}
 	}
@@ -3698,7 +3712,7 @@ static void socket_reenable_events(struct socketbase* sb, int sd, int events)
 		if (entry.sb == sb && entry.sd == sd) {
 			if (entry.fired_mask & events) {
 				entry.fired_mask &= ~events;
-				write_log("BSDSOCK: Re-enabled events 0x%x for socket %d\n", events, sd);
+				BSDTRACE((_T("BSDSOCK: Re-enabled events 0x%x for socket %d\n"), events, sd));
 				// Wake up monitor to check this socket again
 				if (g_event_monitor->wake_pipe[1] != -1) {
 					char b = 1;
@@ -3854,6 +3868,9 @@ uae_u32 bsdthr_Accept_2 (SB)
 		if ((flags = fcntl (s, F_GETFL)) == -1)
 			flags = 0;
 		fcntl (s, F_SETFL, flags & ~O_NONBLOCK); /* @@@ Don't do this if it's supposed to stay nonblocking... */
+		/* TODO: getsd() returns -1 when the descriptor table is full.
+		 * Unchecked, this causes ftable[s2-1] to write out of bounds.
+		 * Same bug exists in the Windows host_accept. */
 		s2 = getsd (sb->context, sb, s);
 		sb->ftable[s2-1] = sb->ftable[sb->len]; /* new socket inherits the old socket's properties */
 		write_log ("Accept: AmigaSide %d, NativeSide %d, len %d(%d)", sb->resultval, s, hlen, get_long (sb->a_addrlen));
@@ -4106,6 +4123,8 @@ static int bsdlib_threadfunc(void* arg)
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Connect_2, sb);
 			if ((int)sb->resultval < 0) {
 				SETERRNO;
+			} else {
+				bsdsocklib_seterrno(ctx, sb, 0);
 			}
 			break;
 
@@ -4114,6 +4133,8 @@ static int bsdlib_threadfunc(void* arg)
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Send_2, sb);
 			if ((int)sb->resultval < 0) {
 				SETERRNO;
+			} else {
+				bsdsocklib_seterrno(ctx, sb, 0);
 			}
 			break;
 
@@ -4121,6 +4142,8 @@ static int bsdlib_threadfunc(void* arg)
 			sb->resultval = bsdthr_SendRecvAcceptConnect(bsdthr_Recv_2, sb);
 			if ((int)sb->resultval < 0) {
 				SETERRNO;
+			} else {
+				bsdsocklib_seterrno(ctx, sb, 0);
 			}
 			break;
 
@@ -4288,6 +4311,8 @@ void host_sbcleanup (SB)
 		return;
 	}
 
+	unregister_all_socket_events(sb);
+
 	uae_thread_id thread = sb->thread;
 	close_pipe (sb->sockabort[0]);
 	close_pipe (sb->sockabort[1]);
@@ -4310,7 +4335,7 @@ void host_sbcleanup (SB)
 
 void host_sbreset (void)
 {
-	//STUB("");
+	stop_event_monitor();
 }
 
 void sockabort (SB)
@@ -4333,14 +4358,16 @@ int host_dup2socket(TrapContext *ctx, SB, int fd1, int fd2)
 		if (fd2 != -1) {
 			if ((unsigned int) (fd2) >= (unsigned int) sb->dtablesize) {
 				bsdsocklib_seterrno (ctx, sb, 9); /* EBADF */
+				return -1;
 			}
 			fd2++;
 			s2 = getsock(ctx, sb, fd2);
 			if (s2 != -1) {
+				unregister_socket_events(sb, fd2 - 1);
 				close_socket (s2);
 			}
 			setsd (ctx, sb, fd2, dup (s1));
-			return 0;
+			return fd2 - 1;
 		} else {
 			fd2 = getsd (ctx, sb, 1);
 			if (fd2 != -1) {
@@ -4372,6 +4399,9 @@ int host_socket(TrapContext *ctx, SB, int af, int type, int protocol)
         return -1;
     } else {
         int arg = 1;
+        /* TODO: getsd() returns -1 when the descriptor table is full.
+         * Unchecked, this causes ftable[sd-1] to write out of bounds.
+         * Same bug exists in the Windows host_socket. */
         sd = getsd (ctx, sb, s);
         setsockopt (s, SOL_SOCKET, SO_REUSEADDR, (const char*)&arg, sizeof(arg));
     }
@@ -4528,7 +4558,7 @@ void host_sendto (TrapContext *ctx, SB, uae_u32 sd, uae_u32 msg, uae_u8 *hmsg, u
 		}
 
 		sb->s = s;
-		sb->buf    = get_real_address (msg);
+		sb->buf    = realpt;
 		sb->len    = len;
 		sb->flags  = flags;
 		sb->to     = to;
@@ -4644,7 +4674,7 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 			write_log("BSDSOCK: Force-enabled REP_WRITE for socket %d (requested mask 0x%x -> 0x%x)\n", sd, get_long(optval), eventflags);
 		}
 		
-		write_log("BSDSOCK: SO_EVENTMASK called for socket %d, eventflags=0x%x\n", sd, eventflags);
+		BSDTRACE((_T("BSDSOCK: SO_EVENTMASK called for socket %d, eventflags=0x%x\n"), sd, eventflags));
 		
 		// Store event mask in ftable (using lower bits)
 		sb->ftable[sd] = (sb->ftable[sd] & ~REP_ALL) | (eventflags & REP_ALL);
@@ -4656,6 +4686,8 @@ void host_setsockopt(SB, uae_u32 sd, uae_u32 level, uae_u32 optname, uae_u32 opt
 		} else {
 			// Unregister socket from event monitoring
 			unregister_socket_events(sb, sd);
+			// Clear pending SET_* flags to prevent stale events on fd reuse
+			sb->ftable[sd] &= ~SET_ALL;
 		}
 		
 		sb->resultval = 0;
@@ -4730,6 +4762,18 @@ uae_u32 host_getsockopt(TrapContext* ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 		return -1;
 	}
 
+	// Handle SO_EVENTMASK (0x2001) - Amiga-specific, no host equivalent
+	if (level == 0xFFFF && optname == 0x2001) {
+		if (optval && optlen) {
+			int mask = sb->ftable[sd] & REP_ALL;
+			put_long(optval, mask);
+			put_long(optlen, 4);
+		}
+		bsdsocklib_seterrno(ctx, sb, 0);
+		sb->resultval = 0;
+		return 0;
+	}
+
 	if (optlen) {
 		len = get_long(optlen);
 		buf = malloc(len);
@@ -4739,13 +4783,24 @@ uae_u32 host_getsockopt(TrapContext* ctx, SB, uae_u32 sd, uae_u32 level, uae_u32
 	}
 
 	if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+		len = sizeof(timeout);
 		r = getsockopt(s, nativelevel, nativeoptname, (char*)&timeout, &len);
 	}
 	else if (nativeoptname == SO_LINGER) {
+		len = sizeof(sl);
 		r = getsockopt(s, nativelevel, nativeoptname, (char*)&sl, &len);
 	}
 	else {
 		r = getsockopt(s, nativelevel, nativeoptname, optval ? (char*)buf : NULL, optlen ? &len : NULL);
+	}
+
+	// Write back Amiga-appropriate optlen for size-mismatched types
+	if (r == 0 && optlen) {
+		if (nativeoptname == SO_RCVTIMEO || nativeoptname == SO_SNDTIMEO) {
+			len = 8; // Amiga sizeof(struct timeval) = 4+4
+		} else if (nativeoptname == SO_LINGER) {
+			len = 8; // Amiga sizeof(struct linger) = 4+4
+		}
 	}
 
 	if (optlen)
@@ -4996,7 +5051,9 @@ int host_CloseSocket(TrapContext *ctx, SB, int sd)
 	
 	// Unregister from event monitoring if registered
 	unregister_socket_events(sb, sd);
-	
+	// Clear pending event flags to prevent stale GetSocketEvents on fd reuse
+	sb->ftable[sd] &= ~SET_ALL;
+
 	retval = close_socket (s);
 	SETERRNO;
 	releasesock (ctx, sb, sd + 1);
@@ -5019,10 +5076,16 @@ uae_u32 bsdthr_WaitSelect(SB)
 	int r;
 	TrapContext* ctx = NULL;  // FIXME: Correct?
 
-	write_log("WaitSelect: %d 0x%x 0x%x 0x%x 0x%x 0x%x\n", sb->nfds, sb->sets[0], sb->sets[1], sb->sets[2], sb->timeout, sb->sigmp);
+	int nfds = sb->nfds;
+	if (nfds > sb->dtablesize) {
+		write_log(_T("BSDSOCK: WaitSelect nfds (%d) exceeds dtablesize (%d), clamping\n"), nfds, sb->dtablesize);
+		nfds = sb->dtablesize;
+	}
+
+	BSDTRACE((_T("WaitSelect: %d 0x%x 0x%x 0x%x 0x%x 0x%x\n"), sb->nfds, sb->sets[0], sb->sets[1], sb->sets[2], sb->timeout, sb->sigmp));
 
 	if (sb->timeout)
-		write_log("WaitSelect: timeout %d %d\n", get_long(sb->timeout), get_long(sb->timeout + 4));
+		BSDTRACE((_T("WaitSelect: timeout %d %d\n"), get_long(sb->timeout), get_long(sb->timeout + 4)));
 
 	FD_ZERO(&sets[0]);
 	FD_ZERO(&sets[1]);
@@ -5036,12 +5099,12 @@ uae_u32 bsdthr_WaitSelect(SB)
 	for (set = 0; set < 3; set++) {
 		if (sb->sets[set] != 0) {
 			a_set = sb->sets[set];
-			for (i = 0; i < sb->nfds; i++) {
+			for (i = 0; i < nfds; i++) {
 				if (bsd_amigaside_FD_ISSET(i, a_set)) {
 					s = getsock(ctx, sb, i + 1);
-					write_log("WaitSelect: AmigaSide %d set. NativeSide %d.\n", i, s);
+					BSDTRACE((_T("WaitSelect: AmigaSide %d set. NativeSide %d.\n"), i, s));
 					if (s == -1) {
-						write_log("BSDSOCK: WaitSelect() called with invalid descriptor %d in set %d.\n", i, set);
+						write_log(_T("BSDSOCK: WaitSelect() called with invalid descriptor %d in set %d.\n"), i, set);
 					} else {
 						FD_SET(s, &sets[set]);
 						if (max < s) max = s;
@@ -5058,14 +5121,14 @@ uae_u32 bsdthr_WaitSelect(SB)
 		tv.tv_usec = get_long(sb->timeout + 4);
 	}
 
-	write_log("Select going to select\n");
+	BSDTRACE((_T("Select going to select\n")));
 	r = select(max, &sets[0], &sets[1], &sets[2], (sb->timeout == 0) ? NULL : &tv);
-	write_log("Select returns %d, errno is %d\n", r, errno);
+	BSDTRACE((_T("Select returns %d, errno is %d\n"), r, errno));
 	if (r > 0) {
 		/* Socket told us to abort */
 		if (FD_ISSET(sb->sockabort[0], &sets[0])) {
 			/* read from the pipe to reset it */
-			write_log("WaitSelect aborted from signal\n");
+			BSDTRACE((_T("WaitSelect aborted from signal\n")));
 			r = 0;
 			for (set = 0; set < 3; set++)
 				if (sb->sets[set] != 0)
@@ -5078,11 +5141,11 @@ uae_u32 bsdthr_WaitSelect(SB)
 				a_set = sb->sets[set];
 				if (a_set != 0) {
 					bsd_amigaside_FD_ZERO(a_set);
-					for (i = 0; i < sb->nfds; i++) {
+					for (i = 0; i < nfds; i++) {
 						a_s = getsock(ctx, sb, i + 1);
 						if (!(a_s < 0)) {
 							if (FD_ISSET(a_s, &sets[set])) {
-								write_log("WaitSelect: NativeSide %d set. AmigaSide %d.\n", a_s, i);
+								BSDTRACE((_T("WaitSelect: NativeSide %d set. AmigaSide %d.\n"), a_s, i));
 
 								bsd_amigaside_FD_SET(i, a_set);
 							}
@@ -5095,7 +5158,7 @@ uae_u32 bsdthr_WaitSelect(SB)
 			if (sb->sets[set] != 0)
 				bsd_amigaside_FD_ZERO(sb->sets[set]);
 	}
-	write_log("WaitSelect: r=%d errno=%d\n", r, errno);
+	BSDTRACE((_T("WaitSelect: r=%d errno=%d\n"), r, errno));
 	return r;
 }
 
@@ -5123,21 +5186,16 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 		}
 	}
 
-	if (nfds == 0) {
-		/* No sockets - Just wait on signals */
-		if (wssigs != 0) {
-			trap_call_add_dreg(ctx, 0, wssigs);
-			sigs = trap_call_lib(ctx, sb->sysbase, -0x13e); // Wait()
-			trap_put_long(ctx, sigmp, sigs & wssigs);
-		}
-
+	if (nfds == 0 && wssigs == 0 && timeout == 0) {
+		/* Nothing to wait for — no sockets, no signals, no timeout */
 		if (readfds)
-			fd_zero (ctx, readfds,nfds);
+			fd_zero(ctx, readfds, nfds);
 		if (writefds)
-			fd_zero (ctx, writefds,nfds);
+			fd_zero(ctx, writefds, nfds);
 		if (exceptfds)
-			fd_zero (ctx, exceptfds,nfds);
+			fd_zero(ctx, exceptfds, nfds);
 		sb->resultval = 0;
+		bsdsocklib_seterrno(ctx, sb, 0);
 		return;
 	}
 
@@ -5159,7 +5217,7 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 
 	if (sigs & wssigs) {
 		/* Received the signals we were waiting on */
-		write_log("WaitSelect: got signal(s) %x\n", sigs);
+		BSDTRACE((_T("WaitSelect: got signal(s) %x\n"), sigs));
 
 
 		if (!(sigs & (((uae_u32)1) << sb->signal))) {
@@ -5179,7 +5237,7 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 		bsdsocklib_seterrno (ctx, sb, 0);
 	} else if (sigs & sb->eintrsigs) {
 		/* Wait select was interrupted */
-		write_log("WaitSelect: interrupted\n");
+		BSDTRACE((_T("WaitSelect: interrupted\n")));
 
 		if (!(sigs & (((uae_u32)1) << sb->signal))) {
 			sockabort (sb);
@@ -5190,38 +5248,6 @@ void host_WaitSelect(TrapContext *ctx, SB, uae_u32 nfds, uae_u32 readfds, uae_u3
 		bsdsocklib_seterrno (ctx, sb, mapErrno (EINTR));
 	}
 	clearsockabort(sb);
-}
-
-uae_u32 host_Inet_NtoA(TrapContext *ctx, SB, uae_u32 in)
-{
-	uae_char *addr;
-	struct in_addr ina;
-	uae_u32 buf;
-
-	*(uae_u32 *)&ina = htonl (in);
-
-	if ((addr = inet_ntoa(ina)) != NULL) {
-		buf = m68k_areg (regs, 6) + offsetof (struct UAEBSDBase, scratchbuf);
-		strncpyha (ctx, buf, addr, SCRATCHBUFSIZE);
-		return buf;
-	} else
-		SETERRNO;
-
-	return 0;
-}
-
-uae_u32 host_inet_addr(TrapContext *ctx, uae_u32 cp)
-{
-	uae_u32 addr;
-	char *cp_rp;
-
-	if (!trap_valid_address(ctx, cp, 4))
-		return 0;
-	cp_rp = trap_get_alloc_string(ctx, cp, 256);
-	addr = htonl(inet_addr(cp_rp));
-
-	xfree(cp_rp);
-	return addr;
 }
 
 // --- Wrap getservbyname, getservbyport, getprotobyname, getprotobynumber with mutex ---
@@ -5267,13 +5293,13 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 	struct servent *s;
 #if defined(__linux__)
 	s = (type) ?
-		getservbyport (nameport, (char *)get_real_address (proto)) :
+		getservbyport (htons((unsigned short)nameport), (char *)get_real_address (proto)) :
 		getservbyname ((char *)get_real_address (nameport), (char *)get_real_address (proto));
 #else
 	// Thread safety: protect non-reentrant getservby* functions
 	std::lock_guard<std::mutex> lock(bsdsock_mutex);
 	s = (type) ?
-		getservbyport (nameport, (char *)get_real_address (proto)) :
+		getservbyport (htons((unsigned short)nameport), (char *)get_real_address (proto)) :
 		getservbyname ((char *)get_real_address (nameport), (char *)get_real_address (proto));
 #endif
 	int size;
@@ -5327,6 +5353,11 @@ void host_getservbynameport(TrapContext *ctx, SB, uae_u32 nameport, uae_u32 prot
 
 		bsdsocklib_seterrno (ctx, sb,0);
 	} else {
+		// Free previous allocation and clear so Amiga side returns NULL
+		if (sb->servent) {
+			uae_FreeMem(ctx, sb->servent, sb->serventsize, sb->sysbase);
+		}
+		sb->servent = 0;
 		SETHERRNO;
 		SETERRNO;
 		return;
@@ -5346,15 +5377,6 @@ void host_gethostbynameaddr (TrapContext *ctx, SB, uae_u32 name, uae_u32 namelen
 	uae_sem_post (&sb->sem);
 
 	WAITSIGNAL;
-}
-
-uae_u32 host_gethostname(TrapContext *ctx, uae_u32 name, uae_u32 namelen)
-{
-	if (!trap_valid_address(ctx, name, namelen))
-		return -1;
-	uae_char buf[256];
-	trap_get_string(ctx, buf, name, sizeof buf);
-	return gethostname(buf, namelen);
 }
 
 #endif /* _WIN32 */

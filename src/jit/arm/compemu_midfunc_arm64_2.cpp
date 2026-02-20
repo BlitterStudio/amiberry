@@ -7881,7 +7881,7 @@ MIDFUNC(2,jnf_MEM_GETADR_OFF,(W4 d, RR4 adr))
 	adr = readreg(adr);
 	d = writereg(d);
 
-	ADD_www(d, adr, R_MEMSTART);
+	ADD_xxwEX(d, R_MEMSTART, adr, EX_SXTW);
 
 	unlock2(d);
 	unlock2(adr);
@@ -7894,12 +7894,29 @@ MIDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
 	d = writereg(d);
 
 	UBFIZ_xxii(REG_WORK1, adr, 0, 24);
-	ADD_www(d, REG_WORK1, R_MEMSTART);
+	ADD_xxwEX(d, R_MEMSTART, REG_WORK1, EX_UXTW);
 
 	unlock2(d);
 	unlock2(adr);
 }
 MENDFUNC(2,jnf_MEM_GETADR24_OFF,(W4 d, RR4 adr))
+
+MIDFUNC(2,jnf_MEM_GETADR_JMP_OFF,(W4 d, RR4 adr))
+{
+	adr = readreg(adr);
+	d = writereg(d);
+
+	LOAD_U64(REG_WORK2, (uintptr)baseaddr);
+	LSR_wwi(REG_WORK1, adr, 16);
+	LDR_xXxLSLi(REG_WORK3, REG_WORK2, REG_WORK1, 1); // 1 means shift by 3
+	ADD_xxwEX(d, REG_WORK3, adr, EX_SXTW);
+	LOAD_U64(REG_WORK1, ~1ULL);
+	AND_xxx(d, d, REG_WORK1);
+
+	unlock2(d);
+	unlock2(adr);
+}
+MENDFUNC(2,jnf_MEM_GETADR_JMP_OFF,(W4 d, RR4 adr))
 
 
 MIDFUNC(3,jnf_MEM_READMEMBANK,(W4 dest, RR4 adr, IM8 offset))
@@ -7921,9 +7938,10 @@ MIDFUNC(3,jnf_MEM_READMEMBANK,(W4 dest, RR4 adr, IM8 offset))
 	LDR_xXi(REG_WORK3, REG_WORK3, offset);
 
 	compemu_raw_call_r(REG_WORK3);
-	// Fix 18: ARM64 ABI (AAPCS64) says upper 32 bits of x0 are UNSPECIFIED
-	// for 32-bit return types. Zero them to maintain 32-bit cleanliness.
-	MOV_ww(REG_RESULT, REG_RESULT);
+	// Most bank callbacks return 32-bit values and need upper-bit cleanup.
+	// xlateaddr callback (offset=6*sizeof(void*)) returns a host pointer.
+	if (offset != SIZEOF_VOID_P * 6)
+		MOV_ww(REG_RESULT, REG_RESULT);
 
 	live.nat[REG_RESULT].holds[0] = dest;
 	live.nat[REG_RESULT].nholds = 1;
@@ -7957,4 +7975,3 @@ MIDFUNC(3,jnf_MEM_WRITEMEMBANK,(RR4 adr, RR4 source, IM8 offset))
 	compemu_raw_call_r(REG_WORK3);
 }
 MENDFUNC(3,jnf_MEM_WRITEMEMBANK,(RR4 adr, RR4 source, IM8 offset))
-

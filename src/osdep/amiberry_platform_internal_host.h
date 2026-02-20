@@ -31,6 +31,13 @@ static inline bool osdep_platform_init_sdl()
 #ifdef SDL_HINT_IME_SHOW_UI
 	SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 #endif
+
+#ifdef __ANDROID__
+	// Trap the Android back button so SDL delivers it as SDL_SCANCODE_AC_BACK
+	// instead of letting the system handle it (which would exit/minimize the app)
+	SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+#endif
+
 	(void)atexit(SDL_Quit);
 	return true;
 }

@@ -50,6 +50,11 @@ SOFTWARE.
 #include <emscripten.h>
 #endif  // __EMSCRIPTEN__
 
+// for print messages
+#ifndef IGFD_COUT
+#define IGFD_COUT std::cout 
+#endif // IGFD_COUT
+
 #ifdef _MSC_VER
 
 #define IGFD_DEBUG_BREAK \
@@ -66,7 +71,7 @@ SOFTWARE.
     defined(_WIN64) || \
     defined(_MSC_VER)
 #define _IGFD_WIN_
-#define stat _stati64
+#define stat _stat64
 #define stricmp _stricmp
 #include <cctype>
 // this option need c++17
@@ -483,32 +488,56 @@ public:
         return bExists;  // this is not a directory!
     }
     bool IsDirectoryExist(const std::string& vName) override {
+        bool bExists = false;
         if (!vName.empty()) {
             namespace fs = std::filesystem;
-            return fs::is_directory(stringToPath(vName));
+            try {
+                bExists = fs::is_directory(stringToPath(vName));
+            } catch (const std::exception& /*ex*/) {
+                bExists = false;
+            }
         }
-        return false;  // this is not a directory!
+        return bExists;
+    }
+    bool IsDirectory(const std::string& vFilePathName) override {
+        return IsDirectoryExist(vFilePathName);
     }
     bool IsFileExist(const std::string& vName) override {
-        namespace fs = std::filesystem;
-        return fs::is_regular_file(stringToPath(vName));
+        bool bExists = false;
+        if (!vName.empty()) {
+            namespace fs = std::filesystem;
+            try {
+                bExists = fs::is_regular_file(stringToPath(vName));
+            } catch (const std::exception& /*ex*/) {
+                bExists = false;
+            }
+        }
+        return bExists;
     }
     bool CreateDirectoryIfNotExist(const std::string& vName) override {
-        if (vName.empty()) return false;
-        if (IsDirectoryExist(vName)) return true;
-
+        if (vName.empty()) {
+            return false;
+        }
+        if (IsDirectoryExist(vName)) {
+            return true;
+        }
+        bool bExists = false;
 #if defined(__EMSCRIPTEN__)
         std::string str = std::string("FS.mkdir('") + vName + "');";
         emscripten_run_script(str.c_str());
-        bool res = true;
+        bExists = true;
 #else
         namespace fs = std::filesystem;
-        bool res     = fs::create_directory(stringToPath(vName));
-#endif  // _IGFD_WIN_
-        if (!res) {
-            std::cout << "Error creating directory " << vName << std::endl;
+        try {
+            bExists = fs::create_directory(stringToPath(vName));
+        } catch (const std::exception& /*ex*/) {
+            bExists = false;
         }
-        return res;
+#endif  // _IGFD_WIN_
+        if (!bExists) {
+            IGFD_COUT << "Error creating directory " << vName << std::endl;
+        }
+        return bExists;
     }
 
     std::vector<IGFD::PathDisplayedName> GetDevicesList() override {
@@ -531,8 +560,8 @@ public:
                 std::wstring wpath = IGFD::Utils::UTF8Decode(a);
                 if (GetVolumeInformationW(wpath.c_str(), szVolumeName, 2048, nullptr, nullptr, nullptr, nullptr, 0)) {
                     path_name.second = IGFD::Utils::UTF8Encode(szVolumeName);
+                    res.push_back(path_name);
                 }
-                res.push_back(path_name);
             }
         }
 #endif  // _IGFD_WIN_
@@ -543,16 +572,22 @@ public:
         // https://github.com/aiekick/ImGuiFileDialog/issues/54
         namespace fs = std::filesystem;
         IGFD::Utils::PathStruct res;
-        if (vPathFileName.empty()) return res;
+        if (vPathFileName.empty()) {
+            return res;
+        }
         auto fsPath = stringToPath(vPathFileName);
-        if (fs::is_directory(fsPath)) {
-            res.name = "";
-            res.path = pathToString(fsPath);
-            res.isOk = true;
-        } else if (fs::is_regular_file(fsPath)) {
-            res.name = pathToString(fsPath.filename());
-            res.path = pathToString(fsPath.parent_path());
-            res.isOk = true;
+        try {
+            if (fs::is_directory(fsPath)) {
+                res.name = "";
+                res.path = pathToString(fsPath);
+                res.isOk = true;
+            } else if (fs::is_regular_file(fsPath)) {
+                res.name = pathToString(fsPath.filename());
+                res.path = pathToString(fsPath.parent_path());
+                res.isOk = true;
+            }
+        } catch (const std::exception& ex) {
+            IGFD_COUT << "IGFD : " << ex.what() << std::endl;
         }
         return res;
     }
@@ -595,17 +630,36 @@ public:
                         }
                     }
                 } catch (const std::exception& ex) {
-                    std::cout << "IGFD : " << ex.what() << std::endl;
+                    IGFD_COUT << "IGFD : " << ex.what() << std::endl;
                 }
             }
         } catch (const std::exception& ex) {
-            std::cout << "IGFD : " << ex.what() << std::endl;
+            IGFD_COUT << "IGFD : " << ex.what() << std::endl;
         }
         return res;
     }
-    bool IsDirectory(const std::string& vFilePathName) override {
+    void GetFileDateAndSize(const std::string& vFilePathName, const IGFD::FileType& vFileType, std::string& voDate, size_t& voSize) override {
         namespace fs = std::filesystem;
-        return fs::is_directory(stringToPath(vFilePathName));
+        try {
+            fs::path fpath(vFilePathName);
+            // date
+            size_t len{};
+            const auto lastWriteTime = fs::last_write_time(fpath);
+            const auto sctp          = std::chrono::time_point_cast<std::chrono::system_clock::duration>(  //
+                lastWriteTime - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
+            const auto cftime        = std::chrono::system_clock::to_time_t(sctp);
+            static char timebuf[100];
+            std::strftime(timebuf, sizeof(timebuf), DateTimeFormat, std::localtime(&cftime));
+            voDate = timebuf;
+            // size
+            if (!vFileType.isDir()) {
+                voSize = fs::file_size(fpath);
+            }
+        } catch (const fs::filesystem_error& ex) {
+            voSize = 0;
+            voDate.clear();
+            IGFD_COUT << "IGFD : " << ex.what() << std::endl;
+        }
     }
 };
 #define FILE_SYSTEM_OVERRIDE FileSystemStd
@@ -675,7 +729,7 @@ public:
                 }
 #endif  // _IGFD_WIN_
                 if (!res) {
-                    std::cout << "Error creating directory " << vName << std::endl;
+                    IGFD_COUT << "Error creating directory " << vName << std::endl;
                 }
             }
         }
@@ -703,8 +757,8 @@ public:
                 std::wstring wpath = IGFD::Utils::UTF8Decode(a);
                 if (GetVolumeInformationW(wpath.c_str(), szVolumeName, 2048, nullptr, nullptr, nullptr, nullptr, 0)) {
                     path_name.second = IGFD::Utils::UTF8Encode(szVolumeName);
+                    res.push_back(path_name);
                 }
-                res.push_back(path_name);
             }
         }
 #endif  // _IGFD_WIN_
@@ -761,11 +815,12 @@ public:
                     case DT_UNKNOWN: {
                         struct stat sb = {};
 #ifdef _IGFD_WIN_
-                        auto filePath = vPath + ent->d_name;
+                        const auto wfpn = IGFD::Utils::UTF8Decode(vPath + ent->d_name);
+                        if (!_wstati64(wfpn.c_str(), &sb)) {
 #else
-                        auto filePath = vPath + IGFD::Utils::GetPathSeparator() + ent->d_name;
+                        const auto fpn = vPath + IGFD::Utils::GetPathSeparator() + ent->d_name;
+                        if (!stat(fpn.c_str(), &sb)) {
 #endif
-                        if (!stat(filePath.c_str(), &sb)) {
                             if (sb.st_mode & S_IFLNK) {
                                 fileType.SetSymLink(true);
                                 // by default if we can't figure out the target type.
@@ -805,6 +860,36 @@ public:
             return true;
         }
         return false;
+    }
+    void GetFileDateAndSize(const std::string& vFilePathName, const IGFD::FileType& vFileType, std::string& voDate, size_t& voSize) override {
+        struct stat statInfos{};
+        int32_t result{};
+#ifdef _IGFD_WIN_
+        std::wstring wfpn = IGFD::Utils::UTF8Decode(vFilePathName);
+        result            = _wstati64(wfpn.c_str(), &statInfos);
+#else
+        result = stat(vFilePathName.c_str(), &statInfos);
+#endif
+        static char timebuf[100];
+        if (!result) {
+            // date
+            size_t len = 0;
+#ifdef _MSC_VER
+            struct tm _tm;
+            errno_t err = localtime_s(&_tm, &statInfos.st_mtime);
+            if (!err) len = strftime(timebuf, 99, DateTimeFormat, &_tm);
+#else   // _MSC_VER
+            struct tm* _tm = localtime(&statInfos.st_mtime);
+            if (_tm) len = strftime(timebuf, 99, DateTimeFormat, _tm);
+#endif  // _MSC_VER
+            if (len) {
+                voDate = std::string(timebuf, len);
+            }
+            // size
+            if (!vFileType.isDir()) {
+                voSize = (size_t)statInfos.st_size;
+            }
+        }
     }
 };
 #define FILE_SYSTEM_OVERRIDE FileSystemDirent
@@ -1006,23 +1091,23 @@ std::string IGFD::Utils::RoundNumber(double vvalue, int n) {
     return tmp.str();
 }
 
-std::string IGFD::Utils::FormatFileSize(size_t vByteSize) {
+std::pair<std::string, std::string> IGFD::Utils::FormatFileSize(size_t vByteSize) {
     if (vByteSize != 0) {
-        static double lo = 1024.0;
-        static double ko = 1024.0 * 1024.0;
-        static double mo = 1024.0 * 1024.0 * 1024.0;
-        const auto v     = static_cast<double>(vByteSize);
-        if (v < lo)
-            return RoundNumber(v, 0) + " " + fileSizeBytes;  // octet
-        else if (v < ko)
-            return RoundNumber(v / lo, 2) + " " + fileSizeKiloBytes;  // ko
-        else if (v < mo)
-            return RoundNumber(v / ko, 2) + " " + fileSizeMegaBytes;  // Mo
-        else
-            return RoundNumber(v / mo, 2) + " " + fileSizeGigaBytes;  // Go
+        static auto lo = 1024.0;
+        static auto ko = 1024.0 * 1024.0;
+        static auto mo = 1024.0 * 1024.0 * 1024.0;
+        const auto v   = static_cast<double>(vByteSize);
+        if (v < lo) {
+            return {RoundNumber(v, 0), fileSizeBytes};  // octet
+        } else if (v < ko) {
+            return {RoundNumber(v / lo, 2), fileSizeKiloBytes};  // ko
+        } else if (v < mo) {
+            return {RoundNumber(v / ko, 2), fileSizeMegaBytes};  // Mo
+        } else {
+            return {RoundNumber(v / mo, 2), fileSizeGigaBytes};  // Go
+        }
     }
-
-    return "0 " fileSizeBytes;
+    return {"0", fileSizeBytes};
 }
 
 // https://cplusplus.com/reference/cstdlib/strtod
@@ -1985,65 +2070,65 @@ void IGFD::FileManager::ClearPathLists() {
 }
 
 void IGFD::FileManager::m_AddFile(const FileDialogInternal& vFileDialogInternal, const std::string& vPath, const std::string& vFileName, const FileType& vFileType) {
-    auto infos_ptr = FileInfos::create();
+    auto pInfos = FileInfos::create();
 
-    infos_ptr->filePath              = vPath;
-    infos_ptr->fileNameExt           = vFileName;
-    infos_ptr->fileNameExt_optimized = Utils::LowerCaseString(infos_ptr->fileNameExt);
-    infos_ptr->fileType              = vFileType;
+    pInfos->filePath              = vPath;
+    pInfos->fileNameExt           = vFileName;
+    pInfos->fileNameExt_optimized = Utils::LowerCaseString(pInfos->fileNameExt);
+    pInfos->fileType              = vFileType;
 
-    if (infos_ptr->fileNameExt.empty() || (infos_ptr->fileNameExt == "." && !vFileDialogInternal.filterManager.dLGFilters.empty())) {  // filename empty or filename is the current dir '.' //-V807
+    if (pInfos->fileNameExt.empty() || (pInfos->fileNameExt == "." && !vFileDialogInternal.filterManager.dLGFilters.empty())) {  // filename empty or filename is the current dir '.' //-V807
         return;
     }
 
-    if (infos_ptr->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && infos_ptr->fileNameExt[0] == '.') {  // dont show hidden files
-        if (!vFileDialogInternal.filterManager.dLGFilters.empty() || (vFileDialogInternal.filterManager.dLGFilters.empty() && infos_ptr->fileNameExt != ".")) {            // except "." if in directory mode //-V728
+    if (pInfos->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && pInfos->fileNameExt[0] == '.') {  // dont show hidden files
+        if (!vFileDialogInternal.filterManager.dLGFilters.empty() || (vFileDialogInternal.filterManager.dLGFilters.empty() && pInfos->fileNameExt != ".")) {            // except "." if in directory mode //-V728
             return;
         }
     }
 
-    if (infos_ptr->FinalizeFileTypeParsing(vFileDialogInternal.filterManager.GetSelectedFilter().count_dots)) {
-        if (!vFileDialogInternal.filterManager.IsCoveredByFilters(*infos_ptr.get(),  //
+    if (pInfos->FinalizeFileTypeParsing(vFileDialogInternal.filterManager.GetSelectedFilter().count_dots)) {
+        if (!vFileDialogInternal.filterManager.IsCoveredByFilters(*pInfos.get(),  //
                                                                   (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering) != 0)) {
             return;
         }
     }
 
-    vFileDialogInternal.filterManager.FillFileStyle(infos_ptr);
+    vFileDialogInternal.filterManager.FillFileStyle(pInfos);
 
-    m_CompleteFileInfos(infos_ptr);
+    m_CompleteFileInfos(pInfos);
 
-    if (m_CompleteFileInfosWithUserFileAttirbutes(vFileDialogInternal, infos_ptr)) {
-        m_FileList.push_back(infos_ptr);
+    if (m_CompleteFileInfosWithUserFileAttirbutes(vFileDialogInternal, pInfos)) {
+        m_FileList.push_back(pInfos);
     }
 }
 
 void IGFD::FileManager::m_AddPath(const FileDialogInternal& vFileDialogInternal, const std::string& vPath, const std::string& vFileName, const FileType& vFileType) {
     if (!vFileType.isDir()) return;
 
-    auto infos_ptr = FileInfos::create();
+    auto pInfos = FileInfos::create();
 
-    infos_ptr->filePath              = vPath;
-    infos_ptr->fileNameExt           = vFileName;
-    infos_ptr->fileNameExt_optimized = Utils::LowerCaseString(infos_ptr->fileNameExt);
-    infos_ptr->fileType              = vFileType;
+    pInfos->filePath              = vPath;
+    pInfos->fileNameExt           = vFileName;
+    pInfos->fileNameExt_optimized = Utils::LowerCaseString(pInfos->fileNameExt);
+    pInfos->fileType              = vFileType;
 
-    if (infos_ptr->fileNameExt.empty() || (infos_ptr->fileNameExt == "." && !vFileDialogInternal.filterManager.dLGFilters.empty())) {  // filename empty or filename is the current dir '.' //-V807
+    if (pInfos->fileNameExt.empty() || (pInfos->fileNameExt == "." && !vFileDialogInternal.filterManager.dLGFilters.empty())) {  // filename empty or filename is the current dir '.' //-V807
         return;
     }
 
-    if (infos_ptr->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && infos_ptr->fileNameExt[0] == '.') {  // dont show hidden files
-        if (!vFileDialogInternal.filterManager.dLGFilters.empty() || (vFileDialogInternal.filterManager.dLGFilters.empty() && infos_ptr->fileNameExt != ".")) {            // except "." if in directory mode //-V728
+    if (pInfos->fileNameExt != ".." && (vFileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DontShowHiddenFiles) && pInfos->fileNameExt[0] == '.') {  // dont show hidden files
+        if (!vFileDialogInternal.filterManager.dLGFilters.empty() || (vFileDialogInternal.filterManager.dLGFilters.empty() && pInfos->fileNameExt != ".")) {            // except "." if in directory mode //-V728
             return;
         }
     }
 
-    vFileDialogInternal.filterManager.FillFileStyle(infos_ptr);
+    vFileDialogInternal.filterManager.FillFileStyle(pInfos);
 
-    m_CompleteFileInfos(infos_ptr);
+    m_CompleteFileInfos(pInfos);
 
-    if (m_CompleteFileInfosWithUserFileAttirbutes(vFileDialogInternal, infos_ptr)) {
-        m_PathList.push_back(infos_ptr);
+    if (m_CompleteFileInfosWithUserFileAttirbutes(vFileDialogInternal, pInfos)) {
+        m_PathList.push_back(pInfos);
     }
 }
 
@@ -2101,19 +2186,19 @@ void IGFD::FileManager::m_OpenPathPopup(const FileDialogInternal& vFileDialogInt
 }
 
 bool IGFD::FileManager::GetDevices() {
-    auto devices = m_FileSystemPtr->GetDevicesList();
+    const auto devices = m_FileSystemPtr->GetDevicesList();
     if (!devices.empty()) {
         m_CurrentPath.clear();
         m_CurrentPathDecomposition.clear();
         ClearFileLists();
-        for (auto& drive : devices) {
-            auto info_ptr                   = FileInfos::create();
-            info_ptr->fileNameExt           = drive.first;
-            info_ptr->fileNameExt_optimized = Utils::LowerCaseString(drive.first);
-            info_ptr->deviceInfos           = drive.second;
-            info_ptr->fileType.SetContent(FileType::ContentType::Directory);
-            if (!info_ptr->fileNameExt.empty()) {
-                m_FileList.push_back(info_ptr);
+        for (const auto& drive : devices) {
+            auto pInfo                   = FileInfos::create();
+            pInfo->fileNameExt           = drive.first;
+            pInfo->fileNameExt_optimized = Utils::LowerCaseString(drive.first);
+            pInfo->deviceInfos           = drive.second;
+            pInfo->fileType.SetContent(FileType::ContentType::Directory);
+            if (!pInfo->fileNameExt.empty()) {
+                m_FileList.push_back(pInfo);
                 showDevices = true;
             }
         }
@@ -2213,51 +2298,37 @@ void IGFD::FileManager::m_ApplyFilteringOnFileList(const FileDialogInternal& vFi
 void IGFD::FileManager::m_CompleteFileInfos(const std::shared_ptr<FileInfos>& vInfos) {
     if (!vInfos.use_count()) return;
 
-    if (vInfos->fileNameExt != "." && vInfos->fileNameExt != "..") {
-        // _stat struct :
-        // dev_t     st_dev;     /* ID of device containing file */
-        // ino_t     st_ino;     /* inode number */
-        // mode_t    st_mode;    /* protection */
-        // nlink_t   st_nlink;   /* number of hard links */
-        // uid_t     st_uid;     /* user ID of owner */
-        // gid_t     st_gid;     /* group ID of owner */
-        // dev_t     st_rdev;    /* device ID (if special file) */
-        // off_t     st_size;    /* total size, in bytes */
-        // blksize_t st_blksize; /* blocksize for file system I/O */
-        // blkcnt_t  st_blocks;  /* number of 512B blocks allocated */
-        // time_t    st_atime;   /* time of last access - not sure out of ntfs */
-        // time_t    st_mtime;   /* time of last modification - not sure out of ntfs */
-        // time_t    st_ctime;   /* time of last status change - not sure out of ntfs */
+    if ((vInfos->fileNameExt == ".") ||   // current dir (special case, not really a dir or a file)
+        (vInfos->fileNameExt == "..")) {  // last dir (special case, not really a dir or a file)
+        return;
+    }
 
-        std::string fpn;
+    // _stat struct :
+    // dev_t     st_dev;     /* ID of device containing file */
+    // ino_t     st_ino;     /* inode number */
+    // mode_t    st_mode;    /* protection */
+    // nlink_t   st_nlink;   /* number of hard links */
+    // uid_t     st_uid;     /* user ID of owner */
+    // gid_t     st_gid;     /* group ID of owner */
+    // dev_t     st_rdev;    /* device ID (if special file) */
+    // off_t     st_size;    /* total size, in bytes */
+    // blksize_t st_blksize; /* blocksize for file system I/O */
+    // blkcnt_t  st_blocks;  /* number of 512B blocks allocated */
+    // time_t    st_atime;   /* time of last access - not sure out of ntfs */
+    // time_t    st_mtime;   /* time of last modification - not sure out of ntfs */
+    // time_t    st_ctime;   /* time of last status change - not sure out of ntfs */
 
-        // FIXME: so the condition is always true?
-        if (vInfos->fileType.isFile() || vInfos->fileType.isLinkToUnknown() || vInfos->fileType.isDir()) {
-            fpn = vInfos->filePath + IGFD::Utils::GetPathSeparator() + vInfos->fileNameExt;
-        }
+    std::string fpn;
 
-        struct stat statInfos = {};
-        char timebuf[100];
-        int result = stat(fpn.c_str(), &statInfos);
-        if (!result) {
-            if (!vInfos->fileType.isDir()) {
-                vInfos->fileSize         = (size_t)statInfos.st_size;
-                vInfos->formatedFileSize = IGFD::Utils::FormatFileSize(vInfos->fileSize);
-            }
+    // FIXME: so the condition is always true?
+    if (vInfos->fileType.isFile() || vInfos->fileType.isLinkToUnknown() || vInfos->fileType.isDir()) {
+        fpn = vInfos->filePath + IGFD::Utils::GetPathSeparator() + vInfos->fileNameExt;
+    }
 
-            size_t len = 0;
-#ifdef _MSC_VER
-            struct tm _tm;
-            errno_t err = localtime_s(&_tm, &statInfos.st_mtime);
-            if (!err) len = strftime(timebuf, 99, DateTimeFormat, &_tm);
-#else   // _MSC_VER
-            struct tm* _tm = localtime(&statInfos.st_mtime);
-            if (_tm) len = strftime(timebuf, 99, DateTimeFormat, _tm);
-#endif  // _MSC_VER
-            if (len) {
-                vInfos->fileModifDate = std::string(timebuf, len);
-            }
-        }
+    m_FileSystemPtr->GetFileDateAndSize(fpn, vInfos->fileType, vInfos->fileModifDate, vInfos->fileSize);
+
+    if (!vInfos->fileType.isDir()) {
+        vInfos->formatedFileSize = IGFD::Utils::FormatFileSize(vInfos->fileSize);
     }
 }
 
@@ -2307,8 +2378,9 @@ void IGFD::FileManager::SetCurrentDir(const std::string& vPath) {
         std::wstring fpath(numchar, 0);
         GetFullPathNameW(wpath.c_str(), numchar, (wchar_t*)fpath.data(), nullptr);
         std::string real_path = IGFD::Utils::UTF8Encode(fpath);
-        while (real_path.back() == '\0')  // for fix issue we can have with std::string concatenation.. if there is a \0 at end
+        while (real_path.back() == '\0') {  // for fix issue we can have with std::string concatenation.. if there is a \0 at end
             real_path = real_path.substr(0, real_path.size() - 1U);
+        }
         if (!real_path.empty())
 #elif defined(_IGFD_UNIX_)  // _IGFD_UNIX_ is _IGFD_WIN_ or APPLE
         char real_path[PATH_MAX];
@@ -2317,7 +2389,7 @@ void IGFD::FileManager::SetCurrentDir(const std::string& vPath) {
 #endif                      // _IGFD_WIN_
         {
             m_CurrentPath = std::move(real_path);
-            if (m_CurrentPath[m_CurrentPath.size() - 1] == PATH_SEP) {
+            if (m_CurrentPath.size() > 1 && m_CurrentPath[m_CurrentPath.size() - 1] == PATH_SEP) {
                 m_CurrentPath = m_CurrentPath.substr(0, m_CurrentPath.size() - 1);
             }
             IGFD::Utils::SetBuffer(inputPathBuffer, MAX_PATH_BUFFER_SIZE, m_CurrentPath);
@@ -2382,7 +2454,9 @@ bool IGFD::FileManager::SetPathOnParentDirectoryIfAny() {
 }
 
 std::string IGFD::FileManager::GetCurrentPath() {
-    if (m_CurrentPath.empty()) m_CurrentPath = ".";
+    if (m_CurrentPath.empty()) {
+        m_CurrentPath = ".";
+    }
     return m_CurrentPath;
 }
 
@@ -2435,9 +2509,9 @@ bool IGFD::FileManager::SelectDirectory(const std::shared_ptr<FileInfos>& vInfos
 
 void IGFD::FileManager::SelectAllFileNames() {
     m_SelectedFileNames.clear();
-    for (const auto& infos_ptr : m_FilteredFileList) {
-        if (infos_ptr != nullptr) {
-            m_AddFileNameInSelection(infos_ptr->fileNameExt, true);
+    for (const auto& pInfos : m_FilteredFileList) {
+        if (pInfos != nullptr) {
+            m_AddFileNameInSelection(pInfos->fileNameExt, true);
         }
     }
 }
@@ -2594,7 +2668,9 @@ void IGFD::FileManager::DrawPathComposer(const FileDialogInternal& vFileDialogIn
             }
         }
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip(buttonEditPathString);
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(buttonEditPathString);
+    }
 
     ImGui::SameLine();
 
@@ -3350,16 +3426,16 @@ bool IGFD::KeyExplorerFeature::m_LocateItem_Loop(FileDialogInternal& vFileDialog
                     m_LocateFileByInputChar_lastFileIdx = i;
                     m_StartFlashItem(m_LocateFileByInputChar_lastFileIdx);
 
-                    auto infos_ptr = fdi.GetFilteredFileAt(m_LocateFileByInputChar_lastFileIdx);
-                    if (infos_ptr.use_count()) {
-                        if (infos_ptr->fileType.isDir())  //-V522
+                    auto pInfos = fdi.GetFilteredFileAt(m_LocateFileByInputChar_lastFileIdx);
+                    if (pInfos.use_count()) {
+                        if (pInfos->fileType.isDir())  //-V522
                         {
                             if (fdi.dLGDirectoryMode)  // directory chooser
                             {
-                                fdi.SelectFileName(infos_ptr);
+                                fdi.SelectFileName(pInfos);
                             }
                         } else {
-                            fdi.SelectFileName(infos_ptr);
+                            fdi.SelectFileName(pInfos);
                         }
 
                         found = true;
@@ -3466,13 +3542,13 @@ void IGFD::KeyExplorerFeature::m_ExploreWithkeys(FileDialogInternal& vFileDialog
                 ImGui::SetScrollY(p);
                 m_StartFlashItem(m_LocateFileByInputChar_lastFileIdx);
 
-                auto infos_ptr = fdi.GetFilteredFileAt(m_LocateFileByInputChar_lastFileIdx);
-                if (infos_ptr.use_count()) {
-                    if (infos_ptr->fileType.isDir())  //-V522
+                auto pInfos = fdi.GetFilteredFileAt(m_LocateFileByInputChar_lastFileIdx);
+                if (pInfos.use_count()) {
+                    if (pInfos->fileType.isDir())  //-V522
                     {
                         if (!fdi.dLGDirectoryMode || enterInDirectory) {
                             if (enterInDirectory) {
-                                if (fdi.SelectDirectory(infos_ptr)) {
+                                if (fdi.SelectDirectory(pInfos)) {
                                     // changement de repertoire
                                     vFileDialogInternal.fileManager.OpenCurrentPath(vFileDialogInternal);
                                     if (m_LocateFileByInputChar_lastFileIdx > countFiles - 1U) {
@@ -3482,10 +3558,10 @@ void IGFD::KeyExplorerFeature::m_ExploreWithkeys(FileDialogInternal& vFileDialog
                             }
                         } else  // directory chooser
                         {
-                            fdi.SelectFileName(infos_ptr);
+                            fdi.SelectFileName(pInfos);
                         }
                     } else {
-                        fdi.SelectFileName(infos_ptr);
+                        fdi.SelectFileName(pInfos);
 
                         if (enterInDirectory) {
                             vFileDialogInternal.isOk = true;
@@ -3730,9 +3806,6 @@ void IGFD::KeyExplorerFeature::SetFlashingAttenuationInSeconds(float vAttenValue
 #endif  // USE_EXPLORATION_BY_KEYS
 
 IGFD::FileDialog::FileDialog() : PlacesFeature(), KeyExplorerFeature(), ThumbnailFeature() {
-#ifdef USE_PLACES_FEATURE
-    m_InitPlaces(m_FileDialogInternal);
-#endif
 }
 IGFD::FileDialog::~FileDialog() = default;
 
@@ -3745,6 +3818,9 @@ void IGFD::FileDialog::OpenDialog(const std::string& vKey, const std::string& vT
     if (m_FileDialogInternal.showDialog)  // if already opened, quit
         return;
     m_FileDialogInternal.configureDialog(vKey, vTitle, vFilters, vConfig);
+#ifdef USE_PLACES_FEATURE
+    m_InitPlaces(m_FileDialogInternal);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3814,8 +3890,7 @@ bool IGFD::FileDialog::Display(const std::string& vKey, ImGuiWindowFlags vFlags,
             }
 #endif  // IMGUI_HAS_VIEWPORT
 
-            ImGuiID _frameId = ImGui::GetID(name.c_str());
-            if (ImGui::BeginChild(_frameId, frameSize, false, m_CurrentDisplayedFlags | ImGuiWindowFlags_NoScrollbar)) {
+            if (ImGui::BeginChild("childContent", frameSize, false, m_CurrentDisplayedFlags | ImGuiWindowFlags_NoScrollbar)) {
                 m_FileDialogInternal.name = name;  //-V820
                 if (fdFile.dLGpath.empty()) {
                     fdFile.dLGpath = ".";  // defaut path is '.'
@@ -3845,12 +3920,7 @@ bool IGFD::FileDialog::Display(const std::string& vKey, ImGuiWindowFlags vFlags,
             ImGui::EndChild();
 
             // for display in dialog center, the confirm to overwrite dlg
-            ImGuiWindow* curWin = ImGui::GetCurrentWindowRead();
-            if (curWin) {
-                m_FileDialogInternal.dialogCenterPos = curWin->ContentRegionRect.GetCenter();
-            } else {
-                m_FileDialogInternal.dialogCenterPos = ImVec2(0, 0);
-            }
+            m_FileDialogInternal.dialogCenterPos = ImGui::GetCurrentWindowRead()->ContentRegionRect.GetCenter();
 
             // when the confirm to overwrite dialog will appear we need to
             // disable the modal mode of the main file dialog
@@ -3929,7 +3999,7 @@ void IGFD::FileDialog::m_DrawContent() {
     if (!(m_FileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_DisablePlaceMode)) {
         if (m_PlacesPaneShown) {
             float otherWidth = size.x - m_PlacesPaneWidth;
-            ImGui::PushID("##splitterplaces");
+            ImGui::PushID("splitterplaces");
             IGFD::Utils::ImSplitter(true, 4.0f, &m_PlacesPaneWidth, &otherWidth, 10.0f, 10.0f + m_FileDialogInternal.getDialogConfig().sidePaneWidth, size.y);
             ImGui::PopID();
             size.x -= otherWidth;
@@ -3942,7 +4012,7 @@ void IGFD::FileDialog::m_DrawContent() {
     size.x = ImGui::GetContentRegionAvail().x - m_FileDialogInternal.getDialogConfig().sidePaneWidth;
 
     if (m_FileDialogInternal.getDialogConfig().sidePane) {
-        ImGui::PushID("##splittersidepane");
+        ImGui::PushID("splittersidepane");
         IGFD::Utils::ImSplitter(true, 4.0f, &size.x, &m_FileDialogInternal.getDialogConfigRef().sidePaneWidth, 10.0f, 10.0f, size.y);
         ImGui::PopID();
     }
@@ -3996,20 +4066,20 @@ void IGFD::FileDialog::m_DisplayPathPopup(ImVec2 vSize) {
                     for (int i = m_PathListClipper.DisplayStart; i < m_PathListClipper.DisplayEnd; i++) {
                         if (i < 0) continue;
 
-                        auto infos_ptr = fdi.GetFilteredPathAt((size_t)i);
-                        if (!infos_ptr.use_count()) continue;
+                        auto pInfos = fdi.GetFilteredPathAt((size_t)i);
+                        if (!pInfos.use_count()) continue;
 
-                        m_BeginFileColorIconStyle(infos_ptr, _showColor, _str, &_font);
+                        m_BeginFileColorIconStyle(pInfos, _showColor, _str, &_font);
 
-                        bool selected = fdi.IsFileNameSelected(infos_ptr->fileNameExt);  // found
+                        bool selected = fdi.IsFileNameSelected(pInfos->fileNameExt);  // found
 
                         ImGui::TableNextRow();
 
                         if (ImGui::TableNextColumn())  // file name
                         {
-                            if (ImGui::Selectable(infos_ptr->fileNameExt.c_str(), &selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_SpanAvailWidth)) {
+                            if (ImGui::Selectable(pInfos->fileNameExt.c_str(), &selected, static_cast<int>(ImGuiSelectableFlags_SpanAllColumns) | static_cast<int>(ImGuiSelectableFlags_SpanAvailWidth))) {
                                 fdi.SetCurrentPath(fdi.ComposeNewPath(fdi.GetCurrentPopupComposedPath()));
-                                fdi.pathClicked = fdi.SelectDirectory(infos_ptr);
+                                fdi.pathClicked = fdi.SelectDirectory(pInfos);
                                 ImGui::CloseCurrentPopup();
                             }
                         }
@@ -4031,8 +4101,8 @@ void IGFD::FileDialog::m_DisplayPathPopup(ImVec2 vSize) {
 
 bool IGFD::FileDialog::m_DrawOkButton() {
     auto& fdFile = m_FileDialogInternal.fileManager;
-    if (m_FileDialogInternal.canWeContinue && strlen(fdFile.fileNameBuffer) || //
-        m_FileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_OptionalFileName) { // optional
+    if ((m_FileDialogInternal.canWeContinue && strlen(fdFile.fileNameBuffer)) || //
+        (m_FileDialogInternal.getDialogConfig().flags & ImGuiFileDialogFlags_OptionalFileName)) { // optional
         if (IMGUI_BUTTON(okButtonString "##validationdialog", ImVec2(okButtonWidth, 0.0f)) || m_FileDialogInternal.isOk) {
             m_FileDialogInternal.isOk = true;
             return true;
@@ -4180,13 +4250,14 @@ void IGFD::FileDialog::m_SelectableItem(int vRowIdx, std::shared_ptr<FileInfos> 
     }
 }
 
-void IGFD::FileDialog::m_DisplayFileInfosTooltip(const int32_t& /*vRowIdx*/, const int32_t& vColumnIdx, std::shared_ptr<FileInfos> vFileInfos) {
-    if (ImGui::IsItemHovered()) {
-        if (vFileInfos != nullptr && vFileInfos->tooltipColumn == vColumnIdx) {
-            if (!vFileInfos->tooltipMessage.empty()) {
-                ImGui::SetTooltip("%s", vFileInfos->tooltipMessage.c_str());
-            }
-        }
+void IGFD::FileDialog::m_DisplayFileInfosTooltip(const int32_t& vRowIdx, const int32_t& vColumnIdx, std::shared_ptr<FileInfos> vFileInfos) {
+    // IsItemHovered is not sufficient since file size have two calls to Text
+    if ((ImGui::TableGetHoveredColumn() == vColumnIdx) &&  // column hovered
+        (ImGui::TableGetHoveredRow() == (vRowIdx + 1)) &&  // row hovered
+        (vFileInfos != nullptr) &&                         // fileinfo not null
+        (vFileInfos->tooltipColumn == vColumnIdx) &&       // good tooltip column
+        (!vFileInfos->tooltipMessage.empty())) {           // tooltip not empty
+        ImGui::SetTooltip("%s", vFileInfos->tooltipMessage.c_str());
     }
 }
 
@@ -4194,21 +4265,20 @@ void IGFD::FileDialog::m_BeginFileColorIconStyle(std::shared_ptr<FileInfos> vFil
     vOutStr.clear();
     vOutShowColor = false;
 
-    if (vFileInfos->fileStyle.use_count())  //-V807 //-V522
-    {
+    if (vFileInfos->fileStyle != nullptr) {
         vOutShowColor = true;
-
-        *vOutFont = vFileInfos->fileStyle->font;
+        *vOutFont     = vFileInfos->fileStyle->font;
     }
 
-    if (vOutShowColor && !vFileInfos->fileStyle->icon.empty())
+    if (vOutShowColor && !vFileInfos->fileStyle->icon.empty()) {
         vOutStr = vFileInfos->fileStyle->icon;
-    else if (vFileInfos->fileType.isDir())
+    } else if (vFileInfos->fileType.isDir()) {
         vOutStr = dirEntryString;
-    else if (vFileInfos->fileType.isLinkToUnknown())
+    } else if (vFileInfos->fileType.isLinkToUnknown()) {
         vOutStr = linkEntryString;
-    else if (vFileInfos->fileType.isFile())
+    } else if (vFileInfos->fileType.isFile()) {
         vOutStr = fileEntryString;
+    }
 
     vOutStr += " " + vFileInfos->fileNameExt;
 
@@ -4233,8 +4303,18 @@ void IGFD::FileDialog::m_EndFileColorIconStyle(const bool vShowColor, ImFont* vF
     }
 }
 
-void IGFD::FileDialog::m_drawColumnText(int /*vColIdx*/, const char* vLabel, bool /*vSelected*/, bool /*vHovered*/) {
-    ImGui::Text("%s", vLabel);
+void IGFD::FileDialog::m_drawColumnText(int /*vColIdx*/, const char* vFmt, const char* vLabel, bool /*vSelected*/, bool /*vHovered*/) {
+    ImGui::Text(vFmt, vLabel);
+}
+
+void IGFD::FileDialog::m_rightAlignText(const char* text, const char* maxWidthText) {
+    const auto maxWidth    = ImGui::CalcTextSize(maxWidthText).x;
+    const auto actualWidth = ImGui::CalcTextSize(text).x;
+    const auto spacing     = maxWidth - actualWidth;
+    if (spacing > 0.0f) {
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + spacing);
+    }
+    ImGui::TextUnformatted(text);
 }
 
 void IGFD::FileDialog::m_DrawFileListView(ImVec2 vSize) {
@@ -4247,8 +4327,8 @@ void IGFD::FileDialog::m_DrawFileListView(ImVec2 vSize) {
                                    | ImGuiTableFlags_Sortable
 #endif  // USE_CUSTOM_SORTING_ICON
         ;
-    auto listViewID = ImGui::GetID("##FileDialog_fileTable");
-    if (ImGui::BeginTableEx("##FileDialog_fileTable", listViewID, 4, flags, vSize, 0.0f)) {
+    const auto listViewID = ImGui::GetID("FileTable");
+    if (ImGui::BeginTableEx("FileTable", listViewID, 4, flags, vSize, 0.0f)) {
         ImGui::TableSetupScrollFreeze(0, 1);  // Make header always visible
         ImGui::TableSetupColumn(fdi.headerFileName.c_str(), ImGuiTableColumnFlags_WidthStretch | (defaultSortOrderFilename ? ImGuiTableColumnFlags_PreferSortAscending : ImGuiTableColumnFlags_PreferSortDescending), -1, 0);
         ImGui::TableSetupColumn(fdi.headerFileType.c_str(),
@@ -4345,45 +4425,54 @@ void IGFD::FileDialog::m_DrawFileListView(ImVec2 vSize) {
 
             int column_id = 0;
             bool _rowHovered = false;
-            m_FileListClipper.Begin((int)fdi.GetFilteredListSize(), ImGui::GetTextLineHeightWithSpacing());
+            m_FileListClipper.Begin((int)fdi.GetFilteredListSize(), ImGui::GetTextLineHeight() + 2.f * ImGui::GetStyle().CellPadding.y);
             while (m_FileListClipper.Step()) {
                 for (int i = m_FileListClipper.DisplayStart; i < m_FileListClipper.DisplayEnd; i++) {
-                    if (i < 0) continue;
+                    if (i < 0) {
+                        continue;
+                    }
 
-                    auto infos_ptr = fdi.GetFilteredFileAt((size_t)i);
-                    if (!infos_ptr.use_count()) continue;
+                    auto pInfos = fdi.GetFilteredFileAt((size_t)i);
+                    if (pInfos == nullptr) {
+                        continue;
+                    }
 
-                    m_BeginFileColorIconStyle(infos_ptr, _showColor, _str, &_font);
+                    m_BeginFileColorIconStyle(pInfos, _showColor, _str, &_font);
 
-                    bool selected = fdi.IsFileNameSelected(infos_ptr->fileNameExt);  // found
+                    const bool selected = fdi.IsFileNameSelected(pInfos->fileNameExt);  // found
 
                     ImGui::TableNextRow();
 
                     column_id = 0;
                     _rowHovered = false;
                     if (ImGui::TableNextColumn()) {  // file name
-                        if (!infos_ptr->deviceInfos.empty()) {
-                            _str += " " + infos_ptr->deviceInfos;
+                        if (!pInfos->deviceInfos.empty()) {
+                            _str += " " + pInfos->deviceInfos;
                         }
-                        m_SelectableItem(i, infos_ptr, selected, _str.c_str());
+                        m_SelectableItem(i, pInfos, selected, _str.c_str());
                         _rowHovered = ImGui::IsItemHovered();
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
+                    column_id++;                     // some columns can be hidden, but the id must keep good
                     if (ImGui::TableNextColumn()) {  // file type
-                        m_drawColumnText(column_id, infos_ptr->fileExtLevels[0].c_str(), selected, _rowHovered);
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        m_drawColumnText(column_id, "%s", pInfos->fileExtLevels[0].c_str(), selected, _rowHovered);
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
+                    column_id++;                     // some columns can be hidden, but the id must keep good
                     if (ImGui::TableNextColumn()) {  // file size
-                        if (!infos_ptr->fileType.isDir()) {
-                            m_drawColumnText(column_id, infos_ptr->formatedFileSize.c_str(), selected, _rowHovered);
+                        if (!pInfos->fileType.isDir()) {
+                            m_rightAlignText(pInfos->formatedFileSize.first.c_str(), "9999.99");
+                            ImGui::SameLine(0.0f, 0.0f);
+                            m_drawColumnText(column_id, " %s ", pInfos->formatedFileSize.second.c_str(), selected, _rowHovered);
                         } else {
                             ImGui::TextUnformatted("");
                         }
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
+                    column_id++;                     // some columns can be hidden, but the id must keep good
                     if (ImGui::TableNextColumn()) {  // file date + time
-                        m_drawColumnText(column_id, infos_ptr->fileModifDate.c_str(), selected, _rowHovered);
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        m_drawColumnText(column_id, "%s", pInfos->fileModifDate.c_str(), selected, _rowHovered);
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
                     m_EndFileColorIconStyle(_showColor, _font);
                 }
@@ -4538,49 +4627,55 @@ void IGFD::FileDialog::m_DrawThumbnailsListView(ImVec2 vSize) {
                 for (int i = m_FileListClipper.DisplayStart; i < m_FileListClipper.DisplayEnd; i++) {
                     if (i < 0) continue;
 
-                    auto infos_ptr = fdi.GetFilteredFileAt((size_t)i);
-                    if (!infos_ptr.use_count()) continue;
+                    auto pInfos = fdi.GetFilteredFileAt((size_t)i);
+                    if (!pInfos.use_count()) continue;
 
-                    m_BeginFileColorIconStyle(infos_ptr, _showColor, _str, &_font);
+                    m_BeginFileColorIconStyle(pInfos, _showColor, _str, &_font);
 
-                    bool selected = fdi.IsFileNameSelected(infos_ptr->fileNameExt);  // found
+                    bool selected = fdi.IsFileNameSelected(pInfos->fileNameExt);  // found
 
                     ImGui::TableNextRow();
 
                     column_id = 0;
                     if (ImGui::TableNextColumn()) {  // file name
-                        if (!infos_ptr->deviceInfos.empty()) {
-                            _str += " " + infos_ptr->deviceInfos;
+                        if (!pInfos->deviceInfos.empty()) {
+                            _str += " " + pInfos->deviceInfos;
                         }
-                        m_SelectableItem(i, infos_ptr, selected, _str.c_str());
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        m_SelectableItem(i, pInfos, selected, _str.c_str());
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
+                    column_id++;                     // some columns can be hidden, but the id must keep good
                     if (ImGui::TableNextColumn()) {  // file type
-                        ImGui::Text("%s", infos_ptr->fileExtLevels[0].c_str());
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        ImGui::Text("%s", pInfos->fileExtLevels[0].c_str());
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
+                    column_id++;                     // some columns can be hidden, but the id must keep good
                     if (ImGui::TableNextColumn()) {  // file size
-                        if (!infos_ptr->fileType.isDir()) {
-                            ImGui::Text("%s ", infos_ptr->formatedFileSize.c_str());
+                        if (!pInfos->fileType.isDir()) {
+                            m_rightAlignText(pInfos->formatedFileSize.first.c_str(), "9999.99");
+                            ImGui::SameLine(0.0f, 0.0f);
+                            ImGui::Text(" %s ", pInfos->formatedFileSize.second.c_str());
                         } else {
                             ImGui::TextUnformatted("");
                         }
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
+                    column_id++;                     // some columns can be hidden, but the id must keep good
                     if (ImGui::TableNextColumn()) {  // file date + time
-                        ImGui::Text("%s", infos_ptr->fileModifDate.c_str());
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        ImGui::Text("%s", pInfos->fileModifDate.c_str());
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
+                    column_id++;                     // some columns can be hidden, but the id must keep good
                     if (ImGui::TableNextColumn()) {  // file thumbnails
-                        auto th = &infos_ptr->thumbnailInfo;
+                        auto th = &pInfos->thumbnailInfo;
 
                         if (!th->isLoadingOrLoaded) {
-                            m_AddThumbnailToLoad(infos_ptr);
+                            m_AddThumbnailToLoad(pInfos);
                         }
                         if (th->isReadyToDisplay && th->textureID) {
                             ImGui::Image((ImTextureID)th->textureID, ImVec2((float)th->textureWidth, (float)th->textureHeight));
                         }
-                        m_DisplayFileInfosTooltip(i, column_id++, infos_ptr);
+                        m_DisplayFileInfosTooltip(i, column_id, pInfos);
                     }
 
                     m_EndFileColorIconStyle(_showColor, _font);

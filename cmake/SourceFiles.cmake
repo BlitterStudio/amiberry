@@ -257,6 +257,7 @@ set(SOURCE_FILES
         src/threaddep/threading.cpp
         src/osdep/gui/main_window.cpp
         src/osdep/vkbd/vkbd.cpp
+        src/osdep/on_screen_joystick.cpp
         src/newcpu.cpp
         src/newcpu_common.cpp
         src/readcpu.cpp

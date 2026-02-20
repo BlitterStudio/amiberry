@@ -43,6 +43,7 @@
 
 #include "threaddep/thread.h"
 #include "vkbd/vkbd.h"
+#include "on_screen_joystick.h"
 #include "fsdb_host.h"
 #include "savestate.h"
 #include "uae/types.h"
@@ -244,7 +245,7 @@ static float SDL2_getrefreshrate(const int monid)
 #ifdef USE_OPENGL
 static int current_vsync_interval = -1;
 static float cached_refresh_rate = 0.0f;
-static bool gl_state_initialized = false; // Track if GL state has been set for current context
+bool gl_state_initialized = false; // Track if GL state has been set for current context
 
 void update_vsync(const int monid)
 {
@@ -824,6 +825,12 @@ static bool SDL2_renderframe(const int monid, int mode, int immediate)
 		{
 			vkbd_redraw();
 		}
+
+		if (on_screen_joystick_is_enabled())
+		{
+			on_screen_joystick_redraw(mon->amiga_renderer);
+		}
+
 		return true;
 	}
 #endif
@@ -2474,6 +2481,16 @@ void show_screen(const int monid, int mode)
 	render_software_cursor_gl(monid, destX, destY, destW, destH);
 	render_osd(monid, destX, destY, destW, destH);
 
+	if (vkbd_allowed(monid))
+	{
+		vkbd_redraw_gl(drawableWidth, drawableHeight);
+	}
+
+	if (on_screen_joystick_is_enabled())
+	{
+		on_screen_joystick_redraw_gl(drawableWidth, drawableHeight, render_quad);
+	}
+
 	SDL_GL_SwapWindow(mon->amiga_window);
 #else
 	SDL2_showframe(monid);
@@ -2742,8 +2759,15 @@ static void close_hwnds(struct AmigaMonitor* mon)
 #else
 	if (mon->amiga_renderer && !kmsdrm_detected)
 	{
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 		// Don't destroy the renderer on Android, as we reuse it
+#elif defined(_WIN32)
+		if (mon->gui_renderer == mon->amiga_renderer) {
+			// GUI is sharing this renderer — don't destroy
+		} else {
+			SDL_DestroyRenderer(mon->amiga_renderer);
+			mon->amiga_renderer = nullptr;
+		}
 #else
 		SDL_DestroyRenderer(mon->amiga_renderer);
 		mon->amiga_renderer = nullptr;
@@ -2752,8 +2776,15 @@ static void close_hwnds(struct AmigaMonitor* mon)
 #endif
 	if (mon->amiga_window && !kmsdrm_detected)
 	{
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 		// Reuse existing window
+#elif defined(_WIN32)
+		if (mon->gui_window == mon->amiga_window) {
+			// GUI is sharing this window — don't destroy
+		} else {
+			SDL_DestroyWindow(mon->amiga_window);
+			mon->amiga_window = nullptr;
+		}
 #else
 		SDL_DestroyWindow(mon->amiga_window);
 		mon->amiga_window = nullptr;
@@ -3629,14 +3660,40 @@ int check_prefs_changed_gfx()
 			vkbd_set_keyboard_has_exit_button(currprefs.vkbd_exit);
 			vkbd_set_language(string(currprefs.vkbd_language));
 			vkbd_set_style(string(currprefs.vkbd_style));
+			vkbd_key = get_hotkey_from_config(string(currprefs.vkbd_toggle));
 			vkbd_button = SDL_GameControllerGetButtonFromString(currprefs.vkbd_toggle);
 			if (vkbd_allowed(0))
 				vkbd_init();
 		}
 		else
 		{
+			vkbd_key = {};
 			vkbd_button = SDL_CONTROLLER_BUTTON_INVALID;
 			vkbd_quit();
+		}
+	}
+
+	// On-screen joystick
+	if (currprefs.onscreen_joystick != changed_prefs.onscreen_joystick)
+	{
+		currprefs.onscreen_joystick = changed_prefs.onscreen_joystick;
+		if (currprefs.onscreen_joystick)
+		{
+			AmigaMonitor* mon = &AMonitors[0];
+			on_screen_joystick_init(mon->amiga_renderer);
+			int sw = 0, sh = 0;
+#ifdef USE_OPENGL
+			SDL_GL_GetDrawableSize(mon->amiga_window, &sw, &sh);
+#else
+			SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+#endif
+			on_screen_joystick_update_layout(sw, sh, render_quad);
+			on_screen_joystick_set_enabled(true);
+		}
+		else
+		{
+			on_screen_joystick_set_enabled(false);
+			on_screen_joystick_quit();
 		}
 	}
 #endif
@@ -4460,6 +4517,11 @@ static int create_windows(struct AmigaMonitor* mon)
 			nh = currprefs.gfx_monitor[mon->monitor_id].gfx_size_win.height;
 		}
 
+		if (!fullscreen && !fullwindow) {
+			nw = DPIHandler::scale_window_dimension(nw);
+			nh = DPIHandler::scale_window_dimension(nh);
+		}
+
 		if (fullwindow) {
 			SDL_Rect rc = md->rect;
 			nx = rc.x;
@@ -4529,6 +4591,11 @@ static int create_windows(struct AmigaMonitor* mon)
 	rc.w = mon->currentmode.current_width;
 	rc.h = mon->currentmode.current_height;
 
+	if (!fullscreen && !fullwindow) {
+		rc.w = DPIHandler::scale_window_dimension(rc.w);
+		rc.h = DPIHandler::scale_window_dimension(rc.h);
+	}
+
 	oldx = rc.x;
 	oldy = rc.y;
 
@@ -4590,8 +4657,14 @@ static int create_windows(struct AmigaMonitor* mon)
 
 	SDL_Rect rc2;
 	GetWindowRect(mon->amiga_window, &rc2);
-	mon->window_extra_width = rc2.w - mon->currentmode.current_width;
-	mon->window_extra_height = rc2.h - mon->currentmode.current_height;
+	int expected_client_width = mon->currentmode.current_width;
+	int expected_client_height = mon->currentmode.current_height;
+	if (!fullscreen && !fullwindow) {
+		expected_client_width = DPIHandler::scale_window_dimension(expected_client_width);
+		expected_client_height = DPIHandler::scale_window_dimension(expected_client_height);
+	}
+	mon->window_extra_width = rc2.w - expected_client_width;
+	mon->window_extra_height = rc2.h - expected_client_height;
 
 	w = mon->currentmode.native_width;
 	h = mon->currentmode.native_height;
@@ -4873,6 +4946,20 @@ static bool doInit(AmigaMonitor* mon)
 		vkbd_set_language(string(currprefs.vkbd_language));
 		vkbd_set_style(string(currprefs.vkbd_style));
 		vkbd_init();
+	}
+
+	// Initialize on-screen joystick if enabled
+	if (currprefs.onscreen_joystick)
+	{
+		on_screen_joystick_init(mon->amiga_renderer);
+		int sw = 0, sh = 0;
+#ifdef USE_OPENGL
+		SDL_GL_GetDrawableSize(mon->amiga_window, &sw, &sh);
+#else
+		SDL_GetRendererOutputSize(mon->amiga_renderer, &sw, &sh);
+#endif
+		on_screen_joystick_update_layout(sw, sh, render_quad);
+		on_screen_joystick_set_enabled(true);
 	}
 
 	return true;
@@ -5397,6 +5484,11 @@ void destroy_shaders()
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 }
+
+void clear_loaded_shader_name()
+{
+	loaded_shader_name.clear();
+}
 #endif
 
 #ifdef AMIBERRY
@@ -5458,6 +5550,11 @@ void auto_crop_image()
 				crop_rect.w = amiga_surface->w - crop_rect.x;
 			if (crop_rect.h <= 0 || crop_rect.y + crop_rect.h > amiga_surface->h)
 				crop_rect.h = amiga_surface->h - crop_rect.y;
+		}
+
+		if (vkbd_allowed(0))
+		{
+			vkbd_update_position_from_texture();
 		}
 #else
 		SDL_RenderSetLogicalSize(mon->amiga_renderer, width, height);

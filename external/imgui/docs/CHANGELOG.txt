@@ -78,6 +78,9 @@ Breaking Changes:
     has already been rendered. (#9162) [@ocornut, @cyfewlp]
   - Removed ImFontConfig::PixelSnapV added in 1.92 which turns out is unnecessary
     (and misdocumented). Post-rescale GlyphOffset is always rounded.
+  - Fixed an issue where using PushFont() from the implicit/fallback "Debug" window when
+    its recorded state is collapsed would incorrectly early out. This would break e.g. using
+    direct draw-list calls such as GetForegroundDrawList() with current font. (#9210, #8865)
  - Popups: changed compile-time 'ImGuiPopupFlags popup_flags = 1' default value to be '= 0' for
    BeginPopupContextItem(), BeginPopupContextWindow(), BeginPopupContextVoid(), OpenPopupOnItemClick().
    The default value has same meaning before and after. (#9157, #9146)
@@ -113,15 +116,23 @@ Breaking Changes:
 Other Changes:
 
 - Fonts:
-  - Added AddFontDefaultVector(): a new embedded scalable font!
-    Based on ProggyVector by Tristan Grimmer, the same author as our good-old ProggyClean.
-    The font data was carefully subsetted, trimmed and compressed so the embedded
-    data is ~18 KB. Embedding a scalable default font ensures that Dear ImGui can
-    be easily and readily used in all contexts, even without file system access.
-    As always you can opt-out of the embedded font data if desired. A sizing tweak
-    was also applied to ensure the new font is a closer match to the classic font.
+  - Added AddFontDefaultVector(): a new embedded monospace scalable font: ProggyForever!
+    From https://github.com/ocornut/proggyforever:
+      "ProggyForever is an MIT-licensed partial reimplementation of the ProggyVector
+       font (originally by Tristan Grimmer), which itself is a vector-based
+       reinterpretation of the ProggyClean bitmap font that happily served as
+       Dear ImGui default font for over 10 years." [...]
+      "I commissioned Thiebault Courot to recreate this, applied various minor tweaks
+       and fixes, and reworked his editing pipeline toward shipping FontForge source
+       files so we can allow and track future changes."
+    - TL;DR; there was no strictly MIT-licensed matching font. We made it!
+    - The font data was carefully subsetted, trimmed and compressed so the embedded
+      data is ~14 KB. Embedding a scalable default font ensures that Dear ImGui can
+      be easily and readily used in all contexts, even without file system access.
+    - As always you can opt-out of the embedded font data if desired.
   - AddFontDefault() now automatically selects an embedded font between
     the classic pixel-looking one and the new scalable one.
+    Prefer calling AddFontDefaultVector() or AddFontDefaultBitmap() explicitely.
   - Fixed an issue related to EllipsisChar handling, while changing
     font loader or font loader flags dynamically in Style->Fonts menus.
   - imgui_freetype: fixed overwriting ImFontConfig::PixelSnapH when hinting
@@ -168,6 +179,9 @@ Other Changes:
       end of a line rather than at the beginning of next line. (#8990, #3237)
   - Fixed low-level word-wrapping function reading from *text_end when passed
     a string range. (#9107) [@achabense]
+  - Changed RenderTextEllipsis() logic to not trim trailing blanks before
+    the ellipsis, making ellipsis position more consistent and not arbitrary
+    hiding the possibility of multiple blanks. (#9229)
 - Nav:
   - Fixed remote/shortcut InputText() not teleporting mouse cursor when
     nav cursor is visible and `io.ConfigNavMoveSetMousePos` is enabled.
@@ -176,6 +190,7 @@ Other Changes:
     used io.DisplayFramebufferScale (very old code), effectively making those
     actions faster on macOS/iOS retina screens.
     (changed this to use a style scale factor that's not fully formalized yet)
+  - Fixed an UBSan warning when using in a ListClipper region . (#9160)
 - Scrollbar: fixed a codepath leading to a divide-by-zero (which would not be
   noticeable by user but detected by sanitizers). (#9089) [@judicaelclair]
 - InvisibleButton: allow calling with size (0,0) to fit to available content 
@@ -186,6 +201,8 @@ Other Changes:
   flags of last submitted item. (#9127)
 - Log/Capture: fixed erroneously injecting extra carriage returns in output
   buffer when ItemSpacing.y > FramePadding.y + 1.
+- Misc: fixed build on ARM64/ARM64EC targets trying to use SSE/immintrin.h.
+  (#9209, #5943, #4091) [@navvyswethgraphics]
 - Images:
   - Added style.ImageRounding, ImGuiStyleVar_ImageRounding to configure
     rounding of Image() widgets. (#2942, #845)
@@ -215,10 +232,25 @@ Other Changes:
     Lowers overhead for very high framerates (e.g. 10k+ FPS). [@maxliani]
   - GLFW: Added IMGUI_IMPL_GLFW_DISABLE_X11 / IMGUI_IMPL_GLFW_DISABLE_WAYLAND to
     forcefully disable either. (#9109, #9116)
+    Try to set them automatically if headers are not accessible. (#9225)
   - OpenGL3: Fixed embedded loader multiple init/shutdown cycles broken on some
     platforms. (#8792, #9112)
   - SDL2, SDL3: changed `GetClipboardText()` handler to return NULL on error aka
     clipboard contents is not text. Consistent with other backends. (#9168)
+  - SDL2, SDL3: systems other than X11 are back to starting mouse capture on mouse down
+    (reverts 1.91.9 change). Only X11 requires waiting for a drag by default (not ideal,
+    but a better default for X11 users). Waiting for a drag to start mouse capture leads to
+    input drops when dragging after clicking on the edge of a window.
+    (#3650, #6410, #9235, #3956, #3835)
+  - SDL2, SDL3: added ImGui_ImplSDL2_SetMouseCaptureMode()/ImGui_ImplSDL3_SetMouseCaptureMode()
+    function for X11 users to disable mouse capturing/grabbing. (#3650, #6410, #9235, #3956, #3835)
+    - When attached to a debugger may want to call:
+      - `ImGui_ImplSDL3_SetMouseCaptureMode(ImGui_ImplSDL3_MouseCaptureMode_Disabled);`
+    - But you can also configure your system or debugger to automatically release
+      mouse grab when crashing/breaking in debugger, e.g.
+      - console: `setxkbmap -option grab:break_actions && xdotool key XF86Ungrab`
+      - or use a GDB script to capture SDL_CaptureMouse(false). See #3650.
+    - On platforms other than X11 this is unnecessary.
   - SDL_GPU3: added `SamplerNearest` in `ImGui_ImplSDLGPU3_RenderState`.
   - SDL_GPU3: macOS version can use MSL shaders in order to support macOS 10.14+
     (vs Metallib shaders requiring macOS 14+). Requires application calling
@@ -342,7 +374,7 @@ Other Changes:
      debug/metrics window is not in the same viewport as the table.
 - Backends:
   - NULL: added imgui_impl_null platform/renderer backend.
-    This is designed if you need to run e.g. context with no input or no ouput.
+    This is designed if you need to run e.g. context with no input or no output.
   - GLFW: fixed building on Linux platforms where Wayland headers
     are not available. (#9024, #8969, #8921, #8920) [@jagot]
   - GLFW: lower minimum requirement from GLFW 3.1 to GLFW 3.0. Though
@@ -824,7 +856,7 @@ Breaking changes:
       which font input is providing which glyph.
 - Fonts: **IMPORTANT** on Thread Safety:
   - A few functions such as font->CalcTextSizeA() were by sheer luck (== accidentally)
-    thread-safe even thou we had never provided that guarantee before. They are
+    thread-safe even though we had never provided that guarantee before. They are
     definitively not thread-safe anymore as new glyphs may be loaded.
 
 - Textures:

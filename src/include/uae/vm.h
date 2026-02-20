@@ -16,6 +16,7 @@
 
 #define UAE_VM_32BIT (1 << 8)
 #define UAE_VM_WRITE_WATCH (1 << 9)
+#define UAE_VM_JIT (1 << 10)
 #define UAE_VM_ALLOC_FAILED NULL
 
 /* Even though it looks like you can OR together vm protection values,
@@ -43,6 +44,7 @@ void *uae_vm_commit(void *address, uae_u32 size, int protect);
 bool uae_vm_decommit(void *address, uae_u32 size);
 
 int uae_vm_page_size(void);
+void uae_vm_jit_write_protect(bool enable_execute_mode);
 
 // void *uae_vm_alloc_with_flags(uae_u32 size, int protect, int flags);
 

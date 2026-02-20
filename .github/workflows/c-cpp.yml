@@ -85,11 +85,15 @@ jobs:
         run: |
           cmake -B build && cmake --build build -j$(sysctl -n hw.ncpu)
 
+      - name: Archive intermediate app bundle
+        run: |
+          tar -C build -czf Amiberry.app.tar.gz Amiberry.app
+
       - name: Upload intermediate app bundle
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: build/Amiberry.app
+          path: Amiberry.app.tar.gz
           retention-days: 1
 
   merge-macOS-universal:
@@ -107,13 +111,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: amiberry-macOS-x86_64-intermediate
-          path: x86_64-app/Amiberry.app
+          path: x86_64-app
 
       - name: Download arm64 app bundle
         uses: actions/download-artifact@v4
         with:
           name: amiberry-macOS-arm64-intermediate
-          path: arm64-app/Amiberry.app
+          path: arm64-app
+
+      - name: Extract downloaded app bundles
+        run: |
+          tar -xzf x86_64-app/Amiberry.app.tar.gz -C x86_64-app
+          tar -xzf arm64-app/Amiberry.app.tar.gz -C arm64-app
 
       - name: Create Universal binary with lipo
         run: |
@@ -129,6 +138,7 @@ jobs:
             x86_64-app/Amiberry.app/Contents/MacOS/Amiberry \
             arm64-app/Amiberry.app/Contents/MacOS/Amiberry \
             -output universal-app/Amiberry.app/Contents/MacOS/Amiberry
+          chmod +x universal-app/Amiberry.app/Contents/MacOS/Amiberry
 
           # Helper: merge a single binary with lipo, skipping if already universal
           merge_binary() {
@@ -208,7 +218,11 @@ jobs:
 
       - name: Codesign the app
         run: |
-          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard universal-app/Amiberry.app
+          codesign -s "Developer ID Application: Dimitris Panokostas (5GQP72592A)" -f -o runtime,hard --entitlements packaging/macos/Amiberry.entitlements universal-app/Amiberry.app
+
+      - name: Verify app entitlements
+        run: |
+          codesign -d --entitlements :- universal-app/Amiberry.app
 
       - name: Create a zip to send to the notary service
         run: |
@@ -239,6 +253,7 @@ jobs:
 
           # Create a staging directory for DMG contents
           STAGING="dmg-staging"
+          rm -rf "$STAGING"
           mkdir -p "$STAGING"
           cp -R universal-app/Amiberry.app "$STAGING/"
           ln -s /Applications "$STAGING/Applications"
@@ -247,11 +262,35 @@ jobs:
           mkdir -p "$STAGING/.background"
           cp packaging/dmg/AppDMGBackground.tiff "$STAGING/.background/background.tiff"
 
-          # Create the DMG
+          # Create a writable DMG, apply Finder layout/background, then compress.
+          RW_DMG="${DMG_NAME}-rw.dmg"
           hdiutil create -volname "Amiberry" \
             -srcfolder "$STAGING" \
-            -ov -format UDZO \
-            "${DMG_NAME}.dmg"
+            -ov -format UDRW \
+            "$RW_DMG"
+
+          DEVICE=""
+          cleanup() {
+            if [ -n "$DEVICE" ]; then
+              hdiutil detach "$DEVICE" || true
+            fi
+          }
+          trap cleanup EXIT
+
+          DEVICE=$(hdiutil attach -readwrite -noverify -noautoopen "$RW_DMG" | awk '/\/Volumes\/Amiberry/ {print $1; exit}')
+          if [ -z "$DEVICE" ]; then
+            echo "Failed to attach DMG."
+            exit 1
+          fi
+
+          osascript packaging/dmg/AppDMGSetup.scpt "Amiberry"
+          hdiutil detach "$DEVICE"
+          DEVICE=""
+          trap - EXIT
+
+          hdiutil convert "$RW_DMG" -format UDZO -imagekey zlib-level=9 -ov -o "${DMG_NAME}.dmg"
+          rm -f "$RW_DMG"
+          rm -rf "$STAGING"
 
           echo "DMG_NAME=${DMG_NAME}" >> "$GITHUB_ENV"
 

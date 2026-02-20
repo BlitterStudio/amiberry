@@ -11,7 +11,12 @@ union SDL_Event;
 // Shared globals moved into the ImGui implementation files
 extern std::vector<const char*> qs_models;
 extern std::vector<const char*> qs_configs;
-extern SDL_Texture* about_logo_texture;
+extern ImTextureID about_logo_texture;
+
+// Texture helpers that abstract SDL_Texture (SDLRenderer2) vs GLuint (OpenGL3)
+struct SDL_Surface;
+ImTextureID gui_create_texture(SDL_Surface* surface, int* out_w, int* out_h);
+void gui_destroy_texture(ImTextureID tex);
 
 // File dialog helpers used across imgui panels (defined in main_window.cpp)
 void OpenFileDialogKey(const char* key, const char* title, const char* filters, const std::string& initialPath);

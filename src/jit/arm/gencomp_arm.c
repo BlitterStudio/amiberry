@@ -2317,8 +2317,8 @@ static void gen_dbcc(uae_u32 opcode, struct instr *curi, const char* ssize) {
 		comprintf("\tsub_w_ri(src,1);\n");
 		comprintf("\t end_needflags();\n");
 		start_brace();
-		comprintf("\tuae_u32 v2,v;\n"
-				"\tuae_u32 v1=get_const(PC_P);\n");
+		comprintf("\tuintptr v2,v;\n"
+				"\tuintptr v1=get_const(PC_P);\n");
 		comprintf("\tv2=get_const(offs);\n"
 				"\tregister_branch(v1,v2,%d);\n", NATIVE_CC_CC);
 		break;
@@ -4289,7 +4289,7 @@ gen_opcode(unsigned long int opcode) {
 		break;
 
 	case i_Bcc:
-		comprintf("\tuae_u32 v,v1,v2;\n");
+		comprintf("\tuintptr v,v1,v2;\n");
 		genamode(curi->smode, "srcreg", curi->size, "src", 1, 0);
 		/* That source is an immediate, so we can clobber it with abandon */
 		switch (curi->size) {

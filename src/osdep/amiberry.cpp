@@ -51,6 +51,7 @@
 
 #include "amiberry_input.h"
 #include "clipboard.h"
+#include "dpi_handler.hpp"
 #include "fsdb.h"
 #include "scsidev.h"
 #ifdef FLOPPYBRIDGE
@@ -61,6 +62,9 @@
 #include "uae/uae.h"
 #include "sana2.h"
 #include "gui_handling_platform.h"
+#include "gui/gui_handling.h"
+#include "on_screen_joystick.h"
+#include "vkbd/vkbd.h"
 
 #ifdef __MACH__
 #include <string>
@@ -94,6 +98,9 @@ struct gpiod_line* lineYellow; // Yellow LED
 #ifdef USE_IPC_SOCKET
 #include "amiberry_ipc.h"
 #endif
+
+extern int run_jit_selftest_cli(void);
+extern int console_logging;
 
 static SDL_threadID mainthreadid;
 static int logging_started;
@@ -149,6 +156,7 @@ amiberry_hotkey fullscreen_key;
 amiberry_hotkey minimize_key;
 amiberry_hotkey left_amiga_key;
 amiberry_hotkey right_amiga_key;
+amiberry_hotkey vkbd_key;
 SDL_GameControllerButton vkbd_button;
 
 bool lctrl_pressed, rctrl_pressed, lalt_pressed, ralt_pressed, lshift_pressed, rshift_pressed, lgui_pressed, rgui_pressed;
@@ -201,7 +209,7 @@ std::vector<int> parse_color_string(const std::string& input)
 	return result;
 }
 
-static amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
+amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 {
 	amiberry_hotkey hotkey = {};
 
@@ -220,6 +228,7 @@ static amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 	};
 
 	static const std::unordered_map<std::string, const char*> sdl2_name_map = {
+		// Modifier keys (ImGui short names → SDL2 names)
 		{"LCtrl", "Left Ctrl"},
 		{"RCtrl", "Right Ctrl"},
 		{"LAlt", "Left Alt"},
@@ -227,7 +236,38 @@ static amiberry_hotkey get_hotkey_from_config(const std::string& config_option)
 		{"LShift", "Left Shift"},
 		{"RShift", "Right Shift"},
 		{"LGUI", "Left GUI"},
-		{"RGUI", "Right GUI"}
+		{"RGUI", "Right GUI"},
+		// ImGui full names → SDL2 names (from ImGui::GetKeyName)
+		{"LeftCtrl", "Left Ctrl"},
+		{"RightCtrl", "Right Ctrl"},
+		{"LeftAlt", "Left Alt"},
+		{"RightAlt", "Right Alt"},
+		{"LeftShift", "Left Shift"},
+		{"RightShift", "Right Shift"},
+		{"LeftSuper", "Left GUI"},
+		{"RightSuper", "Right GUI"},
+		// Arrow keys
+		{"LeftArrow", "Left"},
+		{"RightArrow", "Right"},
+		{"UpArrow", "Up"},
+		{"DownArrow", "Down"},
+		// Punctuation / symbol keys
+		{"Equal", "="},
+		{"Minus", "-"},
+		{"Comma", ","},
+		{"Period", "."},
+		{"Slash", "/"},
+		{"Backslash", "\\"},
+		{"Semicolon", ";"},
+		{"Apostrophe", "'"},
+		{"GraveAccent", "`"},
+		{"LeftBracket", "["},
+		{"RightBracket", "]"},
+		// Misc keys
+		{"Enter", "Return"},
+		{"NumLock", "Numlock"},
+		{"ScrollLock", "ScrollLock"},
+		{"PrintScreen", "PrintScreen"},
 	};
 
 	// Parse tokens more efficiently without modifying the original string
@@ -311,6 +351,11 @@ static void set_key_configs(const uae_prefs* p)
 
 	if (strncmp(p->right_amiga, "", 1) != 0)
 		right_amiga_key = get_hotkey_from_config(p->right_amiga);
+
+	if (strncmp(p->vkbd_toggle, "", 1) != 0)
+		vkbd_key = get_hotkey_from_config(p->vkbd_toggle);
+	else
+		vkbd_key = get_hotkey_from_config(amiberry_options.default_vkbd_toggle);
 
 	vkbd_button = SDL_GameControllerGetButtonFromString(p->vkbd_toggle);
 	if (vkbd_button == SDL_CONTROLLER_BUTTON_INVALID)
@@ -1530,10 +1575,14 @@ static int setsizemove(AmigaMonitor* mon, SDL_Window* hWnd)
 			if (canstretch(mon)) {
 				int w = mon->mainwin_rect.w;
 				int h = mon->mainwin_rect.h;
-				if (w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width + mon->window_extra_width ||
-					h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height + mon->window_extra_height) {
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = w - mon->window_extra_width;
-					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = h - mon->window_extra_height;
+				const int content_w = w - mon->window_extra_width;
+				const int content_h = h - mon->window_extra_height;
+				const int logical_w = DPIHandler::unscale_window_dimension(content_w);
+				const int logical_h = DPIHandler::unscale_window_dimension(content_h);
+				if (logical_w != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width ||
+					logical_h != changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height) {
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.width = logical_w;
+					changed_prefs.gfx_monitor[mon->monitor_id].gfx_size_win.height = logical_h;
 					set_config_changed();
 				}
 				//if (mon->hStatusWnd)
@@ -1679,30 +1728,6 @@ static void handle_controller_button_event(const SDL_Event& event)
 	const auto button = event.cbutton.button;
 	const auto state = event.cbutton.state == SDL_PRESSED;
 
-#ifdef __ANDROID__
-	// Check for Android Back Button (often mapped as Button 1/B on "qwerty2" or similar virtual devices)
-	// We check the name "qwerty2" or the specific GUID to be safe.
-	bool is_virtual_back_button = false;
-	
-	// Check GUID first as it's more reliable
-	char guid_str[33];
-    SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(SDL_JoystickFromInstanceID(event.cbutton.which)), guid_str, sizeof(guid_str));
-	if (strcmp(guid_str, "0500c8dc270600000100000051780000") == 0) {
-		is_virtual_back_button = true;
-	} else {
-		// Fallback to name check if GUID varies (though GUID should be constant for this emulator device)
-		auto* gc = SDL_GameControllerFromInstanceID(event.cbutton.which);
-		if (gc && strcmp(SDL_GameControllerName(gc), "qwerty2") == 0) {
-			is_virtual_back_button = true;
-		}
-	}
-
-	if (is_virtual_back_button && button == 1) { // SDL_CONTROLLER_BUTTON_B
-		// This is the Android Back button
-		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
-	}
-#endif
-
 	if (button == enter_gui_button) {
 		inputdevice_add_inputcode(AKS_ENTERGUI, state, nullptr);
 	}
@@ -1829,6 +1854,16 @@ static void handle_key_event(const SDL_Event& event)
 
 	if (event.key.repeat != 0 || !focus_level)
 		return;
+
+#ifdef __ANDROID__
+	// Android back button opens GUI on physical devices
+	if (scancode == SDL_SCANCODE_AC_BACK) {
+		if (pressed) {
+			inputdevice_add_inputcode(AKS_ENTERGUI, 1, nullptr);
+		}
+		return;
+	}
+#endif
 
 	if (key_swap_hack == 1) {
 		if (scancode == SDL_SCANCODE_F11) {
@@ -2159,19 +2194,64 @@ static void process_event(const SDL_Event& event)
 
 		case SDL_FINGERDOWN:
 		case SDL_FINGERUP:
-			handle_finger_event(event);
+		{
+			// Let on-screen joystick consume the event first if applicable
+			int ww = 0, wh = 0;
+			if (mon->amiga_window)
+				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
+			bool consumed = false;
+			if (on_screen_joystick_is_enabled() && ww > 0 && wh > 0) {
+				if (event.type == SDL_FINGERDOWN)
+					consumed = on_screen_joystick_handle_finger_down(event, ww, wh);
+				else
+					consumed = on_screen_joystick_handle_finger_up(event, ww, wh);
+			}
+			// Check if the on-screen keyboard button was tapped
+			if (on_screen_joystick_keyboard_tapped()) {
+#ifdef __ANDROID__
+				// Toggle native Android soft keyboard
+				if (SDL_IsTextInputActive())
+					SDL_StopTextInput();
+				else
+					SDL_StartTextInput();
+#else
+				// Toggle the virtual keyboard overlay on other platforms
+				if (vkbd_allowed(0))
+					vkbd_toggle();
+#endif
+			}
+			if (!consumed)
+				handle_finger_event(event);
 			break;
+		}
 
 		case SDL_MOUSEBUTTONDOWN:
 		case SDL_MOUSEBUTTONUP:
+			// Skip touch-synthesized mouse events when the on-screen joystick is active,
+			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
+			if (on_screen_joystick_is_enabled() && event.button.which == SDL_TOUCH_MOUSEID)
+				break;
 			handle_mouse_button_event(event, mon);
 			break;
 
 		case SDL_FINGERMOTION:
-			handle_finger_motion_event(event);
+		{
+			int ww = 0, wh = 0;
+			if (mon->amiga_window)
+				SDL_GetWindowSize(mon->amiga_window, &ww, &wh);
+			bool consumed = false;
+			if (on_screen_joystick_is_enabled() && ww > 0 && wh > 0)
+				consumed = on_screen_joystick_handle_finger_motion(event, ww, wh);
+			if (!consumed)
+				handle_finger_motion_event(event);
 			break;
+		}
 
 		case SDL_MOUSEMOTION:
+			// Skip touch-synthesized mouse events when the on-screen joystick is active,
+			// otherwise D-pad touches also inject unwanted mouse input into Amiga port 1
+			if (on_screen_joystick_is_enabled() && event.motion.which == SDL_TOUCH_MOUSEID)
+				break;
 			handle_mouse_motion_event(event, mon);
 			break;
 
@@ -2759,6 +2839,9 @@ void target_default_options(uae_prefs* p, const int type)
 
 	if (amiberry_options.default_soundcard > 0) p->soundcard = amiberry_options.default_soundcard;
 
+	// On-screen joystick
+	p->onscreen_joystick = amiberry_options.default_onscreen_joystick;
+
 	// Virtual keyboard default options
 	p->vkbd_enabled = amiberry_options.default_vkbd_enabled;
 	p->vkbd_exit = amiberry_options.default_vkbd_exit;
@@ -2913,6 +2996,7 @@ void target_save_options(zfile* f, uae_prefs* p)
 	if (scsiromselected > 0)
 		cfgfile_target_write(f, _T("expansion_gui_page"), expansionroms[scsiromselected].name);
 
+	cfgfile_target_dwrite_bool(f, _T("onscreen_joystick"), p->onscreen_joystick);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_enabled"), p->vkbd_enabled);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_hires"), p->vkbd_hires);
 	cfgfile_target_dwrite_bool(f, _T("vkbd_exit"), p->vkbd_exit);
@@ -3035,6 +3119,9 @@ static int target_parse_option_host(uae_prefs *p, const TCHAR *option, const TCH
 		|| cfgfile_string(option, value, "left_amiga", p->left_amiga, sizeof p->left_amiga)
 		|| cfgfile_string(option, value, "right_amiga", p->right_amiga, sizeof p->right_amiga)
 		|| cfgfile_intval(option, value, _T("cpu_idle"), &p->cpu_idle, 1))
+		return 1;
+
+	if (cfgfile_yesno(option, value, _T("onscreen_joystick"), &p->onscreen_joystick))
 		return 1;
 
 	if (cfgfile_yesno(option, value, _T("vkbd_enabled"), &p->vkbd_enabled)
@@ -3821,7 +3908,10 @@ void save_amiberry_settings()
 
 	// Default Sound Card (0=default, first one available in the system)
 	write_int_option("default_soundcard", amiberry_options.default_soundcard);
-	
+
+	// Enable On-screen Joystick by default (for touchscreen devices)
+	write_bool_option("default_onscreen_joystick", amiberry_options.default_onscreen_joystick);
+
 	// Enable Virtual Keyboard by default
 	write_bool_option("default_vkbd_enabled", amiberry_options.default_vkbd_enabled);
 
@@ -4047,6 +4137,7 @@ static int parse_amiberry_settings_line(const char *path, char *linea)
 		ret |= cfgfile_yesno(option, value, "disable_shutdown_button", &amiberry_options.disable_shutdown_button);
 		ret |= cfgfile_yesno(option, value, "allow_display_settings_from_xml", &amiberry_options.allow_display_settings_from_xml);
 		ret |= cfgfile_intval(option, value, "default_soundcard", &amiberry_options.default_soundcard, 1);
+		ret |= cfgfile_yesno(option, value, "default_onscreen_joystick", &amiberry_options.default_onscreen_joystick);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_enabled", &amiberry_options.default_vkbd_enabled);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_hires", &amiberry_options.default_vkbd_hires);
 		ret |= cfgfile_yesno(option, value, "default_vkbd_exit", &amiberry_options.default_vkbd_exit);
@@ -4476,6 +4567,12 @@ std::string get_config_directory(bool portable_mode)
 		getcwd(tmp, MAX_DPATH);
 		return { std::string(tmp) + "\\conf" };
 	}
+#elif defined(__ANDROID__)
+	const char* path = SDL_AndroidGetExternalStoragePath();
+	if (path) {
+		return std::string(path) + "/conf/";
+	}
+	return prefix_with_application_directory_path("conf/");
 #else
 	if (portable_mode)
 	{
@@ -4594,11 +4691,6 @@ std::string get_plugins_directory(bool portable_mode)
 	return { std::string(tmp) + "/plugins" };
 #endif
 }
-
-extern void save_theme(const std::string& theme_filename);
-extern void load_theme(const std::string& theme_filename);
-extern void load_default_theme();
-extern void load_default_dark_theme();
 
 void create_missing_amiberry_folders()
 {
@@ -4990,6 +5082,8 @@ static void init_amiberry_dirs(const bool portable_mode)
 	retroarch_file = config_path;
 #ifdef _WIN32
 	retroarch_file.append("\\retroarch.cfg");
+#elif defined(__ANDROID__)
+	retroarch_file.append("retroarch.cfg");
 #else
 	retroarch_file.append("/retroarch.cfg");
 #endif
@@ -5299,10 +5393,18 @@ int amiberry_main(int argc, char* argv[])
 	max_uae_width = 8192;
 	max_uae_height = 8192;
 
+	bool run_jit_selftest = false;
 	for (auto i = 1; i < argc; i++) {
 		if (_tcscmp(argv[i], _T("-h")) == 0 || _tcscmp(argv[i], _T("--help")) == 0)
 			usage();
+		if (_tcscmp(argv[i], _T("--log")) == 0)
+			console_logging = 1;
+		if (_tcscmp(argv[i], _T("--jit-selftest")) == 0)
+			run_jit_selftest = true;
 	}
+
+	if (run_jit_selftest)
+		return run_jit_selftest_cli();
 
 #ifndef _WIN32
 	struct sigaction action{};

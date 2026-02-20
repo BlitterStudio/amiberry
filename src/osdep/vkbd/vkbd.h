@@ -35,6 +35,9 @@ extern void vkbd_set_keyboard_has_exit_button(bool keyboardHasExitButton);
 extern void vkbd_init(void);
 extern void vkbd_quit(void);
 extern void vkbd_redraw(void);
+#ifdef USE_OPENGL
+extern void vkbd_redraw_gl(int drawable_w, int drawable_h);
+#endif
 extern void vkbd_toggle(void);
 extern bool vkbd_process(int state, int* keycode, int* pressed);
 extern bool vkbd_is_active(void);

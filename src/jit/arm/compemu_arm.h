@@ -46,7 +46,7 @@ typedef uae_u32 uintptr;
 #define USE_JIT
 #endif
 
-#define JITPTR (uae_u32)(uintptr)
+#define JITPTR (uintptr)
 
 /* Now that we do block chaining, and also have linked lists on each tag,
    TAGMASK can be much smaller and still do its job. Saves several megs
@@ -161,7 +161,7 @@ extern void* pushall_call_handler;
 
 typedef struct {
   uae_u32* mem;
-  uae_u32 val;
+  uintptr val;  /* Must be pointer-width: PC_P holds a host pointer (64-bit on ARM64) */
   uae_u8 status;
   uae_s8 realreg; /* gb-- realreg can hold -1 */
   uae_u8 realind; /* The index in the holds[] array */
@@ -309,8 +309,9 @@ extern void get_n_addr_jmp(int address, int dest);
 extern void calc_disp_ea_020(int base, uae_u32 dp, int target);
 #define SYNC_PC_OFFSET 124
 extern void sync_m68k_pc(void);
-extern uae_u32 get_const(int r);
-extern void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond);
+extern uintptr get_const(int r);
+extern uae_u8* compemu_host_pc_from_const(uintptr pc_const);
+extern void register_branch(uintptr not_taken, uintptr taken, uae_u8 cond);
 extern void register_possible_exception(void);
 
 #define comp_get_ibyte(o) do_get_mem_byte((uae_u8 *)(comp_pc_p + (o) + 1))

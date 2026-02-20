@@ -31,6 +31,9 @@
 #include "sysdeps.h"
 
 #include <math.h>
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+#include <sys/mman.h>
+#endif
 
 #ifdef JIT_DEBUG_MEM_CORRUPTION
 #include <signal.h>
@@ -75,7 +78,27 @@
 static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
 {
 	assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
-	return uae_vm_alloc(size, UAE_VM_32BIT, UAE_VM_READ_WRITE);
+	int flags = UAE_VM_32BIT;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	/* ARM64 JIT metadata pools don't need low 4GB addresses on macOS. */
+	flags = 0;
+#endif
+	return uae_vm_alloc(size, flags, UAE_VM_READ_WRITE);
+}
+
+static inline void* vm_acquire_code(uae_u32 size, int options = VM_MAP_DEFAULT)
+{
+	assert(options == (VM_MAP_DEFAULT | VM_MAP_32BIT));
+	int flags = UAE_VM_32BIT;
+	int protect = UAE_VM_READ_WRITE;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	/* On macOS ARM64, MAP_JIT mappings may not be placeable below 4GB.
+	 * Allow normal placement and rely on ARM64 codegen's 64-bit pointers. */
+	flags = UAE_VM_JIT;
+	/* MAP_JIT allocations are expected to be executable mappings. */
+	protect = UAE_VM_READ_WRITE_EXECUTE;
+#endif
+	return uae_vm_alloc(size, flags, protect);
 }
 
 #define UNUSED(x)
@@ -89,7 +112,12 @@ static inline void *vm_acquire(uae_u32 size, int options = VM_MAP_DEFAULT)
   write_log("JIT: " format "\n", ##__VA_ARGS__);
 #define jit_log2(format, ...)
 
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+/* Not used on ARM64; R_MEMSTART (x27) holds full 64-bit natmem_offset */
+#define MEMBaseDiff ((uae_u32)0)
+#else
 #define MEMBaseDiff uae_p32(NATMEM_OFFSET)
+#endif
 
 #ifdef NATMEM_OFFSET
 #define FIXED_ADDRESSING 1
@@ -434,7 +462,7 @@ static inline unsigned int cft_map(unsigned int f)
 
 uae_u8* start_pc_p;
 uae_u32 start_pc;
-uae_u32 current_block_pc_p;
+uintptr current_block_pc_p;
 static uintptr current_block_start_target;
 uae_u32 needed_flags;
 static uintptr next_pc_p;
@@ -477,6 +505,15 @@ static int cache_enabled = 0;
 static blockinfo* hold_bi[MAX_HOLD_BI];
 blockinfo* active;
 blockinfo* dormant;
+
+static void disable_jit_runtime(const char* reason)
+{
+	jit_log("JIT disabled: %s", reason);
+	currprefs.cachesize = 0;
+	changed_prefs.cachesize = 0;
+	cache_size = 0;
+	cache_enabled = 0;
+}
 
 #ifdef NOFLAGS_SUPPORT_GENCOMP
 /* 68040 */
@@ -859,8 +896,37 @@ static void prepare_for_call_1(void);
 static void prepare_for_call_2(void);
 
 STATIC_INLINE void flush_cpu_icache(void *from, void *to);
+STATIC_INLINE void jit_begin_write_window(void);
+STATIC_INLINE void jit_end_write_window(void);
 #endif
 STATIC_INLINE void write_jmp_target(uae_u32 *jmpaddr, uintptr a);
+
+static int jit_write_window_depth = 0;
+
+STATIC_INLINE void jit_begin_write_window(void)
+{
+	jit_write_window_depth++;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (jit_write_window_depth == 1) {
+		uae_vm_jit_write_protect(false);
+	}
+#endif
+}
+
+STATIC_INLINE void jit_end_write_window(void)
+{
+	if (jit_write_window_depth <= 0) {
+		write_log("JIT: write window underflow\n");
+		jit_write_window_depth = 0;
+		return;
+	}
+	jit_write_window_depth--;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (jit_write_window_depth == 0) {
+		uae_vm_jit_write_protect(true);
+	}
+#endif
+}
 
 uae_u32 m68k_pc_offset;
 
@@ -1047,9 +1113,9 @@ void invalidate_block(blockinfo* bi)
     remove_deps(bi);
 }
 
-static inline void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uae_u32 target)
+static inline void create_jmpdep(blockinfo* bi, int i, uae_u32* jmpaddr, uintptr target)
 {
-    blockinfo* tbi = get_blockinfo_addr((void*)(uintptr)target);
+    blockinfo* tbi = get_blockinfo_addr((void*)target);
 
     Dif(!tbi) {
         jit_abort("Could not create jmpdep!");
@@ -1250,10 +1316,6 @@ static inline void alloc_blockinfos(void)
         if (hold_bi[i])
             return;
         bi = hold_bi[i] = alloc_blockinfo();
-#ifdef __MACH__
-        // Turn off write protect (which prevents execution) on JIT cache while the blocks are prepared, this is Mac OS X specific, it will work on x86-64, but as a noop
-        pthread_jit_write_protect_np(false);
-#endif
         prepare_block(bi);
     }
 }
@@ -1626,7 +1688,14 @@ static inline void writeback_const(int r)
         jit_abort("Trying to write back constant NF_HANDLER!");
     }
 
-    compemu_raw_mov_l_mi((uintptr)live.state[r].mem, live.state[r].val);
+    if (r == PC_P) {
+        /* PC_P holds a 64-bit host pointer — use the dedicated 64-bit
+           store path (LOAD_U64 + STR_xXi) instead of compemu_raw_mov_l_mi
+           which truncates to 32 bits via its IM32 parameter. */
+        compemu_raw_set_pc_i(live.state[r].val);
+    } else {
+        compemu_raw_mov_l_mi((uintptr)live.state[r].mem, live.state[r].val);
+    }
     log_vwrite(r);
     live.state[r].val = 0;
     set_status(r, INMEM);
@@ -1696,7 +1765,7 @@ static inline void disassociate(int r)
     evict(r);
 }
 
-static inline void set_const(int r, uae_u32 val)
+static inline void set_const(int r, uintptr val)
 {
     disassociate(r);
     live.state[r].val = val;
@@ -1754,7 +1823,13 @@ static int alloc_reg_hinted(int r, int willclobber, int hint)
     if (!willclobber) {
         if (live.state[r].status != UNDEF) {
             if (isconst(r)) {
-                compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+                if (r == PC_P) {
+                    /* PC_P holds a 64-bit host pointer — use LOAD_U64.
+                       compemu_raw_mov_l_ri uses LOAD_U32 which truncates. */
+                    LOAD_U64(bestreg, live.state[r].val);
+                } else {
+                    compemu_raw_mov_l_ri(bestreg, live.state[r].val);
+                }
                 live.state[r].val = 0;
                 set_status(r, DIRTY);
                 log_isused(bestreg);
@@ -2074,10 +2149,258 @@ static void fflags_into_flags_internal(void)
 static inline int isinrom(uintptr addr)
 {
 #ifdef UAE
-    return (addr >= uae_p32(kickmem_bank.baseaddr) &&
-        addr < uae_p32(kickmem_bank.baseaddr + 8 * 65536));
+    if (addr >= (uintptr)kickmem_bank.baseaddr &&
+        addr < (uintptr)kickmem_bank.baseaddr + 8 * 65536) {
+        return 1;
+    }
+    /* Treat UAE Boot ROM (rtarea) as ROM too for ARM64 JIT safety guards. */
+    if (rtarea_bank.baseaddr &&
+        addr >= (uintptr)rtarea_bank.baseaddr &&
+        addr < (uintptr)rtarea_bank.baseaddr + 65536) {
+        return 1;
+    }
+    return 0;
 #else
     return ((addr >= (uintptr)ROMBaseHost) && (addr < (uintptr)ROMBaseHost + ROMSize));
+#endif
+}
+
+static inline bool isarm64unstableblock(uae_u32 pc)
+{
+#if defined(CPU_AARCH64)
+    /* Fixed safety guard for the known Lightwave startup hotspot that loops
+     * under ARM64 JIT (observed at/around PC=0x4003dfbe).  This guard is
+     * always active — the optional hotspot guard toggle does NOT bypass it. */
+    if (pc >= 0x4003df00 && pc <= 0x4003e1ff)
+        return true;
+
+    /* Guard for KS 3.1 boot-time code in RAMSEY memory where D0/D2
+     * corruption was confirmed.  Two corruption sites:
+     *   1. PC=0x0803ae96 — checksum loop
+     *   2. PC=0x0803b094 — tight loop where D0/D2 become garbage when
+     *      blocks get promoted from optlev=0 to full JIT compilation. */
+    if (pc >= 0x0803ae00 && pc <= 0x0803b100)
+        return true;
+
+    return false;
+#else
+    (void)pc;
+    return false;
+#endif
+}
+
+#if defined(CPU_AARCH64)
+static constexpr uae_u32 ARM64_UNSTABLE_KEY_SHIFT = 9;
+static constexpr uae_u32 ARM64_UNSTABLE_KEY_MASK = ~((1u << ARM64_UNSTABLE_KEY_SHIFT) - 1u);
+static constexpr uae_u32 ARM64_UNSTABLE_BITMAP_BYTES = 1u << (32 - ARM64_UNSTABLE_KEY_SHIFT - 3);
+static uae_u8 arm64_dynamic_unstable_bitmap[ARM64_UNSTABLE_BITMAP_BYTES];
+static uae_u32 arm64_dynamic_unstable_count = 0;
+static uae_u32 arm64_dynamic_window_learn_count = 0;
+static uae_u32 arm64_guard_compile_total = 0;
+static uae_u32 arm64_guard_compile_interp = 0;
+static uae_u32 arm64_guard_compile_interp_rom = 0;
+static uae_u32 arm64_guard_compile_interp_compat = 0;
+static uae_u32 arm64_guard_compile_interp_static = 0;
+static uae_u32 arm64_guard_compile_interp_dynamic = 0;
+static constexpr uae_u32 ARM64_GUARD_STATS_SNAPSHOT_INTERVAL = 1024;
+static uae_u32 arm64_guard_compile_snapshot_target = ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
+
+static inline uae_u32 arm64_unstable_block_key(uae_u32 pc)
+{
+    return pc & ARM64_UNSTABLE_KEY_MASK;
+}
+
+static inline bool arm64_guard_verbose_logging(void)
+{
+    static bool initialized = false;
+    static bool enabled = false;
+    if (!initialized) {
+        initialized = true;
+        const char* env = getenv("AMIBERRY_ARM64_GUARD_VERBOSE");
+        enabled = env && env[0] != '\0' && env[0] != '0';
+        if (enabled) {
+            write_log("JIT: ARM64 verbose guard logging enabled by AMIBERRY_ARM64_GUARD_VERBOSE\n");
+        }
+    }
+    return enabled;
+}
+
+static inline bool arm64_guard_stats_enabled(void)
+{
+    static bool initialized = false;
+    static bool enabled = false;
+    if (!initialized) {
+        initialized = true;
+        const char* env = getenv("AMIBERRY_ARM64_GUARD_STATS");
+        enabled = env && env[0] != '\0' && env[0] != '0';
+        if (enabled) {
+            write_log("JIT: ARM64 guard stats enabled by AMIBERRY_ARM64_GUARD_STATS\n");
+        }
+    }
+    return enabled;
+}
+
+static inline void arm64_guard_stats_log(const char* reason);
+
+static inline void arm64_guard_stats_note_compile(bool interp_only, bool rom_only, bool compat_only, bool static_hotspot_only, bool dynamic_hotspot_only)
+{
+    if (!arm64_guard_stats_enabled()) {
+        return;
+    }
+    arm64_guard_compile_total++;
+    if (!interp_only) {
+        return;
+    }
+    arm64_guard_compile_interp++;
+    if (rom_only) {
+        arm64_guard_compile_interp_rom++;
+    }
+    if (compat_only) {
+        arm64_guard_compile_interp_compat++;
+    }
+    if (static_hotspot_only) {
+        arm64_guard_compile_interp_static++;
+    }
+    if (dynamic_hotspot_only) {
+        arm64_guard_compile_interp_dynamic++;
+    }
+    if (arm64_guard_compile_total >= arm64_guard_compile_snapshot_target) {
+        arm64_guard_stats_log("periodic");
+        while (arm64_guard_compile_total >= arm64_guard_compile_snapshot_target) {
+            arm64_guard_compile_snapshot_target += ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
+        }
+    }
+}
+
+static inline void arm64_guard_stats_log(const char* reason)
+{
+    if (!arm64_guard_stats_enabled()) {
+        return;
+    }
+    if (arm64_guard_compile_total == 0 && arm64_dynamic_unstable_count == 0 && arm64_dynamic_window_learn_count == 0) {
+        return;
+    }
+    write_log("JIT: ARM64 guard stats (%s): compile=%u interp=%u rom=%u compat=%u static=%u dynamic=%u learned_keys=%u learned_windows=%u\n",
+        reason,
+        arm64_guard_compile_total,
+        arm64_guard_compile_interp,
+        arm64_guard_compile_interp_rom,
+        arm64_guard_compile_interp_compat,
+        arm64_guard_compile_interp_static,
+        arm64_guard_compile_interp_dynamic,
+        arm64_dynamic_unstable_count,
+        arm64_dynamic_window_learn_count);
+}
+
+static inline void arm64_guard_stats_reset(void)
+{
+    arm64_dynamic_window_learn_count = 0;
+    arm64_guard_compile_total = 0;
+    arm64_guard_compile_interp = 0;
+    arm64_guard_compile_interp_rom = 0;
+    arm64_guard_compile_interp_compat = 0;
+    arm64_guard_compile_interp_static = 0;
+    arm64_guard_compile_interp_dynamic = 0;
+    arm64_guard_compile_snapshot_target = ARM64_GUARD_STATS_SNAPSHOT_INTERVAL;
+}
+
+static inline bool arm64_is_dynamic_unstable_key(uae_u32 key)
+{
+    if (!key)
+        return false;
+    const uae_u32 idx = key >> ARM64_UNSTABLE_KEY_SHIFT;
+    return (arm64_dynamic_unstable_bitmap[idx >> 3] & (1u << (idx & 7))) != 0;
+}
+
+static bool arm64_add_dynamic_unstable_key(uae_u32 key, bool log_key)
+{
+    if (!key)
+        return false;
+    const uae_u32 idx = key >> ARM64_UNSTABLE_KEY_SHIFT;
+    uae_u8* const bits = &arm64_dynamic_unstable_bitmap[idx >> 3];
+    const uae_u8 mask = static_cast<uae_u8>(1u << (idx & 7));
+    if ((*bits & mask) != 0) {
+        return false;
+    }
+    *bits |= mask;
+    arm64_dynamic_unstable_count++;
+    if (log_key && arm64_guard_verbose_logging())
+        write_log("JIT: ARM64 dynamic guard learned unstable block PC=%08x\n", key);
+    return true;
+}
+
+static inline bool isarm64dynamicunstableblock(uae_u32 pc)
+{
+    return arm64_is_dynamic_unstable_key(arm64_unstable_block_key(pc));
+}
+
+void jit_mark_arm64_unstable_pc(uae_u32 pc)
+{
+    const uae_u32 key = arm64_unstable_block_key(pc);
+    arm64_add_dynamic_unstable_key(key, true);
+}
+
+void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after)
+{
+    if (!pc)
+        return;
+    const uae_u32 start_pc = pc > before ? pc - before : 0;
+    const uae_u32 first = arm64_unstable_block_key(start_pc);
+    const uae_u32 last = arm64_unstable_block_key(pc + after);
+    int learned = 0;
+    for (uae_u32 key = first; key <= last; key += 0x200u) {
+        if (arm64_add_dynamic_unstable_key(key, false))
+            ++learned;
+        if (key > 0xfffffdffu)
+            break;
+    }
+    if (learned > 0 && arm64_guard_verbose_logging()) {
+        write_log("JIT: ARM64 dynamic guard learned unstable window PC=%08x range=%08x-%08x (%d keys)\n",
+            pc, first, last, learned);
+    }
+    if (learned > 0) {
+        arm64_dynamic_window_learn_count++;
+    }
+}
+#else
+static inline bool isarm64dynamicunstableblock(uae_u32 pc)
+{
+    (void)pc;
+    return false;
+}
+void jit_mark_arm64_unstable_pc(uae_u32 pc)
+{
+    (void)pc;
+}
+void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after)
+{
+    (void)pc;
+    (void)before;
+    (void)after;
+}
+#endif
+
+static inline bool arm64_hotspot_guard_enabled(void)
+{
+#if defined(CPU_AARCH64)
+    static bool initialized = false;
+    static bool enabled = false;
+    if (!initialized) {
+        initialized = true;
+        const char* enable_env = getenv("AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD");
+        const char* disable_env = getenv("AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD");
+        if (enable_env && enable_env[0] != '\0' && enable_env[0] != '0') {
+            enabled = true;
+            write_log("JIT: ARM64 hotspot guard enabled by AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD\n");
+        }
+        if (disable_env && disable_env[0] != '\0' && disable_env[0] != '0') {
+            enabled = false;
+            write_log("JIT: ARM64 hotspot guard disabled by AMIBERRY_ARM64_DISABLE_HOTSPOT_GUARD\n");
+        }
+    }
+    return enabled;
+#else
+    return false;
 #endif
 }
 
@@ -2152,12 +2475,17 @@ void cache_invalidate(void) {
 }
 #endif
 
-uae_u32 get_const(int r)
+uintptr get_const(int r)
 {
     Dif(!isconst(r)) {
         jit_abort("Register %d should be constant, but isn't", r);
     }
     return live.state[r].val;
+}
+
+uae_u8* compemu_host_pc_from_const(uintptr pc_const)
+{
+    return (uae_u8*)pc_const;
 }
 
 void sync_m68k_pc(void)
@@ -2197,6 +2525,10 @@ void compiler_init(void)
 
 void compiler_exit(void)
 {
+#if defined(CPU_AARCH64)
+    arm64_guard_stats_log("exit");
+#endif
+
 #ifdef PROFILE_COMPILE_TIME
     emul_end_time = clock();
 #endif
@@ -2445,7 +2777,7 @@ static void freescratch(void)
  * Memory access and related functions, CREATE time                 *
  ********************************************************************/
 
-void register_branch(uae_u32 not_taken, uae_u32 taken, uae_u8 cond)
+void register_branch(uintptr not_taken, uintptr taken, uae_u8 cond)
 {
     next_pc_p = not_taken;
     taken_pc_p = taken;
@@ -2494,7 +2826,7 @@ static inline void writemem_special(int address, int source, int offset)
 
 void writebyte(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_byte() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 5);
     else
         writemem_real(address, source, 1);
@@ -2502,7 +2834,7 @@ void writebyte(int address, int source)
 
 void writeword(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_word() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 4);
     else
         writemem_real(address, source, 2);
@@ -2510,7 +2842,7 @@ void writeword(int address, int source)
 
 void writelong(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_long() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 3);
     else
         writemem_real(address, source, 4);
@@ -2519,7 +2851,7 @@ void writelong(int address, int source)
 // Now the same for clobber variant
 void writeword_clobber(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_word() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 4);
     else
         writemem_real(address, source, 2);
@@ -2528,7 +2860,7 @@ void writeword_clobber(int address, int source)
 
 void writelong_clobber(int address, int source)
 {
-    if (special_mem & S_WRITE)
+    if ((special_mem & S_WRITE) || distrust_long() || jit_n_addr_unsafe)
         writemem_special(address, source, SIZEOF_VOID_P * 3);
     else
         writemem_real(address, source, 4);
@@ -2564,7 +2896,7 @@ static inline void readmem_special(int address, int dest, int offset)
 
 void readbyte(int address, int dest)
 {
-    if (special_mem & S_READ)
+    if ((special_mem & S_READ) || distrust_byte() || jit_n_addr_unsafe)
         readmem_special(address, dest, SIZEOF_VOID_P * 2);
     else
         readmem_real(address, dest, 1);
@@ -2572,7 +2904,7 @@ void readbyte(int address, int dest)
 
 void readword(int address, int dest)
 {
-    if (special_mem & S_READ)
+    if ((special_mem & S_READ) || distrust_word() || jit_n_addr_unsafe)
         readmem_special(address, dest, SIZEOF_VOID_P * 1);
     else
         readmem_real(address, dest, 2);
@@ -2580,7 +2912,7 @@ void readword(int address, int dest)
 
 void readlong(int address, int dest)
 {
-    if (special_mem & S_READ)
+    if ((special_mem & S_READ) || distrust_long() || jit_n_addr_unsafe)
         readmem_special(address, dest, SIZEOF_VOID_P * 0);
     else
         readmem_real(address, dest, 4);
@@ -2602,7 +2934,7 @@ STATIC_INLINE void get_n_addr_real(int address, int dest)
 
 void get_n_addr(int address, int dest)
 {
-    if (special_mem)
+    if (special_mem || distrust_addr() || jit_n_addr_unsafe)
         get_n_addr_old(address, dest);
     else
         get_n_addr_real(address, dest);
@@ -2612,10 +2944,10 @@ void get_n_addr_jmp(int address, int dest)
 {
     /* For this, we need to get the same address as the rest of UAE
        would --- otherwise we end up translating everything twice */
-    if (special_mem)
+    if (special_mem || distrust_addr() || jit_n_addr_unsafe)
         get_n_addr_old(address, dest);
     else
-        get_n_addr_real(address, dest);
+        jnf_MEM_GETADR_JMP_OFF(dest, address);
 }
 
 /* base is a register, but dp is an actual value. 
@@ -2701,7 +3033,7 @@ uae_u32 get_jitted_size(void)
 static uint8 *do_alloc_code(uint32 size, int depth)
 {
 	UNUSED(depth);
-    uint8*code = (uint8 *)vm_acquire(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
+    uint8*code = (uint8 *)vm_acquire_code(size, VM_MAP_DEFAULT | VM_MAP_32BIT);
 	return code == VM_MAP_FAILED ? NULL : code;
 }
 
@@ -2710,14 +3042,84 @@ static inline uint8 *alloc_code(uint32 size)
     uint8 *ptr = do_alloc_code(size, 0);
 	/* allocated code must fit in 32-bit boundaries */
 #ifdef CPU_64_BIT
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+	if (ptr && (uintptr)ptr + size > (uintptr)0xffffffff) {
+		static bool arm64_macos_high_jit_logged = false;
+		if (!arm64_macos_high_jit_logged) {
+			jit_log("ARM64 macOS: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
+			arm64_macos_high_jit_logged = true;
+		}
+	}
+#else
 	if (ptr && (uintptr)ptr + size > (uintptr)0xffffffff) {
 		jit_log("WARNING: JIT code allocated above 32-bit boundary at %p (size %u)", ptr, size);
 		vm_release(ptr, size);
 		return NULL;
 	}
 #endif
+#endif
 	return ptr;
 }
+
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+static inline bool arm64_uncond_branch_reachable(uintptr from, uintptr to)
+{
+	/* AArch64 B immediate range: signed 26-bit immediate, shifted left by 2. */
+	const intptr_t diff = (intptr_t)to - (intptr_t)from;
+	const intptr_t min = -(128 * 1024 * 1024);
+	const intptr_t max = (128 * 1024 * 1024) - 4;
+	return diff >= min && diff <= max;
+}
+
+static inline bool arm64_cache_reaches_popall(uint8 *cache_start, uint32 cache_size_bytes)
+{
+	if (!cache_start || !cache_size_bytes || !popallspace) {
+		return false;
+	}
+	const uintptr popall = (uintptr)popallspace;
+	const uintptr start = (uintptr)cache_start;
+	const uintptr end = start + cache_size_bytes - 4;
+	return arm64_uncond_branch_reachable(start, popall) &&
+		arm64_uncond_branch_reachable(end, popall);
+}
+
+static uint8 *alloc_code_near_popall(uint32 size)
+{
+	if (!popallspace || size == 0) {
+		return alloc_code(size);
+	}
+#ifdef MAP_JIT
+	const int prot = PROT_READ | PROT_WRITE | PROT_EXEC;
+	const int flags = MAP_PRIVATE | MAP_ANON | MAP_JIT;
+	const uintptr page = (uintptr)uae_vm_page_size();
+	const uintptr anchor = (uintptr)popallspace;
+	const intptr_t max_delta = 120 * 1024 * 1024;
+	const intptr_t step = 4 * 1024 * 1024;
+
+	for (intptr_t delta = 0; delta <= max_delta; delta += step) {
+		for (int dir = 0; dir < 2; dir++) {
+			if (delta == 0 && dir == 1) {
+				continue;
+			}
+			const intptr_t signed_delta = dir == 0 ? delta : -delta;
+			uintptr hint = (uintptr)((intptr_t)anchor + signed_delta);
+			hint &= ~(page - 1);
+			void *p = mmap((void *)hint, size, prot, flags, -1, 0);
+			if (p == MAP_FAILED) {
+				continue;
+			}
+			uint8 *code = (uint8 *)p;
+			if (arm64_cache_reaches_popall(code, size)) {
+				return code;
+			}
+			munmap(code, size);
+		}
+	}
+#endif
+	/* Fallback allocation may place cache out of branch range, checked by caller. */
+	return alloc_code(size);
+}
+#endif
 
 void alloc_cache(void)
 {
@@ -2732,14 +3134,35 @@ void alloc_cache(void)
         return;
 
 	while (!compiled_code && cache_size) {
-		if ((compiled_code = alloc_code(cache_size * 1024)) == NULL) {
+		const uint32 cache_bytes = cache_size * 1024;
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+		compiled_code = alloc_code_near_popall(cache_bytes);
+		if (compiled_code && !arm64_cache_reaches_popall(compiled_code, cache_bytes)) {
+			jit_log("ARM64 macOS: JIT cache %p (size %u) is out of branch range from popallspace %p",
+				compiled_code, cache_bytes, popallspace);
+			vm_release(compiled_code, cache_bytes);
+			compiled_code = NULL;
+		}
+#else
+		compiled_code = alloc_code(cache_bytes);
+#endif
+		if (compiled_code == NULL) {
 			compiled_code = 0;
 			cache_size /= 2;
 		}
 	}
+#if !defined(__APPLE__) || !defined(CPU_AARCH64)
 	vm_protect(compiled_code, cache_size * 1024, VM_PAGE_READ | VM_PAGE_WRITE | VM_PAGE_EXECUTE);
+#endif
 
     if (compiled_code) {
+#if defined(__APPLE__) && defined(CPU_AARCH64)
+		static bool arm64_macos_jit_mode_logged = false;
+		if (!arm64_macos_jit_mode_logged) {
+			jit_log("ARM64 macOS JIT mode active: MAP_JIT allocation + write/execute switching");
+			arm64_macos_jit_mode_logged = true;
+		}
+#endif
         jit_log("<JIT compiler> : actual translation cache size : %d KB at %p-%p\n", cache_size, compiled_code, compiled_code + cache_size * 1024);
 #ifdef USE_DATA_BUFFER
         max_compile_start = compiled_code + cache_size * 1024 - BYTES_PER_INST - DATA_BUFFER_SIZE;
@@ -2941,7 +3364,10 @@ STATIC_INLINE void create_popalls(void)
             return;
         }
     }
+#if !defined(__APPLE__) || !defined(CPU_AARCH64)
     vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_WRITE);
+#endif
+	jit_begin_write_window();
 
     current_compile_p = popallspace;
     set_target(current_compile_p);
@@ -3028,7 +3454,10 @@ STATIC_INLINE void create_popalls(void)
     // stale/random data from the I-cache.
     flush_cpu_icache((void *)popallspace, (void *)get_target());
 #endif
+#if !defined(__APPLE__) || !defined(CPU_AARCH64)
 	vm_protect(popallspace, POPALLSPACE_SIZE, VM_PAGE_READ | VM_PAGE_EXECUTE);
+#endif
+	jit_end_write_window();
 }
 
 static inline void reset_lists(void)
@@ -3045,6 +3474,7 @@ static void prepare_block(blockinfo* bi)
 {
     int i;
 
+	jit_begin_write_window();
     set_target(current_compile_p);
     bi->direct_pen = (cpuop_func*)get_target();
     compemu_raw_execute_normal((uintptr) & (bi->pc_p));
@@ -3053,6 +3483,7 @@ static void prepare_block(blockinfo* bi)
     compemu_raw_check_checksum((uintptr) & (bi->pc_p));
 
     flush_cpu_icache((void*)current_compile_p, (void*)target);
+	jit_end_write_window();
     current_compile_p = get_target();
 
     bi->deplist = NULL;
@@ -3065,6 +3496,12 @@ static void prepare_block(blockinfo* bi)
 
 void compemu_reset(void)
 {
+#if defined(CPU_AARCH64)
+    arm64_guard_stats_log("reset");
+    memset(arm64_dynamic_unstable_bitmap, 0, sizeof arm64_dynamic_unstable_bitmap);
+    arm64_dynamic_unstable_count = 0;
+    arm64_guard_stats_reset();
+#endif
     flush_icache = lazy_flush ? flush_icache_lazy : flush_icache_hard;
     set_cache_state(0);
 }
@@ -3209,10 +3646,18 @@ void build_comp(void)
     }
     jit_log("<JIT compiler> : supposedly %d compileable opcodes!", count);
 
-    /* Initialise state */
-    create_popalls();
-    alloc_cache();
-    reset_lists();
+	/* Initialise state */
+	create_popalls();
+	if (!pushall_call_handler || !popall_execute_normal) {
+		disable_jit_runtime("failed to initialize JIT dispatcher stubs (popallspace)");
+		return;
+	}
+	alloc_cache();
+	if (!compiled_code) {
+		disable_jit_runtime("failed to allocate ARM64 JIT code cache");
+		return;
+	}
+	reset_lists();
 
     for (i = 0; i < TAGSIZE; i += 2) {
         cache_tags[i].handler = (cpuop_func*)popall_execute_normal;
@@ -3317,6 +3762,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
 
     if (cache_enabled && compiled_code && currprefs.cpu_model >= 68020) {
+		jit_begin_write_window();
 #ifdef PROFILE_COMPILE_TIME
         compile_count++;
         clock_t start_time = clock();
@@ -3346,6 +3792,50 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
         bi2 = get_blockinfo(cl);
 
         optlev = bi->optlevel;
+#if defined(CPU_AARCH64)
+        const bool arm64_compat_interp_only = currprefs.cpu_compatible != 0;
+        const bool arm64_rom_interp_only = trace_in_rom;
+        const bool arm64_optional_hotspot_guard_enabled = arm64_hotspot_guard_enabled();
+        const bool arm64_static_hotspot_interp_only = isarm64unstableblock(start_pc);
+        const bool arm64_dynamic_hotspot_interp_only = isarm64dynamicunstableblock(start_pc);
+        const bool arm64_hotspot_interp_only = arm64_static_hotspot_interp_only || arm64_dynamic_hotspot_interp_only;
+        const bool arm64_interp_only = arm64_compat_interp_only || arm64_rom_interp_only || arm64_hotspot_interp_only;
+        arm64_guard_stats_note_compile(
+            arm64_interp_only,
+            arm64_rom_interp_only,
+            arm64_compat_interp_only,
+            arm64_static_hotspot_interp_only,
+            arm64_dynamic_hotspot_interp_only);
+        if (arm64_interp_only) {
+            static int arm64_rom_guard_logged = 0;
+            static int arm64_compat_guard_logged = 0;
+            static int arm64_hotspot_guard_logged = 0;
+            static int arm64_hotspot_guard_forced_logged = 0;
+            static int arm64_dynamic_guard_logged = 0;
+            if (arm64_rom_interp_only && !arm64_rom_guard_logged) {
+                write_log("JIT: ARM64 guard active, running ROM blocks without JIT\n");
+                arm64_guard_stats_log("startup");
+                arm64_rom_guard_logged = 1;
+            }
+            if (arm64_compat_interp_only && !arm64_compat_guard_logged) {
+                write_log("JIT: ARM64 guard active, cpu_compatible=true uses interpreter blocks\n");
+                arm64_compat_guard_logged = 1;
+            }
+            if (arm64_static_hotspot_interp_only && !arm64_hotspot_guard_logged) {
+                write_log("JIT: ARM64 guard active, running known unstable ARM64 block range without JIT\n");
+                arm64_hotspot_guard_logged = 1;
+            }
+            if (arm64_static_hotspot_interp_only && !arm64_optional_hotspot_guard_enabled && !arm64_hotspot_guard_forced_logged) {
+                write_log("JIT: ARM64 fixed safety guard still active for known-bad block range while optional hotspot guard is disabled\n");
+                arm64_hotspot_guard_forced_logged = 1;
+            }
+            if (arm64_dynamic_hotspot_interp_only && !arm64_dynamic_guard_logged) {
+                write_log("JIT: ARM64 dynamic guard active, running learned unstable block without JIT\n");
+                arm64_dynamic_guard_logged = 1;
+            }
+            optlev = 0;
+        }
+#endif
         if (bi->status != BI_INVALID) {
             Dif(bi != bi2) {
                 /* I don't think it can happen anymore. Shouldn't, in
@@ -3359,10 +3849,19 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
             }
         }
         if (bi->count == -1) {
+#if defined(CPU_AARCH64)
+            if (arm64_interp_only) {
+                /* Keep ROM/compat/known-hotspot blocks at interpreter level
+                 * to avoid unstable ARM64 codegen paths. */
+                optlev = 0;
+            } else
+#endif
+            {
             optlev++;
             while (!optcount[optlev])
                 optlev++;
             bi->count = optcount[optlev] - 1;
+            }
         }
         current_block_pc_p = JITPTR pc_hist[0].location;
 
@@ -3454,29 +3953,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                 }
 
                 failure = 1; // gb-- defaults to failure state
-#ifdef JIT_INTERPRET_ONLY
-                // Force all opcodes through interpreter fallback to isolate
-                // whether visual corruption is caused by compiled handlers.
-                if (false) {
-#elif defined(JIT_BISECT_OPCODES)
-  #ifdef JIT_BISECT_EXCLUDE
-                // Exclude mode: compile ALL opcodes EXCEPT those in excluded range(s).
-                // If corruption disappears, the guilty opcode is in an excluded range.
-                if (comptbl[opcode] && optlev > 1
-                    && !(opcode >= JIT_BISECT_MIN && opcode <= JIT_BISECT_MAX)
-    #ifdef JIT_BISECT_MIN2
-                    && !(opcode >= JIT_BISECT_MIN2 && opcode <= JIT_BISECT_MAX2)
-    #endif
-                    ) {
-  #else
-                // Include mode: only COMPILE opcodes in [MIN,MAX].
-                // If corruption appears, the guilty opcode is in this range.
-                if (comptbl[opcode] && optlev > 1
-                    && (opcode >= JIT_BISECT_MIN && opcode <= JIT_BISECT_MAX)) {
-  #endif
-#else
                 if (comptbl[opcode] && optlev > 1) {
-#endif
                     failure = 0;
                     if (!was_comp) {
                         comp_pc_p = (uae_u8*)pc_hist[i].location;
@@ -3625,6 +4102,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
                     uae_u32* tba;
                     blockinfo* tbi;
 
+
                     tbi = get_blockinfo_addr_new((void*)v);
                     match_states(tbi);
 
@@ -3693,6 +4171,7 @@ void compile_block(cpu_history* pc_hist, int blocklen, int totcycles)
 #endif
         /* Account for compilation time */
         do_extra_cycles(totcycles);
+		jit_end_write_window();
     }
 }
 

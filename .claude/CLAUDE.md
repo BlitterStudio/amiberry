@@ -13,7 +13,7 @@ Amiberry is an optimized Amiga emulator based on UAE (Unix Amiga Emulator). It p
 - **FreeBSD**: x86_64
 - **Windows**: x86_64 (MinGW-w64/GCC, dependencies via vcpkg)
 
-- **Version**: 8.0.0 (Public Beta 20)
+- **Version**: 8.0.0 (Public Beta 22)
 - **Languages**: C/C++
 - **Build System**: CMake (minimum 3.16)
 - **License**: GPL (see LICENSE file)
@@ -135,11 +135,73 @@ amiberry/
 - `src/osdep/amiberry.cpp` - Main platform abstraction (~170KB, core initialization)
 - `src/osdep/amiberry_gfx.cpp` - Graphics/display handling
 - `src/osdep/amiberry_input.cpp` - Input device handling
+- `src/osdep/amiberry_input.h` - Input device types and declarations
+- `src/osdep/on_screen_joystick.cpp` - On-screen touch joystick (Android/touchscreens)
+- `src/osdep/on_screen_joystick.h` - On-screen joystick public API
 - `src/osdep/amiberry_gui.cpp` - GUI management
 - `src/cfgfile.cpp` - Configuration file parsing
 - `src/custom.cpp` - Amiga custom chip emulation
 - `src/newcpu.cpp` - 68000 CPU emulation
 - `src/memory.cpp` - Memory management
+- `src/osdep/amiberry_mem.cpp` - Natmem shared memory mapping and gap management
+- `src/osdep/sigsegv_handler.cpp` - SIGSEGV handler for JIT code faults
+- `src/vm.cpp` - Virtual memory abstraction (reserve/commit/decommit)
+
+### Natmem / JIT Memory System
+
+The emulator maps Amiga's address space into a contiguous host virtual memory block ("natmem") for direct pointer-based access from both the JIT compiler and interpreter (`canbang` mode).
+
+**Architecture:**
+- `uae_vm_reserve()` reserves a large block (up to 2GB) with `PROT_NONE` (no access)
+- Individual memory banks (Chip RAM, ROMs, Z3 RAM, RTG VRAM) are committed via `uae_vm_commit()` during `memory_reset()`
+- JIT-compiled code and interpreter access emulated memory as `natmem_offset + M68k_address` — direct dereference, no bank lookup
+- `shmids[]` array (MAX_SHMID=256) tracks all committed regions
+
+**Gap handling (`commit_natmem_gaps()`):**
+Gaps between committed banks (e.g., 0x00F10000-0x00F7FFFF between Boot ROM and Kickstart ROM) would cause SIGSEGV on access. After all banks are mapped, `commit_natmem_gaps()` walks the natmem space and commits any remaining gaps with the correct fill value (zero or 0xFF based on `cs_unmapped_space`). This is called at the end of `memory_reset()` behind `#ifdef NATMEM_OFFSET`.
+
+**Key variables** (in `amiberry_mem.cpp`):
+- `natmem_reserved` — base pointer of reserved block
+- `natmem_reserved_size` — total size of reserved block
+- `natmem_offset` — pointer used for M68k address translation (may differ from `natmem_reserved` when RTG VRAM is offset)
+- `canbang` — flag indicating direct natmem access is active
+
+**SIGSEGV handler** (`sigsegv_handler.cpp`):
+When a fault occurs inside JIT code range, the handler decodes the ARM64 LDR/STR instruction and emulates the access via bank handlers. Faults outside JIT code range are not recovered.
+
+### ARM64 JIT Stability Notes (2026-02)
+
+- ARM64 defaults to direct JIT address mode (`jit_n_addr_unsafe=0` at reset). Unsafe banks flip to indirect mode via `S_N_ADDR` handling in `map_banks()`.
+- ARM64 keeps ROM and UAE Boot ROM (`rtarea`) blocks in interpreter mode.
+- Fixed safety fallback for the Lightwave startup hotspot (`PC` range `0x4003df00`-`0x4003e1ff`).
+- ARM64 dynamically quarantines unstable JIT blocks (SIGSEGV recovery, autoconfig paths, illegal-op probes) using an O(1) bitmap lookup, reset on `compemu_reset()`.
+- Fixed KS 3.1 quarantine guards PC range `0x0803ae00`-`0x0803b100` (RAMSEY memory CRC kernel).
+
+**Debugging env vars** (all optional, zero overhead when unset):
+- `AMIBERRY_ARM64_GUARD_VERBOSE=1` — log quarantine events
+- `AMIBERRY_ARM64_ENABLE_HOTSPOT_GUARD=1` — re-enable optional hotspot guard (defaults OFF)
+
+### ARM64 JIT 64-bit Pointer Fix (2026-02, macos-jit branch)
+
+**Problem**: On platforms where `natmem_offset` lives above 4GB (e.g. macOS ARM64 at `0x300000000`), the JIT's virtual register `PC_P` (register 16) holds a 64-bit host pointer, but 18 code paths truncated it to 32 bits. All fixes are `CPU_AARCH64`-guarded (not macOS-only).
+
+**Design principle**: PC_P is the ONLY virtual register holding a 64-bit host pointer. All others (D0-D7, A0-A7, FLAGX, etc.) hold 32-bit M68k values. Fixes add PC_P-specific 64-bit paths while keeping 32-bit ops for everything else (W-register ops zero upper 32 bits for clean `[Xn, X27]` indexing).
+
+**Fix points** (files: `compemu_arm.h`, `compemu_support_arm.cpp`, `compemu_arm.cpp`, `codegen_arm64.cpp`, `compemu_midfunc_arm64.cpp`, `gencomp_arm.c`):
+1-3. `reg_status::val`, `set_const()`, `get_const()` — `uae_u32` → `uintptr`
+4-5. `register_branch()`, `compemu_host_pc_from_const()` — `uae_u32` → `uintptr`
+6-7. `arm_ADD_l_ri()`, `arm_ADD_l_ri8()`, `arm_SUB_l_ri8()` — 64-bit ADD/SUB when `d == PC_P`
+8-9. `mov_l_ri()`, `mov_l_mi()` — `IM32` → `IMPTR`; `LOAD_U64` for pc_p/pc_oldp
+10. `compemu_raw_mov_l_rr()` — `MOV_ww` → `MOV_xx` for PC_P
+11-12. `writeback_const()`, `alloc_reg_hinted()` — `LOAD_U64` path for PC_P
+13-14. Generated `compemu_arm.cpp` + `gencomp_arm.c` — `uae_u32 v1/v2` → `uintptr`
+15. `JITPTR` macro — `(uae_u32)(uintptr)` → `(uintptr)`
+16-17. `current_block_pc_p`, `create_jmpdep()` — `uae_u32` → `uintptr`
+18. `arm_ADD_l_ri()` parameter — `IM32` → `IMPTR` (was truncating `comp_pc_p` in all Bcc/DBcc branch target computations — the root cause of runtime crashes)
+
+**Natmem reservation**: On ARM64, `UAE_VM_32BIT` is dropped from the natmem reservation call since the JIT is 64-bit-clean. This avoids ~25 wasted mmap/munmap cycles on platforms where the kernel ignores low-address hints.
+
+**x86_64 JIT note**: The x86_64 JIT (`src/jit/x86/`) has the same 32-bit type patterns but uses separate files. It works on platforms where natmem fits below 4GB. If x86_64 natmem ever moves above 4GB, the same fixes would be needed there.
 
 ### GUI System
 
@@ -153,6 +215,48 @@ The project is transitioning to ImGui (`USE_IMGUI`). ImGui panel sources are in 
 - `input.cpp` - Controller configuration
 - `whdload.cpp` - WHDLoad integration
 
+### On-Screen Joystick (Touch Controls)
+
+The on-screen joystick provides touch-based D-pad and fire buttons for Android and other touchscreen devices. It is implemented in `src/osdep/on_screen_joystick.cpp` with rendering support for both SDL2 renderer and OpenGL.
+
+**Architecture:**
+- Registered as a **virtual joystick device** ("On-Screen Joystick") in the UAE input device system via `init_joystick()` in `amiberry_input.cpp`
+- Always the **last device** in `di_joystick[]` (appended after physical SDL joysticks)
+- Has 2 axes (X, Y) and 2 buttons (Fire, 2nd Fire), configured with proper `axismappings`, `buttonmappings`, and metadata
+- Input injected via `setjoystickstate()` / `setjoybuttonstate()` — the proper UAE input device API that routes through the full input mapping and port mode system
+- **Auto-assigns to Port 1** in joystick mode when enabled via `on_screen_joystick_set_enabled(true)`, using `JSEM_JOYS + dev` as the port assignment ID and calling `inputdevice_config_change()` to reconfigure
+
+**Key functions:**
+- `get_onscreen_joystick_device_index()` — returns the `di_joystick[]` index, or -1 if not registered (declared in `amiberry_input.h`)
+- `on_screen_joystick_set_enabled(bool)` — enables/disables and handles auto-assignment
+- `on_screen_joystick_update_layout()` — recalculates positions when screen geometry changes
+- `on_screen_joystick_handle_finger_down/up/motion()` — touch event handlers; return true if consumed
+
+**SDL touch-to-mouse filtering:**
+SDL2 synthesizes mouse events from touch events by default (`SDL_HINT_TOUCH_MOUSE_EVENTS = "1"`). When the on-screen joystick is active, `amiberry.cpp` filters out these synthetic events by checking `event.button.which == SDL_TOUCH_MOUSEID` / `event.motion.which == SDL_TOUCH_MOUSEID` to prevent touch D-pad input from being interpreted as Amiga mouse movement.
+
+**Layout sizing constants** (in `on_screen_joystick.cpp`):
+- `DPAD_SIZE_FRACTION = 0.38` — D-pad diameter as fraction of min(screen_w, screen_h)
+- `BUTTON_SIZE_FRACTION = 0.22` — fire button diameter
+- `BUTTON_GAP_FRACTION = 0.05` — gap between fire buttons
+- `KB_BUTTON_SIZE_FRACTION = 0.14` — keyboard toggle button size
+
+**Config options** (in `struct uae_prefs`):
+- `onscreen_joystick` — enable on-screen joystick (boolean)
+- `input_default_onscreen_keyboard` — show keyboard button on the on-screen overlay
+
+### Input Device System Overview
+
+The UAE input device system uses `inputdevice_functions` structs for each device type (`IDTYPE_JOYSTICK`, `IDTYPE_MOUSE`, `IDTYPE_KEYBOARD`). Joystick devices are stored in the `di_joystick[]` array with count `num_joystick`.
+
+**Port assignment IDs:** `JSEM_JOYS + device_index` for joysticks, `JSEM_MICE + index` for mice, `JSEM_KBDLAYOUT + index` for keyboard layouts. These are stored in `changed_prefs.jports[port].id`.
+
+**Input injection APIs:**
+- `setjoystickstate(dev, axis, state, max)` / `setjoybuttonstate(dev, button, state)` — proper device API, respects port mode (joystick/mouse/analog) and full input mapping
+- `send_input_event(INPUTEVENT_JOY*_*, state, max, autofire)` — direct event injection, bypasses port mode. Avoid for new code.
+
+**Device registration pattern:** Append to `di_joystick[]`, increment `num_joystick`, call `cleardid()` + `fixthings()` to initialize metadata, set axes/buttons/names/mappings. The device then appears in the Input configuration GUI dropdown.
+
 ### Platform Support
 
 Platform-specific code is in `src/osdep/`:
@@ -161,6 +265,14 @@ Platform-specific code is in `src/osdep/`:
 - Android has additional handling in `android/` directory
 - Architecture-specific JIT in `src/jit/arm/` and `src/jit/x86/`
 - Windows uses MinGW-w64 which provides POSIX-compatible headers (`unistd.h`, `dirent.h`, etc.)
+
+### macOS Port Notes
+
+**DiskArbitration & CD-ROMs:**
+- macOS mounts Audio CDs via `cddafs`, which inherently puts an exclusive lock on the standard block device (e.g., `/dev/disk4`) returning `EBUSY` when `open()` is attempted.
+- `src/osdep/blkdev_ioctl.cpp` handles this by intentionally falling back to the raw character device (`/dev/rdisk4`).
+- Interfacing with Apple's `DiskArbitration` framework (to retrieve CD TOCs) *requires* the block device string. Therefore `ioctl_command_toc2` temporarily reverts `/dev/rdiskX` back to `/dev/diskX` before passing it to `DADiskCreateFromBSDName`. 
+- Fetching audio sectors requires grouping `CDDA_BUFFERS` into a single `ioctl` call from the character device, and unpacking the contiguous stream with a 96-byte padding gap matching Amiberry's 2448-byte CDDA stride.
 
 ### Windows Port Notes
 

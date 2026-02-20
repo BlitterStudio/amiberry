@@ -58,6 +58,10 @@
 #ifdef JIT
 #include "jit/compemu.h"
 #include <signal.h>
+#if defined(CPU_AARCH64)
+extern void jit_mark_arm64_unstable_pc(uae_u32 pc);
+extern void jit_mark_arm64_unstable_pc_window(uae_u32 pc, uae_u32 before, uae_u32 after);
+#endif
 #else
 /* Need to have these somewhere */
 bool check_prefs_changed_comp (bool checkonly) { return false; }
@@ -3826,6 +3830,27 @@ uae_u32 REGPARAM2 op_illg (uae_u32 opcode)
 	int inrom = in_rom (pc);
 	int inrt = in_rtarea (pc);
 
+#if defined(JIT) && defined(CPU_AARCH64)
+	/* Illegal-instruction probe code in early Z3 startup can destabilize ARM64
+	 * translated control flow; quarantine those PCs to interpreter. */
+	if (currprefs.cachesize > 0 && !inrom && !inrt) {
+		const uae_u32 illg_key = pc & ~0x1ffu;
+		const bool known_startup_probe = opcode == 0x4e7a && pc >= 0x40020000 && pc < 0x40040000;
+		static uae_u32 last_illg_flush_key = 0xffffffffu;
+		jit_mark_arm64_unstable_pc(pc);
+		if (known_startup_probe) {
+			jit_mark_arm64_unstable_pc_window(pc, 0x2000u, 0x2000u);
+		}
+		countdown = 0;
+		set_special(SPCFLAG_END_COMPILE);
+		if (known_startup_probe && illg_key != last_illg_flush_key) {
+			last_illg_flush_key = illg_key;
+			set_special(0);
+			flush_icache(3);
+		}
+	}
+#endif
+
 	if (opcode == 0x4afc || opcode == 0xfc4a) {
 		if (!valid_address(pc, 4) && valid_address(pc - 4, 4)) {
 			// PC fell off the end of RAM
@@ -5560,6 +5585,7 @@ void do_nothing (void)
 		jit_dbg_check_vec2_dispatch("do_nothing");
 	}
 #endif
+
 	if (!currprefs.cpu_thread) {
 		/* What did you expect this to do? */
 		do_cycles (0);
@@ -5595,6 +5621,7 @@ void exec_nostats (void)
 		jit_dbg_check_vec2_dispatch("exec_nostats");
 	}
 #endif
+
 	struct regstruct *r = &regs;
 
 	for (;;)
@@ -5630,6 +5657,7 @@ void execute_normal(void)
 		jit_dbg_check_vec2_dispatch("execute_normal_ENTRY");
 	}
 #endif
+
 	struct regstruct *r = &regs;
 	int blocklen;
 	cpu_history pc_hist[MAXRUN];

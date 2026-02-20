@@ -41,6 +41,7 @@ PFNGLUNIFORM1IPROC glp_Uniform1i = nullptr;
 PFNGLUNIFORM1FPROC glp_Uniform1f = nullptr;
 PFNGLUNIFORM2FPROC glp_Uniform2f = nullptr;
 PFNGLUNIFORM3FPROC glp_Uniform3f = nullptr;
+PFNGLUNIFORM4FPROC glp_Uniform4f = nullptr;
 PFNGLUNIFORMMATRIX4FVPROC glp_UniformMatrix4fv = nullptr;
 PFNGLACTIVETEXTUREPROC glp_ActiveTexture = nullptr;
 PFNGLENABLEVERTEXATTRIBARRAYPROC glp_EnableVertexAttribArray = nullptr;
@@ -103,6 +104,7 @@ bool gl_platform_init()
 	glp_Uniform1f = (PFNGLUNIFORM1FPROC)SDL_GL_GetProcAddress("glUniform1f");
 	glp_Uniform2f = (PFNGLUNIFORM2FPROC)SDL_GL_GetProcAddress("glUniform2f");
 	glp_Uniform3f = (PFNGLUNIFORM3FPROC)SDL_GL_GetProcAddress("glUniform3f");
+	glp_Uniform4f = (PFNGLUNIFORM4FPROC)SDL_GL_GetProcAddress("glUniform4f");
 	glp_UniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)SDL_GL_GetProcAddress("glUniformMatrix4fv");
 
 	// Vertex attribute functions
